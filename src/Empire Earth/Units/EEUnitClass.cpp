@@ -31,6 +31,7 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEUnitVectorItem.h"
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEUGGather.h"
@@ -1101,8 +1102,8 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
         } else {
             if (!theLoaded && inUnit->GetQueuedGoal(theQueue) != NULL) {
                 theCreated->ClearGoalQueue(0);
-                std::deque<EEUnitGoal*>& theGoals = inUnit->GetQueueGoals(theQueue);
-                for (std::deque<EEUnitGoal*>::iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
+                const EEGoalDeque& theGoals = inUnit->GetQueueGoals(theQueue);
+                for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
                     EEUnitGoal* theGoal;
                     if ((*i)->Suits(theCreated)) {
                         if ((*i)->mKind == kGoalBuildRepair) {

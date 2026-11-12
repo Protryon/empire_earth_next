@@ -29,6 +29,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEPhysics.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEUnitGoal.h"
 #include "ee/EEUnitStore.h"
 #include "rust/ee_units.h"
 
@@ -317,6 +319,34 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
 static bool OnMap(RTSUnit* inUnit)
 {
     return inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL;
+}
+
+void EEGoalQueueReport(EEUnitVectorItem* inQueue)
+{
+    uint32_t theIDs[16];
+    std::vector<uint32_t> theMore;
+    size_t theCount = inQueue->mGoals.size();
+    uint32_t* theWords = theIDs;
+    if (theCount > 16) {
+        theMore.resize(theCount);
+        theWords = &theMore[0];
+    }
+    for (size_t i = 0; i < theCount; i++) {
+        EEUnitGoal* theGoal = inQueue->mGoals[i];
+        theWords[i] = theGoal != NULL ? (uint32_t)theGoal->mID : 0;
+    }
+    ee_units_goal_queue_set(reinterpret_cast<uintptr_t>(inQueue), reinterpret_cast<uintptr_t>(inQueue->mUnit), theWords,
+                            theCount);
+}
+
+void EEGoalQueueDropped(EEUnitVectorItem* inQueue)
+{
+    ee_units_goal_queue_drop(reinterpret_cast<uintptr_t>(inQueue));
+}
+
+void EEGoalDeque::Changed()
+{
+    EEGoalQueueReport(OwnerOf<EEUnitVectorItem>(this, offsetof(EEUnitVectorItem, mGoals)));
 }
 
 void EEUnitStoreLinked(RTSUnit* inUnit)
@@ -735,6 +765,44 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
             fprintf(stderr, "EE-UNIT-STORE: %u of the %zu units' stats objects differ from the stats table\n", theStatsBad,
                     sStats.size());
             theCheck.mismatches += theStatsBad;
+        }
+    }
+    // every listed complex unit's goal queues (their containers in order, their goals' ids) against the Rust mirror
+    // (ee_units goals.rs); a difference counts like a field's
+    {
+        static std::vector<uint64_t> sContainers;
+        static std::vector<uint32_t> sLens;
+        static std::vector<uint32_t> sIDs;
+        uint32_t theBad = 0;
+        for (unsigned long p = 0; p < 17; p++) {
+            EEPlayer* thePlayer = gWorld.mPlayers[p];
+            if (thePlayer == NULL)
+                continue;
+            for (RTSUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = theUnit->mNext) {
+                if (theUnit->mObjectKind.mValue != EE_OBJECT_COMPLEX_UNIT)
+                    continue;
+                EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
+                sContainers.clear();
+                sLens.clear();
+                sIDs.clear();
+                for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
+                    EEUnitVectorItem& theQueue = theComplex->mGoalQueues[q];
+                    sContainers.push_back(reinterpret_cast<uintptr_t>(&theQueue));
+                    sLens.push_back((uint32_t)theQueue.mGoals.size());
+                    for (size_t i = 0; i < theQueue.mGoals.size(); i++)
+                        sIDs.push_back(theQueue.mGoals[i] != NULL ? (uint32_t)theQueue.mGoals[i]->mID : 0);
+                }
+                // (a queue's mUnit is its unit: the mirror's unit is the container's mUnit)
+                uint64_t theOwner = theComplex->mGoalQueues.empty() ? reinterpret_cast<uintptr_t>(theComplex)
+                                                                    : reinterpret_cast<uintptr_t>(theComplex->mGoalQueues[0].mUnit);
+                theBad += ee_units_goal_queue_check_unit(theOwner, sContainers.empty() ? NULL : &sContainers[0],
+                                                         sLens.empty() ? NULL : &sLens[0], sContainers.size(),
+                                                         sIDs.empty() ? NULL : &sIDs[0], sIDs.size());
+            }
+        }
+        if (theBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u goal queues differ from the Rust mirror\n", theBad);
+            theCheck.mismatches += theBad;
         }
     }
     // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the

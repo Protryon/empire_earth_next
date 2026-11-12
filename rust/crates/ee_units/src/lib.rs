@@ -22,6 +22,7 @@ pub mod actions;
 pub mod ai;
 pub mod commands;
 pub mod ffi;
+pub mod goals;
 pub mod group;
 mod header_consts;
 pub mod host;

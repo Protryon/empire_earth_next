@@ -1691,6 +1691,33 @@ void ee_units_cast_calamity(void *player,
                             int32_t y,
                             int32_t technology);
 
+/// A container's deque changed: its unit and its goals' ids (`count` at `ids`).
+///
+/// # Safety
+/// `ids` points to `count` words (or is null with `count` 0).
+void ee_units_goal_queue_set(uint64_t container, uint64_t unit, const uint32_t *ids, size_t count);
+
+/// A container's destructor.
+void ee_units_goal_queue_drop(uint64_t container);
+
+/// The length of a unit's queue `index`; -1 when the mirror has no such queue.
+int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
+
+/// TEST ONLY: a unit's `count` containers (their addresses, each with `lens[i]` goal ids, all of them in order at
+/// `ids`) against the mirror: the mismatches (`GoalQueues::check_unit`).
+///
+/// # Safety
+/// `containers` and `lens` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
+uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
+                                        const uint64_t *containers,
+                                        const uint32_t *lens,
+                                        size_t count,
+                                        const uint32_t *ids,
+                                        size_t ids_count);
+
+/// TEST ONLY: the mirrors held (the containers alive).
+uint32_t ee_units_goal_queue_count();
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);

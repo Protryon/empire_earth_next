@@ -21,6 +21,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
@@ -485,8 +486,8 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
 // Returns whether inUnit's first goal queue holds a move goal that is not a forced move (EvaluateCondition's helper)
 bool EEIsLocationGoalQueued(EEComplexUnit* inUnit)
 {
-    std::deque<EEUnitGoal*>::iterator it = inUnit->GetQueueGoals(0).begin();
-    std::deque<EEUnitGoal*>::iterator theEnd = inUnit->GetQueueGoals(0).end();
+    EEGoalDeque::const_iterator it = inUnit->GetQueueGoals(0).begin();
+    EEGoalDeque::const_iterator theEnd = inUnit->GetQueueGoals(0).end();
     bool theResult = false;
     for (; it != theEnd && !theResult; ++it) {
         EEUnitGoal* theGoal = *it;

@@ -129,6 +129,11 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
+// New (R5b.4, the fifteenth round): the goal queues as goal ids (ee_units goals.rs). A queue container's deque
+// changed (EEGoalDeque's writes): its goals' ids to the mirror; its destructor drops it.
+class EEUnitVectorItem;
+void EEGoalQueueReport(EEUnitVectorItem* inQueue);
+void EEGoalQueueDropped(EEUnitVectorItem* inQueue);
 // New (R5b.4, the fourteenth round): the stats table (ee_units stats.rs). A stats object's fields may have changed
 // (its Init, an improvement, the civilization builder's and the scenario events' writes, the setters): its record
 // again; its destructor drops it. EEUnitStatsScope reports its object when the writer returns (every return).

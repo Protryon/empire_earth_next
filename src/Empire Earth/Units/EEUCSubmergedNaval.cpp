@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEPlayer.h"

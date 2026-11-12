@@ -475,7 +475,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
     GEOrientation theOrientation;
     GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
     GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    std::deque<EEUnitGoal*>::iterator theIterator;
+    EEGoalDeque::const_iterator theIterator;
     long theQueue = 0;
     unsigned long theCargoID = inUnit->mExitingUnitID;
     if (UIsNone32(theCargoID))

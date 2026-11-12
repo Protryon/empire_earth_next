@@ -1299,7 +1299,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
     inMachine->GetPath(thePath);
     if (inUnit) {
         EEUGLocation* theLocation = dynamic_cast<EEUGLocation*>(inUnit->GetGoal());
-        std::deque<EEUnitGoal*>& theGoals = inUnit->mGoalQueues[0].mGoals;
+        const EEGoalDeque& theGoals = inUnit->mGoalQueues[0].mGoals;
         if (inUnit->GetGoal())
             inUnit->GetGoal()->mB1D = true;
         bool theForced = theLocation == NULL || theLocation->GetIsForcedMove();

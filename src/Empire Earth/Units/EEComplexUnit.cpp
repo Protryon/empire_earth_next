@@ -1586,7 +1586,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
         fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->GetComplexUnit()->mActiveGroup->mAction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n");
     for (unsigned long i = 0; i < this->GetComplexUnit()->mGoalQueues.size(); ++i) {
-        theGoals = this->GetComplexUnit()->mGoalQueues[i].mGoals;
+        theGoals = this->GetComplexUnit()->mGoalQueues[i].mGoals.Get();
         fprintf(inFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", i, theGoals.size());
         for (unsigned long j = 0; j < theGoals.size(); ++j) {
             fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", j, (theGoals[j])->mKind);
@@ -1897,7 +1897,7 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
     }
     if (inFlags & 0x20) {
         for (unsigned long i = 0; i < this->mComplexUnit->GetNumGoalQueues(); i++) {
-            theGoals = this->mComplexUnit->GetQueueGoals(i);
+            theGoals = this->mComplexUnit->GetQueueGoals(i).Get();
             for (unsigned long j = 0; j < theGoals.size(); j++)
                 theSum += theGoals[j]->GetOutOfSynchChecksum();
         }
@@ -1914,7 +1914,7 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
 
 // FUNCTION: EXE 0x5fa1cd
 // Returns the goals of a goal queue
-std::deque<EEUnitGoal*>& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
+EEGoalDeque& EEComplexUnit::GetQueueGoals(unsigned long inIndex)
 {
     return this->mGoalQueues[inIndex].mGoals;
 }
@@ -3470,7 +3470,7 @@ EEUnitGoal* EEComplexUnit::RefreshGoals()
 void EEComplexUnit::RefreshActiveGoal()
 {
     EEUnitGoal* theResult = NULL;
-    std::deque<EEUnitGoal*>& theGoals = this->mGoalQueues[0].mGoals;
+    const EEGoalDeque& theGoals = this->mGoalQueues[0].mGoals;
     unsigned long theCount = theGoals.size();
     for (unsigned long i = 0; i < theCount; i++) {
         EEUnitGoal* theGoal = theGoals[i];

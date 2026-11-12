@@ -380,6 +380,11 @@ impl ActionReads<'_> {
                 EE_UNITS_ACT_R_CATEGORY => r.category,
                 EE_UNITS_ACT_R_CONTAINER => i64::from(r.container),
                 EE_UNITS_ACT_R_RESOURCE_AMOUNT => r.resource_amount,
+                // `GetQueueGoals(0).size() > 1`: the goal queues' mirror (goals.rs)
+                EE_UNITS_ACT_R_QUEUED_GOALS => match crate::goals::queue_len(r.object, 0) {
+                    Some(n) => i64::from(n > 1),
+                    None => self.host.read(code),
+                },
                 _ => self.host.read(code),
             },
             None => self.host.read(code),
@@ -650,7 +655,7 @@ fn idle(u: &mut ActionReads<'_>) {
     let category = u.field(EE_UNITS_ACT_R_CATEGORY);
     if !((category == CATEGORY_LAND_CITIZEN || category == CATEGORY_NAVAL_CITIZEN)
         && u.field(EE_UNITS_ACT_R_CONTAINER) != 0
-        && u.on(EE_UNITS_ACT_R_QUEUED_GOALS))
+        && u.field(EE_UNITS_ACT_R_QUEUED_GOALS) != 0)
     {
         u.act_with(EE_UNITS_ACT_CLEAR_GOALS, 0);
     }
@@ -1606,6 +1611,34 @@ mod tests {
         assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(idle)));
         assert!(m.log.contains(&(EE_UNITS_ACT_SET_ANIMATION, 7, 0)));
         crate::stats::ee_units_stats_remove(object);
+    }
+
+    #[test]
+    fn the_queued_goals_come_from_the_mirror() {
+        // a citizen in a container with two queued goals keeps them when it idles (the mirror's queue 0)
+        let object = 0x60a1_0000_0001u64;
+        let ids = [11u32, 12];
+        // SAFETY: valid pointers to locals
+        unsafe { crate::goals::ee_units_goal_queue_set(0x60a1_0000_1000, object, ids.as_ptr(), 2) };
+        let record = EeUnitRecord {
+            object,
+            command: ACTION_IDLE,
+            goal_kind: -1,
+            category: CATEGORY_LAND_CITIZEN,
+            container: 1,
+            ..Default::default()
+        };
+        let mut m = unit(ACTION_IDLE);
+        assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(record)));
+        assert!(!ops(&m.log).contains(&EE_UNITS_ACT_CLEAR_GOALS));
+        assert!(!m.asked.contains(&EE_UNITS_ACT_R_QUEUED_GOALS));
+        // one goal: cleared
+        // SAFETY: valid pointers to locals
+        unsafe { crate::goals::ee_units_goal_queue_set(0x60a1_0000_1000, object, ids.as_ptr(), 1) };
+        let mut m = unit(ACTION_IDLE);
+        assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(record)));
+        assert!(ops(&m.log).contains(&EE_UNITS_ACT_CLEAR_GOALS));
+        crate::goals::ee_units_goal_queue_drop(0x60a1_0000_1000);
     }
 
     #[test]
