@@ -2580,6 +2580,15 @@ uint32_t ee_screens_menus_event_for(unsigned long id);
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);
 
+/// `EEUIPGSLineGraph::FormatYValues` of a value (float bits) into `out`; its length in bytes.
+size_t ee_screens_pgs_format_y(uint32_t value, uint8_t *out, size_t capacity);
+
+/// `EEUIPGSLineGraph::FormatXValues` of a value (float bits) with the game's time into `out`; its length in bytes.
+size_t ee_screens_pgs_format_x(uint32_t value,
+                               uint32_t game_time,
+                               uint8_t *out,
+                               size_t capacity);
+
 /// The save/load form's event code for a control event id (the screen active and the editor on when the form is
 /// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
 uint32_t ee_screens_save_load_event_for(unsigned long id,
