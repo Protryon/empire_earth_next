@@ -3586,6 +3586,70 @@ Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
 Next: the port's answer to a few raiders before the Stone Age (seed 24's clubmen: what the C++'s militia and defence
 groups do that the port's do not), then guard posts on hills and choke points, heroes, walls.
 
+### 8.50 Boom's mid-game army, attacks and the owner's Stone raid (2026-11-11, EE-SIM)
+
+The owner's direction: the cheating classic is a bad matchup to report, not a target. The focus is boom's army from
+the Copper Age and its attacks, then (a later direction) the Stone raid of the owner's exact build order (memory
+boom-build-order). Opponents: the improved classic (no cheats) and Age of AI. Small, Hard, 120 minutes. Stone /
+Copper / Bronze: the games that reached the epoch and its median minute. "Under 30": towns with fewer than 30
+citizens at 120 minutes (boom-econ's less noisy measure).
+
+**The Copper army (mb1, merged in 1f6edf5).** From the Copper Age the light army is a third of the citizens (35%),
+up to 60 (25%, 40 before). On 64 seeds (2-65):
+
+| Variant | Opponent | Games | Defeats | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| baseline | Age of AI | 63 | 0 | 6/25/32 | 61, 52.5 | 54, 79.2 |
+| | improved classic | 63 | 10 | 1/54/8 | 39, 62.8 | 11, 94.6 |
+| mb1 | Age of AI | 62 | 0 | 11/10/41 | 60, 52.6 | 51, 81.3 |
+| | improved classic | 64 | 9 | 0/47/17 | 40, 62.4 | 11, 90.7 |
+
+**Off (32 seeds each; the improved classic's defeats against mb1's 4 on the same exe):**
+- the guard's sweep of lone harassers near own buildings: 8 alone, 9 with mb1;
+- attacks (lib.attack) from the Copper Age with 8 soldiers kept home: 8;
+- the same with 16 kept home: 6, then 7 on the fixed scripts;
+- attacks only while the home guard holds 100% or 150% of the largest raid of the last 15 minutes: 6 of 29 and 7 of
+  32 (the baseline on that exe: 6 of 29);
+- Age of AI's W/L/C moves by 1-5 games either way in all of them.
+
+The attacks pull soldiers out of a town that the improved classic hits harder from about minute 70, when it reaches
+180 population and attacks with 42-48 soldiers while boom stands at 90-100 citizens and 22-35 soldiers (boom-econ's
+analysis). An army scaled towards the population cap from the Bronze Age (L50: 50% up to 90; L70: 70% up to 120) was
+started and stopped for the owner's new direction; its partial rows (22 and 12 games against the classic) are too
+few to read.
+
+**The micro step's budget (fixed in 2c477f26):** with 100+ citizens away from a large raid, lib.defence re-tested
+every one against every raider each second and overran 300k instructions (boom-econ's seed 19, from minute 81; mb6's
+17 script errors). It now looks at 40 a second in turn and skips a raid whose box is out of reach: 0 errors in the
+re-run, seed 19 clean, `--repeat 2` identical on seeds 4 and 19 against both opponents.
+
+**The owner's Stone raid (lib.raid, plan.raid, off).** Once the economy is developed (boom-econ's
+`memory.phase == "stone_developed"`; here a stub, 8 minutes into the Stone Age, since the signal was on another branch),
+~20 soldiers go in one raid on the nearest neighbour's gatherers along `ai.route`, and ~20 more are trained as the
+home reserve on the dispatch. 32 seeds against main's scripts (lb0):
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| lb0 (Stone: a quarter of the citizens, at least 20; army_first) | Age of AI | 0 | 0 | 6/1/25 | 32, 51.1 | 29, 82.7 |
+| | improved classic | 8 | 18 | 0/25/7 | 20, 65.8 | 5, 93.0 |
+| rs0 (Stone: 8 soldiers, army_first off) | Age of AI | 0 | 0 | 6/3/23 | 32, 46.7 | 26, 76.3 |
+| | improved classic | 8 | 13 | 1/21/10 | 20, 60.6 | 6, 91.2 |
+| rs1 (rs0 + the raid) | Age of AI | 0 | 0 | 5/6/21 | 32, 47.7 | 23, 81.0 |
+| | improved classic | 10 | 13 | 1/20/11 | 21, 64.6 | 7, 89.4 |
+
+| The raids (rs1) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|
+| improved classic | 20 of 32 | 10.3 | 55 | 332 | 4.7 | 1.9 / 1.9 |
+| Age of AI | 27 of 32 | 10.7 | 43 | 347 | 0.3 | 3.4 / 0.1 |
+
+- **rs0 is the find:** the owner's 5-10 Stone soldiers in place of the 20-soldier army_first bring the Copper Age 4-5
+  minutes sooner against both opponents and the Bronze Age 6 sooner against Age of AI, with the same defeats and 5
+  fewer towns under 30 citizens against the classic.
+- **The raid as built does not do the owner's job yet.** The force is never trained in time: the build waits 10
+  minutes and then goes at half size, at minute 43-55, after the Copper save should have begun. It kills 2-3
+  citizens, and costs two defeats and 1-5 minutes against the classic. Its timing depends on the economy: boom-econ's
+  phase signal and its pause of the Copper save while the raid builds (on boom-econ's branch) are the parts it needs.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
