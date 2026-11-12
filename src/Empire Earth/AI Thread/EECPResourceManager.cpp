@@ -2624,7 +2624,10 @@ void EECPResourceManager::RebalanceGatherers()
     unsigned long theMoves = 0;
     unsigned long theMaxMoves = (unsigned long)EECPPersonality(this->mManager->mPlayer).mMovesPerCycle;
     for (long r = 2; r < 7 && theMoves < theMaxMoves; r++) {
-        while (theMoves < theMaxMoves && this->mGatherers[r].size() > this->mWantedGatherers[r] + 1) {
+        // (the next engine's gather(exact = 1), §8.51: the owner's build order counts exactly, no one of slack)
+        EECPNextState* theNextState = EECPNextEngine(this->mManager->mPlayer) ? EECPNextGetState(this->mManager->mPlayer) : NULL;
+        unsigned long theSlack = theNextState != NULL && theNextState->mExact != 0 ? 0 : 1;
+        while (theMoves < theMaxMoves && this->mGatherers[r].size() > this->mWantedGatherers[r] + theSlack) {
             EEComplexUnit* theUnit = this->mGatherers[r].back();
             if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0
                 || theUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
