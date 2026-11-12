@@ -10133,3 +10133,23 @@ Round 4's pattern (RUST_PLAN's row) applied to the rest of the main game form's 
 - **Seed the investigation with the failing record, not the hypothesis.** "64 on-map records differ from the chain"
   read as a link or load path bypassing the holders; one diagnostic print of the chain's units without a record
   (id, listed, in store, type) showed listed units of one id in one run.
+
+## R5b.4, fifteenth round: the goal queues as goal ids (ee_units goals.rs; branch rust-r5b4-core15, 2026-11-13)
+
+- **The ids were already there.** Every goal has `mID` (`++sGoalCounter` at construction; the load path draws one
+  back and reads the saved id): the saves' goal ids. So "goal queues as ids" is a mirror, not a new numbering: each
+  queue container (`EEUnitVectorItem`, one of a complex unit's `mGoalQueues`) is its goals' ids in Rust, by the
+  container's address with its unit, and the unit record carries the active goal's id (field 49) beside its kind.
+  Ids are not unique across clones (a cloned goal keeps its id), so the mirror is per container, never a map by id.
+- **A unit's queue index is its container's address order.** `mGoalQueues` is one vector, so a unit's containers
+  sorted by address are its queues in index order; a reallocation copies them to new addresses (the copies report,
+  the old ones' destructors drop their mirrors), and no read runs inside it.
+- **The deque as a holder, as the store's fields.** `EEGoalDeque` wraps the container's `std::deque<EEUnitGoal*>`: it
+  reads as the deque (size, elements, front/back, const iterators, `Get()` for a copy) and every change reports the
+  whole list (queues are a few goals). Giving out no writable reference or iterator made the compiler list every
+  writer and every reader that had bound a `std::deque&`: 18 errors over 11 files, all readers but the container's
+  copy constructor and `operator=` (their element writes became `Set`). `DeleteVectorContents` needs a type named
+  `iterator`: the holder's is the const one (the loop only reads).
+- **Bash heredocs on this machine eat backslash escapes.** A Python edit sent through a quoted heredoc wrote a real
+  newline where the C++ string had `\n` (the compiler's "expected expression" found it). Write edit scripts with the
+  file tool and run them, or use the editor tool for strings with escapes.
