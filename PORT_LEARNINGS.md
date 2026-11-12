@@ -7892,3 +7892,63 @@ lobby's model and saved settings held.
   (SetInput on a received whisper) and LanLogic's command handling only a person reaches.
 - **Left.** StagingLogic and InitLogic as Rust objects, then LanLogic; the model's element classes (LobbyClient,
   LobbyGame with the game code's hooks, LobbyGroup, LobbyServer, LobbyFriend) stay C++ objects the containers hold.
+
+## R6: WON's C++ shrinks: the lobby's PNG decoder on ee_openformats, the dead decoders, codec copies, GDI backend and linker-dropped classes deleted (branch rust-r6-won18, 2026-11-12)
+
+Round 18 of R6 (RUST_PLAN "R6 WON, the rest"). The goal changed: net C++ deletion, measured as the lines of
+`src/Empire Earth/WONAPI` + `include/ee/wonapi` (`find ... -name '*.cpp' -o -name '*.h' -o -name '*.inl' | xargs cat | wc -l`).
+Rounds 12-17's bottom-up class moves had not shrunk it (119,299 before round 17, 119,471 after): every moved class
+kept a C++ wrapper for its remaining C++ callers. This round: 117,746 (round 17 merged with rust) -> 100,456 lines,
+-17,290, in three code commits.
+
+- **Measuring the slices first.** The suggested vertical slice (StagingLogic + InitLogic + LanLogic with LobbyModel's
+  element classes and WONLobbyMap.h, ~4.9k lines) has ~600 references to LobbyClient / LobbyGame / LobbyGroup /
+  LobbyServer / LobbyFriend and their lists in 39 other files (RoutingLogic 151, the GUI controls, the events, the
+  game code, EETestFixture): moving it means a C ABI under most of the lobby, a poor delete/keep ratio this round.
+  The image decoders were the best: ~9k lines deleted for one existing Rust call kept. Then the linker's own
+  answer: lld-link `/OPT:REF` drops every function no live code reaches (clang-cl `/O1` implies `/Gy`), so a
+  WON object's text symbols that appear in none of `EE-AOC.map`, `EE-SIM.map` and the test profile's
+  `EE-AOC.map` are dead in every build. Counting only symbols defined in one object (inline and template copies
+  excluded) gave whole files with nothing kept; each class name was then grepped over src, include, tests, tools
+  and the Rust sources before deleting. Scripts: a census over `llvm-nm --defined-only` and the map (kept out of the
+  repo, ~40 lines).
+- **PNG on the game's reader** (commit `R6 WON: the lobby's PNG decoder on ee_openformats...`). The golden first:
+  `tests/won/won_image_test.cpp` links the real PNGDecoder.cpp and JPGDecoder.cpp (with Image.cpp, ImageDecoder.cpp,
+  the file reader, libpng 1.0, zlib, the engine's libjpeg; the display stubbed) and prints per picture the
+  attributes call and the raw decode's size, transparency and pixel hash: the 46 PNG and JPEG pictures of
+  `Data/WONLobby Resources` and 79 PNGs it writes itself (every colour type and depth, tRNS on gray, RGB and
+  palette, Adam7, truncated, header only, not a PNG). `won_image_golden.txt`, 125 lines, three runs the same, then
+  the same over the new decoder. PNGDecoder now calls `ee_of_png_to_picture` (GESurface::LoadPNG's): its depth 32
+  (alpha or tRNS) is the original's transparency rule and its B, G, R, A bytes are the original's ARGB DWORD.
+  DoGetAttrib walks the signature, IHDR and the chunks to the first IDAT as `png_read_info` did (a header-only file
+  answers false, a truncated body true; CRCs unchecked, libpng checked them). Trap: the first walk forgot IHDR's CRC
+  (29 bytes, not 33) and every attribute failed; the driver caught it.
+- **Deleted with it.** `include/ee/wonapi/codec`: libpng 1.0, zlib and libjpeg header copies (7,393 lines); the WON
+  copy of libjpeg's headers was the engine's text but jmorecfg.h's FAR guard, now in `src/ThirdParty/libjpeg`
+  (windows.h defines FAR; the library's own units never include it). GIFDecoder and TGADecoder were never
+  registered (not in the original exe); WindowManager registered BMPDecoder and WIMDecoder, but the open data has
+  no .bmp, .wim, .gif or .tga picture and D9 makes the game read PNG (and the lobby's JPEG) only. libpng and zlib
+  (module `exeimg`) now have no caller and stay linked, unreferenced: removing the module is a tooling change
+  (units.py, build.py, xbuild.py, ee.py) left for the lead.
+- **The never-compiled backend.** `units.WON_REPLACED` kept WONGUI's Win32/GDI backend (MSWindowManager, MSWindow,
+  MSGraphics, MSNativeImage, MSRawImage, MSFont, DisplayContext, Clipboard, MSSound) out of every link since the
+  platform backend replaced it, and WON_NOT_LINKED the open/save dialog and WinSkin; they stayed for upstream merges,
+  which WON no longer takes. Deleted with WONLobbyGUIMS.h (included by nothing) and the three headers only they
+  included: -3,352 lines, no compiled change.
+- **Linker-dropped classes** (commit `R6 WON: the linker-dropped WONGUI classes, WONBigFile and RecvSomeBytesOp
+  deleted`): WONSound (the SDK's mixer; the lobby plays its sounds through EELobbySoundDecoder and the platform layer), ResourceCollection and its writer,
+  SpecialPurposeControls and BorderComponent, Spinner and MSSpinner, GridLayout, LayoutHelper, MSToolControls,
+  MenuBar, ComponentScrollArea, ButtonScroller (with ScrollArea::SetScrollButton and ButtonScrollerConfig),
+  TextImage (with TextArea::AddImage), EndDialogEvent, WONBigFile, RecvSomeBytesOp; their twelve headers and the
+  declarations in WONLobbyGUI.h, WONLobbyResourceConfig.h and WONLobbyTextAreaConfig.h: -5,015 lines. All were SDK
+  code the original exe did not contain (none in link/won/units.txt). The Rust code that modelled some of them
+  (guimenu.rs's menu bar, guiscroll.rs's button scroller, the ButtonScrollerConfig key tables in guiconf.rs) is
+  now reached only by its own tests and the won_gui*_test drivers' copied statements; it stays.
+- **Left dead, measured** (functions no build keeps, in files that keep others): ConfigValue's unused template
+  instantiations (151 of 186), ResourceConfigSound (44 of 50), ChildLayoutsAdvanced's ChildLayoutList and
+  VerticalFlowLayout (40 of 55), Animation's frames (20 of 24), StringParserCollections (all 48, but
+  won_parse_test's golden covers it), the Internet lane's ops (theirs).
+- **What runs it.** EE-SIM never loads the lobby: the oracle cannot see these. Only the PNG change runs: every lobby
+  load decodes the skin, icons and images (39 PNG through ee_openformats, 7 JPEG through libjpeg as before), so
+  the lead's LAN game and any lobby tour exercise it; a wrong pixel order or transparency would show in the
+  lobby's captures, not in a gate's verdict. The deletions remove code no build reaches.
