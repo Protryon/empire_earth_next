@@ -25,7 +25,6 @@ public:
     virtual bool HasArrived(EEComplexUnit* inUnit, float inValue);  // +0x88 0x218d4b
     virtual void RemoveFromTile(EEUnit*);  // +0x98 0x21aaf5 (ICF: EEUCAirAnimal, EEUCAirplane...)
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x217eb2 (ICF: EEUCNaval)
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x218e28 trivial: push dword ptr [esp + 4]; call 0x61c92c; ret 4
     // +0xe4..+0x104: EEUCTransport's signatures
     virtual void FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport, U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile); // +0xe4 0x21a6e0 (ICF: EEUCSpaceTransport)
     virtual void FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile); // +0xe8 0x218a5f (ICF: EEUCSpaceTransport)

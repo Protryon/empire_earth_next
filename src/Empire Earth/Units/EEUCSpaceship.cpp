@@ -16,6 +16,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -86,34 +88,9 @@ void EEUCSpaceship::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, f
 // Handles a spaceship's new action: idle restarts its flight animation; dying plays its sound and death effect
 void EEUCSpaceship::ActionChanged(EEComplexUnit* inUnit)
 {
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionIdle:
-        this->HandleActionChanged(inUnit);
-        inUnit->SetAnimation(0xd, -1, 0);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
-        break;
-    }
-    case kActionResourcesRotting:
-        this->HandleActionChanged(inUnit);
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_SPACESHIP, this, inUnit);
 }
 
 // FUNCTION: EXE 0x61a51a
@@ -158,33 +135,9 @@ long EEUCSpaceship::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEve
 // Updates a spaceship each tick: physics, turrets, timers, animation, sound, power, firing, rotting, regeneration
 void EEUCSpaceship::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-    }
-    inUnit->UpdateOrbitals();
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    this->RegeneratePower(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_SPACESHIP, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

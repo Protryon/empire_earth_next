@@ -1584,6 +1584,7 @@ static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
                           inIndex < gWorld.mUpdateUnits.size() ? (long)gWorld.mUpdateUnits[inIndex].GetSavedID() : -1);
     gPhysicsSteppingUnit = gWorld.mUpdateUnits[inIndex];   // TEST ONLY: named by EE-SIM's random-draw trace
     gWorld.mUpdateUnits[inIndex]->Step();
+    EEUnitUpdateCommit(inID);   // TEST ONLY (USST kind 12)
 }
 
 unsigned long EEPhysics::UpdateUnits()

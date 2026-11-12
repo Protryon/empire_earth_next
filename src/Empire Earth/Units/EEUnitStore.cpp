@@ -512,6 +512,52 @@ void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* in
     sStateCalls++;
 }
 
+static std::vector<uint32_t> sUpdateWords;
+
+void EEUnitUpdateNote(int inOperation, int64_t inA, int64_t inB)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    sUpdateWords.push_back(static_cast<uint32_t>(inOperation));
+    sUpdateWords.push_back(static_cast<uint32_t>(inA));
+    sUpdateWords.push_back(static_cast<uint32_t>(inB));
+}
+
+void EEUnitUpdateCommit(unsigned long inID)
+{
+    if (sUpdateWords.empty())
+        return;
+    EEUnitStateNote(kUnitStateUpdate, inID, sUpdateWords.data(), (unsigned int)sUpdateWords.size());
+    sUpdateWords.clear();
+}
+
+static std::vector<uint32_t> sActionWords;
+static unsigned int sActionDepth = 0;
+static unsigned long sActionID = 0;
+
+void EEUnitActionNote(int inOperation, int64_t inA, int64_t inB)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    sActionWords.push_back(static_cast<uint32_t>(inOperation));
+    sActionWords.push_back(static_cast<uint32_t>(inA));
+    sActionWords.push_back(static_cast<uint32_t>(inB));
+}
+
+EEUnitActionScope::EEUnitActionScope(unsigned long inID)
+{
+    if (sActionDepth++ == 0)
+        sActionID = inID;
+}
+
+EEUnitActionScope::~EEUnitActionScope()
+{
+    if (--sActionDepth != 0 || sActionWords.empty())
+        return;
+    EEUnitStateNote(kUnitStateActionChanged, sActionID, sActionWords.data(), (unsigned int)sActionWords.size());
+    sActionWords.clear();
+}
+
 void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal)
 {
     fprintf(stderr, "EE-UNIT-STEP: %s of unit 0x%08lx: Rust %ld, the original %ld\n", inLeaf, inID, inRust, inOriginal);

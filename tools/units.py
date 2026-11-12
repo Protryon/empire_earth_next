@@ -79,6 +79,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
+                       # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)
+                       "Empire Earth/Units/EEUnitUpdate.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",

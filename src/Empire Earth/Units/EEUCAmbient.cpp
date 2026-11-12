@@ -14,6 +14,8 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -111,11 +113,9 @@ void EEUCAmbient::RemoveFromTile(EEUnit* inUnit)
 // While rotting, counts down the unit's rotting time and gives its linked parts the same time
 void EEUCAmbient::Update(EEComplexUnit* inUnit)
 {
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionUnitRotting)
-        return;
-    long theTime = inUnit->UpdateRottingAwayTime();
-    for (EEComplexUnit* theUnit = inUnit->mNextPart; theUnit != NULL; theUnit = theUnit->mNextPart)
-        theUnit->SetRottingAwayTime(theTime);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_AMBIENT, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x67c0b4

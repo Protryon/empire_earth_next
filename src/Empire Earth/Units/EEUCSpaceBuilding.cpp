@@ -15,6 +15,8 @@
 #include "lle/GETerrainMesh.h"
 
 #include "lle/U2DSparseArray.h"
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -108,12 +110,9 @@ bool EEUCSpaceBuilding::HasArrived(EEComplexUnit* inUnit, float inValue)
 // Steps the space building's physics and sound, regenerates it, then updates it as a building
 void EEUCSpaceBuilding::Update(EEComplexUnit* inUnit)
 {
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->RefreshSound(inUnit);
-    if (inUnit->mStats != NULL && inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    EEUCBuilding::Update(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_SPACE_BUILDING, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x6183f8

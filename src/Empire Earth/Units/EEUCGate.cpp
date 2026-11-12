@@ -49,6 +49,8 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -772,23 +774,9 @@ bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles)
 // Moves an opening or closing gate's doors 0.2 a tick (from the chain's first piece), then updates it as a building
 void EEUCGate::Update(EEComplexUnit* inUnit)
 {
-    long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    if (inUnit->mPreviousPart == NULL && inUnit->mNextPart != NULL && (theCommand == kActionOpening || theCommand == kActionClosing)) {
-        float theOpen = inUnit->mOpenFraction;
-        if (theCommand == kActionOpening) {
-            theOpen = theOpen + kGateStep;
-            if (kGateOpen < theOpen)
-                theOpen = kGateOpen;
-        } else {
-            theOpen = theOpen - kGateStep;
-            if (kGateClosed > theOpen)
-                theOpen = kGateClosed;
-        }
-        inUnit->SetOpenFraction(theOpen);
-        this->GetLastLinkedCarrier(inUnit)->SetOpenFraction(theOpen);
-        this->GetLastLinked(inUnit)->SetOpenFraction(theOpen);
-    }
-    EEUCBuilding::Update(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_GATE, this, inUnit);
 }
 
 // The template and inline COMDATs that close the unit (names paired by address range)

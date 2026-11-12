@@ -103,10 +103,3 @@ EEUnit* EEUCNavalPriest::CreateUnit(long inX, long inY, long inPlayer, bool inIs
     return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// ICF-FOLDED: EXE 0x616dd7
-// Updates the land priest as a priest
-// (no address of its own: the same body as EEUCLandPriest::Update, which ICF kept)
-void EEUCNavalPriest::Update(EEComplexUnit* inUnit)
-{
-    EEUCBasicPriest::Update(inUnit);
-}
