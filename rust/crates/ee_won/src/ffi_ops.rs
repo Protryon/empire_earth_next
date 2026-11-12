@@ -4,108 +4,14 @@
 //! sink may use the queue again. Statuses are `long` (the C++ `WONStatus`); the decisions are small integers
 //! (the enums' `code`).
 
-use crate::asyncop::{self, OpHandle, OpSet, OpState, QueueCompletion, QueueNext, QueueOpKind};
-use crate::ops;
+use crate::asyncop::{self, OpHandle, OpSet, QueueCompletion, QueueNext, QueueOpKind};
 use crate::status::Status;
 use std::ffi::{c_long, c_void};
 
 /// A sink for the ops a queue hands back.
 pub type EeWonOpSink = unsafe extern "C" fn(context: *mut c_void, op: *mut c_void);
 
-// ---- AsyncOp
-
-/// `AsyncOp::AsyncOp`'s state.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_state_init(state: *mut OpState) {
-    unsafe { *state = OpState::new() };
-}
-
-/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
-/// 3 queue it in the container, 4 run blocking.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_run(state: *mut OpState, mode: i32, timeout: u32) -> i32 {
-    unsafe { (*state).run(mode, timeout, ops::tick()).code() }
-}
-
-/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_run_as_timer(state: *mut OpState, timeout: u32) -> bool {
-    unsafe { (*state).run_as_timer(timeout, ops::tick()) }
-}
-
-/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_finish(state: *mut OpState, status: c_long) -> i32 {
-    unsafe { (*state).finish(status as Status).code() }
-}
-
-/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_force_finish(state: *mut OpState, status: c_long) -> i32 {
-    unsafe { (*state).force_finish(status as Status).code() }
-}
-
-/// `AsyncOp::Kill`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_kill(state: *mut OpState, finish: bool) -> i32 {
-    unsafe { (*state).kill(finish).code() }
-}
-
-/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_complete(state: *mut OpState) -> bool {
-    unsafe { (*state).complete() }
-}
-
-/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_after_run_hook(state: *const OpState) -> i32 {
-    unsafe { (*state).after_run_hook().code() }
-}
-
-/// `AsyncOp::SetTimeout`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_set_timeout(state: *mut OpState, timeout: u32) {
-    unsafe { (*state).set_timeout(timeout) }
-}
-
-/// `AsyncOp::SetMode`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_set_mode(state: *mut OpState, mode: i32) {
-    unsafe { (*state).set_mode(mode) }
-}
-
-// (TimerThread and AsyncOpContainer are Rust objects: `thread`)
+// (AsyncOp is a Rust object: `opobj`; TimerThread and AsyncOpContainer: `thread`)
 
 // ---- SocketThreadSimple
 
@@ -238,30 +144,10 @@ pub extern "C" fn ee_won_queue_socket_callback(
 #[allow(clippy::manual_dangling_ptr)] // small integers stand in for the ops' addresses
 mod tests {
     use super::*;
-    use crate::status::{WS_KILLED, WS_PENDING, WS_SUCCESS};
+    use crate::status::WS_KILLED;
 
     unsafe extern "C" fn collect(context: *mut c_void, op: *mut c_void) {
         unsafe { (*context.cast::<Vec<usize>>()).push(op as usize) };
-    }
-
-    #[test]
-    fn op_state_through_the_abi() {
-        let mut s = OpState::new();
-        unsafe {
-            ee_won_op_state_init(&mut s);
-            assert_eq!(ee_won_op_run(&mut s, 1, 10), 3);
-            assert_eq!(s.status as Status, WS_PENDING);
-            assert_eq!(ee_won_op_after_run_hook(&s), 1);
-            assert_eq!(ee_won_op_finish(&mut s, WS_SUCCESS as c_long), 1);
-            assert!(ee_won_op_complete(&mut s));
-            assert!(ee_won_op_run_as_timer(&mut s, 5));
-            assert_eq!(ee_won_op_kill(&mut s, true), 1);
-            assert_eq!(s.status as Status, WS_KILLED);
-            assert_eq!(ee_won_op_force_finish(&mut s, 0), 0);
-            ee_won_op_set_timeout(&mut s, 3);
-            ee_won_op_set_mode(&mut s, 2);
-            assert_eq!(ee_won_op_run(&mut s, 2, 1), 1);
-        }
     }
 
     #[test]
