@@ -750,7 +750,7 @@ function M.step(view, memory)
     -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
     -- (and only once the Prehistoric barracks stands: banked before it, 12 of 16 towns came to the advance without one)
     if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK
-            and V.total(V.buildings(view, "b_barracks")) >= 1 then
+            and ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1 then   -- (stands: a queued one waits on wood)
         reserve.wood = BO.WOOD_BANK
         differs = differs or reserve.wood ~= view.reserve.wood
     end
@@ -1171,7 +1171,7 @@ function M.step(view, memory)
                     -- (in the Prehistoric after the barracks: with the settlements raised to 10 these took its wood and
                     -- 15 of 16 towns came to the advance without it)
                     if ECON.order and BO.OPT.place and rank == nil and s.home
-                            and (age >= 2 or V.total(V.buildings(view, "b_barracks")) >= 1) and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                            and (age >= 2 or ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1) and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
                         for _, r in ipairs({"food", "iron", "gold", "stone"}) do
