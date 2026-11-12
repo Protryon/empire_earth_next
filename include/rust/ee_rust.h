@@ -2550,6 +2550,9 @@ struct EeWonByteBuffer;
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `IPAddr`'s value.
+struct EeWonIpAddr;
+
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
@@ -6877,6 +6880,15 @@ struct EeWonBreak {
   int32_t width;
 };
 
+/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
+struct EeWonAddr {
+  uint8_t sockaddr[16];
+  bool valid;
+  bool remember_host;
+  const uint8_t *host;
+  size_t host_len;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -7199,15 +7211,6 @@ struct EeWonServerPick {
   int32_t clients;
   /// It lists the lobby's language.
   bool language;
-};
-
-/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
-struct EeWonAddr {
-  uint8_t sockaddr[16];
-  bool valid;
-  bool remember_host;
-  const uint8_t *host;
-  size_t host_len;
 };
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
@@ -14799,74 +14802,11 @@ void ee_won_netstats_add(uint32_t counter,
 
 int64_t ee_won_netstats_get(uint32_t counter);
 
-/// `Fn2B2660`: a dotted address or a host name (looked up) and a host-order port -> the address; false when it does
-/// not resolve.
-///
-/// # Safety
-/// `host` holds `length` bytes; the out-parameters are valid.
-bool ee_won_ipaddr_resolve(const uint8_t *host,
-                           size_t length,
-                           uint16_t port,
-                           uint32_t *address,
-                           uint16_t *port_out);
-
-/// `Fn2B2890`'s port: the text after the colon as `atoi` reads it, cut to 16 bits (host order).
-///
-/// # Safety
-/// `text_in` holds `length` bytes.
-uint16_t ee_won_ipaddr_port_of(const uint8_t *text_in, size_t length);
-
-/// `SetWithDefaultPortNoDNS`.
-///
-/// # Safety
-/// As `ee_won_ipaddr_resolve`.
-bool ee_won_ipaddr_parse_no_dns(const uint8_t *text_in,
-                                size_t length,
-                                uint16_t default_port,
-                                uint32_t *address,
-                                uint16_t *port);
-
-/// The dotted form of a network-order address into `out` (16 bytes).
-///
-/// # Safety
-/// `out` has 16 bytes.
-void ee_won_ipaddr_dotted(uint32_t address, char *out);
-
-/// `GetHostAndPortString`: "host:port" (at most 49 bytes) into `out` (50 bytes); returns its length.
-///
-/// # Safety
-/// `host` holds `length` bytes; `out` has 50 bytes.
-size_t ee_won_ipaddr_host_and_port(const uint8_t *host,
-                                   size_t length,
-                                   uint16_t port,
-                                   char *out);
-
-/// The order of two addresses' 6-byte wire forms (`operator<`, `==`): negative, 0 or positive.
-///
-/// # Safety
-/// `a` and `b` point at 6 bytes each (a `PlatSockAddrIn`'s port and address).
-int32_t ee_won_ipaddr_compare_six(const uint8_t *a, const uint8_t *b);
-
-/// `StringCompare` (network-order addresses and ports).
-int32_t ee_won_ipaddr_string_compare(uint32_t a_address,
-                                     uint16_t a_port,
-                                     uint32_t b_address,
-                                     uint16_t b_port);
-
 /// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
 ///
 /// # Safety
 /// The sink is called during the call only.
 void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
-
-/// Whether a host-order address is one of this machine's (`SetLocalHost`'s test: the host name's addresses).
-bool ee_won_ipaddr_is_local(uint32_t host);
-
-/// This machine's name into `out` (`size` bytes); false when the system gives none.
-///
-/// # Safety
-/// `out` has `size` bytes.
-bool ee_won_ipaddr_host_name(char *out, size_t size);
 
 /// `AsyncSocket::HasInternetConnection`.
 bool ee_won_has_internet_connection();
@@ -16868,6 +16808,168 @@ bool ee_won_gui_max_width(int32_t new_width,
                           bool has_breaks,
                           int32_t *out_width,
                           bool *out_rewrap);
+
+/// `IPAddr()`: zero, invalid, no remembered host.
+EeWonIpAddr *ee_won_ipaddr_new();
+
+/// The copy constructor: a copy of `a`'s whole value.
+///
+/// # Safety
+/// `a` is a live value (so for every `ee_won_ipaddr_` call taking one).
+EeWonIpAddr *ee_won_ipaddr_clone(const EeWonIpAddr *a);
+
+/// `operator=`: `to` becomes a copy of `from` (the same value is fine).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_assign(EeWonIpAddr *to, const EeWonIpAddr *from);
+
+/// The destructor.
+///
+/// # Safety
+/// `a` came from `ee_won_ipaddr_new` / `_clone` and is freed once.
+void ee_won_ipaddr_free(EeWonIpAddr *a);
+
+/// `SetRememberHostString`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_remember_host(EeWonIpAddr *a, bool on);
+
+/// `GetSockAddrIn`: the value's `PlatSockAddrIn` (valid while the value lives and is not set again).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+const void *ee_won_ipaddr_sockaddr(const EeWonIpAddr *a);
+
+/// `GetSixByte`: the 6-byte wire form inside the value (the sockaddr's port and address).
+///
+/// # Safety
+/// As `ee_won_ipaddr_sockaddr`.
+const char *ee_won_ipaddr_six(const EeWonIpAddr *a);
+
+/// `Fn2B2660` (a host-order port).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `host` holds `length` bytes.
+bool ee_won_ipaddr_set_resolve(EeWonIpAddr *a, const uint8_t *host, size_t length, uint16_t port);
+
+/// `Fn2B2890`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_host_port(EeWonIpAddr *a, const uint8_t *text, size_t length);
+
+/// `SetSixByte`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `six` points at 6 bytes.
+void ee_won_ipaddr_set_six(EeWonIpAddr *a, const uint8_t *six);
+
+/// `Fn2B2B00`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `sa` points at a `PlatSockAddrIn`.
+void ee_won_ipaddr_set_sockaddr(EeWonIpAddr *a, const void *sa);
+
+/// `Fn2B2C20` (host order).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_host_order(EeWonIpAddr *a, uint32_t host, uint16_t port);
+
+/// `SetWithDefaultPortNoDNS`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_no_dns(EeWonIpAddr *a,
+                              const uint8_t *text,
+                              size_t length,
+                              uint16_t default_port);
+
+/// `SetWithDefaultPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_with_default_port(EeWonIpAddr *a,
+                                         const uint8_t *text,
+                                         size_t length,
+                                         uint16_t default_port);
+
+/// `GetHostString` to `sink`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; the sink is called once during the call.
+void ee_won_ipaddr_host_string(const EeWonIpAddr *a,
+                               bool use_original,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `GetHostAndPortString` to `sink`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_host_string`.
+void ee_won_ipaddr_host_and_port_string(const EeWonIpAddr *a,
+                                        bool use_original,
+                                        EeWonByteSink sink,
+                                        void *context);
+
+/// `GetPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+uint16_t ee_won_ipaddr_port(const EeWonIpAddr *a);
+
+/// `SetPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_port(EeWonIpAddr *a, uint16_t port);
+
+/// `GetHost`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+long ee_won_ipaddr_host(const EeWonIpAddr *a);
+
+/// `IsValid`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+bool ee_won_ipaddr_valid(const EeWonIpAddr *a);
+
+/// `operator<` / `==`: negative, 0 or positive.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`, for both.
+int32_t ee_won_ipaddr_compare(const EeWonIpAddr *a, const EeWonIpAddr *b);
+
+/// `StringCompare`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_compare`.
+int32_t ee_won_ipaddr_string_compare_values(const EeWonIpAddr *a, const EeWonIpAddr *b);
+
+/// `GetLocalHost`.
+long ee_won_ipaddr_local_host();
+
+/// `SetLocalHost`.
+bool ee_won_ipaddr_set_local_host(long host, bool validate);
+
+/// `GetLocalAddr`: a new value.
+EeWonIpAddr *ee_won_ipaddr_local_addr();
+
+/// ServerContext's `ToRust`: the value as servctx.rs's `EeWonAddr` (the host borrowed while the value lives).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
+
+/// ServerContext's `FromRust`: the value set from an `EeWonAddr`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
+void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 

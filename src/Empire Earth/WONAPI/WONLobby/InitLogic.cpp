@@ -151,7 +151,7 @@ void InitLogic::DNSCompletion(AsyncOp* inOp)
         // The original builds this address with mRememberHostString set and destroys it only after both
         // queries are started; it is separate from the per-entry addresses in the loops
         IPAddr address;
-        address.mRememberHostString = true;
+        address.SetRememberHostString(true);
         dir->RemoveAllAddresses();
         std::list<std::string>::iterator it = config->mDirServers.begin();
         while (true) {

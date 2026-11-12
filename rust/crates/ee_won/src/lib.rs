@@ -48,6 +48,7 @@ pub mod guiwin;
 pub mod guiwrap;
 /// cbindgen:ignore
 pub mod ipaddr;
+pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod md5;

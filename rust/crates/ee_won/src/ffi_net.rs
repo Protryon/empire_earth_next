@@ -2,7 +2,7 @@
 //! and the socket ops' algorithms. Addresses cross as (address, port), both in network byte order (a
 //! `PlatSockAddrIn`'s `mAddress` and `mPort`). Statuses are `long` (the C++ `WONStatus`).
 
-use crate::ipaddr::{self, Addr};
+use crate::ipaddr;
 use crate::netstats;
 use crate::ops::{self, LengthStep};
 use crate::socket;
@@ -16,33 +16,6 @@ unsafe fn text<'a>(data: *const u8, length: usize) -> &'a [u8] {
         // SAFETY: the caller passes `length` bytes
         unsafe { std::slice::from_raw_parts(data, length) }
     }
-}
-
-unsafe fn put_addr(a: Option<Addr>, address: *mut u32, port: *mut u16) -> bool {
-    match a {
-        Some(a) => {
-            // SAFETY: the caller's out-parameters
-            unsafe {
-                *address = a.address;
-                *port = a.port;
-            }
-            true
-        }
-        None => false,
-    }
-}
-
-/// Copies `src` with a NUL into `out` of `size` bytes (cut to fit); returns `src`'s length.
-unsafe fn put_c(src: &[u8], out: *mut c_char, size: usize) -> usize {
-    if !out.is_null() && size > 0 {
-        let n = src.len().min(size - 1);
-        // SAFETY: `out` has `size` bytes
-        unsafe {
-            std::ptr::copy_nonoverlapping(src.as_ptr(), out.cast(), n);
-            *out.add(n) = 0;
-        }
-    }
-    src.len()
 }
 
 // ---- WONStatus
@@ -89,87 +62,6 @@ pub extern "C" fn ee_won_netstats_get(counter: u32) -> i64 {
 
 // ---- IPAddr
 
-/// `Fn2B2660`: a dotted address or a host name (looked up) and a host-order port -> the address; false when it does
-/// not resolve.
-///
-/// # Safety
-/// `host` holds `length` bytes; the out-parameters are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_resolve(
-    host: *const u8,
-    length: usize,
-    port: u16,
-    address: *mut u32,
-    port_out: *mut u16,
-) -> bool {
-    unsafe { put_addr(ipaddr::resolve(text(host, length), port), address, port_out) }
-}
-
-/// `Fn2B2890`'s port: the text after the colon as `atoi` reads it, cut to 16 bits (host order).
-///
-/// # Safety
-/// `text_in` holds `length` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_port_of(text_in: *const u8, length: usize) -> u16 {
-    ipaddr::port_of(unsafe { text(text_in, length) })
-}
-
-/// `SetWithDefaultPortNoDNS`.
-///
-/// # Safety
-/// As `ee_won_ipaddr_resolve`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_parse_no_dns(
-    text_in: *const u8,
-    length: usize,
-    default_port: u16,
-    address: *mut u32,
-    port: *mut u16,
-) -> bool {
-    unsafe { put_addr(ipaddr::parse_no_dns(text(text_in, length), default_port), address, port) }
-}
-
-/// The dotted form of a network-order address into `out` (16 bytes).
-///
-/// # Safety
-/// `out` has 16 bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_dotted(address: u32, out: *mut c_char) {
-    unsafe { put_c(ipaddr::dotted(address).as_bytes(), out, 16) };
-}
-
-/// `GetHostAndPortString`: "host:port" (at most 49 bytes) into `out` (50 bytes); returns its length.
-///
-/// # Safety
-/// `host` holds `length` bytes; `out` has 50 bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_host_and_port(
-    host: *const u8,
-    length: usize,
-    port: u16,
-    out: *mut c_char,
-) -> usize {
-    let s = ipaddr::host_and_port(unsafe { text(host, length) }, port);
-    unsafe { put_c(&s, out, 50) }
-}
-
-/// The order of two addresses' 6-byte wire forms (`operator<`, `==`): negative, 0 or positive.
-///
-/// # Safety
-/// `a` and `b` point at 6 bytes each (a `PlatSockAddrIn`'s port and address).
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_compare_six(a: *const u8, b: *const u8) -> i32 {
-    // SAFETY: 6 bytes each
-    let (a, b) = unsafe { (&*(a as *const [u8; 6]), &*(b as *const [u8; 6])) };
-    ipaddr::compare_six(&Addr::from_six_bytes(a), &Addr::from_six_bytes(b)) as i32
-}
-
-/// `StringCompare` (network-order addresses and ports).
-#[no_mangle]
-pub extern "C" fn ee_won_ipaddr_string_compare(a_address: u32, a_port: u16, b_address: u32, b_port: u16) -> i32 {
-    ipaddr::string_compare(&Addr { address: a_address, port: a_port }, &Addr { address: b_address, port: b_port })
-}
-
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 pub type EeWonAddressSink = unsafe extern "C" fn(context: *mut c_void, name: *const u8, length: usize, host: u32);
 
@@ -182,27 +74,6 @@ pub unsafe extern "C" fn ee_won_ipaddr_local_addresses(details: bool, sink: EeWo
     for (name, host) in ipaddr::local_addresses(details) {
         // SAFETY: the sink's contract
         unsafe { sink(context, name.as_ptr(), name.len(), host) };
-    }
-}
-
-/// Whether a host-order address is one of this machine's (`SetLocalHost`'s test: the host name's addresses).
-#[no_mangle]
-pub extern "C" fn ee_won_ipaddr_is_local(host: u32) -> bool {
-    ipaddr::local_addresses(false).iter().any(|&(_, a)| a == host)
-}
-
-/// This machine's name into `out` (`size` bytes); false when the system gives none.
-///
-/// # Safety
-/// `out` has `size` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_ipaddr_host_name(out: *mut c_char, size: usize) -> bool {
-    match ipaddr::host_name() {
-        Some(n) => {
-            unsafe { put_c(&n, out, size) };
-            true
-        }
-        None => false,
     }
 }
 
@@ -310,21 +181,5 @@ mod tests {
         assert_eq!(body, 5);
         assert_eq!(unsafe { ee_won_op_length_step([0xffu8, 0xff].as_ptr(), 2, &mut body) }, 1);
         assert_eq!(unsafe { ee_won_op_length_step([1u8, 2, 3].as_ptr(), 3, &mut body) }, 2);
-    }
-
-    #[test]
-    fn addresses_through_the_abi() {
-        socket::start();
-        let (mut a, mut p) = (0u32, 0u16);
-        let t = b"127.0.0.1:1234";
-        assert!(unsafe { ee_won_ipaddr_parse_no_dns(t.as_ptr(), t.len(), 9, &mut a, &mut p) });
-        assert_eq!((u32::from_be(a), u16::from_be(p)), (0x7f00_0001, 1234));
-        let mut out = [0 as c_char; 50];
-        let n = unsafe { ee_won_ipaddr_host_and_port(b"h".as_ptr(), 1, 80, out.as_mut_ptr()) };
-        assert_eq!(n, 4);
-        let six_a = [0x04u8, 0xd2, 127, 0, 0, 1];
-        let six_b = [0x04u8, 0xd3, 0, 0, 0, 0];
-        assert!(unsafe { ee_won_ipaddr_compare_six(six_a.as_ptr(), six_b.as_ptr()) } < 0);
-        assert_eq!(unsafe { ee_won_ipaddr_compare_six(six_a.as_ptr(), six_a.as_ptr()) }, 0);
     }
 }

@@ -2,7 +2,7 @@
 default host 0 port 0 valid 0 text 0.0.0.0 / 0.0.0.0 0.0.0.0:0
 host port host 167838211 port 80 valid 1 text 10.1.2.3 / 10.1.2.3 10.1.2.3:80
 colon host 167838211 port 8080 valid 1 text 10.1.2.3 / 10.1.2.3 10.1.2.3:8080
-no colon host 167838211 port 8080 valid 0 text 10.1.2.3 / 10.1.2.3 10.1.2.3:8080
+no colon host 0 port 0 valid 0 text 0.0.0.0 / 0.0.0.0 0.0.0.0:0
 numeric host 2130706433 port 25 valid 1 text 127.0.0.1 / 127.0.0.1 127.0.0.1:25
 broadcast host -1 port 9999 valid 1 text 255.255.255.255 / 255.255.255.255 255.255.255.255:9999
 port text host 16909060 port 77 valid 1 text 1.2.3.4 / 1.2.3.4 1.2.3.4:77

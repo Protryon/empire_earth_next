@@ -188,6 +188,8 @@ static void Addresses()
     Log(IpShow("default", IPAddr()));
     Log(IpShow("host port", IPAddr("10.1.2.3", 80)));
     Log(IpShow("colon", IPAddr("10.1.2.3:8080")));
+    // (the original left the sockaddr of an address made from a text without a colon unset: its golden line showed
+    // the stack's last address, 10.1.2.3:8080; the Rust value is zero)
     Log(IpShow("no colon", IPAddr("10.1.2.3")));
     Log(IpShow("numeric", IPAddr(0x7f000001, 25)));
     Log(IpShow("broadcast", IPAddr::GetBroadcastAddr(9999)));
