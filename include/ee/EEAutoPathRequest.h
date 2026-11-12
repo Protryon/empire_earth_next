@@ -27,4 +27,11 @@ public:
     bool mIsDone;                           // +0x4c
 };
 
+// port (save version 0.277): a request as the saved game holds it (every field; EEPathManager.cpp), for the owners
+// that keep one across a save (EECPWallManager, the graph searches in progress). The load's is a new request (one
+// reference, the caller's)
+class FSFile;
+void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest);
+long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest);
+
 #endif

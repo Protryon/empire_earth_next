@@ -168,6 +168,13 @@ inline bool EESaveHasPathSearches(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 276;
 }
+// port: from 0.277 a save holds the wall manager's path request (EECPWallManager::Save, after the runs): a load
+// asked the wall being planned its path again at its first Update, which then waited a step (and found another path)
+// where the continued game went on with the finished one
+inline bool EESaveHasWallRequest(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 277;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;

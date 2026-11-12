@@ -1951,6 +1951,66 @@ long EEPathManager::LoadRunningState(FSFile& inFile)
     return theResult;
 }
 
+// port (save version 0.277): a path request's every field (ee/EEAutoPathRequest.h)
+void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest)
+{
+    outFile.Write(inRequest.mFrom.mX);
+    outFile.Write(inRequest.mFrom.mY);
+    outFile.Write(inRequest.mTo.mX);
+    outFile.Write(inRequest.mTo.mY);
+    outFile.Write(inRequest.mPlayerID);
+    outFile.Write(inRequest.mRequestID);
+    outFile.Write(inRequest.mPathLength);
+    outFile.Write(inRequest.mIsDone);
+    outFile.Write(inRequest.mFlags.mPlayerID);
+    for (int f = 0; f < 17; f++)
+        outFile.Write(inRequest.mFlags.mFlags[f]);
+    outFile.Write((unsigned long)inRequest.mPath.size());
+    for (size_t i = 0; i < inRequest.mPath.size(); i++) {
+        outFile.Write(inRequest.mPath[i].mX);
+        outFile.Write(inRequest.mPath[i].mY);
+    }
+}
+
+long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest)
+{
+    EETileCoordinate theFrom, theTo;
+    long thePlayerID = 0, theRequestID = 0, theLength = 0;
+    bool theDone = false;
+    EECPASGFlags theFlags;
+    unsigned long theCount = 0;
+    outRequest = NULL;
+    long theResult = inFile.Read(theFrom.mX);
+    long* const theLongs[] = {&theFrom.mY, &theTo.mX, &theTo.mY, &thePlayerID, &theRequestID, &theLength};
+    for (long* f : theLongs)
+        if (theResult == 0)
+            theResult = inFile.Read(*f);
+    if (theResult == 0)
+        theResult = inFile.Read(theDone);
+    if (theResult == 0)
+        theResult = inFile.Read(theFlags.mPlayerID);
+    for (int f = 0; f < 17 && theResult == 0; f++)
+        theResult = inFile.Read(theFlags.mFlags[f]);
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    std::vector<EETileCoordinate> thePath;
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        EETileCoordinate theTile;
+        theResult = inFile.Read(theTile.mX);
+        if (theResult == 0)
+            theResult = inFile.Read(theTile.mY);
+        thePath.push_back(theTile);
+    }
+    if (theResult != 0)
+        return theResult;
+    outRequest = new EEAutoPathRequest(theRequestID, thePlayerID, theFrom, theTo, theFlags);
+    outRequest->mFlags.mPlayerID = theFlags.mPlayerID;   // (the copy ctor zeroes it)
+    outRequest->mPath = thePath;
+    outRequest->mPathLength = theLength;
+    outRequest->mIsDone = theDone;
+    return 0;
+}
+
 // port (save version 0.276): a unit's tile search in progress as saved (SaveSearches); its storage as ee_astar's
 // bytes (rust/crates/ee_astar storage_save.rs)
 namespace {
