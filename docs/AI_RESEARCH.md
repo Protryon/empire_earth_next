@@ -4077,6 +4077,212 @@ the attack groups. Next: the port's militia and its flight from small raids agai
 the militia odds).
 
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+**The militia against the C++'s (seeds 2-17, balanced, 90 minutes).** The port now traces its militia decisions in
+the C++'s format (`classic_lua militia fight|run ...`; trace only):
+
+| | the C++ | the port |
+|---|---|---|
+| militia decisions (hits answered) | 1307 | 1916 |
+| fight / run | 1132 / 175 | 1739 / 177 |
+| citizens sent per fight | 4.9 | 2.3 |
+| soldiers per fight | 0.3 | 1.9 |
+| raiders per fight | 2.5 | 1.8 |
+| citizens dying in a fight (all game) | 282 | 211 |
+
+The militia is not the gap: the port's fights cost fewer citizens than the C++'s, and it has more soldiers at hand.
+The gap is the citizens killed while gathering. Over all game time in these 16 games, the port lost 932 citizens
+against the C++'s 576. The C++'s die fighting (282) or moving (180), and only 86 while gathering. The port's die
+hunting (162), at gold (147), at wood (93), foraging (70), at stone (64) and at iron (56). 548 of those 721 die
+within 20 s of their first hit, and 362 with no soldier of their own near. The port is also hit half as often again
+(1916 militia calls against 1307): the C++'s raids find it more. Next: what moves the C++'s hit citizens (their
+`move` deaths), and where the port's raided gatherers stand against the C++'s (distance from the town and drop
+sites).
+
+**What moves the C++'s hit citizens.** The engine's unit AI (EEUnitAI: run from or retaliate against an attacker)
+treats both seats alike. Its run trigger needs a goal that is not player-initiated, and both the classic and
+`ai.gather` give gather goals that are. The C++'s `move` deaths are its own location goals: the militia's run, the
+naval flight (land units under a warship's fire go to the town centre), and EECPRMFleeRaids, which moves the
+gatherers out of the danger zones. The C++ fled 774 times in 16 games. Its zones come from the militia's runs and
+from every naval flight. A Lua seat's naval flight is still the engine's: it moves the port's units, but it puts its
+zone on the classic's own lists, which the port's gatherers are not on. Giving the port that zone (a zone at the
+victim when a warship hits a citizen or a boat, once every 4 s) did not help, and was not kept. Balanced 32 seeds:
+12-15, 5 close (13-14 before). Citizens lost: 64.8 (60.8 before), 1267 after 60 minutes (1128 before), and 161
+killed by ships.
+
+**Where the port's raided gatherers stand.** Seeds 2-17, the citizens killed by an enemy:
+
+| tiles from the town | < 10 | 10-20 | 20-30 | 30-45 | 45+ |
+|---|---|---|---|---|---|
+| the C++ (502) | 107 | 198 | 134 | 51 | 12 |
+| the port (789) | 114 | 274 | 148 | 185 | 68 |
+
+The extra losses are mostly far out. 253 of the port's die 30 or more tiles from the town, against the C++'s 63.
+The port's hunters die at a median of 35 tiles (137; 40 to enemy Prehistoric towers), its gold miners at 27 and its
+stone miners at 29. The C++'s die near home: those killed fighting (which include its hunters) at a median of 15
+tiles, those moving at 20. The port also loses 55 citizens to ships against the C++'s 7.
+Next: the port's far gathering against the C++'s: the game it hunts, which lies beyond the explored land the C++
+sees whole (fog); the mines it takes; and the enemy towers near both.
+
+### 8.59 The classic computer player in Lua: the raids' flight (EECPRMFleeRaids), the gatherers killed by towers (2026-11-12, EE-SIM)
+
+**The flight.** The port has EECPRMFleeRaids: the gatherers within 8 tiles of a danger zone (30 s) go home. Traced on
+seeds 2-17, the C++'s flight fired 774 times (2790 units) and the port's only 37 times (45 units). The C++'s zones come
+from 175 militia runs and from its naval flights: 101 for land units and 558 for boats, each zone made only where a
+unit left. For the port, the engine runs the naval flight and moves the units, but it puts the zone on the classic's
+own lists. The port now makes that zone itself: a hit on an own unit by a warship, once every 4 s, makes a zone if
+any own unit within 12 tiles leaves (the boats round a boat; the citizens and melee soldiers round a land unit).
+This is EECPRMNavalFlee's rule. §8.58's first try made a zone for every hit on a citizen or a boat.
+
+| (32 seeds) | the C++ | the port before | the port now |
+|---|---|---|---|
+| flight fires (units) | 498 (2530) | about 74 | 705 (3021) |
+| won-lost | | 13-14, 5 close | 12-14, 6 close |
+| Lua citizens lost | | 60.8 | 61.8 |
+| citizens killed by ships | 14 | about 110 | 116 |
+
+The flight now fires about as often as the C++'s: more, because the port is hit more. It changes the outcome very
+little. It is kept for fidelity.
+
+**The towers.** The port's citizens killed by enemy towers: 145 in 32 games, against the C++'s 40. They die at gold
+(52) and hunting (65). The C++'s rules for hunt and mine sites are the port's: FindMines takes game within 2 (near) or
+6 (far) drop-off distances of the nearest town centre or settlement, and skips a site with HasEnemyNear. HasEnemyNear
+is the classic's own test through sees_all: every armed unit in the influence box. It leaves out units whose target
+search has been idle for more than 60 s, and so a quiet tower too. The difference is what the port can see. Its
+centres and game are the explored ones, so it finds fewer near sites and takes the far ones. Giving it every resource
+through the fog was tried in §8.58 and lost badly (5-25). Next: the hunting and mining sites against the enemy's
+towers (EECPNextSiteThreat's remembered towers, which the fog-honest test has), and the game the port can see near
+home.
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
+### 8.60 The classic computer player in Lua: the remembered towers on hunt and mine sites (tried, not kept) (2026-11-12, EE-SIM)
+
+§8.59 proposed a second check on hunt and mine sites: an enemy tower the seat remembers (EECPNextSiteThreat's tower
+test, offered as `ai.enemy_near(x, y, {towers = true})`) after HasEnemyNear. The bench (balanced, 32 seeds) came out
+identical to §8.59's: 12-14, 6 close, citizens lost 61.8, and 145 citizens killed by towers against the C++'s 40.
+A traced game (seed 2, 60 minutes) shows why. The finders called the check about 350 times, and it never found a
+tower. The tower kills do not come from the sites the finders choose:
+- most hunters die well into their work (112 of 145 more than 2 s after their first hit);
+- they die far out (a median of 38 tiles), in bursts at one spot (seed 10: 57 kills, most of them in minutes 60-66
+  at one herd 46 tiles out);
+- the engine carries a hunter on to the next animal of its herd, under the tower, with no new order from the script.
+
+The check and its binding were reverted. Next: what the C++ does with a hunter shot by a tower. Its militia ignores
+towers (its raiders are soldiers), so the answer is likely its herds. A tower that kills hunters could make a danger
+zone in the port, or end its hunt at that herd: a deviation, to be weighed against the C++'s own losses there.
+
+### 8.61 The classic computer player in Lua: the herds given up (2026-11-12, EE-SIM)
+
+**The C++'s hunters** (seeds 2-33, balanced). The C++ hunts little: 2.3 hunters at 30 minutes and 1.7 at 60 (its `cp
+food` lines). Its citizens killed by enemy towers are 41: 23 gathering, 12 moving and only 2 hunting, at a median 28
+tiles from its town. Its deaths while attacking (its hunters and its militia) lie at a median 15 tiles. Animals kill
+16 of its citizens and 46 of the port's. The port's hunters die at a median 25 tiles (235 in 32 games). Its far herds
+are the fog's: it sees fewer herds near home and goes on to the far ones it has explored (§8.59, §8.60).
+
+**The herds given up.** This is a DEVIATION (fog), and sensible play: a hunter hit by an enemy tower that dies within
+5 s gives that herd up. For 10 minutes no game within 12 tiles is hunted (FindMines skips it), and the hunters there
+leave it for the town (`militia.lua` and `resource.lua` herd_banned; ORIGIN).
+
+| (32 seeds) | before (§8.59) | herds given up |
+|---|---|---|
+| won-lost | 12-14, 6 close | 12-13, 7 close |
+| Lua citizens lost | 61.8 | 58.6 |
+| killed by enemy towers (of them hunting) | 145 (65) | 123 (30) |
+| the C++'s killed by towers | 40 | 41 |
+| Lua Copper / the C++'s | 23 / 21 | 24 / 21 |
+
+There are 5 bans a bench. Each one ends a stream of hunters going to one herd. Kept. Determinism: seeds 2 and 5,
+60 minutes, --repeat 2. 0 script errors.
+
+### 8.62 The classic computer player in Lua: where it stands (2026-11-12)
+
+The port (`ai/classic_lua`, manifest `classic_lua`) plays the C++ classic's decisions through the per-unit Lua
+interface. It reads the same data and personality, and keeps the C++'s thresholds and timings. Sections §8.39-§8.61
+record each stage. `ai/classic_lua/ORIGIN` maps every C++ file to its module, with what is ported, what stays in the
+engine and what is not started.
+
+**Parity.**
+- **balanced, no cheats** (the bench since §8.49; 90 minutes, Small, Hard, 2 AIs, the port against the C++):
+  - seeds 2-33: 12-13 with 7 close (§8.61);
+  - seeds 34-65: 12-17 with 3 close (§8.58);
+  - by our rule of thumb a 32-seed split this close is within noise (bench-noise note: decide on 32, confirm on 64).
+  - The port reaches Copper about as often (24 and 25 of 32, against the C++'s 21 and 22) and Bronze more often
+    (10-12 against 3-5).
+  - It loses more citizens: 58.6 a game against the C++'s 32.6. The gap is after 60 minutes, in raids on its
+    gatherers far from home (§8.58-§8.61). Its fights and its militia cost no more than the C++'s.
+- **classic with the cheats** (classicX: the classic personality, Hard's seven cheats to both classic seats; seeds
+  2-33, 90 minutes, on main 902a01c's exe), re-checked 2026-11-12: **2-1 with 29 close**, against §8.49's 4-0 with 28
+  close. Parity holds.
+  - Both sides reach the Stone Age in every game (the port at a median 45 minutes, the C++ at 48).
+  - Both stand at the popband's 50 citizens from 20 minutes.
+  - The port's army is larger (17.6 against 8.2 at 30 minutes), as at §8.49. The port loses more citizens (101.3
+    against 25.2), also as at §8.49 (101.1 against 24.5).
+  - 0 script errors. (The cheats must be set with `--set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal,
+    epochs, extra, popband, catchup, retire]"`: Hard keeps none in the data now. Without it, `--cheats all` turns
+    nothing on.)
+
+**The cheat capabilities** (manifest entries in ai/ais.json, declared only by classic_lua, shown in its trace start
+line, AI_LUA_UNITS §11):
+- `sees_all`, the classic's information cheat. With it, `ai.enemy_near` is HasEnemyNear (every armed unit, seen or
+  not), `ai.enemy_force` gives the militia's odds, and `ai.player_file` gives the C++'s intelligence files.
+- `fills_garrison`, the classic's garrison cheat (`ai.garrison_fill`, FillGarrison).
+- The lobby's cheats (cost, reveal, extra, popband, epochs, retire) act in the engine as for a classic seat. The
+  port runs catchup itself (ORIGIN).
+
+**The documented deviations** (ORIGIN has each in place). They come from four causes.
+- **The fog.** The port sees what is explored, where the C++ reads the whole map:
+  - the resource centres, regrouped every 15 s;
+  - the forest finder (the explored tree nearest the town);
+  - the dock sites (`ai.water_sites`, explored);
+  - the enemy armies, outside `ai.player_file` (those seen, counts as remembered);
+  - the attack's "largest" enemy (the nearest known building) and no "weakest";
+  - the humans' epochs (those the view's enemies carry);
+  - an idle citizen explores until it knows a resource;
+  - the untapped sites count for the citizen target only, while every site counts for the per-resource room (§8.58);
+  - the herds given up under enemy towers (§8.61).
+- **The interface.**
+  - Placement goes through `ai.find_site` with the one-tile margin, without CanBuildAt's choke, hill, gate and
+    walkable-ground rules.
+  - FindBuilder's shore rule for docks and towers uses `ai.shore`.
+  - The gatherers' room is the gatherers sent (`workers`).
+  - FindResourceTarget has no area hull test.
+  - The morale effect's fill is approximated (2 houses a town centre, 4 a capitol).
+  - The production counts come from queue lengths.
+  - The random draws are the script's stream.
+  - A missing SOL building is logged (`sol none`), since a script cannot add to the next epoch's count.
+  - ChooseFavoriteLandType draws among the trainable soldier classes.
+- **The army.**
+  - A sub-group does not split or merge.
+  - Targets are what lib.groups picks within 12 tiles.
+  - A town is a 16-tile cluster of the own buildings with its bounding box as hull.
+  - A defence task reaches 12 tiles (18 at a threat point).
+  - The target file's counts stand in for the C++'s files where `sees_all` does not reach.
+- **The engine's lists.** The engine's reflexes act on the C++'s own lists, so the port ports their effects:
+  - the militia and the danger zones (militia.lua);
+  - the naval flight's danger zone (§8.59);
+  - a fled boat's return to the idle list (§8.56).
+
+**C++ fixes found by the port** (both sides changed): the boat count (EECPUGatherSpecialUnitsCount's `inByClass`,
+§8.56), in our coast fishing and in the original's RequestFishingBoats; and the forage patches' boat cap of 32.
+
+**What is left.**
+- **Not started (ORIGIN):**
+  - the walls (EECPWallManager);
+  - the transports and ferries, and the island maps' landings;
+  - air, space and submarine groups, carriers and paratroopers;
+  - the wonder race;
+  - the ICBM;
+  - AidAllies, CheckRaids / Retaliate, BuildUp, the adjacent continents' step of the defence ladder;
+  - BalanceProduction, ChooseTransportClass;
+  - the robotic farm;
+  - the island map's hired garrison citizens;
+  - the chat taunts (no chat command).
+
+  The Small balanced and classic benches never need these: they end before the Middle Ages, on land maps. Islands,
+  late epochs and multi-ally games do.
+- **Open gaps in play:**
+  - the late raids on far gatherers (§8.58-§8.61: 1111 citizens lost after 60 minutes against the C++'s 599);
+  - the empty sub-groups' tasks (§8.55).
 
 
 ### 8.9 Next
