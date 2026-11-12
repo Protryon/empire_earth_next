@@ -13333,6 +13333,33 @@ bool ee_units_store_set_location(uint32_t id,
 /// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
 uint64_t ee_units_store_checksum_flag2();
 
+/// `EEWorld::mUpdateUnits.push_back` (`order`).
+void ee_units_order_push(uint32_t id);
+
+/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
+bool ee_units_order_erase(uint32_t id);
+
+/// `EEWorld::mUpdateUnits.clear()`.
+void ee_units_order_clear();
+
+/// The number of stepped units listed.
+uint32_t ee_units_order_count();
+
+/// The stepped list replaced by `count` ids in order (a load's reorder).
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null with `count` 0).
+void ee_units_order_reset(const uint32_t *ids, size_t count);
+
+/// TEST ONLY: the deque's `count` ids (in its order) against the list (`UpdateOrder::check`: 0 the same, else the
+/// first differing index plus 1); `out_unrecorded` gets the number of listed ids with no store record.
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null with `count` 0); `out_unrecorded` to a writable u32.
+uint32_t ee_units_order_check(const uint32_t *ids,
+                              size_t count,
+                              uint32_t *out_unrecorded);
+
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///
 /// # Safety

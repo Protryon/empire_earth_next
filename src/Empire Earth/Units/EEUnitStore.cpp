@@ -27,6 +27,7 @@
 #include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEPhysics.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
 #include "rust/ee_rust.h"
@@ -269,6 +270,36 @@ void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer)
     ee_units_store_clear_player(reinterpret_cast<uintptr_t>(inPlayer));
 }
 
+void EEUnitOrderPush(unsigned long inID)
+{
+    ee_units_order_push(static_cast<uint32_t>(inID));
+}
+
+void EEUnitOrderErase(unsigned long inID)
+{
+    ee_units_order_erase(static_cast<uint32_t>(inID));
+}
+
+void EEUnitOrderClear()
+{
+    ee_units_order_clear();
+}
+
+// the deque's ids (the handles' own: a freed unit's handle resolves to NULL but keeps its id)
+static void OrderIDs(std::vector<uint32_t>& outIDs)
+{
+    outIDs.clear();
+    for (size_t i = 0; i < gWorld.mUpdateUnits.size(); i++)
+        outIDs.push_back(gWorld.mUpdateUnits[i].GetSavedID());
+}
+
+void EEUnitOrderReset()
+{
+    std::vector<uint32_t> theIDs;
+    OrderIDs(theIDs);
+    ee_units_order_reset(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
+}
+
 unsigned long EEUnitStoreCheck(unsigned long inWhere)
 {
     static std::vector<EeUnitRecord> sObjects;
@@ -314,6 +345,22 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                 (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
                 (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
+    }
+    // the stepped units' deque against the Rust list (ee_units order.rs), in order; a difference counts like a field's
+    static std::vector<uint32_t> sOrderIDs;
+    OrderIDs(sOrderIDs);
+    uint32_t theUnrecorded = 0;
+    uint32_t theOrderAt = ee_units_order_check(sOrderIDs.empty() ? NULL : &sOrderIDs[0], sOrderIDs.size(), &theUnrecorded);
+    if (theOrderAt != 0) {
+        fprintf(stderr, "EE-UNIT-STORE: the stepped units (%zu) and the Rust list (%u) differ at index %u\n",
+                sOrderIDs.size(), ee_units_order_count(), theOrderAt - 1);
+        theCheck.mismatches += 1;
+    }
+    static uint32_t sMostUnrecorded = 0;
+    if (theUnrecorded > sMostUnrecorded) {   // TEST ONLY: stepped units with no store record (the step's leaves read it)
+        sMostUnrecorded = theUnrecorded;
+        fprintf(stderr, "EE-UNIT-ORDER: %u stepped units without a store record at %lu (tick %lu)\n", theUnrecorded,
+                inWhere, gPhysics != NULL ? (unsigned long)gPhysics->mNumTicksDone : 0ul);
     }
     EESimCaptureRecord theRecord(0x4b435355u);   // "USCK"
     theRecord.U32((unsigned int)inWhere);

@@ -99,6 +99,14 @@ void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer);
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
 
+// the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order): each change
+// of the deque reported where it is made (UpdateActiveUnits, RebuildActiveUnits, Clear); EEUnitOrderReset copies the
+// deque whole (after a load's reorder, EEPhysics::Tick's after-load fixups). USCK compares the two.
+void EEUnitOrderPush(unsigned long inID);
+void EEUnitOrderErase(unsigned long inID);
+void EEUnitOrderClear();
+void EEUnitOrderReset();
+
 class EEPlayer;
 // the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
 // invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count
@@ -120,7 +128,8 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
 void EEFillSweep();
 
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
-// on-the-map flags, and the out-of-sync checksum's flags 1 and 2 over the chain against the store's; the count compared.
+// on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'
+// deque against the Rust list (EEUnitOrder*); the count compared.
 // inWhere names the point (0: after a physics tick, else the executed message's type). A mismatch prints the unit and
 // field and exits 3.
 unsigned long EEUnitStoreCheck(unsigned long inWhere);

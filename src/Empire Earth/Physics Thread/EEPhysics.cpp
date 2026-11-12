@@ -759,6 +759,7 @@ void EEPhysics::Tick()
         theFixups.swap(sAfterLoad);
         for (size_t i = 0; i < theFixups.size(); i++)
             theFixups[i]();
+        EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
     }
     this->ReportStatistics();
     if (this->mTicksToProcess == 0) {
