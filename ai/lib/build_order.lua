@@ -22,7 +22,8 @@ M.OPT = {
     techs = true,           -- the town centre's gathering techs
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
-    food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+    food_reach = false,     -- the Stone claim reaches claim_dry while the food places are short (off: the owner's playtest,
+                            -- "unpopulated food settlement near my base"; the bisect: no gain)
     boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
                             -- bank's wood pays the dock and the boats first
     shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
