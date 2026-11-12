@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 namespace WONAPI {
 // Direct-address form of the constructor; nothing in this build calls it.
 DBProxyOp::DBProxyOp(const IPAddr& theAddr)
@@ -34,36 +35,25 @@ DBProxyOp::DBProxyOp(ServerContext* inContext)
 // Builds the DBProxy message (message and sub-message type plus the request data)
 WONStatus DBProxyOp::GetNextRequest()
 {
-    WriteBuffer aRequest(this->mLengthFieldSize,true);
-    aRequest.AppendByte(5);
-    aRequest.AppendShort(14);
-    aRequest.AppendShort(this->mMessageType);
-    aRequest.AppendShort(this->mSubMessageType);
-    aRequest.AppendBuffer(this->mRequestData.get(),0);
-    this->mRequest=aRequest.ToByteBuffer(true);
+    // the request is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_PROXY, this->mLengthFieldSize);
+    q.mReq.message = this->mMessageType;
+    q.mReq.sub = this->mSubMessageType;
+    q.mReq.data = DbRequest::Buffer(this->mRequestData.get());
+    this->mRequest=q.Build();
     return WS_ServerReq_Recv;
 }
 // FUNCTION: WON 0x006ccd30
 // Collects reply data across messages until the last-reply flag; then returns the server status
 WONStatus DBProxyOp::CheckResponse()
 {
-    ReadBuffer aReply(this->mResponse->data(),this->mResponse->length());
-    unsigned char aHeader=aReply.ReadByte();
-    unsigned short aService=aReply.ReadShort();
-    this->mMessageReplyType=aReply.ReadShort();
-    this->mSubMessageReplyType=aReply.ReadShort();
-    WONStatus aStatus=aReply.ReadShort();
-    aReply.ReadString(this->mReplyErrorString,2);
-    unsigned char aFlags=aReply.ReadByte();
-    if (aHeader!=5 || aService!=14)
+    // the reply's read is Rust's (ee_won db.rs)
+    bool anInvalid=false;
+    WONStatus aStatus=DbProxyReply(this->mResponse.get(),this->mMessageReplyType,this->mSubMessageReplyType,
+                                   this->mReplyErrorString,this->mReceivedData,this->mReplyData,&anInvalid);
+    if (anInvalid)
         return this->InvalidReplyHeader();
-    if (aReply.pos()<aReply.length())
-        this->mReceivedData.AppendBytes(aReply.data()+aReply.pos(),aReply.length()-aReply.pos());
-    if ((aFlags&0x80)!=0) {
-        this->mReplyData=this->mReceivedData.ToByteBuffer(true);
-        return aStatus;
-    }
-    return WS_ServerReq_Recv;
+    return aStatus;
 }
 }
 

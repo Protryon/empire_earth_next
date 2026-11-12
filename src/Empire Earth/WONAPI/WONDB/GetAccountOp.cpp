@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006ccef0
 // Sets 4-byte length fields and creates an empty profile
@@ -31,13 +32,10 @@ GetAccountOp::GetAccountOp(ServerContext* inContext,AuthContext* inAuth)
 // Builds the get-account message listing the profile fields wanted
 WONStatus GetAccountOp::GetNextRequest()
 {
-    WriteBuffer aRequest(this->mLengthFieldSize,true);
-    aRequest.AppendByte(5);
-    aRequest.AppendShort(14);
-    aRequest.AppendShort(1002);
-    aRequest.AppendShort(6);
-    this->mProfileData->PackRequestData(aRequest,false);
-    this->mRequest=aRequest.ToByteBuffer(true);
+    // the request is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_GET_ACCOUNT,this->mLengthFieldSize);
+    q.mReq.profile=this->mProfileData->GetProfile();
+    this->mRequest=q.Build();
     return WS_ServerReq_Recv;
 }
 
@@ -45,21 +43,14 @@ WONStatus GetAccountOp::GetNextRequest()
 // Checks the reply and reads the account's email and profile fields; returns the status
 WONStatus GetAccountOp::CheckResponse()
 {
+    // the reply's read is Rust's (ee_won db.rs)
+    EeWonDbReply r=DbAccountReply(EE_WON_DB_GET_ACCOUNT,this->mResponse.get(),this->mErrorString,&this->mEmail);
+    if (r.verdict==EE_WON_DB_INVALID_HEADER)
+        return this->InvalidReplyHeader();
+    if (r.email!=2)
+        return (WONStatus)r.result;
     ReadBuffer aReply(this->mResponse->data(),this->mResponse->length());
-    unsigned char aHeader=aReply.ReadByte();
-    unsigned short aService=aReply.ReadShort();
-    unsigned short aMessage=aReply.ReadShort();
-    unsigned short aSubMessage=aReply.ReadShort();
-    WONStatus aStatus=aReply.ReadShort();
-    aReply.ReadString(this->mErrorString,2);
-    aReply.ReadByte();
-    if (aHeader!=5 || aService!=14)
-        return this->InvalidReplyHeader();
-    if (aStatus!=0)
-        return aStatus;
-    if (aMessage!=1002 || aSubMessage!=7)
-        return this->InvalidReplyHeader();
-    aReply.ReadString(this->mEmail,1);
+    aReply.SetPos((int)r.profile_at);
     this->mProfileData->UnpackGetData(aReply);
     return WS_Success;
 }

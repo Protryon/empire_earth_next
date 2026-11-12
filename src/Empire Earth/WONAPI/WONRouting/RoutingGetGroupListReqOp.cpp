@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006c5ff0
 // Creates a group list request to a routing server address with the given list flags
@@ -21,30 +22,20 @@ RoutingGetGroupListReqOp::RoutingGetGroupListReqOp(const IPAddr& inAddress,unsig
 // Builds the get-group-list request message and asks for the reply next
 WONStatus RoutingGetGroupListReqOp::GetNextRequest()
 {
-    WriteBuffer aRequest(this->mLengthFieldSize,true);
-    aRequest.AppendByte(3);
-    aRequest.AppendByte(7);
-    aRequest.AppendByte(26);
-    aRequest.AppendShort((unsigned char)this->mOp->mFlags);
-    this->mRequest=aRequest.ToByteBuffer(true);
+    // the request is Rust's (ee_won routemsg.rs)
+    this->mRequest=RouteGroupListRequest(this->mLengthFieldSize,this->mOp->mFlags);
     return WS_ServerReq_Recv;
 }
 // FUNCTION: WON 0x006c6270
 // Checks the reply header and status and parses the group list into the inner op; returns the status
 WONStatus RoutingGetGroupListReqOp::CheckResponse()
 {
-    ReadBuffer aMessage(this->mResponse->data(),this->mResponse->length());
-    unsigned char aHeader=aMessage.ReadByte();
-    unsigned char aService=aMessage.ReadByte();
-    unsigned char aType=aMessage.ReadByte();
-    if(aHeader!=3 || aService!=7 || aType!=25)
+    // the read is Rust's (ee_won routemsg.rs): the header, the status and the group list into the inner op
+    bool anInvalidHeader=false;
+    WONStatus aStatus=RouteGroupListReqReply(this->mOp.get(),this->mResponse.get(),&anInvalidHeader);
+    if(anInvalidHeader)
         return this->InvalidReplyHeader();
-    WONStatus aStatus=aMessage.ReadShort();
-    if(aStatus!=0)
-        return aStatus;
-    if(!this->mOp->ParseGroupListObj(aMessage.data()+aMessage.pos(),aMessage.Available()))
-        return WS_MessageUnpackFailure;
-    return WS_Success;
+    return aStatus;
 }
 }
 

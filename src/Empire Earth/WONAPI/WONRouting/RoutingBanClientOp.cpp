@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -23,18 +24,8 @@ RoutingBanClientOp::RoutingBanClientOp(RoutingConnection* inConnection)
 // Sends the routing server the ban/unban request, naming the client by WON id, CD-key id or client id
 void RoutingBanClientOp::SendRequest()
 {
-    this->InitSendMsg(3);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendBool(this->mIsBanned);
-    this->mSendMsg.AppendLong(this->mBanTime);
-    this->mSendMsg.AppendWString(this->mBanComment, 2);
-    if (this->mBanByWONId) {
-        this->mSendMsg.AppendByte(this->mWONIdIsCDKeyId ? 3 : 2);
-        this->mSendMsg.AppendLong(this->mWONId);
-    } else {
-        this->mSendMsg.AppendByte(1);
-        this->mSendMsg.AppendShort(this->mClientId);
-    }
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendBan(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -42,8 +33,8 @@ void RoutingBanClientOp::SendRequest()
 // Accepts only the routing status reply and returns its status
 WONStatus RoutingBanClientOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c4390
 // Returns the op type (ban client)
