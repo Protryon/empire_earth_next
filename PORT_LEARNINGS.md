@@ -8730,3 +8730,54 @@ C++ made them; the WON servers are gone): only the drivers exercise the Rust ops
   (`GetEntry`, `IsValid`, `SetValid`, expiry, entity tag, `UpdateEntry`), `WONFile`'s stat, the receive op's skip,
   binary and modify time flags and a child op for the redirect: codes enough for the base, but the accessors in the
   lobby lane's files first.
+
+
+## R6: WON's Internet code, round 10 (ServerRequestOp's exchange on the Rust op base; GetCertOp and DetectFirewallOp on it)
+
+Branch `rust-won-net10`. Measured by net C++ deletion, as rounds 7 to 9. Nothing in the game reaches this code but
+an Internet login (the lobby's version check, add friend, lost password and user name, the certificate request,
+the firewall test, the directory and account ops; the servers are gone): only the drivers and the Rust replays
+exercise it. RustServerOp::HostCall's new cases only compile; no tour, LAN game or EE-SIM run calls them.
+
+- **The exchange is a Plan.** `reqhost.rs`'s `ReqPlan` keeps ServerRequestOp's members (the address list and its
+  iterator, the current address, both sessions, the socket, the server context, the flags, the last server error,
+  the certificate status, the request and the reply) and runs server.rs's exchange over a `RequestEnv` made of host
+  calls (14 new codes: the auth type and context, ConnectTime, GetTimeout, the certificate's user id, the context's
+  CopyAddresses and NotifyFailed, Get/PutSession, the crypt transform, the tracker's KillAll, the peer auth op's
+  session and certificate status, the is-a-RecvMsgOp test). A derived op is a `HostRequest` behind a lock of its own
+  (its steps may make host calls; the exchange's members stay behind the base's lock, never held across a call).
+  What can call back into the op (Finish, Track with RunAsync of the firewall's datagram receive) runs after the
+  derived op's lock is let go (`Own`, `HostRequest::datagram`).
+- **Four kinds of derived op.** The round 7/8 Rust ops through `Plain` (the lobby's four now `RustServerOp::NewRequest`);
+  GetCertOp (`certhost.rs`) and DetectFirewallOp (`fwhost.rs`): round 6's Rust objects, each statement of their old
+  hook tables one host call (33 codes) and their own side (request, reply, server error, mode, time left, the session
+  key) the exchange's; and the ops still derived in C++ (`CppReq`: the directory, account and routing request ops),
+  whose GetNextRequest, CheckResponse and Reset are the C++ virtuals reached by three codes. ServerRequestOp is now a
+  20-line `RustServerOp` those C++ ops build on (mRequest, mResponse, SetLastServerError, InvalidReplyHeader);
+  ServerRequestOp.cpp, GetCertOp.cpp and DetectFirewallOp.cpp are deleted; GetCertOp and DetectFirewallOp are thin
+  RustServerOps (constructor and the accessors the game uses).
+- **Golden first, from ServerRequestOp.cpp as it was.** `won_hostop_test`'s new op `R`: the original half is
+  ServerRequestOp.cpp's statements (server.rs's exchange over its members, its primitives as host calls over the
+  stand-in), with a contest call, a ping and a user id lookup as the derived ops; 60 sequences appended to
+  `golden_hostop.txt` (the earlier part byte for byte), the stand-in's answers biased for these sequences only
+  (expired-session replies, ping and DB proxy replies, a peer auth certificate failure). 2,280,335 checks of 20,000
+  sequences per op, 0 failed; a mutation (no PutSession, no server error for an invalid header) failed 66,489 and the
+  Rust replay. GetCertOp and DetectFirewallOp: `golden_getcert.txt` and `golden_fwop.txt` replayed again through the
+  base (every object statement a host call answered by the replays' stand-ins, the op's side the stand-in's);
+  mutations (Verify's block and certificate swapped, the datagram host test inverted) fail them.
+- **The original's undefined corners, defined.** The address iterator before any RunHook (default-constructed) and
+  after the context's copy (left dangling: an empty copy finishes before the rewind, and a later callback read it;
+  the driver crashed there before this was defined) is the list's begin; decrementing it at the begin gives the end,
+  as a list's iterator does (an expired-session reply on a finished op). The reuse and expiry flags, unset before a
+  RunHook, start false. A request's reply not received reads as NULL.
+- **Two locks in one expression deadlock.** `assert_eq!((h.st().a, h.st().b), ..)` holds the first guard while taking
+  the second: a test hung until it was split. Read the members under one guard.
+- **`rust_build.py header` and `xtask cbindgen` disagreed once** on the order of two consts (the gate's header test
+  failed after `header` said current): regenerate with `cargo run -p xtask -- cbindgen`.
+- **Behaviour changes.** None intended. GetCertOp's GetErrorList, GetCommunityStatusList, GetSessionKey,
+  SetNewPassword and SetAuthContext had no C++ caller and are now numbers of the Rust op only. RoutingLogic's
+  `GetAddr()` on the group list op reads the first address from Rust.
+- **Not moved, and why.** The ops still derived in C++ (GetDirOp, GetMultiDirOp, FindEntityOp, GetAliasDirOp,
+  GetServiceOp, the account ops, the routing group list op) keep their C++ members because the lobby, EEWonNet and
+  ServerContext read their DirEntity lists, GetEntityRequests and profiles: as Rust ops they need those readers on
+  accessors first. HTTPGetOp / GetHTTPDocumentOp: not started (a scripted-socket driver the size of FTPGetOp's).
