@@ -1,8 +1,15 @@
-//! Round 8's ops derived from `ServerRequestOp` in Rust ([`RequestOp`]): WONDB's `ContestCallOp` and
-//! `EventReportOp`, WONMisc's `ReportPatchStatusOp` (a `DBProxyOp`, [`DbProxy`]) and WONServer's `PingOp`. Their
-//! C++ classes (`ContestCallOp.cpp`, `EventReportOp.cpp`, `ReportPatchStatusOp.cpp`, `PingOp.cpp` and their
-//! headers) are deleted; a C++ `ServerRequestOp` runs one made by [`ee_won_reqops_new`] from its members, and its
-//! callers read the results through [`crate::reqop::ee_won_reqop_bytes`] / [`crate::reqop::ee_won_reqop_num`].
+//! Round 8's ops derived from `ServerRequestOp` in Rust ([`RequestOp`]): WONDB's `ContestCallOp`, `EventReportOp`
+//! and `GetUserIdFromNameOp`, WONMisc's `ReportPatchStatusOp` and `CheckValidVersionOp` (`DBProxyOp`s,
+//! [`DbProxy`]) and WONServer's `PingOp`. Their C++ classes (`ContestCallOp.cpp`, `EventReportOp.cpp`,
+//! `GetUserIdFromNameOp.cpp`, `ReportPatchStatusOp.cpp`, `CheckValidVersionOp.cpp`, `PingOp.cpp`, their headers,
+//! and `DBProxyOp.cpp`, the base none is left of) are deleted; a C++ `ServerRequestOp` runs one made by
+//! [`ee_won_reqops_new`] from its members (the lobby's two by [`ee_won_reqop_user_id`] and
+//! [`ee_won_reqop_version_check`]), and its callers read the results through
+//! [`crate::reqop::ee_won_reqop_bytes`] / [`crate::reqop::ee_won_reqop_num`].
+//!
+//! - The lobby's add-friend dialog looks the friend's id up by name (`RoutingLogic::AddFriend`: the user id
+//!   lookup, its id read as [`EE_WON_REQOP_USER_ID`]); its login screen checks the version
+//!   (`InitLogic::StartVersionCheck`: the product, config and version; nothing reads the reply's patches).
 //!
 //! - The contest call refuses to run without an auth type (`WS_ServerReq_NeedAuthContext`), turns the base's auth2
 //!   off, sends with a 2-byte length field and reads the certificate's user id at each request.
@@ -15,7 +22,7 @@
 //! `golden_reqops.txt` was printed by `tests/won/won_reqops_test.cpp` over the original's statements before the
 //! port. Reached by nothing in the game (no C++ made these ops; their servers are gone).
 
-use crate::adminop::Member;
+use crate::adminop::{Member, PatchRecord};
 use crate::db::{self, Attachment, Detail, Event};
 use crate::patch;
 use crate::reqop::{hex, Checked, DbProxy, EeWonReqOp, RequestOp, ST_RECV, ST_SUCCESS};
@@ -33,6 +40,10 @@ pub const EE_WON_REQOPS_EVENT: i32 = 2;
 pub const EE_WON_REQOPS_PATCH_STATUS: i32 = 3;
 /// `PingOp`: the length field size, the extended flag
 pub const EE_WON_REQOPS_PING: i32 = 4;
+/// `GetUserIdFromNameOp`: the user name (UTF-16 LE)
+pub const EE_WON_REQOPS_USER_ID: i32 = 5;
+/// `CheckValidVersionOp`: the product, the version record's config and version
+pub const EE_WON_REQOPS_VERSION_CHECK: i32 = 6;
 
 /// the contest's `GetReplyData()` (bytes; none while NULL)
 pub const EE_WON_REQOP_CONTEST_REPLY: i32 = 1;
@@ -48,6 +59,11 @@ pub const EE_WON_REQOP_PING_VERSION: i32 = 21;
 pub const EE_WON_REQOP_PING_PID: i32 = 22;
 /// the ping's `mIsAuth` (number)
 pub const EE_WON_REQOP_PING_IS_AUTH: i32 = 23;
+/// the user id lookup's `GetUserId()` (number)
+pub const EE_WON_REQOP_USER_ID: i32 = 30;
+/// the version check's newest version and its description URL (bytes)
+pub const EE_WON_REQOP_VERSION_TO: i32 = 31;
+pub const EE_WON_REQOP_VERSION_URL: i32 = 32;
 
 /// `WS_ServerReq_NeedAuthContext`
 const ST_NEED_AUTH_CONTEXT: i32 = 100056;
@@ -358,6 +374,136 @@ impl RequestOp for PingOp {
     }
 }
 
+// ---- GetUserIdFromNameOp
+
+/// `GetUserIdFromNameOp`
+#[derive(Debug, Default)]
+pub struct UserIdOp {
+    pub name: Vec<u16>,
+    pub user_id: u32,
+    pub proxy: DbProxy,
+}
+
+const USER_ID_SUB: i16 = 16;
+
+impl RequestOp for UserIdOp {
+    fn run_hook(&mut self) {
+        self.proxy.message = 1002;
+        self.proxy.sub = USER_ID_SUB;
+        self.proxy.request_data = Some(db::user_id_data(&self.name));
+    }
+    fn next_request(&mut self, field_size: u8) -> (i32, Option<Vec<u8>>) {
+        self.proxy.next_request(field_size)
+    }
+    fn check_response(&mut self, response: &[u8]) -> Checked {
+        let r = self.proxy.check_response(response);
+        if r != Checked::Status(ST_SUCCESS) {
+            return r;
+        }
+        if !db::answers(self.proxy.reply_sub, USER_ID_SUB as u16) {
+            return Checked::InvalidHeader;
+        }
+        // the reply data's first long; a shorter one threw
+        match db::user_id(self.proxy.reply_data()) {
+            Some(id) => {
+                self.user_id = id as u32;
+                Checked::Status(ST_SUCCESS)
+            }
+            None => Checked::Cut,
+        }
+    }
+    fn describe(&self) -> String {
+        format!("{} u{}", self.proxy.describe(), self.user_id)
+    }
+    fn num(&self, which: i32) -> i64 {
+        if which == EE_WON_REQOP_USER_ID {
+            i64::from(self.user_id)
+        } else {
+            0
+        }
+    }
+}
+
+// ---- CheckValidVersionOp
+
+/// `CheckValidVersionOp` (`mMsgType` 1; its `VersionData` the config and version, no types: nothing set them)
+#[derive(Debug, Default)]
+pub struct VersionCheckOp {
+    pub product: Vec<u8>,
+    pub config: Vec<u8>,
+    pub version: Vec<u8>,
+    /// `mGetPatchList` (true: nothing cleared it)
+    pub get_patch_list: bool,
+    pub version_to: Vec<u8>,
+    pub version_url: Vec<u8>,
+    pub patches: Vec<PatchRecord>,
+    pub proxy: DbProxy,
+}
+
+/// `WS_DBProxyServ_ValidNotLatest` .. `WS_DBProxyServ_OutOfDate`: the version answers the check reads on
+const VALID_NOT_LATEST: i32 = -2816;
+const OUT_OF_DATE: i32 = -2814;
+
+impl RequestOp for VersionCheckOp {
+    fn run_hook(&mut self) {
+        self.proxy.message = 1004;
+        self.proxy.sub = 1;
+        let r = patch::version_check_request(&self.product, &self.config, &self.version, &[], self.get_patch_list);
+        self.proxy.request_data = Some(r);
+    }
+    fn next_request(&mut self, field_size: u8) -> (i32, Option<Vec<u8>>) {
+        self.proxy.next_request(field_size)
+    }
+    fn check_response(&mut self, response: &[u8]) -> Checked {
+        let r = self.proxy.check_response(response);
+        let Checked::Status(result) = r else { return r };
+        if result < VALID_NOT_LATEST || (result > OUT_OF_DATE && result != ST_SUCCESS) {
+            return r;
+        }
+        if !self.proxy.answers_sub() {
+            return Checked::InvalidHeader;
+        }
+        // each field assigned as read, each record pushed whole (from the version to the newest, active, the
+        // config); a cut throws after them
+        let data = self.proxy.reply_data().to_vec();
+        for f in patch::read_patch_reply(&data, true) {
+            let (at, len) = (f.at as usize, f.len as usize);
+            let s = || if f.whole { data[at..at + len].to_vec() } else { Vec::new() };
+            match f.slot {
+                patch::EE_WON_PATCH_VERSION_TO => self.version_to = s(),
+                patch::EE_WON_PATCH_VERSION_URL => self.version_url = s(),
+                patch::EE_WON_PATCH_RECORD => {
+                    let base = PatchRecord {
+                        from: self.version.clone(),
+                        to: self.version_to.clone(),
+                        active: true,
+                        config: self.config.clone(),
+                        ..Default::default()
+                    };
+                    self.patches.push(PatchRecord::read_over(base, &data[at..at + len], false));
+                }
+                patch::EE_WON_PATCH_END => {}
+                _ => return Checked::Cut,
+            }
+        }
+        r
+    }
+    fn describe(&self) -> String {
+        let mut s = format!("{} o{} w{}", self.proxy.describe(), hex(&self.version_to), hex(&self.version_url));
+        for p in &self.patches {
+            s += &format!(" {}", p.describe());
+        }
+        s
+    }
+    fn bytes(&self, which: i32) -> Option<Vec<u8>> {
+        match which {
+            EE_WON_REQOP_VERSION_TO => Some(self.version_to.clone()),
+            EE_WON_REQOP_VERSION_URL => Some(self.version_url.clone()),
+            _ => None,
+        }
+    }
+}
+
 /// The op of `kind` (`EE_WON_REQOPS_*`) with its members in that kind's order; `None` for another kind.
 pub fn new_op(kind: i32, members: &[Member]) -> Option<Box<dyn RequestOp>> {
     let mut m = Members { m: members, at: 0 };
@@ -374,6 +520,11 @@ pub fn new_op(kind: i32, members: &[Member]) -> Option<Box<dyn RequestOp>> {
         EE_WON_REQOPS_PING => {
             let field_size = m.num() as u8;
             Box::new(PingOp { field_size, extended: m.num() != 0, ..Default::default() })
+        }
+        EE_WON_REQOPS_USER_ID => Box::new(UserIdOp { name: m.wide(), ..Default::default() }),
+        EE_WON_REQOPS_VERSION_CHECK => {
+            let (product, config, version) = (m.bytes(), m.bytes(), m.bytes());
+            Box::new(VersionCheckOp { product, config, version, get_patch_list: true, ..Default::default() })
         }
         _ => return None,
     })
@@ -404,6 +555,34 @@ pub unsafe extern "C" fn ee_won_reqops_new(
         Some(op) => EeWonReqOp::new(op),
         None => std::ptr::null_mut(),
     }
+}
+
+/// The lobby's friend id lookup (`GetUserIdFromNameOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_user_id(name: *const u8, len: usize) -> *mut EeWonReqOp {
+    let name = utf16_from_le_bytes(unsafe { crate::ffi::bytes(name, len) });
+    EeWonReqOp::new(Box::new(UserIdOp { name, ..Default::default() }))
+}
+
+/// The lobby's version check (`CheckValidVersionOp` with its product, config and version).
+///
+/// # Safety
+/// Each pointer holds its length's bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_version_check(
+    product: *const u8,
+    product_len: usize,
+    config: *const u8,
+    config_len: usize,
+    version: *const u8,
+    version_len: usize,
+) -> *mut EeWonReqOp {
+    let b = |p, n| unsafe { crate::ffi::bytes(p, n) }.to_vec();
+    let (product, config, version) = (b(product, product_len), b(config, config_len), b(version, version_len));
+    EeWonReqOp::new(Box::new(VersionCheckOp { product, config, version, get_patch_list: true, ..Default::default() }))
 }
 
 #[cfg(test)]

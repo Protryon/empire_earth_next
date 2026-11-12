@@ -771,6 +771,12 @@ constexpr static const int32_t EE_WON_REQOPS_PATCH_STATUS = 3;
 /// `PingOp`: the length field size, the extended flag
 constexpr static const int32_t EE_WON_REQOPS_PING = 4;
 
+/// `GetUserIdFromNameOp`: the user name (UTF-16 LE)
+constexpr static const int32_t EE_WON_REQOPS_USER_ID = 5;
+
+/// `CheckValidVersionOp`: the product, the version record's config and version
+constexpr static const int32_t EE_WON_REQOPS_VERSION_CHECK = 6;
+
 /// the contest's `GetReplyData()` (bytes; none while NULL)
 constexpr static const int32_t EE_WON_REQOP_CONTEST_REPLY = 1;
 
@@ -791,6 +797,14 @@ constexpr static const int32_t EE_WON_REQOP_PING_PID = 22;
 
 /// the ping's `mIsAuth` (number)
 constexpr static const int32_t EE_WON_REQOP_PING_IS_AUTH = 23;
+
+/// the user id lookup's `GetUserId()` (number)
+constexpr static const int32_t EE_WON_REQOP_USER_ID = 30;
+
+/// the version check's newest version and its description URL (bytes)
+constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
+
+constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
@@ -8598,6 +8612,23 @@ void ee_won_reqop_describe(const EeWonReqOp *op, EeWonByteSink sink, void *conte
 EeWonReqOp *ee_won_reqops_new(int32_t kind,
                               const EeWonAdminValue *values,
                               size_t count);
+
+/// The lobby's friend id lookup (`GetUserIdFromNameOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_user_id(const uint8_t *name, size_t len);
+
+/// The lobby's version check (`CheckValidVersionOp` with its product, config and version).
+///
+/// # Safety
+/// Each pointer holds its length's bytes.
+EeWonReqOp *ee_won_reqop_version_check(const uint8_t *product,
+                                       size_t product_len,
+                                       const uint8_t *config,
+                                       size_t config_len,
+                                       const uint8_t *version,
+                                       size_t version_len);
 
 size_t ee_won_resource_count();
 

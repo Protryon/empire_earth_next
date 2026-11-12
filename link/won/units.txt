@@ -47,9 +47,7 @@
 2c78c0 2c7aaf WONRouting/RoutingMuteClientOp.cpp
 2c8450 2c8a1f WONRouting/RoutingRegisterClientOp.cpp
 2cbe70 2cca0d WONDB/CreateAccountOp.cpp
-2cca10 2ccee4 WONDB/DBProxyOp.cpp
 2ccef0 2cd39c WONDB/GetAccountOp.cpp
-2cd3a0 2cd762 WONDB/GetUserIdFromNameOp.cpp
 2cd770 2ce08a WONDB/ProfileData.cpp
 2ce840 2ced4d WONDB/UpdateAccountOp.cpp
 2cf5c0 2cfd67 WONMisc/DetectFirewallOp.cpp
@@ -60,7 +58,6 @@
 2d3830 2d7a1c WONMisc/HTTPGetOp.cpp
 2d7a20 2d8391 WONMisc/URL.cpp
 2d83a0 2d8c7e WONMisc/PatchTypes.cpp
-2d8c80 2d95a0 WONMisc/CheckValidVersionOp.cpp
 2d95a0 2d995e WONCommon/DNSTestOp.cpp
 2dcce0 2dcfae WONAuth/AuthBase.cpp
 2dcfb0 2dd1c9 WONAuth/AuthCertificate.cpp

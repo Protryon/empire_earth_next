@@ -150,8 +150,13 @@ pub struct PatchRecord {
 impl PatchRecord {
     /// `ReadFromBuffer(record, true)` over a new record (a patch list's: with the config and versions)
     fn read(data: &[u8]) -> PatchRecord {
-        let mut p = PatchRecord::default();
-        for f in patch::read_patch(data, 0, true) {
+        PatchRecord::read_over(PatchRecord::default(), data, true)
+    }
+
+    /// `ReadFromBuffer(record, list)` over `p` (the version check's: its config, versions and active flag set
+    /// before, the record without them)
+    pub(crate) fn read_over(mut p: PatchRecord, data: &[u8], list: bool) -> PatchRecord {
+        for f in patch::read_patch(data, 0, list) {
             let s = || if f.whole { data[f.at as usize..(f.at + f.len) as usize].to_vec() } else { Vec::new() };
             match f.slot {
                 patch::EE_WON_PATCH_CONFIG => p.config = s(),
@@ -173,7 +178,7 @@ impl PatchRecord {
         p
     }
 
-    fn describe(&self) -> String {
+    pub(crate) fn describe(&self) -> String {
         format!(
             "{},{},{},{},{},{},{},{},{},{},{},{},{}",
             hex(&self.config),

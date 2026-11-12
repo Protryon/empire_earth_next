@@ -1,4 +1,5 @@
-// WONDB's ContestCallOp and EventReportOp, WONMisc's ReportPatchStatusOp and WONServer's PingOp as whole ops: the
+// WONDB's ContestCallOp, EventReportOp and GetUserIdFromNameOp, WONMisc's ReportPatchStatusOp and
+// CheckValidVersionOp and WONServer's PingOp as whole ops: the
 // original's RunHook, GetNextRequest, CheckResponse and Reset (copied from the C++ op classes before the port, over
 // stand-ins with the ops' members; the wire statements through include/ee/wonapi/WONDBMsg.h and WONPatchMsg.h and
 // ee_won's ping functions, which won_db_test, won_misc_test and won_server_test check against the pre-port
@@ -84,7 +85,8 @@ static string Utf16(const wstring& w)
 
 // ---- the kinds (ee_won reqops.rs)
 
-enum { K_CONTEST = 1, K_EVENT = 2, K_PATCH_STATUS = 3, K_PING = 4 };
+enum { K_CONTEST = 1, K_EVENT = 2, K_PATCH_STATUS = 3, K_PING = 4, K_USER_ID = 5, K_VERSION_CHECK = 6 };
+static const int kKindCount = 6;
 
 static const char* const kInv = "inv";   // InvalidReplyHeader()
 static const char* const kCut = "cut";   // a ReadBufferException
@@ -165,21 +167,99 @@ struct SEvent : SBase {
     };
     std::list<AttachmentStruct> mAttachmentList;
 };
-// ReportPatchStatusOp over DBProxyOp's members
-struct SReport : SBase {
+// DBProxyOp's members and statements
+struct SProxy : SBase {
     short mMessageType, mMessageReplyType, mSubMessageType, mSubMessageReplyType;
     ByteBufferPtr mRequestData, mReplyData;
     WriteBuffer mReceivedData;
     string mReplyErrorString;
+    SProxy()
+        : mMessageType(0), mMessageReplyType(0), mSubMessageType(0), mSubMessageReplyType(0), mReceivedData(0, true),
+          mReplyErrorString("")
+    {
+    }
+    // DBProxyOp::GetNextRequest
+    WONStatus GetNextRequest()
+    {
+        DbRequest q(EE_WON_DB_REQ_PROXY, this->mLengthFieldSize);
+        q.mReq.message = this->mMessageType;
+        q.mReq.sub = this->mSubMessageType;
+        q.mReq.data = DbRequest::Buffer(this->mRequestData.get());
+        this->mRequest = q.Build();
+        return WS_ServerReq_Recv;
+    }
+    // DBProxyOp::CheckResponse (InvalidReplyHeader() as *outInvalid)
+    WONStatus Check(bool* outInvalid)
+    {
+        return DbProxyReply(this->mResponse.get(), this->mMessageReplyType, this->mSubMessageReplyType,
+                            this->mReplyErrorString, this->mReceivedData, this->mReplyData, outInvalid);
+    }
+    string Dump() const
+    {
+        return "t" + Num(this->mMessageReplyType) + "/" + Num(this->mSubMessageReplyType) + " e" + Hex(this->mReplyErrorString) +
+               " d" + (this->mReplyData.get() == NULL ? string("n") : "x" + Hex(Bytes(this->mReplyData.get()))) + " r" +
+               Num((long long)this->mReceivedData.length());
+    }
+};
+// ReportPatchStatusOp
+struct SReport : SProxy {
     unsigned short mMsgType;
     string mProductName, mConfigName, mFromVersion, mToVersion, mNetAddress;
     BYTE mPatchStatus;
     bool mUDP;
-    SReport()
-        : mMessageType(0), mMessageReplyType(0), mSubMessageType(0), mSubMessageReplyType(0), mReceivedData(0, true),
-          mReplyErrorString(""), mMsgType(19), mPatchStatus(0), mUDP(false)
+    SReport() : mMsgType(19), mPatchStatus(0), mUDP(false) {}
+};
+// GetUserIdFromNameOp
+struct SUserId : SProxy {
+    wstring mUserName;
+    unsigned long mUserId;
+    SUserId() : mUserId(0) {}
+};
+// CheckValidVersionOp's VersionData (its config and version; no types: nothing set them) and the PatchData its
+// reply fills (through WONPatchMsg.h, as PatchTypes.cpp)
+struct SVersion {
+    string mConfigName, mVersion;
+    const string& GetConfigName() const { return this->mConfigName; }
+    const string& GetVersion() const { return this->mVersion; }
+};
+struct SPatch : public RefCount {
+    string mConfigName, mFromVersion, mToVersion, mDisplayName, mNetAddress;
+    unsigned long mCheckSum, mPatchSize;
+    string mHostName, mHostURL, mHostText, mHostImageURL;
+    bool mMustVisitHost, mIsActive;
+    SPatch() : mCheckSum(0), mPatchSize(0), mMustVisitHost(false), mIsActive(false) {}
+    void SetConfigName(const string& s) { this->mConfigName = s; }
+    void SetFromVersion(const string& s) { this->mFromVersion = s; }
+    void SetToVersion(const string& s) { this->mToVersion = s; }
+    void SetDisplayName(const string& s) { this->mDisplayName = s; }
+    void SetNetAddress(const string& s) { this->mNetAddress = s; }
+    void SetCheckSum(unsigned long v) { this->mCheckSum = v; }
+    void SetPatchSize(unsigned long v) { this->mPatchSize = v; }
+    void SetHostName(const string& s) { this->mHostName = s; }
+    void SetHostURL(const string& s) { this->mHostURL = s; }
+    void SetHostText(const string& s) { this->mHostText = s; }
+    void SetHostImageURL(const string& s) { this->mHostImageURL = s; }
+    void SetMustVisitHost(bool b) { this->mMustVisitHost = b; }
+    void SetIsActive(bool b) { this->mIsActive = b; }
+    void ReadFromBuffer(ReadBuffer& b, bool inList) { PatchReadPatch(*this, b, inList); }
+    string Dump() const
     {
+        return Hex(this->mConfigName) + "," + Hex(this->mFromVersion) + "," + Hex(this->mToVersion) + "," +
+               Hex(this->mDisplayName) + "," + Hex(this->mNetAddress) + "," + Num((uint32_t)this->mCheckSum) + "," +
+               Num((uint32_t)this->mPatchSize) + "," + Hex(this->mHostName) + "," + Hex(this->mHostURL) + "," +
+               Hex(this->mHostText) + "," + Hex(this->mHostImageURL) + "," + Num(this->mMustVisitHost) + "," +
+               Num(this->mIsActive);
     }
+};
+// CheckValidVersionOp
+struct SVersionCheck : SProxy {
+    unsigned short mMsgType;
+    string mProductName;
+    SVersion mVersionData;
+    bool mGetPatchList;
+    string mVersionTo, mVersionToDescriptionURL;
+    std::list<SmartPtr<SPatch> > mPatchDataList;
+    SVersionCheck() : mMsgType(1), mGetPatchList(true) {}
 };
 // PingOp (the original left mLag, mVersion, mPID and mIsAuth unset until a reply or Reset; zero here, as the port)
 struct SPing : SBase {
@@ -205,6 +285,8 @@ struct Op {
     SEvent mE;
     SReport mR;
     SPing mP;
+    SUserId mU;
+    SVersionCheck mV;
 
     SBase& Base()
     {
@@ -212,6 +294,8 @@ struct Op {
         case K_CONTEST: return this->mC;
         case K_EVENT: return this->mE;
         case K_PATCH_STATUS: return this->mR;
+        case K_USER_ID: return this->mU;
+        case K_VERSION_CHECK: return this->mV;
         default: return this->mP;
         }
     }
@@ -287,6 +371,17 @@ struct Op {
             v.N(o.mPatchStatus);
             break;
         }
+        case K_USER_ID:
+            if (gen) this->mU.mUserName = AWStr();
+            v.W(this->mU.mUserName);
+            break;
+        case K_VERSION_CHECK:
+            if (gen) {
+                this->mV.mProductName = AStr(); this->mV.mVersionData.mConfigName = AStr();
+                this->mV.mVersionData.mVersion = AStr();
+            }
+            v.S(this->mV.mProductName); v.S(this->mV.mVersionData.mConfigName); v.S(this->mV.mVersionData.mVersion);
+            break;
         default: {
             SPing& o = this->mP;
             o.mLengthFieldSize = Pick(2) ? 4 : 2;
@@ -319,6 +414,24 @@ struct Op {
             o.mRequestData = PatchRequest(1, aStrings, o.mPatchStatus);
             // the UDP path: the request without a length field, sent as one datagram
             if (o.mUDP) o.mLengthFieldSize = 0;
+        }
+        if (this->mKind == K_USER_ID) {
+            SUserId& o = this->mU;
+            o.mMessageType = 1002;
+            o.mSubMessageType = 16;
+            DbRequest q(EE_WON_DB_REQ_USER_ID, 0);
+            q.mReq.name = q.Text(o.mUserName);
+            o.mRequestData = q.Build();
+        }
+        if (this->mKind == K_VERSION_CHECK) {
+            SVersionCheck& o = this->mV;
+            o.mMessageType = 1004;
+            o.mSubMessageType = o.mMsgType;
+            std::vector<std::string> aStrings;
+            aStrings.push_back(o.mProductName);
+            aStrings.push_back(o.mVersionData.GetConfigName());
+            aStrings.push_back(o.mVersionData.GetVersion());
+            o.mRequestData = PatchRequest(0, aStrings, o.mGetPatchList);
         }
         return true;
     }
@@ -371,16 +484,9 @@ struct Op {
             o.mRequest = aRequest;
             return WS_ServerReq_Recv;
         }
-        case K_PATCH_STATUS: {
-            // DBProxyOp::GetNextRequest
-            SReport& o = this->mR;
-            DbRequest q(EE_WON_DB_REQ_PROXY, o.mLengthFieldSize);
-            q.mReq.message = o.mMessageType;
-            q.mReq.sub = o.mSubMessageType;
-            q.mReq.data = DbRequest::Buffer(o.mRequestData.get());
-            o.mRequest = q.Build();
-            return WS_ServerReq_Recv;
-        }
+        case K_PATCH_STATUS: return this->mR.GetNextRequest();
+        case K_USER_ID: return this->mU.GetNextRequest();
+        case K_VERSION_CHECK: return this->mV.GetNextRequest();
         default: {
             SPing& o = this->mP;
             std::string aBytes;
@@ -410,9 +516,29 @@ struct Op {
                 break;
             case K_PATCH_STATUS: {
                 SReport& o = this->mR;
-                aStatus = DbProxyReply(o.mResponse.get(), o.mMessageReplyType, o.mSubMessageReplyType,
-                                       o.mReplyErrorString, o.mReceivedData, o.mReplyData, &anInvalid);
+                aStatus = o.Check(&anInvalid);
                 if (!anInvalid && aStatus == WS_Success && o.mSubMessageReplyType != o.mMsgType + 1) anInvalid = true;
+                break;
+            }
+            case K_USER_ID: {
+                // GetUserIdFromNameOp::CheckResponse
+                SUserId& o = this->mU;
+                aStatus = o.Check(&anInvalid);
+                if (anInvalid || aStatus != WS_Success) break;
+                if (!ee_won_db_answers(o.mSubMessageReplyType, 16)) { anInvalid = true; break; }
+                o.mUserId = DbUserId(o.mReplyData.get());
+                break;
+            }
+            case K_VERSION_CHECK: {
+                // CheckValidVersionOp::CheckResponse
+                SVersionCheck& o = this->mV;
+                aStatus = o.Check(&anInvalid);
+                if (anInvalid) break;
+                if (aStatus < WS_DBProxyServ_ValidNotLatest || (aStatus > WS_DBProxyServ_OutOfDate && aStatus != WS_Success))
+                    break;
+                if (o.mSubMessageReplyType != o.mMsgType + 1) { anInvalid = true; break; }
+                PatchReplyData<SPatch>(o.mReplyData.get(), &o.mVersionData, &o.mVersionTo, &o.mVersionToDescriptionURL,
+                                       o.mPatchDataList);
                 break;
             }
             default: {
@@ -462,11 +588,14 @@ struct Op {
         case K_CONTEST:
             return this->mC.mReplyData.get() == NULL ? string("n") : "x" + Hex(Bytes(this->mC.mReplyData.get()));
         case K_EVENT: return "-";
-        case K_PATCH_STATUS: {
-            SReport& o = this->mR;
-            return "t" + Num(o.mMessageReplyType) + "/" + Num(o.mSubMessageReplyType) + " e" + Hex(o.mReplyErrorString) +
-                   " d" + (o.mReplyData.get() == NULL ? string("n") : "x" + Hex(Bytes(o.mReplyData.get()))) + " r" +
-                   Num((long long)o.mReceivedData.length());
+        case K_PATCH_STATUS: return this->mR.Dump();
+        case K_USER_ID: return this->mU.Dump() + " u" + Num((uint32_t)this->mU.mUserId);
+        case K_VERSION_CHECK: {
+            SVersionCheck& o = this->mV;
+            string s = o.Dump() + " o" + Hex(o.mVersionTo) + " w" + Hex(o.mVersionToDescriptionURL);
+            for (std::list<SmartPtr<SPatch> >::iterator i = o.mPatchDataList.begin(); i != o.mPatchDataList.end(); ++i)
+                s += " " + (*i)->Dump();
+            return s;
         }
         default: {
             SPing& o = this->mP;
@@ -505,16 +634,44 @@ static string AReply(Op& op)
         w.AppendShort(Pick(3) ? 0 : (short)ANum());
         if (Pick(4) == 0) w.AppendByte((BYTE)Pick(256));
         break;
-    case K_PATCH_STATUS: {
-        SReport& b = op.mR;
+    case K_PATCH_STATUS: case K_USER_ID: case K_VERSION_CHECK: {
+        SProxy& b = static_cast<SProxy&>(op.Base());
         w.AppendByte(Pick(12) ? 5 : (BYTE)Pick(7));
         w.AppendShort(Pick(12) ? 14 : (short)Pick(20));
         w.AppendShort(Pick(3) ? b.mMessageType : (short)Pick(8));
         w.AppendShort(Pick(4) ? (short)(b.mSubMessageType + 1) : (short)Pick(36));
-        w.AppendShort(Pick(5) ? 0 : (short)(Pick(9) - 6));
+        static const short kStatus[] = { 0, 0, 0, -2816, -2815, -2814, -2817, -2813, -1, 5 };
+        w.AppendShort(op.mKind == K_VERSION_CHECK ? kStatus[Pick(10)] : Pick(5) ? 0 : (short)(Pick(9) - 6));
         w.AppendString(Pick(3) ? string() : AStr());
         w.AppendByte(Pick(4) ? 0x80 : (BYTE)(Pick(2) ? 0 : 0x7f));
-        string d = Pick(3) ? AStr() : string();
+        string d;
+        if (op.mKind == K_USER_ID && Pick(4)) {
+            WriteBuffer u(0, true);
+            u.AppendLong((int32_t)ANum());
+            d = Bytes(u);
+            if (Pick(5) == 0) d.resize(Pick(4));
+        } else if (op.mKind == K_VERSION_CHECK && Pick(5)) {
+            // the version check's reply data: the newest version, its description URL, the patch records
+            WriteBuffer u(0, true);
+            u.AppendString(AStr()); u.AppendString(AStr());
+            int n = Pick(8) ? Pick(4) : 300 + Pick(70000);
+            u.AppendShort((short)n);
+            if (n > 6) n = Pick(4);
+            for (int i = 0; i < n; i++) {
+                WriteBuffer r(0, true);
+                r.AppendString(AStr()); r.AppendString(AStr()); r.AppendLong(ANum()); r.AppendLong(ANum());
+                for (int k = 0; k < 4; k++) r.AppendString(AStr());
+                r.AppendBool(Pick(2) != 0);
+                string rb = Bytes(r);
+                if (Pick(6) == 0) rb.resize(Pick((int)rb.size() + 1));
+                u.AppendShort((short)rb.size());
+                u.AppendBytes(rb.data(), (unsigned long)rb.size());
+            }
+            d = Bytes(u);
+            if (Pick(6) == 0) d.resize(Pick((int)d.size() + 1));
+        } else if (Pick(3)) {
+            d = AStr();
+        }
         w.AppendBytes(d.data(), (unsigned long)d.size());
         break;
     }
@@ -590,7 +747,7 @@ int main(int argc, char** argv)
     long aSteps = 0;
     for (int q = 0; q < aSequences; q++) {
         Op o;
-        o.Generate(1 + Pick(4));
+        o.Generate(1 + Pick(kKindCount));
         SBase& b = o.Base();
         int aAuth = b.mAuthType;
         WONStatus aFinish = WS_Success;

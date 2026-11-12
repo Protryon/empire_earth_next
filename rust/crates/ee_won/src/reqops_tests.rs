@@ -90,7 +90,7 @@ fn golden() {
         }
     }
     assert_eq!(sequences, 1200);
-    assert_eq!(kinds.len(), 4);
+    assert_eq!(kinds.len(), 6);
     assert!(
         replies > 1000 && resets > 50 && refused > 50 && datagrams > 30,
         "{replies} {resets} {refused} {datagrams}"
@@ -230,6 +230,59 @@ fn ping_lag_reset_and_accessors() {
     assert_eq!(unsafe { ee_won_reqop_num(p, EE_WON_REQOP_PING_LAG) }, 250);
     unsafe { ee_won_reqop_free(p) };
     assert_eq!(op_kind_check(), 4);
+}
+
+#[test]
+fn user_id_reads_the_first_long() {
+    let name = crate::text::utf16_to_le_bytes(&crate::text::from_utf8("me"));
+    let op = unsafe { ee_won_reqop_user_id(name.as_ptr(), name.len()) };
+    let o = unsafe { &mut (*op).op };
+    o.run_hook();
+    let (_, r) = o.next_request(4);
+    // 1002/16 and the name behind a 2-byte length
+    assert_eq!(&r.unwrap()[4..], [5, 14, 0, 0xea, 3, 16, 0, 2, 0, b'm', 0, b'e', 0]);
+    let reply = |sub: u8, data: &[u8]| {
+        let mut v = vec![5, 14, 0, 0xea, 3, sub, 0, 0, 0, 0, 0, 0x80];
+        v.extend_from_slice(data);
+        v
+    };
+    assert_eq!(o.check_response(&reply(16, &[1, 0, 0, 0])), Checked::InvalidHeader);
+    assert_eq!(o.check_response(&reply(17, &[1, 0])), Checked::Cut);
+    assert_eq!(o.check_response(&reply(17, &[0x2a, 0, 0, 0])), Checked::Status(ST_SUCCESS));
+    assert_eq!(unsafe { ee_won_reqop_num(op, EE_WON_REQOP_USER_ID) }, 42);
+    unsafe { ee_won_reqop_free(op) };
+}
+
+#[test]
+fn version_check_fills_the_patches_from_its_version() {
+    let op = unsafe { ee_won_reqop_version_check(b"p".as_ptr(), 1, b"en".as_ptr(), 2, b"1.0".as_ptr(), 3) };
+    let o = unsafe { &mut (*op).op };
+    o.run_hook();
+    let mut data = vec![3, 0, b'2', b'.', b'0', 1, 0, b'u', 1, 0];
+    let mut record = vec![1, 0, b'd', 0, 0, 7, 0, 0, 0, 9, 0, 0, 0];
+    record.extend_from_slice(&[0; 8]);
+    record.push(1);
+    data.extend_from_slice(&(record.len() as u16).to_le_bytes());
+    data.extend_from_slice(&record);
+    let reply = |status: i16, data: &[u8]| {
+        let mut v = vec![5, 14, 0, 0xec, 3, 2, 0];
+        v.extend_from_slice(&status.to_le_bytes());
+        v.extend_from_slice(&[0, 0, 0x80]);
+        v.extend_from_slice(data);
+        v
+    };
+    // another error: returned before the reply data is read
+    assert_eq!(o.check_response(&reply(-5, &data)), Checked::Status(-5));
+    let d = o.describe();
+    assert!(d.starts_with("t1004/2 e- dx0300322e30") && d.ends_with("01 r0 o- w-"), "{d}");
+    assert_eq!(o.check_response(&reply(-2815, &data)), Checked::Status(-2815));
+    let mut got: Vec<u8> = Vec::new();
+    assert!(unsafe { ee_won_reqop_bytes(op, EE_WON_REQOP_VERSION_TO, into_vec, &mut got as *mut _ as *mut _) });
+    assert_eq!(got, b"2.0");
+    let o = unsafe { &mut (*op).op };
+    // from 1.0 to 2.0, active, config en; the record's display name, checksum, size, must-visit
+    assert!(o.describe().ends_with(" o322e30 w75 656e,312e30,322e30,64,-,7,9,-,-,-,-,1,1"), "{}", o.describe());
+    unsafe { ee_won_reqop_free(op) };
 }
 
 fn op_kind_check() -> i32 {
