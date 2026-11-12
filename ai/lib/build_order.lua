@@ -53,16 +53,16 @@ M.PHASE = {
     -- minute, 35 to 86 in 15 minutes)
     -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
     -- at its weakest, boom-defence's seeds 4 and 24)
-    stone_start = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_start = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
                    army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
-    stone_grow = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_grow = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
                   army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    stone_developed = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_developed = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
                        army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    copper = {citizens = 90, citizens_max = 100, boats = 10, docks = 1, granaries = 3, save_at = 75,
+    copper = {citizens = 90, citizens_max = 100, boats = 13, docks = 1, granaries = 3, save_at = 75,
               save_after = 12},
 }
 
