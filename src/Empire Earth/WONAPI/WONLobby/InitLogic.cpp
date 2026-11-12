@@ -151,7 +151,7 @@ void InitLogic::DNSCompletion(AsyncOp* inOp)
         // The original builds this address with mRememberHostString set and destroys it only after both
         // queries are started; it is separate from the per-entry addresses in the loops
         IPAddr address;
-        address.mRememberHostString = true;
+        address.SetRememberHostString(true);
         dir->RemoveAllAddresses();
         std::list<std::string>::iterator it = config->mDirServers.begin();
         while (true) {
@@ -428,7 +428,7 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
     this->mAcceptOp = NULL;
     bool anAccepted = op->GetStatus() == WS_Success;
     int anOutcome = ee_won_init_accept_outcome(anAccepted, anAccepted &&
-        op->mAcceptedSocket->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost());
+        op->GetAcceptedSocket()->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost());
     if (anOutcome == 0) {
         LobbySetBehindFirewall(true);
         LobbyBroadcastLobbyEvent(100055,true);
@@ -439,7 +439,7 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
         LobbyBroadcastLobbyEvent(100055,true);
         return;
     }
-    this->mAcceptOp = new AcceptOp(op->mSocket.get());
+    this->mAcceptOp = new AcceptOp(op->GetSocket());
     this->RunOp(this->mAcceptOp.get(),new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion,this),
           gLobbyAcceptTimeout);
 }
@@ -577,8 +577,8 @@ void InitLogic::KillFirewallTest()
 {
     if (this->mAcceptOp.get() != NULL) {
         this->mAcceptOp->Kill(true);
-        if (this->mAcceptOp->mSocket.get() != NULL)
-            this->mAcceptOp->mSocket->Close();
+        if (this->mAcceptOp->GetSocket() != NULL)
+            this->mAcceptOp->GetSocket()->Close();
         this->mAcceptOp = NULL;
     }
     this->mFirewallSocket = NULL;

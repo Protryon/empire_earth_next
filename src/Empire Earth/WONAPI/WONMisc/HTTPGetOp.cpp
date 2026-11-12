@@ -548,7 +548,7 @@ void HTTPGetOp::CleanupHook()
 {
     AsyncOpWithTracker::CleanupHook();
     if (this->mSocket.get()!=NULL) {
-        if ((this->mDoClose && !this->mOnlySend) || this->mSocket->mCore.status!=100004) {
+        if ((this->mDoClose && !this->mOnlySend) || this->mSocket->GetSocketStatus()!=100004) {
             this->mSocket->Close();
             this->mSocket=NULL;
         }

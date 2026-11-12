@@ -52,6 +52,7 @@ pub mod guiwrap;
 pub mod http;
 /// cbindgen:ignore
 pub mod ipaddr;
+pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod md5;
@@ -65,6 +66,7 @@ pub mod patch;
 pub mod path;
 pub mod persist;
 pub mod plaintext;
+pub mod qsock;
 pub mod random;
 pub mod regkey;
 pub mod resource;
@@ -73,6 +75,8 @@ pub mod routing;
 pub mod servctx;
 pub mod server;
 pub mod socket;
+pub mod sockobj;
+pub mod sockop;
 pub mod sockthread;
 pub mod staging;
 /// cbindgen:ignore
