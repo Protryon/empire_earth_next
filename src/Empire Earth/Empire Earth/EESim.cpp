@@ -184,6 +184,9 @@
 #include "ee/EEAreaUtilities.h"     // EECanHeal (the sweep)
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
+#include "ee/EECalamity.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EECalamityManager.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
 
@@ -691,6 +694,26 @@ void DumpState(const std::string& inPath)
         for (size_t b = 0; b < sizeof(EEUnit); b++)
             fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(u)[b]);
         fprintf(f, "\n");
+    }
+    // the active calamities, in order: their checksum's fields (EECalamity::GetOutOfSynchChecksum) and their units
+    if (EECalamityManager* theCalamities = EECalamityManager::GetInstance()) {
+        for (size_t c = 0; c < theCalamities->mCalamities.size(); c++) {
+            EECalamity* k = theCalamities->mCalamities[c];
+            if (k == NULL)
+                continue;
+            fprintf(f, "CAL %zu class=%ld sum=%08lx target=%a,%a,%a tile=%lu,%lu int=%ld,%ld ids=%lu,%lu units=%lu,%lu "
+                       "player=%lu bools=%d%d%d%d%d floats=%a,%a,%a epi=%a alive=%a discrete=%a elapsed=%a\n",
+                    c, k->mClass != NULL ? (long)k->mClass->mClassEnum : -1L, (unsigned long)(uint32_t)k->GetOutOfSynchChecksum(),
+                    (double)k->mTargetLocation.GetX(), (double)k->mTargetLocation.GetY(), (double)k->mTargetLocation.GetZ(),
+                    (unsigned long)k->mTilePlaceHolder1.mX, (unsigned long)k->mTilePlaceHolder1.mY, k->mIntPlaceHolder1,
+                    k->mIntPlaceHolder2, k->mTargetUnitID, k->mOriginatingUnitID,
+                    k->mTargetUnit != NULL ? (unsigned long)k->mTargetUnit->GetUnitID() : 0UL,
+                    k->mCasterUnit != NULL ? (unsigned long)k->mCasterUnit->GetUnitID() : 0UL, k->mPlayerNumber,
+                    k->mBoolPlaceHolder1, k->mBoolPlaceHolder2, k->mInitialized, k->mHasTargetLocation, k->mHasTargetUnit,
+                    (double)k->mFloatPlaceHolder1, (double)k->mFloatPlaceHolder2, (double)k->mHeight,
+                    (double)k->mEpicenterFactor, (double)k->mTimeAlive, (double)k->mDiscreteUpdateTime,
+                    (double)k->mTimeElapsedSinceLastUpdate);
+        }
     }
     // the units of each map region in order (RTSRegionTable: FindImpactUnit and the target searches walk them)
     if (gWorld.mMap != NULL && gWorld.mMap->mUnitRegions != NULL) {
