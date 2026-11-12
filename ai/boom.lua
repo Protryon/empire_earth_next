@@ -1047,6 +1047,12 @@ function M.step(view, memory)
                 memory.plan_want[r] = math.max(want[r] or 0, target[r] or 0)
             end
             want = BO.fill(phase, land, room)
+            -- (the army's priority spends, memory.priority_spend: up to 4 from food to wood while the stock lacks the wood)
+            local ps = memory.priority_spend
+            if ps ~= nil and (ps.wood or 0) > view.stock.wood then
+                local k = math.max(math.min(4, want.food - 12), 0)
+                want.food, want.wood = want.food - k, want.wood + k
+            end
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
             if false and memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
