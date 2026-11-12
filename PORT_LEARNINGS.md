@@ -8451,3 +8451,44 @@ no tour, LAN game or EE-SIM run does.
   HTTPGetOp/FTPGetOp/GetHTTPDocumentOp (a socket state machine, next); the ops the lobby uses (GetDirOp,
   GetMultiDirOp, the account ops, CheckValidVersionOp, GetUserIdFromNameOp), which need their accessors on the
   narrow ABI.
+
+## R6: WON's Internet code, round 8 (the ops no C++ made, and the lobby's user id lookup and version check, as Rust ops)
+
+Branch `rust-won-net8`. Measured by net C++ deletion, as round 7. Nothing in the game reaches these ops but the
+lobby's add-friend dialog and its version check at an Internet login (the servers are gone): only the drivers
+exercise them, and no tour, LAN game or EE-SIM run does.
+
+- **Users first, by class name.** `ContestCallOp`, `EventReportOp`, `ReportPatchStatusOp` and `PingOp` had no C++
+  user at all; `GetUserIdFromNameOp` one (RoutingLogic's add friend), `CheckValidVersionOp` one (InitLogic's
+  version check, which also cast the finished op for `GetCurAddr`). With those gone `DBProxyOp` had no subclass
+  left and went too.
+- **The narrow ABI widened, once, for every op.** `RequestOp` gained `refuses` (a `RunHook` that finishes before
+  the base's: the contest call's `WS_ServerReq_NeedAuthContext` without an auth type), `use_auth2`,
+  `needs_user_id` and `set_env` (the base reads the certificate's user id only for an op that asks, at each
+  request as the original did, since peer authentication may renew the certificate, and hands `WONTickCount()`
+  before each request and reply: the ping's lag), and `bytes` / `num`, results by number. One constructor takes
+  the members as values (`ee_won_reqops_new`); the lobby's two have their own (`ee_won_reqop_user_id`,
+  `ee_won_reqop_version_check`), and the call sites read `ee_won_reqop_num(op->mRustOp, EE_WON_REQOP_USER_ID)`:
+  mechanical edits of RoutingLogic and InitLogic (the lobby lane's files; LanLogic untouched).
+- **A path only one op had stays in the base.** `ReportPatchStatusOp`'s UDP send (with `SetUDPSocket`: the
+  request built at length field 0, one `SendBytesToOp`, then Success; no address: `NoServersSpecified`) is
+  `ServerRequestOp::RunDatagram`, a dozen lines in place of the class. The golden covers its request; the send
+  itself only a real socket would.
+- **Goldens before the port, again.** `won_reqops_test`'s original half is the ops' statements over stand-ins
+  (the wire through WONDBMsg.h, WONPatchMsg.h and the ping functions, which won_db_test, won_misc_test and
+  won_server_test pin to the pre-port statements); recorded with the Rust half compiled out, first for the four
+  ops, then re-recorded with the two lobby ops before their classes were deleted. The driver caught its own bug
+  first: it handed the contest's auth type and user id (driver-side values) to the Rust constructor as members.
+  Mutations: the ping's `Reset` clearing the lag and the version read unsigned (7,656 failed checks), the version
+  check's patches not marked active (3,936); each also failed the Rust replay.
+- **Unset members.** The original `PingOp` left `mLag`, `mVersion`, `mPID` and `mIsAuth` unset until a reply or a
+  `Reset`; the Rust op starts them at 0 (the stand-ins too).
+- **Not moved, and why.** `MultiPingOp` and `FilePushOp` (an `AsyncOp` / `ServerOp` over C++ socket ops, timers
+  and completions: whole Rust ops need a Rust op base over the socket objects, or a hook per call, which outweighs
+  them); HTTPGetOp / FTPGetOp / GetHTTPDocumentOp (the same, and the lobby reads GetHTTPDocumentOp's members
+  directly); GetDirOp / GetMultiDirOp / FindEntityOp / GetAliasDirOp (their results are C++ `GetEntityRequest` and
+  `DirEntity` lists the lobby, EEWonNet and ServerContext read); the account ops (EEWonNet changes
+  `GetAccountOp`'s profile after `RunAsync`, a race the original had: a Rust op mutated from another thread
+  needs a lock first; `CreateAccountOp` holds the C++ ElGamal and Blowfish keys).
+- **PeerAuthServerOp.** `GetClientCertificate()` is on the op; `mPeerAuthServer` stays public until LanLogic
+  (the lobby lane) calls the accessor, since making it private now would break this branch's build.
