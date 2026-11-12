@@ -367,10 +367,20 @@ pub struct EeUnitStoreCheck {
 
 /// The records by id, and the ids by object (the combat lane's handle-to-record lookup: RUST_PLAN's combat row, store
 /// field (3); a handle is the `RTSUnit*`'s address, the record's `object`).
+///
+/// The fourteenth round's unlisted table: the units of id 0xffffffff have their record by object here, as records by
+/// id cannot hold them: the shots (made by `CreateUnit` with no list: `EEUnitStoreInsertUnlisted`, until a list takes
+/// one or its destructor) and a scenario's path points (listed, every one of id 0xffffffff: `insert`). The holders'
+/// writes reach them by object, `by_object` answers from both tables, and the out-of-sync checksum's flags and the
+/// on-map check count those on the map (the chain holds them).
+/// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
+pub const EE_UNIT_ID_UNLISTED: u32 = 0xffff_ffff;
+
 #[derive(Default)]
 pub struct Store {
     records: BTreeMap<u32, EeUnitRecord>,
     by_object: BTreeMap<u64, u32>,
+    unlisted: BTreeMap<u64, EeUnitRecord>,
 }
 
 impl UnitView for Store {
@@ -381,7 +391,7 @@ impl UnitView for Store {
 
 impl Store {
     pub const fn new() -> Self {
-        Store { records: BTreeMap::new(), by_object: BTreeMap::new() }
+        Store { records: BTreeMap::new(), by_object: BTreeMap::new(), unlisted: BTreeMap::new() }
     }
 
     /// Drops the object index's entry of a record leaving the store (only when it names that record).
@@ -394,6 +404,13 @@ impl Store {
     /// A unit entering a player's list: its record replaces any under its id (an object's address names the newest
     /// record made of it).
     pub fn insert(&mut self, record: EeUnitRecord) {
+        // a unit of no id (a scenario's path points: listed, every one of id 0xffffffff) lives by object
+        if record.id == EE_UNIT_ID_UNLISTED {
+            self.unlisted.insert(record.object, record);
+            return;
+        }
+        // listed now: out of the unlisted table
+        self.unlisted.remove(&record.object);
         if let Some(old) = self.records.insert(record.id, record) {
             if old.object != record.object {
                 self.unindex(&old);
@@ -402,7 +419,8 @@ impl Store {
         self.by_object.insert(record.object, record.id);
     }
 
-    /// A unit leaving its player's list; only the record of that object. True when there was one.
+    /// A unit leaving its player's list; only the record of that object (else the object's unlisted record: its
+    /// destructor). True when there was one.
     pub fn remove(&mut self, id: u32, object: u64) -> bool {
         if self.records.get(&id).is_some_and(|r| r.object == object) {
             if let Some(old) = self.records.remove(&id) {
@@ -410,8 +428,22 @@ impl Store {
             }
             true
         } else {
-            false
+            self.unlisted.remove(&object).is_some()
         }
+    }
+
+    /// A unit made out of every list: its record by object (replacing any of that object).
+    pub fn insert_unlisted(&mut self, record: EeUnitRecord) {
+        self.unlisted.insert(record.object, record);
+    }
+
+    /// The unlisted records' objects, in address order (TEST ONLY: the USCK check fills them from the objects).
+    pub fn unlisted_objects(&self) -> Vec<u64> {
+        self.unlisted.keys().copied().collect()
+    }
+
+    pub fn unlisted_len(&self) -> usize {
+        self.unlisted.len()
     }
 
     /// A player object goes: every record of its list goes. The count removed.
@@ -422,6 +454,7 @@ impl Store {
             self.records.remove(&r.id);
             self.unindex(r);
         }
+        self.unlisted.retain(|_, r| r.player != player);
         before - self.records.len()
     }
 
@@ -429,12 +462,15 @@ impl Store {
     pub fn clear(&mut self) {
         self.records.clear();
         self.by_object.clear();
+        self.unlisted.clear();
     }
 
     /// The record of an object (its `RTSUnit*`'s address), when the store has one of that object.
     pub fn by_object(&self, object: u64) -> Option<&EeUnitRecord> {
-        let id = self.by_object.get(&object)?;
-        self.records.get(id).filter(|r| r.object == object)
+        match self.by_object.get(&object) {
+            Some(id) => self.records.get(id).filter(|r| r.object == object),
+            None => self.unlisted.get(&object),
+        }
     }
 
     /// TEST ONLY: the object index against the records: the records it does not name, plus its entries that name
@@ -450,7 +486,7 @@ impl Store {
     pub fn set(&mut self, id: u32, object: u64, field: u32, value: i64) -> bool {
         match self.records.get_mut(&id) {
             Some(r) if r.object == object => r.set(field, value),
-            _ => false,
+            _ => self.unlisted.get_mut(&object).is_some_and(|r| r.set(field, value)),
         }
     }
 
@@ -473,6 +509,7 @@ impl Store {
     pub fn checksum_flag1(&self) -> u64 {
         self.records
             .values()
+            .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
             .fold(0u64, |sum, r| sum.wrapping_add(r.hit_points.wrapping_add(r.tile_y).wrapping_add(r.tile_x) as u64))
     }
@@ -484,6 +521,7 @@ impl Store {
     pub fn checksum_flag2(&self) -> u64 {
         self.records
             .values()
+            .chain(self.unlisted.values())
             .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
             .fold(0u64, |sum, r| sum.wrapping_add(r.flag2() as u64))
     }
@@ -497,15 +535,46 @@ impl Store {
         for &(id, object) in chain {
             match self.records.get(&id) {
                 Some(r) if r.object == object && r.on_map != 0 => found += 1,
+                // a unit on the map in no list (a scenario's path point): its unlisted record by object
+                _ if self.unlisted.get(&object).is_some_and(|r| r.on_map != 0) => found += 1,
                 _ => mismatches += 1,
             }
         }
-        let on_map = self.records.values().filter(|r| r.on_map != 0).count();
+        let on_map = self.records.values().chain(self.unlisted.values()).filter(|r| r.on_map != 0).count();
         mismatches + on_map.saturating_sub(found) as u32
     }
 
-    /// TEST ONLY: compares every object's fields (filled by C++ from every player's list) with the records; the
-    /// records no object named count as mismatches too.
+    /// TEST ONLY: `check` with the unlisted records' objects too.
+    pub fn check_with_unlisted(&self, objects: &[EeUnitRecord], unlisted: &[EeUnitRecord]) -> EeUnitStoreCheck {
+        let mut out = self.check(objects);
+        let unlisted_bad = self.check_unlisted(unlisted, &mut out);
+        out.mismatches += unlisted_bad;
+        out
+    }
+
+    /// TEST ONLY: the unlisted records against `unlisted` (filled from the objects the table names): the missing,
+    /// differing and unnamed ones. They do not count in `compared` (the USCK record's count stays the listed units').
+    pub fn check_unlisted(&self, unlisted: &[EeUnitRecord], out: &mut EeUnitStoreCheck) -> u32 {
+        let mut bad = 0u32;
+        for o in unlisted {
+            let differs = match self.unlisted.get(&o.object) {
+                Some(r) => r.first_difference(o),
+                None => Some(0xfd),
+            };
+            if let Some(f) = differs {
+                if out.mismatches == 0 && bad == 0 {
+                    out.first_id = o.id;
+                    out.first_field = f;
+                }
+                bad += 1;
+            }
+        }
+        let named = unlisted.iter().filter(|o| self.unlisted.contains_key(&o.object)).count();
+        bad + (self.unlisted.len().saturating_sub(named)) as u32
+    }
+
+    /// TEST ONLY: compares every object's fields (filled by C++ from every player's list) with the records (an object
+    /// of id 0xffffffff with its record by object); the records no object named count as mismatches too.
     pub fn check(&self, objects: &[EeUnitRecord]) -> EeUnitStoreCheck {
         let mut out = EeUnitStoreCheck {
             compared: objects.len() as u32,
@@ -516,12 +585,20 @@ impl Store {
         };
         let mut named = 0usize;
         for o in objects {
-            let field = match self.records.get(&o.id) {
-                Some(r) => {
-                    named += 1;
-                    r.first_difference(o)
+            let field = if o.id == EE_UNIT_ID_UNLISTED {
+                // (by object, in the unlisted table: not one of `records`)
+                match self.unlisted.get(&o.object) {
+                    Some(r) => r.first_difference(o),
+                    None => Some(0xff),
                 }
-                None => Some(0xff),
+            } else {
+                match self.records.get(&o.id) {
+                    Some(r) => {
+                        named += 1;
+                        r.first_difference(o)
+                    }
+                    None => Some(0xff),
+                }
             };
             if let Some(f) = field {
                 if out.mismatches == 0 {
@@ -693,6 +770,93 @@ mod tests {
         k.owner = 3;
         assert_eq!(r.first_difference(&k), Some(0));
         assert_eq!(r.first_difference(&r), None);
+    }
+
+    #[test]
+    fn unlisted_units_on_the_map_count_in_the_checksum_and_the_chain() {
+        let mut s = Store::new();
+        let listed = EeUnitRecord { on_map: 1, hit_points: 5, tile_x: 2, tile_y: 3, ..rec(0x0100_0001, 1) };
+        let point = EeUnitRecord {
+            id: u32::MAX,
+            object: 0x9000,
+            on_map: 1,
+            hit_points: 1,
+            tile_x: 10,
+            tile_y: 20,
+            object_kind: crate::kinds::EE_OBJECT_COMPLEX_UNIT,
+            ..Default::default()
+        };
+        s.insert(listed);
+        assert_eq!(s.check_on_map(&[(listed.id, listed.object)]), 0);
+        let before = s.checksum_flag1();
+        s.insert_unlisted(point);
+        // the chain holds the path point: found by object; without it in the chain, a record on the map unmatched
+        assert_eq!(s.check_on_map(&[(listed.id, listed.object), (u32::MAX, 0x9000)]), 0);
+        assert_eq!(s.check_on_map(&[(listed.id, listed.object)]), 1);
+        assert_eq!(s.checksum_flag1(), before.wrapping_add(31));
+        // off the map (an unlink's report): out of both
+        assert!(s.set(u32::MAX, 0x9000, EE_UNIT_FIELD_ON_MAP, 0));
+        assert_eq!(s.checksum_flag1(), before);
+        assert_eq!(s.check_on_map(&[(listed.id, listed.object)]), 0);
+    }
+
+    #[test]
+    fn listed_units_of_no_id_live_by_object() {
+        let mut s = Store::new();
+        // three path points of one player's list, all of id 0xffffffff
+        let point = |object: u64| EeUnitRecord { id: EE_UNIT_ID_UNLISTED, object, on_map: 1, ..rec(0, 1) };
+        for o in [0xa000, 0xb000, 0xc000] {
+            s.insert(point(o));
+        }
+        s.insert(rec(7, 1));
+        assert_eq!((s.len(), s.unlisted_len()), (1, 3));
+        let objects = [point(0xa000), point(0xb000), point(0xc000), rec(7, 1)];
+        assert_eq!(s.check(&objects).mismatches, 0);
+        assert_eq!(s.check_on_map(&[(u32::MAX, 0xa000), (u32::MAX, 0xb000), (u32::MAX, 0xc000), (7, 0x1007)]), 0);
+        // one moved: its record by object follows, the others stay
+        assert!(s.set(u32::MAX, 0xb000, EE_UNIT_FIELD_TILE_X, 44));
+        let moved = EeUnitRecord { tile_x: 44, ..point(0xb000) };
+        assert_eq!(s.check(&[point(0xa000), moved, point(0xc000), rec(7, 1)]).mismatches, 0);
+        assert_eq!(s.check(&objects).mismatches, 1);
+        // the list's removal of one
+        assert!(s.remove(u32::MAX, 0xa000));
+        assert_eq!(s.unlisted_len(), 2);
+    }
+
+    #[test]
+    fn unlisted_units_live_by_object() {
+        let mut s = Store::new();
+        // two shots, both of id 0xffffffff
+        let shot = |object: u64| EeUnitRecord { id: u32::MAX, object, player: 0x77, hit_points: 1, ..rec(0, 1) };
+        s.insert_unlisted(shot(0x5000));
+        s.insert_unlisted(shot(0x6000));
+        assert_eq!(s.len(), 0);
+        assert_eq!(s.unlisted_len(), 2);
+        assert_eq!(s.by_object(0x6000).map(|r| r.hit_points), Some(1));
+        // a holder's write reaches the object's record, not the other shot's
+        assert!(s.set(u32::MAX, 0x6000, EE_UNIT_FIELD_HIT_POINTS, 0));
+        assert_eq!(s.by_object(0x6000).map(|r| r.hit_points), Some(0));
+        assert_eq!(s.by_object(0x5000).map(|r| r.hit_points), Some(1));
+        assert!(!s.set(u32::MAX, 0x7000, EE_UNIT_FIELD_HIT_POINTS, 0));
+        // the check: equal, then a stale field, a missing record and an unnamed one
+        let mut out = EeUnitStoreCheck::default();
+        let objects = [*s.by_object(0x5000).unwrap(), *s.by_object(0x6000).unwrap()];
+        assert_eq!(s.check_unlisted(&objects, &mut out), 0);
+        assert_eq!(s.check_with_unlisted(&[], &objects).mismatches, 0);
+        let stale = EeUnitRecord { hit_points: 9, ..objects[0] };
+        assert_eq!(s.check_with_unlisted(&[], &[stale, objects[1]]).mismatches, 1);
+        assert_eq!(s.check_with_unlisted(&[], &[objects[1]]).mismatches, 1);
+        assert_eq!(s.check_with_unlisted(&[], &[objects[0], objects[1], shot(0x9000)]).mismatches, 1);
+        // the destructor drops it; a list taking one moves it to the listed records
+        assert!(s.remove(u32::MAX, 0x5000));
+        assert!(s.by_object(0x5000).is_none());
+        s.insert(EeUnitRecord { id: 42, ..shot(0x6000) });
+        assert_eq!(s.unlisted_len(), 0);
+        assert_eq!(s.by_object(0x6000).map(|r| r.id), Some(42));
+        // a player's teardown takes its unlisted records too
+        s.insert_unlisted(shot(0x8000));
+        s.clear_player(0x77);
+        assert_eq!(s.unlisted_len(), 0);
     }
 
     #[test]

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <cstddef>
 #include <string.h>
+#include "ee/EEUnitStore.h"
 #include "ee/EESimCapture.h"
 #include "rust/ee_combat.h"
 #include "rust/ee_units.h"
@@ -1624,6 +1625,7 @@ EEUnit* EEUnitClass::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoun
     if (this->mAttachedEffect != NULL)
         gEffectManager->CreateUnitEffect(theUnit, this->mAttachedEffect, NULL, 0, 0, 0);
     ++this->mNumUnits;
+    EEUnitStoreInsertUnlisted(theUnit);   // New (R5b.4, the fourteenth round): a shot's record by object
     theUnit->Dereference();
     return theUnit;
 }

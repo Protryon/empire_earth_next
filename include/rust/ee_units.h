@@ -1462,6 +1462,27 @@ void ee_units_store_check(const EeUnitRecord *objects,
                           size_t count,
                           EeUnitStoreCheck *out);
 
+/// A unit made out of every list (a shot): its record by object (`Store::insert_unlisted`).
+///
+/// # Safety
+/// `record` points to a valid record.
+void ee_units_store_insert_unlisted(const EeUnitRecord *record);
+
+/// TEST ONLY: the unlisted records' objects into `out` (at most `capacity`); their count.
+///
+/// # Safety
+/// `out` points to `capacity` writable words (or is null with `capacity` 0).
+size_t ee_units_store_unlisted(uint64_t *out, size_t capacity);
+
+/// TEST ONLY: the unlisted records against `objects` (`count` records filled from the objects
+/// `ee_units_store_unlisted` named): the mismatches (`out`'s first id and field when it had none).
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0); `out` to a valid result.
+uint32_t ee_units_store_check_unlisted(const EeUnitRecord *objects,
+                                       size_t count,
+                                       EeUnitStoreCheck *out);
+
 /// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
 uint64_t ee_units_store_checksum_flag1();
 

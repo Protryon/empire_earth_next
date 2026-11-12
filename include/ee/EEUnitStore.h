@@ -129,6 +129,12 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
+// New (R5b.4, the fourteenth round): a unit of id 0xffffffff in no list (a shot: CreateUnit with no list): its record
+// in the store's unlisted table by object until a list takes it or its destructor. The store keeps every unit of id
+// 0xffffffff there, listed or not (a scenario's path points are listed, all with that id): records by id cannot hold
+// them. The combat reads' by-object lookup, the out-of-sync checksum's flags and the on-map check read both tables;
+// holders write through to it by object.
+void EEUnitStoreInsertUnlisted(RTSUnit* inUnit);
 
 // the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order): each change
 // of the deque reported where it is made (UpdateActiveUnits, RebuildActiveUnits, Clear); EEUnitOrderReset copies the

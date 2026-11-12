@@ -396,6 +396,17 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
     }
 }
 
+void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)
+{
+    if (inUnit == NULL || inUnit->mInUnitStore || inUnit->mUnitID != 0xffffffff)
+        return;
+    EEPlayer* thePlayer = inUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(inUnit)->mPlayer : NULL;
+    EeUnitRecord theRecord;
+    Fill(inUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
+    ee_units_store_insert_unlisted(&theRecord);
+    inUnit->mInUnitStore = true;
+}
+
 void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* inPlayer)
 {
     EeUnitRecord theRecord;
@@ -612,6 +623,30 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     }
     EeUnitStoreCheck theCheck;
     ee_units_store_check(sObjects.empty() ? NULL : &sObjects[0], sObjects.size(), &theCheck);
+    // the unlisted units' records (the shots, a scenario's path points) against their objects; a difference counts
+    // like a field's (the compared count stays the listed units', so the USCK record is unchanged while there is none)
+    {
+        static std::vector<uint64_t> sUnlisted;
+        static std::vector<EeUnitRecord> sUnlistedRecords;
+        size_t theCount = ee_units_store_unlisted(NULL, 0);
+        sUnlisted.resize(theCount);
+        if (theCount != 0)
+            ee_units_store_unlisted(&sUnlisted[0], theCount);
+        sUnlistedRecords.clear();
+        for (size_t i = 0; i < theCount; i++) {
+            RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(sUnlisted[i]));
+            EEPlayer* thePlayer = theUnit->mObjectKind.mValue >= EE_OBJECT_UNIT ? static_cast<EEUnit*>(theUnit)->mPlayer : NULL;
+            EeUnitRecord theRecord;
+            Fill(theUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
+            sUnlistedRecords.push_back(theRecord);
+        }
+        uint32_t theUnlistedBad = ee_units_store_check_unlisted(sUnlistedRecords.empty() ? NULL : &sUnlistedRecords[0],
+                                                                sUnlistedRecords.size(), &theCheck);
+        if (theUnlistedBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu unlisted units differ from the store\n", theUnlistedBad, theCount);
+            theCheck.mismatches += theUnlistedBad;
+        }
+    }
     // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the
     // checksum's flag 1 over it (EEComplexUnit::GetChecksum(1)) against the store's sum; a mismatch counts like a
     // field's (so the USCK record, and its digest, stay the same while there is none)
@@ -631,15 +666,11 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                                                      sChainObjects.empty() ? NULL : &sChainObjects[0], sChainIDs.size());
     unsigned long theStoreFlag1 = (unsigned long)ee_units_store_checksum_flag1();
     unsigned long theStoreFlag2 = (unsigned long)ee_units_store_checksum_flag2();
-    static const bool sSoftChain = getenv("EE_SIM_STORE_CHECK_SOFT") != NULL;   // (below)
-    static bool sChainReported = false;
     if (theOffMap != 0 || theStoreFlag1 != theFlag1 || theStoreFlag2 != theFlag2) {
-        if (!(sSoftChain && sChainReported))
-            fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
+        fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
                 "%08lx over the chain, %08lx over the store; flag 2 %08lx, %08lx\n", sChainIDs.size(), theOffMap,
                 (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
                 (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
-        sChainReported = true;
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
     }
     // the world's players' diplomacy tables (ee_units players.rs); a difference counts like a field's
@@ -684,18 +715,11 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     theRecord.U32(theCheck.compared);
     theRecord.U32(theCheck.mismatches);
     theRecord.Commit();
-    // EE_SIM_STORE_CHECK_SOFT (TEST ONLY: sim_capture.py's scenario profile, whose loaded scenarios the store does not
-    // follow yet): a mismatch is reported once and recorded, and the game goes on
-    static const bool sSoft = getenv("EE_SIM_STORE_CHECK_SOFT") != NULL;
-    static bool sReported = false;
-    if (theCheck.mismatches != 0 && !(sSoft && sReported)) {
+    if (theCheck.mismatches != 0) {
         fprintf(stderr, "EE-UNIT-STORE: %u of %u units differ from the store (%u records) at %lu: first id 0x%08x field %u\n",
                 theCheck.mismatches, theCheck.compared, theCheck.records, inWhere, theCheck.first_id, theCheck.first_field);
-        sReported = true;
-        if (!sSoft) {
-            EESimCaptureRecord::Flush();
-            exit(3);
-        }
+        EESimCaptureRecord::Flush();
+        exit(3);
     }
     return theListed;
 }
