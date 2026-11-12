@@ -2175,6 +2175,29 @@ static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
 
 static const unsigned long kEarlyWoodSlots = 10;   // the experiment "woodcap"
 
+// TEST ONLY (EE-SIM's state dumps, EECPTrace.cpp): the food capacity's parts: the food outside the centers, the coast
+// boats wanted, the boats had, the fish and the huntable game lists' sizes
+void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile)
+{
+    EECPCivilizationManager* theManager = inManager->mManager;
+    fprintf(inFile, " food=%lu/%lu/%lu fish=%zu mines=%zu", EECPRMFoodOutsideCenters(inManager),
+            EECPRMCoastBoatsWanted(inManager),
+            theManager->mUnitManager != NULL ? (unsigned long)theManager->mUnitManager->GetCount(theManager->GetFishingBoatClass()) : 0UL,
+            inManager->mFish.size(), inManager->mMines.size());
+    fprintf(inFile, " minelist=");
+    for (size_t k = 0; k < inManager->mMines.size(); k++) {
+        EEComplexUnit* theMine = inManager->mMines[k];
+        fprintf(inFile, "%s%lu:%d:%g:%g:%ld,%ld", k ? "," : "", theMine->mUnitID, theMine->mUnitClass->mFamily == kUnitFamilyAnimal ? 1 : 0,
+                (double)theMine->mHitPoints, (double)theMine->mResourceAmount, (long)theMine->GetTileX(), (long)theMine->GetTileY());
+    }
+    fprintf(inFile, " food2=");
+    for (size_t k = 0; k < inManager->mGatherers[2].size(); k++) {
+        EEComplexUnit* theUnit = inManager->mGatherers[2][k];
+        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+        fprintf(inFile, "%s%lu>%lu", k ? "," : "", theUnit->mUnitID, theGoal != NULL && theGoal->mResource != NULL ? theGoal->mResource->mUnitID : 0UL);
+    }
+}
+
 unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
 {
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;

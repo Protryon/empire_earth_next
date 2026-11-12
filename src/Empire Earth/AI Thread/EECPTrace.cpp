@@ -71,6 +71,7 @@ bool gCPTraceOn = false;
 bool gCPTraceHashOn = false;
 const char* gCPTraceManager = "-";
 
+void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile);   // EECPResourceManager.cpp (TEST ONLY)
 static bool sInitialized = false;
 static std::vector<std::string> sExperiments;   // EE_AI_EXP (TEST ONLY): ",a,b," per player in turn
 static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
@@ -747,6 +748,16 @@ void EECPOutOfSynchDump(FILE* inFile)
                     for (int r = 0; r < 7; r++)
                         fprintf(inFile, "%s%zu/%lu", r ? "," : "", theCiv->mResourceManager->mGatherers[r].size(),
                                 (unsigned long)theCiv->mResourceManager->mWantedGatherers[r]);
+                    fprintf(inFile, " cap=");   // GetGatherCapacity's parts and the resource centers (active, units)
+                    for (long r = 2; r < 7; r++)
+                        fprintf(inFile, "%s%lu", r > 2 ? "," : "", (unsigned long)theCiv->mResourceManager->GetGatherCapacity(r));
+                    EECPRMDumpFoodCapacity(theCiv->mResourceManager, inFile);
+                    fprintf(inFile, " rc=");
+                    for (unsigned long k = 0; k < theCP->GetNumResourceCenters(); k++) {
+                        EECPResourceCenter* theCenter = theCP->GetResourceCenter(k);
+                        fprintf(inFile, "%s%lu:%d:%zu", k ? "," : "", theCenter->GetUnit() != NULL ? theCenter->GetUnit()->mUnitID : 0UL,
+                                theCenter->mIsActive ? 1 : 0, theCenter->mUnits.size());
+                    }
                 }
                 if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
                     fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
