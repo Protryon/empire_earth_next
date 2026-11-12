@@ -1394,7 +1394,9 @@ function M.step(view, memory)
     if army_short then
         -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
         -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
-        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
+        -- (plan.iron_free, AI_RESEARCH §8.50: while the next epoch's iron is short, the soldiers that cost none)
+        local iron_free = plan.iron_free and saving and view.stock.iron < (view.next_epoch_cost.iron or 0)
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2, iron_free)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
