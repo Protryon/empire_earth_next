@@ -1955,30 +1955,6 @@ struct EeCombatLineHost {
   int32_t (*tile_top_above)(void *ctx, int32_t x, int32_t y, float height, int32_t bare);
 };
 
-/// `ApplyAreaDamage`'s inputs.
-struct EeCombatAreaIn {
-  /// the attacker's tile
-  int32_t tile_x;
-  int32_t tile_y;
-  float radius;
-  /// the damaging class's (the launcher's) `mFriendlyDamageFactor`
-  float friendly_factor;
-  /// the direct target's complex unit (counted as hit already), or 0 (a `EeCombatHandle`)
-  uint64_t target;
-};
-
-/// `ApplyAreaDamage`'s world (see `AreaHost`).
-struct EeCombatAreaHost {
-  void *ctx;
-  uint64_t (*tile_first)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*node_next)(void *ctx, uint64_t node);
-  uint64_t (*node_unit)(void *ctx, uint64_t node);
-  float (*distance_squared)(void *ctx, uint64_t unit);
-  int32_t (*targetable)(void *ctx, uint64_t unit);
-  int32_t (*same_player)(void *ctx, uint64_t unit);
-  void (*hit)(void *ctx, uint64_t unit);
-};
-
 /// `EEFindNewTarget`'s inputs.
 struct EeCombatFindTargetIn {
   /// the area's tiles, inclusive (the tile less and plus the radius)
@@ -2394,13 +2370,6 @@ EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
 /// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
 EeCombatLineOut ee_combat_line_blocked(const EeCombatLineIn *input,
                                        const EeCombatLineHost *host);
-
-/// `ApplyAreaDamage`'s walk: calls `host.hit` for every victim in order.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-void ee_combat_area_victims(const EeCombatAreaIn *input,
-                            const EeCombatAreaHost *host);
 
 /// `EEUUGetUnitsInArea`: pushes the candidates in order (`host.push`); returns their number.
 ///
