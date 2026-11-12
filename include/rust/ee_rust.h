@@ -5656,6 +5656,22 @@ struct EeGfxPickAdd {
   bool free_camera;
 };
 
+/// `SetMap`'s results.
+struct EeGfxMiniMapTransforms {
+  EeGeTransformation map_to_pixel;
+  EeGeTransformation pixel_to_map;
+  EeGeTransformation map_to_cell;
+  EeGeTransformation cell_to_map;
+  /// `mL12178`, `mL1217C`: one mini-map pixel's extent on the map, across and down, rounded up
+  uint32_t pixel_width;
+  uint32_t pixel_height;
+};
+
+/// `Refresh`'s corners: 0 bottom left, 1 bottom right, 2 top left, 3 top right (`mCorner0..3`).
+struct EeGfxMiniMapView {
+  EeGe2DPoint corners[4];
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -12258,6 +12274,30 @@ uint32_t ee_gfx_pick_view_lod(uint32_t lod_count);
 /// # Safety
 /// `planes` holds six planes, `point` is valid.
 bool ee_gfx_pick_point_in_view(const EeGe3DPlane *planes, const EeGe3DPoint *point);
+
+/// `SetMap`'s transformations and pixel sizes for a map of `height` (`mL195610`) by `width` (`mL195614`) tiles and
+/// `size` tiles per side.
+EeGfxMiniMapTransforms ee_gfx_minimap_transforms(int32_t height,
+                                                 int32_t width,
+                                                 int32_t size);
+
+/// `ProjectToGround`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_minimap_project(const EeGeViewport *viewport,
+                            bool orthographic,
+                            const EeGe2DPoint *point,
+                            float z,
+                            EeGe2DPoint *out);
+
+/// `Refresh`'s view trapezoid of `*viewport` through `*map_to_pixel`.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxMiniMapView ee_gfx_minimap_view(const EeGeViewport *viewport,
+                                     bool orthographic,
+                                     const EeGeTransformation *map_to_pixel);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

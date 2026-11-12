@@ -1,5 +1,5 @@
 //! The C ABI of the Graphics Thread's and the camera's math (`include/rust/ee_rust.h`), called by
-//! `EECameraControl.cpp`, `RTSMouse.cpp` and `EEROUnits.cpp`. Every function copies its inputs before it writes an
+//! `EECameraControl.cpp`, `RTSMouse.cpp`, `EEROUnits.cpp`, `EEUnitPicker.cpp` and `EEMiniMap.cpp`. Every function copies its inputs before it writes an
 //! output, so an output may alias an input; the terrain callbacks run while no Rust reference to a C++ object is held
 //! (the inputs are copies).
 
@@ -11,6 +11,7 @@ use crate::camera::{
     self, EeGfxCameraGoTo, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxClipping, EeGfxEdgePlanes,
     EeGfxOrthoView, Ground,
 };
+use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::units::{self, EeGfxBarRects, EeGfxBarSizes};
@@ -520,4 +521,46 @@ pub extern "C" fn ee_gfx_pick_view_lod(lod_count: u32) -> u32 {
 pub unsafe extern "C" fn ee_gfx_pick_point_in_view(planes: *const Ge3DPlane, point: *const Ge3DPoint) -> bool {
     // SAFETY: the function's contract
     unsafe { pick::point_in_view(&side_planes(planes), *point) }
+}
+
+// ---- the mini map (minimap.rs, EEMiniMap.cpp)
+
+/// `SetMap`'s transformations and pixel sizes for a map of `height` (`mL195610`) by `width` (`mL195614`) tiles and
+/// `size` tiles per side.
+#[no_mangle]
+pub extern "C" fn ee_gfx_minimap_transforms(height: i32, width: i32, size: i32) -> EeGfxMiniMapTransforms {
+    minimap::transforms(height, width, size)
+}
+
+/// `ProjectToGround`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_minimap_project(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    point: *const Ge2DPoint,
+    z: f32,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract (inputs copied before the store)
+    unsafe {
+        let r = minimap::project_to_ground(&*viewport, orthographic, *point, z);
+        *out = r;
+    }
+}
+
+/// `Refresh`'s view trapezoid of `*viewport` through `*map_to_pixel`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_minimap_view(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    map_to_pixel: *const GeTransformation,
+) -> EeGfxMiniMapView {
+    // SAFETY: the function's contract
+    unsafe { minimap::view_trapezoid(&*viewport, orthographic, &*map_to_pixel) }
 }
