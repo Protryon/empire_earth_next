@@ -3559,6 +3559,45 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// A flight step's outputs.
+struct EeCombatFlightOut {
+  /// the unit moved (Step2 may not; its location is then the input's)
+  int32_t moved;
+  /// the new velocity (Accelerate, Home)
+  float speed;
+  /// the new location
+  float matrix[16];
+};
+
+/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
+struct EeCombatFlightIn {
+  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
+  float location[16];
+  /// the projectile's launch point (`mProjectileStart`) (Step0)
+  float start[3];
+  /// the drop target's point (Home)
+  float target[3];
+  /// the projectile's yaw (Step0)
+  float yaw;
+  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
+  float move_y;
+  float move_z;
+  float pitch;
+  /// the class's gravity (`mAcceleration`) (Step2)
+  float gravity;
+  /// the tick's seconds
+  float step;
+  /// the unit's velocity
+  float speed;
+  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
+  float max_speed;
+  float accel;
+  float max_angular;
+  /// the ground point was read (Step2: only at or below height 0) and its height
+  int32_t ground_read;
+  float ground_z;
+};
+
 /// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
 /// point's model first, then each parent) are passed beside it.
 struct EeCombatWeaponIn {
@@ -9370,6 +9409,30 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EEPMProjectile::Step0`'s placement on the arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_launch(const EeCombatFlightIn *input);
+
+/// `EEPMProjectile::Step2`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_step(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Accelerate`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_accelerate(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Home`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_home(const EeCombatFlightIn *input);
 
 /// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
 /// a larger buffer when it exceeds `capacity`).
