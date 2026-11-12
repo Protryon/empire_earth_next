@@ -566,7 +566,8 @@ function M.find_mines(view, memory, n, near)
             break
         end
         local u = M.unit(id)
-        if u ~= nil and (u.amount or 0) > 0 and (tx == nil or ai.reach(tx, ty, u.x, u.y)) and not M.enemy_near(u.x, u.y) then
+        if u ~= nil and (u.amount or 0) > 0 and (tx == nil or ai.reach(tx, ty, u.x, u.y)) and not M.enemy_near(u.x, u.y)
+            and not M.herd_banned(memory, u.x, u.y) then
             local best
             for _, d in ipairs(centres) do
                 local dd = d2(d.x, d.y, u.x, u.y)
@@ -769,6 +770,30 @@ function M.danger_at(memory, x, y)
         end
     end
     return false
+end
+
+-- the herds given up (DEVIATION, fog: the port sees fewer herds near home and hunts far ones under the enemy's towers,
+-- where the engine carries its hunters on from animal to animal; 145 citizens killed by towers in 32 games against
+-- the C++'s 40): where an enemy tower killed a hunter, no game within 12 tiles is hunted for 10 minutes, and the
+-- hunters there leave it (AI_RESEARCH 8.61)
+M.HERD_BAN_RANGE, M.HERD_BAN_MS = 12, 600000
+
+function M.herd_banned(memory, x, y)
+    local bans = memory.rm ~= nil and memory.rm.herd_bans or nil
+    if bans == nil then
+        return false
+    end
+    for _, b in ipairs(bans) do
+        if d2(b.x, b.y, x, y) <= M.HERD_BAN_RANGE * M.HERD_BAN_RANGE then
+            return true
+        end
+    end
+    return false
+end
+
+function M.is_animal(id)
+    local u = id ~= nil and M.unit(id) or nil
+    return u ~= nil and class_of(u.type).family == FAMILY_ANIMAL
 end
 
 -- ---------------------------------------------------------------------------------------------------------------

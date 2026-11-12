@@ -222,6 +222,33 @@ function M.on_events(memory, events, time)
         return
     end
     local humans = memory.humans or {}
+    -- the herds given up (resource.lua herd_banned): a hunter hit by an enemy tower is remembered for 5 s; if it dies
+    -- in that time, the herd there is given up
+    memory.tower_hits = memory.tower_hits or {}
+    for _, e in ipairs(events) do
+        if e.kind == "died" and memory.tower_hits[e.unit] ~= nil then
+            local h = memory.tower_hits[e.unit]
+            if time - h.t <= 5000 then
+                local rm = R.state(memory)
+                rm.herd_bans = rm.herd_bans or {}
+                rm.herd_bans[#rm.herd_bans + 1] = {x = h.x, y = h.y, t = time}
+                print(string.format("classic_lua herd.ban at=%d,%d", h.x, h.y))
+            end
+            memory.tower_hits[e.unit] = nil
+        elseif e.kind == "attacked" and e.attacker ~= nil then
+            local v = ai.unit(e.unit)
+            local a = ai.unit(e.attacker)
+            if v ~= nil and a ~= nil and v.category == "citizen" and a.category == "building" and a.player ~= nil
+                and a.player > 0 and a.player ~= memory.me and R.is_animal(v.target) then
+                memory.tower_hits[e.unit] = {x = v.x, y = v.y, t = time}
+            end
+        end
+    end
+    for id, h in pairs(memory.tower_hits) do
+        if time - h.t > 5000 then
+            memory.tower_hits[id] = nil
+        end
+    end
     for _, e in ipairs(events) do
         if e.kind == "attacked" and e.attacker ~= nil then
             local v = ai.unit(e.unit)
@@ -269,6 +296,28 @@ end
 -- EECPRMFleeRaids: the gatherers within 8 tiles of a danger zone (30 s) go home and onto the idle list
 function M.flee(view, memory)
     local rm = R.state(memory)
+    -- the herds given up: they expire after 10 minutes; the hunters within their range leave
+    if rm.herd_bans ~= nil and #rm.herd_bans > 0 and view.town_x ~= nil and view.town_x >= 0 then
+        for k = #rm.herd_bans, 1, -1 do
+            if view.time - rm.herd_bans[k].t > R.HERD_BAN_MS then
+                table.remove(rm.herd_bans, k)
+            end
+        end
+        local leave = {}
+        for _, id in ipairs(rm.lists.food) do
+            local u = ai.unit(id)
+            if u ~= nil and u.category == "citizen" and u.inside == nil and R.is_animal(u.target)
+                and R.herd_banned(memory, u.x, u.y) then
+                leave[#leave + 1] = id
+            end
+        end
+        if #leave > 0 then
+            for _, id in ipairs(leave) do
+                R.add_idle(rm, id)
+            end
+            ai.move(leave, view.town_x, view.town_y, {forced = true})
+        end
+    end
     if rm.danger == nil or #rm.danger == 0 or view.town_x == nil or view.town_x < 0 then
         return
     end
