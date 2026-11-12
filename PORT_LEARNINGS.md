@@ -7474,3 +7474,50 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## R5a.2, ninth round: the wall manager's request, the graph searches in progress, the active groups (save 0.277-0.279, branch rust-r5a-aisave8, 2026-11-11)
+
+Continues "R5a.2, eighth round" (its matrix: 19 of 40 saves continue identically). Same test:
+`sim_oracle.py saveload NAME --settings all --seeds 2-3 --at 1000,1900`. Each fix was built (0/0 for EE-AOC and
+EE-SIM), checked with the oracle on seeds 2-3 (identical to ref) and the Rust gate, and measured with the settings it
+concerns. All of it is save and load code: the plain oracle stays identical.
+
+- **0.277, the wall manager's path request** (`EESaveHasWallRequest`, after EECPWallManager's runs). StartNextWall's
+  search has no step limit (`RequestPath(..., 1)`: rev limit -1), so the request is always finished when it is held;
+  the load had none, Update asked again and returned, and the continued game read the finished path at once
+  (IsPathUsable, then GetRandomPoint's draw). New `EESaveAutoPathRequest` / `EELoadAutoPathRequest` (every field of a
+  request). Space seed 3 1900 s 0 -> 271 ticks.
+- **Which graph searches stay queued**: only those asked with a step limit. The wall manager, NewPathRequest (the
+  wall avoiders), the explore goal and the target finder ask unlimited searches, done inside RequestPath. Queued:
+  the attack sub groups' RequestPath (land, air, helicopter, sea, spaceship), the storm's route, EEGroup's requests
+  and the units' own graph searches (RequestUnitPath with the graph).
+- **0.278, the graph searches in progress** (`EESaveHasGraphSearches`, EEPathManager::SaveGraphSearches). Each queued
+  node is saved whole: node, machine, goal (the sub sectors by id), modifier (ten route planner classes by exact
+  type; a sub group planner only when its sub group is the request's owner), the request, and the storage as
+  ee_astar's bytes (new `graph_save.rs`: a node's object, a C++ pointer, is written as a tag and found again from the
+  node's index, the sub sector id; free-list nodes drop theirs; `objects_match` lets the save refuse a storage whose
+  objects the load would not find; 4 tests). The load builds them at the first tick **after every other fix-up**
+  (new `EEAfterLoadLast`), puts them at the queue's front and hands each request to the owner that waited for it
+  (new `EEAwaitAutoPathRequest`: the sub groups' running requests, which before asked again at the first tick); an
+  owner whose search could not be rebuilt asks again as before, a request no owner waits for still runs (the 32-step
+  budget its search shares with the others stays the continued game's). No measured save changed (space 598/745
+  75/271, late 0/794 143/197 before and after): the searches were not what parts those saves.
+- **0.279, the active groups** (`EESaveHasActiveGroups`, EESaveActiveGroups in EEActiveGroup.cpp, written before the
+  graph searches so their requests can wait for them). Only the garrison and load-transport commands make them (their
+  rejected units); a loaded game had none. Saved: units (and which point at the group), formation (orientation,
+  centre, heading), type counts, kind flags, action, reserved destinations, the two point lists, the 17 speed values,
+  the flags and the path requests. Not the goal: only Plan, LayOutFormation and RequestPaths read it, when the command
+  made the group. Late seed 2 1000 s 0 -> 37 ticks.
+- **Checked, not a cause: the AI resource lists** (`mines=`, `fish=`, `cap=`, `food=` differ in the load's dump, 21
+  against 9). That dump is taken at the load, before the first tick's fix-ups; at the first tick (dump-000) every AI
+  line equals the continued game's. Nothing to save.
+- **Late seed 2 1000 s at 37 ticks** (pair9.py): a frigate (unit 50331747) cycling CheckRange, PrepareToMove, 10003,
+  2015, 9000, ReacquireGoal on an attack goal against a settlement takes ShouldIReturnToInitialContactLocation in the
+  continued game and CheckRange in the loaded one after ReacquireGoal; every dumped field and its raw bytes agree
+  (only mIgnoredTargets' deque offset, 7 against 0, with the same contents). The same signature as the highlands seed 3
+  1000 s rock thrower and the medium difficulty seed 3 1900 s gatherer: the unit script's choice reads a state no dump
+  shows yet. Not found.
+- **The numbers**: (start -> end of this round; END = identical to 2700 s, else the CT lines equal after the load; seed 2 1000/1900, seed 3 1000/1900): oracle END/END END/END; plains-medium-3ai 1197/168 END/END; islands END/END 1429/400; highlands-large-4ai 149/82 4/END; mediterranean-easy 168/564 434/133; medium-difficulty END/406 END/13; late 0/794 143/197 -> 37/794 143/197; space 598/745 75/0 -> 598/745 75/271; calamity END/END END/END; next END/END END/END. Still **19 of 40** saves continue identically (`saveload as9-fin --settings all`, 1052 s wall at --jobs 2, after the merge of rust; `saveload expect: PASS` against the old file, which now has the two better rows).
+- **Left**: the unit scripts' hidden choice (three saves above); the AI-only divergences (plains 2048 s, islands
+  2251 s, highlands 1973 s, mediterranean 2394 s) and space seed 3 1900 s at 271 ticks (`rng, oos`) were not hunted
+  this round.
