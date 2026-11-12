@@ -5,7 +5,8 @@
 //! ray and ranking (`pick.rs`, `EEUnitPicker.cpp`), the mini map's transforms and view trapezoid (`minimap.rs`,
 //! `EEMiniMap.cpp`), the effects' frustum test and the buildings' near fade (`view.rs`) and the units' ring
 //! models (`models.rs`, `EEROUnits::LoadMedia`) and the sky's colours, the sky, star and cloud models' points
-//! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`) and the earthquake's crack (`quake.rs`).
+//! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`), the earthquake's crack (`quake.rs`), the tracer beam's
+//! aim and stretch (`beam.rs`) and the farm's and the volcano's meshes (`farm.rs`, `volcano.rs`, over `mesh.rs`).
 //!
 //! The camera's `Update` also runs in the simulation tick, so its math is deterministic code under RUST_PLAN 2.1;
 //! the tests replay golden values from the unmodified C++ (`golden_camera.txt`).
@@ -19,13 +20,20 @@
     clippy::collapsible_if
 )]
 
+pub mod beam;
 pub mod camera;
 pub mod effects;
+pub mod farm;
 pub mod ffi;
+pub mod ffi_mesh;
+#[cfg(test)]
+mod golden_beam;
 #[cfg(test)]
 mod golden_camera;
 #[cfg(test)]
 mod golden_center;
+#[cfg(test)]
+mod golden_farm;
 #[cfg(test)]
 mod golden_media;
 #[cfg(test)]
@@ -52,6 +60,9 @@ mod golden_select;
 mod golden_sky;
 #[cfg(test)]
 mod golden_view;
+#[cfg(test)]
+mod golden_volcano;
+pub mod mesh;
 pub mod minimap;
 pub mod models;
 pub mod mouse;
@@ -61,3 +72,4 @@ pub mod select;
 pub mod terrain;
 pub mod units;
 pub mod view;
+pub mod volcano;

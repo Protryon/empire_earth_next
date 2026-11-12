@@ -18,6 +18,21 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// `EeGfxMeshVertex::set`: the point was set.
+constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
+
+/// The normal was set.
+constexpr static const uint32_t EE_GFX_MESH_NORMAL = 2;
+
+/// The texture coordinate was set.
+constexpr static const uint32_t EE_GFX_MESH_COORD = 4;
+
+/// The colour was set.
+constexpr static const uint32_t EE_GFX_MESH_COLOR = 8;
+
+/// The opacity was set.
+constexpr static const uint32_t EE_GFX_MESH_OPACITY = 16;
+
 /// The most vertices (and triangles) a selection ring has: ten segments (model detail 2 and above).
 constexpr static const size_t EE_GFX_SELECTION_MAX_VERTICES = 20;
 
@@ -63,6 +78,9 @@ constexpr static const uint32_t TYPE_CP_ICBM = 750;
 
 /// `kBarFraction`: the filled part's share of a bar's own width.
 constexpr static const float BAR_FRACTION = 0.75;
+
+/// The image's side (`textures\Volcano.png`, 19 x 19).
+constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -351,6 +369,92 @@ struct EeGfxEffectQuad {
 /// and an end.
 struct EeGfxSelectLines {
   EeGe2DPoint points[8][2];
+};
+
+/// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
+struct EeGfxFarmField {
+  float left;
+  float top;
+  float right;
+  float bottom;
+  int32_t row_length;
+  float tile_size;
+};
+
+/// The terrain under a farm field, as C++ callbacks over `context` (the `GETerrainMesh`).
+struct EeGfxFarmTerrain {
+  void *context;
+  /// `GetZ(x, y)`
+  float (*z)(void *context, uint32_t x, uint32_t y);
+  /// `*GetVertexNormal(x, y)`
+  EeGeVector (*normal)(void *context, uint32_t x, uint32_t y);
+  /// `GetMeshZ(x, y)`
+  float (*mesh_z)(void *context, float x, float y);
+};
+
+/// One vertex of a built mesh: `set` names the values a builder wrote.
+struct EeGfxMeshVertex {
+  uint32_t set;
+  EeGe3DPoint point;
+  EeGeVector normal;
+  EeGfxTexCoord coord;
+  EeGfxColor color;
+  float opacity;
+};
+
+/// One triangle of a built mesh: `set` is non-zero once a builder wrote its three indices.
+struct EeGfxMeshTriangle {
+  uint32_t set;
+  uint32_t v[3];
+};
+
+/// The mesh's sizes: the vertices a side, the vertices and the triangles.
+struct EeGfxVolcanoSizes {
+  int32_t side;
+  int32_t vertices;
+  int32_t polygons;
+};
+
+/// What a build leaves: the highest terrain height under the area, the centre's z after it and the writes dropped
+/// past the arrays.
+struct EeGfxVolcanoBuilt {
+  float maximum;
+  float center_z;
+  uint32_t dropped;
+};
+
+/// A volcano: its area (`mArea`) and centre (`mCenter`).
+struct EeGfxVolcanoArea {
+  float left;
+  float top;
+  float right;
+  float bottom;
+  EeGe3DPoint center;
+};
+
+/// The terrain under a volcano, as C++ callbacks over `context` (the `EEMap`).
+struct EeGfxVolcanoTerrain {
+  void *context;
+  /// `mTerrainMesh.GetZ(x, y)`
+  float (*z)(void *context, uint32_t x, uint32_t y);
+  /// `EETerrainTable::Get(mTerrainMesh.GetTextureSetID(x, y))->mColor`
+  EeGfxColor (*color)(void *context, uint32_t x, uint32_t y);
+  /// `mTerrainMesh.GetIsValidTile(x, y)`
+  bool (*valid_tile)(void *context, uint32_t x, uint32_t y);
+  /// `GetVertexColor(x, y, corner)`
+  EeGfxColor (*light)(void *context, int32_t x, int32_t y, int32_t corner);
+};
+
+/// `Aim`'s result: the beam's transformation (`SetTransformation`) and length (`mLength`).
+struct EeGfxBeamAim {
+  EeGeTransformation transform;
+  float length;
+};
+
+/// One vertex of the beam model as `DrawPass6` stretches it: its point and texture coordinate.
+struct EeGfxBeamVertex {
+  EeGe3DPoint point;
+  EeGfxTexCoord coord;
 };
 
 /// The texture's u across the five vertices of a row.
@@ -867,6 +971,87 @@ void ee_gfx_pick_entry_transform(const EeGeTransformation *location,
                                  const EeGeTransformation *internal,
                                  float scale,
                                  EeGeTransformation *out);
+
+/// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
+///
+/// # Safety
+/// `field` is valid; the arrays hold `vertex_count` and `triangle_count` writable records (or are null).
+EeGe3DPoint ee_gfx_farm_ground(const EeGfxFarmField *field,
+                               EeGfxFarmTerrain terrain,
+                               EeGfxMeshVertex *vertices,
+                               size_t vertex_count,
+                               EeGfxMeshTriangle *triangles,
+                               size_t triangle_count);
+
+/// `EEE3DFarm::BuildCrops`' mesh: `rows` crop rows per tile row, `height` tall; returns the models' place.
+///
+/// # Safety
+/// As `ee_gfx_farm_ground`.
+EeGe3DPoint ee_gfx_farm_crops(const EeGfxFarmField *field,
+                              uint32_t rows,
+                              float height,
+                              EeGfxFarmTerrain terrain,
+                              EeGfxMeshVertex *vertices,
+                              size_t vertex_count,
+                              EeGfxMeshTriangle *triangles,
+                              size_t triangle_count);
+
+/// The volcano mesh's sizes for an area `width` wide.
+EeGfxVolcanoSizes ee_gfx_volcano_sizes(float width);
+
+/// `EEE3DVolcano::BuildModel`'s image: `pixels` is the locked image, `row` pixels a row (19 rows of at least 19),
+/// into `colors` and `heights` (`mHeights`; `count` each) of a mesh `side` vertices a side; returns the writes
+/// dropped.
+///
+/// # Safety
+/// `pixels` holds `18 row + 19` pixels (or is null); the arrays hold `count` each (or are null).
+uint32_t ee_gfx_volcano_image(float height_scale,
+                              int32_t side,
+                              const uint32_t *pixels,
+                              size_t row,
+                              EeGfxColor *colors,
+                              float *heights,
+                              size_t count);
+
+/// `EEE3DVolcano::BuildModel`'s mesh over the image's `colors` and `heights`; `points` and `heights` are `mPoints`
+/// and `mHeights` (`count` each).
+///
+/// # Safety
+/// `area` is valid; the arrays hold their counts (or are null).
+EeGfxVolcanoBuilt ee_gfx_volcano_build(const EeGfxVolcanoArea *area,
+                                       const EeGfxColor *colors,
+                                       EeGfxVolcanoTerrain terrain,
+                                       EeGe3DPoint *points,
+                                       float *heights,
+                                       size_t count,
+                                       EeGfxMeshVertex *vertices,
+                                       size_t vertex_count,
+                                       EeGfxMeshTriangle *triangles,
+                                       size_t triangle_count);
+
+/// `EEE3DTracerBeam::Aim`'s beam between `start` and `end` at `age` (the effect's params 5 and 6 grow and shrink
+/// it).
+///
+/// # Safety
+/// `start` and `end` are valid.
+EeGfxBeamAim ee_gfx_beam_aim(const EeGe3DPoint *start,
+                             const EeGe3DPoint *end,
+                             float age,
+                             float grow,
+                             float shrink);
+
+/// `EEE3DTracerBeam::DrawPass6`'s stretch of `count` vertices in place (length, width, texture scroll).
+///
+/// # Safety
+/// `vertices` holds `count` records (or is null).
+void ee_gfx_beam_stretch(EeGfxBeamVertex *vertices,
+                         size_t count,
+                         float length,
+                         float width,
+                         float scroll);
+
+/// `DrawPass6`'s stretch of a sub-model's internal y.
+float ee_gfx_beam_stretch_y(float y, float length);
 
 }  // extern "C"
 
