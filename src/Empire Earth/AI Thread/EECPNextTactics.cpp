@@ -824,6 +824,28 @@ EECPNextResult EECPNextImprove(EEComputerPlayer* inPlayer, long inType, long inI
         inPlayer->GetImprovementLevel(inType, inImprovement));
 }
 
+// The next level's cost of a class's improvement as EECPNextImprove would pay it (PayImprovement: the class's cost x
+// its cost scale x the improvement's cost factor x the level), its level and maximum -> false when the class has no
+// node now or no such improvement (ai.improve_cost, docs/AI_LUA_UNITS.md §11)
+bool EECPNextImproveCost(EEComputerPlayer* inPlayer, long inType, long inImprovement, long outCost[5], long& outLevel,
+                         long& outMax)
+{
+    long theReason;
+    EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
+    if (theNode == NULL)
+        return false;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    if (inImprovement < 0 || inImprovement >= 16 || theClass->mImprovements == NULL)
+        return false;
+    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[inType];
+    outLevel = inPlayer->GetImprovementLevel(inType, inImprovement);
+    outMax = theClass->mImprovements->GetMaxLevel();
+    float theFactor = theClass->mImprovements->mEntries[inImprovement].mCostFactor * (float)outLevel;
+    for (long i = 0; i < kNextResources; i++)
+        outCost[i] = inPlayer->ScaleCost(UMFloatToLong((float)theNode->mData->mCosts[kResourceFood + i] * theUpgrade->mCostScale * theFactor));
+    return true;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Research and the advance (EECPResearchManager::Research into mEpochIDs, TryResearch starts it; AttemptEpochAdvance,
 // SetNextEpochAdvanceTime, ChooseResearch and ResearchCheapest never run)

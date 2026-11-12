@@ -1010,6 +1010,13 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
   it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
   it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
 
+**The cost of an improvement (2026-11-12):** `ai.improve_cost(class, what)` -> `{food, wood, stone, gold, iron,
+level, max}`: the next level's cost of a class's improvement (`what`: `attack`, `hit_points`, `range`, `speed` or the
+improvement's number) as the improve verb pays it (PayImprovement: the class's cost x its cost scale x the improvement's
+cost factor x the level; EECPNextImproveCost beside EECPNextImprove), with its level and maximum; nil when the class
+has no node now or no such improvement. A human reads the cost off the improvement's button. Boom's answer to the
+frigates asks the reserve for it (`memory.priority_spend`, AI_RESEARCH §8.50).
+
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
 - what the port's modules asked for (UPSTREAM's interface gaps): a tribute-received event, an offer channel between
