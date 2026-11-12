@@ -21,9 +21,11 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackGround.h"
+#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EmpireEarth.h"
@@ -53,17 +55,22 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
 long EEUCTorpedo::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     long theResult = 0;
+    // TEST ONLY (CBTC): the target is the attack-unit goal's
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    EECombatConditionScope theCap(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent,
+                                  theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGAttackUnit*>(theGoal)->mTarget : NULL);
     switch (inEvent) {
     case kTriggerProjectileHitGround:
-        if (this->CheckGroundImpact(inUnit))
+        if (EECombatRead(EE_COMBAT_READ_GROUND_IMPACT, this->CheckGroundImpact(inUnit)))
             theResult = 1;
         break;
     case kTriggerProjectileHitWater:
         break;
     default:
-        theResult = EEUCMissile::EvaluateCondition(inUnit, inEvent);
+        theResult = EECombatRead(EE_COMBAT_READ_BASE, EEUCMissile::EvaluateCondition(inUnit, inEvent));
         break;
     }
+    theCap.Commit(theResult, EE_COMBAT_CONDITION_NONE);
     return theResult;
 }
 
