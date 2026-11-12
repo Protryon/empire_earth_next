@@ -7294,3 +7294,67 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## R6: WON's UDP receive and request ops, and the lobby's saved settings' scalar state, as Rust objects (ee_won udpops.rs, prefsobj.rs; branch rust-r6-won16, 2026-11-11)
+
+Round 16 of R6 (RUST_PLAN "R6 WON, the rest"), the fifth round of whole-class moves: the network layer's last C++
+state (UDPManager's two ops) and the first piece of the lobby's model.
+
+- **The golden first.** `won_sockobj_test` grew from 452 to 497 lines, recorded over the unmodified C++ before any
+  edit (commit `R6 WON: won_sockobj_test's round 16 golden`, five runs the same): the ops' own paths (an addressed
+  receive op on its own socket meeting another sender, a refusal, a check that throws, the accepted datagram; a given
+  socket outliving the op; a kill and a time-out on an own socket; retransmits on an own socket; a re-run; a request
+  killed while waiting; a request through an unbound manager; a receive op run twice through a manager closed under
+  it). The same 497 lines after the accessors commit and over the Rust objects (4 runs). Driver trap again: MSVC's
+  ABI evaluates `"x" + St(op()) + Hex(buf)` right to left, so the buffer printed before the receive filled it.
+- **Found: own-socket retransmits never leave.** A request op without a manager queues its request on its own
+  QueueSocket and its reply wait queues a RecvBytesFromOp (no time-out of its own) behind it. When the wait times
+  out, its datagram receive stays first in the socket's queue, so the retransmitted request waits behind it until
+  the socket is killed: the server sees one request, then the op ends with WS_NoReply. The original's behaviour, kept
+  and in the golden. Through a manager (the lobby's only use: PingGameOp, RoutingGetUserStatusOp) the retransmits go
+  out. Also kept: the own-socket path finishes the receive op without storing the datagram (`GetMsg` stays NULL);
+  only the manager's dispatch sets it.
+- **The ops** (udpops.rs). Accessors first (`GetSocket`, `GetUDPManager`, `GetFromAddr` and `GetDestAddr` now
+  copies, `SetOutgoing` / `GetOutgoing`, `GetRecvOp`, `GetAttemptCount`, `GetNumRetransmits`, `GetMsgTimeout`;
+  mechanical edits in PingLogic, RoutingGetUserStatusOp and RoutingLogic::GetUserStatusComplete), then
+  `EeWonUdpRecvOp` (the socket, manager, own-socket flag, address, datagram, the check and its context kept as the C++
+  function pointer) and `EeWonUdpSendRecvOp` (manager, own socket, request, address, reply wait, retry limit,
+  attempts, reply time-out) with every step (RunHook, CleanupHook, QueueRecv, RecvCallback, SendRequest). The C++
+  classes are shims the lobby subclasses; the AsyncOp, the virtual CheckMessage / CheckResponse, the sockets and the
+  ops queued on them, the manager and the reply wait come back through one hook table (`EeWonUdpOpHooks`); a new
+  reply wait's Rust object is reached through the `recv_object` hook to give it the manager or socket. The
+  destructors became explicit (they free the objects). Behaviour change: the request op's attempts start at 0 (the
+  original left them unset until RunHook).
+- **LobbyPersistentData, accessors first.** The members are private: the flags by name (`GetFlag` / `SetFlag` over
+  a `Flag` enum), the numbers and texts (Get / Set), the containers by reference. A script rewrote the Lobby*
+  functions' `(data|aData)->mX` sites (131 lines in six units); the files' event appliers are friends. Compile-checked
+  over the 87 WONLobby units with `tools/clang_build.py --only WONLobby won` (49 s; faster than a full build for a
+  header change's census).
+- **Its scalar state as a Rust object** (prefsobj.rs `EeWonLobbyPrefs`): the current user, the fifteen flags, the
+  connection speed, the LAN broadcast port, the network adapter and the four texts (tab, LAN name, last server and
+  room, UTF-8 compared byte for byte as GUIString's `Compare` compared code units), with the setters' rules
+  (`change_flag`: a change marks the user dirty, the lobby's sound and music set the global flag to whether they
+  differ from the saved state; `change_number`, `change_tab_select`, `set_last_room`, `save_network_adapter`,
+  `restore_defaults`, `after_restore` with the original's `int` copy of the adapter, `after_global_save`,
+  `after_user_load`). The free setters are one call each now. The texts' getters (and `LobbyGetLanName`,
+  `LobbyGetTabSelect`, `LobbyGetLastServerName`, `LobbyGetLastRoomName`) return copies; their callers (LanLogic,
+  LobbyOptionsCtrl, RootScreen, RoutingLogic) only compare or copy them. `won_persist_test` grew from 26,855 to
+  127,055 checks: the original's setter, default and dirty statements over a stand-in against the object, 200
+  random sequences of 500 steps. Behaviour change: the constructor's RestoreDefaults sees user 0 (the original read
+  the unset id): the LAN tab and the default LAN name until a user is set (SetCurrentUser's load restores again).
+  What stays C++: the containers (users, ids, friends, ignored names, blocked keys, options, reconnect ids, LAN
+  names, direct connects) and the password's Blowfish key; their Lobby* functions return references to C++ maps
+  that the lobby's lists iterate, so they move with LobbyModel's lists.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game
+  exercises: the lobby's UDPManager's auto-receive op (LobbyBindUDPPort's SetAutoRecv makes a UDPManagerRecvOp,
+  so its Rust object, and the close frees it; a datagram finishes it, and PingLogic::HandleUDPRecv reads its
+  `GetMsg` / `GetFromAddr` through the object, only when someone pings the host) and the saved settings at every lobby load and LAN login: the constructor, LoadGlobalPrefs (sound, music, adapter),
+  SetCurrentUser(LAN) -> LoadUserPrefs (RestoreDefaults, the flags, texts, port, speed of the user file, the LAN name
+  pick), LobbyGetLanName for the LAN client's name, LobbyGetLanBroadcastPort for the discovery socket, the sound
+  getters, LobbySaveNetworkAdapter, and the saves at exit. Only a person reaches: the game list's Ping action and a
+  direct-connect game (PingGameOp: a UDPManagerSendRecvOp through the manager, its reply wait, retransmits), the
+  options dialog's setters (each LobbySet...), Restore Defaults, the friends' status query (RoutingGetUserStatusOp,
+  Internet only), an own-socket receive or request op (nothing in the game makes one).
+- **Left.** LobbyPersistentData's containers and LobbyModel's lists (LobbyClient, LobbyFriend, LobbyGroup,
+  LobbyServer, LobbyServerList, LobbyGameList; the decisions are model.rs since round 7), then StagingLogic /
+  InitLogic / ChatCommandParser objects.
