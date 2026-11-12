@@ -25,10 +25,14 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x04 0x1ba78e
     // 0x1ba0d1: whether inUnit is in this area (EESMObject's 0x1c6458 asks; provisional name)
     bool ContainsUnit(EEUnit* inUnit);
+    bool ContainsUnitUncaptured(EEUnit* inUnit);   // (+ SMAR)
     bool ContainsTile(const U2DPoint<long>& inTile);   // 0x1ba154 (provisional name)
+    bool ContainsTileUncaptured(const U2DPoint<long>& inTile);   // (+ SMAR)
     void Copy(const EESMArea& inArea);      // 0x1ba2b2 (EEScenarioManager 0x1b12ff; provisional name)
     U2DPoint<long> GetCenterTile();         // 0x1ba315: hidden-result ABI; by-value spelling inferred
+    U2DPoint<long> GetCenterTileUncaptured();   // (+ SMAR)
     void GetTiles(std::vector<U2DPoint<long> >& outTiles);   // 0x1ba495: real typed cache/output family
+    void GetTilesUncaptured(std::vector<U2DPoint<long> >& outTiles);   // (+ SMAR)
     const UWideString& GetName() const { return this->mName; }  // inline (DuplicateArea 0x5b120d)
     bool IsUnset() const;                   // 0x1ba45e
     bool IsOffMap() const;                  // 0x1ba473: the anchor has a negative coordinate (provisional name)

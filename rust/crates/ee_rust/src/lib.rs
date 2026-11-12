@@ -37,6 +37,9 @@ use ee_combat as _;
 // the tech tree's research and prerequisites, the event effects' arithmetic, the calamities' timing (ee_tech/src/ffi.rs),
 // called by the C++ tech tree, EEEvent.cpp and the calamity classes
 use ee_tech as _;
+// the scenario manager's conditions, player choices and triggers (ee_scenario/src/ffi.rs), called by the C++
+// EESMCondition, EESMTrigger and EEScenarioManager over their host (Scenario Manager/EEScenarioHost.cpp)
+use ee_scenario as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 
