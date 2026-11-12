@@ -11,6 +11,7 @@ local MILITIA_RANGE, MILITIA_TOWER_RANGE, DEFEND_RANGE = 10, 12, 30
 local ODDS_K = 1500
 local MILITIA_MS = 4000
 local FLEE_RANGE, DANGER_RANGE, HOME_RANGE, MAX_RAIDERS, DEFENDERS = 8, 10, 12, 2, 4
+local NAVAL_RANGE = 12   -- kNavalFleeRange
 
 local function near(u, x, y, r)
     return R.d2(u.x, u.y, x, y) <= r * r
@@ -116,6 +117,8 @@ local function militia(memory, victim, attacker_player, time)
             nhp, nat = nhp + (c.hp or 0), nat + (c.attack or 0)
             R.add_idle(rm, c.id)
         end
+        print(string.format("classic_lua militia fight citizens=%d soldiers=%d raiders=%d odds=%.2f tower=%d", #all - #soldiers,
+            #soldiers, #raiders, rhp * rat > 0 and hp * at / (rhp * rat) or 0, tower ~= nil and 1 or 0))
         -- each to the nearest raider (batched by target)
         local by = {}
         for _, u in ipairs(all) do
@@ -157,6 +160,8 @@ local function militia(memory, victim, attacker_player, time)
                 hx = nil
             end
         end
+        print(string.format("classic_lua militia run citizens=%d soldiers=%d raiders=%d odds=%.2f tower=%d", hx ~= nil and #citizens or 0,
+            #soldiers, #raiders, rhp * rat > 0 and hp * at / (rhp * rat) or 0, tower ~= nil and 1 or 0))
         if hx ~= nil and #citizens > 0 then
             local ids = {}
             for _, c in ipairs(citizens) do
@@ -217,10 +222,65 @@ function M.on_events(memory, events, time)
         return
     end
     local humans = memory.humans or {}
+    -- the herds given up (resource.lua herd_banned): a hunter hit by an enemy tower is remembered for 5 s; if it dies
+    -- in that time, the herd there is given up
+    memory.tower_hits = memory.tower_hits or {}
+    for _, e in ipairs(events) do
+        if e.kind == "died" and memory.tower_hits[e.unit] ~= nil then
+            local h = memory.tower_hits[e.unit]
+            if time - h.t <= 5000 then
+                local rm = R.state(memory)
+                rm.herd_bans = rm.herd_bans or {}
+                rm.herd_bans[#rm.herd_bans + 1] = {x = h.x, y = h.y, t = time}
+                print(string.format("classic_lua herd.ban at=%d,%d", h.x, h.y))
+            end
+            memory.tower_hits[e.unit] = nil
+        elseif e.kind == "attacked" and e.attacker ~= nil then
+            local v = ai.unit(e.unit)
+            local a = ai.unit(e.attacker)
+            if v ~= nil and a ~= nil and v.category == "citizen" and a.category == "building" and a.player ~= nil
+                and a.player > 0 and a.player ~= memory.me and R.is_animal(v.target) then
+                memory.tower_hits[e.unit] = {x = v.x, y = v.y, t = time}
+            end
+        end
+    end
+    for id, h in pairs(memory.tower_hits) do
+        if time - h.t > 5000 then
+            memory.tower_hits[id] = nil
+        end
+    end
     for _, e in ipairs(events) do
         if e.kind == "attacked" and e.attacker ~= nil then
             local v = ai.unit(e.unit)
             local a = ai.unit(e.attacker)
+            -- EECPRMNavalFlee's danger zone: the engine's naval flight moves the own units round a unit under a
+            -- warship's fire (the boats round a boat; the citizens and melee soldiers round a land unit), but puts its
+            -- zone on the classic's own lists, which the script's gatherers are not on. The zone where any left, once
+            -- every 4 s (the engine's own period)
+            if v ~= nil and a ~= nil and a.category == "ship" and v.category ~= "building" and a.player ~= nil
+                and a.player > 0 and a.player ~= memory.me and not (memory.allies or {})[a.player] and personality.naval_flee
+                and (memory.naval_zone == nil or time - memory.naval_zone >= MILITIA_MS) then
+                memory.naval_zone = time
+                local boat = v.category == "boat"
+                local left = false
+                for _, id in ipairs(ai.units{near = {v.x, v.y, NAVAL_RANGE}}) do
+                    local u = R.unit(id)
+                    if u ~= nil and u.inside == nil then
+                        if boat then
+                            left = u.category == "boat"
+                        else
+                            left = u.category == "citizen" or ((u.category == "soldier" or u.category == "hero")
+                                and (u.range or 0) < 300)
+                        end
+                        if left then
+                            break
+                        end
+                    end
+                end
+                if left then
+                    add_zone(memory, v.x, v.y, time)
+                end
+            end
             if v ~= nil and a ~= nil and v.category == "citizen" and a.player ~= nil and a.player > 0
                 and a.player ~= memory.me and not (memory.allies or {})[a.player] then
                 if personality.militia then
@@ -236,6 +296,28 @@ end
 -- EECPRMFleeRaids: the gatherers within 8 tiles of a danger zone (30 s) go home and onto the idle list
 function M.flee(view, memory)
     local rm = R.state(memory)
+    -- the herds given up: they expire after 10 minutes; the hunters within their range leave
+    if rm.herd_bans ~= nil and #rm.herd_bans > 0 and view.town_x ~= nil and view.town_x >= 0 then
+        for k = #rm.herd_bans, 1, -1 do
+            if view.time - rm.herd_bans[k].t > R.HERD_BAN_MS then
+                table.remove(rm.herd_bans, k)
+            end
+        end
+        local leave = {}
+        for _, id in ipairs(rm.lists.food) do
+            local u = ai.unit(id)
+            if u ~= nil and u.category == "citizen" and u.inside == nil and R.is_animal(u.target)
+                and R.herd_banned(memory, u.x, u.y) then
+                leave[#leave + 1] = id
+            end
+        end
+        if #leave > 0 then
+            for _, id in ipairs(leave) do
+                R.add_idle(rm, id)
+            end
+            ai.move(leave, view.town_x, view.town_y, {forced = true})
+        end
+    end
     if rm.danger == nil or #rm.danger == 0 or view.town_x == nil or view.town_x < 0 then
         return
     end
@@ -258,6 +340,7 @@ function M.flee(view, memory)
             R.add_idle(rm, id)
         end
         ai.move(run, view.town_x, view.town_y, {forced = true})
+        print(string.format("classic_lua flee n=%d zones=%d", #run, #rm.danger))
     end
 end
 
