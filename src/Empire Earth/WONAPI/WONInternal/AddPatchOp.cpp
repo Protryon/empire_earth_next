@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONPatchAdmin.h"
 #include "ee/wonapi/WONStatus.h"
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -59,7 +60,7 @@ void AddPatchOp::RunHook()
 
 	// Pack the message data
 	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
+	AdminValues().Str(this->mProductName).AppendTo(EE_WON_ADMIN_PRODUCT, requestData);
 	this->mPatchData->WriteToBuffer(requestData, this->mIsUpdate);
 
 	// Pack and call base class implementation

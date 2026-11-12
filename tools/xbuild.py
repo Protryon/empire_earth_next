@@ -504,6 +504,9 @@ WON_TESTS = {
     # version filter; the patch ops' requests and replies), the original's statements against
     # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
+    # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
+    "won_admin_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

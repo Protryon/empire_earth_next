@@ -9,6 +9,7 @@ namespace WONAPI {
 // using a valid product cd key and community name to identify the account
 class GetAccountFromCDKeyOp: public DBProxyOp
 {
+	template <class Op> friend long AdminAccountReply(Op& o, const ByteBuffer* inData); // its reply (WONAdminMsg.h)
 	// Attributes
 protected:
 	std::string		mCDKey;		// [in]

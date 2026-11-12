@@ -1175,6 +1175,64 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
+constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMIN_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMIN_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE = 13;
+
+/// the CD key account's request before the profile (the key, the community)
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY = 14;
+
+/// the same with the action flag
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// the version ops' requests: the product (before the version record)
+constexpr static const int32_t EE_WON_ADMIN_PRODUCT = 16;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_VERSION = 17;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMIN_GET_VERSION_LIST = 18;
+
+/// `RemovePatchOp`: product, config, from, to, patch URL
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_PATCH = 19;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMIN_ACTIVATE_PATCH = 20;
+
+/// `GetPatchServerModuleListOp`'s reply (its request has no data)
+constexpr static const int32_t EE_WON_ADMIN_MODULE_LIST = 21;
+
+constexpr static const uint8_t EE_WON_ADMIN_VALUE = 0;
+
+/// the read ended whole (`at`: where the account reply's profile starts)
+constexpr static const uint8_t EE_WON_ADMIN_END = 1;
+
+/// the read failed here
+constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -6177,8 +6235,29 @@ struct EeGoalSpec {
   uint8_t flag_c;
 };
 
+/// A member handed over.
+struct EeWonAdminValue {
+  int64_t num;
+  const uint8_t *data;
+  size_t len;
+};
+
 /// Receives bytes; valid only during the call.
 using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
+/// bytes, so the original erased the member).
+struct EeWonAdminField {
+  /// `EE_WON_ADMIN_VALUE`, `EE_WON_ADMIN_END`, `EE_WON_ADMIN_CUT`
+  uint8_t tag;
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The values of a reply, handed over once.
+using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
 
 /// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
 /// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
@@ -13762,6 +13841,26 @@ extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
 extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
+
+/// An op's request data into `sink` (`values`: its members in its table's order).
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid; `sink` accepts `context`.
+void ee_won_admin_request(int32_t op,
+                          const EeWonAdminValue *values,
+                          size_t count,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// A reply's values into `sink`.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_admin_reply(int32_t op,
+                        const uint8_t *data,
+                        size_t len,
+                        EeWonAdminSink sink,
+                        void *context);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

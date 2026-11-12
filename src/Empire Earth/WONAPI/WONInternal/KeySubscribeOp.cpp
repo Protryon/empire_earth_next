@@ -4,6 +4,7 @@
 #include "ee/wonapi/WONStatus.h"
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -19,31 +20,17 @@ BaseKeySubscribeOp::BaseKeySubscribeOp(ServerContext* theContext)
 ///////////////////////////////////////////////////////////////////////////////
 void BaseKeySubscribeOp::Pack(WriteBuffer& theBufferR)
 {
-	// Stores the message data
-	theBufferR.AppendString(this->mProductName);
-	theBufferR.AppendWString(this->mCommunityName,2);
-	theBufferR.AppendShort(this->mKeyList.size());
-	for(std::list<std::string>::iterator anItr = this->mKeyList.begin(); anItr != this->mKeyList.end(); ++anItr)
-		theBufferR.AppendString(*anItr, 1);
+	AdminSubscribeValues(*this).AppendTo(EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE, theBufferR);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus BaseKeySubscribeOp::Unpack(ReadBuffer& theBufferR)
 {
-	try
-	{
-		this->mStatusList.clear();
-		unsigned short aListSize = theBufferR.ReadShort();
-		for(unsigned short i = 0; i < aListSize; i++)
-			this->mStatusList.push_back(theBufferR.ReadShort());
-	}
-	catch (ReadBufferException&)
-	{
+	// the statuses of the reader's remaining bytes (ee_won admin.rs)
+	ConstSmartPtr<ByteBuffer> aRest = new ByteBuffer(theBufferR.data() + theBufferR.pos(), theBufferR.Available(), false);
+	if (!AdminStatusReply(EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE, aRest.get(), this->mStatusList, true))
 		return (WONStatus)WS_InvalidMessage;
-	}
-
-	// Everything checked out
 	return (WONStatus)WS_Success;
 }
 
@@ -66,16 +53,9 @@ void InsertKeySubscribeOp::RunHook()
 	this->mSubMessageType = MSGTYPE;
 
 	// Stores the message data
-	WriteBuffer requestData(0,true);
-	BaseKeySubscribeOp::Pack(requestData);
-
-	requestData.AppendLong(this->mAllocateDate);
-	requestData.AppendLong(this->mAllocateDuration);
-	requestData.AppendLong(this->mActivateTime);
-	requestData.AppendLong(this->mActivateDuration);
-
-	// Copy buffer into the class
-	this->mRequestData = requestData.ToByteBuffer(true);
+	AdminValues aValues = AdminSubscribeValues(*this);
+	aValues.Num(this->mAllocateDate).Num(this->mAllocateDuration).Num(this->mActivateTime).Num(this->mActivateDuration);
+	this->mRequestData = aValues.Build(EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE);
 
 	DBProxyOp::RunHook();
 }
@@ -119,18 +99,10 @@ void UpdateKeySubscribeOp::RunHook()
 	this->mSubMessageType = MSGTYPE;
 
 	// Stores the message data
-	WriteBuffer requestData(0,true);
-	BaseKeySubscribeOp::Pack(requestData);
-
-	requestData.AppendShort(this->mUpdateFields);
-	requestData.AppendLong(this->mAllocateDate);
-	requestData.AppendLong(this->mAllocateDuration);
-	requestData.AppendLong(this->mActivateTime);
-	requestData.AppendLong(this->mActivateDuration);
-	requestData.AppendLong(this->mActivateUserSeq);
-
-	// Copy buffer into the class
-	this->mRequestData = requestData.ToByteBuffer(true);
+	AdminValues aValues = AdminSubscribeValues(*this);
+	aValues.Num(this->mUpdateFields).Num(this->mAllocateDate).Num(this->mAllocateDuration).Num(this->mActivateTime)
+		.Num(this->mActivateDuration).Num(this->mActivateUserSeq);
+	this->mRequestData = aValues.Build(EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE);
 
 	DBProxyOp::RunHook();
 }
@@ -168,11 +140,7 @@ void RemoveKeySubscribeOp::RunHook()
 	this->mSubMessageType = MSGTYPE;
 
 	// Stores the message data
-	WriteBuffer requestData(0,true);
-	BaseKeySubscribeOp::Pack(requestData);
-
-	// Copy buffer into the class
-	this->mRequestData = requestData.ToByteBuffer(true);
+	this->mRequestData = AdminSubscribeValues(*this).Build(EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE);
 
 	DBProxyOp::RunHook();
 }
@@ -210,15 +178,7 @@ void QueryKeySubscribeOp::RunHook()
 	this->mSubMessageType = MSGTYPE;
 
 	// Stores the message data
-	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendWString(this->mCommunityName,2);
-	requestData.AppendShort(this->mKeyList.size());
-	for(std::list<std::string>::iterator anItr = this->mKeyList.begin(); anItr != this->mKeyList.end(); ++anItr)
-		requestData.AppendString(*anItr, 1);
-
-	// Copy buffer into the class
-	this->mRequestData = requestData.ToByteBuffer(true);
+	this->mRequestData = AdminSubscribeValues(*this).Build(EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE);
 
 	DBProxyOp::RunHook();
 }
@@ -237,28 +197,8 @@ WONStatus QueryKeySubscribeOp::CheckResponse()
 		return this->InvalidReplyHeader();
 
 	// Extended unpack
-	ReadBuffer theData(this->mReplyData->data(), this->mReplyData->length());
-	try
-	{
-		KEY_DATA aKey;
-		this->mKeyDataList.clear();
-		short aListSize = theData.ReadShort();
-		for(short i = 0; i < aListSize; i++)
-		{
-			aKey.mStatus = (WONStatus)theData.ReadShort();
-			aKey.mAllocateDate = theData.ReadLong();
-			aKey.mAllocateDuration = theData.ReadLong();
-			aKey.mActivateTime = theData.ReadLong();
-			aKey.mActivateDuration = theData.ReadLong();
-			aKey.mActivateUserSeq = theData.ReadLong();
-			this->mKeyDataList.push_back(aKey);
-		}
-	}
-	catch (ReadBufferException&)
-	{
+	// Extended unpack: the keys' data (ee_won admin.rs)
+	if (!AdminQueryKeySubscribeReply(*this, this->mReplyData.get()))
 		return (WONStatus)WS_InvalidMessage;
-	}
-
-	// Everything checked out
 	return (WONStatus)WS_Success;
 }
