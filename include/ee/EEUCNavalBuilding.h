@@ -22,7 +22,6 @@ public:
     virtual EEUnit* CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x30 0x218605 (ICF: EEUCNaval, EEUCNavalCitizen...)
     virtual EEUnit* CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x34 0x218909 (ICF: EEUCNaval, EEUCNavalCitizen...)
     virtual bool IsLandBuilding();          // +0x54 0xac9f3 trivial: xor al, al; ret (ICF: ?$EEAIAStarGoalBase@VEEAIAStarBoundedStorage@@VEEMap@@, ?$EEAIAStarGoalBase@VEEAIAStarChokePointStorage@@VEEMap@@...)
-    virtual void ActionChanged(EEComplexUnit* inUnit); // +0x74 0x21a11d trivial: push dword ptr [esp + 4]; call 0x60f015; ret 4 (ICF: EEUCSpaceBuilding)
     virtual void UnitCreated(EEComplexUnit* inUnit);  // +0x78 0x21a129 (ICF: EEUCSpaceBuilding)
     virtual bool HasArrived(EEComplexUnit* inUnit, float inValue);  // +0x88 0x21a144 (ICF: EEUCSpaceBuilding)
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x2183f8 (ICF: EEUCSpaceBuilding)

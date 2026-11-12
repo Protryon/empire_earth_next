@@ -20,6 +20,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"

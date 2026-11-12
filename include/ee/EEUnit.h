@@ -42,6 +42,7 @@ class EEPPatrolGroup;
 class EETown;
 #include "ee/EEUnitAction.h"             // EEComplexUnit::mCommand (+0x1e8; GetCommandType reads its mType inline)
 class EEUnitBehavior;                      // ee/EEUnitBehavior.h (EEComplexUnit+0x208, EEUnitClass+0x118)
+class EEGoalDeque;                          // ee/EEUnitVectorItem.h (EEUnitVectorItem::mGoals' holder)
 class EEUnitVectorItem;                     // the 0x28-byte polymorphic elements of EEComplexUnit+0x90 (ee/EEUnitVectorItem.h)
 class GEModel;
 class EETagPointList;                       // ee/EEGraphicObject.h (EEModel::FnD84EC)
@@ -483,7 +484,7 @@ public:
     // inline in the real header (out-of-line COMDAT 0x1ed63b, first emitted by EEActiveGroup.cpp): the first goal queued
     // in mGoalQueues[inIndex], 0 if none; declared out of line here (provisional name)
     EEUnitGoal* GetQueuedGoal(unsigned long inIndex);
-    std::deque<EEUnitGoal*>& GetQueueGoals(unsigned long inIndex);  // 0x1fa1cd: mGoalQueues[inIndex].mGoals (out of line; EEUICUnitIconBar 0x25ad01) (provisional name)
+    EEGoalDeque& GetQueueGoals(unsigned long inIndex);  // 0x1fa1cd: mGoalQueues[inIndex].mGoals (out of line; EEUICUnitIconBar 0x25ad01) (provisional name)
     // 0x1ebdcc (defined in EEActiveGroup.cpp after Virtual48, out of line): mActiveGroup = inGroup, referenced
     // (provisional name)
     void SetActiveGroup(EEActiveGroup* inGroup);

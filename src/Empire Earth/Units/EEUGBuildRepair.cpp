@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
@@ -806,8 +807,8 @@ bool EEUGBuildRepair::IsSiteFreeOfUnits()
 // with shift): the citizen idles once the queue is done. A farm is still worked: building one is an order to farm it.
 bool EEUGBuildRepair::IsShiftQueueNext(EEComplexUnit* inUnit)
 {
-    std::deque<EEUnitGoal*>& theGoals = inUnit->GetQueueGoals(0);
-    for (std::deque<EEUnitGoal*>::iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
+    const EEGoalDeque& theGoals = inUnit->GetQueueGoals(0);
+    for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
         if (*i == this)
             continue;
         EEUGLocation* theLocation = (*i)->mKind == kGoalLocation ? static_cast<EEUGLocation*>(*i) : NULL;

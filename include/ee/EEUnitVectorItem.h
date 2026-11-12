@@ -12,6 +12,62 @@ class EEUnitGoal;
 class EEComplexUnit;
 class FSFile;
 
+// New (R5b.4, the fifteenth round): the goal queue's deque as a write-through holder. It reads as the deque
+// (size, the elements, const iterators) and every change reports the queue's goal ids to the Rust mirror
+// (ee_units goals.rs) through EEGoalQueueChanged (EEUnitStore.cpp; the owner by offset). No writable reference or
+// iterator leaves it, so the compiler finds every writer; `Set` replaces one element.
+class EEGoalDeque {
+public:
+    typedef std::deque<EEUnitGoal*> Base;
+    typedef Base::const_iterator const_iterator;
+    typedef Base::const_iterator iterator;   // (read only: DeleteVectorContents' loop)
+    typedef Base::size_type size_type;
+    typedef EEUnitGoal* value_type;
+
+    EEGoalDeque() {}
+    EEGoalDeque(const EEGoalDeque&) = delete;
+    EEGoalDeque& operator=(const EEGoalDeque&) = delete;
+
+    size_type size() const { return this->mGoals.size(); }
+    bool empty() const { return this->mGoals.empty(); }
+    EEUnitGoal* operator[](size_type inIndex) const { return this->mGoals[inIndex]; }
+    EEUnitGoal* front() const { return this->mGoals.front(); }
+    EEUnitGoal* back() const { return this->mGoals.back(); }
+    const_iterator begin() const { return this->mGoals.begin(); }
+    const_iterator end() const { return this->mGoals.end(); }
+    const Base& Get() const { return this->mGoals; }
+
+    void push_back(EEUnitGoal* inGoal) { this->mGoals.push_back(inGoal); this->Changed(); }
+    void push_front(EEUnitGoal* inGoal) { this->mGoals.push_front(inGoal); this->Changed(); }
+    void pop_back() { this->mGoals.pop_back(); this->Changed(); }
+    void pop_front() { this->mGoals.pop_front(); this->Changed(); }
+    const_iterator insert(const_iterator inAt, EEUnitGoal* inGoal)
+    {
+        const_iterator theResult = this->mGoals.insert(inAt, inGoal);
+        this->Changed();
+        return theResult;
+    }
+    const_iterator erase(const_iterator inAt)
+    {
+        const_iterator theResult = this->mGoals.erase(inAt);
+        this->Changed();
+        return theResult;
+    }
+    const_iterator erase(const_iterator inFirst, const_iterator inLast)
+    {
+        const_iterator theResult = this->mGoals.erase(inFirst, inLast);
+        this->Changed();
+        return theResult;
+    }
+    void clear() { this->mGoals.clear(); this->Changed(); }
+    void resize(size_type inSize, EEUnitGoal* inGoal) { this->mGoals.resize(inSize, inGoal); this->Changed(); }
+    void Set(size_type inIndex, EEUnitGoal* inGoal) { this->mGoals[inIndex] = inGoal; this->Changed(); }
+
+private:
+    void Changed();   // EEUnitStore.cpp
+    Base mGoals;
+};
+
 // RTTI EEGoalQueueContainer (vtable 0x446f0c; EEGoalQueueContainer.cpp 0x20560c..0x205eda, key
 // "EEGoalQueueContainer-Data"): this is that class (the provisional name EEUnitVectorItem stays until its
 // users are renamed).
@@ -42,7 +98,7 @@ public:
     void Add(EEUnitGoal* inGoal);
     void AddFront(EEUnitGoal* inGoal);
 
-    std::deque<EEUnitGoal*> mGoals;         // +0x04 (its size at +0x14: EEMIncrementRallyTimer tests it)
+    EEGoalDeque mGoals;                     // +0x04 (its size at +0x14: EEMIncrementRallyTimer tests it; a holder: R5b.4)
     EEComplexUnit* mUnit;                   // +0x18 (the goals' Virtual3C/Virtual68 argument)
     unsigned long mStartTime;               // +0x1c (FSFile Read/Write(unsigned long))
     unsigned long mTime;                    // +0x20

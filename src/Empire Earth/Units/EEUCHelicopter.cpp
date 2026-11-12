@@ -86,52 +86,31 @@ float EEUCHelicopter::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLoca
 // (an attack's aim point; exploring at cruising height)
 void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
 {
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs helicopter), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCHelicopter::ActionChanged's path to the goal when preparing to move (the
+// original's statements; ee_units actions.rs decides when, EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
+void EEHelicopterPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCHelicopter* theClass = static_cast<EEUCHelicopter*>(inClass);
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     GE3DPoint theTarget;
     GE3DPoint theEnemy;
     EEUnit* theUnit;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionIdle:
-        this->HandleActionChanged(inUnit);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
-        return;
-    }
-    case kActionPrepareToMove: {
-        EEUnitGoal* theGoal = inUnit->mGoalState;
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->DropPath();
-        if (theGoal->mKind == kGoalAttackUnit) {
-            EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
-            EEGetAimPoint(inUnit, &theEnemy, &theTarget);
-        } else
-            theGoal->GetDestination(inUnit, theTarget);
-        if (theGoal->mKind == kGoalExplore)
-            theTarget.SetZ(this->mCruiseAltitude);
-        EEFindLandingPoint(inUnit, &theTarget);
-        this->PathToward(inUnit, thePosition, theTarget, false);
-        break;
-    }
-    case kActionResourcesRotting:
-        this->HandleActionChanged(inUnit);
-        return;
-    default:
-        this->HandleActionChanged(inUnit);
-        return;
-    }
-    inUnit->SetAnimation(0xd, -1, 0);
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    if (theGoal->mKind == kGoalAttackUnit) {
+        EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
+        EEGetAimPoint(inUnit, &theEnemy, &theTarget);
+    } else
+        theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->mCruiseAltitude);
+    EEFindLandingPoint(inUnit, &theTarget);
+    theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
 // FUNCTION: EXE 0x612deb
