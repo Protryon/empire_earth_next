@@ -8863,3 +8863,63 @@ Measured as rounds 18 and 19 (every file under `src/Empire Earth/WONAPI` and `in
   BroadcastToGame / SendToClient), the chat if typed, and the start. Peer authentication (direct connect with the
   CD key check), the LAN name and port dialogs, the direct-connect list, kicks and a lost host run only in the
   golden.
+
+## R6 WON round 21: WONGUI's component tree mapped, TextArea whole in Rust over one component op table (ee_won textobj.rs, guihost.rs; branch rust-r6-won21, 2026-11-12)
+
+Measured as rounds 18-20 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 94,231 at
+the branch's start (round 20 merged with rust) -> 93,102 after the TextArea commit: -1,129.
+
+- **The map** (`build/w21/census.py`: lines per class from the `Class::` definitions, references outside WONGUI by
+  name). WONGUI is 230 units, 29,583 lines, plus `WONLobbyGUI.h` (3,001) and the per-control headers. The biggest
+  classes: WindowManager 1,487 (27 outside references in 12 files), Container 1,170 (95 in 44), ComponentConfig
+  1,072 (210 in 86), ListArea 846 (76 in 19), Component 752 (377 in 76), TextArea 691 (26 in 5), Window 657,
+  PlatWindowManager 639, InputBox 577 (41 in 10), ResourceConfig 493, SurfaceBase 460 (19 in 2), Button 449 (216 in
+  37). The lobby derives 41 classes from Container (every screen and control panel), 7 from Button
+  (`EELobbyColorButton`, `ImageButton`, the MS and WON buttons), 2 from InputBox, 2 each from ComboBox and TabCtrl,
+  one (`ChatLink`) from TextLink; Label, TextArea, Splitter, TreeArea, MultiListArea and PopupMenu have no
+  subclass. Outside WON: `EETestFixture.cpp` walks the tree (Component, Container, Button, Label, ListArea,
+  WindowManager) for `ui-state.txt`; `EEWonNet.cpp` and the three `EEUIEWonNet*Events` units reach the lobby, not
+  WONGUI's classes.
+- **Why the leaves, and why TextArea first.** The containers and the root are the type of every lobby screen (377
+  references to Component, 95 to Container): moving them first would rewrite the lobby. A leaf with no subclass
+  moves behind its own C++ shell without touching a caller. TextArea had the best ratio: ~1,500 lines (12 units and
+  its header part) behind 26 references in 5 files (ChatCtrl, LobbyAppendFormattedText, TextAreaConfig,
+  BrowserComponent, the allocator table), and its decisions were already guitext/guilist/guidraw's. InputBox (721,
+  two shallow subclasses) and Label (163, 110 references) are next; ListArea is a base of three classes and goes
+  with them.
+- **The design (as round 20's, for a tree node).** The C++ `TextArea` stays a `ScrollArea` in the tree: its
+  virtuals are one-line inline forwarders to `ee_won_text_call(obj, call, a, b, c)` (`EeWonTextCall`), and the Rust
+  object makes every call out through ONE host, `ee_won_guicpp_text_call(component, op, a, b, c, d)`
+  (`WONGUI/GuiHost.cpp`), whose op codes are `guihost.rs` `EeWonGuiOp`: the base class's fields (`Get`/`Set` over
+  `EeWonGuiField`: the scroll view, offsets, totals, the extra height, the scroll steps; ScrollArea's own code
+  changes them between the Rust statements, so Rust keeps no copy), the base class's virtuals (`Base*`:
+  ScrollArea::Virtual08 calls the virtual AdjustPosition back into Rust), the component's services (invalidate,
+  timer, focus, mouse, key mods, the parent's cursor), the segments (hold/release, measures, text, link
+  virtuals, colour) and `Draw` (one EeWonDrawOp on the Graphics, its slots a segment's font and text). The
+  component ops are generic (`ComponentOp`): the next leaves reuse them.
+- **What stays C++.** What the lobby and the config read or set: the fonts, the colours, the selection colours,
+  the last link parameter; the constructor's named fonts; the C++ segments, as data: `TextSegment` (text, colour,
+  font, line break), `TextLink` and the chat's `ChatLink` over it (the chat changes a disabled link's colour after
+  adding it, and its handler casts the event's segment back). Rust holds a reference to each segment of its list.
+  The line breaks, alignments, lines and wrapped pieces are Rust data only; TextSegmentBase lost its layout
+  virtuals. Dead and deleted with it: AddLink, AddAnchor, GotoAnchor, the anchor and width instructions (no
+  caller).
+- **No borrow across a call out.** The state is one `RefCell` borrowed only between calls out: a delivered link
+  event runs the chat's handler inside MouseUp (which may reset the area or add text), and the size change re-enters
+  AdjustPosition. MouseUp re-reads the hovered link after the event, as the original's member reads did.
+- **The golden.** `won_textobj_test` holds the original's TextArea methods and its segments' layout virtuals
+  (TextSegment, TextSegmentPiece, TextAlignInstruction, the base) with every C++ call replaced by the op that makes
+  it, and runs them and the Rust object over one scripted host (the base fields kept, the segments' link state and
+  references counted, the size change calling AdjustPosition back, the link handler resetting, adding or
+  disabling): 20,000 sequences of 40 calls, 9,624,606 trace lines (every op but the field reads, the draws, the
+  copied text), 62 ops and calls met, 101 link activations, identical; every reference given back. A mutated Rust
+  (the baseline re-placement skipping a line's first segment) fails 7,798 sequences. `golden_textobj.txt` (44
+  sequences of 16 calls, 6,489 lines) is replayed by `textobj::tests` op for op with cargo alone.
+- **Two departures, on both sides:** a segment's line break is read once when it is added; when a trim removes the
+  segment a hovered link piece belongs to, the link goes with it (the original kept a piece of a freed segment:
+  its next Released read freed memory).
+- **What runs it.** EE-SIM never builds the lobby: the oracle is unchanged by construction. Only the lobby
+  reaches TextArea: the chat output of the rooms and the staging screen (the LAN game's), the MOTD and news text,
+  the help pages. The lobby captures are the check of its paint (the text, the selection, the link colours); the
+  LAN game's staging chat the check of its segments and wrap. Clicking a chat link (the Internet lobby's client,
+  room and accept links) runs only in the golden.
