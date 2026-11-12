@@ -743,7 +743,10 @@ function M.step(view, memory)
     -- the Stone Age the claims grow with the town: a cap there kept iron at one site and the Copper Age 7 min later)
     -- (ECON.useful_cap, §8.51: from the Copper Age the citizens past the places stood on wood, 26-35 on it against 3-20
     -- wanted, in every matchup)
-    if (age == 1 or (ECON.useful_cap and age >= 3) or ECON.order) and memory.useful ~= nil and cap > memory.useful then
+    -- (ECON.order: not in the Stone Age, where the owner trains on without a pause, 35 to 86 in 15 minutes; capped at
+    -- the touched places the town grew by 1.5 a minute and the town centres stood idle 2780 s by minute 60)
+    if (age == 1 or (ECON.useful_cap and age >= 3) or (ECON.order and age ~= 2)) and memory.useful ~= nil
+            and cap > memory.useful then
         cap = memory.useful
     end
     -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
@@ -929,7 +932,12 @@ function M.step(view, memory)
                     unsettled_r[s.index] = true
                 end
             end
-            local places, c = claim_sites(view, order, keep, r, false, want[r], plan.mine_sites or 3, range, unsettled_r)
+            -- (ECON.order: the mines are claimed, and so settled, for the phase's whole target ahead of the citizens)
+            local claim_want = want[r]
+            if ECON.order then
+                claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
+            end
+            local places, c = claim_sites(view, order, keep, r, false, claim_want, plan.mine_sites or 3, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -949,7 +957,7 @@ function M.step(view, memory)
             for _, s in ipairs(view.sites) do
                 if keep[s.index] and not s.patch then
                     for _, r in ipairs(MINERALS) do
-                        if s.holds[r] > 0 and want[r] > 0 then
+                        if s.holds[r] > 0 and (want[r] > 0 or BO.most(phase, r) > 0) then
                             -- (the mine units a drop site touches, the mining limit each: gatherers on a unit 4 tiles
                             -- past the settlement walk too)
                             local rids = ai.resources{kind = r, source = "mine", near = {s.x, s.y, 6}, limit = 8}
@@ -994,7 +1002,13 @@ function M.step(view, memory)
             -- (food has no room limit: past the patches the engine hunts what it finds; capped at the patches' 6 a
             -- Prehistoric town on one patch starved to 20 citizens and was raided out, seed 14)
             local room = {stone = touched_places.stone, gold = touched_places.gold, iron = touched_places.iron}
-            memory.plan_want = want   -- (what the phase wants before the touched places: the settlements follow it)
+            -- (what the phase wants at its whole target, before the touched places: the settlements follow it, ahead
+            -- of the citizens)
+            local target = BO.fill(phase, plan.citizens_max)
+            memory.plan_want = {}
+            for _, r in ipairs(V.resources) do
+                memory.plan_want[r] = math.max(want[r] or 0, target[r] or 0)
+            end
             want = BO.fill(phase, land, room)
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")

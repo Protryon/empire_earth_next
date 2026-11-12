@@ -106,31 +106,33 @@ function M.spot(type, rids, hx, hy, bad)
     return nil
 end
 
--- the builders for a spot: citizens near it the engine holds, not on food (the owner: never the food gatherers), the
--- nearest first; food gatherers only when no other is near
+-- the builders for a spot: citizens near it the engine holds, the wood gatherers first, then the idle and the others
+-- but food, gold and iron (the owner: never the food gatherers; a mine's gatherer pulled to build costs the mine its
+-- gathering), the nearest first in each; food, gold or iron only when no other is near
 local function builders(x, y)
-    local picked, food = {}, {}
-    for _, id in ipairs(ai.units{category = "citizen", held = "engine", near = {x, y, 40}, limit = 16}) do
+    local rank = {wood = 1, ["nil"] = 2, stone = 3, gold = 5, iron = 5, food = 6}
+    local cands = {}
+    for i, id in ipairs(ai.units{category = "citizen", held = "engine", near = {x, y, 40}, limit = 16}) do
         local u = ai.unit(id)
         if u ~= nil and u.action ~= "build" and u.inside == nil then
-            if u.gathers == "food" then
-                food[#food + 1] = id
-            elseif #picked < BUILDERS then
-                picked[#picked + 1] = id
-            end
+            cands[#cands + 1] = {id = id, r = rank[tostring(u.gathers)] or 4, i = i}
         end
     end
-    for _, id in ipairs(food) do
-        if #picked < 1 then
-            picked[#picked + 1] = id
+    table.sort(cands, function(a, b)
+        if a.r ~= b.r then
+            return a.r < b.r
+        end
+        return a.i < b.i
+    end)
+    local picked = {}
+    for _, c in ipairs(cands) do
+        if #picked < BUILDERS and (c.r < 5 or #picked == 0) then
+            picked[#picked + 1] = c.id
         end
     end
     return picked
 end
 
--- whether a drop site (a settlement, town centre or capitol of the player's) touches one of the resource units (gap 0):
--- a home mine served by the town centre 7 tiles off is not (the gatherers walk), and gets its own settlement
-local DROPS = {"b_settlement", "b_town_center", "b_capitol"}
 function M.touched(rids)
     return M.touched_units(rids) > 0
 end
