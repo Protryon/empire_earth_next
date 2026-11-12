@@ -23,7 +23,8 @@ M.opts = {
     size = 20,          -- the raid force
     reserve = 20,       -- the home guard trained on the dispatch
     epoch = 1,          -- the raid's epoch (the Stone Age)
-    build_ms = 600000,  -- the force goes after this long building even if short, with half of size at least
+    build_ms = 900000,  -- the force goes after this long building even if short, with three quarters of size at least
+                        -- (the owner: ~20 in one raid; at 10 minutes and half the size it went with ~10)
     out_ms = 420000,    -- a raid out this long comes home
     route_avoid = 8,
 }
@@ -97,20 +98,21 @@ function M.step(view, mem, opts)
     if r.state == "none" then
         if view.epoch == o.epoch and opts.ready then
             r.state, r.t = "build", now
+            r.priority = true   -- (boom-econ's citizen training yields to the force while it builds)
             print(string.format("raid build at=%d", now // 1000))
         end
         return
     end
     if r.state == "build" then
         if view.epoch ~= o.epoch then
-            r.state = "done"   -- (the epoch went by: no Stone raid)
+            r.state, r.priority = "done", nil   -- (the epoch went by: no Stone raid)
             print("raid skipped epoch=" .. view.epoch)
             return
         end
         local have = guard ~= nil and #guard.units or 0
         local e = target(view)
         local due = now - r.t >= o.build_ms
-        if e ~= nil and guard ~= nil and (have >= o.size + o.reserve // 4 or (due and have >= o.size // 2 + 4)) then
+        if e ~= nil and guard ~= nil and (have >= o.size + o.reserve // 4 or (due and have >= o.size * 3 // 4 + 4)) then
             -- the force: the units of the guard beyond a few left home (the reserve is trained after the dispatch)
             local n = math.min(o.size, have - 4)
             local ids = {}
@@ -121,7 +123,7 @@ function M.step(view, mem, opts)
                                      home_x = view.town_x, home_y = view.town_y})
             G.add(mem, g, ids)
             g.route, g.route_avoid = true, o.route_avoid
-            r.state, r.sent, r.out, r.n = "sent", now, n, n
+            r.state, r.sent, r.out, r.n, r.priority = "sent", now, n, n, nil
             print(string.format("raid sent units=%d enemy=%d town=%d,%d after=%d", n, e.player, e.town_x, e.town_y,
                 (now - r.t) // 1000))
         end

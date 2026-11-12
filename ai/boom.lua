@@ -1090,7 +1090,8 @@ function M.step(view, memory)
     -- resources unless the town scrambles)
     if army_short then
         -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
-        GD.train(view, memory, soldiers_wanted, order, scramble and 3 or 2)
+        -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
