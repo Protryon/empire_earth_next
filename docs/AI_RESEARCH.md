@@ -3800,6 +3800,26 @@ the attack groups. Next: the port's militia and its flight from small raids agai
 the militia odds).
 
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+**The militia against the C++'s (seeds 2-17, balanced, 90 minutes).** The port now traces its militia decisions in
+the C++'s format (`classic_lua militia fight|run ...`; trace only):
+
+| | the C++ | the port |
+|---|---|---|
+| militia decisions (hits answered) | 1307 | 1916 |
+| fight / run | 1132 / 175 | 1739 / 177 |
+| citizens sent per fight | 4.9 | 2.3 |
+| soldiers per fight | 0.3 | 1.9 |
+| raiders per fight | 2.5 | 1.8 |
+| citizens dying in a fight (all game) | 282 | 211 |
+
+The militia is not the gap: the port's fights cost fewer citizens than the C++'s, and it has more soldiers at hand.
+The gap is the citizens killed while gathering. Over all game time in these 16 games, the port lost 932 citizens
+against the C++'s 576. The C++'s die fighting (282) or moving (180), and only 86 while gathering. The port's die
+hunting (162), at gold (147), at wood (93), foraging (70), at stone (64) and at iron (56). 548 of those 721 die
+within 20 s of their first hit, and 362 with no soldier of their own near. The port is also hit half as often again
+(1916 militia calls against 1307): the C++'s raids find it more. Next: what moves the C++'s hit citizens (their
+`move` deaths), and where the port's raided gatherers stand against the C++'s (distance from the town and drop
+sites).
 
 ### 8.9 Next
 
