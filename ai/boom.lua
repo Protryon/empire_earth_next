@@ -1514,6 +1514,9 @@ function M.step(view, memory)
 
     if ECON.order then
         PL.step(view, memory)   -- (the settlements' builders back to the engine once they stand)
+        if BO.OPT.shore_scout and phase == "pre" then
+            BO.shore_scout(view, memory, saving)
+        end
     end
     -- the plan line, once a minute
     if view.time % 60000 < 1000 and ECON.order then
