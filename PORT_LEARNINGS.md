@@ -8781,3 +8781,90 @@ Round 4's pattern (RUST_PLAN's row) applied to the next six forms; measured by t
 - **Behaviour:** none intended where the original was defined. The save screen's original dereferenced its server
   cast unchecked (a client crashed there); the host checks it. A campaign scenario's Start no longer leaks the file
   of a scenario it does not find. The intro's never-NULL manager checks are gone (`Get` creates it).
+
+## R6: the game screens, seventh round: the lobby and the in-game options menu whole in Rust (ee_screens lobby_form.rs, main_game_options.rs; branch rust-screens7, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the lobby, the largest form so far; measured by the C++ deleted.
+
+- **Deleted:** `EEUIELobbyEvents.cpp` (2,287 lines: 35 event classes, the slot rows, the game options, the start check,
+  the load screens' header loads, `LobbyRebuildPlayers`, `LobbyApplySavedGameOptions`, the functions the user
+  interface thread calls) and `ee/EEUIELobbyEvents.h`, the `??_G` notes of the activate events in
+  `EEAJoinOrHostAGame.cpp`, the header's includes in `EESim.cpp`, `EETestFixture.cpp` and `EEUIManager.cpp`, its
+  `link/exe/units.txt` line, and the Rust forwarders `lobby_ffi.rs` and `lobby_options_ffi.rs` (no C++ caller left;
+  `lobby.rs` and `lobby_options.rs` stay, called by `lobby_form.rs`, their goldens still replayed). C++ lines of the
+  screens (UI Events, User Interface Thread, `include/ee/EEUI*.h`, `EEScreen*.h`, `EECommandLine.cpp`, `EESim.cpp`):
+  39,595 before, 37,553 after (-2,042; git over the C++ +524 -2,573).
+- **What replaced them:** `lobby_form.rs` (codes 0x1a01..0x1a27: the 35 events, the boot question's two answers) over a
+  `LobbyHost` whose calls each name their form (the lobby, the load screen, or the event's), and four exports the
+  user interface thread calls (`ee_screens_lobby_update_player`, `_update_game_options`, `_update_form`,
+  `_show_transfer_progress`). The state the original kept in event objects and statics is a `LobbyForm` record: each
+  slot's type menu, each slot's colour button index (the left and right click events of one button always held the
+  same value, so one per slot), the load screen's previous load type, the chat prefix. The host (`EEScreens.cpp`)
+  gained the slot and options records (`ee_screenscpp_lobby_player`, `_put_lobby_player`, `_lobby_options`; sources:
+  the lobby options, the boot question's copy, the loaded header, the game type's copy), the lock, the messages
+  (player information, game options, chat, start loading, full player and options, the disconnection, the host's
+  removal), the server's start and ping, the rules' tables, the generators and engines, the header loads and option
+  checks, the transfers, the controls' colours, bitmaps, name colours, pings, quiet type selection, keyboard event,
+  blinking, the edit box's clear. `EE_SCREENS_CPP_LOBBY_SINGLE` is the screen code `EE_SCREENS_LE_ACTIVATE_SINGLE`
+  (pattern (d)); `EEAJoinOrHostAGame` makes the host and client activate events by code.
+- **Then the in-game options menu whole** (`main_game_options.rs`, codes 0x1c01..0x1c14; the second code commit):
+  `EEUIEMainGameOptionsEvents.cpp` (15 event classes, the four question answers) and its header deleted; the main
+  game form's options button and the manager's briefing event made by code. C++ lines of the screens 37,553 ->
+  37,112 (-2,483; git over the C++: lobby +524 -2,573, options menu +98 -539). The one state, Play Scenario's posted flag: the original event object posted itself on its first
+  press (flag set) and loaded on its later runs, and an opening hooking the button up made a new object; Rust keeps the button's flag
+  (cleared when an opening hooks the button up) and posts a code of its own (`EE_SCREENS_GO_LOAD_SCENARIO_POSTED`) that always loads, so
+  a posted run that outlives a reopening still loads as the original's object did. `ProcessEvent`'s results are the
+  original's (Return to Game's and Pause's `CloseForm`, Game Settings' `OpenForm`): the host's `OP_CLOSE_FORM` and
+  `OP_OPEN_FORM` answer them now. Golden: `build/sc7/options_driver.cpp`, one session of 2,000 cases (opening the
+  menu, a stored trigger by event kind, the Escape hot key, the close event, a queued posted event, the briefing, a
+  question's yes) over server and client, migration and playback, the editor, pause, observer and scenario states,
+  the intro form present or not (`golden_main_game_options.txt`); identical old against new on seeds 1-4 (25,000
+  cases each for 2-4), replayed in Rust. `tools/harness/save_load.py` (legacy) finds Save Game and Return to Game by
+  `EEScreenEvent` and codes 0x1c06 / 0x1c01. **What reaches it:** only the legacy save/load session (the in-game
+  options' Save Game and Return to Game) and a person (F10 or the options button: resign, restart, pause, the loads,
+  the briefing, the settings, exit); the gates' tour and ai-game never open the menu.
+- **`EEGameOptions`' assignment is not a copy:** it checks every value (a load type past the table becomes 0, a
+  random map's unknown generator becomes the first one, ...). The original copied the options in three places (the
+  game type's random map, the start check's and the load screen's header checks, `LobbyApplySavedGameOptions`), so
+  the host keeps those copies in C++ (`EE_SCREENS_GAME_LE_RANDOM_MAP_OPTIONS`, `_APPLY_SAVED`, the checks) and the
+  random map's options are shown from the copy (`EE_SCREENS_LE_SOURCE_COPY`: it keeps a loaded game's map type where
+  the reassigned lobby options have the first generator's), as the original did.
+- **Golden driver** (scratch, `build/sc7`: `lobby_driver.cpp`, `drv.py`; the old header under `orig/inc`): one
+  session of 2,000 cases over a persistent world (`golden_lobby_form.txt`): each case perturbs the options, slots,
+  server, forms, check boxes, combo boxes, the load list, the chat line and the last names (printed), then fires one
+  stored trigger event (an event kind drawn first, so each is as likely), an activate event, a function the user
+  interface thread calls, the keyboard focus event or the boot question's answer; the slots and options that changed,
+  the server's state, the difficulty levels, the form stack, the names and the bitmaps after. Save files and headers
+  are a hash of the name. The old build includes the unmodified unit, the new one `EEScreens.cpp`; the 2,000 cases
+  and seeds 2-4 at 25,000 cases each are identical old against new; the round-4 menus driver relinked over the new
+  host still prints `golden_menus.txt` (its event names now map the lobby's code). The Rust replay keeps the driver's
+  world and runs every case (all 31 control event kinds and the seven other actions). Mutations checked (the colour
+  button's wrap, the boot's reset citizens, the ready loop's slots, the start check's hidden rows, the cancel's load
+  type) each fail it; the engine of an open slot in a scenario's rebuild does not (that branch with a differing
+  engine never came up).
+- **Lessons:**
+  - A host op that clears a trigger or a form event passes code 0, for which `EECreateScreenEvent` gives NULL: the
+    host's trigger and open-event ops must not `Dereference` it.
+  - Two Rust modules declaring the same `extern "C"` host function stop the header generator ("declared twice"):
+    declare it once (`scenario_screens_ffi::ee_screenscpp_form`, now crate-visible).
+  - A driver's fake vtable slot found by `FindSlot` must be found before an earlier fake replaces that slot (the
+    shared `SetDirty` slot): find all slots first, then install the fakes.
+  - The driver's trigger choice by event kind (not by control) evened out the cases: by control, the per-slot events
+    (16 controls each) took most cases and the load screens' events almost none.
+  - The first selftest run failed its fixture part with `PermissionError(13)` (a file held by another process);
+    the rerun passed ALL PASS.
+- **What the harness reaches:** the tour's `random-map-setup` capture (single player's Random Map: the menus' open
+  event `EE_SCREENS_LE_ACTIVATE_SINGLE`, so `activate`, `lobby_open`, the local server's posted `update_form` and
+  `update_player` rows, the options) and its Start (`start`: the start check, the server's start, start loading); the
+  ai-game gate's lobby setup (`fixture_driver.setup_lobby`: the type boxes' `change_player_type`, the option combo
+  boxes' events, the team and citizens boxes, `--lobby-check`'s check boxes, Start); the LAN game (WON's lobby, then
+  this lobby as host and client: `EE_SCREENS_LE_ACTIVATE_SERVER` / `_CLIENT`, the client rows, the ready boxes, the
+  chat line's focus). `tools/harness/scenario_game.py --scenario-file` (legacy) finds the load screen's Load by
+  `EEScreenEvent`'s ProcessEvent and code 0x1a04 (`save_load.SCREEN_CODES`): unit-checked and by the selftest, not by
+  a session. **Only a person reaches:** saved games and scenarios through the lobby's game type box (the load
+  screens), the boot question, the colour buttons, the engine boxes in multiplayer. Network code: the lobby sends the
+  game's messages only in a multiplayer lobby (single player hands them to the local server too); only the lead's LAN
+  game exercises those. None of this is simulation: EE-SIM never runs it.
+- **Behaviour:** none intended where the original was defined. The boot question's copy is freed with its
+  destructor (the original freed only its memory); a slot or options field read past its table answers 0 (the host
+  guards the variant, map size, difficulty, speed and starting resources tables; the original read past them).
