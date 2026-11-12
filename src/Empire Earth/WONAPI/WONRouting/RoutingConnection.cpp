@@ -574,7 +574,7 @@ void RoutingConnection::BanClientByCDKeyId(unsigned short groupId,bool isBanned,
 #include "ee/wonapi/WONRoutingGroupAdmin.h"
 #include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include "ee/wonapi/WONRoutingDisconnectClientOp.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 void RoutingConnection::DisconnectClient(CompletionBase<AsyncOpPtr> *theCompletion)
 {

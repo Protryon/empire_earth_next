@@ -6,7 +6,7 @@
 // UIEPolledEvent.cpp starts at 0x1006e5a8.
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

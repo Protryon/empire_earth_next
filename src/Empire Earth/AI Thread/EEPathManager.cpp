@@ -79,7 +79,7 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_rust.h"   // ee_path_*: the path splicing (ee_astar path_splice.rs)
+#include "rust/ee_astar.h"   // ee_path_*: the path splicing (ee_astar path_splice.rs)
 
 static_assert(sizeof(GE3DPoint) == sizeof(EePathPoint) && offsetof(GE3DPoint, mZ) == offsetof(EePathPoint, z),
               "GE3DPoint");

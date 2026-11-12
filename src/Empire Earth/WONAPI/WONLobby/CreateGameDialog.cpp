@@ -9,7 +9,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The dialog's decisions are ee_won's dialogs module (rust/crates/ee_won/src/dialogs.rs); this unit keeps the
 // dialog, its controls and events.
 namespace WONAPI {

@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The format's parse is ee_won's guitext module (rust/crates/ee_won/src/guitext.rs, format_ops); this unit adds
 // the segments it names.
 namespace WONAPI {

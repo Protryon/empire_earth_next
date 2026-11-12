@@ -52,7 +52,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFWedge.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_formations.h"
 #include "ee/EEFormationRust.h"
 
 // FUNCTION: EXE 0x4ddf3a

@@ -9,7 +9,7 @@
 #include <mbstring.h>
 #include <algorithm>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"

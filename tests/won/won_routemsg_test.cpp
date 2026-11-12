@@ -20,7 +20,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONRoutingMsg.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 

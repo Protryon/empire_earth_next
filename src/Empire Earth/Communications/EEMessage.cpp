@@ -112,7 +112,8 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEMessageCapture.h"
 #include "ee/EEMessageExecute.h"
-#include "rust/ee_rust.h"   // ee_netmsg
+#include "rust/ee_netmsg.h"   // ee_netmsg
+#include "rust/ee_units.h"
 #include "ee/EEUnitHost.h"   // EESortFarms
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
 static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);

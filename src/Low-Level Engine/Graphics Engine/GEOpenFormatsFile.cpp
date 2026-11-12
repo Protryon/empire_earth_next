@@ -16,7 +16,8 @@
 #include "lle/FSPath.h"
 
 #include "GEOpenFormats.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_ge.h"
+#include "rust/ee_openformats.h"
 
 // Reads a whole file -> its bytes; false when it cannot be read
 static bool GEReadWholeFile(FSFileSpec& inFile, std::vector<unsigned char>& outData)
