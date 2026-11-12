@@ -352,14 +352,6 @@
 3c19a0 3c32a8 WONLobby/RoomCtrl.cpp
 3c3c00 3c4b66 WONLobby/RootScreen.cpp
 3c9d20 3ca5ce WONLobby/UpdateAccountCtrl.cpp
-3cea00 3cedc6 WONGUI/Clipboard.cpp
-3cedd0 3cee5f WONGUI/DisplayContext.cpp
-3cee60 3cf0e4 WONGUI/MSFont.cpp
-3cf0f0 3cf9a7 WONGUI/MSGraphics.cpp
-3cf9b0 3d0403 WONGUI/MSNativeImage.cpp
-3d0410 3d08bd WONGUI/MSRawImage.cpp
-3d08c0 3d24d6 WONGUI/MSWindow.cpp
-3d0900 3d0d88 WONGUI/MSWindowManager.cpp
 3d24e0 3d2a20 WONGUI/PNGDecoder.cpp
 3d2a20 3d2fa0 WONGUI/JPGDecoder.cpp
 3d5e20 3d768d WONCrypt/Blowfish.cpp
