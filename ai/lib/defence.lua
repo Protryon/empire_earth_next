@@ -833,6 +833,40 @@ local function boats_step(mem, events, now)
                     l[#l + 1] = id
                     mem.st.boats_fled = (mem.st.boats_fled or 0) + 1
                 end
+            elseif b ~= nil and threatened(x, y) and now - (b.moved or b.t) >= 5000 then
+                -- (bt1: the boats waiting at a dock died there, idle, to the warships that followed them) under fire
+                -- at the dock: to another dock out of reach, else 8 tiles straight away from the nearest warship
+                b.moved = now
+                local tx, ty = nil, nil
+                for j = 1, #docks do
+                    if dc.x[j] ~= nil and not threatened(dc.x[j], dc.y[j]) then
+                        tx, ty = dc.x[j], dc.y[j]
+                    end
+                end
+                if tx == nil then
+                    local nk, nd = nil, nil
+                    for j = 1, #ships do
+                        if sc.x[j] ~= nil then
+                            local d = d2(x, y, sc.x[j], sc.y[j])
+                            if nd == nil or d < nd then
+                                nk, nd = j, d
+                            end
+                        end
+                    end
+                    if nk ~= nil then
+                        local dx, dy = x - sc.x[nk], y - sc.y[nk]
+                        local l = math.max(math.abs(dx), math.abs(dy), 1)
+                        local m = ai.map()
+                        tx = math.max(2, math.min(x + dx * 8 // l, m.width - 3))
+                        ty = math.max(2, math.min(y + dy * 8 // l, m.height - 3))
+                    end
+                end
+                if tx ~= nil then
+                    local key = tx * 10000 + ty
+                    moves[key] = moves[key] or {}
+                    local l = moves[key]
+                    l[#l + 1] = id
+                end
             elseif b ~= nil then
                 local healed = (c.hp[k] or 0) >= (c.hp_max[k] or 1)
                 local fish = b.fish ~= nil and ai.unit(b.fish) or nil
