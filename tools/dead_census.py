@@ -117,8 +117,9 @@ def strip_comments(text):
             j = i + 1
             while j < n and text[j] != c and text[j] != "\n":
                 j += 2 if text[j] == "\\" else 1
-            j = min(j + 1, n)
-            out.append(c + " " * (j - i - 2) + c if j - i >= 2 else text[i:j])
+            if j < n and text[j] == c:
+                j += 1
+            out.append(c + "".join(ch if ch == "\n" else " " for ch in text[i + 1:j]))
             i = j
         else:
             out.append(c)
