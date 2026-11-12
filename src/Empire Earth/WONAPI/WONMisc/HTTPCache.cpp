@@ -11,6 +11,8 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "ee/wonapi/WONHttpMsg.h"
+#include <vector>
 namespace WONAPI {
 // FUNCTION: WON 0x006d1260
 // Creates an invalid cache entry with no id and no times
@@ -102,7 +104,7 @@ void HTTPCache::WriteCacheMap()
         i=this->mCacheIdMap.begin();
         while (i!=this->mCacheIdMap.end()) {
             HTTPCacheEntry* entry=i->second.get();
-            if (entry->IsValid() && now-entry->mLastAccessTime<1209600) {
+            if (ee_won_http_cache_keeps(entry->IsValid(),now,entry->mLastAccessTime)) {
                 entry->WriteToFile(writer);
                 ++count;
             } else {
@@ -133,12 +135,10 @@ void HTTPCache::SetCachePath(const std::string& inPath,bool inFullPath)
 // Returns the lowest unused entry id from the next free id onwards
 int HTTPCache::GetFreeId()
 {
-    CacheIdMap::iterator i=this->mCacheIdMap.find(this->mNextFreeId);
-    while (i!=this->mCacheIdMap.end()) {
-        if (this->mNextFreeId!=i->first) break;
-        ++i;
-        ++this->mNextFreeId;
-    }
+    std::vector<int32_t> anIds;
+    for (CacheIdMap::iterator i=this->mCacheIdMap.begin();i!=this->mCacheIdMap.end();++i)
+        anIds.push_back(i->first);
+    this->mNextFreeId=ee_won_http_cache_free_id(anIds.empty() ? NULL : &anIds[0],anIds.size(),this->mNextFreeId);
     return this->mNextFreeId;
 }
 // FUNCTION: WON 0x006d2210
@@ -153,18 +153,8 @@ HTTPCacheEntry* HTTPCache::GetEntry(const std::string& inLocation)
         entry=fresh;
         entry->mRemoteLocation=inLocation;
         entry->mId=this->GetFreeId();
-        std::string type;
-        int slash=inLocation.find_last_of('/');
-        if (slash==std::string::npos) slash=inLocation.find_last_of('\\');
-        if (slash!=std::string::npos) {
-            int dot=inLocation.find_last_of('.');
-            if (dot>slash && dot+10>=inLocation.length())
-                type=inLocation.substr(dot+1);
-            else type="dat";
-        } else type="dat";
-        char fileName[50];
-        sprintf(fileName,"%06d.%s",entry->mId,type.c_str());
-        entry->mFileName=fileName;
+        ee_won_http_cache_file_name(entry->mId,reinterpret_cast<const uint8_t*>(inLocation.data()),inLocation.size(),
+                                    HttpStringSink,&entry->mFileName);
         entry->mLocalPath=this->mCachePath+entry->mFileName;
         WONFile file(entry->mLocalPath);
         file.Delete(true);

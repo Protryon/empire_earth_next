@@ -67,7 +67,7 @@ WONStatus PingGameOp::CheckResponse(ReadBuffer& inBuffer)
         return WS_None; // not a reply to this request
     if (inBuffer.ReadShort() != this->mRequestId)
         return WS_None; // the signed ReadShort is compared with the unsigned member
-    unsigned long aStart = this->mStartTime;
+    unsigned long aStart = this->GetStartTime();
     this->mPing = WONTickCount() - aStart;
     this->mReplyFlags = 0;
     if (!(inBuffer.Available() > 0))
@@ -148,7 +148,7 @@ void PingLogic::HandlePingRequest(ReadBuffer& inBuffer, const IPAddr& inAddress)
 void PingLogic::HandleUDPRecv(AsyncOp* inOp)
 {
     UDPManagerRecvOp* anOp = static_cast<UDPManagerRecvOp*>(inOp);
-    if (anOp->GetStatus() != WS_Success || anOp->mKilled)
+    if (anOp->GetStatus() != WS_Success || anOp->IsKilled())
         return;
     const ByteBuffer* aBuffer = anOp->mReceivedData.get();
     ReadBuffer aReadBuffer(aBuffer != NULL ? aBuffer->data() : NULL,
@@ -168,7 +168,7 @@ void PingLogic::HandleUDPRecv(AsyncOp* inOp)
 void PingLogic::PingGameDone(AsyncOp* inOp)
 {
     PingGameOp* anOp = static_cast<PingGameOp*>(inOp);
-    if (anOp->mKilled)
+    if (anOp->IsKilled())
         return;
     unsigned short aPing = anOp->mPing;
     LobbyGame* aGame = anOp->mGame.get();
@@ -195,7 +195,7 @@ void PingLogic::PingGameDone(AsyncOp* inOp)
     LobbyNotifyPingChange(aGame);
     int aMaximum = LobbyGetConnectionSpeed();
     while (!this->mPending.empty()) {
-        if (static_cast<long>(this->mTracker.mMaps.mEntries.size()) >= aMaximum && aMaximum != 0)
+        if (static_cast<long>(this->mTracker.GetNumTrack()) >= aMaximum && aMaximum != 0)
             break;
         SmartPtr<LobbyGame> aPendingGame = this->mPending.front();
         this->mPending.pop_front();
@@ -212,7 +212,7 @@ void PingLogic::PingGameDone(AsyncOp* inOp)
 // Returns the number of queued plus running pings
 int PingLogic::GetNumPingsToDo()
 {
-    return this->mPending.size() + this->mTracker.mMaps.mEntries.size();
+    return this->mPending.size() + this->mTracker.GetNumTrack();
 }
 
 // FUNCTION: WON 0x007e6b50
@@ -234,7 +234,7 @@ void PingLogic::PingGame(LobbyGame* inGame, bool inDetails, bool inForce)
         return;
     if (!inForce && !inDetails) {
         unsigned short aMaximum = LobbyGetConnectionSpeed();
-        if (static_cast<long>(this->mTracker.mMaps.mEntries.size()) >= aMaximum && aMaximum > 0) {
+        if (static_cast<long>(this->mTracker.GetNumTrack()) >= aMaximum && aMaximum > 0) {
             inGame->mPing = 0xfffd;
             LobbyNotifyPingChange(inGame);
             this->mPending.push_back(inGame);
@@ -268,9 +268,8 @@ void PingLogic::KillPings(int)
         (*aGameItr)->SetPing(0xfffe);
         ++aGameItr;
     }
-    AsyncOpTrackerMaps::EntryMap::iterator anItr;
-    for (anItr = this->mTracker.mMaps.mEntries.begin(); anItr != this->mTracker.mMaps.mEntries.end(); ++anItr) {
-        PingGameOp* anOp = dynamic_cast<PingGameOp*>(anItr->second->mOp.get());
+    for (int anIndex = 0; anIndex < this->mTracker.GetNumTrack(); anIndex++) {
+        PingGameOp* anOp = dynamic_cast<PingGameOp*>(this->mTracker.GetTrackedOp(anIndex));
         if (anOp != NULL)
             anOp->mGame->SetPing(0xfffe);
     }

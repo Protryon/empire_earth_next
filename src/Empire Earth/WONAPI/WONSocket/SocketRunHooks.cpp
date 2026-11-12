@@ -25,7 +25,7 @@ void SocketOp::RunHook()
         this->Finish(status);
         return;
     }
-    if(this->mRunMode==OP_MODE_ASYNC)
+    if(this->GetMode()==OP_MODE_ASYNC)
         WONAPICore::AddToSocketThread(this);
     else
     {

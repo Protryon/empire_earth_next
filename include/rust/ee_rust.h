@@ -140,6 +140,21 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
+
+/// `LaunchFromTurret` (a turret part found): the tag point turned by the turret's yaw, the launch along the chain.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_TURRET = 1;
+
+/// `EEApproachAttachPoint`: the world point of the current tag point (or half a tile up).
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_ATTACH = 2;
+
+/// `EEFOFindNewTargetInMeleeRange`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
+
+/// `EEFOFindNewTargetNearOldTarget`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_NEAR_OLD = 1;
+
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
 /// complex unit may be missing).
@@ -1175,6 +1190,107 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
+constexpr static const int32_t EE_WON_ADMIN_INSERT_MASTER_KEY = 1;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_MASTER_KEY = 2;
+
+constexpr static const int32_t EE_WON_ADMIN_DELETE_MASTER_KEY = 3;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_MASTER_KEY = 4;
+
+constexpr static const int32_t EE_WON_ADMIN_AUTH_CHECK_KEY = 5;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_BANNED_KEY = 6;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_BANNED_KEY = 7;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_LIST_BANNED_KEY = 8;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_BANNED_KEY = 9;
+
+constexpr static const int32_t EE_WON_ADMIN_INSERT_KEY_SUBSCRIBE = 10;
+
+constexpr static const int32_t EE_WON_ADMIN_UPDATE_KEY_SUBSCRIBE = 11;
+
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_KEY_SUBSCRIBE = 12;
+
+constexpr static const int32_t EE_WON_ADMIN_QUERY_KEY_SUBSCRIBE = 13;
+
+/// the CD key account's request before the profile (the key, the community)
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY = 14;
+
+/// the same with the action flag
+constexpr static const int32_t EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX = 15;
+
+/// the version ops' requests: the product (before the version record)
+constexpr static const int32_t EE_WON_ADMIN_PRODUCT = 16;
+
+/// `RemoveVersionOp`: product, config, version
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_VERSION = 17;
+
+/// `GetVersionListOp`: product, config, state filter
+constexpr static const int32_t EE_WON_ADMIN_GET_VERSION_LIST = 18;
+
+/// `RemovePatchOp`: product, config, from, to, patch URL
+constexpr static const int32_t EE_WON_ADMIN_REMOVE_PATCH = 19;
+
+/// `ActivatePatchOp`: the same and the active flag
+constexpr static const int32_t EE_WON_ADMIN_ACTIVATE_PATCH = 20;
+
+/// `GetPatchServerModuleListOp`'s reply (its request has no data)
+constexpr static const int32_t EE_WON_ADMIN_MODULE_LIST = 21;
+
+constexpr static const uint8_t EE_WON_ADMIN_VALUE = 0;
+
+/// the read ended whole (`at`: where the account reply's profile starts)
+constexpr static const uint8_t EE_WON_ADMIN_END = 1;
+
+/// the read failed here
+constexpr static const uint8_t EE_WON_ADMIN_CUT = 2;
+
+/// `SendPubKeyRequest`'s message.
+constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
+
+/// `SendLoginRequest`'s message (`key_id`, `a` the encrypted session key, `b` the encrypted login data).
+constexpr static const int32_t EE_WON_CERT_REQ_LOGIN = 2;
+
+/// `SendLoginConfirm`'s message (`a` the encrypted hashes).
+constexpr static const int32_t EE_WON_CERT_REQ_CONFIRM = 3;
+
+/// The read failed here: the original threw `ReadBufferException`.
+constexpr static const uint8_t EE_WON_CERT_CUT = 0;
+
+/// `return InvalidReplyHeader()`.
+constexpr static const uint8_t EE_WON_CERT_INVALID_HEADER = 1;
+
+/// A key block reply's failure status `num`: `SetLastServerError(num)`, try the next server.
+constexpr static const uint8_t EE_WON_CERT_SERVER_ERROR = 2;
+
+/// A key block reply's block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_KEY_BLOCK = 3;
+
+/// A login challenge outside the challenge state.
+constexpr static const uint8_t EE_WON_CERT_UNEXPECTED_CHALLENGE = 4;
+
+/// A login challenge's encrypted block (`at`, `len`).
+constexpr static const uint8_t EE_WON_CERT_CHALLENGE = 5;
+
+/// The login reply's status `num` (the read stops after -1).
+constexpr static const uint8_t EE_WON_CERT_LOGIN_STATUS = 6;
+
+/// An error string (`at`, `len`): `mErrorList.push_back`.
+constexpr static const uint8_t EE_WON_CERT_ERROR = 7;
+
+/// A clear (or decrypted) entry of type `kind` (`at`, `len`); type 7 comes as `EE_WON_CERT_COMMUNITY` instead.
+constexpr static const uint8_t EE_WON_CERT_ENTRY = 8;
+
+/// A community status entry: `kind` = the fields read of its sub message (0 none, 1 the status `num`, 2 and the
+/// id `id`, 3 and the name: `at`, `len` UTF-16 units). Fewer than 3: a `EE_WON_CERT_CUT` follows.
+constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
+
+/// The clear part's end: the rest (`at`, `len`) is the encrypted part.
+constexpr static const uint8_t EE_WON_CERT_REST = 10;
+
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
@@ -1271,6 +1387,48 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
+
+/// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
+constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
+
+constexpr static const int32_t EE_WON_FTP_STATUS_ERROR = 100090;
+
+constexpr static const int32_t EE_WON_FTP_INVALID_PASV = 100091;
+
+/// The request states (`RequestState`).
+constexpr static const int32_t EE_WON_FTP_START = 0;
+
+constexpr static const int32_t EE_WON_FTP_USER = 1;
+
+constexpr static const int32_t EE_WON_FTP_PASSWORD = 2;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_DIR = 3;
+
+constexpr static const int32_t EE_WON_FTP_CHANGE_TYPE = 4;
+
+constexpr static const int32_t EE_WON_FTP_PASSIVE = 5;
+
+constexpr static const int32_t EE_WON_FTP_RESTART = 6;
+
+constexpr static const int32_t EE_WON_FTP_RETRIEVE = 7;
+
+/// What `HandleReply` does with a line.
+constexpr static const int32_t EE_WON_FTP_MORE = 0;
+
+/// finish with `status`
+constexpr static const int32_t EE_WON_FTP_FINISH = 1;
+
+/// send the command of `state`
+constexpr static const int32_t EE_WON_FTP_SEND = 2;
+
+/// the passive reply: the data address (`host`, `port`), then the data connection, then the command of `state`
+constexpr static const int32_t EE_WON_FTP_DATA = 3;
+
+/// receive the content
+constexpr static const int32_t EE_WON_FTP_RECV = 4;
+
+/// return false (an unknown state)
+constexpr static const int32_t EE_WON_FTP_NONE = 5;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -1635,6 +1793,67 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
+
+/// `URL`'s types (`URLType`).
+constexpr static const int32_t EE_WON_URL_NONE = 0;
+
+constexpr static const int32_t EE_WON_URL_FILE = 1;
+
+constexpr static const int32_t EE_WON_URL_HTTP = 2;
+
+constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// The read failed here: the original threw `ReadBufferException` (`at`: the reader's position).
+constexpr static const uint8_t EE_WON_PATCH_CUT = 255;
+
+/// The read ended whole (`at`: the reader's position).
+constexpr static const uint8_t EE_WON_PATCH_END = 254;
+
+constexpr static const uint8_t EE_WON_VERSION_CONFIG = 0;
+
+constexpr static const uint8_t EE_WON_VERSION_VERSION = 1;
+
+/// one version type pushed (a piece of a comma-separated type string)
+constexpr static const uint8_t EE_WON_VERSION_TYPE = 2;
+
+constexpr static const uint8_t EE_WON_VERSION_DESCRIPTION = 3;
+
+constexpr static const uint8_t EE_WON_VERSION_STATE = 4;
+
+constexpr static const uint8_t EE_WON_PATCH_CONFIG = 0;
+
+constexpr static const uint8_t EE_WON_PATCH_FROM = 1;
+
+constexpr static const uint8_t EE_WON_PATCH_TO = 2;
+
+constexpr static const uint8_t EE_WON_PATCH_ACTIVE = 3;
+
+constexpr static const uint8_t EE_WON_PATCH_DISPLAY = 4;
+
+constexpr static const uint8_t EE_WON_PATCH_NET_ADDRESS = 5;
+
+constexpr static const uint8_t EE_WON_PATCH_CHECKSUM = 6;
+
+constexpr static const uint8_t EE_WON_PATCH_SIZE = 7;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_NAME = 8;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_URL = 9;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_TEXT = 10;
+
+constexpr static const uint8_t EE_WON_PATCH_HOST_IMAGE = 11;
+
+constexpr static const uint8_t EE_WON_PATCH_MUST_VISIT = 12;
+
+/// `CheckValidVersionOp::CheckResponse`'s and `GetPatchListOp::CheckResponse`'s reply data: the target version and
+/// its description URL (the version check only), then each patch's record (`EE_WON_PATCH_RECORD`: its range,
+/// read whole by `PatchData::ReadFromBuffer`).
+constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
+
+constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
+
+constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
@@ -2535,6 +2754,9 @@ struct EeSparseArray;
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
+/// `AsyncOp`'s state, lock, completion and container.
+struct EeWonAsyncOp;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -2547,8 +2769,16 @@ struct EeWonConfigLexer;
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
 
+/// `AsyncOpTracker`: the ops tracked by id (a reference each), in id order; among equal ids the latest first (the
+/// original's hinted multimap insert at the id's first entry); an op tracked once (every tracker was made with
+/// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
+struct EeWonOpTracker;
+
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
+
+/// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
+struct EeWonSocketThread;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -2562,9 +2792,6 @@ struct EeWonWriteBuffer;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
-
-/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
-struct EeWonOpSet;
 
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
@@ -3906,6 +4133,45 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// A flight step's outputs.
+struct EeCombatFlightOut {
+  /// the unit moved (Step2 may not; its location is then the input's)
+  int32_t moved;
+  /// the new velocity (Accelerate, Home)
+  float speed;
+  /// the new location
+  float matrix[16];
+};
+
+/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
+struct EeCombatFlightIn {
+  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
+  float location[16];
+  /// the projectile's launch point (`mProjectileStart`) (Step0)
+  float start[3];
+  /// the drop target's point (Home)
+  float target[3];
+  /// the projectile's yaw (Step0)
+  float yaw;
+  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
+  float move_y;
+  float move_z;
+  float pitch;
+  /// the class's gravity (`mAcceleration`) (Step2)
+  float gravity;
+  /// the tick's seconds
+  float step;
+  /// the unit's velocity
+  float speed;
+  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
+  float max_speed;
+  float accel;
+  float max_angular;
+  /// the ground point was read (Step2: only at or below height 0) and its height
+  int32_t ground_read;
+  float ground_z;
+};
+
 /// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
 /// point's model first, then each parent) are passed beside it.
 struct EeCombatWeaponIn {
@@ -3926,6 +4192,56 @@ struct EeCombatWeaponIn {
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
+struct EeCombatLaunchIn {
+  /// `EE_COMBAT_LAUNCH_KIND_*`
+  int32_t kind;
+  /// the shooter's `mIsSpecialAttack` (shot)
+  int32_t special;
+  /// the launcher class's `mHasSpecialAttack` (shot)
+  int32_t has_special;
+  /// the shooter is a Sp15 capital ship or the Yamato (shot)
+  int32_t capital;
+  /// the shooter is a Roman legionnaire (shot)
+  int32_t legionnaire;
+  /// the animation's tag points (0 without a list) (shot, attach)
+  int32_t point_count;
+  /// `mWeaponTagPoint` (shot, attach)
+  int32_t weapon_index;
+  /// the launcher class is a building: the shot faces the target (shot)
+  int32_t building;
+  /// not a bomb's launcher: the shot turns to the target about its own axis (shot)
+  int32_t turn;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// the stats' scale
+  float scale;
+  /// the turret's yaw (turret)
+  float yaw;
+  /// the tag point at the frame, in its model's space (when there is one)
+  float point[3];
+  /// the target location (shot)
+  float target[3];
+  /// the number of model chain transforms
+  int32_t chain;
+};
+
+/// A launch's outputs.
+struct EeCombatLaunchOut {
+  /// the tag point fired from (-1 without one) (shot)
+  int32_t index;
+  /// a special attack fires flaming arrows (shot)
+  int32_t flaming;
+  /// the unit has a tag point (attach)
+  int32_t result;
+  /// the launch transform (shot, turret)
+  float launch[16];
+  /// the attach point (attach)
+  float point[3];
+  /// the launch's floor tile (shot)
+  int32_t tile[2];
 };
 
 /// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
@@ -3965,6 +4281,33 @@ struct EeCombatSearchHost {
   void (*ignore)(void *ctx, uint64_t unit);
   void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
+/// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
+/// and the answer.
+struct EeCombatScreenIn {
+  /// `EE_COMBAT_SCREEN_KIND_*`
+  int32_t kind;
+  /// the candidate's hit points
+  int32_t hit_points;
+  /// the screen's squared range
+  float range;
+  int32_t read;
+  float distance;
+};
+
+/// The host's distance of a screen's candidate (asked only for a living one).
+using EeCombatScreenDistance = float(*)(void *context);
+
+/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
+struct EeCombatHitDistanceIn {
+  /// the unit's position
+  float from[3];
+  /// the target's point (its drop point, a melee unit's: its position)
+  float to[3];
+  /// the point to measure from instead of the unit's (x -10000: none)
+  float x;
+  float y;
 };
 
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
@@ -6023,8 +6366,29 @@ struct EeGoalSpec {
   uint8_t flag_c;
 };
 
+/// A member handed over.
+struct EeWonAdminValue {
+  int64_t num;
+  const uint8_t *data;
+  size_t len;
+};
+
 /// Receives bytes; valid only during the call.
 using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// One value read: a number, or a string's range in the reply (`whole` false: its length was read but not its
+/// bytes, so the original erased the member).
+struct EeWonAdminField {
+  /// `EE_WON_ADMIN_VALUE`, `EE_WON_ADMIN_END`, `EE_WON_ADMIN_CUT`
+  uint8_t tag;
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The values of a reply, handed over once.
+using EeWonAdminSink = void(*)(void *context, const EeWonAdminField *fields, size_t count);
 
 /// One entry of the login's maps across the C ABI: a name (UTF-16 LE bytes), a second text (UTF-16 LE bytes: a
 /// nickname's value), bytes (a CD key, user data, a file hash) when `present`, and more bytes (the keyed hash
@@ -6048,6 +6412,26 @@ struct EeWonReadBuffer {
   const uint8_t *data;
   long length;
 };
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// One step of a reply's read.
+struct EeWonCertEvent {
+  uint8_t tag;
+  uint8_t kind;
+  int32_t num;
+  uint32_t id;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The events of a reply's read, handed over once.
+using EeWonCertSink = void(*)(void *context, const EeWonCertEvent *events, size_t count);
 
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
@@ -6105,13 +6489,6 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
 
 /// A request's fields from the C++ (texts as UTF-16 LE bytes).
 struct EeWonDbRequest {
@@ -6401,22 +6778,6 @@ struct EeWonOpTiming {
   uint32_t timeout;
 };
 
-/// `AsyncOp`'s run state: `mStatus`, `mRunMode`, `mStartTime`, `mTimeout`, `mCompletionPending`, `mKilled` and
-/// `mRunAsyncImmediately`, copied in and out by the C++ under the op's lock.
-struct EeWonOpState {
-  /// The `WONStatus` (a 32-bit `long` in the C++).
-  int32_t status;
-  int32_t run_mode;
-  uint32_t start;
-  uint32_t timeout;
-  bool completion_pending;
-  bool killed;
-  bool run_async_immediately;
-};
-
-/// A sink for the ops a queue hands back.
-using EeWonOpSink = void(*)(void *context, void *op);
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -6454,6 +6815,21 @@ struct EeWonKicked {
 struct EeWonInitErrors {
   int32_t errors;
   bool allow_ignore;
+};
+
+/// A reply's step.
+struct EeWonFtpStep {
+  int32_t action;
+  /// the status scanned (assigned to `mFTPStatus` when `scanned`)
+  bool scanned;
+  int32_t ftp_status;
+  int32_t status;
+  /// the new request state (`SEND`, `DATA`)
+  int32_t state;
+  /// `mDoResume` turned off (a 504 to the restart)
+  bool no_resume;
+  uint32_t host;
+  uint16_t port;
 };
 
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
@@ -6897,6 +7273,61 @@ struct EeWonBreak {
   int32_t width;
 };
 
+/// One header line's reading.
+struct EeWonHttpHeader {
+  /// false: no colon (the line is ignored)
+  bool colon;
+  /// the key's index in `HEADER_KEYS`, 9 for none
+  uint8_t key;
+  /// the value's offset in the line (after the colon and its spaces)
+  uint32_t value;
+  /// Content-Length's `atoi`
+  int32_t number;
+  /// a date's `ParseInternetDateTime`
+  int64_t time;
+  /// Transfer-Encoding starts with CHUNKED, Connection with CLOSE (case-blind)
+  bool flag;
+  /// ETag: the value's length kept (through the second quote), -1 to erase it
+  int32_t tag_len;
+};
+
+/// `SendRequest`'s inputs.
+struct EeWonHttpRequest {
+  bool proxy;
+  const uint8_t *host;
+  size_t host_len;
+  const uint8_t *path;
+  size_t path_len;
+  bool close;
+  /// a local path that exists: `size` and `time` are its
+  bool file;
+  uint64_t size;
+  int64_t time;
+  bool range_resume;
+  const uint8_t *tag;
+  size_t tag_len;
+  bool cache_ok;
+};
+
+/// A URL's results: the type, the absolute flag, the address and the path into `sink` (in that order).
+using EeWonUrlSink = void(*)(void *context,
+                             int32_t kind,
+                             bool absolute,
+                             const uint8_t *address,
+                             size_t address_len,
+                             const uint8_t *path,
+                             size_t path_len);
+
+/// A URL handed over: its type, absolute flag, address and path.
+struct EeWonUrl {
+  int32_t kind;
+  bool absolute;
+  const uint8_t *address;
+  size_t address_len;
+  const uint8_t *path;
+  size_t path_len;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -6972,6 +7403,55 @@ struct EeWonMemberReady {
   bool has_player;
   bool game_captain;
   bool ready;
+};
+
+/// A C++ call on an op (`AsyncOp*`).
+using EeWonAsyncOpFn = void(*)(void *op);
+
+/// A C++ call on a completion (`CompletionBase<AsyncOpPtr>*`).
+using EeWonAsyncOpCompletionFn = void(*)(void *completion);
+
+/// What the op object calls back in the C++. One static table serves every op.
+struct EeWonAsyncOpHooks {
+  /// the virtual `RunHook`
+  EeWonAsyncOpFn run_hook;
+  /// the virtual `CleanupHook`
+  EeWonAsyncOpFn cleanup_hook;
+  /// `WONAPICore::QueueOp` (an op without a container)
+  EeWonAsyncOpFn core_queue;
+  /// `WONAPICore::AddTimerOp(op, timeout)`
+  void (*timer_add)(void *op, uint32_t timeout);
+  /// `WONAPICore::RemoveTimerOp(op)`
+  EeWonAsyncOpFn timer_remove;
+  /// `completion->AddRef()`, `completion->Release()`
+  EeWonAsyncOpCompletionFn completion_add_ref;
+  EeWonAsyncOpCompletionFn completion_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)` (the tracker's)
+  EeWonAsyncOpFn op_add_ref;
+  EeWonAsyncOpFn op_release;
+  EeWonAsyncOpFn op_kill;
+};
+
+/// A string field's or a number's assignment.
+struct EeWonPatchField {
+  /// the field (the record's order), or `EE_WON_PATCH_CUT`
+  uint8_t slot;
+  /// false: a string whose length was read but not its bytes (`ReadRawString` erased it)
+  bool whole;
+  int32_t num;
+  uint32_t at;
+  uint32_t len;
+};
+
+/// The fields of a read, handed over once.
+using EeWonPatchSink = void(*)(void *context, const EeWonPatchField *fields, size_t count);
+
+/// Byte strings handed over.
+struct EeWonPatchBytes {
+  const uint8_t *data;
+  size_t len;
 };
 
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
@@ -7223,6 +7703,25 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A C++ call on a socket op (`SocketOp*`).
+using EeWonSocketOpFn = void(*)(void *op);
+
+/// What the socket thread calls back in the C++. One static table serves every socket thread.
+struct EeWonSocketOpHooks {
+  /// `op->GetStatus()`
+  long (*status)(void *op);
+  /// the virtual `op->Continue()`
+  long (*continue_op)(void *op);
+  /// `op->Finish(status)`
+  void (*finish)(void *op, long status);
+  /// `op->mInSocketThread = on`
+  void (*set_in_thread)(void *op, bool on);
+  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
+  EeWonSocketOpFn add_ref;
+  EeWonSocketOpFn release;
+  EeWonSocketOpFn kill;
+};
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -9836,6 +10335,30 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
+/// `EEPMProjectile::Step0`'s placement on the arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_launch(const EeCombatFlightIn *input);
+
+/// `EEPMProjectile::Step2`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_step(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Accelerate`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_accelerate(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Home`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_home(const EeCombatFlightIn *input);
+
 /// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
 /// a larger buffer when it exceeds `capacity`).
 ///
@@ -9857,11 +10380,38 @@ uint32_t ee_combat_tile_line(int32_t x1,
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
 
+/// The tag point `LaunchShot` fires from (-1: none).
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_launch_index(const EeCombatLaunchIn *input);
+
+/// The launch of `input.kind` over `input.chain` model transforms.
+///
+/// # Safety
+/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
+EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
+                                   const float (*chain)[16]);
+
 /// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
 ///
 /// # Safety
 /// `host` must point to a valid record whose callbacks are callable with its `ctx`.
 uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
+///
+/// # Safety
+/// `input` must point to a valid record; `distance` is called with `context` (it must not touch the record).
+int32_t ee_combat_screen(EeCombatScreenIn *input,
+                         void *context,
+                         EeCombatScreenDistance distance);
+
+/// `EEGetHitDistanceSquared`'s arithmetic.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///
@@ -13491,6 +14041,26 @@ extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
 
+/// An op's request data into `sink` (`values`: its members in its table's order).
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid; `sink` accepts `context`.
+void ee_won_admin_request(int32_t op,
+                          const EeWonAdminValue *values,
+                          size_t count,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// A reply's values into `sink`.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_admin_reply(int32_t op,
+                        const uint8_t *data,
+                        size_t len,
+                        EeWonAdminSink sink,
+                        void *context);
+
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 
 /// # Safety
@@ -13714,6 +14284,46 @@ bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out
 /// # Safety
 /// As `ee_won_reader_take`.
 bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
+/// A request's message into `sink`.
+///
+/// # Safety
+/// `a` and `b` describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_request(int32_t kind,
+                         int16_t key_id,
+                         EeWonDirBytes a,
+                         EeWonDirBytes b,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
+///
+/// # Safety
+/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
+void ee_won_cert_login_data(const uint8_t *key,
+                            int16_t key_id,
+                            bool create_account,
+                            EeWonDirBytes user,
+                            EeWonDirBytes password,
+                            EeWonDirBytes new_password,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `CheckResponse`'s read in `state` into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_reply(const uint8_t *data,
+                       size_t length,
+                       int32_t state,
+                       EeWonCertSink sink,
+                       void *context);
+
+/// The login reply's decrypted part into `sink`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `sink` accepts `context`.
+void ee_won_cert_decrypted(const uint8_t *data, size_t length, EeWonCertSink sink, void *context);
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
@@ -14896,9 +15506,6 @@ long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
 /// WON's millisecond tick (`WONTickCount`).
 uint32_t ee_won_tick();
 
-/// `AsyncOp::TimeLeft` now.
-uint32_t ee_won_op_time_left(EeWonOpTiming timing);
-
 /// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
 uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
 
@@ -14938,105 +15545,6 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonOpTiming timing,
                          EeWonByteSink sink,
                          void *context);
-
-/// `AsyncOp::AsyncOp`'s state.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_state_init(EeWonOpState *state);
-
-/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
-/// 3 queue it in the container, 4 run blocking.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_run(EeWonOpState *state,
-                      int32_t mode,
-                      uint32_t timeout);
-
-/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
-///
-/// # Safety
-/// `state` is valid.
-bool ee_won_op_run_as_timer(EeWonOpState *state, uint32_t timeout);
-
-/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_finish(EeWonOpState *state, long status);
-
-/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_force_finish(EeWonOpState *state, long status);
-
-/// `AsyncOp::Kill`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_kill(EeWonOpState *state, bool finish);
-
-/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
-///
-/// # Safety
-/// `state` is valid.
-bool ee_won_op_complete(EeWonOpState *state);
-
-/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_after_run_hook(const EeWonOpState *state);
-
-/// `AsyncOp::SetTimeout`.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
-
-/// `AsyncOp::SetMode`.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
-
-EeWonOpSet *ee_won_opset_new();
-
-/// # Safety
-/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
-void ee_won_opset_destroy(EeWonOpSet *set);
-
-/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_insert(EeWonOpSet *set, void *op);
-
-/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_remove(EeWonOpSet *set, void *op);
-
-/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `PurgeOps`: every op to the sink, the set emptied.
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
-bool ee_won_socket_op_finishes(long status);
-
-/// `SocketThreadSimple::Pump`'s wait.
-uint32_t ee_won_socket_pump_wait(uint32_t wait);
 
 /// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
 EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
@@ -15309,6 +15817,70 @@ void ee_won_init_cross_promotion(const uint8_t *doc,
                                  EeWonByteSink link,
                                  EeWonByteSink image,
                                  void *context);
+
+/// The URL's ranges: [user, password, host, path] as (start, end), -1 for one not set.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 8 values.
+void ee_won_ftp_url(const uint8_t *text, size_t len, bool extract, ptrdiff_t *out);
+
+/// `ExtractUserNameAndPasswordFromURL`'s ranges: [user, password] as (start, end), -1 for one not set, then
+/// the rest's start.
+///
+/// # Safety
+/// `text` holds `len` bytes; `out` holds 5 values.
+void ee_won_ftp_credentials(const uint8_t *text,
+                            size_t len,
+                            ptrdiff_t *out);
+
+/// `ExtractStatus` of a C string: 0 when no number was scanned, 1 for a status the transfer goes on with, 2 for
+/// another (`*out` the status for 1 and 2).
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+int32_t ee_won_ftp_status(const uint8_t *line,
+                          int32_t *out);
+
+/// `ParsePasv` of a C string: false when malformed, else the host and port.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; the outputs are valid.
+bool ee_won_ftp_pasv(const uint8_t *line, uint32_t *host, uint16_t *port);
+
+/// `SetRemotePath`'s split: the directory's end (-1: none, the file is the whole path).
+///
+/// # Safety
+/// `path` holds `len` bytes.
+ptrdiff_t ee_won_ftp_remote_split(const uint8_t *path, size_t len);
+
+/// `SendRequest`'s line of `state` into `sink`.
+///
+/// # Safety
+/// The byte ranges are valid; `sink` accepts `context`.
+void ee_won_ftp_command(int32_t state,
+                        const uint8_t *user,
+                        size_t user_len,
+                        const uint8_t *password,
+                        size_t password_len,
+                        const uint8_t *directory,
+                        size_t directory_len,
+                        const uint8_t *file,
+                        size_t file_len,
+                        bool binary,
+                        uint32_t local_size,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// `HandleReply`'s step for a line of `len` bytes (its C string read up to a NUL).
+///
+/// # Safety
+/// `line` holds `len` bytes; `out` is valid.
+void ee_won_ftp_reply(const uint8_t *line,
+                      size_t len,
+                      int32_t state,
+                      bool has_directory,
+                      bool resume,
+                      EeWonFtpStep *out);
 
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
@@ -17009,6 +17581,113 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// `MakeInternetDateTime` into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_http_format_date(int64_t t, EeWonByteSink sink, void *context);
+
+/// `ParseInternetDateTime` of a C string.
+///
+/// # Safety
+/// `text` is a NUL-terminated string.
+int64_t ee_won_http_parse_date(const uint8_t *text);
+
+/// `ExtractStatus`'s scan of a C string: false when it fails, else the status in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_status_line(const uint8_t *line, int32_t *out);
+
+/// `ExtractHeaderLine`'s reading of a C string.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+void ee_won_http_header_line(const uint8_t *line, EeWonHttpHeader *out);
+
+/// `ExtractRedirect` of a C string: false without a "://", else the host's range and the path's start
+/// (`*path_at` -1: the path is "/").
+///
+/// # Safety
+/// `location` is a NUL-terminated string; the outputs are valid.
+bool ee_won_http_redirect(const uint8_t *location,
+                          size_t *host_at,
+                          size_t *host_end,
+                          ptrdiff_t *path_at);
+
+/// `ExtractChunkLength`'s scan of a C string: false when it fails, else the length in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_chunk_length(const uint8_t *line, uint32_t *out);
+
+/// `SendRequest`'s text into `sink`.
+///
+/// # Safety
+/// `q` and its byte ranges are valid; `sink` accepts `context`.
+void ee_won_http_request(const EeWonHttpRequest *q, EeWonByteSink sink, void *context);
+
+/// `HTTPGetOp(url)`'s split: the host's range and the path's (`*path_at` -1: none, the path is "/").
+///
+/// # Safety
+/// `url` holds `len` bytes; the outputs are valid.
+void ee_won_http_split_url(const uint8_t *url,
+                           size_t len,
+                           size_t *host_at,
+                           size_t *host_end,
+                           ptrdiff_t *path_at);
+
+/// `RecvContent`'s up-to-date test.
+bool ee_won_http_up_to_date(bool append,
+                            uint64_t local_size,
+                            uint32_t content_length,
+                            int64_t local_time,
+                            int64_t last_modified,
+                            bool close);
+
+/// `URL::URL` into `sink`; an unknown scheme gives the type `EE_WON_URL_NONE` (and the C++ assigns nothing else).
+///
+/// # Safety
+/// `text` holds `len` bytes; `sink` accepts `context`.
+void ee_won_url_parse(const uint8_t *text,
+                      size_t len,
+                      EeWonUrlSink sink,
+                      void *context);
+
+/// `URL::CalcRelativeTo` into `sink`.
+///
+/// # Safety
+/// `url` and `base` are valid; `sink` accepts `context`.
+void ee_won_url_relative(const EeWonUrl *url,
+                         const EeWonUrl *base,
+                         EeWonUrlSink sink,
+                         void *context);
+
+/// `URL::GetEntire` into `sink`.
+///
+/// # Safety
+/// `url` is valid; `sink` accepts `context`.
+void ee_won_url_entire(const EeWonUrl *url, EeWonByteSink sink, void *context);
+
+/// `HTTPCache::GetFreeId` over the sorted ids.
+///
+/// # Safety
+/// `ids` holds `count` ids.
+int32_t ee_won_http_cache_free_id(const int32_t *ids, size_t count, int32_t next);
+
+/// `HTTPCache::GetEntry`'s file name into `sink`.
+///
+/// # Safety
+/// `location` holds `len` bytes; `sink` accepts `context`.
+void ee_won_http_cache_file_name(int32_t id,
+                                 const uint8_t *location,
+                                 size_t len,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// `HTTPCache::WriteCacheMap`'s keep rule.
+bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
+
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 
 size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
@@ -17140,6 +17819,264 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// # Safety
+/// `hooks` lives for the program; `op` is the C++ op being constructed.
+EeWonAsyncOp *ee_won_asyncop_new(void *op, const EeWonAsyncOpHooks *hooks);
+
+/// # Safety
+/// `o` came from `ee_won_asyncop_new` (or is null).
+void ee_won_asyncop_free(EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run mode.
+///
+/// # Safety
+/// `o` is valid.
+int32_t ee_won_asyncop_run_mode(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s start time.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_start_time(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s timeout.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_timeout(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s completion pending.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_completion_pending(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s killed.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_killed(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run async immediately.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_run_async_immediately(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s timing.
+///
+/// # Safety
+/// `o` is valid.
+EeWonOpTiming ee_won_asyncop_timing(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s completion.
+///
+/// # Safety
+/// `o` is valid.
+void *ee_won_asyncop_completion(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s container.
+///
+/// # Safety
+/// `o` is valid.
+void *ee_won_asyncop_container(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s time left.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_time_left(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s real time left.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_real_time_left(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s set completion.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_completion(const EeWonAsyncOp *o, void *completion);
+
+/// `AsyncOp`'s set container.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_container(const EeWonAsyncOp *o, void *container, EeWonOpContainer *obj);
+
+/// `AsyncOp`'s set timeout.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_timeout(const EeWonAsyncOp *o, uint32_t timeout);
+
+/// `AsyncOp`'s set mode.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_mode(const EeWonAsyncOp *o, int32_t mode);
+
+/// `AsyncOp`'s set run async immediately.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_run_async_immediately(const EeWonAsyncOp *o, bool on);
+
+/// `AsyncOp`'s queue in container.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_queue_in_container(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s kill.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_kill(const EeWonAsyncOp *o, bool finish);
+
+/// `AsyncOp`'s complete.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_complete(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s start run async.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_start_run_async(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run as timer.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_run_as_timer(const EeWonAsyncOp *o, uint32_t timeout);
+
+/// `AsyncOp::GetStatus` (a `WONStatus`, the platform's `long`).
+///
+/// # Safety
+/// `o` is valid.
+long ee_won_asyncop_status(const EeWonAsyncOp *o);
+
+/// `AsyncOp::Finish`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_finish(const EeWonAsyncOp *o, long status);
+
+/// `AsyncOp::ForceFinish`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_force_finish(const EeWonAsyncOp *o, long status);
+
+/// `AsyncOp::Run`: the status after the start.
+///
+/// # Safety
+/// `o` is valid.
+long ee_won_asyncop_run(const EeWonAsyncOp *o, int32_t mode, uint32_t timeout);
+
+/// # Safety
+/// `hooks` lives for the program.
+EeWonOpTracker *ee_won_op_tracker_new(const EeWonAsyncOpHooks *hooks);
+
+/// # Safety
+/// `t` came from `ee_won_op_tracker_new` (or is null).
+void ee_won_op_tracker_free(EeWonOpTracker *t);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void *ee_won_op_tracker_add(const EeWonOpTracker *t, void *op, uint32_t id);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_op_tracker_remove(const EeWonOpTracker *t, void *op);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_op_tracker_kill_all(const EeWonOpTracker *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
+
+/// The op at `index` in id order, null past the end.
+///
+/// # Safety
+/// `t` is valid.
+void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
+
+/// A record's or reply's read into `sink`: `kind` 0 a `VersionData`, 1 a `PatchData`, 2 a `PatchData` of a patch
+/// list, 3 the version check's reply data, 4 the patch list's.
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` accepts `context`.
+void ee_won_patch_read(int32_t kind,
+                       const uint8_t *data,
+                       size_t len,
+                       EeWonPatchSink sink,
+                       void *context);
+
+/// `VersionData::WriteToBuffer`'s bytes (`types`: `count` strings) into `sink`.
+///
+/// # Safety
+/// The strings are valid; `sink` accepts `context`.
+void ee_won_version_write(EeWonPatchBytes config,
+                          EeWonPatchBytes version,
+                          const EeWonPatchBytes *types,
+                          size_t count,
+                          EeWonPatchBytes description,
+                          uint8_t state,
+                          uint32_t flags,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `PatchData::WriteToBuffer`'s bytes (`strings`: the nine strings in `Patch`'s order) into `sink`.
+///
+/// # Safety
+/// `strings` holds nine strings; `sink` accepts `context`.
+void ee_won_patch_write(const EeWonPatchBytes *strings,
+                        int32_t checksum,
+                        int32_t size,
+                        bool must_visit,
+                        bool active,
+                        bool update_only,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// A patch op's request data into `sink`: `kind` 0 the version check (`strings`: product, config, version, then
+/// the types; `byte` the patch list flag), else `count` strings and the byte.
+///
+/// # Safety
+/// `strings` holds `count` strings; `sink` accepts `context`.
+void ee_won_patch_request(int32_t kind,
+                          const EeWonPatchBytes *strings,
+                          size_t count,
+                          uint8_t byte,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `BuildVersionFilterSet`'s and `AddVersionType`'s pieces between commas (`EE_WON_VERSION_TYPE` fields; none
+/// for an empty string when `filter`) into `sink`.
+///
+/// # Safety
+/// `text` holds `len` bytes; `sink` accepts `context`.
+void ee_won_patch_split(const uint8_t *text,
+                        size_t len,
+                        bool filter,
+                        EeWonPatchSink sink,
+                        void *context);
+
+/// `IsFiltered` of a version's data (its C string) against the filter set (`count` strings).
+///
+/// # Safety
+/// `data` holds `len` bytes; `filters` holds `count` strings.
+bool ee_won_version_is_filtered(const uint8_t *data,
+                                size_t len,
+                                const EeWonPatchBytes *filters,
+                                size_t count);
 
 /// `SetFilePath`'s separators.
 ///
@@ -17572,6 +18509,42 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// # Safety
+/// `hooks` lives for the program.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+
+/// # Safety
+/// `t` came from `ee_won_socket_thread_new` (or is null).
+void ee_won_socket_thread_free(EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_add(const EeWonSocketThread *t, void *op);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_remove(const EeWonSocketThread *t, void *op);
+
+/// The pump's work; the time to wait on the thread's signal after it.
+///
+/// # Safety
+/// `t` is valid.
+uint32_t ee_won_socket_thread_pump(const EeWonSocketThread *t, uint32_t wait);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_socket_thread_purge(const EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
+
+/// `SocketThread::DoOp` (a static of the C++ class).
+///
+/// # Safety
+/// `hooks` is valid; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

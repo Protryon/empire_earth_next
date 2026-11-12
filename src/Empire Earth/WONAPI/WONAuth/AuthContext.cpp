@@ -147,7 +147,7 @@ void AuthContext::AutoRefreshCallback(AsyncOp* op)
     AutoCrit lock(this->mDataCrit);
     if(op!=this->mAutoRefreshOp.get()) return;
     this->mAutoRefreshOp=NULL;
-    if(op->mKilled) return;
+    if(op->IsKilled()) return;
     this->RefreshAsync(NULL,INFINITE);
 }
 // FUNCTION: WON 0x006de8e0
@@ -197,8 +197,7 @@ void AuthContext::StartAutoRefresh(bool force)
         time_t wait=(time_t)aWait;
         {
             this->mAutoRefreshOp=new AsyncOp;
-            this->mAutoRefreshOp->mCompletion=
-                new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(&AuthContext::StaticAutoRefreshCallback,this);
+            this->mAutoRefreshOp->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(&AuthContext::StaticAutoRefreshCallback,this));
             this->mAutoRefreshOp->RunAsync(static_cast<long>(static_cast<unsigned long>(wait)*1000UL));
         }
     }
@@ -425,7 +424,7 @@ void AuthContext::RefreshAsync(LightGetCertOp* op,DWORD timeout)
     }
     if(this->mGetCertOp.get()==NULL) {
         this->mGetCertOp=new GetCertOp(this);
-        this->mGetCertOp->mCompletion=new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,this);
+        this->mGetCertOp->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,this));
         this->mRefreshStatus=this->mGetCertOp->Run(1,60000);
     }
 }

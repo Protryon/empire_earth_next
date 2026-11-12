@@ -189,7 +189,7 @@ void SmartRoutingConnection::RoutingOpCompleteHook(RoutingOp *theOp)
 // After registering, loads the ignore list and takes over the client id, flags and client list (or just itself)
 void SmartRoutingConnection::HandleRegisterClient(RoutingRegisterClientOp *theOp)
 {
-	if(!(theOp->mStatus==WS_Success))
+	if(!(theOp->GetStatus()==WS_Success))
 		return;
 
 	this->LoadIgnoreSet();
@@ -216,7 +216,7 @@ void SmartRoutingConnection::HandleRegisterClient(RoutingRegisterClientOp *theOp
 // Applies a successful async-flags change to the connection's async message flags
 void SmartRoutingConnection::HandleSetClientFlags(RoutingSetClientFlagsOp *theOp)
 {
-	if(!(theOp->mStatus==WS_Success))
+	if(!(theOp->GetStatus()==WS_Success))
 		return;
 
 	unsigned long aMask = theOp->mAsyncMessageFlagMask;
@@ -527,11 +527,11 @@ void SmartRoutingConnection::HandleGetGroupList(RoutingGetGroupListOp *theOp)
 // After joining, makes the group the default and takes its member list when one came with the reply
 void SmartRoutingConnection::HandleJoinGroup(RoutingJoinGroupOp *theOp)
 {
-	if(!(theOp->mStatus==WS_Success))
+	if(!(theOp->GetStatus()==WS_Success))
 		return;
 
 	int aGroupId = theOp->GetGroupId();
-	if((theOp->mStatus==WS_Success))
+	if((theOp->GetStatus()==WS_Success))
 		this->mDefaultGroupId = aGroupId;
 	
 	RoutingGroupInfoPtr aGroup = this->GetGroup(aGroupId);
@@ -690,7 +690,7 @@ void SmartRoutingConnection::CheckIgnore(RoutingOp *theOp, unsigned short theSen
 		return;
 
 	if(aSmartClient->mIgnored)
-		theOp->mCompletion = NULL; // swallow the completion
+		theOp->SetCompletion(NULL); // swallow the completion
 	else
 		this->InitHandlerVariables(aSmartClient);	
 }

@@ -172,7 +172,7 @@ void PeerAuthOp::RunHook()
 		this->mPeerData = this->mAuthContext->GetPeerData();
 
 	// Asynchronous operation
-	if(this->mRunMode==OP_MODE_ASYNC)
+	if(this->GetMode()==OP_MODE_ASYNC)
 	{
 		this->AsyncRun();
 		return;

@@ -59,8 +59,8 @@ void UDPManager::SetAutoRecv(bool inAutoRecv)
 // Registers a receive op (by sender address if it has one) and starts it; kills it at once when unbound
 void UDPManager::QueueOp(UDPManagerRecvOp* inOp, unsigned long inTimeout)
 {
-    if (inOp->mCompletion.get() == NULL)
-        inOp->mCompletion = this->mDefaultCompletion;
+    if (inOp->GetCompletion() == NULL)
+        inOp->SetCompletion(this->mDefaultCompletion);
     if (this->mSocket.get() == NULL) {
         if (inOp->GetStatus() != WS_Pending)
             inOp->RunAsync(inTimeout);
@@ -152,7 +152,7 @@ void UDPManagerRecvOp::QueueRecv()
     if (this->mSocket.get() == NULL)
         return;
     SmartPtr<RecvBytesFromOp> anOp = new RecvBytesFromOp(1024, NULL);
-    anOp->mCompletion = new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerRecvOp::StaticRecvCallback, this);
+    anOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerRecvOp::StaticRecvCallback, this));
     this->mSocket->QueueOp(anOp.get(), -1);
 }
 
@@ -160,7 +160,7 @@ void UDPManagerRecvOp::QueueRecv()
 // Finishes the op with a datagram from the expected sender that its message check accepts; otherwise receives again
 void UDPManagerRecvOp::RecvCallback(RecvBytesFromOp* inOp)
 {
-    if (this->mStatus != WS_Pending)
+    if (this->GetStatus() != WS_Pending)
         return;
     if (this->mAddress.IsValid() && inOp->mFromAddress != this->mAddress) {
         this->QueueRecv();
@@ -206,12 +206,12 @@ void UDPManagerRecvOp::CleanupHook()
 // Runs the op: refused in blocking mode; registers with the manager, or binds its own UDP socket and receives
 void UDPManagerRecvOp::RunHook()
 {
-    if (this->mRunMode == OP_MODE_BLOCK) {
+    if (this->GetMode() == OP_MODE_BLOCK) {
         this->Finish(WS_BlockMode_NotSupported);
         return;
     }
     if (this->mManager.get() != NULL) {
-        this->mManager->QueueOp(this, this->mTimeout);
+        this->mManager->QueueOp(this, this->GetTimeout());
         return;
     }
     if (this->mSocket.get() == NULL) {
@@ -231,7 +231,7 @@ UDPManagerSendRecvOp::UDPManagerSendRecvOp() : mRetryLimit(0) { this->mReceiveTi
 void UDPManagerSendRecvOp::SendRequest()
 {
     this->mRecvOp = new UDPManagerRecvOp(this->mAddress);
-    this->mRecvOp->mCompletion = new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerSendRecvOp::StaticRecvCallback, this);
+    this->mRecvOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerSendRecvOp::StaticRecvCallback, this));
     this->mRecvOp->SetMessageVerifier(UDPManagerSendRecvOp::StaticCheckResponse, this);
     if (this->mManager.get() != NULL) {
         this->mManager->Send(this->mOutgoing.get(), this->mAddress);
@@ -248,7 +248,7 @@ void UDPManagerSendRecvOp::SendRequest()
 // Runs the op: refused in blocking mode; binds its own UDP socket without a manager, then sends the request
 void UDPManagerSendRecvOp::RunHook()
 {
-    if (this->mRunMode == OP_MODE_BLOCK) {
+    if (this->GetMode() == OP_MODE_BLOCK) {
         this->Finish(WS_BlockMode_NotSupported);
         return;
     }
@@ -264,7 +264,7 @@ void UDPManagerSendRecvOp::RunHook()
 // Finishes with the reply's status, resends on a timeout until the retry limit, then finishes with WS_NoReply
 void UDPManagerSendRecvOp::RecvCallback(AsyncOp* inOp)
 {
-    if (this->mStatus != WS_Pending || inOp != this->mRecvOp.get())
+    if (this->GetStatus() != WS_Pending || inOp != this->mRecvOp.get())
         return;
     WONStatus aStatus = inOp->GetStatus();
     if (aStatus != WS_TimedOut) {

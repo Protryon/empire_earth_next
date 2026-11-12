@@ -235,12 +235,12 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None):
+def run_program(target, exe, args=(), env=None, cwd=None):
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env)
+    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -382,7 +382,8 @@ WON_TESTS = {
                                                          "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
                                                          "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
                                                          "SocketThread.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "WONDebug.cpp")],
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
+                                                          "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
@@ -490,6 +491,22 @@ WON_TESTS = {
     # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
     # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
     "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    # GetCertOp's requests and replies (the reply's entries read in Rust, the certificate, key block and key checks
+    # applied in order), the original's statements against include/ee/wonapi/WONCertMsg.h over ee_won's cert
+    # module (golden: rust/crates/ee_won/src/golden_cert.txt)
+    "won_cert_test": [],
+    # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
+    # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
+    # (golden: rust/crates/ee_won/src/golden_http.txt)
+    "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp", WON_SRC / "WONCommon" / "WONFile.cpp",
+                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
+    # version filter; the patch ops' requests and replies), the original's statements against
+    # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
+    "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
+    # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
+    "won_admin_test": [],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
@@ -568,7 +585,12 @@ def cmd_wontest(a):
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:
-            result |= run_program(t, exe)
+            # each program in its own directory: their scratch files (won_regkey.yaml as $EE_CONFIG, the config,
+            # file and persist tests' files) are relative to the current directory, and two runs, or two programs,
+            # sharing one would see each other's
+            scratch = exe.parent / "run"
+            scratch.mkdir(exist_ok=True)
+            result |= run_program(t, exe, cwd=scratch)
     return result
 
 
