@@ -3752,6 +3752,7 @@ The floor of 28 is no better, so the Copper plan stays as it is.
   with the boats alive).
 - **Off by default.** Against the classic's warships, the boats need ships of their own or towers that reach them.
 
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
@@ -4033,6 +4034,7 @@ the attack groups. Next: the port's militia and its flight from small raids agai
 the militia odds).
 
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
 
 ### 8.9 Next
 

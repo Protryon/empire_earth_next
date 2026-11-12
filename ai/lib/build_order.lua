@@ -69,7 +69,7 @@ M.PHASE = {
 M.START_MAX_MIN = 6        -- minutes: stone_start ends by then even without the boats (no water, no dock site)
 M.GROW_MAX_MIN = 12        -- minutes into the Stone Age: developed by then whatever the gatherers (the raid by ~40)
 M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for even if the raid never went out
-M.FOOD_BANK = 240          -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
+M.FOOD_BANK = 0            -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
 

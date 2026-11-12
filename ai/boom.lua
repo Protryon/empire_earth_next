@@ -727,7 +727,9 @@ function M.step(view, memory)
     end
     -- (ECON.order: the Prehistoric advance waits for the food the Stone Age's first soldiers need on top of its cost;
     -- spent to 3-48 food, the town stood 5-10 minutes with 0-4 of 8 soldiers under raids, boom-defence's seeds 4, 24)
-    if ECON.order and phase == "pre" and view.stock.food < cost.food + BO.FOOD_BANK then
+    -- (C3: it put the Stone Age 2 minutes later, 27.1 against 25.1 against the improved classic, and the owner's own
+    -- bank came from his income: BO.FOOD_BANK 0 until the Prehistoric food is his)
+    if ECON.order and phase == "pre" and BO.FOOD_BANK > 0 and view.stock.food < cost.food + BO.FOOD_BANK then
         paid = false
     end
     if saving and view.sol_missing == 0 and paid then
@@ -1091,6 +1093,7 @@ function M.step(view, memory)
                     end
                     -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
                     -- site, but the gatherers walk: it gets its own touching settlement)
+                    -- (from the start too: the owner's rule, every patch and mine has its own touching settlement)
                     if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
@@ -1303,7 +1306,10 @@ function M.step(view, memory)
         local ranges = V.buildings(view, "b_archery_range")
         -- (ECON.order: a mine's settlement first, the barracks and the range wait while one is short of wood)
         local settle_first = false   -- (§8.51 O5: holding the barracks for the mines' settlements cost defeats)
-        if settle_first then
+        -- (ECON.order, C1: the Stone Age's food sat at 3-43 for its first 15 minutes, the town centres idle; the boats
+        -- that would feed it waited on wood, 20-60 in stock, while the second barracks and the range took 400+: they
+        -- wait for the boats, as the owner's "a dock and 10 fishing boats at once")
+        if settle_first or hold then
             -- (nothing)
         elseif (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
