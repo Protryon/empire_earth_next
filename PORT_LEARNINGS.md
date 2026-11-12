@@ -8410,3 +8410,80 @@ or EE-SIM run does.
   directly (`op->mPeerAuthServer.GetClientCertificate()`): an accessor there first (the lobby lane's file).
   FindPatchOp's state is VersionBaseOp's sets plus a list of PatchInfo maps of ByteBuffers: it follows VersionBaseOp.
   PeerAuthOp, FilePushOp, the routing and DB op families and ServerRequestOp's object remain.
+
+## R4.4, sixth round: the farm's, volcano's and plane meshes, the tracer beam and the effect manager's containers in Rust (ee_gfx farm.rs, volcano.rs, beam.rs, mesh.rs, effect_store.rs; branch rust-gfx12, 2026-11-12)
+
+The "Next" leaves, pinned as before: scratch drivers (`build/gx12_golden`, not in the repository) #include the unit of
+the commit before the work (`git show`) over the real GE math units; an LCG seeded 1 draws the cases and each prints
+an FNV-1a 64 of its log; each driver relinked over the forwarders printed the same bytes, and on seeds 2 and 3 at
+four times the size. Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 26,224 lines before the round; 25,751 after the
+farm, volcano and beam; 25,683 after the planes; 25,727 with the EFMU capture record (TEST ONLY, 44 lines); 25,711
+after the manager's containers (plus `ee/EEEffectMesh.h`, 52).
+
+- **Built meshes as values (`mesh.rs`, `ee/EEEffectMesh.h`).** A builder writes vertex records (which of point,
+  normal, coordinate, colour and opacity it set, and the values) and triangle records into the C++'s arrays; the
+  C++ stores the set values into the model (`EEEffectMesh::Store`). The final state is the contract, as in the fifth
+  round: the original's setters write the arrays only, so a later write to a slot wins in both. A write past the
+  arrays (the original's out-of-bounds store) is dropped and counted. The drivers print a second hash per case of
+  the Rust-built part alone (the fresh model's vertices and triangles, the volcano's `mPoints`/`mHeights`/centre,
+  the beam's transformation and the model as drawn): those lines are the Rust goldens, so the replays need not
+  reproduce the C++ glue's log.
+- **The farm (`farm.rs`).** `BuildGroundModel`'s ground on the terrain's heights
+  and normals and `BuildCrops`' rows on `GetMeshZ`, through callbacks; both stored into the model and its draw copy.
+  Simulation state: `Step` builds the crops in the tick, sways their tops from the stored points and hands the ground
+  model to the unit. The original's unused `theMaxHeight` maxima are gone. 400 farms (sizes 1 to 6, 0 to 5 crop
+  rows); the terrain mesh is the driver's own point rows (`GETerrainMesh`'s private rows through its friend
+  `GERustTerrainLayout`, defined by the driver).
+- **The volcano (`volcano.rs`).** `BuildModel`'s image (the locked 19 x 19 pixels into colours and cone heights) and
+  mesh (the 3 x 3 split, terrain colours and light, the image blend, fades, the final height blend); the original
+  leaves `mCenter`'s z at the last vertex's height and `mCenter` is saved, so the build returns it. The original's
+  clamp turns -0 into +0 (`f32::clamp` would not): kept. A width whose floor is not 6 (a fractional place where
+  `(x + 3) - (x - 3)` rounds below 6) made the original index past its 361-entry vectors: Rust drops those writes.
+  150 volcanoes at whole and quarter tiles (the driver keeps to places where the width is exactly 6).
+- **The tracer beam (`beam.rs`).** `Aim`'s growth and shrink, length, middle and yaw/pitch transformation (the C++
+  keeps the weapon tag point, the turret part and the target's point) and `DrawPass6`'s stretch (vertices read once,
+  stretched, written, restored from the copy). `Aim` runs in `Step`: simulation state. 500 beams, up to three aims
+  each, every start branch (kind-6 tags, weapon tags with and without turret parts, the default point).
+- **The planes (`effects.rs` `plane`).** `CreateHorizontalPlaneModel` and `CreateStandingPlaneModel` share one
+  `CreatePlaneModel` over the Rust mesh.
+- **Fake units and fake vtables.** A calloc'd unit has no vptr: its `GetModel` (virtual) goes through a 200-slot fake
+  table whose handler answers the case's graphic object; the store fields (`EEUnitStoreField`) are written raw with
+  `EEUnitStoreWrote` defined empty; `GEPhysicalModel`'s private location, scale and frame through member-pointer
+  robbery. The effects themselves are constructed with their load-time constructors (placement new on calloc'd
+  memory, `EEEffect3D(long)` defined by the driver) so `SetTransformation`'s virtual `MoveToTransformation` has a
+  real vtable. `GERasterizer::GetScreen`/`GetFog` are inline reads of `mScreenStates`: the driver placement-news the
+  vector. The surface's slots: Lock 25, GetMemoryAddress 16, GetBytesPerRow 11, Unlock 30 (the x64 table, logged
+  first). The rasterizer's float-argument slots are logged by slot number only; `Draw(GEModel*)` is slot 19.
+- **Argument order in drivers.** `f(g.r(), g.r())` evaluates in an order the standard leaves open: a driver whose
+  stream a Rust replay redraws gives every draw its own statement.
+- **A stash by mistake.** `git stash -- file` (meant as a look at the original) stashed the round's edit of the file and
+  the "current" driver compiled the original; `git stash pop` restored it. Compare against `git show BASE:file`
+  instead.
+
+The effects mapped (for the rounds that move them whole). `EEEffect` (0x30 bytes): `mUnit` and `mGraphicEffect`
+(referenced, saved as ids; RepairPointers resolves the unit), `mNext`/`mPrevious` (the manager's list, now Rust's),
+`mKind` (saved by the manager before the effect), `mHandle` (saved), `mPlayer` and `mIsLocalOnly` (Queue's only-for-
+one-player test, not saved), `mTileX`/`mTileY` (the effect region it is in: saved, the region lists are the map's),
+`mKeepsUnit` (saved), `mIsSaved`. `EEEffect3D`: `mTransformation` and `mBoundingRadius` (saved). `EEEffect2D`:
+`mParts` (each part's position, graphic object, frame, age: saved), `mPosition` (saved), `mModel` (the shared plane,
+referenced) and `mBoundingRadius`. Stepped by the tick (`EEEffectManager::Update` from `EEPhysics::Tick`): every
+effect's `Step` in list order (newest first), which draws `EEEffect::GetRandom`'s generator (the effects' own URandom)
+and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass*` and the members they snapshot
+(`mDraw*`). `Load`/`SetUp`/`RepairPointers` build models (the farm's in the tick).
+
+- **The manager's containers (`effect_store.rs`).** `EEEffectManager`'s last handle (the original's global, saved
+  first), its effects by handle (walked in handle order by Save, RepairPointers, ClearEffects), the effect list
+  (newest first; Update steps it, saving the next effect before each Step) and the destruction queue are one Rust
+  object; the C++ keeps the effects (opaque pointers there), their references and every call into them.
+  `EEEffect::mNext`/`mPrevious` are gone; `EEE2DBattlefieldAmbient`'s walk and the tech capture's sizes use the
+  manager's accessors. As the original: a handle already in the index keeps its first effect (the list still links
+  the second), new handles wrap, unlinking an effect that is not linked does nothing.
+- **A capture record first (EFMU).** Recorded from the unmodified C++ manager after every Update: the last handle,
+  the three sizes and an FNV-1a 64 of the index (handle, kind, own handle), the list (handle, kind) and the queue;
+  its golden lines were written from that build for the oracle, late, space and calamity profiles (the missile
+  profile's golden lists only its sweep's tags). The move then gave the same EFMU and every other digest.
+- **Gates of the round.** Sim oracle identical on seeds 2-7; the five sim_capture profiles PASS with EFMU equal
+  (oracle 476 digests, late and space 483, calamity 508, missile 48); `saveload --settings all --seeds 2-3 --at
+  1000,1900 --expect tools/saveload_expect.txt` PASS (effects are saved: the handle counter, the effects in handle
+  order, the queue). No tour: only the windowed game draws a farm's fields and crops, a volcano rising (the volcano
+  calamity), a tracer beam (laser units) and the 2D effects' standing quad and the ground plane.
