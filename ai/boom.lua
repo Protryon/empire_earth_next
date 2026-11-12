@@ -750,7 +750,9 @@ function M.step(view, memory)
             cap = math.min(cap, planned)
         end
     end
-    if citizen and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
+    -- (ECON.order, lib.raid: memory.raid.priority while the raid force trains) no new citizens are queued then
+    local yield = ECON.order and memory.raid ~= nil and memory.raid.priority == true
+    if citizen and not yield and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
             and view.population < view.population_cap then
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
     end
