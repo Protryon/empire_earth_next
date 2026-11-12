@@ -132,6 +132,11 @@ end
 -- a home mine served by the town centre 7 tiles off is not (the gatherers walk), and gets its own settlement
 local DROPS = {"b_settlement", "b_town_center", "b_capitol"}
 function M.touched(rids)
+    return M.touched_units(rids) > 0
+end
+
+-- how many of the resource units a drop site of the player's touches (gap 0)
+function M.touched_units(rids)
     local units = {}
     local cx, cy = 0, 0
     for _, id in ipairs(rids) do
@@ -142,23 +147,30 @@ function M.touched(rids)
         end
     end
     if #units == 0 then
-        return true
+        return 0
     end
     cx, cy = cx // #units, cy // #units
+    local hit = {}
     for _, type in ipairs(DROPS) do
         local s = size_of(type)
         for _, id in ipairs(ai.units{type = type, near = {cx, cy, 10}, limit = 8}) do
             local b = ai.unit(id)
             if b ~= nil and b.x ~= nil then
-                for _, u in ipairs(units) do
+                for i, u in ipairs(units) do
                     if gap(b.x, b.y, s, u.x, u.y, u.s) == 0 then
-                        return true
+                        hit[i] = true
                     end
                 end
             end
         end
     end
-    return false
+    local n = 0
+    for i = 1, #units do
+        if hit[i] then
+            n = n + 1
+        end
+    end
+    return n
 end
 
 function M.pending(mem)

@@ -202,11 +202,12 @@ end
 function M.trace(view, memory, phase, army)
     local g = view.gatherers
     print(string.format("order line phase=%s gat=%d/%d/%d/%d/%d hunters=%d boats=%d cit=%d army=%d docks=%d barracks=%d "
-        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s", phase, g.food or 0, g.wood or 0, g.stone or 0,
+        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s tplaces=%d/%d/%d", phase, g.food or 0, g.wood or 0, g.stone or 0,
         g.gold or 0, g.iron or 0, view.hunters or 0, view.boats, view.citizens, army, count(view, "b_dock", "finished"),
         count(view, "b_barracks", "finished"), count(view, "b_archery_range", "finished"), M.towers(view),
         count(view, "b_settlement", "finished"), count(view, "b_granary", "finished"), count(view, "b_farm", "finished"),
-        memory.raid ~= nil and tostring(memory.raid.state) or "-"))
+        memory.raid ~= nil and tostring(memory.raid.state) or "-", (memory.order_room or {}).stone or 0,
+        (memory.order_room or {}).gold or 0, (memory.order_room or {}).iron or 0))
 end
 
 -- the town centre's gathering techs (dbtechtree: kind 0, researched at b_town_center or b_capitol; the owner takes them at
