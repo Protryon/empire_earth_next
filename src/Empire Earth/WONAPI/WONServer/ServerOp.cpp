@@ -232,6 +232,87 @@ void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLeng
 {
     static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
 }
+DirEntityList RustServerOp::GetEntities(int inWhich, long long inIndex) const
+{
+    DirEntityList aList;
+    ee_won_hostop_entities(this->mRustOp, inWhich, inIndex, DirEntityReplyParser::TakeEntity, &aList);
+    return aList;
+}
+std::string RustServerOp::GetBytes(int inWhich, long long inIndex) const
+{
+    std::string aBytes;
+    ee_won_hostop_bytes(this->mRustOp, inWhich, inIndex, StrSink, &aBytes);
+    return aBytes;
+}
+namespace {
+// a Rust request op's members in its kind's order (ee_won_reqops_new)
+struct ReqMembers {
+    std::list<std::string> mKeep;
+    std::vector<EeWonAdminValue> mValues;
+    ReqMembers& N(long long inNum)
+    {
+        EeWonAdminValue v = {static_cast<int64_t>(inNum), NULL, 0};
+        this->mValues.push_back(v);
+        return *this;
+    }
+    ReqMembers& S(const std::string& inBytes)
+    {
+        this->mKeep.push_back(inBytes);
+        EeWonAdminValue v = {0, reinterpret_cast<const uint8_t*>(this->mKeep.back().data()), this->mKeep.back().size()};
+        this->mValues.push_back(v);
+        return *this;
+    }
+    ReqMembers& W(const std::wstring& inText)
+    {
+        std::string b;
+        WideAppendUtf16LE(b, inText);
+        return this->S(b);
+    }
+    // an empty profile (no newsletters, birth date or custom action)
+    ReqMembers& Profile() { return this->N(0).N(0).N(0).N(0).N(0).N(0).S(std::string()); }
+    EeWonReqOp* Make(int inKind) { return ee_won_reqops_new(inKind, this->mValues.empty() ? NULL : &this->mValues[0], this->mValues.size()); }
+};
+}
+RustServerOp* RustServerOp::NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
+                                      const char* const* inTypes, int inTypeCount)
+{
+    ReqMembers m;
+    m.N(inFlags).W(inPath).N(inTypeCount);
+    for (int i = 0; i < inTypeCount; i++) m.S(inTypes[i]);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_GET), inContext);
+}
+RustServerOp* RustServerOp::NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount)
+{
+    // GetMultiDirOp::AddPath: each path with the op's flags and (no) data types
+    ReqMembers m;
+    m.N(inCount);
+    for (int i = 0; i < inCount; i++) m.N(inFlags).W(inPaths[i]).N(0);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_MULTI), inContext);
+}
+RustServerOp* RustServerOp::NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
+                                          const std::string& inNetAddr)
+{
+    // GetServiceOp::Init's flags: the services, their display names, data objects, names and addresses
+    ReqMembers m;
+    m.N(0x06000822).W(inPath).W(inName).N(1).S(inNetAddr).N(0);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_SERVICE), inContext);
+}
+RustServerOp* RustServerOp::NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
+{
+    ReqMembers m;
+    RustServerOp* anOp = NewRequest(m.Profile().Make(EE_WON_REQOPS_ACCOUNT_GET), inContext);
+    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
+    return anOp;
+}
+RustServerOp* RustServerOp::NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
+                                             const std::string& inEmail)
+{
+    ReqMembers m;
+    m.W(inPassword).S(inEmail).Profile();
+    RustServerOp* anOp = NewRequest(m.Make(EE_WON_REQOPS_ACCOUNT_UPDATE), inContext);
+    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
+    return anOp;
+}
 RustServerOp::~RustServerOp()
 {
     ee_won_hostop_free(this->mRustOp); // its objects released through HostCall

@@ -37,7 +37,7 @@ private:
 	PatchList mPatchList; // ValidFromVersion and the lists are ee_won's (miscops.rs, through WONMiscOpsMsg.h)
 
 protected:
-	void DoFinish(GetDirOp *theOp);
+	void DoFinish(RustServerOp *theOp); // a Rust GetDirOp (ee_won reqdir.rs)
 
 	virtual bool CallbackHook(AsyncOp *theOp, int theId);
 	virtual void RunHook();

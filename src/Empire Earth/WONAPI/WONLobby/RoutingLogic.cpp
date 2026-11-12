@@ -1956,15 +1956,13 @@ void RoutingLogic::RefreshServerList()
     time_t refreshTime=time(NULL);
     if(static_cast<long>(static_cast<unsigned long>(refreshTime)-static_cast<unsigned long>(this->mLastServerRefresh))>=300 ||
        this->mServerList->IsEmpty()) {
-        SmartPtr<GetDirOp> op=new GetDirOp(context.get());
-        op->SetPath(config->mProductDirectory);
-        op->SetFlags(0x04000622);
-        op->AddDataType("_C");
-        op->AddDataType("_L");
+        static const char* const kTypes[] = { "_C", "_L" };
+        SmartPtr<RustServerOp> op=RustServerOp::NewGetDir(context.get(),config->mProductDirectory,0x04000622,kTypes,2);
         LobbyRunOpWithStatus(op.get(),::LobbyContainer_GettingRoomsTitle_String,::LobbyContainer_GettingRoomsDetails_String,1,0);
         if(op->GetStatus()!=WS_Success) return;
-        if(op->GetDirEntityList().empty()) context->NotifyFailed(op->GetCurAddr());
-        this->mServerList->UpdateFromDirectory(op->GetDirEntityList());
+        const DirEntityList entities=op->GetEntities(EE_WON_REQOP_DIR_LIST);
+        if(entities.empty()) context->NotifyFailed(op->GetCurAddr());
+        this->mServerList->UpdateFromDirectory(entities);
         this->mLastServerRefresh=refreshTime;
     }
     time_t now=time(NULL);

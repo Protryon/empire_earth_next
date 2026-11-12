@@ -1191,6 +1191,55 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
 
+/// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
+constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
+
+/// `GetMultiDirOp`: the query count, each query as `GetDirOp`'s
+constexpr static const int32_t EE_WON_REQOPS_DIR_MULTI = 8;
+
+/// `GetAliasDirOp`: the product name, then the queries as `GetMultiDirOp`'s
+constexpr static const int32_t EE_WON_REQOPS_DIR_ALIAS = 9;
+
+/// `FindEntityOp`: is-service, the get flags, the match mode, the find flags, the path, name and display name
+/// (UTF-16 LE), has-net-address and the address, the find data object count and each one's type, has-data and
+/// data, the data type count and each type
+constexpr static const int32_t EE_WON_REQOPS_DIR_FIND = 10;
+
+/// `GetServiceOp`: the flags, the path and name (UTF-16 LE), has-net-address and the address, the data types
+constexpr static const int32_t EE_WON_REQOPS_DIR_SERVICE = 11;
+
+/// `GetAccountOp`: the profile (the newsletter count and each id and subscription; the birth month, day and year;
+/// the custom action id, has-data and data)
+constexpr static const int32_t EE_WON_REQOPS_ACCOUNT_GET = 12;
+
+/// `UpdateAccountOp`: the new password (UTF-16 LE), the email, the profile
+constexpr static const int32_t EE_WON_REQOPS_ACCOUNT_UPDATE = 13;
+
+/// the number of queries (number)
+constexpr static const int32_t EE_WON_REQOP_DIR_LISTS = 40;
+
+/// a query's status (number; the element: the query's index)
+constexpr static const int32_t EE_WON_REQOP_DIR_STATUS = 41;
+
+/// a query's entities (entities; the element: the query's index; the find's own list is 0)
+constexpr static const int32_t EE_WON_REQOP_DIR_LIST = 42;
+
+/// the find's and the get service's `GetService()` (entities: none or one)
+constexpr static const int32_t EE_WON_REQOP_DIR_SERVICE = 43;
+
+/// the get account's `mEmail` (bytes)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_EMAIL = 44;
+
+/// the account ops' `mErrorString` (bytes)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_ERROR = 45;
+
+/// the profile's `GetNewsletterSub(id)` (number; the element: the id); a setter: `AddNewsletterSub` (the number:
+/// the id, with the subscription at bit 16)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_NEWSLETTER = 46;
+
+/// a setter: the profile's `ClearNewsletterSubs()`
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_CLEAR_NEWSLETTERS = 47;
+
 /// The current server's address (`GetCurAddr()`, six bytes): `ee_won_hostop_bytes`
 constexpr static const int32_t EE_WON_REQHOST_CUR_ADDR = -1;
 
@@ -8276,6 +8325,17 @@ bool ee_won_hostop_bytes(const EeWonHostOp *op,
                          int64_t index,
                          EeWonByteSink sink,
                          void *context);
+
+/// A result list of directory entities by number (`EE_WON_REQOP_DIR_*`), each to `sink` in order, outside the op's
+/// locks (the sink makes the C++ `DirEntity` objects); returns how many.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+size_t ee_won_hostop_entities(const EeWonHostOp *op,
+                              int32_t which,
+                              int64_t index,
+                              EeWonDirEntitySink sink,
+                              void *context);
 
 /// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or
 /// an object (the op takes its own reference).

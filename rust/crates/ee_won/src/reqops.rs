@@ -526,7 +526,8 @@ pub fn new_op(kind: i32, members: &[Member]) -> Option<Box<dyn RequestOp>> {
             let (product, config, version) = (m.bytes(), m.bytes(), m.bytes());
             Box::new(VersionCheckOp { product, config, version, get_patch_list: true, ..Default::default() })
         }
-        _ => return None,
+        // the directory and account ops (round 11)
+        _ => return crate::reqdir::new_op(kind, members),
     })
 }
 

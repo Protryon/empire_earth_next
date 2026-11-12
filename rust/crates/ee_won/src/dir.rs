@@ -340,7 +340,7 @@ pub struct EeWonDirReply {
     pub sequence: u8,
 }
 
-unsafe fn give(e: &Entity, sink: EeWonDirEntitySink, context: *mut c_void) {
+pub(crate) unsafe fn give(e: &Entity, sink: EeWonDirEntitySink, context: *mut c_void) {
     let objects: Vec<EeWonDirDataObject> = e
         .data_objects
         .iter()

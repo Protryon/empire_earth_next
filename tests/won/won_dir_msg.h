@@ -1,15 +1,19 @@
-// The directory ops' requests and status replies through ee_won's dirops module (rust/crates/ee_won/src/dirops.rs):
-// the ops hand their members over as an EeWonDirRequest (strings as UTF-16 LE bytes) and copy the results back
+// The directory ops' requests and status replies through ee_won's dirops module (rust/crates/ee_won/src/dirops.rs),
+// as the C++ ops called it before they became Rust ops (reqdir.rs, dirchange.rs): the drivers' original halves hand
+// their members over as an EeWonDirRequest (strings as UTF-16 LE bytes) and copy the results back
 #pragma once
 #include <string.h>
 #include <string>
 #include <list>
+#include <set>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
 #include "rust/ee_won.h"
 
 namespace WONAPI {
+
+typedef std::set<std::string> DirDataTypeSet;
 
 class DirRequestFields {
 public:

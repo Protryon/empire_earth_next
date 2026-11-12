@@ -344,6 +344,10 @@ pub(crate) trait Plan: Send + Sized + 'static {
     fn describe(&self) -> String;
     /// every object reference held, taken (the destructor releases them)
     fn take_objects(&mut self) -> Vec<Obj>;
+    /// a result list of directory entities by number (the directory ops, reqdir.rs)
+    fn entities(&self, _which: i32, _index: i64) -> Vec<crate::dir::Entity> {
+        Vec::new()
+    }
 }
 
 /// A setter's value.
@@ -651,6 +655,7 @@ trait HostDyn: Send + Sync {
     fn describe(&self) -> String;
     fn setup(&self) -> (u8, [u32; 3]);
     fn release_all(&self);
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity>;
 }
 
 impl<P: Plan> HostDyn for Host<P> {
@@ -680,6 +685,9 @@ impl<P: Plan> HostDyn for Host<P> {
     }
     fn setup(&self) -> (u8, [u32; 3]) {
         self.st().setup()
+    }
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
+        self.st().entities(which, index)
     }
     fn release_all(&self) {
         let objs = self.st().take_objects();
@@ -772,6 +780,28 @@ pub unsafe extern "C" fn ee_won_hostop_bytes(
         }
         None => false,
     }
+}
+
+/// A result list of directory entities by number (`EE_WON_REQOP_DIR_*`), each to `sink` in order, outside the op's
+/// locks (the sink makes the C++ `DirEntity` objects); returns how many.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_entities(
+    op: *const EeWonHostOp,
+    which: i32,
+    index: i64,
+    sink: crate::dir::EeWonDirEntitySink,
+    context: *mut c_void,
+) -> usize {
+    // SAFETY: as above
+    let list = unsafe { (*op).op.entities(which, index) };
+    for e in &list {
+        // SAFETY: the sink's contract
+        unsafe { crate::dir::give(e, sink, context) };
+    }
+    list.len()
 }
 
 /// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or

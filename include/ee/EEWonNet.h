@@ -459,7 +459,7 @@ struct EEWonNetRoomInfo {
 
 namespace WONAPI {
 class AsyncOp;
-class GetDirOp;
+class RustServerOp;
 class GetMOTDOp;
 class RoutingConnection;
 class SmartRoutingConnection;
@@ -469,7 +469,6 @@ typedef SmartPtr<RoutingClientInfo> RoutingClientInfoPtr;
 class WONAPICore; //actual core owner, not a synthetic lobby-host alias
 class WONLobbyWindow;
 class ServerContext;
-class GetAccountOp;
 }
 
 class EEWonNet {
@@ -578,10 +577,10 @@ public:
     // +0x038: the message-of-the-day request (base game: RequestMOTD)
     WONAPI::SmartPtr<WONAPI::GetMOTDOp> mMOTDOp;
     WONAPI::SmartPtr<WONAPI::GetCertOp> mLoginOp;  // +0x03c (base game: Login)
-    // +0x040: the directory query (base game: GetTitanServerList)
-    WONAPI::SmartPtr<WONAPI::GetDirOp> mDirOp;
+    // +0x040: the directory query (base game: GetTitanServerList; a Rust GetDirOp, ee_won reqdir.rs)
+    WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;
     char _gap044[0xc];
-    WONAPI::SmartPtr<WONAPI::GetAccountOp> mAccountOp;   // +0x050 (OpenUpdateAccount)
+    WONAPI::SmartPtr<WONAPI::RustServerOp> mAccountOp;   // +0x050 (OpenUpdateAccount; a Rust GetAccountOp)
     std::wstring mPassword;                 // +0x054 (the hosted game's password)
     std::wstring mGameName;                 // +0x064 (the hosted or joined game)
     std::wstring mRoomName;                 // +0x074 (the game room screen shows it)

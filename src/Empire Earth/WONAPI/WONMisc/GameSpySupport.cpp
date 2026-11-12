@@ -211,7 +211,7 @@ void GameSpySupport::PumpTimerCompletion(AsyncOpPtr theOp, SmartPtr<RefCount> th
 void GameSpySupport::StaticGetServiceOpCompletion(AsyncOpPtr theOp, SmartPtr<RefCount> theGameSpy)
 {
 	GameSpySupport *aGameSpy = (GameSpySupport*)theGameSpy.get();
-	GetServiceOp *anOp = (GetServiceOp*)theOp.get();
+	AsyncOp *anOp = theOp.get();
 	aGameSpy->GetServiceOpCompletion(anOp);
 }
 	
@@ -239,11 +239,8 @@ void GameSpySupport::LaunchGetServiceOp()
 	if(this->mGetServiceOp.get()!=NULL)
 		this->mGetServiceOp->Kill(true);
 
-	GetServiceOpPtr anOp = new GetServiceOp(this->mDirServers);
-	anOp->SetPath(L"/GameSpy");
 	std::string &aName = this->mQueryMap[0]["gamename"];
-	anOp->SetName(StringToWString(aName));
-	anOp->SetNetAddr(new ByteBuffer(aName.data(),aName.length(),false));
+	SmartPtr<RustServerOp> anOp = RustServerOp::NewGetService(this->mDirServers, L"/GameSpy", StringToWString(aName), aName);
 	anOp->mCompletion = new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(GameSpySupport::StaticGetServiceOpCompletion,this);
 	this->mGetServiceOp = anOp;
 	anOp->RunAsync(60000);

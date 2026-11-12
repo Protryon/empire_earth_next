@@ -129,13 +129,12 @@ void AccountLogic::QueryAccount()
     AuthContext* auth = GetLobbyAuthContext();
     if (account == NULL || auth == NULL)
         return;
-    SmartPtr<GetAccountOp> op = new GetAccountOp(account,auth);
-    ProfileData* profile = op->mProfileData.get();
-    profile->AddNewsletterSub(1,false);
+    SmartPtr<RustServerOp> op = RustServerOp::NewGetAccount(account,auth);
+    op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1);
     LobbyRunOpWithStatus(op.get(),::LobbyContainer_QueryAccountTitle_String,::LobbyContainer_QueryAccountDetails_String,1,0);
     if (op->GetStatus() == WS_Success)
-        LobbyBroadcastEvent(new QueryAccountResultEvent(op->mEmail,
-                                                  profile->GetNewsletterSub(1)),true);
+        LobbyBroadcastEvent(new QueryAccountResultEvent(op->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL),
+                                                  op->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1) != 0),true);
 }
 
 // FUNCTION: WON 0x007dc160
@@ -146,11 +145,9 @@ void AccountLogic::HandleUpdateAccount(ComponentEvent* inEvent)
     AuthContext* auth = GetLobbyAuthContext();
     if (account == NULL || auth == NULL)
         return;
-    SmartPtr<UpdateAccountOp> op = new UpdateAccountOp(account,auth);
     UpdateAccountEvent* event = static_cast<UpdateAccountEvent*>(inEvent);
-    op->SetEmail(event->mEmail);
-    op->SetNewPassword(event->mNewPassword);
-    op->mProfileData->AddNewsletterSub(1,event->mNewsletter);
+    SmartPtr<RustServerOp> op = RustServerOp::NewUpdateAccount(account,auth,event->mNewPassword,event->mEmail);
+    op->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER,1 | (event->mNewsletter ? 0x10000 : 0));
     LobbyRunOpWithStatus(op.get(),::LobbyContainer_UpdateAccountTitle_String,::LobbyContainer_UpdateAccountDetails_String,0,0);
 }
 

@@ -544,6 +544,11 @@ WON_TESTS = {
     # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
     # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
     "won_reqops_test": [],
+    # WONDir's list, multi-list, alias, find and get-service ops and WONDB's get and update account ops as whole ops
+    # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
+    # through their C ABI (golden: rust/crates/ee_won/src/golden_reqdir.txt)
+    "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
+                        WON_SRC / "WONDB" / "ProfileData.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won/src/golden_hostop.txt)

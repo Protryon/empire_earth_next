@@ -1,7 +1,7 @@
 // WONDir's entity changes as whole ops (AddEntityOp, ModifyEntityOp, RemoveEntityOp, RenameEntityOp, RenewEntityOp,
 // EntitySetDataObjectsOp, EntityModifyDataObjectsOp, EntityClearDataObjectsOp): the original's Init, GetNextRequest
 // and CheckResponse (copied from the C++ op classes before the port, over stand-ins with the ops' members, the
-// messages through include/ee/wonapi/WONDirRequest.h, which won_dirops_test checks against the pre-port statements)
+// messages through tests/won/won_dir_msg.h, which won_dirops_test checks against the pre-port statements)
 // against the Rust ops (ee_won dirchange.rs) through their C ABI. Each sequence: generated members, the request,
 // then up to four generated status replies (headers right and wrong, a returned address or none, cut and mutated),
 // each reply's verdict and the op's address after it.
@@ -21,7 +21,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONDirExtended.h"
-#include "ee/wonapi/WONDirRequest.h"
+#include "won_dir_msg.h"
 #include "rust/ee_won.h"
 
 // 0 records the golden from the original's half alone

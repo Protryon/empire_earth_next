@@ -1748,6 +1748,20 @@ public:
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
+    // the results of a directory or account op (ee_won reqdir.rs): its entities by number and element
+    // (EE_WON_REQOP_DIR_LIST and a query's index, EE_WON_REQOP_DIR_SERVICE), a number, bytes
+    DirEntityList GetEntities(int inWhich, long long inIndex = 0) const;
+    long long GetNum(int inWhich, long long inIndex = 0) const { return ee_won_hostop_num(this->mRustOp, inWhich, inIndex); }
+    std::string GetBytes(int inWhich, long long inIndex = 0) const;
+    // the directory and account ops the game makes (ee_won reqdir.rs), with their members
+    static RustServerOp* NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
+                                   const char* const* inTypes = NULL, int inTypeCount = 0);
+    static RustServerOp* NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount);
+    static RustServerOp* NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
+                                       const std::string& inNetAddr);
+    static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth);
+    static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
+                                          const std::string& inEmail);
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -1821,87 +1835,12 @@ public:
     SmartPtr<RoutingGetGroupListOp> mOp; //f4, implicit destructor releases before base
 };
 
-// AoC directory operation types. The base-game GetDirOp above is a different version.
-// Reuses DirEntityList/SmartPtr from above; do not duplicate these aliases.
-typedef std::set<std::string> DirDataTypeSet;
-// WON SDK stateless parser; static cdecl 2f0510.
+// The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
+// objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
+// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won/src/reqdir.rs).
 class DirEntityReplyParser {
 public:
-    static WONStatus ParseSingleEntityReply(const void*, unsigned long, DirEntityPtr&); //single-entity parser (WON SDK); no original address identified
-    static WONStatus ParseMultiEntityReply(const void*, unsigned long, DirEntityList&, unsigned char* inSequence = NULL);
-    static bool OnlyDirs(DWORD); //2f04f0
-    static bool OnlyServices(DWORD); //2f0500
-};
-
-class GetEntityRequest : public RefCount {
-protected:
-    virtual ~GetEntityRequest(); //2f0da0, explicit ownVT44d4f0 store2f0dc2
-    DWORD mFlags; //08, the inline default constructor sets flags 06020837
-    std::wstring mPath; //0c..1c
-    DirDataTypeSet mDataTypes; //1c..28
-    DirEntityList mDirEntityList; //28..34
-    DirEntityMap mDirEntityMap; //34..40
-    WONStatus mStatus; //40..44; constructor leaves untouched
-public:
-    // The constructor is inline in AddPath 2f18f0 (no out-of-line address).
-    // Never allocated or constructed here.
-    GetEntityRequest() { this->mFlags=0x06020837; }
-    enum PACKFLAG { Pack_GetDirOp, Pack_GetMultiDirOp };
-    void SetPath(const std::wstring& inPath) { this->mPath=inPath; }
-    // the query's fields, for the requests ee_won builds (rust/crates/ee_won/src/dirops.rs)
-    DWORD GetFlags() const { return this->mFlags; }
-    const std::wstring& GetPath() const { return this->mPath; }
-    const DirDataTypeSet& GetDataTypes() const { return this->mDataTypes; }
-    void SetFlags(DWORD inFlags) { this->mFlags=inFlags; }
-    void SetDataTypes(const DirDataTypeSet& inTypes) { this->mDataTypes=inTypes; }
-    void AddDataType(const std::string& type) { this->mDataTypes.insert(type); }
-    void Reset(); //2f1070, clears result list/map only
-    void Pack(WriteBuffer*,PACKFLAG); //2f0fa0
-    WONStatus ParseMultiEntityReply(const void*,unsigned long); //2f1160, original parser only
-    WONStatus GetStatus() { return this->mStatus; }
-    const DirEntityList& GetDirEntityList() { return this->mDirEntityList; }
-    const DirEntityMap& GetDirEntityMap(); //lazy grouping algorithm (WON SDK); no original address identified
-};
-typedef SmartPtr<GetEntityRequest> GetEntityRequestPtr;
-// AoC GetDirOp, 0xf8 bytes: RTTI .?AVGetDirOp@WONAPI@@, VT44d4f8.
-// Replaces the base game's 0x118-byte layout.
-class GetDirOp : public ServerRequestOp {
-private:
-    void Init(); //2f1190, initializes the owned GetEntityRequest (0x44)
-    GetEntityRequestPtr mGetEntityRequest; //f4..f8
-protected:
-    virtual WONStatus GetNextRequest(); //2f13d0, GetNextRequest
-    virtual WONStatus CheckResponse(); //2f14e0, CheckResponse
-    virtual void Reset();     //2f13c0, Reset
-public:
-    GetDirOp(ServerContext*); //2f12d0, 89 bytes; the only out-of-line constructor
-    void SetPath(const std::wstring& path) { this->mGetEntityRequest->SetPath(path); }
-    void SetFlags(DWORD flags) { this->mGetEntityRequest->SetFlags(flags); }
-    void AddDataType(const std::string& type) { this->mGetEntityRequest->AddDataType(type); }
-    const DirEntityList& GetDirEntityList() { return this->mGetEntityRequest->GetDirEntityList(); }
-    // Implicit ordinary dtor 2f1350 releases the child, then ServerRequestOp; no own-vptr write.
-};
-typedef std::list<GetEntityRequestPtr> GetEntityRequestList;
-class GetMultiDirOp : public ServerRequestOp {
-protected:
-    virtual WONStatus GetNextRequest(); //2f1a30
-    virtual WONStatus CheckResponse(); //2f1b90
-    virtual void Reset();     //2f1790
-private:
-    void Init(); //2f1520, protocol initialization
-    GetEntityRequestList mRequestList; //f4..100
-    GetEntityRequestList::iterator mCurRequest; //100=0
-    DWORD mFlags; //104, the ctor leaves it untouched
-    DirDataTypeSet mDataTypes; //108..114
-    int mNumFailedRequests; //114=0, complete118
-public:
-    GetMultiDirOp(ServerContext* inContext); //2f1540, 207 bytes
-    // Implicit destructor 2f1630/350, no own-vptr store.
-    void SetFlags(DWORD inFlags) { this->mFlags=inFlags; }
-    void AddPath(const std::wstring& inPath); //2f18f0
-    void AddRequest(GetEntityRequest*); //2f17c0
-    const GetEntityRequestList& GetRequestList() { return this->mRequestList; }
-    // The inherited current address is at b0.
+    static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
 };
 
 // The direct RTTI parent is ServerOp, not AsyncOpWithTracker or RoutingOp.
@@ -2485,36 +2424,7 @@ public:
     // Implicit ordinary dtor 2cc2e0, no own-vtable store; all members destroyed normally.
 };
 
-class GetAccountOp : public ServerRequestOp {
-public:
-    GetAccountOp(ServerContext* inContext,AuthContext* inAuth); //2ccfa0
-    void Init(); //2ccef0, 163 bytes, length4 before a new Profile (0x20)
-    // Destructor stays implicit: 2cd0a0 has no own-vptr store; releases 114,
-    // string 104 then string f4, calls ServerRequestOp::~ServerRequestOp 2ad110.
-    virtual WONStatus GetNextRequest();     //2cd190 GetNextRequest
-    virtual WONStatus CheckResponse();      //2cd2b0 CheckResponse
-    virtual void Reset();                   //4142a0 Reset, override
-    std::string mEmail;                     //f4..104
-    std::string mErrorString;               //104..114
-    SmartPtr<ProfileData> mProfileData;      //114..118
-};
-class UpdateAccountOp : public ServerRequestOp {
-public:
-    UpdateAccountOp(ServerContext* inContext,AuthContext* inAuth); //2ce8f0
-    // Destructor remains implicit:2cea10 has no own-vptr store; string118,
-    // wstring108,stringf8,ProfilePtrf4, then ServerRequestOp::~2ad110.
-    virtual WONStatus GetNextRequest();     //2ceb30 GetNextRequest
-    virtual WONStatus CheckResponse();      //2cec80 CheckResponse
-    virtual void Reset();                   //4142a0 Reset, override
-    void SetEmail(const std::string& inEmail) { this->mEmail=inEmail; }
-    void SetNewPassword(const std::wstring& inPassword) { this->mNewPassword=inPassword; }
-    SmartPtr<ProfileData> mProfileData;      //f4
-    std::string mErrorString;               //f8..108
-    std::wstring mNewPassword;              //108..118
-    std::string mEmail;                     //118..128
-private:
-    void Init(); //2ce840, 163 bytes, length4 before a new Profile (0x20)
-};
+// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs)
 
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {

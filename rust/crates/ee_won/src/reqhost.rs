@@ -84,6 +84,10 @@ pub(crate) trait HostRequest: Send {
     fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>>;
     /// a setter by the op's number
     fn set(&mut self, _c: &Calls, _which: i32, _value: &SetValue) {}
+    /// a result list of directory entities by the op's number
+    fn entities(&self, _which: i32, _index: i64) -> Vec<crate::dir::Entity> {
+        Vec::new()
+    }
     /// every object reference the op holds, taken
     fn take_objects(&mut self) -> Vec<Obj> {
         Vec::new()
@@ -134,11 +138,17 @@ impl HostRequest for Plain {
     fn describe(&self) -> String {
         self.0.describe()
     }
-    fn num(&self, which: i32, _index: i64) -> i64 {
-        self.0.num(which)
+    fn num(&self, which: i32, index: i64) -> i64 {
+        self.0.num_at(which, index)
     }
     fn bytes(&self, which: i32, _index: i64) -> Option<Vec<u8>> {
         self.0.bytes(which)
+    }
+    fn set(&mut self, _c: &Calls, which: i32, value: &SetValue) {
+        self.0.set(which, value.num, value.data)
+    }
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
+        self.0.entities(which, index)
     }
 }
 
@@ -692,6 +702,10 @@ impl Plan for ReqPlan {
     fn setup(&self) -> (u8, [u32; 3]) {
         let o = self.op();
         (o.length_field_size(), o.max_times())
+    }
+
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
+        self.op().entities(which, index)
     }
 
     fn describe(&self) -> String {

@@ -124,7 +124,7 @@ GetVersionOp::GetVersionOp(ServerContext *theDirServers, const std::string &theP
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-void GetVersionOp::DoFinish(GetDirOp *theOp)
+void GetVersionOp::DoFinish(RustServerOp *theOp)
 {
 	if(!theOp->Succeeded())
 	{
@@ -133,8 +133,10 @@ void GetVersionOp::DoFinish(GetDirOp *theOp)
 	}
 
 
-	DirEntityPtr anEntity = *(theOp->GetDirEntityList().begin());
-	this->BuildValidVersionSet(anEntity);
+	// the original read the first entity of an empty listing too (past the list's end): none is no version here
+	const DirEntityList aList = theOp->GetEntities(EE_WON_REQOP_DIR_LIST);
+	if(!aList.empty())
+		this->BuildValidVersionSet(aList.front());
 	this->Finish(WS_Success);
 }
 
@@ -142,7 +144,7 @@ void GetVersionOp::DoFinish(GetDirOp *theOp)
 ///////////////////////////////////////////////////////////////////////////////
 bool GetVersionOp::CallbackHook(AsyncOp *theOp, int)
 {
-	this->DoFinish(static_cast<GetDirOp*>(theOp));
+	this->DoFinish(static_cast<RustServerOp*>(theOp));
 	return true;
 }
 
@@ -154,13 +156,10 @@ void GetVersionOp::RunHook()
 	this->mFilteredVersionSet.clear();
 	this->mHighestValidVersion.erase();
 
-	SmartPtr<GetDirOp> anOp = new GetDirOp(this->mDirServers);
-
-	anOp->SetPath(this->GetVersionDir());
 
 	DWORD aFlags = DIR_GF_DECOMPROOT | DIR_GF_ADDDATAOBJECTS | DIR_GF_ADDDOTYPE | DIR_GF_ADDDODATA;
 
-	anOp->SetFlags(aFlags);
+	SmartPtr<RustServerOp> anOp = RustServerOp::NewGetDir(this->mDirServers, this->GetVersionDir(), aFlags);
 	if(this->GetMode()==OP_MODE_ASYNC)
 	{
 		this->Track(anOp,0);
