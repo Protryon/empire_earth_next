@@ -12,10 +12,14 @@ use crate::camera::{
     self, EeGfxCameraGoTo, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxClipping, EeGfxEdgePlanes,
     EeGfxOrthoView, Ground,
 };
+use crate::effects::{self, EeGfxColor, EeGfxEffectFog, EeGfxEffectQuad, EeGfxTexCoord};
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
-use crate::units::{self, EeGfxBarRects, EeGfxBarSizes, EeGfxPlacementLine, EeGfxRingSegments, EeGfxSelectionRing};
+use crate::select::{self, EeGfxSelectLines};
+use crate::units::{
+    self, EeGfxBarRects, EeGfxBarSizes, EeGfxLabelClip, EeGfxPlacementLine, EeGfxRingSegments, EeGfxSelectionRing,
+};
 use crate::view;
 use ee_ge::viewport::GeViewport;
 
@@ -619,7 +623,7 @@ pub extern "C" fn ee_gfx_units_ring_segments(strength: u32) -> EeGfxRingSegments
     units::ring_segments(strength)
 }
 
-// ---- the placement footprint (units.rs, EEROUnits.cpp)
+// ---- the placement footprint and the labels (units.rs, EEROUnits.cpp)
 
 /// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
 /// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.
@@ -646,5 +650,257 @@ pub unsafe extern "C" fn ee_gfx_units_placement_lines(
         let cells = *(cells as *const [[u8; units::PLACEMENT_GRID]; units::PLACEMENT_GRID]);
         let out = std::slice::from_raw_parts_mut(out, capacity);
         units::placement_lines(&vp, orthographic, size, tile_x, tile_y, &heights, &cells, out)
+    }
+}
+
+/// `DrawLabels`' clip rectangles from the game view's rectangle `*view` and the window's size.
+///
+/// # Safety
+/// `view` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_units_label_clip(
+    view: *const GeRectangle,
+    width: u32,
+    height: u32,
+    free_camera: bool,
+    panel_active: bool,
+) -> EeGfxLabelClip {
+    // SAFETY: the function's contract
+    let view = unsafe { *view };
+    units::label_clip(view, width, height, free_camera, panel_active)
+}
+
+/// Which clip rectangles a label at screen height `y` is drawn to (bit 0 the view, 1 the strip, 2 the editor's).
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_label_targets(y: f32, text_height: f32, bottom: f32, free_camera: bool) -> u32 {
+    units::label_targets(y, text_height, bottom, free_camera)
+}
+
+/// The debug label's place: the bar tag (`*bar` scaled by `scale` through `*transformation`) on the screen, above
+/// `bars` extra bars.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_units_label_point(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    transformation: *const GeTransformation,
+    bar: *const Ge3DPoint,
+    scale: f32,
+    bars: u64,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract (inputs copied before the store)
+    unsafe {
+        let p = units::label_point(&*viewport, orthographic, &*transformation, *bar, scale, bars);
+        *out = p;
+    }
+}
+
+// ---- the effects' quads (effects.rs, EEEffect.cpp)
+
+/// `GetEffectFogFactor`: the fog's fade at `*point` (`fog.state` 1: linear fog).
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_fog_factor(
+    point: *const Ge3DPoint,
+    fog: *const EeGfxEffectFog,
+    camera_inverse: *const GeTransformation,
+) -> f32 {
+    // SAFETY: the function's contract
+    unsafe { effects::fog_factor(*point, &*fog, &*camera_inverse) }
+}
+
+/// `AddGlowSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_gfx_effect_glow_sprite(
+    position: *const Ge3DPoint,
+    color: *const EeGfxColor,
+    rotation: f32,
+    size: f32,
+    alpha: f32,
+    brightness: f32,
+    fog: f32,
+    camera_yaw: f32,
+    camera_pitch: f32,
+) -> EeGfxEffectQuad {
+    // SAFETY: the function's contract
+    unsafe { effects::glow_sprite(*position, *color, rotation, size, alpha, brightness, fog, camera_yaw, camera_pitch) }
+}
+
+/// `AddGroundSprite`'s and `AddGroundQuad`'s quad; `opacities` holds the four corners'.
+///
+/// # Safety
+/// The pointers are valid; `opacities` holds four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_ground_sprite(
+    position: *const Ge3DPoint,
+    color: *const EeGfxColor,
+    rotation: f32,
+    size: f32,
+    opacities: *const f32,
+    brightness: f32,
+) -> EeGfxEffectQuad {
+    // SAFETY: the function's contract
+    unsafe {
+        let opacities = *(opacities as *const [f32; 4]);
+        effects::ground_sprite(*position, *color, rotation, size, opacities, brightness)
+    }
+}
+
+/// `AddBlendedSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_gfx_effect_blended_sprite(
+    position: *const Ge3DPoint,
+    color: *const EeGfxColor,
+    rotation: f32,
+    size: f32,
+    alpha: f32,
+    brightness: f32,
+    camera_yaw: f32,
+    camera_pitch: f32,
+) -> EeGfxEffectQuad {
+    // SAFETY: the function's contract
+    unsafe { effects::blended_sprite(*position, *color, rotation, size, alpha, brightness, camera_yaw, camera_pitch) }
+}
+
+/// `AddGroundStrip`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_gfx_effect_ground_strip(
+    from: *const Ge3DPoint,
+    to: *const Ge3DPoint,
+    height: f32,
+    color: *const EeGfxColor,
+    origin: *const EeGfxTexCoord,
+    extent: *const EeGfxTexCoord,
+    alpha: f32,
+    brightness: f32,
+) -> EeGfxEffectQuad {
+    // SAFETY: the function's contract
+    unsafe { effects::ground_strip(*from, *to, height, *color, *origin, *extent, alpha, brightness) }
+}
+
+// ---- the box selection (select.rs, EEUICSelectUnits.cpp)
+
+/// `StartSelection`'s drag start: `*location` rounded.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_select_start(location: *const Ge2DPoint, out: *mut Ge2DPoint) {
+    // SAFETY: the function's contract (the input copied before the store)
+    unsafe {
+        let p = select::start_point(*location);
+        *out = p;
+    }
+}
+
+/// `MouseMove`'s drag end: `*location` rounded, clamped to the game view `*view`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_select_drag_end(
+    location: *const Ge2DPoint,
+    view: *const GeRectangle,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract (the inputs copied before the store)
+    unsafe {
+        let p = select::drag_end(*location, &*view);
+        *out = p;
+    }
+}
+
+/// Whether the drag from `*start` to `*end` has gone far enough to start.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_select_starts_drag(start: *const Ge2DPoint, end: *const Ge2DPoint) -> bool {
+    // SAFETY: the function's contract
+    unsafe { select::starts_drag(*start, *end) }
+}
+
+/// The box from `*start` to `*end`: `MouseMove`'s (`release` false) or `MouseLButtonUp`'s.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_select_box(
+    start: *const Ge2DPoint,
+    end: *const Ge2DPoint,
+    release: bool,
+    out: *mut GeRectangle,
+) {
+    // SAFETY: the function's contract (the inputs copied before the store)
+    unsafe {
+        let r = if release { select::release_box(*start, *end) } else { select::drag_box(*start, *end) };
+        *out = r;
+    }
+}
+
+/// `DrawPolygons`' eight lines round the box `*rectangle`.
+///
+/// # Safety
+/// `rectangle` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_select_box_lines(rectangle: *const GeRectangle) -> EeGfxSelectLines {
+    // SAFETY: the function's contract
+    unsafe { select::box_lines(&*rectangle) }
+}
+
+// ---- the mini map's camera point (minimap.rs, EEUIMiniMap.cpp)
+
+/// `EEUIMiniMap::CenterCamera`'s mini-map point for the mouse at `*mouse`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_minimap_center_point(
+    mouse: *const Ge2DPoint,
+    origin: *const Ge2DPoint,
+    width: u32,
+    height: u32,
+    bounds: *const GeRectangle,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract (the inputs copied before the store)
+    unsafe {
+        let p = minimap::center_point(*mouse, *origin, width, height, &*bounds);
+        *out = p;
+    }
+}
+
+/// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_entry_transform(
+    location: *const GeTransformation,
+    internal: *const GeTransformation,
+    scale: f32,
+    out: *mut GeTransformation,
+) {
+    // SAFETY: the function's contract (the inputs copied before the store)
+    unsafe {
+        let t = pick::entry_transform(&*location, &*internal, scale);
+        *out = t;
     }
 }

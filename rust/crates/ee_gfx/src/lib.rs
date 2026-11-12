@@ -18,9 +18,12 @@
 )]
 
 pub mod camera;
+pub mod effects;
 pub mod ffi;
 #[cfg(test)]
 mod golden_camera;
+#[cfg(test)]
+mod golden_center;
 #[cfg(test)]
 mod golden_minimap;
 #[cfg(test)]
@@ -30,13 +33,18 @@ mod golden_picker;
 #[cfg(test)]
 mod golden_placement;
 #[cfg(test)]
+mod golden_quads;
+#[cfg(test)]
 mod golden_rings;
 #[cfg(test)]
 mod golden_rounits;
+#[cfg(test)]
+mod golden_select;
 #[cfg(test)]
 mod golden_view;
 pub mod minimap;
 pub mod mouse;
 pub mod pick;
+pub mod select;
 pub mod units;
 pub mod view;

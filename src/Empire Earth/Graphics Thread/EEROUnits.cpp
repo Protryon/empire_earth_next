@@ -162,8 +162,8 @@ const float kBarFraction = 0.75f;           // 0x441bb0
 // after the vtable (0x441bd0..0x441be4)
 // 0x441bd0..0x441bd8: DrawBars's bar literals 0.0013020834f (1 / 768), 24.0f and 1 / 1024 (orig fmul [1/1024]; fmul [24]:
 // 24.0f * (theWidth / 1024.0f) keeps the two multiplies, and max() reuses the product)
-const float kLabelBottom = 0.7135417f;      // 0x441bdc (548 / 768: the main game form's bottom strip)
-const float kLabelMargin = 0.18066406f;     // 0x441be0 (185 / 1024)
+// 0x441bdc (0.7135417, 548 / 768: the main game form's bottom strip) and 0x441be0 (0.18066406, 185 / 1024: the unit
+// panel's width): ee_gfx units.rs LABEL_BOTTOM and LABEL_MARGIN (DrawLabels)
 const float kRingStep = -0.44879895f;       // 0x441be4 (-2 pi / 14)
 // DrawPlacement's edges at most: an 11 x 11 grid's outline (44) and its inner edges (264)
 const size_t kPlacementLineCapacity = 320;
@@ -739,32 +739,22 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
     GERectangle theView;
     GERectangle theStrip;
     GEText theText(gU531994);
-    GE3DPoint theLocation;
     UWideString theString;
     unsigned long theWidth = gGameWindow->GetWidth();
     unsigned long theHeight = gGameWindow->GetHeight();
-    float theMargin = 0.0f;
-    float theBottom = 0.0f;
-    float theWindowWidth = (float)theWidth;
-    theView = gU4E8F08.GetViewRectangle();
-    theMargin = theWindowWidth;
-    theMargin *= kLabelMargin;
-    theBottom = (float)theHeight * kLabelBottom;
-    if (!gFreeCamera) {
-        theStrip.SetLeft(theView.GetLeft());
-        theStrip.SetTop(theBottom);
-        theStrip.SetBottom(theView.GetBottom());
-        if (gUnitPanelActive)
-            theStrip.SetLeft(theMargin);
-        theStrip.SetRight(theWindowWidth - theMargin);
-        theView.SetBottom(theBottom);
-    }
+    // the view above the bottom strip, the strip beside the panels and the font: ee_gfx units.rs (RUST_PLAN R4.4)
+    EeGfxLabelClip theClip = ee_gfx_units_label_clip(
+        reinterpret_cast<const EeGeRectangle*>(&gU4E8F08.GetViewRectangle()), (uint32_t)theWidth, (uint32_t)theHeight,
+        gFreeCamera, gUnitPanelActive);
+    theView = *reinterpret_cast<const GERectangle*>(&theClip.view);
+    theStrip = *reinterpret_cast<const GERectangle*>(&theClip.strip);
+    float theBottom = theClip.bottom;
     theText.SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
     theText.SetIsTransparent(true);
     theText.SetAlignment(kTextAlignCenter);
-    if (theWidth >= 0x640)
+    if (theClip.font == 2)
         theText.SetFont(gFontTahoma16);
-    else if (theWidth >= 0x500)
+    else if (theClip.font == 1)
         theText.SetFont(gFontTahoma12);
     for (unsigned long i = 0; i < inCount; i++) {
         EERenderUnit* theUnit = &inUnits[i];
@@ -783,30 +773,24 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
         } else if (gU529044 == theUnit) {
             sprintf(theString, "%s", (const char*)gU529030);
             theText.SetText(theString);
-            theOffset.SetX(theUnit->mSource->mBar.GetX() * theUnit->mScale);
-            theOffset.SetY(theUnit->mSource->mBar.GetY() * theUnit->mScale);
-            theOffset.SetZ(theUnit->mSource->mBar.GetZ() * theUnit->mScale);
-            theUnit->mTransformation.Apply(theOffset, theLocation);
-            GetScreenPoint(theLocation, theScreenPoint);
-            theScreenPoint.SetY(theScreenPoint.GetY() - theUnit->mHealthBars.size() * 5.0f - 10.0f);
+            ee_gfx_units_label_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
+                                     reinterpret_cast<const EeGeTransformation*>(&theUnit->mTransformation),
+                                     reinterpret_cast<const EeGe3DPoint*>(&theUnit->mSource->mBar), theUnit->mScale,
+                                     (uint64_t)theUnit->mHealthBars.size(),
+                                     reinterpret_cast<EeGe2DPoint*>(&theScreenPoint));
             theText.SetLocation(theScreenPoint);
             theText.SetFgColor(theUnit->mPlayerColor);
         } else {
             continue;
         }
-        if (!gFreeCamera) {
-            float theTextHeight = theText.GetTextExtent().GetHeight();
-            if (theScreenPoint.GetY() + theTextHeight < theBottom) {
-                gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
-            } else if (theScreenPoint.GetY() - theTextHeight > theBottom) {
-                gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
-            } else {
-                gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
-                gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
-            }
-        } else {
+        float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
+        uint32_t theTargets = ee_gfx_units_label_targets(theScreenPoint.GetY(), theTextHeight, theBottom, gFreeCamera);
+        if (theTargets & 1)
+            gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
+        if (theTargets & 2)
+            gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
+        if (theTargets & 4)
             gUIManager->mScenarioEditorForm->DrawClippedText(theView, &theText, NULL);
-        }
     }
 }
 

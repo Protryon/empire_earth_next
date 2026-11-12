@@ -299,6 +299,80 @@ pub fn placement_lines(
     n
 }
 
+/// `kLabelBottom`: the top of the main game form's bottom strip over the window's height (548 / 768).
+pub(crate) const LABEL_BOTTOM: f32 = 0.7135417;
+/// `kLabelMargin`: the unit panel's width over the window's (185 / 1024).
+pub(crate) const LABEL_MARGIN: f32 = 0.18066406;
+
+/// `DrawLabels`' clip rectangles: above the bottom strip (`view`) and the strip's part beside the panels
+/// (`strip`), the strip's top (`bottom`) and the font (0: the default, 1: Tahoma 12, 2: Tahoma 16).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxLabelClip {
+    pub view: GeRectangle,
+    pub strip: GeRectangle,
+    pub bottom: f32,
+    pub font: u32,
+}
+
+/// `DrawLabels`' rectangles from the game view's rectangle and the window's size. With the free camera (the
+/// scenario editor) the view is the whole game view and the strip unused (all zero).
+pub fn label_clip(view: GeRectangle, width: u32, height: u32, free_camera: bool, panel_active: bool) -> EeGfxLabelClip {
+    let window_width = width as f32;
+    let mut view = view;
+    let mut strip = GeRectangle::default();
+    let mut margin = window_width;
+    margin *= LABEL_MARGIN;
+    let bottom = height as f32 * LABEL_BOTTOM;
+    if !free_camera {
+        strip.left = view.left;
+        strip.top = bottom;
+        strip.bottom = view.bottom;
+        if panel_active {
+            strip.left = margin;
+        }
+        strip.right = window_width - margin;
+        view.bottom = bottom;
+    }
+    let font = if width >= 0x640 {
+        2
+    } else if width >= 0x500 {
+        1
+    } else {
+        0
+    };
+    EeGfxLabelClip { view, strip, bottom, font }
+}
+
+/// Which rectangles a label at screen height `y` is drawn clipped to: bit 0 the main form's view, bit 1 its strip
+/// (both: the text crosses the strip's top; the view first), bit 2 the scenario editor's view (the free camera).
+pub fn label_targets(y: f32, text_height: f32, bottom: f32, free_camera: bool) -> u32 {
+    if free_camera {
+        4
+    } else if y + text_height < bottom {
+        1
+    } else if y - text_height > bottom {
+        2
+    } else {
+        3
+    }
+}
+
+/// The debug label's place: the unit's bar tag on the screen, above its `bars` extra bars and ten pixels more.
+pub fn label_point(
+    vp: &GeViewport,
+    orthographic: bool,
+    transformation: &GeTransformation,
+    bar: Ge3DPoint,
+    scale: f32,
+    bars: u64,
+) -> Ge2DPoint {
+    let location = unit_bar_point(transformation, bar, scale);
+    let mut p = screen_point(vp, orthographic, location);
+    p.y = p.y - bars as f32 * 5.0 - 10.0;
+    p
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -358,5 +432,23 @@ mod tests {
         assert_eq!(placement_lines(&vp, false, 12, 10, 10, &heights, &cells, &mut out), 0);
         let all = [[0u8; PLACEMENT_GRID]; PLACEMENT_GRID];
         assert_eq!(placement_lines(&vp, false, 11, 10, 10, &heights, &all, &mut out), 44 + 44);
+    }
+
+    #[test]
+    fn labels_clip_above_and_beside_the_strip() {
+        let view = rect(0.0, 0.0, 1024.0, 768.0);
+        let c = label_clip(view, 1024, 768, false, true);
+        assert_eq!(c.bottom, 768.0 * LABEL_BOTTOM);
+        assert_eq!(c.view, rect(0.0, 0.0, 1024.0, c.bottom));
+        assert_eq!(c.strip, rect(1024.0 * LABEL_MARGIN, c.bottom, 1024.0 - 1024.0 * LABEL_MARGIN, 768.0));
+        assert_eq!(c.font, 0);
+        assert_eq!(label_clip(view, 1280, 768, false, false).font, 1);
+        assert_eq!(label_clip(view, 1600, 768, false, false).font, 2);
+        let free = label_clip(view, 1024, 768, true, true);
+        assert_eq!((free.view, free.strip), (view, GeRectangle::default()));
+        assert_eq!(label_targets(100.0, 14.0, 548.0, false), 1);
+        assert_eq!(label_targets(600.0, 14.0, 548.0, false), 2);
+        assert_eq!(label_targets(540.0, 14.0, 548.0, false), 3);
+        assert_eq!(label_targets(540.0, 14.0, 548.0, true), 4);
     }
 }

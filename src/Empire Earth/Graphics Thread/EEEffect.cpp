@@ -47,6 +47,7 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEWorld.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/ee_rust.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
 
 // SYNTHETIC: EXE 0x50251d
 // SYNTHETIC: EXE 0x502527
@@ -74,6 +75,21 @@ GEModel* gU4E8DF4;                          // 0x4e8df4
 GEModel* gEffect2DModel;                    // 0x4e8df8
 
 void FlushEffectBatch();
+// The quads' corners, colours, normals and opacities are ee_gfx effects.rs (RUST_PLAN R4.4); the GE value classes
+// pass as their #[repr(C)] mirrors (the same storage)
+static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord) &&
+              sizeof(GEVector) == sizeof(EeGeVector) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint), "GE mirrors");
+// Sets a quad's four vertices from index inIndex on and counts them (provisional name)
+static void AddEffectQuad(EEEffectBatch& ioBatch, const EeGfxEffectQuad& inQuad, unsigned long inIndex)
+{
+    const GEColor& theColor = *reinterpret_cast<const GEColor*>(&inQuad.color);
+    const GEVector& theNormal = *reinterpret_cast<const GEVector*>(&inQuad.normal);
+    for (unsigned long i = 0; i < 4; i++)
+        ioBatch.mVertices->SetVertex(theColor, *reinterpret_cast<const GE3DPoint*>(&inQuad.points[i]), theNormal,
+                                     *reinterpret_cast<const GETextureCoordinate*>(&inQuad.coords[i]),
+                                     inQuad.opacities[i], inIndex + i);
+    ioBatch.mCount += 4;
+}
 // the camera plane (a, b, c, d) the fog distance is measured from (also RTSGraphics.cpp 0x11a130; read through
 // inline accessors: `fld; fld; fmulp`; a GEQuaternion by its x, y, z, w accessors) (provisional name; type inferred)
 void FlushEffectGroundBatch();
@@ -498,20 +514,15 @@ void EEEffect::LoadMedia(bool inIsOnDemand)
 float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
 {
     GERFogAttributes theAttributes;
-    if (inFog != 1)
-        return 1.0f;
-    gRasterizer->GetFogAttributes(theAttributes, gScreenIndex);
-    float theDistance = inPoint.GetY() * gU4E8F08.GetCameraInverse().GetElement(1, 1) + inPoint.GetZ() * gU4E8F08.GetCameraInverse().GetElement(1, 2) +
-                        inPoint.GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0) + gU4E8F08.GetCameraInverse().GetElement(1, 3);
-    if (theDistance <= theAttributes.mStart)
-        return 1.0f;
-    if (theDistance <= theAttributes.mEnd) {
-        float theFactor = 1.0f - (theDistance - theAttributes.mStart) * theAttributes.mScale;
-        if (theFactor >= 0.0f)
-            return theFactor;
-    }
-    return 0.0f;
-    return 1.0f;
+    if (inFog == 1)
+        gRasterizer->GetFogAttributes(theAttributes, gScreenIndex);
+    EeGfxEffectFog theFog;
+    theFog.state = inFog == 1 ? 1 : 0;
+    theFog.start = theAttributes.mStart;
+    theFog.end = theAttributes.mEnd;
+    theFog.scale = theAttributes.mScale;
+    return ee_gfx_effect_fog_factor(reinterpret_cast<const EeGe3DPoint*>(&inPoint), &theFog,
+                                    reinterpret_cast<const EeGeTransformation*>(&gU4E8F08.GetCameraInverse()));
 }
 
 // TEMPLATE: EXE 0x503154
@@ -525,57 +536,18 @@ float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
 void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
-    GE3DPoint theCorner;
-    GE3DPoint thePoint;
-    GEVector theUp(0.0f, -1.0f, 0.0f);
-    GEVector theNormal;
-    GETransformation theTransformation(false);
-    float theAlpha = GetEffectFogFactor(inPosition, gRasterizer->GetFog(gScreenIndex));
-    theAlpha *= inAlpha * inBrightness;
+    float theFog = GetEffectFogFactor(inPosition, gRasterizer->GetFog(gScreenIndex));
     unsigned long theIndex = sEffectBatch.mCount;
-    float theHalfSize = inSize * 0.5f;
-    GEColor theColor(inColor.GetRed() * theAlpha, inColor.GetGreen() * theAlpha, inColor.GetBlue() * theAlpha);
     if (theIndex == 0x800) {
         FlushEffectBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectBatch.mAlphaReference)
         sEffectBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, gRenderSnapshot.mCameraPitch, inRotation);
-    theTransformation.SetPosition(inPosition);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theUp, theNormal);
-    float theNegativeHalfSize = -theHalfSize;
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetZ(theHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    GETextureCoordinate theCoordinate(0.0f, 0.0f);
-    sEffectBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, 1.0f, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetZ(theHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(0.0f);
-    sEffectBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, 1.0f, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetZ(theNegativeHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(1.0f);
-    sEffectBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, 1.0f, theIndex);
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetZ(theNegativeHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(0.0f);
-    theCoordinate.SetV(1.0f);
-    theIndex++;
-    sEffectBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, 1.0f, theIndex);
-    sEffectBatch.mCount += 4;
+    EeGfxEffectQuad theQuad = ee_gfx_effect_glow_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
+                                                        inAlpha, inBrightness, theFog, gRenderSnapshot.mCameraYaw,
+                                                        gRenderSnapshot.mCameraPitch);
+    AddEffectQuad(sEffectBatch, theQuad, theIndex);
 }
 
 // FUNCTION: EXE 0x5033f1
@@ -584,55 +556,17 @@ void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float in
 void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
-    GE3DPoint theCorner;
-    GE3DPoint thePoint;
-    GEVector theUp(0.0f, 0.0f, 1.0f);
-    GEVector theNormal;
-    GETransformation theTransformation(false);
     unsigned long theIndex = sEffectGroundBatch.mCount;
-    GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
-    float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
         FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
         sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(inRotation, 0.0f, 0.0f);
-    theTransformation.SetPosition(inPosition);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theUp, theNormal);
-    float theNegativeHalfSize = -theHalfSize;
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetY(theHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    GETextureCoordinate theCoordinate(0.0f, 0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetY(theHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetY(theNegativeHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(1.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetY(theNegativeHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(0.0f);
-    theCoordinate.SetV(1.0f);
-    theIndex++;
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    sEffectGroundBatch.mCount += 4;
+    float theOpacities[4] = {inAlpha, inAlpha, inAlpha, inAlpha};
+    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
+                                                          theOpacities, inBrightness);
+    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
 // FUNCTION: EXE 0x503634
@@ -641,55 +575,16 @@ void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float 
 void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
               float inBrightness, float inAlphaReference)
 {
-    GE3DPoint theCorner;
-    GE3DPoint thePoint;
-    GEVector theUp(0.0f, 0.0f, 1.0f);
-    GEVector theNormal;
-    GETransformation theTransformation(false);
     unsigned long theIndex = sEffectGroundBatch.mCount;
-    GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
-    float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
         FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
         sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(inYaw, 0.0f, 0.0f);
-    theTransformation.SetPosition(inCenter);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theUp, theNormal);
-    float theNegativeHalfSize = -theHalfSize;
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetY(theHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    GETextureCoordinate theCoordinate(0.0f, 0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inHeights[0], theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetY(theHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inHeights[1], theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetY(theNegativeHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(1.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inHeights[2], theIndex);
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetY(theNegativeHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(0.0f);
-    theCoordinate.SetV(1.0f);
-    theIndex++;
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inHeights[3], theIndex);
-    sEffectGroundBatch.mCount += 4;
+    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_sprite(reinterpret_cast<const EeGe3DPoint*>(&inCenter), reinterpret_cast<const EeGfxColor*>(&inColor), inYaw, inSize, inHeights,
+                                                          inBrightness);
+    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
 // FUNCTION: EXE 0x50387b
@@ -697,55 +592,17 @@ void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYa
 void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
-    GE3DPoint theCorner;
-    GE3DPoint thePoint;
-    GEVector theUp(0.0f, -1.0f, 0.0f);
-    GEVector theNormal;
-    GETransformation theTransformation(false);
     unsigned long theIndex = sEffectGroundBatch.mCount;
-    GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
-    float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
         FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
         sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, gRenderSnapshot.mCameraPitch, inRotation);
-    theTransformation.SetPosition(inPosition);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theUp, theNormal);
-    float theNegativeHalfSize = -theHalfSize;
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetZ(theHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    GETextureCoordinate theCoordinate(0.0f, 0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetZ(theHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(0.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theHalfSize);
-    theCorner.SetZ(theNegativeHalfSize);
-    theIndex++;
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(1.0f);
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theNegativeHalfSize);
-    theCorner.SetZ(theNegativeHalfSize);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(0.0f);
-    theCoordinate.SetV(1.0f);
-    theIndex++;
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    sEffectGroundBatch.mCount += 4;
+    EeGfxEffectQuad theQuad = ee_gfx_effect_blended_sprite(reinterpret_cast<const EeGe3DPoint*>(&inPosition), reinterpret_cast<const EeGfxColor*>(&inColor), inRotation, inSize,
+                                                           inAlpha, inBrightness, gRenderSnapshot.mCameraYaw,
+                                                           gRenderSnapshot.mCameraPitch);
+    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
 // FUNCTION: EXE 0x503ac8
@@ -755,12 +612,6 @@ void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeig
               const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
               float inAlphaReference)
 {
-    GE3DPoint theCorner;
-    GEVector theUp(0.0f, -1.0f, 0.0f);
-    GE3DPoint thePoint;
-    GEVector theNormal;
-    GETransformation theTransformation(false);
-    GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
     unsigned long theIndex = sEffectGroundBatch.mCount;
     if (theIndex == 0x800) {
         FlushEffectGroundBatch();
@@ -768,51 +619,11 @@ void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeig
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
         sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    float theDX = inTo.GetX() - inFrom.GetX();
-    float theDY = inTo.GetY() - inFrom.GetY();
-    float theHalfDX = theDX * 0.5f;
-    float theHalfDY = theDY * 0.5f;
-    GE3DPoint theCenter(inFrom.GetX() + theHalfDX, inFrom.GetY() + theHalfDY, inFrom.GetZ());
-    theTransformation.SetOrientationYPR(0.0f, 0.0f, 0.0f);
-    theTransformation.SetPosition(theCenter);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theUp, theNormal);
-    theCorner.SetX(theHalfDX);
-    theCorner.SetY(theHalfDY);
-    theCorner.SetZ(inTo.GetZ() - inFrom.GetZ() + inHeight);
-    theTransformation.Apply(theCorner, thePoint);
-    GETextureCoordinate theCoordinate(inOrigin.GetU(), inOrigin.GetV());
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theIndex++;
-    float theBackX = theDX * -0.5f;
-    float theBackY = theDY * -0.5f;
-    theCorner.SetX(theBackX);
-    theCorner.SetY(theBackY);
-    theCorner.SetZ(inHeight);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(inOrigin.GetU() + inSize.GetU());
-    theCoordinate.SetV(inOrigin.GetV());
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theIndex++;
-    theCorner.SetX(theBackX);
-    theCorner.SetY(theBackY);
-    theCorner.SetZ(0.0f);
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(inOrigin.GetU() + inSize.GetU());
-    theCoordinate.SetV(inOrigin.GetV() + inSize.GetV());
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    theCorner.SetX(theHalfDX);
-    theCorner.SetY(theHalfDY);
-    theCorner.SetZ(inTo.GetZ() - inFrom.GetZ());
-    theTransformation.Apply(theCorner, thePoint);
-    theCoordinate.SetU(inOrigin.GetU());
-    theCoordinate.SetV(inOrigin.GetV() + inSize.GetV());
-    theIndex++;
-    sEffectGroundBatch.mVertices->SetVertex(theColor, thePoint, theNormal, theCoordinate, inAlpha, theIndex);
-    sEffectGroundBatch.mCount += 4;
+    EeGfxEffectQuad theQuad = ee_gfx_effect_ground_strip(
+        reinterpret_cast<const EeGe3DPoint*>(&inFrom), reinterpret_cast<const EeGe3DPoint*>(&inTo), inHeight, reinterpret_cast<const EeGfxColor*>(&inColor),
+        reinterpret_cast<const EeGfxTexCoord*>(&inOrigin), reinterpret_cast<const EeGfxTexCoord*>(&inSize), inAlpha,
+        inBrightness);
+    AddEffectQuad(sEffectGroundBatch, theQuad, theIndex);
 }
 
 // FUNCTION: EXE 0x503db7

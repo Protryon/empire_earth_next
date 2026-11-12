@@ -63,10 +63,19 @@
 #include "ee/EEALasso.h"
 #include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
+#include "rust/ee_rust.h"   // ee_gfx select.rs (RUST_PLAN R4.4)
 
 
 static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);   // 0x564580
 static GEColor sSelectShadowColor(0.0f, 0.0f, 0.0f);    // 0x564570
+
+// The box's points, its rectangle and its lines are ee_gfx select.rs (RUST_PLAN R4.4); the GE value classes pass as
+// their #[repr(C)] mirrors (the same storage)
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GERectangle) == sizeof(EeGeRectangle), "GE mirrors");
+static const EeGe2DPoint* EESelectPoint(const GE2DPoint& inPoint)
+{
+    return reinterpret_cast<const EeGe2DPoint*>(&inPoint);
+}
 
 // SYNTHETIC: EXE 0x65952f
 // SYNTHETIC: EXE 0x659539
@@ -135,22 +144,11 @@ long EEUICSelectUnits::CopyData()
 long EEUICSelectUnits::DrawPolygons()
 {
     if (this->mD1) {
-        this->mLines[0].SetStartPoint(GE2DPoint(this->mRA0.GetLeft() + 1.0f, this->mRA0.GetTop() + 1.0f));
-        this->mLines[0].SetEndPoint(GE2DPoint(this->mRA0.GetRight() + 1.0f, this->mRA0.GetTop() + 1.0f));
-        this->mLines[1].SetStartPoint(GE2DPoint(this->mRA0.GetLeft() + 1.0f, this->mRA0.GetTop() + 1.0f));
-        this->mLines[1].SetEndPoint(GE2DPoint(this->mRA0.GetLeft() + 1.0f, this->mRA0.GetBottom() + 1.0f));
-        this->mLines[2].SetStartPoint(GE2DPoint(this->mRA0.GetLeft() + 1.0f, this->mRA0.GetBottom()));
-        this->mLines[2].SetEndPoint(GE2DPoint(this->mRA0.GetRight() + 1.0f, this->mRA0.GetBottom()));
-        this->mLines[3].SetStartPoint(GE2DPoint(this->mRA0.GetRight() + 1.0f, this->mRA0.GetTop() + 1.0f));
-        this->mLines[3].SetEndPoint(GE2DPoint(this->mRA0.GetRight() + 1.0f, this->mRA0.GetBottom() + 1.0f));
-        this->mLines[4].SetStartPoint(GE2DPoint(this->mRA0.GetLeft(), this->mRA0.GetTop()));
-        this->mLines[4].SetEndPoint(GE2DPoint(this->mRA0.GetRight() + 1.0f, this->mRA0.GetTop()));
-        this->mLines[5].SetStartPoint(GE2DPoint(this->mRA0.GetLeft(), this->mRA0.GetTop()));
-        this->mLines[5].SetEndPoint(GE2DPoint(this->mRA0.GetLeft(), this->mRA0.GetBottom()));
-        this->mLines[6].SetStartPoint(GE2DPoint(this->mRA0.GetLeft(), this->mRA0.GetBottom() - 1.0f));
-        this->mLines[6].SetEndPoint(GE2DPoint(this->mRA0.GetRight(), this->mRA0.GetBottom() - 1.0f));
-        this->mLines[7].SetStartPoint(GE2DPoint(this->mRA0.GetRight(), this->mRA0.GetTop()));
-        this->mLines[7].SetEndPoint(GE2DPoint(this->mRA0.GetRight(), this->mRA0.GetBottom()));
+        EeGfxSelectLines theLines = ee_gfx_select_box_lines(reinterpret_cast<const EeGeRectangle*>(&this->mRA0));
+        for (int i = 0; i < 8; i++) {
+            this->mLines[i].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&theLines.points[i][0]));
+            this->mLines[i].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&theLines.points[i][1]));
+        }
         gRasterizer->Draw(this->mLines, 8, this->GetScreenIndex());
     }
     return UIControl::DrawPolygons();
@@ -186,18 +184,8 @@ long EEUICSelectUnits::MouseLButtonUp()
     unsigned long theModifiers = gISKeyboard->GetModifierState();
     if (this->mDragging) {
         this->mD1 = false;
-        theRectangle.SetTopLeft(this->mDragStart);
-        theRectangle.SetBottomRight(this->mDragEnd);
-        if (theRectangle.GetLeft() > theRectangle.GetRight()) {
-            float theLeft = theRectangle.GetLeft();
-            theRectangle.SetLeft(theRectangle.GetRight());
-            theRectangle.SetRight(theLeft);
-        }
-        if (theRectangle.GetTop() > theRectangle.GetBottom()) {
-            float theTop = theRectangle.GetTop();
-            theRectangle.SetTop(theRectangle.GetBottom());
-            theRectangle.SetBottom(theTop);
-        }
+        ee_gfx_select_box(EESelectPoint(this->mDragStart), EESelectPoint(this->mDragEnd), true,
+                          reinterpret_cast<EeGeRectangle*>(&theRectangle));
         this->mLasso->SelectUnits(theRectangle, theModifiers, kAnyUnitType, 0);
     } else if (gViewport.GetViewRectangle().Contains(this->GetMouseLocation()))
         this->mClick->SelectAtMouse(theModifiers);
@@ -214,46 +202,15 @@ long EEUICSelectUnits::MouseMove(const GE2DPoint& inLocation)
 {
     GERectangle theRectangle;
     GE2DPoint theOld = this->mDragEnd;
-    if (gViewport.GetViewRectangle().Contains(inLocation)) {
-        this->mDragEnd = inLocation;
-        this->mDragEnd.SetX((float)UMFloatToLong(this->mDragEnd.GetX()));
-        this->mDragEnd.SetY((float)UMFloatToLong(this->mDragEnd.GetY()));
-    } else {
-        float theY;
-        float theX;
-        if (inLocation.GetY() < gViewport.GetViewRectangle().GetTop())
-            theY = gViewport.GetViewRectangle().GetTop();
-        else if (inLocation.GetY() > gViewport.GetViewRectangle().GetBottom() - 1.0f)
-            theY = gViewport.GetViewRectangle().GetBottom() - 1.0f;
-        else
-            theY = inLocation.GetY();
-        if (inLocation.GetX() < gViewport.GetViewRectangle().GetLeft())
-            theX = gViewport.GetViewRectangle().GetLeft();
-        else if (inLocation.GetX() > gViewport.GetViewRectangle().GetRight())
-            theX = gViewport.GetViewRectangle().GetRight();
-        else
-            theX = inLocation.GetX();
-        this->mDragEnd.SetX((float)UMFloatToLong(theX));
-        this->mDragEnd.SetY((float)UMFloatToLong(theY));
-    }
-    if (!this->mDragging && this->GetDisplayMode() == kDisplayModeShown && this->mDragStart.DistanceTo(this->mDragEnd) >= 10.0f)
+    ee_gfx_select_drag_end(EESelectPoint(inLocation), reinterpret_cast<const EeGeRectangle*>(&gViewport.GetViewRectangle()),
+                           reinterpret_cast<EeGe2DPoint*>(&this->mDragEnd));
+    if (!this->mDragging && this->GetDisplayMode() == kDisplayModeShown &&
+        ee_gfx_select_starts_drag(EESelectPoint(this->mDragStart), EESelectPoint(this->mDragEnd)))
         this->mDragging = true;
     if (theOld == this->mDragEnd)
         return 0;
-    if (this->mDragStart.GetX() < this->mDragEnd.GetX()) {
-        theRectangle.SetLeft(this->mDragStart.GetX());
-        theRectangle.SetRight(this->mDragEnd.GetX());
-    } else {
-        theRectangle.SetRight(this->mDragStart.GetX());
-        theRectangle.SetLeft(this->mDragEnd.GetX());
-    }
-    if (this->mDragStart.GetY() < this->mDragEnd.GetY()) {
-        theRectangle.SetTop(this->mDragStart.GetY());
-        theRectangle.SetBottom(this->mDragEnd.GetY());
-    } else {
-        theRectangle.SetBottom(this->mDragStart.GetY());
-        theRectangle.SetTop(this->mDragEnd.GetY());
-    }
+    ee_gfx_select_box(EESelectPoint(this->mDragStart), EESelectPoint(this->mDragEnd), false,
+                      reinterpret_cast<EeGeRectangle*>(&theRectangle));
     this->SetRectangle(theRectangle);
     this->GetForm()->GetManager()->AddDirtyRectangle(this->GetRectangle(), this->GetForm());
     this->GetForm()->RedrawIntersectControls(this->GetRectangle());
@@ -264,9 +221,7 @@ long EEUICSelectUnits::MouseMove(const GE2DPoint& inLocation)
 // Starts a drag selection at a point, confining the mouse to the game view
 void EEUICSelectUnits::StartSelection(const GE2DPoint& inLocation)
 {
-    this->mDragStart = inLocation;
-    this->mDragStart.SetX((float)UMFloatToLong(this->mDragStart.GetX()));
-    this->mDragStart.SetY((float)UMFloatToLong(this->mDragStart.GetY()));
+    ee_gfx_select_start(EESelectPoint(inLocation), reinterpret_cast<EeGe2DPoint*>(&this->mDragStart));
     gMouse->SetBounds(gViewport.GetViewRectangle());
     this->SetRectangle(GERectangle(this->mDragStart, this->mDragStart));
     this->CaptureKeyboard();

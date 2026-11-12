@@ -9,7 +9,7 @@
 //! simulation-run code under RUST_PLAN 2.1 (the C++'s f32 order), though nothing it computes feeds the simulation.
 
 use ee_ge::transform::RotationOrder;
-use ee_ge::types::{Ge2DPoint, Ge3DLine, GeTransformation, GeVector};
+use ee_ge::types::{Ge2DPoint, Ge3DLine, GeRectangle, GeTransformation, GeVector};
 use ee_ge::um::{lrintf, um_arctan2};
 use ee_ge::viewport::GeViewport;
 
@@ -170,6 +170,29 @@ pub fn view_trapezoid(vp: &GeViewport, orthographic: bool, map_to_pixel: &GeTran
         c3 = Ge2DPoint { x: (c3.x - c1.x) * scale + c1.x, y: c1.y + (c3.y - c1.y) * scale };
     }
     EeGfxMiniMapView { corners: [c0, c1, c2, c3] }
+}
+
+/// `EEUIMiniMap::CenterCamera`'s mini-map point: the mouse from the map's top left (`origin`, in window pixels) in
+/// mini-map units (the window's size over 800 x 600), clamped into the map's bounds (`sBounds`) when outside them.
+pub fn center_point(mouse: Ge2DPoint, origin: Ge2DPoint, width: u32, height: u32, bounds: &GeRectangle) -> Ge2DPoint {
+    let mut p = Ge2DPoint {
+        x: (mouse.x - origin.x) / (width as f32 * 0.00125),
+        y: (mouse.y - origin.y) / (height as f32 * 0.0016666667),
+    };
+    let inside = p.x >= bounds.left && p.x <= bounds.right && p.y >= bounds.top && p.y <= bounds.bottom;
+    if !inside {
+        if bounds.left > p.x {
+            p.x = bounds.left;
+        } else if bounds.right < p.x {
+            p.x = bounds.right;
+        }
+        if p.y < bounds.top {
+            p.y = bounds.top;
+        } else if p.y > bounds.bottom {
+            p.y = bounds.bottom;
+        }
+    }
+    p
 }
 
 #[cfg(test)]

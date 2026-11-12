@@ -5693,6 +5693,52 @@ struct EeGfxPlacementLine {
   EeGe2DPoint end;
 };
 
+/// `DrawLabels`' clip rectangles: above the bottom strip (`view`) and the strip's part beside the panels
+/// (`strip`), the strip's top (`bottom`) and the font (0: the default, 1: Tahoma 12, 2: Tahoma 16).
+struct EeGfxLabelClip {
+  EeGeRectangle view;
+  EeGeRectangle strip;
+  float bottom;
+  uint32_t font;
+};
+
+/// The rasterizer's fog for `GetEffectFogFactor`: its state (1 linear) and its range.
+struct EeGfxEffectFog {
+  uint32_t state;
+  float start;
+  float end;
+  float scale;
+};
+
+/// `GEColor`'s storage: red, green, blue.
+struct EeGfxColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// `GETextureCoordinate`'s storage.
+struct EeGfxTexCoord {
+  float u;
+  float v;
+};
+
+/// One quad of an effect batch: its colour and normal (the same at every corner) and its four corners in the order
+/// they are set (the batch's indices `count` .. `count + 3`).
+struct EeGfxEffectQuad {
+  EeGfxColor color;
+  EeGeVector normal;
+  EeGe3DPoint points[4];
+  EeGfxTexCoord coords[4];
+  float opacities[4];
+};
+
+/// The box's lines (`DrawPolygons`): four shadow lines a pixel down and right, then four white ones, each a start
+/// and an end.
+struct EeGfxSelectLines {
+  EeGe2DPoint points[8][2];
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -12360,6 +12406,149 @@ size_t ee_gfx_units_placement_lines(const EeGeViewport *viewport,
                                     const uint8_t *cells,
                                     EeGfxPlacementLine *out,
                                     size_t capacity);
+
+/// `DrawLabels`' clip rectangles from the game view's rectangle `*view` and the window's size.
+///
+/// # Safety
+/// `view` is valid.
+EeGfxLabelClip ee_gfx_units_label_clip(const EeGeRectangle *view,
+                                       uint32_t width,
+                                       uint32_t height,
+                                       bool free_camera,
+                                       bool panel_active);
+
+/// Which clip rectangles a label at screen height `y` is drawn to (bit 0 the view, 1 the strip, 2 the editor's).
+uint32_t ee_gfx_units_label_targets(float y,
+                                    float text_height,
+                                    float bottom,
+                                    bool free_camera);
+
+/// The debug label's place: the bar tag (`*bar` scaled by `scale` through `*transformation`) on the screen, above
+/// `bars` extra bars.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_units_label_point(const EeGeViewport *viewport,
+                              bool orthographic,
+                              const EeGeTransformation *transformation,
+                              const EeGe3DPoint *bar,
+                              float scale,
+                              uint64_t bars,
+                              EeGe2DPoint *out);
+
+/// `GetEffectFogFactor`: the fog's fade at `*point` (`fog.state` 1: linear fog).
+///
+/// # Safety
+/// The pointers are valid.
+float ee_gfx_effect_fog_factor(const EeGe3DPoint *point,
+                               const EeGfxEffectFog *fog,
+                               const EeGeTransformation *camera_inverse);
+
+/// `AddGlowSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_glow_sprite(const EeGe3DPoint *position,
+                                          const EeGfxColor *color,
+                                          float rotation,
+                                          float size,
+                                          float alpha,
+                                          float brightness,
+                                          float fog,
+                                          float camera_yaw,
+                                          float camera_pitch);
+
+/// `AddGroundSprite`'s and `AddGroundQuad`'s quad; `opacities` holds the four corners'.
+///
+/// # Safety
+/// The pointers are valid; `opacities` holds four floats.
+EeGfxEffectQuad ee_gfx_effect_ground_sprite(const EeGe3DPoint *position,
+                                            const EeGfxColor *color,
+                                            float rotation,
+                                            float size,
+                                            const float *opacities,
+                                            float brightness);
+
+/// `AddBlendedSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_blended_sprite(const EeGe3DPoint *position,
+                                             const EeGfxColor *color,
+                                             float rotation,
+                                             float size,
+                                             float alpha,
+                                             float brightness,
+                                             float camera_yaw,
+                                             float camera_pitch);
+
+/// `AddGroundStrip`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_ground_strip(const EeGe3DPoint *from,
+                                           const EeGe3DPoint *to,
+                                           float height,
+                                           const EeGfxColor *color,
+                                           const EeGfxTexCoord *origin,
+                                           const EeGfxTexCoord *extent,
+                                           float alpha,
+                                           float brightness);
+
+/// `StartSelection`'s drag start: `*location` rounded.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_start(const EeGe2DPoint *location, EeGe2DPoint *out);
+
+/// `MouseMove`'s drag end: `*location` rounded, clamped to the game view `*view`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_drag_end(const EeGe2DPoint *location,
+                            const EeGeRectangle *view,
+                            EeGe2DPoint *out);
+
+/// Whether the drag from `*start` to `*end` has gone far enough to start.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_gfx_select_starts_drag(const EeGe2DPoint *start, const EeGe2DPoint *end);
+
+/// The box from `*start` to `*end`: `MouseMove`'s (`release` false) or `MouseLButtonUp`'s.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_box(const EeGe2DPoint *start,
+                       const EeGe2DPoint *end,
+                       bool release,
+                       EeGeRectangle *out);
+
+/// `DrawPolygons`' eight lines round the box `*rectangle`.
+///
+/// # Safety
+/// `rectangle` is valid.
+EeGfxSelectLines ee_gfx_select_box_lines(const EeGeRectangle *rectangle);
+
+/// `EEUIMiniMap::CenterCamera`'s mini-map point for the mouse at `*mouse`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_minimap_center_point(const EeGe2DPoint *mouse,
+                                 const EeGe2DPoint *origin,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 const EeGeRectangle *bounds,
+                                 EeGe2DPoint *out);
+
+/// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_pick_entry_transform(const EeGeTransformation *location,
+                                 const EeGeTransformation *internal,
+                                 float scale,
+                                 EeGeTransformation *out);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
