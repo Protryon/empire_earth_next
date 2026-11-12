@@ -21,6 +21,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 // FUNCTION: EXE 0x4b6fb1
 // Creates the plague functor with its radius, chance, damage, damage time, unit set and hit mode
@@ -70,8 +71,9 @@ void EEPlagueFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
 void EEPlagueFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCalamity)
 {
     if (this->mUpdates > 0) {
-        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, this->mDamage * this->mUpdates);   // CONT (TEST ONLY)
-        inUnit->TakeHit(inCalamity->mCasterUnit, this->mDamage * this->mUpdates, inCalamity->mPlayerNumber, this->mMode);
+        long theDamage = ee_contagion_tick_damage((int32_t)this->mDamage, (uint32_t)this->mUpdates);   // (ee_tech contagion.rs)
+        EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
+        inUnit->TakeHit(inCalamity->mCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
     }
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
     if (theComplexUnit != NULL)

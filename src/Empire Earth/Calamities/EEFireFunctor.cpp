@@ -24,6 +24,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 // FUNCTION: EXE 0x4b6bd1
 // Creates the fire functor with its burning effect (referenced), burn, radius, chance, damage, spread time, unit set
@@ -110,7 +111,7 @@ void EEFireFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity* inCal
         theComplexUnit->SetIsDeletable(false);
     if (!(this->mUpdates > 0))
         return;
-    theDamage = this->mDamage * this->mUpdates;
+    theDamage = ee_contagion_tick_damage((int32_t)this->mDamage, (uint32_t)this->mUpdates);   // (ee_tech contagion.rs)
     if (theComplexUnit == NULL || theComplexUnit->GetOutermostCarrier() == theComplexUnit) {
         EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
         inUnit->TakeHit(theCasterUnit, theDamage, inCalamity->mPlayerNumber, this->mMode);
@@ -124,7 +125,7 @@ void EEFireFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
     EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEUnit* theCasterUnit = inCalamity->mCasterUnit;
     EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-    long theDamage = UMFloatToLong((this->mBurn * 0.01f) * inUnit->mStats->mMaxHitPoints);
+    long theDamage = ee_contagion_fire_burn((int32_t)this->mBurn, (int32_t)inUnit->mStats->mMaxHitPoints);   // (ee_tech contagion.rs)
     if (theComplexUnit != NULL)
         theComplexUnit->SetIsDeletable(false);
     if (theComplexUnit->mFireEffect == kNoEffectHandle) {

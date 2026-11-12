@@ -6,6 +6,9 @@ use crate::calamity::{self, EeCalamityAge};
 use crate::calamity_cast::{self, EeCalamityCast};
 use crate::calamity_start;
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
+use crate::contagion::{
+    self, ContagionHost, EeCalamityDiscrete, EeContagionCall, EeContagionParams, EeContagionReply, EeContagionState,
+};
 use crate::effects::{
     self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
     EeTechUnitWalk,
@@ -666,4 +669,72 @@ mod tests {
         assert_eq!(ee_tech_tree_research_after(1500, 0, 15, -1, 4, 15), EeTechTreeResearchAfter::Nothing);
         assert_eq!(ee_tech_tree_research_after(1500, 0, 15, 1, 4, 15), EeTechTreeResearchAfter::CountTowardNextEpoch);
     }
+}
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeContagionHostFfi {
+    pub ctx: *mut c_void,
+    pub call: unsafe extern "C" fn(ctx: *mut c_void, call: *const EeContagionCall, reply: *mut EeContagionReply),
+}
+
+struct FfiContagionHost(EeContagionHostFfi);
+
+impl ContagionHost for FfiContagionHost {
+    fn call(&mut self, call: &EeContagionCall) -> EeContagionReply {
+        let mut reply = EeContagionReply::default();
+        // SAFETY: the C++ host's contract: valid pointers for the call's duration
+        unsafe { (self.0.call)(self.0.ctx, call, &mut reply) };
+        reply
+    }
+}
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_contagion_update(
+    params: *const EeContagionParams,
+    state: *mut EeContagionState,
+    elapsed: f32,
+    host: *const EeContagionHostFfi,
+) {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    contagion::update(&mut FfiContagionHost(host), &mut s, &params, elapsed);
+    // SAFETY: as above
+    unsafe { *state = s };
+}
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+#[no_mangle]
+pub extern "C" fn ee_calamity_discrete_updates(elapsed: f32, discrete: f32) -> EeCalamityDiscrete {
+    contagion::discrete_updates(elapsed, discrete)
+}
+
+/// A functor's damage per update (`contagion::tick_damage`).
+#[no_mangle]
+pub extern "C" fn ee_contagion_tick_damage(damage: i32, updates: u32) -> i32 {
+    contagion::tick_damage(damage, updates)
+}
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+#[no_mangle]
+pub extern "C" fn ee_contagion_fire_burn(burn: i32, max_hit_points: i32) -> i32 {
+    contagion::fire_burn(burn, max_hit_points)
+}
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_leprosy_damage(damage: i32, updates: u32, hit_points: i32) -> i32 {
+    contagion::leprosy_damage(damage, updates, hit_points)
+}
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_area_damage(damage: i32, updates: u32, attack: f32) -> i32 {
+    contagion::area_damage(damage, updates, attack)
 }

@@ -702,6 +702,33 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
 
+/// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
+constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
+
+/// The functor infects allies only (`InfectsAlliesOnly()`).
+constexpr static const uint32_t EE_CONTAGION_ALLIES_ONLY = 2;
+
+/// The calamity's class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CONTAGION_BLOCKED_BY_IMMUNITY = 4;
+
+/// [`EeContagionOp::NearView`]: the list's entry is a unit.
+constexpr static const uint32_t EE_CONTAGION_NEAR_UNIT = 1;
+
+/// The functor's `CanInfectType` accepts its category and type.
+constexpr static const uint32_t EE_CONTAGION_NEAR_TYPE = 2;
+
+/// It is the held unit's player's.
+constexpr static const uint32_t EE_CONTAGION_NEAR_SAME_PLAYER = 4;
+
+/// Its player is no enemy of the held unit's player (`mEnemies[...] == 0`).
+constexpr static const uint32_t EE_CONTAGION_NEAR_NOT_ENEMY = 8;
+
+/// [`EeContagionOp::NewView`]: the new unit is a complex unit.
+constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
+
+/// The helper holds it already.
+constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
+
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
 
@@ -1871,6 +1898,42 @@ enum class EeTechUnitWalk : uint32_t {
   PendingHitPoints,
   /// The player's or the pending units, for the flight time rescale.
   FlightTime,
+};
+
+/// The host calls (`EeContagionCall::op`).
+enum class EeContagionOp : int32_t {
+  /// The functor's `UpdateUnits(&mUnits)` (a functor that skips the spread).
+  UpdateUnits = 1,
+  /// The functor's `Update(x, calamity)`.
+  FunctorUpdate = 2,
+  /// The helper's unit count: value.
+  UnitCount = 3,
+  /// Held unit `index` is alive: ok.
+  UnitAlive = 4,
+  /// The functor's `Apply(held unit index, x, calamity)`.
+  Apply = 5,
+  /// Held unit `index` removed and cured (`RemoveUnit(iterator, true)`).
+  Remove = 6,
+  /// Held unit `index` is a complex unit: ok.
+  HeldComplex = 7,
+  /// `GetUnitsInArea(x, held unit index)` into the near list (replacing the last): value its size.
+  NearUnits = 8,
+  /// Near unit `index` against held unit `index2`: flags `EE_CONTAGION_NEAR_*`, id its unit id.
+  NearView = 9,
+  /// `gPhysics->mRandom.Generate()`: x.
+  Random = 10,
+  /// The distance squared from held unit `index2` to near unit `index`: x.
+  DistanceSquared = 11,
+  /// Near unit `index` added to the new units.
+  AddNew = 12,
+  /// New unit `index`: flags `EE_CONTAGION_NEW_*`, id its unit id.
+  NewView = 13,
+  /// New unit `index`'s immunity (effect kind 3): ok when it has one (the host plays its effect).
+  Immune = 14,
+  /// New unit `index` added and infected (`AddUnit(unit, true)`).
+  AddUnit = 15,
+  /// The capture's record of a step (TEST ONLY, `EECalamityCaptureContagionEvent(value, index, index2, x, y)`).
+  Capture = 16,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -4772,6 +4835,58 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
+struct EeContagionState {
+  float since_spread;
+  float since_update;
+};
+
+/// One host call.
+struct EeContagionCall {
+  EeContagionOp op;
+  int32_t index;
+  int32_t index2;
+  int32_t value;
+  float x;
+  float y;
+};
+
+/// The host's answer.
+struct EeContagionReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  float x;
+};
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+struct EeContagionHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, const EeContagionCall *call, EeContagionReply *reply);
+};
+
+/// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
+/// unsigned), and the time left (`elapsed -= updates * discrete`, the count converted to a float).
+struct EeCalamityDiscrete {
+  uint32_t updates;
+  float elapsed;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -11370,6 +11485,30 @@ EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, 
 /// # Safety
 /// `unit` must be valid for reads.
 uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+void ee_contagion_update(const EeContagionParams *params,
+                         EeContagionState *state,
+                         float elapsed,
+                         const EeContagionHostFfi *host);
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);
+
+/// A functor's damage per update (`contagion::tick_damage`).
+int32_t ee_contagion_tick_damage(int32_t damage, uint32_t updates);
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+int32_t ee_contagion_fire_burn(int32_t burn, int32_t max_hit_points);
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hit_points);
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

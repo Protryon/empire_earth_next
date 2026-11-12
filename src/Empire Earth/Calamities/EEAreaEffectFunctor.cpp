@@ -27,6 +27,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 extern EEEffectManager*& gEffectManager;
 extern EEWorld gWorld;
@@ -120,9 +121,9 @@ void EEAreaEffectFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity*
     EEUnit* theCaster = inCalamity->mCasterUnit;
     if (!(this->mUpdates > 0))
         return;
-    float theValue = (float)(this->mDamage * this->mUpdates) * inUnit->mStats->GetAttack();
-    long theDamage = UMFloatToLong(theValue);
-    if (theDamage <= 1)
+    // the tick's damage times the unit's attack stat; 0: 1 or less, none (ee_tech contagion.rs)
+    long theDamage = ee_contagion_area_damage((int32_t)this->mDamage, (uint32_t)this->mUpdates, inUnit->mStats->GetAttack());
+    if (theDamage == 0)
         return;
     if (this->mEffect3 != NULL)
         gEffectManager->CreateUnitEffect(inUnit, this->mEffect3, NULL, false, 0, 0);

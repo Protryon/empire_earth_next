@@ -27,6 +27,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 const UString EEContagionHelper::mNumUnitsStringID("ContagionHelperNumUnits-StringID");
 const UString EEContagionHelper::mUnitIDStringID("ContagionHelperUnitID-StringID");
@@ -259,74 +260,6 @@ void EEContagionHelper::SetHelperID(long inHelperID)
     this->mHelperID = inHelperID;
 }
 
-// FUNCTION: EXE 0x4b62dd
-// Spreads the contagion: each held unit may infect nearby units the functor accepts (allies only if it says so) by a
-// chance scaled by the elapsed time; immune units only show their immunity effect
-void EEContagionHelper::Spread(float inElapsedTime)
-{
-    std::vector<EEUnit*> theNewUnits;
-    EEComplexUnit* theComplexUnit = NULL;
-    EEGraphicEffect* theEffect = NULL;
-    std::vector<EEUnit*>::iterator theFound;
-    float theChance = this->mFunctor->GetChance() * (inElapsedTime * 0.001f);
-    std::vector<EEComplexUnit*> theNearUnits;
-    float theRadius = this->mFunctor->GetRadius();
-    float theRadiusSquared = theRadius * theRadius;
-    EECalamityCaptureContagionEvent(kContagionSpread, 0, 0, inElapsedTime, theChance);   // CONT (TEST ONLY)
-    for (std::vector<EEUnit*>::iterator theIterator = this->mUnits.begin(); theIterator != this->mUnits.end(); ++theIterator) {
-        EEComplexUnit* theUnit = (*theIterator)->mComplexUnit;
-        if (theUnit == NULL)
-            continue;
-        this->GetUnitsInArea(theRadius, theUnit, theNearUnits);
-        for (std::vector<EEComplexUnit*>::iterator theNear = theNearUnits.begin(); theNear != theNearUnits.end();
-             ++theNear) {
-            EEComplexUnit* theNearUnit = *theNear;
-            if (theNearUnit == NULL)
-                continue;
-            long theCategory = theNearUnit->mUnitClass->GetCategory();
-            long theUnitType = theNearUnit->mUnitClass->GetUnitType();
-            // (the C++'s one test, its parts in order: the type, the allies, the draw, the distance; CONT TEST ONLY)
-            bool theTypeOK = this->mFunctor->CanInfectType(theCategory, theUnitType);
-            bool theAllyOK = theTypeOK && (!this->mFunctor->InfectsAlliesOnly() || theUnit->mPlayer == theNearUnit->mPlayer ||
-                                           theNearUnit->mPlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0);
-            float theDraw = -1.0f;
-            float theDistance = -1.0f;
-            bool theTake = false;
-            if (theAllyOK) {
-                theDraw = gPhysics->mRandom.Generate();
-                if (theDraw <= theChance) {
-                    theDistance = theUnit->mPhysicalModel.GetLocation().DistanceSquaredTo(theNearUnit->mPhysicalModel.GetLocation());
-                    theTake = theDistance <= theRadiusSquared;
-                }
-            }
-            EECalamityCaptureContagionEvent(kContagionCandidate, theNearUnit->mUnitID,
-                                            (theTypeOK ? 1 : 0) | (theAllyOK ? 2 : 0) | (theTake ? 4 : 0), theDraw,
-                                            theDistance);   // CONT (TEST ONLY)
-            if (theTake)
-                theNewUnits.push_back(theNearUnit);
-        }
-        theNearUnits.clear();
-    }
-    for (std::vector<EEUnit*>::iterator theNew = theNewUnits.begin(); theNew != theNewUnits.end(); ++theNew) {
-        EEUnit* theNewUnit = *theNew;
-        theComplexUnit = theNewUnit->mComplexUnit;
-        theFound = std::find(this->mUnits.begin(), this->mUnits.end(), theComplexUnit);
-        if (theComplexUnit == NULL || theFound != this->mUnits.end()) {
-            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 3);   // CONT (TEST ONLY)
-            continue;
-        }
-        theEffect = NULL;
-        if (this->mCalamity->mClass->mIsBlockedByImmunity && theComplexUnit->GetEffect(3, theEffect)) {
-            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 2);   // CONT (TEST ONLY)
-            if (theEffect != NULL)
-                gEffectManager->CreateUnitEffect(theComplexUnit, theEffect, NULL, 0, 0, 0);
-        } else {
-            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 1);   // CONT (TEST ONLY)
-            this->AddUnit(theNewUnit, true);
-        }
-    }
-}
-
 // FUNCTION: EXE 0x4b64e8
 // Replaces a held unit by its new unit without curing or infecting
 void EEContagionHelper::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
@@ -340,35 +273,133 @@ void EEContagionHelper::SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 
 // FUNCTION: EXE 0x4b6552
 // Spreads (or lets the functor update its units) every spread time, updates the functor, damages each live unit and
-// removes and cures the dead
+// removes and cures the dead. The decisions are Rust (ee_tech contagion.rs: the timers, which near units a spread
+// infects, which held units are damaged or dropped); the helper, its units and the functor's calls stay here
+// (Spread, 0x4b62dd, is that Rust update's spread)
 void EEContagionHelper::Update(float inElapsedTime)
 {
-    unsigned long theSpreadTime = this->mFunctor->GetSpreadTime();
-    this->mTimeSinceLastSpread += inElapsedTime;
-    bool theSpread = theSpreadTime == 0 || this->mTimeSinceLastSpread > theSpreadTime;
-    if (theSpread) {
-        this->mTimeSinceLastSpread -= theSpreadTime;
-        if (!this->mFunctor->SkipsSpread())
-            this->Spread(this->mTimeSinceLastUpdate);
-        else {
-            EECalamityCaptureContagionEvent(kContagionUpdateUnits);   // CONT (TEST ONLY)
-            this->mFunctor->UpdateUnits(&this->mUnits);
+    EeContagionParams theParams = EeContagionParams();
+    theParams.spread_time = (uint32_t)this->mFunctor->GetSpreadTime();
+    theParams.chance = this->mFunctor->GetChance();
+    theParams.radius = this->mFunctor->GetRadius();
+    theParams.flags = (this->mFunctor->SkipsSpread() ? EE_CONTAGION_SKIPS_SPREAD : 0) |
+                      (this->mFunctor->InfectsAlliesOnly() ? EE_CONTAGION_ALLIES_ONLY : 0) |
+                      (this->mCalamity->mClass->mIsBlockedByImmunity ? EE_CONTAGION_BLOCKED_BY_IMMUNITY : 0);
+    EEContagionHelperHost theHost;
+    theHost.mHelper = this;
+    EeContagionHostFfi theFfi;
+    theFfi.ctx = &theHost;
+    theFfi.call = &EEContagionHelperHost::Call;
+    EeContagionState theState;
+    theState.since_spread = this->mTimeSinceLastSpread;
+    theState.since_update = this->mTimeSinceLastUpdate;
+    ee_contagion_update(&theParams, &theState, inElapsedTime, &theFfi);
+    this->mTimeSinceLastSpread = theState.since_spread;
+    this->mTimeSinceLastUpdate = theState.since_update;
+}
+
+// New (port): the helper's answers to its Rust update (ee_tech contagion.rs EeContagionOp)
+void EEContagionHelperHost::Call(void* inContext, const EeContagionCall* inCall, EeContagionReply* outReply)
+{
+    EEContagionHelperHost& theHost = *static_cast<EEContagionHelperHost*>(inContext);
+    EEContagionHelper* theHelper = theHost.mHelper;
+    const EeContagionCall& theCall = *inCall;
+    EeContagionReply& theReply = *outReply;
+    theReply = EeContagionReply();
+    switch (theCall.op) {
+    case EeContagionOp::UpdateUnits:
+        EECalamityCaptureContagionEvent(kContagionUpdateUnits);   // CONT (TEST ONLY)
+        theHelper->mFunctor->UpdateUnits(&theHelper->mUnits);
+        break;
+    case EeContagionOp::FunctorUpdate:
+        EECalamityCaptureContagionEvent(kContagionFunctorUpdate);   // CONT (TEST ONLY)
+        theHelper->mFunctor->Update(theCall.x, theHelper->mCalamity);
+        break;
+    case EeContagionOp::UnitCount:
+        theReply.value = (int32_t)theHelper->mUnits.size();
+        break;
+    case EeContagionOp::UnitAlive:
+        theReply.ok = theHelper->mUnits[theCall.index]->mHitPoints > 0;
+        break;
+    case EeContagionOp::Apply: {
+        EEUnit* theUnit = theHelper->mUnits[theCall.index];
+        EECalamityCaptureContagionEvent(kContagionApply, theUnit->mUnitID);   // CONT (TEST ONLY)
+        theHelper->mFunctor->Apply(theUnit, theCall.x, theHelper->mCalamity);
+        break;
+    }
+    case EeContagionOp::Remove:
+        EECalamityCaptureContagionEvent(kContagionRemove, theHelper->mUnits[theCall.index]->mUnitID);   // CONT (TEST ONLY)
+        theHelper->RemoveUnit(theHelper->mUnits.begin() + theCall.index, true);
+        break;
+    case EeContagionOp::HeldComplex:
+        theReply.ok = theHelper->mUnits[theCall.index]->mComplexUnit != NULL;
+        break;
+    case EeContagionOp::NearUnits:
+        theHost.mNear.clear();
+        theHelper->GetUnitsInArea(theCall.x, theHelper->mUnits[theCall.index]->mComplexUnit, theHost.mNear);
+        theReply.value = (int32_t)theHost.mNear.size();
+        break;
+    case EeContagionOp::NearView: {
+        EEComplexUnit* theNearUnit = theHost.mNear[theCall.index];
+        if (theNearUnit == NULL)
+            break;
+        EEComplexUnit* theUnit = theHelper->mUnits[theCall.index2]->mComplexUnit;
+        theReply.id = theNearUnit->mUnitID;
+        theReply.flags = EE_CONTAGION_NEAR_UNIT;
+        if (theHelper->mFunctor->CanInfectType(theNearUnit->mUnitClass->GetCategory(), theNearUnit->mUnitClass->GetUnitType()))
+            theReply.flags |= EE_CONTAGION_NEAR_TYPE;
+        if (theUnit->mPlayer == theNearUnit->mPlayer)
+            theReply.flags |= EE_CONTAGION_NEAR_SAME_PLAYER;
+        if (theNearUnit->mPlayer->mEnemies[theUnit->mPlayer->mPlayerID] == 0)
+            theReply.flags |= EE_CONTAGION_NEAR_NOT_ENEMY;
+        break;
+    }
+    case EeContagionOp::Random:
+        theReply.x = gPhysics->mRandom.Generate();
+        break;
+    case EeContagionOp::DistanceSquared: {
+        EEComplexUnit* theUnit = theHelper->mUnits[theCall.index2]->mComplexUnit;
+        theReply.x = theUnit->mPhysicalModel.GetLocation().DistanceSquaredTo(theHost.mNear[theCall.index]->mPhysicalModel.GetLocation());
+        break;
+    }
+    case EeContagionOp::AddNew:
+        theHost.mNew.push_back(theHost.mNear[theCall.index]);
+        break;
+    case EeContagionOp::NewView: {
+        EEUnit* theNewUnit = theHost.mNew[theCall.index];
+        EEComplexUnit* theComplexUnit = theNewUnit->mComplexUnit;
+        theReply.id = theNewUnit->mUnitID;
+        if (theComplexUnit != NULL)
+            theReply.flags |= EE_CONTAGION_NEW_COMPLEX;
+        if (std::find(theHelper->mUnits.begin(), theHelper->mUnits.end(), theComplexUnit) != theHelper->mUnits.end())
+            theReply.flags |= EE_CONTAGION_NEW_HELD;
+        break;
+    }
+    case EeContagionOp::Immune: {
+        EEUnit* theNewUnit = theHost.mNew[theCall.index];
+        EEComplexUnit* theComplexUnit = theNewUnit->mComplexUnit;
+        EEGraphicEffect* theEffect = NULL;
+        if (theComplexUnit->GetEffect(3, theEffect)) {
+            EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 2);   // CONT (TEST ONLY)
+            if (theEffect != NULL)
+                gEffectManager->CreateUnitEffect(theComplexUnit, theEffect, NULL, 0, 0, 0);
+            theReply.ok = true;
         }
-        this->mTimeSinceLastUpdate = 0.0f;
-    } else
-        this->mTimeSinceLastUpdate += inElapsedTime;
-    EECalamityCaptureContagionEvent(kContagionFunctorUpdate);   // CONT (TEST ONLY)
-    this->mFunctor->Update(inElapsedTime, this->mCalamity);
-    std::vector<EEUnit*>::iterator theIterator = this->mUnits.begin();
-    while (theIterator != this->mUnits.end())
-        if ((*theIterator)->mHitPoints > 0) {
-            EECalamityCaptureContagionEvent(kContagionApply, (*theIterator)->mUnitID);   // CONT (TEST ONLY)
-            this->mFunctor->Apply(*theIterator, inElapsedTime, this->mCalamity);
-            ++theIterator;
-        } else {
-            EECalamityCaptureContagionEvent(kContagionRemove, (*theIterator)->mUnitID);   // CONT (TEST ONLY)
-            theIterator = this->RemoveUnit(theIterator, true);
-        }
+        break;
+    }
+    case EeContagionOp::AddUnit: {
+        EEUnit* theNewUnit = theHost.mNew[theCall.index];
+        EECalamityCaptureContagionEvent(kContagionNew, theNewUnit->mUnitID, 1);   // CONT (TEST ONLY)
+        theHelper->AddUnit(theNewUnit, true);
+        break;
+    }
+    case EeContagionOp::Capture:
+        EECalamityCaptureContagionEvent(theCall.value, theCall.index, theCall.index2, theCall.x, theCall.y);   // CONT (TEST ONLY)
+        break;
+    default:
+        ESVERIFY_AT(false, 1);
+        break;
+    }
 }
 
 // SYNTHETIC: EXE 0x4b5b7d
