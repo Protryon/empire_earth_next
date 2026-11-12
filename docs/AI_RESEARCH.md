@@ -3753,6 +3753,26 @@ The floor of 28 is no better, so the Copper plan stays as it is.
 - **Off by default.** Against the classic's warships, the boats need ships of their own or towers that reach them.
 
 
+**The answers to the frigates (the owner: "towers and sometimes a ship works for me").** Each is one switch on top of
+bt2 (boom-econ's order, the boats' flight and towers). 32 seeds against the improved classic, main 998932c's exe.
+
+| Variant | Defeats | Under 30 | W/L/C | Copper | Bronze | Boats lost | Boats alive (min 30-90) | End citizens / army |
+|---|---|---|---|---|---|---|---|---|
+| b0 = bt2 | 13 | 19 | 1/28/3 | 17, 58.6 | 9, 82.2 | 18.0 | 6.0 | 35.9 / 11.4 |
+| B1 towers' range + attack from the first warship seen (`plan.tower_up_ships`) | 13 | 18 | 1/27/4 | 17, 58.6 | 9, 82.2 | 18.7 | 6.0 | 37.5 / 12.5 |
+| B2 the boats' towers on the open-water side of the fish (`shore_towers`) | 14 | 19 | 2/27/3 | 17, 58.4 | 9, 85.7 | 16.8 | 6.3 | 36.2 / 10.9 |
+| B3 two warships guarding the fishing grounds (`plan.boat_guard = 2`) | 13 | 16 | 2/27/3 | 19, 58.6 | 12, 87.2 | 16.4 | 6.3 | 42.4 / 13.1 |
+| B4 = B1 + B3 | 13 | 16 | 2/26/4 | 19, 58.6 | 12, 87.2 | 15.6 | 6.3 | 43.4 / 13.5 |
+
+- **B4 is the best:** 2.4 fewer boats lost a game, 3 fewer towns under 30 citizens, 7 more citizens at the end, and
+  the same defeats. Two more games reach the Copper Age and three more the Bronze Age.
+- **Against Age of AI B4 equals b0** (0 defeats, 3/10/19, Copper 52.7, Bronze 80.2): no warships come.
+- **B1 alone changes nothing.** The towers' attack upgrade never completed (none available or affordable when the
+  frigates came); the range upgrade was already researched.
+- **Cost:** the two warships are bought from the first enemy warship seen, so they come late (about minute 70 on
+  seed 3).
+- **Kept off by default** until it merges with boom-econ's order.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
