@@ -1733,13 +1733,35 @@ public:
 };
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
-// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url);
-// this class runs its hooks there and answers its calls on the C++ objects (ServerOp.cpp's HostCall). Results and
-// setters by number: ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
+// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
+// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there and answers
+// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
+// ee_won_hostop_bytes, ee_won_hostop_set.
 class RustServerOp : public ServerOp {
 public:
-    explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; a 4-byte length field, no auth
+    explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
+    // ServerRequestOp(context or address) with a Rust op derived from it (ee_won_reqop_* constructors), taken
+    static RustServerOp* NewRequest(EeWonReqOp* inOp, ServerContext* inContext);
+    static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
+    IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
+    IPAddr GetAddr() const; // a request's first server (an invalid address: none)
+    void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
+    void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
+    // the results of a directory or account op (ee_won reqdir.rs): its entities by number and element
+    // (EE_WON_REQOP_DIR_LIST and a query's index, EE_WON_REQOP_DIR_SERVICE), a number, bytes
+    DirEntityList GetEntities(int inWhich, long long inIndex = 0) const;
+    long long GetNum(int inWhich, long long inIndex = 0) const { return ee_won_hostop_num(this->mRustOp, inWhich, inIndex); }
+    std::string GetBytes(int inWhich, long long inIndex = 0) const;
+    // the directory and account ops the game makes (ee_won reqdir.rs), with their members
+    static RustServerOp* NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
+                                   const char* const* inTypes = NULL, int inTypeCount = 0);
+    static RustServerOp* NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount);
+    static RustServerOp* NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
+                                       const std::string& inNetAddr);
+    static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth);
+    static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
+                                          const std::string& inEmail);
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -1749,6 +1771,8 @@ public:
 protected:
     virtual ~RustServerOp();
 private:
+    static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
+    IPAddr AddrOf(int inWhich) const;
     EeWonHostOp* mRustOp; // owned
     FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
 };
@@ -1783,59 +1807,23 @@ public:
     virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
 };
 
-class ServerRequestOp : public ServerOp {
+// ServerRequestOp (2acf60/2ad050): the request/reply exchange is a Rust op on the base (ee_won reqhost.rs: the
+// server list, sessions, peer authentication, the expired-session retry). This class is what the ops still derived
+// in C++ (the directory, account and routing request ops) build on: its virtuals make the request and read the
+// reply (RustServerOp::HostCall's EE_WON_HOST_REQ_*), mRequest and mResponse the exchange's bytes.
+class ServerRequestOp : public RustServerOp {
 public:
-    ServerRequestOp(const IPAddr&); //2ad050
-    void Init(); //2acf10
-    void SetServerContext(ServerContext*); //2ad2e0
-    void SetAddr(const IPAddr&); //2ad340
-    IPAddr GetAddr() const; //2ad410
-    void FinishSaveSession(WONStatus); //2ad5b0
+    explicit ServerRequestOp(ServerContext*); //2acf60
+    explicit ServerRequestOp(const IPAddr&); //2ad050
     void SetLastServerError(WONStatus); //2ad660
-    bool TryConnect(); //2ad6b0
-    bool TryPeerToPeerAuth(); //2ad950, out of line, the full PeerAuth op
-    bool TryNextServer(); //2add80
-    void QueueSocketOp(SocketOp*,DWORD); //2adae0, out of line
-    WONStatus Send(); //2ae050
-    WONStatus Recv(); //2ae2d0
-    bool CheckExpiredSession(); //2ae200
-    ServerRequestOp(ServerContext*); //2acf60
-    // an op derived in Rust (ee_won reqop.rs, e.g. ee_won_adminop_new): its RunHook statements, request, reply and
-    // Reset are Rust's (the virtuals below when not overridden); the request owns it
-    ServerRequestOp(ServerContext*, EeWonReqOp* inRustOp);
-    ServerRequestOp(const IPAddr&, EeWonReqOp* inRustOp);
-    // a Rust op's request sent as one datagram on this socket instead (ReportPatchStatusOp's SetUDPSocket)
-    void SetUDPSocket(AsyncSocket* inSocket) { this->mUDPSocket = inSocket; }
-    const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
-    virtual void RunHook();   //2ae390
-    virtual void CleanupHook(); //2ae4c0
-    virtual bool CallbackHook(AsyncOp*,int); //2adb10
-    virtual WONStatus GetNextRequest(); //2ad020
-    virtual WONStatus CheckResponse(); //2c7b10
-    virtual void Reset();     //326b60
+    virtual WONStatus GetNextRequest() { return (WONStatus)100059; } //2ad020, WS_ServerReq_Recv
+    virtual WONStatus CheckResponse() { return (WONStatus)0; } //2c7b10, WS_Success
+    virtual void Reset() {} //326b60
 protected:
-    WONStatus InvalidReplyHeader(); //2ad6a0, protected, 16 bytes; returns 100057
-    void RunDatagram(); // the request without a length field to the first address, then Success
-    virtual ~ServerRequestOp(); //2ad110, explicit own-vptr store
+    WONStatus InvalidReplyHeader(); //2ad6a0: the server error, then the next server
 public:
-    typedef std::list<IPAddr> AddrList;
-    AddrList mAddrList; //94
-    AddrList::iterator mAddrItr; //a0
-    SmartPtr<AuthSession> mCurSession; //a4
-    SmartPtr<AuthSession> mUsedSession; //a8
-    bool mReusingSession; //ac
-    bool mSessionExpired; //ad, natural alignmentae/af
-    IPAddr mCurAddr; //b0..d8
-    bool mUseAuth2; //d8
-    bool mCloseConnection; //d9, natural alignmentda/db
-    WONStatus mGetCertStatus; //dc
-    bool mUseLastServerErrorForFinishStatus; //e0, natural alignmente1..e3
-    WONStatus mLastServerError; //e4
-    SmartPtr<ServerContext> mServerContext; //e8
-    ByteBufferPtr mRequest; //ec
-    ByteBufferPtr mResponse; //f0..f4
-    EeWonReqOp* mRustOp; // NULL: a C++ derived op (or none)
-    SmartPtr<AsyncSocket> mUDPSocket; // a Rust op's datagram socket (NULL: the exchange)
+    ByteBufferPtr mRequest;
+    ByteBufferPtr mResponse;
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.
@@ -1847,87 +1835,12 @@ public:
     SmartPtr<RoutingGetGroupListOp> mOp; //f4, implicit destructor releases before base
 };
 
-// AoC directory operation types. The base-game GetDirOp above is a different version.
-// Reuses DirEntityList/SmartPtr from above; do not duplicate these aliases.
-typedef std::set<std::string> DirDataTypeSet;
-// WON SDK stateless parser; static cdecl 2f0510.
+// The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
+// objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
+// GetAliasDirOp, FindEntityOp and GetServiceOp are Rust ops (rust/crates/ee_won/src/reqdir.rs).
 class DirEntityReplyParser {
 public:
-    static WONStatus ParseSingleEntityReply(const void*, unsigned long, DirEntityPtr&); //single-entity parser (WON SDK); no original address identified
-    static WONStatus ParseMultiEntityReply(const void*, unsigned long, DirEntityList&, unsigned char* inSequence = NULL);
-    static bool OnlyDirs(DWORD); //2f04f0
-    static bool OnlyServices(DWORD); //2f0500
-};
-
-class GetEntityRequest : public RefCount {
-protected:
-    virtual ~GetEntityRequest(); //2f0da0, explicit ownVT44d4f0 store2f0dc2
-    DWORD mFlags; //08, the inline default constructor sets flags 06020837
-    std::wstring mPath; //0c..1c
-    DirDataTypeSet mDataTypes; //1c..28
-    DirEntityList mDirEntityList; //28..34
-    DirEntityMap mDirEntityMap; //34..40
-    WONStatus mStatus; //40..44; constructor leaves untouched
-public:
-    // The constructor is inline in AddPath 2f18f0 (no out-of-line address).
-    // Never allocated or constructed here.
-    GetEntityRequest() { this->mFlags=0x06020837; }
-    enum PACKFLAG { Pack_GetDirOp, Pack_GetMultiDirOp };
-    void SetPath(const std::wstring& inPath) { this->mPath=inPath; }
-    // the query's fields, for the requests ee_won builds (rust/crates/ee_won/src/dirops.rs)
-    DWORD GetFlags() const { return this->mFlags; }
-    const std::wstring& GetPath() const { return this->mPath; }
-    const DirDataTypeSet& GetDataTypes() const { return this->mDataTypes; }
-    void SetFlags(DWORD inFlags) { this->mFlags=inFlags; }
-    void SetDataTypes(const DirDataTypeSet& inTypes) { this->mDataTypes=inTypes; }
-    void AddDataType(const std::string& type) { this->mDataTypes.insert(type); }
-    void Reset(); //2f1070, clears result list/map only
-    void Pack(WriteBuffer*,PACKFLAG); //2f0fa0
-    WONStatus ParseMultiEntityReply(const void*,unsigned long); //2f1160, original parser only
-    WONStatus GetStatus() { return this->mStatus; }
-    const DirEntityList& GetDirEntityList() { return this->mDirEntityList; }
-    const DirEntityMap& GetDirEntityMap(); //lazy grouping algorithm (WON SDK); no original address identified
-};
-typedef SmartPtr<GetEntityRequest> GetEntityRequestPtr;
-// AoC GetDirOp, 0xf8 bytes: RTTI .?AVGetDirOp@WONAPI@@, VT44d4f8.
-// Replaces the base game's 0x118-byte layout.
-class GetDirOp : public ServerRequestOp {
-private:
-    void Init(); //2f1190, initializes the owned GetEntityRequest (0x44)
-    GetEntityRequestPtr mGetEntityRequest; //f4..f8
-protected:
-    virtual WONStatus GetNextRequest(); //2f13d0, GetNextRequest
-    virtual WONStatus CheckResponse(); //2f14e0, CheckResponse
-    virtual void Reset();     //2f13c0, Reset
-public:
-    GetDirOp(ServerContext*); //2f12d0, 89 bytes; the only out-of-line constructor
-    void SetPath(const std::wstring& path) { this->mGetEntityRequest->SetPath(path); }
-    void SetFlags(DWORD flags) { this->mGetEntityRequest->SetFlags(flags); }
-    void AddDataType(const std::string& type) { this->mGetEntityRequest->AddDataType(type); }
-    const DirEntityList& GetDirEntityList() { return this->mGetEntityRequest->GetDirEntityList(); }
-    // Implicit ordinary dtor 2f1350 releases the child, then ServerRequestOp; no own-vptr write.
-};
-typedef std::list<GetEntityRequestPtr> GetEntityRequestList;
-class GetMultiDirOp : public ServerRequestOp {
-protected:
-    virtual WONStatus GetNextRequest(); //2f1a30
-    virtual WONStatus CheckResponse(); //2f1b90
-    virtual void Reset();     //2f1790
-private:
-    void Init(); //2f1520, protocol initialization
-    GetEntityRequestList mRequestList; //f4..100
-    GetEntityRequestList::iterator mCurRequest; //100=0
-    DWORD mFlags; //104, the ctor leaves it untouched
-    DirDataTypeSet mDataTypes; //108..114
-    int mNumFailedRequests; //114=0, complete118
-public:
-    GetMultiDirOp(ServerContext* inContext); //2f1540, 207 bytes
-    // Implicit destructor 2f1630/350, no own-vptr store.
-    void SetFlags(DWORD inFlags) { this->mFlags=inFlags; }
-    void AddPath(const std::wstring& inPath); //2f18f0
-    void AddRequest(GetEntityRequest*); //2f17c0
-    const GetEntityRequestList& GetRequestList() { return this->mRequestList; }
-    // The inherited current address is at b0.
+    static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
 };
 
 // The direct RTTI parent is ServerOp, not AsyncOpWithTracker or RoutingOp.
@@ -2347,45 +2260,15 @@ public:
 // Storage, methods and inline virtual bodies live there; no duplicate class definition.
 
 
-// AoC GetCertOp (0x11fc bytes in the original). RTTI GetCertOp > ServerRequestOp > ServerOp > AsyncOpWithTracker >
-// AsyncOp > RefCount. Its members and every step are ee_won's (getcert.rs, a Rust object); this class is the
-// ServerRequestOp the exchange calls through its virtuals and the hooks for the C++ objects the op holds.
-class AuthPubKeyBlock;
+// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...): a Rust op on the base
+// (ee_won certhost.rs over getcert.rs: its members, every step and the session key). The class is its constructor
+// (the auth context and its server list, ServerOp.cpp) and the two accessors the game uses.
 class AuthPeerData;
-class Blowfish;
-class GetCertOp : public ServerRequestOp {
+class GetCertOp : public RustServerOp {
 public:
-    struct COMMUNITY_STATUS {
-        short mStatus;
-        unsigned long mCommunityID;
-        std::wstring mCommunityName;
-    };
-    typedef std::vector<std::string> ERROR_LIST;
-    typedef std::list<COMMUNITY_STATUS> COMMUNITY_STATUS_LIST;
-private:
-    // the members (0xf4..0x11fc: the auth context, the session key, the key block, the clock delta, the peer data,
-    // the challenge seed, the new password, the create-account flag, the state, the error and community lists):
-    // ee_won's (getcert.rs), owned
-    EeWonGetCert* mCert;
-    friend struct GetCertOpHooks;
-    EeWonGetCertHooks Hooks();
-protected:
-    virtual ~GetCertOp(); //2e3d90
-    virtual void RunHook();   //2e3f40
-    virtual void CleanupHook(); //2e4050
-    // Inherited CallbackHook 0c = 2adb10, no added slot.
-    virtual WONStatus GetNextRequest(); //2e4850
-    virtual WONStatus CheckResponse(); //2e5980
-    virtual void Reset();     //2e4130
-public:
-    GetCertOp(AuthContext*); //2e3c30
-    const AuthPeerData* GetPeerData() const;
-    void SetCreateAccount(bool value);
-    void SetNewPassword(const std::wstring& password);
-    void SetAuthContext(AuthContext* context);
-    const Blowfish& GetSessionKey() const;
-    ERROR_LIST GetErrorList() const;
-    COMMUNITY_STATUS_LIST GetCommunityStatusList() const;
+    explicit GetCertOp(AuthContext*); //2e3c30
+    const AuthPeerData* GetPeerData() const; // borrowed; NULL before a login
+    void SetCreateAccount(bool value) { this->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, value); }
 };
 
 
@@ -2497,27 +2380,14 @@ public:
 };
 typedef std::list<SmartPtr<PatchData> > PatchDataList;
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
-class DetectFirewallOp : public ServerRequestOp {
-protected:
-    void Init(); //2cf5c0, constructor called at 2cf651
-    virtual ~DetectFirewallOp(); // implicit in the original (2cf690): now the Rust object's release
-    virtual void RunHook();   //2cf760
-    virtual void CleanupHook(); //2cf920
-    virtual bool CallbackHook(AsyncOp*,int); //2cf8b0
-    virtual WONStatus GetNextRequest(); //2cf970
-    virtual WONStatus CheckResponse(); //2cfad0
-    virtual WONStatus RecvServerDatagram(); //2cfba0, eighth slot SetupReceiveTracker
-private:
-    // the members (0xf4..0x130: the listen port, the longest connect wait, the listening socket, the listen,
-    // wait-for-connect and UDP flags, the datagram receive op, the public address): ee_won's (fwop.rs), owned
-    EeWonFirewallOp* mFw;
-    friend struct DetectFirewallOpHooks;
-    EeWonFirewallHooks Hooks();
+// DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
+// the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
+class DetectFirewallOp : public RustServerOp {
 public:
-    DetectFirewallOp(ServerContext* inContext); //2cf600
-    void SetListenPort(unsigned short inPort) { ee_won_fwop_set_listen_port(this->mFw, inPort); }
-    void SetDoListen(bool inDoListen) { ee_won_fwop_set_do_listen(this->mFw, inDoListen); }
-    void SetWaitForConnect(bool inWait) { ee_won_fwop_set_wait_for_connect(this->mFw, inWait); }
+    explicit DetectFirewallOp(ServerContext* inContext); //2cf600
+    void SetListenPort(unsigned short inPort) { this->SetNum(EE_WON_FWOP_LISTEN_PORT, inPort); }
+    void SetDoListen(bool inDoListen) { this->SetNum(EE_WON_FWOP_DO_LISTEN, inDoListen); }
+    void SetWaitForConnect(bool inWait) { this->SetNum(EE_WON_FWOP_WAIT_FOR_CONNECT, inWait); }
     IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
 };
 
@@ -2554,36 +2424,7 @@ public:
     // Implicit ordinary dtor 2cc2e0, no own-vtable store; all members destroyed normally.
 };
 
-class GetAccountOp : public ServerRequestOp {
-public:
-    GetAccountOp(ServerContext* inContext,AuthContext* inAuth); //2ccfa0
-    void Init(); //2ccef0, 163 bytes, length4 before a new Profile (0x20)
-    // Destructor stays implicit: 2cd0a0 has no own-vptr store; releases 114,
-    // string 104 then string f4, calls ServerRequestOp::~ServerRequestOp 2ad110.
-    virtual WONStatus GetNextRequest();     //2cd190 GetNextRequest
-    virtual WONStatus CheckResponse();      //2cd2b0 CheckResponse
-    virtual void Reset();                   //4142a0 Reset, override
-    std::string mEmail;                     //f4..104
-    std::string mErrorString;               //104..114
-    SmartPtr<ProfileData> mProfileData;      //114..118
-};
-class UpdateAccountOp : public ServerRequestOp {
-public:
-    UpdateAccountOp(ServerContext* inContext,AuthContext* inAuth); //2ce8f0
-    // Destructor remains implicit:2cea10 has no own-vptr store; string118,
-    // wstring108,stringf8,ProfilePtrf4, then ServerRequestOp::~2ad110.
-    virtual WONStatus GetNextRequest();     //2ceb30 GetNextRequest
-    virtual WONStatus CheckResponse();      //2cec80 CheckResponse
-    virtual void Reset();                   //4142a0 Reset, override
-    void SetEmail(const std::string& inEmail) { this->mEmail=inEmail; }
-    void SetNewPassword(const std::wstring& inPassword) { this->mNewPassword=inPassword; }
-    SmartPtr<ProfileData> mProfileData;      //f4
-    std::string mErrorString;               //f8..108
-    std::wstring mNewPassword;              //108..118
-    std::string mEmail;                     //118..128
-private:
-    void Init(); //2ce840, 163 bytes, length4 before a new Profile (0x20)
-};
+// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs)
 
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {

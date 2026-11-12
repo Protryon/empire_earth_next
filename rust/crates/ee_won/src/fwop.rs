@@ -23,7 +23,7 @@ use crate::ffi::EeWonByteSink;
 use crate::miscops::{firewall_reply, firewall_request, firewall_wait, FirewallReply};
 
 /// A C++ `RefCount*` (NULL for none).
-type Obj = *mut c_void;
+pub(crate) type Obj = *mut c_void;
 
 const ST_SUCCESS: i32 = 0;
 const ST_RECV: i32 = 100059;

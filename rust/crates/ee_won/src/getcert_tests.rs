@@ -3,6 +3,20 @@
 //! what the original's statements did. And the real op's own session key (a `Blowfish`) through the C ABI.
 
 use super::*;
+use crate::certhost::{CertSide, HostEnv};
+use crate::hostop::{
+    EeWonHostCall, Host, EE_WON_HOST_ADD_REF, EE_WON_HOST_CERT_ADD_SECRET, EE_WON_HOST_CERT_BLOCK_ENCRYPT,
+    EE_WON_HOST_CERT_BLOCK_ID, EE_WON_HOST_CERT_BLOCK_VALID, EE_WON_HOST_CERT_BLOCK_VERIFIED,
+    EE_WON_HOST_CERT_BLOCK_VERIFY, EE_WON_HOST_CERT_CLEAR_ONE_TIME, EE_WON_HOST_CERT_COMMIT,
+    EE_WON_HOST_CERT_COMMUNITY, EE_WON_HOST_CERT_CTX_PEER, EE_WON_HOST_CERT_DELTA, EE_WON_HOST_CERT_HASHES,
+    EE_WON_HOST_CERT_LOAD_SECRETS, EE_WON_HOST_CERT_NEW, EE_WON_HOST_CERT_NEW_BLOCK, EE_WON_HOST_CERT_NEW_PEER,
+    EE_WON_HOST_CERT_PASSWORD, EE_WON_HOST_CERT_PEER_BLOCK, EE_WON_HOST_CERT_PEER_DELTA, EE_WON_HOST_CERT_PRIV_FREE,
+    EE_WON_HOST_CERT_PRIV_NEW, EE_WON_HOST_CERT_PRIV_SET, EE_WON_HOST_CERT_REMOVE_SECRET,
+    EE_WON_HOST_CERT_SET_PASSWORD, EE_WON_HOST_CERT_SET_PEER, EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK,
+    EE_WON_HOST_CERT_TIMES, EE_WON_HOST_CERT_USER, EE_WON_HOST_CERT_VALID, EE_WON_HOST_CERT_VERIFIER_PUBLIC,
+    EE_WON_HOST_RELEASE,
+};
+use crate::reqhost::{Calls, Plain, ReqPlan};
 use std::fmt::Write as _;
 
 fn hex(d: &[u8]) -> String {
@@ -365,8 +379,130 @@ fn dump(g: &GetCert, e: &Std) -> String {
     s
 }
 
+// ---- the same replay through the Rust op base (certhost.rs): every object statement a host call, answered by the
+// stand-in as RustServerOp::HostCall answers it on the C++ objects; the op's own side (its members, the stand-in key)
+// the stand-in's
+
+struct TestSide(*mut Std);
+
+// SAFETY (every method): the replay's stand-in, alive and otherwise untouched during the step
+impl CertSide for TestSide {
+    fn op_status(&mut self, _c: &Calls) -> i32 {
+        unsafe { &mut *self.0 }.op_status()
+    }
+    fn set_request(&mut self, _c: &Calls, message: &[u8]) {
+        unsafe { &mut *self.0 }.set_request(message)
+    }
+    fn response(&mut self, _c: &Calls) -> Vec<u8> {
+        unsafe { &mut *self.0 }.response()
+    }
+    fn set_last_error(&mut self, _c: &Calls, status: i32) {
+        unsafe { &mut *self.0 }.set_last_error(status)
+    }
+    fn invalid_header(&mut self, _c: &Calls) -> i32 {
+        unsafe { &mut *self.0 }.invalid_header()
+    }
+    fn key_create(&mut self, n: i32) {
+        unsafe { &mut *self.0 }.key_create(n)
+    }
+    fn key(&mut self) -> Vec<u8> {
+        unsafe { &mut *self.0 }.key()
+    }
+    fn key_encrypt(&mut self, data: &[u8]) -> Option<Vec<u8>> {
+        unsafe { &mut *self.0 }.key_encrypt(data)
+    }
+    fn key_decrypt(&mut self, data: &[u8]) -> Option<Vec<u8>> {
+        unsafe { &mut *self.0 }.key_decrypt(data)
+    }
+}
+
+unsafe fn give(c: &mut EeWonHostCall, b: &[u8]) {
+    unsafe { (c.out_sink)(c.out_context, b.as_ptr(), b.len()) }
+}
+
+/// The host calls answered by the stand-in (`host` the replay's `Std`).
+unsafe extern "C" fn std_host(host: *mut c_void, call: *mut EeWonHostCall) {
+    let e = unsafe { &mut *(host as *mut Std) };
+    let c = unsafe { &mut *call };
+    let (o0, o1, o2) = (c.obj[0], c.obj[1], c.obj[2]);
+    let (n0, n1) = (c.num[0], c.num[1]);
+    let data = unsafe { bytes(c.data, c.len) }.to_vec();
+    match c.code {
+        EE_WON_HOST_ADD_REF => e.add_ref(o0),
+        EE_WON_HOST_RELEASE => e.release(o0),
+        EE_WON_HOST_CERT_VERIFIER_PUBLIC => c.out_num = i64::from(e.verifier_public(o0)),
+        EE_WON_HOST_CERT_CTX_PEER => c.out_obj = e.ctx_peer(o0),
+        EE_WON_HOST_CERT_PEER_BLOCK => c.out_obj = e.peer_block(o0),
+        EE_WON_HOST_CERT_PEER_DELTA => c.out_num = e.peer_delta(o0),
+        EE_WON_HOST_CERT_LOAD_SECRETS => e.load_secrets(o0),
+        EE_WON_HOST_CERT_BLOCK_VALID => c.out_num = i64::from(e.block_valid(o0)),
+        EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK => e.set_peer_from_block(o0, o1),
+        EE_WON_HOST_CERT_BLOCK_ID => c.out_num = i64::from(e.block_id(o0)),
+        EE_WON_HOST_CERT_BLOCK_ENCRYPT => {
+            if let Some(v) = e.block_encrypt(o0, &data) {
+                unsafe { give(c, &v) }
+            }
+        }
+        EE_WON_HOST_CERT_USER => unsafe { give(c, &e.user(o0)) },
+        EE_WON_HOST_CERT_PASSWORD => unsafe { give(c, &e.password(o0)) },
+        EE_WON_HOST_CERT_COMMUNITY => unsafe { give(c, &e.community(o0)) },
+        EE_WON_HOST_CERT_HASHES => unsafe { give(c, &e.hashes(o0, &data)) },
+        EE_WON_HOST_CERT_ADD_SECRET => e.add_secret(o0, &data),
+        EE_WON_HOST_CERT_REMOVE_SECRET => e.remove_secret(o0, &data),
+        EE_WON_HOST_CERT_NEW => c.out_obj = e.new_cert(n0 as i32, &data),
+        EE_WON_HOST_CERT_VALID => c.out_num = i64::from(e.cert_valid(n0 as i32, o0)),
+        EE_WON_HOST_CERT_BLOCK_VERIFY => c.out_num = i64::from(e.block_verify(o0, n0 as i32, o1)),
+        EE_WON_HOST_CERT_DELTA => c.out_num = e.cert_delta(n0 as i32, o0),
+        EE_WON_HOST_CERT_TIMES => {
+            let (a, b) = e.cert_times(n0 as i32, o0);
+            let mut v = a.to_le_bytes().to_vec();
+            v.extend_from_slice(&b.to_le_bytes());
+            unsafe { give(c, &v) }
+        }
+        EE_WON_HOST_CERT_NEW_BLOCK => c.out_obj = e.new_block(&data),
+        EE_WON_HOST_CERT_BLOCK_VERIFIED => c.out_num = i64::from(e.block_verified(o0, o1)),
+        EE_WON_HOST_CERT_COMMIT => e.commit(o0, n0, n1),
+        EE_WON_HOST_CERT_PRIV_NEW => c.out_obj = e.priv_new(),
+        EE_WON_HOST_CERT_PRIV_SET => c.out_num = i64::from(e.priv_set(o0, &data)),
+        EE_WON_HOST_CERT_PRIV_FREE => e.priv_free(o0),
+        EE_WON_HOST_CERT_NEW_PEER => c.out_obj = e.new_peer(o0, o1, n0 as usize as *mut c_void, n1, o2),
+        EE_WON_HOST_CERT_SET_PASSWORD => e.set_password(o0, &data),
+        EE_WON_HOST_CERT_SET_PEER => e.set_peer(o0, o1),
+        EE_WON_HOST_CERT_CLEAR_ONE_TIME => e.clear_one_time(o0),
+        k => panic!("host call {k}"),
+    }
+}
+
+fn new_host() -> Host<ReqPlan> {
+    Host::new(ReqPlan::new(Box::new(Plain(Box::new(crate::reqops::UserIdOp::default())))))
+}
+
+/// `$body` over the stand-in itself, or over the base's host calls answered by it.
+macro_rules! env {
+    ($host:expr, $e:ident, |$v:ident| $body:expr) => {
+        match $host {
+            Some(h) => {
+                let p: *mut Std = &mut $e;
+                h.bind_to(Some(std_host), p as *mut c_void);
+                let calls = Calls { h };
+                let mut he = HostEnv { c: &calls, side: TestSide(p) };
+                let $v = &mut he;
+                $body
+            }
+            None => {
+                let $v = &mut $e;
+                $body
+            }
+        }
+    };
+}
+
 /// One golden sequence: the setup line and the step lines.
 fn replay(setup: &str, steps: &[&str]) -> usize {
+    replay_on(setup, steps, None)
+}
+
+fn replay_on(setup: &str, steps: &[&str], host: Option<&Host<ReqPlan>>) -> usize {
     let f: Vec<&str> = setup.split(' ').collect();
     let n = |i: usize| f[i].parse::<i64>().unwrap();
     let (state, seed, block, encfail, create) = (n(1) as i32, n(2) != 0, n(3) != 0, n(4) != 0, n(5) != 0);
@@ -424,14 +560,14 @@ fn replay(setup: &str, steps: &[&str]) -> usize {
         let mut threw = false;
         let mut status = 0;
         match kind {
-            0 => match g.run_hook(&mut e) {
+            0 => match env!(host, e, |v| g.run_hook(v)) {
                 Some(s) => e.log(format!("finish {s}")),
                 None => e.log("baserun".into()),
             },
-            1 => status = g.get_next_request(&mut e),
+            1 => status = env!(host, e, |v| g.get_next_request(v)),
             2 => {
                 e.response = unhex(arg);
-                match g.check_response(&mut e) {
+                match env!(host, e, |v| g.check_response(v)) {
                     Ok(s) => status = s,
                     Err(Cut) => threw = true,
                 }
@@ -439,7 +575,7 @@ fn replay(setup: &str, steps: &[&str]) -> usize {
             3 => g.reset(),
             4 => {
                 e.status = arg.parse().unwrap();
-                g.cleanup_hook(&mut e);
+                env!(host, e, |v| g.cleanup_hook(v));
                 e.log("baseclean".into());
             }
             5 => {
@@ -458,7 +594,7 @@ fn replay(setup: &str, steps: &[&str]) -> usize {
         assert_eq!(got, *want, "\n{setup}\n{step}");
         checked += 1;
     }
-    g.release_all(&mut e);
+    env!(host, e, |v| g.release_all(v));
     checked
 }
 
@@ -480,6 +616,25 @@ fn golden_sequences() {
         sequences += 1;
     }
     assert_eq!(sequences, 400);
+    assert_eq!(steps, 1935);
+}
+
+#[test]
+fn golden_through_the_base() {
+    let text = include_str!("golden_getcert.txt");
+    let h = new_host();
+    let mut lines = text.lines().peekable();
+    let mut steps = 0;
+    while let Some(setup) = lines.next() {
+        let mut body = Vec::new();
+        while let Some(l) = lines.peek() {
+            if l.starts_with("S ") {
+                break;
+            }
+            body.push(lines.next().unwrap());
+        }
+        steps += replay_on(setup, &body, Some(&h));
+    }
     assert_eq!(steps, 1935);
 }
 
