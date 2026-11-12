@@ -239,3 +239,21 @@ pub unsafe extern "C" fn ee_gfx_beam_stretch(
 pub extern "C" fn ee_gfx_beam_stretch_y(y: f32, length: f32) -> f32 {
     beam::stretch_y(y, length)
 }
+
+/// `CreateHorizontalPlaneModel`'s (`standing` false) or `CreateStandingPlaneModel`'s mesh.
+///
+/// # Safety
+/// `vertices` holds 4 writable records and `triangles` 2.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_plane(
+    standing: bool,
+    vertices: *mut EeGfxMeshVertex,
+    triangles: *mut EeGfxMeshTriangle,
+) {
+    let (v, t) = crate::effects::plane_arrays(standing);
+    // SAFETY: the function's contract
+    unsafe {
+        std::ptr::copy_nonoverlapping(v.as_ptr(), vertices, 4);
+        std::ptr::copy_nonoverlapping(t.as_ptr(), triangles, 2);
+    }
+}

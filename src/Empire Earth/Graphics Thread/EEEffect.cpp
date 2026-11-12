@@ -49,6 +49,7 @@
 #include "ee/EERenderSnapshot.h"
 #include "rust/ee_ge.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
 #include "rust/ee_gfx.h"
+#include "ee/EEEffectMesh.h"
 
 // SYNTHETIC: EXE 0x50251d
 // SYNTHETIC: EXE 0x502527
@@ -216,58 +217,32 @@ long EEEffect::Queue(EEEffectQueue* inQueues)
     return theResult;
 }
 
-// FUNCTION: EXE 0x50281f
-// Creates the shared horizontal quad model gU4E8DF4 (unit square in the ground plane, facing up) (provisional name)
-void CreateHorizontalPlaneModel()
+// A shared quad model (unit square, two triangles, white and opaque): standing facing -y or on the ground facing up;
+// its mesh is ee_gfx effects.rs's (RUST_PLAN R4.4) (provisional name)
+static GEModel* CreatePlaneModel(bool inStanding)
 {
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    GE3DPoint thePoint1(-0.5f, 0.5f, 0.0f);
-    GE3DPoint thePoint2(0.5f, 0.5f, 0.0f);
-    GE3DPoint thePoint3(-0.5f, -0.5f, 0.0f);
-    GE3DPoint thePoint4(0.5f, -0.5f, 0.0f);
-    GETextureCoordinate theCoordinate1(0.0f, 0.0f);
-    GETextureCoordinate theCoordinate2(1.0f, 0.0f);
-    GETextureCoordinate theCoordinate3(0.0f, 1.0f);
-    GETextureCoordinate theCoordinate4(1.0f, 1.0f);
-    GEVector theNormal(0.0f, 0.0f, 1.0f);
-    if (gU4E8DF4) {
-        gU4E8DF4->Dereference();
-        gU4E8DF4 = NULL;
-    }
     GEModel* theModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "EEEffect::sHorizontalPlane", 1);
-    gU4E8DF4 = theModel;
     theModel->Reference();
-    theModel->GetVertexArray(0)->SetPoint(thePoint1, 0);
-    theModel->GetVertexArray(0)->SetPoint(thePoint2, 1);
-    theModel->GetVertexArray(0)->SetPoint(thePoint3, 2);
-    theModel->GetVertexArray(0)->SetPoint(thePoint4, 3);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 0);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 1);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 2);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 3);
-    theModel->GetVertexArray(0)->SetColor(theColor, 0);
-    theModel->GetVertexArray(0)->SetColor(theColor, 1);
-    theModel->GetVertexArray(0)->SetColor(theColor, 2);
-    theModel->GetVertexArray(0)->SetColor(theColor, 3);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 0);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 1);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 2);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 3);
+    EEEffectMesh theMesh(4, 2);
+    ee_gfx_effect_plane(inStanding, theMesh.Vertices(), theMesh.Triangles());
+    theMesh.Store(theModel);
     theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
     theModel->GetMaterial(0)->SetPolygonRangeLength(2, 0);
     theModel->GetMaterial(0)->SetVertexStartingIndex(0);
     theModel->GetMaterial(0)->SetVertexRangeLength(4);
-    theModel->GetPolygonArray(0)->SetVertexIndex1(0, 0);
-    theModel->GetPolygonArray(0)->SetVertexIndex2(0, 1);
-    theModel->GetPolygonArray(0)->SetVertexIndex3(0, 2);
-    theModel->GetPolygonArray(0)->SetVertexIndex1(1, 2);
-    theModel->GetPolygonArray(0)->SetVertexIndex2(1, 1);
-    theModel->GetPolygonArray(0)->SetVertexIndex3(1, 3);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, 0);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, 1);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, 2);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate4, 3);
     theModel->ComputeBoundingVolumes();
+    return theModel;
+}
+
+// FUNCTION: EXE 0x50281f
+// Creates the shared horizontal quad model gU4E8DF4 (unit square in the ground plane, facing up) (provisional name)
+void CreateHorizontalPlaneModel()
+{
+    if (gU4E8DF4) {
+        gU4E8DF4->Dereference();
+        gU4E8DF4 = NULL;
+    }
+    gU4E8DF4 = CreatePlaneModel(false);
 }
 
 // FUNCTION: EXE 0x502b1c
@@ -275,54 +250,11 @@ void CreateHorizontalPlaneModel()
 // camera) (provisional name)
 void CreateStandingPlaneModel()
 {
-    GEColor theColor(1.0f, 1.0f, 1.0f);
-    GE3DPoint thePoint1(-0.5f, 0.0f, 0.5f);
-    GE3DPoint thePoint2(0.5f, 0.0f, 0.5f);
-    GE3DPoint thePoint3(-0.5f, 0.0f, -0.5f);
-    GE3DPoint thePoint4(0.5f, 0.0f, -0.5f);
-    GETextureCoordinate theCoordinate1(0.0f, 0.0f);
-    GETextureCoordinate theCoordinate2(1.0f, 0.0f);
-    GETextureCoordinate theCoordinate3(0.0f, 1.0f);
-    GETextureCoordinate theCoordinate4(1.0f, 1.0f);
-    GEVector theNormal(0.0f, -1.0f, 0.0f);
     if (gEffect2DModel) {
         gEffect2DModel->Dereference();
         gEffect2DModel = NULL;
     }
-    GEModel* theModel = gModelManager->CreateModel(2, 4, 1, 0, 1, 0, "EEEffect::sHorizontalPlane", 1);
-    gEffect2DModel = theModel;
-    theModel->Reference();
-    theModel->GetVertexArray(0)->SetPoint(thePoint1, 0);
-    theModel->GetVertexArray(0)->SetPoint(thePoint2, 1);
-    theModel->GetVertexArray(0)->SetPoint(thePoint3, 2);
-    theModel->GetVertexArray(0)->SetPoint(thePoint4, 3);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 0);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 1);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 2);
-    theModel->GetVertexArray(0)->SetNormal(theNormal, 3);
-    theModel->GetVertexArray(0)->SetColor(theColor, 0);
-    theModel->GetVertexArray(0)->SetColor(theColor, 1);
-    theModel->GetVertexArray(0)->SetColor(theColor, 2);
-    theModel->GetVertexArray(0)->SetColor(theColor, 3);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 0);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 1);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 2);
-    theModel->GetVertexArray(0)->SetOpacity(1.0f, 3);
-    theModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
-    theModel->GetMaterial(0)->SetPolygonRangeLength(2, 0);
-    theModel->GetMaterial(0)->SetVertexStartingIndex(0);
-    theModel->GetMaterial(0)->SetVertexRangeLength(4);
-    theModel->GetPolygonArray(0)->SetVertexIndex1(0, 0);
-    theModel->GetPolygonArray(0)->SetVertexIndex2(0, 1);
-    theModel->GetPolygonArray(0)->SetVertexIndex3(0, 2);
-    theModel->GetPolygonArray(0)->SetVertexIndex1(1, 2);
-    theModel->GetPolygonArray(0)->SetVertexIndex2(1, 1);
-    theModel->GetPolygonArray(0)->SetVertexIndex3(1, 3);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, 0);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, 1);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, 2);
-    theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate4, 3);
-    theModel->ComputeBoundingVolumes();
+    gEffect2DModel = CreatePlaneModel(true);
 }
 
 // FUNCTION: EXE 0x502e1b

@@ -1053,6 +1053,12 @@ void ee_gfx_beam_stretch(EeGfxBeamVertex *vertices,
 /// `DrawPass6`'s stretch of a sub-model's internal y.
 float ee_gfx_beam_stretch_y(float y, float length);
 
+/// `CreateHorizontalPlaneModel`'s (`standing` false) or `CreateStandingPlaneModel`'s mesh.
+///
+/// # Safety
+/// `vertices` holds 4 writable records and `triangles` 2.
+void ee_gfx_effect_plane(bool standing, EeGfxMeshVertex *vertices, EeGfxMeshTriangle *triangles);
+
 }  // extern "C"
 
 #endif  // EE_RUST_EE_GFX_H
