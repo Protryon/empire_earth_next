@@ -6,6 +6,11 @@
 //!
 //! `DBProxyOp`'s statements are [`DbProxy`], the base of the DB proxy ops derived here.
 //!
+//! Round 8 widened the ABI for the ops of `reqops.rs`: an op may refuse to run for the request's auth type (the
+//! contest call without one), ask for the certificate's user id and the tick count before its request and reply
+//! ([`ee_won_reqop_set_env`]), turn the base's auth2 flag off, and hand its results out by number
+//! ([`ee_won_reqop_bytes`], [`ee_won_reqop_num`]: the narrow accessors its callers read).
+//!
 //! A reply the original read past its end threw `ReadBufferException` out of `CheckResponse` (the base's exchange
 //! catches it): that is [`Checked::Cut`], which the C++ throws after the call returned. An invalid header was
 //! `InvalidReplyHeader()` (the base's server error, then the next server): [`Checked::InvalidHeader`], which the C++
@@ -40,8 +45,22 @@ pub trait RequestOp: Send {
     fn length_field_size(&self) -> u8 {
         4
     }
+    /// the `mUseAuth2` the op's constructor set
+    fn use_auth2(&self) -> bool {
+        true
+    }
+    /// the status the op's `RunHook` finished with before the base's ran, for the request's `mAuthType`
+    fn refuses(&self, _auth_type: i32) -> Option<i32> {
+        None
+    }
     /// the op's `RunHook` before the base's (the request data of the DB proxy ops)
     fn run_hook(&mut self) {}
+    /// whether `GetNextRequest` reads the auth context's certificate (its user id)
+    fn needs_user_id(&self) -> bool {
+        false
+    }
+    /// the certificate's user id (when asked for) and `WONTickCount()`, before a request and before a reply
+    fn set_env(&mut self, _user_id: u32, _now: u32) {}
     /// `GetNextRequest`: the status and the request (`None` leaves `mRequest`)
     fn next_request(&mut self, field_size: u8) -> (i32, Option<Vec<u8>>);
     /// `CheckResponse` over `mResponse`
@@ -50,6 +69,14 @@ pub trait RequestOp: Send {
     fn reset(&mut self) {}
     /// the op's members after the exchange, as the drivers print them (`tests/won/won_adminop_test.cpp`)
     fn describe(&self) -> String;
+    /// a result's bytes by the op's number (`None`: no such result, or NULL)
+    fn bytes(&self, _which: i32) -> Option<Vec<u8>> {
+        None
+    }
+    /// a result's number by the op's number (0: none)
+    fn num(&self, _which: i32) -> i64 {
+        0
+    }
 }
 
 /// A Rust op held by a C++ `ServerRequestOp`.
@@ -179,13 +206,76 @@ pub unsafe extern "C" fn ee_won_reqop_length_field_size(op: *const EeWonReqOp) -
     unsafe { (*op).op.length_field_size() }
 }
 
-/// The op's `RunHook` statements before the base's.
+/// The `mUseAuth2` the op asks for.
 ///
 /// # Safety
 /// `op` is a live op.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_reqop_run_hook(op: *mut EeWonReqOp) {
-    unsafe { (*op).op.run_hook() }
+pub unsafe extern "C" fn ee_won_reqop_use_auth2(op: *const EeWonReqOp) -> bool {
+    unsafe { (*op).op.use_auth2() }
+}
+
+/// The op's `RunHook` statements before the base's, for the request's `mAuthType`: false when the op finished
+/// instead (`*finish` the status to finish with; the base's `RunHook` does not run).
+///
+/// # Safety
+/// `op` is a live op; `finish` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_run_hook(op: *mut EeWonReqOp, auth_type: i32, finish: *mut i32) -> bool {
+    let op = unsafe { &mut (*op).op };
+    if let Some(s) = op.refuses(auth_type) {
+        unsafe { *finish = s };
+        return false;
+    }
+    op.run_hook();
+    true
+}
+
+/// Whether the op's request reads the certificate's user id (the C++ reads it only then).
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_needs_user_id(op: *const EeWonReqOp) -> bool {
+    unsafe { (*op).op.needs_user_id() }
+}
+
+/// The certificate's user id and `WONTickCount()`, before `GetNextRequest` and before `CheckResponse`.
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_set_env(op: *mut EeWonReqOp, user_id: u32, now: u32) {
+    unsafe { (*op).op.set_env(user_id, now) }
+}
+
+/// A result's bytes (the op's `EE_WON_REQOP_*` number) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_bytes(
+    op: *const EeWonReqOp,
+    which: i32,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+) -> bool {
+    match unsafe { (*op).op.bytes(which) } {
+        Some(b) => {
+            unsafe { sink(context, b.as_ptr(), b.len()) };
+            true
+        }
+        None => false,
+    }
+}
+
+/// A result's number (the op's `EE_WON_REQOP_*` number).
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_num(op: *const EeWonReqOp, which: i32) -> i64 {
+    unsafe { (*op).op.num(which) }
 }
 
 /// `GetNextRequest`: the request into `sink` (when there is one), the status returned.

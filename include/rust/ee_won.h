@@ -756,6 +756,42 @@ constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
 /// throw `ReadBufferException`
 constexpr static const int32_t EE_WON_REQOP_CUT = 2;
 
+/// `ContestCallOp`: the procedure number, whether there is request data, the data
+constexpr static const int32_t EE_WON_REQOPS_CONTEST = 1;
+
+/// `EventReportOp`: the activity type; has-server, server type, logical name (UTF-16 LE), net address; has-client,
+/// name (UTF-16 LE), net address; has-user, user id, name (UTF-16 LE); the detail count, each detail's type, data
+/// type, number, text (UTF-16 LE); the attachment count, each one's description (UTF-16 LE), content type,
+/// has-data, data
+constexpr static const int32_t EE_WON_REQOPS_EVENT = 2;
+
+/// `ReportPatchStatusOp`: product, config, from, to, net address, the patch status
+constexpr static const int32_t EE_WON_REQOPS_PATCH_STATUS = 3;
+
+/// `PingOp`: the length field size, the extended flag
+constexpr static const int32_t EE_WON_REQOPS_PING = 4;
+
+/// the contest's `GetReplyData()` (bytes; none while NULL)
+constexpr static const int32_t EE_WON_REQOP_CONTEST_REPLY = 1;
+
+/// the patch status report's `mReplyData` (bytes; none while NULL)
+constexpr static const int32_t EE_WON_REQOP_PROXY_REPLY = 2;
+
+/// the ping's `mAppName`, `mLogicalName`, `mImage`, `mPorts`, `mRegData`, `mServData` (bytes, `+0` .. `+5`)
+constexpr static const int32_t EE_WON_REQOP_PING_TEXT = 10;
+
+/// the ping's `mLag` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_LAG = 20;
+
+/// the ping's `mVersion` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_VERSION = 21;
+
+/// the ping's `mPID` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_PID = 22;
+
+/// the ping's `mIsAuth` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_IS_AUTH = 23;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -8480,11 +8516,49 @@ void ee_won_reqop_free(EeWonReqOp *op);
 /// `op` is a live op.
 uint8_t ee_won_reqop_length_field_size(const EeWonReqOp *op);
 
-/// The op's `RunHook` statements before the base's.
+/// The `mUseAuth2` the op asks for.
 ///
 /// # Safety
 /// `op` is a live op.
-void ee_won_reqop_run_hook(EeWonReqOp *op);
+bool ee_won_reqop_use_auth2(const EeWonReqOp *op);
+
+/// The op's `RunHook` statements before the base's, for the request's `mAuthType`: false when the op finished
+/// instead (`*finish` the status to finish with; the base's `RunHook` does not run).
+///
+/// # Safety
+/// `op` is a live op; `finish` is writable.
+bool ee_won_reqop_run_hook(EeWonReqOp *op,
+                           int32_t auth_type,
+                           int32_t *finish);
+
+/// Whether the op's request reads the certificate's user id (the C++ reads it only then).
+///
+/// # Safety
+/// `op` is a live op.
+bool ee_won_reqop_needs_user_id(const EeWonReqOp *op);
+
+/// The certificate's user id and `WONTickCount()`, before `GetNextRequest` and before `CheckResponse`.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_reqop_set_env(EeWonReqOp *op,
+                          uint32_t user_id,
+                          uint32_t now);
+
+/// A result's bytes (the op's `EE_WON_REQOP_*` number) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+bool ee_won_reqop_bytes(const EeWonReqOp *op,
+                        int32_t which,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// A result's number (the op's `EE_WON_REQOP_*` number).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_reqop_num(const EeWonReqOp *op, int32_t which);
 
 /// `GetNextRequest`: the request into `sink` (when there is one), the status returned.
 ///
@@ -8515,6 +8589,15 @@ void ee_won_reqop_reset(EeWonReqOp *op);
 /// # Safety
 /// `op` is a live op; `sink` accepts `context`.
 void ee_won_reqop_describe(const EeWonReqOp *op, EeWonByteSink sink, void *context);
+
+/// An op of `kind` (`EE_WON_REQOPS_*`) with its members, for a C++ `ServerRequestOp` to run; NULL for an unknown
+/// kind.
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid.
+EeWonReqOp *ee_won_reqops_new(int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count);
 
 size_t ee_won_resource_count();
 

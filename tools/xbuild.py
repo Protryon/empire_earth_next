@@ -527,6 +527,10 @@ WON_TESTS = {
     # WONInternal's admin ops as whole ops (every op's request and replies), the original's statements against the
     # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_adminop.txt)
     "won_adminop_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    # WONDB's contest call and event report ops, WONMisc's patch status report and WONServer's ping op as whole ops
+    # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
+    # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
+    "won_reqops_test": [],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)

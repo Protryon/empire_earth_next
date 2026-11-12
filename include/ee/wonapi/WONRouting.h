@@ -1781,6 +1781,9 @@ public:
     // an op derived in Rust (ee_won reqop.rs, e.g. ee_won_adminop_new): its RunHook statements, request, reply and
     // Reset are Rust's (the virtuals below when not overridden); the request owns it
     ServerRequestOp(ServerContext*, EeWonReqOp* inRustOp);
+    ServerRequestOp(const IPAddr&, EeWonReqOp* inRustOp);
+    // a Rust op's request sent as one datagram on this socket instead (ReportPatchStatusOp's SetUDPSocket)
+    void SetUDPSocket(AsyncSocket* inSocket) { this->mUDPSocket = inSocket; }
     const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
     virtual void RunHook();   //2ae390
     virtual void CleanupHook(); //2ae4c0
@@ -1790,6 +1793,7 @@ public:
     virtual void Reset();     //326b60
 protected:
     WONStatus InvalidReplyHeader(); //2ad6a0, protected, 16 bytes; returns 100057
+    void RunDatagram(); // the request without a length field to the first address, then Success
     virtual ~ServerRequestOp(); //2ad110, explicit own-vptr store
 public:
     typedef std::list<IPAddr> AddrList;
@@ -1809,6 +1813,7 @@ public:
     ByteBufferPtr mRequest; //ec
     ByteBufferPtr mResponse; //f0..f4
     EeWonReqOp* mRustOp; // NULL: a C++ derived op (or none)
+    SmartPtr<AsyncSocket> mUDPSocket; // a Rust op's datagram socket (NULL: the exchange)
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.
