@@ -14,7 +14,8 @@
 //!   the start check.
 //! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
-//! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus) and the armor attributes' values.
+//! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
+//!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
 pub mod hud;
 mod hud_ffi;

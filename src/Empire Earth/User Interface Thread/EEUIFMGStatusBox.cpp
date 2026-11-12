@@ -91,7 +91,7 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_rust.h"   // ee_screens_hud_*: the attribute texts (ee_screens hud.rs)
+#include "rust/ee_rust.h"   // ee_screens_hud_*: the attribute texts, Fill's icons and bars, Refresh's numbers (ee_screens hud.rs)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
@@ -225,141 +225,112 @@ EEUIFMGStatusBox::EEUIFMGStatusBox(UIForm* inForm) : mForm(inForm)
         this->mAttributes[j] = -1;
 }
 
+// The selected unit's values the status box shows, for ee_screens hud.rs (`inFill`: whether the owner is friendly
+// to the local player, read only when the class carries or garrisons)
+static void EEStatusBoxView(EEUnit* inUnit, const EEUIFMGStatusBox* inBox, bool inFill, EeScreensHudUnit& outView)
+{
+    memset(&outView, 0, sizeof(outView));
+    EEUnitClass* theClass = inUnit->GetUnitClass();
+    EEUnitClassUpgrade* theStats = inUnit->GetStats();
+    EEUnitClass* theStatsClass = theStats->mUnitClass;
+    outView.category = theClass->mCategory;
+    outView.unit_type = inUnit->mUnitClass->mUnitType;
+    outView.class_hit_points = theClass->mHitPoints;
+    outView.hit_points = inUnit->GetHitPoints();
+    outView.max_hit_points = theStats->mMaxHitPoints;
+    outView.stats_class_hit_points = theStatsClass->mHitPoints;
+    outView.class_attack = theClass->mAttack;
+    outView.stats_attack = theStats->mAttack;
+    outView.stats_class_attack = theStatsClass->mAttack;
+    outView.class_range = theClass->GetRange();
+    outView.stats_range = theStats->mRange;
+    outView.stats_class_range = theStatsClass->GetRange();
+    outView.class_speed = theClass->GetMaxVelocity();
+    outView.stats_speed = theStats->mMaxVelocity;
+    outView.stats_class_speed = theStatsClass->GetMaxVelocity();
+    outView.class_area_effect = theClass->mAreaEffect;
+    outView.stats_area_effect = theStats->mAreaEffect;
+    outView.stats_class_area_effect = theStatsClass->GetAreaEffect();
+    outView.class_repair = theClass->mRepairRate;
+    outView.stats_repair = theStats->mRepairRate;
+    outView.stats_class_repair = theStatsClass->mRepairRate;
+    outView.upgrades_range = theClass->mUpgradesRange == true;
+    outView.upgrades_area_effect = theClass->mUpgradesAreaEffect;
+    outView.upgrades_repair = theClass->mUpgradesRepair;
+    outView.upgrades_armor[0] = theClass->mUpgradesShockArmor;
+    outView.upgrades_armor[1] = theClass->mUpgradesPierceArmor;
+    outView.upgrades_armor[2] = theClass->mUpgradesArrowArmor;
+    outView.upgrades_armor[3] = theClass->mUpgradesGunArmor;
+    outView.upgrades_armor[4] = theClass->mUpgradesMissileArmor;
+    outView.upgrades_armor[5] = theClass->mUpgradesLaserArmor;
+    outView.class_transport = theClass->mTransportCapacity;
+    outView.class_flight_time = theClass->mFlightTime;
+    outView.class_garrison = theClass->mGarrisonCapacity;
+    if (inFill && (theClass->mTransportCapacity > 0 || theClass->mGarrisonCapacity > 0))
+        outView.friendly = gWorld.GetCurrentPlayer() == inUnit->mPlayer ||
+                           inUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID] == 0;
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    if (theUnit != NULL) {
+        outView.complex = true;
+        outView.complex_class_transport = theUnit->GetUnitClass()->mTransportCapacity;
+        outView.complex_class_garrison = theUnit->GetUnitClass()->mGarrisonCapacity;
+        outView.cargo_room = theUnit->mCargoRoom;
+        outView.flight_time = theUnit->mFlightTime;
+        outView.stats_flight_time = theStats->mFlightTime;
+        outView.stats_class_flight_time = theStatsClass->mFlightTime;
+        outView.power = theUnit->mPower;
+        outView.stats_power = theStats->mPower;
+        outView.stats_class_power = theStatsClass->mPower;
+        outView.garrison_count = theUnit->mGarrisonCount;
+    }
+    outView.two_bars = inBox->mCA8 != NULL && inBox->mCAC != NULL;
+    outView.resource_type = inUnit->mResourceType;
+    outView.resource_amount = inUnit->mResourceAmount;
+    outView.carry_amount = theStats->mCarryAmount;
+    outView.using_carbon = gUsingCarbon;
+}
+
+// Shows one attribute icon of a Fill plan (ee_screens hud.rs EeScreensHudIcon): its bitmaps stretched over the
+// plan's icon rectangle, its improvement, no queued count, its cost label
+static void EEStatusBoxShowIcon(EEUIFMGStatusBox* inBox, const EeScreensHudIcon& inIcon)
+{
+    inBox->mAttributes[inIcon.slot] = inIcon.icon;
+    if (inIcon.icon == -1)
+        return;
+    EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(inBox->mIcons[inIcon.icon]);
+    EEUIFMGAttribute* theRectangle = static_cast<EEUIFMGAttribute*>(inBox->mIcons[inIcon.rect_icon]);
+    EEUIFMGIconBitmap& theNormal = EEUIFMGStatusBox::sIconBitmaps[inIcon.bitmap];
+    EEUIFMGIconBitmap& thePressed = EEUIFMGStatusBox::sIconBitmaps[inIcon.bitmap + 1];
+    theNormal.mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(), theRectangle->GetIconRectangle(),
+                                                      theNormal.mRectangle, theIcon->GetScreenIndex());
+    thePressed.mBitmap->ComputeStretchedCoordsAndScale(theRectangle->GetIconRectangle(), theRectangle->GetIconRectangle(),
+                                                       thePressed.mRectangle, theIcon->GetScreenIndex());
+    theIcon->SetNormalBitmap(theNormal.mBitmap);
+    theIcon->SetPressedBitmap(thePressed.mBitmap);
+    theIcon->mAttribute = inIcon.improvement;
+    if (theIcon->mNumQueued != 0)
+        theIcon->SetDirty(true);
+    theIcon->mNumQueued = 0;
+    theIcon->SetDisplayMode(kDisplayModeShown);
+    theIcon->mCostLabel = static_cast<UITextLabel*>(inBox->mLabels[inIcon.icon]);
+}
+
 // FUNCTION: EXE 0x66ae16
 // Shows the selected unit's improvable armor kinds (shock, pierce, arrow, gun, missile, laser) after the other
 // attribute buttons, each with its icon and cost label
 void EEUIFMGStatusBox::FillArmorAttributes(EEUnit* inUnit)
 {
+    // the icons are Rust's (ee_screens hud.rs armor_icons)
     long theCount = this->mAttributeCount;
     this->mArmorAttributeCount = theCount;
     if (inUnit != NULL) {
-        EEUnitClass* theClass = inUnit->GetUnitClass();
-        if (theClass->mUpgradesShockArmor) {
-            this->mAttributes[4] = theCount;
-            EEUIFMGStatusBox::sIconBitmaps[8].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[8].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[9].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[9].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[8].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[9].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementShockArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[4] = -1;
-        }
-        if (theClass->mUpgradesPierceArmor) {
-            this->mAttributes[5] = this->mArmorAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[10].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[10].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[11].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[11].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[10].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[11].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementPierceArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[5] = -1;
-        }
-        if (theClass->mUpgradesArrowArmor) {
-            this->mAttributes[6] = this->mArmorAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[12].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[12].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[13].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[13].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[12].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[13].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementArrowArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[6] = -1;
-        }
-        if (theClass->mUpgradesGunArmor) {
-            this->mAttributes[7] = this->mArmorAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[14].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[14].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[15].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[15].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[14].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[15].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementGunArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[7] = -1;
-        }
-        if (theClass->mUpgradesMissileArmor) {
-            this->mAttributes[8] = this->mArmorAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[16].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[16].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[17].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[17].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[16].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[17].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementMissileArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[8] = -1;
-        }
-        if (theClass->mUpgradesLaserArmor) {
-            this->mAttributes[9] = this->mArmorAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[18].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[18].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[19].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(), static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[19].mRectangle, this->mIcons[this->mArmorAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[18].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[19].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mAttribute = kImprovementLaserArmor;
-            EEUIFMGAttribute* theButton = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount]);
-            if (theButton->mNumQueued != 0)
-                theButton->SetDirty(true);
-            theButton->mNumQueued = 0;
-            this->mIcons[this->mArmorAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mArmorAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mArmorAttributeCount]);
-            this->mArmorAttributeCount++;
-        } else {
-            this->mAttributes[9] = -1;
-        }
+        EeScreensHudUnit theView;
+        EEStatusBoxView(inUnit, this, false, theView);
+        EeScreensHudIcons theIcons;
+        ee_screens_hud_armor_icons(theCount, theView.upgrades_armor, &theIcons);
+        for (unsigned long i = 0; i < theIcons.count; i++)
+            EEStatusBoxShowIcon(this, theIcons.icons[i]);
+        this->mArmorAttributeCount = theIcons.next;
     }
     this->mAttributeCount = this->mArmorAttributeCount;
     if (static_cast<unsigned long>(this->mAttributeCount) > 9)
@@ -433,204 +404,60 @@ void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
             static_cast<UITextLabel*>(this->mC94)->SetText(theText);
             this->mC94->SetDisplayMode(kDisplayModeShown);
         }
-        if (theClass->mHitPoints > 0 && theClass->mCategory != kUnitCategoryResource) {
+        // the icons and bars are Rust's (ee_screens hud.rs fill_icons, transport_icon, fill_bars)
+        EeScreensHudUnit theView;
+        EEStatusBoxView(inUnit, this, true, theView);
+        EeScreensHudFillBars theBars;
+        ee_screens_hud_fill_bars(&theView, &theBars);
+        if (theBars.hit_points) {
             static_cast<EEUIFMGStatusBar*>(this->mC84)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[24].mBitmap, EEUIFMGStatusBox::sIconBitmaps[24].mRectangle);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetRange(0, theStats->mMaxHitPoints);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(inUnit->mHitPoints);
+            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetRange(0, theView.max_hit_points);
+            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(theView.hit_points);
             static_cast<EEUIFMGStatusBar*>(this->mC84)->SetDirty(true);
             static_cast<EEUIFMGStatusBar*>(this->mC84)->mAttribute = kImprovementHitPoints;
             static_cast<EEUIFMGStatusBar*>(this->mC84)->SetDisplayMode(kDisplayModeShown);
         }
-        if (theClass->mAttack > 0 && theClass->mCategory != kUnitCategoryNavalCitizen) {
-            this->mAttributes[0] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[0].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[0].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[0].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[1].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementAttack;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[0] = -1;
-        }
-        if (theClass->mUpgradesRange == true) {
-            this->mAttributes[1] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[2].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[2].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[3].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[3].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[2].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[3].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementRange;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[1] = -1;
-        }
-        if (theClass->mMaxVelocity > 0.0f) {
-            this->mAttributes[2] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[4].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[4].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[5].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[5].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[4].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[5].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementSpeed;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[2] = -1;
-        }
-        if (theClass->mUpgradesAreaEffect) {
-            this->mAttributes[3] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[6].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[6].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[7].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[7].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[6].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[7].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementAreaEffect;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[3] = -1;
-        }
-        if (theClass->mUpgradesRepair) {
-            this->mAttributes[10] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[20].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[20].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[21].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[21].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[20].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[21].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementRepair;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[10] = -1;
-        }
+        EeScreensHudIcons theIcons;
+        ee_screens_hud_fill_icons(&theView, &theIcons);
+        for (unsigned long i = 0; i < theIcons.count; i++)
+            EEStatusBoxShowIcon(this, theIcons.icons[i]);
+        this->mAttributeCount = theIcons.next;
         this->mAttributes[11] = -1;
         this->FillArmorAttributes(inUnit);
-        if (theClass->mTransportCapacity > 0 &&
-            (gWorld.GetCurrentPlayer() == inUnit->mPlayer ||
-             inUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID] == 0)) {
-            this->mAttributes[12] = this->mAttributeCount;
-            EEUIFMGStatusBox::sIconBitmaps[46].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[46].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[47].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[47].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[46].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[47].mBitmap);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementTransport;
-            EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
-            if (theIcon->mNumQueued != 0)
-                theIcon->SetDirty(true);
-            theIcon->mNumQueued = 0;
-            this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
-            static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
-            this->mAttributeCount++;
-        } else {
-            this->mAttributes[12] = -1;
-        }
+        ee_screens_hud_transport_icon(this->mAttributeCount, &theView, &theIcons);
+        EEStatusBoxShowIcon(this, theIcons.icons[0]);
+        this->mAttributeCount = theIcons.next;
         this->mC8C->SetDisplayMode(kDisplayModeShown);
         static_cast<EEUICPortrait*>(this->mC8C)->SetUnit(inUnit);
-        EEComplexUnit* theUnit = inUnit->mComplexUnit;
-        if (theUnit != NULL) {
-            if (theClass->mFlightTime > 0 && theClass->mCategory != kUnitCategoryAirAnimal) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[26].mBitmap, EEUIFMGStatusBox::sIconBitmaps[26].mRectangle);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor3);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theStats->mFlightTime / 1000);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mFlightTime / 1000);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementFlightTimeOrPower;
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = true;
-            } else if (theStats->mPower > 0) {
-                EEUIFMGStatusBar* theBar;
-                if (this->mCA8 != NULL && this->mCAC != NULL) {
-                    if (inUnit->mUnitClass->mUnitType == kUnitTypeArch03SimpleBowmanFlaming || inUnit->mUnitClass->mUnitType == kUnitTypeArch05CompositeBowFlaming ||
-                        inUnit->mUnitClass->mUnitType == kUnitTypeArch06LongBowFlaming || inUnit->mUnitClass->mUnitType == kUnitTypeCav07RoyalCuirassierSword)
-                        theBar = static_cast<EEUIFMGStatusBar*>(this->mCAC);
-                    else if (theClass->mGarrisonCapacity > 0 &&
-                             (gWorld.GetCurrentPlayer() == inUnit->mPlayer ||
-                              inUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID] == 0))
-                        theBar = static_cast<EEUIFMGStatusBar*>(this->mCA8);
-                    else
-                        theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
-                } else {
-                    theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
-                }
-                theBar->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[42].mBitmap, EEUIFMGStatusBox::sIconBitmaps[42].mRectangle);
-                theBar->mBar->SetStatusBarColor(kStatusColor1);
-                theBar->mBar->SetRange(0, theStats->mPower);
-                theBar->mBar->SetCurrentRangeValue(theUnit->mPower);
-                theBar->SetAttribute(kImprovementFlightTimeOrPower);
-                theBar->SetDisplayMode(kDisplayModeShown);
-                theBar->mEnabled = true;
-                theBar->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
-            }
-            if (theClass->mGarrisonCapacity > 0 &&
-                (gWorld.GetCurrentPlayer() == inUnit->mPlayer ||
-                 inUnit->mPlayer->mEnemies[gWorld.GetCurrentPlayer()->mPlayerID] == 0)) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[44].mBitmap, EEUIFMGStatusBox::sIconBitmaps[44].mRectangle);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor2);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theClass->mGarrisonCapacity);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mGarrisonCount);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementTransport;
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = false;
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
-            }
+        if (theBars.kind == 1) {
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[26].mBitmap, EEUIFMGStatusBox::sIconBitmaps[26].mRectangle);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor3);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theBars.max);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theBars.current);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementFlightTimeOrPower;
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = true;
+        } else if (theBars.kind == 2) {
+            UIControl* theBars3[3] = {this->mC88, this->mCA8, this->mCAC};
+            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBars3[theBars.bar]);
+            theBar->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[42].mBitmap, EEUIFMGStatusBox::sIconBitmaps[42].mRectangle);
+            theBar->mBar->SetStatusBarColor(kStatusColor1);
+            theBar->mBar->SetRange(0, theBars.max);
+            theBar->mBar->SetCurrentRangeValue(theBars.current);
+            theBar->SetAttribute(kImprovementFlightTimeOrPower);
+            theBar->SetDisplayMode(kDisplayModeShown);
+            theBar->mEnabled = true;
+            theBar->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
+        }
+        if (theBars.garrison) {
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetIconBitmap(EEUIFMGStatusBox::sIconBitmaps[44].mBitmap, EEUIFMGStatusBox::sIconBitmaps[44].mRectangle);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetStatusBarColor(kStatusColor2);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theBars.garrison_max);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theBars.garrison_current);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mAttribute = kImprovementTransport;
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetDisplayMode(kDisplayModeShown);
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->mEnabled = false;
+            static_cast<EEUIFMGStatusBar*>(this->mC88)->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
         }
         if (static_cast<unsigned long>(this->mAttributeCount) > 9)
 
@@ -875,215 +702,100 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
             static_cast<UITextLabel*>(this->mC94)->SetText(theText);
     }
     this->UpdateArmorTexts(inUnit);
-    if (theClass->mHitPoints > 0) {
-        sprintf(theText, "%ld/%ld", (long)((float)inUnit->GetHitPoints() + 0.5f),
-                (long)((float)theStats->mMaxHitPoints + 0.5f));
-        if (theText != static_cast<EEUIFMGStatusBar*>(this->mC84)->GetValueText()) {
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mValue->SetText(theText);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(inUnit->GetHitPoints());
+    // the numbers are Rust's (ee_screens hud.rs refresh); the C++ formats them and keeps the controls
+    EeScreensHudUnit theView;
+    EEStatusBoxView(inUnit, this, false, theView);
+    EeScreensHudRefresh thePlan;
+    ee_screens_hud_refresh(&theView, &thePlan);
+    if (thePlan.hit_points) {
+        EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(this->mC84);
+        sprintf(theText, "%ld/%ld", thePlan.hit_points_text[0], thePlan.hit_points_text[1]);
+        if (theText != theBar->GetValueText()) {
+            theBar->mValue->SetText(theText);
+            theBar->mBar->SetCurrentRangeValue(theView.hit_points);
         }
-        float theBonus = theStats->mMaxHitPoints - theStats->mUnitClass->mHitPoints;
-        sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
-        if (theText != static_cast<EEUIFMGStatusBar*>(this->mC84)->GetValue2Text()) {
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mValue2->SetText(theText);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetRange(0, theStats->mMaxHitPoints);
-            static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(inUnit->GetHitPoints());
+        sprintf(theText, "+ %ld", thePlan.hit_points_bonus);
+        if (theText != theBar->GetValue2Text()) {
+            theBar->mValue2->SetText(theText);
+            theBar->mBar->SetRange(0, theView.max_hit_points);
+            theBar->mBar->SetCurrentRangeValue(theView.hit_points);
         }
-        static_cast<EEUIBUpgrade*>(this->mC84)->UpdateCost(theText);
+        theBar->UpdateCost(theText);
     }
+    // attack, range, speed, area effect, repair
+    static const long kSlots[5] = {0, 1, 2, 3, 10};
     long theIndex;
-    if ((theIndex = this->mAttributes[0]) != -1) {
-        float theAdjustment = theStats->GetAttack() < (float)theClass->mAttack ? -0.0001f : 0.0001f;
-        float theValue = (theStats->mAttack - (float)theStats->mUnitClass->mAttack) + theAdjustment;
-        this->GetAttributeText((float)theClass->mAttack, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[1]) != -1) {
-        float theAdjustment = theStats->GetRange() < theClass->GetRange() ? -0.0001f : 0.0001f;
-        float theValue = (theStats->mRange - theStats->mUnitClass->GetRange()) + theAdjustment;
-        this->GetAttributeText(theClass->GetRange(), theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[2]) != -1) {
-        float theAdjustment = theStats->GetMaxVelocity() < theClass->GetMaxVelocity() ? -0.0001f : 0.0001f;
-        float theValue = (theStats->mMaxVelocity - theStats->mUnitClass->GetMaxVelocity()) * 20.0f + theAdjustment;
-        this->GetAttributeText(theClass->GetMaxVelocity() * 20.0f + 0.0001f, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[3]) != -1) {
-        float theAdjustment = theStats->GetAreaEffect() < theClass->GetAreaEffect() ? -0.0001f : 0.0001f;
-        float theValue = (theStats->mAreaEffect - theStats->mUnitClass->GetAreaEffect()) * 10.0f + theAdjustment;
-        this->GetAttributeText(theClass->mAreaEffect * 10.0f + 0.0001f, theValue, theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    if ((theIndex = this->mAttributes[10]) != -1) {
-        this->GetAttributeText((float)theClass->mRepairRate, (float)(theStats->mRepairRate - theStats->mUnitClass->mRepairRate), theText);
-        static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
-    }
-    static_cast<EEUICPortrait*>(this->mC8C)->Update();
-    EEComplexUnit* theUnit = inUnit->mComplexUnit;
-    if (theUnit != NULL) {
-        if ((theIndex = this->mAttributes[12]) != -1) {
-            unsigned long theAmount = theUnit->GetUnitClass()->mTransportCapacity - theUnit->mCargoRoom;
-            sprintf(theText, "%ld/%ld", (long)((float)theAmount + 0.5f), (long)((float)theClass->mTransportCapacity + 0.5f));
+    for (unsigned long i = 0; i < 5; i++) {
+        if ((theIndex = this->mAttributes[kSlots[i]]) != -1) {
+            sprintf(theText, "%ld+%ld", thePlan.attributes[i][0], thePlan.attributes[i][1]);
             static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
         }
-        if (theClass->mFlightTime > 0) {
-            sprintf(theText, "%ld/%ld", (long)((float)(theUnit->mFlightTime / 1000) + 0.5f),
-                    (long)((float)(theStats->mFlightTime / 1000) + 0.5f));
-            if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValueText()) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue->SetText(theText);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mFlightTime / 1000);
-            }
-            float theBonus = (theStats->mFlightTime - theStats->mUnitClass->mFlightTime) / 1000;
-            sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
-            if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValue2Text()) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue2->SetText(theText);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theStats->mFlightTime / 1000);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mFlightTime / 1000);
-            }
-            static_cast<EEUIBUpgrade*>(this->mC88)->UpdateCost(theText);
-        } else if (theStats->mPower > 0) {
-            sprintf(theText, "%ld/%ld", (long)((float)theUnit->mPower + 0.5f),
-                    (long)((float)theStats->mPower + 0.5f));
-            EEUIFMGStatusBar* theBar;
-            if (this->mCA8 != NULL && this->mCAC != NULL) {
-                unsigned long theType = inUnit->mUnitClass->mUnitType;
-                if (theType == kUnitTypeArch03SimpleBowmanFlaming || theType == kUnitTypeArch05CompositeBowFlaming || theType == kUnitTypeArch06LongBowFlaming || theType == kUnitTypeCav07RoyalCuirassierSword)
-                    theBar = static_cast<EEUIFMGStatusBar*>(this->mCAC);
-                else if (theClass->mGarrisonCapacity > 0)
-                    theBar = static_cast<EEUIFMGStatusBar*>(this->mCA8);
-                else
-                    theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
-            } else {
-                theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
-            }
+    }
+    static_cast<EEUICPortrait*>(this->mC8C)->Update();
+    if (theView.complex) {
+        if ((theIndex = this->mAttributes[12]) != -1) {
+            sprintf(theText, "%ld/%ld", thePlan.cargo[0], thePlan.cargo[1]);
+            static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
+        }
+        if (thePlan.kind != 0) {
+            UIControl* theBars[3] = {this->mC88, this->mCA8, this->mCAC};
+            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(theBars[thePlan.bar]);
+            sprintf(theText, "%ld/%ld", thePlan.bar_text[0], thePlan.bar_text[1]);
             if (theText != theBar->GetValueText()) {
                 theBar->mValue->SetText(theText);
-                theBar->mBar->SetCurrentRangeValue(theUnit->mPower);
+                theBar->mBar->SetCurrentRangeValue(thePlan.bar_current);
             }
-            float theBonus = theStats->mPower - theStats->mUnitClass->mPower;
-            sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
+            sprintf(theText, "+ %ld", thePlan.bar_bonus);
             if (theText != theBar->GetValue2Text()) {
                 theBar->mValue2->SetText(theText);
-                theBar->mBar->SetRange(0, theStats->mPower);
-                theBar->mBar->SetCurrentRangeValue(theUnit->mPower);
+                theBar->mBar->SetRange(0, thePlan.bar_max);
+                theBar->mBar->SetCurrentRangeValue(thePlan.bar_current);
             }
             theBar->UpdateCost(theText);
         }
-        if (theClass->mGarrisonCapacity > 0) {
-            sprintf(theText, "%ld/%ld", (long)((float)theUnit->mGarrisonCount + 0.5f),
-                    (long)((float)theUnit->GetUnitClass()->mGarrisonCapacity + 0.5f));
-            if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValueText()) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue->SetText(theText);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mGarrisonCount);
+        if (thePlan.garrison) {
+            EEUIFMGStatusBar* theBar = static_cast<EEUIFMGStatusBar*>(this->mC88);
+            sprintf(theText, "%ld/%ld", thePlan.garrison_text[0], thePlan.garrison_text[1]);
+            if (theText != theBar->GetValueText()) {
+                theBar->mValue->SetText(theText);
+                theBar->mBar->SetCurrentRangeValue(thePlan.garrison_current);
             }
             theText = "";
-            if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValue2Text()) {
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue2->SetText(theText);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theUnit->GetUnitClass()->mGarrisonCapacity);
-                static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mGarrisonCount);
+            if (theText != theBar->GetValue2Text()) {
+                theBar->mValue2->SetText(theText);
+                theBar->mBar->SetRange(0, thePlan.garrison_max);
+                theBar->mBar->SetCurrentRangeValue(thePlan.garrison_current);
             }
-            static_cast<EEUIBUpgrade*>(this->mC88)->UpdateCost(theText);
+            theBar->UpdateCost(theText);
         }
     }
-    if (inUnit->mResourceType != kResourceNone && inUnit->mResourceType != kResourceAny && inUnit->mResourceAmount > 0) {
+    if (thePlan.resource) {
+        EEUIFMGAttribute* theIcon = static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount]);
         if (!this->mIsResourceShown) {
-            static_cast<EEUIBUpgrade*>(this->mIcons[this->mAttributeCount])->mAttribute = kImprovementTransport;
-            static_cast<EEUIBUpgrade*>(this->mIcons[this->mAttributeCount])->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
+            theIcon->mAttribute = kImprovementTransport;
+            theIcon->mCostLabel = static_cast<UITextLabel*>(this->mLabels[this->mAttributeCount]);
             this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
             this->mLabels[this->mAttributeCount]->SetDisplayMode(kDisplayModeShown);
             this->mIsResourceShown = true;
         }
-        switch (inUnit->mResourceType) {
-        case kResourceFood: {
-            long theBitmap = 34;
+        long theBitmap = thePlan.resource_bitmap;
+        if (theBitmap != -1) {
             EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
+                theIcon->GetIconRectangle(), theIcon->GetIconRectangle(), EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle,
+                theIcon->GetScreenIndex());
             EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-            break;
+                theIcon->GetIconRectangle(), theIcon->GetIconRectangle(),
+                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, theIcon->GetScreenIndex());
+            if (theIcon->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
+                theIcon->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
+            if (theIcon->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
+                theIcon->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
         }
-        case kResourceWood: {
-            long theBitmap = 32;
-            if (gUsingCarbon)
-                theBitmap = 48;
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-            break;
-        }
-        case kResourceStone: {
-            long theBitmap = 28;
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-            break;
-        }
-        case kResourceGold: {
-            long theBitmap = 30;
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-            break;
-        }
-        case kResourceIron: {
-            long theBitmap = 36;
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap->ComputeStretchedCoordsAndScale(
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetIconRectangle(),
-                EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mRectangle, this->mIcons[this->mAttributeCount]->GetScreenIndex());
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetNormalBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetNormalBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap].mBitmap);
-            if (static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->GetPressedBitmap() != EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap)
-                static_cast<EEUIFMGAttribute*>(this->mIcons[this->mAttributeCount])->SetPressedBitmap(EEUIFMGStatusBox::sIconBitmaps[theBitmap + 1].mBitmap);
-            break;
-        }
-        }
-        if (inUnit->GetUnitClass()->mCategory == kUnitCategoryLandCitizen || inUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
-            sprintf(theText, "%ld/%ld", (long)((float)inUnit->mResourceAmount + 0.5f), (long)((float)theStats->mCarryAmount + 0.5f));
+        if (thePlan.resource_pair)
+            sprintf(theText, "%ld/%ld", thePlan.resource_text[0], thePlan.resource_text[1]);
         else
-            sprintf(theText, "%ld", inUnit->mResourceAmount.Get());
-        static_cast<EEUIBUpgrade*>(this->mIcons[this->mAttributeCount])->UpdateCost(theText);
+            sprintf(theText, "%ld", thePlan.resource_text[0]);
+        theIcon->UpdateCost(theText);
     } else if (this->mIsResourceShown) {
         this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);
         this->mLabels[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);

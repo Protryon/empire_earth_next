@@ -6122,6 +6122,126 @@ struct EeOfPicture {
   EeOfBytes bgra;
 };
 
+/// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
+/// (`theStats`), the stats' own class (`theStats->mUnitClass`: an upgraded unit's stats keep their class), the unit
+/// and its complex unit. The C++ reads them under the world's read lock and hands them over.
+struct EeScreensHudUnit {
+  unsigned long category;
+  unsigned long unit_type;
+  /// Hit points: the class's, the unit's, the stats' maximum, the stats' class's.
+  long class_hit_points;
+  long hit_points;
+  long max_hit_points;
+  long stats_class_hit_points;
+  /// Attack: the class's (a `long`), the stats' (a `float`), the stats' class's.
+  long class_attack;
+  float stats_attack;
+  long stats_class_attack;
+  float class_range;
+  float stats_range;
+  float stats_class_range;
+  float class_speed;
+  float stats_speed;
+  float stats_class_speed;
+  float class_area_effect;
+  float stats_area_effect;
+  float stats_class_area_effect;
+  long class_repair;
+  long stats_repair;
+  long stats_class_repair;
+  /// The class's upgrade flags: range, area effect, repair, then the armor kinds in `mAttributes[4..9]`' order
+  /// (shock, pierce, arrow, gun, missile, laser).
+  bool upgrades_range;
+  bool upgrades_area_effect;
+  bool upgrades_repair;
+  bool upgrades_armor[6];
+  long class_transport;
+  long class_flight_time;
+  long class_garrison;
+  /// The unit's owner is the local player or not at war with it (read only when the class carries or garrisons).
+  bool friendly;
+  /// The unit is a complex unit: the rest is its (zero otherwise).
+  bool complex;
+  long complex_class_transport;
+  long complex_class_garrison;
+  long cargo_room;
+  long flight_time;
+  long stats_flight_time;
+  long stats_class_flight_time;
+  long power;
+  long stats_power;
+  long stats_class_power;
+  long garrison_count;
+  /// The box has its third and fourth bars (controls 0x33 and 0x32).
+  bool two_bars;
+  unsigned long resource_type;
+  long resource_amount;
+  long carry_amount;
+  /// `gUsingCarbon`: the wood icon's variant.
+  bool using_carbon;
+};
+
+/// One attribute icon `Fill` shows: `mAttributes[slot] = icon` (-1: not shown, nothing else done), the icon's
+/// bitmaps `bitmap` and `bitmap + 1` (`sIconBitmaps`) stretched over the icon rectangle of `rect_icon` (the armor
+/// icons all take the first armor icon's, as the original), and its improvement.
+struct EeScreensHudIcon {
+  uint32_t slot;
+  long icon;
+  long rect_icon;
+  uint32_t bitmap;
+  long improvement;
+};
+
+/// A group of attribute icons in the order the C++ shows them; `next` the next free icon after them.
+struct EeScreensHudIcons {
+  uint32_t count;
+  long next;
+  EeScreensHudIcon icons[6];
+};
+
+/// The bars `Fill` sets up: the hit points bar, the first complex bar (flight time on the second bar, or power on
+/// the bar [`power_bar`] picks) and the garrison bar (the second bar), each with its range and current value.
+struct EeScreensHudFillBars {
+  bool hit_points;
+  /// 0 none, 1 flight time, 2 power.
+  uint32_t kind;
+  /// 0 the second bar (control 0x1f), 1 the third (0x33), 2 the fourth (0x32).
+  uint32_t bar;
+  long max;
+  long current;
+  bool garrison;
+  long garrison_max;
+  long garrison_current;
+};
+
+/// What `Refresh` shows: each text's numbers (the C++ formats them: "%ld/%ld", "+ %ld", "%ld+%ld", "%ld") and
+/// each bar's range and current value.
+struct EeScreensHudRefresh {
+  bool hit_points;
+  long hit_points_text[2];
+  long hit_points_bonus;
+  /// The attack, range, speed, area effect and repair icons' "base+bonus".
+  long attributes[5][2];
+  long cargo[2];
+  /// 0 none, 1 flight time (the second bar), 2 power (on `bar`, as [`power_bar`]).
+  uint32_t kind;
+  uint32_t bar;
+  long bar_text[2];
+  long bar_bonus;
+  long bar_max;
+  long bar_current;
+  bool garrison;
+  long garrison_text[2];
+  long garrison_max;
+  long garrison_current;
+  /// The carried resource: shown, its icon's bitmap (-1: the icon left as it is), "%ld/%ld" of the amount and
+  /// the capacity (a citizen) or "%ld" of the amount.
+  bool resource;
+  long resource_bitmap;
+  bool resource_pair;
+  long resource_text[2];
+};
+
 /// A slot of the lobby as the rows read it (`EEGameOptionsPlayer`).
 struct EeScreensLobbySlot {
   /// `mType`: 0 computer, 1 human, 2 observer, 3 open, 4 closed.
@@ -13723,6 +13843,26 @@ void ee_screens_hud_armor_attribute(float stat,
                                     long stats_class_base,
                                     float *out_base,
                                     float *out_bonus);
+
+/// `Fill`'s first attribute icons (attack, range, speed, area effect, repair) from icon 0.
+void ee_screens_hud_fill_icons(const EeScreensHudUnit *unit, EeScreensHudIcons *out);
+
+/// `FillArmorAttributes`' icons from icon `start`; `upgrades` the six armor flags (shock, pierce, arrow, gun,
+/// missile, laser).
+void ee_screens_hud_armor_icons(long start,
+                                const bool *upgrades,
+                                EeScreensHudIcons *out);
+
+/// `Fill`'s transport icon at icon `start` (one entry, its icon -1 when not shown).
+void ee_screens_hud_transport_icon(long start,
+                                   const EeScreensHudUnit *unit,
+                                   EeScreensHudIcons *out);
+
+/// `Fill`'s bars.
+void ee_screens_hud_fill_bars(const EeScreensHudUnit *unit, EeScreensHudFillBars *out);
+
+/// `Refresh`'s numbers and bars.
+void ee_screens_hud_refresh(const EeScreensHudUnit *unit, EeScreensHudRefresh *out);
 
 /// `PlayerTypeFromMenu`.
 long ee_screens_lobby_type_from_menu(unsigned long selection, long menu);
