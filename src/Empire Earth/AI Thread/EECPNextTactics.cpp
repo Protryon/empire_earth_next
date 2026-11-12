@@ -301,7 +301,7 @@ static long EECPNextReadyPlaces(EEComputerPlayer* inPlayer, long inResource)
     return thePlaces;
 }
 
-EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer)
+EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer, long inExact)
 {
     if (inResource < 0 || inResource >= kNextResources || inCount < 0 || inCount > 1000
         || (inPrefer != kNextPreferPatch && inPrefer != kNextPreferHunt))
@@ -309,6 +309,8 @@ EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long 
             inResource, inCount, inPrefer);
     EECPNextState* theState = EECPNextGetState(inPlayer);
     EECPResourceManager* theResources = inPlayer->mCivilizationManager->mResourceManager;
+    if (inExact >= 0)
+        theState->mExact = inExact != 0 ? 1 : 0;
     unsigned long theWanted = (unsigned long)inCount;
     if (inResource == 0) {
         // the boats fishing count as food gatherers in the assignment: they come on top

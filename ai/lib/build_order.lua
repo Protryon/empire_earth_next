@@ -42,13 +42,13 @@ M.PHASE = {
            barracks_at = 24, settlements = 7},
     -- (from the Stone Age a second town centre: one trains about 2 citizens a minute, the owner's town grew by 3.4 a
     -- minute, 35 to 86 in 15 minutes)
-    stone_start = {citizens = 34, citizens_max = 34, boats = 10, docks = 1, barracks = 1, ranges = 1,
+    stone_start = {citizens = 34, citizens_max = 34, boats = 10, docks = 1, barracks = 2, ranges = 1,
                    army_first = false, towers = 4, town_centers = 2, tc_at = 30,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
-    stone_grow = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 1, ranges = 1,
+    stone_grow = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
                   army_first = false, towers = 7, town_centers = 2, tc_at = 30,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    stone_developed = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 1, ranges = 1,
+    stone_developed = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
                        army_first = false, towers = 7, town_centers = 2, tc_at = 30,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     copper = {citizens = 90, citizens_max = 100, boats = 10, docks = 1, granaries = 3, save_at = 75,

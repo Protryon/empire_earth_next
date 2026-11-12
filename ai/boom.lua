@@ -653,8 +653,9 @@ function M.step(view, memory)
     local epoch_need = {}   -- the advance's whole cost of each resource kept (the gatherers' target, ECON.full_target)
     for _, r in ipairs(V.resources) do
         local want = 0
+        -- (ECON.order: only while saving; the raid force's spearmen, 30 food and 30 iron each, wait on no reserve)
         local kept = not last and not view.advancing and not unreachable
-            and (saving or (age >= 2 and (r == "gold" or r == "iron")))
+            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order))
         if kept then
             want = cost[r]
             epoch_need[r] = cost[r]
@@ -964,8 +965,9 @@ function M.step(view, memory)
         -- (ECON.order) the fill again within the places the claims found: a resource with no room passes its step on
         -- (the engine put the extra on gold: 5 on it against the owner's 2), and the citizens are capped at the work
         if ECON.order then
-            local room = {food = food_cap, stone = mineral_places.stone, gold = mineral_places.gold,
-                          iron = mineral_places.iron}
+            -- (food has no room limit: past the patches the engine hunts what it finds; capped at the patches' 6 a
+            -- Prehistoric town on one patch starved to 20 citizens and was raided out, seed 14)
+            local room = {stone = mineral_places.stone, gold = mineral_places.gold, iron = mineral_places.iron}
             want = BO.fill(phase, land, room)
             memory.order_room = room   -- (the developed test: the mines' places)
             memory.useful = BO.capacity(phase, room)
@@ -981,7 +983,7 @@ function M.step(view, memory)
         memory.boats_seen = view.boats
         for _, r in ipairs(V.resources) do
             if want[r] ~= view.wanted[r] or (r == "food" and boats_changed) then
-                order("gather_" .. r, {verb = "gather", resource = r, n = want[r]})
+                order("gather_" .. r, {verb = "gather", resource = r, n = want[r], exact = ECON.order and 1 or nil})
             end
         end
         memory.want = want
@@ -1128,13 +1130,11 @@ function M.step(view, memory)
         -- the town grows or a threat comes
         local barracks = V.buildings(view, "b_barracks")
         local ranges = V.buildings(view, "b_archery_range")
-        if hold then
-            -- (nothing: the dock and the boats first)
-        elseif (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
+        if (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
         elseif age >= 2 and V.cost(view, "b_archery_range") ~= nil and not going_up(barracks)
                 and not going_up(ranges) then
-            if plan.army_first and V.total(barracks) < plan.barracks then
+            if (plan.army_first or ECON.order) and V.total(barracks) < plan.barracks then
                 order("barracks", {verb = "build", type = "b_barracks", near = "town"})   -- the army's second barracks
             elseif V.total(ranges) < 1 and plan.ranges > 0 then
                 order("range", {verb = "build", type = "b_archery_range", near = "town"})
