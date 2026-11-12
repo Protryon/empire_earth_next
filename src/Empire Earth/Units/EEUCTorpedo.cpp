@@ -33,35 +33,18 @@
 // true
 bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
 {
+    // the test is ee_combat's torpedo_ground (impact.rs)
     GE3DPoint thePosition;
-    GE3DPoint theTarget;
-    bool theResult = false;
+    EeCombatImpactIn in = {};
+    in.kind = EE_COMBAT_IMPACT_TORPEDO_GROUND;
     inUnit->GetPosition(thePosition);
-    ::gWorld.mMap->GetGroundPoint(thePosition, theTarget);
-    // TEST ONLY (the CBGI capture)
-    EECombatImpactRecordIn theCapIn = {};
-    EECombatImpactRecordOut theCapOut = {};
-    theCapIn.kind = 4;
-    theCapIn.position[0] = thePosition.GetX();
-    theCapIn.position[1] = thePosition.GetY();
-    theCapIn.position[2] = thePosition.GetZ();
-    theCapIn.ground_read = 1;
-    theCapIn.ground_z = theTarget.GetZ();
-    theCapOut.stage = 1;
-    if (thePosition.GetZ() <= theTarget.GetZ() && theTarget.GetZ() >= 0.0f) {
-        theCapOut.stage = 2;
-        theCapOut.result = 1;
-        theCapOut.goal = 1;
-        theCapOut.goal_point[0] = theTarget.GetX();
-        theCapOut.goal_point[1] = theTarget.GetY();
-        theCapOut.goal_point[2] = theTarget.GetZ();
-    }
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'G', 'I'), theCapIn, theCapOut);
-    if (thePosition.GetZ() <= theTarget.GetZ() && theTarget.GetZ() >= 0.0f) {
-        inUnit->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
-        theResult = true;
-    }
-    return theResult;
+    in.position[0] = thePosition.GetX();
+    in.position[1] = thePosition.GetY();
+    in.position[2] = thePosition.GetZ();
+    EeCombatImpactOut theOut = EECombatImpact(this, inUnit, in);
+    if (theOut.goal == EE_COMBAT_IMPACT_GOAL_GROUND)
+        inUnit->SetGoal(new EEUGAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
+    return theOut.result != 0;
 }
 
 // FUNCTION: EXE 0x61b1f7

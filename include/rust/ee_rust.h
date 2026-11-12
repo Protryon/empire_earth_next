@@ -140,6 +140,30 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// `EEUCProjectile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_GROUND = 0;
+
+/// `EEUCProjectile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_WATER = 1;
+
+/// `EEUCMissile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_GROUND = 2;
+
+/// `EEUCMissile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_WATER = 3;
+
+/// `EEUCTorpedo::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_TORPEDO_GROUND = 4;
+
+/// No new goal.
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_NONE = 0;
+
+/// An attack-ground goal at the ground point (the position's x and y, the ground's height).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_GROUND = 1;
+
+/// An attack-ground goal at the position on the water plane (height 0).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_WATER = 2;
+
 /// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
 constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
 
@@ -3980,6 +4004,90 @@ struct EeCombatWeaponIn {
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// An impact test's outcome.
+struct EeCombatImpactOut {
+  /// the test's answer
+  int32_t result;
+  /// where it returned (for the capture): projectile ground 0 not yet, 1 above the ground, 2 impact; missile ground
+  /// 0 not its goal, 1 boosting or near its target, 2 no goal, 3 above the ground, 4 on the ground; water 0 not yet
+  /// (projectile), 1 dry or above, 2 impact; torpedo 1 above, 2 impact
+  int32_t stage;
+  /// `EE_COMBAT_IMPACT_GOAL_*`
+  int32_t goal;
+  float goal_point[3];
+  /// leave a shell hole (projectile: at the ground point; missile: at the position placed on the ground)
+  int32_t decal;
+  /// the missile is placed on the ground and moved `offset` up (missile ground)
+  int32_t place;
+  float offset;
+};
+
+/// An impact test's reads (the capture's CBGI and CBWI layout). The `*_read` fields and the values beside them are
+/// the lazy reads, written by the test.
+struct EeCombatImpactIn {
+  /// `EE_COMBAT_IMPACT_*`
+  int32_t kind;
+  /// the class is a bomb's (projectile)
+  int32_t bomb;
+  /// `mFlightTime` (projectile: ms flown; missile: the launch delay left)
+  int32_t flight_time;
+  /// `mProjectileStart`'s height (projectile ground)
+  float start_z;
+  float position[3];
+  /// the floor tile under the position is on the map (projectile ground)
+  int32_t tile_present;
+  /// the unit's tile's height, read for an off-map position (projectile ground)
+  float tile_height;
+  int32_t has_goal;
+  /// the goal's `mKind` (0 without one)
+  int32_t goal_kind;
+  /// the goal's location, read past the first test (missile ground)
+  float goal_location[3];
+  /// the attack target is a land building or a wall, its tile, its size, the unit's tile; read at an impact under
+  /// an attack-unit goal (projectile ground)
+  int32_t target_building;
+  int32_t target_tile[2];
+  int32_t target_size;
+  int32_t unit_tile[2];
+  /// the class has a shell hole effect
+  int32_t shell_hole;
+  /// the launcher is a missile base (`kUnitTypeCpMissileBase`, `kUnitTypeMissileBase`) (missile ground)
+  int32_t launcher_cp_base;
+  int32_t launcher_missile_base;
+  int32_t ground_read;
+  /// `EEMap::GetGroundPoint`'s height under the position
+  float ground_z;
+  /// `EEIsOnTargetTiles` (missile ground, an attack-unit goal)
+  int32_t on_target_read;
+  int32_t on_target;
+  /// the goal location's tile is the unit's (missile ground, a missile base's)
+  int32_t same_tile_read;
+  int32_t same_tile;
+  /// `CanMoveOnTerrain` on the unit's tile (water, at or below height 0)
+  int32_t move_read;
+  int32_t can_move;
+};
+
+/// The attack target's footprint (projectile ground).
+struct EeCombatImpactTarget {
+  int32_t building;
+  int32_t tile[2];
+  int32_t size;
+  int32_t unit_tile[2];
+};
+
+/// The host's lazy reads (`ctx` is the C++'s).
+struct EeCombatImpactHost {
+  void *ctx;
+  float (*ground_z)(void *ctx, float x, float y, float z);
+  float (*tile_height)(void *ctx);
+  void (*target)(void *ctx, EeCombatImpactTarget *out);
+  void (*goal_location)(void *ctx, float *out);
+  int32_t (*on_target_tiles)(void *ctx);
+  int32_t (*same_tile)(void *ctx, float x, float y);
+  int32_t (*can_move)(void *ctx);
 };
 
 /// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
@@ -9994,6 +10102,13 @@ uint32_t ee_combat_tile_line(int32_t x1,
 /// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
+
+/// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
+///
+/// # Safety
+/// `input` must point to a valid record and `host` to a valid table whose functions may be called with its `ctx`.
+EeCombatImpactOut ee_combat_impact(EeCombatImpactIn *input,
+                                   const EeCombatImpactHost *host);
 
 /// The tag point `LaunchShot` fires from (-1: none).
 ///
