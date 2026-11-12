@@ -66,6 +66,7 @@ pub mod patch;
 pub mod path;
 pub mod persist;
 pub mod plaintext;
+pub mod prefsobj;
 pub mod qsock;
 pub mod random;
 pub mod regkey;

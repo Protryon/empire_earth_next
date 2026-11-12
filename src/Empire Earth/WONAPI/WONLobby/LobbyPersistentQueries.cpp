@@ -95,10 +95,8 @@ const LobbyOptionSet& LobbyFn35DC80(const GUIString& column)
 void LobbySetTabSelect(const GUIString& name)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && name!=data->GetTabSelect()) {
-        data->SetTabSelect(name);
-        data->SetFlag(LobbyPersistentData::kUserDirty, true);
-    }
+    if(data!=NULL)
+        data->ChangeTabSelect(name);
 }
 }
 

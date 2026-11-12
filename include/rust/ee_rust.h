@@ -2747,6 +2747,39 @@ enum class EeWonPrefsEventKind {
   OptionValue,
 };
 
+/// A flag of the saved settings (the C++ `LobbyPersistentData::Flag`).
+enum class EeWonPrefsFlag {
+  FilterDirtyWords = 0,
+  DoAutoAfk = 1,
+  CrossPromotion = 2,
+  LobbySoundEffects = 3,
+  LobbyMusic = 4,
+  ChatSoundEffects = 5,
+  StagingSoundEffects = 6,
+  ShowConfirmations = 7,
+  AutoPingGames = 8,
+  ShowGamesInProgress = 9,
+  AnonymousToFriends = 10,
+  SavedLobbySoundEffects = 11,
+  SavedLobbyMusic = 12,
+  GlobalDirty = 13,
+  UserDirty = 14,
+};
+
+/// A number of the saved settings.
+enum class EeWonPrefsNumber {
+  ConnectionSpeed = 0,
+  LanBroadcastPort = 1,
+};
+
+/// A text of the saved settings.
+enum class EeWonPrefsText {
+  TabSelect = 0,
+  LanName = 1,
+  LastServerName = 2,
+  LastRoomName = 3,
+};
+
 /// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
 enum class EeWonResKind {
   String = 0,
@@ -2826,6 +2859,9 @@ struct EeWonIpAddr;
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
+
+/// `LobbyPersistentData`'s scalar state and its setters' rules.
+struct EeWonLobbyPrefs;
 
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
@@ -18501,6 +18537,137 @@ void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop
 int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
 
 uint16_t ee_won_prefs_default_lan_number(uint32_t host);
+
+/// The constructor's state (see [`EeWonLobbyPrefs::new`]).
+EeWonLobbyPrefs *ee_won_lobbyprefs_new();
+
+/// Frees the object.
+///
+/// # Safety
+/// `p` from `ee_won_lobbyprefs_new` (or null), not used after.
+void ee_won_lobbyprefs_free(EeWonLobbyPrefs *p);
+
+/// A flag.
+///
+/// # Safety
+/// `p` is live.
+bool ee_won_lobbyprefs_flag(const EeWonLobbyPrefs *p, EeWonPrefsFlag f);
+
+/// Sets a flag.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
+
+/// The setters' rule (see [`EeWonLobbyPrefs::change_flag`]).
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_change_flag(EeWonLobbyPrefs *p, EeWonPrefsFlag f, bool on);
+
+/// The current user's id (0: the LAN user).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_lobbyprefs_current_user(const EeWonLobbyPrefs *p);
+
+/// Sets the current user's id.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_current_user(EeWonLobbyPrefs *p, int64_t id);
+
+/// A number.
+///
+/// # Safety
+/// `p` is live.
+uint16_t ee_won_lobbyprefs_number(const EeWonLobbyPrefs *p, EeWonPrefsNumber n);
+
+/// Sets a number.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
+
+/// The setters' rule for a number.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_change_number(EeWonLobbyPrefs *p, EeWonPrefsNumber n, uint16_t v);
+
+/// The network adapter (a numeric IPv4 address, 0 for the default).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_lobbyprefs_network_adapter(const EeWonLobbyPrefs *p);
+
+/// Sets the network adapter.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_set_network_adapter(EeWonLobbyPrefs *p, int64_t a);
+
+/// `LobbySaveNetworkAdapter`'s rule.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_save_network_adapter(EeWonLobbyPrefs *p, int64_t local_host);
+
+/// A text's UTF-8 bytes (valid until the text changes), its length in `*length`.
+///
+/// # Safety
+/// `p` is live, `length` writable.
+const uint8_t *ee_won_lobbyprefs_text(const EeWonLobbyPrefs *p, EeWonPrefsText t, size_t *length);
+
+/// Sets a text.
+///
+/// # Safety
+/// `p` is live; `s` null or `n` readable bytes.
+void ee_won_lobbyprefs_set_text(EeWonLobbyPrefs *p, EeWonPrefsText t, const uint8_t *s, size_t n);
+
+/// `LobbySetTabSelect`'s rule.
+///
+/// # Safety
+/// As `ee_won_lobbyprefs_set_text`.
+void ee_won_lobbyprefs_change_tab_select(EeWonLobbyPrefs *p, const uint8_t *s, size_t n);
+
+/// `LobbySetLastRoom`'s rule.
+///
+/// # Safety
+/// `p` is live; each text null or its length's readable bytes.
+void ee_won_lobbyprefs_set_last_room(EeWonLobbyPrefs *p,
+                                     const uint8_t *server,
+                                     size_t server_length,
+                                     const uint8_t *room,
+                                     size_t room_length);
+
+/// `RestoreDefaults`; true for the LAN user (the caller then sets the default LAN name).
+///
+/// # Safety
+/// `p` is live; each text null or its length's readable bytes.
+bool ee_won_lobbyprefs_restore_defaults(EeWonLobbyPrefs *p,
+                                        const uint8_t *quick_play,
+                                        size_t quick_play_length,
+                                        const uint8_t *lan,
+                                        size_t lan_length);
+
+/// `LobbyRestoreDefaults`' rule after the restore.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_restore(EeWonLobbyPrefs *p, int64_t old_adapter);
+
+/// The end of `SaveGlobalPrefs`.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_global_save(EeWonLobbyPrefs *p);
+
+/// The end of `LoadUserPrefs`.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_lobbyprefs_after_user_load(EeWonLobbyPrefs *p);
 
 /// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
 ///

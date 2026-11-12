@@ -78,7 +78,7 @@ LobbyFriend* LobbyFindFriend(unsigned long id)
 
 // FUNCTION: WON 0x0075d640
 // Returns the current LAN player name
-const GUIString& LobbyGetLanName()
+GUIString LobbyGetLanName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     return data!=NULL?data->GetLanName():gEmptyGUIString;
@@ -86,7 +86,7 @@ const GUIString& LobbyGetLanName()
 
 // FUNCTION: WON 0x0075dc40
 // Returns the name of the server the user last joined
-const GUIString& LobbyGetLastServerName()
+GUIString LobbyGetLastServerName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     return data!=NULL?data->GetLastServerName():gEmptyGUIString;
@@ -94,7 +94,7 @@ const GUIString& LobbyGetLastServerName()
 
 // FUNCTION: WON 0x0075dc60
 // Returns the name of the room the user last joined
-const GUIString& LobbyGetLastRoomName()
+GUIString LobbyGetLastRoomName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     return data!=NULL?data->GetLastRoomName():gEmptyGUIString;
@@ -102,7 +102,7 @@ const GUIString& LobbyGetLastRoomName()
 
 // FUNCTION: WON 0x0075e2d0
 // Returns the name of the lobby tab to open at start (Quick Play, LAN ...)
-const GUIString& LobbyGetTabSelect()
+GUIString LobbyGetTabSelect()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     return data!=NULL?data->GetTabSelect():gEmptyGUIString;

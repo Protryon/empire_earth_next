@@ -121,7 +121,7 @@ LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPass
 
 // the saved options' getters and setters: LobbyPersistentData offsets, defaults without lobby data
 // (provisional names)
-const GUIString& LobbyGetTabSelect(); // 0x58, or gEmptyGUIString
+GUIString LobbyGetTabSelect(); // 0x58, or gEmptyGUIString
 bool LobbyGetFilterDirtyWords(); // 0x54; false
 bool LobbyGetDoAutoAFK(); // 0x55
 bool LobbyGetCrossPromotion(); // 0x56
@@ -154,8 +154,8 @@ void LobbySaveNetworkAdapter(); // copies 0x965f40 to 0x70 and sets the global d
 void LobbySaveGlobalPrefs(bool); // writes the global preferences (0x75faf0) when forced or 0x7c is set
 void LobbySaveUserPrefs(bool); // writes the user's preferences (0x760770) when forced or 0x7d is set
 void LobbyRestoreDefaults(); // RestoreDefaults 0x75c720, then sets 0x7d and recomputes 0x7c
-const GUIString& LobbyGetLastServerName(); // 0x75dc40 (0x74)
-const GUIString& LobbyGetLastRoomName(); // 0x75dc60 (0x78)
+GUIString LobbyGetLastServerName(); // 0x75dc40 (0x74)
+GUIString LobbyGetLastRoomName(); // 0x75dc60 (0x78)
 
 // 0x75d270 returns the friends map (its 0x30), or the static empty map 0x966300 without lobby data
 typedef std::map<unsigned long, SmartPtr<LobbyFriend> > LobbyFriendMap;
@@ -175,7 +175,7 @@ LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inUserId);
 
 typedef std::map<GUIString, long, GUIStringLessNoCase> LobbyLanNameInfoMap;
 typedef std::map<IPAddr, GUIString> LobbyDirectConnectMap;
-const GUIString& LobbyGetLanName(); // 0x75d640 (0x68, or the empty string)
+GUIString LobbyGetLanName(); // 0x75d640 (0x68, or the empty string)
 const LobbyLanNameInfoMap& LobbyFn35D660(); // 0x75d660 (0x114c, or the static 0x966388)
 void LobbyRemoveLanName(); // 0x75d770 (case-insensitive compare 0x728030)
 void LobbyResetFilters(); // 0x75df00
@@ -202,8 +202,8 @@ struct LobbyReconnectInfo {
 };
 class LobbyPersistentData : public RefCount {
 public:
-    LobbyPersistentData(); // 0x75bcb0 (leaves mCurrentUserId unset before the reset)
-    // the destructor is implicit (0x75c2c0; it does not store its own vtable)
+    LobbyPersistentData(); // 0x75bcb0 (the original left mCurrentUserId unset before the reset; 0 here)
+    ~LobbyPersistentData(); // the original's was implicit (0x75c2c0); frees the scalar state's object
     std::string GetUserFileName(long inUserId); // 0x75e6e0 (provisional name)
     long FindUnusedUserId();                  // 0x75e770 (provisional name)
     void PruneUsers(); // 0x75eb30 (drops the oldest users)
@@ -219,28 +219,38 @@ public:
     void PruneLanNames(); // 0x75e7e0 (keeps the 50 most recent LAN names)
     void SelectRecentLanName(); // 0x75ea40
 
-    // the members behind accessors (round 16; the Lobby* functions read them through these)
+    // the members behind accessors (round 16; the Lobby* functions read them through these). The scalar state is a
+    // Rust object (rust/crates/ee_won/src/prefsobj.rs EeWonLobbyPrefs: the current user, the flags, the connection
+    // speed, the LAN broadcast port, the network adapter and the four texts, with the setters' rules); the Flag
+    // values are EeWonPrefsFlag's
     enum Flag { kFilterDirtyWords, kDoAutoAFK, kCrossPromotion, kLobbySoundEffects, kLobbyMusic, kChatSoundEffects,
                 kStagingSoundEffects, kShowConfirmations, kAutoPingGames, kShowGamesInProgress, kAnonymousToFriends,
                 kSavedLobbySoundEffects, kSavedLobbyMusic, kGlobalDirty, kUserDirty };
     bool GetFlag(Flag inFlag) const;
     void SetFlag(Flag inFlag, bool inOn);
-    long GetCurrentUserId() const { return this->mCurrentUserId; }
-    void SetCurrentUserId(long inId) { this->mCurrentUserId = inId; }
-    unsigned short GetConnectionSpeed() const { return this->mConnectionSpeed; }
-    void SetConnectionSpeed(unsigned short inSpeed) { this->mConnectionSpeed = inSpeed; }
-    unsigned short GetLanBroadcastPort() const { return this->mLanBroadcastPort; }
-    void SetLanBroadcastPort(unsigned short inPort) { this->mLanBroadcastPort = inPort; }
-    long GetNetworkAdapter() const { return this->mNetworkAdapter; }
-    void SetNetworkAdapter(long inAdapter) { this->mNetworkAdapter = inAdapter; }
-    const GUIString& GetTabSelect() const { return this->mTabSelect; }
-    void SetTabSelect(const GUIString& inText) { this->mTabSelect = inText; }
-    const GUIString& GetLanName() const { return this->mLanName; }
-    void SetLanName(const GUIString& inText) { this->mLanName = inText; }
-    const GUIString& GetLastServerName() const { return this->mLastServerName; }
-    void SetLastServerName(const GUIString& inText) { this->mLastServerName = inText; }
-    const GUIString& GetLastRoomName() const { return this->mLastRoomName; }
-    void SetLastRoomName(const GUIString& inText) { this->mLastRoomName = inText; }
+    void ChangeFlag(Flag inFlag, bool inOn); // the Lobby setters' rule (prefsobj.rs change_flag)
+    long GetCurrentUserId() const;
+    void SetCurrentUserId(long inId);
+    unsigned short GetConnectionSpeed() const;
+    void SetConnectionSpeed(unsigned short inSpeed);
+    void ChangeConnectionSpeed(unsigned short inSpeed); // a new value marks the user's settings changed
+    unsigned short GetLanBroadcastPort() const;
+    void SetLanBroadcastPort(unsigned short inPort);
+    void ChangeLanBroadcastPort(unsigned short inPort);
+    long GetNetworkAdapter() const;
+    void SetNetworkAdapter(long inAdapter);
+    void SaveNetworkAdapter(long inLocalHost); // LobbySaveNetworkAdapter's rule
+    GUIString GetTabSelect() const; // the texts are copies (the original returned references to the members)
+    void SetTabSelect(const GUIString& inText);
+    void ChangeTabSelect(const GUIString& inText); // a new tab marks the user's settings changed
+    GUIString GetLanName() const;
+    void SetLanName(const GUIString& inText);
+    GUIString GetLastServerName() const;
+    void SetLastServerName(const GUIString& inText);
+    GUIString GetLastRoomName() const;
+    void SetLastRoomName(const GUIString& inText);
+    void SetLastRoom(const GUIString& inServer, const GUIString& inRoom); // LobbySetLastRoom's rule
+    void AfterRestoreDefaults(long inOldAdapter); // LobbyRestoreDefaults' rule after RestoreDefaults
     std::set<long>& UserIds() { return this->mUserIds; }
     std::set<GUIString, GUIStringLessNoCase>& IgnoredNames() { return this->mIgnoredNames; }
     std::set<unsigned long>& BlockedCDKeyIds() { return this->mBlockedCDKeyIds; }
@@ -256,23 +266,15 @@ private:
     friend struct PersistUserLoad;
     LobbyPersistentData(const LobbyPersistentData&);
     LobbyPersistentData& operator=(const LobbyPersistentData&);
-    static bool LobbyPersistentData::* FlagMember(Flag inFlag);
+    GUIString GetText(EeWonPrefsText inText) const;
+    void SetText(EeWonPrefsText inText, const GUIString& inValue);
+    EeWonLobbyPrefs* mPrefs; // the scalar state (the original's 0x14 and 0x54..0x7d)
     std::set<long> mUserIds;                  // 0x08 (the insert at 0x75fa52 gives the type)
-long mCurrentUserId; // 0x14
 std::set<GUIString, GUIStringLessNoCase> mIgnoredNames; // 0x18
 std::set<unsigned long> mBlockedCDKeyIds; // 0x24 (loaded and saved, but nothing in the lobby fills it)
 std::map<unsigned long, SmartPtr<LobbyFriend> > mFriends; // 0x30
 std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase> mDefaultGameOptions; // 0x3c
 std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase> mGameOptions; // 0x48
-bool mFilterDirtyWords, mDoAutoAFK, mCrossPromotion; // 0x54, 0x55, 0x56
-GUIString mTabSelect; // 0x58
-bool mLobbySoundEffects, mLobbyMusic, mChatSoundEffects, mStagingSoundEffects, mShowConfirmations, mAutoPingGames, mShowGamesInProgress, mAnonymousToFriends;
-unsigned short mConnectionSpeed, mLanBroadcastPort; // 0x64, 0x66
-GUIString mLanName; // 0x68
-bool mSavedLobbySoundEffects, mSavedLobbyMusic; // 0x6c, 0x6d
-long mNetworkAdapter; // 0x70 (a numeric IPv4 address) (provisional name)
-GUIString mLastServerName, mLastRoomName; // 0x74, 0x78
-bool mGlobalDirty, mUserDirty; // 0x7c, 0x7d
 
 LobbyUserInfoMap mUsers; // 0x80
 std::map<IPAddr, LobbyReconnectInfo> mReconnectInfoMap; // 0x8c

@@ -179,13 +179,17 @@ struct PersistGlobalLoad {
             d->mUserIds.insert(aLoad->mUser->mUserId);
             break;
         case EeWonPrefsEventKind::SoundEffects:
-            d->mLobbySoundEffects = d->mSavedLobbySoundEffects = e->value != 0;
+            d->SetFlag(LobbyPersistentData::kLobbySoundEffects, e->value != 0);
+            d->SetFlag(LobbyPersistentData::kSavedLobbySoundEffects, e->value != 0);
             // the click sound is used without a null check, as the original did
-            ::LobbyGlobal_ButtonClick_Sound->SetMuted(!d->mLobbySoundEffects);
+            ::LobbyGlobal_ButtonClick_Sound->SetMuted(!d->GetFlag(LobbyPersistentData::kLobbySoundEffects));
             break;
-        case EeWonPrefsEventKind::Music: d->mLobbyMusic = d->mSavedLobbyMusic = e->value != 0; break;
+        case EeWonPrefsEventKind::Music:
+            d->SetFlag(LobbyPersistentData::kLobbyMusic, e->value != 0);
+            d->SetFlag(LobbyPersistentData::kSavedLobbyMusic, e->value != 0);
+            break;
         // the network adapter is stored as its numeric IPv4 address
-        case EeWonPrefsEventKind::NetworkAdapter: d->mNetworkAdapter = (long)e->value; break;
+        case EeWonPrefsEventKind::NetworkAdapter: d->SetNetworkAdapter((long)e->value); break;
         default: break;
         }
     }
@@ -200,12 +204,12 @@ void LobbyPersistentData::LoadGlobalPrefs()
     if (!PersistReadFile("_wonlobbypersistent.dat", aBytes))
         return;
     this->mUsers.clear();
-    this->mNetworkAdapter = 0;
+    this->SetNetworkAdapter(0);
     PersistGlobalLoad aLoad = {this, NULL};
     if (ee_won_prefs_read_global(reinterpret_cast<const uint8_t*>(aBytes.data()), aBytes.length(),
                                  PersistGlobalLoad::Event, &aLoad) == EeWonPrefsRead::OtherVersion)
         return;
-    this->mGlobalDirty = false;
+    this->SetFlag(LobbyPersistentData::kGlobalDirty, false);
 }
 
 // FUNCTION: WON 0x0075faf0
@@ -238,9 +242,9 @@ void LobbyPersistentData::SaveGlobalPrefs()
     aPrefs.value04 = PersistArray(aValues04);
     aPrefs.value08 = PersistArray(aValues08);
     aPrefs.passwords = aPasswords.List();
-    aPrefs.sound_effects = this->mLobbySoundEffects;
-    aPrefs.music = this->mLobbyMusic;
-    aPrefs.network_adapter = (int32_t)this->mNetworkAdapter;
+    aPrefs.sound_effects = this->GetFlag(LobbyPersistentData::kLobbySoundEffects);
+    aPrefs.music = this->GetFlag(LobbyPersistentData::kLobbyMusic);
+    aPrefs.network_adapter = (int32_t)this->GetNetworkAdapter();
     std::string aFile;
     ee_won_prefs_write_global(&aPrefs, PersistAppendBytes, &aFile);
     try
@@ -251,9 +255,7 @@ void LobbyPersistentData::SaveGlobalPrefs()
     {
     }
     // The saved sound and music states are updated even when a write failed
-    this->mSavedLobbySoundEffects = this->mLobbySoundEffects;
-    this->mSavedLobbyMusic = this->mLobbyMusic;
-    this->mGlobalDirty = false;
+    ee_won_lobbyprefs_after_global_save(this->mPrefs);
 }
 
 
@@ -262,29 +264,11 @@ void LobbyPersistentData::SaveGlobalPrefs()
 // default LAN name for the LAN user, all sounds and confirmations on, broadcast port 8585
 void LobbyPersistentData::RestoreDefaults()
 {
-    this->mLastServerName = GetEmptyGUIStringData();
-    this->mLastRoomName = GetEmptyGUIStringData();
-    if (this->mCurrentUserId != 0)
-        this->mTabSelect = ::LobbyGlobal_QuickPlay_String;
-    else
-    {
-        this->mTabSelect = ::LobbyGlobal_Lan_String;
-        this->mLanName = this->GetDefaultLanName();
-    }
-    this->mFilterDirtyWords = true;
-    this->mDoAutoAFK = true;
-    this->mCrossPromotion = true;
-    this->mLobbySoundEffects = true;
-    this->mLobbyMusic = true;
-    this->mShowConfirmations = true;
-    this->mChatSoundEffects = true;
-    this->mStagingSoundEffects = true;
-    this->mAutoPingGames = true;
-    this->mShowGamesInProgress = true;
-    this->mAnonymousToFriends = false;
-    this->mLanBroadcastPort = 8585;
-    this->mConnectionSpeed = 25;
-    this->mNetworkAdapter = 0;
+    std::string aQuickPlay = (std::string)::LobbyGlobal_QuickPlay_String, aLan = (std::string)::LobbyGlobal_Lan_String;
+    if (ee_won_lobbyprefs_restore_defaults(this->mPrefs, reinterpret_cast<const uint8_t*>(aQuickPlay.data()),
+                                           aQuickPlay.length(), reinterpret_cast<const uint8_t*>(aLan.data()),
+                                           aLan.length()))
+        this->SetLanName(this->GetDefaultLanName());
 }
 
 
@@ -435,11 +419,13 @@ struct PersistUserLoad {
         PersistUserLoad* aLoad = static_cast<PersistUserLoad*>(inContext);
         LobbyPersistentData* d = aLoad->mData;
         // the settings in the file's order (persist.rs Settings)
-        bool* const aFlags[14] = {&d->mFilterDirtyWords, &d->mDoAutoAFK, &d->mCrossPromotion, &d->mAutoPingGames,
-                                  &d->mAnonymousToFriends, &d->mShowGamesInProgress, NULL, NULL, NULL,
-                                  &d->mLobbySoundEffects, &d->mLobbyMusic, &d->mChatSoundEffects,
-                                  &d->mStagingSoundEffects, &d->mShowConfirmations};
-        GUIString* const aTexts[3] = {&d->mTabSelect, &d->mLastServerName, &d->mLastRoomName};
+        typedef LobbyPersistentData P;
+        static const int aFlags[14] = {P::kFilterDirtyWords, P::kDoAutoAFK, P::kCrossPromotion, P::kAutoPingGames,
+                                       P::kAnonymousToFriends, P::kShowGamesInProgress, -1, -1, -1,
+                                       P::kLobbySoundEffects, P::kLobbyMusic, P::kChatSoundEffects,
+                                       P::kStagingSoundEffects, P::kShowConfirmations};
+        static const EeWonPrefsText aTexts[3] = {EeWonPrefsText::TabSelect, EeWonPrefsText::LastServerName,
+                                                 EeWonPrefsText::LastRoomName};
         switch (e->kind) {
         case EeWonPrefsEventKind::LanName: d->mLanNameInfoMap[PersistText(e)] = (long)e->value; break;
         case EeWonPrefsEventKind::LanNamesDone: d->SelectRecentLanName(); break;
@@ -449,7 +435,7 @@ struct PersistUserLoad {
             d->mDirectConnectMap[anAddress] = PersistText(e);
             break;
         }
-        case EeWonPrefsEventKind::BroadcastPort: d->mLanBroadcastPort = (unsigned short)e->value; break;
+        case EeWonPrefsEventKind::BroadcastPort: d->SetLanBroadcastPort((unsigned short)e->value); break;
         case EeWonPrefsEventKind::Reconnect: {
             IPAddr anAddress;
             anAddress.SetSixByte(e->address);
@@ -468,12 +454,12 @@ struct PersistUserLoad {
         }
         case EeWonPrefsEventKind::Blocked: d->mBlockedCDKeyIds.insert((unsigned long)e->value); break;
         case EeWonPrefsEventKind::Flag:
-            if (e->index < 14 && aFlags[e->index] != NULL) *aFlags[e->index] = e->value != 0;
+            if (e->index < 14 && aFlags[e->index] >= 0) d->SetFlag((P::Flag)aFlags[e->index], e->value != 0);
             break;
         case EeWonPrefsEventKind::SettingText:
-            if (e->index >= 6 && e->index < 9) *aTexts[e->index - 6] = PersistText(e);
+            if (e->index >= 6 && e->index < 9) d->SetText(aTexts[e->index - 6], PersistText(e));
             break;
-        case EeWonPrefsEventKind::ConnectionSpeed: d->mConnectionSpeed = (unsigned short)e->value; break;
+        case EeWonPrefsEventKind::ConnectionSpeed: d->SetConnectionSpeed((unsigned short)e->value); break;
         case EeWonPrefsEventKind::OptionsBegin: aLoad->mHaveGameOptions = true; break;
         case EeWonPrefsEventKind::OptionName:
             // the filter's name is UTF-8 (D6)
@@ -499,19 +485,18 @@ void LobbyPersistentData::LoadUserPrefs()
     this->mDirectConnectMap.clear();
     this->mGameOptions.clear();
     std::string aBytes;
-    if (!PersistReadFile(this->GetUserFileName(this->mCurrentUserId), aBytes))
+    if (!PersistReadFile(this->GetUserFileName(this->GetCurrentUserId()), aBytes))
     {
         this->mGameOptions = this->mDefaultGameOptions;
         return;
     }
     PersistUserLoad aLoad = {this, NULL, NULL, false};
     if (ee_won_prefs_read_user(reinterpret_cast<const uint8_t*>(aBytes.data()), aBytes.length(),
-                               this->mCurrentUserId == 0, PersistUserLoad::Event, &aLoad) == EeWonPrefsRead::OtherVersion)
+                               this->GetCurrentUserId() == 0, PersistUserLoad::Event, &aLoad) == EeWonPrefsRead::OtherVersion)
         return;
     if (!aLoad.mHaveGameOptions)
         this->mGameOptions = this->mDefaultGameOptions;
-    this->mGlobalDirty = this->mLobbySoundEffects != this->mSavedLobbySoundEffects || this->mSavedLobbyMusic != this->mLobbyMusic;
-    this->mUserDirty = false;
+    ee_won_lobbyprefs_after_user_load(this->mPrefs);
 }
 
 
@@ -523,12 +508,12 @@ void LobbyPersistentData::LoadUserPrefs()
 void LobbyPersistentData::SaveUserPrefs()
 {
     FileWriter writer;
-    std::string fileName = this->GetUserFileName(this->mCurrentUserId);
+    std::string fileName = this->GetUserFileName(this->GetCurrentUserId());
     if (!writer.Open(fileName.c_str(), false))
         return;
     EeWonUserPrefsOut aPrefs;
     memset(&aPrefs, 0, sizeof(aPrefs));
-    aPrefs.lan_user = this->mCurrentUserId == 0;
+    aPrefs.lan_user = this->GetCurrentUserId() == 0;
     PersistTexts aLanNames, aDirectNames, anIgnored, aFriendNames, aTexts, aValues;
     std::vector<int32_t> aLanTimes, aTimes, anIds;
     std::vector<uint32_t> aFriendIds, aBlocked;
@@ -560,9 +545,9 @@ void LobbyPersistentData::SaveUserPrefs()
     }
     for (std::set<unsigned long>::const_iterator u = this->mBlockedCDKeyIds.begin(); u != this->mBlockedCDKeyIds.end(); ++u)
         aBlocked.push_back((uint32_t)*u);
-    aTexts.Add(this->mTabSelect);
-    aTexts.Add(this->mLastServerName);
-    aTexts.Add(this->mLastRoomName);
+    aTexts.Add(this->GetTabSelect());
+    aTexts.Add(this->GetLastServerName());
+    aTexts.Add(this->GetLastRoomName());
     for (std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>::const_iterator o = this->mGameOptions.begin(); o != this->mGameOptions.end(); ++o)
     {
         // the filter's name as UTF-8 (GetString)
@@ -576,7 +561,7 @@ void LobbyPersistentData::SaveUserPrefs()
     aPrefs.lan_times = PersistArray(aLanTimes);
     aPrefs.direct_addresses = reinterpret_cast<const uint8_t*>(aDirect.data());
     aPrefs.direct_names = aDirectNames.List();
-    aPrefs.broadcast_port = this->mLanBroadcastPort;
+    aPrefs.broadcast_port = this->GetLanBroadcastPort();
     aPrefs.reconnect_count = aTimes.size();
     aPrefs.reconnect_addresses = reinterpret_cast<const uint8_t*>(aReconnect.data());
     aPrefs.reconnect_times = PersistArray(aTimes);
@@ -586,14 +571,14 @@ void LobbyPersistentData::SaveUserPrefs()
     aPrefs.friend_ids = PersistArray(aFriendIds);
     aPrefs.blocked_count = aBlocked.size();
     aPrefs.blocked = PersistArray(aBlocked);
-    bool aFirst[6] = {this->mFilterDirtyWords, this->mDoAutoAFK, this->mCrossPromotion, this->mAutoPingGames,
-                      this->mAnonymousToFriends, this->mShowGamesInProgress};
-    bool aSecond[5] = {this->mLobbySoundEffects, this->mLobbyMusic, this->mChatSoundEffects, this->mStagingSoundEffects,
-                       this->mShowConfirmations};
+    bool aFirst[6] = {this->GetFlag(LobbyPersistentData::kFilterDirtyWords), this->GetFlag(LobbyPersistentData::kDoAutoAFK), this->GetFlag(LobbyPersistentData::kCrossPromotion), this->GetFlag(LobbyPersistentData::kAutoPingGames),
+                      this->GetFlag(LobbyPersistentData::kAnonymousToFriends), this->GetFlag(LobbyPersistentData::kShowGamesInProgress)};
+    bool aSecond[5] = {this->GetFlag(LobbyPersistentData::kLobbySoundEffects), this->GetFlag(LobbyPersistentData::kLobbyMusic), this->GetFlag(LobbyPersistentData::kChatSoundEffects), this->GetFlag(LobbyPersistentData::kStagingSoundEffects),
+                       this->GetFlag(LobbyPersistentData::kShowConfirmations)};
     memcpy(aPrefs.first, aFirst, sizeof(aFirst));
     memcpy(aPrefs.second, aSecond, sizeof(aSecond));
     aPrefs.texts = aTexts.List();
-    aPrefs.connection_speed = this->mConnectionSpeed;
+    aPrefs.connection_speed = this->GetConnectionSpeed();
     aPrefs.option_names = anOptionNames.List();
     aPrefs.option_first = &anOptionFirst[0];
     aPrefs.option_values = aValues.List();
@@ -604,7 +589,7 @@ void LobbyPersistentData::SaveUserPrefs()
         writer.WriteBytes(aFile.data(), aFile.length());
     }
     catch (FileWriterException&) {}
-    this->mUserDirty = false;
+    this->SetFlag(LobbyPersistentData::kUserDirty, false);
 }
 }
 
@@ -726,11 +711,7 @@ void LobbySetLastRoom(const GUIString& inServer, const GUIString& inGroup)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
-    if (inServer.mData->Compare(aData->GetLastServerName().mData.get()) == 0 &&
-        inGroup.mData->Compare(aData->GetLastRoomName().mData.get()) == 0) return;
-    aData->SetLastServerName(inServer);
-    aData->SetLastRoomName(inGroup);
-    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
+    aData->SetLastRoom(inServer, inGroup);
 }
 // FUNCTION: WON 0x0075df00
 // Resets the user's game filters to the configured defaults
@@ -768,7 +749,7 @@ void LobbyPersistentData::PruneLanNames()
 void LobbyPersistentData::SelectRecentLanName()
 {
     GetLobbyPersistentData();
-    this->mLanName = this->GetDefaultLanName();
+    this->SetLanName(this->GetDefaultLanName());
     std::vector<LobbyLanNameInfoMap::iterator> anItrs;
     std::vector<int64_t> aTimes;
     for (LobbyLanNameInfoMap::iterator anItr = this->mLanNameInfoMap.begin();
@@ -779,7 +760,7 @@ void LobbyPersistentData::SelectRecentLanName()
     }
     int64_t aChosen = ee_won_prefs_recent_lan_name(PersistArray(aTimes), aTimes.size());
     if (aChosen >= 0)
-        this->mLanName = anItrs[(size_t)aChosen]->first;
+        this->SetLanName(anItrs[(size_t)aChosen]->first);
 }
 }
 
@@ -803,38 +784,82 @@ GUIString LobbyPersistentData::GetDefaultLanName()
 }
 
 namespace WONAPI {
-// the flags by name (the Lobby* functions' accessors)
-bool LobbyPersistentData::* LobbyPersistentData::FlagMember(Flag inFlag)
+// the scalar state's accessors and rules (prefsobj.rs EeWonLobbyPrefs)
+static EeWonPrefsFlag PrefsFlag(LobbyPersistentData::Flag inFlag) { return static_cast<EeWonPrefsFlag>(inFlag); }
+static const uint8_t* PrefsBytes(const std::string& inText) { return reinterpret_cast<const uint8_t*>(inText.data()); }
+bool LobbyPersistentData::GetFlag(Flag inFlag) const { return ee_won_lobbyprefs_flag(this->mPrefs, PrefsFlag(inFlag)); }
+void LobbyPersistentData::SetFlag(Flag inFlag, bool inOn) { ee_won_lobbyprefs_set_flag(this->mPrefs, PrefsFlag(inFlag), inOn); }
+void LobbyPersistentData::ChangeFlag(Flag inFlag, bool inOn)
+{ ee_won_lobbyprefs_change_flag(this->mPrefs, PrefsFlag(inFlag), inOn); }
+long LobbyPersistentData::GetCurrentUserId() const { return (long)ee_won_lobbyprefs_current_user(this->mPrefs); }
+void LobbyPersistentData::SetCurrentUserId(long inId) { ee_won_lobbyprefs_set_current_user(this->mPrefs, inId); }
+unsigned short LobbyPersistentData::GetConnectionSpeed() const
+{ return ee_won_lobbyprefs_number(this->mPrefs, EeWonPrefsNumber::ConnectionSpeed); }
+void LobbyPersistentData::SetConnectionSpeed(unsigned short inSpeed)
+{ ee_won_lobbyprefs_set_number(this->mPrefs, EeWonPrefsNumber::ConnectionSpeed, inSpeed); }
+void LobbyPersistentData::ChangeConnectionSpeed(unsigned short inSpeed)
+{ ee_won_lobbyprefs_change_number(this->mPrefs, EeWonPrefsNumber::ConnectionSpeed, inSpeed); }
+unsigned short LobbyPersistentData::GetLanBroadcastPort() const
+{ return ee_won_lobbyprefs_number(this->mPrefs, EeWonPrefsNumber::LanBroadcastPort); }
+void LobbyPersistentData::SetLanBroadcastPort(unsigned short inPort)
+{ ee_won_lobbyprefs_set_number(this->mPrefs, EeWonPrefsNumber::LanBroadcastPort, inPort); }
+void LobbyPersistentData::ChangeLanBroadcastPort(unsigned short inPort)
+{ ee_won_lobbyprefs_change_number(this->mPrefs, EeWonPrefsNumber::LanBroadcastPort, inPort); }
+long LobbyPersistentData::GetNetworkAdapter() const { return (long)ee_won_lobbyprefs_network_adapter(this->mPrefs); }
+void LobbyPersistentData::SetNetworkAdapter(long inAdapter) { ee_won_lobbyprefs_set_network_adapter(this->mPrefs, inAdapter); }
+void LobbyPersistentData::SaveNetworkAdapter(long inLocalHost)
+{ ee_won_lobbyprefs_save_network_adapter(this->mPrefs, inLocalHost); }
+GUIString LobbyPersistentData::GetText(EeWonPrefsText inText) const
 {
-    static bool LobbyPersistentData::* const kPersistFlags[] = {
-    &LobbyPersistentData::mFilterDirtyWords, &LobbyPersistentData::mDoAutoAFK, &LobbyPersistentData::mCrossPromotion,
-    &LobbyPersistentData::mLobbySoundEffects, &LobbyPersistentData::mLobbyMusic,
-    &LobbyPersistentData::mChatSoundEffects, &LobbyPersistentData::mStagingSoundEffects,
-    &LobbyPersistentData::mShowConfirmations, &LobbyPersistentData::mAutoPingGames,
-    &LobbyPersistentData::mShowGamesInProgress, &LobbyPersistentData::mAnonymousToFriends,
-    &LobbyPersistentData::mSavedLobbySoundEffects, &LobbyPersistentData::mSavedLobbyMusic,
-    &LobbyPersistentData::mGlobalDirty, &LobbyPersistentData::mUserDirty};
-    return kPersistFlags[inFlag];
+    size_t aLength = 0;
+    const uint8_t* aBytes = ee_won_lobbyprefs_text(this->mPrefs, inText, &aLength);
+    return GUIString(std::string(reinterpret_cast<const char*>(aBytes), aLength));
 }
-bool LobbyPersistentData::GetFlag(Flag inFlag) const { return this->*FlagMember(inFlag); }
-void LobbyPersistentData::SetFlag(Flag inFlag, bool inOn) { this->*FlagMember(inFlag) = inOn; }
+void LobbyPersistentData::SetText(EeWonPrefsText inText, const GUIString& inValue)
+{
+    std::string aText = (std::string)inValue;
+    ee_won_lobbyprefs_set_text(this->mPrefs, inText, PrefsBytes(aText), aText.length());
+}
+GUIString LobbyPersistentData::GetTabSelect() const { return this->GetText(EeWonPrefsText::TabSelect); }
+void LobbyPersistentData::SetTabSelect(const GUIString& inText) { this->SetText(EeWonPrefsText::TabSelect, inText); }
+void LobbyPersistentData::ChangeTabSelect(const GUIString& inText)
+{
+    std::string aText = (std::string)inText;
+    ee_won_lobbyprefs_change_tab_select(this->mPrefs, PrefsBytes(aText), aText.length());
+}
+GUIString LobbyPersistentData::GetLanName() const { return this->GetText(EeWonPrefsText::LanName); }
+void LobbyPersistentData::SetLanName(const GUIString& inText) { this->SetText(EeWonPrefsText::LanName, inText); }
+GUIString LobbyPersistentData::GetLastServerName() const { return this->GetText(EeWonPrefsText::LastServerName); }
+void LobbyPersistentData::SetLastServerName(const GUIString& inText)
+{ this->SetText(EeWonPrefsText::LastServerName, inText); }
+GUIString LobbyPersistentData::GetLastRoomName() const { return this->GetText(EeWonPrefsText::LastRoomName); }
+void LobbyPersistentData::SetLastRoomName(const GUIString& inText) { this->SetText(EeWonPrefsText::LastRoomName, inText); }
+void LobbyPersistentData::SetLastRoom(const GUIString& inServer, const GUIString& inRoom)
+{
+    std::string aServer = (std::string)inServer, aRoom = (std::string)inRoom;
+    ee_won_lobbyprefs_set_last_room(this->mPrefs, PrefsBytes(aServer), aServer.length(), PrefsBytes(aRoom),
+                                    aRoom.length());
+}
+void LobbyPersistentData::AfterRestoreDefaults(long inOldAdapter)
+{ ee_won_lobbyprefs_after_restore(this->mPrefs, inOldAdapter); }
+LobbyPersistentData::~LobbyPersistentData() { ee_won_lobbyprefs_free(this->mPrefs); }
 
 // FUNCTION: WON 0x0075bcb0
 // Creates the lobby's saved settings with default options and a password key bound to this machine
-LobbyPersistentData::LobbyPersistentData()
+LobbyPersistentData::LobbyPersistentData() : mPrefs(ee_won_lobbyprefs_new())
 {
     WriteBuffer aKey(0,true);
     aKey.Reserve(8);
     aKey.AppendLong(0x22fa655f);
     aKey.AppendLong(CDKey::GetMachineId(NULL));
     this->mEncryptKey.SetKey(aKey.data(),aKey.length());
-    // The original does not set mCurrentUserId before this reset
+    // The original did not set mCurrentUserId before this reset (the object starts at 0: the LAN user)
     this->RestoreDefaults();
-    this->mLanBroadcastPort = 8585;
-    this->mGlobalDirty = false;
-    this->mUserDirty = false;
-    this->mSavedLobbySoundEffects = true;
-    this->mSavedLobbyMusic = true;
+    this->SetLanBroadcastPort(8585);
+    this->SetFlag(LobbyPersistentData::kGlobalDirty, false);
+    this->SetFlag(LobbyPersistentData::kUserDirty, false);
+    this->SetFlag(LobbyPersistentData::kSavedLobbySoundEffects, true);
+    this->SetFlag(LobbyPersistentData::kSavedLobbyMusic, true);
 }
 }
 

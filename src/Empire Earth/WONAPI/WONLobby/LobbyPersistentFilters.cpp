@@ -29,10 +29,8 @@ namespace WONAPI {
 void LobbySaveNetworkAdapter()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && data->GetNetworkAdapter()!=WONAPI::IPAddr::GetLocalHost()) {
-        data->SetNetworkAdapter(WONAPI::IPAddr::GetLocalHost());
-        data->SetFlag(LobbyPersistentData::kGlobalDirty, true);
-    }
+    if(data!=NULL)
+        data->SaveNetworkAdapter(WONAPI::IPAddr::GetLocalHost());
 }
 // FUNCTION: WON 0x0075dea0
 // Adds a value to the user's filter for a game list column
