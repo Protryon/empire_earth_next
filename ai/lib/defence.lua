@@ -63,6 +63,10 @@ M.opts = {
                           -- the militia whatever its size or kind, when the citizens and the towers win by the
                           -- square law at militia_odds (the caps of 6 raiders and of ranged raids lifted there)
     wave_size = 8,        -- a raid this large is a wave for the scripts (boom's plan.emergency)
+    boats = false,        -- (off; the owner, 2026-11-11) the fishing boats flee to a dock, heal there, go back to their
+                          -- fish (the engine's naval flee reflex off for them); M.boat_spots gives the economy its
+                          -- tower spots by the dock and the fishing grounds
+    boat_max_ms = 180000, -- a boat waits at the dock this long at most
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -107,6 +111,9 @@ function M.setup(opts)
     end
     if ai.reflex ~= nil then
         ai.reflex{militia = false, danger = false}   -- this module is the militia and the flight
+        if M.opts.boats then
+            ai.reflex{naval_flee = false}   -- (the boats' flight is this module's; the land units' too, by the ship raids)
+        end
     end
 end
 
@@ -766,6 +773,125 @@ local function safety(mem, now)
     end
 end
 
+-- [owner, 2026-11-11] the fishing boats from the middle of the Stone Age: a boat hit by an enemy (not an animal), or
+-- within a warship's reach + 2, runs to the nearest own dock out of that reach and waits there until it is healed (a
+-- dock heals ships within 6 tiles: dbareaeffect dock_healing_1_rng_6, the dock_repair set holds the family ship,
+-- the fishing boats' family), then goes back to the fish it fished (ai.gather) and is handed back to the engine's
+-- lists (ai.release{gather = true}). Once a game second, from the micro step.
+local function boats_step(mem, events, now)
+    local o = M.opts
+    mem.boats = mem.boats or {}
+    -- the boats hit since the last step (by an enemy player's unit)
+    local hit = {}
+    for _, e in ipairs(events) do
+        if e.kind == "attacked" and (e.player or 0) > 0 then
+            hit[e.unit] = e.attacker or 0
+        end
+    end
+    local ids = ai.units{category = "boat"}
+    if #ids == 0 then
+        return
+    end
+    local ships = ai.seen{enemy = true, armed = true, category = "ship", limit = 16}
+    local sc = #ships > 0 and ai.get(ships, {"x", "y", "range"}) or {x = {}, y = {}, range = {}}
+    local docks = ai.units{type = "b_dock", built = true, limit = 8}
+    local dc = #docks > 0 and ai.get(docks, {"x", "y"}) or {x = {}, y = {}}
+    local function threatened(x, y)
+        for k = 1, #ships do
+            if sc.x[k] ~= nil then
+                local r = (sc.range[k] or 0) // 100 + 2
+                if d2(x, y, sc.x[k], sc.y[k]) <= r * r then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+    local c = ai.get(ids, {"x", "y", "hp", "hp_max", "target", "action", "held"})
+    local back, moves = {}, {}
+    for k, id in ipairs(ids) do
+        local x, y = c.x[k], c.y[k]
+        if x ~= nil then
+            local b = mem.boats[id]
+            if b == nil and #docks > 0 and (hit[id] ~= nil or threatened(x, y)) then
+                -- the nearest dock out of the warships' reach (else the nearest)
+                local best, bd, safe = nil, nil, false
+                for j = 1, #docks do
+                    if dc.x[j] ~= nil then
+                        local s = not threatened(dc.x[j], dc.y[j])
+                        local d = d2(x, y, dc.x[j], dc.y[j])
+                        if best == nil or (s and not safe) or (s == safe and d < bd) then
+                            best, bd, safe = j, d, s
+                        end
+                    end
+                end
+                if best ~= nil then
+                    mem.boats[id] = {fish = c.target[k], dock = docks[best], t = now}
+                    local key = dc.x[best] * 10000 + dc.y[best]
+                    moves[key] = moves[key] or {}
+                    local l = moves[key]
+                    l[#l + 1] = id
+                    mem.st.boats_fled = (mem.st.boats_fled or 0) + 1
+                end
+            elseif b ~= nil then
+                local healed = (c.hp[k] or 0) >= (c.hp_max[k] or 1)
+                local fish = b.fish ~= nil and ai.unit(b.fish) or nil
+                local clear = fish == nil or not threatened(fish.x, fish.y)
+                if now - b.t >= o.boat_max_ms or (healed and clear and now - b.t >= 5000) then
+                    back[#back + 1] = {id = id, fish = fish ~= nil and b.fish or nil}
+                    mem.boats[id] = nil
+                end
+            end
+        end
+    end
+    for _, key in ipairs(ai.keys(moves)) do
+        ai.move(moves[key], key // 10000, key % 10000, {forced = true})
+    end
+    for _, b in ipairs(back) do
+        if b.fish ~= nil and ai.gather({b.id}, b.fish) == "ok" then
+            ai.release({b.id}, {gather = true})
+        else
+            ai.stop({b.id})
+            ai.release({b.id})
+        end
+        mem.st.boats_back = (mem.st.boats_back or 0) + 1
+    end
+    -- the dead are forgotten
+    for _, id in ipairs(ai.keys(mem.boats)) do
+        if ai.unit(id) == nil then
+            mem.boats[id] = nil
+        end
+    end
+end
+
+
+-- [owner] the tower spots that cover the fishing: the own docks (by their tile) and the centre of the fish the boats
+-- work, 3 at most -> {{x =, y =}...}
+function M.boat_spots()
+    local out = {}
+    for _, id in ipairs(ai.units{type = "b_dock", built = true, limit = 2}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            out[#out + 1] = {x = u.x, y = u.y}
+        end
+    end
+    local boats = ai.units{category = "boat", limit = 16}
+    if #boats > 0 then
+        local c = ai.get(boats, {"target"})
+        local sx, sy, n = 0, 0, 0
+        for k = 1, #boats do
+            local f = c.target[k] ~= nil and ai.unit(c.target[k]) or nil
+            if f ~= nil then
+                sx, sy, n = sx + f.x, sy + f.y, n + 1
+            end
+        end
+        if n > 0 and #out < 3 then
+            out[#out + 1] = {x = sx // n, y = sy // n}
+        end
+    end
+    return out
+end
+
 -- whether the script's claims should leave a site now (hurt_safety; false when it is off)
 local LAST = nil
 function M.site_blocked(x, y)
@@ -779,6 +905,10 @@ function M.micro(mem, events, now, tx, ty, epoch)
     note(mem, events, now)
     if M.opts.hurt_safety and tx ~= nil and tx >= 0 then
         safety(mem, now)
+    end
+    if M.opts.boats and now - (mem.boats_t or -1000000) >= 1000 then
+        mem.boats_t = now
+        boats_step(mem, events, now)
     end
     if M.opts.bait and tx ~= nil and tx >= 0 then
         bait(mem, events, now, tx, ty, epoch)

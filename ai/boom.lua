@@ -1247,6 +1247,11 @@ function M.step(view, memory)
     G.step(view, memory)
     memory.def = memory.def or {}
     D.step(view, memory.def)
+    -- (the owner: towers by the dock and the fishing grounds from the middle of the Stone Age; boom-econ builds them at
+    -- these spots, lib.defence boats)
+    if D.opts.boats and view.time % 30000 < 1000 then
+        memory.boat_towers = D.boat_spots()
+    end
 
     -- the plan line, once a minute
     if view.time % 60000 < 1000 and ECON.order then
