@@ -3728,6 +3728,30 @@ of 28, was benched against it (order on in both, 32 seeds):
 
 The floor of 28 is no better, so the Copper plan stays as it is.
 
+**The fishing boats (the owner's rule of 2026-11-11: protected from the middle of the Stone Age).**
+- **Docks heal boats.** A dock's area effect `dock_healing_1_rng_6` heals the `dock_repair` set within 6 tiles, and that
+  set holds the family `ship`, the fishing boats' family.
+- **The rule as built** (`lib.defence` `boats`): a boat hit by an enemy, or within a warship's reach + 2, runs to the
+  nearest own dock out of that reach. It waits until healed and goes back to the same fish. A boat whose dock comes
+  under fire moves on: to a dock out of reach, else 8 tiles away. The engine's naval flee is off for the script.
+- **The towers:** `memory.boat_towers` publishes the docks and the boats' fishing grounds, and boom-econ's order builds
+  a tower at each from stone_grow.
+- **The bench:** 32 seeds, boom-econ's order on in both, main a11066d's classic (it counts its own boats now).
+
+| Variant | Opponent | Defeats | W/L/C | Copper | Bronze | Boats lost / game | Boats alive (min 30-90) |
+|---|---|---|---|---|---|---|---|
+| bt0n, the order | Age of AI | 0/32 | 1/8/23 | 29, 54.7 | 23, 88.7 | 1.4 | 9.6 |
+| | improved classic | 11/32 | 2/27/3 | 17, 61.2 | 5, 77.2 | 18.0 | 5.4 |
+| bt2, + the boats' flight and towers | Age of AI | 0/32 | 3/10/19 | 30, 52.7 | 25, 80.2 | 0.0 | 9.7 |
+| | improved classic | 13/32 | 1/28/3 | 17, 58.6 | 9, 82.2 | 18.0 | 6.0 |
+
+- **Against the improved classic, the boats die as often as before (18 a game).** Its frigates outrange the
+  Stone-Age towers and follow the boats. A first version that waited at the dock lost more (22.4 against 19.0, 690
+  of them idle at the dock); moving on from a dock under fire brought it back to even.
+- **Against Age of AI, which has no warships near, nothing changes** but its Copper and Bronze minutes (2 and 8 sooner
+  with the boats alive).
+- **Off by default.** Against the classic's warships, the boats need ships of their own or towers that reach them.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
