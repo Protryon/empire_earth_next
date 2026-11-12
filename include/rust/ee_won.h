@@ -134,6 +134,54 @@ constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
 /// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
 constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
 
+/// `SetUserName(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
+
+/// `SetPassword(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_PASSWORD = 2;
+
+/// `SetLoginSecretFile(bytes)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SECRET_FILE = 3;
+
+/// `AddCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_COMMUNITY = 4;
+
+/// `SetCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_COMMUNITY = 5;
+
+/// `RemoveCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY = 6;
+
+/// `RemoveAllCommunity()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY = 7;
+
+/// `SetCDKey(key, CDKey)`: the key's bytes, `num` bit 0 its `mKey` present, bit 1 `mValid`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CDKEY = 8;
+
+/// `AddCDKeyCommunityJoin(key, CDKey)`: the key's bytes, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_JOIN = 9;
+
+/// `ClearCDKeyCommunityJoins()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_JOINS = 10;
+
+/// `AddUserData(key, data)`: the data, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_USER_DATA = 11;
+
+/// `ClearUserData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_USER_DATA = 12;
+
+/// `ClearOneTimeData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME = 13;
+
+/// `AddNickname(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_NICKNAME = 14;
+
+/// `SetNickname(key, text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
+
+/// `ClearNicknames()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -2685,6 +2733,9 @@ struct EeWonAsyncSocket;
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
 
+/// The login data (opaque): `AuthContext::mLogin`, its own lock.
+struct EeWonAuthLogin;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -4854,6 +4905,76 @@ void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f, void *light, uint32_
 /// # Safety
 /// `f` a flow.
 long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout);
+
+/// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
+///
+/// # Safety
+/// `secret_file` holds `len` bytes.
+EeWonAuthLogin *ee_won_auth_login_new(const uint8_t *secret_file, size_t len);
+
+/// # Safety
+/// `l` is from `ee_won_auth_login_new` (or NULL), not used afterwards.
+void ee_won_auth_login_free(EeWonAuthLogin *l);
+
+/// A setter (`EE_WON_AUTH_LOGIN_*`): `key` a map's key and `value` a text (UTF-16 LE bytes) or bytes.
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+void ee_won_auth_login_set(const EeWonAuthLogin *l,
+                           int32_t which,
+                           const uint8_t *key,
+                           size_t key_len,
+                           const uint8_t *value,
+                           size_t value_len,
+                           int64_t num);
+
+/// `EE_WON_AUTH_LOGIN_NAME` / `_PASSWORD`: the text (UTF-16 LE bytes); `_SECRET_FILE`: its bytes.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_text(const EeWonAuthLogin *l,
+                            int32_t which,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
+                                  const uint8_t *community,
+                                  size_t community_len,
+                                  const uint8_t *files,
+                                  size_t files_len);
+
+/// The members, one line (`Login::describe`, the drivers' form).
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_describe(const EeWonAuthLogin *l, EeWonByteSink sink, void *context);
+
+/// The login request's blocks: 0 `AppendCommunityData`, 1 `AppendHashes(challenge)` (`data`), 2
+/// `AppendLoginSecrets`.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `sink` takes `context`.
+void ee_won_auth_login_block(const EeWonAuthLogin *l,
+                             int32_t which,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The secrets: 0 `LoadSecretList`, 1 `SaveSecretList` (false: the file did not open), 2 `AddSecret(key)` and save,
+/// 3 `RemoveSecret(key)` and save when removed, 4 `CommitSecrets(t0, t1)` and save when it changed anything.
+///
+/// # Safety
+/// `l` is a login; `key` 8 bytes for 2 and 3.
+bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
+                               int32_t which,
+                               const uint8_t *key,
+                               int64_t t0,
+                               int64_t t1);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
