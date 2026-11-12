@@ -7474,3 +7474,81 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## R6: the game screens mapped, the settings form's presets and the lobby's player rows in Rust (ee_screens settings.rs, lobby.rs; branch rust-screens1, 2026-11-11)
+
+The toolkit's logic is Rust (the section above); what keeps it from becoming internal to Rust is the game's screens
+built on it. This round maps them (RUST_PLAN's row "R6 game screens", with the ordered plan) and moves the first
+leaves into a new crate, `rust/crates/ee_screens`.
+
+- **The map** (`build/sc1/census.py`, scratch: every class whose base chain reaches a `UI*` class, outside
+  `src/Low-Level Engine` and WON's lobby): 426 classes in 87 units and 6 headers, 356 of them `UIEvent`s. The
+  forms are the UI database's; the game's part is the events on their controls, a few custom controls (the
+  portrait, the icon bar, the minimap control, the post-game line graph, the editors' list boxes) and six
+  `UIFormManager`s. By size: the scenario editor (33 units, 18.0k lines), the UI thread's units (26, 14.7k), the
+  events (33, 13.5k), the civilization builder (4, 2.9k). The lobby (2,747) and the settings (1,323) are the
+  largest out-of-game screens; the main game form (1,924), the status buttons (1,629) and the status box (1,270)
+  the largest in-game ones.
+- **How the screens reach the simulation** (the boundary a Rust screen must keep): `UIManager::UpdateUI` (every
+  control's events) runs under the world's read lock (`EEUserInterface::UpdateInterface`), the queued actions
+  under the UI copy lock and the world's write lock (`ProcessActions`); the HUD reads live units, players and the
+  map there, not the render snapshot; orders leave as game messages; the lobby reads and writes `gGameOptions`
+  under its own `mLock` and sends `EEMFullGameOptions`/`EEMPlayerInformation`; the settings write
+  `gGamePreferences` and the media objects.
+- **Moved** (the C++ functions keep their names, signatures and call sequences; the decisions are Rust):
+  - settings (`settings.rs`): `GetGraphicsQuality`'s preset match, `SetGraphicsQuality`'s plan (the nine check
+    boxes in the presets' order, the two detail radios), the quality radio `ShowGraphics` and
+    `EEUIEGSEAdvancedGraphicsSettingsChanged` check (5: Custom, which they also show), `ShowGraphics`' controls
+    from the settings (the full-resolution textures box is checked only when both MIP drops are 0; the texture
+    resolution line 4 -> 2, 2 -> 1, else 0; a detail value 0 low, 1 medium, any other high), and the port's seven
+    value tables (`PortSelect`'s nearest line, the first of equally near ones, `labs` of the wrapping `long`
+    difference; `PortRead`'s value, none past the lines). The `kQualityCheck*`/`kQualityRadios*` arrays and the
+    value arrays are deleted from the C++; the control indices stay there as tables.
+  - lobby (`lobby.rs`): `PlayerTypeFromMenu`, the five type menus' lines (`LobbyFillPlayerTypes`) and the line a
+    type selects (`LobbySelectPlayerType`), `LobbyShowHostRow`'s and `LobbyShowClientRow`'s menu, name text and
+    row arguments, `LobbyShowRowControls`' pairs (0 the label, 1 the control, 2 neither), `LobbyShowName`'s modes,
+    colour and dirty choice, `LobbyShowPlayer`'s ready, colour, team, citizens and ping modes and
+    `LobbyShowEngine`'s modes and engine choice (one plan, `ee_screens_lobby_player`, for all of them).
+- **Golden drivers over the unmodified units** (scratch, `build/sc1`: `drv.py DRIVER UNIT NAME args` compiles a
+  driver that `#include`s the unit, links it with `/FORCE:UNRESOLVED` against the worktree's `ee_rust.lib`, runs it):
+  - The controls are calloc'ed blocks with one fake vtable of numbered stubs; the slots the units reach
+    (`SetDisplayMode`, `SetDirty`, `UIRadioButton::Check`, `SetBgOpacity`, `SetBgColor`, the communications'
+    `IsServer`) are found at start-up by calling each once through a block and reading which stub ran, then
+    replaced by trace functions. No slot number is written down, so a header change cannot shift them silently.
+  - The toolkit's out-of-line members the units call (`SetChecked`, `SetCurrentSelection`, `SetText`,
+    `AppendLine`, `DeleteAllEntries`, `Get`/`SetTriggerEvent`, `GetFormByID`, `GetString`, `SetPing`) are the
+    driver's, each a trace line; inline ones (`GetIsChecked`, `GetCurrentSelection`, `SetFgColor`, `SetBitmap`,
+    `IsFormVisible`) run on the blocks' real member offsets (`#define private public`).
+  - Traps: a by-value `EEGameSettings` argument runs the implicit copy constructor, which runs
+    `EEGameOptions`' user-declared copy constructor and its sixteen `EEGameOptionsPlayer()` member constructors
+    (unresolved under `/FORCE`: a call to address 0; define them); `gGameOptions` is a reference
+    (`EEGameOptions&`), so the driver defines it over raw storage; the lobby's row controls reach index 306
+    (`kLobbyEngineLabel` 291 + 15), past a 300-entry table; a fake `SetTriggerEvent` must follow the trace switch
+    too, or its setup lines land in the previous case.
+  - The lobby driver links the real `UWideString.cpp` and `UString.cpp` (lle flags; `SC1_REAL_STRINGS=1`), so the
+    names, `sprintf` and the resource strings are the real text.
+- **Goldens:** `golden_settings.txt` (2,000 cases: random control states, half of them a preset, each one of
+  `SetGraphicsQuality`, `ShowGraphics`, the advanced and quality-radio events, the quality combo box's event,
+  `PortShowVideo`, `PortShowInterface`, `PortApply`, with the port's combo boxes sometimes missing and the quality
+  guard sometimes set), `golden_lobby.txt` (3,000 cases: host or client, single or multiplayer, every load type
+  and one past them, every slot type and one past them, `LobbyShowPlayer` with each flag, `LobbyFillPlayerTypes`
+  with menus 0..6, `PlayerTypeFromMenu` over every menu and line). Both replay whole in Rust from each case's
+  printed inputs; both drivers relinked over the forwarders printed the same files, and the same on seeds 2-4 at
+  ten times the size. Mutations checked: `nearest_line`'s `<` -> `<=`, the texture line 2 -> 1, the scenario
+  name rule's `kind != 4`, `PlayerTypeFromMenu`'s (5, 1), the ping's slot 0 test and a host row's citizens
+  argument each fail a replay. On a 64-bit `long` the settings replay skips the cases holding a value past 2^30
+  (the golden is the Windows build's 32-bit wrapping).
+- **Behaviour:** none changed. `GetGraphicsQuality` now reads all fifteen controls before deciding (the original
+  read them lazily, short-circuited): the settings form has them all, so no read differs.
+- **What the tour's captures show of this** (pixel compare, the lead's): the settings form's three milestone
+  captures (`settings-video`, `-audio`, `-interface`) show the controls `OutOfGameOpen` set through
+  `ShowGraphics` and `PortShowVideo`/`PortShowInterface` (the quality combo box's line, the display and zoom
+  combo boxes' lines, the hidden detail controls); the `random-map-setup` capture shows the slot rows (the
+  human's and the computer's type boxes, names, colours, team and citizens boxes, the hidden ready boxes, the
+  closed slots). The ai-game gate selects the type boxes (`PlayerTypeFromMenu` and the menus) and fails on a
+  selection that drifts. The LAN game shows the client rows and the ready boxes. **Only a person reaches:** the
+  settings' OK (`PortRead`/`PortApply`), Restore Default, the quality combo box and the advanced and radio events;
+  the lobby's scenario and saved-game rows (load types 1 and 2: the red and yellow names, menus 4 and 5).
+- **Gates run:** both builds of each commit (`build.py -j 3 --sim`, 0/0), `rust_build.py gate`, the sim oracle on
+  seeds 2-3 per commit; at the end on the merged result see the report. No tour, screenshot, LAN game or POSIX
+  build was run.
