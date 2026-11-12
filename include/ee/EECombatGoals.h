@@ -3,8 +3,11 @@
 // reads of a test (EeCombatConditionIn, null-safe) or a step (EeCombatStepIn); the lazy reads and the step's
 // operations are logged into the record in the order they are made.
 //
-// With EE_SIM_CAPTURE set (ee/EESimCapture.h, tools/sim_capture.py) every test appends a CBTC record (the record and
-// EeCombatConditionOut) and every step a CBGS record (the record with its operations). A test that calls another
+// With EE_SIM_CAPTURE set (ee/EESimCapture.h, tools/sim_capture.py) every test is folded into a CBTC record (some ten
+// million tests a calamity game: one record per 4096 tests, their count and the FNV-1a 64 of each test's record and
+// EeCombatConditionOut in order, the last batch at the game's end; EE_SIM_CAPTURE_CBTC_FULL=1 writes every test's
+// bytes instead, for finding where two builds part) and every step appends a CBGS record (the record with its
+// operations). A test that calls another
 // captured test (the torpedo's other triggers, a base class's test) records both, the inner one first.
 #ifndef EE_EECOMBATGOALS_H
 #define EE_EECOMBATGOALS_H
@@ -27,6 +30,8 @@ void EECombatFillStep(EeCombatStepIn& in, int32_t inKind, EEComplexUnit* inUnit,
 // CBTC, CBGS (no record while the capture is off)
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut);
 void EECombatCaptureStep(const EeCombatStepIn& in);
+// writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
+void EECombatCaptureFlush();
 
 // TEST ONLY: the golden instrumentation of the C++ bodies (recorded before the move to Rust). A scope fills its
 // record while the capture is on and logs the reads made inside it (the thread's innermost scope).

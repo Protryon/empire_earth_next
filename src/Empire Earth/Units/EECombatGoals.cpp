@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <mutex>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -101,9 +103,65 @@ void EECombatFillStep(EeCombatStepIn& in, int32_t inKind, EEComplexUnit* inUnit,
     }
 }
 
+namespace {
+
+const unsigned int kConditionTag = EE_COMBAT_TAG('C', 'B', 'T', 'C');
+const uint32_t kConditionBatch = 4096;
+std::mutex sConditionLock;
+uint32_t sConditionCount = 0;
+uint64_t sConditionHash = 0xcbf29ce484222325ull;
+
+void EEConditionFold(const void* inData, size_t inSize)
+{
+    const unsigned char* theBytes = (const unsigned char*)inData;
+    for (size_t i = 0; i < inSize; i++)
+        sConditionHash = (sConditionHash ^ theBytes[i]) * 0x100000001b3ull;
+}
+
+// under sConditionLock
+void EEConditionWrite()
+{
+    EESimCaptureRecord theRecord(kConditionTag);
+    theRecord.U32(sConditionCount);
+    theRecord.U32((uint32_t)sConditionHash);
+    theRecord.U32((uint32_t)(sConditionHash >> 32));
+    theRecord.Commit();
+    sConditionCount = 0;
+    sConditionHash = 0xcbf29ce484222325ull;
+}
+
+bool EEConditionFull()
+{
+    static const bool sFull = getenv("EE_SIM_CAPTURE_CBTC_FULL") != NULL;
+    return sFull;
+}
+
+}   // namespace
+
 void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatConditionOut& inOut)
 {
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'T', 'C'), in, inOut);
+    if (!EESimCaptureRecord::Active())
+        return;
+    if (EEConditionFull()) {
+        EECombatCapture(kConditionTag, in, inOut);
+        return;
+    }
+    if (!EESimCaptureRecord::Keeps(kConditionTag))
+        return;
+    std::lock_guard<std::mutex> theGuard(sConditionLock);
+    EEConditionFold(&in, sizeof(in));
+    EEConditionFold(&inOut, sizeof(inOut));
+    if (++sConditionCount == kConditionBatch)
+        EEConditionWrite();
+}
+
+void EECombatCaptureFlush()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    std::lock_guard<std::mutex> theGuard(sConditionLock);
+    if (sConditionCount != 0)
+        EEConditionWrite();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
