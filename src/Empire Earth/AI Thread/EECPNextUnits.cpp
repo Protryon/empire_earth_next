@@ -416,7 +416,24 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
         if (theResource >= 0 && theResource < 7) {
             theManager->RemoveGatherer(inUnit);
             theManager->AddGatherer(inUnit, theResource);
+            return;
         }
+    }
+    // new (docs/AI_RESEARCH.md §8.51): a citizen released at work that is not idle yet (stopped this tick, hunting, or
+    // released without {gather = true}) went onto no list at all, and the engine never moved or counted it again: in
+    // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
+    // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
+    if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
+        EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+        EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
+        long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()
+            : theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
+            ? (long)kResourceFood : -1;
+        theManager->RemoveGatherer(inUnit);
+        if (theResource >= kResourceFood && theResource < 7)
+            theManager->AddGatherer(inUnit, theResource);
+        else
+            theManager->AddIdleGatherer(inUnit);
     }
 }
 
