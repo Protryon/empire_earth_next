@@ -937,6 +937,31 @@ constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 /// `kControlTriggerScrollingFinished`.
 constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
 
+/// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
+constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
+
+constexpr static const int64_t EE_UNIT_TYPE_GRANARY = 52;
+
+constexpr static const int64_t EE_UNIT_TYPE_GRANARY_IMPROVED = 698;
+
+/// `kGoalBuildRepair` (`EEUnitGoal::mKind`)
+constexpr static const int32_t EE_GOAL_KIND_VALUE_BUILD_REPAIR = 4;
+
+/// `kActionIdle`, `kActionMoveToStorage`, `kActionCalamityPreCast` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_IDLE = 5000;
+
+constexpr static const int32_t EE_ACTION_MOVE_TO_STORAGE = 8009;
+
+constexpr static const int32_t EE_ACTION_CALAMITY_PRE_CAST = 2030;
+
+/// `kTechTeleport`, `kTechConquistadorsSpell` (ee/EETechTreeTechID.h)
+constexpr static const int32_t EE_TECH_TELEPORT = 1916;
+
+constexpr static const int32_t EE_TECH_CONQUISTADORS_SPELL = 7020;
+
+/// the calamity class whose cast every selected caster takes a copy of (`mClassEnum` 0x12)
+constexpr static const int32_t EE_CALAMITY_CLASS_GROUP_CAST = 18;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
@@ -1018,6 +1043,13 @@ constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
 
 /// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
+
+/// `new EEUGLocation(GE2DPoint(point[0], point[1]), true, true, false, 0.0f, false, 0)` (EEMSmartFarmers' move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_2D = 11;
+
+/// `new EEUGCastCalamity(unit_a, unit_b, ints[0], ints[1], ints[2], flag_a)` (the caster's complex unit, the target
+/// or none, the tile x and y, the technology)
+constexpr static const uint32_t EE_GOAL_CTOR_CAST_CALAMITY = 12;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -1181,6 +1213,25 @@ constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 /// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
 /// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
 constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
+
+/// `EEComplexUnit::mPhysicalModel.GetLocation()`'s x, y and z, as their float bits (`EEUnitStoreModel`'s setters)
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_X = 17;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Y = 18;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Z = 19;
+
+/// `EEComplexUnit::mHeight` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_HEIGHT = 20;
+
+/// `EEComplexUnit::mTimesUpdated`
+constexpr static const uint32_t EE_UNIT_FIELD_TIMES_UPDATED = 21;
+
+/// `EEComplexUnit::mActiveGroup != NULL`
+constexpr static const uint32_t EE_UNIT_FIELD_ACTIVE_GROUP = 22;
+
+/// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
+constexpr static const uint32_t EE_UNIT_FIELD_COMMAND = 23;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -6334,6 +6385,15 @@ struct EeUnitRecord {
   int64_t resource_amount;
   /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
   uint8_t on_map;
+  /// `EEComplexUnit::mActiveGroup != NULL`
+  uint8_t active_group;
+  /// the location's x, y, z and `mHeight` as float bits
+  uint32_t location[3];
+  uint32_t height;
+  /// `EEComplexUnit::mTimesUpdated` (an `unsigned long`)
+  int64_t times_updated;
+  /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
+  int64_t command;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -6364,6 +6424,8 @@ struct EeGoalSpec {
   /// a value (the location's facing)
   float value;
   uint8_t flag_c;
+  /// integer arguments (the cast's tile and technology)
+  int64_t ints[3];
 };
 
 /// A member handed over.
@@ -13787,6 +13849,17 @@ uint32_t ee_units_store_clear_player(uint64_t player);
 /// A holder's write (`EE_UNIT_FIELD_*`); ignored unless the record under `id` is `object`'s.
 bool ee_units_store_set(uint32_t id, uint64_t object, uint32_t field, int64_t value);
 
+/// The location's write (`EEUnitStoreModel`'s setters): x, y and z as float bits, in one call; ignored unless the
+/// record under `id` is `object`'s.
+bool ee_units_store_set_location(uint32_t id,
+                                 uint64_t object,
+                                 uint32_t x,
+                                 uint32_t y,
+                                 uint32_t z);
+
+/// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
+uint64_t ee_units_store_checksum_flag2();
+
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///
 /// # Safety
@@ -13932,6 +14005,30 @@ void ee_units_dropoff_resource(void *player,
                                void *selection,
                                uint32_t dropoff);
 
+/// `EEMBuildUnit::Execute`'s body (`commands::build_unit`) for the sender, its selection, the technology, the tile
+/// (the message's point through the original's `(long)` casts) and the queued flag.
+void ee_units_build_unit(void *player,
+                         void *selection,
+                         int32_t technology,
+                         int64_t x,
+                         int64_t y,
+                         bool queued);
+
+/// `EEMSmartFarmers::Execute`'s body (`commands::smart_farmers`) for the sender, its selection and the target id.
+void ee_units_smart_farmers(void *player,
+                            void *selection,
+                            uint32_t target);
+
+/// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
+/// target id (-1: none), the tile and the technology.
+void ee_units_cast_calamity(void *player,
+                            void *selection,
+                            uint32_t caster,
+                            int32_t target,
+                            int32_t x,
+                            int32_t y,
+                            int32_t technology);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -14040,6 +14137,87 @@ extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
 extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
+
+extern int64_t ee_units_host_technology_unit_class(void *player,
+                                                   int32_t technology,
+                                                   uint8_t *found);
+
+extern int64_t ee_units_host_player_num_capitols(void *player);
+
+extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
+
+extern uint8_t ee_units_host_can_place_on_tile(void *player,
+                                               int64_t unit_type,
+                                               int64_t x,
+                                               int64_t y);
+
+extern uint32_t ee_units_host_make_building(void *player, int64_t unit_type, int64_t x, int64_t y);
+
+extern size_t ee_units_host_free_farms(uint32_t unit, uint32_t *out, size_t capacity);
+
+extern void ee_units_host_sort_farms(uint32_t *farms,
+                                     size_t count,
+                                     int64_t x,
+                                     int64_t y,
+                                     uint8_t greater);
+
+extern void ee_units_host_unit_add_farm_target(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_unit_order_build(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_unit_start_action(uint32_t unit, int32_t action);
+
+extern uint32_t ee_units_host_unit_load_farm(uint32_t unit);
+
+extern size_t ee_units_host_farm_drop_sites(uint32_t farm,
+                                            uint32_t *out,
+                                            size_t capacity,
+                                            uint8_t *found);
+
+extern uint8_t ee_units_host_can_take(uint32_t target, uint32_t unit);
+
+extern void ee_units_host_unit_drop_gathered(uint32_t unit);
+
+extern void ee_units_host_work_farm(uint32_t farm, uint32_t unit);
+
+extern void ee_units_host_unit_set_goal(uint32_t unit, void *goal);
+
+extern void ee_units_host_group_finish(void *group);
+
+extern void *ee_units_host_calamity_of(void *player,
+                                       int32_t technology,
+                                       int32_t *class_enum,
+                                       uint8_t *cast_by_all);
+
+extern int64_t ee_units_host_calamity_can_cast_at(void *class_,
+                                                  uint32_t unit,
+                                                  int32_t x,
+                                                  int32_t y,
+                                                  uint32_t target);
+
+extern uint8_t ee_units_host_technology_contains(void *player,
+                                                 int32_t technology,
+                                                 int64_t unit_type);
+
+extern int64_t ee_units_host_unit_power(uint32_t unit);
+
+extern int64_t ee_units_host_calamity_cost(void *class_);
+
+extern void *ee_units_host_unit_player(uint32_t unit);
+
+extern void ee_units_host_group_split_calamity_casters(void *group,
+                                                       void *class_,
+                                                       void *player,
+                                                       int32_t technology,
+                                                       uint32_t target);
+
+extern void *ee_units_host_goal_clone(void *goal);
+
+extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
+
+extern void ee_units_host_unit_clear_goals(uint32_t unit);
+
+extern int64_t ee_units_host_object_hit_points(uint32_t unit);
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
 ///
