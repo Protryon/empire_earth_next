@@ -207,16 +207,40 @@ function M.holds_wood(view, phase)
     return phase == "stone_start" and view.boats < 10
 end
 
+-- the start patches' food left (the owner: "a failure if the initial patches run out before Copper"): the home forage
+-- patches seen at the first step, their amounts now (0 once gone)
+function M.start_patches(view, memory)
+    if memory.start_patches == nil then
+        memory.start_patches = {}
+        for _, s in ipairs(view.sites) do
+            if s.home and s.patch then
+                memory.start_patches[#memory.start_patches + 1] = s.index
+            end
+        end
+    end
+    local left, alive = 0, 0
+    for _, idx in ipairs(memory.start_patches) do
+        for _, s in ipairs(view.sites) do
+            if s.index == idx and s.patch and (s.amount or 0) > 0 then
+                left = left + s.amount
+                alive = alive + 1
+            end
+        end
+    end
+    return left, alive, #memory.start_patches
+end
+
 -- the trace line (once a minute): what the acceptance check reads
 function M.trace(view, memory, phase, army)
     local g = view.gatherers
+    local pleft, palive, pn = M.start_patches(view, memory)
     print(string.format("order line phase=%s gat=%d/%d/%d/%d/%d hunters=%d boats=%d cit=%d army=%d docks=%d barracks=%d "
-        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s tplaces=%d/%d/%d", phase, g.food or 0, g.wood or 0, g.stone or 0,
+        .. "ranges=%d towers=%d settlements=%d granaries=%d farms=%d raid=%s tplaces=%d/%d/%d startfood=%d/%d/%d", phase, g.food or 0, g.wood or 0, g.stone or 0,
         g.gold or 0, g.iron or 0, view.hunters or 0, view.boats, view.citizens, army, count(view, "b_dock", "finished"),
         count(view, "b_barracks", "finished"), count(view, "b_archery_range", "finished"), M.towers(view),
         count(view, "b_settlement", "finished"), count(view, "b_granary", "finished"), count(view, "b_farm", "finished"),
         memory.raid ~= nil and tostring(memory.raid.state) or "-", (memory.touched_room or {}).stone or 0,
-        (memory.touched_room or {}).gold or 0, (memory.touched_room or {}).iron or 0))
+        (memory.touched_room or {}).gold or 0, (memory.touched_room or {}).iron or 0, pleft, palive, pn))
 end
 
 -- the town centre's gathering techs (dbtechtree: kind 0, researched at b_town_center or b_capitol; the owner takes them at
