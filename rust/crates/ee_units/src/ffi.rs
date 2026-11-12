@@ -55,6 +55,23 @@ pub extern "C" fn ee_units_store_set(id: u32, object: u64, field: u32, value: i6
     with_store(|s| s.set(id, object, field, value))
 }
 
+/// The location's write (`EEUnitStoreModel`'s setters): x, y and z as float bits, in one call; ignored unless the
+/// record under `id` is `object`'s.
+#[no_mangle]
+pub extern "C" fn ee_units_store_set_location(id: u32, object: u64, x: u32, y: u32, z: u32) -> bool {
+    with_store(|s| {
+        s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_X, i64::from(x))
+            && s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_Y, i64::from(y))
+            && s.set(id, object, crate::store::EE_UNIT_FIELD_LOCATION_Z, i64::from(z))
+    })
+}
+
+/// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
+#[no_mangle]
+pub extern "C" fn ee_units_store_checksum_flag2() -> u64 {
+    with_store(|s| s.checksum_flag2())
+}
+
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///
 /// # Safety
@@ -321,6 +338,64 @@ pub extern "C" fn ee_units_unload_transport(player: *mut c_void, selection: *mut
 pub extern "C" fn ee_units_dropoff_resource(player: *mut c_void, selection: *mut c_void, dropoff: u32) {
     let mut host = crate::host::game::GameHost;
     crate::group::dropoff_resource(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), dropoff);
+}
+
+/// `EEMBuildUnit::Execute`'s body (`commands::build_unit`) for the sender, its selection, the technology, the tile
+/// (the message's point through the original's `(long)` casts) and the queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_build_unit(
+    player: *mut c_void,
+    selection: *mut c_void,
+    technology: i32,
+    x: i64,
+    y: i64,
+    queued: bool,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::build_unit(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        technology,
+        x,
+        y,
+        queued,
+    );
+}
+
+/// `EEMSmartFarmers::Execute`'s body (`commands::smart_farmers`) for the sender, its selection and the target id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_smart_farmers(player: *mut c_void, selection: *mut c_void, target: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::smart_farmers(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
+}
+
+/// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
+/// target id (-1: none), the tile and the technology.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_cast_calamity(
+    player: *mut c_void,
+    selection: *mut c_void,
+    caster: u32,
+    target: i32,
+    x: i32,
+    y: i32,
+    technology: i32,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::commands::cast_calamity(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        caster,
+        target,
+        x,
+        y,
+        technology,
+    );
 }
 
 #[cfg(test)]

@@ -1,0 +1,864 @@
+// GetCertOp's messages: the original's statements (copied from GetCertOp.cpp before the port, `this->` an op
+// stand-in) against include/ee/wonapi/WONCertMsg.h over ee_won's cert module, both over the same stand-ins for
+// the auth classes (certificates, key blocks, the ElGamal and Blowfish keys, the peer data, the auth context),
+// whose verdicts follow the bytes they are made from and whose every call is logged. The three requests over
+// generated members; every reply generated in every op state, whole, cut at every length and mutated: the trace,
+// the members, the return or the throw compared. The exit code is the number of failed checks.
+//
+// `--print N` prints N replies in the golden's format (rust/crates/ee_won/src/golden_cert.txt): the state, the
+// session key, the reply and what the original read of it with every check passing (`cert_golden` replays it).
+#include <windows.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <string>
+#include <list>
+#include <vector>
+#include "lle/LowLevelEngine.h"
+#include "ee/EEWonNet.h"
+#include "ee/wonapi/WONBuffer.h"
+#include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONBlowfish.h"
+#include "ee/wonapi/WONCertMsg.h"
+#include "rust/ee_rust.h"
+
+using namespace WONAPI;
+
+static int sFailures;
+static long long sChecks;
+#define CHECK(c) do { sChecks++; if (!(c)) { sFailures++; if (sFailures < 40) printf("FAIL line %d: %s\n", __LINE__, #c); } } while (0)
+
+static unsigned int sSeed = 7171;
+static unsigned int Next()
+{
+    sSeed = sSeed * 1103515245u + 12345u;
+    return (sSeed >> 8) & 0xffffff;
+}
+static int Pick(int n) { return (int)(Next() % (unsigned)n); }
+
+// ---- the stand-ins
+
+static std::string sTrace;
+static int sSerial;
+// golden mode: every check passes, the decryption is the identity
+static bool sAllPass;
+static void Log(const char* inFormat, ...)
+{
+    char aBuffer[256];
+    va_list ap;
+    va_start(ap, inFormat);
+    vsnprintf(aBuffer, sizeof(aBuffer), inFormat, ap);
+    va_end(ap);
+    sTrace += aBuffer;
+    sTrace += ';';
+}
+static std::string Hex(const void* inData, size_t inLength)
+{
+    static const char kHex[] = "0123456789abcdef";
+    std::string s;
+    const unsigned char* p = static_cast<const unsigned char*>(inData);
+    for (size_t i = 0; i < inLength; i++) { s += kHex[p[i] >> 4]; s += kHex[p[i] & 15]; }
+    return s;
+}
+static unsigned char At(const void* inData, unsigned long inLength, unsigned long i)
+{
+    return i < inLength ? static_cast<const unsigned char*>(inData)[i] : 0;
+}
+
+struct SKey {   // ElGamal: the key block's current key (Encrypt), the private key (SetPrivateKey)
+    int mFail;
+    SKey() : mFail(0) {}
+    bool SetPrivateKey(const void* inData, int inLength)
+    {
+        Log("priv %s", Hex(inData, inLength).c_str());
+        return sAllPass || (inLength > 0 && At(inData, inLength, 0) != 0);
+    }
+    ByteBufferPtr Encrypt(const void* inData, int inLength) const
+    {
+        Log("elg %s", Hex(inData, inLength).c_str());
+        if (this->mFail) return NULL;
+        std::string s(static_cast<const char*>(inData), inLength);
+        for (size_t i = 0; i < s.size(); i++) s[i] ^= 0x5a;
+        s += "E";
+        return new ByteBuffer(s.data(), (unsigned long)s.size(), false);
+    }
+};
+
+struct SCert : public RefCount {    // AuthCertificate / Auth2Certificate
+    int mSerial, mIssue, mExpire;
+    bool mValid, mSigned;
+    SCert(const char* inKind, const void* inData, unsigned long inLength)
+    {
+        this->mSerial = ++sSerial;
+        this->mValid = sAllPass || (At(inData, inLength, 0) & 1);
+        this->mSigned = sAllPass || (At(inData, inLength, 0) & 2);
+        this->mIssue = At(inData, inLength, 1) * 1000;
+        this->mExpire = this->mIssue + At(inData, inLength, 2) * 10;
+        Log("%s#%d %s", inKind, this->mSerial, Hex(inData, inLength).c_str());
+    }
+    bool IsValid() const { Log("valid#%d", this->mSerial); return this->mValid; }
+    time_t ComputeAuthDelta() const { Log("delta#%d", this->mSerial); return this->mIssue - 500; }
+    time_t GetIssueTime() const { return this->mIssue; }
+    time_t GetExpireTime() const { return this->mExpire; }
+};
+struct SCert1 : public SCert { SCert1(const void* d = NULL, unsigned long n = 0) : SCert("cert1", d, n) {} };
+struct SCert2 : public SCert { SCert2(const void* d = NULL, unsigned long n = 0) : SCert("cert2", d, n) {} };
+
+struct SKeyBlock : public RefCount {    // AuthPubKeyBlock
+    int mSerial;
+    unsigned short mId;
+    bool mValid, mVerified;
+    SKey mKey;
+    SKeyBlock(const void* inData = NULL, unsigned long inLength = 0)
+    {
+        this->mSerial = ++sSerial;
+        this->mId = (unsigned short)(At(inData, inLength, 1) | At(inData, inLength, 2) << 8);
+        this->mValid = inLength > 0;
+        this->mVerified = sAllPass || (At(inData, inLength, 0) & 1);
+        this->mKey.mFail = !sAllPass && (At(inData, inLength, 0) & 4);
+        Log("block#%d %s", this->mSerial, Hex(inData, inLength).c_str());
+    }
+    bool IsValid() const { return this->mValid; }
+    unsigned short GetId() const { return this->mId; }
+    const SKey& GetCurrentKey() const { return this->mKey; }
+    bool IsValidAndVerified(const SKey&) const { Log("verified#%d", this->mSerial); return this->mVerified; }
+    bool Verify(const SCert* inCert) const
+    {
+        Log("verify#%d#%d", this->mSerial, inCert->mSerial);
+        return inCert->mSigned;
+    }
+};
+
+struct SPeerData : public RefCount {    // AuthPeerData
+    int mSerial;
+    SPeerData(const SCert1* c1, const SKeyBlock* b, const SKey&, time_t d, const SCert2* c2)
+    {
+        this->mSerial = ++sSerial;
+        Log("peer#%d c%d b%d d%d c%d", this->mSerial, c1 ? c1->mSerial : 0, b ? b->mSerial : 0, (int)d, c2 ? c2->mSerial : 0);
+    }
+};
+
+struct SSessionKey {    // Blowfish
+    unsigned char mKey[8];
+    int mLength;
+    SSessionKey() : mLength(8) { for (int i = 0; i < 8; i++) this->mKey[i] = (unsigned char)(0x10 + i); }
+    bool Create(int n)
+    {
+        Log("create %d", n);
+        for (int i = 0; i < 8; i++) this->mKey[i] = (unsigned char)(this->mKey[i] * 7 + 3);
+        this->mLength = n;
+        return true;
+    }
+    const void* GetKey() const { return this->mKey; }
+    int GetKeyLen() const { return this->mLength; }
+    ByteBufferPtr Encrypt(const void* inData, int inLength) const
+    {
+        Log("bf %s", Hex(inData, inLength).c_str());
+        std::string s(static_cast<const char*>(inData), inLength);
+        for (size_t i = 0; i < s.size(); i++) s[i] ^= 0x33;
+        return new ByteBuffer(s.data(), (unsigned long)s.size(), false);
+    }
+    ByteBufferPtr Decrypt(const void* inData, int inLength) const
+    {
+        Log("unbf %d", inLength);
+        if (!sAllPass && inLength > 0 && At(inData, inLength, 0) == 0xdd) return NULL;
+        return new ByteBuffer(inData, inLength, false);
+    }
+};
+
+struct SAuthContext {
+    SKey mVerifier;
+    std::wstring mUser, mPassword;
+    std::string mCommunity;
+    const SKey& GetVerifierKey() const { return this->mVerifier; }
+    const std::wstring& GetUserName() const { return this->mUser; }
+    const std::wstring& GetPassword() const { return this->mPassword; }
+    void RemoveSecret(const void* p) { Log("remove %s", Hex(p, 16).c_str()); }
+    void AddSecret(const void* p) { Log("add %s", Hex(p, 16).c_str()); }
+    void CommitSecrets(time_t a, time_t b) { Log("commit %d %d", (int)a, (int)b); }
+    void SetPeerData(const SPeerData* p) { Log("setpeer#%d", p ? p->mSerial : 0); }
+    void SetPassword(const std::wstring& p) { Log("password %d", (int)p.size()); }
+    void ClearOneTimeData() { Log("clear"); }
+    void AppendCommunityData(WriteBuffer& w) { Log("community"); w.AppendBytes(this->mCommunity.data(), (unsigned long)this->mCommunity.size()); }
+    void AppendHashes(WriteBuffer& w, const RawBuffer& s) { Log("hashes"); w.AppendBytes(s.data(), (unsigned long)s.size()); w.AppendByte('H'); }
+};
+
+struct SOp {
+    struct COMMUNITY_STATUS {
+        short mStatus;
+        unsigned long mCommunityID;
+        std::wstring mCommunityName;
+    };
+    enum State { GETTING_PUB_KEYS = 1, GETTING_CHALLENGE = 2, GETTING_CERTIFICATE = 3 };
+    SAuthContext* mAuthContext;
+    SSessionKey mSessionKey;
+    ConstSmartPtr<SKeyBlock> mKeyBlock;
+    ConstSmartPtr<SPeerData> mPeerData;
+    RawBuffer mChallengeSeed;
+    std::wstring mNewPassword;
+    bool mCreateAccount;
+    State mState;
+    std::vector<std::string> mErrorList;
+    std::list<COMMUNITY_STATUS> mCommunityStatusList;
+    ByteBufferPtr mRequest, mResponse;
+    void SetLastServerError(WONStatus s) { Log("lasterror %d", (int)s); }
+    WONStatus InvalidReplyHeader() { Log("invalid"); return WS_ServerReq_TryNextServer; }
+    std::string Dump() const
+    {
+        std::string s = "state " + std::to_string((int)this->mState) + " block " +
+                        std::to_string(this->mKeyBlock.get() ? this->mKeyBlock->mSerial : 0) + " peer " +
+                        std::to_string(this->mPeerData.get() ? this->mPeerData->mSerial : 0) + " seed " +
+                        Hex(this->mChallengeSeed.data(), this->mChallengeSeed.size()) + " key " +
+                        Hex(this->mSessionKey.mKey, 8) + " req " +
+                        (this->mRequest.get() ? Hex(this->mRequest->data(), this->mRequest->length()) : "-");
+        for (size_t i = 0; i < this->mErrorList.size(); i++) s += " err " + Hex(this->mErrorList[i].data(), this->mErrorList[i].size());
+        for (std::list<COMMUNITY_STATUS>::const_iterator it = this->mCommunityStatusList.begin(); it != this->mCommunityStatusList.end(); ++it) {
+            std::string n;
+            WideAppendUtf16LE(n, it->mCommunityName);
+            s += " cs " + std::to_string(it->mStatus) + " " + std::to_string(it->mCommunityID) + " " + Hex(n.data(), n.size());
+        }
+        return s;
+    }
+};
+
+struct SEnv {
+    typedef SOp Op;
+    typedef SCert1 Cert1;
+    typedef SCert2 Cert2;
+    typedef SKeyBlock KeyBlock;
+    typedef SPeerData PeerData;
+    typedef SKey PrivKey;
+};
+
+// the original thinks it dereferences NULL here (a certificate's times when the other one came)
+struct OrigCrash {};
+
+// ---- the original's statements (GetCertOp.cpp before the port)
+
+namespace Orig {
+enum {
+    WS_GetCert_DecryptFailure = 100074,
+    WS_GetCert_InvalidCertificate = 100072,
+    WS_GetCert_InvalidPrivateKey = 100075,
+    WS_GetCert_InvalidPubKeyBlock = 100073,
+    WS_GetCert_InvalidSecretConfirm = 100076,
+    WS_GetCert_MissingCertificate = 100077,
+    WS_GetCert_UnexpectedLoginChallenge = 100069,
+    WS_GetCert_PubKeyEncryptFailure = 100065,
+    WS_ServerReq_Send = 100058,
+    WS_ServerReq_TryNextServer = 100057,
+    WS_ServerReq_Recv = 100059,
+    WS_Success = 0
+};
+typedef SCert1 AuthCertificate;
+typedef SCert2 Auth2Certificate;
+typedef SKeyBlock AuthPubKeyBlock;
+typedef SPeerData AuthPeerData;
+typedef SKey ElGamal;
+
+WONStatus SendPubKeyRequest(SOp& o)
+{
+    o.mState = SOp::GETTING_PUB_KEYS;
+    WriteBuffer msg(4, true);
+    msg.AppendByte(5);
+    msg.AppendShort(12);
+    msg.AppendShort(1);
+    o.mRequest = msg.ToByteBuffer(true);
+    return (WONStatus)WS_ServerReq_Recv;
+}
+
+WONStatus SendLoginRequest(SOp& o)
+{
+    WriteBuffer msg(4, true);
+    msg.AppendByte(5);
+    msg.AppendShort(12);
+    msg.AppendShort(3);
+    msg.AppendShort(o.mKeyBlock->GetId());
+
+    const ElGamal& pubKey = o.mKeyBlock->GetCurrentKey();
+    o.mSessionKey.Create(8);
+    ByteBufferPtr encryptedSessionKey = pubKey.Encrypt(o.mSessionKey.GetKey(), o.mSessionKey.GetKeyLen());
+    if (encryptedSessionKey.get() == NULL)
+        return (WONStatus)WS_GetCert_PubKeyEncryptFailure;
+
+    msg.AppendShort(encryptedSessionKey->length());
+    msg.AppendBytes(encryptedSessionKey->data(), encryptedSessionKey->length());
+
+    WriteBuffer loginData(0, true);
+    loginData.AppendBytes(o.mSessionKey.GetKey(), 2);
+    loginData.AppendShort(o.mKeyBlock->GetId());
+    int flags = 0x0002 | 0x0004 | 0x0008;
+    if (o.mCreateAccount)
+        flags |= 0x0001;
+    loginData.AppendLong(flags);
+    loginData.AppendWString(o.mAuthContext->GetUserName(), 2);
+    loginData.AppendWString(o.mAuthContext->GetPassword(), 2);
+    loginData.AppendWString(o.mNewPassword, 2);
+    o.mAuthContext->AppendCommunityData(loginData);
+
+    ByteBufferPtr encryptedLoginData = o.mSessionKey.Encrypt(loginData.data(), loginData.length());
+    msg.AppendShort(encryptedLoginData->length());
+    msg.AppendBytes(encryptedLoginData->data(), encryptedLoginData->length());
+    o.mRequest = msg.ToByteBuffer(true);
+    o.mState = SOp::GETTING_CHALLENGE;
+    return (WONStatus)WS_ServerReq_Recv;
+}
+
+WONStatus SendLoginConfirm(SOp& o)
+{
+    WriteBuffer msg(4, true);
+    msg.AppendByte(5);
+    msg.AppendShort(12);
+    msg.AppendShort(5);
+
+    WriteBuffer dataBlock(0, true);
+    o.mAuthContext->AppendHashes(dataBlock, o.mChallengeSeed);
+    ByteBufferPtr encrypted = o.mSessionKey.Encrypt(dataBlock.data(), dataBlock.length());
+    msg.AppendShort(encrypted->length());
+    msg.AppendBytes(encrypted->data(), encrypted->length());
+    o.mRequest = msg.ToByteBuffer(true);
+    return (WONStatus)WS_ServerReq_Recv;
+}
+
+// the golden's read log: what the original read (offsets in the message, or in the decrypted part)
+static std::string sRead;
+static void Read(const char* inFormat, ...)
+{
+    char aBuffer[128];
+    va_list ap;
+    va_start(ap, inFormat);
+    vsnprintf(aBuffer, sizeof(aBuffer), inFormat, ap);
+    va_end(ap);
+    if (!sRead.empty()) sRead += ' ';
+    sRead += aBuffer;
+}
+
+WONStatus HandleLoginReply(SOp& o, ReadBuffer& theMsg)
+{
+    ConstSmartPtr<AuthCertificate> aCert1;
+    ConstSmartPtr<Auth2Certificate> aCert2;
+    ElGamal aPrivKey;
+    time_t anAuthDelta = 0;
+
+    WONStatus aStatus = (WONStatus)theMsg.ReadShort();
+    Read("status %d", (int)aStatus);
+    if (aStatus < 0) // Failure status
+    {
+        if (!o.mChallengeSeed.empty())
+            o.mAuthContext->RemoveSecret(o.mChallengeSeed.data());
+
+        if (aStatus == -1) // unknown auth error
+        {
+            o.SetLastServerError(aStatus);
+            return (WONStatus)WS_ServerReq_TryNextServer;
+        }
+    }
+
+    unsigned char anErrorCount = theMsg.ReadByte();
+    unsigned long i;
+    const char* data;
+    for (i = 0; i < anErrorCount; i++) {
+        std::string anErrorString;
+        theMsg.ReadString(anErrorString);
+        o.mErrorList.push_back(anErrorString);
+        Read("error %d %d", theMsg.pos() - (int)anErrorString.size(), (int)anErrorString.size());
+    }
+
+    unsigned char aNumClearEntries = theMsg.ReadByte();
+
+    for (i = 0; i < aNumClearEntries; i++) {
+        unsigned char aType = theMsg.ReadByte();
+        unsigned short aLen = theMsg.ReadShort();
+
+        data = static_cast<const char*>(theMsg.ReadBytes(aLen));
+        if (aType != 7) Read("entry %d %d %d", aType, (int)(data - theMsg.data()), aLen);
+        switch (aType) {
+        case 1: {
+            aCert1 = new AuthCertificate(data, aLen);
+            if (!aCert1->IsValid() || !o.mKeyBlock->Verify(aCert1)) {
+                o.SetLastServerError((WONStatus)WS_GetCert_InvalidCertificate);
+                return (WONStatus)WS_ServerReq_TryNextServer;
+            } else
+                anAuthDelta = aCert1->ComputeAuthDelta();
+        } break;
+
+        case 3: {
+            ConstSmartPtr<AuthPubKeyBlock> aKeyBlock = new AuthPubKeyBlock(data, aLen);
+            if (!aKeyBlock->IsValidAndVerified(o.mAuthContext->GetVerifierKey())) {
+                o.SetLastServerError((WONStatus)WS_GetCert_InvalidPubKeyBlock);
+                return (WONStatus)WS_ServerReq_TryNextServer;
+            } else
+                o.mKeyBlock = aKeyBlock;
+        } break;
+
+        case 6: {
+            aCert2 = new Auth2Certificate(data, aLen);
+            if (!aCert2->IsValid() || !o.mKeyBlock->Verify(aCert2)) {
+                o.SetLastServerError((WONStatus)WS_GetCert_InvalidCertificate);
+                return (WONStatus)WS_ServerReq_TryNextServer;
+            } else
+                anAuthDelta = aCert2->ComputeAuthDelta();
+        } break;
+
+        case 7: {
+            ReadBuffer aSubMsg(data, aLen);
+            o.mCommunityStatusList.push_back(SOp::COMMUNITY_STATUS());
+            SOp::COMMUNITY_STATUS& aCommunityStatus = o.mCommunityStatusList.back();
+
+            int aFields = 0;
+            try {
+                aCommunityStatus.mStatus = aSubMsg.ReadShort();
+                aFields = 1;
+                aCommunityStatus.mCommunityID = aSubMsg.ReadLong();
+                aFields = 2;
+                aSubMsg.ReadWString(aCommunityStatus.mCommunityName, 2);
+                aFields = 3;
+            } catch (ReadBufferException&) {
+                Read("community %d %d %u", aFields, aCommunityStatus.mStatus, (unsigned)aCommunityStatus.mCommunityID);
+                throw;
+            }
+            Read("community 3 %d %u %d %d", aCommunityStatus.mStatus, (unsigned)aCommunityStatus.mCommunityID,
+                 (int)(data - theMsg.data()) + aSubMsg.pos() - (int)aCommunityStatus.mCommunityName.size() * 2,
+                 (int)aCommunityStatus.mCommunityName.size());
+        } break;
+        }
+    }
+
+    Read("rest %d %d", theMsg.pos(), (int)(theMsg.length() - theMsg.pos()));
+    if (aStatus < 0)
+        return aStatus;
+
+    // Commit secrets and clean up secret file using auth server clock (the duration initialized: the original
+    // passed an indeterminate one when neither certificate came)
+    time_t anAuthTime = 0, aCertDuration = 0;
+    if (aCert2.get() != NULL) {
+        if (aCert1.get() == NULL) throw OrigCrash();
+        anAuthTime = aCert1->GetIssueTime();
+        aCertDuration = aCert1->GetExpireTime() - aCert1->GetIssueTime();
+    } else if (aCert1.get() != NULL) {
+        throw OrigCrash();  // anAuthTime = aCert2->GetIssueTime(): aCert2 is NULL here
+    }
+
+    o.mAuthContext->CommitSecrets(anAuthTime, aCertDuration);
+
+    int aNumLeft = theMsg.length() - theMsg.pos();
+
+    ByteBufferPtr aDecryptBuf = o.mSessionKey.Decrypt(theMsg.ReadBytes(aNumLeft), aNumLeft);
+    if (aDecryptBuf.get() == NULL) {
+        o.SetLastServerError((WONStatus)WS_GetCert_DecryptFailure);
+        return (WONStatus)WS_ServerReq_TryNextServer;
+    }
+
+    ReadBuffer aDecrypt(aDecryptBuf->data(), aDecryptBuf->length());
+    unsigned char aNumCryptEntries = aDecrypt.ReadByte();
+
+    for (i = 0; i < aNumCryptEntries; i++) {
+        unsigned char aType = aDecrypt.ReadByte();
+        unsigned short aLen = aDecrypt.ReadShort();
+        data = static_cast<const char*>(aDecrypt.ReadBytes(aLen));
+        Read("crypt %d %d %d", aType, (int)(data - aDecrypt.data()), aLen);
+        switch (aType) {
+        case 2:
+            if (!aPrivKey.SetPrivateKey(data, aLen)) {
+                o.SetLastServerError((WONStatus)WS_GetCert_InvalidPrivateKey);
+                return (WONStatus)WS_ServerReq_TryNextServer;
+            }
+            break;
+
+        case 4:
+            if ((aLen != o.mSessionKey.GetKeyLen() + 2) || memcmp(data + 2, o.mSessionKey.GetKey(), aLen - 2) != 0) {
+                o.SetLastServerError((WONStatus)WS_GetCert_InvalidSecretConfirm);
+                return (WONStatus)WS_ServerReq_TryNextServer;
+            }
+            break;
+
+        case 5:
+            break;
+        }
+    }
+
+    if (aCert1.get() == NULL || aCert2.get() == NULL) {
+        o.SetLastServerError((WONStatus)WS_GetCert_MissingCertificate);
+        return (WONStatus)WS_ServerReq_TryNextServer;
+    }
+
+    o.mPeerData = new AuthPeerData(aCert1, o.mKeyBlock, aPrivKey, anAuthDelta, aCert2);
+    if (!o.mNewPassword.empty())
+        o.mAuthContext->SetPassword(o.mNewPassword);
+
+    o.mAuthContext->SetPeerData(o.mPeerData.get());
+    o.mAuthContext->ClearOneTimeData();
+    return (WONStatus)WS_Success;
+}
+
+WONStatus HandleLoginChallenge(SOp& o, ReadBuffer& theMsg)
+{
+    unsigned short aLen = theMsg.ReadShort();
+    const void* aBytes = theMsg.ReadBytes(aLen);
+    Read("challenge %d %d", (int)(static_cast<const char*>(aBytes) - theMsg.data()), aLen);
+    ByteBufferPtr aDecrypt = o.mSessionKey.Decrypt(aBytes, aLen);
+    if (aDecrypt.get() == NULL) {
+        o.SetLastServerError((WONStatus)WS_GetCert_DecryptFailure);
+        return (WONStatus)WS_ServerReq_TryNextServer;
+    }
+
+    ReadBuffer aBuf(aDecrypt->data(), aDecrypt->length());
+    o.mChallengeSeed.assign(static_cast<const unsigned char*>(aBuf.ReadBytes(16)), 16);
+    o.mAuthContext->AddSecret(o.mChallengeSeed.data());
+    Read("seed");
+    return (WONStatus)WS_ServerReq_Send;
+}
+
+WONStatus CheckResponse(SOp& o)
+{
+    ReadBuffer aMsg(o.mResponse->data(), o.mResponse->length());
+    unsigned char aHeaderType = aMsg.ReadByte();
+    unsigned short aServiceType = aMsg.ReadShort();
+    unsigned short aMessageType = aMsg.ReadShort();
+
+    if (aHeaderType != 5 || aServiceType != 12) {
+        Read("invalid");
+        return o.InvalidReplyHeader();
+    }
+
+    if (o.mState == SOp::GETTING_PUB_KEYS) {
+        if (aMessageType != 2) { // GetPubKeysReply
+            Read("invalid");
+            return o.InvalidReplyHeader();
+        }
+
+        WONStatus aStatus = (WONStatus)aMsg.ReadShort();
+        if (aStatus < 0) { // shouldn't get this
+            Read("server %d", (int)aStatus);
+            o.SetLastServerError(aStatus);
+            return (WONStatus)WS_ServerReq_TryNextServer;
+        }
+
+        unsigned short aLen = aMsg.ReadShort();
+        const void* aBytes = aMsg.ReadBytes(aLen);
+        Read("block %d %d", (int)(static_cast<const char*>(aBytes) - aMsg.data()), aLen);
+        ConstSmartPtr<AuthPubKeyBlock> aKeyBlock = new AuthPubKeyBlock(aBytes, aLen);
+        if (!aKeyBlock->IsValidAndVerified(o.mAuthContext->GetVerifierKey())) {
+            o.SetLastServerError((WONStatus)WS_GetCert_InvalidPubKeyBlock);
+            return (WONStatus)WS_ServerReq_TryNextServer;
+        } else {
+            o.mKeyBlock = aKeyBlock;
+            return (WONStatus)WS_ServerReq_Send;
+        }
+    }
+
+    if (aMessageType == 6)
+        return HandleLoginReply(o, aMsg);
+
+    if (aMessageType != 4) {
+        Read("invalid");
+        return o.InvalidReplyHeader();
+    }
+
+    if (o.mState != SOp::GETTING_CHALLENGE) {
+        Read("unexpected");
+        o.SetLastServerError((WONStatus)WS_GetCert_UnexpectedLoginChallenge);
+        return (WONStatus)WS_ServerReq_TryNextServer;
+    }
+
+    return HandleLoginChallenge(o, aMsg);
+}
+} // namespace Orig
+
+// ---- the scenarios
+
+static std::wstring AWString()
+{
+    static const wchar_t* const kTexts[] = { L"", L"bob", L"p\x263a", L"\x00e9t\x00e9" };
+    std::wstring s = kTexts[Pick(4)];
+    if (Pick(10) == 0) s += std::wstring(Pick(200), L'x');
+    return s;
+}
+static std::string ABytes(int n)
+{
+    std::string s(n, '\0');
+    for (int i = 0; i < n; i++) s[i] = (char)Pick(256);
+    return s;
+}
+static void Short(std::string& s, int v) { s += (char)(v & 0xff); s += (char)((v >> 8) & 0xff); }
+static void Long(std::string& s, unsigned v) { Short(s, v & 0xffff); Short(s, v >> 16); }
+
+struct Setup {
+    int mState;
+    bool mSeed, mBlock, mNewPassword, mCreate, mEncryptFail;
+    std::string mBlockBytes;
+    std::wstring mUser, mPassword, mNew;
+    std::string mCommunity;
+    void Generate()
+    {
+        this->mState = 1 + Pick(3);
+        this->mSeed = Pick(2) != 0;
+        this->mBlock = Pick(5) != 0;
+        this->mBlockBytes = ABytes(3);
+        this->mEncryptFail = Pick(6) == 0;
+        this->mNewPassword = Pick(3) == 0;
+        this->mCreate = Pick(2) != 0;
+        this->mUser = AWString();
+        this->mPassword = AWString();
+        this->mNew = this->mNewPassword ? AWString() : std::wstring();
+        this->mCommunity = ABytes(Pick(6));
+    }
+    void Apply(SOp& o, SAuthContext& c) const
+    {
+        sSerial = 0;
+        c.mUser = this->mUser;
+        c.mPassword = this->mPassword;
+        c.mCommunity = this->mCommunity;
+        o.mAuthContext = &c;
+        o.mState = (SOp::State)this->mState;
+        if (this->mBlock) {
+            o.mKeyBlock = new SKeyBlock(this->mBlockBytes.data(), (unsigned long)this->mBlockBytes.size());
+            const_cast<SKeyBlock*>(o.mKeyBlock.get())->mKey.mFail = this->mEncryptFail;
+        } else {
+            o.mKeyBlock = new SKeyBlock();
+        }
+        if (this->mSeed) {
+            unsigned char aSeed[16];
+            for (int i = 0; i < 16; i++) aSeed[i] = (unsigned char)(0x80 + i);
+            o.mChallengeSeed.assign(aSeed, 16);
+        }
+        o.mNewPassword = this->mNew;
+        o.mCreateAccount = this->mCreate;
+        sTrace.clear();
+    }
+};
+
+// the session key a reply's secret confirmation must carry (the stand-in's key before any Create)
+static std::string SessionKey()
+{
+    SSessionKey k;
+    return std::string(reinterpret_cast<const char*>(k.mKey), 8);
+}
+
+static std::string CertEntry(int inType)
+{
+    std::string e;
+    e += (char)inType;
+    std::string d;
+    if (inType == 7) {
+        Short(d, Pick(3) ? Pick(5) : (int)Next());
+        Long(d, Next());
+        std::wstring n = AWString();
+        std::string b;
+        WideAppendUtf16LE(b, n);
+        Short(d, Pick(12) ? (int)(b.size() / 2) : (int)Next());
+        d += b;
+        if (Pick(8) == 0) d.resize(Pick((int)d.size() + 1));
+    } else {
+        d = ABytes(Pick(4) ? 3 + Pick(4) : Pick(40));
+        if (!d.empty() && Pick(3)) d[0] = (char)(Pick(4) ? 3 : Pick(256));   // mostly valid and signed
+    }
+    Short(e, (int)d.size());
+    return e + d;
+}
+
+static std::string CryptPart()
+{
+    std::string c;
+    int n = Pick(5);
+    c += (char)n;
+    for (int i = 0; i < n; i++) {
+        static const int kCrypt[] = {2, 4, 5};
+        int t = Pick(4) ? kCrypt[Pick(3)] : Pick(10);
+        c += (char)t;
+        std::string d;
+        if (t == 4 && Pick(4)) d = ABytes(2) + SessionKey();
+        else d = ABytes(Pick(12));
+        if (t == 2 && !d.empty() && Pick(3)) d[0] = 1;
+        Short(c, (int)d.size());
+        c += d;
+    }
+    if (Pick(8) == 0) c = (char)0xdd + c;
+    return c;
+}
+
+static std::string GenReply(int inState)
+{
+    std::string m;
+    m += (char)(Pick(12) ? 5 : Pick(8));
+    Short(m, Pick(12) ? 12 : Pick(20));
+    int aType;
+    if (inState == 1) aType = Pick(8) ? 2 : Pick(8);
+    else aType = Pick(8) ? (Pick(3) ? 6 : 4) : Pick(8);
+    Short(m, aType);
+    if (inState == 1 && aType == 2) {
+        Short(m, Pick(6) ? Pick(3) : -Pick(5) - 1);
+        std::string b = ABytes(Pick(5) ? 3 : Pick(20));
+        Short(m, (int)b.size());
+        m += b;
+    } else if (aType == 4) {
+        std::string c = ABytes(Pick(5) ? 16 + Pick(5) : Pick(20));
+        if (!c.empty() && Pick(10) == 0) c[0] = (char)0xdd;
+        Short(m, (int)c.size());
+        m += c;
+    } else if (aType == 6) {
+        static const int kStatus[] = {-1, -5, 3};
+        int aStatus = Pick(5) ? 0 : kStatus[Pick(3)];
+        Short(m, aStatus);
+        int ne = Pick(3) ? 0 : Pick(4);
+        m += (char)ne;
+        for (int i = 0; i < ne; i++) {
+            std::string s = ABytes(Pick(6));
+            Short(m, (int)s.size());
+            m += s;
+        }
+        int nc = Pick(6);
+        std::string entries;
+        if (Pick(3)) { entries += CertEntry(1); entries += CertEntry(6); nc = 2 + Pick(3); }
+        m += (char)nc;
+        m += entries;
+        for (int i = entries.empty() ? 0 : 2; i < nc; i++) {
+            static const int kTypes[] = {1, 3, 6, 7, 7, 0, 9};
+            m += CertEntry(kTypes[Pick(7)]);
+        }
+        m += CryptPart();
+    } else {
+        m += ABytes(Pick(10));
+    }
+    return m;
+}
+
+struct Outcome {
+    bool threw, crashed;
+    int status;
+    std::string trace, dump, read;
+    bool operator==(const Outcome& o) const
+    {
+        return threw == o.threw && status == o.status && trace == o.trace && dump == o.dump;
+    }
+};
+
+static Outcome RunReply(const Setup& s, const std::string& m, bool inOrig)
+{
+    SOp o;
+    SAuthContext c;
+    s.Apply(o, c);
+    o.mResponse = new ByteBuffer(m.data(), (unsigned long)m.size(), false);
+    Outcome r;
+    r.threw = r.crashed = false;
+    r.status = 0;
+    Orig::sRead.clear();
+    try {
+        r.status = inOrig ? Orig::CheckResponse(o) : CertMsg<SEnv>::CheckResponse(o);
+    } catch (ReadBufferException&) {
+        r.threw = true;
+    } catch (OrigCrash&) {
+        r.crashed = true;
+    }
+    r.trace = sTrace;
+    r.dump = o.Dump();
+    r.read = Orig::sRead;
+    return r;
+}
+
+// the original crashed: the new code's trace starts with the original's and goes on to the documented times
+static void TestReplyOn(const Setup& s, const std::string& m)
+{
+    Outcome a = RunReply(s, m, true);
+    Outcome b = RunReply(s, m, false);
+    if (a.crashed) {
+        CHECK(b.trace.compare(0, a.trace.size(), a.trace) == 0);
+        CHECK(b.trace.find("commit ", a.trace.size()) == a.trace.size());
+        return;
+    }
+    CHECK(a == b);
+    if (!(a == b) && sFailures < 6)
+        printf("state %d reply %s\n  orig %d/%d %s | %s\n  new  %d/%d %s | %s\n", s.mState, Hex(m.data(), m.size()).c_str(),
+               a.threw, a.status, a.trace.c_str(), a.dump.c_str(), b.threw, b.status, b.trace.c_str(), b.dump.c_str());
+}
+
+static long sCrashes;
+static void TestReplies()
+{
+    for (int i = 0; i < 40000; i++) {
+        Setup s;
+        s.Generate();
+        sAllPass = Pick(4) == 0;
+        std::string m = GenReply(s.mState);
+        TestReplyOn(s, m);
+        for (size_t n = 0; n < m.size(); n++) TestReplyOn(s, m.substr(0, n));
+        for (int j = 0; j < 4 && !m.empty(); j++) {
+            std::string x = m;
+            x[Pick((int)x.size())] = (char)Pick(256);
+            TestReplyOn(s, x);
+        }
+        if (RunReply(s, m, true).crashed) sCrashes++;
+    }
+    sAllPass = false;
+}
+
+static Outcome RunRequest(const Setup& s, int inKind, bool inOrig)
+{
+    SOp o;
+    SAuthContext c;
+    s.Apply(o, c);
+    Outcome r;
+    r.threw = r.crashed = false;
+    if (inKind == 0) r.status = inOrig ? Orig::SendPubKeyRequest(o) : CertMsg<SEnv>::SendPubKeyRequest(o);
+    else if (inKind == 1) r.status = inOrig ? Orig::SendLoginRequest(o) : CertMsg<SEnv>::SendLoginRequest(o);
+    else r.status = inOrig ? Orig::SendLoginConfirm(o) : CertMsg<SEnv>::SendLoginConfirm(o);
+    r.trace = sTrace;
+    r.dump = o.Dump();
+    return r;
+}
+
+static void TestRequests()
+{
+    for (int i = 0; i < 30000; i++) {
+        Setup s;
+        s.Generate();
+        s.mBlock = true;
+        int k = i % 3;
+        Outcome a = RunRequest(s, k, true);
+        Outcome b = RunRequest(s, k, false);
+        CHECK(a == b);
+        if (!(a == b) && sFailures < 6)
+            printf("request %d\n  orig %d %s | %s\n  new  %d %s | %s\n", k, a.status, a.trace.c_str(), a.dump.c_str(),
+                   b.status, b.trace.c_str(), b.dump.c_str());
+    }
+}
+
+// the golden: state, the reply, what the original read with every check passing ("cut" after a throw)
+static void Print(int inCount)
+{
+    sAllPass = true;
+    for (int i = 0; i < inCount; i++) {
+        Setup s;
+        s.Generate();
+        std::string m = GenReply(s.mState);
+        std::vector<std::string> v;
+        v.push_back(m);
+        for (int j = 0; j < 3 && !m.empty(); j++) v.push_back(m.substr(0, Pick((int)m.size())));
+        if (!m.empty()) { std::string x = m; x[Pick((int)x.size())] = (char)Pick(256); v.push_back(x); }
+        for (size_t j = 0; j < v.size(); j++) {
+            Outcome a = RunReply(s, v[j], true);
+            printf("%d %s |%s%s%s\n", s.mState, v[j].empty() ? "-" : Hex(v[j].data(), v[j].size()).c_str(),
+                   a.read.empty() ? "" : " ", a.read.c_str(), a.threw ? " cut" : a.crashed ? " crash" : "");
+        }
+    }
+}
+
+int main(int argc, char** argv)
+{
+    int aPrint = 0;
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--print") && i + 1 < argc) aPrint = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--seed") && i + 1 < argc) sSeed = (unsigned)atoi(argv[++i]);
+    }
+    if (aPrint) {
+        Print(aPrint);
+        return 0;
+    }
+    TestRequests();
+    TestReplies();
+    printf("won_cert_test: %lld checks, %d failures (%ld whole replies where the original dereferenced NULL)\n", sChecks,
+           sFailures, sCrashes);
+    return sFailures;
+}

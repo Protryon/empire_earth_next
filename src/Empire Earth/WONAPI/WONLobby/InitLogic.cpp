@@ -151,7 +151,7 @@ void InitLogic::DNSCompletion(AsyncOp* inOp)
         // The original builds this address with mRememberHostString set and destroys it only after both
         // queries are started; it is separate from the per-entry addresses in the loops
         IPAddr address;
-        address.mRememberHostString = true;
+        address.SetRememberHostString(true);
         dir->RemoveAllAddresses();
         std::list<std::string>::iterator it = config->mDirServers.begin();
         while (true) {
@@ -198,7 +198,7 @@ namespace WONAPI {
 // Decodes the downloaded advert image and broadcasts it with the advert's link
 void InitLogic::CrossPromotionImageCompletion(AsyncOp* inOp)
 {
-    if (inOp->mStatus != WS_Success)
+    if (inOp->GetStatus() != WS_Success)
         return;
     HTTPGetOp* op = static_cast<HTTPGetOp*>(inOp);
     SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(op->GetLocalPath().c_str());
@@ -227,7 +227,7 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
     if (!imageURL.empty()) {
         SmartPtr<HTTPGetOp> op = new HTTPGetOp(imageURL);
         op->SetHTTPCache(HTTPCache::GetGlobalCache());
-        op->mCompletion = new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this);
+        op->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this));
         this->mHTTPSession->AddOp(op.get());
     }
 }
@@ -428,7 +428,7 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
     this->mAcceptOp = NULL;
     bool anAccepted = op->GetStatus() == WS_Success;
     int anOutcome = ee_won_init_accept_outcome(anAccepted, anAccepted &&
-        op->mAcceptedSocket->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost());
+        op->GetAcceptedSocket()->GetDestAddr().GetHost() == this->mFirewallAddress.GetHost());
     if (anOutcome == 0) {
         LobbySetBehindFirewall(true);
         LobbyBroadcastLobbyEvent(100055,true);
@@ -439,7 +439,7 @@ void InitLogic::AcceptCompletion(AsyncOp* inOp)
         LobbyBroadcastLobbyEvent(100055,true);
         return;
     }
-    this->mAcceptOp = new AcceptOp(op->mSocket.get());
+    this->mAcceptOp = new AcceptOp(op->GetSocket());
     this->RunOp(this->mAcceptOp.get(),new LogicCompletion<InitLogic>(&InitLogic::AcceptCompletion,this),
           gLobbyAcceptTimeout);
 }
@@ -451,7 +451,7 @@ namespace WONAPI {
 void InitLogic::FirewallCompletion(AsyncOp* inOp)
 {
     DetectFirewallOp* op = static_cast<DetectFirewallOp*>(inOp);
-    if (op->mStatus == WS_Success) {
+    if (op->GetStatus() == WS_Success) {
         LobbySetPublicAddress(op->GetPublicAddr());
         if (this->mFirewallSocket.get() != NULL) {
             this->mFirewallAddress = op->GetCurAddr();
@@ -577,8 +577,8 @@ void InitLogic::KillFirewallTest()
 {
     if (this->mAcceptOp.get() != NULL) {
         this->mAcceptOp->Kill(true);
-        if (this->mAcceptOp->mSocket.get() != NULL)
-            this->mAcceptOp->mSocket->Close();
+        if (this->mAcceptOp->GetSocket() != NULL)
+            this->mAcceptOp->GetSocket()->Close();
         this->mAcceptOp = NULL;
     }
     this->mFirewallSocket = NULL;

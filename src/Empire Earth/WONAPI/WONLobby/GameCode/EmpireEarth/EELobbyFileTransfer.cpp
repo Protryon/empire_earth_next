@@ -45,7 +45,7 @@ SendFileOp::SendFileOp(const std::string& inPath, AsyncSocket* inSocket)
     : SocketOp(inSocket), mPath(inPath), mReadBuffer(mBuffer, 0x2000)
 {
     this->mFile = NULL;
-    this->mWaitForEvent[1] = true;
+    this->SetWaitForEvent(1,true);
 }
 
 // TEMPLATE: EXE 0x6914c2
@@ -102,9 +102,9 @@ WONStatus SendFileOp::Continue()
 {
     for (;;) {
         if ((unsigned long)this->mReadBuffer.pos() < (unsigned long)this->mReadBuffer.length()) {
-            this->mSocket->WaitForWrite(this->TimeLeft());
+            this->GetSocket()->WaitForWrite(this->TimeLeft());
             int theSent = 0;
-            WONStatus theStatus = this->mSocket->Send(this->mReadBuffer.data() + this->mReadBuffer.pos(),
+            WONStatus theStatus = this->GetSocket()->Send(this->mReadBuffer.data() + this->mReadBuffer.pos(),
                 this->mReadBuffer.length() - this->mReadBuffer.pos(), &theSent);
             if ((long)theSent > 0)
                 this->mReadBuffer.ReadBytes(theSent);
@@ -182,7 +182,7 @@ bool EELobbyFileTransfer::IsFileHere()
 // Forgets a client's socket once its connection closes
 void EELobbyFileTransfer::OnClientClosed(AsyncOp* inOp)
 {
-    SmartPtr<AsyncSocket> theSocket = static_cast<SocketOp*>(inOp)->mSocket;
+    SmartPtr<AsyncSocket> theSocket = static_cast<SocketOp*>(inOp)->GetSocket();
     this->mClients.erase(theSocket);
 }
 
@@ -192,7 +192,7 @@ void EELobbyFileTransfer::OnClientAccepted(AsyncOp* inOp)
 {
     if (!inOp->Succeeded())
         return;
-    SmartPtr<AsyncSocket> theSocket = static_cast<AcceptOp*>(inOp)->mAcceptedSocket;
+    SmartPtr<AsyncSocket> theSocket = static_cast<AcceptOp*>(inOp)->GetAcceptedSocket();
     this->mClients.insert(theSocket);
     static_cast<QueueSocket*>(theSocket.get())->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
     static_cast<QueueSocket*>(theSocket.get())->QueueOp(new SendFileOp(this->mPath, NULL), -1);
@@ -214,7 +214,7 @@ void EELobbyFileTransfer::OnProgress(AsyncOp* inOp)
     if (theTime - this->mLastProgressTime < 1000)
         return;
     this->mLastProgressTime = theTime;
-    theGame->UpdateTransferProgress(static_cast<RecvChunkOp*>(inOp)->mRecvOp->mBytesRead, this->mSize);
+    theGame->UpdateTransferProgress(static_cast<RecvChunkOp*>(inOp)->GetRecvOp()->GetBytesRead(), this->mSize);
 }
 
 // FUNCTION: EXE 0x6919dc
@@ -283,8 +283,8 @@ void EELobbyFileTransfer::Download()
     SmartPtr<AsyncSocket> theSocket = new QueueSocket(0);
     static_cast<QueueSocket*>(theSocket.get())->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
     SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);
-    theOp->mCompletion = new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnFileReceived, this);
-    theOp->mPath = this->mPath;
+    theOp->SetCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnFileReceived, this));
+    theOp->SetFilePath(this->mPath);
     theOp->SetProgressCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnProgress, this), 10000);
     static_cast<QueueSocket*>(theSocket.get())->QueueOp(new ConnectOp(this->mHost), -1);
     static_cast<QueueSocket*>(theSocket.get())->QueueOp(theOp.mPtr, -1);

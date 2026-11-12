@@ -492,7 +492,7 @@ bool StagingLogic::VerifyPingBeforeJoin(LobbyGame* inGame)
         while (inGame->IsPinging()) {
             SmartPtr<AsyncOp> anOp = new AsyncOp;
             LobbyRunOpWithStatus(anOp.get(), ::GameStagingLogic_VerifyingPingTitle_String, ::GameStagingLogic_VerifyingPingDetails_String, 2, 500);
-            if (anOp->mKilled) return false;
+            if (anOp->IsKilled()) return false;
         }
         if (!inGame->mPingReplied) {
             LobbyMessageBox(::GameStagingLogic_JoinGameErrorTitle_String, ::GameStagingLogic_NoPingReplyError_String);

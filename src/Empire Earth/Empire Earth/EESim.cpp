@@ -802,6 +802,8 @@ void DumpState(const std::string& inPath)
                     (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2),
                     x->mWaypoints.size(), x->mIsPathDone ? 1 : 0, x->mHasArrived ? 1 : 0, (double)x->GetVelocity(),
                     x->mBlockingUnit != NULL ? x->mBlockingUnit->mUnitID : 0UL);
+            fprintf(f, " anim=%lu/%lu/%lu/%d reload=%ld", (unsigned long)x->GetAnimation(), (unsigned long)x->mPhysicalModel.GetFrame(),
+                    (unsigned long)x->mAnimationTime, x->mIsAnimationPaused ? 1 : 0, (long)x->mReloadTimer);
             fprintf(f, " wps=");   // the path's points (location, distance, start distance)
             for (size_t w = 0; w < x->mWaypoints.size(); w++)
                 fprintf(f, "%a,%a,%a/%a/%a;", (double)x->mWaypoints[w].mLocation.GetX(), (double)x->mWaypoints[w].mLocation.GetY(),
@@ -1021,6 +1023,14 @@ void AfterTick()
     // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
     static long sNextCastMs = 300000;
     static long sCasts = 0;
+    static bool sCastsAligned = false;
+    if (!sCastsAligned) {   // a loaded game casts on the continued game's schedule (sim_oracle.py saveload)
+        sCastsAligned = true;
+        if (!sOptions.mLoadSave.empty()) {
+            sCasts = theTime / 300000;
+            sNextCastMs = (sCasts + 1) * 300000;
+        }
+    }
     if (sOptions.mCalamities && theTime >= sNextCastMs) {
         sNextCastMs += 300000;
         EETechCaptureCastCalamities(sCasts++);

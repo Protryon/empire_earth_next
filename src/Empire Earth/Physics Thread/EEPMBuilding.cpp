@@ -35,7 +35,7 @@
 // first part of a gate also sinks its last linked carrier and last linked part
 void EEPMBuilding::Step2(EEComplexUnit* inUnit)
 {
-    GEPhysicalModel& theModel = inUnit->mPhysicalModel;
+    EEUnitStoreModel& theModel = inUnit->mPhysicalModel;   // (its SetLocation reports to the unit store)
     GETransformation theTransformation(theModel.GetLocation());
     GE3DPoint theLocation(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
     GEVector theForward(0.0f, 1.0f, 0.0f);

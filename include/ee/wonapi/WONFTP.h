@@ -13,6 +13,7 @@ namespace WONAPI
 
 class FTPGetOp : public AsyncOpWithTracker
 {
+	template <class> friend struct FtpMsg; // its URL, commands and replies (WONFtpMsg.h)
 private:
 	SmartPtr<BlockingSocket> mRequestSocket;
 	SmartPtr<BlockingSocket> mDataSocket;

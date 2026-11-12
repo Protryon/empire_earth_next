@@ -24,6 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUnitAction.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EESimCapture.h"
@@ -58,6 +59,20 @@ static int64_t ComplexOf(EEUnit* inUnit)
     if (theComplex == NULL)
         return EE_UNIT_COMPLEX_NONE;
     return static_cast<EEUnit*>(theComplex) == inUnit ? EE_UNIT_COMPLEX_SELF : EE_UNIT_COMPLEX_OTHER;
+}
+
+static uint32_t FloatBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// the command's type as the checksum reads it (mCommand ? mCommand->mType : 0)
+static int64_t CommandOf(EEComplexUnit* inUnit)
+{
+    EEUnitAction* theCommand = inUnit->mCommand.Get();
+    return theCommand != NULL ? (int64_t)theCommand->mType : 0;
 }
 
 void EEUnitStoreWrote(unsigned int inField, const void* inMember)
@@ -129,6 +144,39 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_FORMATION_SLOT, (int64_t)theUnit->mFormationSlot.Get());
         break;
     }
+    case kUnitFieldLocation: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPhysicalModel));
+        if (theUnit->mInUnitStore) {
+            const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+            ee_units_store_set_location(static_cast<uint32_t>(theUnit->mUnitID), reinterpret_cast<uintptr_t>(theUnit),
+                                        FloatBits(theLocation.GetX()), FloatBits(theLocation.GetY()), FloatBits(theLocation.GetZ()));
+        }
+        break;
+    }
+    case kUnitFieldHeight: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHeight));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_HEIGHT, (int64_t)FloatBits(theUnit->mHeight.Get()));
+        break;
+    }
+    case kUnitFieldTimesUpdated: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mTimesUpdated));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_TIMES_UPDATED, (int64_t)theUnit->mTimesUpdated.Get());
+        break;
+    }
+    case kUnitFieldActiveGroup: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mActiveGroup));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_ACTIVE_GROUP, theUnit->mActiveGroup.Get() != NULL ? 1 : 0);
+        break;
+    }
+    case kUnitFieldCommand: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCommand));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_COMMAND, CommandOf(theUnit));
+        break;
+    }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
         if (theUnit->mInUnitStore)
@@ -189,6 +237,14 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.goal_kind = (int32_t)GoalKind(theUnit->mGoalState.Get());
         outRecord.commandable = theUnit->mIsCommandable.Get() ? 1 : 0;
         outRecord.formation_slot = (int64_t)theUnit->mFormationSlot.Get();
+        const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();
+        outRecord.location[0] = FloatBits(theLocation.GetX());
+        outRecord.location[1] = FloatBits(theLocation.GetY());
+        outRecord.location[2] = FloatBits(theLocation.GetZ());
+        outRecord.height = FloatBits(theUnit->mHeight.Get());
+        outRecord.times_updated = (int64_t)theUnit->mTimesUpdated.Get();
+        outRecord.active_group = theUnit->mActiveGroup.Get() != NULL ? 1 : 0;
+        outRecord.command = CommandOf(theUnit);
     }
 }
 
@@ -241,18 +297,22 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     sChainIDs.clear();
     sChainObjects.clear();
     unsigned long theFlag1 = 0;
+    unsigned long theFlag2 = 0;
     for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
         sChainIDs.push_back(static_cast<uint32_t>(theUnit->mUnitID));
         sChainObjects.push_back(reinterpret_cast<uintptr_t>(theUnit));
         theFlag1 += static_cast<EEUnit*>(theUnit)->GetChecksum(1);
+        theFlag2 += static_cast<EEUnit*>(theUnit)->GetChecksum(2);
     }
     uint32_t theOffMap = ee_units_store_check_on_map(sChainIDs.empty() ? NULL : &sChainIDs[0],
                                                      sChainObjects.empty() ? NULL : &sChainObjects[0], sChainIDs.size());
     unsigned long theStoreFlag1 = (unsigned long)ee_units_store_checksum_flag1();
-    if (theOffMap != 0 || theStoreFlag1 != theFlag1) {
+    unsigned long theStoreFlag2 = (unsigned long)ee_units_store_checksum_flag2();
+    if (theOffMap != 0 || theStoreFlag1 != theFlag1 || theStoreFlag2 != theFlag2) {
         fprintf(stderr, "EE-UNIT-STORE: the unit chain (%zu units) and the store's on-the-map records differ: %u; flag 1 "
-                "%08lx over the chain, %08lx over the store\n", sChainIDs.size(), theOffMap,
-                (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1);
+                "%08lx over the chain, %08lx over the store; flag 2 %08lx, %08lx\n", sChainIDs.size(), theOffMap,
+                (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
+                (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
     }
     EESimCaptureRecord theRecord(0x4b435355u);   // "USCK"

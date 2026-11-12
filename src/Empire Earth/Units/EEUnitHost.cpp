@@ -34,6 +34,12 @@
 #include "ee/EEUGPatrol.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGGather.h"
+#include "lle/USingleton.h"
+#include "ee/EEUGCastCalamity.h"
+#include "ee/EECalamityManager.h"
+#include "ee/EECalamityClass.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitClassIDs.h"
 #include "ee/EEPPatrolGroup.h"
@@ -120,8 +126,39 @@ enum DryEvent {
     kDryCanUnload,        // unit, the answer
     kDrySetTransport,     // ctor, unit
     kDryCanUnloadThere,   // ctor (the dry answer: yes)
-    kDryUnloadWarning     // player id, x, y
+    kDryUnloadWarning,    // player id, x, y
+    kDryTechClass,        // player id, technology, found, the class
+    kDryCapitols,         // player id, the count
+    kDryCanProduce,       // player id, technology (the dry answer: yes, not asked)
+    kDryCanPlace,         // player id, unit type, x, y, the real answer (the dry answer: yes)
+    kDryMakeBuilding,     // player id, unit type, x, y (the dry building: kDryBuildingID)
+    kDryFreeFarms,        // unit, the count, the ids (a unit the dry host does not know: two dry farms)
+    kDrySortFarms,        // x, y, greater, the count, the ids before, the ids after
+    kDryAddFarm,          // unit, target
+    kDryOrderBuild,       // unit, target
+    kDryStartAction,      // unit, action
+    kDryLoadFarm,         // unit, the farm
+    kDryDropSites,        // farm, found, the count, the ids
+    kDryCanTake,          // target, unit, the answer
+    kDryDropGathered,     // unit
+    kDryWorkFarm,         // farm, unit
+    kDryUnitSetGoal,      // unit, ctor
+    kDryFinish,           // tag
+    kDryCalamityOf,       // player id, technology, found, class enum, cast by all
+    kDryCanCast,          // unit, x, y, target (the dry answer: 0, it can; not asked)
+    kDryContains,         // player id, technology, unit type, the answer
+    kDryPower,            // unit, its power
+    kDryCost,             // the cost
+    kDryUnitPlayer,       // unit, its player's id
+    kDrySplit,            // tag, technology, target, the count, the ids kept
+    kDryClone,            // ctor
+    kDryRemoveUnit,       // tag, unit
+    kDryClearGoals        // unit
 };
+
+// the dry host's building (EEMakeBuilding makes none) and its two dry farms (ids no unit has)
+const uint32_t kDryBuildingID = 0x7e000002u;
+const uint32_t kDryFarmIDs[2] = {0x7e000004u, 0x7e000003u};
 
 struct DryGroup {
     uint32_t mTag;
@@ -225,6 +262,8 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_PATROL_ROUTE: theKind = kGoalPatrol; break;
     case EE_GOAL_CTOR_LOCATION: theKind = kGoalLocation; break;
     case EE_GOAL_CTOR_LOCATION_XY: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_LOCATION_2D: theKind = kGoalLocation; break;
+    case EE_GOAL_CTOR_CAST_CALAMITY: theKind = kGoalCastCalamity; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     case EE_GOAL_CTOR_UNLOAD_TRANSPORT: theKind = kGoalUnloadTransport; theMade = ComplexOf(inSpec->unit_a) != NULL; break;
     default: theMade = false; break;
     }
@@ -232,6 +271,8 @@ void* DryGoalNew(const EeGoalSpec* inSpec)
          Bits(inSpec->point[2]), inSpec->flag_a, inSpec->flag_b});
     if (inSpec->ctor == EE_GOAL_CTOR_LOCATION)   // (the other constructors' records keep their words)
         Log({Bits(inSpec->value), inSpec->flag_c});
+    if (inSpec->ctor == EE_GOAL_CTOR_CAST_CALAMITY)
+        Log({(uint32_t)inSpec->ints[0], (uint32_t)inSpec->ints[1], (uint32_t)inSpec->ints[2]});
     LogRoute(inSpec->object);
     Log({theMade ? 1u : 0u});
     if (!theMade)
@@ -424,6 +465,16 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
         return static_cast<EEUnitGoal*>(new EEUGLocation(inSpec->point[0], inSpec->point[1], 0.0f, false, true, false,
                                                          0.0f, false, 0));
+    case EE_GOAL_CTOR_LOCATION_2D:   // EEMSmartFarmers' move
+        return static_cast<EEUnitGoal*>(new EEUGLocation(GE2DPoint(inSpec->point[0], inSpec->point[1]), true, true, false,
+                                                         0.0f, false, 0));
+    case EE_GOAL_CTOR_CAST_CALAMITY: {   // EEMCastCalamity's: the caster, the target or none, the tile, the technology
+        EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
+        if (theUnit == NULL)
+            return NULL;
+        return static_cast<EEUnitGoal*>(new EEUGCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
+                                                             (long)inSpec->ints[1], (long)inSpec->ints[2], theFlagA));
+    }
     default:
         return NULL;
     }
@@ -941,4 +992,364 @@ extern "C" void ee_units_host_wall_release(void* inPieces)
         return;
     }
     delete static_cast<std::vector<EEUnit*>*>(inPieces);
+}
+
+// ---- EEMBuildUnit, EEMSmartFarmers, EEMCastCalamity (ee_units commands.rs) ----
+
+// the technology's node of the player's tree (NULL: none)
+static EETechTreeNode* NodeOf(void* inPlayer, int32_t inTechnology)
+{
+    return static_cast<EEPlayer*>(inPlayer)->mTechnologies->Get(inTechnology);
+}
+
+// a read (the dry host's too)
+extern "C" int64_t ee_units_host_technology_unit_class(void* inPlayer, int32_t inTechnology, uint8_t* outFound)
+{
+    EETechTreeNode* theNode = NodeOf(inPlayer, inTechnology);
+    *outFound = theNode != NULL ? 1 : 0;
+    int64_t theClass = theNode != NULL ? (int64_t)theNode->mData->mUnitClass : -1;
+    if (sDry != NULL)
+        Log({kDryTechClass, PlayerID(inPlayer), (uint32_t)inTechnology, *outFound, (uint32_t)theClass});
+    return theClass;
+}
+
+// a read (the dry host's too)
+extern "C" int64_t ee_units_host_player_num_capitols(void* inPlayer)
+{
+    int64_t theCount = (int64_t)static_cast<EEPlayer*>(inPlayer)->mNumCapitols;
+    if (sDry != NULL)
+        Log({kDryCapitols, PlayerID(inPlayer), (uint32_t)theCount});
+    return theCount;
+}
+
+// the dry host answers yes without asking (so the sweep reaches the rest of the body; CanProduce's cost reads are
+// the tech capture's TCST records, which the sweep must not add)
+extern "C" uint8_t ee_units_host_can_produce(void* inPlayer, int32_t inTechnology)
+{
+    if (sDry != NULL) {
+        Log({kDryCanProduce, PlayerID(inPlayer), (uint32_t)inTechnology});
+        return 1;
+    }
+    return static_cast<EEPlayer*>(inPlayer)->CanProduce(inTechnology, 0x20, 1, true, 3, NULL) ? 1 : 0;
+}
+
+// the dry host reads the answer and answers yes
+extern "C" uint8_t ee_units_host_can_place_on_tile(void* inPlayer, int64_t inUnitType, int64_t inX, int64_t inY)
+{
+    bool theResult = EECanPlaceOnTile(static_cast<EEPlayer*>(inPlayer), (long)inUnitType, (long)inX, (long)inY, 0, 1);
+    if (sDry != NULL) {
+        Log({kDryCanPlace, PlayerID(inPlayer), (uint32_t)inUnitType, (uint32_t)inX, (uint32_t)inY, theResult ? 1u : 0u});
+        return 1;
+    }
+    return theResult ? 1 : 0;
+}
+
+extern "C" uint32_t ee_units_host_make_building(void* inPlayer, int64_t inUnitType, int64_t inX, int64_t inY)
+{
+    if (sDry != NULL) {
+        Log({kDryMakeBuilding, PlayerID(inPlayer), (uint32_t)inUnitType, (uint32_t)inX, (uint32_t)inY});
+        return kDryBuildingID;
+    }
+    EEUnit* theBuilding = EEMakeBuilding(static_cast<EEPlayer*>(inPlayer), (long)inUnitType, (long)inX, (long)inY);
+    return theBuilding != NULL ? static_cast<uint32_t>(theBuilding->mUnitID) : 0xffffffffu;
+}
+
+// the last list a two-call read computed (its first call, capacity 0); the second call copies it
+static std::vector<uint32_t> sHostList;
+
+static size_t CopyList(uint32_t* outIDs, size_t inCapacity)
+{
+    for (size_t i = 0; i < sHostList.size() && i < inCapacity; i++)
+        outIDs[i] = sHostList[i];
+    return sHostList.size();
+}
+
+// EEFindFreeFarm from ring 1 until it finds none (the bodies' loops); a read. The dry host answers its two dry farms
+// for a unit it does not know (the dry building's complex unit)
+extern "C" size_t ee_units_host_free_farms(uint32_t inUnit, uint32_t* outIDs, size_t inCapacity)
+{
+    if (inCapacity > 0)
+        return CopyList(outIDs, inCapacity);
+    sHostList.clear();
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    if (theUnit != NULL) {
+        long theRing = 1;
+        EEComplexUnit* theFarm;
+        do {
+            theFarm = EEFindFreeFarm(theUnit, 1, &theRing);
+            if (theFarm != NULL)
+                sHostList.push_back(static_cast<uint32_t>(theFarm->mUnitID));
+        } while (theFarm != NULL);
+    } else if (sDry != NULL) {
+        sHostList.assign(kDryFarmIDs, kDryFarmIDs + 2);
+    }
+    if (sDry != NULL) {
+        Log({kDryFreeFarms, inUnit, (uint32_t)sHostList.size()});
+        sDry->mLog.insert(sDry->mLog.end(), sHostList.begin(), sHostList.end());
+    }
+    return sHostList.size();
+}
+
+// the bodies' std::sorts over the farms (EESortFarms, EEMessage.cpp: their comparators' unit); a permutation (the dry
+// host's too, but for a farm it does not know: then the order stays)
+extern "C" void ee_units_host_sort_farms(uint32_t* ioIDs, size_t inCount, int64_t inX, int64_t inY, uint8_t inGreater)
+{
+    std::vector<uint32_t> theBefore(ioIDs, ioIDs + inCount);
+    std::vector<EEComplexUnit*> theFarms;
+    for (size_t i = 0; i < inCount; i++) {
+        EEComplexUnit* theFarm = ComplexOf(ioIDs[i]);
+        if (theFarm == NULL)
+            break;
+        theFarms.push_back(theFarm);
+    }
+    if (theFarms.size() == inCount) {
+        EESortFarms(theFarms, (long)inX, (long)inY, inGreater != 0);
+        for (size_t i = 0; i < inCount; i++)
+            ioIDs[i] = static_cast<uint32_t>(theFarms[i]->mUnitID);
+    }
+    if (sDry != NULL) {
+        Log({kDrySortFarms, (uint32_t)inX, (uint32_t)inY, inGreater, (uint32_t)inCount});
+        sDry->mLog.insert(sDry->mLog.end(), theBefore.begin(), theBefore.end());
+        sDry->mLog.insert(sDry->mLog.end(), ioIDs, ioIDs + inCount);
+    }
+}
+
+extern "C" void ee_units_host_unit_add_farm_target(uint32_t inUnit, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDryAddFarm, inUnit, inTarget});
+        return;
+    }
+    ComplexOf(inUnit)->AddBuildTarget(UnitOf(inTarget));
+}
+
+extern "C" void ee_units_host_unit_order_build(uint32_t inUnit, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDryOrderBuild, inUnit, inTarget});
+        return;
+    }
+    ComplexOf(inUnit)->OrderRepair(UnitOf(inTarget));
+}
+
+extern "C" void ee_units_host_unit_start_action(uint32_t inUnit, int32_t inAction)
+{
+    if (sDry != NULL) {
+        Log({kDryStartAction, inUnit, (uint32_t)inAction});
+        return;
+    }
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    theUnit->StartAction(inAction);
+    theUnit->mUnitClass->ActionChanged(theUnit);
+}
+
+// a read (the dry host's too)
+extern "C" uint32_t ee_units_host_unit_load_farm(uint32_t inUnit)
+{
+    uint32_t theFarm = 0xffffffffu;
+    EEUGGather* theGather = EEGoalCast<EEUGGather>(ComplexOf(inUnit)->GetLoadGoal());
+    if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mUnitClass->mUnitType == kUnitTypeFarm) {
+        EEComplexUnit* theComplex = theGather->mResource->mComplexUnit;
+        if (theComplex != NULL)
+            theFarm = static_cast<uint32_t>(theComplex->mUnitID);
+    }
+    if (sDry != NULL)
+        Log({kDryLoadFarm, inUnit, theFarm});
+    return theFarm;
+}
+
+// EEGetFarmDropSites; a read (the dry host's too)
+extern "C" size_t ee_units_host_farm_drop_sites(uint32_t inFarm, uint32_t* outIDs, size_t inCapacity, uint8_t* outFound)
+{
+    static uint8_t sFound = 0;
+    if (inCapacity > 0) {
+        *outFound = sFound;
+        return CopyList(outIDs, inCapacity);
+    }
+    std::vector<EEUnit*> theSites;
+    sFound = EEGetFarmDropSites(ComplexOf(inFarm), theSites) ? 1 : 0;
+    sHostList.clear();
+    for (size_t i = 0; i < theSites.size(); i++)
+        sHostList.push_back(static_cast<uint32_t>(theSites[i]->mUnitID));
+    *outFound = sFound;
+    if (sDry != NULL) {
+        Log({kDryDropSites, inFarm, sFound, (uint32_t)sHostList.size()});
+        sDry->mLog.insert(sDry->mLog.end(), sHostList.begin(), sHostList.end());
+    }
+    return sHostList.size();
+}
+
+// a read (the dry host's too)
+extern "C" uint8_t ee_units_host_can_take(uint32_t inTarget, uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    bool theResult = ComplexOf(inTarget)->CanTake(theUnit, theUnit->mResourceType);
+    if (sDry != NULL)
+        Log({kDryCanTake, inTarget, inUnit, theResult ? 1u : 0u});
+    return theResult ? 1 : 0;
+}
+
+extern "C" void ee_units_host_unit_drop_gathered(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryDropGathered, inUnit});
+        return;
+    }
+    ComplexOf(inUnit)->SetGatheredResource(NULL);
+}
+
+extern "C" void ee_units_host_work_farm(uint32_t inFarm, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryWorkFarm, inFarm, inUnit});
+        return;
+    }
+    EEWorkFarm(ComplexOf(inFarm), ComplexOf(inUnit));
+}
+
+extern "C" void ee_units_host_unit_set_goal(uint32_t inUnit, void* inGoal)
+{
+    if (sDry != NULL) {
+        Log({kDryUnitSetGoal, inUnit, static_cast<DryGoal*>(inGoal)->mCtor});
+        return;
+    }
+    ComplexOf(inUnit)->SetGoal(static_cast<EEUnitGoal*>(inGoal), 0, 0);
+}
+
+extern "C" void ee_units_host_group_finish(void* inGroup)
+{
+    if (sDry != NULL) {
+        Log({kDryFinish, Dry(inGroup)->mTag});
+        return;
+    }
+    ActiveOf(inGroup)->Finish();
+}
+
+// the technology's calamity class (EEMCastCalamity: the node, then the class of its calamity); a read (the dry
+// host's too)
+extern "C" void* ee_units_host_calamity_of(void* inPlayer, int32_t inTechnology, int32_t* outClassEnum, uint8_t* outCastByAll)
+{
+    EETechTreeNode* theNode = NodeOf(inPlayer, inTechnology);
+    EECalamityClass* theClass = NULL;
+    if (theNode != NULL)
+        theClass = EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)theNode->mData->mCalamity);
+    *outClassEnum = theClass != NULL ? (int32_t)theClass->mClassEnum : 0;
+    *outCastByAll = theClass != NULL && theClass->mIsCastByAllSelected ? 1 : 0;
+    if (sDry != NULL)
+        Log({kDryCalamityOf, PlayerID(inPlayer), (uint32_t)inTechnology, theClass != NULL ? 1u : 0u, (uint32_t)*outClassEnum,
+             *outCastByAll});
+    return theClass;
+}
+
+// CanCastAt with the check (the location is its out-value, unused). The dry host answers 0 ("can") without asking:
+// CanCastAt is the tech capture's CCAS record, which the sweep must not add
+extern "C" int64_t ee_units_host_calamity_can_cast_at(void* inClass, uint32_t inUnit, int32_t inX, int32_t inY, uint32_t inTarget)
+{
+    if (sDry != NULL) {
+        Log({kDryCanCast, inUnit, (uint32_t)inX, (uint32_t)inY, inTarget});
+        return 0;
+    }
+    GE3DPoint theLocation;
+    EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
+    return (int64_t)static_cast<EECalamityClass*>(inClass)->CanCastAt(ComplexOf(inUnit), theLocation, (unsigned long)inX,
+                                                                      (unsigned long)inY, true, theTarget);
+}
+
+// a read (the dry host's too)
+extern "C" uint8_t ee_units_host_technology_contains(void* inPlayer, int32_t inTechnology, int64_t inUnitType)
+{
+    bool theResult = NodeOf(inPlayer, inTechnology)->Contains((long)inUnitType);
+    if (sDry != NULL)
+        Log({kDryContains, PlayerID(inPlayer), (uint32_t)inTechnology, (uint32_t)inUnitType, theResult ? 1u : 0u});
+    return theResult ? 1 : 0;
+}
+
+// a read (the dry host's too)
+extern "C" int64_t ee_units_host_unit_power(uint32_t inUnit)
+{
+    int64_t thePower = (int64_t)ComplexOf(inUnit)->GetPower();
+    if (sDry != NULL)
+        Log({kDryPower, inUnit, (uint32_t)thePower});
+    return thePower;
+}
+
+// a read (the dry host's too)
+extern "C" int64_t ee_units_host_calamity_cost(void* inClass)
+{
+    int64_t theCost = (int64_t)static_cast<EECalamityClass*>(inClass)->GetCost();
+    if (sDry != NULL)
+        Log({kDryCost, (uint32_t)theCost});
+    return theCost;
+}
+
+// a read (the dry host's too)
+extern "C" void* ee_units_host_unit_player(uint32_t inUnit)
+{
+    EEPlayer* thePlayer = ComplexOf(inUnit)->mPlayer;
+    if (sDry != NULL)
+        Log({kDryUnitPlayer, inUnit, PlayerID(thePlayer)});
+    return thePlayer;
+}
+
+// SplitCalamityCasters; the dry host runs its keep test on the objects (the units that cannot cast leave; the attack
+// group they would form is not made: logged)
+extern "C" void ee_units_host_group_split_calamity_casters(void* inGroup, void* inClass, void* inPlayer, int32_t inTechnology,
+                                                           uint32_t inTarget)
+{
+    EECalamityClass* theClass = static_cast<EECalamityClass*>(inClass);
+    EETechTreeNode* theNode = NodeOf(inPlayer, inTechnology);
+    EEUnit* theTarget = inTarget != 0xffffffffu ? UnitOf(inTarget) : NULL;
+    if (sDry == NULL) {
+        ActiveOf(inGroup)->SplitCalamityCasters(theClass, theNode, theTarget);
+        return;
+    }
+    DryGroup* theGroup = Dry(inGroup);
+    unsigned long i = 0;
+    while (i < theGroup->mUnits.size()) {
+        EEComplexUnit* theUnit = theGroup->mUnits[i];
+        if (theUnit->mIsCommandable && theUnit->mHitPoints > 0 && theUnit->mUnitClass->mHasSpecialAttack
+            && theUnit->GetPower() >= theClass->GetCost() && theNode->Contains(theUnit->mUnitClass->mUnitType))
+            i++;
+        else
+            DryRemove(theGroup, theUnit);
+    }
+    Log({kDrySplit, theGroup->mTag, (uint32_t)inTechnology, inTarget});
+    LogUnits(theGroup->mUnits);
+}
+
+extern "C" void* ee_units_host_goal_clone(void* inGoal)
+{
+    if (sDry != NULL) {
+        DryGoal* theGoal = new DryGoal(*static_cast<DryGoal*>(inGoal));
+        sDry->mGoals.push_back(theGoal);
+        Log({kDryClone, theGoal->mCtor});
+        return theGoal;
+    }
+    return static_cast<EEUnitGoal*>(inGoal)->Clone();
+}
+
+extern "C" void ee_units_host_group_remove_unit(void* inGroup, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryRemoveUnit, Dry(inGroup)->mTag, inUnit});
+        DryRemove(Dry(inGroup), ComplexOf(inUnit));
+        return;
+    }
+    ActiveOf(inGroup)->RemoveUnit(UnitOf(inUnit)->GetComplexUnit());
+}
+
+extern "C" void ee_units_host_unit_clear_goals(uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryClearGoals, inUnit});
+        return;
+    }
+    ComplexOf(inUnit)->ClearGoals(0);
+}
+
+// a read (the dry host does not log it)
+extern "C" int64_t ee_units_host_object_hit_points(uint32_t inUnit)
+{
+    EEUnit* theUnit = UnitOf(inUnit);
+    return theUnit != NULL ? (int64_t)theUnit->mHitPoints.Get() : 0;
 }

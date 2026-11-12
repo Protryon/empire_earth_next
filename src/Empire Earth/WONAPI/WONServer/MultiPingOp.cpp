@@ -113,7 +113,7 @@ void MultiPingOp::StaticRecvCallback(AsyncOpPtr theOp, SmartPtr<RefCount> thePar
 ///////////////////////////////////////////////////////////////////////////////
 void MultiPingOp::RecvCallback(RecvBytesFromOp *theOp)
 {
-	if(this->mStatus!=WS_Pending || theOp->GetSocket()!=this->mSocket.get())
+	if(this->GetStatus()!=WS_Pending || theOp->GetSocket()!=this->mSocket.get())
 		return;
 
 	if(!this->HandleResponsePrv(theOp->GetStatus(),theOp->GetBytes(),theOp->GetAddr()))
@@ -138,7 +138,7 @@ void MultiPingOp::StaticTimeoutCallback(AsyncOpPtr theOp, SmartPtr<RefCount> the
 ///////////////////////////////////////////////////////////////////////////////
 void MultiPingOp::TimeoutCallback(AsyncOp *theOp)
 {
-	if(this->mStatus!=WS_Pending || theOp!=this->mRecvTimeoutOp.get())
+	if(this->GetStatus()!=WS_Pending || theOp!=this->mRecvTimeoutOp.get())
 		return;
 
 	this->mRecvTimeoutOp = NULL;
@@ -205,7 +205,7 @@ void MultiPingOp::PingBatchAsync()
 	}
 
 	this->mRecvTimeoutOp = new AsyncOp;
-	this->mRecvTimeoutOp->mCompletion = new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(MultiPingOp::StaticTimeoutCallback,this);
+	this->mRecvTimeoutOp->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(MultiPingOp::StaticTimeoutCallback,this));
 	this->mRecvTimeoutOp->RunAsync(this->mMaxPingTime);
 }
 
@@ -291,7 +291,7 @@ void MultiPingOp::RunHook()
 	this->mSocket->Fn2B0D90(0,false);
 	this->mFinishedList.clear();
 
-	if(this->mRunMode==OP_MODE_ASYNC)
+	if(this->GetMode()==OP_MODE_ASYNC)
 	{
 		this->mSocket->SetRepeatCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(MultiPingOp::StaticRecvCallback,this));
 		this->mSocket->SetRepeatOp(new RecvBytesFromOp(this->mMaxPingReplySize));

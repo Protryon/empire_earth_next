@@ -16,6 +16,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONFtpMsg.h"
 
 using namespace WONAPI;
 using namespace std;
@@ -44,19 +45,7 @@ FTPGetOp::FTPGetOp(const std::string &theHost, const std::string &theRemotePath)
 FTPGetOp::FTPGetOp(const std::string &theURL, bool doExtractUserAndPassword) 
 {
 	this->Init();
-
-	string aStr = theURL;
-	int aPos = aStr.find("://");
-	if(aPos!=string::npos)
-		aStr = aStr.substr(aPos+3);
-
-	if(doExtractUserAndPassword)
-		this->ExtractUserNameAndPasswordFromURL(aStr);
-
-	aPos = aStr.find('/');
-	this->mHost = aStr.substr(0,aPos);
-	if(aPos!=string::npos)
-		this->SetRemotePath(aStr.substr(aPos+1));
+	FtpMsg<FTPGetOp>::FromURL(*this,theURL,doExtractUserAndPassword);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,40 +57,14 @@ FTPGetOp::FTPGetOp(const std::string &theURL, bool doExtractUserAndPassword)
 ///////////////////////////////////////////////////////////////////////////////
 void FTPGetOp::ExtractUserNameAndPasswordFromURL(std::string &theURL)
 {
-	// Do we have UserName?
-	int aColenPos = theURL.find(':'); // Follows the user name.
-	if(aColenPos!=string::npos)
-	{
-		this->SetUserName(theURL.substr(0,aColenPos));
-		theURL = theURL.substr(aColenPos+1);
-	}
-
-	// Do we have Password?
-	int aSlashPos = theURL.find('/');         // Follows the password.
-	int aAtPos = theURL.rfind('@', aSlashPos); // Preceeds the slash.
-	if(aAtPos!=string::npos)
-	{
-		this->SetPassword(theURL.substr(0,aAtPos));
-		theURL = theURL.substr(aAtPos+1);
-	}
+	FtpMsg<FTPGetOp>::ExtractUserNameAndPassword(*this,theURL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 void FTPGetOp::SetRemotePath(const std::string &thePath)
 {
-	this->mRemotePath = thePath;
-	int aSlashPos = thePath.find_last_of('/');
-	if(aSlashPos==string::npos)
-	{
-		this->mActualPath = "";
-		this->mActualFile = thePath;
-	}
-	else
-	{
-		this->mActualPath = thePath.substr(0,aSlashPos);
-		this->mActualFile = thePath.substr(aSlashPos+1);
-	}
+	FtpMsg<FTPGetOp>::SetRemotePath(*this,thePath);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,30 +92,7 @@ bool FTPGetOp::CheckStatus(WONStatus theStatus)
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::ExtractStatus(const char *theStatusLine)
 {
-	if(sscanf(theStatusLine,"%d",&this->mFTPStatus)!=1)
-	{
-		this->Finish(WS_FTP_InvalidResponse);
-		return false;
-	}
-
-	if(this->mFTPStatus>=200 && this->mFTPStatus<300)
-		return true;
-	
-	if(this->mFTPStatus==331) // just need password
-		return true;
-
-	if(this->mFTPStatus==125 || this->mFTPStatus==150) // transfer starting
-		return true;
-
-	if(this->mFTPStatus==350)	// requested file action pending further action (restart)
-		return true;
-
-	if(this->mFTPStatus==504) // not implemented (should only be for resume)
-		return true;
-
-
-	this->Finish(WS_FTP_StatusError);
-	return false;
+	return FtpMsg<FTPGetOp>::ExtractStatus(*this,theStatusLine);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -162,7 +102,7 @@ bool FTPGetOp::DoConnect()
 	// Connect
 	IPAddr anAddr;
 	anAddr.SetWithDefaultPort(this->mHost,21);
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mRequestSocket->QueueOp(static_cast<SocketOp*>(this->Track(new ConnectOp(anAddr),FTP_Track_RequestConnect)),-1);
 		return false;
@@ -185,28 +125,9 @@ void FTPGetOp::RecvLineAsync()
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::SendRequest()
 {
-	std::string aReq;
-	switch(this->mRequestState)
-	{
-		case RequestState_User: aReq = "USER " + this->mUserName; break;
-		case RequestState_Password: aReq = "PASS " + this->mPassword; break;
-		case RequestState_ChangeDir: aReq = "CWD " + this->mActualPath; break;
-		case RequestState_ChangeType: aReq = string("TYPE ") + (this->mIsBinary?'I':'A'); break;
-		case RequestState_Passive: aReq = "PASV"; break;
-		
-		case RequestState_Restart: 
-		{
-			char aBuf[50];
-			sprintf(aBuf,"REST %d",this->mLocalFileSize);
-			aReq = aBuf;
-		}	
-		break;
+	std::string aReq = FtpMsg<FTPGetOp>::Command(*this);
 
-		case RequestState_Retrieve: aReq = "RETR " + this->mActualFile; break;
-	}
-	aReq+="\r\n";
-
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mRequestSocket->QueueOp(static_cast<SocketOp*>(this->Track(new SendBytesOp(new ByteBuffer(aReq.c_str(),aReq.length(),false)),0)),-1);
 		this->RecvLineAsync();
@@ -223,25 +144,7 @@ bool FTPGetOp::SendRequest()
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::ParsePasv(const char *theStatusLine)
 {
-	const char *aBufP = strchr(theStatusLine,'(');
-	if(aBufP==NULL)
-	{
-		this->Finish(WS_FTP_InvalidPasvResponse);
-		return false;
-	}
-
-	int aNum[6], aResult;
-	aResult = sscanf(aBufP,"(%d,%d,%d,%d,%d,%d)",aNum,aNum+1,aNum+2,aNum+3,aNum+4,aNum+5);
-	if(aResult!=6)
-	{
-		this->Finish(WS_FTP_InvalidPasvResponse);
-		return false;
-	}
-
-	long aHost = (aNum[0]<<24) | (aNum[1]<<16) | (aNum[2]<<8) | aNum[3];
-	unsigned short aPort = (aNum[4]<<8) | aNum[5];
-	this->mDataAddr.Fn2B2C20(aHost,aPort);
-	return true;
+	return FtpMsg<FTPGetOp>::ParsePasv(*this,theStatusLine);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -253,81 +156,14 @@ bool FTPGetOp::HandleReply(RecvCRMsgOp *theReply)
 
 	const char *aLine = theReply->GetMsg()->data();
 	int aLen = theReply->GetMsg()->length();
-	if(aLen>=4 && aLine[3]=='-') // still more reply lines
-	{
-		if((this->mRunMode==OP_MODE_ASYNC))
-			this->RecvLineAsync();
-		
-		return true;
-	}
-
-	if(!this->ExtractStatus(aLine))
-		return false;
-
-	switch(this->mRequestState)
-	{
-		case RequestState_Start:
-			this->mRequestState = RequestState_User;
-			return this->SendRequest();
-		
-		case RequestState_User:
-			if(this->mFTPStatus==331)
-			{
-				this->mRequestState = RequestState_Password;			
-				return this->SendRequest();
-			}
-			// fall through, don't need password
-
-		case RequestState_Password:
-			if(!this->mActualPath.empty())
-			{
-				this->mRequestState = RequestState_ChangeDir;
-				return this->SendRequest();
-			}
-			// fall through, don't need to change dir
-
-		case RequestState_ChangeDir:
-			this->mRequestState = RequestState_ChangeType;
-			return this->SendRequest();
-
-		case RequestState_ChangeType:
-			this->mRequestState = RequestState_Passive;
-			return this->SendRequest();
-
-		case RequestState_Passive:
-			if(!this->ParsePasv(aLine))
-				return false;
-
-			if(this->mDoResume)
-				this->mRequestState = RequestState_Restart;
-			else
-				this->mRequestState = RequestState_Retrieve;
-
-			if(!this->DoDataConnection())
-				return false;
-
-			return this->SendRequest();
-			
-		case RequestState_Restart:
-			if(this->mFTPStatus==504) // resume not implemented
-				this->mDoResume = false;
-
-			this->mRequestState = RequestState_Retrieve;
-			return this->SendRequest();
-
-		case RequestState_Retrieve:
-			this->RecvContent();
-			return false;
-	}
-
-	return false;
+	return FtpMsg<FTPGetOp>::HandleReply(*this,aLine,aLen);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::DoDataConnection()
 {
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mDataSocket->QueueOp(static_cast<SocketOp*>(this->Track(new ConnectOp(this->mDataAddr),FTP_Track_DataConnect)),-1);
 		return false;
@@ -358,7 +194,7 @@ void FTPGetOp::RecvContent()
 //		aRecvBytes->SetFileModifyTime(mLastModified);
 	}	
 
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->Track(aRecvBytes,FTP_Track_RecvContent);
 		aRecvBytes->RunAsync(-1);
@@ -379,7 +215,7 @@ void FTPGetOp::RecvContent()
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::CallbackHook(AsyncOp *theOp, int theParam)
 {
-	if(theOp->mKilled) 
+	if(theOp->IsKilled()) 
 	{
 		this->Kill(true);
 		return true;

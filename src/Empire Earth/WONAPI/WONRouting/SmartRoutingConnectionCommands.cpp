@@ -108,7 +108,7 @@ SmartRoutingConnection::MatchResult SmartRoutingConnection::GetMemberByNameRef(R
 																 const std::wstring &theName, 
 																 RoutingMemberInfoPtr &theMemberOut)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 	MatchResult aResult = MatchResult_NotFound;
 
 	RoutingMemberMap::iterator anItr = theGroup->mMembers.begin();
@@ -149,7 +149,7 @@ SmartRoutingConnection::MatchResult SmartRoutingConnection::GetMemberByNameRef(u
 																 const std::wstring &theName, 
 																 RoutingMemberInfoPtr &theMemberOut)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 
 	RoutingGroupInfoPtr aGroup = this->GetGroup(theGroupId);
 	if(aGroup.get()==NULL)
@@ -160,7 +160,7 @@ SmartRoutingConnection::MatchResult SmartRoutingConnection::GetMemberByNameRef(u
 
 bool SmartRoutingConnection::HandleCommand(const std::wstring &theInput, int theGroupIdContext)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 
 	int aPos = 1;
 	std::wstring aCommand = GetWord(theInput,aPos,true,false);
@@ -397,7 +397,7 @@ bool SmartRoutingConnection::HandleCommand(const std::wstring &theInput, int the
 
 bool SmartRoutingConnection::HandleInput(const std::wstring &theInput, int theGroupIdContext)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 	
 	this->mLastInputError = InputError_None;
 	this->mLastTargetMember = NULL;
@@ -449,7 +449,7 @@ bool SmartRoutingConnection::HandleInput(const std::wstring &theInput, int theGr
 
 void SmartRoutingConnection::ClearCommandStrings()
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataCrit());
 	this->mCommandStringMap.clear();
 }
 

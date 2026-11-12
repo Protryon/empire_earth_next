@@ -879,8 +879,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 269 the computer players' manager timers (EESaveHasManagerTimers)
 // 270 the order of each player's unit list (EESaveHasPlayerUnitOrder)
 // 271 the computer players' intelligence files (EESaveHasIntelligence)
+// 272 the ghosts' resources and the gather goals' dead resources (EESaveHasGhostResources)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 271;
+const unsigned long kSaveGameMinorVersion = 272;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

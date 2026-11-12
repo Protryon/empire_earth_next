@@ -33,7 +33,12 @@ enum EEUnitStoreFieldID {
     kUnitFieldGoal = 9,         // EEComplexUnit::mGoalState (the record's goal kind)
     kUnitFieldCommandable = 12, // EEComplexUnit::mIsCommandable
     kUnitFieldFormationSlot = 13,  // EEComplexUnit::mFormationSlot
-    kUnitFieldResourceAmount = 15  // EEUnit::mResourceAmount
+    kUnitFieldResourceAmount = 15, // EEUnit::mResourceAmount
+    kUnitFieldLocation = 17,    // EEComplexUnit::mPhysicalModel's location (EEUnitStoreModel; the record's x, y, z)
+    kUnitFieldHeight = 20,      // EEComplexUnit::mHeight
+    kUnitFieldTimesUpdated = 21,   // EEComplexUnit::mTimesUpdated
+    kUnitFieldActiveGroup = 22, // EEComplexUnit::mActiveGroup (the record's: set or not)
+    kUnitFieldCommand = 23      // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
@@ -115,7 +120,7 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
 void EEFillSweep();
 
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
-// on-the-map flags, and the out-of-sync checksum's flag 1 over the chain against the store's; the count compared.
+// on-the-map flags, and the out-of-sync checksum's flags 1 and 2 over the chain against the store's; the count compared.
 // inWhere names the point (0: after a physics tick, else the executed message's type). A mismatch prints the unit and
 // field and exits 3.
 unsigned long EEUnitStoreCheck(unsigned long inWhere);

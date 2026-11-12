@@ -519,7 +519,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     }
     if (thePartsResult != 0)
         goto LoadFlags;
-    if ((theResult = inFile.Read(this->mHeight)) != 0
+    if ((theResult = EEUnitStoreRead(inFile, this->mHeight)) != 0
         || (theResult = inFile.Read(this->mVelocity)) != 0
         || (theResult = inFile.Read(this->mF220)) != 0
         || (theResult = inFile.Read(this->mF21C)) != 0
@@ -557,7 +557,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = inFile.Read(theValue)) != 0
         || (theResult = inFile.Read(this->mWeaponTagPoint)) != 0)
         goto LoadFlags;
-    inFile.Read(this->mTimesUpdated);
+    EEUnitStoreRead(inFile, this->mTimesUpdated);
 
 LoadFlags:
     if ((theResult = inFile.Read(this->mConversionStartTime)) != 0
@@ -732,7 +732,13 @@ LoadFinalVersions:
             bool mRunning = false;
             unsigned long mFrame = 0;
             long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
+            // the turret angles as read above: the load's LoadMedia makes the array again, all zero, after Load (a
+            // frigate's turrets then had to turn to their target again: space game, seed 2's 1900 s save, where the
+            // continued frigate fired at its first tick)
+            std::vector<float> mTurretAngles;
         } theLive;
+        for (long q = 0; q < this->mNumTurretAngles && this->mTurretAngles != NULL; q++)
+            theLive.mTurretAngles.push_back(this->mTurretAngles[q]);
         unsigned long theLiveCount = 0;
         if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
             && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
@@ -799,6 +805,9 @@ LoadFinalVersions:
                     theUnit->mGarrisonCount = theLive.mGarrisonCount;
                     theUnit->mPower = theLive.mPower;
                 }
+                unsigned long theParts = theUnit->GetModel() != NULL ? theUnit->GetModel()->GetNumParts() : 0;
+                for (unsigned long q = 0; q < theLive.mTurretAngles.size() && q < theParts && theUnit->mTurretAngles != NULL; q++)
+                    theUnit->mTurretAngles[q] = theLive.mTurretAngles[q];
             });
     }
     return theResult;
@@ -1234,7 +1243,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
             goto SaveGoals;
         theResult = outFile.Write(this->mTurretAngles[q]);
     }
-    if (theResult != 0 || (theResult = outFile.Write(this->mHeight)) != 0
+    if (theResult != 0 || (theResult = outFile.Write(this->mHeight.Get())) != 0
         || (theResult = outFile.Write(this->mVelocity)) != 0 || (theResult = outFile.Write(this->mF220)) != 0
         || (theResult = outFile.Write(this->mF21C)) != 0 || (theResult = outFile.Write(this->mCurrentResearch)) != 0
         || (theResult = outFile.Write(this->mAnimation)) != 0 || (theResult = outFile.Write(this->mCurrentPhysicsAction)) != 0
@@ -1253,7 +1262,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
         || (theResult = outFile.Write(this->mCollisionResolutionCount)) != 0 || (theResult = outFile.Write(this->mWakeTimer)) != 0
         || (theResult = outFile.Write(this->mTrailEffectTimer)) != 0 || (theResult = outFile.Write(this->mAmmunition)) != 0
         || (theResult = outFile.Write(this->mAnimationTime)) != 0 || (theResult = outFile.Write(theZero)) != 0
-        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated)) != 0
+        || (theResult = outFile.Write(this->mWeaponTagPoint)) != 0 || (theResult = outFile.Write(this->mTimesUpdated.Get())) != 0
         || (theResult = outFile.Write(this->mConversionStartTime)) != 0 || (theResult = outFile.Write(this->mCollisionState)) != 0
         || (theResult = outFile.Write(this->mIsDisabled)) != 0 || (theResult = outFile.Write(this->mIsDeletable)) != 0
         || (theResult = outFile.Write(this->mIsCommandable)) != 0 || (theResult = outFile.Write(this->mIsAnimationPaused)) != 0

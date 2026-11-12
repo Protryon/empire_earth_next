@@ -341,7 +341,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
     TMGetTime();
     if (theStatus == WS_Success && this->mRouting.get() != NULL) {
         this->mLock->Enter();
-        PlatMutexLock(this->mRouting->mDataCrit.mCrit);
+        PlatMutexLock(this->mRouting->GetDataCrit().mCrit);
         this->mRooms.clear();
         for (theGroup = this->mRouting->GetGroupMap().begin(); theGroup != this->mRouting->mGroupMap.end(); theGroup++) {
             if (!(theGroup->second->mFlags & 0x800))
@@ -365,7 +365,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
             this->mRooms[(*theData)->mLinkId].mDescription = theString;
         }
         this->mRoomListChanged = true;
-        PlatMutexUnlock(this->mRouting->mDataCrit.mCrit);
+        PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
         this->mLock->Leave();
         TMGetTime();
     } else {
@@ -384,7 +384,7 @@ void EEWonNet::CloseCallback(AsyncOp* inOp)
         gUIManager->DisplayMessage(theMessage, 1, NULL, CloseMessageCallback, true);
     }
     this->mIgnoreClose = false;
-    if (static_cast<SocketOp*>(inOp)->mSocket.get() == this->mRouting.get())
+    if (static_cast<SocketOp*>(inOp)->GetSocket() == this->mRouting.get())
         this->Disconnect();
 }
 
@@ -679,11 +679,11 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 
     if (this->mRouting.get() == NULL)
         return;
-    PlatMutexLock(this->mRouting->mDataCrit.mCrit);
+    PlatMutexLock(this->mRouting->GetDataCrit().mCrit);
     theGroups = this->mRouting->GetGroupMap();
     if (theGroups.size() == 0) {
         // Fix: release the routing data lock on this early exit too (it used to stay held).
-        PlatMutexUnlock(this->mRouting->mDataCrit.mCrit);
+        PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
         return;
     }
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
@@ -708,7 +708,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
         this->mRouting->JoinGroup(theGroup->first, thePassword, std::wstring(gEmptyWideString), 0, 0,
                             new RoutingCompletion(&EEWonNet::JoinGroupCallback));
     }
-    PlatMutexUnlock(this->mRouting->mDataCrit.mCrit);
+    PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
 }
 
 // FUNCTION: EXE 0x4cf02c
@@ -1028,7 +1028,7 @@ void EEWonNet::Login(const char* inName, const char* inPassword)
 
     if (theKey.LoadFromRegistry() && theKey.mValid) {
         this->mLoginOp = new GetCertOp(this->mUser);
-        this->mLoginOp->mCompletion = new EEWonNetCompletion(&EEWonNet::LoginCallback);
+        this->mLoginOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::LoginCallback));
         this->mLoginOp->SetCreateAccount(false);
         this->mLoginOp->RunAsync(15000);
     }
@@ -1053,7 +1053,7 @@ void EEWonNet::LoginCallback(AsyncOp* inOp)
 void EEWonNet::RequestMOTD()
 {
     this->mMOTDOp = new GetMOTDOp(kWonProductName);
-    this->mMOTDOp->mCompletion = new EEWonNetCompletion(&EEWonNet::MOTDCallback);
+    this->mMOTDOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::MOTDCallback));
     this->mMOTDOp->RunAsync(15000);
 }
 
@@ -1091,7 +1091,7 @@ void EEWonNet::GetTitanServerList()
     this->mDirOp = new GetDirOp(this->mDirServers.get());
     this->mDirOp->SetFlags(0x703003a);
     this->mDirOp->SetPath(kWonProductDirectory);
-    this->mDirOp->mCompletion = new EEWonNetCompletion(&EEWonNet::GetTitanServerListCompletion);
+    this->mDirOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetTitanServerListCompletion));
     this->mDirOp->RunAsync(15000);
 }
 
@@ -1198,7 +1198,7 @@ void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPas
     theOp->mAuthContext = this->mUser;
     theOp->mEmail = std::string(inPassword);
     theOp->mNewPassword = this->ToWString(inName);
-    theOp->mCompletion = new EEWonNetCompletion(&EEWonNet::UpdateAccountCallback);
+    theOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::UpdateAccountCallback));
     theOp->mProfileData->ClearNewsletterSubs();
     theOp->mProfileData->AddNewsletterSub(1, inFlag);
     theOp->RunAsync(15000);
@@ -1232,7 +1232,7 @@ void EEWonNet::OpenUpdateAccount()
     this->mAccountOp = new GetAccountOp(this->mAuthServers, this->mUser);
     this->mAccountOp->mAuthType = AUTH_TYPE_SESSION;
     this->mAccountOp->mAuthContext = this->mUser;
-    this->mAccountOp->mCompletion = new EEWonNetCompletion(&EEWonNet::GetAccountCallback);
+    this->mAccountOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetAccountCallback));
     this->mAccountOp->RunAsync(15000);
     this->mAccountOp->mProfileData->AddNewsletterSub(true, false);
     gResource->GetString(IDS_GETTING_CURRENT_USER_INFO, theMessage);

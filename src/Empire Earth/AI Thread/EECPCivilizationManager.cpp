@@ -1015,11 +1015,12 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
             if (!theUnit->IsPathMarker())
                 this->AdjustUnitCount(theUnit->mUnitClass->mUnitType, 1);
         }
-        if (this->mNextEpochAdvanceTime > 4000000000) {
-            this->mAdvancingEpoch = false;
-            this->mScheduleEpochAdvance = true;
-        } else
-            this->mNextEpochAdvanceTime += gPhysics->mGameTime;
+        // the saved delay is the advance time less the save's game time. The original took a delay past due (the
+        // advance time already behind) for no time at all: it dropped the advance under way and scheduled a new one,
+        // drawing a random delay the running game never drew. The port puts the time back as it was (the unsigned sum
+        // wraps back to it): the next engine never sets the time (0, so always past due) and lost its advance at every
+        // load (every save version alike: the bytes are the same)
+        this->mNextEpochAdvanceTime += gPhysics->mGameTime;
         unsigned long theID = this->mGarrison.GetSavedID();
         this->mGarrison = NULL;
         if (!UIsNone32(theID)) {
@@ -1246,13 +1247,18 @@ void EECPCivilizationManager::UnitAdded(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x470ed1
-// Removes a lost unit from the unit manager, the resource manager (citizens), the building counts and the wall
-// manager (buildings and walls)
+// Removes a lost unit from the unit manager, the resource manager (citizens and the other gatherers), the building
+// counts and the wall manager (buildings and walls)
 void EECPCivilizationManager::UnitLost(EEComplexUnit* inUnit, bool inSwapped)
 {
     this->mUnitManager->UnitLost(inUnit);
     if (inUnit->mUnitClass->mUnitType == kUnitTypeCitizen || inUnit->mUnitClass->mUnitType == kUnitTypeFemaleCitizen)
         this->mResourceManager->CitizenLost(inUnit->mComplexUnit);
+    // port fix: the other gatherers (the fishing boats, category 22, and engineers, category 6) are filed in the
+    // gatherer lists like citizens (AddAllUnits, UnitGoalDone) but the original removed only the two citizen types,
+    // so a lost boat stayed there, dead, for the rest of the game (PORT_LEARNINGS "Dead fishing boats")
+    else if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+        this->mResourceManager->RemoveGatherer(inUnit->mComplexUnit);
     if (!inUnit->IsPathMarker())
         this->AdjustUnitCount(inUnit->mUnitClass->mUnitType, -1);
     if (inUnit->mUnitClass->IsLandBuilding() || (inUnit->mUnitClass->mIsWall && !inUnit->mUnitClass->mIsTower))

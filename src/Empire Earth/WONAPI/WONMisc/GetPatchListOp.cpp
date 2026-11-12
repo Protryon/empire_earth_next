@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONPatchProtocol.h"
 #include "ee/wonapi/WONStatus.h"
 
+#include "ee/wonapi/WONPatchMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -51,19 +52,7 @@ WONStatus GetPatchListOp::CheckResponse()
 		return this->InvalidReplyHeader();
 	
 	// Do extended unpack
-	ReadBuffer readBuf(this->mReplyData->data(), this->mReplyData->length());
-
-	unsigned short numPatches = readBuf.ReadShort();
-	for (int patchNum=0; patchNum<numPatches; ++patchNum)
-	{
-		unsigned short patchDataSize = readBuf.ReadShort();
-
-		ReadBuffer patchData(readBuf.ReadBytes(patchDataSize), patchDataSize);
-
-		SmartPtr<PatchData> thePatchData = new PatchData;
-		thePatchData->ReadFromBuffer(patchData, true);
-		this->mPatchDataList.push_back(thePatchData);
-	}
+	PatchReplyData<PatchData,PatchDataList,VersionData>(this->mReplyData.get(),NULL,NULL,NULL,this->mPatchDataList);
 
 	// Finished
 	return (WONStatus)WS_Success;
@@ -78,16 +67,14 @@ void GetPatchListOp::RunHook()
 	this->mSubMessageType=this->mMsgType;
 
 	// Pack the message data
-	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendString(this->mConfigName);
-	requestData.AppendString(this->mFromVersion);
-	requestData.AppendString(this->mToVersion);
-	requestData.AppendByte(this->mStateFilter);
-	
+	std::vector<std::string> aStrings;
+	aStrings.push_back(this->mProductName);
+	aStrings.push_back(this->mConfigName);
+	aStrings.push_back(this->mFromVersion);
+	aStrings.push_back(this->mToVersion);
 
 	// Pack and call base class implementation
-	this->mRequestData=requestData.ToByteBuffer(true);
+	this->mRequestData=PatchRequest(1,aStrings,this->mStateFilter);
 	DBProxyOp::RunHook();
 }
 

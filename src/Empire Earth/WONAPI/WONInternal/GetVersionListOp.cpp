@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONStatus.h"
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -49,22 +50,8 @@ WONStatus GetVersionListOp::CheckResponse()
 		return this->InvalidReplyHeader();
 	
 	// Do extended unpack
-	ReadBuffer aReadBuf(this->mReplyData->data(), this->mReplyData->length());
-	unsigned short numVersions = aReadBuf.ReadShort();
-
-	// Read in each version
-	for (int i=0; i < numVersions; i++)
-	{
-		SmartPtr<VersionData> versionData = new VersionData;
-
-		unsigned short versionDataSize = aReadBuf.ReadShort(); // record size for expandability
-
-		ReadBuffer aVersionBuf(aReadBuf.ReadBytes(versionDataSize), versionDataSize);
-		versionData->ReadFromBuffer(aVersionBuf);
-		this->mVersionDataList.push_back(versionData);
-	}
-
-	// Finished
+	// Do extended unpack: each version record read by VersionData (ee_won admin.rs, patch.rs)
+	AdminVersionListReply<VersionData>(this->mReplyData.get(), this->mVersionDataList);
 	return (WONStatus)WS_Success;
 }
 
@@ -78,9 +65,8 @@ void GetVersionListOp::RunHook()
 
 	// Pack the message data
 	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendString(this->mConfigName);
-	requestData.AppendByte(this->mStateFilter);
+	AdminValues().Str(this->mProductName).Str(this->mConfigName).Num(this->mStateFilter)
+		.AppendTo(EE_WON_ADMIN_GET_VERSION_LIST, requestData);
 	
 
 	// Pack and call base class implementation

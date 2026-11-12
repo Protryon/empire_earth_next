@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONStatus.h"
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,17 +47,8 @@ WONStatus GetPatchServerModuleListOp::CheckResponse()
 		return this->InvalidReplyHeader();
 	
 	// Do extended unpack
-	ReadBuffer aReadBuf(this->mReplyData->data(), this->mReplyData->length());
-	unsigned short numModules = aReadBuf.ReadShort();
-
-	// Read in each module
-	for (int i=0; i < numModules; i++)
-	{
-		unsigned long moduleID = aReadBuf.ReadLong();
-		this->mModuleList.push_back(moduleID);
-	}
-
-	// Finished
+	// the module ids (ee_won admin.rs)
+	AdminModuleListReply(this->mReplyData.get(), this->mModuleList);
 	return (WONStatus)WS_Success;
 }
 

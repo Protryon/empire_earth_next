@@ -6820,6 +6820,215 @@ Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (th
 - **ProfileData wholly in Rust.** Nothing outside `ProfileData.cpp` read its members, so the class is a shim over a Rust `EeWonProfile` (birth date, newsletter map, custom action). `GetBirthDate` was computed in a signed int (`year << 16` goes negative from 32768); the FFI returns an `i32` and the shim widens it as the original did.
 - **Network-layer APIs these call** (for the lobby lane's whole move): `WriteBuffer(size, true)`, `Reset`, `AppendBytes`, `ToByteBuffer`, `data()`, `length()`; `ReadBuffer(data, length)`, `data()`, `length()`, `pos()`, `SetPos`; `ByteBuffer(data, length, false)`; `ReadBufferException`; `WonByteBufferSink`; `WideAppendUtf16LE`, `WideAssignUtf16LE`.
 
+## R6: WON's AsyncOp, AsyncOpTracker and SocketThreadSimple as Rust objects (ee_won opobj.rs, sockthread.rs; branch rust-r6-won13, 2026-11-11)
+
+Round 13 of R6 (RUST_PLAN "R6 WON, the rest"), the second round of whole-class moves: the op every WON service
+derives from, its sub-op tracker and the socket thread now keep their state in Rust objects; the C++ classes are
+shims while C++ callers remain.
+
+- **Accessors first, then the move.** About 40 files read `AsyncOp`'s members directly (`mStatus`, `mKilled`,
+  `mRunMode`, `mTimeout`, `mCompletion`, `mContainer`, `mStartTime`) and two read `AsyncOpTracker`'s multimaps
+  (PingLogic, HTTPDocumentOps). The members were made private and the compiler listed the sites; a script rewrote
+  each at the reported line and column (a read becomes `GetStatus()`, `IsKilled()`, `GetMode()`, `GetTimeout()`,
+  `GetCompletion()`, `GetStartTime()`, `GetContainer()`; an assignment `x->mCompletion = e;` becomes
+  `x->SetCompletion(e);`, ending at the statement's first `;` outside parentheses). That commit changed no
+  behaviour and carried the new golden; the next swapped the implementation under the same accessors. clang-cl
+  reports only a few errors per unit after a template's first one, so the loop ran the build until no private-member
+  error was left (six passes). Files touched outside the lane (mechanical, accessor calls only): EEWonNet.cpp;
+  WONAPI.cpp; WONAuth AuthContext, GetCertOp, PeerAuthOp, PeerAuthServerOp; WONInternal FilePushOp; WONMisc
+  DetectFirewallOp, FTPGetOp, FindPatchOp, GetHTTPDocumentOp, GetVersionOp, HTTPDocumentOps, HTTPEngine, HTTPGetOp,
+  ReportPatchStatusOp; WONRouting RoutingConnection, RoutingCreateGroupOp, RoutingOp, SmartRoutingConnection;
+  WONServer MultiPingOp, ServerConnection, ServerOp, ServerRequestOp; WONSocket BlockingSocket, QueueSocket,
+  SocketOps, SocketRunHooks, UDPManager; the lobby's InitLogic, LanLogic, LobbyLogic, PingLogic, RoutingLogic,
+  StagingLogic, EELobbyFileTransfer.
+- **What moved.** `EeWonAsyncOp`: the run state as atomics (the original read `mStatus`, `mTimeout` and
+  `mCompletion` outside the lock in `Run`'s result, `StartRunAsync` and `Complete`; atomics keep those reads without
+  a data race), the lock (the platform's recursive mutex, taken where the C++ took it), the completion's reference,
+  the container (the C++ object for `GetContainer`, its Rust `EeWonOpContainer` for the queueing), and every step:
+  `Run`, `RunAsTimer`, `StartRunAsync`, `Finish`, `ForceFinish`, `Kill`, `Complete`, `QueueInOpContainer`, the time
+  left. The C++ `AsyncOp` holds the object; its virtual `RunHook`/`CleanupHook`, the completion's `Complete` and
+  references, WONAPICore's queue and timer, and the ops' references and kill come back through one static hook
+  table in AsyncOp.cpp. `EeWonOpTracker` is `AsyncOpTracker` whole (the two multimaps `AsyncOpTrackerMaps` and
+  `AsyncOpTrackerEntry` are deleted). `EeWonSocketThread` is `SocketThreadSimple`'s op set, lock, `DoOp`, pump,
+  purge, adds and removes; the C++ class keeps the `Thread` shim and waits on its signal for the time the pump
+  returns. Deleted C ABI: the `OpState` copies (`ee_won_op_state_init`, `_run`, `_finish`, `_kill`, ...,
+  `ee_won_op_time_left`), the op set's (`ee_won_opset_*`), `ee_won_socket_op_finishes`, `ee_won_socket_pump_wait`.
+- **The tracker's order.** The original inserted with the id's first entry as the hint, and MSVC's multimap puts a
+  hinted equal key before the hint: among equal ids the latest op comes first (`KillAll`'s and PingLogic's order).
+  The golden shows it (`kd kf kb ka ke` for ids 0, 1, 1, 1, 7 added as ka, kb, kd, ke, kf).
+- **Goldens, recorded first.** `won_asyncop_test` grew from 128 to 285 lines: 120 over the C++ AsyncOp and tracker
+  (finish twice, force-finish pending and delivered, an idle kill, a blocking run left pending, the completion's
+  references, the time left of blocking and async runs, the tracker's order, refusals, remove, `KillAll`, deletion,
+  `AsyncOpWithTracker`'s `CallbackHook` and cleanup), then 37 over the C++ socket thread (adds, pumps logged sorted
+  by name since the set is in address order, removes, an op finishing in its own `Continue`, the purge, the thread's
+  loop, ops held at deletion). Each part printed the same over the Rust objects, 30 runs out of 30 under a parallel
+  build. Driver traps: `a + f(x) + f(x)` evaluates right to left under the MSVC ABI (the two `RemoveOp` results came
+  out swapped: sequence the calls); a parent op's completion must not cast it as the test's own op class; a 1 ms
+  timeout "past" after `PlatSleep(5)` is not, at the system clock's 15.6 ms resolution (sleep 40); a socket op handed
+  to `WONAPICore::AddToSocketThread` with no core started is killed (the `killed 1` in the golden is the original's).
+- **Behaviour changes.** A tracked op holds one reference (two before: the op map's key and the entry);
+  `KillAll` takes the first op each turn, so an op tracked during a kill is killed as well (the original's iterator
+  had passed it). Nothing else: the same locks, threads and order.
+- **Not moved, and why.** IPAddr is a value type (copied into maps, messages and every socket, its `std::string`
+  host by value) whose members the Internet lane's ServerContext reads directly; its logic is Rust's since round 2,
+  and making it a Rust object means a handle with copy semantics on every copy site. AsyncSocket, the socket ops,
+  RecvCRMsgOp, BlockingSocket, QueueSocket and LobbyLanSocket are next: about 80 files name `mCore`, `mDataCrit`,
+  `mLengthFieldSize` and friends (many of them other classes' members of the same name), so the same
+  private-members pass comes first.
+- **What runs it.** Every WON op of the lobby (the LAN socket ops, the broadcast and join timers, the lobby
+  logics' tracked ops, PingLogic's pings) now runs through `EeWonAsyncOp`; the LAN game's socket ops are pumped by
+  `EeWonSocketThread`. EE-SIM never loads the lobby, so the oracle cannot see a fault here; the lead's LAN game is
+  the end-to-end check (`lan_game.py`: the lobby start-up, LanLogic's discovery and game-channel sockets, their
+  QueueSocket and BlockingSocket ops through the container, socket thread and timer thread, the join, the game
+  room's messages, the start).
+
+## R5a.2, seventh round: the load test over other games, empty unit lists, past-due epoch advances, dead gatherers and carcasses (save 0.272, branch rust-r5a-aisave6, 2026-11-11)
+
+Continues "R5a.2, sixth round", whose 18 saves (seeds 2-7, the oracle's game) all continue identically. This round
+widens the test and fixes what the wider test found. Each fix was built (0/0 for EE-AOC and EE-SIM), checked with the
+oracle on seeds 2-3 (identical to ref) and the Rust gate, and measured with the matrix below. All of it is save and
+load code (the loaded game, not the running one; the plain oracle stays identical) except the TEST ONLY tools.
+
+- **The matrix** (`sim_oracle.py saveload NAME --settings LIST|all [--clean]`, committed): SETTINGS holds the games:
+  `oracle`, `plains-medium-3ai`, `islands` (Large Islands), `highlands-large-4ai`, `mediterranean-easy`,
+  `medium-difficulty` (the lobby's middle difficulty; gameoptions has three), `late` and `space` (sim_capture's
+  profiles: Middle Ages / Atomic Age start, 3 AIs, the original's cheats), `calamity` (--calamities) and `next`
+  (--engine next). Each setting goes to build/rust_oracle/NAME-SETTING; the loaded game gets the continued game's
+  options (cheats, casts and engines are not in the save); every game's stage slot is deleted when it ends and
+  --clean deletes the saves, AI traces and reports once compared (a whole matrix run leaves about 6 MB). It ends with a
+  table of the saves that continue identically per setting. Saves at 1000 and 1900 s (not multiples of 300 s, where
+  the calamity casts fall). EE-SIM: a loaded game with --calamities casts on the continued game's five-minute schedule
+  (it cast at its first tick before, a harness artefact).
+- **First matrix** (seed 2, 1000/1900 s, 519 s wall at --jobs 2): oracle 2/2, islands 2/2, medium difficulty 1/2, all
+  the others 0/2: plains-medium-3ai 3/168 ticks, highlands-large-4ai 149/82, mediterranean-easy 168/564, medium
+  difficulty -/406, late 3/3, space 12/0, calamity 1/1, next 0/0.
+- **The unit manager's empty class lists** (no format change). GetUnits returns an empty list for a class the player
+  tracked and lost every unit of, NULL for one it never tracked; TryResearch resets the epoch advance (to retry it)
+  only for the empty list. The 0.266 order lists every class the running manager holds, empty ones too: the first tick
+  now makes an empty list for each saved class the load lacks and drops an empty one the save lacks. Found in the
+  calamity game: a player whose town centre a calamity destroyed retried the epoch advance every second (a random
+  draw each time, SetNextEpochAdvanceTime) where the loaded player never did (dumps' new `advflags=` and `rq=`).
+  Calamity 1/1 -> 229/228 ticks (both then part at the next cast).
+- **The next epoch advance time past due** (no format change). Save writes the time less the game time; the
+  original's Restore took a negative delay for none: it dropped the advance under way and scheduled a new one, a
+  random draw the running game never made. The next engine never sets the time (0, always past due), so every load of
+  it lost its advance. The sum is now put back as it was (the unsigned arithmetic wraps back). Next 1900 s save 0 ->
+  identical to the end.
+- **Dead fishing boats in the gatherer lists** (ghosts, no format change). UnitLost calls CitizenLost only for the two
+  citizen types, so a lost fishing boat (a naval citizen, class 109) stays, dead, in its resource manager's gatherer
+  list for the rest of the game; the 0.261 order dropped such an id at the load. SaveGhosts now writes these units too
+  (EECPOutOfWorldGatherers) and the gatherer lists' fixup takes the ghost for an id the world lacks (the players'
+  fixups run before the ghosts' own, the players load before the world helper). Late 3/3 -> 822/484 ticks. Found with a
+  temporary stack print in AssignGatherers (four dead class 109 units in player 4's lists).
+- **0.272, a gather goal's carcass** (`EESaveHasGhostResources`). EEUGGather::Save wrote -1 for a resource no longer
+  valid (a hunted animal eaten up while its gatherer still walks to it); the loaded goal had no resource and
+  EECPRMFoodOutsideCenters counted one hunter less, so the food capacity (the dumps' new `cap=` and `food=`) and with it
+  the wanted gatherers parted at the first resource update. The goal now writes the id, SaveGhosts adds the gather
+  goals' resources and drop sites out of the world, every ghost record also holds its resource type and amount, and
+  RepairPointers takes the ghost. Plains 1000 s 3 -> 1197 ticks.
+- **The turret angles** (no format change). Save writes the model's part count of turret angles and Load reads them,
+  but the load's LoadMedia makes the array again, all zero, after Load (the running game never sets mNumTurretAngles;
+  only Load and RepairPointers' resize do). A loaded frigate's turrets pointed ahead, so FacesTarget failed and it
+  turned to its target (FaceEnemyUnit, the dumps' `cmd=2012`) where the continued one fired (`cmd=2021`
+  WaitForReload, a shell in the world). The angles read are put back with the other live state at the first tick.
+  Space 12/0 -> 598/745 ticks. Found with a temporary print in FacesPoint (the angles 0 against -1.41 and 1.98).
+- **Tools** (TEST ONLY, committed): the dumps' AI line shows the epoch advance's guards (`advflags=`, `later=`), the
+  research queues (`rq=`), each resource's gatherers filed/wanted (`gath=`), the gather capacities (`cap=`), the food
+  capacity's parts and lists (`food= fish= mines= minelist= food2=`) and the resource centers (`rc=`); each unit line
+  its animation, frame, animation time, pause flag and reload timer (`anim= reload=`). Scratch under build/hunt:
+  `pair7.py SETTING SEED T SAVE_MS` (a continued and a loaded game of one save of a setting, dumps at chosen ticks,
+  the draw trace; the continued game's dump-load.txt is the saved state at SAVE_MS - 875), `rd.py` (the first differing
+  draw of two draw traces, its callers resolved), `rs.sh` (exe-relative addresses through EE-SIM.map: image base
+  0x400000), `dl.py` (a dump diff).
+- **Lesson: a dead unit the running game still references is state.** Three of this round's four causes were the same
+  shape as 0.262's dead attackers: a list or goal that keeps a unit out of the world (dead boats, an eaten carcass, a
+  lost class's empty list). The save must say what the running game holds, dead or not; the ghosts are the way.
+- **The numbers** (`saveload as7-fin --settings all --seeds 2-3 --at 1000,1900`, 1067 s wall at --jobs 2, after the
+  merge of rust; END = identical to 2700 s, else the CT lines equal after the load; seed 2 1000/1900, seed 3
+  1000/1900): oracle END/END END/END; plains-medium-3ai 1197/168 END/END; islands END/END 1429/400;
+  highlands-large-4ai 149/82 4/0; mediterranean-easy 168/564 434/133; medium-difficulty END/406 END/0; late 822/484
+  143/197; space 598/745 75/0; calamity 229/228 229/228; next 0/END END/END. **13 of 40 saves continue identically**
+  (first matrix: 5 of 20 on seed 2; this round's fixes moved seed 2's plains 3 -> 1197, late 3/3 -> 822/484, space
+  12/0 -> 598/745, calamity 1/1 -> 229/228, next 1900 s 0 -> END). `tools/saveload_expect.txt` holds these outcomes;
+  `--expect` fails only when a save does worse.
+- **Left** (each names its own cause with the same tools): the calamity casts (both saves part at the next cast,
+  1200/2100 s: the cast after a load differs, oos only); the next engine's 1000 s save on seed 2 (a citizen of player 3
+  gets an exploration route at the load's first tick: EECPNextExploring's state or the Lua step); the AI-only
+  divergences (`oos, ai`: plains 2048 s, highlands 1973 s, mediterranean 2394 s); the 0-4 tick ones of seed 3
+  (highlands 1000/1900 s, medium difficulty 1900 s, space 1900 s); late and islands on seed 3.
+- **A gate for the merge chain**: `python -I tools/sim_oracle.py saveload NAME --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --jobs 2 --clean --expect tools/saveload_expect.txt`
+  covers every cause fixed in rounds 6 and 7 (the oracle setting: the 18 saves' causes at two times; calamity: the
+  empty class lists; late: the dead boats; space: the turret angles; next: the past-due epoch advance; plains: the
+  carcass ghosts). Six settings x (1 continued + 2 loaded games): 18 games, 355 s wall at --jobs 2 on this machine
+  (measured after the merge of rust: `saveload expect: PASS`; the 60-game run took 1067 s).
+
+## Dead fishing boats leave the computer player's gatherer lists (a declared rebaseline; branch rust-fishboat, 2026-11-11)
+
+The owner's declared rebaseline (RUST_PLAN 2.1: a deliberate behaviour change in its own commits, with new references).
+Found by the save lane ("R5a.2, sixth round" and "seventh round": the late game's loads parted on dead class 109 units
+in player 4's lists; round 7 saves them as ghosts so that a load matches).
+
+- **The bug.** `EECPCivilizationManager::UnitLost` (0x470ed1) calls `EECPResourceManager::CitizenLost` (RemoveGatherer
+  and a citizen's cost back on the needs) only for `kUnitTypeCitizen` and `kUnitTypeFemaleCitizen`, but the gatherer
+  lists take every unit of the two citizen categories: `EECPUnitManager::AddAllUnits` and
+  `EEComputerPlayer::UnitGoalDone` file land citizens (category 6) and naval citizens (category 22) with
+  `AddIdleGatherer`, `UnitsSwapped` moves both. The units of those categories in the db: `citizen`, `female_citizen`,
+  `x10_engineer` (category 6, neither citizen type) and the five fishing boats (`s02_fishing_boat_stone`,
+  `s04_..._bronze` = class 109, `s08_..._imperial`, `s11_..._modern`, `s13_digital_fishing_boat`). A fishing boat
+  that was sunk, converted or deleted stayed in its list (mostly the idle list: a boat goes there whenever its goal
+  ends), dead and referenced, for the rest of the game. Every list sum counted it: `EECPRMWantedGatherers`' total
+  (`of=` in the demand trace) and with it the wanted gatherers per resource, the idle list that AssignGatherers walks.
+- **The fix** (EECPCivilizationManager.cpp, one `else if`): a lost unit of a citizen category that is neither citizen
+  type leaves every list (`RemoveGatherer`, dropping the lists' references); no citizen cost is added (CitizenLost's
+  `AddCosts` is the citizen's price). The citizens' path is unchanged.
+- **The ghosts** (round 7's `EECPOutOfWorldGatherers`, `SaveGhosts`, the gatherer lists' load fixup) stay as they are:
+  a fixed game's lists lose every unit the player loses, so it writes no gatherer ghost; a 0.272 save of an unfixed
+  build holds its dead boats as ghosts and loads them back as that game held them (no format change, no version). One
+  way is left for a dead unit to stay in the lists: a unit lost while its computer player is inactive (`SetActive`
+  false: UnitTaken skips the managers, ReleaseUnits does not clear the lists); the ghosts still cover it. Comments in
+  EESaveGameFiles.h and EECPResourceManager::Load say so.
+- **Where it shows** (EE-SIM, the unfixed build of the same tree against the fixed, `--checksums`):
+  - The sim oracle (2 AIs, seeds 2-7): **identical** to `ref`, every decision line and every checksum line (3086
+    ticks a seed). Its computer players fish (the food lines' `fish=` up to 8 boats) but none loses a boat in 2700 s.
+    `ref` is therefore **not** re-recorded: other lanes keep comparing against the main checkout's `ref` as before.
+  - sim_capture: oracle, space and calamity profiles equal to their goldens on all six seeds; the late profile
+    (Middle Ages start, 3 AIs, the original's cheats: navies) differs on seeds 2, 6 and 7 (seeds 3-5 equal).
+  - The late game's first divergent tick (`ticks`): seed 2 CT 696 (game ms 609000), seed 6 CT 2940 (2572500), seed
+    7 CT 1389 (1215375); each time `rng, oos, units`, the `ai` checksum still equal (it sums no gatherer list).
+  - The cause at each: the state dump at the last equal tick (`--dump-at`, the AI line's `gath=` filed/wanted per
+    list, round 7) shows exactly one entry more in the unfixed game's idle list (list 0), with the same number of
+    living boats (`food=` third field, the unit manager's count): seed 2 player 4 10 against 9; seed 7 player 2 6
+    against 5 (and the wanted wood/gold 8/6 against 7/5); seed 6 player 3 6 against 5 (wanted wood 7 against 6).
+    The first differing decision of seed 2 is player 4's demand at 602687 ms, `of=23` against `of=22`: the dead boat
+    counted as a gatherer. The unfixed build's late captures of seeds 2, 6 and 7 equal the old golden.
+- **The rebaseline** (its own commit): `tools/sim_capture/golden_cpp_late.txt`, seeds 2, 6 and 7, from the fixed
+  build (the tree merged with rust): every tag of those seeds changed (the game parts at 609/2572/1215 s: A* areas and
+  searches, combat, formations, tech costs, unit store checks), which they can only through the game itself; no
+  record format changed. CALC/CALS/CALU/CALW of seeds 2 and 7 and CBCN of seed 7 are no longer recorded (the new
+  games cast no calamity, and seed 7 tests no conversion) and were dropped from the golden (144 lines changed, 9
+  dropped): the late golden now holds no calamity record (the calamity profile still covers them all). The other
+  three goldens and `ref` are unchanged. The captures were digested seed by seed and deleted at once (the disk was
+  under 5 GB), with sim_capture's own digest functions (`build/fbhunt/cap.py`, scratch).
+- **The load test.** The gate (`saveload --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at
+  1000,1900 --expect`) and the whole matrix (`--settings all --seeds 2-3`, 1018 s wall at --jobs 2): 38 of the 40
+  saves have the outcomes of `tools/saveload_expect.txt`; late seed 2, a new game from 609 s, went 1900 s 484 -> 794
+  ticks and 1000 s 822 -> **0**. That save parts at the load's first tick on two citizens of player 2 that the
+  continued game holds in an active group (`EEComplexUnit::mActiveGroup`, the dumps' `grp=1`; the unit checksum adds
+  `mActiveGroup != NULL`), which no save version stores: the group a unit moves with after a group order is lost by
+  every load. The old game had no unit in a group at its 1000 s save. Not a dead-boat cause, and not fixed here (it is
+  the save lane's: the active groups in the save); the expect file's two late seed 2 rows are re-recorded (own commit)
+  with a comment that says so, so the gate passes on the new game. Seen in the same dump, outside the checksums: the
+  loaded computer players' resource lists (`mines=` 21 against 9, `fish=` 65 against 70 in the AI lines), rebuilt by
+  the load where the running game refreshes them on its own schedule.
+- **What other lanes do**: nothing for the sim oracle (`ref` is unchanged; compare against the main checkout's `ref`
+  as before). A lane whose late capture check runs before it merges this branch sees seeds 2, 6 and 7 fail on every
+  tag: merge `rust` (with this) first. The saveload gate needs the new expect rows (in this branch).
+- **Gates** (the tree merged with rust at d1894b28): `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM); the sim oracle seeds
+  2-7 identical to `ref`; sim_capture oracle, late, space and calamity equal to their goldens (late: the new one); the
+  saveload gate PASS with the new expect file; `rust_build.py gate` PASS (1750 tests); `--test-profile
+  windowed-software` 0/0. No harness session (tours, AI games, LAN) was run; the fix is in the computer player's
+  simulation only (EE-SIM covers it; no renderer or UI path changed).
+
 ## R5b.2, fourth round: the weapon point's other users, the flight steps, the screens and the unit-list search's sweep (ee_combat launch.rs, flight.rs, screen.rs; branch rust-combat4, 2026-11-11)
 
 | Piece | C++ caller | Rust | Tag |
@@ -6876,6 +7085,139 @@ Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (th
 - **What stays C++:** the shot's creation, goal and launch, the closest tile, the turret part lookup, the drop target,
   the ground point, `EEUpdateUnitTile`, the projectiles' and missiles' ground and water impact tests
   (`CheckGroundImpact`, `CheckWaterImpact`), `DistanceSquaredTo`, the screens' objects.
+
+## R6: WON's Internet code, round 3 (GetCertOp, WONMisc's HTTP, FTP and patch code, WONInternal's admin ops)
+
+Branch `rust-won-net3`. As before, nothing in the game reaches this code except `URL` (the lobby's browser components parse their links with it, so the LAN game runs it): only the drivers exercise the rest.
+
+- **Entries read up to the cut, checks applied in order.** `GetCertOp`'s login reply interleaves each entry's read with certificate, key block, session key and private key checks that return early. Rust (`cert.rs`) reads the whole reply into its entries in the original's order and ends with a cut marker where a read failed; `WONCertMsg.h` walks them and applies each check where the original did, so an early return leaves the reads before it and nothing after. A community status entry carries how many of its sub-message's fields were read (the record is pushed before its fields).
+- **Stand-ins whose verdicts follow their bytes.** The cert driver's certificates, key blocks, keys and decryption decide validity from the bytes they are made from and log every call, so the original's statements and the template run against identical, deterministic environments; the trace and the members are compared whole. A first mutation (the community's id assigned only with its name) failed 22,197 checks.
+- **The original crashed in places; the port defines them.** GetCertOp's secret commit read the other certificate's times (a NULL dereference when only one came) and passed an indeterminate duration when none came; the driver marks those runs and checks the new code's trace up to the crash point. `VersionBaseOp::IsFiltered`'s `unsigned int` positions made `substr` throw `std::out_of_range` for some version data (55,372 of 300,000 generated; the game would stop); the port answers.
+- **The UCRT's scans, measured.** `sscanf("%d")` is `strtoll` saturating to 64 bits, then the low 32 bits (`"4294967295"` is -1, `"9223372036854775808"` is -1, `"-99999999999999999999"` is 0); `%x` is `strtoull` (saturating to `UINT64_MAX`, a minus sign negating), and `"0x"` with no digit after fails; `atoi` saturates to 32 bits. The first HTTP driver run caught the wrapping version; the values came from calling `ucrtbase!__stdio_common_vsscanf` through ctypes with a `va_list` of pointers.
+- **Tool trap: the Bash tool's heredocs.** A `\\` in a heredoc reached Python as `\`, so `"\\r\\n"` matched a real CR LF, and an `index()` of C++ text with `"\r\n"` literals failed. Write such scripts with the editor and run them as files.
+- **Stashing staged new files.** `git stash push -- . ':!build'` stashed only part and left the new files staged; the pop restored them staged, and the next commit took them all. Check `git show --stat` after a commit that follows a pop.
+- **Network-layer APIs these call** (for the lobby lane): `AsyncOp::IsAsync()`, `ReadBuffer::SetPos`/`Available`, `ByteBuffer(data, length, false)`, `IPAddr::Fn2B2C20`, `WriteBuffer::AppendBytes`, `WonByteBufferSink`, `WideAppendUtf16LE`, `WideAssignUtf16LE`.
+
+## R5b.4, ninth round: Build Unit, Smart Farmers and Cast Calamity in Rust, the store's positions and the checksum's flag 2, the tick's step mapped (ee_units commands.rs, store.rs; branch rust-r5b4-core9, 2026-11-11)
+
+- **The last three goal-giving bodies** (`ee_units` commands.rs over host calls in EEUnitHost.cpp, the original's
+  order and draw count; all 15 are now Rust):
+  - `EEMBuildUnit::Execute` (`build_unit`): the technology's class (a node the player lacks is refused: the original
+    read through NULL), the capitol count, `CanProduce(.., 0x20, 1, true, 3, NULL)`, `EECanPlaceOnTile(.., false, 1)`,
+    `EEMakeBuilding`, for a granary the free farms (`EEFindFreeFarm` from ring 1 until none) sorted around the first
+    unit's tile; each unit builds (queued: a build target, shift-queued, a unit with a goal other than a build goes
+    idle; else `OrderRepair`) and takes the farm at its place (past the farms one drawn); a unit the order took out
+    of the group is added back after the loop. The goal kind it tests is the store's.
+  - `EEMSmartFarmers::Execute` (`smart_farmers`): the load goal's farm, its drop sites (`EEGetFarmDropSites`),
+    `CanTake`, the drop, the nearest free farm (`EEFarmDistanceGreater`, the last taken), `EEWorkFarm`, the gather or
+    the 2D move goal (a new constructor, `EE_GOAL_CTOR_LOCATION_2D`), the acknowledgement, the pending push, `Finish`.
+    The carried amount and the tiles are the store's.
+  - `EEMCastCalamity::Execute` (`cast_calamity`): the calamity classes stay C++ (the tech lane's): the class and its
+    flags, `CanCastAt`, `Contains`, the power and the cost, the casters' split, the goal's `Clone` are host calls.
+    The cast goal is a new constructor (`EE_GOAL_CTOR_CAST_CALAMITY`; `EeGoalSpec` gained `ints`: the tile and the
+    technology). A node with no class is refused (the original read through NULL). A selected unit out of its list
+    has its hit points read on the object (`object_hit_points`), as its type already was.
+- **The sorts stay C++.** Both farm sorts are `std::sort` (unstable: equal keys keep the order the algorithm leaves).
+  The comparators are inline in EEMessage.cpp, so the sorts are there too (`EESortFarms`, called by the host's
+  `sort_farms` over the ids the body holds); the sort COMDAT annotations still name them.
+- **The sweep** (USGC) gained the three bodies' original statements and cases: Build Unit with the technologies of
+  the player's tree that make a granary, a house and a capitol and one it has no node of, at the first unit's tile
+  and the centre, plain and queued; Smart Farmers at the usual targets and the player's first granary; Cast Calamity
+  with its first unit and its first unit with power as casters, no target and the next player's unit, one calamity
+  technology of each class kind (0x12, cast by all, other) and Teleport. The dry host answers `CanProduce`,
+  `EECanPlaceOnTile` and `CanCastAt` "yes" (only the placement asked first, its real answer logged), makes a dry building
+  (0x7e000002) whose farms are two dry ids, and runs the split's keep test on the objects.
+- **A trap:** the dry `CanProduce` first asked the real one: its cost reads are the tech capture's TCST records, so
+  the sweep added 3,000 TCST records a game. The dry host now answers without asking (like the hull reads, a sweep
+  must not reach a captured function).
+  The same after the merge with the tech lane's round 2: `CanCastAt` is now its CCAS record (20,000 more a game);
+  the dry `CanCastAt` answers 0 without asking too. Every dry read of another lane's code can become a captured
+  call when that lane adds a record: run the capture after each merge.
+- **A trap of the environment:** a build moved to the background kept running after its first compile error while a
+  second build of the same worktree started; both wrote the same log. Wait for a background build's own exit before
+  the next.
+- **The store's positions and flag 2's fields.** `EEComplexUnit::mPhysicalModel` is an `EEUnitStoreModel`
+  (GEPhysicalModel's layout, no member of its own: its four location setters call the base and report x, y, z in
+  one store call), and `mHeight`, `mTimesUpdated`, `mActiveGroup` (the record keeps whether it is set) and `mCommand`
+  (the record keeps its `mType`: an action's type is fixed by its constructor) are holders. USCK compares the new
+  fields and checks the checksum's flag 2 over the unit chain against the store's sum (`checksum_flag2`: each word
+  sign-extended into a wrapping 64-bit sum, so the low 32 bits are the Windows `long` sum, all 64 the LP64 one).
+  Facing (the transform's rotation) is not in the store: nothing reads it yet.
+- **The writers the holders did not catch.** The first USCK run stopped at tick 0 of a later minute: the location z of
+  one unit differed. `EEUCProjectile` and `EEUCMissile` wrote a dying shot's location through
+  `const_cast<GETransformation&>(GetLocation())`; they now call `SetLocationXYZ` (the same three stores in the same
+  order). `EEPMBuilding::Step2` set the location through a `GEPhysicalModel&`, which a derived class's setters do not
+  intercept: the reference is now the reporting type. A base reference or a const_cast is the hole in a
+  "shadowing" holder: grep for both. `mTimesUpdated` is never incremented in the game (reset, loaded, saved).
+- **Flag 2 from the store.** `GetOutOfSynchChecksum` adds `ee_units_store_checksum_flag2()` for flag 2 and walks the
+  chain only for 0x20 and 8; the oracle's `oos=` (flags 0x153) is identical.
+- **What only a played game runs:** the three bodies' world calls (no capture game sends Build Unit, Smart Farmers or
+  Cast Calamity; the computer players build through their own code): the building's placement, the orders, the farm
+  assignments, the casts and the split. The UI sends Build Unit on every building placement (EEABuild), Smart Farmers on
+  a right click on an own granary, or on a farm with several citizens selected (EEAMouseClick), Cast Calamity from
+  EEACalamity: a played game (the lead's) is the first to run them; the fixture's orders do not send them yet.
+- **The tick's step, mapped**: RUST_PLAN "Leaf 4 (c) and leaf 5, ninth round" (the call tree, the fields each piece
+  touches, what the store lacks, the next three rounds).
+- **Gates** (each code commit built 0/0 for EE-AOC and EE-SIM, the oracle identical on seeds 2-3, the Rust gate PASS;
+  on the merge with rust: the oracle identical on seeds 2-7, the four capture profiles (24 games, run two seeds at a
+  time for the disk) equal to the goldens but USGC, which the last commit recorded, and the combat lane's CBCH
+  lines, which have no golden on rust; USCK found no difference; the test-profile build 0/0). The Rust gate's
+  timer test `timers_under_a_factor_fire_at_the_scaled_rate_until_stopped` failed once under load and passed
+  alone. Not run: any harness session, macOS or Linux builds.
+
+## R6: WON's socket classes and IPAddr as Rust objects (ee_won sockobj.rs, sockop.rs, qsock.rs, ipobj.rs; branch rust-r6-won14, 2026-11-11)
+
+Round 14 of R6 (RUST_PLAN "R6 WON, the rest"), the third round of whole-class moves: the socket layer under the
+lobby's LAN game now keeps its state in Rust objects; the C++ classes are shims while C++ callers remain.
+
+- **Accessors first, again.** AsyncSocket, SocketOp and its ops, QueueSocket and LobbyLanSocket made their members
+  private and the compiler listed the sites; `build/w14/fix.py` rewrote them by (class, member) from the error's
+  class name, so the many other classes with an `mSocket`, `mDataCrit` or `mLengthFieldSize` of their own were left
+  alone. Header-inline code reports its errors with the header's path (the script's pattern took only `src/` paths:
+  those few were edited by hand), and a derived op of the same family (RecvMsgOp, SendMsgOp) is the base's
+  `friend` rather than growing accessors for every buffer. Files touched outside the lane (mechanical, accessor
+  calls only): EEWonNet.cpp; WONMisc DetectFirewallOp, HTTPGetOp; WONRouting RoutingConnection,
+  SmartRoutingConnection(+Commands, +Snapshots); WONServer ServerConnection, ServerContext (IPAddr's conversions);
+  the lobby's InitLogic, LanLogic, RoutingLogic, EELobbyFileTransfer; WONSocket's own units.
+- **What moved.** `EeWonAsyncSocket` (sockobj.rs): the socket's core, length field size, message transforms (the
+  C++ `MsgTransform` objects, owned) and the socket thread's close callback, and every step of AsyncSocket.cpp,
+  under the C++ `mDataCrit`'s mutex (the subclasses lock it around their own state too, so the C++ keeps the
+  `CriticalSection` and the object borrows its mutex). `EeWonSocketOp` (sockop.rs): every socket op's base (its
+  socket and the reference, the thread flag, the wait flags and event indices) and `RunHook`; RecvCRMsgOp's line.
+  `EeWonQueueSocket` (qsock.rs): the queue, the queued and repeat ops, the four completions and the close timer
+  (a reference each, dropped under the lock where a C++ `SmartPtr` assignment dropped it), the queued-close flag and
+  every step of QueueSocket.cpp; the ops and completions it makes (`ParamCompletion`, `QueueOpFastCompletion`,
+  `QueueCloseOp`, `CloseOp`, the timer) come from C++ hooks. `EeWonLanSocket`: LobbyLanSocket's client (a
+  reference) and time, and `SetClient`'s two-way link. `EeWonIpAddr` (ipobj.rs): IPAddr's value; the C++ class is a
+  handle whose copy constructor clones, assignment copies and destructor frees the value (every copy site copies the
+  whole value, as the original's implicit copy did); `mLocalHost` is Rust's. BlockingSocket has no state (each call
+  makes one op and runs it blocking): nothing to move. Deleted C ABI: `ee_won_socket_init` .. `_set_nagling` (all
+  but start / stop), `ee_won_op_send_all`, `ee_won_op_recv_line`, and the IPAddr helpers the C++ called.
+- **Goldens, recorded first.** `won_sockobj_test` (new, `xbuild wontest`): 319 lines over 127.0.0.1, recorded over
+  the C++ classes before each move (the IPAddr part before IPAddr's): AsyncSocket's steps and hooks, the
+  transforms' order and refusals, the ops blocking and async, each op's Duplicate, QueueSocket's queue, repeat op,
+  QueueOpFast, queued close, close timer and hooks, and IPAddr's parses, texts, wire form, order, copies and local
+  host. The same over the Rust objects, run after run. Driver traps: MSVC's ABI evaluates `"x" + St(op->Run()) +
+  St(op->GetStatus())` right to left (the status was read before the run: `LOG2` evaluates the call first); a
+  socket op's repeat copy is queued in the op container, not started, until the next pump (pump before changing
+  the socket under it, or two ops race to fail); a datagram longer than the buffer is the system's (WSAEMSGSIZE on
+  Windows, cut on POSIX) and the setsockopt error of a closed socket too (`WSAENOTSOCK` / `EBADF`): left out so the
+  golden holds on every system; an op with no socket is not run (RunHook finishes it and starts it anyway: every
+  start reads the socket). LobbyLanSocket needs the lobby's headers and units, so only the LAN game runs it.
+- **Found: an unset sockaddr.** `IPAddr(const std::string&)` on a text without a colon set only the remember flag
+  and the validity: the sockaddr was whatever the stack held (the C++ golden line showed the previous temporary's
+  10.1.2.3:8080, the same run after run). The Rust value starts at zero; that one golden line was re-recorded.
+- **Behaviour changes.** That address is 0.0.0.0:0; RecvCRMsgOp on a socket-less op returns
+  `WS_AsyncSocket_InvalidSocket` instead of reading a null socket; LobbyLanSocket's last message time starts at 0
+  (the original left it unset); every IPAddr is a small heap value (a copy allocates). Nothing else: the same
+  locks, threads and order.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game
+  (`lan_game.py`) is the end-to-end check, and it runs every moved class: the lobby start-up (IPAddr's local
+  address, the adapters), LanLogic's discovery socket (a datagram QueueSocket: RecvBytesFromOp as the repeat op,
+  SendBytesToOp broadcasts, IPAddr from the sender), the host's listening LobbyLanSocket (AcceptOp as the repeat op,
+  the accepted socket's Duplicate, SetClient), the joiner's ConnectOp, the game room's messages (RecvMsgOp repeat
+  ops and SendMsgOp queued ops with the 2-byte length field, through the socket thread and the op container), the
+  close timers and queued closes at the start, and the sockets' destruction.
 
 ## R5b.2, fifth round: a missile capture profile, the impact tests and the effects' weapon points in Rust, the combat audit (ee_combat impact.rs, geometry.rs; branch rust-combat5, 2026-11-11)
 

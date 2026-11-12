@@ -29,7 +29,7 @@ void AsyncOpWithTracker::Callback(AsyncOp* op,int param)
 // Tracks a sub-op under the given parameter and routes its completion back to this op; returns the sub-op
 AsyncOp* AsyncOpWithTracker::Track(AsyncOp* op,int param)
 {
-    op->mCompletion=new TrackerCompletion(this,param);
+    op->SetCompletion(new TrackerCompletion(this,param));
     return this->mTracker.AddOp(op,param);
 }
 // FUNCTION: WON 0x006a0290

@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONPatchProtocol.h"
 #include "ee/wonapi/WONStatus.h"
 
+#include "ee/wonapi/WONPatchMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,16 +51,15 @@ void ReportPatchStatusOp::RunHook()
 	this->mSubMessageType=this->mMsgType;
 
 	// Pack the message data
-	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendString(this->mConfigName);
-	requestData.AppendString(this->mFromVersion);
-	requestData.AppendString(this->mToVersion);
-	requestData.AppendString(this->mNetAddress);		// patch url
-	requestData.AppendByte(this->mPatchStatus);
+	std::vector<std::string> aStrings;
+	aStrings.push_back(this->mProductName);
+	aStrings.push_back(this->mConfigName);
+	aStrings.push_back(this->mFromVersion);
+	aStrings.push_back(this->mToVersion);
+	aStrings.push_back(this->mNetAddress);		// patch url
 
 	// Pack and call base class implementation
-	this->mRequestData=requestData.ToByteBuffer(true);
+	this->mRequestData=PatchRequest(1,aStrings,this->mPatchStatus);
 
 	if(this->mUDPSocket.get()==NULL) // just do TCP ServerRequest
 	{
@@ -82,7 +82,7 @@ void ReportPatchStatusOp::RunHook()
 	this->GetNextRequest();
 	this->mLengthFieldSize=aLengthFieldSize;
 	SmartPtr<SendBytesToOp> anOp = new SendBytesToOp(this->mRequest, anAddr, this->mUDPSocket);
-	anOp->Run(this->mRunMode,this->mTimeout);
+	anOp->Run(this->GetMode(),this->GetTimeout());
 	this->Finish((WONStatus)WS_Success);
 }
 

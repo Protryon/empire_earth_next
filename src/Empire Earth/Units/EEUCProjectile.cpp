@@ -132,9 +132,9 @@ void EEUCProjectile::ActionChanged(EEComplexUnit* inUnit)
                 ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
             else
                 theGround = thePosition;
-            const_cast<GETransformation&>(inUnit->mPhysicalModel.GetLocation()).SetX(theGround.GetX());
-            const_cast<GETransformation&>(inUnit->mPhysicalModel.GetLocation()).SetY(theGround.GetY());
-            const_cast<GETransformation&>(inUnit->mPhysicalModel.GetLocation()).SetZ(theGround.GetZ());
+            // the location's x, y, z set in place, as the original's const_cast stores did (New, R5b.4: through the
+            // setter, which reports them to the unit store)
+            inUnit->mPhysicalModel.SetLocationXYZ(theGround);
             gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
         }
         EESoundObject* theSound = inUnit->mStats->mDeathSound;

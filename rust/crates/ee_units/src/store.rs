@@ -42,6 +42,18 @@ pub const EE_UNIT_FIELD_RESOURCE_AMOUNT: u32 = 15;
 /// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
 /// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
 pub const EE_UNIT_FIELD_ON_MAP: u32 = 16;
+/// `EEComplexUnit::mPhysicalModel.GetLocation()`'s x, y and z, as their float bits (`EEUnitStoreModel`'s setters)
+pub const EE_UNIT_FIELD_LOCATION_X: u32 = 17;
+pub const EE_UNIT_FIELD_LOCATION_Y: u32 = 18;
+pub const EE_UNIT_FIELD_LOCATION_Z: u32 = 19;
+/// `EEComplexUnit::mHeight` (float bits)
+pub const EE_UNIT_FIELD_HEIGHT: u32 = 20;
+/// `EEComplexUnit::mTimesUpdated`
+pub const EE_UNIT_FIELD_TIMES_UPDATED: u32 = 21;
+/// `EEComplexUnit::mActiveGroup != NULL`
+pub const EE_UNIT_FIELD_ACTIVE_GROUP: u32 = 22;
+/// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
+pub const EE_UNIT_FIELD_COMMAND: u32 = 23;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -94,6 +106,15 @@ pub struct EeUnitRecord {
     pub resource_amount: i64,
     /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
     pub on_map: u8,
+    /// `EEComplexUnit::mActiveGroup != NULL`
+    pub active_group: u8,
+    /// the location's x, y, z and `mHeight` as float bits
+    pub location: [u32; 3],
+    pub height: u32,
+    /// `EEComplexUnit::mTimesUpdated` (an `unsigned long`)
+    pub times_updated: i64,
+    /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
+    pub command: i64,
 }
 
 impl EeUnitRecord {
@@ -116,9 +137,28 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_CAN_ATTACK_GROUND => self.can_attack_ground = value as u8,
             EE_UNIT_FIELD_RESOURCE_AMOUNT => self.resource_amount = value,
             EE_UNIT_FIELD_ON_MAP => self.on_map = value as u8,
+            EE_UNIT_FIELD_LOCATION_X => self.location[0] = value as u32,
+            EE_UNIT_FIELD_LOCATION_Y => self.location[1] = value as u32,
+            EE_UNIT_FIELD_LOCATION_Z => self.location[2] = value as u32,
+            EE_UNIT_FIELD_HEIGHT => self.height = value as u32,
+            EE_UNIT_FIELD_TIMES_UPDATED => self.times_updated = value,
+            EE_UNIT_FIELD_ACTIVE_GROUP => self.active_group = value as u8,
+            EE_UNIT_FIELD_COMMAND => self.command = value,
             _ => return false,
         }
         true
+    }
+
+    /// This record's part of the checksum's flag 2 (`Store::checksum_flag2`).
+    pub fn flag2(&self) -> i64 {
+        let bits = |b: u32| i64::from(b as i32);
+        self.times_updated
+            .wrapping_add(i64::from(self.active_group))
+            .wrapping_add(self.command)
+            .wrapping_add(bits(self.location[0]))
+            .wrapping_add(bits(self.location[1]))
+            .wrapping_add(bits(self.location[2]))
+            .wrapping_add(bits(self.height))
     }
 
     /// The first field (by `EE_UNIT_FIELD_*`, 0 for the key fields) where two records differ.
@@ -148,6 +188,13 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, self.can_attack_ground == other.can_attack_ground),
             (EE_UNIT_FIELD_RESOURCE_AMOUNT, self.resource_amount == other.resource_amount),
             (EE_UNIT_FIELD_ON_MAP, self.on_map == other.on_map),
+            (EE_UNIT_FIELD_LOCATION_X, self.location[0] == other.location[0]),
+            (EE_UNIT_FIELD_LOCATION_Y, self.location[1] == other.location[1]),
+            (EE_UNIT_FIELD_LOCATION_Z, self.location[2] == other.location[2]),
+            (EE_UNIT_FIELD_HEIGHT, self.height == other.height),
+            (EE_UNIT_FIELD_TIMES_UPDATED, self.times_updated == other.times_updated),
+            (EE_UNIT_FIELD_ACTIVE_GROUP, self.active_group == other.active_group),
+            (EE_UNIT_FIELD_COMMAND, self.command == other.command),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -255,6 +302,17 @@ impl Store {
             .fold(0u64, |sum, r| sum.wrapping_add(r.hit_points.wrapping_add(r.tile_y).wrapping_add(r.tile_x) as u64))
     }
 
+    /// The out-of-sync checksum's flag 2 (`EEComplexUnit::GetChecksum`: the times updated, whether the unit has an
+    /// active group, its command's type, the location's x, y, z and the height as `int32` bits, each sign-extended
+    /// into the `long` sum) over the complex units on the map, wrapping like `checksum_flag1`. The C++ reads these on
+    /// `mComplexUnit`, which is the unit itself for every unit on the map (USCK checks the sum against the chain's).
+    pub fn checksum_flag2(&self) -> u64 {
+        self.records
+            .values()
+            .filter(|r| r.on_map != 0 && r.object_kind == crate::kinds::EE_OBJECT_COMPLEX_UNIT)
+            .fold(0u64, |sum, r| sum.wrapping_add(r.flag2() as u64))
+    }
+
     /// TEST ONLY: the world's unit chain (its units' ids and objects, in the chain's order) against the records'
     /// on-map flags: the chain's units with no record of that object or one not on the map, plus the records on the
     /// map the chain does not hold. 0: the two domains are the same.
@@ -348,6 +406,11 @@ mod tests {
             formation_slot: 3,
             resource_amount: 0,
             on_map: 1,
+            active_group: 0,
+            location: [0; 3],
+            height: 0,
+            times_updated: 0,
+            command: 0,
         }
     }
 
@@ -388,6 +451,13 @@ mod tests {
             (EE_UNIT_FIELD_CAN_ATTACK_GROUND, 0),
             (EE_UNIT_FIELD_RESOURCE_AMOUNT, 1500),
             (EE_UNIT_FIELD_ON_MAP, 0),
+            (EE_UNIT_FIELD_LOCATION_X, i64::from(1.5f32.to_bits())),
+            (EE_UNIT_FIELD_LOCATION_Y, i64::from((-2.0f32).to_bits())),
+            (EE_UNIT_FIELD_LOCATION_Z, 3),
+            (EE_UNIT_FIELD_HEIGHT, 4),
+            (EE_UNIT_FIELD_TIMES_UPDATED, 0xffff_ffff),
+            (EE_UNIT_FIELD_ACTIVE_GROUP, 1),
+            (EE_UNIT_FIELD_COMMAND, 5000),
         ] {
             let before = r;
             assert!(r.set(f, v));
@@ -461,6 +531,29 @@ mod tests {
         s.insert(EeUnitRecord { hit_points: i64::from(i32::MAX), tile_x: 1, tile_y: 0, ..rec(5, 1) });
         let low = s.checksum_flag1() as u32;
         assert_eq!(low, (111i32).wrapping_add(-20003).wrapping_add(i32::MAX).wrapping_add(1) as u32);
+    }
+
+    #[test]
+    fn the_checksum_flag2_sums_the_complex_units_on_the_map() {
+        let mut s = Store::new();
+        let neg = (-2.0f32).to_bits();
+        s.insert(EeUnitRecord {
+            times_updated: 3,
+            active_group: 1,
+            command: 5000,
+            location: [1.5f32.to_bits(), neg, 0],
+            height: 0.25f32.to_bits(),
+            ..rec(1, 1)
+        });
+        // not on the map, not complex: not summed
+        s.insert(EeUnitRecord { on_map: 0, command: 7, ..rec(3, 1) });
+        s.insert(EeUnitRecord { object_kind: crate::kinds::EE_OBJECT_UNIT, command: 9, ..rec(4, 0) });
+        let words = [3i32, 1, 5000, 1.5f32.to_bits() as i32, neg as i32, 0, 0.25f32.to_bits() as i32];
+        // the 32-bit sum (Windows' long) is the low word; the 64-bit one sign-extends each int32
+        let low = words.iter().fold(0i32, |a, &w| a.wrapping_add(w));
+        let wide = words.iter().fold(0i64, |a, &w| a.wrapping_add(i64::from(w)));
+        assert_eq!(s.checksum_flag2() as u32, low as u32);
+        assert_eq!(s.checksum_flag2(), wide as u64);
     }
 
     #[test]

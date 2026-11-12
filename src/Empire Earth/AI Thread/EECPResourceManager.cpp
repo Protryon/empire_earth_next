@@ -1609,6 +1609,12 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
                     for (size_t k = 0; k < theOrder[r].size(); k++) {
                         EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theOrder[r][k]));
                         EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+                        // a dead unit the running list still held (ee/EESaveGameFiles.h EECPOutOfWorldGatherers: a
+                        // fishing boat in the saves of a build before the UnitLost fix): its ghost, from the saves that
+                        // have it. The ghosts' own fixup
+                        // (EEPWorldHelper's LoadGhosts) runs after this one: the players load before the world helper
+                        if (theComplex == NULL)
+                            theComplex = EEFindLoadedGhost(theOrder[r][k]);
                         if (theComplex == NULL) {
                             theMissing++;   // a dead unit the saved list still held
                             continue;
@@ -1623,6 +1629,26 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
         }
     }
     return theResult;
+}
+
+void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits)
+{
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+        EECPResourceManager* theManager = theCP != NULL && theCP->mCivilizationManager != NULL
+            ? theCP->mCivilizationManager->mResourceManager : NULL;
+        if (theManager == NULL)
+            continue;
+        for (unsigned long r = 0; r < 7; r++)
+            for (size_t k = 0; k < theManager->mGatherers[r].size(); k++) {
+                EEComplexUnit* theUnit = theManager->mGatherers[r][k];
+                if (theUnit == NULL || gWorld.GetUnit(theUnit->mUnitID) == theUnit
+                    || std::find(ioUnits.begin(), ioUnits.end(), theUnit) != ioUnits.end())
+                    continue;
+                ioUnits.push_back(theUnit);
+            }
+    }
 }
 
 // FUNCTION: EXE 0x4911ea
@@ -2149,6 +2175,29 @@ static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
 }
 
 static const unsigned long kEarlyWoodSlots = 10;   // the experiment "woodcap"
+
+// TEST ONLY (EE-SIM's state dumps, EECPTrace.cpp): the food capacity's parts: the food outside the centers, the coast
+// boats wanted, the boats had, the fish and the huntable game lists' sizes
+void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile)
+{
+    EECPCivilizationManager* theManager = inManager->mManager;
+    fprintf(inFile, " food=%lu/%lu/%lu fish=%zu mines=%zu", EECPRMFoodOutsideCenters(inManager),
+            EECPRMCoastBoatsWanted(inManager),
+            theManager->mUnitManager != NULL ? (unsigned long)theManager->mUnitManager->GetCount(theManager->GetFishingBoatClass()) : 0UL,
+            inManager->mFish.size(), inManager->mMines.size());
+    fprintf(inFile, " minelist=");
+    for (size_t k = 0; k < inManager->mMines.size(); k++) {
+        EEComplexUnit* theMine = inManager->mMines[k];
+        fprintf(inFile, "%s%lu:%d:%g:%g:%ld,%ld", k ? "," : "", theMine->mUnitID, theMine->mUnitClass->mFamily == kUnitFamilyAnimal ? 1 : 0,
+                (double)theMine->mHitPoints, (double)theMine->mResourceAmount, (long)theMine->GetTileX(), (long)theMine->GetTileY());
+    }
+    fprintf(inFile, " food2=");
+    for (size_t k = 0; k < inManager->mGatherers[2].size(); k++) {
+        EEComplexUnit* theUnit = inManager->mGatherers[2][k];
+        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+        fprintf(inFile, "%s%lu>%lu", k ? "," : "", theUnit->mUnitID, theGoal != NULL && theGoal->mResource != NULL ? theGoal->mResource->mUnitID : 0UL);
+    }
+}
 
 unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
 {
