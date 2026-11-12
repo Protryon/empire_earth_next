@@ -7,6 +7,7 @@
 //! - `names`: the next engine's name tables (result codes and reasons, events, resources, classes and techs);
 //! - `lua_value`: the Lua runtime's value tree (`EECPLuaValue`): the key order, equality, text, the memory's bytes,
 //!   the seed and SplitMix64;
+//! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
 //! The C++ keeps its objects (the states, the manifest's entries) and hands plain values over. `golden` checks every
@@ -14,7 +15,11 @@
 
 pub mod ffi;
 pub mod json;
+// Lua's C API, declared by lua.h: not in the headers
+/// cbindgen:ignore
+pub mod lua_api;
 pub mod lua_ffi;
+pub mod lua_host;
 pub mod lua_value;
 pub mod manifest;
 pub mod names;

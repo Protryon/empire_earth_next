@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// Instructions between two calls of the count hook (`kEECPLuaHookStep`).
+constexpr static const int64_t HOOK_STEP = 1000;
+
 /// The deepest nesting the memory format, the tree -> Lua push and the Lua -> tree conversion take
 /// (`kEECPLuaMaxDepth`).
 constexpr static const size_t MAX_DEPTH = 64;
@@ -233,6 +236,20 @@ struct EeAiLuaTreeOps {
   void (*read_done)(void *owner);
 };
 
+/// `EECPLuaConfig` as the state takes it (the reader is the ops' `read` on the owner, when `has_read`).
+struct EeAiLuaConfig {
+  uint64_t seed;
+  size_t memory_limit;
+  int64_t budget;
+  bool has_read;
+  void (*write)(void *context, const char *text);
+  void *write_context;
+  bool check_memory;
+  /// `void (*)(lua_State*, void*)` or NULL: may raise a Lua error (a C-unwind function, which cbindgen cannot spell)
+  void *open;
+  void *open_context;
+};
+
 extern "C" {
 
 /// The "EENS" block of a state into `out` when `cap` holds it -> the block's length (call with `cap` 0 to size it).
@@ -435,6 +452,75 @@ uint64_t ee_ai_lua_seed(uint32_t game_seed, uint32_t player);
 
 /// SplitMix64: advances `*state` -> the next output. Safety: `state` is valid.
 uint64_t ee_ai_lua_splitmix(uint64_t *state);
+
+/// A new state (`EECPLuaState::EECPLuaState`) -> its handle, never NULL (see `ee_ai_lua_is_open`). Safety: `ops`
+/// outlives the state; `owner` is what `ee_ai_lua_owner` answers for it.
+void *ee_ai_lua_new(const EeAiLuaConfig *config,
+                    const EeAiLuaTreeOps *ops,
+                    void *owner);
+
+/// Closes and frees a state. Safety: `host` came from `ee_ai_lua_new`, is not used again.
+void ee_ai_lua_free(void *host);
+
+/// Safety: `host` is live (as for every function below taking one).
+bool ee_ai_lua_is_open(const void *host);
+
+/// The last call's `EECPLuaStatus`.
+uint32_t ee_ai_lua_status(const void *host);
+
+/// Appends the last call's error text to `out` (a `std::string`).
+void ee_ai_lua_error(const void *host, void *out);
+
+/// This call's (or the last call's) instructions and charges.
+int64_t ee_ai_lua_used(const void *host);
+
+/// The budget of a call (during `CallOptional`, its own).
+int64_t ee_ai_lua_budget(const void *host);
+
+size_t ee_ai_lua_memory_used(const void *host);
+
+size_t ee_ai_lua_memory_peak(const void *host);
+
+uint64_t ee_ai_lua_rng_state(const void *host);
+
+/// The state's next SplitMix64 draw (`ai.random`'s source).
+uint64_t ee_ai_lua_next_random(void *host);
+
+/// The owner of the state `state` belongs to (`EECPLuaState::From`). Safety: `state` is a `lua_State` of a host.
+void *ee_ai_lua_owner(void *state);
+
+/// `EECPLuaState::Charge`: may raise a Lua error (longjmp). Safety: `state` is a host's, inside one of its calls.
+void ee_ai_lua_charge(void *state,
+                      int64_t amount);
+
+/// `LoadPersonality` (`reload` false: `module`) / `Reload` (true).
+bool ee_ai_lua_load(void *host, const char *module, bool reload);
+
+/// `Init`, `Step`, `CallOptional`: personality[name](view, memory) -> `out` (an `EECPLuaValue`: the result, or nil).
+/// Safety: `name` a C string, `view` and `out` live values, `found` valid.
+bool ee_ai_lua_entry(void *host,
+                     const char *name,
+                     bool optional,
+                     const void *view,
+                     int64_t budget,
+                     void *out,
+                     bool *found);
+
+/// `Run`: `source` (`len` bytes) as a chunk named `name` -> `out` (its first result, or nil).
+bool ee_ai_lua_run(void *host, const char *source, size_t len, const char *name, void *out);
+
+/// `GetMemory` -> `out` (the memory, or nil).
+bool ee_ai_lua_get_memory(void *host, void *out);
+
+/// `SaveMemory`: appends the block to `out` (a `std::string`, cleared by the caller) when it succeeds.
+bool ee_ai_lua_save_memory(void *host,
+                           void *out);
+
+/// `RestoreMemory` from `len` bytes at `data`.
+bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
+
+/// `EECPLuaStatusName`: a static C string.
+const char *ee_ai_lua_status_name(uint32_t status);
 
 }  // extern "C"
 

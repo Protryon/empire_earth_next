@@ -188,7 +188,7 @@ fn defined_name(line: &str) -> Option<&str> {
     let mut words = line.split_whitespace().peekable();
     while let Some(word) = words.next() {
         match word {
-            "pub" | "unsafe" | "extern" | "\"C\"" | "async" => continue,
+            "pub" | "unsafe" | "extern" | "\"C\"" | "\"C-unwind\"" | "async" => continue,
             w if w.starts_with("pub(") => continue,
             "const" if matches!(words.peek(), Some(&"fn") | Some(&"unsafe") | Some(&"extern")) => continue,
             "fn" | "struct" | "enum" | "union" | "type" | "const" | "static" => {
@@ -562,6 +562,7 @@ mod tests {
     #[test]
     fn source_lines_name_their_definitions() {
         assert_eq!(defined_name("pub unsafe extern \"C\" fn ee_x(a: u8) {"), Some("ee_x"));
+        assert_eq!(defined_name("pub unsafe extern \"C-unwind\" fn ee_y(a: u8) {"), Some("ee_y"));
         assert_eq!(defined_name("pub(crate) struct Foo<'a> {"), Some("Foo"));
         assert_eq!(defined_name("    pub const IDENTITY: Self = Self;"), Some("IDENTITY"));
         assert_eq!(defined_name("pub const fn make() -> u8 {"), Some("make"));

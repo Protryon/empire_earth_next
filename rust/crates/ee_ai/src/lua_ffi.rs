@@ -1,11 +1,14 @@
 //! The Lua runtime's C ABI (`EECPLua.cpp`): the value tree's order, equality and text, the memory format, the seed
-//! and SplitMix64. The C++ trees are read and built through the ops table the C++ passes in (`kEECPLuaTreeOps`);
+//! and SplitMix64; the state (`EECPLuaState`'s methods over `lua_host`). The C++ trees are read and built through the ops table the C++ passes in (`kEECPLuaTreeOps`);
 //! text goes out by the ops' `append` onto the caller's `std::string`.
 #![allow(clippy::missing_safety_doc)] // each function's contract is its doc's "Safety:"
 
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
-use crate::lua_value::{self, build, CppTree, EeAiLuaKey, EeAiLuaTreeOps};
+use crate::lua_api::lua_State;
+
+use crate::lua_host::{self, Config, Host, JobValueRef};
+use crate::lua_value::{self, build, CppTree, EeAiLuaKey, EeAiLuaTreeOps, Value};
 
 /// `EECPLuaKey::operator<`. Safety: both keys are valid.
 #[no_mangle]
@@ -79,6 +82,191 @@ pub extern "C" fn ee_ai_lua_seed(game_seed: u32, player: u32) -> u64 {
 #[no_mangle]
 pub unsafe extern "C" fn ee_ai_lua_splitmix(state: *mut u64) -> u64 {
     lua_value::splitmix(&mut *state)
+}
+
+// ---- the state (lua_host.rs): `EECPLuaState`'s methods
+
+/// `EECPLuaConfig` as the state takes it (the reader is the ops' `read` on the owner, when `has_read`).
+#[repr(C)]
+pub struct EeAiLuaConfig {
+    pub seed: u64,
+    pub memory_limit: usize,
+    pub budget: i64,
+    pub has_read: bool,
+    pub write: Option<unsafe extern "C" fn(context: *mut c_void, text: *const c_char)>,
+    pub write_context: *mut c_void,
+    pub check_memory: bool,
+    /// `void (*)(lua_State*, void*)` or NULL: may raise a Lua error (a C-unwind function, which cbindgen cannot spell)
+    pub open: *mut c_void,
+    pub open_context: *mut c_void,
+}
+
+/// A new state (`EECPLuaState::EECPLuaState`) -> its handle, never NULL (see `ee_ai_lua_is_open`). Safety: `ops`
+/// outlives the state; `owner` is what `ee_ai_lua_owner` answers for it.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_new(
+    config: *const EeAiLuaConfig,
+    ops: *const EeAiLuaTreeOps,
+    owner: *mut c_void,
+) -> *mut c_void {
+    let c = &*config;
+    let config = Config {
+        seed: c.seed,
+        memory_limit: c.memory_limit,
+        budget: c.budget,
+        has_read: c.has_read,
+        write: c.write,
+        write_context: c.write_context,
+        check_memory: c.check_memory,
+        open: if c.open.is_null() { None } else { Some(std::mem::transmute::<*mut c_void, lua_host::OpenFn>(c.open)) },
+        open_context: c.open_context,
+    };
+    lua_host::new(config, ops, owner) as *mut c_void
+}
+
+/// Closes and frees a state. Safety: `host` came from `ee_ai_lua_new`, is not used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_free(host: *mut c_void) {
+    lua_host::free(host as *mut Host)
+}
+
+/// Safety: `host` is live (as for every function below taking one).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_is_open(host: *const c_void) -> bool {
+    lua_host::is_open(host as *const Host)
+}
+
+/// The last call's `EECPLuaStatus`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_status(host: *const c_void) -> u32 {
+    lua_host::status(host as *const Host) as u32
+}
+
+/// Appends the last call's error text to `out` (a `std::string`).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_error(host: *const c_void, out: *mut c_void) {
+    let h = host as *const Host;
+    let e = lua_host::error(h);
+    (lua_host::ops(h).append)(out, e.as_ptr(), e.len());
+}
+
+/// This call's (or the last call's) instructions and charges.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_used(host: *const c_void) -> i64 {
+    lua_host::used(host as *const Host)
+}
+
+/// The budget of a call (during `CallOptional`, its own).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_budget(host: *const c_void) -> i64 {
+    lua_host::budget(host as *const Host)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_memory_used(host: *const c_void) -> usize {
+    lua_host::memory_used(host as *const Host)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_memory_peak(host: *const c_void) -> usize {
+    lua_host::memory_peak(host as *const Host)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_rng_state(host: *const c_void) -> u64 {
+    lua_host::rng_state(host as *const Host)
+}
+
+/// The state's next SplitMix64 draw (`ai.random`'s source).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_next_random(host: *mut c_void) -> u64 {
+    lua_host::random(host as *mut Host)
+}
+
+/// The owner of the state `state` belongs to (`EECPLuaState::From`). Safety: `state` is a `lua_State` of a host.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_owner(state: *mut c_void) -> *mut c_void {
+    lua_host::owner(state as *mut lua_State)
+}
+
+/// `EECPLuaState::Charge`: may raise a Lua error (longjmp). Safety: `state` is a host's, inside one of its calls.
+#[no_mangle]
+pub unsafe extern "C-unwind" fn ee_ai_lua_charge(state: *mut c_void, amount: i64) {
+    lua_host::charge(state as *mut lua_State, amount)
+}
+
+/// `LoadPersonality` (`reload` false: `module`) / `Reload` (true).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_load(host: *mut c_void, module: *const c_char, reload: bool) -> bool {
+    lua_host::load(host as *mut Host, module, reload)
+}
+
+/// `Init`, `Step`, `CallOptional`: personality[name](view, memory) -> `out` (an `EECPLuaValue`: the result, or nil).
+/// Safety: `name` a C string, `view` and `out` live values, `found` valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_entry(
+    host: *mut c_void,
+    name: *const c_char,
+    optional: bool,
+    view: *const c_void,
+    budget: i64,
+    out: *mut c_void,
+    found: *mut bool,
+) -> bool {
+    let h = host as *mut Host;
+    let mut v = Value::Nil;
+    let ok = lua_host::entry(h, name, optional, JobValueRef::cpp(view), budget, &mut v, &mut *found);
+    build(lua_host::ops(h), out, &v);
+    ok
+}
+
+/// `Run`: `source` (`len` bytes) as a chunk named `name` -> `out` (its first result, or nil).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_run(
+    host: *mut c_void,
+    source: *const c_char,
+    len: usize,
+    name: *const c_char,
+    out: *mut c_void,
+) -> bool {
+    let h = host as *mut Host;
+    let mut v = Value::Nil;
+    let ok = lua_host::run(h, source, len, name, &mut v);
+    build(lua_host::ops(h), out, &v);
+    ok
+}
+
+/// `GetMemory` -> `out` (the memory, or nil).
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_get_memory(host: *mut c_void, out: *mut c_void) -> bool {
+    let h = host as *mut Host;
+    let v = lua_host::get_memory(h);
+    build(lua_host::ops(h), out, v.as_ref().unwrap_or(&Value::Nil));
+    v.is_some()
+}
+
+/// `SaveMemory`: appends the block to `out` (a `std::string`, cleared by the caller) when it succeeds.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_save_memory(host: *mut c_void, out: *mut c_void) -> bool {
+    let h = host as *mut Host;
+    let mut b = Vec::new();
+    let ok = lua_host::save_memory(h, &mut b);
+    if ok {
+        (lua_host::ops(h).append)(out, b.as_ptr(), b.len());
+    }
+    ok
+}
+
+/// `RestoreMemory` from `len` bytes at `data`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ai_lua_restore_memory(host: *mut c_void, data: *const u8, len: usize) -> bool {
+    lua_host::restore_memory(host as *mut Host, lua_value::bytes(data, len))
+}
+
+/// `EECPLuaStatusName`: a static C string.
+#[no_mangle]
+pub extern "C" fn ee_ai_lua_status_name(status: u32) -> *const c_char {
+    lua_host::status_name(status).as_ptr()
 }
 
 #[cfg(test)]
