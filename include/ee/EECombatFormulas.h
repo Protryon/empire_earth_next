@@ -191,7 +191,7 @@ inline void EECombatChainCapture(unsigned int inTag, const In& inInput, const st
     theRecord.Commit();
 }
 
-// ---- the impact tests (round 5)
+// ---- the impact tests and the effects' weapon points (round 5)
 
 // CBGI (EEUCProjectile/EEUCMissile/EEUCTorpedo::CheckGroundImpact) and CBWI (EEUCProjectile/EEUCMissile::
 // CheckWaterImpact): ee_combat's impact.rs decides over EeCombatImpactIn (the reads the C++ gathers; the lazy ones,
@@ -201,24 +201,22 @@ class EEUnitClass;
 class EEComplexUnit;
 EeCombatImpactOut EECombatImpact(EEUnitClass* inClass, EEComplexUnit* inUnit, EeCombatImpactIn& in);
 
-// TEST ONLY until the move (recorded from the unmodified C++ first): CBEW, an effect's start at the shooter's weapon
-// tag point (EEE2DLinearProjectile, EEE2DMuzzleFlash, EEE2DSmokeMuzzleBlast, EEE3DPulseCannonBall, EEE3DTracers): the
-// site, the shooter's model data at its frame as EeCombatWeaponIn (kind 4: no tag point list, the model's default point
-// in `top` under the unscaled location), the model chain, the start the effect computed. Unit is EEComplexUnit, Model
-// EEModel, List EETagPointList (templates: this header needs no model header)
+// CBEW: an effect's start at the shooter's weapon tag point (EEE2DLinearProjectile, EEE2DMuzzleFlash,
+// EEE2DSmokeMuzzleBlast, EEE3DPulseCannonBall, EEE3DTracers): the shooter's model data at its frame as
+// EeCombatWeaponIn (EE_COMBAT_WEAPON_KIND_DEFAULT: no tag point list, the model's default point in `top` under the
+// unscaled location), ee_combat's weapon_point over the model chain; captured with the site. Unit is EEComplexUnit,
+// Model EEModel, List EETagPointList (templates: this header needs no model header)
 template <class Unit, class Model, class List>
-inline void EECombatEffectPointCapture(int32_t inSite, Unit* inUnit, Model* inModel, List* inList, bool inHasList,
-                                       const GE3DPoint& inStart)
+inline void EECombatEffectWeaponPoint(int32_t inSite, Unit* inUnit, Model* inModel, List* inList, bool inHasList,
+                                      GE3DPoint& outStart)
 {
-    if (!EESimCaptureRecord::Active())
-        return;
     EeCombatWeaponIn in = {};
     std::vector<float> theChain;
     memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
     in.list_present = 1;
     in.scale = inUnit->mPhysicalModel.GetScale();
     if (!inHasList) {
-        in.kind = 4;
+        in.kind = EE_COMBAT_WEAPON_KIND_DEFAULT;
         in.top[0] = inModel->mDefaultPoint.GetX();
         in.top[1] = inModel->mDefaultPoint.GetY();
         in.top[2] = inModel->mDefaultPoint.GetZ();
@@ -235,7 +233,13 @@ inline void EECombatEffectPointCapture(int32_t inSite, Unit* inUnit, Model* inMo
             in.kind = EE_COMBAT_WEAPON_KIND_POINT;
         EECombatTagPointChain(thePoint, inUnit->mPhysicalModel.GetFrame(), in.point, theChain, in.chain);
     }
-    float theStart[3] = {inStart.GetX(), inStart.GetY(), inStart.GetZ()};
+    float theStart[3];
+    ee_combat_weapon_point(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0], theStart);
+    outStart.SetX(theStart[0]);
+    outStart.SetY(theStart[1]);
+    outStart.SetZ(theStart[2]);
+    if (!EESimCaptureRecord::Active())
+        return;
     EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'E', 'W'));
     theRecord.I32(inSite);
     theRecord.Bytes(&in, sizeof(in));

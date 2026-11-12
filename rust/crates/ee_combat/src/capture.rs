@@ -7,7 +7,7 @@ use crate::*;
 use std::collections::BTreeMap;
 
 /// The tags (the little-endian u32 of the four letters) and their formulas' names.
-pub const TAGS: [(&[u8; 4], &str); 36] = [
+pub const TAGS: [(&[u8; 4], &str); 37] = [
     (b"CBAF", "attack factor"),
     (b"CBDM", "damage"),
     (b"CBEL", "elevation"),
@@ -44,6 +44,7 @@ pub const TAGS: [(&[u8; 4], &str); 36] = [
     (b"CBHD", "hit distance"),
     (b"CBGI", "ground impact"),
     (b"CBWI", "water impact"),
+    (b"CBEW", "effect weapon point"),
 ];
 
 pub fn tag(name: &[u8; 4]) -> u32 {
@@ -232,6 +233,22 @@ pub fn replay(record: &Record) -> Option<Result<bool, String>> {
         let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[size + 64 * n..size + 64 * n + 64])).collect();
         let height = crate::geometry::weapon_height(&input, &links);
         Ok(height.to_bits().to_le_bytes() == p[p.len() - 4..])
+    } else if t == tag(b"CBEW") {
+        // the site, the input, its chain's matrices, the start
+        let size = std::mem::size_of::<crate::geometry::EeCombatWeaponIn>();
+        if p.len() < 4 + size + 12 {
+            return Some(Err(format!("payload of {} bytes", p.len())));
+        }
+        let input: crate::geometry::EeCombatWeaponIn = from_bytes(&p[4..4 + size]);
+        let chain = input.chain.max(0) as usize;
+        if p.len() != 4 + size + 64 * chain + 12 {
+            return Some(Err(format!("payload of {} bytes, not {}", p.len(), 4 + size + 64 * chain + 12)));
+        }
+        let at = 4 + size;
+        let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[at + 64 * n..at + 64 * n + 64])).collect();
+        let point = crate::geometry::weapon_point(&input, &links);
+        let bytes: Vec<u8> = [point.x, point.y, point.z].iter().flat_map(|v| v.to_bits().to_le_bytes()).collect();
+        Ok(bytes == p[p.len() - 12..])
     } else if t == tag(b"CBFS") {
         check(p, crate::screen::screen)
     } else if t == tag(b"CBHD") {

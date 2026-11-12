@@ -61,29 +61,14 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, EEUnit* inTarget, E
     GE3DPoint theStart;
     GE3DPoint theEnd;
     GE3DPoint theOffset;
-    GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
     GETransformation theTargetTransformation(inTarget->mComplexUnit->mPhysicalModel.GetLocation());
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     unsigned long thePart = theUnit->mAnimation;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[thePart];
-    float theScale = theUnit->mPhysicalModel.GetScale();
     float theTargetScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
-    EETagPointList::Scale(theTransformation, theScale);
-    if (theModel->GetNumParts() > 0) {
-        GETransformation thePartTransformation(false);
-        unsigned long theModelIndex;
-        thePartTransformation.MakeIdentity();
-        if (theModel->FindTurretPart(theList->mPoints[theIndex]->mModel, theModelIndex) == 0)
-            thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-        (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, thePartTransformation,
-                                                            theStart);
-    } else {
-        (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theStart);
-    }
-    EECombatEffectPointCapture(4, theUnit, theModel, theList, true, theStart);   // TEST ONLY
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(4, theUnit, theModel, theList, true, theStart);
     EETagPointList::Scale(theTargetTransformation, theTargetScale);
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
@@ -110,30 +95,12 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, const GE3DPoint& in
     : EEEffect2D(0, inGraphicEffect, gEffect2DModel, kEffect2DSmokeMuzzleBlast, false)
 {
     GE3DPoint theStart;
-    GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     unsigned long thePart = theUnit->mAnimation;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[thePart];
-    float theScale = theUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
-    EETagPointList::Scale(theTransformation, theScale);
-    if (theModel->GetNumParts() > 0) {
-        GETransformation thePartTransformation(false);
-        unsigned long theModelIndex;
-        thePartTransformation.MakeIdentity();
-        GEModel* theTagModel = theList->GetTagPoint(theIndex)->mModel;
-        if (theModel->FindTurretPart(theTagModel, theModelIndex) == 0) {
-            float theYaw = theUnit->mTurretAngles[theModelIndex];
-            thePartTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-        }
-        theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, thePartTransformation,
-                                                            theStart);
-    } else {
-        theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-    }
-    EECombatEffectPointCapture(5, theUnit, theModel, theList, true, theStart);   // TEST ONLY
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(5, theUnit, theModel, theList, true, theStart);
     this->mVelocity.SetX(inTarget.GetX() - theStart.GetX());
     this->mVelocity.SetY(inTarget.GetY() - theStart.GetY());
     this->mVelocity.SetZ(inTarget.GetZ() - theStart.GetZ());

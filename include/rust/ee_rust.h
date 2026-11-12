@@ -140,6 +140,10 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// An effect's start without a tag point list (`EEE2DLinearProjectile`, `EEE3DPulseCannonBall`, `EEE3DTracers`): the
+/// model's default point (in `top`) under the unscaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
+
 /// `EEUCProjectile::CheckGroundImpact`.
 constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_GROUND = 0;
 
@@ -4000,7 +4004,8 @@ struct EeCombatWeaponIn {
   float yaw;
   /// the tag point at the frame, in its model's space
   float point[3];
-  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
+  /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
@@ -10102,6 +10107,15 @@ uint32_t ee_combat_tile_line(int32_t x1,
 /// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
+
+/// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
+///
+/// # Safety
+/// `input` must point to a valid record, `chain` to `input.chain` matrices (or be NULL when it is 0) and `out` to
+/// three floats.
+void ee_combat_weapon_point(const EeCombatWeaponIn *input,
+                            const float (*chain)[16],
+                            float *out);
 
 /// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
 ///

@@ -59,33 +59,15 @@ EEE3DPulseCannonBall::EEE3DPulseCannonBall(EEUnit* inUnit, const GE3DPoint& inTa
 {
     GE3DPoint theStart;
     GETransformation theTransformation;
-    GETransformation theUnitTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
     GEVector theDirection;
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->GetAnimation()];
-    float theScale = inUnit->mComplexUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
     this->mPosition = 0.0f;
     this->mGraphicObject = NULL;
     this->mDrawPosition = 0.0f;
-    if (theList != NULL && theList->GetNumTagPoints() != 0) {
-        EETagPointList::Scale(theUnitTransformation, theScale);
-        if (theModel->GetNumParts() > 0) {
-            GETransformation thePartTransformation(false);
-            unsigned long theModelIndex;
-            thePartTransformation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, theModelIndex) == 0)
-                thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theUnitTransformation, thePartTransformation, theStart);
-        } else {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theUnitTransformation, theStart);
-        }
-    } else {
-        theUnitTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
-    }
-    EECombatEffectPointCapture(6, theUnit, theModel, theList, theList != NULL && theList->GetNumTagPoints() != 0, theStart);   // TEST ONLY
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(6, theUnit, theModel, theList, theList != NULL && theList->GetNumTagPoints() != 0, theStart);
     theDirection.SetX(inTarget.GetX() - theStart.GetX());
     theDirection.SetY(inTarget.GetY() - theStart.GetY());
     theDirection.SetZ(inTarget.GetZ() - theStart.GetZ());

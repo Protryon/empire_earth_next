@@ -69,40 +69,23 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, E
     GE3DPoint theStart;
     GE3DPoint theEnd;
     GE3DPoint theOffset;
-    GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
     GETransformation theTargetTransformation(inTarget->mComplexUnit->mPhysicalModel.GetLocation());
     GEVector theDirection;
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     unsigned long thePart = theUnit->mAnimation;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[thePart];
-    float theScale = inUnit->mComplexUnit->mPhysicalModel.GetScale();
     float theTargetScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
     this->mGraphicObject = NULL;
     this->mT = 0.0f;
     this->mDrawT = 0.0f;
-    if (theList && theList->mPoints.size()) {
-        EETagPointList::Scale(theTransformation, theScale);
-        if (theModel->GetNumParts() > 0) {
-            GETransformation thePartTransformation(false);
-            unsigned long theModelIndex;
-            thePartTransformation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, theModelIndex) == 0)
-                thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, thePartTransformation,
-                                                                theStart);
-        } else {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-        }
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(1, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);
+    if (theList && theList->mPoints.size())
         EETagPointList::Scale(theTargetTransformation, theTargetScale);
-    } else {
-        theTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
+    else
         // the target's point is on its scaled model whatever the shooter has
         ScaleTargetTransformation(theTargetTransformation, theTargetScale);
-    }
-    EECombatEffectPointCapture(1, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);   // TEST ONLY
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
     theDirection.SetX(theEnd.GetX() - theStart.GetX());
@@ -125,35 +108,16 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, const GE3DPoint& in
     : EEEffect2D(0, inGraphicEffect, gEffect2DModel, kEffect2DLinearProjectile, false)
 {
     GE3DPoint theStart;
-    GETransformation theTransformation(inUnit->mComplexUnit->mPhysicalModel.GetLocation());
     GEVector theDirection;
     EEModel* theModel = inUnit->GetModel();
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     unsigned long thePart = theUnit->mAnimation;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[thePart];
-    float theScale = inUnit->mComplexUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
     this->mT = 0.0f;
     this->mGraphicObject = NULL;
     this->mDrawT = 0.0f;
-    if (theList && theList->mPoints.size()) {
-        EETagPointList::Scale(theTransformation, theScale);
-        if (theModel->GetNumParts() > 0) {
-            GETransformation thePartTransformation(false);
-            unsigned long theModelIndex;
-            thePartTransformation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, theModelIndex) == 0)
-                thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, thePartTransformation,
-                                                                theStart);
-        } else {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
-        }
-    } else {
-        theTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
-    }
-    EECombatEffectPointCapture(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);   // TEST ONLY
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);
     theDirection.SetX(inTarget.GetX() - theStart.GetX());
     theDirection.SetY(inTarget.GetY() - theStart.GetY());
     theDirection.SetZ(inTarget.GetZ() - theStart.GetZ());
