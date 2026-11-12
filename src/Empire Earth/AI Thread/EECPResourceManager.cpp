@@ -1877,7 +1877,7 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 // worked from the player's built dock (one is queued while there is none); farms stay as they are.
 static const long kCoastFishRange = 30;
 static const unsigned long kCoastBoats = 8;
-static const unsigned long kCoastBoatsLater = 16;   // the experiment "foodeco": "then lots of fishing boats" (the owner)
+static const unsigned long kCoastBoatsLater = 32;   // the experiment "foodeco": "then lots of fishing boats" (the owner); 32 (AI_RESEARCH 8.56: the boats the uncounted cap made)
 static const unsigned long kCoastBoatsPerFish = 2;
 
 static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)

@@ -63,7 +63,7 @@ local function food_outside(view, memory)
 end
 
 -- the coast's boats wanted (EECPRMCoastBoatsWanted): from the Stone Age, 2 a fish within 30 tiles of the town, 8 at
--- most (16 with the forage patches)
+-- most (32 with the forage patches)
 function M.coast_boats_wanted(view, memory)
     return R.memo("coast_boats", function()
         return M.coast_boats_wanted_now(view, memory)
@@ -87,7 +87,7 @@ function M.coast_boats_wanted_now(view, memory)
             n = n + 1
         end
     end
-    local max = p.forage_patches and 16 or 8
+    local max = p.forage_patches and 32 or 8
     n = n * 2
     return n < max and n or max
 end

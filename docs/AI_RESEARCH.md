@@ -3717,6 +3717,15 @@ Nothing changes before 40 minutes, and the epochs and the C++'s wins stay where 
 the old boats in practice: 14.5 at 70 minutes against the old 14.7 (16 gives 11.0, 24 gives 13.4). This changes the
 opponent of every bench against the C++ classic; benches from before need a new baseline.
 
+The owner chose the 32-boat cap (kCoastBoatsLater, the forage patches' cap; kCoastBoats stays 8), in the C++ and
+in the port, to keep the improved classic's strength. The bench (c32, 32 seeds) does not bring the boats all the
+way back: the C++'s fish gatherers at 70 minutes are 11.3 (16: 10.4, uncounted: 14.2), with 15.5 boat requests a
+game (max 32). The cap now binds in one seed only. The limit is the wanted count itself: two boats a fish within
+30 tiles of the town (kCoastBoatsPerFish), which the uncounted cap had ignored. The rest of the bench: C++ food
+income at 70 minutes 135 a minute, citizens at 89 minutes 102, Copper 21, wins C++ 14 - Lua 13, 5 close. The
+remaining gap is in the per-fish count, not the cap. (The rules document's comment on forage_patches still says
+"16 boats"; changing it would mean a new db release.)
+
 **The boats that fled.** 186 of the port's 230 lost boats died idle. The engine's naval flight (EECPRMNavalFlee)
 calls AddIdleGatherer on the C++'s own lists, which are empty for a Lua seat, so a fled boat stayed on the script's
 food list. It sat idle at the far dock and was never sent to fish again. The port now moves a boat that is off its
