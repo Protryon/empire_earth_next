@@ -3907,6 +3907,40 @@ Two fixes:
   wave dead are equal (940 against 947).
 - **The save is no shorter** (about 60 minutes unpaid in both). What it waits on after the walker is not measured yet.
 
+**The Bronze save with the walker (2026-11-12).** The same per-minute trace on the merged code (the walker, iron_lean
+50; 32 seeds against the improved classic). 23 games saved for Bronze in Copper, 792 minutes in all:
+- **What was short:** iron in 655 minutes (the only one in 176) and gold in 515 (76). Gold was short in 320 before;
+  iron_lean's bowmen cost gold.
+- **During the save:**
+
+| Resource | Gatherers | Income a minute | Stock growth a minute |
+|---|---|---|---|
+| Iron | 14.7 | 79 | 51 |
+| Gold | 13.3 | 68 | 44 |
+
+- **The rate:** about 5.4 a gatherer a minute. boom-econ's deposit trace puts the engine's pace at 5.6-6.0, so drop
+  sites are not the lever.
+- **The fast saves** (12-20 minutes) had 17-19 on iron at 100-110 a minute. **The slow ones** (s2, s4, s28, s5: 54-66
+  minutes, unpaid at the end) had 7-12 on iron at 27-65 a minute, all of it spent replacing soldiers lost to the
+  waves.
+- **The lever is the count of iron and gold gatherers** in the slow games. boom-econ's settlement caps (a03c6b9e) are
+  one cause.
+
+**The Stone soldiers paced (2026-11-12, `plan.soldier_pace`).** The owner trained his Stone soldiers about 1 a minute,
+where boom_order trained its 8 at once. `soldier_pace = 60000` trains one a minute after the advance, and all at once
+with enemy soldiers in sight or under a threat. 32 seeds, iron_lean 50 in both:
+
+| Variant | Opponent | Stone food a minute | Citizens at +15 min | Citizens gained a minute | Stone lost | Defeats | Bronze |
+|---|---|---|---|---|---|---|---|
+| Q0 | improved classic | 162.6 | 65.1 | 2.26 | 13.0 | 5 | 17, 76.7 |
+| Q1 paced | improved classic | 165.7 | 67.6 | 2.43 | 13.1 | 6 | 17, 82.9 |
+| Q0 | Age of AI | 196.8 | 74.6 | 2.79 | 8.2 | 0 | 27 |
+| Q1 paced | Age of AI | 200.1 | 76.3 | 2.91 | 8.6 | 0 | 28 |
+
+About 2 citizens more by Stone +15 against both opponents, at the same losses; nothing clear beyond (Bronze later
+against the classic). It stays off. Against the classic, enemy soldiers are in sight much of the Stone Age, so the
+pace rarely holds the soldiers back.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds

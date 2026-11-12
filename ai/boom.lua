@@ -581,6 +581,13 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (plan.soldier_pace, off; the owner's Stone Age: 3 soldiers at +2 min, 6 at +5.5, 9 at +8.5 - boom-econ found the 8
+    -- trained at once took a third of the Stone food) in the Stone Age, one soldier per soldier_pace ms after the advance,
+    -- all at once while enemy soldiers are in sight or under a threat
+    if plan.soldier_pace ~= nil and view.epoch == 1 and not threatened and #D.clusters() == 0 then
+        local paced = 1 + (view.time - view.epoch_start) // plan.soldier_pace
+        soldiers_wanted = math.min(soldiers_wanted, math.max(paced, view.army_count))
+    end
     -- (plan.emergency, off; AI_RESEARCH §8.41 D6, balanced's prehistoric_army "unless a stronger enemy is near"): while
     -- a wave of lib.defence's wave size is seen in the claim range, up to this many soldiers (and a barracks), the
     -- reserve giving way; none once it has been gone 60 s
