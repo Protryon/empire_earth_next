@@ -11,6 +11,7 @@ local MILITIA_RANGE, MILITIA_TOWER_RANGE, DEFEND_RANGE = 10, 12, 30
 local ODDS_K = 1500
 local MILITIA_MS = 4000
 local FLEE_RANGE, DANGER_RANGE, HOME_RANGE, MAX_RAIDERS, DEFENDERS = 8, 10, 12, 2, 4
+local NAVAL_RANGE = 12   -- kNavalFleeRange
 
 local function near(u, x, y, r)
     return R.d2(u.x, u.y, x, y) <= r * r
@@ -225,6 +226,34 @@ function M.on_events(memory, events, time)
         if e.kind == "attacked" and e.attacker ~= nil then
             local v = ai.unit(e.unit)
             local a = ai.unit(e.attacker)
+            -- EECPRMNavalFlee's danger zone: the engine's naval flight moves the own units round a unit under a
+            -- warship's fire (the boats round a boat; the citizens and melee soldiers round a land unit), but puts its
+            -- zone on the classic's own lists, which the script's gatherers are not on. The zone where any left, once
+            -- every 4 s (the engine's own period)
+            if v ~= nil and a ~= nil and a.category == "ship" and v.category ~= "building" and a.player ~= nil
+                and a.player > 0 and a.player ~= memory.me and not (memory.allies or {})[a.player] and personality.naval_flee
+                and (memory.naval_zone == nil or time - memory.naval_zone >= MILITIA_MS) then
+                memory.naval_zone = time
+                local boat = v.category == "boat"
+                local left = false
+                for _, id in ipairs(ai.units{near = {v.x, v.y, NAVAL_RANGE}}) do
+                    local u = R.unit(id)
+                    if u ~= nil and u.inside == nil then
+                        if boat then
+                            left = u.category == "boat"
+                        else
+                            left = u.category == "citizen" or ((u.category == "soldier" or u.category == "hero")
+                                and (u.range or 0) < 300)
+                        end
+                        if left then
+                            break
+                        end
+                    end
+                end
+                if left then
+                    add_zone(memory, v.x, v.y, time)
+                end
+            end
             if v ~= nil and a ~= nil and v.category == "citizen" and a.player ~= nil and a.player > 0
                 and a.player ~= memory.me and not (memory.allies or {})[a.player] then
                 if personality.militia then
@@ -262,6 +291,7 @@ function M.flee(view, memory)
             R.add_idle(rm, id)
         end
         ai.move(run, view.town_x, view.town_y, {forced = true})
+        print(string.format("classic_lua flee n=%d zones=%d", #run, #rm.danger))
     end
 end
 
