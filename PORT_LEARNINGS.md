@@ -8361,3 +8361,52 @@ the size.
   `EEIsInContactRange`, `EEIsAttackReachable`, `CanReachUnit`, `IsTargetIgnored`/`IgnoreTarget`, `EEIsSeenBy`,
   `Intersects`, `GetNearestFootprintTile`), the shots' objects behind the operations, `LaunchProjectile`,
   `EEIsOnTargetTiles`, the goals' objects and saves.
+
+## R6: WON's Internet code, round 6 (GetCertOp and DetectFirewallOp as whole Rust ops)
+
+Branch `rust-won-net6`. As before, nothing in the game reaches this code (the WON servers are gone; the lobby makes
+a GetCertOp or a DetectFirewallOp only for an Internet login): only the drivers exercise it, and no tour, LAN game
+or EE-SIM run does.
+
+- **A whole op over a ServerRequestOp shim.** `GetCertOp` (getcert.rs) and `DetectFirewallOp` (fwop.rs) keep every
+  member in a Rust object and run every step there; the C++ class is the `ServerRequestOp` the base's exchange calls
+  through its virtuals, plus one hook table for the C++ objects the op holds or makes (the auth context, key
+  blocks, certificates, peer data and the private key; the listening socket and the datagram receive ops). What can
+  complete the op or call back into it is never called from Rust: `Finish`, the base class's `RunHook`,
+  `CleanupHook` and `CallbackHook`, `Track` with `RunAsync`, and the virtual `RecvServerDatagram` come back as the
+  step's outcome and the C++ shim runs them as its next statement, after the call returned. So no Rust borrow lives
+  across a call that can re-enter the object, without a lock.
+- **The session key is the object's.** GetCertOp's `Blowfish` is the Rust object's `Blowfish` (`GetSessionKey`
+  returns it as the C++ class, one `EeWonBlowfish`). A random key cannot be replayed, so its four hooks are nullable
+  function pointers: the real op passes NULL and Rust uses its own key; the driver passes the stand-in key of the
+  original's run. The real key's path is a Rust test (a login request decrypted with the key it carries).
+- **Goldens first, both from the original's half.** `won_cert_test --print-ops` (400 sequences of RunHook,
+  GetNextRequest, CheckResponse, Reset, CleanupHook and the setters on one op) was recorded before getcert.rs
+  existed; `won_fwop_test` was first compiled with its Rust half switched off to record `golden_fwop.txt` (500
+  sequences). Each driver then compares the original's statements with the Rust op on 100,000 sequences (497,094
+  and 550,479 steps), and the Rust tests replay the goldens over Rust stand-ins. Mutations: CleanupHook's status test
+  inverted (38,208 failed checks), the datagram's host test inverted (11,215), both also failing the Rust replays.
+- **A stand-in's log is cut at 255 bytes.** The drivers' `Log` formats into a 256-byte buffer, so a long user
+  name's hex was cut in the golden; the Rust replay's stand-in has to cut the same way (the first replay failed
+  there). And a Rust stand-in that counts references must let a peer data's key block go when the peer goes, or a
+  balance check reports the block alive.
+- **cbindgen exports private aliases.** A module-private `type Sink = EeWonByteSink;` used in an exported hook
+  struct came out as a bare C++ `Sink` in ee_rust.h (the driver then failed to assign its `EeWonByteSink`
+  functions). Write the prefixed type in exported signatures, never a local alias.
+- **clippy: `c_long` is `i32` on Windows.** Its casts to and from `i32` are needed on LP64 and flagged on Windows
+  (`unnecessary_cast`): both modules allow it at their top.
+- **The original's NULL dereferences, defined.** GetCertOp's CleanupHook after RunHook finished for a missing
+  verifier key read a NULL key block: no key block is not valid here. DetectFirewallOp's CallbackHook for a
+  successful datagram with no receive op read NULL: it finishes. A login request whose session-key encryption gives
+  NULL dereferenced it: an empty block is sent. (The drivers never generate these.) The members the constructors
+  left indeterminate (GetCertOp's state and clock delta) start at `GETTING_PUB_KEYS` and 0.
+- **Behaviour changes.** None intended. `GetErrorList`, `GetCommunityStatusList` and `GetPublicAddr` return copies
+  (InitLogic's `LobbySetPublicAddress(op->GetPublicAddr())` binds the temporary). The dead C ABI went with its last
+  C++ user: `ee_won_cert_request`, `_login_data`, `_reply`, `_decrypted` and `ee_won_firewall_request`, `_reply`,
+  `_wait` (their Rust functions stay, used by the ops); `WONCertMsg.h` and `FirewallMsg` are deleted.
+- **Not moved this round, and why.** HTTPGetOp (650 lines, 30 public members read by GetHTTPDocumentOp and
+  HTTPEngine, a state machine over socket ops and a child op for redirects) and FTPGetOp need scripted-socket drivers
+  the size of `won_httpengine_test`'s: next. PeerAuthServerOp's only state is `mPeerAuthServer`, which LanLogic reads
+  directly (`op->mPeerAuthServer.GetClientCertificate()`): an accessor there first (the lobby lane's file).
+  FindPatchOp's state is VersionBaseOp's sets plus a list of PatchInfo maps of ByteBuffers: it follows VersionBaseOp.
+  PeerAuthOp, FilePushOp, the routing and DB op families and ServerRequestOp's object remain.

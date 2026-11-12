@@ -5,14 +5,10 @@
 //! The original's reply reads interleave with C++ checks: a certificate's validity and signature, a key block's
 //! verification, the session key's decryption, the private key's import, the secret's confirmation, each able to
 //! end the read early. Here a reply is read whole into its entries, in the original's order, up to the point a
-//! read failed (`EE_WON_CERT_CUT`: the original threw `ReadBufferException` there); the C++
-//! (`include/ee/wonapi/WONCertMsg.h`) walks them and applies the checks in order, so an early return leaves what
-//! the original left. Reached by nothing in the game: the WON servers are gone.
+//! read failed (`EE_WON_CERT_CUT`: the original threw `ReadBufferException` there); the op (`getcert.rs`) walks
+//! them and applies the checks in order, so an early return leaves what the original left. Reached by nothing in
+//! the game: the WON servers are gone.
 
-use std::ffi::c_void;
-
-use crate::dirops::EeWonDirBytes;
-use crate::ffi::EeWonByteSink;
 use crate::wire::{PastEnd, Reader, Writer};
 
 // ---- the requests
@@ -253,93 +249,6 @@ pub fn decrypted(data: &[u8]) -> Vec<EeWonCertEvent> {
         out.push(ev(EE_WON_CERT_CUT));
     }
     out
-}
-
-// ---- the C ABI
-
-unsafe fn slice<'a, T>(p: *const T, n: usize) -> &'a [T] {
-    if n == 0 || p.is_null() {
-        &[]
-    } else {
-        unsafe { std::slice::from_raw_parts(p, n) }
-    }
-}
-
-unsafe fn units(b: &EeWonDirBytes) -> Vec<u16> {
-    unsafe { slice(b.data, b.len) }.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect()
-}
-
-/// The events of a reply's read, handed over once.
-pub type EeWonCertSink = unsafe extern "C" fn(context: *mut c_void, events: *const EeWonCertEvent, count: usize);
-
-/// A request's message into `sink`.
-///
-/// # Safety
-/// `a` and `b` describe readable bytes; `sink` accepts `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_cert_request(
-    kind: i32,
-    key_id: i16,
-    a: EeWonDirBytes,
-    b: EeWonDirBytes,
-    sink: EeWonByteSink,
-    context: *mut c_void,
-) {
-    let m = request(kind, key_id, unsafe { slice(a.data, a.len) }, unsafe { slice(b.data, b.len) });
-    unsafe { sink(context, m.as_ptr(), m.len()) }
-}
-
-/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
-///
-/// # Safety
-/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_cert_login_data(
-    key: *const u8,
-    key_id: i16,
-    create_account: bool,
-    user: EeWonDirBytes,
-    password: EeWonDirBytes,
-    new_password: EeWonDirBytes,
-    sink: EeWonByteSink,
-    context: *mut c_void,
-) {
-    let k = unsafe { slice(key, 2) };
-    let m = unsafe {
-        login_data([k[0], k[1]], key_id, create_account, &units(&user), &units(&password), &units(&new_password))
-    };
-    unsafe { sink(context, m.as_ptr(), m.len()) }
-}
-
-/// `CheckResponse`'s read in `state` into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_cert_reply(
-    data: *const u8,
-    length: usize,
-    state: i32,
-    sink: EeWonCertSink,
-    context: *mut c_void,
-) {
-    let e = reply(unsafe { slice(data, length) }, state);
-    unsafe { sink(context, e.as_ptr(), e.len()) }
-}
-
-/// The login reply's decrypted part into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_cert_decrypted(
-    data: *const u8,
-    length: usize,
-    sink: EeWonCertSink,
-    context: *mut c_void,
-) {
-    let e = decrypted(unsafe { slice(data, length) });
-    unsafe { sink(context, e.as_ptr(), e.len()) }
 }
 
 #[cfg(test)]
