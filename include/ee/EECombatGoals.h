@@ -46,9 +46,9 @@ void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEU
 // A shot's target: its attack-unit goal's (NULL under another goal)
 EEUnit* EECombatShotTarget(EEComplexUnit* inUnit);
 
-// CBHR (TEST ONLY): one call of a read behind the hosts (R5b.2, seventh round), its outcome: the function, the
+// CBQR (TEST ONLY): one call of a read behind the hosts (R5b.2, seventh round), its outcome: the function, the
 // unit's and target's ids (0 without one), the result and what the call left behind (per function below). Folded
-// like CBTC, 4096 calls to a record (count, FNV-1a 64; EE_SIM_CAPTURE_CBHR_FULL=1 writes every call). A read made
+// like CBTC, 4096 calls to a record (count, FNV-1a 64; EE_SIM_CAPTURE_CBQR_FULL=1 writes every call). A read made
 // inside another captured read (FacesTarget's FacesPoint, IsInReach's facing) records nothing: only the outer call.
 enum {
     EE_COMBAT_HR_IMPACT_UNIT = 1,           // FindImpactUnit: extra 0 the unit hit's id, 1 the owner's mIsFiringHigh

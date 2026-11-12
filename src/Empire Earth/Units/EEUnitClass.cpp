@@ -1911,7 +1911,7 @@ void EEUnitClass::ReleaseUnitClasses()
 // enemies); a hit on a non-target wall makes the launcher fire high
 EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     EEUnit* theFound = [&]() -> EEUnit* {
     GE3DPoint thePosition;
     GE3DLine theLine;
@@ -2052,7 +2052,7 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 // Returns whether the unit faces the target unit (or its tile's centre)
 bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     bool theFaces = [&]() -> bool {
     GE3DPoint theLocation;
     EEComplexUnit* theOwner = inTarget->GetComplexUnit();
@@ -2075,7 +2075,7 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     bool theFaces = [&]() -> bool {
     GETransformation theLocation(inUnit->mPhysicalModel.GetLocation());
     GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());

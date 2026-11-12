@@ -231,7 +231,7 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
 // Returns whether the target is a gate's middle part whose gate is not closed (despite the name)
 bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     bool theClosed = [&]() -> bool {
     bool theResult = false;
     if (this->mTarget->mUnitClass->mCategory == kUnitCategoryGate) {
@@ -260,7 +260,7 @@ bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 // the unit starts ignoring it
 bool EEUGAttackUnit::IsStillReachable(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     EEUnit* theTarget = this->mTarget;
     bool theReachable = [&]() -> bool {
     U2DPoint<long> theTile;

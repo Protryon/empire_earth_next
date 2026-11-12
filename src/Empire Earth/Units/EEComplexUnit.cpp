@@ -4094,7 +4094,7 @@ void EEComplexUnit::Halt()
 // any weapon tag point; a legionnaire's special attack uses its heal range)
 bool EEComplexUnit::IsInReach(EEUnit* inTarget)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     uint32_t theTagBefore = (uint32_t)this->mWeaponTagPoint;
     bool theReach = [&]() -> bool {
     bool theResult = false;

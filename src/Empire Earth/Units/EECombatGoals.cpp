@@ -217,7 +217,7 @@ struct EECombatFolder {
     }
 };
 
-EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'H', 'R'), "EE_SIM_CAPTURE_CBHR_FULL");
+EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQR_FULL");
 thread_local int sHostReadDepth = 0;
 
 }   // namespace

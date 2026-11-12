@@ -3051,7 +3051,7 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
 // Tells whether an enemy the unit may target is within its reach
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
     bool theInRange = [&]() -> bool {
     bool theFound = false;
     EEComplexUnit* theForwardUnit = NULL;
