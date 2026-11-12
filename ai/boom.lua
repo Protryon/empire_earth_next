@@ -715,7 +715,9 @@ function M.step(view, memory)
     end
     -- (ECON.order: the Prehistoric advance waits for the food the Stone Age's first soldiers need on top of its cost;
     -- spent to 3-48 food, the town stood 5-10 minutes with 0-4 of 8 soldiers under raids, boom-defence's seeds 4, 24)
-    if ECON.order and phase == "pre" and view.stock.food < cost.food + BO.FOOD_BANK then
+    -- (C3: it put the Stone Age 2 minutes later, 27.1 against 25.1 against the improved classic, and the owner's own
+    -- bank came from his income: BO.FOOD_BANK 0 until the Prehistoric food is his)
+    if ECON.order and phase == "pre" and BO.FOOD_BANK > 0 and view.stock.food < cost.food + BO.FOOD_BANK then
         paid = false
     end
     if saving and view.sol_missing == 0 and paid then
@@ -1079,7 +1081,9 @@ function M.step(view, memory)
                     end
                     -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
                     -- site, but the gatherers walk: it gets its own touching settlement)
-                    if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                    -- (not in the Prehistoric: there the extra settlements took the wood and the builders the owner's
+                    -- counts need; the bisect: 13 of 32 Prehistoric checks passed without lib.place, 2 with it)
+                    if ECON.order and BO.OPT.place and age >= 2 and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
                         for _, r in ipairs({"food", "iron", "gold", "stone"}) do
