@@ -305,8 +305,10 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
     }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
-        if (theUnit->mInUnitStore)
+        if (theUnit->mInUnitStore) {
             Set(theUnit, EE_UNIT_FIELD_GOAL_KIND, GoalKind(theUnit->mGoalState.Get()));
+            Set(theUnit, EE_UNIT_FIELD_GOAL_ID, theUnit->mGoalState.Get() != NULL ? (int64_t)(uint32_t)theUnit->mGoalState.Get()->mID : 0);
+        }
         break;
     }
     default:
@@ -396,6 +398,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
         outRecord.built = theUnit->mIsBuilt.Get() ? 1 : 0;
         outRecord.goal_kind = (int32_t)GoalKind(theUnit->mGoalState.Get());
+        outRecord.goal_id = theUnit->mGoalState.Get() != NULL ? (uint32_t)theUnit->mGoalState.Get()->mID : 0;
         outRecord.commandable = theUnit->mIsCommandable.Get() ? 1 : 0;
         outRecord.formation_slot = (int64_t)theUnit->mFormationSlot.Get();
         const GETransformation& theLocation = theUnit->mPhysicalModel.GetLocation();

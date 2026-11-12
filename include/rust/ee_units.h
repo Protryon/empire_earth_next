@@ -771,6 +771,9 @@ constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
 /// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
 constexpr static const uint32_t EE_UNIT_FIELD_STATS = 48;
 
+/// the fifteenth round's: the active goal's id (`mGoalState->mID`; 0: no goal), beside its kind
+constexpr static const uint32_t EE_UNIT_FIELD_GOAL_ID = 49;
+
 /// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
 constexpr static const uint8_t EE_UNIT_CLASS_WALL = 1;
 
@@ -1197,6 +1200,8 @@ struct EeUnitRecord {
   uint8_t class_flags;
   /// `mStats`: the unit's stats object (its player's upgrade of the class; 0: none), the stats table's key
   uint64_t stats;
+  /// the active goal's id (`mGoalState->mID`, the saves' goal id; 0: no goal): the goal queues' ids are goals.rs
+  uint32_t goal_id;
 };
 
 /// The result of a consistency check (`Store::check`).
