@@ -37,6 +37,8 @@ pub enum Checked {
     InvalidHeader,
     /// a read past the reply's end threw
     Cut,
+    /// it returned `RecvServerDatagram()` (DetectFirewallOp's UDP test, reqhost.rs)
+    Datagram,
 }
 
 /// An op derived from `ServerRequestOp` in Rust.
@@ -311,7 +313,7 @@ pub unsafe extern "C" fn ee_won_reqop_check_response(
     let (v, s) = match unsafe { (*op).op.check_response(reply) } {
         Checked::Status(s) => (EE_WON_REQOP_STATUS, s),
         Checked::InvalidHeader => (EE_WON_REQOP_INVALID_HEADER, 0),
-        Checked::Cut => (EE_WON_REQOP_CUT, 0),
+        Checked::Cut | Checked::Datagram => (EE_WON_REQOP_CUT, 0),
     };
     unsafe { *verdict = v };
     s

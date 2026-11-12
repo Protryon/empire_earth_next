@@ -1745,6 +1745,7 @@ public:
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
     IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
+    void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
     virtual void RunHook();
     virtual void CleanupHook();
@@ -2345,45 +2346,15 @@ public:
 // Storage, methods and inline virtual bodies live there; no duplicate class definition.
 
 
-// AoC GetCertOp (0x11fc bytes in the original). RTTI GetCertOp > ServerRequestOp > ServerOp > AsyncOpWithTracker >
-// AsyncOp > RefCount. Its members and every step are ee_won's (getcert.rs, a Rust object); this class is the
-// ServerRequestOp the exchange calls through its virtuals and the hooks for the C++ objects the op holds.
-class AuthPubKeyBlock;
+// AoC GetCertOp (0x11fc bytes in the original; RTTI GetCertOp > ServerRequestOp > ...): a Rust op on the base
+// (ee_won certhost.rs over getcert.rs: its members, every step and the session key). The class is its constructor
+// (the auth context and its server list, ServerOp.cpp) and the two accessors the game uses.
 class AuthPeerData;
-class Blowfish;
-class GetCertOp : public ServerRequestOp {
+class GetCertOp : public RustServerOp {
 public:
-    struct COMMUNITY_STATUS {
-        short mStatus;
-        unsigned long mCommunityID;
-        std::wstring mCommunityName;
-    };
-    typedef std::vector<std::string> ERROR_LIST;
-    typedef std::list<COMMUNITY_STATUS> COMMUNITY_STATUS_LIST;
-private:
-    // the members (0xf4..0x11fc: the auth context, the session key, the key block, the clock delta, the peer data,
-    // the challenge seed, the new password, the create-account flag, the state, the error and community lists):
-    // ee_won's (getcert.rs), owned
-    EeWonGetCert* mCert;
-    friend struct GetCertOpHooks;
-    EeWonGetCertHooks Hooks();
-protected:
-    virtual ~GetCertOp(); //2e3d90
-    virtual void RunHook();   //2e3f40
-    virtual void CleanupHook(); //2e4050
-    // Inherited CallbackHook 0c = 2adb10, no added slot.
-    virtual WONStatus GetNextRequest(); //2e4850
-    virtual WONStatus CheckResponse(); //2e5980
-    virtual void Reset();     //2e4130
-public:
-    GetCertOp(AuthContext*); //2e3c30
-    const AuthPeerData* GetPeerData() const;
-    void SetCreateAccount(bool value);
-    void SetNewPassword(const std::wstring& password);
-    void SetAuthContext(AuthContext* context);
-    const Blowfish& GetSessionKey() const;
-    ERROR_LIST GetErrorList() const;
-    COMMUNITY_STATUS_LIST GetCommunityStatusList() const;
+    explicit GetCertOp(AuthContext*); //2e3c30
+    const AuthPeerData* GetPeerData() const; // borrowed; NULL before a login
+    void SetCreateAccount(bool value) { this->SetNum(EE_WON_GETCERT_CREATE_ACCOUNT, value); }
 };
 
 
@@ -2495,27 +2466,14 @@ public:
 };
 typedef std::list<SmartPtr<PatchData> > PatchDataList;
 // CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
-class DetectFirewallOp : public ServerRequestOp {
-protected:
-    void Init(); //2cf5c0, constructor called at 2cf651
-    virtual ~DetectFirewallOp(); // implicit in the original (2cf690): now the Rust object's release
-    virtual void RunHook();   //2cf760
-    virtual void CleanupHook(); //2cf920
-    virtual bool CallbackHook(AsyncOp*,int); //2cf8b0
-    virtual WONStatus GetNextRequest(); //2cf970
-    virtual WONStatus CheckResponse(); //2cfad0
-    virtual WONStatus RecvServerDatagram(); //2cfba0, eighth slot SetupReceiveTracker
-private:
-    // the members (0xf4..0x130: the listen port, the longest connect wait, the listening socket, the listen,
-    // wait-for-connect and UDP flags, the datagram receive op, the public address): ee_won's (fwop.rs), owned
-    EeWonFirewallOp* mFw;
-    friend struct DetectFirewallOpHooks;
-    EeWonFirewallHooks Hooks();
+// DetectFirewallOp (2cf600): a Rust op on the base (ee_won fwhost.rs over fwop.rs: its members and every step);
+// the class is its constructor (ServerOp.cpp) and the setters and the public address the lobby uses.
+class DetectFirewallOp : public RustServerOp {
 public:
-    DetectFirewallOp(ServerContext* inContext); //2cf600
-    void SetListenPort(unsigned short inPort) { ee_won_fwop_set_listen_port(this->mFw, inPort); }
-    void SetDoListen(bool inDoListen) { ee_won_fwop_set_do_listen(this->mFw, inDoListen); }
-    void SetWaitForConnect(bool inWait) { ee_won_fwop_set_wait_for_connect(this->mFw, inWait); }
+    explicit DetectFirewallOp(ServerContext* inContext); //2cf600
+    void SetListenPort(unsigned short inPort) { this->SetNum(EE_WON_FWOP_LISTEN_PORT, inPort); }
+    void SetDoListen(bool inDoListen) { this->SetNum(EE_WON_FWOP_DO_LISTEN, inDoListen); }
+    void SetWaitForConnect(bool inWait) { this->SetNum(EE_WON_FWOP_WAIT_FOR_CONNECT, inWait); }
     IPAddr GetPublicAddr() const; // a copy (the original returned a reference to the member)
 };
 

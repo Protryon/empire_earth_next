@@ -60,6 +60,17 @@ pub(crate) trait HostRequest: Send {
     fn check_response(&mut self, c: &Calls, response: &[u8]) -> Checked;
     /// `Reset` (the next server)
     fn reset(&mut self, c: &Calls);
+    /// the op's `CleanupHook` statements before (`after` false) and after the base's
+    fn cleanup(&mut self, _c: &Calls, _after: bool) {}
+    /// the op's `CallbackHook` for a completion of its own (`None`: the base's)
+    fn callback(&mut self, _c: &Calls, _id: i32, _op: Obj) -> Option<Own> {
+        None
+    }
+    /// the op's `RecvServerDatagram` (`CheckResponse`'s [`Checked::Datagram`]): its status, or a receive op to
+    /// track with id 1000 and run asynchronously with the wait
+    fn datagram(&mut self, _c: &Calls) -> Result<i32, (Obj, u32)> {
+        Ok(st::SUCCESS)
+    }
     /// the op's members, one line
     fn describe(&self) -> String;
     /// a result by the op's number
@@ -72,6 +83,14 @@ pub(crate) trait HostRequest: Send {
     fn take_objects(&mut self) -> Vec<Obj> {
         Vec::new()
     }
+}
+
+/// A derived op's own completion (`CallbackHook`), run after its lock is let go.
+pub(crate) enum Own {
+    /// `Finish(status); return true`
+    Finish(i32),
+    /// `RecvServerDatagram(); return true`
+    Datagram,
 }
 
 /// A round 7/8 op (reqop.rs) on the base: `ServerRequestOp`'s own statements around its calls.
@@ -196,7 +215,7 @@ macro_rules! with_op {
 }
 
 /// `SetLastServerError` over the members.
-fn set_last_server_error(h: &Host<ReqPlan>, error: i32) {
+pub(crate) fn set_last_server_error(h: &Host<ReqPlan>, error: i32) {
     let mut s = h.st();
     let (last, use_last) = server::last_server_error(s.ex.last_error, s.ex.use_last, error);
     s.ex.last_error = last;
@@ -477,6 +496,7 @@ impl RequestEnv for Env<'_> {
                 Some(st::TRY_NEXT_SERVER)
             }
             Checked::Status(s) => Some(s),
+            Checked::Datagram => Some(recv_datagram(h)),
         }
     }
     fn take_op_session(&mut self) {
@@ -486,6 +506,18 @@ impl RequestEnv for Env<'_> {
     fn take_op_response(&mut self) {
         let b = self.h.op_bytes(self.done);
         self.h.st().ex.response = b;
+    }
+}
+
+/// `RecvServerDatagram()`: the derived op's, its asynchronous receive tracked and run after its lock is let go.
+fn recv_datagram(h: &Host<ReqPlan>) -> i32 {
+    match with_op!(h, |o| o.datagram(&Calls { h })) {
+        Ok(s) => s,
+        Err((recv, wait)) => {
+            h.track(recv, 1000);
+            h.run_async(recv, wait);
+            st::EXIT_COMMUNICATION_LOOP
+        }
     }
 }
 
@@ -538,6 +570,17 @@ impl Plan for ReqPlan {
     }
 
     fn callback(h: &Host<Self>, id: i32, op: Obj) -> bool {
+        match with_op!(h, |o| o.callback(&Calls { h }, id, op)) {
+            Some(Own::Finish(s)) => {
+                h.finish(s);
+                return true;
+            }
+            Some(Own::Datagram) => {
+                recv_datagram(h);
+                return true;
+            }
+            None => {}
+        }
         let killed = h.op_killed(op);
         let status = h.op_status(op);
         let cert_status =
@@ -548,6 +591,7 @@ impl Plan for ReqPlan {
     }
 
     fn cleanup(h: &Host<Self>) {
+        with_op!(h, |o| o.cleanup(&Calls { h }, false));
         h.base_cleanup();
         let status = h.status();
         let killed = h.op_killed(Obj::none());
@@ -564,6 +608,7 @@ impl Plan for ReqPlan {
             h.replace(socket, Obj::none());
         }
         h.replace(cur_session, Obj::none());
+        with_op!(h, |o| o.cleanup(&Calls { h }, true));
     }
 
     fn num(&self, which: i32, index: i64) -> i64 {
@@ -628,13 +673,15 @@ impl Plan for ReqPlan {
     }
 
     fn take_objects(&mut self) -> Vec<Obj> {
+        // the derived op's members go first, as its destructor ran before the base's
+        let mut v = self.op().take_objects();
         let e = &mut self.ex;
-        let mut v: Vec<Obj> = [&mut e.cur_session, &mut e.used_session, &mut e.socket, &mut e.context, &mut e.udp]
-            .into_iter()
-            .map(|o| std::mem::replace(o, Obj::none()))
-            .filter(|o| !o.is_none())
-            .collect();
-        v.extend(self.op().take_objects());
+        v.extend(
+            [&mut e.cur_session, &mut e.used_session, &mut e.socket, &mut e.context, &mut e.udp]
+                .into_iter()
+                .map(|o| std::mem::replace(o, Obj::none()))
+                .filter(|o| !o.is_none()),
+        );
         v
     }
 }

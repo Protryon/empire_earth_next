@@ -162,6 +162,75 @@ pub const EE_WON_HOST_PEER_AUTH_SESSION: i32 = 91;
 pub const EE_WON_HOST_PEER_AUTH_CERT: i32 = 92;
 /// `dynamic_cast<RecvMsgOp*>(obj0) != NULL` -> out_num
 pub const EE_WON_HOST_OP_IS_RECV_MSG: i32 = 93;
+// DetectFirewallOp's (fwhost.rs):
+/// a socket obj0's `Listen(1000)` -> out_num
+pub const EE_WON_HOST_SOCKET_LISTEN: i32 = 94;
+/// a socket obj0's `GetLocalPort()` -> out_num
+pub const EE_WON_HOST_SOCKET_PORT: i32 = 95;
+/// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
+pub const EE_WON_HOST_RUN: i32 = 96;
+// GetCertOp's (certhost.rs: round 6's hooks; ctx an auth context, kind 1 `AuthCertificate`, 2 `Auth2Certificate`):
+/// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
+pub const EE_WON_HOST_CERT_VERIFIER_PUBLIC: i32 = 100;
+/// ctx obj0's `GetPeerData()` -> out_obj (a reference)
+pub const EE_WON_HOST_CERT_CTX_PEER: i32 = 101;
+/// peer obj0's `GetPubKeyBlock()` -> out_obj (borrowed)
+pub const EE_WON_HOST_CERT_PEER_BLOCK: i32 = 102;
+/// peer obj0's `GetAuthDelta()` -> out_num
+pub const EE_WON_HOST_CERT_PEER_DELTA: i32 = 103;
+/// ctx obj0's `LoadSecretList()`
+pub const EE_WON_HOST_CERT_LOAD_SECRETS: i32 = 104;
+/// block obj0's `IsValid()` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VALID: i32 = 105;
+/// ctx obj0's `SetPeerData(new AuthPeerData(obj1))` (a block)
+pub const EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK: i32 = 106;
+/// block obj0's `GetId()` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_ID: i32 = 107;
+/// block obj0's `GetCurrentKey().Encrypt(data)` -> the sink (NULL: not called)
+pub const EE_WON_HOST_CERT_BLOCK_ENCRYPT: i32 = 108;
+/// ctx obj0's `GetUserName()` (UTF-16 LE) -> the sink
+pub const EE_WON_HOST_CERT_USER: i32 = 109;
+/// ctx obj0's `GetPassword()` (UTF-16 LE) -> the sink
+pub const EE_WON_HOST_CERT_PASSWORD: i32 = 110;
+/// what ctx obj0's `AppendCommunityData` appends -> the sink
+pub const EE_WON_HOST_CERT_COMMUNITY: i32 = 111;
+/// what ctx obj0's `AppendHashes(data)` appends -> the sink
+pub const EE_WON_HOST_CERT_HASHES: i32 = 112;
+/// ctx obj0's `AddSecret(data)`
+pub const EE_WON_HOST_CERT_ADD_SECRET: i32 = 113;
+/// ctx obj0's `RemoveSecret(data)`
+pub const EE_WON_HOST_CERT_REMOVE_SECRET: i32 = 114;
+/// `new AuthCertificate(data)` (num0 1) or `new Auth2Certificate(data)` -> out_obj
+pub const EE_WON_HOST_CERT_NEW: i32 = 115;
+/// certificate obj0 (kind num0)'s `IsValid()` -> out_num
+pub const EE_WON_HOST_CERT_VALID: i32 = 116;
+/// block obj0's `Verify(obj1)` (a certificate of kind num0) -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VERIFY: i32 = 117;
+/// certificate obj0 (kind num0)'s `ComputeAuthDelta()` -> out_num
+pub const EE_WON_HOST_CERT_DELTA: i32 = 118;
+/// certificate obj0 (kind num0)'s issue and expire times -> the sink (two 64-bit LE numbers)
+pub const EE_WON_HOST_CERT_TIMES: i32 = 119;
+/// `new AuthPubKeyBlock(data)` -> out_obj
+pub const EE_WON_HOST_CERT_NEW_BLOCK: i32 = 120;
+/// block obj0's `IsValidAndVerified(AuthContext::GetVerifierKey())` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VERIFIED: i32 = 121;
+/// ctx obj0's `CommitSecrets(num0, num1)`
+pub const EE_WON_HOST_CERT_COMMIT: i32 = 122;
+/// a new private key (`ElGamal`, not a `RefCount`) -> out_obj
+pub const EE_WON_HOST_CERT_PRIV_NEW: i32 = 123;
+/// private key obj0's `SetPrivateKey(data)` -> out_num
+pub const EE_WON_HOST_CERT_PRIV_SET: i32 = 124;
+/// `delete` private key obj0
+pub const EE_WON_HOST_CERT_PRIV_FREE: i32 = 125;
+/// `new AuthPeerData(obj0, obj1, *key num0, num1, obj2)` (certificate, block, the private key, the delta, the
+/// second certificate) -> out_obj
+pub const EE_WON_HOST_CERT_NEW_PEER: i32 = 126;
+/// ctx obj0's `SetPassword(data)` (UTF-16 LE)
+pub const EE_WON_HOST_CERT_SET_PASSWORD: i32 = 127;
+/// ctx obj0's `SetPeerData(obj1)`
+pub const EE_WON_HOST_CERT_SET_PEER: i32 = 128;
+/// ctx obj0's `ClearOneTimeData()`
+pub const EE_WON_HOST_CERT_CLEAR_ONE_TIME: i32 = 129;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -186,7 +255,8 @@ pub const EE_WON_HOST_OP_RECV_BYTES_FROM: i64 = 7;
 #[repr(C)]
 pub struct EeWonHostCall {
     pub code: i32,
-    pub obj: [*mut c_void; 2],
+    /// the objects (a third only where a statement takes three)
+    pub obj: [*mut c_void; 3],
     pub num: [i64; 2],
     pub data: *const u8,
     pub len: usize,
@@ -287,12 +357,23 @@ impl<P: Plan> Host<P> {
         Host { st: Mutex::new(plan), bind: Mutex::new((None, 0)) }
     }
 
+    /// Binds the C++ side's function (`host` its first argument): the tests' stand-ins.
+    #[cfg(test)]
+    pub(crate) fn bind_to(&self, f: EeWonHostFn, host: *mut c_void) {
+        *self.bind.lock().unwrap_or_else(|e| e.into_inner()) = (f, host as usize);
+    }
+
     /// The members, for statements that make no call.
     pub(crate) fn st(&self) -> MutexGuard<'_, P> {
         self.st.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn invoke(&self, code: i32, obj: [Obj; 2], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
+        self.call(code, [obj[0], obj[1], Obj::none()], num, data, addr)
+    }
+
+    /// One call with all its inputs (the ops' own codes).
+    pub(crate) fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         // a call may re-enter the op: never under its lock
         #[cfg(test)]
         assert!(self.st.try_lock().is_ok(), "a call under the op's lock (code {code})");
@@ -300,7 +381,7 @@ impl<P: Plan> Host<P> {
         let mut out: Option<Vec<u8>> = None;
         let mut c = EeWonHostCall {
             code,
-            obj: [obj[0].ptr(), obj[1].ptr()],
+            obj: [obj[0].ptr(), obj[1].ptr(), obj[2].ptr()],
             num,
             data: if data.is_empty() { std::ptr::null() } else { data.as_ptr() },
             len: data.len(),

@@ -50,7 +50,6 @@
 2ccef0 2cd39c WONDB/GetAccountOp.cpp
 2cd770 2ce08a WONDB/ProfileData.cpp
 2ce840 2ced4d WONDB/UpdateAccountOp.cpp
-2cf5c0 2cfd67 WONMisc/DetectFirewallOp.cpp
 2cffb0 2d101e WONMisc/HTTPDocumentOps.cpp
 2d0170 2d1258 WONMisc/GetHTTPDocumentOp.cpp
 2d1260 2d271c WONMisc/HTTPCache.cpp
@@ -68,7 +67,6 @@
 2e2400 2e27ab WONAuth/AuthPubKeyBlock.cpp
 2e27b0 2e305f WONAuth/AuthSession.cpp
 2e3090 2e3c2d WONAuth/CDKey.cpp
-2e3c30 2e5c2c WONAuth/GetCertOp.cpp
 2e5c30 2e6a03 WONAuth/PeerAuthClient.cpp
 2e6a10 2e8fb8 WONAuth/PeerAuthOp.cpp
 2e7d30 2e8947 WONAuth/PeerAuthServer.cpp
