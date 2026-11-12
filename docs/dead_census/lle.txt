@@ -1,0 +1,25 @@
+# dead-code census of module lle (tools/dead_census.py)
+# maps: build/clang/exe/EE-AOC.map, build/clang/exe/EE-SIM.map, build/clang-test/exe/EE-AOC.map
+# 144 units, 39036 lines; 14 of 2774 functions no map keeps; 132 lines in their definitions
+# columns: dead lines, unit lines, dead/defined functions, unit ('ALL' = no function kept)
+
+    64    360    3/25   Low-Level Engine/User Interface/UIRadioButton.cpp
+    33    323    2/19   Low-Level Engine/User Interface/UICheckBox.cpp
+     8     75    4/15   Low-Level Engine/User Interface/UIScrollButton.cpp
+     8    830    1/51   Low-Level Engine/Network Engine/NEMessageManager.cpp
+     5    347    1/16   Low-Level Engine/Error System/Error System.cpp
+     5   1393    1/62   Low-Level Engine/Network Engine/NESynchronousServer.cpp
+     5    144    1/4    Low-Level Engine/Sound Engine/Sound Engine.cpp
+     4    148    1/7    Low-Level Engine/Graphics Engine/GEVector.cpp
+
+# dead functions by class
+
+UIButtonRust (9): CheckFields, CheckLabel, RadioFields, RadioLabel, RadioUnCheck, ScrollDelay, ScrollFields, ScrollRepeat, ScrollSlider
+
+(free functions) (2): ESQuietVerify, SEInitializeMixers
+
+GEVector::QuantizedVectorArray (1): QuantizedVectorArray
+
+NECDIServer (1): NECDIServer
+
+NEMessageManager (1): GetSentMessage
