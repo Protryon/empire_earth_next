@@ -316,7 +316,7 @@ public:
 };
 
 // a blocking op whose run hook samples its time left (an hour's timeout: within a second of it; a 1 ms timeout
-// after 5 ms: none)
+// after 40 ms: none; more than two of the system clock's 15.6 ms ticks)
 class TimedOp : public TestOp {
 public:
     TimedOp(const char* inName, unsigned long inSleep) : TestOp(inName), mSleep(inSleep) {}
@@ -400,7 +400,7 @@ static void OpCases()
         t->SetCompletion(x);
         t->mFinishInRun = true;
         Log("ot block hour -> " + std::to_string(t->Run(OP_MODE_BLOCK, 3600000)));
-        t->mSleep = 5;
+        t->mSleep = 40;
         Log("ot block 1ms -> " + std::to_string(t->Run(OP_MODE_BLOCK, 1)));
         Log("ot after: left " + std::to_string(t->TimeLeft()) + " start set " +
             std::to_string(t->GetStartTime() != 0 ? 1 : 0));

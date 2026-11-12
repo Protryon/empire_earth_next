@@ -23,85 +23,46 @@ void SocketThread::ThreadFunc()
 {
     while(!this->IsStopped()) this->Pump(1000);
 }
+// The ops' steps for the Rust socket thread (ee_won sockthread.rs): their status, the virtual Continue, Finish,
+// the mInSocketThread flag, the references and the kill
+static long HookStatus(void* inOp) { return static_cast<SocketOp*>(inOp)->GetStatus(); }
+static long HookContinue(void* inOp) { return static_cast<SocketOp*>(inOp)->Continue(); }
+static void HookFinish(void* inOp,long inStatus) { static_cast<SocketOp*>(inOp)->Finish(inStatus); }
+static void HookInThread(void* inOp,bool inOn) { static_cast<SocketOp*>(inOp)->mInSocketThread=inOn; }
+static void HookAddRef(void* inOp) { static_cast<SocketOp*>(inOp)->AddRef(); }
+static void HookRelease(void* inOp) { static_cast<SocketOp*>(inOp)->Release(); }
+static void HookKill(void* inOp) { static_cast<SocketOp*>(inOp)->Kill(true); }
+static const EeWonSocketOpHooks kSocketOpHooks={HookStatus,HookContinue,HookFinish,HookInThread,HookAddRef,
+                                               HookRelease,HookKill};
+
 // FUNCTION: WON 0x006b6160
-// Continues a pending op and finishes it unless it is still waiting (Rust decides: ee_won_socket_op_finishes);
-// returns true once the op is done
+// Continues a pending op and finishes it unless it is still waiting; returns true once the op is done
 bool SocketThread::DoOp(SocketOp* inOp)
 {
-    if(inOp->GetStatus()==WS_Pending) {
-        WONStatus aStatus=inOp->Continue();
-        if(ee_won_socket_op_finishes(aStatus)) {
-            inOp->mInSocketThread=false;
-            inOp->Finish(aStatus);
-        }
-    }
-    if(inOp->GetStatus()!=WS_Pending) {
-        inOp->mInSocketThread=false;
-        return true;
-    }
-    return false;
+    return ee_won_socket_thread_do_op(&kSocketOpHooks,static_cast<void*>(inOp));
 }
-// The op set is Rust's (rust/crates/ee_won/src/asyncop.rs OpSet, in the ops' address order as the original's
-// std::set of SmartPtrs): the thread holds a reference per op in it. The lock, the thread and the ops' steps stay here.
-SocketThreadSimple::SocketThreadSimple()
-{
-    this->mOpSet=ee_won_opset_new();
-}
+SocketThreadSimple::SocketThreadSimple() { this->mOps=ee_won_socket_thread_new(&kSocketOpHooks); }
 // FUNCTION: WON 0x006b61a0
 // Destroys the socket thread, killing every op it still holds
-SocketThreadSimple::~SocketThreadSimple()
-{
-    this->PurgeOps();
-    ee_won_opset_destroy(this->mOpSet);
-    this->mOpSet=NULL;
-}
-static void SocketOpPurged(void*,void* inOp)
-{
-    SocketOp* anOp=static_cast<SocketOp*>(inOp);
-    anOp->Kill(true);
-    anOp->Release();
-}
-static void SocketOpCollect(void* inList,void* inOp)
-{
-    static_cast<std::vector<SocketOp*>*>(inList)->push_back(static_cast<SocketOp*>(inOp));
-}
+SocketThreadSimple::~SocketThreadSimple() { ee_won_socket_thread_free(this->mOps); }
 // FUNCTION: WON 0x006b6380
 // Kills every op the thread holds and forgets them
-void SocketThreadSimple::PurgeOps()
-{
-    ee_won_opset_take_all(this->mOpSet,SocketOpPurged,NULL);
-}
+void SocketThreadSimple::PurgeOps() { ee_won_socket_thread_purge(this->mOps); }
 // FUNCTION: WON 0x006b64f0
 // Hands an op to the thread to be continued on each pump
-void SocketThreadSimple::AddSocketOp(SocketOp* inOp)
-{
-    AutoCrit aCrit(this->mDataCrit);
-    if(ee_won_opset_insert(this->mOpSet,inOp)) inOp->AddRef();
-    inOp->mInSocketThread=true;
-}
+void SocketThreadSimple::AddSocketOp(SocketOp* inOp) { ee_won_socket_thread_add(this->mOps,static_cast<void*>(inOp)); }
 // FUNCTION: WON 0x006b6660
 // Takes an op back from the thread
 void SocketThreadSimple::RemoveSocketOp(SocketOp* inOp)
 {
-    AutoCrit aCrit(this->mDataCrit);
-    bool aHeld=ee_won_opset_remove(this->mOpSet,inOp);
-    inOp->mInSocketThread=false;
-    if(aHeld) inOp->Release();
+    ee_won_socket_thread_remove(this->mOps,static_cast<void*>(inOp));
 }
 // FUNCTION: WON 0x006b6760
 // Continues every held op once, dropping finished ones, then waits up to 20 ms (or less) for a signal
 void SocketThreadSimple::Pump(unsigned long inWaitTime)
 {
-    AutoCrit aCrit(this->mDataCrit);
-    std::vector<SocketOp*> anOps;
-    ee_won_opset_snapshot(this->mOpSet,SocketOpCollect,&anOps);
-    for(size_t i=0;i<anOps.size();i++) {
-        SocketOp* anOp=anOps[i];
-        if(SocketThread::DoOp(anOp) && ee_won_opset_remove(this->mOpSet,anOp)) anOp->Release();
-    }
-    aCrit.Leave();
-    inWaitTime=ee_won_socket_pump_wait(static_cast<uint32_t>(inWaitTime));
-    if(inWaitTime>0) this->WaitForSignal(inWaitTime);
+    uint32_t aWait=ee_won_socket_thread_pump(this->mOps,static_cast<uint32_t>(inWaitTime));
+    if(aWait>0) this->WaitForSignal(aWait);
 }
 // FUNCTION: WON 0x006b6890
 // Pumps the socket ops every 20 ms until the thread is stopped

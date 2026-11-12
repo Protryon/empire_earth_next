@@ -2099,6 +2099,9 @@ struct EeWonOpContainer;
 /// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
 struct EeWonOpTracker;
 
+/// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
+struct EeWonSocketThread;
+
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
 
@@ -2111,9 +2114,6 @@ struct EeWonWriteBuffer;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
-
-/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
-struct EeWonOpSet;
 
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
@@ -5766,9 +5766,6 @@ struct EeWonOpTiming {
   uint32_t timeout;
 };
 
-/// A sink for the ops a queue hands back.
-using EeWonOpSink = void(*)(void *context, void *op);
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -6535,6 +6532,25 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A C++ call on a socket op (`SocketOp*`).
+using EeWonSocketOpFn = void(*)(void *op);
+
+/// What the socket thread calls back in the C++. One static table serves every socket thread.
+struct EeWonSocketOpHooks {
+  /// `op->GetStatus()`
+  long (*status)(void *op);
+  /// the virtual `op->Continue()`
+  long (*continue_op)(void *op);
+  /// `op->Finish(status)`
+  void (*finish)(void *op, long status);
+  /// `op->mInSocketThread = on`
+  void (*set_in_thread)(void *op, bool on);
+  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
+  EeWonSocketOpFn add_ref;
+  EeWonSocketOpFn release;
+  EeWonSocketOpFn kill;
+};
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -14075,42 +14091,6 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonByteSink sink,
                          void *context);
 
-EeWonOpSet *ee_won_opset_new();
-
-/// # Safety
-/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
-void ee_won_opset_destroy(EeWonOpSet *set);
-
-/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_insert(EeWonOpSet *set, void *op);
-
-/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_remove(EeWonOpSet *set, void *op);
-
-/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `PurgeOps`: every op to the sink, the set emptied.
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
-bool ee_won_socket_op_finishes(long status);
-
-/// `SocketThreadSimple::Pump`'s wait.
-uint32_t ee_won_socket_pump_wait(uint32_t wait);
-
 /// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
 EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
                                                 long status,
@@ -16797,6 +16777,42 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// # Safety
+/// `hooks` lives for the program.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+
+/// # Safety
+/// `t` came from `ee_won_socket_thread_new` (or is null).
+void ee_won_socket_thread_free(EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_add(const EeWonSocketThread *t, void *op);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_remove(const EeWonSocketThread *t, void *op);
+
+/// The pump's work; the time to wait on the thread's signal after it.
+///
+/// # Safety
+/// `t` is valid.
+uint32_t ee_won_socket_thread_pump(const EeWonSocketThread *t, uint32_t wait);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_socket_thread_purge(const EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
+
+/// `SocketThread::DoOp` (a static of the C++ class).
+///
+/// # Safety
+/// `hooks` is valid; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

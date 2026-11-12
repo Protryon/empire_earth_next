@@ -2682,10 +2682,13 @@ public:
     virtual void PurgeOps() {} //28, version-empty4142a0
     virtual bool NeedThread() {return true;} //2c, true2f30d0
     void SetSingleThreaded(bool value) { this->mSingleThreaded=value; } //inline bool 34 (WON SDK)
-    static bool DoOp(SocketOp*); //2b6160, cdecl, the caller pops
-    CriticalSection mDataCrit; //1c..34
-    bool mSingleThreaded; //34; total38
+    static bool DoOp(SocketOp*); //2b6160, cdecl, the caller pops (Rust's: ee_won sockthread.rs)
+    bool mSingleThreaded; //34; total38 (the original's lock at 1c is SocketThreadSimple's Rust object's)
 };
+// SocketThreadSimple: a Rust object since round 13 (rust/crates/ee_won/src/sockthread.rs EeWonSocketThread: the ops
+// held, a reference each, in address order as the original's std::set of SmartPtrs; the lock; DoOp, the pump, the
+// purge, the adds and removes) behind this shim; the ops' steps come back through SocketThread.cpp's hook table. The
+// thread is the Thread shim's; ThreadFunc pumps the object, then waits on the thread's signal
 class SocketThreadSimple : public SocketThread {
 public:
     SocketThreadSimple();
@@ -2695,7 +2698,8 @@ public:
     virtual void RemoveSocketOp(SocketOp*); //2b6660
     virtual void Pump(unsigned long); //2b6760
     virtual void PurgeOps(); //2b6380
-    EeWonOpSet* mOpSet; //38 (the original's std::set<SmartPtr<SocketOp>> in address order: Rust's, a reference per op)
+private:
+    EeWonSocketThread* mOps; //owned
 };
 
 class ServerConnection : public BlockingSocket {
