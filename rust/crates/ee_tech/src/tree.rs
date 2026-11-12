@@ -789,3 +789,54 @@ mod tests {
         assert_eq!(last[last.len() - 1], s(ResearchKind7, 4));
     }
 }
+
+/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
+#[repr(i32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeTechUnlockAction {
+    /// An obsolete node is left alone.
+    Nothing = 0,
+    /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
+    MakeAvailable = 1,
+    /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+    SetPrerequisite = 2,
+}
+
+/// `EETechTreeEpoch::Unlock`: what one node gets (asked per node as the walk reaches it: an earlier node's step may
+/// change the tree).
+pub fn unlock_action(node: &EeTechNode, tree: &EeTechTreeState, available_with_epoch: bool) -> EeTechUnlockAction {
+    if node_is_obsolete(node, tree) {
+        EeTechUnlockAction::Nothing
+    } else if available_with_epoch {
+        EeTechUnlockAction::MakeAvailable
+    } else {
+        EeTechUnlockAction::SetPrerequisite
+    }
+}
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched with its epoch (`mResearchedWithEpoch`, or every
+/// node when asked).
+pub fn research_all_takes(researched_with_epoch: bool, all_nodes: bool) -> bool {
+    researched_with_epoch || all_nodes
+}
+
+#[cfg(test)]
+mod unlock_tests {
+    use super::*;
+
+    #[test]
+    fn unlock_skips_the_obsolete_and_makes_the_rest_available_or_waiting() {
+        let tree = EeTechTreeState { current_epoch: 4, ..Default::default() };
+        let node = EeTechNode { obsolete_epoch: 9, ..Default::default() };
+        assert_eq!(unlock_action(&node, &tree, true), EeTechUnlockAction::MakeAvailable);
+        assert_eq!(unlock_action(&node, &tree, false), EeTechUnlockAction::SetPrerequisite);
+        let flagged = EeTechNode { obsolete: true, ..node };
+        assert_eq!(unlock_action(&flagged, &tree, true), EeTechUnlockAction::Nothing);
+        // past its obsolete epoch
+        let outdated = EeTechNode { obsolete_epoch: 3, ..node };
+        assert_eq!(unlock_action(&outdated, &tree, false), EeTechUnlockAction::Nothing);
+        assert!(research_all_takes(true, false));
+        assert!(research_all_takes(false, true));
+        assert!(!research_all_takes(false, false));
+    }
+}

@@ -15,8 +15,8 @@ use crate::effects::{
 };
 use crate::tree::{
     self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate, EeTechNode,
-    EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode,
-    SumCostsView,
+    EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, EeTechUnlockAction, PrerequisiteView,
+    SumCostsNode, SumCostsView,
 };
 use std::ffi::c_void;
 
@@ -737,4 +737,24 @@ pub extern "C" fn ee_contagion_leprosy_damage(damage: i32, updates: u32, hit_poi
 #[no_mangle]
 pub extern "C" fn ee_contagion_area_damage(damage: i32, updates: u32, attack: f32) -> i32 {
     contagion::area_damage(damage, updates, attack)
+}
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_unlock_action(
+    node: *const EeTechNode,
+    tree: *const EeTechTreeState,
+    available_with_epoch: bool,
+) -> EeTechUnlockAction {
+    // SAFETY: the caller's contract
+    unsafe { tree::unlock_action(&*node, &*tree, available_with_epoch) }
+}
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+#[no_mangle]
+pub extern "C" fn ee_tech_research_all_takes(researched_with_epoch: bool, all_nodes: bool) -> bool {
+    tree::research_all_takes(researched_with_epoch, all_nodes)
 }

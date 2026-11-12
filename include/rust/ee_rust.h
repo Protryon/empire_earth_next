@@ -1936,6 +1936,16 @@ enum class EeContagionOp : int32_t {
   Capture = 16,
 };
 
+/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
+enum class EeTechUnlockAction : int32_t {
+  /// An obsolete node is left alone.
+  Nothing = 0,
+  /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
+  MakeAvailable = 1,
+  /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+  SetPrerequisite = 2,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -11509,6 +11519,17 @@ int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hi
 
 /// An area effect's damage (`contagion::area_damage`; 0: no hit).
 int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
+                                         const EeTechTreeState *tree,
+                                         bool available_with_epoch);
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);

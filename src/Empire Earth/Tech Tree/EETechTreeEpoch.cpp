@@ -385,16 +385,21 @@ void EETechTreeEpoch::Unlock()
     this->mTree->UpdateInterface(false);
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
-        if (!theNode->second->GetIsObsolete()) {
-            if (theNode->second->mData->mAvailableWithEpoch) {
-                EETechCaptureWalkStep(theNode->first, 1);   // TNWK (TEST ONLY)
-                theNode->second->MakeAvailable();
-            } else {
-                EETechCaptureWalkStep(theNode->first, 2);   // TNWK (TEST ONLY)
-                theNode->second->SetPrerequisite(this->mData->mID);
-            }
-        } else
-            EETechCaptureWalkStep(theNode->first, 0);   // TNWK (TEST ONLY)
+        // what the node gets is Rust (ee_tech tree.rs unlock_action), asked as the walk reaches it
+        EeTechNode theView = EETechNodeView(theNode->second);
+        EeTechTreeState theTree = EETechTreeView(this->mTree);
+        EeTechUnlockAction theAction = ee_tech_unlock_action(&theView, &theTree, theNode->second->mData->mAvailableWithEpoch);
+        EETechCaptureWalkStep(theNode->first, (long)theAction);   // TNWK (TEST ONLY)
+        switch (theAction) {
+        case EeTechUnlockAction::MakeAvailable:
+            theNode->second->MakeAvailable();
+            break;
+        case EeTechUnlockAction::SetPrerequisite:
+            theNode->second->SetPrerequisite(this->mData->mID);
+            break;
+        case EeTechUnlockAction::Nothing:
+            break;
+        }
         ++theNode;
     }
     EETechCaptureWalk(0, this->mTree, this, this->mData->mID, 0, 0);   // TNWK (TEST ONLY)
@@ -457,7 +462,7 @@ void EETechTreeEpoch::ResearchAll(bool inAllNodes)
     theNode = this->mNodes.begin();
     while (theNode != this->mNodes.end()) {
         EETechTreeNode* theTreeNode = theNode->second;
-        bool theTakes = theTreeNode->mData->mResearchedWithEpoch || inAllNodes == true;
+        bool theTakes = ee_tech_research_all_takes(theTreeNode->mData->mResearchedWithEpoch, inAllNodes);   // (ee_tech tree.rs)
         EETechCaptureWalkStep(theNode->first, theTakes ? 1 : 0);   // TNWK (TEST ONLY)
         if (theTakes)
             theTreeNode->ResearchNode(NULL);
