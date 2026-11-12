@@ -8675,3 +8675,58 @@ exercise them, and no tour, LAN game or EE-SIM run does.
   needs a lock first; `CreateAccountOp` holds the C++ ElGamal and Blowfish keys).
 - **PeerAuthServerOp.** `GetClientCertificate()` is on the op; `mPeerAuthServer` stays public until LanLogic
   (the lobby lane) calls the accessor, since making it private now would break this branch's build.
+
+## R6: WON's Internet code, round 9 (the Rust op base; MultiPingOp, FilePushOp and FTPGetOp as Rust ops on it)
+
+Branch `rust-won-net9`. Measured by net C++ deletion, as rounds 7 and 8. Nothing in the game reaches these ops (no
+C++ made them; the WON servers are gone): only the drivers exercise the Rust ops, and the C++ side's one function
+(`RustServerOp::HostCall`) only compiles, no tour, LAN game, EE-SIM run or driver calls it on real sockets.
+
+- **One narrow C interface instead of a hook table per op.** Round 8 found the remaining ops (`AsyncOp` /
+  `ServerOp` classes over socket ops, timers and completions) each needing a hook table that outweighed what moving
+  deleted. `hostop.rs` is the base: the op's members and steps are Rust's, and every primitive of the original's
+  statements (`new RecvBytesFromOp(n)`, `socket->QueueOp(op, t)`, `Track(op, id)`, `RunAsync`, `Finish`,
+  `TimeLeft()`, a blocking `SendBytesTo`, a file read, ...) is one `EeWonHostCall` (a code, two objects, two
+  numbers, bytes, an address; answers in out fields and through a sink) to one C++ function. The C++ side is one
+  class, `RustServerOp` (a `ServerOp`): its three virtuals and the completions of the timers and repeating receives
+  it makes call `ee_won_hostop_run`, `_cleanup`, `_callback`; results and setters go by number
+  (`ee_won_hostop_num`, `_bytes`, `_set`). A new op adds codes, not a class: the three ops of this round use 47.
+- **Re-entry without a borrow.** A call may re-enter the op (a queued op completing at once, a socket's close
+  killing its ops, `Finish` delivering). The op's state is behind a mutex taken only for statements that make no
+  call: `Host::invoke` asserts in tests that the lock is free at every call, and a test re-enters the cleanup from
+  inside a finish. So calls run in the original's order (the traces match call for call), and the socket threads'
+  completions never wait on a lock held across C++.
+- **One stand-in for both halves.** `won_hostop_test`'s stand-in is the function the Rust op calls: it answers
+  each code from a generated stream and logs it; the original half (MultiPingOp.cpp's, FilePushOp.cpp's and
+  FTPGetOp.cpp's statements, `this->` an op stand-in) calls the same function through a helper. The trace is
+  therefore the same vocabulary on both sides, and the Rust replay (`hostop::tests::golden`) is the stand-in again
+  in Rust. Steps with nothing to do (callbacks on an op not pending) dominated the first goldens: the step mix and
+  the answers needed biasing (receives answering what each op expects: status replies, acknowledgements, ping
+  replies to a recent ping, the next line of a successful FTP session) before RETR and the data connection
+  appeared at all.
+- **Goldens before the deletion, and after.** `golden_hostop.txt` was recorded from the original half before each
+  C++ class was deleted; the driver still prints it byte for byte after (the FTP sequences were appended, the
+  MultiPing and FilePush part unchanged). Each op's reference balance is checked when the Rust op is freed.
+  Mutations: a ping time off by one plus half the pushed bytes counted (19,064 failed checks), the passive port off
+  by one (50,634); each also failed the Rust replay.
+- **cbindgen exports a type through its associated consts.** `impl Obj { pub(crate) const NONE: Obj }` made
+  cbindgen emit the crate-private `Obj`, renamed by cbindgen.toml's global `"Obj" = "EeAStarGraphObject"` into
+  ee_won.h, which pulled ee_won.h into ee_astar.h and dropped astar's alias. The handle is `HostObj` with a
+  `const fn none()`.
+- **The original's undefined corners, defined.** PingBatchBlock's status before any send (indeterminate) is
+  success; a NULL reply, status reply, acknowledgement or FTP line reads as empty; a session key that does not
+  encrypt sends the chunk's length field alone; the members the constructors left unset (MultiPingStruct's id and
+  start, FilePushOp's counts and modify time, FTPGetOp's status, state, file size and chunk size, a RustServerOp's
+  length field size and auth type: 4 and none) start at 0.
+- **What moved where.** WONPing.h keeps the original's `AddServers` and `GetServerContext` as two inline helpers
+  over a `RustServerOp`; WONFilePush.h and WONFTP.h are deleted; WONFtpMsg.h (the FTP statements as a template)
+  moved to `tests/won/won_ftp_msg.h`, its users being won_misc_test and won_hostop_test's original half.
+- **Not moved, and why.** ServerRequestOp's object: the exchange's steps are Rust's already (server.rs), but its
+  members are read and written by the C++ ops still derived from it (GetDirOp, GetMultiDirOp, FindEntityOp,
+  GetAliasDirOp, the account ops, the routing request op, GetCertOp and DetectFirewallOp):
+  its object follows them. HTTPGetOp / GetHTTPDocumentOp: HTTPEngine's C++ shim queues and reads
+  HTTPGetOp objects (SetSocket, GetSocket, the only-send and only-receive flags), InitLogic, MOTDCtrl, LobbyEvents
+  and EEWonNet read GetHTTPDocumentOp's members and the documents; on this base they need the cache entry's calls
+  (`GetEntry`, `IsValid`, `SetValid`, expiry, entity tag, `UpdateEntry`), `WONFile`'s stat, the receive op's skip,
+  binary and modify time flags and a child op for the redirect: codes enough for the base, but the accessors in the
+  lobby lane's files first.

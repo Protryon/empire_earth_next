@@ -35,8 +35,10 @@ pub mod ffi_net;
 pub mod ffi_ops;
 pub mod ffi_parse;
 pub mod file;
+pub mod filepush;
 pub mod flow;
 pub mod ftp;
+pub mod ftpop;
 pub mod fwop;
 pub mod getcert;
 pub mod guicfg;
@@ -56,6 +58,7 @@ pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
+pub mod hostop;
 pub mod http;
 pub mod httpengine;
 /// cbindgen:ignore
@@ -67,6 +70,7 @@ pub mod lobbymap;
 pub mod md5;
 pub mod miscops;
 pub mod model;
+pub mod multiping;
 /// cbindgen:ignore
 pub mod netstats;
 pub mod opobj;
