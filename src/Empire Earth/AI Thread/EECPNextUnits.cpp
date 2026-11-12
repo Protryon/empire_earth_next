@@ -1048,6 +1048,9 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
         static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
         EECPUnitsSetStr(L, "kind", kKinds[(long)inUnit->mResourceType - kResourceFood]);
         EECPUnitsSetInt(L, "amount", inUnit->mResourceAmount);
+        // a resource's hit points stand at 1 until it is first gathered from (the classic's GetGatherCapacity and
+        // its sites count only those: mHitPoints > 0)
+        EECPUnitsSetBool(L, "untapped", inUnit->mHitPoints > 0);
         EECPUnitsSetInt(L, "workers", EECPNextAssigned(me, inUnit));
         EECPUnitsSetBool(L, "has_room", EECPNextHasRoom(me, inUnit));
         return;
