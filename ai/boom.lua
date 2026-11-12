@@ -748,7 +748,9 @@ function M.step(view, memory)
     -- (ECON.order) the Prehistoric bank: wood is kept while the Stone Age is saved for (the dock and the boats come first)
     -- (only while saving: banked from 26 citizens the settlements waited, the patches had no drop site, the food places
     -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
-    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK then
+    -- (and only once the Prehistoric barracks stands: banked before it, 12 of 16 towns came to the advance without one)
+    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK
+            and V.total(V.buildings(view, "b_barracks")) >= 1 then
         reserve.wood = BO.WOOD_BANK
         differs = differs or reserve.wood ~= view.reserve.wood
     end
