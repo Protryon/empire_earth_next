@@ -2842,6 +2842,13 @@ struct EeWonByteBuffer;
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `HTTPConnection`.
+struct EeWonHttpConn;
+
+/// `HTTPSession`: the connections by host, `StringLessNoCase`'s order (the upper-cased bytes, signed, then the
+/// length; a host equal but for case finds the first one's connection).
+struct EeWonHttpSession;
+
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
 
@@ -7449,6 +7456,61 @@ struct EeWonUrl {
   size_t address_len;
   const uint8_t *path;
   size_t path_len;
+};
+
+/// The connection's C++ side: `context` is the `HTTPConnection`.
+struct EeWonHttpConnHooks {
+  void *context;
+  /// `mDataCrit.Enter()` / `Leave()`
+  void (*lock)(void*);
+  void (*unlock)(void*);
+  void (*add_ref)(void*);
+  void (*release)(void*);
+  /// the op's `GetStatus`
+  long (*op_status)(void*);
+  /// `Kill(true)`
+  void (*op_kill)(void*);
+  /// `ForceFinish`
+  void (*op_force_finish)(void*, long);
+  /// `GetCompletion`: a reference, or NULL
+  void *(*op_completion)(void*);
+  /// `SetCompletion` (NULL clears it)
+  void (*op_set_completion)(void*, void*);
+  /// `SetCompletion(new ParamCompletion(StaticOpCallback, connection))`
+  void (*op_set_conn_completion)(void*, void*);
+  /// `SetCloseConnection(false)`, `SetDoRangeResume(false)`, `SetSocket(socket)` (NULL for none)
+  void (*op_prepare)(void*, void*);
+  /// `RunAsync(GetTimeout())`
+  void (*op_run_async)(void*);
+  /// `GetSocket`: a reference, or NULL
+  void *(*op_socket)(void*);
+  /// the op's send / receive flags: 0 send only, 1 send and receive, 2 receive only (`SetOnlyRecv`)
+  void (*op_set_mode)(void*, int);
+  /// `completion->Complete(AsyncOpPtr(op))`
+  void (*complete)(void*, void*);
+  /// the socket's `Kill`
+  void (*socket_kill)(void*);
+  /// `time(NULL)`
+  int64_t (*now)(void*);
+};
+
+/// The session's C++ side: `context` is the `HTTPSession`.
+struct EeWonHttpSessionHooks {
+  void *context;
+  void (*lock)(void*);
+  void (*unlock)(void*);
+  void (*add_ref)(void*);
+  void (*release)(void*);
+  /// the op's `mHost`, into the sink
+  void (*op_host)(void*, EeWonByteSink, void*);
+  /// `new HTTPConnection(NULL)`: a reference
+  void *(*new_conn)(void*);
+  /// the connection's `QueueOp(op)`
+  void (*conn_queue_op)(void*, void*);
+  /// the connection's `Kill`
+  void (*conn_kill)(void*);
+  /// the connection's `GetNumOps`
+  int (*conn_num_ops)(void*);
 };
 
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
@@ -18014,6 +18076,58 @@ void ee_won_http_cache_file_name(int32_t id,
 
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
+
+/// # Safety
+/// `hooks` points to a hook table whose context outlives the connection.
+EeWonHttpConn *ee_won_http_conn_new(const EeWonHttpConnHooks *hooks);
+
+/// # Safety
+/// `c` is from `ee_won_http_conn_new` (or NULL), not used afterwards.
+void ee_won_http_conn_free(EeWonHttpConn *c);
+
+/// # Safety
+/// `c` a connection.
+void ee_won_http_conn_kill(const EeWonHttpConn *c);
+
+/// # Safety
+/// `c` a connection, `op` an `HTTPGetOp`'s `RefCount*`.
+void ee_won_http_conn_queue_op(const EeWonHttpConn *c, void *op);
+
+/// # Safety
+/// `c` a connection, `op` an `HTTPGetOp`'s `RefCount*`, `id` 0 or 1.
+void ee_won_http_conn_queue_op_id(const EeWonHttpConn *c, void *op, int id);
+
+/// # Safety
+/// `c` a connection, `id` 0 or 1.
+void ee_won_http_conn_run_op(const EeWonHttpConn *c, int id);
+
+/// # Safety
+/// `c` a connection, `op` the completing op's `RefCount*`.
+void ee_won_http_conn_op_callback(const EeWonHttpConn *c, void *op);
+
+/// # Safety
+/// `c` a connection.
+int ee_won_http_conn_num_ops(const EeWonHttpConn *c);
+
+/// # Safety
+/// `hooks` points to a hook table whose context outlives the session.
+EeWonHttpSession *ee_won_http_session_new(const EeWonHttpSessionHooks *hooks);
+
+/// # Safety
+/// `s` is from `ee_won_http_session_new` (or NULL), not used afterwards.
+void ee_won_http_session_free(EeWonHttpSession *s);
+
+/// # Safety
+/// `s` a session, `op` an `HTTPGetOp`'s `RefCount*`.
+void ee_won_http_session_add_op(const EeWonHttpSession *s, void *op);
+
+/// # Safety
+/// `s` a session.
+void ee_won_http_session_kill_all(const EeWonHttpSession *s);
+
+/// # Safety
+/// `s` a session.
+int ee_won_http_session_num_ops(const EeWonHttpSession *s);
 
 /// `IPAddr()`: zero, invalid, no remembered host.
 EeWonIpAddr *ee_won_ipaddr_new();

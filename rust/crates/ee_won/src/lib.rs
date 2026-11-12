@@ -52,6 +52,7 @@ pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
 pub mod http;
+pub mod httpengine;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;

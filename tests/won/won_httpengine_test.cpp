@@ -28,7 +28,6 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONStringCompare.h"
-#define EE_HTTPENGINE_ORIG_ONLY
 #include "rust/ee_rust.h"
 
 using namespace WONAPI;
