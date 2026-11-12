@@ -8,7 +8,8 @@
 // (LobbyLanSocket needs the lobby's headers and units: the LAN game is its check); round 15's part: the socket's lock
 // and destination, more of each op (a large send continued on the socket thread, progress chunks, file receives,
 // message limits, refusing transforms, re-runs, connect and accept async, connected datagram ops) and UDPManager with
-// its receive and request ops. Each part was recorded over the C++ classes before their move to Rust. The timeouts
+// its receive and request ops; round 16's part: the receive and request ops' own sockets, given sockets, kills,
+// time-outs, re-runs and checks that throw. Each part was recorded over the C++ classes before their move to Rust. The timeouts
 // are long where an op succeeds and short (or 0) where it times out, so no line depends on the clock; async
 // completions are waited for before the next step, so their order is the queue's. `--print` prints the lines
 // instead. The exit code is the number of failures.
@@ -1207,6 +1208,209 @@ static void Udp()
     Log("udp done");
 }
 
+// ---- round 16: the receive and request ops' own paths (recorded over the C++ classes before their move)
+
+// a check that reads two bytes (a one-byte datagram throws ReadBufferException), accepting "ok"
+static WONStatus TwoByteCheck(ReadBuffer& inMessage, void*)
+{
+    char a = (char)inMessage.ReadByte();
+    char b = (char)inMessage.ReadByte();
+    Log(std::string("two-byte check ") + a + b);
+    return a == 'o' && b == 'k' ? WS_Success : WS_None;
+}
+
+// a request whose response check reads two bytes
+class TwoByteSendRecv : public UDPManagerSendRecvOp {
+public:
+    virtual WONStatus CheckResponse(ReadBuffer& inMessage) { return TwoByteCheck(inMessage, NULL); }
+};
+
+static std::string RecvState(const char* inName, UDPManagerRecvOp* inOp)
+{
+    return std::string(inName) + " status " + St(inOp->GetStatus()) + " killed " + N(inOp->IsKilled()) + " verifier "
+        + N(inOp->HasVerifier()) + " msg " + Hex(inOp->GetMsg()) + " from " + Addr(inOp->GetFromAddr()) + " socket "
+        + N(inOp->mSocket.get() != NULL) + " manager " + N(inOp->mManager.get() != NULL);
+}
+static std::string SendRecvState(const char* inName, UDPManagerSendRecvOp* inOp)
+{
+    return std::string(inName) + " status " + St(inOp->GetStatus()) + " killed " + N(inOp->IsKilled()) + " dest "
+        + Addr(inOp->GetDestAddr()) + " socket " + N(inOp->mSocket.get() != NULL) + " recvop "
+        + N(inOp->mRecvOp.get() != NULL) + " attempts " + N(inOp->mAttemptCount) + " retries " + N(inOp->mRetryLimit)
+        + " timeout " + N(inOp->mReceiveTimeout) + " outgoing " + Hex(inOp->mOutgoing);
+}
+
+static void UdpOps()
+{
+    Log("== UDP ops");
+    SmartPtr<BlockingSocket> u = new BlockingSocket(1);
+    u->Bind(IPAddr("127.0.0.1", 0), false);
+    SmartPtr<BlockingSocket> srv = new BlockingSocket(1);
+    srv->Bind(IPAddr("127.0.0.1", 0), false);
+    IPAddr aSrv("127.0.0.1", srv->GetLocalPort());
+    IPAddr aU("127.0.0.1", u->GetLocalPort());
+
+    // a fresh op's state, the from address set and read back, the check set and cleared
+    SmartPtr<UDPManagerRecvOp> aFresh = new UDPManagerRecvOp;
+    Log(RecvState("fresh", aFresh));
+    aFresh->SetFromAddr(aSrv);
+    Log(RecvState("fresh from", aFresh));
+    aFresh->SetMessageVerifier(&TwoByteCheck, NULL);
+    Log(RecvState("fresh checked", aFresh));
+    aFresh->SetMessageVerifier(NULL, NULL);
+    Log(RecvState("fresh unchecked", aFresh));
+    SmartPtr<UDPManagerSendRecvOp> aFreshSR = new UDPManagerSendRecvOp;
+    aFreshSR->mAttemptCount = 0;   // the constructor leaves it unset
+    Log(SendRecvState("fresh sendrecv", aFreshSR));
+
+    // an addressed receive op on its own socket: another sender's datagram, a refused one, one that throws, then one
+    // accepted (the own-socket path keeps no message)
+    SmartPtr<UdpDone> anOwnDone = new UdpDone("own recv");
+    SmartPtr<UDPManagerRecvOp> anOwn = new UDPManagerRecvOp(aSrv);
+    anOwn->SetMessageVerifier(&TwoByteCheck, NULL);
+    anOwn->SetCompletion(anOwnDone);
+    anOwn->RunAsync(60000);
+    sCore->Pump(20);
+    Log(RecvState("own recv running", anOwn));
+    IPAddr anOwnAddr("127.0.0.1", anOwn->mSocket.get() != NULL ? anOwn->mSocket->GetLocalPort() : 0);
+    u->SendBytesTo(Bytes("ok", 2), anOwnAddr, 5000);
+    sCore->Pump(30);
+    srv->SendBytesTo(Bytes("no", 2), anOwnAddr, 5000);
+    sCore->Pump(30);
+    srv->SendBytesTo(Bytes("o", 1), anOwnAddr, 5000);
+    sCore->Pump(30);
+    Log(RecvState("own recv waiting", anOwn) + " completions " + N(anOwnDone->mCount));
+    srv->SendBytesTo(Bytes("ok", 2), anOwnAddr, 5000);
+    PumpFor(anOwnDone, 1);
+    Log(RecvState("own recv done", anOwn));
+
+    // a receive op on a socket it was given: the socket outlives the op; a check's WS_ServerReq_Recv finishes it
+    SmartPtr<QueueSocket> aGiven = new QueueSocket(1);
+    aGiven->Fn2B0D90(0, 0);
+    IPAddr aGivenAddr("127.0.0.1", aGiven->GetLocalPort());
+    Verifier anAgain = {'G', 'R', "given op"};
+    SmartPtr<UdpDone> aGivenDone = new UdpDone("given");
+    SmartPtr<UDPManagerRecvOp> aGivenOp = new UDPManagerRecvOp;
+    aGivenOp->SetSocket(aGiven);
+    aGivenOp->SetMessageVerifier(&Verifier::Check, &anAgain);
+    aGivenOp->SetCompletion(aGivenDone);
+    aGivenOp->RunAsync(60000);
+    sCore->Pump(20);
+    u->SendBytesTo(Bytes("Rr", 2), aGivenAddr, 5000);
+    PumpFor(aGivenDone, 1);
+    Log(RecvState("given done", aGivenOp) + " socket open " + N(aGiven->IsValid()));
+    aGiven->Close();
+
+    // a receive op killed while waiting on its own socket: the socket goes
+    SmartPtr<UdpDone> aKilledDone = new UdpDone("killed recv");
+    SmartPtr<UDPManagerRecvOp> aKilled = new UDPManagerRecvOp;
+    aKilled->SetCompletion(aKilledDone);
+    aKilled->RunAsync(60000);
+    sCore->Pump(20);
+    Log(RecvState("killed recv running", aKilled));
+    aKilled->Kill(true);
+    PumpFor(aKilledDone, 1);
+    Log(RecvState("killed recv", aKilled));
+    // a receive op timing out on its own socket
+    SmartPtr<UdpDone> aLateDone = new UdpDone("late recv");
+    SmartPtr<UDPManagerRecvOp> aLate = new UDPManagerRecvOp;
+    aLate->SetCompletion(aLateDone);
+    aLate->RunAsync(30);
+    PumpFor(aLateDone, 1);
+    Log(RecvState("late recv", aLate));
+
+    // a request on its own socket: two retransmits, then WS_NoReply; then run again (the attempts start over): a
+    // reply that throws, a wrong one, the right bytes from another sender (ignored: the reply wait has the request's
+    // address) and the right one
+    SmartPtr<UdpDone> aRetryDone = new UdpDone("retry");
+    SmartPtr<TwoByteSendRecv> aRetry = new TwoByteSendRecv;
+    aRetry->SetDestAddr(aSrv);
+    aRetry->SetNumRetransmits(2);
+    aRetry->SetMsgTimeout(60);
+    aRetry->mOutgoing = Bytes("t", 1);
+    aRetry->SetCompletion(aRetryDone);
+    aRetry->RunAsync(60000);
+    PumpFor(aRetryDone, 1);
+    Log(SendRecvState("retry", aRetry));
+    // the retransmits never leave: the timed-out reply wait's datagram receive (no time-out of its own) stays first in
+    // the own socket's queue, so the later sends wait behind it until the socket is killed
+    for (int i = 0; i < 3; i++) {
+        ByteBufferPtr aSent;
+        IPAddr aSender;
+        WONStatus aStatus = srv->RecvBytesFrom(aSent, 512, aSender, 300);
+        Log("server got " + std::string(St(aStatus)) + " " + Hex(aSent));
+    }
+    aRetry->SetMsgTimeout(60000);
+    aRetry->mOutgoing = Bytes("2", 1);
+    aRetry->RunAsync(60000);
+    sCore->Pump(20);
+    Log(SendRecvState("retry again running", aRetry));
+    ByteBufferPtr aGot;
+    IPAddr aFrom;
+    WONStatus aGotStatus = srv->RecvBytesFrom(aGot, 512, aFrom, 5000);
+    Log("server got " + std::string(St(aGotStatus)) + " " + Hex(aGot));
+    srv->SendBytesTo(Bytes("x", 1), aFrom, 5000);
+    sCore->Pump(30);
+    srv->SendBytesTo(Bytes("xx", 2), aFrom, 5000);
+    sCore->Pump(30);
+    u->SendBytesTo(Bytes("ok", 2), aFrom, 5000);
+    sCore->Pump(30);
+    Log(SendRecvState("retry again waiting", aRetry) + " completions " + N(aRetryDone->mCount));
+    srv->SendBytesTo(Bytes("ok", 2), aFrom, 5000);
+    PumpFor(aRetryDone, 2);
+    Log(SendRecvState("retry again", aRetry));
+
+    // a request killed while it waits: its reply wait is killed and its socket goes
+    SmartPtr<UdpDone> aCutDone = new UdpDone("cut");
+    SmartPtr<TestSendRecv> aCut = new TestSendRecv('c');
+    aCut->SetDestAddr(aSrv);
+    aCut->mOutgoing = Bytes("k", 1);
+    aCut->SetCompletion(aCutDone);
+    aCut->RunAsync(60000);
+    sCore->Pump(20);
+    Log(SendRecvState("cut running", aCut));
+    SmartPtr<UDPManagerRecvOp> aCutWait = aCut->mRecvOp.get();
+    aCut->Kill(true);
+    PumpFor(aCutDone, 1);
+    Log(SendRecvState("cut", aCut));
+    if (aCutWait.get() != NULL)
+        Log(RecvState("cut wait", aCutWait));
+    Answer(srv, 1, false);
+    // a request through an unbound manager: the reply wait is killed at once and the request ends with its status
+    SmartPtr<UDPManager> anUnbound = new UDPManager;
+    SmartPtr<UdpDone> anUnboundDone = new UdpDone("unbound");
+    SmartPtr<TestSendRecv> anUnboundSR = new TestSendRecv('u');
+    anUnboundSR->SetUDPManager(anUnbound);
+    anUnboundSR->SetDestAddr(aSrv);
+    anUnboundSR->mOutgoing = Bytes("u", 1);
+    anUnboundSR->SetCompletion(anUnboundDone);
+    anUnboundSR->RunAsync(60000);
+    PumpFor(anUnboundDone, 1);
+    Log(SendRecvState("unbound", anUnboundSR));
+    // a receive op run through a manager, then run again and the manager closed under it
+    SmartPtr<UDPManager> m = new UDPManager;
+    m->Bind(0, false);
+    IPAddr aMgr("127.0.0.1", m->GetSocket()->GetLocalPort());
+    SmartPtr<UdpDone> aMgrDone = new UdpDone("mgr recv");
+    SmartPtr<UDPManagerRecvOp> aMgrOp = new UDPManagerRecvOp(aU);
+    aMgrOp->SetUDPManager(m);
+    aMgrOp->SetCompletion(aMgrDone);
+    aMgrOp->RunAsync(60000);
+    sCore->Pump(20);
+    Log(RecvState("mgr recv running", aMgrOp));
+    u->SendBytesTo(Bytes("mg", 2), aMgr, 5000);
+    PumpFor(aMgrDone, 1);
+    Log(RecvState("mgr recv done", aMgrOp));
+    aMgrOp->RunAsync(60000);
+    sCore->Pump(20);
+    m->Close();
+    PumpFor(aMgrDone, 2);
+    Log(RecvState("mgr recv closed", aMgrOp));
+    m->Close();
+    u->Close();
+    srv->Close();
+    Log("udp ops done");
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -1231,6 +1435,7 @@ int main(int argc, char** argv)
         LockAndDest();
         MoreOps();
         Udp();
+        UdpOps();
         aCore.Pump(50);
         aCore.Shutdown();
     }
