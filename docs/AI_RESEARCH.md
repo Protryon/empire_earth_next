@@ -3654,6 +3654,44 @@ identical. 0 script errors.
 Next: the C++'s other re-task paths (an invalid task, the empty sub-groups' tasks), then the late balanced game - the
 citizens lost to the C++'s soldiers after 60 minutes.
 
+### 8.55 The classic computer player in Lua: the task checks, the docks, the C++'s uncounted boats (2026-11-11, EE-SIM)
+
+**The task check (IsLocationTaskValid).** A C++ defence sub-group's task is looked at only once the group is at its
+place and its next check time is past; then it is dropped half the time, else looked at again in 10-120 s. A new task
+does not reset the check time, so a group that arrives late is looked at on arrival. The port looked at the task on a
+timer that every new task reset. With the C++'s rule, the port's ladder runs 210 times in 32 games against the C++'s
+386 (it ran 175). The remaining gap is mostly the C++'s empty sub-groups, which take a task like any other group and
+pass every test (§8.54); they are not ported because the port makes no empty groups.
+
+**The late game.** On 8 seeds, the port's citizens stopped growing after 40 minutes (70 at 89 minutes against the
+C++'s 145), and from 60 minutes it lost 381 citizens against the C++'s 221. Two causes, both in the food supply:
+- **No dock in 3 of 8 seeds.** A dock's water site lies on the shallows, which form a land mass of their own, so
+  `ai.reach` from a citizen to the site failed and FindBuilder found no builder. The port also asked at only the
+  first 8 placeable sites. The C++'s FindBuilder lets a citizen of another path area build a site class (dock, navy
+  yard, the space classes) or a tower when its continent's shore takes in a tile of the footprint. The port now
+  accepts a citizen that reaches a land mass by the footprint (its tiles and the ring round it, found with
+  `ai.shore` and max 0), and asks at up to 48 placeable sites.
+- **The C++ never counts its boats.** EECPRMRequestBoats counts with EECPUGatherSpecialUnitsCount built with
+  inByClass false, which walks no units: only the boats requested or being made count. So the C++ asks for one more
+  boat every 30 s while food lacks gatherers and fewer than 8 boats stand idle. It asked 13-47 times a game, against
+  the 8 its wanted count names. The port counted the boats it had; now it counts as the C++ does.
+
+Bench (balanced, 32 seeds; rt = §8.54's last stage):
+
+| stage | Lua won-lost | Lua Copper / Bronze | the C++'s Copper / Bronze | citizens at 89 min, Lua / C++ | Lua boats / C++ fish gatherers at 70 min |
+|---|---|---|---|---|---|
+| rt (§8.54) | 10-18, 4 close | 23 / - | 22 / - | - | - |
+| task check (lv) | 10-16, 6 close | 22 / - | 23 / - | - | - |
+| docks (dk) | 11-15, 6 close | 24 / 11 | 22 / 4 | 93 / 116 | 9.1 / 15.2 |
+| uncounted boats (bt) | 10-15, 7 close | 23 / 8 | 21 / 4 | 99 / 117 | 11.1 / 14.2 |
+
+The citizen gap after 60 minutes narrowed from about half to 85%. The port still loses more citizens after
+60 minutes (bt: 1142 against 729 in 32 games; at wood 353, fighting 278, hunting 112). It also loses far more
+fishing boats: 427 against the C++'s 123. Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
+Next: the port's boats lost to warships (its naval guard against the C++'s), then the woodcutters lost after
+60 minutes.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
