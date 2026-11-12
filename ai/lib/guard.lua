@@ -36,6 +36,11 @@ M.opts = {
     home_r = 6,           -- units further than this from the post walk back while nothing is fought
     building_r = 10,      -- a raid this near an own building is in the zone
     focus_hits = 3,       -- a target takes units until their attack x this reaches its hit points
+    detach_small = true,  -- (S2, on; AI_RESEARCH §8.50: 42% of the Stone deaths against the classic had no own soldier
+                          -- within 10 tiles) a raid of detach_n or fewer in the zone gets the detach_k nearest healthy
+                          -- units; the rest of the guard fights the larger raids as a block, or waits at its post
+    detach_n = 3,
+    detach_k = 3,
     fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
                           -- centre, where the citizens run, instead of holding its post (no garrison: a town
                           -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
@@ -546,6 +551,60 @@ function M.step(view, mem, opts)
     end
     recs = ships(view, g, recs)
     local raids = raids_in_zone(view, zone)
+    if M.opts.detach_small and #raids > 0 then
+        -- (S2) the small raids: each its detach_k nearest healthy units, on its raider nearest them; the rest go on
+        local big, used = {}, {}
+        local by = {}
+        for _, r in ipairs(raids) do
+            if r.cl.n <= M.opts.detach_n then
+                local sent = 0
+                while sent < M.opts.detach_k do
+                    local best, bd = nil, nil
+                    for _, u in ipairs(recs) do
+                        if not used[u.id] and not g.hurt[u.id] then
+                            local d = d2(u.x, u.y, r.cl.x, r.cl.y)
+                            if bd == nil or d < bd then
+                                best, bd = u, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        break
+                    end
+                    used[best.id] = true
+                    sent = sent + 1
+                    local tid, td = nil, nil
+                    for k = 1, r.cl.n do
+                        local d = d2(best.x, best.y, r.cl.xs[k], r.cl.ys[k])
+                        if td == nil or d < td then
+                            tid, td = r.cl.ids[k], d
+                        end
+                    end
+                    if g.aims[best.id] ~= tid or (best.action ~= "attack" and best.action ~= "move") then
+                        by[tid] = by[tid] or {}
+                        local l = by[tid]
+                        l[#l + 1] = best.id
+                    end
+                    g.aims[best.id] = tid
+                end
+            else
+                big[#big + 1] = r
+            end
+        end
+        for _, tid in ipairs(ai.keys(by)) do
+            ai.attack(by[tid], tid)
+        end
+        local rest = {}
+        for _, u in ipairs(recs) do
+            if not used[u.id] then
+                rest[#rest + 1] = u
+            end
+        end
+        recs, raids = rest, big
+        if #raids == 0 then
+            return   -- (the rest wait where they are; the next step without raids sends them home)
+        end
+    end
     -- the raids to fight: at the odds with the towers, or under a tower
     local fight = {}
     for _, r in ipairs(raids) do
