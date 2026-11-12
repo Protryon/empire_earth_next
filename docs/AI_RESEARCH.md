@@ -3800,6 +3800,83 @@ the attack groups. Next: the port's militia and its flight from small raids agai
 the militia odds).
 
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+**The militia against the C++'s (seeds 2-17, balanced, 90 minutes).** The port now traces its militia decisions in
+the C++'s format (`classic_lua militia fight|run ...`; trace only):
+
+| | the C++ | the port |
+|---|---|---|
+| militia decisions (hits answered) | 1307 | 1916 |
+| fight / run | 1132 / 175 | 1739 / 177 |
+| citizens sent per fight | 4.9 | 2.3 |
+| soldiers per fight | 0.3 | 1.9 |
+| raiders per fight | 2.5 | 1.8 |
+| citizens dying in a fight (all game) | 282 | 211 |
+
+The militia is not the gap: the port's fights cost fewer citizens than the C++'s, and it has more soldiers at hand.
+The gap is the citizens killed while gathering. Over all game time in these 16 games, the port lost 932 citizens
+against the C++'s 576. The C++'s die fighting (282) or moving (180), and only 86 while gathering. The port's die
+hunting (162), at gold (147), at wood (93), foraging (70), at stone (64) and at iron (56). 548 of those 721 die
+within 20 s of their first hit, and 362 with no soldier of their own near. The port is also hit half as often again
+(1916 militia calls against 1307): the C++'s raids find it more. Next: what moves the C++'s hit citizens (their
+`move` deaths), and where the port's raided gatherers stand against the C++'s (distance from the town and drop
+sites).
+
+**What moves the C++'s hit citizens.** The engine's unit AI (EEUnitAI: run from or retaliate against an attacker)
+treats both seats alike. Its run trigger needs a goal that is not player-initiated, and both the classic and
+`ai.gather` give gather goals that are. The C++'s `move` deaths are its own location goals: the militia's run, the
+naval flight (land units under a warship's fire go to the town centre), and EECPRMFleeRaids, which moves the
+gatherers out of the danger zones. The C++ fled 774 times in 16 games. Its zones come from the militia's runs and
+from every naval flight. A Lua seat's naval flight is still the engine's: it moves the port's units, but it puts its
+zone on the classic's own lists, which the port's gatherers are not on. Giving the port that zone (a zone at the
+victim when a warship hits a citizen or a boat, once every 4 s) did not help, and was not kept. Balanced 32 seeds:
+12-15, 5 close (13-14 before). Citizens lost: 64.8 (60.8 before), 1267 after 60 minutes (1128 before), and 161
+killed by ships.
+
+**Where the port's raided gatherers stand.** Seeds 2-17, the citizens killed by an enemy:
+
+| tiles from the town | < 10 | 10-20 | 20-30 | 30-45 | 45+ |
+|---|---|---|---|---|---|
+| the C++ (502) | 107 | 198 | 134 | 51 | 12 |
+| the port (789) | 114 | 274 | 148 | 185 | 68 |
+
+The extra losses are mostly far out. 253 of the port's die 30 or more tiles from the town, against the C++'s 63.
+The port's hunters die at a median of 35 tiles (137; 40 to enemy Prehistoric towers), its gold miners at 27 and its
+stone miners at 29. The C++'s die near home: those killed fighting (which include its hunters) at a median of 15
+tiles, those moving at 20. The port also loses 55 citizens to ships against the C++'s 7.
+Next: the port's far gathering against the C++'s: the game it hunts, which lies beyond the explored land the C++
+sees whole (fog); the mines it takes; and the enemy towers near both.
+
+### 8.59 The classic computer player in Lua: the raids' flight (EECPRMFleeRaids), the gatherers killed by towers (2026-11-12, EE-SIM)
+
+**The flight.** The port has EECPRMFleeRaids: the gatherers within 8 tiles of a danger zone (30 s) go home. Traced on
+seeds 2-17, the C++'s flight fired 774 times (2790 units) and the port's only 37 times (45 units). The C++'s zones come
+from 175 militia runs and from its naval flights: 101 for land units and 558 for boats, each zone made only where a
+unit left. For the port, the engine runs the naval flight and moves the units, but it puts the zone on the classic's
+own lists. The port now makes that zone itself: a hit on an own unit by a warship, once every 4 s, makes a zone if
+any own unit within 12 tiles leaves (the boats round a boat; the citizens and melee soldiers round a land unit).
+This is EECPRMNavalFlee's rule. §8.58's first try made a zone for every hit on a citizen or a boat.
+
+| (32 seeds) | the C++ | the port before | the port now |
+|---|---|---|---|
+| flight fires (units) | 498 (2530) | about 74 | 705 (3021) |
+| won-lost | | 13-14, 5 close | 12-14, 6 close |
+| Lua citizens lost | | 60.8 | 61.8 |
+| citizens killed by ships | 14 | about 110 | 116 |
+
+The flight now fires about as often as the C++'s: more, because the port is hit more. It changes the outcome very
+little. It is kept for fidelity.
+
+**The towers.** The port's citizens killed by enemy towers: 145 in 32 games, against the C++'s 40. They die at gold
+(52) and hunting (65). The C++'s rules for hunt and mine sites are the port's: FindMines takes game within 2 (near) or
+6 (far) drop-off distances of the nearest town centre or settlement, and skips a site with HasEnemyNear. HasEnemyNear
+is the classic's own test through sees_all: every armed unit in the influence box. It leaves out units whose target
+search has been idle for more than 60 s, and so a quiet tower too. The difference is what the port can see. Its
+centres and game are the explored ones, so it finds fewer near sites and takes the far ones. Giving it every resource
+through the fog was tried in §8.58 and lost badly (5-25). Next: the hunting and mining sites against the enemy's
+towers (EECPNextSiteThreat's remembered towers, which the fog-honest test has), and the game the port can see near
+home.
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
 
 ### 8.9 Next
 
