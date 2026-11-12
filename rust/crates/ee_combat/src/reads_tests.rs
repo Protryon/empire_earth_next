@@ -380,7 +380,15 @@ fn chain_world() -> World {
     let mut w = World { sight: 3.0, ..Default::default() };
     players(&mut w);
     // the chain: head(10) <- 11 <- SHOT(1) -> 12 -> 13
-    let enemy = |x| Unit { tile: (x, 0), footprint: (x, 0), hp: 5, targetable: true, seen: true, player: P2, ..Default::default() };
+    let enemy = |x| Unit {
+        tile: (x, 0),
+        footprint: (x, 0),
+        hp: 5,
+        targetable: true,
+        seen: true,
+        player: P2,
+        ..Default::default()
+    };
     w.units.insert(10, Unit { dummy: true, ..Default::default() });
     w.units.insert(11, Unit { prev: 10, ..enemy(8) });
     w.units.insert(SHOT, Unit { tile: (10, 0), player: P1, prev: 11, next: 12, ..Default::default() });

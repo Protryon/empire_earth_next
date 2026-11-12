@@ -164,9 +164,12 @@ const SET_FIRE_HIGH: i32 = 0x2a;
 const LARGE_UNIT_SCALE: f32 = 1.5;
 const MIN_CONSTRUCTION_SCALE: f32 = 0.1;
 const FACING_TOLERANCE: f32 = 0.043633234;
+// the C++'s literal 0.5235988f (kept as written)
+#[allow(clippy::approx_constant)]
 const SPECIAL_ARC: f32 = 0.5235988;
 const FULL_ARC: f32 = 6.2831855;
-const PI: f32 = 3.1415927;
+// the C++'s literal 3.1415927f: the same f32
+const PI: f32 = std::f32::consts::PI;
 
 /// The world's reads of the bodies here (`EeCombatQueryHost` over the C++, a mock in the tests).
 pub trait QueryHost {
@@ -305,10 +308,12 @@ pub fn impact_unit<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> EeCombatHan
             } else {
                 let player = h.handle(EE_COMBAT_H_PLAYER, candidate, 0);
                 let own = h.handle(EE_COMBAT_H_PLAYER, unit, 0);
-                if player == own || {
-                    let id = h.read(EE_COMBAT_Q_PLAYER_ID, player, 0);
-                    h.read(EE_COMBAT_Q_ENEMY, own, id as i32) == 0
-                } || (h.read(EE_COMBAT_Q_HIT_POINTS, candidate, 0) as i32) <= 0
+                if player == own
+                    || {
+                        let id = h.read(EE_COMBAT_Q_PLAYER_ID, player, 0);
+                        h.read(EE_COMBAT_Q_ENEMY, own, id as i32) == 0
+                    }
+                    || (h.read(EE_COMBAT_Q_HIT_POINTS, candidate, 0) as i32) <= 0
                     || flags & EE_COMBAT_CLASS_PROJECTILE != 0
                 {
                     continue;
@@ -390,7 +395,8 @@ pub fn in_reach<H: QueryHost>(h: &mut H, unit: EeCombatHandle, target: EeCombatH
 pub fn still_reachable<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> bool {
     let target = h.handle(EE_COMBAT_H_TARGET, unit, 0);
     let mut result = false;
-    if h.read(EE_COMBAT_Q_CLASS_FLAGS, unit, 0) & EE_COMBAT_CLASS_MELEE == 0 || flag(h, EE_COMBAT_Q_CAN_REACH_UNIT, target)
+    if h.read(EE_COMBAT_Q_CLASS_FLAGS, unit, 0) & EE_COMBAT_CLASS_MELEE == 0
+        || flag(h, EE_COMBAT_Q_CAN_REACH_UNIT, target)
     {
         let complex = h.handle(EE_COMBAT_H_COMPLEX, target, 0);
         result = flag(h, EE_COMBAT_Q_ATTACK_REACHABLE, complex);
@@ -558,12 +564,8 @@ pub fn faces_point(i: &EeCombatFacingIn, turret: impl FnMut(i32) -> EeCombatTurr
     let mut forward = location.apply_vector(rotated);
     forward.z = 0.0;
     forward.normalize();
-    let mut dot = forward.dot(direction);
-    if dot > 1.0 {
-        dot = 1.0;
-    } else if dot < -1.0 {
-        dot = -1.0;
-    }
+    // the C++'s two tests (a NaN stays NaN, as with clamp)
+    let dot = forward.dot(direction).clamp(-1.0, 1.0);
     let angle = um_arccos(dot).abs();
     if i.fires_broadside == 0 {
         if i.use_tolerance != 0 {
@@ -592,11 +594,8 @@ fn turrets_face_point(
             return false;
         }
         let part = turret(index);
-        let offset = Ge3DPoint {
-            x: i.scale * part.position[0],
-            y: i.scale * part.position[1],
-            z: i.scale * part.position[2],
-        };
+        let offset =
+            Ge3DPoint { x: i.scale * part.position[0], y: i.scale * part.position[1], z: i.scale * part.position[2] };
         let world = location.apply_point(offset);
         let mut direction = GeVector { x: i.point[0] - world.x, y: i.point[1] - world.y, z: 0.0 };
         direction.normalize();
@@ -617,11 +616,7 @@ fn turrets_face_point(
         if !(angle >= 0.0) {
             angle = -angle;
         }
-        result = if i.use_tolerance != 0 {
-            !(angle > i.firing_arc * 0.5)
-        } else {
-            !(angle > FACING_TOLERANCE)
-        };
+        result = if i.use_tolerance != 0 { !(angle > i.firing_arc * 0.5) } else { !(angle > FACING_TOLERANCE) };
     }
     result
 }
