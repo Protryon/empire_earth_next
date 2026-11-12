@@ -171,6 +171,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_ai"
+version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
+]
+
+[[package]]
 name = "ee_astar"
 version = "0.1.0"
 dependencies = [
@@ -330,6 +337,7 @@ dependencies = [
 name = "ee_rust"
 version = "0.1.0"
 dependencies = [
+ "ee_ai",
  "ee_astar",
  "ee_codec",
  "ee_combat",
