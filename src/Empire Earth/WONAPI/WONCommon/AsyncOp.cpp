@@ -234,8 +234,8 @@ TimerThread::TimerThread()
 
 static void OpAddRef(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->AddRef(); }
 static void OpRelease(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Release(); }
-static bool OpIsPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->mStatus==WS_Pending; }
-static bool OpCompletionPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->mCompletionPending; }
+static bool OpIsPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->GetStatus()==WS_Pending; }
+static bool OpCompletionPending(void*,void* inOp) { return static_cast<AsyncOp*>(inOp)->IsCompletionPending(); }
 static void OpStartRunAsync(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->StartRunAsync(); }
 static void OpComplete(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Complete(); }
 static void OpKill(void*,void* inOp) { static_cast<AsyncOp*>(inOp)->Kill(true); }

@@ -28,8 +28,8 @@ void ServerConnection::StartKeepAlive()
     uint32_t aMs;
     if(ee_won_server_keep_alive_ms(this->mKeepAlivePeriod,&aMs)) {
         this->mKeepAliveOp=new AsyncOp;
-        this->mKeepAliveOp->mCompletion=new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
-            ServerConnection::StaticKeepAliveCallback,SmartPtr<RefCount>(this));
+        this->mKeepAliveOp->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
+            ServerConnection::StaticKeepAliveCallback,SmartPtr<RefCount>(this)));
         this->mKeepAliveOp->RunAsync(aMs);
     }
 }
@@ -85,7 +85,7 @@ void ServerConnection::KeepAliveCallback(AsyncOp* inOp)
     AutoCrit aCrit(this->mDataCrit);
     if(inOp==this->mKeepAliveOp.get()) {
         this->mKeepAliveOp=NULL;
-        if(inOp->mKilled) return;
+        if(inOp->IsKilled()) return;
         this->SendNoOp();
         this->StartKeepAlive();
     }
@@ -119,7 +119,7 @@ void ServerConnection::CloseHook()
         this->mKeepAliveOp=NULL;
     }
     if(this->mPeerAuthOp.get()!=NULL) {
-        this->mPeerAuthOp->mCompletion=this->mConnectCompletion;
+        this->mPeerAuthOp->SetCompletion(this->mConnectCompletion);
         if(this->mPeerAuthOp->GetStatus()==WS_Pending) this->mPeerAuthOp->Kill(true);
         this->mPeerAuthOp=NULL;
     }
@@ -159,7 +159,7 @@ void ServerConnectionConnectOp::RunHook()
 {
     this->mConnection->SetConnectCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
         ServerConnectionConnectOp::StaticConnectCompletion,SmartPtr<RefCount>(this)));
-    this->mConnection->ConnectAsync(this->mAddr,this->mTimeout);
+    this->mConnection->ConnectAsync(this->mAddr,this->GetTimeout());
 }
 // FUNCTION: WON 0x006ac380
 // Removes the op's connect completion from the connection
@@ -175,8 +175,8 @@ PeerAuthOp* ServerConnection::ConnectAsync(const IPAddr& address,unsigned long t
     AutoCrit aCrit(this->mDataCrit);
     this->Close();
     this->mPeerAuthOp=new PeerAuthOp(address,this->mAuthContext.get(),this->mAuthType,this,true);
-    this->mPeerAuthOp->mCompletion=new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
-        ServerConnection::StaticConnectCallback,SmartPtr<RefCount>(this));
+    this->mPeerAuthOp->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
+        ServerConnection::StaticConnectCallback,SmartPtr<RefCount>(this)));
     this->mPeerAuthOp->RunAsync(timeout);
     return this->mPeerAuthOp.get();
 }

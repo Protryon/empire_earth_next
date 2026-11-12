@@ -69,8 +69,7 @@ void QueueSocket::StartCloseTimer(long inTimeout)
     this->CancelCloseTimer();
     if (inTimeout != 0) {
         this->mCloseTimer = new AsyncOp;
-        this->mCloseTimer->mCompletion =
-            new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(QueueSocket::StaticCloseTimerCallback, this);
+        this->mCloseTimer->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(QueueSocket::StaticCloseTimerCallback, this));
         this->mCloseTimer->RunAsync(inTimeout);
     }
 }
@@ -106,7 +105,7 @@ void QueueSocket::CloseTimerCallback(AsyncOp* inTimer)
     this->Close();
     if (aCloseCompletion.get() != NULL) {
         SmartPtr<CloseOp> aCloseOp = new CloseOp(this);
-        aCloseOp->mCompletion = aCloseCompletion;
+        aCloseOp->SetCompletion(aCloseCompletion);
         aCloseOp->ForceFinish(WS_Killed);
     }
 }
@@ -127,7 +126,7 @@ void QueueSocket::OpCallback(SocketOp* inOp)
 {
     AutoCrit aCrit(this->mDataCrit);
     int aKind = inOp == this->mQueueOp.get() ? 0 : inOp == this->mRepeatOp.get() ? 1 : 2;
-    EeWonQueueDecision aDecision = ee_won_queue_socket_callback(aKind, inOp->GetStatus(), inOp->mKilled,
+    EeWonQueueDecision aDecision = ee_won_queue_socket_callback(aKind, inOp->GetStatus(), inOp->IsKilled(),
         this->mCloseQueued, this->mOpQueue.empty(), this->IsValid(), this->GetType() == 1);
     bool aClose = aDecision.close;
     OpCompletionBasePtr aCompletion;
@@ -135,7 +134,7 @@ void QueueSocket::OpCallback(SocketOp* inOp)
     case 1: aCompletion = this->mCurQueueCompletion; break;
     case 2: aCompletion = this->mRepeatCompletion; break;
     case 3: {
-        QueueOpFastCompletion* aFast = dynamic_cast<QueueOpFastCompletion*>(inOp->mCompletion.get());
+        QueueOpFastCompletion* aFast = dynamic_cast<QueueOpFastCompletion*>(inOp->GetCompletion());
         if (aFast != NULL)
             aCompletion = aFast->mOriginalCompletion;
         break;
@@ -165,7 +164,7 @@ void QueueSocket::OpCallback(SocketOp* inOp)
         this->Close();
         if (aCloseCompletion.get() != NULL) {
             SmartPtr<CloseOp> aCloseOp = new CloseOp(this);
-            aCloseOp->mCompletion = aCloseCompletion;
+            aCloseOp->SetCompletion(aCloseCompletion);
             aCloseOp->ForceFinish(inOp->GetStatus());
         }
     }
@@ -187,8 +186,7 @@ void QueueSocket::RunRepeatOp()
     AutoCrit aCrit(this->mDataCrit);
     if (this->mRepeatOp.get() == NULL || this->mRepeatOp->GetStatus() == WS_Pending)
         return;
-    this->mRepeatOp->mCompletion =
-        new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(QueueSocket::StaticOpCallback, this);
+    this->mRepeatOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(QueueSocket::StaticOpCallback, this));
     this->mRepeatOp->mSocket = this;
     this->mRepeatOp->RunAsync(-1);
 }
@@ -200,8 +198,8 @@ void QueueSocket::QueueOp(SocketOp* inOp, long inTimeout)
     AutoCrit aCrit(this->mDataCrit);
     inOp->mSocket = this;
     inOp->SetTimeout(inTimeout);
-    if (inOp->mCompletion.get() == NULL)
-        inOp->mCompletion = this->mDefaultQueueCompletion;
+    if (inOp->GetCompletion() == NULL)
+        inOp->SetCompletion(this->mDefaultQueueCompletion);
     this->mOpQueue.push_back(inOp);
     this->RunQueueOp();
 }
@@ -251,12 +249,12 @@ void QueueSocket::CloseHook()
 {
     this->mCloseQueued = false;
     if (this->mRepeatOp.get() != NULL) {
-        this->mRepeatOp->mCompletion = this->mRepeatCompletion;
+        this->mRepeatOp->SetCompletion(this->mRepeatCompletion);
         this->mRepeatOp->Kill(true);
         this->mRepeatOp = NULL;
     }
     if (this->mQueueOp.get() != NULL) {
-        this->mQueueOp->mCompletion = this->mCurQueueCompletion;
+        this->mQueueOp->SetCompletion(this->mCurQueueCompletion);
         this->mQueueOp->Kill(true);
         this->mQueueOp = NULL;
         this->mCurQueueCompletion = NULL;
@@ -301,13 +299,13 @@ void QueueSocket::QueueOpFast(SocketOp *theOp, DWORD theTimeout)
 	}
 
 	theOp->SetSocket(this);
-	OpCompletionBasePtr anOriginalCompletion  = theOp->mCompletion;
+	OpCompletionBasePtr anOriginalCompletion  = theOp->GetCompletion();
 	if(anOriginalCompletion.get()==NULL)
 		anOriginalCompletion =  this->mDefaultQueueCompletion;
 
-	theOp->mCompletion = new QueueOpFastCompletion(QueueSocket::StaticOpCallback,this,anOriginalCompletion);
+	theOp->SetCompletion(new QueueOpFastCompletion(QueueSocket::StaticOpCallback,this,anOriginalCompletion));
 	theOp->RunAsync(theTimeout);
-	if(theOp->mStatus==WS_Pending)
+	if(theOp->GetStatus()==WS_Pending)
 	{
 		this->mQueueOp = theOp;
 		this->mCurQueueCompletion = anOriginalCompletion;

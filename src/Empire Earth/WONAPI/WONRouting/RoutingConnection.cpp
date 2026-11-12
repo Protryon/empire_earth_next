@@ -47,13 +47,13 @@ void RoutingConnection::KillHook()
 // Gives an op without its own completion the one registered for its op type, else the default completion
 void RoutingConnection::CalcCompletion(RoutingOp* inOp)
 {
-    OpCompletionBasePtr completion = inOp->mCompletion;
+    OpCompletionBasePtr completion = inOp->GetCompletion();
     if (completion.get() == NULL) {
         completion = this->mCompletions[inOp->GetType()];
         if (completion.get() == NULL)
             completion = this->mDefaultCompletion;
     }
-    inOp->mCompletion = completion;
+    inOp->SetCompletion(completion);
 }
 
 // FUNCTION: WON 0x006ba630
@@ -81,7 +81,7 @@ void RoutingConnection::CreateGroup(unsigned short inGroupId,
     op->mGroupFlags = inGroupFlags;
     op->mJoinFlags = inJoinFlags;
     op->mAsyncFlags = inAsyncFlags;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 
@@ -98,7 +98,7 @@ void RoutingConnection::JoinGroup(unsigned short inGroupId,
     op->SetJoinComment(inComment);
     op->mJoinFlags = inJoinFlags;
     op->mMemberFlags = inMemberFlags;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 
@@ -118,7 +118,7 @@ void RoutingConnection::BanClient(unsigned short inGroupId, bool inOn,
     op->SetBanComment(inExplanation);
     op->mClientId = inClientId;
     op->mBanByWONId = false;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 // FUNCTION: WON 0x006bf6b0
@@ -135,7 +135,7 @@ void RoutingConnection::BanClientByWONId(unsigned short inGroupId, bool inOn,
     op->mWONId = inWONId;
     op->mBanByWONId = true;
     op->mWONIdIsCDKeyId = false;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 // FUNCTION: WON 0x006bf7d0
@@ -151,7 +151,7 @@ void RoutingConnection::MuteClient(unsigned short inGroupId, bool inOn,
     op->SetMuteComment(inExplanation);
     op->mClientId = inClientId;
     op->mMuteByWONId = false;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 // FUNCTION: WON 0x006bf8f0
@@ -168,7 +168,7 @@ void RoutingConnection::MuteClientByWONId(unsigned short inGroupId, bool inOn,
     op->mWONId = inWONId;
     op->mMuteByWONId = true;
     op->mWONIdIsCDKeyId = false;
-    op->mCompletion = inCompletion;
+    op->SetCompletion(inCompletion);
     op->RunAsync(-1);
 }
 }
@@ -572,7 +572,7 @@ namespace WONAPI {
 void RoutingConnection::DisconnectClient(CompletionBase<AsyncOpPtr> *theCompletion)
 {
 	SmartPtr<RoutingDisconnectClientOp> anOp = new RoutingDisconnectClientOp(this);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -582,7 +582,7 @@ void RoutingConnection::GetClientCDKeyIdList(CompletionBase<AsyncOpPtr> *theComp
 	anOp->mDataType="_KeyId";
 	anOp->mLinkId=0xffff;
 	anOp->mSubscribe=bDoSubscribe;
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -590,28 +590,28 @@ void RoutingConnection::GetClientListEx(CompletionBase<AsyncOpPtr> *theCompletio
 {
 	SmartPtr<RoutingGetClientListOp> anOp = new RoutingGetClientListOp(this);
     anOp->mIsEx=true;
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);	
 }
 
 void RoutingConnection::SetGroupName(unsigned short theGroupId, const std::wstring &theName, CompletionBase<AsyncOpPtr> *theCompletion)
 {
 	SmartPtr<RoutingSetGroupNameOp> anOp = new RoutingSetGroupNameOp(this,theGroupId,theName);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
 void RoutingConnection::SetGroupMaxPlayers(unsigned short theGroupId, unsigned short theMaxPlayers, CompletionBase<AsyncOpPtr> *theCompletion)
 {
 	SmartPtr<RoutingSetGroupMaxPlayersOp> anOp = new RoutingSetGroupMaxPlayersOp(this,theGroupId,theMaxPlayers);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
 void RoutingConnection::RelinquishCaptaincy(unsigned short theGroupId, unsigned short theNewCaptainId, CompletionBase<AsyncOpPtr> *theCompletion)
 {
 	SmartPtr<RoutingRelinquishCaptaincyOp> anOp = new RoutingRelinquishCaptaincyOp(this,theGroupId,theNewCaptainId);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -626,7 +626,7 @@ void RoutingConnection::SendServerAlertWithRecipientList(const std::wstring &the
 	for (; anItr != recipientList.end(); ++anItr)
 		anOp->mRecipientList.push_back(*anItr);
 
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -636,7 +636,7 @@ void RoutingConnection::DetectFirewall(unsigned short theListenPort, unsigned lo
 	anOp->SetListenPort(theListenPort);
 	anOp->SetMaxConnectWaitTime(theMaxConnectSeconds);
 	anOp->SetDoListen(doListen);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -651,7 +651,7 @@ void RoutingConnection::MuteClientByCDKeyId(unsigned short theGroupId, bool isMu
 	anOp->mWONId=theCDKeyId;
     anOp->mMuteByWONId=true;
     anOp->mWONIdIsCDKeyId=true;
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 
@@ -659,7 +659,7 @@ void RoutingConnection::GetBadUserList(RoutingBadUserListType theListType, unsig
 									   CompletionBase<AsyncOpPtr> *theCompletion)
 {
 	SmartPtr<RoutingGetBadUserListOp> anOp = new RoutingGetBadUserListOp(this,theListType,theGroupId,theFlags);
-	anOp->mCompletion=theCompletion;
+	anOp->SetCompletion(theCompletion);
 	anOp->RunAsync(-1);
 }
 }

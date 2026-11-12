@@ -57,6 +57,14 @@ public:
     CompletionBase<SmartPtr<AsyncOp> >* GetCompletion() const { return this->mCompletion; }
     unsigned long GetTimeout() const { return this->mTimeout; }
     void SetCompletion(CompletionBase<SmartPtr<AsyncOp> >* theCompletion) { this->mCompletion=theCompletion; }
+    // the members' readers and setters (round 13: the members are private, the state moves to Rust)
+    bool IsKilled() const { return this->mKilled; }
+    bool IsCompletionPending() const { return this->mCompletionPending; }
+    long GetMode() const { return this->mRunMode; }
+    uint32_t GetStartTime() const { return this->mStartTime; }
+    bool IsRunAsyncImmediately() const { return this->mRunAsyncImmediately; }
+    AsyncOpContainer* GetContainer() const { return this->mContainer; }
+    void SetContainer(AsyncOpContainer* inContainer) { this->mContainer=inContainer; }
     void SetMode(AsyncRunMode); //29f190, conditional setter (enum argument)
     void ForceFinish(WONStatus inStatus); //29f2f0, takes the full status
     void RunAsTimer(unsigned long inTimeout); //29f610, DWORD timeout/ret4
@@ -97,15 +105,17 @@ public:
         this->mRunAsyncImmediately = inState.run_async_immediately;
     }
 
+    bool IsAsync() const { return this->mRunMode==1; }
+    //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
+    bool Succeeded() { return this->mStatus==0 && !this->mKilled; }
+
+private:
     CriticalSection mLock;                  // +0x08, originalInitialize/DeleteCriticalSection
     SmartPtr<CompletionBase<SmartPtr<AsyncOp> > > mCompletion;     // +0x20
     AsyncOpContainer* mContainer;           // +0x24, nonowning; Queue29f200
     uint32_t mStartTime;                    // +0x28, WONTickCount (32-bit: elapsed is a wrapping difference)
     unsigned long mTimeout;                 // +0x2c, unsignedelapsed comparison29f700
-    bool IsAsync() const { return this->mRunMode==1; }
     long mRunMode;                          // +0x30
-    //: 0x291983 (an inline COMDAT of EELobbyFileTransfer.cpp): finished without error
-    bool Succeeded() { return this->mStatus==0 && !this->mKilled; }
 
     WONStatus mStatus;                      // +0x34
     bool mCompletionPending;                // +0x38
@@ -1764,11 +1774,20 @@ class AsyncOpTracker {
 public:
     typedef AsyncOpTrackerMaps OpMap;
     int GetNumTrack() { return this->mMaps.size(); }
-    const OpMap& GetOpMap() { return this->mMaps; }
+    bool IsEmpty() { return this->mMaps.mEntries.empty(); }
+    // the op tracked at inIndex in id order (NULL past the end)
+    AsyncOp* GetTrackedOp(int inIndex)
+    {
+        AutoCrit aLock(this->mLock);
+        AsyncOpTrackerMaps::EntryMap::iterator anItr=this->mMaps.mEntries.begin();
+        for (int i=0; i<inIndex && anItr!=this->mMaps.mEntries.end(); i++) ++anItr;
+        return anItr==this->mMaps.mEntries.end() ? NULL : anItr->second->mOp.get();
+    }
     AsyncOpTracker() : mMaps(true, false) {}
     AsyncOp* AddOp(AsyncOp* inOp, unsigned long inId); // original29fc80
     bool RemoveOp(AsyncOp* inOp);             // original29fe50
     void KillAll();                          // original29ffa0
+private:
     CriticalSection mLock;                  // +0x00
     AsyncOpTrackerMaps mMaps;               // +0x18
 };

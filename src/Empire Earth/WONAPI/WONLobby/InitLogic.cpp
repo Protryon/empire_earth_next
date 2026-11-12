@@ -198,7 +198,7 @@ namespace WONAPI {
 // Decodes the downloaded advert image and broadcasts it with the advert's link
 void InitLogic::CrossPromotionImageCompletion(AsyncOp* inOp)
 {
-    if (inOp->mStatus != WS_Success)
+    if (inOp->GetStatus() != WS_Success)
         return;
     HTTPGetOp* op = static_cast<HTTPGetOp*>(inOp);
     SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(op->GetLocalPath().c_str());
@@ -227,7 +227,7 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
     if (!imageURL.empty()) {
         SmartPtr<HTTPGetOp> op = new HTTPGetOp(imageURL);
         op->SetHTTPCache(HTTPCache::GetGlobalCache());
-        op->mCompletion = new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this);
+        op->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this));
         this->mHTTPSession->AddOp(op.get());
     }
 }
@@ -451,7 +451,7 @@ namespace WONAPI {
 void InitLogic::FirewallCompletion(AsyncOp* inOp)
 {
     DetectFirewallOp* op = static_cast<DetectFirewallOp*>(inOp);
-    if (op->mStatus == WS_Success) {
+    if (op->GetStatus() == WS_Success) {
         LobbySetPublicAddress(op->GetPublicAddr());
         if (this->mFirewallSocket.get() != NULL) {
             this->mFirewallAddress = op->GetCurAddr();

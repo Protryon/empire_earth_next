@@ -97,7 +97,7 @@ struct ServerRequestGlue {
 static ServerRequestOp* Op(void* inGlue) { return static_cast<ServerRequestGlue*>(inGlue)->mOp; }
 static int32_t ReqStatus(void* g) { return Op(g)->GetStatus(); }
 static uint32_t ReqTimeLeft(void* g) { return static_cast<uint32_t>(Op(g)->TimeLeft()); }
-static bool ReqIsAsync(void* g) { return Op(g)->mRunMode == OP_MODE_ASYNC; }
+static bool ReqIsAsync(void* g) { return Op(g)->GetMode() == OP_MODE_ASYNC; }
 static int32_t ReqAuthType(void* g) { return Op(g)->mAuthType; }
 static void ReqFinish(void* g, int32_t s) { Op(g)->Finish(static_cast<WONStatus>(s)); }
 static void ReqFinishSave(void* g, int32_t s) { Op(g)->FinishSaveSession(static_cast<WONStatus>(s)); }
@@ -291,7 +291,7 @@ void ServerRequestOp::RunHook()
 void ServerRequestOp::CleanupHook()
 {
     AsyncOpWithTracker::CleanupHook();
-    uint32_t aPlan = ee_won_server_req_cleanup_plan(this->GetStatus(), this->mKilled, this->mServerContext.get() != NULL,
+    uint32_t aPlan = ee_won_server_req_cleanup_plan(this->GetStatus(), this->IsKilled(), this->mServerContext.get() != NULL,
                                                     this->mSocket.get() != NULL, this->mCloseConnection);
     if (aPlan & 1) this->mServerContext->NotifyFailed(this->mCurAddr);
     if (aPlan & 2) {
@@ -314,11 +314,11 @@ bool ServerRequestOp::TryPeerToPeerAuth()
 bool ServerRequestOp::CallbackHook(AsyncOp* op,int param)
 {
     EeWonServerReqDone aDone;
-    aDone.killed = op->mKilled;
+    aDone.killed = op->IsKilled();
     aDone.status = op->GetStatus();
     aDone.param = param;
     aDone.cert_status = 0;
-    if (param == 2 && !op->mKilled && op->GetStatus() == WS_PeerAuth_GetCertFailure)
+    if (param == 2 && !op->IsKilled() && op->GetStatus() == WS_PeerAuth_GetCertFailure)
         aDone.cert_status = static_cast<PeerAuthOp*>(op)->GetGetCertStatus();
     aDone.is_recv = param == 1 && dynamic_cast<RecvMsgOp*>(op) != NULL;
     ServerRequestGlue aGlue = {this, op};

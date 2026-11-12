@@ -126,3 +126,123 @@ stopped
 t1 thread destroyed
 t2 thread destroyed
 threads done
+x refs 2 container set 1
+replaced: x refs 1 y refs 2
+cleared: y refs 1 completion 0
+idle set: timeout 1234 mode 2 async 0 immediate 0
+pending set: timeout 4294967295 mode 1 async 1
+finished twice, forced: oa status 0 refs 2 pending 1 killed 0
+succeeded 1
+oa CleanupHook
+x got oa refs 3
+delivered: oa status 0 refs 0 pending 0 killed 0
+forced after delivery: oa status 100001 refs 1 pending 1 killed 0
+oa CleanupHook
+x got oa refs 3
+forced delivered: oa status 100001 refs 0 pending 0 killed 0
+succeeded 0
+complete with nothing pending: oa status 100001 refs 0 pending 0 killed 0
+idle killed: oa status 100001 refs 0 pending 0 killed 1
+run after kill: oa status 100000 refs 1 pending 0 killed 0
+oa CleanupHook
+x got oa refs 3
+killed delivered: oa status 100002 refs 0 pending 0 killed 1
+succeeded 0
+ob RunHook status 100000
+ob block -> 100000
+ob pending: ob status 100000 refs 0 pending 0 killed 0
+ob finished: ob status 0 refs 0 pending 1 killed 0
+ob after pump: ob status 0 refs 0 pending 1 killed 0
+ob CleanupHook
+x got ob refs 4
+ob completed: ob status 0 refs 0 pending 0 killed 0
+ot left near real near mode 2
+ot RunHook status 100000
+ot CleanupHook
+x got ot refs 5
+ot block hour -> 0
+ot left 0 real 0 mode 2
+ot RunHook status 100000
+ot CleanupHook
+x got ot refs 5
+ot block 1ms -> 0
+ot after: left 0 start set 1
+ot left 0 real near mode 1
+ot RunHook status 100000
+ot async hour -> 0
+ot async: ot status 0 refs 1 pending 1 killed 0
+ot CleanupHook
+x got ot refs 5
+od queued idle and pumped: od status 100004 refs 0 pending 0 killed 0
+x refs at end 5
+od destroyed
+ot destroyed
+ob destroyed
+oa destroyed
+y completion destroyed
+x completion destroyed
+op cases done
+tracked 0 empty 1:
+add ka 1 -> 1
+add ka 2 again -> 1
+tracked 5 empty 0: kd kf kb ka ke
+remove kb -> 1 again -> 0
+kb untracked: kb status 100004 refs 0 pending 0 killed 0
+tracked 4 empty 0: kd kf ka ke
+ke RunHook status 100000
+ka RunHook status 100000
+kd RunHook status 100000
+tracked 0 empty 1:
+killed all: ka status 100002 refs 1 pending 1 killed 1 | kd status 100002 refs 1 pending 1 killed 1 | ke status 100002 refs 0 pending 1 killed 1
+kd CleanupHook
+kd completed status 100002 killed 1
+ka CleanupHook
+ka completed status 100002 killed 1
+kills delivered: ka status 100002 refs 0 pending 0 killed 1 | kd status 100002 refs 0 pending 0 killed 1 | kf status 100004 refs 0 pending 0 killed 1
+tracked 2 empty 0: kd ka
+tracker deleted: ka status 100002 refs 0 pending 0 killed 1 | kd status 100002 refs 0 pending 0 killed 1
+kf destroyed
+ke destroyed
+kd destroyed
+kb destroyed
+ka destroyed
+p RunHook tracked 0
+track s1 -> 1
+p tracked 3 empty 0: s1 s2 s3
+s1 RunHook status 100000
+s1 CleanupHook
+p CallbackHook s1 param 11 status 0 tracked 2
+s2 RunHook status 100000
+s2 CleanupHook
+p CallbackHook s2 param 12 status 0 tracked 1
+s3 RunHook status 100000
+p after s1 s2 tracked 1 empty 0: s3
+s3 CleanupHook
+p CallbackHook s3 param 13 status 100001 tracked 0
+p CleanupHook tracked 0
+p after cleanup tracked 0
+p completed status 0 tracked 0
+p after s3: s1 status 0 refs 0 pending 0 killed 0 | s2 status 0 refs 0 pending 0 killed 0 | s3 status 100001 refs 0 pending 0 killed 0
+p status 0
+q RunHook tracked 0
+s4 RunHook status 100000
+s5 RunHook status 100000
+q CleanupHook tracked 2
+q after cleanup tracked 0
+q completed status 0 tracked 0
+s4 CleanupHook
+s5 CleanupHook
+q finished: s4 status 100002 refs 0 pending 0 killed 1 | s5 status 100002 refs 0 pending 0 killed 1
+q sub-ops delivered: s4 status 100002 refs 0 pending 0 killed 1 | s5 status 100002 refs 0 pending 0 killed 1
+s6 RunHook status 100000
+s6 CleanupHook
+r tracked 1 empty 0: s6
+sub-ops released
+s5 destroyed
+s4 destroyed
+q destroyed
+s3 destroyed
+s2 destroyed
+s1 destroyed
+p destroyed
+trackers done

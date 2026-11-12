@@ -48,7 +48,7 @@ RoutingOp::RoutingOp(RoutingConnection* connection)
 // Sends the request; fails at once in blocking mode, which routing ops do not support
 void RoutingOp::RunHook()
 {
-    if(this->mRunMode==OP_MODE_BLOCK) {
+    if(this->GetMode()==OP_MODE_BLOCK) {
         this->Finish((WONStatus)WS_BlockMode_NotSupported);
         return;
     }

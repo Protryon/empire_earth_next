@@ -1,7 +1,8 @@
 // WON's async machinery: AsyncOp's runs, finishes, kills and completions through an AsyncOpContainer (queue, pump,
 // purge, the op being pumped queued again, the pump's op limit), the TimerThread (timeouts due and replaced, removed,
 // purged; its own thread), and Thread (start, InThisThread, stop, auto-delete), one line per event with every op's
-// reference count, compared with rust/crates/ee_won/src/golden_asyncop.txt. The golden was recorded over the C++
+// reference count, then (round 13) the op's remaining transitions, its time left and AsyncOpTracker /
+// AsyncOpWithTracker, compared with rust/crates/ee_won/src/golden_asyncop.txt. The golden was recorded over the C++
 // classes before their move to Rust (rust/crates/ee_won/src/thread.rs). Deadlines are 0 ms or an hour, so the
 // lines do not depend on the clock. `--print` prints the lines instead. The exit code is the number of failures.
 #include <windows.h>
@@ -70,15 +71,15 @@ public:
     {
         TestOp* anOp = static_cast<TestOp*>(inOp.get());
         Log(anOp->mName + " completed status " + std::to_string(anOp->GetStatus()) + " killed "
-            + std::to_string(anOp->mKilled ? 1 : 0));
+            + std::to_string(anOp->IsKilled() ? 1 : 0));
     }
 };
 
 static std::string State(TestOp* inOp)
 {
     return inOp->mName + " status " + std::to_string(inOp->GetStatus()) + " refs " +
-           std::to_string(inOp->GetRefCount() - 1) + " pending " + std::to_string(inOp->mCompletionPending ? 1 : 0) +
-           " killed " + std::to_string(inOp->mKilled ? 1 : 0);
+           std::to_string(inOp->GetRefCount() - 1) + " pending " + std::to_string(inOp->IsCompletionPending() ? 1 : 0) +
+           " killed " + std::to_string(inOp->IsKilled() ? 1 : 0);
 }
 
 static void Show(const char* inStep, TestOp* a, TestOp* b = NULL, TestOp* c = NULL)
@@ -92,7 +93,7 @@ static void Show(const char* inStep, TestOp* a, TestOp* b = NULL, TestOp* c = NU
 static SmartPtr<TestOp> NewOp(const char* inName, AsyncOpContainer* inContainer, CompletionBase<AsyncOpPtr>* inDone)
 {
     SmartPtr<TestOp> anOp = new TestOp(inName);
-    anOp->mContainer = inContainer;
+    anOp->SetContainer(inContainer);
     anOp->SetCompletion(inDone);
     return anOp;
 }
@@ -298,6 +299,262 @@ static void Threads()
     Log("threads done");
 }
 
+// ---- round 13: the op's remaining transitions and timings, and AsyncOpTracker / AsyncOpWithTracker (recorded over
+// the C++ AsyncOp and AsyncOpTracker before their move to Rust, ee_won opobj.rs)
+
+class CountedDone : public CompletionBase<AsyncOpPtr> {
+public:
+    CountedDone(const char* inName) : mName(inName) {}
+    virtual ~CountedDone() { Log(this->mName + " completion destroyed"); }
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        Log(this->mName + " got " + static_cast<TestOp*>(inOp.get())->mName + " refs " +
+            std::to_string(this->GetRefCount()));
+    }
+    std::string mName;
+};
+
+// a blocking op whose run hook samples its time left (an hour's timeout: within a second of it; a 1 ms timeout
+// after 5 ms: none)
+class TimedOp : public TestOp {
+public:
+    TimedOp(const char* inName, unsigned long inSleep) : TestOp(inName), mSleep(inSleep) {}
+    virtual void RunHook()
+    {
+        if (this->mSleep) PlatSleep(this->mSleep);
+        unsigned long aLeft = this->TimeLeft();
+        DWORD aReal = this->RealTimeLeft();
+        Log(this->mName + " left " + (aLeft == 0 ? "0" : aLeft + 1000 > this->GetTimeout() ? "near" : "far") +
+            " real " + (aReal == 0 ? "0" : aReal + 1000 > this->GetTimeout() ? "near" : "far") + " mode " +
+            std::to_string(this->GetMode()));
+        TestOp::RunHook();
+    }
+    unsigned long mSleep;
+};
+
+static void OpCases()
+{
+    AsyncOpContainer* c = new AsyncOpContainer;
+    {
+        SmartPtr<CountedDone> x = new CountedDone("x"), y = new CountedDone("y");
+        SmartPtr<TestOp> a = NewOp("oa", c, x);
+        Log("x refs " + std::to_string(x->GetRefCount()) + " container set " +
+            std::to_string(a->GetContainer() == c ? 1 : 0));
+        a->SetCompletion(y);
+        Log("replaced: x refs " + std::to_string(x->GetRefCount()) + " y refs " + std::to_string(y->GetRefCount()));
+        a->SetCompletion(NULL);
+        Log("cleared: y refs " + std::to_string(y->GetRefCount()) + " completion " +
+            std::to_string(a->GetCompletion() == NULL ? 0 : 1));
+        a->SetCompletion(x);
+        // timeout and mode: set while idle, kept while pending
+        a->SetTimeout(1234);
+        a->SetMode(OP_MODE_BLOCK);
+        Log("idle set: timeout " + std::to_string(a->GetTimeout()) + " mode " + std::to_string(a->GetMode()) +
+            " async " + std::to_string(a->IsAsync() ? 1 : 0) + " immediate " +
+            std::to_string(a->IsRunAsyncImmediately() ? 1 : 0));
+        a->RunAsync(-1);
+        a->SetTimeout(99);
+        a->SetMode(OP_MODE_BLOCK);
+        Log("pending set: timeout " + std::to_string(a->GetTimeout()) + " mode " + std::to_string(a->GetMode()) +
+            " async " + std::to_string(a->IsAsync() ? 1 : 0));
+        // finish twice: the second is ignored; force-finish while the completion is pending: ignored
+        a->Finish(WS_Success);
+        a->Finish(WS_TimedOut);
+        a->ForceFinish(WS_Killed);
+        Show("finished twice, forced", a);
+        Log("succeeded " + std::to_string(a->Succeeded() ? 1 : 0));
+        c->Pump(0);
+        Show("delivered", a);
+        // force-finish a finished op: finished again, with the new status
+        a->ForceFinish(WS_TimedOut);
+        Show("forced after delivery", a);
+        c->Pump(0);
+        Show("forced delivered", a);
+        Log("succeeded " + std::to_string(a->Succeeded() ? 1 : 0));
+        // a direct Complete with nothing pending does nothing
+        a->Complete();
+        Show("complete with nothing pending", a);
+        // kill an idle op, then run it: the run clears the flag
+        a->Kill(true);
+        Show("idle killed", a);
+        a->RunAsync(-1);
+        Show("run after kill", a);
+        a->Kill(true);
+        c->Pump(0);
+        Show("killed delivered", a);
+        Log("succeeded " + std::to_string(a->Succeeded() ? 1 : 0));
+        // a blocking run left pending: the finish queues nothing, a Complete delivers
+        SmartPtr<TestOp> b = NewOp("ob", c, x);
+        Log("ob block -> " + std::to_string(b->Run(OP_MODE_BLOCK, -1)));
+        Show("ob pending", b);
+        b->Finish(WS_Success);
+        Show("ob finished", b);
+        c->Pump(0);
+        Show("ob after pump", b);
+        b->Complete();
+        Show("ob completed", b);
+        // blocking runs' time left
+        SmartPtr<TimedOp> t = new TimedOp("ot", 0);
+        t->SetContainer(c);
+        t->SetCompletion(x);
+        t->mFinishInRun = true;
+        Log("ot block hour -> " + std::to_string(t->Run(OP_MODE_BLOCK, 3600000)));
+        t->mSleep = 5;
+        Log("ot block 1ms -> " + std::to_string(t->Run(OP_MODE_BLOCK, 1)));
+        Log("ot after: left " + std::to_string(t->TimeLeft()) + " start set " +
+            std::to_string(t->GetStartTime() != 0 ? 1 : 0));
+        t->mSleep = 0;
+        t->SetMode(OP_MODE_ASYNC);
+        t->SetRunAsyncImmediately(true);
+        Log("ot async hour -> " + std::to_string(t->Run(OP_MODE_ASYNC, 3600000)));
+        Show("ot async", t);
+        c->Pump(0);
+        // an op queued in its container by hand
+        SmartPtr<TestOp> d = NewOp("od", c, x);
+        d->QueueInOpContainer();
+        c->Pump(0);
+        Show("od queued idle and pumped", d);
+        Log("x refs at end " + std::to_string(x->GetRefCount()));
+    }
+    delete c;
+    Log("op cases done");
+}
+
+class TrackingOp : public AsyncOpWithTracker {
+public:
+    TrackingOp(const char* inName, bool inFinishOnLast) : mName(inName), mFinishOnLast(inFinishOnLast) {}
+    virtual ~TrackingOp() { Log(this->mName + " destroyed"); }
+    virtual void RunHook() { Log(this->mName + " RunHook tracked " + std::to_string(this->mTracker.GetNumTrack())); }
+    virtual void CleanupHook()
+    {
+        Log(this->mName + " CleanupHook tracked " + std::to_string(this->mTracker.GetNumTrack()));
+        AsyncOpWithTracker::CleanupHook();
+        Log(this->mName + " after cleanup tracked " + std::to_string(this->mTracker.GetNumTrack()));
+    }
+    virtual bool CallbackHook(AsyncOp* inOp, int inParam)
+    {
+        Log(this->mName + " CallbackHook " + static_cast<TestOp*>(inOp)->mName + " param " +
+            std::to_string(inParam) + " status " + std::to_string(inOp->GetStatus()) + " tracked " +
+            std::to_string(this->mTracker.GetNumTrack()));
+        if (this->mFinishOnLast && this->mTracker.IsEmpty())
+            this->Finish(WS_Success);
+        return true;
+    }
+    std::string mName;
+    bool mFinishOnLast;
+};
+
+class ParentDone : public CompletionBase<AsyncOpPtr> {
+public:
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        TrackingOp* anOp = static_cast<TrackingOp*>(inOp.get());
+        Log(anOp->mName + " completed status " + std::to_string(anOp->GetStatus()) + " tracked " +
+            std::to_string(anOp->mTracker.GetNumTrack()));
+    }
+};
+
+static std::string Tracked(AsyncOpTracker& inTracker)
+{
+    std::string s = "tracked " + std::to_string(inTracker.GetNumTrack()) + " empty " +
+                    std::to_string(inTracker.IsEmpty() ? 1 : 0) + ":";
+    for (int i = 0; i < inTracker.GetNumTrack(); i++)
+        s += " " + static_cast<TestOp*>(inTracker.GetTrackedOp(i))->mName;
+    return s;
+}
+
+static void Trackers()
+{
+    SmartPtr<Done> aDone = new Done;
+    SmartPtr<ParentDone> aParentDone = new ParentDone;
+    AsyncOpContainer* c = new AsyncOpContainer;
+    {
+        AsyncOpTracker* t = new AsyncOpTracker;
+        SmartPtr<TestOp> a = NewOp("ka", c, aDone), b = NewOp("kb", c, aDone), d = NewOp("kd", c, aDone),
+                         e = NewOp("ke", c, aDone), f = NewOp("kf", c, aDone);
+        Log(Tracked(*t));
+        Log("add ka 1 -> " + std::to_string(t->AddOp(a, 1) == a.get() ? 1 : 0));
+        t->AddOp(b, 1);
+        t->AddOp(d, 0);
+        t->AddOp(e, 7);
+        t->AddOp(f, 1);
+        Log("add ka 2 again -> " + std::to_string(t->AddOp(a, 2) == a.get() ? 1 : 0));
+        Log(Tracked(*t));
+        bool aFirst = t->RemoveOp(b);
+        bool aSecond = t->RemoveOp(b);
+        Log("remove kb -> " + std::to_string(aFirst ? 1 : 0) + " again -> " + std::to_string(aSecond ? 1 : 0));
+        Show("kb untracked", b);
+        Log(Tracked(*t));
+        a->RunAsync(-1);
+        d->RunAsync(-1);
+        e->Run(OP_MODE_BLOCK, -1);
+        c->Pump(0);
+        t->KillAll();
+        Log(Tracked(*t));
+        Show("killed all", a, d, e);
+        c->Pump(0);
+        Show("kills delivered", a, d, f);
+        t->AddOp(a, 3);
+        t->AddOp(d, 3);
+        Log(Tracked(*t));
+        delete t;
+        Show("tracker deleted", a, d);
+    }
+    {
+        // a parent tracking three sub-ops: each sub-op's completion goes to CallbackHook while the parent runs
+        SmartPtr<TrackingOp> p = new TrackingOp("p", true);
+        p->SetContainer(c);
+        p->SetCompletion(aParentDone);
+        SmartPtr<TestOp> s1 = NewOp("s1", c, aDone), s2 = NewOp("s2", c, aDone), s3 = NewOp("s3", c, aDone);
+        p->RunAsync(-1);
+        c->Pump(0);
+        Log("track s1 -> " + std::to_string(p->Track(s1, 11) == s1.get() ? 1 : 0));
+        p->Track(s2, 12);
+        p->Track(s3, 13);
+        Log("p " + Tracked(p->mTracker));
+        s1->mFinishInRun = s2->mFinishInRun = true;
+        s1->RunAsync(-1);
+        s2->RunAsync(-1);
+        s3->RunAsync(-1);
+        c->Pump(0);
+        Log("p after s1 s2 " + Tracked(p->mTracker));
+        s3->Finish(WS_TimedOut);
+        c->Pump(0);
+        Show("p after s3", s1, s2, s3);
+        c->Pump(0);
+        Log("p status " + std::to_string(p->GetStatus()));
+        // a parent that finishes with sub-ops left: its cleanup kills them, their completions come after it
+        SmartPtr<TrackingOp> q = new TrackingOp("q", false);
+        q->SetContainer(c);
+        q->SetCompletion(aParentDone);
+        SmartPtr<TestOp> s4 = NewOp("s4", c, aDone), s5 = NewOp("s5", c, aDone);
+        q->RunAsync(-1);
+        c->Pump(0);
+        q->Track(s4, 1);
+        q->Track(s5, 2);
+        s4->RunAsync(-1);
+        s5->RunAsync(-1);
+        c->Pump(0);
+        q->Finish(WS_Success);
+        c->Pump(0);
+        Show("q finished", s4, s5);
+        c->Pump(0);
+        Show("q sub-ops delivered", s4, s5);
+        // a sub-op that completes after its parent finished: CallbackHook is not called
+        SmartPtr<TrackingOp> r = new TrackingOp("r", false);
+        r->SetContainer(c);
+        SmartPtr<TestOp> s6 = NewOp("s6", c, aDone);
+        r->Track(s6, 4);
+        s6->mFinishInRun = true;
+        s6->RunAsync(-1);
+        c->Pump(0);
+        Log("r " + Tracked(r->mTracker));
+        Log("sub-ops released");
+    }
+    delete c;
+    Log("trackers done");
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -311,6 +568,8 @@ int main(int argc, char** argv)
     Containers();
     Timers();
     Threads();
+    OpCases();
+    Trackers();
     if (argc > 1 && strcmp(argv[1], "--print") == 0) {
         for (size_t i = 0; i < sLines.size(); i++)
             printf("%s\n", sLines[i].c_str());
