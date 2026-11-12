@@ -1001,7 +1001,10 @@ function M.step(view, memory)
         if ECON.order then
             -- (food has no room limit: past the patches the engine hunts what it finds; capped at the patches' 6 a
             -- Prehistoric town on one patch starved to 20 citizens and was raided out, seed 14)
-            local room = {stone = touched_places.stone, gold = touched_places.gold, iron = touched_places.iron}
+            -- (§8.51 O5: the mines' room counted from the touched units only starved the metals, gold and iron 12 a
+            -- minute, 14 defeats; the deposit trace shows a working mine gatherer at the requirement's pace without
+            -- it, 151-160 s a load: the claimed places again, the touched ones only in the order line)
+            local room = {stone = mineral_places.stone, gold = mineral_places.gold, iron = mineral_places.iron}
             -- (what the phase wants at its whole target, before the touched places: the settlements follow it, ahead
             -- of the citizens)
             local target = BO.fill(phase, plan.citizens_max)
@@ -1012,11 +1015,12 @@ function M.step(view, memory)
             want = BO.fill(phase, land, room)
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
-            if memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
+            if false and memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
                 local k = math.max(math.min(4, want.food - 12), 0)
                 want.food, want.wood = want.food - k, want.wood + k
             end
             memory.order_room = room   -- (the developed test: the mines' places)
+            memory.touched_room = touched_places   -- (the order line's tplaces)
             memory.useful = BO.capacity(phase, room)
         end
         release_unkept(view, order, keep)
@@ -1252,7 +1256,7 @@ function M.step(view, memory)
         local barracks = V.buildings(view, "b_barracks")
         local ranges = V.buildings(view, "b_archery_range")
         -- (ECON.order: a mine's settlement first, the barracks and the range wait while one is short of wood)
-        local settle_first = ECON.order and memory.settle_short and age >= 2
+        local settle_first = false   -- (§8.51 O5: holding the barracks for the mines' settlements cost defeats)
         if settle_first then
             -- (nothing)
         elseif (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then

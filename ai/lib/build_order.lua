@@ -206,8 +206,8 @@ function M.trace(view, memory, phase, army)
         g.gold or 0, g.iron or 0, view.hunters or 0, view.boats, view.citizens, army, count(view, "b_dock", "finished"),
         count(view, "b_barracks", "finished"), count(view, "b_archery_range", "finished"), M.towers(view),
         count(view, "b_settlement", "finished"), count(view, "b_granary", "finished"), count(view, "b_farm", "finished"),
-        memory.raid ~= nil and tostring(memory.raid.state) or "-", (memory.order_room or {}).stone or 0,
-        (memory.order_room or {}).gold or 0, (memory.order_room or {}).iron or 0))
+        memory.raid ~= nil and tostring(memory.raid.state) or "-", (memory.touched_room or {}).stone or 0,
+        (memory.touched_room or {}).gold or 0, (memory.touched_room or {}).iron or 0))
 end
 
 -- the town centre's gathering techs (dbtechtree: kind 0, researched at b_town_center or b_capitol; the owner takes them at
