@@ -135,7 +135,6 @@
 305760 305c0e WONGUI/ScrollbarScroller.cpp
 305fa0 30683e WONGUI/Scrollbar.cpp
 306870 306e08 WONGUI/ImageComponent.cpp
-307060 30815f WONGUI/Splitter.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp

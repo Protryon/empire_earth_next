@@ -58,6 +58,12 @@ pub enum EeWonGuiCursor {
     Hand = 1,
     /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
     IBeam = 2,
+    /// `Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest)`.
+    NorthSouthEastWest = 3,
+    /// `Cursor::GetStandardCursor(StandardCursor_EastWest)`.
+    EastWest = 4,
+    /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
+    NorthSouth = 5,
 }
 
 /// The op codes. `a`..`d` are integers or pointers as each says.
@@ -198,6 +204,62 @@ pub enum EeWonGuiOp {
     WrapHeight,
     /// `mBackground.Paint(*a, 0, 0, b, c)`.
     PaintBackground,
+    // ---- a container's children and events (`a` a child `Component*`, a `Button*` or a `ComponentEvent*`)
+    /// `a->SetEnabled(b != 0)`.
+    ChildSetEnabled = 150,
+    /// `a->SetVisible(b != 0)`.
+    ChildSetVisible,
+    /// `a->SetPosSize(r.x, r.y, r.w, r.h)` with `r` the `EeWonRect4` at `b`.
+    ChildSetPosSize,
+    /// `a->IsVisible()` (0 or 1).
+    ChildIsVisible,
+    /// `a->Width()`.
+    ChildWidth,
+    /// `a->Height()`.
+    ChildHeight,
+    /// `a->Left()`.
+    ChildLeft,
+    /// `a->Top()`.
+    ChildTop,
+    /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
+    ChildHold,
+    /// `a->Release()`.
+    ChildRelease,
+    /// `a->ComponentFlagSet(b)` (0 or 1).
+    ChildFlagSet,
+    /// `a->SetComponentFlags(b, c != 0)`.
+    ChildSetFlags,
+    /// `a->GetDefaultCursor() != NULL` (0 or 1).
+    ChildHasDefaultCursor,
+    /// `a->SetDefaultCursor(b)` (`EeWonGuiCursor`).
+    ChildSetDefaultCursor,
+    /// `a->GetMouseChild()`.
+    ChildMouseChild,
+    /// `AddChild(a)`.
+    AddChild,
+    /// `mMouseChild`.
+    MouseChild,
+    /// `a->mControlId` (a button).
+    ButtonControlId,
+    /// `a->mControlId = b`.
+    ButtonSetControlId,
+    /// `a->SetCheck(b != 0, false)`.
+    ButtonSetCheck,
+    /// `a->IsChecked()` (0 or 1).
+    ButtonIsChecked,
+    /// a new `Component` laid over the container `a` (`Fn2F6140(c, 3, a, 0, 0, 0, 0, 0)`) and added to it
+    /// (`AddChildEx(c, 0)`), the creator's reference gone (the container holds it).
+    NewDragComponent,
+    /// a new `Component` sized `a` x `a`, with the creator's reference (given back with `ChildRelease`).
+    NewSizedComponent,
+    /// `a->mType == ComponentEvent_ButtonPressed` (0 or 1).
+    EventIsButtonPress,
+    /// `a->GetControlId()`.
+    EventControlId,
+    /// `dynamic_cast<Button*>(a->mComponent)`.
+    EventButton,
+    /// `Container::HandleComponentEvent(a)`.
+    BaseHandleEvent,
 }
 
 /// The events a component object fires (`FireEvent`).

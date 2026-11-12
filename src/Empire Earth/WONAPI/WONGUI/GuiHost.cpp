@@ -2,7 +2,7 @@
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
-// destructor (the Rust Label is labelobj.rs). Each op is a run of the
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
 #include <ctype.h>
@@ -16,6 +16,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
@@ -45,6 +46,9 @@ static Cursor* CursorOf(intptr_t inCursor)
     switch ((EeWonGuiCursor)inCursor) {
     case EeWonGuiCursor::Hand: return Cursor::GetStandardCursor(StandardCursor_Hand);
     case EeWonGuiCursor::IBeam: return Cursor::GetStandardCursor(StandardCursor_IBeam);
+    case EeWonGuiCursor::NorthSouthEastWest: return Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest);
+    case EeWonGuiCursor::EastWest: return Cursor::GetStandardCursor(StandardCursor_EastWest);
+    case EeWonGuiCursor::NorthSouth: return Cursor::GetStandardCursor(StandardCursor_NorthSouth);
     default: return NULL;
     }
 }
@@ -363,4 +367,86 @@ Label::Label()
 // FUNCTION: WON 0x006f9f50
 // Destroys the label: the Rust label goes
 Label::~Label() { ee_won_label_free(this->mRust); }
+}
+
+// ---- the splitter
+
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+static Component* Comp(intptr_t a) { return (Component*)a; }
+static Button* Btn(intptr_t a) { return (Button*)a; }
+
+namespace WONAPI {
+intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetPosSize: {
+        const EeWonRect4* r = (const EeWonRect4*)b;
+        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
+        return 0;
+    }
+    case Op::ChildIsVisible: return Comp(a)->IsVisible() ? 1 : 0;
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::ChildHeight: return Comp(a)->Height();
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildTop: return Comp(a)->Top();
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ChildFlagSet: return Comp(a)->ComponentFlagSet((int)b) ? 1 : 0;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildHasDefaultCursor: return Comp(a)->GetDefaultCursor() != NULL ? 1 : 0;
+    case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
+    case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
+    case Op::AddChild: t->AddChild(Comp(a)); return 0;
+    case Op::MouseChild: return (intptr_t)t->mMouseChild;
+    case Op::ButtonControlId: return Btn(a)->mControlId;
+    case Op::ButtonSetControlId: Btn(a)->mControlId = (int)b; return 0;
+    case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
+    case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
+    case Op::NewDragComponent: {
+        Container* aContainer = (Container*)Comp(a);
+        SmartPtr<Component> aDragComponent = new Component;
+        aContainer->Fn2F6140(aDragComponent.get(), 3, aContainer, 0, 0, 0, 0, 0);
+        aContainer->AddChildEx(aDragComponent.get(), 0);
+        return (intptr_t)aDragComponent.get();
+    }
+    case Op::NewSizedComponent: {
+        Component* aComp = new Component;
+        aComp->AddRef(); // the creator's SmartPtr, given back with ChildRelease
+        aComp->SetSize((int)a, (int)a);
+        return (intptr_t)aComp;
+    }
+    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
+    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
+    case Op::EventButton: return (intptr_t)dynamic_cast<Button*>(((ComponentEvent*)a)->mComponent);
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+// FUNCTION: WON 0x00707060
+// Creates an empty clipping splitter (the Rust splitter holds the split at 50% / 50% and no minimum pane sizes)
+Splitter::Splitter()
+{
+    this->mRust=ee_won_split_new(this,ee_won_guicpp_split_call);
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+}
+// FUNCTION: WON 0x007071e0
+// Destroys the splitter: the Rust splitter gives its buttons and drag handles back
+Splitter::~Splitter() { ee_won_split_free(this->mRust); }
+}
+
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    return SplitterHostCall((Splitter*)inComp, op, a, b, c);
 }

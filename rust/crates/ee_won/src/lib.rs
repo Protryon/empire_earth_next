@@ -106,6 +106,7 @@ pub mod sockobj;
 pub mod sockop;
 pub mod sockops;
 pub mod sockthread;
+pub mod splitobj;
 pub mod staging;
 pub mod stagingobj;
 /// cbindgen:ignore

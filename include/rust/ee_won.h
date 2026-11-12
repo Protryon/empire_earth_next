@@ -1911,6 +1911,61 @@ enum class EeWonGuiOp : uint32_t {
   WrapHeight,
   /// `mBackground.Paint(*a, 0, 0, b, c)`.
   PaintBackground,
+  /// `a->SetEnabled(b != 0)`.
+  ChildSetEnabled = 150,
+  /// `a->SetVisible(b != 0)`.
+  ChildSetVisible,
+  /// `a->SetPosSize(r.x, r.y, r.w, r.h)` with `r` the `EeWonRect4` at `b`.
+  ChildSetPosSize,
+  /// `a->IsVisible()` (0 or 1).
+  ChildIsVisible,
+  /// `a->Width()`.
+  ChildWidth,
+  /// `a->Height()`.
+  ChildHeight,
+  /// `a->Left()`.
+  ChildLeft,
+  /// `a->Top()`.
+  ChildTop,
+  /// `a->AddRef()` (a `SmartPtr` the Rust object keeps).
+  ChildHold,
+  /// `a->Release()`.
+  ChildRelease,
+  /// `a->ComponentFlagSet(b)` (0 or 1).
+  ChildFlagSet,
+  /// `a->SetComponentFlags(b, c != 0)`.
+  ChildSetFlags,
+  /// `a->GetDefaultCursor() != NULL` (0 or 1).
+  ChildHasDefaultCursor,
+  /// `a->SetDefaultCursor(b)` (`EeWonGuiCursor`).
+  ChildSetDefaultCursor,
+  /// `a->GetMouseChild()`.
+  ChildMouseChild,
+  /// `AddChild(a)`.
+  AddChild,
+  /// `mMouseChild`.
+  MouseChild,
+  /// `a->mControlId` (a button).
+  ButtonControlId,
+  /// `a->mControlId = b`.
+  ButtonSetControlId,
+  /// `a->SetCheck(b != 0, false)`.
+  ButtonSetCheck,
+  /// `a->IsChecked()` (0 or 1).
+  ButtonIsChecked,
+  /// a new `Component` laid over the container `a` (`Fn2F6140(c, 3, a, 0, 0, 0, 0, 0)`) and added to it
+  /// (`AddChildEx(c, 0)`), the creator's reference gone (the container holds it).
+  NewDragComponent,
+  /// a new `Component` sized `a` x `a`, with the creator's reference (given back with `ChildRelease`).
+  NewSizedComponent,
+  /// `a->mType == ComponentEvent_ButtonPressed` (0 or 1).
+  EventIsButtonPress,
+  /// `a->GetControlId()`.
+  EventControlId,
+  /// `dynamic_cast<Button*>(a->mComponent)`.
+  EventButton,
+  /// `Container::HandleComponentEvent(a)`.
+  BaseHandleEvent,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2464,6 +2519,43 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonSplitCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `CheckMaxButton(a)` (0 or 1).
+  CheckMaxButton,
+  /// `RegisterMaxButton(a, b)`.
+  RegisterMaxButton,
+  /// `AddQuadrant(a, b)`.
+  AddQuadrant,
+  /// `AddSplitter(a, b)`.
+  AddSplitter,
+  /// `AddComplexSplitter(a, b, c)` (`c` the drag handle or NULL).
+  AddComplexSplitter,
+  /// `AddInvisibleSplitter(a, b)`.
+  AddInvisibleSplitter,
+  /// `MaxQuadrant(a)`.
+  MaxQuadrant,
+  UnMaxQuadrant,
+  /// `SetMinLeftRight(a, b)`.
+  SetMinLeftRight,
+  /// `SetMinTopBottom(a, b)`.
+  SetMinTopBottom,
+  /// `SetPercentages(a, b)`.
+  SetPercentages,
+  /// `SetSplitterPos(a, b, c != 0)`.
+  SetSplitterPos,
+};
+
 /// The sound `UpdateReadyState` plays (if the staging sounds are on).
 enum class EeWonReadySound {
   Silent = 0,
@@ -2638,6 +2730,12 @@ enum class EeWonGuiCursor : uint32_t {
   Hand = 1,
   /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
   IBeam = 2,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest)`.
+  NorthSouthEastWest = 3,
+  /// `Cursor::GetStandardCursor(StandardCursor_EastWest)`.
+  EastWest = 4,
+  /// `Cursor::GetStandardCursor(StandardCursor_NorthSouth)`.
+  NorthSouth = 5,
 };
 
 /// The events a component object fires (`FireEvent`).
@@ -2735,6 +2833,9 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// The Rust Splitter.
+struct EeWonSplitter;
 
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
@@ -10921,6 +11022,23 @@ size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
 /// # Safety
 /// `hooks` is valid; `op` is a live op.
 bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
+
+/// A new Rust Splitter for the C++ `component`, its calls out through `host`.
+EeWonSplitter *ee_won_split_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `split` came from `ee_won_split_new` (or is NULL) and is not used again.
+void ee_won_split_free(EeWonSplitter *split);
+
+/// One of Splitter's methods (`EeWonSplitCall`).
+///
+/// # Safety
+/// `split` is live; the call's arguments as documented.
+ptrdiff_t ee_won_split_call(const EeWonSplitter *split,
+                            EeWonSplitCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///
