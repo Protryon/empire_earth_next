@@ -1,9 +1,13 @@
-// GetCertOp's messages: the original's statements (copied from GetCertOp.cpp before the port, `this->` an op
-// stand-in) against include/ee/wonapi/WONCertMsg.h over ee_won's cert module, both over the same stand-ins for
+// GetCertOp: the original's statements (copied from GetCertOp.cpp before the port, `this->` an op stand-in)
+// against the Rust op (ee_won getcert.rs) through its hooks, both over the same stand-ins for
 // the auth classes (certificates, key blocks, the ElGamal and Blowfish keys, the peer data, the auth context),
 // whose verdicts follow the bytes they are made from and whose every call is logged. The three requests over
 // generated members; every reply generated in every op state, whole, cut at every length and mutated: the trace,
-// the members, the return or the throw compared. The exit code is the number of failed checks.
+// the members, the return or the throw compared; and 100,000 sequences of the op's steps (RunHook, GetNextRequest,
+// CheckResponse, Reset, CleanupHook, the setters) on one op. The exit code is the number of failed checks.
+//
+// `--print-ops N` prints N sequences with what the original did (rust/crates/ee_won/src/golden_getcert.txt,
+// recorded before the port; `getcert_tests.rs` replays it).
 //
 // `--print N` prints N replies in the golden's format (rust/crates/ee_won/src/golden_cert.txt): the state, the
 // session key, the reply and what the original read of it with every check passing (`cert_golden` replays it).
@@ -21,7 +25,7 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBlowfish.h"
-#include "ee/wonapi/WONCertMsg.h"
+#include "ee/wonapi/WONStatus.h"
 #include "rust/ee_rust.h"
 
 using namespace WONAPI;
@@ -181,7 +185,7 @@ struct SSessionKey {    // Blowfish
     }
 };
 
-struct SAuthContext {
+struct SAuthContext : public RefCount {   // a RefCount: the Rust op holds a reference (the tests hold one too)
     SKey mVerifier;
     std::wstring mUser, mPassword;
     std::string mCommunity;
@@ -248,14 +252,268 @@ struct SOp {
     }
 };
 
-struct SEnv {
-    typedef SOp Op;
-    typedef SCert1 Cert1;
-    typedef SCert2 Cert2;
-    typedef SKeyBlock KeyBlock;
-    typedef SPeerData PeerData;
-    typedef SKey PrivKey;
+// ---- the Rust op (ee_won getcert.rs) over the same stand-ins, through its hooks
+
+struct NOp {
+    SAuthContext* mAuthContext;
+    SSessionKey mSessionKey;
+    ByteBufferPtr mRequest, mResponse;
+    int mStatus;
+    EeWonGetCert* mCert;
+    NOp() : mAuthContext(NULL), mStatus(0), mCert(NULL) {}
+    ~NOp();
+    EeWonGetCertHooks Hooks();
+    int GetStatus() const { Log("status %d", this->mStatus); return this->mStatus; }
+    void RunHook()
+    {
+        EeWonGetCertHooks h = this->Hooks();
+        long s = 0;
+        if (ee_won_getcert_run_hook(this->mCert, &h, &s)) Log("finish %d", (int)s);
+        else Log("baserun");
+    }
+    void CleanupHook()
+    {
+        EeWonGetCertHooks h = this->Hooks();
+        ee_won_getcert_cleanup_hook(this->mCert, &h);
+        Log("baseclean");
+    }
+    WONStatus GetNextRequest()
+    {
+        EeWonGetCertHooks h = this->Hooks();
+        return (WONStatus)ee_won_getcert_get_next_request(this->mCert, &h);
+    }
+    WONStatus CheckResponse()
+    {
+        EeWonGetCertHooks h = this->Hooks();
+        bool cut = false;
+        long s = ee_won_getcert_check_response(this->mCert, &h, &cut);
+        if (cut) throw ReadBufferException("Attempt to read past end of buffer.");
+        return (WONStatus)s;
+    }
+    void SetNewPassword(const std::wstring& inPassword)
+    {
+        std::string b;
+        WideAppendUtf16LE(b, inPassword);
+        ee_won_getcert_set_new_password(this->mCert, reinterpret_cast<const uint8_t*>(b.data()), b.size());
+    }
+    std::string Dump() const;
 };
+
+namespace NH {
+static RefCount* R(void* p) { return static_cast<RefCount*>(p); }
+static void* V(const RefCount* p) { return const_cast<RefCount*>(p); }
+static NOp* O(void* c) { return static_cast<NOp*>(c); }
+static SAuthContext* C(void* p) { return static_cast<SAuthContext*>(R(p)); }
+static const SKeyBlock* B(void* p) { return static_cast<const SKeyBlock*>(R(p)); }
+static const SPeerData* P(void* p) { return static_cast<const SPeerData*>(R(p)); }
+static const SCert* Cert(void* p) { return static_cast<const SCert*>(R(p)); }
+static void Out(EeWonByteSink s, void* c, const void* d, size_t n) { s(c, static_cast<const uint8_t*>(d), n); }
+static void StrSink(void* c, const uint8_t* d, size_t n) { static_cast<std::string*>(c)->append(reinterpret_cast<const char*>(d), n); }
+static void AddRef(void* p) { R(p)->AddRef(); }
+static void Release(void* p) { R(p)->Release(); }
+static bool VerifierPublic(void*, void* c) { return C(c)->GetVerifierKey().IsPublic(); }
+static void* CtxPeer(void*, void* c)
+{
+    ConstSmartPtr<SPeerData> p = C(c)->GetPeerData();
+    if (p.get() != NULL) const_cast<SPeerData*>(p.get())->AddRef();
+    return V(p.get());
+}
+static void* PeerBlock(void*, void* p) { return V(P(p)->GetPubKeyBlock()); }
+static int64_t PeerDelta(void*, void* p) { return P(p)->GetAuthDelta(); }
+static void LoadSecrets(void*, void* c) { C(c)->LoadSecretList(); }
+static long OpStatus(void* o) { return O(o)->GetStatus(); }
+static bool BlockValid(void*, void* b) { return B(b)->IsValid(); }
+static void SetPeerFromBlock(void*, void* c, void* b) { C(c)->SetPeerData(new SPeerData(B(b))); }
+static uint16_t BlockId(void*, void* b) { return B(b)->GetId(); }
+static bool BlockEncrypt(void*, void* b, const uint8_t* d, size_t n, EeWonByteSink s, void* sc)
+{
+    ByteBufferPtr e = B(b)->GetCurrentKey().Encrypt(d, (int)n);
+    if (e.get() == NULL) return false;
+    Out(s, sc, e->data(), e->length());
+    return true;
+}
+static void KeyCreate(void* o, int32_t n) { O(o)->mSessionKey.Create(n); }
+static void Key(void* o, EeWonByteSink s, void* sc) { Out(s, sc, O(o)->mSessionKey.GetKey(), O(o)->mSessionKey.GetKeyLen()); }
+static bool KeyEncrypt(void* o, const uint8_t* d, size_t n, EeWonByteSink s, void* sc)
+{
+    ByteBufferPtr e = O(o)->mSessionKey.Encrypt(d, (int)n);
+    if (e.get() == NULL) return false;
+    Out(s, sc, e->data(), e->length());
+    return true;
+}
+static bool KeyDecrypt(void* o, const uint8_t* d, size_t n, EeWonByteSink s, void* sc)
+{
+    ByteBufferPtr e = O(o)->mSessionKey.Decrypt(d, (int)n);
+    if (e.get() == NULL) return false;
+    Out(s, sc, e->data(), e->length());
+    return true;
+}
+static void User(void*, void* c, EeWonByteSink s, void* sc)
+{
+    std::string b;
+    WideAppendUtf16LE(b, C(c)->GetUserName());
+    Out(s, sc, b.data(), b.size());
+}
+static void Password(void*, void* c, EeWonByteSink s, void* sc)
+{
+    std::string b;
+    WideAppendUtf16LE(b, C(c)->GetPassword());
+    Out(s, sc, b.data(), b.size());
+}
+static void Community(void*, void* c, EeWonByteSink s, void* sc)
+{
+    WriteBuffer w(0, true);
+    C(c)->AppendCommunityData(w);
+    Out(s, sc, w.data(), w.length());
+}
+static void Hashes(void*, void* c, const uint8_t* d, size_t n, EeWonByteSink s, void* sc)
+{
+    WriteBuffer w(0, true);
+    C(c)->AppendHashes(w, RawBuffer(d, n));
+    Out(s, sc, w.data(), w.length());
+}
+static void SetRequest(void* o, const uint8_t* d, size_t n) { O(o)->mRequest = new ByteBuffer(d, (unsigned long)n, false); }
+static void Response(void* o, EeWonByteSink s, void* sc) { Out(s, sc, O(o)->mResponse->data(), O(o)->mResponse->length()); }
+static void SetLastError(void*, long s) { Log("lasterror %d", (int)s); }
+static long InvalidHeader(void*) { Log("invalid"); return WS_ServerReq_TryNextServer; }
+static void AddSecret(void*, void* c, const uint8_t* d, size_t) { C(c)->AddSecret(d); }
+static void RemoveSecret(void*, void* c, const uint8_t* d, size_t) { C(c)->RemoveSecret(d); }
+static void* NewCert(void*, int32_t k, const uint8_t* d, size_t n)
+{
+    RefCount* c = k == 1 ? static_cast<RefCount*>(new SCert1(d, (unsigned long)n)) : static_cast<RefCount*>(new SCert2(d, (unsigned long)n));
+    c->AddRef();
+    return c;
+}
+static bool CertValid(void*, int32_t, void* c) { return Cert(c)->IsValid(); }
+static bool BlockVerify(void*, void* b, int32_t, void* c) { return B(b)->Verify(Cert(c)); }
+static int64_t CertDelta(void*, int32_t, void* c) { return Cert(c)->ComputeAuthDelta(); }
+static void CertTimes(void*, int32_t, void* c, int64_t* i, int64_t* e)
+{
+    *i = Cert(c)->GetIssueTime();
+    *e = Cert(c)->GetExpireTime();
+}
+static void* NewBlock(void*, const uint8_t* d, size_t n)
+{
+    SKeyBlock* b = new SKeyBlock(d, (unsigned long)n);
+    b->AddRef();
+    return V(b);
+}
+static bool BlockVerified(void*, void* b, void* c) { return B(b)->IsValidAndVerified(C(c)->GetVerifierKey()); }
+static void Commit(void*, void* c, int64_t t, int64_t d) { C(c)->CommitSecrets((time_t)t, (time_t)d); }
+static void* PrivNew(void*) { return new SKey; }
+static bool PrivSet(void*, void* k, const uint8_t* d, size_t n) { return static_cast<SKey*>(k)->SetPrivateKey(d, (int)n); }
+static void PrivFree(void*, void* k) { delete static_cast<SKey*>(k); }
+static void* NewPeer(void*, void* c1, void* b, void* k, int64_t d, void* c2)
+{
+    SPeerData* p = new SPeerData(static_cast<const SCert1*>(Cert(c1)), B(b), *static_cast<SKey*>(k), (time_t)d,
+                                 static_cast<const SCert2*>(Cert(c2)));
+    p->AddRef();
+    return V(p);
+}
+static void SetPassword(void*, void* c, const uint8_t* d, size_t n)
+{
+    std::wstring w;
+    WideAssignUtf16LE(w, d, (unsigned long)(n / 2));
+    C(c)->SetPassword(w);
+}
+static void SetPeer(void*, void* c, void* p) { C(c)->SetPeerData(P(p)); }
+static void ClearOneTime(void*, void* c) { C(c)->ClearOneTimeData(); }
+} // namespace NH
+
+EeWonGetCertHooks NOp::Hooks()
+{
+    EeWonGetCertHooks h;
+    h.context = this;
+    h.add_ref = NH::AddRef;
+    h.release = NH::Release;
+    h.verifier_public = NH::VerifierPublic;
+    h.ctx_peer = NH::CtxPeer;
+    h.peer_block = NH::PeerBlock;
+    h.peer_delta = NH::PeerDelta;
+    h.load_secrets = NH::LoadSecrets;
+    h.op_status = NH::OpStatus;
+    h.block_valid = NH::BlockValid;
+    h.set_peer_from_block = NH::SetPeerFromBlock;
+    h.block_id = NH::BlockId;
+    h.block_encrypt = NH::BlockEncrypt;
+    h.key_create = NH::KeyCreate;
+    h.key = NH::Key;
+    h.key_encrypt = NH::KeyEncrypt;
+    h.key_decrypt = NH::KeyDecrypt;
+    h.user = NH::User;
+    h.password = NH::Password;
+    h.community = NH::Community;
+    h.hashes = NH::Hashes;
+    h.set_request = NH::SetRequest;
+    h.response = NH::Response;
+    h.set_last_error = NH::SetLastError;
+    h.invalid_header = NH::InvalidHeader;
+    h.add_secret = NH::AddSecret;
+    h.remove_secret = NH::RemoveSecret;
+    h.new_cert = NH::NewCert;
+    h.cert_valid = NH::CertValid;
+    h.block_verify = NH::BlockVerify;
+    h.cert_delta = NH::CertDelta;
+    h.cert_times = NH::CertTimes;
+    h.new_block = NH::NewBlock;
+    h.block_verified = NH::BlockVerified;
+    h.commit = NH::Commit;
+    h.priv_new = NH::PrivNew;
+    h.priv_set = NH::PrivSet;
+    h.priv_free = NH::PrivFree;
+    h.new_peer = NH::NewPeer;
+    h.set_password = NH::SetPassword;
+    h.set_peer = NH::SetPeer;
+    h.clear_one_time = NH::ClearOneTime;
+    return h;
+}
+
+NOp::~NOp()
+{
+    if (this->mCert != NULL) {
+        EeWonGetCertHooks h = this->Hooks();
+        ee_won_getcert_free(this->mCert, &h);
+    }
+}
+
+std::string NOp::Dump() const
+{
+    const SKeyBlock* b = NH::B(ee_won_getcert_key_block(this->mCert));
+    const SPeerData* p = NH::P(ee_won_getcert_peer_data(this->mCert));
+    std::string seed;
+    ee_won_getcert_seed(this->mCert, NH::StrSink, &seed);
+    std::string s = "state " + std::to_string(ee_won_getcert_state(this->mCert)) + " delta " +
+                    std::to_string((long long)ee_won_getcert_auth_delta(this->mCert)) + " block " +
+                    std::to_string(b ? b->mSerial : 0) + " peer " + std::to_string(p ? p->mSerial : 0) + " seed " +
+                    Hex(seed.data(), seed.size()) + " key " + Hex(this->mSessionKey.mKey, 8) + " req " +
+                    (this->mRequest.get() ? Hex(this->mRequest->data(), this->mRequest->length()) : "-");
+    for (size_t i = 0; i < ee_won_getcert_error_count(this->mCert); i++) {
+        std::string e;
+        ee_won_getcert_error(this->mCert, i, NH::StrSink, &e);
+        s += " err " + Hex(e.data(), e.size());
+    }
+    for (size_t i = 0; i < ee_won_getcert_community_count(this->mCert); i++) {
+        short aStatus = 0;
+        uint32_t anId = 0;
+        std::string n;
+        ee_won_getcert_community(this->mCert, i, &aStatus, &anId, NH::StrSink, &n);
+        s += " cs " + std::to_string(aStatus) + " " + std::to_string(anId) + " " + Hex(n.data(), n.size());
+    }
+    return s;
+}
+
+// the Rust op with the members an original-statements stand-in op was set up with
+static void ToRust(const SOp& o, NOp& n)
+{
+    n.mAuthContext = o.mAuthContext;
+    EeWonGetCertHooks h = n.Hooks();
+    n.mCert = ee_won_getcert_new(&h, NH::V(o.mAuthContext));
+    ee_won_getcert_setup(n.mCert, &h, (int)o.mState, o.mChallengeSeed.data(), o.mChallengeSeed.size(),
+                         NH::V(o.mKeyBlock.get()));
+    n.SetNewPassword(o.mNewPassword);
+    ee_won_getcert_set_create_account(n.mCert, o.mCreateAccount);
+    sTrace.clear();
+}
 
 // the original thinks it dereferences NULL here (a certificate's times when the other one came)
 struct OrigCrash {};
@@ -803,23 +1061,27 @@ struct Outcome {
 
 static Outcome RunReply(const Setup& s, const std::string& m, bool inOrig)
 {
-    SOp o;
     SAuthContext c;
+    c.AddRef();
+    SOp o;
     s.Apply(o, c);
+    NOp n;
+    if (!inOrig) ToRust(o, n);
     o.mResponse = new ByteBuffer(m.data(), (unsigned long)m.size(), false);
+    n.mResponse = o.mResponse;
     Outcome r;
     r.threw = r.crashed = false;
     r.status = 0;
     Orig::sRead.clear();
     try {
-        r.status = inOrig ? Orig::CheckResponse(o) : CertMsg<SEnv>::CheckResponse(o);
+        r.status = inOrig ? Orig::CheckResponse(o) : n.CheckResponse();
     } catch (ReadBufferException&) {
         r.threw = true;
     } catch (OrigCrash&) {
         r.crashed = true;
     }
     r.trace = sTrace;
-    r.dump = o.Dump();
+    r.dump = inOrig ? o.Dump() : n.Dump();
     r.read = Orig::sRead;
     return r;
 }
@@ -860,18 +1122,25 @@ static void TestReplies()
     sAllPass = false;
 }
 
+// a request through GetNextRequest's choice: the key block request (an invalid block), the login confirmation
+// (the challenge state) or the login request
 static Outcome RunRequest(const Setup& s, int inKind, bool inOrig)
 {
-    SOp o;
     SAuthContext c;
+    c.AddRef();
+    SOp o;
     s.Apply(o, c);
+    if (inKind == 0) o.mKeyBlock = new SKeyBlock();
+    else if (inKind == 1) o.mState = SOp::GETTING_PUB_KEYS;
+    else o.mState = SOp::GETTING_CHALLENGE;
+    NOp n;
+    if (!inOrig) ToRust(o, n);
+    sTrace.clear();
     Outcome r;
     r.threw = r.crashed = false;
-    if (inKind == 0) r.status = inOrig ? Orig::SendPubKeyRequest(o) : CertMsg<SEnv>::SendPubKeyRequest(o);
-    else if (inKind == 1) r.status = inOrig ? Orig::SendLoginRequest(o) : CertMsg<SEnv>::SendLoginRequest(o);
-    else r.status = inOrig ? Orig::SendLoginConfirm(o) : CertMsg<SEnv>::SendLoginConfirm(o);
+    r.status = inOrig ? Orig::GetNextRequest(o) : n.GetNextRequest();
     r.trace = sTrace;
-    r.dump = o.Dump();
+    r.dump = inOrig ? o.Dump() : n.Dump();
     return r;
 }
 
@@ -1006,12 +1275,38 @@ static std::string OrigStep(SOp& o, const Step& s)
            std::to_string(o.mAuthContext->mPeer->mSerial);
 }
 
+// the Rust op's step
+static std::string RustStep(NOp& n, const Step& s)
+{
+    sTrace.clear();
+    bool threw = false;
+    int status = 0;
+    try {
+        switch (s.mKind) {
+        case 0: n.RunHook(); break;
+        case 1: status = n.GetNextRequest(); break;
+        case 2:
+            n.mResponse = new ByteBuffer(s.mReply.data(), (unsigned long)s.mReply.size(), false);
+            status = n.CheckResponse();
+            break;
+        case 3: ee_won_getcert_reset(n.mCert); break;
+        case 4: n.mStatus = s.mStatus; n.CleanupHook(); break;
+        case 5: n.SetNewPassword(s.mNew); ee_won_getcert_set_create_account(n.mCert, s.mCreate); break;
+        }
+    } catch (ReadBufferException&) {
+        threw = true;
+    }
+    return std::to_string((int)threw) + " " + std::to_string(status) + "|" + sTrace + "|" + n.Dump() + " ctxpeer " +
+           std::to_string(n.mAuthContext->mPeer->mSerial);
+}
+
 // the original's run of a sequence, a line per step; it stops at a crash
 static std::vector<std::string> OrigSequence(const Seq& q)
 {
     std::vector<std::string> out;
-    SOp o;
     SAuthContext c;
+    c.AddRef();
+    SOp o;
     sAllPass = q.mAllPass;
     q.Apply(o, c);
     for (size_t i = 0; i < q.mSteps.size(); i++) {
@@ -1020,6 +1315,49 @@ static std::vector<std::string> OrigSequence(const Seq& q)
     }
     sAllPass = false;
     return out;
+}
+
+// the Rust op's run of the same sequence (as many steps as the original's run)
+static std::vector<std::string> RustSequence(const Seq& q, size_t inSteps)
+{
+    std::vector<std::string> out;
+    SAuthContext c;
+    c.AddRef();
+    SOp o;
+    sAllPass = q.mAllPass;
+    q.Apply(o, c);
+    NOp n;
+    ToRust(o, n);
+    for (size_t i = 0; i < inSteps; i++) out.push_back(RustStep(n, q.mSteps[i]));
+    sAllPass = false;
+    return out;
+}
+
+static long sSequenceSteps;
+static void TestSequences()
+{
+    for (int i = 0; i < 100000; i++) {
+        Seq q;
+        q.Generate();
+        std::vector<std::string> a = OrigSequence(q);
+        std::vector<std::string> b = RustSequence(q, a.size());
+        for (size_t j = 0; j < a.size(); j++) {
+            sSequenceSteps++;
+            if (a[j].compare(0, 6, "crash|") == 0) {
+                // the original dereferenced NULL: the new trace starts with its trace and goes on to the commit
+                std::string t = a[j].substr(6);
+                size_t at = b[j].find('|') + 1;
+                CHECK(b[j].compare(at, t.size(), t) == 0);
+                CHECK(b[j].compare(at + t.size(), 7, "commit ") == 0);
+                break;
+            }
+            CHECK(a[j] == b[j]);
+            if (a[j] != b[j] && sFailures < 6)
+                printf("%s\n%s\n  orig %s\n  new  %s\n", q.Line().c_str(), StepLine(q.mSteps[j]).c_str(), a[j].c_str(),
+                       b[j].c_str());
+            if (a[j] != b[j]) break;
+        }
+    }
 }
 
 // the golden of the whole op: a setup line, then each step and what the original did
@@ -1072,7 +1410,8 @@ int main(int argc, char** argv)
     }
     TestRequests();
     TestReplies();
-    printf("won_cert_test: %lld checks, %d failures (%ld whole replies where the original dereferenced NULL)\n", sChecks,
-           sFailures, sCrashes);
+    TestSequences();
+    printf("won_cert_test: %lld checks, %d failures (%ld whole replies where the original dereferenced NULL; %ld "
+           "steps of 100000 sequences)\n", sChecks, sFailures, sCrashes, sSequenceSteps);
     return sFailures;
 }

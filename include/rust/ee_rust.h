@@ -2989,6 +2989,9 @@ struct EeWonByteBuffer;
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `GetCertOp`'s state: the members and the session key.
+struct EeWonGetCert;
+
 /// `HTTPConnection`.
 struct EeWonHttpConn;
 
@@ -6876,26 +6879,6 @@ struct EeWonCacheEntry {
   size_t lengths[4];
 };
 
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
-
-/// One step of a reply's read.
-struct EeWonCertEvent {
-  uint8_t tag;
-  uint8_t kind;
-  int32_t num;
-  uint32_t id;
-  uint32_t at;
-  uint32_t len;
-};
-
-/// The events of a reply's read, handed over once.
-using EeWonCertSink = void(*)(void *context, const EeWonCertEvent *events, size_t count);
-
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
   const void *text;
@@ -6952,6 +6935,13 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
 
 /// A request's fields from the C++ (texts as UTF-16 LE bytes).
 struct EeWonDbRequest {
@@ -7268,6 +7258,55 @@ struct EeWonFtpStep {
   bool no_resume;
   uint32_t host;
   uint16_t port;
+};
+
+/// The C++ side of a `GetCertOp`: `context` is the op (the hooks' first argument); objects are `RefCount*`. The
+/// four key hooks are NULL for the real op (the session key is the object's own `Blowfish`); a driver hands
+/// stand-ins.
+struct EeWonGetCertHooks {
+  void *context;
+  void (*add_ref)(void*);
+  void (*release)(void*);
+  bool (*verifier_public)(void*, void*);
+  void *(*ctx_peer)(void*, void*);
+  void *(*peer_block)(void*, void*);
+  int64_t (*peer_delta)(void*, void*);
+  void (*load_secrets)(void*, void*);
+  long (*op_status)(void*);
+  bool (*block_valid)(void*, void*);
+  void (*set_peer_from_block)(void*, void*, void*);
+  uint16_t (*block_id)(void*, void*);
+  /// false for NULL
+  bool (*block_encrypt)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*key_create)(void*, int32_t);
+  void (*key)(void*, EeWonByteSink, void*);
+  bool (*key_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*key_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*user)(void*, void*, EeWonByteSink, void*);
+  void (*password)(void*, void*, EeWonByteSink, void*);
+  void (*community)(void*, void*, EeWonByteSink, void*);
+  void (*hashes)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*set_request)(void*, const uint8_t*, size_t);
+  void (*response)(void*, EeWonByteSink, void*);
+  void (*set_last_error)(void*, long);
+  long (*invalid_header)(void*);
+  void (*add_secret)(void*, void*, const uint8_t*, size_t);
+  void (*remove_secret)(void*, void*, const uint8_t*, size_t);
+  void *(*new_cert)(void*, int32_t, const uint8_t*, size_t);
+  bool (*cert_valid)(void*, int32_t, void*);
+  bool (*block_verify)(void*, void*, int32_t, void*);
+  int64_t (*cert_delta)(void*, int32_t, void*);
+  void (*cert_times)(void*, int32_t, void*, int64_t*, int64_t*);
+  void *(*new_block)(void*, const uint8_t*, size_t);
+  bool (*block_verified)(void*, void*, void*);
+  void (*commit)(void*, void*, int64_t, int64_t);
+  void *(*priv_new)(void*);
+  bool (*priv_set)(void*, void*, const uint8_t*, size_t);
+  void (*priv_free)(void*, void*);
+  void *(*new_peer)(void*, void*, void*, void*, int64_t, void*);
+  void (*set_password)(void*, void*, const uint8_t*, size_t);
+  void (*set_peer)(void*, void*, void*);
+  void (*clear_one_time)(void*, void*);
 };
 
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
@@ -15319,46 +15358,6 @@ void ee_won_cachemap_write(const char *path,
                            void (*delete_)(void*, size_t),
                            void *context);
 
-/// A request's message into `sink`.
-///
-/// # Safety
-/// `a` and `b` describe readable bytes; `sink` accepts `context`.
-void ee_won_cert_request(int32_t kind,
-                         int16_t key_id,
-                         EeWonDirBytes a,
-                         EeWonDirBytes b,
-                         EeWonByteSink sink,
-                         void *context);
-
-/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
-///
-/// # Safety
-/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
-void ee_won_cert_login_data(const uint8_t *key,
-                            int16_t key_id,
-                            bool create_account,
-                            EeWonDirBytes user,
-                            EeWonDirBytes password,
-                            EeWonDirBytes new_password,
-                            EeWonByteSink sink,
-                            void *context);
-
-/// `CheckResponse`'s read in `state` into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-void ee_won_cert_reply(const uint8_t *data,
-                       size_t length,
-                       int32_t state,
-                       EeWonCertSink sink,
-                       void *context);
-
-/// The login reply's decrypted part into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-void ee_won_cert_decrypted(const uint8_t *data, size_t length, EeWonCertSink sink, void *context);
-
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
 
@@ -16700,6 +16699,144 @@ void ee_won_ftp_reply(const uint8_t *line,
                       bool has_directory,
                       bool resume,
                       EeWonFtpStep *out);
+
+/// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
+///
+/// # Safety
+/// `hooks` is valid; `context` is a `RefCount*` or NULL.
+EeWonGetCert *ee_won_getcert_new(const EeWonGetCertHooks *hooks, void *context);
+
+/// The destructor: every reference released.
+///
+/// # Safety
+/// `op` came from `ee_won_getcert_new` (or is NULL); `hooks` is valid.
+void ee_won_getcert_free(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `SetAuthContext`.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `context` is a `RefCount*` or NULL.
+void ee_won_getcert_set_context(EeWonGetCert *op, const EeWonGetCertHooks *hooks, void *context);
+
+/// `SetCreateAccount`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_set_create_account(EeWonGetCert *op, bool value);
+
+/// `SetNewPassword` (UTF-16 LE bytes).
+///
+/// # Safety
+/// `op` is valid; `data` holds `length` bytes.
+void ee_won_getcert_set_new_password(EeWonGetCert *op, const uint8_t *data, size_t length);
+
+/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `op`, `hooks` and `status` are valid.
+bool ee_won_getcert_run_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks, long *status);
+
+/// `CleanupHook` up to `ServerRequestOp::CleanupHook`, which the caller calls next.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+void ee_won_getcert_cleanup_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `Reset`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_reset(EeWonGetCert *op);
+
+/// `GetNextRequest`.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+long ee_won_getcert_get_next_request(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `CheckResponse`: `*cut` true where the original threw `ReadBufferException` (the caller throws it).
+///
+/// # Safety
+/// `op`, `hooks` and `cut` are valid.
+long ee_won_getcert_check_response(EeWonGetCert *op,
+                                   const EeWonGetCertHooks *hooks,
+                                   bool *cut);
+
+/// `GetPeerData` (borrowed; NULL before a login).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_peer_data(const EeWonGetCert *op);
+
+/// `GetSessionKey`: the C++ `Blowfish` is this one `EeWonBlowfish` (pointer-interconvertible).
+///
+/// # Safety
+/// `op` is valid; the pointer lives as long as the op.
+const EeWonBlowfish *ee_won_getcert_session_key(const EeWonGetCert *op);
+
+/// The state (`GETTING_PUB_KEYS` 1, `GETTING_CHALLENGE` 2, `GETTING_CERTIFICATE` 3).
+///
+/// # Safety
+/// `op` is valid.
+int32_t ee_won_getcert_state(const EeWonGetCert *op);
+
+/// The key block (borrowed).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_key_block(const EeWonGetCert *op);
+
+/// The auth server's clock delta (`mAuthDelta`).
+///
+/// # Safety
+/// `op` is valid.
+int64_t ee_won_getcert_auth_delta(const EeWonGetCert *op);
+
+/// The challenge seed into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_seed(const EeWonGetCert *op, EeWonByteSink sink, void *context);
+
+/// The number of error strings (`GetErrorList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_error_count(const EeWonGetCert *op);
+
+/// Error string `index` into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_error(const EeWonGetCert *op, size_t index, EeWonByteSink sink, void *context);
+
+/// The number of community statuses (`GetCommunityStatusList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_community_count(const EeWonGetCert *op);
+
+/// Community status `index`: the status and id, the name's UTF-16 LE bytes into `sink`.
+///
+/// # Safety
+/// `op`, `status` and `id` are valid; `sink` accepts `context`.
+void ee_won_getcert_community(const EeWonGetCert *op,
+                              size_t index,
+                              int16_t *status,
+                              uint32_t *id,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The drivers' setup: the state, the challenge seed and the key block a scenario starts with.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `seed` holds `length` bytes; `block` is a `RefCount*` or NULL.
+void ee_won_getcert_setup(EeWonGetCert *op,
+                          const EeWonGetCertHooks *hooks,
+                          int32_t state,
+                          const uint8_t *seed,
+                          size_t length,
+                          void *block);
 
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///

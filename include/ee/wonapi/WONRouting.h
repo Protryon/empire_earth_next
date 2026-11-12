@@ -2315,52 +2315,45 @@ public:
 // Storage, methods and inline virtual bodies live there; no duplicate class definition.
 
 
-// AoC GetCertOp, 0x11fc bytes. Constructor/destructor/protocol are out of line.
-// RTTI GetCertOp > ServerRequestOp > ServerOp > AsyncOpWithTracker > AsyncOp > RefCount.
+// AoC GetCertOp (0x11fc bytes in the original). RTTI GetCertOp > ServerRequestOp > ServerOp > AsyncOpWithTracker >
+// AsyncOp > RefCount. Its members and every step are ee_won's (getcert.rs, a Rust object); this class is the
+// ServerRequestOp the exchange calls through its virtuals and the hooks for the C++ objects the op holds.
 class AuthPubKeyBlock;
 class AuthPeerData;
+class Blowfish;
 class GetCertOp : public ServerRequestOp {
 public:
     struct COMMUNITY_STATUS {
-        short mStatus; //00
-        unsigned long mCommunityID; //04
-        std::wstring mCommunityName; //08..18, list node 0x20
+        short mStatus;
+        unsigned long mCommunityID;
+        std::wstring mCommunityName;
     };
     typedef std::vector<std::string> ERROR_LIST;
     typedef std::list<COMMUNITY_STATUS> COMMUNITY_STATUS_LIST;
 private:
-    SmartPtr<AuthContext> mAuthContext; //f4
-    Blowfish mSessionKey; //f8..11ac, Blowfish (0x10b4)
-    ConstSmartPtr<AuthPubKeyBlock> mKeyBlock; //11ac
-    time_t mAuthDelta; //11b0, the constructor leaves it untouched
-    ConstSmartPtr<AuthPeerData> mPeerData; //11b4
-    RawBuffer mChallengeSeed; //11b8..11c8
-    std::wstring mNewPassword; //11c8..11d8
-    bool mCreateAccount; //11d8, the constructor sets false
-    enum State { GETTING_PUB_KEYS=1,GETTING_CHALLENGE=2,GETTING_CERTIFICATE=3 } mState; //11dc, ctor untouched
-    ERROR_LIST mErrorList; //11e0..11f0
-    COMMUNITY_STATUS_LIST mCommunityStatusList; //11f0..11fc
-    template <class> friend struct CertMsg; // its messages (WONCertMsg.h)
-    WONStatus SendPubKeyRequest(); //2e4270 RET0
-    WONStatus SendLoginRequest(); //2e4380 RET0
-    WONStatus SendLoginConfirm(); //2e46a0 RET0
+    // the members (0xf4..0x11fc: the auth context, the session key, the key block, the clock delta, the peer data,
+    // the challenge seed, the new password, the create-account flag, the state, the error and community lists):
+    // ee_won's (getcert.rs), owned
+    EeWonGetCert* mCert;
+    friend struct GetCertOpHooks;
+    EeWonGetCertHooks Hooks();
 protected:
-    virtual ~GetCertOp(); //2e3d90 own-vptr destructor, cleans up every field
-    virtual void RunHook();   //2e3f40 RunHook
-    virtual void CleanupHook(); //2e4050 CleanupHook
+    virtual ~GetCertOp(); //2e3d90
+    virtual void RunHook();   //2e3f40
+    virtual void CleanupHook(); //2e4050
     // Inherited CallbackHook 0c = 2adb10, no added slot.
-    virtual WONStatus GetNextRequest(); //2e4850 GetNextRequest
-    virtual WONStatus CheckResponse(); //2e5980 CheckResponse
-    virtual void Reset();     //2e4130 Reset
+    virtual WONStatus GetNextRequest(); //2e4850
+    virtual WONStatus CheckResponse(); //2e5980
+    virtual void Reset();     //2e4130
 public:
-    GetCertOp(AuthContext*); //2e3c30, 319 bytes, out of line
-    const AuthPeerData* GetPeerData() const { return this->mPeerData; }
-    void SetCreateAccount(bool value) { this->mCreateAccount=value; }
-    void SetNewPassword(const std::wstring& password) { this->mNewPassword=password; }
-    void SetAuthContext(AuthContext* context) { this->mAuthContext=context; }
-    const Blowfish& GetSessionKey() const { return this->mSessionKey; }
-    const ERROR_LIST& GetErrorList() { return this->mErrorList; }
-    const COMMUNITY_STATUS_LIST& GetCommunityStatusList() { return this->mCommunityStatusList; }
+    GetCertOp(AuthContext*); //2e3c30
+    const AuthPeerData* GetPeerData() const;
+    void SetCreateAccount(bool value);
+    void SetNewPassword(const std::wstring& password);
+    void SetAuthContext(AuthContext* context);
+    const Blowfish& GetSessionKey() const;
+    ERROR_LIST GetErrorList() const;
+    COMMUNITY_STATUS_LIST GetCommunityStatusList() const;
 };
 
 
