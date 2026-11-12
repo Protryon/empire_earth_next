@@ -69,6 +69,15 @@ static uint32_t FloatBits(float inValue)
     return theBits;
 }
 
+// the class's flags the combat reads test (store.rs EE_UNIT_CLASS_*; 0 for no class)
+static int64_t ClassFlags(EEUnitClass* inClass)
+{
+    if (inClass == NULL)
+        return 0;
+    return (inClass->mIsWall ? EE_UNIT_CLASS_WALL : 0) | (inClass->mIsProjectile ? EE_UNIT_CLASS_PROJECTILE : 0)
+        | (inClass->mIsParatrooperBomber ? EE_UNIT_CLASS_PARATROOPER_BOMBER : 0) | (inClass->mIsMelee ? EE_UNIT_CLASS_MELEE : 0);
+}
+
 // the command's type as the checksum reads it (mCommand ? mCommand->mType : 0)
 static int64_t CommandOf(EEComplexUnit* inUnit)
 {
@@ -117,6 +126,7 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_CRUSADER, theClass != NULL && theClass->IsCrusader() ? 1 : 0);
             Set(theUnit, EE_UNIT_FIELD_PARATROOPER_BOMBER, theClass != NULL && theClass->mIsParatrooperBomber ? 1 : 0);
             Set(theUnit, EE_UNIT_FIELD_HEAL_THRESHOLD, theClass != NULL ? (int64_t)FloatBits(theClass->GetHealThreshold()) : 0);
+            Set(theUnit, EE_UNIT_FIELD_CLASS_FLAGS, ClassFlags(theClass));
         }
         break;
     }
@@ -348,6 +358,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
             outRecord.crusader = theClass->IsCrusader() ? 1 : 0;
             outRecord.paratrooper_bomber = theClass->mIsParatrooperBomber ? 1 : 0;
             outRecord.heal_threshold = FloatBits(theClass->GetHealThreshold());
+            outRecord.class_flags = (uint8_t)ClassFlags(theClass);
         }
     }
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
@@ -404,6 +415,22 @@ void EEUnitStoreRemove(RTSUnit* inUnit)
 void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer)
 {
     ee_units_store_clear_player(reinterpret_cast<uintptr_t>(inPlayer));
+    ee_units_player_drop(reinterpret_cast<uintptr_t>(inPlayer));
+}
+
+// a player's id and stances as words (the table's key is its RTSPlayer object, as the unit records')
+static void PlayerWords(const EEPlayer* inPlayer, uint32_t* outEnemies)
+{
+    for (unsigned long i = 0; i < 17; i++)
+        outEnemies[i] = (uint32_t)inPlayer->mEnemies[i];
+}
+
+void EEUnitStorePlayerTable(const EEPlayer* inPlayer)
+{
+    uint32_t theEnemies[17];
+    PlayerWords(inPlayer, theEnemies);
+    ee_units_player_set(reinterpret_cast<uintptr_t>(static_cast<const RTSPlayer*>(inPlayer)), (uint32_t)inPlayer->mPlayerID,
+                        theEnemies);
 }
 
 void EEUnitOrderPush(unsigned long inID)
@@ -564,6 +591,27 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                 (unsigned long)(uint32_t)theFlag1, (unsigned long)(uint32_t)theStoreFlag1,
                 (unsigned long)(uint32_t)theFlag2, (unsigned long)(uint32_t)theStoreFlag2);
         theCheck.mismatches += theOffMap != 0 ? theOffMap : 1;
+    }
+    // the world's players' diplomacy tables (ee_units players.rs); a difference counts like a field's
+    {
+        uint64_t theObjects[17];
+        uint32_t theIDs[17];
+        uint32_t theEnemies[17 * 17];
+        size_t theCount = 0;
+        for (unsigned long i = 0; i < 17; i++) {
+            EEPlayer* thePlayer = gWorld.mPlayers[i];
+            if (thePlayer == NULL)
+                continue;
+            theObjects[theCount] = reinterpret_cast<uintptr_t>(static_cast<RTSPlayer*>(thePlayer));
+            theIDs[theCount] = (uint32_t)thePlayer->mPlayerID;
+            PlayerWords(thePlayer, &theEnemies[17 * theCount]);
+            theCount++;
+        }
+        uint32_t theDiffer = ee_units_player_check(theObjects, theIDs, theEnemies, theCount);
+        if (theDiffer != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu players' diplomacy tables differ from the store\n", theDiffer, theCount);
+            theCheck.mismatches += theDiffer;
+        }
     }
     // the stepped units' deque against the Rust list (ee_units order.rs), in order; a difference counts like a field's
     static std::vector<uint32_t> sOrderIDs;

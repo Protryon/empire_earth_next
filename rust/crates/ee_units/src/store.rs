@@ -94,6 +94,14 @@ pub const EE_UNIT_FIELD_CLOAK_RADIUS: u32 = 43;
 pub const EE_UNIT_FIELD_CRUSADER: u32 = 44;
 pub const EE_UNIT_FIELD_PARATROOPER_BOMBER: u32 = 45;
 pub const EE_UNIT_FIELD_HEAL_THRESHOLD: u32 = 46;
+/// `EEUnit::mUnitClass` too: the class's flags the combat reads test (`EE_UNIT_CLASS_*`: the combat lane's
+/// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
+pub const EE_UNIT_FIELD_CLASS_FLAGS: u32 = 47;
+/// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
+pub const EE_UNIT_CLASS_WALL: u8 = 1;
+pub const EE_UNIT_CLASS_PROJECTILE: u8 = 2;
+pub const EE_UNIT_CLASS_PARATROOPER_BOMBER: u8 = 4;
+pub const EE_UNIT_CLASS_MELEE: u8 = 8;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -195,6 +203,8 @@ pub struct EeUnitRecord {
     pub cloak_radius: i64,
     /// the class's `GetHealThreshold()` as float bits (0: no class)
     pub heal_threshold: u32,
+    /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
+    pub class_flags: u8,
 }
 
 impl EeUnitRecord {
@@ -247,6 +257,7 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_CRUSADER => self.crusader = value as u8,
             EE_UNIT_FIELD_PARATROOPER_BOMBER => self.paratrooper_bomber = value as u8,
             EE_UNIT_FIELD_HEAL_THRESHOLD => self.heal_threshold = value as u32,
+            EE_UNIT_FIELD_CLASS_FLAGS => self.class_flags = value as u8,
             _ => return false,
         }
         true
@@ -321,6 +332,7 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_CRUSADER, self.crusader == other.crusader),
             (EE_UNIT_FIELD_PARATROOPER_BOMBER, self.paratrooper_bomber == other.paratrooper_bomber),
             (EE_UNIT_FIELD_HEAL_THRESHOLD, self.heal_threshold == other.heal_threshold),
+            (EE_UNIT_FIELD_CLASS_FLAGS, self.class_flags == other.class_flags),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -666,6 +678,7 @@ mod tests {
             (EE_UNIT_FIELD_CRUSADER, 1),
             (EE_UNIT_FIELD_PARATROOPER_BOMBER, 1),
             (EE_UNIT_FIELD_HEAL_THRESHOLD, i64::from(0.75f32.to_bits())),
+            (EE_UNIT_FIELD_CLASS_FLAGS, i64::from(EE_UNIT_CLASS_WALL | EE_UNIT_CLASS_MELEE)),
         ] {
             let before = r;
             assert!(r.set(f, v));

@@ -250,6 +250,9 @@ constexpr static const int32_t EE_UNITS_MODE_ACCELERATE = 3;
 
 constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
 
+/// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
+constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
+
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
@@ -411,6 +414,19 @@ constexpr static const uint32_t EE_UNIT_FIELD_PARATROOPER_BOMBER = 45;
 
 constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
 
+/// `EEUnit::mUnitClass` too: the class's flags the combat reads test (`EE_UNIT_CLASS_*`: the combat lane's
+/// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
+constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
+
+/// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
+constexpr static const uint8_t EE_UNIT_CLASS_WALL = 1;
+
+constexpr static const uint8_t EE_UNIT_CLASS_PROJECTILE = 2;
+
+constexpr static const uint8_t EE_UNIT_CLASS_PARATROOPER_BOMBER = 4;
+
+constexpr static const uint8_t EE_UNIT_CLASS_MELEE = 8;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -569,6 +585,8 @@ struct EeUnitRecord {
   int64_t cloak_radius;
   /// the class's `GetHealThreshold()` as float bits (0: no class)
   uint32_t heal_threshold;
+  /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
+  uint8_t class_flags;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -1249,6 +1267,33 @@ EeUnitsTurn ee_units_pm_approach_pitch(const EeUnitsPitchIn *input,
                                        float current,
                                        float target,
                                        int32_t mode);
+
+/// A player's table: its id and its 17 stances (`enemies` has 17 words).
+///
+/// # Safety
+/// `enemies` points to 17 readable words.
+void ee_units_player_set(uint64_t object, uint32_t id, const uint32_t *enemies);
+
+/// The player object goes (`~RTSPlayer`).
+bool ee_units_player_drop(uint64_t object);
+
+/// `mEnemies[other]` of the player object into `out`; false when it has no table (or `other` is out of range).
+///
+/// # Safety
+/// `out` points to a writable word.
+bool ee_units_player_enemy(uint64_t object,
+                           uint32_t other,
+                           uint32_t *out);
+
+/// TEST ONLY: the world's players' tables (`objects`, `ids`: `count` each; `enemies`: 17 words a player) against the
+/// Rust ones; the count that differ.
+///
+/// # Safety
+/// The pointers hold `count` (`enemies`: `17 * count`) readable entries, or `count` is 0.
+uint32_t ee_units_player_check(const uint64_t *objects,
+                               const uint32_t *ids,
+                               const uint32_t *enemies,
+                               size_t count);
 
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.
