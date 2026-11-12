@@ -733,7 +733,7 @@ end
 -- group (and the land count - 1), under its share of the population limit (pop_percentage, the own and asked for
 -- counted): a free one of the class taken -> the wanted count asked for; else the held candidates of the class, else
 -- the class asked for when a candidate. As the original, the free-one path leaves the land count as it is.
--- The paratroopers, heroes and carriers: NOT STARTED
+-- The paratroopers and carriers: NOT STARTED
 local function special_slots(view, memory, kind, numLand, numUnits, list, cands, held, byKind)
     local b = memory.t.behavior
     local slots = {}
@@ -796,6 +796,59 @@ local function special_slots(view, memory, kind, numLand, numUnits, list, cands,
                             slots[#slots + 1] = sp.name
                         end
                     end
+                end
+            end
+        end
+    end
+    -- the heroes (AI kind 0x1b): by hero_chance with more than one unit in the group, 1 .. hero_max_per_group, under
+    -- hero_pop_percentage of the limit: a free one taken, else the held heroes, else a random hero class of the
+    -- candidates. DEVIATION: the game's hero limit (GetHeroLimit) is not read
+    local heroes = byKind[KIND_HERO]
+    if numLand > 0 and numUnits > 1 and T.random_k() <= (b.hero_chance_k or 0) and heroes ~= nil and #heroes > 0 then
+        local wanted = ai.random(1, math.max(math.min(b.hero_max_per_group or 0, numLand - 1), 1))
+        local have = 0
+        for _, u in ipairs(own_military()) do
+            if (cls(u.type).ai_kind or 0) == KIND_HERO then
+                have = have + 1
+            end
+        end
+        for _, g in ipairs(G.all(army(memory))) do
+            for _, sl in ipairs(g.slots or {}) do
+                if (cls(sl.c).ai_kind or 0) == KIND_HERO then
+                    have = have + 1
+                end
+            end
+        end
+        local limit = ((b.hero_pop_percentage_k or 0) * cap + 999) // 1000
+        if have < limit then
+            wanted = math.min(wanted, limit - have)
+            local taken = nil
+            for _, u in ipairs(list) do
+                if (cls(u.type).ai_kind or 0) == KIND_HERO then
+                    taken = u.type
+                    break
+                end
+            end
+            if taken ~= nil then
+                slots[#slots + 1] = taken
+                wanted = wanted - 1
+            end
+            for _, c in ipairs(cands) do
+                if wanted <= 0 then
+                    break
+                end
+                if (cls(c.type).ai_kind or 0) == KIND_HERO and not c.taken then
+                    c.taken = true
+                    held[#held + 1] = c
+                    numLand = math.max(numLand - 1, 0)
+                    wanted = wanted - 1
+                end
+            end
+            if wanted > 0 then
+                local name = heroes[ai.random(1, #heroes)]
+                for _ = 1, wanted do
+                    numLand = math.max(numLand - 1, 0)
+                    slots[#slots + 1] = name
                 end
             end
         end
@@ -1319,21 +1372,23 @@ local function add_to_package(memory, town_id, g)
 end
 
 -- AssignSubGroupTask (the defence ladder): the chosen defend tasks (scenario only: none); a forest within 35 tiles
--- (80%, infantry); a hill (35%: NOT STARTED, no hills query), a choke point (guard_chokepoint_percentage: NOT
--- STARTED, no choke points query); a threatened town (guard_town_percentage: mission 3, into its package); a random
--- point on the group's land
+-- (80%, infantry); a hill within 35 tiles (35%: ai.hill_point), a choke point of the land (guard_chokepoint_percentage:
+-- ai.choke_point; the group has no continent of its own, so any of them); a threatened town (guard_town_percentage:
+-- mission 3, into its package); a random point on the group's land. NOT STARTED: the adjacent continents' step
 local function defence_task(view, memory, g)
     local b = memory.t.behavior
     local x, y = g.cx or g.x, g.cy or g.y
     if x == nil or x < 0 then
         x, y = rally_point(view)
     end
-    -- the forest (the units' common move flags hold forest: foot soldiers)
+    -- the forest (UpdateCommonMoveFlags: every unit of the group crosses forest, the records' crosses_forest)
     local infantry = true
-    for _, id in ipairs(g.units) do
-        local u = R.unit(id)
-        if u ~= nil and u.category ~= "soldier" then
-            infantry = false
+    if #g.units > 0 then
+        local cols = ai.get(g.units, {"crosses_forest"})
+        for k = 1, #g.units do
+            if not cols.crosses_forest[k] then
+                infantry = false
+            end
         end
     end
     if infantry and T.random_k() < 800 then
@@ -1356,6 +1411,23 @@ local function defence_task(view, memory, g)
                     return "forest"
                 end
             end
+        end
+    end
+    -- a hill whose hull comes within 35 tiles (35%), else a choke point of the land (guard_chokepoint_percentage)
+    if ai.hill_point ~= nil and T.random_k() < 350 then
+        local hx, hy = ai.hill_point(x, y, FOREST_RANGE, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+        if hx ~= nil then
+            g.mission = 1
+            set_place(g, "defend", hx, hy, GUARD_RADIUS, 0)
+            return "hill"
+        end
+    end
+    if ai.choke_point ~= nil and T.random_k() < (b.guard_chokepoint_percentage_k or 0) then
+        local cx, cy = ai.choke_point(x, y, 0, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+        if cx ~= nil then
+            g.mission = 1
+            set_place(g, "defend", cx, cy, GUARD_RADIUS, 0)
+            return "choke"
         end
     end
     if T.random_k() < b.guard_town_percentage_k then
@@ -1443,7 +1515,7 @@ local function assign_task(view, memory, g)
     if home ~= nil then
         -- (CounterAttack's task: the town, in combat mode)
         set_place(g, "defend", ai.random(home.l, home.r), ai.random(home.t, home.b), GUARD_RADIUS, 0)
-        why = "town"
+        why = "aid"
     elseif g.mission == 2 or g.mission == 0 then
         local regions = target_regions(memory, g.enemy)
         local pick = regions[#regions]
@@ -1469,8 +1541,8 @@ local function assign_task(view, memory, g)
         why = "return"
     end
     g.task_t = view.time
-    -- (CheckTask: a defence task is looked at again after 10..120 s, and kept half the time)
-    g.task_check = view.time + ai.random(10, 120) * 1000
+    -- (IsLocationTaskValid: the check time stays as it was - mNextTaskCheckTime - so a new place is looked at on
+    -- arrival, then again 10..120 s later, kept half the time)
     print(string.format("classic_lua army.task id=%d mission=%d %s at=%d,%d units=%d", g.id, g.mission, why, g.x, g.y,
         #g.units))
 end
@@ -1499,11 +1571,17 @@ local function update_groups(view, memory)
                     assign_task(view, memory, g)
                 end
             elseif g.phase == "task" and #g.units > 0 then
-                if g.task == "attack" and g.state == "arrived" then
+                -- (EECPASGLand: a sub-group whose fight is over goes idle and is given a task again)
+                local fought = g.was_fighting and g.state ~= "fighting"
+                g.was_fighting = g.state == "fighting"
+                if fought and not g.sea and g.mission ~= 3 then
+                    assign_task(view, memory, g)
+                elseif g.task == "attack" and g.state == "arrived" then
                     assign_task(view, memory, g)
                 elseif g.task == "defend" and g.mission ~= 3 and g.state ~= "fighting"
-                        and view.time >= (g.task_check or 0) then
-                    -- (a sea sub-group's place is a location task: done once looked at again)
+                        and (g.sea or g.state == "arrived") and view.time >= (g.task_check or 0) then
+                    -- IsLocationTaskValid: at its place (and its check time past) a defence task is dropped half
+                    -- the time, else looked at again in 10-120 s (a sea sub-group's place: done once looked at)
                     if g.sea or ai.random(0, 1) == 0 then
                         assign_task(view, memory, g)
                     else

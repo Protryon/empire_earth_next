@@ -3653,6 +3653,167 @@ Open: the O3 to O8 slowdown; gold and iron 12-18 held through Stone; the citizen
 earlier second one); the losses against the improved classic (boom-defence's o4b: in 12 of 14 the Stone forage ran out
 before Copper was paid; O8's food reach did not yet move it).
 
+### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
+
+**Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
+C++'s with an attack goal: its militia's). Seed 24's collapse (§8.52) is not the common case; the port's citizen
+losses come late (54% after 60 minutes, §8.47).
+
+**The defence ladder's hills and choke points**, through two generic queries (AI_LUA_UNITS §11):
+`ai.hill_point(x, y, r, pick, seed)` (a hill whose hull comes within r tiles, 35% of the time after the forest) and
+`ai.choke_point(x, y, nearest, pick, seed)` (a choke point of the land, by guard_chokepoint_percentage: 68% in the
+data). The port's defence tasks over 32 games: forest 203, town 158, choke 20, hill 9 (the sea's 81 apart).
+
+**The heroes of AllocateSpecialUnits** (hero_chance 2%, one per group, a share of the limit; the game's hero limit is
+not read): none was trained in the 32 games (no hero class in the balanced games' epochs and chances).
+
+**Walls:** not ported; the C++ built none in 90-minute games (§8.42).
+
+Bench (balanced, 32 seeds, 90 minutes, --jobs 2; before = §8.52's cs):
+
+| stage | Lua won-lost | Lua Copper | Lua citizens lost by 20 / all | C++ citizens lost |
+|---|---|---|---|---|
+| §8.52 (cs) | 10-18, 4 close | 22/32 | 2.1 / 56.6 | 36.6 |
+| hills, choke points (hc) | 9-19, 4 close | 22/32 | 2.0 / 57.5 | 37.9 |
+| heroes (he, 2 lobby faults re-run) | 7-20, 5 close | 22/32 | 2.1 / 58.5 | 33.0 |
+
+Within noise. Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
+
+Next: the balanced late game - the port's citizens lost to the C++'s soldiers after 60 minutes and its Copper Age
+in 22 games against 27.
+
+### 8.54 The classic computer player in Lua: the defence ladder against the C++'s own (2026-11-11, EE-SIM)
+
+§8.53's port chose choke 20 and hill 9 of about 390 tasks; the data's guard_chokepoint_percentage is 68%. A trace-only
+`dc.ladder` line on the C++'s AssignSubGroupTask (which step gave the task, and the sub-group's common move flags)
+shows the C++'s own distribution on the same games. Seeds 2-9 (balanced, 90 minutes):
+
+| step | the C++ | the port before | the port, forest gated | the port, re-tasked after fights (32 games) | the C++ (32 games) |
+|---|---|---|---|---|---|
+| choke | 31 | 8 | 12 | 76 | 166 |
+| hill | 25 | 4 | 14 | 63 | 108 |
+| forest | 12 | 33 | 2 | 20 | 86 |
+| town | 15 | 4 | 2 | 16 | 51 |
+| land | 3 | - | - | - | 23 |
+| adjacent | 1 | - | - | - | 13 |
+
+Two gaps, both closed:
+- **The forest step's gate.** The C++ takes the forest only when every unit of the sub-group crosses forest
+  (UpdateCommonMoveFlags over EEUnitClass::GetTerrainFlags); most of its groups mix units that cannot (flags 00), so
+  the forest is rare and the hill and choke steps come next. The port took every soldier group for foot soldiers. The
+  own unit records now have `crosses_forest` / `crosses_cliff` (AI_LUA_UNITS §11). (The C++'s forest tasks with flags
+  11 are mostly empty sub-groups: an empty group passes every test.)
+- **The re-tasking.** A C++ land sub-group whose fight is over goes idle and is given a task again (EECPASGLand: Attack
+  -> Idle -> AssignTask); the port's stayed at its place. The port's ladder now runs 175 times in 32 games against the
+  C++'s 449 (from 137); the rest is the C++'s other idle paths (a task no longer valid, the empty sub-groups).
+
+Bench (balanced, 32 seeds; before = §8.53's he):
+
+| stage | Lua won-lost | Lua Copper | the C++'s Copper | Lua citizens lost by 20 / all |
+|---|---|---|---|---|
+| §8.53 (he) | 7-20, 5 close | 22/32 | 27/32 | 2.1 / 58.5 |
+| forest gated (tf, 2 lobby faults) | 9-16, 5 close | 21/30 | 21/30 | 2.3 / 60.0 |
+| re-tasked after fights (rt) | 10-18, 4 close | 23/32 | 22/32 | 2.2 / 57.5 |
+
+The port now reaches Copper as often as the C++ (23 against 22). Determinism: seeds 2 and 5, 60 minutes, --repeat 2:
+identical. 0 script errors.
+
+Next: the C++'s other re-task paths (an invalid task, the empty sub-groups' tasks), then the late balanced game - the
+citizens lost to the C++'s soldiers after 60 minutes.
+
+### 8.55 The classic computer player in Lua: the task checks, the docks, the C++'s uncounted boats (2026-11-11, EE-SIM)
+
+**The task check (IsLocationTaskValid).** A C++ defence sub-group's task is looked at only once the group is at its
+place and its next check time is past; then it is dropped half the time, else looked at again in 10-120 s. A new task
+does not reset the check time, so a group that arrives late is looked at on arrival. The port looked at the task on a
+timer that every new task reset. With the C++'s rule, the port's ladder runs 210 times in 32 games against the C++'s
+386 (it ran 175). The remaining gap is mostly the C++'s empty sub-groups, which take a task like any other group and
+pass every test (§8.54); they are not ported because the port makes no empty groups.
+
+**The late game.** On 8 seeds, the port's citizens stopped growing after 40 minutes (70 at 89 minutes against the
+C++'s 145), and from 60 minutes it lost 381 citizens against the C++'s 221. Two causes, both in the food supply:
+- **No dock in 3 of 8 seeds.** A dock's water site lies on the shallows, which form a land mass of their own, so
+  `ai.reach` from a citizen to the site failed and FindBuilder found no builder. The port also asked at only the
+  first 8 placeable sites. The C++'s FindBuilder lets a citizen of another path area build a site class (dock, navy
+  yard, the space classes) or a tower when its continent's shore takes in a tile of the footprint. The port now
+  accepts a citizen that reaches a land mass by the footprint (its tiles and the ring round it, found with
+  `ai.shore` and max 0), and asks at up to 48 placeable sites.
+- **The C++ never counts its boats.** EECPRMRequestBoats counts with EECPUGatherSpecialUnitsCount built with
+  inByClass false, which walks no units: only the boats requested or being made count. So the C++ asks for one more
+  boat every 30 s while food lacks gatherers and fewer than 8 boats stand idle. It asked 13-47 times a game, against
+  the 8 its wanted count names. The port counted the boats it had; now it counts as the C++ does.
+
+Bench (balanced, 32 seeds; rt = §8.54's last stage):
+
+| stage | Lua won-lost | Lua Copper / Bronze | the C++'s Copper / Bronze | citizens at 89 min, Lua / C++ | Lua boats / C++ fish gatherers at 70 min |
+|---|---|---|---|---|---|
+| rt (§8.54) | 10-18, 4 close | 23 / - | 22 / - | - | - |
+| task check (lv) | 10-16, 6 close | 22 / - | 23 / - | - | - |
+| docks (dk) | 11-15, 6 close | 24 / 11 | 22 / 4 | 93 / 116 | 9.1 / 15.2 |
+| uncounted boats (bt) | 10-15, 7 close | 23 / 8 | 21 / 4 | 99 / 117 | 11.1 / 14.2 |
+
+The citizen gap after 60 minutes narrowed from about half to 85%. The port still loses more citizens after
+60 minutes (bt: 1142 against 729 in 32 games; at wood 353, fighting 278, hunting 112). It also loses far more
+fishing boats: 427 against the C++'s 123. Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
+Next: the port's boats lost to warships (its naval guard against the C++'s), then the woodcutters lost after
+60 minutes.
+
+### 8.56 The fishing boats counted, the boats that fled, the woodcutters the port deletes (2026-11-11, EE-SIM)
+
+**The boat count (C++ and Lua).** §8.55 found the coast-fishing cap was never applied. EECPRMRequestBoats (our coast
+fishing, 2026-11-07) and the original's RequestFishingBoats (0x49487b, the island rule) both build
+EECPUGatherSpecialUnitsCount with inByClass false. That flag walks no units, so mUnits stays 0. The 8/16 cap
+(kCoastBoats, kCoastBoatsLater) never applied, and the island rule's "unless the player already has one" never saw
+its boats either. Both now count by class, and the port counts the same way. The C++ classic, balanced, against
+the port (32 seeds; b0 before, b1 after):
+
+| | before | after |
+|---|---|---|
+| C++ boat requests a game (mean, max) | 23.5, 55 | 14.0, 25 |
+| C++ fish gatherers at 40 / 70 min | 3.7 / 14.2 | 3.7 / 10.4 |
+| C++ food income at 40 / 70 min (a minute) | 135 / 160 | 135 / 145 |
+| C++ food stock at 40 / 70 min | 244 / 625 | 244 / 680 |
+| C++ citizens at 60 / 89 min | 79 / 117 | 77 / 103 |
+| C++ Copper / Bronze | 21 / 4 | 21 / 5 |
+| wins: C++ - Lua, close | 15-10, 7 | 15-13, 4 |
+| Lua boats at 40 / 70 min | 2.1 / 11.1 | 2.1 / 8.1 |
+
+Nothing changes before 40 minutes, and the epochs and the C++'s wins stay where they were. Later the C++ has about
+12% fewer citizens and 9% less food income. The cap that binds is the forage patches' 16. A cap of 32 would match
+the old boats in practice: 14.5 at 70 minutes against the old 14.7 (16 gives 11.0, 24 gives 13.4). This changes the
+opponent of every bench against the C++ classic; benches from before need a new baseline.
+
+The owner chose the 32-boat cap (kCoastBoatsLater, the forage patches' cap; kCoastBoats stays 8), in the C++ and
+in the port, to keep the improved classic's strength. The bench (c32, 32 seeds) does not bring the boats all the
+way back: the C++'s fish gatherers at 70 minutes are 11.3 (16: 10.4, uncounted: 14.2), with 15.5 boat requests a
+game (max 32). The cap now binds in one seed only. The limit is the wanted count itself: two boats a fish within
+30 tiles of the town (kCoastBoatsPerFish), which the uncounted cap had ignored. The rest of the bench: C++ food
+income at 70 minutes 135 a minute, citizens at 89 minutes 102, Copper 21, wins C++ 14 - Lua 13, 5 close. The
+remaining gap is in the per-fish count, not the cap. (The rules document's comment on forage_patches still says
+"16 boats"; changing it would mean a new db release.)
+
+**The boats that fled.** 186 of the port's 230 lost boats died idle. The engine's naval flight (EECPRMNavalFlee)
+calls AddIdleGatherer on the C++'s own lists, which are empty for a Lua seat, so a fled boat stayed on the script's
+food list. It sat idle at the far dock and was never sent to fish again. The port now moves a boat that is off its
+fish back to its idle list. AssignIdleBoats takes every boat of that list, as the classic does. Boats lost: 170
+against the C++'s 153 (from 230 against 113). Balanced 32 seeds: 14-14, 4 close.
+
+**The woodcutters lost after 60 minutes.** 422 of the port's 1310 citizens lost after 60 minutes have no killer
+(the C++'s: 801 in all). They die exactly 30 s apart, near the town, with no enemy near. These are the port's own
+KillUnitsForMilitary: 407 citizens were deleted for the surplus over ceil(pop limit x 0.45) = 180. Wood scores
+highest, so the woodcutters go first. The port trains past 180 because its wanted citizens rise to 199-278:
+GetWantedCitizens' floor, the gather capacity up to max_citizen_share. The C++'s stays at 180 in every trace line
+after 60 minutes. The port's capacity counts every centre as active (24 of 24 in seed 13) and its mineral sites
+stay at 7/10/10. The C++'s centres' sites run down (3/0/2/4/4). Without the deletions the late losses are 903
+against 801.
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2, identical apart from the timing lines. 0 script errors. The
+builds link 0/0 (EE-SIM and the test profile), and the eedata check passes.
+
+Next: the port's centres' activity and sites against the C++'s (GetGatherCapacity), so its wanted citizens stay at
+the C++'s and it stops training citizens it then deletes.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

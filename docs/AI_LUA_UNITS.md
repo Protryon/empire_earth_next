@@ -948,7 +948,9 @@ from data, so that a script can make its decisions with the same numbers:
 - Own and allied unit records have `target` (the goal's target unit: the resource gathered, the building built or
   repaired, the unit attacked) and `gathers` (a gatherer's resource kind), and `waiting` (a gatherer waiting for
   room at its resource, which the classic resource manager's AssignGatherers takes as idle), and `stalled` (a
-  builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder).
+  builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
+  `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
+  sub-group's common move flags).
 - `ai.used()` -> used, budget: the instructions and helper charges the current call has used so far and its budget
   (a script's own profiling; it changes nothing).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
@@ -966,6 +968,10 @@ from data, so that a script can make its decisions with the same numbers:
   `ai.forest_point(x, y, r, pick, seed)` -> x, y, n: a random point of one of the continent manager's forests on the
   land mass at (x, y) whose hull holds the tile or comes within r tiles (the (pick mod n)-th of the n found; the
   classic defence ladder's forest, AssignSubGroupTask).
+  `ai.hill_point(x, y, r, pick, seed)` -> x, y, n: the same over the continent manager's hills (EEAIHill).
+  `ai.choke_point(x, y, nearest, pick, seed)` -> x, y, n: a random point of one of the choke points (EEAIChokePoint)
+  of the land mass at (x, y) - of the `nearest` ones to the tile when nearest > 0, else of all n (the defence ladder's
+  choke point).
 - **The classic's information cheat, `sees_all`.** A manifest entry (ai/ais.json) may declare `"sees_all": true`;
   only `classic_lua` does. The seat's trace start line then ends in `sees_all=1`, and `ai.tuning()` has
   `sees_all = true`. It changes one query: `ai.enemy_near(x, y)` -> whether armed enemy units stand near the tile.
