@@ -1473,15 +1473,8 @@ function M.step(view, memory)
         for _, r in ipairs(V.resources) do
             need[r] = missing * (best ~= nil and best.cost[r] or 0)
         end
-        if plan.tower_up_ships and tower ~= nil and memory.improved_atk ~= tower then
-            -- (the level's real cost: ai.improve_cost)
-            local ic = ai.improve_cost ~= nil and ai.improve_cost(tower, "attack") or nil
-            if ic ~= nil and ic.level <= ic.max then
-                for _, r in ipairs(V.resources) do
-                    need[r] = need[r] + ic[r]
-                end
-            end
-        end
+        -- (not the towers' attack level: their improvement point goes to their range, so it is never bought - 1,392
+        -- refusals in 32 games, AI_RESEARCH §8.50)
         memory.priority_spend = V.sum(need) > 0 and need or nil
         if have > 0 then
             local fx, fy = D.fish_centre()

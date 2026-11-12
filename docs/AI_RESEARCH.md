@@ -3773,6 +3773,29 @@ bt2 (boom-econ's order, the boats' flight and towers). 32 seeds against the impr
   seed 3).
 - **Kept off by default** until it merges with boom-econ's order.
 
+**B4 in time.** Across b4's 32 games against the improved classic, the first enemy warship comes in 23: at minutes
+34-91 in 18 of them and at 109-113 in 3; 9 games see none. B4's guard order went out 1-12 minutes after the first one,
+unaffordable under the epoch reserve. The towers' attack upgrade was refused for cost in every game. Two fixes:
+- `memory.priority_spend` (boom) carries what the answer still needs: the missing warships, and the upgrade's next level
+  at its real cost. The cost comes from the new `ai.improve_cost` (AI_LUA_UNITS §11).
+- boom-econ's reserve gives way by that much (b8fa3e89). Its order also moves up to 4 food gatherers to wood while the
+  wood is short (91abc7d8).
+
+32 seeds against the improved classic, boom-econ's order on, the same exe:
+
+| Variant | Defeats | Under 30 | W/L/C | Copper | Bronze | Boats lost by 60 / 90 / all | Boats alive (30-90) |
+|---|---|---|---|---|---|---|---|
+| t0, B4 | 10 | 13 | 1/20/11 | 22, 57.3 | 10, 80.2 | 2.3 / 9.2 / 18.6 | 7.5 |
+| t1, + the reserve gives way | 11 | 13 | 1/20/11 | 21, 55.8 | 9, 89.0 | 2.1 / 10.4 / 17.7 | 7.6 |
+| t2, + up to 4 gatherers to wood | 11 | 14 | 2/18/12 | 24, 57.7 | 10, 92.0 | 1.7 / 7.3 / 16.5 | 7.9 |
+
+- **t2 cuts the boats lost by minute 90 by a fifth** (7.3 against 9.2) and two more games reach the Copper Age. It
+  has one defeat more (11 against 10, within the noise), and the Bronze Age comes later (92 against 80, 10 games).
+- **The towers' attack upgrade cannot be bought after their range upgrade.** It was refused 1,392 times in t2, always
+  at "level=1 max=1", whatever the stock. The game's units have a limited number of improvement points, and the
+  range upgrade boom buys from the Stone Age takes the towers'. B1's attack half is dead weight, and its cost is
+  dropped from the priority spend.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
