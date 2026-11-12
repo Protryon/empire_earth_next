@@ -9695,3 +9695,55 @@ exercise it. RustServerOp::HostCall's new cases only compile; no tour, LAN game 
   GetServiceOp, the account ops, the routing group list op) keep their C++ members because the lobby, EEWonNet and
   ServerContext read their DirEntity lists, GetEntityRequests and profiles: as Rust ops they need those readers on
   accessors first. HTTPGetOp / GetHTTPDocumentOp: not started (a scripted-socket driver the size of FTPGetOp's).
+
+## R6: WON's Internet code, round 11 (the directory and account request ops as Rust ops; their readers on accessors)
+
+Branch `rust-won-net11`. Measured by net C++ deletion, as rounds 7 to 10. Nothing in the game reaches these ops but
+an Internet login (the lobby's room list and server query, EEWonNet's Titan list and account form, the patch ops'
+listings, GameSpy's service lookup; the servers are gone): only the driver and the Rust replay exercise them. The
+readers' new lines only compile; no tour, LAN game or EE-SIM run calls them.
+
+- **What moved.** GetDirOp, GetMultiDirOp, GetAliasDirOp, FindEntityOp, GetServiceOp (with GetEntityRequest) and
+  GetAccountOp, UpdateAccountOp are `RequestOp`s (`reqdir.rs`), made by `ee_won_reqops_new` (kinds 7 to 13, the
+  members in a fixed order) and run by a `RustServerOp` through `Plain`. Their GetNextRequest, CheckResponse and
+  Reset are the deleted classes' statements over `dirops.rs`, `dir.rs` and `db.rs`, which were Rust already.
+- **Results are Rust lists, read through accessors.** The readers held references into the C++ ops (`const
+  DirEntityList&`, `GetRequestList()`, `mProfileData`, `mEmail`). Now `RustServerOp::GetEntities(which, index)`
+  makes a `DirEntityList` of what the Rust op holds (`ee_won_hostop_entities`: the list copied under the op's
+  locks, then each entity handed to `DirEntityReplyParser::TakeEntity` outside them); `GetNum` and `GetBytes` read
+  a query's status, the list count, the email, a newsletter. A by-value list read twice is two lists: each reader
+  keeps one copy (EEWonNet's loop read `GetDirEntityList()` for its begin and its end).
+- **Setters after the op was made.** RequestOp gained `set` (through the base's lock of the derived op), `num_at`
+  (an element) and `entities`; Plan, HostRequest and the C ABI carry them. EEWonNet sets the newsletter of a running
+  GetAccountOp after `RunAsync`, as the original did: the setter now waits for the op's lock instead of racing the
+  request it builds.
+- **Golden first.** `tests/won/won_reqdir_test.cpp`'s original half is the seven classes' statements and
+  GetEntityRequest's over stand-ins (the parsers' statements over `dir.rs`, the requests through `won_dir_msg.h`
+  and WONDBMsg.h); 1000 sequences printed to `golden_reqdir.txt` before the port (the request, up to six replies
+  with headers right and wrong, statuses, sequence bytes, cut and mutated replies; a Reset and the next server's
+  request at times). `reqdir::tests::golden` replays it; the driver checks 40,000 sequences (158,623 checks) against
+  the Rust ops, 0 failed. A mutation (the failure count cleared by Reset, the find's service taken for a directory
+  search) fails the replay. A first recording missed two members of each generated query (the replay caught it at
+  the first request): print the members from the same statements that set them.
+- **The original's undefined corners, defined.** A query's status before its first reply (its constructor left it
+  unset) is `WS_None`. GetVersionOp read the first entity of an empty listing (past the list's end): an empty
+  listing now gives no version. The ACLs' signed and unsigned conversions of the two parsers give the same bits
+  in the members, so one entity maker serves both.
+- **Deleted.** GetDirOp.cpp, GetMultiDirOp.cpp, GetAliasDirOp.cpp, FindEntityOp.cpp, GetServiceOp.cpp,
+  GetEntityRequest.cpp, GetAccountOp.cpp, UpdateAccountOp.cpp, WONDirAlias.h, the classes in WONRouting.h and
+  WONDirExtended.h, DirEntityReplyParser's parsers (their statements are `won_dir_test`'s original half now);
+  WONDirRequest.h moved to `tests/won/won_dir_msg.h`. src+include: 175 lines added, 1,161 deleted.
+  `GetEntityRequest::GetDirEntityMap` had no caller and went with its class (`dirops::group_keys` keeps the rule).
+- **`rust_build.py header` and the gate's check.** `header` printed xtask's "N headers are current" after writing,
+  whatever the gate's `cbindgen --check` then found. It now runs that same check (one command in both) after
+  writing and fails when it disagrees. The round 10 case (a const order) did not reproduce in eight runs from both
+  directories; cbindgen's crate order follows Cargo.lock and its constants their parse order, so a stale source
+  read (a header written while sources changed) is the likelier cause.
+- **The oracle on a rebuilt tree.** The shared open tree was rebuilt with main's Lua AIs mid-round: `compare ref`
+  then differs at line 0 (the AI manifest's line) while every later line is identical. Compare the traces past
+  that line before calling it a divergence.
+- **Not moved, and why.** CreateAccountOp (its ElGamal public key and Blowfish session key are C++ objects;
+  random keys need a seeded generator for a golden) and RoutingGetGroupListReqOp (its result is a C++ group map
+  built by `WONRoutingMsg.h`'s records, read by `LobbyServer::SyncGroups`) still derive from the 20-line
+  ServerRequestOp, which stays until they move. HTTPGetOp / GetHTTPDocumentOp: not started (HTTPEngine drives
+  HTTPGetOp's sockets and modes; a scripted-socket driver the size of FTPGetOp's first).
