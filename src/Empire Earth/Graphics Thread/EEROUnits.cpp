@@ -147,8 +147,7 @@ long gCollisionSphereMode;                  // 0x529510 (ee/EmpireEarth.h; read-
                                             // unit's statics, before EEROUserInterface's gUIViewport 0x529518: either unit)
 
 // the selection model by ring size (0x4be73c; .data): ee_gfx units.rs SELECTION_SIZES
-// the selection models' ring widths by size (0x4be748)
-static float sSelectionWidths[3] = { 0.08f, 0.05f, 0.025f };
+// the selection models' ring widths by size (0x4be748): ee_gfx models.rs SELECTION_WIDTHS
 // the bars' size (0x4be754..0x4be75c; .data, recomputed per frame from the window size)
 static unsigned long sBarWidth = 24;
 static float sBarHeight = 2.0f;
@@ -163,9 +162,11 @@ const float kBarFraction = 0.75f;           // 0x441bb0
 // after the vtable (0x441bd0..0x441be4)
 // 0x441bd0..0x441bd8: DrawBars's bar literals 0.0013020834f (1 / 768), 24.0f and 1 / 1024 (orig fmul [1/1024]; fmul [24]:
 // 24.0f * (theWidth / 1024.0f) keeps the two multiplies, and max() reuses the product)
-const float kLabelBottom = 0.7135417f;      // 0x441bdc (548 / 768: the main game form's bottom strip)
-const float kLabelMargin = 0.18066406f;     // 0x441be0 (185 / 1024)
-const float kRingStep = -0.44879895f;       // 0x441be4 (-2 pi / 14)
+// 0x441bdc (0.7135417, 548 / 768: the main game form's bottom strip) and 0x441be0 (0.18066406, 185 / 1024: the unit
+// panel's width): ee_gfx units.rs LABEL_BOTTOM and LABEL_MARGIN (DrawLabels)
+// 0x441be4 (-2 pi / 14, the area-effect ring's step): ee_gfx models.rs RING_STEP
+// DrawPlacement's edges at most: an 11 x 11 grid's outline (44) and its inner edges (264)
+const size_t kPlacementLineCapacity = 320;
 
 // The bars' sizes, the bar rectangles and GetScreenPoint are ee_gfx units.rs (RUST_PLAN R4.4); the GE value classes
 // pass as their #[repr(C)] mirrors (the same storage)
@@ -318,20 +319,12 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
 {
     GETextureCoordinate theStart;
     GETextureCoordinate theEnd;
-    GE3DPoint thePoint;
-    GE2DPoint theScreenPoint;
     GERFogAttributes theFogAttributes;
     unsigned long theScreen = gScreenIndex;
     long theSize = inRecord.mUnit.mGridSize;
     long theX = inRecord.mTileX;
     long theY = inRecord.mTileY;
     unsigned long theLineCount = 0;
-    float theLineX;
-    float theLineY;
-    bool theRows[12][12];
-    bool theColumns[12][12];
-    memset(theRows, 0, sizeof(theRows));
-    memset(theColumns, 0, sizeof(theColumns));
     inRecord.mUnit.mOpacity = 1.0f;
     if (inRecord.mUnit.mScale != 0.0f) {
         gRasterizer->SetShadingColorSource(0, gScreenIndex);
@@ -367,104 +360,23 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     gRasterizer->SetViewport(gU4E8F08, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetZCompare(kCompareLess, theScreen);
-    float theHalf;
-    if (theSize % 2 == 0)
-        theHalf = (float)theSize * 0.5f;
-    else
-        theHalf = (float)(theSize - 1) * 0.5f;
     theStart.SetU(gU4E9330);
-    float theLeft = (float)theX - theHalf;
-    float theTop = (float)theY - theHalf;
     theEnd.SetU(gU4E9330 + 3.0f);
-    long j;
-    for (theX = 0; theX <= theSize; theX++) {
-        for (j = 0; j <= theSize; j++) {
-            if ((theX == 0 || theX == theSize) && j != theSize) {
-                sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-                sLines[theLineCount].SetColor(gBarColor);
-                thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = theX + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetStartPoint(theScreenPoint);
-                thePoint.SetX(theLineX + 1.0f);
-                thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetEndPoint(theScreenPoint);
-                if (++theLineCount == 0x40) {
-                    gRasterizer->Draw(sLines, theLineCount, theScreen);
-                    theLineCount = 0;
-                }
-            }
-            if ((j != 0 && j != theSize) || theX == theSize)
-                continue;
-            sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-            sLines[theLineCount].SetColor(gBarColor);
-            thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = theX + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][theX]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetStartPoint(theScreenPoint);
-            thePoint.SetX(theLineX);
-            thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetEndPoint(theScreenPoint);
-            if (++theLineCount == 0x40) {
-                gRasterizer->Draw(sLines, theLineCount, theScreen);
-                theLineCount = 0;
-            }
-        }
-    }
-    for (theX = 0; theX < theSize; theX++) {
-        for (j = 0; j < theSize; j++) {
-            if (inRecord.mCells[j][theX])
-                continue;
-            theRows[j][theX] ^= 1;
-            theRows[j][theX + 1] ^= 1;
-            theColumns[j][theX] ^= 1;
-            theColumns[j + 1][theX] ^= 1;
-        }
-    }
-    for (theX = 0; theX <= theSize; theX++) {
-        for (j = 0; j <= theSize; j++) {
-            if (theRows[j][theX] && j != theSize) {
-                sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-                sLines[theLineCount].SetColor(gBarBackColor);
-                thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = theX + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetStartPoint(theScreenPoint);
-                thePoint.SetX(theLineX + 1.0f);
-                thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetEndPoint(theScreenPoint);
-                if (++theLineCount == 0x40) {
-                    gRasterizer->Draw(sLines, theLineCount, theScreen);
-                    theLineCount = 0;
-                }
-            }
-            if (!theColumns[j][theX] || theX == theSize)
-                continue;
-            sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-            sLines[theLineCount].SetColor(gBarBackColor);
-            thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = theX + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][theX]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetStartPoint(theScreenPoint);
-            thePoint.SetX(theLineX);
-            thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetEndPoint(theScreenPoint);
-            if (++theLineCount == 0x40) {
-                gRasterizer->Draw(sLines, theLineCount, theScreen);
-                theLineCount = 0;
-            }
+    // the outline, then the edges round the unusable cells: ee_gfx units.rs (RUST_PLAN R4.4)
+    static_assert(sizeof(inRecord.mHeights) == 144 * sizeof(float) && sizeof(inRecord.mCells) == 144, "the grid");
+    EeGfxPlacementLine theLines[kPlacementLineCapacity];
+    size_t theCount = ee_gfx_units_placement_lines(reinterpret_cast<const EeGeViewport*>(&gU4E8F08),
+                                                   gOrthographicView, (int32_t)theSize, (int32_t)theX,
+                                                   (int32_t)theY, &inRecord.mHeights[0][0], &inRecord.mCells[0][0],
+                                                   theLines, kPlacementLineCapacity);
+    for (size_t i = 0; i < theCount; i++) {
+        sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
+        sLines[theLineCount].SetColor(theLines[i].back != 0 ? gBarBackColor : gBarColor);
+        sLines[theLineCount].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].start));
+        sLines[theLineCount].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].end));
+        if (++theLineCount == 0x40) {
+            gRasterizer->Draw(sLines, theLineCount, theScreen);
+            theLineCount = 0;
         }
     }
     if (theLineCount > 0)
@@ -827,32 +739,22 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
     GERectangle theView;
     GERectangle theStrip;
     GEText theText(gU531994);
-    GE3DPoint theLocation;
     UWideString theString;
     unsigned long theWidth = gGameWindow->GetWidth();
     unsigned long theHeight = gGameWindow->GetHeight();
-    float theMargin = 0.0f;
-    float theBottom = 0.0f;
-    float theWindowWidth = (float)theWidth;
-    theView = gU4E8F08.GetViewRectangle();
-    theMargin = theWindowWidth;
-    theMargin *= kLabelMargin;
-    theBottom = (float)theHeight * kLabelBottom;
-    if (!gFreeCamera) {
-        theStrip.SetLeft(theView.GetLeft());
-        theStrip.SetTop(theBottom);
-        theStrip.SetBottom(theView.GetBottom());
-        if (gUnitPanelActive)
-            theStrip.SetLeft(theMargin);
-        theStrip.SetRight(theWindowWidth - theMargin);
-        theView.SetBottom(theBottom);
-    }
+    // the view above the bottom strip, the strip beside the panels and the font: ee_gfx units.rs (RUST_PLAN R4.4)
+    EeGfxLabelClip theClip = ee_gfx_units_label_clip(
+        reinterpret_cast<const EeGeRectangle*>(&gU4E8F08.GetViewRectangle()), (uint32_t)theWidth, (uint32_t)theHeight,
+        gFreeCamera, gUnitPanelActive);
+    theView = *reinterpret_cast<const GERectangle*>(&theClip.view);
+    theStrip = *reinterpret_cast<const GERectangle*>(&theClip.strip);
+    float theBottom = theClip.bottom;
     theText.SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
     theText.SetIsTransparent(true);
     theText.SetAlignment(kTextAlignCenter);
-    if (theWidth >= 0x640)
+    if (theClip.font == 2)
         theText.SetFont(gFontTahoma16);
-    else if (theWidth >= 0x500)
+    else if (theClip.font == 1)
         theText.SetFont(gFontTahoma12);
     for (unsigned long i = 0; i < inCount; i++) {
         EERenderUnit* theUnit = &inUnits[i];
@@ -871,30 +773,24 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
         } else if (gU529044 == theUnit) {
             sprintf(theString, "%s", (const char*)gU529030);
             theText.SetText(theString);
-            theOffset.SetX(theUnit->mSource->mBar.GetX() * theUnit->mScale);
-            theOffset.SetY(theUnit->mSource->mBar.GetY() * theUnit->mScale);
-            theOffset.SetZ(theUnit->mSource->mBar.GetZ() * theUnit->mScale);
-            theUnit->mTransformation.Apply(theOffset, theLocation);
-            GetScreenPoint(theLocation, theScreenPoint);
-            theScreenPoint.SetY(theScreenPoint.GetY() - theUnit->mHealthBars.size() * 5.0f - 10.0f);
+            ee_gfx_units_label_point(reinterpret_cast<const EeGeViewport*>(&gU4E8F08), gOrthographicView,
+                                     reinterpret_cast<const EeGeTransformation*>(&theUnit->mTransformation),
+                                     reinterpret_cast<const EeGe3DPoint*>(&theUnit->mSource->mBar), theUnit->mScale,
+                                     (uint64_t)theUnit->mHealthBars.size(),
+                                     reinterpret_cast<EeGe2DPoint*>(&theScreenPoint));
             theText.SetLocation(theScreenPoint);
             theText.SetFgColor(theUnit->mPlayerColor);
         } else {
             continue;
         }
-        if (!gFreeCamera) {
-            float theTextHeight = theText.GetTextExtent().GetHeight();
-            if (theScreenPoint.GetY() + theTextHeight < theBottom) {
-                gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
-            } else if (theScreenPoint.GetY() - theTextHeight > theBottom) {
-                gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
-            } else {
-                gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
-                gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
-            }
-        } else {
+        float theTextHeight = gFreeCamera ? 0.0f : theText.GetTextExtent().GetHeight();
+        uint32_t theTargets = ee_gfx_units_label_targets(theScreenPoint.GetY(), theTextHeight, theBottom, gFreeCamera);
+        if (theTargets & 1)
+            gUIManager->mMainGameForm->DrawClippedText(theView, &theText, NULL);
+        if (theTargets & 2)
+            gUIManager->mMainGameForm->DrawClippedText(theStrip, &theText, NULL);
+        if (theTargets & 4)
             gUIManager->mScenarioEditorForm->DrawClippedText(theView, &theText, NULL);
-        }
     }
 }
 
@@ -903,8 +799,6 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
 // ring model and the three selection ring models (segment count by detail level)
 void EEROUnits::LoadMedia()
 {
-    GETransformation theTransformation;
-    GE3DPoint theStart;
     GETextureDescription theDescription;
     theDescription.mNumMipLevelsToDrop = 0;
     theDescription.mFrameFormat = 0;
@@ -914,14 +808,10 @@ void EEROUnits::LoadMedia()
     theDescription.mSurfaceVolatility = 1;
     theDescription.mHasAlpha = true;
     theDescription.mCreateMIPMaps = true;
-    GE3DPoint thePoint;
-    GE3DPoint theInner;
-    GE3DPoint theOuter;
     GETextureCoordinate theLineStart;
     GETextureCoordinate theLineEnd(3.0f, 0.0f);
     UString theName;
     unsigned long theSegments;
-    float theAngle;
     unsigned long i;
     sBGBar = new GERhombus;
     sFGBar = new GERhombus;
@@ -1008,82 +898,18 @@ void EEROUnits::LoadMedia()
     sAreaEffectTexture->SetStageMipMapBias(-1.0f, -1);
     sAreaEffectTexture->SetStageTextureAddressingMode(kAddressingWrap, -1);
     sRingModel = gModelManager->CreateModel(0xa, 0x1a, 1, 0, 1, 0, "area effect", 1);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 3);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 6);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 9);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0xc);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0xf);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0x12);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0x19);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0x16);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.0f, 0.0f, 0.0f), 0x17);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.5f, 0.0f, 0.0f), 0x13);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(0.5f, 0.0f, 0.0f), 0x18);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(-0.5f, 0.0f, 0.0f), 0x11);
-    sRingModel->GetVertexArray(0)->SetPoint(GE3DPoint(-0.5f, 0.0f, 0.0f), 0x15);
-    theStart.SetX(0.5f);
-    theStart.SetY(0.0f);
-    theStart.SetZ(0.0f);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0xd);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0x14);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 7);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0xe);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 1);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 8);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 2);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 4);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 5);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0xa);
-    theTransformation.Revolve(kRingStep, 0.0f, 0.0f);
-    theTransformation.Apply(theStart, thePoint);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0xb);
-    sRingModel->GetVertexArray(0)->SetPoint(thePoint, 0x10);
+    // the ring's points, texture coordinates and triangles: ee_gfx models.rs (RUST_PLAN R4.4)
+    EeGfxRingModel theRing = ee_gfx_units_area_effect_ring();
     for (i = 0; i < 0x1a; i++) {
-        sRingModel->GetVertexArray(0)->GetPoint(theStart, i);
+        sRingModel->GetVertexArray(0)->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theRing.points[i]), i);
         sRingModel->GetVertexArray(0)->SetTextureCoordinate(
-            GETextureCoordinate(theStart.GetX() + 0.5f, -(theStart.GetY() - 0.5f)), i);
+            *reinterpret_cast<const GETextureCoordinate*>(&theRing.coords[i]), i);
     }
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(0, 0);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(0, 1);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(0, 2);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(1, 3);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(1, 4);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(1, 5);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(2, 6);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(2, 7);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(2, 8);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(3, 9);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(3, 0xa);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(3, 0xb);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(4, 0xc);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(4, 0xd);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(4, 0xe);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(5, 0xf);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(5, 0x10);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(5, 0x11);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(6, 0x12);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(6, 0x13);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(6, 0x14);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(7, 0x15);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(7, 0x16);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(7, 0x19);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(8, 0x19);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(8, 0x16);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(8, 0x17);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex1(9, 0x19);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex2(9, 0x17);
-    sRingModel->GetPolygonArray(0)->SetVertexIndex3(9, 0x18);
+    for (i = 0; i < 10; i++) {
+        sRingModel->GetPolygonArray(0)->SetVertexIndex1(i, theRing.indices[i * 3]);
+        sRingModel->GetPolygonArray(0)->SetVertexIndex2(i, theRing.indices[i * 3 + 1]);
+        sRingModel->GetPolygonArray(0)->SetVertexIndex3(i, theRing.indices[i * 3 + 2]);
+    }
     for (i = 0; i < 0x1a; i++) {
         sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, i);
         sRingModel->GetVertexArray(0)->SetOpacity(1.0f, i);
@@ -1095,111 +921,27 @@ void EEROUnits::LoadMedia()
     sRingModel->GetMaterial(0)->SetTexture(sAreaEffectTexture, gScreenIndex);
     sRingModel->ComputeModelNormals();
     sRingModel->ComputeBoundingVolumes();
-    if (gModelDetail == 0)
-        theSegments = 6;
-    else
-        theSegments = gModelDetail == 1 ? 8 : 10;
-    theAngle = 6.2831855f / (float)theSegments;
+    // the selection rings' segments, points, texture coordinates, triangles and colours: ee_gfx models.rs
+    theSegments = ee_gfx_units_selection_segments((int32_t)gModelDetail);
+    const GEColor* theColors[3] = { &gU5294A0, &gU529490, &gSelectionRingDark };
     for (unsigned long k = 0; k < 3; k++) {
         sSelectionModels[k] = gModelManager->CreateModel(theSegments * 2, theSegments * 2, 1, 0, 1, 0,
                                                          "unit selection", 1);
-        theInner = GE3DPoint(0.0f, 0.5f, 0.0f);
-        theOuter = GE3DPoint(0.0f, 0.5f - sSelectionWidths[k], 0.0f);
-        sSelectionModels[k]->GetVertexArray(0)->SetPoint(theInner, 0);
-        sSelectionModels[k]->GetVertexArray(0)->SetPoint(theOuter, 1);
-        sSelectionModels[k]->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, 0.0f), 0);
-        sSelectionModels[k]->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, 1.0f), 1);
-        theTransformation.MakeIdentity();
-        unsigned long theVertex = 2;
-        for (i = 1; i < theSegments; i++) {
-            theTransformation.Revolve(theAngle, 0.0f, 0.0f);
-            theTransformation.Apply(theInner, thePoint);
-            sSelectionModels[k]->GetVertexArray(0)->SetPoint(thePoint, theVertex);
-            sSelectionModels[k]->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, 0.0f), theVertex);
-            theVertex++;
-            theTransformation.Apply(theOuter, thePoint);
-            sSelectionModels[k]->GetVertexArray(0)->SetPoint(thePoint, theVertex);
-            sSelectionModels[k]->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, 1.0f), theVertex);
-            theVertex++;
+        EeGfxSelectionModel theModel = ee_gfx_units_selection_model((int32_t)gModelDetail, (uint32_t)k);
+        GEVertexArray* theVertices = sSelectionModels[k]->GetVertexArray(0);
+        for (i = 0; i < theModel.count; i++) {
+            theVertices->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theModel.points[i]), i);
+            theVertices->SetTextureCoordinate(*reinterpret_cast<const GETextureCoordinate*>(&theModel.coords[i]), i);
         }
-        unsigned long thePolygon = 0;
-        theVertex = 0;
-        unsigned long theCount = theSegments * 2;
-        for (; thePolygon < theCount - 2; theVertex += 2) {
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 2);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 1);
-            thePolygon++;
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + 1);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 2);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 3);
-            thePolygon++;
+        for (i = 0; i < theModel.count; i++) {
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(i, theModel.indices[i * 3]);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(i, theModel.indices[i * 3 + 1]);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(i, theModel.indices[i * 3 + 2]);
         }
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex);
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, 0);
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 1);
-        thePolygon++;
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + 1);
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, 0);
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, 1);
-        if (gModelDetail == 0) {
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 0);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 1);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 2);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 3);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 4);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 5);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 6);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 7);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 8);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 9);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xa);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xb);
-            for (i = 0; i < 0xc; i++)
-                sSelectionModels[k]->GetVertexArray(0)->SetOpacity(1.0f, i);
-        } else if (gModelDetail == 1) {
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 0);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 1);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 2);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 3);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 4);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 5);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 6);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 7);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 8);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 9);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xa);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xb);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xc);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xd);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xe);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xf);
-            for (i = 0; i < 0x10; i++)
-                sSelectionModels[k]->GetVertexArray(0)->SetOpacity(1.0f, i);
-        } else {
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 0);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 1);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 2);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 3);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 4);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 5);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 6);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 7);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 8);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 9);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 0xa);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU5294A0, 0xb);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xc);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0xd);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xe);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0xf);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0x10);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gSelectionRingDark, 0x11);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0x12);
-            sSelectionModels[k]->GetVertexArray(0)->SetColor(gU529490, 0x13);
-            for (i = 0; i < 0x14; i++)
-                sSelectionModels[k]->GetVertexArray(0)->SetOpacity(1.0f, i);
-        }
+        for (i = 0; i < theModel.count; i++)
+            theVertices->SetColor(*theColors[theModel.colors[i]], i);
+        for (i = 0; i < theModel.count; i++)
+            theVertices->SetOpacity(1.0f, i);
         sSelectionModels[k]->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
         sSelectionModels[k]->GetMaterial(0)->SetPolygonRangeLength(theSegments * 2, 0);
         sSelectionModels[k]->GetMaterial(0)->SetVertexStartingIndex(0);

@@ -8116,3 +8116,99 @@ kept a C++ wrapper for its remaining C++ callers. This round: 117,746 (round 17 
   load decodes the skin, icons and images (39 PNG through ee_openformats, 7 JPEG through libjpeg as before), so
   the lead's LAN game and any lobby tour exercise it; a wrong pixel order or transparency would show in the
   lobby's captures, not in a gate's verdict. The deletions remove code no build reaches.
+
+## R4.4, fourth round: the placement footprint, the labels' clip rectangles, the box selection, the mini map's camera point and the effects' quads in Rust (ee_gfx units.rs, select.rs, minimap.rs, effects.rs, pick.rs; branch rust-gfx10, 2026-11-12)
+
+The fourth round's five leaves, each pinned as before: a scratch driver (`build/gx10_golden`, not in the repository)
+#includes the unit of the commit before the work (7da90274, `git show`) over the real GE math units, `GEViewport`
+and `UWideString`, with fakes whose calls log; an LCG seeded 1 draws the cases and each prints an FNV-1a 64 of its
+log. The Rust tests draw the same stream and replay the C++ glue; each driver relinked over the forwarders printed
+the same bytes, and so did seeds 2 and 3 at four times the size.
+
+- **`DrawPlacement`'s footprint (`units.rs`).** `ee_gfx_units_placement_lines` gives the edges in the original's
+  order (the outline in the bar colour, then every edge with an unusable cell on exactly one side, toggled per cell
+  as the original did) as window points; the C++ keeps the `GELine`s, their texture coordinates and colours, and
+  the draw every 64 lines. 1,240 cases (sizes 0 to 11, the cells all usable, none or a random share). A grid side
+  past 11 indexed past the record's 12 x 12 arrays (and overran the original's stack); it now draws no edges (no
+  retail building is that large; a mod could make one).
+- **`DrawLabels`' rectangles (`units.rs`).** The view above the bottom strip, the strip beside the unit panel, the
+  strip's top and the font by the window's width (`ee_gfx_units_label_clip`), which rectangles a label is drawn to
+  (`ee_gfx_units_label_targets`: above the strip, below it, or both when the text crosses its top; the editor's
+  view with the free camera) and the debug label's place above the bars (`ee_gfx_units_label_point`). 1,240 frames
+  of up to six units, most near the strip's top; the fonts are fakes whose `ComputeTextExtent` sets a height per font.
+- **The box selection (`select.rs`, `pick.rs`).** `EEUICSelectUnits`' press point, the drag's end (rounded, clamped
+  a pixel short of the view's bottom when outside), the ten-pixel drag start, the move's and the release's boxes
+  (two functions: the original built them two ways) and `DrawPolygons`' eight lines; and the picker's
+  `GetIsEntryInView` model transformation (`ee_gfx_pick_entry_transform`). The selection driver built the control
+  with its own constructor over a no-op `UIControl` one (the unit emits the vtable; `GELine::GELine` and
+  `GERhombus::GERhombus` defined in the driver) and logged every `UIControl` member it calls; 600 presses with up to
+  four moves, copies and draws, the control's state running on across the cases. The round-three picker driver,
+  relinked over the new forwarder, printed its golden again (2,184 cases; `golden_picker.rs` now calls
+  `entry_transform`).
+- **`EEUIMiniMap::CenterCamera` (`minimap.rs`).** The mouse in mini-map units (the window over 800 x 600), clamped
+  to `sBounds` when outside: `ee_gfx_minimap_center_point`, 2,000 cases. `MouseRButtonDown` has the same arithmetic
+  with a different clamp (two separate tests per axis, not `else if`); it stays C++, not covered by this driver.
+- **The effects' quads (`effects.rs`).** `AddGlowSprite`, `AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite` and
+  `AddGroundStrip` now take their four vertices (colour, points, normal, texture corners, opacities) from Rust;
+  `GetEffectFogFactor` is `ee_gfx_effect_fog_factor`. The C++ keeps the batches (the count, the flush when full,
+  the alpha reference, the `SetVertex` calls). 2,040 cases with the counts near full, so both flushes run.
+- **Fake vtables see garbage in unused argument registers.** The first quads golden logged the second integer
+  register of every rasterizer slot; `SetCulling` takes one argument and `SetAlphaTestingRefValue` a float (in an
+  XMM register), so those words were whatever the caller left there and would differ between the original and the
+  forwarder builds. Log only the arguments each slot takes; and never log a pointer's value (ASLR): log "p".
+- **The vtable stubs ran out.** `GERasterizer` has more than 64 slots: `SetZBuffer` jumped past the 64-slot table
+  into `type_info`'s vtable (a DEP fault). `common.h` has a 200-slot table now.
+- **Statics with unresolved constructors.** A driver that defines `gRenderSnapshot` runs `EERenderSnapshot`'s
+  out-of-line constructor at start-up (unresolved: a jump to zero before `main`); define it as raw storage under its
+  decorated name (`__asm__("?gRenderSnapshot@@3UEERenderSnapshot@@A")`). `UWideString`'s assignment needs the
+  platform's string functions: the scratch Rust library links `ee_plat_core` too.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: a building's placement footprint
+  (choose a building to place, over usable and blocked ground), the labels (a rally label, a selected unit under the
+  strip's top, the scenario editor's labels), the box selection (drag a box, past the view's edges; the box-select
+  fixture check clicks through it), the mini map (click and drag on it) and every 2D effect's quads (fire, smoke,
+  glows, the energy wave's strip) run only in the windowed game.
+
+## R4.4, fifth round: the mini map's press, the ring models, the sky and clouds and the earthquake's crack in Rust (ee_gfx minimap.rs, models.rs, terrain.rs, quake.rs; branch rust-gfx11, 2026-11-12)
+
+Four leaves, pinned as before: a scratch driver (`build/gx11_golden`, not in the repository) #includes the unit of
+the commit before the work (929fa637, `git show`) over the real GE math units, an LCG seeded 1 draws the cases and
+each prints an FNV-1a 64 of its log; the Rust tests replay the C++ glue; each driver relinked over the forwarders
+printed the same bytes, and the random ones on seeds 2 and 3 at four times the size.
+
+- **`EEUIMiniMap::MouseRButtonDown` (`minimap.rs` `press_point`).** The press's clamp makes two separate tests per
+  axis where `CenterCamera`'s uses `else if`; they part only with inverted bounds (left past right), which the
+  driver draws in 8 % of the cases (the test asserts the stream reaches it). 2,000 presses with the modifiers.
+- **The ring models (`models.rs`, `EEROUnits::LoadMedia`).** The area-effect ring's 26 vertices (six turns of
+  -2 pi / 14 through `revolve`), texture coordinates and 10 triangles; the selection rings' segments (6, 8, 10 by
+  model detail), points (the turns accumulate in one transformation, as the original's), coordinates, triangles
+  and colour pattern. `LoadMedia` has no input but `gModelDetail`: the driver loads it at details 0, 1, 2, 3, -1
+  and 7 and dumps every model's final state. The C++ now stores the values in index order where the original
+  stored them in its own order; nothing reads between the stores except the ring's coordinate loop, which read
+  the points it had just stored, so the final state is the contract. The driver prints the calls (textures,
+  lines, creations) on a line of their own: the relink compares those, the Rust test only the models.
+- **The sky and clouds (`terrain.rs`, `EEROTerrain.cpp`).** `UpdateSkyColors`' blend of the four bands, the sky
+  dome's and the star models' points, `UpdateCloudLayer`'s points, scrolled coordinates and wrapped offset (the
+  original read the points back from the vertex array for its distances: Rust takes them from its own array),
+  and `StepGridMode`. A time of day past 1 read past a band, and past `gSkyColors` from 17/16 on, in the original;
+  the index is held at the table's last entry (the golden stays within 0..1). 1,240 cases.
+- **The earthquake's crack (`quake.rs`, `EEE3DEarthquake.cpp`).** The strip's triangles, `BuildModel`'s texture
+  rows, `Queue`'s rows (each row's front and v) and the hold time of a crack stopped over space. The C++ keeps the
+  ground: the five vertices across each row on `GetGroundPoint` and the middle one's space test, in the original's
+  order (the first row's z carries into the next vertex's transform, as before). 300 cracks, 1,230 calls.
+- **Fake models that store.** `fakemodel.h` subclasses `GEVertexArray` and `GEPolygonArray` for real (their
+  constructors and destructors defined in the driver), stores every set, logs a read of an unset slot or an index
+  past the array, and dumps the final state: a better contract than call order for builders that write arrays.
+  `GEMaterial`'s private ranges are read through its `friend struct GEStoreDigest`, defined by the driver.
+- **Virtual members on a zeroed object.** A pointer to a virtual member dispatches through the vtable even when
+  taken with `&Class::Member`: on a calloc'd control it jumped through a null vptr (the press is virtual). Call
+  the body by its decorated name (`__asm__("?MouseRButtonDown@EEUIMiniMap@@MEAAJXZ")`; `M` for protected, `U`
+  public) or with a qualified call (`q->EEE3DEarthquake::Queue(...)`).
+- **cbindgen and computed array lengths.** `[T; 2 * CONST]` in a `#[repr(C)]` struct made cbindgen emit the struct
+  as opaque (a forward declaration only); use a named constant for each length.
+- **A build without the environment.** One build was started from a shell that had not sourced the round's
+  environment, so `EE_ORIG_SRC_ROOT` was unset and it began staging into the default `C:\EEX` (stopped within
+  seconds). Source the environment in the same command as every build.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: the mini map's right click
+  (orders to a point; drag past the map's edges), the area-effect and selection rings at each model detail, the
+  sky at each time of day and the clouds' scroll (and the stars on a space map), the editor's grid mode keys and
+  an earthquake (a calamity power) growing over land and stopping at space run only in the windowed game.
