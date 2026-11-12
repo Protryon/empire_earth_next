@@ -103,6 +103,8 @@ pub unsafe extern "C" fn ee_combat_store_unit(id: u32, out: *mut ee_combat::read
 
 // the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage
 use ee_netmsg as _;
+// the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes
+use ee_screens as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;

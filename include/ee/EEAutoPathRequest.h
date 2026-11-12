@@ -6,6 +6,7 @@
 #define EE_EEAUTOPATHREQUEST_H
 
 #include <vector>
+#include <functional>
 #include "ee/EETileCoordinate.h"
 
 class EEAutoPathRequest : public UReferenceCounter {
@@ -26,5 +27,18 @@ public:
     long mPathLength;                       // +0x48
     bool mIsDone;                           // +0x4c
 };
+
+// port (save version 0.277): a request as the saved game holds it (every field; EEPathManager.cpp), for the owners
+// that keep one across a save (EECPWallManager, the graph searches in progress). The load's is a new request (one
+// reference, the caller's)
+class FSFile;
+void EESaveAutoPathRequest(FSFile& outFile, const EEAutoPathRequest& inRequest);
+long EELoadAutoPathRequest(FSFile& inFile, EEAutoPathRequest*& outRequest);
+// port (save version 0.278): an owner whose running request the saved game holds (its graph search,
+// EEPathManager::SaveGraphSearches) waits for it: at the loaded game's first tick inAttach gets the rebuilt request
+// (one reference, the owner's), or NULL when the search could not be rebuilt (the owner asks again). inSubGroup (or
+// NULL) is the owner the search's route planner points at; it is referenced until then
+class EECPAttackSubGroup;
+void EEAwaitAutoPathRequest(long inRequestID, EECPAttackSubGroup* inSubGroup, std::function<void(EEAutoPathRequest*)> inAttach);
 
 #endif

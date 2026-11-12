@@ -38,7 +38,16 @@ enum EEUnitStoreFieldID {
     kUnitFieldHeight = 20,      // EEComplexUnit::mHeight
     kUnitFieldTimesUpdated = 21,   // EEComplexUnit::mTimesUpdated
     kUnitFieldActiveGroup = 22, // EEComplexUnit::mActiveGroup (the record's: set or not)
-    kUnitFieldCommand = 23      // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
+    kUnitFieldCommand = 23,     // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
+    // the step's timers and power (R5b.4 leaf 6; the step's leaves read them from the record: ee_units step.rs)
+    kUnitFieldReloadTimer = 24,         // EEComplexUnit::mReloadTimer
+    kUnitFieldTargetSearchTimer = 25,   // EEComplexUnit::mTargetSearchTimer
+    kUnitFieldHealSearchTimer = 26,     // EEComplexUnit::mHealSearchTimer (float bits)
+    kUnitFieldNextTriggerTime = 27,     // EEComplexUnit::mNextTriggerTime
+    kUnitFieldRottingAwayTime = 28,     // EEComplexUnit::mRottingAwayTime
+    kUnitFieldPower = 29,               // EEComplexUnit::mPower
+    kUnitFieldPowerRegenTimer = 30,     // EEComplexUnit::mPowerRegenTimer
+    kUnitFieldCamouflageTimer = 31      // EEComplexUnit::mCamouflageTimer
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
@@ -72,6 +81,8 @@ public:
     EEUnitStoreField& operator-=(T inValue) { return *this = (T)(this->mValue - inValue); }
     EEUnitStoreField& operator++() { return *this = (T)(this->mValue + 1); }
     EEUnitStoreField& operator--() { return *this = (T)(this->mValue - 1); }
+    EEUnitStoreField& operator|=(T inValue) { return *this = (T)(this->mValue | inValue); }
+    EEUnitStoreField& operator&=(T inValue) { return *this = (T)(this->mValue & inValue); }
     T operator++(int) { T theOld = this->mValue; *this = (T)(theOld + 1); return theOld; }
     T operator--(int) { T theOld = this->mValue; *this = (T)(theOld - 1); return theOld; }
 
@@ -99,6 +110,14 @@ void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer);
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
 
+// the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order): each change
+// of the deque reported where it is made (UpdateActiveUnits, RebuildActiveUnits, Clear); EEUnitOrderReset copies the
+// deque whole (after a load's reorder, EEPhysics::Tick's after-load fixups). USCK compares the two.
+void EEUnitOrderPush(unsigned long inID);
+void EEUnitOrderErase(unsigned long inID);
+void EEUnitOrderClear();
+void EEUnitOrderReset();
+
 class EEPlayer;
 // the box selection's pick (EEPlayer::SelectUnits): the ids of inIDs (inCount) the selection takes, in order (an
 // invalid unit at each of its ids: the group's Add skips it); outIDs has room for inCount; the count
@@ -119,8 +138,27 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
 // TEST ONLY: the Fill test over every player's units for every slot (USFL records; EE-SIM, every five game minutes)
 void EEFillSweep();
 
+// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): EEUnitStepNote adds one call of a leaf
+// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; EEUnitStepCommit (the end of
+// EEPhysics::UpdateUnits) writes the tick's record: the tick, the calls, their FNV-1a. Words: reload / target search
+// [timer, tick ms, written, timer after]; heal search the same with float bits (the tick time, not ms); power
+// [regeneration, maximum, cinematic, land building, built, power, timer, tick ms, interval, written, power set, power
+// after, timer after]. Nothing is noted unless the capture runs.
+enum EEUnitStepKind {
+    kUnitStepReload = 1,        // EEComplexUnit::UpdateReloadTimer
+    kUnitStepTargetSearch = 2,  // EEComplexUnit::UpdateTargetSearchTimer
+    kUnitStepHealSearch = 3,    // EEComplexUnit::UpdateHealSearchTimer
+    kUnitStepPower = 4          // EEUnitClass::RegeneratePower
+};
+void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
+void EEUnitStepCommit();
+// TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
+// the unit and exits 3 (the capture's USTM gate; the leaves compare only while the capture runs)
+void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal);
+
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
-// on-the-map flags, and the out-of-sync checksum's flags 1 and 2 over the chain against the store's; the count compared.
+// on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'
+// deque against the Rust list (EEUnitOrder*); the count compared.
 // inWhere names the point (0: after a physics tick, else the executed message's type). A mismatch prints the unit and
 // field and exits 3.
 unsigned long EEUnitStoreCheck(unsigned long inWhere);

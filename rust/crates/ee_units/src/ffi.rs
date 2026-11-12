@@ -2,6 +2,7 @@
 //! One process-wide registry; the C++ keeps the "no id" value (0xffffffff) out of it.
 //! And the unit store's (`include/ee/EEUnitStore.h`, `src/Empire Earth/Units/EEUnitStore.cpp`; see `store`).
 
+use crate::order::with_order;
 use crate::store::{with_store, EeUnitRecord, EeUnitStoreCheck};
 use crate::Registry;
 use std::ffi::c_void;
@@ -70,6 +71,57 @@ pub extern "C" fn ee_units_store_set_location(id: u32, object: u64, x: u32, y: u
 #[no_mangle]
 pub extern "C" fn ee_units_store_checksum_flag2() -> u64 {
     with_store(|s| s.checksum_flag2())
+}
+
+/// `EEWorld::mUpdateUnits.push_back` (`order`).
+#[no_mangle]
+pub extern "C" fn ee_units_order_push(id: u32) {
+    with_order(|o| o.push(id));
+}
+
+/// `EEWorld::mUpdateUnits.erase` of the unit `id` (its first entry); false when the list has none.
+#[no_mangle]
+pub extern "C" fn ee_units_order_erase(id: u32) -> bool {
+    with_order(|o| o.erase(id))
+}
+
+/// `EEWorld::mUpdateUnits.clear()`.
+#[no_mangle]
+pub extern "C" fn ee_units_order_clear() {
+    with_order(|o| o.clear());
+}
+
+/// The number of stepped units listed.
+#[no_mangle]
+pub extern "C" fn ee_units_order_count() -> u32 {
+    with_order(|o| o.len()) as u32
+}
+
+/// The stepped list replaced by `count` ids in order (a load's reorder).
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null with `count` 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_order_reset(ids: *const u32, count: usize) {
+    // SAFETY: the caller's contract
+    let ids = if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(ids, count) } };
+    with_order(|o| o.reset(ids));
+}
+
+/// TEST ONLY: the deque's `count` ids (in its order) against the list (`UpdateOrder::check`: 0 the same, else the
+/// first differing index plus 1); `out_unrecorded` gets the number of listed ids with no store record.
+///
+/// # Safety
+/// `ids` points to `count` ids (or is null with `count` 0); `out_unrecorded` to a writable u32.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_order_check(ids: *const u32, count: usize, out_unrecorded: *mut u32) -> u32 {
+    // SAFETY: the caller's contract
+    let ids = if count == 0 { &[][..] } else { unsafe { std::slice::from_raw_parts(ids, count) } };
+    let (result, listed) = with_order(|o| (o.check(ids), o.ids().to_vec()));
+    let unrecorded = with_store(|s| listed.iter().filter(|&&id| s.get(id).is_none()).count()) as u32;
+    // SAFETY: the caller's contract
+    unsafe { *out_unrecorded = unrecorded };
+    result
 }
 
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
