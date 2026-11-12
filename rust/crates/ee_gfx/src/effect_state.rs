@@ -115,6 +115,21 @@ impl Default for EeGfxEffectAmbient {
     }
 }
 
+/// `EEEDamagedEffect`'s state: its child effects' handles (owned: made on first use, freed with the record) and the
+/// finished flag (the fire functor sets it).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectDamaged {
+    pub lists: *mut EeGfxEffectLists,
+    pub finished: bool,
+}
+
+impl Default for EeGfxEffectDamaged {
+    fn default() -> EeGfxEffectDamaged {
+        EeGfxEffectDamaged { lists: std::ptr::null_mut(), finished: false }
+    }
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -148,6 +163,8 @@ pub struct EeGfxEffectRecord {
     pub particle: EeGfxEffectParticle,
     /// the battlefield decals'
     pub ambient: EeGfxEffectAmbient,
+    /// the damage controller's
+    pub damaged: EeGfxEffectDamaged,
 }
 
 /// The identity (`GETransformation()`).
@@ -178,6 +195,7 @@ impl EeGfxEffectRecord {
             plume: EeGfxEffectPlume::default(),
             particle: EeGfxEffectParticle::default(),
             ambient: EeGfxEffectAmbient::default(),
+            damaged: EeGfxEffectDamaged::default(),
         }
     }
 
@@ -1311,6 +1329,177 @@ pub fn save_ambient<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
     res
 }
 
+// ---- the damage controller (EEEDamagedEffect, kind 0x3e)
+
+/// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
+/// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EeGfxEffectLists {
+    pub primary: Vec<u32>,
+    pub secondary: Vec<u32>,
+}
+
+/// What the damage controller's tick reads (the C++ fills it from the unit, the head part of a multi-part one).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxDamagedTick {
+    /// the effect has a unit
+    pub has_unit: bool,
+    /// the damage tag points of linked effect 1's kind (1 without a list)
+    pub tag_count: u32,
+    /// the unit's hit points and its stats' maximum
+    pub hit_points: i32,
+    pub max_hit_points: i32,
+    /// the graphic effect's `GetParam2()` (the health share below which the damage shows) and linked effect 2
+    pub param2: f32,
+    pub has_linked2: bool,
+    /// the unit is on the map, cloaked, and the current player is not its ally: no child effects
+    pub hidden: bool,
+}
+
+/// The world the damage controller's tick calls into, in the original's order.
+pub trait DamagedHost {
+    /// `CreateUnitEffect(unit, linked effect 1 or 2, &handle, 0, index, 0)`: the handle
+    fn create(&mut self, secondary: bool, index: u32) -> u32;
+    /// `DestroyEffect(handle)`
+    fn destroy(&mut self, handle: u32);
+}
+
+/// `EEEDamagedEffect::Step`: one child effect (and its secondary) per damage tag point, more as the health drops;
+/// none on a hidden unit; once finished, destroys them all and returns 7.
+pub fn damaged_step<H: DamagedHost>(
+    finished: &mut bool,
+    lists: &mut EeGfxEffectLists,
+    t: &EeGfxDamagedTick,
+    host: &mut H,
+) -> i32 {
+    if *finished {
+        for _ in 0..lists.primary.len() {
+            host.destroy(lists.primary.pop().unwrap_or(0));
+            if t.has_linked2 {
+                host.destroy(lists.secondary.pop().unwrap_or(0));
+            }
+        }
+        return 7;
+    }
+    if !t.has_unit {
+        return 0;
+    }
+    let ratio = t.hit_points as f32 / t.max_hit_points as f32;
+    let wanted: u32 = if ratio <= t.param2 && t.hit_points > 0 {
+        let amount = (1.0 - ratio * (1.0 / t.param2)) * t.tag_count as f32;
+        let mut w = um::lrintf(amount) as u32;
+        if (w as f32) < amount {
+            w = w.wrapping_add(1);
+        }
+        w
+    } else {
+        0
+    };
+    if wanted == 0 && t.param2 < 1.0 {
+        *finished = true;
+    }
+    let mut delta = (wanted as i32).wrapping_sub(lists.primary.len() as i32);
+    if t.hidden {
+        delta = -(lists.primary.len() as i32);
+    }
+    if delta == 0 {
+        return 0;
+    }
+    if delta > 0 {
+        while delta > 0 {
+            let h = host.create(false, lists.primary.len() as u32);
+            lists.primary.push(h);
+            if t.has_linked2 {
+                let h2 = host.create(true, lists.secondary.len() as u32);
+                lists.secondary.push(h2);
+            }
+            delta -= 1;
+        }
+    } else {
+        while delta < 0 {
+            host.destroy(lists.primary.pop().unwrap_or(0));
+            if t.has_linked2 {
+                host.destroy(lists.secondary.pop().unwrap_or(0));
+            }
+            delta += 1;
+        }
+    }
+    0
+}
+
+/// `EEEDamagedEffect::Load`'s own reads after the base's (ignored): whether secondaries were saved, the handles,
+/// and from 0.249 the finished flag; the first error.
+pub fn load_damaged<F: EffectFile>(
+    finished: &mut bool,
+    lists: &mut EeGfxEffectLists,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    let mut has_second = false;
+    let mut res = f.read_bool(&mut has_second);
+    if res != OK {
+        return res;
+    }
+    let mut count = 0u32;
+    res = f.read_u32(&mut count);
+    if res != OK {
+        return res;
+    }
+    let mut handle = 0u32;
+    let mut i = 0;
+    while i < count && res == OK {
+        i += 1;
+        res = f.read_u32(&mut handle);
+        if res != OK {
+            continue;
+        }
+        lists.primary.push(handle);
+        if !has_second {
+            continue;
+        }
+        res = f.read_u32(&mut handle);
+        if res == OK {
+            lists.secondary.push(handle);
+        }
+    }
+    if res == OK && (major > 0 || minor >= 0xf9) {
+        res = f.read_bool(finished);
+    }
+    res
+}
+
+/// `EEEDamagedEffect::Save`'s own writes after the base's (ignored): whether linked effect 2 is set, the handles
+/// (each primary with its secondary), the finished flag; the first error.
+pub fn save_damaged<F: EffectFile>(finished: bool, lists: &EeGfxEffectLists, f: &mut F, has_linked2: bool) -> i32 {
+    let mut res = f.write_bool(has_linked2);
+    if res != OK {
+        return res;
+    }
+    res = f.write_u32(lists.primary.len() as u32);
+    if res != OK {
+        return res;
+    }
+    for i in 0..lists.primary.len() {
+        res = f.write_u32(lists.primary[i]);
+        if res != OK {
+            break;
+        }
+        if !has_linked2 {
+            continue;
+        }
+        res = f.write_u32(lists.secondary.get(i).copied().unwrap_or(0));
+        if res != OK {
+            break;
+        }
+    }
+    if res == OK {
+        res = f.write_bool(finished);
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1746,6 +1935,74 @@ mod tests {
         let mut want = r.ambient;
         want.hidden = 0.0;
         assert_eq!(back.ambient, want);
+    }
+
+    #[derive(Default)]
+    struct Children {
+        next: u32,
+        log: Vec<(char, u32)>,
+    }
+
+    impl DamagedHost for Children {
+        fn create(&mut self, secondary: bool, index: u32) -> u32 {
+            self.next += 1;
+            self.log.push((if secondary { 's' } else { 'p' }, index));
+            self.next
+        }
+        fn destroy(&mut self, handle: u32) {
+            self.log.push(('d', handle));
+        }
+    }
+
+    #[test]
+    fn the_damage_controller_keeps_a_child_per_lost_share_and_saves_them() {
+        let mut lists = EeGfxEffectLists::default();
+        let mut finished = false;
+        let mut h = Children::default();
+        let t = EeGfxDamagedTick {
+            has_unit: true,
+            tag_count: 4,
+            hit_points: 25,
+            max_hit_points: 100,
+            param2: 0.5,
+            has_linked2: true,
+            hidden: false,
+        };
+        // a quarter of the health with damage below half: ceil((1 - 0.25 / 0.5) * 4) = 2 children, each with its secondary
+        assert_eq!(damaged_step(&mut finished, &mut lists, &t, &mut h), 0);
+        assert_eq!(lists, EeGfxEffectLists { primary: vec![1, 3], secondary: vec![2, 4] });
+        assert_eq!(h.log, vec![('p', 0), ('s', 0), ('p', 1), ('s', 1)]);
+        // hidden: all go, last first
+        h.log.clear();
+        assert_eq!(damaged_step(&mut finished, &mut lists, &EeGfxDamagedTick { hidden: true, ..t }, &mut h), 0);
+        assert_eq!(h.log, vec![('d', 3), ('d', 4), ('d', 1), ('d', 2)]);
+        // healed past the share: finished (param 2 below 1), then everything goes and it ends
+        lists = EeGfxEffectLists { primary: vec![7], secondary: vec![8] };
+        h.log.clear();
+        assert_eq!(damaged_step(&mut finished, &mut lists, &EeGfxDamagedTick { hit_points: 80, ..t }, &mut h), 0);
+        assert!(finished);
+        assert_eq!(damaged_step(&mut finished, &mut lists, &t, &mut h), 7);
+        assert_eq!(h.log, vec![('d', 7), ('d', 8)]);
+        // without a unit nothing happens
+        let mut f2 = false;
+        assert_eq!(damaged_step(&mut f2, &mut lists, &EeGfxDamagedTick { has_unit: false, ..t }, &mut h), 0);
+        // save and load
+        let full = EeGfxEffectLists { primary: vec![5, 6], secondary: vec![9, 10] };
+        let mut f = Mem::default();
+        assert_eq!(save_damaged(true, &full, &mut f, true), 0);
+        let types: String = f.items.iter().map(|i| i.0).collect();
+        assert_eq!(types, "buuuuub");
+        let mut back = EeGfxEffectLists::default();
+        let mut fin = false;
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_damaged(&mut fin, &mut back, &mut g, 0, 0x10c), 0);
+        assert_eq!((back, fin), (full.clone(), true));
+        // before 0.249 the flag was not saved
+        let mut old = EeGfxEffectLists::default();
+        let mut fin2 = false;
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_damaged(&mut fin2, &mut old, &mut g, 0, 0xf8), 0);
+        assert!(!fin2);
     }
 
     #[test]

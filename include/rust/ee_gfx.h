@@ -108,6 +108,10 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
+/// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
+struct EeGfxEffectLists;
+
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
 
@@ -470,6 +474,13 @@ struct EeGfxEffectAmbient {
   float hidden;
 };
 
+/// `EEEDamagedEffect`'s state: its child effects' handles (owned: made on first use, freed with the record) and the
+/// finished flag (the fire functor sets it).
+struct EeGfxEffectDamaged {
+  EeGfxEffectLists *lists;
+  bool finished;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -501,6 +512,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectParticle particle;
   /// the battlefield decals'
   EeGfxEffectAmbient ambient;
+  /// the damage controller's
+  EeGfxEffectDamaged damaged;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -644,6 +657,30 @@ struct EeGfxAmbientNew {
   float size;
   int32_t int_param1;
   bool flag1;
+};
+
+/// What the damage controller's tick reads (the C++ fills it from the unit, the head part of a multi-part one).
+struct EeGfxDamagedTick {
+  /// the effect has a unit
+  bool has_unit;
+  /// the damage tag points of linked effect 1's kind (1 without a list)
+  uint32_t tag_count;
+  /// the unit's hit points and its stats' maximum
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the graphic effect's `GetParam2()` (the health share below which the damage shows) and linked effect 2
+  float param2;
+  bool has_linked2;
+  /// the unit is on the map, cloaked, and the current player is not its ally: no child effects
+  bool hidden;
+};
+
+/// The world the damage controller calls into (`context`: the effect).
+struct EeGfxDamagedHost {
+  void *context;
+  /// `CreateUnitEffect(unit, linked effect 1 (or 2: `secondary`), &handle, 0, index, 0)`: the handle
+  uint32_t (*create)(void *context, bool secondary, uint32_t index);
+  void (*destroy)(void *context, uint32_t handle);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1473,6 +1510,31 @@ int32_t ee_gfx_effect_load_ambient(EeGfxEffectRecord *r, const EeGfxEffectFile *
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_ambient(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEEDamagedEffect::Step`: 7 when it ends. The lists are out of the record while the C++ creates and destroys.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `host` are valid.
+int32_t ee_gfx_effect_damaged_step(EeGfxEffectRecord *r,
+                                   const EeGfxDamagedTick *tick,
+                                   const EeGfxDamagedHost *host);
+
+/// `EEEDamagedEffect::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_damaged(EeGfxEffectRecord *r,
+                                   const EeGfxEffectFile *file,
+                                   uint32_t major,
+                                   uint32_t minor);
+
+/// `EEEDamagedEffect::Save`'s own writes (`has_linked2`: the graphic effect's linked effect 2 is set).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_damaged(EeGfxEffectRecord *r,
+                                   const EeGfxEffectFile *file,
+                                   bool has_linked2);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

@@ -8,9 +8,9 @@ use std::ffi::c_void;
 use ee_ge::types::Ge3DPoint;
 
 use crate::effect_state::{
-    self, EeGfxAmbientNew, EeGfxEffectLoaded, EeGfxEffectPart, EeGfxEffectRecord, EeGfxParticleSetUp,
-    EeGfxParticleTick, EeGfxPlumeTick, EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, ParticleGround,
-    SmokeHost,
+    self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
+    EeGfxEffectRecord, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick, EeGfxSmokeSetUp, EeGfxSmokeTick,
+    EffectFile, EffectParts, ParticleGround, SmokeHost,
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -139,7 +139,43 @@ pub extern "C" fn ee_gfx_effect_record_new(kind: i32) -> *mut EeGfxEffectRecord 
 pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
     if !r.is_null() {
         // SAFETY: the function's contract
-        drop(unsafe { Box::from_raw(r) });
+        let record = unsafe { Box::from_raw(r) };
+        if !record.damaged.lists.is_null() {
+            // SAFETY: the lists came from `take_lists`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.damaged.lists) });
+        }
+    }
+}
+
+/// The damage controller's lists taken out of the record for a call (empty when it has none yet).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn take_lists(r: *mut EeGfxEffectRecord) -> EeGfxEffectLists {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).damaged.lists;
+        if p.is_null() {
+            EeGfxEffectLists::default()
+        } else {
+            std::mem::take(&mut *p)
+        }
+    }
+}
+
+/// Puts the lists back into the record (made on first use).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn put_lists(r: *mut EeGfxEffectRecord, lists: EeGfxEffectLists) {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).damaged.lists;
+        if p.is_null() {
+            (*r).damaged.lists = Box::into_raw(Box::new(lists));
+        } else {
+            *p = lists;
+        }
     }
 }
 
@@ -605,6 +641,90 @@ pub unsafe extern "C" fn ee_gfx_effect_save_ambient(r: *const EeGfxEffectRecord,
     unsafe {
         let local = r.read();
         effect_state::save_ambient(&local, &mut File(&*file))
+    }
+}
+
+/// The world the damage controller calls into (`context`: the effect).
+#[repr(C)]
+pub struct EeGfxDamagedHost {
+    pub context: *mut c_void,
+    /// `CreateUnitEffect(unit, linked effect 1 (or 2: `secondary`), &handle, 0, index, 0)`: the handle
+    pub create: extern "C" fn(context: *mut c_void, secondary: bool, index: u32) -> u32,
+    pub destroy: extern "C" fn(context: *mut c_void, handle: u32),
+}
+
+struct Damaged<'a>(&'a EeGfxDamagedHost);
+
+impl DamagedHost for Damaged<'_> {
+    fn create(&mut self, secondary: bool, index: u32) -> u32 {
+        (self.0.create)(self.0.context, secondary, index)
+    }
+    fn destroy(&mut self, handle: u32) {
+        (self.0.destroy)(self.0.context, handle)
+    }
+}
+
+/// `EEEDamagedEffect::Step`: 7 when it ends. The lists are out of the record while the C++ creates and destroys.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `host` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_damaged_step(
+    r: *mut EeGfxEffectRecord,
+    tick: *const EeGfxDamagedTick,
+    host: *const EeGfxDamagedHost,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = *tick;
+        let mut lists = take_lists(r);
+        let mut finished = (*r).damaged.finished;
+        let res = effect_state::damaged_step(&mut finished, &mut lists, &t, &mut Damaged(&*host));
+        (*r).damaged.finished = finished;
+        put_lists(r, lists);
+        res
+    }
+}
+
+/// `EEEDamagedEffect::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_damaged(
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut lists = take_lists(r);
+        let mut finished = (*r).damaged.finished;
+        let res = effect_state::load_damaged(&mut finished, &mut lists, &mut File(&*file), major, minor);
+        (*r).damaged.finished = finished;
+        put_lists(r, lists);
+        res
+    }
+}
+
+/// `EEEDamagedEffect::Save`'s own writes (`has_linked2`: the graphic effect's linked effect 2 is set).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_damaged(
+    r: *mut EeGfxEffectRecord,
+    file: *const EeGfxEffectFile,
+    has_linked2: bool,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let lists = take_lists(r);
+        let finished = (*r).damaged.finished;
+        let res = effect_state::save_damaged(finished, &lists, &mut File(&*file), has_linked2);
+        put_lists(r, lists);
+        res
     }
 }
 
