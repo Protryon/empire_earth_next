@@ -2695,6 +2695,22 @@ enum class EeWonReadySound {
   NotReady = 2,
 };
 
+/// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
+enum class EeWonTitleInstr {
+  /// Not a title instruction: `false`.
+  NotMine,
+  /// Parse a child `TitleConfig(true)`.
+  ChildTitle,
+  /// Parse a child `CommunityConfig` (`alreadyInCommunity` as the field says).
+  ChildCommunity,
+  /// `"You can't nest Title definitions!"`.
+  ErrorNestTitle,
+  /// `"You can't have a title definition within a community!"`.
+  ErrorTitleInCommunity,
+  /// `"You can't nest communities!"`.
+  ErrorNestCommunity,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -7764,6 +7780,39 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// The strings `ToString` prints (each a pointer and a length).
+struct EeWonTitleText {
+  const uint8_t *name;
+  size_t name_len;
+  const uint8_t *network;
+  size_t network_len;
+  const uint8_t *image_path;
+  size_t image_path_len;
+  const uint8_t *hash_string;
+  size_t hash_string_len;
+  const uint8_t *key_prefix;
+  size_t key_prefix_len;
+  uint16_t net_port;
+};
+
+/// The title fields `ToString` prints, in its order after `NetPort`.
+struct EeWonTitleFlags {
+  bool force_cd_key;
+  bool require_crc;
+  bool allow_beta_key;
+  bool require_cd_key;
+  bool fail_to_guest;
+  bool allow_guest;
+  bool concurrent_user_login;
+  bool concurrent_cd_key_login;
+  bool get_user_data;
+  bool get_forgeable_user_data;
+  bool cd_key_for_invite;
+  bool save_session_key;
+  bool get_key_id;
+  bool ascii_account_names;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -19109,6 +19158,62 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// [`instruction`] over an instruction type's bytes.
+///
+/// # Safety
+/// `ty` holds `len` bytes.
+EeWonTitleInstr ee_won_titlecfg_instruction(bool community,
+                                            bool already,
+                                            const uint8_t *ty,
+                                            size_t len);
+
+/// [`instr_error`] handed to `sink` (nothing for a verdict without one).
+///
+/// # Safety
+/// `sink` and `context` form a valid sink.
+void ee_won_titlecfg_instr_error(EeWonTitleInstr i, EeWonByteSink sink, void *context);
+
+/// [`name_login`].
+///
+/// # Safety
+/// `s` holds `len` bytes.
+int32_t ee_won_titlecfg_name_login(const uint8_t *s, size_t len);
+
+/// [`lifespans`]: the map's pairs (key, value) handed to `put` in key order.
+///
+/// # Safety
+/// `flat` holds `len` values; `put` is valid with `context`.
+void ee_won_titlecfg_lifespans(const int32_t *flat,
+                               size_t len,
+                               void (*put)(void *context, int32_t key, int32_t value),
+                               void *context);
+
+/// [`title_text`] handed to `sink`.
+///
+/// # Safety
+/// The text's pointers hold their lengths; `sink` is valid with `context`.
+void ee_won_titlecfg_title_text(const EeWonTitleText *t,
+                                const EeWonTitleFlags *flags,
+                                bool with_name,
+                                EeWonByteSink sink,
+                                void *context);
+
+/// [`community_text`] handed to `sink`; the map comes flattened as key, value pairs.
+///
+/// # Safety
+/// The pointers hold their lengths; `sink` is valid with `context`.
+void ee_won_titlecfg_community_text(const uint8_t *header,
+                                    size_t header_len,
+                                    int32_t id,
+                                    const EeWonTitleText *t,
+                                    const EeWonTitleFlags *flags,
+                                    const uint8_t *name_login,
+                                    size_t name_login_len,
+                                    const int32_t *pairs,
+                                    size_t pair_count,
+                                    EeWonByteSink sink,
+                                    void *context);
 
 }  // extern "C"
 

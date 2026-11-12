@@ -509,6 +509,10 @@ WON_TESTS = {
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
     # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
     "won_admin_test": [],
+    # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
+    # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
+    # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
+    "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
