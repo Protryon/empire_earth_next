@@ -9747,3 +9747,51 @@ readers' new lines only compile; no tour, LAN game or EE-SIM run calls them.
   built by `WONRoutingMsg.h`'s records, read by `LobbyServer::SyncGroups`) still derive from the 20-line
   ServerRequestOp, which stays until they move. HTTPGetOp / GetHTTPDocumentOp: not started (HTTPEngine drives
   HTTPGetOp's sockets and modes; a scripted-socket driver the size of FTPGetOp's first).
+
+## R6: WON's Internet code, round 12 (the last C++ request ops, HTTPGetOp and GetHTTPDocumentOp as Rust ops)
+
+Branch `rust-won-net12`. Measured by net C++ deletion, as rounds 7 to 11. Nothing in the game reaches this code but
+an Internet login (the lobby's create account form, its server room counts, the message of the day, terms of use
+and advert downloads, EEWonNet's dead MOTD request; the WON servers are gone): only the drivers and the Rust
+replays exercise it. RustServerOp::HostCall's new cases and the readers' new lines only compile; no tour, LAN game
+or EE-SIM run calls them.
+
+- **The last C++ request ops.** CreateAccountOp and RoutingGetGroupListReqOp are `RequestOp`s (`reqlast.rs`, kinds
+  14 and 15) made by `RustServerOp::NewCreateAccount` and `NewGroupListReq`; with them the 20-line C++
+  `ServerRequestOp`, reqhost.rs's `CppReq` and the `EE_WON_HOST_REQ_*` codes went. CreateAccountOp's keys are Rust
+  objects (`ElGamal`, `Blowfish`), made in the class's member order (the ElGamal's generator first, then the
+  session key's), so one fixed seed gives the same bytes on both halves. A server key that does not load is the
+  new `Checked::ServerError` (`SetLastServerError` then the next server). ProfileData (no game user left: the
+  account ops take the profile as members) and WONDBMsg.h moved to `tests/won`.
+- **A group map as a Rust list of replies.** The group list op keeps every reply it checked; its one reader
+  (`RoutingLogic::QueryServerGroupsDone`) reads them again with the original's own statements
+  (`RouteGroupListOf` over `RouteGroupListReqReply`) into a connection-less inner op's map for `SyncGroups`. Cheaper
+  than a Rust group record and its accessors, and the record-building stays the one template the connection ops
+  use. A reply's non-record events set the inner op's flags, which the next request sends: the Rust op keeps them.
+- **Random keys in a golden.** `ee_won_random_test_seed(base)` makes the system seed `base + use count` (for the
+  drivers only; the Rust replay builds the generators from `random::test_seed` instead, since parallel tests share
+  the counter). The driver sets it again before making each half's op.
+- **HTTPGetOp on the base** (`httpget.rs`): every step, 18 host codes (the socket's connected test, kill, status
+  and blocking line receive, the file's stat, `time`, the cache entry's reads and writes, the receive op's skip,
+  binary and modify time, the web proxy host, a new HTTP get, another RustServerOp's results and setters). The
+  redirect's child op is made through the host (`EE_WON_HOST_NEW_HTTP_GET`), set and read through
+  `EE_WON_HOST_HOSTOP_SET` / `_NUM` / `_BYTES`: the original half does the same, so the traces agree and the child's
+  own steps are the same sequences again. The web proxy file stays C++ (read once per process when the first op is
+  made; the constructors' growing file name prefix, unobservable, is gone).
+- **GetHTTPDocumentOp on the base** (`httpdoc.rs`): its downloads are child HTTP gets, its MOTD flag read one
+  `fgetc` host call; the C++ side keeps the construction (the cache file names from the WON directory, the ignored
+  path files), the language's lower case and `GetHttpDocument` (the cache file's read). Its readers (InitLogic,
+  MOTDCtrl, TOUDialog, LobbyEvents, EEWonNet) read by number: mechanical.
+- **Goldens first.** `golden_reqlast.txt` (`won_reqlast_test`, 1000 sequences); `golden_hostop.txt`'s `H` (300) and
+  `D` (180) sequences appended, the earlier part byte for byte; the Rust replays port the stand-in's new answers.
+  Driver checks 0 failed; mutations fail them (57,440; 312; 7,305) and the replays. A first recording printed a
+  server status of -1 as the invalid header the driver encoded as -1: encode an invalid header as a flag.
+- **The UB abort in `reqops::tests::contest_through_the_abi`** was the test's: `values(&[.., b(b"ab")])` built the
+  C ABI's values from a temporary array dropped at the end of the statement, so `ee_won_reqops_new` copied freed
+  bytes (the debug `copy_nonoverlapping` check stopped it when the allocator had reused the block). 13 of 200 runs
+  aborted before the fix, 0 after. Any helper returning raw pointers into its argument needs the argument bound.
+- **The original's undefined corners, defined.** A NULL reply line reads as empty; a NULL group list reply as an
+  empty one; a document callback's id other than 0 or 1 (an index past the arrays) is taken modulo 2;
+  OpFinished's `fclose(NULL)` is not done.
+- **Not moved, and why.** AuthContext's remaining C++, the peer auth objects and the certificate classes (item 3 of
+  the round): not started this round.
