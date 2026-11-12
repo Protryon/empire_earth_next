@@ -72,6 +72,7 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEPhysics.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
@@ -443,6 +444,8 @@ bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, 
                std::vector<EEUnit*>& outUnits)
 {
     outUnits.clear();
+    if (inTile == NULL)   // port: a tile off the map
+        return false;
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && EEGetTileUnitStanding(theUnit, inPlayer, inUnitType, inIgnoreOwner) == 1)
@@ -2960,6 +2963,15 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
         ::gWorld.mEffectManager->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), &theHandle, 1, 0, 0);
     }
     inContainer->mPlayer->AddResource(inUnit->mResourceType, theAmount);
+    // TEST ONLY (docs/AI_RESEARCH.md §8.51, EE_AI_TRACE with EE_AI_EXP deposits): each deposit of a computer player,
+    // to time a gatherer's loads (trace only: nothing here changes the game)
+    if (gCPTraceOn) {
+        EEComputerPlayer* theComputer = dynamic_cast<EEComputerPlayer*>(inContainer->mPlayer);
+        if (theComputer != NULL && EECPExperiment(theComputer, "deposits"))
+            EE_CP_TRACE(theComputer, "deposit", "unit=%lu cls=%ld res=%lu carried=%ld amount=%ld bonus=%.3f store=%lu t=%lu",
+                (unsigned long)inUnit->GetUnitID(), (long)inUnit->mUnitClass->mUnitType, theKind, theCarried, theAmount,
+                (double)theBonus, (unsigned long)inContainer->GetUnitID(), (unsigned long)gPhysics->mGameTime);
+    }
     switch (inUnit->mResourceType) {
     case kResourceFood:
         inContainer->mPlayer->mSavedGroups.Reset(7, theAmount);
@@ -6353,13 +6365,22 @@ void EEStepAsideFromSite(EEUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlaye
     }
     for (i = 0; theTiles.size() > 0 && i < theTiles.size(); i++) {
         EETile* theMapTile = ::gWorld.GetMap()->RTSMap::GetTile(theTiles[i].GetX(), theTiles[i].GetY());
+        if (theMapTile == NULL)   // port: a footprint tile off the map (a site at the map's edge): the fault of Small Islands seed 11
+            continue;
         for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
             EEUnit* theOther = theNode->mUnit;
             EEComplexUnit* theComplexUnit;
             if (theOther == NULL || (theComplexUnit = theOther->GetComplexUnit()) == NULL || theComplexUnit->IsFoundation())
                 continue;
+            // port: a unit removed while its tile node lingers (PORT_LEARNINGS: the x-sorted list and the tile lists
+            // keep a removed unit's node until it is freed), or one without stats or a tile (a path point, a unit
+            // not placed yet): nothing to step aside. A builder beginning on a granary beside removed path points
+            // faulted here (EEUGBuildRepair::BeginRepair, Small Islands seed 11)
+            if (!theOther->mIsValid || theOther->mTile == NULL || theComplexUnit->GetStats() == NULL || theComplexUnit->GetClass() == NULL)
+                continue;
             if ((theComplexUnit->GetClass()->GetFamily() != kUnitFamilyAnimal || theComplexUnit->GetStats()->GetAttack() != 0.0f) && !inForce) {
-                if (theOther->GetPlayer() != inPlayer && inPlayer->mEnemies[theOther->mPlayer->GetPlayerID()] != 0)
+                if (theOther->GetPlayer() != inPlayer && (theOther->mPlayer == NULL || inPlayer == NULL
+                                                          || inPlayer->mEnemies[theOther->mPlayer->GetPlayerID()] != 0))
                     continue;
                 long theCommand = theComplexUnit->mCommand != NULL ? theComplexUnit->mCommand->mType : 0;
                 if (theCommand != kActionIdle && theCommand != kActionWaitForOpenPosition && theCommand != kActionGatherResource)

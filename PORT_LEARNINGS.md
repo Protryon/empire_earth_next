@@ -1568,7 +1568,38 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   converter code (open_data.json `converters`) may not load: the main checkout's open tree had an aipersonalities key
   (`demand_split`) this branch does not know, and the game stops on an unknown key; tools/sim.py warns.
 - **POSIX**: `ee-aoc --sim <EE-SIM options>` runs the same driver from the game's main (EESimMain returns -1 and
-  main goes on with the game). It compiles for linux-x86_64 with the game's flags; it has not been run there.
+  main goes on with the game); the exe started as `ee-sim` (the link `xbuild.py sim`/`game` makes) does the same.
+  For a bench machine without display or GPU (2026-11-11, branch linux-sim; README "Benches on a Linux machine"):
+  - Linux: the sim sets `SDL_VIDEO_DRIVER=dummy` (the hidden window needs no display; the primary surface has no
+    native window, so GX presents nothing) and `LP_NUM_THREADS=1` unless the environment sets them. macOS keeps
+    Cocoa: its windows carry `SDL_WINDOW_METAL`, which the dummy driver refuses at window creation.
+  - The renderer still creates its wgpu device (GX has no device-less path; ~90 wgpu calls). On a machine without a
+    GPU that is Mesa's lavapipe (`mesa-vulkan-drivers`), the Linux counterpart of WARP. Lavapipe starts one
+    rasterizer thread per core per process by default: hence the one thread.
+  - Message boxes go to stderr in the sim (as on Windows), never to the window layer's box.
+  - A fault prints `EE-SIM FAULT signal N` and the frames (`backtrace_symbols_fd`: `ee-sim(+0xOFFSET)`, for
+    `addr2line`), then the default action; not in sanitizer builds, whose own report is better.
+  - TCP sockets get `SO_REUSEADDR` on POSIX: Linux refuses to bind a listening port while a connection of an
+    earlier process on it is in TIME_WAIT (about a minute), Windows does not; a bench slot binds the same pair game
+    after game. Linux's ephemeral ports start at 32768, below the benches' pairs (33334 + 2000 + 64 k): the setup
+    (tools/setup_linux_bench.sh) moves them to 45000 and up.
+  - Cross-platform identity is not known yet (tools/sim_compare.py checks it). The known risks: libm (`sin`, `cos`,
+    `atan2` in the simulation's files; UCRT and glibc may differ in the last bit), `std::sort` on ties (68 game
+    files use it; MSVC's STL and libstdc++ order equal elements differently), and any leftover LP64 width. Not
+    risks: the URandom generator (32-bit state, lrintf), SSE2 floats on both, `-ffp-contract=off` on both.
+- **Where a 120-minute game's time went (2026-11-11, `tools/sim_profile.py`).** Boom against Age of AI, seed 25: a
+  third in `EECPLuaState::CheckMemory`, which after every Lua call converted the whole memory table into an
+  `EECPLuaValue` tree (paths, copies, a sort) only to see that it could be saved; 12% in the UCRT's `lrintf` (it
+  reads and restores the floating-point environment around each rounding: UMCos, ground points, movement); the
+  next engine's view copied map by map into arrays. A check-only walk, cvtss2si inside 2^30 (`UMRint`) and moves
+  halved the game part (seeds 2-7, both opponents: 582 -> 261 s and 864 -> 365 s of game) with byte-identical
+  reports and traces (the `EE-AIPROF` lines aside: they are wall time). Trace writing is not a cost (under 0.1%).
+- **-O2 changes the game.** The sim built with `--opt=-O2` was no faster than -O1 on the same seeds and one game of
+  12 (seed 4 against the classic) left the -O1 trace at 50 game s (`sim hash` units differ): some code depends on
+  how it is compiled (UB or float evaluation). Benches stay on -O1.
+- **Other runs' ports.** A sim given another bench's `--port-offset` (two benches with the same `--port-base`)
+  faults at the main menu in `NERecordPlayback::Process`: give concurrent benches ranges apart. A freshly linked exe
+  can also take ~100 s to reach the main menu on its first runs with the CPU idle (seen on several new exes at once; probably the virus scanner).
 
 ## macOS playtesting under lldb and ASan (2026-11-06)
 
@@ -1816,6 +1847,65 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   continent (`GetContinent(x, y, kAIPathLandMass)`) refuses every site: take the town's continent.
 - **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
   while the town's own fish lie in other water by it.
+
+## The next computer player's per-unit Lua interface (2026-11-09, docs/AI_LUA_UNITS.md §11)
+
+- **Computer players have no slot of their own.** `RTSPlayer::mSlot` is `0xff` (`kSlotNone`) for every computer
+  player, and `EEWorld::GetPlayerBySlot` returns the first player with the slot asked for. A human's message run for
+  a computer player (`EEM*::Execute` finds its sender through the originating slot) has to give the player a slot
+  that no peer uses (`0xfd`) while it runs, and put `0xff` back.
+- **A building may start as a capitol.** The start town is not always a town centre (`b_capitol` in the open tree's
+  Small Hard games). Code looking for "the town" asks for both classes.
+- **`ai.tile` shows a continent only where the player has explored.** A test that places a fight towards the enemy
+  cannot check the far tiles' land mass (they are unexplored): it takes them on trust.
+- **The Python edits of a `-text` file must keep its line ends.** The repository's code is LF with `attr/-text`.
+  Python's text mode on Windows writes CR LF, and git then shows the whole file as changed: open with
+  `newline=''` both ways.
+
+## The next computer player's army in Lua and the Age of AI port (2026-11-09, docs/AI_LUA_UNITS.md §11)
+
+- **Projectiles are units of their owner.** A hunter's spear (`citizen_projectile`), a bomb, a missile or a torpedo
+  in flight is an `EEUnit` in the player's unit list (category 9, 11, 12, 20) with hit points 1 and a speed.
+  `ai.units{category = "soldier"}` listed them (the category fell through to "soldier"), boom's home guard took
+  them and lost them a second later. The interface skips them everywhere now (`EECPUnitsIsProjectile`).
+- **A library's memory keys must not clash with the script's.** `lib.groups` kept the enemies' gather spots in
+  `mem.spots`, which boom already used for its own site spots (strings): `ai.keys` raised on the first step. A
+  library's state lives under its own prefix (`mem.gspots`).
+- **Only upstream's unit training was budgeted.** Age of AI's budget hook wraps the unit manager's training call;
+  its buildings spend from the stockpile as the game's build manager always did. The port's first draft hid the
+  military account from the citizens *and* the buildings, so no barracks was ever paid (the account held the wood).
+  The military account is a ledger of what the army may spend; the civil side sees the stock above the epoch
+  reserve.
+- **Mineral worker targets by raw shortfall swing.** With need = reserve - stock, a mine's target drops to 0 the
+  moment the stock crosses the reserve and the gatherers walk to the next mine, then back. A standing margin (half
+  `mineral_worker_margin`) and a hysteresis of 3 a pass stop the swing.
+- **The view's `sites[].resource` is a name,** not an index: `V.resources[s.resource + 1]` is an error.
+- **A human-placed building is pending until a builder arrives.** `EEMBuildUnit` makes the foundation as a pending
+  unit of the player (`GetPendingUnit`), not in `gWorld`'s lookup: `GetUnit(id)` is NULL until it is placed. A
+  script that tests "is my foundation still there" through the world lookup sees it gone and orders another at the
+  same tile (the pending one is not on the map, so the placement test passes). The interface looks in the pending
+  list too.
+- **A human-placed granary has no fields.** The AI build manager's granary (`CanBuildAt(..., farm, size * 3)`)
+  reserves and lays the eight field foundations; a granary built through the human's build message does not.
+  `EEMReplantFarms` (the human's replant command, `ai.replant`) lays the missing ones; `build b_farm` only ever
+  finishes a foundation that exists (the classic `FindSite` returns a farm foundation with 1 hit point).
+- **A building site at the map's edge crashed the game when a builder arrived.** `EEUGBuildRepair::BeginRepair` ->
+  `ClearBuildSite` -> `EEStepAsideFromSite`, and `EEUGBuildRepair::IsFootprintClear` -> `EEGetMovableTileUnits`,
+  walk the site's footprint tiles and dereference `GetTile(x, y)`, which is NULL for a tile off the map. A granary
+  the Age of AI port placed through the human's build message (`ai.build`, placement by `EECanPlaceOnTile`) at an
+  island's edge had such a footprint (Small Islands seed 11 at 49 min, deterministic: `python -I
+  tools/sim_bench.py --name x --seeds 11 --data open --ai-scripts ai --engine ageofai,classic --maps "Small
+  Islands" --game-seconds 5400`; `EE-SIM FAULT c0000005` in the run's err.txt, the frames resolved against the
+  .map). A human's build order runs the same code. The three functions skip a NULL tile now (and `EEStepAsideFromSite`
+  a unit that is not valid, has no tile or no stats; `BeginRepair` clears no footprint for a site not placed yet).
+  The "placement skips a removed unit (PathPoint)" lines in the same seconds were the group move's path markers,
+  not the cause.
+- **A sim bench shares the main checkout's open data tree.** `sim.py --data open` takes `build/open_data/tree` of
+  the main checkout when the worktree has none; while the main checkout's gates rebuild that tree every game fails
+  at start (`EETerrainColorTable.cpp (81) : Verification failure`, `rc 2147483651`, no report). A worktree that
+  benches builds its own tree.
+- **A bash heredoc over about 140 lines fails in the harness shell** ("unexpected EOF while looking for matching
+  `''`"); long patch scripts go into a file first.
 
 ## The next computer player's settlement-first rule and the binary tree (2026-11-09, docs/AI_RESEARCH.md §8.36)
 
@@ -8634,3 +8724,140 @@ inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted fo
   dropped symbol); the remaining entries are inlined live code, base-class virtuals, EEWonNet's, and what tests and
   tools reach. The next real yield is semantic, not the linker's: code reachable only through a never-set pointer
   (gWonNet) or a menu entry the game no longer shows.
+- **A wall tech is never "available" to a computer player (2026-11-10).** `EEPlayer::CanProduce` (the human UI's test
+  before `EEMBuildWall`) says no for a computer player's wall and gate techs even in their epoch, and the classic wall
+  manager never asks it: it sends the message as it is, and `EEPlanWall` / `EEBuildWall` check the placement and pay the
+  pieces. The next engine's `ai.wall` / `ai.gate` therefore check the tech node and `CanAfford` only (the first version
+  refused every wall `cannot_afford`). `EECPCivilizationManager::GetWallClass` returns 0 before the Copper Age: the
+  `"wall"` alias is `bad_argument` there, a Prehistoric palisade goes by its class name.
+- **An intermittent units-hash divergence after a direct build (open, 2026-11-10).** Small Islands seed 11, the port
+  against classic Hard, two runs: identical traces for 65 minutes, then the `sim hash` units value differed (AI and RNG
+  equal) ten seconds after `ai.build` placed a granary with three held citizens (`build_direct`) and the classic
+  helper joined (`build.help sent=1`). A second 90-minute pair diverged the same way ten seconds after the same
+  granary at the same tile (114,58), and the navy port's agent saw it once as well after a direct granary; a pair cut
+  at 70 minutes was identical. In both pairs only the units hash differs from then on: the RNG and AI hashes stay
+  equal to the end and the final states (citizens, army, epoch) are the same, so what differs is a hashed unit field
+  that the game's decisions never read (or the units' order), not the play. The suspects are the build message's
+  field assignment round a granary (EEMBuildUnit: EEFindFreeFarm's order, the std::sort ties) and the helper's pick;
+  a human placing a granary goes through the same message.
+
+- **The micro step's instruction budget (2026-11-10).** A per-unit module that queries the engine once per citizen
+  (`ai.seen` near each, `ai.units` round its site, `ai.unit` of the site) blows the 250 ms micro step's 300,000
+  instructions once the town has 100+ citizens: the step aborts with `instruction budget exceeded` and every module
+  after it in that tick is skipped (the safety port cost 1,900-8,900 aborted ticks a 120-minute bench before it was
+  rewritten). The shape that fits: one `ai.seen` of the enemy soldiers near home per step, their tiles read once with
+  `ai.get`, the distances in Lua, and the engine asked about a site only when a Lua test has already singled it out.
+
+- **An income share accumulated a step at a time truncates to nothing (2026-11-10).** `income x dt x share // (60000 x
+  100)` with a one-second step and an income under 150 a minute is 0 every step: the Age of AI port's military account
+  never grew past its start share in any bench so far (`mil=240/225/240/30/30` in every trace), and the epoch account
+  of `copper_plan=next_epoch` filled only on income spikes - half of f6's games never left the Prehistoric for it.
+  Carry the remainder (`frac = frac + income x dt x share; acc += frac // D; frac = frac % D`), as the three accounts
+  now do (econ.lua, navy.lua).
+
+## Boom's economy on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.43)
+
+- **`ai.units{type = ...}` takes one class name, not a list.** AI_LUA_UNITS §2.2 says "a class id or a list", but
+  `EECPUnitsReadFilter` reads the `type` field with `EECPUnitsClassArg`, which turns a table into "unknown": the filter
+  then matches nothing. Boom's first second-town-centre rule counted its town centres as 0 that way and filled one
+  settlement after another (5 citizens each) every 20 s.
+  `ai/ageofai/econ.lua` (`ai.units{type = TOWN_TYPES, built = true}`) has the same pattern and finds no town.
+  Fixed since: the filters take a list of names (AI_LUA_UNITS §11, `tests/ai_units/types.lua`).
+- **A town centre filled from a settlement uses its citizens up.** `ai.garrison(ids, settlement)` with the
+  settlement's garrison capacity (5) makes it a town centre. Releasing the citizens right after the order (as the
+  Age of AI port does) hands them to the gatherer runner while they walk: hold them until they are inside (gone) and
+  release only the ones still out after a minute.
+- **Stopping a background shell leaves its bench loop running.** A queue script started in the background and
+  stopped from the agent's task list kept its child `bash` loop alive; when the hold it waited on was lifted, it
+  started its benches beside the new queue's, both on the same port offsets, and 24 of the first 32 games died at
+  the main menu (`EE-SIM FAULT` in `NERecordPlayback::Process`, the known two-benches-on-one-port start fault, §8.29).
+  Kill the loop's own processes, and let a bench script take a lock directory before it starts.
+- **PowerShell's `-like` is case-insensitive: a stage pattern hit another agent's games.** Stopping my bench `O6`'s
+  games by `CommandLine -like '*O6-*'` also stopped another agent's three games in its stage `l-o6-2-33-*`. Match a
+  bench's own stage folder exactly (`-clike`, or the full path `build\sim\stage\<bench>-<k>` of the own worktree).
+- **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
+  scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
+  subfolder.
+
+## Boom's defence on the per-unit interface (2026-11-10, docs/AI_RESEARCH.md §8.41)
+
+- **A unit killed arrives as a `converted` event, never as `died`.** `EECPUnitsOnTaken` calls a unit converted when
+  its hit points are above 0, but `EEComplexUnit::Kill` calls `UnitTaken` before it zeroes them; a priest's
+  conversion goes through `EEConvertUnit` -> `Kill(false, false, true)` with the swap flag, which the hook skips. So
+  every kill is `converted` and no script ever saw `died` (Age of AI's `diplo.lua` counts its losses from `died`).
+  Fixed: a unit is converted only while alive and another player's; `lib.defence` counts both kinds as losses.
+- **A released gatherer is on no runner list.** `ai.release` put only idle citizens back on the engine's idle list,
+  so a citizen sent back to its resource with `ai.gather` and then released worked unseen by the gatherer runner until
+  the resource ran out. `ai.release(ids, {gather = true})` puts it on its resource's list.
+- **A scout is no raid.** The first raid answer sent every citizen near any enemy soldier running: the rush's lone
+  scout walking through the town made 61 flights in 5 minutes. A group is a raid only once it is stronger than boom's
+  `THREAT_MIN` (2,500) or one of its units has hit an own unit in the last 15 s.
+- **Citizens do not fight ranged raiders, whatever the odds.** Against 2-3 rock throwers the square-law odds of 6-12
+  citizens came out at 3-4 x, and every such fight still lost a citizen (they kite, and their pierce armour takes 2
+  of a citizen's 5 attack). The militia now answers melee raids only; ranged ones are run from, to the towers.
+- **A militia counts per raid.** Re-deciding every second added one more citizen each time (the ones already fighting
+  were not counted), and a second raid nearby called the first raid's militia off at its own odds; the militia now
+  counts the citizens already fighting the raid nearest them.
+
+## The classic computer player in Lua (2026-11-10, ai/classic_lua/ORIGIN, docs/AI_RESEARCH.md §8.39)
+
+- **A script's gatherers are invisible to `ai.resource`'s `workers`.** `EECPNextAssigned` counts the classic resource
+  manager's gatherer lists, and `AddGatherer` keeps every unit a script holds off them: the port's finder saw 0
+  gatherers on every bush and sent all 15 food gatherers to one (60 food a minute). `ai.gatherers()` (one scan of the
+  own units: the citizens whose gather goal is each resource) counts them whoever holds them.
+- **A class's tech is `ai.class(t).tech`, not the first tech that makes it.** Several tech tree nodes make the same
+  class (the citizen's own 1074 and others); a map from `ai.techs` keyed by `makes` took a later epoch's.
+- **The classic puts an epoch at the front of the town centre's queue** (`QueueResearch(id, true)`); a human's order
+  (EEMResearchTechnology) queues at the back, behind up to ten citizens (five minutes). The port cancels the citizens
+  queued behind the current one (`ai.cancel`, refunded), orders the epoch and queues them again.
+- **The classic attempts an epoch advance only with a later epoch's request standing** (or a human ahead): the first
+  update queues the "future research sentinel" (dbtechtree 15020, a Space Age wonder) for that, and it stays queued
+  all game. Leaving it out, the port never advanced.
+- **The engine's reflexes skip a script's units.** EECPRMNoteDanger and EECPRMMilitia ignore held (detached) citizens,
+  so a script that holds its citizens has no militia unless it runs one (militia.lua; `ai.reflex{militia = false,
+  danger = false}`).
+- **A step that asks per unit blows the 2M budget at 25 minutes** (the gather capacity's centres and the citizen
+  target were recomputed for every caller): a per-step cache of the records, the own units by class and the derived
+  numbers (`resource.lua` begin_step / unit / of_type / memo) keeps the step's charges bounded.
+- **The favourite land unit of a "soldier" class can be the Prehistoric domestic wolf** (trained at the town
+  centre): the favourite is drawn among the classes the barracks, archery range, stable and factories train.
+- **A bench slot that faults at the lobby every time is a port held by a stray EE-SIM.** An EE-SIM left over from an
+  earlier run kept listening on one slot's ports (40462/40463); every run that slot took faulted in
+  NERecordPlayback::Process before the game and sim_bench moved the next seeds onto the same slot (13 of 16 runs
+  failed). Another `--port-base` avoids it; `netstat -ano` names the holder.
+- **Editing a script that a running bench reads, or the shell script that runs it, spoils the bench.** `--ai-scripts
+  ai` reads the checkout's scripts at each game's start, so an edit mid-bench mixes versions; and bash reads a script
+  as it runs, so rewriting the bench's own shell script made the old shell run garbage once sim_bench returned (it
+  truncated the log). Benches here run from a copy of `ai/` taken at the start (`build/aisnap/<name>`).
+- **lib.groups drops an empty group in its step, so a sub-group waiting for Personnel's units vanished.** The
+  classic's sub-group lives through WaitForUnits with no units and open request slots; a lib.groups group with no
+  units is deleted ("group gone") on the next G.step. army.lua parks the empty waiting groups out of the table for
+  the length of G.step, and a package counts its groups' open slots as units (else UpdatePackages deleted the new
+  package every 8 s and CounterAttack made another).
+- **The needs ledger counts a tech's listed cost, not GetCost's.** EECPResourceManager::AddCosts takes the data's
+  mCosts (ScaleCost'ed); the port took `ai.class`'s `cost` (EETechTreeNode::GetCost), whose epoch factor makes the
+  future research sentinel (an epoch-14 tech, 2000 wood, 1000 stone, 2000 iron) cost nothing in the Prehistoric. The
+  classic personality splits its gatherers by the needs, so the C++ sent its first gatherers to stone and iron (and
+  its towers went up at the iron) while the port's went to wood; `data_cost` (AI_LUA_UNITS §11) is the ledger's cost.
+- **A script's granary plants its farms later than the classic's, and its builder builds them.** EEMakeBuilding (the
+  C++ classic's placement) sends EEMReplantFarms at once, so the farm foundations stand unbuilt while the granary goes
+  up, and CheckBuildingCounts sees them unbuilt and queues farm requests (48 a bench). `ai.build` places through
+  EEMBuildUnit: the farms are planted when the granary is finished (EEComplexUnit::SetBuilt), and its builder builds
+  them in turn (EEUGBuildRepair::TendNextFarm), so the port's count check finds them built and queues the granary
+  only. Counting the farm build orders said "the port builds no farms"; the farmers say otherwise (3.3 against 4.3 at
+  90 minutes over 32 games). Compare a building's effect (its workers), not its orders.
+- **A site finder that asks for a builder at every candidate blows the step's budget.** FindShoreSite tries every water
+  site with FindBuilderForTile; in Lua each test is an `ai.reach` per available citizen, and with the reveal cheat the
+  sites run to hundreds: 300 budget errors a bench. The port asks at the first 8 placeable sites (asking at the
+  first only halved its docks: `ai.reach` to a water tile fails at some sites a builder reaches at the next). Later (§8.55): the water sites lie on the shallows, a land mass of their own, so `ai.reach` from a citizen to a
+  site fails at most of them; FindBuilder's shore rule (a citizen whose land touches the footprint builds a dock or a
+  tower) is now ported with `ai.shore`, cached per citizen and land mass, and the port asks at up to 48 sites.
+- **A unit counter built with the wrong flag counts nothing, and the cap above it never applies.**
+  EECPUGatherSpecialUnitsCount takes `inByClass`; false walks no units (only the requests), so EECPRMRequestBoats and
+  RequestFishingBoats never saw the boats a player had: the coast fishing's 8/16 cap was dead, one more boat every
+  30 s (13-47 a game). Found by matching the port's boats to the C++'s; both now count by class (§8.56). A cap that
+  a trace never shows binding deserves a look at its counter.
+- **The engine's reflexes give their units back to the classic's lists, not to a script's.** The naval flight
+  (EECPRMNavalFlee) calls AddIdleGatherer on the C++ resource manager; for a Lua seat that list is empty, so a fled
+  boat stayed on the script's food list, idle at the far dock, and was never sent to fish again (most of the port's
+  boats died idle). The script now moves a boat off its fish back to its idle list itself.

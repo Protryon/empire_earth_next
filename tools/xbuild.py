@@ -9,7 +9,11 @@
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
   python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke] [--sanitize address|undefined]
-                                                                                the game (POSIX targets): ee-aoc
+                                                                                the game (POSIX targets): ee-aoc,
+                                                                                and ee-sim beside it (a link)
+  python -I tools/xbuild.py sim      [the game's options]                       the same build for a bench machine:
+                                                                                no macOS app bundle; ee-sim is the
+                                                                                headless simulation (tools/sim.py)
   python -I tools/xbuild.py targets                                             what each target needs, and if it is here
 
 Targets (--target, default: the host):
@@ -977,6 +981,7 @@ def cmd_census(a):
 
 
 GAME_NAME = "ee-aoc"
+SIM_NAME = "ee-sim"   # the game started as the headless simulation (cmd_game links it beside ee-aoc)
 
 
 FONT_ARRAYS = [("kSansRegular", "LiberationSans-Regular.ttf"), ("kSansBold", "LiberationSans-Bold.ttf"),
@@ -1205,6 +1210,17 @@ def cmd_game(a):
         libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
+    # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the
+    # POSIX main takes the name as "ee-aoc --sim"); a link, so it is never older than ee-aoc
+    sim = out / SIM_NAME
+    sim.unlink(missing_ok=True)
+    try:
+        os.link(exe, sim)
+    except OSError:
+        shutil.copy2(exe, sim)
+    print(f"headless simulation {sim} (tools/sim.py, tools/sim_bench.py)")
+    if getattr(a, "sim", False):   # xbuild.py sim: no app bundle; --smoke runs ee-sim --help
+        return run_program(t, sim, ["--help"]) if a.smoke and t.native() else 0
     if t.os == "macos":
         app = out / "Empire Earth AoC.app" / "Contents"
         if app.parent.exists():
@@ -1250,7 +1266,8 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "targets"):
+    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "sim",
+                 "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
@@ -1264,10 +1281,11 @@ def main():
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":
             p.add_argument("--fresh", action="store_true", help="configure from scratch")
-        if name == "game":
+        if name in ("game", "sim"):
             p.add_argument("--debug", action="store_true", help="-O0")
             p.add_argument("--incremental", action="store_true", help="keep objects newer than their unit")
-            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test (native only)")
+            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test, ee-sim with "
+                                                                "--help (native only)")
             p.add_argument("--sanitize", choices=["address", "undefined"],
                            help="clang sanitizer build -> <out>/game-<sanitizer>/ (POSIX debugging)")
         if name == "census":
@@ -1275,8 +1293,9 @@ def main():
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
+    a.sim = a.cmd == "sim"
     sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
-              "census": cmd_census, "game": cmd_game, "targets": cmd_targets}[a.cmd](a))
+              "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 
 if __name__ == "__main__":

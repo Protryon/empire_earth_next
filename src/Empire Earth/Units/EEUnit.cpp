@@ -46,6 +46,8 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEMapDimensions.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
 #include "ee/EEEffectKindIDs.h"
@@ -758,6 +760,10 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
         this->mUnitClass->BadlyHurt(this);
     theHitPoints = theHitOut.hit_points;
     thePlayer->DamageTaken(inPlayerNumber, theDamage, this);
+    // new: the attacking computer player's Lua units interface counts the hit it dealt (ee/EECPNextUnits.h)
+    if (inPlayerNumber > 0 && (unsigned long)inPlayerNumber < gWorld.mNumPlayers && gWorld.mPlayers[inPlayerNumber] != NULL
+        && gWorld.mPlayers[inPlayerNumber]->mComputerPlayer != NULL && gWorld.mPlayers[inPlayerNumber]->mComputerPlayer->mUnitsState != NULL)
+        EECPUnitsOnDealt(gWorld.mPlayers[inPlayerNumber]->mComputerPlayer, theDamage, this);
     if (this->mTileX != -10000) {
         if (inAttacker != NULL) {
             if (inAttacker->mTileNode != NULL && inAttacker->mComplexUnit->mOwner != NULL) {
