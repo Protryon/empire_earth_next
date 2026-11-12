@@ -972,16 +972,6 @@ constexpr static const int32_t EE_WON_HOST_SOCKET_PORT = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 constexpr static const int32_t EE_WON_HOST_RUN = 96;
 
-/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
-constexpr static const int32_t EE_WON_HOST_REQ_NEXT = 97;
-
-/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
-/// `ReadBufferException`
-constexpr static const int32_t EE_WON_HOST_REQ_CHECK = 98;
-
-/// `Reset()`
-constexpr static const int32_t EE_WON_HOST_REQ_RESET = 99;
-
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 constexpr static const int32_t EE_WON_HOST_CERT_VERIFIER_PUBLIC = 100;
 
@@ -1253,9 +1243,25 @@ constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
 /// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
 constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
 
-/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
-/// `ee_won_hostop_set`
+/// `SetLastServerError(num)`: `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_REQHOST_LAST_ERROR = -5;
+
+/// `CreateAccountOp`: the user name and password (UTF-16 LE), the email, the profile (as the account ops':
+/// the newsletter count and each id and subscription; the birth month, day and year; the custom action id,
+/// has-data and data)
+constexpr static const int32_t EE_WON_REQOPS_CREATE_ACCOUNT = 14;
+
+/// `RoutingGetGroupListReqOp`: the group list flags (its inner op's `mFlags`)
+constexpr static const int32_t EE_WON_REQOPS_GROUP_LIST = 15;
+
+/// the create account's `mErrorString` (bytes)
+constexpr static const int32_t EE_WON_REQOP_CREATE_ERROR = 48;
+
+/// the group list's replies checked (number)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLIES = 49;
+
+/// a reply the group list checked (bytes; the element: its index, in order)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLY = 50;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -1265,6 +1271,9 @@ constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
 
 /// throw `ReadBufferException`
 constexpr static const int32_t EE_WON_REQOP_CUT = 2;
+
+/// `SetLastServerError(status)`, then the next server
+constexpr static const int32_t EE_WON_REQOP_SERVER_ERROR = 3;
 
 /// `ContestCallOp`: the procedure number, whether there is request data, the data
 constexpr static const int32_t EE_WON_REQOPS_CONTEST = 1;
@@ -9780,6 +9789,10 @@ int64_t ee_won_lansocket_last_message_time(const EeWonLanSocket *l);
 /// As `ee_won_lansocket_client`.
 void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
 
+/// From now on [`system_seed`] gives `seed` plus a use counter, the same sequence in every run (0: the clocks
+/// again). For the `tests/won` drivers only: nothing in the game calls it.
+void ee_won_random_test_seed(int64_t seed);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -9824,10 +9837,6 @@ bool ee_won_regkey_root_valid(int32_t root);
 /// # Safety
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
-
-/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
-/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
-EeWonHostOp *ee_won_hostop_cpp_request();
 
 /// Frees an op.
 ///
@@ -9878,6 +9887,16 @@ bool ee_won_reqop_bytes(const EeWonReqOp *op,
                         int32_t which,
                         EeWonByteSink sink,
                         void *context);
+
+/// A result's bytes by number and element (a list's index) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
+                           int32_t which,
+                           int64_t index,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///

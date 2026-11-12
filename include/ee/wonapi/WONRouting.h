@@ -1762,6 +1762,13 @@ public:
     static RustServerOp* NewGetAccount(ServerContext* inContext, AuthContext* inAuth);
     static RustServerOp* NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
                                           const std::string& inEmail);
+    // the create account and the group list request (ee_won reqlast.rs): the lobby's profile (newsletter 1 and
+    // the birth date); a routing server's group list flags, its replies read again by RouteGroupListOf
+    static RustServerOp* NewCreateAccount(ServerContext* inContext, const std::wstring& inUserName,
+                                          const std::wstring& inPassword, const std::string& inEmail,
+                                          bool inNewsletter, unsigned char inMonth, unsigned char inDay,
+                                          unsigned short inYear);
+    static RustServerOp* NewGroupListReq(const IPAddr& inAddr, unsigned char inFlags);
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -1807,33 +1814,6 @@ public:
     virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
 };
 
-// ServerRequestOp (2acf60/2ad050): the request/reply exchange is a Rust op on the base (ee_won reqhost.rs: the
-// server list, sessions, peer authentication, the expired-session retry). This class is what the ops still derived
-// in C++ (the directory, account and routing request ops) build on: its virtuals make the request and read the
-// reply (RustServerOp::HostCall's EE_WON_HOST_REQ_*), mRequest and mResponse the exchange's bytes.
-class ServerRequestOp : public RustServerOp {
-public:
-    explicit ServerRequestOp(ServerContext*); //2acf60
-    explicit ServerRequestOp(const IPAddr&); //2ad050
-    void SetLastServerError(WONStatus); //2ad660
-    virtual WONStatus GetNextRequest() { return (WONStatus)100059; } //2ad020, WS_ServerReq_Recv
-    virtual WONStatus CheckResponse() { return (WONStatus)0; } //2c7b10, WS_Success
-    virtual void Reset() {} //326b60
-protected:
-    WONStatus InvalidReplyHeader(); //2ad6a0: the server error, then the next server
-public:
-    ByteBufferPtr mRequest;
-    ByteBufferPtr mResponse;
-};
-
-// 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.
-class RoutingGetGroupListReqOp : public ServerRequestOp {
-public:
-    RoutingGetGroupListReqOp(const IPAddr&,unsigned char inFlags=0);
-    virtual WONStatus GetNextRequest(); //GetNextRequest
-    virtual WONStatus CheckResponse(); //CheckResponse
-    SmartPtr<RoutingGetGroupListOp> mOp; //f4, implicit destructor releases before base
-};
 
 // The directory server's entity replies: the reading is ee_won's (dir.rs); a list of what it read as DirEntity
 // objects (DirEntityReplyParser.cpp), for RustServerOp::GetEntities. GetEntityRequest, GetDirOp, GetMultiDirOp,
@@ -2272,30 +2252,6 @@ public:
 };
 
 
-class ProfileData : public RefCount {
-public:
-    ProfileData(); //2cd770, 150 bytes, initializes birth8/9/a=0, mapc, id18=0, data1c=NULL
-    void ClearNewsletterSubs(); //2cdc20, clears the map
-    void ClearNewsletterSub(unsigned short);
-    void SetCustomAction(unsigned short,const ByteBuffer*);
-    void ClearCustomAction();
-    unsigned long GetBirthDate();
-    void AddNewsletterSub(unsigned short inId, bool inSubscribe = false); //2cd9e0
-    bool GetNewsletterSub(unsigned short inId); //2cdae0
-    void PackRequestData(WriteBuffer&,bool); //2cdcc0
-    void UnpackGetData(ReadBuffer&); //2cde20
-    void SetBirthDate(unsigned char inMonth,unsigned char inDay,unsigned short inYear); //2ce070
-    // the Rust profile (ee_won db.rs), for the requests that pack it
-    const EeWonProfile* GetProfile() const { return this->mProfile; }
-protected:
-    virtual ~ProfileData(); //2cd830, explicit own-vtable store at 2cd852
-private:
-    ProfileData(const ProfileData&);
-    ProfileData& operator=(const ProfileData&);
-    static void Append(void*,const uint8_t*,size_t);
-    // the birth date, the newsletter subscriptions and the custom action: a Rust object (ee_won db.rs)
-    EeWonProfile* mProfile;
-};
 // DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
 // Patch-server records: VersionData 0x48 / PatchData 0xa4,
 // constructors 2d83a0/2d86f0, allocations 2d93a7/2d9079.
@@ -2395,36 +2351,10 @@ public:
 
 // GetUserIdFromNameOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 
-// Account creator, 0x1398 bytes. Embedded ElGamal 108..2b0 and Blowfish 2b0..1364.
-class CreateAccountOp : public ServerRequestOp {
-    SmartPtr<ProfileData> mProfileData; //f4
-    std::string mErrorString; //f8
-    ElGamal mPubKey; //108,8aligned
-    Blowfish mSymKey; //2b0
-    enum State { State_GettingPubKey,State_SettingSessionKey,State_CreatingAccount } mState; //1364
-    std::wstring mUserName; //1368
-    std::wstring mPassword; //1378
-    std::string mEmail; //1388..1398
-    void Init(); //2cbe70
-protected:
-    virtual WONStatus GetNextRequest(); //2cc4f0
-    virtual WONStatus CheckResponse(); //2cc8d0,vtable44d254 slot14
-    virtual void Reset();     //2cc4e0, Reset
-public:
-    CreateAccountOp(ServerContext*); //2cbf20
-    void SetProfileData(ProfileData* inProfile) {this->mProfileData=inProfile;}
-    void SetUserName(const std::wstring& inUser) {this->mUserName=inUser;}
-    void SetPassword(const std::wstring& inPassword) {this->mPassword=inPassword;}
-    void SetEmail(const std::string& inEmail) {this->mEmail=inEmail;}
-    const std::wstring& GetUserName() const {return this->mUserName;}
-    const std::wstring& GetPassword() const {return this->mPassword;}
-    const std::string& GetEmail() const {return this->mEmail;}
-    const std::string& GetErrorString() const {return this->mErrorString;}
-    ProfileData* GetProfileData() {return this->mProfileData.get();}
-    // Implicit ordinary dtor 2cc2e0, no own-vtable store; all members destroyed normally.
-};
 
-// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs)
+// GetAccountOp and UpdateAccountOp are Rust ops (rust/crates/ee_won/src/reqdir.rs), CreateAccountOp and
+// RoutingGetGroupListReqOp too (reqlast.rs: RustServerOp::NewCreateAccount, NewGroupListReq), and no C++ op derives
+// from ServerRequestOp any more (its exchange is reqhost.rs's)
 
 // The +20 EEWonNet member is WONAPICore (WONAPICore.h); +24 is a separate window interface.
 class WONLobbyWindow {

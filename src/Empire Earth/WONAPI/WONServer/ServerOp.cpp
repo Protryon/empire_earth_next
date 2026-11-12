@@ -175,21 +175,6 @@ RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
                       NULL);
     return anOp;
 }
-ServerRequestOp::ServerRequestOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_cpp_request())
-{
-    this->Set(EE_WON_REQHOST_CONTEXT, inContext);
-}
-ServerRequestOp::ServerRequestOp(const IPAddr& inAddr) : RustServerOp(ee_won_hostop_cpp_request())
-{
-    ee_won_hostop_set(this->GetRustOp(), EE_WON_REQHOST_ADDR, 0, NULL, 0,
-                      reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), NULL);
-}
-void ServerRequestOp::SetLastServerError(WONStatus inError) { this->SetNum(EE_WON_REQHOST_LAST_ERROR, inError); }
-WONStatus ServerRequestOp::InvalidReplyHeader()
-{
-    this->SetLastServerError(WS_ServerReq_InvalidReplyHeader);
-    return WS_ServerReq_TryNextServer;
-}
 GetCertOp::GetCertOp(AuthContext* inContext) : RustServerOp(ee_won_hostop_getcert())
 {
     this->Set(EE_WON_REQHOST_CONTEXT, inContext->GetServerContext().get());
@@ -312,6 +297,21 @@ RustServerOp* RustServerOp::NewUpdateAccount(ServerContext* inContext, AuthConte
     RustServerOp* anOp = NewRequest(m.Make(EE_WON_REQOPS_ACCOUNT_UPDATE), inContext);
     anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
     return anOp;
+}
+RustServerOp* RustServerOp::NewCreateAccount(ServerContext* inContext, const std::wstring& inUserName,
+                                             const std::wstring& inPassword, const std::string& inEmail,
+                                             bool inNewsletter, unsigned char inMonth, unsigned char inDay,
+                                             unsigned short inYear)
+{
+    // the lobby's profile: newsletter 1 and the birth date
+    ReqMembers m;
+    m.W(inUserName).W(inPassword).S(inEmail).N(1).N(1).N(inNewsletter).N(inMonth).N(inDay).N(inYear).N(0).N(0);
+    return NewRequest(m.S(std::string()).Make(EE_WON_REQOPS_CREATE_ACCOUNT), inContext);
+}
+RustServerOp* RustServerOp::NewGroupListReq(const IPAddr& inAddr, unsigned char inFlags)
+{
+    ReqMembers m;
+    return NewRequest(m.N(inFlags).Make(EE_WON_REQOPS_GROUP_LIST), inAddr);
 }
 RustServerOp::~RustServerOp()
 {
@@ -488,24 +488,6 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
     case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
-    // an op derived in C++ (reqhost.rs's CppReq): its virtuals
-    case EE_WON_HOST_REQ_NEXT: {
-        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
-        c->out_num = r->GetNextRequest();
-        Give(c, r->mRequest.get());
-        break;
-    }
-    case EE_WON_HOST_REQ_CHECK: {
-        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
-        r->mResponse = n0 ? Buf(c) : ByteBufferPtr();
-        try {
-            c->out_num = r->CheckResponse();
-        } catch (ReadBufferException&) {
-            c->out_addr[0] = 1;
-        }
-        break;
-    }
-    case EE_WON_HOST_REQ_RESET: static_cast<ServerRequestOp*>(o)->Reset(); break;
     // DetectFirewallOp's (ee_won fwhost.rs)
     case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
     case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;

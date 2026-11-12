@@ -167,15 +167,9 @@ void AccountLogic::HandleCreateAccount(ComponentEvent* inBaseEvent)
     }
     ServerContext* servers=LobbyGetAccountServers();
     if(!servers) return;
-    SmartPtr<CreateAccountOp> op=new CreateAccountOp(servers);
     CreateAccountEvent* event=static_cast<CreateAccountEvent*>(inBaseEvent);
-    op->SetUserName(event->mUserName);
-    op->SetPassword(event->mPassword);
-    op->SetEmail(event->mEmail);
-    SmartPtr<ProfileData> profile=new ProfileData;
-    profile->AddNewsletterSub(1,event->mNewsletter);
-    profile->SetBirthDate(event->mMonth,event->mDay,event->mYear);
-    op->SetProfileData(profile.get());
+    SmartPtr<RustServerOp> op=RustServerOp::NewCreateAccount(servers,event->mUserName,event->mPassword,event->mEmail,
+                                                             event->mNewsletter,event->mMonth,event->mDay,event->mYear);
     LobbyRunOpWithStatus(op.get(),::LobbyContainer_CreateAccountTitle_String,::LobbyContainer_CreateAccountDetails_String,0,0);
     if(op->GetStatus()==WS_Success) {
         LobbyUserInfo* user=LobbyAddUser(event->mUserName,"",false);

@@ -515,9 +515,9 @@ WON_TESTS = {
     # datagram, the group list request, the connection's header, dispatch rule and table), the original's
     # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module
     "won_routemsg_test": [],
-    # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
-    # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
-    "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    # WONDB (ProfileData's shim over the Rust profile (the drivers' copy), the DBProxy family's, the contest's and the event report's
+    # requests and replies), the original's statements against tests/won/won_db_msg.h over ee_won's db module
+    "won_db_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # GetCertOp (its requests, replies and the whole op's steps), the original's statements against the Rust op
     # (ee_won getcert.rs) through its hooks over stand-ins (goldens: rust/crates/ee_won/src/golden_cert.txt,
     # golden_getcert.txt)
@@ -539,7 +539,7 @@ WON_TESTS = {
     "won_admin_test": [],
     # WONInternal's admin ops as whole ops (every op's request and replies), the original's statements against the
     # Rust ops (ee_won adminop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_adminop.txt)
-    "won_adminop_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
+    "won_adminop_test": [ROOT / "tests" / "won" / "won_profiledata.cpp"],
     # WONDB's contest call and event report ops, WONMisc's patch status report and WONServer's ping op as whole ops
     # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
     # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
@@ -548,7 +548,12 @@ WON_TESTS = {
     # (requests, replies, Reset, the results), the original's statements against the Rust ops (ee_won reqdir.rs)
     # through their C ABI (golden: rust/crates/ee_won/src/golden_reqdir.txt)
     "won_reqdir_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp",
-                        WON_SRC / "WONDB" / "ProfileData.cpp"],
+                        ROOT / "tests" / "won" / "won_profiledata.cpp"],
+    # WONDB's create account op and WONRouting's group list request op as whole ops (requests, replies, Reset, the
+    # keys, the group map read again), the original's statements against the Rust ops (ee_won reqlast.rs) through
+    # their C ABI (golden: rust/crates/ee_won/src/golden_reqlast.txt)
+    "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp",
+                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won/src/golden_hostop.txt)

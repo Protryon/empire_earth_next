@@ -92,6 +92,7 @@ pub mod random;
 pub mod regkey;
 pub mod reqdir;
 pub mod reqhost;
+pub mod reqlast;
 pub mod reqop;
 pub mod reqops;
 pub mod resource;

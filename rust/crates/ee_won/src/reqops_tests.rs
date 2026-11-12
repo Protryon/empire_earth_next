@@ -32,6 +32,7 @@ fn verdict(c: Checked) -> String {
         Checked::Status(s) => s.to_string(),
         Checked::InvalidHeader => "inv".into(),
         Checked::Cut | Checked::Datagram => "cut".into(),
+        Checked::ServerError(e) => format!("err{e}"),
     }
 }
 

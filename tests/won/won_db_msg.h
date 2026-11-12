@@ -1,6 +1,8 @@
-// WONDB's requests and replies through ee_won's db module (rust/crates/ee_won/src/db.rs): the ops hand their
-// members over (DbRequest) and apply a reply's read; the helpers take the members by reference (most of the
-// ops keep them private) so that tests/won/won_db_test.cpp runs the same code over stand-ins.
+// WONDB's requests and replies through ee_won's db module (rust/crates/ee_won/src/db.rs), as the ops' C++ read
+// them before they became Rust ops (moved here from include/ee/wonapi/WONDBMsg.h): the ops hand their members over
+// (DbRequest) and apply a reply's read; the helpers take the members by reference so that the drivers
+// (won_db_test, won_adminop_test, won_reqops_test, won_reqdir_test, won_reqlast_test) run the same code over
+// stand-ins.
 #pragma once
 #include <string.h>
 #include <string>
