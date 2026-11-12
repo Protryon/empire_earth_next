@@ -75,7 +75,7 @@ M.opts = {
     small_n = 2,
     small_odds = 200,
     short_r = 8,
-    fast_return = false,  -- (S3, off) back to work sooner: away_min 2 s, clear_ms 3 s
+    fast_return = true,   -- (S3, on: AI_RESEARCH §8.50) back to work sooner: away_min 2 s, clear_ms 3 s
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)

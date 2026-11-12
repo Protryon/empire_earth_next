@@ -36,7 +36,7 @@ M.opts = {
     home_r = 6,           -- units further than this from the post walk back while nothing is fought
     building_r = 10,      -- a raid this near an own building is in the zone
     focus_hits = 3,       -- a target takes units until their attack x this reaches its hit points
-    detach_small = false, -- (S2, off; AI_RESEARCH §8.50: 42% of the Stone deaths against the classic had no own soldier
+    detach_small = true,  -- (S2, on; AI_RESEARCH §8.50: 42% of the Stone deaths against the classic had no own soldier
                           -- within 10 tiles) a raid of detach_n or fewer in the zone gets the detach_k nearest healthy
                           -- units; the rest of the guard fights the larger raids as a block, or waits at its post
     detach_n = 3,

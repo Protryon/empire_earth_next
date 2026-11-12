@@ -3796,6 +3796,35 @@ unaffordable under the epoch reserve. The towers' attack upgrade was refused for
   range upgrade boom buys from the Stone Age takes the towers'. B1's attack half is dead weight, and its cost is
   dropped from the priority spend.
 
+**The small raids (2026-11-12).** Against the improved classic, boom's Stone-Age food income was a fifth below its
+income against Age of AI (143.5 against 177.4 a minute). The classic raided it 12 times in the Stone Age, against 2
+for Age of AI, with 16 citizens lost against 8. 46% of those citizens died to 1-2 raiders, 44% while fleeing, and 42%
+with no own soldier within 10 tiles. Three switches, on the boom_order setup (boom-econ's 5da1c67d), 32 seeds:
+
+| Variant | Classic: defeats | Under 30 | W/L/C | Stone food a minute | Stone citizens lost | Age of AI: defeats, W/L/C |
+|---|---|---|---|---|---|---|
+| s0 | 9 | 13 | 2/20/10 | 154.4 | 14.1 | 0, 3/10/19 |
+| S1 militia at 2 x and short flights against 1-2 raiders (`small_raid`) | 11 | 17 | 2/20/10 | 150.6 | 15.6 | 0, 2/14/15 |
+| S2 the 3 nearest guard soldiers to raids of 1-3 (`detach_small`) | **5** | 8 | 6/23/3 | 153.2 | 11.6 | 0, 3/11/18 |
+| S3 back to work sooner (`fast_return`) | **6** | 7 | 2/22/8 | 161.6 | 11.9 | 0, 5/12/14 |
+| S1 + S2 + S3 | 11 | 13 | 5/21/6 | 154.1 | 14.9 | 0, 4/9/19 |
+| S2 + S3 | 7 | 10 | 3/21/8 | 164.0 | 11.7 | 0, 5/13/14 |
+
+On 64 seeds (2-65):
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Copper | Bronze | End citizens |
+|---|---|---|---|---|---|---|---|
+| s0 | improved classic | 19 | 26 | 3/43/18 | 46, 54.6 | 23, 78.9 | 53.7 |
+| | Age of AI | 0 | 0 | 5/22/37 | 63, 50.2 | 52, 77.3 | 102.9 |
+| S2 + S3 (on) | improved classic | **12** | **18** | 6/41/17 | 49, 57.1 | 25, 88.1 | 65.5 |
+| | Age of AI | 0 | 0 | 9/20/35 | 63, 49.5 | 56, 79.8 | 101.6 |
+
+- **S2 and S3 are on by default.** The Stone food is 10-15 a minute higher against the classic (164 and 149 against
+  154 and 133 on the two halves of the seeds), defeats fall from 19 to 12 of 64, and the towns end with 12 more
+  citizens.
+- **S1 is off.** The militia against small raids loses citizens to the ranged raiders it now fights.
+- **Benched only on boom_order.** The default boom shares lib.defence and lib.guard and gets the two switches too.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
