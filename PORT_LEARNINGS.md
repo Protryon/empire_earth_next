@@ -6876,3 +6876,56 @@ Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (th
 - **What stays C++:** the shot's creation, goal and launch, the closest tile, the turret part lookup, the drop target,
   the ground point, `EEUpdateUnitTile`, the projectiles' and missiles' ground and water impact tests
   (`CheckGroundImpact`, `CheckWaterImpact`), `DistanceSquaredTo`, the screens' objects.
+
+## R5b.2, fifth round: a missile capture profile, the impact tests and the effects' weapon points in Rust, the combat audit (ee_combat impact.rs, geometry.rs; branch rust-combat5, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the missile's boost and homing ticks (round 4's move) | `EEPMMissile::Accelerate`, `Home` | `flight::missile_accelerate`, `missile_home` | CBMA, CBMH (the missile profile, replayed) |
+| a projectile's ground and water tests | `EEUCProjectile::CheckGroundImpact`, `CheckWaterImpact` | `impact::projectile_ground`, `projectile_water` | CBGI, CBWI (replayed) |
+| a missile's ground and water tests | `EEUCMissile::CheckGroundImpact`, `CheckWaterImpact` | `impact::missile_ground`, `missile_water` | CBGI, CBWI |
+| a torpedo's ground test | `EEUCTorpedo::CheckGroundImpact` | `impact::torpedo_ground` | CBGI |
+| the effects' start at the weapon tag point | `EEE2DLinearProjectile` (2 ctors), `EEE2DMuzzleFlash::SetUp`, `EEE2DSmokeMuzzleBlast` (2 ctors), `EEE3DPulseCannonBall`, `EEE3DTracers` | `geometry::weapon_point` (the line of fire's start, now shared) | CBEW (replayed) |
+
+- **A fifth capture profile, `missile`.** No game of the four profiles flies a missile, and a sweep at the end of
+  their games could not go into them: the missiles it creates stay on the map, and the AI and UI threads, which keep
+  running after the end, then make other `GetCost` calls (TCST: +40 records in oracle seed 2, the same in two runs:
+  the state's doing, not timing). So EE-SIM `--missile-sweep` (TEST ONLY) runs the sweep only in the missile profile
+  (the oracle's game), whose golden file `golden_cpp_missile.txt` lists only CBMA, CBMH, CBGI and CBWI; its other
+  tags are the oracle profile's and show as "without a golden". The four profiles are unchanged.
+- **The sweep.** When the game ends, after the unit-list search's sweep: each player's newest four armed units launch
+  one missile of every missile and torpedo class at the next player's newest armed unit, alternately attack unit and
+  attack ground, the launcher class the first class that fires it; `LaunchProjectile` as `LaunchShot` calls it (0.3 s
+  of boost when the launcher has no launch delay, so both steps fly), then up to 120 ticks of the physics step, the
+  flight time's count down and the water and ground tests. 1,267 to 2,172 CBMA and 6,204 to 10,719 CBMH records a
+  game.
+- **A created unit is not on the map until the next tick's `FlushWorld`.** `CreateUnit` queues the unit
+  (`AddUnitEntry`, the player's pending units); the first sweep crashed in `RTSUnit::Link` when `Home` moved a
+  missile across a tile. The sweep now does what `FlushWorld` does first (`FlushQueuedPlacements`, `AddPendingUnits`).
+- **The capture's new controls.** `EESimCaptureRecord::Only` takes up to four tags (the sweep's), `Exclusive(true)`
+  drops other threads' records while the sweep runs, `Close()` ends the capture after it (missile profile only).
+- **Golden first, one temporary tree.** Commits 747bd2a6 (CBGI/CBWI) and f3723a16 (CBEW) put TEST ONLY probes into
+  the unmodified C++; the goldens were recorded from that tree with one more, temporary change: round 4's C++
+  `Accelerate`/`Home` bodies (from 7d8fe54a) in place of the Rust-backed ones. Every earlier digest of those runs
+  equalled the existing goldens. The CBMA/CBMH digests of the C++ bodies equal the Rust steps' (round 4's move had
+  only unit tests): seed 2's `a47f32c7fdb66775`/`13d0d23dcf7e76f6` from both.
+- **Lazy reads at the seam.** Each test reads the ground height, the off-map tile's height, the attack target's
+  footprint, the goal's location, the missile's target tiles (`EEIsOnTargetTiles`), the missile base's same-tile test
+  and the terrain test only where the original does; Rust asks them of a host table (`EeCombatImpactHost`) and writes
+  each answer with its flag into the record. The replay runs the test over the record's eager part with a host that
+  answers from the record and must write the same record and outcome. `EEIsOnTargetTiles` and the tile lookups stay
+  C++ behind the host.
+- **The weapon point, once.** Round 3's line of fire start (`weapon_height`) and the effects compute the same point:
+  the location's rows scaled (`EETagPointList::Scale`), the tag point turned by its turret part on a model with parts
+  (the identity part applied when it is no turret part: a `-0` may become `+0`, so it is applied, not skipped), up the
+  model chain. `geometry::weapon_point` is both; the effects' default point without a tag list is a new kind
+  (`EE_COMBAT_WEAPON_KIND_DEFAULT`, the point in `top`). CBEW comes from the late and space profiles only (the oracle
+  games stay in the epochs without muzzle flashes): the effects are created in EE-SIM (effect detail 2), but **only a
+  tour draws them**: the lead should look at muzzle flashes and tracers in a later-epoch tour.
+- **Fast digests.** `sim_capture.py digest` is a Python byte loop (about 1 s per MB): a late or space seed pair took
+  over 15 minutes. The golden and verification runs here used a scratch Rust digester of the same lines, checked
+  against the Python one on a seed.
+- **What stays C++:** the projectile's and missile's `ActionChanged`, `EvaluateCondition`, `Update`,
+  `LaunchProjectile`, `EEIsOnTargetTiles`, the shell hole (`EEPlaceImpactDecal`), the placement on the ground, the
+  tracer beam's per-frame start (`EEE3DTracerBeam`, drawn only; not moved) and the audit's list in RUST_PLAN's R5b.2
+  combat row.
