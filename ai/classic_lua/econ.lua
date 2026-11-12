@@ -114,8 +114,10 @@ function M.gather_capacity_now(view, memory, which)
             if pass == 2 or c.active then
                 active = active + 1
                 for _, id in ipairs(c.u) do
+                    -- (the classic counts a centre's units with mHitPoints > 0: a resource's hit points fall from 1
+                    -- when it is first gathered from, so only the untapped ones count; the record's `untapped`)
                     local u = R.unit(id)
-                    if u ~= nil and u.kind ~= nil then
+                    if u ~= nil and u.kind ~= nil and u.untapped ~= false then
                         sites[u.kind] = sites[u.kind] + 1
                     end
                 end

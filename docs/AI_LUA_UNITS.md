@@ -951,6 +951,9 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet
+  (the classic's GetGatherCapacity and its sites trace count a centre's units with mHitPoints > 0, so a tapped mine
+  no longer adds room).
 - `ai.used()` -> used, budget: the instructions and helper charges the current call has used so far and its budget
   (a script's own profiling; it changes nothing).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
