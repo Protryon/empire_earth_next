@@ -182,6 +182,7 @@ fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeComba
         cloak_timer: r.cloak_timer,
         family: r.family,
         cloak_radius: r.cloak_radius,
+        resource_amount: r.resource_amount,
     }
 }
 

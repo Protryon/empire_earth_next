@@ -583,3 +583,33 @@ fn plain_reads_come_from_the_unit_store() {
     }
     assert_eq!(host.asked.len(), 5);
 }
+
+#[test]
+fn the_damage_reads_and_the_complex_unit_come_from_the_unit_store() {
+    use crate::damage::{EE_COMBAT_Q_CLOAK_TIMER, EE_COMBAT_Q_HERD, EE_COMBAT_Q_RESOURCE_AMOUNT};
+    use crate::store::tests::put_unit;
+    use crate::store::{EE_COMBAT_STORED_COMPLEX_OTHER, EE_COMBAT_STORED_COMPLEX_SELF};
+    let unit = |object, complex| EeCombatStoredUnit {
+        object,
+        id: object as u32,
+        object_kind: EE_COMBAT_STORED_COMPLEX_UNIT,
+        complex,
+        herd: 1,
+        cloak_timer: 0xffff_fff0,
+        resource_amount: 175,
+        ..Default::default()
+    };
+    put_unit(unit(71, EE_COMBAT_STORED_COMPLEX_SELF));
+    put_unit(unit(72, EE_COMBAT_STORED_COMPLEX_NONE));
+    put_unit(unit(73, EE_COMBAT_STORED_COMPLEX_OTHER));
+    let mut host = Plain { asked: Vec::new() };
+    let mut h = Stored::new(&mut host);
+    assert_eq!(h.read(EE_COMBAT_Q_RESOURCE_AMOUNT, 71, 0), 175);
+    assert_eq!(h.read(EE_COMBAT_Q_HERD, 71, 0), 1);
+    assert_eq!(h.read(EE_COMBAT_Q_CLOAK_TIMER, 71, 0), 0xffff_fff0);
+    assert_eq!(h.read(EE_COMBAT_Q_RESOURCE_AMOUNT, 72, 0), 175);
+    assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 71, 0), 71, "the unit itself");
+    assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 72, 0), 0, "none");
+    assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 73, 0), 0x77, "another object: the host's");
+    assert_eq!(h.handle(EE_COMBAT_H_COMPLEX, 0, 0), 0x77, "no handle: the host's");
+}

@@ -15,9 +15,12 @@ use ee_ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
 use ee_ge::um::um_arccos;
 
 use crate::geometry::matrix;
-use crate::store::{self, EeCombatStoredUnit, EE_COMBAT_STORED_COMPLEX_UNIT};
+use crate::store::{
+    self, EeCombatStoredUnit, EE_COMBAT_STORED_COMPLEX_NONE, EE_COMBAT_STORED_COMPLEX_SELF,
+    EE_COMBAT_STORED_COMPLEX_UNIT,
+};
 use crate::walks::EeCombatHandle;
-use crate::world;
+use crate::{damage, world};
 
 // ---- the reads (`QueryHost::read`): 0/1, an integer, or an f32's bits where noted
 
@@ -668,6 +671,9 @@ fn stored_field(r: &EeCombatStoredUnit, code: i32) -> Option<u32> {
         world::EE_COMBAT_Q_GOAL_KIND => r.goal_kind as u32,
         world::EE_COMBAT_Q_LAND_BUILDING => u32::from(r.land_building),
         world::EE_COMBAT_Q_RELOAD_TIMER => r.reload_timer as u32,
+        damage::EE_COMBAT_Q_RESOURCE_AMOUNT => r.resource_amount as u32,
+        damage::EE_COMBAT_Q_HERD => u32::from(r.herd),
+        damage::EE_COMBAT_Q_CLOAK_TIMER => r.cloak_timer as u32,
         _ => return None,
     })
 }
@@ -691,6 +697,14 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
         if code == EE_COMBAT_H_PLAYER {
             if let Some(r) = store::unit_of(object) {
                 return r.player;
+            }
+        }
+        // `GetComplexUnit()`: the unit itself or none from the store; another object from the C++
+        if code == EE_COMBAT_H_COMPLEX {
+            match store::unit_of(object).map(|r| r.complex) {
+                Some(EE_COMBAT_STORED_COMPLEX_SELF) => return object,
+                Some(EE_COMBAT_STORED_COMPLEX_NONE) => return 0,
+                _ => {}
             }
         }
         self.host.handle(code, object, arg)

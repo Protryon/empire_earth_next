@@ -27,6 +27,67 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// `EEUnit::mResourceAmount` (the store's).
+constexpr static const int32_t EE_COMBAT_Q_RESOURCE_AMOUNT = 68;
+
+/// `mHerd != NULL` (the store's).
+constexpr static const int32_t EE_COMBAT_Q_HERD = 69;
+
+/// `mCloaked`, the fanatic's timer (the store's).
+constexpr static const int32_t EE_COMBAT_Q_CLOAK_TIMER = 70;
+
+/// `EEUnit::mResourceType`.
+constexpr static const int32_t EE_COMBAT_Q_RESOURCE_TYPE = 71;
+
+/// `ComputeDamage`'s C++ part into the record at `args[0]` (an `EeCombatDamageIn*`; `form` and `attack` set) for
+/// `object` hitting `other` with ammunition `args[1]` and weapon column `args[2]`: the attack factor
+/// (`gToHitTable.GetAttackFactor`) and `gWeaponToHitFactors` unless a direct hit without attack, the target's
+/// armour of the weapon, combat.yaml's constants.
+constexpr static const int32_t EE_COMBAT_W_DAMAGE_IN = 40;
+
+/// The class's `GetElevationFactor(object, other)` (other: the target's complex unit), as float bits.
+constexpr static const int32_t EE_COMBAT_W_ELEVATION = 41;
+
+/// TEST ONLY (CBDM): the record at `args[0]` and its result at `args[1]` (an `EeCombatDamageOut*`).
+constexpr static const int32_t EE_COMBAT_W_DAMAGE_CAPTURE = 42;
+
+/// ApplyHit's classes of `object` into `args`: the hit's (a capital ship's special weapon, else the launcher's or the
+/// class's) attack and area effect as float bits (its player's upgrade's, else the class's), ammunition, weapon
+/// column, category; the splash's (the launcher's or the class's) friendly factor bits and category; combat.yaml's
+/// dead food share bits; the class has a shot effect.
+constexpr static const int32_t EE_COMBAT_W_HIT_CLASS = 43;
+
+/// `object->GetEffect(3, e)`: false for none; else plays `e` on it (when not NULL) and answers true.
+constexpr static const int32_t EE_COMBAT_W_UNIT_EFFECT = 44;
+
+/// `object->TakeHit(other, args[0], other's player id, 1)`.
+constexpr static const int32_t EE_COMBAT_W_TAKE_HIT = 45;
+
+/// `object->mUnitClass->UnitDamaged(object->GetComplexUnit(), other, args[0])`.
+constexpr static const int32_t EE_COMBAT_W_UNIT_DAMAGED = 46;
+
+/// `object->mExperience++`.
+constexpr static const int32_t EE_COMBAT_W_EXPERIENCE = 47;
+
+/// `object->mResourceAmount = args[0]`.
+constexpr static const int32_t EE_COMBAT_W_SET_RESOURCE = 48;
+
+/// The first unit node of tile (`args[0]`, `args[1]`), 0 for none or no tile.
+constexpr static const int32_t EE_COMBAT_W_TILE_UNITS = 49;
+
+/// The node after node `object`.
+constexpr static const int32_t EE_COMBAT_W_NODE_NEXT = 50;
+
+/// The complex unit of node `object`'s unit.
+constexpr static const int32_t EE_COMBAT_W_NODE_UNIT = 51;
+
+/// TEST ONLY (CBAD, CBXA): `ApplyAreaDamage` of `object` with target `other`: `args[1]` victims at `args[0]` (a
+/// `const u64*`), the tile `args[2..4]`, the radius bits `args[4]`, the friendly factor above 0 `args[5]`.
+constexpr static const int32_t EE_COMBAT_W_AREA_CAPTURE = 52;
+
+/// TEST ONLY (CBXA): `ApplyHit` of `object` on `other` ends.
+constexpr static const int32_t EE_COMBAT_W_HIT_CAPTURE = 53;
+
 /// The base table (`gDamageTable`).
 constexpr static const uint32_t EE_COMBAT_DAMAGE_BASE = 0;
 
@@ -889,9 +950,6 @@ constexpr static const int32_t EE_COMBAT_W_SPARKS_ON = 27;
 
 constexpr static const int32_t EE_COMBAT_W_SPARKS_AT = 28;
 
-/// the class's `ApplyHit(object, other)`.
-constexpr static const int32_t EE_COMBAT_W_APPLY_HIT = 29;
-
 /// the class's `LaunchShot(object, other, point, NULL)`, `LaunchFromTurret(object, other, point)`.
 constexpr static const int32_t EE_COMBAT_W_LAUNCH_SHOT = 30;
 
@@ -934,6 +992,47 @@ constexpr static const int32_t EE_COMBAT_WORLD_ATTACK_REACHABLE = 6;
 constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED = 7;
 
 constexpr static const int32_t EE_COMBAT_WORLD_FIRE_SHOT = 8;
+
+/// One hit's damage arguments (`ComputeDamage`'s after the units).
+struct EeCombatDamageCall {
+  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
+  int32_t form;
+  float attack;
+  /// the attack's ammunition kind (the to-hit table's column) and weapon (the armour's index)
+  int32_t ammo;
+  int32_t weapon;
+  /// splash on the own player's units
+  float friendly_factor;
+  /// out: the damage when the call answers true
+  int32_t amount;
+};
+
+/// The C++ host of the reads (see [`QueryHost`]; `ctx` is the C++'s context: the call's unit and goal).
+struct EeCombatQueryHost {
+  void *ctx;
+  uint32_t (*read)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  uint64_t (*handle)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  void (*act)(void *ctx, int32_t code, uint64_t object, int32_t arg);
+  /// the location's `mMatrix` row by row into `out`
+  void (*location)(void *ctx, uint64_t object, float (*out)[16]);
+  /// `line`: start x, y, z, direction x, y, z
+  int32_t (*intersects)(void *ctx,
+                        uint64_t candidate,
+                        const float (*line)[6],
+                        int32_t segment,
+                        uint32_t lod,
+                        float scale);
+  void (*footprint_tile)(void *ctx, uint64_t object, int32_t (*out)[2]);
+};
+
+/// The argument block of an operation.
+using EeCombatWorldArgs = int64_t[12];
+
+/// The C++ host of the bodies here: the reads' table and the operations (`ctx`: the reads' context).
+struct EeCombatWorldHost {
+  EeCombatQueryHost query;
+  uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
+};
 
 /// `EEToHitTable::GetAttackFactor`'s inputs.
 struct EeCombatAttackFactorIn {
@@ -1571,24 +1670,6 @@ struct EeCombatSearchHost {
   void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
 };
 
-/// The C++ host of the reads (see [`QueryHost`]; `ctx` is the C++'s context: the call's unit and goal).
-struct EeCombatQueryHost {
-  void *ctx;
-  uint32_t (*read)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  uint64_t (*handle)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  void (*act)(void *ctx, int32_t code, uint64_t object, int32_t arg);
-  /// the location's `mMatrix` row by row into `out`
-  void (*location)(void *ctx, uint64_t object, float (*out)[16]);
-  /// `line`: start x, y, z, direction x, y, z
-  int32_t (*intersects)(void *ctx,
-                        uint64_t candidate,
-                        const float (*line)[6],
-                        int32_t segment,
-                        uint32_t lod,
-                        float scale);
-  void (*footprint_tile)(void *ctx, uint64_t object, int32_t (*out)[2]);
-};
-
 /// `FacesPoint`'s reads (plain): the unit's location, the point, the class's arc, offset and broadside flag, the unit's
 /// type and special attack, its model's turret part count and its stats' scale.
 struct EeCombatFacingIn {
@@ -1928,16 +2009,16 @@ struct EeCombatTargetHost {
   void (*push)(void *ctx, uint64_t unit);
 };
 
-/// The argument block of an operation.
-using EeCombatWorldArgs = int64_t[12];
-
-/// The C++ host of the bodies here: the reads' table and the operations (`ctx`: the reads' context).
-struct EeCombatWorldHost {
-  EeCombatQueryHost query;
-  uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
-};
-
 extern "C" {
+
+/// `ComputeDamage` of `unit` on `target` over `host` (the trample's): true with `call.amount` set when it does damage.
+///
+/// # Safety
+/// `call` must point to a writable record, `host` to a valid table whose callbacks may be called with its context.
+bool ee_combat_compute_damage(EeCombatDamageCall *call,
+                              uint64_t unit,
+                              uint64_t target,
+                              const EeCombatWorldHost *host);
 
 /// Loads the tables from `count` rows of percentages (replacing any loaded ones); returns the row count.
 ///
