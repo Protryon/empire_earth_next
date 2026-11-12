@@ -1,10 +1,10 @@
-//! `extern "C"` for the status box's attribute texts (`hud.rs`; `User Interface Thread/EEUIFMGStatusBox.cpp`):
+//! `extern "C"` for the status box (`hud.rs`; `User Interface Thread/EEUIFMGStatusBox.cpp`):
 //! plain values in and out, no host calls.
 #![allow(clippy::missing_safety_doc)]
 
 use core::ffi::c_long;
 
-use crate::hud;
+use crate::hud::{self, EeScreensHudFillBars, EeScreensHudIcons, EeScreensHudRefresh, EeScreensHudUnit};
 
 /// `GetAttributeText`: the base and the bonus "base+bonus" shows.
 #[no_mangle]
@@ -38,4 +38,39 @@ pub unsafe extern "C" fn ee_screens_hud_armor_attribute(
     let (a, b) = hud::armor_attribute(stat, class_base, stats_class_base);
     out_base.write(a);
     out_bonus.write(b);
+}
+
+/// `Fill`'s first attribute icons (attack, range, speed, area effect, repair) from icon 0.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_hud_fill_icons(unit: *const EeScreensHudUnit, out: *mut EeScreensHudIcons) {
+    out.write(hud::fill_icons(&*unit));
+}
+
+/// `FillArmorAttributes`' icons from icon `start`; `upgrades` the six armor flags (shock, pierce, arrow, gun,
+/// missile, laser).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_hud_armor_icons(start: c_long, upgrades: *const bool, out: *mut EeScreensHudIcons) {
+    out.write(hud::armor_icons(start, *upgrades.cast::<[bool; 6]>()));
+}
+
+/// `Fill`'s transport icon at icon `start` (one entry, its icon -1 when not shown).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_hud_transport_icon(
+    start: c_long,
+    unit: *const EeScreensHudUnit,
+    out: *mut EeScreensHudIcons,
+) {
+    out.write(hud::transport_icon(start, &*unit));
+}
+
+/// `Fill`'s bars.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_hud_fill_bars(unit: *const EeScreensHudUnit, out: *mut EeScreensHudFillBars) {
+    out.write(hud::fill_bars(&*unit));
+}
+
+/// `Refresh`'s numbers and bars.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_hud_refresh(unit: *const EeScreensHudUnit, out: *mut EeScreensHudRefresh) {
+    out.write(hud::refresh(&*unit));
 }

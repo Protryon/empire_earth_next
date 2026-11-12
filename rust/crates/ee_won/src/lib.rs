@@ -35,6 +35,8 @@ pub mod ffi_parse;
 pub mod file;
 pub mod flow;
 pub mod ftp;
+pub mod fwop;
+pub mod getcert;
 pub mod guicfg;
 pub mod guiconf;
 pub mod guictl;

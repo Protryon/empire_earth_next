@@ -66,15 +66,9 @@ constexpr static const uint32_t RESOURCE_FOOD = 2;
 /// The unit categories, family and types the picker tests (`EEUnitClassIDs.h`).
 constexpr static const uint32_t CATEGORY_AMBIENT = 0;
 
-constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
-
-constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
-
 constexpr static const uint32_t FAMILY_AA_BUILDING = 46;
 
 constexpr static const uint32_t TYPE_PATH_POINT = 223;
-
-constexpr static const uint32_t TYPE_CP_ICBM = 750;
 
 /// `kBarFraction`: the filled part's share of a bar's own width.
 constexpr static const float BAR_FRACTION = 0.75;

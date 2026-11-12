@@ -46,4 +46,60 @@ void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEU
 // A shot's target: its attack-unit goal's (NULL under another goal)
 EEUnit* EECombatShotTarget(EEComplexUnit* inUnit);
 
+// CBQR (TEST ONLY): one call of a read behind the hosts (R5b.2, seventh round), its outcome: the function, the
+// unit's and target's ids (0 without one), the result and what the call left behind (per function below). Folded
+// like CBTC, 4096 calls to a record (count, FNV-1a 64; EE_SIM_CAPTURE_CBQR_FULL=1 writes every call). A read made
+// inside another captured read (FacesTarget's FacesPoint, IsInReach's facing) records nothing: only the outer call.
+enum {
+    EE_COMBAT_HR_IMPACT_UNIT = 1,           // FindImpactUnit: extra 0 the unit hit's id, 1 the owner's mIsFiringHigh
+    EE_COMBAT_HR_STILL_REACHABLE = 2,       // IsStillReachable: extra 0 mPathAttempts, 1 the ignored targets' count
+    EE_COMBAT_HR_GATE_CLOSED = 3,           // IsGateClosed
+    EE_COMBAT_HR_ENEMY_IN_RANGE = 4,        // EEIsEnemyWithinRange: extra 0 mTargetSearchTimer
+    EE_COMBAT_HR_IN_REACH = 5,              // IsInReach: extra 0 mWeaponTagPoint before, 1 after
+    EE_COMBAT_HR_FACES_POINT = 6,           // FacesPoint: extra 0, 1 the point's x, y bits, 2 inUseTolerance
+    EE_COMBAT_HR_FACES_TARGET = 7,          // FacesTarget: extra 2 inUseTolerance
+};
+void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                             uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0);
+// The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
+// IsStillReachable and IsGateClosed (inGoal the attack goal), EEIsEnemyWithinRange, FacesPoint (inClass `this`)
+class EEUGAttackUnit;
+class GE3DPoint;
+EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
+bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
+bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
+bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
+
+// CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,
+// physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
+// its player's population) or of the heal goal's Work (the target's hit points, the elapsed time); folded like CBQR
+// (EE_SIM_CAPTURE_CBSO_FULL=1: every call), only the outermost call of each kind (scope slots 1 to 3)
+enum {
+    EE_COMBAT_SO_PROJECTILE_ACTION = 1,
+    EE_COMBAT_SO_MISSILE_ACTION = 2,
+    EE_COMBAT_SO_PROJECTILE_UPDATE = 3,
+    EE_COMBAT_SO_MISSILE_UPDATE = 4,
+    EE_COMBAT_SO_TORPEDO_UPDATE = 5,
+    EE_COMBAT_SO_HEAL_WORK = 6,
+};
+uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
+void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore);
+void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed);
+
+// The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
+// EE_COMBAT_SHOT_*, inClass the original's `this`)
+void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
+void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
+
+// The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
+// Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running
+struct EECombatHostReadScope {
+    explicit EECombatHostReadScope(int inSlot = 0);
+    ~EECombatHostReadScope();
+    int mSlot;
+    bool mOuter;
+};
+
 #endif
