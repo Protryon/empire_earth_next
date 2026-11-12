@@ -404,7 +404,7 @@ bool EELobbyRunConnectDialog()
     EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return false;
-    bool theFlag = theGame->mIsHost;
+    bool theFlag = theGame->GetIsHost();
     bool theResult = theDialog->Run(theGame);
     theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)

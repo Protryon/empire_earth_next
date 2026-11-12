@@ -1652,6 +1652,44 @@ public:
     void RemoveClient(LobbyClient* inClient);
     bool ReadDetails(ReadBuffer& inBuffer);
 
+    bool IsInProgress() const { return this->mInProgress; }
+    bool GetShowDetails() const { return this->mShowDetails; }
+    long GetGameType() { return this->mGameType; }
+    long GetNumPlayers() { return this->mNumPlayers; }
+    long GetMaxPlayers() { return this->mNumOpenSlots; }
+    void SetMaxPlayers(long inSlots) { this->mNumOpenSlots = inSlots; }
+    unsigned short GetPing() { return this->mPing; }
+    void SetPing(unsigned short inPing) { this->mPing=inPing; }
+protected:
+    typedef LobbyGame* (*LobbyGameFactory)();
+    static LobbyGameFactory mGameFactory;
+    static LobbyGame* DefaultGameFactory() { return new LobbyGame; }
+public:
+    static LobbyGame* CreateGame(LobbyGameType inType);
+    static void SetGameFactory(LobbyGameFactory factory) { LobbyGame::mGameFactory=factory; }
+
+    unsigned short GetGroupId() const { return this->mGroupId; }
+    bool GetIsFiltered() const { return this->mIsFiltered; }
+    const GUIString& GetName() const { return this->mName; }
+    const GUIString& GetPassword() const { return this->mPassword; }
+    const IPAddr& GetAddress() const { return this->mAddress; }
+    const SmartPtr<LobbyClientList>& GetClients() const { return this->mClients; }
+    unsigned short GetCaptainId() const { return this->mCaptainId; }
+    void SetGameType(long inType) { this->mGameType = inType; }
+    void SetGroupId(unsigned short inId) { this->mGroupId = inId; }
+    bool GetHaveDetails() const { return this->mHaveDetails; }
+    void SetInProgress(bool inValue) { this->mInProgress = inValue; }
+    bool GetInviteOnly() const { return this->mInviteOnly; }
+    bool IsInvited() const { return this->mInvited; }
+    void SetInvited(bool inValue) { this->mInvited = inValue; }
+    void SetIsFiltered(bool inValue) { this->mIsFiltered = inValue; }
+    bool GetIsHost() const { return this->mIsHost; }
+    long GetLastSeenTime() const { return this->mLastSeenTime; }
+    void SetLastSeenTime(long inTime) { this->mLastSeenTime = inTime; }
+    bool GetPingReplied() const { return this->mPingReplied; }
+    void SetPingReplied(bool inValue) { this->mPingReplied = inValue; }
+    void SetShowDetails(bool inValue) { this->mShowDetails = inValue; }
+private:
     GUIString mName;                       // +0x08
     GUIString mPassword;                   // +0x0c
     bool mHasPassword;
@@ -1667,33 +1705,13 @@ public:
     bool mIsFiltered;                     // +0x20, set by the filters; padding to +0x23
     long mNumPlayers;                      // +0x24
     long mNumOpenSlots;                    // +0x28
-    bool IsInProgress() const { return this->mInProgress; }
-    bool GetShowDetails() const { return this->mShowDetails; }
-    long GetGameType() { return this->mGameType; }
-    long GetNumPlayers() { return this->mNumPlayers; }
-    long GetMaxPlayers() { return this->mNumOpenSlots; }
     long mGameType;                        // +0x2c
     long mSkill;                           // +0x30
     SmartPtr<LobbyClientList> mClients;     // +0x34 (owned; constructor/destructor/copy evidence)
     IPAddr mAddress;                       // +0x38
     unsigned short mCaptainId;
     unsigned short mGroupId;
-    unsigned short GetPing() { return this->mPing; }
-    void SetPing(unsigned short inPing) { this->mPing=inPing; }
     unsigned short mPing;                  // base allocation 0x68 at 0x3a6730
-protected:
-    typedef LobbyGame* (*LobbyGameFactory)();
-    static LobbyGameFactory mGameFactory;
-    static LobbyGame* DefaultGameFactory() { return new LobbyGame; }
-public:
-    static LobbyGame* CreateGame(LobbyGameType inType);
-    static void SetGameFactory(LobbyGameFactory factory) { LobbyGame::mGameFactory=factory; }
-
-public:
-    unsigned short GetGroupId() const { return this->mGroupId; }
-    bool GetAskToJoinFlag() const { return this->mAskToJoin; }
-    bool GetInProgress() const { return this->mInProgress; }
-    bool GetIsFiltered() const { return this->mIsFiltered; }
 };
 
 
@@ -1739,8 +1757,27 @@ public:
     unsigned short GetPing();
     bool IsTeammate(LobbyClient* inOther);
 
-    GUIString mName;                        // +0x08
     unsigned short GetClientId() { return this->mClientId; }
+    void SetIsFriend(bool inFriend) { this->mIsFriend = inFriend; }
+    void SetInvited(bool inValue) { this->mInvited = inValue; }
+    unsigned long GetWONUserId() const { return this->mWONUserId; }
+    unsigned long GetCDKeyId() const { return this->mCDKeyId; }
+    unsigned short GetChatGroupId() const { return this->mChatGroupId; }
+    unsigned short GetGameGroupId() const { return this->mGameGroupId; }
+    void SetGroupId(unsigned short inId, bool inGame) { if (inGame) this->mGameGroupId = inId; else this->mChatGroupId = inId; }
+    void SetMemberFlags(unsigned char inFlags, bool inGame) { if (inGame) this->mGameMemberFlags = inFlags; else this->mChatMemberFlags = inFlags; }
+    bool IsIgnored() const { return this->mIgnored; }
+    bool IsBlocked() const { return this->mBlocked; }
+    const GUIString& GetName() const { return this->mName; }
+    void SetName(const GUIString& inName) { this->mName = inName; }
+    void SetClientId(unsigned short inId) { this->mClientId = inId; }
+    void SetClientFlags(unsigned long inFlags) { this->mClientFlags = inFlags; }
+    void SetBlocked(bool inBlocked) { this->mBlocked = inBlocked; }
+    void SetIgnored(bool inIgnored) { this->mIgnored = inIgnored; }
+    bool IsInvited() const { return this->mInvited; }
+    const SmartPtr<LobbyPlayer>& GetPlayer() const { return this->mPlayer; }
+private:
+    GUIString mName;                        // +0x08
     unsigned short mClientId;              // +0x0c
     unsigned long mClientFlags;
     unsigned long mWONUserId;
@@ -1756,19 +1793,6 @@ public:
     bool mIsChatCaptain;
     bool mInvited;
     SmartPtr<LobbyPlayer> mPlayer;          // +0x28; setter and destructor own the reference
-public:
-    void SetIsFriend(bool inFriend) { this->mIsFriend = inFriend; }
-    void SetInvited(bool inValue) { this->mInvited = inValue; }
-    unsigned long GetWONUserId() const { return this->mWONUserId; }
-    unsigned long GetCDKeyId() const { return this->mCDKeyId; }
-    unsigned short GetChatGroupId() const { return this->mChatGroupId; }
-    unsigned short GetGameGroupId() const { return this->mGameGroupId; }
-    void SetGroupId(unsigned short inId, bool inGame) { if (inGame) this->mGameGroupId = inId; else this->mChatGroupId = inId; }
-    void SetMemberFlags(unsigned char inFlags, bool inGame) { if (inGame) this->mGameMemberFlags = inFlags; else this->mChatMemberFlags = inFlags; }
-    bool IsIgnored() const { return this->mIgnored; }
-    bool IsBlocked() const { return this->mBlocked; }
-public:
-    const GUIString& GetName() const { return this->mName; }
 };
 
 
@@ -1785,8 +1809,6 @@ public:
     void WriteToBuffer(WriteBuffer& outBuffer); // 0x3a9170
     bool IsSameTeam(LobbyPlayer* inOther);     // 0x3a91a0
 
-    unsigned short mPing;                  // +0x08
-    bool mIsReady;                         // +0x0a
 protected:
     typedef LobbyPlayer* (*LobbyPlayerFactory)();
     static LobbyPlayerFactory mPlayerFactory;
@@ -1794,7 +1816,13 @@ protected:
 public:
     static LobbyPlayer* CreatePlayer();
     static void SetPlayerFactory(LobbyPlayerFactory factory) { LobbyPlayer::mPlayerFactory=factory; }
-
+    bool GetReady() const { return this->mIsReady; }
+    void SetReady(bool inReady) { this->mIsReady = inReady; }
+    unsigned short GetPing() const { return this->mPing; }
+    void SetPing(unsigned short inPing) { this->mPing = inPing; }
+private:
+    unsigned short mPing;                  // +0x08
+    bool mIsReady;                         // +0x0a
 };
 
 // a rectangle

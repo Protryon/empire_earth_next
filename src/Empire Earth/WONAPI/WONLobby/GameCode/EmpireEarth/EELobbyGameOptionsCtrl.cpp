@@ -181,7 +181,7 @@ void EELobbyGameOptionsCtrl::UpdateAll()
     for (i = 0; i < 16; i++)
         this->UpdateOption(i, theGame);
     bool theNotRandomMap = theGame->GetOption(0) != 0;
-    bool theFlag = theGame->mIsHost;
+    bool theFlag = theGame->GetIsHost();
     for (int j = 0; j < 16; j++) {
         Component* theControl = this->GetControl(j);
         bool theEnabled;
@@ -213,7 +213,7 @@ void EELobbyGameOptionsCtrl::Activate()
         return;
     this->mIsActive = true;
     this->UpdateAll();
-    bool theFlag = theGame->mIsHost;
+    bool theFlag = theGame->GetIsHost();
     for (int i = 0; i < 16; i++)
         this->mOptions[i]->SetEnabled(theFlag);
 }

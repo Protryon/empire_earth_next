@@ -174,13 +174,13 @@ bool LobbyClient::HasPlayer() { return this->mPlayer.get() != NULL; }
 
 // FUNCTION: WON 0x7a5590
 // Returns whether the client's player has clicked ready; false without a player
-bool LobbyClient::IsReady() { return this->mPlayer.get() != NULL ? this->mPlayer->mIsReady : false; }
+bool LobbyClient::IsReady() { return this->mPlayer.get() != NULL ? this->mPlayer->GetReady() : false; }
 
 // FUNCTION: WON 0x7a55a0
 // Returns the client's player ping, or 0xfffe (unknown) without a player
 unsigned short LobbyClient::GetPing()
 {
-    if (this->mPlayer.get() != NULL) return this->mPlayer->mPing;
+    if (this->mPlayer.get() != NULL) return this->mPlayer->GetPing();
     return 0xfffe;
 }
 
@@ -250,7 +250,7 @@ void LobbyClientList::UpdateIgnoreStatus()
 // FUNCTION: WON 0x7a5cc0
 // Adds the client under its id, replacing any client with the same id
 void LobbyClientList::AddClient(LobbyClient* inClient) {
-    unsigned short clientId = inClient->mClientId;
+    unsigned short clientId = inClient->GetClientId();
     this->mClients.Set(clientId, inClient);
 }
 
@@ -341,7 +341,7 @@ bool LobbyClientSetIterator::HasMore()
     const LobbyClientMap& aClients = this->Clients();
     size_t i;
     while ((i = this->mItr.Peek(aClients)) < aClients.size()) {
-        if (aClients.At(i)->mPlayer.get() != NULL) {
+        if (aClients.At(i)->GetPlayer().get() != NULL) {
             this->mReady = true;
             return true;
         }
@@ -358,7 +358,7 @@ LobbyPlayer* LobbyClientSetIterator::Next(LobbyClient** outClient)
         const LobbyClientMap& aClients = this->Clients();
         LobbyClient* aClient = aClients.At(this->mItr.Next(aClients));
         if (outClient != NULL) *outClient = aClient;
-        LobbyPlayer* aPlayer = aClient->mPlayer.get();
+        LobbyPlayer* aPlayer = aClient->GetPlayer().get();
         this->mReady = false;
         return aPlayer;
     }
@@ -624,7 +624,7 @@ void LobbyGame::HandlePlayerJoined(LobbyClient* inClient) { this->HandlePlayerJo
 // Removes the client's player from the game, lowering the player count and telling the game code
 void LobbyGame::RemoveClient(LobbyClient* inClient)
 {
-    SmartPtr<LobbyPlayer> aPlayer(inClient->mPlayer);
+    SmartPtr<LobbyPlayer> aPlayer(inClient->GetPlayer());
     if (aPlayer.get() == NULL) return;
     --this->mNumPlayers;
     inClient->SetPlayer(NULL);
@@ -900,13 +900,13 @@ void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClien
                 this->mGroups.SetAt(anAt, group.get());
                 if (anAt <= groupIt) ++groupIt;
             }
-            ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
+            ee_won_model_population(&aPopulation, 0, (uint32_t)group->GetFlags(), (uint32_t)group->GetNumClients());
             break;
         }
         case 2: {
             SmartPtr<LobbyGroup> group = this->mGroups.At(groupIt);
             group->ReadRoutingInfo(anInfos[aPlan[k].incoming]->second.get(), clients);
-            ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
+            ee_won_model_population(&aPopulation, 0, (uint32_t)group->GetFlags(), (uint32_t)group->GetNumClients());
             ++groupIt;
             break;
         }
@@ -934,7 +934,7 @@ void LobbyServer::AddClientToGroup(LobbyClient* inClient, unsigned char inFlags,
 {
     inGroup->AddClient(inClient, inFlags);
     EeWonPopulation aPopulation = { this->mNumChatClients, this->mNumClients };
-    ee_won_model_population(&aPopulation, 1, (uint32_t)inGroup->mFlags, 0);
+    ee_won_model_population(&aPopulation, 1, (uint32_t)inGroup->GetFlags(), 0);
     this->mNumChatClients = aPopulation.chat;
 }
 
@@ -969,7 +969,7 @@ SmartPtr<LobbyClient> LobbyServer::RemoveClientFromGroup(unsigned short inId, Lo
     SmartPtr<LobbyClient> client = inGroup->RemoveClient(inId);
     if (client.get() != NULL) {
         EeWonPopulation aPopulation = { this->mNumChatClients, this->mNumClients };
-        ee_won_model_population(&aPopulation, 2, (uint32_t)inGroup->mFlags, 0);
+        ee_won_model_population(&aPopulation, 2, (uint32_t)inGroup->GetFlags(), 0);
         this->mNumChatClients = aPopulation.chat;
     }
     return client;
@@ -1073,13 +1073,13 @@ bool LobbyGame::IsSameGame(LobbyGame* inOther)
 // Copies the game room's name, join restrictions, id, captain and members into the game
 void LobbyGame::ReadGroup(LobbyGroup* inGroup)
 {
-    this->mName = inGroup->mName;
+    this->mName = inGroup->GetName();
     this->mHasPassword = inGroup->IsPasswordProtected();
     this->mInviteOnly = inGroup->IsInviteOnly();
     this->mAskToJoin = inGroup->IsAskToJoin();
-    this->mGroupId = inGroup->mId;
-    this->mCaptainId = inGroup->mCaptainId;
-    this->mClients = inGroup->mClients;
+    this->mGroupId = inGroup->GetId();
+    this->mCaptainId = inGroup->GetCaptainId();
+    this->mClients = inGroup->GetClients();
 }
 // FUNCTION: WON 0x7a7200
 // Reads the game's listing summary from a byte buffer; false without one
@@ -1154,7 +1154,7 @@ short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,Wr
     inClient->SetPlayer(player.get());
     try {
         short anId=inBuffer.ReadShort();
-        player->mPing=anId;
+        player->SetPing(anId);
         short result=this->HandleJoinGameRequestHook(inBuffer,inClient);
         if (result!=0) { inClient->SetPlayer(NULL); return result; }
     } catch (ReadBufferException&) {
@@ -1222,12 +1222,12 @@ void LobbyGameList::Clear() { this->mIdGames.clear(); this->mAddrGames.clear(); 
 // Adds the game under its room id (Internet) or its address, setting its type to the list's
 void LobbyGameList::AddGame(LobbyGame* inGame)
 {
-    inGame->mGameType=this->mType;
+    inGame->SetGameType(this->mType);
     if (ee_won_model_game_list_by_id(this->mType)) {
-        unsigned short id = inGame->mGroupId;
+        unsigned short id = inGame->GetGroupId();
         this->mIdGames.Set(id, inGame);
     }
-    else this->mAddrGames.Set(inGame->mAddress, inGame);
+    else this->mAddrGames.Set(inGame->GetAddress(), inGame);
 }
 // FUNCTION: WON 0x7a80f0
 // Returns the game in the given room, creating it if new; passes out whether it existed
@@ -1238,7 +1238,7 @@ LobbyGame* LobbyGameList::GetOrCreateGame(unsigned short inId,bool* outExisted)
     if (game==NULL) {
         game=LobbyGame::CreateGame(static_cast<LobbyGameType>(this->mType));
         this->mIdGames.SetAt(it, game);
-        game->mGroupId=inId;
+        game->SetGroupId(inId);
         if (outExisted!=NULL) *outExisted=false;
     } else if (outExisted!=NULL) *outExisted=true;
     return game;
@@ -1252,7 +1252,7 @@ LobbyGame* LobbyGameList::GetOrCreateGame(const IPAddr& inAddress,bool* outExist
     if (game==NULL) {
         game=LobbyGame::CreateGame(static_cast<LobbyGameType>(this->mType));
         this->mAddrGames.SetAt(it, game);
-        game->mAddress=inAddress;
+        game->SetAddress(inAddress);
         if (outExisted!=NULL) *outExisted=false;
     } else if (outExisted!=NULL) *outExisted=true;
     return game;
@@ -1274,7 +1274,7 @@ LobbyGame* LobbyGameList::GetGame(const IPAddr& inAddress)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(unsigned short inId)
 {
     SmartPtr<LobbyGame> game=this->mIdGames.Remove(inId);
-    if (game.get()!=NULL) game->mPing=0xfffe;
+    if (game.get()!=NULL) game->SetPing(0xfffe);
     return game;
 }
 // FUNCTION: WON 0x7a8730
@@ -1282,7 +1282,7 @@ SmartPtr<LobbyGame> LobbyGameList::RemoveGame(unsigned short inId)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(const IPAddr& inAddress)
 {
     SmartPtr<LobbyGame> game=this->mAddrGames.Remove(inAddress);
-    if (game.get()!=NULL) game->mPing=0xfffe;
+    if (game.get()!=NULL) game->SetPing(0xfffe);
     return game;
 }
 // FUNCTION: WON 0x7a8850
@@ -1323,8 +1323,8 @@ bool LobbyGameList::RemoveStaleGames(long inMaxAge)
     size_t it=0;
     while (it<this->mAddrGames.size()) {
         LobbyGame* aGame=this->mAddrGames.At(it);
-        if (ee_won_model_game_stale((int64_t)now,(int32_t)aGame->mLastSeenTime,(int32_t)inMaxAge)) {
-            aGame->mPing=0xfffe;
+        if (ee_won_model_game_stale((int64_t)now,(int32_t)aGame->GetLastSeenTime(),(int32_t)inMaxAge)) {
+            aGame->SetPing(0xfffe);
             this->mAddrGames.EraseAt(it);
         } else ++it;
     }
