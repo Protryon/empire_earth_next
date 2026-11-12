@@ -83,7 +83,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
@@ -6877,7 +6877,7 @@ void EEMSetRallyGoal::Execute()
                 || (theTarget->mUnitClass->IsLandBuilding() && theTarget->mHitPoints < theTarget->mStats->mMaxHitPoints)) {
                 theGoal = new EEUGBuildRepair(theTarget->mPlayer, theTarget, true);
             } else if (theTarget->mUnitClass->mUnitType == kUnitTypePathPoint) {
-                theGoal = new EEUGPatrol(theTarget->mComplexUnit->mPatrolGroup, theTarget->mComplexUnit, true);
+                theGoal = EEUGRust::NewPatrol(theTarget->mComplexUnit->mPatrolGroup, theTarget->mComplexUnit, true);
             } else if (theTarget->mUnitClass->mGarrisonCapacity > 0 && theTarget->mTileNode != NULL && theTarget->mHitPoints > 0) {
                 EEComplexUnit* theGarrison = theTarget->mComplexUnit;
                 if (theGarrison->mGoalState != NULL && theGarrison->mGoalState->mKind == kGoalLoadGarrison) {

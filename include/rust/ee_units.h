@@ -593,6 +593,34 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+constexpr static const int32_t EE_UNITS_PATROL_CREATE_EMPTY = 1;
+
+constexpr static const int32_t EE_UNITS_PATROL_CREATE = 2;
+
+constexpr static const int32_t EE_UNITS_PATROL_DESTROY = 3;
+
+constexpr static const int32_t EE_UNITS_PATROL_SET_GROUP = 4;
+
+constexpr static const int32_t EE_UNITS_PATROL_CLONE_TARGET = 5;
+
+constexpr static const int32_t EE_UNITS_PATROL_CHECKSUM = 6;
+
+constexpr static const int32_t EE_UNITS_PATROL_STEP = 7;
+
+constexpr static const int32_t EE_UNITS_PATROL_START = 8;
+
+constexpr static const int32_t EE_UNITS_PATROL_SAVE = 9;
+
+constexpr static const int32_t EE_UNITS_PATROL_LOAD = 10;
+
+constexpr static const int32_t EE_UNITS_PATROL_REPAIR = 11;
+
+constexpr static const int32_t EE_UNITS_PATROL_TARGET = 12;
+
+constexpr static const int32_t EE_UNITS_PATROL_GROUP = 13;
+
+constexpr static const int32_t EE_UNITS_PATROL_FORWARD = 14;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -1290,6 +1318,31 @@ struct EeUnitsPushIn {
   float tick_seconds;
 };
 
+/// The C++ host table.
+struct EePatrolHost {
+  void *context;
+  uint64_t (*new_group)(void*);
+  void (*reference)(void*, uint64_t, bool);
+  void (*dereference)(void*, uint64_t, bool);
+  uint64_t (*group_next)(void*, uint64_t, uint64_t);
+  uint64_t (*group_previous)(void*, uint64_t, uint64_t);
+  uint32_t (*group_count)(void*, uint64_t);
+  uint32_t (*group_id)(void*, uint64_t);
+  uint64_t (*group_nearest)(void*, uint64_t, int64_t, int64_t);
+  void (*unit_tile)(void*, uint64_t, int64_t*, int64_t*);
+  uint32_t (*unit_id)(void*, uint64_t);
+  bool (*unit_valid)(void*, uint64_t);
+  int64_t (*unit_command)(void*, uint64_t);
+  void (*reset_path_attempts)(void*, uint64_t);
+  void (*start_action)(void*, uint64_t, int64_t);
+  uint64_t (*find_unit)(void*, uint32_t);
+  uint64_t (*player_group)(void*, uint64_t, uint32_t);
+  int32_t (*write_u32)(void*, uint32_t);
+  int32_t (*write_bool)(void*, bool);
+  int32_t (*read_u32)(void*, uint32_t*);
+  int32_t (*read_bool)(void*, bool*);
+};
+
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
 struct EeUnitsTurn {
   float delta;
@@ -1983,6 +2036,17 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// # Safety
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
+
+/// A patrol goal's body `op` on the goal `goal` (`a`, `b`: the unit, the group or the target as the body takes
+/// them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int64_t ee_units_patrol_goal(int32_t op,
+                             uint64_t goal,
+                             uint64_t a,
+                             uint64_t b,
+                             const EePatrolHost *host);
 
 /// `TurnTowardAngle` over the C++'s values.
 ///
