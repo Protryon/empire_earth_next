@@ -146,6 +146,13 @@ inline bool EESaveHasGhostResources(unsigned long inMajorVersion, unsigned long 
 {
     return inMajorVersion > 0 || inMinorVersion >= 272;
 }
+// port: from 0.273 a save holds the contagion manager's last helper id after its helpers (EEContagionManager): a load
+// went on from the highest saved helper's id (0 with none), so a calamity cast after it kept another helper id in its
+// placeholder than the running game's (the calamity's out-of-synch checksum differed from the next cast on)
+inline bool EESaveHasContagionCounter(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 273;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;

@@ -880,8 +880,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 270 the order of each player's unit list (EESaveHasPlayerUnitOrder)
 // 271 the computer players' intelligence files (EESaveHasIntelligence)
 // 272 the ghosts' resources and the gather goals' dead resources (EESaveHasGhostResources)
+// 273 the contagion manager's last helper id (EESaveHasContagionCounter)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 272;
+const unsigned long kSaveGameMinorVersion = 273;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
