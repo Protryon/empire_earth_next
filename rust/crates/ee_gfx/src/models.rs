@@ -42,9 +42,8 @@ pub struct EeGfxSelectionModel {
 }
 
 /// The ring's triangles (LoadMedia's 30 `SetVertexIndex` calls).
-const RING_INDICES: [u32; 30] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 25, 22, 23, 25, 23, 24,
-];
+const RING_INDICES: [u32; 30] =
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 25, 22, 23, 25, 23, 24];
 /// The ring's vertices at the centre, at +x and at -x.
 const RING_ZERO: [usize; 10] = [0, 3, 6, 9, 12, 15, 18, 25, 22, 23];
 /// The vertex pairs at each turn of the spoke, in the original's order.

@@ -133,8 +133,7 @@ pub fn sky_frame(time_of_day: f32, colors: &[EeGfxColor; 68], size: i32, width: 
         let (corner, z) = SKY_VERTICES[i];
         frame.sky_points[i] = Ge3DPoint { x: corners[corner].x, y: corners[corner].y, z };
     }
-    for i in 0..24 {
-        let (corner, z) = STAR_VERTICES[i];
+    for (i, &(corner, z)) in STAR_VERTICES.iter().enumerate() {
         let c = corners[corner];
         frame.outer_stars[i] = Ge3DPoint { x: c.x, y: c.y, z };
         frame.inner_stars[i] = Ge3DPoint { x: c.x * 0.25, y: c.y * 0.25, z: z * 0.25 };
