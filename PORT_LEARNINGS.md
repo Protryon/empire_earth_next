@@ -10136,3 +10136,38 @@ methods, the ops table Rust reads and builds the tree through, the forwarders, `
   EENS/EENU blocks, every savecheck same, no next.error); oracle seeds 2-3 identical to `ref`; `saveload --settings
   next` as `tools/saveload_expect.txt` (647, 1217, END, END); the Rust gate PASS. Only the EE-SIM and the tests ran:
   the Lua AI's lobby/tour path has no new code here (the state is the same object behind the same handle).
+
+## R5a.8, third round: the per-unit bindings' Lua helpers on the raw API (ee_ai units_lua; branch rust-ai3, 2026-11-12)
+
+The lead's decisions for step 3: keep `panic = "abort"` and the hand-written `extern "C"` declarations of
+`lua_api.rs`; no mlua high-level API; the bindings on the raw API, so that a Lua error never crosses a Rust frame
+that cannot unwind; the first check on the release library: a script error under luatest must not abort.
+
+- **What moved**: `units_lua.rs`, the helpers every `ai.*` binding of `EECPNextUnits.cpp` calls: `ReadIds`,
+  `OptInt`/`OptBool`/`OptString`/`OptNear`/`OptAmount`, `ClassArg` (the class lookup by name stays C++, passed as a
+  function pointer), `LayerArg` (an index; the C++ maps it to its vector), `ReadFilter` (the filter copied into a
+  `repr(C)` mirror and back), `Result` (with the reason names), `SetInt`/`SetStr`/`SetBool`, `PushSorted` (sorts the
+  C++'s `std::pair<long long, long>` vector in place through a same-layout Rust struct); and the binding `ai.used`
+  (`lua_host.rs`). The 79 bindings stay C++ over the game's objects: their bodies are unchanged, the helpers' bodies
+  are one-line forwarders (`EECPNextUnits.cpp` 4,390 -> 4,304 lines), so main's work on the bindings merges as before.
+- **A Lua error through a Rust helper**: a script's `__index` runs inside `lua_getfield`. The helpers are
+  `extern "C-unwind"` over `extern "C"` declarations and own nothing with a destructor; the error is the script's.
+  luatest has four new checks (`ai.optx` through `ee_ai_units_opt_int`: an error raised by `__index`, the same under
+  pcall, a budget raised by the hook inside the helper): 141/141 with the release library.
+- **`long` stays `long`**: the C++ cast `lua_tointeger` to `long` (32 bits on Windows) before comparing (`ClassArg`'s
+  `>= 0`, `OptAmount`'s clamp); the Rust uses `c_long` at the same points.
+- **The golden driver** (`build/ai3_golden`): the helpers cut out of `EECPNextUnits.cpp` (git c265af97), a real Lua
+  with a counting allocator, 47 Lua values (integers past 32 bits, floats, arrays past 4,000 ids, holes, `near`,
+  type lists past 16, metatables whose `__index` answers, raises or hands back tables), each helper in its own pcall,
+  then the result, field and sorted-list pushers: 529 lines with the stack top and the byte count after each,
+  identical over the forwarders; `units_lua.rs`'s test replays it. One trap of the driver's own: `printf`'s arguments
+  run right to left under clang-cl, so three `OptBool` calls in one `printf` asked `idle` before `flag` (seen only in
+  which `__index` error came first); the Rust replay calls them in that order.
+- **Bare constants in headers**: `pub const MAX_IDS` landed in `ee_ai.h` and clashed with ee_netmsg's (`ee_netmsg.h`
+  gained `#include "ee_ai.h"`); round 2's `HOOK_STEP` and `MAX_DEPTH` were there too. All are crate-private now, and a
+  `repr(C)` array's length is a literal. The helpers take the state as `void*`: `ee_ai.h` is included by files that
+  do not include `lua.h`.
+- **Gates** (on db8752c8): build `--sim` 0/0; luatest 141/141; boom, classic_lua and ageofai seeds 2-3 identical to the
+  unmodified exe (decisions, checksum lines, saved blocks, savecheck same); oracle seeds 2-7 identical to `ref`;
+  `saveload --settings next` as the expect file (647, 1217, END, END); the Rust gate PASS; captures at seeds 2-3:
+  oracle, late, space, calamity and missile PASS. Only EE-SIM and the tests ran: no tour.
