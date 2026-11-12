@@ -8277,3 +8277,87 @@ the size.
   when they exist (the original dereferenced them when it showed them); a button reads its pure test's
   inputs (a unit's set membership, cloak, power) for every selected unit the button's test covers instead of
   stopping at the first that passes.
+
+## R5b.2, seventh round: the reads behind the hosts, the shots' actions and ticks, the heal goal's work and the unit store's plain reads in Rust (ee_combat reads.rs, shots.rs; branch rust-combat7, 2026-11-12)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| which unit a shot hits | `EEUnitClass::FindImpactUnit` | `reads::impact_unit` | CBQR |
+| the facing test | `EEUnitClass::FacesPoint`, `TurretsFacePoint` (gone) | `reads::faces_point` | CBQR |
+| reach | `EEComplexUnit::IsInReach` | `reads::in_reach` | CBQR |
+| the attack goal's path and gate tests | `EEUGAttackUnit::IsStillReachable`, `IsGateClosed` | `reads::still_reachable`, `gate_closed` | CBQR |
+| an enemy in sight | `EEIsEnemyWithinRange` | `reads::enemy_in_range` | CBQR |
+| the shots' new actions | `EEUCProjectile`, `EEUCMissile::ActionChanged` | `shots::action_changed` (a plan) | CBSO |
+| the shots' ticks | `EEUCProjectile`, `EEUCMissile`, `EEUCTorpedo::Update` | `shots::update` (a plan) | CBSO |
+| the heal goal's work | `EEUGHealUnit::Work` | `shots::heal_work` | CBSO |
+
+- **One host table for the reads.** The five bodies run over `EeCombatQueryHost` (EECombatGoals.cpp): `read`
+  (a field, a flag, an f32's bits or a C++ test such as `EECanBallisticHit`, `IsTargetIgnored`, `EEIsSeenBy`),
+  `handle` (the complex unit, previous part, owner, the goal's target, the player, a region's unit, the tile chain's
+  neighbours), `act` (the launcher's `mIsFiringHigh`, `mWeaponTagPoint`, `IgnoreTarget`), the location, the
+  intersection test and the footprint tile. Every handle is an `EEUnit*` (an `EEComplexUnit*` as the base pointer;
+  a player's an `EEPlayer*`), so the original's pointer comparisons (the candidate against the owner, the result
+  against the goal's target, the wall's first part against the target's) are handle comparisons. A read is made
+  where the original makes it: several (`EEIsInRangeToHit`, `EECanBallisticHit`, the hit distance) reach C++ that
+  records captures of its own, and `IsTargetIgnored` may forget an entry.
+- **The original's quirks kept.** `EEIsEnemyWithinRange` tests the visibility of each side's *first* unit for
+  every candidate on that side, and its backward walk never tests the dummy head; `FindImpactUnit` reads the attack
+  goal's target again in the wall branch; `IsInReach` leaves the weapon tag point it tried last (or the one that
+  hit). `TurretsFacePoint` compares with the class's own arc, not the special attack's.
+- **The facing test is arithmetic.** `FacesPoint` and `TurretsFacePoint` are plain f32 work over the location and
+  the turret parts (position, part transform, angle; read by a callback per part, so a false first part reads no
+  second): ee_ge's `apply_point`/`apply_vector`/`set_orientation` and the table arc cosine, the products in the
+  C++'s order (the turrets' dot product z + y + x, its NaN-aware `!(dot >= -1)` clamp kept apart from the plain
+  one). FacesTarget keeps its six lines of point choice in C++ (it calls FacesPoint). `GetTurretPartModel(i)`,
+  which the original called and dropped, is not called.
+- **Goldens from the original, by outcome.** CBQR records each outermost call (per thread: a read inside another
+  captured read records nothing): the function, the ids, the result and what it left behind (the unit hit and the
+  owner's firing-high flag, the path attempts and the ignored targets' count, the weapon tag point before and after,
+  the search timer, the facing point); CBSO a shot's state after `ActionChanged`/`Update` (command before and after,
+  animation, physics action, hit points, goal and its target, location, rotting, flight and lifetime timers,
+  opacity, velocity, the player's population) and the heal's target hit points and elapsed time, each kind in its
+  own nesting slot. Both are folded 4096 calls to a record like CBTC (one `EECombatFolder`, flushed at EE-SIM's
+  end; `EE_SIM_CAPTURE_CBQR_FULL` / `_CBSO_FULL=1` write every call). They were recorded from the original bodies
+  wrapped in place in a lambda (e1b378a5, 13604619), five profiles each; every other tag equalled its golden in
+  those runs. **A tag clash:** the first golden run used CBHR, which the second round's heal range already had: its
+  lines mixed and the comparison failed only on CBHR. Grep the golden files for a new tag before using it.
+- **The shots' plans.** `ActionChanged` and `Update` issue each statement to `EeCombatShotHost` (EEUCProjectile.cpp)
+  in the original's order; the reads are lazy (the goal kind is read again after `FireShot`, which may change the
+  goal). The world's objects stay C++ behind the operations (effects, sounds, cargo, the burning calamity, goals,
+  remains, the mini map); the flaming arrows' `gPhysics->mRandom.Generate()` is a read at the original's place and
+  `roll * 100 <= mChance` (the `int32` chance as a float) is Rust. The recursive `this->ActionChanged(inUnit)` is an
+  operation (virtual: the class dispatches as before). The parachute's cargo tile is the position's x, y passed as
+  f32 bits, truncated by the host's `(long)` casts.
+- **The unit store's plain reads (step 4).** The reads' host is wrapped (`reads::Stored`): a unit's tile, hit
+  points, class type and category, built flag, command, location's x, y, z and (since the core lane's tenth round)
+  target search timer come from the core lane's store when it
+  holds a record of that object (the store's `object` is the `RTSUnit*`, the `EEUnit*`'s address; the id is one host
+  read per unit in a row), else from the C++ as before. ee_combat cannot depend on ee_units: its crate imports C++
+  functions (the store's world host), and a `#[no_mangle]` crate's exports are linked into every test binary that
+  depends on it, so ee_combat's tests failed to link (76 unresolved `ee_units_host_*`). ee_rust, which links both,
+  bridges the record's fields (`ee_combat_store_unit`; false in its test binary); ee_combat's unit tests use a map of
+  their own. `FindImpactUnit`'s distance to its target is the two positions' (what `DistanceSquaredTo` of two
+  locations reads), so it needs no matrix. The goals' and shots' trigger records (CBTC) keep their C++ fill: a record
+  field that moved to the store would need a fallback for a target out of the players' lists (a dead unit a goal
+  still names), and the record's bytes are the golden.
+- **Fields the store would need for the rest of combat's plain reads:** per unit: the stats (`mStats`: scale, range,
+  max hit points, attack, reload time, flight time, fire over walls, healing points), the class's flags and values
+  (wall, projectile, melee, paratrooper bomber, crusader, heal range and threshold, firing arc, facing offset,
+  broadside, cloak radius, family, projectile class, rotting time, effects present), the player (its id and the
+  enemy table), the physical model (scale, model present, the full location matrix, the frame), the goal's target id
+  and kind-specific fields (path attempts, the attack goal's tile, the attack-ground point), the timers (flight,
+  `mCloaked`; the reload and rotting timers are in the store now, read by the trigger records and the shots' plans
+  through the C++ still), the flags (firing high, special attack, cloaked/cloakable, herd),
+  velocity, collision radius, weapon tag point, animation, owner and previous part, container, the initial contact
+  location, turret angles, the line of sight and the tile chain's neighbours.
+- **Overlapping builds.** Two `build.py` of one worktree started a few minutes apart (a first one that had failed
+  on a compile error kept compiling the other units) fought over the same objects (`PermissionError` on a WONGUI
+  `.obj`, and one shared log). Wait for a build's process to end before starting the next.
+- **What only a tour shows:** the facing test decides when units turn to fire and heal (`FacesTarget` in the goals'
+  steps and triggers), `FindImpactUnit` which unit a shot hits, and the shots' actions play the hit's effects,
+  splash, death sound and remains: a combat tour should show units turning, firing (projectiles hitting and
+  splashing in water, muzzle flashes), healing and ships' broadside and turreted fire as before.
+- **What stays C++:** FacesTarget's point, the hosts' C++ tests (`EEIsInRangeToHit`, `EECanBallisticHit`,
+  `EEIsInContactRange`, `EEIsAttackReachable`, `CanReachUnit`, `IsTargetIgnored`/`IgnoreTarget`, `EEIsSeenBy`,
+  `Intersects`, `GetNearestFootprintTile`), the shots' objects behind the operations, `LaunchProjectile`,
+  `EEIsOnTargetTiles`, the goals' objects and saves.
