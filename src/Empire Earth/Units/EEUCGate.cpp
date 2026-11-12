@@ -49,6 +49,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
@@ -591,6 +592,7 @@ void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 // other actions go the building's way
 void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     long theAction;
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionOpen:
@@ -600,6 +602,7 @@ void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
         theAction = 15001;
         break;
     case kActionOpening: {
+        EEACN(GATE_SOUND);
         EESoundObject* theSound = EESoundObject::Get(kSoundGate);
         if (theSound != NULL) {
             float theVolume;
@@ -612,6 +615,7 @@ void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
         break;
     }
     case kActionClosing: {
+        EEACN(GATE_SOUND);
         EESoundObject* theSound = EESoundObject::Get(kSoundGate);
         if (theSound != NULL) {
             float theVolume;
@@ -627,6 +631,7 @@ void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
         EEUCBuilding::ActionChanged(inUnit);
         return;
     }
+    EEACNA(GATE_PARTS_ACTION, theAction, 0);
     inUnit->mNextPart->StartAction(theAction);
     inUnit->mNextPart->mNextPart->StartAction(theAction);
 }

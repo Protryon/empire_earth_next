@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
@@ -86,6 +87,7 @@ float EEUCHelicopter::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLoca
 // (an attack's aim point; exploring at cruising height)
 void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     GE3DPoint theTarget;
@@ -98,21 +100,23 @@ void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
     case kActionDying: {
         EESoundObject* theSound = inUnit->mStats->mDeathSound;
         if (theSound != NULL) {
+            EEACN(DEATH_SOUND);
             float theVolume;
             float thePan;
             float thePitch;
             this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
             gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
+        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
+        (EEACN(DROP_PATH), inUnit->DropPath());
         return;
     }
     case kActionPrepareToMove: {
         EEUnitGoal* theGoal = inUnit->mGoalState;
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->DropPath();
+        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
+        (EEACN(DROP_PATH), inUnit->DropPath());
+        EEACNA(HELICOPTER_PATH, 0, 0);
         if (theGoal->mKind == kGoalAttackUnit) {
             EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
             EEGetAimPoint(inUnit, &theEnemy, &theTarget);
@@ -131,7 +135,7 @@ void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
         this->HandleActionChanged(inUnit);
         return;
     }
-    inUnit->SetAnimation(0xd, -1, 0);
+    (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
 }
 
 // FUNCTION: EXE 0x612deb

@@ -23,6 +23,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
@@ -69,6 +70,7 @@ void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector
 // storage for a carried load; empties the load when dying or rotting; then uses the common handling
 void EEUCBasicCitizen::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     EEUnitGoal* theGoal = inUnit->mGoalState;
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionRepairBuilding:
@@ -86,13 +88,14 @@ void EEUCBasicCitizen::ActionChanged(EEComplexUnit* inUnit)
     case kActionMoveToStorage:
     case kActionMoveToRepairSite:
         if (theGoal != NULL)
-            theGoal->Step(inUnit);
+            (EEACN(GOAL_STEP), theGoal->Step(inUnit));
         return;
     case kActionFindNewStorage:
     case kActionFindStorage:
         if (theGoal != NULL)
-            theGoal->Step(inUnit);
+            (EEACN(GOAL_STEP), theGoal->Step(inUnit));
         else if (inUnit->mResourceAmount > 0) {
+            EEACNA(FIND_STORAGE_GOAL, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFindNewStorage, 0);
             EEUnit* theStorage = this->FindStorage(inUnit, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFindNewStorage);
             if (theStorage != NULL)
                 inUnit->SetGoal(new EEUGGather(NULL, theStorage, false), 0, 0);
@@ -100,21 +103,21 @@ void EEUCBasicCitizen::ActionChanged(EEComplexUnit* inUnit)
         return;
     case kActionTaskSmartCitizen:
         if (theGoal != NULL && inUnit->mPlayer->IsHuman())
-            theGoal->Step(inUnit);
+            (EEACN(GOAL_STEP), theGoal->Step(inUnit));
         return;
     case kActionResourcesRotting:
         if (inUnit->mUnitClass->mBloodStainEffect != NULL)
-            EEPlaceTrackDecal(inUnit);
-        inUnit->SetResourceAmount(0);
+            (EEACN(PLACE_TRACK_DECAL), EEPlaceTrackDecal(inUnit));
+        (EEACNA(SET_RESOURCE_AMOUNT, 0, 0), inUnit->SetResourceAmount(0));
         break;
     case kActionDying:
-        inUnit->SetResourceAmount(0);
+        (EEACNA(SET_RESOURCE_AMOUNT, 0, 0), inUnit->SetResourceAmount(0));
         break;
     case kActionIdle:
-        inUnit->SetProductionTime(0);
+        (EEACNA(SET_PRODUCTION_TIME, 0, 0), inUnit->SetProductionTime(0));
         // Port: the shift-queued builds are done (EEComplexUnit::mHasShiftQueuedBuild)
         if (inUnit->mCitizenBuildQueue.size() == 0)
-            inUnit->mHasShiftQueuedBuild = false;
+            (EEACN(CLEAR_SHIFT_QUEUED), inUnit->mHasShiftQueuedBuild = false);
         break;
     }
     EEUnitClass::ActionChanged(inUnit);

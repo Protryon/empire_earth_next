@@ -13,6 +13,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEPhysics.h"
@@ -75,10 +76,11 @@ EEUnit* EEUCMiningBuilding::CreateUnit(long inX, long inY, long inPlayer, bool i
 // Starts the gather timer when the mine starts gathering; other actions go to the building handler
 void EEUCMiningBuilding::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionGatherResource)
         EEUCBuilding::ActionChanged(inUnit);
     else
-        inUnit->SetWorkTimer(inUnit->mStats->mGatherTimes[2]);
+        (EEACNA(SET_WORK_TIMER, inUnit->mStats->mGatherTimes[2], 0), inUnit->SetWorkTimer(inUnit->mStats->mGatherTimes[2]));
 }
 
 // FUNCTION: EXE 0x61726d

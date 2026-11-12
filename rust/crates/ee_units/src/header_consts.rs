@@ -28,10 +28,8 @@ mod tests {
     ];
 
     /// names that do not follow the rule: the Rust name and the header's
-    const RENAMES: &[(&str, &str)] = &[
-        ("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"),
-        ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace"),
-    ];
+    const RENAMES: &[(&str, &str)] =
+        &[("UNIT_TYPE_RADIO_MAN", "kUnitTypeInf10RadioMan"), ("MOVEMENT_SEA_OR_SPACE", "kMovementSeaOrSpace")];
 
     /// copies with no header constant, and why
     const NO_HEADER: &[&str] = &[
@@ -61,7 +59,7 @@ mod tests {
     /// an integer expression: literals (decimal, hex, `_`), names, `|`, `+`, unary `-`, `<<`, parentheses
     fn eval(expr: &str, names: &dyn Fn(&str) -> Option<i64>) -> Option<i64> {
         let e = expr.trim();
-        let e = e.trim_end_matches(|c: char| c == 'L' || c == 'u' || c == 'U');
+        let e = e.trim_end_matches(['L', 'u', 'U']);
         if e.starts_with('(') && e.ends_with(')') {
             // only when the outer parentheses match each other
             let inner = &e[1..e.len() - 1];
@@ -143,7 +141,8 @@ mod tests {
                 let mut rest = code;
                 while let Some(at) = rest.find('k') {
                     let tail = &rest[at..];
-                    let before_ok = at == 0 || !rest.as_bytes()[at - 1].is_ascii_alphanumeric() && rest.as_bytes()[at - 1] != b'_';
+                    let before_ok =
+                        at == 0 || !rest.as_bytes()[at - 1].is_ascii_alphanumeric() && rest.as_bytes()[at - 1] != b'_';
                     let name_len = tail.bytes().take_while(|b| b.is_ascii_alphanumeric() || *b == b'_').count();
                     let name = &tail[..name_len];
                     let after = tail[name_len..].trim_start();
@@ -153,7 +152,8 @@ mod tests {
                         && after.starts_with('=')
                         && !after.starts_with("==")
                     {
-                        let value: String = after[1..].chars().take_while(|c| *c != ',' && *c != ';' && *c != '}').collect();
+                        let value: String =
+                            after[1..].chars().take_while(|c| *c != ',' && *c != ';' && *c != '}').collect();
                         defs.entry(name.to_string()).or_default().push(value.trim().to_string());
                     }
                     rest = &tail[name_len.max(1)..];
@@ -168,10 +168,7 @@ mod tests {
             return Vec::new();
         }
         let Some(exprs) = defs.get(name) else { return Vec::new() };
-        exprs
-            .iter()
-            .filter_map(|e| eval(e, &|n| header_value(defs, n, depth + 1).first().copied()))
-            .collect()
+        exprs.iter().filter_map(|e| eval(e, &|n| header_value(defs, n, depth + 1).first().copied())).collect()
     }
 
     /// every `const NAME: T = expr;` of this crate's sources: (file, name, the Rust expression)

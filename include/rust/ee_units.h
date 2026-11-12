@@ -20,6 +20,34 @@ constexpr static const int32_t EE_UNITS_ACTION_SPACESHIP = 5;
 
 constexpr static const int32_t EE_UNITS_ACTION_BASIC_PRIEST = 6;
 
+/// the fourteenth round's: `EEUCBasicCitizen` (and the naval citizen, whose forwarder is gone), `EEUCBuilding` (and
+/// the naval and space buildings'), `EEUCBuildingPriest`, `EEUCGate`, `EEUCMiningBuilding`, `EEUCHelicopter`,
+/// `EEUCHelicopterTransport`, `EEUCHelicopterPriest`, `EEUCAirAnimal`, `EEUCLandable`, `EEUCAirplane`,
+/// `EEUCPlanetSpaceship`
+constexpr static const int32_t EE_UNITS_ACTION_CITIZEN = 7;
+
+constexpr static const int32_t EE_UNITS_ACTION_BUILDING = 8;
+
+constexpr static const int32_t EE_UNITS_ACTION_BUILDING_PRIEST = 9;
+
+constexpr static const int32_t EE_UNITS_ACTION_GATE = 10;
+
+constexpr static const int32_t EE_UNITS_ACTION_MINING_BUILDING = 11;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER = 12;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER_TRANSPORT = 13;
+
+constexpr static const int32_t EE_UNITS_ACTION_HELICOPTER_PRIEST = 14;
+
+constexpr static const int32_t EE_UNITS_ACTION_AIR_ANIMAL = 15;
+
+constexpr static const int32_t EE_UNITS_ACTION_LANDABLE = 16;
+
+constexpr static const int32_t EE_UNITS_ACTION_AIRPLANE = 17;
+
+constexpr static const int32_t EE_UNITS_ACTION_PLANET_SPACESHIP = 18;
+
 /// `GetAnimation()`, `EEGetAttackFrameSet(inUnit)`, `IsSwimming()`, the class's `IsLandBuilding()`, the class's
 /// `mAttack > 0`, `mStats->mCanFireOverWalls`
 constexpr static const int32_t EE_UNITS_ACT_R_ANIMATION = 130;
@@ -70,6 +98,29 @@ constexpr static const int32_t EE_UNITS_ACT_R_CATEGORY = 151;
 constexpr static const int32_t EE_UNITS_ACT_R_CONTAINER = 152;
 
 constexpr static const int32_t EE_UNITS_ACT_R_RESOURCE_AMOUNT = 153;
+
+/// the fourteenth round's: `mPlayer->IsHuman()`, `mCitizenBuildQueue.size() == 0`, the class's
+/// `mAIKind == kAIKindAircraftCarrier`, `mExitingUnitID`, the class's `mAirTrafficType`, `(long)mWaypoints.size()`,
+/// `mHomeBase != NULL`, `mIsClearanceGranted == true`, the class's `mProjectileClass` a bomb, `mIsCommandable`
+constexpr static const int32_t EE_UNITS_ACT_R_IS_HUMAN = 154;
+
+constexpr static const int32_t EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY = 155;
+
+constexpr static const int32_t EE_UNITS_ACT_R_AIRCRAFT_CARRIER = 156;
+
+constexpr static const int32_t EE_UNITS_ACT_R_EXITING_UNIT = 157;
+
+constexpr static const int32_t EE_UNITS_ACT_R_AIR_TRAFFIC_TYPE = 158;
+
+constexpr static const int32_t EE_UNITS_ACT_R_WAYPOINTS = 159;
+
+constexpr static const int32_t EE_UNITS_ACT_R_HOME_BASE = 160;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CLEARANCE_GRANTED = 161;
+
+constexpr static const int32_t EE_UNITS_ACT_R_BOMBER = 162;
+
+constexpr static const int32_t EE_UNITS_ACT_R_COMMANDABLE = 163;
 
 /// `ReleaseHealEffect()`; the herd's `AttackBack(inUnit, true)`, `HandleUnitHit(inUnit)`
 constexpr static const int32_t EE_UNITS_ACT_RELEASE_HEAL_EFFECT = 200;
@@ -201,6 +252,110 @@ constexpr static const int32_t EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS = 250;
 constexpr static const int32_t EE_UNITS_ACT_SET_CONVERSION_START = 251;
 
 constexpr static const int32_t EE_UNITS_ACT_SET_WORK_TIMER = 252;
+
+/// the citizen's: `FindStorage(inUnit, a != 0)` and a gather goal to the storage found; `SetResourceAmount(a)`,
+/// `SetProductionTime(a)`, `mHasShiftQueuedBuild = false`
+constexpr static const int32_t EE_UNITS_ACT_FIND_STORAGE_GOAL = 253;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_RESOURCE_AMOUNT = 254;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_PRODUCTION_TIME = 255;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_SHIFT_QUEUED = 256;
+
+/// the building's: the attack goal retargeted to the nearest building of its target, `SetExitingUnitID(a)`, the
+/// exiting plane's takeoff request, `ReleaseUnit(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_RETARGET_NEAREST_BUILDING = 257;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_EXITING_UNIT = 258;
+
+constexpr static const int32_t EE_UNITS_ACT_QUEUE_TAKEOFF = 259;
+
+constexpr static const int32_t EE_UNITS_ACT_RELEASE_UNIT = 260;
+
+/// the gate's: the gate sound played, the next two parts' `StartAction(a)`
+constexpr static const int32_t EE_UNITS_ACT_GATE_SOUND = 261;
+
+constexpr static const int32_t EE_UNITS_ACT_GATE_PARTS_ACTION = 262;
+
+/// `SetCurrentPhysicsOrder(a)`, `SetF220(0.0f)`, `SetHeight(GetHeightAt(inUnit, the unit's location))`, the next
+/// waypoint's height (`GetNextWaypointPoint`, then `SetHeight(GetHeightAt)` when there is one), `inUnit->NextWaypoint()`
+constexpr static const int32_t EE_UNITS_ACT_SET_PHYSICS_ORDER = 263;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_F220 = 264;
+
+constexpr static const int32_t EE_UNITS_ACT_HEIGHT_HERE = 265;
+
+constexpr static const int32_t EE_UNITS_ACT_HEIGHT_AT_NEXT_WAYPOINT = 266;
+
+constexpr static const int32_t EE_UNITS_ACT_UNIT_NEXT_WAYPOINT = 267;
+
+/// `ReturnToAirport(inUnit)`, `SetFlightTime(mStats->mFlightTime)`, `SetAmmunition(the class's mAmmunition)`
+constexpr static const int32_t EE_UNITS_ACT_RETURN_TO_AIRPORT = 268;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_FLIGHT_TIME_STATS = 269;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_AMMUNITION = 270;
+
+/// a falling flyer's roll (a: 0 the air animal's model, 1 the airplane's): `SetF220(ComputeRoll(yaw rate))`, the roll
+/// rate set to the yaw rate
+constexpr static const int32_t EE_UNITS_ACT_DEATH_ROLL = 271;
+
+/// the helicopters' path to the goal (a: 0 helicopter, 1 transport, 2 priest), the air animal's, the landable's
+/// (destination, landing point, `PathToward`)
+constexpr static const int32_t EE_UNITS_ACT_HELICOPTER_PATH = 272;
+
+constexpr static const int32_t EE_UNITS_ACT_AIR_ANIMAL_PATH = 273;
+
+constexpr static const int32_t EE_UNITS_ACT_LANDABLE_PATH = 274;
+
+/// the airplane's circling side (the space map's reach tests and the draws), the holding pattern (a: 0 airplane,
+/// 1 planet spaceship), `FlyOffMap(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_CIRCLE_SIDE = 275;
+
+constexpr static const int32_t EE_UNITS_ACT_HOLDING_PATTERN = 276;
+
+constexpr static const int32_t EE_UNITS_ACT_FLY_OFF_MAP = 277;
+
+/// the landable's: `ApproachCarrier(inUnit, a != 0)`, boarding the home carrier, `TakeOffFromCarrier(inUnit)`, the
+/// flight's path check (path start, continent, landing point), `FindNearestAirport` (its result; the host keeps it)
+/// and `SetHomeBase` of it, `StartAction(a)`, the class's `ActionChanged` again, the landing approach (a: landing),
+/// the secondary target, the takeoff, the landing request (`QueueRequest` of the home base: its result, else 9)
+constexpr static const int32_t EE_UNITS_ACT_APPROACH_CARRIER = 278;
+
+constexpr static const int32_t EE_UNITS_ACT_BOARD_CARRIER = 279;
+
+constexpr static const int32_t EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER = 280;
+
+constexpr static const int32_t EE_UNITS_ACT_FLY_CHECK_PATH = 281;
+
+constexpr static const int32_t EE_UNITS_ACT_FIND_NEAREST_AIRPORT = 282;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_HOME_BASE_FOUND = 283;
+
+constexpr static const int32_t EE_UNITS_ACT_START_ACTION = 284;
+
+constexpr static const int32_t EE_UNITS_ACT_CLASS_ACTION_CHANGED = 285;
+
+constexpr static const int32_t EE_UNITS_ACT_APPROACH_LANDING = 286;
+
+constexpr static const int32_t EE_UNITS_ACT_SECONDARY_TARGET = 287;
+
+constexpr static const int32_t EE_UNITS_ACT_TAKEOFF = 288;
+
+constexpr static const int32_t EE_UNITS_ACT_QUEUE_LANDING = 289;
+
+/// a bomber's attack: `SetIsCommandable(a != 0)`, an attack ground goal at the drop location; `mIsCommandable = true`;
+/// the initial attack state's cruise height; the contact location here with heading 0 (a: through the setter)
+constexpr static const int32_t EE_UNITS_ACT_SET_COMMANDABLE = 290;
+
+constexpr static const int32_t EE_UNITS_ACT_BOMBER_GROUND_GOAL = 291;
+
+constexpr static const int32_t EE_UNITS_ACT_MAKE_COMMANDABLE = 292;
+
+constexpr static const int32_t EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT = 293;
+
+constexpr static const int32_t EE_UNITS_ACT_CONTACT_HERE = 294;
 
 /// `kActionIdle` (the idle action's id).
 constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;

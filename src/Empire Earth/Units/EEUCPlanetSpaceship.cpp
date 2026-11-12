@@ -14,6 +14,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -34,28 +35,30 @@ static const float kPlanetSpaceshipNoHeight = -10000.0f;
 // holding pattern over its home airport (dies without one), circling the controller, dying; others to the base
 void EEUCPlanetSpaceship::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
     EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionCircle:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
+        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
+        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
+        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
         if ((long)inUnit->mWaypoints.size() > 0)
-            inUnit->DropPath();
+            (EEACN(DROP_PATH), inUnit->DropPath());
         if (gPhysics->mRandom.Generate() < 0.5f)
-            inUnit->SetCurrentPhysicsOrder(0);
+            (EEACNA(SET_PHYSICS_ORDER, 0, 0), inUnit->SetCurrentPhysicsOrder(0));
         else
-            inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        inUnit->mInitialContactHeading = kPlanetSpaceshipNoHeight;
+            (EEACNA(SET_PHYSICS_ORDER, 1, 0), inUnit->SetCurrentPhysicsOrder(1));
+        (EEACN(HEIGHT_HERE), inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition)));
+        (EEACN(CLEAR_HEADING), inUnit->mInitialContactHeading = kPlanetSpaceshipNoHeight);
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind != kGoalExplore)
-            inUnit->ClearGoals(0);
+            (EEACNA(CLEAR_GOALS, 0, 0), inUnit->ClearGoals(0));
         break;
     case kActionHoldingPattern:
-        inUnit->SetCurrentPhysicsAction(3);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
+        EEACNA(HOLDING_PATTERN, 1, 0);
         if (inUnit->mHomeBase == NULL) {
             if (theControl->GetNumSlots() > 0)
                 inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
@@ -74,24 +77,25 @@ void EEUCPlanetSpaceship::ActionChanged(EEComplexUnit* inUnit)
         }
         break;
     case kActionCircleAirtrafficController:
-        inUnit->SetCurrentPhysicsAction(3);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
+        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
+        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
         break;
     case kActionDying: {
         EESoundObject* theSound = inUnit->mStats->mDeathSound;
         if (theSound != NULL) {
+            EEACN(DEATH_SOUND);
             float theVolume;
             float thePan;
             float thePitch;
             this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
             gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
+        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+        (EEACNA(SET_ANIMATION, 4, 0), inUnit->SetAnimation(4, -1, 0));
+        (EEACN(DROP_PATH), inUnit->DropPath());
         if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
+            EEACN(DEATH_EFFECT), gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
         break;
     }
     default:

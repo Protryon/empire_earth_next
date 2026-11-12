@@ -18,6 +18,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -103,6 +104,7 @@ long EEUCHelicopterPriest::GetPopulationCost()
 // goal (an attack's aim point, a calamity's cast point, a heal target); others the priest's way
 void EEUCHelicopterPriest::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     EEUnitGoal* theGoal = inUnit->mGoalState;
@@ -116,20 +118,22 @@ void EEUCHelicopterPriest::ActionChanged(EEComplexUnit* inUnit)
     case kActionDying: {
         EESoundObject* theSound = inUnit->mStats->mDeathSound;
         if (theSound != NULL) {
+            EEACN(DEATH_SOUND);
             float theVolume;
             float thePan;
             float thePitch;
             this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
             gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
+        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
+        (EEACN(DROP_PATH), inUnit->DropPath());
         return;
     }
     case kActionPrepareToMove:
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->DropPath();
+        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
+        (EEACN(DROP_PATH), inUnit->DropPath());
+        EEACNA(HELICOPTER_PATH, 2, 0);
         if (theGoal->mKind == kGoalAttackUnit) {
             EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
             EEGetAimPoint(inUnit, &theEnemy, &theTarget);
@@ -152,7 +156,7 @@ void EEUCHelicopterPriest::ActionChanged(EEComplexUnit* inUnit)
         EEUCBasicPriest::ActionChanged(inUnit);
         return;
     }
-    inUnit->SetAnimation(0xd, -1, 0);
+    (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
 }
 
 // FUNCTION: EXE 0x6132c0

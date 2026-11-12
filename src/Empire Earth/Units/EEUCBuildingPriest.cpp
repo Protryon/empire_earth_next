@@ -19,6 +19,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -54,6 +55,7 @@ static const float kBuildingPriestSoundFactor = 4.0f;   // EEUCBasicPriest.cpp's
 // Handles the temple's new action: building actions (targets, dying, airport) as a building, the rest as a priest
 void EEUCBuildingPriest::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionSearchForSecondaryTarget:
     case kActionTrackEnemyUnit:
@@ -192,24 +194,25 @@ void EEUCBuildingPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inT
 
 void EEUCBuildingPriest::PriestVirtual74(EEComplexUnit* inUnit)
 {
-    inUnit->ReleaseConversionEffect();
-    inUnit->ReleaseHealEffect();
-    this->HideConversionEffects(inUnit);
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
+    (EEACN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
+    (EEACN(RELEASE_HEAL_EFFECT), inUnit->ReleaseHealEffect());
+    (EEACN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionConvertEnemyUnit:
-        inUnit->SetCurrentPhysicsAction(1);
-        inUnit->SetTargetSearchTimer(0);
-        inUnit->SetAnimation(9, -1, 0);
+        (EEACNA(SET_PHYSICS_ACTION, 1, 0), inUnit->SetCurrentPhysicsAction(1));
+        (EEACNA(SET_TARGET_SEARCH_TIMER, 0, 0), inUnit->SetTargetSearchTimer(0));
+        (EEACNA(SET_ANIMATION, 9, 0), inUnit->SetAnimation(9, -1, 0));
         if (inUnit->mConversionStartTime == 0) {
             if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                inUnit->mConversionStartTime = gPhysics->mGameTime;
-            inUnit->SetWorkTimer(0);
+                (EEACNA(SET_CONVERSION_START, gPhysics->mGameTime, 0), inUnit->mConversionStartTime = gPhysics->mGameTime);
+            (EEACNA(SET_WORK_TIMER, 0, 0), inUnit->SetWorkTimer(0));
             EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         }
-        inUnit->DropPath();
+        (EEACN(DROP_PATH), inUnit->DropPath());
         break;
     case kActionWaitForReload:
-        inUnit->SetCurrentPhysicsAction(3);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
         break;
     default:
         this->HandleActionChanged(inUnit);

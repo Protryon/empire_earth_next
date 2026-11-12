@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -39,17 +40,19 @@ static const float kAirplaneNoHeight = -10000.0f;
 // pattern over its home airport (killed when there is none), circling the air control, or leaving the map
 void EEUCAirplane::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
     GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     EEAirTrafficControl* theControl = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionCircle:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
+        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
+        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
+        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
         if ((long)inUnit->mWaypoints.size() > 0)
-            inUnit->DropPath();
+            (EEACN(DROP_PATH), inUnit->DropPath());
+        EEACN(CIRCLE_SIDE);
         if (::gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
             float theDistance = inUnit->mStats->GetMaxVelocity() / inUnit->mStats->GetMaxAngularVelocity();
             theDistance = (float)UMCeil(theDistance);
@@ -87,13 +90,14 @@ void EEUCAirplane::ActionChanged(EEComplexUnit* inUnit)
             inUnit->SetCurrentPhysicsOrder(0);
         else
             inUnit->SetCurrentPhysicsOrder(1);
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        inUnit->mInitialContactHeading = kAirplaneNoHeight;
+        (EEACN(HEIGHT_HERE), inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition)));
+        (EEACN(CLEAR_HEADING), inUnit->mInitialContactHeading = kAirplaneNoHeight);
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind != kGoalExplore)
-            inUnit->ClearGoals(0);
+            (EEACNA(CLEAR_GOALS, 0, 0), inUnit->ClearGoals(0));
         break;
     case kActionHoldingPattern:
-        inUnit->SetCurrentPhysicsAction(0);
+        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
+        EEACNA(HOLDING_PATTERN, 0, 0);
         if (inUnit->mHomeBase == NULL) {
             if (theControl->GetNumSlots() > 0)
                 inUnit->SetHomeBase(theControl->GetSlot(0).mAirport);
@@ -116,13 +120,13 @@ void EEUCAirplane::ActionChanged(EEComplexUnit* inUnit)
             inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
         break;
     case kActionCircleAirtrafficController:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetCurrentPhysicsOrder(0);
-        inUnit->SetHasArrived(false);
-        inUnit->SetF220(0.0f);
+        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
+        (EEACNA(SET_PHYSICS_ORDER, 0, 0), inUnit->SetCurrentPhysicsOrder(0));
+        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
+        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
         break;
     case kActionSendParatrooperPlaneOffMap:
-        this->FlyOffMap(inUnit);
+        (EEACN(FLY_OFF_MAP), this->FlyOffMap(inUnit));
         break;
     default:
         EEUCLandable::ActionChanged(inUnit);
