@@ -6,6 +6,7 @@
   python -I tools/sim_oracle.py ticks BASE NAME [--root DIR]
   python -I tools/sim_oracle.py saveload NAME [--exe EXE] [--seeds 2-7] [--at 600,1350,2100] [--jobs 3] [--data open]
                                         [--compare-only] [--settings oracle,islands,...|all] [--clean]
+                                        [--expect FILE] [--write-expect FILE]
   python -I tools/sim_oracle.py selftest
 
 `run` plays a 2-AI Hard game of 2700 game seconds per seed (no cheats) and keeps its EE-AI trace. `compare` checks the
@@ -33,6 +34,11 @@ other difficulties, the capture profiles' later start epochs, the calamity casts
 build/rust_oracle/NAME-SETTING, and ends with a table of the saves that continue identically per setting. The loaded
 game gets the same options as the continued one. Every game's stage slot is deleted when it ends; --clean also deletes
 the saves, AI traces and reports once compared (the checksum lines, logs and saveload.txt stay).
+
+--write-expect FILE writes each save's outcome (SETTING SEED T, then END when it continues identically or the ticks it
+ran equal); --expect FILE makes the exit code that of a gate: it fails only when a save does worse than its line (fewer
+equal ticks, or not END where END was expected) and names saves that did better (tools/saveload_expect.txt: the merge
+chain's expectations).
 """
 import argparse
 import concurrent.futures
@@ -194,9 +200,11 @@ def load_difference(cont, load):
     return "ok", (start, len(load))
 
 
-def compare_loads(d, seed_list, at, out=sys.stdout):
-    """Every save of a saveload run against its continued game -> the failure count."""
+def compare_loads(d, seed_list, at, out=sys.stdout, results=None):
+    """Every save of a saveload run against its continued game -> the failure count. results (a dict) gets each save's
+    outcome by (seed, t): "END" when it continues identically, else the ticks it ran equal ("-" when missing)."""
     bad = 0
+    results = {} if results is None else results
     for seed in seed_list:
         pc = d / f"ct-{seed}.txt"
         cont = tick_lines(pc) if pc.exists() else []
@@ -206,9 +214,12 @@ def compare_loads(d, seed_list, at, out=sys.stdout):
             if not cont or not pl.exists():
                 print(f"{what}: MISSING {pc if not cont else pl}", file=out)
                 bad += 1
+                results[(seed, t)] = "-"
                 continue
             load = tick_lines(pl)
             status, detail = load_difference(cont, load)
+            results[(seed, t)] = ("END" if status == "ok" else str(detail[1]) if status in ("differs", "ends")
+                                  else "0")
             if status == "ok":
                 start, n = detail
                 print(f"{what}: identical (loaded at game ms {cont[start][1].get('ms')}, {n} ticks to game ms "
@@ -287,6 +298,15 @@ def selftest():
         checks.append(("saveload", bad == 2 and "seed 1 save 1 s: identical (loaded at game ms 1050, 3 ticks" in text
                        and "seed 1 save 2 s: FIRST DIVERGENT TICK game ms 700 (0 ticks after" in text
                        and "inputs" in text and "seed 1 save 3 s: MISSING" in text))
+        # the gate's expectation file: worse fails, equal and better pass
+        exp = pathlib.Path(tmp, "expect.txt")
+        exp.write_text("# a comment\nx 1 1 END\nx 1 2 10\nx 1 3 5\n")
+        out = io.StringIO()
+        bad = expect_check(exp, {"x": {(1, 1): "END", (1, 2): "12", (1, 3): "4"}}, out)
+        text = out.getvalue()
+        checks.append(("expect", bad == 1 and "x seed 1 3 s: 5 -> 4 WORSE" in text and "10 -> 12 (better" in text))
+        out = io.StringIO()
+        checks.append(("expect end", expect_check(exp, {"x": {(1, 1): "40"}}, out) == 1))
     for what, ok in checks:
         print(f"selftest {what}: {'ok' if ok else 'FAILED'}")
     return 0 if all(ok for _, ok in checks) else 1
@@ -332,12 +352,13 @@ def saveload(a):
                       flush=True)
             for n, seed, t, code, size in ex.map(load, [(n, s, t) for n in names for s in seed_list for t in at]):
                 print(f"{dirs[n]} seed {seed} loaded at {t} s: exit {code}, trace {size} bytes", flush=True)
-    results = {}
+    results, outcomes = {}, {}
     for n in names:
         if len(names) > 1:
             print(f"== {n}: {' '.join(SETTINGS[n]) or '(the oracle game)'}")
         out = io.StringIO()
-        results[n] = compare_loads(OUT / dirs[n], seed_list, at, out)
+        outcomes[n] = {}
+        results[n] = compare_loads(OUT / dirs[n], seed_list, at, out, outcomes[n])
         print(out.getvalue(), end="")
         (OUT / dirs[n] / "saveload.txt").write_text(out.getvalue())
         if a.clean:
@@ -350,7 +371,34 @@ def saveload(a):
             print(f"  {n:<22} {len(seed_list) * len(at) - results[n]}/{len(seed_list) * len(at)}")
     if not a.compare_only:
         print(f"saveload: {time.monotonic() - started:.0f} s wall")
+    if a.write_expect:
+        pathlib.Path(a.write_expect).write_text("".join(
+            f"{n} {seed} {t} {outcomes[n][(seed, t)]}\n" for n in names for seed in seed_list for t in at), newline="\n")
+    if a.expect:
+        return 1 if expect_check(pathlib.Path(a.expect), outcomes) else 0
     return 1 if any(results.values()) else 0
+
+
+def expect_check(path, outcomes, out=sys.stdout):
+    """A saveload run's outcomes against an expectation file (SETTING SEED T TICKS|END per line, # comments): a save
+    that ran fewer equal ticks than expected, or that was expected to END and did not, fails. -> the failure count."""
+    bad = 0
+    for line in path.read_text().splitlines():
+        parts = line.split("#", 1)[0].split()
+        if len(parts) != 4:
+            continue
+        n, seed, t, want = parts[0], int(parts[1]), int(parts[2]), parts[3]
+        got = outcomes.get(n, {}).get((seed, t))
+        if got is None:
+            continue   # not in this run
+        worse = got == "-" or (got != "END" and (want == "END" or int(got) < int(want)))
+        better = got != want and not worse
+        if worse or better:
+            print(f"expect {n} seed {seed} {t} s: {want} -> {got}" + (" WORSE" if worse else " (better: update the file)"),
+                  file=out)
+        bad += worse
+    print("saveload expect:", "PASS" if not bad else f"FAIL ({bad})", file=out)
+    return bad
 
 
 def main():
@@ -380,6 +428,8 @@ def main():
     s.add_argument("--compare-only", action="store_true", help="compare the files of an earlier run")
     s.add_argument("--settings", default="oracle",
                    help=f"comma list of {', '.join(SETTINGS)} or all; each but a lone oracle goes to NAME-SETTING")
+    s.add_argument("--expect", help="a file of SETTING SEED T TICKS|END lines: pass when no save does worse (the gate)")
+    s.add_argument("--write-expect", help="write this run's outcomes to that file")
     s.add_argument("--clean", action="store_true",
                    help="after the comparison delete the saves, AI traces and reports (the checksum lines stay)")
     sub.add_parser("selftest")
