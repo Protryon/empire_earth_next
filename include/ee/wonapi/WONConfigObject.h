@@ -73,19 +73,8 @@ public:
     bool HandleKeyVal(ConfigParser&,StringParser&,KeyValMap::iterator&); //3b1120
     bool QueryValue(KeyValMap::const_iterator,std::string&); //3aedf0
     void RegisterKeyValue(const char*,ConfigValueBase*); //3b18e0
-    void RegisterInt64Value(const char *theKey, __int64 &theInt64, __int64 theDefVal = 0);
     void RegisterIntValue(const char *theKey, int &theInt, int theDefVal = 0);
-    void RegisterLongValue(const char *theKey, long &theLong, long theDefVal = 0);
-    void RegisterShortValue(const char *theKey, short &theShort, short theDefVal = 0);
-    void RegisterByteValue(const char *theKey, char &theByte, char theDefVal = 0);
-    void RegisterUInt64Value(const char *theKey, unsigned __int64 &theInt64, unsigned __int64 theDefVal = 0);
-    void RegisterBoolListValue(const char *theKey, std::list<bool> &theBoolList, const char *theDefVal = NULL, bool additive = false);
-    void RegisterIntListValue(const char *theKey, std::list<int> &theIntList, const char *theDefVal = NULL, bool additive = false);
-    void RegisterWStringListValue(const char *theKey, std::list<std::wstring> &theStringList, const wchar_t *theDefVal = NULL, bool additive = false);
-    void RegisterBoolListListValue(const char *theKey, std::list<std::list<bool> > &theBoolListList, const char *theDefVal = NULL, bool additive = false);
     void RegisterIntListListValue(const char *theKey, std::list<std::list<int> > &theIntListList, const char *theDefVal = NULL, bool additive = false);
-    void RegisterStringListListValue(const char *theKey, std::list<std::list<std::string> > &theStringListList, const char *theDefVal = NULL, bool additive = false);
-    void RegisterWStringListListValue(const char *theKey, std::list<std::list<std::wstring> > &theStringListList, const wchar_t *theDefVal = NULL, bool additive = false);
 
     ChildList mChildList;  // +0x08 (dtor ICF 0xd17ea, list<SmartPtr<..>>)
     ChildList::iterator mChildItr;                         // +0x14

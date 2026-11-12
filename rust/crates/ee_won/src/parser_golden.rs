@@ -4,6 +4,9 @@
 //! over the same primitives. The `english` pass needs the C runtime's locale and is checked by `won_parse_test`
 //! itself, which runs over the Rust port. `WStringToString` is UTF-8 (decision D6: `text::game_from_utf16`, the
 //! inputs are all in the BMP), the text ending at the first NUL.
+//! Round 19 dropped the lines of the reads and formats no caller had (the bool list, the nested bool, string and
+//! wide-string lists: StringParserCollections.cpp lost them), from the C++ driver's own output: the old golden
+//! less those lines.
 
 use crate::parser::{format_bool, CLocale, Narrow, Parser, Text, Wide};
 
@@ -131,10 +134,6 @@ fn int_text(v: &i32) -> Vec<u8> {
     v.to_string().into_bytes()
 }
 
-fn bool_text(v: &bool) -> Vec<u8> {
-    format_bool(*v).to_vec()
-}
-
 fn run_case<T: Text>(t: &T, name: &str, lines: &mut Vec<String>) {
     let fresh = || P::new(t, &CLocale, 0);
     for (op, ws) in [("str", false), ("str-ws", true)] {
@@ -205,18 +204,6 @@ fn run_case<T: Text>(t: &T, name: &str, lines: &mut Vec<String>) {
         let v = join_lists(l.iter().map(|i| join(i.iter().map(int_text).collect())).collect());
         lines.push(format!("{name} intlists: r={} pos={} n={} v={}", u8::from(r), p.pos, l.len(), hex(&v)));
     }
-    {
-        let mut p = fresh();
-        let (r, l) = read_list_list(&mut p, |p| Some(p.read_string(false)));
-        let v = join_lists(l.iter().map(|i| join(i.clone())).collect());
-        lines.push(format!("{name} strlists: r={} pos={} n={} v={}", u8::from(r), p.pos, l.len(), hex(&v)));
-    }
-    {
-        let mut p = fresh();
-        let (r, l) = read_list(&mut p, |p| p.read_bool());
-        let v = join(l.iter().map(bool_text).collect());
-        lines.push(format!("{name} bools: r={} pos={} n={} v={}", u8::from(r), p.pos, l.len(), hex(&v)));
-    }
 }
 
 fn formats() -> String {
@@ -239,9 +226,7 @@ fn formats() -> String {
     put(b"-1234567890123");
     put(u64::MAX.to_string().as_bytes());
     put(&narrow_of(&[0x77, 0xe9]));
-    put(b"x, , y");
-    put(b"(True, False), ()");
-    s.extend_from_slice(b"(a, b)");
+    s.extend_from_slice(b"x, , y");
     format!("formats: {}", hex(&s))
 }
 

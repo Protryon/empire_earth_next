@@ -520,36 +520,10 @@ public:
     unsigned char mGroupId;                 // +08
     bool mEnabled;                         // +09
 };
-// A plain value class (no vtable) that owns its nodes and points at components it does not own
-class ChildLayoutList
-{
-protected:
-	typedef std::list<Component*> ChildList;
-	mutable ChildList mChildList;
-	mutable ChildList::iterator mItr;
-
-public:
-	ChildLayoutList(Component *c1);
-	ChildLayoutList(Component *c1, Component *c2);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3, Component *c4);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3, Component *c4, Component *c5);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3, Component *c4, Component *c5, Component *c6);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3, Component *c4, Component *c5, Component *c6, Component *c7);
-	ChildLayoutList(Component *c1, Component *c2, Component *c3, Component *c4, Component *c5, Component *c6, Component *c7, Component *c8);
-
-	void Rewind() const;
-	bool HasMore() const;
-	Component* GetNext() const;
-
-	void AddTo(ChildList &theList) const;
-};
 class CenterLayout : public ChildLayoutInstructionBase {
 public:
     CenterLayout(Component* box,bool horz,bool vert) : mHorz(horz),mVert(vert),mCenterBox(box) {} // inline (0x388f6d..0x388fb3); the class is 0x20 bytes
     CenterLayout(Component* box,Component* first,bool horz,bool vert) : mHorz(horz),mVert(vert),mCenterBox(box) { this->Add(first); } // inline (0x3624e8..0x362530); its cleanup covers the first insertion
-    CenterLayout(Component* box,const ChildLayoutList& list,bool horz,bool vert) : mHorz(horz),mVert(vert),mCenterBox(box) { this->Add(list); }
-    CenterLayout* Add(const ChildLayoutList& list) { list.AddTo(this->mComponentList); return this; }
     CenterLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
     static void Center(Component* inParent, Component* inChild, bool inHorz, bool inVert); // 337690
     virtual void Execute(Component*);
