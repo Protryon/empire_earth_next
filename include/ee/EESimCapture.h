@@ -17,6 +17,13 @@ public:
     // While set (not 0), this thread's records of any other tag are dropped: a sweep that calls a leaf records only
     // that leaf, not the leaves it reaches (Only(0) clears it)
     static void Only(unsigned int inTag);
+    // the same for up to four tags (a sweep over leaves that call each other; inCount 0 clears it)
+    static void Only(const unsigned int* inTags, unsigned int inCount);
+    // While on, every other thread's records are dropped (a sweep at the game's end that takes wall time: the UI
+    // thread's GetCost calls, TCST, would otherwise add records by how long it runs)
+    static void Exclusive(bool inOn);
+    // No record of any thread after it (the game's end, after its sweeps: the units a sweep made must not add any)
+    static void Close();
 
     explicit EESimCaptureRecord(unsigned int inTag) : mTag(inTag) {}
     void U32(unsigned int inValue) { this->Bytes(&inValue, 4); }

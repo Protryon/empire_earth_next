@@ -290,6 +290,9 @@ pub const EE_COMBAT_WEAPON_KIND_TURRET: i32 = 1;
 pub const EE_COMBAT_WEAPON_KIND_POINT: i32 = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 pub const EE_COMBAT_WEAPON_KIND_BOX: i32 = 3;
+/// An effect's start without a tag point list (`EEE2DLinearProjectile`, `EEE3DPulseCannonBall`, `EEE3DTracers`): the
+/// model's default point (in `top`) under the unscaled location.
+pub const EE_COMBAT_WEAPON_KIND_DEFAULT: i32 = 4;
 
 /// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
 /// point's model first, then each parent) are passed beside it.
@@ -309,7 +312,8 @@ pub struct EeCombatWeaponIn {
     pub yaw: f32,
     /// the tag point at the frame, in its model's space
     pub point: [f32; 3],
-    /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+    /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
+    /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
     pub top: [f32; 3],
     /// the number of model chain transforms
     pub chain: i32,
@@ -334,13 +338,13 @@ pub(crate) fn up_the_chain(mut point: Ge3DPoint, chain: &[[f32; 16]]) -> Ge3DPoi
     point
 }
 
-/// The shot's start height of `EEIsLineToUnitBlocked` (`EELineOfFireStartHeight`): the weapon tag point's world z.
-pub fn weapon_height(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> f32 {
+/// The weapon tag point's world point, as the line of fire's start (`EELineOfFireStartHeight`) and the effects'
+/// starts (`EEE2DLinearProjectile`, `EEE2DMuzzleFlash`, `EEE2DSmokeMuzzleBlast`, `EEE3DPulseCannonBall`,
+/// `EEE3DTracers`) compute it: the tag point (turned by its turret part's yaw on a model with parts) up the model
+/// chain under the location scaled by `EETagPointList::Scale`; the box's or the default point under the unscaled
+/// location. The bare kind's is the location's position.
+pub fn weapon_point(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> Ge3DPoint {
     let location = matrix(&i.location);
-    let height = location.z();
-    if i.kind == EE_COMBAT_WEAPON_KIND_BARE {
-        return height;
-    }
     // `EETagPointList::Scale`: the orientation rows scaled, the position kept
     let mut scaled = location;
     for row in scaled.m.iter_mut().take(3) {
@@ -349,7 +353,8 @@ pub fn weapon_height(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> f32 {
         }
     }
     let local = Ge3DPoint { x: i.point[0], y: i.point[1], z: i.point[2] };
-    let start = match i.kind {
+    match i.kind {
+        EE_COMBAT_WEAPON_KIND_BARE => Ge3DPoint { x: location.x(), y: location.y(), z: location.z() },
         EE_COMBAT_WEAPON_KIND_TURRET => {
             // `GETransformation()`, `MakeIdentity`, then `SetOrientationYPR(angle, 0, 0)` for a turret part
             let mut part = GeTransformation::IDENTITY;
@@ -359,13 +364,19 @@ pub fn weapon_height(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> f32 {
             scaled.apply_point(up_the_chain(part.apply_point(local), chain))
         }
         EE_COMBAT_WEAPON_KIND_POINT => scaled.apply_point(up_the_chain(local, chain)),
+        EE_COMBAT_WEAPON_KIND_DEFAULT => location.apply_point(Ge3DPoint { x: i.top[0], y: i.top[1], z: i.top[2] }),
         _ => location.apply_point(Ge3DPoint { x: i.top[0], y: i.top[1], z: i.top[2] * 0.5 }),
-    };
-    if i.list_present != 0 {
-        start.z
-    } else {
-        height
     }
+}
+
+/// The shot's start height of `EEIsLineToUnitBlocked` (`EELineOfFireStartHeight`): the weapon tag point's world z
+/// (the location's without a tag point list).
+pub fn weapon_height(i: &EeCombatWeaponIn, chain: &[[f32; 16]]) -> f32 {
+    let height = matrix(&i.location).z();
+    if i.kind == EE_COMBAT_WEAPON_KIND_BARE || i.list_present == 0 {
+        return height;
+    }
+    weapon_point(i, chain).z
 }
 
 // ---- the C ABI
@@ -408,6 +419,28 @@ pub unsafe extern "C" fn ee_combat_weapon_height(input: *const EeCombatWeaponIn,
         unsafe { std::slice::from_raw_parts(chain, input.chain as usize) }
     };
     weapon_height(input, chain)
+}
+
+/// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
+///
+/// # Safety
+/// `input` must point to a valid record, `chain` to `input.chain` matrices (or be NULL when it is 0) and `out` to
+/// three floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_weapon_point(
+    input: *const EeCombatWeaponIn,
+    chain: *const [f32; 16],
+    out: *mut f32,
+) {
+    let input = unsafe { &*input };
+    let chain: &[[f32; 16]] = if chain.is_null() || input.chain <= 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(chain, input.chain as usize) }
+    };
+    let p = weapon_point(input, chain);
+    let out = unsafe { std::slice::from_raw_parts_mut(out, 3) };
+    out.copy_from_slice(&[p.x, p.y, p.z]);
 }
 
 #[cfg(test)]
@@ -514,6 +547,56 @@ mod tests {
         w.list_present = 0;
         assert_eq!(weapon_height(&w, &[]), 3.0);
     }
+
+    #[test]
+    fn weapon_point_cases() {
+        // the point (1, 0, 0.5) under the location scaled by 2 (its rows, not its position): (10, 22, 4)
+        let p = weapon_point(&weapon(EE_COMBAT_WEAPON_KIND_POINT), &[]);
+        assert_eq!((p.x, p.y, p.z), (10.0, 22.0, 4.0));
+        // a turret part turned a quarter (x to y) first: (0, 1, 0.5) -> (8, 20, 4)
+        let mut w = weapon(EE_COMBAT_WEAPON_KIND_TURRET);
+        w.turret = 1;
+        w.yaw = std::f32::consts::FRAC_PI_2;
+        let p = weapon_point(&w, &[]);
+        assert!((p.x - 8.0).abs() < 1e-5 && (p.y - 20.0).abs() < 1e-5 && p.z == 4.0, "{p:?}");
+        // a model with parts but no turret part: the identity part
+        let p = weapon_point(&weapon(EE_COMBAT_WEAPON_KIND_TURRET), &[]);
+        assert_eq!((p.x, p.y, p.z), (10.0, 22.0, 4.0));
+        // the default point under the unscaled location: (0, 0, 4) -> (10, 20, 7); the bare kind: the position
+        let p = weapon_point(&weapon(EE_COMBAT_WEAPON_KIND_DEFAULT), &[]);
+        assert_eq!((p.x, p.y, p.z), (10.0, 20.0, 7.0));
+        let p = weapon_point(&weapon(EE_COMBAT_WEAPON_KIND_BARE), &[]);
+        assert_eq!((p.x, p.y, p.z), (10.0, 20.0, 3.0));
+        // the C ABI
+        let w = weapon(EE_COMBAT_WEAPON_KIND_POINT);
+        let mut out = [0.0f32; 3];
+        // SAFETY: a valid record, no chain, three floats
+        unsafe { ee_combat_weapon_point(&w, std::ptr::null(), out.as_mut_ptr()) };
+        assert_eq!(out, [10.0, 22.0, 4.0]);
+    }
+
+    #[test]
+    fn the_capture_replays_effect_points() {
+        use crate::capture::{replay, tag, Record};
+        let w = weapon(EE_COMBAT_WEAPON_KIND_POINT);
+        let mut p: Vec<u8> = 3i32.to_le_bytes().to_vec();
+        // SAFETY: a plain record of 4-byte fields
+        p.extend_from_slice(unsafe {
+            std::slice::from_raw_parts(
+                (&w as *const EeCombatWeaponIn).cast::<u8>(),
+                std::mem::size_of::<EeCombatWeaponIn>(),
+            )
+        });
+        for v in [10.0f32, 22.0, 4.0] {
+            p.extend_from_slice(&v.to_le_bytes());
+        }
+        assert_eq!(replay(&Record { tag: tag(b"CBEW"), payload: &p }), Some(Ok(true)));
+        let n = p.len();
+        p[n - 1] ^= 1;
+        assert_eq!(replay(&Record { tag: tag(b"CBEW"), payload: &p }), Some(Ok(false)));
+        assert!(matches!(replay(&Record { tag: tag(b"CBEW"), payload: &p[..n - 4] }), Some(Err(_))));
+    }
+
     #[test]
     fn the_capture_replays_tile_lines_and_weapon_heights() {
         use crate::capture::{replay, tag, Record};

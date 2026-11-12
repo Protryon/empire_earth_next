@@ -18,6 +18,7 @@ pub mod decide;
 pub mod ffi;
 pub mod flight;
 pub mod geometry;
+pub mod impact;
 pub mod launch;
 pub mod pursuer;
 pub mod screen;
