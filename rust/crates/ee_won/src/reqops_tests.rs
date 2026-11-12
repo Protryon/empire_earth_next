@@ -98,6 +98,7 @@ fn golden() {
     );
 }
 
+/// The members as the C ABI's values: they point into `m`, which must outlive them.
 fn values(m: &[Member]) -> Vec<crate::admin::EeWonAdminValue> {
     m.iter().map(|v| crate::admin::EeWonAdminValue { num: v.num, data: v.bytes.as_ptr(), len: v.bytes.len() }).collect()
 }
@@ -117,7 +118,9 @@ unsafe extern "C" fn into_vec(c: *mut std::ffi::c_void, d: *const u8, n: usize) 
 
 #[test]
 fn contest_through_the_abi() {
-    let v = values(&[n(7), n(1), b(b"ab")]);
+    // the members outlive the values pointing into them (a temporary array here freed "ab" before the call read it)
+    let m = [n(7), n(1), b(b"ab")];
+    let v = values(&m);
     let op = unsafe { ee_won_reqops_new(EE_WON_REQOPS_CONTEST, v.as_ptr(), v.len()) };
     assert!(!op.is_null());
     let o = unsafe { &mut (*op).op };
