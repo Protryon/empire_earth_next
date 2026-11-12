@@ -203,11 +203,10 @@ fn the_projectile_tick() {
             EE_COMBAT_SHOT_ORBITALS,
             EE_COMBAT_SHOT_EFFECTS,
             EE_COMBAT_SHOT_REFRESH_SOUND,
-            EE_COMBAT_SHOT_SET_ROTTING,
+            EE_COMBAT_SHOT_COUNT_ROTTING,
             EE_COMBAT_SHOT_SET_FLIGHT_TIME
         ]
     );
-    assert!(m.log.contains(&(EE_COMBAT_SHOT_SET_ROTTING, 0, 0)), "at 0");
     assert!(m.log.contains(&(EE_COMBAT_SHOT_SET_FLIGHT_TIME, 150, 0)));
     // off the map: no step; a zero tick counts 1 ms; fading in space below z 0
     let mut m = Mock::with(&[

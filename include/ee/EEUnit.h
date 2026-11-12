@@ -835,7 +835,7 @@ public:
     EEComplexUnit* mNextPart;               // +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
     EEComplexUnit* mHomeBase;               // +0x1d4
     EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
-    EEComplexUnit* mContainer;              // +0x1d8 provisional name (aircraft in an airport: its position is the holder's)
+    EEUnitStoreField<EEComplexUnit*, kUnitFieldContainer> mContainer;   // +0x1d8 provisional name (aircraft in an airport: its position is the holder's; the unit store's)
     EEComplexUnit* mLastAttacker;                 // +0x1dc (released by Virtual04)
     void SetLastAttacker(EEComplexUnit* inUnit);  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
     EEComplexUnit* mOwner;                        // +0x1e0 provisional name (SetOwner; referenced)
@@ -853,7 +853,7 @@ public:
     RTSUnit* mLastResource;                 // +0x1f4
     EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
     EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
-    EEHerd* mHerd;                          // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it)
+    EEUnitStoreField<EEHerd*, kUnitFieldHerd> mHerd;   // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it; the unit store's)
     float* mTurretAngles;                   // +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
     EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
@@ -897,7 +897,7 @@ public:
     long mTrailEffectTimer;                 // +0x284 (saved)
     long mGarrisonCount;                    // +0x288
     long mGarrisonPopulation;               // +0x28c (saved)
-    long mFlightTime;                       // +0x290
+    EEUnitStoreField<long, kUnitFieldFlightTime> mFlightTime;   // +0x290 (the unit store's)
     long mRegenerationTimer;                // +0x294 (saved)
     long mExitingUnitID;                    // +0x298 (saved)
     EEUnitStoreField<unsigned long, kUnitFieldFormationSlot> mFormationSlot;   // +0x29c (the unit store's)
@@ -935,7 +935,7 @@ public:
     unsigned long mGrazeTime;               // +0x314 (saved)
     unsigned long mGrowTime;                // +0x318 (saved)
     unsigned long mNumAttackers;            // +0x31c (saved)
-    unsigned long mCloaked;                        // +0x320 provisional name (the cloaking calamity sets it; saved as unsigned long)
+    EEUnitStoreField<unsigned long, kUnitFieldCloakTimer> mCloaked;   // +0x320 provisional name (the cloaking calamity sets it; saved as unsigned long; the unit store's)
     unsigned long mPushImmuneUntil;         // +0x324 (a game time: mLD0 + 5000; compared unsigned)
     EEUnitStoreField<unsigned long, kUnitFieldCamouflageTimer> mCamouflageTimer;   // +0x328 (saved; the unit store's)
     unsigned long mU32C;                    // +0x32c (saved)
@@ -954,8 +954,8 @@ public:
     bool mIsClearanceGranted;               // +0x342 (+0x340..+0x351 saved)
     bool mIsAnimationPaused;                // +0x343
     bool mIsPaidFor;                        // +0x344
-    bool mIsCloakable;                      // +0x345
-    bool mIsCloaked;                        // +0x346
+    EEUnitStoreField<bool, kUnitFieldCloakable> mIsCloakable;   // +0x345 (the unit store's)
+    EEUnitStoreField<bool, kUnitFieldCloaked> mIsCloaked;   // +0x346 (the unit store's)
     bool mIsDisabled;                       // +0x347 (set: not selectable by the aircraft hot key; provisional name)
     bool mIsLocked;                         // +0x348
     bool mIsTinted;                         // +0x349

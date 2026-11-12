@@ -112,6 +112,11 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_DOMAINS, theClass != NULL ? (int64_t)theClass->mDomains : 0);
             Set(theUnit, EE_UNIT_FIELD_LAND_BUILDING, theClass != NULL && theClass->IsLandBuilding() ? 1 : 0);
             Set(theUnit, EE_UNIT_FIELD_CAN_ATTACK_GROUND, theClass != NULL && theClass->mCanAttackGround ? 1 : 0);
+            Set(theUnit, EE_UNIT_FIELD_FAMILY, theClass != NULL ? (int64_t)theClass->mFamily : 0);
+            Set(theUnit, EE_UNIT_FIELD_CLOAK_RADIUS, theClass != NULL ? (int64_t)theClass->mCloakRadius : 0);
+            Set(theUnit, EE_UNIT_FIELD_CRUSADER, theClass != NULL && theClass->IsCrusader() ? 1 : 0);
+            Set(theUnit, EE_UNIT_FIELD_PARATROOPER_BOMBER, theClass != NULL && theClass->mIsParatrooperBomber ? 1 : 0);
+            Set(theUnit, EE_UNIT_FIELD_HEAL_THRESHOLD, theClass != NULL ? (int64_t)FloatBits(theClass->GetHealThreshold()) : 0);
         }
         break;
     }
@@ -250,6 +255,42 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_CAMOUFLAGE_TIMER, (int64_t)theUnit->mCamouflageTimer.Get());
         break;
     }
+    case kUnitFieldFlightTime: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mFlightTime));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_FLIGHT_TIME, (int64_t)theUnit->mFlightTime.Get());
+        break;
+    }
+    case kUnitFieldCloakTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCloaked));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CLOAK_TIMER, (int64_t)theUnit->mCloaked.Get());
+        break;
+    }
+    case kUnitFieldCloakable: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCloakable));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CLOAKABLE, theUnit->mIsCloakable.Get() ? 1 : 0);
+        break;
+    }
+    case kUnitFieldCloaked: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mIsCloaked));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CLOAKED, theUnit->mIsCloaked.Get() ? 1 : 0);
+        break;
+    }
+    case kUnitFieldHerd: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHerd));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_HERD, theUnit->mHerd.Get() != NULL ? 1 : 0);
+        break;
+    }
+    case kUnitFieldContainer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mContainer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CONTAINER, theUnit->mContainer.Get() != NULL ? 1 : 0);
+        break;
+    }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
         if (theUnit->mInUnitStore)
@@ -302,6 +343,11 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
             outRecord.domains = theClass->mDomains;
             outRecord.land_building = theClass->IsLandBuilding() ? 1 : 0;
             outRecord.can_attack_ground = theClass->mCanAttackGround ? 1 : 0;
+            outRecord.family = (int64_t)theClass->mFamily;
+            outRecord.cloak_radius = (int64_t)theClass->mCloakRadius;
+            outRecord.crusader = theClass->IsCrusader() ? 1 : 0;
+            outRecord.paratrooper_bomber = theClass->mIsParatrooperBomber ? 1 : 0;
+            outRecord.heal_threshold = FloatBits(theClass->GetHealThreshold());
         }
     }
     if (inUnit->mObjectKind.mValue == EE_OBJECT_COMPLEX_UNIT) {
@@ -330,6 +376,12 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.push_velocity_x = FloatBits(theUnit->mPushVelocityX.Get());
         outRecord.push_velocity_y = FloatBits(theUnit->mPushVelocityY.Get());
         outRecord.roll = FloatBits(theUnit->mRoll.Get());
+        outRecord.flight_time = (int64_t)theUnit->mFlightTime.Get();
+        outRecord.cloak_timer = (int64_t)theUnit->mCloaked.Get();
+        outRecord.cloakable = theUnit->mIsCloakable.Get() ? 1 : 0;
+        outRecord.cloaked = theUnit->mIsCloaked.Get() ? 1 : 0;
+        outRecord.herd = theUnit->mHerd.Get() != NULL ? 1 : 0;
+        outRecord.container = theUnit->mContainer.Get() != NULL ? 1 : 0;
     }
 }
 

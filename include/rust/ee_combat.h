@@ -688,6 +688,10 @@ constexpr static const int32_t EE_COMBAT_SHOT_SET_CLOAKED = 72;
 /// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
 constexpr static const int32_t EE_COMBAT_SHOT_WATER_PLANE = 73;
 
+/// the rotting time's count down by the tick, not below 0 (`UpdateRottingAwayTime()`: the core lane's ee_units step.rs
+/// over the unit store, noted in its USTM capture as the other classes' countdowns).
+constexpr static const int32_t EE_COMBAT_SHOT_COUNT_ROTTING = 74;
+
 /// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
 /// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
 /// call's `inArg6` is false; no technology: -1).

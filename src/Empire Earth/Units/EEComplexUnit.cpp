@@ -1652,7 +1652,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6ld\n", this->GetComplexUnit()->mCollisionTile.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6ld\n", this->GetComplexUnit()->mCrewHitPoints);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6ld\n", this->GetComplexUnit()->mPhysicalModel.GetFrame());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->GetComplexUnit()->mFlightTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->GetComplexUnit()->mFlightTime.Get());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart X:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Y:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Z:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetZ());

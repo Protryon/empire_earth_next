@@ -377,6 +377,33 @@ constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_Y = 34;
 /// `EEComplexUnit::mRoll` (float bits)
 constexpr static const uint32_t EE_UNIT_FIELD_ROLL = 35;
 
+/// the combat lane's fields (its trigger record's fill, `EECombatFillCondition`; RUST_PLAN's combat row, store fields
+/// (1) and (8)): `EEComplexUnit::mFlightTime`, `mCloaked` (the cloak's timer, an `unsigned long`), `mIsCloakable`,
+/// `mIsCloaked`, `mHerd != NULL`, `mContainer != NULL`
+constexpr static const uint32_t EE_UNIT_FIELD_FLIGHT_TIME = 36;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAK_TIMER = 37;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAKABLE = 38;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAKED = 39;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HERD = 40;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CONTAINER = 41;
+
+/// `EEUnit::mUnitClass` too (reported with it, fixed once the db's classes are made): the class's `mFamily`,
+/// `mCloakRadius`, `IsCrusader()`, `mIsParatrooperBomber`, `GetHealThreshold()` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_FAMILY = 42;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAK_RADIUS = 43;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CRUSADER = 44;
+
+constexpr static const uint32_t EE_UNIT_FIELD_PARATROOPER_BOMBER = 45;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -519,6 +546,22 @@ struct EeUnitRecord {
   uint32_t push_velocity_y;
   /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
   uint32_t roll;
+  /// `EEComplexUnit::mFlightTime`, `mCloaked` (an `unsigned long`), `mIsCloakable`, `mIsCloaked`, `mHerd != NULL`,
+  /// `mContainer != NULL` (the combat reads')
+  int64_t flight_time;
+  int64_t cloak_timer;
+  uint8_t cloakable;
+  uint8_t cloaked;
+  uint8_t herd;
+  uint8_t container;
+  /// the class's `IsCrusader()`, `mIsParatrooperBomber` (0: no class)
+  uint8_t crusader;
+  uint8_t paratrooper_bomber;
+  /// the class's `mFamily` (an `unsigned long`), `mCloakRadius` (0: no class)
+  int64_t family;
+  int64_t cloak_radius;
+  /// the class's `GetHealThreshold()` as float bits (0: no class)
+  uint32_t heal_threshold;
 };
 
 /// The result of a consistency check (`Store::check`).

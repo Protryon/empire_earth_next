@@ -78,6 +78,22 @@ pub const EE_UNIT_FIELD_PUSH_VELOCITY_X: u32 = 33;
 pub const EE_UNIT_FIELD_PUSH_VELOCITY_Y: u32 = 34;
 /// `EEComplexUnit::mRoll` (float bits)
 pub const EE_UNIT_FIELD_ROLL: u32 = 35;
+/// the combat lane's fields (its trigger record's fill, `EECombatFillCondition`; RUST_PLAN's combat row, store fields
+/// (1) and (8)): `EEComplexUnit::mFlightTime`, `mCloaked` (the cloak's timer, an `unsigned long`), `mIsCloakable`,
+/// `mIsCloaked`, `mHerd != NULL`, `mContainer != NULL`
+pub const EE_UNIT_FIELD_FLIGHT_TIME: u32 = 36;
+pub const EE_UNIT_FIELD_CLOAK_TIMER: u32 = 37;
+pub const EE_UNIT_FIELD_CLOAKABLE: u32 = 38;
+pub const EE_UNIT_FIELD_CLOAKED: u32 = 39;
+pub const EE_UNIT_FIELD_HERD: u32 = 40;
+pub const EE_UNIT_FIELD_CONTAINER: u32 = 41;
+/// `EEUnit::mUnitClass` too (reported with it, fixed once the db's classes are made): the class's `mFamily`,
+/// `mCloakRadius`, `IsCrusader()`, `mIsParatrooperBomber`, `GetHealThreshold()` (float bits)
+pub const EE_UNIT_FIELD_FAMILY: u32 = 42;
+pub const EE_UNIT_FIELD_CLOAK_RADIUS: u32 = 43;
+pub const EE_UNIT_FIELD_CRUSADER: u32 = 44;
+pub const EE_UNIT_FIELD_PARATROOPER_BOMBER: u32 = 45;
+pub const EE_UNIT_FIELD_HEAL_THRESHOLD: u32 = 46;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -163,6 +179,22 @@ pub struct EeUnitRecord {
     pub push_velocity_y: u32,
     /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
     pub roll: u32,
+    /// `EEComplexUnit::mFlightTime`, `mCloaked` (an `unsigned long`), `mIsCloakable`, `mIsCloaked`, `mHerd != NULL`,
+    /// `mContainer != NULL` (the combat reads')
+    pub flight_time: i64,
+    pub cloak_timer: i64,
+    pub cloakable: u8,
+    pub cloaked: u8,
+    pub herd: u8,
+    pub container: u8,
+    /// the class's `IsCrusader()`, `mIsParatrooperBomber` (0: no class)
+    pub crusader: u8,
+    pub paratrooper_bomber: u8,
+    /// the class's `mFamily` (an `unsigned long`), `mCloakRadius` (0: no class)
+    pub family: i64,
+    pub cloak_radius: i64,
+    /// the class's `GetHealThreshold()` as float bits (0: no class)
+    pub heal_threshold: u32,
 }
 
 impl EeUnitRecord {
@@ -204,6 +236,17 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_PUSH_VELOCITY_X => self.push_velocity_x = value as u32,
             EE_UNIT_FIELD_PUSH_VELOCITY_Y => self.push_velocity_y = value as u32,
             EE_UNIT_FIELD_ROLL => self.roll = value as u32,
+            EE_UNIT_FIELD_FLIGHT_TIME => self.flight_time = value,
+            EE_UNIT_FIELD_CLOAK_TIMER => self.cloak_timer = value,
+            EE_UNIT_FIELD_CLOAKABLE => self.cloakable = value as u8,
+            EE_UNIT_FIELD_CLOAKED => self.cloaked = value as u8,
+            EE_UNIT_FIELD_HERD => self.herd = value as u8,
+            EE_UNIT_FIELD_CONTAINER => self.container = value as u8,
+            EE_UNIT_FIELD_FAMILY => self.family = value,
+            EE_UNIT_FIELD_CLOAK_RADIUS => self.cloak_radius = value,
+            EE_UNIT_FIELD_CRUSADER => self.crusader = value as u8,
+            EE_UNIT_FIELD_PARATROOPER_BOMBER => self.paratrooper_bomber = value as u8,
+            EE_UNIT_FIELD_HEAL_THRESHOLD => self.heal_threshold = value as u32,
             _ => return false,
         }
         true
@@ -267,6 +310,17 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_PUSH_VELOCITY_X, self.push_velocity_x == other.push_velocity_x),
             (EE_UNIT_FIELD_PUSH_VELOCITY_Y, self.push_velocity_y == other.push_velocity_y),
             (EE_UNIT_FIELD_ROLL, self.roll == other.roll),
+            (EE_UNIT_FIELD_FLIGHT_TIME, self.flight_time == other.flight_time),
+            (EE_UNIT_FIELD_CLOAK_TIMER, self.cloak_timer == other.cloak_timer),
+            (EE_UNIT_FIELD_CLOAKABLE, self.cloakable == other.cloakable),
+            (EE_UNIT_FIELD_CLOAKED, self.cloaked == other.cloaked),
+            (EE_UNIT_FIELD_HERD, self.herd == other.herd),
+            (EE_UNIT_FIELD_CONTAINER, self.container == other.container),
+            (EE_UNIT_FIELD_FAMILY, self.family == other.family),
+            (EE_UNIT_FIELD_CLOAK_RADIUS, self.cloak_radius == other.cloak_radius),
+            (EE_UNIT_FIELD_CRUSADER, self.crusader == other.crusader),
+            (EE_UNIT_FIELD_PARATROOPER_BOMBER, self.paratrooper_bomber == other.paratrooper_bomber),
+            (EE_UNIT_FIELD_HEAL_THRESHOLD, self.heal_threshold == other.heal_threshold),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -299,10 +353,12 @@ pub struct EeUnitStoreCheck {
     pub first_field: u32,
 }
 
-/// The records by id.
+/// The records by id, and the ids by object (the combat lane's handle-to-record lookup: RUST_PLAN's combat row, store
+/// field (3); a handle is the `RTSUnit*`'s address, the record's `object`).
 #[derive(Default)]
 pub struct Store {
     records: BTreeMap<u32, EeUnitRecord>,
+    by_object: BTreeMap<u64, u32>,
 }
 
 impl UnitView for Store {
@@ -313,18 +369,33 @@ impl UnitView for Store {
 
 impl Store {
     pub const fn new() -> Self {
-        Store { records: BTreeMap::new() }
+        Store { records: BTreeMap::new(), by_object: BTreeMap::new() }
     }
 
-    /// A unit entering a player's list: its record replaces any under its id.
+    /// Drops the object index's entry of a record leaving the store (only when it names that record).
+    fn unindex(&mut self, record: &EeUnitRecord) {
+        if self.by_object.get(&record.object) == Some(&record.id) {
+            self.by_object.remove(&record.object);
+        }
+    }
+
+    /// A unit entering a player's list: its record replaces any under its id (an object's address names the newest
+    /// record made of it).
     pub fn insert(&mut self, record: EeUnitRecord) {
-        self.records.insert(record.id, record);
+        if let Some(old) = self.records.insert(record.id, record) {
+            if old.object != record.object {
+                self.unindex(&old);
+            }
+        }
+        self.by_object.insert(record.object, record.id);
     }
 
     /// A unit leaving its player's list; only the record of that object. True when there was one.
     pub fn remove(&mut self, id: u32, object: u64) -> bool {
         if self.records.get(&id).is_some_and(|r| r.object == object) {
-            self.records.remove(&id);
+            if let Some(old) = self.records.remove(&id) {
+                self.unindex(&old);
+            }
             true
         } else {
             false
@@ -334,13 +405,33 @@ impl Store {
     /// A player object goes: every record of its list goes. The count removed.
     pub fn clear_player(&mut self, player: u64) -> usize {
         let before = self.records.len();
-        self.records.retain(|_, r| r.player != player);
+        let gone: Vec<EeUnitRecord> = self.records.values().filter(|r| r.player == player).copied().collect();
+        for r in &gone {
+            self.records.remove(&r.id);
+            self.unindex(r);
+        }
         before - self.records.len()
     }
 
     /// Everything (the world's teardown).
     pub fn clear(&mut self) {
         self.records.clear();
+        self.by_object.clear();
+    }
+
+    /// The record of an object (its `RTSUnit*`'s address), when the store has one of that object.
+    pub fn by_object(&self, object: u64) -> Option<&EeUnitRecord> {
+        let id = self.by_object.get(&object)?;
+        self.records.get(id).filter(|r| r.object == object)
+    }
+
+    /// TEST ONLY: the object index against the records: the records it does not name, plus its entries that name
+    /// no record of their object. 0: consistent.
+    pub fn check_index(&self) -> u32 {
+        let unnamed = self.records.values().filter(|r| self.by_object.get(&r.object) != Some(&r.id)).count();
+        let stale =
+            self.by_object.iter().filter(|(o, id)| self.records.get(id).is_none_or(|r| r.object != **o)).count();
+        (unnamed + stale) as u32
     }
 
     /// A holder's write. Ignored when no record of that object is under the id (a pending unit, a removed one).
@@ -437,6 +528,15 @@ impl Store {
             }
             out.mismatches += (self.records.len() - named) as u32;
         }
+        // the object index names every record and nothing else (field 0xfe)
+        let index = self.check_index();
+        if index != 0 {
+            if out.mismatches == 0 {
+                out.first_id = u32::MAX;
+                out.first_field = 0xfe;
+            }
+            out.mismatches += index;
+        }
         out
     }
 }
@@ -495,6 +595,7 @@ mod tests {
             push_velocity_x: 0,
             push_velocity_y: 0,
             roll: 0,
+            ..Default::default()
         }
     }
 
@@ -554,6 +655,17 @@ mod tests {
             (EE_UNIT_FIELD_PUSH_VELOCITY_X, i64::from((-0.25f32).to_bits())),
             (EE_UNIT_FIELD_PUSH_VELOCITY_Y, i64::from(0.125f32.to_bits())),
             (EE_UNIT_FIELD_ROLL, i64::from(0.3f32.to_bits())),
+            (EE_UNIT_FIELD_FLIGHT_TIME, 30000),
+            (EE_UNIT_FIELD_CLOAK_TIMER, 0xffff_ffff),
+            (EE_UNIT_FIELD_CLOAKABLE, 1),
+            (EE_UNIT_FIELD_CLOAKED, 1),
+            (EE_UNIT_FIELD_HERD, 1),
+            (EE_UNIT_FIELD_CONTAINER, 1),
+            (EE_UNIT_FIELD_FAMILY, 0x17),
+            (EE_UNIT_FIELD_CLOAK_RADIUS, 6),
+            (EE_UNIT_FIELD_CRUSADER, 1),
+            (EE_UNIT_FIELD_PARATROOPER_BOMBER, 1),
+            (EE_UNIT_FIELD_HEAL_THRESHOLD, i64::from(0.75f32.to_bits())),
         ] {
             let before = r;
             assert!(r.set(f, v));
@@ -568,6 +680,34 @@ mod tests {
         k.owner = 3;
         assert_eq!(r.first_difference(&k), Some(0));
         assert_eq!(r.first_difference(&r), None);
+    }
+
+    #[test]
+    fn the_object_index_follows_the_records() {
+        let mut s = Store::new();
+        for i in 0..4 {
+            s.insert(rec(i, i % 2));
+        }
+        assert_eq!(s.by_object(0x1002).map(|r| r.id), Some(2));
+        assert!(s.by_object(0x9999).is_none());
+        // a new object under an old id: the old object names nothing
+        s.insert(EeUnitRecord { object: 0x8000, ..rec(2, 0) });
+        assert!(s.by_object(0x1002).is_none());
+        assert_eq!(s.by_object(0x8000).map(|r| r.id), Some(2));
+        // an object's address reused for another id: it names the newest
+        s.insert(EeUnitRecord { object: 0x1001, ..rec(7, 1) });
+        assert_eq!(s.by_object(0x1001).map(|r| r.id), Some(7));
+        // the stale record of id 1 keeps object 0x1001 but the index names id 7: one unnamed record
+        assert_eq!(s.check_index(), 1);
+        assert!(s.remove(1, 0x1001));
+        assert_eq!(s.by_object(0x1001).map(|r| r.id), Some(7));
+        assert_eq!(s.check_index(), 0);
+        assert_eq!(s.clear_player(0x5001), 2);
+        assert!(s.by_object(0x1003).is_none() && s.by_object(0x1001).is_none());
+        assert_eq!(s.check_index(), 0);
+        s.clear();
+        assert!(s.by_object(0x8000).is_none());
+        assert_eq!(s.check_index(), 0);
     }
 
     #[test]

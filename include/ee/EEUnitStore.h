@@ -52,10 +52,20 @@ enum EEUnitStoreFieldID {
     kUnitFieldVelocity = 32,            // EEComplexUnit::mVelocity
     kUnitFieldPushVelocityX = 33,       // EEComplexUnit::mPushVelocityX
     kUnitFieldPushVelocityY = 34,       // EEComplexUnit::mPushVelocityY
-    kUnitFieldRoll = 35                 // EEComplexUnit::mRoll
+    kUnitFieldRoll = 35,                // EEComplexUnit::mRoll
+    // the combat reads' fields (R5b.4, twelfth round: the combat lane's trigger record; store.rs)
+    kUnitFieldFlightTime = 36,          // EEComplexUnit::mFlightTime
+    kUnitFieldCloakTimer = 37,          // EEComplexUnit::mCloaked (the cloak's timer)
+    kUnitFieldCloakable = 38,           // EEComplexUnit::mIsCloakable
+    kUnitFieldCloaked = 39,             // EEComplexUnit::mIsCloaked
+    kUnitFieldHerd = 40,                // EEComplexUnit::mHerd (the record's: set or not)
+    kUnitFieldContainer = 41            // EEComplexUnit::mContainer (the record's: set or not)
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
-// EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
+// EE_UNIT_FIELD_CAN_ATTACK_GROUND, and the combat reads' EE_UNIT_FIELD_FAMILY, _CLOAK_RADIUS, _CRUSADER,
+// _PARATROOPER_BOMBER, _HEAL_THRESHOLD): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its
+// constructor, and its mFamily, mCloakRadius, IsCrusader(), mIsParatrooperBomber and GetHealThreshold(), fixed once the
+// db's classes are made (EEUnitClass::InitUnitClasses)
 
 // a holder's member was written (EEUnitStore.cpp: the owner from the member's offset)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember);
