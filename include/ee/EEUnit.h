@@ -867,9 +867,9 @@ public:
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
-    float mPushVelocityX;                   // +0x230
-    float mPushVelocityY;                   // +0x234
-    float mVelocity;                        // +0x238 (SetVelocity; saved)
+    EEUnitStoreField<float, kUnitFieldPushVelocityX> mPushVelocityX;   // +0x230 (the unit store's)
+    EEUnitStoreField<float, kUnitFieldPushVelocityY> mPushVelocityY;   // +0x234 (the unit store's)
+    EEUnitStoreField<float, kUnitFieldVelocity> mVelocity;   // +0x238 (SetVelocity; saved; the unit store's)
     float mAnimationFraction;               // +0x23c
     float mGrowth;                          // +0x240 (saved)
     float GetCollisionRadius() const { return this->mCollisionRadius; }
@@ -976,7 +976,7 @@ public:
     unsigned short mPlanetID;               // +0x35c (saved)
     unsigned short mU35E;                   // +0x35e (untouched)
     float GetRoll() const { return this->mRoll; }
-    float mRoll;                            // +0x360
+    EEUnitStoreField<float, kUnitFieldRoll> mRoll;   // +0x360 (the unit store's)
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.

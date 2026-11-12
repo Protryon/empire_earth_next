@@ -1326,6 +1326,18 @@ constexpr static const uint32_t EE_UNIT_FIELD_POWER_REGEN_TIMER = 30;
 /// `EEComplexUnit::mCamouflageTimer` (an `unsigned long`)
 constexpr static const uint32_t EE_UNIT_FIELD_CAMOUFLAGE_TIMER = 31;
 
+/// `EEComplexUnit::mVelocity` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_VELOCITY = 32;
+
+/// `EEComplexUnit::mPushVelocityX` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_X = 33;
+
+/// `EEComplexUnit::mPushVelocityY` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_Y = 34;
+
+/// `EEComplexUnit::mRoll` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_ROLL = 35;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -6766,6 +6778,14 @@ struct EeUnitRecord {
   int64_t power_regen_timer;
   /// `EEComplexUnit::mCamouflageTimer` (the step's leaves read it: `step`)
   int64_t camouflage_timer;
+  /// `EEComplexUnit::mVelocity` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t velocity;
+  /// `EEComplexUnit::mPushVelocityX` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t push_velocity_x;
+  /// `EEComplexUnit::mPushVelocityY` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t push_velocity_y;
+  /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t roll;
 };
 
 /// The result of a consistency check (`Store::check`).

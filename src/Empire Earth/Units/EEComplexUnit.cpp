@@ -2005,7 +2005,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
         ioString += theString;
     }
     ioString += ":";
-    sprintf(theString, "vel %.4f:", this->mVelocity);
+    sprintf(theString, "vel %.4f:", this->mVelocity.Get());
     ioString += theString;
     if (!theGoal)
         return;

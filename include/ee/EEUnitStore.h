@@ -47,7 +47,12 @@ enum EEUnitStoreFieldID {
     kUnitFieldRottingAwayTime = 28,     // EEComplexUnit::mRottingAwayTime
     kUnitFieldPower = 29,               // EEComplexUnit::mPower
     kUnitFieldPowerRegenTimer = 30,     // EEComplexUnit::mPowerRegenTimer
-    kUnitFieldCamouflageTimer = 31      // EEComplexUnit::mCamouflageTimer
+    kUnitFieldCamouflageTimer = 31,     // EEComplexUnit::mCamouflageTimer
+    // the velocities the physics models' arithmetic reads (R5b.4 leaf 6; float bits; ee_units step.rs)
+    kUnitFieldVelocity = 32,            // EEComplexUnit::mVelocity
+    kUnitFieldPushVelocityX = 33,       // EEComplexUnit::mPushVelocityX
+    kUnitFieldPushVelocityY = 34,       // EEComplexUnit::mPushVelocityY
+    kUnitFieldRoll = 35                 // EEComplexUnit::mRoll
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor

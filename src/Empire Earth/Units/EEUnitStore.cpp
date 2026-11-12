@@ -196,6 +196,30 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_HEAL_SEARCH_TIMER, (int64_t)FloatBits(theUnit->mHealSearchTimer.Get()));
         break;
     }
+    case kUnitFieldVelocity: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mVelocity));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_VELOCITY, (int64_t)FloatBits(theUnit->mVelocity.Get()));
+        break;
+    }
+    case kUnitFieldPushVelocityX: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityX));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_X, (int64_t)FloatBits(theUnit->mPushVelocityX.Get()));
+        break;
+    }
+    case kUnitFieldPushVelocityY: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityY));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_Y, (int64_t)FloatBits(theUnit->mPushVelocityY.Get()));
+        break;
+    }
+    case kUnitFieldRoll: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRoll));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_ROLL, (int64_t)FloatBits(theUnit->mRoll.Get()));
+        break;
+    }
     case kUnitFieldNextTriggerTime: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mNextTriggerTime));
         if (theUnit->mInUnitStore)
@@ -302,6 +326,10 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.power = (int64_t)theUnit->mPower.Get();
         outRecord.power_regen_timer = (int64_t)theUnit->mPowerRegenTimer.Get();
         outRecord.camouflage_timer = (int64_t)theUnit->mCamouflageTimer.Get();
+        outRecord.velocity = FloatBits(theUnit->mVelocity.Get());
+        outRecord.push_velocity_x = FloatBits(theUnit->mPushVelocityX.Get());
+        outRecord.push_velocity_y = FloatBits(theUnit->mPushVelocityY.Get());
+        outRecord.roll = FloatBits(theUnit->mRoll.Get());
     }
 }
 
