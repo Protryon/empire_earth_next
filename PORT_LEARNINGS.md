@@ -7521,3 +7521,54 @@ glue around the moved code; the driver relinked over the forwarders printed the 
 - **Only the game reaches these.** Goldens and EE-SIM never draw: the effects' culling, the near fade, the rings and
   the mini map's trapezoid as drawn are exercised only by a tour (zoom close to a building, select units of each
   size, an area-effect unit, scroll and watch the mini map's trapezoid, an effect at the screen's edge).
+
+## R4.4, fourth round: the placement footprint, the labels' clip rectangles, the box selection, the mini map's camera point and the effects' quads in Rust (ee_gfx units.rs, select.rs, minimap.rs, effects.rs, pick.rs; branch rust-gfx10, 2026-11-12)
+
+The fourth round's five leaves, each pinned as before: a scratch driver (`build/gx10_golden`, not in the repository)
+#includes the unit of the commit before the work (7da90274, `git show`) over the real GE math units, `GEViewport`
+and `UWideString`, with fakes whose calls log; an LCG seeded 1 draws the cases and each prints an FNV-1a 64 of its
+log. The Rust tests draw the same stream and replay the C++ glue; each driver relinked over the forwarders printed
+the same bytes, and so did seeds 2 and 3 at four times the size.
+
+- **`DrawPlacement`'s footprint (`units.rs`).** `ee_gfx_units_placement_lines` gives the edges in the original's
+  order (the outline in the bar colour, then every edge with an unusable cell on exactly one side, toggled per cell
+  as the original did) as window points; the C++ keeps the `GELine`s, their texture coordinates and colours, and
+  the draw every 64 lines. 1,240 cases (sizes 0 to 11, the cells all usable, none or a random share). A grid side
+  past 11 indexed past the record's 12 x 12 arrays (and overran the original's stack); it now draws no edges (no
+  retail building is that large; a mod could make one).
+- **`DrawLabels`' rectangles (`units.rs`).** The view above the bottom strip, the strip beside the unit panel, the
+  strip's top and the font by the window's width (`ee_gfx_units_label_clip`), which rectangles a label is drawn to
+  (`ee_gfx_units_label_targets`: above the strip, below it, or both when the text crosses its top; the editor's
+  view with the free camera) and the debug label's place above the bars (`ee_gfx_units_label_point`). 1,240 frames
+  of up to six units, most near the strip's top; the fonts are fakes whose `ComputeTextExtent` sets a height per font.
+- **The box selection (`select.rs`, `pick.rs`).** `EEUICSelectUnits`' press point, the drag's end (rounded, clamped
+  a pixel short of the view's bottom when outside), the ten-pixel drag start, the move's and the release's boxes
+  (two functions: the original built them two ways) and `DrawPolygons`' eight lines; and the picker's
+  `GetIsEntryInView` model transformation (`ee_gfx_pick_entry_transform`). The selection driver built the control
+  with its own constructor over a no-op `UIControl` one (the unit emits the vtable; `GELine::GELine` and
+  `GERhombus::GERhombus` defined in the driver) and logged every `UIControl` member it calls; 600 presses with up to
+  four moves, copies and draws, the control's state running on across the cases. The round-three picker driver,
+  relinked over the new forwarder, printed its golden again (2,184 cases; `golden_picker.rs` now calls
+  `entry_transform`).
+- **`EEUIMiniMap::CenterCamera` (`minimap.rs`).** The mouse in mini-map units (the window over 800 x 600), clamped
+  to `sBounds` when outside: `ee_gfx_minimap_center_point`, 2,000 cases. `MouseRButtonDown` has the same arithmetic
+  with a different clamp (two separate tests per axis, not `else if`); it stays C++, not covered by this driver.
+- **The effects' quads (`effects.rs`).** `AddGlowSprite`, `AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite` and
+  `AddGroundStrip` now take their four vertices (colour, points, normal, texture corners, opacities) from Rust;
+  `GetEffectFogFactor` is `ee_gfx_effect_fog_factor`. The C++ keeps the batches (the count, the flush when full,
+  the alpha reference, the `SetVertex` calls). 2,040 cases with the counts near full, so both flushes run.
+- **Fake vtables see garbage in unused argument registers.** The first quads golden logged the second integer
+  register of every rasterizer slot; `SetCulling` takes one argument and `SetAlphaTestingRefValue` a float (in an
+  XMM register), so those words were whatever the caller left there and would differ between the original and the
+  forwarder builds. Log only the arguments each slot takes; and never log a pointer's value (ASLR): log "p".
+- **The vtable stubs ran out.** `GERasterizer` has more than 64 slots: `SetZBuffer` jumped past the 64-slot table
+  into `type_info`'s vtable (a DEP fault). `common.h` has a 200-slot table now.
+- **Statics with unresolved constructors.** A driver that defines `gRenderSnapshot` runs `EERenderSnapshot`'s
+  out-of-line constructor at start-up (unresolved: a jump to zero before `main`); define it as raw storage under its
+  decorated name (`__asm__("?gRenderSnapshot@@3UEERenderSnapshot@@A")`). `UWideString`'s assignment needs the
+  platform's string functions: the scratch Rust library links `ee_plat_core` too.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: a building's placement footprint
+  (choose a building to place, over usable and blocked ground), the labels (a rally label, a selected unit under the
+  strip's top, the scenario editor's labels), the box selection (drag a box, past the view's edges; the box-select
+  fixture check clicks through it), the mini map (click and drag on it) and every 2D effect's quads (fire, smoke,
+  glows, the energy wave's strip) run only in the windowed game.
