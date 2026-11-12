@@ -4094,48 +4094,10 @@ void EEComplexUnit::Halt()
 // any weapon tag point; a legionnaire's special attack uses its heal range)
 bool EEComplexUnit::IsInReach(EEUnit* inTarget)
 {
-    EECombatHostReadScope theScope;   // TEST ONLY (CBQR golden): the original body in a lambda
+    EECombatHostReadScope theScope;
     uint32_t theTagBefore = (uint32_t)this->mWeaponTagPoint;
-    bool theReach = [&]() -> bool {
-    bool theResult = false;
-    EEUnitClass* theClass = this->GetUnitClass();
-    float theRange = this->GetStats()->GetRange();
-    bool theSpecial = false;
-    if (theClass->mUnitType == kUnitTypeX04RomanLegionnaire && this->mIsSpecialAttack) {
-        theSpecial = true;
-        theRange = theClass->mHealRange;
-    }
-    if (theRange != 0.0f && inTarget->mHitPoints > 0) {
-        if (!theClass->mIsMelee || theSpecial) {
-            if (theClass->mProjectileClass == NULL ||
-                (theClass->mProjectileClass->mCategory != kUnitCategoryProjectile && theClass->mProjectileClass->mCategory != kUnitCategoryBomb))
-                theResult = EEIsInRangeToHit(this, inTarget);
-            else {
-                float theExtraRange = this->mCollisionRadius;
-                if (EEGetHitDistanceSquared(this, inTarget, -10000.0f, -10000.0f) <=
-                    (theExtraRange + theRange) * (theExtraRange + theRange)) {
-                    EETagPointList* theTags = this->GetModel()->mTagPoints[this->mAnimation];
-                    unsigned long theCount = theTags != NULL ? theTags->GetNumTagPoints() : 0;
-                    unsigned long theFirst = this->mWeaponTagPoint;
-                    unsigned long theIndex = theFirst;
-                    do {
-                        if (this->mWeaponTagPoint != theIndex)
-                            this->mWeaponTagPoint = theIndex;
-                        theResult = EECanBallisticHit(this, inTarget);
-                        if (theCount <= 1)
-                            break;
-                        theIndex = (theIndex + 1) % theCount;
-                    } while (!theResult && theIndex != theFirst);
-                } else
-                    theResult = false;
-            }
-        } else {
-            float theDistance = EEGetHitDistanceSquared(this, inTarget, -10000.0f, -10000.0f);
-            theResult = EEIsInContactRange(this, inTarget, theDistance);
-        }
-    }
-    return theResult;
-    }();
+    // ee_combat reads.rs in_reach over the C++ host (EECombatGoals.cpp); CBQR records the outcome
+    bool theReach = EECombatIsInReach(this, inTarget);
     if (theScope.mOuter)
         EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, this, inTarget, theReach, theTagBefore, (uint32_t)this->mWeaponTagPoint);
     return theReach;

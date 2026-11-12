@@ -61,6 +61,17 @@ enum {
 };
 void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
                              uint32_t inExtra0 = 0, uint32_t inExtra1 = 0, uint32_t inExtra2 = 0);
+// The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
+// IsStillReachable and IsGateClosed (inGoal the attack goal), EEIsEnemyWithinRange, FacesPoint (inClass `this`)
+class EEUGAttackUnit;
+class GE3DPoint;
+EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
+bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
+bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
+bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
+
 // The nesting guard of a captured read (per thread): mOuter when no other captured read is running
 struct EECombatHostReadScope {
     EECombatHostReadScope();

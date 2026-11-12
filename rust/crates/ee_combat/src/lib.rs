@@ -22,6 +22,7 @@ pub mod goals;
 pub mod impact;
 pub mod launch;
 pub mod pursuer;
+pub mod reads;
 pub mod screen;
 pub mod search;
 pub mod search_ffi;
