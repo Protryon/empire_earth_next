@@ -3846,6 +3846,38 @@ tiles, those moving at 20. The port also loses 55 citizens to ships against the 
 Next: the port's far gathering against the C++'s: the game it hunts, which lies beyond the explored land the C++
 sees whole (fog); the mines it takes; and the enemy towers near both.
 
+### 8.59 The classic computer player in Lua: the raids' flight (EECPRMFleeRaids), the gatherers killed by towers (2026-11-12, EE-SIM)
+
+**The flight.** The port has EECPRMFleeRaids: the gatherers within 8 tiles of a danger zone (30 s) go home. Traced on
+seeds 2-17, the C++'s flight fired 774 times (2790 units) and the port's only 37 times (45 units). The C++'s zones come
+from 175 militia runs and from its naval flights: 101 for land units and 558 for boats, each zone made only where a
+unit left. For the port, the engine runs the naval flight and moves the units, but it puts the zone on the classic's
+own lists. The port now makes that zone itself: a hit on an own unit by a warship, once every 4 s, makes a zone if
+any own unit within 12 tiles leaves (the boats round a boat; the citizens and melee soldiers round a land unit).
+This is EECPRMNavalFlee's rule. §8.58's first try made a zone for every hit on a citizen or a boat.
+
+| (32 seeds) | the C++ | the port before | the port now |
+|---|---|---|---|
+| flight fires (units) | 498 (2530) | about 74 | 705 (3021) |
+| won-lost | | 13-14, 5 close | 12-14, 6 close |
+| Lua citizens lost | | 60.8 | 61.8 |
+| citizens killed by ships | 14 | about 110 | 116 |
+
+The flight now fires about as often as the C++'s: more, because the port is hit more. It changes the outcome very
+little. It is kept for fidelity.
+
+**The towers.** The port's citizens killed by enemy towers: 145 in 32 games, against the C++'s 40. They die at gold
+(52) and hunting (65). The C++'s rules for hunt and mine sites are the port's: FindMines takes game within 2 (near) or
+6 (far) drop-off distances of the nearest town centre or settlement, and skips a site with HasEnemyNear. HasEnemyNear
+is the classic's own test through sees_all: every armed unit in the influence box. It leaves out units whose target
+search has been idle for more than 60 s, and so a quiet tower too. The difference is what the port can see. Its
+centres and game are the explored ones, so it finds fewer near sites and takes the far ones. Giving it every resource
+through the fog was tried in §8.58 and lost badly (5-25). Next: the hunting and mining sites against the enemy's
+towers (EECPNextSiteThreat's remembered towers, which the fog-honest test has), and the game the port can see near
+home.
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
