@@ -938,6 +938,45 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// A command button that is always available.
+constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
+
+/// Go fanatic (0x28): a selected unit in unit set 0x2f that is not cloaked.
+constexpr static const uint32_t EE_SCREENS_BUTTON_FANATIC = 1;
+
+/// Unload (2): a selected unit that is not a teleporter short of the fortress unload power.
+constexpr static const uint32_t EE_SCREENS_BUTTON_UNLOAD = 2;
+
+/// A market trade (0x5dc..0x5e3): the player can afford it.
+constexpr static const uint32_t EE_SCREENS_BUTTON_TRADE = 3;
+
+/// Just-in-time manufacturing (0x29, 0x2a): not in the deathmatch delay.
+constexpr static const uint32_t EE_SCREENS_BUTTON_JIT = 4;
+
+/// A technology: the player's `CanProduce`.
+constexpr static const uint32_t EE_SCREENS_BUTTON_PRODUCE = 5;
+
+/// A calamity with a cost: a selected unit of the node's types with the power to pay it.
+constexpr static const uint32_t EE_SCREENS_BUTTON_POWER = 6;
+
+/// [`icon`]: no icon.
+constexpr static const uint32_t EE_SCREENS_BUTTON_ICON_NONE = 0;
+
+/// [`icon`]: the icon as the face bitmap.
+constexpr static const uint32_t EE_SCREENS_BUTTON_ICON_FACE = 1;
+
+/// [`icon`]: the icon as the pressed bitmap.
+constexpr static const uint32_t EE_SCREENS_BUTTON_ICON_PRESSED = 2;
+
+/// [`EeScreensPanelButton`]: a command button (`ShowCommandButton(button, control)`).
+constexpr static const uint32_t EE_SCREENS_PANEL_COMMAND = 0;
+
+/// [`EeScreensPanelButton`]: research technology `research` on `control` (`SetTechButton`).
+constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
+
+/// [`EeScreensPanelButton`]: the stop command on the first action button.
+constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
+
 /// A display mode as `UIControl::SetDisplayMode` takes it: 0 hidden, 1 shown.
 constexpr static const unsigned long EE_SCREENS_HIDDEN = 0;
 
@@ -6132,6 +6171,97 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// What a button's test reads besides the units.
+struct EeScreensButtonFacts {
+  /// The player has a selected group (else no unit test passes).
+  bool has_group;
+  bool affordable;
+  bool can_produce;
+  /// `gGameResources`, the game clock and the deathmatch JIT delay (seconds: `kWorldDeathmatchJitManufacturingDelay`).
+  long game_resources;
+  float clock;
+  unsigned long jit_delay;
+  long unload_cost;
+  long calamity_cost;
+};
+
+/// What a button's test reads of one selected unit (`present` false: the group's entry is empty).
+struct EeScreensButtonUnit {
+  bool present;
+  unsigned long unit_type;
+  long power;
+  /// The fanatic test: in unit set 0x2f, cloaked.
+  bool in_set;
+  bool cloaked;
+  /// The calamity test: the tech node holds the unit's type.
+  bool in_node;
+};
+
+/// A technology button's tooltip: where the name comes from, the cost, the population cost, the unit's name.
+struct EeScreensTechHelp {
+  /// 0 the class's name string, 1 the player's upgrade name, 2 the node's name string.
+  uint32_t name;
+  /// The cost as "Power: <cost>" (a calamity with a cost), else the node's cost string.
+  bool power;
+  /// " Pop Cost: <n>" (a class costing more than one).
+  bool population;
+  /// The node's name after the cost (a node that makes a unit and has a name).
+  bool unit_name;
+};
+
+/// A targeting mode a command starts (`Command`): the main game form's UI state, and for the attack ground and
+/// rally commands the cursor locked to a pointer first. The form then shows its cancel button and refreshes.
+struct EeScreensCommandMode {
+  long ui_state;
+  bool lock_cursor;
+  unsigned long pointer;
+};
+
+/// What `EEUIFMGMainGroup::ShowCommands` reads before it lays the panel out: whether it shows at all (a built,
+/// living, commandable complex unit of the local human, non-observing player, no targeting mode on) and what the
+/// mode's buttons need.
+struct EeScreensPanelView {
+  bool unit;
+  bool complex;
+  bool built;
+  bool alive;
+  bool commandable;
+  /// The unit's owner is the local player (not observing).
+  bool owned;
+  bool cancel_hidden;
+  bool player;
+  bool human;
+  /// The main group's mode: 1 and 3 the commands, 2 and 3 the research, 2 the stop button, 4 the market.
+  long mode;
+  /// The fanaticism power and a fanatic-capable unit; the just-in-time power and a rally point; its state.
+  bool fanatic;
+  bool jit;
+  bool jit_on;
+  /// The button objects' positions: go fanatic (0x28), JIT on and off (0x29, 0x2a), the eight trades.
+  long fanatic_position;
+  long jit_positions[2];
+  long trade_positions[8];
+  /// The class's nine command slots.
+  unsigned long commands[9];
+};
+
+/// One research technology of the class: its button object's position and id, its node's kind, and whether it is
+/// shown (a position in 0..10000, available, allowed or already queued).
+struct EeScreensPanelResearch {
+  long position;
+  long command;
+  long kind;
+  bool eligible;
+};
+
+/// One button the panel shows, in the order the original shows them.
+struct EeScreensPanelButton {
+  uint32_t kind;
+  unsigned long button;
+  uint32_t research;
+  unsigned long control;
 };
 
 /// What the status box's `Fill` and `Refresh` read of the selected unit: its class (`theClass`), its stats
@@ -13849,6 +13979,61 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// # Safety
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
+
+/// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
+uint32_t ee_screens_button_command_test(unsigned long button);
+
+/// Whether a technology button is a calamity's (its cost then decides the test).
+bool ee_screens_button_tech_is_calamity(long kind, unsigned long calamity);
+
+/// A technology button's test (`EE_SCREENS_BUTTON_POWER` or `_PRODUCE`).
+uint32_t ee_screens_button_tech_test(bool calamity, long cost);
+
+/// Whether the button is available under `test` (`units`: `count` selected units).
+bool ee_screens_button_available(uint32_t test,
+                                 const EeScreensButtonFacts *facts,
+                                 const EeScreensButtonUnit *units,
+                                 size_t count);
+
+/// The icon `CopyData` draws (`EE_SCREENS_BUTTON_ICON_*`).
+uint32_t ee_screens_button_icon(bool has_object,
+                                unsigned long button,
+                                unsigned long state,
+                                bool normal_is_pressed,
+                                bool focused_is_pressed,
+                                bool pressed_is_none);
+
+/// A command button's first tooltip string.
+long ee_screens_command_help_string(unsigned long button);
+
+/// Whether a command's tooltip adds the selected priest's conversion cost.
+bool ee_screens_command_help_priest(unsigned long button);
+
+/// A technology button's tooltip plan.
+void ee_screens_button_tech_help(bool has_class,
+                                 bool upgrade_named,
+                                 long population,
+                                 long kind,
+                                 long calamity_cost,
+                                 bool makes_unit,
+                                 long name_id,
+                                 EeScreensTechHelp *out);
+
+/// The targeting mode of command `button`: false when it starts none.
+bool ee_screens_command_mode(unsigned long button, EeScreensCommandMode *out);
+
+/// The panel's gate before the player's `IsHuman` (every other condition).
+bool ee_screens_panel_gate(const EeScreensPanelView *view);
+
+/// Whether the panel shows any button.
+bool ee_screens_panel_shown(const EeScreensPanelView *view);
+
+/// `ShowCommands`' buttons in order into `out` (room for `capacity`); returns how many.
+size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
+                                const EeScreensPanelResearch *research,
+                                size_t count,
+                                EeScreensPanelButton *out,
+                                size_t capacity);
 
 /// `GetAttributeText`: the base and the bonus "base+bonus" shows.
 void ee_screens_hud_attribute_text(float base, float bonus, long *out_base, long *out_bonus);

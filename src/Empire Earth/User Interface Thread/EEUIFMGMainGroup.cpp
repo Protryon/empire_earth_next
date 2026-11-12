@@ -55,6 +55,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
+#include "rust/ee_rust.h"   // ee_screens_panel_*: the command panel's layout (ee_screens command_panel.rs)
 #include "ee/EEUIManager.h"
 #include "ee/EEButtonObject.h"
 #include "ee/EEUnitBehavior.h"
@@ -306,7 +307,6 @@ void EEUIFMGMainGroup::ShowCommandButton(EEPlayer* inPlayer, EEUnit* inUnit, uns
 void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
 {
     EEComplexUnit* theComplex = inUnit ? inUnit->mComplexUnit : NULL;
-    long theFreeSlot = -1;
     this->mOwner->RemoveAllHotKeysForAGroup(2);
     unsigned long i; for (i = 0x6e; i < 0xce; i++) {
         this->mOwner->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
@@ -321,76 +321,93 @@ void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
     this->mOwner->GetControl(kMainGameTimedAtomicBomberRally)->SetDisplayMode(kDisplayModeHidden);
     EEPlayer* theLocalPlayer = gWorld.GetCurrentPlayer();
     EEPlayer* thePlayer = theLocalPlayer->mObserverMode ? NULL : theLocalPlayer;
-    if (!inUnit || !theComplex || !theComplex->mIsBuilt || !inUnit->mHitPoints || !theComplex->mIsCommandable ||
-        inUnit->mPlayer != thePlayer || this->mOwner->GetControl(kMainGameCancelUIMode)->GetDisplayMode() != kDisplayModeHidden || !thePlayer ||
-        thePlayer->IsHuman() != true)
+    // the layout is Rust's (ee_screens command_panel.rs panel_buttons) over what the C++ reads here
+    EeScreensPanelView theView;
+    memset(&theView, 0, sizeof(theView));
+    theView.unit = inUnit != NULL;
+    theView.complex = theComplex != NULL;
+    if (inUnit != NULL && theComplex != NULL) {
+        theView.built = theComplex->mIsBuilt;
+        theView.alive = inUnit->mHitPoints != 0;
+        theView.commandable = theComplex->mIsCommandable;
+        theView.owned = inUnit->mPlayer == thePlayer;
+    }
+    theView.cancel_hidden = this->mOwner->GetControl(kMainGameCancelUIMode)->GetDisplayMode() == kDisplayModeHidden;
+    theView.player = thePlayer != NULL;
+    if (!ee_screens_panel_gate(&theView))
+        return;
+    theView.human = thePlayer->IsHuman() == true;
+    if (!ee_screens_panel_shown(&theView))
         return;
     EEUnitClass* theClass = inUnit->mUnitClass;
     EETechTree* theTree = thePlayer->GetTechTree();
-    if (this->mMode == 4) {
+    theView.mode = this->mMode;
+    if (this->mMode == 1 || this->mMode == 3) {
+        theView.fanatic = gCivPowersManager.HasPower(thePlayer, kCivPowerFanaticism) &&
+                          gUnitSetManager.GetSet(0x2f)->Contains(inUnit->mUnitClass->mUnitType);
+        theView.jit = gCivPowersManager.HasPower(thePlayer, kCivPowerJustInTimeManufacturing) &&
+                      theComplex->mUnitClass->HasRallyPoint();
+        theView.jit_on = thePlayer->mJITManufacturing;
+        EEButtonObject* theObjects[3] = {EEButtonObject::Get(0x28), EEButtonObject::Get(0x29), EEButtonObject::Get(0x2a)};
+        theView.fanatic_position = theObjects[0] ? theObjects[0]->mPosition : 0;
+        theView.jit_positions[0] = theObjects[1] ? theObjects[1]->mPosition : 0;
+        theView.jit_positions[1] = theObjects[2] ? theObjects[2]->mPosition : 0;
+    } else if (this->mMode == 4) {
         for (long j = 0; j < 8; j++)
-            this->ShowCommandButton(thePlayer, inUnit, 0x5dc + j, EEButtonObject::Get(0x5dc + j)->mPosition + 0x6e);
-    } else if (this->mMode == 1 || this->mMode == 3) {
-        if (gCivPowersManager.HasPower(thePlayer, kCivPowerFanaticism) &&
-            gUnitSetManager.GetSet(0x2f)->Contains(inUnit->mUnitClass->mUnitType))
-            this->ShowCommandButton(thePlayer, inUnit, 0x28, EEButtonObject::Get(0x28)->mPosition + 0x6e);
-        if (gCivPowersManager.HasPower(thePlayer, kCivPowerJustInTimeManufacturing) && theComplex->mUnitClass->HasRallyPoint()) {
-            unsigned long theButton = thePlayer->mJITManufacturing ? 0x29 : 0x2a;
-            this->ShowCommandButton(thePlayer, inUnit, theButton, EEButtonObject::Get(theButton)->mPosition + 0x6e);
-        }
-        for (unsigned long k = 0; k < 9; k++) {
-            if (theClass->mCommands[k] >= 2 && theClass->mCommands[k] < 0x32)
-                this->ShowCommandButton(thePlayer, inUnit, theClass->mCommands[k], k + 0x4e);
-            else if (theFreeSlot < 0)
-                theFreeSlot = k;
-        }
-    } else if (this->mMode == 2) {
-        static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(kMainGameActionButton1))->SetCommandButton(3);
-        this->mOwner->GetControl(kMainGameActionButton1)->SetDisplayMode(kDisplayModeShown);
+            theView.trade_positions[j] = EEButtonObject::Get(0x5dc + j)->mPosition;
     }
+    for (unsigned long k = 0; k < 9; k++)
+        theView.commands[k] = theClass->mCommands[k];
+    std::vector<EeScreensPanelResearch> theResearch;
+    std::vector<EETechTreeNode*> theNodes;
     if (this->mMode == 2 || this->mMode == 3) {
         for (long m = 0; m < theClass->GetNumResearchTechnologies(); m++) {
             EETechTreeNode* theNode = theTree->Get(theClass->mResearchTechnologies[m]);
             EEButtonObject* theObject = theNode->mButton;
-            if (!(theObject->mPosition >= 0) || !(theObject->mPosition < 10000) || !theNode->GetIsAvailable() ||
-                (!theNode->mIsAllowed && !theComplex->IsResearchQueued(theNode->mData->mID)))
-                continue;
-            long theIndex = theObject->mPosition;
-            if (theIndex < 0 || theIndex > 0x5f)
-                theIndex = 0x5f;
-            long theCommand = theObject->mID;
-            if (theCommand < 0x32 && theNode->mData->mKind == 3) {
-                for (unsigned long n = theFreeSlot; n < 9; n++) {
-                    bool theFree = theClass->mCommands[n] < 2 || theClass->mCommands[n] >= 0x32;
-                    if (!theFree)
-                        continue;
-                    this->ShowCommandButton(thePlayer, inUnit, theCommand, n + 0x4e);
-                    theFreeSlot++;
-                    break;
-                }
-            } else {
-                EEUIFMGStatusButton* theButton = static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(theIndex + 0x6e));
-                theButton->SetTechButton(theClass->mResearchTechnologies[m], theClass->mUnitType, inUnit->mUnitID);
-                this->mOwner->GetControl(theIndex + 0x6e)->SetDisplayMode(kDisplayModeShown);
-                if (theNode->GetHotKey()) {
-                    theNode->GetHotKey()->SetAlwaysFire(true);
-                    UIEvent* theEvent = new EEUIEMGHotKeyStatusButton(theButton, true);
-                    theNode->GetHotKey()->SetJustPressedEvent(theEvent);
-                    theEvent->Dereference();
-                    theEvent = new EEUIEMGHotKeyStatusButton(theButton, false);
-                    theNode->GetHotKey()->SetJustUnpressedEvent(theEvent);
-                    theEvent->Dereference();
-                    UIHotKey theHotKey(this->mOwner, *theNode->GetHotKey());
-                    theHotKey.SetModifier(kKeyShift, 0);
-                    theEvent = new EEUIEMGHotKeyStatusButton(theButton, true);
-                    theHotKey.SetJustPressedEvent(theEvent);
-                    theEvent->Dereference();
-                    theEvent = new EEUIEMGHotKeyStatusButton(theButton, false);
-                    theHotKey.SetJustUnpressedEvent(theEvent);
-                    theEvent->Dereference();
-                    this->mOwner->AddHotKey(theHotKey, 2);
-                    this->mOwner->AddHotKey(*theNode->GetHotKey(), 2);
-                }
+            EeScreensPanelResearch theEntry;
+            theEntry.position = theObject->mPosition;
+            theEntry.command = theObject->mID;
+            theEntry.kind = theNode->mData->mKind;
+            theEntry.eligible = theObject->mPosition >= 0 && theObject->mPosition < 10000 && theNode->GetIsAvailable() &&
+                                (theNode->mIsAllowed || theComplex->IsResearchQueued(theNode->mData->mID));
+            theResearch.push_back(theEntry);
+            theNodes.push_back(theNode);
+        }
+    }
+    std::vector<EeScreensPanelButton> theButtons(8 + 2 + 9 + theResearch.size() + 1);
+    unsigned long theCount = ee_screens_panel_buttons(&theView, theResearch.empty() ? NULL : &theResearch[0],
+                                                      theResearch.size(), &theButtons[0], theButtons.size());
+    for (unsigned long b = 0; b < theCount; b++) {
+        const EeScreensPanelButton& theEntry = theButtons[b];
+        if (theEntry.kind == EE_SCREENS_PANEL_COMMAND) {
+            this->ShowCommandButton(thePlayer, inUnit, theEntry.button, theEntry.control);
+        } else if (theEntry.kind == EE_SCREENS_PANEL_STOP) {
+            static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(kMainGameActionButton1))->SetCommandButton(3);
+            this->mOwner->GetControl(kMainGameActionButton1)->SetDisplayMode(kDisplayModeShown);
+        } else {
+            long m = theEntry.research;
+            EETechTreeNode* theNode = theNodes[m];
+            EEUIFMGStatusButton* theButton = static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(theEntry.control));
+            theButton->SetTechButton(theClass->mResearchTechnologies[m], theClass->mUnitType, inUnit->mUnitID);
+            this->mOwner->GetControl(theEntry.control)->SetDisplayMode(kDisplayModeShown);
+            if (theNode->GetHotKey()) {
+                theNode->GetHotKey()->SetAlwaysFire(true);
+                UIEvent* theEvent = new EEUIEMGHotKeyStatusButton(theButton, true);
+                theNode->GetHotKey()->SetJustPressedEvent(theEvent);
+                theEvent->Dereference();
+                theEvent = new EEUIEMGHotKeyStatusButton(theButton, false);
+                theNode->GetHotKey()->SetJustUnpressedEvent(theEvent);
+                theEvent->Dereference();
+                UIHotKey theHotKey(this->mOwner, *theNode->GetHotKey());
+                theHotKey.SetModifier(kKeyShift, 0);
+                theEvent = new EEUIEMGHotKeyStatusButton(theButton, true);
+                theHotKey.SetJustPressedEvent(theEvent);
+                theEvent->Dereference();
+                theEvent = new EEUIEMGHotKeyStatusButton(theButton, false);
+                theHotKey.SetJustUnpressedEvent(theEvent);
+                theEvent->Dereference();
+                this->mOwner->AddHotKey(theHotKey, 2);
+                this->mOwner->AddHotKey(*theNode->GetHotKey(), 2);
             }
         }
     }
