@@ -4,8 +4,8 @@
 //! and the completions of the timers and repeating receives it made come here ([`ee_won_hostop_run`],
 //! [`ee_won_hostop_cleanup`], [`ee_won_hostop_callback`]), and everything the op does to a C++ object is one
 //! [`EeWonHostCall`] through one function the class binds ([`ee_won_hostop_bind`]). So an op ported here has no
-//! C++ class, no hook table and no shim of its own: `MultiPingOp` (multiping.rs) and `FilePushOp` (filepush.rs)
-//! are the first.
+//! C++ class, no hook table and no shim of its own: `MultiPingOp` (multiping.rs), `FilePushOp` (filepush.rs) and
+//! `FTPGetOp` (ftpop.rs) are the first.
 //!
 //! The calls are primitives of the original's statements (`new RecvBytesFromOp(n)`, `socket->QueueOp(op, t)`,
 //! `Track(op, id)`, `op->RunAsync(t)`, `Finish(status)`, `TimeLeft()`, a blocking `SendBytesTo`, ...), made in the
@@ -71,11 +71,19 @@ pub const EE_WON_HOST_OP_ADDR: i32 = 22;
 pub const EE_WON_HOST_OP_SOCKET: i32 = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 pub const EE_WON_HOST_PEER_AUTH_KEY: i32 = 24;
+/// `op->IsKilled()` -> out_num
+pub const EE_WON_HOST_OP_KILLED: i32 = 25;
 // Immediate socket calls:
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
 pub const EE_WON_HOST_SOCKET_BIND: i32 = 30;
 /// `socket->SetLengthFieldSize(num0)`
 pub const EE_WON_HOST_SOCKET_SET_LFS: i32 = 31;
+/// `IPAddr::SetWithDefaultPort(data, num0)` (a name lookup) -> out_addr, out_num (valid)
+pub const EE_WON_HOST_RESOLVE: i32 = 32;
+/// a receive op's `SetProgressCompletion(obj1, num0)`
+pub const EE_WON_HOST_RECV_PROGRESS: i32 = 33;
+/// a receive op's `SetFilePath(data)`, `SetAppendFile(num0)`
+pub const EE_WON_HOST_RECV_FILE: i32 = 34;
 // Blocking socket calls (status -> out_num):
 /// `socket->SendBytesTo(data, addr, num0)`
 pub const EE_WON_HOST_SEND_BYTES_TO: i32 = 40;
@@ -91,6 +99,8 @@ pub const EE_WON_HOST_RECV_BYTES: i32 = 44;
 pub const EE_WON_HOST_RECV_MSG: i32 = 45;
 /// `op->RunBlock(num0)` -> out_num (0/1)
 pub const EE_WON_HOST_RUN_BLOCK: i32 = 46;
+/// `socket->Connect(addr, num0)`
+pub const EE_WON_HOST_CONNECT: i32 = 47;
 // The op's file (one per op):
 /// `mFile.Attach(PlatFOpen(data, "rb"))` -> out_num (0: none)
 pub const EE_WON_HOST_FILE_OPEN: i32 = 50;
@@ -98,10 +108,12 @@ pub const EE_WON_HOST_FILE_OPEN: i32 = 50;
 pub const EE_WON_HOST_FILE_READ: i32 = 51;
 /// `mFile.Detach()`
 pub const EE_WON_HOST_FILE_CLOSE: i32 = 52;
+/// `stat(data)`'s size -> out_num (-1: no file)
+pub const EE_WON_HOST_FILE_SIZE: i32 = 53;
 // Calls that may call back into the op:
 /// `Finish(num0)`
 pub const EE_WON_HOST_FINISH: i32 = 60;
-/// `obj0->Kill(num0)`
+/// `obj0->Kill(num0)` (NULL: the op itself)
 pub const EE_WON_HOST_KILL: i32 = 61;
 /// `Track(obj0, num0)`
 pub const EE_WON_HOST_TRACK: i32 = 62;
@@ -347,6 +359,24 @@ impl<P: Plan> Host<P> {
     }
     pub(crate) fn op_socket(&self, op: Obj) -> Obj {
         self.invoke(EE_WON_HOST_OP_SOCKET, [op, Obj::none()], [0, 0], &[], [0; 6]).obj
+    }
+    pub(crate) fn op_killed(&self, op: Obj) -> bool {
+        self.num_of(EE_WON_HOST_OP_KILLED, op, [0, 0]) != 0
+    }
+    pub(crate) fn resolve(&self, host: &[u8], default_port: u16) -> [u8; 6] {
+        self.invoke(EE_WON_HOST_RESOLVE, [Obj::none(); 2], [i64::from(default_port), 0], host, [0; 6]).addr
+    }
+    pub(crate) fn connect(&self, socket: Obj, addr: [u8; 6], timeout: u32) -> i32 {
+        self.invoke(EE_WON_HOST_CONNECT, [socket, Obj::none()], [i64::from(timeout), 0], &[], addr).num as i32
+    }
+    pub(crate) fn recv_progress(&self, op: Obj, completion: Obj, interval: u32) {
+        self.invoke(EE_WON_HOST_RECV_PROGRESS, [op, completion], [i64::from(interval), 0], &[], [0; 6]);
+    }
+    pub(crate) fn recv_file(&self, op: Obj, path: &[u8], append: bool) {
+        self.invoke(EE_WON_HOST_RECV_FILE, [op, Obj::none()], [i64::from(append), 0], path, [0; 6]);
+    }
+    pub(crate) fn file_size(&self, path: &[u8]) -> i64 {
+        self.invoke(EE_WON_HOST_FILE_SIZE, [Obj::none(); 2], [0, 0], path, [0; 6]).num
     }
     pub(crate) fn peer_auth_key(&self, op: Obj) -> Option<Vec<u8>> {
         self.invoke(EE_WON_HOST_PEER_AUTH_KEY, [op, Obj::none()], [0, 0], &[], [0; 6]).bytes

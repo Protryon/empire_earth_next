@@ -1733,9 +1733,9 @@ public:
 };
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
-// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new); this class runs its hooks there and answers
-// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
-// ee_won_hostop_bytes, ee_won_hostop_set.
+// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url);
+// this class runs its hooks there and answers its calls on the C++ objects (ServerOp.cpp's HostCall). Results and
+// setters by number: ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
 class RustServerOp : public ServerOp {
 public:
     explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; a 4-byte length field, no auth

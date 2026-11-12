@@ -516,7 +516,7 @@ WON_TESTS = {
                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
     # version filter; the patch ops' requests and replies), the original's statements against
-    # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
+    # tests/won/won_ftp_msg.h and WONPatchMsg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
     # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
@@ -531,10 +531,10 @@ WON_TESTS = {
     # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
     # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
     "won_reqops_test": [],
-    # the Rust op base and the ops on it (MultiPingOp, FilePushOp): the original's statements against the Rust ops
-    # (ee_won hostop.rs, multiping.rs, filepush.rs) through the base's one call over a stand-in (golden:
-    # rust/crates/ee_won/src/golden_hostop.txt)
-    "won_hostop_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
+    # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
+    # (golden: rust/crates/ee_won/src/golden_hostop.txt)
+    "won_hostop_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp", WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)

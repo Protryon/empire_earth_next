@@ -38,6 +38,7 @@ pub mod file;
 pub mod filepush;
 pub mod flow;
 pub mod ftp;
+pub mod ftpop;
 pub mod fwop;
 pub mod getcert;
 pub mod guicfg;

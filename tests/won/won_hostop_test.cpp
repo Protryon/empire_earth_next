@@ -21,6 +21,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONBlowfish.h"
+#include "won_ftp_msg.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;
@@ -56,9 +57,11 @@ struct Standin {
     unsigned int mSeed;
     int mSerial, mStatus, mMode, mLfs, mLastSocket, mCalls;
     unsigned mTick;
+    int mLine; // the next line of the session LineBytes gives
     std::vector<int> mRands;
     std::vector<string> mAddrs;
     std::map<int, int> mOwn;  // the op's own references per object (NEW_*, ADD_REF, RELEASE)
+    std::map<int, int> mKinds; // each socket op's kind (its bytes: a line for a RecvCRMsgOp)
     string mTrace;
 };
 static Standin S;
@@ -142,6 +145,19 @@ static string PingBytes(bool* outNull)
                         (char)((id >> 24) & 0xff) };
     return string(r, 7);
 }
+// a RecvCRMsgOp's line (NUL ended): FTP replies of every kind
+static string LineBytes(bool* outNull)
+{
+    static const char* const k[] = { "220 ready", "331 need password", "230 logged in", "250 ok", "200 type set",
+                                     "227 Entering Passive Mode (10,0,0,1,4,1)", "350 restarting", "504 not implemented",
+                                     "150 opening", "226 done", "530 not logged in", "220-hello", "227 bad", "" };
+    // mostly the next line of a successful session (so the steps reach the data connection), else any
+    static const int kSession[] = { 0, 1, 2, 3, 4, 5, 6, 8, 9 };
+    int i = APick(5) != 0 ? kSession[S.mLine++ % 9] : APick(15);
+    *outNull = i == 14;
+    if (*outNull) return string();
+    return string(k[i]) + '\0';
+}
 static string Addr()
 {
     if (!S.mAddrs.empty() && APick(4) != 0) return S.mAddrs[APick((int)S.mAddrs.size())];
@@ -209,6 +225,7 @@ static void Call(EeWonHostCall* c)
         int id = NewObj();
         c->out_obj = P(id);
         if (n0 == EE_WON_HOST_OP_SEND_BYTES_TO) S.mAddrs.push_back(addr);
+        S.mKinds[id] = (int)n0;
         Log("op#%d k%d s%d n%d a%s d%s", id, (int)n0, o0, (int)n1, Hex(addr).c_str(), Hex(data).c_str());
         break;
     }
@@ -225,14 +242,16 @@ static void Call(EeWonHostCall* c)
         break;
     }
     case EE_WON_HOST_OP_STATUS: {
-        int v = RecvStatus();
+        std::map<int, int>::const_iterator k = S.mKinds.find(o0);
+        int v = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? SendStatus() : RecvStatus();
         c->out_num = v;
         Log("st#%d=%d", o0, v);
         break;
     }
     case EE_WON_HOST_OP_BYTES: {
         bool isNull;
-        string b = Bytes(&isNull);
+        std::map<int, int>::const_iterator k = S.mKinds.find(o0);
+        string b = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? LineBytes(&isNull) : Bytes(&isNull);
         Give(c, b, isNull);
         Log("bytes#%d=%s", o0, BytesLog(b, isNull).c_str());
         break;
@@ -326,6 +345,33 @@ static void Call(EeWonHostCall* c)
         break;
     }
     case EE_WON_HOST_FILE_CLOSE: Log("fclose"); break;
+    case EE_WON_HOST_OP_KILLED: {
+        int v = APick(6) == 0 ? 1 : 0;
+        c->out_num = v;
+        Log("killed#%d=%d", o0, v);
+        break;
+    }
+    case EE_WON_HOST_RESOLVE: {
+        string a = Addr();
+        memcpy(c->out_addr, a.data(), 6);
+        c->out_num = 1;
+        Log("resolve %s %d=%s", Hex(data).c_str(), (int)n0, Hex(a).c_str());
+        break;
+    }
+    case EE_WON_HOST_CONNECT: {
+        int v = SendStatus();
+        c->out_num = v;
+        Log("connect#%d %s t%u=%d", o0, Hex(addr).c_str(), (unsigned)n0, v);
+        break;
+    }
+    case EE_WON_HOST_RECV_PROGRESS: Log("progress#%d c%d %d", o0, o1, (int)n0); break;
+    case EE_WON_HOST_RECV_FILE: Log("rfile#%d %s %d", o0, Hex(data).c_str(), (int)n0); break;
+    case EE_WON_HOST_FILE_SIZE: {
+        int v = APick(3) == 0 ? -1 : APick(5000);
+        c->out_num = v;
+        Log("fsize %s=%d", Hex(data).c_str(), v);
+        break;
+    }
     case EE_WON_HOST_FINISH:
         Log("finish %d", (int)n0);
         if (S.mStatus == 100000) S.mStatus = (int)n0;
@@ -892,6 +938,204 @@ static string Results(const Op& o)
 }
 }
 
+// ---- the original's statements: FTPGetOp.cpp before the port (FtpMsg, won_ftp_msg.h, over the op stand-in; the
+// members the constructors left unset 0)
+
+namespace OrigFtp {
+enum { FTP_Track_RequestConnect = 1, FTP_Track_Request = 2, FTP_Track_DataConnect = 3, FTP_Track_RecvContent = 4 };
+struct Op {
+    enum RequestState { RequestState_Start, RequestState_User, RequestState_Password, RequestState_ChangeDir,
+                        RequestState_ChangeType, RequestState_Passive, RequestState_Restart, RequestState_Retrieve };
+    int mRequestSocket, mDataSocket;
+    string mHost, mRemotePath, mLocalPath, mUserName, mPassword, mActualPath, mActualFile;
+    bool mHasContent;
+    string mContent;
+    int mFTPStatus;
+    int mRecvChunkCompletion;
+    unsigned mRecvChunkSize;
+    IPAddr mDataAddr;
+    bool mIsBinary, mDoResume;
+    unsigned mLocalFileSize;
+    RequestState mRequestState;
+    Op() : mRequestSocket(0), mDataSocket(0), mHasContent(false), mFTPStatus(0), mRecvChunkCompletion(0),
+           mRecvChunkSize(0), mIsBinary(true), mDoResume(false), mLocalFileSize(0), mRequestState(RequestState_Start)
+    {
+        mUserName = "anonymous";
+        mPassword = "anonymous";
+        mDataAddr.SetSixByte("\0\0\0\0\0\0");
+    }
+    void SetUserName(const string& s) { mUserName = s; }
+    void SetPassword(const string& s) { mPassword = s; }
+    int GetMode() { return (int)Do(EE_WON_HOST_MODE).mNum; }
+    bool IsAsync() { return GetMode() == 1; }
+    unsigned TimeLeft() { return (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum; }
+    void Finish(int s) { Do(EE_WON_HOST_FINISH, 0, 0, s); }
+    int Track(int inOp, int inId) { Do(EE_WON_HOST_TRACK, inOp, 0, inId); return inOp; }
+    void RecvLineAsync();
+    bool SendRequest();
+    bool DoDataConnection();
+    void RecvContent();
+};
+static string Six(const IPAddr& a) { return string(a.GetSixByte(), 6); }
+static bool CheckStatus(Op& o, int theStatus)
+{
+    if (theStatus == 0)
+        return true;
+    o.Finish(theStatus);
+    return false;
+}
+static bool DoConnect(Op& o)
+{
+    string anAddr = Do(EE_WON_HOST_RESOLVE, 0, 0, 21, 0, o.mHost).mAddr; // IPAddr::SetWithDefaultPort(mHost, 21)
+    if (o.GetMode() == 1) {
+        int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_CONNECT, 0, string(), anAddr).mObj;
+        Do(EE_WON_HOST_QUEUE, o.mRequestSocket, o.Track(anOp, FTP_Track_RequestConnect), 0xffffffffu);
+        return false;
+    }
+    unsigned aTime = o.TimeLeft();
+    int aStatus = (int)Do(EE_WON_HOST_CONNECT, o.mRequestSocket, 0, aTime, 0, string(), anAddr).mNum;
+    return CheckStatus(o, aStatus);
+}
+void Op::RecvLineAsync()
+{
+    int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_RECV_CR_MSG).mObj;
+    Do(EE_WON_HOST_QUEUE, this->mRequestSocket, this->Track(anOp, FTP_Track_Request), 0xffffffffu);
+}
+bool Op::SendRequest()
+{
+    std::string aReq = FtpMsg<Op>::Command(*this);
+    if (this->GetMode() == 1) {
+        int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_SEND_BYTES, 0, aReq).mObj;
+        Do(EE_WON_HOST_QUEUE, this->mRequestSocket, this->Track(anOp, 0), 0xffffffffu);
+        this->RecvLineAsync();
+        return false;
+    }
+    unsigned aTime = this->TimeLeft();
+    Do(EE_WON_HOST_SEND_BYTES, this->mRequestSocket, 0, aTime, 0, aReq);
+    return true;
+}
+static bool HandleReply(Op& o, int theReply)
+{
+    if (!CheckStatus(o, (int)Do(EE_WON_HOST_OP_STATUS, theReply).mNum))
+        return false;
+    string aLine = Do(EE_WON_HOST_OP_BYTES, theReply).mBytes;
+    return FtpMsg<Op>::HandleReply(o, aLine.data(), (int)aLine.length());
+}
+bool Op::DoDataConnection()
+{
+    if (this->GetMode() == 1) {
+        int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_CONNECT, 0, string(), Six(this->mDataAddr)).mObj;
+        Do(EE_WON_HOST_QUEUE, this->mDataSocket, this->Track(anOp, FTP_Track_DataConnect), 0xffffffffu);
+        return false;
+    }
+    unsigned aTime = this->TimeLeft();
+    int aStatus = (int)Do(EE_WON_HOST_CONNECT, this->mDataSocket, 0, aTime, 0, string(), Six(this->mDataAddr)).mNum;
+    if (!CheckStatus(*this, aStatus))
+        return false;
+    return true;
+}
+void Op::RecvContent()
+{
+    int aRecvBytes = Do(EE_WON_HOST_NEW_OP, this->mDataSocket, 0, EE_WON_HOST_OP_RECV_BYTES, 0).mObj;
+    if (this->mRecvChunkCompletion != 0)
+        Do(EE_WON_HOST_RECV_PROGRESS, aRecvBytes, this->mRecvChunkCompletion, this->mRecvChunkSize);
+    if (!this->mLocalPath.empty())
+        Do(EE_WON_HOST_RECV_FILE, aRecvBytes, 0, this->mDoResume ? 1 : 0, 0, this->mLocalPath);
+    if (this->GetMode() == 1) {
+        this->Track(aRecvBytes, FTP_Track_RecvContent);
+        Do(EE_WON_HOST_RUN_ASYNC, aRecvBytes, 0, 0xffffffffu);
+    } else {
+        unsigned aTime = this->TimeLeft();
+        if (Do(EE_WON_HOST_RUN_BLOCK, aRecvBytes, 0, aTime).mNum != 0) {
+            if (this->mLocalPath.empty()) {
+                Res r = Do(EE_WON_HOST_OP_BYTES, aRecvBytes);
+                this->mHasContent = !r.mNull;
+                this->mContent = r.mBytes;
+            }
+        }
+        this->Finish((int)Do(EE_WON_HOST_OP_STATUS, aRecvBytes).mNum);
+    }
+}
+static bool CallbackHook(Op& o, int theOp, int theParam)
+{
+    if (Do(EE_WON_HOST_OP_KILLED, theOp).mNum != 0) {
+        Do(EE_WON_HOST_KILL, 0, 0, 1);
+        return true;
+    }
+    if (!((int)Do(EE_WON_HOST_OP_STATUS, theOp).mNum == 0)) {
+        o.Finish((int)Do(EE_WON_HOST_OP_STATUS, theOp).mNum);
+        return true;
+    }
+    switch (theParam) {
+    case FTP_Track_RequestConnect: o.RecvLineAsync(); break;
+    case FTP_Track_DataConnect: o.SendRequest(); break;
+    case FTP_Track_Request: HandleReply(o, theOp); break;
+    case FTP_Track_RecvContent:
+        if (o.mLocalPath.empty() && ((int)Do(EE_WON_HOST_OP_STATUS, theOp).mNum == 0)) {
+            Res r = Do(EE_WON_HOST_OP_BYTES, theOp);
+            o.mHasContent = !r.mNull;
+            o.mContent = r.mBytes;
+        }
+        o.Finish((int)Do(EE_WON_HOST_OP_STATUS, theOp).mNum);
+        break;
+    default: return false;
+    }
+    return true;
+}
+static void RunHook(Op& o)
+{
+    o.mHasContent = false;
+    o.mContent.clear();
+    o.mFTPStatus = 0;
+    if (o.mDoResume) {
+        long long aSize = Do(EE_WON_HOST_FILE_SIZE, 0, 0, 0, 0, o.mLocalPath).mNum; // stat
+        if (aSize >= 0)
+            o.mLocalFileSize = (unsigned)aSize;
+        else
+            o.mDoResume = false;
+    }
+    o.mRequestSocket = Do(EE_WON_HOST_NEW_SOCKET, 0, 0, 0).mObj;
+    o.mDataSocket = Do(EE_WON_HOST_NEW_SOCKET, 0, 0, 0).mObj;
+    o.mRequestState = Op::RequestState_Start;
+    if (!DoConnect(o))
+        return;
+    while (true) {
+        int aRecvOp = Do(EE_WON_HOST_NEW_OP, o.mRequestSocket, 0, EE_WON_HOST_OP_RECV_CR_MSG).mObj;
+        Do(EE_WON_HOST_RUN_BLOCK, aRecvOp, 0, o.TimeLeft());
+        if (!HandleReply(o, aRecvOp))
+            return;
+    }
+}
+static void CleanupHook(Op& o)
+{
+    Do(EE_WON_HOST_BASE_CLEANUP);
+    if (o.mRequestSocket != 0) {
+        Do(EE_WON_HOST_CLOSE, o.mRequestSocket);
+        o.mRequestSocket = 0;
+    }
+    if (o.mDataSocket != 0) {
+        Do(EE_WON_HOST_CLOSE, o.mDataSocket);
+        o.mDataSocket = 0;
+    }
+}
+static string Describe(const Op& o)
+{
+    char b[400];
+    snprintf(b, sizeof(b), " st %d chunk %d:%u data %s bin %d resume %d size %u state %d rsock %d dsock %d", o.mFTPStatus,
+             o.mRecvChunkCompletion, o.mRecvChunkSize, Hex(Six(o.mDataAddr)).c_str(), o.mIsBinary ? 1 : 0,
+             o.mDoResume ? 1 : 0, o.mLocalFileSize, (int)o.mRequestState, o.mRequestSocket, o.mDataSocket);
+    return "host " + Hex(o.mHost) + " remote " + Hex(o.mRemotePath) + " local " + Hex(o.mLocalPath) + " user " +
+           Hex(o.mUserName) + " pass " + Hex(o.mPassword) + " path " + Hex(o.mActualPath) + " file " +
+           Hex(o.mActualFile) + " content " + (o.mHasContent ? Hex(o.mContent) : string("null")) + b;
+}
+static string Results(const Op& o)
+{
+    char b[40];
+    snprintf(b, sizeof(b), "st %d ", o.mFTPStatus);
+    return b + (o.mHasContent ? Hex(o.mContent) : string("null")) + " " + Hex(o.mLocalPath) + " " + Hex(o.mRemotePath);
+}
+}
+
 // ---- the Rust half: the ops through the base's C interface, bound to the same stand-in
 
 static void DescribeSink(void* inContext, const uint8_t* inData, size_t inLength)
@@ -976,6 +1220,79 @@ static Step MakePushStep()
     default: break;
     }
     return s;
+}
+
+static const char* const kFtpUrls[] = { "ftp://host.example/dir/file.bin", "ftp://bob:pw@ftp.won.net/patch.exe",
+                                        "ftp://anon@h/a/b/c.txt", "ftp://h" };
+static const char* const kFtpPaths[] = { "x.bin", "/top/y.txt", "a/b/", "" };
+
+static Step MakeFtpStep()
+{
+    static const int kKinds[] = { 0, 0, 1, 2, 3, 4, 5, 5, 6, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 10, 11 };
+    Step s;
+    s.mKind = kKinds[Pick(21)];
+    s.mA = s.mB = 0;
+    switch (s.mKind) {
+    case 0: s.mData = kNames[Pick(4)]; break;
+    case 1: s.mData = kFtpPaths[Pick(4)]; break;
+    case 2: case 3: s.mData = kNames[Pick(4)]; break;
+    case 4: case 5: s.mA = Pick(2); break;
+    case 6: s.mA = Pick(2); s.mB = Pick(2) ? 10000 : 7; break;          // chunk (completion, size)
+    case 7: s.mA = Pick(2) + 1; break;                                   // run (mode)
+    case 8: case 9: { static const int k[] = { 0, 1, 2, 2, 2, 2, 3, 4, 4, 7 }; s.mA = k[Pick(10)]; break; }
+    default: break;
+    }
+    return s;
+}
+static string FtpStep(OrigFtp::Op* o, EeWonHostOp* r, const Step& s)
+{
+    S.mTrace.clear();
+    S.mCalls = 0;
+    string ret = "-";
+    switch (s.mKind) {
+    case 0: if (o) o->mLocalPath = s.mData; else RSet(r, EE_WON_FTPGET_LOCAL_PATH, 0, s.mData); break;
+    case 1: if (o) FtpMsg<OrigFtp::Op>::SetRemotePath(*o, s.mData); else RSet(r, EE_WON_FTPGET_REMOTE_PATH, 0, s.mData); break;
+    case 2: if (o) o->SetUserName(s.mData); else RSet(r, EE_WON_FTPGET_USER, 0, s.mData); break;
+    case 3: if (o) o->SetPassword(s.mData); else RSet(r, EE_WON_FTPGET_PASSWORD, 0, s.mData); break;
+    case 4: if (o) o->mIsBinary = s.mA != 0; else RSet(r, EE_WON_FTPGET_BINARY, s.mA); break;
+    case 5: if (o) o->mDoResume = s.mA != 0; else RSet(r, EE_WON_FTPGET_RESUME, s.mA); break;
+    case 6: {
+        int c = s.mA ? NewObj() : 0;
+        if (o) { o->mRecvChunkCompletion = c; o->mRecvChunkSize = (unsigned)s.mB; }
+        else RSet(r, EE_WON_FTPGET_CHUNK, s.mB, string(), NULL, c);
+        if (c) S.mOwn[c]--;
+        break;
+    }
+    case 7:
+        S.mMode = (int)s.mA;
+        S.mStatus = 100000;
+        if (o) OrigFtp::RunHook(*o); else ee_won_hostop_run(r);
+        break;
+    case 8: case 9: {
+        int done = ++S.mSerial;
+        if (s.mA == 2) S.mKinds[done] = EE_WON_HOST_OP_RECV_CR_MSG; // the reply ops are line receives
+        bool b;
+        if (o) b = OrigFtp::CallbackHook(*o, done, (int)s.mA); else b = ee_won_hostop_callback(r, (int)s.mA, P(done));
+        ret = b ? "1" : "0";
+        break;
+    }
+    case 10: if (o) OrigFtp::CleanupHook(*o); else ee_won_hostop_cleanup(r); break;
+    case 11: {
+        if (o) ret = OrigFtp::Results(*o);
+        else {
+            char b[40];
+            snprintf(b, sizeof(b), "st %d ", (int)ee_won_hostop_num(r, EE_WON_FTPGET_STATUS, 0));
+            string c, l, m;
+            bool has = ee_won_hostop_bytes(r, EE_WON_FTPGET_CONTENT, 0, DescribeSink, &c);
+            ee_won_hostop_bytes(r, EE_WON_FTPGET_LOCAL, 0, DescribeSink, &l);
+            ee_won_hostop_bytes(r, EE_WON_FTPGET_REMOTE, 0, DescribeSink, &m);
+            ret = b + (has ? Hex(c) : string("null")) + " " + Hex(l) + " " + Hex(m);
+        }
+        break;
+    }
+    }
+    string d = o ? OrigFtp::Describe(*o) : RDescribe(r);
+    return ret + "|" + S.mTrace + "|" + d;
 }
 
 static string StepText(char inOp, const Step& s)
@@ -1098,9 +1415,11 @@ static void Reset(unsigned inSeed)
     S.mLastSocket = 0;
     S.mCalls = 0;
     S.mTick = 0;
+    S.mLine = 0;
     S.mRands.clear();
     S.mAddrs.clear();
     S.mOwn.clear();
+    S.mKinds.clear();
     S.mTrace.clear();
     sTimer = 0;
 }
@@ -1119,8 +1438,14 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
 {
     unsigned aSeed = Next();
     std::vector<Step> steps;
-    for (int i = 0; i < inSteps; i++) steps.push_back(inOp == 'M' ? MakePingStep() : MakePushStep());
+    for (int i = 0; i < inSteps; i++)
+        steps.push_back(inOp == 'M' ? MakePingStep() : inOp == 'F' ? MakePushStep() : MakeFtpStep());
     string addr(kAddrs[Pick(6)], 6);
+    if (inOp == 'P') { // FTPGetOp(url, extract): the URL's index and the flag
+        addr.assign(2, '\0');
+        addr[0] = (char)Pick(4);
+        addr[1] = (char)Pick(2);
+    }
     if (inPrint) printf("S %c %u %d %s\n", inOp, aSeed, inSteps, Hex(addr).c_str());
     // the original
     std::vector<string> orig;
@@ -1128,9 +1453,13 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     if (inOp == 'M') {
         OrigPing::Op p;
         for (size_t i = 0; i < steps.size(); i++) orig.push_back(PingStep(&p, NULL, steps[i]));
-    } else {
+    } else if (inOp == 'F') {
         OrigPush::Op f(addr);
         for (size_t i = 0; i < steps.size(); i++) orig.push_back(PushStep(&f, NULL, steps[i]));
+    } else {
+        OrigFtp::Op f;
+        FtpMsg<OrigFtp::Op>::FromURL(f, kFtpUrls[(int)addr[0]], addr[1] != 0);
+        for (size_t i = 0; i < steps.size(); i++) orig.push_back(FtpStep(&f, NULL, steps[i]));
     }
     if (inPrint) {
         for (size_t i = 0; i < steps.size(); i++) printf("%s => %s\n", StepText(inOp, steps[i]).c_str(), orig[i].c_str());
@@ -1138,10 +1467,17 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     }
     // the Rust op
     Reset(aSeed);
-    EeWonHostOp* r = inOp == 'M' ? ee_won_multiping_new() : ee_won_filepush_new(reinterpret_cast<const uint8_t*>(addr.data()));
+    EeWonHostOp* r;
+    if (inOp == 'M') r = ee_won_multiping_new();
+    else if (inOp == 'F') r = ee_won_filepush_new(reinterpret_cast<const uint8_t*>(addr.data()));
+    else {
+        const char* u = kFtpUrls[(int)addr[0]];
+        r = ee_won_ftpget_new_url(reinterpret_cast<const uint8_t*>(u), strlen(u), addr[1] != 0);
+    }
     ee_won_hostop_bind(r, HostFn, NULL);
     for (size_t i = 0; i < steps.size(); i++) {
-        string got = inOp == 'M' ? PingStep(NULL, r, steps[i]) : PushStep(NULL, r, steps[i]);
+        string got = inOp == 'M' ? PingStep(NULL, r, steps[i]) : inOp == 'F' ? PushStep(NULL, r, steps[i])
+                                                                              : FtpStep(NULL, r, steps[i]);
         CHECK(got == orig[i]);
         if (got != orig[i] && sFailures < 6)
             printf("%s\n  orig %s\n  rust %s\n", StepText(inOp, steps[i]).c_str(), orig[i].c_str(), got.c_str());
@@ -1161,10 +1497,12 @@ int main(int argc, char** argv)
     if (aPrint > 0) {
         for (int i = 0; i < aPrint; i++) Sequence('M', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('F', 8 + Pick(40), true);
+        for (int i = 0; i < aPrint; i++) Sequence('P', 8 + Pick(40), true);
         return 0;
     }
     for (int i = 0; i < aCount; i++) Sequence('M', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('F', 8 + Pick(40), false);
+    for (int i = 0; i < aCount; i++) Sequence('P', 8 + Pick(40), false);
     printf("won_hostop_test: %lld checks, %d failed\n", sChecks, sFailures);
     return sFailures;
 }

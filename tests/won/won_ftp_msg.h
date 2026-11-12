@@ -1,7 +1,8 @@
 // FTPGetOp's URL, commands and replies through ee_won's ftp module (rust/crates/ee_won/src/ftp.rs): Rust splits the
 // URL and path, writes the commands, reads the status and passive replies and decides each reply's step; this
-// applies them to the op's members in the original's order (FTPGetOp.cpp's statements). A template over the op so
-// that tests/won/won_misc_test.cpp runs the same code over a stand-in; FTPGetOp makes it a friend.
+// applies them to the op's members in the original's order (FTPGetOp.cpp's statements). A template over the op:
+// tests/won/won_misc_test.cpp runs it over a stand-in, and won_hostop_test's original half of FTPGetOp over its
+// own (the op is the Rust ftpop.rs since round 9; moved here from include/ee/wonapi/WONFtpMsg.h).
 #pragma once
 #include <string>
 #include "ee/wonapi/WONHttpMsg.h"

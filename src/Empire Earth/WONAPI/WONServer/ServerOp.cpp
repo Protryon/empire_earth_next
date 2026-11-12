@@ -81,6 +81,7 @@ void ServerOp::RecvMsgAsync(int theTrackId)
 #include <time.h>
 #include <stdlib.h>
 #include <vector>
+#include <sys/stat.h>
 #include "platform/PlatFile.h"
 namespace WONAPI {
 namespace {
@@ -196,6 +197,31 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         if (aSession != NULL) Give(c, aSession->GetKey().GetKey(), aSession->GetKey().GetKeyLen());
         break;
     }
+    case EE_WON_HOST_OP_KILLED: c->out_num = Op(o0)->IsKilled() ? 1 : 0; break;
+    case EE_WON_HOST_RESOLVE: {
+        IPAddr anAddr;
+        c->out_num = anAddr.SetWithDefaultPort(std::string(reinterpret_cast<const char*>(c->data), c->len),
+                                               (unsigned short)n0) ? 1 : 0;
+        GiveAddr(c, anAddr);
+        break;
+    }
+    case EE_WON_HOST_RECV_PROGRESS:
+        static_cast<RecvBytesOp*>(Op(o0))->SetProgressCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(Obj(c->obj[1])),
+                                                                 (long)n0);
+        break;
+    case EE_WON_HOST_RECV_FILE: {
+        RecvBytesOp* anOp = static_cast<RecvBytesOp*>(Op(o0));
+        anOp->SetFilePath(std::string(reinterpret_cast<const char*>(c->data), c->len));
+        anOp->SetAppendFile(n0 != 0);
+        break;
+    }
+    case EE_WON_HOST_CONNECT: c->out_num = Sock(o0)->Connect(Addr(c), (unsigned long)n0); break;
+    case EE_WON_HOST_FILE_SIZE: {
+        std::string aPath(reinterpret_cast<const char*>(c->data), c->len);
+        struct stat anInfo;
+        c->out_num = stat(aPath.c_str(), &anInfo) == 0 ? (long long)anInfo.st_size : -1;
+        break;
+    }
     case EE_WON_HOST_SOCKET_BIND: c->out_num = Sock(o0)->Fn2B0D90((unsigned short)n0, n1 != 0); break;
     case EE_WON_HOST_SOCKET_SET_LFS: Sock(o0)->SetLengthFieldSize((unsigned char)n0); break;
     case EE_WON_HOST_SEND_BYTES_TO: c->out_num = Sock(o0)->SendBytesTo(Buf(c), Addr(c), (unsigned long)n0); break;
@@ -238,7 +264,7 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         o->mFile = NULL;
         break;
     case EE_WON_HOST_FINISH: o->Finish((WONStatus)n0); break;
-    case EE_WON_HOST_KILL: Op(o0)->Kill(n0 != 0); break;
+    case EE_WON_HOST_KILL: (o0 != NULL ? Op(o0) : o)->Kill(n0 != 0); break;
     case EE_WON_HOST_TRACK: o->Track(Op(o0), (int)n0); break;
     case EE_WON_HOST_QUEUE: Sock(o0)->QueueOp(static_cast<SocketOp*>(Op(c->obj[1])), (long)n0); break;
     case EE_WON_HOST_RUN_ASYNC: Op(o0)->RunAsync((long)n0); break;

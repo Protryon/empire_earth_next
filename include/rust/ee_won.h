@@ -345,6 +345,34 @@ constexpr static const int32_t EE_WON_FTP_RECV = 4;
 /// return false (an unknown state)
 constexpr static const int32_t EE_WON_FTP_NONE = 5;
 
+/// `SetLocalPath`, `SetRemotePath`, `SetUserName`, `SetPassword` (the bytes)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL_PATH = 1;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE_PATH = 2;
+
+constexpr static const int32_t EE_WON_FTPGET_USER = 3;
+
+constexpr static const int32_t EE_WON_FTPGET_PASSWORD = 4;
+
+/// `SetIsBinary`, `SetDoResume` (the number)
+constexpr static const int32_t EE_WON_FTPGET_BINARY = 5;
+
+constexpr static const int32_t EE_WON_FTPGET_RESUME = 6;
+
+/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
+constexpr static const int32_t EE_WON_FTPGET_CHUNK = 7;
+
+/// `GetFTPStatus()` (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FTPGET_STATUS = 10;
+
+/// `GetContent()` (`ee_won_hostop_bytes`; none: NULL)
+constexpr static const int32_t EE_WON_FTPGET_CONTENT = 11;
+
+/// `GetLocalPath()`, `GetRemotePath()` (`ee_won_hostop_bytes`)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL = 12;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE = 13;
+
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
 
@@ -764,11 +792,23 @@ constexpr static const int32_t EE_WON_HOST_OP_SOCKET = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 constexpr static const int32_t EE_WON_HOST_PEER_AUTH_KEY = 24;
 
+/// `op->IsKilled()` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_KILLED = 25;
+
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
 constexpr static const int32_t EE_WON_HOST_SOCKET_BIND = 30;
 
 /// `socket->SetLengthFieldSize(num0)`
 constexpr static const int32_t EE_WON_HOST_SOCKET_SET_LFS = 31;
+
+/// `IPAddr::SetWithDefaultPort(data, num0)` (a name lookup) -> out_addr, out_num (valid)
+constexpr static const int32_t EE_WON_HOST_RESOLVE = 32;
+
+/// a receive op's `SetProgressCompletion(obj1, num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_PROGRESS = 33;
+
+/// a receive op's `SetFilePath(data)`, `SetAppendFile(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_FILE = 34;
 
 /// `socket->SendBytesTo(data, addr, num0)`
 constexpr static const int32_t EE_WON_HOST_SEND_BYTES_TO = 40;
@@ -791,6 +831,9 @@ constexpr static const int32_t EE_WON_HOST_RECV_MSG = 45;
 /// `op->RunBlock(num0)` -> out_num (0/1)
 constexpr static const int32_t EE_WON_HOST_RUN_BLOCK = 46;
 
+/// `socket->Connect(addr, num0)`
+constexpr static const int32_t EE_WON_HOST_CONNECT = 47;
+
 /// `mFile.Attach(PlatFOpen(data, "rb"))` -> out_num (0: none)
 constexpr static const int32_t EE_WON_HOST_FILE_OPEN = 50;
 
@@ -800,10 +843,13 @@ constexpr static const int32_t EE_WON_HOST_FILE_READ = 51;
 /// `mFile.Detach()`
 constexpr static const int32_t EE_WON_HOST_FILE_CLOSE = 52;
 
+/// `stat(data)`'s size -> out_num (-1: no file)
+constexpr static const int32_t EE_WON_HOST_FILE_SIZE = 53;
+
 /// `Finish(num0)`
 constexpr static const int32_t EE_WON_HOST_FINISH = 60;
 
-/// `obj0->Kill(num0)`
+/// `obj0->Kill(num0)` (NULL: the op itself)
 constexpr static const int32_t EE_WON_HOST_KILL = 61;
 
 /// `Track(obj0, num0)`
@@ -5364,6 +5410,21 @@ void ee_won_ftp_reply(const uint8_t *line,
                       bool has_directory,
                       bool resume,
                       EeWonFtpStep *out);
+
+/// `new FTPGetOp(host, remotePath)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_ftpget_new(const uint8_t *host,
+                               size_t host_len,
+                               const uint8_t *path,
+                               size_t path_len);
+
+/// `new FTPGetOp(url, doExtractUserAndPassword)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_ftpget_new_url(const uint8_t *url, size_t len, bool extract);
 
 /// `DetectFirewallOp`'s members after `Init`.
 EeWonFirewallOp *ee_won_fwop_new();

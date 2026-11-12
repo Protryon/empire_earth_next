@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::filepush::*;
+use crate::ftpop::*;
 use crate::multiping::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -19,9 +20,11 @@ struct Standin {
     last_socket: i32,
     calls: i32,
     tick: u32,
+    line: i32,
     rands: Vec<i32>,
     addrs: Vec<[u8; 6]>,
     own: BTreeMap<i32, i32>,
+    kinds: BTreeMap<i32, i64>,
     trace: String,
 }
 
@@ -124,6 +127,39 @@ impl Standin {
         let k = self.pick(if n < 3 { n as i32 } else { 3 }) as usize;
         Some(Standin::ping_reply(self.rands[n - 1 - k]))
     }
+    fn line_bytes(&mut self) -> Option<Vec<u8>> {
+        const K: [&str; 14] = [
+            "220 ready",
+            "331 need password",
+            "230 logged in",
+            "250 ok",
+            "200 type set",
+            "227 Entering Passive Mode (10,0,0,1,4,1)",
+            "350 restarting",
+            "504 not implemented",
+            "150 opening",
+            "226 done",
+            "530 not logged in",
+            "220-hello",
+            "227 bad",
+            "",
+        ];
+        // mostly the next line of a successful session, else any
+        const SESSION: [usize; 9] = [0, 1, 2, 3, 4, 5, 6, 8, 9];
+        let i = if self.pick(5) != 0 {
+            let l = SESSION[(self.line % 9) as usize];
+            self.line += 1;
+            l
+        } else {
+            self.pick(15) as usize
+        };
+        if i == 14 {
+            return None;
+        }
+        let mut b = K[i].as_bytes().to_vec();
+        b.push(0);
+        Some(b)
+    }
     fn addr(&mut self) -> [u8; 6] {
         if !self.addrs.is_empty() && self.pick(4) != 0 {
             let n = self.addrs.len() as i32;
@@ -214,6 +250,7 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 if n0 == EE_WON_HOST_OP_SEND_BYTES_TO {
                     s.addrs.push(addr);
                 }
+                s.kinds.insert(id, n0);
                 s.log(format!("op#{id} k{} s{o0} n{} a{} d{}", n0 as i32, n1 as i32, hex(&addr), hex(&data)));
             }
             EE_WON_HOST_NEW_TIMER => {
@@ -227,12 +264,16 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 s.log(format!("pauth#{id} s{o0} a{} {}", hex(&addr), n0 as i32));
             }
             EE_WON_HOST_OP_STATUS => {
-                let v = s.recv_status();
+                let v = if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) {
+                    s.send_status()
+                } else {
+                    s.recv_status()
+                };
                 c.out_num = i64::from(v);
                 s.log(format!("st#{o0}={v}"));
             }
             EE_WON_HOST_OP_BYTES => {
-                let b = s.bytes();
+                let b = if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) { s.line_bytes() } else { s.bytes() };
                 // SAFETY: during the call
                 unsafe { give(c, &b) };
                 s.log(format!("bytes#{o0}={}", blog(&b)));
@@ -316,6 +357,29 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 s.log(format!("fread {}={}", n0 as u32, hex(&b)));
             }
             EE_WON_HOST_FILE_CLOSE => s.log("fclose".into()),
+            EE_WON_HOST_OP_KILLED => {
+                let v = i64::from(s.pick(6) == 0);
+                c.out_num = v;
+                s.log(format!("killed#{o0}={v}"));
+            }
+            EE_WON_HOST_RESOLVE => {
+                let a = s.addr();
+                c.out_addr = a;
+                c.out_num = 1;
+                s.log(format!("resolve {} {}={}", hex(&data), n0 as i32, hex(&a)));
+            }
+            EE_WON_HOST_CONNECT => {
+                let v = s.send_status();
+                c.out_num = i64::from(v);
+                s.log(format!("connect#{o0} {} t{}={v}", hex(&addr), n0 as u32));
+            }
+            EE_WON_HOST_RECV_PROGRESS => s.log(format!("progress#{o0} c{o1} {}", n0 as i32)),
+            EE_WON_HOST_RECV_FILE => s.log(format!("rfile#{o0} {} {}", hex(&data), n0 as i32)),
+            EE_WON_HOST_FILE_SIZE => {
+                let v = if s.pick(3) == 0 { -1 } else { s.pick(5000) };
+                c.out_num = i64::from(v);
+                s.log(format!("fsize {}={v}", hex(&data)));
+            }
             EE_WON_HOST_FINISH => {
                 s.log(format!("finish {}", n0 as i32));
                 if s.status == 100000 {
@@ -442,6 +506,53 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
             11 => ret = ping_results(op),
             _ => {}
         }
+    } else if which == 'P' {
+        match kind {
+            0 => op.set(EE_WON_FTPGET_LOCAL_PATH, 0, data, None, 0),
+            1 => op.set(EE_WON_FTPGET_REMOTE_PATH, 0, data, None, 0),
+            2 => op.set(EE_WON_FTPGET_USER, 0, data, None, 0),
+            3 => op.set(EE_WON_FTPGET_PASSWORD, 0, data, None, 0),
+            4 => op.set(EE_WON_FTPGET_BINARY, a, &[], None, 0),
+            5 => op.set(EE_WON_FTPGET_RESUME, a, &[], None, 0),
+            6 => {
+                let c = if a != 0 { with(|s| s.new_obj()) } else { 0 };
+                op.set(EE_WON_FTPGET_CHUNK, b, &[], None, c);
+                if c != 0 {
+                    with(|s| *s.own.get_mut(&c).unwrap() -= 1);
+                }
+            }
+            7 => {
+                with(|s| {
+                    s.mode = a as i32;
+                    s.status = 100000;
+                });
+                h.run();
+            }
+            8 | 9 => {
+                let done = with(|s| {
+                    s.serial += 1;
+                    if a == 2 {
+                        s.kinds.insert(s.serial, EE_WON_HOST_OP_RECV_CR_MSG);
+                    }
+                    s.serial
+                });
+                ret = if h.callback(a as i32, Obj(done as usize)) { "1" } else { "0" }.into();
+            }
+            10 => h.cleanup(),
+            11 => {
+                let c = h.bytes(EE_WON_FTPGET_CONTENT, 0);
+                let l = h.bytes(EE_WON_FTPGET_LOCAL, 0).unwrap_or_default();
+                let m = h.bytes(EE_WON_FTPGET_REMOTE, 0).unwrap_or_default();
+                ret = format!(
+                    "st {} {} {} {}",
+                    op.num(EE_WON_FTPGET_STATUS, 0) as i32,
+                    c.as_ref().map_or("null".to_string(), |c| hex(c)),
+                    hex(&l),
+                    hex(&m)
+                );
+            }
+            _ => {}
+        }
     } else {
         match kind {
             0 => op.set(EE_WON_FILEPUSH_FILE, 0, data, None, 0),
@@ -506,6 +617,16 @@ fn free_and_check(op: Op) {
 fn new_op(which: char, addr: &[u8]) -> Op {
     let op = if which == 'M' {
         ee_won_multiping_new()
+    } else if which == 'P' {
+        const URLS: [&str; 4] = [
+            "ftp://host.example/dir/file.bin",
+            "ftp://bob:pw@ftp.won.net/patch.exe",
+            "ftp://anon@h/a/b/c.txt",
+            "ftp://h",
+        ];
+        let u = URLS[addr[0] as usize];
+        // SAFETY: the URL's bytes
+        unsafe { ee_won_ftpget_new_url(u.as_ptr(), u.len(), addr[1] != 0) }
     } else {
         // SAFETY: six bytes
         unsafe { ee_won_filepush_new(addr.as_ptr()) }
