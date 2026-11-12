@@ -397,7 +397,7 @@ end
 
 -- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
 -- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
--- lib.defence options
+-- lib.defence options, order = lib.build_order's BO.OPT
 function M.configure(o)
     for k, v in pairs(o.econ or {}) do
         ECON[k] = v
@@ -409,6 +409,9 @@ function M.configure(o)
     end
     for k, v in pairs(o.defence or {}) do
         D.opts[k] = v
+    end
+    for k, v in pairs(o.order or {}) do   -- (lib.build_order's BO.OPT)
+        BO.OPT[k] = v
     end
     return M
 end
