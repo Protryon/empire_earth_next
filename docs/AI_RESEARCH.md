@@ -3894,6 +3894,114 @@ The check and its binding were reverted. Next: what the C++ does with a hunter s
 towers (its raiders are soldiers), so the answer is likely its herds. A tower that kills hunters could make a danger
 zone in the port, or end its hunt at that herd: a deviation, to be weighed against the C++'s own losses there.
 
+### 8.61 The classic computer player in Lua: the herds given up (2026-11-12, EE-SIM)
+
+**The C++'s hunters** (seeds 2-33, balanced). The C++ hunts little: 2.3 hunters at 30 minutes and 1.7 at 60 (its `cp
+food` lines). Its citizens killed by enemy towers are 41: 23 gathering, 12 moving and only 2 hunting, at a median 28
+tiles from its town. Its deaths while attacking (its hunters and its militia) lie at a median 15 tiles. Animals kill
+16 of its citizens and 46 of the port's. The port's hunters die at a median 25 tiles (235 in 32 games). Its far herds
+are the fog's: it sees fewer herds near home and goes on to the far ones it has explored (§8.59, §8.60).
+
+**The herds given up.** This is a DEVIATION (fog), and sensible play: a hunter hit by an enemy tower that dies within
+5 s gives that herd up. For 10 minutes no game within 12 tiles is hunted (FindMines skips it), and the hunters there
+leave it for the town (`militia.lua` and `resource.lua` herd_banned; ORIGIN).
+
+| (32 seeds) | before (§8.59) | herds given up |
+|---|---|---|
+| won-lost | 12-14, 6 close | 12-13, 7 close |
+| Lua citizens lost | 61.8 | 58.6 |
+| killed by enemy towers (of them hunting) | 145 (65) | 123 (30) |
+| the C++'s killed by towers | 40 | 41 |
+| Lua Copper / the C++'s | 23 / 21 | 24 / 21 |
+
+There are 5 bans a bench. Each one ends a stream of hunters going to one herd. Kept. Determinism: seeds 2 and 5,
+60 minutes, --repeat 2. 0 script errors.
+
+### 8.62 The classic computer player in Lua: where it stands (2026-11-12)
+
+The port (`ai/classic_lua`, manifest `classic_lua`) plays the C++ classic's decisions through the per-unit Lua
+interface. It reads the same data and personality, and keeps the C++'s thresholds and timings. Sections §8.39-§8.61
+record each stage. `ai/classic_lua/ORIGIN` maps every C++ file to its module, with what is ported, what stays in the
+engine and what is not started.
+
+**Parity.**
+- **balanced, no cheats** (the bench since §8.49; 90 minutes, Small, Hard, 2 AIs, the port against the C++):
+  - seeds 2-33: 12-13 with 7 close (§8.61);
+  - seeds 34-65: 12-17 with 3 close (§8.58);
+  - by our rule of thumb a 32-seed split this close is within noise (bench-noise note: decide on 32, confirm on 64).
+  - The port reaches Copper about as often (24 and 25 of 32, against the C++'s 21 and 22) and Bronze more often
+    (10-12 against 3-5).
+  - It loses more citizens: 58.6 a game against the C++'s 32.6. The gap is after 60 minutes, in raids on its
+    gatherers far from home (§8.58-§8.61). Its fights and its militia cost no more than the C++'s.
+- **classic with the cheats** (the original's decisions with the classic personality's cheats): last measured at
+  §8.49 at 4-0 with 28 close, near level. That bench was paused on the owner's word ("bench only the balanced
+  personality for now"), and the port has changed since (§8.50-§8.61). It needs a fresh 32-seed check before it is
+  called done.
+
+**The cheat capabilities** (manifest entries in ai/ais.json, declared only by classic_lua, shown in its trace start
+line, AI_LUA_UNITS §11):
+- `sees_all`, the classic's information cheat. With it, `ai.enemy_near` is HasEnemyNear (every armed unit, seen or
+  not), `ai.enemy_force` gives the militia's odds, and `ai.player_file` gives the C++'s intelligence files.
+- `fills_garrison`, the classic's garrison cheat (`ai.garrison_fill`, FillGarrison).
+- The lobby's cheats (cost, reveal, extra, popband, epochs, retire) act in the engine as for a classic seat. The
+  port runs catchup itself (ORIGIN).
+
+**The documented deviations** (ORIGIN has each in place). They come from four causes.
+- **The fog.** The port sees what is explored, where the C++ reads the whole map:
+  - the resource centres, regrouped every 15 s;
+  - the forest finder (the explored tree nearest the town);
+  - the dock sites (`ai.water_sites`, explored);
+  - the enemy armies, outside `ai.player_file` (those seen, counts as remembered);
+  - the attack's "largest" enemy (the nearest known building) and no "weakest";
+  - the humans' epochs (those the view's enemies carry);
+  - an idle citizen explores until it knows a resource;
+  - the untapped sites count for the citizen target only, while every site counts for the per-resource room (§8.58);
+  - the herds given up under enemy towers (§8.61).
+- **The interface.**
+  - Placement goes through `ai.find_site` with the one-tile margin, without CanBuildAt's choke, hill, gate and
+    walkable-ground rules.
+  - FindBuilder's shore rule for docks and towers uses `ai.shore`.
+  - The gatherers' room is the gatherers sent (`workers`).
+  - FindResourceTarget has no area hull test.
+  - The morale effect's fill is approximated (2 houses a town centre, 4 a capitol).
+  - The production counts come from queue lengths.
+  - The random draws are the script's stream.
+  - A missing SOL building is logged (`sol none`), since a script cannot add to the next epoch's count.
+  - ChooseFavoriteLandType draws among the trainable soldier classes.
+- **The army.**
+  - A sub-group does not split or merge.
+  - Targets are what lib.groups picks within 12 tiles.
+  - A town is a 16-tile cluster of the own buildings with its bounding box as hull.
+  - A defence task reaches 12 tiles (18 at a threat point).
+  - The target file's counts stand in for the C++'s files where `sees_all` does not reach.
+- **The engine's lists.** The engine's reflexes act on the C++'s own lists, so the port ports their effects:
+  - the militia and the danger zones (militia.lua);
+  - the naval flight's danger zone (§8.59);
+  - a fled boat's return to the idle list (§8.56).
+
+**C++ fixes found by the port** (both sides changed): the boat count (EECPUGatherSpecialUnitsCount's `inByClass`,
+§8.56), in our coast fishing and in the original's RequestFishingBoats; and the forage patches' boat cap of 32.
+
+**What is left.**
+- **Not started (ORIGIN):**
+  - the walls (EECPWallManager);
+  - the transports and ferries, and the island maps' landings;
+  - air, space and submarine groups, carriers and paratroopers;
+  - the wonder race;
+  - the ICBM;
+  - AidAllies, CheckRaids / Retaliate, BuildUp, the adjacent continents' step of the defence ladder;
+  - BalanceProduction, ChooseTransportClass;
+  - the robotic farm;
+  - the island map's hired garrison citizens;
+  - the chat taunts (no chat command).
+
+  The Small balanced and classic benches never need these: they end before the Middle Ages, on land maps. Islands,
+  late epochs and multi-ally games do.
+- **Open gaps in play:**
+  - the late raids on far gatherers (§8.58-§8.61: 1111 citizens lost after 60 minutes against the C++'s 599);
+  - the empty sub-groups' tasks (§8.55);
+  - the classic-with-cheats re-check.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
