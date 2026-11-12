@@ -341,7 +341,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
     TMGetTime();
     if (theStatus == WS_Success && this->mRouting.get() != NULL) {
         this->mLock->Enter();
-        PlatMutexLock(this->mRouting->GetDataCrit().mCrit);
+        PlatMutexLock(this->mRouting->GetDataLock());
         this->mRooms.clear();
         for (theGroup = this->mRouting->GetGroupMap().begin(); theGroup != this->mRouting->mGroupMap.end(); theGroup++) {
             if (!(theGroup->second->mFlags & 0x800))
@@ -365,7 +365,7 @@ void EEWonNet::ListRoomCallback(AsyncOp* inOp)
             this->mRooms[(*theData)->mLinkId].mDescription = theString;
         }
         this->mRoomListChanged = true;
-        PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
+        PlatMutexUnlock(this->mRouting->GetDataLock());
         this->mLock->Leave();
         TMGetTime();
     } else {
@@ -679,11 +679,11 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 
     if (this->mRouting.get() == NULL)
         return;
-    PlatMutexLock(this->mRouting->GetDataCrit().mCrit);
+    PlatMutexLock(this->mRouting->GetDataLock());
     theGroups = this->mRouting->GetGroupMap();
     if (theGroups.size() == 0) {
         // Fix: release the routing data lock on this early exit too (it used to stay held).
-        PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
+        PlatMutexUnlock(this->mRouting->GetDataLock());
         return;
     }
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
@@ -708,7 +708,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
         this->mRouting->JoinGroup(theGroup->first, thePassword, std::wstring(gEmptyWideString), 0, 0,
                             new RoutingCompletion(&EEWonNet::JoinGroupCallback));
     }
-    PlatMutexUnlock(this->mRouting->GetDataCrit().mCrit);
+    PlatMutexUnlock(this->mRouting->GetDataLock());
 }
 
 // FUNCTION: EXE 0x4cf02c

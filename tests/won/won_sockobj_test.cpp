@@ -723,8 +723,8 @@ static void Queues()
 // classes before their move)
 
 // the socket's data lock (the subclasses' and connections' lock)
-static void LockData(AsyncSocket* inSocket) { PlatMutexLock(inSocket->GetDataCrit().mCrit); }
-static void UnlockData(AsyncSocket* inSocket) { PlatMutexUnlock(inSocket->GetDataCrit().mCrit); }
+static void LockData(AsyncSocket* inSocket) { PlatMutexLock(inSocket->GetDataLock()); }
+static void UnlockData(AsyncSocket* inSocket) { PlatMutexUnlock(inSocket->GetDataLock()); }
 
 struct LockProbe {
     AsyncSocket* mSocket;

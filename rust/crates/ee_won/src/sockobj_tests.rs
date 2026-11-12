@@ -64,9 +64,7 @@ static HOOKS: EeWonAsyncSocketHooks = EeWonAsyncSocketHooks {
 
 fn new_socket(name: &str, kind: i32) -> EeWonAsyncSocket {
     let n: &'static String = Box::leak(Box::new(name.to_string()));
-    // SAFETY: a plain platform call; the mutex is leaked with the test
-    let lock = unsafe { plat::PlatMutexCreate() };
-    EeWonAsyncSocket::new(n as *const String as *mut c_void, &HOOKS, lock, kind)
+    EeWonAsyncSocket::new(n as *const String as *mut c_void, &HOOKS, kind)
 }
 
 fn local(port: u16) -> Addr {
@@ -91,10 +89,15 @@ fn a_socket_object_over_loopback() {
     assert_ne!(port, 0);
 
     let b = new_socket("b", KIND_STREAM);
-    assert_eq!(b.connect_prepare(0), WS_SUCCESS);
+    // an invalid address is refused before anything; a valid one is the destination
+    assert_eq!(b.connect_to(&EeWonIpAddr::default(), 0), WS_INVALID_ADDRESS);
+    assert_eq!(take(), Vec::<String>::new());
+    let mut to = EeWonIpAddr::default();
+    to.set_host_order(0x7f00_0001, port);
+    let s = b.connect_to(&to, 0);
     assert_eq!(take(), ["b open"]);
-    let s = b.connect(local(port));
     assert!(s == WS_SUCCESS || s == WS_TIMED_OUT, "{s}");
+    assert_eq!(b.dest_addr(), to);
     assert_eq!(b.wait_for_connect(5000), WS_SUCCESS);
     assert!(b.is_connected());
     a.wait(socket::WAIT_READ, 5000);
@@ -102,8 +105,12 @@ fn a_socket_object_over_loopback() {
     assert_eq!(peer.host(), 0x7f00_0001);
     assert_eq!(peer.host_port(), b.local_port());
     let c = new_socket("c", KIND_STREAM);
-    c.adopt(h);
+    c.adopt(h, peer);
     assert!(c.is_valid() && c.is_open() && c.is_connected());
+    // the peer is the destination, as an address made from its sockaddr
+    let d = c.dest_addr();
+    assert!(d.valid && !d.remember_host && d.host.is_empty());
+    assert_eq!((d.host(), d.port()), (0x7f00_0001, b.local_port()));
     assert_eq!(a.accept().err(), Some(WS_TIMED_OUT));
 
     // bytes
@@ -186,9 +193,7 @@ fn the_close_callback_runs_before_the_hooks() {
         transform_recv: None,
         transform_free: None,
     };
-    // SAFETY: a plain platform call
-    let lock = unsafe { plat::PlatMutexCreate() };
-    let s = EeWonAsyncSocket::new(42 as *mut c_void, &QUIET, lock, KIND_STREAM);
+    let s = EeWonAsyncSocket::new(42 as *mut c_void, &QUIET, KIND_STREAM);
     s.set_close_callback(cb as *const () as usize);
     s.close();
     s.kill();
@@ -197,7 +202,57 @@ fn the_close_callback_runs_before_the_hooks() {
     drop(s);
     assert_eq!(CALLS.lock().unwrap().len(), 2);
     // no transforms set: the chains pass
-    let t = EeWonAsyncSocket::new(std::ptr::null_mut(), &QUIET, lock, KIND_STREAM);
+    let t = EeWonAsyncSocket::new(std::ptr::null_mut(), &QUIET, KIND_STREAM);
     assert_eq!(unsafe { t.transform_send(std::ptr::null_mut()) }, WS_SUCCESS);
     assert_eq!(unsafe { t.transform_recv(std::ptr::null_mut()) }, WS_SUCCESS);
+}
+
+#[test]
+fn the_lock_is_recursive_and_the_destination_a_copy() {
+    static QUIET: EeWonAsyncSocketHooks = EeWonAsyncSocketHooks {
+        open_hook: None,
+        close_hook: None,
+        kill_hook: None,
+        transform_send: None,
+        transform_recv: None,
+        transform_free: None,
+    };
+    let s = EeWonAsyncSocket::new(std::ptr::null_mut(), &QUIET, KIND_STREAM);
+    let m = s.mutex();
+    // held twice by this thread, the socket's own steps take it again
+    unsafe {
+        plat::PlatMutexLock(m);
+        plat::PlatMutexLock(m);
+    }
+    let mut a = EeWonIpAddr::default();
+    a.set_host_order(0x0a00_0007, 99);
+    s.set_dest_addr(&a);
+    unsafe {
+        plat::PlatMutexUnlock(m);
+        plat::PlatMutexUnlock(m);
+    }
+    // another thread waits for it
+    let order = std::sync::Arc::new(Mutex::new(Vec::new()));
+    unsafe { plat::PlatMutexLock(m) };
+    let (o2, mm) = (order.clone(), m as usize);
+    let t = std::thread::spawn(move || {
+        unsafe { plat::PlatMutexLock(mm as *mut plat::PlatMutex) };
+        o2.lock().unwrap().push("thread");
+        unsafe { plat::PlatMutexUnlock(mm as *mut plat::PlatMutex) };
+    });
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    order.lock().unwrap().push("main");
+    unsafe { plat::PlatMutexUnlock(m) };
+    t.join().unwrap();
+    assert_eq!(*order.lock().unwrap(), ["main", "thread"]);
+    // the destination is a copy: a later set leaves an earlier copy alone
+    let copy = s.dest_addr();
+    let mut b = EeWonIpAddr::default();
+    b.set_host_order(0x0a00_0008, 98);
+    s.set_dest_addr(&b);
+    assert_eq!((copy.host(), copy.port()), (0x0a00_0007, 99));
+    assert_eq!(s.dest_addr(), b);
+    // an invalid connect leaves it
+    assert_eq!(s.connect_to(&EeWonIpAddr::default(), 0), WS_INVALID_ADDRESS);
+    assert_eq!(s.dest_addr(), b);
 }

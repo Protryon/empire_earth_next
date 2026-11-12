@@ -352,7 +352,6 @@ mod tests {
     use crate::ipaddr::Addr;
     use crate::socket::{self, KIND_STREAM};
     use crate::sockobj::{EeWonAsyncSocket, EeWonAsyncSocketHooks};
-    use ee_plat_sys::thread::imp as plat;
     use std::sync::Mutex;
 
     static LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
@@ -467,19 +466,18 @@ mod tests {
             transform_free: None,
         };
         socket::start();
-        let lock = unsafe { plat::PlatMutexCreate() };
         let local = |p| Addr::from_host(0x7f00_0001, p);
-        let l = EeWonAsyncSocket::new(null_mut(), &QUIET, lock, KIND_STREAM);
+        let l = EeWonAsyncSocket::new(null_mut(), &QUIET, KIND_STREAM);
         assert_eq!(l.bind(local(0), true), WS_SUCCESS);
         assert_eq!(l.listen(1), WS_SUCCESS);
-        let c = EeWonAsyncSocket::new(null_mut(), &QUIET, lock, KIND_STREAM);
+        let c = EeWonAsyncSocket::new(null_mut(), &QUIET, KIND_STREAM);
         c.connect_prepare(0);
         c.connect(local(l.local_port()));
         assert_eq!(c.wait_for_connect(5000), WS_SUCCESS);
         l.wait(socket::WAIT_READ, 5000);
-        let (h, _) = l.accept().unwrap();
-        let s = Box::leak(Box::new(EeWonAsyncSocket::new(null_mut(), &QUIET, lock, KIND_STREAM)));
-        s.adopt(h);
+        let (h, peer) = l.accept().unwrap();
+        let s = Box::leak(Box::new(EeWonAsyncSocket::new(null_mut(), &QUIET, KIND_STREAM)));
+        s.adopt(h, peer);
         let mut n = 0;
         assert_eq!(c.send(b"a\nb\r\npar", &mut n), WS_SUCCESS);
         let o = EeWonSocketOp::new(null_mut(), &HOOKS);

@@ -196,7 +196,7 @@ public:
     unsigned char GetLengthFieldSize() const; //2b0610, called at 2b5b10
     void SetLengthFieldSize(unsigned char); //2b0600, bytearg->50/ret4
     bool IsConnected(); //2b08d0, byte51 ->AL; SDK IsConnected corroboration
-    const IPAddr& GetDestAddr(); //2b08e0, lea28/ret; SDK nonconst method
+    IPAddr GetDestAddr(); //2b08e0; a copy taken under the lock (the original returned a reference to the member)
     void AddMsgTransform(MsgTransform*); //2b0620, owns raw transform pushed into list
     void WaitForRead(unsigned long); //2b1410, wait-for-read timeout
     void ClosePrv(); //2b1a10, ClosePrv handle shutdown/close
@@ -208,21 +208,21 @@ public:
     WONStatus Recv(void*,int,int*);     //recv
 
     typedef void (*CloseCallback)(AsyncSocket*);
-    // the lock the subclasses (QueueSocket, the routing and server connections) take around their own state too
-    CriticalSection& GetDataCrit() { return this->mDataCrit; }
-    void SetDestAddr(const IPAddr& inAddr) { this->mDestAddr=inAddr; }
+    // the socket's lock (the original's mDataCrit, a recursive mutex the Rust object owns), which the subclasses
+    // (QueueSocket, the routing and server connections) take around their own state too: AutoCrit takes it
+    PlatMutex* GetDataLock() const { return static_cast<PlatMutex*>(ee_won_asyncsocket_mutex(this->mSock)); }
+    void SetDestAddr(const IPAddr& inAddr) { ee_won_asyncsocket_set_dest_addr(this->mSock,inAddr.GetValue()); }
     void SetThreadCloseCallback(CloseCallback inCallback);
     WONStatus GetSocketStatus() const; // the last socket error recorded (the original's +0x54)
     EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
 private:
     AsyncSocket(const AsyncSocket&);
     AsyncSocket& operator=(const AsyncSocket&);
-    CriticalSection mDataCrit; //08..1f; its mutex is the Rust object's lock
     // A Rust object since round 14 (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
     // status and times (the original's +0x20..+0x5c), the length field size (+0x50), the message transforms (+0x60,
-    // owned) and the socket thread's close callback (+0x6c), and every step of AsyncSocket.cpp
+    // owned) and the socket thread's close callback (+0x6c), and every step of AsyncSocket.cpp; since round 15 also
+    // the lock (mDataCrit, +0x08) and the destination address (mDestAddr, +0x28)
     EeWonAsyncSocket* mSock;
-    IPAddr mDestAddr; //28..4f, complete28 (a C++ IPAddr until IPAddr is Rust's)
 };
 
 

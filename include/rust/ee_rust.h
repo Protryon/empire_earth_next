@@ -17871,13 +17871,12 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
-/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `hooks` is a static table; `socket` outlives the object.
 EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
                                          const EeWonAsyncSocketHooks *hooks,
-                                         void *lock,
                                          int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
@@ -17967,17 +17966,31 @@ long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
                              uint16_t port,
                              bool reuse);
 
-/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
 ///
 /// # Safety
-/// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect_prepare(const EeWonAsyncSocket *s, uint32_t local_host);
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+long ee_won_asyncsocket_connect_to(const EeWonAsyncSocket *s,
+                                   const EeWonIpAddr *addr,
+                                   uint32_t local_host);
 
-/// `Fn2B0E60`'s connect.
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect(const EeWonAsyncSocket *s, uint32_t address, uint16_t port);
+void *ee_won_asyncsocket_mutex(const EeWonAsyncSocket *s);
+
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+EeWonIpAddr *ee_won_asyncsocket_dest_addr(const EeWonAsyncSocket *s);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+void ee_won_asyncsocket_set_dest_addr(const EeWonAsyncSocket *s, const EeWonIpAddr *addr);
 
 /// `Listen`.
 ///
@@ -17994,11 +18007,14 @@ long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
                                uint32_t *address,
                                uint16_t *port);
 
-/// The accepted handle into the new socket `s`.
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s, ptrdiff_t handle);
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s,
+                              ptrdiff_t handle,
+                              uint32_t address,
+                              uint16_t port);
 
 /// `WaitForConnect`.
 ///

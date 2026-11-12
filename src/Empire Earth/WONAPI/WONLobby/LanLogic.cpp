@@ -308,7 +308,8 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
     unsigned char aPeerNet[2] = {0, 0}, aLocalNet[2] = {0, 0};
     if (aGame->GetGameType() == 1) {
         IPAddr aLocalAddr = IPAddr::GetLocalAddr();
-        const char* aPeerBytes = inSocket->GetDestAddr().GetSixByte();
+        IPAddr aPeerAddr = inSocket->GetDestAddr();   // a copy: the bytes point into it
+        const char* aPeerBytes = aPeerAddr.GetSixByte();
         const char* aLocalBytes = aLocalAddr.GetSixByte();
         aPeerNet[0] = aPeerBytes[2];
         aPeerNet[1] = aPeerBytes[3];

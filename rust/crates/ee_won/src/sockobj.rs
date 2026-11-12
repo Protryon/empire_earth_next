@@ -5,10 +5,11 @@
 //! chains. The C++ `AsyncSocket` is a shim holding an [`EeWonAsyncSocket`]; its virtual `OpenHook`, `CloseHook` and
 //! `KillHook` and the transforms' `Send`, `Recv` and deletion come back to it as the [`EeWonAsyncSocketHooks`].
 //!
-//! The lock is the C++ `mDataCrit`'s platform mutex (recursive), which the subclasses (QueueSocket, the routing and
-//! server connections) take around their own state as well; this object takes it where `AsyncSocket.cpp` took it, and
-//! calls the hooks under it as the C++ did. No borrow of the core lives across a hook. The behaviour is
-//! `golden_sockobj.txt`, recorded over the C++ class.
+//! Since round 15 the object also owns the lock (the original's `mDataCrit`, a recursive platform mutex), which the
+//! subclasses (QueueSocket, the routing and server connections) take around their own state as well through
+//! [`ee_won_asyncsocket_mutex`], and the destination address (`mDestAddr`, an [`EeWonIpAddr`] read and written under
+//! the lock). This object takes the lock where `AsyncSocket.cpp` took it, and calls the hooks under it as the C++ did.
+//! No borrow of the core lives across a hook. The behaviour is `golden_sockobj.txt`, recorded over the C++ class.
 
 use std::cell::UnsafeCell;
 use std::ffi::{c_long, c_void};
@@ -18,6 +19,7 @@ use ee_plat_sys::constants::PlatSocket;
 use ee_plat_sys::thread::imp as plat;
 
 use crate::ipaddr::Addr;
+use crate::ipobj::EeWonIpAddr;
 use crate::ops::LockedSocket;
 use crate::socket::{self, Socket, KIND_STREAM};
 use crate::status::*;
@@ -65,8 +67,10 @@ pub struct EeWonAsyncSocket {
     /// the C++ `AsyncSocket*` the hooks get
     socket: *mut c_void,
     hooks: &'static EeWonAsyncSocketHooks,
-    /// `mDataCrit`'s mutex (the C++ object's, alive as long as this object)
+    /// `mDataCrit`: the socket's recursive lock, owned
     lock: *mut plat::PlatMutex,
+    /// `mDestAddr`: the peer of a connect or an accept (under the lock)
+    dest: UnsafeCell<EeWonIpAddr>,
     core: UnsafeCell<Socket>,
     length_field_size: AtomicU8,
     /// the C++ `MsgTransform*`s, owned, in chain order
@@ -82,17 +86,15 @@ unsafe impl Send for EeWonAsyncSocket {}
 unsafe impl Sync for EeWonAsyncSocket {}
 
 impl EeWonAsyncSocket {
-    /// `AsyncSocket::AsyncSocket(type)`: closed, a 4-byte length prefix, no transforms; counts it.
-    pub fn new(
-        socket: *mut c_void,
-        hooks: &'static EeWonAsyncSocketHooks,
-        lock: *mut plat::PlatMutex,
-        kind: i32,
-    ) -> EeWonAsyncSocket {
+    /// `AsyncSocket::AsyncSocket(type)`: closed, a 4-byte length prefix, no transforms, no destination, a new
+    /// lock; counts it.
+    pub fn new(socket: *mut c_void, hooks: &'static EeWonAsyncSocketHooks, kind: i32) -> EeWonAsyncSocket {
         EeWonAsyncSocket {
             socket,
             hooks,
-            lock,
+            // SAFETY: a plain platform call; destroyed in `drop`
+            lock: unsafe { plat::PlatMutexCreate() },
+            dest: UnsafeCell::new(EeWonIpAddr::default()),
             core: UnsafeCell::new(Socket::new(kind)),
             length_field_size: AtomicU8::new(4),
             transforms: UnsafeCell::new(Vec::new()),
@@ -153,6 +155,46 @@ impl EeWonAsyncSocket {
     }
     pub fn set_close_callback(&self, callback: usize) {
         self.close_callback.store(callback, Relaxed);
+    }
+
+    /// The lock (`mDataCrit`'s), for the subclasses and the connections.
+    pub fn mutex(&self) -> *mut plat::PlatMutex {
+        self.lock
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    fn dest(&self) -> &mut EeWonIpAddr {
+        // SAFETY: the callers hold the lock and drop the borrow before any hook
+        unsafe { &mut *self.dest.get() }
+    }
+
+    /// `GetDestAddr`: a copy, taken under the lock (the original returned a reference to the member).
+    pub fn dest_addr(&self) -> EeWonIpAddr {
+        let _held = Held::new(self.lock);
+        self.dest().clone()
+    }
+
+    /// `SetDestAddr`.
+    pub fn set_dest_addr(&self, addr: &EeWonIpAddr) {
+        let _held = Held::new(self.lock);
+        *self.dest() = addr.clone();
+    }
+
+    /// `Fn2B0E60`: `WS_InvalidAddress` for an invalid address; under the lock, [`connect_prepare`]
+    /// (`local_host` is `IPAddr::GetLocalHost()`), the destination's store, then the connect.
+    ///
+    /// [`connect_prepare`]: Self::connect_prepare
+    pub fn connect_to(&self, addr: &EeWonIpAddr, local_host: u32) -> Status {
+        if !addr.valid {
+            return WS_INVALID_ADDRESS;
+        }
+        let _held = Held::new(self.lock);
+        let s = self.connect_prepare(local_host);
+        if s != WS_SUCCESS {
+            return s;
+        }
+        *self.dest() = addr.clone();
+        self.connect(addr.addr())
     }
 
     /// `GetLastSocketError`.
@@ -259,9 +301,14 @@ impl EeWonAsyncSocket {
         self.core().accept()
     }
 
-    /// The accepted handle into this new socket.
-    pub fn adopt(&self, handle: PlatSocket) {
+    /// The accepted handle into this new socket, and its peer as the destination (an address made from the
+    /// sockaddr, as `Accept`'s `IPAddr(sockaddr)`).
+    pub fn adopt(&self, handle: PlatSocket, peer: Addr) {
+        let _held = Held::new(self.lock);
         self.core().adopt(handle);
+        let mut a = EeWonIpAddr::default();
+        a.set_sockaddr(peer_sockaddr(peer));
+        *self.dest() = a;
     }
 
     /// `WaitForConnect`: the handle read under the lock, the wait without it.
@@ -411,25 +458,36 @@ impl Drop for EeWonAsyncSocket {
         let all = std::mem::take(self.transforms());
         self.free_transforms(&all);
         self.core().destroyed();
+        // SAFETY: created in `new`, no longer held
+        unsafe { plat::PlatMutexDestroy(self.lock) };
+    }
+}
+
+/// An accepted peer's sockaddr (family, network-order port and address, zero padding).
+fn peer_sockaddr(a: Addr) -> ee_plat_sys::constants::PlatSockAddrIn {
+    ee_plat_sys::constants::PlatSockAddrIn {
+        mFamily: ee_plat_sys::constants::PLAT_AF_INET,
+        mPort: a.port,
+        mAddress: a.address,
+        mZero: [0; 8],
     }
 }
 
 // ---- the C ABI
 
-/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `hooks` is a static table; `socket` outlives the object.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_asyncsocket_new(
     socket: *mut c_void,
     hooks: *const EeWonAsyncSocketHooks,
-    lock: *mut c_void,
     kind: i32,
 ) -> *mut EeWonAsyncSocket {
     // SAFETY: the caller's static table
     let hooks = unsafe { &*hooks };
-    Box::into_raw(Box::new(EeWonAsyncSocket::new(socket, hooks, lock.cast(), kind)))
+    Box::into_raw(Box::new(EeWonAsyncSocket::new(socket, hooks, kind)))
 }
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
@@ -560,21 +618,43 @@ pub unsafe extern "C" fn ee_won_asyncsocket_bind(
 ) -> c_long {
     sock!(s).bind(Addr { address, port }, reuse) as c_long
 }
-/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
 ///
 /// # Safety
-/// As `ee_won_asyncsocket_kind`.
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_asyncsocket_connect_prepare(s: *const EeWonAsyncSocket, local_host: u32) -> c_long {
-    sock!(s).connect_prepare(local_host) as c_long
+pub unsafe extern "C" fn ee_won_asyncsocket_connect_to(
+    s: *const EeWonAsyncSocket,
+    addr: *const EeWonIpAddr,
+    local_host: u32,
+) -> c_long {
+    // SAFETY: the caller's value
+    sock!(s).connect_to(unsafe { &*addr }, local_host) as c_long
 }
-/// `Fn2B0E60`'s connect.
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_asyncsocket_connect(s: *const EeWonAsyncSocket, address: u32, port: u16) -> c_long {
-    sock!(s).connect(Addr { address, port }) as c_long
+pub unsafe extern "C" fn ee_won_asyncsocket_mutex(s: *const EeWonAsyncSocket) -> *mut c_void {
+    sock!(s).mutex().cast()
+}
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncsocket_dest_addr(s: *const EeWonAsyncSocket) -> *mut EeWonIpAddr {
+    Box::into_raw(Box::new(sock!(s).dest_addr()))
+}
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_asyncsocket_set_dest_addr(s: *const EeWonAsyncSocket, addr: *const EeWonIpAddr) {
+    // SAFETY: the caller's value
+    sock!(s).set_dest_addr(unsafe { &*addr })
 }
 /// `Listen`.
 ///
@@ -608,13 +688,13 @@ pub unsafe extern "C" fn ee_won_asyncsocket_accept(
         Err(e) => e as c_long,
     }
 }
-/// The accepted handle into the new socket `s`.
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_asyncsocket_adopt(s: *const EeWonAsyncSocket, handle: isize) {
-    sock!(s).adopt(handle)
+pub unsafe extern "C" fn ee_won_asyncsocket_adopt(s: *const EeWonAsyncSocket, handle: isize, address: u32, port: u16) {
+    sock!(s).adopt(handle, Addr { address, port })
 }
 /// `WaitForConnect`.
 ///

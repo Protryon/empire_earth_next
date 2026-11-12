@@ -1,7 +1,7 @@
 // WONAPI AsyncSocket: non-blocking TCP/UDP socket wrapper (file grouping inferred). A Rust object since round 14
 // (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket: the core, the length prefix, the message transforms, the close
-// callback and every step below); the C++ class keeps the lock (mDataCrit, which the subclasses take as well), the
-// destination address, and the virtual hooks the object calls back.
+// callback and every step below; since round 15 the lock, which the subclasses take as well, and the destination
+// address); the C++ class keeps the virtual hooks the object calls back.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string.h>
@@ -91,7 +91,7 @@ static const EeWonAsyncSocketHooks kSocketHooks = {HookOpen, HookClose, HookKill
 // Creates a closed socket of the given type (0 stream, 1 datagram) with a 4-byte length field and counts it
 AsyncSocket::AsyncSocket(int inType)
 {
-    this->mSock = ee_won_asyncsocket_new(static_cast<void*>(this), &kSocketHooks, this->mDataCrit.mCrit, inType);
+    this->mSock = ee_won_asyncsocket_new(static_cast<void*>(this), &kSocketHooks, inType);
 }
 
 // FUNCTION: WON 0x006b0420
@@ -159,10 +159,10 @@ bool AsyncSocket::IsConnected()
 }
 
 // FUNCTION: WON 0x006b08e0
-// Returns the address the socket is connected to
-const IPAddr& AsyncSocket::GetDestAddr()
+// Returns the address the socket is connected to (a copy)
+IPAddr AsyncSocket::GetDestAddr()
 {
-    return this->mDestAddr;
+    return IPAddr::FromValue(ee_won_asyncsocket_dest_addr(this->mSock));
 }
 
 // FUNCTION: WON 0x006b1360
@@ -262,15 +262,8 @@ WONStatus AsyncSocket::Bind(const IPAddr& inAddress, bool inReuse)
 // Starts connecting to an address: drops an existing stream connection, opens and binds to the local host if needed
 WONStatus AsyncSocket::Fn2B0E60(const IPAddr& inAddress)
 {
-    if (!inAddress.IsValid())
-        return WS_InvalidAddress;
-    AutoCrit aCrit(this->mDataCrit);
-    WONStatus aStatus = ee_won_asyncsocket_connect_prepare(this->mSock,
-                                                           static_cast<uint32_t>(WONAPI::IPAddr::GetLocalHost()));
-    if (aStatus != 0)
-        return aStatus;
-    this->mDestAddr = inAddress;
-    return ee_won_asyncsocket_connect(this->mSock, AddressOf(inAddress), PortOf(inAddress));
+    return ee_won_asyncsocket_connect_to(this->mSock, inAddress.GetValue(),
+                                         static_cast<uint32_t>(WONAPI::IPAddr::GetLocalHost()));
 }
 
 // FUNCTION: WON 0x006b0fc0
@@ -284,7 +277,7 @@ WONStatus AsyncSocket::Listen(int inBacklog)
 // Accepts a pending connection into a new non-blocking socket of the same type, connected to the caller
 WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
 {
-    AutoCrit aCrit(this->mDataCrit);
+    AutoCrit aCrit(this->GetDataLock());
     PlatSocket aSocket = PLAT_SOCKET_INVALID;
     uint32_t anAddress = 0;
     uint16_t aPort = 0;
@@ -292,8 +285,7 @@ WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
     if (aStatus != 0)
         return aStatus;
     outSocket = this->Duplicate();
-    ee_won_asyncsocket_adopt(outSocket->mSock, aSocket);
-    outSocket->mDestAddr = MakeAddr(anAddress, aPort);
+    ee_won_asyncsocket_adopt(outSocket->mSock, aSocket, anAddress, aPort);
     return 0;
 }
 
