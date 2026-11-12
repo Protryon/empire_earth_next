@@ -78,27 +78,51 @@ pub unsafe extern "C" fn ee_combat_store_unit(id: u32, out: *mut ee_combat::read
     {
         let Some(r) = ee_units::store::with_store(|s| s.get(id).copied()) else { return false };
         // SAFETY: the function's contract
-        unsafe {
-            *out = ee_combat::reads::EeCombatStoredUnit {
-                object: r.object,
-                object_kind: r.object_kind,
-                built: r.built,
-                tile_x: r.tile_x,
-                tile_y: r.tile_y,
-                hit_points: r.hit_points,
-                unit_type: r.unit_type,
-                category: r.category,
-                command: r.command,
-                location: r.location,
-                target_search_timer: r.target_search_timer,
-            }
-        };
+        unsafe { *out = combat_stored(&r) };
         true
     }
     #[cfg(test)]
     {
         let _ = (id, out);
         false
+    }
+}
+
+/// The bridge by the object (the combat lane's handle, an `EEUnit*`'s address: ee_units' object index), so a read
+/// needs no id read from the host first: the record of that object into `out`; false for none (always in a test binary).
+///
+/// # Safety
+/// `out` must point to a writable record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_combat::reads::EeCombatStoredUnit) -> bool {
+    #[cfg(not(test))]
+    {
+        let Some(r) = ee_units::store::with_store(|s| s.by_object(object).copied()) else { return false };
+        // SAFETY: the function's contract
+        unsafe { *out = combat_stored(&r) };
+        true
+    }
+    #[cfg(test)]
+    {
+        let _ = (object, out);
+        false
+    }
+}
+
+#[cfg(not(test))]
+fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::reads::EeCombatStoredUnit {
+    ee_combat::reads::EeCombatStoredUnit {
+        object: r.object,
+        object_kind: r.object_kind,
+        built: r.built,
+        tile_x: r.tile_x,
+        tile_y: r.tile_y,
+        hit_points: r.hit_points,
+        unit_type: r.unit_type,
+        category: r.category,
+        command: r.command,
+        location: r.location,
+        target_search_timer: r.target_search_timer,
     }
 }
 

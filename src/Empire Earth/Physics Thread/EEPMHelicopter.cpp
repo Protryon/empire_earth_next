@@ -32,8 +32,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPhysicsModel.h"
 
-static const float kPMMinimumStep = 0.005f;   // 0x4428d4 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
-static const float kPMStopDistance = 0.02f;   // 0x4428d0 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
 static const float kPMMinimumSpeed = 1.0f;   // 0x4428d8 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
 
 extern unsigned long gCollisionPeriod;      // 0x4c237c (EEPhysics.cpp; provisional name)
@@ -193,43 +191,10 @@ void EEPMHelicopter::Step1(EEComplexUnit* inUnit)
 // clears the push
 void EEPMHelicopter::Move(EEComplexUnit* inUnit)
 {
-    float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
-    theLimit = inUnit->GetVelocity() > theLimit ? inUnit->GetVelocity() : theLimit;
-    float theTicks = (float) gCollisionPeriod;
-    float theDX = inUnit->mPushVelocityX;
-    theDX *= theTicks;
-    float theDY = inUnit->mPushVelocityY;
-    theDY *= theTicks;
-    float theSignX;
-    if (theDX > 0.0f)
-        theSignX = 1.0f;
-    else
-        theSignX = -1.0f;
-    float theSignY;
-    if (theDY > 0.0f)
-        theSignY = 1.0f;
-    else
-        theSignY = -1.0f;
-    if (theDX < 0.0f)
-        theDX = -theDX;
-    if (theDY < 0.0f)
-        theDY = -theDY;
-    if (theDY + theDX < kPMStopDistance) {
-        theDY = 0.0f;
-        theDX = 0.0f;
-    }
-    if (theDX != 0.0f || theDY != 0.0f) {
-        if (theDX > theLimit || theDY > theLimit) {
-            if (theDX > theDY) {
-                theDY = theLimit / theDX * theDY;
-                theDX = theLimit;
-            } else {
-                theDX = theLimit / theDY * theDX;
-                theDY = theLimit;
-            }
-        }
-        float theX = gPhysics->GetTickSeconds() * theSignX * theDX + inUnit->mPhysicalModel.GetLocation().GetX();
-        float theY = gPhysics->GetTickSeconds() * theSignY * theDY + inUnit->mPhysicalModel.GetLocation().GetY();
+    float theX, theY;
+    bool thePast;
+    // New (R5b.4 leaf 6): the push's arithmetic is Rust (ee_units motion.rs push), capped at the helicopter's speed
+    if (EEPMPush(inUnit, inUnit->GetVelocity(), theX, theY, thePast)) {
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         EETileCoordinate theTile(theTileX, theTileY);
@@ -283,33 +248,7 @@ float EEPMHelicopter::ComputeRoll(EEComplexUnit* inUnit, float inValue)
 // within braking distance of the path's end, else cruising (3)
 long EEPMHelicopter::SpeedMode(EEComplexUnit* inUnit, float inDistance, float inTurn)
 {
-    float theBrake = inUnit->GetAcceleration();
-    float theStep = gPhysics->mTickSeconds;
-    float theTime = gPhysics->mTicksPerGameSecond;
-    float theSpeed = inUnit->mVelocity;
-    float theTicks = inUnit->GetInverseAcceleration() * theTime * theSpeed;
-    float theStop = theStep * theStep * (theTicks + 1.0f) * theTicks * 0.5f * theBrake;
-    if (theStop < 0.0001f)
-        theStop = 0.0f;
-    float theSlide = inDistance;
-    theSlide *= 0.5f * inUnit->mAngularVelocity.GetYaw() * theStep;
-    if (theSlide < 0.0f)
-        theSlide = -theSlide;
-    long theResult = 3;
-    if (inTurn < -0.7853982f || inTurn > 0.7853982f) {
-        if (theSlide <= theSpeed * theStep)
-            theResult = 4;
-        else if (theSlide <= (theStep * theBrake + theSpeed) * theStep)
-            theResult = 2;
-    }
-    float theRemaining;
-    if ((long)inUnit->mWaypoints.size() > 1)
-        inUnit->GetPathLength(theRemaining);
-    else
-        theRemaining = inDistance;
-    if (theRemaining <= theStop)
-        theResult = 4;
-    return theResult;
+    return EEPMSpeedMode(inUnit, true, inDistance, inTurn);
 }
 
 // NEAR: out-of-line EEMap::GetTile (0x402f85) and imported SetPosition calls in the original: inline budget

@@ -9234,3 +9234,42 @@ and creates and destroys effects; drawn only: `Queue`, `PrepareQueue`, `DrawPass
   1000,1900 --expect tools/saveload_expect.txt` PASS (effects are saved: the handle counter, the effects in handle
   order, the queue). No tour: only the windowed game draws a farm's fields and crops, a volcano rising (the volcano
   calamity), a tracer beam (laser units) and the 2D effects' standing quad and the ground plane.
+
+## R5b.4, twelfth round: the combat reads' store fields, the players' diplomacy tables, the physics models' step arithmetic in Rust (one push body), the land and naval Update as Rust sequences (ee_units store.rs, players.rs, physics.rs, update.rs; branch rust-r5b4-core12, 2026-11-12)
+
+- **The combat lane's store fields by its own count.** Its round-8 count of the C++ host reads named the fields;
+  this round added the unit members of its condition fill (flight time, the cloak timer and flags, herd, container)
+  as holders, the class's fixed fields (family, cloak radius, crusader, paratrooper bomber, heal threshold, and the
+  wall/projectile/paratrooper/melee flags in its own bit order) reported with `mUnitClass`, the records by object
+  (`Store::by_object`, ee_rust's `ee_combat_store_unit_of`: no id read before a store read) and the players'
+  diplomacy tables by player object (`players.rs`: `mEnemies` and the id, reported where `EEPlayer` writes them:
+  `Reset`, the four loads, `SetDiplomaticStance`'s three writes). USCK checks all of them (the index as field 0xfe,
+  the tables against `gWorld.mPlayers`). Not added: the stats (they change in place on upgrades: a per-class table
+  keyed by the stats' version is the next step), the human flag (`IsHuman` is virtual: a table filled from
+  `Reset`, which the constructors call, would read the base's answer), the region membership (map state).
+- **A merge can move a leaf out of a digest.** After the merge of rust, the combat lane's shots' `Update` counted the
+  rotting time down in Rust itself, so those units' rotting left USTM (the goldens' USTM still had them). The shots'
+  plan now issues an operation the host applies as `UpdateRottingAwayTime` (ee_units step.rs), and USTM is equal.
+- **The copies were the same statements.** `EEPMNaval::Move` and `EEPMSpaceship::Move` were the base `Move` without
+  the ground placement (`IsSwimming`/`PlaceOnGround`): one body (`MoveByPush(unit, on_ground)`) serves the three;
+  the helicopter's and the submarine's keep their own tile work over the same Rust push (the helicopter capped at its
+  velocity, not its top speed). `EEPMSpaceship::PitchMode` was `EEPMNaval::PitchMode` (ICF had folded them), and
+  `EEPMSeaAnimal::Accelerate`'s switch the base one over boosted values (its brake without the `1.0f` factor: no bit
+  differs). The base and naval `ApproachPitch` differ only for a NaN rate (the naval brake falls through to 0).
+- **What stays C++ in the arithmetic:** the headings (`Apply` of the transformation and `UMArcTan2`), the reads
+  `SpeedMode` makes lazily (the path length with two waypoints or more, the terrain pitch under a slope penalty: the
+  C++ makes them under the same conditions before the Rust call), and every write.
+- **Golden first, and one capture pass at a time.** A capture pass started with `&` from a foreground shell did not
+  die with the shell: a second pass under the same NAME then shared its stage slots, and every run of both failed
+  ("db table is missing", exit -1) while one pass's `rust_build.py gate` lost its `build/rust/debug` to the other's
+  cleanup ("extern location does not exist"). Start long runs only as background tasks, and check for a running one
+  (`Win32_Process` command lines naming the worktree) before starting another.
+- **The Update sequence.** `EEUCLand::Update` and `EEUCNaval::Update` are Rust over one C++ host (EEUCLand.cpp): the
+  herd, owner, tile, command, goal and unit type come from the record, read again after the calls that change them
+  (the command after `Animate`, the goal after the heal search); the class's virtual and member calls are the host's,
+  through the `EEUnitClass*` (`UpdateEffects` and `Animate` dispatch as before; `UpdateResourceUnit` is the naval
+  class's, handed in). The goldens' USTM/USST order and the oracle gate it: no new digest.
+- **cbindgen renames reach private items.** A private `struct Unit<'a>` in ee_units (the sequence's reads) took
+  ee_astar's global rename `Unit = EeAStarUnit`: the split header gave the alias to ee_units.h, and ee_astar.h's users
+  failed ("field has incomplete type 'EeAStarUnit'"). A generic private struct also stopped the splitter ("cannot name
+  the header item `template<...>`"). Name even private Rust types with the module's prefix (`UpdateReads`).
