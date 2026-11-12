@@ -41,6 +41,9 @@ rust-r5b-cont3).
 CB** are the combat and unit formulas' records (ee/EECombatFormulas.h: damage, attack factor, elevation, morale, hit
 points, healing, conversion, the ballistic pitch, the projectile arc, the reach and range tests, the damage rows): one
 per call, the input record's bytes and the output's. Their golden lines come from the C++ formulas (R5b.2).
+CBTC is the goals' and shots' trigger tests (ee/EECombatGoals.h: the plain reads, the lazy reads in order, the outcome),
+folded 4096 tests to a record (count and FNV-1a 64), CBGS every goal step with its operations in order; their golden
+lines come from the instrumented original C++ bodies (R5b.2, sixth round); the missile profile's golden lists them too.
 
 
 The tech tree, event effect and calamity records (ee/EETechCapture.h: TQRS research starts, TTRS/TNRS/TNPR/TSOL/TEPO
@@ -51,7 +54,7 @@ computer players stay in the first epochs and never cast a calamity, so --profil
 calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_<profile>.txt.
 --profile missile is the oracle's game with EE-SIM --missile-sweep: when it ends, the players' units fire every missile
 and torpedo class (CBMA/CBMH, the missile's flight steps, and its impact tests' CBGI/CBWI); its golden file lists only
-those tags, every other tag of it is the oracle profile's (reported as without a golden).
+those tags (and CBTC, CBGS), every other tag of it is the oracle profile's (reported as without a golden).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
