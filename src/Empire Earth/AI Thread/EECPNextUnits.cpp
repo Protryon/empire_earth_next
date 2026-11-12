@@ -88,7 +88,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "platform/PlatSim.h"
-#include "rust/ee_ai.h"   // ee_ai_units_save_*: the save block's format (ee_ai units_save.rs)
+#include "rust/ee_ai.h"   // ee_ai_units_*: the save block's format (units_save.rs), the bindings' Lua helpers (units_lua.rs)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The state
@@ -656,129 +656,70 @@ static const char* EECPUnitsName(EECPUnitsState* s, long inType)
     return it->second.c_str();
 }
 
+static long EECPUnitsClassByName(const char* inName)
+{
+    return EECPNextClassByName(inName);
+}
+
+// the helpers below are Rust (ee_ai units_lua.rs): the same Lua calls, the same answers
 static long EECPUnitsClassArg(lua_State* L, int inIndex)
 {
-    if (lua_type(L, inIndex) == LUA_TNUMBER && lua_isinteger(L, inIndex))
-        return (long)lua_tointeger(L, inIndex);
-    if (lua_type(L, inIndex) != LUA_TSTRING)
-        return -1;
-    const char* theName = lua_tostring(L, inIndex);
-    return EECPNextClassByName(theName);
+    return ee_ai_units_class_arg(L, inIndex, EECPUnitsClassByName);
 }
 
 // ids at inIndex (an integer or an array of integers) -> outIds (no error: the count of bad entries)
 static long EECPUnitsReadIds(lua_State* L, int inIndex, std::vector<long>& outIds)
 {
-    outIds.clear();
-    long theBad = 0;
-    if (lua_type(L, inIndex) == LUA_TNUMBER) {
-        if (lua_isinteger(L, inIndex))
-            outIds.push_back((long)lua_tointeger(L, inIndex));
-        else
-            theBad++;
-        return theBad;
-    }
-    if (lua_type(L, inIndex) != LUA_TTABLE)
-        return 1;
-    lua_Integer n = (lua_Integer)lua_rawlen(L, inIndex);
-    for (lua_Integer i = 1; i <= n && (long)outIds.size() < kMaxIds; i++) {
-        lua_rawgeti(L, inIndex, i);
-        if (lua_isinteger(L, -1))
-            outIds.push_back((long)lua_tointeger(L, -1));
-        else
-            theBad++;
-        lua_pop(L, 1);
-    }
+    static_assert(kMaxIds == 4000, "ee_ai units_lua.rs MAX_IDS");
+    outIds.resize(kMaxIds);
+    size_t theCount = 0;
+    long theBad = ee_ai_units_read_ids(L, inIndex, outIds.data(), &theCount);
+    outIds.resize(theCount);
     return theBad;
 }
 
 static bool EECPUnitsOptInt(lua_State* L, int inTable, const char* inKey, long& outValue)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return false;
-    lua_getfield(L, inTable, inKey);
-    bool theFound = lua_isinteger(L, -1) != 0;
-    if (theFound)
-        outValue = (long)lua_tointeger(L, -1);
-    lua_pop(L, 1);
-    return theFound;
+    return ee_ai_units_opt_int(L, inTable, inKey, &outValue);
 }
 
 static bool EECPUnitsOptBool(lua_State* L, int inTable, const char* inKey, bool inDefault)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return inDefault;
-    lua_getfield(L, inTable, inKey);
-    bool theValue = lua_isnil(L, -1) ? inDefault : lua_toboolean(L, -1) != 0;
-    lua_pop(L, 1);
-    return theValue;
+    return ee_ai_units_opt_bool(L, inTable, inKey, inDefault);
 }
 
 // a string field -> a pointer into the Lua string (valid while the table holds it), or NULL
 static const char* EECPUnitsOptString(lua_State* L, int inTable, const char* inKey)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return NULL;
-    lua_getfield(L, inTable, inKey);
-    const char* theValue = lua_type(L, -1) == LUA_TSTRING ? lua_tostring(L, -1) : NULL;
-    lua_pop(L, 1);
-    return theValue;
+    return ee_ai_units_opt_string(L, inTable, inKey);
 }
 
 // `near = {x, y, r}` -> true with the values
 static bool EECPUnitsOptNear(lua_State* L, int inTable, long& outX, long& outY, long& outR)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return false;
-    lua_getfield(L, inTable, "near");
-    bool theOK = false;
-    if (lua_type(L, -1) == LUA_TTABLE) {
-        int t = lua_gettop(L);
-        lua_rawgeti(L, t, 1);
-        lua_rawgeti(L, t, 2);
-        lua_rawgeti(L, t, 3);
-        if (lua_isinteger(L, -3) && lua_isinteger(L, -2)) {
-            outX = (long)lua_tointeger(L, -3);
-            outY = (long)lua_tointeger(L, -2);
-            outR = lua_isinteger(L, -1) ? (long)lua_tointeger(L, -1) : 1000000;
-            theOK = true;
-        }
-        lua_pop(L, 3);
-    }
-    lua_pop(L, 1);
-    return theOK;
+    return ee_ai_units_opt_near(L, inTable, &outX, &outY, &outR);
 }
 
 static void EECPUnitsSetInt(lua_State* L, const char* inKey, long inValue)
 {
-    lua_pushinteger(L, (lua_Integer)inValue);
-    lua_setfield(L, -2, inKey);
+    ee_ai_units_set_int(L, inKey, inValue);
 }
 
 static void EECPUnitsSetStr(lua_State* L, const char* inKey, const char* inValue)
 {
-    lua_pushstring(L, inValue);
-    lua_setfield(L, -2, inKey);
+    ee_ai_units_set_str(L, inKey, inValue);
 }
 
 static void EECPUnitsSetBool(lua_State* L, const char* inKey, bool inValue)
 {
-    lua_pushboolean(L, inValue ? 1 : 0);
-    lua_setfield(L, -2, inKey);
+    ee_ai_units_set_bool(L, inKey, inValue);
 }
 
 // the ids of s->mSorted (key, id), sorted, up to inLimit, as a Lua array
 static void EECPUnitsPushSorted(lua_State* L, EECPUnitsState* s, long inLimit)
 {
-    std::sort(s->mSorted.begin(), s->mSorted.end());
-    long n = (long)s->mSorted.size();
-    if (inLimit >= 0 && n > inLimit)
-        n = inLimit;
-    lua_createtable(L, (int)n, 0);
-    for (long k = 0; k < n; k++) {
-        lua_pushinteger(L, (lua_Integer)s->mSorted[k].second);
-        lua_rawseti(L, -2, (lua_Integer)(k + 1));
-    }
+    static_assert(sizeof(std::pair<long long, long>) == sizeof(EeAiUnitsSortEntry), "the pairs' layout");
+    ee_ai_units_push_sorted(L, (EeAiUnitsSortEntry*)s->mSorted.data(), s->mSorted.size(), inLimit);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -867,57 +808,45 @@ struct EECPUnitsFilter {
 
 static void EECPUnitsReadFilter(lua_State* L, int inTable, EECPUnitsFilter& f)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return;
-    lua_getfield(L, inTable, "type");
-    if (lua_type(L, -1) == LUA_TTABLE) {
-        // a list of class names (or ids): any of them; the unknown ones are left out (none known: nothing)
-        int theList = lua_gettop(L);
-        lua_Integer theLength = (lua_Integer)lua_rawlen(L, theList);
-        for (lua_Integer k = 1; k <= theLength && f.mTypeCount < kUnitsMaxTypes; k++) {
-            lua_rawgeti(L, theList, k);
-            long theType = EECPUnitsClassArg(L, lua_gettop(L));
-            lua_pop(L, 1);
-            if (theType >= 0)
-                f.mTypes[f.mTypeCount++] = theType;
-        }
-        f.mType = -3;
-    } else {
-        if (!lua_isnil(L, -1))
-            f.mType = EECPUnitsClassArg(L, lua_gettop(L));
-        if (!lua_isnil(L, -1) && f.mType < 0)
-            f.mType = -2;   // an unknown name: matches nothing
-    }
-    lua_pop(L, 1);
-    f.mCategory = EECPUnitsOptString(L, inTable, "category");
-    f.mHasNear = EECPUnitsOptNear(L, inTable, f.mX, f.mY, f.mR);
-    lua_getfield(L, inTable, "idle");
-    if (!lua_isnil(L, -1))
-        f.mIdle = lua_toboolean(L, -1) ? 1 : 0;
-    lua_pop(L, 1);
-    lua_getfield(L, inTable, "built");
-    if (!lua_isnil(L, -1))
-        f.mBuilt = lua_toboolean(L, -1) ? 1 : 0;
-    lua_pop(L, 1);
-    lua_getfield(L, inTable, "armed");
-    if (!lua_isnil(L, -1))
-        f.mArmed = lua_toboolean(L, -1) ? 1 : 0;
-    lua_pop(L, 1);
-    lua_getfield(L, inTable, "enemy");
-    if (!lua_isnil(L, -1))
-        f.mEnemy = lua_toboolean(L, -1) ? 1 : 0;
-    lua_pop(L, 1);
-    f.mHeld = EECPUnitsOptString(L, inTable, "held");
-    f.mAction = EECPUnitsOptString(L, inTable, "action");
-    EECPUnitsOptInt(L, inTable, "player", f.mPlayer);
-    EECPUnitsOptInt(L, inTable, "limit", f.mLimit);
-    const char* theKind = EECPUnitsOptString(L, inTable, "kind");
-    static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
-    for (long k = 0; theKind != NULL && k < 5; k++)
-        if (strcmp(theKind, kKinds[k]) == 0)
-            f.mKind = k;
-    if (theKind != NULL && f.mKind < 0)
-        f.mKind = 99;
+    static_assert(kUnitsMaxTypes == 16, "ee_ai units_lua.rs MAX_TYPES");
+    EeAiUnitsFilter r;
+    r.kind_type = f.mType;
+    for (long k = 0; k < kUnitsMaxTypes; k++)
+        r.types[k] = f.mTypes[k];
+    r.type_count = f.mTypeCount;
+    r.category = f.mCategory;
+    r.has_near = f.mHasNear;
+    r.x = f.mX;
+    r.y = f.mY;
+    r.r = f.mR;
+    r.idle = f.mIdle;
+    r.built = f.mBuilt;
+    r.armed = f.mArmed;
+    r.held = f.mHeld;
+    r.action = f.mAction;
+    r.player = f.mPlayer;
+    r.enemy = f.mEnemy;
+    r.kind = f.mKind;
+    r.limit = f.mLimit;
+    ee_ai_units_read_filter(L, inTable, &r, EECPUnitsClassByName);
+    f.mType = r.kind_type;
+    for (long k = 0; k < kUnitsMaxTypes; k++)
+        f.mTypes[k] = r.types[k];
+    f.mTypeCount = r.type_count;
+    f.mCategory = r.category;
+    f.mHasNear = r.has_near;
+    f.mX = r.x;
+    f.mY = r.y;
+    f.mR = r.r;
+    f.mIdle = r.idle;
+    f.mBuilt = r.built;
+    f.mArmed = r.armed;
+    f.mHeld = r.held;
+    f.mAction = r.action;
+    f.mPlayer = r.player;
+    f.mEnemy = r.enemy;
+    f.mKind = r.kind;
+    f.mLimit = r.limit;
 }
 
 // a class against a filter's `type` (one class, a list, or any)
@@ -1501,14 +1430,7 @@ const char* const kReasonNames[] = {"none", "bad_argument", "not_own", "not_seen
 // the result: code, reason, n, id
 static int EECPUnitsResult(lua_State* L, long inReason, long inCount, long inID)
 {
-    lua_pushstring(L, inReason == kOK ? "ok" : "refused");
-    lua_pushstring(L, kReasonNames[inReason]);
-    lua_pushinteger(L, (lua_Integer)inCount);
-    if (inID != 0)
-        lua_pushinteger(L, (lua_Integer)inID);
-    else
-        lua_pushnil(L);
-    return 4;
+    return ee_ai_units_result(L, inReason, inCount, inID);
 }
 
 // the per-step limits (AI_LUA_UNITS §3.4)
@@ -2230,16 +2152,16 @@ static long EECPUnitsDangerAt(const EECPUnitsState* s, long inX, long inY)
 // the layer an optional string argument names: "threat" (the default), "lost" or "influence"; NULL: unknown
 static const std::vector<long>* EECPUnitsLayerArg(lua_State* L, int inIndex, const EECPUnitsState* s)
 {
-    if (lua_type(L, inIndex) != LUA_TSTRING)
+    switch (ee_ai_units_layer_arg(L, inIndex)) {
+    case 0:
         return &s->mThreat;
-    const char* theName = lua_tostring(L, inIndex);
-    if (strcmp(theName, "threat") == 0)
-        return &s->mThreat;
-    if (strcmp(theName, "lost") == 0)
+    case 1:
         return &s->mLost;
-    if (strcmp(theName, "influence") == 0)
+    case 2:
         return &s->mInfluence;
-    return NULL;
+    default:
+        return NULL;
+    }
 }
 
 // ai.danger(x, y[, layer]) -> the layer's value at the tile (0: none); layer "threat" (the default), "lost" or
@@ -3180,10 +3102,7 @@ static int LuaConfig(lua_State* L)
 // charges), against the budget (ai.used's second value): a script's own profiling; it changes nothing
 static int LuaUsed(lua_State* L)
 {
-    EECPLuaState* s = EECPLuaState::From(L);
-    lua_pushinteger(L, (lua_Integer)s->LastInstructions());
-    lua_pushinteger(L, (lua_Integer)s->Budget());
-    return 2;
+    return ee_ai_lua_used_binding(L);   // ee_ai lua_host.rs
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -3584,12 +3503,7 @@ static int LuaLock(lua_State* L)
 
 static long EECPUnitsOptAmount(lua_State* L, int inTable, const char* inKey)
 {
-    if (lua_type(L, inTable) != LUA_TTABLE)
-        return 0;
-    lua_getfield(L, inTable, inKey);
-    long v = lua_isinteger(L, -1) ? (long)lua_tointeger(L, -1) : 0;
-    lua_pop(L, 1);
-    return v < 0 ? 0 : v;
+    return ee_ai_units_opt_amount(L, inTable, inKey);
 }
 
 // ai.tribute(player, {food=, wood=, stone=, gold=, iron=}): the resources given to another player as a human's

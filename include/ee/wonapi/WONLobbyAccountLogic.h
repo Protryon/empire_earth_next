@@ -54,7 +54,7 @@ public:
     void VersionCompletion(AsyncOp* inOp); // 0x7de8f0
     void AcceptCompletion(AsyncOp* inOp); // 0x7deb50
     void FirewallCompletion(AsyncOp* inOp); // 0x7ded20
-    void HandleTOU(GetHTTPDocumentOp* inOp); // 0x7de090
+    void HandleTOU(RustServerOp* inOp); // 0x7de090
     void LoadTOUTimes(); // 0x7ddef0
     void KillFirewallTest(); // 0x7dfa80
     SmartPtr<HTTPSession> mHTTPSession; // 0x40

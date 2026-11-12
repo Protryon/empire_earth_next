@@ -129,6 +129,31 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
+// New (R5b.4, the fifteenth round): the goal queues as goal ids (ee_units goals.rs). A queue container's deque
+// changed (EEGoalDeque's writes): its goals' ids to the mirror; its destructor drops it.
+class EEUnitVectorItem;
+void EEGoalQueueReport(EEUnitVectorItem* inQueue);
+void EEGoalQueueDropped(EEUnitVectorItem* inQueue);
+// New (R5b.4, the fourteenth round): the stats table (ee_units stats.rs). A stats object's fields may have changed
+// (its Init, an improvement, the civilization builder's and the scenario events' writes, the setters): its record
+// again; its destructor drops it. EEUnitStatsScope reports its object when the writer returns (every return).
+class EEUnitClassUpgrade;
+void EEUnitStatsReport(EEUnitClassUpgrade* inStats);
+void EEUnitStatsRemove(EEUnitClassUpgrade* inStats);
+struct EEUnitStatsScope {
+    explicit EEUnitStatsScope(EEUnitClassUpgrade* inStats) : mStats(inStats) {}
+    ~EEUnitStatsScope() { if (mStats != NULL) EEUnitStatsReport(mStats); }
+    EEUnitClassUpgrade* mStats;
+};
+// a unit's mStats was assigned: its record's stats handle (EE_UNIT_FIELD_STATS)
+class EEUnit;
+void EEUnitStoreStatsChanged(EEUnit* inUnit);
+// New (R5b.4, the fourteenth round): a unit of id 0xffffffff in no list (a shot: CreateUnit with no list): its record
+// in the store's unlisted table by object until a list takes it or its destructor. The store keeps every unit of id
+// 0xffffffff there, listed or not (a scenario's path points are listed, all with that id): records by id cannot hold
+// them. The combat reads' by-object lookup, the out-of-sync checksum's flags and the on-map check read both tables;
+// holders write through to it by object.
+void EEUnitStoreInsertUnlisted(RTSUnit* inUnit);
 
 // the units stepped every tick (EEWorld::mUpdateUnits; ee_units order.rs, the same ids in the same order): each change
 // of the deque reported where it is made (UpdateActiveUnits, RebuildActiveUnits, Clear); EEUnitOrderReset copies the

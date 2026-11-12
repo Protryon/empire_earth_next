@@ -190,7 +190,6 @@ e614f e6621 Empire Earth/Graphics Thread/EEE2DShockwave.cpp
 e6621 e6ef2 Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
 e6ef2 e72fa Empire Earth/Graphics Thread/EEE2DSmokePlume.cpp
 e72fa e753d Empire Earth/Graphics Thread/EEE2DSquareMarchingIcons.cpp
-e753d e773c Empire Earth/Graphics Thread/EEE2DVelocityParticle.cpp
 e773c e7d67 Empire Earth/Graphics Thread/EEE2DVortex.cpp
 e7d67 e8158 Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
 e8158 e89c6 Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
@@ -198,9 +197,7 @@ e89c6 e8ed8 Empire Earth/Graphics Thread/EEE3DAdditivePass.cpp
 e8ed8 e9474 Empire Earth/Graphics Thread/EEE3DBlastWave.cpp
 e9474 e9bee Empire Earth/Graphics Thread/EEE3DCitizenBeam.cpp
 e9bee ea703 Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
-ea703 ea9e2 Empire Earth/Graphics Thread/EEE3DDamageSmoke.cpp
 ea9e2 ebbba Empire Earth/Graphics Thread/EEE3DDamageVent.cpp
-ebbba ebde9 Empire Earth/Graphics Thread/EEE3DDestructionSmoke.cpp
 ebde9 ec6e4 Empire Earth/Graphics Thread/EEE3DDisease.cpp
 ec6e4 ed606 Empire Earth/Graphics Thread/EEE3DEarthquake.cpp
 ed606 ee1b4 Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp
@@ -386,8 +383,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 1cfeef 1d1766 Empire Earth/UI Events/EEUIECampaignEditorEvents.cpp
 1d321b 1d3a77 Empire Earth/UI Events/EEUIEChatLogEvents.cpp
 1e1b8d 1e1e48 Empire Earth/UI Events/EEUIESSEOpen.cpp
-1e295f 1e5e2e Empire Earth/UI Events/EEUIEPostGameSummaryEvents.cpp
-1e5e2e 1e6711 Empire Earth/UI Events/EEUIEPDCSEvents.cpp
 1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
 1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
 1eafcb 1eb5e2 Empire Earth/UI Events/EEUIEWonNetArenaRoomEvents.cpp
@@ -466,7 +461,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
-2544e9 2547e0 Empire Earth/UI Events/EEDSUIEvents.cpp
 2547e0 254911 Empire Earth/User Interface Thread/EEUIBColor.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
 255c2a 25619b Empire Earth/User Interface Thread/EEUIBSavedGroup.cpp

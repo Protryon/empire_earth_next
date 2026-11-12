@@ -12,3 +12,11 @@ crate-type = ["rlib"]
 
 [dependencies]
 ee_plat_core = { path = "../ee_plat_core" }
+libc = "0.2"
+# the C API of the vendored Lua the C++ build compiles (src/ThirdParty/lua/ee_lua.c): `external` links no Lua of its
+# own (never `vendored`: lua-src brings its own luaconf and a random hash seed)
+mlua-sys = { version = "0.13", default-features = false, features = ["lua54", "external"] }
+
+[build-dependencies]
+# ee_lua.c for this crate's tests only (build.rs)
+cc = "1"

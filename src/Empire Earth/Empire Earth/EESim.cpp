@@ -108,6 +108,7 @@
 #include "lle/UIBackground.h"
 #include "lle/NESynchronousServer.h"
 #include "lle/FSRestorable.h"
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
 #include "ee/EEARemovePlayer.h"
@@ -133,7 +134,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEUICPing.h"
-#include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
@@ -820,7 +820,7 @@ void DumpState(const std::string& inPath)
                         (double)x->mWaypoints[w].mLocation.GetZ(), (double)x->mWaypoints[w].mDistance,
                         (double)x->mWaypoints[w].mStartDistance);
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
-                std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
+                const EEGoalDeque& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
                     fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
@@ -844,7 +844,7 @@ void DumpState(const std::string& inPath)
                 fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);
             fprintf(f, "\n");
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {   // each goal's own out-of-synch dump
-                std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
+                const EEGoalDeque& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++) {
                     fprintf(f, "  unit %lu goal %ld.%zu\n", u->GetUnitID(), q, g);
                     theGoals[g]->DumpOutOfSynch(f);

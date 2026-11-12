@@ -90,31 +90,28 @@ void EEEffect3D::Reinit()
 }
 
 // FUNCTION: EXE 0x505471
-// Resets the transformation to identity and the bounding radius to 0
+// Resets the transformation to identity and the bounding radius to 0 (the record's)
 void EEEffect3D::InitTransformation()
 {
-    this->mTransformation.MakeIdentity();
-    this->mBoundingRadius = 0.0f;
+    ee_gfx_effect_init_transformation(this->mRecord);
 }
 
 // FUNCTION: EXE 0x505484
-// Reads the transformation and bounding radius; returns the first read error (the base class result is ignored)
+// Reads the transformation and bounding radius (ee_gfx effect_state.rs); returns the first read error (the base
+// class result is ignored)
 long EEEffect3D::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = EEEffect::Load(inMajorVersion, inMinorVersion, inFile);
-    theResult = this->mTransformation.Load(inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mBoundingRadius);
-    return theResult;
+    EEEffect::Load(inMajorVersion, inMinorVersion, inFile);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_3d(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x5054b8
-// Writes the transformation and bounding radius; returns the first write error (the base class result is ignored)
+// Writes the transformation and bounding radius (ee_gfx effect_state.rs); returns the first write error (the base
+// class result is ignored)
 long EEEffect3D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect::Save(inMajorVersion, inMinorVersion, outFile);
-    theResult = this->mTransformation.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mBoundingRadius);
-    return theResult;
+    EEEffect::Save(inMajorVersion, inMinorVersion, outFile);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_3d(this->mRecord, &theFile);
 }

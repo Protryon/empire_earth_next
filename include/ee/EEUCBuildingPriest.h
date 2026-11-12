@@ -30,7 +30,6 @@ public:
     // the priest half: the class's own copies of EEUCBasicPriest's bodies (identical source; ICF-folded into
     // EEUCBasicPriest's 0x20d998/0x20dd0a/0x20dd2d/0x20dee4/0x20df05/0x20d59f/0x20d7f2/0x20e16a/0x20e274; owner
     // decision) (provisional names)
-    void PriestVirtual74(EEComplexUnit* inUnit);
     void PriestVirtualA8(EEPlayer* inPlayer);
     long PriestVirtualA0(EEComplexUnit* inUnit, unsigned long inEvent);
     void PriestVirtualB4(EEPlayer* inPlayer);

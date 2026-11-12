@@ -460,7 +460,7 @@ struct EEWonNetRoomInfo {
 namespace WONAPI {
 class AsyncOp;
 class RustServerOp;
-class GetMOTDOp;
+class RustServerOp;
 class RoutingConnection;
 class SmartRoutingConnection;
 class RoutingOp;
@@ -575,7 +575,7 @@ public:
     WONAPI::AuthContext* mUser;                    // +0x028
     WONAPI::DirEntityList mServers;         // +0x02c (the server-select form lists them)
     // +0x038: the message-of-the-day request (base game: RequestMOTD)
-    WONAPI::SmartPtr<WONAPI::GetMOTDOp> mMOTDOp;
+    WONAPI::SmartPtr<WONAPI::RustServerOp> mMOTDOp;
     WONAPI::SmartPtr<WONAPI::GetCertOp> mLoginOp;  // +0x03c (base game: Login)
     // +0x040: the directory query (base game: GetTitanServerList; a Rust GetDirOp, ee_won reqdir.rs)
     WONAPI::SmartPtr<WONAPI::RustServerOp> mDirOp;

@@ -116,7 +116,7 @@ unsigned long EEMenuHeight();
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EECivilizationBuilder.h"
-#include "ee/EEUIEPDCSEvents.h"
+#include "ee/EEScreenEvent.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"
@@ -744,10 +744,10 @@ void EEUserInterface::ShowCivilizationBuilder(long inX, bool inFlag1, bool inFla
             EESetCivBuilderButtonBlinking(false);
             gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationChosen = true;
             gWorld.mPlayers[gWorld.mCurrentPlayer]->mCivilizationLocked = true;
-            theEvent = new EEUIEPDCSFormOpen;
+            theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_OPEN);   // (ee_screens civ_choice.rs)
             theForm->SetFormOpenEvent(theEvent);
             theEvent->Dereference();
-            theEvent = new EEUIEPDCSFormClose;
+            theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_CLOSE);
             theForm->SetFormCloseEvent(theEvent);
             theEvent->Dereference();
             gUIManager->Push(theForm);
@@ -762,12 +762,6 @@ void EEUserInterface::ShowCivilizationBuilder(long inX, bool inFlag1, bool inFla
     gUIManager->UnlockUIForCopyData();
     this->ResumeGraphics();
 }
-
-// SYNTHETIC: EXE 0x677e0d
-// (EEUIEPDCSFormOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x677e38
-// (EEUIEPDCSFormClose's scalar deleting destructor)
 
 // FUNCTION: EXE 0x677e63
 // Pauses the graphics thread and waits until it is paused

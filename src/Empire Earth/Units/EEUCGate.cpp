@@ -591,44 +591,9 @@ void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 // other actions go the building's way
 void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
 {
-    long theAction;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionOpen:
-        theAction = 15000;
-        break;
-    case kActionClosed:
-        theAction = 15001;
-        break;
-    case kActionOpening: {
-        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            theSound->Play(theVolume, thePan, thePitch);
-        }
-        theAction = 15002;
-        break;
-    }
-    case kActionClosing: {
-        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            theSound->Play(theVolume, thePan, thePitch);
-        }
-        theAction = 15003;
-        break;
-    }
-    default:
-        EEUCBuilding::ActionChanged(inUnit);
-        return;
-    }
-    inUnit->mNextPart->StartAction(theAction);
-    inUnit->mNextPart->mNextPart->StartAction(theAction);
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs gate), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_GATE, this, inUnit);
 }
 
 // FUNCTION: EXE 0x611905

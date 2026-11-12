@@ -131,8 +131,16 @@ impl Blowfish {
         if !(MIN_KEY_LEN..=MAX_KEY_LEN).contains(&length) {
             return false;
         }
+        self.create_with(length, Random::new())
+    }
+
+    /// `Create` with a given generator (tests and golden comparisons).
+    pub fn create_with(&mut self, length: usize, mut random: Random) -> bool {
+        if !(MIN_KEY_LEN..=MAX_KEY_LEN).contains(&length) {
+            return false;
+        }
         let mut key = vec![0u8; length];
-        Random::new().next_bytes(&mut key);
+        random.next_bytes(&mut key);
         self.set_key(&key)
     }
 

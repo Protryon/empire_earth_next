@@ -8,6 +8,10 @@
 
 #include <map>
 #include <deque>
+#include <string.h>
+#include <new>
+#include <stdint.h>
+#include "rust/ee_gfx.h"            // effect_state.rs: the effects' records (RUST_PLAN R4.4)
 
 class EEUnit;
 class EEGraphicEffect;
@@ -24,7 +28,7 @@ struct EEEffectHandle {
     bool operator==(const EEEffectHandle& inHandle) const { return this->mValue == inHandle.mValue; }
     bool operator!=(const EEEffectHandle& inHandle) const { return this->mValue != inHandle.mValue; }
 
-    unsigned long mValue;                   // (EECalamity Load/Save use FSFile Read/Write(unsigned long) on it)
+    uint32_t mValue;                        // (EECalamity Load/Save use FSFile Read/Write on it; 32 bits, the record's)
 };
 
 static const EEEffectHandle kNoEffectHandle = {0};
@@ -60,19 +64,40 @@ float GetEffectRandomFloat(float inMinimum, float inMaximum);
 // 0x102f57 (cdecl, in EEEffect.cpp's range): a random integer in [inMinimum, inMaximum] (EEE2DBattlefieldAmbient's
 // effect variant pick) (provisional name)
 long GetEffectRandomLong(long inMinimum, long inMaximum);
+// TEST ONLY (tools/sim_capture.py EFST): the effects' random generator's seed
+unsigned long EEEffectRandomSeed();
+
+// An FSFile as ee_gfx effect_state.rs's typed reads and writes (EEEffect.cpp)
+EeGfxEffectFile EEEffectFile(FSFile& inFile);
 
 class EEEffect : public UReferenceCounter {
 public:
+    // New (port, R4.4): effects are allocated zeroed. The original's constructors leave members to SetUp, to the
+    // first step or to a tag point that may not exist (EEE2DImpact's tag index, EEE2DLightGlow's, ...), and a save or
+    // the EFST capture wrote whatever the heap held; zero-filled storage makes those values the same in every run
+    // (the pools' objects too: `new T[]`).
+    static void* operator new(size_t inSize) { return EEEffect::Zeroed(::operator new(inSize), inSize); }
+    static void* operator new[](size_t inSize) { return EEEffect::Zeroed(::operator new[](inSize), inSize); }
+    static void* operator new(size_t, void* inWhere) { return inWhere; }
+    static void operator delete(void* inMemory) { ::operator delete(inMemory); }
+    static void operator delete[](void* inMemory) { ::operator delete[](inMemory); }
+    static void* Zeroed(void* inMemory, size_t inSize) { memset(inMemory, 0, inSize); return inMemory; }
     static const UString sData;             // "EEEffect-Data" (chain 0x10251d)
     // 0x10258e: vptr, Init(), then the arguments (both pointers referenced), mKind, mB2C, and the media load
     // `Virtual04(gU5318D8 == false)`
     EEEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind, bool inKeepsUnit);
-    // inline (the effects' load-time ctors: EEEffect3D(long) 0xe8e76 expands it; mKind before the count and the vptr,
-    // then the flags; nothing else is set). VC6 refuses to expand this exact body in a probe (any 4 stores plus
-    // UReferenceCounter's inline ctor) where the original expands it: the real spelling is cheaper)
-    EEEffect(long inKind) : mKind(inKind) { this->mKeepsUnit = false; this->mIsSaved = true; this->mIsLocalOnly = false; this->mPlayer = 0; }
-    // inline (EEEffect2D's load-time ctor 0xdf4a2 expands it: mB2D/mL20/mKind/mB2C before the vptr, mIsSaved after)
-    EEEffect(long inKind, bool inKeepsUnit) : mKind(inKind), mKeepsUnit(inKeepsUnit) { this->mIsSaved = true; this->mIsLocalOnly = false; this->mPlayer = 0; }
+    // inline (the effects' load-time ctors: EEEffect3D(long) 0xe8e76 expands it): the record's kind; its new record
+    // holds Init's values (the original left the handle, region and pointers to the load)
+    EEEffect(long inKind) : mUnit(NULL), mGraphicEffect(NULL) { this->mKind = inKind; }
+    // inline (EEEffect2D's load-time ctor 0xdf4a2 expands it)
+    EEEffect(long inKind, bool inKeepsUnit) : mUnit(NULL), mGraphicEffect(NULL)
+    {
+        this->mKind = inKind;
+        this->mKeepsUnit = inKeepsUnit;
+    }
+    // not copied: the members are references into the effect's own record
+    EEEffect(const EEEffect&) = delete;
+    EEEffect& operator=(const EEEffect&) = delete;
     virtual ~EEEffect();                    // +0x00 0x102600 (??_G 0xdf50a): unloads, leaves its tile, dereferences
     virtual void LoadMedia(bool inIsOnDemand);  // +0x04 0x1030b5: mGraphicEffect->Load(inArg) when set
     virtual long DrawPass2();               // +0x08 0x1ad67e (`xor eax, eax`, ICF-shared)
@@ -103,6 +128,7 @@ public:
     // leaving the old tile's effect list (0x239ee2) and joining the new one (0xf40ac)
     virtual void MoveToTransformation(const GETransformation& inTransformation);
     virtual void MoveToPoint(const GE3DPoint& inLocation);
+    void MoveToRegion(float inX, float inY);   // both moves' body (the region is effect_state.rs's)
     virtual long Step() = 0;                // +0x4c
     // +0x50 0xdf42d (`ret 0x10`, ICF-shared): inline (its COMDAT follows EEE2DBattlefieldAmbient.cpp, the first unit
     // that emits EEEffect's vtable through the inline EEEffect2D ctors)
@@ -128,17 +154,22 @@ public:
     void Reinit(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, bool inKeepsUnit);
     void Reinit(bool inKeepsUnit);
 
+    // The effect's plain state is a Rust record (ee_gfx effect_state.rs: EEEffect's, EEEffect3D's, EEEffect2D's and
+    // the smoke generators'), made here and freed by the destructor; the members below are references into it.
+    EeGfxEffectRecord* mRecord = ee_gfx_effect_record_new(0);
     EEUnit* mUnit;                          // +0x08 (referenced; RTSUnit::Dereference in the dtor; saved as its id)
     EEGraphicEffect* mGraphicEffect;        // +0x0c (referenced; Load/Unload)
     // (+0x10 / +0x14: the manager's list links, now its Rust store's: ee_gfx effect_store.rs)
-    long mKind;                             // +0x18 (ctor argument; the fire functor tests 0x3e = EEEDamagedEffect)
-    EEEffectHandle mHandle;                 // +0x1c (= kNoEffectHandle; provisional name)
-    long mPlayer;                           // +0x20 (compared with gU5318C4)
-    long mTileX;                            // +0x24 (-1: on no tile; provisional name)
-    long mTileY;                            // +0x28 (-1)
-    bool mKeepsUnit;                        // +0x2c (ctor argument; set: Virtual20 keeps the unit)
-    bool mIsLocalOnly;                      // +0x2d
-    bool mIsSaved;                          // +0x2e (Init: true)
+    int32_t& mKind = mRecord->kind;         // +0x18 (ctor argument; the fire functor tests 0x3e = EEEDamagedEffect)
+    EEEffectHandle& mHandle = *reinterpret_cast<EEEffectHandle*>(&mRecord->handle);   // +0x1c (= kNoEffectHandle)
+    int32_t& mPlayer = mRecord->player;     // +0x20 (compared with gU5318C4)
+    int32_t& mTileX = mRecord->tile_x;      // +0x24 (-1: on no tile; provisional name)
+    int32_t& mTileY = mRecord->tile_y;      // +0x28 (-1)
+    bool& mKeepsUnit = mRecord->keeps_unit; // +0x2c (ctor argument; set: Virtual20 keeps the unit)
+    bool& mIsLocalOnly = mRecord->local_only;   // +0x2d
+    bool& mIsSaved = mRecord->saved;        // +0x2e (Init: true)
 };
+
+static_assert(sizeof(EEEffectHandle) == sizeof(uint32_t), "an effect handle is the record's u32");
 
 #endif

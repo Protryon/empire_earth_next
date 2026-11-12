@@ -9,8 +9,14 @@
 
 class EEPGSFormManager : public UIFormManager {
 public:
-    EEPGSFormManager();                     // 0x1e44da
-    virtual ~EEPGSFormManager();            // 0x1e4562
+    // 0x1e44da and 0x1e4562 (out of line in the original's summary unit; the summary is ee_screens post_game.rs now,
+    // its host UI Events/EEScreens.cpp; the time line's range is Rust's, mFirstTime and mLastTime stay unused)
+    EEPGSFormManager()
+    {
+        this->mU34C = 0;
+        this->mU348 = -1;
+    }
+    virtual ~EEPGSFormManager() {}
 
     UGraph mEconomyScoreGraph;              // +0x004
     UGraph mTotalCollectedGraph;            // +0x060
@@ -26,5 +32,9 @@ public:
     long mU348;                             // +0x348 (-1)
     long mU34C;                             // +0x34c (0)
 };
+
+// Globals of other units the summary reads (provisional names; no evidence beyond these reads)
+extern GEFont* gFontTahoma8;                // 0x531990 (the status bars' font; Empire Earth.cpp)
+extern long& gGameResources;                 // 0x53123c (0x2ec52 compares it with 4)
 
 #endif

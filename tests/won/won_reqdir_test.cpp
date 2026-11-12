@@ -2,7 +2,7 @@
 // UpdateAccountOp as whole ops: the original's GetNextRequest, CheckResponse and Reset (copied from the C++ op
 // classes and GetEntityRequest before the port, over stand-ins with the ops' members; the entity replies' reading
 // through DirEntityReplyParser's statements over ee_won's dir module, which won_dir_test checks against the
-// pre-port parser, the requests through won_dir_msg.h and WONDBMsg.h, which won_dirops_test and won_db_test
+// pre-port parser, the requests through won_dir_msg.h and won_db_msg.h, which won_dirops_test and won_db_test
 // check) against the Rust ops (ee_won reqdir.rs) through their C ABI. Each sequence: generated members and the
 // request, then up to six generated replies (headers right and wrong, statuses, sequences, cut and mutated), each
 // reply's verdict and the op's results after it; a Reset at times, then the next server's request.
@@ -21,7 +21,8 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONDBMsg.h"
+#include "won_profiledata.h"
+#include "won_db_msg.h"
 #include "won_dir_msg.h"
 #include "rust/ee_won.h"
 

@@ -58,6 +58,8 @@ struct Standin {
     int mSerial, mStatus, mMode, mLfs, mLastSocket, mCalls;
     unsigned mTick;
     int mLine; // the next line of the session LineBytes gives
+    bool mHttp; // an HTTP get's sequence (its reply lines: HttpLine)
+    bool mDoc; // an HTTP document's sequence (its downloads' statuses: invalid redirects at times)
     bool mReq; // a request exchange's sequence (its own answers: ReqBytes, the peer auth's statuses)
     int mAuth; // the request's mAuthType
     std::vector<int> mRands;
@@ -76,7 +78,7 @@ static unsigned int ANext()
 static int APick(int n) { return (int)(ANext() % (unsigned)n); }
 static void Log(const char* inFormat, ...)
 {
-    char aBuffer[512];
+    char aBuffer[4096];
     va_list ap;
     va_start(ap, inFormat);
     vsnprintf(aBuffer, sizeof(aBuffer), inFormat, ap);
@@ -159,6 +161,30 @@ static string LineBytes(bool* outNull)
     *outNull = i == 14;
     if (*outNull) return string();
     return string(k[i]) + '\0';
+}
+// an HTTP reply's lines (NUL ended), biased to a session: the status first, then headers, blank lines, chunk
+// lengths
+static string HttpLine(bool* outNull)
+{
+    static const char* const kStatus[] = { "HTTP/1.1 200 OK", "HTTP/1.1 206 Partial", "HTTP/1.1 301 Moved",
+                                           "HTTP/1.0 302 Found", "HTTP/1.1 304 Not Modified", "HTTP/1.1 404 Not Found",
+                                           "HTTP/1.1 500 Error", "garbage" };
+    static const char* const kHeaders[] = {
+        "Content-Length: 12", "Content-Type: text/plain", "Last-Modified: Sun, 06 Nov 1994 08:49:37 GMT",
+        "Location: http://www.sierra.com/motd/x.txt", "Location: http://other", "Location: nowhere",
+        "Transfer-Encoding: chunked", "Connection: close", "Date: Sun, 06 Nov 1994 08:49:37 GMT",
+        "Expires: Sun, 06 Nov 1994 09:49:37 GMT", "ETag: \"abc\"x", "ETag: none", "X-Other: y", "no colon" };
+    static const char* const kChunks[] = { "c", "0", "1a;ext", "zz", "" };
+    int k = APick(10);
+    *outNull = k == 0 && APick(3) == 0;
+    if (*outNull) return string();
+    string l;
+    if (S.mLine == 0 || k == 1) l = kStatus[APick(8)];
+    else if (k < 6) l = kHeaders[APick(14)];
+    else if (k < 8) l = "";
+    else l = kChunks[APick(5)];
+    S.mLine++;
+    return l + '\0';
 }
 // a request exchange's reply: a reused session's "expired", a ping reply, anything
 static string ReqBytes(bool* outNull)
@@ -272,6 +298,7 @@ static void Call(EeWonHostCall* c)
         std::map<int, int>::const_iterator k = S.mKinds.find(o0);
         int v = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? SendStatus() : RecvStatus();
         if (S.mReq && APick(6) == 0) v = 100053; // WS_PeerAuth_GetCertFailure
+        if (S.mDoc && APick(4) == 0) v = 100094; // WS_HTTP_InvalidRedirect
         c->out_num = v;
         Log("st#%d=%d", o0, v);
         break;
@@ -279,7 +306,8 @@ static void Call(EeWonHostCall* c)
     case EE_WON_HOST_OP_BYTES: {
         bool isNull;
         std::map<int, int>::const_iterator k = S.mKinds.find(o0);
-        string b = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? LineBytes(&isNull)
+        string b = S.mHttp ? HttpLine(&isNull)
+                   : (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? LineBytes(&isNull)
                    : S.mReq ? ReqBytes(&isNull) : Bytes(&isNull);
         Give(c, b, isNull);
         Log("bytes#%d=%s", o0, BytesLog(b, isNull).c_str());
@@ -452,6 +480,100 @@ static void Call(EeWonHostCall* c)
         break;
     }
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = APick(4) != 0; Log("isrecv#%d=%d", o0, (int)c->out_num); break;
+    case EE_WON_HOST_SOCKET_CONNECTED: c->out_num = APick(3) == 0; Log("conn?#%d=%d", o0, (int)c->out_num); break;
+    case EE_WON_HOST_SOCKET_KILL: Log("skill#%d", o0); break;
+    case EE_WON_HOST_SOCKET_STATUS: {
+        c->out_num = APick(2) ? 100004 : 100001;
+        Log("sstat#%d=%d", o0, (int)c->out_num);
+        break;
+    }
+    case EE_WON_HOST_RECV_CR: {
+        int v = SendStatus();
+        bool isNull;
+        string b = HttpLine(&isNull);
+        c->out_num = v;
+        Give(c, b, isNull);
+        Log("recvcr#%d t%u=%d %s", o0, (unsigned)n0, v, BytesLog(b, isNull).c_str());
+        break;
+    }
+    case EE_WON_HOST_FILE_STAT: {
+        static const long long k[] = { 0, 12, 4096, 784111777 };
+        long long v = n0 == 0 ? APick(3) != 0 : k[APick(4)];
+        c->out_num = v;
+        Log("stat %s %d=%lld", Hex(data).c_str(), (int)n0, v);
+        break;
+    }
+    case EE_WON_HOST_TIME: {
+        long long v = 784111000 + APick(9000);
+        c->out_num = v;
+        Log("time=%lld", v);
+        break;
+    }
+    case EE_WON_HOST_CACHE_ENTRY: {
+        int id = APick(3) == 0 ? 0 : NewObj();
+        c->out_obj = P(id);
+        Log("entry#%d %s=%d", o0, Hex(data).c_str(), id);
+        break;
+    }
+    case EE_WON_HOST_ENTRY_GET:
+        if (n0 == 0 || n0 == 1) {
+            long long v = n0 == 0 ? APick(2) : 784111000 + APick(9000);
+            c->out_num = v;
+            Log("eget#%d %d=%lld", o0, (int)n0, v);
+        } else {
+            static const char* const k[] = { "", "_cache1.txt", "\"tag\"" };
+            string b = k[APick(3)];
+            Give(c, b, false);
+            Log("eget#%d %d=%s", o0, (int)n0, Hex(b).c_str());
+        }
+        break;
+    case EE_WON_HOST_ENTRY_SET: Log("eset#%d %d %lld %s", o0, (int)n0, n1, Hex(data).c_str()); break;
+    case EE_WON_HOST_CACHE_UPDATE: Log("update#%d %d", o0, o1); break;
+    case EE_WON_HOST_RECV_SKIP: Log("skip#%d", o0); break;
+    case EE_WON_HOST_RECV_BINARY: Log("binary#%d %d", o0, (int)n0); break;
+    case EE_WON_HOST_RECV_MODIFY_TIME: Log("mtime#%d %lld", o0, n0); break;
+    case EE_WON_HOST_HTTP_PROXY: {
+        static const char* const k[] = { "", "", "proxy:8080" };
+        string b = k[APick(3)];
+        Give(c, b, false);
+        Log("proxy=%s", Hex(b).c_str());
+        break;
+    }
+    case EE_WON_HOST_NEW_HTTP_GET: {
+        int id = NewObj();
+        c->out_obj = P(id);
+        Log("http#%d %d %s", id, (int)n0, Hex(data).c_str());
+        break;
+    }
+    case EE_WON_HOST_HOSTOP_NUM: {
+        long long v = APick(3) == 0 ? (long long)ANext() : APick(4) == 0 ? 404 : APick(3);
+        c->out_num = v;
+        Log("cnum#%d %d=%lld", o0, (int)n0, v);
+        break;
+    }
+    case EE_WON_HOST_HOSTOP_BYTES: {
+        bool isNull = APick(5) == 0;
+        string b = isNull ? string() : APick(2) ? string() : string("x.txt");
+        Give(c, b, isNull);
+        Log("cbytes#%d %d=%s", o0, (int)n0, BytesLog(b, isNull).c_str());
+        break;
+    }
+    case EE_WON_HOST_HOSTOP_SET: Log("cset#%d %d %lld %s o%d", o0, (int)n0, n1, Hex(data).c_str(), o1); break;
+    case EE_WON_HOST_HTTP_MODIFIED: {
+        long long v = APick(3) == 0 ? 0 : 784111000 + APick(9000);
+        c->out_num = v;
+        Log("hmod#%d=%lld", o0, v);
+        break;
+    }
+    case EE_WON_HOST_FILE_FIRST_CHAR: {
+        static const int k[] = { -2, -1, '1', '0', '<' };
+        int v = k[APick(5)];
+        c->out_num = v;
+        Log("fgetc %s=%d", Hex(data).c_str(), v);
+        break;
+    }
+    case EE_WON_HOST_SESSION_ADD: Log("sadd#%d %d", o0, o1); break;
+    case EE_WON_HOST_TRACKER_EMPTY: c->out_num = APick(2); Log("tempty=%d", (int)c->out_num); break;
     default: Log("unknown %d", c->code); break;
     }
 }
@@ -1202,6 +1324,640 @@ static string Results(const Op& o)
 }
 }
 
+// ---- the original's statements: HTTPGetOp.cpp before the port (WONHttpMsg.h's helpers over the op stand-in; the
+// redirect's child op, its setters and its results through the host calls the Rust op makes; the members the
+// constructors left unset 0)
+
+namespace OrigHttp {
+enum { HTTP_Track_Connect = 1, HTTP_Track_RecvStatus = 2, HTTP_Track_RecvHeader = 3, HTTP_Track_RecvContent = 4,
+       HTTP_Track_Redirect = 5, HTTP_Track_RecvChunkLength = 6, HTTP_Track_RecvChunkCRLF = 7,
+       HTTP_Track_RecvFooter = 8, HTTP_Track_SendRequest = 9 };
+struct Op {
+    int mSocket, mHTTPCache, mHTTPCacheEntry;
+    string mHost, mRemotePath, mLocalPath;
+    bool mContentIsChunked, mIsFirstChunk, mBinaryFile, mCloseConnection, mDoClose, mDoRangeResume;
+    string mProxyHost, mRedirectHost, mRedirectPath;
+    long long mServerTime, mExpireTime, mLastModified, mLocalFileModifyTime;
+    unsigned long long mLocalFileSize;
+    string mEntityTag, mContentType;
+    unsigned mContentLength, mChunkLength;
+    bool mHasContent;
+    string mContent;
+    string mContentAccumulator;
+    int mHTTPStatus;
+    bool mContentIsNew;
+    int mRecvChunkCompletion;
+    unsigned mRecvChunkSize;
+    bool mOnlySend, mOnlyRecv, mAutoRedirect;
+    int mNumRedirects;
+    Op() : mSocket(0), mHTTPCache(0), mHTTPCacheEntry(0), mContentIsChunked(false), mIsFirstChunk(false),
+           mBinaryFile(true), mCloseConnection(true), mDoClose(false), mDoRangeResume(true), mServerTime(0),
+           mExpireTime(0), mLastModified(0), mLocalFileModifyTime(0), mLocalFileSize(0), mContentLength(0),
+           mChunkLength(0), mHasContent(false), mHTTPStatus(0), mContentIsNew(false), mRecvChunkCompletion(0),
+           mRecvChunkSize(0), mOnlySend(false), mOnlyRecv(false), mAutoRedirect(true), mNumRedirects(0) {}
+    int GetMode() { return (int)Do(EE_WON_HOST_MODE).mNum; }
+    bool IsAsync() { return GetMode() == 1; }
+    unsigned TimeLeft() { return (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum; }
+    void Finish(int s) { Do(EE_WON_HOST_FINISH, 0, 0, s); }
+    int Track(int inOp, int inId) { Do(EE_WON_HOST_TRACK, inOp, 0, inId); return inOp; }
+    bool GetOnlySend() { return mOnlySend; }
+    void SetProxy(const string& s) { mProxyHost = s; }
+    // the helpers' calls (WONHttpMsg.h)
+    void DoFinish();
+    bool CheckStatus(int inStatus);
+    bool ExtractStatus(const char* inLine) { return HttpExtractStatus(*this, inLine); }
+    bool ExtractRedirect(const char* inLocation) { return HttpExtractRedirect(*this, inLocation); }
+    bool ExtractHeaderLine(const char* inLine) { return HttpExtractHeaderLine(*this, inLine); }
+    bool DoConnect();
+    bool SendRequest();
+    void AsyncRecvCRMsg(int inType);
+    bool ExtractChunkLength(const char* inLine);
+    bool RecvChunkLength();
+    bool DoneRecvContent(int inOp);
+    void RecvContent();
+    bool CallbackHook(int inOp, int inParam);
+    void FinishRedirect(int inOp);
+    void FollowRedirect();
+    void DoneRecvHeader();
+    void RunHook();
+    void CleanupHook();
+};
+// a line of a socket's or an op's (NULL, which the original dereferenced: empty), NUL ended for the helpers
+static string LineOf(const Res& r) { return r.mNull ? string(1, '\0') : r.mBytes + '\0'; }
+static size_t LengthOf(const Res& r) { return r.mNull ? 0 : r.mBytes.size(); }
+static int EntryNum(int inEntry, int inWhat) { return (int)Do(EE_WON_HOST_ENTRY_GET, inEntry, 0, inWhat).mNum; }
+static long long EntryTime(int inEntry) { return Do(EE_WON_HOST_ENTRY_GET, inEntry, 0, 1).mNum; }
+static string EntryBytes(int inEntry, int inWhat) { return Do(EE_WON_HOST_ENTRY_GET, inEntry, 0, inWhat).mBytes; }
+static long long Now() { return Do(EE_WON_HOST_TIME).mNum; }
+void Op::DoFinish()
+{
+    if (this->mHTTPStatus>304) this->Finish(100093);
+    else this->Finish(0);
+}
+bool Op::CheckStatus(int inStatus)
+{
+    if (inStatus==0) return true;
+    this->Finish(inStatus);
+    return false;
+}
+bool Op::DoConnect()
+{
+    if (Do(EE_WON_HOST_SOCKET_CONNECTED, this->mSocket).mNum != 0)
+        return true;
+    string anAddress;
+    if (!this->mProxyHost.empty())
+        anAddress = Do(EE_WON_HOST_RESOLVE, 0, 0, 80, 0, this->mProxyHost).mAddr;
+    else
+        anAddress = Do(EE_WON_HOST_RESOLVE, 0, 0, 80, 0, this->mHost).mAddr;
+    if (this->GetMode()==1) {
+        int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_CONNECT, 0, string(), anAddress).mObj;
+        Do(EE_WON_HOST_QUEUE, this->mSocket, this->Track(anOp, HTTP_Track_Connect), 0xffffffffu);
+        return false;
+    }
+    else {
+        unsigned aTime = this->TimeLeft();
+        return this->CheckStatus((int)Do(EE_WON_HOST_CONNECT, this->mSocket, 0, aTime, 0, string(), anAddress).mNum);
+    }
+}
+bool Op::SendRequest()
+{
+    bool aFile=false;
+    if (!this->mLocalPath.empty()) {
+        if (Do(EE_WON_HOST_FILE_STAT, 0, 0, 0, 0, this->mLocalPath).mNum != 0) { // WONFile::Exists
+            this->mLocalFileSize=(unsigned long long)Do(EE_WON_HOST_FILE_STAT, 0, 0, 1, 0, this->mLocalPath).mNum;
+            this->mLocalFileModifyTime=Do(EE_WON_HOST_FILE_STAT, 0, 0, 2, 0, this->mLocalPath).mNum;
+            aFile=true;
+        }
+    }
+    bool aCacheOk = this->mHTTPCacheEntry==0 || EntryNum(this->mHTTPCacheEntry, 0) != 0;
+    ByteBufferPtr aRequest=HttpRequestBytes(this->mProxyHost.length()!=0,this->mHost,this->mRemotePath,
+                                            this->mCloseConnection,aFile,(size_t)this->mLocalFileSize,
+                                            (time_t)this->mLocalFileModifyTime,this->mDoRangeResume,this->mEntityTag,
+                                            aCacheOk);
+    string aReq(aRequest->data(), aRequest->length());
+    if (this->IsAsync()) {
+        int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_SEND_BYTES, 0, aReq).mObj;
+        Do(EE_WON_HOST_QUEUE, this->mSocket, this->Track(anOp, HTTP_Track_SendRequest), 0xffffffffu);
+        if (!this->GetOnlySend())
+            this->AsyncRecvCRMsg(HTTP_Track_RecvStatus);
+        return false;
+    }
+    else {
+        unsigned aTime = this->TimeLeft();
+        Do(EE_WON_HOST_SEND_BYTES, this->mSocket, 0, aTime, 0, aReq);
+    }
+    return true;
+}
+void Op::AsyncRecvCRMsg(int inType)
+{
+    int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_RECV_CR_MSG).mObj;
+    Do(EE_WON_HOST_QUEUE, this->mSocket, this->Track(anOp, inType), 0xffffffffu);
+}
+bool Op::ExtractChunkLength(const char* inLine)
+{
+    uint32_t aChunkLength=0;
+    if (ee_won_http_chunk_length(reinterpret_cast<const uint8_t*>(inLine),&aChunkLength)) {
+        this->mChunkLength=aChunkLength;
+        this->mContentLength+=this->mChunkLength;
+        if (this->mChunkLength==0) {
+            if (this->mHTTPCacheEntry!=0)
+                Do(EE_WON_HOST_ENTRY_SET, this->mHTTPCacheEntry, 0, 0, 1); // SetValid(true)
+            if (this->mLocalPath.empty()) {
+                this->mHasContent=true;
+                this->mContent=this->mContentAccumulator;
+                this->mContentAccumulator.clear();
+            }
+            if (this->GetMode()==1) {
+                this->AsyncRecvCRMsg(HTTP_Track_RecvFooter);
+                return false;
+            }
+            while (true) {
+                unsigned aTime = this->TimeLeft();
+                Res aFooter = Do(EE_WON_HOST_RECV_CR, this->mSocket, 0, aTime);
+                if (!this->CheckStatus((int)aFooter.mNum))
+                    return false;
+                if (!aFooter.mNull && aFooter.mBytes.size()==1)
+                    break;
+            }
+            this->DoFinish();
+            return false;
+        }
+        return true;
+    }
+    this->Finish(100092);
+    return false;
+}
+bool Op::RecvChunkLength()
+{
+    if (this->mIsFirstChunk)
+        this->mContentLength=0;
+    if (this->GetMode()==1) {
+        if (!this->mIsFirstChunk)
+            this->AsyncRecvCRMsg(HTTP_Track_RecvChunkCRLF);
+        this->AsyncRecvCRMsg(HTTP_Track_RecvChunkLength);
+        return false;
+    }
+    if (!this->mIsFirstChunk) {
+        unsigned aTime = this->TimeLeft();
+        if (!this->CheckStatus((int)Do(EE_WON_HOST_RECV_CR, this->mSocket, 0, aTime).mNum))
+            return false;
+    }
+    unsigned aTime = this->TimeLeft();
+    Res aLine = Do(EE_WON_HOST_RECV_CR, this->mSocket, 0, aTime);
+    if (!this->CheckStatus((int)aLine.mNum))
+        return false;
+    return this->ExtractChunkLength(LineOf(aLine).c_str());
+}
+static int OpStatus(int inOp) { return (int)Do(EE_WON_HOST_OP_STATUS, inOp).mNum; }
+bool Op::DoneRecvContent(int inOp)
+{
+    this->mIsFirstChunk=false;
+    if (this->mLocalPath.empty() && OpStatus(inOp)==0) {
+        Res b = Do(EE_WON_HOST_OP_BYTES, inOp);
+        if (this->mContentIsChunked)
+            this->mContentAccumulator+=b.mBytes; // AppendBuffer: NULL appends nothing
+        else {
+            this->mHasContent=!b.mNull;
+            this->mContent=b.mBytes;
+        }
+    }
+    if (OpStatus(inOp)!=0) {
+        this->Finish(OpStatus(inOp));
+        return false;
+    }
+    if (this->mContentIsChunked)
+        return this->RecvChunkLength();
+    if (this->mHTTPCacheEntry!=0)
+        Do(EE_WON_HOST_ENTRY_SET, this->mHTTPCacheEntry, 0, 0, 1);
+    this->DoFinish();
+    return false;
+}
+void Op::RecvContent()
+{
+    if (this->mHTTPStatus==304) {
+        this->mContentIsNew=false;
+        this->DoFinish();
+        return;
+    }
+    bool skip;
+    if (this->mHTTPStatus>=200 && this->mHTTPStatus<300) skip=false;
+    else {
+        skip=true;
+        if (this->mDoClose) {
+            this->Finish(100093);
+            return;
+        }
+    }
+    for (;;) {
+        unsigned long length=this->mContentLength;
+        if (this->mContentIsChunked) length=this->mChunkLength;
+        int recv = Do(EE_WON_HOST_NEW_OP, this->mSocket, 0, EE_WON_HOST_OP_RECV_BYTES, (long long)length).mObj;
+        if (skip) Do(EE_WON_HOST_RECV_SKIP, recv, 0, 1);
+        else {
+            if (this->mRecvChunkCompletion!=0)
+                Do(EE_WON_HOST_RECV_PROGRESS, recv, this->mRecvChunkCompletion, this->mRecvChunkSize);
+            if (this->mHTTPCacheEntry!=0) Do(EE_WON_HOST_ENTRY_SET, this->mHTTPCacheEntry, 0, 0, 0);
+            if (!this->mLocalPath.empty()) {
+                bool append=this->mHTTPStatus==206 || (this->mContentIsChunked && !this->mIsFirstChunk);
+                if (ee_won_http_up_to_date(append,this->mLocalFileSize,this->mContentLength,
+                                           this->mLocalFileModifyTime,this->mLastModified,this->mDoClose)) {
+                    this->DoFinish();
+                    this->mContentIsNew=false;
+                    return;
+                }
+                Do(EE_WON_HOST_RECV_BINARY, recv, 0, this->mBinaryFile ? 1 : 0);
+                Do(EE_WON_HOST_RECV_FILE, recv, 0, append ? 1 : 0, 0, this->mLocalPath);
+                Do(EE_WON_HOST_RECV_MODIFY_TIME, recv, 0, this->mLastModified);
+            }
+        }
+        if (this->GetMode()==1) {
+            this->Track(recv,HTTP_Track_RecvContent);
+            Do(EE_WON_HOST_RUN_ASYNC, recv, 0, 0xffffffffu);
+            return;
+        }
+        unsigned aTime = this->TimeLeft();
+        if (Do(EE_WON_HOST_RUN_BLOCK, recv, 0, aTime).mNum != 0) {
+            if (!this->DoneRecvContent(recv)) return;
+        } else {
+            this->Finish(OpStatus(recv));
+            return;
+        }
+    }
+}
+bool Op::CallbackHook(int inOp,int inParam)
+{
+    if (Do(EE_WON_HOST_OP_KILLED, inOp).mNum != 0) {
+        Do(EE_WON_HOST_KILL, 0, 0, 1);
+        return true;
+    }
+    if (OpStatus(inOp)!=0) {
+        this->Finish(OpStatus(inOp));
+        return true;
+    }
+    switch (inParam) {
+    case HTTP_Track_Connect:
+        this->SendRequest();
+        break;
+    case HTTP_Track_SendRequest:
+        if (this->mOnlySend) this->Finish(100097);
+        break;
+    case HTTP_Track_RecvStatus: {
+        Res line=Do(EE_WON_HOST_OP_BYTES, inOp);
+        if (!this->ExtractStatus(LineOf(line).c_str())) break;
+        this->AsyncRecvCRMsg(HTTP_Track_RecvHeader);
+        break;
+    }
+    case HTTP_Track_RecvHeader: {
+        Res line=Do(EE_WON_HOST_OP_BYTES, inOp);
+        if (LengthOf(line)==1) {
+            this->DoneRecvHeader();
+            break;
+        }
+        if (!this->ExtractHeaderLine(LineOf(line).c_str())) break;
+        this->AsyncRecvCRMsg(HTTP_Track_RecvHeader);
+        break;
+    }
+    case HTTP_Track_RecvFooter: {
+        Res line=Do(EE_WON_HOST_OP_BYTES, inOp);
+        if (LengthOf(line)==1) this->DoFinish();
+        else this->AsyncRecvCRMsg(HTTP_Track_RecvFooter);
+        break;
+    }
+    case HTTP_Track_RecvContent:
+        this->DoneRecvContent(inOp);
+        break;
+    case HTTP_Track_Redirect:
+        this->FinishRedirect(inOp);
+        break;
+    case HTTP_Track_RecvChunkLength: {
+        Res line=Do(EE_WON_HOST_OP_BYTES, inOp);
+        if (this->ExtractChunkLength(LineOf(line).c_str())) this->RecvContent();
+        break;
+    }
+    default:
+        return false;
+    }
+    return true;
+}
+static long long ChildNum(int inOp, int inWhich) { return Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, inWhich).mNum; }
+static Res ChildBytes(int inOp, int inWhich) { return Do(EE_WON_HOST_HOSTOP_BYTES, inOp, 0, inWhich); }
+static void ChildSet(int inOp, int inWhich, long long inNum, const string& inData = string(), int inObj = 0)
+{
+    Do(EE_WON_HOST_HOSTOP_SET, inOp, inObj, inWhich, inNum, inData);
+}
+void Op::FinishRedirect(int inOp)
+{
+    this->mLastModified=ChildNum(inOp, EE_WON_HTTPGET_LAST_MODIFIED);
+    this->mContentType=ChildBytes(inOp, EE_WON_HTTPGET_CONTENT_TYPE).mBytes;
+    this->mContentLength=(unsigned)ChildNum(inOp, EE_WON_HTTPGET_CONTENT_LENGTH);
+    Res aContent=ChildBytes(inOp, EE_WON_HTTPGET_CONTENT);
+    this->mHasContent=!aContent.mNull;
+    this->mContent=aContent.mBytes;
+    this->mLocalPath=ChildBytes(inOp, EE_WON_HTTPGET_LOCAL_PATH).mBytes;
+    string aRedirectHost=ChildBytes(inOp, EE_WON_HTTPGET_REDIRECT_HOST).mBytes;
+    if (!aRedirectHost.empty()) {
+        this->mRedirectHost=aRedirectHost;
+        this->mRedirectPath=ChildBytes(inOp, EE_WON_HTTPGET_REDIRECT_PATH).mBytes;
+    }
+    this->mHTTPStatus=(int)ChildNum(inOp, EE_WON_HTTPGET_STATUS);
+    this->mContentIsNew=ChildNum(inOp, EE_WON_HTTPGET_IS_NEW)!=0;
+    this->mNumRedirects=(int)ChildNum(inOp, EE_WON_HTTPGET_REDIRECTS);
+    this->Finish(OpStatus(inOp));
+}
+void Op::FollowRedirect()
+{
+    Do(EE_WON_HOST_KILL_ALL);
+    if (this->mSocket!=0) {
+        Do(EE_WON_HOST_SOCKET_KILL, this->mSocket);
+        this->mSocket=0;
+    }
+    if (this->mNumRedirects>5) {
+        this->Finish(100095);
+        return;
+    }
+    if (!this->mAutoRedirect) {
+        this->Finish(100096);
+        return;
+    }
+    int anOp=Do(EE_WON_HOST_NEW_HTTP_GET, 0, 0, (long long)this->mRedirectHost.size(), 0,
+                this->mRedirectHost+this->mRedirectPath).mObj;
+    ChildSet(anOp, EE_WON_HTTPGET_BINARY, this->mBinaryFile ? 1 : 0);
+    ChildSet(anOp, EE_WON_HTTPGET_LOCAL_PATH, 0, this->mLocalPath);
+    ChildSet(anOp, EE_WON_HTTPGET_CACHE, 0, string(), this->mHTTPCache);
+    ChildSet(anOp, EE_WON_HTTPGET_REDIRECTS, this->mNumRedirects+1);
+    if (this->mRecvChunkCompletion!=0)
+        ChildSet(anOp, EE_WON_HTTPGET_CHUNK, this->mRecvChunkSize, string(), this->mRecvChunkCompletion);
+    if (this->GetMode()==1) {
+        this->Track(anOp,HTTP_Track_Redirect);
+        Do(EE_WON_HOST_RUN_ASYNC, anOp, 0, 0xffffffffu);
+        return;
+    }
+    unsigned aTime = this->TimeLeft();
+    Do(EE_WON_HOST_RUN_BLOCK, anOp, 0, aTime);
+    this->FinishRedirect(anOp);
+}
+void Op::DoneRecvHeader()
+{
+    if (this->mHTTPStatus==301 || this->mHTTPStatus==302) {
+        this->FollowRedirect();
+        return;
+    }
+    int anEntry=this->mHTTPCacheEntry;
+    if (anEntry!=0) {
+        if (this->mServerTime>0 && this->mExpireTime>0 && this->mExpireTime>this->mServerTime)
+            Do(EE_WON_HOST_ENTRY_SET, anEntry, 0, 1, Now()+this->mExpireTime-this->mServerTime);
+        if (!this->mEntityTag.empty())
+            Do(EE_WON_HOST_ENTRY_SET, this->mHTTPCacheEntry, 0, 3, 0, this->mEntityTag);
+    }
+    if (this->mContentIsChunked && !this->RecvChunkLength())
+        return;
+    this->RecvContent();
+}
+void Op::RunHook()
+{
+    if (!this->mOnlyRecv) {
+        string aProxy = Do(EE_WON_HOST_HTTP_PROXY).mBytes; // HTTPGetOp::mStaticProxyHost
+        if (!aProxy.empty())
+            this->SetProxy(aProxy);
+        this->mLastModified=0;
+        this->mServerTime=0;
+        this->mExpireTime=0;
+        this->mContentType.erase();
+        this->mContentLength=0;
+        this->mHasContent=false;
+        this->mContent.clear();
+        this->mDoClose=this->mCloseConnection;
+        this->mHTTPStatus=0;
+        this->mLocalFileModifyTime=0;
+        this->mLocalFileSize=0;
+        this->mNumRedirects=0;
+        this->mContentIsNew=true;
+        this->mChunkLength=0;
+        this->mContentIsChunked=false;
+        this->mIsFirstChunk=false;
+        this->mHTTPCacheEntry=0;
+        this->mContentAccumulator.clear();
+        if (this->mSocket==0)
+            this->mSocket=Do(EE_WON_HOST_NEW_SOCKET, 0, 0, 0).mObj;
+        this->mRedirectHost="";
+        this->mRedirectPath="";
+        if (this->mHTTPCache!=0) {
+            this->mHTTPCacheEntry=Do(EE_WON_HOST_CACHE_ENTRY, this->mHTTPCache, 0, 0, 0, this->mHost+this->mRemotePath).mObj;
+            if (this->mHTTPCacheEntry!=0) {
+                this->mLocalPath=EntryBytes(this->mHTTPCacheEntry, 2);
+                this->mEntityTag=EntryBytes(this->mHTTPCacheEntry, 3);
+                if (EntryNum(this->mHTTPCacheEntry, 0) != 0 &&
+                    EntryTime(this->mHTTPCacheEntry)>Now()) {
+                    this->mContentIsNew=false;
+                    this->Finish(0);
+                    return;
+                }
+            }
+        }
+        if (!this->DoConnect())
+            return;
+        if (!this->SendRequest())
+            return;
+    }
+    if (this->mOnlySend) {
+        this->Finish(100097);
+        return;
+    }
+    if (this->mOnlyRecv && this->GetMode()==1) {
+        this->AsyncRecvCRMsg(HTTP_Track_RecvStatus);
+        return;
+    }
+    unsigned aTime = this->TimeLeft();
+    Res aLine = Do(EE_WON_HOST_RECV_CR, this->mSocket, 0, aTime);
+    if (!this->CheckStatus((int)aLine.mNum))
+        return;
+    if (!this->ExtractStatus(LineOf(aLine).c_str()))
+        return;
+    while (true) {
+        unsigned aTime2 = this->TimeLeft();
+        aLine = Do(EE_WON_HOST_RECV_CR, this->mSocket, 0, aTime2);
+        if (!this->CheckStatus((int)aLine.mNum))
+            return;
+        if (LengthOf(aLine)==1)
+            break;
+        if (!this->ExtractHeaderLine(LineOf(aLine).c_str()))
+            return;
+    }
+    this->DoneRecvHeader();
+}
+void Op::CleanupHook()
+{
+    Do(EE_WON_HOST_BASE_CLEANUP);
+    if (this->mSocket!=0) {
+        if ((this->mDoClose && !this->mOnlySend) || Do(EE_WON_HOST_SOCKET_STATUS, this->mSocket).mNum!=100004) {
+            Do(EE_WON_HOST_CLOSE, this->mSocket);
+            this->mSocket=0;
+        }
+    }
+    if (!this->mOnlySend && this->mHTTPCache!=0 && this->mHTTPCacheEntry!=0)
+        Do(EE_WON_HOST_CACHE_UPDATE, this->mHTTPCache, this->mHTTPCacheEntry);
+}
+// the constructor of a URL (HTTPGetOp.cpp's split over ee_won_http_split_url)
+static void FromURL(Op& o, const string& inURL)
+{
+    size_t aHost=0,anEnd=0;
+    intptr_t aPath=-1;
+    ee_won_http_split_url(reinterpret_cast<const uint8_t*>(inURL.data()),inURL.size(),&aHost,&anEnd,&aPath);
+    o.mHost=inURL.substr(aHost,anEnd-aHost);
+    if (aPath>=0)
+        o.mRemotePath=inURL.substr(aPath);
+    else
+        o.mRemotePath="/";
+}
+static string Describe(const Op& o)
+{
+    char b[600];
+    snprintf(b, sizeof(b),
+             " sock %d cache %d entry %d chunk %d:%u f %d%d%d%d%d%d%d%d%d%d0 times %lld %lld %lld %lld size %llu len %u "
+             "clen %u st %d redirects %d",
+             o.mSocket, o.mHTTPCache, o.mHTTPCacheEntry, o.mRecvChunkCompletion, o.mRecvChunkSize,
+             o.mContentIsChunked ? 1 : 0, o.mIsFirstChunk ? 1 : 0, o.mBinaryFile ? 1 : 0, o.mCloseConnection ? 1 : 0,
+             o.mDoClose ? 1 : 0, o.mDoRangeResume ? 1 : 0, o.mContentIsNew ? 1 : 0, o.mOnlySend ? 1 : 0,
+             o.mOnlyRecv ? 1 : 0, o.mAutoRedirect ? 1 : 0, o.mServerTime, o.mExpireTime, o.mLastModified,
+             o.mLocalFileModifyTime, o.mLocalFileSize, o.mContentLength, o.mChunkLength, o.mHTTPStatus,
+             o.mNumRedirects);
+    return "host " + Hex(o.mHost) + " path " + Hex(o.mRemotePath) + " local " + Hex(o.mLocalPath) + " proxy " +
+           Hex(o.mProxyHost) + " redir " + Hex(o.mRedirectHost) + Hex(o.mRedirectPath) + " tag " + Hex(o.mEntityTag) +
+           " type " + Hex(o.mContentType) + " content " + (o.mHasContent ? Hex(o.mContent) : string("null")) +
+           " acc " + Hex(o.mContentAccumulator) + b;
+}
+}
+
+// ---- the original's statements: GetHTTPDocumentOp.cpp and HTTPDocumentOps.cpp before the port (the downloads are
+// child ops made, set, run and read through the host calls the Rust op makes; the members as the C++ side's
+// constructor sets them: the product's and the language's lower case, the cache file names)
+
+namespace OrigDoc {
+enum { HTTPDocType_MOTD = 0, HTTPDocType_TOU = 1, HTTPDocType_ADV = 2 };
+struct Op {
+    int mDocumentType;
+    string mProductLower, mConfigLower;
+    int mSession;
+    bool mIsNew[2], mRetried[2];
+    int mDocumentStatus[2], mHTTPStatus[2];
+    long long mLastModified[2];
+    string mDocuments[2];
+    Op() : mDocumentType(0), mSession(0)
+    {
+        for (int i = 0; i < 2; i++) {
+            mIsNew[i] = mRetried[i] = false;
+            mDocumentStatus[i] = mHTTPStatus[i] = 0;
+            mLastModified[i] = 0;
+        }
+    }
+    int GetMode() { return (int)Do(EE_WON_HOST_MODE).mNum; }
+    unsigned TimeLeft() { return (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum; }
+    void Finish(int s) { Do(EE_WON_HOST_FINISH, 0, 0, s); }
+    void Track(int inOp, int inId) { Do(EE_WON_HOST_TRACK, inOp, 0, inId); }
+    void DoFinish();
+    void OpFinished(int inOp, int inOwner);
+    void TryHTTPOp(int inOwner, bool inForceDefault);
+    void RunHook();
+    bool CallbackHook(int inOp, int inParam);
+};
+static int Status(int inOp) { return (int)Do(EE_WON_HOST_OP_STATUS, inOp).mNum; }
+void Op::DoFinish()
+{
+    if (this->mDocumentStatus[0] != 0 && this->mDocumentType != HTTPDocType_ADV)
+        this->Finish(100098);
+    else if (this->mDocumentStatus[1] != 0)
+        this->Finish(100099);
+    else
+        this->Finish(0);
+}
+void Op::OpFinished(int inOp, int inOwner)
+{
+    if (!this->mRetried[inOwner] && (Status(inOp) == 100094 ||
+                                     Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_STATUS).mNum == 404)) {
+        this->TryHTTPOp(inOwner, true);
+        return;
+    }
+    this->mDocumentStatus[inOwner] = Status(inOp);
+    this->mHTTPStatus[inOwner] = (int)Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_STATUS).mNum;
+    this->mLastModified[inOwner] = Do(EE_WON_HOST_HTTP_MODIFIED, inOp).mNum;
+    if (Status(inOp) != 0) return;
+    this->mIsNew[inOwner] = Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_IS_NEW).mNum != 0;
+    if (this->mDocumentType != HTTPDocType_MOTD) return;
+    int first = (int)Do(EE_WON_HOST_FILE_FIRST_CHAR, 0, 0, 0, 0, this->mDocuments[inOwner]).mNum; // fopen, fgetc
+    if (first != -2) {
+        if (first == -1) {
+            this->mIsNew[inOwner] = false;
+            return;
+        }
+        if (toupper(first & 0xff) != '1') this->mIsNew[inOwner] = true;
+    }
+}
+void Op::TryHTTPOp(int inOwner, bool inForceDefault)
+{
+    std::string document;
+    std::string config = this->mConfigLower;
+    if (config == "en") config.erase();
+    if (config.empty() || inForceDefault) {
+        this->mRetried[inOwner] = true;
+        if (this->mDocumentType == HTTPDocType_MOTD) document = "motd.txt";
+        else if (this->mDocumentType == HTTPDocType_TOU) document = "tou.txt";
+        else if (this->mDocumentType == HTTPDocType_ADV) document = "adv.txt";
+    } else {
+        if (this->mDocumentType == HTTPDocType_MOTD) document = "motd_" + config + ".txt";
+        else if (this->mDocumentType == HTTPDocType_TOU) document = "tou_" + config + ".txt";
+        else if (this->mDocumentType == HTTPDocType_ADV) document = "adv_" + config + ".txt";
+    }
+    std::string path;
+    if (inOwner == 0) path = std::string("/motd/") + "sys/";
+    else if (inOwner == 1) path = std::string("/motd/") + this->mProductLower + "/";
+    std::string host = "www.sierra.com";
+    int op = Do(EE_WON_HOST_NEW_HTTP_GET, 0, 0, (long long)host.size(), 0, host + path + document).mObj;
+    Do(EE_WON_HOST_HOSTOP_SET, op, 0, EE_WON_HTTPGET_RANGE_RESUME, 0);
+    Do(EE_WON_HOST_HOSTOP_SET, op, 0, EE_WON_HTTPGET_LOCAL_PATH, 0, this->mDocuments[inOwner]);
+    if (this->GetMode() == 1) {
+        this->Track(op, inOwner);
+        if (this->mSession != 0) Do(EE_WON_HOST_SESSION_ADD, this->mSession, op);
+        else Do(EE_WON_HOST_RUN_ASYNC, op, 0, 0xffffffffu);
+        return;
+    }
+    unsigned aTime = this->TimeLeft();
+    Do(EE_WON_HOST_RUN, op, 0, 2, aTime);
+    this->OpFinished(op, inOwner);
+}
+void Op::RunHook()
+{
+    for (int i = 0; i < 2; ++i) {
+        this->mIsNew[i] = false;
+        this->mDocumentStatus[i] = 100004;
+        this->mHTTPStatus[i] = 0;
+        this->mLastModified[i] = 0;
+        this->mRetried[i] = false;
+    }
+    if (this->mDocumentType == HTTPDocType_ADV) this->TryHTTPOp(1, false);
+    else for (int owner = 0; owner < 2; ++owner)
+        this->TryHTTPOp(owner, false);
+    if (this->GetMode() != 1) this->DoFinish();
+}
+bool Op::CallbackHook(int inOp, int inParam)
+{
+    this->OpFinished(inOp, inParam & 1); // the owner (any other id indexed past the arrays)
+    if (Do(EE_WON_HOST_TRACKER_EMPTY).mNum != 0) this->DoFinish();
+    return true;
+}
+static string Describe(const Op& o)
+{
+    char b[300];
+    snprintf(b, sizeof(b), " new %d%d retried %d%d st %d %d http %d %d mod %lld %lld docs ", o.mIsNew[0] ? 1 : 0,
+             o.mIsNew[1] ? 1 : 0, o.mRetried[0] ? 1 : 0, o.mRetried[1] ? 1 : 0, o.mDocumentStatus[0],
+             o.mDocumentStatus[1], o.mHTTPStatus[0], o.mHTTPStatus[1], o.mLastModified[0], o.mLastModified[1]);
+    char t[80];
+    snprintf(t, sizeof(t), "type %d product ", o.mDocumentType);
+    return t + Hex(o.mProductLower) + " config " + Hex(o.mConfigLower) + " session " + std::to_string(o.mSession) + b +
+           Hex(o.mDocuments[0]) + " " + Hex(o.mDocuments[1]);
+}
+}
+
+
 // ---- the original's statements: ServerRequestOp.cpp before round 10 (its exchange is server.rs's, as the C++
 // called it; its primitives over the op stand-in, a Rust op derived from it the request's own: ee_won_reqop_*).
 // The iterator before any RunHook (default-constructed there) and after the context's copy (left dangling there)
@@ -1697,6 +2453,199 @@ static string FtpStep(OrigFtp::Op* o, EeWonHostOp* r, const Step& s)
     return ret + "|" + S.mTrace + "|" + d;
 }
 
+static const char* const kHttpUrls[] = { "http://www.sierra.com/motd/sys/motd.txt", "www.sierra.com",
+                                         "http://h:8080/a/b?c=1", "http://onlyhost" };
+static const char* const kHttpHosts[] = { "www.sierra.com", "h:8080", "", "x" };
+static const char* const kHttpPaths[] = { "/motd/sys/motd.txt", "/", "", "/a b" };
+
+static Step MakeHttpStep()
+{
+    // weighted: runs, many callbacks, the setters, cleanups, the results
+    static const int kKinds[] = { 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12 };
+    Step s;
+    s.mKind = kKinds[Pick(23)];
+    s.mA = s.mB = 0;
+    switch (s.mKind) {
+    case 0: s.mA = Pick(2) + 1; break; // run (mode)
+    case 1: { static const int k[] = { 1, 2, 2, 3, 3, 3, 3, 4, 5, 6, 6, 7, 8, 8, 9, 10 }; s.mA = k[Pick(16)]; break; }
+    case 3: s.mData = kNames[Pick(4)]; break;
+    case 4: case 9: case 11: s.mA = Pick(2); s.mB = Pick(2) ? 10000 : 7; break;
+    case 5: case 7: case 8: s.mA = Pick(2); break;
+    case 6: s.mA = Pick(3); break;
+    case 12: s.mA = Pick(8); break;
+    default: break;
+    }
+    return s;
+}
+static string HttpResults(OrigHttp::Op* o, EeWonHostOp* r)
+{
+    static const int kNums[] = { EE_WON_HTTPGET_REDIRECTS, EE_WON_HTTPGET_LAST_MODIFIED, EE_WON_HTTPGET_STATUS,
+                                 EE_WON_HTTPGET_IS_NEW, EE_WON_HTTPGET_CONTENT_LENGTH, EE_WON_HTTPGET_ONLY_SEND,
+                                 EE_WON_HTTPGET_ONLY_RECV };
+    static const int kBytes[] = { EE_WON_HTTPGET_LOCAL_PATH, EE_WON_HTTPGET_HOST, EE_WON_HTTPGET_REMOTE_PATH,
+                                  EE_WON_HTTPGET_CONTENT_TYPE, EE_WON_HTTPGET_CONTENT, EE_WON_HTTPGET_REDIRECT_HOST,
+                                  EE_WON_HTTPGET_REDIRECT_PATH };
+    string out;
+    char b[40];
+    for (int i = 0; i < 7; i++) {
+        long long n = 0;
+        if (o) {
+            switch (i) {
+            case 0: n = o->mNumRedirects; break;
+            case 1: n = o->mLastModified; break;
+            case 2: n = o->mHTTPStatus; break;
+            case 3: n = o->mContentIsNew; break;
+            case 4: n = o->mContentLength; break;
+            case 5: n = o->mOnlySend; break;
+            case 6: n = o->mOnlyRecv; break;
+            }
+        } else
+            n = ee_won_hostop_num(r, kNums[i], 0);
+        snprintf(b, sizeof(b), "%lld ", n);
+        out += b;
+    }
+    for (int i = 0; i < 7; i++) {
+        string d;
+        bool has = true;
+        if (o) {
+            switch (i) {
+            case 0: d = o->mLocalPath; break;
+            case 1: d = o->mHost; break;
+            case 2: d = o->mRemotePath; break;
+            case 3: d = o->mContentType; break;
+            case 4: has = o->mHasContent; d = o->mContent; break;
+            case 5: d = o->mRedirectHost; break;
+            case 6: d = o->mRedirectPath; break;
+            }
+        } else
+            has = ee_won_hostop_bytes(r, kBytes[i], 0, DescribeSink, &d);
+        out += (has ? Hex(d) : string("null")) + " ";
+    }
+    return out;
+}
+static string HttpStep(OrigHttp::Op* o, EeWonHostOp* r, const Step& s)
+{
+    S.mTrace.clear();
+    S.mCalls = 0;
+    string ret = "-";
+    switch (s.mKind) {
+    case 0:
+        S.mMode = (int)s.mA;
+        S.mStatus = 100000;
+        S.mLine = 0;
+        if (o) o->RunHook(); else ee_won_hostop_run(r);
+        break;
+    case 1: {
+        int done = ++S.mSerial;
+        bool b = o ? o->CallbackHook(done, (int)s.mA) : ee_won_hostop_callback(r, (int)s.mA, P(done));
+        ret = b ? "1" : "0";
+        break;
+    }
+    case 2: if (o) o->CleanupHook(); else ee_won_hostop_cleanup(r); break;
+    case 3: if (o) o->mLocalPath = s.mData; else RSet(r, EE_WON_HTTPGET_LOCAL_PATH, 0, s.mData); break;
+    case 4: case 9: case 11: {
+        int c = s.mA ? NewObj() : 0;
+        int which = s.mKind == 4 ? EE_WON_HTTPGET_CACHE : s.mKind == 9 ? EE_WON_HTTPGET_SOCKET : EE_WON_HTTPGET_CHUNK;
+        if (o) {
+            if (s.mKind == 4) o->mHTTPCache = c;
+            else if (s.mKind == 9) o->mSocket = c; // SetSocket
+            else { o->mRecvChunkCompletion = c; o->mRecvChunkSize = (unsigned)s.mB; } // SetRecvChunkCompletion
+        } else
+            RSet(r, which, s.mKind == 11 ? s.mB : 0, string(), NULL, c);
+        if (c) S.mOwn[c]--;
+        break;
+    }
+    case 5: if (o) o->mBinaryFile = s.mA != 0; else RSet(r, EE_WON_HTTPGET_BINARY, s.mA); break;
+    case 6:
+        if (o) {
+            if (s.mA == 0) { o->mOnlySend = true; o->mOnlyRecv = false; }      // SetOnlySend
+            else if (s.mA == 2) { o->mOnlyRecv = true; o->mOnlySend = false; } // SetOnlyRecv
+            else { o->mOnlySend = false; o->mOnlyRecv = false; }               // SetSendAndRecv
+        } else
+            RSet(r, EE_WON_HTTPGET_MODE, s.mA);
+        break;
+    case 7: if (o) o->mDoRangeResume = s.mA != 0; else RSet(r, EE_WON_HTTPGET_RANGE_RESUME, s.mA); break;
+    case 8: if (o) o->mCloseConnection = s.mA != 0; else RSet(r, EE_WON_HTTPGET_CLOSE, s.mA); break;
+    case 10: ret = HttpResults(o, r); break;
+    case 12: if (o) o->mNumRedirects = (int)s.mA; else RSet(r, EE_WON_HTTPGET_REDIRECTS, s.mA); break;
+    }
+    string d = o ? OrigHttp::Describe(*o) : RDescribe(r);
+    return ret + "|" + S.mTrace + "|" + d;
+}
+
+static const char* const kDocProducts[] = { "eeaoc", "", "x y" };
+static const char* const kDocConfigs[] = { "", "en", "fr", "de" };
+static const char* const kDocNames[] = { "motd", "tou", "adv", "zzz" };
+static string DocPath(int inType, int inProduct, int inOwner)
+{
+    return string("_won") + (inOwner == 0 ? string("sys") : string(kDocProducts[inProduct])) + kDocNames[inType] + ".txt";
+}
+static Step MakeDocStep()
+{
+    static const int kKinds[] = { 0, 0, 0, 1, 1, 1, 1, 1, 2, 3, 4, 5 };
+    Step s;
+    s.mKind = kKinds[Pick(12)];
+    s.mA = s.mB = 0;
+    switch (s.mKind) {
+    case 0: s.mA = Pick(2) + 1; break;               // run (mode)
+    case 1: s.mA = Pick(8) ? Pick(2) : Pick(4); break; // callback (the owner, else another id)
+    case 3: s.mData = kDocConfigs[Pick(4)]; break;  // the language, lower case
+    case 4: s.mA = Pick(2); break;                   // the session, or none
+    default: break;
+    }
+    return s;
+}
+static string DocStep(OrigDoc::Op* o, EeWonHostOp* r, const Step& s)
+{
+    S.mTrace.clear();
+    S.mCalls = 0;
+    string ret = "-";
+    switch (s.mKind) {
+    case 0:
+        S.mMode = (int)s.mA;
+        S.mStatus = 100000;
+        if (o) o->RunHook(); else ee_won_hostop_run(r);
+        break;
+    case 1: {
+        int done = ++S.mSerial;
+        bool b = o ? o->CallbackHook(done, (int)s.mA) : ee_won_hostop_callback(r, (int)s.mA, P(done));
+        ret = b ? "1" : "0";
+        break;
+    }
+    case 2: if (o) Do(EE_WON_HOST_BASE_CLEANUP); else ee_won_hostop_cleanup(r); break;
+    case 3: if (o) o->mConfigLower = s.mData; else RSet(r, EE_WON_HTTPDOC_CONFIG, 0, s.mData); break;
+    case 4: {
+        int c = s.mA ? NewObj() : 0;
+        if (o) o->mSession = c; else RSet(r, EE_WON_HTTPDOC_SESSION, 0, string(), NULL, c);
+        if (c) S.mOwn[c]--;
+        break;
+    }
+    case 5: {
+        char b[200];
+        string out;
+        for (int w = 0; w < 2; w++) {
+            if (o)
+                snprintf(b, sizeof(b), "%d %d %d %d %lld %s ", o->mDocumentType, o->mIsNew[w] ? 1 : 0,
+                         o->mDocumentStatus[w], o->mHTTPStatus[w], o->mLastModified[w], Hex(o->mDocuments[w]).c_str());
+            else {
+                string d;
+                ee_won_hostop_bytes(r, EE_WON_HTTPDOC_PATH, w, DescribeSink, &d);
+                snprintf(b, sizeof(b), "%d %d %d %d %lld %s ", (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_TYPE, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_IS_NEW, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_STATUS, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_HTTP_STATUS, w),
+                         ee_won_hostop_num(r, EE_WON_HTTPDOC_MODIFIED, w), Hex(d).c_str());
+            }
+            out += b;
+        }
+        ret = out;
+        break;
+    }
+    }
+    string d = o ? OrigDoc::Describe(*o) : RDescribe(r);
+    return ret + "|" + S.mTrace + "|" + d;
+}
+
 static string StepText(char inOp, const Step& s)
 {
     char b[200];
@@ -1940,6 +2889,8 @@ static void Reset(unsigned inSeed)
     S.mTick = 0;
     S.mLine = 0;
     S.mReq = false;
+    S.mHttp = false;
+    S.mDoc = false;
     S.mAuth = 0;
     S.mRands.clear();
     S.mAddrs.clear();
@@ -1965,7 +2916,7 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     std::vector<Step> steps;
     for (int i = 0; i < inSteps; i++)
         steps.push_back(inOp == 'M' ? MakePingStep() : inOp == 'F' ? MakePushStep() : inOp == 'R' ? MakeReqStep()
-                                                                                    : MakeFtpStep());
+                        : inOp == 'H' ? MakeHttpStep() : inOp == 'D' ? MakeDocStep() : MakeFtpStep());
     string addr(kAddrs[Pick(6)], 6);
     if (inOp == 'P') { // FTPGetOp(url, extract): the URL's index and the flag
         addr.assign(2, '\0');
@@ -1978,6 +2929,17 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         addr[1] = (char)Pick(4);
         addr[2] = (char)Pick(2);
         addr[3] = (char)Pick(6);
+    }
+    if (inOp == 'H') { // HTTPGetOp(url) or (host, path): the URL's or host's index, the constructor, the path's
+        addr.assign(3, '\0');
+        addr[0] = (char)Pick(4);
+        addr[1] = (char)Pick(2);
+        addr[2] = (char)Pick(4);
+    }
+    if (inOp == 'D') { // GetHTTPDocumentOp(product, type): the type (3: none), the product's index
+        addr.assign(2, '\0');
+        addr[0] = (char)(Pick(8) ? Pick(3) : 3);
+        addr[1] = (char)Pick(3);
     }
     if (inPrint) printf("S %c %u %d %s\n", inOp, aSeed, inSteps, Hex(addr).c_str());
     // the original
@@ -1994,6 +2956,20 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         ReqSetup(addr, &q, NULL);
         for (size_t i = 0; i < steps.size(); i++) orig.push_back(ReqStep(q, NULL, steps[i]));
         delete q;
+    } else if (inOp == 'D') {
+        OrigDoc::Op d;
+        d.mDocumentType = addr[0];
+        d.mProductLower = kDocProducts[(int)addr[1]];
+        if (addr[0] < 3)
+            for (int w = 0; w < 2; w++) d.mDocuments[w] = DocPath(addr[0], addr[1], w);
+        S.mDoc = true;
+        for (size_t i = 0; i < steps.size(); i++) orig.push_back(DocStep(&d, NULL, steps[i]));
+    } else if (inOp == 'H') {
+        OrigHttp::Op h;
+        if (addr[1]) { h.mHost = kHttpHosts[(int)addr[0]]; h.mRemotePath = kHttpPaths[(int)addr[2]]; }
+        else OrigHttp::FromURL(h, kHttpUrls[(int)addr[0]]);
+        S.mHttp = true;
+        for (size_t i = 0; i < steps.size(); i++) orig.push_back(HttpStep(&h, NULL, steps[i]));
     } else {
         OrigFtp::Op f;
         FtpMsg<OrigFtp::Op>::FromURL(f, kFtpUrls[(int)addr[0]], addr[1] != 0);
@@ -2009,7 +2985,26 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     if (inOp == 'M') r = ee_won_multiping_new();
     else if (inOp == 'F') r = ee_won_filepush_new(reinterpret_cast<const uint8_t*>(addr.data()));
     else if (inOp == 'R') ReqSetup(addr, NULL, &r);
-    else {
+    else if (inOp == 'D') {
+        S.mDoc = true;
+        string p = kDocProducts[(int)addr[1]];
+        string a = addr[0] < 3 ? DocPath(addr[0], addr[1], 0) : string();
+        string b = addr[0] < 3 ? DocPath(addr[0], addr[1], 1) : string();
+        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(),
+                               reinterpret_cast<const uint8_t*>(a.data()), a.size(),
+                               reinterpret_cast<const uint8_t*>(b.data()), b.size());
+    } else if (inOp == 'H') {
+        S.mHttp = true;
+        if (addr[1]) {
+            const char* h = kHttpHosts[(int)addr[0]];
+            const char* p = kHttpPaths[(int)addr[2]];
+            r = ee_won_httpget_new(reinterpret_cast<const uint8_t*>(h), strlen(h), reinterpret_cast<const uint8_t*>(p),
+                                   strlen(p));
+        } else {
+            const char* u = kHttpUrls[(int)addr[0]];
+            r = ee_won_httpget_new_url(reinterpret_cast<const uint8_t*>(u), strlen(u));
+        }
+    } else {
         const char* u = kFtpUrls[(int)addr[0]];
         r = ee_won_ftpget_new_url(reinterpret_cast<const uint8_t*>(u), strlen(u), addr[1] != 0);
     }
@@ -2018,6 +3013,8 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         string got = inOp == 'M'   ? PingStep(NULL, r, steps[i])
                      : inOp == 'F' ? PushStep(NULL, r, steps[i])
                      : inOp == 'R' ? ReqStep(NULL, r, steps[i])
+                     : inOp == 'H' ? HttpStep(NULL, r, steps[i])
+                     : inOp == 'D' ? DocStep(NULL, r, steps[i])
                                    : FtpStep(NULL, r, steps[i]);
         CHECK(got == orig[i]);
         if (got != orig[i] && sFailures < 6)
@@ -2040,12 +3037,16 @@ int main(int argc, char** argv)
         for (int i = 0; i < aPrint; i++) Sequence('F', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('P', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('R', 8 + Pick(40), true);
+        for (int i = 0; i < 5 * aPrint; i++) Sequence('H', 8 + Pick(40), true);
+        for (int i = 0; i < 3 * aPrint; i++) Sequence('D', 8 + Pick(30), true);
         return 0;
     }
     for (int i = 0; i < aCount; i++) Sequence('M', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('F', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('P', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('R', 8 + Pick(40), false);
+    for (int i = 0; i < aCount; i++) Sequence('H', 8 + Pick(40), false);
+    for (int i = 0; i < aCount; i++) Sequence('D', 8 + Pick(30), false);
     printf("won_hostop_test: %lld checks, %d failed\n", sChecks, sFailures);
     return sFailures;
 }

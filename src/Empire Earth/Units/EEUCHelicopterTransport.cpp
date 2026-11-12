@@ -114,45 +114,25 @@ bool EEUCHelicopterTransport::CanUnloadAt(EEComplexUnit* inTransport, long inX, 
 // to the goal (exploring at cruising height)
 void EEUCHelicopterTransport::ActionChanged(EEComplexUnit* inUnit)
 {
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs helicopter), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER_TRANSPORT, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCHelicopterTransport::ActionChanged's path to the goal when preparing to move
+// (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
+void EEHelicopterTransportPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCHelicopterTransport* theClass = static_cast<EEUCHelicopterTransport*>(inClass);
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     EEUnitGoal* theGoal = inUnit->mGoalState;
     GE3DPoint theTarget;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionIdle:
-        this->HandleActionChanged(inUnit);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
-        return;
-    }
-    case kActionPrepareToMove:
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->DropPath();
-        theGoal->GetDestination(inUnit, theTarget);
-        if (theGoal->mKind == kGoalExplore)
-            theTarget.SetZ(this->mCruiseAltitude);
-        EEFindLandingPoint(inUnit, &theTarget);
-        this->PathToward(inUnit, thePosition, theTarget, false);
-        break;
-    case kActionResourcesRotting:
-        this->HandleActionChanged(inUnit);
-        return;
-    default:
-        this->HandleActionChanged(inUnit);
-        return;
-    }
-    inUnit->SetAnimation(0xd, -1, 0);
+    theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->mCruiseAltitude);
+    EEFindLandingPoint(inUnit, &theTarget);
+    theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
 // FUNCTION: EXE 0x613774

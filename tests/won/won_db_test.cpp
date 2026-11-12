@@ -1,7 +1,7 @@
 // WONDB (ProfileData, DBProxyOp, CreateAccountOp, GetAccountOp, UpdateAccountOp, GetUserIdFromNameOp, the email
 // requests, ContestCallOp, EventReportOp): the original's statements (copied from the C++ before the port, the
 // members replaced by locals) against the new code: ProfileData's shim over ee_won's Rust profile (its unit
-// linked here) and include/ee/wonapi/WONDBMsg.h over ee_won's db module. Profiles over generated edits, packed
+// linked here) and tests/won/won_db_msg.h over ee_won's db module. Profiles over generated edits, packed
 // and unpacked from generated replies (cut, mutated); every request over generated members; every reply
 // generated, cut at every length and mutated, the members it assigns, the return or the throw compared. The exit
 // code is the number of failed checks.
@@ -16,8 +16,9 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "won_profiledata.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "ee/wonapi/WONDBMsg.h"
+#include "won_db_msg.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

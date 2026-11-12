@@ -1,7 +1,7 @@
 // WONInternal's admin ops as whole ops (the master key, key check, banned key, key subscription, CD key account,
 // version, patch and module list ops, each a DBProxyOp): the original's RunHook, GetNextRequest and CheckResponse
 // (copied from the C++ op classes before the port, over stand-ins with the ops' members, the messages through
-// tests/won/won_admin_msg.h and include/ee/wonapi/WONDBMsg.h, which won_admin_test and won_db_test check against the
+// tests/won/won_admin_msg.h and tests/won/won_db_msg.h, which won_admin_test and won_db_test check against the
 // pre-port statements) against the Rust ops (ee_won adminop.rs) through their C ABI. Each sequence: generated
 // members, the request, then up to five generated replies (DB proxy headers right and wrong, record lists whole, cut
 // and mutated, replies spread over several messages), each reply's verdict and the op's members after it.
@@ -21,7 +21,8 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONDBMsg.h"
+#include "won_profiledata.h"
+#include "won_db_msg.h"
 #include "ee/wonapi/WONPatchMsg.h"
 #include "won_admin_msg.h"
 #include "rust/ee_won.h"

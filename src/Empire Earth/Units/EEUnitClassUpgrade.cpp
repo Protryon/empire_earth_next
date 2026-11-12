@@ -21,6 +21,7 @@
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
 
+#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -73,6 +74,7 @@ EEUnitClassUpgrade::EEUnitClassUpgrade(EEUnitClass* inUnitClass)
 // Destroys the copy, unloading its sounds and model while its media is loaded
 EEUnitClassUpgrade::~EEUnitClassUpgrade()
 {
+    EEUnitStatsRemove(this);   // New (R5b.4, the fourteenth round): out of the stats table (ee/EEUnitStore.h)
     if (this->mMediaCount > 0) {
         long i;
         for (i = 0; i < 2; i++) {
@@ -171,6 +173,7 @@ EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels
 void EEUnitClassUpgrade::Init()
 {
+    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     long i;
     this->mButton = this->mUnitClass->mButton;
     this->SetModel(this->mUnitClass->mModel);
@@ -281,6 +284,7 @@ void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
 // the area-effect templates and the class's media; later requests are counted and wait while the first one loads
 void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
 {
+    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the death sound's (ee/EEUnitStore.h)
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 0) {
         this->mMediaCount = 1;
@@ -360,6 +364,7 @@ void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 // Replaces the death sound; while media is loaded, unloads the old sound and loads the new one
 void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 {
+    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     while (this->mIsLoadingMedia == true)
         PlatSleep(1);
     sDatabaseLock.mLock->Enter();
@@ -391,6 +396,7 @@ void EEUnitClassUpgrade::SetModel(EEModel* inModel)
 // inverses
 void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
 {
+    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     float theRatio = inValue / this->mUnitClass->GetMaxVelocity();
     this->mMaxVelocity = inValue;
     this->mAcceleration = this->mUnitClass->GetAcceleration() * theRatio;
@@ -424,6 +430,7 @@ void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 // Legionnaire aims for its heal range; no projectile: 0)
 void EEUnitClassUpgrade::SetRange(float inValue)
 {
+    EEUnitStatsScope theStatsScope(this);   // New (R5b.4, the fourteenth round): the stats table's record, on return
     float theCosine = UMCos(0.78539819f);
     this->mRange = inValue;
     EEUnitClass* theProjectile = this->mUnitClass->mProjectileClass;

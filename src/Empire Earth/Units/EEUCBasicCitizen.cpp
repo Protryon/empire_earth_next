@@ -23,6 +23,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitUpdate.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPhysics.h"
@@ -69,55 +70,9 @@ void EEGetSquareRing(long inX, long inY, long inSizeX, long inSizeY, std::vector
 // storage for a carried load; empties the load when dying or rotting; then uses the common handling
 void EEUCBasicCitizen::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionRepairBuilding:
-    case kActionGatherResource:
-    case kActionAddResourceToStorage:
-    case kActionFindNewResource:
-    case kActionWaitForBuildSiteToClear:
-    case kActionConvertToLocationGoal:
-    case kActionMoveToWaitingArea:
-    case kActionNotifyWaitingCitizen:
-    case kActionCheckForOpenPosition:
-    case kActionWaitForOpenPosition:
-    case kActionFindFarm:
-    case kActionMoveToResource:
-    case kActionMoveToStorage:
-    case kActionMoveToRepairSite:
-        if (theGoal != NULL)
-            theGoal->Step(inUnit);
-        return;
-    case kActionFindNewStorage:
-    case kActionFindStorage:
-        if (theGoal != NULL)
-            theGoal->Step(inUnit);
-        else if (inUnit->mResourceAmount > 0) {
-            EEUnit* theStorage = this->FindStorage(inUnit, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFindNewStorage);
-            if (theStorage != NULL)
-                inUnit->SetGoal(new EEUGGather(NULL, theStorage, false), 0, 0);
-        }
-        return;
-    case kActionTaskSmartCitizen:
-        if (theGoal != NULL && inUnit->mPlayer->IsHuman())
-            theGoal->Step(inUnit);
-        return;
-    case kActionResourcesRotting:
-        if (inUnit->mUnitClass->mBloodStainEffect != NULL)
-            EEPlaceTrackDecal(inUnit);
-        inUnit->SetResourceAmount(0);
-        break;
-    case kActionDying:
-        inUnit->SetResourceAmount(0);
-        break;
-    case kActionIdle:
-        inUnit->SetProductionTime(0);
-        // Port: the shift-queued builds are done (EEComplexUnit::mHasShiftQueuedBuild)
-        if (inUnit->mCitizenBuildQueue.size() == 0)
-            inUnit->mHasShiftQueuedBuild = false;
-        break;
-    }
-    EEUnitClass::ActionChanged(inUnit);
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs citizen), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_CITIZEN, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60be58

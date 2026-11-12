@@ -63,6 +63,9 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DPoint& inLocation, EEGraphicEffec
     this->SetTransformation(theTransformation);
     this->mTagPoint = 0;
     this->mIsFirstStep = true;
+    // (the original leaves the times to SetUp: an effect saved before its set-up wrote whatever the memory held)
+    this->mTime = 0.0f;
+    this->mEmitTime = 0.0f;
 }
 
 // SYNTHETIC: EXE 0x4f5e66
@@ -80,6 +83,8 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(GE3DLine& inLine, EEGraphicEffect* in
     this->mVelocity = inLine.GetDirection();
     this->mTagPoint = 0;
     this->mIsFirstStep = true;
+    this->mTime = 0.0f;   // (as above)
+    this->mEmitTime = 0.0f;
 }
 
 // FUNCTION: EXE 0x4f5f23
@@ -89,7 +94,9 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(EEUnit* inUnit, EEGraphicEffect* inGr
                                            unsigned long inTagPoint)
     : EEEffect3D(inUnit, inGraphicEffect, inKind)
 {
-    GETransformation theTransformation(false);
+    // (the original's is uninitialized, and a tag point follower placed itself at whatever it held until its first
+    // step: here the identity)
+    GETransformation theTransformation;
     EEComplexUnit* theUnit = inUnit->GetComplexUnit();
     this->mSound = NULL;
     this->mTagPoint = inTagPoint;
@@ -110,6 +117,8 @@ EEE3DParticleEmitter::EEE3DParticleEmitter(EEUnit* inUnit, EEGraphicEffect* inGr
     }
     this->SetTransformation(theTransformation);
     this->mIsFirstStep = true;
+    this->mTime = 0.0f;   // (as above)
+    this->mEmitTime = 0.0f;
 }
 
 // FUNCTION: EXE 0x4f604d

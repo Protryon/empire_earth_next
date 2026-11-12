@@ -17,6 +17,10 @@ gates the Rust leaves alone over the C++ capture, even after the game has change
 EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
 FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
 round; the missile profile's golden does not list it).
+EFST is every effect's state after every Update (EEEffectManager.cpp: the effects' random seed, then per effect in
+handle order its handle, kind, player, local-only and saved flags and a saved effect's own Save bytes, folded to a
+count, a length and an FNV-1a 64); its golden lines come from the C++ effects before their state moved (R4.4,
+seventh round), in all five profiles.
 ASRN is the tile A* searches' record (ee/EEAIAStarCapture.h): one per EEAIAStarMachine::Run, with the run's inputs,
 the count and FNV-1a digest of everything the machine asked its goal and the goal asked its view (in order, with the
 answers), and the run's outputs (the machine's members, the goal's flags, a digest of every storage node in list
@@ -98,8 +102,8 @@ every trigger's evaluation, SMOB every scenario object's, SMCP the player choice
 object's evaluation, SMEX every effect run, SMUP each trigger round. No random map has a trigger, so --profile
 scenario plays a retail campaign scenario per seed (SCENARIOS, extracted from the data tree's campaign archives into
 build/sim_capture/scenarios; EE-SIM --scenario); its golden file lists only the SM tags (recorded from the C++
-scenario manager before its logic moved), and its USCK reports without stopping the game (EE_SIM_STORE_CHECK_SOFT:
-the unit store does not follow a loaded scenario's units yet).
+scenario manager before its logic moved); its USCK stops the game on a mismatch like every profile's (a scenario's
+path points, on the map in no list, are the store's unlisted records: R5b.4's fourteenth round).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
@@ -180,8 +184,6 @@ def one(name, exe, seed, data, profile="oracle"):
     capture, trace, report = d / f"capture-{seed}.bin", d / f"trace-{seed}.txt", d / f"report-{seed}.json"
     capture.unlink(missing_ok=True)
     env = dict(os.environ, EE_SIM_CAPTURE=str(capture.resolve()))
-    if profile == "scenario":   # the unit store does not follow a loaded scenario's units yet: USCK reports, goes on
-        env["EE_SIM_STORE_CHECK_SOFT"] = "1"
     args =[str(scenario_file(seed, data)) if v == "{scenario}" else v for v in PROFILES[profile]]
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
                         f"capture-{name}-{seed}", "--exe", str(exe), "--", "--seed", str(seed), *args,
