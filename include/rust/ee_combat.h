@@ -411,9 +411,6 @@ constexpr static const int32_t EE_COMBAT_A_IGNORE = 3;
 /// `RTSUnit::mUnitID` of the object (the store's key).
 constexpr static const int32_t EE_COMBAT_Q_ID = 45;
 
-/// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
-constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_UNIT = 2;
-
 /// `EEFOFindNewTargetInMeleeRange`.
 constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
 
@@ -690,6 +687,16 @@ constexpr static const int32_t EE_COMBAT_SHOT_SET_CLOAKED = 72;
 
 /// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
 constexpr static const int32_t EE_COMBAT_SHOT_WATER_PLANE = 73;
+
+/// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
+constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_UNIT = 2;
+
+/// ee_units' `EE_UNIT_COMPLEX_*`: no complex unit, the unit itself, another object.
+constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_NONE = 0;
+
+constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_SELF = 1;
+
+constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_OTHER = 2;
 
 /// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
 /// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
@@ -2244,23 +2251,40 @@ EeCombatSearchOut ee_combat_search_along_list(const EeCombatSearchIn *input,
                                               uint64_t unit,
                                               const EeCombatSearchHost *host);
 
-/// A shot's `ActionChanged` over the C++ host.
+/// A shot's `ActionChanged` over the C++ host (`unit`: the shot, its plain reads the store's).
 ///
 /// # Safety
 /// `host` must point to a valid table whose function may be called with its context.
-void ee_combat_shot_action_changed(int32_t kind, const EeCombatShotHost *host);
+void ee_combat_shot_action_changed(int32_t kind, uint64_t unit, const EeCombatShotHost *host);
 
 /// A shot's `Update` over the C++ host.
 ///
 /// # Safety
 /// As [`ee_combat_shot_action_changed`].
-void ee_combat_shot_update(int32_t kind, const EeCombatShotHost *host);
+void ee_combat_shot_update(int32_t kind, uint64_t unit, const EeCombatShotHost *host);
 
 /// `EEUGHealUnit::Work` over its reads.
 ///
 /// # Safety
 /// `input` must point to a valid record.
 EeCombatHealWorkOut ee_combat_heal_work(const EeCombatHealWorkIn *input);
+
+/// `EECombatFillCondition`'s store part over `input` (see [`fill_condition`]).
+///
+/// # Safety
+/// `input` must point to a writable record.
+void ee_combat_fill_condition(EeCombatConditionIn *input,
+                              int32_t kind,
+                              uint64_t unit,
+                              uint32_t event,
+                              uint64_t target,
+                              uint64_t complex);
+
+/// `EECombatFillStep`'s store part over `input` (see [`fill_step`]).
+///
+/// # Safety
+/// `input` must point to a writable record.
+void ee_combat_fill_step(EeCombatStepIn *input, int32_t kind, uint64_t unit, uint64_t target);
 
 /// `EECanConvert`.
 ///
