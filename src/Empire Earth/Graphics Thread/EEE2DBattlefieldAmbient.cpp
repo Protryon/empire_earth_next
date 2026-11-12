@@ -133,7 +133,7 @@ void EEPlaceTrackDecal(EEComplexUnit* inUnit)
 static EEE2DBattlefieldAmbient* AmbientFindNear(unsigned long inType, GE3DPoint& inLocation)
 {
     EEE2DBattlefieldAmbient* theAmbient;
-    EEEffect* theEffect = gEffectManager->mEffects;
+    EEEffect* theEffect = gEffectManager->First();
     while (theEffect) {
         if (theEffect->mKind == kEffect2DBattlefieldAmbient) {
             theAmbient = dynamic_cast<EEE2DBattlefieldAmbient*>(theEffect);
@@ -145,7 +145,7 @@ static EEE2DBattlefieldAmbient* AmbientFindNear(unsigned long inType, GE3DPoint&
                     return theAmbient;
             }
         }
-        theEffect = theEffect->mNext;
+        theEffect = gEffectManager->Next(theEffect);
     }
     return NULL;
 }

@@ -8,6 +8,7 @@
 #include <vector>
 #include "lle/FSRestorable.h"
 #include "ee/EEGraphicalGoalManager.h"
+#include "rust/ee_gfx.h"            // effect_store.rs (RUST_PLAN R4.4)
 
 class EEGraphicEffect;
 class EEUnit;
@@ -72,9 +73,16 @@ public:
     // 0x4e8e38 "EEEffectManager-Data": a class static (its atexit dtor 0x105513 is guarded) (provisional name)
     static const UString sData;
 
-    std::map<unsigned long, EEEffect*> mEffectsByHandle;  // +0x04 the effects by handle (find 0x820bd compares the key with jb)
-    std::vector<unsigned long> mDestroyedHandles;  // +0x10 the handles DestroyEffect queued (saved)
-    EEEffect* mEffects;                     // +0x20 the effect list (= 0; linked by EEEffect::mNext; EEE2DBattlefieldAmbient 0xde5ca)
+    // the effect list, newest first (Update steps it in this order; EEE2DBattlefieldAmbient 0xde5ca walks it), the
+    // index's and the destruction queue's sizes
+    EEEffect* First() const { return static_cast<EEEffect*>(ee_gfx_effects_head(this->mStore)); }
+    EEEffect* Next(const EEEffect* inEffect) const { return static_cast<EEEffect*>(ee_gfx_effects_next(this->mStore, inEffect)); }
+    unsigned long Count() const { return (unsigned long)ee_gfx_effects_count(this->mStore); }
+    unsigned long DestroyedCount() const { return (unsigned long)ee_gfx_effects_destroyed_len(this->mStore); }
+
+    // the original's effects by handle (+0x04, a map), destruction queue (+0x10, saved), effect list (+0x20, linked
+    // by EEEffect's +0x10/+0x14) and last handle (the global 0x4e8e48, saved first): ee_gfx effect_store.rs
+    EeGfxEffectStore* mStore;
     EEGraphicalGoalManager mGoals;          // +0x24 (ctor 0x10779d; sizeof 0x10)
 };
 
