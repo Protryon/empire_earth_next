@@ -142,13 +142,76 @@ function M.available_citizens_now()
     return out
 end
 
--- FindBuilder: the nearest available citizen on the site's land; a farm's builder is not a farmer
+-- FindBuilder's shore rule: for the site classes (EECPIsSiteClass: the dock, the navy yard, the space classes) and
+-- the tower class a citizen of another path area qualifies when its continent's shore takes in a tile of the
+-- footprint (a dock's water site lies on no land of the town: the shallows are a land mass of their own). The port:
+-- the land masses by the footprint (its tiles and the ring round it: ai.shore with max 0, a land tile by water), one
+-- tile of each; a citizen qualifies when it reaches one of them (cached for the step per citizen and land mass).
+-- DEVIATION: the ring round the footprint stands in for the continent's shore tiles
+local SITE_CLASSES = {[C.dock] = true, [C.navy_yard] = true, [C.space_dock] = true, b_space_turret = true,
+                      w_orbital_space_station = true}
+
+local function shore_class(class)
+    if SITE_CLASSES[class] then
+        return true
+    end
+    for e = 0, 15 do
+        if T.tower_class(e) == class then
+            return true
+        end
+    end
+    return false
+end
+
+local function footprint_lands(x, y, class)
+    return R.memo("footprint_" .. class .. "_" .. x .. "_" .. y, function()
+        local size = R.class_of(class).size or 1
+        if size < 1 then
+            size = 1
+        end
+        local out, seen = {}, {}
+        for ty = y - 1, y + size do
+            for tx = x - 1, x + size do
+                local lx, ly, _, mass = ai.shore(tx, ty, {max = 0})
+                if lx ~= nil and not seen[mass] then
+                    seen[mass] = true
+                    out[#out + 1] = {lx, ly, mass}
+                end
+            end
+        end
+        return out
+    end)
+end
+
+local function reaches(u, x, y, lands)
+    if ai.reach(u.x, u.y, x, y) then
+        return true
+    end
+    local cache = R.memo("shore_reach", function() return {} end)
+    for _, l in ipairs(lands) do
+        local key = u.id .. ":" .. l[3]
+        local r = cache[key]
+        if r == nil then
+            r = ai.reach(u.x, u.y, l[1], l[2])
+            cache[key] = r
+        end
+        if r then
+            return true
+        end
+    end
+    return false
+end
+
+-- FindBuilder: the nearest available citizen on the site's land (or, for the site classes and towers, by its
+-- shore); a farm's builder is not a farmer
 function M.find_builder(memory, x, y, class)
     local best, bd
     local farm = memory.civ ~= nil and memory.civ.farm_type or C.farm
+    local lands = shore_class(class) and footprint_lands(x, y, class) or nil
     for _, u in ipairs(M.available_citizens()) do
         local dd = d2(u.x, u.y, x, y)
-        if (bd == nil or dd < bd or (dd == bd and u.id < best.id)) and ai.reach(u.x, u.y, x, y) then
+        if (bd == nil or dd < bd or (dd == bd and u.id < best.id))
+                and (lands ~= nil and reaches(u, x, y, lands) or lands == nil and ai.reach(u.x, u.y, x, y)) then
             local skip = false
             if class == farm and u.action == "gather" and u.target ~= nil then
                 local t = R.unit(u.target)
@@ -421,13 +484,13 @@ local function find_shore_site(view, memory, class)
             end
         end
         if not near and ai.can_place(class, x, y) and not R.enemy_near(x, y) then
-            -- (the classic asks FindBuilderForTile at every site, which blew the step's budget: the port asks at the
-            -- first 8 placeable sites)
+            -- (the classic asks FindBuilderForTile at every site; the port at the first 48 placeable sites, for the
+            -- step's budget)
             if M.find_builder(memory, x, y, class) ~= nil then
                 return x, y
             end
             asked = asked + 1
-            if asked >= 8 then
+            if asked >= 48 then
                 return nil
             end
         end

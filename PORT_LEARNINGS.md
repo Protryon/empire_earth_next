@@ -2049,4 +2049,15 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **A site finder that asks for a builder at every candidate blows the step's budget.** FindShoreSite tries every water
   site with FindBuilderForTile; in Lua each test is an `ai.reach` per available citizen, and with the reveal cheat the
   sites run to hundreds: 300 budget errors a bench. The port asks at the first 8 placeable sites (asking at the
-  first only halved its docks: `ai.reach` to a water tile fails at some sites a builder reaches at the next).
+  first only halved its docks: `ai.reach` to a water tile fails at some sites a builder reaches at the next). Later (§8.55): the water sites lie on the shallows, a land mass of their own, so `ai.reach` from a citizen to a
+  site fails at most of them; FindBuilder's shore rule (a citizen whose land touches the footprint builds a dock or a
+  tower) is now ported with `ai.shore`, cached per citizen and land mass, and the port asks at up to 48 sites.
+- **A unit counter built with the wrong flag counts nothing, and the cap above it never applies.**
+  EECPUGatherSpecialUnitsCount takes `inByClass`; false walks no units (only the requests), so EECPRMRequestBoats and
+  RequestFishingBoats never saw the boats a player had: the coast fishing's 8/16 cap was dead, one more boat every
+  30 s (13-47 a game). Found by matching the port's boats to the C++'s; both now count by class (§8.56). A cap that
+  a trace never shows binding deserves a look at its counter.
+- **The engine's reflexes give their units back to the classic's lists, not to a script's.** The naval flight
+  (EECPRMNavalFlee) calls AddIdleGatherer on the C++ resource manager; for a Lua seat that list is empty, so a fled
+  boat stayed on the script's food list, idle at the far dock, and was never sent to fish again (most of the port's
+  boats died idle). The script now moves a boat off its fish back to its idle list itself.

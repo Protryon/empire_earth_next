@@ -61,6 +61,8 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIForest.h"
+#include "ee/EEAIHill.h"
+#include "ee/EEAIChokePoint.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEMessage.h"
 #include "ee/EEUCBuilding.h"
@@ -70,6 +72,7 @@
 #include "ee/EETeam.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPAttackSubGroup.h"
 #include "ee/EEMessageID.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
@@ -1122,6 +1125,17 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
     }
     if (c->mContainer != NULL)
         EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
+    if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
+        // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
+        EECPASGFlags theFlags;
+        memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
+        theFlags.mPlayerID = 0;
+        c->mUnitClass->GetTerrainFlags(c, theFlags);
+        if (theFlags.mFlags[kAITileForest])
+            EECPUnitsSetBool(L, "crosses_forest", true);
+        if (theFlags.mFlags[kAITileCliff])
+            EECPUnitsSetBool(L, "crosses_cliff", true);
+    }
     EECPUnitsSetInt(L, "cargo", (long)c->GetNumCargoUnits());
     EECPUnitsSetInt(L, "garrisoned", c->mGarrisonCount);   // citizens inside a town centre, capitol or settlement
     if (c->mUnitClass->IsBuilding()) {
@@ -2944,6 +2958,99 @@ static int LuaForestPoint(lua_State* L)
     return 3;
 }
 
+// ai.hill_point(x, y, r, pick, seed) -> x, y, n: as ai.forest_point, over the continent manager's hills (EEAIHill) on
+// the land mass at (x, y) whose hull holds the tile or comes within r tiles (the classic defence ladder's hill)
+static int LuaHillPoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    for (int i = 1; i <= 5; i++)
+        if (!lua_isinteger(L, i))
+            return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2), r = (long)lua_tointeger(L, 3);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    if (x < 0 || y < 0 || x >= w || y >= h)
+        return 0;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theLand == NULL)
+        return 0;
+    U2DPoint<long> theFrom(x, y);
+    std::vector<EEAIHill*> theHills;
+    for (size_t i = 0; i < theLand->mHillIDs.size(); i++) {
+        unsigned short theID = theLand->mHillIDs[i];
+        EEAIHill* theHill = theID < gContinentManager.mHills.size() ? gContinentManager.mHills[theID] : NULL;
+        if (theHill != NULL && (theHill->mHull.BoundedContains(theFrom)
+                || theHill->GetClosestHullPoint(theFrom).DistanceToSquared(theFrom) <= r * r))
+            theHills.push_back(theHill);
+    }
+    EECPUnitsCharge(L, (int64_t)theLand->mHillIDs.size() * kCostScan * 4);
+    if (theHills.empty())
+        return 0;
+    long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theHills.size());
+    if (thePick < 0)
+        thePick += (long)theHills.size();
+    EEAIHill* theHill = theHills[thePick];
+    if (!(theHill->mTiles.Size() > 0))
+        return 0;
+    URandom theRandom((unsigned long)lua_tointeger(L, 5));
+    U2DPoint<long> thePoint = theHill->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    lua_pushinteger(L, (lua_Integer)theHills.size());
+    return 3;
+}
+
+// ai.choke_point(x, y, nearest, pick, seed) -> x, y, n: a random point of one of the continent manager's choke points
+// (EEAIChokePoint) of the land mass at (x, y) - of the `nearest` ones to the tile (by their closest point) when
+// nearest > 0, else of all n of them; the (pick mod count)-th (the classic defence ladder's choke point and
+// FindTowerSite's); nil when the land has none
+static int LuaChokePoint(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    for (int i = 1; i <= 5; i++)
+        if (!lua_isinteger(L, i))
+            return 0;
+    long x = (long)lua_tointeger(L, 1), y = (long)lua_tointeger(L, 2), theNearest = (long)lua_tointeger(L, 3);
+    long w, h;
+    EECPUnitsMapSize(w, h);
+    if (x < 0 || y < 0 || x >= w || y >= h)
+        return 0;
+    EEAIContinent* theLand = gContinentManager.GetContinentAt(x, y);
+    if (theLand == NULL)
+        return 0;
+    std::vector<EEAIChokePoint*> theChokePoints;
+    gContinentManager.GetChokePoints(theChokePoints, theLand->mID, false);
+    EECPUnitsCharge(L, (int64_t)theChokePoints.size() * kCostScan * 4);
+    long theTotal = (long)theChokePoints.size();
+    if (theChokePoints.empty())
+        return 0;
+    if (theNearest > 0) {
+        U2DPoint<long> theFrom(x, y);
+        std::multimap<long, EEAIChokePoint*> theMap;
+        while (!theChokePoints.empty()) {
+            U2DPoint<long> theClosest = theChokePoints.back()->GetClosestPoint(theFrom);
+            theMap.insert(std::make_pair((long)theClosest.DistanceToSquared(theFrom), theChokePoints.back()));
+            theChokePoints.pop_back();
+        }
+        long theCount = 0;
+        for (std::multimap<long, EEAIChokePoint*>::iterator it = theMap.begin(); it != theMap.end() && theCount < theNearest;
+             ++it, ++theCount)
+            theChokePoints.push_back(it->second);
+    }
+    long thePick = (long)(lua_tointeger(L, 4) % (lua_Integer)theChokePoints.size());
+    if (thePick < 0)
+        thePick += (long)theChokePoints.size();
+    EEAIChokePoint* theChoke = theChokePoints[thePick];
+    if (!(theChoke->mTiles.Size() > 0))
+        return 0;
+    URandom theRandom((unsigned long)lua_tointeger(L, 5));
+    U2DPoint<long> thePoint = theChoke->mTiles.GetRandomPoint(theRandom);
+    lua_pushinteger(L, (lua_Integer)thePoint.mX);
+    lua_pushinteger(L, (lua_Integer)thePoint.mY);
+    lua_pushinteger(L, (lua_Integer)theTotal);
+    return 3;
+}
+
 // ai.area_point(id, seed) -> x, y: a random tile of the area (EEAIArea::GetRandomPoint), drawn from a stream seeded
 // with the script's number (the game's random stream is left alone); nil for no such area or an empty one
 static int LuaAreaPoint(lua_State* L)
@@ -4004,7 +4111,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
