@@ -298,18 +298,22 @@ bool EETechTreeNode::GetIsObsolete()
 // Tells whether the node makes a building or mine whose media this game needs
 bool EETechTreeNode::NeedsUnitMedia()
 {
+    bool theResult = this->NeedsUnitMediaUncaptured();
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
     long theUnitClass = this->mData->mUnitClass;
-    if (theUnitClass <= 0)
-        return false;
-    EEUnitClass* theClass = gUnitClassTable[theUnitClass];
-    if (theClass == NULL)
-        return false;
-    long theKind = theClass->mFamily;
-    if (theKind == kUnitFamilyBuilding || theKind == kUnitFamilyMines) {
-        if (!this->mScenEditorObsoleted && this->mObsoleteEpoch >= this->mTree->mStartEpoch)
-            return true;
-    }
-    return false;
+    EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
+    EETechCaptureWalk(10, NULL, this, theUnitClass, theClass != NULL ? theClass->mFamily : -1, theResult ? 1 : 0);
+    return theResult;
+}
+
+bool EETechTreeNode::NeedsUnitMediaUncaptured()
+{
+    // the rule is Rust (ee_tech tree.rs needs_unit_media): the node's class (none for an id 0 or less or an empty
+    // table entry) and its family
+    long theUnitClass = this->mData->mUnitClass;
+    EEUnitClass* theClass = theUnitClass > 0 ? gUnitClassTable[theUnitClass] : NULL;
+    return ee_tech_needs_unit_media(theClass != NULL, theClass != NULL ? (int32_t)theClass->mFamily : -1, this->mScenEditorObsoleted,
+                                    (int32_t)this->mObsoleteEpoch, (int32_t)this->mTree->mStartEpoch);
 }
 
 // the tree for the Rust DependsOn: a node's four prerequisites (false without a node)
@@ -496,21 +500,24 @@ void EETechTreeNode::SetScenEditorObsoleted(bool inValue, bool inRecurse)
 // Makes the node obsolete (obsolete event, unloading its unit media unless kept) or clears the flag
 void EETechTreeNode::SetObsolete(bool inValue, bool inKeepMedia)
 {
-    if (inValue) {
-        if (this->mIsObsolete == false) {
-            this->mIsObsolete = true;
-            EEEvent::Trigger(this->mData->mObsoleteEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
-            this->mTree->UpdateInterface(false);
-            if (!inKeepMedia) {
-                if (this->NeedsUnitMedia() == true && this->mIsUnitMediaLoaded == true) {
-                    this->mTree->GetPlayer()->UnloadUnitClassMedia(this->mData->mUnitClass);
-                    this->mIsUnitMediaLoaded = false;
-                }
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theAction = inValue ? 0 : 4;   // TNWK (TEST ONLY): 1 obsoleted, 2 its media unloaded, 4 cleared
+    // the decision is Rust (ee_tech tree.rs set_obsolete); the event, the interface and the media stay here
+    EeTechSetObsolete theDecision = ee_tech_set_obsolete(inValue, inKeepMedia, this->mIsObsolete);
+    this->mIsObsolete = theDecision.obsolete;
+    if (theDecision.fires) {
+        theAction |= 1;
+        EEEvent::Trigger(this->mData->mObsoleteEvent, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
+        this->mTree->UpdateInterface(false);
+        if (theDecision.check_media) {
+            if (this->NeedsUnitMedia() == true && this->mIsUnitMediaLoaded == true) {
+                theAction |= 2;
+                this->mTree->GetPlayer()->UnloadUnitClassMedia(this->mData->mUnitClass);
+                this->mIsUnitMediaLoaded = false;
             }
         }
-    } else {
-        this->mIsObsolete = false;
     }
+    EETechCaptureWalk(5, this->mTree, this, inValue ? 1 : 0, inKeepMedia ? 1 : 0, theAction);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cfc72

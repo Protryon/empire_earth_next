@@ -12,12 +12,16 @@
 //! - [`calamity`]: a calamity's age against its class's lifetime.
 //! - [`calamity_cast`]: `CanCastAt` and the classes' target and location tests.
 //! - [`calamity_update`]: every calamity class's own update over a host of world calls.
+//! - [`calamity_start`]: every calamity class's `Start` and `Stop` over the same host.
+//! - [`contagion`]: the contagion helpers' update and spread over a host, the functors' damage arithmetic.
 //! - [`capture`]: the simulation capture's records (`ee/EETechCapture.h`) and their replay.
 
 pub mod calamity;
 pub mod calamity_cast;
+pub mod calamity_start;
 pub mod calamity_update;
 pub mod capture;
+pub mod contagion;
 pub mod effects;
 pub mod ffi;
 pub mod tree;

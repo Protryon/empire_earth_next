@@ -24,6 +24,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
 
 extern EEEffectManager*& gEffectManager;
 
@@ -48,6 +49,7 @@ EEAEMindControlFunctor::~EEAEMindControlFunctor()
 // Shows the mind-control effect on a caught unit, disables it (reason 0x1a) and halts it
 void EEAEMindControlFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     if (this->mEffect != NULL)
         gEffectManager->CreateUnitEffect(inUnit, this->mEffect, NULL, false, 0, 0);
     inUnit->mComplexUnit->SetDisabled(true, 0x1a);
@@ -60,6 +62,7 @@ void EEAEMindControlFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 // (handing the unit back to its owner is not done here)
 void EEAEMindControlFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionCure, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     if (theUnit == NULL)
         return;

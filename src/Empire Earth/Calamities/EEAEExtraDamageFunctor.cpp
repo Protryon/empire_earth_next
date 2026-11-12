@@ -26,6 +26,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
 
 extern EEEffectManager*& gEffectManager;
 
@@ -56,6 +57,7 @@ EEAEExtraDamageFunctor::~EEAEExtraDamageFunctor()
 // battle cry effect and gives it one more negative morale
 void EEAEExtraDamageFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     EEUnit* theCaster = inCalamity->mCasterUnit;
     if (theCaster != NULL && (inUnit->mPlayer == theCaster->mPlayer
                               || theCaster->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] == 0))
@@ -74,6 +76,7 @@ void EEAEExtraDamageFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 // Takes the unit's extra negative morale away again
 void EEAEExtraDamageFunctor::Cure(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionCure, inUnit->mUnitID);   // CONT (TEST ONLY)
     inUnit->mComplexUnit->mNegativeMorale--;
 }
 

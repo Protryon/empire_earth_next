@@ -126,4 +126,52 @@ void EETechCaptureResearchToEpoch(EETechTree* inTree, long inEpoch, bool inLocal
 // 3 pending hit points, 4 flight time, 5 pending flight time, 6 area effects, 7 conversion)
 void EETechCaptureUnitStep(EEUnit* inUnit, bool inApplies, long inValue);
 void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA = 0, long inB = 0);
+
+// CALT: a calamity's Start (kind 0) or Stop (kind 1): the class, the calamity's state, its target's and caster's
+// unit state and the contagion manager's before, the world calls of the start or stop in order
+// (EECalamityCaptureStartEvent), the same after, the result
+enum EECalamityStartOp {
+    kCalamityStartEffect = 1,       // an effect the start creates (its location's x, y as floats; z as the int)
+    kCalamityStartSound,            // a sound started (volume, pan as floats)
+    kCalamityStartHelper,           // a contagion helper created (id, whether it exists)
+    kCalamityStopHelper,            // a contagion helper destroyed (id)
+    kCalamityStartDestroyEffect,    // the calamity's effect destroyed (handle)
+    kCalamityStartStopSound,        // StopSound / StopSecondarySound (0 / 1)
+    kCalamityStartKill,             // the target unit killed (id)
+    kCalamityStartStep,             // a class's own world step (its number)
+};
+void EECalamityCaptureStartEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
+// a kCalamityStartEffect event: which effect of the class, the location (z as the int's bits)
+void EECalamityCaptureStartPoint(long inWhich, float inX, float inY, float inZ);
+bool EECalamityCaptureStart(EECalamityClass* inClass, EECalamity* inCalamity);
+void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity);
+
+// CONT: one contagion helper's Update: the helper's id, class, timers and units before, the elapsed time, the
+// update's world calls in order (EECalamityCaptureContagionEvent: spread candidates with their answers and draws,
+// units added, immune, cured, applied, the damage), the timers and units after
+class EEContagionHelper;
+enum EEContagionCaptureOp {
+    kContagionSpread = 1,       // Spread (the elapsed time, the chance)
+    kContagionUpdateUnits,      // the functor's UpdateUnits instead of a spread
+    kContagionCandidate,        // a near unit (id, the draw or -1; the distance squared or -1)
+    kContagionNew,              // a new unit (id; 1 added, 2 immune, 3 held or no complex)
+    kContagionApply,            // Apply on a living unit (id)
+    kContagionRemove,           // a dead unit removed and cured (id)
+    kContagionDamage,           // a functor's TakeHit (unit id, damage)
+    kContagionInfect,           // a functor's Infect (unit id)
+    kContagionCure,             // a functor's Cure (unit id)
+    kContagionFunctorUpdate,    // the functor's Update (its update count)
+};
+void EECalamityCaptureContagionEvent(long inOp, long inA = 0, long inB = 0, float inC = 0.0f, float inD = 0.0f);
+void EECalamityCaptureContagion(EEContagionHelper* inHelper, float inElapsedTime);
+
+// TNWK: one walk over an epoch's nodes or one tree decision (kind: 0 Unlock, 1 ResearchAll, 2 ResearchKind,
+// 3 the epoch's ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's
+// GetBuildTime, 7 SetEpoch, 8 AdvanceEpoch, 9 SetNodeAvailable, 10 NeedsUnitMedia): the walk's arguments, per node
+// the step (id, action), the node (or the tree's epoch) after, the result. Kinds 6 and 10 (asked from the media
+// loader's thread too) are TNMT records: their order against the game thread's depends on timing. Walks nest (an event a step fires may
+// walk again): Begin opens one, the steps go to the innermost, Walk writes and closes it
+void EETechCaptureWalkBegin();
+void EETechCaptureWalkStep(long inID, long inAction);
+void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB, long inResult);
 #endif

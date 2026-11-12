@@ -61,32 +61,18 @@ EECCCloaking::~EECCCloaking()
 // also makes the capitols grouped around it cast cloaking. Returns true
 bool EECCCloaking::Start(EECalamity* inCalamity)
 {
-    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inCalamity->GetCasterUnit());
-    EEAreaEffect* theEffect = gAEManager.CreateAreaEffect(0x2e, theUnit);
-    theUnit->mAreaEffects.Add(theEffect);
-    theEffect->Dereference();
-    GE3DPoint theLocation;
-    theUnit->GetPosition(theLocation);
-    inCalamity->mTargetLocation = theLocation;
-    inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(), 0.0f,
-                                                                    1.0f, this->mSound->GetLooping(), NULL));
-    if (inCalamity->mSound != NULL)
-        inCalamity->mSound->Dereference();
-    theUnit->mCloaked = 1;
-    if (theUnit->mUnitClass->mUnitType == kUnitTypeCapitol)
-        this->CloakGroup(inCalamity, theUnit, theEffect);
-    gEffectManager->CreateUnitEffect(inCalamity->mCasterUnit, this->mGraphicEffect, NULL, 0, 0, 0);
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCCloaking::StartStep);
 }
 
 // FUNCTION: EXE 0x4afa26
 // Uncloaks the caster: removes its area effect of kind 8 and stops the sound
 void EECCCloaking::Stop(EECalamity* inCalamity)
 {
-    EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(inCalamity->GetCasterUnit());
-    theUnit->mAreaEffects.Remove(8);
-    inCalamity->StopSound();
-    theUnit->mCloaked = 0;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCCloaking::StartStep);
 }
 
 // FUNCTION: EXE 0x4afa68
@@ -206,4 +192,49 @@ void EECCCloaking::CloakUnit(EECalamity* inCalamity, EEComplexUnit* inUnit)
     inUnit->SetGoal(new EEUGCastCalamity(inUnit, 0, inUnit->GetTileX(), inUnit->GetTileY(), 0x43d, true), 0, 0);
     inUnit->StartAction(kActionCalamityPreCast);
     inUnit->mUnitClass->ActionChanged(inUnit);
+}
+
+// New (port): EECCCloaking's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCCloaking::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCCloaking* theClass = static_cast<EECCCloaking*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        // the cloak's area effect on the caster, the target its position, the sound, the cloak flag; a capitol's group
+        EEComplexUnit* theUnit = EEUnitCast<EEComplexUnit>(theCalamity->GetCasterUnit());
+        EEAreaEffect* theEffect = gAEManager.CreateAreaEffect(0x2e, theUnit);
+        theUnit->mAreaEffects.Add(theEffect);
+        theEffect->Dereference();
+        GE3DPoint theLocation;
+        theUnit->GetPosition(theLocation);
+        theCalamity->mTargetLocation = theLocation;
+        theCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(theClass->mSound->GetSampleID(), theClass->mSound->GetVolume(),
+                                                                         0.0f, 1.0f, theClass->mSound->GetLooping(), NULL));
+        if (theCalamity->mSound != NULL)
+            theCalamity->mSound->Dereference();
+        theUnit->mCloaked = 1;
+        ioHost.mPending = theEffect;
+        outReply.ok = theUnit->mUnitClass->mUnitType == kUnitTypeCapitol;
+        return true;
+    }
+    case 2:
+        theClass->CloakGroup(theCalamity, EEUnitCast<EEComplexUnit>(theCalamity->GetCasterUnit()),
+                             static_cast<EEAreaEffect*>(ioHost.mPending));
+        return true;
+    case 3:
+        gEffectManager->CreateUnitEffect(theCalamity->mCasterUnit, theClass->mGraphicEffect, NULL, 0, 0, 0);
+        return true;
+    case 4:
+        EEUnitCast<EEComplexUnit>(theCalamity->GetCasterUnit())->mAreaEffects.Remove(8);
+        return true;
+    case 5:
+        EEUnitCast<EEComplexUnit>(theCalamity->GetCasterUnit())->mCloaked = 0;
+        return true;
+    default:
+        return false;
+    }
 }

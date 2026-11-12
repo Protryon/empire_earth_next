@@ -40,6 +40,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DImpact.h"
 #include "ee/EEE2DMuzzleFlash.h"
+#include "ee/EECombatFormulas.h"
 
 // FUNCTION: EXE 0x4e4529
 // Creates a muzzle flash (an impact of kind 9) on a firing unit
@@ -76,25 +77,12 @@ long EEE2DMuzzleFlash::Queue(EEEffectQueue* inQueues)
 // graphic at the first frame; returns 0
 long EEE2DMuzzleFlash::SetUp()
 {
-    GETransformation theTransformation(this->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
     EEModel* theModel = this->mUnit->GetModel();
     EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
     unsigned long thePart = theUnit->mAnimation;
     EETagPointList* theList = this->mUnit->GetModel()->mTagPoints[thePart];
-    float theScale = theUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
-    EETagPointList::Scale(theTransformation, theScale);
-    if (theModel->GetNumParts() <= 0) {
-        theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, this->mStart);
-    } else {
-        GETransformation thePartTransformation(false);
-        unsigned long theModelIndex;
-        thePartTransformation.MakeIdentity();
-        if (theModel->FindTurretPart((*(theList->mPoints.begin() + theIndex))->mModel, theModelIndex) == 0)
-            thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-        (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, thePartTransformation, this->mStart);
-    }
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(3, theUnit, theModel, theList, true, this->mStart);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
     this->mTime = 0.0f;

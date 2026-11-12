@@ -1,5 +1,6 @@
 // New (port), TEST ONLY: the simulation capture (ee/EESimCapture.h; tools/sim_capture.py). Written from the thread
 // that runs the leaf (the physics tick in EE-SIM); the lock keeps records whole if another thread captures too.
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
@@ -10,7 +11,11 @@
 namespace {
 
 std::mutex sCaptureLock;
-thread_local unsigned int sOnlyTag = 0;
+thread_local unsigned int sOnlyTags[4] = {};
+thread_local unsigned int sOnlyCount = 0;
+std::atomic<bool> sExclusive{false};
+std::atomic<bool> sClosed{false};
+thread_local bool sExclusiveOwner = false;
 
 FILE* CaptureFile()
 {
@@ -33,14 +38,40 @@ bool EESimCaptureRecord::Active()
 
 void EESimCaptureRecord::Only(unsigned int inTag)
 {
-    sOnlyTag = inTag;
+    sOnlyTags[0] = inTag;
+    sOnlyCount = inTag != 0 ? 1 : 0;
+}
+
+void EESimCaptureRecord::Only(const unsigned int* inTags, unsigned int inCount)
+{
+    sOnlyCount = inCount < 4 ? inCount : 4;
+    for (unsigned int i = 0; i < sOnlyCount; i++)
+        sOnlyTags[i] = inTags[i];
+}
+
+void EESimCaptureRecord::Exclusive(bool inOn)
+{
+    sExclusiveOwner = inOn;
+    sExclusive.store(inOn);
+}
+
+void EESimCaptureRecord::Close()
+{
+    sClosed.store(true);
 }
 
 void EESimCaptureRecord::Commit()
 {
     FILE* theFile = CaptureFile();
-    if (theFile == NULL || (sOnlyTag != 0 && this->mTag != sOnlyTag))
+    if (theFile == NULL || sClosed.load() || (sExclusive.load() && !sExclusiveOwner))
         return;
+    if (sOnlyCount != 0) {
+        bool theKept = false;
+        for (unsigned int i = 0; i < sOnlyCount; i++)
+            theKept = theKept || this->mTag == sOnlyTags[i];
+        if (!theKept)
+            return;
+    }
     unsigned int theHeader[2] = {this->mTag, (unsigned int)this->mData.size()};
     std::lock_guard<std::mutex> theGuard(sCaptureLock);
     std::fwrite(theHeader, 4, 2, theFile);

@@ -12,6 +12,18 @@ class EEComplexUnit;
 class EEContagionFunctor;
 class EEUnit;
 
+class EEContagionHelper;
+struct EeContagionCall;
+struct EeContagionReply;
+// New (port): the host of a helper's Rust update (ee_tech contagion.rs): the helper, the near units of the held unit
+// the spread looks at, the new units it found
+struct EEContagionHelperHost {
+    EEContagionHelper* mHelper;
+    std::vector<EEComplexUnit*> mNear;
+    std::vector<EEUnit*> mNew;
+    static void Call(void* inContext, const EeContagionCall* inCall, EeContagionReply* outReply);
+};
+
 class EEContagionHelper : public FSRestorable {
 public:
     EEContagionHelper();                    // 0xb5c89 (EEContagionManager::Load)
@@ -32,7 +44,6 @@ public:
     void SetCalamity(EECalamity* inCalamity);   // 0xb62c9
     void SetFunctor(EEContagionFunctor* inFunctor);   // 0xb62d3
     void SetHelperID(long inHelperID);      // ICF-folded (0x1c1c)
-    void Spread(float inElapsedTime);       // 0xb62dd: infects the units near the infected ones
     void SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);   // 0xb64e8: inNewUnit replaces inOldUnit
     void Update(float inElapsedTime);       // 0xb6552
 

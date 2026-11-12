@@ -24,6 +24,8 @@ public:
     virtual ~EECCEarthquake();              // 0xb03b5 (??_G 0xb0399)
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb03e1
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb0750
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb0765
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 0xb0850
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xb0621
@@ -36,7 +38,6 @@ public:
 
 protected:
     // Provisional names (by behaviour)
-    bool CreateSourceEffect(EECalamity* inCalamity);    // 0xb0409: the effect from the caster to the target
     bool CreateCracks(EECalamity* inCalamity);          // 0xb0502: mCrackCount cracks around the target
     bool SetAffectedArea(EECalamity* inCalamity);       // 0xb06b5: the calamity's rectangle (mRadius around the target)
     long CreateCrack(GE3DPoint& inFrom, float inX, float inY);   // 0xb071c
