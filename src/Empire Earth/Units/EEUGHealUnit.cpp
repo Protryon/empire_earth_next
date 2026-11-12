@@ -229,21 +229,30 @@ bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
 // to the target's maximum hit points
 void EEUGHealUnit::Work(EEComplexUnit* inUnit)
 {
-    EECombatHostReadScope theScope(3);   // TEST ONLY (CBSO golden): the original body in a lambda
-    [&]() {
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionHealUnit || this->mTarget == NULL || ::gWorld.mInCinematic
-        || !(this->mTarget->mHitPoints > 0)
-        || (inUnit->mPlayer != this->mTarget->mPlayer && this->mTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] != 0))
-        return;
-    EeCombatHealStepIn theStep = {(uint32_t)this->mElapsedTime, (int32_t)gPhysics->mTickTimeMs};
-    EeCombatHealStepOut theStepOut = EECombatHealStep(theStep);
-    this->mElapsedTime = theStepOut.elapsed;
-    if (theStepOut.due) {
-        EeCombatHealIn theHeal = {(int32_t)this->mTarget->mHitPoints, (int32_t)inUnit->mStats->mHealingPoints,
-                                  (int32_t)this->mTarget->mStats->mMaxHitPoints};
-        this->mTarget->SetHitPoints(EECombatHeal(theHeal).hit_points);
+    EECombatHostReadScope theScope(3);
+    // ee_combat shots.rs heal_work over the plain reads (the target's 0 without one); CBSO records the outcome
+    EeCombatHealWorkIn in;
+    memset(&in, 0, sizeof(in));
+    in.command = EECombatCommandOf(inUnit);
+    in.cinematic = ::gWorld.mInCinematic;
+    in.elapsed = (uint32_t)this->mElapsedTime;
+    in.tick_ms = (int32_t)gPhysics->mTickTimeMs;
+    in.healing = inUnit->mStats != NULL ? (int32_t)inUnit->mStats->mHealingPoints : 0;
+    EEUnit* theTarget = this->mTarget;
+    if (theTarget != NULL) {
+        in.has_target = 1;
+        in.target_hp = (int32_t)theTarget->mHitPoints.Get();
+        in.same_player = inUnit->mPlayer == theTarget->mPlayer;
+        if (!in.same_player && theTarget->mPlayer != NULL && inUnit->mPlayer != NULL)
+            in.target_enemy_of = theTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] != 0;
+        in.max_hp = theTarget->mStats != NULL ? (int32_t)theTarget->mStats->mMaxHitPoints : 0;
     }
-    }();
+    EeCombatHealWorkOut theOut = ee_combat_heal_work(&in);
+    if (theOut.work) {
+        this->mElapsedTime = theOut.elapsed;
+        if (theOut.heal)
+            this->mTarget->SetHitPoints(theOut.hit_points);
+    }
     if (theScope.mOuter)
         EECombatCaptureHealWork(inUnit, this->mTarget, this->mElapsedTime);
 }

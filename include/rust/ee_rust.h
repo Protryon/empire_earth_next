@@ -571,6 +571,194 @@ constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_PREFERRED = 5;
 /// `kUnitType14AntiMissileBattery`: always scored as a still target.
 constexpr static const int32_t EE_COMBAT_ANTI_MISSILE_BATTERY = 741;
 
+/// `EEUCProjectile` (and `EEUCBomb`, which runs its action and update).
+constexpr static const int32_t EE_COMBAT_SHOT_PROJECTILE = 0;
+
+/// `EEUCMissile`.
+constexpr static const int32_t EE_COMBAT_SHOT_MISSILE = 1;
+
+/// `EEUCTorpedo` (its update: the missile's, then the water plane).
+constexpr static const int32_t EE_COMBAT_SHOT_TORPEDO = 2;
+
+/// `mCommand ? mCommand->mType : 0`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_COMMAND = 1;
+
+/// the class's `mRottingTime`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME = 2;
+
+/// `mPhysicalModel.GetLocation()`'s x, y, z (f32).
+constexpr static const int32_t EE_COMBAT_SHOT_R_LOCATION_X = 3;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_LOCATION_Y = 4;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_LOCATION_Z = 5;
+
+/// `mTile->GetHeight()` (f32).
+constexpr static const int32_t EE_COMBAT_SHOT_R_TILE_HEIGHT = 6;
+
+/// `mGoalState->mKind`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_GOAL_KIND = 7;
+
+/// the class's `mSplashEffect`, `mDeathEffect` and the stats' `mDeathSound` are there.
+constexpr static const int32_t EE_COMBAT_SHOT_R_SPLASH_EFFECT = 8;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_DEATH_EFFECT = 9;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_DEATH_SOUND = 10;
+
+/// `mUnitClass->mUnitType`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_UNIT_TYPE = 11;
+
+/// `GetNumCargoUnits()`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_CARGO = 12;
+
+/// `GetLineOfSight()` (f32).
+constexpr static const int32_t EE_COMBAT_SHOT_R_LINE_OF_SIGHT = 13;
+
+/// `mComplexUnit->mGoalState->mKind`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND = 14;
+
+/// the flaming arrows' calamity class (0x17)'s unit set holds the attack goal's target's type.
+constexpr static const int32_t EE_COMBAT_SHOT_R_FLAMING_SET = 15;
+
+/// `gPhysics->mRandom.Generate()` (f32; a draw).
+constexpr static const int32_t EE_COMBAT_SHOT_R_RANDOM = 16;
+
+/// the flaming arrows' power record's `mChance` (f32).
+constexpr static const int32_t EE_COMBAT_SHOT_R_FLAMING_CHANCE = 17;
+
+/// the class's `mRemainsClass` is there, its `mIsProjectile`, `gWorldClearing`, `gFreeCamera`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_REMAINS = 18;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_IS_PROJECTILE = 19;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_WORLD_CLEARING = 20;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_FREE_CAMERA = 21;
+
+/// the attack goal's target's `mHitPoints`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_TARGET_HIT_POINTS = 22;
+
+/// `mHitPoints`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_HIT_POINTS = 23;
+
+/// the class's `GetPopulationCost()`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_POPULATION_COST = 24;
+
+/// the class's `mPhysicsModel` is there.
+constexpr static const int32_t EE_COMBAT_SHOT_R_PHYSICS_MODEL = 25;
+
+/// `mTileX`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_TILE_X = 26;
+
+/// `mRottingAwayTime`, `gPhysics->mTickTimeMs`, `mFlightTime`, `mCloaked`.
+constexpr static const int32_t EE_COMBAT_SHOT_R_ROTTING = 27;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_TICK = 28;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_FLIGHT_TIME = 29;
+
+constexpr static const int32_t EE_COMBAT_SHOT_R_CLOAKED = 30;
+
+/// `GetPosition(point)`'s z (f32).
+constexpr static const int32_t EE_COMBAT_SHOT_R_POSITION_Z = 31;
+
+/// `SetAnimation(arg, -1, 0)`.
+constexpr static const int32_t EE_COMBAT_SHOT_SET_ANIMATION = 40;
+
+/// `SetRottingAwayTime(arg)`.
+constexpr static const int32_t EE_COMBAT_SHOT_SET_ROTTING = 41;
+
+/// the splash effect placed at the location's x, y and z 0.
+constexpr static const int32_t EE_COMBAT_SHOT_SPLASH = 42;
+
+/// the location set to the ground point under it (`GetGroundPoint`, `SetLocationXYZ`).
+constexpr static const int32_t EE_COMBAT_SHOT_GROUND_LOCATION = 43;
+
+/// the location set to itself (`SetLocationXYZ(position)`).
+constexpr static const int32_t EE_COMBAT_SHOT_SAME_LOCATION = 44;
+
+/// the death effect created on the unit.
+constexpr static const int32_t EE_COMBAT_SHOT_DEATH_EFFECT = 45;
+
+/// the death sound played (`GetSoundParameters`, `Play`).
+constexpr static const int32_t EE_COMBAT_SHOT_DEATH_SOUND = 46;
+
+/// `SetCurrentPhysicsAction(arg)`.
+constexpr static const int32_t EE_COMBAT_SHOT_PHYSICS_ACTION = 47;
+
+/// `DropPath()`.
+constexpr static const int32_t EE_COMBAT_SHOT_DROP_PATH = 48;
+
+/// `UnloadCargoAtTile((long)x, (long)y, false)` of the position's x and y (arg, arg1: f32 bits).
+constexpr static const int32_t EE_COMBAT_SHOT_UNLOAD_CARGO = 49;
+
+/// `KillCargo()`.
+constexpr static const int32_t EE_COMBAT_SHOT_KILL_CARGO = 50;
+
+/// `FireShot(inUnit)`.
+constexpr static const int32_t EE_COMBAT_SHOT_FIRE_SHOT = 51;
+
+/// the attack goal's complex target's `SetIsTinted(false)` (when it is one).
+constexpr static const int32_t EE_COMBAT_SHOT_UNTINT_TARGET = 52;
+
+/// `SightOffHere()`, `SetHitPoints(arg)`, `SightOnHere()`.
+constexpr static const int32_t EE_COMBAT_SHOT_SIGHT_OFF = 53;
+
+constexpr static const int32_t EE_COMBAT_SHOT_SET_HIT_POINTS = 54;
+
+constexpr static const int32_t EE_COMBAT_SHOT_SIGHT_ON = 55;
+
+/// the burning calamity (0x18) on the attack goal's target for the unit's player.
+constexpr static const int32_t EE_COMBAT_SHOT_CREATE_CALAMITY = 56;
+
+/// `StartAction(arg)`.
+constexpr static const int32_t EE_COMBAT_SHOT_START_ACTION = 57;
+
+/// `this->ActionChanged(inUnit)` (virtual: it may run this plan again).
+constexpr static const int32_t EE_COMBAT_SHOT_ACTION_CHANGED = 58;
+
+/// `CreateRemainsUnit(inUnit)`.
+constexpr static const int32_t EE_COMBAT_SHOT_CREATE_REMAINS = 59;
+
+/// a new attack-ground goal on the dead target's tile (its height when the tile is there).
+constexpr static const int32_t EE_COMBAT_SHOT_ATTACK_TARGET_TILE = 60;
+
+/// the attack goal retargeted to its target's container.
+constexpr static const int32_t EE_COMBAT_SHOT_RETARGET_CONTAINER = 61;
+
+/// `HandleActionChanged(inUnit)`.
+constexpr static const int32_t EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED = 62;
+
+/// a new attack-ground goal on the goal's location (`GetGoalLocation`, `GetB1C`).
+constexpr static const int32_t EE_COMBAT_SHOT_ATTACK_GOAL_LOCATION = 63;
+
+/// `mPlayer->mPopulationCount -= arg`.
+constexpr static const int32_t EE_COMBAT_SHOT_POPULATION = 64;
+
+/// `gMiniMap->MoveUnit(inUnit, mTileX, mTileY, -10000, -10000)`.
+constexpr static const int32_t EE_COMBAT_SHOT_MINIMAP_OFF = 65;
+
+/// `mPhysicsModel->Step(inUnit)`, `UpdateOrbitals()`, `UpdateEffects(inUnit)`, `RefreshSound(inUnit)`.
+constexpr static const int32_t EE_COMBAT_SHOT_STEP_PHYSICS = 66;
+
+constexpr static const int32_t EE_COMBAT_SHOT_ORBITALS = 67;
+
+constexpr static const int32_t EE_COMBAT_SHOT_EFFECTS = 68;
+
+constexpr static const int32_t EE_COMBAT_SHOT_REFRESH_SOUND = 69;
+
+/// `SetOpacityChain(arg as f32 bits)`.
+constexpr static const int32_t EE_COMBAT_SHOT_SET_OPACITY = 70;
+
+/// `SetFlightTime(arg)`, `mCloaked = arg`.
+constexpr static const int32_t EE_COMBAT_SHOT_SET_FLIGHT_TIME = 71;
+
+constexpr static const int32_t EE_COMBAT_SHOT_SET_CLOAKED = 72;
+
+/// the torpedo held at the water plane: the location with z 0 (`SetTransformation(t, true)`).
+constexpr static const int32_t EE_COMBAT_SHOT_WATER_PLANE = 73;
+
 /// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
 /// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
 /// call's `inArg6` is false; no technology: -1).
@@ -5128,6 +5316,39 @@ struct EeCombatSearchIn {
   float position_y;
   /// the targeting table, row by row
   int32_t table[30];
+};
+
+/// The C++ host of a shot's plan: `op` reads or acts on the unit and its class over `ctx`.
+struct EeCombatShotHost {
+  void *ctx;
+  int32_t (*op)(void *ctx, int32_t op, int32_t arg, int32_t arg1);
+};
+
+/// What the work does: the goal's new elapsed time (`work`), and the target's new hit points (`heal`).
+struct EeCombatHealWorkOut {
+  int32_t work;
+  uint32_t elapsed;
+  int32_t heal;
+  int32_t hit_points;
+};
+
+/// `EEUGHealUnit::Work`'s reads (plain; the target's fields 0 without one).
+struct EeCombatHealWorkIn {
+  /// the healer's command's `mType` (0 without one)
+  uint32_t command;
+  int32_t has_target;
+  /// `gWorld.mInCinematic`
+  int32_t cinematic;
+  int32_t target_hp;
+  /// the target's player is the healer's; at war with the healer's (`mEnemies[healer's player] != 0`)
+  int32_t same_player;
+  int32_t target_enemy_of;
+  /// the goal's `mElapsedTime`, `gPhysics->mTickTimeMs`
+  uint32_t elapsed;
+  int32_t tick_ms;
+  /// the healer's `mStats->mHealingPoints`, the target's `mStats->mMaxHitPoints`
+  int32_t healing;
+  int32_t max_hp;
 };
 
 /// `EECanConvert`'s result and its out flag (written only when `flag_written`).
@@ -11496,6 +11717,24 @@ EeCombatSearchOut ee_combat_search_target(const EeCombatSearchIn *input,
 EeCombatSearchOut ee_combat_search_along_list(const EeCombatSearchIn *input,
                                               uint64_t unit,
                                               const EeCombatSearchHost *host);
+
+/// A shot's `ActionChanged` over the C++ host.
+///
+/// # Safety
+/// `host` must point to a valid table whose function may be called with its context.
+void ee_combat_shot_action_changed(int32_t kind, const EeCombatShotHost *host);
+
+/// A shot's `Update` over the C++ host.
+///
+/// # Safety
+/// As [`ee_combat_shot_action_changed`].
+void ee_combat_shot_update(int32_t kind, const EeCombatShotHost *host);
+
+/// `EEUGHealUnit::Work` over its reads.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealWorkOut ee_combat_heal_work(const EeCombatHealWorkIn *input);
 
 /// `EECanConvert`.
 ///

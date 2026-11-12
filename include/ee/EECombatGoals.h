@@ -88,6 +88,11 @@ uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
 void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore);
 void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed);
 
+// The shots' ActionChanged and Update through ee_combat shots.rs over the host in EEUCProjectile.cpp (inKind
+// EE_COMBAT_SHOT_*, inClass the original's `this`)
+void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
+void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
+
 // The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
 // Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running
 struct EECombatHostReadScope {
