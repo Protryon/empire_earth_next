@@ -127,7 +127,6 @@
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
-#include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"
 #include "ee/EEUIEGrabScroll.h"
 #include "ee/EEUIEHotKeyZoom.h"
@@ -368,7 +367,7 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIEPGSEClose;
         break;
     case kFormEventDSOpen:
-        theEvent = new EEUIEDSOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
         break;
     case kFormEventCEOpen:
         theEvent = new EEUIECEOpen;
@@ -398,9 +397,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671e5b
 // (EEUIEPGSEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671e86
-// (EEUIEDSOpen's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671eb1
 // (EEUIECEOpen's scalar deleting destructor, after its first user)

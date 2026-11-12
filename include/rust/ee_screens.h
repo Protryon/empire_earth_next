@@ -166,6 +166,56 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_ERROR = 53;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_NONE_FOUND = 54;
 
+/// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
+constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
+
+/// The allied and custom chat check boxes' events (empty: OK reads the boxes).
+constexpr static const uint32_t EE_SCREENS_DS_ALLIED = 6914;
+
+constexpr static const uint32_t EE_SCREENS_DS_CUSTOM_CHAT = 6915;
+
+/// A tribute button's left click (raise) and right click (lower).
+constexpr static const uint32_t EE_SCREENS_DS_TRIBUTE_RAISE = 6916;
+
+constexpr static const uint32_t EE_SCREENS_DS_TRIBUTE_LOWER = 6917;
+
+constexpr static const uint32_t EE_SCREENS_DS_OK = 6918;
+
+constexpr static const uint32_t EE_SCREENS_DS_CLEAR = 6919;
+
+constexpr static const uint32_t EE_SCREENS_DS_CANCEL = 6920;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_PLAYERS = 624;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_CURRENT = 625;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_TEAMS_LOCKED = 626;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_UV = 627;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_BG = 628;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_FG = 629;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_DISABLE = 630;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_BUTTON_NUMBER = 631;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_LABEL_NUMBER = 632;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_RESOURCES = 633;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_STANCE = 634;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_CHAT = 635;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_NAME = 123;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
+
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
 
@@ -1800,6 +1850,20 @@ struct EeScreensHotKeyUnit {
   int32_t c_type;
   int32_t c_max_hit_points;
   uint32_t distance;
+};
+
+/// A player as the diplomacy form reads it (`ee_screenscpp_diplomacy_player`).
+struct EeScreensDiplomacyPlayer {
+  uint32_t player_id;
+  uint32_t game_result;
+  bool observer;
+  bool human;
+  uint8_t slot;
+  /// `GetResource(kResourceFood..kResourceIron)`.
+  int32_t resources[5];
+  uint32_t enemies[17];
+  bool send_chat[17];
+  float tribute_fee;
 };
 
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,

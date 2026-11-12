@@ -21,6 +21,8 @@
 //! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
 //!   C++ host).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
+//! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
+//!   as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
@@ -40,6 +42,9 @@ mod chat_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod custom_campaign;
+pub mod diplomacy;
+#[cfg(not(test))]
+mod diplomacy_ffi;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;

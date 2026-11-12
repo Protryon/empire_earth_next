@@ -823,6 +823,92 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     return 0;
 }
 
+// ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
+
+// player inIndex of the world as the diplomacy form reads it; false for an empty entry
+extern "C" bool ee_screenscpp_diplomacy_player(uint32_t inIndex, EeScreensDiplomacyPlayer* outPlayer)
+{
+    EEPlayer* thePlayer = gWorld.GetPlayer(inIndex);
+    if (thePlayer == NULL)
+        return false;
+    outPlayer->player_id = thePlayer->GetPlayerID();
+    outPlayer->game_result = thePlayer->GetGameResult();
+    outPlayer->observer = thePlayer->GetObserverMode();
+    outPlayer->human = thePlayer->IsHuman();
+    outPlayer->slot = thePlayer->GetSlot();
+    for (long r = 0; r < 5; r++)
+        outPlayer->resources[r] = thePlayer->GetResource(kResourceFood + r);
+    for (unsigned long q = 0; q < 17; q++) {
+        outPlayer->enemies[q] = thePlayer->GetEnemy(q);
+        outPlayer->send_chat[q] = thePlayer->GetSendChatMessage(q);
+    }
+    outPlayer->tribute_fee = thePlayer->GetTributeFee();
+    return true;
+}
+
+// a tribute to player inTo (food, wood, gold, stone, iron) to the local input
+extern "C" void ee_screenscpp_diplomacy_tribute(uint32_t inTo, const uint32_t* inAmounts)
+{
+    gCommunications->ProcessLocalUserInput(new EEMPayTribute((unsigned char)inTo, inAmounts[0], inAmounts[1], inAmounts[2],
+                                                             inAmounts[3], inAmounts[4]), kSlotNone);
+}
+
+static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC,
+                                       uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_DS_PLAYERS:
+        return gWorld.GetNumPlayers();
+    case EE_SCREENS_GAME_DS_CURRENT:
+        return gWorld.mCurrentPlayer;
+    case EE_SCREENS_GAME_DS_TEAMS_LOCKED:
+        return gWorld.GetTeamsLocked();
+    case EE_SCREENS_OP_DS_UV: {
+        GETextureCoordinate theTopLeft, theTopRight, theBottomRight, theBottomLeft;
+        theTopLeft.mU = Float(inB);
+        theTopLeft.mV = 0.0f;
+        theTopRight.mU = Float(inC);
+        theTopRight.mV = 0.0f;
+        theBottomRight.mU = Float(inB);
+        theBottomRight.mV = Float(inD);
+        theBottomLeft.mU = Float(inC);
+        theBottomLeft.mV = Float(inD);
+        static_cast<UIBitmap*>(inForm->GetControl(inA))->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRight,
+                                                                                            theBottomRight, theBottomLeft);
+        break;
+    }
+    case EE_SCREENS_OP_DS_BG:
+        inForm->GetControl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_OP_DS_FG: {
+        UIControl* theControl = inForm->GetControl(inA);
+        GEText* theText = inC ? static_cast<UIButton*>(theControl)->GetGEText()
+                              : static_cast<UITextLabel*>(theControl)->GetGEText();
+        theText->SetFgColor(gWorld.GetPlayer(inB)->GetColor());
+        break;
+    }
+    case EE_SCREENS_OP_DS_DISABLE:
+        static_cast<UICheckBox*>(inForm->GetControl(inA))->SetDisabled(true);
+        break;
+    case EE_SCREENS_OP_DS_BUTTON_NUMBER:
+        return (uint32_t)atoi(static_cast<UIButton*>(inForm->GetControl(inA))->GetGEText()->GetText());
+    case EE_SCREENS_OP_DS_LABEL_NUMBER:
+        return (uint32_t)static_cast<UITextLabel*>(inForm->GetControl(inA))->GetTextAsInt(0);
+    case EE_SCREENS_GAME_DS_RESOURCES:
+        gCommunications->ProcessLocalUserInput(new EEMAddRemoveResources(inA, (long)inB, inC, (unsigned char)inD), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_STANCE:
+        gCommunications->ProcessLocalUserInput(new EEMSetDiplomaticStance((long)inA, (long)inB), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_CHAT:
+        gCommunications->ProcessLocalUserInput(new EEMSelectCustomPlayerForChat((long)inA, inB != 0), kSlotNone);
+        break;
+    default:
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
 // the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
 extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
                                        uint32_t inC, uint32_t inD)
@@ -1673,7 +1759,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB, inC);
+        return EEScreensDiplomacyCall(theForm, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1702,6 +1788,12 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         break;
     case EE_SCREENS_TEXT_CL_PLAYER:
         theText = gWorld.GetCurrentPlayer()->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_NAME:
+        theText = gWorld.GetPlayer(inArg)->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_CIVILIZATION:
+        theText = UWideString(gWorld.GetPlayer(inArg)->mCivilization.mName);
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -2021,6 +2113,11 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_CL_APPEND:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
         break;
+    case EE_SCREENS_TEXT_DS_BUTTON: {
+        UIButton* theButton = static_cast<UIButton*>(theForm->GetControl(inArg));
+        theButton->SetText(theText, theButton->GetGEText()->GetFont());
+        break;
+    }
     case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
         // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found
         UWideString theName = inArg ? gGamePreferences.mSettings.mLastAutoSave : gGamePreferences.mSettings.mLastQuickSave;
