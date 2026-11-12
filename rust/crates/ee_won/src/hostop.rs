@@ -515,7 +515,7 @@ impl<P: Plan> Host<P> {
     pub(crate) fn ctx_addrs(&self, context: Obj) -> Vec<[u8; 6]> {
         let b =
             self.invoke(EE_WON_HOST_CTX_ADDRS, [context, Obj::none()], [0, 0], &[], [0; 6]).bytes.unwrap_or_default();
-        b.chunks_exact(6).map(|c| [c[0], c[1], c[2], c[3], c[4], c[5]]).collect()
+        b.as_chunks::<6>().0.to_vec()
     }
     pub(crate) fn ctx_failed(&self, context: Obj, addr: [u8; 6]) {
         self.invoke(EE_WON_HOST_CTX_FAILED, [context, Obj::none()], [0, 0], &[], addr);
