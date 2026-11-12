@@ -25,6 +25,8 @@
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
+//! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
+//!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events over the C++ host).
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
@@ -38,6 +40,9 @@ mod chat_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod custom_campaign;
+pub mod hot_keys;
+#[cfg(not(test))]
+mod hot_keys_ffi;
 pub mod hud;
 mod hud_ffi;
 pub mod lobby;

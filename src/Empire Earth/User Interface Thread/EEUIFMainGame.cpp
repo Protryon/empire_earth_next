@@ -97,7 +97,6 @@
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIEKeyboardScroll.h"
 #include "ee/EEUIECameraEvents.h"
-#include "ee/EEUIEHotKeyEvents.h"
 #include "ee/EEUICChatLine.h"
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEUICUnitIconBar.h"
@@ -447,29 +446,29 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
     this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
     for (i = 0; i < 10; i++) {
-        this->AddHotKey(i + 2, kKeyNone, kKeyNone, kKeyNone, new EEUIEHKSelectGroup(i, false), NULL, NULL, new EEUIEHKSelectGroup(i, true),
+        this->AddHotKey(i + 2, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP + i), NULL, NULL, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP_ADD + i),
                   0, false);
-        this->AddHotKey(i + 2, kKeyShift, kKeyNone, kKeyNone, new EEUIEHKAddSelectionToGroup(i), NULL, NULL, NULL, 0, false);
-        this->AddHotKey(i + 2, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKCreateGroup(i), NULL, NULL, NULL, 0, false);
-        this->AddHotKey(i + 2, kKeyAlt, kKeyNone, kKeyNone, new EEUIEHKSelectGroup(i, true), NULL, NULL, NULL, 0, false);
+        this->AddHotKey(i + 2, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_ADD_TO_GROUP + i), NULL, NULL, NULL, 0, false);
+        this->AddHotKey(i + 2, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_CREATE_GROUP + i), NULL, NULL, NULL, 0, false);
+        this->AddHotKey(i + 2, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_SELECT_GROUP_ADD + i), NULL, NULL, NULL, 0, false);
     }
     this->AddHotKey(kKeyS, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_SCOUT), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyD, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_STAND_GROUND), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyG, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_GUARD), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyA, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyB, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(0), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(1), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(2), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(3), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(4), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyW, kKeyNone, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(5), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyB, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 0), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyA, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 1), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyF, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 2), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyD, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 3), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyS, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 4), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyW, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 5), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyPrior, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PREVIOUS_MESSAGES), NULL, NULL, NULL, 0, true);
-    this->AddHotKey(kKeyB, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(0), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(1), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(2), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(3), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(4), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyW, kKeyShift, kKeyNone, kKeyNone, new EEUIESelectClosestAircraft(5), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyB, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 0), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyA, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 1), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyF, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 2), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyD, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 3), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyS, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 4), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyW, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 5), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyUp, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(0), NULL, NULL, 0, true);
     this->AddHotKey(kKeyDown, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(1), NULL, NULL, 0, true);
     this->AddHotKey(kKeyLeft, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(2), NULL, NULL, 0, true);
@@ -487,40 +486,40 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->AddHotKey(kKeyNumpadEnter, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyRBracket, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEHotKeyZoom(0), NULL, NULL, 0, true);
     this->AddHotKey(kKeyLBracket, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEHotKeyZoom(1), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyComma, kKeyNone, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(0, false, true, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyComma, kKeyShift, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(0, false, true, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyComma, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(0, false, true, true), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyComma, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyComma, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyComma, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, true)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyGrave, kKeyNone, kKeyNone, kKeyNone, new EEUIEDisableMouseMove, new EEUIERotateCamera, new EEUIEEnableMouseMove, NULL, 0, true);
     this->AddHotKey(kKeyPeriod, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FOLLOW), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyA, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeArcheryRange, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyB, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeBarracks, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyC, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeSiegeFactory, false, false, false), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyA, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeArcheryRange, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyB, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeBarracks, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyC, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSiegeFactory, false, false, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF, kKeyAlt, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FLARE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyF, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeTankFactory, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyG, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeGranary, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyH, kKeyNone, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeTownCenter, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyI, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeMissileBase, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyN, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeSettlement, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyQ, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeAirport, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyR, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCyberFactory, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeStable, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyV, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeNavyYard, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyX, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCyberLaboratory, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyY, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeTemple, false, false, false), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyF, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTankFactory, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyG, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeGranary, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyH, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTownCenter, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyI, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeMissileBase, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyN, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSettlement, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyQ, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeAirport, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyR, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCyberFactory, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeStable, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyV, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeNavyYard, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyX, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCyberLaboratory, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyY, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeTemple, false, false, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyZ, kKeyControl, kKeyAlt, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ATTACK), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyZ, kKeyControl, kKeyShift, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ATTACK_ALLIES), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCitizen, true, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyShift, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCitizen, true, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyTab, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCitizen, true, false, true), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeySpace, kKeyNone, kKeyNone, kKeyNone, new EEUIEHKPlayerEvent, NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyTab, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyTab, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, true)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeySpace, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_PLAYER_EVENT), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF1, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ENTER_EDITOR), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF2, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PERSPECTIVE), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF3, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_PAUSE), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyBackslash, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeCpMissileBase, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeySlash, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypePriestTower, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyM, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeMarketCP, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyU, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeUniversity, false, false, false), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyZ, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeHospital, false, false, false), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyBackslash, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCpMissileBase, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeySlash, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypePriestTower, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyM, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeMarketCP, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyU, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeUniversity, false, false, false)), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyZ, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeHospital, false, false, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF4, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_QUICK_SAVE), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF4, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_QUICK_LOAD), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyF4, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_AUTO_LOAD), NULL, NULL, NULL, 0, false);

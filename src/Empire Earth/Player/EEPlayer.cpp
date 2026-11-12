@@ -65,7 +65,8 @@
 #include "lle/UIManager.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
-#include "ee/EEUIEHotKeyEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // ee_screens_hot_key_unit_selection: the docks' hot keys (ee_screens hot_keys.rs)
 #include "lle/U2DRectangle.h"
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
@@ -4825,7 +4826,7 @@ void EEPlayer::ApplyMapRestrictions()
         this->GetTechTree()->Get(kTechLighthouseOfAlexandria)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechHurricane)->mIsAllowed = false;
     } else if (gWorld.mPlayers[gWorld.mCurrentPlayer] == this)
-        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeDock, false, false, false),
+        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeDock, false, false, false)),
                                              NULL, NULL, NULL, 0, false);
     if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
         this->GetTechTree()->Get(kTechSpaceDock)->mIsAllowed = false;
@@ -4833,13 +4834,9 @@ void EEPlayer::ApplyMapRestrictions()
         this->GetTechTree()->Get(kTechMeteorStorm)->mIsAllowed = false;
         this->GetTechTree()->Get(kTechOrbitalSpaceStation)->mIsAllowed = false;
     } else if (gWorld.mPlayers[gWorld.mCurrentPlayer] == this)
-        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, new EEUIEHKUnitSelection(kUnitTypeSpaceDock, false, false, false),
+        gUIManager->mMainGameForm->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeSpaceDock, false, false, false)),
                                              NULL, NULL, NULL, 0, false);
 }
-
-// FUNCTION: EXE 0x56c3fc
-// Destroys a unit-selection hotkey event and optionally frees it
-// (EEUIEHKUnitSelection's ??_G, ee/EEUIEHotKeyEvents.h: emitted after its first user ApplyMapRestrictions; slot EEUIEHKUnitSelection+0x0)
 
 // FUNCTION: EXE 0x56c427
 // Recounts the player's living heroes, heroes being researched or queued, and teleporters

@@ -130,7 +130,6 @@
 #include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"
 #include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEHotKeyEvents.h"
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIEKeyboardScroll.h"
 #include "ee/EEUIEMainScreenEvents.h"
@@ -661,10 +660,10 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         theEvent = new EEUIELoadUnit;
         break;
     case kControlEventSRMIdleCitizen:
-        theEvent = new EEUIEHKUnitSelection(kUnitTypeCitizen, true, false, false);
+        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false));
         break;
     case kControlEventSRMIdleMilitary:
-        theEvent = new EEUIEHKUnitSelection(0, false, true, false);
+        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false));
         break;
     case kControlEventSRMFighterRallyTimer:
         theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_FIGHTER);

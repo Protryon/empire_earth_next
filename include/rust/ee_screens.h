@@ -166,6 +166,67 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_ERROR = 53;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_NONE_FOUND = 54;
 
+/// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
+constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
+
+constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP_ADD = 3600;
+
+/// `EEUIEHKAddSelectionToGroup(group)` (Shift) and `EEUIEHKCreateGroup(group)` (Ctrl).
+constexpr static const uint32_t EE_SCREENS_HK_ADD_TO_GROUP = 3616;
+
+constexpr static const uint32_t EE_SCREENS_HK_CREATE_GROUP = 3632;
+
+/// Space: the player event action.
+constexpr static const uint32_t EE_SCREENS_HK_PLAYER_EVENT = 3648;
+
+/// `EEUIESelectClosestAircraft(kind)` (kinds 0..5).
+constexpr static const uint32_t EE_SCREENS_HK_AIRCRAFT = 3664;
+
+/// `EEUIEHKUnitSelection(type, idle workers, idle military, select all)`: this base, the flags in bits 16..18, the
+/// unit type in the low 16 bits ([`ee_screens_hot_key_unit_selection`]).
+constexpr static const uint32_t EE_SCREENS_HK_UNIT_SELECTION = 251658240;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_UPDATE_SELECTION = 608;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_RESET_SAVED = 609;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_GROUP = 610;
+
+constexpr static const uint32_t EE_SCREENS_OP_HK_GROUP_BUTTON = 611;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_PLAYER_EVENT = 612;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_SHIFT = 613;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_SELECT_UNIT = 614;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_ADD_UNIT = 615;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_CENTER = 616;
+
+constexpr static const uint32_t EE_SCREENS_GAME_HK_ALARM = 617;
+
+/// [`EeScreensHotKeyUnit::flags`]
+constexpr static const uint32_t EE_SCREENS_HK_F_COMPLEX = 1;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_ALIVE = 2;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_ON_TILE = 4;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_SELECTED = 8;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_COMMANDABLE = 16;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_TILE = 32;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_CONTAINER = 64;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_DISABLED = 128;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_PREVIOUS_PART = 256;
+
+constexpr static const uint32_t EE_SCREENS_HK_F_C_GOAL = 512;
+
 /// A display mode as `UIControl::SetDisplayMode` takes it: 0 hidden, 1 shown.
 constexpr static const unsigned long EE_SCREENS_HIDDEN = 0;
 
@@ -1719,6 +1780,28 @@ struct EeScreensVideoMode {
   unsigned long bit_count;
 };
 
+/// A unit of the current player's list as the hot keys see it. The unit's own fields (`unit_type`, `category`,
+/// `command`, `max_velocity`, `complex_id`, [`EE_SCREENS_HK_F_SELECTED`]) are filled for a complex, living unit on a tile; the
+/// complex unit's (`c_*`, `distance`) for any unit with a complex unit, and `distance` only for the aircraft's
+/// snapshot (the squared distance from the point under the view's centre, z 0; a carried unit's its container's).
+struct EeScreensHotKeyUnit {
+  uint32_t unit_id;
+  uint32_t complex_id;
+  uint32_t flags;
+  int32_t unit_type;
+  uint32_t category;
+  uint32_t command;
+  uint32_t max_velocity;
+  uint32_t c_category;
+  int32_t c_hit_points;
+  uint32_t c_goal_kind;
+  uint32_t c_family;
+  uint32_t c_ammo;
+  int32_t c_type;
+  int32_t c_max_hit_points;
+  uint32_t distance;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
@@ -1779,6 +1862,12 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
+uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
+                                           bool idle_workers,
+                                           bool idle_military,
+                                           bool select_all);
 
 /// `GetAttributeText`: the base and the bonus "base+bonus" shows.
 void ee_screens_hud_attribute_text(float base, float bonus, long *out_base, long *out_bonus);

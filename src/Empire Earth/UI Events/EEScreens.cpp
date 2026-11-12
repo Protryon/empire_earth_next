@@ -2,11 +2,11 @@
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
-// the main game form's events; chat.rs: the chat forms' events): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
+// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
 // and the toolkit's and the game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces
 // EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp,
 // EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp,
-// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp and EEUIEChatEvents.cpp.
+// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp, EEUIEChatEvents.cpp and EEUIEHotKeyEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -128,6 +128,15 @@
 #include "lle/TSThread.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEUIEChatLogEvents.h"
+#include "ee/EEUnitAction.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUIBSavedGroup.h"
+#include "ee/EEMiniMap.h"
+#include "lle/GETransformation.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEMap.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
 #include "lle/GETextAlignment.h"
 #include "ee/EEUnit.h"
@@ -137,6 +146,7 @@
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
+extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
 unsigned long EEMenuWidth();   // Empire Earth.cpp
@@ -407,6 +417,152 @@ static UWideString Text(const uint8_t* inText, size_t inLength)
     return UWideString(std::string((const char*)inText, inLength).c_str());
 }
 
+// ---- the hot keys' (hot_keys.rs): inForm is the main game form
+
+// the last snapshot's complex units (EE_SCREENS_GAME_HK_CENTER's record index), filled by ee_screenscpp_hot_key_units
+static std::vector<EEComplexUnit*> sHotKeyUnits;
+
+// the current player's units as the hot keys see them (hot_keys.rs EeScreensHotKeyUnit; the aircraft's with the
+// squared distances from the point under the view's centre); up to inCapacity into outUnits; their count
+extern "C" size_t ee_screenscpp_hot_key_units(bool inAircraft, EeScreensHotKeyUnit* outUnits, size_t inCapacity)
+{
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
+    GE3DPoint theTarget;
+    GE3DPoint theLocation;
+    if (inAircraft) {
+        GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
+        if (gWorld.mMap->GetLocationAt(theCursor, theTarget, true) == NULL) {
+            long theX;
+            long theY;
+            gWorld.mMap->GetTileAt(theCursor, theX, theY);
+            theTarget.SetX(theX + 0.5f);
+            theTarget.SetY(theY + 0.5f);
+        }
+        theTarget.SetZ(0.0f);
+        theLocation.SetZ(0.0f);
+    }
+    sHotKeyUnits.clear();
+    size_t theCount = 0;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit; theUnit = static_cast<EEUnit*>(theUnit->mNext), theCount++) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        sHotKeyUnits.push_back(theComplex);
+        if (theCount >= inCapacity)
+            continue;
+        EeScreensHotKeyUnit& r = outUnits[theCount];
+        r = EeScreensHotKeyUnit();
+        r.unit_id = theUnit->mUnitID;
+        if (theComplex == NULL)
+            continue;
+        r.flags |= EE_SCREENS_HK_F_COMPLEX;
+        if (theUnit->mHitPoints > 0)
+            r.flags |= EE_SCREENS_HK_F_ALIVE;
+        if (theUnit->mTile != NULL)
+            r.flags |= EE_SCREENS_HK_F_ON_TILE;
+        if ((r.flags & (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) == (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) {
+            // the unit selection's fields
+            r.complex_id = theComplex->mUnitID;
+            r.unit_type = theUnit->mUnitClass->mUnitType;
+            r.category = theUnit->mUnitClass->mCategory;
+            r.command = theComplex->mCommand ? theComplex->mCommand->mType : 0;
+            r.max_velocity = Bits(theUnit->mStats->mMaxVelocity);
+        }
+        if (theGroup->Contains(theUnit->GetComplexUnit()))
+            r.flags |= EE_SCREENS_HK_F_SELECTED;
+        // the aircraft's fields (of the complex unit)
+        r.c_category = theComplex->mUnitClass->mCategory;
+        r.c_hit_points = theComplex->mHitPoints;
+        if (theComplex->mIsCommandable)
+            r.flags |= EE_SCREENS_HK_F_C_COMMANDABLE;
+        if (theComplex->mTileX != -10000)
+            r.flags |= EE_SCREENS_HK_F_C_TILE;
+        if (theComplex->mContainer)
+            r.flags |= EE_SCREENS_HK_F_C_CONTAINER;
+        if (theComplex->mIsDisabled)
+            r.flags |= EE_SCREENS_HK_F_C_DISABLED;
+        if (theComplex->mPreviousPart != NULL)
+            r.flags |= EE_SCREENS_HK_F_C_PREVIOUS_PART;
+        if (theComplex->mGoalState) {
+            r.flags |= EE_SCREENS_HK_F_C_GOAL;
+            r.c_goal_kind = theComplex->mGoalState->mKind;
+        }
+        r.c_family = theComplex->mUnitClass->mFamily;
+        r.c_ammo = theComplex->mUnitClass->mAmmoType;
+        r.c_type = theComplex->mUnitClass->mUnitType;
+        r.c_max_hit_points = theComplex->mStats->mMaxHitPoints;
+        if (inAircraft) {
+            if (theComplex->mContainer == NULL) {
+                theLocation.SetX(theComplex->mPhysicalModel.GetLocation().GetX());
+                theLocation.SetY(theComplex->mPhysicalModel.GetLocation().GetY());
+            } else {
+                theLocation.SetX(theComplex->mContainer->mPhysicalModel.GetLocation().GetX());
+                theLocation.SetY(theComplex->mContainer->mPhysicalModel.GetLocation().GetY());
+            }
+            r.distance = Bits(theLocation.DistanceToSquared(theTarget));
+        }
+    }
+    return theCount;
+}
+
+static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    switch (inOp) {
+    case EE_SCREENS_GAME_HK_UPDATE_SELECTION:
+        thePlayer->UpdateSelection(NULL, true);
+        break;
+    case EE_SCREENS_GAME_HK_RESET_SAVED:
+        thePlayer->mSavedGroups.Reset(0x14, true);
+        break;
+    case EE_SCREENS_GAME_HK_GROUP:
+        if (inA == 0)
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupSelect((unsigned char)inB, inC != 0), kSlotNone);
+        else if (inA == 1)
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupAddSelection((unsigned char)inB), kSlotNone);
+        else
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupCreate((unsigned char)inB), kSlotNone);
+        break;
+    case EE_SCREENS_OP_HK_GROUP_BUTTON:
+        static_cast<EEUIBSavedGroup*>(inForm->GetControl(inA))->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
+        break;
+    case EE_SCREENS_GAME_HK_PLAYER_EVENT: {
+        EEAction* theAction = new EEAPlayerEvent;
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_SCREENS_GAME_HK_SHIFT: {
+        ISEntity* theKey;
+        gISKeyboard->GetEntity(kKeyShift, theKey);
+        return (uint32_t)theKey->GetValue();
+    }
+    case EE_SCREENS_GAME_HK_SELECT_UNIT:
+        gCommunications->ProcessLocalUserInput(new EEMSelectUnit(inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_HK_ADD_UNIT:
+        gCommunications->ProcessLocalUserInput(new EEMAlwaysAddUnitToSelectedGroup(inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_HK_CENTER: {
+        // the camera on the unit, the mini map refreshed, the camera no longer following
+        const GETransformation& theTransformation = sHotKeyUnits[inA]->mPhysicalModel.GetLocation();
+        GE3DPoint theCenter;
+        theCenter.SetX(theTransformation.GetX());
+        theCenter.SetY(theTransformation.GetY());
+        theCenter.SetZ(theTransformation.GetZ());
+        gWorld.mCameraControl.SetChanged();
+        gWorld.mCameraControl.SetLocation(theCenter, false, true);
+        gMiniMap->Refresh();
+        gCameraFollowing = false;
+        break;
+    }
+    case EE_SCREENS_GAME_HK_ALARM:
+        if (EESoundObject::Get(kSoundHotKeyAlarm))
+            gSoundManager->Play(EESoundObject::Get(kSoundHotKeyAlarm)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    }
+    return 0;
+}
+
 // ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
 static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
@@ -471,6 +627,8 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
     case EE_SCREENS_GAME_CL_UNPAUSE:
         gWorld.UnpauseGame();
         break;
+    default:
+        return EEScreensHotKeyCall(inForm, inOp, inA, inB, inC);
     }
     return 0;
 }
