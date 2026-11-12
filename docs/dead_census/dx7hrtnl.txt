@@ -1,18 +1,18 @@
 # dead-code census of module dx7hrtnl (tools/dead_census.py)
 # maps: build/clang/exe/EE-AOC.map, build/clang/exe/EE-SIM.map, build/clang-test/exe/EE-AOC.map
-# 12 units, 3668 lines; 55 of 390 functions no map keeps; 55 lines in their definitions
+# 12 units, 3636 lines; 37 of 372 functions no map keeps; 37 lines in their definitions
 # columns: dead lines, unit lines, dead/defined functions, unit ('ALL' = no function kept)
 
-    55    170   55/68   Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/GX/GX.cpp
+    37    138   37/50   Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/GX/GX.cpp
 
 # dead functions by class
 
-GXDevice (20): AddRef, BeginScene, Clear, DrawIndexedPrimitiveVB, DrawPrimitiveVB, EndScene, EnumTextureFormats, GetCaps, GetRenderState, GetTransform, GetViewport, LightEnable, SetLight, SetMaterial, SetRenderState, SetRenderTarget, SetTexture, SetTextureStageState, SetTransform, SetViewport
+GXDevice (16): AddRef, BeginScene, Clear, DrawIndexedPrimitiveVB, EndScene, GetCaps, GetViewport, LightEnable, SetLight, SetMaterial, SetRenderState, SetRenderTarget, SetTexture, SetTextureStageState, SetTransform, SetViewport
 
-GXDirectDraw (16): AddRef, CreateDevice, CreateSurface, CreateVertexBuffer, EnumDevices, EnumDisplayModes, FlipToGDISurface, GetAvailableVidMem, GetCaps, GetDeviceIdentifier, GetDisplayMode, QueryInterface, RestoreAllSurfaces, SetCooperativeLevel, SetDisplayMode, TestCooperativeLevel
+GXDirectDraw (9): AddRef, CreateDevice, CreateSurface, CreateVertexBuffer, GetCaps, GetDeviceIdentifier, RestoreAllSurfaces, SetCooperativeLevel, SetDisplayMode
 
-GXSurface (13): AddAttachedSurface, AddRef, Blt, DeleteAttachedSurface, Flip, GetAttachedSurface, GetSurfaceDesc, IsGPUResident, IsLost, Lock, Restore, SetColorKey, Unlock
-
-(free functions) (3): GXAutoUIScale, GXDirectDrawCreate, GXDirectDrawEnumerateEx
+GXSurface (8): AddAttachedSurface, AddRef, Blt, Flip, GetAttachedSurface, Lock, SetColorKey, Unlock
 
 GXVertexBuffer (3): AddRef, Lock, Unlock
+
+(free functions) (1): GXDirectDrawCreate
