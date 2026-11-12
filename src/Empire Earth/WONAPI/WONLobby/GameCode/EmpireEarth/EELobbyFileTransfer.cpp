@@ -283,7 +283,7 @@ void EELobbyFileTransfer::Download()
     SmartPtr<AsyncSocket> theSocket = new QueueSocket(0);
     static_cast<QueueSocket*>(theSocket.get())->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
     SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);
-    theOp->mCompletion = new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnFileReceived, this);
+    theOp->SetCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnFileReceived, this));
     theOp->mPath = this->mPath;
     theOp->SetProgressCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnProgress, this), 10000);
     static_cast<QueueSocket*>(theSocket.get())->QueueOp(new ConnectOp(this->mHost), -1);

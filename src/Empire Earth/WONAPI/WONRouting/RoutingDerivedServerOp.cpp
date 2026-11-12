@@ -9,14 +9,14 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRoutingDerivedServerOp.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006c5260
 // Keeps the message type and the rest of the message as the op's payload; always succeeds
 WONStatus RoutingDerivedServerOp::HandleReply(unsigned char messageType,ReadBuffer& message)
 {
-    this->mMsgType=messageType;
-    this->mRecvMsg=new ByteBuffer(message.data()+message.pos(),message.Available(),false);
-    return WS_Success;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteDerived(this->mMsgType, this->mRecvMsg, messageType, message);
 }
 // FUNCTION: WON 0x006bc6c0
 // Returns a new derived-server op for an unsolicited message when all derived ops count as unsolicited, else NULL

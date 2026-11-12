@@ -37,6 +37,7 @@
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
+#include "ee/EECPResearchManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
@@ -70,6 +71,7 @@ bool gCPTraceOn = false;
 bool gCPTraceHashOn = false;
 const char* gCPTraceManager = "-";
 
+void EECPRMDumpFoodCapacity(EECPResourceManager* inManager, FILE* inFile);   // EECPResourceManager.cpp (TEST ONLY)
 static bool sInitialized = false;
 static std::vector<std::string> sExperiments;   // EE_AI_EXP (TEST ONLY): ",a,b," per player in turn
 static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
@@ -718,6 +720,22 @@ void EECPOutOfSynchDump(FILE* inFile)
             fprintf(inFile, " popcap=%ld", (long)theCP->mPopulationCap);
             if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
                 fprintf(inFile, " epochadv=%lu", (unsigned long)theCiv->mNextEpochAdvanceTime);
+                // the epoch advance's guards (AttemptEpochAdvance's caller): advancing, scheduled, requested, the
+                // later-epoch requests of the build, research and unit managers, behind a human
+                fprintf(inFile, " advflags=%d%d%d", theCiv->mAdvancingEpoch ? 1 : 0, theCiv->mScheduleEpochAdvance ? 1 : 0,
+                        theCiv->mEpochResearchRequested ? 1 : 0);
+                if (theCiv->mBuildManager != NULL && theCiv->mResearchManager != NULL && theCiv->mUnitManager != NULL)
+                    fprintf(inFile, " later=%d%d%d%d", theCiv->mBuildManager->HasLaterEpochRequests() ? 1 : 0,
+                            theCiv->mResearchManager->HasLaterEpochIDs() ? 1 : 0,
+                            theCiv->mUnitManager->HasLaterEpochRequests() ? 1 : 0, theCiv->IsBehindInEpoch() ? 1 : 0);
+                if (theCiv->mResearchManager != NULL) {   // the research queues up to the manager's epoch
+                    fprintf(inFile, " rq=");
+                    for (long e = 0; e <= theCiv->mResearchManager->mEpoch && e < EEEpochCount(); e++) {
+                        fprintf(inFile, "%s", e ? "|" : "");
+                        for (size_t k = 0; k < theCiv->mResearchManager->mEpochIDs[e].size(); k++)
+                            fprintf(inFile, "%s%ld", k ? "," : "", theCiv->mResearchManager->mEpochIDs[e][k]);
+                    }
+                }
                 if (theCiv->mBuildManager != NULL) {
                     fprintf(inFile, " queues=");
                     for (long e = 0; e < EEEpochCount(); e++)
@@ -725,6 +743,22 @@ void EECPOutOfSynchDump(FILE* inFile)
                 }
                 if (theCiv->mUnitManager != NULL)
                     fprintf(inFile, " waiting=%lu", (unsigned long)theCiv->mUnitManager->mNumWaiting);
+                if (theCiv->mResourceManager != NULL) {   // each resource's gatherers: filed/wanted
+                    fprintf(inFile, " gath=");
+                    for (int r = 0; r < 7; r++)
+                        fprintf(inFile, "%s%zu/%lu", r ? "," : "", theCiv->mResourceManager->mGatherers[r].size(),
+                                (unsigned long)theCiv->mResourceManager->mWantedGatherers[r]);
+                    fprintf(inFile, " cap=");   // GetGatherCapacity's parts and the resource centers (active, units)
+                    for (long r = 2; r < 7; r++)
+                        fprintf(inFile, "%s%lu", r > 2 ? "," : "", (unsigned long)theCiv->mResourceManager->GetGatherCapacity(r));
+                    EECPRMDumpFoodCapacity(theCiv->mResourceManager, inFile);
+                    fprintf(inFile, " rc=");
+                    for (unsigned long k = 0; k < theCP->GetNumResourceCenters(); k++) {
+                        EECPResourceCenter* theCenter = theCP->GetResourceCenter(k);
+                        fprintf(inFile, "%s%lu:%d:%zu", k ? "," : "", theCenter->GetUnit() != NULL ? theCenter->GetUnit()->mUnitID : 0UL,
+                                theCenter->mIsActive ? 1 : 0, theCenter->mUnits.size());
+                    }
+                }
                 if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
                     fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
                             theCiv->mResourceManager->mDangerZones.size());

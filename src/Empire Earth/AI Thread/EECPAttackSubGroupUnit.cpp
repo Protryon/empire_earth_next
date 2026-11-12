@@ -1169,7 +1169,7 @@ bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
         return false;
     }
     if (theClass->CanBeAttacked()) {
-        if (gDamageTable[theArmor][theKind] != 0.0f) {
+        if (EEDamageFactor(theArmor, theKind) != 0.0f) {
             EEComplexUnit* theTarget = inTarget->mUnit;
             theResult = !this->GetUnit()->IsTargetIgnored(theTarget, true);
         }

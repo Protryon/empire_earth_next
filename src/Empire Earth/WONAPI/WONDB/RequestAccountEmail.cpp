@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006ce090
 // Creates a request to email the account information for an address
@@ -25,7 +26,8 @@ WONStatus RequestAccountInfoEmailOp::CheckResponse()
 {
     WONStatus status=DBProxyOp::CheckResponse();
     if (status!=WS_Success) return status;
-    if (this->mSubMessageReplyType!=this->mMsgType+1) return this->InvalidReplyHeader();
+    // the reply's check is Rust's (ee_won db.rs)
+    if (!ee_won_db_answers(this->mSubMessageReplyType,this->mMsgType)) return this->InvalidReplyHeader();
     return WS_Success;
 }
 // FUNCTION: WON 0x006ce2b0
@@ -34,11 +36,11 @@ void RequestAccountInfoEmailOp::RunHook()
 {
     this->mMessageType=1002;
     this->mSubMessageType=this->mMsgType;
-    WriteBuffer msg(0,true);
-    const std::string& email=this->mEmail;
-    msg.AppendString(email,2);
-    this->mProfileData->PackRequestData(msg,true);
-    this->mRequestData=msg.ToByteBuffer(true);
+    // the request data is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_INFO_EMAIL,0);
+    q.mReq.email=DbRequest::Narrow(this->mEmail);
+    q.mReq.profile=this->mProfileData->GetProfile();
+    this->mRequestData=q.Build();
     ServerRequestOp::RunHook();
 }
 // FUNCTION: WON 0x006ce3d0
@@ -64,7 +66,8 @@ WONStatus RequestPasswordEmailOp::CheckResponse()
 {
     WONStatus status=DBProxyOp::CheckResponse();
     if (status!=WS_Success) return status;
-    if (this->mSubMessageReplyType!=this->mMsgType+1) return this->InvalidReplyHeader();
+    // the reply's check is Rust's (ee_won db.rs)
+    if (!ee_won_db_answers(this->mSubMessageReplyType,this->mMsgType)) return this->InvalidReplyHeader();
     return WS_Success;
 }
 // FUNCTION: WON 0x006ce670
@@ -73,11 +76,11 @@ void RequestPasswordEmailOp::RunHook()
 {
     this->mMessageType=1002;
     this->mSubMessageType=this->mMsgType;
-    WriteBuffer msg(0,true);
-    const std::wstring& userName=this->mUserName;
-    msg.AppendWString(userName,2);
-    this->mProfileData->PackRequestData(msg,true);
-    this->mRequestData=msg.ToByteBuffer(true);
+    // the request data is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_PASSWORD_EMAIL,0);
+    q.mReq.name=q.Text(this->mUserName);
+    q.mReq.profile=this->mProfileData->GetProfile();
+    this->mRequestData=q.Build();
     ServerRequestOp::RunHook();
 }
 // FUNCTION: WON 0x006ce790

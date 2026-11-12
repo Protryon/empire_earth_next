@@ -58,14 +58,14 @@ void GetHTTPDocumentOp::DoFinish()
 // Records one download's result (retrying once on a bad redirect or 404); for a MOTD reads the is-new flag
 void GetHTTPDocumentOp::OpFinished(HTTPGetOp* inOp, int inOwner)
 {
-    if (!this->mRetried[inOwner] && (inOp->mStatus == WS_HTTP_InvalidRedirect || inOp->mHTTPStatus == 404)) {
+    if (!this->mRetried[inOwner] && (inOp->GetStatus() == WS_HTTP_InvalidRedirect || inOp->mHTTPStatus == 404)) {
         this->TryHTTPOp(static_cast<HTTPDocOwner>(inOwner),true);
         return;
     }
-    this->mDocumentStatus[inOwner] = inOp->mStatus;
+    this->mDocumentStatus[inOwner] = inOp->GetStatus();
     this->mHTTPStatus[inOwner] = inOp->mHTTPStatus;
     this->mLastModified[inOwner] = inOp->GetLastModifiedTime();
-    if (inOp->mStatus != WS_Success) return;
+    if (inOp->GetStatus() != WS_Success) return;
     this->mIsNew[inOwner] = inOp->mContentIsNew;
     if (this->mDocumentType != HTTPDocType_MOTD) return;
     FILE* file = PlatFOpen(this->mDocuments[inOwner].c_str(),"r");
@@ -96,7 +96,7 @@ void GetHTTPDocumentOp::RunHook()
     if (this->mDocumentType == HTTPDocType_ADV) this->TryHTTPOp(HTTPDocOwner_Game,false);
     else for (int owner=0; owner<HTTPDocOwner_Count; ++owner)
         this->TryHTTPOp(static_cast<HTTPDocOwner>(owner),false);
-    if (this->mRunMode != OP_MODE_ASYNC) this->DoFinish();
+    if (this->GetMode() != OP_MODE_ASYNC) this->DoFinish();
 }
 
 // FUNCTION: WON 0x006d10e0

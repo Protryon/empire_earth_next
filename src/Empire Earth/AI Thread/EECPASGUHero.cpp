@@ -83,7 +83,7 @@ bool EECPASGUHero::ShouldRetreat()
             EEUnitClass* theClass = this->mUnit->mUnitClass;
             long theTargetKind = theTarget->mUnitClass->mAmmoType;
             long theKind = theClass->mFamily;
-            if (!theClass->CanBeAttacked() || gDamageTable[theKind][theTargetKind] == 0.0f)
+            if (!theClass->CanBeAttacked() || EEDamageFactor(theKind, theTargetKind) == 0.0f)
                 continue;
             float theDistance = this->mUnit->DistanceSquaredTo(theTarget);
             if (theDistance <= 49.0f || theDistance <= theTarget->mStats->mRange * theTarget->mStats->mRange)   // squared (was range + range)

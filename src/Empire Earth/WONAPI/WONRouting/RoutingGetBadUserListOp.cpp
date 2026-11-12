@@ -8,16 +8,15 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 // FUNCTION: WON 0x6c5320
 // Sends the routing server a request for the banned/muted user list of a group
 void RoutingGetBadUserListOp::SendRequest()
 {
-    this->InitSendMsg(22);
-    this->mSendMsg.AppendByte((unsigned char)this->mListType);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendByte(this->mFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendBadUsers(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -26,29 +25,8 @@ void RoutingGetBadUserListOp::SendRequest()
 // Parses the bad-user list reply into the op's list, reading the optional fields its flags select; returns the status
 WONStatus RoutingGetBadUserListOp::HandleReply(unsigned char inMsgType,ReadBuffer& inMsg)
 {
-    if(inMsgType!=21) return (WONStatus)WS_RoutingOp_DontWantReply;
-    this->mBadUserList.clear();
-    WONStatus status=inMsg.ReadShort();
-    if(status==0) {
-        this->mListType=(RoutingBadUserListType)(signed char)inMsg.ReadByte();
-        this->mGroupId=inMsg.ReadShort();
-        this->mFlags=inMsg.ReadByte();
-        int count=(unsigned short)inMsg.ReadShort();
-        for(;count>0;--count) {
-            unsigned short length=inMsg.ReadShort();
-            long start=inMsg.pos();
-            RoutingBadUser user; // default: the three longs zeroed, three empty wstrings
-            user.mWONId=inMsg.ReadLong();
-            inMsg.ReadWString(user.mName,2);
-            if(this->GetFlags()&1) user.mExpirationDiff=inMsg.ReadLong();
-            if(this->GetFlags()&2) user.mModeratorWONId=inMsg.ReadLong();
-            if(this->GetFlags()&4) inMsg.ReadWString(user.mModeratorName,2);
-            if(this->GetFlags()&8) inMsg.ReadWString(user.mModeratorComment,2);
-            this->mBadUserList.push_back(user);
-            inMsg.ReadBytes(length-inMsg.pos()+start);
-        }
-    }
-    return status;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteBadUsers(this, inMsgType, inMsg);
 }
 }
 

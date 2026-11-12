@@ -35,6 +35,7 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
 #include "ee/EEPhysics.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEUCNavalCitizen.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCivilizationManager.h"
@@ -841,7 +842,10 @@ long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
     long theResult = 0;
     if (USavedID(this->mResource) != -1) {
-        this->mResource = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mResource)));
+        unsigned long theID = USavedID(this->mResource);
+        this->mResource = static_cast<EEUnit*>(::gWorld.GetUnit(theID));
+        if (this->mResource == NULL)   // port (0.272): a resource gone from the world the running goal still held
+            this->mResource = EEFindLoadedGhost(theID);
         if (this->mResource != NULL)
             this->mResource->Reference();
         else
@@ -852,7 +856,10 @@ long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->mGathering = false;
     }
     if (theResult == 0 && USavedID(this->mStorage) != -1) {
-        this->mStorage = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(USavedID(this->mStorage)));
+        unsigned long theID = USavedID(this->mStorage);
+        this->mStorage = EEUnitCast<EEComplexUnit>(::gWorld.GetUnit(theID));
+        if (this->mStorage == NULL)   // port (0.272): likewise a drop site
+            this->mStorage = EEFindLoadedGhost(theID);
         if (this->mStorage != NULL)
             this->mStorage->Reference();
         else
@@ -903,10 +910,14 @@ long EEUGGather::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    theResult = outFile.Write(this->mResource && this->mResource->mIsValid ? this->mResource->GetUnitID() : -1);
+    // port (0.272, EESaveHasGhostResources): a resource or drop site out of the world (a carcass eaten up) is written as
+    // its id too, the goal still holding it: the ghosts hold it (EEPWorldHelper's SaveGhosts) and the load takes it
+    // back (RepairPointers). Before, the id was -1 and the loaded goal had no resource and cleared its flags
+    bool theGhosts = EESaveHasGhostResources(inMajorVersion, inMinorVersion);
+    theResult = outFile.Write(this->mResource && (this->mResource->mIsValid || theGhosts) ? this->mResource->GetUnitID() : -1);
     if (theResult != 0)
         return theResult;
-    theResult = outFile.Write(this->mStorage && this->mStorage->mIsValid ? this->mStorage->GetUnitID() : -1);
+    theResult = outFile.Write(this->mStorage && (this->mStorage->mIsValid || theGhosts) ? this->mStorage->GetUnitID() : -1);
     if (theResult != 0)
         return theResult;
     // port: the original cleared mGathering and mWaiting here without a valid resource, so saving changed the running

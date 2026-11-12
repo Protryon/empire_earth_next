@@ -599,7 +599,7 @@ bool EEUGAttackUnit::Suits(EEUnit* inUnit)
         if (theKind >= 0) {
             EEUnitClass* theClass = this->mTarget->mUnitClass;
             long theTargetKind = theClass->mFamily;
-            if (theClass->CanBeAttacked() && gDamageTable[theTargetKind][theKind] > 0.0f)
+            if (theClass->CanBeAttacked() && EEDamageFactor(theTargetKind, theKind) > 0.0f)
                 theResult = true;
             else
                 theResult = false;

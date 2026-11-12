@@ -16,6 +16,7 @@ pub mod chat;
 pub mod config;
 pub mod configobj;
 pub mod crc16;
+pub mod db;
 pub mod der;
 pub mod dialogs;
 pub mod dir;
@@ -53,6 +54,7 @@ pub mod md5;
 pub mod model;
 /// cbindgen:ignore
 pub mod netstats;
+pub mod opobj;
 pub mod ops;
 pub mod parser;
 pub mod path;
@@ -61,10 +63,12 @@ pub mod plaintext;
 pub mod random;
 pub mod regkey;
 pub mod resource;
+pub mod routemsg;
 pub mod routing;
 pub mod servctx;
 pub mod server;
 pub mod socket;
+pub mod sockthread;
 pub mod staging;
 /// cbindgen:ignore
 pub mod status;

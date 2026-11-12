@@ -31,7 +31,7 @@ void ServerOp::SetMaxTimes(int inConnect,int inSend,int inRecv)
 DWORD ServerOp::ConnectTime()
 {
     // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxConnectTime;
+    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxConnectTime;
     return ee_won_server_step_time(this->mMaxConnectTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006ace80
@@ -39,7 +39,7 @@ DWORD ServerOp::ConnectTime()
 DWORD ServerOp::SendTime()
 {
     // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxSendTime;
+    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxSendTime;
     return ee_won_server_step_time(this->mMaxSendTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006aceb0
@@ -47,7 +47,7 @@ DWORD ServerOp::SendTime()
 DWORD ServerOp::RecvTime()
 {
     // Rust's (ee_won server.rs); the time left is read only when blocking, as before
-    if(this->mRunMode==OP_MODE_ASYNC) return this->mMaxRecvTime;
+    if(this->GetMode()==OP_MODE_ASYNC) return this->mMaxRecvTime;
     return ee_won_server_step_time(this->mMaxRecvTime,false,this->TimeLeft());
 }
 // FUNCTION: WON 0x006acee0

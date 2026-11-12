@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 // FUNCTION: WON 0x6c56d0
@@ -15,8 +16,8 @@ namespace WONAPI {
 void RoutingGetClientListOp::SendRequest()
 {
     this->mClientMap.clear();
-    this->InitSendMsg(24);
-    if (this->mIsEx) this->mSendMsg.AppendBool(true);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendClientList(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -25,20 +26,7 @@ void RoutingGetClientListOp::SendRequest()
 // Parses the (extended) client list reply into the client map by client id; returns the status
 WONStatus RoutingGetClientListOp::HandleReply(unsigned char inMsgType,ReadBuffer& inMsg)
 {
-    if (inMsgType!=23 && inMsgType!=74) return (WONStatus)WS_RoutingOp_DontWantReply;
-    this->mIsEx=inMsgType==74;
-    WONStatus status=inMsg.ReadShort();
-    if (status==0) {
-        int count=(unsigned short)inMsg.ReadShort();
-        for (int i=0;i<count;++i) {
-            RoutingClientInfoPtr client=this->GetNewClientInfo();
-            client->mClientId=inMsg.ReadShort();
-            inMsg.ReadWString(client->mName,2);
-            client->mFlags=inMsg.ReadLong();
-            if (this->mIsEx) RoutingClientJoinedServerOp::ParseExClientData(inMsg,client.get());
-            this->mClientMap[client->mClientId]=client;
-        }
-    }
-    return status;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteClientList(this, inMsgType, inMsg);
 }
 }

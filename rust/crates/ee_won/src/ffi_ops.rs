@@ -1,181 +1,14 @@
-//! The C ABI of the async-op machinery (`asyncop`) for the C++ `AsyncOp`, `SocketThreadSimple` and `QueueSocket`
-//! (the timer thread and the op container are Rust objects: `thread`). Ops cross as opaque `void*` handles the C++ keeps alive (`AddRef`) while
+//! The C ABI of the async-op machinery (`asyncop`) for the C++ `QueueSocket` (AsyncOp, the socket thread, the timer
+//! thread and the op container are Rust objects: `opobj`, `sockthread`, `thread`). Ops cross as opaque `void*` handles the C++ keeps alive (`AddRef`) while
 //! a queue holds them; a queue hands them back through a sink called after the queue's own borrow ended, so a
 //! sink may use the queue again. Statuses are `long` (the C++ `WONStatus`); the decisions are small integers
 //! (the enums' `code`).
 
-use crate::asyncop::{self, OpHandle, OpSet, OpState, QueueCompletion, QueueNext, QueueOpKind};
-use crate::ops;
+use crate::asyncop::{self, QueueCompletion, QueueNext, QueueOpKind};
 use crate::status::Status;
-use std::ffi::{c_long, c_void};
+use std::ffi::c_long;
 
-/// A sink for the ops a queue hands back.
-pub type EeWonOpSink = unsafe extern "C" fn(context: *mut c_void, op: *mut c_void);
-
-// ---- AsyncOp
-
-/// `AsyncOp::AsyncOp`'s state.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_state_init(state: *mut OpState) {
-    unsafe { *state = OpState::new() };
-}
-
-/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
-/// 3 queue it in the container, 4 run blocking.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_run(state: *mut OpState, mode: i32, timeout: u32) -> i32 {
-    unsafe { (*state).run(mode, timeout, ops::tick()).code() }
-}
-
-/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_run_as_timer(state: *mut OpState, timeout: u32) -> bool {
-    unsafe { (*state).run_as_timer(timeout, ops::tick()) }
-}
-
-/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_finish(state: *mut OpState, status: c_long) -> i32 {
-    unsafe { (*state).finish(status as Status).code() }
-}
-
-/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_force_finish(state: *mut OpState, status: c_long) -> i32 {
-    unsafe { (*state).force_finish(status as Status).code() }
-}
-
-/// `AsyncOp::Kill`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_kill(state: *mut OpState, finish: bool) -> i32 {
-    unsafe { (*state).kill(finish).code() }
-}
-
-/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_complete(state: *mut OpState) -> bool {
-    unsafe { (*state).complete() }
-}
-
-/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_after_run_hook(state: *const OpState) -> i32 {
-    unsafe { (*state).after_run_hook().code() }
-}
-
-/// `AsyncOp::SetTimeout`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_set_timeout(state: *mut OpState, timeout: u32) {
-    unsafe { (*state).set_timeout(timeout) }
-}
-
-/// `AsyncOp::SetMode`.
-///
-/// # Safety
-/// `state` is valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_set_mode(state: *mut OpState, mode: i32) {
-    unsafe { (*state).set_mode(mode) }
-}
-
-// (TimerThread and AsyncOpContainer are Rust objects: `thread`)
-
-// ---- SocketThreadSimple
-
-#[no_mangle]
-pub extern "C" fn ee_won_opset_new() -> *mut OpSet {
-    Box::into_raw(Box::new(OpSet::new()))
-}
-
-/// # Safety
-/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opset_destroy(set: *mut OpSet) {
-    if !set.is_null() {
-        drop(unsafe { Box::from_raw(set) });
-    }
-}
-
-/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
-///
-/// # Safety
-/// `set` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opset_insert(set: *mut OpSet, op: *mut c_void) -> bool {
-    unsafe { (*set).insert(op as OpHandle) }
-}
-
-/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
-///
-/// # Safety
-/// `set` is live.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opset_remove(set: *mut OpSet, op: *mut c_void) -> bool {
-    unsafe { (*set).remove(op as OpHandle) }
-}
-
-/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
-///
-/// # Safety
-/// `set` is live during the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opset_snapshot(set: *const OpSet, sink: EeWonOpSink, context: *mut c_void) {
-    let ops = unsafe { (*set).snapshot() };
-    for op in ops {
-        unsafe { sink(context, op as *mut c_void) };
-    }
-}
-
-/// `PurgeOps`: every op to the sink, the set emptied.
-///
-/// # Safety
-/// `set` is live during the call.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_opset_take_all(set: *mut OpSet, sink: EeWonOpSink, context: *mut c_void) {
-    let ops = unsafe { (*set).take_all() };
-    for op in ops {
-        unsafe { sink(context, op as *mut c_void) };
-    }
-}
-
-/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
-#[no_mangle]
-pub extern "C" fn ee_won_socket_op_finishes(status: c_long) -> bool {
-    asyncop::socket_op_finishes(status as Status)
-}
-
-/// `SocketThreadSimple::Pump`'s wait.
-#[no_mangle]
-pub extern "C" fn ee_won_socket_pump_wait(wait: u32) -> u32 {
-    asyncop::socket_pump_wait(wait)
-}
+// (AsyncOp is a Rust object: `opobj`; SocketThreadSimple: `sockthread`; TimerThread and AsyncOpContainer: `thread`)
 
 // ---- QueueSocket
 
@@ -235,51 +68,12 @@ pub extern "C" fn ee_won_queue_socket_callback(
 }
 
 #[cfg(test)]
-#[allow(clippy::manual_dangling_ptr)] // small integers stand in for the ops' addresses
 mod tests {
     use super::*;
-    use crate::status::{WS_KILLED, WS_PENDING, WS_SUCCESS};
-
-    unsafe extern "C" fn collect(context: *mut c_void, op: *mut c_void) {
-        unsafe { (*context.cast::<Vec<usize>>()).push(op as usize) };
-    }
+    use crate::status::WS_KILLED;
 
     #[test]
-    fn op_state_through_the_abi() {
-        let mut s = OpState::new();
-        unsafe {
-            ee_won_op_state_init(&mut s);
-            assert_eq!(ee_won_op_run(&mut s, 1, 10), 3);
-            assert_eq!(s.status as Status, WS_PENDING);
-            assert_eq!(ee_won_op_after_run_hook(&s), 1);
-            assert_eq!(ee_won_op_finish(&mut s, WS_SUCCESS as c_long), 1);
-            assert!(ee_won_op_complete(&mut s));
-            assert!(ee_won_op_run_as_timer(&mut s, 5));
-            assert_eq!(ee_won_op_kill(&mut s, true), 1);
-            assert_eq!(s.status as Status, WS_KILLED);
-            assert_eq!(ee_won_op_force_finish(&mut s, 0), 0);
-            ee_won_op_set_timeout(&mut s, 3);
-            ee_won_op_set_mode(&mut s, 2);
-            assert_eq!(ee_won_op_run(&mut s, 2, 1), 1);
-        }
-    }
-
-    #[test]
-    fn queues_through_the_abi() {
-        unsafe {
-            let mut got = Vec::<usize>::new();
-            let s = ee_won_opset_new();
-            assert!(ee_won_opset_insert(s, 5 as *mut c_void));
-            assert!(ee_won_opset_insert(s, 3 as *mut c_void));
-            got.clear();
-            ee_won_opset_snapshot(s, collect, (&mut got as *mut Vec<usize>).cast());
-            assert_eq!(got, vec![3, 5]);
-            assert!(ee_won_opset_remove(s, 3 as *mut c_void));
-            got.clear();
-            ee_won_opset_take_all(s, collect, (&mut got as *mut Vec<usize>).cast());
-            assert_eq!(got, vec![5]);
-            ee_won_opset_destroy(s);
-        }
+    fn queue_socket_through_the_abi() {
         let d = ee_won_queue_socket_callback(1, WS_KILLED as c_long, true, false, true, true, false);
         assert_eq!(d, QueueDecision { close: true, completion: 2, next: 3, clear_current: false });
     }

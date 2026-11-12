@@ -132,7 +132,7 @@ void WONAPICore::QueueOp(AsyncOp* op)
 {
     if(WONAPICore::IsStarted()) WONAPICore::mInstance->mOpContainer.QueueOp(op);
     else if(WONAPICore::mInstance!=NULL) {
-        if(op->mStatus!=WS_Pending) WONAPICore::mInstance->mOpContainer.QueueOp(op);
+        if(op->GetStatus()!=WS_Pending) WONAPICore::mInstance->mOpContainer.QueueOp(op);
     }
 }
 // FUNCTION: WON 0x006f2ea0
