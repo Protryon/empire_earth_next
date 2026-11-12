@@ -53,13 +53,13 @@ M.PHASE = {
     -- minute, 35 to 86 in 15 minutes)
     -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
     -- at its weakest, boom-defence's seeds 4 and 24)
-    stone_start = {citizens = 34, citizens_max = 34, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_start = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
                    army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
-    stone_grow = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_grow = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
                   army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    stone_developed = {citizens = 70, citizens_max = 70, boats = 10, docks = 1, barracks = 2, ranges = 1,
+    stone_developed = {citizens = 76, citizens_max = 76, boats = 10, docks = 1, barracks = 2, ranges = 1,
                        army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     copper = {citizens = 90, citizens_max = 100, boats = 10, docks = 1, granaries = 3, save_at = 75,
@@ -67,7 +67,8 @@ M.PHASE = {
 }
 
 M.START_MAX_MIN = 6        -- minutes: stone_start ends by then even without the boats (no water, no dock site)
-M.GROW_MAX_MIN = 12        -- minutes into the Stone Age: developed by then whatever the gatherers (the raid by ~40)
+M.GROW_MAX_MIN = 30        -- minutes into the Stone Age: developed by then whatever the gatherers (a safety only: the owner
+                           -- saves once the town is developed, 32 -> 86 citizens in minutes 22-37.5, then Copper at 45)
 M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for even if the raid never went out
 M.FOOD_BANK = 0            -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
@@ -109,8 +110,9 @@ function M.phase(view, memory)
             local function met(r, n)
                 return (g[r] or 0) >= math.min(n, math.max(room[r] or n, 1))
             end
-            if (met("iron", 12) and met("gold", 12) and met("stone", 6) and (g.wood or 0) >= 10)
-                    or in_epoch >= M.GROW_MAX_MIN then
+            -- (the owner's targets only: 12+ gold, 12+ iron, 6 stone, 10+ wood, the boats; the timer is a safety)
+            if ((g.iron or 0) >= 12 and (g.gold or 0) >= 12 and (g.stone or 0) >= 6 and (g.wood or 0) >= 10
+                    and view.boats >= 10) or in_epoch >= M.GROW_MAX_MIN then
                 p = "stone_developed"
             end
         end
