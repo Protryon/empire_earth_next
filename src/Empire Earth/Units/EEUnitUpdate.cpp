@@ -367,14 +367,12 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->SetCurrentPhysicsOrder((unsigned long)inA);
         break;
     case EE_UNITS_UPD_GOAL_QUEUES: {
-        unsigned long theCount = theUnit->GetNumGoalQueues();
-        for (unsigned long i = 0; i < theCount; i++) {
-            if (!theUnit->mGoalQueues[i].mStarted || theUnit->mGoalQueues[i].mGoals.size() <= 0)
-                continue;
-            theUnit->mGoalQueues[i].Update();
-            theUnit->RefreshGoals();
-            theUnit->RefreshActiveGoal();
-        }
+        // the started, non-empty queues' expiry and the goals' refresh: Rust over the mirror (ee_units goals.rs)
+        EEGoalQueueIO theIO = {NULL, NULL, 0, 0, theUnit};
+        EeGoalQueueHost theHost;
+        EEGoalQueueHostOf(theIO, theHost);
+        ee_units_goal_queues_update(reinterpret_cast<uintptr_t>(theUnit), (uint32_t)theUnit->GetNumGoalQueues(),
+                                    (uint32_t)gPhysics->mGameTime, &theHost);
         break;
     }
     case EE_UNITS_UPD_OPACITY_CHAIN:

@@ -1218,6 +1218,36 @@ struct EeUnitStoreCheck {
   uint32_t first_field;
 };
 
+/// One goal of a queue's report: its id, kind and object.
+struct EeGoalQueueEntry {
+  uint32_t id;
+  uint8_t kind;
+  uint64_t goal;
+};
+
+/// A queue's timer (`mStartTime`, `mTime`, `mStarted`).
+struct EeGoalQueueTimer {
+  uint32_t start;
+  uint32_t time;
+  uint8_t started;
+};
+
+/// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
+struct EeGoalQueueHost {
+  void *context;
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_u8)(void *context, uint8_t value);
+  int32_t (*write_bool)(void *context, bool value);
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_u8)(void *context, uint8_t *value);
+  int32_t (*save_goal)(void *context, uint64_t goal);
+  int32_t (*load_goal)(void *context, uint8_t kind);
+  void (*clear)(void *context);
+  int32_t (*read_timer)(void *context, uint32_t field);
+  void (*expire)(void *context, uint32_t index);
+  void (*refresh)(void *context);
+};
+
 /// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
 struct EeGoalSpec {
   uint32_t ctor;
@@ -1702,6 +1732,37 @@ void ee_units_cast_calamity(void *player,
 /// `ids` points to `count` words (or is null with `count` 0).
 void ee_units_goal_queue_set(uint64_t container, uint64_t unit, const uint32_t *ids, size_t count);
 
+/// A container's report: `count` goals at `entries` (id, kind, object) and its timer.
+///
+/// # Safety
+/// `entries` points to `count` entries (or is null with `count` 0).
+void ee_units_goal_queue_report(uint64_t container,
+                                uint64_t unit,
+                                const EeGoalQueueEntry *entries,
+                                size_t count,
+                                EeGoalQueueTimer timer);
+
+/// The container's save from its mirror (`save`): the status; -1 when there is no mirror.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int32_t ee_units_goal_queue_save(uint64_t container, const EeGoalQueueHost *host);
+
+/// The container's load (`load`): the status.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int32_t ee_units_goal_queue_load(const EeGoalQueueHost *host);
+
+/// The unit's goal queues' per-tick update (`update_unit`).
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+void ee_units_goal_queues_update(uint64_t unit,
+                                 uint32_t count,
+                                 uint32_t now,
+                                 const EeGoalQueueHost *host);
+
 /// A container's destructor.
 void ee_units_goal_queue_drop(uint64_t container);
 
@@ -1709,13 +1770,14 @@ void ee_units_goal_queue_drop(uint64_t container);
 int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
 
 /// TEST ONLY: a unit's `count` containers (their addresses, each with `lens[i]` goal ids, all of them in order at
-/// `ids`) against the mirror: the mismatches (`GoalQueues::check_unit`).
+/// `ids`, and its timer) against the mirror: the mismatches (`GoalQueues::check_unit_timers`).
 ///
 /// # Safety
-/// `containers` and `lens` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
+/// `containers`, `lens` and `timers` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
 uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
                                         const uint64_t *containers,
                                         const uint32_t *lens,
+                                        const EeGoalQueueTimer *timers,
                                         size_t count,
                                         const uint32_t *ids,
                                         size_t ids_count);
