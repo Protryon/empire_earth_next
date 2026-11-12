@@ -7575,6 +7575,23 @@ uint32_t ee_rust_abi_version();
 /// call.
 void ee_rust_init(void (*log)(const char *line));
 
+/// The storage as bytes (`storage_save`): writes them to `out` when `capacity` holds them; returns their length.
+///
+/// # Safety
+/// As `st`; `out` must be null or hold `capacity` writable bytes.
+uint32_t ee_astar_save(EeAStarStorage *s,
+                       uint8_t *out,
+                       uint32_t capacity);
+
+/// The storage replaced by the one `ee_astar_save` wrote (its own kind); false, the storage unchanged, for other
+/// bytes.
+///
+/// # Safety
+/// As `st`; `data` must hold `length` readable bytes (or `length` be 0).
+bool ee_astar_load(EeAStarStorage *s,
+                   const uint8_t *data,
+                   uint32_t length);
+
 /// A new storage of the given kind (`StorageKind`: 0 hashed, 1 bounded, 2 terrain).
 EeAStarStorage *ee_astar_new(EeAStarStorageKind kind);
 

@@ -51,6 +51,7 @@ pub mod repair;
 pub mod sectors;
 pub mod sparse;
 pub mod storage;
+pub mod storage_save;
 pub mod sub_sector_links;
 pub mod tile_kind;
 pub mod tile_values;
