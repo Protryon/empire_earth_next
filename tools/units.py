@@ -107,7 +107,7 @@ def _won_extra_units():
 # platform layer (WONGUI/Plat*.cpp, include/ee/wonapi/WONLobbyPlatform.h; PORT_LEARNINGS.md "The WON library from
 # source")
 WON_REPLACED = {"MSWindowManager.cpp", "MSWindow.cpp", "MSGraphics.cpp", "MSNativeImage.cpp", "MSRawImage.cpp",
-                "MSFont.cpp", "DisplayContext.cpp", "BMPDecoderPlatform.cpp", "Clipboard.cpp", "MSSound.cpp"}
+                "MSFont.cpp", "DisplayContext.cpp", "Clipboard.cpp", "MSSound.cpp"}
 # WONAPI sources not linked: WON SDK sources the original exe did not contain and nothing
 # references (the GameSpy query/report support, the Win32 open/save file dialog; WinSkin, the Windows desktop-theme
 # reader). The Winsock event-driven socket thread backends (SocketThreadWinsock2, SocketThreadEx) are deleted: the

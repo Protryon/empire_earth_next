@@ -27,14 +27,14 @@ static EeWonRect4 WinRect4(const WONRectangle& inRect)
     return aRect;
 }
 // FUNCTION: WON 0x0072b660
-// Creates the window manager: registers the BMP and WIM decoders, becomes the default manager, sets standard colours
+// Creates the window manager: becomes the default manager, sets standard colours. The original registered BMP and
+// WIM decoders here; the port reads PNG and JPEG pictures only (D9; the lobby's game code registers both), so they
+// went (round 18)
 WindowManager::WindowManager() {
     WindowManager::mThreadId=PlatCurrentThreadId();
     this->mIsFullScreen=false;
     this->mOriginalScreenWidth=this->mOriginalScreenHeight=0;
     this->mLastLoseFocusTick=0;
-    this->mImageDecoder.AddDecoder(new BMPDecoder,"bmp");
-    this->mImageDecoder.AddDecoder(new WIMDecoder,"wim");
     WindowManager::mDefaultWindowManager=this;
     this->mLastTimerTick=WONTickCount();
     this->mEndPopup=false;
