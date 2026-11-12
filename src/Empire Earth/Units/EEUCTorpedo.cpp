@@ -64,13 +64,12 @@ long EEUCTorpedo::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
 // Flies the torpedo as a missile and keeps it from rising above the water plane (height 0)
 void EEUCTorpedo::Update(EEComplexUnit* inUnit)
 {
-    EEUCMissile::Update(inUnit);
-    if (!(inUnit->mPhysicalModel.GetLocation().GetZ() > 0.0f))
-        return;
-    GETransformation theTransformation(false);
-    theTransformation = inUnit->mPhysicalModel.GetLocation();
-    theTransformation.SetZ(0.0f);
-    inUnit->SetTransformation(theTransformation, true);
+    EECombatHostReadScope theScope(2);
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    // ee_combat shots.rs update (the missile's, then the water plane) over EEUCProjectile.cpp's host; CBSO records the outcome
+    EECombatShotUpdate(EE_COMBAT_SHOT_TORPEDO, this, inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_TORPEDO_UPDATE, inUnit, theBefore);
 }
 
 // ICF-FOLDED: EXE 0x69059d

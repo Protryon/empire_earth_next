@@ -414,7 +414,36 @@ pub fn start_check(
     out
 }
 
+/// [`game_type_action`]: nothing to do.
+pub const EE_SCREENS_GAME_TYPE_NONE: u32 = 0;
+/// [`game_type_action`]: push the load screen for a saved game.
+pub const EE_SCREENS_GAME_TYPE_SAVED_GAME: u32 = 1;
+/// [`game_type_action`]: push the load screen for a scenario.
+pub const EE_SCREENS_GAME_TYPE_SCENARIO: u32 = 2;
+/// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
+pub const EE_SCREENS_GAME_TYPE_RANDOM_MAP: u32 = 3;
+
+/// The game type box's event (`EEUIELEGameType`): its line (random map, saved game, scenario) and the options'
+/// load type. A random map does something only when a game or scenario was loaded.
+pub fn game_type_action(selection: c_ulong, load_type: c_ulong) -> u32 {
+    match selection {
+        2 => EE_SCREENS_GAME_TYPE_SCENARIO,
+        1 => EE_SCREENS_GAME_TYPE_SAVED_GAME,
+        0 if load_type != 0 => EE_SCREENS_GAME_TYPE_RANDOM_MAP,
+        _ => EE_SCREENS_GAME_TYPE_NONE,
+    }
+}
+
+/// The map type box's event (`EEUIELEGameMapType`): the line's generator name differs from the options' map type
+/// (`operator!=`'s multibyte compare of two C strings: their bytes), so the change is sent (option 2, the line and
+/// the name) and stored.
+pub fn map_type_changed(name: &[u8], current: &[u8]) -> bool {
+    name != current
+}
+
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden3;
 #[cfg(test)]
 mod tests;

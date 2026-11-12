@@ -64,6 +64,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -3050,73 +3051,12 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
 // Tells whether an enemy the unit may target is within its reach
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
-    bool theFound = false;
-    EEComplexUnit* theForwardUnit = NULL;
-    EEComplexUnit* theBackwardUnit = NULL;
-    long theX;
-    long theY;
-    long theTileX;
-    long theTileY;
-
-    if (inUnit->mTargetSearchTimer <= 0) {
-        theX = inUnit->GetTileX();
-        theY = inUnit->GetTileY();
-        EEPlayer* thePlayer = inUnit->mPlayer;
-        float theReach = inUnit->GetLineOfSight();
-        float theOuter = (theReach + 4.0f) * (theReach + 4.0f);
-        long theReachTiles = UMFloatToLong(theReach);   // unused (the original's fistp at 0x24553d stays: asm helper)
-        float theReachSquared = theReach * theReach;
-        EEUnit* theForward = static_cast<EEUnit*>(inUnit->mTileNode->mPrev);
-        bool theDone = false;
-        bool theBackDone = false;
-        if (theForward != NULL)
-            theForwardUnit = theForward->mComplexUnit;
-        EEUnit* theBackward = static_cast<EEUnit*>(inUnit->mTileNode->mNext);
-        if (theBackward != NULL)
-            theBackwardUnit = theBackward->mComplexUnit;
-        while (!theDone || !theBackDone) {
-            if (!theDone) {
-                if (RTSDummyHead(theForward) == NULL
-                    && (float)((theX - theForward->GetTileX()) * (theX - theForward->GetTileX())) <= theOuter) {
-                    if (theForward->mPlayer == thePlayer || thePlayer->mEnemies[theForward->mPlayer->GetPlayerID()] == 0
-                        || theForward->mPlayer->GetPlayerID() == 0
-                        || !EEUUGetIsUnitClassTargetable(inUnit, theForward->mUnitClass) || theForward->mHitPoints <= 1
-                        || !EEIsSeenBy(theForwardUnit, inUnit->GetPlayer(), true)
-                        || (inUnit->GetNearestFootprintTile(theForward, &theTileX, &theTileY),
-                            theReachSquared < (float)((theY - theTileY) * (theY - theTileY)
-                                                      + (theX - theTileX) * (theX - theTileX)))) {
-                        theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
-                    } else {
-                        theDone = true;
-                        theBackDone = true;
-                        theFound = true;
-                    }
-                } else {
-                    theDone = true;
-                }
-            }
-            if (theBackDone)
-                continue;
-            if (theBackward == NULL
-                || theOuter < (float)((theBackward->GetTileX() - theX) * (theBackward->GetTileX() - theX))) {
-                theBackDone = true;
-            } else if (theBackward->mPlayer == thePlayer
-                       || thePlayer->mEnemies[theBackward->mPlayer->GetPlayerID()] == 0
-                       || theBackward->mPlayer->GetPlayerID() == 0
-                       || !EEUUGetIsUnitClassTargetable(inUnit, theBackward->mUnitClass)
-                       || theBackward->mHitPoints <= 1 || !EEIsSeenBy(theBackwardUnit, inUnit->GetPlayer(), true)
-                       || (inUnit->GetNearestFootprintTile(theBackward, &theTileX, &theTileY),
-                           theReachSquared < (float)((theY - theTileY) * (theY - theTileY)
-                                                     + (theX - theTileX) * (theX - theTileX)))) {
-                theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
-            } else {
-                theDone = true;
-                theBackDone = true;
-                theFound = true;
-            }
-        }
-    }
-    return theFound;
+    EECombatHostReadScope theScope;
+    // ee_combat reads.rs enemy_in_range over the C++ host (EECombatGoals.cpp); CBQR records the outcome
+    bool theInRange = EECombatIsEnemyWithinRange(inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_ENEMY_IN_RANGE, inUnit, NULL, theInRange, (uint32_t)inUnit->mTargetSearchTimer);
+    return theInRange;
 }
 
 // FUNCTION: EXE 0x64572b

@@ -3,6 +3,12 @@
 
 use ee_combat::capture::{replay_all, Counts, TAGS};
 
+/// The unit store's bridge that ee_combat's reads import (ee_rust's in the game): a replay has no store.
+#[no_mangle]
+pub extern "C" fn ee_combat_store_unit(_id: u32, _out: *mut ee_combat::reads::EeCombatStoredUnit) -> bool {
+    false
+}
+
 fn main() {
     let mut bad = 0u64;
     for path in std::env::args().skip(1) {

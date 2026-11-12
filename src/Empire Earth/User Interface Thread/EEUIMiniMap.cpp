@@ -60,6 +60,8 @@
 #include "ee/EEAction.h"
 #include "ee/EEAMiniMap.h"
 #include "ee/EEUIMiniMap.h"
+#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 
@@ -322,18 +324,11 @@ long EEUIMiniMap::MouseRButtonDown()
     unsigned long theWidth = gGameWindow->GetWidth();
     unsigned long theHeight = gGameWindow->GetHeight();
     unsigned long theModifiers = gISKeyboard->GetModifierState();
-    thePoint.SetX((this->GetMouseLocation().GetX() - this->mOrigin.GetX()) / (theWidth * 0.00125f));
-    thePoint.SetY((this->GetMouseLocation().GetY() - this->mOrigin.GetY()) / (theHeight * 0.0016666667f));
-    if (!EEUIMiniMap::sBounds.Contains(thePoint)) {
-        if (EEUIMiniMap::sBounds.GetLeft() > thePoint.GetX())
-            thePoint.SetX(EEUIMiniMap::sBounds.GetLeft());
-        if (EEUIMiniMap::sBounds.GetRight() < thePoint.GetX())
-            thePoint.SetX(EEUIMiniMap::sBounds.GetRight());
-        if (thePoint.GetY() < EEUIMiniMap::sBounds.GetTop())
-            thePoint.SetY(EEUIMiniMap::sBounds.GetTop());
-        if (thePoint.GetY() > EEUIMiniMap::sBounds.GetBottom())
-            thePoint.SetY(EEUIMiniMap::sBounds.GetBottom());
-    }
+    // the mouse in mini-map units, clamped to the map by two tests per axis: ee_gfx minimap.rs (RUST_PLAN R4.4)
+    ee_gfx_minimap_press_point(reinterpret_cast<const EeGe2DPoint*>(&this->GetMouseLocation()),
+                               reinterpret_cast<const EeGe2DPoint*>(&this->mOrigin), (uint32_t)theWidth,
+                               (uint32_t)theHeight, reinterpret_cast<const EeGeRectangle*>(&EEUIMiniMap::sBounds),
+                               reinterpret_cast<EeGe2DPoint*>(&thePoint));
     EEAMiniMap* theAction = this->mAction;
     theAction->mMode = 1;
     theAction->mPoint = thePoint;
@@ -401,20 +396,12 @@ long EEUIMiniMap::MouseMove(const GE2DPoint& inLocation)
 void EEUIMiniMap::CenterCamera()
 {
     GE2DPoint thePoint;
-    unsigned long theWidth = gGameWindow->GetWidth();
-    unsigned long theHeight = gGameWindow->GetHeight();
-    thePoint.SetX((this->GetMouseLocation().GetX() - this->mOrigin.GetX()) / (theWidth * 0.00125f));
-    thePoint.SetY((this->GetMouseLocation().GetY() - this->mOrigin.GetY()) / (theHeight * 0.0016666667f));
-    if (!EEUIMiniMap::sBounds.Contains(thePoint)) {
-        if (EEUIMiniMap::sBounds.GetLeft() > thePoint.GetX())
-            thePoint.SetX(EEUIMiniMap::sBounds.GetLeft());
-        else if (EEUIMiniMap::sBounds.GetRight() < thePoint.GetX())
-            thePoint.SetX(EEUIMiniMap::sBounds.GetRight());
-        if (thePoint.GetY() < EEUIMiniMap::sBounds.GetTop())
-            thePoint.SetY(EEUIMiniMap::sBounds.GetTop());
-        else if (thePoint.GetY() > EEUIMiniMap::sBounds.GetBottom())
-            thePoint.SetY(EEUIMiniMap::sBounds.GetBottom());
-    }
+    // the mouse in mini-map units, clamped to the map: ee_gfx minimap.rs (RUST_PLAN R4.4)
+    ee_gfx_minimap_center_point(reinterpret_cast<const EeGe2DPoint*>(&this->GetMouseLocation()),
+                                reinterpret_cast<const EeGe2DPoint*>(&this->mOrigin), (uint32_t)gGameWindow->GetWidth(),
+                                (uint32_t)gGameWindow->GetHeight(),
+                                reinterpret_cast<const EeGeRectangle*>(&EEUIMiniMap::sBounds),
+                                reinterpret_cast<EeGe2DPoint*>(&thePoint));
     EEAMiniMap* theAction = this->mAction;
     theAction->mMode = 0;
     theAction->mPoint = thePoint;

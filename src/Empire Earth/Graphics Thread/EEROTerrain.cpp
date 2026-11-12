@@ -51,27 +51,23 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/ee_ge.h"   // ee_gfx terrain.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
+
+static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
+                  sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord),
+              "GE mirrors");
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
 extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
 extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
 
-// one vertex of the cloud/star models: a corner of the map square (index into the corner table) and a height
-// (.rdata 0x441a18.. / 0x441ab8..) (provisional name)
-struct EEROTerrainVertex {
-    long mCorner;
-    float mZ;
-};
-
 // the cloud layer's ten triangles (0x44142c)
 static const unsigned long sCloudIndices[30] = {
     0, 1, 4, 4, 1, 5, 2, 0, 6, 6, 0, 4, 3, 2, 7, 7, 2, 6, 1, 3, 5, 5, 3, 7, 4, 5, 6, 6, 5, 7,
 };
-const float kCloudHeight = 1500.0f;         // 0x441408
-const float kCloudOverhang = 3000.0f;       // 0x44140c
-const float kCloudZ = 200.0f;               // 0x441410
-const float kCloudRepeat = 4000.0f;         // 0x441414
+// 0x441408..0x441414 (the cloud layer's height, overhang, z and texture repeat): ee_gfx terrain.rs CLOUD_*
 const float kHighlightOpacity = 0.5f;       // 0x441418
 const float kEEROTerrainStarU = 6.0f;                  // 0x441428: original word 0000c040, verified
 
@@ -495,17 +491,7 @@ void EEROTerrain::RenderScene()
 // Steps the terrain grid mode forwards or backwards through 0..17, wrapping around
 void EEROTerrain::StepGridMode(bool inBackwards)
 {
-    if (inBackwards) {
-        if (this->mGridMode == 0)
-            this->mGridMode = 0x11;
-        else
-            this->mGridMode--;
-    } else {
-        if (this->mGridMode == 0x11)
-            this->mGridMode = 0;
-        else
-            this->mGridMode++;
-    }
+    this->mGridMode = ee_gfx_terrain_grid_mode_step((int32_t)this->mGridMode, inBackwards);   // ee_gfx terrain.rs
 }
 
 // FUNCTION: EXE 0x5138d2
@@ -536,114 +522,29 @@ void EEROTerrain::ReleaseSkyModels()
     gCircleAreaEffectTexture = NULL;
 }
 
-// the band of each group of four sky vertices (0x441a04)
-static const unsigned long sSkyBands[5] = { 0, 0, 1, 2, 3 };
-// the sky vertices (0x441a18)
-static const EEROTerrainVertex sSkyVertices[20] = {
-    {0, -4500.0f}, {1, -4500.0f}, {2, -4500.0f}, {3, -4500.0f}, {0, 0.0f}, {1, 0.0f}, {2, 0.0f}, {3, 0.0f},
-    {0, 150.0f}, {1, 150.0f}, {2, 150.0f}, {3, 150.0f}, {0, 1000.0f}, {1, 1000.0f}, {2, 1000.0f}, {3, 1000.0f},
-    {0, 10000.0f}, {1, 10000.0f}, {2, 10000.0f}, {3, 10000.0f},
-};
-// the star vertices (0x441ab8)
-static const EEROTerrainVertex sStarVertices[24] = {
-    {3, 5000.0f}, {2, 5000.0f}, {1, 5000.0f}, {0, 5000.0f}, {3, 5000.0f}, {0, 5000.0f}, {0, -4500.0f}, {3, -4500.0f},
-    {1, 5000.0f}, {2, 5000.0f}, {2, -4500.0f}, {1, -4500.0f}, {0, 5000.0f}, {1, 5000.0f}, {1, -4500.0f},
-    {0, -4500.0f}, {2, 5000.0f}, {3, 5000.0f}, {3, -4500.0f}, {2, -4500.0f}, {0, -4500.0f}, {1, -4500.0f},
-    {2, -4500.0f}, {3, -4500.0f},
-};
+// the band of each group of four sky vertices (0x441a04), the sky vertices (0x441a18) and the star vertices
+// (0x441ab8): ee_gfx terrain.rs SKY_BANDS, SKY_VERTICES and STAR_VERTICES
 // FUNCTION: EXE 0x51396f
 // Places the cloud layer over the map square and scrolls its texture by the environment's cloud offset
 // (kept in 0..1) (provisional name)
 static void UpdateCloudLayer()
 {
-    GETextureCoordinate theCoordinate4;
-    GETextureCoordinate theCoordinate5;
-    GETextureCoordinate theCoordinate6;
-    GETextureCoordinate theCoordinate7;
-    GETextureCoordinate theCoordinate0;
-    GETextureCoordinate theCoordinate1;
-    GETextureCoordinate theCoordinate2;
-    GETextureCoordinate theCoordinate3;
-    GE3DPoint thePoint0;
-    GE3DPoint thePoint1;
-    float theOffset = gRenderEnvironment.mCloudOffset;
     if (sCloudModel == NULL)
         CreateCloudModel();
-    float theSize = (float)gWorld.mMap->mSize;
-    float theLow = theSize - (float)gWorld.mMap->mL195614 - 1.0f;
-    float theHigh = (float)gWorld.mMap->mL195614 + 1.0f;
-    float theOverhang = kCloudHeight + kCloudOverhang;
-    {
-        GE3DPoint thePoint(-theOverhang, theLow + 1.0f, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 0);
-    }
-    {
-        GE3DPoint thePoint(theHigh - 1.0f, theSize + theOverhang, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 1);
-    }
-    {
-        GE3DPoint thePoint(theLow + 1.0f, -theOverhang, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 2);
-    }
-    {
-        GE3DPoint thePoint(theSize + theOverhang, theHigh - 1.0f, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 3);
-    }
-    {
-        GE3DPoint thePoint(-kCloudOverhang, theLow + 1.0f, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 4);
-    }
-    {
-        GE3DPoint thePoint(theHigh - 1.0f, theSize + kCloudOverhang, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 5);
-    }
-    {
-        GE3DPoint thePoint(theLow + 1.0f, -kCloudOverhang, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 6);
-    }
-    {
-        GE3DPoint thePoint(theSize + kCloudOverhang, theHigh - 1.0f, kCloudZ);
-        sCloudModel->GetVertexArray(0)->SetPoint(thePoint, 7);
-    }
+    // the layer's points, its texture coordinates and the offset kept in 0..1: ee_gfx terrain.rs
+    EEMap* theMap = gWorld.mMap;
+    EeGfxCloudLayer theLayer = ee_gfx_terrain_cloud_layer((int32_t)theMap->mSize, (int32_t)theMap->mL195614,
+                                                          gRenderEnvironment.mCloudOffset);
+    unsigned long i;
+    for (i = 0; i < 8; i++)
+        sCloudModel->GetVertexArray(0)->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theLayer.points[i]), i);
     sCloudModel->ComputeModelNormals();
     sCloudModel->ComputeBoundingVolumes();
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint0, 0);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint1, 1);
-    float theWidth = thePoint0.DistanceTo(thePoint1);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint0, 0);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint1, 2);
-    float theHeight = thePoint0.DistanceTo(thePoint1);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint0, 4);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint1, 5);
-    float theInnerU = (1.0f - thePoint0.DistanceTo(thePoint1) / theWidth) * 0.5f;
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint0, 4);
-    sCloudModel->GetVertexArray(0)->GetPoint(thePoint1, 6);
-    float theInnerV = (1.0f - thePoint0.DistanceTo(thePoint1) / theHeight) * 0.5f;
-    theWidth = theWidth / kCloudRepeat;
-    theHeight = theHeight / kCloudRepeat;
-    theInnerU = theInnerU * theWidth;
-    theInnerV = theInnerV * theHeight;
-    if (theOffset >= 1.0f) {
-        theOffset = theOffset - (float)UMFloor(theOffset);
-        gRenderEnvironment.mCloudOffset = theOffset;
-    }
-    theCoordinate0 = GETextureCoordinate(theOffset, theOffset);
-    theCoordinate1 = GETextureCoordinate(theWidth + theOffset, theOffset);
-    theCoordinate2 = GETextureCoordinate(theOffset, theHeight + theOffset);
-    theCoordinate3 = GETextureCoordinate(theWidth + theOffset, theHeight + theOffset);
-    theCoordinate4 = GETextureCoordinate(theInnerU + theOffset, theInnerV + theOffset);
-    theCoordinate5 = GETextureCoordinate(theWidth - theInnerU + theOffset, theInnerV + theOffset);
-    theCoordinate6 = GETextureCoordinate(theInnerU + theOffset, theHeight - theInnerV + theOffset);
-    theCoordinate7 = GETextureCoordinate(theWidth - theInnerU + theOffset,
-                                            theHeight - theInnerV + theOffset);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate0, 0);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate1, 1);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate2, 2);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate3, 3);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate4, 4);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate5, 5);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate6, 6);
-    sCloudModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate7, 7);
+    if (theLayer.wrapped)
+        gRenderEnvironment.mCloudOffset = theLayer.offset;
+    for (i = 0; i < 8; i++)
+        sCloudModel->GetVertexArray(0)->SetTextureCoordinate(
+            *reinterpret_cast<const GETextureCoordinate*>(&theLayer.coords[i]), i);
 }
 
 // FUNCTION: EXE 0x513ebd
@@ -651,56 +552,25 @@ static void UpdateCloudLayer()
 // stretches the sky dome and star models over the map square (provisional name)
 static void UpdateSkyColors()
 {
-    float theTime = gRenderEnvironment.mTimeOfDay * 16.0f;
-    float theFraction = theTime - (float)UMFloor(theTime);
-    unsigned long theIndex = UMFloorUnsigned(theTime);
-    unsigned long theNext = theIndex + 1;
-    unsigned long i;
-    if (theNext > 0x10)
-        theNext = 0x10;
-    GEColor theColors[4];
-    float theComplement = 1.0f - theFraction;
-    for (i = 0; i < 4; i++) {
-        theColors[i].SetRed(gSkyColors[i * 17 + theIndex].GetRed() * theComplement + gSkyColors[i * 17 + theNext].GetRed() * theFraction);
-        theColors[i].SetGreen(gSkyColors[i * 17 + theIndex].GetGreen() * theComplement + gSkyColors[i * 17 + theNext].GetGreen() * theFraction);
-        theColors[i].SetBlue(gSkyColors[i * 17 + theIndex].GetBlue() * theComplement + gSkyColors[i * 17 + theNext].GetBlue() * theFraction);
-    }
-    gU4E9220 = theColors[0];
-    for (i = 0; i < 0x14; i++)
-        sSkyModel->GetVertexArray(0)->SetColor(theColors[sSkyBands[i >> 2]], i);
-    GE2DPoint theCorners[4];
+    // the bands' blend for the time of day and the models stretched over the map's square: ee_gfx terrain.rs
     EEMap* theMap = gWorld.mMap;
-    // Keep the map diamond in left, top, right, bottom order before extending the sky.
-    theCorners[0].SetX(0.0f);
-    theCorners[0].SetY((float)theMap->mSize - theMap->mL195614 - 1.0f);
-    theCorners[1].SetX((float)theMap->mL195614 + 1.0f);
-    theCorners[1].SetY((float)theMap->mSize);
-    theCorners[2].SetX((float)theMap->mSize);
-    theCorners[2].SetY((float)theMap->mL195614 + 1.0f);
-    theCorners[3].SetX((float)theMap->mSize - theMap->mL195614 - 1.0f);
-    theCorners[3].SetY(0.0f);
-    theCorners[0].SetY(theCorners[0].GetY() + 1.0f);
-    theCorners[1].SetX(theCorners[1].GetX() - 1.0f);
-    theCorners[2].SetY(theCorners[2].GetY() - 1.0f);
-    theCorners[3].SetX(theCorners[3].GetX() + 1.0f);
-    theCorners[0].SetX(-10000.0f);
-    theCorners[1].SetY(theCorners[1].GetY() + 10000.0f);
-    theCorners[2].SetX(theCorners[2].GetX() + 10000.0f);
-    theCorners[3].SetY(-10000.0f);
+    EeGfxSkyFrame theFrame =
+        ee_gfx_terrain_sky_frame(gRenderEnvironment.mTimeOfDay, reinterpret_cast<const EeGfxColor*>(gSkyColors),
+                                 (int32_t)theMap->mSize, (int32_t)theMap->mL195614);
+    unsigned long i;
+    gU4E9220 = *reinterpret_cast<const GEColor*>(&theFrame.fog);
+    for (i = 0; i < 0x14; i++)
+        sSkyModel->GetVertexArray(0)->SetColor(*reinterpret_cast<const GEColor*>(&theFrame.sky_colors[i]), i);
     GEVertexArray* theSkyArray = sSkyModel->GetVertexArray(0);
-    for (i = 0; i < 20; i++) {
-        const GE2DPoint& theCorner = theCorners[sSkyVertices[i].mCorner];
-        theSkyArray->SetPoint(GE3DPoint(theCorner.GetX(), theCorner.GetY(), sSkyVertices[i].mZ), i);
-    }
+    for (i = 0; i < 20; i++)
+        theSkyArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.sky_points[i]), i);
     sSkyModel->ComputeModelNormals();
     sSkyModel->ComputeBoundingVolumes();
     GEVertexArray* theOuterArray = sOuterStarModel->GetVertexArray(0);
     GEVertexArray* theInnerArray = sInnerStarModel->GetVertexArray(0);
     for (i = 0; i < 24; i++) {
-        const EEROTerrainVertex& theVertex = sStarVertices[i];
-        const GE2DPoint& theCorner = theCorners[theVertex.mCorner];
-        theOuterArray->SetPoint(GE3DPoint(theCorner.GetX(), theCorner.GetY(), theVertex.mZ), i);
-        theInnerArray->SetPoint(GE3DPoint(theCorner.GetX() * 0.25f, theCorner.GetY() * 0.25f, theVertex.mZ * 0.25f), i);
+        theOuterArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.outer_stars[i]), i);
+        theInnerArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.inner_stars[i]), i);
     }
     sOuterStarModel->ComputeModelNormals();
     sOuterStarModel->ComputeBoundingVolumes();
