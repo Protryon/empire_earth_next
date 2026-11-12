@@ -1,5 +1,6 @@
 //! The C ABI of the Graphics Thread's and the camera's math (`include/rust/ee_rust.h`), called by
-//! `EECameraControl.cpp`, `RTSMouse.cpp`, `EEROUnits.cpp`, `EEUnitPicker.cpp` and `EEMiniMap.cpp`. Every function copies its inputs before it writes an
+//! `EECameraControl.cpp`, `RTSMouse.cpp`, `EEROUnits.cpp`, `EEUnitPicker.cpp`, `EEMiniMap.cpp`, `EEEffect2D/3D.cpp` and
+//! `EERenderObject.cpp`. Every function copies its inputs before it writes an
 //! output, so an output may alias an input; the terrain callbacks run while no Rust reference to a C++ object is held
 //! (the inputs are copies).
 
@@ -15,6 +16,7 @@ use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::units::{self, EeGfxBarRects, EeGfxBarSizes};
+use crate::view;
 use ee_ge::viewport::GeViewport;
 
 /// The terrain mesh under the camera, as C++ callbacks over `context` (the `GETerrainMesh`).
@@ -563,4 +565,42 @@ pub unsafe extern "C" fn ee_gfx_minimap_view(
 ) -> EeGfxMiniMapView {
     // SAFETY: the function's contract
     unsafe { minimap::view_trapezoid(&*viewport, orthographic, &*map_to_pixel) }
+}
+
+// ---- the frame's view tests (view.rs, EEEffect2D/3D.cpp, EERenderObject.cpp)
+
+/// The effects' frustum test of a sphere at `*location`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_in_view(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    location: *const Ge3DPoint,
+    radius: f32,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe { view::effect_in_view(&*viewport, orthographic, *location, radius) }
+}
+
+/// `GetUnitOpacity`'s near fade: updates `*translucent` and `*opacity`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_unit_near_fade(
+    viewport: *const GeViewport,
+    center: *const Ge3DPoint,
+    radius: f32,
+    scale: f32,
+    translucent: *mut bool,
+    opacity: *mut f32,
+) {
+    // SAFETY: the function's contract (inputs copied before the stores)
+    unsafe {
+        let (t, o) = view::near_fade(&*viewport, *center, radius, scale, *translucent, *opacity);
+        *translucent = t;
+        *opacity = o;
+    }
 }

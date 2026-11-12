@@ -12299,6 +12299,26 @@ EeGfxMiniMapView ee_gfx_minimap_view(const EeGeViewport *viewport,
                                      bool orthographic,
                                      const EeGeTransformation *map_to_pixel);
 
+/// The effects' frustum test of a sphere at `*location`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_gfx_effect_in_view(const EeGeViewport *viewport,
+                           bool orthographic,
+                           const EeGe3DPoint *location,
+                           float radius);
+
+/// `GetUnitOpacity`'s near fade: updates `*translucent` and `*opacity`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_unit_near_fade(const EeGeViewport *viewport,
+                           const EeGe3DPoint *center,
+                           float radius,
+                           float scale,
+                           bool *translucent,
+                           float *opacity);
+
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);
 
