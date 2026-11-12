@@ -67,9 +67,11 @@ static unsigned char At(const void* inData, unsigned long inLength, unsigned lon
     return i < inLength ? static_cast<const unsigned char*>(inData)[i] : 0;
 }
 
-struct SKey {   // ElGamal: the key block's current key (Encrypt), the private key (SetPrivateKey)
+struct SKey {   // ElGamal: the key block's current key (Encrypt), the private key (SetPrivateKey), the verifier
     int mFail;
-    SKey() : mFail(0) {}
+    bool mPublic;
+    SKey() : mFail(0), mPublic(true) {}
+    bool IsPublic() const { Log("public"); return this->mPublic; }
     bool SetPrivateKey(const void* inData, int inLength)
     {
         Log("priv %s", Hex(inData, inLength).c_str());
@@ -120,7 +122,7 @@ struct SKeyBlock : public RefCount {    // AuthPubKeyBlock
         this->mKey.mFail = !sAllPass && (At(inData, inLength, 0) & 4);
         Log("block#%d %s", this->mSerial, Hex(inData, inLength).c_str());
     }
-    bool IsValid() const { return this->mValid; }
+    bool IsValid() const { Log("isvalid#%d", this->mSerial); return this->mValid; }
     unsigned short GetId() const { return this->mId; }
     const SKey& GetCurrentKey() const { return this->mKey; }
     bool IsValidAndVerified(const SKey&) const { Log("verified#%d", this->mSerial); return this->mVerified; }
@@ -133,11 +135,22 @@ struct SKeyBlock : public RefCount {    // AuthPubKeyBlock
 
 struct SPeerData : public RefCount {    // AuthPeerData
     int mSerial;
-    SPeerData(const SCert1* c1, const SKeyBlock* b, const SKey&, time_t d, const SCert2* c2)
+    ConstSmartPtr<SKeyBlock> mKeyBlock;
+    time_t mDelta;
+    SPeerData(const SCert1* c1, const SKeyBlock* b, const SKey&, time_t d, const SCert2* c2) : mKeyBlock(b), mDelta(d)
     {
         this->mSerial = ++sSerial;
         Log("peer#%d c%d b%d d%d c%d", this->mSerial, c1 ? c1->mSerial : 0, b ? b->mSerial : 0, (int)d, c2 ? c2->mSerial : 0);
     }
+    // AuthPeerData(const AuthPubKeyBlock*): an empty key block when none
+    explicit SPeerData(const SKeyBlock* b) : mKeyBlock(b), mDelta(0)
+    {
+        if (this->mKeyBlock.get() == NULL) this->mKeyBlock = new SKeyBlock();
+        this->mSerial = ++sSerial;
+        Log("peer#%d b%d", this->mSerial, this->mKeyBlock->mSerial);
+    }
+    const SKeyBlock* GetPubKeyBlock() const { return this->mKeyBlock.get(); }
+    time_t GetAuthDelta() const { return this->mDelta; }
 };
 
 struct SSessionKey {    // Blowfish
@@ -172,13 +185,16 @@ struct SAuthContext {
     SKey mVerifier;
     std::wstring mUser, mPassword;
     std::string mCommunity;
+    ConstSmartPtr<SPeerData> mPeer;
     const SKey& GetVerifierKey() const { return this->mVerifier; }
+    ConstSmartPtr<SPeerData> GetPeerData() const { Log("getpeer#%d", this->mPeer->mSerial); return this->mPeer; }
+    void LoadSecretList() { Log("load"); }
     const std::wstring& GetUserName() const { return this->mUser; }
     const std::wstring& GetPassword() const { return this->mPassword; }
     void RemoveSecret(const void* p) { Log("remove %s", Hex(p, 16).c_str()); }
     void AddSecret(const void* p) { Log("add %s", Hex(p, 16).c_str()); }
     void CommitSecrets(time_t a, time_t b) { Log("commit %d %d", (int)a, (int)b); }
-    void SetPeerData(const SPeerData* p) { Log("setpeer#%d", p ? p->mSerial : 0); }
+    void SetPeerData(const SPeerData* p) { Log("setpeer#%d", p ? p->mSerial : 0); this->mPeer = p; }
     void SetPassword(const std::wstring& p) { Log("password %d", (int)p.size()); }
     void ClearOneTimeData() { Log("clear"); }
     void AppendCommunityData(WriteBuffer& w) { Log("community"); w.AppendBytes(this->mCommunity.data(), (unsigned long)this->mCommunity.size()); }
@@ -203,11 +219,20 @@ struct SOp {
     std::vector<std::string> mErrorList;
     std::list<COMMUNITY_STATUS> mCommunityStatusList;
     ByteBufferPtr mRequest, mResponse;
+    time_t mAuthDelta;
+    int mStatus;
+    SOp() : mAuthDelta(0), mStatus(0) {}
     void SetLastServerError(WONStatus s) { Log("lasterror %d", (int)s); }
     WONStatus InvalidReplyHeader() { Log("invalid"); return WS_ServerReq_TryNextServer; }
+    // AsyncOp's and ServerRequestOp's parts the op calls
+    void Finish(int s) { Log("finish %d", s); }
+    int GetStatus() const { Log("status %d", this->mStatus); return this->mStatus; }
+    void BaseRunHook() { Log("baserun"); }
+    void BaseCleanupHook() { Log("baseclean"); }
     std::string Dump() const
     {
-        std::string s = "state " + std::to_string((int)this->mState) + " block " +
+        std::string s = "state " + std::to_string((int)this->mState) + " delta " +
+                        std::to_string((long long)this->mAuthDelta) + " block " +
                         std::to_string(this->mKeyBlock.get() ? this->mKeyBlock->mSerial : 0) + " peer " +
                         std::to_string(this->mPeerData.get() ? this->mPeerData->mSerial : 0) + " seed " +
                         Hex(this->mChallengeSeed.data(), this->mChallengeSeed.size()) + " key " +
@@ -565,6 +590,47 @@ WONStatus CheckResponse(SOp& o)
 
     return HandleLoginChallenge(o, aMsg);
 }
+
+// the op's other steps (GetCertOp.cpp before the port; the base class's calls are the stand-in's)
+void RunHook(SOp& o)
+{
+    if (!o.mAuthContext->GetVerifierKey().IsPublic()) {
+        o.Finish(100070);   // WS_GetCert_NeedVerifierKey
+        return;
+    }
+
+    ConstSmartPtr<AuthPeerData> peerData = o.mAuthContext->GetPeerData();
+    o.mKeyBlock = peerData->GetPubKeyBlock();
+    o.mAuthDelta = peerData->GetAuthDelta();
+    o.mAuthContext->LoadSecretList();
+    o.BaseRunHook();
+}
+
+void CleanupHook(SOp& o)
+{
+    if (o.GetStatus() != WS_Success && o.mKeyBlock->IsValid() && !o.mAuthContext->GetPeerData()->GetPubKeyBlock()->IsValid())
+        o.mAuthContext->SetPeerData(new AuthPeerData(o.mKeyBlock));
+
+    o.BaseCleanupHook();
+}
+
+void Reset(SOp& o)
+{
+    o.mState = SOp::GETTING_PUB_KEYS;
+    o.mChallengeSeed.erase();
+    o.mErrorList.clear();
+    o.mCommunityStatusList.clear();
+}
+
+WONStatus GetNextRequest(SOp& o)
+{
+    if (!o.mKeyBlock->IsValid())
+        return SendPubKeyRequest(o);
+    else if (o.mState == SOp::GETTING_CHALLENGE)
+        return SendLoginConfirm(o);
+    else
+        return SendLoginRequest(o);
+}
 } // namespace Orig
 
 // ---- the scenarios
@@ -825,6 +891,149 @@ static void TestRequests()
     }
 }
 
+// ---- the whole op: a setup and a sequence of steps on one op (RunHook, GetNextRequest, CheckResponse, Reset,
+// CleanupHook, the setters), the trace, the return or throw and the members after each step
+
+struct Step {
+    int mKind;          // 0 RunHook, 1 GetNextRequest, 2 CheckResponse, 3 Reset, 4 CleanupHook, 5 the setters
+    std::string mReply; // 2: the reply
+    int mStatus;        // 4: the op's status
+    std::wstring mNew;  // 5: SetNewPassword
+    bool mCreate;       // 5: SetCreateAccount
+};
+struct Seq {
+    Setup mSetup;
+    bool mAllPass, mPublic, mPeerBlock;
+    std::string mPeerBlockBytes;
+    int mPeerDelta;
+    std::vector<Step> mSteps;
+    void Generate()
+    {
+        this->mSetup.Generate();
+        this->mAllPass = Pick(4) == 0;
+        this->mPublic = Pick(8) != 0;
+        this->mPeerBlock = Pick(3) != 0;
+        this->mPeerBlockBytes = ABytes(3);
+        this->mPeerDelta = Pick(3) ? (int)Next() % 100000 - 50000 : 0;
+        int n = 1 + Pick(9);
+        for (int i = 0; i < n; i++) {
+            Step s;
+            static const int kKinds[] = {0, 1, 1, 2, 2, 2, 3, 4, 5};
+            s.mKind = i == 0 && Pick(2) ? 0 : kKinds[Pick(9)];
+            s.mStatus = 0;
+            s.mCreate = false;
+            if (s.mKind == 2) {
+                s.mReply = GenReply(1 + Pick(3));
+                if (Pick(4) == 0 && !s.mReply.empty()) s.mReply.resize(Pick((int)s.mReply.size()));
+            } else if (s.mKind == 4) {
+                static const int kStatus[] = {0, 0, 100057, -5, 100070};
+                s.mStatus = kStatus[Pick(5)];
+            } else if (s.mKind == 5) {
+                s.mNew = Pick(3) ? AWString() : std::wstring();
+                s.mCreate = Pick(2) != 0;
+            }
+            this->mSteps.push_back(s);
+        }
+    }
+    // the stand-ins' setup, then the trace cleared
+    void Apply(SOp& o, SAuthContext& c) const
+    {
+        this->mSetup.Apply(o, c);
+        c.mVerifier.mPublic = this->mPublic;
+        SKeyBlock* b = NULL;
+        if (this->mPeerBlock) {
+            b = new SKeyBlock(this->mPeerBlockBytes.data(), 3);
+            b->mKey.mFail = this->mSetup.mEncryptFail;
+        }
+        SPeerData* p = new SPeerData(b);
+        p->mDelta = this->mPeerDelta;
+        c.mPeer = p;
+        sTrace.clear();
+    }
+    std::string Line() const
+    {
+        const Setup& s = this->mSetup;
+        std::string u, p, n;
+        WideAppendUtf16LE(u, s.mUser);
+        WideAppendUtf16LE(p, s.mPassword);
+        WideAppendUtf16LE(n, s.mNew);
+        char aBuffer[128];
+        snprintf(aBuffer, sizeof(aBuffer), "S %d %d %d %d %d %d %d %d %d", s.mState, s.mSeed, s.mBlock, s.mEncryptFail,
+                 s.mCreate, this->mAllPass, this->mPublic, this->mPeerBlock, this->mPeerDelta);
+        return std::string(aBuffer) + " " + Hex(s.mBlockBytes.data(), 3) + " " + Hex(this->mPeerBlockBytes.data(), 3) +
+               " u" + Hex(u.data(), u.size()) + " p" + Hex(p.data(), p.size()) + " n" + Hex(n.data(), n.size()) +
+               " c" + Hex(s.mCommunity.data(), s.mCommunity.size());
+    }
+};
+
+static std::string StepLine(const Step& s)
+{
+    std::string a;
+    if (s.mKind == 2) a = s.mReply.empty() ? "-" : Hex(s.mReply.data(), s.mReply.size());
+    else if (s.mKind == 4) a = std::to_string(s.mStatus);
+    else if (s.mKind == 5) {
+        std::string n;
+        WideAppendUtf16LE(n, s.mNew);
+        a = (s.mCreate ? "1n" : "0n") + Hex(n.data(), n.size());
+    } else a = "-";
+    return "T " + std::to_string(s.mKind) + " " + a;
+}
+
+// one step on the original's statements: "threw status|trace|dump"
+static std::string OrigStep(SOp& o, const Step& s)
+{
+    sTrace.clear();
+    bool threw = false;
+    int status = 0;
+    try {
+        switch (s.mKind) {
+        case 0: Orig::RunHook(o); break;
+        case 1: status = Orig::GetNextRequest(o); break;
+        case 2:
+            o.mResponse = new ByteBuffer(s.mReply.data(), (unsigned long)s.mReply.size(), false);
+            status = Orig::CheckResponse(o);
+            break;
+        case 3: Orig::Reset(o); break;
+        case 4: o.mStatus = s.mStatus; Orig::CleanupHook(o); break;
+        case 5: o.mNewPassword = s.mNew; o.mCreateAccount = s.mCreate; break;
+        }
+    } catch (ReadBufferException&) {
+        threw = true;
+    } catch (OrigCrash&) {
+        return "crash|" + sTrace;
+    }
+    return std::to_string((int)threw) + " " + std::to_string(status) + "|" + sTrace + "|" + o.Dump() + " ctxpeer " +
+           std::to_string(o.mAuthContext->mPeer->mSerial);
+}
+
+// the original's run of a sequence, a line per step; it stops at a crash
+static std::vector<std::string> OrigSequence(const Seq& q)
+{
+    std::vector<std::string> out;
+    SOp o;
+    SAuthContext c;
+    sAllPass = q.mAllPass;
+    q.Apply(o, c);
+    for (size_t i = 0; i < q.mSteps.size(); i++) {
+        out.push_back(OrigStep(o, q.mSteps[i]));
+        if (out.back().compare(0, 6, "crash|") == 0) break;
+    }
+    sAllPass = false;
+    return out;
+}
+
+// the golden of the whole op: a setup line, then each step and what the original did
+static void PrintOps(int inCount)
+{
+    for (int i = 0; i < inCount; i++) {
+        Seq q;
+        q.Generate();
+        std::vector<std::string> r = OrigSequence(q);
+        printf("%s\n", q.Line().c_str());
+        for (size_t j = 0; j < r.size(); j++) printf("%s => %s\n", StepLine(q.mSteps[j]).c_str(), r[j].c_str());
+    }
+}
+
 // the golden: state, the reply, what the original read with every check passing ("cut" after a throw)
 static void Print(int inCount)
 {
@@ -847,10 +1056,15 @@ static void Print(int inCount)
 
 int main(int argc, char** argv)
 {
-    int aPrint = 0;
+    int aPrint = 0, aPrintOps = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--print") && i + 1 < argc) aPrint = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--print-ops") && i + 1 < argc) aPrintOps = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--seed") && i + 1 < argc) sSeed = (unsigned)atoi(argv[++i]);
+    }
+    if (aPrintOps) {
+        PrintOps(aPrintOps);
+        return 0;
     }
     if (aPrint) {
         Print(aPrint);
