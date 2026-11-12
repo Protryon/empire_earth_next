@@ -26,6 +26,8 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
+#include "rust/ee_rust.h"
 
 extern EEEffectManager*& gEffectManager;
 extern EEWorld gWorld;
@@ -99,6 +101,7 @@ void EEAreaEffectFunctor::Update(float inElapsedTime, EECalamity* inCalamity)
 // Plays the target effect at the calamity's target on the ground (at height 0 on water terrain types 1 and 10)
 void EEAreaEffectFunctor::Infect(EEUnit* inUnit, EECalamity* inCalamity)
 {
+    EECalamityCaptureContagionEvent(kContagionInfect, inUnit->mUnitID);   // CONT (TEST ONLY)
     GE3DPoint theLocation;
     inCalamity->GetTargetLocation(theLocation);
     long theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))->mTerrainType;
@@ -118,12 +121,13 @@ void EEAreaEffectFunctor::Apply(EEUnit* inUnit, float inElapsedTime, EECalamity*
     EEUnit* theCaster = inCalamity->mCasterUnit;
     if (!(this->mUpdates > 0))
         return;
-    float theValue = (float)(this->mDamage * this->mUpdates) * inUnit->mStats->GetAttack();
-    long theDamage = UMFloatToLong(theValue);
-    if (theDamage <= 1)
+    // the tick's damage times the unit's attack stat; 0: 1 or less, none (ee_tech contagion.rs)
+    long theDamage = ee_contagion_area_damage((int32_t)this->mDamage, (uint32_t)this->mUpdates, inUnit->mStats->GetAttack());
+    if (theDamage == 0)
         return;
     if (this->mEffect3 != NULL)
         gEffectManager->CreateUnitEffect(inUnit, this->mEffect3, NULL, false, 0, 0);
+    EECalamityCaptureContagionEvent(kContagionDamage, inUnit->mUnitID, theDamage);   // CONT (TEST ONLY)
     inUnit->TakeHit(theCaster, theDamage, inCalamity->mPlayerNumber, this->mMode);
 }
 

@@ -56,9 +56,9 @@ EECCMeteorStorm::~EECCMeteorStorm()
 // Starts a meteor storm: the first meteor falls at time 100, the first sound at once
 bool EECCMeteorStorm::Start(EECalamity* inCalamity)
 {
-    inCalamity->mFloatPlaceHolder1 = 100.0f;
-    inCalamity->mFloatPlaceHolder2 = 0.0f;
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
 }
 
 // ICF-FOLDED: EXE 0x557269

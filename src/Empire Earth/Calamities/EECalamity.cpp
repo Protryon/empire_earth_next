@@ -31,6 +31,7 @@
 #include "ee/EEVectorIO.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "rust/ee_rust.h"
 
 const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
 const UString EECalamity::mTargetUnitStringID("TargetUnitStringID");
@@ -327,12 +328,10 @@ long EECalamity::GetOutOfSynchChecksum()
 // Returns how many whole discrete update periods have elapsed and keeps the remainder
 unsigned long EECalamity::GetDiscreteUpdates()
 {
-    unsigned long theUpdates = 0;
-    if (this->mDiscreteUpdateTime != 0.0f) {
-        theUpdates = UMFloatToLong(this->mTimeElapsedSinceLastUpdate / this->mDiscreteUpdateTime);
-        this->mTimeElapsedSinceLastUpdate -= theUpdates * this->mDiscreteUpdateTime;
-    }
-    return theUpdates;
+    // the periods and the time left are Rust (ee_tech contagion.rs discrete_updates)
+    EeCalamityDiscrete theDiscrete = ee_calamity_discrete_updates(this->mTimeElapsedSinceLastUpdate, this->mDiscreteUpdateTime);
+    this->mTimeElapsedSinceLastUpdate = theDiscrete.elapsed;
+    return theDiscrete.updates;
 }
 
 // FUNCTION: EXE 0x4ad5fc

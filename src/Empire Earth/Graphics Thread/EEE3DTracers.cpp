@@ -43,6 +43,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DTracers.h"
+#include "ee/EECombatFormulas.h"
 
 // SYNTHETIC: EXE 0x4fd330
 // SYNTHETIC: EXE 0x4fd33a
@@ -59,35 +60,19 @@ EEE3DTracers::EEE3DTracers(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGrap
     GE3DPoint theStart;
     GE3DPoint theEnd;
     GE3DPoint theOffset;
-    GETransformation theFromTransformation(inFrom->mComplexUnit->mPhysicalModel.GetLocation());
     GETransformation theToTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
     GEVector theDirection;
     EEModel* theModel = inFrom->GetModel();
     EEComplexUnit* theUnit = inFrom->mComplexUnit;
     EETagPointList* theList = inFrom->GetModel()->mTagPoints[theUnit->GetAnimation()];
-    float theScale = inFrom->mComplexUnit->mPhysicalModel.GetScale();
     float theToScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
-    unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
-    unsigned long theIndex = theUnit->mWeaponTagPoint;
     this->mPosition = 0.0f;
     this->mGraphicObject = NULL;
     this->mDrawPosition = 0.0f;
-    if (theList != NULL && theList->GetNumTagPoints() != 0) {
-        EETagPointList::Scale(theFromTransformation, theScale);
-        if (theModel->GetNumParts() > 0) {
-            GETransformation thePartTransformation(false);
-            unsigned long theModelIndex;
-            thePartTransformation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, theModelIndex) == 0)
-                thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theFromTransformation, thePartTransformation, theStart);
-        } else {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theFromTransformation, theStart);
-        }
+    // the start is ee_combat's weapon_point (EECombatEffectWeaponPoint)
+    EECombatEffectWeaponPoint(7, theUnit, theModel, theList, theList != NULL && theList->GetNumTagPoints() != 0, theStart);
+    if (theList != NULL && theList->GetNumTagPoints() != 0)
         EETagPointList::Scale(theToTransformation, theToScale);
-    } else {
-        theFromTransformation.Apply(inFrom->GetModel()->mDefaultPoint, theStart);
-    }
     theOffset = inTo->GetModel()->PickPoint();
     theToTransformation.Apply(theOffset, theEnd);
     theDirection.SetX(theEnd.GetX() - theStart.GetX());

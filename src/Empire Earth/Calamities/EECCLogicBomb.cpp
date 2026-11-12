@@ -64,26 +64,11 @@ static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation);
 // the sound there (at the origin when no launch effect was sent)
 bool EECCLogicBomb::Start(EECalamity* inCalamity)
 {
-    GE3DPoint theLocation;
-    EEUnit* theTargetUnit = NULL;
-    EEEffectHandle theEffectHandle;
-    float theVolume;
-    float thePan;
-    float thePitch;
-
-    if (inCalamity->GetTargetUnit(theTargetUnit) && theTargetUnit->mComplexUnit->IsProtected())
-        return false;
-    if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
-        theLocation = inCalamity->mTargetLocation;
-        AdjustLocation(inCalamity, &theLocation);
-        gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, &theEffectHandle, 0);
-    }
-    EEComputeSoundParameters(this->mSound->GetVolume(), theLocation, theVolume, thePan, thePitch, kCalamitySoundFalloff);
-    inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), theVolume, thePan,
-                                                                    thePitch, this->mSound->GetLooping(), NULL));
-    if (inCalamity->mSound != NULL)
-        inCalamity->mSound->Dereference();
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCLogicBomb::StartStep);
 }
 
 // FUNCTION: EXE 0x4b21c2
@@ -107,20 +92,11 @@ static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation)
 // Re-enables the target unit (giving a wonder back to its player), removes the disable effect and stops the sounds
 void EECCLogicBomb::Stop(EECalamity* inCalamity)
 {
-    EEUnit* theTargetUnit = NULL;
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        theTargetUnit->mComplexUnit->SetDisabled(0, 0);
-        theTargetUnit->mUnitClass->ActionChanged(theTargetUnit->mComplexUnit);
-        EETechTreeNode* theNode = theTargetUnit->GetTechTreeNode();
-        if (theNode != NULL && theNode->mData->mKind == 4)
-            theTargetUnit->mPlayer->AddWonder(theTargetUnit->mComplexUnit, false);
-    }
-    if (inCalamity->mEffectHandle != kNoEffectHandle) {
-        gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
-        inCalamity->mEffectHandle = kNoEffectHandle;
-    }
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCLogicBomb::StartStep);
 }
 
 // FUNCTION: EXE 0x4b22ad
@@ -260,4 +236,49 @@ bool EECCLogicBomb::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
     // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     return EECalamityValidTarget(this, inUnit, inTargetUnit);
+}
+
+// New (port): EECCLogicBomb's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCLogicBomb::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCLogicBomb* theClass = static_cast<EECCLogicBomb*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        AdjustLocation(theCalamity, &theLocation);
+        outReply.x = theLocation.mX;
+        outReply.y = theLocation.mY;
+        outReply.z = theLocation.mZ;
+        return true;
+    }
+    case 2: {
+        // the target enabled again; its node's kind (-1 without one)
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        theTargetUnit->mComplexUnit->SetDisabled(0, 0);
+        theTargetUnit->mUnitClass->ActionChanged(theTargetUnit->mComplexUnit);
+        EETechTreeNode* theNode = theTargetUnit->GetTechTreeNode();
+        outReply.value = theNode != NULL ? (int32_t)theNode->mData->mKind : -1;
+        return true;
+    }
+    case 3: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        theTargetUnit->mPlayer->AddWonder(theTargetUnit->mComplexUnit, false);
+        return true;
+    }
+    case 4: {
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        EEEffectHandle theEffectHandle;
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
+        gEffectManager->CreateEffect(theCalamity->mCasterUnit, theLocation, theClass->mGraphicEffect1, &theEffectHandle, 0);
+        return true;
+    }
+    default:
+        return false;
+    }
 }

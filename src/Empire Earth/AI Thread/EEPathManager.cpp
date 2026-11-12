@@ -1823,6 +1823,21 @@ void EEPathManager::DumpSim(FILE* inFile)
     fprintf(inFile, "\nPATHMANAGER history=%zu regions=%zu prunehistory=%ld pruneregions=%ld nextrequest=%ld nextregion=%lu updating=%d\n",
             this->mHistory.size(), this->mRegions.size(), this->mNextHistoryPruneTime, this->mNextRegionPruneTime,
             this->mNextRequestID, this->mNextRegionTime, this->mIsUpdatingRegions ? 1 : 0);
+    // the bounded machine's storage (FindPath, FindBoundedPath: one machine kept from search to search), as a digest
+    // of its bytes (ee_astar storage_save.rs), and the C++ members around it
+    unsigned long theHash = 2166136261u, theSize = 0;
+    if (this->mBoundedMachine != NULL) {
+        std::vector<unsigned char> theBytes(ee_astar_save(this->mBoundedMachine->mCore, NULL, 0));
+        ee_astar_save(this->mBoundedMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+        for (size_t i = 0; i < theBytes.size(); i++)
+            theHash = (uint32_t)((theHash ^ theBytes[i]) * 16777619u);
+        theSize = (unsigned long)theBytes.size();
+    }
+    fprintf(inFile, "BOUNDED %d bytes=%lu hash=%08lx", this->mBoundedMachine != NULL ? 1 : 0, theSize, theHash);
+    if (this->mBoundedMachine != NULL)
+        fprintf(inFile, " size=%ld,%ld map=%ld,%ld found=%d", this->mBoundedMachine->mWidth, this->mBoundedMachine->mHeight,
+                this->mBoundedMachine->mMapWidth, this->mBoundedMachine->mMapHeight, this->mBoundedMachine->mFound ? 1 : 0);
+    fprintf(inFile, "\n");
 }
 
 // port (save version 0.256): the history (newest first), the region maps (by unit id, then tile) and the timers.
@@ -1933,6 +1948,262 @@ long EEPathManager::LoadRunningState(FSFile& inFile)
             theManager.mNextRegionTime = theState->mNextRegionTime;
             theManager.mIsUpdatingRegions = theState->mIsUpdatingRegions;
         });
+    return theResult;
+}
+
+// port (save version 0.276): a unit's tile search in progress as saved (SaveSearches); its storage as ee_astar's
+// bytes (rust/crates/ee_astar storage_save.rs)
+namespace {
+struct EESavedSearch {
+    unsigned long mUnitID = 0;
+    EETileCoordinate mTile;                 // the node's
+    long mPasses = 0, mL04 = 0, mL20 = 0, mL24 = 0, mL28 = 0, mL2C = 0;
+    EETileCoordinate mMachineTile;          // the machine's
+    long mType = 0, mRevs = 0, mNumRuns = 0, mSteps = 0, mMapWidth = 0, mMapHeight = 0;
+    bool mCheckCorners = false, mFound = false;
+    long mStorageWidth = 0, mStorageHeight = 0;
+    U2DPoint<long> mStartTile, mGoalTile;   // the goal's
+    long mRevLimit = -1, mMaxRevs = -1;
+    bool mFlags[6] = {false, false, false, false, false, false};
+    std::vector<U2DPoint<long> > mBlockedTiles, mUnitTiles;
+    EEAIAStarBounds mBounds[3];             // mBounds24, mGoalBounds, mStartBounds
+    U2DPoint<long> mDestination;
+    long mL64 = 0;
+    float mOffsetX = 0.5f, mOffsetY = 0.5f;
+    unsigned short mContinentID = 0;
+    bool mIsBounded = false, mAvoidUnits = false;
+    std::vector<unsigned char> mStorage;
+};
+
+void EEWritePoints(FSFile& outFile, const std::vector<U2DPoint<long> >& inPoints)
+{
+    outFile.Write((unsigned long)inPoints.size());
+    for (size_t i = 0; i < inPoints.size(); i++) {
+        outFile.Write(inPoints[i].mX);
+        outFile.Write(inPoints[i].mY);
+    }
+}
+
+long EEReadPoints(FSFile& inFile, std::vector<U2DPoint<long> >& outPoints)
+{
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        U2DPoint<long> thePoint;
+        theResult = inFile.Read(thePoint.mX);
+        if (theResult == 0)
+            theResult = inFile.Read(thePoint.mY);
+        outPoints.push_back(thePoint);
+    }
+    return theResult;
+}
+
+// a search SaveSearches writes: a unit's own tile search on an EEPathMachine (not the bounded machine, mType 4; no
+// group request: those come from a graph search's request, RequestUnitPaths)
+EEPathMachine* EESavableSearch(EEPathManagerNode* inNode)
+{
+    if (inNode == NULL || inNode->mUnit == NULL || inNode->mRequest != NULL || inNode->mPathMachine == NULL
+        || inNode->mPathMachine->mType == 4)
+        return NULL;
+    return dynamic_cast<EEPathMachine*>(inNode->mPathMachine);
+}
+}   // namespace
+
+void EEPathManager::SaveSearches(FSFile& outFile)
+{
+    std::vector<EEPathManagerNode*> theNodes;
+    for (size_t i = 0; i < this->mPaths.size(); i++)
+        if (EESavableSearch(this->mPaths[i]) != NULL)
+            theNodes.push_back(this->mPaths[i]);
+    outFile.Write((unsigned long)theNodes.size());
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        EEPathManagerNode* theNode = theNodes[i];
+        EEPathMachine* theMachine = EESavableSearch(theNode);
+        EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
+        outFile.Write((unsigned long)theNode->mUnit->mUnitID);
+        outFile.Write(theNode->mTile.mX);
+        outFile.Write(theNode->mTile.mY);
+        const long theNodeFields[] = {theNode->mPasses, theNode->mL04, theNode->mL20, theNode->mL24, theNode->mL28, theNode->mL2C};
+        for (long f : theNodeFields)
+            outFile.Write(f);
+        outFile.Write(theMachine->mTile.mX);
+        outFile.Write(theMachine->mTile.mY);
+        const long theMachineFields[] = {theMachine->mType, theMachine->mRevs, theMachine->mNumRuns, theMachine->mSteps,
+                                         theMachine->mMapWidth, theMachine->mMapHeight, theMachine->mWidth, theMachine->mHeight};
+        for (long f : theMachineFields)
+            outFile.Write(f);
+        outFile.Write(theMachine->mCheckCorners);
+        outFile.Write(theMachine->mFound);
+        outFile.Write(theGoal.mStartTile.mX);
+        outFile.Write(theGoal.mStartTile.mY);
+        outFile.Write(theGoal.mGoalTile.mX);
+        outFile.Write(theGoal.mGoalTile.mY);
+        outFile.Write(theGoal.mRevLimit);
+        outFile.Write(theGoal.mMaxRevs);
+        const bool theFlags[6] = {theGoal.mSearchFailed, theGoal.mB29, theGoal.mAcceptNearest, theGoal.mB2B, theGoal.mB2C,
+                                  theGoal.mTookNearest};
+        for (bool f : theFlags)
+            outFile.Write(f);
+        EEWritePoints(outFile, theGoal.mBlockedTiles);
+        EEWritePoints(outFile, theGoal.mUnitTiles);
+        const EEAIAStarBounds* theBounds[3] = {&theGoal.mBounds24, &theGoal.mGoalBounds, &theGoal.mStartBounds};
+        for (const EEAIAStarBounds* b : theBounds) {
+            outFile.Write(b->mBottom);
+            outFile.Write(b->mLeft);
+            outFile.Write(b->mRight);
+            outFile.Write(b->mTop);
+        }
+        outFile.Write(theGoal.mDestination.mX);
+        outFile.Write(theGoal.mDestination.mY);
+        outFile.Write(theGoal.mL64);
+        outFile.Write(theGoal.mOffsetX);
+        outFile.Write(theGoal.mOffsetY);
+        outFile.Write(theGoal.mContinentID);
+        outFile.Write(theGoal.mIsBounded);
+        outFile.Write(theGoal.mAvoidUnits);
+        std::vector<unsigned char> theBytes(ee_astar_save(theMachine->mCore, NULL, 0));
+        ee_astar_save(theMachine->mCore, theBytes.data(), (uint32_t)theBytes.size());
+        outFile.Write((unsigned long)theBytes.size());
+        unsigned long theWritten = 0;
+        if (!theBytes.empty())
+            outFile.Write(theBytes.data(), (unsigned long)theBytes.size(), theWritten);
+    }
+}
+
+long EEPathManager::LoadSearches(FSFile& inFile)
+{
+    std::shared_ptr<std::vector<EESavedSearch> > theSearches = std::make_shared<std::vector<EESavedSearch> >();
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        EESavedSearch s;
+        theResult = inFile.Read(s.mUnitID);
+        long* const theLongs[] = {&s.mTile.mX, &s.mTile.mY, &s.mPasses, &s.mL04, &s.mL20, &s.mL24, &s.mL28, &s.mL2C,
+                                  &s.mMachineTile.mX, &s.mMachineTile.mY, &s.mType, &s.mRevs, &s.mNumRuns, &s.mSteps,
+                                  &s.mMapWidth, &s.mMapHeight, &s.mStorageWidth, &s.mStorageHeight};
+        for (long* f : theLongs)
+            if (theResult == 0)
+                theResult = inFile.Read(*f);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mCheckCorners);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mFound);
+        long* const theGoalLongs[] = {&s.mStartTile.mX, &s.mStartTile.mY, &s.mGoalTile.mX, &s.mGoalTile.mY, &s.mRevLimit,
+                                      &s.mMaxRevs};
+        for (long* f : theGoalLongs)
+            if (theResult == 0)
+                theResult = inFile.Read(*f);
+        for (int f = 0; f < 6 && theResult == 0; f++)
+            theResult = inFile.Read(s.mFlags[f]);
+        if (theResult == 0)
+            theResult = EEReadPoints(inFile, s.mBlockedTiles);
+        if (theResult == 0)
+            theResult = EEReadPoints(inFile, s.mUnitTiles);
+        for (int b = 0; b < 3 && theResult == 0; b++) {
+            long* const theSides[] = {&s.mBounds[b].mBottom, &s.mBounds[b].mLeft, &s.mBounds[b].mRight, &s.mBounds[b].mTop};
+            for (long* f : theSides)
+                if (theResult == 0)
+                    theResult = inFile.Read(*f);
+        }
+        if (theResult == 0)
+            theResult = inFile.Read(s.mDestination.mX);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mDestination.mY);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mL64);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mOffsetX);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mOffsetY);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mContinentID);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mIsBounded);
+        if (theResult == 0)
+            theResult = inFile.Read(s.mAvoidUnits);
+        unsigned long theLength = 0;
+        if (theResult == 0)
+            theResult = inFile.Read(theLength);
+        if (theResult == 0 && theLength > 0) {
+            s.mStorage.resize(theLength);
+            unsigned long theRead = 0;
+            theResult = inFile.Read(s.mStorage.data(), theLength, theRead);
+            if (theResult == 0 && theRead != theLength)
+                theResult = 1;
+        }
+        theSearches->push_back(s);
+    }
+    if (theResult != 0)
+        return theResult;
+    // the units the saved searches hold ask no path again (their unit's Load put them in mPending, as the original's
+    // load did for every unit with a search in progress)
+    for (size_t i = 0; i < theSearches->size(); i++)
+        for (size_t p = this->mPending.size(); p-- > 0;)
+            if (this->mPending[p].mUnitID == (*theSearches)[i].mUnitID)
+                this->mPending.erase(this->mPending.begin() + p);
+    EEAfterLoad([theSearches]() {
+        EEPathManager& theManager = gPathManager;
+        std::deque<EEPathManagerNode*> theRestored;
+        for (size_t i = 0; i < theSearches->size(); i++) {
+            const EESavedSearch& s = (*theSearches)[i];
+            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(s.mUnitID)));
+            if (theUnit == NULL || gWorld.mMap == NULL)
+                continue;
+            EEPathMachine* theMachine = theManager.NewPathMachine(s.mType, gWorld.mMap);   // its sea/space modifier
+            if (!ee_astar_load(theMachine->mCore, s.mStorage.data(), (uint32_t)s.mStorage.size())) {
+                theManager.ReleasePathMachine(theMachine);
+                continue;
+            }
+            theMachine->mWidth = s.mStorageWidth;
+            theMachine->mHeight = s.mStorageHeight;
+            theMachine->mTile = s.mMachineTile;
+            theMachine->mRevs = s.mRevs;
+            theMachine->mNumRuns = s.mNumRuns;
+            theMachine->mSteps = s.mSteps;
+            theMachine->mMapWidth = s.mMapWidth;
+            theMachine->mMapHeight = s.mMapHeight;
+            theMachine->mCheckCorners = s.mCheckCorners;
+            theMachine->mFound = s.mFound;
+            EEAIAStarPathfindingGoal& theGoal = theMachine->mGoal;
+            theGoal.Attach(gWorld.mMap, theMachine, theMachine);   // as Run does at a search's start
+            theGoal.SetUnit(theUnit);
+            theGoal.mStartTile = s.mStartTile;
+            theGoal.mGoalTile = s.mGoalTile;
+            theGoal.mRevLimit = s.mRevLimit;
+            theGoal.mMaxRevs = s.mMaxRevs;
+            theGoal.mSearchFailed = s.mFlags[0];
+            theGoal.mB29 = s.mFlags[1];
+            theGoal.mAcceptNearest = s.mFlags[2];
+            theGoal.mB2B = s.mFlags[3];
+            theGoal.mB2C = s.mFlags[4];
+            theGoal.mTookNearest = s.mFlags[5];
+            theGoal.mBlockedTiles = s.mBlockedTiles;
+            theGoal.mUnitTiles = s.mUnitTiles;
+            theGoal.mBounds24 = s.mBounds[0];
+            theGoal.mGoalBounds = s.mBounds[1];
+            theGoal.mStartBounds = s.mBounds[2];
+            theGoal.mDestination = s.mDestination;
+            theGoal.mL64 = s.mL64;
+            theGoal.mOffsetX = s.mOffsetX;
+            theGoal.mOffsetY = s.mOffsetY;
+            theGoal.mContinentID = s.mContinentID;
+            theGoal.mIsBounded = s.mIsBounded;
+            theGoal.mAvoidUnits = s.mAvoidUnits;
+            EEPathManagerNode* theNode = theManager.NewNode();
+            theNode->SetUnit(theUnit);
+            theNode->mPathMachine = theMachine;
+            theNode->mTile = s.mTile;
+            theNode->mPasses = s.mPasses;
+            theNode->mL04 = s.mL04;
+            theNode->mL20 = s.mL20;
+            theNode->mL24 = s.mL24;
+            theNode->mL28 = s.mL28;
+            theNode->mL2C = s.mL2C;
+            theRestored.push_back(theNode);
+        }
+        // before the searches the load itself queued (RequestPendingPaths: units whose search was not saved)
+        theManager.mPaths.insert(theManager.mPaths.begin(), theRestored.begin(), theRestored.end());
+    });
     return theResult;
 }
 

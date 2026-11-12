@@ -10,12 +10,17 @@
 class EEGraphicEffect;
 class EEPlagueFunctor;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCPlague : public EEUnitCalamityClass {
 public:
     EECCPlague();                           // 0xb2f31
     virtual ~EECCPlague();                  // 0xb2f7c
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb2fac
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb2fba
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual EEContagionFunctor* GetContagionFunctor();           // +0x0c 0xb3001
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb3005
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 0xb30c7 (its contagion helper)

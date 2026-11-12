@@ -63,30 +63,22 @@ EECCFire::~EECCFire()
 // Starts a fire on the target unit with the ignition effect and sound; returns false without a target unit
 bool EECCFire::Start(EECalamity* inCalamity)
 {
-    bool theResult = false;
-    EEUnit* theTargetUnit = NULL;
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        if (this->mGraphicEffect1 != NULL)
-            gEffectManager->CreateUnitEffect(theTargetUnit, this->mGraphicEffect1, NULL, 0, 0, 0);
-        if (this->mSound != NULL) {
-            inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(),
-                                                                            0.0f, 1.0f, this->mSound->GetLooping(), NULL));
-            if (inCalamity->mSound != NULL)
-                inCalamity->mSound->Dereference();
-        }
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCFire::StartStep);
 }
 
 // FUNCTION: EXE 0x4b0f60
 // Stops the fire's sounds and removes its contagion helper
 void EECCFire::Stop(EECalamity* inCalamity)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID), 118);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCFire::StartStep);
 }
 
 // ICF-FOLDED: EXE 0x52c730
@@ -164,4 +156,24 @@ long EECCFire::Update(EECalamity* inCalamity, float inElapsedTime)
 bool EECCFire::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
     return this->mFunctor->CanInfect(inTargetUnit);
+}
+
+// New (port): EECCFire's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCFire::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCFire* theClass = static_cast<EECCFire*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        gEffectManager->CreateUnitEffect(theTargetUnit, theClass->mGraphicEffect1, NULL, 0, 0, 0);
+        return true;
+    }
+    default:
+        return false;
+    }
 }

@@ -55,44 +55,26 @@ EECCMorale::~EECCMorale()
 // false without a target
 bool EECCMorale::Start(EECalamity* inCalamity)
 {
-    EEEffectHandle theEffectHandle;
-    bool theResult = false;
-    EEUnit* theTargetUnit = NULL;
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        if (this->mGraphicEffect != NULL && inCalamity->mCasterUnit != NULL) {
-            gEffectManager->CreateEffectBetweenUnits(inCalamity->mCasterUnit, theTargetUnit->mComplexUnit,
-                                                     this->mGraphicEffect, &theEffectHandle);
-            inCalamity->mEffectHandle = theEffectHandle;
-        }
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(), 0.0f,
-                                                                        1.0f, this->mSound->GetLooping(), NULL));
-        if (inCalamity->mSound != NULL)
-            inCalamity->mSound->Dereference();
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    if (this->mGraphicEffect != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    if (this->mPositive)
+        theParams.flags |= EE_CALAMITY_POSITIVE;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCMorale::StartStep);
 }
 
 // FUNCTION: EXE 0x4b2cad
 // Takes the positive or negative morale count Update gave the target back, removes its effect and stops the sounds
 void EECCMorale::Stop(EECalamity* inCalamity)
 {
-    EEUnit* theTargetUnit;
-    if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        // only a count Update took (once the effect time had passed) is given back
-        if (inCalamity->mBoolPlaceHolder1) {
-            if (this->mPositive)
-                theTargetUnit->mComplexUnit->mPositiveMorale--;
-            else
-                theTargetUnit->mComplexUnit->mNegativeMorale--;
-        }
-        if (inCalamity->mEffectHandle != kNoEffectHandle) {
-            gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
-            inCalamity->mEffectHandle = kNoEffectHandle;
-        }
-    }
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    if (this->mGraphicEffect != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    if (this->mPositive)
+        theParams.flags |= EE_CALAMITY_POSITIVE;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCMorale::StartStep);
 }
 
 // FUNCTION: EXE 0x4b2d13
@@ -193,4 +175,37 @@ bool EECCMorale::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
     // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     return EECalamityValidTarget(this, inUnit, inTargetUnit);
+}
+
+// New (port): EECCMorale's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCMorale::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCMorale* theClass = static_cast<EECCMorale*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        EEEffectHandle theEffectHandle;
+        gEffectManager->CreateEffectBetweenUnits(theCalamity->mCasterUnit, theTargetUnit->mComplexUnit, theClass->mGraphicEffect,
+                                                 &theEffectHandle);
+        outReply.id = theEffectHandle.mValue;
+        return true;
+    }
+    case 2:
+    case 3: {
+        EEUnit* theTargetUnit = NULL;
+        theCalamity->GetTargetUnit(theTargetUnit);
+        if (inCall.index == 2)
+            theTargetUnit->mComplexUnit->mPositiveMorale--;
+        else
+            theTargetUnit->mComplexUnit->mNegativeMorale--;
+        return true;
+    }
+    default:
+        return false;
+    }
 }

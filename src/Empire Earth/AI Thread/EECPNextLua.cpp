@@ -1049,7 +1049,7 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 3);
+    EECPNextPut(outBytes, 4);
     EECPNextPut(outBytes, s->mClaimRange);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mReserve[i]);
@@ -1096,6 +1096,9 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
     EECPNextPutSpots(outBytes, s->mThreats);
     EECPNextPut(outBytes, s->mThreatsTime);
+    // version 4 (save 0.274): the walkers sent to see a site (§8.36), as the spots: a load without them sent a new
+    // walker at its first step where the running game's walker still stood there
+    EECPNextPutSpots(outBytes, s->mExplore);
 }
 
 // the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
@@ -1107,7 +1110,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 3)
+    if (theVersion < 1 || theVersion > 4)
         return false;
     s->mClaimRange = g.Get();
     for (long i = 0; i < kNextResources; i++)
@@ -1168,6 +1171,9 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
         EECPNextGetSpots(g, s->mThreats);
         s->mThreatsTime = g.Get();
     }
+    s->mExplore.clear();
+    if (theVersion >= 4)
+        EECPNextGetSpots(g, s->mExplore);
     if (!g.mOK || g.mOffset != inBytes.size())
         return false;
     delete s->mLua;

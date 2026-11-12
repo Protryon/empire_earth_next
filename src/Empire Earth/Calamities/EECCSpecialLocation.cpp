@@ -39,7 +39,9 @@ EECCSpecialLocation::~EECCSpecialLocation()
 // (`return true`: identical to EECCSpecialAttack::Start)
 bool EECCSpecialLocation::Start(EECalamity* inCalamity)
 {
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
 }
 
 // ICF-FOLDED: EXE 0x557269

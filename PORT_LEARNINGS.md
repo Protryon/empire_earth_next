@@ -6747,6 +6747,70 @@ below them keeps its C++ API as shims over the Rust objects.
   the broadcast and join timeouts through the timer thread. EE-SIM never loads the lobby: the oracle cannot see a
   fault here; the lead's LAN game is the end-to-end check.
 
+## R5b.2, third round: the calamity classes' Start and Stop, the contagion helpers and functors, Unlock, ResearchAll and the tech tree's walks in Rust (ee_tech calamity_start.rs, contagion.rs, tree.rs; branch rust-tech3, 2026-11-11)
+
+Every calamity class's `Start` and `Stop`, the contagion helper's `Update` with its spread, the functors' damage
+arithmetic and the calamity's discrete updates, the epoch's `Unlock` and `ResearchAll` and the tech tree's remaining
+walks and tests are Rust. The C++ keeps the classes, the helper and its unit list, the functors' world calls, the
+nodes and every world step.
+
+- **Capture first, from the unmodified C++** (commits 965c6833, 6630937e; `ee/EETechCapture.h`):
+  CALT (every `Start` and `Stop`: the calamity's numeric state with its rectangle and sounds, its target's and
+  caster's unit state (hit points, disabled flag and reason, sight, morale counts, cloak, calamity flags, fire effect,
+  area effects), the contagion manager's helper count and next id and the effect manager's sizes, before and after;
+  the effects a start places with their locations and the sounds it places with their volume and pan; the result),
+  CONT (every contagion helper update: its timers, the calamity's discrete timer and the held units before and after,
+  and in order the spread with its chance, every near unit with what passed and the draw and distance it took, the
+  new units (added, immune, skipped), the functor's update, the applies, the removals, the functors' infects, cures
+  and damage), TNWK (Unlock, ResearchAll, ResearchKind, an epoch's ObsoleteOutdatedNodes and MakeObsolete, a node's
+  SetObsolete and NeedsUnitMedia, an epoch's GetBuildTime, SetEpoch, AdvanceEpoch, SetNodeAvailable: the arguments,
+  the per-node steps, the node and the tree after, the result; walks nest through the events their steps fire, so
+  each opens its own step list). In the same runs every existing digest of the four profiles equalled its golden.
+- **Start and Stop over the update's host.** `calamity_start::start`/`stop` dispatch on the class enum and run the
+  class's decisions; the shared world steps are new `EeCalamityOp`s answered in `EECalamityUpdate.cpp` (the sounds,
+  the helper's creation and `ESVERIFY`ed destruction, the height, the killed storm or volcano, the caster's sight,
+  the target's protection and liveness, a tile's terrain), a class's own are `EeCalamityOp::ClassStep` calls its new
+  static `StartStep` answers (its effects, units, payments, orders). The calamity's state travels as for the
+  updates; the cloak's area effect waits in the host (`mPending`) between the steps that create it and cloak the
+  group. `CreateSourceEffect` is gone (its decisions are the earthquake's start, its world part a step).
+  `EECCAreaEffect::Start` called `GetSourceLocation` and ignored the point (a pure read): the call is dropped. The
+  `DestroyContagionHelper` checks keep their line numbers but now name `EECalamityUpdate.cpp` as their file.
+- **The contagion.** `contagion::update` is the helper's `Update` and `Spread` over `EEContagionHelperHost`: the
+  functor's getters (spread time, chance, radius, skips the spread, allies only) and the class's immunity flag are
+  read once up front (plain getters; the C++ asked some of them per candidate); the near test keeps the
+  short-circuit order (the type test, the allies test, then a draw only when both passed, then the distance only
+  when the draw passed), so the physics draws are the C++'s in count and order. The held units are asked for by
+  index each turn of the loop (the C++'s iterator test), the dead removed in place. The unsigned spread time is
+  compared and subtracted as a float, as the C++ converted it. The functors' arithmetic: the fire's burn
+  `lrintf((burn * 0.01f) * max hit points)`, the tick `damage * updates` (a long times an unsigned long: the
+  32-bit product), the leprosy's Windows `min` with hit points - 1, the area effect's unsigned product converted to
+  a float times the attack stat; `GetDiscreteUpdates` (`lrintf`, stored unsigned, the time left less the count as
+  a float times the period).
+- **The tree.** Per node, as each walk reaches it (an event a step fires can change the tree): Unlock's action
+  (nothing for an obsolete node, available with the epoch, else the epoch prerequisite), ResearchAll's and
+  ResearchKind's choice, ObsoleteOutdatedNodes' test; MakeObsolete's choice, SetObsolete's decision (the flag, the
+  event, whether the media is checked), NeedsUnitMedia, the epoch's build time (half for a computer player, the C
+  division), SetEpoch's test, AdvanceEpoch, SetNodeAvailable's test.
+- **Only the calamity profile exercises the starts and the contagion** (no oracle game casts); the walks run in
+  every profile. Nothing here draws: no change is tour-only, but the start's sounds and effects are world calls the
+  headless EE-SIM makes without a renderer (the effect manager's sizes are in CALT).
+- **A capture record that was not deterministic.** The full run after the port gave TNWK digests unequal to the
+  golden in five oracle seeds and one late seed, and two runs of one build differed: `NeedsUnitMedia` is also asked
+  on the media loader's thread, so its records fell between the game thread's at timing's whim, and its walk used
+  the game thread's step stack. Its records and `GetBuildTime`'s are TNMT now, the step stacks are per thread,
+  and TNWK and TNMT were recorded again from the unmodified C++ (6630937e with the capture change, in a worktree of
+  its own) and compared with the port's. TNMT's order, like TCST's, can move under load.
+- **Found on the way.** A script that cut the classes' bodies by regex took an empty `Stop` (`{` `}`) through the next
+  function (`Initialize`): the link's four unresolved symbols showed it. The four classes whose Start is trivial
+  (meteor storm, conscription, special attack and location) keep their empty C++ `Stop`; their `Start` is Rust.
+- **What is left of the tech tree and the events (C++):** the saved games (`EETechTree::Load` 49 lines and `Save` 65,
+  the epoch's `Load` 71, the node's `Load` 64, `ApplySavedResearch` 17, `ApplySavedScenEditorObsoleted` 25,
+  `ApplySavedState` 16), the media (`BuildUnitClassInfo` 59, `GetUnitClassMediaMask` 34, `IsLatestEffect` 37, the
+  node's `LoadMedia`/`UnloadMedia` 37 each, the epoch's `LoadMedia` 14), the editor's `SetScenEditorObsoleted` 36,
+  the interface (`GetCostString` 48, `UpdateInterface` 10), `EEEvent::LoadEvents` 29 and the effects that touch
+  media, sounds and buttons; the orchestration bodies (`ResearchToEpoch` 49, `RunEffectUncaptured` 52) call Rust
+  for every decision.
+
 ## R5b.2, third round: the target searches' scoring, EEGetPursuerOf, the tile line, the weapon tag point and the damage table storage in Rust (ee_combat search.rs, pursuer.rs, geometry.rs, damage_table.rs; branch rust-combat3, 2026-11-11)
 
 | Piece | C++ caller | Rust | Tag |
@@ -7218,6 +7282,122 @@ lobby's LAN game now keeps its state in Rust objects; the C++ classes are shims 
   the accepted socket's Duplicate, SetClient), the joiner's ConnectOp, the game room's messages (RecvMsgOp repeat
   ops and SendMsgOp queued ops with the 2-byte length field, through the socket thread and the op container), the
   close timers and queued closes at the start, and the sockets' destruction.
+
+## R5b.2, fifth round: a missile capture profile, the impact tests and the effects' weapon points in Rust, the combat audit (ee_combat impact.rs, geometry.rs; branch rust-combat5, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the missile's boost and homing ticks (round 4's move) | `EEPMMissile::Accelerate`, `Home` | `flight::missile_accelerate`, `missile_home` | CBMA, CBMH (the missile profile, replayed) |
+| a projectile's ground and water tests | `EEUCProjectile::CheckGroundImpact`, `CheckWaterImpact` | `impact::projectile_ground`, `projectile_water` | CBGI, CBWI (replayed) |
+| a missile's ground and water tests | `EEUCMissile::CheckGroundImpact`, `CheckWaterImpact` | `impact::missile_ground`, `missile_water` | CBGI, CBWI |
+| a torpedo's ground test | `EEUCTorpedo::CheckGroundImpact` | `impact::torpedo_ground` | CBGI |
+| the effects' start at the weapon tag point | `EEE2DLinearProjectile` (2 ctors), `EEE2DMuzzleFlash::SetUp`, `EEE2DSmokeMuzzleBlast` (2 ctors), `EEE3DPulseCannonBall`, `EEE3DTracers` | `geometry::weapon_point` (the line of fire's start, now shared) | CBEW (replayed) |
+
+- **A fifth capture profile, `missile`.** No game of the four profiles flies a missile, and a sweep at the end of
+  their games could not go into them: the missiles it creates stay on the map, and the AI and UI threads, which keep
+  running after the end, then make other `GetCost` calls (TCST: +40 records in oracle seed 2, the same in two runs:
+  the state's doing, not timing). So EE-SIM `--missile-sweep` (TEST ONLY) runs the sweep only in the missile profile
+  (the oracle's game), whose golden file `golden_cpp_missile.txt` lists only CBMA, CBMH, CBGI and CBWI; its other
+  tags are the oracle profile's and show as "without a golden". The four profiles are unchanged.
+- **The sweep.** When the game ends, after the unit-list search's sweep: each player's newest four armed units launch
+  one missile of every missile and torpedo class at the next player's newest armed unit, alternately attack unit and
+  attack ground, the launcher class the first class that fires it; `LaunchProjectile` as `LaunchShot` calls it (0.3 s
+  of boost when the launcher has no launch delay, so both steps fly), then up to 120 ticks of the physics step, the
+  flight time's count down and the water and ground tests. 1,267 to 2,172 CBMA and 6,204 to 10,719 CBMH records a
+  game.
+- **A created unit is not on the map until the next tick's `FlushWorld`.** `CreateUnit` queues the unit
+  (`AddUnitEntry`, the player's pending units); the first sweep crashed in `RTSUnit::Link` when `Home` moved a
+  missile across a tile. The sweep now does what `FlushWorld` does first (`FlushQueuedPlacements`, `AddPendingUnits`).
+- **The capture's new controls.** `EESimCaptureRecord::Only` takes up to four tags (the sweep's), `Exclusive(true)`
+  drops other threads' records while the sweep runs, `Close()` ends the capture after it (missile profile only).
+- **Golden first, one temporary tree.** Commits 747bd2a6 (CBGI/CBWI) and f3723a16 (CBEW) put TEST ONLY probes into
+  the unmodified C++; the goldens were recorded from that tree with one more, temporary change: round 4's C++
+  `Accelerate`/`Home` bodies (from 7d8fe54a) in place of the Rust-backed ones. Every earlier digest of those runs
+  equalled the existing goldens. The CBMA/CBMH digests of the C++ bodies equal the Rust steps' (round 4's move had
+  only unit tests): seed 2's `a47f32c7fdb66775`/`13d0d23dcf7e76f6` from both.
+- **Lazy reads at the seam.** Each test reads the ground height, the off-map tile's height, the attack target's
+  footprint, the goal's location, the missile's target tiles (`EEIsOnTargetTiles`), the missile base's same-tile test
+  and the terrain test only where the original does; Rust asks them of a host table (`EeCombatImpactHost`) and writes
+  each answer with its flag into the record. The replay runs the test over the record's eager part with a host that
+  answers from the record and must write the same record and outcome. `EEIsOnTargetTiles` and the tile lookups stay
+  C++ behind the host.
+- **The weapon point, once.** Round 3's line of fire start (`weapon_height`) and the effects compute the same point:
+  the location's rows scaled (`EETagPointList::Scale`), the tag point turned by its turret part on a model with parts
+  (the identity part applied when it is no turret part: a `-0` may become `+0`, so it is applied, not skipped), up the
+  model chain. `geometry::weapon_point` is both; the effects' default point without a tag list is a new kind
+  (`EE_COMBAT_WEAPON_KIND_DEFAULT`, the point in `top`). CBEW comes from the late and space profiles only (the oracle
+  games stay in the epochs without muzzle flashes): the effects are created in EE-SIM (effect detail 2), but **only a
+  tour draws them**: the lead should look at muzzle flashes and tracers in a later-epoch tour.
+- **Fast digests.** `sim_capture.py digest` is a Python byte loop (about 1 s per MB): a late or space seed pair took
+  over 15 minutes. The golden and verification runs here used a scratch Rust digester of the same lines, checked
+  against the Python one on a seed.
+- **What stays C++:** the projectile's and missile's `ActionChanged`, `EvaluateCondition`, `Update`,
+  `LaunchProjectile`, `EEIsOnTargetTiles`, the shell hole (`EEPlaceImpactDecal`), the placement on the ground, the
+  tracer beam's per-frame start (`EEE3DTracerBeam`, drawn only; not moved) and the audit's list in RUST_PLAN's R5b.2
+  combat row.
+
+## R5a.2, eighth round: calamity helper ids, the next engine's site walkers, the goals' units out of the world, the units' tile searches (save 0.273-0.276, branch rust-r5a-aisave7, 2026-11-11)
+
+Continues "R5a.2, seventh round" (its matrix: 13 of 40 saves continue identically). Same test:
+`sim_oracle.py saveload NAME --settings all --seeds 2-3 --at 1000,1900`. Each fix was built (0/0 for EE-AOC and
+EE-SIM), checked with the oracle on seeds 2-3 (identical to ref) and the Rust gate, and measured with the settings it
+concerns. All of it is save and load code (the plain oracle stays identical), except the TEST ONLY dumps.
+
+- **0.273, the contagion manager's last helper id** (`EESaveHasContagionCounter`). EEContagionManager::RestorePointers
+  went on from the highest loaded helper's id (0 with none), the running game from its own counter, so the next
+  cast's area-effect calamities kept other helper ids in their placeholder (EECalamity::mIntPlaceHolder1: 13/14 against
+  1/2), which the calamity checksum sums: both calamity saves parted at the next cast with `oos` only. The counter is
+  saved after the helpers. Found with the dumps' new CAL lines (each active calamity's checksum fields and units).
+  Calamity 229/228 229/228 -> END/END END/END.
+- **0.274, the next engine's site walkers** (EECPNextState::mExplore, the state block's version 4). A citizen sent to
+  see a site before its settlement (§8.36) was not saved; the loaded engine's first step sent another one. Next seed 2
+  1000 s 0 -> END (4/4).
+- **0.275, the goals' units out of the world** (`EESaveHasGoalGhosts`). EEUGAttackUnit::Save wrote -1 for a target with
+  no hit points left and a gather goal's simple resource (a tree or mine used up while its gatherer still held it)
+  had no ghost (SaveGhosts took complex units only): RepairPointers failed and the unit's whole goal queue was cleared
+  (found with a temporary print in EEComplexDoppelganger's RepairPointers: `goal kind 6 EEUGGather failed 3`,
+  `kind 2 EEUGAttackUnit`). The target is now written while held, the ghosts take the attack goals' targets and the
+  simple resources (a complex flag per record; a simple ghost keeps its tile pointer, off the tile's lists, as the
+  gather goal's ResourceAccessible reads its terrain: without it the first load crashed there). Medium difficulty
+  seed 3 1900 s 0 -> 13 ticks.
+- **0.276, the units' tile searches in progress** (`EESaveHasPathSearches`, EEPathManager::SaveSearches). The original
+  saved no search: each unit with a search queued (mPaths) went to mPending at its Load and asked its path again at
+  StartGame (RequestPendingPaths: a graph search first), so the path came later or another one (seed 3's highlands
+  1900 s save: the dumps' `PATHS 1: u67108923 p12` against the load's `AUTOPATHS 1: ... p1`). The machine's members,
+  its goal (start, goal, limits, flags, blocked and unit tiles, bounds, destination, offsets, continent) and its storage
+  go into the save, the storage as ee_astar's bytes (new `storage_save.rs`: every field of the Rust storage, refused
+  unless it reads back whole with every link inside the arena; 3 tests); the load takes those units out of mPending and
+  puts the searches back at the first tick, before any the load queued. Highlands seed 3 1900 s 0 -> END.
+- **Checked, not a cause** (reverted): the path manager's bounded machine (one machine kept from search to search,
+  whose PrepareGrid clears only the last search's bounds). Its storage differed between the games (the dumps' new
+  BOUNDED line), but saving it changed none of the measured saves; the digest stays in the dumps.
+- **Tools** (TEST ONLY, committed): the dumps' CAL lines and BOUNDED line. Scratch under build/hunt: `pair8.py` (pair7
+  with its own slot prefix), `rd2.py` (rd.py from a game ms on: the load's own draws left out), `rawu.py` (a unit's raw
+  bytes in two dumps, the differing offsets named through build/clang/layout.json; padding and pointers are noise),
+  `gate8.sh` (the lighter gates; NOBUILD=1 reuses the last build).
+- **Lesson: the harness of a pair is not the matrix's.** pair8.py's continued game (with --dump-at) shows an `oos` 3
+  above the loaded game's at every dump while the matrix's CT lines agree; compare a pair's dumps with each other, never
+  its checksums with the matrix's.
+- **The numbers** (start -> end of this round; END = identical to 2700 s, else the CT lines equal after the load; seed 2
+  1000/1900, seed 3 1000/1900): oracle END/END END/END; plains-medium-3ai 1197/168 END/END; islands END/END 1429/400; highlands-large-4ai 149/82 4/0 -> 149/82 4/END; mediterranean-easy 168/564 434/133; medium-difficulty END/406 END/0 -> END/406 END/13; late 822/484 143/197 -> 0/794 143/197 (the fishing-boat rebaseline's game, not this round: its 1000 s save parts on the active groups); space 598/745 75/0; calamity 229/228 229/228 -> END/END END/END; next 0/END END/END -> END/END END/END. **19 of 40** saves continue identically (`saveload as8-fin --settings all`, 1072 s wall at --jobs 2, after the merge of rust; from 13; 20 before the rebaseline moved late seed 2 1000 s). `tools/saveload_expect.txt` rewritten from this run (`saveload expect: PASS` against the old file).
+- **Left**, each with what is known:
+  - **active groups** (EEComplexUnit::mActiveGroup, the players' mPendingGroups/mRunningGroups; found by the
+    rust-fishboat lane in the fixed late seed 2 game: two citizens grouped at the 1000 s save's first tick in the
+    continued game only, so that save parts at 0 ticks). No save version stores them: their units, goal, action,
+    destinations and flags, and their group path requests, which hold graph searches in progress;
+  - **graph searches in progress** (mAutoPaths: EEAutoPathRequest's sub groups, the wall manager, herds, active groups):
+    the space seed 3 1900 s save parts at its first tick because the wall manager's request (re-asked by Update) finished
+    in the continued game only (EECPWallManager::Update draws GetRandomPoint). Needs the graph storage as bytes, the
+    graph goal and its modifier (eight modifier classes, some holding a sub group), and the requesters relinked;
+  - highlands seed 3 1000 s (4 ticks): a rock thrower's AI script takes another action after EnemyUnitReachable in the
+    continued game only (its waypoint count 0 against 1 one CT later); every dumped and raw field of the unit, its
+    target, the path manager and the bounded machine agree. Not found;
+  - medium difficulty seed 3 1900 s (13 ticks): a gatherer's goal turns inactive (PathTaken) in the continued game
+    only; the same signature (AIStep's action change with every dumped field equal);
+  - the AI-only divergences (`oos, ai`: plains 2048 s from both saves, islands 2251 s from both, highlands 1973 s,
+    mediterranean 2394 s): a state both saves lose, read much later;
+  - the AI resource lists rebuilt differently at the load (the dumps' `mines=` and `fish=`: 21 against 9; outside the
+    checksums so far).
 
 ## R6: WON's socket ops, AsyncSocket's lock and destination, and UDPManager as Rust objects (ee_won sockops.rs, udpmgr.rs, sockobj.rs; branch rust-r6-won15, 2026-11-11)
 

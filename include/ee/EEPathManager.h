@@ -71,6 +71,12 @@ public:
     // original did not save (a load started with none: other search budgets, no stranded units, other prune times)
     void SaveRunningState(FSFile& outFile);
     long LoadRunningState(FSFile& inFile);   // put back at the loaded game's first tick (EEAfterLoad)
+    // port (save version 0.276, EESaveHasPathSearches): the units' tile searches in progress (mPaths) as they are,
+    // machine, goal and storage. The original saved none: each unit asked its path again from the load
+    // (RequestPendingPaths), so the path came later or another one. LoadSearches takes the units it holds out of
+    // mPending and puts the searches back at the loaded game's first tick, before the queue's others
+    void SaveSearches(FSFile& outFile);
+    long LoadSearches(FSFile& inFile);
     void Update();                      // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
     void Reset();                       // 0xa8778 (before a scenario starts; provisional name)
     void RequestPendingPaths(EEMap* inMap);  // 0xa8582 (EEWorld::StartGame; provisional name)
