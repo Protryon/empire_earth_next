@@ -546,14 +546,6 @@ void EEMiniMap::Refresh()
     this->mCorner3 = *reinterpret_cast<const GE2DPoint*>(&theView.corners[3]);
 }
 
-// FUNCTION: EXE 0x51ff72
-// Projects a screen point onto the ground at height inZ, or the far point when the ray misses
-void EEMiniMap::ProjectToGround(const GEViewport& inViewport, const GE2DPoint& inPoint, float inZ, GE2DPoint& outPoint)
-{
-    ee_gfx_minimap_project(reinterpret_cast<const EeGeViewport*>(&inViewport), gOrthographicView,
-                           reinterpret_cast<const EeGe2DPoint*>(&inPoint), inZ, reinterpret_cast<EeGe2DPoint*>(&outPoint));
-}
-
 // FUNCTION: EXE 0x5200df
 // Recomputes every terrain pixel of the mini map and flags the terrain texture changed
 void EEMiniMap::RedrawAll()

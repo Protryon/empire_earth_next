@@ -1,0 +1,895 @@
+# dead-code census of module exe (tools/dead_census.py)
+# maps: build/clang/exe/EE-AOC.map, build/clang/exe/EE-SIM.map, build/clang-test/exe/EE-AOC.map
+# 580 units, 302115 lines; 541 of 13768 functions no map keeps; 3299 lines in their definitions
+# columns: dead lines, unit lines, dead/defined functions, unit ('ALL' = no function kept)
+
+   258   1796   20/156  Empire Earth/Communications/EEWonNet.cpp
+   130   1352   13/88   Empire Earth/AI Thread/EECPLua.cpp
+   120   6627   12/168  Empire Earth/AI Thread/EEComputerPlayer.cpp
+    98   1507    9/57   Empire Earth/Scenario Editor/EESEUnit.cpp
+    76   6856   14/275  Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
+    72    760   16/85   Empire Earth/AI Thread/EEAIAStarView.cpp
+    60    645    8/28   Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
+    55   3050    8/275  Empire Earth/AI Thread/EEPathManager.cpp
+    51    647    6/24   Empire Earth/Empire Earth/EEEMStorm.cpp
+    49   5207    8/259  Empire Earth/Player/EEPlayer.cpp
+    43    836    5/47   Empire Earth/Civilization Builder/EECBUIListBox.cpp
+    43   2201    3/110  Empire Earth/AI Thread/EECPDefenseCommander.cpp
+    39    664    8/56   Empire Earth/Civilization Builder/EEAEManager.cpp
+    38   1013    5/64   Empire Earth/AI Thread/EEAIFunctionObjects.cpp
+    37    916    6/45   Empire Earth/Civilization Builder/EECivilizationManager.cpp
+    36   4851    5/144  Empire Earth/Units/EEUnitClass.cpp
+    36    877    4/40   Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp
+    35   2394    7/103  Empire Earth/Empire Earth/EEWorld.cpp
+    34    603    7/29   Empire Earth/Empire Earth/EECheatCodes.cpp
+    34   1311    5/76   Empire Earth/AI Thread/EECPPersonnel.cpp
+    33   1914    6/93   Empire Earth/User Interface Thread/EEUserInterface.cpp
+    33    406    3/31   Empire Earth/Graphics Thread/EEE3DParticle.cpp
+    32   1333    8/34   Empire Earth/Units/EEUCLandable.cpp
+    29    448    3/32   Empire Earth/Graphics Thread/EEE2DParticle.cpp
+    29   1219    3/26   Empire Earth/UI Events/EEUIEPostGameSummaryEvents.cpp
+    28    165    4/14   Empire Earth/AI Thread/EECPPlayerInteractionManager.cpp
+    28   1274    4/45   Empire Earth/Units/EEUGGather.cpp
+    26   2731    4/306  Empire Earth/AI Thread/EEAIContinentManager.cpp
+    26    590    3/20   Empire Earth/AI Thread/EECPMilitaryAidPackage.cpp
+    26    841    3/46   Empire Earth/Graphics Thread/EEEffect.cpp
+    26    814    3/27   Empire Earth/Scenario Manager/EEEvent.cpp
+    26    745    2/19   Empire Earth/Units/EEGhostUnit.cpp
+    23    395    3/30   Empire Earth/Player/EEPPlayerEventList.cpp
+    23    256    1/11   Empire Earth/Database/EEAnimal.cpp
+    22   1591    5/44   Empire Earth/Scenario Editor/EEUIFScenarioEditor.cpp
+    22   1373    4/49   Empire Earth/Physics Thread/EEPhysics.cpp
+    22    505    1/12   Empire Earth/Scenario Manager/EESMCondition.cpp
+    22    655    1/12   Empire Earth/UI Events/EEUIEDiplomacyEvents.cpp
+    22     92    1/2    Empire Earth/UI Events/EEUIEMultiplayerScreenEvents.cpp
+    20    746    4/48   Empire Earth/AI Thread/EEAIAStarBoundedPathGoalModifiers.cpp
+    20    217    3/71   Empire Earth/Database/EERules.cpp
+    20   2607    3/199  Empire Earth/Scenario Manager/EEScenarioManager.cpp
+    20    336    2/17   Empire Earth/Units/EEUCSpaceTransport.cpp
+    19   2027    3/78   Empire Earth/Graphics Thread/EERenderObject.cpp
+    19   1118    3/45   Empire Earth/Units/EEUGBuildRepair.cpp
+    19   1925    3/66   Empire Earth/User Interface Thread/EEUIFMainGame.cpp
+    19    240    1/20   Empire Earth/AI Thread/EEAIAStarPathfindingGoal.cpp
+    18   2850    3/88   Empire Earth/AI Thread/EECPASGLand.cpp
+    18    456    3/13   Empire Earth/Persistent/EEGameStateLoader.cpp
+    18    336    2/17   Empire Earth/Calamities/EECCEarthquake.cpp
+    18    275    1/21   Empire Earth/AI Thread/EEAIAStarBoundedPathGoal.cpp
+    17   1349    3/51   Empire Earth/AI Thread/EECPWallManager.cpp
+    17    119    1/4    RTS Engine/Graphics/RTSMousePointer.cpp
+    16   1555    3/82   Empire Earth/AI Thread/EECPASGUProphet.cpp
+    16    588    3/23   Empire Earth/Empire Earth/EEAmbientSoundManager.cpp
+    16   2145    3/48   Empire Earth/Scenario Editor/EESERBUnitTypes.cpp
+    16   3295    1/181  Empire Earth/AI Thread/EECPAttackSubGroup.cpp
+    14   1040    4/62   Empire Earth/AI Thread/EECPIntelligence.cpp
+    14   3053    3/61   Empire Earth/Empire Earth/Empire Earth.cpp
+    14    203    2/11   Empire Earth/Player/EEPPlayerEvent.cpp
+    14   1017    1/56   Empire Earth/Tech Tree/EETechTree.cpp
+    13    334    2/18   Empire Earth/Data Pre-Loading Thread/EEDataPreLoading.cpp
+    13    202    2/14   Empire Earth/Database/EEUnitBehavior.cpp
+    13    832    1/34   Empire Earth/Units/EECombatGoals.cpp
+    12   2012    5/84   Empire Earth/AI Thread/EECPAttackGroup.cpp
+    12   3379    4/118  Empire Earth/AI Thread/EECPResourceManager.cpp
+    12    189    3/11   Empire Earth/AI Thread/EECPAGOrder.cpp
+    12    965    3/44   Empire Earth/Empire Earth/EECameraControl.cpp
+    12    859    3/27   Empire Earth/Graphics Thread/EEE3DFarm.cpp
+    12   4603    3/209  Empire Earth/Units/EEComplexUnit.cpp
+    12    593    2/23   Empire Earth/Calamities/EECalamity.cpp
+    12    551    2/25   Empire Earth/Graphics Thread/EEE3DRain.cpp
+    12   1161    2/50   Empire Earth/Physics Thread/EEPhysicsModel.cpp
+    12   1551    2/48   Empire Earth/User Interface Thread/EEUIFMGStatusButton.cpp
+    12    370    1/19   RTS Engine/Player/RTSPlayer.cpp
+    11    593    3/33   Empire Earth/Units/EEUGLoadContainer.cpp
+    11    562    2/37   Empire Earth/Campaign/EECampaignEditorBehavior.cpp
+    11    210    1/13   Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp
+    11   1455    1/54   Empire Earth/Units/EEComplexDoppelganger.cpp
+    11   1027    1/42   Empire Earth/Units/EEUnitAction.cpp
+    10    274    2/17   Empire Earth/Graphics Thread/EEE2DExplosion.cpp
+    10    298    2/18   Empire Earth/Graphics Thread/EEE2DFire.cpp
+    10    393    2/20   Empire Earth/Graphics Thread/EEE3DParticleEmitter.cpp
+    10    202    2/16   Empire Earth/Persistent/EEPCalamityHelper.cpp
+    10   1578    2/57   Empire Earth/Random Map/EERandomMap.cpp
+    10    305    1/17   Empire Earth/Calamities/EECCAreaEffect.cpp
+    10    273    1/18   Empire Earth/Calamities/EECCLeprosy.cpp
+    10    606    1/16   Empire Earth/Units/EEUnitClassImprovement.cpp
+    10    219    1/15   RTS Engine/RTS Engine/RTSWorld.cpp
+     9    376    3/27   Empire Earth/Units/EEUGLoadGarrison.cpp
+     9    568    2/19   Empire Earth/Empire Earth/EEPreferences.cpp
+     9    617    1/33   Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
+     9    340    1/13   Empire Earth/Graphics Thread/EEEffect2D.cpp
+     9    405    1/17   Empire Earth/User Interface Thread/EEUICPortrait.cpp
+     8    181    3/11   Empire Earth/Database/EEStartingResources.cpp
+     8    177    2/14   Empire Earth/AI Thread/EEInfluenceTable.cpp
+     8    861    2/47   Empire Earth/Physics Thread/EEAirTrafficControl.cpp
+     8    294    2/13   Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp
+     8   1281    1/40   Empire Earth/Communications/EEServer.cpp
+     8    148    1/6    Empire Earth/Database/EEUCUpgradeTable.cpp
+     8    160    1/4    Empire Earth/Scenario Editor Actions/EESEAPlaceGate.cpp
+     7   1434    2/40   Empire Earth/AI Thread/EECPUnitSelector.cpp
+     7    313    2/16   Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp
+     7    445    2/20   Empire Earth/Graphics Thread/EEE2DLightGlow.cpp
+     7    507    2/33   Empire Earth/Graphics Thread/EEGraphicalGoalManager.cpp
+     7    559    2/26   Empire Earth/Graphics Thread/EEUnitPicker.cpp
+     7    449    2/31   RTS Engine/Units/RTSUnit.cpp
+     7    248    1/16   Empire Earth/Calamities/EEContagionManager.cpp
+     7    455    1/21   Empire Earth/Database/EETerrainTable.cpp
+     7    386    1/14   Empire Earth/Graphics Thread/EEE3DCommandConfirmation.cpp
+     7    463    1/18   Empire Earth/Graphics Thread/EEE3DSnow.cpp
+     7    233    1/14   Empire Earth/Graphics Thread/EEE3DTeleport.cpp
+     7    237    1/14   Empire Earth/Graphics Thread/EEE3DTimeWarp.cpp
+     7    366    1/17   Empire Earth/Physics Thread/EEPPatrolGroup.cpp
+     7   1356    1/85   Empire Earth/Units/EEUnitHost.cpp
+     6   2132    3/96   Empire Earth/AI Thread/EECPBuildManager.cpp
+     6   1661    2/58   Empire Earth/AI Thread/EECPAttackSubGroupUnit.cpp
+     6    126    2/7    Empire Earth/Database/EEGameVariant.cpp
+     6    270    2/19   Empire Earth/UI Events/EEUIEChatLogEvents.cpp
+     6    414    2/22   Empire Earth/Units/EESelectedGroup.cpp
+     6    718    1/33   Empire Earth/Campaign/EECampaign.cpp
+     6    375    1/21   Empire Earth/Graphics Thread/EEE2DImpact.cpp
+     6    288    1/18   Empire Earth/Graphics Thread/EEE2DLightning.cpp
+     6    265    1/17   Empire Earth/Graphics Thread/EEE2DPlasmaPulse.cpp
+     6    298    1/17   Empire Earth/Graphics Thread/EEE3DDisease.cpp
+     6    343    1/18   Empire Earth/Graphics Thread/EEE3DHurricane.cpp
+     6    349    1/18   Empire Earth/Graphics Thread/EEE3DVirus.cpp
+     6    792    1/31   Empire Earth/Scenario Editor/EESETriggerScreen.cpp
+     6    601    1/25   Empire Earth/Scenario Editor/EESEUITechListBox.cpp
+     6    249    1/24   Empire Earth/Units/EEDoppelganger.cpp
+     6    509    1/37   Empire Earth/Units/EEDoppelgangerManager.cpp
+     6    949    1/18   Empire Earth/User Interface Thread/EEUIFMGStatusBox.cpp
+     5    264    2/18   Empire Earth/AI Thread/EEAIAStarPathGraphGoal.cpp
+     5   2198    2/101  Empire Earth/Units/EEActiveGroup.cpp
+     5    111    1/5    Empire Earth/Actions/EEABuild.cpp
+     5    155    1/6    Empire Earth/Actions/EEACalamity.cpp
+     5    263    1/21   Empire Earth/AI Thread/EEAIAStarPathfindingGoalBase.cpp
+     5    400    1/9    Empire Earth/Campaign/EECampaignProgress.cpp
+     5    198    1/17   Empire Earth/Civilization Builder/EECBEditableCivilization.cpp
+     5    332    1/16   Empire Earth/Database/EEButtonObject.cpp
+     5    302    1/13   Empire Earth/Empire Earth/EEAmbientSound.cpp
+     5    493    1/18   Empire Earth/Graphics Thread/EEE2DBattlefieldAmbient.cpp
+     5    187    1/14   Empire Earth/Graphics Thread/EEE2DFireTrail.cpp
+     5    308    1/16   Empire Earth/Graphics Thread/EEE2DLinearProjectile.cpp
+     5    236    1/14   Empire Earth/Graphics Thread/EEE2DPulseWave.cpp
+     5    225    1/15   Empire Earth/Graphics Thread/EEE2DShockwave.cpp
+     5    260    1/15   Empire Earth/Graphics Thread/EEE2DSmokeMuzzleBlast.cpp
+     5    195    1/15   Empire Earth/Graphics Thread/EEE2DWaterRipple.cpp
+     5    318    1/15   Empire Earth/Graphics Thread/EEE2DWinterBreath.cpp
+     5    267    1/18   Empire Earth/Graphics Thread/EEE3DBlastWave.cpp
+     5    275    1/16   Empire Earth/Graphics Thread/EEE3DCitizenBeam.cpp
+     5    418    1/20   Empire Earth/Graphics Thread/EEE3DEnergyWall.cpp
+     5    211    1/15   Empire Earth/Graphics Thread/EEE3DEnergyWave.cpp
+     5    393    1/21   Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
+     5    284    1/15   Empire Earth/Graphics Thread/EEE3DNuclearExplosion.cpp
+     5    297    1/16   Empire Earth/Graphics Thread/EEE3DPulseCannonBall.cpp
+     5    206    1/15   Empire Earth/Graphics Thread/EEE3DScreenFlash.cpp
+     5    280    1/15   Empire Earth/Graphics Thread/EEE3DShield.cpp
+     5    186    1/14   Empire Earth/Graphics Thread/EEE3DWaterSplash.cpp
+     5    121    1/9    Empire Earth/Graphics Thread/EEEffect3D.cpp
+     5     93    1/5    Empire Earth/Graphics Thread/EERenderSnapshot.cpp
+     5    730    1/24   Empire Earth/Persistent/EESaveLoad.cpp
+     5    495    1/21   Empire Earth/Scenario Editor/EESETSArea.cpp
+     5    483    1/29   Empire Earth/Units/EEUGAttackUnit.cpp
+     5    381    1/26   Empire Earth/Units/EEUGUnloadTransport.cpp
+     4   1388    3/91   Empire Earth/AI Thread/EECPUnitManager.cpp
+     4    111    1/8    Empire Earth/AI Thread/EEAIAStarCapture.cpp
+     4    284    1/27   Empire Earth/AI Thread/EEAIAStarPathAreaGoal.cpp
+     4   1271    1/56   Empire Earth/AI Thread/EECPNextLua.cpp
+     4   1435    1/75   Empire Earth/AI Thread/EEHerd.cpp
+     4     86    1/5    Empire Earth/Calamities/EEAEExtraDamageFunctor.cpp
+     4    163    1/11   Empire Earth/Calamities/EEFireFunctor.cpp
+     4   7954    1/690  Empire Earth/Communications/EEMessage.cpp
+     4    248    1/34   Empire Earth/Empire Earth/EEMusicManager.cpp
+     4    411    1/18   Empire Earth/Graphics Thread/EEE2DMarchingIcons.cpp
+     4    566    1/22   Empire Earth/Graphics Thread/EEGraphics.cpp
+     4    514    1/12   Empire Earth/Physics Thread/EEPMSubmergedNaval.cpp
+     4    395    1/16   Empire Earth/Scenario Editor/EESETSETSetObjectStance.cpp
+     4    282    1/4    Empire Earth/Scenario Editor Actions/EESEAPlaceUnit.cpp
+     4    151    1/4    Empire Earth/Scenario Editor Actions/EESEAPlaceWall.cpp
+     4   2288    1/71   Empire Earth/UI Events/EEUIELobbyEvents.cpp
+     4    120    1/10   Empire Earth/Units/EESavedGroup.cpp
+     4    701    1/15   Empire Earth/Units/EEUCBasicCitizen.cpp
+     4    506    1/27   Empire Earth/Units/EEUnitClassUpgrade.cpp
+     4    329    1/10   Empire Earth/User Interface Thread/EEUICCommandUnits.cpp
+     4    560    1/20   Empire Earth/User Interface Thread/EEUIFMGMainGroup.cpp
+     4    565    1/25   RTS Engine/Graphics/RTSGraphics.cpp
+     4    899    1/29   RTS Engine/Map/RTSMap.cpp
+     3   3965    2/40   Empire Earth/Scenario Manager/EESMEffect.cpp
+     3    246    2/22   Empire Earth/Units/EEUGLoadTransport.cpp
+     3    263    1/6    Empire Earth/Actions/EEAJoinOrHostAGame.cpp
+     3     95    1/4    Empire Earth/Actions/EEASaveGame.cpp
+     3    153    1/5    Empire Earth/Actions/EEAScroll.cpp
+     3    890    1/42   Empire Earth/AI Thread/EECPASGAirTransport.cpp
+     3    225    1/15   Empire Earth/AI Thread/EECPASGHelicopter.cpp
+     3   1177    1/56   Empire Earth/AI Thread/EECPASGSeaTransport.cpp
+     3    371    1/12   Empire Earth/AI Thread/EECPASGSpaceFighter.cpp
+     3    681    1/32   Empire Earth/AI Thread/EECPASGSpaceTransport.cpp
+     3    168    1/8    Empire Earth/AI Thread/EECPASGSubmarine.cpp
+     3    184    1/8    Empire Earth/AI Thread/EECPASGUAirBomber.cpp
+     3     37    1/4    Empire Earth/AI Thread/EECPASGUAircraftCarrier.cpp
+     3     96    1/7    Empire Earth/AI Thread/EECPASGUAirFighter.cpp
+     3     37    1/3    Empire Earth/AI Thread/EECPASGUHelicopter.cpp
+     3    134    1/9    Empire Earth/AI Thread/EECPASGUHero.cpp
+     3     81    1/4    Empire Earth/AI Thread/EECPASGUMechPriest.cpp
+     3   1250    1/62   Empire Earth/AI Thread/EECPASGUMechProphet.cpp
+     3     44    1/4    Empire Earth/AI Thread/EECPASGUSea.cpp
+     3     82    1/4    Empire Earth/AI Thread/EECPASGUSpace.cpp
+     3     89    1/4    Empire Earth/AI Thread/EECPASGUSpaceCarrier.cpp
+     3    106    1/9    Empire Earth/AI Thread/EECPASGUTransport.cpp
+     3     31    1/3    Empire Earth/AI Thread/EECPDiplomacyManager.cpp
+     3     87    1/5    Empire Earth/Calamities/EEAEMindControlFunctor.cpp
+     3    143    1/8    Empire Earth/Calamities/EECCAEExtraDamage.cpp
+     3    157    1/9    Empire Earth/Calamities/EECCAEMindControl.cpp
+     3    119    1/9    Empire Earth/Calamities/EECCConscription.cpp
+     3     89    1/8    Empire Earth/Calamities/EECCLineOfSight.cpp
+     3    219    1/14   Empire Earth/Calamities/EECCMeteorStorm.cpp
+     3    121    1/10   Empire Earth/Calamities/EECCSpecialAttack.cpp
+     3    116    1/10   Empire Earth/Calamities/EECCSpecialLocation.cpp
+     3    121    1/7    Empire Earth/Civilization Builder/EEAECloaking.cpp
+     3    308    1/18   Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp
+     3    403    1/10   Empire Earth/Empire Earth/EECommandLine.cpp
+     3    597    1/19   Empire Earth/Empire Earth/EEGameOptions.cpp
+     3     73    1/2    Empire Earth/Formations/EEFDeepWedge.cpp
+     3     72    1/2    Empire Earth/Formations/EEFLongLine.cpp
+     3     72    1/2    Empire Earth/Formations/EEFLooseLine.cpp
+     3     73    1/2    Empire Earth/Formations/EEFShallowWedge.cpp
+     3     72    1/2    Empire Earth/Formations/EEFShortLine.cpp
+     3     72    1/2    Empire Earth/Formations/EEFStaggeredLine.cpp
+     3    252    1/15   Empire Earth/Graphics Thread/EEE2DExhaustTrail.cpp
+     3    123    1/9    Empire Earth/Graphics Thread/EEE2DMuzzleFlash.cpp
+     3     89    1/5    Empire Earth/Graphics Thread/EEE2DSquareMarchingIcons.cpp
+     3    128    1/4    Empire Earth/Graphics Thread/EEE3DDamageSmoke.cpp
+     3    109    1/8    Empire Earth/Graphics Thread/EEE3DMultiEffect.cpp
+     3     67    1/6    Empire Earth/Graphics Thread/EEROEffects.cpp
+     3    252    1/10   Empire Earth/Graphics Thread/EEROGroundShadows.cpp
+     3    605    1/12   Empire Earth/Graphics Thread/EEROTerrain.cpp
+     3   1071    1/24   Empire Earth/Graphics Thread/EEROUnits.cpp
+     3    137    1/7    Empire Earth/Graphics Thread/EEROUserInterface.cpp
+     3    198    1/6    Empire Earth/Persistent/EEPMultiplayerHelper.cpp
+     3    332    1/10   Empire Earth/Scenario Editor/EESETSUICBPlayer.cpp
+     3    173    1/6    Empire Earth/Scenario Editor/EESEUICTriggerSelectUnits.cpp
+     3     51    1/3    Empire Earth/Scenario Editor/EEUIFSEESElevation.cpp
+     3    280    1/10   Empire Earth/Scenario Editor/EEUIFSEPaintElevation.cpp
+     3    385    1/15   Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp
+     3    679    1/43   Empire Earth/Tech Tree/EETechTreeEpoch.cpp
+     3    387    1/9    Empire Earth/UI Events/EEUIEHotKeyEvents.cpp
+     3    384    1/20   Empire Earth/Units/EEUGExplore.cpp
+     3    222    1/11   Empire Earth/Units/EEWheel.cpp
+     3    496    1/12   Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
+     3     86    1/6    Empire Earth/User Interface Thread/EEUIFMGGChat.cpp
+     3     86    1/6    Empire Earth/User Interface Thread/EEUIFMGGCivBuilder.cpp
+     3     86    1/6    Empire Earth/User Interface Thread/EEUIFMGGDiplomacy.cpp
+     3     86    1/6    Empire Earth/User Interface Thread/EEUIFMGGOptions.cpp
+     3    120    1/6    Empire Earth/User Interface Thread/EEUIFMGGStatistics.cpp
+     0    612    2/35   Empire Earth/Tech Tree/EETechTreeNode.cpp
+     0    278    1/14   Empire Earth/AI Thread/EEAIAStarChokePointGoal.cpp
+     0    812    1/37   Empire Earth/AI Thread/EECPResourceCenter.cpp
+     0    359    1/24   Empire Earth/Player/EEPlayerStatistics.cpp
+     0    251    1/21   Empire Earth/Units/EEGoalQueueContainer.cpp
+
+# dead functions by class
+
+(free functions) (34): CivBuilderHasChoices, CivBuilderResetUpgradeSelection, CivBuilderSetReloadPlayers, CivBuilderUnloadSounds, EECBTrace, EECBUpgradeArmor, EECPLuaDecode, EECPNextTechByName, EECanReach, EECombatFillStep, EEEventKind7, EEFn0FCA98, EEGetTownCenterLastRing, EEGetWallLineXY, EEHasCivilizationUpgrade, EEHasZeroCount, EEIsInGatherReach, EEReleaseUnitPools, EERunBalancer, EEUnitHandleResolve, EEWonNetError, GetTileHasTree, GetTributeResource, LoadGameState, MakeEventTechnologyObsolete, PlayerTypeFromMenu, QuoteText, RTSUnregisterUnit, ReleaseHorizontalPlaneModel, ReleaseStandingPlaneModel, RoutingOpTypeToString, SetEventPrerequisite, UnloadRenderShadows, ee_units_host_goal_kind
+
+EEAIAStarView (16): GetAIValue, GetContinentID, GetEpoch, GetFormationRank, GetPathArea, GetStoredPathAreaID, GetTerrain, GetTileFlag, GetWaterState, HasHill, HasUnits, IgnoresFormation, IsAlone, IsSeaGoing, IsWide, RandomAtMost
+
+EEComputerPlayer (11): CanEnableManager, GetAttackDelayModifier, GetAttackFrequencyModifier, GetDMAttackFrequencyModifier, GetDMInitialAttackModifier, GetIslandExpansionTimer, GetPopLimitAdjustment, GetUnitCostModifier, RunsEveryManager, SetEnableTime, SetNextExpansionTime
+
+EEWonNet (11): A2W, EEWonNet, GetTitanServerList, GetTitanServerListCompletion, Initialize, Login, LoginCallback, MOTDCallback, RequestMOTD, W2A, ~EEWonNet
+
+EECPLuaState (8): CheckMemory, Fail, From, NextRandom, ReadModule, Reload, Run, Write
+
+EEComplexUnit (8): ClearTint, GetAngularAcceleration, GetB34F, GetCitizenBuildTarget, GetInverseAngularAcceleration, GetInverseMaxVelocity, PopProductionQueue, SetCamouflaged
+
+EEUCLandable (8): ApproachRunwayNegX, ApproachRunwayNegY, ApproachRunwayPosX, ApproachRunwayPosY, TakeOffFromRunwayNegX, TakeOffFromRunwayNegY, TakeOffFromRunwayPosX, TakeOffFromRunwayPosY
+
+EEUISCIFormManager (8): Clear, GetBriefing, GetHints, GetHistory, GetMap, GetMovie, GetScenario, GetSound
+
+EEAEManager (6): ApplyGeneratedAreaEffects, ClearAreaEffects, EffectAtTile, RemoveRedundantAreaEffects, UpdateAffectedByAreaEffects, UpdateGeneratedAreaEffects
+
+EECheatCodes (6): AddResource, ClearPhysicsFlagForPlayer, ClearResource, ExploreMap, SetPhysicsFlagForPlayer, ToggleInstantBuild
+
+EEUserInterface (6): CloseIMECompositionString, GetQueueSize, OpenIMECompositionString, PostLoginDone, PostMOTD, PushBack
+
+EEWorld (6): ClearContinents, NotifyPlayersLoaded, SetCalamityHelper, SetEffectManager, SetInfluenceTable, TeamsChanged
+
+EECBUIListBox (5): GetCategory, GetCost, GetLine, SortLines, ~EECBUIListBox
+
+EEAIAStarPathGraphGoal (4): CanEnter, Estimate, GetDefaultStepCost, SetFlags
+
+EEAIContinentManager (4): ClearChecksum, DeleteContinents, DeleteHills, NewPathAreaID
+
+EECPPIMEntry (4): Clear, Copy, EECPPIMEntry, operator=
+
+EECivilizationManager (4): ForEachUpgrade, GetCategory, GetLevelCount, MakeUpgrade
+
+EEEMStorm (4): Grow, SetIntensity, SetTargetIntensity, Shrink
+
+EEPathManager (4): NewNode, ReleaseNode, RequestGroupPath, RunBoundedPath
+
+EEPlayer (4): GetName, GetNumHeroes, RemoveConstructionSite, UpdateAirTraffic
+
+EEWUnitsOffMapInfo (4): EEWUnitsOffMapInfo, ReleaseUnit, RepairPointers, ~EEWUnitsOffMapInfo
+
+EEAmbientSoundManager (3): RandomInteger, RandomRange, UpdateDawn
+
+EECPAGOrder (3): ReleaseOtherSubGroup, ReleaseSubGroup, operator=
+
+EECPAttackGroup (3): FilterTargets, FindSeaTarget, FindSpaceTarget
+
+EECPMilitaryAidPackage (3): EnterState2, EnterState3, SetState
+
+EECPUMGatherUnitsScreenBase (3): CountRequest, CountUnit, CountUnits
+
+EECameraControl (3): GetPitch, SlerpOffsetTurn, SlerpViewTurn
+
+EEE2DParticle (3): Clear, EEE2DParticle, ~EEE2DParticle
+
+EEE3DFarm (3): BuildModels, GetCropFrame, GetCropKind
+
+EEE3DParticle (3): Clear, EEE3DParticle, ~EEE3DParticle
+
+EEGameState (3): SetDefaultMapCenter, SetEffectManager, SetMap
+
+EEGhostUnit (3): GetScale, Reset, SetFarmSlotTile
+
+EEInfluenceTable (3): GetOthersValue, SumOthersValueOnTiles, ~EEInfluenceTable
+
+EEPPlayerEventList (3): Ping, ReleaseSound, StopPing
+
+EESEUnit (3): GetLayer, GetSortMode, GetUnitTypeMode
+
+EEScenarioManager (3): EraseTimedEffect, FindEffectByID, GetTimedEffect
+
+EEUGBuildRepair (3): AddBuildEvent, SetTargetLocation, UpdateTargetCenter
+
+EEUGGather (3): IsAtStorage, IsResourceInReach, IsStorageInReach
+
+EEUGLoadContainer (3): AddUnits, ClearUnits, HasUnit
+
+EEUGLoadGarrison (3): EEUGLoadGarrison, Initialize, ~EEUGLoadGarrison
+
+EEABuild (2): EEABuild, ~EEABuild
+
+EEAIBPGModifierStormShaper (2): EEAIBPGModifierStormShaper, StormState
+
+EEAIGPGModiferUseInfluenceCostsBase (2): EEAIGPGModiferUseInfluenceCostsBase
+
+EEAirTrafficControl (2): BlocksTakeoffs, IsLandingDone
+
+EECCEarthquake (2): CreateCrack, SetAffectedArea
+
+EECPDefenseCommander (2): GetPackage, SetNextAidTime
+
+EECPIntelligencePlayerFile (2): DeleteArmies, EECPIntelligencePlayerFile
+
+EECPLuaKey (2): Int, operator<(struct EECPLuaKey const &) const
+
+EECPPersonnel (2): NewRequest, SubmitRequest
+
+EECPPersonnelRequest (2): EECPPersonnelRequest, UpdateFill
+
+EECPRMUnitDistanceLess (2): EECPRMUnitDistanceLess, operator 
+
+EECPWallManager (2): GetCenter, IsRequestDone
+
+EECalamity (2): ReleaseSecondarySound, ReleaseSound
+
+EECampaignEditorBehavior (2): Validate, ValidateOther
+
+EEDataPreLoading (2): LoadTechnologyMedia, StartQueueing
+
+EEE2DExplosion (2): ReleaseSound, ~EEE2DExplosion
+
+EEE2DFire (2): ReleaseSound, ~EEE2DFire
+
+EEE3DParticleEmitter (2): ReleaseSound, ~EEE3DParticleEmitter
+
+EEE3DRain (2): ReleaseRumble, ReleaseSound
+
+EEFOFindNewTargetScreenBase (2): Virtual04, Virtual08
+
+EEGamePreferences (2): LoadGameOptions, SaveGameOptions
+
+EEGameVariant (2): EEGameVariant, ~EEGameVariant
+
+EEGraphicalGoal (2): DestroyEffect, ~EEGraphicalGoal
+
+EEPCalamityHelper (2): ClearContagionManager, ~EEPCalamityHelper
+
+EEPGSGameReport (2): ExportMessage, ExportSize
+
+EEPPlayerEvent (2): Reset, ~EEPPlayerEvent
+
+EERandomMap (2): FilterHeightMap, ~EERandomMap
+
+EERuleNumber (2): Constant, World
+
+EESEEQuickLoad (2): EESEEQuickLoad, ~EESEEQuickLoad
+
+EESEEQuickSave (2): EESEEQuickSave, ~EESEEQuickSave
+
+EEStartingResources (2): EEStartingResources, ~EEStartingResources
+
+EEUCSpaceTransport (2): SpaceshipVirtual2C, SpaceshipVirtualA0
+
+EEUGLoadTransport (2): EEUGLoadTransport, ~EEUGLoadTransport
+
+EEUIECLEFormManager (2): EEUIECLEFormManager, ~EEUIECLEFormManager
+
+EEUIFSEBRotation (2): GetAngle, UpdateBitmaps
+
+EEUIFSELBUnitList (2): EEUIFSELBUnitList, SetSortMode
+
+EEUIManager (2): Fn26FA55, Fn26FA6A
+
+EEUnitBehavior (2): EEUnitBehavior, ~EEUnitBehavior
+
+EEUnitClass (2): GetNumGoalQueues, ReleaseUnitClass
+
+EEUnitVectorItem (2): Add, operator=
+
+EEWonNetAvailableGameFormManager (2): EEWonNetAvailableGameFormManager, ~EEWonNetAvailableGameFormManager
+
+RTSMap (2): DeleteTiles, IsEdgeTile
+
+RTSTechTreeNode (2): GetIsAvailable, GetIsObsolete
+
+WONAPI::ConstSmartPtr<class WONAPI::GetMOTDOp> (2): operator=, ~ConstSmartPtr<class WONAPI::GetMOTDOp>
+
+std (2): _Make_heap_unchecked<class EEComplexUnit **, struct std::_Ref_fn<struct EECPUnitDistanceLess>>, _Sort_heap_unchecked<class EEComplexUnit **, struct std::_Ref_fn<struct EECPUnitDistanceLess>>
+
+EEACalamity (1): ~EEACalamity
+
+EEAECloaking (1): ~EEAECloaking
+
+EEAEExtraDamageFunctor (1): ~EEAEExtraDamageFunctor
+
+EEAEMindControlFunctor (1): ~EEAEMindControlFunctor
+
+EEAGIncreasingVelocityUnitSorter (1): operator 
+
+EEAIAStarBoundedPathGoal (1): PathState
+
+EEAIAStarCaptureRun (1): Active
+
+EEAIAStarGoalBase<class EEAIAStarChokePointStorage, class EEMap> (1): Attach
+
+EEAIAStarGraphGoalBase<class EEAIAStarGraphStorage> (1): Prepare
+
+EEAIAStarPathAreaGoal (1): GetArea
+
+EEAIAStarPathfindingGoal (1): PathState
+
+EEAIAStarPathfindingGoalBase (1): CollectUnitTiles
+
+EEAIBoundedPathGoalModifierBase (1): EEAIBoundedPathGoalModifierBase
+
+EEAIFOBestRegionToAttack (1): EEAIFOBestRegionToAttack
+
+EEAIFOContinentScreenBase (1): Test
+
+EEAIFOContinentScreenContinentsShareAdjacentID (1): Test
+
+EEAIFOFavoriteUnitScreener (1): EEAIFOFavoriteUnitScreener
+
+EEAJoinOrHostAGame (1): ~EEAJoinOrHostAGame
+
+EEASaveGame (1): ~EEASaveGame
+
+EEAScroll (1): ~EEAScroll
+
+EEAmbientSound (1): ~EEAmbientSound
+
+EEAnimal (1): EEAnimal
+
+EEAreaEffect (1): IsInRange
+
+EEButtonObject (1): EEButtonObject
+
+EECBEditableCivilization (1): PickedInCategory
+
+EECBProcessUpgrade (1): EECBProcessUpgrade
+
+EECCAEExtraDamage (1): ~EECCAEExtraDamage
+
+EECCAEMindControl (1): ~EECCAEMindControl
+
+EECCAreaEffect (1): GetSourceLocation
+
+EECCConscription (1): ~EECCConscription
+
+EECCLeprosy (1): GetSourceLocation
+
+EECCLineOfSight (1): ~EECCLineOfSight
+
+EECCMeteorStorm (1): ~EECCMeteorStorm
+
+EECCSpecialAttack (1): ~EECCSpecialAttack
+
+EECCSpecialLocation (1): ~EECCSpecialLocation
+
+EECPAGTownLess (1): operator 
+
+EECPAILoadGroup (1): ResetLoad
+
+EECPASGAirTransport (1): ~EECPASGAirTransport
+
+EECPASGHelicopter (1): ~EECPASGHelicopter
+
+EECPASGLand (1): ClearLocations
+
+EECPASGLandTileFarther (1): DistanceSquared
+
+EECPASGSeaTransport (1): ~EECPASGSeaTransport
+
+EECPASGSpaceFighter (1): ~EECPASGSpaceFighter
+
+EECPASGSpaceTransport (1): ~EECPASGSpaceTransport
+
+EECPASGSubmarine (1): ~EECPASGSubmarine
+
+EECPASGUAirBomber (1): ~EECPASGUAirBomber
+
+EECPASGUAirFighter (1): ~EECPASGUAirFighter
+
+EECPASGUAircraftCarrier (1): ~EECPASGUAircraftCarrier
+
+EECPASGUHelicopter (1): ~EECPASGUHelicopter
+
+EECPASGUHero (1): ~EECPASGUHero
+
+EECPASGUMechPriest (1): ~EECPASGUMechPriest
+
+EECPASGUMechProphet (1): ~EECPASGUMechProphet
+
+EECPASGUProphet (1): ReleaseAnalyzers
+
+EECPASGUProphetCalamityAnalyzerHurricane (1): ApplyShipFactor
+
+EECPASGUProphetCalamityAnalyzerPlague (1): ApplyRandomFactor
+
+EECPASGUSea (1): ~EECPASGUSea
+
+EECPASGUSpace (1): ~EECPASGUSpace
+
+EECPASGUSpaceCarrier (1): ~EECPASGUSpaceCarrier
+
+EECPASGUTransport (1): ~EECPASGUTransport
+
+EECPASGUnitCounts (1): Clear
+
+EECPAttackSubGroupUnit (1): ReleaseSubGroup
+
+EECPBMBuildsTarget (1): operator 
+
+EECPBuildManager (1): FindAntiAirSiteNear
+
+EECPCombatStrategy (1): DecrementRemaining
+
+EECPDiplomacyManager (1): ~EECPDiplomacyManager
+
+EECPITargetRegionEqual (1): operator 
+
+EECPITargetRegionLess (1): operator 
+
+EECPLuaValue (1): ToText
+
+EECPRCTileNearer (1): operator 
+
+EECPRMForestDistanceLess (1): EECPRMForestDistanceLess
+
+EECPResourceManager (1): IsSettlementQueued
+
+EECPUGatherCarrierFightersCount (1): IsFighter
+
+EECPUGatherUnitsOfTypeAndTownAndContinent (1): Clear
+
+EECPUnitSelector (1): ~EECPUnitSelector
+
+EECPUnitWithinDistance (1): operator 
+
+EECampaign (1): NotArchived
+
+EECampaignProgress (1): MakeKey
+
+EECliffTerrainTable (1): EECliffTerrainTable
+
+EEComplexDoppelganger (1): Reset
+
+EEContagionManager (1): GetCalamity
+
+EEDoppelganger (1): Reset
+
+EEDoppelgangerManager (1): NewDoppelganger
+
+EEE2DBattlefieldAmbient (1): ~EEE2DBattlefieldAmbient
+
+EEE2DExhaustTrail (1): ~EEE2DExhaustTrail
+
+EEE2DFireTrail (1): ~EEE2DFireTrail
+
+EEE2DImpact (1): ReleaseSound
+
+EEE2DLightGlow (1): Hidden
+
+EEE2DLightGlowSpot (1): EEE2DLightGlowSpot
+
+EEE2DLightning (1): ReleaseSound
+
+EEE2DLinearProjectile (1): ~EEE2DLinearProjectile
+
+EEE2DMarchingIcons (1): GetHeightOffset
+
+EEE2DMuzzleFlash (1): ~EEE2DMuzzleFlash
+
+EEE2DPlasmaPulse (1): ReleaseSound
+
+EEE2DPulseWave (1): ~EEE2DPulseWave
+
+EEE2DShockwave (1): ~EEE2DShockwave
+
+EEE2DSmokeMuzzleBlast (1): ~EEE2DSmokeMuzzleBlast
+
+EEE2DSquareMarchingIcons (1): ~EEE2DSquareMarchingIcons
+
+EEE2DWaterRipple (1): ~EEE2DWaterRipple
+
+EEE2DWinterBreath (1): ~EEE2DWinterBreath
+
+EEE3DBlastWave (1): ~EEE3DBlastWave
+
+EEE3DCitizenBeam (1): ~EEE3DCitizenBeam
+
+EEE3DCommandConfirmation (1): ~EEE3DCommandConfirmation
+
+EEE3DDamageSmoke (1): ~EEE3DDamageSmoke
+
+EEE3DDisease (1): ReleaseSound
+
+EEE3DEnergyWall (1): ~EEE3DEnergyWall
+
+EEE3DEnergyWave (1): ~EEE3DEnergyWave
+
+EEE3DHurricane (1): ReleaseSound
+
+EEE3DMarchingLine (1): Reset
+
+EEE3DMultiEffect (1): ~EEE3DMultiEffect
+
+EEE3DNuclearExplosion (1): ~EEE3DNuclearExplosion
+
+EEE3DPulseCannonBall (1): ~EEE3DPulseCannonBall
+
+EEE3DScreenFlash (1): ~EEE3DScreenFlash
+
+EEE3DShield (1): ~EEE3DShield
+
+EEE3DSnowFlake (1): EEE3DSnowFlake
+
+EEE3DTeleport (1): ~EEE3DTeleport
+
+EEE3DTimeWarp (1): ~EEE3DTimeWarp
+
+EEE3DVirus (1): ReleaseSound
+
+EEE3DWaterSplash (1): ~EEE3DWaterSplash
+
+EEEffect (1): Init
+
+EEEffect2D (1): Clear
+
+EEEffect3D (1): InitTransformation
+
+EEEnvironmentManager (1): Tick
+
+EEFDeepWedge (1): ~EEFDeepWedge
+
+EEFLongLine (1): ~EEFLongLine
+
+EEFLooseLine (1): ~EEFLooseLine
+
+EEFOFindNewTargetInMeleeRange (1): EEFOFindNewTargetInMeleeRange
+
+EEFShallowWedge (1): ~EEFShallowWedge
+
+EEFShortLine (1): ~EEFShortLine
+
+EEFStaggeredLine (1): ~EEFStaggeredLine
+
+EEFireFunctor (1): ~EEFireFunctor
+
+EEFleeFromLocationScreenBase (1): Screen
+
+EEGameOptionsPlayer (1): FnE123D
+
+EEGatherTileFarther (1): operator 
+
+EEGraphicEffect (1): ~EEGraphicEffect
+
+EEGraphicObject (1): GetWheelCount
+
+EEGraphics (1): PostRedrawUI
+
+EEHerd (1): UpdateIdle
+
+EEMCivTimerExpired (1): EEMCivTimerExpired
+
+EEMLoadMainScreen (1): EEMLoadMainScreen
+
+EEMMakeWorldVisible (1): EEMMakeWorldVisible
+
+EEMReportStatistics (1): EEMReportStatistics
+
+EEMedia (1): GetCount
+
+EEMusicManager (1): Update
+
+EEMusicObject (1): ~EEMusicObject
+
+EEPGSPlayerReport (1): ExportSize
+
+EEPMSubmergedNaval (1): AdjustDiveDepth
+
+EEPMultiplayerHelper (1): ~EEPMultiplayerHelper
+
+EEPPatrolGroup (1): AppendPatrolPoint
+
+EEPathManagerNode (1): ReleaseRequest
+
+EEPhysics (1): PostAutoSave
+
+EEROEffects (1): ~EEROEffects
+
+EEROGroundShadows (1): ~EEROGroundShadows
+
+EEROTerrain (1): ~EEROTerrain
+
+EEROUnits (1): ~EEROUnits
+
+EEROUserInterface (1): ~EEROUserInterface
+
+EEROWater (1): ~EEROWater
+
+EERenderSnapshot (1): EERenderSnapshot
+
+EERules (1): SetMusicFromDbmusicFile
+
+EESEAPaintArea (1): EESEAPaintArea
+
+EESEAPlaceGateEntry (1): EESEAPlaceGateEntry
+
+EESEAPlaceWallEntry (1): EESEAPlaceWallEntry
+
+EESEAPlacedUnit (1): EESEAPlacedUnit
+
+EESEEGameUnitLimit (1): ~EESEEGameUnitLimit
+
+EESEGamePage (1): PairIndex
+
+EESEPlayerScreen (1): GetCurrentPlayer
+
+EESERBUnitTypes (1): EESERBUnitTypes
+
+EESETSETSetObjectStance (1): ~EESETSETSetObjectStance
+
+EESETSUICBPlayer (1): ~EESETSUICBPlayer
+
+EESETriggerScreen (1): StoreEntry
+
+EESEUICTriggerSelectUnits (1): ~EESEUICTriggerSelectUnits
+
+EESGUnitSorter (1): operator 
+
+EESMCondition (1): Compare
+
+EESMEffect (1): MaintainObject
+
+EESMUnitPriorityLess (1): operator 
+
+EESavedGroup (1): ~EESavedGroup
+
+EESelectedGroup (1): RefreshSelectionAreas
+
+EEServer (1): ResetFastSelection
+
+EESoundObject (1): EESoundObject
+
+EEStartScreen (1): ~EEStartScreen
+
+EEStatisticsHistory (1): EEStatisticsHistory
+
+EEStatisticsPoint (1): operator=
+
+EETagPoint (1): GetOffset
+
+EETechTree (1): SumCostsUncaptured
+
+EETechTreeEpoch (1): CheckUnitMedia
+
+EEUCBasicCitizen (1): Update
+
+EEUCGate (1): IsMiddlePart
+
+EEUCUpgradeTable (1): EEUCUpgradeTable
+
+EEUGAttackUnit (1): UpdateTargetTile
+
+EEUGExplore (1): ~EEUGExplore
+
+EEUGUnloadTransport (1): ~EEUGUnloadTransport
+
+EEUIBGenericBackground (1): ~EEUIBGenericBackground
+
+EEUICCommandUnits (1): ComputeAngle
+
+EEUICPortrait (1): GetBarRectangles
+
+EEUIEGrabScroll (1): ~EEUIEGrabScroll
+
+EEUIEHKSelectGroup (1): ~EEUIEHKSelectGroup
+
+EEUIEMSOpenMultiplayerScreen (1): ProcessEvent
+
+EEUIESLLoadScreen (1): ~EEUIESLLoadScreen
+
+EEUIFMGGChat (1): ~EEUIFMGGChat
+
+EEUIFMGGCivBuilder (1): ~EEUIFMGGCivBuilder
+
+EEUIFMGGDiplomacy (1): ~EEUIFMGGDiplomacy
+
+EEUIFMGGOptions (1): ~EEUIFMGGOptions
+
+EEUIFMGGStatistics (1): ~EEUIFMGGStatistics
+
+EEUIFMGStatusBox (1): GetAttributeText
+
+EEUIFMGUnitHack (1): FnE123D
+
+EEUIFMainGame (1): SetChatTop
+
+EEUIFSEBRemoveCargo (1): EEUIFSEBRemoveCargo
+
+EEUIFSEESElevation (1): ~EEUIFSEESElevation
+
+EEUIFSELBCargoList (1): EEUIFSELBCargoList
+
+EEUIFSEPaintElevation (1): ~EEUIFSEPaintElevation
+
+EEUUCircleScreen (1): EEUUCircleScreen
+
+EEUUPointNearerToUnit (1): operator 
+
+EEUUTileNearerToPoint (1): operator 
+
+EEUUTileNearerToUnit (1): operator 
+
+EEUnitClassImprovement (1): GetStep
+
+EEUnitClassUpgrade (1): GetImprovement
+
+EEUnitPicker (1): GetEntryUnit
+
+EEUnitTrigger (1): EEUnitTrigger
+
+EEWheel (1): ~EEWheel
+
+RTSGraphics (1): PopRenderObject
+
+RTSMapTileRun (1): operator==
+
+RTSMousePointer (1): HandleMessage
+
+RTSPlayer (1): Reset
+
+RTSWorld (1): GetPlayerIndex
+
+RebuildAreaEffectRegionListFunctor (1): RebuildAreaEffectRegionListFunctor
+
+WONAPI::ConstSmartPtr<class WONAPI::GetCertOp> (1): operator=
+
+WONAPI::ConstSmartPtr<class WONAPI::GetDirOp> (1): operator=
+
+WONAPI::ConstSmartPtr<class WONAPI::SmartRoutingConnection> (1): ~ConstSmartPtr<class WONAPI::SmartRoutingConnection>
+
+WONAPI::WONLobbyWindow (1): Close
+
+std::list<class WONAPI::SmartPtr<class WONAPI::DirEntity>, class std::allocator<class WONAPI::SmartPtr<class WONAPI::DirEntity>>> (1): _Emplace<class WONAPI::SmartPtr<class WONAPI::DirEntity> const &>

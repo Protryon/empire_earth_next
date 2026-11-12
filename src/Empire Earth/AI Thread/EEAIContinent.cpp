@@ -221,19 +221,6 @@ void EEAIContinent::RemovePathAreaID(unsigned short inID)
         this->mPathAreaIDs.erase(theID);
 }
 
-// FUNCTION: EXE 0x41e512
-// Sorts the continent's shore tiles and, when asked, drops duplicates
-void EEAIContinent::SortTiles(bool inUnique)
-{
-    std::vector<U2DPoint<long> >::iterator theEnd;
-    std::sort(this->mShoreTiles.begin(), this->mShoreTiles.end());
-    if (!inUnique)
-        return;
-    theEnd = std::unique(this->mShoreTiles.begin(), this->mShoreTiles.end());
-    if (theEnd != this->mShoreTiles.end())
-        this->mShoreTiles.erase(theEnd, this->mShoreTiles.end());
-}
-
 // Compiler-generated for this unit (names in analysis/exe/names.txt):
 // SYNTHETIC: EXE 0x41d931
 // TEMPLATE: EXE 0x41e5bd

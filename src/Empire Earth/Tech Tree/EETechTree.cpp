@@ -416,45 +416,6 @@ void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
         ioCosts[i] = theCosts[i];
 }
 
-// FUNCTION: EXE 0x5cc710
-// Tells which media of a unit class a tree starting at a later epoch still needs: false when the class is
-// upgraded away before the start epoch, else a mask without models and sounds replaced before it
-bool EETechTree::GetUnitClassMediaMask(EETechTree* inTree, long inUnitClass, unsigned long* outMask)
-{
-    bool theResult = true;
-    *outMask = kMediaAll;
-    if (sUnitClassInfo.find(inUnitClass) != sUnitClassInfo.end()) {
-        if (sUnitClassInfo[inUnitClass].mTechnology != kTechNone) {
-            EETechTreeNode* theNode = inTree->Get(sUnitClassInfo[inUnitClass].mTechnology);
-            if (theNode != NULL && theNode->mEpoch < inTree->mStartEpoch && !theNode->mScenEditorObsoleted)
-                theResult = false;
-        } else {
-            if (sUnitClassInfo[inUnitClass].mModelTechs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mModelTechs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaModel;
-            if (sUnitClassInfo[inUnitClass].mAcknowledgeSound1Techs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mAcknowledgeSound1Techs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaAcknowledgeSound1;
-            if (sUnitClassInfo[inUnitClass].mAcknowledgeSound2Techs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mAcknowledgeSound2Techs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaAcknowledgeSound2;
-            if (sUnitClassInfo[inUnitClass].mCreationSoundTechs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mCreationSoundTechs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaCreationSound;
-            if (sUnitClassInfo[inUnitClass].mDeathSoundTechs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mDeathSoundTechs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaDeathSound;
-            if (sUnitClassInfo[inUnitClass].mSelectionSound1Techs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mSelectionSound1Techs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaSelectionSound1;
-            if (sUnitClassInfo[inUnitClass].mSelectionSound2Techs.size() > 0
-                && inTree->Get(sUnitClassInfo[inUnitClass].mSelectionSound2Techs[0])->mEpoch < inTree->mStartEpoch)
-                *outMask &= ~kMediaSelectionSound2;
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5cc9e8
 // Tells whether a tech's model or sound effect for a unit class is the latest one the tree still uses
 bool EETechTree::IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind)

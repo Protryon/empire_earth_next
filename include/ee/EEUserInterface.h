@@ -129,7 +129,6 @@ public:
     void PostMOTD(const UWideString& inGame, const UWideString& inSystem);
     void PostLoginDone();                   // base exe 0x661aef (message 0x441; DEAD-IN-AOC like PostMOTD)
     void TestScenario();                    // 0x276ab0 (message 0x415: starts the tested scenario)
-    void CloseIMECandidateWindow();         // 0x276c9c (IMN_CLOSECANDIDATE)
     void CloseIMECompositionString();       // 0x276cb1 (WM_IME_ENDCOMPOSITION)
     void SaveAndTestScenario();             // 0x276cbc (message 0x40f: saves ScenDefault and starts it)
     void LeaveMap(UIForm* inForm, bool inResize);      // 0x277023 (ClearQueue on all three, then the form)
@@ -147,7 +146,6 @@ public:
     void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);  // 0x2780d3
     void AddIMEResultString(const char* inText);  // 0x2781da
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
-    void OpenIMECandidateWindow();          // 0x278f90 (IMN_OPENCANDIDATE)
     void OpenIMECompositionString();        // 0x278fc0 (WM_IME_STARTCOMPOSITION)
     void RestartGame();                     // 0x279013 (message 0x428)
     void ShowLagStatus(unsigned long inPlayer, bool inLagging);  // 0x27977c (message 0x442; the caller passes (unsigned short))

@@ -57,7 +57,6 @@ public:
 static ESLockHolder gLockHolder;                  // 0x1010f668
 static TSCriticalSection* gLock;                  // 0x1010f6c8
 static unsigned long gRecordingSuffix;            // 0x1010f6e0: 0..9, the "%d_" of the next recording
-static bool gRecordToDebuggerOnly;                // 0x1010f6ac (provisional name)
 static bool gRecording;                           // 0x1010f6d8
 static char* gRecordingStart;                     // 0x1010f6cc (copied from 0x1010f6b4) (provisional name)
 static char* gX6b4;                               // 0x1010f6b4: never assigned; deleted at shutdown (provisional name)
@@ -90,13 +89,12 @@ long ESBeginRecording(FSFileSpec& inSpec)
     long theResult = gRecordingFile.Create();
     if (theResult == kErrorOK || theResult == kErrorAlreadyExists) {
         gRecording = true;
-        if (!gRecordToDebuggerOnly) {
-            if (gRecordingFile.FOpen("w") != kErrorOK) {
-                ESDebugOut("!::ESReport: error opening error log with write access.\n");
-                gRecording = false;
-            }
-            gRecordingStart = gX6b4;
+        // (the original skipped the file while its never-set 0x1010f6ac was on: records to the debugger only)
+        if (gRecordingFile.FOpen("w") != kErrorOK) {
+            ESDebugOut("!::ESReport: error opening error log with write access.\n");
+            gRecording = false;
         }
+        gRecordingStart = gX6b4;
         theResult = kErrorOK;
     }
     gLock->Leave();
@@ -160,14 +158,6 @@ void ESInitialize(HINSTANCE inInstance)
     URegisterShutdown(ESShutdown);
     long theResult = TSScheduler::CreateCriticalSection(gLock);
     ESVERIFY_AT(theResult == keseOK, 671);
-}
-
-// FUNCTION: LLE 0x100016c4
-// Formats a quiet verification failure and discards it (no output in the retail build)
-void ESQuietVerify(const char* inFile, unsigned long inLine, const char* inExpression)
-{
-    char theText[1024];
-    sprintf(theText, "%s (%ld) : Quiet verification failure (%s)", inFile, inLine, inExpression);
 }
 
 // FUNCTION: LLE 0x100016ed

@@ -8584,3 +8584,53 @@ the main menu, the editors' sub-menu, the single player screen and the play camp
   the oracle only shows it does not disturb the game; goldens never draw, so the tour must show the menus.
 - **Behaviour:** none intended. `gUIManager` and the event form's manager are the same object, so the host uses the
   latter where the original named either.
+
+## Dead code across the game and engine: the linker's census, and why it finds little (tools/dead_census.py; branch rust-deadcode1, 2026-11-12)
+
+A new lane: delete the first-party C++ that no build reaches, outside WON (src/Empire Earth/WONAPI and
+include/ee/wonapi are the WON lanes'). Measured as `python -I tools/dead_census.py --lines`: src without ThirdParty
+and WONAPI, include without the generated rust headers, the third-party copies and wonapi. 416,370 -> 415,913 lines
+(-457) in four code commits (415,196 merged with rust); the census tool and its report (docs/dead_census/<module>.txt,
+inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted for below) are committed.
+
+- **The census.** lld-link /OPT:REF drops every function no live code reaches (clang-cl /O1 implies /Gy), and its
+  /MAP lists every kept symbol, ICF-folded copies included at their leader's address (checked: 2,767 map addresses
+  carry more than one name). A text symbol a first-party object defines that none of EE-AOC.map, EE-SIM.map and the
+  test profile's EE-AOC.map lists is dropped in every build. First census: 640 of 17,106 functions, ~3,700 lines.
+- **Dropped is not dead.** Almost all of them are inlined: a function defined in a unit and called only from that
+  unit is inlined into every caller at /O1, and its out-of-line copy (external, so still emitted) is dropped.
+  Same for constructors and destructors (the ??_G deleting destructor in the vtable holds the inlined body), base
+  classes' virtual functions (the base vtable's store is optimised away once the base constructor is inlined into
+  the derived one: 50 first-party vtables are in no map, none of them a class nobody builds but EEWonNet), and
+  calls behind constants. A grep over src, include, tests, tools, ai and rust, with the uses inside proven-dead
+  definitions discounted (a fixpoint), left 43 functions with no caller; Rust and Python tokens of the same name and
+  other files that never name the class are discounted for members. That is the WON lane's method; WON's SDK had
+  whole unused classes, the game has almost none: its sources were rebuilt from the original exe, which was itself
+  linked with /OPT:REF, so every reconstructed function existed in a binary that reached it. What is dead is what
+  the port made dead (a caller moved to Rust, a DirectX path replaced) and the original's never-set debug flags.
+- **Deleted.** The 43 callerless functions (EEAIAStarStorage::GetDirtyBounds, EEAIContinent::SortTiles,
+  EECPAttackSubGroupUnitPrejudice::Matches, EECPChoiceName, EECPNextTechName, EECCVolcano::UpdateVolcano,
+  EERuleNumber::Integer, EETagPoint::GetTransformation, EECameraControl::ClampHeight/ClipToEdges, EEMusicManager's
+  five Do* steps, EEGraphicalGoalManager::GetGoals, EEMiniMap::ProjectToGround, both EEApplyEventEffect,
+  EETechTree::GetUnitClassMediaMask, EEUserInterface::Open/CloseIMECandidateWindow, ESQuietVerify, 18 GX shim
+  methods with their extern "C" declarations); UFromChars.h and EESCTChatText.h (no #include), EEMiniMapCell,
+  the comment-only EEAGIncreasingVelocityUnitSorter.cpp; and the branches behind three zero-initialised statics
+  nothing writes: sB563234 (the waypoint marker units: AddWaypoint's marker, DropPath stepping through the
+  waypoints, EEComplexUnit::FindWaypointMarker and RemoveWaypointMarker, EEWorld::FindQueuedUnitAt), sL52906C
+  (FillUnit's line-of-sight and range ring sizes) and gRecordToDebuggerOnly (ESBeginRecording). A scan for every
+  other never-written scalar global found none.
+- **Kept on purpose.** EEWonNet and what only it reaches (gWonNet is only ever set to NULL and the EEWonNet constructor is in no map, so
+  the WON front end is unreachable: EEWonNet.cpp/.h and EEWonNetAvailableGameFormManager, ~2,700 lines, plus the
+  gWonNet branches in EEClient, EEServer and the lobby events; the owner keeps WON's Internet code): EEWonNet.cpp, EEWonNetAvailableGameFormManager, EEUserInterface::PostLoginDone/PostMOTD. The GX methods
+  tools/gx_test and tests/platform/sdl_test call (GXDevice's state setters, CreateDevice, SetColorKey, ...);
+  EECPLuaState::Run/Reload and EECPLuaValue::ToText (tests/lua_test); EERules::SetMusicFromDbmusicFile
+  (tools/eedata gate); ee_units_host_goal_kind (ee_units calls it). The Rust functions some deleted shims forwarded
+  to (gx_device_get_transform, ee_gfx_camera_clamp_height, ee_tech_effect_f32, ...) stay: Rust was not touched.
+- **POSIX.** No POSIX link map: a Linux game build needs the Linux Rust library and a full cross compile. Code only
+  `#if !defined(_WIN32)` compiles is in no Windows object, so a function only it calls looks dead here; the grep
+  covers that (every candidate was searched over the whole tree, POSIX sources included).
+- **Rerunning it.** `python -I tools/dead_census.py` after `build.py --sim` and `--test-profile windowed-software`
+  rewrites docs/dead_census and build/dead_census/dead.tsv (unit, definitions, mangled and demangled name of every
+  dropped symbol); the remaining entries are inlined live code, base-class virtuals, EEWonNet's, and what tests and
+  tools reach. The next real yield is semantic, not the linker's: code reachable only through a never-set pointer
+  (gWonNet) or a menu entry the game no longer shows.

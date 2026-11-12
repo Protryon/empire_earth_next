@@ -188,13 +188,6 @@ void EEAIAStarStorage::SetHasBounds(bool inHasBounds)
     ee_astar_set_fields(this->mCore, &theFields);
 }
 
-EEAIAStarBounds EEAIAStarStorage::GetDirtyBounds()
-{
-    EeAStarFields theFields;
-    ee_astar_get_fields(this->mCore, &theFields);
-    return EEAIAStarBoundsOf(theFields.dirty);
-}
-
 void EEAIAStarStorage::SetDirtyBounds(const EEAIAStarBounds& inBounds)
 {
     EeAStarFields theFields;

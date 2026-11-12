@@ -73,22 +73,6 @@ EEEvent::~EEEvent()
 
 std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 
-// FUNCTION: EXE 0x5ca591
-// Returns an event effect applied to a float stat: base + offset, value * factor + base, or the set value (else 0)
-float EEApplyEventEffect(float inValue, float inBase, EEEventEffect* inEffect)
-{
-    EeTechEffectValues theValues = EETechEffectView(inEffect);
-    return ee_tech_effect_f32(inValue, inBase, &theValues);
-}
-
-// FUNCTION: EXE 0x5ca5df
-// Returns an event effect applied to an integer stat: base + offset, value * factor + base, or the set value
-long EEApplyEventEffect(long inValue, long inBase, EEEventEffect* inEffect)
-{
-    EeTechEffectValues theValues = EETechEffectView(inEffect);
-    return ee_tech_effect_i32((int32_t)inValue, (int32_t)inBase, &theValues);
-}
-
 // FUNCTION: EXE 0x5ca63b
 // Loads every event effect and every event with its effect list (as many as the files hold: the original read
 // exactly 2000 effects and 1500 events); returns the last read's result

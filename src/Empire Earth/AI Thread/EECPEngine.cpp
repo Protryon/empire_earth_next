@@ -561,14 +561,6 @@ long EECPChoiceByName(const std::string& inName)
     return -1;
 }
 
-std::string EECPChoiceName(unsigned long inChoice)
-{
-    if (inChoice == kEECPChoiceRandom)
-        return "random";
-    const EECPAIEntry* theAI = EECPAIByChoice(inChoice);
-    return theAI != NULL ? theAI->mID : "classic";
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // The folder's hash
 

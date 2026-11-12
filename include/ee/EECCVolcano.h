@@ -46,8 +46,6 @@ protected:
     static void ClearArea(EEUnitClass* inClass, long inX, long inY);
     float GetMaximumHeight(const GE3DPoint& inLocation);   // 0xb4b62: the highest terrain point around inLocation
     bool CreateVolcano(EECalamity* inCalamity);  // 0xb4d19
-    // empty, ICF-folded 0x163d6f (Update calls it directly)
-    void UpdateVolcano(EECalamity* inCalamity, float inElapsedTime);
 
     EEGraphicEffect* mGraphicEffect1;       // +0x28 (record +0x94; placed at Start; its delay starts the volcano)
     EEGraphicEffect* mGraphicEffect2;       // +0x2c (record +0x98; on the volcano unit)
