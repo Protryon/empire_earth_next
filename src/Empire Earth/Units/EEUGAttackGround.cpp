@@ -20,6 +20,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackGround.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEAreaUtilities.h"
 
@@ -107,28 +108,8 @@ void EEUGAttackGround::GetGoalLocation(GE3DPoint& outLocation)
 // a randomised reload timer; drops the path and resets the path attempts
 void EEUGAttackGround::Step(EEComplexUnit* inUnit)
 {
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionFaceLocation:
-        inUnit->SetCurrentPhysicsAction(1);
-        inUnit->DropPath();
-        break;
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation: {
-            inUnit->SetCurrentPhysicsAction(1);
-            long theSet = inUnit->mStats->mCanFireOverWalls && inUnit->mIsFiringHigh ? 8 : 0;
-            unsigned long theFrame = inUnit->GetModel()->mSound1Frames[theSet];
-            inUnit->SetAnimation(theSet, -1, 0);
-            if (theFrame == inUnit->mPhysicalModel.GetFrame())
-                inUnit->mUnitClass->FireShot(inUnit);
-            else
-                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-            inUnit->SetTargetSearchTimer(0);
-            inUnit->DropPath();
-            this->SetPathAttempts(0);
-        }
-        break;
-    }
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, this, NULL);
 }
 
 // FUNCTION: EXE 0x61d1b2
@@ -164,19 +145,10 @@ long EEUGAttackGround::Save(unsigned long inMajorVersion, unsigned long inMinorV
 // at 0, fly off after the attack for paratrooper bombers); others go to the common goal
 bool EEUGAttackGround::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    switch (inEvent) {
-    case kTriggerLocationInWeaponRange:
-        return inUnit->CanReachTile(UMFloor(this->mTarget.GetX()), UMFloor(this->mTarget.GetY()));
-    case kTriggerLocationInsideFiringArch:
-        return inUnit->GetUnitClass()->FacesPoint(inUnit, this->mTarget, true);
-    case kTriggerAttackerIsRangedUnit:
-        return inUnit->mStats->mRange > 1.0f ? true : false;
-    case kTriggerReadyToFireAgain:
-        return inUnit->mReloadTimer == 0 ? true : false;
-    case kTriggerFlyOffMapAfterAttack:
-        return inUnit->mUnitClass->mIsParatrooperBomber;
-    }
-    return EEUnitGoal::EvaluateCondition(inUnit, inEvent);
+    // ee_combat goals.rs condition (CBTC)
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL);
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // ICF-FOLDED: EXE 0x61d460

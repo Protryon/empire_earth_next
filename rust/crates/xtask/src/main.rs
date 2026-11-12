@@ -1,7 +1,10 @@
-//! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`.
+//! Repository tasks: `cargo run -p xtask -- cbindgen [--check]`, `capture-digest SEED=PATH ...`
+//! (tools/sim_capture.py's digests, [`capture_digest`]).
 //!
 //! `include/rust/ee_rust.h` is generated from the `extern "C"` items of `ee_rust` and checked in; `--check` fails if it
 //! is stale, as `eedata.py cppgen --check` does for the generated C++.
+
+mod capture_digest;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -64,7 +67,8 @@ fn main() -> ExitCode {
     let result = match refs.as_slice() {
         ["cbindgen"] => cbindgen_task(false),
         ["cbindgen", "--check"] => cbindgen_task(true),
-        _ => Err("usage: xtask cbindgen [--check]".to_string()),
+        ["capture-digest", files @ ..] => capture_digest::run(files),
+        _ => Err("usage: xtask cbindgen [--check] | capture-digest SEED=PATH ...".to_string()),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

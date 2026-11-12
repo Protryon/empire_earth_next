@@ -15,125 +15,186 @@
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 
+// HTTPSession's map and HTTPConnection's state machine are ee_won's (rust/crates/ee_won/src/httpengine.rs); these
+// classes keep the locks and are the RefCounts the ops' completions hold. The hooks hand Rust the C++ objects as
+// RefCounts.
+struct HTTPEngineHooks {
+    static RefCount* Obj(void* p) { return static_cast<RefCount*>(p); }
+    static HTTPGetOp* Op(void* p) { return static_cast<HTTPGetOp*>(static_cast<AsyncOp*>(Obj(p))); }
+    static void* Ref(RefCount* p) { return p; }
+    static void ConnLock(void* c) { static_cast<HTTPConnection*>(c)->mDataCrit.Enter(); }
+    static void ConnUnlock(void* c) { static_cast<HTTPConnection*>(c)->mDataCrit.Leave(); }
+    static void SessionLock(void* c) { static_cast<HTTPSession*>(c)->mDataCrit.Enter(); }
+    static void SessionUnlock(void* c) { static_cast<HTTPSession*>(c)->mDataCrit.Leave(); }
+    static void AddRef(void* p) { Obj(p)->AddRef(); }
+    static void Release(void* p) { Obj(p)->Release(); }
+    static long Status(void* p) { return Op(p)->GetStatus(); }
+    static void Kill(void* p) { Op(p)->Kill(true); }
+    static void ForceFinish(void* p, long s) { Op(p)->ForceFinish(s); }
+    static void* Completion(void* p)
+    {
+        CompletionBase<AsyncOpPtr>* c = Op(p)->GetCompletion();
+        if (c == NULL) return NULL;
+        c->AddRef();
+        return Ref(c);
+    }
+    static void SetCompletion(void* p, void* c)
+    {
+        Op(p)->SetCompletion(c != NULL ? static_cast<CompletionBase<AsyncOpPtr>*>(Obj(c)) : NULL);
+    }
+    static void SetConnCompletion(void* p, void* c)
+    {
+        Op(p)->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
+            HTTPConnection::StaticOpCallback,SmartPtr<RefCount>(static_cast<HTTPConnection*>(c))));
+    }
+    static void Prepare(void* p, void* s)
+    {
+        HTTPGetOp* op = Op(p);
+        op->SetCloseConnection(false);
+        op->SetDoRangeResume(false);
+        op->SetSocket(s != NULL ? static_cast<BlockingSocket*>(Obj(s)) : NULL);
+    }
+    static void RunAsync(void* p) { Op(p)->RunAsync(Op(p)->GetTimeout()); }
+    static void* Socket(void* p)
+    {
+        BlockingSocket* s = Op(p)->GetSocket();
+        if (s == NULL) return NULL;
+        s->AddRef();
+        return Ref(s);
+    }
+    static void SetMode(void* p, int m)
+    {
+        if (m == 2) Op(p)->SetOnlyRecv();
+        else if (m == 0) Op(p)->SetOnlySend();
+        else Op(p)->SetSendAndRecv();
+    }
+    static void Complete(void* c, void* p)
+    {
+        static_cast<CompletionBase<AsyncOpPtr>*>(Obj(c))->Complete(AsyncOpPtr(static_cast<AsyncOp*>(Op(p))));
+    }
+    static void SocketKill(void* s) { static_cast<BlockingSocket*>(Obj(s))->Kill(); }
+    static int64_t Now(void*) { return (int64_t)time(NULL); }
+    static void Host(void* p, EeWonByteSink sink, void* sc)
+    {
+        const std::string& h = Op(p)->GetHost();
+        sink(sc, reinterpret_cast<const uint8_t*>(h.data()), h.size());
+    }
+    static void* NewConn(void*)
+    {
+        HTTPConnection* c = new HTTPConnection(NULL);
+        c->AddRef();
+        return Ref(c);
+    }
+    static void ConnQueue(void* c, void* p) { static_cast<HTTPConnection*>(Obj(c))->QueueOp(Op(p)); }
+    static void ConnKill(void* c) { static_cast<HTTPConnection*>(Obj(c))->Kill(); }
+    static int ConnNumOps(void* c) { return static_cast<HTTPConnection*>(Obj(c))->GetNumOps(); }
+
+    static EeWonHttpConn* NewConnImpl(HTTPConnection* c)
+    {
+        EeWonHttpConnHooks h;
+        h.context = c;
+        h.lock = ConnLock;
+        h.unlock = ConnUnlock;
+        h.add_ref = AddRef;
+        h.release = Release;
+        h.op_status = Status;
+        h.op_kill = Kill;
+        h.op_force_finish = ForceFinish;
+        h.op_completion = Completion;
+        h.op_set_completion = SetCompletion;
+        h.op_set_conn_completion = SetConnCompletion;
+        h.op_prepare = Prepare;
+        h.op_run_async = RunAsync;
+        h.op_socket = Socket;
+        h.op_set_mode = SetMode;
+        h.complete = Complete;
+        h.socket_kill = SocketKill;
+        h.now = Now;
+        return ee_won_http_conn_new(&h);
+    }
+    static EeWonHttpSession* NewSessionImpl(HTTPSession* s)
+    {
+        EeWonHttpSessionHooks h;
+        h.context = s;
+        h.lock = SessionLock;
+        h.unlock = SessionUnlock;
+        h.add_ref = AddRef;
+        h.release = Release;
+        h.op_host = Host;
+        h.new_conn = NewConn;
+        h.conn_queue_op = ConnQueue;
+        h.conn_kill = ConnKill;
+        h.conn_num_ops = ConnNumOps;
+        return ee_won_http_session_new(&h);
+    }
+};
+
 // FUNCTION: WON 0x006d28f0
 // Queues an HTTP get on the connection for its host, creating the connection on first use
 void HTTPSession::AddOp(HTTPGetOp* inOp)
 {
-    AutoCrit guard(this->mDataCrit);
-    ConnectionMap::iterator anItr = this->mConnectionMap.insert(ConnectionMap::value_type(inOp->mHost, HTTPConnectionPtr())).first;
-    HTTPConnectionPtr& stored = anItr->second;
-    if (stored.get() == NULL) stored = new HTTPConnection(NULL);
-    HTTPConnectionPtr connection = stored.get();
-    connection->QueueOp(inOp);
+    ee_won_http_session_add_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
 
 // FUNCTION: WON 0x006d2bc0
 // Kills every connection's running and queued requests
 void HTTPSession::KillAll()
 {
-    AutoCrit guard(this->mDataCrit);
-    ConnectionMap::iterator it=this->mConnectionMap.begin();
-    while(it!=this->mConnectionMap.end()) { it->second->Kill();
-        ++it;
-    }
+    ee_won_http_session_kill_all(this->mImpl);
 }
 
 // FUNCTION: WON 0x006d2c80
 // Creates an idle connection with pipelining on
 HTTPConnection::HTTPConnection(HTTPSession* inSession)
 {
-    this->mCurOp[1] = NULL;
-    this->mCurOp[0] = NULL;
-    this->mDoPipeline = true;
     this->mSession = inSession;
-    this->mRetryMode = false;
-    this->mNumPipelineFailures = 0;
-    this->mNumPipelineSuccesses = 0;
+    this->mImpl = HTTPEngineHooks::NewConnImpl(this);
+}
+// TEMPLATE: WON 0x006d2d50
+// Destroys the connection: its socket, queues and saved completions
+HTTPConnection::~HTTPConnection()
+{
+    ee_won_http_conn_free(this->mImpl);
 }
 
 // FUNCTION: WON 0x006d3600
 // Kills the running and queued requests (finishing queued ones as killed) and drops the socket
 void HTTPConnection::Kill()
 {
-    AutoCrit guard(this->mDataCrit);
-    this->mRetryMode = false;
-    this->mNumPipelineFailures = 0;
-    this->mNumPipelineSuccesses = 0;
-    this->mDoPipeline = true;
-    for (int id=0; id<2; ++id) {
-        if (this->mCurOp[id] != NULL) {
-            this->mCurOp[id]->Kill(true);
-            this->mCurOp[id] = NULL;
-            this->mCurOpCompletion[id] = NULL;
-        }
-        for (OpQueue::iterator it=this->mOpQueue[id].begin(); it!=this->mOpQueue[id].end(); ++it) {
-            HTTPGetOp* op = it->get();
-            bool wasNotPending = op->GetStatus() != WS_Pending;
-            op->Kill(true);
-            if (wasNotPending) op->ForceFinish(WS_Killed);
-        }
-        this->mOpQueue[id].clear();
-    }
-    if (this->mSocket.get() != NULL) {
-        this->mSocket->Kill();
-        this->mSocket = NULL;
-    }
+    ee_won_http_conn_kill(this->mImpl);
 }
 
 // FUNCTION: WON 0x006d33a0
 // Queues a request as send-only on the pipeline queue, or as a full request when pipelining is off
 void HTTPConnection::QueueOp(HTTPGetOp* inOp)
 {
-    AutoCrit guard(this->mDataCrit);
-    if (this->mDoPipeline) {
-        inOp->mOnlySend = true;
-        inOp->mOnlyRecv = false;
-        this->QueueOp(inOp,0);
-    } else {
-        inOp->mOnlySend = false;
-        inOp->mOnlyRecv = false;
-        this->QueueOp(inOp,1);
-    }
+    ee_won_http_conn_queue_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
 // FUNCTION: WON 0x006d3290
 // Appends a request to the send (0) or receive (1) queue and starts it when the queue was empty
 void HTTPConnection::QueueOp(HTTPGetOp* inOp,int inId)
 {
-    AutoCrit guard(this->mDataCrit);
-    this->mOpQueue[inId].push_back(inOp);
-    if (this->mOpQueue[inId].size() == 1) this->RunOp(inId);
+    ee_won_http_conn_queue_op_id(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)), inId);
 }
-
 
 // HTTPConnection is 0x64 bytes, HTTPSession 0x2c bytes
 
 HTTPSession::HTTPSession()
 {
+    this->mImpl = HTTPEngineHooks::NewSessionImpl(this);
+}
+// TEMPLATE: WON 0x006d2870
+// Destroys the session: its connections
+HTTPSession::~HTTPSession()
+{
+    ee_won_http_session_free(this->mImpl);
 }
 // FUNCTION: WON 0x006d3430
 // Starts the next request of a queue on the shared socket, routing its completion back to the connection
 void HTTPConnection::RunOp(int inId)
 {
-    AutoCrit guard(this->mDataCrit);
-    if (this->mRetryMode)
-        return;
-    if (this->mOpQueue[inId].empty())
-        return;
-    if (this->mCurOp[inId]!=NULL)
-        return;
-    SmartPtr<HTTPGetOp> op=this->mOpQueue[inId].front();
-    this->mOpQueue[inId].pop_front();
-    this->mCurOp[inId]=op.get();
-    this->mCurOpCompletion[inId]=this->mCurOp[inId]->GetCompletion();
-    this->mCurOp[inId]->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
-        HTTPConnection::StaticOpCallback,SmartPtr<RefCount>(this)));
-    this->mCurOp[inId]->SetCloseConnection(false);
-    this->mCurOp[inId]->SetDoRangeResume(false);
-    this->mCurOp[inId]->SetSocket(this->mSocket.get());
-    this->mCurOp[inId]->RunAsync(this->mCurOp[inId]->GetTimeout());
+    ee_won_http_conn_run_op(this->mImpl, inId);
 }
-
-
 
 // FUNCTION: WON 0x006d2df0
 // Completion trampoline: passes a finished request to its connection's OpCallback
@@ -147,110 +208,20 @@ void HTTPConnection::StaticOpCallback(AsyncOpPtr inOp,SmartPtr<RefCount> inConne
 // Handles a finished request: queues a sent one for its reply or completes it; requeues all when the pipeline drops
 void HTTPConnection::OpCallback(HTTPGetOp* inOp)
 {
-    int anId;
-    for (anId=0;anId<2;++anId)
-        if (inOp==this->mCurOp[anId])
-            break;
-    if (anId>=2)
-        return;
-    this->mCurOp[anId]=NULL;
-    OpCompletionBasePtr aCompletion=this->mCurOpCompletion[anId];
-    this->mCurOpCompletion[anId]=NULL;
-    inOp->SetCompletion(aCompletion);
-
-    if (!this->mRetryMode) {
-        this->mSocket=inOp->GetSocket();
-        if (anId==1 && this->mSocket.get()!=NULL) {
-            if (++this->mNumPipelineSuccesses>2)
-                this->mNumPipelineFailures=0;
-        }
-        if (this->mSocket.get()==NULL && this->mDoPipeline &&
-            (!this->mOpQueue[1].empty() || this->mCurOp[1]!=NULL || this->mCurOp[0]!=NULL)) {
-            AutoCrit aGuard(this->mDataCrit);
-            this->mRetryMode=true;
-            if (this->mCurOp[0]!=NULL)
-                this->mCurOp[0]->Kill(true);
-            if (this->mCurOp[1]!=NULL)
-                this->mCurOp[1]->Kill(true);
-        }
-    }
-
-    if (this->mRetryMode) {
-        if (anId!=0 && inOp->GetStatus()==WS_Success) {
-            if (aCompletion.get()!=NULL)
-                aCompletion->Complete(AsyncOpPtr(inOp));
-        }
-        else
-            this->QueueOp(inOp);
-
-        if (this->mCurOp[0]==NULL && this->mCurOp[1]==NULL) {
-            AutoCrit aGuard(this->mDataCrit);
-            int aLastQueue=1;
-            if (this->mDoPipeline && ++this->mNumPipelineFailures>2) {
-                this->mDoPipeline=false;
-                aLastQueue=0;
-            }
-            for (anId=1;anId>=aLastQueue;--anId) {
-                OpQueue aQueue=this->mOpQueue[anId];
-                this->mOpQueue[anId].clear();
-                for (OpQueue::iterator anItr=aQueue.begin();anItr!=aQueue.end();++anItr)
-                    this->QueueOp(anItr->get());
-            }
-            this->mRetryMode=false;
-            this->RunOp(this->mDoPipeline?0:1);
-        }
-        return;
-    }
-    else {
-        if (anId==0 && this->mSocket.get()!=NULL && inOp->GetStatus()==WS_HTTP_SendSuccess) {
-            inOp->SetOnlyRecv();
-            this->QueueOp(inOp,1);
-        }
-        else {
-            if (aCompletion.get()!=NULL)
-                aCompletion->Complete(AsyncOpPtr(inOp));
-            this->mLastUseTime=time(NULL);
-        }
-        this->RunOp(anId);
-    }
-}
-
+    ee_won_http_conn_op_callback(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
 
 // No original address identified: WON SDK request counting
-namespace WONAPI {
 int HTTPSession::GetNumOps()
 {
-	AutoCrit aCrit(this->mDataCrit);
-	int aNumOps = 0;
-	ConnectionMap::iterator anItr = this->mConnectionMap.begin();
-	while(anItr!=this->mConnectionMap.end())
-	{
-		HTTPConnection *aConnection = anItr->second;
-		aNumOps += aConnection->GetNumOps();
-		++anItr;
-	}
-
-	return aNumOps;
+    return ee_won_http_session_num_ops(this->mImpl);
 }
 
 int HTTPConnection::GetNumOps()
 {
-	int aNumOps = 0;
-	for(int i=0; i<2; i++)
-	{
-		aNumOps += this->mOpQueue[i].size();
-		if(this->mCurOp[i]!=NULL)
-			aNumOps++;
-	}
-
-	return aNumOps;
+    return ee_won_http_conn_num_ops(this->mImpl);
 }
 }
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x006d2d50
-// (public: virtual __thiscall WONAPI::HTTPConnection::~HTTPConnection(void)    [??1HTTPConnection@WONAPI@@UAE@XZ])
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x006d2d30
