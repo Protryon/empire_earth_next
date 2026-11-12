@@ -12,6 +12,8 @@
 //!   rows' controls, type menus, names and colours.
 //! - [`lobby_options`]: the lobby's game options (what is shown and editable), the option events' messages and
 //!   the start check.
+//! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
+//!   (`EEIsValidName`) it shares with the multiplayer screens.
 
 pub mod lobby;
 mod lobby_ffi;
@@ -19,3 +21,5 @@ pub mod lobby_options;
 mod lobby_options_ffi;
 pub mod settings;
 mod settings_ffi;
+pub mod single_player;
+mod single_player_ffi;

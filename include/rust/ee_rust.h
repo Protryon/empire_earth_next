@@ -932,6 +932,13 @@ constexpr static const float EE_SCREENS_MINIMUM_MOUSE_SENSITIVITY = 0.01;
 /// `ApplySettings`' floor on the sound channels.
 constexpr static const unsigned long EE_SCREENS_MINIMUM_CHANNELS = 8;
 
+/// A slot of the random map's table: the human's, the computer's, or a closed one.
+constexpr static const uint32_t EE_SCREENS_SP_HUMAN = 0;
+
+constexpr static const uint32_t EE_SCREENS_SP_COMPUTER = 1;
+
+constexpr static const uint32_t EE_SCREENS_SP_CLOSED = 2;
+
 /// [`EeCalamityOp::TargetView`]'s flags.
 constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
 
@@ -6073,6 +6080,18 @@ struct EeScreensInterfaceShow {
   bool left_handed;
   long autosave_minutes;
   long autosaves;
+};
+
+/// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
+struct EeScreensSinglePlayerSlot {
+  /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
+  /// slot's type and name).
+  uint32_t source;
+  unsigned long kind;
+  unsigned long color;
+  unsigned long slot;
+  bool local;
+  bool ready;
 };
 
 /// The conductor's scalar members (the C++ object's, read and written around each call).
@@ -13128,6 +13147,12 @@ long ee_screens_settings_percent(float value);
 /// `ShowInterface`'s plan for the settings.
 void ee_screens_settings_interface(const EeScreensInterfaceSettings *settings,
                                    EeScreensInterfaceShow *out);
+
+/// `EEIsValidName` over the name's `count` characters (each one's first byte).
+bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// The random map's slot table: 16 slots into `out`.
+void ee_screens_single_player_slots(EeScreensSinglePlayerSlot *out);
 
 /// An empty score table (the constructor).
 EeConductor *ee_conductor_create();
