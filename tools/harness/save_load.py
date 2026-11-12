@@ -38,7 +38,11 @@ SCREEN_CODES={'EEUIESPELoadGame':0x0605,'EEUIESPECampaign':0x0602,'EEUIEPCECampa
               'EEUIESLESaveFile':0x0302,'EEUIESPLELoadFile':0x0d03,'EEUIESLECancelSave':0x0307,
               # the campaign scenario select's Start and the scenario intro's Start (scenario_screens.rs;
               # scenario_game.py)
-              'EEUIECSSEStartScenario':0x2106,'EEUIESIEStart':0x130a}
+              'EEUIECSSEStartScenario':0x2106,'EEUIESIEStart':0x130a,
+              # the lobby's load screen's Load for a scenario (lobby_form.rs; scenario_game.py --scenario-file)
+              'EEUIELELoadScenarioGame':0x1a04,
+              # the in-game options menu's Save Game and Return to Game (main_game_options.rs)
+              'EEUIEMGOESaveGame':0x1c06,'EEUIEMGOEReturnToGame':0x1c01}
 SAVE_DIR=('Data','Saved Games')
 EXT='.ees'
 

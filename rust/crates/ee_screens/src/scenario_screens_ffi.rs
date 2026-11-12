@@ -12,7 +12,7 @@ use crate::scenario_screens::*;
 
 extern "C" {
     /// The manager's form of an id (`gUIManager->GetFormByID`).
-    fn ee_screenscpp_form(id: u32) -> *mut c_void;
+    pub(crate) fn ee_screenscpp_form(id: u32) -> *mut c_void;
 }
 
 /// The intro's briefing sound (the UI thread's; locked only around its own reads and writes).

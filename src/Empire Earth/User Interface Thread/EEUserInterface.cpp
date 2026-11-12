@@ -56,6 +56,7 @@ unsigned long EEMenuHeight();
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
+#include "rust/ee_screens.h"   // the lobby's updates (ee_screens lobby_form.rs)
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFMGMainGroup.h"
 #include "ee/EEAreaUtilities.h"
@@ -139,10 +140,8 @@ void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture
 void EEPostGraphicsAll();                   // 0x10fc0c
 // CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();                     // 0x295bd2
-void LobbyUpdatePlayer(long inSlot, long inFlags);   // 0x1ddd8c
-void LobbyUpdateGameOptions();              // 0x1deefb
-void LobbyUpdateForm();                     // 0x1db6ec
-void LobbyShowTransferProgress(const unsigned char& inCurrent, const unsigned char& inTotal);   // 0x1df093
+// the lobby's LobbyUpdatePlayer, LobbyUpdateGameOptions, LobbyUpdateForm and LobbyShowTransferProgress: Rust's
+// (rust/ee_screens.h, ee_screens lobby_form.rs)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (set before the tested scenario starts) (provisional name)
 RTSRenderObject* gU56534C;                  // 0x56534c (the UI's render object; .bss among this unit's 0x565334..0x56536c)
 extern UString gUserInterfaceThreadName;   // 0x52a220 (Empire Earth.cpp)
@@ -1200,25 +1199,25 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
         break;
     case 0x436:
         gUIManager->LockUIForCopyData();
-        LobbyUpdatePlayer(inParameter1, inParameter2);
+        ee_screens_lobby_update_player(inParameter1, inParameter2);
         gUIManager->UnlockUIForCopyData();
         break;
     case 0x437:
         gUIManager->LockUIForCopyData();
-        LobbyUpdateGameOptions();
+        ee_screens_lobby_update_game_options();
         gUIManager->UnlockUIForCopyData();
         break;
     case 0x439: {
         gUIManager->LockUIForCopyData();
         unsigned char theTotal = (unsigned char)inParameter2;
         unsigned char theCurrent = (unsigned char)inParameter1;
-        LobbyShowTransferProgress(theCurrent, theTotal);
+        ee_screens_lobby_show_transfer_progress(theCurrent, theTotal);
         gUIManager->UnlockUIForCopyData();
         break;
     }
     case 0x438:
         gUIManager->LockUIForCopyData();
-        LobbyUpdateForm();
+        ee_screens_lobby_update_form();
         gUIManager->UnlockUIForCopyData();
         break;
     case 0x442:

@@ -115,6 +115,270 @@ constexpr static const uint32_t EE_SCREENS_LOBBY_WHITE = 2;
 
 constexpr static const uint32_t EE_SCREENS_LOBBY_GREEN = 3;
 
+constexpr static const uint32_t EE_SCREENS_LE_CANCEL_LOAD = 6657;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_SAVED_GAME = 6658;
+
+constexpr static const uint32_t EE_SCREENS_LE_OPEN_LOAD_SAVED_GAME = 6659;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_SCENARIO = 6660;
+
+constexpr static const uint32_t EE_SCREENS_LE_OPEN_LOAD_SCENARIO = 6661;
+
+constexpr static const uint32_t EE_SCREENS_LE_CITIZENS = 6662;
+
+constexpr static const uint32_t EE_SCREENS_LE_ENGINE = 6663;
+
+constexpr static const uint32_t EE_SCREENS_LE_CHAT = 6664;
+
+constexpr static const uint32_t EE_SCREENS_LE_CANCEL = 6665;
+
+constexpr static const uint32_t EE_SCREENS_LE_START = 6666;
+
+constexpr static const uint32_t EE_SCREENS_LE_COLOR_UP = 6667;
+
+constexpr static const uint32_t EE_SCREENS_LE_COLOR_DOWN = 6668;
+
+constexpr static const uint32_t EE_SCREENS_LE_TEAM = 6669;
+
+constexpr static const uint32_t EE_SCREENS_LE_PLAYER_TYPE = 6670;
+
+constexpr static const uint32_t EE_SCREENS_LE_READY = 6671;
+
+constexpr static const uint32_t EE_SCREENS_LE_VICTORY = 6672;
+
+constexpr static const uint32_t EE_SCREENS_LE_GAME_TYPE = 6673;
+
+constexpr static const uint32_t EE_SCREENS_LE_MAP_SIZE = 6674;
+
+constexpr static const uint32_t EE_SCREENS_LE_MAP_TYPE = 6675;
+
+constexpr static const uint32_t EE_SCREENS_LE_RESOURCES = 6676;
+
+constexpr static const uint32_t EE_SCREENS_LE_EPOCH_START = 6677;
+
+constexpr static const uint32_t EE_SCREENS_LE_EPOCH_END = 6678;
+
+constexpr static const uint32_t EE_SCREENS_LE_UNIT_LIMIT = 6679;
+
+constexpr static const uint32_t EE_SCREENS_LE_WONDERS = 6680;
+
+constexpr static const uint32_t EE_SCREENS_LE_VARIANT = 6681;
+
+constexpr static const uint32_t EE_SCREENS_LE_DIFFICULTY = 6682;
+
+constexpr static const uint32_t EE_SCREENS_LE_SPEED = 6683;
+
+constexpr static const uint32_t EE_SCREENS_LE_RECORD_GAMES = 6684;
+
+constexpr static const uint32_t EE_SCREENS_LE_REVEAL_MAP = 6685;
+
+constexpr static const uint32_t EE_SCREENS_LE_CUSTOM_CIVS = 6686;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOCK_TEAMS = 6687;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOCK_SPEED = 6688;
+
+constexpr static const uint32_t EE_SCREENS_LE_CHEAT_CODES = 6689;
+
+constexpr static const uint32_t EE_SCREENS_LE_CHAT_FOCUS = 6690;
+
+/// The lobby's open events: a multiplayer host's (`EEAJoinOrHostAGame`), a client's, single player's (the single
+/// player screen's Random Map).
+constexpr static const uint32_t EE_SCREENS_LE_ACTIVATE_SERVER = 6691;
+
+constexpr static const uint32_t EE_SCREENS_LE_ACTIVATE_CLIENT = 6692;
+
+constexpr static const uint32_t EE_SCREENS_LE_ACTIVATE_SINGLE = 6693;
+
+/// The boot question's answers (no event object: the host's callbacks, the slot's copy held by the host).
+constexpr static const uint32_t EE_SCREENS_LE_BOOT_YES = 6694;
+
+constexpr static const uint32_t EE_SCREENS_LE_BOOT_NO = 6695;
+
+/// (kind: [`LE_READ_LOCK`] ..) the lobby options' lock.
+constexpr static const uint32_t EE_SCREENS_GAME_LE_LOCK = 448;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_IS_CLIENT = 449;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_PLAYER_INFO = 450;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_SEND_OPTION = 451;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_SET_OPTION = 452;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_DIFFICULTY_LEVELS = 453;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_COMBO_DELETE_LINE = 454;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_COMBO_LINES = 455;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_TYPE_SELECT = 456;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_HAS_TRIGGER = 457;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_PLAYER_COLOUR = 458;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_OPACITY = 459;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_BITMAP = 460;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_NAME_COLOUR = 461;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_DIRTY = 462;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_PING = 463;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_FORM_VISIBLE = 464;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_KEYBOARD_EVENT = 465;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_KEYBOARD_CAPTURED = 466;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_BLINKING = 467;
+
+constexpr static const uint32_t EE_SCREENS_OP_LE_EDIT_DELETE = 468;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_DISCONNECT = 469;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_REMOVE_HOST = 470;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_WON_REJOIN = 471;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_WON_LEAVE = 472;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_START_SERVER = 473;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_START_LOADING = 474;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS = 475;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_START_PING = 476;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_FULL_PLAYER = 477;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_RULE = 479;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_FIND_GENERATOR = 480;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_BOOT_FREE = 481;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_BOOT_REFUSE = 482;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_XFER = 483;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_HEADER_PLAYERS = 484;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LE_APPLY_SAVED = 485;
+
+/// The lobby options copied (their assignment checks each value) with load type 0, and back.
+constexpr static const uint32_t EE_SCREENS_GAME_LE_RANDOM_MAP_OPTIONS = 486;
+
+/// Texts (ee_screenscpp_text / _put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_MAP_TYPE = 96;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_SEND_MAP_TYPE = 97;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_CHAT = 98;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_GENERATOR_DISPLAY = 99;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_MAP_DISPLAY = 100;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_GENERATOR_NAME = 101;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_ENGINE = 102;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_CHECK_LOAD = 103;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_OPEN_HEADER = 104;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_MISSING = 105;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_BOOT_QUESTION = 106;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LE_CHECK_LABEL = 107;
+
+/// The lock's kinds.
+constexpr static const uint32_t EE_SCREENS_LE_READ_LOCK = 0;
+
+constexpr static const uint32_t EE_SCREENS_LE_READ_UNLOCK = 1;
+
+constexpr static const uint32_t EE_SCREENS_LE_WRITE_LOCK = 2;
+
+constexpr static const uint32_t EE_SCREENS_LE_WRITE_UNLOCK = 3;
+
+/// A load check's or header's outcome.
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_NOT_FOUND = 0;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_READ_ERROR = 1;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_MISMATCH = 2;
+
+constexpr static const uint32_t EE_SCREENS_LE_LOAD_OK = 3;
+
+/// The slots a record comes from: the lobby options', the boot question's copy, the loaded header's.
+constexpr static const uint32_t EE_SCREENS_LE_SOURCE_LOBBY = 0;
+
+constexpr static const uint32_t EE_SCREENS_LE_SOURCE_BOOT = 1;
+
+constexpr static const uint32_t EE_SCREENS_LE_SOURCE_HEADER = 2;
+
+/// The game type's copy of the options (random map: shown as the copy, which keeps a loaded game's map type).
+constexpr static const uint32_t EE_SCREENS_LE_SOURCE_COPY = 3;
+
+/// [`EE_SCREENS_GAME_LE_RULE`]'s tables.
+constexpr static const uint32_t EE_SCREENS_LE_RULE_EPOCHS = 0;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_UNIT_MINIMUM = 1;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_UNIT_MAXIMUM = 2;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_UNIT_STEP = 3;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_WONDERS_MAXIMUM = 4;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_MAP_SIZES = 5;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_MAP_SIZE_NAME = 6;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_DIFFICULTIES = 7;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_DIFFICULTY_NAME = 8;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_SPEEDS = 9;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_SPEED_NAME = 10;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_VARIANTS = 11;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_VARIANT_SELECTABLE = 12;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_VARIANT_NAME = 13;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_RESOURCE_LEVELS = 14;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_RESOURCE_LEVEL_NAME = 15;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME = 16;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_EPOCH_TITLE = 17;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_GENERATORS = 18;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_ENGINES = 19;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_DEFAULT_COLOUR = 20;
+
+constexpr static const uint32_t EE_SCREENS_LE_RULE_STARTING_CITIZENS = 21;
+
+/// The forms a host call names (the event's: [`LE_FORM_EVENT`]).
+constexpr static const uint32_t LE_FORM_LOBBY = 26;
+
+constexpr static const uint32_t LE_FORM_LOAD = 4;
+
+constexpr static const uint32_t LE_FORM_EVENT = UINT32_MAX;
+
 /// A row of the game options with an editable box (the map size, the map type): hidden on a loaded game.
 constexpr static const uint32_t EE_SCREENS_LOBBY_ROW_HIDDEN = 0;
 
@@ -198,6 +462,87 @@ constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SCENARIO = 2;
 /// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
 constexpr static const uint32_t EE_SCREENS_GAME_TYPE_RANDOM_MAP = 3;
 
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_GAME = 7169;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESIGN = 7170;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESTART = 7171;
+
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_EDITOR = 7172;
+
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SAVED_GAME = 7173;
+
+constexpr static const uint32_t EE_SCREENS_GO_SAVE_GAME = 7174;
+
+constexpr static const uint32_t EE_SCREENS_GO_PAUSE = 7175;
+
+constexpr static const uint32_t EE_SCREENS_GO_PREVIOUS_MESSAGES = 7176;
+
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SCENARIO = 7177;
+
+constexpr static const uint32_t EE_SCREENS_GO_BRIEFING = 7178;
+
+constexpr static const uint32_t EE_SCREENS_GO_SETTINGS = 7179;
+
+constexpr static const uint32_t EE_SCREENS_GO_EXIT = 7180;
+
+/// The form's open event (the main game form's options button) and its close event (nothing).
+constexpr static const uint32_t EE_SCREENS_GO_OPEN = 7181;
+
+constexpr static const uint32_t EE_SCREENS_GO_CLOSE = 7182;
+
+/// The main game form's briefing (`EEUIEMGDisplayScenarioIntro`: the briefing's body, the manager's factory).
+constexpr static const uint32_t EE_SCREENS_GO_DISPLAY_INTRO = 7183;
+
+/// The questions answered yes (no event object: the host's callbacks).
+constexpr static const uint32_t EE_SCREENS_GO_RESIGN_YES = 7184;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESTART_YES = 7185;
+
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_EDITOR_YES = 7186;
+
+constexpr static const uint32_t EE_SCREENS_GO_EXIT_YES = 7187;
+
+/// Play Scenario's posted run (the original posted its own object, its flag set: that run loads).
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SCENARIO_POSTED = 7188;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_RESIGN = 512;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_RESTART = 513;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_TO_EDITOR = 514;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_USER_PAUSE = 515;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_REQUEST_PAUSE = 516;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_FORM_EXISTS = 517;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_TO_SCENARIO_LOAD = 518;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_BRIEFING = 519;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_CANNOT_EXIT = 520;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_EXIT = 521;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF = 522;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_USER_PAUSED = 523;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_REMOVE_HOT_KEYS = 524;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_HOT_KEY = 525;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_STRING_ID = 526;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_HIDE_RESIGN = 527;
+
+/// Texts (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_GO_QUESTION = 112;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_GO_BUTTON = 113;
+
 /// The main menu's open event (form event 1).
 constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
 
@@ -260,8 +605,6 @@ constexpr static const uint32_t EE_SCREENS_PC_CUSTOM = 2055;
 constexpr static const uint32_t EE_SCREENS_PC_LEARNING = 2056;
 
 /// The C++ events the menus hang on other forms (built by the host).
-constexpr static const uint32_t EE_SCREENS_CPP_LOBBY_SINGLE = 65539;
-
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA = 65540;
 
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA_ALL = 65541;
@@ -1023,160 +1366,42 @@ struct EeScreensHudRefresh {
   long resource_text[2];
 };
 
-/// A slot of the lobby as the rows read it (`EEGameOptionsPlayer`).
-struct EeScreensLobbySlot {
-  /// `mType`: 0 computer, 1 human, 2 observer, 3 open, 4 closed.
+/// A lobby slot (`EEGameOptionsPlayer`) but its name.
+struct EeScreensLobbyPlayerRecord {
   unsigned long kind;
-  /// `mLoadedType`: a loaded game's slot's type (1 a human's).
   long loaded_type;
-  /// `mSlot`: the slot's index (a row shows only under 8).
+  float ping;
   unsigned long slot;
-  bool is_local;
-  bool is_ready;
-  /// `mB36`: the slot was a player's in the scenario.
-  bool b36;
-};
-
-/// The lobby's state the rows depend on.
-struct EeScreensLobbyContext {
-  /// `gCommunications->IsServer()`: this machine hosts.
-  bool server;
-  /// `gGameOptions.mIsMultiplayer`.
-  bool multiplayer;
-  /// `gGameOptions.mLoadType`: 0 a new random map, 1 a scenario, 2 a saved game.
-  unsigned long load_type;
-  /// The host's slot (0) is ready.
-  bool host_ready;
-};
-
-/// A row's choice: its type box's menu, its name label's text (`EE_SCREENS_LOBBY_TEXT_*`) and the arguments of
-/// `LobbyShowRowControls` (ready, team, colour, citizens: 0 the label, 1 the editable control, 2 neither).
-struct EeScreensLobbyRow {
-  long menu;
-  uint32_t text;
-  unsigned long controls[4];
-};
-
-/// `LobbyShowName`'s plan: the type box's and the name label's display modes, the name's colour
-/// (`EE_SCREENS_LOBBY_*` colours) and whether the type box is marked dirty (the label always is).
-struct EeScreensLobbyName {
-  unsigned long box_mode;
-  unsigned long label_mode;
-  uint32_t colour;
-  bool box_dirty;
-};
-
-/// `LobbyShowPlayer`'s display modes for each of a row's parts, as (editable control, label) pairs: the ready check
-/// box and its bitmap, the colour button and label, the team box and label, the citizens box and label, the engine
-/// box and label (`LobbyShowEngine`), then the ping meter.
-struct EeScreensLobbyPlayer {
-  unsigned long ready[2];
-  unsigned long colour[2];
-  unsigned long team[2];
-  unsigned long citizens[2];
-  unsigned long engine[2];
-  unsigned long ping;
-};
-
-/// What `LobbyShowGameOptions` reads.
-struct EeScreensLobbyOptionsView {
-  /// The shown options' load type, and the lobby's own (`gGameOptions`: the map type box follows it).
-  long load_type;
-  long lobby_load_type;
-  bool server;
-  bool host_ready;
-  /// The lobby's multiplayer flag (the game type box) and the shown options' (the cheat codes row).
-  bool lobby_multiplayer;
-  bool options_multiplayer;
-  /// The game type box's selection, when it has one.
-  bool type_selected;
-  unsigned long type_selection;
-  /// The map generator's line (`EERMFindGenerator` found it), else the first.
-  bool map_found;
-  unsigned long map_line;
-  /// Whether the start epoch box has a selection.
-  bool epoch_selected;
-  /// The unit limit and the rules' minimum and step (gameoptions.yaml unit_limit).
-  long unit_limit;
-  unsigned long unit_minimum;
-  long unit_step;
-  unsigned long wonders;
-  /// The option flags and their check boxes' states, in [`EE_SCREENS_LOBBY_FLAGS`]' order.
-  bool flags[EE_SCREENS_LOBBY_FLAGS];
-  bool checked[EE_SCREENS_LOBBY_FLAGS];
-};
-
-/// `LobbyShowGameOptions`' plan.
-struct EeScreensLobbyOptionsPlan {
-  /// Whether the server sets the game type box, and to which line (0 random map, 1 saved game, 2 scenario).
-  bool set_type_line;
-  unsigned long type_line;
-  /// The game type label's string ([`EE_SCREENS_LOBBY_NO_STRING`]: the label shows nothing).
-  long type_string;
-  /// The game type box shown (else its label).
-  bool type_editable;
-  /// The map size's and the map type's rows (`EE_SCREENS_LOBBY_ROW_*`).
-  uint32_t map_rows;
-  /// Whether the map type box is set, and to which line.
-  bool set_map_line;
-  unsigned long map_line;
-  /// The scenario's information shown (a loaded game).
-  bool scenario_info;
-  /// The other options' boxes shown (else their labels): the host before ready, a random map.
-  bool editable;
-  /// Whether the start epoch box is set (it has no selection yet).
-  bool set_epoch_start;
-  /// The unit limit box's line.
-  unsigned long unit_line;
-  /// The wonders label shows the number (else "Off").
-  bool wonders_number;
-  /// The check boxes to set to their flag (they differ), in [`EE_SCREENS_LOBBY_FLAGS`]' order.
-  bool set_checked[EE_SCREENS_LOBBY_FLAGS];
-  /// The cheat codes row (`EE_SCREENS_LOBBY_ROW_EDIT`, `_LABEL` or `_KEEP`).
-  uint32_t cheats_row;
-};
-
-/// The lobby's options as the option events compare them: each option's current value by its number (a flag 0 or
-/// 1, an `unsigned long` option its bits), and what the unit limit and epoch events need.
-struct EeScreensLobbyOptionState {
-  long current[EE_SCREENS_OPTION_COUNT];
-  long epoch_count;
-  unsigned long unit_minimum;
-  long unit_step;
-};
-
-/// A game options message: the option and its value (the value the lobby then stores).
-struct EeScreensLobbyMessage {
-  long option;
-  long value;
-};
-
-/// What an option event does: the messages to send in order (each one then stored), whether the end epoch box is
-/// trimmed first (`LobbyUpdateEpochEnd`: the start epoch's) and whether the global difficulty levels take the
-/// first message's value before it is sent (the difficulty's).
-struct EeScreensLobbyOptionChange {
-  uint32_t count;
-  EeScreensLobbyMessage messages[2];
-  bool update_epoch_end;
-  bool set_difficulty;
-};
-
-/// A slot as the start check reads it.
-struct EeScreensLobbyStartSlot {
-  unsigned long kind;
   unsigned long color;
   unsigned long team;
-  bool ready;
+  unsigned long citizens;
   unsigned long transfer;
+  bool is_local;
+  bool is_ready;
+  bool b36;
+  unsigned long engine;
 };
 
-/// The start check's outcome: whether the game may start, its messages in order, and whether a loaded game's
-/// failed check hides the rows' controls 257..271.
-struct EeScreensLobbyStart {
-  bool result;
-  bool hide_rows;
-  uint32_t count;
-  uint32_t messages[EE_SCREENS_START_MESSAGES];
+/// The lobby options' (`EEGameOptions`) values the lobby reads, but the map type.
+struct EeScreensLobbyOptionsRecord {
+  unsigned long load_type;
+  unsigned long map_size;
+  unsigned long resources;
+  long epoch_start;
+  long epoch_end;
+  unsigned long unit_limit;
+  unsigned long wonders;
+  unsigned long variant;
+  unsigned long difficulty;
+  unsigned long speed;
+  bool multiplayer;
+  bool record_games;
+  bool custom_civs;
+  bool reveal_map;
+  bool lock_teams;
+  bool lock_speed;
+  bool cheat_codes;
+  bool victory;
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
@@ -1341,73 +1566,35 @@ void ee_screens_hud_fill_bars(const EeScreensHudUnit *unit, EeScreensHudFillBars
 /// `Refresh`'s numbers and bars.
 void ee_screens_hud_refresh(const EeScreensHudUnit *unit, EeScreensHudRefresh *out);
 
-/// `PlayerTypeFromMenu`.
-long ee_screens_lobby_type_from_menu(unsigned long selection, long menu);
+/// A slot of `source` (`EE_SCREENS_LE_SOURCE_*`) into `out`, its name into `name` (up to `capacity` bytes); the
+/// name's length.
+extern size_t ee_screenscpp_lobby_player(uint32_t source,
+                                         uint32_t index,
+                                         EeScreensLobbyPlayerRecord *out,
+                                         uint8_t *name,
+                                         size_t capacity);
 
-/// `LobbyFillPlayerTypes`: menu `menu`'s lines (`EE_SCREENS_LOBBY_LINE_*`) into `out` (room for 4) -> their count.
-unsigned long ee_screens_lobby_type_lines(long menu,
-                                          uint8_t *out);
+/// A slot of `source` from a record and a name.
+extern void ee_screenscpp_put_lobby_player(uint32_t source,
+                                           uint32_t index,
+                                           const EeScreensLobbyPlayerRecord *player,
+                                           const uint8_t *name,
+                                           size_t length);
 
-/// `LobbySelectPlayerType`: whether menu `menu` selects a line for type `kind` (`out` then the line).
-bool ee_screens_lobby_type_line(long menu,
-                                unsigned long kind,
-                                unsigned long *out);
+/// The options of `source` into `out`.
+extern void ee_screenscpp_lobby_options(uint32_t source, EeScreensLobbyOptionsRecord *out);
 
-/// `LobbyShowHostRow` (`host` true) or `LobbyShowClientRow`'s choice.
-void ee_screens_lobby_row(bool host,
-                          const EeScreensLobbySlot *slot,
-                          const EeScreensLobbyContext *context,
-                          EeScreensLobbyRow *out);
+/// `LobbyUpdatePlayer`: the given parts (`LobbyShowPlayer`'s flags) of one slot's row.
+void ee_screens_lobby_update_player(long slot, long flags);
 
-/// `LobbyShowRowControls`: one pair's (label, control) display modes into `out` (2).
-void ee_screens_lobby_row_pair(unsigned long argument, unsigned long *out);
+/// `LobbyUpdateGameOptions`: the lobby's game options redrawn.
+void ee_screens_lobby_update_game_options();
 
-/// `LobbyShowName`'s plan.
-void ee_screens_lobby_name(const EeScreensLobbySlot *slot,
-                           const EeScreensLobbyContext *context,
-                           EeScreensLobbyName *out);
+/// `LobbyUpdateForm`: the lobby's end epoch, its events and its controls enabled.
+void ee_screens_lobby_update_form();
 
-/// `LobbyShowPlayer`'s display modes.
-void ee_screens_lobby_player(const EeScreensLobbySlot *slot,
-                             const EeScreensLobbyContext *context,
-                             EeScreensLobbyPlayer *out);
-
-/// `LobbyShowEngine`: the engine a row shows.
-unsigned long ee_screens_lobby_engine(unsigned long engine, unsigned long count);
-
-/// `LobbyShowGameOptions`' plan for the view.
-void ee_screens_lobby_show_options(const EeScreensLobbyOptionsView *view,
-                                   EeScreensLobbyOptionsPlan *out);
-
-/// The variant box's line of `variant` over the variants' selectable flags (`count` of them).
-unsigned long ee_screens_lobby_variant_line(const bool *selectable,
-                                            size_t count,
-                                            unsigned long variant);
-
-/// An option event's change (`option` the `EEMGameOptions` option, `selection` the box's line or a check box's 0/1;
-/// `selectable`/`count` the variants' flags, the variant event's).
-void ee_screens_lobby_option_change(long option,
-                                    unsigned long selection,
-                                    const EeScreensLobbyOptionState *state,
-                                    const bool *selectable,
-                                    size_t count,
-                                    EeScreensLobbyOptionChange *out);
-
-/// `LobbyCheckStart` after the load (`load_ok`: a loaded game's file loaded and matched); `slots` 16 of them.
-void ee_screens_lobby_start_check(unsigned long load_type,
-                                  bool load_ok,
-                                  bool multiplayer,
-                                  const EeScreensLobbyStartSlot *slots,
-                                  EeScreensLobbyStart *out);
-
-/// The game type box's action (`EE_SCREENS_GAME_TYPE_*`) for its line and the options' load type.
-uint32_t ee_screens_lobby_game_type_action(unsigned long selection, unsigned long load_type);
-
-/// Whether the map type box's generator name (`name`, `name_len` UTF-8 bytes) differs from the options' map type.
-bool ee_screens_lobby_map_type_changed(const uint8_t *name,
-                                       size_t name_len,
-                                       const uint8_t *current,
-                                       size_t current_len);
+/// `LobbyShowTransferProgress`: a client's file transfer on its row.
+void ee_screens_lobby_show_transfer_progress(uint8_t slot, uint8_t progress);
 
 /// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
 long ee_screens_event(uint32_t event,

@@ -134,9 +134,7 @@
 #include "ee/EEUIEHotKeyEvents.h"
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIEKeyboardScroll.h"
-#include "ee/EEUIELobbyEvents.h"
 #include "ee/EEUIEMainGameEvents.h"
-#include "ee/EEUIEMainGameOptionsEvents.h"
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
@@ -270,7 +268,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // port: the lobby's engine column (EELobbyControl kLobbyEngine*; ee/EECPEngine.h) where the ping column is (a
     // computer row has no ping), widened into the gap before the game options: the header a copy of the ping label
     // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic and Random, then the
-    // AI manifest's names, which the lobby appends: EEUIELobbyEvents.cpp LobbyFillEngineBox) and a label like the
+    // AI manifest's names, which the lobby appends: ee_screens lobby_form.rs fill_engine_box) and a label like the
     // citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391); moved left with the
     // columns above (0.4282..0.5200 in the database's places). The open list is as tall as its lines (about 0.034 of
     // the height each in this lobby), up to 8; more scroll.
@@ -674,7 +672,7 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         break;
     case kControlEventSRMLargeScenBriefingAlert:
     case kControlEventSRMGameInfoScenarioIntroduction:
-        theEvent = new EEUIEMGDisplayScenarioIntro;
+        theEvent = EECreateScreenEvent(EE_SCREENS_GO_DISPLAY_INTRO);
         break;
     case kControlEventSRMTempBoxLoadUnit:
         theEvent = new EEUIELoadUnit;
@@ -764,9 +762,6 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 
 // SYNTHETIC: EXE 0x673405
 // (EEUIEMGDisplayDiplomacy's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673430
-// (EEUIEMGDisplayScenarioIntro's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x67345b
 // (EEUIEMGIncrementRallyTimer's scalar deleting destructor, after its first user)

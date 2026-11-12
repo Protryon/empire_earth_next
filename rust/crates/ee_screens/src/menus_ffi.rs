@@ -215,6 +215,12 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
     if crate::scenario_screens_ffi::dispatch(&mut host, event) {
         return 0;
     }
+    if crate::lobby_form_ffi::dispatch(&mut host, event) {
+        return 0;
+    }
+    if let Some(result) = crate::main_game_options_ffi::dispatch(&mut host, event) {
+        return result;
+    }
     dispatch(&mut host, &MENUS, event);
     0
 }
