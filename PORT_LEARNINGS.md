@@ -9748,3 +9748,37 @@ is in RUST_PLAN's row "R5b.5"; what follows is what was learned getting it exerc
   that read little (the objects' Evaluate, the effects' decisions) and when the classes move whole.
 - **What only a tour or a person reaches:** the dialogs' text and portrait (the x64 fix), cinematics' camera, the
   editor. EE-SIM never draws.
+
+## R5b.2, tenth round: the damage glue in Rust (ee_combat damage.rs; branch rust-combat10, 2026-11-12)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EEUnitClass::ApplyHit` | EEUnitClass.cpp body, called by the world op `EE_COMBAT_W_APPLY_HIT` | `damage::apply_hit`, called by `fire_shot` itself |
+| `ApplyAreaDamage` and each victim's hit | the body, its `EeCombatAreaHost` callbacks | `damage::area_damage` over the world host (walks.rs `area_victims`) |
+| `ComputeDamage` | the record's fill | `damage::compute_damage`: the players, herd and cloak timer from the store, the C++'s part one operation (`EE_COMBAT_W_DAMAGE_IN`) |
+| the trample's damage (EEPhysicsModel) | `ComputeDamage` | `EECombatComputeDamage` (EECombatGoals.cpp) over `ee_combat_compute_damage` |
+
+- **The captures stay at their places.** CBDM is the C++'s `EECombatCapture` behind `EE_COMBAT_W_DAMAGE_CAPTURE`
+  with the Rust record and result; CBAD and the splash's CBXA behind `EE_COMBAT_W_AREA_CAPTURE` (the victims handed
+  over as an array of handles, their FNV after every hit as before); ApplyHit's CBXA behind `EE_COMBAT_W_HIT_CAPTURE`,
+  also after the volcano's early return (the original's lambda). CBAF and CBEL are still recorded inside the C++
+  calls (the attack factor in the fill, the elevation an operation). Every golden unchanged.
+- **Two classes.** ApplyHit's damage class (a capital ship's special weapon, else the launcher's or `this`) and the
+  splash's (the launcher's or `this`) differ for a capital ship's special attack: one operation answers both
+  (`EE_COMBAT_W_HIT_CLASS`), with the dead food share and the shot effect flag.
+- **Two roundings of the food share.** ApplyHit rounds `amount x share` with `lrintf`, the splash with the x86
+  ceiling (`UMCeil`): kept as the original (the unit tests pin 37.5 to 38 both ways).
+- **`GetComplexUnit()` from the store.** `Stored` answers `EE_COMBAT_H_COMPLEX` for a record whose `complex` is the
+  unit itself or none; only another object asks the C++.
+- **rustfmt and CRLF.** `cargo fmt` rewrote reads.rs (CRLF in the index) to LF: converted back before committing
+  (`--check` accepts either).
+- **C++ deleted.** EEUnitClass.cpp -220, EEUnit.h -11, EECombatGoals.cpp +116 (the operations, the moved CBAD
+  capture, the trample's entry), EECombatGoals.h +7, EEPhysicsModel.cpp +1: 237 deleted, 130 added, net -107.
+- **Only a combat tour shows:** nothing new is drawn, but the volcano projectile's effect and the hit's
+  `UnitDamaged` reaction (sounds, effects) now go through operations; EE-SIM and the captures run them without a
+  window.
+- **Not moved.** `LaunchShot`/`LaunchFromTurret`: object work only (create the shot, its goal, owner, location,
+  cargo); an operation host would restate it line for line.
+- **The shots' store records** (proposal for the core lane, RUST_PLAN's R5b.2 row): a table of unlisted units keyed
+  by object, filled where `CreateUnit` returns a unit it did not insert, dropped in the destructor, the write-through
+  falling back to it for id 0xffffffff.

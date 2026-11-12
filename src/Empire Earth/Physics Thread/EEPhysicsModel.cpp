@@ -34,6 +34,7 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUnitBehavior.h"
 #include "rust/ee_units.h"
@@ -678,10 +679,10 @@ bool EEPhysicsModel::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
         || !(theOtherRadius < theRadius) || !(theDistanceSquared > gPhysicsModelsF) || inOther->mPlayer == inUnit->mPlayer
         || inUnit->mPlayer->mEnemies[inOther->mPlayer->mPlayerID] == 0)
         return false;
-    // the trample: the shared damage function (EEUnitClass::ComputeDamage; combat.yaml trample_damage/_threshold)
+    // the trample: the shared damage function (ee_combat damage.rs; combat.yaml trample_damage/_threshold)
     long theAmount;
-    if (inUnit->mUnitClass->ComputeDamage(kDamageTrample, inUnit, inOther, inUnit->mStats->GetAttack(),
-                                          inUnit->mUnitClass->mAmmoType, inUnit->mUnitClass->mWeapon, 0.0f, theAmount))
+    if (EECombatComputeDamage(kDamageTrample, inUnit, inOther, inUnit->mStats->GetAttack(), inUnit->mUnitClass->mAmmoType,
+                              inUnit->mUnitClass->mWeapon, 0.0f, theAmount))
         inOther->TakeHit(inUnit, theAmount, inUnit->mPlayer->mPlayerID, 1);
     return false;
 }
