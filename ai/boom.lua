@@ -133,6 +133,7 @@ local THREAT_MS = 90000         -- a threat seen keeps the town on guard this lo
 local THREAT_MIN = 2500         -- weaker than this (a scout) is left to the militia and the towers
 local BACKOFF_MS = 60000        -- an order refused for want of a site or producer is not repeated for this long
 local SITE_PLACES = 6           -- gatherers a mine unit holds (the mining limit); a forage patch holds 6 in all
+local ORDER_MINE_REACH = 8     -- (ECON.order) tiles past the claim range a mine is still the town's (a drop site's reach)
 local FAR_REACH = 45            -- tiles: how far a mineral with no site in the claim range is looked for (was 60:
                                 -- on a Small map that is the other town, §8.35)
 local UNKNOWN_REACH = 38        -- tiles: how far out a site is taken while no enemy town has been seen
@@ -341,7 +342,9 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
         want_sites = most
     end
     -- (ECON.order, the owner: "only claim iron/gold near home") the minerals within the claim range only
-    local reach = (patch or ECON.order) and range or FAR_REACH
+    -- (C7: the minerals within the town's own area, the claim range and a drop site's reach past it; safe_site keeps
+    -- them on the town's side, never toward the enemy)
+    local reach = patch and range or (ECON.order and range + ORDER_MINE_REACH or FAR_REACH)
     local kept, places, open, open_places = 0, 0, 0, 0
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
@@ -385,6 +388,24 @@ local function release_unkept(view, order, keep)
             order("release", {verb = "release", site = s.index})
         end
     end
+end
+
+-- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
+-- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
+-- lib.defence options
+function M.configure(o)
+    for k, v in pairs(o.econ or {}) do
+        ECON[k] = v
+    end
+    for age = 2, #PLAN do
+        for k, v in pairs(o.plan or {}) do
+            PLAN[age][k] = v
+        end
+    end
+    for k, v in pairs(o.defence or {}) do
+        D.opts[k] = v
+    end
+    return M
 end
 
 function M.init(view, memory)

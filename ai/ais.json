@@ -8,6 +8,13 @@
       "description": "Builds its economy first: food, many citizens, towers at the town and its sites, a small defence that grows with the threat it sees, no attacks; advances an epoch once it is paid for."
     },
     {
+      "id": "boom_order",
+      "name": "Boom (owner order)",
+      "script": "boom_order",
+      "random": false,
+      "description": "Boom on the owner's build order (AI_RESEARCH §8.51): 12 on the forage patches and settlements touching them, 3-6 hunting, 5-8 wood, 2 each on the mines; in Stone a dock and 13 fishing boats, then 12-18 gold and iron, 6 stone, 10-15 wood; the Copper save once that economy stands; 3 granaries in Copper; the town centre's gathering techs. Its fishing grounds guarded by warships and the boats' flight to a dock."
+    },
+    {
       "id": "ageofai",
       "name": "Age of AI",
       "script": "ageofai.main",
