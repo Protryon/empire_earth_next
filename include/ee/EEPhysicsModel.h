@@ -21,6 +21,17 @@ void EEPMNotePush(EEComplexUnit* inUnit, float inSpeed, bool inMoving, float inD
 // a speed mode's note (kUnitStateSpeedMode: the remaining distance and the terrain pitch as the mode read them)
 void EEPMNoteSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inRemaining, float inPitch, float inDistance,
                        float inTurn, long inMode);
+// New (R5b.4 leaf 6, the twelfth round): the models' shared arithmetic, Rust (ee_units physics.rs; each noted in USST)
+// over the unit's values: the pitch mode and approach (inNaval: EEPMNaval's and EEPMSpaceship's, over the class's
+// rates; else the unit's, its active group's when it is in one), the speed after a mode (inSpeed, inMaxSpeed,
+// inAccel: the model's), the speed mode (inHelicopter: EEPMHelicopter's), the collision push's arithmetic (inSpeed:
+// the speed it is capped at; true when the unit moves, to outX, outY; outPast: past the move distance)
+long EEPMPitchMode(EEComplexUnit* inUnit, bool inNaval, float inRate, float inAngle);
+void EEPMApproachPitch(EEComplexUnit* inUnit, bool inNaval, long inMode, float inCurrent, float inTarget, float* outRate,
+                       float* outNew);
+float EEPMAccelerate(EEComplexUnit* inUnit, float inSpeed, float inMaxSpeed, float inAccel, float inDistance, long inMode);
+long EEPMSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inDistance, float inTurn);
+bool EEPMPush(EEComplexUnit* inUnit, float inSpeed, float& outX, float& outY, bool& outPast);
 
 class EEPhysicsModel {
 public:
@@ -49,6 +60,9 @@ public:
     virtual void Step4(EEComplexUnit* inUnit) {}                                        // +0x50 (state 4)
     virtual void Step5(EEComplexUnit* inUnit) {}                                        // +0x54 (state 5)
     virtual bool ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3DPoint& ioLocation, float* outDistance);         // +0x58 0x156908
+    // New (port): Move's body, shared by EEPMNaval and EEPMSpaceship (their copies were the base's without the ground
+    // placement: inOnGround false)
+    void MoveByPush(EEComplexUnit* inUnit, bool inOnGround);
 
     // 0x156897: by inUnit's +0x268 state (EEUCSpaceBuilding/EEUCNavalBuilding::Update when the unit is placed)
     void Step(EEComplexUnit* inUnit);

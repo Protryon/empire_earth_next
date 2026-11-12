@@ -243,6 +243,13 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
+constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
+
+constexpr static const int32_t EE_UNITS_MODE_ACCELERATE = 3;
+
+constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
+
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
@@ -618,6 +625,70 @@ struct EeUnitsPushIn {
   /// the unit's `GetMaxVelocity()`
   float max_velocity;
   float tick_seconds;
+};
+
+/// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
+struct EeUnitsTurn {
+  float delta;
+  float rate;
+  float heading;
+};
+
+/// The unit's values a turn reads (`TurnTowardAngle`, `YawMode`).
+struct EeUnitsTurnIn {
+  /// `gPhysics->mTickSeconds`, `gPhysics->mTicksPerGameSecond`
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetAngularAcceleration()`, `GetMaxAngularVelocity()`, `GetInverseAngularAcceleration()`
+  float accel;
+  float max;
+  float inverse_accel;
+  /// `mAngularVelocity.mYaw`
+  float rate;
+  /// the heading and the bearing to turn to
+  float current;
+  float target;
+  /// `inFlag`: aim the class's facing offset (`GetFacingOffset()`), either side for a broadside ship
+  /// (`mFiresBroadside`); both 0 without the flag
+  uint8_t use_facing;
+  uint8_t broadside;
+  float facing_offset;
+};
+
+/// The unit's values a speed reads (`Accelerate`, `SpeedMode`).
+struct EeUnitsSpeedIn {
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetVelocity()`, `GetMaxVelocity()`, `GetAcceleration()`, `GetInverseAcceleration()`
+  float speed;
+  float max_speed;
+  float accel;
+  float inverse_accel;
+  /// `mAngularVelocity.GetYaw()`
+  float yaw_rate;
+  /// the class's `mSlopeSpeedPenalty` (the helicopter's has none)
+  float slope_penalty;
+  /// `mWaypoints.size()`
+  int32_t waypoints;
+  /// `GetPathLength` (read when the mode needs it: two waypoints or more), `GetTerrainPitch` of the location
+  /// (read when the penalty is under 1)
+  float path_length;
+  float terrain_pitch;
+};
+
+/// The unit's values a pitch reads (`ApproachPitch`, `PitchMode`): the base model's are the unit's (its active
+/// group's), the naval model's the class's.
+struct EeUnitsPitchIn {
+  float tick_seconds;
+  float ticks_per_second;
+  float accel;
+  float max;
+  /// the base model's `GetInverseAngularAcceleration()` (the naval model divides by `accel`)
+  float inverse_accel;
+  /// `mAngularVelocity.mPitch`
+  float rate;
+  /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
+  uint8_t naval;
 };
 
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
@@ -1120,6 +1191,64 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// # Safety
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
+
+/// `TurnTowardAngle` over the C++'s values.
+///
+/// # Safety
+/// `input` points to a valid record.
+EeUnitsTurn ee_units_pm_turn(const EeUnitsTurnIn *input);
+
+/// `YawMode` over the C++'s values (`rate`, `angle`: the call's).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_yaw_mode(const EeUnitsTurnIn *input, float rate, float angle);
+
+/// `SpinDown` (the heading is the caller's).
+EeUnitsTurn ee_units_pm_spin_down(float rate,
+                                  float heading,
+                                  float tick_seconds,
+                                  float accel,
+                                  float max);
+
+/// `SteadyTurn` (the heading is the caller's).
+EeUnitsTurn ee_units_pm_steady_turn(float rate,
+                                    float heading,
+                                    float tick_seconds,
+                                    float accel,
+                                    float max,
+                                    int32_t order,
+                                    uint32_t command);
+
+/// `SpeedMode` (`helicopter`: `EEPMHelicopter::SpeedMode`).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_speed_mode(const EeUnitsSpeedIn *input,
+                               float distance,
+                               float turn,
+                               bool helicopter);
+
+/// `Accelerate`'s speed after the mode.
+///
+/// # Safety
+/// `input` points to a valid record.
+float ee_units_pm_accelerate(const EeUnitsSpeedIn *input, float distance, int32_t mode);
+
+/// `PitchMode` (the base model's or the naval one's).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_pitch_mode(const EeUnitsPitchIn *input, float rate, float angle);
+
+/// `ApproachPitch` with its mode: the new rate (`rate`) and pitch (`heading`).
+///
+/// # Safety
+/// `input` points to a valid record.
+EeUnitsTurn ee_units_pm_approach_pitch(const EeUnitsPitchIn *input,
+                                       float current,
+                                       float target,
+                                       int32_t mode);
 
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.

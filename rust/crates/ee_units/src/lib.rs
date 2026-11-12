@@ -12,7 +12,8 @@
 //! store is `select`, the active groups' Fill test and the group commands `group` and `commands`. The units stepped
 //! every tick, in their order, are `order`; the smallest leaves of a unit's step (the
 //! countdowns, the power's regeneration, the camouflage) over the store are `step`, its AI step and the AI script's
-//! decision `ai`, the physics models' arithmetic over the store's velocities `motion`; the physics tick's unit loop
+//! decision `ai`, the physics models' arithmetic over the store's velocities `motion` and their per-action step
+//! arithmetic (the turn, the speed, the pitch) `physics`; the physics tick's unit loop
 //! over the stepped units' list `tick`.
 
 pub mod ai;
@@ -23,6 +24,7 @@ pub mod host;
 pub mod kinds;
 pub mod motion;
 pub mod order;
+pub mod physics;
 pub mod registry;
 pub mod select;
 pub mod step;

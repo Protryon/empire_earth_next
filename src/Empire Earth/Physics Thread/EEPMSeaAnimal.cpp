@@ -132,7 +132,6 @@ float EEPMSeaAnimal::Accelerate(EEComplexUnit* inUnit, float inDistance, float i
     float theSpeed = inUnit->GetVelocity();
     float theMaxSpeed = inUnit->GetMaxVelocity();
     float theAccel = inUnit->GetAcceleration();
-    float theStep = gPhysics->mTickSeconds;
     long theKind = inUnit->mWaypoints.size();
     if (theKind > 1 && (*inUnit->mWaypoints.begin()).mLocation.GetZ() > 0.0f
         && inUnit->mPhysicalModel.GetLocation().GetZ() < 0.3f) {
@@ -143,34 +142,10 @@ float EEPMSeaAnimal::Accelerate(EEComplexUnit* inUnit, float inDistance, float i
         theMaxSpeed *= theFactor;
         theAccel *= theFactor;
     }
-    float theResult;
+    // New (R5b.4 leaf 6): the speed after the mode is the base model's arithmetic (Rust: ee_units physics.rs
+    // accelerate; its brake's 1.0f factor changes no bit) over the boosted top speed and acceleration
     long theMode = this->SpeedMode(inUnit, inDistance, inTurn);
-    switch (theMode) {
-    case 2:
-        theResult = theSpeed;
-        break;
-    case 3:
-        theResult = theStep * theAccel + theSpeed;
-        if (theResult > theMaxSpeed)
-            theResult = theMaxSpeed;
-        else if (theKind == 1 && theResult > inDistance)
-            theResult = inDistance;
-        break;
-    case 4:
-        theResult = theSpeed - theStep * theAccel;
-        if (theResult < 0.005f)
-            theResult = 0.0f;
-        break;
-    default:
-        theResult = 0.0f;
-        break;
-    }
-    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
-        uint32_t theWords[8] = {EEPMBits(theStep), EEPMBits(theSpeed), EEPMBits(theMaxSpeed), EEPMBits(theAccel),
-                                (uint32_t)theKind, EEPMBits(inDistance), (uint32_t)theMode, EEPMBits(theResult)};
-        EEUnitStateNote(kUnitStateAccelerate, inUnit->mUnitID, theWords, 8);
-    }
-    return theResult;
+    return EEPMAccelerate(inUnit, theSpeed, theMaxSpeed, theAccel, inDistance, theMode);
 }
 
 // FUNCTION: EXE 0x55d8de

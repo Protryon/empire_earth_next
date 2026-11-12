@@ -34,8 +34,6 @@
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMathInline.h"
 
-static const float kPMMinimumStep = 0.005f;   // 0x442968 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
-static const float kPMStopDistance = 0.02f;   // 0x442964 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
 static const float kPMMinimumSpeed = 1.0f;   // 0x44296c (unit-local const, as EEPhysicsModel.cpp's; provisional name)
 
 extern unsigned long gCollisionPeriod;      // 0x4c237c (EEPhysics.cpp; provisional name)
@@ -148,47 +146,10 @@ void EEPMSubmergedNaval::Step1(EEComplexUnit* inUnit)
 void EEPMSubmergedNaval::Move(EEComplexUnit* inUnit)
 {
     EETileCoordinate theTile(0, 0);
-    float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
-    if (inUnit->GetMaxVelocity() > theLimit)
-        theLimit = inUnit->GetMaxVelocity();
-    float theTicks = (float) gCollisionPeriod;
-    float theDX = inUnit->mPushVelocityX;
-    theDX *= theTicks;
-    float theDY = inUnit->mPushVelocityY;
-    theDY *= theTicks;
-    float theSignX;
-    if (theDX > 0.0f)
-        theSignX = 1.0f;
-    else
-        theSignX = -1.0f;
-    float theSignY;
-    if (theDY > 0.0f)
-        theSignY = 1.0f;
-    else
-        theSignY = -1.0f;
-    if (theDX < 0.0f)
-        theDX = -theDX;
-    if (theDY < 0.0f)
-        theDY = -theDY;
-    if (theDY + theDX < kPMStopDistance) {
-        theDY = 0.0f;
-        theDX = 0.0f;
-    }
-    if (theDX != 0.0f || theDY != 0.0f) {
-        if (theDX > theLimit || theDY > theLimit) {
-            if (theDX > theDY) {
-                theDY = theLimit / theDX * theDY;
-                theDX = theLimit;
-            } else {
-                theDX = theLimit / theDY * theDX;
-                theDY = theLimit;
-            }
-        }
-        float theX = gPhysics->GetTickSeconds() * theSignX * theDX;
-        theX += inUnit->mPhysicalModel.GetLocation().GetX();
-        float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
-        theY += inUnit->mPhysicalModel.GetLocation().GetY();
-        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), true, theDX, theDY, theX, theY);   // TEST ONLY (USST)
+    float theX, theY;
+    bool thePast;
+    // New (R5b.4 leaf 6): the push's arithmetic is Rust (ee_units motion.rs push)
+    if (EEPMPush(inUnit, inUnit->GetMaxVelocity(), theX, theY, thePast)) {
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         theTile.mX = theTileX;
@@ -217,8 +178,6 @@ void EEPMSubmergedNaval::Move(EEComplexUnit* inUnit)
             this->AdjustDiveDepth(inUnit, theLocation);
             inUnit->SetLocation(theLocation, true);
         }
-    } else {
-        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), false, 0.0f, 0.0f, 0.0f, 0.0f);   // TEST ONLY (USST)
     }
     if (inUnit->mPushVelocityX != 0.0f)
         inUnit->mPushVelocityX = 0.0f;
