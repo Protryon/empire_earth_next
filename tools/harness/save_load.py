@@ -14,7 +14,9 @@ file in the list box (control 4; fixture `lselect`, UIListBox::ChangeSelectionIn
 clicks Load (EEUIESPLELoadFile: validates, EEMStartLoading(1, ...)). The game form then continues the ai-game play loop
 (no lobby, no civilization pre-empt: the saved players carry their flags).
 Controls are found by their trigger event's ProcessEvent rva (ui-state `control i event-rva X`): original rvas from
-analysis/exe/names.txt, full link by map name; nothing is hardcoded but the form ids (data-defined, both images).
+analysis/exe/names.txt, full link by map name; nothing is hardcoded but the form ids (data-defined, both images). An
+event the game screens moved to Rust (rust/crates/ee_screens) has no class in the full link: it is an EEScreenEvent,
+found by that class's ProcessEvent and its code (ui-state `... screen CODE`; SCREEN_CODES).
 """
 import pathlib,re,shutil,time
 
@@ -27,6 +29,10 @@ SYM=dict(
     sp_load='?ProcessEvent@EEUIESPELoadGame@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
     sp_load_file='?ProcessEvent@EEUIESPLELoadFile@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',
 )
+# the events whose classes the game screens replaced with EEScreenEvent codes (EE_SCREENS_*, rust/ee_screens.h)
+SCREEN_PE='?ProcessEvent@EEScreenEvent@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z'
+SCREEN_CODES={'EEUIESPELoadGame':0x0605,'EEUIESPECampaign':0x0602,'EEUIEPCECampaign1':0x0802,
+              'EEUIEPCECampaign2':0x0803,'EEUIEPCECampaign3':0x0804,'EEUIEPCELearningCampaign':0x0808}
 SAVE_DIR=('Data','Saved Games')
 EXT='.ees'
 
@@ -44,22 +50,38 @@ def add_arguments(g):
                    '(single player -> Load Game) instead of the random-map lobby')
 
 
-def symbol_rvas(options):
-    """ProcessEvent rva of each needed event in the session's image."""
+def screen_event(m,symbol):
+    """A ProcessEvent symbol's rva in a full link's map; (EEScreenEvent's rva, code) for a class the screens
+    replaced."""
+    match=re.fullmatch(r'\?ProcessEvent@(\w+)@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',symbol)
+    if symbol not in m.by_name and match and match.group(1) in SCREEN_CODES:
+        return (m.address(SCREEN_PE)-0x400000,SCREEN_CODES[match.group(1)])
+    return m.address(symbol)-0x400000
+
+
+def symbol_rvas(options,syms=None):
+    """ProcessEvent rva of each needed event in the session's image (screen_event's pair for a moved one)."""
+    syms=SYM if syms is None else syms
     if options is not None and getattr(options,'fulllink',None):
         from fulllink_locator import LinkMap
         m=LinkMap(pathlib.Path(options.fulllink).resolve().with_suffix('.map'))
-        return {k:m.address(s)-0x400000 for k,s in SYM.items()}
+        return {k:screen_event(m,s) for k,s in syms.items()}
     names={}
     for line in (ROOT/'analysis/exe/names.txt').read_text(encoding='utf-8').splitlines():
         part=line.split()
         if len(part)>=2 and re.fullmatch(r"[0-9a-fA-F]+",part[0]):names.setdefault(part[1],int(part[0],16))
-    return {k:names[s] for k,s in SYM.items()}
+    return {k:names[s] for k,s in syms.items()}
 
 
 def control_for(st,rva,what):
-    hits=[i for i,v in st['controls'].items() if int(v,16)==rva]
-    if len(hits)!=1:raise RuntimeError(f'{what}: {len(hits)} controls with event rva {rva:#x} on form {st["form"]} ({st["controls"]})')
+    """The one control whose trigger event is at rva (an int, or (rva, code) for an EEScreenEvent)."""
+    rva,code=rva if isinstance(rva,tuple) else (rva,None)
+    hits=[i for i,v in st['controls'].items()
+          if int(v,16)==rva and (code is None or st.get('screens',{}).get(i)==code)]
+    if len(hits)!=1:
+        raise RuntimeError(f'{what}: {len(hits)} controls with event rva {rva:#x}'
+                           + (f' screen {code:#x}' if code is not None else '')
+                           + f' on form {st["form"]} ({st["controls"]} {st.get("screens")})')
     return hits[0]
 
 
