@@ -13,6 +13,8 @@ local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_
 local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
 local SC = require("lib.scout")    -- the watcher (plan.watch; off until benched)
 local AT = require("lib.attack")   -- attacks in windows from strength (plan.attack; off until benched)
+local N = require("lib.navy")     -- (plan.boat_guard: the warships that guard the fishing grounds)
+local RD = require("lib.raid")     -- the owner's Stone raid of ~20 and the reserve (plan.raid; AI_RESEARCH §8.50)
 local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
 local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
 local DM = require("lib.demand")       -- the split's stock correction and the saving ramp (balanced's rules)
@@ -439,7 +441,12 @@ function M.step(view, memory)
             memory.techs[memory.tech_last] = n >= 3 or nil   -- (three refusals: given up, the next one comes)
             memory.backoff[tag] = view.time + BACKOFF_MS
         end
-        if tag ~= nil and r.code == "refused" and tag == "improve" then
+        if tag ~= nil and r.code == "refused" and tag == "improve_atk" then
+            if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
+                memory.improved_atk = memory.improve_atk_class
+            end
+            memory.backoff[tag] = view.time + BACKOFF_MS
+        elseif tag ~= nil and r.code == "refused" and tag == "improve" then
             -- a tower improvement: no level left waits for the next tower class, else a minute
             if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
                 memory.improved = memory.improve_class
@@ -509,7 +516,7 @@ function M.step(view, memory)
         plan = BO.plan(plan, phase)
     end
     if plan.army_per ~= nil then
-        plan = GD.scaled(plan, view.citizens)   -- (the light army by the workers, balanced's rule: lib.guard)
+        plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
     end
     local citizen = V.cost(view, "citizen")
     local in_epoch = (view.time - view.epoch_start) // 60000
@@ -564,6 +571,11 @@ function M.step(view, memory)
         if emergency then
             soldiers_wanted = math.max(soldiers_wanted, plan.emergency)
         end
+    end
+    -- (plan.raid, the owner's build order: the raid force on top while it builds, the home reserve beside it while
+    -- it is out; lib.raid)
+    if plan.raid or memory.raid ~= nil then
+        soldiers_wanted = math.min(RD.wanted(memory, soldiers_wanted), math.max(plan.soldiers_max, soldiers_wanted))
     end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
@@ -1224,9 +1236,16 @@ function M.step(view, memory)
 
         -- (§8.35, the owner: "upgrading tower range is worth it for AI") the towers' range, a level at a time, once
         -- three towers stand, from the Stone Age, never out of the reserve (the verb keeps it)
-        if age >= 2 and tower ~= nil and towers_built >= 3 and not scramble and memory.improved ~= tower then
+        local ships_seen = plan.tower_up_ships and memory.def ~= nil and memory.def.ships_seen ~= nil
+        if age >= 2 and tower ~= nil and (towers_built >= 3 or ships_seen) and (not scramble or ships_seen)
+                and memory.improved ~= tower then
             memory.improve_class = tower
             order("improve", {verb = "improve", type = tower, what = "range"})
+        end
+        -- (plan.tower_up_ships, the owner's frigates: the towers' attack too once a warship has been seen)
+        if ships_seen and tower ~= nil and memory.improved_atk ~= tower then
+            memory.improve_atk_class = tower
+            order("improve_atk", {verb = "improve", type = tower, what = "attack"})
         end
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
@@ -1356,7 +1375,8 @@ function M.step(view, memory)
     -- resources unless the town scrambles)
     if army_short then
         -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
-        GD.train(view, memory, soldiers_wanted, order, scramble and 3 or 2)
+        -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
@@ -1403,6 +1423,12 @@ function M.step(view, memory)
     if plan.attack then
         AT.step(view, memory, {guard = home, keep = plan.attack_keep or 8})
     end
+    if plan.raid or memory.raid ~= nil then
+        -- (ready: boom-econ's phase signal; before it lands, 8 minutes into the Stone Age)
+        local ready = memory.phase == "stone_developed"
+            or (memory.phase == nil and view.epoch == 1 and view.time - view.epoch_start >= 480000)
+        RD.step(view, memory, {guard = home, ready = ready})
+    end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
@@ -1422,6 +1448,42 @@ function M.step(view, memory)
     G.step(view, memory)
     memory.def = memory.def or {}
     D.step(view, memory.def)
+    -- (the owner: towers by the dock and the fishing grounds from the middle of the Stone Age; boom-econ builds them at
+    -- these spots, lib.defence boats)
+    if D.opts.boats and view.time % 30000 < 1000 then
+        memory.boat_towers = D.boat_spots()
+    end
+    -- (plan.boat_guard, the owner: "sometimes a ship works") from the first enemy warship seen, this many warships of
+    -- our own from the dock, guarding the fishing grounds (lib.navy's fleet step: they fight what comes in reach and
+    -- fall back from 1.5 x)
+    if plan.boat_guard ~= nil and memory.def ~= nil and memory.def.ships_seen ~= nil then
+        local have = #ai.units{category = "ship", armed = true}
+        local best = nil
+        for _, c in ipairs(view.costs) do
+            if c.military and not c.building and c.producer == "b_dock" and c.producers > 0
+                    and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
+                best = c
+            end
+        end
+        if best ~= nil and have + best.requested + best.in_production < plan.boat_guard and best.requested == 0 then
+            order("warship", {verb = "train", type = best.type, n = 1})
+        end
+        -- (AI_RESEARCH §8.50: the answer came 1-12 minutes after the first warship, its orders unaffordable under the
+        -- epoch reserve) what the answer still needs, for boom-econ's reserve to give way to: the warships missing and,
+        -- while the towers' attack upgrade is due, its next level's cost
+        local need = {food = 0, wood = 0, stone = 0, gold = 0, iron = 0}
+        local missing = best ~= nil and math.max(plan.boat_guard - have, 0) or 0
+        for _, r in ipairs(V.resources) do
+            need[r] = missing * (best ~= nil and best.cost[r] or 0)
+        end
+        -- (not the towers' attack level: their improvement point goes to their range, so it is never bought - 1,392
+        -- refusals in 32 games, AI_RESEARCH §8.50)
+        memory.priority_spend = V.sum(need) > 0 and need or nil
+        if have > 0 then
+            local fx, fy = D.fish_centre()
+            N.fleet_step(memory, {x = fx, y = fy})
+        end
+    end
 
     if ECON.order then
         PL.step(view, memory)   -- (the settlements' builders back to the engine once they stand)

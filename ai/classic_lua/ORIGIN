@@ -96,7 +96,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
   EECPResourceManager.cpp
                 PARTLY -> econ.lua, resource.lua: the gatherer lists, the needs ledger (AddCosts / RemoveCosts / Earn,
                 Spend from the view's income_total), UpdateWantedGatherers with the stock correction and the army
-                floor (demand_split false) or EECPRMSplitByDemand with GetDemand's tiers and GetGatherCapacity
+                floor (demand_split false) or EECPRMSplitByDemand with GetDemand's tiers and GetGatherCapacity (the untapped sites, `untapped`, for the citizen target only: DEVIATION, every site for the per-resource room)
                 (demand_split true), EECPRMActivateNeeded (the patches kept claimed, claim_needed), EECPRMSettlePatches,
                 EECPRMGuardSites, the claim range and its growth, RebalanceGatherers (the done builders freed,
                 moves_per_cycle), AssignGatherers (food: the bushes near with a drop site, the idle farms, the game

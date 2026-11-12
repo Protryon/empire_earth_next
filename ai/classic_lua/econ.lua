@@ -96,13 +96,18 @@ local function fishes(view, memory)
     return R.state(memory).uses_fishing or M.coast_boats_wanted(view, memory) > 0
 end
 
-function M.gather_capacity(view, memory, which)
-    return R.memo("capacity_" .. tostring(which), function()
-        return M.gather_capacity_now(view, memory, which)
+-- untapped: count the untapped sites only, as the classic (see below); the port does so for the citizen target
+-- (GetWantedCitizens) only. DEVIATION: the per-resource room (the demand split, an advance's reachable resources)
+-- counts every site, tapped or not: the port's centres hold the explored resources only (fog), fewer than the
+-- classic's whole-map centres, and counting only the untapped ones as well left its split short of gold and food
+-- (seeds 34-65: 5-20 against 12-17; AI_RESEARCH 8.58)
+function M.gather_capacity(view, memory, which, untapped)
+    return R.memo("capacity_" .. tostring(which) .. (untapped and "_u" or ""), function()
+        return M.gather_capacity_now(view, memory, which, untapped)
     end)
 end
 
-function M.gather_capacity_now(view, memory, which)
+function M.gather_capacity_now(view, memory, which, untapped)
     local rm = R.state(memory)
     local sites = {food = 0, wood = 0, stone = 0, gold = 0, iron = 0}
     local active = 0
@@ -114,8 +119,10 @@ function M.gather_capacity_now(view, memory, which)
             if pass == 2 or c.active then
                 active = active + 1
                 for _, id in ipairs(c.u) do
+                    -- (the classic counts a centre's units with mHitPoints > 0: a resource's hit points fall from 1
+                    -- when it is first gathered from, so only the untapped ones count; the record's `untapped`)
                     local u = R.unit(id)
-                    if u ~= nil and u.kind ~= nil then
+                    if u ~= nil and u.kind ~= nil and (not untapped or u.untapped ~= false) then
                         sites[u.kind] = sites[u.kind] + 1
                     end
                 end

@@ -951,6 +951,9 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet
+  (the classic's GetGatherCapacity and its sites trace count a centre's units with mHitPoints > 0, so a tapped mine
+  no longer adds room).
 - `ai.used()` -> used, budget: the instructions and helper charges the current call has used so far and its budget
   (a script's own profiling; it changes nothing).
 - The view has `income_total` (gathered since the start, per resource: the classic ledger's Spend).
@@ -1006,6 +1009,13 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
   it off, absent leaves it as it was): the gatherer runner's rebalance then moves a gatherer off a resource as soon as
   it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
   it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
+
+**The cost of an improvement (2026-11-12):** `ai.improve_cost(class, what)` -> `{food, wood, stone, gold, iron,
+level, max}`: the next level's cost of a class's improvement (`what`: `attack`, `hit_points`, `range`, `speed` or the
+improvement's number) as the improve verb pays it (PayImprovement: the class's cost x its cost scale x the improvement's
+cost factor x the level; EECPNextImproveCost beside EECPNextImprove), with its level and maximum; nil when the class
+has no node now or no such improvement. A human reads the cost off the improvement's button. Boom's answer to the
+frigates asks the reserve for it (`memory.priority_spend`, AI_RESEARCH §8.50).
 
 **Not built yet:**
 - the engine pathfinder overlay (§4.3, step 2);
