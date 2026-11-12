@@ -8,6 +8,12 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONPing.h" // the MultiPingOp helpers over RustServerOp
+#include "ee/wonapi/WONAuthPeerData.h"
+#include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONAuthCertificate.h"
+#include "ee/wonapi/WONAuthPubKeyBlock.h"
+#include "ee/wonapi/WONBlowfish.h"
+#include "ee/wonapi/WONElGamal.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006acc10
 // Creates a server op with 60-second connect, send and receive limits and an 8-byte key size
@@ -115,6 +121,23 @@ void Give(EeWonHostCall* c, const ByteBuffer* inBytes)
 {
     if (inBytes != NULL) Give(c, inBytes->data(), inBytes->length());
 }
+// GetCertOp's objects (certhost.rs): every one a RefCount* (the private key an ElGamal*)
+void* V(const RefCount* inObj) { return const_cast<RefCount*>(inObj); }
+AuthContext* Ctx(void* p) { return static_cast<AuthContext*>(Obj(p)); }
+const AuthPeerData* Peer(void* p) { return static_cast<const AuthPeerData*>(Obj(p)); }
+const AuthPubKeyBlock* Block(void* p) { return static_cast<const AuthPubKeyBlock*>(Obj(p)); }
+const AuthCertificate* Cert1(void* p) { return static_cast<const AuthCertificate*>(Obj(p)); }
+const Auth2Certificate* Cert2(void* p) { return static_cast<const Auth2Certificate*>(Obj(p)); }
+const AuthCertificateBase* Cert(long long inKind, void* p)
+{
+    return inKind == 1 ? static_cast<const AuthCertificateBase*>(Cert1(p)) : static_cast<const AuthCertificateBase*>(Cert2(p));
+}
+void GiveText(EeWonHostCall* c, const std::wstring& inText)
+{
+    std::string b;
+    WideAppendUtf16LE(b, inText);
+    Give(c, b.data(), b.size());
+}
 SocketOp* NewSocketOp(const EeWonHostCall* c)
 {
     AsyncSocket* s = Sock(c->obj[0]);
@@ -133,9 +156,162 @@ SocketOp* NewSocketOp(const EeWonHostCall* c)
 
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp), mFile(NULL)
 {
-    this->mLengthFieldSize = 4;
+    uint32_t aTimes[3];
+    ee_won_hostop_setup(inRustOp, &this->mLengthFieldSize, aTimes);
+    this->SetMaxTimes(aTimes[0], aTimes[1], aTimes[2]);
     this->mAuthType = AUTH_TYPE_NONE;
     ee_won_hostop_bind(inRustOp, RustServerOp::HostCall, this);
+}
+RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, ServerContext* inContext)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
+    anOp->Set(EE_WON_REQHOST_CONTEXT, static_cast<RefCount*>(inContext));
+    return anOp;
+}
+RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
+    ee_won_hostop_set(anOp->mRustOp, EE_WON_REQHOST_ADDR, 0, NULL, 0, reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()),
+                      NULL);
+    return anOp;
+}
+ServerRequestOp::ServerRequestOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_cpp_request())
+{
+    this->Set(EE_WON_REQHOST_CONTEXT, inContext);
+}
+ServerRequestOp::ServerRequestOp(const IPAddr& inAddr) : RustServerOp(ee_won_hostop_cpp_request())
+{
+    ee_won_hostop_set(this->GetRustOp(), EE_WON_REQHOST_ADDR, 0, NULL, 0,
+                      reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), NULL);
+}
+void ServerRequestOp::SetLastServerError(WONStatus inError) { this->SetNum(EE_WON_REQHOST_LAST_ERROR, inError); }
+WONStatus ServerRequestOp::InvalidReplyHeader()
+{
+    this->SetLastServerError(WS_ServerReq_InvalidReplyHeader);
+    return WS_ServerReq_TryNextServer;
+}
+GetCertOp::GetCertOp(AuthContext* inContext) : RustServerOp(ee_won_hostop_getcert())
+{
+    this->Set(EE_WON_REQHOST_CONTEXT, inContext->GetServerContext().get());
+    this->Set(EE_WON_GETCERT_AUTH_CONTEXT, inContext);
+}
+const AuthPeerData* GetCertOp::GetPeerData() const
+{
+    return Peer(reinterpret_cast<void*>((intptr_t)ee_won_hostop_num(this->GetRustOp(), EE_WON_GETCERT_PEER, 0)));
+}
+DetectFirewallOp::DetectFirewallOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_firewall())
+{
+    this->Set(EE_WON_REQHOST_CONTEXT, inContext);
+}
+IPAddr DetectFirewallOp::GetPublicAddr() const
+{
+    IPAddr anAddr;
+    if (ee_won_hostop_num(this->GetRustOp(), EE_WON_FWOP_HAS_PUBLIC, 0))
+        anAddr.Fn2B2C20(static_cast<long>(ee_won_hostop_num(this->GetRustOp(), EE_WON_FWOP_PUBLIC_HOST, 0)), 0);
+    return anAddr;
+}
+void RustServerOp::SetNum(int inWhich, long long inNum)
+{
+    ee_won_hostop_set(this->mRustOp, inWhich, inNum, NULL, 0, NULL, NULL);
+}
+void RustServerOp::Set(int inWhich, RefCount* inObj)
+{
+    ee_won_hostop_set(this->mRustOp, inWhich, 0, NULL, 0, NULL, inObj);
+}
+IPAddr RustServerOp::GetCurAddr() const { return this->AddrOf(EE_WON_REQHOST_CUR_ADDR); }
+IPAddr RustServerOp::GetAddr() const { return this->AddrOf(EE_WON_REQHOST_ADDR); }
+IPAddr RustServerOp::AddrOf(int inWhich) const
+{
+    std::string anAddr;
+    ee_won_hostop_bytes(this->mRustOp, inWhich, 0, StrSink, &anAddr);
+    IPAddr a;
+    if (anAddr.size() == 6) a.SetSixByte(anAddr.data());
+    return a;
+}
+void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
+}
+DirEntityList RustServerOp::GetEntities(int inWhich, long long inIndex) const
+{
+    DirEntityList aList;
+    ee_won_hostop_entities(this->mRustOp, inWhich, inIndex, DirEntityReplyParser::TakeEntity, &aList);
+    return aList;
+}
+std::string RustServerOp::GetBytes(int inWhich, long long inIndex) const
+{
+    std::string aBytes;
+    ee_won_hostop_bytes(this->mRustOp, inWhich, inIndex, StrSink, &aBytes);
+    return aBytes;
+}
+namespace {
+// a Rust request op's members in its kind's order (ee_won_reqops_new)
+struct ReqMembers {
+    std::list<std::string> mKeep;
+    std::vector<EeWonAdminValue> mValues;
+    ReqMembers& N(long long inNum)
+    {
+        EeWonAdminValue v = {static_cast<int64_t>(inNum), NULL, 0};
+        this->mValues.push_back(v);
+        return *this;
+    }
+    ReqMembers& S(const std::string& inBytes)
+    {
+        this->mKeep.push_back(inBytes);
+        EeWonAdminValue v = {0, reinterpret_cast<const uint8_t*>(this->mKeep.back().data()), this->mKeep.back().size()};
+        this->mValues.push_back(v);
+        return *this;
+    }
+    ReqMembers& W(const std::wstring& inText)
+    {
+        std::string b;
+        WideAppendUtf16LE(b, inText);
+        return this->S(b);
+    }
+    // an empty profile (no newsletters, birth date or custom action)
+    ReqMembers& Profile() { return this->N(0).N(0).N(0).N(0).N(0).N(0).S(std::string()); }
+    EeWonReqOp* Make(int inKind) { return ee_won_reqops_new(inKind, this->mValues.empty() ? NULL : &this->mValues[0], this->mValues.size()); }
+};
+}
+RustServerOp* RustServerOp::NewGetDir(ServerContext* inContext, const std::wstring& inPath, DWORD inFlags,
+                                      const char* const* inTypes, int inTypeCount)
+{
+    ReqMembers m;
+    m.N(inFlags).W(inPath).N(inTypeCount);
+    for (int i = 0; i < inTypeCount; i++) m.S(inTypes[i]);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_GET), inContext);
+}
+RustServerOp* RustServerOp::NewGetMultiDir(ServerContext* inContext, DWORD inFlags, const std::wstring* inPaths, int inCount)
+{
+    // GetMultiDirOp::AddPath: each path with the op's flags and (no) data types
+    ReqMembers m;
+    m.N(inCount);
+    for (int i = 0; i < inCount; i++) m.N(inFlags).W(inPaths[i]).N(0);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_MULTI), inContext);
+}
+RustServerOp* RustServerOp::NewGetService(ServerContext* inContext, const std::wstring& inPath, const std::wstring& inName,
+                                          const std::string& inNetAddr)
+{
+    // GetServiceOp::Init's flags: the services, their display names, data objects, names and addresses
+    ReqMembers m;
+    m.N(0x06000822).W(inPath).W(inName).N(1).S(inNetAddr).N(0);
+    return NewRequest(m.Make(EE_WON_REQOPS_DIR_SERVICE), inContext);
+}
+RustServerOp* RustServerOp::NewGetAccount(ServerContext* inContext, AuthContext* inAuth)
+{
+    ReqMembers m;
+    RustServerOp* anOp = NewRequest(m.Profile().Make(EE_WON_REQOPS_ACCOUNT_GET), inContext);
+    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
+    return anOp;
+}
+RustServerOp* RustServerOp::NewUpdateAccount(ServerContext* inContext, AuthContext* inAuth, const std::wstring& inPassword,
+                                             const std::string& inEmail)
+{
+    ReqMembers m;
+    m.W(inPassword).S(inEmail).Profile();
+    RustServerOp* anOp = NewRequest(m.Make(EE_WON_REQOPS_ACCOUNT_UPDATE), inContext);
+    anOp->SetAuthType(AUTH_TYPE_SESSION, inAuth);
+    return anOp;
 }
 RustServerOp::~RustServerOp()
 {
@@ -197,7 +373,7 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         if (aSession != NULL) Give(c, aSession->GetKey().GetKey(), aSession->GetKey().GetKeyLen());
         break;
     }
-    case EE_WON_HOST_OP_KILLED: c->out_num = Op(o0)->IsKilled() ? 1 : 0; break;
+    case EE_WON_HOST_OP_KILLED: c->out_num = (o0 != NULL ? Op(o0) : o)->IsKilled() ? 1 : 0; break;
     case EE_WON_HOST_RESOLVE: {
         IPAddr anAddr;
         c->out_num = anAddr.SetWithDefaultPort(std::string(reinterpret_cast<const char*>(c->data), c->len),
@@ -277,6 +453,125 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_BASE_CLEANUP: o->AsyncOpWithTracker::CleanupHook(); break;
     case EE_WON_HOST_RELEASE: Obj(o0)->Release(); break;
     case EE_WON_HOST_ADD_REF: Obj(o0)->AddRef(); break;
+    // the request exchange (ee_won reqhost.rs: ServerRequestOp's statements)
+    case EE_WON_HOST_AUTH_TYPE: c->out_num = o->mAuthType; break;
+    case EE_WON_HOST_HAS_AUTH: c->out_num = o->mAuthContext.get() != NULL; break;
+    case EE_WON_HOST_CONNECT_TIME: c->out_num = o->ConnectTime(); break;
+    case EE_WON_HOST_TIMEOUT: c->out_num = (DWORD)o->GetTimeout(); break;
+    case EE_WON_HOST_CERT_USER_ID:
+        c->out_num = (uint32_t)o->mAuthContext->GetPeerData()->GetCertificate()->GetUserId(); // WONUserSeq
+        break;
+    case EE_WON_HOST_CTX_ADDRS: {
+        ServerContext::AddrList aList;
+        static_cast<ServerContext*>(Obj(o0))->CopyAddresses(aList);
+        std::string aBytes;
+        for (ServerContext::AddrList::const_iterator i = aList.begin(); i != aList.end(); ++i)
+            aBytes.append(reinterpret_cast<const char*>(i->GetSixByte()), 6);
+        Give(c, aBytes.data(), aBytes.size());
+        break;
+    }
+    case EE_WON_HOST_CTX_FAILED: static_cast<ServerContext*>(Obj(o0))->NotifyFailed(Addr(c)); break;
+    case EE_WON_HOST_GET_SESSION: {
+        SmartPtr<AuthSession> aSession = o->mAuthContext->GetSession(Addr(c));
+        c->out_obj = aSession.get() != NULL ? Out(aSession.get()) : NULL;
+        break;
+    }
+    case EE_WON_HOST_PUT_SESSION: o->mAuthContext->PutSession(Addr(c), static_cast<AuthSession*>(Obj(o0))); break;
+    case EE_WON_HOST_ADD_CRYPT:
+        Sock(o0)->AddMsgTransform(new CryptTransform(static_cast<AuthSession*>(Obj(c->obj[1]))));
+        break;
+    case EE_WON_HOST_KILL_ALL: o->mTracker.KillAll(); break;
+    case EE_WON_HOST_PEER_AUTH_SESSION: {
+        AuthSession* aSession = static_cast<PeerAuthOp*>(Op(o0))->GetSession();
+        c->out_obj = aSession != NULL ? Out(aSession) : NULL;
+        break;
+    }
+    case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
+    case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
+    // an op derived in C++ (reqhost.rs's CppReq): its virtuals
+    case EE_WON_HOST_REQ_NEXT: {
+        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
+        c->out_num = r->GetNextRequest();
+        Give(c, r->mRequest.get());
+        break;
+    }
+    case EE_WON_HOST_REQ_CHECK: {
+        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
+        r->mResponse = n0 ? Buf(c) : ByteBufferPtr();
+        try {
+            c->out_num = r->CheckResponse();
+        } catch (ReadBufferException&) {
+            c->out_addr[0] = 1;
+        }
+        break;
+    }
+    case EE_WON_HOST_REQ_RESET: static_cast<ServerRequestOp*>(o)->Reset(); break;
+    // DetectFirewallOp's (ee_won fwhost.rs)
+    case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
+    case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;
+    case EE_WON_HOST_RUN: c->out_num = Op(o0)->Run((long)n0, (unsigned long)n1); break;
+    // GetCertOp's objects (ee_won certhost.rs): round 6's hooks, one statement each
+    case EE_WON_HOST_CERT_VERIFIER_PUBLIC: c->out_num = AuthContext::GetVerifierKey().IsPublic(); break;
+    case EE_WON_HOST_CERT_CTX_PEER: {
+        ConstSmartPtr<AuthPeerData> aPeer = Ctx(o0)->GetPeerData();
+        c->out_obj = aPeer.get() != NULL ? Out(const_cast<AuthPeerData*>(aPeer.get())) : NULL;
+        break;
+    }
+    case EE_WON_HOST_CERT_PEER_BLOCK: c->out_obj = V(Peer(o0)->GetPubKeyBlock()); break;
+    case EE_WON_HOST_CERT_PEER_DELTA: c->out_num = Peer(o0)->GetAuthDelta(); break;
+    case EE_WON_HOST_CERT_LOAD_SECRETS: Ctx(o0)->LoadSecretList(); break;
+    case EE_WON_HOST_CERT_BLOCK_VALID: c->out_num = Block(o0)->IsValid(); break;
+    case EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK: Ctx(o0)->SetPeerData(new AuthPeerData(Block(c->obj[1]))); break;
+    case EE_WON_HOST_CERT_BLOCK_ID: c->out_num = Block(o0)->GetId(); break;
+    case EE_WON_HOST_CERT_BLOCK_ENCRYPT: Give(c, Block(o0)->GetCurrentKey().Encrypt(c->data, (int)c->len).get()); break;
+    case EE_WON_HOST_CERT_USER: GiveText(c, Ctx(o0)->GetUserName()); break;
+    case EE_WON_HOST_CERT_PASSWORD: GiveText(c, Ctx(o0)->GetPassword()); break;
+    case EE_WON_HOST_CERT_COMMUNITY: {
+        WriteBuffer w(0, true);
+        Ctx(o0)->AppendCommunityData(w);
+        Give(c, w.data(), w.length());
+        break;
+    }
+    case EE_WON_HOST_CERT_HASHES: {
+        WriteBuffer w(0, true);
+        Ctx(o0)->AppendHashes(w, RawBuffer(c->data, c->len));
+        Give(c, w.data(), w.length());
+        break;
+    }
+    case EE_WON_HOST_CERT_ADD_SECRET: Ctx(o0)->AddSecret(c->data); break;
+    case EE_WON_HOST_CERT_REMOVE_SECRET: Ctx(o0)->RemoveSecret(c->data); break;
+    case EE_WON_HOST_CERT_NEW:
+        c->out_obj = Out(n0 == 1 ? static_cast<RefCount*>(new AuthCertificate(c->data, (unsigned long)c->len))
+                                 : static_cast<RefCount*>(new Auth2Certificate(c->data, (unsigned long)c->len)));
+        break;
+    case EE_WON_HOST_CERT_VALID: c->out_num = Cert(n0, o0)->IsValid(); break;
+    case EE_WON_HOST_CERT_BLOCK_VERIFY:
+        c->out_num = n0 == 1 ? Block(o0)->Verify(Cert1(c->obj[1])) : Block(o0)->Verify(Cert2(c->obj[1]));
+        break;
+    case EE_WON_HOST_CERT_DELTA: c->out_num = n0 == 1 ? Cert1(o0)->ComputeAuthDelta() : Cert2(o0)->ComputeAuthDelta(); break;
+    case EE_WON_HOST_CERT_TIMES: {
+        int64_t aTimes[2] = {(int64_t)Cert(n0, o0)->GetIssueTime(), (int64_t)Cert(n0, o0)->GetExpireTime()};
+        Give(c, aTimes, sizeof(aTimes));
+        break;
+    }
+    case EE_WON_HOST_CERT_NEW_BLOCK: c->out_obj = Out(new AuthPubKeyBlock(c->data, (unsigned long)c->len)); break;
+    case EE_WON_HOST_CERT_BLOCK_VERIFIED: c->out_num = Block(o0)->IsValidAndVerified(AuthContext::GetVerifierKey()); break;
+    case EE_WON_HOST_CERT_COMMIT: Ctx(o0)->CommitSecrets((time_t)n0, (time_t)n1); break;
+    case EE_WON_HOST_CERT_PRIV_NEW: c->out_obj = new ElGamal; break;
+    case EE_WON_HOST_CERT_PRIV_SET: c->out_num = static_cast<ElGamal*>(o0)->SetPrivateKey(c->data, (int)c->len); break;
+    case EE_WON_HOST_CERT_PRIV_FREE: delete static_cast<ElGamal*>(o0); break;
+    case EE_WON_HOST_CERT_NEW_PEER:
+        c->out_obj = Out(new AuthPeerData(Cert1(o0), Block(c->obj[1]), *reinterpret_cast<ElGamal*>((intptr_t)n0), (time_t)n1,
+                                          Cert2(c->obj[2])));
+        break;
+    case EE_WON_HOST_CERT_SET_PASSWORD: {
+        std::wstring aPassword;
+        WideAssignUtf16LE(aPassword, c->data, (unsigned long)(c->len / 2));
+        Ctx(o0)->SetPassword(aPassword);
+        break;
+    }
+    case EE_WON_HOST_CERT_SET_PEER: Ctx(o0)->SetPeerData(Peer(c->obj[1])); break;
+    case EE_WON_HOST_CERT_CLEAR_ONE_TIME: Ctx(o0)->ClearOneTimeData(); break;
     default: break;
     }
 }

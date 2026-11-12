@@ -37,6 +37,8 @@ pub enum Checked {
     InvalidHeader,
     /// a read past the reply's end threw
     Cut,
+    /// it returned `RecvServerDatagram()` (DetectFirewallOp's UDP test, reqhost.rs)
+    Datagram,
 }
 
 /// An op derived from `ServerRequestOp` in Rust.
@@ -77,6 +79,16 @@ pub trait RequestOp: Send {
     fn num(&self, _which: i32) -> i64 {
         0
     }
+    /// a result's number by the op's number and an element (a list's index, a newsletter's id)
+    fn num_at(&self, which: i32, _index: i64) -> i64 {
+        self.num(which)
+    }
+    /// a result list of directory entities by the op's number and an element (reqdir.rs)
+    fn entities(&self, _which: i32, _index: i64) -> Vec<crate::dir::Entity> {
+        Vec::new()
+    }
+    /// a setter by the op's number, after the op was made (a value as a number or bytes)
+    fn set(&mut self, _which: i32, _num: i64, _data: &[u8]) {}
 }
 
 /// A Rust op held by a C++ `ServerRequestOp`.
@@ -311,7 +323,7 @@ pub unsafe extern "C" fn ee_won_reqop_check_response(
     let (v, s) = match unsafe { (*op).op.check_response(reply) } {
         Checked::Status(s) => (EE_WON_REQOP_STATUS, s),
         Checked::InvalidHeader => (EE_WON_REQOP_INVALID_HEADER, 0),
-        Checked::Cut => (EE_WON_REQOP_CUT, 0),
+        Checked::Cut | Checked::Datagram => (EE_WON_REQOP_CUT, 0),
     };
     unsafe { *verdict = v };
     s

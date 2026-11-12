@@ -18,7 +18,6 @@ public:
     EEUCPlanetSpaceship(EEUnitClassRecord* inRecord);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1)
     virtual ~EEUCPlanetSpaceship() {}       // +0x00 dtor 0x2305ee
     virtual void ActionChanged(EEComplexUnit* inUnit); // +0x74 0x218e34
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x20b9f0 trivial: push dword ptr [esp + 4]; call 0x616a11; ret 4 (ICF: EEUCAirplane)
     // members OPEN: a base's sizeof is unknown (no new site), so this class's own members cannot be placed yet
 };
 

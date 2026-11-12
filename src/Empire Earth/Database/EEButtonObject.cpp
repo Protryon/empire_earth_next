@@ -187,8 +187,9 @@ void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRect
     GETextureCoordinate theTopRight;
     GETextureCoordinate theBottomLeft;
     GETextureCoordinate theBottomRight;
-    // Test the texture before reading its size (a button whose texture failed to load is skipped).
-    if (this->mTexture == NULL)
+    // Test the texture before reading its size (a button whose texture failed to load is skipped; so is one whose
+    // surface is not loaded: EE-SIM's textures, a scenario's information portrait).
+    if (this->mTexture == NULL || this->mTexture->GetSurface() == NULL)
         return;
     float theWidth = (float)(this->mTexture->GetWidth() << this->mTexture->GetNumMipLevelsToDrop());
     unsigned long theHeight = this->mTexture->GetSurface()->GetHeight();

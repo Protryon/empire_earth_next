@@ -1,0 +1,13 @@
+[package]
+name = "ee_scenario"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The scenario manager's simulation logic (docs/RUST_PLAN.md R5b.5) behind the C++ classes of
+# src/Empire Earth/Scenario Manager: the triggers' conditions, the player choices, the triggers' firing. The world
+# is read through a host table the C++ fills; no FFI imports.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]

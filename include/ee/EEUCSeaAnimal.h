@@ -18,7 +18,6 @@ public:
     virtual void GroundLocation(GE3DPoint& ioLocation); // +0x04 0x219d67 trivial: push dword ptr [esp + 4]; call 0x61ab66; ret 4
     virtual void LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY); // +0x08 0x219d73
     virtual void AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth); // +0x0c 0x219d87
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x219fd7 trivial: push dword ptr [esp + 4]; call 0x61b085; ret 4
     virtual void UpdateEffects(EEComplexUnit*); // +0xbc 0x20d336 (ICF: EEUCBasicCitizen, EEUCBasicPriest...)
 };
 

@@ -19,6 +19,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -357,39 +359,9 @@ long EEUCAirAnimal::Animate(EEComplexUnit* inUnit)
 // animation and sound, and counts down a carcass's food (1 per 4 s) or rotting time
 void EEUCAirAnimal::Update(EEComplexUnit* inUnit)
 {
-    long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    long theTime = inUnit->mFlightTime;
-    unsigned long theState = inUnit->mCurrentPhysicsOrder;
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionIdle) {
-        long theLeft = theTime - gPhysics->mTickTimeMs;
-        if (theLeft < 0)
-            theLeft = 0;
-        if (!::gWorld.mInCinematic)
-            inUnit->SetFlightTime(theLeft);
-        if (theCommand != kActionCircle && theCommand != kActionWaitForLandingClearance && theCommand != kActionCircleAirtrafficController) {
-            unsigned long theNew = this->GetNextFlightState(inUnit);
-            if (theState == 5) {
-                if (theNew != 5)
-                    inUnit->SetCurrentPhysicsOrder(theNew);
-            } else if (theNew == 5)
-                inUnit->SetCurrentPhysicsOrder(5);
-            else if (theState != theNew && (theTime / 1000 > theLeft / 1000 || theLeft / 1000 == 0))
-                inUnit->SetCurrentPhysicsOrder(theNew);
-        }
-    }
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionResourcesRotting:
-        inUnit->UpdateResourcesRotting();
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_AIR_ANIMAL, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x4ac9f3

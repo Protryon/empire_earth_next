@@ -6,6 +6,11 @@ use super::*;
 use crate::filepush::*;
 use crate::ftpop::*;
 use crate::multiping::*;
+use crate::reqhost::*;
+use crate::reqops::{
+    EE_WON_REQOP_CONTEST_REPLY, EE_WON_REQOP_PING_LAG, EE_WON_REQOP_PING_TEXT, EE_WON_REQOP_PING_VERSION,
+    EE_WON_REQOP_USER_ID,
+};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -21,6 +26,9 @@ struct Standin {
     calls: i32,
     tick: u32,
     line: i32,
+    /// a request exchange's sequence (its own answers)
+    req: bool,
+    auth: i32,
     rands: Vec<i32>,
     addrs: Vec<[u8; 6]>,
     own: BTreeMap<i32, i32>,
@@ -160,6 +168,29 @@ impl Standin {
         b.push(0);
         Some(b)
     }
+    /// a request exchange's reply: a reused session's "expired", a ping reply, a DB proxy reply, anything
+    fn req_bytes(&mut self) -> Option<Vec<u8>> {
+        let k = self.pick(6);
+        if k == 0 {
+            return Some(vec![1, 0, 0, 0, 15, 0, 0, 0, self.pick(3) as u8, 0]);
+        }
+        if k == 1 || k == 2 {
+            let t = self.tick.wrapping_sub(self.pick(50) as u32).to_le_bytes();
+            let mut b = vec![3, 1, 6, t[0], t[1], t[2], t[3], self.pick(2) as u8];
+            b.truncate(if k == 1 { 7 } else { 8 });
+            return Some(b);
+        }
+        if k == 3 {
+            let last = if self.pick(3) != 0 { 0x80 } else { 0 };
+            let mut b = vec![5, 14, 0, 0xea, 3, 17, 0, 0, 0, 0, 0, last, 7, 0, 0, 0];
+            if self.pick(4) == 0 {
+                let n = self.pick(b.len() as i32) as usize;
+                b.truncate(n);
+            }
+            return Some(b);
+        }
+        self.bytes()
+    }
     fn addr(&mut self) -> [u8; 6] {
         if !self.addrs.is_empty() && self.pick(4) != 0 {
             let n = self.addrs.len() as i32;
@@ -269,11 +300,18 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 } else {
                     s.recv_status()
                 };
+                let v = if s.req && s.pick(6) == 0 { 100053 } else { v };
                 c.out_num = i64::from(v);
                 s.log(format!("st#{o0}={v}"));
             }
             EE_WON_HOST_OP_BYTES => {
-                let b = if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) { s.line_bytes() } else { s.bytes() };
+                let b = if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) {
+                    s.line_bytes()
+                } else if s.req {
+                    s.req_bytes()
+                } else {
+                    s.bytes()
+                };
                 // SAFETY: during the call
                 unsafe { give(c, &b) };
                 s.log(format!("bytes#{o0}={}", blog(&b)));
@@ -324,7 +362,13 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
             }
             EE_WON_HOST_RECV_BYTES | EE_WON_HOST_RECV_MSG => {
                 let v = s.send_status();
-                let b = if c.code == EE_WON_HOST_RECV_BYTES { s.ack_bytes() } else { s.status_bytes() };
+                let b = if c.code == EE_WON_HOST_RECV_BYTES {
+                    s.ack_bytes()
+                } else if s.req {
+                    s.req_bytes()
+                } else {
+                    s.status_bytes()
+                };
                 c.out_num = i64::from(v);
                 // SAFETY: during the call
                 unsafe { give(c, &b) };
@@ -396,6 +440,57 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
             EE_WON_HOST_BASE_CLEANUP => s.log("basecleanup".into()),
             EE_WON_HOST_RELEASE => *s.own.entry(o0).or_insert(0) -= 1,
             EE_WON_HOST_ADD_REF => *s.own.entry(o0).or_insert(0) += 1,
+            EE_WON_HOST_AUTH_TYPE => c.out_num = i64::from(s.auth),
+            EE_WON_HOST_HAS_AUTH => {
+                c.out_num = i64::from(s.pick(5) != 0);
+                s.log(format!("hasauth={}", c.out_num));
+            }
+            EE_WON_HOST_CONNECT_TIME | EE_WON_HOST_TIMEOUT => {
+                let v: u32 = if s.pick(2) != 0 { 20000 } else { 0 };
+                c.out_num = i64::from(v);
+                let n = if c.code == EE_WON_HOST_TIMEOUT { "timeout" } else { "ctime" };
+                s.log(format!("{n}={v}"));
+            }
+            EE_WON_HOST_CERT_USER_ID => {
+                let v = s.next();
+                c.out_num = i64::from(v);
+                s.log(format!("uid={v}"));
+            }
+            EE_WON_HOST_CTX_ADDRS => {
+                let n = s.pick(4);
+                let mut b = Vec::new();
+                for _ in 0..n {
+                    let a = s.addr();
+                    b.extend_from_slice(&a);
+                }
+                let null = n == 0 && s.pick(2) == 0;
+                let given = if null { None } else { Some(b.clone()) };
+                give(c, &given);
+                s.log(format!("addrs#{o0}={}", hex(&b)));
+            }
+            EE_WON_HOST_CTX_FAILED => s.log(format!("failed#{o0} {}", hex(&addr))),
+            EE_WON_HOST_GET_SESSION | EE_WON_HOST_PEER_AUTH_SESSION => {
+                let id = if s.pick(3) == 0 { 0 } else { s.new_obj() };
+                c.out_obj = id as usize as *mut c_void;
+                if c.code == EE_WON_HOST_GET_SESSION {
+                    s.log(format!("session {}={id}", hex(&addr)));
+                } else {
+                    s.log(format!("psession#{o0}={id}"));
+                }
+            }
+            EE_WON_HOST_PUT_SESSION => s.log(format!("put {} {o0}", hex(&addr))),
+            EE_WON_HOST_ADD_CRYPT => s.log(format!("crypt#{o0} {o1}")),
+            EE_WON_HOST_KILL_ALL => s.log("killall".into()),
+            EE_WON_HOST_PEER_AUTH_CERT => {
+                const K: [i32; 4] = [0, 100001, 100062, 100072];
+                let v = K[s.pick(4) as usize];
+                c.out_num = i64::from(v);
+                s.log(format!("cert#{o0}={v}"));
+            }
+            EE_WON_HOST_OP_IS_RECV_MSG => {
+                c.out_num = i64::from(s.pick(4) != 0);
+                s.log(format!("isrecv#{o0}={}", c.out_num));
+            }
             code => s.log(format!("unknown {code}")),
         }
     });
@@ -506,6 +601,45 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
             11 => ret = ping_results(op),
             _ => {}
         }
+    } else if which == 'R' {
+        match kind {
+            0 => {
+                with(|s| {
+                    s.mode = a as i32;
+                    s.auth = b as i32;
+                    s.status = 100000;
+                });
+                h.run();
+            }
+            1..=3 => {
+                let done = with(|s| {
+                    s.serial += 1;
+                    s.serial
+                });
+                let param = if kind == 3 { 7 } else { kind };
+                ret = if h.callback(param, Obj(done as usize)) { "1" } else { "0" }.into();
+            }
+            4 => h.cleanup(),
+            5 => {
+                let u = if a != 0 { with(|s| s.new_obj()) } else { 0 };
+                op.set(EE_WON_REQHOST_UDP_SOCKET, 0, &[], None, u);
+                if u != 0 {
+                    with(|s| *s.own.get_mut(&u).unwrap() -= 1);
+                }
+            }
+            6 => {
+                let mut r = hex(&h.bytes(EE_WON_REQHOST_CUR_ADDR, 0).unwrap_or_default());
+                for w in [EE_WON_REQOP_PING_LAG, EE_WON_REQOP_PING_VERSION, EE_WON_REQOP_USER_ID] {
+                    let _ = write!(r, " {}", op.num(w, 0));
+                }
+                for w in [EE_WON_REQOP_CONTEST_REPLY, EE_WON_REQOP_PING_TEXT] {
+                    let b = h.bytes(w, 0);
+                    let _ = write!(r, " {}", b.as_ref().map_or("null".to_string(), |b| hex(b)));
+                }
+                ret = r;
+            }
+            _ => {}
+        }
     } else if which == 'P' {
         match kind {
             0 => op.set(EE_WON_FTPGET_LOCAL_PATH, 0, data, None, 0),
@@ -614,7 +748,53 @@ fn free_and_check(op: Op) {
     });
 }
 
+/// The driver's `NewReqOp`: a contest call, a ping or a user id lookup.
+fn new_req_op(kind: u8, arg: u8) -> *mut crate::reqop::EeWonReqOp {
+    use crate::admin::EeWonAdminValue;
+    let v = |num: i64| EeWonAdminValue { num, data: std::ptr::null(), len: 0 };
+    // SAFETY: the values' bytes live through the calls
+    unsafe {
+        match kind {
+            0 => {
+                let d = [1u8, 2, 3];
+                let vals =
+                    [v(i64::from(arg)), v(i64::from(arg & 1)), EeWonAdminValue { num: 0, data: d.as_ptr(), len: 3 }];
+                crate::reqops::ee_won_reqops_new(crate::reqops::EE_WON_REQOPS_CONTEST, vals.as_ptr(), 3)
+            }
+            1 => {
+                let vals = [v(if arg & 1 != 0 { 2 } else { 4 }), v(i64::from((arg >> 1) & 1))];
+                crate::reqops::ee_won_reqops_new(crate::reqops::EE_WON_REQOPS_PING, vals.as_ptr(), 2)
+            }
+            _ => {
+                let n = [b'b', 0, b'o', 0, b'b', 0];
+                crate::reqops::ee_won_reqop_user_id(n.as_ptr(), 6)
+            }
+        }
+    }
+}
+
 fn new_op(which: char, addr: &[u8]) -> Op {
+    if which == 'R' {
+        let r = new_req_op(addr[0], addr[1]);
+        // SAFETY: the new ops
+        unsafe {
+            let lfs = crate::reqop::ee_won_reqop_length_field_size(r);
+            with(|s| {
+                s.lfs = i32::from(lfs);
+                s.req = true;
+            });
+            let op = Op(crate::reqhost::ee_won_hostop_request(r));
+            ee_won_hostop_bind(op.0, Some(host_fn), std::ptr::null_mut());
+            if addr[2] != 0 {
+                let c = with(|s| s.new_obj());
+                op.set(EE_WON_REQHOST_CONTEXT, 0, &[], None, c);
+                with(|s| *s.own.get_mut(&c).unwrap() -= 1);
+            } else {
+                op.set(EE_WON_REQHOST_ADDR, 0, &[], Some(ADDRS[addr[3] as usize]), 0);
+            }
+            return op;
+        }
+    }
     let op = if which == 'M' {
         ee_won_multiping_new()
     } else if which == 'P' {

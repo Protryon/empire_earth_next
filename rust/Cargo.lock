@@ -171,6 +171,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_ai"
+version = "0.1.0"
+dependencies = [
+ "ee_plat_core",
+]
+
+[[package]]
 name = "ee_astar"
 version = "0.1.0"
 dependencies = [
@@ -330,6 +337,7 @@ dependencies = [
 name = "ee_rust"
 version = "0.1.0"
 dependencies = [
+ "ee_ai",
  "ee_astar",
  "ee_codec",
  "ee_combat",
@@ -351,6 +359,7 @@ dependencies = [
  "ee_plat_ui",
  "ee_random",
  "ee_rmap",
+ "ee_scenario",
  "ee_screens",
  "ee_sound",
  "ee_tech",
@@ -358,6 +367,10 @@ dependencies = [
  "ee_units",
  "ee_won",
 ]
+
+[[package]]
+name = "ee_scenario"
+version = "0.1.0"
 
 [[package]]
 name = "ee_screens"

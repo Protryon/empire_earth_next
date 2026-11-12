@@ -7,6 +7,201 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `EEUnitClass::ActionChanged` (every class's `HandleActionChanged`)
+constexpr static const int32_t EE_UNITS_ACTION_BASE = 1;
+
+constexpr static const int32_t EE_UNITS_ACTION_LAND = 2;
+
+constexpr static const int32_t EE_UNITS_ACTION_NAVAL = 3;
+
+constexpr static const int32_t EE_UNITS_ACTION_SUBMERGED_NAVAL = 4;
+
+constexpr static const int32_t EE_UNITS_ACTION_SPACESHIP = 5;
+
+constexpr static const int32_t EE_UNITS_ACTION_BASIC_PRIEST = 6;
+
+/// `GetAnimation()`, `EEGetAttackFrameSet(inUnit)`, `IsSwimming()`, the class's `IsLandBuilding()`, the class's
+/// `mAttack > 0`, `mStats->mCanFireOverWalls`
+constexpr static const int32_t EE_UNITS_ACT_R_ANIMATION = 130;
+
+constexpr static const int32_t EE_UNITS_ACT_R_ATTACK_FRAME_SET = 131;
+
+constexpr static const int32_t EE_UNITS_ACT_R_SWIMMING = 132;
+
+constexpr static const int32_t EE_UNITS_ACT_R_LAND_BUILDING = 133;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CLASS_ARMED = 134;
+
+constexpr static const int32_t EE_UNITS_ACT_R_FIRE_OVER_WALLS = 135;
+
+/// `gPhysics->GetRandom()` (a draw: the float's bits)
+constexpr static const int32_t EE_UNITS_ACT_R_RANDOM = 136;
+
+/// `mUnitClass->mIsWall`, the class's `mRottingTime`, `mNextPart != NULL` (the update host's), the goal's
+/// `(unsigned long)mPathAttempts > (unsigned long)GetMaxPathAttempts()`, `mUnitClass->mResourceAmount`,
+/// `mInitialContactHeading == kUnitAINoHeading`, `gWorldClearing`, `GetQueueGoals(0).size() > 1`, the class's
+/// `mDeathEffect != NULL`, `mStats->mDeathSound != NULL`, `mUnitClass->mBloodStainEffect != NULL`
+constexpr static const int32_t EE_UNITS_ACT_R_IS_WALL = 137;
+
+constexpr static const int32_t EE_UNITS_ACT_R_ROTTING_TIME = 138;
+
+constexpr static const int32_t EE_UNITS_ACT_R_PATH_ATTEMPTS_EXCEEDED = 139;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CLASS_RESOURCE_AMOUNT = 140;
+
+constexpr static const int32_t EE_UNITS_ACT_R_NO_HEADING = 141;
+
+constexpr static const int32_t EE_UNITS_ACT_R_WORLD_CLEARING = 142;
+
+constexpr static const int32_t EE_UNITS_ACT_R_QUEUED_GOALS = 143;
+
+constexpr static const int32_t EE_UNITS_ACT_R_DEATH_EFFECT = 144;
+
+constexpr static const int32_t EE_UNITS_ACT_R_DEATH_SOUND = 145;
+
+constexpr static const int32_t EE_UNITS_ACT_R_BLOOD_STAIN = 146;
+
+/// the store's fields for a unit with no record: the class's `mDomains`, `mCategory`, `mContainer != NULL`,
+/// `mResourceAmount`
+constexpr static const int32_t EE_UNITS_ACT_R_DOMAINS = 150;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CATEGORY = 151;
+
+constexpr static const int32_t EE_UNITS_ACT_R_CONTAINER = 152;
+
+constexpr static const int32_t EE_UNITS_ACT_R_RESOURCE_AMOUNT = 153;
+
+/// `ReleaseHealEffect()`; the herd's `AttackBack(inUnit, true)`, `HandleUnitHit(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_RELEASE_HEAL_EFFECT = 200;
+
+constexpr static const int32_t EE_UNITS_ACT_HERD_ATTACK_BACK = 201;
+
+constexpr static const int32_t EE_UNITS_ACT_HERD_UNIT_HIT = 202;
+
+/// the initial contact location and heading from the unit's location (`kActionCheckRange`'s writes;
+/// `kActionShouldIFollowEnemyUnit`'s through `SetInitialContactLocation`)
+constexpr static const int32_t EE_UNITS_ACT_CONTACT_CHECK_RANGE = 203;
+
+constexpr static const int32_t EE_UNITS_ACT_CONTACT_FOLLOW = 204;
+
+/// the class's `Attacked(inUnit)`, `FleeAttacker(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_ATTACKED = 205;
+
+constexpr static const int32_t EE_UNITS_ACT_FLEE_ATTACKER = 206;
+
+/// `SetCurrentPhysicsAction(a)`, `SetAnimation(a, -1, b)`
+constexpr static const int32_t EE_UNITS_ACT_SET_PHYSICS_ACTION = 207;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_ANIMATION = 208;
+
+/// a new location goal to the initial contact location, `SetGoal(goal, a, 0)`
+constexpr static const int32_t EE_UNITS_ACT_RETURN_TO_CONTACT = 209;
+
+/// `SetTargetSearchTimer(a)`, `FleeAfterCalamity(0)`, `mNextTriggerTime = a`
+constexpr static const int32_t EE_UNITS_ACT_SET_TARGET_SEARCH_TIMER = 210;
+
+constexpr static const int32_t EE_UNITS_ACT_FLEE_AFTER_CALAMITY = 211;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_NEXT_TRIGGER_TIME = 212;
+
+/// `SetIsAnimationPaused(true)`; `SetAnimationTime(gPhysics->GetRandom(0, the hold time of GetAnimation()))`
+constexpr static const int32_t EE_UNITS_ACT_PAUSE_ANIMATION = 213;
+
+constexpr static const int32_t EE_UNITS_ACT_RANDOM_ANIMATION_TIME = 214;
+
+/// `DropPath()`, `UpdateWaterState(false)`, `mPlayer->UnitGoalDone(inUnit)`, `ClearGoals(a)`,
+/// `mInitialContactHeading = kUnitAINoHeading`, `gPathManager.CancelPaths(inUnit, true)`
+constexpr static const int32_t EE_UNITS_ACT_DROP_PATH = 215;
+
+constexpr static const int32_t EE_UNITS_ACT_UPDATE_WATER_STATE = 216;
+
+constexpr static const int32_t EE_UNITS_ACT_UNIT_GOAL_DONE = 217;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_GOALS = 218;
+
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_HEADING = 219;
+
+constexpr static const int32_t EE_UNITS_ACT_CANCEL_PATHS = 220;
+
+/// `SetRottingAwayTime(a)`; the next part's `StartAction(a)` and its class's `ActionChanged`
+constexpr static const int32_t EE_UNITS_ACT_SET_ROTTING = 221;
+
+constexpr static const int32_t EE_UNITS_ACT_NEXT_PART_ACTION = 222;
+
+/// the class's `UnitDied(inUnit)`, `mGoalState->Step(inUnit)`, `mPlayer->DeselectUnit(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_UNIT_DIED = 223;
+
+constexpr static const int32_t EE_UNITS_ACT_GOAL_STEP = 224;
+
+constexpr static const int32_t EE_UNITS_ACT_DESELECT = 225;
+
+/// `SetCloakedChain(true)`, `SetOpacityChain(1.0f)`, `Kill(a != 0, false, false)`, `mPlayer->KillUnit` of the unit
+/// and its next parts
+constexpr static const int32_t EE_UNITS_ACT_CLOAK_CHAIN = 226;
+
+constexpr static const int32_t EE_UNITS_ACT_OPAQUE_CHAIN = 227;
+
+constexpr static const int32_t EE_UNITS_ACT_KILL = 228;
+
+constexpr static const int32_t EE_UNITS_ACT_KILL_UNIT_AND_PARTS = 229;
+
+/// `StartAction(kActionIdle)` and the class's `ActionChanged`
+constexpr static const int32_t EE_UNITS_ACT_START_IDLE = 230;
+
+/// the class's `PathToGoal`, `MoveToTileCentre`, `Flee`, `NextWaypoint`, `FindSafeLocation`
+constexpr static const int32_t EE_UNITS_ACT_PATH_TO_GOAL = 231;
+
+constexpr static const int32_t EE_UNITS_ACT_MOVE_TO_TILE_CENTRE = 232;
+
+constexpr static const int32_t EE_UNITS_ACT_FLEE = 233;
+
+constexpr static const int32_t EE_UNITS_ACT_NEXT_WAYPOINT = 234;
+
+constexpr static const int32_t EE_UNITS_ACT_FIND_SAFE_LOCATION = 235;
+
+/// `SetHasArrived(false)`; the location goal's `FaceYaw(inUnit)` (its result)
+constexpr static const int32_t EE_UNITS_ACT_CLEAR_ARRIVED = 236;
+
+constexpr static const int32_t EE_UNITS_ACT_FACE_YAW = 237;
+
+/// the class's `FindPath`, `Heal`; `FindTargetNear(inUnit, line of sight, &target)` (its result; the host keeps the
+/// target), a new heal goal on it `SetGoal(goal, a, 0)`, `SetHealSearchTimer(the class's mHealDelay)`
+constexpr static const int32_t EE_UNITS_ACT_FIND_PATH = 238;
+
+constexpr static const int32_t EE_UNITS_ACT_HEAL = 239;
+
+constexpr static const int32_t EE_UNITS_ACT_FIND_HEALEE = 240;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_HEAL_GOAL = 241;
+
+constexpr static const int32_t EE_UNITS_ACT_RESET_HEAL_SEARCH = 242;
+
+/// `mGoalState->SetStartTime(gPhysics->mGameTime)`
+constexpr static const int32_t EE_UNITS_ACT_GOAL_START_TIME = 243;
+
+/// the land class's `CallParatroopPlane(inUnit)`, `EEPlaceTrackDecal(inUnit)`
+constexpr static const int32_t EE_UNITS_ACT_CALL_PARATROOP_PLANE = 244;
+
+constexpr static const int32_t EE_UNITS_ACT_PLACE_TRACK_DECAL = 245;
+
+/// the class's death effect on the unit, the stats' death sound played where it is
+constexpr static const int32_t EE_UNITS_ACT_DEATH_EFFECT = 246;
+
+constexpr static const int32_t EE_UNITS_ACT_DEATH_SOUND = 247;
+
+/// `mAngularVelocity = 0`, `SetVelocity(0.0f)`
+constexpr static const int32_t EE_UNITS_ACT_STOP = 248;
+
+/// `ReleaseConversionEffect()`, the priest class's `HideConversionEffects(inUnit)`, `mConversionStartTime = a` (when
+/// it differs), `SetWorkTimer(a)`
+constexpr static const int32_t EE_UNITS_ACT_RELEASE_CONVERSION_EFFECT = 249;
+
+constexpr static const int32_t EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS = 250;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_CONVERSION_START = 251;
+
+constexpr static const int32_t EE_UNITS_ACT_SET_WORK_TIMER = 252;
+
 /// `kActionIdle` (the idle action's id).
 constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 
@@ -439,6 +634,46 @@ constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 
 constexpr static const int32_t EE_UNITS_UPDATE_NAVAL = 2;
 
+constexpr static const int32_t EE_UNITS_UPDATE_LAND_CITIZEN = 3;
+
+constexpr static const int32_t EE_UNITS_UPDATE_NAVAL_CITIZEN = 4;
+
+/// `EEUCBasicPriest` (the land, naval and helicopter priests')
+constexpr static const int32_t EE_UNITS_UPDATE_BASIC_PRIEST = 5;
+
+constexpr static const int32_t EE_UNITS_UPDATE_SPACESHIP = 6;
+
+/// `EEUCSubmergedNaval` (and the sea animal's)
+constexpr static const int32_t EE_UNITS_UPDATE_SUBMERGED_NAVAL = 7;
+
+constexpr static const int32_t EE_UNITS_UPDATE_HELICOPTER = 8;
+
+/// `EEUCTransport` (and the naval and space transports')
+constexpr static const int32_t EE_UNITS_UPDATE_TRANSPORT = 9;
+
+constexpr static const int32_t EE_UNITS_UPDATE_LAND_TRANSPORT = 10;
+
+constexpr static const int32_t EE_UNITS_UPDATE_HELICOPTER_TRANSPORT = 11;
+
+constexpr static const int32_t EE_UNITS_UPDATE_FORTRESS = 12;
+
+/// `EEUCLandable` (and the airplane's and planet spaceship's)
+constexpr static const int32_t EE_UNITS_UPDATE_LANDABLE = 13;
+
+constexpr static const int32_t EE_UNITS_UPDATE_AIR_ANIMAL = 14;
+
+constexpr static const int32_t EE_UNITS_UPDATE_BUILDING = 15;
+
+constexpr static const int32_t EE_UNITS_UPDATE_GATE = 16;
+
+constexpr static const int32_t EE_UNITS_UPDATE_MINING_BUILDING = 17;
+
+constexpr static const int32_t EE_UNITS_UPDATE_NAVAL_BUILDING = 18;
+
+constexpr static const int32_t EE_UNITS_UPDATE_SPACE_BUILDING = 19;
+
+constexpr static const int32_t EE_UNITS_UPDATE_AMBIENT = 20;
+
 /// `mPhysicalModel.GetFrame()`
 constexpr static const int32_t EE_UNITS_UPD_R_FRAME = 1;
 
@@ -451,11 +686,12 @@ constexpr static const int32_t EE_UNITS_UPD_R_PHYSICS_MODEL = 3;
 /// the class's `mIsMedic`
 constexpr static const int32_t EE_UNITS_UPD_R_MEDIC = 4;
 
-/// `mStats->mRegeneration > 0`
+/// `mStats != NULL && mStats->mRegeneration > 0`
 constexpr static const int32_t EE_UNITS_UPD_R_REGENERATES = 5;
 
 /// the store's fields for a unit with no record: `mHerd != NULL`, `mPlayer->mPlayerID`, `mTileX`,
-/// `mCommand ? mCommand->mType : 0`, `mGoalState ? mGoalState->mKind : -1`, the class's `mUnitType`
+/// `mCommand ? mCommand->mType : 0`, `mGoalState ? mGoalState->mKind : -1`, the class's `mUnitType`, `mHitPoints`,
+/// the class's `mFamily`, `mIsBuilt`, `mFlightTime`
 constexpr static const int32_t EE_UNITS_UPD_R_HERD = 10;
 
 constexpr static const int32_t EE_UNITS_UPD_R_OWNER = 11;
@@ -467,6 +703,63 @@ constexpr static const int32_t EE_UNITS_UPD_R_COMMAND = 13;
 constexpr static const int32_t EE_UNITS_UPD_R_GOAL_KIND = 14;
 
 constexpr static const int32_t EE_UNITS_UPD_R_UNIT_TYPE = 15;
+
+constexpr static const int32_t EE_UNITS_UPD_R_HIT_POINTS = 16;
+
+constexpr static const int32_t EE_UNITS_UPD_R_FAMILY = 17;
+
+constexpr static const int32_t EE_UNITS_UPD_R_BUILT = 18;
+
+constexpr static const int32_t EE_UNITS_UPD_R_FLIGHT_TIME = 19;
+
+/// `mConversionStartTime`, `gWorld.mInCinematic`, `gPhysics->mTickTimeMs`, `mCurrentPhysicsOrder`,
+/// `mCurrentPhysicsAction`
+constexpr static const int32_t EE_UNITS_UPD_R_CONVERSION_START = 100;
+
+constexpr static const int32_t EE_UNITS_UPD_R_CINEMATIC = 101;
+
+constexpr static const int32_t EE_UNITS_UPD_R_TICK_MS = 102;
+
+constexpr static const int32_t EE_UNITS_UPD_R_PHYSICS_ORDER = 103;
+
+constexpr static const int32_t EE_UNITS_UPD_R_PHYSICS_ACTION = 104;
+
+/// `GetPosition`'s z (the float's bits)
+constexpr static const int32_t EE_UNITS_UPD_R_POSITION_Z = 105;
+
+/// the calamity manager's `IsCalamityActive(0x17)`; the class's `mAttack == 0.0f`, `IsPriest()`; `mStats->mPower`
+constexpr static const int32_t EE_UNITS_UPD_R_CALAMITY_CAMOUFLAGE = 106;
+
+constexpr static const int32_t EE_UNITS_UPD_R_CLASS_UNARMED = 107;
+
+constexpr static const int32_t EE_UNITS_UPD_R_IS_PRIEST = 108;
+
+constexpr static const int32_t EE_UNITS_UPD_R_STATS_POWER = 109;
+
+/// `gPhysics->mGameTime`, `mGrazeTime`, `mStats->mGatherTimes[2]` and `[6]`, the game variant's `mWorkTimeFactor`
+/// (the float's bits), `mWorkTimer`, `mMine != NULL`, `mMine->mResourceType`
+constexpr static const int32_t EE_UNITS_UPD_R_GAME_TIME = 110;
+
+constexpr static const int32_t EE_UNITS_UPD_R_GRAZE_TIME = 111;
+
+constexpr static const int32_t EE_UNITS_UPD_R_GATHER_TIME_2 = 112;
+
+constexpr static const int32_t EE_UNITS_UPD_R_GATHER_TIME_6 = 113;
+
+constexpr static const int32_t EE_UNITS_UPD_R_WORK_TIME_FACTOR = 114;
+
+constexpr static const int32_t EE_UNITS_UPD_R_WORK_TIMER = 115;
+
+constexpr static const int32_t EE_UNITS_UPD_R_MINE = 116;
+
+constexpr static const int32_t EE_UNITS_UPD_R_MINE_RESOURCE_TYPE = 117;
+
+/// `mPreviousPart == NULL`, `mNextPart != NULL`, `mOpenFraction` (the float's bits)
+constexpr static const int32_t EE_UNITS_UPD_R_FIRST_PART = 118;
+
+constexpr static const int32_t EE_UNITS_UPD_R_HAS_NEXT_PART = 119;
+
+constexpr static const int32_t EE_UNITS_UPD_R_OPEN_FRACTION = 120;
 
 /// `SetLastHitPoints(mHitPoints)`
 constexpr static const int32_t EE_UNITS_UPD_LAST_HIT_POINTS = 20;
@@ -503,8 +796,8 @@ constexpr static const int32_t EE_UNITS_UPD_FANATICISM_COLOR = 32;
 /// the class's `FireOnAttackFrame(inUnit, a: the animation's result, b: the frame)`
 constexpr static const int32_t EE_UNITS_UPD_FIRE_ON_ATTACK_FRAME = 33;
 
-/// `UpdateRottingAwayTime()`, `UpdateHealSearchTimer()`, `mGoalState->Work(inUnit)`, the class's
-/// `Regenerate(inUnit)`, `UpdateDone(inUnit)`, `UpdateAnimal(inUnit)`, `UpdateResourceUnit(inUnit)`
+/// `UpdateRottingAwayTime()` (its result), `UpdateHealSearchTimer()`, `mGoalState->Work(inUnit)`, the class's
+/// `Regenerate(inUnit)`, `UpdateDone(inUnit)`, `UpdateAnimal(inUnit)`, the naval class's `UpdateResourceUnit(inUnit)`
 constexpr static const int32_t EE_UNITS_UPD_ROTTING = 34;
 
 constexpr static const int32_t EE_UNITS_UPD_HEAL_SEARCH_TIMER = 35;
@@ -518,6 +811,68 @@ constexpr static const int32_t EE_UNITS_UPD_DONE = 38;
 constexpr static const int32_t EE_UNITS_UPD_ANIMAL = 39;
 
 constexpr static const int32_t EE_UNITS_UPD_RESOURCE_UNIT = 40;
+
+/// `ContinueProduction()`, the citizen class's `UpdateCitizen(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_CONTINUE_PRODUCTION = 41;
+
+constexpr static const int32_t EE_UNITS_UPD_UPDATE_CITIZEN = 42;
+
+/// the priest class's `UpdateConversion(inUnit)`, `mConversionStartTime = 0`, `ReleaseConversionEffect()`, the
+/// priest class's `HideConversionEffects(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_UPDATE_CONVERSION = 43;
+
+constexpr static const int32_t EE_UNITS_UPD_CLEAR_CONVERSION_START = 44;
+
+constexpr static const int32_t EE_UNITS_UPD_RELEASE_CONVERSION_EFFECT = 45;
+
+constexpr static const int32_t EE_UNITS_UPD_HIDE_CONVERSION_EFFECTS = 46;
+
+/// `UpdateResourcesRotting()`
+constexpr static const int32_t EE_UNITS_UPD_RESOURCES_ROTTING = 47;
+
+/// `SetFlightTime(a)`, the landable class's `GetNextFlightState(inUnit)` (its result), `SetCurrentPhysicsOrder(a)`
+constexpr static const int32_t EE_UNITS_UPD_SET_FLIGHT_TIME = 48;
+
+constexpr static const int32_t EE_UNITS_UPD_NEXT_FLIGHT_STATE = 49;
+
+constexpr static const int32_t EE_UNITS_UPD_SET_PHYSICS_ORDER = 50;
+
+/// the landable's goal queues: each started queue with goals `Update()`, then `RefreshGoals()`, `RefreshActiveGoal()`
+constexpr static const int32_t EE_UNITS_UPD_GOAL_QUEUES = 51;
+
+/// `SetOpacityChain(a: the float's bits)`
+constexpr static const int32_t EE_UNITS_UPD_OPACITY_CHAIN = 52;
+
+/// the class's `UpdateBuilding(inUnit)`, the building class's `UpdateArmed(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_UPDATE_BUILDING = 53;
+
+constexpr static const int32_t EE_UNITS_UPD_UPDATE_ARMED = 54;
+
+/// `mPlayer->AddResource(a, b)`, `mPlayer->mSavedGroups.Reset(7, 1)`, `SetGrazeTime(a)`
+constexpr static const int32_t EE_UNITS_UPD_ADD_RESOURCE = 55;
+
+constexpr static const int32_t EE_UNITS_UPD_SAVED_GROUPS_RESET = 56;
+
+constexpr static const int32_t EE_UNITS_UPD_SET_GRAZE_TIME = 57;
+
+/// `SetOpenFraction(a: the float's bits)` on the unit, the class's `GetLastLinkedCarrier(inUnit)` and
+/// `GetLastLinked(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_SET_OPEN_FRACTION = 58;
+
+/// `SetWorkTimer(a)`, `mMine->DepleteResource(1)`
+constexpr static const int32_t EE_UNITS_UPD_SET_WORK_TIMER = 59;
+
+constexpr static const int32_t EE_UNITS_UPD_DEPLETE_MINE = 60;
+
+/// every next part's `SetRottingAwayTime(a)`
+constexpr static const int32_t EE_UNITS_UPD_SET_PARTS_ROTTING = 61;
+
+/// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
+struct EeUnitsUpdateHost {
+  void *ctx;
+  int64_t (*read)(void *ctx, int32_t code);
+  int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
+};
 
 /// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
 /// unit waiting, 4 evaluated), the gather's action, the two evaluations' results (`u32::MAX`: not evaluated).
@@ -833,14 +1188,16 @@ struct EeUnitsTickHost {
   void (*step)(void *ctx, uint32_t index, uint32_t id);
 };
 
-/// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
-struct EeUnitsUpdateHost {
-  void *ctx;
-  int64_t (*read)(void *ctx, int32_t code);
-  int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
-};
-
 extern "C" {
+
+/// A class's `ActionChanged` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+bool ee_units_action_changed(int32_t kind,
+                             uint32_t id,
+                             uint64_t object,
+                             const EeUnitsUpdateHost *host);
 
 /// `EEComplexUnit::AIStep` over the store and the host's calls.
 ///
