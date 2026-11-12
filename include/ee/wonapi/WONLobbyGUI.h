@@ -2668,6 +2668,7 @@ public:
     int GetItemPosAtYPos(int); //2fc4b0
     bool ListFlagSet(int flags) { return this->mListFlags & flags ? true : false; }
     ListItem* GetSelItem() { return this->mSelItem; } // inline
+    int GetPaintWidth() const { return this->mPaintWidth; } // the layout width the items paint to
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
     std::vector<SmartPtr<ListItem> > mItems;          // +0x110

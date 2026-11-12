@@ -71,7 +71,7 @@ void ChooseNetworkAdapterDialog::Reset()
 // Returns the selected adapter's address, or the current local host when nothing is selected
 unsigned long ChooseNetworkAdapterDialog::GetSelectedAddress()
 {
-    NetworkAdapterListItem* anItem=static_cast<NetworkAdapterListItem*>(this->mAdapterList->mSelItem);
+    NetworkAdapterListItem* anItem=static_cast<NetworkAdapterListItem*>(this->mAdapterList->GetSelItem());
     return ee_won_dlg_selected_address(anItem!=NULL,anItem==NULL ? 0 : (uint32_t)anItem->mHost,
                                        (uint32_t)WONAPI::IPAddr::GetLocalHost());
 }
