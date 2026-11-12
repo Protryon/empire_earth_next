@@ -1284,7 +1284,10 @@ function M.step(view, memory)
         local ranges = V.buildings(view, "b_archery_range")
         -- (ECON.order: a mine's settlement first, the barracks and the range wait while one is short of wood)
         local settle_first = false   -- (§8.51 O5: holding the barracks for the mines' settlements cost defeats)
-        if settle_first then
+        -- (ECON.order, C1: the Stone Age's food sat at 3-43 for its first 15 minutes, the town centres idle; the boats
+        -- that would feed it waited on wood, 20-60 in stock, while the second barracks and the range took 400+: they
+        -- wait for the boats, as the owner's "a dock and 10 fishing boats at once")
+        if settle_first or hold then
             -- (nothing)
         elseif (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
