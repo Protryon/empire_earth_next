@@ -16,6 +16,15 @@ local M = {}
 
 local RESOURCES = {"food", "wood", "stone", "gold", "iron"}
 
+-- the parts added after O3 (AI_RESEARCH §8.51), each switchable for the bisect of O8's slower Copper Age
+M.OPT = {
+    place = true,           -- settlements touching their resource (lib.place), home sites included
+    techs = true,           -- the town centre's gathering techs
+    stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
+    claim_target = true,    -- the mines claimed for the phase's whole target
+    food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+}
+
 -- the gatherers, filled in this order as the citizens come (each step: a resource up to a count); food counts the
 -- land gatherers only (the boats come on top)
 M.FILL = {

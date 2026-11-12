@@ -745,7 +745,7 @@ function M.step(view, memory)
     -- wanted, in every matchup)
     -- (ECON.order: not in the Stone Age, where the owner trains on without a pause, 35 to 86 in 15 minutes; capped at
     -- the touched places the town grew by 1.5 a minute and the town centres stood idle 2780 s by minute 60)
-    if (age == 1 or (ECON.useful_cap and age >= 3) or (ECON.order and age ~= 2)) and memory.useful ~= nil
+    if (age == 1 or (ECON.useful_cap and age >= 3) or (ECON.order and (age ~= 2 or not BO.OPT.stone_uncap))) and memory.useful ~= nil
             and cap > memory.useful then
         cap = memory.useful
     end
@@ -915,7 +915,7 @@ function M.step(view, memory)
         -- (ECON.order, §8.51, boom-defence's o4b: in 12 of 14 lost towns the Stone Age's forage ran out before the Copper
         -- Age was paid, the food gatherers fell from 18 to 0-7 and the save stalled 37-96 minutes) the claim, and with it
         -- the patches and the hunting, reaches out while the food places are short
-        if (ECON.food_dry or ECON.order) and plan.claim_dry ~= nil
+        if (ECON.food_dry or (ECON.order and BO.OPT.food_reach)) and plan.claim_dry ~= nil
                 and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
             claim_max = math.max(claim_max, plan.claim_dry)
         end
@@ -938,7 +938,7 @@ function M.step(view, memory)
             end
             -- (ECON.order: the mines are claimed, and so settled, for the phase's whole target ahead of the citizens)
             local claim_want = want[r]
-            if ECON.order then
+            if ECON.order and BO.OPT.claim_target then
                 claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
             end
             local places, c = claim_sites(view, order, keep, r, false, claim_want, plan.mine_sites or 3, range, unsettled_r)
@@ -1074,7 +1074,7 @@ function M.step(view, memory)
                     end
                     -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
                     -- site, but the gatherers walk: it gets its own touching settlement)
-                    if ECON.order and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                    if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
                         for _, r in ipairs({"food", "iron", "gold", "stone"}) do
@@ -1128,7 +1128,7 @@ function M.step(view, memory)
                     -- the touching tile and builds there; the wood above the reserve pays)
                     local settle_cost = V.cost(view, "b_settlement")
                     local payable = settle_cost ~= nil and view.stock.wood - reserve.wood >= settle_cost.cost.wood
-                    if ECON.order and c.site ~= nil then
+                    if ECON.order and BO.OPT.place and c.site ~= nil then
                         local s = c.site
                         local rids = {}
                         local function add(list)
@@ -1151,7 +1151,7 @@ function M.step(view, memory)
                                 memory.settle_at[spot_of(s)] = view.time
                             end
                         end
-                    elseif ECON.order then
+                    elseif ECON.order and BO.OPT.place then
                         local spot = "w" .. c.x .. "," .. c.y
                         local rids = ai.resources{kind = "wood", source = "tree", near = {c.x, c.y, 3}, limit = 10}
                         if payable and #rids > 0 then
@@ -1185,7 +1185,7 @@ function M.step(view, memory)
 
         -- (ECON.order, §8.51, the owner takes the town centre's gathering techs at once, epoch by epoch) one at a time,
         -- from the food and wood above the reserve
-        if ECON.order and not view.advancing then
+        if ECON.order and BO.OPT.techs and not view.advancing then
             local tech = BO.next_tech(view, memory)
             if tech ~= nil and view.stock.food - reserve.food >= 100 and view.stock.wood - reserve.wood >= 75
                     and order("tech", {verb = "research", tech = tech}) then
