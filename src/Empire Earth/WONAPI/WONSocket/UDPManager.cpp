@@ -1,5 +1,6 @@
 // WONAPI UDPManager: one UDP socket shared by receive ops matched by sender, plus send/retry ops; the manager is a
-// Rust object since round 15 (rust/crates/ee_won/src/udpmgr.rs), its receive and request ops C++
+// Rust object since round 15 (rust/crates/ee_won/src/udpmgr.rs), its receive and request ops since round 16
+// (udpops.rs)
 // (file grouping inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
@@ -120,27 +121,168 @@ void UDPManager::Send(const ByteBuffer* inData, const IPAddr& inAddress)
 void UDPManager::CleanOps() { ee_won_udpmanager_clean_ops(this->mManager); }
 
 
+// The receive and request ops are Rust objects since round 16 (rust/crates/ee_won/src/udpops.rs EeWonUdpRecvOp and
+// EeWonUdpSendRecvOp: their members and RunHook, CleanupHook, QueueRecv, RecvCallback and SendRequest); these are
+// the classes' shims and the C++ side the objects call back (the AsyncOp, the virtual check, the sockets and their
+// ops, the manager, the reply wait)
+static RefCount* AsRefOp(AsyncOp* inOp) { return static_cast<RefCount*>(inOp); }
+static UDPManagerSendRecvOp* SendRecvOf(void* inOp)
+{ return static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(static_cast<RefCount*>(inOp))); }
+static UDPManager* ManagerOf(void* inManager) { return static_cast<UDPManager*>(static_cast<RefCount*>(inManager)); }
+template <class T> static T* ObjectOf(void* inObject) { return static_cast<T*>(static_cast<RefCount*>(inObject)); }
+
+static int UdpOpMode(void* inOp) { return static_cast<int>(OpOf(inOp)->GetMode()); }
+static long UdpOpTimeout(void* inOp) { return static_cast<long>(OpOf(inOp)->GetTimeout()); }
+static void* UdpSocketNewBound()
+{
+    QueueSocket* aSocket = new QueueSocket(1);
+    aSocket->AddRef();
+    aSocket->Fn2B0D90(0, 0);
+    return static_cast<RefCount*>(aSocket);
+}
+static void UdpSocketQueueRecv(void* inSocket, void* inOp)
+{
+    SmartPtr<RecvBytesFromOp> anOp = new RecvBytesFromOp(1024, NULL);
+    anOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerRecvOp::StaticRecvCallback,
+                                                                             RecvOpOf(inOp)));
+    SocketOf(inSocket)->QueueOp(anOp.get(), -1);
+}
+static void UdpManagerQueue(void* inManager, void* inOp, uint32_t inTimeout)
+{ ManagerOf(inManager)->QueueOp(RecvOpOf(inOp), inTimeout); }
+static void UdpManagerSend(void* inManager, void* inBytes, const EeWonIpAddr* inAddr)
+{ ManagerOf(inManager)->Send(ObjectOf<ByteBuffer>(inBytes), IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))); }
+static void* UdpNewWait(void* inRequest, const EeWonIpAddr* inAddr)
+{
+    UDPManagerSendRecvOp* aRequest = SendRecvOf(inRequest);
+    UDPManagerRecvOp* anOp = new UDPManagerRecvOp(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)));
+    anOp->AddRef();
+    anOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerSendRecvOp::StaticRecvCallback,
+                                                                             aRequest));
+    anOp->SetMessageVerifier(UDPManagerSendRecvOp::StaticCheckResponse, aRequest);
+    return AsRefOp(anOp);
+}
+static const EeWonUdpRecvOp* UdpRecvObject(void* inOp) { return RecvOpOf(inOp)->GetUdpObject(); }
+static const EeWonUdpOpHooks kUdpOpHooks = {UdpRefAdd, UdpRefRelease, UdpOpMode, UdpOpTimeout, UdpOpStatus,
+                                            UdpOpFinish, UdpOpRunAsync, UdpOpKill, UdpRecvCheck, UdpSocketNewBound,
+                                            UdpSocketKill, UdpSocketQueueRecv, UdpSocketSend, UdpManagerQueue,
+                                            UdpManagerSend, UdpNewWait, UdpRecvObject};
+
+// FUNCTION: WON 0x006b68b0
+// Creates a receive op that accepts a datagram from any sender
+UDPManagerRecvOp::UDPManagerRecvOp() : mUdp(ee_won_udprecvop_new(AsRefOp(this), &kUdpOpHooks, NULL)) {}
+
+// FUNCTION: WON 0x006b6a10
+// Creates a receive op that waits for a datagram from the given address
+UDPManagerRecvOp::UDPManagerRecvOp(const IPAddr& inAddress)
+    : mUdp(ee_won_udprecvop_new(AsRefOp(this), &kUdpOpHooks, inAddress.GetValue())) {}
+
+// The object's references go (the original's implicit destructor released the members)
+UDPManagerRecvOp::~UDPManagerRecvOp() { ee_won_udprecvop_free(this->mUdp); }
+
+bool UDPManagerRecvOp::HasVerifier() { return ee_won_udprecvop_verifier(this->mUdp) != NULL; }
+void UDPManagerRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udprecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+void UDPManagerRecvOp::SetSocket(QueueSocket* theSocket)
+{ ee_won_udprecvop_set_socket(this->mUdp, static_cast<RefCount*>(theSocket)); }
+IPAddr UDPManagerRecvOp::GetFromAddr() const { return IPAddr::FromValue(ee_won_udprecvop_address(this->mUdp)); }
+void UDPManagerRecvOp::SetFromAddr(const IPAddr& theAddr) { ee_won_udprecvop_set_address(this->mUdp, theAddr.GetValue()); }
+const ByteBuffer* UDPManagerRecvOp::GetMsg() const
+{
+    void* aBytes = ee_won_udprecvop_msg(this->mUdp);
+    return aBytes != NULL ? ObjectOf<ByteBuffer>(aBytes) : NULL;
+}
+void UDPManagerRecvOp::SetMsg(const ByteBuffer* theMsg) { ee_won_udprecvop_set_msg(this->mUdp, AsRef(theMsg)); }
+QueueSocket* UDPManagerRecvOp::GetSocket() const
+{
+    void* aSocket = ee_won_udprecvop_socket(this->mUdp);
+    return aSocket != NULL ? SocketOf(aSocket) : NULL;
+}
+UDPManager* UDPManagerRecvOp::GetUDPManager() const
+{
+    void* aManager = ee_won_udprecvop_manager(this->mUdp);
+    return aManager != NULL ? ManagerOf(aManager) : NULL;
+}
+
 // FUNCTION: WON 0x006b6bf0
 // Sets the callback (and its context) that decides whether a datagram answers this op
 void UDPManagerRecvOp::SetMessageVerifier(MessageVerifier inVerifier, void* inContext)
-{
-    this->mVerifier = inVerifier;
-    this->mVerifierContext = inContext;
-}
+{ ee_won_udprecvop_set_verifier(this->mUdp, reinterpret_cast<void*>(inVerifier), inContext); }
+
 // FUNCTION: WON 0x006b6c10
 // Asks the message check callback whether a datagram answers this op (WS_None = no); without a callback accepts all
 WONStatus UDPManagerRecvOp::CheckMessage(ReadBuffer& inMessage)
 {
-    return this->mVerifier ? this->mVerifier(inMessage, this->mVerifierContext) : 0;
+    MessageVerifier aVerifier = reinterpret_cast<MessageVerifier>(ee_won_udprecvop_verifier(this->mUdp));
+    return aVerifier ? aVerifier(inMessage, ee_won_udprecvop_verifier_context(this->mUdp)) : 0;
 }
+
 // FUNCTION: WON 0x006b6d70
 // Forwards a successful datagram receive to its receive op
 void UDPManagerRecvOp::StaticRecvCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)
 {
     if (!inOp->Succeeded())
         return;
-    static_cast<UDPManagerRecvOp*>(inParam.get())->RecvCallback(static_cast<RecvBytesFromOp*>(inOp.get()));
+    static_cast<UDPManagerRecvOp*>(static_cast<AsyncOp*>(inParam.get()))
+        ->RecvCallback(static_cast<RecvBytesFromOp*>(inOp.get()));
 }
+
+// FUNCTION: WON 0x006b6c30
+// Queues a receive of one datagram (up to 1024 bytes) on the op's own socket
+void UDPManagerRecvOp::QueueRecv() { ee_won_udprecvop_queue_recv(this->mUdp); }
+
+// FUNCTION: WON 0x006b6e60
+// Finishes the op with a datagram from the expected sender that its message check accepts; otherwise receives again
+void UDPManagerRecvOp::RecvCallback(RecvBytesFromOp* inOp)
+{
+    ByteBufferPtr aBuffer = inOp->GetBytes();
+    IPAddr aFrom = inOp->GetAddr();
+    const ByteBuffer* aBytes = aBuffer.get();
+    ee_won_udprecvop_recv(this->mUdp, aBytes != NULL ? reinterpret_cast<const uint8_t*>(aBytes->data()) : NULL,
+                          aBytes != NULL ? aBytes->length() : 0, aFrom.GetValue());
+}
+
+// FUNCTION: WON 0x006b6f60
+// Kills the op's own socket when the op ends
+void UDPManagerRecvOp::CleanupHook() { ee_won_udprecvop_cleanup(this->mUdp); }
+
+// FUNCTION: WON 0x006b6fb0
+// Runs the op: refused in blocking mode; registers with the manager, or binds its own UDP socket and receives
+void UDPManagerRecvOp::RunHook() { ee_won_udprecvop_run(this->mUdp); }
+
+// FUNCTION: WON 0x006b70b0
+// Creates a request/reply op with no retries and a 10-second reply wait
+UDPManagerSendRecvOp::UDPManagerSendRecvOp() : mUdp(ee_won_udpsendrecvop_new(AsRefOp(this), &kUdpOpHooks)) {}
+
+// The object's references go (the original's implicit destructor released the members)
+UDPManagerSendRecvOp::~UDPManagerSendRecvOp() { ee_won_udpsendrecvop_free(this->mUdp); }
+
+void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager)
+{ ee_won_udpsendrecvop_set_manager(this->mUdp, static_cast<RefCount*>(theManager)); }
+void UDPManagerSendRecvOp::SetMsgTimeout(DWORD theTimeout)
+{ ee_won_udpsendrecvop_set_timeout(this->mUdp, static_cast<uint32_t>(theTimeout)); }
+void UDPManagerSendRecvOp::SetNumRetransmits(int theNum) { ee_won_udpsendrecvop_set_retry_limit(this->mUdp, theNum); }
+void UDPManagerSendRecvOp::SetDestAddr(const IPAddr& theAddr)
+{ ee_won_udpsendrecvop_set_address(this->mUdp, theAddr.GetValue()); }
+IPAddr UDPManagerSendRecvOp::GetDestAddr() const { return IPAddr::FromValue(ee_won_udpsendrecvop_address(this->mUdp)); }
+void UDPManagerSendRecvOp::SetOutgoing(const ByteBuffer* theMsg) { ee_won_udpsendrecvop_set_outgoing(this->mUdp, AsRef(theMsg)); }
+const ByteBuffer* UDPManagerSendRecvOp::GetOutgoing() const
+{
+    void* aBytes = ee_won_udpsendrecvop_outgoing(this->mUdp);
+    return aBytes != NULL ? ObjectOf<ByteBuffer>(aBytes) : NULL;
+}
+QueueSocket* UDPManagerSendRecvOp::GetSocket() const
+{
+    void* aSocket = ee_won_udpsendrecvop_socket(this->mUdp);
+    return aSocket != NULL ? SocketOf(aSocket) : NULL;
+}
+UDPManagerRecvOp* UDPManagerSendRecvOp::GetRecvOp() const
+{
+    void* anOp = ee_won_udpsendrecvop_recv_op(this->mUdp);
+    return anOp != NULL ? RecvOpOf(anOp) : NULL;
+}
+int UDPManagerSendRecvOp::GetAttemptCount() const { return ee_won_udpsendrecvop_attempts(this->mUdp); }
+int UDPManagerSendRecvOp::GetNumRetransmits() const { return ee_won_udpsendrecvop_retry_limit(this->mUdp); }
+unsigned long UDPManagerSendRecvOp::GetMsgTimeout() const { return ee_won_udpsendrecvop_timeout(this->mUdp); }
 
 // FUNCTION: WON 0x006b7250
 // Forwards a datagram to the send/receive op's response check
@@ -152,156 +294,24 @@ WONStatus UDPManagerSendRecvOp::StaticCheckResponse(ReadBuffer& inMessage, void*
 // Forwards the end of a reply wait to its send/receive op
 void UDPManagerSendRecvOp::StaticRecvCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)
 {
-    static_cast<UDPManagerSendRecvOp*>(inParam.get())->RecvCallback(inOp.get());
+    static_cast<UDPManagerSendRecvOp*>(static_cast<AsyncOp*>(inParam.get()))->RecvCallback(inOp.get());
 }
-
-// FUNCTION: WON 0x006b6c30
-// Queues a receive of one datagram (up to 1024 bytes) on the op's own socket
-void UDPManagerRecvOp::QueueRecv()
-{
-    if (this->mSocket.get() == NULL)
-        return;
-    SmartPtr<RecvBytesFromOp> anOp = new RecvBytesFromOp(1024, NULL);
-    anOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerRecvOp::StaticRecvCallback, this));
-    this->mSocket->QueueOp(anOp.get(), -1);
-}
-
-// FUNCTION: WON 0x006b6e60
-// Finishes the op with a datagram from the expected sender that its message check accepts; otherwise receives again
-void UDPManagerRecvOp::RecvCallback(RecvBytesFromOp* inOp)
-{
-    if (this->GetStatus() != WS_Pending)
-        return;
-    if (this->mAddress.IsValid() && inOp->GetAddr() != this->mAddress) {
-        this->QueueRecv();
-        return;
-    }
-    const ByteBuffer* aBuffer = inOp->GetBytes().get();
-    try {
-        ReadBuffer aMessage(aBuffer->data(), aBuffer->length());
-        WONStatus aStatus = this->CheckMessage(aMessage);
-        if (aStatus != WS_None) {
-            this->Finish(aStatus);
-            return;
-        }
-    }
-    catch (ReadBufferException&) {
-    }
-    this->QueueRecv();
-}
-
-// FUNCTION: WON 0x006b68b0
-// Creates a receive op that accepts a datagram from any sender
-UDPManagerRecvOp::UDPManagerRecvOp() { this->mVerifier = NULL; }
-
-// FUNCTION: WON 0x006b6a10
-// Creates a receive op that waits for a datagram from the given address
-UDPManagerRecvOp::UDPManagerRecvOp(const IPAddr& inAddress)
-{
-    this->mAddress = inAddress;
-    this->mVerifier = NULL;
-}
-
-// FUNCTION: WON 0x006b6f60
-// Kills the op's own socket when the op ends
-void UDPManagerRecvOp::CleanupHook()
-{
-    if (this->mSocket.get() != NULL && this->mOwnSocket) {
-        this->mSocket->Kill();
-        this->mSocket = NULL;
-    }
-}
-
-// FUNCTION: WON 0x006b6fb0
-// Runs the op: refused in blocking mode; registers with the manager, or binds its own UDP socket and receives
-void UDPManagerRecvOp::RunHook()
-{
-    if (this->GetMode() == OP_MODE_BLOCK) {
-        this->Finish(WS_BlockMode_NotSupported);
-        return;
-    }
-    if (this->mManager.get() != NULL) {
-        this->mManager->QueueOp(this, this->GetTimeout());
-        return;
-    }
-    if (this->mSocket.get() == NULL) {
-        this->mSocket = new QueueSocket(1);
-        this->mSocket->Fn2B0D90(0, 0);
-        this->mOwnSocket = true;
-    }
-    this->QueueRecv();
-}
-
-// FUNCTION: WON 0x006b70b0
-// Creates a request/reply op with no retries and a 10-second reply wait
-UDPManagerSendRecvOp::UDPManagerSendRecvOp() : mRetryLimit(0), mAttemptCount(0) { this->mReceiveTimeout=10000; }
 
 // FUNCTION: WON 0x006b7260
 // Sends the request datagram (via the manager or the op's socket) and waits for a matching reply
-void UDPManagerSendRecvOp::SendRequest()
-{
-    this->mRecvOp = new UDPManagerRecvOp(this->mAddress);
-    this->mRecvOp->SetCompletion(new ParamCompletion<AsyncOpPtr, SmartPtr<RefCount> >(UDPManagerSendRecvOp::StaticRecvCallback, this));
-    this->mRecvOp->SetMessageVerifier(UDPManagerSendRecvOp::StaticCheckResponse, this);
-    if (this->mManager.get() != NULL) {
-        this->mManager->Send(this->mOutgoing.get(), this->mAddress);
-        this->mRecvOp->SetUDPManager(this->mManager);
-    }
-    else {
-        this->mSocket->QueueOp(new SendBytesToOp(this->mOutgoing.get(), this->mAddress, NULL), -1);
-        this->mRecvOp->SetSocket(this->mSocket);
-    }
-    this->mRecvOp->RunAsync(this->mReceiveTimeout);
-}
+void UDPManagerSendRecvOp::SendRequest() { ee_won_udpsendrecvop_send_request(this->mUdp); }
 
 // FUNCTION: WON 0x006b7470
 // Runs the op: refused in blocking mode; binds its own UDP socket without a manager, then sends the request
-void UDPManagerSendRecvOp::RunHook()
-{
-    if (this->GetMode() == OP_MODE_BLOCK) {
-        this->Finish(WS_BlockMode_NotSupported);
-        return;
-    }
-    this->mAttemptCount = 0;
-    if (this->mManager.get() == NULL) {
-        this->mSocket = new QueueSocket(1);
-        this->mSocket->Fn2B0D90(0, 0);
-    }
-    this->SendRequest();
-}
+void UDPManagerSendRecvOp::RunHook() { ee_won_udpsendrecvop_run(this->mUdp); }
 
 // FUNCTION: WON 0x006b75e0
 // Finishes with the reply's status, resends on a timeout until the retry limit, then finishes with WS_NoReply
-void UDPManagerSendRecvOp::RecvCallback(AsyncOp* inOp)
-{
-    if (this->GetStatus() != WS_Pending || inOp != this->mRecvOp.get())
-        return;
-    WONStatus aStatus = inOp->GetStatus();
-    if (aStatus != WS_TimedOut) {
-        this->Finish(aStatus);
-        return;
-    }
-    if (this->mAttemptCount >= this->mRetryLimit) {
-        this->Finish(WS_NoReply);
-        return;
-    }
-    ++this->mAttemptCount;
-    this->SendRequest();
-}
+void UDPManagerSendRecvOp::RecvCallback(AsyncOp* inOp) { ee_won_udpsendrecvop_recv_done(this->mUdp, AsRefOp(inOp)); }
 
 // FUNCTION: WON 0x006b7630
 // Kills the reply wait and the op's socket when the op ends
-void UDPManagerSendRecvOp::CleanupHook()
-{
-    if (this->mRecvOp.get() != NULL) {
-        this->mRecvOp->Kill(true);
-        this->mRecvOp = NULL;
-    }
-    if (this->mSocket.get() != NULL) {
-        this->mSocket->Kill();
-        this->mSocket = NULL;
-    }
-}
+void UDPManagerSendRecvOp::CleanupHook() { ee_won_udpsendrecvop_cleanup(this->mUdp); }
 // FUNCTION: WON 0x006b8230
 // Forwards a successful datagram receive to its UDP manager
 void UDPManager::StaticRecvCallback(AsyncOpPtr inOp, SmartPtr<RefCount> inParam)

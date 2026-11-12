@@ -2857,6 +2857,12 @@ struct EeWonTimerThread;
 /// `UDPManager`'s state and steps.
 struct EeWonUdpManager;
 
+/// `UDPManagerRecvOp`'s state and steps.
+struct EeWonUdpRecvOp;
+
+/// `UDPManagerSendRecvOp`'s state and steps.
+struct EeWonUdpSendRecvOp;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -8017,6 +8023,40 @@ struct EeWonUdpHooks {
   void (*socket_repeat)(void *socket, void *manager, int32_t size);
   /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
   void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
+};
+
+/// A C++ call on one object.
+using EeWonUdpOpFn = void(*)(void *object);
+
+/// What the ops call back in the C++. One static table serves every op.
+struct EeWonUdpOpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpOpFn ref_add;
+  EeWonUdpOpFn ref_release;
+  /// an op's `GetMode()`, `GetTimeout()`, `GetStatus()`, `Finish(s)`, `RunAsync(t)`, `Kill(true)`
+  int32_t (*op_mode)(void *op);
+  long (*op_timeout)(void *op);
+  long (*op_status)(void *op);
+  void (*op_finish)(void *op, long status);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpOpFn op_kill;
+  /// a receive op's virtual `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new QueueSocket(UDP)` bound to any port (`Fn2B0D90(0, false)`), a reference taken; a socket's `Kill()`
+  void *(*socket_new_bound)();
+  EeWonUdpOpFn socket_kill;
+  /// `QueueRecv`'s op: `QueueOp(new RecvBytesFromOp(1024)` completing to the receive op's `StaticRecvCallback`, `-1)`
+  void (*socket_queue_recv)(void *socket, void *op);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
+  /// a manager's `QueueOp(op, timeout)` and `Send(bytes, addr)`
+  void (*manager_queue)(void *manager, void *op, uint32_t timeout);
+  void (*manager_send)(void *manager, void *bytes, const EeWonIpAddr *addr);
+  /// the reply wait: `new UDPManagerRecvOp(addr)` completing to the request op's `StaticRecvCallback`, its check the
+  /// request's `StaticCheckResponse`; a reference taken
+  void *(*new_wait)(void *request, const EeWonIpAddr *addr);
+  /// a receive op's Rust object
+  const EeWonUdpRecvOp *(*recv_object)(void *op);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -19744,6 +19784,227 @@ void ee_won_udpmanager_recv(const EeWonUdpManager *m,
                             const uint8_t *data,
                             size_t length,
                             const EeWonIpAddr *from);
+
+/// A receive op's object (`addr` null for any sender).
+///
+/// # Safety
+/// `op` is the C++ op as `RefCount*`, `hooks` a static table, `addr` null or a live value.
+EeWonUdpRecvOp *ee_won_udprecvop_new(void *op,
+                                     const EeWonUdpOpHooks *hooks,
+                                     const EeWonIpAddr *addr);
+
+/// Frees the object, its references given back.
+///
+/// # Safety
+/// `r` from `ee_won_udprecvop_new` (or null), not used after.
+void ee_won_udprecvop_free(EeWonUdpRecvOp *r);
+
+/// `SetUDPManager` (a `UDPManager*` as `RefCount*`, or null).
+///
+/// # Safety
+/// `r` is live; `manager` null or live.
+void ee_won_udprecvop_set_manager(const EeWonUdpRecvOp *r, void *manager);
+
+/// The manager (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udprecvop_manager(const EeWonUdpRecvOp *r);
+
+/// `SetSocket` (a `QueueSocket*` as `RefCount*`, or null): not the op's own.
+///
+/// # Safety
+/// `r` is live; `socket` null or live.
+void ee_won_udprecvop_set_socket(const EeWonUdpRecvOp *r, void *socket);
+
+/// The socket (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udprecvop_socket(const EeWonUdpRecvOp *r);
+
+/// The from address, a new value.
+///
+/// # Safety
+/// `r` is live.
+EeWonIpAddr *ee_won_udprecvop_address(const EeWonUdpRecvOp *r);
+
+/// `SetFromAddr`.
+///
+/// # Safety
+/// `r` is live, `addr` a live value.
+void ee_won_udprecvop_set_address(const EeWonUdpRecvOp *r, const EeWonIpAddr *addr);
+
+/// The received datagram (a `ByteBuffer*` as `RefCount*`, null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udprecvop_msg(const EeWonUdpRecvOp *r);
+
+/// `SetMsg`.
+///
+/// # Safety
+/// `r` is live; `bytes` null or live.
+void ee_won_udprecvop_set_msg(const EeWonUdpRecvOp *r, void *bytes);
+
+/// `SetMessageVerifier`: the C++ check function and its context, kept as they are.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udprecvop_set_verifier(const EeWonUdpRecvOp *r, void *verifier, void *context);
+
+/// The check function (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udprecvop_verifier(const EeWonUdpRecvOp *r);
+
+/// The check's context.
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udprecvop_verifier_context(const EeWonUdpRecvOp *r);
+
+/// `QueueRecv`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udprecvop_queue_recv(const EeWonUdpRecvOp *r);
+
+/// `RecvCallback`: a datagram from `from` (`data` null for none).
+///
+/// # Safety
+/// `r` is live; `data` null or `length` readable bytes; `from` a live value.
+void ee_won_udprecvop_recv(const EeWonUdpRecvOp *r,
+                           const uint8_t *data,
+                           size_t length,
+                           const EeWonIpAddr *from);
+
+/// `CleanupHook`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udprecvop_cleanup(const EeWonUdpRecvOp *r);
+
+/// `RunHook`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udprecvop_run(const EeWonUdpRecvOp *r);
+
+/// A request op's object.
+///
+/// # Safety
+/// `op` is the C++ op as `RefCount*`, `hooks` a static table.
+EeWonUdpSendRecvOp *ee_won_udpsendrecvop_new(void *op, const EeWonUdpOpHooks *hooks);
+
+/// Frees the object, its references given back.
+///
+/// # Safety
+/// `r` from `ee_won_udpsendrecvop_new` (or null), not used after.
+void ee_won_udpsendrecvop_free(EeWonUdpSendRecvOp *r);
+
+/// `SetUDPManager`.
+///
+/// # Safety
+/// `r` is live; `manager` null or live.
+void ee_won_udpsendrecvop_set_manager(const EeWonUdpSendRecvOp *r, void *manager);
+
+/// The manager (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udpsendrecvop_manager(const EeWonUdpSendRecvOp *r);
+
+/// The op's own socket (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udpsendrecvop_socket(const EeWonUdpSendRecvOp *r);
+
+/// `SetOutgoing`: the request datagram.
+///
+/// # Safety
+/// `r` is live; `bytes` null or live.
+void ee_won_udpsendrecvop_set_outgoing(const EeWonUdpSendRecvOp *r, void *bytes);
+
+/// The request datagram (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udpsendrecvop_outgoing(const EeWonUdpSendRecvOp *r);
+
+/// The destination, a new value.
+///
+/// # Safety
+/// `r` is live.
+EeWonIpAddr *ee_won_udpsendrecvop_address(const EeWonUdpSendRecvOp *r);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// `r` is live, `addr` a live value.
+void ee_won_udpsendrecvop_set_address(const EeWonUdpSendRecvOp *r, const EeWonIpAddr *addr);
+
+/// The reply wait (null for none).
+///
+/// # Safety
+/// `r` is live.
+void *ee_won_udpsendrecvop_recv_op(const EeWonUdpSendRecvOp *r);
+
+/// `SetNumRetransmits`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udpsendrecvop_set_retry_limit(const EeWonUdpSendRecvOp *r, int32_t n);
+
+/// The retry limit.
+///
+/// # Safety
+/// `r` is live.
+int32_t ee_won_udpsendrecvop_retry_limit(const EeWonUdpSendRecvOp *r);
+
+/// The retransmits so far.
+///
+/// # Safety
+/// `r` is live.
+int32_t ee_won_udpsendrecvop_attempts(const EeWonUdpSendRecvOp *r);
+
+/// `SetMsgTimeout`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udpsendrecvop_set_timeout(const EeWonUdpSendRecvOp *r, uint32_t t);
+
+/// The reply wait's time-out.
+///
+/// # Safety
+/// `r` is live.
+uint32_t ee_won_udpsendrecvop_timeout(const EeWonUdpSendRecvOp *r);
+
+/// `SendRequest`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udpsendrecvop_send_request(const EeWonUdpSendRecvOp *r);
+
+/// `RunHook`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udpsendrecvop_run(const EeWonUdpSendRecvOp *r);
+
+/// `RecvCallback` (`wait` the ended op as `RefCount*`).
+///
+/// # Safety
+/// `r` is live; `wait` is live.
+void ee_won_udpsendrecvop_recv_done(const EeWonUdpSendRecvOp *r, void *wait);
+
+/// `CleanupHook`.
+///
+/// # Safety
+/// `r` is live.
+void ee_won_udpsendrecvop_cleanup(const EeWonUdpSendRecvOp *r);
 
 }  // extern "C"
 

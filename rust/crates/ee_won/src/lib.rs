@@ -86,6 +86,7 @@ pub mod strcase;
 pub mod text;
 pub mod thread;
 pub mod udpmgr;
+pub mod udpops;
 pub mod wire;
 
 #[cfg(test)]
