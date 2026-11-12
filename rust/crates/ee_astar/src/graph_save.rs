@@ -247,11 +247,8 @@ impl GraphStorage {
         let arrays_ok = size == self.flags.as_ref().map(|f| f.len())
             && self.node_map.as_ref().is_none_or(|m| m.iter().all(|&i| ok(i)));
         let free = self.free_nodes();
-        let indices_ok = self
-            .nodes
-            .iter()
-            .zip(free)
-            .all(|(x, f)| f || size.is_none_or(|s| x.index >= 0 && (x.index as usize) < s));
+        let indices_ok =
+            self.nodes.iter().zip(free).all(|(x, f)| f || size.is_none_or(|s| x.index >= 0 && (x.index as usize) < s));
         self.bucket_count > 0
             && self.nodes.iter().all(|x| ok(x.parent) && ok(x.next) && ok(x.prev))
             && [
