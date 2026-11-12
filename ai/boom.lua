@@ -390,6 +390,24 @@ local function release_unkept(view, order, keep)
     end
 end
 
+-- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
+-- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
+-- lib.defence options
+function M.configure(o)
+    for k, v in pairs(o.econ or {}) do
+        ECON[k] = v
+    end
+    for age = 2, #PLAN do
+        for k, v in pairs(o.plan or {}) do
+            PLAN[age][k] = v
+        end
+    end
+    for k, v in pairs(o.defence or {}) do
+        D.opts[k] = v
+    end
+    return M
+end
+
 function M.init(view, memory)
     memory.backoff = {}
     memory.tags = {}
