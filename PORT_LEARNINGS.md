@@ -8673,3 +8673,40 @@ inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted fo
   ee_astar's global rename `Unit = EeAStarUnit`: the split header gave the alias to ee_units.h, and ee_astar.h's users
   failed ("field has incomplete type 'EeAStarUnit'"). A generic private struct also stopped the splitter ("cannot name
   the header item `template<...>`"). Name even private Rust types with the module's prefix (`UpdateReads`).
+
+## R5b.4, thirteenth round: every class's Update as a Rust sequence, ActionChanged as Rust decisions (ee_units update.rs, actions.rs; EEUnitUpdate.cpp; branch rust-r5b4-core13, 2026-11-12)
+
+- **Golden first, by notes on the original bodies.** Before anything moved, every leaf call of the original class
+  `Update` bodies and every operation of the original `ActionChanged` bodies was noted, in the original's place, as
+  a USST record kind: 12 (a unit's `Update` calls, three words each: the operation, its two arguments; written after
+  the unit's step in `TickStep`) and 13 (an `ActionChanged`'s operations with the nested calls it makes, written when
+  the outermost call returns: `EEUnitActionScope`). The notes were comma expressions (`(EEUN(OP), call)`), so a
+  braceless `if`'s body stayed one statement. The golden commit holds those notes in the original bodies and the new
+  USST lines (four profiles x six seeds; the missile profile lists no USST); each later commit replaced bodies and
+  their notes with the Rust sequence, whose host notes the same words at the same points.
+- **Single forwarders are gone, not moved.** Eight classes' `Update` only called a base's (`EEUCLandPriest`,
+  `EEUCNavalPriest`, `EEUCHelicopterPriest` -> `EEUCBasicPriest`; `EEUCLandMilitaryHero` -> `EEUCLand`;
+  `EEUCNavalTransport` -> `EEUCTransport`; `EEUCAirplane`, `EEUCPlanetSpaceship` -> `EEUCLandable`; `EEUCSeaAnimal` ->
+  `EEUCSubmergedNaval`): their overrides and declarations are deleted, the vtable resolves to the base's. Not so
+  `EEUCFortress`: a land transport whose `Update` calls the transport's (no wheels).
+- **The small arithmetic moved with the sequences:** the flight time's count down and `UpdateFlightState` (deleted,
+  inlined in the landable's sequence; the air animal's copy has no facing test), the gate's opening step and clamps,
+  the mine's work timer, the robotic farm's graze time (`lrintf` of the work time factor times the gather time), the
+  fade out in space (`1 - z * -1/6`), as 32-bit wrapping `long`s and the original's `f32` operations.
+- **ActionChanged.** `EEUnitClass::ActionChanged` (the 40-case switch every class's `HandleActionChanged` reaches) and
+  the overrides of the land, naval, submerged naval, spaceship and basic priest classes are Rust decisions over the
+  store (command, goal kind, herd, the class's domains and category, container, resource amount, unit type) and host
+  reads (animation, swimming, the idle stance's random draw at its place); the operations (60) are one call or
+  expression each in the host. The contact heading's arithmetic (`Apply`, `UMArcTan2`) stays a host operation. An
+  operation may run `ActionChanged` again (the next part's rotting, the idle restart): the record is read again after
+  every operation.
+- **Copy constants from the headers, never from memory.** Two constants written from memory were wrong: the
+  twelfth round's heal goal kind (13; `kGoalHealUnit` is 15: a land medic never worked its heal goal in Rust; the
+  oracle and late profiles heal nothing, the space profile's notes now gate it) and this round's
+  `kMovementSea | kMovementSpace` (written 2 | 4: 2 is `kMovementLand`, so idle land units called
+  `UpdateWaterState`). The second showed only in the new USST notes (every other record stayed equal: the call is
+  harmless on land), found by checking every `const` of the two modules against the headers by script.
+- **The notes' order needs one scope per call tree.** `ActionChanged` runs from many places (the AI step, the
+  goals, the messages, another unit's rotting) and nests; its notes are gathered under a depth-counted scope and
+  written when the outermost call returns, with the outer unit's id. The golden put the scope in every instrumented
+  body, the Rust build has it in the one C++ entry (`EEUnitClassActionChanged`): the same words in the same order.
