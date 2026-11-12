@@ -1880,6 +1880,9 @@ constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
 /// `InvalidReplyHeader()` (a group list request's reply of another kind)
 constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 
+/// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
+constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
+
 /// Which members the storage's machine calls (see the module table).
 enum class EeAStarStorageKind {
   Hashed = 0,
@@ -2458,17 +2461,30 @@ struct EeSubSectorLinks;
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
+/// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
+struct EeWonByteBuffer;
+
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
+struct EeWonOpContainer;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
 
+/// `ThreadBase` + `Thread`'s state.
+struct EeWonThread;
+
+/// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
+/// signal and the thread that pumps it.
+struct EeWonTimerThread;
+
+/// `WriteBuffer`'s state.
+struct EeWonWriteBuffer;
+
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
-
-/// `AsyncOpContainer::mOpQueue`.
-struct EeWonOpQueue;
 
 /// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
 struct EeWonOpSet;
@@ -2495,12 +2511,6 @@ struct EeDx7StandardVertexArray;
 
 /// A `GEVertexArray` of [`Dx7StdColorVertex`].
 struct EeDx7StdColorVertexArray;
-
-/// `TimerThread`'s two maps: the deadlines of this tick-count era and, past the 32-bit wrap, of the next
-/// (`mTimerMap`, `mWrapAroundMap`), each in deadline order and, among equal deadlines, in insertion order (the
-/// `multimap`'s), plus `mLastTick`. An entry's key stays valid across the wrap (the C++ copied the wrap map over
-/// the first map, which left the ops' iterators dangling).
-struct EeWonTimerQueue;
 
 /// The plan of one frame.
 struct EeGeVisiblePlan;
@@ -5852,6 +5862,14 @@ struct EeWonAuthEntry {
   bool present;
 };
 
+/// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
+struct EeWonReadBuffer {
+  /// the read position
+  long pos;
+  const uint8_t *data;
+  long length;
+};
+
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
   const void *text;
@@ -6219,14 +6237,6 @@ struct EeWonOpState {
 
 /// A sink for the ops a queue hands back.
 using EeWonOpSink = void(*)(void *context, void *op);
-
-/// `AsyncOpContainer::Pump`'s accounting: how many ops to run and how long to go on (a value the C++ keeps on its
-/// stack across the pump).
-struct EeWonPumpPlan {
-  uint32_t start;
-  uint32_t wait;
-  int32_t remaining;
-};
 
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
@@ -7080,6 +7090,39 @@ struct EeWonGameSummary {
   bool ok;
   uint32_t read;
   size_t rest;
+};
+
+/// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
+/// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
+struct EeWonThreadBody {
+  void (*run)(void *context);
+  void (*destroy)(void *context);
+  void *context;
+};
+
+/// An op callback: the op (a C++ `AsyncOp*`) and the context given with the table.
+using EeWonOpCall = void(*)(void *context, void *op);
+
+/// The C++ steps the timer thread takes on an op: `due` (it timed out: `Finish(WS_TimedOut)`, then the timer's
+/// reference released) and `purged` (the queue let it go: `Kill(true)`, then the reference released).
+struct EeWonTimerHooks {
+  EeWonOpCall due;
+  EeWonOpCall purged;
+  void *context;
+};
+
+/// The C++ steps the container takes on an op (`AsyncOp*`): references, its status, its run and its completion.
+struct EeWonContainerHooks {
+  EeWonOpCall add_ref;
+  EeWonOpCall release;
+  /// `mStatus==WS_Pending`
+  bool (*is_pending)(void *context, void *op);
+  bool (*completion_pending)(void *context, void *op);
+  EeWonOpCall start_run_async;
+  EeWonOpCall complete;
+  /// `Kill(true)`
+  EeWonOpCall kill;
+  void *context;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -13260,6 +13303,155 @@ int64_t ee_won_auth_auto_refresh_wait(bool enabled,
                                       bool peer_valid,
                                       int64_t expire_delta);
 
+/// `ByteBuffer(data, length, false)`: a copy.
+///
+/// # Safety
+/// `data` holds `length` bytes (or `length` is 0).
+EeWonByteBuffer *ee_won_bytes_copy(const uint8_t *data, unsigned long length);
+
+/// `ByteBuffer(const char*)`: the text and its terminator; null gives no bytes.
+///
+/// # Safety
+/// `text` is null or a NUL-terminated string.
+EeWonByteBuffer *ee_won_bytes_text(const char *text);
+
+/// # Safety
+/// `b` came from an `ee_won_bytes_*` constructor or `ee_won_writer_to_bytes` and is not used again.
+void ee_won_bytes_free(EeWonByteBuffer *b);
+
+/// `data()`: null for a buffer of no bytes at all.
+///
+/// # Safety
+/// `b` is valid.
+const uint8_t *ee_won_bytes_data(const EeWonByteBuffer *b);
+
+/// `length()`.
+///
+/// # Safety
+/// `b` is valid.
+unsigned long ee_won_bytes_length(const EeWonByteBuffer *b);
+
+/// `WriteBuffer(lengthFieldSize, lengthIncludesField)`.
+EeWonWriteBuffer *ee_won_writer_new(uint8_t field_size, bool includes_field);
+
+/// # Safety
+/// `w` came from `ee_won_writer_new` and is not used again.
+void ee_won_writer_free(EeWonWriteBuffer *w);
+
+/// `data()`: the data's start (null before the first growth); `capacity()` bytes may be written there until the
+/// next call that grows, resets or releases.
+///
+/// # Safety
+/// `w` is valid.
+uint8_t *ee_won_writer_data(EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_length(const EeWonWriteBuffer *w);
+
+/// # Safety
+/// `w` is valid.
+unsigned long ee_won_writer_capacity(const EeWonWriteBuffer *w);
+
+/// `Reset` (and `Release`, which forgot the allocation another owner had taken: no caller takes it any more).
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reset(EeWonWriteBuffer *w);
+
+/// `Reserve`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve(EeWonWriteBuffer *w, unsigned long capacity);
+
+/// `CheckWrite`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_check_write(EeWonWriteBuffer *w, unsigned long add);
+
+/// `ReserveChunk`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_reserve_chunk(EeWonWriteBuffer *w, unsigned long total, unsigned long max);
+
+/// `SetSize`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_set_size(EeWonWriteBuffer *w, unsigned long size);
+
+/// `SkipBytes`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_skip(EeWonWriteBuffer *w, unsigned long n);
+
+/// `AppendBytes` (and the byte, bool, short and long appends of their little-endian bytes).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes and is not the writer's own.
+void ee_won_writer_append(EeWonWriteBuffer *w, const uint8_t *data, unsigned long length);
+
+/// `AppendLength`.
+///
+/// # Safety
+/// `w` is valid.
+void ee_won_writer_append_length(EeWonWriteBuffer *w, unsigned long length, uint8_t size);
+
+/// `AppendString` / `AppendBuffer`: a `size`-byte length field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_field(EeWonWriteBuffer *w,
+                                const uint8_t *data,
+                                unsigned long length,
+                                uint8_t size);
+
+/// `AppendWString` of `length` UTF-16 little-endian bytes: a unit count field, then the bytes.
+///
+/// # Safety
+/// As `ee_won_writer_append`.
+void ee_won_writer_append_utf16le(EeWonWriteBuffer *w,
+                                  const uint8_t *data,
+                                  unsigned long length,
+                                  uint8_t size);
+
+/// `SetBytes` (and `SetByte`, `SetShort`).
+///
+/// # Safety
+/// `w` is valid; `data` holds `length` bytes.
+void ee_won_writer_set(EeWonWriteBuffer *w,
+                       unsigned long at,
+                       const uint8_t *data,
+                       unsigned long length);
+
+/// `ToByteBuffer`: a new byte buffer (the caller frees it with `ee_won_bytes_free`).
+///
+/// # Safety
+/// `w` is valid.
+EeWonByteBuffer *ee_won_writer_to_bytes(EeWonWriteBuffer *w, bool release);
+
+/// `ReadBuffer(data, length)` / `SetData`: points the reader at the bytes, rewound.
+///
+/// # Safety
+/// `r` is valid.
+void ee_won_reader_set(EeWonReadBuffer *r, const uint8_t *data, unsigned long length);
+
+/// `ReadBytes`: the next `amount` bytes into `*out`, skipped; false past the end (nothing moves).
+///
+/// # Safety
+/// `r` and `out` are valid; the reader's bytes are alive.
+bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out);
+
+/// `ReadLength`: into `*out`; false past the end.
+///
+/// # Safety
+/// As `ee_won_reader_take`.
+bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
 
@@ -13777,49 +13969,6 @@ void ee_won_utf8_from_wide(const void *wide,
                            EeWonByteSink sink,
                            void *context);
 
-/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
-uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
-
-/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
-uint64_t ee_won_write_chunk(uint64_t capacity,
-                            uint64_t total,
-                            uint64_t max);
-
-/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
-///
-/// # Safety
-/// `out` has 4 bytes.
-size_t ee_won_encode_length(uint32_t length,
-                            uint8_t size,
-                            uint8_t *out);
-
-/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
-///
-/// # Safety
-/// `out` has 6 bytes.
-size_t ee_won_length_prefix(uint8_t field_size,
-                            bool includes_field,
-                            uint32_t length,
-                            uint8_t *out);
-
-/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
-///
-/// # Safety
-/// `pos` is valid.
-bool ee_won_read_take(uint64_t length,
-                      int64_t *pos,
-                      uint64_t amount);
-
-/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
-///
-/// # Safety
-/// `data` holds `length` bytes; `pos` and `out` are valid.
-bool ee_won_read_length(const uint8_t *data,
-                        uint64_t length,
-                        int64_t *pos,
-                        uint8_t size,
-                        uint32_t *out);
-
 /// `CRC16::Put`: the register after the bytes.
 ///
 /// # Safety
@@ -14260,14 +14409,9 @@ bool ee_won_lan_joiner_ping_due(int64_t now, int64_t last_ping);
 /// `lan::summary_due`.
 bool ee_won_lan_summary_due(int64_t now, int64_t last_broadcast);
 
-/// `WONStatusToString`: the status's name. A `WS_` name is a static string; another (a number, a DB proxy
-/// game-specific error) is written into `buffer` (`size` bytes), which is returned.
-///
-/// # Safety
-/// `buffer` has `size` bytes.
-const char *ee_won_status_name(long s,
-                               char *buffer,
-                               size_t size);
+/// `WONStatusToString` (WONRouting.h's inline shim; WONStatus.cpp is deleted): the status's name. A `WS_` name is a
+/// static string; another (a number, a DB proxy game-specific error) is valid until this thread's next unnamed one.
+const char *ee_won_status_text(long s);
 
 void ee_won_netstats_enable(bool on);
 
@@ -14594,90 +14738,6 @@ void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
 /// # Safety
 /// `state` is valid.
 void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
-
-EeWonTimerQueue *ee_won_timers_new();
-
-/// # Safety
-/// `timers` came from `ee_won_timers_new` (null: nothing) and is used no more.
-void ee_won_timers_destroy(EeWonTimerQueue *timers);
-
-/// The tick the wait times count from (`ThreadFunc`'s start).
-///
-/// # Safety
-/// `timers` is live.
-void ee_won_timers_set_last_tick(EeWonTimerQueue *timers);
-
-/// `TimerThread::AddTimerOp` now -> the entry's key.
-///
-/// # Safety
-/// `timers` is live; `op` stays alive while the entry exists.
-uint64_t ee_won_timers_add(EeWonTimerQueue *timers, uint32_t timeout, void *op);
-
-/// `TimerThread::RemoveTimerOp`: the entry's op, or null when the key is gone.
-///
-/// # Safety
-/// `timers` is live.
-void *ee_won_timers_remove(EeWonTimerQueue *timers, uint64_t key);
-
-/// `TimerThread::Pump` now: the ops that time out go to the sink, in order.
-///
-/// # Safety
-/// `timers` is live during the call.
-void ee_won_timers_pump(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
-
-/// `TimerThread::GetWaitTime`.
-///
-/// # Safety
-/// `timers` is live.
-uint32_t ee_won_timers_wait_time(const EeWonTimerQueue *timers);
-
-/// `TimerThread::PurgeOps`: every op to the sink, the maps emptied.
-///
-/// # Safety
-/// `timers` is live during the call.
-void ee_won_timers_purge(EeWonTimerQueue *timers, EeWonOpSink sink, void *context);
-
-EeWonOpQueue *ee_won_opqueue_new();
-
-/// # Safety
-/// `queue` came from `ee_won_opqueue_new` (null: nothing) and is used no more.
-void ee_won_opqueue_destroy(EeWonOpQueue *queue);
-
-/// `AsyncOpContainer::QueueOp`: 0 refused (the op being pumped, finished or purging), 1 queued, 2 queued first
-/// (signal the pump). `current` is the op being pumped (null: none), `current_pending` its status.
-///
-/// # Safety
-/// `queue` is live; a queued `op` stays alive until popped.
-int32_t ee_won_opqueue_queue(EeWonOpQueue *queue,
-                             void *op,
-                             void *current,
-                             bool current_pending,
-                             bool purging);
-
-/// The front op, taken (null: none).
-///
-/// # Safety
-/// `queue` is live.
-void *ee_won_opqueue_pop(EeWonOpQueue *queue);
-
-/// # Safety
-/// `queue` is live.
-size_t ee_won_opqueue_len(const EeWonOpQueue *queue);
-
-/// `AsyncOpContainer::Pump`'s accounting, started now.
-EeWonPumpPlan ee_won_pump_plan_new(uint32_t wait, int32_t max_ops, size_t queued);
-
-/// Whether to wait for the signal before pumping.
-///
-/// # Safety
-/// `plan` is valid.
-bool ee_won_pump_plan_should_wait(const EeWonPumpPlan *plan, size_t queued);
-
-/// After one op: whether to go on with the next.
-///
-/// # Safety
-/// `plan` is valid.
-bool ee_won_pump_plan_go_on(EeWonPumpPlan *plan);
 
 EeWonOpSet *ee_won_opset_new();
 
@@ -17361,6 +17421,124 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+EeWonThread *ee_won_thread_new(EeWonThreadBody body);
+
+/// # Safety
+/// `t` came from `ee_won_thread_new`; its thread does not run any more (or never ran).
+void ee_won_thread_free(EeWonThread *t);
+
+/// # Safety
+/// `t` is valid and stays at its address while its thread runs.
+void ee_won_thread_start(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_mark_stopped(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_is_stopped(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_stopped(const EeWonThread *t, bool stopped);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_is_running(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_auto_delete(const EeWonThread *t, bool on);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_signal(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_wait_signal(const EeWonThread *t, uint32_t milliseconds);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_thread_in_this_thread(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_wait_for_stop(const EeWonThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_thread_set_priority(const EeWonThread *t, int32_t priority);
+
+EeWonTimerThread *ee_won_timer_thread_new(EeWonTimerHooks hooks);
+
+/// # Safety
+/// `t` came from `ee_won_timer_thread_new`; its thread does not run any more.
+void ee_won_timer_thread_free(EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_start(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_stop(const EeWonTimerThread *t, bool wait);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_wait_for_stop(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid; the caller took a reference on `op` for the queue.
+bool ee_won_timer_thread_add(const EeWonTimerThread *t, void *op, uint32_t timeout);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_timer_thread_remove(const EeWonTimerThread *t, void *op);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_pump(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_timer_thread_purge(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+uint32_t ee_won_timer_thread_wait_time(const EeWonTimerThread *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_timer_thread_len(const EeWonTimerThread *t);
+
+EeWonOpContainer *ee_won_container_new(EeWonContainerHooks hooks);
+
+/// # Safety
+/// `c` came from `ee_won_container_new`.
+void ee_won_container_free(EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid; `op` is a live op.
+void ee_won_container_queue(const EeWonOpContainer *c, void *op);
+
+/// # Safety
+/// `c` is valid.
+void ee_won_container_purge(const EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid.
+void ee_won_container_pump(const EeWonOpContainer *c, uint32_t wait, int32_t max_ops);
+
+/// # Safety
+/// `c` is valid.
+size_t ee_won_container_len(const EeWonOpContainer *c);
+
+/// # Safety
+/// `c` is valid.
+void *ee_won_container_current(const EeWonOpContainer *c);
 
 }  // extern "C"
 

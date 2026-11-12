@@ -83,7 +83,7 @@ WONStatus PeerAuthClient::GetChallenge2(ByteBufferPtr &challenge2)
 	anEncryptBuf.AppendBytes(this->mSecretB.GetKey(), this->mSecretB.GetKeyLen());
 	anEncryptBuf.AppendBytes(this->mSecretA.GetKey(), this->mSecretA.GetKeyLen());
 
-	ByteBufferPtr anEncrypt = this->mServerCertificate->GetPubKey().Encrypt(anEncryptBuf.mData,anEncryptBuf.mLength);
+	ByteBufferPtr anEncrypt = this->mServerCertificate->GetPubKey().Encrypt(anEncryptBuf.data(),anEncryptBuf.length());
 	if(anEncrypt.get()==NULL)
 		return WS_PeerAuthClient_Challenge2EncryptFailure /* WS_PeerAuthClient_Challenge2EncryptFailure */;
 

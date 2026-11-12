@@ -10,6 +10,7 @@ pub mod authctx;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
+pub mod buffer;
 pub mod cdkey;
 pub mod chat;
 pub mod config;
@@ -71,8 +72,11 @@ pub mod staging;
 pub mod status;
 pub mod strcase;
 pub mod text;
+pub mod thread;
 pub mod wire;
 
+#[cfg(test)]
+mod buffer_golden;
 #[cfg(test)]
 mod chat_golden;
 #[cfg(test)]

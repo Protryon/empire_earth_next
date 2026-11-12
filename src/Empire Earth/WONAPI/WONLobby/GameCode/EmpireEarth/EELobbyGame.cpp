@@ -455,7 +455,7 @@ void EELobbyGame::WriteDetailsHook(WriteBuffer& outBuffer)
     for (i = 0; i < 16; i++)
         this->WriteOption(outBuffer, i);
     unsigned char theCount = 0;
-    unsigned long thePos = outBuffer.mLength;
+    unsigned long thePos = outBuffer.length();
     outBuffer.AppendByte(0);
     for (i = 0; i < 8; i++) {
         EELobbyPlayerSlot* theSlot = this->GetPlayerSlot(i);
@@ -478,7 +478,7 @@ bool EELobbyGame::ReadDetailsHook(ReadBuffer& inBuffer)
     int i;
     for (i = 0; i < 16; i++)
         this->ReadOption(inBuffer, i);
-    if (inBuffer.mLength - inBuffer.mPos > 0) {
+    if (inBuffer.Available() > 0) {
         unsigned char theCount = inBuffer.ReadByte();
         LobbyServer* theClients = LobbyGetCurrentServer();
         if (theClients == NULL && this->mGameType == 2)
