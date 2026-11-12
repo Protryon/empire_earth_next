@@ -7,8 +7,9 @@
 // million tests a calamity game: one record per 4096 tests, their count and the FNV-1a 64 of each test's record and
 // EeCombatConditionOut in order, the last batch at the game's end; EE_SIM_CAPTURE_CBTC_FULL=1 writes every test's
 // bytes instead, for finding where two builds part) and every step appends a CBGS record (the record with its
-// operations). A test that calls another
-// captured test (the torpedo's other triggers, a base class's test) records both, the inner one first.
+// operations). A test that calls another captured test (the torpedo's other triggers, a base class's test) records
+// both, the inner one first. The golden lines were recorded from the original C++ bodies (instrumented in place)
+// before Rust took them.
 #ifndef EE_EECOMBATGOALS_H
 #define EE_EECOMBATGOALS_H
 
@@ -33,101 +34,16 @@ void EECombatCaptureStep(const EeCombatStepIn& in);
 // writes the tests' last CBTC batch (EE-SIM at the game's end, before the capture closes)
 void EECombatCaptureFlush();
 
-// TEST ONLY: the golden instrumentation of the C++ bodies (recorded before the move to Rust). A scope fills its
-// record while the capture is on and logs the reads made inside it (the thread's innermost scope).
-class EECombatConditionScope {
-public:
-    EECombatConditionScope(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget)
-        : mActive(EESimCaptureRecord::Active()), mPrevious(sCurrent)
-    {
-        memset(&this->mIn, 0, sizeof(this->mIn));
-        if (!this->mActive)
-            return;
-        EECombatFillCondition(this->mIn, inKind, inUnit, inEvent, inTarget);
-        sCurrent = this;
-    }
-    ~EECombatConditionScope()
-    {
-        if (this->mActive)
-            sCurrent = this->mPrevious;
-    }
-    void Commit(long inResult, int32_t inAction)
-    {
-        if (!this->mActive)
-            return;
-        EeCombatConditionOut theOut = {(int32_t)inResult, inAction};
-        EECombatCaptureCondition(this->mIn, theOut);
-    }
-    static void Log(int32_t inCode, uint32_t inValue)
-    {
-        if (sCurrent == NULL)
-            return;
-        EeCombatConditionIn& in = sCurrent->mIn;
-        if (in.reads < 4) {
-            in.log[in.reads].code = inCode;
-            in.log[in.reads].value = inValue;
-        }
-        in.reads++;
-    }
-
-    EeCombatConditionIn mIn;
-
-private:
-    bool mActive;
-    EECombatConditionScope* mPrevious;
-    static thread_local EECombatConditionScope* sCurrent;
-};
-
-// a lazy read's answer, logged (bool or long)
-template <class T> inline T EECombatRead(int32_t inCode, T inValue)
-{
-    EECombatConditionScope::Log(inCode, (uint32_t)(long)inValue);
-    return inValue;
-}
-
-inline float EECombatReadF(int32_t inCode, float inValue)
-{
-    uint32_t theBits;
-    memcpy(&theBits, &inValue, 4);
-    EECombatConditionScope::Log(inCode, theBits);
-    return inValue;
-}
-
-class EECombatStepScope {
-public:
-    EECombatStepScope(int32_t inKind, EEComplexUnit* inUnit, EEUnit* inTarget) : mActive(EESimCaptureRecord::Active())
-    {
-        memset(&this->mIn, 0, sizeof(this->mIn));
-        if (this->mActive)
-            EECombatFillStep(this->mIn, inKind, inUnit, inTarget);
-    }
-    ~EECombatStepScope()
-    {
-        if (this->mActive)
-            EECombatCaptureStep(this->mIn);
-    }
-    void Op(int32_t inOp, int32_t inArg) { this->Log(inOp, inArg, 0); }
-    template <class T> T Read(int32_t inOp, int32_t inArg, T inValue)
-    {
-        this->Log(inOp, inArg, (int32_t)inValue);
-        return inValue;
-    }
-
-    EeCombatStepIn mIn;
-
-private:
-    void Log(int32_t inOp, int32_t inArg, int32_t inValue)
-    {
-        if (!this->mActive)
-            return;
-        if (this->mIn.count < 12) {
-            this->mIn.log[this->mIn.count].op = inOp;
-            this->mIn.log[this->mIn.count].arg = inArg;
-            this->mIn.log[this->mIn.count].value = inValue;
-        }
-        this->mIn.count++;
-    }
-    bool mActive;
-};
+// The test of in (filled by EECombatFillCondition) through ee_combat_condition over the C++ host (inGoal for the
+// goals, inClass for the shots); the action applied (a shot's attack goal on the unit it hit), then the CBTC record.
+// Returns the test's value. Defined in EECombatGoals.cpp.
+class EEUnitGoal;
+class EEUnitClass;
+long EECombatCondition(EeCombatConditionIn& in, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnitClass* inClass);
+// The step of inGoal (inKind) through ee_combat_goal_step: the plan's operations executed on inUnit and inGoal as
+// they are issued, then the CBGS record
+void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget);
+// A shot's target: its attack-unit goal's (NULL under another goal)
+EEUnit* EECombatShotTarget(EEComplexUnit* inUnit);
 
 #endif

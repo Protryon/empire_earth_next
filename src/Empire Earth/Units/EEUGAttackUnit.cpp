@@ -282,47 +282,8 @@ long EEUGAttackUnit::GetMaxPathAttempts()
 // frame else a randomised reload timer; drops the path and resets the path attempts
 void EEUGAttackUnit::Step(EEComplexUnit* inUnit)
 {
-    EECombatStepScope theCap(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, this->mTarget);   // TEST ONLY (CBGS)
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionChangeTargetForSpecialEnemy:
-        theCap.Op(EE_COMBAT_STEP_RETARGET_GATE, 0);
-        this->RetargetGatePart(inUnit);
-        break;
-    case kActionFaceEnemyUnit:
-        theCap.Op(EE_COMBAT_STEP_PHYSICS_ACTION, 1);
-        inUnit->SetCurrentPhysicsAction(1);
-        if (!theCap.Read(EE_COMBAT_STEP_FACES, 0, inUnit->mUnitClass->FacesTarget(inUnit, this->mTarget, false))
-            && theCap.Read(EE_COMBAT_STEP_ANIMATION, 0, inUnit->mAnimation) != 0xd) {
-            theCap.Op(EE_COMBAT_STEP_SET_ANIMATION, 0xd);
-            inUnit->SetAnimation(0xd, -1, 0);
-        }
-        theCap.Op(EE_COMBAT_STEP_DROP_PATH, 0);
-        inUnit->DropPath();
-        break;
-    case kActionAttackEnemyUnit: {
-            theCap.Op(EE_COMBAT_STEP_PHYSICS_ACTION, 1);
-            inUnit->SetCurrentPhysicsAction(1);
-            long theSet = theCap.Read(EE_COMBAT_STEP_ATTACK_FRAME_SET, 0, EEGetAttackFrameSet(inUnit));
-            unsigned long theFrame = theCap.Read(EE_COMBAT_STEP_SOUND_FRAME, (int32_t)theSet, inUnit->GetModel()->mSound1Frames[theSet]);
-            theCap.Op(EE_COMBAT_STEP_SET_ANIMATION, (int32_t)theSet);
-            inUnit->SetAnimation(theSet, -1, 0);
-            if (theFrame == theCap.Read(EE_COMBAT_STEP_FRAME, 0, inUnit->mPhysicalModel.GetFrame())) {
-                theCap.Op(EE_COMBAT_STEP_FIRE_SHOT, 0);
-                inUnit->mUnitClass->FireShot(inUnit);
-            } else {
-                theCap.Op(EE_COMBAT_STEP_RELOAD_TIMER, (int32_t)inUnit->mStats->mReloadTime);
-                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-            }
-            theCap.Op(EE_COMBAT_STEP_SEARCH_TIMER, 0);
-            inUnit->SetTargetSearchTimer(0);
-            theCap.Op(EE_COMBAT_STEP_DROP_PATH, 0);
-            inUnit->DropPath();
-            theCap.Op(EE_COMBAT_STEP_PATH_ATTEMPTS, 0);
-            this->SetPathAttempts(0);
-        }
-        break;
-    }
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, this, this->mTarget);
 }
 
 // FUNCTION: EXE 0x61d9d3
@@ -477,131 +438,13 @@ void EEUGAttackUnit::SetTarget(EEUnit* inTarget)
 // fire ...); a living destroyed-test falls through to the hidden test; others go to the common goal
 bool EEUGAttackUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    bool theResult = false;
-    EEUnit* theArg3 = NULL;
-    long theArg4;
-    long theArg5;
-    // TEST ONLY (CBTC)
-    EECombatConditionScope theCap(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->mTarget);
-    theCap.mIn.goal_tile[0] = (int32_t)this->mTargetTileX;
-    theCap.mIn.goal_tile[1] = (int32_t)this->mTargetTileY;
-    theCap.mIn.convert = this->mIsConvert;
-    switch (inEvent) {
-    case kTriggerEnemyUnitDestroyed:
-        if (this->mTarget->mHitPoints <= 0 || this->mTarget->mTileX == -10000) {
-            theResult = true;
-            break;
-        }
-    case kTriggerEnemyUnitUndetectable:
-        if (this->mTarget != NULL && this->mTarget->mComplexUnit->mIsCloakable && this->mTarget->mComplexUnit->GetIsCloaked()
-            && this->mTarget->mPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[this->mTarget->mPlayer->mPlayerID] != 0
-            && this->mTarget->mUnitClass->mCloakRadius == 0)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerUnitNotOnMap:
-        theResult = this->mTarget->mTileX == -10000;
-        break;
-    case kTriggerUnitInWeaponRange:
-        if (this->mIsConvert && inUnit->mUnitClass->IsCrusader())
-            theResult = EECombatRead(EE_COMBAT_READ_IN_RANGE_TO_HIT, EEIsInRangeToHit(inUnit, this->mTarget));
-        else
-            theResult = EECombatRead(EE_COMBAT_READ_IN_REACH, inUnit->IsInReach(this->mTarget));
-        break;
-    case kTriggerEnemyUnitNoLongerVisible:
-        if ((inUnit->mPlayer->IsHuman() || inUnit->mStats->GetRange() > EECombatReadF(EE_COMBAT_READ_LINE_OF_SIGHT, inUnit->GetLineOfSight()))
-            && !EECombatRead(EE_COMBAT_READ_SEEN, EEIsSeenBy(this->mTarget, inUnit->mPlayer, false)))
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitInsideFiringArch:
-        theResult = EECombatRead(EE_COMBAT_READ_FACES_ARCH, inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, true));
-        break;
-    case kTriggerEnemyUnitLeftLOS: {
-            float theRange = inUnit->mStats->mRange;
-            float theMinimum = EECombatReadF(EE_COMBAT_READ_LINE_OF_SIGHT, inUnit->GetLineOfSight());
-            if (theRange > theMinimum)
-                theResult = !EECombatRead(EE_COMBAT_READ_SEEN, EEIsSeenBy(this->mTarget, inUnit->GetPlayer(), false));
-            else if (EECombatReadF(EE_COMBAT_READ_DISTANCE_SQUARED, inUnit->DistanceSquaredToUnit(this->mTarget)) > theMinimum * theMinimum)
-                theResult = true;
-            else
-                theResult = false;
-        }
-        break;
-    case kTriggerEnemyUnitMoving: {
-            EEComplexUnit* theComplexUnit = this->mTarget->mComplexUnit;
-            if (theComplexUnit != NULL && theComplexUnit->mVelocity > 0.0f
-                && !EECombatRead(EE_COMBAT_READ_FACES_MOVING, inUnit->GetUnitClass()->FacesTarget(inUnit, theComplexUnit, true)))
-                theResult = true;
-            else
-                theResult = false;
-        }
-        break;
-    case kTriggerFacingEnemyUnit:
-        theResult = EECombatRead(EE_COMBAT_READ_FACES, inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, false));
-        break;
-    case kTriggerReadyToFireAgain:
-        theResult = inUnit->mReloadTimer >= inUnit->mStats->mReloadTime;
-        break;
-    case kTriggerUnitOnTileBorderingTarget:
-        theResult = EECombatRead(EE_COMBAT_READ_BORDERING, inUnit->IsOnTileBorderingTarget(this->mTarget));
-        break;
-    case kTriggerAttackerIsRangedUnit:
-        if (inUnit->mStats->mRange > 1.0f)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerTargetIsNotDefensiveBuilding:
-        if (this->mTarget != NULL && this->mTarget->mUnitClass->IsLandBuilding() && this->mTarget->mStats->mAttack == 0.0f)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerBlockedByWall:
-        if (!inUnit->mStats->mCanFireOverWalls)
-            theResult = EECombatRead(EE_COMBAT_READ_LINE_BLOCKED, EEIsLineToUnitBlocked(inUnit, this->mTarget, &theArg3, &theArg4, &theArg5));
-        break;
-    case kTriggerEnemyIsBuilding:
-        theResult = this->mTarget->mUnitClass->mFamily == kUnitFamilyBuilding;
-        break;
-    case kTriggerCeaseFire:
-        if (this->mTarget->mPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[this->mTarget->mPlayer->mPlayerID] != 0)
-            theResult = false;
-        else if (inUnit->mHerd == NULL)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitMoved:
-        if (this->mTarget->mTileX != this->mTargetTileX || this->mTarget->mTileY != this->mTargetTileY)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerTargetIsSpecialEnemy:
-        theResult = EECombatRead(EE_COMBAT_READ_GATE_CLOSED, this->IsGateClosed(inUnit));
-        break;
-    case kTriggerEnemyUnitHasNotMovedOneTile:
-        if (this->mTarget->mTileX == this->mTargetTileX && this->mTarget->mTileY == this->mTargetTileY)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitReachable:
-        theResult = EECombatRead(EE_COMBAT_READ_STILL_REACHABLE, this->IsStillReachable(inUnit));
-        break;
-    case kTriggerEnemyUnitInLOS:
-        theResult = EECombatRead(EE_COMBAT_READ_ENEMY_IN_RANGE, EEIsEnemyWithinRange(inUnit));
-        break;
-    default:
-        theResult = EEUnitGoal::EvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    theCap.Commit(theResult, EE_COMBAT_CONDITION_NONE);
-    return theResult;
+    // ee_combat goals.rs condition over the plain reads and the host's lazy ones (CBTC)
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->mTarget);
+    in.goal_tile[0] = (int32_t)this->mTargetTileX;
+    in.goal_tile[1] = (int32_t)this->mTargetTileY;
+    in.convert = this->mIsConvert;
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x61e01e

@@ -54,24 +54,10 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
 // class
 long EEUCTorpedo::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    long theResult = 0;
-    // TEST ONLY (CBTC): the target is the attack-unit goal's
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    EECombatConditionScope theCap(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent,
-                                  theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGAttackUnit*>(theGoal)->mTarget : NULL);
-    switch (inEvent) {
-    case kTriggerProjectileHitGround:
-        if (EECombatRead(EE_COMBAT_READ_GROUND_IMPACT, this->CheckGroundImpact(inUnit)))
-            theResult = 1;
-        break;
-    case kTriggerProjectileHitWater:
-        break;
-    default:
-        theResult = EECombatRead(EE_COMBAT_READ_BASE, EEUCMissile::EvaluateCondition(inUnit, inEvent));
-        break;
-    }
-    theCap.Commit(theResult, EE_COMBAT_CONDITION_NONE);
-    return theResult;
+    // ee_combat goals.rs condition (CBTC); the missile's test is the host's base read
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit));
+    return EECombatCondition(in, inUnit, NULL, this);
 }
 
 // FUNCTION: EXE 0x61b232

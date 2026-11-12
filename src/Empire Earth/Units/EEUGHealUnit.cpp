@@ -143,18 +143,8 @@ bool EEUGHealUnit::IsInRange(EEComplexUnit* inHealer, EEComplexUnit* inTarget)
 // On the turn-to-face action, plays the turning animation (0xd) until the healer faces the target and drops its path
 void EEUGHealUnit::Step(EEComplexUnit* inUnit)
 {
-    EECombatStepScope theCap(EE_COMBAT_GOAL_HEAL, inUnit, this->mTarget);   // TEST ONLY (CBGS)
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionTurnToFaceHealee)
-        return;
-    theCap.Op(EE_COMBAT_STEP_PHYSICS_ACTION, 1);
-    inUnit->SetCurrentPhysicsAction(1);
-    if (!theCap.Read(EE_COMBAT_STEP_FACES, 0, inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, false))
-        && theCap.Read(EE_COMBAT_STEP_ANIMATION, 0, inUnit->mAnimation) != 0xd) {
-        theCap.Op(EE_COMBAT_STEP_SET_ANIMATION, 0xd);
-        inUnit->SetAnimation(0xd, -1, 0);
-    }
-    theCap.Op(EE_COMBAT_STEP_DROP_PATH, 0);
-    inUnit->DropPath();
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_HEAL, inUnit, this, this->mTarget);
 }
 
 // FUNCTION: EXE 0x625595
@@ -228,35 +218,10 @@ void EEUGHealUnit::SetTarget(EEComplexUnit* inTarget)
 // heal threshold for a non-enemy healer); others go to the location goal
 bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    // TEST ONLY (CBTC): the original body, its value recorded
-    EECombatConditionScope theCap(EE_COMBAT_GOAL_HEAL, inUnit, inEvent, this->mTarget);
-    bool theResult = [&]() -> bool {
-        switch (inEvent) {
-        case kTriggerHealeeNoLongerVisible:
-            if (!inUnit->mPlayer->IsHuman() || EECombatRead(EE_COMBAT_READ_SEEN, EEIsSeenBy(this->mTarget, inUnit->GetPlayer(), true)))
-                return false;
-            return true;
-        case kTriggerHealeeDestroyed:
-            return this->mTarget->mHitPoints <= 0 ? true : false;
-        case kTriggerFacingHealee:
-            return EECombatRead(EE_COMBAT_READ_FACES, inUnit->mUnitClass->FacesTarget(inUnit, this->mTarget, false));
-        case kTriggerGoalIsHeal:
-            return true;
-        case kTriggerHealeeInHealingRange:
-            return EECombatRead(EE_COMBAT_READ_HEAL_IN_RANGE, this->IsInRange(inUnit, this->mTarget));
-        case kTriggerTargetNeedsHealing: {
-                long theHitPoints = this->mTarget->mHitPoints;
-                long theMaxHitPoints = this->mTarget->mStats->mMaxHitPoints;
-                if (EECombatRead(EE_COMBAT_READ_REPAIRABLE, this->mTarget->IsRepairable()) && (float)theHitPoints / theMaxHitPoints <= inUnit->mUnitClass->GetHealThreshold()
-                    && (inUnit->mPlayer == this->mTarget->mPlayer || this->mTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] == 0))
-                    return true;
-                return false;
-            }
-        }
-        return EECombatRead(EE_COMBAT_READ_BASE, EEUGLocation::EvaluateCondition(inUnit, inEvent));
-    }();
-    theCap.Commit(theResult, EE_COMBAT_CONDITION_NONE);
-    return theResult;
+    // ee_combat goals.rs condition (CBTC); the location goal's test is the host's base read
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_HEAL, inUnit, inEvent, this->mTarget);
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x625789

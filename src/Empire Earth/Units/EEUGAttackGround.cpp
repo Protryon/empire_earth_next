@@ -108,39 +108,8 @@ void EEUGAttackGround::GetGoalLocation(GE3DPoint& outLocation)
 // a randomised reload timer; drops the path and resets the path attempts
 void EEUGAttackGround::Step(EEComplexUnit* inUnit)
 {
-    EECombatStepScope theCap(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, NULL);   // TEST ONLY (CBGS)
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionFaceLocation:
-        theCap.Op(EE_COMBAT_STEP_PHYSICS_ACTION, 1);
-        inUnit->SetCurrentPhysicsAction(1);
-        theCap.Op(EE_COMBAT_STEP_DROP_PATH, 0);
-        inUnit->DropPath();
-        break;
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation: {
-            theCap.Op(EE_COMBAT_STEP_PHYSICS_ACTION, 1);
-            inUnit->SetCurrentPhysicsAction(1);
-            long theSet = inUnit->mStats->mCanFireOverWalls && theCap.Read(EE_COMBAT_STEP_FIRING_HIGH, 0, inUnit->mIsFiringHigh) ? 8 : 0;
-            unsigned long theFrame = theCap.Read(EE_COMBAT_STEP_SOUND_FRAME, (int32_t)theSet, inUnit->GetModel()->mSound1Frames[theSet]);
-            theCap.Op(EE_COMBAT_STEP_SET_ANIMATION, (int32_t)theSet);
-            inUnit->SetAnimation(theSet, -1, 0);
-            if (theFrame == theCap.Read(EE_COMBAT_STEP_FRAME, 0, inUnit->mPhysicalModel.GetFrame())) {
-                theCap.Op(EE_COMBAT_STEP_FIRE_SHOT, 0);
-                inUnit->mUnitClass->FireShot(inUnit);
-            } else {
-                theCap.Op(EE_COMBAT_STEP_RELOAD_TIMER, (int32_t)inUnit->mStats->mReloadTime);
-                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-            }
-            theCap.Op(EE_COMBAT_STEP_SEARCH_TIMER, 0);
-            inUnit->SetTargetSearchTimer(0);
-            theCap.Op(EE_COMBAT_STEP_DROP_PATH, 0);
-            inUnit->DropPath();
-            theCap.Op(EE_COMBAT_STEP_PATH_ATTEMPTS, 0);
-            this->SetPathAttempts(0);
-        }
-        break;
-    }
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, this, NULL);
 }
 
 // FUNCTION: EXE 0x61d1b2
@@ -176,25 +145,10 @@ long EEUGAttackGround::Save(unsigned long inMajorVersion, unsigned long inMinorV
 // at 0, fly off after the attack for paratrooper bombers); others go to the common goal
 bool EEUGAttackGround::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    // TEST ONLY (CBTC): the original body, its value recorded
-    EECombatConditionScope theCap(EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL);
-    bool theResult = [&]() -> bool {
-        switch (inEvent) {
-        case kTriggerLocationInWeaponRange:
-            return EECombatRead(EE_COMBAT_READ_CAN_REACH_TILE, inUnit->CanReachTile(UMFloor(this->mTarget.GetX()), UMFloor(this->mTarget.GetY())));
-        case kTriggerLocationInsideFiringArch:
-            return EECombatRead(EE_COMBAT_READ_FACES_POINT, inUnit->GetUnitClass()->FacesPoint(inUnit, this->mTarget, true));
-        case kTriggerAttackerIsRangedUnit:
-            return inUnit->mStats->mRange > 1.0f ? true : false;
-        case kTriggerReadyToFireAgain:
-            return inUnit->mReloadTimer == 0 ? true : false;
-        case kTriggerFlyOffMapAfterAttack:
-            return inUnit->mUnitClass->mIsParatrooperBomber;
-        }
-        return EEUnitGoal::EvaluateCondition(inUnit, inEvent);
-    }();
-    theCap.Commit(theResult, EE_COMBAT_CONDITION_NONE);
-    return theResult;
+    // ee_combat goals.rs condition (CBTC)
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_GROUND, inUnit, inEvent, NULL);
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // ICF-FOLDED: EXE 0x61d460

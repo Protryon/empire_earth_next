@@ -1,5 +1,6 @@
 // New (port): the plain reads of the goals' and shots' trigger tests and of the goals' steps (ee/EECombatGoals.h;
-// rust/crates/ee_combat/src/goals.rs; docs/RUST_PLAN.md R5b.2, sixth round), and their CBTC/CBGS capture records.
+// rust/crates/ee_combat/src/goals.rs; docs/RUST_PLAN.md R5b.2, sixth round), the hosts of the Rust tests and steps
+// (each lazy read and each operation the original's statement), and their CBTC/CBGS capture records.
 // Every read here is a field or a trivial accessor: no side effect, no random draw, nothing the test would not
 // survive reading early; a missing unit, target, player or class leaves its fields 0.
 #include <windows.h>
@@ -22,10 +23,16 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUGLocation.h"
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGHealUnit.h"
+#include "ee/EEUCProjectile.h"
+#include "ee/EEUCMissile.h"
+#include "ee/EEGraphicObject.h"
+#include "ee/EEAreaUtilities.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
-
-thread_local EECombatConditionScope* EECombatConditionScope::sCurrent = NULL;
 
 void EECombatFillCondition(EeCombatConditionIn& in, int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent,
                            EEUnit* inTarget)
@@ -171,4 +178,194 @@ void EECombatCaptureStep(const EeCombatStepIn& in)
     EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'G', 'S'));
     theRecord.Bytes(&in, sizeof(in));
     theRecord.Commit();
+}
+
+// ---- the hosts of ee_combat's trigger tests and steps
+
+namespace {
+
+struct EEConditionContext {
+    int32_t mKind;
+    unsigned long mEvent;
+    EEComplexUnit* mUnit;
+    EEUnitGoal* mGoal;                      // the goals' (attack unit, attack ground, heal)
+    EEUnitClass* mClass;                    // the shots'
+    EEUnit* mImpact;                        // FindImpactUnit's answer, kept for the targetable read and the action
+};
+
+uint32_t EEConditionBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// the attack goal's target (attack unit), the heal goal's (heal)
+EEUnit* EEConditionTarget(EEConditionContext* inContext)
+{
+    if (inContext->mKind == EE_COMBAT_GOAL_HEAL)
+        return static_cast<EEUGHealUnit*>(inContext->mGoal)->mTarget;
+    return static_cast<EEUGAttackUnit*>(inContext->mGoal)->mTarget;
+}
+
+// The lazy reads, each the original's call at the place the test makes it (ee_combat goals.rs EE_COMBAT_READ_*)
+uint32_t EEConditionRead(void* inContext, int32_t inCode)
+{
+    EEConditionContext* theContext = (EEConditionContext*)inContext;
+    EEComplexUnit* theUnit = theContext->mUnit;
+    switch (inCode) {
+    case EE_COMBAT_READ_LINE_OF_SIGHT:
+        return EEConditionBits(theUnit->GetLineOfSight());
+    case EE_COMBAT_READ_IN_RANGE_TO_HIT:
+        return EEIsInRangeToHit(theUnit, EEConditionTarget(theContext));
+    case EE_COMBAT_READ_IN_REACH:
+        return theUnit->IsInReach(EEConditionTarget(theContext));
+    case EE_COMBAT_READ_SEEN:
+        if (theContext->mKind == EE_COMBAT_GOAL_HEAL)
+            return EEIsSeenBy(EEConditionTarget(theContext), theUnit->GetPlayer(), true);
+        return EEIsSeenBy(EEConditionTarget(theContext), theUnit->mPlayer, false);
+    case EE_COMBAT_READ_FACES_ARCH:
+        return theUnit->GetUnitClass()->FacesTarget(theUnit, EEConditionTarget(theContext), true);
+    case EE_COMBAT_READ_FACES:
+        return theUnit->mUnitClass->FacesTarget(theUnit, EEConditionTarget(theContext), false);
+    case EE_COMBAT_READ_FACES_MOVING: {
+        EEComplexUnit* theComplexUnit = EEConditionTarget(theContext)->mComplexUnit;
+        return theUnit->GetUnitClass()->FacesTarget(theUnit, theComplexUnit, true);
+    }
+    case EE_COMBAT_READ_DISTANCE_SQUARED:
+        return EEConditionBits(theUnit->DistanceSquaredToUnit(EEConditionTarget(theContext)));
+    case EE_COMBAT_READ_BORDERING:
+        return theUnit->IsOnTileBorderingTarget(EEConditionTarget(theContext));
+    case EE_COMBAT_READ_LINE_BLOCKED: {
+        EEUnit* theArg3 = NULL;
+        long theArg4;
+        long theArg5;
+        return EEIsLineToUnitBlocked(theUnit, EEConditionTarget(theContext), &theArg3, &theArg4, &theArg5);
+    }
+    case EE_COMBAT_READ_GATE_CLOSED:
+        return static_cast<EEUGAttackUnit*>(theContext->mGoal)->IsGateClosed(theUnit);
+    case EE_COMBAT_READ_STILL_REACHABLE:
+        return static_cast<EEUGAttackUnit*>(theContext->mGoal)->IsStillReachable(theUnit);
+    case EE_COMBAT_READ_ENEMY_IN_RANGE:
+        return EEIsEnemyWithinRange(theUnit);
+    case EE_COMBAT_READ_BASE:
+        switch (theContext->mKind) {
+        case EE_COMBAT_GOAL_HEAL:
+            return static_cast<EEUGHealUnit*>(theContext->mGoal)->EEUGLocation::EvaluateCondition(theUnit, theContext->mEvent);
+        case EE_COMBAT_GOAL_TORPEDO:
+            return (uint32_t)static_cast<EEUCMissile*>(theContext->mClass)->EEUCMissile::EvaluateCondition(theUnit, theContext->mEvent);
+        default:
+            return (uint32_t)theContext->mClass->EEUnitClass::EvaluateCondition(theUnit, theContext->mEvent);
+        }
+    case EE_COMBAT_READ_CAN_REACH_TILE: {
+        const GE3DPoint& theTarget = static_cast<EEUGAttackGround*>(theContext->mGoal)->mTarget;
+        return theUnit->CanReachTile(UMFloor(theTarget.GetX()), UMFloor(theTarget.GetY()));
+    }
+    case EE_COMBAT_READ_FACES_POINT:
+        return theUnit->GetUnitClass()->FacesPoint(theUnit, static_cast<EEUGAttackGround*>(theContext->mGoal)->mTarget, true);
+    case EE_COMBAT_READ_HEAL_IN_RANGE: {
+        EEUGHealUnit* theGoal = static_cast<EEUGHealUnit*>(theContext->mGoal);
+        return theGoal->IsInRange(theUnit, theGoal->mTarget);
+    }
+    case EE_COMBAT_READ_REPAIRABLE:
+        return static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget->IsRepairable();
+    case EE_COMBAT_READ_IMPACT_UNIT:
+        theContext->mImpact = theContext->mClass->FindImpactUnit(theUnit);
+        return theContext->mImpact != NULL;
+    case EE_COMBAT_READ_TARGETABLE:
+        return EEUUGetIsUnitClassTargetable(theUnit, theContext->mImpact->GetUnitClass());
+    case EE_COMBAT_READ_GROUND_IMPACT:
+        if (theContext->mKind == EE_COMBAT_GOAL_PROJECTILE)
+            return static_cast<EEUCProjectile*>(theContext->mClass)->CheckGroundImpact(theUnit);
+        return static_cast<EEUCMissile*>(theContext->mClass)->CheckGroundImpact(theUnit);
+    case EE_COMBAT_READ_WATER_IMPACT:
+        if (theContext->mKind == EE_COMBAT_GOAL_PROJECTILE)
+            return static_cast<EEUCProjectile*>(theContext->mClass)->CheckWaterImpact(theUnit);
+        return static_cast<EEUCMissile*>(theContext->mClass)->CheckWaterImpact(theUnit);
+    }
+    return 0;
+}
+
+struct EEStepContext {
+    int32_t mKind;
+    EEComplexUnit* mUnit;
+    EEUnitGoal* mGoal;
+};
+
+// The step's operations, each the original's statement (ee_combat goals.rs EE_COMBAT_STEP_*); reads answer
+int32_t EEStepOp(void* inContext, int32_t inOp, int32_t inArg)
+{
+    EEStepContext* theContext = (EEStepContext*)inContext;
+    EEComplexUnit* theUnit = theContext->mUnit;
+    switch (inOp) {
+    case EE_COMBAT_STEP_PHYSICS_ACTION:
+        theUnit->SetCurrentPhysicsAction((unsigned long)inArg);
+        break;
+    case EE_COMBAT_STEP_FACES:
+        if (theContext->mKind == EE_COMBAT_GOAL_HEAL)
+            return theUnit->GetUnitClass()->FacesTarget(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget, false);
+        return theUnit->mUnitClass->FacesTarget(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal)->mTarget, false);
+    case EE_COMBAT_STEP_ANIMATION:
+        return (int32_t)theUnit->mAnimation;
+    case EE_COMBAT_STEP_SET_ANIMATION:
+        theUnit->SetAnimation(inArg, -1, 0);
+        break;
+    case EE_COMBAT_STEP_DROP_PATH:
+        theUnit->DropPath();
+        break;
+    case EE_COMBAT_STEP_RETARGET_GATE:
+        static_cast<EEUGAttackUnit*>(theContext->mGoal)->RetargetGatePart(theUnit);
+        break;
+    case EE_COMBAT_STEP_ATTACK_FRAME_SET:
+        return (int32_t)EEGetAttackFrameSet(theUnit);
+    case EE_COMBAT_STEP_SOUND_FRAME:
+        return (int32_t)theUnit->GetModel()->mSound1Frames[inArg];
+    case EE_COMBAT_STEP_FRAME:
+        return (int32_t)theUnit->mPhysicalModel.GetFrame();
+    case EE_COMBAT_STEP_FIRE_SHOT:
+        theUnit->mUnitClass->FireShot(theUnit);
+        break;
+    case EE_COMBAT_STEP_RELOAD_TIMER:
+        theUnit->SetRandomReloadTimer(inArg);
+        break;
+    case EE_COMBAT_STEP_SEARCH_TIMER:
+        theUnit->SetTargetSearchTimer(inArg);
+        break;
+    case EE_COMBAT_STEP_PATH_ATTEMPTS:
+        theContext->mGoal->SetPathAttempts(inArg);
+        break;
+    case EE_COMBAT_STEP_FIRING_HIGH:
+        return theUnit->mIsFiringHigh;
+    }
+    return 0;
+}
+
+}   // namespace
+
+EEUnit* EECombatShotTarget(EEComplexUnit* inUnit)
+{
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    return theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGAttackUnit*>(theGoal)->mTarget : NULL;
+}
+
+long EECombatCondition(EeCombatConditionIn& in, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnitClass* inClass)
+{
+    EEConditionContext theContext = {in.kind, in.event, inUnit, inGoal, inClass, NULL};
+    EeCombatConditionHost theHost = {&theContext, EEConditionRead};
+    EeCombatConditionOut theOut = ee_combat_condition(&in, &theHost);
+    // the action before the record, as the original's body set the goal before its end
+    if (theOut.action == EE_COMBAT_CONDITION_ATTACK_IMPACT_UNIT)
+        inUnit->SetGoal(new EEUGAttackUnit(inUnit, theContext.mImpact, false, false), 0, 0);
+    EECombatCaptureCondition(in, theOut);
+    return theOut.result;
+}
+
+void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget)
+{
+    EeCombatStepIn in;
+    EECombatFillStep(in, inKind, inUnit, inTarget);
+    EEStepContext theContext = {inKind, inUnit, inGoal};
+    EeCombatStepHost theHost = {&theContext, EEStepOp};
+    ee_combat_goal_step(&in, &theHost);
+    EECombatCaptureStep(in);
 }
