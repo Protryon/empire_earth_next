@@ -6,37 +6,7 @@ namespace WONAPI {
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-class PingOp : public ServerRequestOp
-{
-private:
-	bool mExtended;
-
-public:
-	DWORD mLag;
-	std::string mAppName;
-	std::string mLogicalName;
-	std::string mImage;
-	std::string mPorts;
-	std::string mRegData;
-	std::string mServData;
-	time_t mVersion;
-	long mPID;
-	bool mIsAuth;
-
-protected:
-	virtual WONStatus GetNextRequest();
-	virtual WONStatus CheckResponse();
-	virtual void Reset();
-
-public:
-	PingOp(const IPAddr &theAddr, unsigned char theLengthFieldSize, bool extended = false);
-
-	void SetExtended(bool isExtended) { this->mExtended = isExtended; }
-	bool GetExtended() { return this->mExtended; }
-
-};
-
-typedef SmartPtr<PingOp> PingOpPtr;
+// PingOp is a Rust op (rust/crates/ee_won/src/reqops.rs, EE_WON_REQOPS_PING)
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////

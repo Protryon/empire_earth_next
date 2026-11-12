@@ -1781,6 +1781,9 @@ public:
     // an op derived in Rust (ee_won reqop.rs, e.g. ee_won_adminop_new): its RunHook statements, request, reply and
     // Reset are Rust's (the virtuals below when not overridden); the request owns it
     ServerRequestOp(ServerContext*, EeWonReqOp* inRustOp);
+    ServerRequestOp(const IPAddr&, EeWonReqOp* inRustOp);
+    // a Rust op's request sent as one datagram on this socket instead (ReportPatchStatusOp's SetUDPSocket)
+    void SetUDPSocket(AsyncSocket* inSocket) { this->mUDPSocket = inSocket; }
     const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
     virtual void RunHook();   //2ae390
     virtual void CleanupHook(); //2ae4c0
@@ -1790,6 +1793,7 @@ public:
     virtual void Reset();     //326b60
 protected:
     WONStatus InvalidReplyHeader(); //2ad6a0, protected, 16 bytes; returns 100057
+    void RunDatagram(); // the request without a length field to the first address, then Success
     virtual ~ServerRequestOp(); //2ad110, explicit own-vptr store
 public:
     typedef std::list<IPAddr> AddrList;
@@ -1809,6 +1813,7 @@ public:
     ByteBufferPtr mRequest; //ec
     ByteBufferPtr mResponse; //f0..f4
     EeWonReqOp* mRustOp; // NULL: a C++ derived op (or none)
+    SmartPtr<AsyncSocket> mUDPSocket; // a Rust op's datagram socket (NULL: the exchange)
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.
@@ -2007,6 +2012,9 @@ public:
     PeerAuthServerOp(AuthContext*,BlockingSocket*); //2e8950, 230 bytes, RET8
     // Typed field view for the game's use; access and names inferred.
     IPAddr mConnectAddr; //94..bc, default IPAddr (0x28) constructed at 2b2350
+    // the client's certificate after the handshake (LanLogic's read); mPeerAuthServer goes private once
+    // LanLogic calls this (the lobby lane)
+    const AuthCertificateBase* GetClientCertificate() { return this->mPeerAuthServer.GetClientCertificate(); }
     PeerAuthServer mPeerAuthServer; //bc..2240; clientCertificate2230/session2234/state223c
 };
 
@@ -2383,22 +2391,7 @@ private:
     // the birth date, the newsletter subscriptions and the custom action: a Rust object (ee_won db.rs)
     EeWonProfile* mProfile;
 };
-class DBProxyOp : public ServerRequestOp {
-public:
-    DBProxyOp(ServerContext* inContext); //2cca10,235B; dtor implicit224B2ccb20,noownVT
-    DBProxyOp(const IPAddr&); //direct-address constructor (WON SDK)
-    virtual WONStatus GetNextRequest(); //2ccc00
-    virtual WONStatus CheckResponse(); //2ccd30
-    virtual void Reset();     //4142a0
-    short mMessageType; //f4
-    short mMessageReplyType; //f6
-    short mSubMessageType; //f8
-    short mSubMessageReplyType; //fa
-    ByteBufferPtr mRequestData; //fc
-    WriteBuffer mReceivedData; //100..118
-    ByteBufferPtr mReplyData; //118
-    std::string mReplyErrorString; //11c..12c
-};
+// DBProxyOp is a Rust op base (rust/crates/ee_won/src/reqop.rs DbProxy)
 // Patch-server records: VersionData 0x48 / PatchData 0xa4,
 // constructors 2d83a0/2d86f0, allocations 2d93a7/2d9079.
 enum VersionState { VersionState_Invalid=0, VersionState_Inactive=1, VersionState_Active=2, VersionState_BadState=3 };
@@ -2481,25 +2474,7 @@ public:
     void SetIsActive(bool inActive) { this->mIsActive=inActive; }
 };
 typedef std::list<SmartPtr<PatchData> > PatchDataList;
-class CheckValidVersionOp : public DBProxyOp {
-    void Init(); //2d9380
-protected:
-    virtual ~CheckValidVersionOp(); //2d8d90/458 explicitownVTstore2d8db0
-    virtual void RunHook();   //2d9250
-    virtual WONStatus CheckResponse(); //2d8f60
-private:
-    std::string mProductName; //12c..13c
-    SmartPtr<VersionData> mVersionData; //13c
-    PatchDataList mPatchDataList; //140..14c
-    bool mGetPatchList; //14c, naturalalignment14d..14f
-    std::string mVersionTo; //150..160
-    std::string mVersionToDescriptionURL; //160..170
-    const unsigned short mMsgType; //170=1, naturalalignment172..173,full174
-public:
-    CheckValidVersionOp(const std::string& inProduct,ServerContext* inContext); //2d8c80
-    void SetConfigName(const std::string& inName) { this->mVersionData->SetConfigName(inName); }
-    void SetVersion(const std::string& inVersion) { this->mVersionData->SetVersion(inVersion); }
-};
+// CheckValidVersionOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 class DetectFirewallOp : public ServerRequestOp {
 protected:
     void Init(); //2cf5c0, constructor called at 2cf651
@@ -2526,20 +2501,7 @@ public:
 
 // RequestPasswordEmailOp and RequestAccountInfoEmailOp are Rust ops (rust/crates/ee_won/src/adminop.rs)
 
-// GetUserIdFromNameOp, 0x140 bytes; ctor 2cd3a0 / destructor 2cd4d0,
-// RTTI44d2b8 six inherited operation slots plus Reset18; no additional slots.
-class GetUserIdFromNameOp : public DBProxyOp {
-protected:
-    virtual ~GetUserIdFromNameOp(); //2cd4d0 explicit ownVT44d2b8
-    virtual void RunHook();   //2cd600, serialized lookup request
-    virtual WONStatus CheckResponse(); //2cd700, vtable-derived response
-public:
-    GetUserIdFromNameOp(ServerContext*); //2cd3a0
-    void SetUserName(const std::wstring& v) { this->mUserName=v; }
-    unsigned long GetUserId() const { return this->mUserId; }
-    std::wstring mUserName; //12c
-    unsigned long mUserId; //13c, constructorzero
-};
+// GetUserIdFromNameOp is a Rust op (rust/crates/ee_won/src/reqops.rs)
 
 // Account creator, 0x1398 bytes. Embedded ElGamal 108..2b0 and Blowfish 2b0..1364.
 class CreateAccountOp : public ServerRequestOp {

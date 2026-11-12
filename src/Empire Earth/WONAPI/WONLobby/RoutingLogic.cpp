@@ -1883,12 +1883,16 @@ void RoutingLogic::AddFriend()
     if(LobbyDoDialog(this->mAddFriendDialog.get())!=100001) return;
     ServerContext* servers=LobbyGetAccountServers();
     if(!servers) return;
-    SmartPtr<GetUserIdFromNameOp> op=new GetUserIdFromNameOp(servers);
+    // GetUserIdFromNameOp: a Rust op (ee_won reqops.rs) with the name, its id read back
     GUIString name=this->mAddFriendDialog->GetName();
-    op->SetUserName(name);
+    std::wstring aWide=name;
+    std::string aName;
+    WideAppendUtf16LE(aName,aWide);
+    SmartPtr<ServerRequestOp> op=new ServerRequestOp(servers,ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(aName.data()),aName.size()));
     LobbyRunOpWithStatus(op.get(),::AddFriendDialog_StatusTitle_String,::AddFriendDialog_StatusDetails_String,1,0);
-    if(op->GetStatus()!=WS_Success || op->GetUserId()==0) return;
-    LobbyFriend* friendEntry=LobbyAddFriend(name,op->GetUserId());
+    unsigned long aUserId=(unsigned long)ee_won_reqop_num(op->mRustOp,EE_WON_REQOP_USER_ID);
+    if(op->GetStatus()!=WS_Success || aUserId==0) return;
+    LobbyFriend* friendEntry=LobbyAddFriend(name,aUserId);
     if(friendEntry) {
     if(this->mCurrentServer.get()) {
         LobbyClient* client=this->mCurrentServer->FindClientByWONId(friendEntry->GetUserId());

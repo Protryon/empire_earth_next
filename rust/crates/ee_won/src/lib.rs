@@ -82,6 +82,7 @@ pub mod qsock;
 pub mod random;
 pub mod regkey;
 pub mod reqop;
+pub mod reqops;
 pub mod resource;
 pub mod routemsg;
 pub mod routing;
