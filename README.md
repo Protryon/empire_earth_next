@@ -22,7 +22,7 @@ DLLs only.
 
 | Module | Was | Source |
 |---|---|---|
-| `exe` | `EE-AOC.exe` (game; with libpng, zlib) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/` |
+| `exe` | `EE-AOC.exe` (game; its libpng and zlib are gone: PNG is ee_openformats' reader) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/lua` |
 | `lle`, `jpeg` | `Low-Level Engine.dll` (engine core, libjpeg, the DCL) | `src/Low-Level Engine/`, `src/ThirdParty/` |
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
 | `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer; now on wgpu) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |

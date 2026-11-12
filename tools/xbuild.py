@@ -1144,8 +1144,6 @@ def cmd_game(a):
     for s in platform_sources(t):
         if pathlib.Path(s).resolve() not in have:
             jobs.append(("platform", s, ""))
-    # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
-    jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
     # the window icon's pixels (the generated gen/PlatIconData.h) handed to the Rust window layer at start-up
     jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatWindowIcon.c", ""))
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
@@ -1176,20 +1174,15 @@ def cmd_game(a):
     print(f"{len(commands) - len(failed)}/{len(commands)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
     if failed:
         return 1
-    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game, then the
-    # image libraries as an archive
-    first = [o for j, o in objs if j[0] not in ("exe", "exeimg")]
+    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game
+    first = [o for j, o in objs if j[0] != "exe"]
     game = [o for j, o in objs if j[0] == "exe"]
-    img = [o for j, o in objs if j[0] == "exeimg"]
-    archive = out / "libexeimg.a"
-    archive.unlink(missing_ok=True)
-    ar = str(ee.LLVM / "llvm-ar.exe") if IS_WINDOWS else (shutil.which("llvm-ar") or "ar")
-    run([ar, "rcs", archive, *img])
+    (out / "libexeimg.a").unlink(missing_ok=True)   # the image libraries' archive (libpng, zlib) of older builds
     exe = out / GAME_NAME
     rsp = out / "link.rsp"
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
     # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
-    libs = [archive, wlib, *sdl_libs(t)]
+    libs = [wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-ldl", "-lm", "-lpthread"]
     else:
