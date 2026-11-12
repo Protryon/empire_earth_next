@@ -41,6 +41,9 @@ M.opts = {
                           -- units; the rest of the guard fights the larger raids as a block, or waits at its post
     detach_n = 3,
     detach_k = 3,
+    detach_r = 0,         -- (off; AI_RESEARCH §8.50, the waves after Copper: a wave of 4-8 seen as 2-3 clusters of 1-3 got 3
+                          -- soldiers each while the rest of the guard waited at its post, half the waves) a raid is small
+                          -- only when the raiders of every raid within detach_r tiles of it are detach_n or fewer
     fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
                           -- centre, where the citizens run, instead of holding its post (no garrison: a town
                           -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
@@ -576,8 +579,19 @@ function M.step(view, mem, opts)
         -- (S2) the small raids: each its detach_k nearest healthy units, on its raider nearest them; the rest go on
         local big, used = {}, {}
         local by = {}
-        for _, r in ipairs(raids) do
-            if r.cl.n <= M.opts.detach_n then
+        local near_n = {}
+        for i, r in ipairs(raids) do
+            near_n[i] = r.cl.n
+            if M.opts.detach_r > 0 then
+                for j, q in ipairs(raids) do
+                    if j ~= i and d2(r.cl.x, r.cl.y, q.cl.x, q.cl.y) <= M.opts.detach_r * M.opts.detach_r then
+                        near_n[i] = near_n[i] + q.cl.n
+                    end
+                end
+            end
+        end
+        for i, r in ipairs(raids) do
+            if near_n[i] <= M.opts.detach_n then
                 local sent = 0
                 while sent < M.opts.detach_k do
                     local best, bd = nil, nil
