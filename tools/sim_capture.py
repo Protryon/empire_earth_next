@@ -70,6 +70,11 @@ USGC is the group commands' sweep (ee/EEUnitHost.h, EEGroupCommandSweep.cpp): ev
 player and a set of selections and arguments, the Rust body of a group command run over the dry host (every world
 call logged, nothing changed); the original body's statements run over the same host must give the same log (else
 EE-SIM exits 3). The record holds the Rust body's log.
+USTM is the unit step's leaves (ee/EEUnitStore.h, ee_units step.rs): one record per physics tick, the calls of the
+reload, target and heal search countdowns and RegeneratePower and the FNV-1a of each call's kind, unit, inputs and
+outputs. Its golden lines come from the C++ bodies (oracle, late 3-5, space 2-3); late 2, 6, 7 (the fishing-boat
+rebaseline's games), space 4-7 and calamity from the Rust bodies, whose every call the original's statements recheck
+while the capture runs (EE-SIM exits 3 on a difference).
 `replay` covers the formations, the combat formulas and the tech tree's records (ee_tech: TNRS, TNPR, TSOL, TSWP,
 EVHP).
 """
