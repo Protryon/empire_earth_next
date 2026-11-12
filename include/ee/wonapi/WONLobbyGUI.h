@@ -833,70 +833,63 @@ public:
 
 // InputBox (0xec bytes): Background values at +0xc4 and +0xd8
 // Constructor 0x2f7fd0 and destructor 0x2f8270 are out of line.
+// InputBox (R6 WON round 22): its text, selection, scroll, cursor, padding, history and paint are the Rust
+// InputBox (rust/crates/ee_won/src/inputobj.rs); this is the type the lobby holds and what its configs set.
 class InputBox : public Component {
 public:
     void SetFont(Font* f) { this->mFont=f; }
     typedef bool (*InputFilter)(InputBox*,GUIString&);
-    static bool NumericFilter(InputBox*,GUIString&); //2f7f70 cdecl
-    InputBox(); // 0x2f7fd0
-    // Implicit virtual destructor (0x2f8270)
-    const GUIString& GetText() const; // 0x2f9960
-    void SetText(const GUIString&,bool); //2f9990
-    void Clear(bool); //2f99c0
-    void AddInputHistory(const GUIString&,bool); // 0x2f9140
-    void SetInputHistory(const GUIString&,bool=false); //2f92f0
-    void SetAllowSelection(bool); // 0x2f84b0
-    void SelectRange(int,int); // 0x2f8aa0 (SDK name SetSel)
-    void AdjustTextRect(); //2f8400
-    void SetIcon(Image*); //2f8450
-    void SetCharWidth(int); //2f8560
-    void CheckSel(int,int,bool); //2f8600
+    static bool NumericFilter(InputBox*,GUIString&); // at 0x006f7f70 in the original
+    InputBox(); // at 0x006f7fd0 in the original
+    virtual ~InputBox();
+    const GUIString& GetText() const { return this->mRealText; }
+    void SetText(const GUIString& t,bool send) { this->CallText(EeWonInputCall::SetText,t,send); }
+    void Clear(bool send) { this->CallText(EeWonInputCall::SetText,gEmptyGUIString,send); }
+    void AddInputHistory(const GUIString& t,bool clear) { this->CallText(EeWonInputCall::AddInputHistory,t,clear); }
+    void SetInputHistory(const GUIString& t,bool clear=false) { this->CallText(EeWonInputCall::SetInputHistory,t,clear); }
+    void SetAllowSelection(bool allow) { this->Call(EeWonInputCall::SetAllowSelection,allow); }
+    void SelectRange(int start,int end) { this->Call(EeWonInputCall::SelectRange,start,end); }
+    void SetIcon(Image* icon) { this->mIcon=icon; this->Call(EeWonInputCall::IconChanged); }
+    void SetCharWidth(int em) { this->Call(EeWonInputCall::SetCharWidth,em); }
     void SetBackground(const Background& b) { this->mBackground=b; }
     void SetDisabledBackground(const Background& b) { this->mDisabledBackground=b; }
-    void SetCursorBlinkRate(int,int=0); //2f87d0
-    void AdjustPosition(); //2f8a20
-    void CopySelection(); // 0x2f8b10
-    void SetSelText(const GUIString&,bool=true); //2f8e10
-    int MoveCursor(bool,bool,const GUIString&,int); //2f90c0
-    void SetPasswordChar(char); //2f9970
-    void SetTextPrv(const GUIString&,bool=true); // 0x2f99e0
-    virtual void Virtual08(); //2f8510
-    virtual void GetDesiredSize(int&,int&); //2f8530
-    virtual void GotFocus();  //2f8590
-    virtual void LostFocus(); //2f85d0
-    virtual void MouseDown(int,int,int); //2f8750
-    virtual void MouseUp(int,int,int);   //2f8790
-    virtual void MouseExit(); //2f87a0
-    virtual void MouseDrag(int,int); //2f87b0
-    virtual bool TimerEvent(int); //2f8800
-    virtual bool KeyChar(int);   // 0x2f8c30
-    virtual bool KeyDown(int);   //2f93b0
-    virtual void Paint(Graphics&); // 0x2f9ac0
-    GUIString mText; //30 display
-    GUIString mPasswordText; // at +0x34, the real text when this is a password box
-    char mPassword; // at +0x38, the password character
-    SmartPtr<Image> mIcon; //3c
-    InputFilter mInputFilter; // at +0x40, input transform
-    std::deque<GUIString> mInputHistory; // at +0x44..0x57, Dinkum deque (allocator, map, map size, offset, size; 0x14 bytes)
-    int mInputHistoryPos; //58
-    int mMaxInputHistory; //5c
-    bool mHaveTraversedHistory; //60
-    bool mBackwardsSel; //61
-    int mSelStartChar; //64
-    int mSelEndChar; //68
-    int mHorzOffset; //6c
-    bool mSelecting; //70
-    int mLeftPad,mTopPad,mRightPad,mBottomPad; //74,78,7c,80
-    int mCursorDelay,mCursorOnTime,mCursorOffTime; //84,88,8c
-    bool mCursorOn,mUnderlineCursor,mAllowSelection,mSelectOnFocus,mUseDisabledColors; //90..94
-    int mMaxChars; //98
-    SmartPtr<Font> mFont; //9c
-    unsigned long mTextColor; // at +0xa0
-    int mDisabledTextColor; //a4
-    SelectionColor mSelColor; // at +0xa8..0xb3
-    WONRectangle mTextRect; // at +0xb4..0xc3
-    Background mBackground; // at +0xc4..0xd7
-    Background mDisabledBackground; // at +0xd8..0xeb
+    void SetCursorBlinkRate(int on,int off=0) { this->Call(EeWonInputCall::SetCursorBlinkRate,on,off); }
+    void AdjustPosition() { this->Call(EeWonInputCall::AdjustPosition); }
+    void CopySelection() { this->Call(EeWonInputCall::CopySelection); }
+    void SetSelText(const GUIString& t,bool send=true) { this->CallText(EeWonInputCall::SetSelText,t,send); }
+    void SetPasswordChar(char c) { this->Call(EeWonInputCall::SetPasswordChar,(intptr_t)c); }
+    void SetMaxChars(int n) { this->Call(EeWonInputCall::SetMaxChars,n); }
+    void SetSelectOnFocus(bool on) { this->Call(EeWonInputCall::SetSelectOnFocus,on); }
+    void SetMaxInputHistory(int n) { this->Call(EeWonInputCall::SetMaxInputHistory,n); }
+    void SetLeftPad(int n) { this->Call(EeWonInputCall::SetLeftPad,n); }
+    int GetSelStart() { return (int)this->Call(EeWonInputCall::SelStart); }
+    virtual void Virtual08() { this->Call(EeWonInputCall::SizeChanged); } // SizeChanged
+    virtual void GetDesiredSize(int& w,int& h) { this->Call(EeWonInputCall::DesiredSize,(intptr_t)&w,(intptr_t)&h); }
+    virtual void GotFocus() { this->Call(EeWonInputCall::GotFocus); }
+    virtual void LostFocus() { this->Call(EeWonInputCall::LostFocus); }
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonInputCall::MouseDown,x,y,b); }
+    virtual void MouseUp(int x,int y,int b) { this->Call(EeWonInputCall::MouseUp,x,y,b); }
+    virtual void MouseExit() { this->Call(EeWonInputCall::MouseExit); }
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonInputCall::MouseDrag,x,y); }
+    virtual bool TimerEvent(int delta) { return this->Call(EeWonInputCall::TimerEvent,delta)!=0; }
+    virtual bool KeyChar(int k) { return this->Call(EeWonInputCall::KeyChar,k)!=0; }
+    virtual bool KeyDown(int k) { return this->Call(EeWonInputCall::KeyDown,k)!=0; }
+    virtual void Paint(Graphics& g) { this->Call(EeWonInputCall::Paint,(intptr_t)&g); }
+    GUIString mText; // the shown text (the password characters for a password box): the Rust box's copy
+    GUIString mRealText; // GetText(): the Rust box's copy
+    SmartPtr<Image> mIcon;
+    InputFilter mInputFilter;
+    bool mUseDisabledColors;
+    SmartPtr<Font> mFont;
+    unsigned long mTextColor;
+    int mDisabledTextColor;
+    SelectionColor mSelColor;
+    Background mBackground;
+    Background mDisabledBackground;
+    EeWonInput* mRust;
+private:
+    intptr_t Call(EeWonInputCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_input_call(this->mRust,c,a,b,cc); }
+    void CallText(EeWonInputCall c,const GUIString& t,bool flag) { this->Call(c,(intptr_t)t.mData->mText,t.length(),flag); }
 };
 
 class StretchImage;

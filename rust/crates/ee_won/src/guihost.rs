@@ -93,6 +93,12 @@ pub enum EeWonGuiOp {
     BaseKeyChar,
     /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
     ScrollTranslate,
+    /// `Component::GotFocus()` (the input box's base).
+    BaseGotFocus = 20,
+    /// `Component::LostFocus()`.
+    BaseLostFocus,
+    /// `Component::Paint(*a)` (`a` the Graphics).
+    BasePaint,
     // ---- the component
     /// `Invalidate()`.
     Invalidate = 30,
@@ -116,6 +122,16 @@ pub enum EeWonGuiOp {
     SelTextBreak,
     /// `Clipboard::Set(copied text)`, then the copied text emptied.
     SelTextCopy,
+    /// `SetSize(a, b)`.
+    SetSize = 45,
+    /// `SetDefaultCursor(a)` (`EeWonGuiCursor`).
+    SetDefaultCursor,
+    /// `FireEvent(a, false)` (`EeWonGuiEvent`).
+    FireEvent,
+    /// `Clipboard::Set(text)`, the text `b` units (u32) at `a`.
+    ClipboardSet,
+    /// `Clipboard::Get()`'s units appended to the Rust buffer `a` with `ee_won_gui_sink_units`.
+    ClipboardTake,
     // ---- a segment (`a` = its C++ object)
     /// `a->AddRef()`.
     SegHold = 60,
@@ -145,6 +161,40 @@ pub enum EeWonGuiOp {
     /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
     /// segment `c`'s font and text (none when `c` is 0).
     Draw = 90,
+    // ---- the input box (its font, icon, filter and the texts the C++ keeps for its readers)
+    /// `mFont->GetHeight()`.
+    FontHeight = 100,
+    /// `mFont->GetCharacterWidth(a)`.
+    FontCharWidth,
+    /// `mFont->GetStringWidth(mText, a, b)` (both cast to unsigned short).
+    TextWidth,
+    /// `mFont->GetStringWidth(mText)`.
+    TextWidthAll,
+    /// `mFont->GetCharacterWidth(mText[a])`.
+    TextCharWidth,
+    /// `mFont->GetStringWidth(GUIString("M"))`.
+    FontStringM,
+    /// the C++ copy of a text (`a`: 0 the shown text `mText`, 1 the real one `GetText()`) = the `c` units (u32)
+    /// at `b`.
+    TextStore,
+    /// `mInputFilter(this, s)` over the string `s` of the `b` units (u32) at `a`: 2 without a filter, else the
+    /// filter's answer (0 or 1) with `s` after it appended to the Rust buffer `c`.
+    Filter,
+    /// `mIcon->mWidth`, or -1 without an icon.
+    IconWidth,
+    /// the C++ members of the paint into `*a` (an `EeWonInputPaint`: the disabled look, the icon and its height,
+    /// the focus, the text colours, the font's height, the selection colours).
+    PaintInputs,
+}
+
+/// The events a component object fires (`FireEvent`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonGuiEvent {
+    /// `ComponentEvent_InputReturn`.
+    InputReturn = 1,
+    /// `ComponentEvent_InputTextChanged`.
+    InputTextChanged = 2,
 }
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.

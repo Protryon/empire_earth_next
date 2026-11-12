@@ -13,7 +13,7 @@ extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord", "EeScreensHotKeyUnit", "EeScreensDiplomacyPlayer"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeWonGuiEvent", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord", "EeScreensHotKeyUnit", "EeScreensDiplomacyPlayer"]
 # Rust-to-Rust bridges no C++ calls (ee_rust defines them for a crate that imports them; listed twice otherwise)
 exclude = ["ee_combat_store_unit_of", "ee_combat_store_player_of"]
 

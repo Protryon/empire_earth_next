@@ -1,8 +1,10 @@
-// WONGUI's component objects in Rust (R6 WON round 21): the one outward call table, ee_won_guicpp_call
+// WONGUI's component objects in Rust (R6 WON rounds 21-22): the one outward call table, ee_won_guicpp_call
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
-// constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs). Each op is a run of the
+// constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
+// constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
+#include <ctype.h>
 #include <string>
 #include <vector>
 #include <list>
@@ -46,6 +48,14 @@ static Cursor* CursorOf(intptr_t inCursor)
     }
 }
 
+// a text the Rust object hands out (u32 units)
+static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
+{
+    std::wstring w;
+    for (intptr_t i = 0; i < inCount; i++) w.push_back((wchar_t)((const uint32_t*)inUnits)[i]);
+    return GUIString(w);
+}
+
 // a component's services, the same for every component object
 static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
 {
@@ -56,6 +66,18 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::GetMousePos: c->GetMousePos(*(int*)a, *(int*)b); return 0;
     case Op::KeyMod: return c->GetKeyMod();
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
+    case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
+    case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
+    case Op::FireEvent:
+        c->Fn2F5380((EeWonGuiEvent)a == EeWonGuiEvent::InputReturn ? ComponentEvent_InputReturn
+                                                                  : ComponentEvent_InputTextChanged, 0);
+        return 0;
+    case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
+    case Op::ClipboardTake: {
+        GUIString aText = Clipboard::Get();
+        ee_won_gui_sink_units((void*)a, aText.mData->mText, aText.length(), sizeof(wchar_t));
+        return 0;
+    }
     default: return 0;
     }
 }
@@ -193,4 +215,103 @@ void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
     for(size_t i=0;i<aCount && i<aParts.size();i++)
         this->AddSegment(text.substr((unsigned short)aParts[i].start,(unsigned short)aParts[i].len),aParts[i].line_break);
 }
+}
+
+// ---- the input box
+
+extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    InputBox* t = (InputBox*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
+    case Op::BaseGotFocus: t->Component::GotFocus(); return 0;
+    case Op::BaseLostFocus: t->Component::LostFocus(); return 0;
+    case Op::BaseMouseExit: t->Component::MouseExit(); return 0;
+    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
+    case Op::FontHeight: return t->mFont->GetHeight();
+    case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
+    case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
+    case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
+    case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
+    case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
+    case Op::TextStore: (a == 0 ? t->mText : t->mRealText) = UnitsText(b, c); return 0;
+    case Op::Filter: {
+        if (!t->mInputFilter) return 2;
+        GUIString aText = UnitsText(a, b);
+        bool r = t->mInputFilter(t, aText);
+        ee_won_gui_sink_units((void*)c, aText.mData->mText, aText.length(), sizeof(wchar_t));
+        return r ? 1 : 0;
+    }
+    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->mWidth : -1;
+    case Op::PaintInputs: {
+        EeWonInputPaint* p = (EeWonInputPaint*)a;
+        p->disabled_look = t->IsDisabled() && t->mUseDisabledColors;
+        p->has_icon = t->mIcon.get() != NULL;
+        p->has_focus = t->HasFocus();
+        p->text_color = (int)t->mTextColor;
+        p->disabled_text_color = t->mDisabledTextColor;
+        p->icon_height = p->has_icon ? t->mIcon->mHeight : 0;
+        p->font_height = t->mFont->GetHeight();
+        p->sel = WONDrawSelOf(t->mSelColor);
+        return 0;
+    }
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mImages[0] = t->mIcon.get();
+        aSlots.mFont = t->mFont.get();
+        aSlots.mString = &t->mText;
+        Graphics& g = *(Graphics*)a;
+        const EeWonDrawOp& o = *(const EeWonDrawOp*)b;
+        auto aBackground = [&](const EeWonDrawOp& call) {
+            Background& aBack = call.b ? t->mDisabledBackground : t->mBackground;
+            aBack.Paint(g, 0, 0, call.c, call.d, call.e, 0);
+        };
+        WONDrawOne(g, o, aSlots, aBackground);
+        return 0;
+    }
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x006f7f70
+// Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
+bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
+{
+    int aPos = 0;
+    if(theStr[0]=='-')
+    {
+        if(theInputBox->GetSelStart()>0)
+            return false;
+        aPos++;
+    }
+    for(;aPos<theStr.length();aPos++)
+        if(!isdigit(theStr[aPos]))
+            return false;
+    return true;
+}
+
+// FUNCTION: WON 0x006f7fd0
+// Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
+// rest: the 500 ms blink, the 100-entry input history, the padding)
+InputBox::InputBox()
+{
+    this->mRust=ee_won_input_new(this,ee_won_guicpp_input_call);
+    this->mFont=this->GetNamedFont("InputBox");
+    this->SetComponentFlags(0x4008,true);
+    this->mTextColor=0x8000000e;
+    this->mDisabledTextColor=(int)0x80000006;
+    this->mDisabledBackground.SetColor((int)0x80000001);
+    this->mUseDisabledColors=true;
+    this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_IBeam));
+    this->mInputFilter=NULL;
+}
+// FUNCTION: WON 0x006f8270
+// Destroys the input box: the Rust box goes
+InputBox::~InputBox() { ee_won_input_free(this->mRust); }
 }
