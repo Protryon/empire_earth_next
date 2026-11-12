@@ -69,6 +69,21 @@
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEUIEMGHotKeyStatusButton.h"
 
+// Presses or releases a status button by hot key (pressing also resets the saved-group state). The original (0x6601da)
+// lay among the main game form's events (EEUIEMainGameEvents.cpp, now Rust's: ee_screens main_game.rs); this one
+// holds a C++ button, so it stays with the panel that makes it.
+long EEUIEMGHotKeyStatusButton::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    if (!this->mButton)
+        return kErrorOK;
+    if (this->mPressed) {
+        this->mButton->HotKeyDown();
+        gWorld.GetCurrentPlayer()->mSavedGroups.Reset(0x14, 1);
+    } else
+        this->mButton->HotKeyUp();
+    return kErrorOK;
+}
+
 // FUNCTION: EXE 0x667ec8
 // Creates the main game form's main panel group with its status box, no unit shown
 EEUIFMGMainGroup::EEUIFMGMainGroup(EEUIFMainGame* inOwner)

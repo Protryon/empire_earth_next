@@ -9884,3 +9884,69 @@ readers' new lines only compile; no tour, LAN game or EE-SIM run calls them.
   built by `WONRoutingMsg.h`'s records, read by `LobbyServer::SyncGroups`) still derive from the 20-line
   ServerRequestOp, which stays until they move. HTTPGetOp / GetHTTPDocumentOp: not started (HTTPEngine drives
   HTTPGetOp's sockets and modes; a scripted-socket driver the size of FTPGetOp's first).
+
+## R6: the game screens, eighth round: the main game form's events, the chat forms and the hot keys whole in Rust (ee_screens main_game.rs, chat.rs, hot_keys.rs; branch rust-screens8, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the in-game HUD's event units; measured by the C++ deleted.
+
+- **Deleted:** `EEUIEMainGameEvents.cpp` (530 lines) and its header, the manager's five main game classes
+  (`EEUIManagerEvents.h`), `EEUIEChatEvents.cpp` (228) and its header, the chat log's three events (out of
+  `EEUIEChatLogEvents.cpp`, which keeps the log's form manager), `EEUIEHotKeyEvents.cpp` (386) and its header, their
+  `??_G` notes and `link/exe/units.txt` lines. C++ lines of the screens (UI Events, User Interface Thread,
+  `include/ee/EEUI*.h`, `EEScreen*.h`, `EECommandLine.cpp`, `EESim.cpp`): 37,112 -> 36,585 -> 36,292 -> 35,996
+  (-1,116; git over the C++: main game +298 -826, chat +116 -409, hot keys +208 -507).
+- **What replaced them:** `main_game.rs` (codes 0x0b01..0x0b26: one per value a creator passes, e.g. the four media
+  dumps, the three rally timers, F4's three loads, the four behaviours), `chat.rs` (0x1201..0x120c, the log's
+  0x1d01..0x1d03), `hot_keys.rs` (0x0e00.. the groups, the player event, the aircraft kinds; a unit selection's code
+  is 0x0f00_0000 with its three flags in bits 16..18 and the unit type in the low 16, made by
+  `ee_screens_hot_key_unit_selection` for the C++ creators). The creators (the main game form's hot keys, the
+  manager's factories, the server's posted pause, the status button's pause, the scenario editor's hot keys, the
+  player's dock hot keys) make them by code; round 4's `EE_SCREENS_CPP_DUMP_MEDIA` codes became screen codes (pattern
+  (d)). `EEUIEMGHotKeyStatusButton` stays C++ (it holds an `EEUIFMGStatusButton*`): its body moved into
+  `EEUIFMGMainGroup.cpp`, the panel that makes it.
+- **Records for the simulation's units:** the hot keys read the current player's unit list; the host hands it over
+  as `EeScreensHotKeyUnit` records (`ee_screenscpp_hot_key_units`: per unit the fields the original read, the
+  unit's for the unit selection, its complex unit's for the aircraft, the aircraft's squared distance computed in
+  C++ with the original's `DistanceToSquared`), and keeps the snapshot's complex unit pointers for the camera jump
+  (`EE_SCREENS_GAME_HK_CENTER` takes a record index, no unit pointer crosses into Rust). Which units a key takes, the
+  next one by id after the selection's highest, the closest aircraft are Rust's.
+- **Order of host calls matters where the fakes print:** the quick load's not-found message was shown before the
+  file spec's delete in the original; a first version showed it after (the golden caught it), so the load is one put
+  that carries the message (`EE_SCREENS_TEXT_MG_QUICK_LOAD`). The chat's Enter is one event object for the hot key
+  object and the edit box's Enter trigger, set in the original's order inside one host op.
+- **Golden drivers** (scratch, `build/sc8`: `main_game_driver.cpp`, `chat_driver.cpp`, `hotkeys_driver.cpp`,
+  `drv.py`; the old headers under `orig/inc`, which `drv.py` now puts first for an `orig*` unit): each one session of
+  2,000 cases drawing an event first (all 38 main game kinds; the chat's 15; the hot keys' groups, aircraft and
+  unit selections with the creators' arguments), perturbing a persistent world and printing it, then every call.
+  Identical old against new on seeds 1-4 (25,000 cases each for 2-4); the round-4 menus and round-7 options drivers
+  relinked over the new host still print their goldens. Mutations checked: the speed's range ends, the hidden
+  units' moved flag, the clock's cycle, the behaviour button's first match, the chat radios' cycle, the log's
+  empty line, the cheat switch, the next unit's fallback, the closest's strict compare, the contained aircraft's
+  full hit points, the idle military's speed: each fails its replay.
+- **Lessons:**
+  - The drivers' fakes must set what the code reads, not what a fake setter records: `GetDisplayMode` is inline
+    (`mDisplayMode`), so a state written only to the fake `SetDisplayMode`'s table made every case take one branch;
+    the first golden "agreed" with a wrong host until the state was written to the member.
+  - A golden that never reaches a rule cannot pin it: the contained aircraft's full hit points rule passed its
+    mutation until the driver drew aircraft families and ammunition (and containers) often enough; the hidden units'
+    walk needed units in the world's list. Run a mutation per rule.
+  - Units whose fields are the unit store's (`EEUnitStoreField`) call `EEUnitStoreWrote` on every write: a driver
+    that writes them needs a no-op for it (an unresolved call to 0 otherwise).
+  - `::gWorld` in a unit defeats the drivers' `#define gWorld (*gFakeWorld)`: the chat units' driver copies drop the
+    `::` (`build/sc8/orig2`). A global object with an out-of-line constructor (`GEViewport gU4E8F08`) is faked the
+    same way (`#define gU4E8F08 (*gFakeViewport)`).
+  - Git Bash rewrites `/DNAME` in an environment variable into a path: pass `-DNAME` to clang-cl.
+  - A comment change in `tools/eedata/` changes the converter code's hash (`open_data.json`) and would rebuild the
+    open tree; leave the converters alone in a screens round.
+- **What the harness reaches:** the tour's F3 input check (`fixture_game.py --input-check`: the main game form's F3
+  hot key, `EE_SCREENS_MG_PAUSE`); the orders' queued steps and the box selection's add mode hold Shift (the main
+  game form's Shift hot key: `EE_SCREENS_MG_ENTER_SHIFT` / `_EXIT_SHIFT`, the shift mode messages); the zoom hot keys,
+  the wheel and the arrow keys' scroll are not moved (`EEUIEHotKeyZoom`, `EEUIEWheelZoom`, `EEUIEKeyboardScroll`).
+  `tools/harness` names none of the deleted classes but in comments (`ai_game.py`'s now name the codes; selftest ALL
+  PASS). **Only a person reaches:** the other hot keys (groups, unit selection, aircraft, follow, perspective, the
+  clock, hidden units, the cheats, the speed keys, the behaviour menu, F1's return to the editor, F4's quick save and
+  loads, the media dump), the main game form's buttons (statistics, diplomacy, chat, the civilization builder, the
+  options button, the chat log button), the chat form and the chat log. Network code: quick save sends
+  `EEMLoadOrSaveGame` to every player; only a multiplayer game sends it over the wire.
+- **Behaviour:** none intended where the original was defined. The main game form's pause posts and drops its
+  `EEAUserPauseGame` reference as before; the options menu's pause still keeps it (the shared host op takes the flag).

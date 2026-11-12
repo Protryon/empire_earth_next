@@ -126,15 +126,12 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIEChatEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"
 #include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEHotKeyEvents.h"
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIEKeyboardScroll.h"
-#include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
@@ -337,14 +334,14 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_OPEN);
         break;
     case kFormEventChatFormOpen:
-        theEvent = new EEUIECEOpenChat;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_OPEN);
         break;
     case kFormEventChatFormClose:
-        theEvent = new EEUIECECloseChat;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CLOSE);
         break;
     case kFormEventChatMLBPressed:
     case kFormEventChatMRBPressed:
-        theEvent = new EEUIECECancel;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CANCEL);
         break;
     case kFormEventWNSFormOpen:
         theEvent = new EEUIEWNSOpen;
@@ -380,11 +377,11 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIECEClose;
         break;
     case kFormEventChatLogOpen:
-        theEvent = new EEUIECLEOpenChatLog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_OPEN);
         break;
     case kFormEventChatLogMLBPressed:
     case kFormEventChatLogMRBPressed:
-        theEvent = new EEUIECLEMousePressed;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_MOUSE_PRESSED);
         break;
     }
     return theEvent;
@@ -392,15 +389,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671cd8
 // (EEUIESSEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d2e
-// (EEUIECECloseChat's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d59
-// (EEUIECEOpenChat's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d84
-// (EEUIECECancel's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
@@ -419,12 +407,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671edc
 // (EEUIECEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671f07
-// (EEUIECLEOpenChatLog's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671f32
-// (EEUIECLEMousePressed's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x671f5d
 // Creates the save/load game form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
@@ -568,7 +550,7 @@ UIEvent* EECreateChatLogEvent(UIForm* inForm, unsigned long inID)
     UIEvent* theEvent = NULL;
     switch (inID) {
     case kControlEventChatLogClose:
-        theEvent = new EEUIECLECloseChatLog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CL_CLOSE);
         break;
     }
     return theEvent;
@@ -655,20 +637,20 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
     UIEvent* theEvent = NULL;
     switch (inID) {
     case kControlEventSRMMainGameStatistics:
-        theEvent = new EEUIEMGDisplayStatistics;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_STATISTICS);
         break;
     case kControlEventSRMMainGameDiplomacy:
-        theEvent = new EEUIEMGDisplayDiplomacy;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_DIPLOMACY);
         break;
     case kControlEventSRMMainGameChat:
-        theEvent = new EEUIEMGDisplayChat;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT);
         break;
     case kControlEventSRMMainGameOptions:
-        theEvent = new EEUIEMGDisplayOptions;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_OPTIONS);
         break;
     case kControlEventSRMLargeCivBuilderAlert:
     case kControlEventSRMMainGameCivBuilder:
-        theEvent = new EEUIEMGDisplayCivBuilder;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CIV_BUILDER);
         break;
     case kControlEventSRMLargeScenBriefingAlert:
     case kControlEventSRMGameInfoScenarioIntroduction:
@@ -678,40 +660,40 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         theEvent = new EEUIELoadUnit;
         break;
     case kControlEventSRMIdleCitizen:
-        theEvent = new EEUIEHKUnitSelection(kUnitTypeCitizen, true, false, false);
+        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false));
         break;
     case kControlEventSRMIdleMilitary:
-        theEvent = new EEUIEHKUnitSelection(0, false, true, false);
+        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false));
         break;
     case kControlEventSRMFighterRallyTimer:
-        theEvent = new EEUIEMGIncrementRallyTimer(1);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_FIGHTER);
         break;
     case kControlEventSRMBomberRallyTimer:
-        theEvent = new EEUIEMGIncrementRallyTimer(2);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_BOMBER);
         break;
     case kControlEventSRMAtomicRallyTimer:
-        theEvent = new EEUIEMGIncrementRallyTimer(3);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_ATOMIC);
         break;
     case kControlEventSRMChatDialogFinished:
-        theEvent = new EEUIEMGEndScenarioDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_END_SCENARIO_DIALOG);
         break;
     case kControlEventSRMHiddenUnitToggle:
-        theEvent = new EEUIEMGToggleShowHiddenUnits;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN);
         break;
     case kControlEventSRMFlare:
-        theEvent = new EEUIEMGFlareMode;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FLARE);
         break;
     case kControlEventSRMSetScoutBehavior:
-        theEvent = new EEUIEMGUnitBehavior(0);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_SCOUT);
         break;
     case kControlEventSRMSetStandGroundBehavior:
-        theEvent = new EEUIEMGUnitBehavior(1);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_STAND_GROUND);
         break;
     case kControlEventSRMSetGuardBehavior:
-        theEvent = new EEUIEMGUnitBehavior(2);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_GUARD);
         break;
     case kControlEventSRMSetAggressiveBehavior:
-        theEvent = new EEUIEMGUnitBehavior(5);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE);
         break;
     case kControlEventSRMSetFormationShortLine:
         theEvent = new EEUIEFormationChange(0);
@@ -738,7 +720,7 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         theEvent = new EEUIEFormationChange(7);
         break;
     case kControlEventSRMDisplayChatLog:
-        theEvent = new EEUIEMGShowPreviousMessages;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_PREVIOUS_MESSAGES);
         break;
     }
     return theEvent;
@@ -750,25 +732,6 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 
 // SYNTHETIC: EXE 0x673359
 // (EEUIELoadUnit's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673384
-// (EEUIEMGEndScenarioDialog's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6733af
-// (EEUIEMGDisplayStatistics's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6733da
-// (EEUIEMGDisplayCivBuilder's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673405
-// (EEUIEMGDisplayDiplomacy's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67345b
-// (EEUIEMGIncrementRallyTimer's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x673486
-// Creates the show-previous-messages event of the main game form
-// (EEUIEMGShowPreviousMessages's implicit ctor (not inlined))
 
 // SYNTHETIC: EXE 0x67349a
 // (EEUIEFormationChange's scalar deleting destructor, after its first user)
