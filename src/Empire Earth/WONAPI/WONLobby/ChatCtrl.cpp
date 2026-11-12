@@ -601,9 +601,9 @@ void ChatCtrl::SendInput()
         if(parser->mTargetName.length()!=0) break;
         {
             GUIString names;
-            for(LobbyIgnoredNameSet::const_iterator i=LobbyFn35CFC0().begin();i!=LobbyFn35CFC0().end();++i) {
+            for(size_t i=0;i<LobbyGetIgnoredNameCount();++i) {
                 if(names.length()!=0) names.append(GUIString(", "));
-                names.append(*i);
+                names.append(LobbyGetIgnoredNameAt(i));
             }
             this->AddTextLine(::ChatCtrl_IgnoreList_String,names,true);
         }

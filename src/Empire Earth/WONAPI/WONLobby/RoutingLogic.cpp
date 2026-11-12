@@ -1774,7 +1774,6 @@ void RoutingLogic::LocateFriends()
     UDPManager* manager = LobbyGetUDPManager();
     if (manager == NULL) return;
     unsigned long now = (unsigned long)time(NULL);
-    const LobbyFriendMap& friends = LobbyFn35D270();
     LobbyServerList* servers = this->mServerList.get();
     int count = 0;
     for (size_t scanServer = 0; scanServer < servers->GetCount(); ++scanServer) {
@@ -1784,9 +1783,9 @@ void RoutingLogic::LocateFriends()
     }
     if (count == 0) return;
     RoutingGetUserStatusOp::FriendStatusMap requested;
-    LobbyFriendMap::const_iterator friendItr = friends.begin();
-    while(friendItr != friends.end()) {
-        LobbyFriend* friendInfo = friendItr->second.get();
+    size_t friendItr = 0;
+    while(friendItr < LobbyGetFriendCount()) {
+        LobbyFriend* friendInfo = LobbyGetFriendAt(friendItr);
         if (this->ShouldLocateFriend(friendInfo,now)) {
             friendInfo->StartLocate(0);
             friendInfo->mLastSearch = count;
@@ -2067,7 +2066,7 @@ namespace WONAPI {
 // Returns false with a message box when the friends list already holds 255 entries
 bool RoutingLogic::CanAddFriend()
 {
-    if(!ee_won_routing_can_add_friend(LobbyFn35D270().size())) {
+    if(!ee_won_routing_can_add_friend(LobbyGetFriendCount())) {
         LobbyMessageBox(::RoutingLogic_TooManyFriendsTitle_String,
                         ::RoutingLogic_TooManyFriendsDetails_String);
         return false;

@@ -831,11 +831,9 @@ void LanLogic::EnterLanScreen()
     LobbySetCurrentUser(NULL);
     this->mLanGames->Clear();
     this->mDirectGames->Clear();
-    const LobbyDirectConnectMap& aSavedGames = LobbyFn35D8E0();
-    LobbyDirectConnectMap::const_iterator anItr;
-    for (anItr = aSavedGames.begin(); anItr != aSavedGames.end(); ++anItr) {
-        LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(anItr->first, NULL);
-        aGame->mName = anItr->second;
+    for (size_t anItr = 0; anItr < LobbyGetDirectConnectCount(); ++anItr) {
+        LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(LobbyGetDirectConnectAddressAt(anItr), NULL);
+        aGame->mName = LobbyGetDirectConnectNameAt(anItr);
     }
     LobbyBroadcastEvent(new SyncGameListEvent(this->mDirectGames.get()), true);
     this->StartDiscovery();

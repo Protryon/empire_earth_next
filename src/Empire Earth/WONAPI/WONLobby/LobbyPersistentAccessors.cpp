@@ -26,13 +26,16 @@ void LobbySetCurrentUser(LobbyUserInfo* user)
 }
 
 // FUNCTION: WON 0x0075cfc0
-// Returns the current user's ignored player names (an empty set without lobby data)
-const LobbyIgnoredNameSet& LobbyFn35CFC0()
+// The current user's ignored player names (none without lobby data), in their order
+size_t LobbyGetIgnoredNameCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->IgnoredNames();
-    static LobbyIgnoredNameSet empty;
-    return empty;
+    return data!=NULL?data->IgnoredNames().size():0;
+}
+GUIString LobbyGetIgnoredNameAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->IgnoredNames().KeyAt(inPos):gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075d010
@@ -41,8 +44,7 @@ bool LobbyIsNameIgnored(const GUIString& name)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return false;
-    LobbyIgnoredNameSet::iterator it=data->IgnoredNames().find(name);
-    return it!=data->IgnoredNames().end();
+    return data->IgnoredNames().Contains(name);
 }
 
 // FUNCTION: WON 0x0075d090
@@ -51,18 +53,20 @@ bool LobbyIsCDKeyBlocked(unsigned long id)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return false;
-    std::set<unsigned long>::iterator it=data->BlockedCDKeyIds().find(id);
-    return it!=data->BlockedCDKeyIds().end();
+    return data->BlockedCDKeyIds().Contains(id);
 }
 
 // FUNCTION: WON 0x0075d270
-// Returns the current user's friend list (an empty map without lobby data)
-const LobbyFriendMap& LobbyFn35D270()
+// The current user's friends (none without lobby data), by user id
+size_t LobbyGetFriendCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->Friends();
-    static LobbyFriendMap empty;
-    return empty;
+    return data!=NULL?data->Friends().size():0;
+}
+LobbyFriend* LobbyGetFriendAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->Friends().At(inPos):NULL;
 }
 
 // FUNCTION: WON 0x0075d3f0
@@ -71,9 +75,7 @@ LobbyFriend* LobbyFindFriend(unsigned long id)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return NULL;
-    LobbyFriendMap::iterator it=data->Friends().find(id);
-    if(it==data->Friends().end()) return NULL;
-    return it->second.get();
+    return data->Friends().Get(id);
 }
 
 // FUNCTION: WON 0x0075d640

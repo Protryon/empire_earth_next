@@ -656,9 +656,9 @@ void ServerListCtrl::LoadFilterCombos()
         aCombo->Clear(true);
         aCombo->InsertItem(new TextListItem(::ServerListCtrl_NoFilter_String,this->mBoldFont.get()),-1);
         aCombo->InsertItem(new FilterListItem(it->mColumnName,this->mBoldFont.get()),-1);
-        const LobbyOptionSet& aFilters=LobbyFn35DC80(it->mColumnName);
-        for(std::list<GUIString>::const_iterator jt=aFilters.mValues.begin();jt!=aFilters.mValues.end();++jt)
-            aCombo->AddString(*jt,-1);
+        LobbyOptionSet aFilters=LobbyGetFilterValues(it->mColumnName);
+        for(size_t jt=0;jt<aFilters.size();++jt)
+            aCombo->AddString(aFilters.ValueAt(jt),-1);
     }
 }
 extern int gServerFilterItemPos;

@@ -39,9 +39,8 @@ void LostPasswordCtrl::UpdateRetrieveButton()
 void LostPasswordCtrl::FillUserNames()
 {
     this->mUserNameCombo->Clear(true);
-    const LobbyUserInfoMap& users=LobbyFn35CE60();
-    for(LobbyUserInfoMap::const_iterator i=users.begin();i!=users.end();++i)
-        this->mUserNameCombo->AddString(i->first,-1);
+    for(size_t i=0;i<LobbyGetUserCount();++i)
+        this->mUserNameCombo->AddString(LobbyGetUserNameAt(i),-1);
 }
 // FUNCTION: WON 0x007c0520
 // Updates the button on typing, requests the lost password on retrieve and refills the names on event 100052
