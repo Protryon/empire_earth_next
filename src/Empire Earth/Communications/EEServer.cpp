@@ -40,7 +40,8 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
-#include "ee/EEUIEMainGameEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
 #include "ee/EEWonNet.h"
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEARemovePlayer.h"
@@ -710,7 +711,7 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
         theResult = this->StartVote(static_cast<EEMEdictProposal*>(inMessage)->GetEdict());
         break;
     case kNetMessageClientRequestPause: {
-        UIEvent* theEvent = new EEUIEMGPauseGame;
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
         inMessage->Dereference();
@@ -759,9 +760,6 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
     }
     return theResult;
 }
-
-// SYNTHETIC: EXE 0x4cc1ce
-// (EEUIEMGPauseGame's ??_G, after its first user)
 
 // FUNCTION: EXE 0x4cc1f9
 // Stamps the host's local input with the fast-selection number; selection messages take a new number and run at once

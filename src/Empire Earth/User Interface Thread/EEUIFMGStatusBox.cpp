@@ -67,7 +67,6 @@
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEButtonObject.h"

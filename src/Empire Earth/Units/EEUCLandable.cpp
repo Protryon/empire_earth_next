@@ -25,6 +25,8 @@
 #include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -1201,79 +1203,14 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
     return theResult;
 }
 
-// FUNCTION: EXE 0x61695d
-// Updates the plane's circling side from GetNextFlightState (not while circling or waiting); a switch of side
-// waits for the flight time's next whole second
-void EEUCLandable::UpdateFlightState(EEComplexUnit* inUnit, long inTime, long inLeft)
-{
-    long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    if (theCommand == kActionCircle || theCommand == kActionWaitForLandingClearance || theCommand == kActionCircleAirtrafficController)
-        return;
-    unsigned long theState = inUnit->mCurrentPhysicsOrder;
-    unsigned long theNew = this->GetNextFlightState(inUnit);
-    if (theState == 5) {
-        if (theNew != 5)
-            inUnit->SetCurrentPhysicsOrder(theNew);
-    } else if (theNew == 5)
-        inUnit->SetCurrentPhysicsOrder(5);
-    else if (theState != theNew) {
-        long theNow = inTime / 1000;
-        long theLast = inLeft / 1000;
-        if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionFaceEnemyUnit && (theNow > theLast || theLast == 0))
-            inUnit->SetCurrentPhysicsOrder(theNew);
-    }
-}
-
 // FUNCTION: EXE 0x616a11
 // Advances a plane each tick: flight time countdown (not in cinematics or for nature), circling side, goal queues,
 // physics, timers, animation and sound, attack frames, rotting, and fading out below ground in space
 void EEUCLandable::Update(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition;
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionIdle) {
-        long theTime = inUnit->mFlightTime;
-        long theLeft = theTime - gPhysics->mTickTimeMs;
-        if (theLeft < 0)
-            theLeft = 0;
-        if (!::gWorld.mInCinematic && inUnit->mPlayer->mPlayerID != 0)
-            inUnit->SetFlightTime(theLeft);
-        this->UpdateFlightState(inUnit, theTime, theLeft);
-    }
-    unsigned long theCount = inUnit->GetNumGoalQueues();
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (!inUnit->mGoalQueues[i].mStarted || inUnit->mGoalQueues[i].mGoals.size() <= 0)
-            continue;
-        inUnit->mGoalQueues[i].Update();
-        inUnit->RefreshGoals();
-        inUnit->RefreshActiveGoal();
-    }
-    if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    inUnit->UpdateOrbitals();
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    case kActionFadingOutInSpace:
-        inUnit->GetPosition(thePosition);
-        if (thePosition.GetZ() < 0.0f)
-            inUnit->SetOpacityChain(1.0f - thePosition.GetZ() * -0.16666667f);
-        break;
-    }
-    this->UpdateDone(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_LANDABLE, this, inUnit);
 }
 
 // FUNCTION: EXE 0x616c22

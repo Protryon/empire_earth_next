@@ -88,6 +88,7 @@
 #include "ee/EECPNext.h"
 #include "ee/EECPNextUnits.h"
 #include "platform/PlatSim.h"
+#include "rust/ee_ai.h"   // ee_ai_units_save_*: the save block's format (ee_ai units_save.rs)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The state
@@ -4209,193 +4210,144 @@ void EECPUnitsMicroTick(unsigned long inTime)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The save: "EENU", version 1, then int32 LE fields
-
-static void EECPUnitsPut(std::string& ioBytes, long inValue)
-{
-    uint32_t v = (uint32_t)inValue;
-    for (int i = 0; i < 4; i++)
-        ioBytes += (char)((v >> (8 * i)) & 0xff);
-}
+// The save: "EENU" (version 3: the lost layer's trades; 2: the hurt spots and the marks). The format is Rust's (ee_ai
+// units_save.rs); the state's lists go over in its containers' order and come back into them.
 
 static void EECPUnitsSaveState(const EECPUnitsState* s, std::string& outBytes)
 {
-    outBytes.append("EENU", 4);
-    EECPUnitsPut(outBytes, 3);
-    EECPUnitsPut(outBytes, (long)s->mHeld.size());
+    std::vector<int32_t> theHeld, theForward, theHurt, theTrades;
     for (std::set<long>::const_iterator it = s->mHeld.begin(); it != s->mHeld.end(); ++it)
-        EECPUnitsPut(outBytes, *it);
-    EECPUnitsPut(outBytes, (long)s->mEvents.size());
+        theHeld.push_back((int32_t)*it);
+    std::vector<EeAiUnitsEvent> theEvents;
     for (unsigned long k = 0; k < s->mEvents.size(); k++) {
         const UnitsEvent& e = s->mEvents[k];
-        EECPUnitsPut(outBytes, e.mKind);
-        EECPUnitsPut(outBytes, e.mUnit);
-        EECPUnitsPut(outBytes, e.mOther);
-        EECPUnitsPut(outBytes, e.mType);
-        EECPUnitsPut(outBytes, e.mAmount);
-        EECPUnitsPut(outBytes, e.mTime);
+        EeAiUnitsEvent theEvent = {(int32_t)e.mKind, (int32_t)e.mUnit, (int32_t)e.mOther, (int32_t)e.mType,
+            (int32_t)e.mAmount, (int32_t)e.mTime};
+        theEvents.push_back(theEvent);
     }
-    EECPUnitsPut(outBytes, (long)s->mForward.size());
     for (std::map<long, std::pair<long, long> >::const_iterator it = s->mForward.begin(); it != s->mForward.end(); ++it) {
-        EECPUnitsPut(outBytes, it->first);
-        EECPUnitsPut(outBytes, it->second.first);
-        EECPUnitsPut(outBytes, it->second.second);
+        theForward.push_back((int32_t)it->first);
+        theForward.push_back((int32_t)it->second.first);
+        theForward.push_back((int32_t)it->second.second);
     }
-    EECPUnitsPut(outBytes, (long)s->mMemory.size());
+    std::vector<EeAiUnitsRemembered> theMemory;
     for (std::map<long, Remembered>::const_iterator it = s->mMemory.begin(); it != s->mMemory.end(); ++it) {
         const Remembered& r = it->second;
-        EECPUnitsPut(outBytes, it->first);
-        EECPUnitsPut(outBytes, r.mPlayer);
-        EECPUnitsPut(outBytes, r.mType);
-        EECPUnitsPut(outBytes, r.mX);
-        EECPUnitsPut(outBytes, r.mY);
-        EECPUnitsPut(outBytes, r.mHP);
-        EECPUnitsPut(outBytes, r.mSeen);
-        EECPUnitsPut(outBytes, r.mBuilding);
+        EeAiUnitsRemembered theEntry = {(int32_t)it->first, (int32_t)r.mPlayer, (int32_t)r.mType, (int32_t)r.mX,
+            (int32_t)r.mY, (int32_t)r.mHP, (int32_t)r.mSeen, (int32_t)r.mBuilding};
+        theMemory.push_back(theEntry);
     }
-    EECPUnitsPut(outBytes, s->mMemoryMs);
-    EECPUnitsPut(outBytes, s->mMemoryNext);
-    EECPUnitsPut(outBytes, s->mReflexNavalFlee ? 1 : 0);
-    EECPUnitsPut(outBytes, s->mReflexDanger ? 1 : 0);
-    EECPUnitsPut(outBytes, s->mMicroNext);
-    // version 2: the hurt spots and the marks
-    EECPUnitsPut(outBytes, (long)s->mHurt.size());
     for (unsigned long k = 0; k < s->mHurt.size(); k++) {
-        EECPUnitsPut(outBytes, s->mHurt[k].first);
-        EECPUnitsPut(outBytes, s->mHurt[k].second);
+        theHurt.push_back((int32_t)s->mHurt[k].first);
+        theHurt.push_back((int32_t)s->mHurt[k].second);
     }
-    EECPUnitsPut(outBytes, (long)s->mMarks.size());
+    std::vector<EeAiUnitsMark> theMarks;
     for (unsigned long k = 0; k < s->mMarks.size(); k++) {
-        EECPUnitsPut(outBytes, s->mMarks[k].mX);
-        EECPUnitsPut(outBytes, s->mMarks[k].mY);
-        EECPUnitsPut(outBytes, s->mMarks[k].mR);
-        EECPUnitsPut(outBytes, s->mMarks[k].mValue);
-        EECPUnitsPut(outBytes, s->mMarks[k].mUntil);
+        const DangerMark& m = s->mMarks[k];
+        EeAiUnitsMark theMark = {(int32_t)m.mX, (int32_t)m.mY, (int32_t)m.mR, (int32_t)m.mValue, (int32_t)m.mUntil};
+        theMarks.push_back(theMark);
     }
-    // version 3: the lost layer's trades
-    EECPUnitsPut(outBytes, (long)s->mTrades.size());
     for (std::map<std::pair<long, long>, std::pair<long, long> >::const_iterator it = s->mTrades.begin(); it != s->mTrades.end(); ++it) {
-        EECPUnitsPut(outBytes, it->first.first);
-        EECPUnitsPut(outBytes, it->first.second);
-        EECPUnitsPut(outBytes, it->second.first);
-        EECPUnitsPut(outBytes, it->second.second);
+        theTrades.push_back((int32_t)it->first.first);
+        theTrades.push_back((int32_t)it->first.second);
+        theTrades.push_back((int32_t)it->second.first);
+        theTrades.push_back((int32_t)it->second.second);
     }
+    EeAiUnitsSave v = {};
+    v.held = theHeld.data();
+    v.held_count = theHeld.size();
+    v.events = theEvents.data();
+    v.event_count = theEvents.size();
+    v.forward = theForward.data();
+    v.forward_count = s->mForward.size();
+    v.memory = theMemory.data();
+    v.memory_count = theMemory.size();
+    v.memory_ms = (int32_t)s->mMemoryMs;
+    v.memory_next = (int32_t)s->mMemoryNext;
+    v.reflex_naval_flee = s->mReflexNavalFlee;
+    v.reflex_danger = s->mReflexDanger;
+    v.micro_next = (int32_t)s->mMicroNext;
+    v.hurt = theHurt.data();
+    v.hurt_count = s->mHurt.size();
+    v.marks = theMarks.data();
+    v.mark_count = theMarks.size();
+    v.trades = theTrades.data();
+    v.trade_count = s->mTrades.size();
+    size_t theAt = outBytes.size();
+    size_t theLength = ee_ai_units_save_encode(&v, NULL, 0);
+    outBytes.resize(theAt + theLength);
+    ee_ai_units_save_encode(&v, (uint8_t*)&outBytes[theAt], theLength);
 }
 
-namespace {
-struct Getter {
-    const std::string& mBytes;
-    size_t mOffset;
-    bool mOK;
-    explicit Getter(const std::string& inBytes) : mBytes(inBytes), mOffset(0), mOK(true) {}
-    long Get()
-    {
-        if (this->mOffset + 4 > this->mBytes.size()) {
-            this->mOK = false;
-            return 0;
-        }
-        uint32_t v = 0;
-        for (int i = 0; i < 4; i++)
-            v |= (uint32_t)(unsigned char)this->mBytes[this->mOffset + i] << (8 * i);
-        this->mOffset += 4;
-        return (long)(int32_t)v;
-    }
-    long Count(long inMax)
-    {
-        long n = this->Get();
-        if (n < 0 || n > inMax)
-            this->mOK = false;
-        return this->mOK ? n : 0;
-    }
-};
-}  // namespace
-
+// the state from a block (false: not one; the state is then as it was): the counts past kMaxEvents, kMaxRemembered
+// or kMaxTrades, or an event of no kind, refuse it. The layers rebuild at the next game second
 static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
 {
-    if (inBytes.size() < 8 || inBytes.compare(0, 4, "EENU") != 0)
+    const EeAiUnitsLimits theLimits = {(int32_t)kMaxEvents, (int32_t)kMaxRemembered, (int32_t)kMaxTrades,
+        (int32_t)kEvAttacked, (int32_t)kEvConverted};
+    EeAiUnitsDecoded* theDecoded = ee_ai_units_save_decode((const uint8_t*)inBytes.data(), inBytes.size(), &theLimits);
+    if (theDecoded == NULL)
         return false;
-    Getter g(inBytes);
-    g.mOffset = 4;
-    long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 3)
-        return false;
+    const EeAiUnitsSave& v = *ee_ai_units_decoded_view(theDecoded);
     s->mHeld.clear();
-    long n = g.Count(1 << 20);
-    for (long k = 0; k < n && g.mOK; k++)
-        s->mHeld.insert(g.Get());
+    for (size_t k = 0; k < v.held_count; k++)
+        s->mHeld.insert(v.held[k]);
     s->mEvents.clear();
     s->mAttackedAt.clear();
-    n = g.Count(kMaxEvents);
-    for (long k = 0; k < n && g.mOK; k++) {
+    for (size_t k = 0; k < v.event_count; k++) {
         UnitsEvent e;
-        e.mKind = g.Get();
-        e.mUnit = g.Get();
-        e.mOther = g.Get();
-        e.mType = g.Get();
-        e.mAmount = g.Get();
-        e.mTime = g.Get();
-        if (e.mKind < kEvAttacked || e.mKind > kEvConverted)
-            g.mOK = false;
-        else
-            s->mEvents.push_back(e);
+        e.mKind = v.events[k].kind;
+        e.mUnit = v.events[k].unit;
+        e.mOther = v.events[k].other;
+        e.mType = v.events[k].unit_type;
+        e.mAmount = v.events[k].amount;
+        e.mTime = v.events[k].time;
+        s->mEvents.push_back(e);
     }
     s->mForward.clear();
-    n = g.Count(1 << 20);
-    for (long k = 0; k < n && g.mOK; k++) {
-        long a = g.Get(), b = g.Get(), t = g.Get();
-        s->mForward[a] = std::make_pair(b, t);
-    }
+    for (size_t k = 0; k < v.forward_count; k++)
+        s->mForward[v.forward[3 * k]] = std::make_pair((long)v.forward[3 * k + 1], (long)v.forward[3 * k + 2]);
     s->mMemory.clear();
-    n = g.Count(kMaxRemembered);
-    for (long k = 0; k < n && g.mOK; k++) {
-        long theID = g.Get();
+    for (size_t k = 0; k < v.memory_count; k++) {
+        const EeAiUnitsRemembered& m = v.memory[k];
         Remembered r;
-        r.mPlayer = g.Get();
-        r.mType = g.Get();
-        r.mX = g.Get();
-        r.mY = g.Get();
-        r.mHP = g.Get();
-        r.mSeen = g.Get();
-        r.mBuilding = g.Get();
-        s->mMemory[theID] = r;
+        r.mPlayer = m.player;
+        r.mType = m.unit_type;
+        r.mX = m.x;
+        r.mY = m.y;
+        r.mHP = m.hit_points;
+        r.mSeen = m.seen;
+        r.mBuilding = m.building;
+        s->mMemory[m.id] = r;
     }
-    s->mMemoryMs = g.Get();
-    s->mMemoryNext = g.Get();
-    s->mReflexNavalFlee = g.Get() != 0;
-    s->mReflexDanger = g.Get() != 0;
-    s->mMicroNext = g.Get();
+    s->mMemoryMs = v.memory_ms;
+    s->mMemoryNext = v.memory_next;
+    s->mReflexNavalFlee = v.reflex_naval_flee;
+    s->mReflexDanger = v.reflex_danger;
+    s->mMicroNext = v.micro_next;
     s->mHurt.clear();
+    for (size_t k = 0; k < v.hurt_count; k++)
+        s->mHurt.push_back(std::make_pair((long)v.hurt[2 * k], (long)v.hurt[2 * k + 1]));
     s->mMarks.clear();
-    if (theVersion >= 2) {
-        n = g.Count(256);
-        for (long k = 0; k < n && g.mOK; k++) {
-            long a = g.Get(), t = g.Get();
-            s->mHurt.push_back(std::make_pair(a, t));
-        }
-        n = g.Count(64);
-        for (long k = 0; k < n && g.mOK; k++) {
-            DangerMark m;
-            m.mX = g.Get();
-            m.mY = g.Get();
-            m.mR = g.Get();
-            m.mValue = g.Get();
-            m.mUntil = g.Get();
-            s->mMarks.push_back(m);
-        }
+    for (size_t k = 0; k < v.mark_count; k++) {
+        DangerMark m;
+        m.mX = v.marks[k].x;
+        m.mY = v.marks[k].y;
+        m.mR = v.marks[k].r;
+        m.mValue = v.marks[k].value;
+        m.mUntil = v.marks[k].until;
+        s->mMarks.push_back(m);
     }
     s->mTrades.clear();
-    if (theVersion >= 3) {
-        n = g.Count(kMaxTrades);
-        for (long k = 0; k < n && g.mOK; k++) {
-            long a = g.Get(), b = g.Get(), c = g.Get(), d = g.Get();
-            s->mTrades[std::make_pair(a, b)] = std::make_pair(c, d);
-        }
-    }
+    for (size_t k = 0; k < v.trade_count; k++)
+        s->mTrades[std::make_pair((long)v.trades[4 * k], (long)v.trades[4 * k + 1])] =
+            std::make_pair((long)v.trades[4 * k + 2], (long)v.trades[4 * k + 3]);
+    ee_ai_units_decoded_free(theDecoded);
     s->mLost.clear();
     s->mInfluence.clear();
     s->mThreat.clear();
     s->mDangerW = s->mDangerH = 0;   // rebuilt at the next game second
-    return g.mOK && g.mOffset == inBytes.size();
+    return true;
 }
 
 // TEST ONLY (EE_AI_SAVE_CHECK=1, as EECPNextSaveCheck): the bytes decode into a fresh state that encodes to the same

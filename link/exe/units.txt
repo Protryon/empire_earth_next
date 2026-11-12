@@ -384,18 +384,11 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 1cdf25 1cedce Empire Earth/Tech Tree/EETechTreeEpoch.cpp
 1cedce 1cfeef Empire Earth/Tech Tree/EETechTreeNode.cpp
 1cfeef 1d1766 Empire Earth/UI Events/EEUIECampaignEditorEvents.cpp
-1d2b02 1d321b Empire Earth/UI Events/EEUIEChatEvents.cpp
 1d321b 1d3a77 Empire Earth/UI Events/EEUIEChatLogEvents.cpp
-1d4165 1d6775 Empire Earth/UI Events/EEUIEDiplomacyEvents.cpp
-1d6886 1d6b94 Empire Earth/UI Events/EEUIEFormationChange.cpp
-1d99ff 1d9d67 Empire Earth/UI Events/EEUIEScrollZoomEvents.cpp
 1e1b8d 1e1e48 Empire Earth/UI Events/EEUIESSEOpen.cpp
 1e295f 1e5e2e Empire Earth/UI Events/EEUIEPostGameSummaryEvents.cpp
 1e5e2e 1e6711 Empire Earth/UI Events/EEUIEPDCSEvents.cpp
-1e6711 1e688c Empire Earth/UI Events/EEUIECameraEvents.cpp
 1e71cc 1e853a Empire Earth/UI Events/EEUIEScenarioIntroEvents.cpp
-1e93df 1e9f40 Empire Earth/UI Events/EEUIEHotKeyEvents.cpp
-1e9f40 1e9fed Empire Earth/UI Events/EEUIEWheelZoom.cpp
 1e9fed 1eafcb Empire Earth/UI Events/EEUIEWonNetArenaGameEvents.cpp
 1eafcb 1eb5e2 Empire Earth/UI Events/EEUIEWonNetArenaRoomEvents.cpp
 1eb5e2 1eb7fb Empire Earth/UI Events/EEUIEWonNetModifyUserAccountEvents.cpp
@@ -489,7 +482,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 25b2ce 25cead Empire Earth/User Interface Thread/EEUICWonNetGamesBox.cpp
 25cead 25e2f8 Empire Earth/User Interface Thread/EEUICWonNetRoomsBox.cpp
 25e2f8 25fdb3 Empire Earth/User Interface Thread/EEUICWonNetStatBox.cpp
-25fdb3 260c27 Empire Earth/UI Events/EEUIEMainGameEvents.cpp
 260c27 2624a6 Empire Earth/User Interface Thread/EEUIFError.cpp
 2624a6 26272b Empire Earth/User Interface Thread/EEUIFileComboBox.cpp
 26272b 26783d Empire Earth/User Interface Thread/EEUIFMainGame.cpp
@@ -520,7 +512,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 27c0f3 27c8b9 Empire Earth/Civilization Builder/EEAreaEffectTemplate.cpp
 27c8b9 27c9db Empire Earth/Civilization Builder/EECBCivilizationCreator.cpp
 27c9db 27cd62 Empire Earth/Civilization Builder/EECBEditableCivilization.cpp
-27cd62 27cfdb Empire Earth/Civilization Builder/EECBUIEvents.cpp
 27cfdb 27efca Empire Earth/Civilization Builder/EECBUIListBox.cpp
 27efca 27fdfe Empire Earth/Civilization Builder/EECivilizationBuilder.cpp
 27fdfe 2813f4 Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp

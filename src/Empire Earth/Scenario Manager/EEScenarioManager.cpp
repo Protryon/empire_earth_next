@@ -65,6 +65,8 @@
 #include "ee/EECommunications.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEPersistentTag.h"
+#include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 // the vector Load/Save helpers (cdecl template COMDATs 0x1b5faf / 0x1b5fff: the count, then each element's slot)
 template<class T> long EESMLoadVector(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                                       std::vector<T>& outVector)
@@ -87,6 +89,8 @@ template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned lon
         theResult = theIterator->Save(inMajorVersion, inMinorVersion, outFile);
     return theResult;
 }
+
+bool gScenarioSimDialogs = false;
 
 static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms: Update, ApplyPendingEffects; unit .rdata; provisional name)
 static const float kSMZero = 0.0f;           // 0x445fd0 (Update's mTriggerTimer test while mIsMovingCamera; unit .rdata; provisional name)
@@ -924,6 +928,8 @@ void EEScenarioManager::Update()
             }
             this->mTriggerTimer = 0.0f;
             this->mLastChatText.Clear();
+            if (EESimCaptureRecord::Active())
+                EESMCaptureUpdate(this, theHumanPlaying);
         }
     }
     if (this->mIsEndingCinematic && gF4BE374 == 1.0f) {
@@ -996,71 +1002,15 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
 // player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
 long EEScenarioManager::ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle)
 {
-    unsigned long theNumPlayers = gWorld.mNumPlayers;
-    int theResult = -1;
-    std::vector<long> thePlayers;
-    long i;
-    switch (inType) {
-    case 0:
-        theResult = 0;
-        thePlayers.push_back(theResult);
-        break;
-    case 1:
-    case 3:
-        for (i = 1; i < theNumPlayers; i++)
-            if (gWorld.GetPlayer(i)->mHumanPlayer != NULL)
-                thePlayers.push_back(i);
-        if (thePlayers.size() != 0 && inType == 1) {
-            EEAIRandomShuffle(thePlayers.begin(), thePlayers.end());
-            theResult = thePlayers[0];
-            if (inSingle) {
-                thePlayers.clear();
-                thePlayers.push_back(theResult);
-            }
-        }
-        break;
-    case 2:
-    case 4:
-        for (i = 1; i < theNumPlayers; i++)
-            if (gWorld.GetPlayer(i)->mComputerPlayer != NULL)
-                thePlayers.push_back(i);
-        if (thePlayers.size() != 0 && inType == 2) {
-            EEAIRandomShuffle(thePlayers.begin(), thePlayers.end());
-            theResult = thePlayers[0];
-            if (inSingle) {
-                thePlayers.clear();
-                thePlayers.push_back(theResult);
-            }
-        }
-        break;
-    case 5:
-        for (i = 0; i < theNumPlayers; i++)
-            thePlayers.push_back(i);
-        theResult = gPhysics->GetRandom(0L, (long)(theNumPlayers - 1));
-        if (inSingle) {
-            thePlayers.clear();
-            thePlayers.push_back(theResult);
-        }
-        break;
-    case 6:
-        for (i = 1; i < theNumPlayers; i++)
-            thePlayers.push_back(i);
-        theResult = gPhysics->GetRandom(1L, (long)(theNumPlayers - 1));
-        if (inSingle) {
-            thePlayers.clear();
-            thePlayers.push_back(theResult);
-        }
-        break;
-    default:
-        theResult = inType - 6;
-        if (theResult < (long)theNumPlayers)
-            thePlayers.push_back(theResult);
-        else
-            theResult = -1;
-        break;
-    }
+    // the choice is Rust's (ee_scenario condition.rs choose_player, the AI's shuffle with it; the SMCP record too)
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    int32_t thePlayers[EE_SCENARIO_MAX_PLAYERS];
+    size_t theCount = 0;
+    long theResult = ee_scenario_choose_player(&theHost, (int32_t)inType, inSingle, outPlayers != NULL, thePlayers,
+                                               &theCount);
     if (outPlayers != NULL)
-        *outPlayers = thePlayers;
+        outPlayers->assign(thePlayers, thePlayers + theCount);
     return theResult;
 }
 

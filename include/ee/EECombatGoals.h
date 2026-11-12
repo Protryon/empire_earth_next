@@ -126,6 +126,13 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
 // when the body sets it). Returns the body's answer (0/1).
 int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
                       long* ioX = NULL, long* ioY = NULL);
+// The damage of one hit (ee_combat damage.rs compute_damage; ee/EERules.h EEDamageForm, combat.yaml's constants):
+// inUnit hits inTarget with inAttack, attack kind inAmmo (dbfamily column) and weapon inWeapon (dbweapontohit row);
+// the elevation rule is inUnit's class's. inFriendlyFactor: splash on the own player's units. False when the hit does
+// not get through (outAmount untouched), else outAmount. The trample's (EEPhysicsModel); ApplyHit and the splash are
+// damage.rs's.
+bool EECombatComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, float inAttack, long inAmmo, long inWeapon,
+                           float inFriendlyFactor, long& outAmount);
 
 // The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
 // Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running

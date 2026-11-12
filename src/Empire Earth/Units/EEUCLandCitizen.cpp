@@ -15,6 +15,8 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
@@ -27,30 +29,9 @@
 // production, then does its citizen work
 void EEUCLandCitizen::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    inUnit->ContinueProduction();
-    this->UpdateCitizen(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_LAND_CITIZEN, this, inUnit);
 }
 
 // FUNCTION: EXE 0x616d2d

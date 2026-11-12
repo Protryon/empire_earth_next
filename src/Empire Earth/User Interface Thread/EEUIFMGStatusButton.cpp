@@ -69,7 +69,7 @@
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
-#include "ee/EEUIEMainGameEvents.h"
+#include "ee/EEScreenEvent.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EEButtonObject.h"
@@ -1506,7 +1506,7 @@ bool EEModeKeyboardCinematic(void* inForm)
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
     } else if (gISKeyboard->GetEntity(kKeyF3, theKey) == 0 && theKey->JustPressed() && !gWorld.GetScenarioManager()->mIsEndingCinematic) {
-        UIEvent* theEvent = new EEUIEMGPauseGame;
+        UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MG_PAUSE);
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
     } else if (gISKeyboard->GetEntity(kKeyF9, theKey) == 0 && theKey->JustPressed()) {

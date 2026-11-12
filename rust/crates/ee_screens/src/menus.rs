@@ -60,9 +60,8 @@ pub const EE_SCREENS_PC_OPEN: u32 = 0x0806;
 pub const EE_SCREENS_PC_CUSTOM: u32 = 0x0807;
 pub const EE_SCREENS_PC_LEARNING: u32 = 0x0808;
 
-/// The C++ events the menus hang on other forms (built by the host).
-pub const EE_SCREENS_CPP_DUMP_MEDIA: u32 = 0x1_0004; // EEUIEMGDumpLoadedMedia(false)
-pub const EE_SCREENS_CPP_DUMP_MEDIA_ALL: u32 = 0x1_0005; // EEUIEMGDumpLoadedMedia(true)
+/// The main game form's events the main menu hangs on itself (the media dump's hot keys; main_game.rs).
+use crate::main_game::{EE_SCREENS_MG_DUMP_MEDIA, EE_SCREENS_MG_DUMP_MEDIA_ALL};
 
 // ---- the game's calls (MenuHost::call, call_with)
 
@@ -333,8 +332,8 @@ pub fn dispatch<H: MenuHost>(host: &mut H, state: &Mutex<Menus>, event: u32) -> 
             host.show(MAIN_COPYRIGHT_LABEL, DISPLAY_SHOWN);
             let version = host.text(EE_SCREENS_TEXT_VERSION, 0);
             host.set_label(MAIN_BUILD_LABEL, &version);
-            host.add_hot_key(KEY_D, KEY_CONTROL, KEY_NONE, EE_SCREENS_CPP_DUMP_MEDIA);
-            host.add_hot_key(KEY_D, KEY_CONTROL, KEY_SHIFT, EE_SCREENS_CPP_DUMP_MEDIA_ALL);
+            host.add_hot_key(KEY_D, KEY_CONTROL, KEY_NONE, EE_SCREENS_MG_DUMP_MEDIA);
+            host.add_hot_key(KEY_D, KEY_CONTROL, KEY_SHIFT, EE_SCREENS_MG_DUMP_MEDIA_ALL);
             host.call(EE_SCREENS_GAME_DELETE_EDITOR);
             host.call(EE_SCREENS_GAME_DELETE_WON);
         }
@@ -561,8 +560,8 @@ mod tests {
             [
                 "show 8 1",
                 "label 5 T1.0",
-                "hotkey 0x20 0xe0 0x7fff 0x10004",
-                "hotkey 0x20 0xe0 0xe1 0x10005",
+                "hotkey 0x20 0xe0 0x7fff 0xb02",
+                "hotkey 0x20 0xe0 0xe1 0xb03",
                 "call 6",
                 "call 7"
             ]

@@ -4,6 +4,7 @@
 #ifndef EE_RUST_H
 #define EE_RUST_H
 
+#include "ee_ai.h"
 #include "ee_astar.h"
 #include "ee_codec.h"
 #include "ee_combat.h"
@@ -19,6 +20,7 @@
 #include "ee_openformats.h"
 #include "ee_rmap.h"
 #include "ee_rust_common.h"
+#include "ee_scenario.h"
 #include "ee_screens.h"
 #include "ee_sound.h"
 #include "ee_tech.h"

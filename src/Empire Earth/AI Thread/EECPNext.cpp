@@ -46,6 +46,7 @@
 #include "ee/EECPEngine.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
+#include "rust/ee_ai.h"   // ee_ai_*_name: the name tables (ee_ai names.rs)
 
 bool EECPNextEngine(const EEComputerPlayer* inPlayer)
 {
@@ -55,31 +56,12 @@ bool EECPNextEngine(const EEComputerPlayer* inPlayer)
 
 const char* EECPNextCodeName(long inCode)
 {
-    switch (inCode) {
-    case kNextDone: return "done";
-    case kNextQueued: return "queued";
-    default: return "refused";
-    }
+    return ee_ai_code_name((int64_t)inCode);
 }
 
 const char* EECPNextReasonName(long inReason)
 {
-    switch (inReason) {
-    case kNextReasonNoSite: return "no_site";
-    case kNextReasonNoProducer: return "no_producer";
-    case kNextReasonCannotAfford: return "cannot_afford";
-    case kNextReasonNotInEpoch: return "not_in_epoch";
-    case kNextReasonUnknownClass: return "unknown_class";
-    case kNextReasonBadArgument: return "bad_argument";
-    case kNextReasonNoUnits: return "no_units";
-    case kNextReasonRequirements: return "requirements";
-    case kNextReasonBusy: return "busy";
-    case kNextReasonNoTarget: return "no_target";
-    case kNextReasonUnsafe: return "unsafe";
-    case kNextReasonNoDropoff: return "no_dropoff";
-    case kNextReasonUnexplored: return "unexplored";
-    default: return "-";
-    }
+    return ee_ai_reason_name((int64_t)inReason);
 }
 
 EECPNextState::EECPNextState()
@@ -174,14 +156,7 @@ long EECPNextClaimRangeOf(const EEComputerPlayer* inPlayer)
 
 static const char* EECPNextEventName(long inKind)
 {
-    switch (inKind) {
-    case kNextEventUnitLost: return "unit_lost";
-    case kNextEventProductionLost: return "production_lost";
-    case kNextEventAdvanceLost: return "advance_lost";
-    case kNextEventNoSite: return "no_site";
-    case kNextEventGroupWants: return "group_wants";
-    default: return "?";
-    }
+    return ee_ai_event_name((int64_t)inKind, true);   // "?" for a kind it does not know
 }
 
 // the next engine's tick: the executors and the reflexes the classic engine runs too, then one strategy step

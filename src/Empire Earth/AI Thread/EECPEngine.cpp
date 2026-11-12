@@ -39,6 +39,7 @@
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatString.h"
+#include "rust/ee_ai.h"   // ee_ai_*: the manifest, the choices and the resolve (ee_ai manifest.rs, seat.rs)
 
 // ---------------------------------------------------------------------------------------------------------------
 // The log: "EE-AI engine ..." lines to the debug output, the game log when one is open, and EE-SIM's stderr
@@ -112,318 +113,8 @@ static bool EECPAIFileExists(const std::string& inPath)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// A small JSON reader (RFC 8259: objects, arrays, strings with escapes, numbers, true, false, null)
-
-namespace {
-
-struct JValue {
-    enum Kind { kNull, kBool, kNumber, kString, kArray, kObject } mKind = kNull;
-    bool mBool = false;
-    double mNumber = 0.0;
-    std::string mString;
-    std::vector<JValue> mItems;
-    std::vector<std::pair<std::string, JValue>> mFields;
-};
-
-struct JReader {
-    const std::string& mText;
-    size_t mAt = 0;
-    std::string mError;
-    int mDepth = 0;
-
-    explicit JReader(const std::string& inText) : mText(inText) {}
-
-    bool Fail(const std::string& inWhat)
-    {
-        if (mError.empty()) {
-            long theLine = 1;
-            for (size_t i = 0; i < mAt && i < mText.size(); i++)
-                theLine += mText[i] == '\n';
-            mError = "line " + std::to_string(theLine) + ": " + inWhat;
-        }
-        return false;
-    }
-    void Space()
-    {
-        while (mAt < mText.size() && (mText[mAt] == ' ' || mText[mAt] == '\t' || mText[mAt] == '\r' || mText[mAt] == '\n'))
-            mAt++;
-    }
-    bool Word(const char* inWord)
-    {
-        size_t n = strlen(inWord);
-        if (mText.compare(mAt, n, inWord) != 0)
-            return Fail("unexpected text");
-        mAt += n;
-        return true;
-    }
-    static void PutUTF8(std::string& out, uint32_t c)
-    {
-        if (c < 0x80) {
-            out += (char)c;
-        } else if (c < 0x800) {
-            out += (char)(0xc0 | (c >> 6));
-            out += (char)(0x80 | (c & 0x3f));
-        } else if (c < 0x10000) {
-            out += (char)(0xe0 | (c >> 12));
-            out += (char)(0x80 | ((c >> 6) & 0x3f));
-            out += (char)(0x80 | (c & 0x3f));
-        } else {
-            out += (char)(0xf0 | (c >> 18));
-            out += (char)(0x80 | ((c >> 12) & 0x3f));
-            out += (char)(0x80 | ((c >> 6) & 0x3f));
-            out += (char)(0x80 | (c & 0x3f));
-        }
-    }
-    bool Hex4(uint32_t& out)
-    {
-        out = 0;
-        for (int i = 0; i < 4; i++, mAt++) {
-            if (mAt >= mText.size())
-                return Fail("unterminated \\u escape");
-            char c = mText[mAt];
-            out <<= 4;
-            if (c >= '0' && c <= '9')
-                out |= (uint32_t)(c - '0');
-            else if (c >= 'a' && c <= 'f')
-                out |= (uint32_t)(c - 'a' + 10);
-            else if (c >= 'A' && c <= 'F')
-                out |= (uint32_t)(c - 'A' + 10);
-            else
-                return Fail("bad \\u escape");
-        }
-        return true;
-    }
-    bool String(std::string& out)
-    {
-        mAt++;   // "
-        out.clear();
-        while (true) {
-            if (mAt >= mText.size())
-                return Fail("unterminated string");
-            unsigned char c = (unsigned char)mText[mAt++];
-            if (c == '"')
-                return true;
-            if (c < 0x20)
-                return Fail("a control character in a string");
-            if (c != '\\') {
-                out += (char)c;
-                continue;
-            }
-            if (mAt >= mText.size())
-                return Fail("unterminated string");
-            char e = mText[mAt++];
-            switch (e) {
-            case '"': out += '"'; break;
-            case '\\': out += '\\'; break;
-            case '/': out += '/'; break;
-            case 'b': out += '\b'; break;
-            case 'f': out += '\f'; break;
-            case 'n': out += '\n'; break;
-            case 'r': out += '\r'; break;
-            case 't': out += '\t'; break;
-            case 'u': {
-                uint32_t u;
-                if (!Hex4(u))
-                    return false;
-                if (u >= 0xd800 && u < 0xdc00 && mText.compare(mAt, 2, "\\u") == 0) {
-                    mAt += 2;
-                    uint32_t v;
-                    if (!Hex4(v))
-                        return false;
-                    if (v >= 0xdc00 && v < 0xe000)
-                        u = 0x10000 + ((u - 0xd800) << 10) + (v - 0xdc00);
-                }
-                PutUTF8(out, u);
-                break;
-            }
-            default:
-                return Fail("bad escape in a string");
-            }
-        }
-    }
-    bool Number(JValue& out)
-    {
-        size_t theStart = mAt;
-        if (mText[mAt] == '-')
-            mAt++;
-        while (mAt < mText.size() && strchr("0123456789.eE+-", mText[mAt]) != NULL)
-            mAt++;
-        std::string theText = mText.substr(theStart, mAt - theStart);
-        char* theEnd = NULL;
-        out.mKind = JValue::kNumber;
-        out.mNumber = strtod(theText.c_str(), &theEnd);
-        if (theText.empty() || theEnd == NULL || *theEnd != '\0')
-            return Fail("bad number");
-        return true;
-    }
-    bool Value(JValue& out)
-    {
-        Space();
-        if (mAt >= mText.size())
-            return Fail("unexpected end");
-        if (++mDepth > 32)
-            return Fail("nested too deep");
-        bool theOK = true;
-        char c = mText[mAt];
-        if (c == '{') {
-            out.mKind = JValue::kObject;
-            mAt++;
-            Space();
-            if (mAt < mText.size() && mText[mAt] == '}') {
-                mAt++;
-            } else {
-                while (theOK) {
-                    Space();
-                    if (mAt >= mText.size() || mText[mAt] != '"') {
-                        theOK = Fail("expected a key");
-                        break;
-                    }
-                    std::pair<std::string, JValue> theField;
-                    if (!String(theField.first)) {
-                        theOK = false;
-                        break;
-                    }
-                    Space();
-                    if (mAt >= mText.size() || mText[mAt] != ':') {
-                        theOK = Fail("expected :");
-                        break;
-                    }
-                    mAt++;
-                    if (!Value(theField.second)) {
-                        theOK = false;
-                        break;
-                    }
-                    out.mFields.push_back(std::move(theField));
-                    Space();
-                    if (mAt < mText.size() && mText[mAt] == ',') {
-                        mAt++;
-                        continue;
-                    }
-                    if (mAt < mText.size() && mText[mAt] == '}') {
-                        mAt++;
-                        break;
-                    }
-                    theOK = Fail("expected , or }");
-                }
-            }
-        } else if (c == '[') {
-            out.mKind = JValue::kArray;
-            mAt++;
-            Space();
-            if (mAt < mText.size() && mText[mAt] == ']') {
-                mAt++;
-            } else {
-                while (theOK) {
-                    JValue theItem;
-                    if (!Value(theItem)) {
-                        theOK = false;
-                        break;
-                    }
-                    out.mItems.push_back(std::move(theItem));
-                    Space();
-                    if (mAt < mText.size() && mText[mAt] == ',') {
-                        mAt++;
-                        continue;
-                    }
-                    if (mAt < mText.size() && mText[mAt] == ']') {
-                        mAt++;
-                        break;
-                    }
-                    theOK = Fail("expected , or ]");
-                }
-            }
-        } else if (c == '"') {
-            out.mKind = JValue::kString;
-            theOK = String(out.mString);
-        } else if (c == 't') {
-            out.mKind = JValue::kBool;
-            out.mBool = true;
-            theOK = Word("true");
-        } else if (c == 'f') {
-            out.mKind = JValue::kBool;
-            theOK = Word("false");
-        } else if (c == 'n') {
-            theOK = Word("null");
-        } else if (c == '-' || (c >= '0' && c <= '9')) {
-            theOK = Number(out);
-        } else {
-            theOK = Fail("unexpected character");
-        }
-        mDepth--;
-        return theOK;
-    }
-    bool Document(JValue& out)
-    {
-        if (mText.compare(0, 3, "\xef\xbb\xbf") == 0)
-            mAt = 3;   // a UTF-8 byte order mark
-        if (!Value(out))
-            return false;
-        Space();
-        return mAt == mText.size() || Fail("text after the document");
-    }
-};
-
-const JValue* Field(const JValue& inObject, const char* inName)
-{
-    for (const auto& f : inObject.mFields)
-        if (f.first == inName)
-            return &f.second;
-    return NULL;
-}
-
-}   // namespace
-
-// ---------------------------------------------------------------------------------------------------------------
-// The manifest
-
-// The manifest's text as the game's (UTF-8 both, decision D6): a byte that is not part of a well-formed sequence
-// becomes U+FFFD, so a lobby string is always text
-static std::string EECPAIToGameText(const std::string& inText)
-{
-    std::string theOut;
-    for (size_t i = 0; i < inText.size();) {
-        uint32_t theLength = 0;
-        uint32_t theCharacter = PlatUtf8Decode(inText.c_str() + i, &theLength);
-        if (theLength == 0)   // an embedded NUL ends the text
-            break;
-        char theBytes[4];
-        if (theCharacter >= 0xDC80 && theCharacter <= 0xDCFF)
-            theCharacter = 0xFFFD;
-        theOut.append(theBytes, PlatUtf8Encode(theCharacter, theBytes));
-        i += theLength;
-    }
-    return theOut;
-}
-
-static bool EECPAIIdOK(const std::string& inID)
-{
-    if (inID.empty() || inID.size() > 64)
-        return false;
-    for (char c : inID)
-        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'))
-            return false;
-    return true;
-}
-
-// a Lua module name as require takes it (EECPLua.cpp ModuleName): letters, digits and _, in segments separated by dots
-static bool EECPAIModuleOK(const std::string& inName)
-{
-    if (inName.empty() || inName.size() > 96)
-        return false;
-    bool theStart = true;
-    for (char c : inName) {
-        if (c == '.') {
-            if (theStart)
-                return false;
-            theStart = true;
-        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-            theStart = false;
-        } else {
-            return false;
-        }
-    }
-    return !theStart;
-}
+// The manifest: its document's checks are Rust's (ee_ai json.rs, manifest.rs: the JSON reader, the entries' checks
+// and their log lines; a name as the game's text, UTF-8 with a malformed byte as U+FFFD, decision D6)
 
 // the script's file is there (EE_AI_SCRIPTS's folder or Data\ai; dots are folders)
 static bool EECPAIScriptExists(const std::string& inModule)
@@ -434,6 +125,23 @@ static bool EECPAIScriptExists(const std::string& inModule)
     const std::string& theOverride = EECPAIOverrideFolder();
     return (!theOverride.empty() && EECPAIFileExists(theOverride + theRelative)) ||
            EECPAIFileExists("Data\\ai\\" + theRelative);
+}
+
+static bool EECPAIScriptExistsOf(void* inContext, const uint8_t* inModule, size_t inLength)
+{
+    (void)inContext;
+    return EECPAIScriptExists(std::string((const char*)inModule, inLength));
+}
+
+static std::string EECPAIText(const EeAiBytes& inBytes)
+{
+    return inBytes.len > 0 ? std::string((const char*)inBytes.data, inBytes.len) : std::string();
+}
+
+static EeAiBytes EECPAIBytes(const std::string& inText)
+{
+    EeAiBytes theBytes = {(const uint8_t*)inText.data(), inText.size()};
+    return theBytes;
 }
 
 static std::vector<EECPAIEntry> EECPAIReadManifest()
@@ -449,82 +157,27 @@ static std::vector<EECPAIEntry> EECPAIReadManifest()
         EECPEngineLog("no Data/ai/ais.json: the lobby offers only classic and random");
         return theAIs;
     }
-    JValue theRoot;
-    JReader theReader(theText);
-    if (!theReader.Document(theRoot)) {
-        EECPEngineLog("%s: %s: no AIs read (only classic and random)", thePath.c_str(), theReader.mError.c_str());
-        return theAIs;
-    }
-    const JValue* theList = theRoot.mKind == JValue::kObject ? Field(theRoot, "ais") : NULL;
-    if (theList == NULL || theList->mKind != JValue::kArray) {
-        EECPEngineLog("%s: the document must be an object with an array \"ais\": no AIs read (only classic and random)",
-                  thePath.c_str());
-        return theAIs;
-    }
-    for (size_t k = 0; k < theList->mItems.size(); k++) {
-        const JValue& e = theList->mItems[k];
-        std::string theWhere = thePath + ": ais[" + std::to_string(k) + "]";
-        if (e.mKind != JValue::kObject) {
-            EECPEngineLog("%s: not an object: skipped", theWhere.c_str());
-            continue;
-        }
+    EeAiManifest* theRead = ee_ai_manifest_read(EECPAIBytes(theText), EECPAIBytes(thePath), EECPAIScriptExistsOf, NULL);
+    for (size_t k = 0; k < ee_ai_manifest_log_count(theRead); k++)
+        EECPEngineLog("%s", EECPAIText(ee_ai_manifest_log(theRead, k)).c_str());
+    for (size_t k = 0; k < ee_ai_manifest_count(theRead); k++) {
+        EeAiManifestEntry e;
+        if (!ee_ai_manifest_entry(theRead, k, &e))
+            break;
         EECPAIEntry theAI;
-        theAI.mRandom = false;
-        theAI.mSeesAll = false;
-        theAI.mFillsGarrison = false;
-        std::string theProblem;
-        for (const auto& f : e.mFields) {
-            const JValue& v = f.second;
-            if (f.first == "id" || f.first == "name" || f.first == "script" || f.first == "description") {
-                if (v.mKind != JValue::kString) {
-                    theProblem = f.first + " must be a string";
-                    break;
-                }
-                (f.first == "id" ? theAI.mID : f.first == "name" ? theAI.mName : f.first == "script" ? theAI.mScript
-                                                                                             : theAI.mDescription) = v.mString;
-            } else if (f.first == "random") {
-                if (v.mKind != JValue::kBool) {
-                    theProblem = "random must be true or false";
-                    break;
-                }
-                theAI.mRandom = v.mBool;
-            } else if (f.first == "sees_all") {
-                if (v.mKind != JValue::kBool) {
-                    theProblem = "sees_all must be true or false";
-                    break;
-                }
-                theAI.mSeesAll = v.mBool;
-            } else if (f.first == "fills_garrison") {
-                if (v.mKind != JValue::kBool) {
-                    theProblem = "fills_garrison must be true or false";
-                    break;
-                }
-                theAI.mFillsGarrison = v.mBool;
-            } else {
-                EECPEngineLog("%s: unknown key \"%s\" ignored", theWhere.c_str(), f.first.c_str());
-            }
-        }
-        if (theProblem.empty() && !EECPAIIdOK(theAI.mID))
-            theProblem = "id '" + theAI.mID + "' must be 1 to 64 of a-z, 0-9 and _";
-        if (theProblem.empty() && (theAI.mID == "classic" || theAI.mID == "random" || theAI.mID == "next"))
-            theProblem = "id '" + theAI.mID + "' is reserved (classic, random, next)";
-        for (const EECPAIEntry& o : theAIs)
-            if (theProblem.empty() && o.mID == theAI.mID)
-                theProblem = "id '" + theAI.mID + "' is listed twice";
-        if (theProblem.empty() && !EECPAIModuleOK(theAI.mScript))
-            theProblem = "script '" + theAI.mScript +
-                         "' is not a module name (letters, digits and _, in segments separated by dots)";
-        if (theProblem.empty() && !EECPAIScriptExists(theAI.mScript))
-            theProblem = "script '" + theAI.mScript + "': no such file under Data/ai";
-        if (theProblem.empty() && theAIs.size() >= kEECPMaxAIs)
-            theProblem = "more than " + std::to_string(kEECPMaxAIs) + " AIs";
-        if (!theProblem.empty()) {
-            EECPEngineLog("%s: %s: skipped", theWhere.c_str(), theProblem.c_str());
-            continue;
-        }
-        theAI.mName = EECPAIToGameText(theAI.mName.empty() ? theAI.mID : theAI.mName);
+        theAI.mID = EECPAIText(e.id);
+        theAI.mName = EECPAIText(e.name);
+        theAI.mScript = EECPAIText(e.script);
+        theAI.mDescription = EECPAIText(e.description);
+        theAI.mRandom = e.random;
+        theAI.mSeesAll = e.sees_all;
+        theAI.mFillsGarrison = e.fills_garrison;
         theAIs.push_back(theAI);
     }
+    bool theListed = ee_ai_manifest_listed(theRead);
+    ee_ai_manifest_free(theRead);
+    if (!theListed)
+        return theAIs;   // (the document is not a manifest: logged)
     std::string theIDs;
     for (const EECPAIEntry& a : theAIs)
         theIDs += (theIDs.empty() ? "" : ",") + a.mID + (a.mRandom ? "" : "(not random)");
@@ -562,17 +215,15 @@ const EECPAIEntry* EECPAIByID(const std::string& inID)
 
 long EECPChoiceByName(const std::string& inName)
 {
-    if (inName == "classic")
-        return kEECPChoiceClassic;
-    if (inName == "random")
-        return kEECPChoiceRandom;
+    // classic and random need no manifest (it is read at its first use)
+    long theChoice = (long)ee_ai_choice_by_name(EECPAIBytes(inName), NULL, 0);
+    if (theChoice == kEECPChoiceClassic || theChoice == kEECPChoiceRandom)
+        return theChoice;
     const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
-    if (inName == "next")
-        return theAIs.empty() ? -1 : (long)kEECPChoiceFirstAI;
-    for (size_t k = 0; k < theAIs.size(); k++)
-        if (theAIs[k].mID == inName)
-            return (long)(kEECPChoiceFirstAI + k);
-    return -1;
+    std::vector<EeAiBytes> theIDs;
+    for (const EECPAIEntry& a : theAIs)
+        theIDs.push_back(EECPAIBytes(a.mID));
+    return (long)ee_ai_choice_by_name(EECPAIBytes(inName), theIDs.data(), theIDs.size());
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -732,25 +383,17 @@ static const std::vector<long>& EECPEngineOverrides()
 unsigned long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, unsigned long inSlot,
                                 unsigned long inPlayerID)
 {
+    // classic and the AIs that allow it, uniformly, from a hash of the seed and the slot (32-bit arithmetic: the same on
+    // every peer and platform); not the game's generators, so the other draws (the random start epoch, the map) stay
+    // as they were (ee_ai seat.rs)
     const std::vector<long>& theOverrides = EECPEngineOverrides();
-    if (!theOverrides.empty())
-        inChoice = (unsigned long)theOverrides[(inPlayerID > 0 ? inPlayerID - 1 : 0) % theOverrides.size()];
-    if (inChoice == kEECPChoiceRandom) {
-        // classic and the AIs that allow it, uniformly, from a hash of the seed and the slot (32-bit arithmetic: the
-        // same on every peer and platform); not the game's generators, so the other draws (the random start epoch,
-        // the map) stay as they were. With one such AI this is the old classic/next coin.
-        std::vector<unsigned long> thePool(1, (unsigned long)kEECPChoiceClassic);
-        const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
-        for (size_t k = 0; k < theAIs.size(); k++)
-            if (theAIs[k].mRandom)
-                thePool.push_back(kEECPChoiceFirstAI + (unsigned long)k);
-        uint32_t h = (uint32_t)inSeed * 2654435761u ^ ((uint32_t)inSlot + 1u) * 0x9e3779b9u;
-        h ^= h >> 15;
-        h *= 0x2c1b3c6du;
-        h ^= h >> 12;
-        return thePool[(h >> 7) % (uint32_t)thePool.size()];
-    }
-    return EECPAIByChoice(inChoice) != NULL ? inChoice : (unsigned long)kEECPChoiceClassic;
+    std::vector<int64_t> theChoices(theOverrides.begin(), theOverrides.end());
+    const std::vector<EECPAIEntry>& theAIs = EECPAIManifest();
+    bool theRandom[kEECPMaxAIs];
+    for (size_t k = 0; k < theAIs.size() && k < kEECPMaxAIs; k++)
+        theRandom[k] = theAIs[k].mRandom;
+    return (unsigned long)ee_ai_engine_resolve((uint64_t)inChoice, (uint64_t)inSeed, (uint64_t)inSlot, (uint64_t)inPlayerID,
+        theChoices.data(), theChoices.size(), theRandom, theAIs.size());
 }
 
 // (EECPNextUpdate, the next engine's tick, is in EECPNext.cpp: docs/AI_LUA_PLAN.md §2.1; EECPNextPrepare in

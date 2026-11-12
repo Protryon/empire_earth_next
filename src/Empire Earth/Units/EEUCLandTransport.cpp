@@ -19,6 +19,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -98,8 +100,9 @@ void EEUCLandTransport::BadlyHurt(EEUnit* inUnit)
 // Updates the transport the common way, then its wheels
 void EEUCLandTransport::Update(EEComplexUnit* inUnit)
 {
-    EEUCTransport::Update(inUnit);
-    inUnit->UpdateWheels();
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_LAND_TRANSPORT, this, inUnit);
 }
 
 // UnloadAt: unloads at a tile the common transport way

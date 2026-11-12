@@ -10,7 +10,6 @@ class EESMTConditionWrapper {
 public:
     // inline (the trigger's ctor 0x1c97b7 and 0x1ca2c3 expand it)
     EESMTConditionWrapper() { this->mIsNot = false; this->mValue = 0; this->mOperator = kSMTriggerOperatorEnd; }
-    bool Evaluate(bool& ioResult);          // 0x1c9caf (the condition mValue through the operator mL08, returns it; provisional name)
     // +0x00 (ret 4; not a dtor): the cdecl 0x1b9fcf(&mValue, inArg) (provisional names)
     virtual void Virtual0(EESMIDMap& inMap);   // (EESMIDMap&: EESMTrigger +0x04/+0x0c forward a map)
     virtual void Virtual4(unsigned long inOld, unsigned long inNew);

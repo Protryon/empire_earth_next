@@ -19,6 +19,8 @@
 #include "lle/SESoundManager.h"
 
 #include <string.h>
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EESimCapture.h"
 #include "rust/ee_combat.h"
 #include "rust/ee_units.h"
@@ -158,29 +160,9 @@ void EEUCBasicPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarg
 // or uses the common handling
 void EEUCBasicPriest::ActionChanged(EEComplexUnit* inUnit)
 {
-    inUnit->ReleaseConversionEffect();
-    inUnit->ReleaseHealEffect();
-    this->HideConversionEffects(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionConvertEnemyUnit:
-        inUnit->SetCurrentPhysicsAction(1);
-        inUnit->SetTargetSearchTimer(0);
-        inUnit->SetAnimation(9, -1, 0);
-        if (inUnit->mConversionStartTime == 0) {
-            if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                inUnit->mConversionStartTime = gPhysics->mGameTime;
-            inUnit->SetWorkTimer(0);
-            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        }
-        inUnit->DropPath();
-        break;
-    case kActionWaitForReload:
-        inUnit->SetCurrentPhysicsAction(3);
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BASIC_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60da7a
@@ -318,48 +300,9 @@ void EEUCBasicPriest::UnloadMedia(EEPlayer* inPlayer)
 // not converting, ends any conversion and its effects
 void EEUCBasicPriest::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-        inUnit->UpdateOrbitals();
-    }
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    if (this->mIsMedic) {
-        inUnit->UpdateHealSearchTimer();
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalHealUnit)
-            inUnit->mGoalState->Work(inUnit);
-    }
-    if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
-    this->RegeneratePower(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionConvertEnemyUnit:
-        this->UpdateConversion(inUnit);
-        return;
-    case kActionResourcesRotting:
-        return;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    if (inUnit->mConversionStartTime != 0)
-        inUnit->mConversionStartTime = 0;
-    inUnit->ReleaseConversionEffect();
-    this->HideConversionEffects(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_BASIC_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60e086
