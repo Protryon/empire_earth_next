@@ -10082,3 +10082,68 @@ Round 4's pattern (RUST_PLAN's row) applied to the rest of the main game form's 
 - **Behaviour:** none intended where the original was defined. The grab scroll's saved mouse move event is released
   with its form's destructor (the original's object was released when its last reference went, normally the same
   moment).
+
+## R6: the game screens, tenth round: the debug sound panel, the civilization choice form and the post-game summary whole in Rust (ee_screens debug_sound.rs, civ_choice.rs, post_game.rs; branch rust-screens10, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to three more forms. The count now covers the whole game UI: round 9's
+set (UI Events, User Interface Thread, `include/ee/EEUI*.h`, `EEScreen*.h`, `EECommandLine.cpp`, `EESim.cpp`) plus
+the Civilization Builder folder and its headers (`EECB*.h`, `EECivilizationBuilder.h`, `EECivilizationManager.h`),
+`EEDSUIEvents.h` and `EEPGSFormManager.h`.
+
+- **Deleted:** `EEDSUIEvents.cpp` (256) and its header; `EEUIEPDCSEvents.cpp` (250) and its header (with its
+  in-class `ClearCivStats` and `LoadCiv`); `EEUIEPostGameSummaryEvents.cpp` (1,219) and its header (the report
+  structs went with it: the reports are Rust's). Their `??_G` notes and `link/exe/units.txt` lines. Game UI C++ lines
+  40,882 -> 40,562 -> 40,301 -> 39,227 (-1,655); git over the C++: +49 -369, +103 -364, +400 -1,476.
+- **Codes:** the debug sound panel 0x1601..0x160b (the factory is Rust's table, `ee_screens_debug_sound_event_for`);
+  the civilization choice form 0x2301..0x2307 (its open and close events made by code where the builder's timer and
+  `ShowCivilizationBuilder` pushed the form); the post-game summary 0x1901..0x1932 (`ee_screens_post_game_event_for`;
+  a check box's code carries its series, `+ 0..15`; the manager's form events make the open and close by code).
+- **A posted event's data:** the civilization choice's `LoadCiv` carried the selected file in the event object. A
+  code cannot, so the file is a Rust record by slot (`CivChoice`), the slot in the code's bits 16..23 (1..255, so the
+  top byte stays clear of the hot keys' `0x0f......` unit selection codes); the load takes its file out by slot.
+  Posted events run in order, but the slot keeps two piled-up loads apart regardless.
+- **The summary's state:** the shown graph's cycle, the bars and stars the summary adds at run time (control index
+  and entity group, deleted by the close event), the time line's first and last epochs and the stats server's reports
+  are `PostGame`; the graphs stay the toolkit's `UGraph`s (the line graph's 31 and the form manager's eight) and change
+  through host ops that mirror the original's calls one for one (graph numbers 0..30, 31 the shown one, 32..39 the
+  manager's). The host keeps two registers the original kept as locals: a rectangle (four `SET_R` then `APPLY_R` or
+  `NEW_BAR`) and `BuildGraphs`' series (reset with the new form manager). `EEPGSFormManager`'s ctor and dtor are
+  inline in its header now; its `mFirstTime`/`mLastTime` stay unused.
+- **The reports:** the game report (type 1000, 20 bytes) and each player's (type 1001, 22 bytes plus the name) are
+  built in Rust (`game_message`, `player_message`, little endian as the original's `memcpy`s); the host reads the
+  stats server's file ("host\0port"), gets the protocol and sends. `atoi` is the UCRT's.
+- **Golden drivers** (scratch, `build/sc10`: `dsu_driver.cpp`, `pdcs_driver.cpp`, `pgs_driver.cpp`, `drv.py`; the
+  old headers under `orig/inc`): one session each over the unmodified units (2,000; 2,000; 1,000 cases), the drivers
+  relinked over `EEScreens.cpp` printing the same on seeds 1-4 (20,000; 20,000; 2,000 cases for 2-4; the summary's
+  seed 1 is 771,398 lines). The summary's driver runs the real `EEUIPGSLineGraph.cpp` (its vtable copied, `SetDirty`
+  faked), `UGraph.cpp` and `EEPlayerStatistics.cpp` (`drv.py`'s `SC10_LLE`/`SC10_EXE` compile more real units) and
+  hashes every graph that changed after each event.
+- **The summary's replay is a host log, not the original's trace:** its answers (bars' maxima, the epochs' points)
+  come from `UGraph`'s pruning and combining, which stay C++. So the equivalence proof is the relinked driver (the
+  original's every call and the graphs' hashes equal); the committed golden (`golden_post_game.txt`, 200 cases) is the
+  relinked run's host log (per event the history and records handed over, the non-string texts, every call's answer,
+  a hash of every call with its arguments and answer), and the Rust replay answers from it and checks the hash: a
+  regression test of the Rust's call sequence. Mutations of the losses' "lowest is best" rule and the last page's tab
+  each fail it.
+- **Lessons:**
+  - Calls on a local object of a known class are devirtualized: the driver's fake vtable for `FSFileSpec` was never
+    used for `theFile.SetVolume(...)`; the fakes must be the members themselves (`FSBasicFile::SetVolume`).
+  - A driver over the summary needs the original's preconditions: the epochs' series only up to 14 (epoch 15's bar
+    index is the gold star's, 0x316), the check boxes only for a series every graph has (`UGraph::SetIsSeriesEnabled`
+    indexes unchecked), the bars' templates status bars (`GEText::operator=` dereferences the template's text).
+  - `extern char gEmptyString[]` mangles as an array: a driver's `char* gEmptyString` leaves it unresolved (strlen
+    of garbage at the first `EEPlayerStatistics` ctor).
+  - A static with a constructor in the host (`UGraphSeries`) makes every older driver over `EEScreens.cpp` link its
+    unit (`SC10_LLE=Utilities/UGraph.cpp`), or they crash at start-up.
+  - `drv.py`'s `SC8_DEFINES=/DX` under Git Bash becomes a path (`C:/Program Files/Git/DX`): use `-DX`.
+- **What the harness reaches:** none of the three in the gates. The ai-game gate stops at its time cap and the
+  harness kills the game (no `CancelGame`, so no summary); the LAN game likewise. The civilization choice form is
+  pushed by the civilization timer (`EEProcessTimerExpired`) when custom civilizations are off; `ai_game.py`
+  dismisses form 35 with control 0 (Cancel: `EE_SCREENS_PDCS_CANCEL`, Pop) if it shows. **Only a person reaches:**
+  the summary (a game played to its end, or quit from the options menu: `CancelGame` -> `LeaveMap` to form 25), its
+  tabs, check boxes and Exit (a campaign's reload), the civilization choice's Ok and selection, the debug sound panel
+  (form 22, no menu opens it). Network code: the civilization choice's Ok posts `EEMCivUpgradesRequested` to the
+  server in a multiplayer session; the stats server's reports go out only for a victory game with several humans
+  from the server's slot.
+- **Behaviour:** none intended where the original was defined. The civilization choice's Ok and its hot keys and
+  double click now hold separate event objects (the original shared one, referenced four times).
