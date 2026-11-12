@@ -41,6 +41,8 @@ local ECON = {
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
     iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
+    iron_push = false,      -- from the Copper Age, while the save lacks iron: iron claimed further out, 18 on it, from
+                            -- the food once the epoch's food is in stock (§8.51)
 }
 
 local PLAN = {
@@ -334,6 +336,8 @@ end
 -- and claimed, and the escort holds it (§8.34). Only sites on the town's side (safe_site, §8.35); a claimed one under
 -- a tower (or with one on the way) is not kept. Returns the places the kept sites hold, the contested site (nil: none)
 -- and the places of the kept sites the gatherers can go to now (open).
+local claim_far = {}   -- (ECON.iron_push) the minerals claimed out to FAR_REACH this pass, on the town's side
+
 local function claim_sites(view, order, keep, resource, patch, wanted, most, range, skip)
     local want_sites = 0
     if wanted > 0 then
@@ -345,7 +349,7 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
     -- (ECON.order, the owner: "only claim iron/gold near home") the minerals within the claim range only
     -- (C7: the minerals within the town's own area, the claim range and a drop site's reach past it; safe_site keeps
     -- them on the town's side, never toward the enemy)
-    local reach = patch and range or (ECON.order and range + ORDER_MINE_REACH or FAR_REACH)
+    local reach = patch and range or (ECON.order and not claim_far[resource] and range + ORDER_MINE_REACH or FAR_REACH)
     local kept, places, open, open_places = 0, 0, 0, 0
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
@@ -393,7 +397,7 @@ end
 
 -- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
 -- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
--- lib.defence options
+-- lib.defence options, order = lib.build_order's BO.OPT
 function M.configure(o)
     for k, v in pairs(o.econ or {}) do
         ECON[k] = v
@@ -405,6 +409,9 @@ function M.configure(o)
     end
     for k, v in pairs(o.defence or {}) do
         D.opts[k] = v
+    end
+    for k, v in pairs(o.order or {}) do   -- (lib.build_order's BO.OPT)
+        BO.OPT[k] = v
     end
     return M
 end
@@ -999,7 +1006,17 @@ function M.step(view, memory)
             if ECON.order and BO.OPT.claim_target then
                 claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
             end
-            local places, c = claim_sites(view, order, keep, r, false, claim_want, plan.mine_sites or 3, range, unsettled_r)
+            -- (ECON.iron_push, boom-defence's Bronze saves: unpaid on iron 849 of 914 minutes, 12 of 18 on iron at 5 a
+            -- minute; the fast saves had 16-20 on it) from the Copper Age, while the save lacks iron, the iron is claimed
+            -- out to FAR_REACH (still on the town's side) and up to 5 sites, for the whole 18
+            local most = plan.mine_sites or 3
+            claim_far[r] = nil
+            if ECON.iron_push and r == "iron" and age >= 3 and saving and view.stock.iron < (view.next_epoch_cost.iron or 0) then
+                claim_far[r] = true
+                most = math.max(most, 5)
+                claim_want = math.max(claim_want, 18)
+            end
+            local places, c = claim_sites(view, order, keep, r, false, claim_want, most, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -1080,6 +1097,13 @@ function M.step(view, memory)
             if ps ~= nil and (ps.wood or 0) > view.stock.wood then
                 local k = math.max(math.min(4, want.food - 12), 0)
                 want.food, want.wood = want.food - k, want.wood + k
+            end
+            -- (ECON.iron_push: the save lacks iron and its food is in stock: food gatherers to iron up to 18, within the
+            -- iron's places)
+            if ECON.iron_push and age >= 3 and saving and view.stock.iron < (cost.iron or 0)
+                    and view.stock.food >= (cost.food or 0) then
+                local k = math.max(math.min(18 - want.iron, want.food - 12, (room.iron or 0) - want.iron), 0)
+                want.food, want.iron = want.food - k, want.iron + k
             end
             -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
             local settle = V.cost(view, "b_settlement")
@@ -1218,6 +1242,10 @@ function M.step(view, memory)
                             if placed then
                                 memory.settle_at[spot_of(s)] = view.time
                             end
+                        elseif #rids == 0 and not s.explored then
+                            -- (a claimed mine nobody has seen: its units are not listed until a citizen walks there; the
+                            -- Copper Age's second iron mine stood claimed and unexplored for 30 minutes)
+                            PL.walk(view, memory, spot_of(s), s.x, s.y)
                         end
                     elseif ECON.order and BO.OPT.place then
                         local spot = "w" .. c.x .. "," .. c.y
@@ -1415,6 +1443,8 @@ function M.step(view, memory)
         local iron_free = plan.iron_free and saving and (view.stock.iron < (view.next_epoch_cost.iron or 0)
             or view.stock.iron - (view.reserve.iron or 0) < 180)
         -- (plan.train_spare, AI_RESEARCH §8.50: no order the reserve leaves unaffordable; a scramble spends the reserve)
+        -- (plan.iron_lean, AI_RESEARCH §8.50: from the Copper Age while saving, this percent of the iron infantry's share
+        -- trained as ranged soldiers)
         local spare = nil
         if plan.train_spare and not scramble then
             spare = {}
@@ -1423,7 +1453,8 @@ function M.step(view, memory)
             end
         end
         GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2, iron_free,
-            spare)
+            spare,
+            plan.iron_lean ~= nil and saving and view.epoch >= 2 and plan.iron_lean or 0)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard

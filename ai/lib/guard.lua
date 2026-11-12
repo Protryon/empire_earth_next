@@ -152,7 +152,9 @@ end
 -- spare (AI_RESEARCH §8.50, the waves after Copper: an order the reserve left unaffordable sat queued for 14 minutes
 -- and kept its class from being ordered again, the army 12 -> 1): the stock less the reserve; an order is cut to what
 -- it pays, and a class it cannot pay one of is not ordered (nil: no limit)
-function M.train(view, mem, n, order, per, iron_free, spare)
+-- lean (AI_RESEARCH §8.50, the Bronze save: it waited on iron in 849 of 914 minutes, and the soldier orders asked 41 of
+-- the 65 iron a minute): this percent of the iron roles' share (pierce, shock) goes to the ranged role
+function M.train(view, mem, n, order, per, iron_free, spare, lean)
     local have = {pierce = 0, ranged = 0, shock = 0, cavalry = 0}
     local total = 0
     for _, s in ipairs(view.soldiers or {}) do
@@ -177,6 +179,10 @@ function M.train(view, mem, n, order, per, iron_free, spare)
     local mix = M.mix(view, mem)
     if iron_free and class_for(view, "ranged") == nil then
         iron_free = false
+    end
+    if (lean or 0) > 0 and not iron_free and class_for(view, "ranged") ~= nil then
+        local dp, ds = mix.pierce * lean // 100, mix.shock * lean // 100
+        mix = {pierce = mix.pierce - dp, ranged = mix.ranged + dp + ds, shock = mix.shock - ds}
     end
     if iron_free then
         mix = {pierce = 0, ranged = 100, shock = 0}
