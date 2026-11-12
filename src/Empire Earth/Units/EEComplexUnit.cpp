@@ -109,14 +109,8 @@ bool EEIsSameResearch(long inFirst, long inSecond);
 // the colour of a time-warped unit (SetDisabled 0x1fe5b3: SetColor when +0x358 is 0x1a/0x1c) (provisional name)
 const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
-// 0x963234: when set, DropPath moves the unit through its waypoints instead of dropping them (only this unit
-// reads it) (provisional name)
-static bool sB563234;
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 static unsigned long sU563238;
-// 0x963abc: gUnitClassTable[0x104], the unit class whose units mark the waypoints while sB563234 is set
-// (only AddWaypoint reads it; the address is a gUnitClassTable slot, filled by CreateUnitClasses like every
-// other class; no separate static)
 // SYNTHETIC: EXE 0x5f57d3   (wrapper)
 // SYNTHETIC: EXE 0x5f57dd   (ctor)
 // SYNTHETIC: EXE 0x5f57f8   (registrar)
@@ -495,8 +489,6 @@ void EEComplexUnit::AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap)
     }
     if (!theValid)
         return;
-    if (sB563234 && gUnitClassTable[kUnitTypeWaypoint] != NULL)
-        gUnitClassTable[kUnitTypeWaypoint]->CreateUnit(theX, theY, this->mPlayer->mPlayerID, false, NULL)->SetHitPoints(this->mUnitID);
     if (theSize > 0) {
         float theDistance = sqrt((inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
                                      * (inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
@@ -891,16 +883,12 @@ void EEComplexUnit::ReleaseFireEffect()
 }
 
 // FUNCTION: EXE 0x5f7112
-// Drops the unit's waypoints (or steps through them all while waypoint marking is on)
+// Drops the unit's waypoints (the original stepped through them instead while its never-set waypoint marking flag
+// 0x963234 was on)
 void EEComplexUnit::DropPath()
 {
-    if (!sB563234) {
-        this->mWaypoints.clear();
-        this->mCollisionResolutionCount = 0.0f;
-        return;
-    }
-    while (this->NextWaypoint() == 0)
-        ;
+    this->mWaypoints.clear();
+    this->mCollisionResolutionCount = 0.0f;
 }
 
 // FUNCTION: EXE 0x5f713d
@@ -1749,27 +1737,6 @@ void EEComplexUnit::ApplyAreaEffects()
     theLocation.SetX(thePoint.GetX());
     theLocation.SetY(thePoint.GetY());
     ::gAEManager.CollectEffects(theRadius, theLocation, thePlayerID, &this->mAreaEffects, this);
-}
-
-// FUNCTION: EXE 0x5f9c12
-// Returns this unit's waypoint marker at a tile, on the map or in the world's queued units
-EEComplexUnit* EEComplexUnit::FindWaypointMarker(long inX, long inY)
-{
-    EEComplexUnit* theResult = NULL;
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-    if (theTile != NULL) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-            if (theResult != NULL)
-                return theResult;
-            EEUnit* theUnit = theNode->mUnit;
-            if (theUnit != NULL && theUnit->mUnitClass->GetUnitType() == kUnitTypeWaypoint && (unsigned long)theUnit->mHitPoints == this->mUnitID
-                && theUnit->mIsQueuedForDelete == false)
-                theResult = static_cast<EEComplexUnit*>(theUnit);
-        }
-        if (theResult != NULL)
-            return theResult;
-    }
-    return ::gWorld.FindQueuedUnitAt(inX, inY, this->mUnitID);
 }
 
 // FUNCTION: EXE 0x5f9c9b
@@ -2777,18 +2744,11 @@ void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 }
 
 // FUNCTION: EXE 0x5fbdd1
-// Drops the unit's first waypoint (and its marker while waypoint markers are on); returns 0, or 7 if there was none
+// Drops the unit's first waypoint; returns 0, or 7 if there was none
 long EEComplexUnit::NextWaypoint()
 {
     long theResult;
     if (this->mWaypoints.size() > 0) {
-        long theX = UMFloor((*this->mWaypoints.begin()).mLocation.GetX());
-        long theY = UMFloor((*this->mWaypoints.begin()).mLocation.GetY());
-        EEMap* theMap = ::gWorld.mMap;
-        if (theMap->GetTile(theX, theY) == NULL)
-            theMap->GetClosestTile(&(*this->mWaypoints.begin()).mLocation, &theX, &theY);
-        if (sB563234)
-            this->RemoveWaypointMarker(theX, theY);
         this->mWaypoints.pop_front();
         theResult = 0;
     } else
@@ -3461,15 +3421,6 @@ void EEComplexUnit::TakeOffMap()
     this->ReleaseHealEffect();
     this->ClearTint();
     this->ReleaseFireEffect();
-}
-
-// FUNCTION: EXE 0x5fdc39
-// Kills the waypoint marker unit on the given tile
-void EEComplexUnit::RemoveWaypointMarker(long inX, long inY)
-{
-    EEComplexUnit* theUnit = this->FindWaypointMarker(inX, inY);
-    if (theUnit)
-        theUnit->mPlayer->KillUnit(theUnit, false);
 }
 
 // FUNCTION: EXE 0x5fdc58

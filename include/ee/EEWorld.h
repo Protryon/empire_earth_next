@@ -59,9 +59,6 @@ public:
     // 0x139589: a test of map tile (inX, inY) (the teleport calamity refuses a location where it holds)
     // (provisional name)
     bool IsTileBlocked(unsigned long inX, unsigned long inY);
-    // 0x1396a9: a unit at tile (inX, inY) for inUnitID (EEComplexUnit::FindWaypointMarker's fallback) (provisional
-    // name)
-    EEComplexUnit* FindQueuedUnitAt(long inX, long inY, unsigned long inUnitID);
     // 0x138fe5 / 0x1396f3: inUnit leaves / joins a world list (EEComplexUnit::SetGatheredResource's mShadowScale)
     // (provisional name)
     void ReleaseResourceUser(EEUnit* inUnit);

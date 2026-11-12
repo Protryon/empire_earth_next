@@ -679,8 +679,6 @@ public:
     float DistanceSquared3D(const GE3DPoint& inPoint);
     void ClearTint();                       // 0x1fa979 (provisional name)
     void UpdateFanaticismColor();                        // 0x1fa98c (the cloak colour; function-static GEColors) (provisional name)
-    EEComplexUnit* FindWaypointMarker(long inArg1, long inArg2);  // 0x1f9c12 (provisional name)
-    void RemoveWaypointMarker(long inX, long inY);        // 0x1fdc39 (provisional name)
     EEUnitGoal* RefreshGoals();             // 0x1fdf31: the goal = the first queued one (returned: DropFinishedGoals) (provisional name)
     void SetPatrolGroup(EEPPatrolGroup* inGroup);   // 0x1fe83f (provisional name)
     // defined in EEPlayer.cpp's range after their first user EEPlayer::DisableCamouflagePower (out of line everywhere: recursive)
