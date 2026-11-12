@@ -1461,15 +1461,19 @@ function M.step(view, memory)
         end
         -- (AI_RESEARCH §8.50: the answer came 1-12 minutes after the first warship, its orders unaffordable under the
         -- epoch reserve) what the answer still needs, for boom-econ's reserve to give way to: the warships missing and,
-        -- while the towers' attack upgrade is due, an estimate of a level (the verb does not tell its cost)
+        -- while the towers' attack upgrade is due, its next level's cost
         local need = {food = 0, wood = 0, stone = 0, gold = 0, iron = 0}
         local missing = best ~= nil and math.max(plan.boat_guard - have, 0) or 0
         for _, r in ipairs(V.resources) do
             need[r] = missing * (best ~= nil and best.cost[r] or 0)
         end
         if plan.tower_up_ships and tower ~= nil and memory.improved_atk ~= tower then
-            for _, r in ipairs({"wood", "stone", "gold"}) do
-                need[r] = need[r] + 150
+            -- (the level's real cost: ai.improve_cost)
+            local ic = ai.improve_cost ~= nil and ai.improve_cost(tower, "attack") or nil
+            if ic ~= nil and ic.level <= ic.max then
+                for _, r in ipairs(V.resources) do
+                    need[r] = need[r] + ic[r]
+                end
             end
         end
         memory.priority_spend = V.sum(need) > 0 and need or nil
