@@ -7536,3 +7536,51 @@ Branch `rust-won-net4`. As before, nothing in the game reaches this code (the WO
 - **HTTPCache's index on the Rust file layer.** `cachemap.rs` opens, reads and writes `cachemap.dat` with `file.rs`'s `FileReader` / `FileWriter` state (over `PlatFOpen`, as the C++ classes were); the C++ keeps the entry objects and maps (built from each entry read whole, as the original inserted it before reading the next) and the deletion of dropped files (a callback per index in the id map's order, between the writes, where the original deleted them). `HTTPCacheEntry::ReadFromFile` and `WriteToFile` had no other caller and are deleted. The driver writes each generated cache through the original's statements and through Rust into two directories and compares the files and the deletions, then reads the same (cut, mutated, foreign-version or missing) file through both and compares the maps.
 - **A 2-byte length is unsigned in a file.** `FileReader::ReadLength(2)` reads an unsigned 16-bit field, where `ReadBuffer`'s is sign-extended; the first unit test's reader assumed the message rule.
 - **Tool trap: a crash without a word.** The cache driver ended with 0xC0000409 and no output: its own `fwrite` to a file it could not open (a directory that does not exist, on purpose) reached the CRT's invalid-parameter handler, which fails fast. Check `fopen` in drivers too.
+
+## R6: WON's Internet code, round 5 (AuthContext's sessions and certificate flow, HTTPEngine as Rust objects)
+
+Branch `rust-won-net5`. As before, nothing in the game reaches this code (the WON servers are gone; the LAN game
+does no peer authentication and fetches no HTTP document): only the drivers exercise it, and no tour, LAN game or
+EE-SIM run does.
+
+- **The pattern: a Rust object over C++ RefCounts, the C++ lock kept.** `EeWonAuthFlow` (authflow.rs) holds what
+  AuthContext's sessions and certificate refresh were (the session map by the address's 6-byte wire form and its
+  clean-up cursor, the waiting LightGetCertOps by address, the GetCertOp, the auto-refresh timer, the refresh
+  status and flag); `EeWonHttpConn` and `EeWonHttpSession` (httpengine.rs) hold HTTPConnection's socket, queues,
+  running ops, saved completions, pipelining counts and retry mode, and HTTPSession's connections by host
+  (`StringLessNoCase`: the upper-cased bytes, signed, then the length). The objects they hold (sessions, ops,
+  completions, sockets, connections, peer data) stay C++ RefCounts reached through one hook table per object;
+  Rust holds one reference each and drops it where the original's SmartPtr assignment dropped it. The state is
+  behind a Rust `Mutex` taken only between hooks, never across one: a kill, a run or a finish can complete the op
+  inside the call and its completion comes straight back into the same object (the timer into
+  `auto_refresh_callback`, the request into `get_cert_callback`, a connection's op into `op_callback`, a user's
+  completion into a new `AddOp`). AuthContext keeps taking its CriticalSection where the original did; HTTPEngine's
+  locks are taken through hooks at the original's points (OpCallback runs mostly unlocked, as before).
+- **Walks that survive inserts.** The original walked node-based containers while completions inserted into them
+  (a waiting op's completion starting another refresh during GetCertCallback's walk; a user completion adding an op
+  during KillAll's or Kill's walk): a walk reaches what was inserted past it. The Rust walks re-read the live
+  container each step ("the next key after this one", or the next index of a queue), so they reach the same
+  entries; the goldens contain both cases.
+- **Goldens, recorded first.** `won_authctx_test` and `won_httpengine_test` (new, `xbuild wontest`) run generated
+  scripts over stand-ins that log every call, creation and free (ops whose run is held by a "thread" list until the
+  script ends it, completing inside a kill or a run, user completions that re-enter, sockets, sessions, peer
+  data), allocated in creation order from an arena so the address-ordered sets agree; runs of consecutive frees are
+  compared sorted (a map's clear frees in its tree's order). The original's statements were copied into the
+  drivers and their traces recorded (`golden_authflow.txt`, 400 scripts; `golden_httpengine.txt`, 100 scripts)
+  before the Rust objects existed (the drivers' Rust halves off); the Rust tests replay them over Rust stand-ins
+  that behave the same. Each driver then compares the original's statements with the Rust object over the same
+  stand-ins on 100,000 scripts. The first authflow generator never put a session exactly 300 s old: two boundary
+  mutations (`>= 300`, `<= 300`) passed; steps that move the clock by 298-302 s and put sessions that old were
+  added and the golden re-recorded (from the original's half); both mutations now fail. The first HTTPEngine
+  generator never turned pipelining off (three retries without three replies): busy scripts with sends that end
+  with a new socket or none were added.
+- **clippy: raw-pointer arguments.** Public methods taking `*mut c_void` fail `not_unsafe_ptr_arg_deref`; the
+  objects' methods are `pub(crate)` (the C ABI functions are `unsafe`). A test stand-in printing a `c_long` as
+  Windows' 32-bit value needs the cast on LP64 and `allow(clippy::unnecessary_cast)` on Windows.
+- **Behaviour changes.** None intended: the same calls in the same order and count (the drivers' traces), the same
+  locks. Release timing inside a call can differ by a statement (Rust drops a reference after its own lock is let
+  go); destruction order within one clear is the map's order instead of the tree's.
+- **Not moved this round.** GetCertOp's object (its members are a C++ Blowfish, AuthPubKeyBlock and AuthPeerData,
+  which CertMsg's templates and the callers read: it follows those classes), HTTPGetOp's and FTPGetOp's state
+  machines, FilePushOp, PeerAuthOp, PeerAuthServerOp, FindPatchOp and DetectFirewallOp as objects, the routing and
+  DB op families, ServerRequestOp.

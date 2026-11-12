@@ -8,6 +8,7 @@ pub mod admin;
 pub mod asyncop;
 pub mod auth;
 pub mod authctx;
+pub mod authflow;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
@@ -51,6 +52,7 @@ pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
 pub mod http;
+pub mod httpengine;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;

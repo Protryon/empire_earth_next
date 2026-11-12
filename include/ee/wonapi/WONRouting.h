@@ -622,10 +622,12 @@ public:
 class HTTPGetOp;
 class HTTPSession;
 class HTTPGetOp;
+// HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
+// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
 class HTTPConnection : public RefCount {
 public:
     HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
-    // Implicit ordinary destructor 2d2d50 (150 bytes), no own-vptr store; one-slot vtable 44d3a4.
+    virtual ~HTTPConnection(); //2d2d50, the members
     void Kill(); //2d3600
     void QueueOp(HTTPGetOp*); //2d33a0,ret4
     void QueueOp(HTTPGetOp*,int); //2d3290,ret8
@@ -634,34 +636,27 @@ public:
     static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
 protected:
     void OpCallback(HTTPGetOp*); //2d2e80, 1030 bytes; protected in the SDK
-public:
+private:
+    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
     HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
-    SmartPtr<BlockingSocket> mSocket; //24
-    int mNumPipelineFailures; //28
-    int mNumPipelineSuccesses; //2c
-    bool mDoPipeline; //30; natural alignment31..33
-    time_t mLastUseTime; //34, constructor leaves uninitialized
-    typedef std::list<SmartPtr<HTTPGetOp> > OpQueue;
-    OpQueue mOpQueue[2]; //38,44
-    bool mRetryMode; //50; natural alignment51..53
-    HTTPGetOp* mCurOp[2]; //54,58 NONOWNING, Kill nulls them after killing
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCurOpCompletion[2]; //5c,60
+    EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
 };
 typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
 
-// 0x2c bytes: constructor 2d27b0, map destruction 2d2870.
-// Implicit dtor:2d2870 has no own vptr store; final store is RefCount at2d28d0.
-// SDK HTTPEngine.h independently has no explicit destructor declaration.
+// 0x2c bytes: constructor 2d27b0, map destruction 2d2870. The connections by host (StringLessNoCase) are ee_won's
+// (httpengine.rs EeWonHttpSession).
 class HTTPSession : public RefCount {
 public:
     HTTPSession();                          //2d27b0, out of line
+    virtual ~HTTPSession();                 //2d2870, the map
     void AddOp(HTTPGetOp*);                  //2d28f0, queues a completed op
     void KillAll();                         //2d2bc0
     int GetNumOps();
+private:
+    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit;              //08..20
-    typedef std::map<std::string,HTTPConnectionPtr,StringLessNoCase> ConnectionMap;
-    ConnectionMap mConnectionMap;           //20..2c
+    EeWonHttpSession* mImpl;                //20..2c, owned
 };
 typedef SmartPtr<HTTPSession> HTTPSessionPtr;
 
