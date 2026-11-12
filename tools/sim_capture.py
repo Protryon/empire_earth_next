@@ -2,6 +2,8 @@
 
   python -I tools/sim_capture.py run NAME [--exe EXE] [--seeds 2-7] [--jobs 2] [--data open]  -> build/sim_capture/NAME/
   python -I tools/sim_capture.py digest NAME [--write]     per seed and tag: records and FNV-1a of their bytes
+`digest` and `check` compute the digests with `cargo run --release -p xtask -- capture-digest` when cargo is there
+(the same lines; EE_SIM_CAPTURE_PYTHON_DIGEST=1 forces the Python digest, the fallback without cargo).
   python -I tools/sim_capture.py check NAME                the digests equal tools/sim_capture/golden_cpp.txt
   python -I tools/sim_capture.py replay NAME               the Rust leaves recompute every captured output
 
@@ -150,12 +152,42 @@ def digests(path):
     return out
 
 
+def rust_digest_lines(paths):
+    """{seed: lines} from xtask capture-digest (rust/crates/xtask/src/capture_digest.rs: the same lines, the seeds in
+    parallel, about a hundred times faster), or None when cargo or the tool is missing or fails."""
+    if not paths or os.environ.get("EE_SIM_CAPTURE_PYTHON_DIGEST"):
+        return None
+    try:
+        cargo = rust_build.cargo()
+    except SystemExit:
+        return None
+    try:
+        r = subprocess.run([cargo, "run", "-q", "--release", "-p", "xtask", "--", "capture-digest",
+                            *(f"{seed}={p.resolve()}" for seed, p in paths)], cwd=rust_build.RUST,
+                           env=rust_build.cargo_env(), capture_output=True, encoding="utf-8")
+    except OSError:
+        return None
+    if r.returncode:
+        print(f"  (xtask capture-digest failed, digesting in Python: {r.stderr.strip()[-300:]})", file=sys.stderr)
+        return None
+    out = {seed: [] for seed, _ in paths}
+    for line in r.stdout.splitlines():
+        out[int(line.split()[1])].append(line)
+    return out
+
+
 def digest_lines(name, seed_list):
+    found = [(seed, OUT / name / f"capture-{seed}.bin") for seed in seed_list]
+    found = [(seed, p) for seed, p in found if p.exists()]
+    fast = rust_digest_lines(found)
     lines = []
     for seed in seed_list:
         p = OUT / name / f"capture-{seed}.bin"
         if not p.exists():
             lines.append(f"seed {seed} MISSING")
+            continue
+        if fast is not None:
+            lines += fast[seed]
             continue
         for tag, (n, h) in sorted(digests(p).items()):
             lines.append(f"seed {seed} {tag} {n} {h:016x}")
