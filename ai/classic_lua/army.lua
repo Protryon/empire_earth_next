@@ -1571,7 +1571,12 @@ local function update_groups(view, memory)
                     assign_task(view, memory, g)
                 end
             elseif g.phase == "task" and #g.units > 0 then
-                if g.task == "attack" and g.state == "arrived" then
+                -- (EECPASGLand: a sub-group whose fight is over goes idle and is given a task again)
+                local fought = g.was_fighting and g.state ~= "fighting"
+                g.was_fighting = g.state == "fighting"
+                if fought and not g.sea and g.mission ~= 3 then
+                    assign_task(view, memory, g)
+                elseif g.task == "attack" and g.state == "arrived" then
                     assign_task(view, memory, g)
                 elseif g.task == "defend" and g.mission ~= 3 and g.state ~= "fighting"
                         and view.time >= (g.task_check or 0) then
