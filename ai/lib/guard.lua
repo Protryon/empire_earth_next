@@ -185,7 +185,7 @@ function M.train(view, mem, n, order, per)
     end)
     local busy = {}
     for _, l in ipairs(lack) do
-        local k = math.min(l.n, need, per or 2)
+        local k = math.min(l.n, need, (per or 2) * math.max(l.c.producers, 1))   -- (on every producer of the class)
         if k > 0 and l.c.requested == 0 and not busy[l.c.producer] then
             order("soldier_" .. l.c.producer, {verb = "train", type = l.c.type, n = k})
             busy[l.c.producer] = true
