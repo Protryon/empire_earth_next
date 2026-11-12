@@ -7,7 +7,8 @@
 //! models (`models.rs`, `EEROUnits::LoadMedia`) and the sky's colours, the sky, star and cloud models' points
 //! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`), the earthquake's crack (`quake.rs`), the tracer beam's
 //! aim and stretch (`beam.rs`) and the farm's and the volcano's meshes (`farm.rs`, `volcano.rs`, over `mesh.rs`) and the
-//! effect manager's containers (`effect_store.rs`).
+//! effect manager's containers (`effect_store.rs`), the effects' records, their base classes' Load and Save, their random
+//! generator and the smoke generators (`effect_state.rs`).
 //!
 //! The camera's `Update` also runs in the simulation tick, so its math is deterministic code under RUST_PLAN 2.1;
 //! the tests replay golden values from the unmodified C++ (`golden_camera.txt`).
@@ -23,10 +24,12 @@
 
 pub mod beam;
 pub mod camera;
+pub mod effect_state;
 pub mod effect_store;
 pub mod effects;
 pub mod farm;
 pub mod ffi;
+pub mod ffi_effect;
 pub mod ffi_mesh;
 #[cfg(test)]
 mod golden_beam;

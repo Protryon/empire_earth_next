@@ -94,7 +94,7 @@ ServerChangedEvent::ServerChangedEvent(LobbyServer* inServer, int inChangeKind)
     : LobbyChangeEvent(LobbyEvent_ServerChanged, inChangeKind), mServer(inServer) {}
 // FUNCTION: WON 0x0075a2a0
 // Creates the notice that an HTTP download finished, holding its operation
-GotHTTPDocumentEvent::GotHTTPDocumentEvent(GetHTTPDocumentOp* inOp)
+GotHTTPDocumentEvent::GotHTTPDocumentEvent(RustServerOp* inOp)
     : LobbyEvent(LobbyEvent_GotHTTPDocument), mOp(inOp) {}
 // FUNCTION: WON 0x00759990
 // Creates the notice that a Direct Connect game was added, removed or changed

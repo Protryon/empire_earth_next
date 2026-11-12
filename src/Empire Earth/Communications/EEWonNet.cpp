@@ -1052,7 +1052,7 @@ void EEWonNet::LoginCallback(AsyncOp* inOp)
 // 0x4cff95 and the tracker family 0x4d157f.. survive, WONAPI uses them too; GetMOTDOp itself is gone). (r25pre-won-2)
 void EEWonNet::RequestMOTD()
 {
-    this->mMOTDOp = new GetMOTDOp(kWonProductName);
+    this->mMOTDOp = RustServerOp::NewHttpDocument(kWonProductName, HTTPDocType_MOTD); // GetMOTDOp
     this->mMOTDOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::MOTDCallback));
     this->mMOTDOp->RunAsync(15000);
 }
@@ -1064,17 +1064,17 @@ void EEWonNet::MOTDCallback(AsyncOp* inOp)
     UWideString theGameMOTD;
     UWideString theSystemMOTD;
     ByteBufferPtr theBuffer;
-    GetMOTDOp* theOp = static_cast<GetMOTDOp*>((AsyncOp*)inOp);
+    RustServerOp* theOp = static_cast<RustServerOp*>((AsyncOp*)inOp);
     bool theFound = false;
 
     if (static_cast<AsyncOp*>(inOp) == (AsyncOp*)this->mMOTDOp.get() && inOp->GetStatus() == WS_Success) {
-        if (theOp->mIsNew[0]) {
-            theBuffer = theOp->GetDocument(HTTPDocOwner_Sys);
+        if (theOp->GetNum(EE_WON_HTTPDOC_IS_NEW, 0)) {
+            theBuffer = theOp->GetHttpDocument(HTTPDocOwner_Sys);
             theGameMOTD = GetBufferData(theBuffer);
             theFound = true;
         }
-        if (theOp->mIsNew[1]) {
-            theBuffer = theOp->GetDocument(HTTPDocOwner_Game);
+        if (theOp->GetNum(EE_WON_HTTPDOC_IS_NEW, 1)) {
+            theBuffer = theOp->GetHttpDocument(HTTPDocOwner_Game);
             theSystemMOTD = GetBufferData(theBuffer);
             theFound = true;
         }

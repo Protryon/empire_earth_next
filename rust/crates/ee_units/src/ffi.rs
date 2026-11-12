@@ -163,6 +163,53 @@ pub unsafe extern "C" fn ee_units_store_check(objects: *const EeUnitRecord, coun
     unsafe { *out = result };
 }
 
+/// A unit made out of every list (a shot): its record by object (`Store::insert_unlisted`).
+///
+/// # Safety
+/// `record` points to a valid record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_insert_unlisted(record: *const EeUnitRecord) {
+    // SAFETY: the caller's contract
+    let record = unsafe { *record };
+    with_store(|s| s.insert_unlisted(record));
+}
+
+/// TEST ONLY: the unlisted records' objects into `out` (at most `capacity`); their count.
+///
+/// # Safety
+/// `out` points to `capacity` writable words (or is null with `capacity` 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_unlisted(out: *mut u64, capacity: usize) -> usize {
+    let objects = with_store(|s| s.unlisted_objects());
+    for (i, o) in objects.iter().take(capacity).enumerate() {
+        // SAFETY: the caller's contract (i < capacity)
+        unsafe { *out.add(i) = *o };
+    }
+    objects.len()
+}
+
+/// TEST ONLY: the unlisted records against `objects` (`count` records filled from the objects
+/// `ee_units_store_unlisted` named): the mismatches (`out`'s first id and field when it had none).
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0); `out` to a valid result.
+#[no_mangle]
+pub unsafe extern "C" fn ee_units_store_check_unlisted(
+    objects: *const EeUnitRecord,
+    count: usize,
+    out: *mut EeUnitStoreCheck,
+) -> u32 {
+    let objects = if count == 0 || objects.is_null() {
+        &[][..]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(objects, count) }
+    };
+    // SAFETY: the caller's contract
+    let out = unsafe { &mut *out };
+    with_store(|s| s.check_unlisted(objects, out))
+}
+
 /// The out-of-sync checksum's flag 1 over the store's units on the map (`Store::checksum_flag1`).
 #[no_mangle]
 pub extern "C" fn ee_units_store_checksum_flag1() -> u64 {

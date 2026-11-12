@@ -39,6 +39,8 @@ pub enum Checked {
     Cut,
     /// it returned `RecvServerDatagram()` (DetectFirewallOp's UDP test, reqhost.rs)
     Datagram,
+    /// `SetLastServerError(error); return WS_ServerReq_TryNextServer` (CreateAccountOp's server key, reqlast.rs)
+    ServerError(i32),
 }
 
 /// An op derived from `ServerRequestOp` in Rust.
@@ -74,6 +76,10 @@ pub trait RequestOp: Send {
     /// a result's bytes by the op's number (`None`: no such result, or NULL)
     fn bytes(&self, _which: i32) -> Option<Vec<u8>> {
         None
+    }
+    /// a result's bytes by the op's number and an element (a list's index)
+    fn bytes_at(&self, which: i32, _index: i64) -> Option<Vec<u8>> {
+        self.bytes(which)
     }
     /// a result's number by the op's number (0: none)
     fn num(&self, _which: i32) -> i64 {
@@ -197,6 +203,8 @@ pub const EE_WON_REQOP_STATUS: i32 = 0;
 pub const EE_WON_REQOP_INVALID_HEADER: i32 = 1;
 /// throw `ReadBufferException`
 pub const EE_WON_REQOP_CUT: i32 = 2;
+/// `SetLastServerError(status)`, then the next server
+pub const EE_WON_REQOP_SERVER_ERROR: i32 = 3;
 
 /// Frees an op.
 ///
@@ -281,6 +289,27 @@ pub unsafe extern "C" fn ee_won_reqop_bytes(
     }
 }
 
+/// A result's bytes by number and element (a list's index) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_bytes_at(
+    op: *const EeWonReqOp,
+    which: i32,
+    index: i64,
+    sink: EeWonByteSink,
+    context: *mut c_void,
+) -> bool {
+    match unsafe { (*op).op.bytes_at(which, index) } {
+        Some(b) => {
+            unsafe { sink(context, b.as_ptr(), b.len()) };
+            true
+        }
+        None => false,
+    }
+}
+
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///
 /// # Safety
@@ -324,6 +353,7 @@ pub unsafe extern "C" fn ee_won_reqop_check_response(
         Checked::Status(s) => (EE_WON_REQOP_STATUS, s),
         Checked::InvalidHeader => (EE_WON_REQOP_INVALID_HEADER, 0),
         Checked::Cut | Checked::Datagram => (EE_WON_REQOP_CUT, 0),
+        Checked::ServerError(e) => (EE_WON_REQOP_SERVER_ERROR, e),
     };
     unsafe { *verdict = v };
     s

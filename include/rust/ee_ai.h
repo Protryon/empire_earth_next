@@ -186,6 +186,93 @@ struct EeAiManifestEntry {
   bool fills_garrison;
 };
 
+/// A table key across the C ABI (`EECPLuaKey`).
+struct EeAiLuaKey {
+  uint8_t is_int;
+  int64_t integer;
+  const uint8_t *text;
+  size_t text_len;
+};
+
+/// One C++ value as the accessor fills it: the scalars, and the items' and keys' arrays (the vectors' storage, with
+/// the element sizes).
+struct EeAiLuaNode {
+  uint8_t kind;
+  uint8_t boolean;
+  int64_t integer;
+  const uint8_t *text;
+  size_t text_len;
+  /// an array's items, or a map's fields
+  size_t count;
+  const void *items;
+  size_t item_stride;
+  const void *keys;
+  size_t key_stride;
+};
+
+/// The C++ side's functions over its tree and strings (`EECPLua.cpp`'s `kEECPLuaTreeOps`): read a value or a key,
+/// build a value (set a scalar or an empty container, push an item, add a field: both return the new child), append
+/// bytes to a `std::string`, and read a script for the runtime (the text stays the owner's until `read_done`).
+struct EeAiLuaTreeOps {
+  void (*node)(const void *value, EeAiLuaNode *out);
+  void (*key)(const void *key, EeAiLuaKey *out);
+  void (*set)(void *value,
+              uint8_t kind,
+              uint8_t boolean,
+              int64_t integer,
+              const uint8_t *text,
+              size_t len);
+  void *(*push)(void *array);
+  void *(*field)(void *map, const EeAiLuaKey *key);
+  void (*append)(void *string, const uint8_t *data, size_t len);
+  bool (*read)(void *owner, const char *path, const uint8_t **text, size_t *len);
+  void (*read_done)(void *owner);
+};
+
+/// `EECPLuaConfig` as the state takes it (the reader is the ops' `read` on the owner, when `has_read`).
+struct EeAiLuaConfig {
+  uint64_t seed;
+  size_t memory_limit;
+  int64_t budget;
+  bool has_read;
+  void (*write)(void *context, const char *text);
+  void *write_context;
+  bool check_memory;
+  /// `void (*)(lua_State*, void*)` or NULL: may raise a Lua error (a C-unwind function, which cbindgen cannot spell)
+  void *open;
+  void *open_context;
+};
+
+/// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
+using EeAiUnitsClassByName = long(*)(const char *name);
+
+/// An `(sort key, id)` pair of the C++'s `std::vector<std::pair<long long, long>>` (the same layout).
+struct EeAiUnitsSortEntry {
+  int64_t key;
+  long id;
+};
+
+/// `EECPUnitsFilter` (ai.units' and ai.seen's filter) as the C++ copies it in and out.
+struct EeAiUnitsFilter {
+  long kind_type;
+  long types[16];
+  long type_count;
+  const char *category;
+  bool has_near;
+  long x;
+  long y;
+  long r;
+  int idle;
+  int built;
+  int armed;
+  const char *held;
+  const char *action;
+  long player;
+  int enemy;
+  long kind;
+  long limit;
+};
+
 extern "C" {
 
 /// The "EENS" block of a state into `out` when `cap` holds it -> the block's length (call with `cap` 0 to size it).
@@ -357,6 +444,176 @@ int64_t ee_ai_names_key_of(const EeAiNames *t, EeAiBytes name);
 /// # Safety
 /// `t` is NULL or a live table, not used after.
 void ee_ai_names_free(EeAiNames *t);
+
+/// `EECPLuaKey::operator<`. Safety: both keys are valid.
+bool ee_ai_lua_key_less(const EeAiLuaKey *a, const EeAiLuaKey *b);
+
+/// `EECPLuaKey::operator==`. Safety: both keys are valid.
+bool ee_ai_lua_key_equal(const EeAiLuaKey *a, const EeAiLuaKey *b);
+
+/// `EECPLuaValue::operator==`. Safety: `ops` is the C++ table, `a` and `b` live values.
+bool ee_ai_lua_value_equal(const EeAiLuaTreeOps *ops, const void *a, const void *b);
+
+/// `EECPLuaValue::ToText`, appended to `out` (a `std::string`). Safety: as above.
+void ee_ai_lua_value_text(const EeAiLuaTreeOps *ops, const void *value, void *out);
+
+/// `EECPLuaEncode`: appends the value's bytes to `out` (a `std::string`). Safety: as above.
+void ee_ai_lua_encode(const EeAiLuaTreeOps *ops, const void *value, void *out);
+
+/// `EECPLuaDecode`: one value from `data[*at..len]`; `*at` advances past it (or to where the error was found). On
+/// success `out` (an `EECPLuaValue`) becomes the value; on a failure it stays as it was and the error is appended
+/// to `error` (a `std::string`). Safety: `data` holds `len` bytes, `*at` is set, `out` and `error` are live.
+bool ee_ai_lua_decode(const EeAiLuaTreeOps *ops,
+                      const uint8_t *data,
+                      size_t len,
+                      size_t *at,
+                      void *out,
+                      void *error);
+
+/// `EECPLuaSeed`.
+uint64_t ee_ai_lua_seed(uint32_t game_seed, uint32_t player);
+
+/// SplitMix64: advances `*state` -> the next output. Safety: `state` is valid.
+uint64_t ee_ai_lua_splitmix(uint64_t *state);
+
+/// A new state (`EECPLuaState::EECPLuaState`) -> its handle, never NULL (see `ee_ai_lua_is_open`). Safety: `ops`
+/// outlives the state; `owner` is what `ee_ai_lua_owner` answers for it.
+void *ee_ai_lua_new(const EeAiLuaConfig *config,
+                    const EeAiLuaTreeOps *ops,
+                    void *owner);
+
+/// Closes and frees a state. Safety: `host` came from `ee_ai_lua_new`, is not used again.
+void ee_ai_lua_free(void *host);
+
+/// Safety: `host` is live (as for every function below taking one).
+bool ee_ai_lua_is_open(const void *host);
+
+/// The last call's `EECPLuaStatus`.
+uint32_t ee_ai_lua_status(const void *host);
+
+/// Appends the last call's error text to `out` (a `std::string`).
+void ee_ai_lua_error(const void *host, void *out);
+
+/// This call's (or the last call's) instructions and charges.
+int64_t ee_ai_lua_used(const void *host);
+
+/// The budget of a call (during `CallOptional`, its own).
+int64_t ee_ai_lua_budget(const void *host);
+
+size_t ee_ai_lua_memory_used(const void *host);
+
+size_t ee_ai_lua_memory_peak(const void *host);
+
+uint64_t ee_ai_lua_rng_state(const void *host);
+
+/// The state's next SplitMix64 draw (`ai.random`'s source).
+uint64_t ee_ai_lua_next_random(void *host);
+
+/// The owner of the state `state` belongs to (`EECPLuaState::From`). Safety: `state` is a `lua_State` of a host.
+void *ee_ai_lua_owner(void *state);
+
+/// `EECPLuaState::Charge`: may raise a Lua error (longjmp). Safety: `state` is a host's, inside one of its calls.
+void ee_ai_lua_charge(void *state,
+                      int64_t amount);
+
+/// The binding `ai.used()` -> this call's instructions and charges so far, and the call's budget (a script's own
+/// profiling; it changes nothing). Safety: `state` is a host's, inside one of its calls.
+int ee_ai_lua_used_binding(void *state);
+
+/// `LoadPersonality` (`reload` false: `module`) / `Reload` (true).
+bool ee_ai_lua_load(void *host, const char *module, bool reload);
+
+/// `Init`, `Step`, `CallOptional`: personality[name](view, memory) -> `out` (an `EECPLuaValue`: the result, or nil).
+/// Safety: `name` a C string, `view` and `out` live values, `found` valid.
+bool ee_ai_lua_entry(void *host,
+                     const char *name,
+                     bool optional,
+                     const void *view,
+                     int64_t budget,
+                     void *out,
+                     bool *found);
+
+/// `Run`: `source` (`len` bytes) as a chunk named `name` -> `out` (its first result, or nil).
+bool ee_ai_lua_run(void *host, const char *source, size_t len, const char *name, void *out);
+
+/// `GetMemory` -> `out` (the memory, or nil).
+bool ee_ai_lua_get_memory(void *host, void *out);
+
+/// `SaveMemory`: appends the block to `out` (a `std::string`, cleared by the caller) when it succeeds.
+bool ee_ai_lua_save_memory(void *host,
+                           void *out);
+
+/// `RestoreMemory` from `len` bytes at `data`.
+bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
+
+/// `EECPLuaStatusName`: a static C string.
+const char *ee_ai_lua_status_name(uint32_t status);
+
+/// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
+long ee_ai_units_class_arg(void *state,
+                           int index,
+                           EeAiUnitsClassByName by_name);
+
+/// `EECPUnitsReadIds`: the ids at `index` (an integer, or an array of integers, at most [`MAX_IDS`]) into `out`
+/// (room for `MAX_IDS`), their count in `*count` -> the count of bad entries. No error.
+long ee_ai_units_read_ids(void *state,
+                          int index,
+                          long *out,
+                          size_t *count);
+
+/// `EECPUnitsOptInt`: an integer field of the table at `table` -> found, the value in `*out`.
+bool ee_ai_units_opt_int(void *state, int table, const char *key, long *out);
+
+/// `EECPUnitsOptBool`: a field's truth (nil, or no table: `default`).
+bool ee_ai_units_opt_bool(void *state, int table, const char *key, bool default_);
+
+/// `EECPUnitsOptString`: a string field -> a pointer into the Lua string (valid while the table holds it), or NULL.
+const char *ee_ai_units_opt_string(void *state,
+                                   int table,
+                                   const char *key);
+
+/// `EECPUnitsOptNear`: `near = {x, y[, r]}` -> found, the values (r 1,000,000 when it is not an integer).
+bool ee_ai_units_opt_near(void *state,
+                          int table,
+                          long *x,
+                          long *y,
+                          long *r);
+
+/// `EECPUnitsOptAmount`: an integer field, 0 when missing or negative (as a `long`).
+long ee_ai_units_opt_amount(void *state, int table, const char *key);
+
+/// `EECPUnitsSetInt`: `t[key] = value` on the table on top.
+void ee_ai_units_set_int(void *state, const char *key, long value);
+
+/// `EECPUnitsSetStr`.
+void ee_ai_units_set_str(void *state, const char *key, const char *value);
+
+/// `EECPUnitsSetBool`.
+void ee_ai_units_set_bool(void *state, const char *key, bool value);
+
+/// `EECPUnitsPushSorted`: sorts the pairs in place (by key, then id) and pushes the first `limit` ids (negative:
+/// all) as a Lua array.
+void ee_ai_units_push_sorted(void *state,
+                             EeAiUnitsSortEntry *entries,
+                             size_t count,
+                             long limit);
+
+/// `EECPUnitsResult`: a command's result: "ok"/"refused", the reason's name, the count, the id (nil for 0) -> 4.
+int ee_ai_units_result(void *state,
+                       long reason,
+                       long count,
+                       long id);
+
+/// `EECPUnitsLayerArg`: the layer an optional string argument names -> 0 threat (also the default: not a string),
+/// 1 lost, 2 influence, -1 unknown.
+int ee_ai_units_layer_arg(void *state,
+                          int index);
+
+/// `EECPUnitsReadFilter`: the filter table at `table` into `f` (the fields it names; the rest as they were).
+void ee_ai_units_read_filter(void *state,
+                             int table,
+                             EeAiUnitsFilter *f,
+                             EeAiUnitsClassByName by_name);
 
 }  // extern "C"
 

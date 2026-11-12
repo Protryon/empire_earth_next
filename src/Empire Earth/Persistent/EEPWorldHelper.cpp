@@ -563,7 +563,7 @@ static void SaveGhosts(FSFile& outFile)
             if (theComplex == NULL)
                 continue;
             for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
-                std::deque<EEUnitGoal*>& theGoals = theComplex->mGoalQueues[q].mGoals;
+                const EEGoalDeque& theGoals = theComplex->mGoalQueues[q].mGoals;
                 for (size_t g = 0; g < theGoals.size(); g++) {
                     if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoals[g])) {
                         AddHeldGhost(theAttack->mTarget, theDead, theSimple);

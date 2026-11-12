@@ -1,5 +1,5 @@
 // WONAPI account profile data: newsletters, custom action and birth date (file grouping inferred)
-// The profile is a Rust object (ee_won db.rs EeWonProfile); this class is its shim.
+// The profile is a Rust object (ee_won db.rs EeWonProfile); this class is its shim (the drivers' copy).
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "won_profiledata.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006cd770
 // Creates an empty profile (no birth date, no custom action)

@@ -18,6 +18,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -103,56 +105,36 @@ long EEUCHelicopterPriest::GetPopulationCost()
 // goal (an attack's aim point, a calamity's cast point, a heal target); others the priest's way
 void EEUCHelicopterPriest::ActionChanged(EEComplexUnit* inUnit)
 {
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs helicopter), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_HELICOPTER_PRIEST, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCHelicopterPriest::ActionChanged's path to the goal when preparing to move
+// (the original's statements; EEUnitUpdate.cpp's EE_UNITS_ACT_HELICOPTER_PATH calls it)
+void EEHelicopterPriestPathToGoal(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEUCHelicopterPriest* theClass = static_cast<EEUCHelicopterPriest*>(inClass);
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
     EEUnitGoal* theGoal = inUnit->mGoalState;
     GE3DPoint theTarget;
     GE3DPoint theEnemy;
     EEUnit* theUnit;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionIdle:
-        this->HandleActionChanged(inUnit);
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
-        return;
-    }
-    case kActionPrepareToMove:
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->DropPath();
-        if (theGoal->mKind == kGoalAttackUnit) {
-            EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
-            EEGetAimPoint(inUnit, &theEnemy, &theTarget);
-        } else if (theGoal->mKind == kGoalCastCalamity) {
-            theGoal->GetDestination(inUnit, theTarget);
-            EEGetHelicopterPriestDestination(inUnit, theTarget);
-        } else if (theGoal->mKind == kGoalHealUnit)
-            theGoal->GetGoalLocation(theTarget);
-        else
-            theGoal->GetDestination(inUnit, theTarget);
-        if (theGoal->mKind == kGoalExplore)
-            theTarget.SetZ(this->mCruiseAltitude);
-        EEFindLandingPoint(inUnit, &theTarget);
-        this->PathToward(inUnit, thePosition, theTarget, false);
-        break;
-    case kActionResourcesRotting:
-        EEUCBasicPriest::ActionChanged(inUnit);
-        return;
-    default:
-        EEUCBasicPriest::ActionChanged(inUnit);
-        return;
-    }
-    inUnit->SetAnimation(0xd, -1, 0);
+    if (theGoal->mKind == kGoalAttackUnit) {
+        EEFindDropLocation(inUnit, &theUnit, &theEnemy, NULL);
+        EEGetAimPoint(inUnit, &theEnemy, &theTarget);
+    } else if (theGoal->mKind == kGoalCastCalamity) {
+        theGoal->GetDestination(inUnit, theTarget);
+        EEGetHelicopterPriestDestination(inUnit, theTarget);
+    } else if (theGoal->mKind == kGoalHealUnit)
+        theGoal->GetGoalLocation(theTarget);
+    else
+        theGoal->GetDestination(inUnit, theTarget);
+    if (theGoal->mKind == kGoalExplore)
+        theTarget.SetZ(theClass->mCruiseAltitude);
+    EEFindLandingPoint(inUnit, &theTarget);
+    theClass->PathToward(inUnit, thePosition, theTarget, false);
 }
 
 // FUNCTION: EXE 0x6132c0

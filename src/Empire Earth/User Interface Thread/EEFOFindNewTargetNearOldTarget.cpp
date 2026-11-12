@@ -58,6 +58,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEPlayer.h"
@@ -6421,6 +6422,7 @@ public:
 // inUpgrade's hit points raised by inFactor of its class's base; inPlayer's units of type inType follow (inferred)
 void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFactor, EEPlayer* inPlayer)
 {
+    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     long theBase = inUpgrade->mUnitClass->mHitPoints;
     EEHitPointUpgrader theUpgrader(inType, (theBase * inFactor + inUpgrade->GetMaxHitPoints()) / inUpgrade->GetMaxHitPoints());
     long theBonus = inUpgrade->mUnitClass->mHitPoints;

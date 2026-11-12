@@ -75,13 +75,6 @@ EEUnit* EEUCSpaceBuilding::CreateUnit(long inX, long inY, long inPlayer, bool in
     return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x61a11d
-// Handles a new action as a building does
-void EEUCSpaceBuilding::ActionChanged(EEComplexUnit* inUnit)
-{
-    EEUCBuilding::ActionChanged(inUnit);
-}
-
 // FUNCTION: EXE 0x61a129
 // Sets up a new space building as a building, already built
 void EEUCSpaceBuilding::UnitCreated(EEComplexUnit* inUnit)

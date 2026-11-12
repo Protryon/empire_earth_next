@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h" // RouteGroupListOf
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/EELobbyGameCode.h"
@@ -1915,7 +1916,7 @@ void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
 {
     LobbyServerList* servers=LobbyGetServerList();
     if(!servers) return;
-    RoutingGetGroupListReqOp* op=static_cast<RoutingGetGroupListReqOp*>(inBaseOp);
+    RustServerOp* op=static_cast<RustServerOp*>(inBaseOp);
     LobbyServer* server=servers->FindServer(op->GetAddr());
     if(!server) return;
     server->SetQueryingGroups(false);
@@ -1923,7 +1924,9 @@ void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
         this->mLastServerRefresh=0;
         server->SetLastPing(0);
     }
-    server->SyncGroups(op->mOp->mGroupMap,false);
+    SmartPtr<RoutingGetGroupListOp> groups=new RoutingGetGroupListOp; // the op's replies read again (reqlast.rs)
+    RouteGroupListOf(groups.get(),*op);
+    server->SyncGroups(groups->mGroupMap,false);
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
 }
 // FUNCTION: WON 0x007ed4c0
@@ -1939,8 +1942,7 @@ void RoutingLogic::HandleQueryServerGroups(QueryServerGroupsEvent* event)
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
     server->SetQueryingGroups(true);
     server->SetLastPing(now);
-    SmartPtr<RoutingGetGroupListReqOp> op=new RoutingGetGroupListReqOp(server->GetAddress(),0);
-    op->mOp->mFlags=0x29;
+    SmartPtr<RustServerOp> op=RustServerOp::NewGroupListReq(server->GetAddress(),0x29);
     this->RunTrackedOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone,this),0);
 }
 }

@@ -169,14 +169,6 @@ pub const EE_WON_HOST_SOCKET_LISTEN: i32 = 94;
 pub const EE_WON_HOST_SOCKET_PORT: i32 = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 pub const EE_WON_HOST_RUN: i32 = 96;
-// The ops still derived in C++ (reqhost.rs's CppReq; `this` a C++ `ServerRequestOp`):
-/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
-pub const EE_WON_HOST_REQ_NEXT: i32 = 97;
-/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
-/// `ReadBufferException`
-pub const EE_WON_HOST_REQ_CHECK: i32 = 98;
-/// `Reset()`
-pub const EE_WON_HOST_REQ_RESET: i32 = 99;
 // GetCertOp's (certhost.rs: round 6's hooks; ctx an auth context, kind 1 `AuthCertificate`, 2 `Auth2Certificate`):
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 pub const EE_WON_HOST_CERT_VERIFIER_PUBLIC: i32 = 100;
@@ -239,6 +231,53 @@ pub const EE_WON_HOST_CERT_SET_PASSWORD: i32 = 127;
 pub const EE_WON_HOST_CERT_SET_PEER: i32 = 128;
 /// ctx obj0's `ClearOneTimeData()`
 pub const EE_WON_HOST_CERT_CLEAR_ONE_TIME: i32 = 129;
+// HTTPGetOp's (httpget.rs):
+/// a socket obj0's `IsConnected()` -> out_num
+pub const EE_WON_HOST_SOCKET_CONNECTED: i32 = 130;
+/// a socket obj0's `Kill()`
+pub const EE_WON_HOST_SOCKET_KILL: i32 = 131;
+/// a socket obj0's `GetSocketStatus()` -> out_num
+pub const EE_WON_HOST_SOCKET_STATUS: i32 = 132;
+/// a socket obj0's `RecvCRMsg(line, num0)` -> out_num (the status), the line (none: NULL)
+pub const EE_WON_HOST_RECV_CR: i32 = 133;
+/// `WONFile(data)`'s `Exists()` (num0 0), `GetSize()` (1), `GetModifyTime()` (2) -> out_num
+pub const EE_WON_HOST_FILE_STAT: i32 = 134;
+/// `time(NULL)` -> out_num
+pub const EE_WON_HOST_TIME: i32 = 135;
+/// a cache obj0's `GetEntry(data)` -> out_obj (a reference taken; none: NULL)
+pub const EE_WON_HOST_CACHE_ENTRY: i32 = 136;
+/// a cache entry obj0's `IsValid()` (num0 0), `GetExpirationTime()` (1) -> out_num; `GetLocalPath()` (2),
+/// `GetEntityTag()` (3) -> the bytes
+pub const EE_WON_HOST_ENTRY_GET: i32 = 137;
+/// a cache entry obj0's `SetValid(num1)` (num0 0), `SetExpirationTime(num1)` (1), `SetEntityTag(data)` (3)
+pub const EE_WON_HOST_ENTRY_SET: i32 = 138;
+/// a cache obj0's `UpdateEntry(obj1)`
+pub const EE_WON_HOST_CACHE_UPDATE: i32 = 139;
+/// a receive op obj0's `SetSkipBytes(true)`
+pub const EE_WON_HOST_RECV_SKIP: i32 = 140;
+/// a receive op obj0's `SetBinaryFile(num0)`
+pub const EE_WON_HOST_RECV_BINARY: i32 = 141;
+/// a receive op obj0's `SetFileModifyTime(num0)`
+pub const EE_WON_HOST_RECV_MODIFY_TIME: i32 = 142;
+/// the web proxy file's host (`HTTPGetOp::mStaticProxyHost`) -> the bytes
+pub const EE_WON_HOST_HTTP_PROXY: i32 = 143;
+/// `new HTTPGetOp(host, path)` (data: the host's num0 bytes, then the path) -> out_obj (a `RustServerOp`)
+pub const EE_WON_HOST_NEW_HTTP_GET: i32 = 144;
+/// a `RustServerOp` obj0's result num0 (element num1) -> out_num
+pub const EE_WON_HOST_HOSTOP_NUM: i32 = 145;
+/// a `RustServerOp` obj0's result bytes num0 (element num1) -> the bytes (none: NULL)
+pub const EE_WON_HOST_HOSTOP_BYTES: i32 = 146;
+/// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
+pub const EE_WON_HOST_HOSTOP_SET: i32 = 147;
+// GetHTTPDocumentOp's (httpdoc.rs):
+/// an HTTP get obj0's `GetLastModifiedTime()` (the C++ side's, over its local file) -> out_num
+pub const EE_WON_HOST_HTTP_MODIFIED: i32 = 148;
+/// `PlatFOpen(data, "r")` and its `fgetc` -> out_num (-2: no file, -1: EOF)
+pub const EE_WON_HOST_FILE_FIRST_CHAR: i32 = 149;
+/// an HTTP session obj0's `AddOp(obj1)`
+pub const EE_WON_HOST_SESSION_ADD: i32 = 150;
+/// the op's `mTracker.IsEmpty()` -> out_num
+pub const EE_WON_HOST_TRACKER_EMPTY: i32 = 151;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
