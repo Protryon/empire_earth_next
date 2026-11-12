@@ -82,7 +82,7 @@ void EELobbyGame::SetGameFile(const GUIString& inName, unsigned long inSize, uns
     GUIString thePath = EELobbyFn2988E9();
     thePath.append(this->GetGameFileName());
     this->mFileTransfer->SetPath(thePath);
-    if (this->mIsHost && inFlag)
+    if (this->GetIsHost() && inFlag)
         this->mFileTransfer->Serve(EELobbyGetFileTransferPort());
 }
 
@@ -115,7 +115,7 @@ void EELobbyGame::ReadGameFile(ReadBuffer& inBuffer)
     unsigned long theChecksum = inBuffer.ReadLong();
     unsigned short thePort = inBuffer.ReadShort();
     this->SetGameFile(theName, theSize, theChecksum, false);
-    IPAddr theAddress(this->mAddress);
+    IPAddr theAddress(this->GetAddress());
     theAddress.SetPort(thePort);
     this->mFileTransfer->SetHost(theAddress);
 }
@@ -153,7 +153,7 @@ void EELobbyGame::SetTransferPercent(unsigned char inPercent)
 // Not identical: as in SetGameFile (0x69232f), GUIString::append(const GUIString&) is out of line in the original
 void EELobbyGame::StartTransfer()
 {
-    if (this->mIsHost)
+    if (this->GetIsHost())
         return;
     this->mFileTransfer->CloseClients();
     GUIString thePath = EELobbyFn2988E9();
@@ -230,7 +230,7 @@ void EELobbyGame::ResetSlots()
 {
     this->mNumComputerSlots = 0;
     this->mNumReservedSlots = 0;
-    this->mNumOpenSlots = 8;
+    this->SetMaxPlayers(8);
     this->mNumHumanPlayers = 1;
     for (int i = 0; i < 8; i++) {
         this->mSlots[i].SetOpen();
@@ -261,8 +261,8 @@ void EELobbyGame::CountPlayers(bool inNotify)
         if (theState == 4 && this->mSlots[i].mOptions[4] == 0)
             this->mNumReservedSlots++;
     }
-    if (theOpen != this->mNumOpenSlots) {
-        this->mNumOpenSlots = theOpen;
+    if (theOpen != this->GetMaxPlayers()) {
+        this->SetMaxPlayers(theOpen);
         if (inNotify)
             LobbyNetAdvertiseGame();
     }
@@ -397,7 +397,7 @@ void EELobbyGame::HandleHostGameHook(LobbyClient* inClient)
     this->mOptions[15] = 1;
     EELobbySetDefaultGameOptions(this);
     this->ResetSlots();
-    this->mSlots[0].SetPlayer(inClient, (EELobbyPlayer*)inClient->mPlayer.mPtr);
+    this->mSlots[0].SetPlayer(inClient, (EELobbyPlayer*)inClient->GetPlayer().mPtr);
 }
 
 // FUNCTION: EXE 0x692ade
@@ -461,10 +461,10 @@ void EELobbyGame::WriteDetailsHook(WriteBuffer& outBuffer)
         EELobbyPlayerSlot* theSlot = this->GetPlayerSlot(i);
         if (theSlot != NULL && theSlot->mClient.mPtr != NULL) {
             theCount++;
-            if (this->mGameType == 2)
-                outBuffer.AppendShort(theSlot->mClient->mClientId);
+            if (this->GetGameType() == 2)
+                outBuffer.AppendShort(theSlot->mClient->GetClientId());
             else
-                outBuffer.AppendWString(theSlot->mClient->mName, 2);
+                outBuffer.AppendWString(theSlot->mClient->GetName(), 2);
         }
     }
     outBuffer.SetByte(thePos, theCount);
@@ -481,15 +481,15 @@ bool EELobbyGame::ReadDetailsHook(ReadBuffer& inBuffer)
     if (inBuffer.Available() > 0) {
         unsigned char theCount = inBuffer.ReadByte();
         LobbyServer* theClients = LobbyGetCurrentServer();
-        if (theClients == NULL && this->mGameType == 2)
+        if (theClients == NULL && this->GetGameType() == 2)
             return true;
         this->mFiles.reserve(theCount);
         for (i = theCount; i > 0; i--) {
-            if (this->mGameType == 2) {
+            if (this->GetGameType() == 2) {
                 unsigned short theId = inBuffer.ReadShort();
                 LobbyClient* theClient = theClients->GetClient(theId);
                 if (theClient != NULL)
-                    this->mFiles.push_back(theClient->mName);
+                    this->mFiles.push_back(theClient->GetName());
             } else {
                 std::wstring theName;
                 inBuffer.ReadWString(theName, 2);
@@ -574,13 +574,13 @@ short EELobbyGame::HandleJoinGameRequestHook(ReadBuffer& inBuffer, LobbyClient* 
         if (!theSaved) {
             if (this->mSlots[i].mOptions[0] == 0)
                 break;
-        } else if (this->mSlots[i].mOptions[0] == 4 && inClient->mName == this->mSlots[i].GetName()) {
+        } else if (this->mSlots[i].mOptions[0] == 4 && inClient->GetName() == this->mSlots[i].GetName()) {
             break;
         }
     }
     if (i >= 8)
         return theSaved ? 10000 : 2;
-    this->mSlots[i].SetPlayer(inClient, (EELobbyPlayer*)inClient->mPlayer.mPtr);
+    this->mSlots[i].SetPlayer(inClient, (EELobbyPlayer*)inClient->GetPlayer().mPtr);
     if (!theSaved)
         this->mSlots[i].Reset();
     return 0;
@@ -604,7 +604,7 @@ void EELobbyGame::GetJoinGameReplyHook(LobbyClient* inClient, WriteBuffer& outBu
 int EELobbyGame::SeatClient(LobbyClient* inClient)
 {
     if (inClient != NULL) {
-        EELobbyPlayer* thePlayer = (EELobbyPlayer*)inClient->mPlayer.mPtr;
+        EELobbyPlayer* thePlayer = (EELobbyPlayer*)inClient->GetPlayer().mPtr;
         if (thePlayer != NULL) {
             unsigned char theSlot = thePlayer->GetSlot();
             if (theSlot < 8) {
@@ -629,7 +629,7 @@ void EELobbyGame::HandleJoinGameReplyHook(ReadBuffer& inBuffer)
         this->mSlots[i].ReadData(inBuffer);
     if (this->HasGameFile())
         this->ReadGameFile(inBuffer);
-    LobbyClientSetIterator theIterator(this->mClients.mPtr);
+    LobbyClientSetIterator theIterator(this->GetClients().mPtr);
     while (theIterator.HasMore()) {
         LobbyClient* theClient = NULL;
         theIterator.Next(&theClient);
@@ -667,7 +667,7 @@ void EELobbyGame::HandlePlayerLeftHook(LobbyClient* inClient, LobbyPlayer* inPla
     if (theSlot >= 8 || this->mSlots[theSlot].mClient.mPtr != inClient)
         return;
     if (this->HasGameFile()) {
-        this->mSlots[theSlot].SetName(inClient->mName);
+        this->mSlots[theSlot].SetName(inClient->GetName());
     } else {
         this->mSlots[theSlot].SetOpen();
         this->mSlots[theSlot].Reset();
@@ -771,9 +771,9 @@ void EELobbyGame::SendCancelConnect()
 // message 0x66
 void EELobbyGame::HandlePlayerOptionRequest(ReadBuffer& inBuffer, LobbyClient* inFrom)
 {
-    if (!this->mIsHost)
+    if (!this->GetIsHost())
         return;
-    EELobbyPlayer* thePlayer = (EELobbyPlayer*)inFrom->mPlayer.mPtr;
+    EELobbyPlayer* thePlayer = (EELobbyPlayer*)inFrom->GetPlayer().mPtr;
     if (thePlayer == NULL)
         return;
     int theIndex = thePlayer->GetSlot();
@@ -942,9 +942,9 @@ void EELobbyGame::HandleGameState(ReadBuffer& inBuffer, LobbyClient* inFrom)
     for (i = 0; i < 8; i++) {
         this->mSlots[i].ReadData(inBuffer);
         if (this->mSlots[i].mOptions[0] == 3) {
-            LobbyClient* theClient = this->mClients.mPtr->FindClient(inBuffer.ReadShort());
-            if (theClient != NULL && theClient->mPlayer.mPtr != NULL)
-                this->mSlots[i].SetPlayer(theClient, (EELobbyPlayer*)theClient->mPlayer.mPtr);
+            LobbyClient* theClient = this->GetClients().mPtr->FindClient(inBuffer.ReadShort());
+            if (theClient != NULL && theClient->GetPlayer().mPtr != NULL)
+                this->mSlots[i].SetPlayer(theClient, (EELobbyPlayer*)theClient->GetPlayer().mPtr);
             else
                 this->mSlots[i].SetOpen();
         }
@@ -956,7 +956,7 @@ void EELobbyGame::HandleGameState(ReadBuffer& inBuffer, LobbyClient* inFrom)
     }
     LobbyBroadcastLobbyEvent(100065, true);
     LobbyResetReadyFlags();
-    if (this->mIsHost) {
+    if (this->GetIsHost()) {
         this->CountPlayers(false);
         LobbyNetAdvertiseGame();
     }
@@ -974,7 +974,7 @@ void EELobbyGame::SendGameState()
     for (i = 0; i < 8; i++) {
         this->mSlots[i].WriteData(theBuffer);
         if (this->mSlots[i].mOptions[0] == 3)
-            theBuffer.AppendShort(this->mSlots[i].mClient->mClientId);
+            theBuffer.AppendShort(this->mSlots[i].mClient->GetClientId());
     }
     if (this->HasGameFile())
         this->WriteGameFile(theBuffer);
@@ -998,16 +998,16 @@ void EELobbyGame::ChangePlayerOption(int inSlot, int inWhat, unsigned char inVal
     case 2:
     case 4:
     case 5:
-        theOK = inSlot == this->GetMySlot() || (this->mIsHost && theSlot->mOptions[0] != 3);
+        theOK = inSlot == this->GetMySlot() || (this->GetIsHost() && theSlot->mOptions[0] != 3);
         theToHost = true;
         break;
     case 0:
-        if (this->mIsHost && inSlot != 0)
+        if (this->GetIsHost() && inSlot != 0)
             LobbyKickClient(theSlot->mClient.get(), false);
         else
             theOK = false;
     default:
-        if (!this->mIsHost)
+        if (!this->GetIsHost())
             theOK = false;
         break;
     }
@@ -1017,7 +1017,7 @@ void EELobbyGame::ChangePlayerOption(int inSlot, int inWhat, unsigned char inVal
         LobbyBroadcastEvent(new EELobbySyncPlayerEvent(inSlot), true);
         return;
     }
-    if (this->mIsHost)
+    if (this->GetIsHost())
         theToHost = false;
     WriteBuffer theBuffer(0, true);
     if (theToHost) {

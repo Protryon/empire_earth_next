@@ -8,7 +8,8 @@ ai-game play loop runs as for a loaded game (no lobby, no civilization pre-empt)
 Only open scenarios are listed: every learning scenario (StartCampaign's all-open flag), the first scenario of the
 others (no campaign progress in the staged Users folder).
 Controls are found by their trigger event's ProcessEvent rva, like save_load.py (original rvas from
-analysis/exe/names.txt, full link by map name). Scenario load extracts archive members to a temporary disk file
+analysis/exe/names.txt, full link by map name; the events the game screens moved to Rust by EEScreenEvent's and their
+code, save_load.SCREEN_CODES). Scenario load extracts archive members to a temporary disk file
 (FSMemoryFile::FOpen: GetTempPath + GetTempFileName); the session's TMP/TEMP point at the stage directory
 (set in session_exercise.prepare_session), so that write lands inside the staging sandbox.
 """
@@ -37,15 +38,9 @@ def add_arguments(g):
 
 
 def symbol_rvas(options):
-    if options is not None and getattr(options,'fulllink',None):
-        from fulllink_locator import LinkMap
-        m=LinkMap(pathlib.Path(options.fulllink).resolve().with_suffix('.map'))
-        return {k:m.address(s)-0x400000 for k,s in SYM.items()}
-    names={}
-    for line in (ROOT/'analysis/exe/names.txt').read_text(encoding='utf-8').splitlines():
-        part=line.split()
-        if len(part)>=2 and re.fullmatch(r"[0-9a-fA-F]+",part[0]):names.setdefault(part[1],int(part[0],16))
-    return {k:names[s] for k,s in SYM.items()}
+    """save_load.symbol_rvas over this exercise's events (a class the screens moved to Rust: its EEScreenEvent code)."""
+    import save_load
+    return save_load.symbol_rvas(options,SYM)
 
 
 def start_from_menu(ui,cur,raw,note,options,evidence,capture):

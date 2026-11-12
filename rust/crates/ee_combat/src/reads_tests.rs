@@ -489,23 +489,22 @@ fn every_turret_must_face() {
     assert_eq!(asked, vec![0]);
 }
 
-/// A host that knows ids and answers the C++'s values (the store's must win where it has the unit).
+/// A host that answers the C++'s values (the store's must win where it has the unit).
 struct Plain {
     asked: Vec<i32>,
 }
 
 impl QueryHost for Plain {
-    fn read(&mut self, code: i32, object: u64, _arg: i32) -> u32 {
+    fn read(&mut self, code: i32, _object: u64, _arg: i32) -> u32 {
         self.asked.push(code);
         match code {
-            EE_COMBAT_Q_ID => object as u32 + 900_000,
             EE_COMBAT_Q_TILE_X => 5,
             EE_COMBAT_Q_LINE_OF_SIGHT => 2.0f32.to_bits(),
             _ => 1,
         }
     }
     fn handle(&mut self, _code: i32, _object: u64, _arg: i32) -> u64 {
-        0
+        0x77
     }
     fn act(&mut self, _code: i32, _object: u64, _arg: i32) {}
     fn location(&mut self, _object: u64) -> GeTransformation {
@@ -521,33 +520,31 @@ impl QueryHost for Plain {
     }
 }
 
-thread_local! {
-    static STORE: std::cell::RefCell<BTreeMap<u32, UnitRecord>> = const { std::cell::RefCell::new(BTreeMap::new()) };
-}
-
-/// The tests' unit store.
-pub(super) fn stored(id: u32) -> Option<UnitRecord> {
-    STORE.with(|s| s.borrow().get(&id).copied())
-}
-
-fn record(id: u32, object: u64) -> (u32, UnitRecord) {
-    (id, UnitRecord { object, ..Default::default() })
-}
-
 #[test]
 fn plain_reads_come_from_the_unit_store() {
-    let (unit_id, mut unit) = record(900_061, 61);
-    unit.object_kind = EE_COMBAT_STORED_COMPLEX_UNIT;
-    unit.tile_x = 9;
-    unit.hit_points = -3;
-    unit.location = [7.5f32.to_bits(), 0, 0];
-    unit.target_search_timer = 250;
-    let (other_id, mut other) = record(900_062, 99);
-    other.tile_x = 9;
-    STORE.with(|s| {
-        s.borrow_mut().insert(unit_id, unit);
-        s.borrow_mut().insert(other_id, other);
+    use crate::store::tests::{put_player, put_unit};
+    put_unit(EeCombatStoredUnit {
+        object: 61,
+        player: 0x500,
+        id: 900_061,
+        object_kind: EE_COMBAT_STORED_COMPLEX_UNIT,
+        tile_x: 9,
+        hit_points: -3,
+        location: [7.5f32.to_bits(), 0, 0],
+        target_search_timer: 250,
+        class_flags: (EE_COMBAT_CLASS_WALL | EE_COMBAT_CLASS_MELEE) as u8,
+        goal_kind: -1,
+        reload_timer: 40,
+        domains: 6,
+        container: 1,
+        land_building: 1,
+        unit_type: 0x2dc,
+        category: 0x19,
+        command: 15001,
+        built: 1,
+        ..Default::default()
     });
+    put_player(0x500, 3, &[1, 4]);
     let mut host = Plain { asked: Vec::new() };
     {
         let mut h = Stored::new(&mut host);
@@ -555,13 +552,34 @@ fn plain_reads_come_from_the_unit_store() {
         assert_eq!(h.read(EE_COMBAT_Q_HIT_POINTS, 61, 0), (-3i32) as u32);
         assert_eq!(h.position(61).x, 7.5);
         assert_eq!(h.read(EE_COMBAT_Q_SEARCH_TIMER, 61, 0), 250);
-        // a read the store does not mirror, a record of another object, no record: the host's
+        assert_eq!(h.read(EE_COMBAT_Q_ID, 61, 0), 900_061);
+        assert_eq!(h.read(EE_COMBAT_Q_CLASS_FLAGS, 61, 0), EE_COMBAT_CLASS_WALL | EE_COMBAT_CLASS_MELEE);
+        assert_eq!(h.read(world::EE_COMBAT_Q_GOAL_KIND, 61, 0), EE_COMBAT_Q_NONE);
+        assert_eq!(h.read(world::EE_COMBAT_Q_RELOAD_TIMER, 61, 0), 40);
+        assert_eq!(h.read(world::EE_COMBAT_Q_DOMAINS, 61, 0), 6);
+        assert_eq!(h.read(world::EE_COMBAT_Q_CONTAINER, 61, 0), 1);
+        assert_eq!(h.read(world::EE_COMBAT_Q_LAND_BUILDING, 61, 0), 1);
+        assert_eq!(h.read(EE_COMBAT_Q_UNIT_TYPE, 61, 0), 0x2dc);
+        assert_eq!(h.read(EE_COMBAT_Q_CATEGORY, 61, 0), 0x19);
+        assert_eq!(h.read(EE_COMBAT_Q_COMMAND, 61, 0), 15001);
+        assert_eq!(h.read(EE_COMBAT_Q_BUILT, 61, 0), 1);
+        assert_eq!(h.handle(EE_COMBAT_H_PLAYER, 61, 0), 0x500, "the record's player");
+        assert_eq!(h.read(EE_COMBAT_Q_PLAYER_ID, 0x500, 0), 3);
+        assert_eq!(h.read(EE_COMBAT_Q_ENEMY, 0x500, 4), 1);
+        assert_eq!(h.read(EE_COMBAT_Q_ENEMY, 0x500, 2), 0);
+    }
+    assert!(host.asked.is_empty(), "no host read: {:?}", host.asked);
+    {
+        let mut h = Stored::new(&mut host);
+        // a read the store does not mirror, no record, no table, no handle: the host's
         assert_eq!(h.read(EE_COMBAT_Q_LINE_OF_SIGHT, 61, 0), 2.0f32.to_bits());
-        assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 62, 0), 5);
         assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 63, 0), 5);
         assert_eq!(h.position(63).x, 1.0);
         assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 0, 0), 5, "no handle");
+        assert_eq!(h.read(EE_COMBAT_Q_PLAYER_ID, 0x501, 0), 1);
+        assert_eq!(h.read(EE_COMBAT_Q_ENEMY, 0x500, 17), 1, "out of the table");
+        assert_eq!(h.handle(EE_COMBAT_H_PLAYER, 63, 0), 0x77);
+        assert_eq!(h.handle(EE_COMBAT_H_OWNER, 61, 0), 0x77);
     }
-    // one id read per object in a row
-    assert_eq!(host.asked.iter().filter(|&&c| c == EE_COMBAT_Q_ID).count(), 3);
+    assert_eq!(host.asked.len(), 5);
 }

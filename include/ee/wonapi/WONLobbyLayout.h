@@ -7,8 +7,6 @@ namespace WONAPI {
 class PercentLayoutParam {
 public:
     PercentLayoutParam(Component *left, Component *top, Component *right, Component *bottom, int px, int py, int pw = -1, int ph = -1, int lp = -1, int tp = -1, int rp = -1, int bp = -1); // at 0x00737320
-    PercentLayoutParam(Component *ref,int px,int py,int pw=-1,int ph=-1,int lp=-1,int tp=-1,int rp=-1,int bp=-1);
-    PercentLayoutParam(Component *ref1,Component *ref2,int px,int py,int pw=-1,int ph=-1,int lp=-1,int tp=-1,int rp=-1,int bp=-1);
     void Init(Component*,Component*,Component*,Component*,int,int,int,int,int,int,int,int); // at 0x007372c0
     void SetPercentages(int,int,int,int); // at 0x007373f0
     void SetPadding(int,int,int,int); // at 0x00737410
@@ -18,24 +16,6 @@ public:
     int px, py, pw, ph;
     int lp, tp, rp, bp;
     int dx, dy, dw, dh; // offsets 0x30..0x3c, copied by the factory; DoCalc does not read them
-};
-// VerticalFlowLayout (not identified in the original exe).
-class VerticalFlowLayout : public ChildLayoutInstructionBase {
-protected:
-    struct ItemInfo {
-        int mTopPad;
-        int mLeftPad;
-        Component* mComponent;
-        ItemInfo(Component* component,int topPad,int leftPad)
-            : mTopPad(topPad),mLeftPad(leftPad),mComponent(component) {}
-    };
-    Component* mTopComp;
-    typedef std::list<ItemInfo> ComponentList;
-    ComponentList mComponentList;
-public:
-    VerticalFlowLayout(Component*);
-    VerticalFlowLayout* Add(Component*,int=0,int=0);
-    virtual void Execute(Component*);
 };
 class SameSizeLayout : public ChildLayoutInstructionBase {
 public:

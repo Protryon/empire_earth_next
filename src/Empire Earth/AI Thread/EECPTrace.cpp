@@ -48,7 +48,9 @@
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPAttackGroup.h"
 #include "ee/EEAutoPathRequest.h"
+#include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
+#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
@@ -88,6 +90,7 @@ static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizen
 static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from the town center: <15, 15-30, more tiles
 static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
 static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
+static long sSpend[kMaxTracedPlayers][8][5];                 // TEST ONLY: paid since the last spend line, by kind
 
 void EECPTraceInit()
 {
@@ -399,11 +402,105 @@ static bool EECPIsBuildingCategory(long inCategory)
 }
 
 // A resource amount the player got (EEComputerPlayer::AddResource), for the next income line
+void EECPTraceSpend(EEComputerPlayer* inPlayer, long inKind, const long inCost[5])
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (!gCPTraceOn || theID >= kMaxTracedPlayers || inKind < 0 || inKind > 7 || !EECPExperiment(inPlayer, "spending"))
+        return;
+    for (long r = 0; r < 5; r++)
+        sSpend[theID][inKind][r] += inCost[r];
+}
+
 void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
 {
     unsigned long theID = inPlayer->mPlayerID;
     if (theID < kMaxTracedPlayers && inResource >= 0 && inResource <= kResourceIron && inAmount > 0)
         sIncome[theID][inResource] += inAmount;
+}
+
+// A soldier, ship or other non-citizen unit lost (any computer seat, the classic's too): one "unit.death" line - its
+// class, tile and distance from the town centre, its goal, and the killer (player:class:kind, its distance). The AI
+// trace only (gCPTraceOn): it reads the dead unit and its last attacker and changes nothing
+static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    EEComplexUnit* c = inUnit->mComplexUnit;
+    long theX = inUnit->mTileX, theY = inUnit->mTileY;
+    long theTown = -1;
+    U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
+        ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+    if (theCenter.mX != -10000 && theX != -10000) {
+        long theDX = theX - theCenter.mX, theDY = theY - theCenter.mY;
+        theTown = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+    }
+    const char* theGoal = "none";
+    if (c->mActiveGoal != NULL) {
+        switch (c->mActiveGoal->mKind) {
+        case kGoalLocation: theGoal = "move"; break;
+        case kGoalAttackUnit: theGoal = "attack"; break;
+        case kGoalAttackGround: theGoal = "attack_ground"; break;
+        case kGoalPatrol: theGoal = "patrol"; break;
+        case kGoalExplore: theGoal = "explore"; break;
+        case kGoalGather: theGoal = "gather"; break;
+        case kGoalLoadGarrison: theGoal = "garrison"; break;
+        default: theGoal = "other"; break;
+        }
+    }
+    EEComplexUnit* theKiller = c->mLastAttacker;
+    long theKillerPlayer = -1, theKillerClass = -1, theKillerDistance = -1;
+    char theKind = '-';
+    if (theKiller != NULL && theKiller->mUnitClass != NULL) {
+        theKillerPlayer = theKiller->mPlayer != NULL ? (long)theKiller->mPlayer->mPlayerID : -1;
+        theKillerClass = theKiller->mUnitClass->mUnitType;
+        if (theKiller->GetTileX() != -10000 && theX != -10000) {
+            long theDX = theKiller->GetTileX() - theX, theDY = theKiller->GetTileY() - theY;
+            theKillerDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+        }
+        EEUnitClass* theClass = theKiller->mUnitClass;
+        theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
+            : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : (theClass->mDomains & kMovementSea) ? 'n' : 's';
+    }
+    // the killer's own goal and its target's kind (s soldier, c citizen, b building, n ship, - none): whom it was after
+    const char* theKillerGoal = "-";
+    char theKillerTarget = '-';
+    if (theKiller != NULL && theKiller->mActiveGoal != NULL) {
+        theKillerGoal = theKiller->mActiveGoal->mKind == kGoalAttackUnit ? "attack"
+            : theKiller->mActiveGoal->mKind == kGoalLocation ? "move" : "other";
+        if (theKiller->mActiveGoal->mKind == kGoalAttackUnit) {
+            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theKiller->mActiveGoal)->mTarget;
+            if (theTarget != NULL && theTarget->mUnitClass != NULL) {
+                EEUnitClass* theTargetClass = theTarget->mUnitClass;
+                theKillerTarget = theTargetClass->IsBuilding() ? 'b'
+                    : theTargetClass->mCategory == kUnitCategoryLandCitizen ? 'c'
+                    : (theTargetClass->mDomains & kMovementSea) ? 'n' : 's';
+            }
+        }
+    }
+    // the classic's sub-group holding it (EECPAttackCommander::FindHolder, read only): its id and mission, its task
+    // (type:mode) and that task's distance; the group's task (type:mode) - which of the classic's groups it served
+    long theGroup = -1, theMission = -1, theTaskType = -1, theTaskMode = -1, theTaskDistance = -1;
+    long theGroupType = -1, theGroupMode = -1;
+    if (inPlayer->mCombatManager != NULL && inPlayer->mCombatManager->mAttackCommander != NULL) {
+        EECPAttackSubGroup* theHolder = inPlayer->mCombatManager->mAttackCommander->FindHolder(inUnit);
+        if (theHolder != NULL) {
+            theGroup = (long)theHolder->mID;
+            theMission = theHolder->mMission;
+            theTaskType = theHolder->mTask.mIsActive ? theHolder->mTask.mType : -1;
+            theTaskMode = theHolder->mTask.mMode;
+            if (theHolder->mTask.mIsActive && theX != -10000) {
+                long theDX = theHolder->mTask.mLocation.mTile.mX - theX, theDY = theHolder->mTask.mLocation.mTile.mY - theY;
+                theTaskDistance = (long)sqrt((double)(theDX * theDX + theDY * theDY));
+            }
+            if (theHolder->mGroup != NULL) {
+                theGroupType = theHolder->mGroup->mTask.mType;
+                theGroupMode = theHolder->mGroup->mTask.mMode;
+            }
+        }
+    }
+    EECPTraceScope theScope("cp");
+    EE_CP_TRACE(inPlayer, "unit.death", "unit=%s x=%ld y=%ld d=%ld goal=%s killer=%ld:%s:%c kd=%ld kgoal=%s:%c sub=%ld:%ld:%ld:%ld:%ld grp=%ld:%ld",
+        EECPNextClassName(inUnit->mUnitClass->mUnitType).c_str(), theX, theY, theTown, theGoal, theKillerPlayer,
+        theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance,
+        theKillerGoal, theKillerTarget, theGroup, theMission, theTaskType, theTaskMode, theTaskDistance, theGroupType, theGroupMode);
 }
 
 // A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
@@ -413,7 +510,9 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     if (theID >= kMaxTracedPlayers || inUnit == NULL || inUnit->mUnitClass == NULL || inUnit->mComplexUnit == NULL)
         return;
     long theCategory = inUnit->mUnitClass->mCategory;
-    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
+    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
+        // (the braces were missing: every unit lost counted in the citizens' by-killer and by-distance fields, and
+        // the buildings' and others' counts hung off the town-centre test; AI_RESEARCH §8.41)
         sLost[theID][0]++;
         EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
         sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
@@ -424,10 +523,14 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             long theSquared = theDX * theDX + theDY * theDY;
             sLostNear[theID][theSquared < 225 ? 0 : theSquared < 900 ? 1 : 2]++;
         }
-    else if (EECPIsBuildingCategory(theCategory))
+        if (inPlayer->mNextState == NULL)
+            EECPTraceSoldierLost(inPlayer, inUnit);   // (a script's seat has its next.death line)
+    } else if (EECPIsBuildingCategory(theCategory))
         sLost[theID][1]++;
-    else if (theCategory != kUnitCategoryProjectile)
+    else if (theCategory != kUnitCategoryProjectile) {
         sLost[theID][2]++;
+        EECPTraceSoldierLost(inPlayer, inUnit);
+    }
 }
 
 // One "stats" line per player every 30 game s: epoch, population and its caps, citizens (idle: no goal; free: the
@@ -621,6 +724,18 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             sIncome[theID][kResourceFood], sIncome[theID][kResourceWood], sIncome[theID][kResourceStone],
             sIncome[theID][kResourceGold], sIncome[theID][kResourceIron], theTrips[kResourceFood], theTrips[kResourceWood],
             theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron]);
+        if (EECPExperiment(inPlayer, "spending")) {   // TEST ONLY: what was bought since the last line
+            static const char* const kKinds[8] = {"citizens", "soldiers", "buildings", "techs", "epochs", "boats", "improve", "other"};
+            char theLine[1024];
+            long theAt = 0;
+            for (long k = 0; k < 8 && theAt < 900; k++) {
+                theAt += snprintf(theLine + theAt, sizeof(theLine) - theAt, "%s%s=%ld/%ld/%ld/%ld/%ld", k ? " " : "", kKinds[k],
+                    sSpend[theID][k][0], sSpend[theID][k][1], sSpend[theID][k][2], sSpend[theID][k][3], sSpend[theID][k][4]);
+                for (long r = 0; r < 5; r++)
+                    sSpend[theID][k][r] = 0;
+            }
+            EECPTraceOut(inPlayer, "spend", "%s", theLine);
+        }
         for (long r = 0; r <= kResourceIron; r++)
             sIncome[theID][r] = 0;
         EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",

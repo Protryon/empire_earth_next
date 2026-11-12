@@ -49,6 +49,35 @@ mod tests {
         (listener, bound)
     }
 
+    /// Stream sockets are opened with SO_REUSEADDR on POSIX (a listening port in TIME_WAIT binds again at once, as
+    /// on Windows); datagram sockets are not.
+    #[cfg(unix)]
+    #[test]
+    fn posix_stream_sockets_reuse_their_address() {
+        let _serial = startup();
+        unsafe fn reuse(socket: PlatSocket) -> libc::c_int {
+            let mut value: libc::c_int = 0;
+            let mut length = size_of::<libc::c_int>() as libc::socklen_t;
+            let result = libc::getsockopt(
+                socket as libc::c_int,
+                libc::SOL_SOCKET,
+                libc::SO_REUSEADDR,
+                (&raw mut value).cast(),
+                &mut length,
+            );
+            assert_eq!(result, 0);
+            value
+        }
+        unsafe {
+            let stream = PlatSocketOpen(PLAT_SOCKET_STREAM);
+            let datagram = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+            assert_ne!(reuse(stream), 0);
+            assert_eq!(reuse(datagram), 0);
+            PlatSocketClose(stream);
+            PlatSocketClose(datagram);
+        }
+    }
+
     #[test]
     fn parse_and_format_ipv4() {
         let _serial = startup();

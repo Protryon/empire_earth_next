@@ -122,6 +122,53 @@ function M.threat(view)
     return view.threat_strength
 end
 
+-- [forces.c] the walk-and-fight record: goal_near - the unit walks to within r of (x, y) already (its goal's
+-- place); fighting (unit_fighting) - it attacks a target that lives. An own unit's goal is the record's `tx`,
+-- `ty`, `action` and `target` (what the engine's goal state shows; docs/AI_LUA_UNITS.md §2.3)
+function M.goal_near(u, x, y, r)
+    return u ~= nil and u.tx ~= nil and u.action ~= "idle" and math.abs(u.tx - x) < r and math.abs(u.ty - y) < r
+end
+
+function M.fighting(u)
+    return u ~= nil and u.action == "attack" and u.target ~= nil and ai.unit(u.target) ~= nil
+end
+
+-- [forces.c] home_threat: the enemy soldiers (siege too) the AI sees within 20 tiles of any of its buildings (no
+-- wall): an army in its territory
+local function is_wall(t)
+    return t ~= nil and string.sub(t, 1, 7) == "b_wall_"
+end
+
+function M.home_threat()
+    local foes = ai.seen{enemy = true, armed = true, category = "soldier"}
+    if #foes == 0 then
+        return 0
+    end
+    local fc = ai.get(foes, {"x", "y"})
+    local own = ai.units{category = "building"}
+    local bc = ai.get(own, {"x", "y", "type"})
+    local bx, by, nb = {}, {}, 0
+    for j = 1, #own do
+        if bc.x[j] ~= nil and not is_wall(bc.type[j]) then
+            nb = nb + 1
+            bx[nb], by[nb] = bc.x[j], bc.y[j]
+        end
+    end
+    local n = 0
+    for k = 1, #foes do
+        if fc.x[k] ~= nil then
+            for j = 1, nb do
+                local dx, dy = fc.x[k] - bx[j], fc.y[k] - by[j]
+                if dx * dx + dy * dy <= 400 then
+                    n = n + 1
+                    break
+                end
+            end
+        end
+    end
+    return n
+end
+
 -- the strength of the groups of a task (nil: every group)
 function M.strength(view, task)
     local s, n = 0, 0

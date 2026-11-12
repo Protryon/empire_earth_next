@@ -71,6 +71,7 @@
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPBehavior.h"
+#include "ee/EECPTrace.h"
 // The gatherers this unit builds on the stack (out-of-line slots open the unit). Class names from RTTI.
 // RTTI EECPUGatherBuildingUnitsCount (vtable 0x43c0d0): the buildings
 class EECPUGatherBuildingUnitsCount : public EECPUMGatherUnitsScreenBase {
@@ -1847,6 +1848,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
     EECPILocation theLocation;
     EECPILocation theFrom;
     bool theFound = false;
+    const char* theStep = "none";   // (the AI trace only: which step of the ladder gave the task)
     bool theCombat3 = false;
     U2DPoint<long> theClosest;
     bool theCombat1 = true;
@@ -1881,8 +1883,10 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
         }
     }
     outTask.mPlayer = inSubGroup->mGroup->mTask.mPlayer;
-    if (theFound)
+    if (theFound) {
+        EE_CP_TRACE(this->mPlayer, "dc.ladder", "step=task sub=%lu", (unsigned long)inSubGroup->mID);
         return;
+    }
     if (inSubGroup->mCommonMoveFlags.size() > 0) {
         std::vector<long>::iterator it;
         for (it = inSubGroup->mCommonMoveFlags.begin(); it != inSubGroup->mCommonMoveFlags.end(); it++)
@@ -1903,6 +1907,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                     theLocation.mSerial = (theForests[theIndex])->mSerial;
                     theLocation.mType = kAIAreaForest;
                     theLocation.mTile = (theForests[theIndex])->GetRandomPoint();
+                    theStep = "forest";
                     outTask.mLocation = theLocation;
                     outTask.mMode = kAGModeDefense;
                     outTask.mType = kAGTaskLocation;
@@ -1929,6 +1934,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                         theLocation.mSerial = (theContinents[theIndex])->mSerial;
                         theLocation.mType = 10;
                         theLocation.mTile = (theContinents[theIndex])->GetRandomPoint();
+                        theStep = "adjacent";
                         outTask.mLocation = theLocation;
                         outTask.mMode = kAGModeDefense;
                         outTask.mType = kAGTaskLocation;
@@ -1953,6 +1959,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                 theLocation.mSerial = (theHills[theIndex])->mSerial;
                 theLocation.mType = kAIAreaHill;
                 theLocation.mTile = (theHills[theIndex])->GetRandomPoint();
+                theStep = "hill";
                 outTask.mLocation = theLocation;
                 outTask.mMode = kAGModeDefense;
                 outTask.mType = kAGTaskLocation;
@@ -1982,6 +1989,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
             theLocation.mSerial = (theChokePoints[theIndex])->mSerial;
             theLocation.mType = kAIAreaChokePoint;
             theLocation.mTile = (theChokePoints[theIndex])->GetRandomPoint();
+            theStep = "choke";
             outTask.mLocation = theLocation;
             outTask.mMode = kAGModeDefense;
             outTask.mType = kAGTaskLocation;
@@ -1993,6 +2001,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                 theLocation.mSerial = (theChokePoints[theIndex])->mSerial;
                 theLocation.mType = kAIAreaChokePoint;
                 theLocation.mTile = (theChokePoints[theIndex])->GetRandomPoint();
+                theStep = "choke_any";
                 outTask.mLocation = theLocation;
                 outTask.mType = kAGTaskLocation;
                 outTask.mMode = kAGModeDefense;
@@ -2012,6 +2021,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
                 theLocation.mSerial = theTown->mSerial;
                 theLocation.mType = kAIAreaTown;
                 theLocation.mTile = theTown->GetRandomPoint();
+                theStep = "town";
                 outTask.mLocation = theLocation;
                 outTask.mType = kAGTaskLocation;
                 outTask.mMode = kAGModeDefense;
@@ -2032,10 +2042,20 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
             outTask.mLocation = theLocation;
             outTask.mType = kAGTaskLocation;
             outTask.mIsActive = true;
+            theStep = "land";
         }
     }
     if (outTask.mIsActive)
         inSubGroup->mMission = 1;
+    if (gCPTraceOn) {
+        bool theForestFlag = false, theCliffFlag = false;
+        for (unsigned long k = 0; k < inSubGroup->mCommonMoveFlags.size(); k++) {
+            theForestFlag = theForestFlag || inSubGroup->mCommonMoveFlags[k] == 4;
+            theCliffFlag = theCliffFlag || inSubGroup->mCommonMoveFlags[k] == 3;
+        }
+        EE_CP_TRACE(this->mPlayer, "dc.ladder", "step=%s sub=%lu flags=%d%d chokes=%lu", theStep, (unsigned long)inSubGroup->mID,
+            theForestFlag ? 1 : 0, theCliffFlag ? 1 : 0, (unsigned long)gContinentManager.mChokePoints.size());
+    }
 }
 
 // Compiler-generated for this unit (names in analysis/exe/names.txt). 0x478937 (EECPUMGatherUnitsScreenBase) is emitted and exact.

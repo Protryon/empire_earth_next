@@ -53,7 +53,8 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
-#include "ee/EEUIESLSaveScreen.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 #include "ee/EESEASaveScenario.h"
 
 // FUNCTION: EXE 0x5aa802
@@ -71,9 +72,9 @@ void EESEASaveScenario::Virtual4()
     gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
     if (gUIManager->mInScenarioEditor == true) {
         gWorld.mMap->PrepareSave();
-        theEvent = new EEUIESLSaveScreen(gScenarioExtension, UString("data\\") + UString("Scenarios\\"));
+        theEvent = EECreateScreenEvent(EE_SCREENS_SL_SAVE_SCREEN_SCENARIO);   // (ee_screens save_load.rs)
     } else
-        theEvent = new EEUIESLSaveScreen(gSavedGameExtension, UString("data\\") + UString("Saved Games\\"));
+        theEvent = EECreateScreenEvent(EE_SCREENS_SL_SAVE_SCREEN_GAME);
     gUserInterface->PostEvent(theEvent, NULL);
     theEvent->Dereference();
 }
@@ -85,13 +86,3 @@ void EESEASaveScenario::Virtual8()
 {
 }
 
-// FUNCTION: EXE 0x5aa9ef
-// Creates the save screen event for a file extension and folder (EEUIESLSaveScreen's ctor)
-// (inline, ee/EEUIESLSaveScreen.h)
-
-// SYNTHETIC: EXE 0x5aaa31
-// (EEUIESLSaveScreen's scalar deleting destructor)
-
-// FUNCTION: EXE 0x5aaa4d
-// Destroys the save screen event (EEUIESLSaveScreen's dtor)
-// (inline, ee/EEUIESLSaveScreen.h)

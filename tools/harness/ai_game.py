@@ -57,7 +57,7 @@ OPTIONS=28                # in-game options (EEUIEMGDisplayOptions on main-form 
 
 
 def parse_state(text):
-    out=dict(form=None,command=None,pid=None,stack=[],controls={},combos={},checks={})
+    out=dict(form=None,command=None,pid=None,stack=[],controls={},screens={},combos={},checks={})
     for line in text.splitlines():
         part=line.split(' ')
         try:
@@ -65,7 +65,9 @@ def parse_state(text):
             elif part[0]=='command':out['command']=int(part[1])
             elif part[0]=='pid':out['pid']=int(part[1])
             elif part[0]=='stack':out['stack']=[int(v) for v in part[1:]]
-            elif part[0]=='control':out['controls'][int(part[1])]=part[3]
+            elif part[0]=='control':
+                out['controls'][int(part[1])]=part[3]
+                if len(part)>=6 and part[4]=='screen':out['screens'][int(part[1])]=int(part[5],16)   # EEScreenEvent's code
             elif part[0]=='check':out['checks'][int(part[1])]=int(part[2])
             elif part[0]=='combo':
                 head,_,tail=line.partition(' lines ')

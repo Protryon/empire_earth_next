@@ -1749,6 +1749,359 @@ enum class EeWonLanJoinStep {
   Again = 4,
 };
 
+/// The op codes. Arguments: `a`, `b` pointers, `c`, `d` integers (a message is `a` = its `ByteBuffer*` or NULL for
+/// one Rust built, `c` = its bytes, `d` = their length).
+enum class EeWonLobbyOp : uint32_t {
+  /// `mGame.get()`.
+  StGame = 1,
+  /// `mMyClient.get()`.
+  StMyClient,
+  /// `mMyClient = LobbyGetNetMyClient()`; returns it.
+  StSetMyClientFromNet,
+  /// `mGame = a`.
+  StSetGame,
+  /// `mJoinOp = new AsyncOp`.
+  StJoinOpNew,
+  /// `if (mJoinOp) mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinish,
+  /// `LobbyRunOpWithStatus(mJoinOp, GettingGameInfo, 1, 0)`, then `mJoinOp = NULL`.
+  StJoinOpRun,
+  /// `if (mJoinOp) { mJoinOp->Kill(true); mJoinOp = NULL; }`.
+  StJoinOpKill,
+  /// `mGame->GetJoinRequest()` sent with `this->SendToCaptain`.
+  StSendJoinRequest,
+  /// `mCreateGameDialog->SetGameType(c); Reset(false); return LobbyDoDialog(dialog)`.
+  StCreateDialogRun,
+  /// `aGame = mCreateGameDialog->GetGame(); aGame->SetAddress(LobbyGetMyAddress(c)); mGame = aGame`; held.
+  StTakeDialogGame,
+  /// Logout's tail: `mCreateGameDialog->Reset(true)`, `LobbyNetLogout`, `LobbyKillPings(0)`,
+  /// `LobbyShowLoginScreen`, `LobbySaveGlobalPrefs(false)`, `LobbySaveUserPrefs(false)`, the logon sound stopped.
+  StLogoutTail,
+  /// `new ClientModeratedEvent(a, c, mGame->GetName(), d >> 1, 0, d & 1, "")` broadcast.
+  StClientModerated,
+  /// `a->AddRef()`: Rust holds it (returns `a`).
+  GameHold = 39,
+  GameRelease = 40,
+  GameIsHost,
+  GameFindClient,
+  GameType,
+  GameIsInProgress,
+  GameAreAllReady,
+  GameCanReady,
+  /// `CanStartGame() && TryStartGame()`.
+  GameCanStartAndTry,
+  GamePingReplied,
+  GameIsPinging,
+  /// `a->IsSameGame(b)`.
+  GameIsSameGame,
+  GameJoinStatus,
+  GamePing,
+  /// `LobbyGame::CreateGame(a's type)` with `CopyFrom(a)`; held.
+  GameNewCopy,
+  GamePreNetCreate,
+  GamePostNetCreate,
+  GamePreNetJoin,
+  GamePostNetJoin,
+  /// `SetIsHost(true)`, `SetCaptainId(b's id)`, `b->SetCaptain(true, true)`.
+  GameBecomeHost,
+  /// `GetClients()->AddClient(b)`, `HandleHostGame(b)`.
+  GameAddHostClient,
+  /// `ClearPlayers()`, `mMyClient = NULL`, `PreNetLeaveGame()`, `LobbyNetLeaveGame(a)`, `PostNetLeaveGame()`.
+  GameLeaveNet,
+  GameRemoveClient,
+  GameHandlePlayerJoined,
+  /// `SetInProgress(c)`, `LobbyNetSetGameInProgress(c)`, `LobbyNetAdvertiseGame()`.
+  GameSetInProgressNet,
+  /// every client with a player: `SetReady(false)` and a `PlayerChangedEvent(client, 2)`.
+  GameResetReadyFlags,
+  /// `a->GetJoinReply(*b, d)`; if not NULL sent with `this->SendToClient(d, reply)`: 1 sent, 0 none, Threw.
+  GameJoinReplySend,
+  /// `a->HandleJoinReply(*b)` or Threw.
+  GameHandleJoinReply,
+  /// `a->HandleGameMessage(c, *b, d)`: 0 or Threw.
+  GameHandleGameMessage,
+  /// `LobbyMessageBox(JoinGameErrorTitle, a->GetStatusString(c))`.
+  GameShowStatus,
+  /// `LobbyPingGame(a, true)` and a `GameChangedEvent(a, 2)`.
+  GamePingAndNotify,
+  /// `LobbyQueryGameDetails(a)`, `SetShowDetails(true)`, a `GameChangedEvent(a, 2)`.
+  GameShowDetails,
+  /// `SetShowDetails(false)`, a `GameChangedEvent(a, 2)`.
+  GameHideDetails,
+  /// `LobbyDispatchEvent(new ChangeDirectConnectEvent(1, a))`.
+  GameDirectConnect,
+  /// a `GameOptionsPopup` for `a` opened as a standard popup.
+  GameShowOptions,
+  ClientHasPlayer = 80,
+  ClientPlayer,
+  ClientIsReady,
+  ClientId,
+  /// `IsCaptain(1)`.
+  ClientIsGameCaptain,
+  /// `a->IsTeammate(b)`.
+  ClientIsTeammate,
+  ClientPlayerSetReady,
+  ClientPlayerSetPing,
+  /// a new player read from `*b` set on `a`: 1, 0 when the read failed, or Threw.
+  ClientReadPlayer,
+  /// the player-joined head for `a` and its player's bytes broadcast with `this->BroadcastToGame`.
+  ClientBroadcastJoined,
+  /// `new PlayerChangedEvent(a, c)` broadcast.
+  ClientChanged,
+  /// `new PlayerTeamChangedEvent(a, c)` broadcast.
+  ClientTeamChanged,
+  /// `b->SetPos(b->pos() + c)`.
+  BufSkip = 110,
+  /// a `ReadBuffer` over the message handed to `this->HandleMessage(.., b)`.
+  HandleBytes,
+  /// `LobbyNetSendToCaptain(message)`.
+  NetSendToCaptain,
+  /// `LobbyNetBroadcastToGame(message)`.
+  NetBroadcastToGame,
+  /// `LobbyNetSendToClient(b, message)`.
+  NetSendToClient,
+  NetKickClient,
+  NetRemoveGameAdvertisement,
+  NetHostGame,
+  NetJoinGame,
+  NetAdvertiseGame,
+  /// `static_cast<JoinGameEvent*>(a)->mGame.get()`.
+  EventJoinGame,
+  /// `static_cast<GameActionEvent*>(a)->mGame.get()`.
+  EventActionGame,
+  /// `static_cast<GameActionEvent*>(a)->mAction`.
+  EventAction,
+  BroadcastLobbyEvent = 140,
+  MessageBox,
+  YesNo,
+  /// a new AsyncOp run with status (text `c`, mode `d`, 500 ms); returns whether it was killed.
+  RunWaitOp,
+  PlaySound,
+  StagingSoundEffects,
+  ShowConfirmations,
+  FirewallTestDone,
+  BehindFirewall,
+  GameScreenType,
+  /// -1 without a lobby config, else its `mAllowJoinGameWithoutPing`.
+  AllowJoinWithoutPing,
+  Exit,
+  /// `time(NULL)`.
+  Now,
+  /// `mMyClient.get()`.
+  LanMyClient = 200,
+  /// `mMyClient = a`.
+  LanSetMyClient,
+  LanListenSocket,
+  LanServerSocket,
+  LanNetworkTimer,
+  LanDiscoveryTimer,
+  LanDiscoverySocket,
+  /// `&mDiscoveryAddress`.
+  LanDiscoveryAddress,
+  /// the lobby's auth context, if any, stops refreshing its certificate.
+  LanAuthAutoRefreshOff,
+  /// CloseConnections' sockets: the listen socket killed, the host socket closed, the network timer killed, every
+  /// pending socket closed, `mMyClient`, the socket set and the client list cleared.
+  LanCloseSockets,
+  /// `static_cast<SocketOp*>(a)->GetSocket()`.
+  LanOpSocket,
+  /// a LobbyLanSocket's client.
+  LanSocketClient,
+  /// `a->SetClient(b)`.
+  LanSocketSetClient,
+  /// `mPendingSockets.erase(a)`.
+  LanForgetSocket,
+  /// `mServerSocket->Kill()`, `mServerSocket = NULL`, `LobbyGameDisconnected(true)`.
+  LanLoseHost,
+  LanPendingCount,
+  /// the pending socket `c` in the set's order.
+  LanPendingAt,
+  LanSocketLastTime,
+  /// `a->QueueClose(c)`.
+  LanSocketClose,
+  LanStartNetworkTimer,
+  /// `GetMyLobbyGame()`.
+  LanMyGame,
+  /// a LAN join's subnet bytes: the peer's `GetSixByte()[2..4]` and ours, packed low to high.
+  LanSubnets,
+  /// whether the password (`c` UTF-16 units, `d` of them) is `a`'s.
+  LanGamePasswordIs,
+  /// a SendMsgOp of the message queued on the socket `b`.
+  LanSocketSend,
+  /// a new LobbyLanClient named `c`/`d` (UTF-16 units); held.
+  LanNewClient,
+  /// `a->SetClientId(c)`, `mClients->AddClient(a)`.
+  LanAddClient,
+  ClientHold,
+  ClientRelease,
+  /// `a`'s name, taken.
+  ClientNameTake,
+  LanClientCount,
+  /// the client `c` in the list's order.
+  LanClientAt,
+  /// `mClients->FindClient(c)`.
+  LanFindClient,
+  /// `mClients->RemoveClient(c)`; held.
+  LanRemoveClient,
+  /// `new ClientChangedEvent(a, 8, c)` broadcast.
+  LanClientChanged,
+  /// `LobbyClientLeftGame(a)`.
+  ClientLeftGame,
+  GameSetCaptainId,
+  /// `mServerSocket->SetClient(a)`, `a->SetCaptain(true, true)`.
+  LanServerClientIsCaptain,
+  /// the receive op succeeded and was not killed.
+  LanRecvOk,
+  /// the socket's last message time is now.
+  LanSocketStamp,
+  /// the receive op's message (its ByteBuffer, or 0), taken.
+  LanRecvMsgTake,
+  /// AddPendingSocket: the close and receive completions, the receive op, the time, the set.
+  LanAddPending,
+  /// a LobbyLanClient's socket.
+  LanClientSocket,
+  /// a SendMsgOp of the message queued on the client `b`'s socket.
+  LanClientSocketSend,
+  /// `mServerSocket->QueueOp(new SendMsgOp(message))`.
+  LanServerSend,
+  ClientIsIgnored,
+  /// a whisper received: the sound (if the chat sounds are on), the parser's reply name.
+  LanWhisperReceived,
+  /// `new RecvChatEvent(8, d >> 32, a, text, b)` broadcast; the text is `c` with `d & 0xffffffff` units.
+  LanRecvChat,
+  /// the staging message (the bytes from its type byte) read past the type and handed to the staging logic.
+  LanStagingRead,
+  /// ChangeLanName's dialog: Reset, LobbyDoDialog.
+  LanNameDialogRun,
+  LanNameDialogLength,
+  /// `LobbySetLanName(dialog's name)`, the lobby event 0x186d2.
+  LanNameDialogSave,
+  LanBroadcastPort,
+  /// ChangeLanPort's dialog: the game port, the port `c`, Reset, LobbyDoDialog.
+  LanPortDialogRun,
+  LanPortDialogPort,
+  /// `LobbySetLanBroadcastPort(c)`, the lobby event 0x186d2.
+  LanSetBroadcastPort,
+  /// `a->mComponent`.
+  EventComponent,
+  EventDirectIsDelete,
+  EventDirectIsAdd,
+  EventDirectGame,
+  /// a saved direct-connect game removed: the saved one, the list's, a `GameChangedEvent(a, 1)`.
+  LanDirectRemove,
+  /// HandleChangeDirectConnect's add: the dialog and the address (its DNS check), the game and its event.
+  LanDirectAdd,
+  /// a ClientOptionsPopup for `a` (room spec `c`).
+  LanShowClientOptions,
+  EventClientActionClient,
+  EventClientActionRoomSpec,
+  EventClientActionAction,
+  /// `LobbySetClientIgnored(a, c, d)`.
+  SetClientIgnored,
+  /// `new SetChatInputEvent(2, a's name, c, false)` broadcast.
+  LanSetChatInput,
+  /// `LobbyKickClient(a, false)`.
+  KickClientFromLobby,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  ParserRoomFlags,
+  ParserTarget,
+  ParserCommand,
+  ParserTextTake,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(InvalidCommand), a)`.
+  LanChatCommandError,
+  /// the LAN games cleared and synced.
+  LanClearLanGames,
+  /// every unfiltered direct-connect game pinged, the lobby event 0x186da.
+  LanPingDirectGames,
+  /// EnterLanScreen's lists: no current user, the games cleared, the saved direct-connect games, their sync.
+  LanEnterScreenLists,
+  ShowLanScreen,
+  DoCDKeyCheck,
+  KillFirewallTest,
+  /// RefreshCertificate.
+  LanRefreshCertificate,
+  /// HostGame's client: a new LobbyLanClient (id `c`, the LAN name, captain) added, the game's clients.
+  LanHostMyClient,
+  /// HostGame's listen socket bound and listening (an error dialog when not), its accept op, JoinedRoomEvent.
+  LanHostListen,
+  GameAddressPort,
+  /// the summary: the head (the message), the game's summary, sent to the address `b`.
+  LanSendSummary,
+  /// a SendBytesToOp of the message to the address `b`.
+  LanDiscoverySend,
+  /// stale LAN games removed (synced if any).
+  LanRemoveStaleGames,
+  LanStartDiscoveryTimer,
+  /// the discovery receive op is the discovery socket's and succeeded.
+  LanDiscoveryOk,
+  /// its bytes, taken.
+  LanDiscoveryTake,
+  /// HandleGameSummary from the packet past its head (port `c`).
+  LanGameSummary,
+  /// HandleGameKeepAlive (port `c`).
+  LanGameKeepAlive,
+  /// HandleGameRemoved (port `c`).
+  LanGameRemoved,
+  /// the receive op's sender address.
+  LanRecvFrom,
+  /// StartDiscovery's socket: the address, the QueueSocket, its bind (0 when bound).
+  LanOpenDiscovery,
+  /// the discovery socket's receive completion and op.
+  LanDiscoveryArm,
+  LanStopDiscovery,
+  LanClearDirectGames,
+  /// the accept op's socket (NULL when it failed or was killed).
+  LanAcceptedSocket,
+  /// a PeerAuthServerOp on the socket, tracked (30 s); nothing without an auth context.
+  LanStartPeerAuth,
+  /// `mServerSocket = new LobbyLanSocket`.
+  LanNewServerSocket,
+  GameHasPassword,
+  /// JoinGame's password: emptied.
+  LanJoinPasswordClear,
+  /// the password dialog: Reset, LobbyDoDialog, the password kept on OK.
+  LanPasswordDialogRun,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game run with status: whether it succeeded.
+  LanConnect,
+  /// `LobbyGetLanName()`, taken.
+  LanNameTake,
+  LanJoinPasswordTake,
+  /// a RecvMsgOp on the host socket run with status: -1 failed, 0 no message, 1 its bytes taken.
+  LanRecvReplyTake,
+  /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
+  /// JoinedRoomEvent.
+  LanJoinArm,
+};
+
+/// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
+/// message is `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonLanCall : uint32_t {
+  /// The LAN name (1), LAN port (2), refresh (3) and LAN screen (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  HostGame,
+  JoinGame,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  AdvertiseGame,
+  RemoveGameAdvertisement,
+  /// `KickClient(b)`.
+  KickClient,
+  LeaveGame,
+  Logout,
+  /// The completions (`a` the op).
+  SocketClosed,
+  NetworkTimer,
+  RecvMsg,
+  DiscoveryTimer,
+  DiscoveryRecv,
+  Accept,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -1852,6 +2205,170 @@ enum class EeWonReadySound {
   NotReady = 2,
 };
 
+/// The inward calls (StagingLogic's methods the lobby calls). `a`, `b` pointers, `c`, `d` integers; a message is
+/// `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonStagingCall : uint32_t {
+  /// The host (1), leave (2), logout (3) and start/ready (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  /// `HandleMessage(*a, b)`: `c` the bytes from the buffer's position, `d` their length.
+  HandleMessage,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  IAmCaptain,
+  IAmReady,
+  JoinGame,
+  HostGame,
+  Logout,
+  /// `KickClient(b, c)`.
+  KickClient,
+  HandleDisconnect,
+  /// `HandleClientLeft(b)`.
+  HandleClientLeft,
+  /// `HandleKicked(b, c)`.
+  HandleKicked,
+  ResetReadyFlags,
+  SetGameInProgress,
+  LeaveGame,
+  NotifyStagingChange,
+  NotifyPingChange,
+};
+
+/// The op codes. `a`..`d` are integers or pointers as each says.
+enum class EeWonGuiOp : uint32_t {
+  /// the field `a` (`EeWonGuiField`).
+  Get = 1,
+  /// the field `a` = `b`.
+  Set,
+  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
+  BaseSizeChanged,
+  /// `ScrollArea::AdjustPosition(a != 0)`.
+  BaseAdjustPosition,
+  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
+  BaseNotifyRootVisibility,
+  /// `ScrollArea::MouseDown(a, b, c)`.
+  BaseMouseDown,
+  /// `ScrollArea::MouseUp(a, b, c)`.
+  BaseMouseUp,
+  /// `ScrollArea::MouseExit()`.
+  BaseMouseExit,
+  /// `ScrollArea::MouseMove(a, b)`.
+  BaseMouseMove,
+  /// `ScrollArea::MouseEnter(a, b)`.
+  BaseMouseEnter,
+  /// `ScrollArea::MouseDrag(a, b)`.
+  BaseMouseDrag,
+  /// `ScrollArea::KeyDown(a)` (0 or 1).
+  BaseKeyDown,
+  /// `ScrollArea::KeyChar(a)` (0 or 1).
+  BaseKeyChar,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `Invalidate()`.
+  Invalidate = 30,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
+  GetMousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
+  SetParentCursor,
+  /// the selection colours into `*a` (an `EeWonSelColor`).
+  SelColor,
+  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
+  LinkActivated,
+  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
+  SelTextAppend,
+  /// the copied text `.append("\r\n")`.
+  SelTextBreak,
+  /// `Clipboard::Set(copied text)`, then the copied text emptied.
+  SelTextCopy,
+  /// `a->AddRef()`.
+  SegHold = 60,
+  /// `a->Release()`.
+  SegRelease,
+  /// `a->mLineBreak` (0 or 1).
+  SegLineBreak,
+  /// `a->GetLength()`.
+  SegLength,
+  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
+  SegMeasure,
+  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
+  SegStringWidth,
+  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
+  SegCharWidth,
+  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
+  SegTextTake,
+  /// `a->IsLink()` (0 or 1).
+  SegIsLink,
+  /// `a->Pressed()`.
+  SegPressed,
+  /// `a->Released()` (0 or 1).
+  SegReleased,
+  /// `a->mColor`.
+  SegColor,
+  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
+  /// segment `c`'s font and text (none when `c` is 0).
+  Draw = 90,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
+enum class EeWonTextCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent()` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `NotifyRootVisibility(a != 0)`.
+  NotifyRootVisibility,
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `CheckSel(a, b, c != 0)`.
+  CheckSel,
+  /// `Reset(a != 0)`.
+  Reset,
+  /// `AddSegment(a)` (a C++ `TextSegment` or one derived from it).
+  AddSegment,
+  /// `LineBreak(a)`.
+  LineBreak,
+  /// `SetLineAlignment(a)` (`HorzAlign`).
+  SetLineAlignment,
+  /// `SetTextFlags(a, b != 0)`.
+  SetTextFlags,
+  /// `SetMaxChars(a)`.
+  SetMaxChars,
+  /// `SetMaxLines(a)`.
+  SetMaxLines,
+  /// `SetWrapIndentSize(a)`.
+  SetWrapIndentSize,
+  /// `GetNumLines()`.
+  GetNumLines,
+  /// `mTextFlags`.
+  TextFlags,
+};
+
 /// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
 enum class EeWonTitleInstr {
   /// Not a title instruction: `false`.
@@ -1866,6 +2383,76 @@ enum class EeWonTitleInstr {
   ErrorTitleInCommunity,
   /// `"You can't nest communities!"`.
   ErrorNestCommunity,
+};
+
+/// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
+/// caught it in `HandleMessage` and did nothing more); outside every `short` status.
+enum class EeWonLobbyResult {
+  Threw = 65536,
+};
+
+/// The string pairs (title, details) of the message boxes, yes/no dialogs and status waits.
+enum class EeWonLobbyText : uint32_t {
+  GameDissolved = 0,
+  AlreadyJoined = 1,
+  NoPingReply = 2,
+  Disconnected = 3,
+  Banned = 4,
+  Kicked = 5,
+  ConnectWarning1 = 6,
+  ConnectWarning2 = 7,
+  ConnectWarning3 = 8,
+  DissolveGame = 9,
+  LeaveGame = 10,
+  VerifyingPing = 11,
+  GettingGameInfo = 12,
+  WrongPassword = 13,
+  OtherSubnet = 14,
+};
+
+/// The lobby sounds an op plays.
+enum class EeWonLobbySound : uint32_t {
+  PlayerJoined = 0,
+  AllReady = 1,
+  AllNotReady = 2,
+};
+
+/// A base class field the Rust object reads or writes (`Get` / `Set`).
+enum class EeWonGuiField : uint32_t {
+  /// `mScrollArea.width`.
+  ScrollWidth = 0,
+  /// `mScrollArea.height`.
+  ScrollHeight,
+  /// `mVertOffset`.
+  VertOffset,
+  /// `mHorzOffset`.
+  HorzOffset,
+  /// `mTotalWidth`.
+  TotalWidth,
+  /// `mTotalHeight`.
+  TotalHeight,
+  /// `mExtraHeight`.
+  ExtraHeight,
+  /// `mUserHasScrolled` (0 or 1).
+  UserHasScrolled,
+  /// `mUpScrollAmount`.
+  UpScrollAmount,
+  /// `mDownScrollAmount`.
+  DownScrollAmount,
+  /// `Width()` (read only).
+  Width,
+  /// `Height()` (read only).
+  Height,
+};
+
+/// The cursor `SetParentCursor` sets on the parent.
+enum class EeWonGuiCursor : uint32_t {
+  /// NULL (the parent's own).
+  None = 0,
+  /// `Cursor::GetStandardCursor(StandardCursor_Hand)`.
+  Hand = 1,
+  /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
+  IBeam = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -1914,6 +2501,9 @@ struct EeWonHttpSession;
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
 
+/// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
+struct EeWonLan;
+
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
@@ -1946,6 +2536,12 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// StagingLogic's state (the original's members 0x4c..0x54).
+struct EeWonStaging;
+
+/// The Rust TextArea.
+struct EeWonText;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -3129,6 +3725,14 @@ struct EeWonLanChatCommand {
   bool whisper;
 };
 
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
 struct EeWonLobbyMapHooks {
@@ -3712,6 +4316,14 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
+
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -6676,6 +7288,15 @@ bool ee_won_gui_button_state_cell(int32_t state,
                                   int32_t *out_state,
                                   int32_t *out_checked);
 
+/// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `units` holds `count` units of `unit_size` bytes.
+void ee_won_gui_sink_units(void *sink,
+                           const void *units,
+                           size_t count,
+                           size_t unit_size);
+
 /// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
 ///
 /// # Safety
@@ -8079,6 +8700,32 @@ int32_t ee_won_lanlogic_direct_default_port(bool have_config,
 bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `lan` came from `ee_won_lan_new` (or is NULL) and is not used again.
+void ee_won_lan_free(EeWonLan *lan);
+
+/// One of LanLogic's methods (`EeWonLanCall`).
+///
+/// # Safety
+/// `lan` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
+                          EeWonLanCall call,
+                          void *a,
+                          void *b,
+                          ptrdiff_t c,
+                          ptrdiff_t d);
+
+/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
+void ee_won_lobby_sink(void *sink,
+                       const uint8_t *bytes,
+                       size_t length);
 
 /// A new, empty container.
 EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
@@ -10098,6 +10745,24 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               EeWonUnitSink name_sink,
                               void *context);
 
+/// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `staging` came from `ee_won_staging_new` (or is NULL) and is not used again.
+void ee_won_staging_free(EeWonStaging *staging);
+
+/// One of StagingLogic's methods (`EeWonStagingCall`).
+///
+/// # Safety
+/// `staging` is live; the call's arguments as documented.
+ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
+                              EeWonStagingCall call,
+                              void *a,
+                              void *b,
+                              ptrdiff_t c,
+                              ptrdiff_t d);
+
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
 /// # Safety
@@ -10142,6 +10807,23 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// A new Rust TextArea for the C++ `component`, its calls out through `host`.
+EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `text` came from `ee_won_text_new` (or is NULL) and is not used again.
+void ee_won_text_free(EeWonText *text);
+
+/// One of TextArea's methods (`EeWonTextCall`).
+///
+/// # Safety
+/// `text` is live; the call's arguments as documented.
+ptrdiff_t ee_won_text_call(const EeWonText *text,
+                           EeWonTextCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 

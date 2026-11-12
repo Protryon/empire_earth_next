@@ -14,7 +14,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONLobbyAnimation.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 namespace WONJPG { extern "C" {
 #include "../../../ThirdParty/libjpeg/jpeglib.h"

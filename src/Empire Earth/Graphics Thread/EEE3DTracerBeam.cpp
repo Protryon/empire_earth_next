@@ -44,6 +44,8 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DTracerBeam.h"
+#include "rust/ee_gfx.h"   // ee_gfx beam.rs (RUST_PLAN R4.4)
+#include <vector>
 
 
 // SYNTHETIC: EXE 0x4fc382
@@ -114,7 +116,8 @@ EEE3DTracerBeam::~EEE3DTracerBeam()
 
 // FUNCTION: EXE 0x4fc5a4
 // Places the beam between the shooter's weapon tag point (or tag kind 6, or the default point) and its target point,
-// growing from the start until age param 5 and shrinking towards the end after age param 6
+// growing from the start until age param 5 and shrinking towards the end after age param 6. The beam's length and
+// transformation are ee_gfx beam.rs's (RUST_PLAN R4.4)
 void EEE3DTracerBeam::Aim()
 {
     GE3DPoint theEnd;
@@ -122,8 +125,6 @@ void EEE3DTracerBeam::Aim()
     GETransformation theFrom(this->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
     GETransformation theTo(false);
     GETransformation thePart(false);
-    GETransformation theBeam(false);
-    GEVector theDirection;
     EEGraphicObject* theGraphic = this->mUnit->GetModel();
     EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
     float theTargetScale = 1.0f;
@@ -159,36 +160,11 @@ void EEE3DTracerBeam::Aim()
         theTo.Apply(this->mTargetPoint, theEnd);
     else
         theEnd = this->mTargetPoint;
-    if (this->mGraphicEffect->GetParam5() > 0.0f && this->mAge < this->mGraphicEffect->GetParam5()) {
-        float theFraction = this->mAge / this->mGraphicEffect->GetParam5();
-        theEnd.SetX((theEnd.GetX() - theStart.GetX()) * theFraction + theStart.GetX());
-        theEnd.SetY((theEnd.GetY() - theStart.GetY()) * theFraction + theStart.GetY());
-        theEnd.SetZ((theEnd.GetZ() - theStart.GetZ()) * theFraction + theStart.GetZ());
-    }
-    if (this->mGraphicEffect->GetParam6() > 0.0f && this->mGraphicEffect->GetParam6() < this->mAge) {
-        float theFraction = (this->mAge - this->mGraphicEffect->GetParam6()) / (1.0f - this->mGraphicEffect->GetParam6());
-        theStart.SetX((theEnd.GetX() - theStart.GetX()) * theFraction + theStart.GetX());
-        theStart.SetY((theEnd.GetY() - theStart.GetY()) * theFraction + theStart.GetY());
-        theStart.SetZ((theEnd.GetZ() - theStart.GetZ()) * theFraction + theStart.GetZ());
-    }
-    theDirection.SetX(theEnd.GetX() - theStart.GetX());
-    theDirection.SetY(theEnd.GetY() - theStart.GetY());
-    theDirection.SetZ(theEnd.GetZ() - theStart.GetZ());
-    this->mLength = theDirection.GetMagnitude();
-    theDirection.Scale(0.5f, theDirection);
-    theStart += theDirection;
-    theDirection.Normalize();
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    float thePitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f;
-    theBeam.SetX(theStart.GetX());
-    theBeam.SetY(theStart.GetY());
-    theBeam.SetZ(theStart.GetZ());
-    theBeam.SetOrientationYPR(theYaw, thePitch, 0.0f);
-    theBeam.SetElement(3, 0, 0.0f);
-    theBeam.SetElement(3, 1, 0.0f);
-    theBeam.SetElement(3, 2, 0.0f);
-    theBeam.SetElement(3, 3, 1.0f);
-    this->SetTransformation(theBeam);
+    EeGfxBeamAim theAim = ee_gfx_beam_aim(reinterpret_cast<const EeGe3DPoint*>(&theStart),
+                                          reinterpret_cast<const EeGe3DPoint*>(&theEnd), this->mAge,
+                                          this->mGraphicEffect->GetParam5(), this->mGraphicEffect->GetParam6());
+    this->mLength = theAim.length;
+    this->SetTransformation(*reinterpret_cast<const GETransformation*>(&theAim.transform));
 }
 // FUNCTION: EXE 0x4fc9d7
 // Snapshots the beam's age, length, scroll and width for drawing and queues it in render queue 4 under its texture
@@ -235,21 +211,25 @@ long EEE3DTracerBeam::DrawPass5()
     return 0;
 }
 
+// a beam model's vertices' points and texture coordinates (DrawPass6's stretch and its restore)
+static void EEBeamSetVertices(GEVertexArray* inVertices, const std::vector<EeGfxBeamVertex>& inValues)
+{
+    for (unsigned long i = 0; i < inValues.size(); i++) {
+        inVertices->SetPoint(*reinterpret_cast<const GE3DPoint*>(&inValues[i].point), i);
+        inVertices->SetTextureCoordinate(*reinterpret_cast<const GETextureCoordinate*>(&inValues[i].coord), i);
+    }
+}
+
 // FUNCTION: EXE 0x4fca9b
 // Draws the beam model stretched to its length and width with its texture scrolled, additive when the effect's flag 2
-// is set; restores the model's vertices, texture coordinates and sub-model offsets
+// is set; restores the model's vertices, texture coordinates and sub-model offsets. The stretch is ee_gfx beam.rs's
 long EEE3DTracerBeam::DrawPass6()
 {
-    std::vector<float> theOldYs;
-    std::vector<float> theOldXs;
-    std::vector<float> theOldUs;
     std::vector<float> theOldModelYs;
     GETransformation theScale;
     GETransformation theTransformation(this->mTransformation);
     GETransformation theCombined(false);
     GETransformation theModelTransform(false);
-    GETextureCoordinate theCoordinate;
-    GE3DPoint thePoint;
     float theValue;
     GEModel* theModel = this->mGraphicObject->mModel;
     unsigned long theScreen = gScreenIndex;
@@ -275,30 +255,24 @@ long EEE3DTracerBeam::DrawPass6()
     theScale.SetScale(theSize, theSize, theSize);
     theTransformation.Apply(theScale, theCombined);
     theModel->SetGraphicsPostModelTransform(theCombined);
+    GEVertexArray* theVertices = theModel->GetVertexArray(0);
+    std::vector<EeGfxBeamVertex> theOld(theVertices->GetSize());
     unsigned long i;
-    for (i = 0; i < theModel->GetVertexArray(0)->GetSize(); i++) {
-        theModel->GetVertexArray(0)->GetPoint(thePoint, i);
-        float theY = thePoint.GetY();
-        theOldYs.push_back(theY);
-        float theX = thePoint.GetX();
-        theOldXs.push_back(theX);
-        thePoint.SetY(thePoint.GetY() * this->mDrawLength * 1.15f);
-        thePoint.SetX(thePoint.GetX() * this->mDrawWidth);
-        theModel->GetVertexArray(0)->SetPoint(thePoint, i);
-        theModel->GetVertexArray(0)->GetTextureCoordinate(theCoordinate, i);
-        float theU = theCoordinate.GetU();
-        theOldUs.push_back(theU);
-        theU += this->mDrawScroll;
-        theCoordinate.SetU(theU);
-        theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, i);
+    for (i = 0; i < theOld.size(); i++) {
+        theVertices->GetPoint(*reinterpret_cast<GE3DPoint*>(&theOld[i].point), i);
+        theVertices->GetTextureCoordinate(*reinterpret_cast<GETextureCoordinate*>(&theOld[i].coord), i);
     }
+    std::vector<EeGfxBeamVertex> theStretched(theOld);
+    ee_gfx_beam_stretch(theStretched.empty() ? NULL : &theStretched[0], theStretched.size(), this->mDrawLength,
+                        this->mDrawWidth, this->mDrawScroll);
+    EEBeamSetVertices(theVertices, theStretched);
     long j;
     for (j = 0; j < (long)theModel->GetSubModelCount(); j++) {
         GEModel* theSubModel = theModel->GetSubModel(j);
         theModelTransform = theSubModel->GetInternalTransform(0);
         float theY = theModelTransform.GetY();
         theOldModelYs.push_back(theY);
-        theModelTransform.SetY(theModelTransform.GetY() * this->mDrawLength * 1.15f);
+        theModelTransform.SetY(ee_gfx_beam_stretch_y(theModelTransform.GetY(), this->mDrawLength));
         theSubModel->SetInternalTransform(0, theModelTransform);
     }
     theModel->ComputeBoundingVolumes();
@@ -306,15 +280,7 @@ long EEE3DTracerBeam::DrawPass6()
     bool theSorted = gOrthographicView;
     long theResult = gRasterizer->Draw(theModel, theScreen, 1.0f, theSorted);
     gRasterizer->SetFog(theFog, theScreen);
-    for (i = 0; i < theModel->GetVertexArray(0)->GetSize(); i++) {
-        theModel->GetVertexArray(0)->GetPoint(thePoint, i);
-        thePoint.SetY(theOldYs[i]);
-        thePoint.SetX(theOldXs[i]);
-        theModel->GetVertexArray(0)->SetPoint(thePoint, i);
-        theModel->GetVertexArray(0)->GetTextureCoordinate(theCoordinate, i);
-        theCoordinate.SetU(theOldUs[i]);
-        theModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, i);
-    }
+    EEBeamSetVertices(theVertices, theOld);
     for (j = 0; j < (long)theModel->GetSubModelCount(); j++) {
         GEModel* theSubModel = theModel->GetSubModel(j);
         theModelTransform = theSubModel->GetInternalTransform(0);

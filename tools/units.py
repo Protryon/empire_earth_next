@@ -11,11 +11,11 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
-# Every module is linked into the one exe (no DLLs): the game, its image libraries, the engine with libjpeg, and the
+# Every module is linked into the one exe (no DLLs): the game, the engine with libjpeg (the lobby's JPEG too), and the
 # plug-ins (TCP protocol, mixer, Default random maps, the DX7 T&L renderer), registered in PIMModule.cpp.
-MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "won", "exe"]
+MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "won", "exe"]
 TARGETS = ["exe"]
-TARGET_MODULES = {"exe": ["exe", "exeimg", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
+TARGET_MODULES = {"exe": ["exe", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that
@@ -59,6 +59,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/AI Thread/EEAIContinentSave.cpp",
                        # the start of the Rust library (ee_rust_init)
                        "Empire Earth/Empire Earth/EERust.cpp",
+                       # its per-unit Lua queries and human-level commands (docs/AI_LUA_UNITS.md)
+                       "Empire Earth/AI Thread/EECPNextUnits.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)
                        "Empire Earth/Empire Earth/EEGameLog.cpp",
                        # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
@@ -89,7 +91,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
                        "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls
-                       # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign)
+                       # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
+                       # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)
                        "Empire Earth/UI Events/EEScreens.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)
                        "Empire Earth/Language/LanguageStrings.cpp",

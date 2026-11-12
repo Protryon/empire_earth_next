@@ -9,7 +9,11 @@
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
   python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke] [--sanitize address|undefined]
-                                                                                the game (POSIX targets): ee-aoc
+                                                                                the game (POSIX targets): ee-aoc,
+                                                                                and ee-sim beside it (a link)
+  python -I tools/xbuild.py sim      [the game's options]                       the same build for a bench machine:
+                                                                                no macOS app bundle; ee-sim is the
+                                                                                headless simulation (tools/sim.py)
   python -I tools/xbuild.py targets                                             what each target needs, and if it is here
 
 Targets (--target, default: the host):
@@ -395,6 +399,9 @@ WON_TESTS = {
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
     # staging module
     "won_staging_test": [],
+    # StagingLogic as a whole Rust object (stagingobj.rs): the original's methods over a scripted host against the
+    # Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_stagingobj.txt)
+    "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
     "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
@@ -406,6 +413,12 @@ WON_TESTS = {
     # LanLogic's flow (what a message, a closed socket, a summary, a join status or a command does), the original's
     # statements against ee_won's lanlogic module
     "won_lanlogic_test": [],
+    # LanLogic as a whole Rust object (lanobj.rs): the original's methods over a scripted host against the Rust
+    # object's calls out, op for op (golden: rust/crates/ee_won/src/golden_lanobj.txt)
+    "won_lanobj_test": [],
+    # TextArea as a whole Rust object (textobj.rs): the original's methods and its segments' layout virtuals over a
+    # scripted host against the Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_textobj.txt)
+    "won_textobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -985,6 +998,7 @@ def cmd_census(a):
 
 
 GAME_NAME = "ee-aoc"
+SIM_NAME = "ee-sim"   # the game started as the headless simulation (cmd_game links it beside ee-aoc)
 
 
 FONT_ARRAYS = [("kSansRegular", "LiberationSans-Regular.ttf"), ("kSansBold", "LiberationSans-Bold.ttf"),
@@ -1161,8 +1175,6 @@ def cmd_game(a):
     for s in platform_sources(t):
         if pathlib.Path(s).resolve() not in have:
             jobs.append(("platform", s, ""))
-    # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
-    jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
     # the window icon's pixels (the generated gen/PlatIconData.h) handed to the Rust window layer at start-up
     jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatWindowIcon.c", ""))
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
@@ -1193,26 +1205,32 @@ def cmd_game(a):
     print(f"{len(commands) - len(failed)}/{len(commands)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
     if failed:
         return 1
-    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game, then the
-    # image libraries as an archive
-    first = [o for j, o in objs if j[0] not in ("exe", "exeimg")]
+    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game
+    first = [o for j, o in objs if j[0] != "exe"]
     game = [o for j, o in objs if j[0] == "exe"]
-    img = [o for j, o in objs if j[0] == "exeimg"]
-    archive = out / "libexeimg.a"
-    archive.unlink(missing_ok=True)
-    ar = str(ee.LLVM / "llvm-ar.exe") if IS_WINDOWS else (shutil.which("llvm-ar") or "ar")
-    run([ar, "rcs", archive, *img])
+    (out / "libexeimg.a").unlink(missing_ok=True)   # the image libraries' archive (libpng, zlib) of older builds
     exe = out / GAME_NAME
     rsp = out / "link.rsp"
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
     # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
-    libs = [archive, wlib, *sdl_libs(t)]
+    libs = [wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-ldl", "-lm", "-lpthread"]
     else:
         libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
     run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
+    # ee-sim: the same exe under the name that starts the headless simulation (EE-SIM.exe's driver, EESim.cpp; the
+    # POSIX main takes the name as "ee-aoc --sim"); a link, so it is never older than ee-aoc
+    sim = out / SIM_NAME
+    sim.unlink(missing_ok=True)
+    try:
+        os.link(exe, sim)
+    except OSError:
+        shutil.copy2(exe, sim)
+    print(f"headless simulation {sim} (tools/sim.py, tools/sim_bench.py)")
+    if getattr(a, "sim", False):   # xbuild.py sim: no app bundle; --smoke runs ee-sim --help
+        return run_program(t, sim, ["--help"]) if a.smoke and t.native() else 0
     if t.os == "macos":
         app = out / "Empire Earth AoC.app" / "Contents"
         if app.parent.exists():
@@ -1258,7 +1276,8 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "targets"):
+    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "sim",
+                 "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
@@ -1272,10 +1291,11 @@ def main():
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":
             p.add_argument("--fresh", action="store_true", help="configure from scratch")
-        if name == "game":
+        if name in ("game", "sim"):
             p.add_argument("--debug", action="store_true", help="-O0")
             p.add_argument("--incremental", action="store_true", help="keep objects newer than their unit")
-            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test (native only)")
+            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test, ee-sim with "
+                                                                "--help (native only)")
             p.add_argument("--sanitize", choices=["address", "undefined"],
                            help="clang sanitizer build -> <out>/game-<sanitizer>/ (POSIX debugging)")
         if name == "census":
@@ -1283,8 +1303,9 @@ def main():
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
+    a.sim = a.cmd == "sim"
     sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
-              "census": cmd_census, "game": cmd_game, "targets": cmd_targets}[a.cmd](a))
+              "census": cmd_census, "game": cmd_game, "sim": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 
 if __name__ == "__main__":

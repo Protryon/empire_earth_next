@@ -50,7 +50,7 @@ bool LobbyNetHostGame(LobbyGame* game)
 {
     if(gLobbyData.get()==NULL)
         return false;
-    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->mGameType);
+    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->GetGameType());
     NetLogic* logic=LobbyGetCurNetLogic();
     if(logic!=NULL) return logic->HostGame(game);
     return false;
@@ -61,7 +61,7 @@ bool LobbyNetJoinGame(LobbyGame* game)
 {
     if(gLobbyData.get()==NULL)
         return false;
-    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->mGameType);
+    gLobbyData->mCurGameType=static_cast<LobbyGameType>(game->GetGameType());
     NetLogic* logic=LobbyGetCurNetLogic();
     if(logic!=NULL) return logic->JoinGame(game);
     return false;
@@ -203,7 +203,7 @@ namespace WONAPI {
 LobbyPlayer* GetMyLobbyPlayer()
 {
     LobbyClient* client=GetMyLobbyClient();
-    return client!=NULL ? client->mPlayer.get() : NULL;
+    return client!=NULL ? client->GetPlayer().get() : NULL;
 }
 // (SDK LobbyStaging::IAmReady)
 // FUNCTION: WON 0x007613a0
@@ -238,14 +238,14 @@ void LobbyNetSendToClient(LobbyClient* client,const ByteBuffer* message)
 // Withdraws a game's advertisement on its own network
 void LobbyNetRemoveGameAdvertisement(LobbyGame* game)
 {
-    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->mGameType));
+    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->GetGameType()));
     if(logic!=NULL) logic->RemoveGameAdvertisement(game);
 }
 // FUNCTION: WON 0x00761d30
 // Leaves a game on its own network
 void LobbyNetLeaveGame(LobbyGame* game)
 {
-    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->mGameType));
+    NetLogic* logic=LobbyGetNetLogic(static_cast<LobbyGameType>(game->GetGameType()));
     if(logic!=NULL) logic->LeaveGame(game);
 }
 // FUNCTION: WON 0x00761d50
