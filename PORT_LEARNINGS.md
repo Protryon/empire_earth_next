@@ -9711,3 +9711,60 @@ Round 4's pattern (RUST_PLAN's row) applied to the in-game HUD's event units; me
   `EEMLoadOrSaveGame` to every player; only a multiplayer game sends it over the wire.
 - **Behaviour:** none intended where the original was defined. The main game form's pause posts and drops its
   `EEAUserPauseGame` reference as before; the options menu's pause still keeps it (the shared host op takes the flag).
+
+## R6: the game screens, ninth round: diplomacy, the camera, scroll and zoom events, the formation change and the civilization builder's events whole in Rust (ee_screens diplomacy.rs, camera.rs, main_game.rs, civ_builder.rs; branch rust-screens9, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the rest of the main game form's events and the builder's.
+
+- **Deleted:** `EEUIEDiplomacyEvents.cpp` (654) and its header; `EEUIECameraEvents.cpp` (110),
+  `EEUIEScrollZoomEvents.cpp` (161), `EEUIEWheelZoom.cpp` (78), `EEUIEFormationChange.cpp` (110) and their six
+  headers, the grab scroll's ctor and dtor (`EEUIFScenarioEditor.cpp`); `EECBUIEvents.cpp` (281),
+  `EEUIECivilizationBuilderEvents.h` and the builder form's two events (`EECBCivilizationFiles.cpp`). Their `??_G`
+  notes and `link/exe/units.txt` lines. Screens C++ lines (round 8's count) 36,046 -> 35,420 -> 34,927 -> 34,905; git
+  over the C++: +98 -725, +142 -635, +136 -485.
+- **Codes:** diplomacy 0x1b01..0x1b08; the camera events 0x0b40..0x0b4c (`camera.rs`: the mouse freeze, revolve,
+  rotate, the four arrow keys, the two zoom keys, the wheel, the main game form's and the editor's grab); the
+  formation buttons 0x0b27 + type (`main_game.rs`); the builder 0x0701..0x0713 and its open event 0x0720 + five
+  flags (`civ_builder.rs`). The creators (the main game form's ctor and hot keys, the scenario editor's ctor, the
+  manager's factories, `CivBuilderOpenForm`) make them by code.
+- **State as records:** the diplomacy form's players reach Rust as `EeScreensDiplomacyPlayer` (one host call per
+  player, live at each use); its pending tributes stay where the original kept them, in the tribute buttons' texts
+  (read with the host's `atoi`, the UCRT's clamping one). The grab scroll's per-form state is `CameraGrab` (whether
+  the middle button is held), one per form in a Rust `Mutex`; the mouse move event it saves while held is a C++
+  object, so the host keeps that reference (`sGrabSaved[form]`) and hands the form's mouse move events to the grab
+  (a new `EEScreenEvent` of the grab's code, not the original's same object: the same code reaches the same record)
+  and back. `EECreateGrabScroll(form)` (the forms' ctors) and `EEReleaseGrabScroll(form)` (their dtors) reset the
+  record and drop the saved reference, as the original's object came and went with its form. The builder's
+  first-change flag (`sFirstChange`) is `CivBuilder`.
+- **Floats:** the camera's arithmetic is the original's in f32, operation by operation (the revolve negates the
+  integer before converting it: `wrapping_neg() as f32`; the down key's product is `-((zoom + 0.5) * ((speed + 0.5) *
+  0.05))`, not the up key's order); the tribute amounts' `(long)` casts are x64's `cvttss2si` (`i32::MIN` out of
+  range); `<windows.h>`'s `min`/`max` macros (`a > b ? a : b`) keep their NaN behaviour. Each of these failed its
+  replay when mutated.
+- **Golden drivers** (scratch, `build/sc9`: `diplomacy_driver.cpp`, `view_driver.cpp`, `cb_driver.cpp`, `drv.py`;
+  the old headers under `orig/inc`): one session each (1,000; 2,000; 2,000 cases). Identical old against new on seeds
+  1-4 (10,000, 20,000 and 30,000 cases for 2-4); every earlier driver relinked over the new host still prints its
+  golden.
+- **Lessons:**
+  - The original's `min(max(UMCos(x), 0.0f), 1.0f)` is two `<windows.h>` macros: UMCos runs up to four times. A
+    driver fake that prints every call pins the macro expansion, not the behaviour; the fake stays silent (UMCos is
+    pure) and the Rust calls it once.
+  - An exe call to a template member the engine exports (`UIListBox<UWideString>::GetCurrentSelection`, declared
+    `extern template` for importers) cannot be faked by a specialization; the driver defines it under its decorated
+    name with clang's `__asm__` label (`extern "C" long F(const void*, unsigned long&) __asm__("?GetCurrentSelection@...")`).
+  - The driver's random state must stay inside what the original survives: a current player whose id is 0 put the
+    OK button's rows below 19 and crashed the unmodified unit; the mouse's X and Y entities are never checked for
+    NULL there (only the middle button and the wheel are).
+  - GNU sed on Git Bash rewrites a CRLF file's every line ending, even for a one-line substitution
+    (`tools/harness/ai_game.py` showed 771 lines changed): edit CRLF files with the editor, never sed.
+- **What the harness reaches:** the tour's scroll check (`fixture_driver.scroll_check`): the arrow keys
+  (`EE_SCREENS_CAM_SCROLL_*`), the zoom keys (`_ZOOM_IN`/`_OUT`) and the wheel (`_WHEEL_ZOOM`) are Rust's now; its
+  edge scroll is `EEAScroll`, not moved. The ai-game gate's dismissal of the civilization builder (form 7, control 16:
+  `ai_game.py`'s comment names the code) runs the builder's open event (`EE_SCREENS_CB_BUTTONS` + flags) and
+  `EE_SCREENS_CB_CANCEL_CHANGES`, and its close event `EE_SCREENS_CB_CLEAN_UP`. **Only a person reaches:** diplomacy
+  (no gate opens it), the grab scroll, the grave key's free camera, the formation menu, the builder's other buttons
+  and dialogs. Network code: the diplomacy form's tributes, stances and chat choices and the formation change are
+  game messages; only a multiplayer game sends them over the wire.
+- **Behaviour:** none intended where the original was defined. The grab scroll's saved mouse move event is released
+  with its form's destructor (the original's object was released when its last reference went, normally the same
+  moment).
