@@ -17,6 +17,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -199,8 +201,9 @@ long EEUCHelicopterTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned 
 // Updates the transport the common way, then its orbitals
 void EEUCHelicopterTransport::Update(EEComplexUnit* inUnit)
 {
-    EEUCTransport::Update(inUnit);
-    inUnit->UpdateOrbitals();
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_HELICOPTER_TRANSPORT, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

@@ -29,7 +29,7 @@ pub const EE_UNITS_MODE_ACCELERATE: i32 = 3;
 pub const EE_UNITS_MODE_BRAKE: i32 = 4;
 
 /// `lrintf` as the x86-64 build computes it (round half to even; the "indefinite" value out of range).
-fn lrintf(value: f32) -> i32 {
+pub(crate) fn lrintf(value: f32) -> i32 {
     let rounded = value.round_ties_even();
     if (-2_147_483_648.0..2_147_483_648.0).contains(&rounded) {
         rounded as i32

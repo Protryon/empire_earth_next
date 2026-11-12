@@ -1165,19 +1165,8 @@ public:
     void RouteDockWaypoint(EEComplexUnit* inUnit);  // 0x213db5 (the airplane on its carrier after its move: EEPMAirplane::OrientOnCarrier) (provisional name)
     bool IsAffectedByCalamity(unsigned long inFlag);  // 0x2317d7 (EEComplexUnit::GetCatchableContagions: the class takes that calamity flag) (provisional name)
     bool FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance);  // 0x233a14 (EEUGHealUnit)
-    // 0x230c55: the splash damage of inUnit's attack around it (inRadius, inDamage, the to-hit kind and weapon column),
-    // every unit hit once, inTarget first (provisional name)
-    void ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float inDamage, long inKind, long inColumn, EEUnit* inTarget);
     // 0x238087: the projectile launch from the weapon tag point (FireShot) (provisional name)
     void LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation);
-    void ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget);   // 0x230fd2: inUnit's hit on inTarget plus its splash
-    // The damage of one hit, the one function of the three forms (ee/EERules.h EEDamageForm; the constants are
-    // combat.yaml's): inUnit hits inTarget with inAttack, attack kind inAmmo (dbfamily column) and weapon inWeapon
-    // (dbweapontohit row); the elevation rule is this class's. inFriendlyFactor: splash damage on the own player's
-    // units. False when the hit does not get through (outAmount untouched), else outAmount (new, not in the original:
-    // ApplyHit, ApplyAreaDamage and EEPhysicsModel's trample each had a copy).
-    bool ComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, float inAttack, long inAmmo, long inWeapon,
-                       float inFriendlyFactor, long& outAmount);
     void FireShot(EEComplexUnit* inUnit);   // 0x231312 (EEUGAttackGround::Step; provisional name)
     bool FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);  // 0x233a72 (EEUGAttackGround::EvaluateCondition)
     // the building classes' VirtualB8 helpers (EEUCSpaceBuilding 0x21a1cb; provisional names)

@@ -68,6 +68,8 @@ pub struct EeCombatStoredUnit {
     /// the class's `mFamily`, `mCloakRadius` (0: no class)
     pub family: i64,
     pub cloak_radius: i64,
+    /// `EEUnit::mResourceAmount`
+    pub resource_amount: i64,
 }
 
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.

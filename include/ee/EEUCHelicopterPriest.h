@@ -26,7 +26,6 @@ public:
     virtual void AddToTile(EEUnit* inUnit);   // +0x84 0x21aaa9 (ICF: EEUCAirAnimal, EEUCAirplane...)
     virtual void RemoveFromTile(EEUnit*);  // +0x98 0x21aaf5 (ICF: EEUCAirAnimal, EEUCAirplane...)
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x213344
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x216dd7 trivial: push dword ptr [esp + 4]; call 0x60df05; ret 4 (ICF: EEUCLandPriest, EEUCNavalPriest)
     virtual void UpdateEffects(EEComplexUnit*); // +0xbc 0x157269 trivial: ret 4 (ICF: EEAECalamityImmunity, EEAEConversionImmunity...)
     // NB: EEUCBasicPriest's sizeof (0x32c) is ASSUMED = the smallest derived class's (no new site)
 };

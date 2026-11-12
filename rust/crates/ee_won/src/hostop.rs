@@ -71,7 +71,7 @@ pub const EE_WON_HOST_OP_ADDR: i32 = 22;
 pub const EE_WON_HOST_OP_SOCKET: i32 = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 pub const EE_WON_HOST_PEER_AUTH_KEY: i32 = 24;
-/// `op->IsKilled()` -> out_num
+/// `op->IsKilled()` (NULL: the op itself) -> out_num
 pub const EE_WON_HOST_OP_KILLED: i32 = 25;
 // Immediate socket calls:
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
@@ -133,6 +133,112 @@ pub const EE_WON_HOST_BASE_CLEANUP: i32 = 68;
 pub const EE_WON_HOST_RELEASE: i32 = 69;
 /// `obj0->AddRef()`
 pub const EE_WON_HOST_ADD_REF: i32 = 70;
+// The request exchange (reqhost.rs: `ServerRequestOp`'s statements):
+/// `mAuthType` -> out_num
+pub const EE_WON_HOST_AUTH_TYPE: i32 = 80;
+/// `mAuthContext != NULL` -> out_num
+pub const EE_WON_HOST_HAS_AUTH: i32 = 81;
+/// `ServerOp::ConnectTime()` -> out_num
+pub const EE_WON_HOST_CONNECT_TIME: i32 = 82;
+/// `GetTimeout()` -> out_num
+pub const EE_WON_HOST_TIMEOUT: i32 = 83;
+/// `mAuthContext->GetPeerData()->GetCertificate()->GetUserId()` -> out_num
+pub const EE_WON_HOST_CERT_USER_ID: i32 = 84;
+/// a server context obj0's `CopyAddresses(list)` -> the sink (six bytes each)
+pub const EE_WON_HOST_CTX_ADDRS: i32 = 85;
+/// a server context obj0's `NotifyFailed(addr)`
+pub const EE_WON_HOST_CTX_FAILED: i32 = 86;
+/// `mAuthContext->GetSession(addr)` -> out_obj (a reference; none: NULL)
+pub const EE_WON_HOST_GET_SESSION: i32 = 87;
+/// `mAuthContext->PutSession(addr, obj0)`
+pub const EE_WON_HOST_PUT_SESSION: i32 = 88;
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+pub const EE_WON_HOST_ADD_CRYPT: i32 = 89;
+/// `mTracker.KillAll()` (may call back)
+pub const EE_WON_HOST_KILL_ALL: i32 = 90;
+/// a peer auth op's `GetSession()` -> out_obj (a reference; none: NULL)
+pub const EE_WON_HOST_PEER_AUTH_SESSION: i32 = 91;
+/// a peer auth op's `GetGetCertStatus()` -> out_num
+pub const EE_WON_HOST_PEER_AUTH_CERT: i32 = 92;
+/// `dynamic_cast<RecvMsgOp*>(obj0) != NULL` -> out_num
+pub const EE_WON_HOST_OP_IS_RECV_MSG: i32 = 93;
+// DetectFirewallOp's (fwhost.rs):
+/// a socket obj0's `Listen(1000)` -> out_num
+pub const EE_WON_HOST_SOCKET_LISTEN: i32 = 94;
+/// a socket obj0's `GetLocalPort()` -> out_num
+pub const EE_WON_HOST_SOCKET_PORT: i32 = 95;
+/// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
+pub const EE_WON_HOST_RUN: i32 = 96;
+// The ops still derived in C++ (reqhost.rs's CppReq; `this` a C++ `ServerRequestOp`):
+/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
+pub const EE_WON_HOST_REQ_NEXT: i32 = 97;
+/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
+/// `ReadBufferException`
+pub const EE_WON_HOST_REQ_CHECK: i32 = 98;
+/// `Reset()`
+pub const EE_WON_HOST_REQ_RESET: i32 = 99;
+// GetCertOp's (certhost.rs: round 6's hooks; ctx an auth context, kind 1 `AuthCertificate`, 2 `Auth2Certificate`):
+/// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
+pub const EE_WON_HOST_CERT_VERIFIER_PUBLIC: i32 = 100;
+/// ctx obj0's `GetPeerData()` -> out_obj (a reference)
+pub const EE_WON_HOST_CERT_CTX_PEER: i32 = 101;
+/// peer obj0's `GetPubKeyBlock()` -> out_obj (borrowed)
+pub const EE_WON_HOST_CERT_PEER_BLOCK: i32 = 102;
+/// peer obj0's `GetAuthDelta()` -> out_num
+pub const EE_WON_HOST_CERT_PEER_DELTA: i32 = 103;
+/// ctx obj0's `LoadSecretList()`
+pub const EE_WON_HOST_CERT_LOAD_SECRETS: i32 = 104;
+/// block obj0's `IsValid()` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VALID: i32 = 105;
+/// ctx obj0's `SetPeerData(new AuthPeerData(obj1))` (a block)
+pub const EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK: i32 = 106;
+/// block obj0's `GetId()` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_ID: i32 = 107;
+/// block obj0's `GetCurrentKey().Encrypt(data)` -> the sink (NULL: not called)
+pub const EE_WON_HOST_CERT_BLOCK_ENCRYPT: i32 = 108;
+/// ctx obj0's `GetUserName()` (UTF-16 LE) -> the sink
+pub const EE_WON_HOST_CERT_USER: i32 = 109;
+/// ctx obj0's `GetPassword()` (UTF-16 LE) -> the sink
+pub const EE_WON_HOST_CERT_PASSWORD: i32 = 110;
+/// what ctx obj0's `AppendCommunityData` appends -> the sink
+pub const EE_WON_HOST_CERT_COMMUNITY: i32 = 111;
+/// what ctx obj0's `AppendHashes(data)` appends -> the sink
+pub const EE_WON_HOST_CERT_HASHES: i32 = 112;
+/// ctx obj0's `AddSecret(data)`
+pub const EE_WON_HOST_CERT_ADD_SECRET: i32 = 113;
+/// ctx obj0's `RemoveSecret(data)`
+pub const EE_WON_HOST_CERT_REMOVE_SECRET: i32 = 114;
+/// `new AuthCertificate(data)` (num0 1) or `new Auth2Certificate(data)` -> out_obj
+pub const EE_WON_HOST_CERT_NEW: i32 = 115;
+/// certificate obj0 (kind num0)'s `IsValid()` -> out_num
+pub const EE_WON_HOST_CERT_VALID: i32 = 116;
+/// block obj0's `Verify(obj1)` (a certificate of kind num0) -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VERIFY: i32 = 117;
+/// certificate obj0 (kind num0)'s `ComputeAuthDelta()` -> out_num
+pub const EE_WON_HOST_CERT_DELTA: i32 = 118;
+/// certificate obj0 (kind num0)'s issue and expire times -> the sink (two 64-bit LE numbers)
+pub const EE_WON_HOST_CERT_TIMES: i32 = 119;
+/// `new AuthPubKeyBlock(data)` -> out_obj
+pub const EE_WON_HOST_CERT_NEW_BLOCK: i32 = 120;
+/// block obj0's `IsValidAndVerified(AuthContext::GetVerifierKey())` -> out_num
+pub const EE_WON_HOST_CERT_BLOCK_VERIFIED: i32 = 121;
+/// ctx obj0's `CommitSecrets(num0, num1)`
+pub const EE_WON_HOST_CERT_COMMIT: i32 = 122;
+/// a new private key (`ElGamal`, not a `RefCount`) -> out_obj
+pub const EE_WON_HOST_CERT_PRIV_NEW: i32 = 123;
+/// private key obj0's `SetPrivateKey(data)` -> out_num
+pub const EE_WON_HOST_CERT_PRIV_SET: i32 = 124;
+/// `delete` private key obj0
+pub const EE_WON_HOST_CERT_PRIV_FREE: i32 = 125;
+/// `new AuthPeerData(obj0, obj1, *key num0, num1, obj2)` (certificate, block, the private key, the delta, the
+/// second certificate) -> out_obj
+pub const EE_WON_HOST_CERT_NEW_PEER: i32 = 126;
+/// ctx obj0's `SetPassword(data)` (UTF-16 LE)
+pub const EE_WON_HOST_CERT_SET_PASSWORD: i32 = 127;
+/// ctx obj0's `SetPeerData(obj1)`
+pub const EE_WON_HOST_CERT_SET_PEER: i32 = 128;
+/// ctx obj0's `ClearOneTimeData()`
+pub const EE_WON_HOST_CERT_CLEAR_ONE_TIME: i32 = 129;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -157,7 +263,8 @@ pub const EE_WON_HOST_OP_RECV_BYTES_FROM: i64 = 7;
 #[repr(C)]
 pub struct EeWonHostCall {
     pub code: i32,
-    pub obj: [*mut c_void; 2],
+    /// the objects (a third only where a statement takes three)
+    pub obj: [*mut c_void; 3],
     pub num: [i64; 2],
     pub data: *const u8,
     pub len: usize,
@@ -228,10 +335,19 @@ pub(crate) trait Plan: Send + Sized + 'static {
     }
     /// a setter by number (the value as a number, bytes, an address or an object)
     fn set(_h: &Host<Self>, _which: i32, _value: &SetValue) {}
+    /// the C++ side's `ServerOp` members the op's constructor set: (`mLengthFieldSize`, `mMaxConnectTime`,
+    /// `mMaxSendTime`, `mMaxRecvTime`)
+    fn setup(&self) -> (u8, [u32; 3]) {
+        (4, [60000; 3])
+    }
     /// the members, one line (the drivers' and goldens' form)
     fn describe(&self) -> String;
     /// every object reference held, taken (the destructor releases them)
     fn take_objects(&mut self) -> Vec<Obj>;
+    /// a result list of directory entities by number (the directory ops, reqdir.rs)
+    fn entities(&self, _which: i32, _index: i64) -> Vec<crate::dir::Entity> {
+        Vec::new()
+    }
 }
 
 /// A setter's value.
@@ -253,12 +369,23 @@ impl<P: Plan> Host<P> {
         Host { st: Mutex::new(plan), bind: Mutex::new((None, 0)) }
     }
 
+    /// Binds the C++ side's function (`host` its first argument): the tests' stand-ins.
+    #[cfg(test)]
+    pub(crate) fn bind_to(&self, f: EeWonHostFn, host: *mut c_void) {
+        *self.bind.lock().unwrap_or_else(|e| e.into_inner()) = (f, host as usize);
+    }
+
     /// The members, for statements that make no call.
     pub(crate) fn st(&self) -> MutexGuard<'_, P> {
         self.st.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn invoke(&self, code: i32, obj: [Obj; 2], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
+        self.call(code, [obj[0], obj[1], Obj::none()], num, data, addr)
+    }
+
+    /// One call with all its inputs (the ops' own codes).
+    pub(crate) fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         // a call may re-enter the op: never under its lock
         #[cfg(test)]
         assert!(self.st.try_lock().is_ok(), "a call under the op's lock (code {code})");
@@ -266,7 +393,7 @@ impl<P: Plan> Host<P> {
         let mut out: Option<Vec<u8>> = None;
         let mut c = EeWonHostCall {
             code,
-            obj: [obj[0].ptr(), obj[1].ptr()],
+            obj: [obj[0].ptr(), obj[1].ptr(), obj[2].ptr()],
             num,
             data: if data.is_empty() { std::ptr::null() } else { data.as_ptr() },
             len: data.len(),
@@ -462,6 +589,52 @@ impl<P: Plan> Host<P> {
         self.num_of(EE_WON_HOST_COMPLETE, completion, [0, 0]);
     }
 
+    // ---- the request exchange
+    pub(crate) fn auth_type(&self) -> i32 {
+        self.num_of(EE_WON_HOST_AUTH_TYPE, Obj::none(), [0, 0]) as i32
+    }
+    pub(crate) fn has_auth(&self) -> bool {
+        self.num_of(EE_WON_HOST_HAS_AUTH, Obj::none(), [0, 0]) != 0
+    }
+    pub(crate) fn connect_time(&self) -> u32 {
+        self.num_of(EE_WON_HOST_CONNECT_TIME, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn timeout(&self) -> u32 {
+        self.num_of(EE_WON_HOST_TIMEOUT, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn cert_user_id(&self) -> u32 {
+        self.num_of(EE_WON_HOST_CERT_USER_ID, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn ctx_addrs(&self, context: Obj) -> Vec<[u8; 6]> {
+        let b =
+            self.invoke(EE_WON_HOST_CTX_ADDRS, [context, Obj::none()], [0, 0], &[], [0; 6]).bytes.unwrap_or_default();
+        b.as_chunks::<6>().0.to_vec()
+    }
+    pub(crate) fn ctx_failed(&self, context: Obj, addr: [u8; 6]) {
+        self.invoke(EE_WON_HOST_CTX_FAILED, [context, Obj::none()], [0, 0], &[], addr);
+    }
+    pub(crate) fn get_session(&self, addr: [u8; 6]) -> Obj {
+        self.invoke(EE_WON_HOST_GET_SESSION, [Obj::none(); 2], [0, 0], &[], addr).obj
+    }
+    pub(crate) fn put_session(&self, addr: [u8; 6], session: Obj) {
+        self.invoke(EE_WON_HOST_PUT_SESSION, [session, Obj::none()], [0, 0], &[], addr);
+    }
+    pub(crate) fn add_crypt(&self, socket: Obj, session: Obj) {
+        self.invoke(EE_WON_HOST_ADD_CRYPT, [socket, session], [0, 0], &[], [0; 6]);
+    }
+    pub(crate) fn kill_all(&self) {
+        self.num_of(EE_WON_HOST_KILL_ALL, Obj::none(), [0, 0]);
+    }
+    pub(crate) fn peer_auth_session(&self, op: Obj) -> Obj {
+        self.invoke(EE_WON_HOST_PEER_AUTH_SESSION, [op, Obj::none()], [0, 0], &[], [0; 6]).obj
+    }
+    pub(crate) fn peer_auth_cert(&self, op: Obj) -> i32 {
+        self.num_of(EE_WON_HOST_PEER_AUTH_CERT, op, [0, 0]) as i32
+    }
+    pub(crate) fn op_is_recv_msg(&self, op: Obj) -> bool {
+        self.num_of(EE_WON_HOST_OP_IS_RECV_MSG, op, [0, 0]) != 0
+    }
+
     /// `slot = o` for an object slot of the members (`o` carries the reference the slot keeps; the old one goes
     /// after, outside the lock).
     pub(crate) fn replace(&self, slot: impl FnOnce(&mut P) -> &mut Obj, o: Obj) {
@@ -480,7 +653,9 @@ trait HostDyn: Send + Sync {
     fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>>;
     fn set(&self, which: i32, value: &SetValue);
     fn describe(&self) -> String;
+    fn setup(&self) -> (u8, [u32; 3]);
     fn release_all(&self);
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity>;
 }
 
 impl<P: Plan> HostDyn for Host<P> {
@@ -507,6 +682,12 @@ impl<P: Plan> HostDyn for Host<P> {
     }
     fn describe(&self) -> String {
         self.st().describe()
+    }
+    fn setup(&self) -> (u8, [u32; 3]) {
+        self.st().setup()
+    }
+    fn entities(&self, which: i32, index: i64) -> Vec<crate::dir::Entity> {
+        self.st().entities(which, index)
     }
     fn release_all(&self) {
         let objs = self.st().take_objects();
@@ -601,6 +782,28 @@ pub unsafe extern "C" fn ee_won_hostop_bytes(
     }
 }
 
+/// A result list of directory entities by number (`EE_WON_REQOP_DIR_*`), each to `sink` in order, outside the op's
+/// locks (the sink makes the C++ `DirEntity` objects); returns how many.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_entities(
+    op: *const EeWonHostOp,
+    which: i32,
+    index: i64,
+    sink: crate::dir::EeWonDirEntitySink,
+    context: *mut c_void,
+) -> usize {
+    // SAFETY: as above
+    let list = unsafe { (*op).op.entities(which, index) };
+    for e in &list {
+        // SAFETY: the sink's contract
+        unsafe { crate::dir::give(e, sink, context) };
+    }
+    list.len()
+}
+
 /// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or
 /// an object (the op takes its own reference).
 ///
@@ -626,6 +829,22 @@ pub unsafe extern "C" fn ee_won_hostop_set(
     let v = SetValue { num, data, addr: a, obj: Obj::of(obj) };
     // SAFETY: as above
     unsafe { (*op).op.set(which, &v) }
+}
+
+/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
+/// length field size and the connect, send and receive limits.
+///
+/// # Safety
+/// `op` is a live op; `lfs` is writable, `times` three writable values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_setup(op: *const EeWonHostOp, lfs: *mut u8, times: *mut u32) {
+    // SAFETY: as above
+    let (l, t) = unsafe { (*op).op.setup() };
+    // SAFETY: the caller's out values
+    unsafe {
+        *lfs = l;
+        std::ptr::copy_nonoverlapping(t.as_ptr(), times, 3);
+    }
 }
 
 /// The members, one line (the drivers' form).

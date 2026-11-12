@@ -11,43 +11,10 @@ public:
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 };
 
-class EEUIEMGDisplayCivBuilder : public UIEvent {
-public:
-    virtual ~EEUIEMGDisplayCivBuilder() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEMGDisplayDiplomacy : public UIEvent {
-public:
-    virtual ~EEUIEMGDisplayDiplomacy() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEMGDisplayStatistics : public UIEvent {
-public:
-    virtual ~EEUIEMGDisplayStatistics() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEMGEndScenarioDialog : public UIEvent {
-public:
-    virtual ~EEUIEMGEndScenarioDialog() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
 class EEUIECECampaignNameChanged : public UIEvent {
 public:
     virtual ~EEUIECECampaignNameChanged() {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIEMGIncrementRallyTimer : public UIEvent {
-public:
-    EEUIEMGIncrementRallyTimer(unsigned char inTimer) { this->mTimer = inTimer; }  // body: stored after the vptr
-    virtual ~EEUIEMGIncrementRallyTimer() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-
-    unsigned char mTimer;                   // +0x0c (1..3)
 };
 
 // ProcessEvent 0x273345 inline (emitted after the main game factory): the unit hack panel loads the unit data

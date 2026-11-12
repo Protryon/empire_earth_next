@@ -213,9 +213,26 @@ enum EEUnitStateKind {
     kUnitStateAccelerate = 8,   // EEPhysicsModel::Accelerate, EEPMSeaAnimal::Accelerate
     kUnitStateSpeedMode = 9,    // EEPhysicsModel::SpeedMode, EEPMHelicopter::SpeedMode
     kUnitStatePitchMode = 10,   // EEPhysicsModel::PitchMode, EEPMNaval::PitchMode, EEPMSpaceship::PitchMode
-    kUnitStateApproachPitch = 11   // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
+    kUnitStateApproachPitch = 11,  // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
+    // the thirteenth round's: a class Update's leaf calls in order, three words each [operation (ee_units update.rs
+    // EE_UNITS_UPD_*), its two arguments], noted by the Update host (EEUnitUpdate.cpp) and written once the unit's
+    // step is done (EEUnitUpdateCommit)
+    kUnitStateUpdate = 12,
+    // a class ActionChanged's operations in order, three words each [operation (ee_units actions.rs
+    // EE_UNITS_ACT_*), its two arguments], the nested calls (another part's, the idle restart) with them, written once
+    // the outermost call returns (EEUnitActionScope)
+    kUnitStateActionChanged = 13
 };
 void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
+// TEST ONLY (USST kind 12): one leaf call of a class Update; the step's calls as one note (TickStep, after the step)
+void EEUnitUpdateNote(int inOperation, int64_t inA, int64_t inB);
+void EEUnitUpdateCommit(unsigned long inID);
+// TEST ONLY (USST kind 13): one operation of a class ActionChanged; the scope of a call (the outermost writes the note)
+void EEUnitActionNote(int inOperation, int64_t inA, int64_t inB);
+struct EEUnitActionScope {
+    explicit EEUnitActionScope(unsigned long inID);
+    ~EEUnitActionScope();
+};
 // TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
 // the unit and exits 3 (the capture's USTM gate; the leaves compare only while the capture runs)
 void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal);

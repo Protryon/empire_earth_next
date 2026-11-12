@@ -19,6 +19,8 @@
 #include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -119,18 +121,9 @@ long EEUCNavalCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
 // Updates a fishing boat each tick: physics, effects, camouflage, animation, sound, rotting, then its citizen work
 void EEUCNavalCitizen::Update(EEComplexUnit* inUnit)
 {
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    this->UpdateCamouflageTimer(inUnit);
-    this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    if (theCommand == kActionUnitRotting) {
-        inUnit->UpdateRottingAwayTime();
-    }
-    this->UpdateCitizen(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL_CITIZEN, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x618909

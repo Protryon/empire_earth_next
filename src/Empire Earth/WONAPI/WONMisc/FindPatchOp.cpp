@@ -63,7 +63,7 @@ void FindPatchOp::GetHighestPatchList(const std::string &theFromVersion, PatchLi
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-void FindPatchOp::DoFinish(GetDirOp *theOp)
+void FindPatchOp::DoFinish(RustServerOp *theOp)
 {
 	if(!theOp->Succeeded())
 	{
@@ -71,7 +71,7 @@ void FindPatchOp::DoFinish(GetDirOp *theOp)
 		return;
 	}
 
-	const DirEntityList &aList = theOp->GetDirEntityList();
+	const DirEntityList aList = theOp->GetEntities(EE_WON_REQOP_DIR_LIST);
 	DirEntityList::const_iterator anItr = aList.begin();
 	while(anItr!=aList.end())
 	{
@@ -114,7 +114,7 @@ void FindPatchOp::DoFinish(GetDirOp *theOp)
 ///////////////////////////////////////////////////////////////////////////////
 bool FindPatchOp::CallbackHook(AsyncOp *theOp, int)
 {
-	this->DoFinish(static_cast<GetDirOp*>(theOp));
+	this->DoFinish(static_cast<RustServerOp*>(theOp));
 	return true;
 }
 
@@ -124,16 +124,13 @@ void FindPatchOp::RunHook()
 {
 	this->mPatchList.clear();
 
-	SmartPtr<GetDirOp> anOp = new GetDirOp(this->mDirServers);
-
-	anOp->SetPath(this->GetVersionDir());
 	DWORD aGetFlags = DIR_GF_DECOMPSERVICES | DIR_GF_SERVADDNAME | DIR_GF_ADDDISPLAYNAME | DIR_GF_SERVADDNETADDR 
 		| DIR_GF_ADDDATAOBJECTS | DIR_GF_ADDDOTYPE | DIR_GF_ADDDODATA;
 
 	if(this->mValidVersionSet.empty())
 		aGetFlags |= DIR_GF_DECOMPROOT;
 
-	anOp->SetFlags(aGetFlags);
+	SmartPtr<RustServerOp> anOp = RustServerOp::NewGetDir(this->mDirServers, this->GetVersionDir(), aGetFlags);
 
 	if(this->GetMode()==OP_MODE_ASYNC)
 	{

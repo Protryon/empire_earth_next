@@ -1888,9 +1888,9 @@ void RoutingLogic::AddFriend()
     std::wstring aWide=name;
     std::string aName;
     WideAppendUtf16LE(aName,aWide);
-    SmartPtr<ServerRequestOp> op=new ServerRequestOp(servers,ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(aName.data()),aName.size()));
+    SmartPtr<RustServerOp> op=RustServerOp::NewRequest(ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(aName.data()),aName.size()),servers);
     LobbyRunOpWithStatus(op.get(),::AddFriendDialog_StatusTitle_String,::AddFriendDialog_StatusDetails_String,1,0);
-    unsigned long aUserId=(unsigned long)ee_won_reqop_num(op->mRustOp,EE_WON_REQOP_USER_ID);
+    unsigned long aUserId=(unsigned long)ee_won_hostop_num(op->GetRustOp(),EE_WON_REQOP_USER_ID,0);
     if(op->GetStatus()!=WS_Success || aUserId==0) return;
     LobbyFriend* friendEntry=LobbyAddFriend(name,aUserId);
     if(friendEntry) {
@@ -1956,15 +1956,13 @@ void RoutingLogic::RefreshServerList()
     time_t refreshTime=time(NULL);
     if(static_cast<long>(static_cast<unsigned long>(refreshTime)-static_cast<unsigned long>(this->mLastServerRefresh))>=300 ||
        this->mServerList->IsEmpty()) {
-        SmartPtr<GetDirOp> op=new GetDirOp(context.get());
-        op->SetPath(config->mProductDirectory);
-        op->SetFlags(0x04000622);
-        op->AddDataType("_C");
-        op->AddDataType("_L");
+        static const char* const kTypes[] = { "_C", "_L" };
+        SmartPtr<RustServerOp> op=RustServerOp::NewGetDir(context.get(),config->mProductDirectory,0x04000622,kTypes,2);
         LobbyRunOpWithStatus(op.get(),::LobbyContainer_GettingRoomsTitle_String,::LobbyContainer_GettingRoomsDetails_String,1,0);
         if(op->GetStatus()!=WS_Success) return;
-        if(op->GetDirEntityList().empty()) context->NotifyFailed(op->GetCurAddr());
-        this->mServerList->UpdateFromDirectory(op->GetDirEntityList());
+        const DirEntityList entities=op->GetEntities(EE_WON_REQOP_DIR_LIST);
+        if(entities.empty()) context->NotifyFailed(op->GetCurAddr());
+        this->mServerList->UpdateFromDirectory(entities);
         this->mLastServerRefresh=refreshTime;
     }
     time_t now=time(NULL);

@@ -20,9 +20,3 @@
 #include "ee/EEUCLand.h"
 #include "ee/EEUCLandMilitaryHero.h"
 
-// FUNCTION: EXE 0x616d4b
-// Updates the hero as a land unit
-void EEUCLandMilitaryHero::Update(EEComplexUnit* inUnit)
-{
-    EEUCLand::Update(inUnit);
-}

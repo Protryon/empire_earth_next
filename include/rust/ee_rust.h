@@ -20,6 +20,7 @@
 #include "ee_openformats.h"
 #include "ee_rmap.h"
 #include "ee_rust_common.h"
+#include "ee_scenario.h"
 #include "ee_screens.h"
 #include "ee_sound.h"
 #include "ee_tech.h"

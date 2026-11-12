@@ -28,6 +28,8 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 #include "ee/EEPlayer.h"
 #include "ee/EESMArea.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 // 0x246ea2 again, as IsNearTile uses it (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
@@ -79,34 +81,10 @@ EESMObject::~EESMObject()
 // (provisional name)
 bool EESMObject::AcceptsClass(unsigned long inClass)
 {
-    bool theResult;
-    if (this->mClass != 0)
-        theResult = this->mClass == (long)inClass;
-    else
-        theResult = gUnitClassTable[inClass]->mIsScenarioSelectable;
-    if (theResult) {
-        EEUnitClass* theClass = gUnitClassTable[inClass];
-        if (theClass != NULL) {
-            long theType = theClass->mCategory;
-            if (theType == kUnitCategoryProjectile || theType == kUnitCategoryBomb || theType == kUnitCategoryMissile || theType == kUnitCategoryTorpedo
-                || gUnitSetManager.Contains(theType, 0x79)) {
-                theResult = false;
-            } else if (this->mFamily == 0) {
-                theResult = true;
-            } else if ((unsigned long)this->mFamily <= 0xf) {
-                theResult = this->mFamily == theClass->mEpoch + 1;
-            } else if ((unsigned long)this->mFamily <= 0x4b) {
-                theResult = this->mFamily - 0x10 == theClass->mFamily;
-            } else if ((unsigned long)this->mFamily <= 0x74) {
-                theResult = this->mFamily - 0x4c == theClass->mAIKind;
-            } else if ((unsigned long)this->mFamily <= gUnitSetManager.GetSize() + 0x74) {
-                EEUnitSet* theSet = gUnitSetManager.GetSet(this->mFamily - 0x75);
-                if (theSet != NULL)
-                    theResult = theSet->Contains(inClass);
-            }
-        }
-    }
-    return theResult;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs accepts_class
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
+    return ee_scenario_object_accepts_class(&theHost, &theFilter, (uint32_t)inClass);
 }
 
 // FUNCTION: EXE 0x5c6148
@@ -225,6 +203,17 @@ void EESMObject::Copy(const EESMObject& inObject)
 // Rebuilds a dynamic object's units (parent or owners), keeps those passing the state/attribute/selected/visible/area/
 // near filters, shuffles and caps them; returns whether any pass (visibility uses the selected-by player)
 bool EESMObject::Evaluate(bool inIncludeDead)
+{
+    if (!EESimCaptureRecord::Active())
+        return this->EvaluateUncaptured(inIncludeDead);
+    EESMCaptureObjectState theBefore = EESMCaptureObjectBegin(this);
+    bool theResult = this->EvaluateUncaptured(inIncludeDead);
+    EESMCaptureObjectEnd(this, inIncludeDead, theResult, theBefore);
+    return theResult;
+}
+
+// Evaluate's body (Evaluate adds the simulation capture's SMOB record: ee/EEScenarioCapture.h)
+bool EESMObject::EvaluateUncaptured(bool inIncludeDead)
 {
     std::vector<long> thePlayers;
     EESMObject* theParent = gWorld.mScenarioManager->GetScenarioObject(this->mParent);
@@ -353,63 +342,10 @@ bool EESMObject::Evaluate(bool inIncludeDead)
 // class matching its epoch/family/AI kind/unit set filter; -1 if none
 long EESMObject::PickUnitType()
 {
-    std::vector<long> theClasses;
-    std::vector<unsigned long> theUnits;
-    EESMObject* theParent = gWorld.GetScenarioManager()->GetScenarioObject(this->GetParent());
-    long theResult = -1;
-    if (theParent != NULL && this->GetParent() != 0) {
-        if (theParent->GetIsSelectOnMap()) {
-            theParent->GetUnits(theUnits);
-            if (theUnits.size() > 0) {
-                EEUnit* theUnit = gWorld.GetUnit(theUnits[0]);
-                if (theUnit != NULL)
-                    theResult = theUnit->mUnitClass->GetUnitType();
-            }
-        } else {
-            theResult = theParent->PickUnitType();
-        }
-    } else {
-        if (this->GetClass() != 0)
-            theResult = this->GetClass();
-        else {
-            for (long i = 0; i < EEUnitClassCount(); i++) {
-                EEUnitClass* theClass = gUnitClassTable[i];
-                if (theClass == NULL)
-                    continue;
-                long theCategory = theClass->mCategory;
-                if (theCategory != kUnitCategoryProjectile && theCategory != kUnitCategoryBomb && theCategory != kUnitCategoryMissile && theCategory != kUnitCategoryTorpedo) {
-                    if (this->GetFamily() == 0) {
-                        long theType = theClass->GetUnitType();
-                        theClasses.push_back(theType);
-                    } else if (this->GetFamily() <= 0xf) {
-                        if (this->GetFamily() == theClass->mEpoch + 1) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->GetFamily() <= 0x4b) {
-                        if (this->GetFamily() - 0x10 == theClass->mFamily) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->GetFamily() <= 0x74) {
-                        if (this->GetFamily() - 0x4c == theClass->mAIKind) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->mFamily <= gUnitSetManager.GetSize() + 0x74) {
-                        EEUnitSet* theSet = gUnitSetManager.GetSet(this->GetFamily() - 0x75);
-                        if (theSet != NULL && theSet->Contains(theClass->GetUnitType())) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    }
-                }
-            }
-            if (theClasses.size() > 0)
-                theResult = theClasses[gPhysics->GetRandom(0L, (long)theClasses.size() - 1)];
-        }
-    }
-    return theResult;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs pick_unit_type
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
+    return ee_scenario_object_pick_unit_type(&theHost, &theFilter);
 }
 
 #include "lle/GE3DPoint.h"
@@ -1847,91 +1783,45 @@ void EESMTrigger::DeleteEffect(unsigned long inIndex)
 // (EEScenarioManager::Update 0x1b20e6)
 void EESMTrigger::Evaluate(float inTime)
 {
-    long theChosen = 0;
-    long theRandomCount = 0;
-    bool theContinue = true;
-    bool theResult = false;
-    if (!this->mIsOn || (gWorld.mInCinematic && !this->mIsInCinematic))
-        return;
-    long theCount = this->mConditions.size();
-    long i;
-    for (i = 0; i < theCount && theContinue == true; i++) {
-        theResult = this->GetCondition(i)->Evaluate(theContinue);
-        if (theContinue || this->GetCondition(i)->mOperator != kSMTriggerOperatorAnd)
-            continue;
-        for (long j = i + 1; j < theCount; j++) {
-            if (this->GetCondition(j)->mOperator != kSMTriggerOperatorOr)
-                continue;
-            i = j;
-            j = theCount;
-            theContinue = true;
-        }
-    }
-    if (theResult == true) {
-        if (this->mConditionDuration != 0) {
-            if (this->mConditionStartTime == 0) {
-                this->mConditionStartTime = (long)inTime;
-                return;
-            }
-            if ((float)this->mConditionDuration > (inTime - this->mConditionStartTime) * 0.001f)
-                return;
-        }
-        this->mHasFired = true;
-        this->mConditionStartTime = 0;
-        if (!this->mIsLooping)
-            this->mIsOn = false;
-        long theEffects = this->mEffects.size();
-        long e;
-        for (e = 0; e < theEffects; e++) {
-            if (this->mEffects[e]->mOperator == kSMTriggerOperatorOr)
-                theRandomCount++;
-        }
-        if (theRandomCount > 0)
-            theChosen = gPhysics->GetRandom(0, theRandomCount);
-        theRandomCount = 0;
-        for (long k = 0; k < theEffects; k++) {
-            EESMTEffectWrapper* theWrapper = this->mEffects[k];
-            if (theRandomCount == theChosen) {
-                unsigned long theTime = (long)(theWrapper->mDelay * 1000.0f + inTime);
-                // (the original also calls GetEffect(mL0C) here and discards it, 0x1c9c6d; no stand-in: the row is not exact, r32 close)
-                gWorld.mScenarioManager->AddTimedEffect(theWrapper->mEffectIndex, theTime, this->mIsInCinematic);
-            }
-            if (theWrapper->mOperator == kSMTriggerOperatorOr)
-                theRandomCount++;
-            if (theRandomCount > theChosen)
-                break;
-        }
+    if (!EESimCaptureRecord::Active()) {
+        this->EvaluateUncaptured(inTime);
         return;
     }
-    this->mConditionStartTime = 0;
+    EESMCaptureTriggerState theBefore = EESMCaptureTriggerBefore(this);
+    unsigned int theSeed = EESMCaptureSeed();
+    this->EvaluateUncaptured(inTime);
+    EESMCaptureTrigger(this, theBefore, inTime, theSeed);
+}
+
+// Evaluate's body (Evaluate adds the simulation capture's SMTE record: ee/EEScenarioCapture.h)
+void EESMTrigger::EvaluateUncaptured(float inTime)
+{
+    // the chain, the duration and the effects' choice are Rust's (ee_scenario trigger.rs); the C++ schedules them
+    EeScenarioTriggerState theState = {this->mIsOn, this->mHasFired, this->mIsLooping, this->mIsInCinematic,
+                                       (uint32_t)this->mConditionDuration, (uint32_t)this->mConditionStartTime};
+    std::vector<EeScenarioConditionEntry> theConditions(this->mConditions.size());
+    for (size_t i = 0; i < theConditions.size(); i++)
+        theConditions[i] = {(uint32_t)this->mConditions[i]->mValue, (int32_t)this->mConditions[i]->mOperator,
+                            this->mConditions[i]->mIsNot};
+    std::vector<EeScenarioEffectEntry> theEffects(this->mEffects.size());
+    for (size_t k = 0; k < theEffects.size(); k++)
+        theEffects[k] = {(int32_t)this->mEffects[k]->mOperator, (uint32_t)this->mEffects[k]->mDelay,
+                         (uint32_t)this->mEffects[k]->mEffectIndex};
+    std::vector<EeScenarioTimedEffect> theTimed(theEffects.size() + 1);
+    size_t theCount = 0;
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    ee_scenario_trigger_evaluate(&theHost, &theState, gWorld.mInCinematic, theConditions.data(), theConditions.size(),
+                                 theEffects.data(), theEffects.size(), inTime, theTimed.data(), &theCount);
+    this->mIsOn = theState.is_on;
+    this->mHasFired = theState.has_fired;
+    this->mConditionStartTime = theState.condition_start_time;
+    for (size_t t = 0; t < theCount; t++)
+        gWorld.mScenarioManager->AddTimedEffect((long)theTimed[t].effect, theTimed[t].time, this->mIsInCinematic);
 }
 
 // FUNCTION: EXE 0x5c9caf
-// Returns the entry's condition result (negated if set); ioResult says whether the chain goes on (AND: result true,
-// OR: result false, end: never)
-bool EESMTConditionWrapper::Evaluate(bool& ioResult)
-{
-    bool theResult;
-    EESMCondition* theCondition = gWorld.mScenarioManager->GetCondition(this->mValue);
-    if (theCondition != NULL && theCondition->Evaluate())
-        theResult = true;
-    else
-        theResult = false;
-    if (this->mIsNot == true)
-        theResult = !theResult;
-    switch (this->mOperator) {
-    case kSMTriggerOperatorOr:
-        ioResult = !theResult;
-        break;
-    case kSMTriggerOperatorAnd:
-        ioResult = theResult;
-        break;
-    case kSMTriggerOperatorEnd:
-        ioResult = false;
-        break;
-    }
-    return theResult;
-}
+// (EESMTConditionWrapper::Evaluate: ee_scenario trigger.rs entry)
 
 // FUNCTION: EXE 0x5c9d0e
 // Returns the condition entry at an index, or NULL

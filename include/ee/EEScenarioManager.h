@@ -38,6 +38,11 @@ struct EESMUnitClassMedia {
     long mUnitClass;                        // +0x04
 };
 
+// TEST ONLY (EE-SIM --scenario): the driver ends each shown dialog message at the next communications tick (as a
+// player who reads every one through), and the UI's end of a message (EEPhysics' message 0x508) is ignored: the
+// scenario's dialogs, and the cinematics that wait for them, then follow the game's ticks, not the wall clock
+extern bool gScenarioSimDialogs;
+
 class EEScenarioManager : public FSPersistent {   // RTTI base; vtable 0x445fd8, sizeof 0x23c
 public:
     EEScenarioManager();                    // 0x1afa90

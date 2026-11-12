@@ -22,6 +22,8 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -760,29 +762,9 @@ void EEUCBuilding::UpdateEffects(EEComplexUnit* inUnit)
 // ones fight; a built robotic farm adds 1 food each gather interval
 void EEUCBuilding::Update(EEComplexUnit* inUnit)
 {
-    if ((inUnit->mUnitClass->mFamily == kUnitFamilyWalls || inUnit->mUnitClass->mUnitType == kUnitTypeHouse) && inUnit->mHitPoints > 0) {
-        if (USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17))
-            this->UpdateCamouflageTimer(inUnit);
-        return;
-    }
-    if ((this->mAttack == 0.0f && !this->IsPriest()) || this->mUnitType == kUnitTypeCpMissileBase) {
-        if (inUnit->mCurrentPhysicsAction == 2 && this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-            this->mPhysicsModel->Step(inUnit);
-        if (this->mUnitType == kUnitTypeCapitol && inUnit->mStats->mPower > 0) {
-            this->UpdateDone(inUnit);
-            this->RegeneratePower(inUnit);
-        }
-        this->UpdateBuilding(inUnit);
-    } else
-        this->UpdateArmed(inUnit);
-    if (inUnit->mUnitClass->mUnitType != kUnitTypeRoboticFarm || !((unsigned long)gPhysics->mGameTime >= inUnit->mGrazeTime) || !inUnit->mIsBuilt)
-        return;
-    inUnit->mPlayer->AddResource(kResourceFood, 1);
-    inUnit->mPlayer->mSavedGroups.Reset(7, 1);
-    long theTime = gPhysics->mGameTime;
-    long theDelay = inUnit->mStats->mGatherTimes[6];
-    float theScale = ::gWorld.GetGameVariant()->mWorkTimeFactor;
-    inUnit->SetGrazeTime(theTime + UMFloatToLong(theScale * theDelay));
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_BUILDING, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60fef9

@@ -69,6 +69,10 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
                        "Empire Earth/Tech Tree/EETechCapture.cpp",
+                       # TEST ONLY: the scenario manager's capture records (ee/EEScenarioCapture.h; RUST_PLAN R5b.5)
+                       "Empire Earth/Scenario Manager/EEScenarioCapture.cpp",
+                       # the scenario logic's host: the world's reads for ee_scenario (ee/EEScenarioHost.h; RUST_PLAN R5b.5)
+                       "Empire Earth/Scenario Manager/EEScenarioHost.cpp",
                        # the host of the calamity classes' Rust updates (ee/EECalamityUpdate.h; ee_tech calamity_update.rs)
                        "Empire Earth/Calamities/EECalamityUpdate.cpp",
                        # the host of the calamity classes' Rust cast tests (ee_tech calamity_cast.rs)
@@ -79,6 +83,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Units/EEUnitStore.cpp",
                        # the world calls of the Rust decisions: groups as ids, goals as handles (ee_units host.rs)
                        "Empire Earth/Units/EEUnitHost.cpp",
+                       # the host of the unit classes' Update sequences (ee/EEUnitUpdate.h; ee_units update.rs)
+                       "Empire Earth/Units/EEUnitUpdate.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",
