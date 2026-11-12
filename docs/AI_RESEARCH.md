@@ -3847,6 +3847,40 @@ that, and B4 (warships from the dock) for the default boom, 32 seeds against the
   minutes, for one defeat more (within the noise).
 - Both switches stay off by default here (`plan.iron_free`, `econ.iron_guard`): the choice is the owner's.
 
+**The waves after Copper (2026-11-12).** On boom_order against the improved classic, with both iron switches on,
+175 incidents of 3-13 foes after the Copper Age killed 592 citizens, against 337 lost to raids of 1-2. A wave is
+typically 4 foes, lasts about 50 s, and comes about 15 tiles out. 84% of the dead were killed by land soldiers, at 1.6
+tiles: bowmen, macemen, short swords, phalanxes, horsemen and war elephants. 54-60% were running when first hit. The
+losses follow the army: 5.9 citizens a wave with 0-5 soldiers, 1.5 with 25 or more. With a temporary trace of the
+guard's view (168 waves):
+- in 85 waves the guard saw only clusters of 1-3, so S2 sent 3 soldiers to each and the rest waited at the post;
+- in 47 it engaged, losing 4.6 citizens a wave;
+- in 27 it had no soldiers (6.0 a wave);
+- in 8 it held off on the odds.
+
+The iron switches starved the army: under 10 soldiers in 28% of the minutes after Copper, against 9% without them.
+iron_guard reserved the epoch's iron that iron_free only released while the stock was below the cost. With no archery
+range, iron_free trained nothing. An unaffordable order sat queued and kept its class from being ordered again.
+
+Fixes, 32 seeds (2-33), the m14 exe (the FindGatherSpot crash fixed):
+
+| Variant | Defeats | Under 30 | Copper | Bronze | Army under 10 | Wave dead |
+|---|---|---|---|---|---|---|
+| A0 base (both switches off) | 6 | 10 | 22 | 11 | 9% | 476 |
+| A1 iron switches fixed + `train_spare` | 7 | 10 | 22 | 14 | 20% | 1040 |
+| A2 `train_spare` only | 7 | 10 | 22 | 11 | 13% | 663 |
+| A3 iron switches fixed | 7 | 8 | 24 | 16 | 26% | 718 |
+| B1 `detach_r` 12 | 6 | 6 | 25 | 13 | 10% | 597 |
+| C1 `guard_refuge` | 9 | 12 | 21 | 11 | 4% | 447 |
+| C2 `guard_refuge` from Copper | 7 | 11 | 22 | 12 | 8% | 475 |
+
+On seeds 34-65, B1 had 8 defeats against A0's 5 (14 against 11 of 64).
+- **None is better than the base.** The fixed iron switches still starve the army: a ranged-only guard cannot keep
+  its numbers. Holding back an unaffordable order (`train_spare`) is worse than queueing it, because a queued order
+  has the first claim on the income. All of them stay off (`plan.iron_free`, `plan.train_spare`, `detach_r = 0`,
+  `guard_refuge`).
+- The waves are an army-size problem: the guard engages them when it has the soldiers.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds

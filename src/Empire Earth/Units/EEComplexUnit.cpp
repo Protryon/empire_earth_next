@@ -2674,8 +2674,10 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
         inPlayer != NULL && (inPlayer == this->mPlayer || this->mPlayer->mEnemies[inPlayer->mPlayerID] == 0 ||
                           theUnarmed || inForce)) {
         if (theCommand == kActionWaitForOpenPosition) {
+            // (the port: a unit waiting for a spot whose goal is no longer a gather - the original dereferenced the
+            // null cast; seen when a repair began beside such a unit, PORT_LEARNINGS)
             EEUGGather* theGather = dynamic_cast<EEUGGather*>(this->GetGoal());
-            if (theGather->FindGatherSpot(this)) {
+            if (theGather != NULL && theGather->FindGatherSpot(this)) {
                 this->StartAction(kActionMoveToWaitingArea);
                 this->GetUnitClass()->ActionChanged(this);
             }

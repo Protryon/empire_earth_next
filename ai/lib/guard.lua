@@ -41,6 +41,9 @@ M.opts = {
                           -- units; the rest of the guard fights the larger raids as a block, or waits at its post
     detach_n = 3,
     detach_k = 3,
+    detach_r = 0,         -- (off; AI_RESEARCH §8.50, the waves after Copper: a wave of 4-8 seen as 2-3 clusters of 1-3 got 3
+                          -- soldiers each while the rest of the guard waited at its post, half the waves) a raid is small
+                          -- only when the raiders of every raid within detach_r tiles of it are detach_n or fewer
     fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
                           -- centre, where the citizens run, instead of holding its post (no garrison: a town
                           -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
@@ -144,7 +147,12 @@ end
 -- iron_free (AI_RESEARCH §8.50: the Bronze save sat unpaid 44 minutes on average, short of iron only, while the
 -- spearmen and macemen retrained against the waves spent every iron unit): the ranged units only (bowmen and
 -- slingers: wood and gold, which pile up), no new iron infantry
-function M.train(view, mem, n, order, per, iron_free)
+-- with no ranged producer (no archery range) the usual mix (AI_RESEARCH §8.50: else nothing
+-- trained at all, a town 70 minutes at 0-4 soldiers)
+-- spare (AI_RESEARCH §8.50, the waves after Copper: an order the reserve left unaffordable sat queued for 14 minutes
+-- and kept its class from being ordered again, the army 12 -> 1): the stock less the reserve; an order is cut to what
+-- it pays, and a class it cannot pay one of is not ordered (nil: no limit)
+function M.train(view, mem, n, order, per, iron_free, spare)
     local have = {pierce = 0, ranged = 0, shock = 0, cavalry = 0}
     local total = 0
     for _, s in ipairs(view.soldiers or {}) do
@@ -167,6 +175,9 @@ function M.train(view, mem, n, order, per, iron_free)
         return
     end
     local mix = M.mix(view, mem)
+    if iron_free and class_for(view, "ranged") == nil then
+        iron_free = false
+    end
     if iron_free then
         mix = {pierce = 0, ranged = 100, shock = 0}
     end
@@ -197,6 +208,13 @@ function M.train(view, mem, n, order, per, iron_free)
     local busy = {}
     for _, l in ipairs(lack) do
         local k = math.min(l.n, need, (per or 2) * math.max(l.c.producers, 1))   -- (on every producer of the class)
+        if spare ~= nil then
+            for r, v in pairs(l.c.cost) do
+                if v > 0 then
+                    k = math.min(k, math.max(spare[r] or 0, 0) // v)
+                end
+            end
+        end
         if k > 0 and l.c.requested == 0 and not busy[l.c.producer] then
             order("soldier_" .. l.c.producer, {verb = "train", type = l.c.type, n = k})
             busy[l.c.producer] = true
@@ -561,8 +579,19 @@ function M.step(view, mem, opts)
         -- (S2) the small raids: each its detach_k nearest healthy units, on its raider nearest them; the rest go on
         local big, used = {}, {}
         local by = {}
-        for _, r in ipairs(raids) do
-            if r.cl.n <= M.opts.detach_n then
+        local near_n = {}
+        for i, r in ipairs(raids) do
+            near_n[i] = r.cl.n
+            if M.opts.detach_r > 0 then
+                for j, q in ipairs(raids) do
+                    if j ~= i and d2(r.cl.x, r.cl.y, q.cl.x, q.cl.y) <= M.opts.detach_r * M.opts.detach_r then
+                        near_n[i] = near_n[i] + q.cl.n
+                    end
+                end
+            end
+        end
+        for i, r in ipairs(raids) do
+            if near_n[i] <= M.opts.detach_n then
                 local sent = 0
                 while sent < M.opts.detach_k do
                     local best, bd = nil, nil

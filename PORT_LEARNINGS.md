@@ -1645,6 +1645,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Fix:** the line ends at the first tile off the map, and `EEGetBlockingUnits` treats a NULL tile as holding no
   units (its other callers pass `GetTile` results too).
 
+## A citizen waiting for a gather spot whose goal is no gather (EE-SIM, 2026-11-12)
+
+- **Crash:** `EEUGGather::FindGatherSpot` read `this->mResource` through a NULL `this` (c0000005, every time at
+  105 minutes in one seed of boom_order against the improved classic). `EEUGBuildRepair::BeginRepair` asks the units on
+  the site to step aside (`EEStepAsideFromSite`), and `EEComplexUnit::StepAside` takes a unit in
+  `kActionWaitForOpenPosition` to have an `EEUGGather` goal: `dynamic_cast<EEUGGather*>(GetGoal())->FindGatherSpot`.
+  This unit's goal was something else (probably a new order from a script, given while the action had not changed
+  yet). Frames resolved from `EE-SIM.map` by address (the image loads at its preferred base).
+- **Fix:** a NULL cast skips the gather-spot search; the unit stays where it is.
+
 ## Unit upgrades lost on loading a save, on macOS/Linux (2026-11-08)
 
 - **Symptom** (owner's playtest): after every load of an autosave, units kept some purchased improvements (attack,
