@@ -533,6 +533,7 @@ static void SaveGhosts(FSFile& outFile)
             theDead.push_back(theAttacker);
         }
     }
+    EECPOutOfWorldGatherers(theDead);   // the dead units the gatherer lists still hold
     outFile.Write((unsigned long)theDead.size());
     for (size_t i = 0; i < theDead.size(); i++) {
         EEComplexUnit* theUnit = theDead[i];

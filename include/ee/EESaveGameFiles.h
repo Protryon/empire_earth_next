@@ -157,6 +157,11 @@ unsigned long EEContinentRegionsDigest();
 // when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
 class EEComplexUnit;
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
+// the units out of the world the computer players' gatherer lists still hold (EECPResourceManager::mGatherers): a
+// lost unit of a citizen category but neither citizen type (the fishing boats: EECPCivilizationManager::UnitLost calls
+// CitizenLost only for those two types) stays filed, dead, for the rest of the game. They are saved as ghosts too
+// (EEPWorldHelper's SaveGhosts) and put back in their lists as saved (EECPResourceManager::Load)
+void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

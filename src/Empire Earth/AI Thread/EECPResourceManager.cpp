@@ -1609,6 +1609,11 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
                     for (size_t k = 0; k < theOrder[r].size(); k++) {
                         EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theOrder[r][k]));
                         EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
+                        // a dead unit the running list still held (a fishing boat: ee/EESaveGameFiles.h
+                        // EECPOutOfWorldGatherers): its ghost, from the saves that have it. The ghosts' own fixup
+                        // (EEPWorldHelper's LoadGhosts) runs after this one: the players load before the world helper
+                        if (theComplex == NULL)
+                            theComplex = EEFindLoadedGhost(theOrder[r][k]);
                         if (theComplex == NULL) {
                             theMissing++;   // a dead unit the saved list still held
                             continue;
@@ -1623,6 +1628,26 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
         }
     }
     return theResult;
+}
+
+void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits)
+{
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        EEComputerPlayer* theCP = thePlayer != NULL ? thePlayer->mComputerPlayer : NULL;
+        EECPResourceManager* theManager = theCP != NULL && theCP->mCivilizationManager != NULL
+            ? theCP->mCivilizationManager->mResourceManager : NULL;
+        if (theManager == NULL)
+            continue;
+        for (unsigned long r = 0; r < 7; r++)
+            for (size_t k = 0; k < theManager->mGatherers[r].size(); k++) {
+                EEComplexUnit* theUnit = theManager->mGatherers[r][k];
+                if (theUnit == NULL || gWorld.GetUnit(theUnit->mUnitID) == theUnit
+                    || std::find(ioUnits.begin(), ioUnits.end(), theUnit) != ioUnits.end())
+                    continue;
+                ioUnits.push_back(theUnit);
+            }
+    }
 }
 
 // FUNCTION: EXE 0x4911ea
