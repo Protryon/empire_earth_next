@@ -506,6 +506,12 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// The most vertices (and triangles) a selection ring has: ten segments (model detail 2 and above).
+constexpr static const size_t EE_GFX_SELECTION_MAX_VERTICES = 20;
+
+/// Three indices per triangle.
+constexpr static const size_t EE_GFX_SELECTION_MAX_INDICES = 60;
+
 /// `kU441C28`: the depth tolerance, in clipping ranges.
 constexpr static const float PICK_TOLERANCE = 3.0;
 
@@ -6095,6 +6101,29 @@ struct EeGfxRingSegments {
   uint32_t highlight;
 };
 
+/// `GETextureCoordinate`'s storage.
+struct EeGfxTexCoord {
+  float u;
+  float v;
+};
+
+/// The area-effect ring: its points and texture coordinates by vertex and its triangles' vertex indices.
+struct EeGfxRingModel {
+  EeGe3DPoint points[26];
+  EeGfxTexCoord coords[26];
+  uint32_t indices[30];
+};
+
+/// One selection ring: `count` vertices (twice the segments) and as many triangles; `colors` names each vertex's
+/// colour (0: the light one, 0x5294a0; 1: the middle one, 0x529490; 2: `gSelectionRingDark`).
+struct EeGfxSelectionModel {
+  uint32_t count;
+  EeGe3DPoint points[EE_GFX_SELECTION_MAX_VERTICES];
+  EeGfxTexCoord coords[EE_GFX_SELECTION_MAX_VERTICES];
+  uint32_t indices[EE_GFX_SELECTION_MAX_INDICES];
+  uint32_t colors[EE_GFX_SELECTION_MAX_VERTICES];
+};
+
 /// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
 /// edges between usable and unusable cells `gBarBackColor` (`back` 1).
 struct EeGfxPlacementLine {
@@ -6125,12 +6154,6 @@ struct EeGfxColor {
   float red;
   float green;
   float blue;
-};
-
-/// `GETextureCoordinate`'s storage.
-struct EeGfxTexCoord {
-  float u;
-  float v;
 };
 
 /// One quad of an effect batch: its colour and normal (the same at every corner) and its four corners in the order
@@ -13190,6 +13213,15 @@ EeGfxSelectionRing ee_gfx_units_selection_ring(float size);
 
 /// `DrawRings`' segment colours for an area-effect strength.
 EeGfxRingSegments ee_gfx_units_ring_segments(uint32_t strength);
+
+/// `LoadMedia`'s area-effect ring: its points, texture coordinates and triangles.
+EeGfxRingModel ee_gfx_units_area_effect_ring();
+
+/// The selection rings' segments at a model detail (`gModelDetail`).
+uint32_t ee_gfx_units_selection_segments(int32_t detail);
+
+/// `LoadMedia`'s selection ring of size `size` (0..2; larger is held at 2) at a model detail.
+EeGfxSelectionModel ee_gfx_units_selection_model(int32_t detail, uint32_t size);
 
 /// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
 /// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.

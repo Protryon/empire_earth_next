@@ -3,7 +3,8 @@
 //! world. So far: the camera's math (`camera.rs`, `EECameraControl.cpp`), the pointer's (`mouse.rs`,
 //! `RTSMouse.cpp`), the units' screen point, bars and selection rings (`units.rs`, `EEROUnits.cpp`), the picker's
 //! ray and ranking (`pick.rs`, `EEUnitPicker.cpp`), the mini map's transforms and view trapezoid (`minimap.rs`,
-//! `EEMiniMap.cpp`) and the effects' frustum test and the buildings' near fade (`view.rs`).
+//! `EEMiniMap.cpp`), the effects' frustum test and the buildings' near fade (`view.rs`) and the units' ring
+//! models (`models.rs`, `EEROUnits::LoadMedia`).
 //!
 //! The camera's `Update` also runs in the simulation tick, so its math is deterministic code under RUST_PLAN 2.1;
 //! the tests replay golden values from the unmodified C++ (`golden_camera.txt`).
@@ -25,6 +26,8 @@ mod golden_camera;
 #[cfg(test)]
 mod golden_center;
 #[cfg(test)]
+mod golden_media;
+#[cfg(test)]
 mod golden_minimap;
 #[cfg(test)]
 mod golden_mouse;
@@ -45,6 +48,7 @@ mod golden_select;
 #[cfg(test)]
 mod golden_view;
 pub mod minimap;
+pub mod models;
 pub mod mouse;
 pub mod pick;
 pub mod select;

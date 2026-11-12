@@ -14,6 +14,7 @@ use crate::camera::{
 };
 use crate::effects::{self, EeGfxColor, EeGfxEffectFog, EeGfxEffectQuad, EeGfxTexCoord};
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
+use crate::models::{self, EeGfxRingModel, EeGfxSelectionModel};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::select::{self, EeGfxSelectLines};
@@ -621,6 +622,26 @@ pub extern "C" fn ee_gfx_units_selection_ring(size: f32) -> EeGfxSelectionRing {
 #[no_mangle]
 pub extern "C" fn ee_gfx_units_ring_segments(strength: u32) -> EeGfxRingSegments {
     units::ring_segments(strength)
+}
+
+// ---- the ring models (models.rs, EEROUnits::LoadMedia)
+
+/// `LoadMedia`'s area-effect ring: its points, texture coordinates and triangles.
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_area_effect_ring() -> EeGfxRingModel {
+    models::area_effect_ring()
+}
+
+/// The selection rings' segments at a model detail (`gModelDetail`).
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_selection_segments(detail: i32) -> u32 {
+    models::selection_segments(detail)
+}
+
+/// `LoadMedia`'s selection ring of size `size` (0..2; larger is held at 2) at a model detail.
+#[no_mangle]
+pub extern "C" fn ee_gfx_units_selection_model(detail: i32, size: u32) -> EeGfxSelectionModel {
+    models::selection_model(detail, (size as usize).min(2))
 }
 
 // ---- the placement footprint and the labels (units.rs, EEROUnits.cpp)
