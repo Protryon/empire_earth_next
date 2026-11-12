@@ -1118,23 +1118,6 @@ enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,
     ScrollButtonCondition_Conditional=2, ScrollButtonCondition_PartialConditional=3
 };
-// Not identified in the original exe
-class ButtonScroller : public Scroller {
-protected:
-    SmartPtr<Button> mLeftButton,mRightButton,mUpButton,mDownButton;
-    ScrollButtonCondition mVertCondition,mHorzCondition;
-    bool mSettingScrollButtonConditions;
-    bool EnableScrollButtons(Button*,Button*,ScrollButtonCondition);
-public:
-    virtual void Virtual08();
-    virtual void NotifyScrollChange(bool);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    virtual void AddedToParent();
-    ButtonScroller();
-    void SetButton(Button*,Direction);
-    void AddControls();
-    void SetScrollButtonConditions(ScrollButtonCondition,ScrollButtonCondition);
-};
 // ComboBox (0xa4 bytes)
 class Scroller;
 class ComboBox : public Container {
@@ -2586,7 +2569,6 @@ public:
     ScrollAreaViewport* GetViewport() { return this->mViewport.get(); }
     void SetScrollDimension(int,int); // sets the content dimensions
     void SetScrollbar(Scrollbar*); // selects a scrollbar scroller
-    void SetScrollButton(Button*,Direction); // selects a button scroller
     void SetScroller(Scroller*); // 0x305010; the scroller at +0xd4 is not owned
     int GetTotalHeight() { return this->mTotalHeight; }
     int GetTotalWidth() { return this->mTotalWidth; }
@@ -2613,20 +2595,6 @@ public:
     void SetBackground(const Background& theBackground) { this->mBackground=theBackground; }
     int mExtraHeight; //fc
     int mUpScrollAmount,mDownScrollAmount,mLeftScrollAmount,mRightScrollAmount; //100..10f
-};
-
-// Not identified in the original exe
-class ComponentScrollArea : public ScrollArea {
-protected:
-    SmartPtr<Component> mComponent;
-    bool mHorzCenter,mVertCenter;
-    void PositionComponent();
-public:
-    virtual void Virtual08();
-    ComponentScrollArea(Component*);
-    void SetComponentSize(int,int);
-    void UpdateComponentSize();
-    Component* GetComponent() { return this->mComponent.get(); }
 };
 
 enum ListSortType { ListSortType_Ascending, ListSortType_Descending, ListSortType_None };
@@ -2833,52 +2801,6 @@ protected:
     int mTimerAcc; //170
     int mLastX,mLastY; //174,178
     bool mKeyboardMode; // at +0x17c; +0x17d..0x17f padding; the class is 0x180 bytes; the constructor leaves mLastX/Y unset
-};
-
-// Menu bar classes (not identified in the original exe).
-enum MenuBarState { MenuBarState_None,MenuBarState_Up,MenuBarState_Down };
-class MenuBarItem : public Component {
-protected:
-    SmartPtr<PopupMenu> mPopup;
-    SmartPtr<Font> mFont;
-    GUIString mText;
-    MenuBarState mState;
-public:
-    virtual void Paint(Graphics&);
-    MenuBarItem();
-    void SetMenuBarState(MenuBarState);
-    void SetText(const GUIString&);
-    void SetPopup(PopupMenu*);
-    PopupMenu* GetPopup() { return this->mPopup.get(); }
-};
-class MenuItemSelectedEvent : public ComponentEvent {
-public:
-    SmartPtr<MenuItem> mItem;
-    virtual void Deliver();
-    MenuItemSelectedEvent(Component* menu,MenuItem* item)
-      :ComponentEvent(menu,ComponentEvent_MenuItemSelected),mItem(item) {}
-};
-class MenuBar : public Container {
-protected:
-    typedef std::vector<MenuBarItem*> ItemVector;
-    ItemVector mItemVector;
-    MenuBarState mState;
-    MenuBarItem* mCurItem;
-    int mLastX,mLastY;
-    Background mBackground;
-    void CheckItem(Component*);
-public:
-    virtual void MouseDrag(int,int);
-    virtual void MouseMove(int,int);
-    virtual void MouseDown(int,int,int);
-    virtual void MouseUp(int,int,int);
-    virtual void MouseExit();
-    virtual bool KeyDown(int);
-    virtual void HandleComponentEvent(ComponentEvent*);
-    virtual void Paint(Graphics&);
-    MenuBar();
-    void AddItem(const GUIString&,PopupMenu*);
-    void AddSeperator(Component* =NULL);
 };
 
 class ScrollAreaViewport : public Container {

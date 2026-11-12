@@ -255,12 +255,9 @@ static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DP
     GETransformation theTransformation(false);
     bool theBelow[4];
     const EeGe3DPlane* thePlanes = reinterpret_cast<const EeGe3DPlane*>(inPlanes.data());
-    inEntry.GetLocation().Apply(theModel->GetInternalTransform(theFrame), theTransformation);
-    if (theScale != 1.0f) {
-        theTransformation.Scale(theScale, theScale, theScale);
-        theTransformation.SetPosition(inEntry.GetLocation().GetX(), inEntry.GetLocation().GetY(),
-                                      inEntry.GetLocation().GetZ());
-    }
+    ee_gfx_pick_entry_transform(reinterpret_cast<const EeGeTransformation*>(&inEntry.GetLocation()),
+                                reinterpret_cast<const EeGeTransformation*>(&theModel->GetInternalTransform(theFrame)),
+                                theScale, reinterpret_cast<EeGeTransformation*>(&theTransformation));
     theTransformation.Apply(theModel->GetCenterPoint(), theCenter);
     const EeGe3DPoint* theRustCenter = reinterpret_cast<const EeGe3DPoint*>(&theCenter);
     if (ee_gfx_pick_sphere_below(theRustCenter, thePlanes, theBelow) != 0) {

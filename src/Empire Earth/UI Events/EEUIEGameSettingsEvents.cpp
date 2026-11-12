@@ -123,25 +123,40 @@ static const unsigned long kQualityRadios[6] = {kGameSettingsGQRadio1Lowest, kGa
     kGameSettingsGQRadio3Middle, kGameSettingsGQRadio4, kGameSettingsGQRadio5Highest, kGameSettingsGQRadio6Custom};
 
 // the modes of a screen, largest first (the sort's predicate; its operator() is the COMDAT 0x1d9554)
+// A video mode as ee_screens settings.rs sees it
+static EeScreensVideoMode EEScreensMode(const GEVideoMode& inMode)
+{
+    EeScreensVideoMode theMode;
+    theMode.width = inMode.mWidth;
+    theMode.height = inMode.mHeight;
+    theMode.refresh_rate = inMode.mRefreshRate;
+    theMode.bit_count = inMode.mBitCount;
+    return theMode;
+}
+static std::vector<EeScreensVideoMode> EEScreensModes(const std::vector<GEVideoMode>& inModes)
+{
+    std::vector<EeScreensVideoMode> theModes;
+    for (unsigned long i = 0; i < inModes.size(); i++)
+        theModes.push_back(EEScreensMode(inModes[i]));
+    return theModes;
+}
+static EeScreensVideoMode EEScreensSettingsMode(const EEGameSettings& inSettings)
+{
+    EeScreensVideoMode theMode;
+    theMode.width = inSettings.mGameWindowWidth;
+    theMode.height = inSettings.mGameWindowHeight;
+    theMode.refresh_rate = 0;
+    theMode.bit_count = inSettings.mGameBitDepth;
+    return theMode;
+}
+
+// the order is Rust's (ee_screens settings.rs video_mode_greater: width, height, bits, refresh rate, largest first)
 struct EEVideoModeGreater {
     bool operator()(const GEVideoMode& inA, const GEVideoMode& inB) const
     {
-        bool theResult;
-        if (inA.mWidth > inB.mWidth)
-            theResult = true;
-        else if (inA.mWidth < inB.mWidth)
-            theResult = false;
-        else if (inA.mHeight > inB.mHeight)
-            theResult = true;
-        else if (inA.mHeight < inB.mHeight)
-            theResult = false;
-        else if (inA.mBitCount > inB.mBitCount)
-            theResult = true;
-        else if (inA.mBitCount < inB.mBitCount)
-            theResult = false;
-        else
-            theResult = inA.mRefreshRate > inB.mRefreshRate;
-        return theResult;
+        EeScreensVideoMode theA = EEScreensMode(inA);
+        EeScreensVideoMode theB = EEScreensMode(inB);
+        return ee_screens_video_mode_greater(&theA, &theB);
     }
 };
 
@@ -769,12 +784,12 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
     // the matching mode's (InGameOk compares it with the current mode)
     sPortDisplayChanged = PortApply(inForm, gGamePreferences.GetSettings());
     FillModes(theRasterizer, theScreen, theModes);
-    outModeIndex = 0;
-    for (unsigned long i = 0; i < theModes.size(); i++)
-        if (theModes[i].mWidth == gGamePreferences.GetSettings().mGameWindowWidth &&
-            theModes[i].mHeight == gGamePreferences.GetSettings().mGameWindowHeight &&
-            theModes[i].mBitCount == gGamePreferences.GetSettings().mGameBitDepth)
-            outModeIndex = i;
+    {
+        // the last mode of the settings' size, else 0 (ee_screens settings.rs mode_index)
+        std::vector<EeScreensVideoMode> theList = EEScreensModes(theModes);
+        EeScreensVideoMode theSize = EEScreensSettingsMode(gGamePreferences.GetSettings());
+        outModeIndex = ee_screens_mode_index(theList.empty() ? NULL : &theList[0], theList.size(), &theSize);
+    }
     (void)theResolutionList;
     theViewRectangle.SetBottom(kGameViewBottom);
     theViewRectangle.SetLeft(kGameViewLeft);
@@ -1023,11 +1038,12 @@ static void ShowScreens(UIForm* inForm, EEGameSettings inSettings)
     theScreenBox->ReleaseCapturedMouse();
     theScreenBox->DeleteAllEntries();
     theRasterizerList->GetCurrentSelection(theRasterizer);
-    unsigned long theScreenID = inSettings.mScreenID;
+    // the settings' screen when the rasterizer has it (ee_screens settings.rs screen_line)
+    unsigned long theLine = ee_screens_screen_line(gDisplayRasterizers[theRasterizer].mScreens.size(), inSettings.mScreenID);
     for (std::vector<EEDisplayScreen>::iterator theScreen = gDisplayRasterizers[theRasterizer].mScreens.begin();
          theScreen != gDisplayRasterizers[theRasterizer].mScreens.end(); theScreen++) {
         theScreenBox->AppendLine(theScreen->mName);
-        if (theScreenID == theIndex)
+        if (theLine == theIndex)
             theScreenBox->SetCurrentSelection(theIndex);
         theIndex++;
     }
@@ -1043,36 +1059,24 @@ static void ShowResolutions(UIForm* inForm, EEGameSettings inSettings)
     UIComboBox* theScreenBox = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsVideoCardComboBox));
     UILBString* theResolutionList = static_cast<UILBString*>(inForm->GetControl(kGameSettingsScreenResListBox));
     EEGameSettings theDefaults(EEGamePreferences::sDefaultSettings);
-    unsigned long theSelection = 0;
-    bool theFound = false;
     unsigned long theRasterizer;
     theRasterizerList->GetCurrentSelection(theRasterizer);
     GERasterizer* theRasterizerObject = GERasterizer::GetRasterizer(theRasterizer);
     unsigned long theScreen;
     theScreenBox->GetCurrentSelection(theScreen);
     GEScreen* theGEScreen = theRasterizerObject->GetScreen(theScreen);
-    unsigned long theIndex = 0;
     FillModes(theRasterizer, theScreen, theModes);
-    GEVideoMode theCurrentMode;
-    theCurrentMode.mBitCount = inSettings.mGameBitDepth;
-    theCurrentMode.mHeight = inSettings.mGameWindowHeight;
-    theCurrentMode.mWidth = inSettings.mGameWindowWidth;
+    // the line: the settings' mode, else the defaults' (ee_screens settings.rs resolution_line)
+    std::vector<EeScreensVideoMode> theList = EEScreensModes(theModes);
+    EeScreensVideoMode theCurrent = EEScreensSettingsMode(inSettings);
+    EeScreensVideoMode theDefault = EEScreensSettingsMode(theDefaults);
+    unsigned long theSelection =
+        ee_screens_resolution_line(theList.empty() ? NULL : &theList[0], theList.size(), &theCurrent, &theDefault);
     theResolutionList->DeleteAllEntries();
     for (std::vector<GEVideoMode>::iterator it = theModes.begin(); it != theModes.end(); it++) {
         GEVideoMode theMode = *it;
         sprintf(theText, "%lu x %lu x %lu Bit", theMode.mWidth, theMode.mHeight, theMode.mBitCount);
         theResolutionList->AppendLine(theText);
-        if (theMode.mBitCount == theCurrentMode.mBitCount && theMode.mHeight == theCurrentMode.mHeight
-            && theMode.mWidth == theCurrentMode.mWidth) {
-            theSelection = theIndex;
-            theFound = true;
-        }
-        if (!theFound && theMode.mBitCount == theDefaults.mGameBitDepth
-            && theMode.mHeight == theDefaults.mGameWindowHeight && theMode.mWidth == theDefaults.mGameWindowWidth) {
-            theSelection = theIndex;
-            theFound = true;
-        }
-        theIndex++;
     }
     theResolutionList->ChangeSelectionIndex(theSelection, false, true);
 }
