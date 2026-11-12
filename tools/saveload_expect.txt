@@ -1,8 +1,7 @@
 # sim_oracle.py saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt: each save of each
 # setting, END when it continues identically to 2700 s, else the CT lines it ran equal after the load. A gate fails only
-# when a save does worse; rewrite with --write-expect when one does better (R5a.2, seventh round, 2026-11-11).
-# late seed 2 re-recorded after the declared rebaseline of the dead fishing boats (PORT_LEARNINGS "Dead fishing boats
-# leave..."): another game from 609 s; its 1000 s save parts at once on two citizens' active groups, which no save holds.
+# when a save does worse; rewrite with --write-expect when one does better (R5a.2, eighth round, 2026-11-11, after the merge of rust).
+# late seed 2 1000 s: 0 since the declared rebaseline of the dead fishing boats (its two citizens' active groups, which no save holds).
 oracle 2 1000 END
 oracle 2 1900 END
 oracle 3 1000 END
@@ -18,7 +17,7 @@ islands 3 1900 400
 highlands-large-4ai 2 1000 149
 highlands-large-4ai 2 1900 82
 highlands-large-4ai 3 1000 4
-highlands-large-4ai 3 1900 0
+highlands-large-4ai 3 1900 END
 mediterranean-easy 2 1000 168
 mediterranean-easy 2 1900 564
 mediterranean-easy 3 1000 434
@@ -26,7 +25,7 @@ mediterranean-easy 3 1900 133
 medium-difficulty 2 1000 END
 medium-difficulty 2 1900 406
 medium-difficulty 3 1000 END
-medium-difficulty 3 1900 0
+medium-difficulty 3 1900 13
 late 2 1000 0
 late 2 1900 794
 late 3 1000 143
@@ -35,11 +34,11 @@ space 2 1000 598
 space 2 1900 745
 space 3 1000 75
 space 3 1900 0
-calamity 2 1000 229
-calamity 2 1900 228
-calamity 3 1000 229
-calamity 3 1900 228
-next 2 1000 0
+calamity 2 1000 END
+calamity 2 1900 END
+calamity 3 1000 END
+calamity 3 1900 END
+next 2 1000 END
 next 2 1900 END
 next 3 1000 END
 next 3 1900 END

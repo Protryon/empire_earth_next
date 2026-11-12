@@ -486,8 +486,8 @@ struct EECPNextState {
     std::vector<EECPNextSpot> mThreats;     // enemy soldiers seen in the last kNextThreatMs (unit, player, x, y, time)
     std::vector<EECPNextSpot> mExplore;     // §8.36: a site's settlement waits for its tiles to be seen (a building is
                                             // placed only on tiles in sight): the walker (mUnit) sent there at mTime;
-                                            // AssignGatherers leaves it standing there (not saved: a loaded game sends
-                                            // a new one)
+                                            // AssignGatherers leaves it standing there (saved from the state
+                                            // block's version 4, save 0.274: an older save's game sends a new one)
     long mThreatsTime;                      // game ms of the last scan into mThreats (its entries of that time: in sight)
     std::vector<long> mHome;                // (transient) the start resources' unit ids, sorted (EECPNextUpdateHome)
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)

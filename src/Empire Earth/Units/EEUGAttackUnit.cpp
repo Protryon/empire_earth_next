@@ -361,7 +361,10 @@ long EEUGAttackUnit::RepairPointers(unsigned long inFirst, unsigned long inSecon
 {
     long theResult = 3;
     if (USavedID(this->mTarget) != -1) {
-        this->mTarget = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mTarget)));
+        unsigned long theTargetID = USavedID(this->mTarget);
+        this->mTarget = static_cast<EEUnit*>(::gWorld.GetUnit(theTargetID));
+        if (this->mTarget == NULL)   // port (0.275): a target out of the world the running goal still held
+            this->mTarget = EEFindLoadedGhostUnit(theTargetID);
         if (this->mTarget != NULL) {
             this->mTarget->Reference();
             theResult = 0;
@@ -408,7 +411,12 @@ long EEUGAttackUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    theResult = outFile.Write(this->mTarget != NULL && this->mTarget->mHitPoints > 0 ? this->mTarget->GetUnitID() : -1);
+    // port (0.275, ee/EESaveGameFiles.h EESaveHasGoalGhosts): the target while the goal holds it, dying or dead (the
+    // ghosts hold one out of the world); the original wrote -1 for one with no hit points left, and the loaded unit
+    // lost the goal
+    bool theHeld = this->mTarget != NULL
+                   && (this->mTarget->mHitPoints > 0 || EESaveHasGoalGhosts(inMajorVersion, inMinorVersion));
+    theResult = outFile.Write(theHeld ? this->mTarget->GetUnitID() : -1);
     if (theResult != 0)
         return theResult;
     theResult = outFile.Write(this->mAttacker ? this->mAttacker->GetUnitID() : -1);

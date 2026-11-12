@@ -7271,3 +7271,66 @@ lobby's LAN game now keeps its state in Rust objects; the C++ classes are shims 
   `LaunchProjectile`, `EEIsOnTargetTiles`, the shell hole (`EEPlaceImpactDecal`), the placement on the ground, the
   tracer beam's per-frame start (`EEE3DTracerBeam`, drawn only; not moved) and the audit's list in RUST_PLAN's R5b.2
   combat row.
+
+## R5a.2, eighth round: calamity helper ids, the next engine's site walkers, the goals' units out of the world, the units' tile searches (save 0.273-0.276, branch rust-r5a-aisave7, 2026-11-11)
+
+Continues "R5a.2, seventh round" (its matrix: 13 of 40 saves continue identically). Same test:
+`sim_oracle.py saveload NAME --settings all --seeds 2-3 --at 1000,1900`. Each fix was built (0/0 for EE-AOC and
+EE-SIM), checked with the oracle on seeds 2-3 (identical to ref) and the Rust gate, and measured with the settings it
+concerns. All of it is save and load code (the plain oracle stays identical), except the TEST ONLY dumps.
+
+- **0.273, the contagion manager's last helper id** (`EESaveHasContagionCounter`). EEContagionManager::RestorePointers
+  went on from the highest loaded helper's id (0 with none), the running game from its own counter, so the next
+  cast's area-effect calamities kept other helper ids in their placeholder (EECalamity::mIntPlaceHolder1: 13/14 against
+  1/2), which the calamity checksum sums: both calamity saves parted at the next cast with `oos` only. The counter is
+  saved after the helpers. Found with the dumps' new CAL lines (each active calamity's checksum fields and units).
+  Calamity 229/228 229/228 -> END/END END/END.
+- **0.274, the next engine's site walkers** (EECPNextState::mExplore, the state block's version 4). A citizen sent to
+  see a site before its settlement (§8.36) was not saved; the loaded engine's first step sent another one. Next seed 2
+  1000 s 0 -> END (4/4).
+- **0.275, the goals' units out of the world** (`EESaveHasGoalGhosts`). EEUGAttackUnit::Save wrote -1 for a target with
+  no hit points left and a gather goal's simple resource (a tree or mine used up while its gatherer still held it)
+  had no ghost (SaveGhosts took complex units only): RepairPointers failed and the unit's whole goal queue was cleared
+  (found with a temporary print in EEComplexDoppelganger's RepairPointers: `goal kind 6 EEUGGather failed 3`,
+  `kind 2 EEUGAttackUnit`). The target is now written while held, the ghosts take the attack goals' targets and the
+  simple resources (a complex flag per record; a simple ghost keeps its tile pointer, off the tile's lists, as the
+  gather goal's ResourceAccessible reads its terrain: without it the first load crashed there). Medium difficulty
+  seed 3 1900 s 0 -> 13 ticks.
+- **0.276, the units' tile searches in progress** (`EESaveHasPathSearches`, EEPathManager::SaveSearches). The original
+  saved no search: each unit with a search queued (mPaths) went to mPending at its Load and asked its path again at
+  StartGame (RequestPendingPaths: a graph search first), so the path came later or another one (seed 3's highlands
+  1900 s save: the dumps' `PATHS 1: u67108923 p12` against the load's `AUTOPATHS 1: ... p1`). The machine's members,
+  its goal (start, goal, limits, flags, blocked and unit tiles, bounds, destination, offsets, continent) and its storage
+  go into the save, the storage as ee_astar's bytes (new `storage_save.rs`: every field of the Rust storage, refused
+  unless it reads back whole with every link inside the arena; 3 tests); the load takes those units out of mPending and
+  puts the searches back at the first tick, before any the load queued. Highlands seed 3 1900 s 0 -> END.
+- **Checked, not a cause** (reverted): the path manager's bounded machine (one machine kept from search to search,
+  whose PrepareGrid clears only the last search's bounds). Its storage differed between the games (the dumps' new
+  BOUNDED line), but saving it changed none of the measured saves; the digest stays in the dumps.
+- **Tools** (TEST ONLY, committed): the dumps' CAL lines and BOUNDED line. Scratch under build/hunt: `pair8.py` (pair7
+  with its own slot prefix), `rd2.py` (rd.py from a game ms on: the load's own draws left out), `rawu.py` (a unit's raw
+  bytes in two dumps, the differing offsets named through build/clang/layout.json; padding and pointers are noise),
+  `gate8.sh` (the lighter gates; NOBUILD=1 reuses the last build).
+- **Lesson: the harness of a pair is not the matrix's.** pair8.py's continued game (with --dump-at) shows an `oos` 3
+  above the loaded game's at every dump while the matrix's CT lines agree; compare a pair's dumps with each other, never
+  its checksums with the matrix's.
+- **The numbers** (start -> end of this round; END = identical to 2700 s, else the CT lines equal after the load; seed 2
+  1000/1900, seed 3 1000/1900): oracle END/END END/END; plains-medium-3ai 1197/168 END/END; islands END/END 1429/400; highlands-large-4ai 149/82 4/0 -> 149/82 4/END; mediterranean-easy 168/564 434/133; medium-difficulty END/406 END/0 -> END/406 END/13; late 822/484 143/197 -> 0/794 143/197 (the fishing-boat rebaseline's game, not this round: its 1000 s save parts on the active groups); space 598/745 75/0; calamity 229/228 229/228 -> END/END END/END; next 0/END END/END -> END/END END/END. **19 of 40** saves continue identically (`saveload as8-fin --settings all`, 1072 s wall at --jobs 2, after the merge of rust; from 13; 20 before the rebaseline moved late seed 2 1000 s). `tools/saveload_expect.txt` rewritten from this run (`saveload expect: PASS` against the old file).
+- **Left**, each with what is known:
+  - **active groups** (EEComplexUnit::mActiveGroup, the players' mPendingGroups/mRunningGroups; found by the
+    rust-fishboat lane in the fixed late seed 2 game: two citizens grouped at the 1000 s save's first tick in the
+    continued game only, so that save parts at 0 ticks). No save version stores them: their units, goal, action,
+    destinations and flags, and their group path requests, which hold graph searches in progress;
+  - **graph searches in progress** (mAutoPaths: EEAutoPathRequest's sub groups, the wall manager, herds, active groups):
+    the space seed 3 1900 s save parts at its first tick because the wall manager's request (re-asked by Update) finished
+    in the continued game only (EECPWallManager::Update draws GetRandomPoint). Needs the graph storage as bytes, the
+    graph goal and its modifier (eight modifier classes, some holding a sub group), and the requesters relinked;
+  - highlands seed 3 1000 s (4 ticks): a rock thrower's AI script takes another action after EnemyUnitReachable in the
+    continued game only (its waypoint count 0 against 1 one CT later); every dumped and raw field of the unit, its
+    target, the path manager and the bounded machine agree. Not found;
+  - medium difficulty seed 3 1900 s (13 ticks): a gatherer's goal turns inactive (PathTaken) in the continued game
+    only; the same signature (AIStep's action change with every dumped field equal);
+  - the AI-only divergences (`oos, ai`: plains 2048 s from both saves, islands 2251 s from both, highlands 1973 s,
+    mediterranean 2394 s): a state both saves lose, read much later;
+  - the AI resource lists rebuilt differently at the load (the dumps' `mines=` and `fish=`: 21 against 9; outside the
+    checksums so far).
