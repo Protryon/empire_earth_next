@@ -49,7 +49,6 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
@@ -592,48 +591,9 @@ void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType)
 // other actions go the building's way
 void EEUCGate::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
-    long theAction;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionOpen:
-        theAction = 15000;
-        break;
-    case kActionClosed:
-        theAction = 15001;
-        break;
-    case kActionOpening: {
-        EEACN(GATE_SOUND);
-        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            theSound->Play(theVolume, thePan, thePitch);
-        }
-        theAction = 15002;
-        break;
-    }
-    case kActionClosing: {
-        EEACN(GATE_SOUND);
-        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            theSound->Play(theVolume, thePan, thePitch);
-        }
-        theAction = 15003;
-        break;
-    }
-    default:
-        EEUCBuilding::ActionChanged(inUnit);
-        return;
-    }
-    EEACNA(GATE_PARTS_ACTION, theAction, 0);
-    inUnit->mNextPart->StartAction(theAction);
-    inUnit->mNextPart->mNextPart->StartAction(theAction);
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs gate), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_GATE, this, inUnit);
 }
 
 // FUNCTION: EXE 0x611905

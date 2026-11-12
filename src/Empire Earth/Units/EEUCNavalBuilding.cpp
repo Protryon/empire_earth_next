@@ -143,14 +143,6 @@ void EEUCNavalBuilding::Update(EEComplexUnit* inUnit)
     EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL_BUILDING, this, inUnit);
 }
 
-// ICF-FOLDED: EXE 0x61a11d
-// Handles a new action as a building does
-// (no address of its own: the same body as EEUCSpaceBuilding::ActionChanged, which ICF kept)
-void EEUCNavalBuilding::ActionChanged(EEComplexUnit* inUnit)
-{
-    EEUCBuilding::ActionChanged(inUnit);
-}
-
 // ICF-FOLDED: EXE 0x618605
 // Creates a fishing boat on a tile at sea level
 // (no address of its own: the same body as EEUCNavalCitizen::CreateUnit, which ICF kept)

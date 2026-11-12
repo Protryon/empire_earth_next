@@ -74,18 +74,6 @@ EEUnit* EEUCNavalCitizen::CreateUnit(long inX, long inY, long inPlayer, bool inI
     return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
 }
 
-// FUNCTION: EXE 0x618641
-// Hands every action change to the basic citizen's handler (the dying test changes nothing)
-// The original still loads the command's type and compares it with 0x1770 with no branch after it: both arms make the
-// same base call and VC6 merges them after the compare (an empty if, a switch or a bool local drop the compare)
-void EEUCNavalCitizen::ActionChanged(EEComplexUnit* inUnit)
-{
-    if (inUnit->GetCommandType() == kActionDying)
-        EEUCBasicCitizen::ActionChanged(inUnit);
-    else
-        EEUCBasicCitizen::ActionChanged(inUnit);
-}
-
 // FUNCTION: EXE 0x618664
 // Answers dying done: true once the boat's transformed bounding box lies wholly below the water line
 long EEUCNavalCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)

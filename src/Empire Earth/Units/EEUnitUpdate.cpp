@@ -1,5 +1,6 @@
 // New (port; docs/RUST_PLAN.md R5b.4 leaf 6, the twelfth and thirteenth rounds): the host of the unit classes' Update
-// sequences and ActionChanged decisions (ee/EEUnitUpdate.h; rust/crates/ee_units/src/update.rs, actions.rs). Rust
+// sequences and ActionChanged decisions (ee/EEUnitUpdate.h; rust/crates/ee_units/src/update.rs, actions.rs; the
+// fourteenth round's overrides with their classes' operations). Rust
 // decides which of a unit's leaves run and in which order; each read and operation here is one expression or call of
 // the original bodies, through the class (its virtuals dispatch as before) and the unit. TEST ONLY: every call is noted
 // (USST kinds 12 and 13) while the capture runs.
@@ -53,7 +54,14 @@
 #include "ee/EEUCBasicCitizen.h"
 #include "ee/EEUCBasicPriest.h"
 #include "ee/EEUCLandable.h"
+#include "ee/EEUCAirplane.h"
 #include "ee/EEUCBuilding.h"
+#include "ee/EEUCBuildingPriest.h"
+#include "ee/EEUCAirAnimal.h"
+#include "ee/EEAirTrafficControl.h"
+#include "ee/EEUGGather.h"
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUnitKind.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
@@ -63,11 +71,13 @@ namespace {
 // EEUnitAI.cpp's: no initial contact heading
 const float kUnitAINoHeading = -10000.0f;
 
-// the host's context: the class, the unit, an ActionChanged's healee found (EE_UNITS_ACT_FIND_HEALEE)
+// the host's context: the class, the unit, an ActionChanged's healee found (EE_UNITS_ACT_FIND_HEALEE), the nearest
+// airport found (EE_UNITS_ACT_FIND_NEAREST_AIRPORT)
 struct EEUpdateContext {
     EEUnitClass* mClass;
     EEComplexUnit* mUnit;
     EEUnit* mHealee;
+    EEComplexUnit* mAirport;
 };
 
 // the initial contact location and heading from the unit's location (EEUnitClass::ActionChanged's two copies)
@@ -230,6 +240,27 @@ int64_t EEUpdateRead(void* inContext, int32_t inCode)
         return theUnit->mContainer != NULL ? 1 : 0;
     case EE_UNITS_ACT_R_RESOURCE_AMOUNT:
         return (int64_t)theUnit->mResourceAmount.Get();
+    // the fourteenth round's
+    case EE_UNITS_ACT_R_IS_HUMAN:
+        return theUnit->mPlayer->IsHuman() ? 1 : 0;
+    case EE_UNITS_ACT_R_BUILD_QUEUE_EMPTY:
+        return theUnit->mCitizenBuildQueue.size() == 0 ? 1 : 0;
+    case EE_UNITS_ACT_R_AIRCRAFT_CARRIER:
+        return theUnit->mUnitClass->mAIKind == kAIKindAircraftCarrier ? 1 : 0;
+    case EE_UNITS_ACT_R_EXITING_UNIT:
+        return (int64_t)theUnit->mExitingUnitID;
+    case EE_UNITS_ACT_R_AIR_TRAFFIC_TYPE:
+        return (int64_t)theUnit->mUnitClass->mAirTrafficType;
+    case EE_UNITS_ACT_R_WAYPOINTS:
+        return (int64_t)(long)theUnit->mWaypoints.size();
+    case EE_UNITS_ACT_R_HOME_BASE:
+        return theUnit->mHomeBase != NULL ? 1 : 0;
+    case EE_UNITS_ACT_R_CLEARANCE_GRANTED:
+        return theUnit->mIsClearanceGranted == true ? 1 : 0;
+    case EE_UNITS_ACT_R_BOMBER:
+        return theClass->mProjectileClass != NULL && theClass->mProjectileClass->mCategory == kUnitCategoryBomb ? 1 : 0;
+    case EE_UNITS_ACT_R_COMMANDABLE:
+        return theUnit->mIsCommandable ? 1 : 0;
     default:
         return 0;
     }
@@ -551,7 +582,11 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->ReleaseConversionEffect();
         break;
     case EE_UNITS_ACT_HIDE_CONVERSION_EFFECTS:
-        static_cast<EEUCBasicPriest*>(theClass)->HideConversionEffects(theUnit);
+        // (the temple is no basic priest: its own copy)
+        if (EEUnitClassCast<EEUCBuildingPriest>(theClass) != NULL)
+            static_cast<EEUCBuildingPriest*>(theClass)->HideConversionEffects(theUnit);
+        else
+            static_cast<EEUCBasicPriest*>(theClass)->HideConversionEffects(theUnit);
         break;
     case EE_UNITS_ACT_SET_CONVERSION_START:
         theUnit->mConversionStartTime = gPhysics->mGameTime;
@@ -559,6 +594,145 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_SET_WORK_TIMER:
         theUnit->SetWorkTimer((long)inA);
         break;
+    // the fourteenth round's
+    case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
+        EEUnit* theStorage = static_cast<EEUCBasicCitizen*>(theClass)->FindStorage(theUnit, inA != 0);
+        if (theStorage != NULL)
+            theUnit->SetGoal(new EEUGGather(NULL, theStorage, false), 0, 0);
+        break;
+    }
+    case EE_UNITS_ACT_SET_RESOURCE_AMOUNT:
+        theUnit->SetResourceAmount((long)inA);
+        break;
+    case EE_UNITS_ACT_SET_PRODUCTION_TIME:
+        theUnit->SetProductionTime((long)inA);
+        break;
+    case EE_UNITS_ACT_CLEAR_SHIFT_QUEUED:
+        theUnit->mHasShiftQueuedBuild = false;
+        break;
+    case EE_UNITS_ACT_RETARGET_NEAREST_BUILDING: {
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(theUnit->GetGoal());
+        if (theGoal != NULL && theGoal->mTarget != NULL) {
+            EEUnit* theTarget = static_cast<EEUCBuilding*>(theClass)->FindNearestTargetBuilding(theGoal->mTarget);
+            if (theTarget != NULL)
+                theGoal->SetTarget(theTarget);
+        }
+        break;
+    }
+    case EE_UNITS_ACT_SET_EXITING_UNIT:
+        theUnit->SetExitingUnitID((long)inA);
+        break;
+    case EE_UNITS_ACT_QUEUE_TAKEOFF: {
+        EEComplexUnit* theCargo = theUnit->FindPassenger(theUnit->mExitingUnitID);
+        if (theCargo != NULL)
+            theCargo->mPlayer->mAirTraffic[theCargo->mUnitClass->mAirTrafficType - 1]->QueueRequest(theUnit, theCargo, 0);
+        break;
+    }
+    case EE_UNITS_ACT_RELEASE_UNIT:
+        static_cast<EEUCBuilding*>(theClass)->ReleaseUnit(theUnit);
+        break;
+    case EE_UNITS_ACT_GATE_SOUND: {
+        EESoundObject* theSound = EESoundObject::Get(kSoundGate);
+        if (theSound != NULL) {
+            float theVolume;
+            float thePan;
+            float thePitch;
+            theClass->GetSoundParameters(theUnit, theSound, &theVolume, &thePan, &thePitch);
+            theSound->Play(theVolume, thePan, thePitch);
+        }
+        break;
+    }
+    case EE_UNITS_ACT_GATE_PARTS_ACTION:
+        theUnit->mNextPart->StartAction((unsigned long)inA);
+        theUnit->mNextPart->mNextPart->StartAction((unsigned long)inA);
+        break;
+    case EE_UNITS_ACT_SET_PHYSICS_ORDER:
+        theUnit->SetCurrentPhysicsOrder((unsigned long)inA);
+        break;
+    case EE_UNITS_ACT_CLEAR_F220:
+        theUnit->SetF220(0.0f);
+        break;
+    case EE_UNITS_ACT_HEIGHT_HERE: {
+        GE3DPoint thePosition(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(),
+                              theUnit->mPhysicalModel.GetLocation().GetZ());
+        theUnit->SetHeight(theClass->GetHeightAt(theUnit, thePosition));
+        break;
+    }
+    case EE_UNITS_ACT_HEIGHT_AT_NEXT_WAYPOINT: {
+        GE3DPoint thePosition(theUnit->mPhysicalModel.GetLocation().GetX(), theUnit->mPhysicalModel.GetLocation().GetY(),
+                              theUnit->mPhysicalModel.GetLocation().GetZ());
+        if (theUnit->GetNextWaypointPoint(thePosition) == 0)
+            theUnit->SetHeight(theClass->GetHeightAt(theUnit, thePosition));
+        break;
+    }
+    case EE_UNITS_ACT_UNIT_NEXT_WAYPOINT:
+        theUnit->NextWaypoint();
+        break;
+    case EE_UNITS_ACT_RETURN_TO_AIRPORT:
+        static_cast<EEUCAirAnimal*>(theClass)->ReturnToAirport(theUnit);
+        break;
+    case EE_UNITS_ACT_SET_FLIGHT_TIME_STATS:
+        theUnit->SetFlightTime(theUnit->mStats->mFlightTime);
+        break;
+    case EE_UNITS_ACT_SET_AMMUNITION:
+        theUnit->SetAmmunition(theClass->mAmmunition);
+        break;
+    case EE_UNITS_ACT_DEATH_ROLL:
+        if (inA == 0)
+            EEAirAnimalDeathRoll(theClass, theUnit);
+        else
+            EELandableActionOperation(inCode, theClass, theUnit, inA, &theContext->mAirport);
+        break;
+    case EE_UNITS_ACT_HELICOPTER_PATH:
+        if (inA == 0)
+            EEHelicopterPathToGoal(theClass, theUnit);
+        else if (inA == 1)
+            EEHelicopterTransportPathToGoal(theClass, theUnit);
+        else
+            EEHelicopterPriestPathToGoal(theClass, theUnit);
+        break;
+    case EE_UNITS_ACT_AIR_ANIMAL_PATH:
+        EEAirAnimalPathToGoal(theClass, theUnit);
+        break;
+    case EE_UNITS_ACT_CIRCLE_SIDE:
+        EEAirplaneCircleSide(theClass, theUnit);
+        break;
+    case EE_UNITS_ACT_HOLDING_PATTERN:
+        if (inA == 0)
+            EEAirplaneHoldingPattern(theClass, theUnit);
+        else
+            EEPlanetSpaceshipHoldingPattern(theClass, theUnit);
+        break;
+    case EE_UNITS_ACT_FLY_OFF_MAP:
+        static_cast<EEUCAirplane*>(theClass)->FlyOffMap(theUnit);
+        break;
+    case EE_UNITS_ACT_START_ACTION:
+        theUnit->StartAction((unsigned long)inA);
+        break;
+    case EE_UNITS_ACT_CLASS_ACTION_CHANGED:
+        theClass->ActionChanged(theUnit);
+        break;
+    case EE_UNITS_ACT_SET_COMMANDABLE:
+        theUnit->SetIsCommandable(inA != 0);
+        break;
+    case EE_UNITS_ACT_MAKE_COMMANDABLE:
+        theUnit->mIsCommandable = true;
+        break;
+    case EE_UNITS_ACT_APPROACH_CARRIER:
+    case EE_UNITS_ACT_BOARD_CARRIER:
+    case EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER:
+    case EE_UNITS_ACT_FLY_CHECK_PATH:
+    case EE_UNITS_ACT_FIND_NEAREST_AIRPORT:
+    case EE_UNITS_ACT_SET_HOME_BASE_FOUND:
+    case EE_UNITS_ACT_APPROACH_LANDING:
+    case EE_UNITS_ACT_SECONDARY_TARGET:
+    case EE_UNITS_ACT_TAKEOFF:
+    case EE_UNITS_ACT_QUEUE_LANDING:
+    case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
+    case EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT:
+    case EE_UNITS_ACT_CONTACT_HERE:
+    case EE_UNITS_ACT_LANDABLE_PATH:
+        return EELandableActionOperation(inCode, theClass, theUnit, inA, &theContext->mAirport);
     default:
         break;
     }
@@ -569,7 +743,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
 
 void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
-    EEUpdateContext theContext = {inClass, inUnit, NULL};
+    EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
     EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct};
     ee_units_update(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), &theHost);
 }
@@ -577,7 +751,7 @@ void EEUnitClassUpdate(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 void EEUnitClassActionChanged(int inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEUnitActionScope theScope(inUnit->mUnitID);   // TEST ONLY (USST kind 13)
-    EEUpdateContext theContext = {inClass, inUnit, NULL};
+    EEUpdateContext theContext = {inClass, inUnit, NULL, NULL};
     EeUnitsUpdateHost theHost = {&theContext, EEUpdateRead, EEUpdateAct};
     ee_units_action_changed(inKind, static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
                             &theHost);

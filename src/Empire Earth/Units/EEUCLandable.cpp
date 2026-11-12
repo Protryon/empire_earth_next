@@ -25,7 +25,6 @@
 #include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
@@ -306,70 +305,39 @@ long EEUCLandable::GetNextFlightPoint(EEComplexUnit* inUnit, GE3DPoint& outTarge
 // emergencies, secondary targets, bombing runs, initial contact, and death (falls, rolling at its turn rate)
 void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs landable), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_LANDABLE, this, inUnit);
+}
+
+// New (R5b.4, the fourteenth round): EEUCLandable::ActionChanged's operations that are more than a call, each the
+// original's statements of its branch (ee_units actions.rs decides which, in which order; EEUnitUpdate.cpp's host
+// calls this with the operation code). inoutAirport: FIND_NEAREST_AIRPORT's result, for SET_HOME_BASE_FOUND.
+int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EEComplexUnit* inUnit, int64_t inA,
+                                  EEComplexUnit** inoutAirport)
+{
+    EEUCLandable* theClass = static_cast<EEUCLandable*>(inClass);
     GE3DPoint theTarget;
     GE3DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY(),
                           inUnit->mPhysicalModel.GetLocation().GetZ());
-    GEOrientation theOrientation;
     EEAirTrafficControl* theAirTraffic = inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1];
     EEUnitGoal* theGoal = inUnit->mGoalState;
     EEUnit* theEnemy;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionBrake:
-        if (inUnit->mUnitClass->mAirTrafficType == 2 || inUnit->mUnitClass->mAirTrafficType == 4)
-            (EEACNA(APPROACH_CARRIER, 0, 0), this->ApproachCarrier(inUnit, false));
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
-        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
+    switch (inOperation) {
+    case EE_UNITS_ACT_APPROACH_CARRIER:
+        theClass->ApproachCarrier(inUnit, inA != 0);
         break;
-    case kActionBoardTransport:
-        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
-        if (inUnit->mHomeBase == NULL)
-            return;
-        EEACN(BOARD_CARRIER);
+    case EE_UNITS_ACT_BOARD_CARRIER:
         theAirTraffic->RemovePlane(inUnit->mHomeBase, inUnit);
         inUnit->mHomeBase->LoadCargo(inUnit, 1, 0);   // the carrier takes the plane aboard
         inUnit->SetHomeBase(NULL);
         inUnit->SetIsCommandable(true);
         inUnit->SetHeight(0.0f);
         break;
-    case kActionContinueToTaxi:
-        if ((inUnit->mUnitClass->mAirTrafficType == 2 || inUnit->mUnitClass->mAirTrafficType == 4) && inUnit->mIsClearanceGranted == true) {
-            (EEACN(TAKE_OFF_FROM_CARRIER), this->TakeOffFromCarrier(inUnit));
-            (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-            (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-            (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
-            (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
-            break;
-        }
-    case kActionContinueToClimb:
-    case kActionContinueToDescend:
-    case kActionContinueToBrake:
-    case kActionContinueToWaitForLandingClearance:
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        (EEACN(UNIT_NEXT_WAYPOINT), inUnit->NextWaypoint());
+    case EE_UNITS_ACT_TAKE_OFF_FROM_CARRIER:
+        theClass->TakeOffFromCarrier(inUnit);
         break;
-    case kActionTaxi:
-    case kActionClimb:
-    case kActionDescend:
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
-        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
-        break;
-    case kActionFly:
-    case kActionContinueToFly: {
-        if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFly) {
-            (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-            (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-            (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
-            (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
-        } else {
-            (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-            (EEACN(UNIT_NEXT_WAYPOINT), inUnit->NextWaypoint());
-        }
-        EEACN(FLY_CHECK_PATH);
+    case EE_UNITS_ACT_FLY_CHECK_PATH: {
         GE3DPoint theNext;
         float theIndex;
         if (inUnit->GetPathStart(theNext, theIndex) == 0 &&
@@ -381,51 +349,35 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
         }
         break;
     }
-    case kActionEmergencyTakeoff: {
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        EEComplexUnit* theBase = (EEACN(FIND_NEAREST_AIRPORT), theAirTraffic->FindNearestAirport(inUnit));
-        if ((long)inUnit->mWaypoints.size() <= 3 || theBase == NULL) {
-            (EEACNA(KILL, 1, 0), inUnit->Kill(true, false, false));
-            return;
-        }
-        (EEACN(SET_HOME_BASE_FOUND), inUnit->SetHomeBase(theBase));
-        (EEACNA(START_ACTION, kActionRequestLanding, 0), inUnit->StartAction(kActionRequestLanding));
-        (EEACN(CLASS_ACTION_CHANGED), this->ActionChanged(inUnit));
+    case EE_UNITS_ACT_FIND_NEAREST_AIRPORT:
+        *inoutAirport = theAirTraffic->FindNearestAirport(inUnit);
+        return *inoutAirport != NULL ? 1 : 0;
+    case EE_UNITS_ACT_SET_HOME_BASE_FOUND:
+        inUnit->SetHomeBase(*inoutAirport);
         break;
-    }
-    case kActionLand:
-    case kActionRecalculateLanding:
-        EEACNA(APPROACH_LANDING, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionLand, 0);
+    case EE_UNITS_ACT_APPROACH_LANDING:
         if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
             switch (inUnit->mHomeBase->mFacing) {
             case 0:
-                this->ApproachRunwayPosY(inUnit);
+                theClass->ApproachRunwayPosY(inUnit);
                 break;
             case 1:
-                this->ApproachRunwayNegY(inUnit);
+                theClass->ApproachRunwayNegY(inUnit);
                 break;
             case 2:
-                this->ApproachRunwayPosX(inUnit);
+                theClass->ApproachRunwayPosX(inUnit);
                 break;
             default:
-                this->ApproachRunwayNegX(inUnit);
+                theClass->ApproachRunwayNegX(inUnit);
                 break;
             }
         } else
-            this->ApproachCarrier(inUnit, (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionLand);
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
-        EEACN(HEIGHT_AT_NEXT_WAYPOINT);
-        if (inUnit->GetNextWaypointPoint(thePosition) == 0)
-            inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
+            theClass->ApproachCarrier(inUnit, inA != 0);
         break;
-    case kActionSearchForSecondaryTarget: {
-        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
-        EEACN(SECONDARY_TARGET);
+    case EE_UNITS_ACT_SECONDARY_TARGET: {
         EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
         if (theAttack == NULL)
-            return;
+            break;
         EEUnit* theTargetUnit = theAttack->mTarget;
         if (theTargetUnit != NULL) {
             long theX = theTargetUnit->GetTileX();
@@ -438,7 +390,7 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
             theEnemy = EEFindTargetNear(inUnit, theX, theY, 3.0f);
             if (theEnemy != NULL && inUnit->mBehavior->mCanTargetEnemies) {
                 theAttack->SetTarget(theEnemy);
-                return;
+                break;
             }
         } else {
             inUnit->ClearGoals(0);
@@ -446,136 +398,80 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
         }
         if (theAttack->mTarget->GetTileX() != -10000) {
             EEUGLocation* theMove = new EEUGLocation((float)theAttack->mTarget->GetTileX() + 0.5f,
-                                                     (float)theAttack->mTarget->GetTileY() + 0.5f, this->GetCruiseAltitude(),
+                                                     (float)theAttack->mTarget->GetTileY() + 0.5f, theClass->GetCruiseAltitude(),
                                                      theAttack->GetB1C(), true, false, 0.0f, false, false);
             inUnit->SetGoal(theMove, 0, 0);
             inUnit->StartAction(theMove->GetStartAction());
-            this->ActionChanged(inUnit);
+            theClass->ActionChanged(inUnit);
             break;
         }
         inUnit->ClearGoals(0);
         break;
     }
-    case kActionTakeoff: {
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        EEACN(TAKEOFF);
-        if (inUnit->mHomeBase == NULL) {
-            if (theAirTraffic->GetNumSlots() == 0)
-                inUnit->Kill(true, false, false);
-            else {
-                if (inUnit->mContainer == NULL)
-                    inUnit->SetHomeBase(theAirTraffic->mSlots[0].mAirport);
+    case EE_UNITS_ACT_TAKEOFF:
+        {
+            if (inUnit->mHomeBase == NULL) {
+                if (theAirTraffic->GetNumSlots() == 0)
+                    inUnit->Kill(true, false, false);
                 else {
-                    for (unsigned long i = 0; i < theAirTraffic->GetNumSlots(); i++) {
-                        if (inUnit->mContainer == theAirTraffic->mSlots[i].mAirport)
-                            inUnit->SetHomeBase(theAirTraffic->mSlots[i].mAirport);
+                    if (inUnit->mContainer == NULL)
+                        inUnit->SetHomeBase(theAirTraffic->mSlots[0].mAirport);
+                    else {
+                        for (unsigned long i = 0; i < theAirTraffic->GetNumSlots(); i++) {
+                            if (inUnit->mContainer == theAirTraffic->mSlots[i].mAirport)
+                                inUnit->SetHomeBase(theAirTraffic->mSlots[i].mAirport);
+                        }
                     }
+                    theClass->ReturnToAirport(inUnit);
                 }
-                this->ReturnToAirport(inUnit);
-            }
-        } else if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
-            switch (inUnit->mHomeBase->mFacing) {
-            case 0:
-                this->TakeOffFromRunwayPosY(inUnit);
-                break;
-            case 1:
-                this->TakeOffFromRunwayNegY(inUnit);
-                break;
-            case 2:
-                this->TakeOffFromRunwayPosX(inUnit);
-                break;
-            default:
-                this->TakeOffFromRunwayNegX(inUnit);
-                break;
-            }
-        } else
-            this->TakeOffFromCarrier(inUnit);
-        if (inUnit->mHomeBase == NULL)
-            return;
-        inUnit->SetFlightTime(inUnit->GetStats()->mFlightTime);
-        if (!this->mIsParatrooperBomber)
-            inUnit->SetAmmunition(this->mAmmunition);
-        inUnit->SetAnimation(0xd, -1, 0);
-        if (inUnit->GetNextWaypointPoint(thePosition) != 0)
-            return;
-        inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
-        return;
-    }
-    case kActionRequestLanding: {
-        long theResult;
-        if (inUnit->mHomeBase != NULL)
-            theResult = (EEACN(QUEUE_LANDING), theAirTraffic->QueueRequest(inUnit->mHomeBase, inUnit, 1));
-        else
-            theResult = 9;
-        if (theResult != 0) {
-            EEComplexUnit* theBase = (EEACN(FIND_NEAREST_AIRPORT), theAirTraffic->FindNearestAirport(inUnit));
-            if (theBase == NULL)
-                (EEACNA(KILL, 1, 0), inUnit->Kill(true, false, false));
-            else {
-                (EEACN(SET_HOME_BASE_FOUND), inUnit->SetHomeBase(theBase));
-                (EEACNA(START_ACTION, kActionRequestLanding, 0), inUnit->StartAction(kActionRequestLanding));
-                (EEACN(CLASS_ACTION_CHANGED), this->ActionChanged(inUnit));
-            }
+            } else if (inUnit->mUnitClass->mAirTrafficType == 1 || inUnit->mUnitClass->mAirTrafficType == 3) {
+                switch (inUnit->mHomeBase->mFacing) {
+                case 0:
+                    theClass->TakeOffFromRunwayPosY(inUnit);
+                    break;
+                case 1:
+                    theClass->TakeOffFromRunwayNegY(inUnit);
+                    break;
+                case 2:
+                    theClass->TakeOffFromRunwayPosX(inUnit);
+                    break;
+                default:
+                    theClass->TakeOffFromRunwayNegX(inUnit);
+                    break;
+                }
+            } else
+                theClass->TakeOffFromCarrier(inUnit);
+            if (inUnit->mHomeBase == NULL)
+                return 0;
+            inUnit->SetFlightTime(inUnit->GetStats()->mFlightTime);
+            if (!theClass->mIsParatrooperBomber)
+                inUnit->SetAmmunition(theClass->mAmmunition);
+            inUnit->SetAnimation(0xd, -1, 0);
+            if (inUnit->GetNextWaypointPoint(thePosition) != 0)
+                return 0;
+            inUnit->SetHeight(theClass->GetHeightAt(inUnit, thePosition));
+            return 0;
         }
-        (EEACN(CLEAR_HEADING), inUnit->mInitialContactHeading = kLandableNone);
         break;
-    }
-    case kActionWaitForLandingClearance:
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
-        (EEACN(CLEAR_F220), inUnit->SetF220(0.0f));
+    case EE_UNITS_ACT_QUEUE_LANDING:
+        return (int64_t)theAirTraffic->QueueRequest(inUnit->mHomeBase, inUnit, 1);
+    case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
+        EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
+        inUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
         break;
-    case kActionAttackEnemyUnit:
-        if (this->mProjectileClass != NULL && this->mProjectileClass->mCategory == kUnitCategoryBomb) {
-            (EEACNA(SET_COMMANDABLE, 0, 0), inUnit->SetIsCommandable(false));
-            if (theGoal != NULL && theGoal->mKind != kGoalAttackGround) {
-                EEACN(BOMBER_GROUND_GOAL);
-                EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
-                inUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
-            }
-        }
-    case kActionFaceEnemyUnit:
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        this->HandleActionChanged(inUnit);
+    case EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT:
+        if (inUnit->mHeight < theClass->GetCruiseAltitude() && theClass->GetCruiseAltitude() != inUnit->mHeight)
+            inUnit->mHeight = theClass->GetCruiseAltitude();
         break;
-    case kActionRunFromAttacker:
-        if (this->mProjectileClass != NULL && this->mProjectileClass->mCategory == kUnitCategoryBomb && !inUnit->mIsCommandable && inUnit->mFlightTime != 0)
-            (EEACN(MAKE_COMMANDABLE), inUnit->mIsCommandable = true);
-        this->HandleActionChanged(inUnit);
-        break;
-    case kActionInitialAttackState:
-        EEACN(INITIAL_ATTACK_HEIGHT);
-        if (inUnit->mHeight < this->GetCruiseAltitude() && this->GetCruiseAltitude() != inUnit->mHeight)
-            inUnit->mHeight = this->GetCruiseAltitude();
-        this->HandleActionChanged(inUnit);
-        break;
-    case kActionCheckRange:
-        if (inUnit->mInitialContactHeading != kLandableNone)
-            return;
-        EEACNA(CONTACT_HERE, 0, 0);
-        if (inUnit->mInitialContactLocation != thePosition)
+    case EE_UNITS_ACT_CONTACT_HERE:
+        if (inA != 0)
+            inUnit->SetInitialContactLocation(thePosition);
+        else if (inUnit->mInitialContactLocation != thePosition)
             inUnit->mInitialContactLocation = thePosition;
         if (inUnit->mInitialContactHeading != 0.0f)
             inUnit->mInitialContactHeading = 0.0f;
         break;
-    case kActionShouldIFollowEnemyUnit:
-        if (inUnit->mInitialContactHeading != kLandableNone)
-            return;
-        EEACNA(CONTACT_HERE, 1, 0);
-        inUnit->SetInitialContactLocation(thePosition);
-        if (inUnit->mInitialContactHeading != 0.0f)
-            inUnit->mInitialContactHeading = 0.0f;
-        break;
-    case kActionPrepareToMove:
-        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
-        (EEACNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
-        (EEACN(DROP_PATH), inUnit->DropPath());
-        if (inUnit->mInitialContactHeading == kLandableNone) {
-            EEACNA(CONTACT_HERE, 1, 0);
-            inUnit->SetInitialContactLocation(thePosition);
-            if (inUnit->mInitialContactHeading != 0.0f)
-                inUnit->mInitialContactHeading = 0.0f;
-        }
+    case EE_UNITS_ACT_LANDABLE_PATH:
         if (theGoal->mKind == kGoalAttackUnit) {
             EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
             EEComplexUnit* theComplex = theEnemy->mComplexUnit;
@@ -588,40 +484,23 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
         } else {
             theGoal->GetDestination(inUnit, theTarget);
             if (theGoal->mKind == kGoalExplore)
-                theTarget.SetZ(this->GetCruiseAltitude());
+                theTarget.SetZ(theClass->GetCruiseAltitude());
         }
-        this->PathToward(inUnit, thePosition, theTarget, true);
-        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
-        EEACN(HEIGHT_AT_NEXT_WAYPOINT);
-        if (inUnit->GetNextWaypointPoint(thePosition) == 0)
-            inUnit->SetHeight(this->GetHeightAt(inUnit, thePosition));
+        theClass->PathToward(inUnit, thePosition, theTarget, true);
         break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->GetStats()->mDeathSound;
-        if (theSound != NULL) {
-            EEACN(DEATH_SOUND);
-            float theVolume;
-            float thePan;
-            float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
-        (EEACNA(SET_ANIMATION, 4, 0), inUnit->SetAnimation(4, -1, 0));
-        (EEACN(DROP_PATH), inUnit->DropPath());
-        EEACNA(DEATH_ROLL, 1, 0);
-        EEPMAirplane* theModel = dynamic_cast<EEPMAirplane*>(this->mPhysicsModel);
+    case EE_UNITS_ACT_DEATH_ROLL: {
+        EEPMAirplane* theModel = dynamic_cast<EEPMAirplane*>(theClass->mPhysicsModel);
         if (theModel != NULL)
             inUnit->SetF220(theModel->ComputeRoll(inUnit, inUnit->mAngularVelocity.GetYaw()));
-        theOrientation = inUnit->mAngularVelocity;
+        GEOrientation theOrientation = inUnit->mAngularVelocity;
         theOrientation.SetRoll(theOrientation.GetYaw());
         inUnit->mAngularVelocity = theOrientation;
-        return;
+        break;
     }
     default:
-        this->HandleActionChanged(inUnit);
-        return;
+        break;
     }
+    return 0;
 }
 
 // FUNCTION: EXE 0x615246

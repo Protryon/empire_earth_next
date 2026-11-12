@@ -19,7 +19,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 14's golden)
+#include "ee/EEUnitUpdate.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -55,22 +55,9 @@ static const float kBuildingPriestSoundFactor = 4.0f;   // EEUCBasicPriest.cpp's
 // Handles the temple's new action: building actions (targets, dying, airport) as a building, the rest as a priest
 void EEUCBuildingPriest::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionSearchForSecondaryTarget:
-    case kActionTrackEnemyUnit:
-    case kActionDying:
-    case kActionResourcesRotting:
-    case kActionPrepareToMove:
-    case kActionAirportOpen:
-    case kActionWaitForTakeoffClearance:
-    case kActionLaunchNextAirplane:
-        EEUCBuilding::ActionChanged(inUnit);
-        break;
-    default:
-        this->PriestVirtual74(inUnit);
-        break;
-    }
+    // New (R5b.4, the fourteenth round): the decision is Rust (ee_units actions.rs building_priest), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BUILDING_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x6100b5
@@ -189,34 +176,6 @@ void EEUCBuildingPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inT
         EEPlayer* theCurrent = ::gWorld.mPlayers[::gWorld.mCurrentPlayer];
         if (inUnit->mPlayer == theCurrent || theOldPlayer == theCurrent)
             gSoundManager->Play(theSound->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
-    }
-}
-
-void EEUCBuildingPriest::PriestVirtual74(EEComplexUnit* inUnit)
-{
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 14's golden)
-    (EEACN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
-    (EEACN(RELEASE_HEAL_EFFECT), inUnit->ReleaseHealEffect());
-    (EEACN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionConvertEnemyUnit:
-        (EEACNA(SET_PHYSICS_ACTION, 1, 0), inUnit->SetCurrentPhysicsAction(1));
-        (EEACNA(SET_TARGET_SEARCH_TIMER, 0, 0), inUnit->SetTargetSearchTimer(0));
-        (EEACNA(SET_ANIMATION, 9, 0), inUnit->SetAnimation(9, -1, 0));
-        if (inUnit->mConversionStartTime == 0) {
-            if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                (EEACNA(SET_CONVERSION_START, gPhysics->mGameTime, 0), inUnit->mConversionStartTime = gPhysics->mGameTime);
-            (EEACNA(SET_WORK_TIMER, 0, 0), inUnit->SetWorkTimer(0));
-            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        }
-        (EEACN(DROP_PATH), inUnit->DropPath());
-        break;
-    case kActionWaitForReload:
-        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
     }
 }
 
