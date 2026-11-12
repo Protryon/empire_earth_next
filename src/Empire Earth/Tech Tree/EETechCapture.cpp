@@ -612,8 +612,8 @@ void StartState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
     EEContagionManager* theManager = ::gWorld.GetContagionManager();
     ioRecord.U32((unsigned int)theManager->mHelpers.size());
     ioRecord.I32(theManager->mNextHelperID);
-    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->mEffectsByHandle.size() : 0u);
-    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->mDestroyedHandles.size() : 0u);
+    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->Count() : 0u);
+    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->DestroyedCount() : 0u);
 }
 
 void StartRecord(long inKind, EECalamityClass* inClass, EECalamity* inCalamity, EESimCaptureRecord& ioRecord)

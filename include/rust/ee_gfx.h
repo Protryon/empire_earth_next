@@ -76,6 +76,9 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The effect manager's containers (opaque to the C++).
+struct EeGfxEffectStore;
+
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
 struct EeGfxCameraGoTo {
@@ -1052,6 +1055,68 @@ float ee_gfx_beam_stretch_y(float y, float length);
 /// # Safety
 /// `vertices` holds 4 writable records and `triangles` 2.
 void ee_gfx_effect_plane(bool standing, EeGfxMeshVertex *vertices, EeGfxMeshTriangle *triangles);
+
+/// A new, empty store (`EEEffectManager`'s constructor).
+EeGfxEffectStore *ee_gfx_effects_new();
+
+/// Frees a store (null: nothing).
+///
+/// # Safety
+/// `s` is null or a store from `ee_gfx_effects_new`, not used again.
+void ee_gfx_effects_free(EeGfxEffectStore *s);
+
+/// The last handle given out.
+uint32_t ee_gfx_effects_last_handle(const EeGfxEffectStore *s);
+
+/// Sets the last handle given out (a load).
+void ee_gfx_effects_set_last_handle(EeGfxEffectStore *s, uint32_t handle);
+
+/// `AddEffect`: links `effect` first and indexes it under a new handle (`new_handle`) or `own`; returns the handle.
+uint32_t ee_gfx_effects_add(EeGfxEffectStore *s,
+                            void *effect,
+                            bool new_handle,
+                            uint32_t own);
+
+/// `RemoveEffect`'s unlink.
+void ee_gfx_effects_unlink(EeGfxEffectStore *s, void *effect);
+
+/// The list's first effect (null: none).
+void *ee_gfx_effects_head(const EeGfxEffectStore *s);
+
+/// The effect after `effect` in the list (null: none).
+void *ee_gfx_effects_next(const EeGfxEffectStore *s, const void *effect);
+
+/// The effect under `handle` (null: none).
+void *ee_gfx_effects_find(const EeGfxEffectStore *s, uint32_t handle);
+
+/// Erases the index's entry under `handle`; whether there was one.
+bool ee_gfx_effects_erase(EeGfxEffectStore *s, uint32_t handle);
+
+/// The index's size.
+size_t ee_gfx_effects_count(const EeGfxEffectStore *s);
+
+/// The index's first entry at or after `cursor` in handle order: its effect (null: none) and handle.
+///
+/// # Safety
+/// `handle` is writable.
+void *ee_gfx_effects_at_or_after(const EeGfxEffectStore *s,
+                                 uint64_t cursor,
+                                 uint32_t *handle);
+
+/// `DestroyEffect`: queues a handle.
+void ee_gfx_effects_queue_destroy(EeGfxEffectStore *s, uint32_t handle);
+
+/// Takes the destruction queue's front handle; false when it is empty.
+///
+/// # Safety
+/// `handle` is writable.
+bool ee_gfx_effects_take_destroyed(EeGfxEffectStore *s, uint32_t *handle);
+
+/// The destruction queue's length.
+size_t ee_gfx_effects_destroyed_len(const EeGfxEffectStore *s);
+
+/// The destruction queue's `i`th handle.
+uint32_t ee_gfx_effects_destroyed_at(const EeGfxEffectStore *s, size_t i);
 
 }  // extern "C"
 

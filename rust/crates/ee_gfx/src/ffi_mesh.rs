@@ -1,5 +1,6 @@
 //! The C ABI of the effects' mesh builders (`farm.rs`, `volcano.rs`) and the tracer beam (`beam.rs`), called by
-//! `EEE3DFarm.cpp`, `EEE3DVolcano.cpp` and `EEE3DTracerBeam.cpp`. The terrain callbacks run while Rust holds no
+//! `EEE3DFarm.cpp`, `EEE3DVolcano.cpp` and `EEE3DTracerBeam.cpp`, and of the effect manager's containers
+//! (`effect_store.rs`, `EEEffectManager.cpp`). The terrain callbacks run while Rust holds no
 //! reference to a C++ object: the outputs are the C++'s own arrays, which the callbacks do not touch.
 
 use std::ffi::c_void;
@@ -7,6 +8,7 @@ use std::ffi::c_void;
 use ee_ge::types::{Ge3DPoint, GeVector};
 
 use crate::beam::{self, EeGfxBeamAim, EeGfxBeamVertex};
+use crate::effect_store::EffectStore;
 use crate::effects::EeGfxColor;
 use crate::farm::{self, EeGfxFarmField, FarmTerrain};
 use crate::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex, Mesh};
@@ -256,4 +258,145 @@ pub unsafe extern "C" fn ee_gfx_effect_plane(
         std::ptr::copy_nonoverlapping(v.as_ptr(), vertices, 4);
         std::ptr::copy_nonoverlapping(t.as_ptr(), triangles, 2);
     }
+}
+
+// ---- the effect manager's containers (effect_store.rs, EEEffectManager.cpp)
+
+/// The effect manager's containers (opaque to the C++).
+pub struct EeGfxEffectStore(EffectStore);
+
+fn store<'a>(s: *const EeGfxEffectStore) -> &'a EffectStore {
+    // SAFETY: the C++ passes the store `ee_gfx_effects_new` made, alive until `ee_gfx_effects_free`
+    unsafe { &(*s).0 }
+}
+
+fn store_mut<'a>(s: *mut EeGfxEffectStore) -> &'a mut EffectStore {
+    // SAFETY: as `store`; the manager's calls do not overlap
+    unsafe { &mut (*s).0 }
+}
+
+/// A new, empty store (`EEEffectManager`'s constructor).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_new() -> *mut EeGfxEffectStore {
+    Box::into_raw(Box::new(EeGfxEffectStore(EffectStore::new())))
+}
+
+/// Frees a store (null: nothing).
+///
+/// # Safety
+/// `s` is null or a store from `ee_gfx_effects_new`, not used again.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effects_free(s: *mut EeGfxEffectStore) {
+    if !s.is_null() {
+        // SAFETY: the function's contract
+        drop(unsafe { Box::from_raw(s) });
+    }
+}
+
+/// The last handle given out.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_last_handle(s: *const EeGfxEffectStore) -> u32 {
+    store(s).last_handle()
+}
+
+/// Sets the last handle given out (a load).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_set_last_handle(s: *mut EeGfxEffectStore, handle: u32) {
+    store_mut(s).set_last_handle(handle)
+}
+
+/// `AddEffect`: links `effect` first and indexes it under a new handle (`new_handle`) or `own`; returns the handle.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_add(s: *mut EeGfxEffectStore, effect: *mut c_void, new_handle: bool, own: u32) -> u32 {
+    store_mut(s).add(effect as usize, new_handle, own)
+}
+
+/// `RemoveEffect`'s unlink.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_unlink(s: *mut EeGfxEffectStore, effect: *mut c_void) {
+    store_mut(s).unlink(effect as usize)
+}
+
+/// The list's first effect (null: none).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_head(s: *const EeGfxEffectStore) -> *mut c_void {
+    store(s).head() as *mut c_void
+}
+
+/// The effect after `effect` in the list (null: none).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_next(s: *const EeGfxEffectStore, effect: *const c_void) -> *mut c_void {
+    store(s).next(effect as usize) as *mut c_void
+}
+
+/// The effect under `handle` (null: none).
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_find(s: *const EeGfxEffectStore, handle: u32) -> *mut c_void {
+    store(s).find(handle) as *mut c_void
+}
+
+/// Erases the index's entry under `handle`; whether there was one.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_erase(s: *mut EeGfxEffectStore, handle: u32) -> bool {
+    store_mut(s).erase(handle)
+}
+
+/// The index's size.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_count(s: *const EeGfxEffectStore) -> usize {
+    store(s).count()
+}
+
+/// The index's first entry at or after `cursor` in handle order: its effect (null: none) and handle.
+///
+/// # Safety
+/// `handle` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effects_at_or_after(
+    s: *const EeGfxEffectStore,
+    cursor: u64,
+    handle: *mut u32,
+) -> *mut c_void {
+    match store(s).at_or_after(cursor) {
+        Some((h, e)) => {
+            // SAFETY: the function's contract
+            unsafe { *handle = h };
+            e as *mut c_void
+        }
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// `DestroyEffect`: queues a handle.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_queue_destroy(s: *mut EeGfxEffectStore, handle: u32) {
+    store_mut(s).queue_destroy(handle)
+}
+
+/// Takes the destruction queue's front handle; false when it is empty.
+///
+/// # Safety
+/// `handle` is writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effects_take_destroyed(s: *mut EeGfxEffectStore, handle: *mut u32) -> bool {
+    match store_mut(s).take_destroyed() {
+        Some(h) => {
+            // SAFETY: the function's contract
+            unsafe { *handle = h };
+            true
+        }
+        None => false,
+    }
+}
+
+/// The destruction queue's length.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_destroyed_len(s: *const EeGfxEffectStore) -> usize {
+    store(s).destroyed_len()
+}
+
+/// The destruction queue's `i`th handle.
+#[no_mangle]
+pub extern "C" fn ee_gfx_effects_destroyed_at(s: *const EeGfxEffectStore, i: usize) -> u32 {
+    store(s).destroyed_at(i)
 }

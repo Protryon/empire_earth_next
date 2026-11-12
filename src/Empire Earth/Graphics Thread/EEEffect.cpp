@@ -139,8 +139,6 @@ EEEffect::~EEEffect()
     }
     this->mTileX = -1;
     this->mTileY = -1;
-    this->mNext = NULL;
-    this->mPrevious = NULL;
 }
 
 // FUNCTION: EXE 0x50269c
@@ -293,8 +291,6 @@ void EEEffect::ReleaseResources()
     }
     this->mTileX = -1;
     this->mTileY = -1;
-    this->mNext = NULL;
-    this->mPrevious = NULL;
 }
 
 // FUNCTION: EXE 0x502ef0
@@ -385,8 +381,6 @@ void EEEffect::Init()
 {
     this->mUnit = NULL;
     this->mGraphicEffect = NULL;
-    this->mNext = NULL;
-    this->mPrevious = NULL;
     this->mHandle = kNoEffectHandle;
     this->mTileX = -1;
     this->mTileY = -1;
