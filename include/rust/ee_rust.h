@@ -1679,6 +1679,15 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+/// `URL`'s types (`URLType`).
+constexpr static const int32_t EE_WON_URL_NONE = 0;
+
+constexpr static const int32_t EE_WON_URL_FILE = 1;
+
+constexpr static const int32_t EE_WON_URL_HTTP = 2;
+
+constexpr static const int32_t EE_WON_URL_FTP = 3;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -6943,6 +6952,61 @@ struct EeWonBreak {
   int32_t pos;
   int32_t next;
   int32_t width;
+};
+
+/// One header line's reading.
+struct EeWonHttpHeader {
+  /// false: no colon (the line is ignored)
+  bool colon;
+  /// the key's index in `HEADER_KEYS`, 9 for none
+  uint8_t key;
+  /// the value's offset in the line (after the colon and its spaces)
+  uint32_t value;
+  /// Content-Length's `atoi`
+  int32_t number;
+  /// a date's `ParseInternetDateTime`
+  int64_t time;
+  /// Transfer-Encoding starts with CHUNKED, Connection with CLOSE (case-blind)
+  bool flag;
+  /// ETag: the value's length kept (through the second quote), -1 to erase it
+  int32_t tag_len;
+};
+
+/// `SendRequest`'s inputs.
+struct EeWonHttpRequest {
+  bool proxy;
+  const uint8_t *host;
+  size_t host_len;
+  const uint8_t *path;
+  size_t path_len;
+  bool close;
+  /// a local path that exists: `size` and `time` are its
+  bool file;
+  uint64_t size;
+  int64_t time;
+  bool range_resume;
+  const uint8_t *tag;
+  size_t tag_len;
+  bool cache_ok;
+};
+
+/// A URL's results: the type, the absolute flag, the address and the path into `sink` (in that order).
+using EeWonUrlSink = void(*)(void *context,
+                             int32_t kind,
+                             bool absolute,
+                             const uint8_t *address,
+                             size_t address_len,
+                             const uint8_t *path,
+                             size_t path_len);
+
+/// A URL handed over: its type, absolute flag, address and path.
+struct EeWonUrl {
+  int32_t kind;
+  bool absolute;
+  const uint8_t *address;
+  size_t address_len;
+  const uint8_t *path;
+  size_t path_len;
 };
 
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
@@ -17025,6 +17089,113 @@ bool ee_won_gui_max_width(int32_t new_width,
                           bool has_breaks,
                           int32_t *out_width,
                           bool *out_rewrap);
+
+/// `MakeInternetDateTime` into `sink`.
+///
+/// # Safety
+/// `sink` accepts `context`.
+void ee_won_http_format_date(int64_t t, EeWonByteSink sink, void *context);
+
+/// `ParseInternetDateTime` of a C string.
+///
+/// # Safety
+/// `text` is a NUL-terminated string.
+int64_t ee_won_http_parse_date(const uint8_t *text);
+
+/// `ExtractStatus`'s scan of a C string: false when it fails, else the status in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_status_line(const uint8_t *line, int32_t *out);
+
+/// `ExtractHeaderLine`'s reading of a C string.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+void ee_won_http_header_line(const uint8_t *line, EeWonHttpHeader *out);
+
+/// `ExtractRedirect` of a C string: false without a "://", else the host's range and the path's start
+/// (`*path_at` -1: the path is "/").
+///
+/// # Safety
+/// `location` is a NUL-terminated string; the outputs are valid.
+bool ee_won_http_redirect(const uint8_t *location,
+                          size_t *host_at,
+                          size_t *host_end,
+                          ptrdiff_t *path_at);
+
+/// `ExtractChunkLength`'s scan of a C string: false when it fails, else the length in `*out`.
+///
+/// # Safety
+/// `line` is a NUL-terminated string; `out` is valid.
+bool ee_won_http_chunk_length(const uint8_t *line, uint32_t *out);
+
+/// `SendRequest`'s text into `sink`.
+///
+/// # Safety
+/// `q` and its byte ranges are valid; `sink` accepts `context`.
+void ee_won_http_request(const EeWonHttpRequest *q, EeWonByteSink sink, void *context);
+
+/// `HTTPGetOp(url)`'s split: the host's range and the path's (`*path_at` -1: none, the path is "/").
+///
+/// # Safety
+/// `url` holds `len` bytes; the outputs are valid.
+void ee_won_http_split_url(const uint8_t *url,
+                           size_t len,
+                           size_t *host_at,
+                           size_t *host_end,
+                           ptrdiff_t *path_at);
+
+/// `RecvContent`'s up-to-date test.
+bool ee_won_http_up_to_date(bool append,
+                            uint64_t local_size,
+                            uint32_t content_length,
+                            int64_t local_time,
+                            int64_t last_modified,
+                            bool close);
+
+/// `URL::URL` into `sink`; an unknown scheme gives the type `EE_WON_URL_NONE` (and the C++ assigns nothing else).
+///
+/// # Safety
+/// `text` holds `len` bytes; `sink` accepts `context`.
+void ee_won_url_parse(const uint8_t *text,
+                      size_t len,
+                      EeWonUrlSink sink,
+                      void *context);
+
+/// `URL::CalcRelativeTo` into `sink`.
+///
+/// # Safety
+/// `url` and `base` are valid; `sink` accepts `context`.
+void ee_won_url_relative(const EeWonUrl *url,
+                         const EeWonUrl *base,
+                         EeWonUrlSink sink,
+                         void *context);
+
+/// `URL::GetEntire` into `sink`.
+///
+/// # Safety
+/// `url` is valid; `sink` accepts `context`.
+void ee_won_url_entire(const EeWonUrl *url, EeWonByteSink sink, void *context);
+
+/// `HTTPCache::GetFreeId` over the sorted ids.
+///
+/// # Safety
+/// `ids` holds `count` ids.
+int32_t ee_won_http_cache_free_id(const int32_t *ids, size_t count, int32_t next);
+
+/// `HTTPCache::GetEntry`'s file name into `sink`.
+///
+/// # Safety
+/// `location` holds `len` bytes; `sink` accepts `context`.
+void ee_won_http_cache_file_name(int32_t id,
+                                 const uint8_t *location,
+                                 size_t len,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// `HTTPCache::WriteCacheMap`'s keep rule.
+bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 

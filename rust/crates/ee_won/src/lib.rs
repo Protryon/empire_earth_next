@@ -47,6 +47,7 @@ pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
+pub mod http;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod lan;

@@ -495,6 +495,11 @@ WON_TESTS = {
     # applied in order), the original's statements against include/ee/wonapi/WONCertMsg.h over ee_won's cert
     # module (golden: rust/crates/ee_won/src/golden_cert.txt)
     "won_cert_test": [],
+    # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
+    # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
+    # (golden: rust/crates/ee_won/src/golden_http.txt)
+    "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp", WON_SRC / "WONCommon" / "WONFile.cpp",
+                      WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
