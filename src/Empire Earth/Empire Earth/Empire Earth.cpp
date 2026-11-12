@@ -881,8 +881,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 271 the computer players' intelligence files (EESaveHasIntelligence)
 // 272 the ghosts' resources and the gather goals' dead resources (EESaveHasGhostResources)
 // 273 the contagion manager's last helper id (EESaveHasContagionCounter)
+// 274 the next engine's site walkers (EECPNextState::mExplore: its state block's version 4, EECPNextLua.cpp)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 273;
+const unsigned long kSaveGameMinorVersion = 274;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
