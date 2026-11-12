@@ -540,6 +540,10 @@ public:
     unsigned long mReceiveTimeout; //84, initialized to 10000; DWORD in the SDK
 };
 
+// A Rust object since round 15 (rust/crates/ee_won/src/udpmgr.rs EeWonUdpManager: the socket +0x08, the default
+// completion +0x0c, the auto-receive op +0x10, the clean-up cursors +0x14/+0x18, the list +0x1c and the multimap
+// +0x28 of waiting receive ops, the receive size +0x34, and Close, SetAutoRecv, QueueOp, Send, CleanOps, Bind, the
+// erases 0x2b8160/0x2b81b0 and RecvCallback's dispatch). The original's mAutoRecv (+0x38) was never read: gone
 class UDPManager : public RefCount {
 public:
     WONStatus Bind(int,bool);     //2b79c0, signed int port as in the SDK
@@ -547,26 +551,18 @@ public:
     void RecvCallback(RecvBytesFromOp*); //2b8320, receive callback
 
     UDPManager(); //2b76b0
-    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion) { this->mDefaultCompletion=theCompletion; }
+    virtual ~UDPManager(); //2b77b0
+    void SetDefaultCompletion(CompletionBase<AsyncOpPtr>* theCompletion);
     void Send(const ByteBuffer*, const IPAddr&); //2b7ec0, void/ret8 (provisional name; the SDK has SendBytesTo)
     void Close(); //2b78e0
     void SetAutoRecv(bool); //2b7b40
     void QueueOp(UDPManagerRecvOp*,unsigned long); //2b7c50
     void CleanOps(); //2b8000
-    // Implicit virtual destructor; 2b77b0 has no own-derived-vptr store.
-    typedef std::list<SmartPtr<UDPManagerRecvOp> > OpList;
-    typedef std::multimap<IPAddr, SmartPtr<UDPManagerRecvOp> > OpMap;
-    void Erase(const OpList::iterator&); //2b8160, iterator-preserving erase from the clean list
-    void Erase(const OpMap::iterator&); //2b81b0, iterator-preserving erase from the clean map
-    SmartPtr<QueueSocket> mSocket; //08
-    SmartPtr<CompletionBase<AsyncOpPtr> > mDefaultCompletion; //0c
-    SmartPtr<UDPManagerRecvOp> mAutoRecvOp; //10
-    OpList::iterator mCleanListItr; //14, initialized mOpList.begin()
-    OpMap::iterator mCleanMapItr; //18, initialized mOpMap.begin()
-    OpList mOpList; //1c, list node 0x0c with the pointer at +08
-    OpMap mOpMap; //28, map node 0x3c: IPAddr key 0c, pointer 34, tree flags 38/39
-    int mMaxRecvBytes; //34, initialized1024
-    bool mAutoRecv; //38, initializedfalse; naturalpadding39..3b
+    QueueSocket* GetSocket() const; // the socket (NULL when unbound)
+private:
+    UDPManager(const UDPManager&);
+    UDPManager& operator=(const UDPManager&);
+    EeWonUdpManager* mManager;
 };
 
 // WON SDK inline UDP functions; defined after UDPManager is complete (typed SmartPtr)

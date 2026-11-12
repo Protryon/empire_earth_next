@@ -2584,6 +2584,9 @@ struct EeWonThread;
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
 
+/// `UDPManager`'s state and steps.
+struct EeWonUdpManager;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -7455,6 +7458,44 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// A C++ call on one object.
+using EeWonUdpFn = void(*)(void *object);
+
+/// What the manager calls back in the C++. One static table serves every manager.
+struct EeWonUdpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpFn ref_add;
+  EeWonUdpFn ref_release;
+  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
+  /// `ForceFinish(s)`, `TimeLeft()`
+  long (*op_status)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpFn op_kill;
+  void (*op_finish)(void *op, long status);
+  void (*op_force_finish)(void *op, long status);
+  uint32_t (*op_time_left)(void *op);
+  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
+  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  EeWonIpAddr *(*recv_address)(void *op);
+  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
+  void (*recv_set_msg)(void *op, void *bytes);
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
+  void *(*new_recv_op)(const EeWonIpAddr *addr);
+  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
+  void *(*socket_new)();
+  EeWonUdpFn socket_kill;
+  void (*socket_set_broadcast)(void *socket, bool on);
+  long (*socket_bind)(void *socket, int32_t port);
+  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
+  /// `SetRepeatOp(new RecvBytesFromOp(size))`
+  void (*socket_repeat)(void *socket, void *manager, int32_t size);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -18644,6 +18685,76 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// A new manager object for the C++ `manager`.
+///
+/// # Safety
+/// `hooks` is a static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+
+/// Frees the object (its references go).
+///
+/// # Safety
+/// `m` came from `ee_won_udpmanager_new` and is freed once.
+void ee_won_udpmanager_free(EeWonUdpManager *m);
+
+/// `Bind`.
+///
+/// # Safety
+/// `m` is a live manager object (so for every call below).
+long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_close(const EeWonUdpManager *m);
+
+/// `SetAutoRecv`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_set_auto_recv(const EeWonUdpManager *m, bool on);
+
+/// `QueueOp` (`op` a `UDPManagerRecvOp` as `RefCount*`).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `op` is live.
+void ee_won_udpmanager_queue_op(const EeWonUdpManager *m, void *op, uint32_t timeout);
+
+/// `Send`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `bytes` is a live `ByteBuffer` (or null), `addr` a live value.
+void ee_won_udpmanager_send(const EeWonUdpManager *m, void *bytes, const EeWonIpAddr *addr);
+
+/// `CleanOps`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_clean_ops(const EeWonUdpManager *m);
+
+/// `SetDefaultCompletion`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `completion` is null or live.
+void ee_won_udpmanager_set_default_completion(const EeWonUdpManager *m, void *completion);
+
+/// The socket (a borrowed `QueueSocket*` as `RefCount*`, null when unbound).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void *ee_won_udpmanager_socket(const EeWonUdpManager *m);
+
+/// `RecvCallback`: the datagram (`bytes`, its `data`) and its sender.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `data` holds `length` bytes; `from` is a live value.
+void ee_won_udpmanager_recv(const EeWonUdpManager *m,
+                            void *bytes,
+                            const uint8_t *data,
+                            size_t length,
+                            const EeWonIpAddr *from);
 
 }  // extern "C"
 

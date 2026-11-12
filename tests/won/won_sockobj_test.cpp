@@ -1075,7 +1075,7 @@ static void Udp()
     PumpFor(anEarly, 1);
     LOG2("early status ", St(anEarlyOp->GetStatus()), " killed " + N(anEarlyOp->IsKilled()));
     Log("bind " + std::string(St(m->Bind(0, false))));
-    unsigned short aPort = m->mSocket->GetLocalPort();
+    unsigned short aPort = m->GetSocket()->GetLocalPort();
     Log("bound " + Port(aPort));
     m->SetAutoRecv(true);
     SmartPtr<BlockingSocket> u = new BlockingSocket(1);
@@ -1193,12 +1193,12 @@ static void Udp()
     m->Close();
     PumpFor(aWaitDone, 1);
     PumpFor(aWait2Done, 1);
-    Log("closed socket " + N(m->mSocket.get() == NULL));
+    Log("closed socket " + N(m->GetSocket() == NULL));
     m->Close();
     // a rebind with broadcast, then auto-receive off
     Log("rebind " + std::string(St(m->Bind(0, true))));
     m->SetAutoRecv(false);
-    Log("send " + std::string(St(u->SendBytesTo(Bytes("lost", 4), IPAddr("127.0.0.1", m->mSocket->GetLocalPort()), 5000))));
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("lost", 4), IPAddr("127.0.0.1", m->GetSocket()->GetLocalPort()), 5000))));
     sCore->Pump(50);
     Log("default count " + N(aDefault->mCount));
     m->Close();
