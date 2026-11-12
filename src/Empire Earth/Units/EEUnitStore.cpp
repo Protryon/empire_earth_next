@@ -178,6 +178,54 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_COMMAND, CommandOf(theUnit));
         break;
     }
+    case kUnitFieldReloadTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mReloadTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_RELOAD_TIMER, (int64_t)theUnit->mReloadTimer.Get());
+        break;
+    }
+    case kUnitFieldTargetSearchTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mTargetSearchTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_TARGET_SEARCH_TIMER, (int64_t)theUnit->mTargetSearchTimer.Get());
+        break;
+    }
+    case kUnitFieldHealSearchTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mHealSearchTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_HEAL_SEARCH_TIMER, (int64_t)FloatBits(theUnit->mHealSearchTimer.Get()));
+        break;
+    }
+    case kUnitFieldNextTriggerTime: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mNextTriggerTime));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_NEXT_TRIGGER_TIME, (int64_t)theUnit->mNextTriggerTime.Get());
+        break;
+    }
+    case kUnitFieldRottingAwayTime: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRottingAwayTime));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_ROTTING_AWAY_TIME, (int64_t)theUnit->mRottingAwayTime.Get());
+        break;
+    }
+    case kUnitFieldPower: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPower));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_POWER, (int64_t)theUnit->mPower.Get());
+        break;
+    }
+    case kUnitFieldPowerRegenTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPowerRegenTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_POWER_REGEN_TIMER, (int64_t)theUnit->mPowerRegenTimer.Get());
+        break;
+    }
+    case kUnitFieldCamouflageTimer: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mCamouflageTimer));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_CAMOUFLAGE_TIMER, (int64_t)theUnit->mCamouflageTimer.Get());
+        break;
+    }
     case kUnitFieldGoal: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mGoalState));
         if (theUnit->mInUnitStore)
@@ -246,6 +294,14 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.times_updated = (int64_t)theUnit->mTimesUpdated.Get();
         outRecord.active_group = theUnit->mActiveGroup.Get() != NULL ? 1 : 0;
         outRecord.command = CommandOf(theUnit);
+        outRecord.reload_timer = (int64_t)theUnit->mReloadTimer.Get();
+        outRecord.target_search_timer = (int64_t)theUnit->mTargetSearchTimer.Get();
+        outRecord.heal_search_timer = FloatBits(theUnit->mHealSearchTimer.Get());
+        outRecord.next_trigger_time = (int64_t)theUnit->mNextTriggerTime.Get();
+        outRecord.rotting_away_time = (int64_t)theUnit->mRottingAwayTime.Get();
+        outRecord.power = (int64_t)theUnit->mPower.Get();
+        outRecord.power_regen_timer = (int64_t)theUnit->mPowerRegenTimer.Get();
+        outRecord.camouflage_timer = (int64_t)theUnit->mCamouflageTimer.Get();
     }
 }
 

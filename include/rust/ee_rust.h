@@ -1218,6 +1218,30 @@ constexpr static const uint32_t EE_UNIT_FIELD_ACTIVE_GROUP = 22;
 /// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
 constexpr static const uint32_t EE_UNIT_FIELD_COMMAND = 23;
 
+/// `EEComplexUnit::mReloadTimer`
+constexpr static const uint32_t EE_UNIT_FIELD_RELOAD_TIMER = 24;
+
+/// `EEComplexUnit::mTargetSearchTimer`
+constexpr static const uint32_t EE_UNIT_FIELD_TARGET_SEARCH_TIMER = 25;
+
+/// `EEComplexUnit::mHealSearchTimer` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_HEAL_SEARCH_TIMER = 26;
+
+/// `EEComplexUnit::mNextTriggerTime` (an `unsigned long`)
+constexpr static const uint32_t EE_UNIT_FIELD_NEXT_TRIGGER_TIME = 27;
+
+/// `EEComplexUnit::mRottingAwayTime`
+constexpr static const uint32_t EE_UNIT_FIELD_ROTTING_AWAY_TIME = 28;
+
+/// `EEComplexUnit::mPower`
+constexpr static const uint32_t EE_UNIT_FIELD_POWER = 29;
+
+/// `EEComplexUnit::mPowerRegenTimer`
+constexpr static const uint32_t EE_UNIT_FIELD_POWER_REGEN_TIMER = 30;
+
+/// `EEComplexUnit::mCamouflageTimer` (an `unsigned long`)
+constexpr static const uint32_t EE_UNIT_FIELD_CAMOUFLAGE_TIMER = 31;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -6059,6 +6083,22 @@ struct EeUnitRecord {
   int64_t times_updated;
   /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
   int64_t command;
+  /// `EEComplexUnit::mReloadTimer` (the step's leaves read it: `step`)
+  int64_t reload_timer;
+  /// `EEComplexUnit::mTargetSearchTimer` (the step's leaves read it: `step`)
+  int64_t target_search_timer;
+  /// `EEComplexUnit::mHealSearchTimer` as float bits (the step's leaves read it: `step`)
+  uint32_t heal_search_timer;
+  /// `EEComplexUnit::mNextTriggerTime` (the step's leaves read it: `step`)
+  int64_t next_trigger_time;
+  /// `EEComplexUnit::mRottingAwayTime` (the step's leaves read it: `step`)
+  int64_t rotting_away_time;
+  /// `EEComplexUnit::mPower` (the step's leaves read it: `step`)
+  int64_t power;
+  /// `EEComplexUnit::mPowerRegenTimer` (the step's leaves read it: `step`)
+  int64_t power_regen_timer;
+  /// `EEComplexUnit::mCamouflageTimer` (the step's leaves read it: `step`)
+  int64_t camouflage_timer;
 };
 
 /// The result of a consistency check (`Store::check`).

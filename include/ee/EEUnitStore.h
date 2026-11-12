@@ -38,7 +38,16 @@ enum EEUnitStoreFieldID {
     kUnitFieldHeight = 20,      // EEComplexUnit::mHeight
     kUnitFieldTimesUpdated = 21,   // EEComplexUnit::mTimesUpdated
     kUnitFieldActiveGroup = 22, // EEComplexUnit::mActiveGroup (the record's: set or not)
-    kUnitFieldCommand = 23      // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
+    kUnitFieldCommand = 23,     // EEComplexUnit::mCommand (the record's: its mType, 0 for none)
+    // the step's timers and power (R5b.4 leaf 6; the step's leaves read them from the record: ee_units step.rs)
+    kUnitFieldReloadTimer = 24,         // EEComplexUnit::mReloadTimer
+    kUnitFieldTargetSearchTimer = 25,   // EEComplexUnit::mTargetSearchTimer
+    kUnitFieldHealSearchTimer = 26,     // EEComplexUnit::mHealSearchTimer (float bits)
+    kUnitFieldNextTriggerTime = 27,     // EEComplexUnit::mNextTriggerTime
+    kUnitFieldRottingAwayTime = 28,     // EEComplexUnit::mRottingAwayTime
+    kUnitFieldPower = 29,               // EEComplexUnit::mPower
+    kUnitFieldPowerRegenTimer = 30,     // EEComplexUnit::mPowerRegenTimer
+    kUnitFieldCamouflageTimer = 31      // EEComplexUnit::mCamouflageTimer
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
 // EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
@@ -72,6 +81,8 @@ public:
     EEUnitStoreField& operator-=(T inValue) { return *this = (T)(this->mValue - inValue); }
     EEUnitStoreField& operator++() { return *this = (T)(this->mValue + 1); }
     EEUnitStoreField& operator--() { return *this = (T)(this->mValue - 1); }
+    EEUnitStoreField& operator|=(T inValue) { return *this = (T)(this->mValue | inValue); }
+    EEUnitStoreField& operator&=(T inValue) { return *this = (T)(this->mValue & inValue); }
     T operator++(int) { T theOld = this->mValue; *this = (T)(theOld + 1); return theOld; }
     T operator--(int) { T theOld = this->mValue; *this = (T)(theOld - 1); return theOld; }
 
