@@ -1041,6 +1041,18 @@ constexpr static const uint32_t EE_SCREENS_START_TRANSFER = 6;
 /// The most messages one check shows (one per player count, colour clash, team, ready and transfer).
 constexpr static const size_t EE_SCREENS_START_MESSAGES = 24;
 
+/// [`game_type_action`]: nothing to do.
+constexpr static const uint32_t EE_SCREENS_GAME_TYPE_NONE = 0;
+
+/// [`game_type_action`]: push the load screen for a saved game.
+constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SAVED_GAME = 1;
+
+/// [`game_type_action`]: push the load screen for a scenario.
+constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SCENARIO = 2;
+
+/// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
+constexpr static const uint32_t EE_SCREENS_GAME_TYPE_RANDOM_MAP = 3;
+
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
 
@@ -6560,6 +6572,14 @@ struct EeScreensInterfaceShow {
   bool left_handed;
   long autosave_minutes;
   long autosaves;
+};
+
+/// A video mode as the settings' lists see it (`GEVideoMode` without its pixel format).
+struct EeScreensVideoMode {
+  unsigned long width;
+  unsigned long height;
+  unsigned long refresh_rate;
+  unsigned long bit_count;
 };
 
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
@@ -13923,6 +13943,15 @@ void ee_screens_lobby_start_check(unsigned long load_type,
                                   const EeScreensLobbyStartSlot *slots,
                                   EeScreensLobbyStart *out);
 
+/// The game type box's action (`EE_SCREENS_GAME_TYPE_*`) for its line and the options' load type.
+uint32_t ee_screens_lobby_game_type_action(unsigned long selection, unsigned long load_type);
+
+/// Whether the map type box's generator name (`name`, `name_len` UTF-8 bytes) differs from the options' map type.
+bool ee_screens_lobby_map_type_changed(const uint8_t *name,
+                                       size_t name_len,
+                                       const uint8_t *current,
+                                       size_t current_len);
+
 /// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
 unsigned long ee_screens_graphics_quality(const EeScreensGraphics *controls);
 
@@ -13954,6 +13983,23 @@ long ee_screens_settings_percent(float value);
 /// `ShowInterface`'s plan for the settings.
 void ee_screens_settings_interface(const EeScreensInterfaceSettings *settings,
                                    EeScreensInterfaceShow *out);
+
+/// `EEVideoModeGreater`: whether `a` sorts before `b` in the resolution list (largest first).
+bool ee_screens_video_mode_greater(const EeScreensVideoMode *a, const EeScreensVideoMode *b);
+
+/// `ShowResolutions`' line over the sorted modes (`count` of them).
+unsigned long ee_screens_resolution_line(const EeScreensVideoMode *list,
+                                         size_t count,
+                                         const EeScreensVideoMode *current,
+                                         const EeScreensVideoMode *default_);
+
+/// `ApplySettings`' mode index over the sorted modes (`count` of them).
+unsigned long ee_screens_mode_index(const EeScreensVideoMode *list,
+                                    size_t count,
+                                    const EeScreensVideoMode *settings);
+
+/// `ShowScreens`' line among the rasterizer's `count` screens (`c_ulong::MAX`: none).
+unsigned long ee_screens_screen_line(size_t count, unsigned long screen_id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);

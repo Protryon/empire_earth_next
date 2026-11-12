@@ -66,3 +66,22 @@ pub unsafe extern "C" fn ee_screens_lobby_start_check(
         &*slots.cast::<[EeScreensLobbyStartSlot; 16]>(),
     ));
 }
+
+/// The game type box's action (`EE_SCREENS_GAME_TYPE_*`) for its line and the options' load type.
+#[no_mangle]
+pub extern "C" fn ee_screens_lobby_game_type_action(selection: c_ulong, load_type: c_ulong) -> u32 {
+    lobby_options::game_type_action(selection, load_type)
+}
+
+/// Whether the map type box's generator name (`name`, `name_len` UTF-8 bytes) differs from the options' map type.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_lobby_map_type_changed(
+    name: *const u8,
+    name_len: usize,
+    current: *const u8,
+    current_len: usize,
+) -> bool {
+    let bytes =
+        |p: *const u8, n: usize| if p.is_null() || n == 0 { &[][..] } else { core::slice::from_raw_parts(p, n) };
+    lobby_options::map_type_changed(bytes(name, name_len), bytes(current, current_len))
+}
