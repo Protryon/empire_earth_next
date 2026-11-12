@@ -1257,6 +1257,178 @@ enum class EeWonReadySound {
   NotReady = 2,
 };
 
+/// The op codes. Arguments: `a`, `b` pointers, `c`, `d` integers (a message is `a` = its `ByteBuffer*` or NULL for
+/// one Rust built, `c` = its bytes, `d` = their length).
+enum class EeWonLobbyOp : uint32_t {
+  /// `mGame.get()`.
+  StGame = 1,
+  /// `mMyClient.get()`.
+  StMyClient,
+  /// `mMyClient = LobbyGetNetMyClient()`; returns it.
+  StSetMyClientFromNet,
+  /// `mGame = a`.
+  StSetGame,
+  /// `mJoinOp = new AsyncOp`.
+  StJoinOpNew,
+  /// `if (mJoinOp) mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinish,
+  /// `LobbyRunOpWithStatus(mJoinOp, GettingGameInfo, 1, 0)`, then `mJoinOp = NULL`.
+  StJoinOpRun,
+  /// `if (mJoinOp) { mJoinOp->Kill(true); mJoinOp = NULL; }`.
+  StJoinOpKill,
+  /// `mGame->GetJoinRequest()` sent with `this->SendToCaptain`.
+  StSendJoinRequest,
+  /// `mCreateGameDialog->SetGameType(c); Reset(false); return LobbyDoDialog(dialog)`.
+  StCreateDialogRun,
+  /// `aGame = mCreateGameDialog->GetGame(); aGame->SetAddress(LobbyGetMyAddress(c)); mGame = aGame`; held.
+  StTakeDialogGame,
+  /// Logout's tail: `mCreateGameDialog->Reset(true)`, `LobbyNetLogout`, `LobbyKillPings(0)`,
+  /// `LobbyShowLoginScreen`, `LobbySaveGlobalPrefs(false)`, `LobbySaveUserPrefs(false)`, the logon sound stopped.
+  StLogoutTail,
+  /// `new ClientModeratedEvent(a, c, mGame->GetName(), d >> 1, 0, d & 1, "")` broadcast.
+  StClientModerated,
+  /// `a->AddRef()`: Rust holds it (returns `a`).
+  GameHold = 39,
+  GameRelease = 40,
+  GameIsHost,
+  GameFindClient,
+  GameType,
+  GameIsInProgress,
+  GameAreAllReady,
+  GameCanReady,
+  /// `CanStartGame() && TryStartGame()`.
+  GameCanStartAndTry,
+  GamePingReplied,
+  GameIsPinging,
+  /// `a->IsSameGame(b)`.
+  GameIsSameGame,
+  GameJoinStatus,
+  GamePing,
+  /// `LobbyGame::CreateGame(a's type)` with `CopyFrom(a)`; held.
+  GameNewCopy,
+  GamePreNetCreate,
+  GamePostNetCreate,
+  GamePreNetJoin,
+  GamePostNetJoin,
+  /// `SetIsHost(true)`, `SetCaptainId(b's id)`, `b->SetCaptain(true, true)`.
+  GameBecomeHost,
+  /// `GetClients()->AddClient(b)`, `HandleHostGame(b)`.
+  GameAddHostClient,
+  /// `ClearPlayers()`, `mMyClient = NULL`, `PreNetLeaveGame()`, `LobbyNetLeaveGame(a)`, `PostNetLeaveGame()`.
+  GameLeaveNet,
+  GameRemoveClient,
+  GameHandlePlayerJoined,
+  /// `SetInProgress(c)`, `LobbyNetSetGameInProgress(c)`, `LobbyNetAdvertiseGame()`.
+  GameSetInProgressNet,
+  /// every client with a player: `SetReady(false)` and a `PlayerChangedEvent(client, 2)`.
+  GameResetReadyFlags,
+  /// `a->GetJoinReply(*b, d)`; if not NULL sent with `this->SendToClient(d, reply)`: 1 sent, 0 none, Threw.
+  GameJoinReplySend,
+  /// `a->HandleJoinReply(*b)` or Threw.
+  GameHandleJoinReply,
+  /// `a->HandleGameMessage(c, *b, d)`: 0 or Threw.
+  GameHandleGameMessage,
+  /// `LobbyMessageBox(JoinGameErrorTitle, a->GetStatusString(c))`.
+  GameShowStatus,
+  /// `LobbyPingGame(a, true)` and a `GameChangedEvent(a, 2)`.
+  GamePingAndNotify,
+  /// `LobbyQueryGameDetails(a)`, `SetShowDetails(true)`, a `GameChangedEvent(a, 2)`.
+  GameShowDetails,
+  /// `SetShowDetails(false)`, a `GameChangedEvent(a, 2)`.
+  GameHideDetails,
+  /// `LobbyDispatchEvent(new ChangeDirectConnectEvent(1, a))`.
+  GameDirectConnect,
+  /// a `GameOptionsPopup` for `a` opened as a standard popup.
+  GameShowOptions,
+  ClientHasPlayer = 80,
+  ClientPlayer,
+  ClientIsReady,
+  ClientId,
+  /// `IsCaptain(1)`.
+  ClientIsGameCaptain,
+  /// `a->IsTeammate(b)`.
+  ClientIsTeammate,
+  ClientPlayerSetReady,
+  ClientPlayerSetPing,
+  /// a new player read from `*b` set on `a`: 1, 0 when the read failed, or Threw.
+  ClientReadPlayer,
+  /// the player-joined head for `a` and its player's bytes broadcast with `this->BroadcastToGame`.
+  ClientBroadcastJoined,
+  /// `new PlayerChangedEvent(a, c)` broadcast.
+  ClientChanged,
+  /// `new PlayerTeamChangedEvent(a, c)` broadcast.
+  ClientTeamChanged,
+  /// `b->SetPos(b->pos() + c)`.
+  BufSkip = 110,
+  /// a `ReadBuffer` over the message handed to `this->HandleMessage(.., b)`.
+  HandleBytes,
+  /// `LobbyNetSendToCaptain(message)`.
+  NetSendToCaptain,
+  /// `LobbyNetBroadcastToGame(message)`.
+  NetBroadcastToGame,
+  /// `LobbyNetSendToClient(b, message)`.
+  NetSendToClient,
+  NetKickClient,
+  NetRemoveGameAdvertisement,
+  NetHostGame,
+  NetJoinGame,
+  NetAdvertiseGame,
+  /// `static_cast<JoinGameEvent*>(a)->mGame.get()`.
+  EventJoinGame,
+  /// `static_cast<GameActionEvent*>(a)->mGame.get()`.
+  EventActionGame,
+  /// `static_cast<GameActionEvent*>(a)->mAction`.
+  EventAction,
+  BroadcastLobbyEvent = 140,
+  MessageBox,
+  YesNo,
+  /// a new AsyncOp run with status (text `c`, mode `d`, 500 ms); returns whether it was killed.
+  RunWaitOp,
+  PlaySound,
+  StagingSoundEffects,
+  ShowConfirmations,
+  FirewallTestDone,
+  BehindFirewall,
+  GameScreenType,
+  /// -1 without a lobby config, else its `mAllowJoinGameWithoutPing`.
+  AllowJoinWithoutPing,
+  Exit,
+  /// `time(NULL)`.
+  Now,
+};
+
+/// The inward calls (StagingLogic's methods the lobby calls). `a`, `b` pointers, `c`, `d` integers; a message is
+/// `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonStagingCall : uint32_t {
+  /// The host (1), leave (2), logout (3) and start/ready (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  /// `HandleMessage(*a, b)`: `c` the bytes from the buffer's position, `d` their length.
+  HandleMessage,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  IAmCaptain,
+  IAmReady,
+  JoinGame,
+  HostGame,
+  Logout,
+  /// `KickClient(b, c)`.
+  KickClient,
+  HandleDisconnect,
+  /// `HandleClientLeft(b)`.
+  HandleClientLeft,
+  /// `HandleKicked(b, c)`.
+  HandleKicked,
+  ResetReadyFlags,
+  SetGameInProgress,
+  LeaveGame,
+  NotifyStagingChange,
+  NotifyPingChange,
+};
+
 /// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
 enum class EeWonTitleInstr {
   /// Not a title instruction: `false`.
@@ -1271,6 +1443,36 @@ enum class EeWonTitleInstr {
   ErrorTitleInCommunity,
   /// `"You can't nest communities!"`.
   ErrorNestCommunity,
+};
+
+/// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
+/// caught it in `HandleMessage` and did nothing more); outside every `short` status.
+enum class EeWonLobbyResult {
+  Threw = 65536,
+};
+
+/// The string pairs (title, details) of the message boxes, yes/no dialogs and status waits.
+enum class EeWonLobbyText : uint32_t {
+  GameDissolved = 0,
+  AlreadyJoined = 1,
+  NoPingReply = 2,
+  Disconnected = 3,
+  Banned = 4,
+  Kicked = 5,
+  ConnectWarning1 = 6,
+  ConnectWarning2 = 7,
+  ConnectWarning3 = 8,
+  DissolveGame = 9,
+  LeaveGame = 10,
+  VerifyingPing = 11,
+  GettingGameInfo = 12,
+};
+
+/// The lobby sounds an op plays.
+enum class EeWonLobbySound : uint32_t {
+  PlayerJoined = 0,
+  AllReady = 1,
+  AllNotReady = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -1345,6 +1547,9 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// StagingLogic's state (the original's members 0x4c..0x54).
+struct EeWonStaging;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -3090,6 +3295,14 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
+
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -9219,6 +9432,24 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               EeWonGameSummary *out,
                               EeWonUnitSink name_sink,
                               void *context);
+
+/// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `staging` came from `ee_won_staging_new` (or is NULL) and is not used again.
+void ee_won_staging_free(EeWonStaging *staging);
+
+/// One of StagingLogic's methods (`EeWonStagingCall`).
+///
+/// # Safety
+/// `staging` is live; the call's arguments as documented.
+ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
+                              EeWonStagingCall call,
+                              void *a,
+                              void *b,
+                              ptrdiff_t c,
+                              ptrdiff_t d);
 
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///

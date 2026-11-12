@@ -395,6 +395,9 @@ WON_TESTS = {
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
     # staging module
     "won_staging_test": [],
+    # StagingLogic as a whole Rust object (stagingobj.rs): the original's methods over a scripted host against the
+    # Rust object's calls out, op for op (golden: rust/crates/ee_won/src/golden_stagingobj.txt)
+    "won_stagingobj_test": [],
     # the lobby's saved settings (LobbyPersistentData's files and rules), the original's statements against ee_won's
     # persist module
     "won_persist_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
