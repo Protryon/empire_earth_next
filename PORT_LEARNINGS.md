@@ -9950,3 +9950,78 @@ Round 4's pattern (RUST_PLAN's row) applied to the in-game HUD's event units; me
   `EEMLoadOrSaveGame` to every player; only a multiplayer game sends it over the wire.
 - **Behaviour:** none intended where the original was defined. The main game form's pause posts and drops its
   `EEAUserPauseGame` reference as before; the options menu's pause still keeps it (the shared host op takes the flag).
+
+## R5a.8: the AI host's leaves in Rust: the next engine's save blocks, the AI manifest and seat choice, the name tables (ee_ai; branch rust-ai1, 2026-11-12)
+
+The first round of the AI lane (RUST_PLAN R5a.8). The owner's rules for it: the AI work happens on main, almost all
+in Lua; the Lua AI is not at parity with the C++ classic AI, so the classic stays; this lane moves only what cannot
+change how an AI plays and stays merge-friendly with main's ongoing Lua/C++ AI work. `EECPNextUnits`, `Tactics`,
+`Army` and `View` are main's (36 commits on `EECPNextUnits.cpp` in November): of them only `EECPNextUnits.cpp`'s save
+block's two functions changed here, nothing else.
+
+- **What moved** (`rust/crates/ee_ai`, 25 tests):
+  - `next_save.rs`: the "EENS" block (`EECPNextLua.cpp` `EECPNextEncodeState`/`DecodeState`): the fields' order,
+    versions 1-4, the reader's limits (256 events, `kNextMaxOrders` results, 1,000 groups, 2,048 spots per list, read
+    and dropped past them; a group id past the results read and dropped). The C++ fills an `EeAiNextSave` view of its
+    state (its own lists' pointers, valid during the call) and copies a decoded block's view back;
+  - `units_save.rs`: the "EENU" block (`EECPNextUnits.cpp` `EECPUnitsSaveState`/`LoadState`): the lists go over in
+    the C++ containers' order and come back into them (a set's insert, a map's assignment: a repeated key behaves as
+    before). The limits `EECPNextUnits.cpp` owns (`kMaxEvents`, `kMaxRemembered`, `kMaxTrades`, the event kinds) come
+    with each decode, so a change there needs no Rust change; the format's own (2^20 held and forwards, 256 hurt
+    spots, 64 marks) are Rust's;
+  - `json.rs`, `manifest.rs`: `EECPEngine.cpp`'s JSON reader (the same documents accepted, the same first error and
+    line; numbers as C `strtod` reads a whole decimal one), the entries' checks in their order and every log line;
+    `EECPAIToGameText` on `ee_plat_core::utf8`. The C++ still reads the file, answers whether a script exists (a
+    callback inside `ee_ai_manifest_read`), writes the lines and the summary (the folder hash is C++);
+  - `seat.rs`: `EECPChoiceByName` and `EECPEngineResolve` (the 32-bit hash pool). EE_AI_ENGINE's list is still split
+    in C++ (`EECPEngineOverrides`, calling the choice by name);
+  - `names.rs`: `EECPNextCodeName`, `EECPNextReasonName`, the two event-kind tables ("?" in the trace, "unknown" in the
+    script's view) and the class and tech names by data id (`EECPNextClassName`/`TechName`/`ClassByName`/`TechByName`'s
+    tables; the C++ still builds them from `EEDbRowIds` once). `kNextResourceNames` stays a C++ table.
+  - C++ deleted: the two block codecs (`EECPNextPut`, the getters, the army encode/decode), the JSON reader, the id,
+    module and text checks, the name switches and the names map (the four files: 880 lines out, 385 in, most of them the views' marshalling).
+- **The golden driver** (scratch, `build/ai1_golden`): `make_driver.py` cuts the functions out of a source tree (git
+  `78035043` or the work tree) by their markers and compiles them into one exe with fakes (the manifest's file, the
+  script files: every path without "missing", the log, `EEDbRowIds`, the unit class table) linked with `ee_rust.lib`.
+  Its cases: 60 generated next states and 80 per-unit states (every tenth past the decoder's limits), each encoded
+  (length, FNV-1a 64, the first three in hex) and 16 changed blocks of each (versions 1-3 by dropping the newer parts,
+  bad versions, cuts, a byte more, a bad magic, four flipped bytes) decoded onto another generated state and encoded
+  again; 427 manifest documents (the real `ai/ais.json`, CRLF and BOM copies, 60 hand-made entries alone and between
+  two good ones, 30 broken documents, 260 random edits of a small manifest); the choices by name, seven EE_AI_ENGINE
+  lists and a hash of 15,000 resolves for the first twelve manifests; the name tables. `golden.rs` replays the generator
+  step for step and checks every line; the same driver over the new forwarders prints the identical file (5,325 lines),
+  and 40 real blocks (the EENS and EENU blocks of boom, classic_lua and ageofai saves at 1000 and 1900 s, cut out of the
+  decompressed players chunk) decode and encode to the same bytes in both and in Rust (`real_blocks`, ignored: it needs
+  `EE_AI_BLOCKS`).
+- **Two C++ evaluation-order traps in the driver itself**: `a(g.Next()) + b(g.Next())` on two `std::string`s is a
+  call whose arguments are unsequenced; the generator's draws went into locals first. Python's `write_text` on Windows
+  writes CR LF: the driver's list of block paths ended each name with a CR and every real block "failed" to decode.
+- **Behaviour kept, and the one difference**: every value, order and log line is as before (the goldens, and the game
+  traces below). A failed decode now leaves the state as it was, where the C++ had overwritten the fields it read
+  before the failure (EENS) or cleared and refilled them (EENU); a failed decode fails the saved game's load
+  (`EEPPlayerHelper`: `kErrorFailed`) and the test-only save check decodes into a fresh state, so nothing reads that
+  state. `EECPChoiceByName` still answers classic and random before the manifest is read (the manifest's log lines
+  stay where they were).
+- **The games** (EE-SIM, Hard, 2700 s, `--ai-scripts ai`: the open tree's `Data/ai` predates classic_lua and ageofai):
+  `--engine next` (boom), `classic_lua` and `ageofai,classic`, seeds 2-3, each with the AI trace, the checksum lines and
+  saves at 1000 and 1900 s under `EE_AI_SAVE_CHECK=1`: before and after identical (every decision line, every checksum
+  line, the 40 saved blocks byte for byte; every `next.savecheck` "same", no `next.error`). Only a save and a load run
+  these codecs. The manifest is read at the first lobby or game (the engine boxes' lines come from it) and the
+  names at every next-engine step: EE-SIM covers both, but the lobby's engine boxes are only seen by a tour (the lead
+  should check one: its lines and Random's pick). The oracle (classic seats) seeds 2-3 identical.
+- **Merge-friendliness**: a new reason or event kind on main now needs its name in `names.rs` (the C++ switch is a
+  one-line forwarder: such a change conflicts there, visibly); a new field in either block needs the Rust format and
+  the C++ view both. The rest of `EECPNextUnits.cpp` is as main wrote it.
+- The Rust gate's `ee_won` test `reqops::tests::contest_through_the_abi` aborted once under full load
+  (`ptr::copy_nonoverlapping` precondition) and passed alone and on the gate's rerun: a race in that crate's tests,
+  not this lane's.
+- **The end of the round, merged with rust (001dada0)**: the shared open tree (the main checkout's
+  `build/open_data/tree`) was rebuilt by another session at 10:57-11:04, in the middle of the first full oracle run
+  (four seeds crashed reading a half-written tree; its `Data/ai` is now main's, five AIs). Everything was then run
+  before (the unmodified exe, kept) and after on the new tree: the oracle seeds 2-7 identical (against `ref` only the
+  manifest's log line differs, `1 AIs (boom)` -> `5 AIs (...)`: the tree's `Data/ai`); boom, classic_lua and
+  ageofai seeds 2-3 identical again (decisions, checksum lines, saved blocks); the five capture profiles PASS (oracle
+  494, late 499, space 501, calamity 526, missile 60 digests); `saveload --settings all --seeds 2-3 --at 1000,1900`
+  as before except `next` 2/4: seeds 2 and 3 at 1000 s part 647 and 1217 ticks after the load, and the unmodified
+  exe parts at the same ticks on this tree, so `tools/saveload_expect.txt`'s `next` lines (END) need the tree's new
+  boom looked at (not this lane's: the codecs give the same bytes); the Rust gate PASS; the test profile links 0/0.

@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
