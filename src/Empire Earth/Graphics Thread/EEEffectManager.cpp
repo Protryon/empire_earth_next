@@ -71,7 +71,6 @@
 #include "ee/EEE2DWaterRipple.h"
 #include "ee/EEE2DVortex.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
-#include "ee/EEE2DVelocityParticle.h"
 #include "ee/EEE3DIcon.h"
 #include "ee/EEE3DBlastWave.h"
 #include "ee/EEE3DNuclearExplosion.h"
@@ -79,9 +78,7 @@
 #include "ee/EEE3DHurricane.h"
 #include "ee/EEE3DDisease.h"
 #include "ee/EEE3DSmokeGenerator.h"
-#include "ee/EEE3DDestructionSmoke.h"
 #include "ee/EEE3DFarm.h"
-#include "ee/EEE3DDamageSmoke.h"
 #include "ee/EEE3DEnergyWall.h"
 #include "ee/EEE3DDamageVent.h"
 #include "ee/EEE3DParticleEmitter.h"
@@ -251,7 +248,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
             break;
         case 0x1e:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE3DDestructionSmoke(inUnit, inEffect);
+                theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect);
             else
                 theResult = 10;
             break;
@@ -278,7 +275,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
             break;
         case 0x2c:
             if (inUnit && inUnit->mComplexUnit)
-                theEffect = new EEE3DDamageSmoke(inUnit, inEffect);
+                theEffect = new EEE3DSmokeGenerator(inUnit, inEffect, 0x2c);
             else
                 theResult = 10;
             break;
@@ -586,7 +583,7 @@ long EEEffectManager::CreateLineEffect(GE3DLine& inLine, EEGraphicEffect* inEffe
     if (inEffect->mDetailLevel <= gEffectDetail) {
         switch (inEffect->mKind) {
         case kEffect2DVelocityParticle:
-            theEffect = new EEE2DVelocityParticle(inLine, inEffect);
+            theEffect = new EEE2DSmokePlume(inLine, inEffect);
             break;
         case kEffect2DParticle:
             theEffect = EEE2DParticle::Create(inLine, inEffect);
@@ -790,16 +787,16 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                     theEffect = EEE2DParticle::Create();
                     break;
                 case kEffect3DDestructionSmoke:
-                    theEffect = new EEE3DDestructionSmoke();
+                    theEffect = new EEE3DSmokeGenerator(0x1e);
                     break;
                 case kEffect2DVelocityParticle:
-                    theEffect = new EEE2DVelocityParticle();
+                    theEffect = new EEE2DSmokePlume(EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE);
                     break;
                 case kEffect3DWaterSplash:
                     theEffect = new EEE3DWaterSplash();
                     break;
                 case kEffect3DDamageSmoke:
-                    theEffect = new EEE3DDamageSmoke();
+                    theEffect = new EEE3DSmokeGenerator(0x2c);
                     break;
                 case kEffect3DSmokeGenerator:
                     theEffect = new EEE3DSmokeGenerator(0x2b);
@@ -974,9 +971,6 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     }
     return theResult;
 }
-
-// FUNCTION: EXE 0x5072a8
-// Creates an empty velocity particle for loading (EEE2DVelocityParticle's inline default ctor, emitted out of line)
 
 // FUNCTION: EXE 0x5072d0
 // Unlinks an effect from the effect list and releases it

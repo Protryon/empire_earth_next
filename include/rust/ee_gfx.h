@@ -18,6 +18,30 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// The plain smoke generator (on a unit or at a point).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_GENERATOR = 43;
+
+/// The damage smoke: puffs from a damaged unit's tag points, more often the lower its hit points.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DAMAGE_SMOKE = 44;
+
+/// The destruction smoke: lines thrown out around a destroyed unit at its set-up.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DESTRUCTION_SMOKE = 30;
+
+/// `kActionDead`.
+constexpr static const int32_t EE_GFX_EFFECT_ACTION_DEAD = 6003;
+
+/// The smoke puff.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_PLUME = 11;
+
+/// The velocity particle: a puff thrown along a line's direction, slowing down over the effect's int param 1.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE = 12;
+
+/// The icons on a circle (the original's `EEE2DCircularMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_CIRCULAR_ICONS = 16;
+
+/// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SQUARE_ICONS = 15;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -368,6 +392,159 @@ struct EeGfxEffectQuad {
 /// and an end.
 struct EeGfxSelectLines {
   EeGe2DPoint points[8][2];
+};
+
+/// `EEE3DSmokeGenerator`'s state (and the destruction smoke's radius, kind 0x1e).
+struct EeGfxEffectSmoke {
+  /// `mTime`: milliseconds alive (saved)
+  float time;
+  /// `mSinceEmit`: milliseconds since the last puff (saved)
+  float since_emit;
+  /// `mRadius` (kind 0x1e only): half the unit class's scale (saved)
+  float radius;
+};
+
+/// `EEE2DSmokePlume`'s state (kind 0xb) and the velocity particle's (kind 0xc, the original's
+/// `EEE2DVelocityParticle`).
+struct EeGfxEffectPlume {
+  /// `mAge`: 0..1 (saved)
+  float age;
+  /// `mStart`: the puff's position (saved)
+  EeGe3DPoint start;
+  /// `mRotation`: random 0..2 pi (saved)
+  float rotation;
+  /// `mBrightness`: random round param 1 by param 2, clamped to 0..1 (saved)
+  float brightness;
+  /// `mVelocity` (kind 0xc only): the line's direction (saved)
+  EeGe3DPoint velocity;
+};
+
+/// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
+struct EeGfxEffectRecord {
+  /// `mKind`
+  int32_t kind;
+  /// `mHandle` (saved)
+  uint32_t handle;
+  /// `mPlayer` (the local-only test; not saved)
+  int32_t player;
+  /// `mTileX` / `mTileY`: the effect region it is in (-1: none; saved)
+  int32_t tile_x;
+  int32_t tile_y;
+  /// `mKeepsUnit` (saved)
+  bool keeps_unit;
+  /// `mIsLocalOnly`
+  bool local_only;
+  /// `mIsSaved`
+  bool saved;
+  /// `EEEffect3D::mTransformation` (saved)
+  EeGeTransformation transformation;
+  /// `EEEffect3D::mBoundingRadius` and `EEEffect2D::mBoundingRadius` (saved)
+  float bounding_radius;
+  /// `EEEffect2D::mPosition` (saved)
+  EeGe3DPoint position;
+  /// `EEE3DSmokeGenerator`'s
+  EeGfxEffectSmoke smoke;
+  /// `EEE2DSmokePlume`'s
+  EeGfxEffectPlume plume;
+};
+
+/// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
+/// type; `context` is the file).
+struct EeGfxEffectFile {
+  void *context;
+  bool (*is_open)(void *context);
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_i32)(void *context, int32_t *value);
+  int32_t (*read_f32)(void *context, float *value);
+  int32_t (*read_bool)(void *context, bool *value);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_i32)(void *context, int32_t value);
+  int32_t (*write_f32)(void *context, float value);
+  int32_t (*write_bool)(void *context, bool value);
+};
+
+/// What `EEEffect::Load` read for the C++: the graphic effect's id (when read: the C++ resolves, references and
+/// loads it) and the unit's saved id (when its read was made: the C++ keeps it in the unit pointer for
+/// RepairPointers, even after a failed read, as the original).
+struct EeGfxEffectLoaded {
+  uint32_t graphic_effect_id;
+  bool has_graphic_effect;
+  uint32_t unit_id;
+  bool has_unit;
+};
+
+/// A 2D effect's part as saved (`EEEffect2DPart` without its graphic object and draw frame).
+struct EeGfxEffectPart {
+  EeGe3DPoint position;
+  uint32_t tag;
+  uint32_t frame;
+  float time;
+  bool done;
+};
+
+/// `EEEffect2D::mParts` for Load and Save (`context`: the effect).
+struct EeGfxEffectParts {
+  void *context;
+  /// a loaded part: the C++ gives it the graphic object, loads its media, keeps it on success; the result
+  int32_t (*push)(void *context, const EeGfxEffectPart *part);
+  uint32_t (*count)(void *context);
+  void (*get)(void *context, uint32_t index, EeGfxEffectPart *part);
+};
+
+/// What a smoke generator's tick reads (the C++ fills it from the world; the unit's fields only with a unit).
+struct EeGfxSmokeTick {
+  /// `gPhysics->GetTickSeconds()`
+  float tick_seconds;
+  /// `gPhysics->GetTickTime()`
+  float tick_time;
+  bool has_unit;
+  /// the unit's position (its physical model's location)
+  EeGe3DPoint unit_position;
+  /// the unit's command type (`GetCommandType()`; the damage smoke's: its command's `mType`, 0 without one)
+  int32_t unit_command;
+  /// the unit's hit points and its stats' maximum (the damage smoke)
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the graphic effect's `mDuration`, `mTime1`, `mTime2`, `GetParam1()`, `GetParam2()`
+  uint32_t duration;
+  uint32_t time1;
+  int32_t time2;
+  float param1;
+  float param2;
+  /// the damage smoke's tag points of kind 0 (in the unit's frame and scaled location): whether the list exists
+  /// and its size
+  bool has_tag_points;
+  uint32_t tag_point_count;
+};
+
+/// The world a smoke generator calls into (`context`: the effect).
+struct EeGfxSmokeHost {
+  void *context;
+  void (*tag_point)(void *context, uint32_t index, EeGe3DPoint *point);
+  int32_t (*place)(void *context, const EeGe3DPoint *point);
+  void (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
+};
+
+/// The destruction smoke's set-up reads: the graphic effect's `mParam2` (the speed), `GetParam1()` and
+/// `mIntParam1`.
+struct EeGfxSmokeSetUp {
+  float param1;
+  float param2;
+  int32_t int_param1;
+};
+
+/// What a puff's tick reads.
+struct EeGfxPlumeTick {
+  /// `gPhysics->GetTickSeconds()` (the puff) and `GetTickTime()` (the velocity particle)
+  float tick_seconds;
+  float tick_time;
+  /// `gWorld.mWindDirection`
+  EeGe3DPoint wind;
+  /// the graphic effect's `mDuration`, `mIntParam1`, `GetParam3()`, `mFlag1`
+  uint32_t duration;
+  int32_t int_param1;
+  float param3;
+  bool flag1;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -970,6 +1147,176 @@ void ee_gfx_pick_entry_transform(const EeGeTransformation *location,
                                  const EeGeTransformation *internal,
                                  float scale,
                                  EeGeTransformation *out);
+
+/// A new effect's record (`Init`'s values, the identity, `kind`), freed by `ee_gfx_effect_record_free`.
+EeGfxEffectRecord *ee_gfx_effect_record_new(int32_t kind);
+
+/// Frees a record (null: nothing).
+///
+/// # Safety
+/// `r` is null or from `ee_gfx_effect_record_new`, not used again.
+void ee_gfx_effect_record_free(EeGfxEffectRecord *r);
+
+/// `EEEffect::Init`'s part of the record.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_effect_init(EeGfxEffectRecord *r);
+
+/// `EEEffect3D::InitTransformation`.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_effect_init_transformation(EeGfxEffectRecord *r);
+
+/// `EEEffect2D::Clear`'s part of the record.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_effect_clear_2d(EeGfxEffectRecord *r);
+
+/// The effect region under (x, y), regions of `size` tiles (`MoveToPoint`, `MoveToTransformation`): whether it is
+/// not the record's; `out_x`/`out_y` get it.
+///
+/// # Safety
+/// `r` is a live record; the outputs are writable.
+bool ee_gfx_effect_region_changed(const EeGfxEffectRecord *r,
+                                  float x,
+                                  float y,
+                                  int32_t size,
+                                  int32_t *out_x,
+                                  int32_t *out_y);
+
+/// `EEEffect::Load`'s reads (the C++ resolves what `out` names).
+///
+/// # Safety
+/// `r` is a live record; `file` and `out` are valid.
+int32_t ee_gfx_effect_load(EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           EeGfxEffectLoaded *out);
+
+/// `EEEffect::Save`'s writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save(const EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           int32_t graphic_effect_id,
+                           uint32_t unit_id);
+
+/// `EEEffect3D::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_3d(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEEffect3D::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_3d(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEEffect2D::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` and `parts` are valid.
+int32_t ee_gfx_effect_load_2d(EeGfxEffectRecord *r,
+                              const EeGfxEffectFile *file,
+                              const EeGfxEffectParts *parts);
+
+/// `EEEffect2D::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` and `parts` are valid.
+int32_t ee_gfx_effect_save_2d(const EeGfxEffectRecord *r,
+                              const EeGfxEffectFile *file,
+                              const EeGfxEffectParts *parts);
+
+/// `EEE3DSmokeGenerator::Load`'s own reads (and the destruction smoke's radius).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_smoke(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DSmokeGenerator::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_smoke(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DSmokeGenerator::Step` (every smoke kind): 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `host` are valid.
+int32_t ee_gfx_effect_smoke_step(EeGfxEffectRecord *r,
+                                 const EeGfxSmokeTick *tick,
+                                 const EeGfxSmokeHost *host);
+
+/// `EEE3DSmokeGenerator::SetUp` (the destruction smoke's lines): 0.
+///
+/// # Safety
+/// `r` is a live record; `setup` and `host` are valid.
+int32_t ee_gfx_effect_smoke_set_up(const EeGfxEffectRecord *r,
+                                   const EeGfxSmokeSetUp *setup,
+                                   const EeGfxSmokeHost *host);
+
+/// `EEE2DSmokePlume`'s constructor at a point (its draws; `velocity`: the velocity particle's, else zero).
+///
+/// # Safety
+/// `r` is a live record; the points are valid.
+void ee_gfx_effect_plume_new(EeGfxEffectRecord *r,
+                             const EeGe3DPoint *start,
+                             float param1,
+                             float param2,
+                             const EeGe3DPoint *velocity);
+
+/// `EEE2DSmokePlume::Step` (both kinds): 7 when it ends; `moved`: the C++ sets the effect's position to the point.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `moved` are valid.
+int32_t ee_gfx_effect_plume_step(EeGfxEffectRecord *r,
+                                 const EeGfxPlumeTick *tick,
+                                 bool *moved);
+
+/// `EEE2DSmokePlume::Load`'s own reads (and the velocity particle's velocity).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_plume(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DSmokePlume::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_plume(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
+/// points into `out`; their count.
+///
+/// # Safety
+/// `out` has room for `capacity` points.
+size_t ee_gfx_effect_marching_offsets(int32_t kind,
+                                      int32_t count,
+                                      float angle,
+                                      float radius,
+                                      float half_side,
+                                      EeGe3DPoint *out,
+                                      size_t capacity);
+
+/// The square icons' bounding radius (`sqrt(2 r r)`).
+float ee_gfx_effect_square_icons_radius(float half_side);
+
+/// `EEEffect::GetRandom`.
+float ee_gfx_effect_random();
+
+/// `GetEffectRandomFloat`.
+float ee_gfx_effect_random_float(float min, float max);
+
+/// `GetEffectRandomLong`.
+int32_t ee_gfx_effect_random_long(int32_t min, int32_t max);
+
+/// The effects' random seed (TEST ONLY: the EFST capture).
+uint32_t ee_gfx_effect_random_seed();
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///

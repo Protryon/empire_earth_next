@@ -21,7 +21,7 @@ SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObjec
 class EEEffect3D : public EEEffect {
 public:
     EEEffect3D(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-        : EEEffect(inUnit, inGraphicEffect, inKind, false), mBoundingRadius(0.0f) {}
+        : EEEffect(inUnit, inGraphicEffect, inKind, false) {}
     // 0xe8e76: `: EEEffect(inKind)` (EEEffect's inline ctor expanded), the transformation. Every derived default ctor
     // calls it out of line, so it is declared out of line here; its body sits at the end of EEE3DAdditivePass.cpp's
     // range with this class's Virtual3C and ??_G (probably an inline COMDAT the first user emitted: OPEN)
@@ -49,9 +49,10 @@ public:
 
     static const UString sData;             // "EEEffect3D-Data" (0x4e8e20; provisional name)
 
-    GETransformation mTransformation;       // +0x30
-    float mBoundingRadius;                  // +0x70 (the bounding radius Virtual24 tests on screen; EEE3DBlastWave: its
-                                            // graphic effect's +0x1c)
+    // the record's (ee_gfx effect_state.rs; a new record holds the identity and 0)
+    GETransformation& mTransformation = *reinterpret_cast<GETransformation*>(&this->mRecord->transformation);   // +0x30
+    // +0x70 (the bounding radius Virtual24 tests on screen; EEE3DBlastWave: its graphic effect's +0x1c)
+    float& mBoundingRadius = this->mRecord->bounding_radius;
 };
 
 #endif
