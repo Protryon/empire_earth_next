@@ -170,8 +170,11 @@ local function request_boats(view, memory)
         B().queue(view, memory, C.dock, false, true)
         return
     end
+    -- (the count of EECPRMRequestBoats: EECPUGatherSpecialUnitsCount built with inByClass false walks no units, so
+    -- the classic counts the boats requested or being made, never the boats it has: one more boat every 30 s while
+    -- the food lacks gatherers and fewer than 8 boats stand idle; the C++ made 13-47 a game by 70 minutes)
     local um = U().state(memory)
-    if (um.waiting[boat] or 0) == 0 and #ai.units{type = boat} < wanted then
+    if (um.waiting[boat] or 0) == 0 and not U().in_production(view, boat) then
         U().request(view, memory, boat, 1)
     end
 end

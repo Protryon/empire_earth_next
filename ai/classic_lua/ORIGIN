@@ -74,7 +74,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric
                 houses, early_trainers), Update (every 3 s, up to 4 producible and affordable requests tried, one
                 started), StartBuilding (FindSite, FindBuilder: the nearest available citizen on the site's land,
-                ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
+                for the site classes and towers by its shore, ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
                 centres nearest home, the rings from the drop-off distance + 5 inward), FindCenterSite, FindGranarySite,
                 FindTowerSite (the worked centres' gold, iron and active food, the tower spacing), FindShoreSite, the
                 farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
@@ -102,7 +102,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 moves_per_cycle), AssignGatherers (food: the bushes near with a drop site, the idle farms, the game
                 near, the bushes near and far, the game far, the unfinished farms, the boats; wood: the forest; the
                 minerals from the last active centre), AssignIdleGatherers, the boats (EECPRMRequestBoats with
-                coast_fishing), the finders FindMines / FindFarm / FindResourceTarget / FindFish, RefreshResources.
+                coast_fishing; as the C++, the boats it has are not counted, only those requested or being made), the finders FindMines / FindFarm / FindResourceTarget / FindFish, RefreshResources.
                 ENGINE: the gather/return loop. DEVIATIONS: the gatherers' room is the gatherers sent (ai.resource
                 `workers`) under the mining limit, not GetResourceUsers; FindForestTarget takes the explored tree
                 nearest the town (the continent manager's forests are not readable); FindResourceTarget skips the
