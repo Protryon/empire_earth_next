@@ -147,8 +147,10 @@ function M.fill(phase, land, room, keep_left)
         return want, left
     end
     give("food", want.food + left)
-    want.wood = want.wood + left   -- (no room anywhere: the engine sets them to wood anyway)
-    return want, 0
+    -- (no room anywhere: on wood up to the phase's most, then wherever the engine sets them; the citizens are capped
+    -- at M.capacity, so this is only the town that lost a site)
+    give("wood", math.max(want.wood, M.most(phase, "wood")))
+    return want, left
 end
 
 -- the citizens the phase's fill has work for within `room`

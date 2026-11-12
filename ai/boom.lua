@@ -957,7 +957,7 @@ function M.step(view, memory)
             local room = {food = food_cap, stone = mineral_places.stone, gold = mineral_places.gold,
                           iron = mineral_places.iron}
             want = BO.fill(phase, land, room)
-            memory.useful = BO.capacity(phase, room) + 1
+            memory.useful = BO.capacity(phase, room)
         end
         release_unkept(view, order, keep)
         memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
