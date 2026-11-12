@@ -689,7 +689,9 @@ function M.step(view, memory)
     end
     memory.res_epoch = view.epoch
     -- (ECON.order) the Prehistoric bank: wood is kept while the Stone Age is saved for (the dock and the boats come first)
-    if ECON.order and phase == "pre" and (saving or view.citizens >= BO.BANK_AT) and reserve.wood < BO.WOOD_BANK then
+    -- (only while saving: banked from 26 citizens the settlements waited, the patches had no drop site, the food places
+    -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
+    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK then
         reserve.wood = BO.WOOD_BANK
         differs = differs or reserve.wood ~= view.reserve.wood
     end
@@ -959,6 +961,7 @@ function M.step(view, memory)
             local room = {food = food_cap, stone = mineral_places.stone, gold = mineral_places.gold,
                           iron = mineral_places.iron}
             want = BO.fill(phase, land, room)
+            memory.order_room = room   -- (the developed test: the mines' places)
             memory.useful = BO.capacity(phase, room)
         end
         release_unkept(view, order, keep)

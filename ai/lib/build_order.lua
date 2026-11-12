@@ -56,10 +56,10 @@ M.PHASE = {
 }
 
 M.START_MAX_MIN = 6        -- minutes: stone_start ends by then even without the boats (no water, no dock site)
-M.GROW_MAX_MIN = 20        -- minutes into the Stone Age: developed by then whatever the gatherers
+M.GROW_MAX_MIN = 12        -- minutes into the Stone Age: developed by then whatever the gatherers (the raid by ~40)
 M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for even if the raid never went out
-M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve from BANK_AT citizens (the dock 175, ten boats 500)
-M.BANK_AT = 26
+M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
+                           -- boats 500)
 
 local V = require("lib.view")
 
@@ -92,7 +92,12 @@ function M.phase(view, memory)
         end
         if p == "stone_grow" then
             local g = view.gatherers
-            if ((g.iron or 0) >= 12 and (g.gold or 0) >= 12 and (g.stone or 0) >= 6 and (g.wood or 0) >= 10)
+            -- (the targets, or the mines' places all worked: a map with one gold mine near home holds 6, never 12)
+            local room = memory.order_room or {}
+            local function met(r, n)
+                return (g[r] or 0) >= math.min(n, math.max(room[r] or n, 1))
+            end
+            if (met("iron", 12) and met("gold", 12) and met("stone", 6) and (g.wood or 0) >= 10)
                     or in_epoch >= M.GROW_MAX_MIN then
                 p = "stone_developed"
             end
