@@ -4,7 +4,11 @@
 
 use core::ffi::{c_long, c_ulong};
 
-use crate::settings::{self, EeScreensGraphics, EeScreensGraphicsSettings, EeScreensGraphicsShow, EeScreensPreset};
+use crate::settings::{
+    self, EeScreensApplied, EeScreensApplyControls, EeScreensAudioSettings, EeScreensAudioShow, EeScreensGraphics,
+    EeScreensGraphicsSettings, EeScreensGraphicsShow, EeScreensInterfaceSettings, EeScreensInterfaceShow,
+    EeScreensPreset,
+};
 
 /// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
 #[no_mangle]
@@ -55,4 +59,34 @@ pub unsafe extern "C" fn ee_screens_settings_value(table: u32, selection: c_ulon
         }
         None => false,
     }
+}
+
+/// `ApplySettings`' values from the controls; `io` holds the current settings on entry.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_settings_apply(controls: *const EeScreensApplyControls, io: *mut EeScreensApplied) {
+    settings::apply(&*controls, &mut *io);
+}
+
+/// `ShowAudio`'s plan for the settings.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_settings_audio(
+    settings: *const EeScreensAudioSettings,
+    out: *mut EeScreensAudioShow,
+) {
+    out.write(settings::audio_show(&*settings));
+}
+
+/// A factor as a slider's percent (`(long)(inValue * 100.0f)`).
+#[no_mangle]
+pub extern "C" fn ee_screens_settings_percent(value: f32) -> c_long {
+    settings::slider_percent(value)
+}
+
+/// `ShowInterface`'s plan for the settings.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_settings_interface(
+    settings: *const EeScreensInterfaceSettings,
+    out: *mut EeScreensInterfaceShow,
+) {
+    out.write(settings::interface_show(&*settings));
 }

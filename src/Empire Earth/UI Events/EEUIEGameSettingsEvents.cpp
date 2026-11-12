@@ -101,12 +101,12 @@ unsigned long EEMenuHeight();
 static UWideString sMusicFileName;          // 0x562f78 (init chain 0x1d6b94): the form's music while it is open
 static bool sInGame;                        // 0x562f8c: opened from the game (InGameOpen), not the main screen
 
-// the game view rectangle the settings reset (0x4463c0..: separate .rdata words, so named constants)
+// the game view rectangle the settings reset (0x4463c0..: separate .rdata words, so named constants; the mouse
+// sensitivity floor beside them, 0.01, is Rust's: EE_SCREENS_MINIMUM_MOUSE_SENSITIVITY)
 static const float kGameViewLeft = 0.0f;
 static const float kGameViewRight = 1600.0f;
 static const float kGameViewTop = 35.0f;
 static const float kGameViewBottom = 1085.0f;
-static const float kMinimumMouseSensitivity = 0.01f;
 // the graphics quality presets (0..4; the original's radio groups 0x4463d4, 0x4463e8 and the check boxes 82..88, 110,
 // 105) are Rust's (ee_screens settings.rs): GetGraphicsQuality, SetGraphicsQuality and ShowGraphics forward to it.
 // The check boxes in the order the presets list them (EeScreensGraphics::checks), the detail radios high to low.
@@ -781,71 +781,79 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
     theViewRectangle.SetRight(kGameViewRight);
     theViewRectangle.SetTop(kGameViewTop);
     EESetGameViewRectangle(theViewRectangle);
-    gGamePreferences.GetSettings().mShowBlood = theCheck13->GetIsChecked();
-    gGamePreferences.GetSettings().mZoomEnabled = true;
-    gGamePreferences.GetSettings().mTrilinearFilter = theCheck82->GetIsChecked();
-    if (theCheck82->GetIsChecked())
-        gTextureManager->UpdateMIPFilterMode(kMipFilterLinear);
-    else
-        gTextureManager->UpdateMIPFilterMode(kMipFilterPoint);
-    gGamePreferences.GetSettings().mUnitLighting = theCheck83->GetIsChecked();
-    if (theCheck84->GetIsChecked()) {
-        gGamePreferences.GetSettings().mMIPLevelsToDrop = 0;
-        gGamePreferences.GetSettings().mTerrainMIPLevelsToDrop = 0;
-    } else {
-        gGamePreferences.GetSettings().mMIPLevelsToDrop = 1;
-        gGamePreferences.GetSettings().mTerrainMIPLevelsToDrop = 1;
-    }
+    // the values from the controls are Rust's (ee_screens settings.rs apply); the C++ writes them and calls the
+    // engine in the original order
+    EEGameSettings& theSettings = gGamePreferences.GetSettings();
+    EeScreensApplyControls theControls;
+    theControls.show_blood = theCheck13->GetIsChecked();
+    theControls.trilinear = theCheck82->GetIsChecked();
+    theControls.unit_lighting = theCheck83->GetIsChecked();
+    theControls.full_textures = theCheck84->GetIsChecked();
     // port: the texture resolution combo box (Original, 2x, 4x); world textures loaded from now on use it
     UIComboBox* theTextureResolution = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsTextureResolutionComboBox));
-    unsigned long theTextureSelection;
-    if (theTextureResolution && theTextureResolution->GetCurrentSelection(theTextureSelection) == kErrorOK
-        && theTextureSelection < 3) {
-        gGamePreferences.GetSettings().mTextureResolution = theTextureSelection == 0 ? 0 : theTextureSelection == 1 ? 2 : 4;
-        EESetTextureResolution(gGamePreferences.GetSettings().mTextureResolution);
+    theControls.texture_selected = theTextureResolution
+        && theTextureResolution->GetCurrentSelection(theControls.texture_line) == kErrorOK;
+    theControls.shadows = theCheck86->GetIsChecked();
+    theControls.clouds = theCheck87->GetIsChecked();
+    theControls.battlefield_ambients = theCheck110->GetIsChecked();
+    theControls.weather_effects = theCheck88->GetIsChecked();
+    theControls.model[0] = theRadio75->GetIsChecked();
+    theControls.model[1] = theRadio76->GetIsChecked();
+    theControls.model[2] = theRadio77->GetIsChecked();
+    theControls.effect[0] = theRadio79->GetIsChecked();
+    theControls.effect[1] = theRadio80->GetIsChecked();
+    theControls.effect[2] = theRadio81->GetIsChecked();
+    theControls.ambient_sounds = theAmbientSounds->GetIsChecked();
+    theControls.voices = theVoiceVolume->GetCurrentRangeValue();
+    theControls.max_channels = gSoundManager->GetMaxChannels();
+    theControls.music_off = theMusicOff->GetIsChecked();
+    theControls.reverb_on = theReverbOn->GetIsChecked();
+    theControls.reverb_off = theReverbOff->GetIsChecked();
+    theControls.mouse_sensitivity = theMouseSensitivity->GetCurrentRangeValue();
+    theControls.side_scroll = theSideScrollSpeed->GetCurrentRangeValue();
+    theControls.grab_scroll = theGrabScrollSpeed->GetCurrentRangeValue();
+    theControls.right_handed = theRightHanded->GetIsChecked();
+    theControls.autosave_minutes = theAutoSaveTime->GetCurrentRangeValue();
+    theControls.autosave_count = theAutoSaveCount->GetCurrentRangeValue();
+    EeScreensApplied theApplied = {};
+    theApplied.texture_resolution = theSettings.mTextureResolution;
+    theApplied.model_detail = theSettings.mModelDetail;
+    theApplied.effect_detail = theSettings.mEffectDetail;
+    theApplied.reverb = theSettings.mReverbEnabled;
+    ee_screens_settings_apply(&theControls, &theApplied);
+    theSettings.mShowBlood = theApplied.show_blood;
+    theSettings.mZoomEnabled = true;
+    theSettings.mTrilinearFilter = theApplied.trilinear;
+    gTextureManager->UpdateMIPFilterMode(theApplied.trilinear ? kMipFilterLinear : kMipFilterPoint);
+    theSettings.mUnitLighting = theApplied.unit_lighting;
+    theSettings.mMIPLevelsToDrop = theApplied.mip_levels_to_drop;
+    theSettings.mTerrainMIPLevelsToDrop = theApplied.terrain_mip_levels_to_drop;
+    if (theApplied.set_texture_resolution) {
+        theSettings.mTextureResolution = theApplied.texture_resolution;
+        EESetTextureResolution(theSettings.mTextureResolution);
     }
-    gGamePreferences.GetSettings().mDisplayShadows = theCheck86->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayClouds = theCheck87->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayBattlefieldAmbients = theCheck110->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayWeatherEffects = theCheck88->GetIsChecked();
-    if (theRadio77->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 0;
-    else if (theRadio76->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 1;
-    else if (theRadio75->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 2;
-    if (theRadio81->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 0;
-    else if (theRadio80->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 1;
-    else if (theRadio79->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 2;
-    gGamePreferences.GetSettings().mAmbientSounds = theAmbientSounds->GetIsChecked();
-    gAmbientSoundManager.SetEnabled(theAmbientSounds->GetIsChecked());
-    gGamePreferences.GetSettings().mSoundVolume = gSoundManager->GetMasterVolume();
-    float theVoiceFactor = gGamePreferences.GetSettings().mMaxNumberOfSounds = theVoiceVolume->GetCurrentRangeValue() * 0.01f;
-    unsigned long theChannels = (unsigned long)(gSoundManager->GetMaxChannels() * theVoiceFactor);
-    if (theChannels < 8)
-        theChannels = 8;
-    gSoundManager->SetMaxChannels(theChannels);
-    gGamePreferences.GetSettings().mMusicEnabled = theMusicOff->GetIsChecked() == false;
-    if (theReverbOn->GetIsChecked())
-        gGamePreferences.GetSettings().mReverbEnabled = true;
-    else if (theReverbOff->GetIsChecked())
-        gGamePreferences.GetSettings().mReverbEnabled = false;
-    gGamePreferences.GetSettings().mMusicVolume = gConductor->GetConductor().GetVolume();
-    float theSensitivity = theMouseSensitivity->GetCurrentRangeValue() * 0.01f;
-    if (theSensitivity < kMinimumMouseSensitivity)
-        theSensitivity = kMinimumMouseSensitivity;
-    gMouse->SetSensitivity(theSensitivity);
-    gGamePreferences.GetSettings().mMouseSensitivity = theSensitivity;
-    gGamePreferences.GetSettings().mSideScrollSpeed = theSideScrollSpeed->GetCurrentRangeValue() * 0.01f;
-    gGamePreferences.GetSettings().mGrabScrollSpeed = theGrabScrollSpeed->GetCurrentRangeValue() * 0.01f;
-    bool theRight = theRightHanded->GetIsChecked();
-    UIManager::SetMouseLeftHanded(theRight == false);
-    gGamePreferences.GetSettings().mRightHandMouseOrientation = theRight;
-    gGamePreferences.GetSettings().mAutoSaveInMilliseconds = theAutoSaveTime->GetCurrentRangeValue() * 60000;
-    gGamePreferences.GetSettings().mNumberOfAutoSaves = theAutoSaveCount->GetCurrentRangeValue();
+    theSettings.mDisplayShadows = theApplied.shadows;
+    theSettings.mDisplayClouds = theApplied.clouds;
+    theSettings.mDisplayBattlefieldAmbients = theApplied.battlefield_ambients;
+    theSettings.mDisplayWeatherEffects = theApplied.weather_effects;
+    theSettings.mModelDetail = theApplied.model_detail;
+    theSettings.mEffectDetail = theApplied.effect_detail;
+    theSettings.mAmbientSounds = theApplied.ambient_sounds;
+    gAmbientSoundManager.SetEnabled(theApplied.ambient_sounds);
+    theSettings.mSoundVolume = gSoundManager->GetMasterVolume();
+    theSettings.mMaxNumberOfSounds = theApplied.max_number_of_sounds;
+    gSoundManager->SetMaxChannels(theApplied.channels);
+    theSettings.mMusicEnabled = theApplied.music_enabled;
+    theSettings.mReverbEnabled = theApplied.reverb;
+    theSettings.mMusicVolume = gConductor->GetConductor().GetVolume();
+    gMouse->SetSensitivity(theApplied.mouse_sensitivity);
+    theSettings.mMouseSensitivity = theApplied.mouse_sensitivity;
+    theSettings.mSideScrollSpeed = theApplied.side_scroll;
+    theSettings.mGrabScrollSpeed = theApplied.grab_scroll;
+    UIManager::SetMouseLeftHanded(!theApplied.right_handed);
+    theSettings.mRightHandMouseOrientation = theApplied.right_handed;
+    theSettings.mAutoSaveInMilliseconds = theApplied.autosave_ms;
+    theSettings.mNumberOfAutoSaves = theApplied.autosaves;
     (void)theWaitForVSync;   // port: the frame rate combo box decides v-sync (PortApply)
     long theResult = gGamePreferences.Save();
     return theResult;
@@ -922,20 +930,31 @@ static void ShowAudio(UIForm* inForm, EEGameSettings inSettings)
     UISlider* theSoundVolume = static_cast<UISlider*>(inForm->GetControl(kGameSettingsSoundVolumeSlider));
     UIRadioButton* theReverbOff = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsMusicQualLowRadio));
     UIRadioButton* theMusicOff = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsMusicOffRadioButton));
-    if (inSettings.mMusicVolume == EEGamePreferences::sDefaultSettings.mMusicVolume) {
+    // the plan is Rust's (ee_screens settings.rs audio_show)
+    EeScreensAudioSettings theAudio;
+    theAudio.music_volume = inSettings.mMusicVolume;
+    theAudio.default_music_volume = EEGamePreferences::sDefaultSettings.mMusicVolume;
+    theAudio.sound_volume = inSettings.mSoundVolume;
+    theAudio.default_sound_volume = EEGamePreferences::sDefaultSettings.mSoundVolume;
+    theAudio.max_number_of_sounds = inSettings.mMaxNumberOfSounds;
+    theAudio.reverb = inSettings.mReverbEnabled;
+    theAudio.music_enabled = inSettings.mMusicEnabled;
+    EeScreensAudioShow theShow;
+    ee_screens_settings_audio(&theAudio, &theShow);
+    if (theShow.set_music_volume) {
         gConductor->GetConductor().SetVolume(inSettings.mMusicVolume);
         gUIManager->SetMusicVolume(inSettings.mMusicVolume);
     }
-    theMusicVolume->SetCurrentRangeValue((long)(gConductor->GetConductor().GetVolume() * 100.0f));
-    if (inSettings.mSoundVolume == EEGamePreferences::sDefaultSettings.mSoundVolume)
+    theMusicVolume->SetCurrentRangeValue(ee_screens_settings_percent(gConductor->GetConductor().GetVolume()));
+    if (theShow.set_sound_volume)
         gSoundManager->SetMasterVolume(inSettings.mSoundVolume);
-    theSoundVolume->SetCurrentRangeValue((long)(gSoundManager->GetMasterVolume() * 100.0f));
-    theVoiceVolume->SetCurrentRangeValue((long)(inSettings.mMaxNumberOfSounds * 100.0f));
-    if (inSettings.mReverbEnabled)
+    theSoundVolume->SetCurrentRangeValue(ee_screens_settings_percent(gSoundManager->GetMasterVolume()));
+    theVoiceVolume->SetCurrentRangeValue(theShow.voices);
+    if (theShow.reverb_on)
         theReverbOn->Check();
     else
         theReverbOff->Check();
-    if (!inSettings.mMusicEnabled)
+    if (theShow.music_off)
         theMusicOff->Check();
     theAmbientSounds->SetChecked(inSettings.mAmbientSounds);
     PortShowAudio(inForm, inSettings);   // port
@@ -956,31 +975,40 @@ static void ShowInterface(UIForm* inForm, EEGameSettings inSettings)
     NEProtocol* theProtocol = NULL;
     std::vector<UWideString> theAdapters;
     UWideString theText;
-    theMouseSensitivity->SetCurrentRangeValue((long)(inSettings.mMouseSensitivity * 100.0f));
-    gMouse->SetSensitivity(inSettings.mMouseSensitivity);
-    theSideScrollSpeed->SetCurrentRangeValue((long)(inSettings.mSideScrollSpeed * 100.0f));
-    theGrabScrollSpeed->SetCurrentRangeValue((long)(inSettings.mGrabScrollSpeed * 100.0f));
+    // the plan is Rust's (ee_screens settings.rs interface_show); the adapters are listed first (a query: the
+    // original listed them after the sliders)
     NEProtocol::GetProtocol(0, theProtocol);
     unsigned long theCount = theProtocol->EnumerateNetworkAdapters(theAdapters);
-    unsigned long theAdapter = inSettings.mNetworkAdapter;
+    EeScreensInterfaceSettings theInterface;
+    theInterface.mouse_sensitivity = inSettings.mMouseSensitivity;
+    theInterface.side_scroll = inSettings.mSideScrollSpeed;
+    theInterface.grab_scroll = inSettings.mGrabScrollSpeed;
+    theInterface.network_adapter = inSettings.mNetworkAdapter;
+    theInterface.adapters = theCount;
+    theInterface.right_handed = inSettings.mRightHandMouseOrientation;
+    theInterface.autosave_ms = inSettings.mAutoSaveInMilliseconds;
+    theInterface.autosaves = inSettings.mNumberOfAutoSaves;
+    EeScreensInterfaceShow theShow;
+    ee_screens_settings_interface(&theInterface, &theShow);
+    theMouseSensitivity->SetCurrentRangeValue(theShow.mouse_sensitivity);
+    gMouse->SetSensitivity(inSettings.mMouseSensitivity);
+    theSideScrollSpeed->SetCurrentRangeValue(theShow.side_scroll);
+    theGrabScrollSpeed->SetCurrentRangeValue(theShow.grab_scroll);
     theAdapterBox->DeleteAllEntries();
     gResource->GetString(IDS_CIV_POWER_DEFAULT, theText);
     theAdapterBox->AppendLine(theText);
     for (unsigned long i = 0; i < theCount; i++)
         theAdapterBox->AppendLine(theAdapters[i]);
-    if (theAdapter > theCount)
-        theAdapter = 0;
-    theAdapterBox->SetCurrentSelection(theAdapter);
-    bool theRight = inSettings.mRightHandMouseOrientation;
-    UIManager::SetMouseLeftHanded(theRight == false);
-    if (theRight)
+    theAdapterBox->SetCurrentSelection(theShow.adapter_line);
+    UIManager::SetMouseLeftHanded(theShow.left_handed);
+    if (!theShow.left_handed)
         theRightHanded->Check();
     else
         theLeftHanded->Check();
-    theAutoSaveTime->SetCurrentRangeValue(inSettings.mAutoSaveInMilliseconds / 60000);
-    theAutoSaveCount->SetCurrentRangeValue(inSettings.mNumberOfAutoSaves);
-    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosaveFreqNumberLabel))->SetText((long)(inSettings.mAutoSaveInMilliseconds / 60000));
-    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel))->SetText(inSettings.mNumberOfAutoSaves);
+    theAutoSaveTime->SetCurrentRangeValue(theShow.autosave_minutes);
+    theAutoSaveCount->SetCurrentRangeValue(theShow.autosaves);
+    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosaveFreqNumberLabel))->SetText(theShow.autosave_minutes);
+    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel))->SetText(theShow.autosaves);
     PortShowInterface(inForm, inSettings);   // port
 }
 

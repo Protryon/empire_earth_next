@@ -855,6 +855,12 @@ constexpr static const uint32_t EE_SCREENS_TABLE_BRIGHTNESS = 5;
 
 constexpr static const uint32_t EE_SCREENS_TABLE_ZOOM_OUT = 6;
 
+/// `ApplySettings`' floor on the mouse sensitivity.
+constexpr static const float EE_SCREENS_MINIMUM_MOUSE_SENSITIVITY = 0.01;
+
+/// `ApplySettings`' floor on the sound channels.
+constexpr static const unsigned long EE_SCREENS_MINIMUM_CHANNELS = 8;
+
 /// [`EeCalamityOp::TargetView`]'s flags.
 constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
 
@@ -5776,6 +5782,125 @@ struct EeScreensGraphicsShow {
   unsigned long texture_line;
   long model;
   long effect;
+};
+
+/// The controls `ApplySettings` reads.
+struct EeScreensApplyControls {
+  /// 13: show blood.
+  bool show_blood;
+  /// 82, 83, 84: the trilinear filter, unit lighting, full-resolution textures.
+  bool trilinear;
+  bool unit_lighting;
+  bool full_textures;
+  /// 111, the port's texture resolution combo box: whether it is there with a selection, and the selection.
+  bool texture_selected;
+  unsigned long texture_line;
+  /// 86, 87, 110, 88: shadows, clouds, battlefield ambients, weather effects.
+  bool shadows;
+  bool clouds;
+  bool battlefield_ambients;
+  bool weather_effects;
+  /// The model and the effects detail radios: high, medium, low (75..77, 79..81).
+  bool model[3];
+  bool effect[3];
+  /// 66: the ambient sounds.
+  bool ambient_sounds;
+  /// 39: the voices slider (percent of the mixer's channels).
+  long voices;
+  /// The mixer's channels (`GetMaxChannels`).
+  unsigned long max_channels;
+  /// 29 music off, 27 reverb on, 28 reverb off.
+  bool music_off;
+  bool reverb_on;
+  bool reverb_off;
+  /// 56, 49, 62: the mouse sensitivity and the side and grab scroll speeds (percent).
+  long mouse_sensitivity;
+  long side_scroll;
+  long grab_scroll;
+  /// 53: the right-handed mouse.
+  bool right_handed;
+  /// 91, 94: the autosave minutes and count.
+  long autosave_minutes;
+  long autosave_count;
+};
+
+/// The settings `ApplySettings` writes, in and out: a detail level, the reverb and the texture resolution stay when
+/// no control decides them.
+struct EeScreensApplied {
+  bool show_blood;
+  bool trilinear;
+  bool unit_lighting;
+  long mip_levels_to_drop;
+  long terrain_mip_levels_to_drop;
+  /// Whether the texture resolution is set (and `EESetTextureResolution` called), and its value.
+  bool set_texture_resolution;
+  long texture_resolution;
+  bool shadows;
+  bool clouds;
+  bool battlefield_ambients;
+  bool weather_effects;
+  long model_detail;
+  long effect_detail;
+  bool ambient_sounds;
+  /// The voices factor (`mMaxNumberOfSounds`) and the channels it leaves (`SetMaxChannels`).
+  float max_number_of_sounds;
+  unsigned long channels;
+  bool music_enabled;
+  bool reverb;
+  float mouse_sensitivity;
+  float side_scroll;
+  float grab_scroll;
+  bool right_handed;
+  unsigned long autosave_ms;
+  unsigned long autosaves;
+};
+
+/// The audio tab's settings as `ShowAudio` reads them (with the defaults' volumes: a volume equal to its default is
+/// put into effect, as Restore Default does).
+struct EeScreensAudioSettings {
+  float music_volume;
+  float default_music_volume;
+  float sound_volume;
+  float default_sound_volume;
+  float max_number_of_sounds;
+  bool reverb;
+  bool music_enabled;
+};
+
+/// `ShowAudio`'s plan: whether to put the music and the sound volume into effect, the voices slider, the reverb
+/// radio to check (27 on, else 28 off) and whether to check music off (29). The music and sound sliders show the
+/// engine's volumes afterwards ([`slider_percent`]).
+struct EeScreensAudioShow {
+  bool set_music_volume;
+  bool set_sound_volume;
+  long voices;
+  bool reverb_on;
+  bool music_off;
+};
+
+/// The interface tab's settings as `ShowInterface` reads them.
+struct EeScreensInterfaceSettings {
+  float mouse_sensitivity;
+  float side_scroll;
+  float grab_scroll;
+  long network_adapter;
+  /// The adapters the protocol lists (the box holds Default, then them).
+  unsigned long adapters;
+  bool right_handed;
+  unsigned long autosave_ms;
+  unsigned long autosaves;
+};
+
+/// `ShowInterface`'s plan: the three sliders, the adapter box's line (an adapter past the list: Default), the mouse
+/// hand (`SetMouseLeftHanded`; 53 or 54 checked) and the autosave sliders' and labels' values.
+struct EeScreensInterfaceShow {
+  long mouse_sensitivity;
+  long side_scroll;
+  long grab_scroll;
+  unsigned long adapter_line;
+  bool left_handed;
+  long autosave_minutes;
+  long autosaves;
 };
 
 /// The conductor's scalar members (the C++ object's, read and written around each call).
@@ -12793,6 +12918,19 @@ unsigned long ee_screens_settings_nearest(uint32_t table, long value);
 
 /// `PortRead`: whether line `selection` of value table `table` exists (`out` then its value).
 bool ee_screens_settings_value(uint32_t table, unsigned long selection, long *out);
+
+/// `ApplySettings`' values from the controls; `io` holds the current settings on entry.
+void ee_screens_settings_apply(const EeScreensApplyControls *controls, EeScreensApplied *io);
+
+/// `ShowAudio`'s plan for the settings.
+void ee_screens_settings_audio(const EeScreensAudioSettings *settings, EeScreensAudioShow *out);
+
+/// A factor as a slider's percent (`(long)(inValue * 100.0f)`).
+long ee_screens_settings_percent(float value);
+
+/// `ShowInterface`'s plan for the settings.
+void ee_screens_settings_interface(const EeScreensInterfaceSettings *settings,
+                                   EeScreensInterfaceShow *out);
 
 /// An empty score table (the constructor).
 EeConductor *ee_conductor_create();
