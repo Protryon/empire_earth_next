@@ -346,6 +346,29 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_ERROR = 53;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_NONE_FOUND = 54;
 
+/// A slider's event: the first selected unit's sound of kind `event - EE_SCREENS_DSU_ADJUST + 1` (1, 2 its class's
+/// acknowledge sounds, 3 creation, 4 death, 5, 6 selection; 7..10 its model's first and last sounds of its two arrays).
+constexpr static const uint32_t EE_SCREENS_DSU_ADJUST = 5633;
+
+/// The last kind's event (`EE_SCREENS_DSU_ADJUST + 9`).
+constexpr static const uint32_t EE_SCREENS_DSU_ADJUST_LAST = 5642;
+
+/// The close button (`EEDSUIHideDebugSoundPanel`): the top form popped.
+constexpr static const uint32_t EE_SCREENS_DSU_HIDE = 5643;
+
+/// (kind) -> 0 without a first selected unit or its complex unit, 1 when it has no sound of the kind, 2 when it has
+/// one (kept for `EE_SCREENS_GAME_DSU_VOLUME`).
+constexpr static const uint32_t EE_SCREENS_GAME_DSU_SOUND = 698;
+
+/// -> 1 when the event's entity is a slider.
+constexpr static const uint32_t EE_SCREENS_OP_DSU_SLIDER = 699;
+
+/// (volume bits) the kept sound's `SetVolume`.
+constexpr static const uint32_t EE_SCREENS_GAME_DSU_VOLUME = 700;
+
+/// Put (control id): the debug sound form's control of that id, when it is a label, `SetText`.
+constexpr static const uint32_t EE_SCREENS_TEXT_DSU_LABEL = 130;
+
 /// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
 constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
 
@@ -2117,6 +2140,9 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// The debug sound panel's event code for a control event id, 0 for another form's.
+uint32_t ee_screens_debug_sound_event_for(unsigned long id);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,

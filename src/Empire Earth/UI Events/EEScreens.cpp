@@ -139,6 +139,7 @@
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
 #include "ee/EESoundObject.h"
+#include "ee/EEGraphicObject.h"
 #include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
 #include "lle/GETextAlignment.h"
@@ -1107,6 +1108,45 @@ static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint
     return 0;
 }
 
+// ---- the debug sound panel's (debug_sound.rs): the first selected unit's sound of a kind
+static EESoundObject* sDebugSound;   // EE_SCREENS_GAME_DSU_SOUND's, for EE_SCREENS_GAME_DSU_VOLUME
+
+static uint32_t EEScreensDebugSoundCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                        uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_DSU_SOUND: {
+        EEComplexUnit* theUnit = NULL;
+        sDebugSound = NULL;
+        if (!EEGetFirstSelectedUnit(theUnit) || theUnit->mComplexUnit == NULL)
+            return 0;
+        EEUnitClass* theClass = theUnit->mComplexUnit->mUnitClass;
+        EEModel* theModel = theClass->mModel;
+        switch (inA) {
+        case 1: sDebugSound = theClass->mAcknowledgeSounds[0]; break;
+        case 2: sDebugSound = theClass->mAcknowledgeSounds[1]; break;
+        case 3: sDebugSound = theClass->mCreationSound; break;
+        case 4: sDebugSound = theClass->mDeathSound; break;
+        case 5: sDebugSound = theClass->mSelectionSounds[0]; break;
+        case 6: sDebugSound = theClass->mSelectionSounds[1]; break;
+        case 7: sDebugSound = theModel->mSounds1[0]; break;
+        case 8: sDebugSound = theModel->mSounds2[0]; break;
+        case 9: sDebugSound = theModel->mSounds1[13]; break;
+        case 10: sDebugSound = theModel->mSounds2[13]; break;
+        }
+        return sDebugSound ? 2 : 1;
+    }
+    case EE_SCREENS_OP_DSU_SLIDER:
+        return dynamic_cast<UISlider*>(inEntity) != NULL;
+    case EE_SCREENS_GAME_DSU_VOLUME:
+        sDebugSound->SetVolume(Float(inA));
+        break;
+    default:
+        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
 // the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
 extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
                                        uint32_t inC, uint32_t inD)
@@ -1957,7 +1997,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensCivBuilderCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
+        return EEScreensDebugSoundCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2544,6 +2584,11 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         theButton->SetText(theText, theButton->GetGEText()->GetFont());
         break;
     }
+    // the debug sound panel's (debug_sound.rs)
+    case EE_SCREENS_TEXT_DSU_LABEL:
+        if (UITextLabel* theLabel = dynamic_cast<UITextLabel*>(gUIManager->GetFormByID(kFormDebugSound)->GetControlById(inArg)))
+            theLabel->SetText(theText);
+        break;
     }
     return 0;
 }

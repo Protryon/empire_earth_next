@@ -134,7 +134,6 @@
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetStatsEvents.h"
-#include "ee/EEDSUIEvents.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBitmapBackground.h"
 #include "ee/EEUIFMGUnitHack.h"
@@ -417,46 +416,11 @@ UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID)
 // (EEUIECancel's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6724eb
-// Creates the debug sound form's event for a control id; NULL for other ids
+// Creates the debug sound form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
+// debug_sound.rs)
 UIEvent* EECreateDebugSoundEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventDSAdjustCommandSoundOne:
-        theEvent = new EEDSUIAdjustCommandSoundOne;
-        break;
-    case kControlEventDSAdjustCommandSoundTwo:
-        theEvent = new EEDSUIAdjustCommandSoundTwo;
-        break;
-    case kControlEventDSAdjustCreatedSound:
-        theEvent = new EEDSUIAdjustCreatedSound;
-        break;
-    case kControlEventDSAdjustDyingSound:
-        theEvent = new EEDSUIAdjustDyingSound;
-        break;
-    case kControlEventDSAdjustSelectedSoundOne:
-        theEvent = new EEDSUIAdjustSelectedSoundOne;
-        break;
-    case kControlEventDSAdjustSelectedSoundTwo:
-        theEvent = new EEDSUIAdjustSelectedSoundTwo;
-        break;
-    case kControlEventDSAdjustAttackSoundOne:
-        theEvent = new EEDSUIAdjustAttackSoundOne;
-        break;
-    case kControlEventDSAdjustAttackSoundTwo:
-        theEvent = new EEDSUIAdjustAttackSoundTwo;
-        break;
-    case kControlEventDSAdjustWalkSoundOne:
-        theEvent = new EEDSUIAdjustWalkSoundOne;
-        break;
-    case kControlEventDSAdjustWalkSoundTwo:
-        theEvent = new EEDSUIAdjustWalkSoundTwo;
-        break;
-    case kControlEventDSHideDebugSoundPanel:
-        theEvent = new EEDSUIHideDebugSoundPanel;
-        break;
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_debug_sound_event_for(inID));
 }
 
 // FUNCTION: EXE 0x6726b3

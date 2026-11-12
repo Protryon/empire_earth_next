@@ -466,7 +466,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 23ceca 23d7c0 Empire Earth/Units/EECloakingUtilities.cpp
 23d7c0 23dd54 RTS Engine/Units/RTSUnit.cpp
 23dd54 2544e9 Empire Earth/User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp
-2544e9 2547e0 Empire Earth/UI Events/EEDSUIEvents.cpp
 2547e0 254911 Empire Earth/User Interface Thread/EEUIBColor.cpp
 254911 255c2a Empire Earth/User Interface Thread/EEUIBGenericBackground.cpp
 255c2a 25619b Empire Earth/User Interface Thread/EEUIBSavedGroup.cpp
