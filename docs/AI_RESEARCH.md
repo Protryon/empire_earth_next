@@ -3974,6 +3974,40 @@ Open: the O3 to O8 slowdown; gold and iron 12-18 held through Stone; the citizen
 earlier second one); the losses against the improved classic (boom-defence's o4b: in 12 of 14 the Stone forage ran out
 before Copper was paid; O8's food reach did not yet move it).
 
+**Later rounds (2026-11-12), to the playtest entry `boom_order`.** The order went to the owner's playtest as its own AI,
+`boom_order` ("Boom (owner order)", `ai/boom_order.lua` through `boom.configure`; the default `boom` keeps the order
+off). What changed on the way, each benched on 32 seeds against the improved classic and Age of AI:
+
+- **The settlements touch from the start** (the owner's rule; lib.place's builders now 3 from within 20 tiles, which
+  brought its pace up to the C++ verb's); the Prehistoric food bank at the advance (240 food) is off: it put the
+  Stone Age 2 minutes later.
+- **The Stone Age's town centres wait on food, then on the save.** A TEST ONLY spending trace (`EE_AI_EXP=spending`
+  in `EEComputerPlayer::Pay`; game samples identical with it) shows Stone's food against Age of AI: 185 a minute in,
+  89 on citizens (2.2 a minute), 20 on soldiers, 23 on the epoch, 1 on the techs (the techs cost nothing that matters).
+  `stone_developed` now latches on the owner's targets only (12+ gold and iron, 6 stone, 10+ wood, 10 boats; 30 minutes
+  as a safety); the Stone phases train to 76 citizens. Neither more town centres (C2) nor more mines (C7) moved gold
+  and iron: the citizens, and behind them the food, are the limit.
+- **The boats.** The owner's own pace is one dock at once and a boat every 30 s (10 by +7 minutes). A second dock
+  (D1) and a larger wood bank (Wx) did not help. The late docks had wood but no dock site: the dock finder knew 9-18
+  fish within 30 tiles and no shore tile in sight for them (a building goes only on seen tiles). The shore scout
+  (`BO.OPT.shore_scout`, on in boom_order: a wood gatherer walks a ring 16 tiles round home while the Stone Age is
+  saved for) brought "10 boats by +7" misses from 9 to 5 of 32 against Age of AI and Bronze from 26 to 29 games, the
+  improved classic unchanged.
+- **The Bronze save's iron.** boom-defence found the save unpaid 44-60 minutes on iron alone. The further iron mines
+  stood claimed but unexplored for 30 minutes (gatherers go only to seen sites): lib.place now sends a walker to a
+  claimed site nobody has seen (on in the order). On seed 17 that took the Copper Age's iron from 6 to 18 gatherers
+  (Bronze at 63.1). `ECON.iron_push` (claim iron out to FAR_REACH and move food to iron while the save lacks iron)
+  adds nothing on top of it and stays off; `ECON.iron_guard` stays off. boom-defence's `iron_lean` 50 (half the guard's
+  iron infantry share to ranged during the Bronze save; 64 seeds: the same defeats, Bronze 35 games against 31) is on
+  in boom_order.
+- **boom_order against the improved classic is level with the default boom** (11 defeats each on main e8067a9's exe);
+  against Age of AI 16-5-11 (boom's default, Gbase2: 16-7-8). P1 (boom_order with iron_push, boom-defence's exe):
+  Stone 20.0, Copper 46.5, Bronze 70.8 (28/32), Dark 86.1 (22) against Age of AI, the Bronze save unpaid 27.6 minutes
+  a game.
+
+Still open: the owner's citizen growth (3.4 a minute against 1.6-2.1), gold and iron income (about half the
+requirement), the Prehistoric's exact counts (one over or one short on the mines in most games).
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
