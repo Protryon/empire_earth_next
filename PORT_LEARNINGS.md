@@ -7631,3 +7631,46 @@ concerns. All of it is save and load code: the plain oracle stays identical.
 - **Left**: the unit scripts' hidden choice (three saves above); the AI-only divergences (plains 2048 s, islands
   2251 s, highlands 1973 s, mediterranean 2394 s) and space seed 3 1900 s at 271 ticks (`rng, oos`) were not hunted
   this round.
+
+## R5b.4, tenth round: the stepped units' order, the step's timers in the store, the first step leaves in Rust (ee_units order.rs, step.rs; branch rust-r5b4-core10, 2026-11-11)
+
+- **The fixture's orders after a long scout.** The lead's run (orders_b6.log) failed `repair` with
+  `order-refused ... no-message` right after a gather that scouted 14 s: the click on the building gave no message.
+  A click with no message within 10 s is now retried once (EETestFixtureOrders.cpp `RetryPlan`): the camera centred on
+  the target's tile, the view scanned and the plan chosen again, the group selected again, the button found again
+  (note "retry", then "retried" through the verdict; "retry-no-pick" when the new view has no target). The hook stays
+  armed, so a late message still counts. The driver's step timeout is 60 s (the retry adds about 20 s); the stand-in's
+  first repair takes the retry path and the self test checks its note. TEST ONLY; only a harness session runs it.
+- **The stepped units as a Rust list** (`order.rs`): `EEWorld::mUpdateUnits`' ids in its order, following every change
+  where it is made (UpdateActiveUnits' appends and in-place erases, RebuildActiveUnits' and Clear's clears and
+  appends); a load's reorder (EEPWorldHelper's `RestoreUnitOrder`, an after-load fixup) is followed by a copy of the
+  whole deque after the fixups run (EEPhysics::Tick), so the saves lane's file is untouched. USCK compares the deque
+  with the list in order at every check. The deque stays what the tick walks.
+- **Stepped units out of the store.** A killed unit leaves its player's list (and the store) before it leaves the
+  stepped list: USCK counts the stepped ids with no record (EE-UNIT-ORDER on stderr, the most so far): 3 or 4 a game
+  in the oracle's seeds. A step leaf over the store must handle a unit with no record: the C++ hands the member's
+  value too, the record's is used when there is one, and a record differing from the member is counted (the C++
+  exits 3 at the tick's USTM record if any did).
+- **Eight more holders**: `mReloadTimer`, `mTargetSearchTimer`, `mHealSearchTimer` (float bits), `mNextTriggerTime`,
+  `mRottingAwayTime`, `mPower`, `mPowerRegenTimer`, `mCamouflageTimer` (the holder gained `|=` and `&=` for the
+  camouflage bit). The compiler found the writers: the save code (reads through `EEUnitStoreRead`, writes `.Get()`),
+  the out-of-sync dump's `fprintf` (a holder through varargs), and the scenario effects' attribute change, which
+  wrote three of them through a `long*` (now an index and the holders' assignments). The save's `memcpy` of the power
+  fraction into `mPower` bypasses the holder, as the hit points' did: the load runs before the insert.
+- **The first step leaves in Rust** (`step.rs`, over the store): `UpdateReloadTimer`, `UpdateTargetSearchTimer` (one
+  countdown), `UpdateHealSearchTimer` (the same `f32` division then subtraction) and `RegeneratePower` (the stats, the
+  cinematic flag, the rules' interval and the tick handed in). Each returns what the C++ writes through the holders,
+  so the holder stays the one writer. Golden first: USTM (one record per physics tick: the calls, the FNV-1a of each
+  call's kind, unit, inputs and outputs) was recorded from the C++ bodies (oracle six seeds, late six, space 2-3: the
+  rest of that run was stopped for time); with the Rust bodies, while the capture runs, the original's statements
+  recompute each call from the same values and EE-SIM exits 3 on a difference, so a rebaseline does not need the C++
+  bodies back. On the merge with rust the Rust build equals every C++ USTM line except late 2, 6 and 7, exactly the
+  fishing-boat rebaseline's games (every other tag of those seeds equal to the re-recorded goldens); those, space 4-7
+  and calamity are the merged Rust build's lines.
+- **Not in this round:** the rotting countdown (17 inline copies in the classes' `Update`s: one helper each, next),
+  the camouflage arithmetic (its mini map calls), `mNextTriggerTime`'s reader (`AIStep`, next round).
+- **A trap of this machine:** Python's `write_text` on Windows writes CR LF: four LF sources became CR LF (the build
+  did not mind; the diff did). Write sources as bytes.
+- **A trap of the scratch scripts:** killing a capture run while EE-SIM stages its data leaves a slot that the next
+  run of the same NAME takes as staged ("db table is missing"): delete the run's `build/sim/stage/capture-NAME-*`
+  slots after a kill.

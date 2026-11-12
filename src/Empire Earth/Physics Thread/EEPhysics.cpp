@@ -766,6 +766,7 @@ void EEPhysics::Tick()
         theFixups.swap(sAfterLoad);
         for (size_t i = 0; i < theFixups.size(); i++)
             theFixups[i]();
+        EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
     }
     if (!sAfterLoadLast.empty()) {   // port: then those that wait for the others (EEAfterLoadLast)
         std::vector<std::function<void()> > theFixups;
@@ -1302,6 +1303,7 @@ unsigned long EEPhysics::UpdateUnits()
         gWorld.mUpdateUnits[j]->Step();
     }
     gPhysicsSteppingUnit = NULL;
+    EEUnitStepCommit();   // TEST ONLY: the step leaves' record (USTM, ee/EEUnitStore.h)
     return theCount;
 }
 

@@ -643,8 +643,8 @@ def order_step(g, form, name, timeout=None):
     through the real input path, every unit judged by the original's rule after the message executed) -> the step's
     evidence (skipped: the refusal when the start does not give the case); raises on a bad unit, no message or no
     verdict."""
-    if timeout is None:   # gather may first walk to a resource out of view (up to 60 s, "scouting")
-        timeout = 120 if name == 'gather' else 40
+    if timeout is None:   # gather may first walk to a resource out of view (up to 60 s, "scouting"); a click with no
+        timeout = 120 if name == 'gather' else 60   # message is retried once from a fresh view (note "retry", ~20 s)
     seq = g.command(f'order {form} {ORDER_KINDS[name]}')
     end = time.monotonic() + timeout
     while g.verdict(seq) not in ('order-done', 'order-refused', 'order-busy', 'rejected') and time.monotonic() < end:
