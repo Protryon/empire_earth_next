@@ -56,6 +56,8 @@ start's placed effects and sounds), CONT (every contagion helper update: the spr
 distances, the new, applied and removed units, the functors' damage) and TNWK (the tech tree's walks and tests:
 Unlock, ResearchAll, ResearchKind, ObsoleteOutdatedNodes, MakeObsolete, SetObsolete, NeedsUnitMedia, GetBuildTime,
 SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before those moved (R5b.2, round 3).
+GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
+depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
 bytes it came from, the bytes it exports again, its members as the import left them), NMSW the same for a sweep of
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE

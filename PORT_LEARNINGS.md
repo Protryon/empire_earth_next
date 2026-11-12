@@ -6794,6 +6794,12 @@ nodes and every world step.
 - **Only the calamity profile exercises the starts and the contagion** (no oracle game casts); the walks run in
   every profile. Nothing here draws: no change is tour-only, but the start's sounds and effects are world calls the
   headless EE-SIM makes without a renderer (the effect manager's sizes are in CALT).
+- **A capture record that was not deterministic.** The full run after the port gave TNWK digests unequal to the
+  golden in five oracle seeds and one late seed, and two runs of one build differed: `NeedsUnitMedia` is also asked
+  on the media loader's thread, so its records fell between the game thread's at timing's whim, and its walk used
+  the game thread's step stack. Its records and `GetBuildTime`'s are TNMT now, the step stacks are per thread,
+  and TNWK and TNMT were recorded again from the unmodified C++ (6630937e with the capture change, in a worktree of
+  its own) and compared with the port's. TNMT's order, like TCST's, can move under load.
 - **Found on the way.** A script that cut the classes' bodies by regex took an empty `Stop` (`{` `}`) through the next
   function (`Initialize`): the link's four unresolved symbols showed it. The four classes whose Start is trivial
   (meteor storm, conscription, special attack and location) keep their empty C++ `Stop`; their `Start` is Rust.
