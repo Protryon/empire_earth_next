@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <memory>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -54,6 +55,7 @@
 #include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
+#include "rust/ee_ai.h"   // ee_ai_*: the name tables and the state block's format (ee_ai names.rs, next_save.rs)
 #include "platform/PlatSim.h"
 
 static const char* const kNextResourceNames[kNextResources] = {"food", "wood", "stone", "gold", "iron"};
@@ -881,56 +883,19 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 //     reason, count each); the Lua memory bytes (EECPLuaState::SaveMemory; length 0: no Lua state)
 // Not saved (rebuilt): the Lua state itself (the modules run again from scratch), the view, the class name tables.
 
-static void EECPNextPut(std::string& ioBytes, long inValue)
+// The block's format is Rust's (ee_ai next_save.rs: the fields' order, the versions, the reader's limits); the C++
+// hands the state's fields over as a view (EeAiNextSave) and takes a decoded block's back.
+
+static EeAiBytes EECPNextBytes(const std::string& inText)
 {
-    uint32_t v = (uint32_t)(int32_t)inValue;
-    for (int i = 0; i < 4; i++)
-        ioBytes += (char)((v >> (8 * i)) & 0xff);
+    EeAiBytes theBytes = {(const uint8_t*)inText.data(), inText.size()};
+    return theBytes;
 }
 
-static void EECPNextPutString(std::string& ioBytes, const std::string& inText)
+static std::string EECPNextText(const EeAiBytes& inBytes)
 {
-    EECPNextPut(ioBytes, (long)inText.size());
-    ioBytes += inText;
+    return inBytes.len > 0 ? std::string((const char*)inBytes.data, inBytes.len) : std::string();
 }
-
-struct EECPNextGetter {
-    const std::string& mBytes;
-    size_t mOffset;
-    bool mOK;
-    explicit EECPNextGetter(const std::string& inBytes) : mBytes(inBytes), mOffset(0), mOK(true) {}
-    long Get()
-    {
-        if (!this->mOK || this->mOffset + 4 > this->mBytes.size()) {
-            this->mOK = false;
-            return 0;
-        }
-        uint32_t v = 0;
-        for (int i = 0; i < 4; i++)
-            v |= (uint32_t)(unsigned char)this->mBytes[this->mOffset + i] << (8 * i);
-        this->mOffset += 4;
-        return (long)(int32_t)v;
-    }
-    std::string GetString()
-    {
-        long n = this->Get();
-        if (!this->mOK || n < 0 || this->mOffset + (size_t)n > this->mBytes.size()) {
-            this->mOK = false;
-            return std::string();
-        }
-        std::string theText = this->mBytes.substr(this->mOffset, (size_t)n);
-        this->mOffset += (size_t)n;
-        return theText;
-    }
-    bool GetByte()
-    {
-        if (!this->mOK || this->mOffset >= this->mBytes.size()) {
-            this->mOK = false;
-            return false;
-        }
-        return this->mBytes[this->mOffset++] != 0;
-    }
-};
 
 // the memory bytes of a state: the restore bytes when it was loaded and has not stepped since, else its Lua memory
 // ("" when there is none)
@@ -952,236 +917,220 @@ static bool EECPNextMemoryBytes(EEComputerPlayer* inPlayer, EECPNextState* s, st
 // version 2 (S4): the army after the Lua memory: the next group id; the groups (count, then id, task, state, target,
 // x, y, radius, created, state time, way x, y, time, started, lost, the units (count, then id and aim each), the
 // skips (count, then each)); the gather spots and the towers (count, then player, x, y, time, unit each); per player
-// id 0..63: citizens seen, army x, y; the last step's results' group ids (count, then each)
-static void EECPNextPutSpots(std::string& ioBytes, const std::vector<EECPNextSpot>& inSpots)
+// id 0..63: citizens seen, army x, y; the last step's results' group ids (count, then each). Version 3: the gather
+// safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan). Version 4 (save 0.274):
+// the walkers sent to see a site (Â§8.36), as the spots: a load without them sent a new walker at its first step
+// where the running game's walker still stood there.
+static void EECPNextSpotsOut(const std::vector<EECPNextSpot>& inSpots, std::vector<EeAiNextSpot>& outSpots)
 {
-    EECPNextPut(ioBytes, (long)inSpots.size());
-    for (unsigned long k = 0; k < inSpots.size(); k++) {
-        EECPNextPut(ioBytes, inSpots[k].mPlayer);
-        EECPNextPut(ioBytes, inSpots[k].mX);
-        EECPNextPut(ioBytes, inSpots[k].mY);
-        EECPNextPut(ioBytes, inSpots[k].mTime);
-        EECPNextPut(ioBytes, inSpots[k].mUnit);
-    }
-}
-
-static void EECPNextEncodeArmy(const EECPNextState* s, std::string& outBytes)
-{
-    EECPNextPut(outBytes, s->mNextGroup);
-    EECPNextPut(outBytes, (long)s->mGroups.size());
-    for (unsigned long g = 0; g < s->mGroups.size(); g++) {
-        const EECPNextGroup& theGroup = s->mGroups[g];
-        const long theFields[] = {theGroup.mID, theGroup.mTask, theGroup.mState, theGroup.mTarget, theGroup.mX, theGroup.mY,
-            theGroup.mRadius, theGroup.mCreated, theGroup.mStateTime, theGroup.mWayX, theGroup.mWayY, theGroup.mWayTime,
-            theGroup.mStarted, theGroup.mLost};
-        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-            EECPNextPut(outBytes, theFields[f]);
-        EECPNextPut(outBytes, (long)theGroup.mUnits.size());
-        for (unsigned long k = 0; k < theGroup.mUnits.size(); k++) {
-            EECPNextPut(outBytes, theGroup.mUnits[k]);
-            EECPNextPut(outBytes, theGroup.mAims[k]);
-        }
-        EECPNextPut(outBytes, (long)theGroup.mSkips.size());
-        for (unsigned long k = 0; k < theGroup.mSkips.size(); k++)
-            EECPNextPut(outBytes, theGroup.mSkips[k]);
-    }
-    EECPNextPutSpots(outBytes, s->mSpots);
-    EECPNextPutSpots(outBytes, s->mTowers);
-    for (long p = 0; p < 64; p++) {
-        EECPNextPut(outBytes, s->mSeenCitizens[p]);
-        EECPNextPut(outBytes, s->mArmyX[p]);
-        EECPNextPut(outBytes, s->mArmyY[p]);
-    }
-    EECPNextPut(outBytes, (long)s->mResults.size());
-    for (unsigned long k = 0; k < s->mResults.size(); k++)
-        EECPNextPut(outBytes, s->mResults[k].mGroup);
-}
-
-static void EECPNextGetSpots(EECPNextGetter& g, std::vector<EECPNextSpot>& outSpots)
-{
-    long theCount = g.Get();
     outSpots.clear();
-    for (long k = 0; g.mOK && k < theCount; k++) {
-        EECPNextSpot theSpot;
-        theSpot.mPlayer = g.Get();
-        theSpot.mX = g.Get();
-        theSpot.mY = g.Get();
-        theSpot.mTime = g.Get();
-        theSpot.mUnit = g.Get();
-        if (k < 64 * 32)
-            outSpots.push_back(theSpot);
+    for (unsigned long k = 0; k < inSpots.size(); k++) {
+        const EECPNextSpot& s = inSpots[k];
+        EeAiNextSpot theSpot = {(int32_t)s.mPlayer, (int32_t)s.mX, (int32_t)s.mY, (int32_t)s.mTime, (int32_t)s.mUnit};
+        outSpots.push_back(theSpot);
     }
 }
 
-static void EECPNextDecodeArmy(EECPNextState* s, EECPNextGetter& g)
+static void EECPNextSpotsIn(const EeAiNextSpot* inSpots, size_t inCount, std::vector<EECPNextSpot>& outSpots)
 {
-    s->mNextGroup = g.Get();
-    long theGroups = g.Get();
-    s->mGroups.clear();
-    for (long n = 0; g.mOK && n < theGroups; n++) {
-        EECPNextGroup theGroup;
-        long* const theFields[] = {&theGroup.mID, &theGroup.mTask, &theGroup.mState, &theGroup.mTarget, &theGroup.mX,
-            &theGroup.mY, &theGroup.mRadius, &theGroup.mCreated, &theGroup.mStateTime, &theGroup.mWayX, &theGroup.mWayY,
-            &theGroup.mWayTime, &theGroup.mStarted, &theGroup.mLost};
-        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
-            *theFields[f] = g.Get();
-        long theUnits = g.Get();
-        for (long k = 0; g.mOK && k < theUnits; k++) {
-            theGroup.mUnits.push_back(g.Get());
-            theGroup.mAims.push_back(g.Get());
-        }
-        long theSkips = g.Get();
-        for (long k = 0; g.mOK && k < theSkips; k++)
-            theGroup.mSkips.push_back(g.Get());
-        if (n < 1000)
-            s->mGroups.push_back(theGroup);
-    }
-    EECPNextGetSpots(g, s->mSpots);
-    EECPNextGetSpots(g, s->mTowers);
-    for (long p = 0; p < 64; p++) {
-        s->mSeenCitizens[p] = g.Get();
-        s->mArmyX[p] = g.Get();
-        s->mArmyY[p] = g.Get();
-    }
-    long theResults = g.Get();
-    for (long k = 0; g.mOK && k < theResults; k++) {
-        long theGroup = g.Get();
-        if ((unsigned long)k < s->mResults.size())
-            s->mResults[k].mGroup = theGroup;
+    outSpots.clear();
+    for (size_t k = 0; k < inCount; k++) {
+        EECPNextSpot theSpot;
+        theSpot.mPlayer = inSpots[k].player;
+        theSpot.mX = inSpots[k].x;
+        theSpot.mY = inSpots[k].y;
+        theSpot.mTime = inSpots[k].time;
+        theSpot.mUnit = inSpots[k].unit;
+        outSpots.push_back(theSpot);
     }
 }
 
 static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMemory, std::string& outBytes)
 {
-    outBytes.clear();
-    outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 4);
-    EECPNextPut(outBytes, s->mClaimRange);
+    std::unique_ptr<EeAiNextSave> v(new EeAiNextSave());   // (value-initialized: every field 0)
+    v->claim_range = (int32_t)s->mClaimRange;
     for (long i = 0; i < kNextResources; i++)
-        EECPNextPut(outBytes, s->mReserve[i]);
-    EECPNextPut(outBytes, s->mFoodPrefer);
-    EECPNextPut(outBytes, s->mFoodLand);
-    EECPNextPut(outBytes, s->mEpoch);
-    EECPNextPut(outBytes, (long)s->mEpochStart);
-    EECPNextPut(outBytes, (long)s->mNextRepairTime);
+        v->reserve[i] = (int32_t)s->mReserve[i];
+    v->food_prefer = (int32_t)s->mFoodPrefer;
+    v->food_land = (int32_t)s->mFoodLand;
+    v->epoch = (int32_t)s->mEpoch;
+    v->epoch_start = (uint32_t)s->mEpochStart;
+    v->next_repair_time = (uint32_t)s->mNextRepairTime;
     for (long i = 0; i < kNextResources; i++)
-        EECPNextPut(outBytes, s->mIncomeTotal[i]);
+        v->income_total[i] = (int32_t)s->mIncomeTotal[i];
     for (long k = 0; k < 60; k++)
         for (long i = 0; i < kNextResources; i++)
-            EECPNextPut(outBytes, s->mIncomeRing[k][i]);
-    EECPNextPut(outBytes, s->mIncomeSteps);
+            v->income_ring[k * kNextResources + i] = (int32_t)s->mIncomeRing[k][i];
+    v->income_steps = (int32_t)s->mIncomeSteps;
     for (long p = 0; p < 64; p++) {
-        EECPNextPut(outBytes, s->mSeenArmy[p]);
-        EECPNextPut(outBytes, s->mSeenStrength[p]);
-        EECPNextPut(outBytes, (long)s->mLastSeen[p]);
-        EECPNextPut(outBytes, s->mSeenTownX[p]);
-        EECPNextPut(outBytes, s->mSeenTownY[p]);
+        v->seen_army[p] = (int32_t)s->mSeenArmy[p];
+        v->seen_strength[p] = (int32_t)s->mSeenStrength[p];
+        v->last_seen[p] = (uint32_t)s->mLastSeen[p];
+        v->seen_town_x[p] = (int32_t)s->mSeenTownX[p];
+        v->seen_town_y[p] = (int32_t)s->mSeenTownY[p];
+        v->seen_citizens[p] = (int32_t)s->mSeenCitizens[p];
+        v->army_x[p] = (int32_t)s->mArmyX[p];
+        v->army_y[p] = (int32_t)s->mArmyY[p];
     }
-    EECPNextPut(outBytes, (long)s->mEvents.size());
+    std::vector<EeAiNextEvent> theEvents;
     for (unsigned long k = 0; k < s->mEvents.size(); k++) {
-        EECPNextPut(outBytes, s->mEvents[k].kind);
-        EECPNextPut(outBytes, s->mEvents[k].type);
-        EECPNextPut(outBytes, s->mEvents[k].count);
+        EeAiNextEvent e = {(int32_t)s->mEvents[k].kind, (int32_t)s->mEvents[k].type, (int32_t)s->mEvents[k].count};
+        theEvents.push_back(e);
     }
-    EECPNextPut(outBytes, s->mTest.mLastClaim);
-    EECPNextPut(outBytes, s->mTest.mDefended);
-    EECPNextPut(outBytes, s->mTest.mAttacked);
-    EECPNextPut(outBytes, s->mTest.mStep);
-    EECPNextPutString(outBytes, s->mScript);
-    outBytes += (char)(s->mStarted ? 1 : 0);
-    outBytes += (char)(s->mFailed ? 1 : 0);
-    EECPNextPut(outBytes, (long)s->mResults.size());
+    v->events = theEvents.data();
+    v->event_count = theEvents.size();
+    v->test[0] = (int32_t)s->mTest.mLastClaim;
+    v->test[1] = (int32_t)s->mTest.mDefended;
+    v->test[2] = (int32_t)s->mTest.mAttacked;
+    v->test[3] = (int32_t)s->mTest.mStep;
+    v->script = EECPNextBytes(s->mScript);
+    v->started = s->mStarted;
+    v->failed = s->mFailed;
+    std::vector<EeAiNextResult> theResults;
     for (unsigned long k = 0; k < s->mResults.size(); k++) {
-        EECPNextPutString(outBytes, s->mResults[k].mVerb);
-        EECPNextPut(outBytes, s->mResults[k].mCode);
-        EECPNextPut(outBytes, s->mResults[k].mReason);
-        EECPNextPut(outBytes, s->mResults[k].mCount);
+        const EECPNextOrderResult& r = s->mResults[k];
+        EeAiNextResult theResult = {EECPNextBytes(r.mVerb), (int32_t)r.mCode, (int32_t)r.mReason, (int32_t)r.mCount,
+            (int32_t)r.mGroup};
+        theResults.push_back(theResult);
     }
-    EECPNextPutString(outBytes, inMemory);
-    EECPNextEncodeArmy(s, outBytes);
-    // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
-    EECPNextPutSpots(outBytes, s->mThreats);
-    EECPNextPut(outBytes, s->mThreatsTime);
-    // version 4 (save 0.274): the walkers sent to see a site (§8.36), as the spots: a load without them sent a new
-    // walker at its first step where the running game's walker still stood there
-    EECPNextPutSpots(outBytes, s->mExplore);
+    v->results = theResults.data();
+    v->result_count = theResults.size();
+    v->memory = EECPNextBytes(inMemory);
+    v->next_group = (int32_t)s->mNextGroup;
+    std::vector<std::vector<int32_t> > theLists(3 * s->mGroups.size());   // per group: its units, aims, skips
+    std::vector<EeAiNextGroup> theGroups;
+    for (unsigned long g = 0; g < s->mGroups.size(); g++) {
+        const EECPNextGroup& theGroup = s->mGroups[g];
+        const long theFields[] = {theGroup.mID, theGroup.mTask, theGroup.mState, theGroup.mTarget, theGroup.mX, theGroup.mY,
+            theGroup.mRadius, theGroup.mCreated, theGroup.mStateTime, theGroup.mWayX, theGroup.mWayY, theGroup.mWayTime,
+            theGroup.mStarted, theGroup.mLost};
+        EeAiNextGroup theOut = {};
+        for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
+            theOut.fields[f] = (int32_t)theFields[f];
+        std::vector<int32_t>& theUnits = theLists[3 * g];
+        std::vector<int32_t>& theAims = theLists[3 * g + 1];
+        std::vector<int32_t>& theSkips = theLists[3 * g + 2];
+        for (unsigned long k = 0; k < theGroup.mUnits.size(); k++) {
+            theUnits.push_back((int32_t)theGroup.mUnits[k]);
+            theAims.push_back((int32_t)theGroup.mAims[k]);
+        }
+        for (unsigned long k = 0; k < theGroup.mSkips.size(); k++)
+            theSkips.push_back((int32_t)theGroup.mSkips[k]);
+        theOut.units = theUnits.data();
+        theOut.aims = theAims.data();
+        theOut.unit_count = theUnits.size();
+        theOut.skips = theSkips.data();
+        theOut.skip_count = theSkips.size();
+        theGroups.push_back(theOut);
+    }
+    v->groups = theGroups.data();
+    v->group_count = theGroups.size();
+    std::vector<EeAiNextSpot> theSpots, theTowers, theThreats, theExplore;
+    EECPNextSpotsOut(s->mSpots, theSpots);
+    EECPNextSpotsOut(s->mTowers, theTowers);
+    EECPNextSpotsOut(s->mThreats, theThreats);
+    EECPNextSpotsOut(s->mExplore, theExplore);
+    v->spots = theSpots.data();
+    v->spot_count = theSpots.size();
+    v->towers = theTowers.data();
+    v->tower_count = theTowers.size();
+    v->threats = theThreats.data();
+    v->threat_count = theThreats.size();
+    v->threats_time = (int32_t)s->mThreatsTime;
+    v->explore = theExplore.data();
+    v->explore_count = theExplore.size();
+    size_t theLength = ee_ai_next_save_encode(v.get(), NULL, 0);
+    outBytes.assign(theLength, '\0');
+    ee_ai_next_save_encode(v.get(), (uint8_t*)&outBytes[0], theLength);
 }
 
-// the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
-// restored at the first step
+// the state from its bytes (false: not a block of versions 1-4, or bytes left over; the state is then as it was);
+// the Lua memory goes to mRestoreBytes, restored at the first step. A version 1 block has no army (the state keeps
+// its own), below version 3 no gather safety's memory, below 4 no walkers
 static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
 {
-    if (inBytes.size() < 8 || inBytes.compare(0, 4, "EENS") != 0)
+    EeAiNextDecoded* theDecoded = ee_ai_next_save_decode((const uint8_t*)inBytes.data(), inBytes.size(), kNextMaxOrders);
+    if (theDecoded == NULL)
         return false;
-    EECPNextGetter g(inBytes);
-    g.mOffset = 4;
-    long theVersion = g.Get();
-    if (theVersion < 1 || theVersion > 4)
-        return false;
-    s->mClaimRange = g.Get();
+    const EeAiNextSave& v = *ee_ai_next_decoded_view(theDecoded);
+    s->mClaimRange = v.claim_range;
     for (long i = 0; i < kNextResources; i++)
-        s->mReserve[i] = g.Get();
-    s->mFoodPrefer = g.Get();
-    s->mFoodLand = g.Get();
-    s->mEpoch = g.Get();
-    s->mEpochStart = (unsigned long)(uint32_t)g.Get();
-    s->mNextRepairTime = (unsigned long)(uint32_t)g.Get();
+        s->mReserve[i] = v.reserve[i];
+    s->mFoodPrefer = v.food_prefer;
+    s->mFoodLand = v.food_land;
+    s->mEpoch = v.epoch;
+    s->mEpochStart = (unsigned long)v.epoch_start;
+    s->mNextRepairTime = (unsigned long)v.next_repair_time;
     for (long i = 0; i < kNextResources; i++)
-        s->mIncomeTotal[i] = g.Get();
+        s->mIncomeTotal[i] = v.income_total[i];
     for (long k = 0; k < 60; k++)
         for (long i = 0; i < kNextResources; i++)
-            s->mIncomeRing[k][i] = g.Get();
-    s->mIncomeSteps = g.Get();
+            s->mIncomeRing[k][i] = v.income_ring[k * kNextResources + i];
+    s->mIncomeSteps = v.income_steps;
     for (long p = 0; p < 64; p++) {
-        s->mSeenArmy[p] = g.Get();
-        s->mSeenStrength[p] = g.Get();
-        s->mLastSeen[p] = (unsigned long)(uint32_t)g.Get();
-        s->mSeenTownX[p] = g.Get();
-        s->mSeenTownY[p] = g.Get();
+        s->mSeenArmy[p] = v.seen_army[p];
+        s->mSeenStrength[p] = v.seen_strength[p];
+        s->mLastSeen[p] = (unsigned long)v.last_seen[p];
+        s->mSeenTownX[p] = v.seen_town_x[p];
+        s->mSeenTownY[p] = v.seen_town_y[p];
     }
-    long theEvents = g.Get();
     s->mEvents.clear();
-    for (long k = 0; g.mOK && k < theEvents; k++) {
+    for (size_t k = 0; k < v.event_count; k++) {
         EECPNextEvent theEvent;
-        theEvent.kind = g.Get();
-        theEvent.type = g.Get();
-        theEvent.count = g.Get();
-        if (k < 256)
-            s->mEvents.push_back(theEvent);
+        theEvent.kind = v.events[k].kind;
+        theEvent.type = v.events[k].unit_type;
+        theEvent.count = v.events[k].count;
+        s->mEvents.push_back(theEvent);
     }
-    s->mTest.mLastClaim = g.Get();
-    s->mTest.mDefended = g.Get();
-    s->mTest.mAttacked = g.Get();
-    s->mTest.mStep = g.Get();
-    s->mScript = g.GetString();
-    s->mStarted = g.GetByte();
-    s->mFailed = g.GetByte();
-    long theResults = g.Get();
+    s->mTest.mLastClaim = v.test[0];
+    s->mTest.mDefended = v.test[1];
+    s->mTest.mAttacked = v.test[2];
+    s->mTest.mStep = v.test[3];
+    s->mScript = EECPNextText(v.script);
+    s->mStarted = v.started;
+    s->mFailed = v.failed;
     s->mResults.clear();
-    for (long k = 0; g.mOK && k < theResults; k++) {
+    for (size_t k = 0; k < v.result_count; k++) {
         EECPNextOrderResult theEntry;
-        theEntry.mVerb = g.GetString();
-        theEntry.mCode = g.Get();
-        theEntry.mReason = g.Get();
-        theEntry.mCount = g.Get();
-        theEntry.mGroup = 0;   // (version 2: from the army block)
-        if (k < (long)kNextMaxOrders)
-            s->mResults.push_back(theEntry);
+        theEntry.mVerb = EECPNextText(v.results[k].verb);
+        theEntry.mCode = v.results[k].code;
+        theEntry.mReason = v.results[k].reason;
+        theEntry.mCount = v.results[k].count;
+        theEntry.mGroup = v.results[k].group;   // (a version 1 block: 0)
+        s->mResults.push_back(theEntry);
     }
-    std::string theMemory = g.GetString();
-    if (theVersion >= 2)
-        EECPNextDecodeArmy(s, g);   // (a version 1 block: no groups, no army memory)
-    s->mThreats.clear();
-    s->mThreatsTime = -1;
-    if (theVersion >= 3) {
-        EECPNextGetSpots(g, s->mThreats);
-        s->mThreatsTime = g.Get();
+    std::string theMemory = EECPNextText(v.memory);
+    if (v.version >= 2) {
+        s->mNextGroup = v.next_group;
+        s->mGroups.clear();
+        for (size_t g = 0; g < v.group_count; g++) {
+            const EeAiNextGroup& theIn = v.groups[g];
+            EECPNextGroup theGroup;
+            long* const theFields[] = {&theGroup.mID, &theGroup.mTask, &theGroup.mState, &theGroup.mTarget, &theGroup.mX,
+                &theGroup.mY, &theGroup.mRadius, &theGroup.mCreated, &theGroup.mStateTime, &theGroup.mWayX, &theGroup.mWayY,
+                &theGroup.mWayTime, &theGroup.mStarted, &theGroup.mLost};
+            for (unsigned long f = 0; f < sizeof(theFields) / sizeof(theFields[0]); f++)
+                *theFields[f] = theIn.fields[f];
+            for (size_t k = 0; k < theIn.unit_count; k++) {
+                theGroup.mUnits.push_back(theIn.units[k]);
+                theGroup.mAims.push_back(theIn.aims[k]);
+            }
+            for (size_t k = 0; k < theIn.skip_count; k++)
+                theGroup.mSkips.push_back(theIn.skips[k]);
+            s->mGroups.push_back(theGroup);
+        }
+        EECPNextSpotsIn(v.spots, v.spot_count, s->mSpots);
+        EECPNextSpotsIn(v.towers, v.tower_count, s->mTowers);
+        for (long p = 0; p < 64; p++) {
+            s->mSeenCitizens[p] = v.seen_citizens[p];
+            s->mArmyX[p] = v.army_x[p];
+            s->mArmyY[p] = v.army_y[p];
+        }
     }
-    s->mExplore.clear();
-    if (theVersion >= 4)
-        EECPNextGetSpots(g, s->mExplore);
-    if (!g.mOK || g.mOffset != inBytes.size())
-        return false;
+    EECPNextSpotsIn(v.threats, v.threat_count, s->mThreats);
+    s->mThreatsTime = v.threats_time;   // (below version 3: -1)
+    EECPNextSpotsIn(v.explore, v.explore_count, s->mExplore);
+    ee_ai_next_decoded_free(theDecoded);
     delete s->mLua;
     s->mLua = NULL;
     s->mRestore = !theMemory.empty();
