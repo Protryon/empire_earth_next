@@ -23,6 +23,7 @@ pub mod ai;
 pub mod commands;
 pub mod ffi;
 pub mod group;
+mod header_consts;
 pub mod host;
 pub mod kinds;
 pub mod motion;
