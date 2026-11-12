@@ -1972,6 +1972,9 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   started its benches beside the new queue's, both on the same port offsets, and 24 of the first 32 games died at
   the main menu (`EE-SIM FAULT` in `NERecordPlayback::Process`, the known two-benches-on-one-port start fault, §8.29).
   Kill the loop's own processes, and let a bench script take a lock directory before it starts.
+- **PowerShell's `-like` is case-insensitive: a stage pattern hit another agent's games.** Stopping my bench `O6`'s
+  games by `CommandLine -like '*O6-*'` also stopped another agent's three games in its stage `l-o6-2-33-*`. Match a
+  bench's own stage folder exactly (`-clike`, or the full path `build\sim\stage\<bench>-<k>` of the own worktree).
 - **The scratchpad is shared between parallel agents.** Two agents of one session wrote `bench.sh` into the same
   scratchpad folder; one ran the other's script with its own arguments. Each agent keeps its helpers in its own
   subfolder.
