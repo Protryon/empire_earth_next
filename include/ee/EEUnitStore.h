@@ -152,6 +152,9 @@ enum EEUnitStepKind {
 };
 void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
 void EEUnitStepCommit();
+// TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
+// the unit and exits 3 (the capture's USTM gate; the leaves compare only while the capture runs)
+void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal);
 
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
 // on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'

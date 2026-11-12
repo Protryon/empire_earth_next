@@ -378,10 +378,22 @@ void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inW
     sStepCalls++;
 }
 
+void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal)
+{
+    fprintf(stderr, "EE-UNIT-STEP: %s of unit 0x%08lx: Rust %ld, the original %ld\n", inLeaf, inID, inRust, inOriginal);
+    EESimCaptureRecord::Flush();
+    exit(3);
+}
+
 void EEUnitStepCommit()
 {
     if (!EESimCaptureRecord::Active())
         return;
+    // the leaves' store reads that differed from the members (the holders keep them equal): a USCK mismatch
+    uint32_t theMismatches = 0, theUnrecorded = 0;
+    ee_units_step_reads(&theMismatches, &theUnrecorded);
+    if (theMismatches != 0)
+        EEUnitStepDiffers("a store read (records differing from the members)", 0, (long)theMismatches, 0);
     EESimCaptureRecord theRecord(0x4d545355u);   // "USTM"
     theRecord.U32((unsigned int)gPhysics->mNumTicksDone);
     theRecord.U32(sStepCalls);

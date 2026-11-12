@@ -1155,6 +1155,11 @@ constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
+/// The kinds of countdown (`ee_units_step_countdown`'s `which`).
+constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
+
+constexpr static const uint32_t EE_UNITS_STEP_TARGET_SEARCH = 2;
+
 /// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
 constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
 
@@ -6131,6 +6136,25 @@ struct EeGoalSpec {
   uint8_t flag_c;
   /// integer arguments (the cast's tile and technology)
   int64_t ints[3];
+};
+
+/// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
+/// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
+struct EeUnitsPowerIn {
+  int64_t regeneration;
+  int64_t max_power;
+  uint8_t in_cinematic;
+  int64_t interval;
+  int64_t tick_ms;
+};
+
+/// What `RegeneratePower` writes: `write` 0 when it returns early (nothing written); else the power regeneration
+/// timer, and the power when `set_power` is 1 (the timer ran out).
+struct EeUnitsPowerOut {
+  uint8_t write;
+  uint8_t set_power;
+  int64_t power;
+  int64_t regen_timer;
 };
 
 /// Receives bytes; valid only during the call.
@@ -13758,6 +13782,44 @@ extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
 extern int64_t ee_units_host_object_hit_points(uint32_t unit);
+
+/// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
+/// timer in `out` when the C++ writes it.
+///
+/// # Safety
+/// `out` points to a writable i64.
+bool ee_units_step_countdown(uint32_t id,
+                             uint64_t object,
+                             uint32_t which,
+                             int64_t member,
+                             int64_t tick_ms,
+                             int64_t *out);
+
+/// `UpdateHealSearchTimer` over the store: true and the new timer in `out` when the C++ writes it.
+///
+/// # Safety
+/// `out` points to a writable f32.
+bool ee_units_step_heal(uint32_t id, uint64_t object, float member, float tick_time, float *out);
+
+/// `RegeneratePower` over the store (`member_*`: the C++ members, used when the unit has no record).
+///
+/// # Safety
+/// `inp` points to a valid input, `out` to a writable output.
+void ee_units_step_power(uint32_t id,
+                         uint64_t object,
+                         int64_t member_power,
+                         int64_t member_timer,
+                         uint8_t member_built,
+                         uint8_t member_land_building,
+                         const EeUnitsPowerIn *inp,
+                         EeUnitsPowerOut *out);
+
+/// TEST ONLY: the leaves' reads whose record differed from the member, and those of units with no record.
+///
+/// # Safety
+/// Both point to writable u32s.
+void ee_units_step_reads(uint32_t *out_mismatches,
+                         uint32_t *out_unrecorded);
 
 EeWonAuthSecrets *ee_won_auth_secrets_new();
 

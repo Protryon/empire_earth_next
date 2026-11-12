@@ -10,7 +10,8 @@
 //! a player's list, kept current by the C++ members' write-through holders (`include/ee/EEUnitStore.h`). The world
 //! calls a decision makes (a group's units as ids, goals as handles) are `host`'s; the box selection's pick over the
 //! store is `select`, the active groups' Fill test and the group commands `group` and `commands`. The units stepped
-//! every tick, in their order, are `order`.
+//! every tick, in their order, are `order`; the smallest leaves of a unit's step (the
+//! countdowns, the power's regeneration) over the store are `step`.
 
 pub mod commands;
 pub mod ffi;
@@ -20,6 +21,7 @@ pub mod kinds;
 pub mod order;
 pub mod registry;
 pub mod select;
+pub mod step;
 pub mod store;
 
 pub use registry::Registry;
