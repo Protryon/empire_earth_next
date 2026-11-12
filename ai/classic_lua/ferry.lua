@@ -60,7 +60,7 @@ end
 local function free_transports(memory)
     local out = {}
     for _, t in ipairs(N.transports()) do
-        if t.cargo == 0 then
+        if t.cargo == 0 and not (memory.cross_ships or {})[t.id] then
             out[#out + 1] = t
         end
     end
