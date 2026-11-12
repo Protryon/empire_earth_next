@@ -2713,7 +2713,8 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
         theRecord.I32((int32_t)inUnit->GetUnitID());
         theRecord.I32((int32_t)inX);
         theRecord.I32((int32_t)inY);
-        theRecord.F32(inScale);
+        // the scaled range, as the C++ search's record had it (it wrote its inScale after `inScale = theRange * inScale`)
+        theRecord.F32(in.range * inScale);
         theRecord.I32((int32_t)(theContext.mTrace.size() / 3));
         for (size_t i = 0; i < theContext.mTrace.size(); i++)
             theRecord.I32(theContext.mTrace[i]);

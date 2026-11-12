@@ -6860,6 +6860,10 @@ Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (th
   record sees: `EESimCaptureRecord::Only(tag)` (thread-local) drops every other tag's record while it runs (the
   CBAF/CBLB/CBDP/CBHD records of the tests it calls), each unit's `mIgnoredTargets` is copied back after each call
   (`IgnoreTarget`, the expired entries' erase), and nothing simulates after it. 180 to 230 CBSL records a game.
+- **The first CBSL comparison found a record difference, not a behaviour one.** Round 3's C++ probe wrote the
+  search's `inScale` after the original's `inScale = theRange * inScale`, the Rust-backed record wrote the argument:
+  every trace, best and score were equal (134 of 134 records of a seed, all but that field). The moved record now
+  writes `in.range * inScale` (the golden is the C++'s). Round 3 had no CBSL golden, so this had never been compared.
 - **Coverage.** CBLT comes only from the space profile (turrets); CBFS from none to a few hundred screens a game
   (absent in 3 late and 2 calamity seeds and every space seed); CBHD from every search's distance (100k+ a game).
   **No game of the four profiles flies a missile: CBMA and CBMH have no golden** and `missile_accelerate` and
