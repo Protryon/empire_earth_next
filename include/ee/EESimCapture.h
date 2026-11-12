@@ -14,6 +14,9 @@ class EESimCaptureRecord {
 public:
     static bool Active();                   // EE_SIM_CAPTURE is set and the file opened
     static void Flush();                    // before the process ends (EE-SIM's Quit)
+    // While set (not 0), this thread's records of any other tag are dropped: a sweep that calls a leaf records only
+    // that leaf, not the leaves it reaches (Only(0) clears it)
+    static void Only(unsigned int inTag);
 
     explicit EESimCaptureRecord(unsigned int inTag) : mTag(inTag) {}
     void U32(unsigned int inValue) { this->Bytes(&inValue, 4); }

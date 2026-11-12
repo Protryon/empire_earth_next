@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <vector>
 #include <math.h>
+#include <string.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -29,19 +30,15 @@
 // NEAR: frame/float slot order; the original calls vector<long>::operator[] out of line (0x11e2a5) for the first lookup
 // FUNCTION: EXE 0x55d015
 // Places the launched projectile on its ballistic arc from the launch point for its flight time so far,
-// nose along the arc; a meteor flies straight at its top speed, without gravity
+// nose along the arc; a meteor flies straight at its top speed, without gravity (new: the arc and the placement are
+// ee_combat's arc and projectile_launch)
 // Fields: start point (+0x10c), yaw/pitch (+0x188/+0x18c), the launcher class's launch speed (else its own) for
 // +0x290 ms of flight under the class's gravity (+0x13c); a type 0x325 flies straight at its speed
 void EEPMProjectile::Step0(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition = inUnit->mPhysicalModel.GetLocation().GetPosition();
-    GE3DPoint theStart = inUnit->mProjectileStart;
-    GEVector theDirection(0.0f, 0.0f, 0.0f);
-    GEVector theMove(0.0f, 0.0f, 0.0f);
     long theTileX;
     long theTileY;
-    float theYaw = inUnit->mOrientation.mYaw;
-    inUnit->mInitialContactLocation = thePosition;
+    inUnit->mInitialContactLocation = inUnit->mPhysicalModel.GetLocation().GetPosition();
     EeCombatArcIn theIn = {};
     theIn.flight_time_ms = (int32_t)inUnit->mFlightTime;
     theIn.gravity = inUnit->mUnitClass->mAcceleration;
@@ -55,57 +52,50 @@ void EEPMProjectile::Step0(EEComplexUnit* inUnit)
             theIn.own_speed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mUnitClass->mUnitType]->mLaunchSpeed;
     }
     EeCombatArcOut theArc = EECombatArc(theIn);
-    theDirection.mY = theArc.move_y;
-    theDirection.mZ = theArc.move_z;
+    // the placement on the arc is ee_combat's projectile_launch (flight.rs)
+    EeCombatFlightIn in = {};
+    in.start[0] = inUnit->mProjectileStart.GetX();
+    in.start[1] = inUnit->mProjectileStart.GetY();
+    in.start[2] = inUnit->mProjectileStart.GetZ();
+    in.yaw = inUnit->mOrientation.mYaw;
+    in.move_y = theArc.move_y;
+    in.move_z = theArc.move_z;
+    in.pitch = theArc.pitch;
+    EeCombatFlightOut theOut = ee_combat_projectile_launch(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'J'), in, theOut);
     GETransformation theTransformation(false);
-    theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    theTransformation.SetPosition(0.0f, 0.0f, 0.0f);
-    theTransformation.SetElement(3, 0, 0.0f);
-    theTransformation.SetElement(3, 1, 0.0f);
-    theTransformation.SetElement(3, 2, 0.0f);
-    theTransformation.SetElement(3, 3, 1.0f);
-    theTransformation.Apply(theDirection, theMove);
-    theStart += theMove;
-    theTransformation.SetPosition(theStart.GetX(), theStart.GetY(), theStart.GetZ());
-    theTransformation.SetOrientationYPR(theYaw, theArc.pitch, 0.0f);
+    memcpy(theTransformation.mMatrix, theOut.matrix, sizeof(theOut.matrix));
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
 
 // NEAR: frame layout (the original keeps the step in the dead inUnit slot; 0x94 vs our 0xa0)
 // FUNCTION: EXE 0x55d259
 // Moves the projectile one tick along its heading and pulls its nose down by its class's gravity; only
-// while it is at or below height 0 and above the ground point
+// while it is at or below height 0 and above the ground point (new: ee_combat's projectile_step)
 // Class gravity +0x13c; the height-0 test is the original's (bytes 0x55d2e4: `fcomp 0.0`, `ja` returns)
 void EEPMProjectile::Step2(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    GE3DPoint thePosition = theTransformation.GetPosition();
-    GE3DPoint theGround;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theDirection;
-    GEVector theMove;
+    // the tick is ee_combat's projectile_step (flight.rs); the ground point is read only at or below height 0
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
     long theTileX;
     long theTileY;
-    float theGravity = inUnit->mUnitClass->mAcceleration;
-    float theStep = gPhysics->mTickSeconds;
-    float theSpeed = inUnit->mVelocity;
-    if (thePosition.GetZ() > 0.0f)
+    EeCombatFlightIn in = {};
+    memcpy(in.location, theLocation.mMatrix, sizeof(in.location));
+    in.gravity = inUnit->mUnitClass->mAcceleration;
+    in.step = gPhysics->mTickSeconds;
+    in.speed = inUnit->mVelocity;
+    if (!(theLocation.GetZ() > 0.0f)) {
+        GE3DPoint thePosition = theLocation.GetPosition();
+        GE3DPoint theGround;
+        ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
+        in.ground_read = 1;
+        in.ground_z = theGround.GetZ();
+    }
+    EeCombatFlightOut theOut = ee_combat_projectile_step(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'S'), in, theOut);
+    if (!theOut.moved)
         return;
-    ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-    if (thePosition.GetZ() <= theGround.GetZ())
-        return;
-    theTransformation.Apply(theForward, theDirection);
-    float thePitch = UMArcCos(-theDirection.GetZ()) - 1.5707964f;
-    float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-    theForward = GEVector(0.0f, theSpeed / UMCos(thePitch) * 0.1f, 0.0f);
-    theTransformation.Apply(theForward, theDirection);
-    theMove = GEVector(theDirection.GetX() * theStep, theDirection.GetY() * theStep, theDirection.GetZ() * theStep);
-    thePosition += theMove;
-    theTransformation.SetPosition(thePosition);
-    theDirection.mZ = theDirection.GetZ() - theStep * theGravity * 0.2f;
-    theDirection.Normalize();
-    float theDelta = UMArcCos(-theDirection.GetZ()) - 1.5707964f - thePitch;
-    theTransformation.SetOrientationYPR(theYaw, thePitch + theDelta, 0.0f);
+    GETransformation theTransformation(false);
+    memcpy(theTransformation.mMatrix, theOut.matrix, sizeof(theOut.matrix));
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
 }
-

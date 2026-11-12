@@ -681,6 +681,25 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                             (*theUnits)[u]->Dereference();
                     theUnits->swap(theSorted);   // the saved units (and their references), in the saved order
                 }
+                // the classes themselves as saved: GetUnits tells a class the running game tracked and lost every
+                // unit of (an empty list) from one it never tracked (NULL). TryResearch resets the epoch advance only
+                // for an empty list: the calamity game's player without a town centre retried the advance every
+                // second where the loaded one, which had no entry, never did
+                for (std::map<long, std::deque<EEComplexUnit*>*>::iterator theClass = theSelf->mUnits.begin();
+                     theClass != theSelf->mUnits.end();) {
+                    bool theSaved = false;
+                    for (size_t c = 0; c < theOrder.size() && !theSaved; c++)
+                        theSaved = theOrder[c].first == theClass->first;
+                    if (!theSaved && (theClass->second == NULL || theClass->second->empty())) {
+                        delete theClass->second;
+                        theClass = theSelf->mUnits.erase(theClass);
+                    } else
+                        ++theClass;
+                }
+                for (size_t c = 0; c < theOrder.size(); c++)
+                    if (theSelf->mUnits.find(theOrder[c].first) == theSelf->mUnits.end())
+                        theSelf->mUnits.insert(std::map<long, std::deque<EEComplexUnit*>*>::value_type(
+                            theOrder[c].first, new std::deque<EEComplexUnit*>));
             });
         }
     }

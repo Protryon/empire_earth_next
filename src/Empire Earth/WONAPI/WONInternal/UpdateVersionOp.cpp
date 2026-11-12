@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONStatus.h"
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,7 +65,7 @@ void UpdateVersionOp::RunHook()
 
 	// Pack the message data
 	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
+	AdminValues().Str(this->mProductName).AppendTo(EE_WON_ADMIN_PRODUCT, requestData);
 
 	this->mVersionData->WriteToBuffer(requestData, VersionData::WriteFlag_AppendDescripURL | VersionData::WriteFlag_AppendState);
 	

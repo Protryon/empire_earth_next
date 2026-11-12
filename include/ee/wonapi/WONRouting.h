@@ -207,17 +207,22 @@ public:
     WONStatus SendTo(const void*,int,const IPAddr&);   //sendto
     WONStatus Recv(void*,int,int*);     //recv
 
-    CriticalSection mDataCrit; //08..1f
-    // the socket's handle (the original's mSocket at +0x20), type (+0x24), connected and open flags (+0x51, +0x52),
-    // status (+0x54), last receive and first blocked send times (+0x58, +0x5c): Rust's socket core
-    // (rust/crates/ee_won/src/socket.rs), which makes the platform socket calls. Callers hold mDataCrit.
-    EeWonSocket mCore;
-    IPAddr mDestAddr; //28..4f, complete28
-    unsigned char mLengthFieldSize; //50
-    std::list<MsgTransform*> mMsgTransformQueue; //60 allocator,64head,68size; ownsraw virtualobjects
     typedef void (*CloseCallback)(AsyncSocket*);
-    CloseCallback mThreadCloseCallback; //6c, cdecl caller-pops4 at2b1aed/1b6d
-    SmartPtr<RefCount> mThreadData; //70, intrusive owned pointer (SDK RefCountPtr)
+    // the lock the subclasses (QueueSocket, the routing and server connections) take around their own state too
+    CriticalSection& GetDataCrit() { return this->mDataCrit; }
+    void SetDestAddr(const IPAddr& inAddr) { this->mDestAddr=inAddr; }
+    void SetThreadCloseCallback(CloseCallback inCallback);
+    WONStatus GetSocketStatus() const; // the last socket error recorded (the original's +0x54)
+    EeWonAsyncSocket* GetSocketObject() const { return this->mSock; }
+private:
+    AsyncSocket(const AsyncSocket&);
+    AsyncSocket& operator=(const AsyncSocket&);
+    CriticalSection mDataCrit; //08..1f; its mutex is the Rust object's lock
+    // A Rust object since round 14 (rust/crates/ee_won/src/sockobj.rs EeWonAsyncSocket): the handle, type, flags,
+    // status and times (the original's +0x20..+0x5c), the length field size (+0x50), the message transforms (+0x60,
+    // owned) and the socket thread's close callback (+0x6c), and every step of AsyncSocket.cpp
+    EeWonAsyncSocket* mSock;
+    IPAddr mDestAddr; //28..4f, complete28 (a C++ IPAddr until IPAddr is Rust's)
 };
 
 
@@ -227,17 +232,11 @@ public:
 class SocketOp : public AsyncOp {
 public:
     static bool mRunAsyncImmediatelyDef; //WON SDK bool static at 565f08, zero-initialized
-    AsyncSocket* GetSocket() { return this->mSocket.get(); }
-    void SetSocket(AsyncSocket* theSocket) { this->mSocket=theSocket; }
-    SocketOp(AsyncSocket* inSocket) : mInSocketThread(false), mSocket(inSocket)
-    {
-        this->SetRunAsyncImmediately(SocketOp::mRunAsyncImmediatelyDef);
-        for (int i = 0; i < 3; i++) {
-            this->mWaitForEvent[i] = false;
-            this->mEventIndex[i] = -1;
-        }
-    }
-    // Implicit destructor: original29153d has no own-vptr store.
+    // the op's socket (a reference held)
+    AsyncSocket* GetSocket() { return static_cast<AsyncSocket*>(ee_won_socketop_socket(this->mSockOp)); }
+    void SetSocket(AsyncSocket* theSocket) { ee_won_socketop_set_socket(this->mSockOp,theSocket); }
+    SocketOp(AsyncSocket* inSocket); // SocketRunHooks.cpp (the original's was inline)
+    virtual ~SocketOp(); // the Rust object (the original's was implicit, 29153d)
     virtual void RunHook();                 // +0x04 0x2b6070 RunHook
     virtual void CleanupHook();             // +0x08 0x2b60c0
     //: +0x0c starts the operation, +0x10 continues it (SendFileOp 0x2915d2 / 0x291613 return a WONStatus)
@@ -247,27 +246,37 @@ public:
     // 0x291ab7 news one on the same socket; provisional name)
     virtual AsyncOp* Duplicate() { return NULL; }
 
-    bool mInSocketThread;                   // +0x44
-    long mEventIndex[3];                    // +0x48
-    SmartPtr<AsyncSocket> mSocket;          // +0x54
-    bool mWaitForEvent[3];                  // +0x58
+    bool IsInSocketThread() const { return ee_won_socketop_in_socket_thread(this->mSockOp); }
+    void SetInSocketThread(bool inFlag) { ee_won_socketop_set_in_socket_thread(this->mSockOp,inFlag); }
+    bool GetWaitForEvent(int i) const { return ee_won_socketop_wait_for_event(this->mSockOp,i); }
+    void SetWaitForEvent(int i,bool inFlag) { ee_won_socketop_set_wait_for_event(this->mSockOp,i,inFlag); }
+    long GetEventIndex(int i) const { return ee_won_socketop_event_index(this->mSockOp,i); }
+    void SetEventIndex(int i,long inIndex) { ee_won_socketop_set_event_index(this->mSockOp,i,inIndex); }
+    EeWonSocketOp* GetSocketOpObject() const { return this->mSockOp; }
+private:
+    static void HookAddToSocketThread(void* inOp); // WONAPICore's friend
+    static const EeWonSocketOpBaseHooks kHooks;
+    // A Rust object since round 14 (rust/crates/ee_won/src/sockop.rs EeWonSocketOp): the socket thread flag (+0x44),
+    // the event indices (+0x48), the socket (+0x54, a reference) and the wait flags (+0x58), and RunHook
+    EeWonSocketOp* mSockOp;
 };
 
 // closes its socket
 class CloseOp : public SocketOp {
 public:
     CloseOp(AsyncSocket* inSocket) : SocketOp(inSocket) {}
-    virtual WONStatus Continue() { this->mSocket->Close(); return 0; }  // +0x10 0x291993
+    virtual WONStatus Continue() { this->GetSocket()->Close(); return 0; }  // +0x10 0x291993
 };
 
 // waits for a connection on its (listening) socket
 class AcceptOp : public SocketOp {
 public:
-    AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket) { this->mWaitForEvent[0] = true; }
+    AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket) { this->SetWaitForEvent(0,true); }
     AsyncSocket* GetAcceptedSocket() { return this->mAcceptedSocket.get(); }
     virtual WONStatus Continue();           // +0x10 0x2b0310 (WONAPI)
-    virtual AsyncOp* Duplicate() { return new AcceptOp(this->mSocket.get()); }  // +0x14 0x291ab7
+    virtual AsyncOp* Duplicate() { return new AcceptOp(this->GetSocket()); }  // +0x14 0x291ab7
 
+private:
     SmartPtr<AsyncSocket> mAcceptedSocket;  // +0x5c
 };
 
@@ -278,12 +287,14 @@ class ConnectOp : public SocketOp {
 public:
     ConnectOp(const IPAddr& inAddr, AsyncSocket* inSocket = NULL) : SocketOp(inSocket), mAddr(inAddr)
     {
-        this->mWaitForEvent[1] = true;
-        this->mWaitForEvent[2] = true;
+        this->SetWaitForEvent(1,true);
+        this->SetWaitForEvent(2,true);
     }
     virtual WONStatus Start();              // +0x0c 0x2b2320 (WONAPI)
     virtual WONStatus Continue();           // +0x10 0x2b2330 (WONAPI)
 
+    const IPAddr& GetAddr() const { return this->mAddr; }
+private:
     IPAddr mAddr;                           // +0x5c
 };
 
@@ -308,6 +319,10 @@ public:
     void SetBinaryFile(bool isBinary) { this->mBinary=isBinary; }
     void SetFileModifyTime(time_t theTime) { this->mFileModifyTime=theTime; }
     void SetSkipBytes(bool skip) { this->mSkipBytes=skip; }
+    const std::string& GetFilePath() const { return this->mPath; }
+    unsigned long GetBytesRead() const { return this->mBytesRead; }
+private:
+    friend class RecvMsgOp; // its length prefix and body steps
     WriteBuffer mWriteBuffer; //5c,18
     ByteBufferPtr mReceivedData; //74
     unsigned long mLength; //78
@@ -334,6 +349,7 @@ public:
     virtual WONStatus Continue();  //2b5e20
     virtual AsyncOp* Duplicate(); //2ab3d0
     ByteBufferPtr GetMsg() const; //2ab770, owning return by value
+private:
     ByteBufferPtr mMessage; //ac
     int mState; //b0, ctor uninitialized, RunHook sets1
 };
@@ -341,12 +357,13 @@ public:
 // vtable 44ca78, six slots
 class RecvCRMsgOp : public SocketOp {
 public:
-    RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket),mBuffer(0,true) {this->mWaitForEvent[0]=true;}
+    RecvCRMsgOp(AsyncSocket* inSocket=NULL) : SocketOp(inSocket) {this->SetWaitForEvent(0,true);}
     virtual WONStatus Start();     //2b5970,62
     virtual WONStatus Continue();  //2b59b0,330 ending ret2b5af9, excludes6align
-    virtual AsyncOp* Duplicate() {return new RecvCRMsgOp(this->mSocket.get());} //2b2180, 209 bytes
+    virtual AsyncOp* Duplicate() {return new RecvCRMsgOp(this->GetSocket());} //2b2180, 209 bytes
     ByteBufferPtr GetMsg() const {return this->mMessage;} //accessor 2b1df0 (ICF-folded)
-    WriteBuffer mBuffer; //5c..73
+private:
+    // the line so far (the original's WriteBuffer at 0x5c) is the op's Rust object's (sockop.rs)
     ByteBufferPtr mMessage; //74, total78
     //Implicit normal2b2280/157 has NO own-vptr store: SP74,Buffer5c,SocketSP54,AsyncBase.
 };
@@ -356,8 +373,10 @@ public:
 class RecvChunkOp : public AsyncOp {
 public:
     RecvChunkOp(RecvBytesOp* inOp) : mRecvOp(inOp) {} //0x48 bytes: AsyncOp (0x44) plus the owning pointer at 0x44
+    RecvBytesOp* GetRecvOp() const { return this->mRecvOp.get(); }
     virtual void RunHook() { this->Finish(0); }  //2b5370, 8-byte override of slot 04
 
+private:
     SmartPtr<RecvBytesOp> mRecvOp;          // +0x44
 };
 
@@ -407,8 +426,7 @@ public:
     void RunRepeatOp(); //2b45b0, RunRepeatOp
     void RunQueueOp(); //2b48b0, RunQueueOp
     QueueSocket(int inType); //2b3930; fresh factory2b39d0 newa0
-    // IMPLICIT destructor: ordinary2b3a60 has no own-vptr store and naturally inlines
-    // into BlockingSocket/LobbyLanSocket; do not add bare out-of-line dtor declaration.
+    virtual ~QueueSocket(); // the Rust object (the original's was implicit, 2b3a60)
     virtual void OpenHook();  //2b4c00, byte9c=false,ret
     virtual void CloseHook(); //2b4c10,noargs/void, SDK CloseHook
     virtual void KillHook();  //2b4d40,noargs/void, SDK KillHook
@@ -421,15 +439,11 @@ public:
     void QueueOp(SocketOp*,long inTimeout);  //2b4740, accesses/rebinds op54
     void QueueClose(long inTimeout); //2b4a70, distinct from Close() 2b1b50
 
-    SmartPtr<CompletionBase<AsyncOpPtr> > mDefaultQueueCompletion; //74
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCurQueueCompletion; //78
-    SmartPtr<CompletionBase<AsyncOpPtr> > mRepeatCompletion; //7c
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCloseCompletion; //80
-    SmartPtr<SocketOp> mRepeatOp; //84
-    SmartPtr<SocketOp> mQueueOp; //88
-    AsyncOpPtr mCloseTimer; //8c, original StartCloseTimer new44/AsyncOpctor
-    std::list<SmartPtr<SocketOp> > mOpQueue; //90 allocator,94head,98count
-    bool mCloseQueued; //9c, AoC-only flag; natural padding 9d..9f
+private:
+    // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat
+    // and close completions (+0x74..+0x80), the repeat and queued ops (+0x84, +0x88), the close timer (+0x8c), the
+    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of QueueSocket.cpp
+    EeWonQueueSocket* mQueue;
 };
 
 class BlockingSocket : public QueueSocket {
@@ -460,9 +474,11 @@ public:
         : SocketOp(inSocket),
           mReadBuffer(inData != NULL ? inData->data() : NULL, inData != NULL ? inData->length() : 0),
           mBuffer(inData)
-    { this->mWaitForEvent[1] = true; }
+    { this->SetWaitForEvent(1,true); }
     virtual WONStatus Start();     //2b5e50
     virtual WONStatus Continue();  //2b5e70
+private:
+    friend class SendMsgOp; // its transformed message's send
     ReadBuffer mReadBuffer; //5c, 0x0c bytes
     ByteBufferPtr mBuffer; //68
 };
@@ -474,6 +490,7 @@ public:
         : SendBytesOp(NULL, inSocket), mMessage(inMessage) {}
     virtual WONStatus Start();     //2b5fa0
     virtual WONStatus Continue();  //2b6020
+private:
     ByteBufferPtr mMessage; //6c
 };
 
@@ -484,8 +501,9 @@ public:
     SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress,
                   AsyncSocket* inSocket = NULL)
         : SocketOp(inSocket), mBuffer(inData), mAddress(inAddress)
-    { this->mWaitForEvent[1] = true; }
+    { this->SetWaitForEvent(1,true); }
     virtual WONStatus Continue();  //2b5f10
+private:
     ByteBufferPtr mBuffer; //5c
     IPAddr mAddress; //60, 0x28 bytes
 };
@@ -501,6 +519,7 @@ public:
     virtual AsyncOp* Duplicate(); //2b5660, fresh allocation of the same class
     SmartPtr<ByteBuffer> GetBytes() const; //2aa920, owning51B sret/AddRef, field60
     const IPAddr& GetAddr() const { return this->mFromAddress; }
+private:
     char* mRawBuffer; //5c, owned array: allocate/transfer/clear; the explicit destructor deletes the rest
     SmartPtr<ByteBuffer> mReceivedData; //60, initializednull
     unsigned short mMaxLength; //64, first constructor argument
@@ -2350,8 +2369,7 @@ private:
     enum State { GETTING_PUB_KEYS=1,GETTING_CHALLENGE=2,GETTING_CERTIFICATE=3 } mState; //11dc, ctor untouched
     ERROR_LIST mErrorList; //11e0..11f0
     COMMUNITY_STATUS_LIST mCommunityStatusList; //11f0..11fc
-    WONStatus HandleLoginReply(ReadBuffer&); //2e4880 RET4; full reply parser
-    WONStatus HandleLoginChallenge(ReadBuffer&); //2e5800 RET4
+    template <class> friend struct CertMsg; // its messages (WONCertMsg.h)
     WONStatus SendPubKeyRequest(); //2e4270 RET0
     WONStatus SendLoginRequest(); //2e4380 RET0
     WONStatus SendLoginConfirm(); //2e46a0 RET0

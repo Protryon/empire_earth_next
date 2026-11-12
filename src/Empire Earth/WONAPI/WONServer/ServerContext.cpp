@@ -15,21 +15,12 @@
 namespace WONAPI {
 static EeWonAddr ToRust(const IPAddr& inAddress)
 {
-    EeWonAddr a;
-    memcpy(a.sockaddr, &inAddress.mAddr, sizeof(a.sockaddr));
-    a.valid = inAddress.mIsValid;
-    a.remember_host = inAddress.mRememberHostString;
-    a.host = reinterpret_cast<const uint8_t*>(inAddress.mHost.data());
-    a.host_len = inAddress.mHost.size();
-    return a;
+    return inAddress.ToRaw();
 }
 static IPAddr FromRust(const EeWonAddr* inAddress)
 {
     IPAddr anAddr;
-    memcpy(&anAddr.mAddr, inAddress->sockaddr, sizeof(inAddress->sockaddr));
-    anAddr.mIsValid = inAddress->valid;
-    anAddr.mRememberHostString = inAddress->remember_host;
-    anAddr.mHost.assign(reinterpret_cast<const char*>(inAddress->host), inAddress->host_len);
+    anAddr.FromRaw(*inAddress);
     return anAddr;
 }
 static void ToList(void* inList, const EeWonAddr* inAddress)

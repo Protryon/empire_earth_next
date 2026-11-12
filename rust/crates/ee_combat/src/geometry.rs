@@ -315,7 +315,7 @@ pub struct EeCombatWeaponIn {
     pub chain: i32,
 }
 
-fn matrix(m: &[f32; 16]) -> GeTransformation {
+pub(crate) fn matrix(m: &[f32; 16]) -> GeTransformation {
     GeTransformation {
         m: [
             [m[0], m[1], m[2], m[3]],
@@ -327,7 +327,7 @@ fn matrix(m: &[f32; 16]) -> GeTransformation {
 }
 
 /// `EETagPoint`'s walk up the model chain: each model's internal transform at the frame, the point's model first.
-fn up_the_chain(mut point: Ge3DPoint, chain: &[[f32; 16]]) -> Ge3DPoint {
+pub(crate) fn up_the_chain(mut point: Ge3DPoint, chain: &[[f32; 16]]) -> Ge3DPoint {
     for link in chain {
         point = matrix(link).apply_point(point);
     }

@@ -13,6 +13,7 @@
 
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,17 +34,8 @@ void GetAccountFromCDKeyExOp::RunHook()
 
 	// Stores the message data
 	WriteBuffer requestData(0,true);
-
-	// Append the CDKey (string)
-	requestData.AppendString(this->mCDKey,2);
-
-	// Append the community (unsigned long)
-	requestData.AppendLong(this->mCommunity);
-	
-	// Append the Reset or Ban flag
-	requestData.AppendByte(this->mActionFlag);
-
-	// Append the profile data
+	AdminValues().Str(this->mCDKey).Num(this->mCommunity).Num(this->mActionFlag)
+		.AppendTo(EE_WON_ADMIN_ACCOUNT_FROM_CDKEY_EX, requestData);
 	this->mProfileData->PackRequestData(requestData,true);
 
 	// Copy buffer into the class

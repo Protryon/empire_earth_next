@@ -4,6 +4,7 @@
 #include "ee/wonapi/WONGetVersionOp.h"
 #include "ee/wonapi/WONStatus.h"
 
+#include "ee/wonapi/WONPatchMsg.h"
 using namespace WONAPI;
 using namespace std;
 
@@ -22,77 +23,8 @@ std::wstring VersionBaseOp::GetVersionDir()
 ///////////////////////////////////////////////////////////////////////////////
 bool VersionBaseOp::IsFiltered(const std::string &theVersion, const std::string& theVersionData)
 {
-	FilterStringSet aFilterSet;
-
-	// Is the data empty?
-	if (theVersionData.empty())
-		return false;
-	
-	// Find the data object data value for this version
-	std::string versionDescription = StringToLowerCase(theVersionData);
-
-	// Search the description for the "pt" key
-
-	unsigned int aLineStart = 0;
-	unsigned int aSpacePos = 0;
-	std::string aKey = "";
-	std::string aKeyValue = "";
-
-	while (aLineStart != -1 && aKey != "pt")
-	{
-		aSpacePos = versionDescription.find(' ',aLineStart);
-		aKey = versionDescription.substr(aLineStart, aSpacePos-aLineStart);
-
-		aLineStart = versionDescription.find('\n',aSpacePos);
-		if (aLineStart != -1)
-			++aLineStart;
-		else
-		{
-			aLineStart = versionDescription.find('\r',aSpacePos);
-			if (aLineStart != -1)
-				++aLineStart;
-		}
-	}
-
-	if (aKey == "pt")
-	{
-		if (aLineStart != -1)
-		{
-			aKeyValue = versionDescription.substr(aSpacePos+1, aLineStart-(aSpacePos+1));
-
-			// Depending upon how the info was entered, we might have '\n' or '\r\n' line breaks,
-			// so assume the worst and remove both as needed.
-			unsigned int aRemove = aKeyValue.find('\n');
-			if (aRemove != std::string::npos)
-				aKeyValue = aKeyValue.erase(aRemove, 1);
-
-			aRemove = aKeyValue.find('\r');
-			if (aRemove != std::string::npos)
-				aKeyValue = aKeyValue.erase(aRemove, 1);
-		}
-		else
-			aKeyValue = versionDescription.substr(aSpacePos+1, versionDescription.size()-(aSpacePos+1));
-	}
-	else
-		// pt not found, do not filter
-		return false;
-
-	// Use the key value to build a filter set
-	this->BuildVersionFilterSet(aKeyValue, aFilterSet);
-	
-	// Is aFilter a subset of mFilterStringList?
-	FilterStringSet::const_iterator anItr = aFilterSet.begin();
-	for (; anItr != aFilterSet.end(); ++anItr)
-	{
-		// Is this token also in our filter list? (Skip empty keys)
-		if (*anItr == "")
-			continue;
-
-		if (this->mFilterStringSet.find( *anItr ) == this->mFilterStringSet.end())
-			return true;
-	}
-
-	return false;
+	// the "pt" line's filters against ours (ee_won patch.rs)
+	return PatchIsFiltered(this->mFilterStringSet,theVersionData);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,22 +101,7 @@ bool VersionBaseOp::VersionIsValid(const std::string &theVersionId)
 ///////////////////////////////////////////////////////////////////////////////
 void VersionBaseOp::BuildVersionFilterSet(const std::string &theFilterString, FilterStringSet &theFilterSet)
 {
-	// Parse each token and append to the list
-	unsigned int lastPos = 0;
-	unsigned int commaPos = theFilterString.find(',');
-
-	theFilterSet.clear();
-	if (theFilterString.length() == 0)
-		return;
-
-	while (commaPos != -1)
-	{
-		theFilterSet.insert(theFilterString.substr(lastPos, commaPos-lastPos));
-		lastPos = commaPos+1;
-		commaPos = theFilterString.find(',', lastPos);
-	}
-	
-	theFilterSet.insert(theFilterString.substr(lastPos, theFilterString.size()-lastPos));
+	PatchFilterSet(theFilterString,theFilterSet);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

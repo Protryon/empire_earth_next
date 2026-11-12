@@ -71,6 +71,8 @@
 #include "ee/EECPExperimentTimers.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitHandle.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEUGGather.h"
 #include <algorithm>
 #include <vector>
 
@@ -516,6 +518,8 @@ struct EESavedGhost {
     long mTileY;
     bool mIsBuilt;
     float mPlacement[4][4];
+    unsigned long mResourceType;   // 0.272 (EESaveHasGhostResources)
+    long mResourceAmount;
 };
 static std::vector<EESavedGhost> sGhosts;            // the loaded records, until the first tick
 static std::vector<EEComplexUnit*> sGhostUnits;      // made from them, one reference each until the first tick
@@ -533,6 +537,32 @@ static void SaveGhosts(FSFile& outFile)
             theDead.push_back(theAttacker);
         }
     }
+    EECPOutOfWorldGatherers(theDead);   // the dead units the gatherer lists still hold
+    // 0.272: the resources and drop sites the gather goals hold out of the world (EEUGGather::RepairPointers)
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex == NULL)
+                continue;
+            for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
+                std::deque<EEUnitGoal*>& theGoals = theComplex->mGoalQueues[q].mGoals;
+                for (size_t g = 0; g < theGoals.size(); g++) {
+                    EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoals[g]);
+                    if (theGather == NULL)
+                        continue;
+                    EEUnit* theHeld[2] = {theGather->mResource, theGather->mStorage};
+                    for (int h = 0; h < 2; h++) {
+                        EEComplexUnit* theDeadUnit = dynamic_cast<EEComplexUnit*>(theHeld[h]);   // (a removed unit's store fields read 0)
+                        if (theDeadUnit == NULL || gWorld.GetUnit(theDeadUnit->mUnitID) == theHeld[h]
+                            || std::find(theDead.begin(), theDead.end(), theDeadUnit) != theDead.end())
+                            continue;
+                        theDead.push_back(theDeadUnit);
+                    }
+                }
+            }
+        }
+    }
     outFile.Write((unsigned long)theDead.size());
     for (size_t i = 0; i < theDead.size(); i++) {
         EEComplexUnit* theUnit = theDead[i];
@@ -547,10 +577,12 @@ static void SaveGhosts(FSFile& outFile)
         for (int r = 0; r < 4; r++)
             for (int c = 0; c < 4; c++)
                 outFile.Write(thePlacement.mMatrix[r][c]);
+        outFile.Write((unsigned long)theUnit->mResourceType);   // 0.272
+        outFile.Write((long)theUnit->mResourceAmount);
     }
 }
 
-static long LoadGhosts(FSFile& inFile)
+static long LoadGhosts(FSFile& inFile, bool inHasResources)
 {
     std::vector<EESavedGhost> theGhosts;
     unsigned long theCount = 0;
@@ -565,6 +597,9 @@ static long LoadGhosts(FSFile& inFile)
         for (int r = 0; r < 4 && theResult == kErrorOK; r++)
             for (int c = 0; c < 4 && theResult == kErrorOK; c++)
                 theResult = inFile.Read(theGhost.mPlacement[r][c]);
+        theGhost.mResourceType = (unsigned long)-1;   // before 0.272: the class's own
+        if (inHasResources && theResult == kErrorOK && (theResult = inFile.Read(theGhost.mResourceType)) == kErrorOK)
+            theResult = inFile.Read(theGhost.mResourceAmount);
         theGhosts.push_back(theGhost);
     }
     if (theResult == kErrorOK) {
@@ -600,6 +635,10 @@ EEComplexUnit* EEFindLoadedGhost(unsigned long inID)
         theUnit->mTileX = theGhost.mTileX;
         theUnit->mTileY = theGhost.mTileY;
         theUnit->mIsBuilt = theGhost.mIsBuilt;
+        if (theGhost.mResourceType != (unsigned long)-1) {   // 0.272
+            theUnit->mResourceType = theGhost.mResourceType;
+            theUnit->mResourceAmount = theGhost.mResourceAmount;
+        }
         GETransformation thePlacement = theUnit->mPhysicalModel.GetLocation();
         memcpy(thePlacement.mMatrix, theGhost.mPlacement, sizeof(thePlacement.mMatrix));
         theUnit->mPhysicalModel.SetLocation(thePlacement);
@@ -763,7 +802,7 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && EESaveHasTowns(inMajorVersion, inMinorVersion)
             && EELoadTowns(inFile, EESaveHasTownAreas(inMajorVersion, inMinorVersion)) == kErrorOK   // port (0.260): the towns' ids and order
             && EESaveHasGhosts(inMajorVersion, inMinorVersion)
-            && LoadGhosts(inFile) == kErrorOK   // port (0.262): the dead attackers the units still hold
+            && LoadGhosts(inFile, EESaveHasGhostResources(inMajorVersion, inMinorVersion)) == kErrorOK   // port (0.262): the dead attackers the units still hold
             && EESaveHasContinentRegions(inMajorVersion, inMinorVersion)
             && EELoadContinentRegions(inFile) == kErrorOK   // port (0.263): the continent manager as it was
             && EESaveHasResourceState(inMajorVersion, inMinorVersion)

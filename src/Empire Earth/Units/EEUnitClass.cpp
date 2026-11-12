@@ -20,6 +20,7 @@
 #include "lle/GETextureCoordinate.h"
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
+#include "lle/GEModel.h"   // the tag points' model chain (EECombatTagPointChain)
 #include "lle/USingleton.h"
 #include "lle/SESoundManager.h"
 #include "lle/FSFileSpec.h"
@@ -2197,55 +2198,43 @@ void EEUnitClass::PlayCreationEffect(EEUnit* inUnit)
 
 // FUNCTION: EXE 0x6340a7
 // Launches a projectile (or carried cargo) from the unit's weapon tag point toward the target or ground point; the
-// volcano idles after each launch
+// volcano idles after each launch (new: the launch transform, its tile and the special attack's choices are
+// ee_combat's launch_shot)
 void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation, EEComplexUnit* inCargo)
 {
-    GE3DPoint theOffset;
     GE3DPoint thePosition;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theFacing;
-    GEVector theDirection;
-    GETransformation theTransform(inUnit->mPhysicalModel.GetLocation());
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     EETagPointList* thePoints = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
     EEUnitClass* theClass = this->mProjectileClass;
     EEUnit* theCreated = NULL;
-    if (thePoints != NULL && thePoints->GetNumTagPoints() != 0) {
-        unsigned long theIndex = inUnit->mWeaponTagPoint;
-        if ((inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato) && inUnit->mIsSpecialAttack)
-            theIndex = inUnit->GetModel()->mTagPoints[inUnit->GetAnimation()]->GetNumTagPoints() - 1;
-        thePoints->GetTagPoint(theIndex)->GetOffset(inUnit->mPhysicalModel.GetFrame(), theOffset);
-    } else {
-        theOffset.SetX(0.0f);
-        theOffset.SetY(0.0f);
-        theOffset.SetZ(0.5f);
-    }
-    theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-    theOffset.SetY(theStats->GetScale() * theOffset.GetY());
-    theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
-    theTransform.Apply(theOffset, thePosition);
-    theTransform.SetPosition(thePosition);
-    if (this->mCategory == kUnitCategoryBuilding) {
-        theDirection.SetX(inLocation.GetX() - theTransform.GetX());
-        theDirection.SetY(inLocation.GetY() - theTransform.GetY());
-        theDirection.SetZ(0.0f);
-        theDirection.Normalize();
-        float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-        theTransform.SetOrientationYPR(theYaw, 0.0f, 0.0f);
-    } else if (this->mProjectileClass == NULL || this->mProjectileClass->mCategory != kUnitCategoryBomb) {
-        theDirection.SetX(inLocation.GetX() - theTransform.GetX());
-        theDirection.SetY(inLocation.GetY() - theTransform.GetY());
-        theDirection.SetZ(0.0f);
-        theDirection.Normalize();
-        float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
-        theTransform.Apply(theForward, theFacing);
-        float theDifference = theYaw - UMArcTan2(-theFacing.GetX(), theFacing.GetY());
-        if (theDifference < -3.1415927f) theDifference += 6.2831855f;
-        else if (theDifference > 3.1415927f) theDifference -= 6.2831855f;
-        theTransform.Revolve(theDifference, 0.0f, 0.0f);
-    }
-    long theX = UMFloor(theTransform.GetX());
-    long theY = UMFloor(theTransform.GetY());
+    // the launch's geometry and choices are ee_combat's (launch.rs): the model data at the frame gathered here
+    long theType = inUnit->mUnitClass->GetUnitType();
+    EeCombatLaunchIn in = {};
+    in.kind = EE_COMBAT_LAUNCH_KIND_SHOT;
+    in.special = inUnit->mIsSpecialAttack;
+    in.has_special = this->mHasSpecialAttack;
+    in.capital = theType == kUnitTypeSp15CapitalShip || theType == kUnitTypeCapitalShipYamato;
+    in.legionnaire = theType == kUnitTypeX04RomanLegionnaire;
+    in.point_count = thePoints != NULL ? (int32_t)thePoints->GetNumTagPoints() : 0;
+    in.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
+    in.building = this->mCategory == kUnitCategoryBuilding;
+    in.turn = this->mProjectileClass == NULL || this->mProjectileClass->mCategory != kUnitCategoryBomb;
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.scale = theStats->GetScale();
+    in.target[0] = inLocation.GetX();
+    in.target[1] = inLocation.GetY();
+    in.target[2] = inLocation.GetZ();
+    std::vector<float> theChain;
+    int32_t theIndex = ee_combat_launch_index(&in);
+    if (theIndex >= 0)
+        EECombatTagPointChain(thePoints->GetTagPoint((unsigned long)theIndex), inUnit->mPhysicalModel.GetFrame(), in.point,
+                              theChain, in.chain);
+    EeCombatLaunchOut theLaunch = ee_combat_launch(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+    EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'L', 'S'), in, theChain, theLaunch);
+    GETransformation theTransform(false);
+    memcpy(theTransform.mMatrix, theLaunch.launch, sizeof(theLaunch.launch));
+    long theX = theLaunch.tile[0];
+    long theY = theLaunch.tile[1];
     if (::gWorld.mMap->GetTile(theX, theY) == NULL) {
         thePosition.SetX(theTransform.GetX());
         thePosition.SetY(theTransform.GetY());
@@ -2253,8 +2242,7 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
         ::gWorld.mMap->GetClosestTile(&thePosition, &theX, &theY);
     }
     if (inUnit->mIsSpecialAttack) {
-        if (this->mHasSpecialAttack && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeX04RomanLegionnaire && inUnit->GetUnitClass()->GetUnitType() != kUnitTypeSp15CapitalShip &&
-            inUnit->GetUnitClass()->GetUnitType() != kUnitTypeCapitalShipYamato) {
+        if (theLaunch.flaming) {
             theClass = gUnitClassTable[gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mUnitType];
             theCreated = theClass->CreateUnit(theX, theY, inUnit->GetPlayer()->GetPlayerID(), false, inUnit);
         }
@@ -3769,15 +3757,36 @@ EEFOFindNewTargetInMeleeRange::EEFOFindNewTargetInMeleeRange(EEComplexUnit* inUn
 }
 
 // FUNCTION: EXE 0x63799d
-// Returns whether a candidate is alive and closer to the attacker than its current target
+// Returns whether a candidate is alive and closer to the attacker than its current target (new: ee_combat's screen)
+// the melee screen's candidate distance (asked by ee_combat's screen for a living candidate only)
+struct EEMeleeScreenContext {
+    EEComplexUnit* mUnit;
+    EEComplexUnit* mCandidate;
+};
+
+static float EEMeleeScreenDistance(void* inContext)
+{
+    EEMeleeScreenContext* theContext = (EEMeleeScreenContext*)inContext;
+    return EEGetHitDistanceSquared(theContext->mUnit, theContext->mCandidate, -10000.0f, -10000.0f);
+}
+
+static bool EEMeleeScreen(EEFOFindNewTargetInMeleeRange* inScreen, EEComplexUnit* inUnit)
+{
+    EEMeleeScreenContext theContext = {inScreen->mUnit, inUnit};
+    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_MELEE, (int32_t)inUnit->mHitPoints, inScreen->mRange, 0, 0.0f};
+    int32_t theResult = ee_combat_screen(&in, &theContext, EEMeleeScreenDistance);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
+    return theResult != 0;
+}
+
 bool EEFOFindNewTargetInMeleeRange::Virtual04(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f) < this->mRange;
+    return EEMeleeScreen(this, inUnit);
 }
 
 bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && EEGetHitDistanceSquared(this->mUnit, inUnit, -10000.0f, -10000.0f) < this->mRange;
+    return EEMeleeScreen(this, inUnit);
 }
 
 // FUNCTION: EXE 0x6379dd
@@ -3947,32 +3956,28 @@ void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
 // Fires the class's projectile from the unit's turret weapon point at a target or ground location;
 // without a turret part, fires a plain shot
 // The launch point is the weapon tag point mWeaponTagPoint scaled by the stats' scale and turned by the turret's
-// yaw, under the unit's transformation; the shot is owned by inUnit
+// yaw, under the unit's transformation; the shot is owned by inUnit (new: the launch is ee_combat's launch_from_turret)
 void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint& inLocation)
 {
-    GE3DPoint thePoint;
-    GE3DPoint theWorld;
-    GETransformation theLocation(inUnit->mPhysicalModel.GetLocation());
-    GETransformation theOrientation;
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     EEModel* theModel = inUnit->GetModel();
     EETagPointList* theList = theModel->mTagPoints[inUnit->GetAnimation()];
     unsigned long thePart = 0;
     unsigned long theIndex = inUnit->mWeaponTagPoint;
     if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0) {
-        theOrientation.SetOrientationYPR(inUnit->mTurretAngles[thePart], 0.0f, 0.0f);
-        unsigned long theFrame = inUnit->mPhysicalModel.GetFrame();
-        theList->GetTagPoint(theIndex)->GetOffset(theFrame, theOrientation, thePoint);
-        thePoint.mX = theStats->mScale * thePoint.mX;
-        thePoint.mY = theStats->mScale * thePoint.GetY();
-        thePoint.mZ = theStats->mScale * thePoint.mZ;
-        theLocation.Apply(thePoint, theWorld);
+        // the launch is ee_combat's launch_from_turret (launch.rs) over the tag point's model chain at the frame
+        EeCombatLaunchIn in = {};
+        std::vector<float> theChain;
+        in.kind = EE_COMBAT_LAUNCH_KIND_TURRET;
+        memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+        in.scale = theStats->mScale;
+        in.yaw = inUnit->mTurretAngles[thePart];
+        EECombatTagPointChain(theList->GetTagPoint(theIndex), inUnit->mPhysicalModel.GetFrame(), in.point, theChain,
+                              in.chain);
+        EeCombatLaunchOut theOut = ee_combat_launch(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+        EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'L', 'T'), in, theChain, theOut);
         GETransformation theLaunch(false);
-        (theList->mPoints[theIndex])->GetTransformation(inUnit->mPhysicalModel.GetFrame(), theLocation,
-                                                                  theOrientation, theLaunch);
-        theLaunch.mMatrix[0][3] = theWorld.mX;
-        theLaunch.mMatrix[1][3] = theWorld.GetY();
-        theLaunch.mMatrix[2][3] = theWorld.mZ;
+        memcpy(theLaunch.mMatrix, theOut.launch, sizeof(theOut.launch));
         EEUnit* theShot = this->mProjectileClass->CreateUnitAt(theLaunch, inUnit->mPlayer->GetPlayerID(), false, inUnit);
         if (this->mCreationEffect != NULL)
             gEffectManager->CreateUnitEffect(theShot, this->mCreationEffect, NULL, false, 0, 0);

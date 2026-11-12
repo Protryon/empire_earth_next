@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONPatchAdmin.h"
 #include "ee/wonapi/WONStatus.h"
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -59,11 +60,8 @@ void RemovePatchOp::RunHook()
 
 	// Pack the message data
 	WriteBuffer requestData(0,true);
-	requestData.AppendString(this->mProductName);
-	requestData.AppendString(this->mConfigName);
-	requestData.AppendString(this->mFromVersion);
-	requestData.AppendString(this->mToVersion);
-	requestData.AppendString(this->mNetAddress);		// patch url
+	AdminValues().Str(this->mProductName).Str(this->mConfigName).Str(this->mFromVersion).Str(this->mToVersion)
+		.Str(this->mNetAddress).AppendTo(EE_WON_ADMIN_REMOVE_PATCH, requestData);		// the last: the patch url
 
 	// Pack and call base class implementation
 	this->mRequestData=requestData.ToByteBuffer(true);

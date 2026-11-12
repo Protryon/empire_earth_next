@@ -5,7 +5,8 @@
   python -I tools/sim_oracle.py compare BASE NAME [--root DIR]
   python -I tools/sim_oracle.py ticks BASE NAME [--root DIR]
   python -I tools/sim_oracle.py saveload NAME [--exe EXE] [--seeds 2-7] [--at 600,1350,2100] [--jobs 3] [--data open]
-                                        [--compare-only]
+                                        [--compare-only] [--settings oracle,islands,...|all] [--clean]
+                                        [--expect FILE] [--write-expect FILE]
   python -I tools/sim_oracle.py selftest
 
 `run` plays a 2-AI Hard game of 2700 game seconds per seed (no cheats) and keeps its EE-AI trace. `compare` checks the
@@ -27,17 +28,47 @@ at each --at game second (EE-SIM --save-at: save-SEED-T.ees); then, per save, a 
 the loaded game's first tick on, its lines must equal the continued game's at the same game ms (the CT number aside:
 EE-SIM counts it from the process's first tick). It names the first divergent tick per save. --compare-only compares
 the files of an earlier run.
+
+--settings plays the test in other games than the oracle's (SETTINGS: map types and sizes, 3-4 computer players,
+other difficulties, the capture profiles' later start epochs, the calamity casts, the next engine), each into
+build/rust_oracle/NAME-SETTING, and ends with a table of the saves that continue identically per setting. The loaded
+game gets the same options as the continued one. Every game's stage slot is deleted when it ends; --clean also deletes
+the saves, AI traces and reports once compared (the checksum lines, logs and saveload.txt stay).
+
+--write-expect FILE writes each save's outcome (SETTING SEED T, then END when it continues identically or the ticks it
+ran equal); --expect FILE makes the exit code that of a gate: it fails only when a save does worse than its line (fewer
+equal ticks, or not END where END was expected) and names saves that did better (tools/saveload_expect.txt: the merge
+chain's expectations).
 """
 import argparse
 import concurrent.futures
 import io
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "build" / "rust_oracle"
+STAGES = ROOT / "build" / "sim" / "stage"   # tools/sim.py's stage slots
+
+# saveload --settings: the games beyond the oracle's (EE-SIM options after the oracle's, which they override). The
+# map types are the Random Map Scripts' (the lobby's lines), the sizes and difficulties the lobby's; late and space are
+# tools/sim_capture.py's profiles of those names, calamity its calamity game.
+SETTINGS = {
+    "oracle": [],
+    "plains-medium-3ai": ["--map-type", "Plains", "--map-size", "Medium", "--ai", "3"],
+    "islands": ["--map-type", "Large Islands"],
+    "highlands-large-4ai": ["--map-type", "Highlands", "--map-size", "Large", "--ai", "4"],
+    "mediterranean-easy": ["--map-type", "Mediterranean", "--difficulty", "Easy"],
+    "medium-difficulty": ["--difficulty", "#1"],   # the middle of the three (gameoptions difficulties)
+    "late": ["--cheats", "all", "--ai", "3", "--lobby", "183=#5"],
+    "space": ["--cheats", "all", "--ai", "3", "--lobby", "183=#9"],
+    "calamity": ["--calamities"],
+    "next": ["--engine", "next"],
+}
 
 
 def seeds(text):
@@ -48,8 +79,9 @@ def seeds(text):
     return out
 
 
-def one(name, exe, seed, data, checksums=False, autosave_ms=0, extra=(), suffix=""):
-    """One EE-SIM game -> (seed, exit code, trace size). suffix names a variant's files (e.g. "-load-600")."""
+def one(name, exe, seed, data, checksums=False, autosave_ms=0, extra=(), suffix="", settings=(), unstage=False):
+    """One EE-SIM game -> (seed, exit code, trace size). suffix names a variant's files (e.g. "-load-600"); settings
+    are EE-SIM options after the oracle's (SETTINGS); unstage deletes the game's stage slot when it ends."""
     d = OUT / name
     d.mkdir(parents=True, exist_ok=True)
     tag = f"{seed}{suffix}"
@@ -57,11 +89,14 @@ def one(name, exe, seed, data, checksums=False, autosave_ms=0, extra=(), suffix=
     extra = (["--checksum-trace", str(d / f"ct-{tag}.txt")] if checksums else []) + list(extra)
     if autosave_ms:
         extra += ["--autosave-ms", str(autosave_ms)]
+    slot = f"oracle-{name}-{tag}"
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "sim.py"), "--data", data, "--slot",
-                        f"oracle-{name}-{tag}", "--exe", str(exe), "--", "--seed", str(seed), "--difficulty", "Hard",
-                        "--game-seconds", "2700", "--cheats", "none", "--report", str(report), "--ai-trace",
+                        slot, "--exe", str(exe), "--", "--seed", str(seed), "--difficulty", "Hard",
+                        "--game-seconds", "2700", "--cheats", "none", *settings, "--report", str(report), "--ai-trace",
                         "--trace", str(trace), *extra], cwd=ROOT, capture_output=True, text=True)
     (d / f"log-{tag}.txt").write_text(r.stdout + r.stderr)
+    if unstage:
+        shutil.rmtree(STAGES / slot, ignore_errors=True)
     return seed, r.returncode, trace.stat().st_size if trace.exists() else -1
 
 
@@ -165,9 +200,11 @@ def load_difference(cont, load):
     return "ok", (start, len(load))
 
 
-def compare_loads(d, seed_list, at, out=sys.stdout):
-    """Every save of a saveload run against its continued game -> the failure count."""
+def compare_loads(d, seed_list, at, out=sys.stdout, results=None):
+    """Every save of a saveload run against its continued game -> the failure count. results (a dict) gets each save's
+    outcome by (seed, t): "END" when it continues identically, else the ticks it ran equal ("-" when missing)."""
     bad = 0
+    results = {} if results is None else results
     for seed in seed_list:
         pc = d / f"ct-{seed}.txt"
         cont = tick_lines(pc) if pc.exists() else []
@@ -177,9 +214,12 @@ def compare_loads(d, seed_list, at, out=sys.stdout):
             if not cont or not pl.exists():
                 print(f"{what}: MISSING {pc if not cont else pl}", file=out)
                 bad += 1
+                results[(seed, t)] = "-"
                 continue
             load = tick_lines(pl)
             status, detail = load_difference(cont, load)
+            results[(seed, t)] = ("END" if status == "ok" else str(detail[1]) if status in ("differs", "ends")
+                                  else "0")
             if status == "ok":
                 start, n = detail
                 print(f"{what}: identical (loaded at game ms {cont[start][1].get('ms')}, {n} ticks to game ms "
@@ -258,9 +298,107 @@ def selftest():
         checks.append(("saveload", bad == 2 and "seed 1 save 1 s: identical (loaded at game ms 1050, 3 ticks" in text
                        and "seed 1 save 2 s: FIRST DIVERGENT TICK game ms 700 (0 ticks after" in text
                        and "inputs" in text and "seed 1 save 3 s: MISSING" in text))
+        # the gate's expectation file: worse fails, equal and better pass
+        exp = pathlib.Path(tmp, "expect.txt")
+        exp.write_text("# a comment\nx 1 1 END\nx 1 2 10\nx 1 3 5\n")
+        out = io.StringIO()
+        bad = expect_check(exp, {"x": {(1, 1): "END", (1, 2): "12", (1, 3): "4"}}, out)
+        text = out.getvalue()
+        checks.append(("expect", bad == 1 and "x seed 1 3 s: 5 -> 4 WORSE" in text and "10 -> 12 (better" in text))
+        out = io.StringIO()
+        checks.append(("expect end", expect_check(exp, {"x": {(1, 1): "40"}}, out) == 1))
     for what, ok in checks:
         print(f"selftest {what}: {'ok' if ok else 'FAILED'}")
     return 0 if all(ok for _, ok in checks) else 1
+
+
+def saveload(a):
+    """saveload: per setting, the continued games with their saves, then a loaded game per save, then the comparison;
+    every game's stage slot is deleted when it ends. -> the exit code (1 when any save differs)."""
+    at = [int(x) for x in a.at.split(",") if x]
+    names = list(SETTINGS) if a.settings == "all" else [x for x in a.settings.split(",") if x]
+    for n in names:
+        if n not in SETTINGS:
+            sys.exit(f"saveload: no setting {n} ({', '.join(SETTINGS)})")
+    dirs = {n: a.name if names == ["oracle"] else f"{a.name}-{n}" for n in names}
+    seed_list = seeds(a.seeds)
+    started = time.monotonic()
+    if not a.compare_only:
+        def cont(job):
+            n, seed = job
+            d = OUT / dirs[n]
+            return n, *one(dirs[n], a.exe, seed, a.data, True, settings=SETTINGS[n], unstage=True,
+                           extra=[x for t in at for x in ("--save-at", f"{t * 1000}={d / f'save-{seed}-{t}.ees'}")])
+
+        def load(job):
+            n, seed, t = job
+            save = OUT / dirs[n] / f"save-{seed}-{t}.ees"
+            if not save.exists():
+                return n, seed, t, -1, -1
+            # the same options as the continued game: those the load does not replace (the cheats' environment,
+            # --calamities' casts, the engines' scripts) must be the same
+            _, code, size = one(dirs[n], a.exe, seed, a.data, True, extra=["--load-save", str(save)],
+                                suffix=f"-load-{t}", settings=SETTINGS[n], unstage=True)
+            return n, seed, t, code, size
+
+        for n in names:
+            (OUT / dirs[n]).mkdir(parents=True, exist_ok=True)
+            for t in at:
+                for seed in seed_list:
+                    (OUT / dirs[n] / f"save-{seed}-{t}.ees").unlink(missing_ok=True)
+        with concurrent.futures.ThreadPoolExecutor(a.jobs) as ex:
+            for n, seed, code, size in ex.map(cont, [(n, s) for n in names for s in seed_list]):
+                print(f"{dirs[n]} seed {seed} (continued, saves at {a.at} s): exit {code}, trace {size} bytes",
+                      flush=True)
+            for n, seed, t, code, size in ex.map(load, [(n, s, t) for n in names for s in seed_list for t in at]):
+                print(f"{dirs[n]} seed {seed} loaded at {t} s: exit {code}, trace {size} bytes", flush=True)
+    results, outcomes = {}, {}
+    for n in names:
+        if len(names) > 1:
+            print(f"== {n}: {' '.join(SETTINGS[n]) or '(the oracle game)'}")
+        out = io.StringIO()
+        outcomes[n] = {}
+        results[n] = compare_loads(OUT / dirs[n], seed_list, at, out, outcomes[n])
+        print(out.getvalue(), end="")
+        (OUT / dirs[n] / "saveload.txt").write_text(out.getvalue())
+        if a.clean:
+            for pattern in ("save-*.ees", "trace-*.txt", "report-*.json"):
+                for f in (OUT / dirs[n]).glob(pattern):
+                    f.unlink()
+    if len(names) > 1:
+        print("== matrix (saves that continue identically):")
+        for n in names:
+            print(f"  {n:<22} {len(seed_list) * len(at) - results[n]}/{len(seed_list) * len(at)}")
+    if not a.compare_only:
+        print(f"saveload: {time.monotonic() - started:.0f} s wall")
+    if a.write_expect:
+        pathlib.Path(a.write_expect).write_text("".join(
+            f"{n} {seed} {t} {outcomes[n][(seed, t)]}\n" for n in names for seed in seed_list for t in at), newline="\n")
+    if a.expect:
+        return 1 if expect_check(pathlib.Path(a.expect), outcomes) else 0
+    return 1 if any(results.values()) else 0
+
+
+def expect_check(path, outcomes, out=sys.stdout):
+    """A saveload run's outcomes against an expectation file (SETTING SEED T TICKS|END per line, # comments): a save
+    that ran fewer equal ticks than expected, or that was expected to END and did not, fails. -> the failure count."""
+    bad = 0
+    for line in path.read_text().splitlines():
+        parts = line.split("#", 1)[0].split()
+        if len(parts) != 4:
+            continue
+        n, seed, t, want = parts[0], int(parts[1]), int(parts[2]), parts[3]
+        got = outcomes.get(n, {}).get((seed, t))
+        if got is None:
+            continue   # not in this run
+        worse = got == "-" or (got != "END" and (want == "END" or int(got) < int(want)))
+        better = got != want and not worse
+        if worse or better:
+            print(f"expect {n} seed {seed} {t} s: {want} -> {got}" + (" WORSE" if worse else " (better: update the file)"),
+                  file=out)
+        bad += worse
+    print("saveload expect:", "PASS" if not bad else f"FAIL ({bad})", file=out)
+    return bad
 
 
 def main():
@@ -288,39 +426,18 @@ def main():
     s.add_argument("--jobs", type=int, default=3)
     s.add_argument("--data", default="open")
     s.add_argument("--compare-only", action="store_true", help="compare the files of an earlier run")
+    s.add_argument("--settings", default="oracle",
+                   help=f"comma list of {', '.join(SETTINGS)} or all; each but a lone oracle goes to NAME-SETTING")
+    s.add_argument("--expect", help="a file of SETTING SEED T TICKS|END lines: pass when no save does worse (the gate)")
+    s.add_argument("--write-expect", help="write this run's outcomes to that file")
+    s.add_argument("--clean", action="store_true",
+                   help="after the comparison delete the saves, AI traces and reports (the checksum lines stay)")
     sub.add_parser("selftest")
     a = ap.parse_args()
     if a.cmd == "selftest":
         return selftest()
     if a.cmd == "saveload":
-        at = [int(x) for x in a.at.split(",") if x]
-        d = OUT / a.name
-        if not a.compare_only:
-            def cont(seed):
-                return one(a.name, a.exe, seed, a.data, True,
-                           extra=[x for t in at for x in ("--save-at", f"{t * 1000}={d / f'save-{seed}-{t}.ees'}")])
-
-            def load(job):
-                seed, t = job
-                save = d / f"save-{seed}-{t}.ees"
-                save.parent.mkdir(parents=True, exist_ok=True)
-                if not save.exists():
-                    return seed, t, -1, -1
-                _, code, size = one(a.name, a.exe, seed, a.data, True, extra=["--load-save", str(save)],
-                                    suffix=f"-load-{t}")
-                return seed, t, code, size
-
-            d.mkdir(parents=True, exist_ok=True)
-            for t in at:
-                for seed in seeds(a.seeds):
-                    (d / f"save-{seed}-{t}.ees").unlink(missing_ok=True)
-            with concurrent.futures.ThreadPoolExecutor(a.jobs) as ex:
-                for seed, code, size in ex.map(cont, seeds(a.seeds)):
-                    print(f"{a.name} seed {seed} (continued, saves at {a.at} s): exit {code}, trace {size} bytes",
-                          flush=True)
-                for seed, t, code, size in ex.map(load, [(s, t) for s in seeds(a.seeds) for t in at]):
-                    print(f"{a.name} seed {seed} loaded at {t} s: exit {code}, trace {size} bytes", flush=True)
-        return 1 if compare_loads(d, seeds(a.seeds), at) else 0
+        return saveload(a)
     if a.cmd == "run":
         bad = 0
         with concurrent.futures.ThreadPoolExecutor(a.jobs) as ex:

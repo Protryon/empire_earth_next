@@ -14,6 +14,7 @@
 
 
 
+#include "ee/wonapi/WONAdminMsg.h"
 using namespace WONAPI;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,14 +48,7 @@ void GetAccountFromCDKeyOp::RunHook()
 
 	// Stores the message data
 	WriteBuffer requestData(0,true);
-
-	// Append the CDKey (string)
-	requestData.AppendString(this->mCDKey,2);
-
-	// Append the community (unsigned long)
-	requestData.AppendLong(this->mCommunity);
-	
-	// Append the profile data
+	AdminValues().Str(this->mCDKey).Num(this->mCommunity).AppendTo(EE_WON_ADMIN_ACCOUNT_FROM_CDKEY, requestData);
 	this->mProfileData->PackRequestData(requestData,true);
 
 	// Copy buffer into the class
@@ -81,24 +75,20 @@ WONStatus GetAccountFromCDKeyOp::CheckResponse()
 	// [WString] Password
 	// [String ] Email
 
-	ReadBuffer theData(this->mReplyData->data(), this->mReplyData->length());
-
-	try
+	// Extended unpack: the strings (ee_won admin.rs), then the profile; a short reply keeps what was read
+	long aProfile = AdminAccountReply(*this, this->mReplyData.get());
+	if (aProfile >= 0)
 	{
-		theData.ReadWString(this->mUserName,2);
-		theData.ReadString (this->mEmail,2);
-		theData.ReadWString(this->mPassword,2);
-		theData.ReadString (this->mLastLogin,2);
-		theData.ReadString (this->mActivated,2);
-
-		// Unpack the profile data (custom actions)
-		this->mProfileData->UnpackGetData(theData); 
+		ReadBuffer theData(this->mReplyData->data(), this->mReplyData->length());
+		theData.SetPos(aProfile);
+		try
+		{
+			this->mProfileData->UnpackGetData(theData);
+		}
+		catch (ReadBufferException&)
+		{
+		}
 	}
-	catch (ReadBufferException&)
-	{
-	}
-
-	// Everything checked out
 	return (WONStatus)WS_Success;
 }
 
