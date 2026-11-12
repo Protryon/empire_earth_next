@@ -15,8 +15,8 @@ enum EEFormEventID {
     kFormEventWNSFormOpen = 8,          // db dbuiformevents id 8 'WNS Form Open'; EECreateFormEvent: new EEUIEWNSOpen
     kFormEventSSFormOpen = 9,           // db dbuiformevents id 9 'SS Form Open'; EECreateFormEvent: new EEUIESSEOpen
     kFormEventScenarioIntroClose = 10,  // db dbuiformevents id 10 'Scenario Intro Close'; EECreateFormEvent: new EEUIESIEClose
-    kFormEventSinglePlayerLoadOpen = 11,  // db dbuiformevents id 11 'Single Player Load Open'; EECreateFormEvent: new EEUIESPLEOpen
-    kFormEventScenarioLoadOpen = 12,    // db dbuiformevents id 12 'Scenario Load Open'; EECreateFormEvent: new EEUIESCLEOpen
+    kFormEventSinglePlayerLoadOpen = 11,  // db dbuiformevents id 11 'Single Player Load Open'; EECreateFormEvent: EE_SCREENS_SPL_OPEN
+    kFormEventScenarioLoadOpen = 12,    // db dbuiformevents id 12 'Scenario Load Open'; EECreateFormEvent: EE_SCREENS_SCL_OPEN
     kFormEventPGSOpen = 13,             // db dbuiformevents id 13 'PGS Open'; EECreateFormEvent: new EEUIEPGSEOpen
     kFormEventPGSClose = 14,            // db dbuiformevents id 14 'PGS Close'; EECreateFormEvent: new EEUIEPGSEClose
     kFormEventDSOpen = 15,              // db dbuiformevents id 15 'DS Open'; EECreateFormEvent: new EEUIEDSOpen

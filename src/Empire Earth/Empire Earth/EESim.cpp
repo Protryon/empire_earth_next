@@ -139,7 +139,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // EE_SCREENS_SP_LOAD_GAME (ee_screens menus.rs)
-#include "ee/EEUIESinglePlayerLoadEvents.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -1541,7 +1540,7 @@ long LoadLine(unsigned long& outSelection)
 
 // --load-save: the file staged as data\Saved Games\EE-SIM load.ees, then the single-player form's Load Game, the file
 // selected in the load screen's list (UIListBox::ChangeSelectionIndex, as the screen's own keys do), Load
-// (EEUIESPLELoadFile: the file validated, EEMStartLoading of a saved game)
+// (EE_SCREENS_SPL_LOAD: the file validated, EEMStartLoading of a saved game)
 void LoadFromMenu()
 {
     std::string theStaged = SavePath(kLoadName);
@@ -1566,7 +1565,7 @@ void LoadFromMenu()
     WaitFor("the load selection to stick", 20,
             [&] { return LoadLine(theSelection) == theLine && theSelection == (unsigned long)theLine; });
     SimSleep(200);
-    long theLoad = ControlWithEvent<EEUIESPLELoadFile>(kFormLoad);
+    long theLoad = ControlWithEvent<EEScreenEvent>(kFormLoad, EE_SCREENS_SPL_LOAD);
     if (theLoad < 0)
         Fail("--load-save: no Load button on the load screen");
     Note("UI load %s", sOptions.mLoadSave.c_str());

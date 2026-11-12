@@ -67,6 +67,9 @@
 #include "lle/SEConductor.h"
 #include "lle/NEProtocol.h"
 #include "lle/NESynchronousServer.h"
+#include "lle/UIScrollBar.h"
+#include "lle/UIFileListBox.h"
+#include "lle/FSRestorable.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
@@ -94,6 +97,14 @@
 #include "ee/EESoundObject.h"
 #include "ee/RTSGraphics.h"
 #include "ee/EEDisplayDevices.h"
+#include "ee/EEMessage.h"
+#include "ee/EEAction.h"
+#include "ee/EEASaveGame.h"
+#include "ee/EESaveGameFiles.h"
+#include "ee/EESMMediaStrings.h"
+#include "ee/EEPSaveGameHeader.h"
+#include "ee/EEUISCIFormManager.h"
+#include "ee/EEUIFMainGame.h"
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
@@ -103,6 +114,7 @@ unsigned long EEMenuWidth();   // Empire Earth.cpp
 unsigned long EEMenuHeight();
 
 UString gMultiplayerString("");             // 0x562fd8 (EEUserInterface.cpp keeps the WON password in it)
+EEUIFMainGame* gSavedMainGameForm;          // 0x563144 (.bss among the UI events' statics; ee/EmpireEarth.h)
 static EECivilization sCivilization;        // 0x962f08: the civilization the editors' sub-menu opens the builder on
 
 long EEScreenEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -122,6 +134,58 @@ static void EEScreensNoCustomCampaigns(UIForm* inForm)
 static void EEScreensRestoreDefaultYes(UIForm* inForm)
 {
     ee_screens_event(EE_SCREENS_GS_RESTORE_YES, inForm, NULL);
+}
+
+// ---- the load and save screens' (save_load.rs): the questions' callbacks get the list or the pending save object
+
+// the pending save (an EEMLoadOrSaveGame or an EEASaveGame, as the "form" DisplayQuestion hands its callbacks) between
+// its creation and the save event's end
+static UIForm* sSaveObject;
+
+// the delete question, answered yes: the list's selected file deleted
+static void EEScreensDeleteSelectedFile(UIForm* inList)
+{
+    reinterpret_cast<UIFileListBox*>(inList)->DeleteSelectedFile();
+}
+
+// a saved game's save message to every player, waiting up to 15 s; the save handed on
+static void EEScreensSendSave(UIForm* inMessage)
+{
+    static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(reinterpret_cast<NEMessage*>(inMessage), 15000, 12);
+    ee_screens_event(EE_SCREENS_SL_SAVED, NULL, NULL);
+}
+
+// a scenario's save action posted, our reference dropped; the save handed on
+static void EEScreensPostSave(UIForm* inAction)
+{
+    gUserInterface->PostAction(reinterpret_cast<EEAction*>(inAction));
+    reinterpret_cast<EEAction*>(inAction)->Dereference();
+    ee_screens_event(EE_SCREENS_SL_SAVED, NULL, NULL);
+}
+
+// the overwrite question, answered no: the pending save dropped
+static void EEScreensDropSave(UIForm* inObject)
+{
+    reinterpret_cast<UReferenceCounter*>(inObject)->Dereference();
+}
+
+// a put's texts joined by 0 bytes
+static std::vector<UString> Parts(const uint8_t* inText, size_t inLength)
+{
+    std::vector<UString> theParts;
+    std::string theText((const char*)inText, inLength);
+    size_t theStart = 0;
+    for (;;) {
+        size_t theEnd = theText.find('\0', theStart);
+        theParts.push_back(UString(theText.substr(theStart, theEnd == std::string::npos ? std::string::npos
+                                                                                     : theEnd - theStart).c_str()));
+        if (theEnd == std::string::npos)
+            break;
+        theStart = theEnd + 1;
+    }
+    while (theParts.size() < 3)
+        theParts.push_back(UString(""));
+    return theParts;
 }
 
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
@@ -165,7 +229,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
                                        uint32_t inC, uint32_t inD)
 {
     UIForm* theForm = static_cast<UIForm*>(inForm);
-    EEUIManager* theManager = static_cast<EEUIManager*>(theForm->GetManager());
+    // (a posted event runs with no form: the game's manager)
+    EEUIManager* theManager = theForm ? static_cast<EEUIManager*>(theForm->GetManager()) : gUIManager;
     auto Ctl = [&]() { return theForm->GetControl(inA); };   // a control op's control
     switch (inOp) {
     case EE_SCREENS_OP_PUSH:
@@ -461,6 +526,56 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN:
         EECampaignFormManager::Get()->mAllScenariosOpen = inA != 0;
         break;
+    // the load and save screens' (save_load.rs)
+    case EE_SCREENS_OP_SWAP_FORM:
+        theManager->SwapForm(theManager->GetFormByID(inA));
+        break;
+    case EE_SCREENS_OP_CURRENT_FORM_IS:
+        return theManager->GetCurrentForm() == theManager->GetFormByID(inA);
+    case EE_SCREENS_OP_POST_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        gUserInterface->PostEvent(theEvent, NULL);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_FORM_LIST_SELECTED: {
+        UIForm* theTarget = inA ? theManager->GetFormByID(inA - 1) : theForm;
+        UILBString* theList = static_cast<UILBString*>(theTarget->GetControl(inB));
+        unsigned long theSelection = 0;
+        if (theList && theList->GetCurrentSelection(theSelection) == kErrorOK)
+            return (uint32_t)theSelection;
+        return 0xffffffffu;
+    }
+    case EE_SCREENS_GAME_FREE_CAMERA:
+        return gFreeCamera;
+    case EE_SCREENS_GAME_MULTIPLAYER_SESSION:
+        return gCommunications->GetIsMultiplayerSession();
+    case EE_SCREENS_GAME_SCREEN_ACTIVE:
+        return gGameScreenActive;
+    case EE_SCREENS_GAME_IN_EDITOR:
+        return theManager->mInScenarioEditor;
+    case EE_SCREENS_GAME_PAUSE_SERVER: {
+        // (the save screen's original did not check the cast: a client crashed there)
+        EEServer* theServer = dynamic_cast<EEServer*>(gCommunications);
+        if (theServer && theServer->GetIsGamePaused() == false) {
+            theServer->PauseGame();
+            gUserInterface->PostPauseInformation(true);
+        }
+        break;
+    }
+    case EE_SCREENS_GAME_CTS_PROCESSED:
+        return gCommunications->GetNumberOfCTsProcessedInPhysics();
+    case EE_SCREENS_GAME_SAVE_SEND:
+        EEScreensSendSave(sSaveObject);
+        break;
+    case EE_SCREENS_GAME_SAVE_POST:
+        EEScreensPostSave(sSaveObject);
+        break;
+    case EE_SCREENS_GAME_SAVED_MAIN_FORM:
+        return gSavedMainGameForm != NULL;
+    case EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM:
+        gUserInterface->OpenForm(gSavedMainGameForm);
+        break;
     }
     return 0;
 }
@@ -579,6 +694,18 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     case EE_SCREENS_TEXT_CAMPAIGN_CIV:
         theText = EECampaignFormManager::Get()->mCampaign.GetRequiredCiv();
         break;
+    case EE_SCREENS_TEXT_SAVED_EXTENSION:
+        theText = gSavedGameExtension;
+        break;
+    case EE_SCREENS_TEXT_SCENARIO_EXTENSION:
+        theText = gScenarioExtension;
+        break;
+    case EE_SCREENS_TEXT_LOAD_SAVED_NAME:
+        theText = gLoadSavedGameName;
+        break;
+    case EE_SCREENS_TEXT_LOAD_SCENARIO_NAME:
+        theText = gLoadScenarioName;
+        break;
     }
     if (!theList.empty()) {
         memcpy(outText, theList.data(), theList.size() < inCapacity ? theList.size() : inCapacity);
@@ -675,6 +802,132 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
         gCommunications->ProcessLocalUserInput(new NEMClientConnectionRequest(theText, gGameVersion, gBinaryChecksum, false),
                                                kSlotNone);
+        break;
+    // the load and save screens' (save_load.rs)
+    case EE_SCREENS_TEXT_LOAD_SAVED_NAME:
+        gGamePreferences.mSettings.SetLoadSavedGameName(Parts(inText, inLength)[0]);
+        break;
+    case EE_SCREENS_TEXT_LOAD_SCENARIO_NAME:
+        gGamePreferences.mSettings.SetLoadScenarioName(Parts(inText, inLength)[0]);
+        break;
+    case EE_SCREENS_TEXT_FILE_LIST: {
+        // a file list from a directory below the startup one with an extension, the name selected when listed
+        std::vector<UString> theParts = Parts(inText, inLength);
+        UIFileListBox* theList = static_cast<UIFileListBox*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff));
+        if (theList == NULL)
+            break;
+        FSFileSpec theDirectory;
+        FSPath* thePath = new FSPath;
+        UWideString theName(theParts[2]);
+        unsigned long theIndex = 0;
+        theList->AddValidExtension(theParts[0]);
+        theDirectory.SetVolume(gStartupVolume);
+        theDirectory.SetDirectory(gStartupDirectory + theParts[1]);
+        thePath->AddDirectory(theDirectory, true);
+        theList->SetSearchPaths(thePath);
+        theList->CreateEntries(1);
+        if (theList->FindString(theName, theIndex) == true) {
+            theList->ChangeSelectionIndex(theIndex, true, false);
+            theList->SetScrollBarCurrentRange(theIndex);
+        }
+        thePath->Dereference();
+        break;
+    }
+    case EE_SCREENS_TEXT_QUESTION_DELETE:
+        gUIManager->DisplayQuestion(theText, true, reinterpret_cast<UIForm*>(static_cast<UIFileListBox*>(theForm->GetControl(inArg))),
+                                    EEScreensDeleteSelectedFile, 0);
+        break;
+    case EE_SCREENS_TEXT_LOAD_POST: {
+        std::vector<UString> theParts = Parts(inText, inLength);
+        FSFileSpec* theFile = NULL;
+        if (EEOpenSaveGameFile(theParts[0], theParts[1], theFile) != kErrorOK)
+            return 0;
+        gUserInterface->PostLoadSavedGame(*theFile);
+        if (theFile)
+            delete theFile;
+        return 1;
+    }
+    case EE_SCREENS_TEXT_SAVE_MESSAGE:
+        sSaveObject = reinterpret_cast<UIForm*>(static_cast<NEMessage*>(new EEMLoadOrSaveGame(
+            theText, TMGetTime(), 0, 0, gCommunications->GetNumberOfCTsProcessedInPhysics(), 0)));
+        break;
+    case EE_SCREENS_TEXT_SAVE_ACTION: {
+        std::vector<UString> theParts = Parts(inText, inLength);
+        sSaveObject = reinterpret_cast<UIForm*>(static_cast<EEAction*>(new EEASaveGame(theParts[0], true, theParts[1])));
+        break;
+    }
+    case EE_SCREENS_TEXT_FILE_EXISTS: {
+        std::vector<UString> theParts = Parts(inText, inLength);
+        FSFileSpec theSpec;
+        theSpec.SetFile(theParts[0]);
+        theSpec.SetDirectory(gStartupDirectory + theParts[1]);
+        if (theSpec.Open(kFileAccessRead) != kErrorOK)
+            return 0;
+        theSpec.Close();
+        return 1;
+    }
+    case EE_SCREENS_TEXT_SAVE_QUESTION:
+        gUIManager->DisplayQuestion(theText, true, sSaveObject, inArg ? EEScreensPostSave : EEScreensSendSave, EEScreensDropSave);
+        break;
+    case EE_SCREENS_TEXT_LOAD_SAVED_GAME: {
+        // the single player load: the saved game validated, the lobby options and a new local server set up for
+        // it, its loading started; an invalid file shows the reason (the file is freed on every path)
+        std::vector<UString> theParts = Parts(inText, inLength);
+        UWideString theMessage;
+        FSFileSpec* theFile = NULL;
+        if (EEOpenSaveGameFile(theParts[0], theParts[1], theFile) == kErrorOK && theFile->Open(kFileAccessRead) == kErrorOK) {
+            if (!EEValidateSaveGameFile(*theFile, theMessage)) {
+                gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
+                delete theFile;
+                return 0;
+            }
+            gWorld.GetLobbyOptions().GetLock()->WriteLock();
+            gWorld.GetLobbyOptions().SetDefaults();
+            gWorld.GetLobbyOptions().SetLoadType(2);
+            gWorld.GetLobbyOptions().SetMapType((const char*)theFile->GetFile());
+            gWorld.GetLobbyOptions().GetLock()->WriteUnlock();
+            gLoadSavedGameName = theFile->GetFile().GetIndexedSubstring(0, theFile->GetFile().GetLength() - 5);
+            delete theFile;
+            gGameState.mGameOptions.SetIsMultiplayer(false);
+            if (gCommunications)
+                delete gCommunications;
+            gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
+            static_cast<EEServer*>(gCommunications)->StartThreads();
+            static_cast<EEServer*>(gCommunications)->SetNumLoadResponses(false);
+            gGameStateLoadType = 2;
+            static_cast<EEServer*>(gCommunications)->StopPing();
+            static_cast<EEServer*>(gCommunications)->SetLoadState(true);
+            gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
+            return 1;
+        }
+        if (theFile != NULL)
+            delete theFile;
+        return 0;
+    }
+    case EE_SCREENS_TEXT_SCENARIO_INTRO: {
+        // a scenario's header into the scenario intro's form manager (2; the caller opens the form), the scenario
+        // the last loaded one; 1: the file is not a scenario, 0: not found
+        std::vector<UString> theParts = Parts(inText, inLength);
+        EEPSaveGameHeader theHeader;
+        FSFileSpec* theFile = NULL;
+        if (EEOpenSaveGameFile(theParts[0], theParts[1], theFile) != kErrorOK)
+            return 0;
+        theHeader.SetMajorVersion(kSaveGameMajorVersion);
+        theHeader.SetMinorVersion(kSaveGameMinorVersion);
+        if (theHeader.LoadFromFile(*theFile) != kErrorOK) {
+            if (theFile)
+                delete theFile;
+            return 1;
+        }
+        EEUISCIFormManager* theManager = EEUISCIFormManager::Get();
+        theManager->SetMediaStrings(theHeader.GetMediaStrings());
+        theManager->SetFile(theFile);
+        theManager->SetIsCampaign(false);
+        gLoadScenarioName = theFile->GetFile().GetIndexedSubstring(0, theFile->GetFile().GetLength() - 5);
+        return 2;
+    }
+    case EE_SCREENS_TEXT_FORM_EDIT:
+        static_cast<UIEditBox*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff))->SetText(theText);
         break;
     }
     return 0;

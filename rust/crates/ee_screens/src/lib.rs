@@ -19,6 +19,8 @@
 //! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
 //!   C++ host).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
+//! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
+//!   load forms).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
@@ -37,6 +39,9 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+pub mod save_load;
+#[cfg(not(test))]
+mod save_load_ffi;
 pub mod settings;
 pub mod settings_form;
 #[cfg(not(test))]

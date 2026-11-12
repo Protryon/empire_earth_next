@@ -353,6 +353,122 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// The save form's activate event (clears the saved flag).
+constexpr static const uint32_t EE_SCREENS_SL_ACTIVATE = 769;
+
+/// The save form's Save (its button, Enter in the name box, a double click in the list): a saved game (the saved
+/// games' extension, no directory: the message names the file) or a scenario (the editor's: `data\Scenarios\`).
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_GAME = 770;
+
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCENARIO = 771;
+
+/// The save screen's opening (`EEUIESLSaveScreen`, posted by the in-game options and the editor): the saved games of
+/// `data\Saved Games\` or the scenarios of `data\Scenarios\`.
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCREEN_GAME = 772;
+
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCREEN_SCENARIO = 773;
+
+/// The save list's focused file into the name box.
+constexpr static const uint32_t EE_SCREENS_SL_DISPLAY_NEW_FILE = 774;
+
+/// The save form's Cancel.
+constexpr static const uint32_t EE_SCREENS_SL_CANCEL_SAVE = 775;
+
+/// Delete on the save or load form (their list, control 4): the question, the selected file deleted on yes.
+constexpr static const uint32_t EE_SCREENS_SL_DELETE = 776;
+
+/// The save handed on (the overwrite question's yes and the direct path: the host's callbacks).
+constexpr static const uint32_t EE_SCREENS_SL_SAVED = 777;
+
+/// The load form's Load (its button, a double click): a saved game of `Saved Games\` or a scenario of `Scenarios\`.
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_GAME = 1025;
+
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCENARIO = 1026;
+
+/// The load screen's opening (`EEUIESLLoadScreen`): saved games or scenarios as the save screen's.
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCREEN_GAME = 1027;
+
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCREEN_SCENARIO = 1028;
+
+/// The single player load screen: its open event (posts the fill), the fill, Load, Cancel, Delete.
+constexpr static const uint32_t EE_SCREENS_SPL_OPEN = 3329;
+
+constexpr static const uint32_t EE_SCREENS_SPL_LOAD_SCREEN = 3330;
+
+constexpr static const uint32_t EE_SCREENS_SPL_LOAD = 3331;
+
+constexpr static const uint32_t EE_SCREENS_SPL_CANCEL = 3332;
+
+constexpr static const uint32_t EE_SCREENS_SPL_DELETE = 3333;
+
+/// The scenario load screen: its open event, the fill, Load (into the scenario intro), Cancel, Delete.
+constexpr static const uint32_t EE_SCREENS_SCL_OPEN = 5121;
+
+constexpr static const uint32_t EE_SCREENS_SCL_LOAD_SCREEN = 5122;
+
+constexpr static const uint32_t EE_SCREENS_SCL_LOAD = 5123;
+
+constexpr static const uint32_t EE_SCREENS_SCL_CANCEL = 5124;
+
+constexpr static const uint32_t EE_SCREENS_SCL_DELETE = 5125;
+
+constexpr static const uint32_t EE_SCREENS_OP_SWAP_FORM = 368;
+
+constexpr static const uint32_t EE_SCREENS_OP_CURRENT_FORM_IS = 369;
+
+constexpr static const uint32_t EE_SCREENS_OP_POST_EVENT = 370;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_SELECTED = 371;
+
+constexpr static const uint32_t EE_SCREENS_GAME_FREE_CAMERA = 372;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MULTIPLAYER_SESSION = 373;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SCREEN_ACTIVE = 374;
+
+constexpr static const uint32_t EE_SCREENS_GAME_IN_EDITOR = 375;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PAUSE_SERVER = 376;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CTS_PROCESSED = 377;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVE_SEND = 378;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVE_POST = 379;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVED_MAIN_FORM = 380;
+
+constexpr static const uint32_t EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM = 381;
+
+/// Texts (ee_screenscpp_text / _put_text); `a\0b` joins a put's two texts.
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVED_EXTENSION = 64;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_EXTENSION = 65;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SAVED_NAME = 66;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SCENARIO_NAME = 67;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FILE_LIST = 68;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_QUESTION_DELETE = 69;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_POST = 70;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_MESSAGE = 71;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_ACTION = 72;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FILE_EXISTS = 73;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_QUESTION = 74;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SAVED_GAME = 75;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_INTRO = 76;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FORM_EDIT = 77;
+
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
 
@@ -1164,6 +1280,18 @@ long ee_screens_event(uint32_t event,
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
+
+/// The save/load form's event code for a control event id (the screen active and the editor on when the form is
+/// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
+uint32_t ee_screens_save_load_event_for(unsigned long id,
+                                        bool screen_active,
+                                        bool in_editor);
+
+/// The single player load form's event code for a control event id; 0 for another form's.
+uint32_t ee_screens_sp_load_event_for(unsigned long id);
+
+/// The scenario load form's event code for a control event id; 0 for another form's.
+uint32_t ee_screens_scenario_load_event_for(unsigned long id);
 
 /// The settings form's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_settings_event_for(unsigned long id);

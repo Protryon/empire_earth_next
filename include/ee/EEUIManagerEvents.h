@@ -35,12 +35,6 @@ public:
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 };
 
-class EEUIESPLECancel : public UIEvent {
-public:
-    virtual ~EEUIESPLECancel() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
 class EEUISIEMouseOutButton : public UIEvent {
 public:
     virtual ~EEUISIEMouseOutButton() {}
