@@ -14,19 +14,19 @@ use crate::wire::{PastEnd, Reader, Writer};
 
 /// Which request (`EeWonDirRequest::op`).
 pub mod op {
-    pub const GET_DIR: i32 = 0;
-    pub const GET_MULTI_DIR: i32 = 1;
-    pub const ALIAS_GET: i32 = 2;
-    pub const GET_SERVICE: i32 = 3;
-    pub const FIND: i32 = 4;
-    pub const ADD: i32 = 5;
-    pub const MODIFY: i32 = 6;
-    pub const REMOVE: i32 = 7;
-    pub const RENAME: i32 = 8;
-    pub const RENEW: i32 = 9;
-    pub const SET_DATA_OBJECTS: i32 = 10;
-    pub const MODIFY_DATA_OBJECTS: i32 = 11;
-    pub const CLEAR_DATA_OBJECTS: i32 = 12;
+    pub(crate) const GET_DIR: i32 = 0;
+    pub(crate) const GET_MULTI_DIR: i32 = 1;
+    pub(crate) const ALIAS_GET: i32 = 2;
+    pub(crate) const GET_SERVICE: i32 = 3;
+    pub(crate) const FIND: i32 = 4;
+    pub(crate) const ADD: i32 = 5;
+    pub(crate) const MODIFY: i32 = 6;
+    pub(crate) const REMOVE: i32 = 7;
+    pub(crate) const RENAME: i32 = 8;
+    pub(crate) const RENEW: i32 = 9;
+    pub(crate) const SET_DATA_OBJECTS: i32 = 10;
+    pub(crate) const MODIFY_DATA_OBJECTS: i32 = 11;
+    pub(crate) const CLEAR_DATA_OBJECTS: i32 = 12;
 }
 
 /// A data object: its type and its data (`None`: a NULL buffer, a zero length).

@@ -1136,32 +1136,6 @@ constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
 
 constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
 
-constexpr static const int32_t GET_DIR = 0;
-
-constexpr static const int32_t GET_MULTI_DIR = 1;
-
-constexpr static const int32_t ALIAS_GET = 2;
-
-constexpr static const int32_t GET_SERVICE = 3;
-
-constexpr static const int32_t FIND = 4;
-
-constexpr static const int32_t ADD = 5;
-
-constexpr static const int32_t MODIFY = 6;
-
-constexpr static const int32_t REMOVE = 7;
-
-constexpr static const int32_t RENAME = 8;
-
-constexpr static const int32_t RENEW = 9;
-
-constexpr static const int32_t SET_DATA_OBJECTS = 10;
-
-constexpr static const int32_t MODIFY_DATA_OBJECTS = 11;
-
-constexpr static const int32_t CLEAR_DATA_OBJECTS = 12;
-
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
