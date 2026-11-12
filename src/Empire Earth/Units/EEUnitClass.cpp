@@ -67,6 +67,7 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEGameSound.h"
@@ -1910,6 +1911,8 @@ void EEUnitClass::ReleaseUnitClasses()
 // enemies); a hit on a non-target wall makes the launcher fire high
 EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EEUnit* theFound = [&]() -> EEUnit* {
     GE3DPoint thePosition;
     GE3DLine theLine;
     GEVector theDirection;
@@ -2035,12 +2038,22 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
         gUnitSetManager.Contains(theResult->mUnitClass->GetUnitType(), 0x2a) && inUnit->mOwner->mIsFiringHigh != true)
         inUnit->mOwner->mIsFiringHigh = true;
     return theResult;
+    }();
+    if (theScope.mOuter) {
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
+        EECombatCaptureHostRead(EE_COMBAT_HR_IMPACT_UNIT, inUnit, theGoal != NULL ? theGoal->mTarget : NULL, theFound != NULL,
+                                theFound != NULL ? (uint32_t)theFound->mUnitID : 0,
+                                inUnit->mOwner != NULL ? (uint32_t)inUnit->mOwner->mIsFiringHigh : 0xffffffffu);
+    }
+    return theFound;
 }
 
 // FUNCTION: EXE 0x633a14
 // Returns whether the unit faces the target unit (or its tile's centre)
 bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    bool theFaces = [&]() -> bool {
     GE3DPoint theLocation;
     EEComplexUnit* theOwner = inTarget->GetComplexUnit();
     if (theOwner != NULL) {
@@ -2051,6 +2064,10 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
         theLocation.SetY(inTarget->GetTileY() + 0.5f);
     }
     return this->FacesPoint(inUnit, theLocation, inUseTolerance);
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
+    return theFaces;
 }
 
 // FUNCTION: EXE 0x633a72
@@ -2058,6 +2075,8 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    bool theFaces = [&]() -> bool {
     GETransformation theLocation(inUnit->mPhysicalModel.GetLocation());
     GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     GE3DPoint theTarget(inLocation);
@@ -2100,6 +2119,16 @@ bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation,
         return theAngle <= theHalfTolerance || theOppositeAngle <= theHalfTolerance;
     }
     return theAngle <= kFacingTolerance || theOppositeAngle <= kFacingTolerance;
+    }();
+    if (theScope.mOuter) {
+        float theX = inLocation.GetX();
+        float theY = inLocation.GetY();
+        uint32_t theBits[2];
+        memcpy(&theBits[0], &theX, 4);
+        memcpy(&theBits[1], &theY, 4);
+        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_POINT, inUnit, NULL, theFaces, theBits[0], theBits[1], inUseTolerance);
+    }
+    return theFaces;
 }
 
 // FUNCTION: EXE 0x633ccc

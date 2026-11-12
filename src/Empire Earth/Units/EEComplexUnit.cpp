@@ -32,6 +32,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -4093,6 +4094,9 @@ void EEComplexUnit::Halt()
 // any weapon tag point; a legionnaire's special attack uses its heal range)
 bool EEComplexUnit::IsInReach(EEUnit* inTarget)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    uint32_t theTagBefore = (uint32_t)this->mWeaponTagPoint;
+    bool theReach = [&]() -> bool {
     bool theResult = false;
     EEUnitClass* theClass = this->GetUnitClass();
     float theRange = this->GetStats()->GetRange();
@@ -4131,6 +4135,10 @@ bool EEComplexUnit::IsInReach(EEUnit* inTarget)
         }
     }
     return theResult;
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_IN_REACH, this, inTarget, theReach, theTagBefore, (uint32_t)this->mWeaponTagPoint);
+    return theReach;
 }
 
 // FUNCTION: EXE 0x5ff18a

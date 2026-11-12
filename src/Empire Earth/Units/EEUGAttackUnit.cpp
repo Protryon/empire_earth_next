@@ -231,6 +231,8 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
 // Returns whether the target is a gate's middle part whose gate is not closed (despite the name)
 bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    bool theClosed = [&]() -> bool {
     bool theResult = false;
     if (this->mTarget->mUnitClass->mCategory == kUnitCategoryGate) {
         EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mTarget->GetUnitClass());
@@ -247,6 +249,10 @@ bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
             theResult = false;
     }
     return theResult;
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, this->mTarget, theClosed);
+    return theClosed;
 }
 
 // FUNCTION: EXE 0x61d857
@@ -254,6 +260,9 @@ bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 // the unit starts ignoring it
 bool EEUGAttackUnit::IsStillReachable(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    EEUnit* theTarget = this->mTarget;
+    bool theReachable = [&]() -> bool {
     U2DPoint<long> theTile;
     bool theResult;
     if (!inUnit->mUnitClass->mIsMelee || (theResult = inUnit->CanReachUnit(this->mTarget)) != false) {
@@ -268,6 +277,11 @@ bool EEUGAttackUnit::IsStillReachable(EEComplexUnit* inUnit)
     if (theComplexUnit != NULL && !inUnit->IsTargetIgnored(theComplexUnit, true))
         inUnit->IgnoreTarget(theComplexUnit);
     return theResult;
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_STILL_REACHABLE, inUnit, theTarget, theReachable, (uint32_t)this->mPathAttempts,
+                                (uint32_t)inUnit->mIgnoredTargets.size());
+    return theReachable;
 }
 
 // FUNCTION: EXE 0x61d8d7

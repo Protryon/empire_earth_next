@@ -64,6 +64,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -3050,6 +3051,8 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
 // Tells whether an enemy the unit may target is within its reach
 bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope;   // TEST ONLY (CBHR golden): the original body in a lambda
+    bool theInRange = [&]() -> bool {
     bool theFound = false;
     EEComplexUnit* theForwardUnit = NULL;
     EEComplexUnit* theBackwardUnit = NULL;
@@ -3117,6 +3120,10 @@ bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
         }
     }
     return theFound;
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_ENEMY_IN_RANGE, inUnit, NULL, theInRange, (uint32_t)inUnit->mTargetSearchTimer);
+    return theInRange;
 }
 
 // FUNCTION: EXE 0x64572b

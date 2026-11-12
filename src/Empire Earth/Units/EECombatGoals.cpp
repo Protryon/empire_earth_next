@@ -162,13 +162,90 @@ void EECombatCaptureCondition(const EeCombatConditionIn& in, const EeCombatCondi
         EEConditionWrite();
 }
 
+namespace {
+
+// A folded tag: inBatch calls to a record (count, FNV-1a 64 of each call's bytes in order)
+struct EECombatFolder {
+    unsigned int mTag;
+    const char* mFullName;
+    std::mutex mLock;
+    int mFull = -1;
+    uint32_t mCount = 0;
+    uint64_t mHash = 0xcbf29ce484222325ull;
+
+    EECombatFolder(unsigned int inTag, const char* inFullName) : mTag(inTag), mFullName(inFullName) {}
+
+    // under mLock
+    void Write()
+    {
+        EESimCaptureRecord theRecord(this->mTag);
+        theRecord.U32(this->mCount);
+        theRecord.U32((uint32_t)this->mHash);
+        theRecord.U32((uint32_t)(this->mHash >> 32));
+        theRecord.Commit();
+        this->mCount = 0;
+        this->mHash = 0xcbf29ce484222325ull;
+    }
+
+    void Add(const void* inData, size_t inSize)
+    {
+        if (!EESimCaptureRecord::Active())
+            return;
+        if (this->mFull < 0)
+            this->mFull = getenv(this->mFullName) != NULL;
+        if (this->mFull) {
+            EESimCaptureRecord theRecord(this->mTag);
+            theRecord.Bytes(inData, (unsigned int)inSize);
+            theRecord.Commit();
+            return;
+        }
+        if (!EESimCaptureRecord::Keeps(this->mTag))
+            return;
+        std::lock_guard<std::mutex> theGuard(this->mLock);
+        const unsigned char* theBytes = (const unsigned char*)inData;
+        for (size_t i = 0; i < inSize; i++)
+            this->mHash = (this->mHash ^ theBytes[i]) * 0x100000001b3ull;
+        if (++this->mCount == 4096)
+            this->Write();
+    }
+
+    void Flush()
+    {
+        std::lock_guard<std::mutex> theGuard(this->mLock);
+        if (this->mCount != 0)
+            this->Write();
+    }
+};
+
+EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'H', 'R'), "EE_SIM_CAPTURE_CBHR_FULL");
+thread_local int sHostReadDepth = 0;
+
+}   // namespace
+
+EECombatHostReadScope::EECombatHostReadScope() : mOuter(sHostReadDepth++ == 0) {}
+EECombatHostReadScope::~EECombatHostReadScope() { sHostReadDepth--; }
+
+void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                             uint32_t inExtra0, uint32_t inExtra1, uint32_t inExtra2)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[7] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
+                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult,
+                             inExtra0, inExtra1, inExtra2};
+    sHostReads.Add(theRecord, sizeof(theRecord));
+}
+
 void EECombatCaptureFlush()
 {
     if (!EESimCaptureRecord::Active())
         return;
-    std::lock_guard<std::mutex> theGuard(sConditionLock);
-    if (sConditionCount != 0)
-        EEConditionWrite();
+    {
+        std::lock_guard<std::mutex> theGuard(sConditionLock);
+        if (sConditionCount != 0)
+            EEConditionWrite();
+    }
+    sHostReads.Flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
