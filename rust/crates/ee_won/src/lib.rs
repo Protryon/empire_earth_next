@@ -26,6 +26,7 @@ pub mod db;
 pub mod der;
 pub mod dialogs;
 pub mod dir;
+pub mod dirchange;
 pub mod dirops;
 pub mod elgamal;
 pub mod ffi;

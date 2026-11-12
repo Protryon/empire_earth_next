@@ -487,6 +487,9 @@ WON_TESTS = {
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
+    # WONDir's entity changes as whole ops (every op's request and status replies), the original's statements
+    # against the Rust ops (ee_won dirchange.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_dirop.txt)
+    "won_dirop_test": [],
     # the routing server's protocol (every routing op's request and reply, the notifications, the user status
     # datagram, the group list request, the connection's header, dispatch rule and table), the original's
     # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module

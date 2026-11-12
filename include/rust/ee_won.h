@@ -232,6 +232,12 @@ constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
 
 constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
 
+/// `DIR_UF_UNIQUEDISPLAYNAME`
+constexpr static const uint32_t EE_WON_DIR_UF_UNIQUE_DISPLAY_NAME = 1;
+
+/// `DIR_UF_SERVRETURNADDR`
+constexpr static const uint32_t EE_WON_DIR_UF_SERV_RETURN_ADDR = 16;
+
 /// An auth block's kind for `ee_won_auth_unpack`: the header only.
 constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
 
@@ -4099,6 +4105,13 @@ EeWonDirReply ee_won_dir_parse_single(const uint8_t *data,
                                       size_t length,
                                       EeWonDirEntitySink sink,
                                       void *context);
+
+/// An entity change with the members of `fields` (an `EeWonDirRequest` as the original ops filled it), for a C++
+/// `ServerRequestOp` to run.
+///
+/// # Safety
+/// `fields` and everything it points to are valid.
+EeWonReqOp *ee_won_dirop_new(const EeWonDirRequest *fields);
 
 /// A request's message into `sink`.
 ///

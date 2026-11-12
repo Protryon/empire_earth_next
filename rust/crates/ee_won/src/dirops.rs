@@ -4,7 +4,8 @@
 //! changes (with a service's returned address), the multi-directory replies' accounting, `FindEntityOp`'s choice of
 //! parser and `GetEntityRequest::GetDirEntityMap`'s grouping of a listing by directory.
 //!
-//! The C++ ops keep their members and the `DirEntity` objects; they hand the fields over and copy the results back.
+//! The entity changes are Rust ops (dirchange.rs); the C++ list, get and find ops keep their members and the
+//! `DirEntity` objects, hand the fields over and copy the results back.
 //! Reached by nothing in the game today: the directory servers are gone.
 
 use std::ffi::c_void;
@@ -457,8 +458,17 @@ pub unsafe extern "C" fn ee_won_dir_request(
     sink: EeWonByteSink,
     context: *mut c_void,
 ) {
-    let r = unsafe { &*r };
-    let req = unsafe {
+    let req = unsafe { owned_request(&*r) };
+    let m = request(&req, field_size);
+    unsafe { sink(context, m.as_ptr(), m.len()) }
+}
+
+/// A request's fields from the C++ (the arrays and bytes borrowed, the texts decoded).
+///
+/// # Safety
+/// `r` and everything it points to are valid while the result lives.
+pub(crate) unsafe fn owned_request<'a>(r: &EeWonDirRequest) -> Request<'a> {
+    unsafe {
         Request {
             op: r.op,
             is_service: r.is_service,
@@ -486,9 +496,7 @@ pub unsafe extern "C" fn ee_won_dir_request(
                 .collect(),
             product: bytes(&r.product),
         }
-    };
-    let m = request(&req, field_size);
-    unsafe { sink(context, m.as_ptr(), m.len()) }
+    }
 }
 
 /// `GetEntityRequest::Pack`'s bytes into `sink` (`multi`: the multi-get's form).
