@@ -8711,3 +8711,73 @@ inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted fo
   dropped symbol); the remaining entries are inlined live code, base-class virtuals, EEWonNet's, and what tests and
   tools reach. The next real yield is semantic, not the linker's: code reachable only through a never-set pointer
   (gWonNet) or a menu entry the game no longer shows.
+
+## R6: the game screens, sixth round: the load and save screens, the campaign scenario select and the scenario intro whole in Rust (ee_screens save_load.rs, scenario_screens.rs; branch rust-screens6, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the next six forms; measured by the C++ deleted.
+
+- **Deleted:** `EEUIESaveLoadEvents.cpp`, `EEUIESinglePlayerLoadEvents.cpp`, `EEUIEScenarioLoadEvents.cpp`,
+  `EEUIECampaignSelectScreenEvents.cpp`, the events of `EEUIEScenarioIntroEvents.cpp` (the unit keeps
+  `EEUISCIFormManager`'s members, which the game uses elsewhere), the headers `EEUIESaveLoadEvents.h`,
+  `EEUIESLLoadScreen.h`, `EEUIESLSaveScreen.h`, `EEUIESinglePlayerLoadEvents.h`, `EEUIEScenarioLoadEvents.h`,
+  `EEUIECampaignSelectScreenEvents.h`, `EEUIEScenarioIntroEvents.h`, `EEUIESPLECancel` and the intro's two empty mouse
+  events (`EEUIManagerEvents.h`, `EEUIManager.cpp`), the four factories' cases (now one line each over
+  `ee_screens_save_load_event_for`, `_sp_load_`, `_scenario_load_`, `_scenario_intro_`; the load form's Cancel stays
+  `EEUIECancel`, which carries a form), their `??_G` notes and `link/exe/units.txt` lines. C++ lines of the screens
+  (UI Events, User Interface Thread, `include/ee/EEUI*.h`, `EEScreen*.h`, `EECommandLine.cpp`, `EESim.cpp`): 41,042
+  before, 40,275 after the load and save screens (-767; git over the C++ +285 -1,076), 39,595 after the campaign
+  scenario select and the scenario intro (-680; +350 -1,029).
+- **Parametric events:** the load and save screens' events carried an extension and a directory, given by whoever
+  made them (the in-game options, the editor's tool bar and save action, the factories, the open events). Each pair
+  they were ever made with is a code of its own (`EE_SCREENS_SL_SAVE_GAME` / `_SCENARIO`, `_LOAD_SCREEN_GAME` /
+  `_SCENARIO`, ...), so `EEScreenEvent` stays one code and no state. The factories made them when the form was
+  created, deciding by the screen and the editor then: the C++ one-liner passes both to the Rust table, so the choice
+  is the original's moment. The delete question handed the event to its callback for the list it was made with; the
+  host hands the list itself.
+- **What replaced them:** `save_load.rs` (codes 0x0301.. form 3, 0x0401.. form 4, 0x0d01.. form 13, 0x1401.. form 20;
+  the saved flag a `SaveLoad` record) and `scenario_screens.rs` (0x2101.. form 33, 0x1301.. form 19; the briefing
+  sound a `ScenarioScreens` record), each over a host trait. `scenario_screens.rs` names the form of every call
+  (`ee_screenscpp_form` gives the host a form by id), so the toolkit ops of the earlier rounds work on any form. The
+  host gained: posted events (a posted event runs with no form: the host's calls take the game's manager then), the
+  form swap and current form, list selections with their result, the file list fill, the questions and their
+  callbacks (the pending save message or action held by the host from its creation to the question), the file
+  checks, the saved game, scenario and intro loads; backgrounds' removal, tab stops, label lines and scrolling, event
+  triggers, the intro manager's flags, media, movie, sound and map backdrop, the scenario's start, the campaign's
+  checksum, archive, backdrop, scenarios, progress, scenario headers and Start, the difficulty.
+  `EE_SCREENS_CPP_SCENARIOS_*` are the campaign form's screen codes now (pattern (d)); `EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN`
+  answers the campaign's number (its checksum must match), not a flag.
+- **Golden drivers** (scratch, `build/sc6`: `save_load_driver.cpp`, `scenario_driver.cpp`, `drv.py`; the old headers
+  under `orig/inc`): `golden_save_load.txt`, 2,000 cases of the 18 events and a sweep of the three factories with the
+  free camera, current form, session, pause, turns, server and its cast, screen, editor, saved main form, the
+  questions' answers, the files' outcomes, the edit box, the last names and two lists; `golden_scenario_screens.txt`,
+  2,000 cases of the 19 events and the intro factory with campaigns that load or not, built-in checksums, archives,
+  maps, scenario lists, completed scenarios, progress, the lists, difficulty, the intro's flags, media and files, the
+  backdrops. Both replay in Rust; seeds 1-4 (20,000 cases each for 2-4) are identical old against new; the round 4
+  and 5 drivers relinked over the new host still print their goldens. Mutations checked (the saved flag's ignore and
+  reset, the editor's name choice, the factory's screen test; the built-in checksum rule, the completed marking, the
+  next selection, the intro's movie or briefing choice) each fail a replay.
+- **Lessons:**
+  - A `PostEvent`ed event's `ProcessEvent` gets no form: a host that starts from the event's form must take the
+    game's manager when there is none (the in-game load and save screens and the intro's briefing are posted).
+  - The drivers' fakes are as strong as their slots: `UIListBox::FindString` loops over the virtual `GetNumLines`, and
+    a stub answering 0 silently hid every preselection until it was faked too. Count each trace line kind before
+    trusting a golden.
+  - `dynamic_cast<EEServer*>` over a fake communications object: a driver can `#define dynamic_cast` to its own
+    template around the units it includes (both builds), and choose per case whether the cast succeeds.
+  - A zeroed `UWideString` survives assignment but not copy construction: `T x = y` over a fake header's members
+    crashed where the original's `T x; x = y` did not (the host keeps the original's form).
+  - An event reading a list's line on an empty list is undefined (it read a cleared vector's old element): such
+    cases are the driver's to avoid, as the game never fires the event then.
+  - A message's text with a line break spans two golden lines: a replay splits its own lines the same way.
+- **What the harness reaches:** EE-SIM's `--load-save` (single player -> Load Game -> the single player load screen's
+  posted fill and Load: `sim_oracle.py saveload` PASS on seed 2, the loaded game identical from its first tick) moves
+  through `save_load.rs`; `tools/harness/save_load.py` (legacy: the in-game Save Game screen, its Save and Cancel, the
+  single player Load) and `scenario_game.py` (legacy: the campaign scenario select's Start, the intro's Start) find
+  the moved controls by `EEScreenEvent`'s ProcessEvent and the codes in `SCREEN_CODES`: checked over a stand-in map
+  and ui-state (`build/sc6/check_harness.py`) and by the selftest (ALL PASS), not by a session. The gates' tour and
+  ai-game reach none of these forms. **Only a person (or the lead's legacy sessions) reaches:** the in-game save and
+  load screens, the scenario load screen, the campaign scenario select, the scenario intro, the editor's load and
+  save. None of this is simulation.
+- **Behaviour:** none intended where the original was defined. The save screen's original dereferenced its server
+  cast unchecked (a client crashed there); the host checks it. A campaign scenario's Start no longer leaks the file
+  of a scenario it does not find. The intro's never-NULL manager checks are gone (`Get` creates it).
