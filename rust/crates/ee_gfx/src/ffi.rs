@@ -5,13 +5,14 @@
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
+use ee_ge::types::{Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeRectangle, GeTransformation, GeVector};
 
 use crate::camera::{
     self, EeGfxCameraGoTo, EeGfxCameraPose, EeGfxCameraRays, EeGfxCameraStep, EeGfxClipping, EeGfxEdgePlanes,
     EeGfxOrthoView, Ground,
 };
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
+use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
 use crate::units::{self, EeGfxBarRects, EeGfxBarSizes};
 use ee_ge::viewport::GeViewport;
 
@@ -361,4 +362,162 @@ pub unsafe extern "C" fn ee_gfx_units_object_bar(
         let screen = units::screen_point(&*viewport, orthographic, world);
         units::object_bar(screen, health, &*sizes)
     }
+}
+
+// ---- the unit picker (pick.rs, EEUnitPicker.cpp)
+
+/// `FindUnit`'s ray through a screen point of `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_ray(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    point: *const Ge2DPoint,
+    out: *mut EeGfxPickRay,
+) {
+    // SAFETY: the function's contract (inputs copied before the store)
+    unsafe {
+        let r = pick::screen_ray(&*viewport, orthographic, *point);
+        *out = r;
+    }
+}
+
+/// `FindUnit`'s depth tolerance and pixel share.
+///
+/// # Safety
+/// `viewport` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_tolerances(
+    viewport: *const GeViewport,
+    free_camera: bool,
+    window_width: u32,
+) -> EeGfxPickTolerances {
+    // SAFETY: the function's contract
+    pick::tolerances(unsafe { &*viewport }, free_camera, window_width)
+}
+
+/// The bounding test's scale of an entry of priority `kind`.
+#[no_mangle]
+pub extern "C" fn ee_gfx_pick_scale(kind: i32, saved: f32) -> f32 {
+    pick::pick_scale(kind, saved)
+}
+
+/// Whether a bounding hit is large on the screen (or a tree).
+#[no_mangle]
+pub extern "C" fn ee_gfx_pick_is_large(pixel_size: f32, pixel: f32, kind: i32) -> bool {
+    pick::is_large(pixel_size, pixel, kind)
+}
+
+/// `FindUnit`'s ranking and choice over `count` hits: the chosen hit's index into `hits`, or -1. `group_nonempty`
+/// (the current player's selection holds a unit) is asked only when both an exact and a bounding hit rank.
+///
+/// # Safety
+/// `hits` holds `count` hits (or `count` is 0); the callback's contract is the caller's.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_best(
+    hits: *const EeGfxPickHit,
+    count: usize,
+    tolerance: f32,
+    show_hidden: bool,
+    context: *mut c_void,
+    group_nonempty: unsafe extern "C" fn(context: *mut c_void) -> bool,
+) -> isize {
+    let hits: Vec<EeGfxPickHit> =
+        if count == 0 { vec![] } else { unsafe { std::slice::from_raw_parts(hits, count) }.to_vec() };
+    let (first, second) = pick::rank(&hits, tolerance, show_hidden);
+    // SAFETY: the callback's contract (the hits are a copy)
+    match pick::choose(&hits, first, second, || unsafe { group_nonempty(context) }) {
+        Some(i) => i as isize,
+        None => -1,
+    }
+}
+
+/// `GetUnitPickPriority`; `ask(context, question)` answers 0 `IsLandBuilding`, 1 the current player's `IsAlly`.
+///
+/// # Safety
+/// `unit` is valid; the callback's contract is the caller's.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_priority(
+    unit: *const EeGfxPickUnit,
+    prefer_resources: bool,
+    context: *mut c_void,
+    ask: unsafe extern "C" fn(context: *mut c_void, question: u32) -> bool,
+) -> i32 {
+    // SAFETY: the function's contract (the facts copied)
+    let unit = unsafe { *unit };
+    // SAFETY: the callback's contract
+    pick::priority(&unit, prefer_resources, |q| unsafe { ask(context, q as u32) })
+}
+
+/// `AddUnit`'s admission.
+///
+/// # Safety
+/// `add` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_admits(add: *const EeGfxPickAdd) -> bool {
+    // SAFETY: the function's contract
+    pick::admits(unsafe { &*add })
+}
+
+/// # Safety
+/// `planes` holds the frustum's six planes.
+unsafe fn side_planes(planes: *const Ge3DPlane) -> [Ge3DPlane; 4] {
+    // SAFETY: the caller's contract
+    unsafe { [*planes.add(2), *planes.add(3), *planes.add(4), *planes.add(5)] }
+}
+
+/// `GetIsEntryInView`'s centre test against the side planes 2..5 of `planes` (six): `below[0..4]` and their count.
+///
+/// # Safety
+/// `center` is valid, `planes` holds six planes, `below` has room for four.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_sphere_below(
+    center: *const Ge3DPoint,
+    planes: *const Ge3DPlane,
+    below: *mut bool,
+) -> u32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let b = pick::sphere_below(*center, &side_planes(planes));
+        for (k, v) in b.iter().enumerate() {
+            *below.add(k) = *v;
+        }
+        b.iter().filter(|v| **v).count() as u32
+    }
+}
+
+/// `GetIsEntryInView`'s sphere test: of the side planes the centre is below, how many the sphere does not reach.
+///
+/// # Safety
+/// `center` is valid, `planes` holds six planes, `below` four flags.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_sphere_outside(
+    center: *const Ge3DPoint,
+    planes: *const Ge3DPlane,
+    below: *const bool,
+    radius: f32,
+) -> u32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let b = [*below, *below.add(1), *below.add(2), *below.add(3)];
+        pick::sphere_outside(*center, &side_planes(planes), &b, radius)
+    }
+}
+
+/// The LOD `GetIsEntryInView` walks.
+#[no_mangle]
+pub extern "C" fn ee_gfx_pick_view_lod(lod_count: u32) -> u32 {
+    pick::view_lod(lod_count)
+}
+
+/// `GetIsModelInView`'s vertex test against the side planes 2..5 of `planes` (six).
+///
+/// # Safety
+/// `planes` holds six planes, `point` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_pick_point_in_view(planes: *const Ge3DPlane, point: *const Ge3DPoint) -> bool {
+    // SAFETY: the function's contract
+    unsafe { pick::point_in_view(&side_planes(planes), *point) }
 }

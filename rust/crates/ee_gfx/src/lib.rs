@@ -22,6 +22,9 @@ mod golden_camera;
 #[cfg(test)]
 mod golden_mouse;
 #[cfg(test)]
+mod golden_picker;
+#[cfg(test)]
 mod golden_rounits;
 pub mod mouse;
+pub mod pick;
 pub mod units;

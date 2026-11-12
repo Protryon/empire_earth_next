@@ -373,6 +373,47 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// `kU441C28`: the depth tolerance, in clipping ranges.
+constexpr static const float PICK_TOLERANCE = 3.0;
+
+/// `kMinPickPixelSize`: the smallest pixel size `AddUnit` keeps.
+constexpr static const float MIN_PICK_PIXEL_SIZE = 0.35;
+
+/// `kFreeCameraPickWidth`: the window width the free camera picks against.
+constexpr static const float FREE_CAMERA_PICK_WIDTH = 1024.0;
+
+/// `kLargeHitFraction`: a bounding hit wider than this share of the window is "large" (ranked last).
+constexpr static const float LARGE_HIT_FRACTION = 0.17;
+
+/// `kU441C38`: `GetIsEntryInView`'s detail: the LOD a quarter from the coarsest.
+constexpr static const float VIEW_LOD_FRACTION = 0.25;
+
+/// `kPickScale`: the bounding test's growth for everything but trees.
+constexpr static const float PICK_SCALE = 1.2;
+
+/// `kTreePickScale`: a tree's (priority 2) scale in both tests.
+constexpr static const float TREE_PICK_SCALE = 0.9;
+
+/// The resource ids `GetUnitPickPriority` reads (`EEResourceType.h`).
+constexpr static const uint32_t RESOURCE_FOOD = 2;
+
+constexpr static const uint32_t RESOURCE_WOOD = 3;
+
+constexpr static const uint32_t RESOURCE_STONE = 4;
+
+/// The unit categories, family and types the picker tests (`EEUnitClassIDs.h`).
+constexpr static const uint32_t CATEGORY_AMBIENT = 0;
+
+constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
+
+constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
+
+constexpr static const uint32_t FAMILY_AA_BUILDING = 46;
+
+constexpr static const uint32_t TYPE_PATH_POINT = 223;
+
+constexpr static const uint32_t TYPE_CP_ICBM = 750;
+
 /// `kBarFraction`: the filled part's share of a bar's own width.
 constexpr static const float BAR_FRACTION = 0.75;
 
@@ -5556,6 +5597,63 @@ struct EeGfxBarRects {
   uint32_t kind;
   uint32_t count;
   EeGeRectangle rects[4];
+};
+
+/// A screen point's ray: its world points on the near and far clipping planes.
+struct EeGfxPickRay {
+  /// on the near (front) clipping plane
+  EeGe3DPoint front;
+  /// on the far (rear) one
+  EeGe3DPoint rear;
+};
+
+/// `FindUnit`'s depth tolerance and one pixel's share of the window it picks against.
+struct EeGfxPickTolerances {
+  float tolerance;
+  float pixel;
+};
+
+/// `EEUnitPickerHit` (0x14 bytes).
+struct EeGfxPickHit {
+  /// along the ray
+  float distance;
+  /// the priority with the caller's resource preference
+  uint32_t priority;
+  /// the priority without it
+  int32_t kind;
+  /// into the picker's entries
+  uint32_t index;
+  /// the exact (LOD 2) test hit
+  bool exact;
+  /// big on the screen (or a tree)
+  bool large;
+};
+
+/// What `GetUnitPickPriority` reads of a unit (its class's virtual `IsLandBuilding` and the current player's
+/// `IsAlly` are asked, in the C++'s order, through the questions).
+struct EeGfxPickUnit {
+  /// `GetComplexUnit() != NULL`
+  bool complex;
+  /// `mPlayer == gWorld.mPlayers[0]`
+  bool gaia;
+  /// the class's `mIsWall`
+  bool wall;
+  int32_t hit_points;
+  uint32_t family;
+  uint32_t category;
+  uint32_t resource_type;
+  int32_t resource_amount;
+};
+
+/// What `AddUnit` reads of a unit and the picker.
+struct EeGfxPickAdd {
+  uint32_t count;
+  uint32_t capacity;
+  float pixel_size;
+  uint32_t unit_type;
+  uint32_t category;
+  bool projectile;
+  bool free_camera;
 };
 
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
@@ -12084,6 +12182,82 @@ EeGfxBarRects ee_gfx_units_object_bar(const EeGeViewport *viewport,
                                       float scale,
                                       float health,
                                       const EeGfxBarSizes *sizes);
+
+/// `FindUnit`'s ray through a screen point of `*viewport`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_pick_ray(const EeGeViewport *viewport,
+                     bool orthographic,
+                     const EeGe2DPoint *point,
+                     EeGfxPickRay *out);
+
+/// `FindUnit`'s depth tolerance and pixel share.
+///
+/// # Safety
+/// `viewport` is valid.
+EeGfxPickTolerances ee_gfx_pick_tolerances(const EeGeViewport *viewport,
+                                           bool free_camera,
+                                           uint32_t window_width);
+
+/// The bounding test's scale of an entry of priority `kind`.
+float ee_gfx_pick_scale(int32_t kind, float saved);
+
+/// Whether a bounding hit is large on the screen (or a tree).
+bool ee_gfx_pick_is_large(float pixel_size, float pixel, int32_t kind);
+
+/// `FindUnit`'s ranking and choice over `count` hits: the chosen hit's index into `hits`, or -1. `group_nonempty`
+/// (the current player's selection holds a unit) is asked only when both an exact and a bounding hit rank.
+///
+/// # Safety
+/// `hits` holds `count` hits (or `count` is 0); the callback's contract is the caller's.
+ptrdiff_t ee_gfx_pick_best(const EeGfxPickHit *hits,
+                           size_t count,
+                           float tolerance,
+                           bool show_hidden,
+                           void *context,
+                           bool (*group_nonempty)(void *context));
+
+/// `GetUnitPickPriority`; `ask(context, question)` answers 0 `IsLandBuilding`, 1 the current player's `IsAlly`.
+///
+/// # Safety
+/// `unit` is valid; the callback's contract is the caller's.
+int32_t ee_gfx_pick_priority(const EeGfxPickUnit *unit,
+                             bool prefer_resources,
+                             void *context,
+                             bool (*ask)(void *context, uint32_t question));
+
+/// `AddUnit`'s admission.
+///
+/// # Safety
+/// `add` is valid.
+bool ee_gfx_pick_admits(const EeGfxPickAdd *add);
+
+/// `GetIsEntryInView`'s centre test against the side planes 2..5 of `planes` (six): `below[0..4]` and their count.
+///
+/// # Safety
+/// `center` is valid, `planes` holds six planes, `below` has room for four.
+uint32_t ee_gfx_pick_sphere_below(const EeGe3DPoint *center,
+                                  const EeGe3DPlane *planes,
+                                  bool *below);
+
+/// `GetIsEntryInView`'s sphere test: of the side planes the centre is below, how many the sphere does not reach.
+///
+/// # Safety
+/// `center` is valid, `planes` holds six planes, `below` four flags.
+uint32_t ee_gfx_pick_sphere_outside(const EeGe3DPoint *center,
+                                    const EeGe3DPlane *planes,
+                                    const bool *below,
+                                    float radius);
+
+/// The LOD `GetIsEntryInView` walks.
+uint32_t ee_gfx_pick_view_lod(uint32_t lod_count);
+
+/// `GetIsModelInView`'s vertex test against the side planes 2..5 of `planes` (six).
+///
+/// # Safety
+/// `planes` holds six planes, `point` is valid.
+bool ee_gfx_pick_point_in_view(const EeGe3DPlane *planes, const EeGe3DPoint *point);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

@@ -46,15 +46,17 @@
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
 #include "ee/EERenderSnapshot.h"
+#include "rust/ee_rust.h"   // ee_gfx pick.rs (RUST_PLAN R4.4)
 
-// the picker's named consts (.rdata 0x441c28.., reloaded per use) (provisional names)
-const float kU441C28 = 3.0f;
-const float kMinPickPixelSize = 0.35f;
-const float kFreeCameraPickWidth = 1024.0f;
-const float kLargeHitFraction = 0.17f;
-const float kU441C38 = 0.25f;
-const float kPickScale = 1.2f;
-const float kTreePickScale = 0.9f;
+// The picker's decisions are ee_gfx pick.rs (RUST_PLAN R4.4): the ray, the tolerances, the pick scales and the large
+// test, the hits' ranking, GetUnitPickPriority, AddUnit's admission, the frustum's sphere and vertex tests (its named
+// consts, .rdata 0x441c28.., are there). The C++ keeps the entries, the model tests, the lock and the world; the GE
+// value classes and the hits pass as their #[repr(C)] mirrors.
+static_assert(sizeof(GE2DPoint) == sizeof(EeGe2DPoint) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
+              sizeof(GE3DPlane) == sizeof(EeGe3DPlane) && sizeof(GEViewport) == sizeof(EeGeViewport), "GE mirrors");
+static_assert(sizeof(EEUnitPickerHit) == sizeof(EeGfxPickHit) && offsetof(EEUnitPickerHit, mIndex) == offsetof(EeGfxPickHit, index) &&
+              offsetof(EEUnitPickerHit, mExact) == offsetof(EeGfxPickHit, exact) &&
+              offsetof(EEUnitPickerHit, mLarge) == offsetof(EeGfxPickHit, large), "EEUnitPickerHit");
 
 // FUNCTION: EXE 0x518aa2
 // Creates the water's render object
@@ -117,30 +119,27 @@ void EEROWater::FrameDone()
 // FUNCTION: EXE 0x518c40
 // Returns a unit's click priority: 1 land building or wall, 4 own or allied unit, 6 enemy unit or AA
 // building, 2 wood, 3 stone/gold/other resource, 5 any resource when preferring resources (provisional name)
+// GetUnitPickPriority's questions (pick.rs EeGfxPickQuestion), asked where the original asked them
+static bool EEPickAsk(void* inUnit, uint32_t inQuestion)
+{
+    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+    if (inQuestion == 0)
+        return theUnit->mUnitClass->IsLandBuilding();
+    return gWorld.GetCurrentPlayer()->IsAlly(theUnit->GetPlayer());
+}
+
 long GetUnitPickPriority(EEUnit* inUnit, bool inPreferResources)
 {
-    long theResult = 0;
-    if (inUnit->GetComplexUnit() != NULL && inUnit->mHitPoints > 0 && inUnit->mPlayer != gWorld.mPlayers[0]) {
-        if (inUnit->mUnitClass->mFamily == kUnitFamilyAABuilding)
-            theResult = 6;
-        else if (inUnit->mUnitClass->IsLandBuilding() || inUnit->mUnitClass->mIsWall)
-            theResult = 1;
-        else {
-            if (gWorld.GetCurrentPlayer()->IsAlly(inUnit->GetPlayer()))
-
-                theResult = 4;
-            else
-                theResult = 6;
-        }
-    } else if (inUnit->mResourceType == kResourceWood) {
-        theResult = 2;
-    } else if (inUnit->mResourceType >= kResourceStone && inUnit->mResourceType < 7) {
-        theResult = 3;
-    }
-    if (inPreferResources && inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen &&
-        inUnit->mResourceType >= kResourceFood && inUnit->mResourceType < 7 && inUnit->mResourceAmount > 0)
-        theResult = 5;
-    return theResult;
+    EeGfxPickUnit theFacts;
+    theFacts.complex = inUnit->GetComplexUnit() != NULL;
+    theFacts.gaia = inUnit->mPlayer == gWorld.mPlayers[0];
+    theFacts.wall = inUnit->mUnitClass->mIsWall;
+    theFacts.hit_points = (int32_t)inUnit->mHitPoints;
+    theFacts.family = (uint32_t)inUnit->mUnitClass->mFamily;
+    theFacts.category = (uint32_t)inUnit->mUnitClass->mCategory;
+    theFacts.resource_type = (uint32_t)inUnit->mResourceType;
+    theFacts.resource_amount = (int32_t)inUnit->mResourceAmount;
+    return ee_gfx_pick_priority(&theFacts, inPreferResources, inUnit, EEPickAsk);
 }
 
 // FUNCTION: EXE 0x518cf8
@@ -247,15 +246,14 @@ static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransfo
 // first, then the vertices)
 static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes)
 {
-    long theOutside = 0;
     GE3DPoint theCenter;
     float theScale = inEntry.GetScale();
     GEModel* theModel = inEntry.GetModel();
     unsigned long theFrame = inEntry.GetFrame();
     bool theResult = true;
     GETransformation theTransformation(false);
-    bool theBelow[6];
-    unsigned long i;
+    bool theBelow[4];
+    const EeGe3DPlane* thePlanes = reinterpret_cast<const EeGe3DPlane*>(inPlanes.data());
     inEntry.GetLocation().Apply(theModel->GetInternalTransform(theFrame), theTransformation);
     if (theScale != 1.0f) {
         theTransformation.Scale(theScale, theScale, theScale);
@@ -263,29 +261,11 @@ static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DP
                                       inEntry.GetLocation().GetZ());
     }
     theTransformation.Apply(theModel->GetCenterPoint(), theCenter);
-    for (i = 2; i <= 5; i++) {
-        theBelow[i] = inPlanes[i].IsPointBelowPlane(theCenter);
-        if (theBelow[i])
-            theOutside++;
-    }
-    if (theOutside != 0) {
+    const EeGe3DPoint* theRustCenter = reinterpret_cast<const EeGe3DPoint*>(&theCenter);
+    if (ee_gfx_pick_sphere_below(theRustCenter, thePlanes, theBelow) != 0) {
         float theRadius = theModel->GetBoundingRadius(theFrame) * theScale;
-        for (i = 2; i <= 5; i++) {
-            if (!theBelow[i])
-                continue;
-            const GE3DPoint& thePoint = inPlanes[i].GetPoint();
-            GEVector theOffset(theCenter.mX - thePoint.mX, theCenter.mY - thePoint.mY,
-                               theCenter.mZ - thePoint.mZ);
-            float theDistance = theOffset.DotProduct(inPlanes[i].GetNormal());
-            if (theDistance < 0.0f)
-                theDistance = -theDistance;
-            if (theDistance <= theRadius)
-                theOutside--;
-        }
-        if (theOutside == 0) {
-            unsigned long theLOD = UMFloatToLong((1.0f - kU441C38) * theModel->GetLODCount());
-            if (theLOD == theModel->GetLODCount())
-                theLOD = theModel->GetLODCount() - 1;
+        if (ee_gfx_pick_sphere_outside(theRustCenter, thePlanes, theBelow, theRadius) == 0) {
+            unsigned long theLOD = ee_gfx_pick_view_lod((uint32_t)theModel->GetLODCount());
             theResult = GetIsModelInView(theModel, theTransformation, theFrame, theLOD, inPlanes);
         } else {
             theResult = false;
@@ -303,7 +283,7 @@ static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransfo
     GE3DPoint thePoint;
     GE3DPoint theWorldPoint;
     unsigned long i;
-    unsigned long k;
+    const EeGe3DPlane* thePlanes = reinterpret_cast<const EeGe3DPlane*>(inPlanes.data());
     if (inModel->GetParentModel() == NULL)
         theTransformation = inTransformation;
     else
@@ -318,25 +298,19 @@ static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransfo
             inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
                 inModel->GetPolygonArray(inLOD)->GetVertexIndex1(j) + theVertexStart);
             theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = true;
-            for (k = 2; k <= 5 && theInside; k++)
-                theInside = inPlanes[k].IsPointOnOrAbovePlane(theWorldPoint);
+            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
             if (theInside)
                 continue;
             inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
                 inModel->GetPolygonArray(inLOD)->GetVertexIndex2(j) + theVertexStart);
             theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = true;
-            for (k = 2; k <= 5 && theInside; k++)
-                theInside = inPlanes[k].IsPointOnOrAbovePlane(theWorldPoint);
+            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
             if (theInside)
                 continue;
             inModel->GetVertexArray(inFrame)->GetPoint(thePoint,
                 inModel->GetPolygonArray(inLOD)->GetVertexIndex3(j) + theVertexStart);
             theTransformation.Apply(thePoint, theWorldPoint);
-            theInside = true;
-            for (k = 2; k <= 5 && theInside; k++)
-                theInside = inPlanes[k].IsPointOnOrAbovePlane(theWorldPoint);
+            theInside = ee_gfx_pick_point_in_view(thePlanes, reinterpret_cast<const EeGe3DPoint*>(&theWorldPoint));
         }
     }
     if (!theInside) {
@@ -375,49 +349,36 @@ EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPref
     return theResult;
 }
 
+// the current player's selection holds a unit (FindUnit's choice asks it only with both an exact and a bounding hit)
+static bool EEPickGroupNonEmpty(void*)
+{
+    return gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0;
+}
+
 // PickUnit's search, under mLock (port: split from PickUnit, R5a.3)
 EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
 {
-    GE3DPoint theNear;
-    GE3DPoint theFar;
-    GE3DPoint theNearWorld;
-    GE3DPoint theFarWorld;
+    EeGfxPickRay theRay;
     GE3DLine theLine;
     std::vector<EEUnitPickerHit> theHits;
     EEUnitPickerHit theHit;
-    float theScale = 1.0f / this->mViewport.GetHalfWidth();
     EEUnit* theResult = NULL;
-    float theTolerance = kU441C28 / (this->mViewport.GetRearClippingDistance() - this->mViewport.GetFrontClippingDistance());
-    float theWidth = kFreeCameraPickWidth;
-    if (!gFreeCamera)
-        theWidth = (float)gGameWindowWidth;
+    const EeGeViewport* theViewport = reinterpret_cast<const EeGeViewport*>(&this->mViewport);
+    EeGfxPickTolerances theTolerances = ee_gfx_pick_tolerances(theViewport, gFreeCamera, (uint32_t)gGameWindowWidth);
     unsigned long theBest = this->mCount;
-    float thePixel = 1.0f / theWidth;
     float theSavedScale = 1.0f;
-    unsigned long theFirst = theBest;
-    unsigned long theSecond = theBest;
     float theDistance;
     long i;
     if (this->mCount != 0) {
-        float theX = (inPoint.GetX() - this->mViewport.GetXCenter()) * theScale;
-        float theY = -((inPoint.GetY() - this->mViewport.GetYCenter()) * theScale);
-        theNear = GE3DPoint(theX, theY, 0.0f);
-        theFar = GE3DPoint(theX, theY, 1.0f);
-        if (!this->mOrthographic) {
-            this->mViewport.DenormalizePerspectivePoint(theNear, this->mViewport.GetFrontClippingDistance(), theNearWorld);
-            this->mViewport.DenormalizePerspectivePoint(theFar, this->mViewport.GetRearClippingDistance(), theFarWorld);
-        } else {
-            this->mViewport.DenormalizeOrthographicPoint(theNear, theNearWorld);
-            this->mViewport.DenormalizeOrthographicPoint(theFar, theFarWorld);
-        }
-        theLine.Define(theNearWorld, theFarWorld);
+        ee_gfx_pick_ray(theViewport, this->mOrthographic, reinterpret_cast<const EeGe2DPoint*>(&inPoint), &theRay);
+        theLine.Define(*reinterpret_cast<const GE3DPoint*>(&theRay.front), *reinterpret_cast<const GE3DPoint*>(&theRay.rear));
         for (i = this->mCount - 1; i >= 0; i--) {
             EEUnit* theEntryUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
             if (theEntryUnit == NULL)
                 continue;
             theSavedScale = this->mEntries[i].GetScale();
             long theKind = GetUnitPickPriority(theEntryUnit, false);
-            this->mEntries[i].SetScale((theKind != 2 ? kPickScale : kTreePickScale) * theSavedScale);
+            this->mEntries[i].SetScale(ee_gfx_pick_scale((int32_t)theKind, theSavedScale));
             if (theEntryUnit->GetTileX() != -10000 &&
                 this->mEntries[i].Intersects(theLine, 1, theHit.mDistance, false)) {
                 theHit.mIndex = i;
@@ -432,70 +393,23 @@ EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
         for (i = theHits.size() - 1; i >= 0; i--) {
             if (theHits[i].mKind == 2) {
                 theSavedScale = this->mEntries[theHits[i].mIndex].GetScale();
-                this->mEntries[theHits[i].mIndex].SetScale(kTreePickScale * theSavedScale);
+                this->mEntries[theHits[i].mIndex].SetScale(ee_gfx_pick_scale(2, theSavedScale));   // the tree's scale
             }
             if (this->mEntries[theHits[i].mIndex].Intersects(theLine, 2, theDistance, false)) {
                 theHits[i].mDistance = theDistance;
                 theHits[i].mExact = true;
             } else {
-                bool theLarge;
-                if (gRasterizer->GetPixelSize(this->mEntries[theHits[i].mIndex], this->mViewport, this->mOrthographic) * thePixel >
-                        kLargeHitFraction || theHits[i].mKind == 2)
-                    theLarge = true;
-                else
-                    theLarge = false;
-                theHits[i].mLarge = theLarge;
+                float thePixels = gRasterizer->GetPixelSize(this->mEntries[theHits[i].mIndex], this->mViewport, this->mOrthographic);
+                theHits[i].mLarge = ee_gfx_pick_is_large(thePixels, theTolerances.pixel, (int32_t)theHits[i].mKind);
             }
             if (theHits[i].mKind == 2)
                 this->mEntries[theHits[i].mIndex].SetScale(theSavedScale);
         }
-        for (i = theHits.size() - 1; i >= 0; i--) {
-            if (theHits[i].mLarge)
-                continue;
-            if (!theHits[i].mExact) {
-                if (theSecond != this->mCount) {
-                    float theDelta = theHits[i].mDistance - theHits[theSecond].mDistance;
-                    if ((-theTolerance <= theDelta && theDelta <= theTolerance) || this->mShowHiddenUnits != 0) {
-                        if (theHits[i].mPriority <= theHits[theSecond].mPriority) {
-                            if (theDelta >= 0.0f)
-                                continue;
-                            if (theHits[i].mPriority != theHits[theSecond].mPriority)
-                                continue;
-                        }
-                    } else if (theDelta >= 0.0f) {
-                        continue;
-                    }
-                }
-                theSecond = i;
-            } else {
-                if (theFirst != this->mCount) {
-                    float theDelta = theHits[i].mDistance - theHits[theFirst].mDistance;
-                    if ((-theTolerance <= theDelta && theDelta <= theTolerance) || this->mShowHiddenUnits != 0) {
-                        if (theHits[i].mPriority <= theHits[theFirst].mPriority) {
-                            if (theDelta >= 0.0f)
-                                continue;
-                            if (theHits[i].mPriority != theHits[theFirst].mPriority)
-                                continue;
-                        }
-                    } else if (theDelta >= 0.0f) {
-                        continue;
-                    }
-                }
-                theFirst = i;
-            }
-        }
-        if (theSecond < this->mCount) {
-            if (theFirst < this->mCount) {
-                theBest = theFirst;
-                if (gWorld.GetCurrentPlayer()->mSelectedGroup->GetNumUnits() != 0 &&
-                    theHits[theFirst].mPriority < theHits[theSecond].mPriority)
-                    theBest = theSecond;
-            } else {
-                theBest = theSecond;
-            }
-        } else if (theFirst < this->mCount) {
-            theBest = theFirst;
-        }
+        ptrdiff_t theChoice = ee_gfx_pick_best(reinterpret_cast<const EeGfxPickHit*>(theHits.data()), theHits.size(),
+                                               theTolerances.tolerance, this->mShowHiddenUnits != 0, NULL,
+                                               EEPickGroupNonEmpty);
+        if (theChoice >= 0)
+            theBest = (unsigned long)theChoice;
         if (theBest < this->mCount) {
             theResult = this->GetEntryUnit(theHits[theBest].mIndex);
             if (theResult->GetComplexUnit() != NULL) {
@@ -593,8 +507,15 @@ void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformat
     EEUnitClass* theClass = inUnit->mUnitClass;
     EEComplexUnit* theComplexUnit = inUnit->GetComplexUnit();
     EEUnitPickerEntry& theEntry = this->mEntries[this->mCount];
-    if (!(this->mCount < this->mCapacity) || !(inPixelSize >= kMinPickPixelSize) || theClass->mUnitType == kUnitTypePathPoint ||
-        (!gFreeCamera && (theClass->mCategory == kUnitCategoryAmbient || (theClass->mIsProjectile && theClass->mUnitType != kUnitTypeCpICBM))))
+    EeGfxPickAdd theAdd;
+    theAdd.count = (uint32_t)this->mCount;
+    theAdd.capacity = (uint32_t)this->mCapacity;
+    theAdd.pixel_size = inPixelSize;
+    theAdd.unit_type = (uint32_t)theClass->mUnitType;
+    theAdd.category = (uint32_t)theClass->mCategory;
+    theAdd.projectile = theClass->mIsProjectile;
+    theAdd.free_camera = gFreeCamera;
+    if (!ee_gfx_pick_admits(&theAdd))
         return;
     theEntry.mUnitID = inUnit->GetUnitID();   // port: the id, no reference (R5a.3)
     if (theComplexUnit != NULL) {
