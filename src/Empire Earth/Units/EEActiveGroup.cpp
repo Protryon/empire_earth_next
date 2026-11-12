@@ -1844,3 +1844,354 @@ void EEActiveGroup::Validate()
 // TEMPLATE: EXE 0x5f1e8a
 
 // TEMPLATE: EXE 0x5f1edb
+
+// port (save version 0.279, EESaveHasActiveGroups): the players' active groups (mRunningGroups, mPendingGroups), which
+// the original did not save: a loaded game had none, so their units moved at their own speeds (not the group's when
+// it moves together), took no reserved destinations, and the groups' path requests and finishes were gone. Each group
+// is written whole but for its goal, which only Plan, LayOutFormation and RequestPaths read (when the command made the
+// group): the loaded group has none. Its running path requests wait for their graph searches (EEAwaitAutoPathRequest)
+#include <memory>
+#include <functional>
+#include <stddef.h>
+#include "lle/FSFile.h"
+#include "ee/EESaveGameFiles.h"
+
+namespace {
+struct EESavedGroupRequest {
+    long mKey = 0;
+    std::vector<long> mUnitIDs;
+    EECPASGFlags mFlags;
+    long mL30 = 0;
+    EEAutoPathRequest* mRequest = NULL;     // the load's (one reference)
+};
+
+struct EESavedActiveGroup {
+    std::vector<std::pair<long, bool> > mUnits;   // the id, whether the unit's mActiveGroup is this group
+    unsigned long mFormationType = 8;       // 8: none
+    float mOrientation[16] = {};
+    GE3DPoint mCenter;
+    float mHeading = 0.0f;
+    bool mB5C = true;
+    std::vector<std::pair<long, long> > mTypeCounts;
+    long mKindFlags = 0, mAction = 0;
+    std::vector<std::pair<unsigned int, GE3DPoint> > mDestinations;
+    std::vector<GE3DPoint> mU48, mU58;
+    float mValues[17] = {};                 // mSpeed .. mInverseTurnAcceleration, mCapFactor
+    bool mFlags[4] = {false, false, false, false};
+    std::vector<EESavedGroupRequest> mRequests;
+};
+
+typedef std::vector<std::vector<EESavedActiveGroup> > EESavedPlayerGroups;   // per player: running, then pending
+
+static_assert(sizeof(GETransformation) == 16 * sizeof(float), "GETransformation");
+
+float* EEGroupValues(EEActiveGroup* inGroup)
+{
+    return &inGroup->mSpeed;   // the 17 floats mSpeed .. mCapFactor, in their order
+}
+
+void EEWritePoint(FSFile& outFile, const GE3DPoint& inPoint)
+{
+    outFile.Write(inPoint.mX);
+    outFile.Write(inPoint.mY);
+    outFile.Write(inPoint.mZ);
+}
+
+long EEReadPoint(FSFile& inFile, GE3DPoint& outPoint)
+{
+    long theResult = inFile.Read(outPoint.mX);
+    if (theResult == 0)
+        theResult = inFile.Read(outPoint.mY);
+    if (theResult == 0)
+        theResult = inFile.Read(outPoint.mZ);
+    return theResult;
+}
+
+void EEReleaseSaved(std::vector<EESavedActiveGroup>& ioGroups)
+{
+    for (size_t i = 0; i < ioGroups.size(); i++)
+        for (size_t r = 0; r < ioGroups[i].mRequests.size(); r++)
+            if (ioGroups[i].mRequests[r].mRequest != NULL) {
+                ioGroups[i].mRequests[r].mRequest->Dereference();
+                ioGroups[i].mRequests[r].mRequest = NULL;
+            }
+}
+
+void EESaveActiveGroup(FSFile& outFile, EEActiveGroup* inGroup)
+{
+    outFile.Write((unsigned long)inGroup->mUnits.size());
+    for (size_t i = 0; i < inGroup->mUnits.size(); i++) {
+        outFile.Write((long)inGroup->mUnits[i]->mUnitID);
+        outFile.Write(inGroup->mUnits[i]->GetActiveGroup() == inGroup);
+    }
+    EEFormation* theFormation = inGroup->mFormation;
+    outFile.Write(theFormation != NULL ? (unsigned long)theFormation->mType : 8UL);
+    if (theFormation != NULL) {
+        float theMatrix[16];
+        memcpy(theMatrix, &theFormation->mOrientation, sizeof(theMatrix));
+        for (int f = 0; f < 16; f++)
+            outFile.Write(theMatrix[f]);
+        EEWritePoint(outFile, theFormation->mCenter);
+        outFile.Write(theFormation->mHeading);
+        outFile.Write(theFormation->mB5C);
+    }
+    outFile.Write((unsigned long)inGroup->mUnitTypeCounts.size());
+    for (std::map<long, long>::iterator it = inGroup->mUnitTypeCounts.begin(); it != inGroup->mUnitTypeCounts.end(); it++) {
+        outFile.Write(it->first);
+        outFile.Write(it->second);
+    }
+    outFile.Write(inGroup->mKindFlags);
+    outFile.Write(inGroup->mAction);
+    outFile.Write((unsigned long)inGroup->mDestinations.size());
+    for (std::map<unsigned int, GE3DPoint>::iterator it = inGroup->mDestinations.begin(); it != inGroup->mDestinations.end(); it++) {
+        outFile.Write((unsigned long)it->first);
+        EEWritePoint(outFile, it->second);
+    }
+    const std::vector<GE3DPoint>* theLists[2] = {&inGroup->mU48, &inGroup->mU58};
+    for (const std::vector<GE3DPoint>* theList : theLists) {
+        outFile.Write((unsigned long)theList->size());
+        for (size_t i = 0; i < theList->size(); i++)
+            EEWritePoint(outFile, (*theList)[i]);
+    }
+    const float* theValues = EEGroupValues(inGroup);
+    for (int v = 0; v < 17; v++)
+        outFile.Write(theValues[v]);
+    outFile.Write(inGroup->mIsFinished);
+    outFile.Write(inGroup->mIsQueued);
+    outFile.Write(inGroup->mMovesTogether);
+    outFile.Write(inGroup->mIsSpecialAttack);
+    unsigned long theCount = 0;
+    std::map<long, EEGroupPathRequest*>::iterator it;
+    for (it = inGroup->mPathRequests.begin(); it != inGroup->mPathRequests.end(); it++)
+        if (it->second->mPath != NULL)
+            theCount++;
+    outFile.Write(theCount);
+    for (it = inGroup->mPathRequests.begin(); it != inGroup->mPathRequests.end(); it++) {
+        EEGroupPathRequest* theRequest = it->second;
+        if (theRequest->mPath == NULL)
+            continue;
+        outFile.Write(it->first);
+        outFile.Write((unsigned long)theRequest->mUnitIDs.size());
+        for (size_t i = 0; i < theRequest->mUnitIDs.size(); i++)
+            outFile.Write(theRequest->mUnitIDs[i]);
+        outFile.Write(theRequest->mFlags.mPlayerID);
+        for (int f = 0; f < 17; f++)
+            outFile.Write(theRequest->mFlags.mFlags[f]);
+        outFile.Write(theRequest->mL30);
+        EESaveAutoPathRequest(outFile, *theRequest->mPath);
+    }
+}
+
+long EELoadActiveGroup(FSFile& inFile, EESavedActiveGroup& g)
+{
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        long theID = 0;
+        bool theMember = false;
+        theResult = inFile.Read(theID);
+        if (theResult == 0)
+            theResult = inFile.Read(theMember);
+        g.mUnits.push_back(std::make_pair(theID, theMember));
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(g.mFormationType);
+    if (theResult == 0 && g.mFormationType != 8) {
+        for (int f = 0; f < 16 && theResult == 0; f++)
+            theResult = inFile.Read(g.mOrientation[f]);
+        if (theResult == 0)
+            theResult = EEReadPoint(inFile, g.mCenter);
+        if (theResult == 0)
+            theResult = inFile.Read(g.mHeading);
+        if (theResult == 0)
+            theResult = inFile.Read(g.mB5C);
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        long theType = 0, theNumber = 0;
+        theResult = inFile.Read(theType);
+        if (theResult == 0)
+            theResult = inFile.Read(theNumber);
+        g.mTypeCounts.push_back(std::make_pair(theType, theNumber));
+    }
+    if (theResult == 0)
+        theResult = inFile.Read(g.mKindFlags);
+    if (theResult == 0)
+        theResult = inFile.Read(g.mAction);
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        unsigned long theID = 0;
+        GE3DPoint thePoint;
+        theResult = inFile.Read(theID);
+        if (theResult == 0)
+            theResult = EEReadPoint(inFile, thePoint);
+        g.mDestinations.push_back(std::make_pair((unsigned int)theID, thePoint));
+    }
+    std::vector<GE3DPoint>* theLists[2] = {&g.mU48, &g.mU58};
+    for (std::vector<GE3DPoint>* theList : theLists) {
+        if (theResult == 0)
+            theResult = inFile.Read(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+            GE3DPoint thePoint;
+            theResult = EEReadPoint(inFile, thePoint);
+            theList->push_back(thePoint);
+        }
+    }
+    for (int v = 0; v < 17 && theResult == 0; v++)
+        theResult = inFile.Read(g.mValues[v]);
+    for (int f = 0; f < 4 && theResult == 0; f++)
+        theResult = inFile.Read(g.mFlags[f]);
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+        g.mRequests.push_back(EESavedGroupRequest());
+        EESavedGroupRequest& r = g.mRequests.back();
+        unsigned long theIDs = 0;
+        theResult = inFile.Read(r.mKey);
+        if (theResult == 0)
+            theResult = inFile.Read(theIDs);
+        for (unsigned long u = 0; u < theIDs && theResult == 0; u++) {
+            long theID = 0;
+            theResult = inFile.Read(theID);
+            r.mUnitIDs.push_back(theID);
+        }
+        if (theResult == 0)
+            theResult = inFile.Read(r.mFlags.mPlayerID);
+        for (int f = 0; f < 17 && theResult == 0; f++)
+            theResult = inFile.Read(r.mFlags.mFlags[f]);
+        if (theResult == 0)
+            theResult = inFile.Read(r.mL30);
+        if (theResult == 0)
+            theResult = EELoadAutoPathRequest(inFile, r.mRequest);
+    }
+    return theResult;
+}
+
+EEActiveGroup* EERestoreActiveGroup(EEPlayer* inPlayer, EESavedActiveGroup& g)
+{
+    EEActiveGroup* theGroup = new EEActiveGroup(inPlayer);
+    for (size_t i = 0; i < g.mUnits.size(); i++) {
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(g.mUnits[i].first)));
+        if (theUnit == NULL)
+            continue;
+        theGroup->EEGroup::Add(theUnit);
+        if (g.mUnits[i].second)
+            theUnit->SetActiveGroup(theGroup);
+    }
+    EEFormation* theFormation = g.mFormationType != 8 ? EEFormation::Create(g.mFormationType) : NULL;
+    if (theFormation != NULL) {
+        memcpy(&theFormation->mOrientation, g.mOrientation, sizeof(g.mOrientation));
+        theFormation->mCenter = g.mCenter;
+        theFormation->mHeading = g.mHeading;
+        theFormation->mB5C = g.mB5C;
+    }
+    if (theGroup->mFormation != NULL)
+        theGroup->mFormation->Dereference();
+    theGroup->mFormation = theFormation;    // (Create's reference)
+    theGroup->mUnitTypeCounts.clear();
+    for (size_t i = 0; i < g.mTypeCounts.size(); i++)
+        theGroup->mUnitTypeCounts[g.mTypeCounts[i].first] = g.mTypeCounts[i].second;
+    theGroup->mKindFlags = g.mKindFlags;
+    theGroup->mAction = g.mAction;
+    for (size_t i = 0; i < g.mDestinations.size(); i++)
+        theGroup->mDestinations[g.mDestinations[i].first] = g.mDestinations[i].second;
+    theGroup->mU48 = g.mU48;
+    theGroup->mU58 = g.mU58;
+    memcpy(EEGroupValues(theGroup), g.mValues, sizeof(g.mValues));
+    theGroup->mIsFinished = g.mFlags[0];
+    theGroup->mIsQueued = g.mFlags[1];
+    theGroup->mMovesTogether = g.mFlags[2];
+    theGroup->mIsSpecialAttack = g.mFlags[3];
+    for (size_t i = 0; i < g.mRequests.size(); i++) {
+        EESavedGroupRequest& r = g.mRequests[i];
+        EEAutoPathRequest* thePath = r.mRequest;
+        r.mRequest = NULL;
+        EEGroupPathRequest* theRequest = new EEGroupPathRequest(thePath, r.mUnitIDs, r.mL30);
+        thePath->Dereference();   // (the group request's own reference keeps it)
+        theRequest->mFlags = r.mFlags;
+        long theKey = r.mKey;
+        theGroup->mPathRequests[theKey] = theRequest;
+        if (thePath->mIsDone)
+            continue;
+        // its graph search: the restored request takes the loaded copy's place, else the request is dropped
+        theGroup->Reference();
+        EEAwaitAutoPathRequest(thePath->mRequestID, NULL, [theGroup, theKey](EEAutoPathRequest* inRequest) {
+            std::map<long, EEGroupPathRequest*>::iterator it = theGroup->mPathRequests.find(theKey);
+            if (it != theGroup->mPathRequests.end()) {
+                if (inRequest != NULL) {
+                    it->second->mPath->Dereference();
+                    it->second->mPath = inRequest;   // the owner's reference
+                    inRequest = NULL;
+                } else {
+                    delete it->second;
+                    theGroup->mPathRequests.erase(it);
+                }
+            }
+            if (inRequest != NULL)
+                inRequest->Dereference();
+            theGroup->Dereference();
+        });
+    }
+    return theGroup;
+}
+}   // namespace
+
+void EESaveActiveGroups(FSFile& outFile)
+{
+    outFile.Write((unsigned long)gWorld.mNumPlayers);
+    for (unsigned long p = 0; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[p];
+        for (int l = 0; l < 2; l++) {
+            std::vector<EEActiveGroup*> theGroups;
+            if (thePlayer != NULL) {
+                std::vector<EEGroup*>& theList = l == 0 ? thePlayer->mRunningGroups : thePlayer->mPendingGroups;
+                for (size_t i = 0; i < theList.size(); i++)
+                    if (EEActiveGroup* theGroup = dynamic_cast<EEActiveGroup*>(theList[i]))
+                        theGroups.push_back(theGroup);
+            }
+            outFile.Write((unsigned long)theGroups.size());
+            for (size_t i = 0; i < theGroups.size(); i++)
+                EESaveActiveGroup(outFile, theGroups[i]);
+        }
+    }
+}
+
+long EELoadActiveGroups(FSFile& inFile)
+{
+    std::shared_ptr<EESavedPlayerGroups> theLists = std::make_shared<EESavedPlayerGroups>();
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long p = 0; p < theCount * 2 && theResult == 0; p++) {
+        theLists->push_back(std::vector<EESavedActiveGroup>());
+        unsigned long theGroups = 0;
+        theResult = inFile.Read(theGroups);
+        for (unsigned long i = 0; i < theGroups && theResult == 0; i++) {
+            theLists->back().push_back(EESavedActiveGroup());
+            theResult = EELoadActiveGroup(inFile, theLists->back().back());
+        }
+    }
+    if (theResult != 0) {
+        for (size_t l = 0; l < theLists->size(); l++)
+            EEReleaseSaved((*theLists)[l]);
+        return theResult;
+    }
+    // at the first tick (the units are back), before the graph searches are resolved (EEAfterLoadLast)
+    EEAfterLoad([theLists]() {
+        for (size_t l = 0; l < theLists->size(); l++) {
+            unsigned long p = (unsigned long)(l / 2);
+            EEPlayer* thePlayer = p < gWorld.mNumPlayers ? gWorld.mPlayers[p] : NULL;
+            std::vector<EESavedActiveGroup>& theSaved = (*theLists)[l];
+            if (thePlayer == NULL) {
+                EEReleaseSaved(theSaved);
+                continue;
+            }
+            for (size_t i = 0; i < theSaved.size(); i++) {
+                EEActiveGroup* theGroup = EERestoreActiveGroup(thePlayer, theSaved[i]);
+                (l % 2 == 0 ? thePlayer->mRunningGroups : thePlayer->mPendingGroups).push_back(theGroup);
+            }
+        }
+    });
+    return theResult;
+}

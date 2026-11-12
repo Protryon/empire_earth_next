@@ -1,4 +1,5 @@
-// DetectFirewallOp: asks a firewall-detection server to connect or send a datagram back to us
+// DetectFirewallOp: asks a firewall-detection server to connect or send a datagram back to us; the request, the
+// reply's reading and the datagram wait are ee_won's (rust/crates/ee_won/src/miscops.rs, through WONMiscOpsMsg.h)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -8,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONMiscOpsMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006cf5c0
 // Sets the defaults: listen on any port over TCP, wait for the connect, no receive limit
@@ -77,35 +79,13 @@ void DetectFirewallOp::CleanupHook()
 // Builds the detect request (TCP or UDP, our port, connect wait settings) and asks to receive the reply
 WONStatus DetectFirewallOp::GetNextRequest()
 {
-    WriteBuffer request(this->mLengthFieldSize,true);
-    request.AppendByte(5);
-    request.AppendShort(3);
-    request.AppendShort(this->mUseUDP?3:1);
-    request.AppendShort(this->mListenPort);
-    if (!this->mUseUDP) {
-        request.AppendBool(this->mWaitForConnect);
-        request.AppendLong(this->mMaxConnectWaitTime);
-        request.AppendBool(false);
-    }
-    this->mRequest=request.ToByteBuffer(true);
-    return WS_ServerReq_Recv;
+    return FirewallMsg<DetectFirewallOp>::GetNextRequest(*this);
 }
 // FUNCTION: WON 0x006cfad0
 // Checks the reply header, records our public address if given and returns the status (UDP: waits for the datagram)
 WONStatus DetectFirewallOp::CheckResponse()
 {
-    ReadBuffer reply(this->mResponse->data(),this->mResponse->length());
-    unsigned char header=reply.ReadByte();
-    unsigned short service=reply.ReadShort();
-    unsigned short message=reply.ReadShort();
-    if (header!=5 || service!=3 || message!=2) return this->InvalidReplyHeader();
-    short status=reply.ReadShort();
-    if (reply.Available()>=4) {
-        long host=reply.ReadLong();
-        if (host!=0) this->mPublicAddr.Fn2B2C20(host,0);
-    }
-    if (this->mUseUDP) return this->RecvServerDatagram();
-    return status;
+    return FirewallMsg<DetectFirewallOp>::CheckResponse(*this);
 }
 // FUNCTION: WON 0x006cfba0
 // Waits for a datagram from the server's host on the UDP socket, async or blocking; returns the status
@@ -113,19 +93,14 @@ WONStatus DetectFirewallOp::RecvServerDatagram()
 {
     if (this->GetMode()==OP_MODE_ASYNC) {
         this->mRecvBytesFromOp=new RecvBytesFromOp(255,this->mListenSocket.get());
-        unsigned long wait=this->TimeLeft();
-        if (this->mMaxConnectWaitTime>0 && this->mMaxConnectWaitTime<wait)
-            wait=this->mMaxConnectWaitTime;
+        unsigned long wait=FirewallMsg<DetectFirewallOp>::Wait(this->TimeLeft(),this->mMaxConnectWaitTime,true);
         this->Track(this->mRecvBytesFromOp.get(),1000);
-        if (wait==0) wait=0xffffffff;
         this->mRecvBytesFromOp->RunAsync(wait);
         return WS_ServerReq_ExitCommunicationLoop;
     }
     do {
         this->mRecvBytesFromOp=new RecvBytesFromOp(255,this->mListenSocket.get());
-        unsigned long wait=this->TimeLeft();
-        if (this->mMaxConnectWaitTime>0 && this->mMaxConnectWaitTime<wait)
-            wait=this->mMaxConnectWaitTime;
+        unsigned long wait=FirewallMsg<DetectFirewallOp>::Wait(this->TimeLeft(),this->mMaxConnectWaitTime,false);
         WONStatus status=this->mRecvBytesFromOp->Run(2,wait);
         if (status!=WS_Success) return status;
     } while (this->mRecvBytesFromOp->GetAddr().GetHost()!=this->GetCurAddr().GetHost());

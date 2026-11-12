@@ -1,4 +1,5 @@
-// HTTPCache: the on-disk cache of HTTP downloads; this revision creates the cache directory up front
+// HTTPCache: the on-disk cache of HTTP downloads; this revision creates the cache directory up front. The index
+// file (cachemap.dat) is read and written by ee_won (rust/crates/ee_won/src/cachemap.rs, through WONHttpCacheMsg.h)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -12,6 +13,7 @@
 #include "ee/wonapi/WONAPICore.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONHttpMsg.h"
+#include "ee/wonapi/WONHttpCacheMsg.h"
 #include <vector>
 namespace WONAPI {
 // FUNCTION: WON 0x006d1260
@@ -23,32 +25,8 @@ HTTPCacheEntry::HTTPCacheEntry()
     this->mExpirationTime=0;
     this->mLastAccessTime=0;
 }
-// FUNCTION: WON 0x006d1450
-// Reads the entry's id, valid flag, times, remote location, file name, type and entity tag
-void HTTPCacheEntry::ReadFromFile(FileReader& inReader)
-{
-    this->mId=inReader.ReadLong();
-    this->mIsValid=inReader.ReadByte()!=0;
-    this->mExpirationTime=inReader.ReadLong();
-    this->mLastAccessTime=inReader.ReadLong();
-    inReader.ReadString(this->mRemoteLocation,2);
-    inReader.ReadString(this->mFileName,2);
-    inReader.ReadString(this->mFileType,2);
-    inReader.ReadString(this->mEntityTag,2);
-}
-// FUNCTION: WON 0x006d14c0
-// Writes the entry's id, valid flag, times, remote location, file name, type and entity tag
-void HTTPCacheEntry::WriteToFile(FileWriter& inWriter)
-{
-    inWriter.WriteLong(this->mId);
-    inWriter.WriteByte(this->mIsValid?1:0);
-    inWriter.WriteLong(this->mExpirationTime);
-    inWriter.WriteLong(this->mLastAccessTime);
-    inWriter.WriteString(this->mRemoteLocation,2);
-    inWriter.WriteString(this->mFileName,2);
-    inWriter.WriteString(this->mFileType,2);
-    inWriter.WriteString(this->mEntityTag,2);
-}
+// ReadFromFile 0x006d1450 and WriteToFile 0x006d14c0 (the entry's id, valid flag, times, remote location, file
+// name, type and entity tag) are ee_won's (cachemap.rs read_entry, write_entry)
 // FUNCTION: WON 0x006d1670
 // Creates a cache in the given directory and loads its index
 HTTPCache::HTTPCache(const std::string& inPath,bool inFullPath)
@@ -66,57 +44,20 @@ extern const long gHTTPCacheVersion;
 // Loads cachemap.dat into the id and location maps; a missing file, wrong version or read error stops early
 void HTTPCache::ReadCacheMap()
 {
-    this->mCacheIdMap.clear();
-    this->mCacheLocationMap.clear();
-    this->mNextFreeId=1;
-    FileReader reader;
-    std::string path=this->mCachePath+"cachemap.dat";
-    if (!reader.Open(path.c_str())) return;
-    try {
-        if (reader.ReadLong()!=gHTTPCacheVersion) return;
-        int count=reader.ReadLong();
-        for (int i=0;i<count;++i) {
-            SmartPtr<HTTPCacheEntry> entry=new HTTPCacheEntry;
-            entry->ReadFromFile(reader);
-            entry->mLocalPath=this->mCachePath+entry->mFileName;
-            this->mCacheIdMap[entry->mId]=entry;
-            this->mCacheLocationMap[entry->mRemoteLocation]=entry;
-        }
-    } catch (FileReaderException&) {
-    }
+    HttpCacheMsg<HTTPCache,HTTPCacheEntry>::Read(*this,gHTTPCacheVersion);
 }
 // FUNCTION: WON 0x006d1ca0
 // Saves valid entries used in the last 14 days to cachemap.dat and deletes the other cached files
 void HTTPCache::WriteCacheMap()
 {
-    FileWriter writer;
-    std::string path=this->mCachePath+"cachemap.dat";
-    if (!writer.Open(path.c_str(),false)) return;
-    time_t now=time(NULL);
-    unsigned long position;
-    int count=0;
-    CacheIdMap::iterator i;
-    try {
-        writer.WriteLong(gHTTPCacheVersion);
-        int size=this->mCacheIdMap.size();
-        position=writer.pos();
-        writer.WriteLong(size);
-        i=this->mCacheIdMap.begin();
-        while (i!=this->mCacheIdMap.end()) {
-            HTTPCacheEntry* entry=i->second.get();
-            if (ee_won_http_cache_keeps(entry->IsValid(),now,entry->mLastAccessTime)) {
-                entry->WriteToFile(writer);
-                ++count;
-            } else {
-                WONFile file(entry->mLocalPath);
-                file.Delete(true);
-            }
-            ++i;
-        }
-        writer.SetPos(position);
-        writer.WriteLong(count);
-    } catch (FileWriterException&) {
-    }
+    HttpCacheMsg<HTTPCache,HTTPCacheEntry>::Write(*this,gHTTPCacheVersion,time(NULL));
+}
+
+// a dropped entry's cached file, deleted while the index is written
+void HTTPCache::DeleteCachedFile(HTTPCacheEntry* entry)
+{
+    WONFile file(entry->mLocalPath);
+    file.Delete(true);
 }
 // FUNCTION: WON 0x006d1ef0
 // Sets (and creates) the cache directory, absolute when asked, and loads its index

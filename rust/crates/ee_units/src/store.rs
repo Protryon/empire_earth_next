@@ -54,6 +54,22 @@ pub const EE_UNIT_FIELD_TIMES_UPDATED: u32 = 21;
 pub const EE_UNIT_FIELD_ACTIVE_GROUP: u32 = 22;
 /// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
 pub const EE_UNIT_FIELD_COMMAND: u32 = 23;
+/// `EEComplexUnit::mReloadTimer`
+pub const EE_UNIT_FIELD_RELOAD_TIMER: u32 = 24;
+/// `EEComplexUnit::mTargetSearchTimer`
+pub const EE_UNIT_FIELD_TARGET_SEARCH_TIMER: u32 = 25;
+/// `EEComplexUnit::mHealSearchTimer` (float bits)
+pub const EE_UNIT_FIELD_HEAL_SEARCH_TIMER: u32 = 26;
+/// `EEComplexUnit::mNextTriggerTime` (an `unsigned long`)
+pub const EE_UNIT_FIELD_NEXT_TRIGGER_TIME: u32 = 27;
+/// `EEComplexUnit::mRottingAwayTime`
+pub const EE_UNIT_FIELD_ROTTING_AWAY_TIME: u32 = 28;
+/// `EEComplexUnit::mPower`
+pub const EE_UNIT_FIELD_POWER: u32 = 29;
+/// `EEComplexUnit::mPowerRegenTimer`
+pub const EE_UNIT_FIELD_POWER_REGEN_TIMER: u32 = 30;
+/// `EEComplexUnit::mCamouflageTimer` (an `unsigned long`)
+pub const EE_UNIT_FIELD_CAMOUFLAGE_TIMER: u32 = 31;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -115,6 +131,22 @@ pub struct EeUnitRecord {
     pub times_updated: i64,
     /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
     pub command: i64,
+    /// `EEComplexUnit::mReloadTimer` (the step's leaves read it: `step`)
+    pub reload_timer: i64,
+    /// `EEComplexUnit::mTargetSearchTimer` (the step's leaves read it: `step`)
+    pub target_search_timer: i64,
+    /// `EEComplexUnit::mHealSearchTimer` as float bits (the step's leaves read it: `step`)
+    pub heal_search_timer: u32,
+    /// `EEComplexUnit::mNextTriggerTime` (the step's leaves read it: `step`)
+    pub next_trigger_time: i64,
+    /// `EEComplexUnit::mRottingAwayTime` (the step's leaves read it: `step`)
+    pub rotting_away_time: i64,
+    /// `EEComplexUnit::mPower` (the step's leaves read it: `step`)
+    pub power: i64,
+    /// `EEComplexUnit::mPowerRegenTimer` (the step's leaves read it: `step`)
+    pub power_regen_timer: i64,
+    /// `EEComplexUnit::mCamouflageTimer` (the step's leaves read it: `step`)
+    pub camouflage_timer: i64,
 }
 
 impl EeUnitRecord {
@@ -144,6 +176,14 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_TIMES_UPDATED => self.times_updated = value,
             EE_UNIT_FIELD_ACTIVE_GROUP => self.active_group = value as u8,
             EE_UNIT_FIELD_COMMAND => self.command = value,
+            EE_UNIT_FIELD_RELOAD_TIMER => self.reload_timer = value,
+            EE_UNIT_FIELD_TARGET_SEARCH_TIMER => self.target_search_timer = value,
+            EE_UNIT_FIELD_HEAL_SEARCH_TIMER => self.heal_search_timer = value as u32,
+            EE_UNIT_FIELD_NEXT_TRIGGER_TIME => self.next_trigger_time = value,
+            EE_UNIT_FIELD_ROTTING_AWAY_TIME => self.rotting_away_time = value,
+            EE_UNIT_FIELD_POWER => self.power = value,
+            EE_UNIT_FIELD_POWER_REGEN_TIMER => self.power_regen_timer = value,
+            EE_UNIT_FIELD_CAMOUFLAGE_TIMER => self.camouflage_timer = value,
             _ => return false,
         }
         true
@@ -195,6 +235,14 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_TIMES_UPDATED, self.times_updated == other.times_updated),
             (EE_UNIT_FIELD_ACTIVE_GROUP, self.active_group == other.active_group),
             (EE_UNIT_FIELD_COMMAND, self.command == other.command),
+            (EE_UNIT_FIELD_RELOAD_TIMER, self.reload_timer == other.reload_timer),
+            (EE_UNIT_FIELD_TARGET_SEARCH_TIMER, self.target_search_timer == other.target_search_timer),
+            (EE_UNIT_FIELD_HEAL_SEARCH_TIMER, self.heal_search_timer == other.heal_search_timer),
+            (EE_UNIT_FIELD_NEXT_TRIGGER_TIME, self.next_trigger_time == other.next_trigger_time),
+            (EE_UNIT_FIELD_ROTTING_AWAY_TIME, self.rotting_away_time == other.rotting_away_time),
+            (EE_UNIT_FIELD_POWER, self.power == other.power),
+            (EE_UNIT_FIELD_POWER_REGEN_TIMER, self.power_regen_timer == other.power_regen_timer),
+            (EE_UNIT_FIELD_CAMOUFLAGE_TIMER, self.camouflage_timer == other.camouflage_timer),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -411,6 +459,14 @@ mod tests {
             height: 0,
             times_updated: 0,
             command: 0,
+            reload_timer: 0,
+            target_search_timer: 0,
+            heal_search_timer: 0,
+            next_trigger_time: 0,
+            rotting_away_time: 0,
+            power: 0,
+            power_regen_timer: 0,
+            camouflage_timer: 0,
         }
     }
 
@@ -458,6 +514,14 @@ mod tests {
             (EE_UNIT_FIELD_TIMES_UPDATED, 0xffff_ffff),
             (EE_UNIT_FIELD_ACTIVE_GROUP, 1),
             (EE_UNIT_FIELD_COMMAND, 5000),
+            (EE_UNIT_FIELD_RELOAD_TIMER, 2500),
+            (EE_UNIT_FIELD_TARGET_SEARCH_TIMER, -1),
+            (EE_UNIT_FIELD_HEAL_SEARCH_TIMER, i64::from(0.5f32.to_bits())),
+            (EE_UNIT_FIELD_NEXT_TRIGGER_TIME, 0xffff_ffff),
+            (EE_UNIT_FIELD_ROTTING_AWAY_TIME, 9000),
+            (EE_UNIT_FIELD_POWER, 77),
+            (EE_UNIT_FIELD_POWER_REGEN_TIMER, 5000),
+            (EE_UNIT_FIELD_CAMOUFLAGE_TIMER, 0x8000_0100),
         ] {
             let before = r;
             assert!(r.set(f, v));

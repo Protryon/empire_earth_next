@@ -620,10 +620,12 @@ public:
 class HTTPGetOp;
 class HTTPSession;
 class HTTPGetOp;
+// HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
+// ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
 class HTTPConnection : public RefCount {
 public:
     HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
-    // Implicit ordinary destructor 2d2d50 (150 bytes), no own-vptr store; one-slot vtable 44d3a4.
+    virtual ~HTTPConnection(); //2d2d50, the members
     void Kill(); //2d3600
     void QueueOp(HTTPGetOp*); //2d33a0,ret4
     void QueueOp(HTTPGetOp*,int); //2d3290,ret8
@@ -632,34 +634,27 @@ public:
     static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
 protected:
     void OpCallback(HTTPGetOp*); //2d2e80, 1030 bytes; protected in the SDK
-public:
+private:
+    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
     HTTPSession* mSession; //20 NONOWNING, ctor raw assignment
-    SmartPtr<BlockingSocket> mSocket; //24
-    int mNumPipelineFailures; //28
-    int mNumPipelineSuccesses; //2c
-    bool mDoPipeline; //30; natural alignment31..33
-    time_t mLastUseTime; //34, constructor leaves uninitialized
-    typedef std::list<SmartPtr<HTTPGetOp> > OpQueue;
-    OpQueue mOpQueue[2]; //38,44
-    bool mRetryMode; //50; natural alignment51..53
-    HTTPGetOp* mCurOp[2]; //54,58 NONOWNING, Kill nulls them after killing
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCurOpCompletion[2]; //5c,60
+    EeWonHttpConn* mImpl;   // owned: 0x24..0x64 (socket, counts, flag, last use, queues, retry, running ops)
 };
 typedef SmartPtr<HTTPConnection> HTTPConnectionPtr;
 
-// 0x2c bytes: constructor 2d27b0, map destruction 2d2870.
-// Implicit dtor:2d2870 has no own vptr store; final store is RefCount at2d28d0.
-// SDK HTTPEngine.h independently has no explicit destructor declaration.
+// 0x2c bytes: constructor 2d27b0, map destruction 2d2870. The connections by host (StringLessNoCase) are ee_won's
+// (httpengine.rs EeWonHttpSession).
 class HTTPSession : public RefCount {
 public:
     HTTPSession();                          //2d27b0, out of line
+    virtual ~HTTPSession();                 //2d2870, the map
     void AddOp(HTTPGetOp*);                  //2d28f0, queues a completed op
     void KillAll();                         //2d2bc0
     int GetNumOps();
+private:
+    friend struct HTTPEngineHooks;
     CriticalSection mDataCrit;              //08..20
-    typedef std::map<std::string,HTTPConnectionPtr,StringLessNoCase> ConnectionMap;
-    ConnectionMap mConnectionMap;           //20..2c
+    EeWonHttpSession* mImpl;                //20..2c, owned
 };
 typedef SmartPtr<HTTPSession> HTTPSessionPtr;
 
@@ -1737,28 +1732,24 @@ public:
     DWORD mMaxRecvTime; //90=60000
 };
 
-// AuthSession: 0x10cc bytes; constructor 2e27b0 copies the by-value Blowfish (0x10b4);
-// dtor 2e2a80 destroys the RawBuffers and the RefCount base.
+// AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
+// and the last use, constructor 2e27b0, dtor 2e2a80): a RefCount shim over ee_won's EeWonAuthSession
+// (rust/crates/ee_won/src/peerauth.rs), which owns all of it.
 class AuthSession : public RefCount {
 protected:
-    AuthType mAuthType; //08
-    unsigned char mLengthFieldSize; //0c, natural alignment0d
-    unsigned short mId; //0e
-    unsigned short mInSeq; //10
-    unsigned short mOutSeq; //12
-    Blowfish mKey; //14..10c8
-    time_t mLastUseTime; //10c8, extent10cc
+    EeWonAuthSession* mImpl;
     virtual ~AuthSession(); //2e2a80
 public:
     AuthSession(AuthType, unsigned short, Blowfish, unsigned char); //2e27b0/RET10c0
     WONStatus Encrypt(ByteBufferPtr&); //2e2b40
     WONStatus Decrypt(ByteBufferPtr&); //2e2d60
-    time_t GetLastUseTime() const { return this->mLastUseTime; }
-    const Blowfish& GetKey() const { return this->mKey; }
-    AuthType GetAuthType() const { return this->mAuthType; }
-    unsigned short GetSessionId() const { return this->mId; }
-    void SetLengthFieldSize(unsigned char size) { this->mLengthFieldSize = size; }
-    bool IsEncrypted() { return (this->mAuthType==AUTH_TYPE_SESSION || this->mAuthType==AUTH_TYPE_PERSISTENT); } //inline (WON SDK); same AuthSession+08 test as PeerAuthServerOp::Success
+    time_t GetLastUseTime() const { return static_cast<time_t>(ee_won_auth_session_get(this->mImpl, 2)); }
+    // the Rust session's key, laid out as Blowfish's one member
+    const Blowfish& GetKey() const { return *reinterpret_cast<const Blowfish*>(ee_won_auth_session_key(this->mImpl)); }
+    AuthType GetAuthType() const { return static_cast<AuthType>(ee_won_auth_session_get(this->mImpl, 0)); }
+    unsigned short GetSessionId() const { return static_cast<unsigned short>(ee_won_auth_session_get(this->mImpl, 1)); }
+    void SetLengthFieldSize(unsigned char size) { ee_won_auth_session_set_lfs(this->mImpl, size); }
+    bool IsEncrypted() { AuthType t = this->GetAuthType(); return (t==AUTH_TYPE_SESSION || t==AUTH_TYPE_PERSISTENT); } //inline (WON SDK); same AuthSession+08 test as PeerAuthServerOp::Success
 };
 // CryptTransform: 8 bytes; new 8 at 2ad6d7, VT44ca1c, SDK CryptTransform.h.
 // Holds a reference to the AuthSession only.
@@ -1914,6 +1905,7 @@ public:
 // Ctor calls ServerOp2acc10 at2e6a30; inherited pointer78 release/addref/write
 // shown 2e6b10..2e6b61, source argument BlockingSocket* (as in the SDK header).
 // PeerAuthClient: 0x2180 bytes, no vptr, two Blowfish (0x10b4) members.
+template <class P> struct PeerAuthMsg;
 class PeerAuthClient {
     ConstSmartPtr<AuthPeerData> mPeerData; //00
     AuthType mAuthType; //04, the constructor leaves it untouched
@@ -1928,9 +1920,22 @@ class PeerAuthClient {
 public:
     enum PeerAuthClientState { STATE_NOT_STARTED=0, STATE_AWAITING_CHALLENGE=1, STATE_AWAITING_COMPLETE=2 } mState; //217c
 private:
-    WONStatus HandleChallenge1(ReadBuffer&,ByteBufferPtr&); //2e5cc0 RET8
-    WONStatus GetChallenge2(ByteBufferPtr&); //2e5fb0 RET4
-    WONStatus HandleComplete(ReadBuffer&); //2e61d0 RET4
+    // HandleChallenge1 2e5cc0, GetChallenge2 2e5fb0 and HandleComplete 2e61d0 are ee_won's (peerauth.rs)
+    // the hooks of the handshake in Rust (include/ee/wonapi/WONPeerAuthMsg.h)
+    template <class P> friend struct PeerAuthMsg;
+    bool PaPrivateDecrypt(const void*,unsigned long,std::string&);
+    bool PaMakeCert(bool,const void*,unsigned long);
+    bool PaVerifyCert();
+    bool PaCertExpired();
+    bool PaCertEncrypt(const void*,unsigned long,std::string&);
+    bool PaHasOwnCert2();
+    void PaOwnCertRaw(bool,std::string&);
+    void PaSecretCreate(int,int);
+    bool PaSecretSetKey(int,const void*,int);
+    void PaSecretKey(int,std::string&);
+    void PaNewSession(int,unsigned short,int,unsigned char);
+    void PaGetState(EeWonPeerState&);
+    void PaSetState(const EeWonPeerState&);
 public:
     ByteBufferPtr Start(const AuthPeerData*,AuthType,unsigned char); //2e6730 owning sret RET10
     WONStatus HandleRecvMsg(const void*,unsigned long,ByteBufferPtr&); //2e68d0 RET0c
@@ -1957,10 +1962,23 @@ class PeerAuthServer {
 public:
     enum PeerAuthServerState { STATE_NOT_STARTED=0,STATE_AWAITING_REQUEST=1,STATE_AWAITING_CHALLENGE2=2 } mState; //2180=0
 private:
-    WONStatus GetChallenge1(ByteBufferPtr&); //2e7dd0 RET4, wire/encryption body
-    WONStatus HandleRequest(ReadBuffer&,ByteBufferPtr&); //2e80a0 RET8, allocates the certificates
-    WONStatus GetComplete(WONStatus,ByteBufferPtr&); //2e8300 RET8, allocates the AuthSession
-    WONStatus HandleChallenge2(ReadBuffer&,ByteBufferPtr&); //2e8630 RET8
+    // GetChallenge1 2e7dd0, HandleRequest 2e80a0, GetComplete 2e8300 and HandleChallenge2 2e8630 are ee_won's
+    // (peerauth.rs)
+    // the hooks of the handshake in Rust (include/ee/wonapi/WONPeerAuthMsg.h)
+    template <class P> friend struct PeerAuthMsg;
+    bool PaPrivateDecrypt(const void*,unsigned long,std::string&);
+    bool PaMakeCert(bool,const void*,unsigned long);
+    bool PaVerifyCert();
+    bool PaCertExpired();
+    bool PaCertEncrypt(const void*,unsigned long,std::string&);
+    bool PaHasOwnCert2();
+    void PaOwnCertRaw(bool,std::string&);
+    void PaSecretCreate(int,int);
+    bool PaSecretSetKey(int,const void*,int);
+    void PaSecretKey(int,std::string&);
+    void PaNewSession(int,unsigned short,int,unsigned char);
+    void PaGetState(EeWonPeerState&);
+    void PaSetState(const EeWonPeerState&);
 public:
     void Start(const AuthPeerData*,unsigned char); //2e7d30 RET8 protocol initializer
     WONStatus HandleRecvMsg(const void*,unsigned long,ByteBufferPtr&); //2e87c0 RET0c protocol dispatcher
@@ -2018,8 +2036,10 @@ public:
 class FileReader;
 class FileWriter;
 // Cache entry, 0x68 bytes; ctor 2d1260; implicit dtor 2d1330 (no own-vtable store).
+template <class Cache, class Entry> struct HttpCacheMsg;
 class HTTPCacheEntry : public RefCount {
     friend class HTTPCache;
+    template <class Cache, class Entry> friend struct HttpCacheMsg;
     int mId; //08
     bool mIsValid; //0c,naturalpadding0d..0f
     std::string mRemoteLocation; //10
@@ -2031,8 +2051,7 @@ class HTTPCacheEntry : public RefCount {
     time_t mLastAccessTime; //64
 public:
     HTTPCacheEntry(); //2d1260
-    void ReadFromFile(FileReader&); //2d1450
-    void WriteToFile(FileWriter&); //2d14c0
+    // ReadFromFile 2d1450 and WriteToFile 2d14c0 are ee_won's (cachemap.rs, through WONHttpCacheMsg.h)
     bool IsValid(); //2d1540, small getter, out of line
     void SetValid(bool inValid) {this->mIsValid=inValid;}
     void SetExpirationTime(time_t inTime) {this->mExpirationTime=inTime;}
@@ -2053,6 +2072,8 @@ protected:
     int mNextFreeId; //30
     void ReadCacheMap(); //2d1a10
     void WriteCacheMap(); //2d1ca0
+    void DeleteCachedFile(HTTPCacheEntry*); // WriteCacheMap's deletion of a dropped entry's file
+    template <class Cache, class Entry> friend struct HttpCacheMsg;
     int GetFreeId(); //2d2170
     virtual ~HTTPCache(); //2d1820 explicitownVT then WriteCacheMap
 public:
@@ -2491,6 +2512,7 @@ protected:
     virtual WONStatus GetNextRequest(); //2cf970
     virtual WONStatus CheckResponse(); //2cfad0
     virtual WONStatus RecvServerDatagram(); //2cfba0, eighth slot SetupReceiveTracker
+    template <class Op> friend struct FirewallMsg;
 private:
     unsigned short mListenPort; //f4, naturalalignmentf6/f7
     unsigned long mMaxConnectWaitTime; //f8

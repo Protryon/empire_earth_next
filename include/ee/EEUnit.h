@@ -863,7 +863,7 @@ public:
     float mF220;                            // +0x220 (saved; 2*pi by 0x1fac37)
     float mLaunchYaw;                       // +0x224 (saved)
     float mOpenFraction;                    // +0x228 (saved)
-    float mHealSearchTimer;                 // +0x22c (saved)
+    EEUnitStoreField<float, kUnitFieldHealSearchTimer> mHealSearchTimer;   // +0x22c (saved; the unit store's)
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
@@ -881,7 +881,7 @@ public:
     float mF24C;                            // +0x24c
     float mSight;                           // +0x250 provisional name (the line-of-sight calamity adds to it; saved)
     unsigned long mCalamityFlags;           // +0x254 the EECalamityClass::mClassFlags of the contagions on it (provisional name)
-    unsigned long mNextTriggerTime;         // +0x258 (unsigned: AIStep compares it with gPhysics->mLD0 by jb)
+    EEUnitStoreField<unsigned long, kUnitFieldNextTriggerTime> mNextTriggerTime;   // +0x258 (unsigned: AIStep compares it with gPhysics->mLD0 by jb; the unit store's)
     SESMInstanceNode* mSound;               // +0x25c
     long mCurrentResearch;                  // +0x260 (= 100000; saved)
     unsigned long mAnimation;               // +0x264 (= 7; saved)
@@ -900,10 +900,10 @@ public:
     long mExitingUnitID;                    // +0x298 (saved)
     EEUnitStoreField<unsigned long, kUnitFieldFormationSlot> mFormationSlot;   // +0x29c (the unit store's)
     long mLastHitPoints;                    // +0x2a0
-    long mReloadTimer;                      // +0x2a4 (saved)
+    EEUnitStoreField<long, kUnitFieldReloadTimer> mReloadTimer;   // +0x2a4 (saved; the unit store's)
     long mCargoRoom;                        // +0x2a8 (saved)
-    long mRottingAwayTime;                  // +0x2ac (saved)
-    long mTargetSearchTimer;                // +0x2b0 (saved)
+    EEUnitStoreField<long, kUnitFieldRottingAwayTime> mRottingAwayTime;   // +0x2ac (saved; the unit store's)
+    EEUnitStoreField<long, kUnitFieldTargetSearchTimer> mTargetSearchTimer;   // +0x2b0 (saved; the unit store's)
     unsigned long mNumAreaEffects;          // +0x2b4 (saved)
     long mWakeTimer;                        // +0x2b8 (saved)
     long mWorkTimer;                        // +0x2bc (saved)
@@ -911,8 +911,8 @@ public:
     EEEffectHandle mHealEffect;             // +0x2c4 (saved; -1: none, ReleaseHealEffect)
     long mPositiveMorale;                   // +0x2c8 provisional name (the morale calamity counts itself in; saved)
     long mNegativeMorale;                   // +0x2cc provisional name (saved)
-    long mPowerRegenTimer;                  // +0x2d0 (saved)
-    long mPower;                            // +0x2d4 (calamities compare it with EECalamityClass::GetCost)
+    EEUnitStoreField<long, kUnitFieldPowerRegenTimer> mPowerRegenTimer;   // +0x2d0 (saved; the unit store's)
+    EEUnitStoreField<long, kUnitFieldPower> mPower;   // +0x2d4 (calamities compare it with EECalamityClass::GetCost; the unit store's)
     long mNumPathRequests;                  // +0x2d8
     long mIsCollidable;                     // +0x2dc
     long GetFormationRank() const { return this->mFormationRank; }
@@ -935,7 +935,7 @@ public:
     unsigned long mNumAttackers;            // +0x31c (saved)
     unsigned long mCloaked;                        // +0x320 provisional name (the cloaking calamity sets it; saved as unsigned long)
     unsigned long mPushImmuneUntil;         // +0x324 (a game time: mLD0 + 5000; compared unsigned)
-    unsigned long mCamouflageTimer;         // +0x328 (saved)
+    EEUnitStoreField<unsigned long, kUnitFieldCamouflageTimer> mCamouflageTimer;   // +0x328 (saved; the unit store's)
     unsigned long mU32C;                    // +0x32c (saved)
     long GetAIState() const { return this->mAIState; }
     long mAIState;                          // +0x330

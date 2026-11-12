@@ -30,6 +30,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EECombatGoals.h"
 
 const UString EEUGAttackUnit::sData("EEUGAttackUnit-Data");
 // SYNTHETIC: EXE 0x61d2f4   (wrapper)
@@ -281,32 +282,8 @@ long EEUGAttackUnit::GetMaxPathAttempts()
 // frame else a randomised reload timer; drops the path and resets the path attempts
 void EEUGAttackUnit::Step(EEComplexUnit* inUnit)
 {
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionChangeTargetForSpecialEnemy:
-        this->RetargetGatePart(inUnit);
-        break;
-    case kActionFaceEnemyUnit:
-        inUnit->SetCurrentPhysicsAction(1);
-        if (!inUnit->mUnitClass->FacesTarget(inUnit, this->mTarget, false) && inUnit->mAnimation != 0xd)
-            inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
-        break;
-    case kActionAttackEnemyUnit: {
-            inUnit->SetCurrentPhysicsAction(1);
-            long theSet = EEGetAttackFrameSet(inUnit);
-            unsigned long theFrame = inUnit->GetModel()->mSound1Frames[theSet];
-            inUnit->SetAnimation(theSet, -1, 0);
-            if (theFrame == inUnit->mPhysicalModel.GetFrame())
-                inUnit->mUnitClass->FireShot(inUnit);
-            else
-                inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-            inUnit->SetTargetSearchTimer(0);
-            inUnit->DropPath();
-            this->SetPathAttempts(0);
-        }
-        break;
-    }
+    // ee_combat goals.rs step: the plan's operations executed by ee/EECombatGoals.h's host (CBGS)
+    EECombatStep(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, this, this->mTarget);
 }
 
 // FUNCTION: EXE 0x61d9d3
@@ -461,125 +438,13 @@ void EEUGAttackUnit::SetTarget(EEUnit* inTarget)
 // fire ...); a living destroyed-test falls through to the hidden test; others go to the common goal
 bool EEUGAttackUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    bool theResult = false;
-    EEUnit* theArg3 = NULL;
-    long theArg4;
-    long theArg5;
-    switch (inEvent) {
-    case kTriggerEnemyUnitDestroyed:
-        if (this->mTarget->mHitPoints <= 0 || this->mTarget->mTileX == -10000) {
-            theResult = true;
-            break;
-        }
-    case kTriggerEnemyUnitUndetectable:
-        if (this->mTarget != NULL && this->mTarget->mComplexUnit->mIsCloakable && this->mTarget->mComplexUnit->GetIsCloaked()
-            && this->mTarget->mPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[this->mTarget->mPlayer->mPlayerID] != 0
-            && this->mTarget->mUnitClass->mCloakRadius == 0)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerUnitNotOnMap:
-        theResult = this->mTarget->mTileX == -10000;
-        break;
-    case kTriggerUnitInWeaponRange:
-        if (this->mIsConvert && inUnit->mUnitClass->IsCrusader())
-            theResult = EEIsInRangeToHit(inUnit, this->mTarget);
-        else
-            theResult = inUnit->IsInReach(this->mTarget);
-        break;
-    case kTriggerEnemyUnitNoLongerVisible:
-        if ((inUnit->mPlayer->IsHuman() || inUnit->mStats->GetRange() > inUnit->GetLineOfSight())
-            && !EEIsSeenBy(this->mTarget, inUnit->mPlayer, false))
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitInsideFiringArch:
-        theResult = inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, true);
-        break;
-    case kTriggerEnemyUnitLeftLOS: {
-            float theRange = inUnit->mStats->mRange;
-            float theMinimum = inUnit->GetLineOfSight();
-            if (theRange > theMinimum)
-                theResult = !EEIsSeenBy(this->mTarget, inUnit->GetPlayer(), false);
-            else if (inUnit->DistanceSquaredToUnit(this->mTarget) > theMinimum * theMinimum)
-                theResult = true;
-            else
-                theResult = false;
-        }
-        break;
-    case kTriggerEnemyUnitMoving: {
-            EEComplexUnit* theComplexUnit = this->mTarget->mComplexUnit;
-            if (theComplexUnit != NULL && theComplexUnit->mVelocity > 0.0f
-                && !inUnit->GetUnitClass()->FacesTarget(inUnit, theComplexUnit, true))
-                theResult = true;
-            else
-                theResult = false;
-        }
-        break;
-    case kTriggerFacingEnemyUnit:
-        theResult = inUnit->GetUnitClass()->FacesTarget(inUnit, this->mTarget, false);
-        break;
-    case kTriggerReadyToFireAgain:
-        theResult = inUnit->mReloadTimer >= inUnit->mStats->mReloadTime;
-        break;
-    case kTriggerUnitOnTileBorderingTarget:
-        theResult = inUnit->IsOnTileBorderingTarget(this->mTarget);
-        break;
-    case kTriggerAttackerIsRangedUnit:
-        if (inUnit->mStats->mRange > 1.0f)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerTargetIsNotDefensiveBuilding:
-        if (this->mTarget != NULL && this->mTarget->mUnitClass->IsLandBuilding() && this->mTarget->mStats->mAttack == 0.0f)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerBlockedByWall:
-        if (!inUnit->mStats->mCanFireOverWalls)
-            theResult = EEIsLineToUnitBlocked(inUnit, this->mTarget, &theArg3, &theArg4, &theArg5);
-        break;
-    case kTriggerEnemyIsBuilding:
-        theResult = this->mTarget->mUnitClass->mFamily == kUnitFamilyBuilding;
-        break;
-    case kTriggerCeaseFire:
-        if (this->mTarget->mPlayer != inUnit->mPlayer && inUnit->mPlayer->mEnemies[this->mTarget->mPlayer->mPlayerID] != 0)
-            theResult = false;
-        else if (inUnit->mHerd == NULL)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitMoved:
-        if (this->mTarget->mTileX != this->mTargetTileX || this->mTarget->mTileY != this->mTargetTileY)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerTargetIsSpecialEnemy:
-        theResult = this->IsGateClosed(inUnit);
-        break;
-    case kTriggerEnemyUnitHasNotMovedOneTile:
-        if (this->mTarget->mTileX == this->mTargetTileX && this->mTarget->mTileY == this->mTargetTileY)
-            theResult = true;
-        else
-            theResult = false;
-        break;
-    case kTriggerEnemyUnitReachable:
-        theResult = this->IsStillReachable(inUnit);
-        break;
-    case kTriggerEnemyUnitInLOS:
-        theResult = EEIsEnemyWithinRange(inUnit);
-        break;
-    default:
-        theResult = EEUnitGoal::EvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    return theResult;
+    // ee_combat goals.rs condition over the plain reads and the host's lazy ones (CBTC)
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->mTarget);
+    in.goal_tile[0] = (int32_t)this->mTargetTileX;
+    in.goal_tile[1] = (int32_t)this->mTargetTileY;
+    in.convert = this->mIsConvert;
+    return EECombatCondition(in, inUnit, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x61e01e
