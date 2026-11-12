@@ -141,7 +141,10 @@ end
 
 -- trains towards a guard of n soldiers by the mix: each role's lack from its producer, at most `per` an order, one
 -- order a class at a time (as boom's own training)
-function M.train(view, mem, n, order, per)
+-- iron_free (AI_RESEARCH §8.50: the Bronze save sat unpaid 44 minutes on average, short of iron only, while the
+-- spearmen and macemen retrained against the waves spent every iron unit): the ranged units only (bowmen and
+-- slingers: wood and gold, which pile up), no new iron infantry
+function M.train(view, mem, n, order, per, iron_free)
     local have = {pierce = 0, ranged = 0, shock = 0, cavalry = 0}
     local total = 0
     for _, s in ipairs(view.soldiers or {}) do
@@ -164,6 +167,9 @@ function M.train(view, mem, n, order, per)
         return
     end
     local mix = M.mix(view, mem)
+    if iron_free then
+        mix = {pierce = 0, ranged = 100, shock = 0}
+    end
     -- each role's lack, the largest first; a role with no class to train gives its share to pierce
     local lack = {}
     local spill = 0
@@ -171,7 +177,7 @@ function M.train(view, mem, n, order, per)
         local want = (n * mix[r] + 50) // 100
         local c = class_for(view, r)
         if c == nil then
-            spill = spill + math.max(want - have[r], 0)
+            spill = iron_free and 0 or spill + math.max(want - have[r], 0)
         else
             lack[#lack + 1] = {role = r, n = math.max(want - have[r], 0), c = c}
         end

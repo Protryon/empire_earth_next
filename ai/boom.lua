@@ -40,6 +40,7 @@ local ECON = {
                             -- holds its cost, whatever the citizens or the minutes (§8.51)
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
+    iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
 }
 
 local PLAN = {
@@ -651,6 +652,12 @@ function M.step(view, memory)
     -- out: the Stone Age for the rest of the game)
     local no_site = memory.no_site or {}
     local function guarded(r)
+        -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
+        -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
+        -- the Copper Age, while saving, the epoch's iron is kept from the army too
+        if ECON.iron_guard and r == "iron" and age >= 3 and saving and cost[r] > 0 then
+            return true
+        end
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
     end
     -- (balanced's claim_needed) an advance with a resource short that no site the gatherers can reach holds and
@@ -1116,7 +1123,10 @@ function M.step(view, memory)
             end
         end
         local swant = ECON.order and memory.plan_want or want   -- (ECON.order: the phase's want, not the touched)
-        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements then
+        -- (BO.OPT.boat_wood: the settlements too wait for the boats in stone_start)
+        local settle_hold = ECON.order and BO.OPT.boat_wood and BO.holds_wood(view, phase)
+        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements
+                and not settle_hold then
             local wanted = {}
             for _, s in ipairs(view.sites) do
                 if keep[s.index] and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil
@@ -1330,12 +1340,18 @@ function M.step(view, memory)
         end
 
         -- fishing: from the Stone Age's first minute, two docks and the boats (they pay for themselves in food)
-        if plan.boats > 0 then
+        -- (ECON.order with BO.OPT.pre_dock: the dock goes up while the Stone Age is saved for, so the boats start at
+        -- the advance; the owner had 8 boats 3 minutes into Stone, boom 10 at 6)
+        local docks = plan.docks or 0
+        if ECON.order and BO.OPT.pre_dock and phase == "pre" and saving then
+            docks = 1
+        end
+        if plan.boats > 0 or docks > 0 then
             local boats = plan.boats
             if #memory.boats_lost >= BOATS_LOST_MAX then
                 boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
             end
-            order("fish", {verb = "fish", boats = boats, docks = plan.docks})
+            order("fish", {verb = "fish", boats = boats, docks = docks})
         end
 
         -- the trainers: a barracks once the town has ten citizens, then an archery range, then the second of each as
@@ -1394,7 +1410,9 @@ function M.step(view, memory)
     if army_short then
         -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
         -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
-        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
+        -- (plan.iron_free, AI_RESEARCH §8.50: while the next epoch's iron is short, the soldiers that cost none)
+        local iron_free = plan.iron_free and saving and view.stock.iron < (view.next_epoch_cost.iron or 0)
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2, iron_free)
     end
 
     -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
@@ -1505,6 +1523,9 @@ function M.step(view, memory)
 
     if ECON.order then
         PL.step(view, memory)   -- (the settlements' builders back to the engine once they stand)
+        if BO.OPT.shore_scout and phase == "pre" then
+            BO.shore_scout(view, memory, saving)
+        end
     end
     -- the plan line, once a minute
     if view.time % 60000 < 1000 and ECON.order then

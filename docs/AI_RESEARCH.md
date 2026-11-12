@@ -3825,6 +3825,28 @@ On 64 seeds (2-65):
 - **S1 is off.** The militia against small raids loses citizens to the ranged raiders it now fights.
 - **Benched only on boom_order.** The default boom shares lib.defence and lib.guard and gets the two switches too.
 
+**The late game: iron (2026-11-12).** With S2 and S3 on, no town of the default boom falls after the Copper Age.
+What holds it back is the Bronze advance: its save sits unpaid for 44 minutes on iron alone (stock 3-27, income 0-75
+a minute), because the army is exempt from the reserve and spends the iron as it comes in. Two switches against
+that, and B4 (warships from the dock) for the default boom, 32 seeds against the improved classic, the m13 exe:
+
+| Variant | Defeats | Bronze (games, median min) | Dark | Save unpaid (min) | Boats lost after Copper |
+|---|---|---|---|---|---|
+| boom, base | 7 | 9, 93.7 | - | 44 | 24 |
+| boom, `iron_free` (soldiers without iron while the iron is short) | 8 | 9, 90.2 | 5 | 42 | 21 |
+| boom, `iron_free` + boom-econ's `iron_guard` | 8 | 8, 89.4 | 4 | 43 | 21 |
+| boom, B4 (`boat_guard`, `tower_up_ships`) | 8 | 8, 90.1 | - | 39 | **14** |
+| boom_order, base | 6 | 11, 79.5 | 7 | 58 | 13 |
+| boom_order, `iron_free` | 6 | 14, 78.7 | 10 | 56 | 11 |
+| boom_order, `iron_free` + `iron_guard` | 6 | **16**, 83.2 | 10 | 55 | 14 |
+
+- **`iron_free` with `iron_guard` helps boom_order:** 16 games reach the Bronze Age against 11, at the same 6
+  defeats. The save still waits about as long; the gain is in games that would never have paid it.
+- **It does not help the default boom,** whose iron income is too low for the saving to matter. Off there.
+- **B4 cuts the default boom's boats lost after the Copper Age by 40%** (14 against 24) and the save's wait by 5
+  minutes, for one defeat more (within the noise).
+- Both switches stay off by default here (`plan.iron_free`, `econ.iron_guard`): the choice is the owner's.
+
 ### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
 
 The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
