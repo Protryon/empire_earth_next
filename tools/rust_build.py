@@ -75,11 +75,16 @@ def fmt_packages():
     return [arg for crate in sorted(p.name for p in (RUST / "crates").iterdir() if p.is_dir()) for arg in ("-p", crate)]
 
 
+# the gate's header test, and what `header` runs after writing: one command, so the two cannot disagree
+HEADER_CHECK = ["run", "-q", "-p", "xtask", "--", "cbindgen", "--check"]
+HEADER_WRITE = ["run", "-q", "-p", "xtask", "--", "cbindgen"]
+
+
 def gate():
     steps = [("test", ["test", "--workspace"]),
              ("clippy", ["clippy", "--workspace", "--no-deps", "--all-targets", "--", "-D", "warnings"]),
              ("rustfmt", ["fmt", "--check", *fmt_packages()]),
-             ("header", ["run", "-q", "-p", "xtask", "--", "cbindgen", "--check"])]
+             ("header", HEADER_CHECK)]
     for name, args in steps:
         print(f"== {name}", flush=True)
         code = run_cargo(args)
@@ -99,7 +104,19 @@ def main():
         return 0
     if a.command == "gate":
         return gate()
-    return run_cargo(["run", "-q", "-p", "xtask", "--", "cbindgen"])
+    return header()
+
+
+def header():
+    """Regenerates the headers, then runs the gate's own check over them: `header` reports them current only when
+    the gate would (it printed "current" after writing before, whatever the gate's check then found)."""
+    code = run_cargo(HEADER_WRITE)
+    if code:
+        return code
+    code = run_cargo(HEADER_CHECK)
+    if code:
+        print("rust_build header: the gate's header check still finds a header stale after writing it", file=sys.stderr)
+    return code
 
 
 if __name__ == "__main__":
