@@ -1557,7 +1557,6 @@ struct EeCombatSearchHost {
                   int32_t (*out)[4]);
   int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
   uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
-  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
   uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
   int32_t (*dummy_head)(void *ctx, uint64_t unit);
@@ -1922,10 +1921,8 @@ struct EeCombatTargetHost {
                   int32_t (*out)[4]);
   int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
   uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
-  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   int32_t (*screen)(void *ctx, uint64_t unit);
   int32_t (*multiple)(void *ctx, uint64_t unit);
-  uint32_t (*unit_id)(void *ctx, uint64_t unit);
   int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
   /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
   void (*push)(void *ctx, uint64_t unit);

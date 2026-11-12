@@ -2315,12 +2315,6 @@ static uint64_t EESearchRegionUnit(void* inContext, int32_t inX, int32_t inY, in
     return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
 }
 
-static void EESearchUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
-{
-    (*outTile)[0] = (int32_t)EESearchUnit(inUnit)->mTileX;
-    (*outTile)[1] = (int32_t)EESearchUnit(inUnit)->mTileY;
-}
-
 static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
 {
     EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
@@ -2529,7 +2523,7 @@ static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int3
 
 static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
 {
-    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit, EESearchUnitTile,
+    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit,
                                   EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
                                   EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
                                   EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
@@ -3183,12 +3177,6 @@ static uint64_t EENewTargetRegionUnit(void* inContext, int32_t inX, int32_t inY,
     return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
 }
 
-static void EENewTargetUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
-{
-    (*outTile)[0] = (int32_t)EENewTargetUnit(inUnit)->GetTileX();
-    (*outTile)[1] = (int32_t)EENewTargetUnit(inUnit)->GetTileY();
-}
-
 static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
 {
     return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
@@ -3197,11 +3185,6 @@ static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
 static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
 {
     return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
-}
-
-static uint32_t EENewTargetUnitID(void* inContext, uint64_t inUnit)
-{
-    return (uint32_t)EENewTargetUnit(inUnit)->GetUnitID();
 }
 
 static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
@@ -3252,9 +3235,9 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
                 EETileCoordinate* inTile, long inRadius, bool inArg6, long inArg7)
 {
     EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
+    // (the units' tiles and ids: ee_combat's reads of the unit store)
     EeCombatTargetHost theHost = {&theContext, EENewTargetRegions, EENewTargetRegionLength, EENewTargetRegionUnit,
-                                  EENewTargetUnitTile, EENewTargetScreen, EENewTargetMultiple, EENewTargetUnitID,
-                                  EENewTargetTest, EENewTargetPush};
+                                  EENewTargetScreen, EENewTargetMultiple, EENewTargetTest, EENewTargetPush};
     EeCombatFindTargetIn in = {};
     in.left = (int32_t)(inTile->GetX() - inRadius);
     in.top = (int32_t)(inTile->GetY() - inRadius);
