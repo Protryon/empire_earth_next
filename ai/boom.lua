@@ -1081,9 +1081,8 @@ function M.step(view, memory)
                     end
                     -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
                     -- site, but the gatherers walk: it gets its own touching settlement)
-                    -- (not in the Prehistoric: there the extra settlements took the wood and the builders the owner's
-                    -- counts need; the bisect: 13 of 32 Prehistoric checks passed without lib.place, 2 with it)
-                    if ECON.order and BO.OPT.place and age >= 2 and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                    -- (from the start too: the owner's rule, every patch and mine has its own touching settlement)
+                    if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
                         for _, r in ipairs({"food", "iron", "gold", "stone"}) do
