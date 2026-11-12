@@ -76,6 +76,45 @@ pub struct EeGfxEffectParticle {
     pub moved: bool,
 }
 
+/// `EEE2DBattlefieldAmbient`'s state (a ground decal: shell holes, blood stains).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectAmbient {
+    /// `mType`: the graphic effect's int param 1 (saved)
+    pub kind: u32,
+    /// `mOnSlope`: 1 when the corners are not level (saved)
+    pub on_slope: u32,
+    /// `mCenter` (saved)
+    pub center: Ge3DPoint,
+    /// `mCorners`: on the terrain (saved)
+    pub corners: [Ge3DPoint; 4],
+    /// `mTransformation`: its position is the centre (saved)
+    pub transformation: GeTransformation,
+    /// `mAge`: 0..1 over the effect's duration (saved)
+    pub age: f32,
+    /// `mRotation`, `mSize` (saved)
+    pub rotation: f32,
+    pub size: f32,
+    /// `mHidden`: 1 off the map or on a slope
+    pub hidden: f32,
+}
+
+impl Default for EeGfxEffectAmbient {
+    fn default() -> EeGfxEffectAmbient {
+        EeGfxEffectAmbient {
+            kind: 0,
+            on_slope: 0,
+            center: Ge3DPoint::default(),
+            corners: [Ge3DPoint::default(); 4],
+            transformation: identity(),
+            age: 0.0,
+            rotation: 0.0,
+            size: 0.0,
+            hidden: 0.0,
+        }
+    }
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,6 +146,8 @@ pub struct EeGfxEffectRecord {
     pub plume: EeGfxEffectPlume,
     /// the pooled particles'
     pub particle: EeGfxEffectParticle,
+    /// the battlefield decals'
+    pub ambient: EeGfxEffectAmbient,
 }
 
 /// The identity (`GETransformation()`).
@@ -136,6 +177,7 @@ impl EeGfxEffectRecord {
             smoke: EeGfxEffectSmoke::default(),
             plume: EeGfxEffectPlume::default(),
             particle: EeGfxEffectParticle::default(),
+            ambient: EeGfxEffectAmbient::default(),
         }
     }
 
@@ -1116,9 +1158,165 @@ pub fn save_particle<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
     res
 }
 
+// ---- the battlefield decals (EEE2DBattlefieldAmbient, kind 0x32)
+
+/// What a decal's constructor reads from its graphic effect: `GetStartSize()`, `GetSize()`, `mIntParam1`, `mFlag1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxAmbientNew {
+    pub start_size: f32,
+    pub size: f32,
+    pub int_param1: i32,
+    pub flag1: bool,
+}
+
+/// `EEE2DBattlefieldAmbient(point, ...)`: a random size, the four corners on the terrain; off the map or not level
+/// (a rise over 0.03) it is hidden and expires at once (age 1), else a random turn when flag 1 asks and the
+/// transformation at the point. The original's on-slope branch cannot run (an uneven corner hides the decal first):
+/// kept.
+pub fn ambient_new<G: ParticleGround>(r: &mut EeGfxEffectRecord, at: Ge3DPoint, n: &EeGfxAmbientNew, ground: &mut G) {
+    let a = &mut r.ambient;
+    a.age = 0.0;
+    a.hidden = 0.0;
+    a.kind = n.int_param1 as u32;
+    a.size = n.start_size + random() * (n.size - n.start_size);
+    a.center = at;
+    let h = a.size * 0.5;
+    a.corners[0].x = at.x - h;
+    a.corners[0].y = at.y - h;
+    a.corners[1].x = at.x + h;
+    a.corners[1].y = at.y - h;
+    a.corners[2].x = at.x + h;
+    a.corners[2].y = at.y + h;
+    a.corners[3].x = at.x - h;
+    a.corners[3].y = at.y + h;
+    let mut level = true;
+    let mut first = 0.0f32;
+    for i in 0..4 {
+        let x = um::floor_unsigned(a.corners[i].x);
+        let y = um::floor_unsigned(a.corners[i].y);
+        if !ground.is_valid_tile(x, y) {
+            a.hidden = 1.0;
+            break;
+        }
+        a.corners[i].z = ground.mesh_z(a.corners[i].x, a.corners[i].y);
+        let z = a.corners[i].z;
+        if i == 0 {
+            first = a.corners[0].z;
+        } else if level {
+            let rise = z - first;
+            if rise > 0.03 || rise < -0.03 {
+                level = false;
+                a.hidden = 1.0;
+            }
+        }
+    }
+    if a.hidden != 0.0 {
+        a.age = 1.0;
+    } else {
+        if level {
+            a.on_slope = 0;
+            a.rotation = if n.flag1 { random() * 6.2831855 } else { 0.0 };
+        } else {
+            a.on_slope = 1;
+            a.rotation = 0.0;
+        }
+        a.transformation.m[0][3] = at.x;
+        a.transformation.m[1][3] = at.y;
+        a.transformation.m[2][3] = at.z;
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Step`: the age by the tick over the duration; 7 past 1.
+pub fn ambient_step(r: &mut EeGfxEffectRecord, tick_seconds: f32, duration: u32) -> i32 {
+    r.ambient.age += (tick_seconds * 1000.0) / duration as f32;
+    if r.ambient.age > 1.0 {
+        7
+    } else {
+        0
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads after the base's (ignored) and the media load: the transformation,
+/// age, centre, type, rotation, size, slope flag and corners, each after the last succeeded; hidden by the slope
+/// flag whatever was read.
+pub fn load_ambient<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &mut r.ambient;
+    let mut res = load_transformation(f, &mut a.transformation);
+    if res == OK {
+        res = f.read_f32(&mut a.age);
+    }
+    if res == OK {
+        res = load_point(f, &mut a.center);
+    }
+    if res == OK {
+        let mut v = a.kind as i32;
+        res = f.read_i32(&mut v);
+        a.kind = v as u32;
+    }
+    if res == OK {
+        res = f.read_f32(&mut a.rotation);
+    }
+    if res == OK {
+        res = f.read_f32(&mut a.size);
+    }
+    if res == OK {
+        let mut v = a.on_slope as i32;
+        res = f.read_i32(&mut v);
+        a.on_slope = v as u32;
+    }
+    if res == OK {
+        for c in a.corners.iter_mut() {
+            res = load_point(f, c);
+            if res != OK {
+                break;
+            }
+        }
+    }
+    a.hidden = if a.on_slope != 0 { 1.0 } else { 0.0 };
+    res
+}
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes after the base's (ignored).
+pub fn save_ambient<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &r.ambient;
+    let mut res = save_transformation(f, &a.transformation);
+    if res == OK {
+        res = f.write_f32(a.age);
+    }
+    if res == OK {
+        res = save_point(f, &a.center);
+    }
+    if res == OK {
+        res = f.write_i32(a.kind as i32);
+    }
+    if res == OK {
+        res = f.write_f32(a.rotation);
+    }
+    if res == OK {
+        res = f.write_f32(a.size);
+    }
+    if res == OK {
+        res = f.write_i32(a.on_slope as i32);
+    }
+    if res != OK {
+        return res;
+    }
+    for c in a.corners.iter() {
+        res = save_point(f, c);
+        if res != OK {
+            break;
+        }
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The effects' generator is one for the process: the tests that draw from it take turns.
+    static RANDOM_TESTS: Mutex<()> = Mutex::new(());
 
     /// A file of typed values (the debug file's view: each write and its type).
     #[derive(Default)]
@@ -1515,6 +1713,42 @@ mod tests {
     }
 
     #[test]
+    fn decals_lie_level_or_hide_and_save() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        set_random_seed(777);
+        let mut check = URandom { seed: 777 };
+        let n = EeGfxAmbientNew { start_size: 1.0, size: 3.0, int_param1: 2, flag1: true };
+        let at = Ge3DPoint { x: 10.0, y: 10.0, z: 0.5 };
+        let mut r = EeGfxEffectRecord::new(0x32);
+        ambient_new(&mut r, at, &n, &mut Flat(0.5, true, false));
+        let size = 1.0 + check.generate() * (3.0 - 1.0);
+        let rot = check.generate() * 6.2831855;
+        let a = r.ambient;
+        assert_eq!((a.size, a.rotation, a.hidden, a.age, a.kind, a.on_slope), (size, rot, 0.0, 0.0, 2, 0));
+        assert_eq!(a.corners[2], Ge3DPoint { x: 10.0 + size * 0.5, y: 10.0 + size * 0.5, z: 0.5 });
+        assert_eq!(a.transformation.m[0][3], 10.0);
+        // off the map: hidden, expired, no turn drawn
+        let mut h = EeGfxEffectRecord::new(0x32);
+        ambient_new(&mut h, at, &n, &mut Flat(0.5, false, false));
+        check.generate();
+        assert_eq!((h.ambient.hidden, h.ambient.age, h.ambient.transformation), (1.0, 1.0, identity()));
+        assert_eq!(random_seed(), check.seed);
+        // ages by the tick
+        assert_eq!(ambient_step(&mut r, 0.5, 1000), 0);
+        assert_eq!(ambient_step(&mut r, 0.6, 1000), 7);
+        // save and load
+        let mut f = Mem::default();
+        assert_eq!(save_ambient(&r, &mut f), 0);
+        assert_eq!(f.items.len(), 16 + 1 + 3 + 1 + 1 + 1 + 1 + 12);
+        let mut back = EeGfxEffectRecord::new(0x32);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_ambient(&mut back, &mut g), 0);
+        let mut want = r.ambient;
+        want.hidden = 0.0;
+        assert_eq!(back.ambient, want);
+    }
+
+    #[test]
     fn regions_floor_then_divide() {
         assert_eq!(EeGfxEffectRecord::region_of(17.9, 0.0, 8), (2, 0));
         assert_eq!(EeGfxEffectRecord::region_of(-0.5, 15.99, 8), (0, 1));
@@ -1554,6 +1788,7 @@ mod tests {
     // the generator is global: one test walks every smoke kind in turn
     #[test]
     fn the_smoke_generators_step_draw_and_place_in_the_original_s_order() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
         set_random_seed(12345);
         let mut check = URandom { seed: 12345 };
         // a point generator: puffs once its interval passes, ends after its duration

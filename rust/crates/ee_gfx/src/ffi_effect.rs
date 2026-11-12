@@ -8,8 +8,9 @@ use std::ffi::c_void;
 use ee_ge::types::Ge3DPoint;
 
 use crate::effect_state::{
-    self, EeGfxEffectLoaded, EeGfxEffectPart, EeGfxEffectRecord, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
-    EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, ParticleGround, SmokeHost,
+    self, EeGfxAmbientNew, EeGfxEffectLoaded, EeGfxEffectPart, EeGfxEffectRecord, EeGfxParticleSetUp,
+    EeGfxParticleTick, EeGfxPlumeTick, EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, ParticleGround,
+    SmokeHost,
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -549,6 +550,61 @@ pub unsafe extern "C" fn ee_gfx_effect_save_particle(r: *const EeGfxEffectRecord
     unsafe {
         let local = r.read();
         effect_state::save_particle(&local, &mut File(&*file))
+    }
+}
+
+/// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_ambient_new(
+    r: *mut EeGfxEffectRecord,
+    at: *const Ge3DPoint,
+    n: *const EeGfxAmbientNew,
+    ground: *const EeGfxParticleGround,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let (p, a) = (*at, *n);
+        on_copy(r, |r| effect_state::ambient_new(r, p, &a, &mut Ground(&*ground)))
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_ambient_step(
+    r: *mut EeGfxEffectRecord,
+    tick_seconds: f32,
+    duration: u32,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::ambient_step(r, tick_seconds, duration)) }
+}
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_ambient(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_ambient(r, &mut File(&*file))) }
+}
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_ambient(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_ambient(&local, &mut File(&*file))
     }
 }
 

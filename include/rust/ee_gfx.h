@@ -449,6 +449,27 @@ struct EeGfxEffectParticle {
   bool moved;
 };
 
+/// `EEE2DBattlefieldAmbient`'s state (a ground decal: shell holes, blood stains).
+struct EeGfxEffectAmbient {
+  /// `mType`: the graphic effect's int param 1 (saved)
+  uint32_t kind;
+  /// `mOnSlope`: 1 when the corners are not level (saved)
+  uint32_t on_slope;
+  /// `mCenter` (saved)
+  EeGe3DPoint center;
+  /// `mCorners`: on the terrain (saved)
+  EeGe3DPoint corners[4];
+  /// `mTransformation`: its position is the centre (saved)
+  EeGeTransformation transformation;
+  /// `mAge`: 0..1 over the effect's duration (saved)
+  float age;
+  /// `mRotation`, `mSize` (saved)
+  float rotation;
+  float size;
+  /// `mHidden`: 1 off the map or on a slope
+  float hidden;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -478,6 +499,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectPlume plume;
   /// the pooled particles'
   EeGfxEffectParticle particle;
+  /// the battlefield decals'
+  EeGfxEffectAmbient ambient;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -613,6 +636,14 @@ struct EeGfxParticleGround {
   bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
   float (*mesh_z)(void *context, float x, float y);
   void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
+};
+
+/// What a decal's constructor reads from its graphic effect: `GetStartSize()`, `GetSize()`, `mIntParam1`, `mFlag1`.
+struct EeGfxAmbientNew {
+  float start_size;
+  float size;
+  int32_t int_param1;
+  bool flag1;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1415,6 +1446,33 @@ int32_t ee_gfx_effect_load_particle(EeGfxEffectRecord *r,
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_particle(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DBattlefieldAmbient`'s constructor at a point (its draws and the terrain's corners).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+void ee_gfx_effect_ambient_new(EeGfxEffectRecord *r,
+                               const EeGe3DPoint *at,
+                               const EeGfxAmbientNew *n,
+                               const EeGfxParticleGround *ground);
+
+/// `EEE2DBattlefieldAmbient::Step`: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record.
+int32_t ee_gfx_effect_ambient_step(EeGfxEffectRecord *r, float tick_seconds, uint32_t duration);
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_ambient(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_ambient(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();
