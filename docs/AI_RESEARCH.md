@@ -3586,6 +3586,73 @@ Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
 Next: the port's answer to a few raiders before the Stone Age (seed 24's clubmen: what the C++'s militia and defence
 groups do that the port's do not), then guard posts on hills and choke points, heroes, walls.
 
+### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
+
+The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
+(switches over boom; 32 seeds 2-33, Small, Hard, 120 min, improved classic `cl` and Age of AI `aoa`) were then
+superseded by the owner's exact build order (memory boom-build-order.md), now `ai/lib/build_order.lua` behind
+`ECON.order` (off by default until it beats the baseline).
+
+**Round 1 and 2 (switches, all off):** what holds the epochs back. Against the improved classic the mines stay half
+empty in Stone and Copper (2-3 on gold and iron against 7-13 wanted): the classic's lone slingers stand by them under
+THREAT_MIN, and the reserve's missing-army clause sets gold's want to 0. In every matchup the citizens past the plan's
+places go to wood (30-48 on it against 18-20 wanted, 2000-5000 in stock). Copper costs 1584 food, 844 gold and 844 iron
+at Hard. Measured: `full_target` (more Copper Ages before 60 but 10 defeats against 4), `wood_surplus` plus the Bronze
+reserve sooner (Gbc: against the improved classic Copper 24/32 against 20, towns under 30 citizens 12 against 18, the same
+8 defeats; against Age of AI 10-9-12 against 15-5-12), `places`, `paid_go` (never fires) and `useful_cap`: none kept.
+"Under 30 citizens at the end" is reported beside defeats since: the improved classic reaches 180 population by minute
+70 and grinds boom down, so whether a collapsing town is at 0 by minute 120 is a race (Gbase-cl 8 defeats against mb1's
+4: the same collapses, 4 of 5 extra were near 0 in both).
+
+**The build order** (phases `pre`, `stone_start`, `stone_grow`, `stone_developed` latched, `copper`; `memory.phase` is
+the army's signal, `memory.raid.state` its answer): each phase's gatherers filled in the owner's order as the citizens
+come (`exact = 1` on the gather order keeps no gatherer of slack), the plan overlaid per phase (the army's soldier
+fields: boom-defence's rs0), the Prehistoric wood bank while saving, a dock and 10 boats first in Stone, a second
+barracks and a range, gold and iron reserved only while saving (the raid's spearmen), the Copper save at
+`stone_developed`, 3 granaries in Copper, the town centre's gathering techs epoch by epoch (hafts, hand axe,
+fine-flaked tools, metal working, hardened chisel, falconry, saw, amalgamation, shaft mining, ...), and the settlements
+placed in Lua (`ai/lib/place.lua`: the tile touching the resource units, gap 0, `ai.can_place`, built with `ai.build`
+at that tile; the C++ near=site placement is unchanged for the other scripts).
+
+The acceptance check (`order_check.py`, the boom-econ scratchpad): per phase the true gatherer counts (the engine's
+`cp stats`, land food without the boats), boats, buildings; income a minute against the owner's playtest with their
+civ's free bonuses out (gold, iron and stone / 1.25, Expansionism's garrison of 5 at every drop site in
+`EEDepositLoad`; stone / 1.2 more for their stone item); a gatherer's rate a minute; citizens gained a minute in Stone.
+
+| Row (32 seeds) | Matchup | Stone | Copper (reached) | Bronze (reached) | Defeated | Under 30 | W-L-C | Gold / iron a minute, 30-45 |
+|---|---|---|---|---|---|---|---|---|
+| baseline (Gbase2) | cl | 25.1 (30) | 53.9 (21) | 81.5 (9) | 9 | 12 | 3-22-7 | |
+| O1: the order | cl | 25.0 (26) | 46.0 (14) | 74.8 (10) | 15 | 18 | 3-23-6 | |
+| O3: + food not capped at the patches, raid iron, barracks 2 + range, exact | cl | 23.5 (31) | 53.6 (19) | 74.4 (8) | 12 | 16 | 2-25-5 | 21 / 29 |
+| O5: + gatherers only by a touching settlement | cl | 27.1 (30) | 60.0 (11) | 87.7 (2) | 14 | 22 | 1-28-3 | 12 / 12 |
+| O8: O3 + touching settlements, techs, no Stone cap, food reach | cl | 26.7 (32) | 56.3 (18) | 84.3 (8) | 15 | 18 | 2-27-3 | 19 / 21 |
+| baseline (Gbase2) | aoa | 22.2 (31) | 50.4 (31) | 80.9 (27) | 0 | 0 | 16-7-8 | |
+| O1 | aoa | 22.5 (32) | 47.6 (27) | 73.5 (23) | 0 | 0 | 12-12-8 | |
+| O3 | aoa | 21.7 (32) | 47.3 (31) | 72.7 (27) | 0 | 0 | | 44 / 50 |
+| O5 | aoa | 21.5 (32) | 63.0 (26) | 103.7 (16) | 0 | 1 | 10-13-9 | |
+| O8 | aoa | 21.9 (32) | 52.8 (32) | 82.5 (27) | 0 | 0 | 12-7-13 | 37 / 42 |
+
+The requirement: Stone ~21, Copper ~45, Bronze ~66; gold 81 and iron 74 a minute in minutes 30-45.
+
+- **O3 against Age of AI is the owner's pace** to Copper (47.3) and 8 minutes ahead of the baseline on Bronze; against
+  the improved classic it costs 3 defeats. O8's additions slowed it again (Copper 52.8): not yet sorted out which.
+- **The mines' rate is not the gap.** A deposit trace (TEST ONLY, `EE_AI_EXP=deposits` in `EEDepositLoad`; game samples
+  identical with and without it) times a working gatherer's loads: gold 160 s, iron 151 s a load of 15 (5.6 and 6.0 a
+  minute; the requirement 6.1, 148 s), food 112 s, wood 122 s. The owner's 7.6 is the same pace times their civ's
+  garrison bonus (+25%, 15 a load becomes 19). Boom's gold and iron income is short by headcount: too few on the mines
+  through Stone (the developed check fails in most games) and the mines' gatherers re-tasked (a probe: one gatherer 404
+  of 820 s on gold, the rest on stone, wood and building).
+- **The touching settlements** (lib.place) build at gap 0 on every smoke site; counting the mines' places only from
+  touched units (O5) left the mines empty while the settlements waited on wood and cost 5 defeats: reverted.
+- **The citizens** grow 1.2-1.9 a minute in Stone's first 15 minutes against the owner's 3.4 (his Expansionism trains
+  at every drop site; boom has 2 town centres).
+- **Engine fixes on the way** (both in AI_LUA_UNITS §11): a citizen released at work went onto no gatherer list (18 of
+  33 in one game, the counts wrong for the rest of it), and `gather(exact = 1)`.
+
+Open: the O3 to O8 slowdown; gold and iron 12-18 held through Stone; the citizens' growth (a third town centre or
+earlier second one); the losses against the improved classic (boom-defence's o4b: in 12 of 14 the Stone forage ran out
+before Copper was paid; O8's food reach did not yet move it).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
