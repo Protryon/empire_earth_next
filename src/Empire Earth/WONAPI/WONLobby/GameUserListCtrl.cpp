@@ -197,8 +197,8 @@ void GameUserListCtrl::HandleJoinedGame()
     }
     this->mUserList->BeginUpdate();
     this->mUserList->Clear(true);
-    for(LobbyClientMap::iterator i=clients->mClients.begin();i!=clients->mClients.end();++i) {
-        LobbyClient* client=i->second.get();
+    for(size_t i=0;i<clients->GetCount();++i) {
+        LobbyClient* client=clients->ClientAt(i);
         if(!client->HasPlayer())
             continue;
         SmartPtr<GameUserListItem> item=new GameUserListItem(client);

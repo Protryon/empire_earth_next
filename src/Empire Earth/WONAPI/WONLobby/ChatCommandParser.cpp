@@ -69,9 +69,9 @@ struct ChatClients {
     {
         if (inList == NULL)
             return;
-        for (LobbyClientMap::iterator i = inList->mClients.begin(); i != inList->mClients.end(); ++i) {
-            this->mClients.push_back(i->second.get());
-            this->mNames.push_back(ChatText(i->second->mName));
+        for (size_t i = 0; i < inList->GetCount(); ++i) {
+            this->mClients.push_back(inList->ClientAt(i));
+            this->mNames.push_back(ChatText(inList->ClientAt(i)->mName));
         }
     }
     const EeWonChatText* Names() const { return this->mNames.empty() ? NULL : &this->mNames[0]; }

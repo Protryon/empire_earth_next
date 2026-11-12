@@ -593,6 +593,162 @@ static std::string GoldenPath()
     return aPath + "../../rust/crates/ee_won/src/golden_lobbymap.txt";
 }
 
+// ---- the same scripts over the Rust container (lobbymap.rs) through its C ABI, as WONLobbyMap.h calls it: the
+// lines must be the golden's
+
+static std::vector<std::string> sPortGolden;
+static const EeWonLobbyKeyKind kPortKinds[] = { EeWonLobbyKeyKind::Unsigned, EeWonLobbyKeyKind::Signed,
+                                                EeWonLobbyKeyKind::Addr, EeWonLobbyKeyKind::NoCase,
+                                                EeWonLobbyKeyKind::Text, EeWonLobbyKeyKind::NarrowNoCase };
+static EeWonLobbyKey PortKey(int inKind, int i)
+{
+    EeWonLobbyKey k = { 0, NULL, NULL, 0, 0 };
+    switch (inKind) {
+    case kUnsigned: k.num = kMapIds[i]; break;
+    case kSigned: k.num = (uint64_t)(int64_t)kMapSigned[i]; break;
+    case kAddr: k.addr = sMapAddrs[i]; break;
+    case kNoCase:
+    case kText:
+        k.text = kMapWide[i];
+        k.count = wcslen(kMapWide[i]);
+        k.unit_size = sizeof(wchar_t);
+        break;
+    default:
+        k.text = kMapNarrow[i];
+        k.count = strlen(kMapNarrow[i]);
+        k.unit_size = 1;
+        break;
+    }
+    return k;
+}
+// the candidate the stored key at a position is (its spelling)
+static int PortKeyIndex(int inKind, const EeWonLobbyMap* m, size_t inAt)
+{
+    for (size_t i = 0; i < CandidateCount(inKind == kNoCase ? kText : inKind); i++) {
+        switch (inKind) {
+        case kUnsigned: if (ee_won_lobbymap_key_num(m, inAt) == kMapIds[i]) return (int)i; break;
+        case kSigned: if ((int64_t)ee_won_lobbymap_key_num(m, inAt) == kMapSigned[i]) return (int)i; break;
+        case kAddr: if (ee_won_ipaddr_compare(ee_won_lobbymap_key_addr(m, inAt), sMapAddrs[i]) == 0) return (int)i; break;
+        case kNoCase:
+        case kText: {
+            size_t n = 0;
+            const uint32_t* u = static_cast<const uint32_t*>(ee_won_lobbymap_key_text(m, inAt, &n));
+            const wchar_t* w = kMapWide[i];
+            bool aSame = n == wcslen(w);
+            for (size_t j = 0; aSame && j < n; j++) aSame = u[j] == (uint32_t)w[j];
+            if (aSame) return (int)i;
+            break;
+        }
+        default: {
+            size_t n = 0;
+            const char* b = static_cast<const char*>(ee_won_lobbymap_key_text(m, inAt, &n));
+            if (n == strlen(kMapNarrow[i]) && memcmp(b, kMapNarrow[i], n) == 0) return (int)i;
+            break;
+        }
+        }
+    }
+    return -1;
+}
+static std::string PortDump(int inKind, const EeWonLobbyMap* m)
+{
+    size_t n = ee_won_lobbymap_len(m);
+    std::string s = Num((long long)n) + ":";
+    for (size_t i = 0; i < n; i++)
+        s += " " + Num(PortKeyIndex(inKind, m, i)) + "=" + Num(ee_won_lobbymap_num(m, i, 0));
+    return s;
+}
+static long long PortIndex(const EeWonLobbyMap* m, size_t i) { return i < ee_won_lobbymap_len(m) ? (long long)i : -1; }
+
+static void MapScriptPort(int inKind, unsigned inSeed)
+{
+    unsigned r = inSeed * 2654435761u + (unsigned)inKind;
+    EeWonLobbyMapHooks aNoHooks = { NULL, NULL };
+    EeWonLobbyMap* m = ee_won_lobbymap_new(kPortKinds[inKind], aNoHooks);
+    EeWonLobbyMap* aCopy = ee_won_lobbymap_new(kPortKinds[inKind], aNoHooks);
+    const std::string aHead = "map " + Num(inKind) + " " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 160; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 20;
+        int ki = (int)((r >> 16) % CandidateCount(inKind));
+        EeWonLobbyKey k = PortKey(inKind, ki);
+        int v = (int)((r >> 24) % 100);
+        size_t aSize = ee_won_lobbymap_len(m);
+        std::string s;
+        if (anOp < 5) {
+            bool aNew = false;
+            size_t i = ee_won_lobbymap_insert(m, &k, &aNew);
+            s = "ins " + Num(ki) + " -> " + Num((long long)i) + " " + Num(aNew);
+        } else if (anOp < 9) {
+            size_t i = ee_won_lobbymap_insert(m, &k, NULL);
+            ee_won_lobbymap_set_num(m, i, 0, v);
+            s = "set " + Num(ki) + " " + Num(v) + " -> " + Num((long long)i);
+        } else if (anOp < 12) {
+            s = "find " + Num(ki) + " -> " + Num((long long)ee_won_lobbymap_find(m, &k));
+        } else if (anOp < 14) {
+            s = "erase " + Num(ki) + " -> " + Num(ee_won_lobbymap_erase(m, &k));
+        } else if (anOp == 14) {
+            s = "lb " + Num(ki) + " -> " + Num(PortIndex(m, ee_won_lobbymap_lower_bound(m, &k)));
+        } else if (anOp == 15) {
+            s = "ub " + Num(ki) + " -> " + Num(PortIndex(m, ee_won_lobbymap_upper_bound(m, &k)));
+        } else if (anOp == 16) {
+            if (aSize == 0) s = "eraseat none";
+            else {
+                size_t i = (r >> 16) % aSize;
+                ee_won_lobbymap_erase_at(m, i);
+                s = "eraseat " + Num((long long)i);
+            }
+        } else if (anOp == 17) {
+            size_t i = aSize == 0 ? 0 : (r >> 16) % (aSize + 1);
+            if ((r >> 28) % 4 == 0) {
+                ee_won_lobbymap_erase_from(m, i);
+                s = "erasefrom " + Num((long long)i);
+            } else s = "dump";
+        } else if (anOp == 18) {
+            if ((r >> 28) % 8 == 0) {
+                ee_won_lobbymap_clear(m);
+                s = "clear";
+            } else {
+                ee_won_lobbymap_assign(aCopy, m);
+                s = "copy";
+            }
+        } else {
+            s = "copied " + PortDump(inKind, aCopy);
+        }
+        sPortGolden.push_back(aHead + s + " | " + PortDump(inKind, m));
+    }
+    ee_won_lobbymap_free(m);
+    ee_won_lobbymap_free(aCopy);
+}
+static void OptionScriptPort(unsigned inSeed)
+{
+    unsigned r = inSeed * 2246822519u;
+    EeWonLobbyMapHooks aNoHooks = { NULL, NULL };
+    EeWonLobbyMap* o = ee_won_lobbymap_new(EeWonLobbyKeyKind::InOrder, aNoHooks);
+    const std::string aHead = "opt " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 120; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 10;
+        int v = (int)((r >> 16) % kMapWideCount);
+        EeWonLobbyKey k = PortKey(kText, v);
+        std::string s;
+        if (anOp < 5) {
+            bool aNew = false;
+            ee_won_lobbymap_insert(o, &k, &aNew);
+            s = "add " + Num(v) + " -> " + Num(aNew);
+        } else if (anOp < 9) {
+            s = "erase " + Num(v) + " -> " + Num(ee_won_lobbymap_erase(o, &k));
+        } else {
+            ee_won_lobbymap_clear(o);
+            s = "clear";
+        }
+        s += " |";
+        for (size_t i = 0; i < ee_won_lobbymap_len(o); i++)
+            s += " " + Num(PortKeyIndex(kText, o, i));
+        sPortGolden.push_back(aHead + s);
+    }
+    ee_won_lobbymap_free(o);
+}
+
 static void TestContainers(bool inPrint)
 {
     for (size_t i = 0; i < sizeof(kMapHosts) / sizeof(kMapHosts[0]); i++) {
@@ -600,10 +756,20 @@ static void TestContainers(bool inPrint)
         ee_won_ipaddr_set_host_order(sMapAddrs[i], (uint32_t)kMapHosts[i], kMapPorts[i]);
     }
     for (int aKind = 0; aKind < kKinds; aKind++)
-        for (unsigned aSeed = 1; aSeed <= 6; aSeed++)
+        for (unsigned aSeed = 1; aSeed <= 6; aSeed++) {
             MapScript(aKind, aSeed);
-    for (unsigned aSeed = 1; aSeed <= 6; aSeed++)
+            MapScriptPort(aKind, aSeed);
+        }
+    for (unsigned aSeed = 1; aSeed <= 6; aSeed++) {
         OptionScript(aSeed);
+        OptionScriptPort(aSeed);
+    }
+    CHECK(sPortGolden == sGolden);
+    for (size_t i = 0; i < sGolden.size() && i < sPortGolden.size(); i++)
+        if (sGolden[i] != sPortGolden[i] && sFailures < 40) {
+            printf("  port line %u: std '%s', rust '%s'\n", (unsigned)(i + 1), sGolden[i].c_str(), sPortGolden[i].c_str());
+            sFailures++;
+        }
     for (size_t i = 0; i < sizeof(kMapHosts) / sizeof(kMapHosts[0]); i++)
         ee_won_ipaddr_free(sMapAddrs[i]);
     if (inPrint) {

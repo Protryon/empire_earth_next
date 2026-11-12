@@ -23,8 +23,9 @@
 // LobbyGame's join rules, its listing summary's fields and the join request's and a player's heads are ee_won's
 // staging module (rust/crates/ee_won/src/staging.rs); the lists' decisions (the routing maps' merges, the
 // populations, what the flags say, the ping states, the stale rule, the status texts, the ready check, the
-// directory's data objects) are its model module (model.rs). The classes keep their members, maps and the game
-// code's hooks.
+// directory's data objects) are its model module (model.rs). The containers (the clients, rooms, address names,
+// servers, a game list's two maps) are Rust objects since round 17 (lobbymap.rs through WONLobbyMap.h; positions
+// are indices into their order). The classes keep their members and the game code's hooks.
 namespace WONAPI {
 LobbyClientMap& GetEmptyClientMap();
 
@@ -34,8 +35,8 @@ static std::vector<EeWonSyncStep> ModelSyncPlan(const LobbyMap& inLobby, const I
                                                 std::vector<typename InfoMap::const_iterator>& outInfos)
 {
     std::vector<uint16_t> anExisting, anIncoming;
-    for (typename LobbyMap::const_iterator it = inLobby.begin(); it != inLobby.end(); ++it)
-        anExisting.push_back(it->first);
+    for (size_t i = 0; i < inLobby.size(); ++i)
+        anExisting.push_back(inLobby.KeyAt(i));
     for (typename InfoMap::const_iterator it = inInfos.begin(); it != inInfos.end(); ++it) {
         anIncoming.push_back(it->first);
         outInfos.push_back(it);
@@ -193,7 +194,7 @@ bool LobbyClient::IsTeammate(LobbyClient* inOther)
 
 // FUNCTION: WON 0x7a55f0
 // Creates an empty client list
-LobbyClientList::LobbyClientList() {}
+LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
 
 // FUNCTION: WON 0x7a56a0
 // Destroys the client list, releasing every client
@@ -205,30 +206,35 @@ void LobbyClientList::Clear() { this->mClients.clear(); }
 
 // FUNCTION: WON 0x7a5820
 // Merges the routing server's client map into the list: drops gone clients, adds new ones, refreshes the rest
-// (the plan is ee_won_model_sync_plan; a new client goes in under the routing map's key, its own id)
+// (the plan is ee_won_model_sync_plan; a new client goes in under the routing map's key, its own id; the walk's
+// place is a position, moved past an entry inserted before it)
 void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
 {
     std::vector<RoutingClientMap::const_iterator> anInfos;
     std::vector<EeWonSyncStep> aPlan = ModelSyncPlan(this->mClients, inMap, anInfos);
-    LobbyClientMap::iterator aClient = this->mClients.begin();
-    LobbyClientMap::iterator anInsert = this->mClients.end(); // the original hinted begin(), dangling after an erase
+    size_t aClient = 0;
     for (size_t k = 0; k < aPlan.size(); ++k) {
         switch (aPlan[k].kind) {
-        case 0: this->mClients.erase(aClient++); break;
+        case 0: this->mClients.EraseAt(aClient); break;
         case 1: {
             RoutingClientMap::const_iterator anInfo = anInfos[aPlan[k].incoming];
             SmartPtr<LobbyClient> aNewClient = new LobbyClient;
             aNewClient->ReadRoutingInfo(anInfo->second.get());
-            anInsert = this->mClients.insert(anInsert, LobbyClientMap::value_type(anInfo->first, aNewClient));
+            bool aNew = false;
+            size_t anAt = this->mClients.Insert(anInfo->first, &aNew);
+            if (aNew) {
+                this->mClients.SetAt(anAt, aNewClient.get());
+                if (anAt <= aClient) ++aClient;
+            }
             break;
         }
         case 2: {
-            SmartPtr<LobbyClient> aCopy = aClient->second;
+            SmartPtr<LobbyClient> aCopy = this->mClients.At(aClient);
             aCopy->ReadRoutingInfo(anInfos[aPlan[k].incoming]->second.get());
             ++aClient;
             break;
         }
-        case 3: this->mClients.erase(aClient, this->mClients.end()); aClient = this->mClients.end(); break;
+        case 3: this->mClients.EraseFrom(aClient); aClient = this->mClients.size(); break;
         }
     }
 }
@@ -237,45 +243,38 @@ void LobbyClientList::SyncClients(const RoutingClientMap& inMap)
 // Refreshes the ignored/blocked state of every client in the list
 void LobbyClientList::UpdateIgnoreStatus()
 {
-    for (LobbyClientMap::iterator it = this->mClients.begin(); it != this->mClients.end(); ++it)
-        it->second->UpdateIgnoreStatus();
+    for (size_t i = 0; i < this->mClients.size(); ++i)
+        this->mClients.At(i)->UpdateIgnoreStatus();
 }
 
 // FUNCTION: WON 0x7a5cc0
 // Adds the client under its id, replacing any client with the same id
 void LobbyClientList::AddClient(LobbyClient* inClient) {
     unsigned short clientId = inClient->mClientId;
-    this->mClients[clientId] = inClient;
+    this->mClients.Set(clientId, inClient);
 }
 
 // FUNCTION: WON 0x7a5d30
 // Returns the client with the given id, or NULL
 LobbyClient* LobbyClientList::FindClient(unsigned short inId)
 {
-    LobbyClientMap::iterator anItr = this->mClients.find(inId);
-    return anItr != this->mClients.end() ? anItr->second.get() : NULL;
+    return this->mClients.Get(inId);
 }
 
 // FUNCTION: WON 0x7a5d90
 // Removes the client with the given id and returns it (NULL if absent)
 SmartPtr<LobbyClient> LobbyClientList::RemoveClient(unsigned short inId)
 {
-    LobbyClientMap::iterator anItr = this->mClients.find(inId);
-    if (anItr != this->mClients.end()) {
-        SmartPtr<LobbyClient> aClient = anItr->second;
-        this->mClients.erase(anItr);
-        return aClient;
-    }
-    return NULL;
+    return this->mClients.Remove(inId);
 }
 
 // FUNCTION: WON 0x7a5ea0
 // Returns the first client with the given WON user id, or NULL
 LobbyClient* LobbyClientList::FindClientByWONId(unsigned long inId)
 {
-    for (LobbyClientMap::iterator anItr = this->mClients.begin(); anItr != this->mClients.end(); ++anItr)
+    for (size_t i = 0; i < this->mClients.size(); ++i)
     {
-        LobbyClient* aClient = anItr->second;
+        LobbyClient* aClient = this->mClients.At(i);
         if (aClient->GetWONUserId() == inId) return aClient;
     }
     return NULL;
@@ -285,48 +284,53 @@ LobbyClient* LobbyClientList::FindClientByWONId(unsigned long inId)
 // Clears the invited mark on every client in the list
 void LobbyClientList::ClearInvited()
 {
-    for (LobbyClientMap::iterator anItr = this->mClients.begin(); anItr != this->mClients.end(); ++anItr)
-        anItr->second->SetInvited(false);
+    for (size_t i = 0; i < this->mClients.size(); ++i)
+        this->mClients.At(i)->SetInvited(false);
 }
 
 // FUNCTION: WON 0x7a5f70
 // Starts iterating the list's clients (an empty list when NULL)
-LobbyClientIterator::LobbyClientIterator(LobbyClientList* inList)
-    : mClients(inList != NULL ? &inList->mClients : &GetEmptyClientMap())
+LobbyClientIterator::LobbyClientIterator(LobbyClientList* inList) : mList(inList)
 {
     this->Rewind();
 }
 
 // FUNCTION: WON 0x7a5fa0
 // Returns the shared empty client map used by iterators over no list
-LobbyClientMap& GetEmptyClientMap() { static LobbyClientMap aMap; return aMap; }
+LobbyClientMap& GetEmptyClientMap() { static LobbyClientMap aMap(EeWonLobbyKeyKind::Unsigned); return aMap; }
+
+const LobbyClientMap& LobbyClientIterator::Clients() const
+{
+    return this->mList != NULL ? this->mList->mClients : GetEmptyClientMap();
+}
 
 // FUNCTION: WON 0x7a60b0
 // Returns whether clients remain
-bool LobbyClientIterator::HasMore() { return this->mItr != this->mClients->end(); }
+bool LobbyClientIterator::HasMore() { return this->mItr.HasMore(this->Clients()); }
 
 // FUNCTION: WON 0x7a60d0
 // Returns the next client and advances, or NULL at the end
 LobbyClient* LobbyClientIterator::Next()
 {
-    if (this->mItr != this->mClients->end()) {
-        LobbyClient* aClient = this->mItr->second.get();
-        ++this->mItr;
-        return aClient;
-    }
-    return NULL;
+    const LobbyClientMap& aClients = this->Clients();
+    size_t i = this->mItr.Next(aClients);
+    return i < aClients.size() ? aClients.At(i) : NULL;
 }
 
 // FUNCTION: WON 0x7a6140
 // Restarts the iteration at the first client
-void LobbyClientIterator::Rewind() { this->mItr = this->mClients->begin(); }
+void LobbyClientIterator::Rewind() { this->mItr.Rewind(); }
 
 // FUNCTION: WON 0x7a6150
 // Starts iterating the list's clients that joined the game as players (an empty list when NULL)
-LobbyClientSetIterator::LobbyClientSetIterator(LobbyClientList* inList)
-    : mClients(inList != NULL ? &inList->mClients : &GetEmptyClientMap())
+LobbyClientSetIterator::LobbyClientSetIterator(LobbyClientList* inList) : mList(inList)
 {
     this->Rewind();
+}
+
+const LobbyClientMap& LobbyClientSetIterator::Clients() const
+{
+    return this->mList != NULL ? this->mList->mClients : GetEmptyClientMap();
 }
 
 // FUNCTION: WON 0x7a6180
@@ -334,12 +338,14 @@ LobbyClientSetIterator::LobbyClientSetIterator(LobbyClientList* inList)
 bool LobbyClientSetIterator::HasMore()
 {
     if (this->mReady) return true;
-    while (this->mItr != this->mClients->end()) {
-        if (this->mItr->second->mPlayer.get() != NULL) {
+    const LobbyClientMap& aClients = this->Clients();
+    size_t i;
+    while ((i = this->mItr.Peek(aClients)) < aClients.size()) {
+        if (aClients.At(i)->mPlayer.get() != NULL) {
             this->mReady = true;
             return true;
         }
-        ++this->mItr;
+        this->mItr.Next(aClients);
     }
     return false;
 }
@@ -349,11 +355,11 @@ bool LobbyClientSetIterator::HasMore()
 LobbyPlayer* LobbyClientSetIterator::Next(LobbyClient** outClient)
 {
     if (this->HasMore()) {
-        LobbyClient* aClient = this->mItr->second.get();
+        const LobbyClientMap& aClients = this->Clients();
+        LobbyClient* aClient = aClients.At(this->mItr.Next(aClients));
         if (outClient != NULL) *outClient = aClient;
         LobbyPlayer* aPlayer = aClient->mPlayer.get();
         this->mReady = false;
-        ++this->mItr;
         return aPlayer;
     }
     return NULL;
@@ -361,7 +367,7 @@ LobbyPlayer* LobbyClientSetIterator::Next(LobbyClient** outClient)
 
 // FUNCTION: WON 0x7a62a0
 // Restarts the iteration at the first client
-void LobbyClientSetIterator::Rewind() { this->mItr = this->mClients->begin(); this->mReady = false; }
+void LobbyClientSetIterator::Rewind() { this->mItr.Rewind(); this->mReady = false; }
 
 // FUNCTION: WON 0x7a62b0
 // Creates a friends-list entry for the given name and WON user id, with no known location
@@ -690,7 +696,7 @@ void LobbyGroup::SetMembers(const RoutingMemberMap& inMembers, LobbyClientList* 
         }
         ++it;
     }
-    this->mNumClients = this->mClients->mClients.size();
+    this->mNumClients = this->mClients->GetCount();
 }
 
 // FUNCTION: WON 0x7a8e40
@@ -701,7 +707,7 @@ void LobbyGroup::AddClient(LobbyClient* inClient, unsigned char inFlags)
     inClient->SetGroupId(this->mId, this->IsGameGroup());
     inClient->SetMemberFlags(inFlags, this->IsGameGroup());
     inClient->SetCaptain(inClient->GetClientId() == this->mCaptainId, this->IsGameGroup());
-    this->mNumClients = this->mClients->mClients.size();
+    this->mNumClients = this->mClients->GetCount();
 }
 
 // FUNCTION: WON 0x7a8eb0
@@ -709,7 +715,7 @@ void LobbyGroup::AddClient(LobbyClient* inClient, unsigned char inFlags)
 SmartPtr<LobbyClient> LobbyGroup::RemoveClient(unsigned short inId)
 {
     SmartPtr<LobbyClient> client = this->mClients->RemoveClient(inId);
-    this->mNumClients = this->mClients->mClients.size();
+    this->mNumClients = this->mClients->GetCount();
     if (client.get() != NULL) client->ClearGroup(this->mId, this->IsGameGroup());
     return client;
 }
@@ -809,7 +815,9 @@ bool LobbyPlayer::IsSameTeam(LobbyPlayer* inOther)
 
 // FUNCTION: WON 0x7a91c0
 // Creates a disconnected lobby server entry with an empty client list
-LobbyServer::LobbyServer() : mName(GetEmptyGUIStringData()), mClients(NULL), mConnection(NULL)
+LobbyServer::LobbyServer()
+    : mName(GetEmptyGUIStringData()), mAddresses(EeWonLobbyKeyKind::NarrowNoCase, EeWonLobbyMapHooks()),
+      mGroups(EeWonLobbyKeyKind::Unsigned), mClients(NULL), mConnection(NULL)
 {
     this->mNumChatClients = 0; this->mNumClients = 0; this->mLastPing = 0; this->mQueryingGroups = false; this->mMyClientId = 0xffff;
     this->mClients = new LobbyClientList;
@@ -819,7 +827,7 @@ LobbyServer::LobbyServer() : mName(GetEmptyGUIStringData()), mClients(NULL), mCo
 // Returns whether the server lists the given address name (case-insensitive)
 bool LobbyServer::HasAddress(const std::string& inName)
 {
-    return this->mAddresses.find(inName) != this->mAddresses.end();
+    return this->mAddresses.Contains(inName);
 }
 
 
@@ -839,9 +847,8 @@ void LobbyServer::SyncClients(const RoutingClientMap& inMap)
 // Marks which clients are friends and records this server as each friend's location
 void LobbyServer::UpdateFriends()
 {
-    LobbyClientMap& aClients = this->mClients->mClients;
-    for (LobbyClientMap::iterator it = aClients.begin(); it != aClients.end(); ++it) {
-        LobbyClient* client = it->second;
+    for (size_t i = 0; i < this->mClients->GetCount(); ++i) {
+        LobbyClient* client = this->mClients->ClientAt(i);
         LobbyFriend* aFriend = LobbyFindFriend(client->GetWONUserId());
         if (aFriend != NULL) {
             client->SetIsFriend(true);
@@ -856,9 +863,8 @@ void LobbyServer::UpdateFriends()
 void LobbyServer::ClearFriendLocations()
 {
     time_t now = time(NULL);
-    LobbyClientMap& aClients = this->mClients->mClients;
-    for (LobbyClientMap::iterator it = aClients.begin(); it != aClients.end(); ++it) {
-        LobbyClient* client = it->second;
+    for (size_t i = 0; i < this->mClients->GetCount(); ++i) {
+        LobbyClient* client = this->mClients->ClientAt(i);
         if (client->IsFriend()) {
             LobbyFriend* aFriend = LobbyFindFriend(client->GetWONUserId());
             if (aFriend != NULL) {
@@ -880,27 +886,31 @@ void LobbyServer::SyncGroups(const RoutingGroupMap& inGroups, bool inUpdateClien
     LobbyClientList* clients = inUpdateClients ? this->mClients : SmartPtr<LobbyClientList>(NULL);
     std::vector<RoutingGroupMap::const_iterator> anInfos;
     std::vector<EeWonSyncStep> aPlan = ModelSyncPlan(this->mGroups, inGroups, anInfos);
-    LobbyGroupMap::iterator groupIt = this->mGroups.begin();
-    LobbyGroupMap::iterator insertIt = this->mGroups.end(); // the original hinted begin(), dangling after an erase
+    size_t groupIt = 0; // the walk's place (as SyncClients)
     for (size_t k = 0; k < aPlan.size(); ++k) {
         switch (aPlan[k].kind) {
-        case 0: this->mGroups.erase(groupIt++); break;
+        case 0: this->mGroups.EraseAt(groupIt); break;
         case 1: {
             RoutingGroupMap::const_iterator infoIt = anInfos[aPlan[k].incoming];
             SmartPtr<LobbyGroup> group = new LobbyGroup;
             group->ReadRoutingInfo(infoIt->second.get(), clients);
-            insertIt = this->mGroups.insert(insertIt, LobbyGroupMap::value_type(infoIt->first, group));
+            bool aNew = false;
+            size_t anAt = this->mGroups.Insert(infoIt->first, &aNew);
+            if (aNew) {
+                this->mGroups.SetAt(anAt, group.get());
+                if (anAt <= groupIt) ++groupIt;
+            }
             ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
             break;
         }
         case 2: {
-            SmartPtr<LobbyGroup> group = groupIt->second;
+            SmartPtr<LobbyGroup> group = this->mGroups.At(groupIt);
             group->ReadRoutingInfo(anInfos[aPlan[k].incoming]->second.get(), clients);
             ee_won_model_population(&aPopulation, 0, (uint32_t)group->mFlags, (uint32_t)group->mNumClients);
             ++groupIt;
             break;
         }
-        case 3: this->mGroups.erase(groupIt, this->mGroups.end()); groupIt = this->mGroups.end(); break;
+        case 3: this->mGroups.EraseFrom(groupIt); groupIt = this->mGroups.size(); break;
         }
     }
     this->mNumChatClients = aPopulation.chat;
@@ -934,7 +944,7 @@ LobbyGroup* LobbyServer::AddGroup(RoutingGroupInfo* inInfo)
 {
     SmartPtr<LobbyGroup> group = new LobbyGroup;
     group->ReadRoutingInfo(inInfo, this->mClients.get());
-    this->mGroups[group->GetId()] = group;
+    this->mGroups.Set(group->GetId(), group.get());
     return group.get();
 }
 
@@ -942,11 +952,7 @@ LobbyGroup* LobbyServer::AddGroup(RoutingGroupInfo* inInfo)
 // Removes the room with the given id and returns it (NULL if absent)
 SmartPtr<LobbyGroup> LobbyServer::RemoveGroup(unsigned short inId)
 {
-    LobbyGroupMap::iterator it = this->mGroups.find(inId);
-    if (it == this->mGroups.end()) return NULL;
-    SmartPtr<LobbyGroup> group = it->second;
-    this->mGroups.erase(it);
-    return group;
+    return this->mGroups.Remove(inId);
 }
 
 // FUNCTION: WON 0x7aa280
@@ -989,15 +995,14 @@ LobbyClient* LobbyServer::GetMyClient()
 // Returns the room or game with the given id, or NULL
 LobbyGroup* LobbyServer::GetGroup(int inId)
 {
-    LobbyGroupMap::iterator it = this->mGroups.find(inId);
-    return it != this->mGroups.end() ? it->second.get() : NULL;
+    return this->mGroups.Get((unsigned short)inId); // the original's find converted the int to the key type
 }
 
 // FUNCTION: WON 0x7aa410
 // Returns the server's population: the live client count when connected, else the listed count
 int LobbyServer::GetNumClients()
 {
-    return ee_won_model_server_num_clients(this->IsConnected(), (uint32_t)this->mClients->mClients.size(),
+    return ee_won_model_server_num_clients(this->IsConnected(), (uint32_t)this->mClients->GetCount(),
                                            this->mNumClients);
 }
 
@@ -1011,7 +1016,7 @@ void LobbyServer::ClearGroups() { this->mGroups.clear(); }
 
 // FUNCTION: WON 0x7aa4f0
 // Creates an empty server list
-LobbyServerList::LobbyServerList() {}
+LobbyServerList::LobbyServerList() : mServers(EeWonLobbyKeyKind::Addr) {}
 
 // FUNCTION: WON 0x7aa5a0
 // Destroys the server list, releasing every server
@@ -1023,9 +1028,9 @@ void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
 {
     for (DirEntityList::const_iterator it = inEntities.begin(); it != inEntities.end(); ++it) {
         DirEntity* entity = it->get();
-        LobbyServerMap::iterator serverIt = this->mServers.insert(LobbyServerMap::value_type(entity->GetNetAddrAsIP(), NULL)).first;
-        if (serverIt->second.get() == NULL) serverIt->second = new LobbyServer;
-        LobbyServer* aServer = serverIt->second.get();
+        size_t serverIt = this->mServers.Insert(entity->GetNetAddrAsIP());
+        if (this->mServers.At(serverIt) == NULL) this->mServers.SetAt(serverIt, new LobbyServer);
+        LobbyServer* aServer = this->mServers.At(serverIt);
         if (!aServer->IsConnected()) aServer->ReadDirEntity(entity);
     }
 }
@@ -1034,8 +1039,7 @@ void LobbyServerList::UpdateFromDirectory(const DirEntityList& inEntities)
 // Returns the server at the given address, or NULL
 LobbyServer* LobbyServerList::FindServer(const IPAddr& inAddress)
 {
-    LobbyServerMap::iterator it = this->mServers.find(inAddress);
-    return it == this->mServers.end() ? NULL : it->second.get();
+    return this->mServers.Get(inAddress);
 }
 
 
@@ -1055,8 +1059,8 @@ void LobbyGame::ClearPlayers()
 {
     LobbyClientList* clients = this->mClients.get();
     if (clients == NULL) return;
-    for (LobbyClientMap::iterator it=clients->mClients.begin(); it!=clients->mClients.end(); ++it)
-        it->second->SetPlayer(NULL);
+    for (size_t i=0; i<clients->GetCount(); ++i)
+        clients->ClientAt(i)->SetPlayer(NULL);
 }
 // FUNCTION: WON 0x7a6d00
 // Returns whether two games are the same: same type and same room (Internet) or same address
@@ -1113,10 +1117,10 @@ void LobbyGame::HandleHostGame(LobbyClient* inClient)
 // Returns whether every player except the captain has clicked ready
 bool LobbyGame::AreAllReady()
 {
-    LobbyClientMap& clients = this->mClients->mClients;
+    LobbyClientList* clients = this->mClients.get();
     std::vector<EeWonMemberReady> members;
-    for (LobbyClientMap::iterator it=clients.begin(); it!=clients.end(); ++it) {
-        LobbyClient* client=it->second.get();
+    for (size_t i=0; i<clients->GetCount(); ++i) {
+        LobbyClient* client=clients->ClientAt(i);
         EeWonMemberReady member;
         member.has_player=client->HasPlayer();
         member.game_captain=client->IsCaptain(1);
@@ -1141,8 +1145,10 @@ short LobbyGame::HandleJoinRequest(ReadBuffer& inBuffer,LobbyClient* inClient,Wr
     if (check!=0) return check;
     LobbyConfig* config=GetLobbyConfig();
     if (config!=NULL && !config->mAllowDuplicateNames) {
-        for (LobbyClientMap::iterator it=this->mClients->mClients.begin(); it!=this->mClients->mClients.end(); ++it)
-            if (it->second->GetName()==inClient->GetName() && it->second.get()!=inClient) return 8;
+        for (size_t i=0; i<this->mClients->GetCount(); ++i) {
+            LobbyClient* aMember=this->mClients->ClientAt(i);
+            if (aMember->GetName()==inClient->GetName() && aMember!=inClient) return 8;
+        }
     }
     player=LobbyPlayer::CreatePlayer();
     inClient->SetPlayer(player.get());
@@ -1201,7 +1207,11 @@ short LobbyGame::HandleJoinReply(ReadBuffer& inBuffer)
 
 // FUNCTION: WON 0x7a7c50
 // Creates an empty game list for the given game type
-LobbyGameList::LobbyGameList(int inType) : mIdItr(),mAddrItr() { this->mType=inType; }
+LobbyGameList::LobbyGameList(int inType)
+    : mIdGames(EeWonLobbyKeyKind::Unsigned), mAddrGames(EeWonLobbyKeyKind::Addr), mIdItr(), mAddrItr()
+{
+    this->mType = inType;
+}
 // FUNCTION: WON 0x7a7e00
 // Destroys the game list, releasing every game
 LobbyGameList::~LobbyGameList() {}
@@ -1215,92 +1225,86 @@ void LobbyGameList::AddGame(LobbyGame* inGame)
     inGame->mGameType=this->mType;
     if (ee_won_model_game_list_by_id(this->mType)) {
         unsigned short id = inGame->mGroupId;
-        this->mIdGames[id]=inGame;
+        this->mIdGames.Set(id, inGame);
     }
-    else this->mAddrGames[inGame->mAddress]=inGame;
+    else this->mAddrGames.Set(inGame->mAddress, inGame);
 }
 // FUNCTION: WON 0x7a80f0
 // Returns the game in the given room, creating it if new; passes out whether it existed
 LobbyGame* LobbyGameList::GetOrCreateGame(unsigned short inId,bool* outExisted)
 {
-    LobbyIdGameMap::iterator it=this->mIdGames.insert(LobbyIdGameMap::value_type(inId,NULL)).first;
-    SmartPtr<LobbyGame>& game=it->second;
-    if (game.get()==NULL) {
+    size_t it = this->mIdGames.Insert(inId);
+    LobbyGame* game = this->mIdGames.At(it);
+    if (game==NULL) {
         game=LobbyGame::CreateGame(static_cast<LobbyGameType>(this->mType));
+        this->mIdGames.SetAt(it, game);
         game->mGroupId=inId;
         if (outExisted!=NULL) *outExisted=false;
     } else if (outExisted!=NULL) *outExisted=true;
-    return game.get();
+    return game;
 }
 // FUNCTION: WON 0x7a8290
 // Returns the game at the given address, creating it if new; passes out whether it existed
 LobbyGame* LobbyGameList::GetOrCreateGame(const IPAddr& inAddress,bool* outExisted)
 {
-    LobbyAddrGameMap::iterator it=this->mAddrGames.insert(LobbyAddrGameMap::value_type(inAddress,NULL)).first;
-    SmartPtr<LobbyGame>& game=it->second;
-    if (game.get()==NULL) {
+    size_t it = this->mAddrGames.Insert(inAddress);
+    LobbyGame* game = this->mAddrGames.At(it);
+    if (game==NULL) {
         game=LobbyGame::CreateGame(static_cast<LobbyGameType>(this->mType));
+        this->mAddrGames.SetAt(it, game);
         game->mAddress=inAddress;
         if (outExisted!=NULL) *outExisted=false;
     } else if (outExisted!=NULL) *outExisted=true;
-    return game.get();
+    return game;
 }
 // FUNCTION: WON 0x7a8560
 // Returns the game in the given room, or NULL
 LobbyGame* LobbyGameList::GetGame(unsigned short inId)
 {
-    LobbyIdGameMap::iterator it=this->mIdGames.find(inId);
-    return it!=this->mIdGames.end()?it->second.get():NULL;
+    return this->mIdGames.Get(inId);
 }
 // FUNCTION: WON 0x7a85c0
 // Returns the game at the given address, or NULL
 LobbyGame* LobbyGameList::GetGame(const IPAddr& inAddress)
 {
-    LobbyAddrGameMap::iterator it=this->mAddrGames.find(inAddress);
-    return it!=this->mAddrGames.end()?it->second.get():NULL;
+    return this->mAddrGames.Get(inAddress);
 }
 // FUNCTION: WON 0x7a8620
 // Removes the game in the given room, resetting its ping; returns it (NULL if absent)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(unsigned short inId)
 {
-    LobbyIdGameMap::iterator it=this->mIdGames.find(inId);
-    if (it==this->mIdGames.end()) return NULL;
-    SmartPtr<LobbyGame> game=it->second;
-    game->mPing=0xfffe;
-    this->mIdGames.erase(it);
+    SmartPtr<LobbyGame> game=this->mIdGames.Remove(inId);
+    if (game.get()!=NULL) game->mPing=0xfffe;
     return game;
 }
 // FUNCTION: WON 0x7a8730
 // Removes the game at the given address, resetting its ping; returns it (NULL if absent)
 SmartPtr<LobbyGame> LobbyGameList::RemoveGame(const IPAddr& inAddress)
 {
-    LobbyAddrGameMap::iterator it=this->mAddrGames.find(inAddress);
-    if (it==this->mAddrGames.end()) return NULL;
-    SmartPtr<LobbyGame> game=it->second;
-    game->mPing=0xfffe;
-    this->mAddrGames.erase(it);
+    SmartPtr<LobbyGame> game=this->mAddrGames.Remove(inAddress);
+    if (game.get()!=NULL) game->mPing=0xfffe;
     return game;
 }
 // FUNCTION: WON 0x7a8850
 // Restarts iteration over the games
 void LobbyGameList::Rewind()
 {
-    if (ee_won_model_game_list_by_id(this->mType)) this->mIdItr=this->mIdGames.begin();
-    else this->mAddrItr=this->mAddrGames.begin();
+    if (ee_won_model_game_list_by_id(this->mType)) this->mIdItr.Rewind();
+    else this->mAddrItr.Rewind();
 }
 // FUNCTION: WON 0x7a8870
 // Returns whether games remain in the iteration
 bool LobbyGameList::HasMore()
 {
-    if (ee_won_model_game_list_by_id(this->mType)) return this->mIdItr!=this->mIdGames.end();
-    return this->mAddrItr!=this->mAddrGames.end();
+    if (ee_won_model_game_list_by_id(this->mType)) return this->mIdItr.HasMore(this->mIdGames);
+    return this->mAddrItr.HasMore(this->mAddrGames);
 }
 // FUNCTION: WON 0x7a88a0
-// Returns the next game and advances (no end check: callers test HasMore first)
+// Returns the next game and advances (callers test HasMore first; NULL at the end, where the original read past it)
 LobbyGame* LobbyGameList::Next()
 {
-    if (ee_won_model_game_list_by_id(this->mType)) return (this->mIdItr++)->second.get();
-    return (this->mAddrItr++)->second.get();
+    if (ee_won_model_game_list_by_id(this->mType)) return this->mIdGames.At(this->mIdItr.Next(this->mIdGames));
+    return this->mAddrGames.At(this->mAddrItr.Next(this->mAddrGames));
 }
 // FUNCTION: WON 0x7a8960
 // Returns whether the list has no games
@@ -1316,11 +1320,12 @@ bool LobbyGameList::RemoveStaleGames(long inMaxAge)
     if (ee_won_model_game_list_by_id(this->mType)) return false;
     time_t now=time(NULL);
     unsigned long oldSize=this->mAddrGames.size();
-    LobbyAddrGameMap::iterator it=this->mAddrGames.begin();
-    while (it!=this->mAddrGames.end()) {
-        if (ee_won_model_game_stale((int64_t)now,(int32_t)it->second->mLastSeenTime,(int32_t)inMaxAge)) {
-            it->second->mPing=0xfffe;
-            this->mAddrGames.erase(it++);
+    size_t it=0;
+    while (it<this->mAddrGames.size()) {
+        LobbyGame* aGame=this->mAddrGames.At(it);
+        if (ee_won_model_game_stale((int64_t)now,(int32_t)aGame->mLastSeenTime,(int32_t)inMaxAge)) {
+            aGame->mPing=0xfffe;
+            this->mAddrGames.EraseAt(it);
         } else ++it;
     }
     return this->mAddrGames.size()<oldSize;
@@ -1364,7 +1369,7 @@ void LobbyServer::ReadDirEntity(DirEntity* inEntity)
             aParser.ReadValue(aNames);
             for (std::list<std::string>::iterator aName = aNames.begin();
                  aName != aNames.end(); ++aName)
-                this->mAddresses.insert(*aName);
+                this->mAddresses.Insert(*aName);
         }
     }
 }
@@ -1379,7 +1384,7 @@ void LobbyServer::Disconnect()
 {
     if (this->mConnection.get() != NULL) {
         this->ClearFriendLocations();
-        this->mNumClients = this->mClients->mClients.size();
+        this->mNumClients = this->mClients->GetCount();
         this->mConnection->QueueClose(-1);
         this->mConnection = NULL;
     }

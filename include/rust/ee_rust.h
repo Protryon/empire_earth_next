@@ -2856,6 +2856,24 @@ enum class EeWonLanJoinStep {
   Again = 4,
 };
 
+/// A container's key kind (its comparator).
+enum class EeWonLobbyKeyKind {
+  /// `unsigned short` / `unsigned long` ids
+  Unsigned = 0,
+  /// `long` ids
+  Signed = 1,
+  /// `IPAddr`
+  Addr = 2,
+  /// `GUIString`, `GUIStringLessNoCase`
+  NoCase = 3,
+  /// `GUIString`, `operator<`
+  Text = 4,
+  /// `std::string`, `StringLessNoCase`
+  NarrowNoCase = 5,
+  /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
+  InOrder = 6,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -3006,6 +3024,9 @@ struct EeWonIpAddr;
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
+
+/// An ordered container of the lobby (see the module).
+struct EeWonLobbyMap;
 
 /// `LobbyPersistentData`'s scalar state and its setters' rules.
 struct EeWonLobbyPrefs;
@@ -7774,6 +7795,24 @@ struct EeWonLanChatCommand {
   int32_t action;
   uint16_t flags;
   bool whisper;
+};
+
+/// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
+/// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
+struct EeWonLobbyMapHooks {
+  void *(*copy)(void*);
+  void (*drop)(void*);
+};
+
+/// A key handed over by C++: `num` for the ids (an `unsigned` id zero-extended, a `long` sign-extended), `addr` for
+/// an address, `text` / `count` / `unit_size` for text (`count` units of `unit_size` bytes: a `wchar_t`'s size for a
+/// `GUIString`, 1 for narrow text).
+struct EeWonLobbyKey {
+  uint64_t num;
+  const EeWonIpAddr *addr;
+  const void *text;
+  size_t count;
+  uint32_t unit_size;
 };
 
 /// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
@@ -18524,6 +18563,144 @@ int32_t ee_won_lanlogic_direct_default_port(bool have_config,
 bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// A new, empty container.
+EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
+
+/// Frees the container, dropping its objects.
+///
+/// # Safety
+/// `m` from `ee_won_lobbymap_new` (or null), not used after.
+void ee_won_lobbymap_free(EeWonLobbyMap *m);
+
+/// The number of entries.
+///
+/// # Safety
+/// `m` is live.
+size_t ee_won_lobbymap_len(const EeWonLobbyMap *m);
+
+/// `clear`.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_clear(EeWonLobbyMap *m);
+
+/// `find`: the entry's position, or -1.
+///
+/// # Safety
+/// `m` is live, `key` a key of its kind.
+ptrdiff_t ee_won_lobbymap_find(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `lower_bound`'s position (the length: `end()`).
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+size_t ee_won_lobbymap_lower_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `upper_bound`'s position.
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+size_t ee_won_lobbymap_upper_bound(const EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `insert(value_type(key, empty))`: the entry's position; `inserted` (or null) says whether it is new (an empty
+/// entry: no object, numbers 0, no text). In insertion order a new value goes at the end.
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`; `inserted` null or writable.
+size_t ee_won_lobbymap_insert(EeWonLobbyMap *m,
+                              const EeWonLobbyKey *key,
+                              bool *inserted);
+
+/// `erase(key)`: whether an entry went (its object dropped).
+///
+/// # Safety
+/// As `ee_won_lobbymap_find`.
+bool ee_won_lobbymap_erase(EeWonLobbyMap *m, const EeWonLobbyKey *key);
+
+/// `erase(position)` (nothing past the end).
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_erase_at(EeWonLobbyMap *m, size_t i);
+
+/// `erase(position, end())`.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_erase_from(EeWonLobbyMap *m, size_t i);
+
+/// The container's assignment (`to = from`): `to`'s entries dropped, `from`'s copied (each object through the copy
+/// hook).
+///
+/// # Safety
+/// Both live, of the same kind and hooks; they may be the same map.
+void ee_won_lobbymap_assign(EeWonLobbyMap *to,
+                            const EeWonLobbyMap *from);
+
+/// The entry's object (null when none or past the end).
+///
+/// # Safety
+/// `m` is live.
+void *ee_won_lobbymap_obj(const EeWonLobbyMap *m, size_t i);
+
+/// Sets the entry's object (the map owns it from then on: a reference the caller added, or a record it made); the
+/// old one is dropped.
+///
+/// # Safety
+/// `m` is live, `i` a position.
+void ee_won_lobbymap_set_obj(EeWonLobbyMap *m,
+                             size_t i,
+                             void *obj);
+
+/// One of the entry's two numbers (0 past the end).
+///
+/// # Safety
+/// `m` is live.
+int64_t ee_won_lobbymap_num(const EeWonLobbyMap *m, size_t i, size_t slot);
+
+/// Sets one of the entry's numbers.
+///
+/// # Safety
+/// `m` is live.
+void ee_won_lobbymap_set_num(EeWonLobbyMap *m, size_t i, size_t slot, int64_t value);
+
+/// The entry's text (units as `u32`; `count` gets their number), valid until the map changes.
+///
+/// # Safety
+/// `m` is live, `count` writable.
+const uint32_t *ee_won_lobbymap_text(const EeWonLobbyMap *m, size_t i, size_t *count);
+
+/// Sets the entry's text (`count` units of `unit_size` bytes).
+///
+/// # Safety
+/// `m` is live; `text` holds the units.
+void ee_won_lobbymap_set_text(EeWonLobbyMap *m,
+                              size_t i,
+                              const void *text,
+                              size_t count,
+                              uint32_t unit_size);
+
+/// The entry's key as a number (an id map; 0 otherwise or past the end).
+///
+/// # Safety
+/// `m` is live.
+uint64_t ee_won_lobbymap_key_num(const EeWonLobbyMap *m, size_t i);
+
+/// The entry's key as an address (an address map; null otherwise), valid until the map changes.
+///
+/// # Safety
+/// `m` is live.
+const EeWonIpAddr *ee_won_lobbymap_key_addr(const EeWonLobbyMap *m, size_t i);
+
+/// The entry's key as text: `u32` units of a `GUIString` key, or the bytes of a narrow one (as `u8`), and their
+/// count; valid until the map changes.
+///
+/// # Safety
+/// `m` is live, `count` writable.
+const void *ee_won_lobbymap_key_text(const EeWonLobbyMap *m,
+                                     size_t i,
+                                     size_t *count);
 
 /// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
 ///

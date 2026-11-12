@@ -55,6 +55,7 @@ pub mod ipaddr;
 pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
+pub mod lobbymap;
 pub mod md5;
 pub mod model;
 /// cbindgen:ignore

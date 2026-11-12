@@ -337,9 +337,8 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
     std::vector<uint16_t> anIds;
     std::vector<size_t> anOffsets(1, 0);
     std::string aNames;
-    for (LobbyClientMap::iterator anItr = this->mClients->mClients.begin();
-         anItr != this->mClients->mClients.end(); ++anItr) {
-        LobbyClient* aListedClient = anItr->second.get();
+    for (size_t anItr = 0; anItr < this->mClients->GetCount(); ++anItr) {
+        LobbyClient* aListedClient = this->mClients->ClientAt(anItr);
         anIds.push_back(aListedClient->GetClientId());
         aNames += LanUtf16(aListedClient->mName);
         anOffsets.push_back(aNames.length());
