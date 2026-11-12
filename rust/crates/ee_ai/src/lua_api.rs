@@ -51,6 +51,7 @@ extern "C" {
     pub fn lua_toboolean(L: *mut lua_State, idx: c_int) -> c_int;
     pub fn lua_tolstring(L: *mut lua_State, idx: c_int, len: *mut usize) -> *const c_char;
     pub fn lua_touserdata(L: *mut lua_State, idx: c_int) -> *mut c_void;
+    pub fn lua_rawlen(L: *mut lua_State, idx: c_int) -> u64;
     pub fn lua_topointer(L: *mut lua_State, idx: c_int) -> *const c_void;
 
     pub fn lua_pushnil(L: *mut lua_State);

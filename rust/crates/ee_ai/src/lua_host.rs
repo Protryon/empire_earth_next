@@ -27,7 +27,7 @@ use crate::lua_api::*;
 use crate::lua_value::{self, EeAiLuaTreeOps, Key, Kind, OwnedKey, Tree, Value, MAX_DEPTH};
 
 /// Instructions between two calls of the count hook (`kEECPLuaHookStep`).
-pub const HOOK_STEP: i64 = 1000;
+pub(crate) const HOOK_STEP: i64 = 1000;
 
 /// `EECPLuaStatus`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

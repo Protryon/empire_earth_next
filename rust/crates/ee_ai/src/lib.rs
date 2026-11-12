@@ -7,6 +7,7 @@
 //! - `names`: the next engine's name tables (result codes and reasons, events, resources, classes and techs);
 //! - `lua_value`: the Lua runtime's value tree (`EECPLuaValue`): the key order, equality, text, the memory's bytes,
 //!   the seed and SplitMix64;
+//! - `units_lua`: the per-unit bindings' Lua helpers (argument readers, result pushers, the units filter);
 //! - `lua_host`: the Lua runtime's state (`EECPLuaState`'s body) over the vendored Lua;
 //! - `ffi`: the C ABI the C++ (`EECPNextLua.cpp`, `EECPNextUnits.cpp`, `EECPEngine.cpp`, `EECPNext.cpp`) calls.
 //!
@@ -25,6 +26,7 @@ pub mod manifest;
 pub mod names;
 pub mod next_save;
 pub mod seat;
+pub mod units_lua;
 pub mod units_save;
 
 #[cfg(test)]

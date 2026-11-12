@@ -7,13 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/// Instructions between two calls of the count hook (`kEECPLuaHookStep`).
-constexpr static const int64_t HOOK_STEP = 1000;
-
-/// The deepest nesting the memory format, the tree -> Lua push and the Lua -> tree conversion take
-/// (`kEECPLuaMaxDepth`).
-constexpr static const size_t MAX_DEPTH = 64;
-
 /// A manifest read: its entries and log lines.
 struct EeAiManifest;
 
@@ -248,6 +241,36 @@ struct EeAiLuaConfig {
   /// `void (*)(lua_State*, void*)` or NULL: may raise a Lua error (a C-unwind function, which cbindgen cannot spell)
   void *open;
   void *open_context;
+};
+
+/// The C++'s class lookup by name (`EECPNextClassByName`) -> the class, or negative.
+using EeAiUnitsClassByName = long(*)(const char *name);
+
+/// An `(sort key, id)` pair of the C++'s `std::vector<std::pair<long long, long>>` (the same layout).
+struct EeAiUnitsSortEntry {
+  int64_t key;
+  long id;
+};
+
+/// `EECPUnitsFilter` (ai.units' and ai.seen's filter) as the C++ copies it in and out.
+struct EeAiUnitsFilter {
+  long kind_type;
+  long types[16];
+  long type_count;
+  const char *category;
+  bool has_near;
+  long x;
+  long y;
+  long r;
+  int idle;
+  int built;
+  int armed;
+  const char *held;
+  const char *action;
+  long player;
+  int enemy;
+  long kind;
+  long limit;
 };
 
 extern "C" {
@@ -521,6 +544,72 @@ bool ee_ai_lua_restore_memory(void *host, const uint8_t *data, size_t len);
 
 /// `EECPLuaStatusName`: a static C string.
 const char *ee_ai_lua_status_name(uint32_t status);
+
+/// `EECPUnitsClassArg`: an integer (a class id) or a class name at `index` -> the class (negative: none).
+long ee_ai_units_class_arg(void *state,
+                           int index,
+                           EeAiUnitsClassByName by_name);
+
+/// `EECPUnitsReadIds`: the ids at `index` (an integer, or an array of integers, at most [`MAX_IDS`]) into `out`
+/// (room for `MAX_IDS`), their count in `*count` -> the count of bad entries. No error.
+long ee_ai_units_read_ids(void *state,
+                          int index,
+                          long *out,
+                          size_t *count);
+
+/// `EECPUnitsOptInt`: an integer field of the table at `table` -> found, the value in `*out`.
+bool ee_ai_units_opt_int(void *state, int table, const char *key, long *out);
+
+/// `EECPUnitsOptBool`: a field's truth (nil, or no table: `default`).
+bool ee_ai_units_opt_bool(void *state, int table, const char *key, bool default_);
+
+/// `EECPUnitsOptString`: a string field -> a pointer into the Lua string (valid while the table holds it), or NULL.
+const char *ee_ai_units_opt_string(void *state,
+                                   int table,
+                                   const char *key);
+
+/// `EECPUnitsOptNear`: `near = {x, y[, r]}` -> found, the values (r 1,000,000 when it is not an integer).
+bool ee_ai_units_opt_near(void *state,
+                          int table,
+                          long *x,
+                          long *y,
+                          long *r);
+
+/// `EECPUnitsOptAmount`: an integer field, 0 when missing or negative (as a `long`).
+long ee_ai_units_opt_amount(void *state, int table, const char *key);
+
+/// `EECPUnitsSetInt`: `t[key] = value` on the table on top.
+void ee_ai_units_set_int(void *state, const char *key, long value);
+
+/// `EECPUnitsSetStr`.
+void ee_ai_units_set_str(void *state, const char *key, const char *value);
+
+/// `EECPUnitsSetBool`.
+void ee_ai_units_set_bool(void *state, const char *key, bool value);
+
+/// `EECPUnitsPushSorted`: sorts the pairs in place (by key, then id) and pushes the first `limit` ids (negative:
+/// all) as a Lua array.
+void ee_ai_units_push_sorted(void *state,
+                             EeAiUnitsSortEntry *entries,
+                             size_t count,
+                             long limit);
+
+/// `EECPUnitsResult`: a command's result: "ok"/"refused", the reason's name, the count, the id (nil for 0) -> 4.
+int ee_ai_units_result(void *state,
+                       long reason,
+                       long count,
+                       long id);
+
+/// `EECPUnitsLayerArg`: the layer an optional string argument names -> 0 threat (also the default: not a string),
+/// 1 lost, 2 influence, -1 unknown.
+int ee_ai_units_layer_arg(void *state,
+                          int index);
+
+/// `EECPUnitsReadFilter`: the filter table at `table` into `f` (the fields it names; the rest as they were).
+void ee_ai_units_read_filter(void *state,
+                             int table,
+                             EeAiUnitsFilter *f,
+                             EeAiUnitsClassByName by_name);
 
 }  // extern "C"
 

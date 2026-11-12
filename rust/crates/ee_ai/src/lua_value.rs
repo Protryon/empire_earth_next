@@ -11,7 +11,7 @@ use std::ffi::{c_char, c_void};
 
 /// The deepest nesting the memory format, the tree -> Lua push and the Lua -> tree conversion take
 /// (`kEECPLuaMaxDepth`).
-pub const MAX_DEPTH: usize = 64;
+pub(crate) const MAX_DEPTH: usize = 64;
 
 /// A value's type (`EECPLuaValue::Type`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
