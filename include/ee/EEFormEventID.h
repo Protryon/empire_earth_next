@@ -5,7 +5,7 @@
 
 // UI database form-event ids (dbuiformevents): EECreateFormEvent creates the event class for each
 enum EEFormEventID {
-    kFormEventMainScreenOpen = 1,       // db dbuiformevents id 1 'Main Screen Open'; EECreateFormEvent: new EEUIEMSEOpen
+    kFormEventMainScreenOpen = 1,       // db dbuiformevents id 1 'Main Screen Open'; EECreateFormEvent: the screen event EE_SCREENS_MAIN_OPEN
     kFormEventGameSettingsOpen = 2,     // db dbuiformevents id 2 'Game Settings Open'; no case in EECreateFormEvent
     kFormEventChatFormOpen = 3,         // db dbuiformevents id 3 'Chat Form Open'; EECreateFormEvent: new EEUIECEOpenChat
     kFormEventChatFormClose = 4,        // db dbuiformevents id 4 'Chat Form Close'; EECreateFormEvent: new EEUIECECloseChat

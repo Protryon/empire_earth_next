@@ -69,6 +69,8 @@ use ee_units as _;
 // the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage
 use ee_netmsg as _;
 // the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes
+// (the menus' FFI imports the C++ host's calls, absent from a test binary)
+#[cfg(not(test))]
 use ee_screens as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.

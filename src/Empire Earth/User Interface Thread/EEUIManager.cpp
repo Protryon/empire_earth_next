@@ -131,7 +131,6 @@
 #include "ee/EEUIEChooseCustomCampaignEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
-#include "ee/EEUIEEmpireEarthEditorsEvents.h"
 #include "ee/EEUIEFormationChange.h"
 #include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEUIEGrabScroll.h"
@@ -142,6 +141,8 @@
 #include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEUIEMainGameOptionsEvents.h"
 #include "ee/EEUIEMainScreenEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEPlayCampaignEvents.h"
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
@@ -150,7 +151,6 @@
 #include "ee/EEUIESaveLoadEvents.h"
 #include "ee/EEUIEScenarioIntroEvents.h"
 #include "ee/EEUIEScenarioLoadEvents.h"
-#include "ee/EEUIESinglePlayerEvents.h"
 #include "ee/EEUIESinglePlayerLoadEvents.h"
 #include "ee/EEUIEWheelZoom.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
@@ -190,7 +190,6 @@ UIEvent* EECreatePlayCampaignEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateSinglePlayerEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateSinglePlayerLoadEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 
@@ -230,12 +229,11 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     this->RegisterControlEventCallback(EECreateGameSettingsEvent);
     this->RegisterControlEventCallback(EECreateSaveLoadEvent);
     this->RegisterControlEventCallback(EECreateMainGameEvent);
-    this->RegisterControlEventCallback(EECreateMainScreenEvent);
+    this->RegisterControlEventCallback(EECreateMainScreenEvent);   // and the single player form's (Rust's table)
     this->RegisterControlEventCallback(EECreatePlayCampaignEvent);
     this->RegisterControlEventCallback(EECreatePostGameSummaryEvent);
     this->RegisterControlEventCallback(EECreateScenarioIntroEvent);
     this->RegisterControlEventCallback(EECreateScenarioLoadEvent);
-    this->RegisterControlEventCallback(EECreateSinglePlayerEvent);
     this->RegisterControlEventCallback(EECreateSinglePlayerLoadEvent);
     this->RegisterControlEventCallback(EECreateGameSettingsEvent);
     this->RegisterControlEventCallback(EECreateWonNetServerSelectEvent);
@@ -459,7 +457,7 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     case kFormEventGameSettingsOpen:
         break;
     case kFormEventMainScreenOpen:
-        theEvent = new EEUIEMSEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_OPEN);
         break;
     case kFormEventChatFormOpen:
         theEvent = new EEUIECEOpenChat;
@@ -517,9 +515,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671cd8
 // (EEUIESSEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671d03
-// (EEUIEMSEOpen's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671d2e
 // (EEUIECECloseChat's scalar deleting destructor, after its first user)
@@ -983,76 +978,12 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 // (EEUIEFormationChange's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6734c5
-// Creates the main screen's event for a control id; NULL for other ids
+// Creates the main screen's, the editors' sub-menu's and the single player form's event for a control id (the menus
+// are Rust's whole: ee_screens menus.rs; the original's single player factory, 0x674200, folded in); NULL for other ids
 UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if ((inID >= kControlEventMainScreenOptionSinglePlayerButton && inID <= kControlEventMainScreenTestButton) || (inID >= kControlEventMainScreenOpenEEEditorSubMenuScreen && inID <= kControlEventEEEditorSubMenuCivBuilderButton)) {
-        switch (inID) {
-        case kControlEventMainScreenOptionSinglePlayerButton:
-            theEvent = new EEUIEMSESinglePlayer;
-            break;
-        case 0x1d:
-            theEvent = new EEUIEEEEScenarioEditor;
-            break;
-        case kControlEventMainScreenOptionMultiPlayerButton:
-            theEvent = new EEUIEMSEMultiPlayer;
-            break;
-        case kControlEventMainScreenOptionExitGame:
-            theEvent = new EEUIEMSEExitGame;
-            break;
-        case kControlEventMainScreenLearningScenariosButton:
-            theEvent = new EEUIEMSEGameSettings;
-            break;
-        case kControlEventMainScreenTestButton:
-            theEvent = new EEUIEMSETestButton;
-            break;
-        case kControlEventMainScreenOpenEEEditorSubMenuScreen:
-            theEvent = new EEUIEEEESubMenuOpen;
-            break;
-        case kControlEventEEEditorSubMenuStartScenarioEditor:
-            theEvent = new EEUIEEEEScenarioEditor;
-            break;
-        case kControlEventEEEditorSubMenuMainMenu:
-            theEvent = new EEUIEEEEMainMenu;
-            break;
-        case kControlEventEEEditorSubMenuStartCampaignEditor:
-            theEvent = new EEUIEEEEEditor;
-            break;
-        case kControlEventEEEditorSubMenuCivBuilderButton:
-            theEvent = new EEUIEEEECivBuilder;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_menus_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x6736b3
-// (EEUIEMSEGameSettings's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6736de
-// (EEUIEMSEExitGame's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673709
-// (EEUIEMSESinglePlayer's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673734
-// (EEUIEMSETestButton's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67375f
-// (EEUIEEEESubMenuOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67378a
-// (EEUIEEEEEditor's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6737b5
-// (EEUIEEEEMainMenu's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6737e0
-// (EEUIEEEEScenarioEditor's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67380b
-// (EEUIEEEECivBuilder's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x673836
 // Creates the play campaign form's event for a control id; NULL for other ids
@@ -1074,7 +1005,7 @@ UIEvent* EECreatePlayCampaignEvent(UIForm* inForm, unsigned long inID)
             theEvent = new EEUIEPCECampaign3;
             break;
         case kControlEventPCPlaySavedGame:
-            theEvent = new EEUIESPELoadGame;
+            theEvent = EECreateScreenEvent(EE_SCREENS_SP_LOAD_GAME);
             break;
         case kControlEventPCCustomCampaign:
             theEvent = new EEUIEPCECustomCampaign;
@@ -1104,9 +1035,6 @@ UIEvent* EECreatePlayCampaignEvent(UIForm* inForm, unsigned long inID)
 
 // SYNTHETIC: EXE 0x673a33
 // (EEUIEPCELearningCampaign's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673a5e
-// (EEUIESPELoadGame's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x673a89
 // Creates the post-game summary's event for a control id; NULL for other ids
@@ -1310,51 +1238,6 @@ UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID)
 // FUNCTION: EXE 0x6741d5
 // Destroys that load-file event
 // (EEUIESCLELoadFile's inline dtor)
-
-// FUNCTION: EXE 0x674200
-// Creates the single player form's event for a control id; NULL for other ids
-UIEvent* EECreateSinglePlayerEvent(UIForm* inForm, unsigned long inID)
-{
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventSinglePlayerCampaign && inID <= kControlEventSinglePlayerRandomMap) {
-        switch (inID) {
-        case kControlEventSinglePlayerCampaign:
-            theEvent = new EEUIESPECampaign;
-            break;
-        case kControlEventSinglePlayerCivCampaign:
-            theEvent = new EEUIESPECivCampaign;
-            break;
-        case kControlEventSinglePlayerGameSettings:
-            theEvent = new EEUIESPELearningScenarios;
-            break;
-        case kControlEventSinglePlayerLoadGame:
-            theEvent = new EEUIESPELoadGame;
-            break;
-        case kControlEventSinglePlayerMainMenu:
-            theEvent = new EEUIESPEMainMenu;
-            break;
-        case kControlEventSinglePlayerRandomMap:
-            theEvent = new EEUIESPERandomMap;
-            break;
-        }
-    }
-    return theEvent;
-}
-
-// SYNTHETIC: EXE 0x6742fb
-// (EEUIESPECampaign's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x674326
-// (EEUIESPECivCampaign's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x674351
-// (EEUIESPELearningScenarios's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67437c
-// (EEUIESPEMainMenu's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6743a7
-// (EEUIESPERandomMap's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6743d2
 // Creates the single player load form's event for a control id; NULL for other ids
@@ -1735,23 +1618,9 @@ long EEUIECEClose::ProcessEvent(class UIForm *,class UIEntity *)
     return 0;
 }
 
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUIEMSETestButton::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUIESPELearningScenarios::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-
 // ICF-FOLDED: EXE 0x5d6811
 // Returns to the main menu
-// (no address of its own: the same body as EEUIEEEEMainMenu::ProcessEvent, which ICF kept)
+// (no address of its own: the same body as the editors' sub-menu's Main Menu, which ICF kept)
 long EEUIESPLECancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     inForm->GetManager()->Pop();
