@@ -670,6 +670,8 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetY());
     case EE_COMBAT_Q_CONTACT_Z:
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetZ());
+    case EE_COMBAT_Q_ID:
+        return (uint32_t)theObject->mUnitID;
     }
     return 0;
 }

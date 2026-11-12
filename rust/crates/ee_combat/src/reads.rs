@@ -181,6 +181,11 @@ pub trait QueryHost {
     fn act(&mut self, code: i32, object: EeCombatHandle, arg: i32);
     /// a complex unit's `mPhysicalModel.GetLocation()`.
     fn location(&mut self, object: EeCombatHandle) -> GeTransformation;
+    /// a complex unit's location's x, y, z (the location's translation).
+    fn position(&mut self, object: EeCombatHandle) -> Ge3DPoint {
+        let t = self.location(object);
+        Ge3DPoint { x: t.x(), y: t.y(), z: t.z() }
+    }
     /// the call's unit's `mPhysicalModel.Intersects(&<candidate>->mPhysicalModel, line, segment, lod, 1, 1, scale)`,
     /// the line set only when `segment` (else the default `GE3DLine`).
     fn intersects(&mut self, candidate: EeCombatHandle, line: &Ge3DLine, segment: bool, lod: u32, scale: f32) -> bool;
@@ -232,8 +237,7 @@ fn hits<H: QueryHost>(h: &mut H, candidate: EeCombatHandle, line: &Ge3DLine, seg
 /// `EEUnitClass::FindImpactUnit(unit)`: the unit a shot hits, its attack target first, then its region's units in
 /// storage order (walls, enemies); a hit on a fire-high set unit that is not the target makes the launcher fire high.
 pub fn impact_unit<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> EeCombatHandle {
-    let location = h.location(unit);
-    let position = Ge3DPoint { x: location.x(), y: location.y(), z: location.z() };
+    let position = h.position(unit);
     let goal = Ge3DPoint {
         x: real(h, EE_COMBAT_Q_CONTACT_X, unit),
         y: real(h, EE_COMBAT_Q_CONTACT_Y, unit),
@@ -249,7 +253,10 @@ pub fn impact_unit<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> EeCombatHan
     if attack && goal_target != 0 {
         let target = h.handle(EE_COMBAT_H_COMPLEX, goal_target, 0);
         if target != 0 && flag(h, EE_COMBAT_Q_MODEL, target) {
-            let distance = h.location(unit).distance_squared_to(&h.location(target));
+            // `GETransformation::DistanceSquaredTo` of the two locations: their translations only
+            let (from, to) = (h.position(unit), h.position(target));
+            let (dz, dy, dx) = (from.z - to.z, from.y - to.y, from.x - to.x);
+            let distance = dx * dx + dy * dy + dz * dz;
             let reach = real(h, EE_COMBAT_Q_STATS_SCALE, unit) + real(h, EE_COMBAT_Q_STATS_SCALE, target);
             if distance <= reach * reach {
                 let lod = if real(h, EE_COMBAT_Q_STATS_SCALE, target) < LARGE_UNIT_SCALE { 1 } else { 2 };
@@ -621,6 +628,142 @@ fn turrets_face_point(
     result
 }
 
+// ---- the plain reads from the unit store (R5b.4's ee_units store, step 4 of the combat plan)
+
+/// `RTSUnit::mUnitID` of the object (the store's key).
+pub const EE_COMBAT_Q_ID: i32 = 45;
+
+/// A host whose plain reads of a unit come from the core lane's unit store (ee_units' `store`) when the unit has a
+/// record there (it is in a player's list, and the record is of that object: the store's `object` is the
+/// `RTSUnit*`, the `EEUnit*`'s address); the other reads, and these when the store has no record, go to the host.
+/// The store is written through at every write of a field it mirrors, so a record equals the object at any point.
+pub struct Stored<'a, H: QueryHost> {
+    pub host: &'a mut H,
+    /// the last object asked about and its id (a body reads one unit's fields in a row)
+    last: (EeCombatHandle, u32),
+}
+
+impl<'a, H: QueryHost> Stored<'a, H> {
+    pub fn new(host: &'a mut H) -> Self {
+        Stored { host, last: (0, 0) }
+    }
+
+    fn record(&mut self, object: EeCombatHandle) -> Option<UnitRecord> {
+        if object == 0 {
+            return None;
+        }
+        if self.last.0 != object {
+            self.last = (object, self.host.read(EE_COMBAT_Q_ID, object, 0));
+        }
+        let id = self.last.1;
+        stored_record(id).filter(|r| r.object == object)
+    }
+}
+
+type UnitRecord = EeCombatStoredUnit;
+
+/// The unit store's fields the reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge: ee_combat does not
+/// depend on ee_units, whose crate imports C++ functions no test binary of this crate has).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeCombatStoredUnit {
+    /// the `RTSUnit*` the record is of (the `EEUnit*`'s address)
+    pub object: u64,
+    /// ee_units' `EE_OBJECT_*` (`EE_COMBAT_STORED_COMPLEX_UNIT`: an `EEComplexUnit`)
+    pub object_kind: u8,
+    pub built: u8,
+    pub tile_x: i64,
+    pub tile_y: i64,
+    pub hit_points: i64,
+    /// -1: no class
+    pub unit_type: i64,
+    pub category: i64,
+    pub command: i64,
+    /// the location's x, y, z as float bits
+    pub location: [u32; 3],
+}
+
+/// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
+pub const EE_COMBAT_STORED_COMPLEX_UNIT: u8 = 2;
+
+#[cfg(not(test))]
+extern "C" {
+    /// ee_rust's bridge to the core lane's unit store: the record under `id` into `out`; false for none.
+    fn ee_combat_store_unit(id: u32, out: *mut EeCombatStoredUnit) -> bool;
+}
+
+/// The store's record under `id` (in the unit tests their own map).
+fn stored_record(id: u32) -> Option<UnitRecord> {
+    #[cfg(not(test))]
+    {
+        let mut out = EeCombatStoredUnit::default();
+        // SAFETY: the bridge writes one record into `out`
+        unsafe { ee_combat_store_unit(id, &mut out) }.then_some(out)
+    }
+    #[cfg(test)]
+    {
+        tests::stored(id)
+    }
+}
+
+impl<H: QueryHost> QueryHost for Stored<'_, H> {
+    fn read(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> u32 {
+        // the store's `long`s are the C++ values; the reads answer their low 32 bits as the host does
+        let field = |r: &UnitRecord| -> Option<u32> {
+            match code {
+                EE_COMBAT_Q_TILE_X => Some(r.tile_x as u32),
+                EE_COMBAT_Q_TILE_Y => Some(r.tile_y as u32),
+                EE_COMBAT_Q_HIT_POINTS => Some(r.hit_points as u32),
+                EE_COMBAT_Q_UNIT_TYPE if r.unit_type != -1 => Some(r.unit_type as u32),
+                EE_COMBAT_Q_CATEGORY if r.category != -1 => Some(r.category as u32),
+                EE_COMBAT_Q_BUILT if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(u32::from(r.built)),
+                EE_COMBAT_Q_COMMAND if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(r.command as u32),
+                _ => None,
+            }
+        };
+        if matches!(
+            code,
+            EE_COMBAT_Q_TILE_X
+                | EE_COMBAT_Q_TILE_Y
+                | EE_COMBAT_Q_HIT_POINTS
+                | EE_COMBAT_Q_UNIT_TYPE
+                | EE_COMBAT_Q_CATEGORY
+                | EE_COMBAT_Q_BUILT
+                | EE_COMBAT_Q_COMMAND
+        ) {
+            if let Some(value) = self.record(object).as_ref().and_then(field) {
+                return value;
+            }
+        }
+        self.host.read(code, object, arg)
+    }
+    fn handle(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> EeCombatHandle {
+        self.host.handle(code, object, arg)
+    }
+    fn act(&mut self, code: i32, object: EeCombatHandle, arg: i32) {
+        self.host.act(code, object, arg)
+    }
+    fn location(&mut self, object: EeCombatHandle) -> GeTransformation {
+        self.host.location(object)
+    }
+    fn position(&mut self, object: EeCombatHandle) -> Ge3DPoint {
+        if let Some(r) = self.record(object).filter(|r| r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT) {
+            return Ge3DPoint {
+                x: f32::from_bits(r.location[0]),
+                y: f32::from_bits(r.location[1]),
+                z: f32::from_bits(r.location[2]),
+            };
+        }
+        self.host.position(object)
+    }
+    fn intersects(&mut self, candidate: EeCombatHandle, line: &Ge3DLine, segment: bool, lod: u32, scale: f32) -> bool {
+        self.host.intersects(candidate, line, segment, lod, scale)
+    }
+    fn footprint_tile(&mut self, object: EeCombatHandle) -> (i32, i32) {
+        self.host.footprint_tile(object)
+    }
+}
+
 // ---- the C ABI
 
 /// The C++ host of the reads (see [`QueryHost`]; `ctx` is the C++'s context: the call's unit and goal).
@@ -680,7 +823,7 @@ impl QueryHost for EeCombatQueryHost {
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_impact_unit(unit: u64, host: *const EeCombatQueryHost) -> u64 {
     let mut h = unsafe { *host };
-    impact_unit(&mut h, unit)
+    impact_unit(&mut Stored::new(&mut h), unit)
 }
 
 /// `IsInReach` of `unit` on `target`.
@@ -690,7 +833,7 @@ pub unsafe extern "C" fn ee_combat_impact_unit(unit: u64, host: *const EeCombatQ
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_in_reach(unit: u64, target: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
-    i32::from(in_reach(&mut h, unit, target))
+    i32::from(in_reach(&mut Stored::new(&mut h), unit, target))
 }
 
 /// `IsStillReachable` of `unit` (its attack goal is the host's).
@@ -700,7 +843,7 @@ pub unsafe extern "C" fn ee_combat_in_reach(unit: u64, target: u64, host: *const
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_still_reachable(unit: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
-    i32::from(still_reachable(&mut h, unit))
+    i32::from(still_reachable(&mut Stored::new(&mut h), unit))
 }
 
 /// `IsGateClosed` of `unit` (its attack goal is the host's).
@@ -710,7 +853,7 @@ pub unsafe extern "C" fn ee_combat_still_reachable(unit: u64, host: *const EeCom
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_gate_closed(unit: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
-    i32::from(gate_closed(&mut h, unit))
+    i32::from(gate_closed(&mut Stored::new(&mut h), unit))
 }
 
 /// `EEIsEnemyWithinRange` of `unit`.
@@ -720,7 +863,7 @@ pub unsafe extern "C" fn ee_combat_gate_closed(unit: u64, host: *const EeCombatQ
 #[no_mangle]
 pub unsafe extern "C" fn ee_combat_enemy_in_range(unit: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
-    i32::from(enemy_in_range(&mut h, unit))
+    i32::from(enemy_in_range(&mut Stored::new(&mut h), unit))
 }
 
 /// `FacesPoint` over `input`; `turret(ctx, i, out)` reads turret part `i`.

@@ -485,6 +485,12 @@ constexpr static const int32_t EE_COMBAT_A_WEAPON_TAG = 2;
 /// the call's unit's `IgnoreTarget(<the complex unit>)`.
 constexpr static const int32_t EE_COMBAT_A_IGNORE = 3;
 
+/// `RTSUnit::mUnitID` of the object (the store's key).
+constexpr static const int32_t EE_COMBAT_Q_ID = 45;
+
+/// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
+constexpr static const uint8_t EE_COMBAT_STORED_COMPLEX_UNIT = 2;
+
 /// `EEFOFindNewTargetInMeleeRange`.
 constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
 
@@ -3546,6 +3552,25 @@ using EeDataIdVisit = void(*)(void *ctx, int32_t key, const uint8_t *id, size_t 
 
 /// One keyed upgrade of a `.civ` text: its key and line.
 using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, int32_t line);
+
+/// The unit store's fields the reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge: ee_combat does not
+/// depend on ee_units, whose crate imports C++ functions no test binary of this crate has).
+struct EeCombatStoredUnit {
+  /// the `RTSUnit*` the record is of (the `EEUnit*`'s address)
+  uint64_t object;
+  /// ee_units' `EE_OBJECT_*` (`EE_COMBAT_STORED_COMPLEX_UNIT`: an `EEComplexUnit`)
+  uint8_t object_kind;
+  uint8_t built;
+  int64_t tile_x;
+  int64_t tile_y;
+  int64_t hit_points;
+  /// -1: no class
+  int64_t unit_type;
+  int64_t category;
+  int64_t command;
+  /// the location's x, y, z as float bits
+  uint32_t location[3];
+};
 
 /// A node as the goals and the capture see it.
 struct EeAStarNodeView {
@@ -9286,6 +9311,15 @@ void ee_data_rules_override_problems(EeDataBytes *out);
 /// source of truth for a consistency check in tests.
 size_t ee_data_rule_category_count();
 
+/// The combat reads' bridge to the unit store (ee_combat reads.rs `Stored`: ee_combat cannot depend on ee_units, whose
+/// host imports C++): ee_units' record under `id`, its plain fields into `out`; false for none (always in a test
+/// binary, which has no store's host).
+///
+/// # Safety
+/// `out` must point to a writable record.
+bool ee_combat_store_unit(uint32_t id,
+                          EeCombatStoredUnit *out);
+
 /// Returns `EE_RUST_ABI_VERSION`.
 uint32_t ee_rust_abi_version();
 
@@ -11650,6 +11684,10 @@ EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
 /// # Safety
 /// `host` must point to a valid record whose callbacks are callable with its `ctx`.
 uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// ee_rust's bridge to the core lane's unit store: the record under `id` into `out`; false for none.
+extern bool ee_combat_store_unit(uint32_t id,
+                                 EeCombatStoredUnit *out);
 
 /// `FindImpactUnit` of `unit` (an `EEUnit*`): the unit hit, 0 for none.
 ///

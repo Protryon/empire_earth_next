@@ -488,3 +488,78 @@ fn every_turret_must_face() {
     assert!(!away);
     assert_eq!(asked, vec![0]);
 }
+
+/// A host that knows ids and answers the C++'s values (the store's must win where it has the unit).
+struct Plain {
+    asked: Vec<i32>,
+}
+
+impl QueryHost for Plain {
+    fn read(&mut self, code: i32, object: u64, _arg: i32) -> u32 {
+        self.asked.push(code);
+        match code {
+            EE_COMBAT_Q_ID => object as u32 + 900_000,
+            EE_COMBAT_Q_TILE_X => 5,
+            EE_COMBAT_Q_LINE_OF_SIGHT => 2.0f32.to_bits(),
+            _ => 1,
+        }
+    }
+    fn handle(&mut self, _code: i32, _object: u64, _arg: i32) -> u64 {
+        0
+    }
+    fn act(&mut self, _code: i32, _object: u64, _arg: i32) {}
+    fn location(&mut self, _object: u64) -> GeTransformation {
+        let mut t = GeTransformation::IDENTITY;
+        t.m[0][3] = 1.0;
+        t
+    }
+    fn intersects(&mut self, _candidate: u64, _line: &Ge3DLine, _segment: bool, _lod: u32, _scale: f32) -> bool {
+        false
+    }
+    fn footprint_tile(&mut self, _object: u64) -> (i32, i32) {
+        (0, 0)
+    }
+}
+
+thread_local! {
+    static STORE: std::cell::RefCell<BTreeMap<u32, UnitRecord>> = const { std::cell::RefCell::new(BTreeMap::new()) };
+}
+
+/// The tests' unit store.
+pub(super) fn stored(id: u32) -> Option<UnitRecord> {
+    STORE.with(|s| s.borrow().get(&id).copied())
+}
+
+fn record(id: u32, object: u64) -> (u32, UnitRecord) {
+    (id, UnitRecord { object, ..Default::default() })
+}
+
+#[test]
+fn plain_reads_come_from_the_unit_store() {
+    let (unit_id, mut unit) = record(900_061, 61);
+    unit.object_kind = EE_COMBAT_STORED_COMPLEX_UNIT;
+    unit.tile_x = 9;
+    unit.hit_points = -3;
+    unit.location = [7.5f32.to_bits(), 0, 0];
+    let (other_id, mut other) = record(900_062, 99);
+    other.tile_x = 9;
+    STORE.with(|s| {
+        s.borrow_mut().insert(unit_id, unit);
+        s.borrow_mut().insert(other_id, other);
+    });
+    let mut host = Plain { asked: Vec::new() };
+    {
+        let mut h = Stored::new(&mut host);
+        assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 61, 0), 9, "the store's");
+        assert_eq!(h.read(EE_COMBAT_Q_HIT_POINTS, 61, 0), (-3i32) as u32);
+        assert_eq!(h.position(61).x, 7.5);
+        // a read the store does not mirror, a record of another object, no record: the host's
+        assert_eq!(h.read(EE_COMBAT_Q_LINE_OF_SIGHT, 61, 0), 2.0f32.to_bits());
+        assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 62, 0), 5);
+        assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 63, 0), 5);
+        assert_eq!(h.position(63).x, 1.0);
+        assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 0, 0), 5, "no handle");
+    }
+    // one id read per object in a row
+    assert_eq!(host.asked.iter().filter(|&&c| c == EE_COMBAT_Q_ID).count(), 3);
+}
