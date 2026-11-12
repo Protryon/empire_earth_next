@@ -5,6 +5,7 @@
 use super::*;
 use crate::filepush::*;
 use crate::ftpop::*;
+use crate::httpdoc::*;
 use crate::httpget::*;
 use crate::multiping::*;
 use crate::reqhost::*;
@@ -31,6 +32,8 @@ struct Standin {
     req: bool,
     /// an HTTP get's sequence (its reply lines: `http_line`)
     http: bool,
+    /// an HTTP document's sequence (its downloads' statuses: invalid redirects at times)
+    doc: bool,
     auth: i32,
     rands: Vec<i32>,
     addrs: Vec<[u8; 6]>,
@@ -352,6 +355,7 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                     s.recv_status()
                 };
                 let v = if s.req && s.pick(6) == 0 { 100053 } else { v };
+                let v = if s.doc && s.pick(4) == 0 { 100094 } else { v };
                 c.out_num = i64::from(v);
                 s.log(format!("st#{o0}={v}"));
             }
@@ -632,6 +636,22 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 s.log(format!("cbytes#{o0} {}={}", n0 as i32, blog(&b)));
             }
             EE_WON_HOST_HOSTOP_SET => s.log(format!("cset#{o0} {} {n1} {} o{o1}", n0 as i32, hex(&data))),
+            EE_WON_HOST_HTTP_MODIFIED => {
+                let v = if s.pick(3) == 0 { 0 } else { 784111000 + i64::from(s.pick(9000)) };
+                c.out_num = v;
+                s.log(format!("hmod#{o0}={v}"));
+            }
+            EE_WON_HOST_FILE_FIRST_CHAR => {
+                const K: [i64; 5] = [-2, -1, b'1' as i64, b'0' as i64, b'<' as i64];
+                let v = K[s.pick(5) as usize];
+                c.out_num = v;
+                s.log(format!("fgetc {}={v}", hex(&data)));
+            }
+            EE_WON_HOST_SESSION_ADD => s.log(format!("sadd#{o0} {o1}")),
+            EE_WON_HOST_TRACKER_EMPTY => {
+                c.out_num = i64::from(s.pick(2));
+                s.log(format!("tempty={}", c.out_num));
+            }
             code => s.log(format!("unknown {code}")),
         }
     });
@@ -783,6 +803,8 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
         }
     } else if which == 'H' {
         ret = http_step(op, kind, a, b, data);
+    } else if which == 'D' {
+        ret = doc_step(op, kind, a, data);
     } else if which == 'P' {
         match kind {
             0 => op.set(EE_WON_FTPGET_LOCAL_PATH, 0, data, None, 0),
@@ -950,6 +972,55 @@ fn http_step(op: &Op, kind: i32, a: i64, b: i64, data: &[u8]) -> String {
     "-".into()
 }
 
+/// The driver's `DocStep`, Rust half: the step's return.
+fn doc_step(op: &Op, kind: i32, a: i64, data: &[u8]) -> String {
+    let h = &op.h().op;
+    match kind {
+        0 => {
+            with(|s| {
+                s.mode = a as i32;
+                s.status = 100000;
+            });
+            h.run();
+        }
+        1 => {
+            let done = with(|s| {
+                s.serial += 1;
+                s.serial
+            });
+            return if h.callback(a as i32, Obj(done as usize)) { "1" } else { "0" }.into();
+        }
+        2 => h.cleanup(),
+        3 => op.set(EE_WON_HTTPDOC_CONFIG, 0, data, None, 0),
+        4 => {
+            let c = if a != 0 { with(|s| s.new_obj()) } else { 0 };
+            op.set(EE_WON_HTTPDOC_SESSION, 0, &[], None, c);
+            if c != 0 {
+                with(|s| *s.own.get_mut(&c).unwrap() -= 1);
+            }
+        }
+        5 => {
+            let mut r = String::new();
+            for w in 0..2 {
+                let d = h.bytes(EE_WON_HTTPDOC_PATH, w).unwrap_or_default();
+                let _ = write!(
+                    r,
+                    "{} {} {} {} {} {} ",
+                    op.num(EE_WON_HTTPDOC_TYPE, w) as i32,
+                    op.num(EE_WON_HTTPDOC_IS_NEW, w) as i32,
+                    op.num(EE_WON_HTTPDOC_STATUS, w) as i32,
+                    op.num(EE_WON_HTTPDOC_HTTP_STATUS, w) as i32,
+                    op.num(EE_WON_HTTPDOC_MODIFIED, w),
+                    hex(&d)
+                );
+            }
+            return r;
+        }
+        _ => {}
+    }
+    "-".into()
+}
+
 fn reset(seed: u32) {
     with(|s| *s = Standin { seed, mode: 2, lfs: 4, ..Standin::default() });
 }
@@ -1013,6 +1084,22 @@ fn new_op(which: char, addr: &[u8]) -> Op {
     }
     let op = if which == 'M' {
         ee_won_multiping_new()
+    } else if which == 'D' {
+        const PRODUCTS: [&str; 3] = ["eeaoc", "", "x y"];
+        const NAMES: [&str; 4] = ["motd", "tou", "adv", "zzz"];
+        let (t, p) = (addr[0] as usize, addr[1] as usize);
+        let doc = |owner: usize| {
+            if t < 3 {
+                format!("_won{}{}.txt", if owner == 0 { "sys" } else { PRODUCTS[p] }, NAMES[t])
+            } else {
+                String::new()
+            }
+        };
+        let (a, b) = (doc(0), doc(1));
+        with(|s| s.doc = true);
+        let pr = PRODUCTS[p];
+        // SAFETY: the texts' bytes
+        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), a.as_ptr(), a.len(), b.as_ptr(), b.len()) }
     } else if which == 'H' {
         const URLS: [&str; 4] =
             ["http://www.sierra.com/motd/sys/motd.txt", "www.sierra.com", "http://h:8080/a/b?c=1", "http://onlyhost"];

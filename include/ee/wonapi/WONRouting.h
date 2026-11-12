@@ -1776,6 +1776,11 @@ public:
     void SetBytes(int inWhich, const std::string& inBytes);
     BlockingSocket* GetHttpSocket() const;
     time_t GetHttpLastModifiedTime();
+    // GetHTTPDocumentOp(product, type) (ee_won httpdoc.rs; the type an HTTPDocType), its language and HTTP session,
+    // and GetDocument(owner): the cache file as a NUL-ended buffer, a MOTD without its leading flag character
+    static RustServerOp* NewHttpDocument(const std::string& inProduct, int inType);
+    void SetHttpDocConfig(const std::string& inLanguage);
+    ByteBufferPtr GetHttpDocument(int inOwner) const;
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -2109,46 +2114,8 @@ enum HTTPDocOwner {
     HTTPDocOwner_Count=2
 };
 
-// 0xdc bytes. The implicit dtor cff46 is emitted by its users;
-// it must not be replaced by an explicit empty or out-of-line dtor.
-// vtable 44d378: delete 2d0320, Run 2d1070, Cleanup 2a0290, Callback 2d0810.
-class GetHTTPDocumentOp : public AsyncOpWithTracker {
-public:
-    void SetDocType(HTTPDocType); //2d0340
-    void DoFinish(); //2d06c0
-    void OpFinished(RustServerOp*,int); //2d0700
-    void TryHTTPOp(HTTPDocOwner,bool=false); //2d0840
-    static void CheckHostAndPath(HTTPDocType); //2cffb0, static
-
-    GetHTTPDocumentOp(const std::string& inProduct,HTTPDocType inType); //2d0170
-    HTTPDocType GetDocType() { return this->mDocumentType; }
-    void SetExtraConfig(const std::string& theExtraConfig) { this->mPath=theExtraConfig; }
-    const std::string& GetDocumentPath(HTTPDocOwner theOwner) const { return this->mDocuments[theOwner]; }
-    time_t GetModifiedTime(HTTPDocOwner theOwner) const { return this->mLastModified[theOwner]; }
-    WONStatus GetDocumentStatus(HTTPDocOwner theOwner) { return this->mDocumentStatus[theOwner]; }
-    void SetHTTPSession(HTTPSession* theSession) { this->mSession=theSession; }
-    virtual void RunHook();                 //slot04,2d1070
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //slot0c,2d0810
-    ByteBufferPtr GetDocument(HTTPDocOwner inOwner) const; //2d10e0
-    HTTPDocType mDocumentType;              //78
-    std::string mProduct;                   //7c
-    std::string mPath;                      //8c
-    HTTPSessionPtr mSession;                //9c
-    bool mIsNew[2];                         //a0
-    bool mRetried[2];                       //a2
-    WONStatus mDocumentStatus[2];           //a4,ac
-    int mHTTPStatus[2];                     //ac,b4
-    time_t mLastModified[2];                //b4,bc; VC6 signed32-bit
-    std::string mDocuments[2];              //bc,cc,dc; FILE PATHS
-};
-
-
-// the message of the day
-class GetMOTDOp : public GetHTTPDocumentOp {
-public:
-    GetMOTDOp(const std::string& inProduct)
-        : GetHTTPDocumentOp(inProduct, HTTPDocType_MOTD) {} //base 4c965b pushes 0
-};
+// GetHTTPDocumentOp (and GetMOTDOp, its MOTD) is a Rust op on the base (rust/crates/ee_won/src/httpdoc.rs):
+// RustServerOp::NewHttpDocument, its members by EE_WON_HTTPDOC_* number and owner, GetHttpDocument
 
 // WONAPI's CD key (dead in AoC; from the base game's Login: ctor base exe 0x68ab90, an 0x1c-byte local;
 // implicit dtor 0x4cff2a: the SmartPtr at +0x14, the string at +4; provisional names)

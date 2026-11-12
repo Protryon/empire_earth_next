@@ -44,8 +44,6 @@
 2c7140 2c761f WONRouting/RoutingJoinGroupOp.cpp
 2c78c0 2c7aaf WONRouting/RoutingMuteClientOp.cpp
 2c8450 2c8a1f WONRouting/RoutingRegisterClientOp.cpp
-2cffb0 2d101e WONMisc/HTTPDocumentOps.cpp
-2d0170 2d1258 WONMisc/GetHTTPDocumentOp.cpp
 2d1260 2d271c WONMisc/HTTPCache.cpp
 2d28f0 2d3782 WONMisc/HTTPEngine.cpp
 2d7a20 2d8391 WONMisc/URL.cpp

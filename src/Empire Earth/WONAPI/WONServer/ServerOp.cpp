@@ -383,6 +383,61 @@ time_t RustServerOp::GetHttpLastModifiedTime()
     this->SetNum(EE_WON_HTTPGET_LAST_MODIFIED, (long long)aTime);
     return aTime;
 }
+// GetHTTPDocumentOp::CheckHostAndPath: once per process opens the type's _won*path.txt override file and ignores it
+static void CheckHttpDocHostAndPath(int inType)
+{
+    static bool checked = false;
+    static CriticalSection crit;
+    AutoCrit guard(crit);
+    if (checked) return;
+    checked = true;
+    // The fopen results are discarded.
+    if (inType == HTTPDocType_MOTD)
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory() + "_wonmotdpath.txt").c_str(), "r");
+    else if (inType == HTTPDocType_TOU)
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory() + "_wontoupath.txt").c_str(), "r");
+    else if (inType == HTTPDocType_ADV)
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory() + "_wonadvpath.txt").c_str(), "r");
+}
+RustServerOp* RustServerOp::NewHttpDocument(const std::string& inProduct, int inType)
+{
+    // SetDocType: the cache files of the system's and the game's copy
+    CheckHttpDocHostAndPath(inType);
+    static const char* const kNames[] = { "motd", "tou", "adv" };
+    std::string aDocs[2];
+    if (inType >= HTTPDocType_MOTD && inType <= HTTPDocType_ADV) {
+        aDocs[0] = WONAPICore::GetDefaultFileDirectory() + "_wonsys" + kNames[inType] + ".txt";
+        aDocs[1] = WONAPICore::GetDefaultFileDirectory() + "_won" + inProduct + kNames[inType] + ".txt";
+    }
+    std::string aLower = StringToLowerCase(inProduct);
+    return new RustServerOp(ee_won_httpdoc_new(inType, reinterpret_cast<const uint8_t*>(aLower.data()), aLower.size(),
+                                               reinterpret_cast<const uint8_t*>(aDocs[0].data()), aDocs[0].size(),
+                                               reinterpret_cast<const uint8_t*>(aDocs[1].data()), aDocs[1].size()));
+}
+void RustServerOp::SetHttpDocConfig(const std::string& inLanguage)
+{
+    this->SetBytes(EE_WON_HTTPDOC_CONFIG, StringToLowerCase(inLanguage)); // as TryHTTPOp lowered it
+}
+ByteBufferPtr RustServerOp::GetHttpDocument(int inOwner) const
+{
+    std::string aPath = this->GetBytes(EE_WON_HTTPDOC_PATH, inOwner);
+    FILE* file = NULL;
+    if (!aPath.empty()) file = PlatFOpen(aPath.c_str(), "r");
+    if (file == NULL) return new ByteBuffer("");
+    WriteBuffer buffer(0, true);
+    if (this->GetNum(EE_WON_HTTPDOC_TYPE) == HTTPDocType_MOTD) {
+        int first = fgetc(file);
+        if (first == '<') ungetc(first, file);
+    }
+    char bytes[1024];
+    while (!feof(file)) {
+        int count = (int)fread(bytes, 1, 1024, file);
+        if (count > 0) buffer.AppendBytes(bytes, count);
+    }
+    buffer.AppendByte(0);
+    fclose(file);
+    return buffer.ToByteBuffer(true);
+}
 RustServerOp::~RustServerOp()
 {
     ee_won_hostop_free(this->mRustOp); // its objects released through HostCall
@@ -622,6 +677,22 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         ee_won_hostop_set(static_cast<RustServerOp*>(Op(o0))->GetRustOp(), (int)n0, n1, c->data, c->len, NULL,
                           c->obj[1]);
         break;
+    // GetHTTPDocumentOp's (ee_won httpdoc.rs)
+    case EE_WON_HOST_HTTP_MODIFIED: c->out_num = (long long)static_cast<RustServerOp*>(Op(o0))->GetHttpLastModifiedTime(); break;
+    case EE_WON_HOST_FILE_FIRST_CHAR: {
+        FILE* aFile = PlatFOpen(std::string(reinterpret_cast<const char*>(c->data), c->len).c_str(), "r");
+        c->out_num = -2;
+        if (aFile != NULL) {
+            int aFirst = fgetc(aFile);
+            c->out_num = aFirst == EOF ? -1 : aFirst;
+            fclose(aFile);
+        }
+        break;
+    }
+    case EE_WON_HOST_SESSION_ADD:
+        static_cast<HTTPSession*>(Obj(o0))->AddOp(static_cast<RustServerOp*>(Op(c->obj[1])));
+        break;
+    case EE_WON_HOST_TRACKER_EMPTY: c->out_num = o->mTracker.IsEmpty() ? 1 : 0; break;
     case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
     case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;
     case EE_WON_HOST_RUN: c->out_num = Op(o0)->Run((long)n0, (unsigned long)n1); break;

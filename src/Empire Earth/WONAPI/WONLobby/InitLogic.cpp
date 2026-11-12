@@ -252,18 +252,18 @@ namespace WONAPI {
 // Each of the two file writes has its own FileWriterException handler
 // FUNCTION: WON 0x7de090
 // Saves newer system and game terms-of-use documents to disk and re-reads their times
-void InitLogic::HandleTOU(GetHTTPDocumentOp* inOp)
+void InitLogic::HandleTOU(RustServerOp* inOp)
 {
     long systemTime;
     long gameTime;
     LobbyGetTOUTimes(systemTime, gameTime);
     bool changed = false;
-    if (ee_won_init_tou_saved(inOp->GetDocumentStatus(HTTPDocOwner_Sys),
-                              (int32_t)inOp->GetModifiedTime(HTTPDocOwner_Sys), (int32_t)systemTime)) {
+    if (ee_won_init_tou_saved((int32_t)inOp->GetNum(EE_WON_HTTPDOC_STATUS, HTTPDocOwner_Sys),
+                              (int32_t)inOp->GetNum(EE_WON_HTTPDOC_MODIFIED, HTTPDocOwner_Sys), (int32_t)systemTime)) {
         FileWriter writer;
         try {
             if (writer.Open(LobbyGetSysTOUPath().c_str(), true)) {
-                ByteBufferPtr document = inOp->GetDocument(HTTPDocOwner_Sys);
+                ByteBufferPtr document = inOp->GetHttpDocument(HTTPDocOwner_Sys);
                 size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
                 if (aBytes != 0)
                     writer.WriteBytes(document->data(), aBytes);
@@ -272,12 +272,12 @@ void InitLogic::HandleTOU(GetHTTPDocumentOp* inOp)
             changed = true;
         } catch (FileWriterException&) {}
     }
-    if (ee_won_init_tou_saved(inOp->GetDocumentStatus(HTTPDocOwner_Game),
-                              (int32_t)inOp->GetModifiedTime(HTTPDocOwner_Game), (int32_t)gameTime)) {
+    if (ee_won_init_tou_saved((int32_t)inOp->GetNum(EE_WON_HTTPDOC_STATUS, HTTPDocOwner_Game),
+                              (int32_t)inOp->GetNum(EE_WON_HTTPDOC_MODIFIED, HTTPDocOwner_Game), (int32_t)gameTime)) {
         FileWriter writer;
         try {
             if (writer.Open(LobbyGetGameTOUPath().c_str(), true)) {
-                ByteBufferPtr document = inOp->GetDocument(HTTPDocOwner_Game);
+                ByteBufferPtr document = inOp->GetHttpDocument(HTTPDocOwner_Game);
                 size_t aBytes = document.get() != NULL ? ee_won_init_document_bytes(document->length()) : 0;
                 if (aBytes != 0)
                     writer.WriteBytes(document->data(), aBytes);
@@ -296,15 +296,15 @@ namespace WONAPI {
 // Broadcasts a downloaded document, then saves terms of use or parses the advert (clearing an empty advert)
 void InitLogic::HTTPDocumentCompletion(AsyncOp* inOp)
 {
-    GetHTTPDocumentOp* op = static_cast<GetHTTPDocumentOp*>(inOp);
+    RustServerOp* op = static_cast<RustServerOp*>(inOp);
     LobbyBroadcastEvent(new GotHTTPDocumentEvent(op), true);
-    switch (op->mDocumentType) {
+    switch (op->GetNum(EE_WON_HTTPDOC_TYPE)) {
     case HTTPDocType_TOU:
         this->HandleTOU(op);
         break;
     case HTTPDocType_ADV:
         {
-            ByteBufferPtr document = op->GetDocument(HTTPDocOwner_Game);
+            ByteBufferPtr document = op->GetHttpDocument(HTTPDocOwner_Game);
             if (document.get() != NULL && ee_won_init_document_bytes(document->length()) != 0) {
                 this->ParseCrossPromotion(document.get());
                 return;
@@ -487,17 +487,17 @@ void InitLogic::StartHTTPDocuments()
     LobbyConfig* config = GetLobbyConfig();
     if (config == NULL)
         return;
-    SmartPtr<GetHTTPDocumentOp> motd = new GetHTTPDocumentOp(config->mProductName, HTTPDocType_MOTD);
-    motd->SetExtraConfig(config->mLanguage);
-    motd->SetHTTPSession(this->mHTTPSession.get());
+    SmartPtr<RustServerOp> motd = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_MOTD);
+    motd->SetHttpDocConfig(config->mLanguage);
+    motd->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(motd.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
-    SmartPtr<GetHTTPDocumentOp> tou = new GetHTTPDocumentOp(config->mProductName, HTTPDocType_TOU);
-    tou->mPath = config->mLanguage;
-    tou->mSession = this->mHTTPSession.get();
+    SmartPtr<RustServerOp> tou = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_TOU);
+    tou->SetHttpDocConfig(config->mLanguage);
+    tou->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(tou.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
-    SmartPtr<GetHTTPDocumentOp> adv = new GetHTTPDocumentOp(config->mProductName, HTTPDocType_ADV);
-    adv->SetExtraConfig(config->mLanguage);
-    adv->mSession = this->mHTTPSession.get();
+    SmartPtr<RustServerOp> adv = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_ADV);
+    adv->SetHttpDocConfig(config->mLanguage);
+    adv->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(adv.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
 }
 }

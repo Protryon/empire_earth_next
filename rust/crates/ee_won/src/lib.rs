@@ -63,6 +63,7 @@ pub mod guiwin;
 pub mod guiwrap;
 pub mod hostop;
 pub mod http;
+pub mod httpdoc;
 pub mod httpengine;
 pub mod httpget;
 /// cbindgen:ignore

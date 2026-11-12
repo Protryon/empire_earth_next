@@ -269,6 +269,15 @@ pub const EE_WON_HOST_HOSTOP_NUM: i32 = 145;
 pub const EE_WON_HOST_HOSTOP_BYTES: i32 = 146;
 /// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
 pub const EE_WON_HOST_HOSTOP_SET: i32 = 147;
+// GetHTTPDocumentOp's (httpdoc.rs):
+/// an HTTP get obj0's `GetLastModifiedTime()` (the C++ side's, over its local file) -> out_num
+pub const EE_WON_HOST_HTTP_MODIFIED: i32 = 148;
+/// `PlatFOpen(data, "r")` and its `fgetc` -> out_num (-2: no file, -1: EOF)
+pub const EE_WON_HOST_FILE_FIRST_CHAR: i32 = 149;
+/// an HTTP session obj0's `AddOp(obj1)`
+pub const EE_WON_HOST_SESSION_ADD: i32 = 150;
+/// the op's `mTracker.IsEmpty()` -> out_num
+pub const EE_WON_HOST_TRACKER_EMPTY: i32 = 151;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`

@@ -134,7 +134,7 @@ public:
     GUIString mActualOldPassword;
 };
 // Login screen and its panels.
-class GetHTTPDocumentOp;
+class RustServerOp;
 class LoginScreen : public Container {
 public:
     LoginScreen();
@@ -170,7 +170,7 @@ public:
     virtual void InitComponent(ComponentInit&);
     virtual void HandleComponentEvent(ComponentEvent*);
     virtual void Paint(Graphics&);
-    void ShowMessage(GetHTTPDocumentOp*);
+    void ShowMessage(RustServerOp*);
     SmartPtr<BrowserComponent> mBrowser; // 0x84
     std::string mGameMOTDPath; // 0x88
     std::string mSysMOTDPath; // 0x98

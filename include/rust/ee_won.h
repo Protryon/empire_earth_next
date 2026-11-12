@@ -1118,6 +1118,18 @@ constexpr static const int32_t EE_WON_HOST_HOSTOP_BYTES = 146;
 /// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
 constexpr static const int32_t EE_WON_HOST_HOSTOP_SET = 147;
 
+/// an HTTP get obj0's `GetLastModifiedTime()` (the C++ side's, over its local file) -> out_num
+constexpr static const int32_t EE_WON_HOST_HTTP_MODIFIED = 148;
+
+/// `PlatFOpen(data, "r")` and its `fgetc` -> out_num (-2: no file, -1: EOF)
+constexpr static const int32_t EE_WON_HOST_FILE_FIRST_CHAR = 149;
+
+/// an HTTP session obj0's `AddOp(obj1)`
+constexpr static const int32_t EE_WON_HOST_SESSION_ADD = 150;
+
+/// the op's `mTracker.IsEmpty()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TRACKER_EMPTY = 151;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -1150,6 +1162,37 @@ constexpr static const int32_t EE_WON_URL_FILE = 1;
 constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// `HTTPDocType_MOTD`, `_TOU`, `_ADV`
+constexpr static const int32_t EE_WON_HTTPDOC_MOTD = 0;
+
+constexpr static const int32_t EE_WON_HTTPDOC_TOU = 1;
+
+constexpr static const int32_t EE_WON_HTTPDOC_ADV = 2;
+
+/// `GetDocType()` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_TYPE = 1;
+
+/// `SetExtraConfig` (bytes: the language, lower case as `TryHTTPOp` read it)
+constexpr static const int32_t EE_WON_HTTPDOC_CONFIG = 2;
+
+/// `SetHTTPSession(session)` (the object)
+constexpr static const int32_t EE_WON_HTTPDOC_SESSION = 3;
+
+/// `mIsNew[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_IS_NEW = 4;
+
+/// `GetDocumentStatus(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_STATUS = 5;
+
+/// `mHTTPStatus[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_HTTP_STATUS = 6;
+
+/// `GetModifiedTime(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
+
+/// `GetDocumentPath(owner)` (bytes)
+constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
 
 /// `SetLocalPath` / `GetLocalPath()` (bytes)
 constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
@@ -8603,6 +8646,19 @@ void ee_won_http_cache_file_name(int32_t id,
 
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
+
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
+/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
+                                const uint8_t *product_lower,
+                                size_t product_len,
+                                const uint8_t *sys_doc,
+                                size_t sys_len,
+                                const uint8_t *game_doc,
+                                size_t game_len);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.

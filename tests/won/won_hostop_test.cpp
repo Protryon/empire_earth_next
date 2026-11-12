@@ -59,6 +59,7 @@ struct Standin {
     unsigned mTick;
     int mLine; // the next line of the session LineBytes gives
     bool mHttp; // an HTTP get's sequence (its reply lines: HttpLine)
+    bool mDoc; // an HTTP document's sequence (its downloads' statuses: invalid redirects at times)
     bool mReq; // a request exchange's sequence (its own answers: ReqBytes, the peer auth's statuses)
     int mAuth; // the request's mAuthType
     std::vector<int> mRands;
@@ -297,6 +298,7 @@ static void Call(EeWonHostCall* c)
         std::map<int, int>::const_iterator k = S.mKinds.find(o0);
         int v = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? SendStatus() : RecvStatus();
         if (S.mReq && APick(6) == 0) v = 100053; // WS_PeerAuth_GetCertFailure
+        if (S.mDoc && APick(4) == 0) v = 100094; // WS_HTTP_InvalidRedirect
         c->out_num = v;
         Log("st#%d=%d", o0, v);
         break;
@@ -557,6 +559,21 @@ static void Call(EeWonHostCall* c)
         break;
     }
     case EE_WON_HOST_HOSTOP_SET: Log("cset#%d %d %lld %s o%d", o0, (int)n0, n1, Hex(data).c_str(), o1); break;
+    case EE_WON_HOST_HTTP_MODIFIED: {
+        long long v = APick(3) == 0 ? 0 : 784111000 + APick(9000);
+        c->out_num = v;
+        Log("hmod#%d=%lld", o0, v);
+        break;
+    }
+    case EE_WON_HOST_FILE_FIRST_CHAR: {
+        static const int k[] = { -2, -1, '1', '0', '<' };
+        int v = k[APick(5)];
+        c->out_num = v;
+        Log("fgetc %s=%d", Hex(data).c_str(), v);
+        break;
+    }
+    case EE_WON_HOST_SESSION_ADD: Log("sadd#%d %d", o0, o1); break;
+    case EE_WON_HOST_TRACKER_EMPTY: c->out_num = APick(2); Log("tempty=%d", (int)c->out_num); break;
     default: Log("unknown %d", c->code); break;
     }
 }
@@ -1811,6 +1828,136 @@ static string Describe(const Op& o)
 }
 }
 
+// ---- the original's statements: GetHTTPDocumentOp.cpp and HTTPDocumentOps.cpp before the port (the downloads are
+// child ops made, set, run and read through the host calls the Rust op makes; the members as the C++ side's
+// constructor sets them: the product's and the language's lower case, the cache file names)
+
+namespace OrigDoc {
+enum { HTTPDocType_MOTD = 0, HTTPDocType_TOU = 1, HTTPDocType_ADV = 2 };
+struct Op {
+    int mDocumentType;
+    string mProductLower, mConfigLower;
+    int mSession;
+    bool mIsNew[2], mRetried[2];
+    int mDocumentStatus[2], mHTTPStatus[2];
+    long long mLastModified[2];
+    string mDocuments[2];
+    Op() : mDocumentType(0), mSession(0)
+    {
+        for (int i = 0; i < 2; i++) {
+            mIsNew[i] = mRetried[i] = false;
+            mDocumentStatus[i] = mHTTPStatus[i] = 0;
+            mLastModified[i] = 0;
+        }
+    }
+    int GetMode() { return (int)Do(EE_WON_HOST_MODE).mNum; }
+    unsigned TimeLeft() { return (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum; }
+    void Finish(int s) { Do(EE_WON_HOST_FINISH, 0, 0, s); }
+    void Track(int inOp, int inId) { Do(EE_WON_HOST_TRACK, inOp, 0, inId); }
+    void DoFinish();
+    void OpFinished(int inOp, int inOwner);
+    void TryHTTPOp(int inOwner, bool inForceDefault);
+    void RunHook();
+    bool CallbackHook(int inOp, int inParam);
+};
+static int Status(int inOp) { return (int)Do(EE_WON_HOST_OP_STATUS, inOp).mNum; }
+void Op::DoFinish()
+{
+    if (this->mDocumentStatus[0] != 0 && this->mDocumentType != HTTPDocType_ADV)
+        this->Finish(100098);
+    else if (this->mDocumentStatus[1] != 0)
+        this->Finish(100099);
+    else
+        this->Finish(0);
+}
+void Op::OpFinished(int inOp, int inOwner)
+{
+    if (!this->mRetried[inOwner] && (Status(inOp) == 100094 ||
+                                     Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_STATUS).mNum == 404)) {
+        this->TryHTTPOp(inOwner, true);
+        return;
+    }
+    this->mDocumentStatus[inOwner] = Status(inOp);
+    this->mHTTPStatus[inOwner] = (int)Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_STATUS).mNum;
+    this->mLastModified[inOwner] = Do(EE_WON_HOST_HTTP_MODIFIED, inOp).mNum;
+    if (Status(inOp) != 0) return;
+    this->mIsNew[inOwner] = Do(EE_WON_HOST_HOSTOP_NUM, inOp, 0, EE_WON_HTTPGET_IS_NEW).mNum != 0;
+    if (this->mDocumentType != HTTPDocType_MOTD) return;
+    int first = (int)Do(EE_WON_HOST_FILE_FIRST_CHAR, 0, 0, 0, 0, this->mDocuments[inOwner]).mNum; // fopen, fgetc
+    if (first != -2) {
+        if (first == -1) {
+            this->mIsNew[inOwner] = false;
+            return;
+        }
+        if (toupper(first & 0xff) != '1') this->mIsNew[inOwner] = true;
+    }
+}
+void Op::TryHTTPOp(int inOwner, bool inForceDefault)
+{
+    std::string document;
+    std::string config = this->mConfigLower;
+    if (config == "en") config.erase();
+    if (config.empty() || inForceDefault) {
+        this->mRetried[inOwner] = true;
+        if (this->mDocumentType == HTTPDocType_MOTD) document = "motd.txt";
+        else if (this->mDocumentType == HTTPDocType_TOU) document = "tou.txt";
+        else if (this->mDocumentType == HTTPDocType_ADV) document = "adv.txt";
+    } else {
+        if (this->mDocumentType == HTTPDocType_MOTD) document = "motd_" + config + ".txt";
+        else if (this->mDocumentType == HTTPDocType_TOU) document = "tou_" + config + ".txt";
+        else if (this->mDocumentType == HTTPDocType_ADV) document = "adv_" + config + ".txt";
+    }
+    std::string path;
+    if (inOwner == 0) path = std::string("/motd/") + "sys/";
+    else if (inOwner == 1) path = std::string("/motd/") + this->mProductLower + "/";
+    std::string host = "www.sierra.com";
+    int op = Do(EE_WON_HOST_NEW_HTTP_GET, 0, 0, (long long)host.size(), 0, host + path + document).mObj;
+    Do(EE_WON_HOST_HOSTOP_SET, op, 0, EE_WON_HTTPGET_RANGE_RESUME, 0);
+    Do(EE_WON_HOST_HOSTOP_SET, op, 0, EE_WON_HTTPGET_LOCAL_PATH, 0, this->mDocuments[inOwner]);
+    if (this->GetMode() == 1) {
+        this->Track(op, inOwner);
+        if (this->mSession != 0) Do(EE_WON_HOST_SESSION_ADD, this->mSession, op);
+        else Do(EE_WON_HOST_RUN_ASYNC, op, 0, 0xffffffffu);
+        return;
+    }
+    unsigned aTime = this->TimeLeft();
+    Do(EE_WON_HOST_RUN, op, 0, 2, aTime);
+    this->OpFinished(op, inOwner);
+}
+void Op::RunHook()
+{
+    for (int i = 0; i < 2; ++i) {
+        this->mIsNew[i] = false;
+        this->mDocumentStatus[i] = 100004;
+        this->mHTTPStatus[i] = 0;
+        this->mLastModified[i] = 0;
+        this->mRetried[i] = false;
+    }
+    if (this->mDocumentType == HTTPDocType_ADV) this->TryHTTPOp(1, false);
+    else for (int owner = 0; owner < 2; ++owner)
+        this->TryHTTPOp(owner, false);
+    if (this->GetMode() != 1) this->DoFinish();
+}
+bool Op::CallbackHook(int inOp, int inParam)
+{
+    this->OpFinished(inOp, inParam & 1); // the owner (any other id indexed past the arrays)
+    if (Do(EE_WON_HOST_TRACKER_EMPTY).mNum != 0) this->DoFinish();
+    return true;
+}
+static string Describe(const Op& o)
+{
+    char b[300];
+    snprintf(b, sizeof(b), " new %d%d retried %d%d st %d %d http %d %d mod %lld %lld docs ", o.mIsNew[0] ? 1 : 0,
+             o.mIsNew[1] ? 1 : 0, o.mRetried[0] ? 1 : 0, o.mRetried[1] ? 1 : 0, o.mDocumentStatus[0],
+             o.mDocumentStatus[1], o.mHTTPStatus[0], o.mHTTPStatus[1], o.mLastModified[0], o.mLastModified[1]);
+    char t[80];
+    snprintf(t, sizeof(t), "type %d product ", o.mDocumentType);
+    return t + Hex(o.mProductLower) + " config " + Hex(o.mConfigLower) + " session " + std::to_string(o.mSession) + b +
+           Hex(o.mDocuments[0]) + " " + Hex(o.mDocuments[1]);
+}
+}
+
+
 // ---- the original's statements: ServerRequestOp.cpp before round 10 (its exchange is server.rs's, as the C++
 // called it; its primitives over the op stand-in, a Rust op derived from it the request's own: ee_won_reqop_*).
 // The iterator before any RunHook (default-constructed there) and after the context's copy (left dangling there)
@@ -2426,6 +2573,79 @@ static string HttpStep(OrigHttp::Op* o, EeWonHostOp* r, const Step& s)
     return ret + "|" + S.mTrace + "|" + d;
 }
 
+static const char* const kDocProducts[] = { "eeaoc", "", "x y" };
+static const char* const kDocConfigs[] = { "", "en", "fr", "de" };
+static const char* const kDocNames[] = { "motd", "tou", "adv", "zzz" };
+static string DocPath(int inType, int inProduct, int inOwner)
+{
+    return string("_won") + (inOwner == 0 ? string("sys") : string(kDocProducts[inProduct])) + kDocNames[inType] + ".txt";
+}
+static Step MakeDocStep()
+{
+    static const int kKinds[] = { 0, 0, 0, 1, 1, 1, 1, 1, 2, 3, 4, 5 };
+    Step s;
+    s.mKind = kKinds[Pick(12)];
+    s.mA = s.mB = 0;
+    switch (s.mKind) {
+    case 0: s.mA = Pick(2) + 1; break;               // run (mode)
+    case 1: s.mA = Pick(8) ? Pick(2) : Pick(4); break; // callback (the owner, else another id)
+    case 3: s.mData = kDocConfigs[Pick(4)]; break;  // the language, lower case
+    case 4: s.mA = Pick(2); break;                   // the session, or none
+    default: break;
+    }
+    return s;
+}
+static string DocStep(OrigDoc::Op* o, EeWonHostOp* r, const Step& s)
+{
+    S.mTrace.clear();
+    S.mCalls = 0;
+    string ret = "-";
+    switch (s.mKind) {
+    case 0:
+        S.mMode = (int)s.mA;
+        S.mStatus = 100000;
+        if (o) o->RunHook(); else ee_won_hostop_run(r);
+        break;
+    case 1: {
+        int done = ++S.mSerial;
+        bool b = o ? o->CallbackHook(done, (int)s.mA) : ee_won_hostop_callback(r, (int)s.mA, P(done));
+        ret = b ? "1" : "0";
+        break;
+    }
+    case 2: if (o) Do(EE_WON_HOST_BASE_CLEANUP); else ee_won_hostop_cleanup(r); break;
+    case 3: if (o) o->mConfigLower = s.mData; else RSet(r, EE_WON_HTTPDOC_CONFIG, 0, s.mData); break;
+    case 4: {
+        int c = s.mA ? NewObj() : 0;
+        if (o) o->mSession = c; else RSet(r, EE_WON_HTTPDOC_SESSION, 0, string(), NULL, c);
+        if (c) S.mOwn[c]--;
+        break;
+    }
+    case 5: {
+        char b[200];
+        string out;
+        for (int w = 0; w < 2; w++) {
+            if (o)
+                snprintf(b, sizeof(b), "%d %d %d %d %lld %s ", o->mDocumentType, o->mIsNew[w] ? 1 : 0,
+                         o->mDocumentStatus[w], o->mHTTPStatus[w], o->mLastModified[w], Hex(o->mDocuments[w]).c_str());
+            else {
+                string d;
+                ee_won_hostop_bytes(r, EE_WON_HTTPDOC_PATH, w, DescribeSink, &d);
+                snprintf(b, sizeof(b), "%d %d %d %d %lld %s ", (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_TYPE, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_IS_NEW, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_STATUS, w),
+                         (int)ee_won_hostop_num(r, EE_WON_HTTPDOC_HTTP_STATUS, w),
+                         ee_won_hostop_num(r, EE_WON_HTTPDOC_MODIFIED, w), Hex(d).c_str());
+            }
+            out += b;
+        }
+        ret = out;
+        break;
+    }
+    }
+    string d = o ? OrigDoc::Describe(*o) : RDescribe(r);
+    return ret + "|" + S.mTrace + "|" + d;
+}
+
 static string StepText(char inOp, const Step& s)
 {
     char b[200];
@@ -2670,6 +2890,7 @@ static void Reset(unsigned inSeed)
     S.mLine = 0;
     S.mReq = false;
     S.mHttp = false;
+    S.mDoc = false;
     S.mAuth = 0;
     S.mRands.clear();
     S.mAddrs.clear();
@@ -2695,7 +2916,7 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     std::vector<Step> steps;
     for (int i = 0; i < inSteps; i++)
         steps.push_back(inOp == 'M' ? MakePingStep() : inOp == 'F' ? MakePushStep() : inOp == 'R' ? MakeReqStep()
-                        : inOp == 'H' ? MakeHttpStep() : MakeFtpStep());
+                        : inOp == 'H' ? MakeHttpStep() : inOp == 'D' ? MakeDocStep() : MakeFtpStep());
     string addr(kAddrs[Pick(6)], 6);
     if (inOp == 'P') { // FTPGetOp(url, extract): the URL's index and the flag
         addr.assign(2, '\0');
@@ -2715,6 +2936,11 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         addr[1] = (char)Pick(2);
         addr[2] = (char)Pick(4);
     }
+    if (inOp == 'D') { // GetHTTPDocumentOp(product, type): the type (3: none), the product's index
+        addr.assign(2, '\0');
+        addr[0] = (char)(Pick(8) ? Pick(3) : 3);
+        addr[1] = (char)Pick(3);
+    }
     if (inPrint) printf("S %c %u %d %s\n", inOp, aSeed, inSteps, Hex(addr).c_str());
     // the original
     std::vector<string> orig;
@@ -2730,6 +2956,14 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
         ReqSetup(addr, &q, NULL);
         for (size_t i = 0; i < steps.size(); i++) orig.push_back(ReqStep(q, NULL, steps[i]));
         delete q;
+    } else if (inOp == 'D') {
+        OrigDoc::Op d;
+        d.mDocumentType = addr[0];
+        d.mProductLower = kDocProducts[(int)addr[1]];
+        if (addr[0] < 3)
+            for (int w = 0; w < 2; w++) d.mDocuments[w] = DocPath(addr[0], addr[1], w);
+        S.mDoc = true;
+        for (size_t i = 0; i < steps.size(); i++) orig.push_back(DocStep(&d, NULL, steps[i]));
     } else if (inOp == 'H') {
         OrigHttp::Op h;
         if (addr[1]) { h.mHost = kHttpHosts[(int)addr[0]]; h.mRemotePath = kHttpPaths[(int)addr[2]]; }
@@ -2751,7 +2985,15 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     if (inOp == 'M') r = ee_won_multiping_new();
     else if (inOp == 'F') r = ee_won_filepush_new(reinterpret_cast<const uint8_t*>(addr.data()));
     else if (inOp == 'R') ReqSetup(addr, NULL, &r);
-    else if (inOp == 'H') {
+    else if (inOp == 'D') {
+        S.mDoc = true;
+        string p = kDocProducts[(int)addr[1]];
+        string a = addr[0] < 3 ? DocPath(addr[0], addr[1], 0) : string();
+        string b = addr[0] < 3 ? DocPath(addr[0], addr[1], 1) : string();
+        r = ee_won_httpdoc_new(addr[0], reinterpret_cast<const uint8_t*>(p.data()), p.size(),
+                               reinterpret_cast<const uint8_t*>(a.data()), a.size(),
+                               reinterpret_cast<const uint8_t*>(b.data()), b.size());
+    } else if (inOp == 'H') {
         S.mHttp = true;
         if (addr[1]) {
             const char* h = kHttpHosts[(int)addr[0]];
@@ -2772,6 +3014,7 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
                      : inOp == 'F' ? PushStep(NULL, r, steps[i])
                      : inOp == 'R' ? ReqStep(NULL, r, steps[i])
                      : inOp == 'H' ? HttpStep(NULL, r, steps[i])
+                     : inOp == 'D' ? DocStep(NULL, r, steps[i])
                                    : FtpStep(NULL, r, steps[i]);
         CHECK(got == orig[i]);
         if (got != orig[i] && sFailures < 6)
@@ -2795,6 +3038,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < aPrint; i++) Sequence('P', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('R', 8 + Pick(40), true);
         for (int i = 0; i < 5 * aPrint; i++) Sequence('H', 8 + Pick(40), true);
+        for (int i = 0; i < 3 * aPrint; i++) Sequence('D', 8 + Pick(30), true);
         return 0;
     }
     for (int i = 0; i < aCount; i++) Sequence('M', 8 + Pick(40), false);
@@ -2802,6 +3046,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < aCount; i++) Sequence('P', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('R', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('H', 8 + Pick(40), false);
+    for (int i = 0; i < aCount; i++) Sequence('D', 8 + Pick(30), false);
     printf("won_hostop_test: %lld checks, %d failed\n", sChecks, sFailures);
     return sFailures;
 }
