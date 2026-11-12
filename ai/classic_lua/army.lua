@@ -1541,8 +1541,8 @@ local function assign_task(view, memory, g)
         why = "return"
     end
     g.task_t = view.time
-    -- (CheckTask: a defence task is looked at again after 10..120 s, and kept half the time)
-    g.task_check = view.time + ai.random(10, 120) * 1000
+    -- (IsLocationTaskValid: the check time stays as it was - mNextTaskCheckTime - so a new place is looked at on
+    -- arrival, then again 10..120 s later, kept half the time)
     print(string.format("classic_lua army.task id=%d mission=%d %s at=%d,%d units=%d", g.id, g.mission, why, g.x, g.y,
         #g.units))
 end
@@ -1579,8 +1579,9 @@ local function update_groups(view, memory)
                 elseif g.task == "attack" and g.state == "arrived" then
                     assign_task(view, memory, g)
                 elseif g.task == "defend" and g.mission ~= 3 and g.state ~= "fighting"
-                        and view.time >= (g.task_check or 0) then
-                    -- (a sea sub-group's place is a location task: done once looked at again)
+                        and (g.sea or g.state == "arrived") and view.time >= (g.task_check or 0) then
+                    -- IsLocationTaskValid: at its place (and its check time past) a defence task is dropped half
+                    -- the time, else looked at again in 10-120 s (a sea sub-group's place: done once looked at)
                     if g.sea or ai.random(0, 1) == 0 then
                         assign_task(view, memory, g)
                     else
