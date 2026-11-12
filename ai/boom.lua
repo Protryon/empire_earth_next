@@ -912,7 +912,11 @@ function M.step(view, memory)
         -- minute for 25 minutes) with fewer food places than half the plan's food the claim, and with it the hunting
         -- and the patches, may grow to claim_dry
         local claim_max = plan.claim_max
-        if ECON.food_dry and plan.claim_dry ~= nil and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
+        -- (ECON.order, §8.51, boom-defence's o4b: in 12 of 14 lost towns the Stone Age's forage ran out before the Copper
+        -- Age was paid, the food gatherers fell from 18 to 0-7 and the save stalled 37-96 minutes) the claim, and with it
+        -- the patches and the hunting, reaches out while the food places are short
+        if (ECON.food_dry or ECON.order) and plan.claim_dry ~= nil
+                and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
             claim_max = math.max(claim_max, plan.claim_dry)
         end
         if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
