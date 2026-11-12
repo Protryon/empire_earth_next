@@ -1203,6 +1203,24 @@ function M.step(view, memory)
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
         -- threat one more at the town
+        -- (ECON.order, the owner: the fishing boats protected from mid-Stone) a tower at each of the army's boat spots
+        -- (memory.boat_towers, boom-defence's: by the dock and the fishing grounds), ahead of the other towers
+        if ECON.order and tower ~= nil and age >= 2 and phase ~= "stone_start" and not towers_busy
+                and memory.boat_towers ~= nil then
+            for _, b in ipairs(memory.boat_towers) do
+                if b.x ~= nil and b.y ~= nil and not towers_busy then
+                    local near = 0
+                    for _, t in ipairs(TOWER_CLASSES) do
+                        near = near + #ai.units{type = t, near = {b.x, b.y, 4}, limit = 1}
+                    end
+                    if near == 0 and memory.bad_spots["bt" .. b.x .. "," .. b.y] == nil
+                            and order("tower_boats", {verb = "build", type = tower, near = "tile", x = b.x, y = b.y},
+                                      "bt" .. b.x .. "," .. b.y) then
+                        towers_busy = true
+                    end
+                end
+            end
+        end
         -- (ECON.order) while the Stone Age's boats come, the bank's wood goes to the dock and the boats first
         local hold = ECON.order and BO.holds_wood(view, phase)
         if tower_wanted and not towers_busy and view.citizens >= (plan.tower_at or 10) and not hold then
