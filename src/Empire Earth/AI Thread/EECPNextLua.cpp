@@ -487,13 +487,14 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
         std::string theResource = r.Str("resource", "", true);
         long n = r.Int("n", 0, true);
         std::string thePrefer = r.Str("prefer", "patch");
+        long theExact = r.Int("exact", -1);
         if (!r.Done())
             return EECPNextRefuse(inPlayer, v, r.mProblem);
         long theIndex = EECPNextResourceIndex(theResource);
         long thePreferKind = thePrefer == "patch" ? kNextPreferPatch : thePrefer == "hunt" ? kNextPreferHunt : -1;
         if (theIndex < 0 || thePreferKind < 0)
             return EECPNextRefuse(inPlayer, v, theIndex < 0 ? "resource " + theResource : "prefer " + thePrefer);
-        return EECPNextGather(inPlayer, theIndex, n, thePreferKind);
+        return EECPNextGather(inPlayer, theIndex, n, thePreferKind, theExact);
     }
     if (v == "claim" || v == "release") {
         long theSite = r.Int("site", 0, true);

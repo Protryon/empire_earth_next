@@ -5767,8 +5767,35 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(this, kAICheatEpochs))
+    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(this, kAICheatEpochs)) {
+        if (gCPTraceOn) {   // TEST ONLY (EE_AI_EXP spending): what the payment buys, by kind (the stock delta, as paid)
+            long theBefore[5], theCost[5];
+            for (long r = 0; r < 5; r++)
+                theBefore[r] = this->mResourceCaps[kResourceFood + r];
+            EEPlayer::Pay(inTechnology, inUnitType, inFraction);
+            for (long r = 0; r < 5; r++)
+                theCost[r] = theBefore[r] - this->mResourceCaps[kResourceFood + r];
+            long theKind = 3;
+            // (the class the technology makes; inUnitType is the producer's)
+            long theMade = (long)inTechnology->mData->mUnitClass;
+            EEUnitClass* theClass = theMade > 0 && (unsigned long)theMade < EEUnitClassCount() ? gUnitClassTable[theMade] : NULL;
+            if (EEIsEpochID(inTechnology->mData->mID))
+                theKind = 4;
+            else if (theClass != NULL && inTechnology->mData->mUnitClass != 0) {
+                if (theClass->mCategory == kUnitCategoryLandCitizen)
+                    theKind = 0;
+                else if (theClass->mCategory == kUnitCategoryNavalCitizen)
+                    theKind = 5;
+                else if (theClass->IsBuilding())
+                    theKind = 2;
+                else
+                    theKind = theClass->mIsAttackUnit || theClass->mIsDefenseUnit ? 1 : 7;
+            }
+            EECPTraceSpend(this, theKind, theCost);
+            return;
+        }
         EEPlayer::Pay(inTechnology, inUnitType, inFraction);
+    }
 }
 
 // FUNCTION: EXE 0x43edc0

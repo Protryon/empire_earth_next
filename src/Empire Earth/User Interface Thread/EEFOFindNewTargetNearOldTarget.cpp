@@ -70,6 +70,7 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEPhysics.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
@@ -3182,6 +3183,15 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
         ::gWorld.mEffectManager->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), &theHandle, 1, 0, 0);
     }
     inContainer->mPlayer->AddResource(inUnit->mResourceType, theAmount);
+    // TEST ONLY (docs/AI_RESEARCH.md §8.51, EE_AI_TRACE with EE_AI_EXP deposits): each deposit of a computer player,
+    // to time a gatherer's loads (trace only: nothing here changes the game)
+    if (gCPTraceOn) {
+        EEComputerPlayer* theComputer = dynamic_cast<EEComputerPlayer*>(inContainer->mPlayer);
+        if (theComputer != NULL && EECPExperiment(theComputer, "deposits"))
+            EE_CP_TRACE(theComputer, "deposit", "unit=%lu cls=%ld res=%lu carried=%ld amount=%ld bonus=%.3f store=%lu t=%lu",
+                (unsigned long)inUnit->GetUnitID(), (long)inUnit->mUnitClass->mUnitType, theKind, theCarried, theAmount,
+                (double)theBonus, (unsigned long)inContainer->GetUnitID(), (unsigned long)gPhysics->mGameTime);
+    }
     switch (inUnit->mResourceType) {
     case kResourceFood:
         inContainer->mPlayer->mSavedGroups.Reset(7, theAmount);

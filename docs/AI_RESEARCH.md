@@ -3586,6 +3586,283 @@ Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 script errors.
 Next: the port's answer to a few raiders before the Stone Age (seed 24's clubmen: what the C++'s militia and defence
 groups do that the port's do not), then guard posts on hills and choke points, heroes, walls.
 
+### 8.50 Boom's mid-game army, attacks and the owner's Stone raid (2026-11-11, EE-SIM)
+
+The owner's direction: the cheating classic is a bad matchup to report, not a target. The focus is boom's army from
+the Copper Age and its attacks, then (a later direction) the Stone raid of the owner's exact build order (memory
+boom-build-order). Opponents: the improved classic (no cheats) and Age of AI. Small, Hard, 120 minutes. Stone /
+Copper / Bronze: the games that reached the epoch and its median minute. "Under 30": towns with fewer than 30
+citizens at 120 minutes (boom-econ's less noisy measure).
+
+**The Copper army (mb1, merged in 1f6edf5).** From the Copper Age the light army is a third of the citizens (35%),
+up to 60 (25%, 40 before). On 64 seeds (2-65):
+
+| Variant | Opponent | Games | Defeats | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| baseline | Age of AI | 63 | 0 | 6/25/32 | 61, 52.5 | 54, 79.2 |
+| | improved classic | 63 | 10 | 1/54/8 | 39, 62.8 | 11, 94.6 |
+| mb1 | Age of AI | 62 | 0 | 11/10/41 | 60, 52.6 | 51, 81.3 |
+| | improved classic | 64 | 9 | 0/47/17 | 40, 62.4 | 11, 90.7 |
+
+**Off (32 seeds each; the improved classic's defeats against mb1's 4 on the same exe):**
+- the guard's sweep of lone harassers near own buildings: 8 alone, 9 with mb1;
+- attacks (lib.attack) from the Copper Age with 8 soldiers kept home: 8;
+- the same with 16 kept home: 6, then 7 on the fixed scripts;
+- attacks only while the home guard holds 100% or 150% of the largest raid of the last 15 minutes: 6 of 29 and 7 of
+  32 (the baseline on that exe: 6 of 29);
+- Age of AI's W/L/C moves by 1-5 games either way in all of them.
+
+The attacks pull soldiers out of a town that the improved classic hits harder from about minute 70, when it reaches
+180 population and attacks with 42-48 soldiers while boom stands at 90-100 citizens and 22-35 soldiers (boom-econ's
+analysis). An army scaled towards the population cap from the Bronze Age (L50: 50% up to 90; L70: 70% up to 120) was
+started and stopped for the owner's new direction; its partial rows (22 and 12 games against the classic) are too
+few to read.
+
+**The micro step's budget (fixed in 2c477f26):** with 100+ citizens away from a large raid, lib.defence re-tested
+every one against every raider each second and overran 300k instructions (boom-econ's seed 19, from minute 81; mb6's
+17 script errors). It now looks at 40 a second in turn and skips a raid whose box is out of reach: 0 errors in the
+re-run, seed 19 clean, `--repeat 2` identical on seeds 4 and 19 against both opponents.
+
+**The owner's Stone raid (lib.raid, plan.raid, off).** Once the economy is developed (boom-econ's
+`memory.phase == "stone_developed"`; here a stub, 8 minutes into the Stone Age, since the signal was on another branch),
+~20 soldiers go in one raid on the nearest neighbour's gatherers along `ai.route`, and ~20 more are trained as the
+home reserve on the dispatch. 32 seeds against main's scripts (lb0):
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| lb0 (Stone: a quarter of the citizens, at least 20; army_first) | Age of AI | 0 | 0 | 6/1/25 | 32, 51.1 | 29, 82.7 |
+| | improved classic | 8 | 18 | 0/25/7 | 20, 65.8 | 5, 93.0 |
+| rs0 (Stone: 8 soldiers, army_first off) | Age of AI | 0 | 0 | 6/3/23 | 32, 46.7 | 26, 76.3 |
+| | improved classic | 8 | 13 | 1/21/10 | 20, 60.6 | 6, 91.2 |
+| rs1 (rs0 + the raid) | Age of AI | 0 | 0 | 5/6/21 | 32, 47.7 | 23, 81.0 |
+| | improved classic | 10 | 13 | 1/20/11 | 21, 64.6 | 7, 89.4 |
+
+| The raids (rs1) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|
+| improved classic | 20 of 32 | 10.3 | 55 | 332 | 4.7 | 1.9 / 1.9 |
+| Age of AI | 27 of 32 | 10.7 | 43 | 347 | 0.3 | 3.4 / 0.1 |
+
+- **rs0 is the find:** the owner's 5-10 Stone soldiers in place of the 20-soldier army_first bring the Copper Age 4-5
+  minutes sooner against both opponents and the Bronze Age 6 sooner against Age of AI, with the same defeats and 5
+  fewer towns under 30 citizens against the classic.
+- **The raid as built does not do the owner's job yet.** The force is never trained in time: the build waits 10
+  minutes and then goes at half size, at minute 43-55, after the Copper save should have begun. It kills 2-3
+  citizens, and costs two defeats and 1-5 minutes against the classic. Its timing depends on the economy: boom-econ's
+  phase signal and its pause of the Copper save while the raid builds (on boom-econ's branch) are the parts it needs.
+
+**The raid on boom-econ's real signal (boom-econ's f0fc8d79 merged into boom-defence; its order on).** Both variants
+turn on boom-econ's build order (ECON.order), which carries rs0's 8 Stone soldiers in its phase tables. o1 adds the
+raid with the training priority: 3 soldiers an order while it builds, the citizens yielding (memory.raid.priority),
+and a 15-minute gate of three quarters of the force. Same exe (with boom-econ's release fix), 32 seeds, --cache.
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|---|
+| o0, the order | Age of AI | 0/31 | 0 | 3/15/13 | 31, 22.6 | 26, 47.1 | 23, 73.5 |
+| | improved classic | 15/32 | 18 | 2/28/2 | 26, 25.0 | 14, 46.0 | 10, 74.8 |
+| o1, the order + the raid | Age of AI | 0/31 | 1 | 2/14/15 | 31, 22.6 | 26, 51.4 | 23, 75.8 |
+| | improved classic | 16/32 | 19 | 1/26/5 | 26, 25.0 | 15, 50.1 | 11, 76.7 |
+
+| The raids (o1) | Built from (min) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|---|
+| improved classic | 43.2 (26 games) | 16 | 17.6 | 54.3 | 339 | 4.7 | 3.6 / 4.2 |
+| Age of AI | 38.7 (31 games) | 20 | 19.5 | 49.8 | 329 | 1.4 | 3.9 / 1.6 |
+
+- **The priority works:** the raid now goes with 18-20 soldiers (10 before). It kills about 4 citizens and 2-4
+  soldiers for 1-5 of its own.
+- **It goes late:** `stone_developed` comes at minute 39-43, so the force builds through minutes 40-54. The raid
+  costs the Copper Age 4 minutes against both opponents and one defeat more against the classic. Its timing is set
+  by the phase signal.
+- **The order itself** (o0, boom-econ's, still off on main) has 15 defeats against the classic, against rs0's 8 on
+  the earlier exe. That is boom-econ's bench to read; the raid adds to it, not to rs0.
+
+**The raid on the earlier latch (boom-econ's c2a6e309).** Order on in both; 32 seeds, the same exe.
+
+| Variant | Opponent | Defeats | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| o2, the order | Age of AI | 0/32 | 5/17/10 | 32, 22.4 | 28, 47.3 | 23, 78.0 |
+| | improved classic | 15/32 | 1/29/2 | 26, 24.6 | 16, 48.6 | 10, 74.6 |
+| o3, the order + the raid | Age of AI | 0/32 | 4/14/14 | 32, 22.4 | 24, 49.9 | 21, 74.4 |
+| | improved classic | 17/32 | 1/28/3 | 26, 24.6 | 13, 50.0 | 7, 80.6 |
+
+- The build now begins at minute 35-38. It still takes 13-15 minutes: about 1.3 soldiers a minute with the citizens
+  yielding. So the raid goes at minute 50-52 with 17-18 soldiers. It kills 2-3 citizens and 2-5 soldiers for 1-5 of
+  its own, and costs the Copper Age 1-3 minutes and two defeats.
+- The order's 15 defeats against the classic did not move with the wood-bank fix on this exe: 26 of 32 games reach
+  the Stone Age, against 30 for rs0 on the earlier exe.
+
+**The raid with two barracks and a range (boom-econ's c8289c62: the producers at the Stone start, gold and iron
+reserved only while saving, food unlimited, the exact gathering).** Order on in both, 32 seeds, the same exe.
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|---|
+| o4, the order | Age of AI | 0/32 | 0 | 4/11/17 | 32, 21.7 | 31, 47.4 | 28, 72.5 |
+| | improved classic | 13/32 | 15 | 0/28/4 | 31, 23.5 | 19, 53.6 | 8, 69.4 |
+| o5, the order + the raid | Age of AI | 0/32 | 0 | 4/11/17 | 32, 21.7 | 31, 52.3 | 29, 79.0 |
+| | improved classic | 14/32 | 15 | 0/25/7 | 31, 23.5 | 18, 57.0 | 11, 81.8 |
+
+| The raids (o5) | Built from (min) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|---|
+| improved classic | 38.0 (30 games) | 22 | 20.0 | 42.9 | 320 | 2.5 | 2.1 / 1.1 |
+| Age of AI | 34.7 (32 games) | 28 | 19.6 | 43.6 | 358 | 1.2 | 2.8 / 1.4 |
+
+- **The raid now goes out as the owner describes:** 20 soldiers, 5 minutes after the economy is developed, at minute
+  43, in most games.
+- **It does little:** 2-3 citizens and about 1 soldier killed, 1-2.5 of its own lost. Against the classic it gives
+  three fewer losses (7 close games for 4) and one defeat more.
+- **It costs the Copper Age:** 5 minutes against Age of AI and 3.4 against the classic. The Bronze Age comes 6-12
+  minutes later. The raid and the reserve of 20 trained after it spend the stock that the Copper save would have had.
+- 5 budget errors in one game (seed 19 against Age of AI, minute 113, 100+ raiders) are fixed: a large raid's distance
+  test now takes every n/16-th raider. The seed is clean after the fix.
+
+**The owner's decisions (2026-11-11): the raid off by default, the reserve after the Copper advance.** With the raid off
+(`plan.raid` unset, the code and switch kept), the Copper plan's floor of 20 (35% of the citizens, up to 60) already
+trains the 20-soldier reserve from the Copper advance. The literal reading, the Stone Age's 8 plus 20 as a Copper floor
+of 28, was benched against it (order on in both, 32 seeds):
+
+| Variant | Opponent | Defeats | W/L/C | Copper | Bronze |
+|---|---|---|---|---|---|
+| o4b, Copper floor 20 (kept) | Age of AI | 0/32 | 5/12/15 | 31, 47.4 | 28, 72.5 |
+| | improved classic | 14/32 | 0/26/6 | 20, 55.0 | 7, 83.1 |
+| o6, Copper floor 28 | Age of AI | 0/32 | 3/10/19 | 31, 47.4 | 28, 73.3 |
+| | improved classic | 15/32 | 0/28/4 | 20, 55.0 | 10, 89.5 |
+
+The floor of 28 is no better, so the Copper plan stays as it is.
+
+**The fishing boats (the owner's rule of 2026-11-11: protected from the middle of the Stone Age).**
+- **Docks heal boats.** A dock's area effect `dock_healing_1_rng_6` heals the `dock_repair` set within 6 tiles, and that
+  set holds the family `ship`, the fishing boats' family.
+- **The rule as built** (`lib.defence` `boats`): a boat hit by an enemy, or within a warship's reach + 2, runs to the
+  nearest own dock out of that reach. It waits until healed and goes back to the same fish. A boat whose dock comes
+  under fire moves on: to a dock out of reach, else 8 tiles away. The engine's naval flee is off for the script.
+- **The towers:** `memory.boat_towers` publishes the docks and the boats' fishing grounds, and boom-econ's order builds
+  a tower at each from stone_grow.
+- **The bench:** 32 seeds, boom-econ's order on in both, main a11066d's classic (it counts its own boats now).
+
+| Variant | Opponent | Defeats | W/L/C | Copper | Bronze | Boats lost / game | Boats alive (min 30-90) |
+|---|---|---|---|---|---|---|---|
+| bt0n, the order | Age of AI | 0/32 | 1/8/23 | 29, 54.7 | 23, 88.7 | 1.4 | 9.6 |
+| | improved classic | 11/32 | 2/27/3 | 17, 61.2 | 5, 77.2 | 18.0 | 5.4 |
+| bt2, + the boats' flight and towers | Age of AI | 0/32 | 3/10/19 | 30, 52.7 | 25, 80.2 | 0.0 | 9.7 |
+| | improved classic | 13/32 | 1/28/3 | 17, 58.6 | 9, 82.2 | 18.0 | 6.0 |
+
+- **Against the improved classic, the boats die as often as before (18 a game).** Its frigates outrange the
+  Stone-Age towers and follow the boats. A first version that waited at the dock lost more (22.4 against 19.0, 690
+  of them idle at the dock); moving on from a dock under fire brought it back to even.
+- **Against Age of AI, which has no warships near, nothing changes** but its Copper and Bronze minutes (2 and 8 sooner
+  with the boats alive).
+- **Off by default.** Against the classic's warships, the boats need ships of their own or towers that reach them.
+
+
+**The answers to the frigates (the owner: "towers and sometimes a ship works for me").** Each is one switch on top of
+bt2 (boom-econ's order, the boats' flight and towers). 32 seeds against the improved classic, main 998932c's exe.
+
+| Variant | Defeats | Under 30 | W/L/C | Copper | Bronze | Boats lost | Boats alive (min 30-90) | End citizens / army |
+|---|---|---|---|---|---|---|---|---|
+| b0 = bt2 | 13 | 19 | 1/28/3 | 17, 58.6 | 9, 82.2 | 18.0 | 6.0 | 35.9 / 11.4 |
+| B1 towers' range + attack from the first warship seen (`plan.tower_up_ships`) | 13 | 18 | 1/27/4 | 17, 58.6 | 9, 82.2 | 18.7 | 6.0 | 37.5 / 12.5 |
+| B2 the boats' towers on the open-water side of the fish (`shore_towers`) | 14 | 19 | 2/27/3 | 17, 58.4 | 9, 85.7 | 16.8 | 6.3 | 36.2 / 10.9 |
+| B3 two warships guarding the fishing grounds (`plan.boat_guard = 2`) | 13 | 16 | 2/27/3 | 19, 58.6 | 12, 87.2 | 16.4 | 6.3 | 42.4 / 13.1 |
+| B4 = B1 + B3 | 13 | 16 | 2/26/4 | 19, 58.6 | 12, 87.2 | 15.6 | 6.3 | 43.4 / 13.5 |
+
+- **B4 is the best:** 2.4 fewer boats lost a game, 3 fewer towns under 30 citizens, 7 more citizens at the end, and
+  the same defeats. Two more games reach the Copper Age and three more the Bronze Age.
+- **Against Age of AI B4 equals b0** (0 defeats, 3/10/19, Copper 52.7, Bronze 80.2): no warships come.
+- **B1 alone changes nothing.** The towers' attack upgrade never completed (none available or affordable when the
+  frigates came); the range upgrade was already researched.
+- **Cost:** the two warships are bought from the first enemy warship seen, so they come late (about minute 70 on
+  seed 3).
+- **Kept off by default** until it merges with boom-econ's order.
+
+**B4 in time.** Across b4's 32 games against the improved classic, the first enemy warship comes in 23: at minutes
+34-91 in 18 of them and at 109-113 in 3; 9 games see none. B4's guard order went out 1-12 minutes after the first one,
+unaffordable under the epoch reserve. The towers' attack upgrade was refused for cost in every game. Two fixes:
+- `memory.priority_spend` (boom) carries what the answer still needs: the missing warships, and the upgrade's next level
+  at its real cost. The cost comes from the new `ai.improve_cost` (AI_LUA_UNITS §11).
+- boom-econ's reserve gives way by that much (b8fa3e89). Its order also moves up to 4 food gatherers to wood while the
+  wood is short (91abc7d8).
+
+32 seeds against the improved classic, boom-econ's order on, the same exe:
+
+| Variant | Defeats | Under 30 | W/L/C | Copper | Bronze | Boats lost by 60 / 90 / all | Boats alive (30-90) |
+|---|---|---|---|---|---|---|---|
+| t0, B4 | 10 | 13 | 1/20/11 | 22, 57.3 | 10, 80.2 | 2.3 / 9.2 / 18.6 | 7.5 |
+| t1, + the reserve gives way | 11 | 13 | 1/20/11 | 21, 55.8 | 9, 89.0 | 2.1 / 10.4 / 17.7 | 7.6 |
+| t2, + up to 4 gatherers to wood | 11 | 14 | 2/18/12 | 24, 57.7 | 10, 92.0 | 1.7 / 7.3 / 16.5 | 7.9 |
+
+- **t2 cuts the boats lost by minute 90 by a fifth** (7.3 against 9.2) and two more games reach the Copper Age. It
+  has one defeat more (11 against 10, within the noise), and the Bronze Age comes later (92 against 80, 10 games).
+- **The towers' attack upgrade cannot be bought after their range upgrade.** It was refused 1,392 times in t2, always
+  at "level=1 max=1", whatever the stock. The game's units have a limited number of improvement points, and the
+  range upgrade boom buys from the Stone Age takes the towers'. B1's attack half is dead weight, and its cost is
+  dropped from the priority spend.
+
+### 8.51 Boom's economy after Stone; the owner's build order (2026-11-11, EE-SIM)
+
+The owner's direction: boom's economy after Stone (epoch pace through Copper, Bronze and later). The first two rounds
+(switches over boom; 32 seeds 2-33, Small, Hard, 120 min, improved classic `cl` and Age of AI `aoa`) were then
+superseded by the owner's exact build order (memory boom-build-order.md), now `ai/lib/build_order.lua` behind
+`ECON.order` (off by default until it beats the baseline).
+
+**Round 1 and 2 (switches, all off):** what holds the epochs back. Against the improved classic the mines stay half
+empty in Stone and Copper (2-3 on gold and iron against 7-13 wanted): the classic's lone slingers stand by them under
+THREAT_MIN, and the reserve's missing-army clause sets gold's want to 0. In every matchup the citizens past the plan's
+places go to wood (30-48 on it against 18-20 wanted, 2000-5000 in stock). Copper costs 1584 food, 844 gold and 844 iron
+at Hard. Measured: `full_target` (more Copper Ages before 60 but 10 defeats against 4), `wood_surplus` plus the Bronze
+reserve sooner (Gbc: against the improved classic Copper 24/32 against 20, towns under 30 citizens 12 against 18, the same
+8 defeats; against Age of AI 10-9-12 against 15-5-12), `places`, `paid_go` (never fires) and `useful_cap`: none kept.
+"Under 30 citizens at the end" is reported beside defeats since: the improved classic reaches 180 population by minute
+70 and grinds boom down, so whether a collapsing town is at 0 by minute 120 is a race (Gbase-cl 8 defeats against mb1's
+4: the same collapses, 4 of 5 extra were near 0 in both).
+
+**The build order** (phases `pre`, `stone_start`, `stone_grow`, `stone_developed` latched, `copper`; `memory.phase` is
+the army's signal, `memory.raid.state` its answer): each phase's gatherers filled in the owner's order as the citizens
+come (`exact = 1` on the gather order keeps no gatherer of slack), the plan overlaid per phase (the army's soldier
+fields: boom-defence's rs0), the Prehistoric wood bank while saving, a dock and 10 boats first in Stone, a second
+barracks and a range, gold and iron reserved only while saving (the raid's spearmen), the Copper save at
+`stone_developed`, 3 granaries in Copper, the town centre's gathering techs epoch by epoch (hafts, hand axe,
+fine-flaked tools, metal working, hardened chisel, falconry, saw, amalgamation, shaft mining, ...), and the settlements
+placed in Lua (`ai/lib/place.lua`: the tile touching the resource units, gap 0, `ai.can_place`, built with `ai.build`
+at that tile; the C++ near=site placement is unchanged for the other scripts).
+
+The acceptance check (`order_check.py`, the boom-econ scratchpad): per phase the true gatherer counts (the engine's
+`cp stats`, land food without the boats), boats, buildings; income a minute against the owner's playtest with their
+civ's free bonuses out (gold, iron and stone / 1.25, Expansionism's garrison of 5 at every drop site in
+`EEDepositLoad`; stone / 1.2 more for their stone item); a gatherer's rate a minute; citizens gained a minute in Stone.
+
+| Row (32 seeds) | Matchup | Stone | Copper (reached) | Bronze (reached) | Defeated | Under 30 | W-L-C | Gold / iron a minute, 30-45 |
+|---|---|---|---|---|---|---|---|---|
+| baseline (Gbase2) | cl | 25.1 (30) | 53.9 (21) | 81.5 (9) | 9 | 12 | 3-22-7 | |
+| O1: the order | cl | 25.0 (26) | 46.0 (14) | 74.8 (10) | 15 | 18 | 3-23-6 | |
+| O3: + food not capped at the patches, raid iron, barracks 2 + range, exact | cl | 23.5 (31) | 53.6 (19) | 74.4 (8) | 12 | 16 | 2-25-5 | 21 / 29 |
+| O5: + gatherers only by a touching settlement | cl | 27.1 (30) | 60.0 (11) | 87.7 (2) | 14 | 22 | 1-28-3 | 12 / 12 |
+| O8: O3 + touching settlements, techs, no Stone cap, food reach | cl | 26.7 (32) | 56.3 (18) | 84.3 (8) | 15 | 18 | 2-27-3 | 19 / 21 |
+| baseline (Gbase2) | aoa | 22.2 (31) | 50.4 (31) | 80.9 (27) | 0 | 0 | 16-7-8 | |
+| O1 | aoa | 22.5 (32) | 47.6 (27) | 73.5 (23) | 0 | 0 | 12-12-8 | |
+| O3 | aoa | 21.7 (32) | 47.3 (31) | 72.7 (27) | 0 | 0 | | 44 / 50 |
+| O5 | aoa | 21.5 (32) | 63.0 (26) | 103.7 (16) | 0 | 1 | 10-13-9 | |
+| O8 | aoa | 21.9 (32) | 52.8 (32) | 82.5 (27) | 0 | 0 | 12-7-13 | 37 / 42 |
+
+The requirement: Stone ~21, Copper ~45, Bronze ~66; gold 81 and iron 74 a minute in minutes 30-45.
+
+- **O3 against Age of AI is the owner's pace** to Copper (47.3) and 8 minutes ahead of the baseline on Bronze; against
+  the improved classic it costs 3 defeats. O8's additions slowed it again (Copper 52.8): not yet sorted out which.
+- **The mines' rate is not the gap.** A deposit trace (TEST ONLY, `EE_AI_EXP=deposits` in `EEDepositLoad`; game samples
+  identical with and without it) times a working gatherer's loads: gold 160 s, iron 151 s a load of 15 (5.6 and 6.0 a
+  minute; the requirement 6.1, 148 s), food 112 s, wood 122 s. The owner's 7.6 is the same pace times their civ's
+  garrison bonus (+25%, 15 a load becomes 19). Boom's gold and iron income is short by headcount: too few on the mines
+  through Stone (the developed check fails in most games) and the mines' gatherers re-tasked (a probe: one gatherer 404
+  of 820 s on gold, the rest on stone, wood and building).
+- **The touching settlements** (lib.place) build at gap 0 on every smoke site; counting the mines' places only from
+  touched units (O5) left the mines empty while the settlements waited on wood and cost 5 defeats: reverted.
+- **The citizens** grow 1.2-1.9 a minute in Stone's first 15 minutes against the owner's 3.4 (his Expansionism trains
+  at every drop site; boom has 2 town centres).
+- **Engine fixes on the way** (both in AI_LUA_UNITS §11): a citizen released at work went onto no gatherer list (18 of
+  33 in one game, the counts wrong for the rest of it), and `gather(exact = 1)`.
+
+Open: the O3 to O8 slowdown; gold and iron 12-18 held through Stone; the citizens' growth (a third town centre or
+earlier second one); the losses against the improved classic (boom-defence's o4b: in 12 of 14 the Stone forage ran out
+before Copper was paid; O8's food reach did not yet move it).
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
@@ -4001,6 +4278,7 @@ line, AI_LUA_UNITS §11):
   - the late raids on far gatherers (§8.58-§8.61: 1111 citizens lost after 60 minutes against the C++'s 599);
   - the empty sub-groups' tasks (§8.55);
   - the classic-with-cheats re-check.
+
 
 ### 8.9 Next
 

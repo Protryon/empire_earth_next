@@ -419,7 +419,24 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
         if (theResource >= 0 && theResource < 7) {
             theManager->RemoveGatherer(inUnit);
             theManager->AddGatherer(inUnit, theResource);
+            return;
         }
+    }
+    // new (docs/AI_RESEARCH.md §8.51): a citizen released at work that is not idle yet (stopped this tick, hunting, or
+    // released without {gather = true}) went onto no list at all, and the engine never moved or counted it again: in
+    // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
+    // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
+    if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
+        EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+        EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
+        long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()
+            : theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
+            ? (long)kResourceFood : -1;
+        theManager->RemoveGatherer(inUnit);
+        if (theResource >= kResourceFood && theResource < 7)
+            theManager->AddGatherer(inUnit, theResource);
+        else
+            theManager->AddIdleGatherer(inUnit);
     }
 }
 
@@ -3266,6 +3283,37 @@ static int LuaImprove(lua_State* L)
     return EECPUnitsResult(L, kOK, 1, 0);
 }
 
+// ai.improve_cost(class, what) -> {food=, wood=, stone=, gold=, iron=, level=, max=}: the next level's cost of a class's
+// improvement (what: "attack", "hit_points", "range", "speed" or the improvement's number) as the improve verb pays
+// it, or nil (no node now, no such improvement). A human reads it off the improvement's button.
+bool EECPNextImproveCost(EEComputerPlayer* inPlayer, long inType, long inImprovement, long outCost[5], long& outLevel,
+                         long& outMax);
+
+static int LuaImproveCost(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    long theType = EECPUnitsClassArg(L, 1);
+    long theWhat = -1;
+    if (lua_isinteger(L, 2))
+        theWhat = (long)lua_tointeger(L, 2);
+    else if (lua_type(L, 2) == LUA_TSTRING) {
+        const char* theName = lua_tostring(L, 2);
+        theWhat = strcmp(theName, "range") == 0 ? 11 : strcmp(theName, "attack") == 0 ? 1
+            : strcmp(theName, "hit_points") == 0 ? 9 : strcmp(theName, "speed") == 0 ? 14 : -1;
+    }
+    long theCost[5] = {0, 0, 0, 0, 0}, theLevel = 0, theMax = 0;
+    if (theType < 0 || theWhat < 0 || !EECPNextImproveCost(me, theType, theWhat, theCost, theLevel, theMax))
+        return 0;
+    static const char* const kNames[5] = {"food", "wood", "stone", "gold", "iron"};
+    lua_createtable(L, 0, 7);
+    for (long i = 0; i < 5; i++)
+        EECPUnitsSetInt(L, kNames[i], theCost[i]);
+    EECPUnitsSetInt(L, "level", theLevel);
+    EECPUnitsSetInt(L, "max", theMax);
+    return 1;
+}
+
 // ai.formation(ids, kind)
 static int LuaFormation(lua_State* L)
 {
@@ -4095,7 +4143,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"reflex", LuaReflex}, {"test_spawn", LuaTestSpawn}, {"test_town", LuaTestTown},
         {"danger", LuaDanger}, {"danger_box", LuaDangerBox}, {"mark", LuaMark}, {"route", LuaRoute},
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
-        {"improve", LuaImprove}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
+        {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
         {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig}, {"used", LuaUsed},
