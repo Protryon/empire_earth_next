@@ -16,7 +16,6 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
@@ -89,35 +88,9 @@ void EEUCSpaceship::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, f
 // Handles a spaceship's new action: idle restarts its flight animation; dying plays its sound and death effect
 void EEUCSpaceship::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionIdle:
-        this->HandleActionChanged(inUnit);
-        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
-        break;
-    case kActionDying: {
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            float theVolume;
-            float thePan;
-            float thePitch;
-            (EEACN(DEATH_SOUND), this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch));
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        if (this->mDeathEffect != NULL)
-            (EEACN(DEATH_EFFECT), gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0));
-        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
-        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
-        (EEACN(DROP_PATH), inUnit->DropPath());
-        break;
-    }
-    case kActionResourcesRotting:
-        this->HandleActionChanged(inUnit);
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_SPACESHIP, this, inUnit);
 }
 
 // FUNCTION: EXE 0x61a51a

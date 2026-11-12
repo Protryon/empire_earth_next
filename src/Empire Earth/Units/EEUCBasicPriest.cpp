@@ -19,7 +19,6 @@
 #include "lle/SESoundManager.h"
 
 #include <string.h>
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
 #include "ee/EESimCapture.h"
@@ -161,30 +160,9 @@ void EEUCBasicPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarg
 // or uses the common handling
 void EEUCBasicPriest::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
-    (EEACN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
-    (EEACN(RELEASE_HEAL_EFFECT), inUnit->ReleaseHealEffect());
-    (EEACN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionConvertEnemyUnit:
-        (EEACNA(SET_PHYSICS_ACTION, 1, 0), inUnit->SetCurrentPhysicsAction(1));
-        (EEACNA(SET_TARGET_SEARCH_TIMER, 0, 0), inUnit->SetTargetSearchTimer(0));
-        (EEACNA(SET_ANIMATION, 9, 0), inUnit->SetAnimation(9, -1, 0));
-        if (inUnit->mConversionStartTime == 0) {
-            if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                (EEACNA(SET_CONVERSION_START, gPhysics->mGameTime, 0), inUnit->mConversionStartTime = gPhysics->mGameTime);
-            (EEACNA(SET_WORK_TIMER, 0, 0), inUnit->SetWorkTimer(0));
-            EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        }
-        (EEACN(DROP_PATH), inUnit->DropPath());
-        break;
-    case kActionWaitForReload:
-        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
-        break;
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_BASIC_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60da7a

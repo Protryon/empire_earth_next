@@ -20,7 +20,6 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -63,21 +62,9 @@ void EEUCLand::UnitCreated(EEComplexUnit* inUnit)
 // its blood stain; then the common handling
 void EEUCLand::ActionChanged(EEComplexUnit* inUnit)
 {
-    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionSpecialLocation:
-        if (this->mUnitType == kUnitTypeInf10RadioMan) {
-            (EEACNA(SET_PHYSICS_ACTION, 1, 0), inUnit->SetCurrentPhysicsAction(1));
-            (EEACNA(SET_ANIMATION, 0xb, 0), inUnit->SetAnimation(0xb, -1, 0));
-            (EEACN(CALL_PARATROOP_PLANE), this->CallParatroopPlane(inUnit));
-        }
-        break;
-    case kActionResourcesRotting:
-        if (inUnit->mUnitClass->mBloodStainEffect != NULL)
-            (EEACN(PLACE_TRACK_DECAL), EEPlaceTrackDecal(inUnit));
-        break;
-    }
-    this->HandleActionChanged(inUnit);
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_LAND, this, inUnit);
 }
 
 // FUNCTION: EXE 0x61393c

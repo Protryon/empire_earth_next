@@ -211,8 +211,8 @@ const CATEGORY_LAND_CITIZEN: i64 = 6;
 const CATEGORY_NAVAL_CITIZEN: i64 = 0x16;
 const CATEGORY_PLANET_SPACESHIP: i64 = 0x22;
 const MOVEMENT_AIR: i64 = 1;
-/// `kMovementSea | kMovementSpace`
-const MOVEMENT_SEA_OR_SPACE: i64 = 2 | 4;
+/// `kMovementSea | kMovementSpace` (`kMovementLand` is 2)
+const MOVEMENT_SEA_OR_SPACE: i64 = 4 | 8;
 const UNIT_TYPE_RADIO_MAN: i64 = 0x2ef;
 
 /// The host's calls (the update host's table: `EeUnitsUpdateHost`), as a trait (the FFI table; the tests' mock).
@@ -696,7 +696,7 @@ mod tests {
         // a soldier not idling: the draw picks stance 8, then the hold's draw
         let mut m = unit(ACTION_IDLE);
         m.reads.insert(EE_UNITS_ACT_R_RANDOM, i64::from(0.75f32.to_bits()));
-        m.reads.insert(EE_UNITS_ACT_R_DOMAINS, 2);
+        m.reads.insert(EE_UNITS_ACT_R_DOMAINS, 4);
         let log = run(EE_UNITS_ACTION_BASE, &mut m);
         assert_eq!(
             log,
@@ -717,6 +717,10 @@ mod tests {
         );
         // the draw is made once, after the stance tests
         assert_eq!(m.asked.iter().filter(|&&c| c == EE_UNITS_ACT_R_RANDOM).count(), 1);
+        // a land unit (kMovementLand 2) has no water state
+        let mut m = unit(ACTION_IDLE);
+        m.reads.insert(EE_UNITS_ACT_R_DOMAINS, 2);
+        assert!(!ops(&run(EE_UNITS_ACTION_BASE, &mut m)).contains(&EE_UNITS_ACT_UPDATE_WATER_STATE));
         // below 0.5 or firing over walls: stance 7
         let mut m = unit(ACTION_IDLE);
         m.reads.insert(EE_UNITS_ACT_R_RANDOM, i64::from(0.25f32.to_bits()));
