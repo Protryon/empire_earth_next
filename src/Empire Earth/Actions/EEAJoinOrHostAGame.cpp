@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 #include <list>
+#include <vector>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -74,6 +75,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAJoinOrHostAGame.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_rust.h"   // ee_screens_valid_name (ee_screens single_player.rs)
 // FUNCTION: EXE 0x402086
 // Creates the join/host action for a mode, player name and game name
 EEAJoinOrHostAGame::EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName)
@@ -245,35 +247,12 @@ void EEAJoinOrHostAGameRestartClient(UIForm* inForm)
 // Returns whether a player name is non-empty and free of control, quote, backslash and @ characters
 bool EEIsValidName(const UWideString& inName)
 {
-    bool theValid = true;
+    // the rule is Rust's (ee_screens single_player.rs valid_name), over each character's first byte
     unsigned long theLength = inName.GetLength();
-    if (theLength > 0) {
-        for (int i = 0; i < theLength; i++) {
-            unsigned char theChar = inName[i];
-            if (theChar < 0x20 || theChar == 0x7f || theChar == '\'' || theChar == '"' || theChar == '\\'
-                || theChar == '@')
-                theValid = false;
-        }
-    } else
-        theValid = false;
-    if (theValid) {
-        if (PlatIsMbcSpace(inName[(int)theLength - 1]) || PlatIsMbcSpace(inName[0]))
-            theValid = false;
-        if (theValid) {
-            bool theLastSpace = false;
-            for (int j = 0; j < theLength; j++) {
-                if (PlatIsMbcSpace(inName[j])) {
-                    if (theLastSpace) {
-                        theValid = false;
-                        break;
-                    }
-                    theLastSpace = true;
-                } else
-                    theLastSpace = false;
-            }
-        }
-    }
-    return theValid;
+    std::vector<unsigned char> theChars(theLength);
+    for (unsigned long i = 0; i < theLength; i++)
+        theChars[i] = (unsigned char)inName[(int)i];
+    return ee_screens_valid_name(theChars.data(), theLength);
 }
 
 // ICF-FOLDED: EXE 0x5720c6

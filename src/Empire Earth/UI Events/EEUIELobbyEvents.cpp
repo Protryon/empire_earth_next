@@ -417,6 +417,116 @@ long EEUIELEStart::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return kErrorOK;
 }
 
+// The game options' rows (ee_screens lobby_options.rs plans them): a box shown and its label hidden, or the other
+// way round; a map row (the leading label too) hidden, editable or a label
+static void LobbyShowOptionRow(UIForm* inForm, bool inEdit, unsigned long inBox, unsigned long inLabel)
+{
+    inForm->GetControl(inBox)->SetDisplayMode(inEdit ? kDisplayModeShown : kDisplayModeHidden);
+    inForm->GetControl(inLabel)->SetDisplayMode(inEdit ? kDisplayModeHidden : kDisplayModeShown);
+}
+static void LobbyShowMapRow(UIForm* inForm, unsigned long inRow, unsigned long inLabel0, unsigned long inBox,
+                            unsigned long inLabel)
+{
+    if (inRow == EE_SCREENS_LOBBY_ROW_HIDDEN) {
+        inForm->GetControl(inLabel0)->SetDisplayMode(kDisplayModeHidden);
+        inForm->GetControl(inBox)->SetDisplayMode(kDisplayModeHidden);
+        inForm->GetControl(inLabel)->SetDisplayMode(kDisplayModeHidden);
+    } else {
+        inForm->GetControl(inLabel0)->SetDisplayMode(kDisplayModeShown);
+        LobbyShowOptionRow(inForm, inRow == EE_SCREENS_LOBBY_ROW_EDIT, inBox, inLabel);
+    }
+}
+// The game variants' selectable flags (as bools: one byte each), the variant box's lines
+static void LobbySelectableVariants(std::vector<unsigned char>& outSelectable)
+{
+    outSelectable.resize(gGameVariants.size());
+    for (size_t i = 0; i < gGameVariants.size(); i++)
+        outSelectable[i] = gGameVariants[i]->mSelectable == true;
+}
+
+// The option events: the change is Rust's (ee_screens lobby_options.rs option_change), over the options by their
+// EEMGameOptions number; the C++ sends each message and stores its value, under the options' write lock (the
+// caller's)
+static void LobbySetOption(long inOption, long inValue)
+{
+    switch (inOption) {
+    case EE_SCREENS_OPTION_MAP_SIZE: gGameOptions.mMapSize = inValue; break;
+    case EE_SCREENS_OPTION_RESOURCES: gGameOptions.mResources = inValue; break;
+    case EE_SCREENS_OPTION_EPOCH_START: gGameOptions.mEpochStart = inValue; break;
+    case EE_SCREENS_OPTION_EPOCH_END: gGameOptions.mEpochEnd = inValue; break;
+    case EE_SCREENS_OPTION_UNIT_LIMIT: gGameOptions.mUnitLimit = inValue; break;
+    case EE_SCREENS_OPTION_WONDERS: gGameOptions.mWondersForVictory = inValue; break;
+    case EE_SCREENS_OPTION_VARIANT: gGameOptions.mVariant = inValue; break;
+    case EE_SCREENS_OPTION_DIFFICULTY: gGameOptions.mDifficulty = inValue; break;
+    case EE_SCREENS_OPTION_SPEED: gGameOptions.mGameSpeed = inValue; break;
+    case EE_SCREENS_OPTION_RECORD_GAMES: gGameOptions.mRecordGames = inValue != 0; break;
+    case EE_SCREENS_OPTION_CUSTOM_CIVS: gGameOptions.mAllowCustomCivs = inValue != 0; break;
+    case EE_SCREENS_OPTION_REVEAL_MAP: gGameOptions.mRevealMap = inValue != 0; break;
+    case EE_SCREENS_OPTION_LOCK_TEAMS: gGameOptions.mLockTeams = inValue != 0; break;
+    case EE_SCREENS_OPTION_LOCK_SPEED: gGameOptions.mLockSpeed = inValue != 0; break;
+    case EE_SCREENS_OPTION_CHEAT_CODES: gGameOptions.mCheatCodes = inValue != 0; break;
+    }
+}
+static void LobbyChangeOption(long inOption, unsigned long inSelection)
+{
+    EeScreensLobbyOptionState theState = {};
+    theState.current[EE_SCREENS_OPTION_MAP_SIZE] = gGameOptions.mMapSize;
+    theState.current[EE_SCREENS_OPTION_RESOURCES] = gGameOptions.mResources;
+    theState.current[EE_SCREENS_OPTION_EPOCH_START] = gGameOptions.mEpochStart;
+    theState.current[EE_SCREENS_OPTION_EPOCH_END] = gGameOptions.mEpochEnd;
+    theState.current[EE_SCREENS_OPTION_UNIT_LIMIT] = gGameOptions.mUnitLimit;
+    theState.current[EE_SCREENS_OPTION_WONDERS] = gGameOptions.mWondersForVictory;
+    theState.current[EE_SCREENS_OPTION_VARIANT] = gGameOptions.mVariant;
+    theState.current[EE_SCREENS_OPTION_DIFFICULTY] = gGameOptions.mDifficulty;
+    theState.current[EE_SCREENS_OPTION_SPEED] = gGameOptions.mGameSpeed;
+    theState.current[EE_SCREENS_OPTION_RECORD_GAMES] = gGameOptions.mRecordGames;
+    theState.current[EE_SCREENS_OPTION_CUSTOM_CIVS] = gGameOptions.mAllowCustomCivs;
+    theState.current[EE_SCREENS_OPTION_REVEAL_MAP] = gGameOptions.mRevealMap;
+    theState.current[EE_SCREENS_OPTION_LOCK_TEAMS] = gGameOptions.mLockTeams;
+    theState.current[EE_SCREENS_OPTION_LOCK_SPEED] = gGameOptions.mLockSpeed;
+    theState.current[EE_SCREENS_OPTION_CHEAT_CODES] = gGameOptions.mCheatCodes;
+    theState.epoch_count = EEEpochCount();
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // gameoptions.yaml unit_limit
+    theState.unit_minimum = EERuleLong(theRules.mUnitLimitMinimum);
+    theState.unit_step = theRules.mUnitLimitStep;
+    std::vector<unsigned char> theSelectable;
+    if (inOption == EE_SCREENS_OPTION_VARIANT)
+        LobbySelectableVariants(theSelectable);
+    EeScreensLobbyOptionChange theChange;
+    ee_screens_lobby_option_change(inOption, inSelection, &theState,
+                                   reinterpret_cast<const bool*>(theSelectable.data()), theSelectable.size(),
+                                   &theChange);
+    for (unsigned long i = 0; i < theChange.count; i++) {
+        if (i == 0 && theChange.update_epoch_end)
+            LobbyUpdateEpochEnd();
+        if (theChange.set_difficulty) {
+            gDifficultyLevel = theChange.messages[i].value;
+            gDifficultyLevel2 = theChange.messages[i].value;
+        }
+        NEMessage* theMessage = new EEMGameOptions(theChange.messages[i].option, theChange.messages[i].value,
+                                                   UWideString(""));
+        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
+        LobbySetOption(theChange.messages[i].option, theChange.messages[i].value);
+    }
+}
+// A check box option's event: its state, under the write lock
+static void LobbyChangeFlag(long inOption, UIEntity* inEntity)
+{
+    gGameOptions.mLock->WriteLock();
+    LobbyChangeOption(inOption, static_cast<UICheckBox*>(inEntity)->GetIsChecked() ? 1 : 0);
+    gGameOptions.mLock->WriteUnlock();
+}
+// A combo box option's event: its selection (none: nothing, not even the lock), under the write lock
+static void LobbyChangeSelection(long inOption, UIEntity* inEntity)
+{
+    unsigned long theSelection;
+    if (static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theSelection) != kErrorOK)
+        return;
+    gGameOptions.mLock->WriteLock();
+    LobbyChangeOption(inOption, theSelection);
+    gGameOptions.mLock->WriteUnlock();
+}
+
 // FUNCTION: EXE 0x5da876
 // Checks whether the game may start (load file opens and matches; two players and a human; unique human colours; not
 // all one team; everyone ready; no file transfers left), showing the reason when not
@@ -426,19 +536,12 @@ bool LobbyCheckStart()
     EEPSaveGameHeader theHeader;
     FSFileSpec* theStream;
     long theError;
-    unsigned char j;
-    long theTeam;
-    bool theFound;
-    long k;
     std::vector<UWideString> theMissing;
     UWideString theText;
     UString theFile;
     UString theDirectory;
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
-    EEGameOptionsPlayer thePlayer;
-    unsigned long theCount = 0;
-    unsigned long theHumans = 0;
-    bool theResult = true;
+    bool theLoadOk = true;
     if (gGameOptions.mLoadType != 0) {
         if (gGameOptions.mLoadType == 2)
             theDirectory = "Saved Games\\";
@@ -467,89 +570,33 @@ bool LobbyCheckStart()
             gResource->GetString(IDS_FILE_NAME_NOT_FOUND, theText);
             gUIManager->DisplayMessage(theText, true, NULL, 0, true);
         }
-        theResult = theError == kErrorOK;
-    } else {
-        for (long i = 0; i < 16; i++) {
-            thePlayer = gWorld.GetLobbyOptions().GetPlayer(i);
-            if (thePlayer.mType != 0 && thePlayer.mType != 1)
-                continue;
-            theCount++;
-            if (theCount > 1 && theHumans > 0)
-                break;
-            if (thePlayer.mType == 1)
-                theHumans++;
-        }
-        if (theCount > 1) {
-            if (theHumans < 1) {
-                theResult = false;
-                gResource->GetString(IDS_YOU_NEED_AT_LEAST_1_HUMAN, theText);
-                gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-            }
-        } else {
-            theResult = false;
-            if (gGameOptions.mIsMultiplayer == true)
-                gResource->GetString(IDS_YOU_CANT_PLAY_GAME_WITH_ONLY_ONE_PLAYER, theText);
-            else
-                gResource->GetString(IDS_YOU_CANT_PLAY_GAME_WITH_ONLY_ONE_PLAYER_274F, theText);
-            gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-        }
-        bool theColorUsed[16] = { false };
-        for (j = 0; j < 16; j++) {
-            thePlayer = gGameOptions.mPlayers[j];
-            if (thePlayer.mType != 1)
-                continue;
-            if (theColorUsed[thePlayer.mColor] == true) {
-                theResult = false;
-                gResource->GetString(IDS_ONE_OR_MORE_PLAYERS_HAVE_SAME, theText);
-                gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-            } else
-                theColorUsed[thePlayer.mColor] = true;
-        }
-        if (theResult == true) {
-            thePlayer = gGameOptions.mPlayers[0];
-            theTeam = thePlayer.mTeam;
-            if (theTeam != 0) {
-                theFound = false;
-                for (k = 1; k < 16; k++) {
-                    thePlayer = gWorld.GetLobbyOptions().GetPlayer(k);
-                    if ((thePlayer.mType == 0 || thePlayer.mType == 1)
-                        && (thePlayer.mTeam == 0 || theTeam != thePlayer.mTeam)) {
-                        theFound = true;
-                        break;
-                    }
-                }
-                if (!theFound) {
-                    theResult = false;
-                    gResource->GetString(IDS_ALL_PLAYERS_CANT_BE_ON_SAME, theText);
-                    gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-                }
-            }
-        }
+        theLoadOk = theError == kErrorOK;
     }
-    if (theResult == true && gGameOptions.mIsMultiplayer == true) {
-        for (long i = 0; i < 16; i++) {
-            thePlayer = gGameOptions.mPlayers[i];
-            if ((thePlayer.mType != 1 && thePlayer.mType != 2) || thePlayer.mIsReady != false)
-                continue;
-            theResult = false;
-            gResource->GetString(IDS_CANT_START_GAME_UNTIL_ALL_PLAYERS, theText);
-            gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-            break;
-        }
+    // the rest is Rust's (ee_screens lobby_options.rs start_check): the players, colours, teams, ready boxes and
+    // transfers; the C++ shows its messages in order
+    static const long kStartMessages[] = {IDS_YOU_NEED_AT_LEAST_1_HUMAN, IDS_YOU_CANT_PLAY_GAME_WITH_ONLY_ONE_PLAYER,
+        IDS_YOU_CANT_PLAY_GAME_WITH_ONLY_ONE_PLAYER_274F, IDS_ONE_OR_MORE_PLAYERS_HAVE_SAME,
+        IDS_ALL_PLAYERS_CANT_BE_ON_SAME, IDS_CANT_START_GAME_UNTIL_ALL_PLAYERS, IDS_YOU_CANT_START_GAME_UNTIL};
+    EeScreensLobbyStartSlot theSlots[16];
+    for (long i = 0; i < 16; i++) {
+        const EEGameOptionsPlayer& thePlayer = gGameOptions.mPlayers[i];
+        theSlots[i].kind = thePlayer.mType;
+        theSlots[i].color = thePlayer.mColor;
+        theSlots[i].team = thePlayer.mTeam;
+        theSlots[i].ready = thePlayer.mIsReady;
+        theSlots[i].transfer = thePlayer.mTransferID;
     }
-    if (theResult == true) {
-        for (unsigned char i = 1; i < 16; i++) {
-            thePlayer = gGameOptions.mPlayers[i];
-            if ((thePlayer.mType != 1 && thePlayer.mType != 2) || !(thePlayer.mTransferID > 0) || theResult != true)
-                continue;
-            gResource->GetString(IDS_YOU_CANT_START_GAME_UNTIL, theText);
-            gUIManager->DisplayMessage(theText, true, NULL, 0, true);
-            theResult = false;
-        }
-    } else if (gGameOptions.mLoadType != 0)
+    EeScreensLobbyStart theStart;
+    ee_screens_lobby_start_check(gGameOptions.mLoadType, theLoadOk, gGameOptions.mIsMultiplayer == true, theSlots,
+                                 &theStart);
+    for (unsigned long i = 0; i < theStart.count; i++) {
+        gResource->GetString(kStartMessages[theStart.messages[i]], theText);
+        gUIManager->DisplayMessage(theText, true, NULL, 0, true);
+    }
+    if (theStart.hide_rows)
         for (long i = 257; i < 272; i++)
             theForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
-    return theResult;
+    return theStart.result;
 }
 
 // FUNCTION: EXE 0x5dad59
@@ -1592,306 +1639,138 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     bool theReady = inHost.mIsReady;
     bool theServer = gCommunications->IsServer();
     if (theForm != gUIManager->GetCurrentForm())
-        goto theEnd;
-    long theType;
-    switch (inOptions.GetLoadType()) {
-    case 1:
-        theType = 2;
-        break;
-    case 2:
-        theType = 1;
-        break;
-    case 0:
-        theType = 0;
-        break;
-    default:
-        theType = 0;
-        break;
-    }
+        return;
+    // the plan is Rust's (ee_screens lobby_options.rs show_options); the C++ makes the calls in the original order
+    UIComboBox* theTypeBox = static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameTypeCombo));
+    UIComboBox* theStartBox = static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochStartCombo));
+    // the check boxes in the plan's order (EE_SCREENS_LOBBY_FLAGS): box, bitmap, label
+    static const unsigned long kFlagControls[EE_SCREENS_LOBBY_FLAGS][3] = {
+        {kLobbyGameOpCheckBox6RecGame, kLobbyGameOpCheckBox6Bitmap, kLobbyGameOpCheckBox6Label},
+        {kLobbyGameOpCheckBox2CustomCiv, kLobbyGameOpCheckBox2Bitmap, kLobbyGameOpCheckBox2Label},
+        {kLobbyGameOpCheckBox1RevealMap, kLobbyGameOpCheckBox1Bitmap, kLobbyGameOpCheckBox1Label},
+        {kLobbyGameOpCheckBox3LockTeam, kLobbyGameOpCheckBox3Bitmap, kLobbyGameOpCheckBox3Label},
+        {kLobbyGameOpCheckBox4LockSpeed, kLobbyGameOpCheckBox4Bitmap, kLobbyGameOpCheckBox4Label},
+        {kLobbyGameOpCheckBox5Cheats, kLobbyGameOpCheckBox5Bitmap, kLobbyGameOpCheckBox5Label}};
+    const bool theFlags[EE_SCREENS_LOBBY_FLAGS] = {inOptions.GetRecordGames(), inOptions.GetAllowCustomCivs(),
+        inOptions.GetRevealMap(), inOptions.mLockTeams, inOptions.mLockSpeed, inOptions.mCheatCodes};
+    EeScreensLobbyOptionsView theView;
+    theView.load_type = inOptions.GetLoadType();
+    theView.lobby_load_type = gGameOptions.GetLoadType();
+    theView.server = theServer;
+    theView.host_ready = theReady;
+    theView.lobby_multiplayer = gGameOptions.mIsMultiplayer == true;
+    theView.options_multiplayer = inOptions.mIsMultiplayer == true;
     unsigned long theSelection;
-    if (theServer
-        && (static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameTypeCombo))->GetCurrentSelection(theSelection) != kErrorOK
-            || theSelection != theType))
-        (static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameTypeCombo)))->SetCurrentSelection(theType);
-    switch (inOptions.GetLoadType()) {
-    case 2:
-        gResource->GetString(sGameTypeStrings[1], theText);
-        break;
-    case 1:
-        gResource->GetString(sGameTypeStrings[2], theText);
-        break;
-    case 0:
-        gResource->GetString(sGameTypeStrings[0], theText);
-        break;
+    theView.type_selected = theTypeBox->GetCurrentSelection(theView.type_selection) == kErrorOK;
+    theView.map_found = EERMFindGenerator(inOptions.GetMapType(), theView.map_line) == 0;
+    theView.epoch_selected = theStartBox->GetCurrentSelection(theSelection) == kErrorOK;
+    theView.unit_limit = inOptions.GetUnitLimit();
+    theView.unit_minimum = EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum);
+    theView.unit_step = EEGetRules().mGameOptions.mUnitLimitStep;
+    theView.wonders = inOptions.mWondersForVictory;
+    for (int i = 0; i < EE_SCREENS_LOBBY_FLAGS; i++) {
+        theView.flags[i] = theFlags[i];
+        theView.checked[i] = static_cast<UICheckBox*>(theForm->GetControl(kFlagControls[i][0]))->GetIsChecked();
     }
+    EeScreensLobbyOptionsPlan thePlan;
+    ee_screens_lobby_show_options(&theView, &thePlan);
+    if (thePlan.set_type_line)
+        theTypeBox->SetCurrentSelection(thePlan.type_line);
+    if (thePlan.type_string != EE_SCREENS_LOBBY_NO_STRING)
+        gResource->GetString(sGameTypeStrings[thePlan.type_string], theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameTypeLabel2))->SetText(theText);
-    if (theServer && !theReady && gGameOptions.mIsMultiplayer == true) {
-        theForm->GetControl(kLobbyGameTypeCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameTypeLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameTypeCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameTypeLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    LobbyShowOptionRow(theForm, thePlan.type_editable, kLobbyGameTypeCombo, kLobbyGameTypeLabel2);
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapSizeCombo))->SetCurrentSelection(inOptions.GetMapSize());
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapSizeCombo))->GetCurrentSelection(theSelection);
     gResource->GetString(EEGetRules().mGameOptions.mMapSizes[theSelection < EEGetRules().mGameOptions.mMapSizes.size()
                                                                  ? theSelection : 0].mNameID, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyMapSizeLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0) {
-        theForm->GetControl(kLobbyMapSizeLabel0)->SetDisplayMode(kDisplayModeShown);
-        if (theServer && !theReady) {
-            theForm->GetControl(kLobbyMapSizeCombo)->SetDisplayMode(kDisplayModeShown);
-            theForm->GetControl(kLobbyMapSizeLabel2)->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theForm->GetControl(kLobbyMapSizeCombo)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(kLobbyMapSizeLabel2)->SetDisplayMode(kDisplayModeShown);
-        }
-    } else {
-        theForm->GetControl(kLobbyMapSizeLabel0)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyMapSizeCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyMapSizeLabel2)->SetDisplayMode(kDisplayModeHidden);
-    }
-    if (EERMFindGenerator(inOptions.GetMapType(), theSelection))
-        theSelection = 0;
-    if (gGameOptions.GetLoadType() == 0)
-        (static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapTypeCombo)))->SetCurrentSelection(theSelection);
+    LobbyShowMapRow(theForm, thePlan.map_rows, kLobbyMapSizeLabel0, kLobbyMapSizeCombo, kLobbyMapSizeLabel2);
+    if (thePlan.set_map_line)
+        (static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapTypeCombo)))->SetCurrentSelection(thePlan.map_line);
     theText = EERMGetGeneratorDisplayName(inOptions.GetMapType());
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyMapTypeLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0) {
-        theForm->GetControl(kLobbyMapTypeLabel0)->SetDisplayMode(kDisplayModeShown);
-        if (theServer && !theReady) {
-            theForm->GetControl(kLobbyMapTypeCombo)->SetDisplayMode(kDisplayModeShown);
-            theForm->GetControl(kLobbyMapTypeLabel2)->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theForm->GetControl(kLobbyMapTypeCombo)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(kLobbyMapTypeLabel2)->SetDisplayMode(kDisplayModeShown);
-        }
-    } else {
-        theForm->GetControl(kLobbyMapTypeLabel0)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyMapTypeCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyMapTypeLabel2)->SetDisplayMode(kDisplayModeHidden);
-    }
-    if (inOptions.GetLoadType() == 0) {
-        theForm->GetControl(kLobbyScenarioInfoMLText)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyScenarioInfoLabel)->SetDisplayMode(kDisplayModeHidden);
-    } else {
+    LobbyShowMapRow(theForm, thePlan.map_rows, kLobbyMapTypeLabel0, kLobbyMapTypeCombo, kLobbyMapTypeLabel2);
+    if (thePlan.scenario_info) {
         static_cast<UITextLabel*>(theForm->GetControl(kLobbyScenarioInfoMLText))->SetText(gGameOptions.GetMapType());
         theForm->GetControl(kLobbyScenarioInfoMLText)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyScenarioInfoLabel)->SetDisplayMode(kDisplayModeShown);
+    } else {
+        theForm->GetControl(kLobbyScenarioInfoMLText)->SetDisplayMode(kDisplayModeHidden);
+        theForm->GetControl(kLobbyScenarioInfoLabel)->SetDisplayMode(kDisplayModeHidden);
     }
+    bool theEdit = thePlan.editable;
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyResourcesCombo))->SetCurrentSelection(inOptions.GetResources());
     gResource->GetString(EEStartingResources::Get(inOptions.GetResources())->mNameID, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyResourcesLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyResourcesCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyResourcesLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyResourcesCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyResourcesLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    LobbyShowOptionRow(theForm, theEdit, kLobbyResourcesCombo, kLobbyResourcesLabel2);
     gResource->GetString(EEEpochTitleID(inOptions.GetEpochStart()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyEpochStartLabel2))->SetText(theText);
-    if (static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochStartCombo))->GetCurrentSelection(theSelection) != kErrorOK)
-        (static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochStartCombo)))->SetCurrentSelection(inOptions.GetEpochStart());
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyEpochStartCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyEpochStartLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyEpochStartCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyEpochStartLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    if (thePlan.set_epoch_start)
+        theStartBox->SetCurrentSelection(inOptions.GetEpochStart());
+    LobbyShowOptionRow(theForm, theEdit, kLobbyEpochStartCombo, kLobbyEpochStartLabel2);
     gResource->GetString(EEEpochTitleID(inOptions.GetEpochEnd()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyEpochEndLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyEpochEndCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyEpochEndLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyEpochEndCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyEpochEndLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
-    static_cast<UIComboBox*>(theForm->GetControl(kLobbyWorldUnitLimitCombo))->SetCurrentSelection(
-        (inOptions.GetUnitLimit() - EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum)) /
-        EEGetRules().mGameOptions.mUnitLimitStep);
+    LobbyShowOptionRow(theForm, theEdit, kLobbyEpochEndCombo, kLobbyEpochEndLabel2);
+    static_cast<UIComboBox*>(theForm->GetControl(kLobbyWorldUnitLimitCombo))->SetCurrentSelection(thePlan.unit_line);
     sprintf(theText, "%ld", inOptions.GetUnitLimit());
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWorldPopLimitLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyWorldUnitLimitCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyWorldPopLimitLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyWorldUnitLimitCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyWorldPopLimitLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    LobbyShowOptionRow(theForm, theEdit, kLobbyWorldUnitLimitCombo, kLobbyWorldPopLimitLabel2);
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWondersVictoryCombo))->SetCurrentSelection(inOptions.GetWondersForVictory());
-    if (inOptions.mWondersForVictory > 0)
+    if (thePlan.wonders_number)
         sprintf(theText, "%ld", inOptions.GetWondersForVictory());
     else
         gResource->GetString(IDS_LOBBY_OFF, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWondersVictoryLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyWondersVictoryCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyWondersVictoryLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyWondersVictoryCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyWondersVictoryLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
-    unsigned long theVariant;
-    theVariant = 0;
-    if (EEGetGameVariantAt(inOptions.GetVariant())->mSelectable == true)
-        for (theSelection = 0; theSelection < inOptions.GetVariant(); theSelection++)
-            if (EEGetGameVariantAt(theSelection)->mSelectable == true)
-                theVariant++;
-    static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameVariantCombo))->SetCurrentSelection(theVariant);
+    LobbyShowOptionRow(theForm, theEdit, kLobbyWondersVictoryCombo, kLobbyWondersVictoryLabel2);
+    std::vector<unsigned char> theSelectable;
+    LobbySelectableVariants(theSelectable);
+    static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameVariantCombo))->SetCurrentSelection(
+        ee_screens_lobby_variant_line(reinterpret_cast<const bool*>(theSelectable.data()), theSelectable.size(),
+                                      inOptions.GetVariant()));
     gResource->GetString(EEGetGameVariantAt(inOptions.GetVariant())->mNameID, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameVariantLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameVariantCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameVariantLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameVariantCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameVariantLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    LobbyShowOptionRow(theForm, theEdit, kLobbyGameVariantCombo, kLobbyGameVariantLabel2);
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyDifficultyCombo))->SetCurrentSelection(inOptions.GetDifficulty());
     gResource->GetString(EEDifficultyNameID(inOptions.GetDifficulty()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyDifficultyLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyDifficultyCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyDifficultyLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyDifficultyCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyDifficultyLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
+    LobbyShowOptionRow(theForm, theEdit, kLobbyDifficultyCombo, kLobbyDifficultyLabel2);
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameSpeedCombo))->SetCurrentSelection(inOptions.GetGameSpeed());
     gResource->GetString(EESpeedNameID(inOptions.GetGameSpeed()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameSpeedLabel2))->SetText(theText);
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameSpeedCombo)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameSpeedLabel2)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameSpeedCombo)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameSpeedLabel2)->SetDisplayMode(kDisplayModeShown);
-    }
-    if (inOptions.GetRecordGames() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox6RecGame))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox6RecGame)))->SetChecked(inOptions.GetRecordGames());
-    if (inOptions.GetRecordGames() == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox6Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox6Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox6RecGame))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox6Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox6RecGame))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox6Label)))->SetText("");
-    theForm->GetControl(kLobbyGameOpCheckBox6RecGame)->SetDisplayMode(kDisplayModeHidden);
-    theForm->GetControl(kLobbyGameOpCheckBox6Bitmap)->SetDisplayMode(kDisplayModeHidden);
-    theForm->GetControl(kLobbyGameOpCheckBox6Label)->SetDisplayMode(kDisplayModeHidden);
-    if (inOptions.GetAllowCustomCivs() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv)))->SetChecked(inOptions.GetAllowCustomCivs());
-    if (inOptions.GetAllowCustomCivs() == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox2Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox2Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox2Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox2Label)))->SetText("");
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox2Bitmap)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox2Label)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameOpCheckBox2CustomCiv)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox2Bitmap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox2Label)->SetDisplayMode(kDisplayModeShown);
-    }
-    if (inOptions.GetRevealMap() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox1RevealMap))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox1RevealMap)))->SetChecked(inOptions.GetRevealMap());
-    if (inOptions.GetRevealMap() == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox1Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox1Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox1RevealMap))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox1Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox1RevealMap))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox1Label)))->SetText("");
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameOpCheckBox1RevealMap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox1Bitmap)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox1Label)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameOpCheckBox1RevealMap)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox1Bitmap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox1Label)->SetDisplayMode(kDisplayModeShown);
-    }
-    if (inOptions.mLockTeams != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)))->SetChecked(inOptions.mLockTeams);
-    if (inOptions.mLockTeams == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox3Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox3Label)))->SetText("");
-    if (inOptions.mLoadType == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox3Label)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox3Label)->SetDisplayMode(kDisplayModeShown);
-    }
-    if (inOptions.mLockSpeed != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)))->SetChecked(inOptions.mLockSpeed);
-    if (inOptions.mLockSpeed == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox4Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox4Label)))->SetText("");
-    if (inOptions.mLoadType == 0 && theServer && !theReady) {
-        theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox4Label)->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox4Label)->SetDisplayMode(kDisplayModeShown);
-    }
-    if (inOptions.mCheatCodes != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats)))->SetChecked(inOptions.mCheatCodes);
-    if (inOptions.mCheatCodes == true)
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
-    else
-        (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
-    if (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetTextLabel())
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox5Label)))->SetText(
-            static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetTextLabel()->GetText(0));
-    else
-        (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox5Label)))->SetText("");
-    if (inOptions.mLoadType == 0 && theServer && !theReady) {
-        if (inOptions.mIsMultiplayer == false) {
-            theForm->GetControl(kLobbyGameOpCheckBox5Cheats)->SetDisplayMode(kDisplayModeShown);
-            theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(kLobbyGameOpCheckBox5Label)->SetDisplayMode(kDisplayModeHidden);
+    LobbyShowOptionRow(theForm, theEdit, kLobbyGameSpeedCombo, kLobbyGameSpeedLabel2);
+    // the check boxes: the box set when it differs, the bitmap, the label text; record games stay hidden, the cheat
+    // codes row follows the plan (a multiplayer game keeps it as it is)
+    for (int i = 0; i < EE_SCREENS_LOBBY_FLAGS; i++) {
+        UICheckBox* theBox = static_cast<UICheckBox*>(theForm->GetControl(kFlagControls[i][0]));
+        UIControl* theBitmap = theForm->GetControl(kFlagControls[i][1]);
+        UITextLabel* theLabel = static_cast<UITextLabel*>(theForm->GetControl(kFlagControls[i][2]));
+        if (thePlan.set_checked[i])
+            theBox->SetChecked(theFlags[i]);
+        static_cast<UIBitmap*>(theBitmap)->SetBitmap(theFlags[i] ? gUIManager->GetCheckDownOn()
+                                                                 : gUIManager->GetCheckDownOff());
+        if (theBox->GetTextLabel())
+            theLabel->SetText(theBox->GetTextLabel()->GetText(0));
+        else
+            theLabel->SetText("");
+        unsigned long theRow = i == 0 ? EE_SCREENS_LOBBY_ROW_HIDDEN
+                             : i == EE_SCREENS_LOBBY_FLAGS - 1 ? thePlan.cheats_row
+                             : theEdit ? EE_SCREENS_LOBBY_ROW_EDIT : EE_SCREENS_LOBBY_ROW_LABEL;
+        if (theRow == EE_SCREENS_LOBBY_ROW_HIDDEN) {
+            theBox->SetDisplayMode(kDisplayModeHidden);
+            theBitmap->SetDisplayMode(kDisplayModeHidden);
+            theLabel->SetDisplayMode(kDisplayModeHidden);
+        } else if (theRow != EE_SCREENS_LOBBY_ROW_KEEP) {
+            bool theEditRow = theRow == EE_SCREENS_LOBBY_ROW_EDIT;
+            theBox->SetDisplayMode(theEditRow ? kDisplayModeShown : kDisplayModeHidden);
+            theBitmap->SetDisplayMode(theEditRow ? kDisplayModeHidden : kDisplayModeShown);
+            theLabel->SetDisplayMode(theEditRow ? kDisplayModeHidden : kDisplayModeShown);
         }
-    } else if (inOptions.mIsMultiplayer == false) {
-        theForm->GetControl(kLobbyGameOpCheckBox5Cheats)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)->SetDisplayMode(kDisplayModeShown);
-        theForm->GetControl(kLobbyGameOpCheckBox5Label)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox7Victory))->SetChecked(true);
     theForm->GetControl(kLobbyGameOpCheckBox7Victory)->SetDisplayMode(kDisplayModeHidden);
     theForm->GetControl(kLobbyGameOpCheckBox7Bitmap)->SetDisplayMode(kDisplayModeHidden);
     theForm->GetControl(kLobbyGameOpCheckBox7Label)->SetDisplayMode(kDisplayModeHidden);
-theEnd:
-    ;
 }
 
 // FUNCTION: EXE 0x5deefb
@@ -2172,14 +2051,7 @@ long EEUIELEActivateSinglePlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntit
 // Sets the reveal-map option from its check box and sends the change
 long EEUIELEGameRevealMap::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mRevealMap) {
-        NEMessage* theMessage = new EEMGameOptions(13, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mRevealMap = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_REVEAL_MAP, inEntity);
     return kErrorOK;
 }
 
@@ -2187,14 +2059,7 @@ long EEUIELEGameRevealMap::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the allow-custom-civs option from its check box and sends the change
 long EEUIELEGameTeamIslands::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mAllowCustomCivs) {
-        NEMessage* theMessage = new EEMGameOptions(12, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mAllowCustomCivs = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_CUSTOM_CIVS, inEntity);
     return kErrorOK;
 }
 
@@ -2202,14 +2067,7 @@ long EEUIELEGameTeamIslands::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the record-games option from its check box and sends the change
 long EEUIELEGameRecordGames::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mRecordGames) {
-        NEMessage* theMessage = new EEMGameOptions(11, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mRecordGames = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_RECORD_GAMES, inEntity);
     return kErrorOK;
 }
 
@@ -2217,14 +2075,7 @@ long EEUIELEGameRecordGames::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the lock-teams option from its check box and sends the change
 long EEUIELEGameLockTeams::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mLockTeams) {
-        NEMessage* theMessage = new EEMGameOptions(14, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mLockTeams = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_LOCK_TEAMS, inEntity);
     return kErrorOK;
 }
 
@@ -2232,14 +2083,7 @@ long EEUIELEGameLockTeams::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the cheat-codes option from its check box and sends the change
 long EEUIELEGameCheatCodes::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mCheatCodes) {
-        NEMessage* theMessage = new EEMGameOptions(16, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mCheatCodes = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_CHEAT_CODES, inEntity);
     return kErrorOK;
 }
 
@@ -2247,14 +2091,7 @@ long EEUIELEGameCheatCodes::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the lock-speed option from its check box and sends the change
 long EEUIELEGameLockSpeed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    gGameOptions.mLock->WriteLock();
-    UICheckBox* theBox = static_cast<UICheckBox*>(inEntity);
-    if (theBox->GetIsChecked() != gGameOptions.mLockSpeed) {
-        NEMessage* theMessage = new EEMGameOptions(15, theBox->GetIsChecked() == true, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mLockSpeed = theBox->GetIsChecked() == true;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeFlag(EE_SCREENS_OPTION_LOCK_SPEED, inEntity);
     return kErrorOK;
 }
 
@@ -2262,17 +2099,7 @@ long EEUIELEGameLockSpeed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the map size from its box and sends the change
 long EEUIELEGameMapSize::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    if (theSelection != gGameOptions.mMapSize) {
-        NEMessage* theMessage = new EEMGameOptions(1, theSelection, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mMapSize = theSelection;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_MAP_SIZE, inEntity);
     return kErrorOK;
 }
 
@@ -2333,17 +2160,7 @@ long EEUIELEGameType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the game speed from its box and sends the change
 long EEUIELEGameSpeed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    if (theSelection != gGameOptions.mGameSpeed) {
-        NEMessage* theMessage = new EEMGameOptions(10, theSelection, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mGameSpeed = theSelection;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_SPEED, inEntity);
     return kErrorOK;
 }
 
@@ -2351,19 +2168,7 @@ long EEUIELEGameSpeed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the difficulty from its box (also the global difficulty levels) and sends the change
 long EEUIELEGameDifficulty::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    if (theSelection != gGameOptions.mDifficulty) {
-        gDifficultyLevel = theSelection;
-        gDifficultyLevel2 = theSelection;
-        NEMessage* theMessage = new EEMGameOptions(9, theSelection, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mDifficulty = theSelection;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_DIFFICULTY, inEntity);
     return kErrorOK;
 }
 
@@ -2371,26 +2176,7 @@ long EEUIELEGameDifficulty::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the game variant from its box (the n-th selectable variant) and sends the change
 long EEUIELEGameVariant::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) == kErrorOK) {
-        long theVariant = 0;
-        unsigned long theCount = 0;
-        gGameOptions.mLock->WriteLock();
-        for (;; theVariant++) {
-            if (EEGameVariant::GetGameVariant(theVariant)->mSelectable != true)
-                continue;
-            if (theCount == theSelection)
-                break;
-            theCount++;
-        }
-        if (theVariant != gGameOptions.mVariant) {
-            NEMessage* theMessage = new EEMGameOptions(8, theVariant, UWideString(""));
-            gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-            gGameOptions.mVariant = theVariant;
-        }
-        gGameOptions.mLock->WriteUnlock();
-    }
+    LobbyChangeSelection(EE_SCREENS_OPTION_VARIANT, inEntity);
     return kErrorOK;
 }
 
@@ -2398,17 +2184,7 @@ long EEUIELEGameVariant::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the number of wonders for victory from its box and sends the change
 long EEUIELEGameWondersForVictory::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    if (theSelection != gGameOptions.mWondersForVictory) {
-        NEMessage* theMessage = new EEMGameOptions(7, theSelection, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mWondersForVictory = theSelection;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_WONDERS, inEntity);
     return kErrorOK;
 }
 
@@ -2416,20 +2192,7 @@ long EEUIELEGameWondersForVictory::ProcessEvent(UIForm* inForm, UIEntity* inEnti
 // Sets the unit limit from its box (minimum plus 50 per entry) and sends the change
 long EEUIELEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // gameoptions.yaml unit_limit
-    unsigned long theMinimum = EERuleLong(theRules.mUnitLimitMinimum);
-    if (theSelection != (gGameOptions.mUnitLimit - theMinimum) / theRules.mUnitLimitStep) {
-        NEMessage* theMessage = new EEMGameOptions(6, theSelection * theRules.mUnitLimitStep + theMinimum,
-                                                   UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mUnitLimit = theSelection * theRules.mUnitLimitStep + theMinimum;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_UNIT_LIMIT, inEntity);
     return kErrorOK;
 }
 
@@ -2437,19 +2200,7 @@ long EEUIELEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the end epoch from its box (counted from the start epoch) and sends the change
 long EEUIELEEpochEnd::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
-        return kErrorOK;
-    gGameOptions.mLock->WriteLock();
-    if (gGameOptions.mEpochStart != EEEpochCount())
-        theSelection += gGameOptions.mEpochStart;
-    if (theSelection != gGameOptions.mEpochEnd) {
-        NEMessage* theMessage = new EEMGameOptions(5, theSelection, UWideString(""));
-        gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mEpochEnd = theSelection;
-    }
-    gGameOptions.mLock->WriteUnlock();
+    LobbyChangeSelection(EE_SCREENS_OPTION_EPOCH_END, inEntity);
     return kErrorOK;
 }
 
@@ -2457,25 +2208,7 @@ long EEUIELEEpochEnd::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the start epoch from its box, trims the end-epoch box and moves the end epoch up when it lies before the start
 long EEUIELEGameEpochStart::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) == kErrorOK) {
-        gGameOptions.mLock->WriteLock();
-        if (theSelection != gGameOptions.mEpochStart) {
-            LobbyUpdateEpochEnd();
-            NEMessage* theMessage = new EEMGameOptions(4, theSelection, UWideString(""));
-            gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-            gGameOptions.mEpochStart = theSelection;
-            if (theSelection >= (unsigned long)EEEpochCount())   // random
-                theSelection = 0;
-            if (gGameOptions.mEpochEnd < theSelection) {
-                theMessage = new EEMGameOptions(5, theSelection, UWideString(""));
-                gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-                gGameOptions.mEpochEnd = theSelection;
-            }
-        }
-        gGameOptions.mLock->WriteUnlock();
-    }
+    LobbyChangeSelection(EE_SCREENS_OPTION_EPOCH_START, inEntity);
     return kErrorOK;
 }
 
@@ -2483,18 +2216,7 @@ long EEUIELEGameEpochStart::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Sets the starting resources from its box and sends the change
 long EEUIELEGameResources::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UWideString theText;
-    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
-    unsigned long theSelection;
-    if (theBox->GetCurrentSelection(theSelection) == kErrorOK) {
-        gGameOptions.mLock->WriteLock();
-        if (theSelection != gGameOptions.mResources) {
-            NEMessage* theMessage = new EEMGameOptions(3, theSelection, UWideString(""));
-            gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-            gGameOptions.mResources = theSelection;
-        }
-        gGameOptions.mLock->WriteUnlock();
-    }
+    LobbyChangeSelection(EE_SCREENS_OPTION_RESOURCES, inEntity);
     return kErrorOK;
 }
 

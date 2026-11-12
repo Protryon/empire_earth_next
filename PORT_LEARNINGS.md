@@ -7906,3 +7906,77 @@ glue around the moved code; the driver relinked over the forwarders printed the 
 - **Only the game reaches these.** Goldens and EE-SIM never draw: the effects' culling, the near fade, the rings and
   the mini map's trapezoid as drawn are exercised only by a tour (zoom close to a building, select units of each
   size, an area-effect unit, scroll and watch the mini map's trapezoid, an effect at the screen's edge).
+
+## R6: the game screens, second round: the settings' Apply and tabs, the lobby's game options, start check and option events, the single player screen and name check, the status box's attribute texts (ee_screens; branch rust-screens2, 2026-11-12)
+
+Round 1 (the section above) left in the settings and lobby units `ApplySettings`, the audio and interface tabs'
+conversions, the lobby's game options, the start check and the option events; this round moves them, then the
+single player screen's choices and the first leaf of the in-game HUD. Same rules: the C++ functions keep their
+names, signatures, objects and call order; the decisions are Rust; each move is pinned by a golden trace of the
+unmodified unit (scratch drivers in `build/sc2`, `drv.py` as round 1's), replayed whole in Rust, the driver relinked
+over the forwarders printing the same, and the same on seeds 2-4 at ten times the size.
+
+- **Moved** (`rust/crates/ee_screens`):
+  - `settings.rs`: `ApplySettings`' values from the controls (the check boxes, the texture resolution line, the
+    detail radios' else-if chains that keep the setting when none is checked, the voices factor and the channels
+    with their floor of 8, music, reverb that stays when neither radio is checked, the mouse sensitivity with its
+    0.01 floor, the scroll speeds, the hand, the autosave minutes x 60000 wrapping); `ShowAudio`'s plan (a volume is
+    put into effect only when it equals the default's, the sliders' percents, the reverb and music-off radios);
+    `ShowInterface`'s (the three sliders, the adapter line: an adapter past the list is Default, the hand, the
+    autosave values). `kMinimumMouseSensitivity` is deleted from the C++.
+  - `lobby_options.rs`: `LobbyShowGameOptions`' plan (the game type box's line and string, which rows are boxes and
+    which labels, the map rows hidden on a loaded game, the map line, the start epoch box set only without a
+    selection, the unit limit line `(limit - minimum) / step` in `unsigned long`, the wonders' number or Off, the
+    variant line counting the selectable variants before it, which check boxes differ from their flags, the cheat
+    codes row left alone in a multiplayer game); every option event's messages (`option_change` over the options
+    by their `EEMGameOptions` number: the unsigned compares, the unit limit's line and value, the end epoch counted
+    from the start, the start epoch moving the end up and trimming the end box first, the variant of a line, the
+    difficulty setting the global levels before its message); `LobbyCheckStart` after the file load (two players
+    and a human, one colour per human, not everyone on the host's team, everyone ready, no transfer left; a loaded
+    game's failure hides the rows). The C++ keeps `gGameOptions`, its lock, the strings, the rules' lists and the
+    load (`EEOpenSaveGameFile` .. `EECheckSavedGameOptions`) with its messages, and stores each message's value
+    (`LobbySetOption`). The map type event (a string compare) and the game type event (forms) stay C++.
+  - `single_player.rs`: `EEIsValidName` (`Actions/EEAJoinOrHostAGame.cpp`, shared with WON's screens) over each
+    character's first byte as `UWideString::operator[]` hands it (the C++ builds the array; `PlatIsMbcSpace` of a
+    sign-extended lead byte is never a space); the random map's slot table (the human, the computer, the closed
+    slots with the original's `mSlot` 4).
+  - `hud.rs`: the status box's `GetAttributeText` ("base+bonus", rounded half up, a negative bonus taken off the
+    base) and `UpdateArmorTexts`' six armor attributes (the kind each shows, the base through a `double`, the bonus
+    over the stats' own class nudged by 0.0001).
+- **Float conversions:** the C++'s `(long)(x * 100.0f)` and `(long)(x + 0.5f)` are the Windows build's `cvttss2si`
+  (`LONG_MIN` for NaN and past the type); `(unsigned long)(f)` is clang's 64-bit convert keeping the low bits (a
+  negative channel count wraps). `settings::float_to_long`/`float_to_ulong` give those answers on every target
+  (arm64 saturated before: a behaviour change there for NaN and huge values only).
+- **Driver lessons** (scratch, `build/sc2`):
+  - A global object whose class has an out-of-line constructor (`gWorld`, `gGamePreferences`,
+    `gAmbientSoundManager`) is faked with `#define gWorld (*gFakeWorld)` before the unit: the header's `extern
+    EEWorld gWorld;` becomes a pointer declaration, defined over raw storage. `gGameOptions` (a reference) then
+    binds to the fake world's `mLobbyOptions`.
+  - An unresolved constructor whose class cannot be faked in C++ (`EEServer`: its base has no default constructor)
+    is caught with `#pragma comment(linker, "/alternatename:<mangled>=SC2FakeServer")` and an `extern "C"` function
+    taking `this` and the arguments and returning `this`; it points the vtable at the fake table. The mangled name
+    comes from `llvm-nm` on the driver's object.
+  - Unresolved data reads as address 0 under `/FORCE`: `kSaveGameMajorVersion` and `EERuleNumber::Constant` (a
+    default member initializer of the rules' lists) crashed before the first trace; an exception filter printing
+    the return address, then `llvm-objdump` at it, finds the caller.
+  - The unit store's holders (`EEUnitStoreField`) report every write through `EEUnitStoreWrote`: a driver that sets
+    `mUnitClass` defines it empty.
+  - The Bash tool's heredocs turn `\\n` into a newline inside a quoted heredoc; driver and edit scripts go through
+    files written whole.
+- **What the harness reaches:** the tour's settings captures (`settings-video`, `-audio`, `-interface`) show the
+  controls `ShowAudio` and `ShowInterface` set on open (the volume sliders, the voices slider, the reverb radios,
+  the mouse sliders, the adapter box is hidden by the port, the autosave sliders and labels); the
+  `random-map-setup` capture shows `LobbyShowGameOptions` (the host's boxes before Start: map size and type,
+  resources, epochs, unit limit, wonders, variant, difficulty, speed, the reveal, lock and cheat check boxes; the
+  record games row hidden) and the single player screen's random map (its slot table, the name check on the
+  default name); Start runs `LobbyCheckStart` (a random map: the players, colours and teams; no message on the tour's
+  table). The ai-game gate changes the option combo boxes and check boxes (the option events' messages, the
+  stored values) and starts through the same check. The in-game tour selects units (the box selection), so the
+  status box's armor and attribute texts are drawn for the selected unit. The LAN game shows the client's labels
+  (`LobbyShowGameOptions` with `server` false) and the ready check. **Only a person reaches:** the settings' OK
+  (`ApplySettings`), Restore Default (`ShowAudio` with the defaults' volumes), the multiplayer game type box, a
+  loaded game's start check, the variant box, the end epoch box, and the main menu's buttons other than Single
+  Player. The main menu's events have no decision to move (they push forms and set two flags). None of this is
+  simulation: EE-SIM never runs it, so the oracle only shows it does not disturb the game.
+- **Behaviour:** none on Windows. The variant event no longer walks past the variants' list when a line holds no
+  selectable variant (the original read past it); a start check colour past 16 no longer indexes past its table.
