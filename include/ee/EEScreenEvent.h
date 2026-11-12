@@ -17,4 +17,9 @@ public:
 // The event of a code: an EEScreenEvent, or a C++ event class for an EE_SCREENS_CPP_* code; NULL for 0
 UIEvent* EECreateScreenEvent(unsigned long inEvent);
 
+// A form's middle-button grab scroll (0 the main game form's, 1 the scenario editor's; ee_screens camera.rs): its event
+// made with the form, its record (not grabbing, no saved mouse move event) fresh; released with the form
+UIEvent* EECreateGrabScroll(unsigned long inForm);
+void EEReleaseGrabScroll(unsigned long inForm);
+
 #endif

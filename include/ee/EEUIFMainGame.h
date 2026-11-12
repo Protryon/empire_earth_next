@@ -14,8 +14,6 @@ class EEACalamity;
 class EEALasso;
 class EEAMouseClick;
 class EEAScroll;
-class EEUIEGrabScroll;
-class EEUIEWheelZoom;
 class EEUIFMGGroup;
 class EEUIFMGInformation;
 class EEUIFMGMainGroup;
@@ -102,8 +100,8 @@ public:
     EEUIBuildWall mBuildWall;               // +0x494
     EEUIBuildGate mBuildGate;               // +0x4b4
     UIBackground* mUnitInfoBackground;      // +0x4d4 the background 0x64 (Open)
-    EEUIEWheelZoom* mWheelZoom;             // +0x4d8
-    EEUIEGrabScroll* mGrabScroll;           // +0x4dc (the middle button's pressed and unpressed event)
+    UIEvent* mWheelZoom;                    // +0x4d8 (EE_SCREENS_CAM_WHEEL_ZOOM)
+    UIEvent* mGrabScroll;                   // +0x4dc (the middle button's pressed and unpressed event: EECreateGrabScroll)
     long mL4E0;                             // +0x4e0
     TSCriticalSection* mErrorCriticalSection;        // +0x4e4 (guards mStrings)
     EEUIFMGUnitHack* mUnitHack;             // +0x4e8

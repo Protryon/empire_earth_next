@@ -91,12 +91,7 @@
 #include "ee/EELocationCalamityClass.h"
 #include "ee/EECCVolcano.h"
 #include "ee/EEScreenEvent.h"
-#include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
-#include "ee/EEUIEWheelZoom.h"
-#include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEHotKeyZoom.h"
-#include "ee/EEUIEKeyboardScroll.h"
-#include "ee/EEUIECameraEvents.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUICChatLine.h"
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEUICUnitIconBar.h"
@@ -440,9 +435,9 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->mKeyboardTests[19] = EEModeKeyboardNone;
     this->mKeyboardTests[20] = EEModeKeyboardNone;
     this->mKeyboardTests[21] = EEModeKeyboardNone;
-    this->mWheelZoom = new EEUIEWheelZoom;
+    this->mWheelZoom = EECreateScreenEvent(EE_SCREENS_CAM_WHEEL_ZOOM);
     this->SetMouseWheelMoveEvent(this->mWheelZoom);
-    this->mGrabScroll = new EEUIEGrabScroll;
+    this->mGrabScroll = EECreateGrabScroll(0);
     this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
     this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
     for (i = 0; i < 10; i++) {
@@ -469,10 +464,10 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->AddHotKey(kKeyD, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 3), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyS, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 4), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyW, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_HK_AIRCRAFT + 5), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyUp, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(0), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyDown, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(1), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyLeft, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(2), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyRight, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEKeyboardScroll(3), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyUp, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_UP), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyDown, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_DOWN), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyLeft, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_LEFT), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyRight, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_SCROLL_RIGHT), NULL, NULL, 0, true);
     this->AddHotKey(kKeyShift, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_ENTER_SHIFT), NULL, EECreateScreenEvent(EE_SCREENS_MG_EXIT_SHIFT), NULL, 0, true);
     this->AddHotKey(kKeyDelete, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyDelete, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_KILL_ALL), NULL, NULL, NULL, 0, false);
@@ -484,12 +479,12 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->AddHotKey(kKeyEscape, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_CANCEL_UPDATE_STATE), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyReturn, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyNumpadEnter, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyRBracket, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEHotKeyZoom(0), NULL, NULL, 0, true);
-    this->AddHotKey(kKeyLBracket, kKeyNone, kKeyNone, kKeyNone, NULL, new EEUIEHotKeyZoom(1), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyRBracket, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_IN), NULL, NULL, 0, true);
+    this->AddHotKey(kKeyLBracket, kKeyNone, kKeyNone, kKeyNone, NULL, EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_OUT), NULL, NULL, 0, true);
     this->AddHotKey(kKeyComma, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyComma, kKeyShift, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyComma, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, true)), NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyGrave, kKeyNone, kKeyNone, kKeyNone, new EEUIEDisableMouseMove, new EEUIERotateCamera, new EEUIEEnableMouseMove, NULL, 0, true);
+    this->AddHotKey(kKeyGrave, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_CAM_DISABLE_MOUSE_MOVE), EECreateScreenEvent(EE_SCREENS_CAM_ROTATE), EECreateScreenEvent(EE_SCREENS_CAM_ENABLE_MOUSE_MOVE), NULL, 0, true);
     this->AddHotKey(kKeyPeriod, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_FOLLOW), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyA, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeArcheryRange, false, false, false)), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyB, kKeyControl, kKeyNone, kKeyNone, EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeBarracks, false, false, false)), NULL, NULL, NULL, 0, false);
@@ -604,6 +599,7 @@ EEUIFMainGame::~EEUIFMainGame()
     unsigned long i;
 
     this->mGrabScroll->Dereference();
+    EEReleaseGrabScroll(0);
     this->mWheelZoom->Dereference();
     this->mScroll->Dereference();
     this->mMouseClick->Dereference();

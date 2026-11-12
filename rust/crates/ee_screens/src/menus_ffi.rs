@@ -233,6 +233,9 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
     if let Some(result) = crate::diplomacy_ffi::dispatch(&mut host, event) {
         return result;
     }
+    if let Some(result) = crate::camera_ffi::dispatch(&mut host, event) {
+        return result;
+    }
     dispatch(&mut host, &MENUS, event);
     0
 }

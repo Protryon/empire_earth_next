@@ -57,9 +57,11 @@ pub const EE_SCREENS_MG_BEHAVIOR_STAND_GROUND: u32 = 0x0b23;
 pub const EE_SCREENS_MG_BEHAVIOR_GUARD: u32 = 0x0b24;
 pub const EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE: u32 = 0x0b25;
 pub const EE_SCREENS_MG_PREVIOUS_MESSAGES: u32 = 0x0b26;
+/// The formation menu's eight buttons (`EEUIEFormationChange(0..7)`): this code plus the formation type.
+pub const EE_SCREENS_MG_FORMATION: u32 = 0x0b27;
 
 pub fn is_main_game_event(event: u32) -> bool {
-    (EE_SCREENS_MG_CANCEL_UI_MODE..=EE_SCREENS_MG_PREVIOUS_MESSAGES).contains(&event)
+    (EE_SCREENS_MG_CANCEL_UI_MODE..=EE_SCREENS_MG_FORMATION + 7).contains(&event)
 }
 
 // ---- the host's ops (ee_screenscpp_call on the event's form, the main game form; the shared ones are earlier rounds')
@@ -105,6 +107,9 @@ pub const EE_SCREENS_GAME_MG_SELECTED_COMMAND: u32 = 0x236; // (i) the main grou
 pub const EE_SCREENS_GAME_MG_BEHAVIOR: u32 = 0x237; // (behaviour) EEMSetUnitBehavior
 pub const EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS: u32 = 0x238; // the main game form's group 9 off, background 0x97 hidden
 pub const EE_SCREENS_GAME_MG_COPY_BITMAPS: u32 = 0x239; // (to, from) the main game form's button bitmaps
+/// (type) EEFormation::Create, EEMChangeFormation posted, the formation menu (group 8, background 0x98) closed, the
+/// formation the selected group's
+pub const EE_SCREENS_GAME_MG_SET_FORMATION: u32 = 0x23a;
 /// Texts (ee_screenscpp_put_text).
 pub const EE_SCREENS_TEXT_MG_CHAT_LOG: u32 = 0x72; // AddChatLogEntry(text, 0)
 /// (auto) the last quick (or auto) save's load; the text is the not-found message, shown when its file is missing.
@@ -118,6 +123,9 @@ const MG_BEHAVIOR_SCOUT: u32 = 232;
 const MG_BEHAVIOR_GUARD: u32 = 233;
 const MG_COMMAND_BUTTONS: u32 = 0x4e;
 const MG_COMMAND_BEHAVIOR: u32 = 0x1d;
+const MG_COMMAND_FORMATION: u32 = 30;
+/// The formation menu's buttons, one per formation type (`kMainGameFormationShortLine` ..).
+const MG_FORMATION_BUTTONS: u32 = 236;
 const MG_SHOWN: u32 = 1;
 const MG_HIDDEN: u32 = 0;
 const MG_FORM_CHAT: u32 = 18;
@@ -208,6 +216,20 @@ fn unit_behavior<H: MainGameHost + ?Sized>(h: &mut H, behavior: u32) {
         _ => MG_BEHAVIOR_AGGRESSIVE,
     };
     h.call(EE_SCREENS_GAME_MG_COPY_BITMAPS, MG_COMMAND_BUTTONS + i as u32, from);
+}
+
+/// `EEUIEFormationChange`: the formation set and posted, the menu closed, the chosen formation's bitmaps on the
+/// selected unit's first formation command button.
+fn formation_change<H: MainGameHost + ?Sized>(h: &mut H, formation: u32) {
+    // (the unit as the original took it: before the formation; its class's commands do not change)
+    let mut commands = [0u32; 9];
+    for (i, c) in commands.iter_mut().enumerate() {
+        *c = h.call(EE_SCREENS_GAME_MG_SELECTED_COMMAND, i as u32, 0);
+    }
+    h.call(EE_SCREENS_GAME_MG_SET_FORMATION, formation, 0);
+    if let Some(i) = commands.iter().position(|&c| c == MG_COMMAND_FORMATION) {
+        h.call(EE_SCREENS_GAME_MG_COPY_BITMAPS, MG_COMMAND_BUTTONS + i as u32, MG_FORMATION_BUTTONS + formation);
+    }
 }
 
 /// `EEUIEMGInGameLoadAndSave`: the host's quick save or load of a running game (the loads in single player only); a
@@ -357,6 +379,9 @@ pub fn dispatch<H: MainGameHost + ?Sized>(h: &mut H, event: u32) -> Option<c_lon
         EE_SCREENS_MG_PREVIOUS_MESSAGES => {
             h.call(EE_SCREENS_OP_SWITCH, MG_FORM_CHAT_LOG, 0);
         }
+        _ if (EE_SCREENS_MG_FORMATION..EE_SCREENS_MG_FORMATION + 8).contains(&event) => {
+            formation_change(h, event - EE_SCREENS_MG_FORMATION)
+        }
         _ => return None,
     }
     Some(result)
@@ -374,7 +399,8 @@ mod tests {
         assert!(
             is_main_game_event(EE_SCREENS_MG_CANCEL_UI_MODE) && is_main_game_event(EE_SCREENS_MG_PREVIOUS_MESSAGES)
         );
-        assert!(!is_main_game_event(0x0b00) && !is_main_game_event(0x0b27));
+        assert!(is_main_game_event(EE_SCREENS_MG_FORMATION) && is_main_game_event(EE_SCREENS_MG_FORMATION + 7));
+        assert!(!is_main_game_event(0x0b00) && !is_main_game_event(0x0b2f));
     }
 
     #[test]

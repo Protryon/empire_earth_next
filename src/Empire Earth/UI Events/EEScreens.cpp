@@ -144,8 +144,10 @@
 #include "ee/EERenderObject.h"
 #include "ee/EECameraControl.h"
 #include "platform/PlatWindow.h"
+#include "ee/EEFormation.h"
 #include "rust/ee_screens.h"
 
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
@@ -823,6 +825,113 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     return 0;
 }
 
+// ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
+
+static UIEvent* sGrabSaved[2];   // each form's grab scroll: the mouse move event it saved (referenced) while grabbing
+
+UIEvent* EECreateGrabScroll(unsigned long inForm)
+{
+    EEReleaseGrabScroll(inForm);
+    return EECreateScreenEvent(inForm ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+}
+
+void EEReleaseGrabScroll(unsigned long inForm)
+{
+    if (sGrabSaved[inForm] != NULL) {
+        sGrabSaved[inForm]->Dereference();
+        sGrabSaved[inForm] = NULL;
+    }
+    ee_screens_camera_grab_reset(inForm);
+}
+
+// the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
+static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
+{
+    static const unsigned long kAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
+    ISEntity* theEntity = NULL;
+    gISMouse->GetEntity(kAxes[inAxis & 3], theEntity);
+    return theEntity;
+}
+
+static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    switch (inOp) {
+    case EE_SCREENS_GAME_CAM_FREEZE:
+        gMouse->mIsFrozen = inA != 0;
+        break;
+    case EE_SCREENS_GAME_CAM_MOUSE_PRESENT:
+        return EEScreensMouseEntity(inA) != NULL;
+    case EE_SCREENS_GAME_CAM_MOUSE_VALUE: {
+        ISEntity* theEntity = EEScreensMouseEntity(inA);
+        return (uint32_t)(inB ? theEntity->GetNormalizedValue() : theEntity->GetValue());
+    }
+    case EE_SCREENS_GAME_CAM_FREE:
+        return gFreeCamera;
+    case EE_SCREENS_GAME_CAM_REVOLVE:
+        theCamera.Revolve(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ROTATE:
+        theCamera.Rotate(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM:
+        return Bits(theCamera.GetZoom());
+    case EE_SCREENS_GAME_CAM_GRAB_SPEED:
+        return Bits(gGamePreferences.mSettings.GetGrabScrollSpeed());
+    case EE_SCREENS_GAME_CAM_SCROLL:
+        theCamera.Scroll(Float(inA), Float(inB));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM_ENABLED:
+        return inA ? gZoomEnabled : gGamePreferences.mSettings.mZoomEnabled;
+    case EE_SCREENS_GAME_CAM_CINEMATIC:
+        return gWorld.mInCinematic;
+    case EE_SCREENS_GAME_CAM_RESET_ZOOM:
+        theCamera.ResetZoom();
+        break;
+    case EE_SCREENS_GAME_CAM_CHANGED:
+        theCamera.SetChanged();
+        break;
+    case EE_SCREENS_GAME_CAM_SET_ZOOM:
+        theCamera.SetZoom(Float(inA));
+        break;
+    case EE_SCREENS_GAME_CAM_MAX_ZOOM:
+        return Bits(gCameraMaxZoom);
+    case EE_SCREENS_GAME_CAM_COS:
+        return Bits(UMCos(Float(inA)));
+    case EE_SCREENS_OP_CAM_GRAB_BEGIN: {
+        // the form's mouse move event saved; the grab its mouse move event while the button is down
+        sGrabSaved[inA] = inForm->GetMouseMoveEvent();
+        if (sGrabSaved[inA])
+            sGrabSaved[inA]->Reference();
+        UIEvent* theGrab = EECreateScreenEvent(inA ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+        inForm->SetMouseMoveEvent(theGrab);
+        theGrab->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_CAM_GRAB_END:
+        inForm->SetMouseMoveEvent(sGrabSaved[inA]);
+        if (sGrabSaved[inA]) {
+            sGrabSaved[inA]->Dereference();
+            sGrabSaved[inA] = NULL;
+        }
+        break;
+    case EE_SCREENS_GAME_MG_SET_FORMATION: {
+        // the selected group's formation, posted; the formation menu closed
+        EEFormation* theFormation = EEFormation::Create((long)inA);
+        gCommunications->ProcessLocalUserInput(new EEMChangeFormation((long)inA), kSlotNone);
+        gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
+        gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
+        theFormation->mB5C = true;
+        gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup->SetFormation(theFormation);
+        theFormation->Dereference();
+        break;
+    }
+    default:
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
 // ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
 
 // player inIndex of the world as the diplomacy form reads it; false for an empty entry
@@ -904,7 +1013,7 @@ static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t i
         gCommunications->ProcessLocalUserInput(new EEMSelectCustomPlayerForChat((long)inA, inB != 0), kSlotNone);
         break;
     default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
+        return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
     }
     return 0;
 }

@@ -7,6 +7,75 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The grave key's press and release around the free camera's rotation (`EEUIEDisableMouseMove`,
+/// `EEUIEEnableMouseMove`).
+constexpr static const uint32_t EE_SCREENS_CAM_DISABLE_MOUSE_MOVE = 2880;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ENABLE_MOUSE_MOVE = 2881;
+
+/// The free camera's revolve (the scenario editor's) and rotate (both forms', the grave key held).
+constexpr static const uint32_t EE_SCREENS_CAM_REVOLVE = 2882;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ROTATE = 2883;
+
+/// The arrow keys (`EEUIEKeyboardScroll(0..3)`: up, down, left, right).
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_UP = 2884;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_DOWN = 2885;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_LEFT = 2886;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_RIGHT = 2887;
+
+/// The bracket keys (`EEUIEHotKeyZoom(0)` in, `(1)` out).
+constexpr static const uint32_t EE_SCREENS_CAM_ZOOM_IN = 2888;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ZOOM_OUT = 2889;
+
+/// The mouse wheel.
+constexpr static const uint32_t EE_SCREENS_CAM_WHEEL_ZOOM = 2890;
+
+/// The middle button's grab scroll of the main game form and of the scenario editor's form (`EECreateGrabScroll`).
+constexpr static const uint32_t EE_SCREENS_CAM_GRAB_MAIN = 2891;
+
+constexpr static const uint32_t EE_SCREENS_CAM_GRAB_EDITOR = 2892;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_FREEZE = 640;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MOUSE_PRESENT = 641;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MOUSE_VALUE = 642;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_FREE = 643;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_REVOLVE = 644;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ROTATE = 645;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ZOOM = 646;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_GRAB_SPEED = 647;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_SCROLL = 648;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ZOOM_ENABLED = 649;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_CINEMATIC = 650;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_RESET_ZOOM = 651;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_CHANGED = 652;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_SET_ZOOM = 653;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MAX_ZOOM = 654;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_COS = 655;
+
+constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_BEGIN = 656;
+
+constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_END = 657;
+
 /// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
 constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
 
@@ -738,6 +807,9 @@ constexpr static const uint32_t EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE = 2853;
 
 constexpr static const uint32_t EE_SCREENS_MG_PREVIOUS_MESSAGES = 2854;
 
+/// The formation menu's eight buttons (`EEUIEFormationChange(0..7)`): this code plus the formation type.
+constexpr static const uint32_t EE_SCREENS_MG_FORMATION = 2855;
+
 constexpr static const uint32_t EE_SCREENS_GAME_MG_UI_STATE = 528;
 
 constexpr static const uint32_t EE_SCREENS_GAME_MG_GHOSTS = 529;
@@ -819,6 +891,10 @@ constexpr static const uint32_t EE_SCREENS_GAME_MG_BEHAVIOR = 567;
 constexpr static const uint32_t EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS = 568;
 
 constexpr static const uint32_t EE_SCREENS_GAME_MG_COPY_BITMAPS = 569;
+
+/// (type) EEFormation::Create, EEMChangeFormation posted, the formation menu (group 8, background 0x98) closed, the
+/// formation the selected group's
+constexpr static const uint32_t EE_SCREENS_GAME_MG_SET_FORMATION = 570;
 
 /// Texts (ee_screenscpp_put_text).
 constexpr static const uint32_t EE_SCREENS_TEXT_MG_CHAT_LOG = 114;
@@ -1871,6 +1947,10 @@ struct EeScreensDiplomacyPlayer {
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
 extern "C" {
+
+/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
+/// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
+void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
 uint32_t ee_screens_button_command_test(unsigned long button);

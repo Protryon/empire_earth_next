@@ -29,13 +29,19 @@
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
-//! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events over the C++ host).
+//! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
+//!   change, over the C++ host).
+//! - [`camera`]: the camera, scroll and zoom events whole (the main game form's and the scenario editor's: the free
+//!   camera's turns, the arrow keys, the zoom keys, the wheel, the grab scroll with its per-form record).
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
+pub mod camera;
+#[cfg(not(test))]
+mod camera_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
