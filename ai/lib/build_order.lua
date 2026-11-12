@@ -23,7 +23,8 @@ M.OPT = {
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
     food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
-    pre_dock = false,       -- the dock built while the Stone Age is saved for (off: benched as D2)
+    pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
+                            -- dock, not_in_epoch)
 }
 
 -- the gatherers, filled in this order as the citizens come (each step: a resource up to a count); food counts the
