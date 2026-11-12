@@ -7334,3 +7334,79 @@ concerns. All of it is save and load code (the plain oracle stays identical), ex
     mediterranean 2394 s): a state both saves lose, read much later;
   - the AI resource lists rebuilt differently at the load (the dumps' `mines=` and `fish=`: 21 against 9; outside the
     checksums so far).
+
+## R6: WON's socket ops, AsyncSocket's lock and destination, and UDPManager as Rust objects (ee_won sockops.rs, udpmgr.rs, sockobj.rs; branch rust-r6-won15, 2026-11-11)
+
+Round 15 of R6 (RUST_PLAN "R6 WON, the rest"), the fourth round of whole-class moves: the socket layer under the
+lobby's LAN game now keeps all of its state in Rust objects.
+
+- **The golden first.** `won_sockobj_test` grew from 319 to 452 lines, recorded over the unmodified C++ before any
+  move (commit `R6 WON: won_sockobj_test's round 15 golden`): the destination's set, copy and connect; the data
+  lock's recursion and a second thread waiting on it; a 2 MB send continued on the socket thread while the receiver
+  reads blocking (progress chunks); the chunks' bytes read; re-runs of a timed-out RecvBytesOp and RecvMsgOp; file
+  receives (append, text mode, the modify time, the path); the message length limits; refusing transforms on each
+  side; connect and accept async, an invalid address, a refused connect; datagram ops on a connected socket; and
+  UDPManager with its receive and request ops (unbound kills, the auto-receive op, address and address-less ops with
+  checks, WS_ServerReq_Recv's new op, a time-out, the blocking refusals, Send, a request through the manager with a
+  wrong then a right reply, retransmits to WS_NoReply, the ops' own sockets, Close, a rebind). The same 452 lines
+  over the C++ five times and after each of the three moves (4 more runs each). `won_ops_test`'s units now include
+  UDPManager.cpp. Driver traps: an op's RunAsync only queues it in the op container (pump once before blocking on its
+  peer, or the peer waits for a send that has not started); two completions finishing on two threads (the send and
+  the receive of one transfer, a connect and its accept) come in either order: count them and log afterwards.
+- **Found: the re-run quirk.** A RecvBytesOp run again after a time-out keeps its write buffer: the second
+  `StartRecv` reserves the same length, so the receive reads only the room left, then asks for 0 bytes, which the
+  system reports as a close (`WS_AsyncSocket_Shutdown`); a RecvMsgOp re-run reads the old prefix bytes as the body
+  (`WS_RecvMsg_InvalidMessageLength`). The original's behaviour, kept and in the golden.
+- **AsyncSocket's lock and destination** (sockobj.rs). EeWonAsyncSocket owns the recursive lock (created with the
+  object, destroyed after its close) and the destination (an EeWonIpAddr under the lock); `Fn2B0E60` is Rust's whole
+  (`ee_won_asyncsocket_connect_to`), Accept's adopt sets the accepted socket's destination from the peer. The C++
+  keeps `GetDataLock()` (the mutex), `GetDestAddr()` (now a copy: `IPAddr::FromValue` adopts a Rust value) and
+  `SetDestAddr`. `AutoCrit` holds a `PlatMutex*` and takes a CriticalSection or a mutex. Mechanical edits outside
+  the lane (`GetDataCrit()` -> `GetDataLock()`): EEWonNet.cpp; WONRouting RoutingConnection, SmartRoutingConnection
+  (+Commands, +Snapshots); WONServer ServerConnection; QueueSocket. LanLogic's join check held a pointer into the
+  temporary that `GetDestAddr()` now returns: it keeps a copy (look for the same shape when a getter turns from a
+  reference into a value: `x->Get().Bytes()` kept past the statement).
+- **The socket ops** (sockops.rs). SendBytesOp, SendMsgOp, SendBytesToOp, RecvBytesOp, RecvMsgOp, RecvBytesFromOp,
+  ConnectOp and AcceptOp keep their state in an `OpKind` inside their EeWonSocketOp (the bytes and position, the
+  message and its transformed copy, the destination, the receive's write buffer, length, count, skip flag, file,
+  path, file flags and modify time, the progress completion, the message stage, the datagram buffer and sender, the
+  connect address, the accepted socket), and every step of SocketOps.cpp and SocketOperationDispatch.cpp runs in
+  Rust. The C++ classes are shims (constructors, Start/Continue, accessors, Duplicate). What stays C++ is in
+  SocketOp's one hook table: the `RefCount*` references (ByteBuffers, the progress completion, the accepted socket),
+  a ByteBuffer's bytes and a new one adopting Rust's, the socket's transform chain on a message slot, the target
+  file (PlatFOpen's modes, fwrite, fclose, utime), the progress chunk (a RecvChunkOp in the op's mode; its completion
+  reads the op's bytes so far, so no borrow of the state lives across it), and `AsyncSocket::Accept` (the virtual
+  Duplicate). `ConnectOp::GetAddr`, `RecvBytesFromOp::GetAddr` and `RecvBytesOp::GetFilePath` return copies.
+  RecvMsgOp's constructor takes a tag type: a `(AsyncSocket*, bool)` overload was ambiguous with
+  `RecvBytesOp(0, NULL)`.
+- **UDPManager** (udpmgr.rs). EeWonUdpManager holds the socket, the default completion, the auto-receive op, the
+  address-less list and the by-sender multimap (the address's wire order, so the port first; an equal address after
+  those already there) with their clean-up cursors, and does Bind, Close, SetAutoRecv, QueueOp, Send, CleanOps, the
+  iterator-keeping erases and RecvCallback's dispatch. The iterators are the entries' ids (end is none), so a cursor
+  survives inserts and erases as the original's node-based containers allowed, including the new op that
+  WS_ServerReq_Recv queues into the map during the walk (the walk reaches it, as the golden shows). Like the
+  original it takes no lock. The ops it holds (`UDPManagerRecvOp`, `UDPManagerSendRecvOp`) stay C++: they are
+  AsyncOps the lobby subclasses (PingGameOp, RoutingGetUserStatusOp) with public members the lobby reads. Mechanical
+  edit outside the lane: PingLogic's `mDefaultCompletion =` became `SetDefaultCompletion` (UDPManager.cpp and the
+  ops are the Internet lane's file, but entirely socket plumbing: moved here by agreement).
+- **Behaviour changes.** An op without a socket returns `WS_AsyncSocket_InvalidSocket` (the original read a null
+  socket); a progress interval of 0 resets the count (the original divided by zero); `UDPManager::Send` while
+  unbound does nothing (the original used the null socket); `GetDestAddr` and the ops' address getters are copies.
+  Nothing else: the same locks, threads and order.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game is the
+  end-to-end check; it exercises: the discovery socket (a datagram QueueSocket: RecvBytesFromOp as its repeat op,
+  `RecvBytesFromOp::RunHook`'s buffer, the datagram and its sender; SendBytesToOp broadcasts on an unconnected
+  socket, SendTo), the host's listening socket (AcceptOp as the repeat op, the hook's Accept and Duplicate, the
+  accepted socket's destination from Rust's adopt, which LanLogic's join subnet check reads through GetDestAddr), the
+  joiner's ConnectOp (`connect_to`, the destination, the wait), the game room's RecvMsgOp repeat ops (the 2-byte
+  length prefix, `StartRecvBody`, `FinishRecvMsg`, no transforms on LAN sockets) and SendMsgOp queued ops, the locks
+  of QueueSocket and the sockets through `GetDataLock`, and the lobby's UDPManager (LobbyBindUDPPort's Bind with
+  broadcast, SetAutoRecv, the repeat receive, PingLogic's default completion for unsolicited datagrams; a game ping, PingGameOp's request through the
+  manager's Send and its reply op in the map, runs only for a direct-connect game or the game list's Ping action,
+  which lan_game.py does not use). RecvBytesOp with a file, the progress chunks, CloseFile and SendBytesOp alone are reached by the lobby's file
+  transfer and the Internet code only.
+- **Left.** UDPManagerRecvOp and UDPManagerSendRecvOp (C++ AsyncOps over the manager); BlockingSocket has no
+  state; the lobby model and logic (LobbyModel 1587 lines: LobbyClient, LobbyFriend, LobbyGroup, LobbyServer,
+  LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
+  persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
+  comes before its move).

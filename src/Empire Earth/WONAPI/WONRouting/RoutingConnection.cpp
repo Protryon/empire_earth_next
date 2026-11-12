@@ -60,7 +60,7 @@ void RoutingConnection::CalcCompletion(RoutingOp* inOp)
 // Adds an op (with its completion resolved) to the list waiting for replies
 void RoutingConnection::AddOp(RoutingOp* inOp)
 {
-    AutoCrit crit(this->GetDataCrit());
+    AutoCrit crit(this->GetDataLock());
     this->CalcCompletion(inOp);
     this->mOpList.push_back(inOp);
 }
@@ -352,7 +352,7 @@ namespace WONAPI {
 // Dispatches an incoming routing message to the first pending or unsolicited op that accepts it and completes that op
 void RoutingConnection::MsgCallback(const ByteBuffer* inData)
 {
-    AutoCrit crit(this->GetDataCrit());
+    AutoCrit crit(this->GetDataLock());
     SmartPtr<RoutingOp> op;
     RoutingOpList::iterator itr;
     bool unsolicited = false;

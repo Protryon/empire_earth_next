@@ -2882,6 +2882,9 @@ struct EeWonThread;
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
 
+/// `UDPManager`'s state and steps.
+struct EeWonUdpManager;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -7971,6 +7974,25 @@ struct EeWonSocketOpBaseHooks {
   EeWonSocketRefFn socket_release;
   /// the socket's Rust object (`socket->mSock`)
   EeWonAsyncSocket *(*socket_object)(void *socket);
+  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+  EeWonSocketRefFn ref_add;
+  EeWonSocketRefFn ref_release;
+  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+  /// modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+  long (*accept)(void *socket, void **out);
 };
 
 /// A C++ call on a socket op (`SocketOp*`).
@@ -8070,6 +8092,44 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// A C++ call on one object.
+using EeWonUdpFn = void(*)(void *object);
+
+/// What the manager calls back in the C++. One static table serves every manager.
+struct EeWonUdpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpFn ref_add;
+  EeWonUdpFn ref_release;
+  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
+  /// `ForceFinish(s)`, `TimeLeft()`
+  long (*op_status)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpFn op_kill;
+  void (*op_finish)(void *op, long status);
+  void (*op_force_finish)(void *op, long status);
+  uint32_t (*op_time_left)(void *op);
+  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
+  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  EeWonIpAddr *(*recv_address)(void *op);
+  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
+  void (*recv_set_msg)(void *op, void *bytes);
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
+  void *(*new_recv_op)(const EeWonIpAddr *addr);
+  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
+  void *(*socket_new)();
+  EeWonUdpFn socket_kill;
+  void (*socket_set_broadcast)(void *socket, bool on);
+  long (*socket_bind)(void *socket, int32_t port);
+  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
+  /// `SetRepeatOp(new RecvBytesFromOp(size))`
+  void (*socket_repeat)(void *socket, void *manager, int32_t size);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -19006,13 +19066,12 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
-/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `hooks` is a static table; `socket` outlives the object.
 EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
                                          const EeWonAsyncSocketHooks *hooks,
-                                         void *lock,
                                          int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
@@ -19102,17 +19161,31 @@ long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
                              uint16_t port,
                              bool reuse);
 
-/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
 ///
 /// # Safety
-/// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect_prepare(const EeWonAsyncSocket *s, uint32_t local_host);
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+long ee_won_asyncsocket_connect_to(const EeWonAsyncSocket *s,
+                                   const EeWonIpAddr *addr,
+                                   uint32_t local_host);
 
-/// `Fn2B0E60`'s connect.
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect(const EeWonAsyncSocket *s, uint32_t address, uint16_t port);
+void *ee_won_asyncsocket_mutex(const EeWonAsyncSocket *s);
+
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+EeWonIpAddr *ee_won_asyncsocket_dest_addr(const EeWonAsyncSocket *s);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+void ee_won_asyncsocket_set_dest_addr(const EeWonAsyncSocket *s, const EeWonIpAddr *addr);
 
 /// `Listen`.
 ///
@@ -19129,11 +19202,14 @@ long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
                                uint32_t *address,
                                uint16_t *port);
 
-/// The accepted handle into the new socket `s`.
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s, ptrdiff_t handle);
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s,
+                              ptrdiff_t handle,
+                              uint32_t address,
+                              uint16_t port);
 
 /// `WaitForConnect`.
 ///
@@ -19349,6 +19425,135 @@ void ee_won_socketop_line_reset(const EeWonSocketOp *o);
 long ee_won_socketop_line_continue(const EeWonSocketOp *o,
                                    EeWonOpTiming timing,
                                    EeWonByteBuffer **message);
+
+/// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
+///
+/// # Safety
+/// `o` is a live op object (so for every call below); `data` and `message` are null or live `ByteBuffer`s.
+void ee_won_socketop_init_send(const EeWonSocketOp *o,
+                               void *data,
+                               void *message,
+                               bool is_msg);
+
+/// `SendBytesToOp(data, address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `to` is a live value.
+void ee_won_socketop_init_send_to(const EeWonSocketOp *o, void *data, const EeWonIpAddr *to);
+
+/// `RecvBytesOp(length)` / `RecvMsgOp` (`is_msg`, length 0).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv(const EeWonSocketOp *o, uint32_t length, bool is_msg);
+
+/// `RecvBytesFromOp(maxLength)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv_from(const EeWonSocketOp *o, uint16_t max);
+
+/// `ConnectOp(address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `addr` is a live value.
+void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *addr);
+
+/// `AcceptOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// The op class's `Start`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_start(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// The op class's `Continue`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_continue(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// `RecvBytesFromOp::RunHook`'s buffer and reset (the base's run follows).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::CloseFile(status)` (its `CleanupHook`'s).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// The received bytes: a borrowed `ByteBuffer*` (null for none).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_received(const EeWonSocketOp *o);
+
+/// `RecvMsgOp::GetMsg`: a borrowed `ByteBuffer*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_message(const EeWonSocketOp *o);
+
+/// `ConnectOp::GetAddr` / `RecvBytesFromOp::GetAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+EeWonIpAddr *ee_won_socketop_address(const EeWonSocketOp *o);
+
+/// `AcceptOp::GetAcceptedSocket`: a borrowed `AsyncSocket*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_accepted(const EeWonSocketOp *o);
+
+/// A receive's length / a datagram op's maximum.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_length(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetBytesRead`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_bytes_read(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetFilePath`: the bytes to `sink`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; the sink is called during the call only.
+void ee_won_socketop_path(const EeWonSocketOp *o, EeWonByteSink sink, void *context);
+
+/// `SetFilePath`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `path` holds `length` bytes.
+void ee_won_socketop_set_path(const EeWonSocketOp *o, const uint8_t *path, size_t length);
+
+/// `SetAppendFile` (0), `SetBinaryFile` (1), `SetSkipBytes` (2).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_flag(const EeWonSocketOp *o, int32_t which, bool on);
+
+/// `SetFileModifyTime`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
+
+/// `SetProgressCompletion(completion, interval)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
+void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
 /// # Safety
 /// `hooks` lives for the program.
@@ -19615,6 +19820,76 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// A new manager object for the C++ `manager`.
+///
+/// # Safety
+/// `hooks` is a static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+
+/// Frees the object (its references go).
+///
+/// # Safety
+/// `m` came from `ee_won_udpmanager_new` and is freed once.
+void ee_won_udpmanager_free(EeWonUdpManager *m);
+
+/// `Bind`.
+///
+/// # Safety
+/// `m` is a live manager object (so for every call below).
+long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_close(const EeWonUdpManager *m);
+
+/// `SetAutoRecv`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_set_auto_recv(const EeWonUdpManager *m, bool on);
+
+/// `QueueOp` (`op` a `UDPManagerRecvOp` as `RefCount*`).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `op` is live.
+void ee_won_udpmanager_queue_op(const EeWonUdpManager *m, void *op, uint32_t timeout);
+
+/// `Send`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `bytes` is a live `ByteBuffer` (or null), `addr` a live value.
+void ee_won_udpmanager_send(const EeWonUdpManager *m, void *bytes, const EeWonIpAddr *addr);
+
+/// `CleanOps`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_clean_ops(const EeWonUdpManager *m);
+
+/// `SetDefaultCompletion`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `completion` is null or live.
+void ee_won_udpmanager_set_default_completion(const EeWonUdpManager *m, void *completion);
+
+/// The socket (a borrowed `QueueSocket*` as `RefCount*`, null when unbound).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void *ee_won_udpmanager_socket(const EeWonUdpManager *m);
+
+/// `RecvCallback`: the datagram (`bytes`, its `data`) and its sender.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `data` holds `length` bytes; `from` is a live value.
+void ee_won_udpmanager_recv(const EeWonUdpManager *m,
+                            void *bytes,
+                            const uint8_t *data,
+                            size_t length,
+                            const EeWonIpAddr *from);
 
 }  // extern "C"
 

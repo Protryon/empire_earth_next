@@ -100,7 +100,7 @@ void PingLogic::InitComponent(ComponentConfig*)
 {
     UDPManager* aManager = LobbyGetUDPManager();
     if (aManager != NULL)
-        aManager->mDefaultCompletion = new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, this);
+        aManager->SetDefaultCompletion(new LogicCompletion<PingLogic>(&PingLogic::HandleUDPRecv, this));
 }
 
 // FUNCTION: WON 0x007e6680
