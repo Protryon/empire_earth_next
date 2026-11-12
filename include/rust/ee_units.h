@@ -435,6 +435,90 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 
+constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
+
+constexpr static const int32_t EE_UNITS_UPDATE_NAVAL = 2;
+
+/// `mPhysicalModel.GetFrame()`
+constexpr static const int32_t EE_UNITS_UPD_R_FRAME = 1;
+
+/// `EEHerd::IsAnimalOnMap(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_R_ANIMAL_ON_MAP = 2;
+
+/// the class's `mPhysicsModel != NULL`
+constexpr static const int32_t EE_UNITS_UPD_R_PHYSICS_MODEL = 3;
+
+/// the class's `mIsMedic`
+constexpr static const int32_t EE_UNITS_UPD_R_MEDIC = 4;
+
+/// `mStats->mRegeneration > 0`
+constexpr static const int32_t EE_UNITS_UPD_R_REGENERATES = 5;
+
+/// the store's fields for a unit with no record: `mHerd != NULL`, `mPlayer->mPlayerID`, `mTileX`,
+/// `mCommand ? mCommand->mType : 0`, `mGoalState ? mGoalState->mKind : -1`, the class's `mUnitType`
+constexpr static const int32_t EE_UNITS_UPD_R_HERD = 10;
+
+constexpr static const int32_t EE_UNITS_UPD_R_OWNER = 11;
+
+constexpr static const int32_t EE_UNITS_UPD_R_TILE_X = 12;
+
+constexpr static const int32_t EE_UNITS_UPD_R_COMMAND = 13;
+
+constexpr static const int32_t EE_UNITS_UPD_R_GOAL_KIND = 14;
+
+constexpr static const int32_t EE_UNITS_UPD_R_UNIT_TYPE = 15;
+
+/// `SetLastHitPoints(mHitPoints)`
+constexpr static const int32_t EE_UNITS_UPD_LAST_HIT_POINTS = 20;
+
+/// `mPhysicsModel->Step(inUnit)`, `UpdateTurrets()`, `UpdateWheels()`, `UpdateOrbitals()`
+constexpr static const int32_t EE_UNITS_UPD_PHYSICS_STEP = 21;
+
+constexpr static const int32_t EE_UNITS_UPD_TURRETS = 22;
+
+constexpr static const int32_t EE_UNITS_UPD_WHEELS = 23;
+
+constexpr static const int32_t EE_UNITS_UPD_ORBITALS = 24;
+
+/// the class's `UpdateEffects(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_EFFECTS = 25;
+
+/// `UpdateReloadTimer()`, `UpdateTargetSearchTimer()`, the class's `UpdateCamouflageTimer(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_RELOAD_TIMER = 26;
+
+constexpr static const int32_t EE_UNITS_UPD_TARGET_SEARCH_TIMER = 27;
+
+constexpr static const int32_t EE_UNITS_UPD_CAMOUFLAGE_TIMER = 28;
+
+/// the class's `Animate(inUnit)`: its result
+constexpr static const int32_t EE_UNITS_UPD_ANIMATE = 29;
+
+/// the class's `RefreshSound(inUnit)`, `RegeneratePower(inUnit)`; `UpdateFanaticismColor()`
+constexpr static const int32_t EE_UNITS_UPD_REFRESH_SOUND = 30;
+
+constexpr static const int32_t EE_UNITS_UPD_REGENERATE_POWER = 31;
+
+constexpr static const int32_t EE_UNITS_UPD_FANATICISM_COLOR = 32;
+
+/// the class's `FireOnAttackFrame(inUnit, a: the animation's result, b: the frame)`
+constexpr static const int32_t EE_UNITS_UPD_FIRE_ON_ATTACK_FRAME = 33;
+
+/// `UpdateRottingAwayTime()`, `UpdateHealSearchTimer()`, `mGoalState->Work(inUnit)`, the class's
+/// `Regenerate(inUnit)`, `UpdateDone(inUnit)`, `UpdateAnimal(inUnit)`, `UpdateResourceUnit(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_ROTTING = 34;
+
+constexpr static const int32_t EE_UNITS_UPD_HEAL_SEARCH_TIMER = 35;
+
+constexpr static const int32_t EE_UNITS_UPD_GOAL_WORK = 36;
+
+constexpr static const int32_t EE_UNITS_UPD_REGENERATE = 37;
+
+constexpr static const int32_t EE_UNITS_UPD_DONE = 38;
+
+constexpr static const int32_t EE_UNITS_UPD_ANIMAL = 39;
+
+constexpr static const int32_t EE_UNITS_UPD_RESOURCE_UNIT = 40;
+
 /// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
 /// unit waiting, 4 evaluated), the gather's action, the two evaluations' results (`u32::MAX`: not evaluated).
 struct EeUnitsAIStepOut {
@@ -747,6 +831,13 @@ struct EeUnitsTickHost {
   void (*update_player)(void *ctx, uint32_t index);
   /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
   void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
+/// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
+struct EeUnitsUpdateHost {
+  void *ctx;
+  int64_t (*read)(void *ctx, int32_t code);
+  int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
 };
 
 extern "C" {
@@ -1373,6 +1464,15 @@ float ee_units_step_cloak_fade(float opacity,
 /// # Safety
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
+
+/// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+bool ee_units_update(int32_t kind,
+                     uint32_t id,
+                     uint64_t object,
+                     const EeUnitsUpdateHost *host);
 
 }  // extern "C"
 

@@ -14,7 +14,8 @@
 //! countdowns, the power's regeneration, the camouflage) over the store are `step`, its AI step and the AI script's
 //! decision `ai`, the physics models' arithmetic over the store's velocities `motion` and their per-action step
 //! arithmetic (the turn, the speed, the pitch) `physics`; the physics tick's unit loop
-//! over the stepped units' list `tick`. The players' diplomacy tables (by player object) are `players`.
+//! over the stepped units' list `tick`; the classes' `Update`s as sequences of those leaves and host calls `update`.
+//! The players' diplomacy tables (by player object) are `players`.
 
 pub mod ai;
 pub mod commands;
@@ -31,5 +32,6 @@ pub mod select;
 pub mod step;
 pub mod store;
 pub mod tick;
+pub mod update;
 
 pub use registry::Registry;
