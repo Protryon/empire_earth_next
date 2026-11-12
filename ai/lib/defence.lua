@@ -72,7 +72,7 @@ M.opts = {
     away_min = 6000,      -- a citizen stays away at least this long
     away_max = 150000,    -- and at most this long (then the engine has it again)
     reflee_ms = 3000,     -- a citizen still in danger is sent again after this long
-    return_scan = 40,     -- citizens away looked at a second at most, in turn (boom-econ: 100+ citizens away with a
+    return_scan = 24,     -- citizens away looked at a second at most, in turn (boom-econ: 100+ citizens away with a
                           -- large raid overran the micro step's budget from minute 81 of seed 19)
     return_max = 12,      -- citizens sent back at most a second (the micro step's 300k budget: 60 at once
                           -- overran it in one 120-minute game)
@@ -206,7 +206,10 @@ end
 -- the nearest raider of a cluster to a tile -> its squared distance
 local function raider_d2(cl, x, y)
     local best = nil
-    for k = 1, cl.n do
+    -- (a large raid: every step-th raider; they stand within cluster_r of each other, and 100+ raiders against the
+    -- citizens away overran the micro step's budget late in seed 19 against Age of AI)
+    local step = math.max(1, cl.n // 16)
+    for k = 1, cl.n, step do
         local d = d2(x, y, cl.xs[k], cl.ys[k])
         if best == nil or d < best then
             best = d
