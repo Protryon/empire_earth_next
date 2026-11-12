@@ -14,6 +14,7 @@
 
 #include "ee/EELuaApi.h"
 #include "platform/PlatFile.h"
+#include "rust/ee_ai.h"   // ee_ai_lua_*: the tree's order, equality, text and bytes, the seed, SplitMix64 (ee_ai lua_value.rs)
 
 // ---- the value tree
 
@@ -33,19 +34,27 @@ EECPLuaKey EECPLuaKey::Str(const std::string& inValue)
     return k;
 }
 
+// the order and equality are Rust's (ee_ai lua_value.rs)
+static EeAiLuaKey KeyView(const EECPLuaKey& inKey)
+{
+    EeAiLuaKey k;
+    k.is_int = inKey.mIsInt ? 1 : 0;
+    k.integer = inKey.mInt;
+    k.text = (const uint8_t*)inKey.mString.data();
+    k.text_len = inKey.mString.size();
+    return k;
+}
+
 bool EECPLuaKey::operator<(const EECPLuaKey& inOther) const
 {
-    if (this->mIsInt != inOther.mIsInt)
-        return this->mIsInt;
-    if (this->mIsInt)
-        return this->mInt < inOther.mInt;
-    return this->mString < inOther.mString;   // std::string compares bytes as unsigned char
+    EeAiLuaKey a = KeyView(*this), b = KeyView(inOther);
+    return ee_ai_lua_key_less(&a, &b);
 }
 
 bool EECPLuaKey::operator==(const EECPLuaKey& inOther) const
 {
-    return this->mIsInt == inOther.mIsInt &&
-           (this->mIsInt ? this->mInt == inOther.mInt : this->mString == inOther.mString);
+    EeAiLuaKey a = KeyView(*this), b = KeyView(inOther);
+    return ee_ai_lua_key_equal(&a, &b);
 }
 
 EECPLuaValue EECPLuaValue::Bool(bool inValue)
@@ -132,107 +141,95 @@ const EECPLuaValue* EECPLuaValue::Find(const EECPLuaKey& inKey) const
     return &this->mItems[(size_t)(it - this->mKeys.begin())];
 }
 
+// ---- the tree as Rust reads and builds it (ee_ai lua_value.rs: Tree, CppTree, build)
+
+static void TreeNode(const void* inValue, EeAiLuaNode* outNode)
+{
+    const EECPLuaValue& v = *(const EECPLuaValue*)inValue;
+    EeAiLuaNode& n = *outNode;
+    n.kind = (uint8_t)v.GetType();
+    n.boolean = v.AsBool() ? 1 : 0;
+    n.integer = v.AsInt();
+    n.text = (const uint8_t*)v.AsString().data();
+    n.text_len = v.AsString().size();
+    bool isMap = v.GetType() == EECPLuaValue::kMap;
+    n.count = isMap ? v.FieldCount() : v.GetType() == EECPLuaValue::kArray ? v.Size() : 0;
+    n.items = n.count ? (const void*)(isMap ? &v.ValueAt(0) : &v.At(0)) : nullptr;
+    n.item_stride = sizeof(EECPLuaValue);
+    n.keys = isMap && n.count ? (const void*)&v.KeyAt(0) : nullptr;
+    n.key_stride = sizeof(EECPLuaKey);
+}
+
+static void TreeKey(const void* inKey, EeAiLuaKey* outKey)
+{
+    *outKey = KeyView(*(const EECPLuaKey*)inKey);
+}
+
+static void TreeSet(void* inValue, uint8_t inKind, uint8_t inBool, int64_t inInt, const uint8_t* inText, size_t inLength)
+{
+    EECPLuaValue& v = *(EECPLuaValue*)inValue;
+    switch (inKind) {
+    case EECPLuaValue::kBool:
+        v = EECPLuaValue::Bool(inBool != 0);
+        break;
+    case EECPLuaValue::kInt:
+        v = EECPLuaValue::Int(inInt);
+        break;
+    case EECPLuaValue::kString:
+        v = EECPLuaValue::Str(std::string((const char*)inText, inLength));
+        break;
+    case EECPLuaValue::kArray:
+        v = EECPLuaValue::NewArray();
+        break;
+    case EECPLuaValue::kMap:
+        v = EECPLuaValue::NewMap();
+        break;
+    default:
+        v = EECPLuaValue();
+        break;
+    }
+}
+
+static void* TreePush(void* inArray)
+{
+    return &((EECPLuaValue*)inArray)->Push(EECPLuaValue());
+}
+
+static void* TreeField(void* inMap, const EeAiLuaKey* inKey)
+{
+    EECPLuaKey k = inKey->is_int ? EECPLuaKey::Int(inKey->integer)
+                                 : EECPLuaKey::Str(std::string((const char*)inKey->text, inKey->text_len));
+    return &((EECPLuaValue*)inMap)->Set(k, EECPLuaValue());
+}
+
+static void TreeAppend(void* inString, const uint8_t* inData, size_t inLength)
+{
+    ((std::string*)inString)->append((const char*)inData, inLength);
+}
+
+static bool TreeRead(void*, const char*, const uint8_t**, size_t*)
+{
+    return false;   // the state's reader comes with the state's move
+}
+
+static void TreeReadDone(void*) {}
+
+static const EeAiLuaTreeOps kEECPLuaTreeOps = {TreeNode, TreeKey, TreeSet, TreePush, TreeField, TreeAppend, TreeRead,
+                                               TreeReadDone};
+
 bool EECPLuaValue::operator==(const EECPLuaValue& inOther) const
 {
-    if (this->mType != inOther.mType)
-        return false;
-    switch (this->mType) {
-    case kNil:
-        return true;
-    case kBool:
-        return this->mBool == inOther.mBool;
-    case kInt:
-        return this->mInt == inOther.mInt;
-    case kString:
-        return this->mString == inOther.mString;
-    default:
-        return this->mKeys == inOther.mKeys && this->mItems == inOther.mItems;
-    }
-}
-
-static void QuoteText(const std::string& inText, std::string& ioOut)
-{
-    static const char kHex[] = "0123456789abcdef";
-    ioOut += '"';
-    for (unsigned char c : inText) {
-        if (c == '"' || c == '\\') {
-            ioOut += '\\';
-            ioOut += (char)c;
-        } else if (c < 32 || c > 126) {
-            ioOut += "\\x";
-            ioOut += kHex[c >> 4];
-            ioOut += kHex[c & 15];
-        } else {
-            ioOut += (char)c;
-        }
-    }
-    ioOut += '"';
-}
-
-static bool IsIdentifier(const std::string& inText)
-{
-    if (inText.empty() || (inText[0] >= '0' && inText[0] <= '9'))
-        return false;
-    for (char c : inText)
-        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_'))
-            return false;
-    return true;
+    return ee_ai_lua_value_equal(&kEECPLuaTreeOps, this, &inOther);
 }
 
 std::string EECPLuaValue::ToText() const
 {
-    char theNumber[32];
-    switch (this->mType) {
-    case kNil:
-        return "nil";
-    case kBool:
-        return this->mBool ? "true" : "false";
-    case kInt:
-        snprintf(theNumber, sizeof(theNumber), "%lld", (long long)this->mInt);
-        return theNumber;
-    case kString: {
-        std::string s;
-        QuoteText(this->mString, s);
-        return s;
-    }
-    case kArray: {
-        std::string s = "[";
-        for (size_t i = 0; i < this->mItems.size(); i++)
-            s += (i ? "," : "") + this->mItems[i].ToText();
-        return s + "]";
-    }
-    default: {
-        std::string s = "{";
-        for (size_t i = 0; i < this->mKeys.size(); i++) {
-            if (i)
-                s += ',';
-            const EECPLuaKey& k = this->mKeys[i];
-            if (k.mIsInt) {
-                snprintf(theNumber, sizeof(theNumber), "[%lld]", (long long)k.mInt);
-                s += theNumber;
-            } else if (IsIdentifier(k.mString)) {
-                s += k.mString;
-            } else {
-                s += '[';
-                QuoteText(k.mString, s);
-                s += ']';
-            }
-            s += '=' + this->mItems[i].ToText();
-        }
-        return s + "}";
-    }
-    }
+    std::string s;
+    ee_ai_lua_value_text(&kEECPLuaTreeOps, this, &s);
+    return s;
 }
 
-// ---- the memory's bytes
-
-enum { kTagNil = 0, kTagFalse = 1, kTagTrue = 2, kTagInt = 3, kTagString = 4, kTagTable = 5 };
-
-static void PutU32(std::string& ioOut, uint32_t inValue)
-{
-    for (int i = 0; i < 4; i++)
-        ioOut += (char)(unsigned char)(inValue >> (8 * i));
-}
+// ---- the memory's bytes (ee_ai lua_value.rs: encode, decode)
 
 static void PutU64(std::string& ioOut, uint64_t inValue)
 {
@@ -240,76 +237,9 @@ static void PutU64(std::string& ioOut, uint64_t inValue)
         ioOut += (char)(unsigned char)(inValue >> (8 * i));
 }
 
-static void EncodeKey(const EECPLuaKey& inKey, std::string& ioOut)
-{
-    if (inKey.mIsInt) {
-        ioOut += (char)kTagInt;
-        PutU64(ioOut, (uint64_t)inKey.mInt);
-    } else {
-        ioOut += (char)kTagString;
-        PutU32(ioOut, (uint32_t)inKey.mString.size());
-        ioOut += inKey.mString;
-    }
-}
-
 void EECPLuaEncode(const EECPLuaValue& inValue, std::string& outBytes)
 {
-    switch (inValue.GetType()) {
-    case EECPLuaValue::kNil:
-        outBytes += (char)kTagNil;
-        return;
-    case EECPLuaValue::kBool:
-        outBytes += (char)(inValue.AsBool() ? kTagTrue : kTagFalse);
-        return;
-    case EECPLuaValue::kInt:
-        outBytes += (char)kTagInt;
-        PutU64(outBytes, (uint64_t)inValue.AsInt());
-        return;
-    case EECPLuaValue::kString:
-        outBytes += (char)kTagString;
-        PutU32(outBytes, (uint32_t)inValue.AsString().size());
-        outBytes += inValue.AsString();
-        return;
-    case EECPLuaValue::kArray: {   // the keys 1..n; a nil item is a hole (no entry), as in Lua
-        uint32_t theCount = 0;
-        for (size_t i = 0; i < inValue.Size(); i++)
-            theCount += inValue.At(i).IsNil() ? 0 : 1;
-        outBytes += (char)kTagTable;
-        PutU32(outBytes, theCount);
-        for (size_t i = 0; i < inValue.Size(); i++) {
-            if (inValue.At(i).IsNil())
-                continue;
-            EncodeKey(EECPLuaKey::Int((int64_t)i + 1), outBytes);
-            EECPLuaEncode(inValue.At(i), outBytes);
-        }
-        return;
-    }
-    case EECPLuaValue::kMap: {
-        uint32_t theCount = 0;
-        for (size_t i = 0; i < inValue.FieldCount(); i++)
-            theCount += inValue.ValueAt(i).IsNil() ? 0 : 1;
-        outBytes += (char)kTagTable;
-        PutU32(outBytes, theCount);
-        for (size_t i = 0; i < inValue.FieldCount(); i++) {
-            if (inValue.ValueAt(i).IsNil())
-                continue;
-            EncodeKey(inValue.KeyAt(i), outBytes);
-            EECPLuaEncode(inValue.ValueAt(i), outBytes);
-        }
-        return;
-    }
-    }
-}
-
-static bool GetU32(const std::string& inBytes, size_t& ioOffset, uint32_t& outValue)
-{
-    if (ioOffset > inBytes.size() || inBytes.size() - ioOffset < 4)
-        return false;
-    outValue = 0;
-    for (int i = 0; i < 4; i++)
-        outValue |= (uint32_t)(unsigned char)inBytes[ioOffset + i] << (8 * i);
-    ioOffset += 4;
-    return true;
+    ee_ai_lua_encode(&kEECPLuaTreeOps, &inValue, &outBytes);
 }
 
 static bool GetU64(const std::string& inBytes, size_t& ioOffset, uint64_t& outValue)
@@ -323,94 +253,14 @@ static bool GetU64(const std::string& inBytes, size_t& ioOffset, uint64_t& outVa
     return true;
 }
 
-static bool DecodeValue(const std::string& inBytes, size_t& ioOffset, EECPLuaValue& outValue, std::string& outError,
-                        int inDepth)
-{
-    if (ioOffset >= inBytes.size()) {
-        outError = "truncated";
-        return false;
-    }
-    int theTag = (unsigned char)inBytes[ioOffset++];
-    switch (theTag) {
-    case kTagNil:
-        outValue = EECPLuaValue();
-        return true;
-    case kTagFalse:
-    case kTagTrue:
-        outValue = EECPLuaValue::Bool(theTag == kTagTrue);
-        return true;
-    case kTagInt: {
-        uint64_t v;
-        if (!GetU64(inBytes, ioOffset, v)) {
-            outError = "truncated integer";
-            return false;
-        }
-        outValue = EECPLuaValue::Int((int64_t)v);
-        return true;
-    }
-    case kTagString: {
-        uint32_t n;
-        if (!GetU32(inBytes, ioOffset, n) || inBytes.size() - ioOffset < n) {
-            outError = "truncated string";
-            return false;
-        }
-        outValue = EECPLuaValue::Str(inBytes.substr(ioOffset, n));
-        ioOffset += n;
-        return true;
-    }
-    case kTagTable: {
-        if (inDepth >= kEECPLuaMaxDepth) {
-            outError = "nested too deep";
-            return false;
-        }
-        uint32_t n;
-        if (!GetU32(inBytes, ioOffset, n) || inBytes.size() - ioOffset < (size_t)n * 2) {
-            outError = "truncated table";
-            return false;
-        }
-        EECPLuaValue theMap = EECPLuaValue::NewMap();
-        bool theArray = n > 0;
-        for (uint32_t i = 0; i < n; i++) {
-            EECPLuaValue k, v;
-            if (!DecodeValue(inBytes, ioOffset, k, outError, inDepth + 1))
-                return false;
-            if (k.GetType() != EECPLuaValue::kInt && k.GetType() != EECPLuaValue::kString) {
-                outError = "a table key that is not an integer or a string";
-                return false;
-            }
-            EECPLuaKey theKey = k.GetType() == EECPLuaValue::kInt ? EECPLuaKey::Int(k.AsInt())
-                                                                  : EECPLuaKey::Str(k.AsString());
-            if (theMap.FieldCount() && !(theMap.KeyAt(theMap.FieldCount() - 1) < theKey)) {
-                outError = "table keys out of order";
-                return false;
-            }
-            if (!DecodeValue(inBytes, ioOffset, v, outError, inDepth + 1))
-                return false;
-            if (v.IsNil()) {
-                outError = "a nil table value";
-                return false;
-            }
-            theArray = theArray && theKey.mIsInt && theKey.mInt == (int64_t)i + 1;
-            theMap.Set(theKey, v);
-        }
-        if (theArray) {
-            outValue = EECPLuaValue::NewArray();
-            for (size_t i = 0; i < theMap.FieldCount(); i++)
-                outValue.Push(theMap.ValueAt(i));
-        } else {
-            outValue = theMap;
-        }
-        return true;
-    }
-    default:
-        outError = "unknown tag";
-        return false;
-    }
-}
-
 bool EECPLuaDecode(const std::string& inBytes, size_t& ioOffset, EECPLuaValue& outValue, std::string& outError)
 {
-    return DecodeValue(inBytes, ioOffset, outValue, outError, 0);
+    std::string theError;
+    if (ee_ai_lua_decode(&kEECPLuaTreeOps, (const uint8_t*)inBytes.data(), inBytes.size(), &ioOffset, &outValue,
+                         &theError))
+        return true;
+    outError = theError;
+    return false;
 }
 
 // ---- Lua tables -> the tree (no Lua error can be raised here: it runs outside lua_pcall)
@@ -1150,7 +1000,7 @@ bool EECPLuaReadFromFolder(void* inContext, const char* inPath, std::string& out
 
 uint64_t EECPLuaSeed(uint32_t inGameSeed, uint32_t inPlayer)
 {
-    return ((uint64_t)inGameSeed << 32) | inPlayer;
+    return ee_ai_lua_seed(inGameSeed, inPlayer);
 }
 
 EECPLuaState* EECPLuaState::From(lua_State* inL)
@@ -1160,14 +1010,10 @@ EECPLuaState* EECPLuaState::From(lua_State* inL)
     return (EECPLuaState*)theState;
 }
 
-// SplitMix64 (Steele, Lea, Flood 2014): the state advances by the golden gamma; the output is its mix
+// SplitMix64 (ee_ai lua_value.rs)
 uint64_t EECPLuaState::NextRandom()
 {
-    this->mRng += 0x9E3779B97F4A7C15ull;
-    uint64_t z = this->mRng;
-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
-    z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
-    return z ^ (z >> 31);
+    return ee_ai_lua_splitmix(&this->mRng);
 }
 
 void EECPLuaState::Write(const char* inText)

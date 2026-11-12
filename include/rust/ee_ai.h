@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The deepest nesting the memory format, the tree -> Lua push and the Lua -> tree conversion take
+/// (`kEECPLuaMaxDepth`).
+constexpr static const size_t MAX_DEPTH = 64;
+
 /// A manifest read: its entries and log lines.
 struct EeAiManifest;
 
@@ -186,6 +190,49 @@ struct EeAiManifestEntry {
   bool fills_garrison;
 };
 
+/// A table key across the C ABI (`EECPLuaKey`).
+struct EeAiLuaKey {
+  uint8_t is_int;
+  int64_t integer;
+  const uint8_t *text;
+  size_t text_len;
+};
+
+/// One C++ value as the accessor fills it: the scalars, and the items' and keys' arrays (the vectors' storage, with
+/// the element sizes).
+struct EeAiLuaNode {
+  uint8_t kind;
+  uint8_t boolean;
+  int64_t integer;
+  const uint8_t *text;
+  size_t text_len;
+  /// an array's items, or a map's fields
+  size_t count;
+  const void *items;
+  size_t item_stride;
+  const void *keys;
+  size_t key_stride;
+};
+
+/// The C++ side's functions over its tree and strings (`EECPLua.cpp`'s `kEECPLuaTreeOps`): read a value or a key,
+/// build a value (set a scalar or an empty container, push an item, add a field: both return the new child), append
+/// bytes to a `std::string`, and read a script for the runtime (the text stays the owner's until `read_done`).
+struct EeAiLuaTreeOps {
+  void (*node)(const void *value, EeAiLuaNode *out);
+  void (*key)(const void *key, EeAiLuaKey *out);
+  void (*set)(void *value,
+              uint8_t kind,
+              uint8_t boolean,
+              int64_t integer,
+              const uint8_t *text,
+              size_t len);
+  void *(*push)(void *array);
+  void *(*field)(void *map, const EeAiLuaKey *key);
+  void (*append)(void *string, const uint8_t *data, size_t len);
+  bool (*read)(void *owner, const char *path, const uint8_t **text, size_t *len);
+  void (*read_done)(void *owner);
+};
+
 extern "C" {
 
 /// The "EENS" block of a state into `out` when `cap` holds it -> the block's length (call with `cap` 0 to size it).
@@ -357,6 +404,37 @@ int64_t ee_ai_names_key_of(const EeAiNames *t, EeAiBytes name);
 /// # Safety
 /// `t` is NULL or a live table, not used after.
 void ee_ai_names_free(EeAiNames *t);
+
+/// `EECPLuaKey::operator<`. Safety: both keys are valid.
+bool ee_ai_lua_key_less(const EeAiLuaKey *a, const EeAiLuaKey *b);
+
+/// `EECPLuaKey::operator==`. Safety: both keys are valid.
+bool ee_ai_lua_key_equal(const EeAiLuaKey *a, const EeAiLuaKey *b);
+
+/// `EECPLuaValue::operator==`. Safety: `ops` is the C++ table, `a` and `b` live values.
+bool ee_ai_lua_value_equal(const EeAiLuaTreeOps *ops, const void *a, const void *b);
+
+/// `EECPLuaValue::ToText`, appended to `out` (a `std::string`). Safety: as above.
+void ee_ai_lua_value_text(const EeAiLuaTreeOps *ops, const void *value, void *out);
+
+/// `EECPLuaEncode`: appends the value's bytes to `out` (a `std::string`). Safety: as above.
+void ee_ai_lua_encode(const EeAiLuaTreeOps *ops, const void *value, void *out);
+
+/// `EECPLuaDecode`: one value from `data[*at..len]`; `*at` advances past it (or to where the error was found). On
+/// success `out` (an `EECPLuaValue`) becomes the value; on a failure it stays as it was and the error is appended
+/// to `error` (a `std::string`). Safety: `data` holds `len` bytes, `*at` is set, `out` and `error` are live.
+bool ee_ai_lua_decode(const EeAiLuaTreeOps *ops,
+                      const uint8_t *data,
+                      size_t len,
+                      size_t *at,
+                      void *out,
+                      void *error);
+
+/// `EECPLuaSeed`.
+uint64_t ee_ai_lua_seed(uint32_t game_seed, uint32_t player);
+
+/// SplitMix64: advances `*state` -> the next output. Safety: `state` is valid.
+uint64_t ee_ai_lua_splitmix(uint64_t *state);
 
 }  // extern "C"
 

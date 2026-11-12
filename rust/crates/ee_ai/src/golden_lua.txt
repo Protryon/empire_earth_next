@@ -1,0 +1,4676 @@
+== part A
+tree 0: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 2987672760437711157
+tree 1: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 10614154748533337427
+tree 2: [" .\xff",true,[{["_\xff\x80Z"]=true}]]
+  bytes 05030000000301000000000000000403000000202eff030200000000000000020303000000000000000501000000030100000000000000050100000004040000005fff805a02
+  dec ok off=70 err=none val=[" .\xff",true,[{["_\xff\x80Z"]=true}]] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=56 err=truncated table val="sentinel"
+  flip fail off=31 err=table keys out of order val="sentinel" same=0
+  more ok off=70 err=none val=[" .\xff",true,[{["_\xff\x80Z"]=true}]] same=1
+  key 0 1 0 1
+  seed 3387096859583761704
+tree 3: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 5870290025914604684
+tree 4: -3859352022317945726
+  bytes 0382ac8d8ec8d370ca
+  dec ok off=9 err=none val=-3859352022317945726 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-3859351945008534398 same=0
+  more ok off=9 err=none val=-3859352022317945726 same=1
+  key 0 1 0 1
+  seed 17382615771945859773
+tree 5: "\x809"
+  bytes 04020000008039
+  dec ok off=7 err=none val="\x809" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="\x809" same=1
+  key 0 1 0 1
+  seed 17704303707671165912
+tree 6: [[{[4]=nil},["a9",nil]," "],false,47]
+  bytes 05030000000301000000000000000503000000030100000000000000050000000003020000000000000005010000000301000000000000000402000000613903030000000000000004010000002003020000000000000001030300000000000000032f00000000000000
+  dec ok off=106 err=none val=[[{},["a9"]," "],false,47] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=20 err=truncated integer val="sentinel"
+  flip ok off=106 err=none val=[[{},["a9"]," "],false,837518622767] same=0
+  more ok off=106 err=none val=[[{},["a9"]," "],false,47] same=0
+  key 0 1 0 1
+  seed 11821377061741178693
+tree 7: "_b"
+  bytes 04020000005f62
+  dec ok off=7 err=none val="_b" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="_b" same=1
+  key 0 1 0 1
+  seed 238545702862066723
+tree 8: "\""
+  bytes 040100000022
+  dec ok off=6 err=none val="\"" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=6 err=none val="\"" same=1
+  key 1 0 0 1
+  seed 11019811171276341658
+tree 9: 1645662489922589373
+  bytes 03bd5205c45091d616
+  dec ok off=9 err=none val=1645662489922589373 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=1645662489922589373 same=1
+  key 1 0 0 1
+  seed 11789832213318520090
+tree 10: 76
+  bytes 034c00000000000000
+  dec ok off=9 err=none val=76 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=30680772461461580 same=0
+  more ok off=9 err=none val=76 same=1
+  key 1 0 0 1
+  seed 13693853316398471810
+tree 11: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 14628987705775438186
+tree 12: 4146481323744460101
+  bytes 03457d9481cb428b39
+  dec ok off=9 err=none val=4146481323744460101 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=4146481422528707909 same=0
+  more ok off=9 err=none val=4146481323744460101 same=1
+  key 1 0 0 1
+  seed 14164613121614372848
+tree 13: "\\"
+  bytes 04010000005c
+  dec ok off=6 err=none val="\\" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=6 err=none val="\\" same=1
+  key 0 1 0 1
+  seed 2326375020848995472
+tree 14: "Zb"
+  bytes 04020000005a62
+  dec ok off=7 err=none val="Zb" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="Zb" same=1
+  key 1 0 0 1
+  seed 12339566712801425435
+tree 15: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 16974146438965580609
+tree 16: {[0]="\xff",["\x80\""]=false}
+  bytes 05020000000300000000000000000401000000ff0402000000802201
+  dec ok off=28 err=none val={[0]="\xff",["\x80\""]=false} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=21 err=truncated string val="sentinel"
+  flip ok off=28 err=none val={[287762808832]="\xff",["\x80\""]=false} same=0
+  more ok off=28 err=none val={[0]="\xff",["\x80\""]=false} same=1
+  key 0 1 0 1
+  seed 12486976488546744539
+tree 17: [-1435519002254148027,"\x80\x80\\\x00"]
+  bytes 050200000003010000000000000003457e51ba120314ec030200000000000000040400000080805c00
+  dec ok off=41 err=none val=[-1435519002254148027,"\x80\x80\\\x00"] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=23 err=truncated val="sentinel"
+  flip fail off=32 err=table keys out of order val="sentinel" same=0
+  more ok off=41 err=none val=[-1435519002254148027,"\x80\x80\\\x00"] same=1
+  key 0 1 0 1
+  seed 4036651275798097476
+tree 18: 9139767867763278183
+  bytes 0367418f7f73fad67e
+  dec ok off=9 err=none val=9139767867763278183 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-155661763129425561 same=0
+  more ok off=9 err=none val=9139767867763278183 same=1
+  key 0 1 0 1
+  seed 5677605183336973663
+tree 19: "9\x00a_"
+  bytes 04040000003900615f
+  dec ok off=9 err=none val="9\x00a_" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=9 err=none val="9\x00/_" same=0
+  more ok off=9 err=none val="9\x00a_" same=1
+  key 0 1 0 1
+  seed 15262262078733188221
+tree 20: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 2073317740864758999
+tree 21: {[-5]=nil}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 13728607203767835205
+tree 22: "\"\xffa"
+  bytes 040300000022ff61
+  dec ok off=8 err=none val="\"\xffa" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="\"5a" same=0
+  more ok off=8 err=none val="\"\xffa" same=1
+  key 1 0 0 1
+  seed 531459450641465408
+tree 23: {[0]=false,["b.\\\""]=1529812639704993126}
+  bytes 0502000000030000000000000000010404000000622e5c220366cd84927dfc3a15
+  dec ok off=33 err=none val={[0]=false,["b.\\\""]=1529812639704993126} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=25 err=truncated integer val="sentinel"
+  flip ok off=33 err=none val={[28587302322176]=false,["b.\\\""]=1529812639704993126} same=0
+  more ok off=33 err=none val={[0]=false,["b.\\\""]=1529812639704993126} same=1
+  key 1 0 0 1
+  seed 6948516714180226133
+tree 24: [".",""]
+  bytes 050200000003010000000000000004010000002e0302000000000000000400000000
+  dec ok off=34 err=none val=[".",""] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=19 err=truncated string val="sentinel"
+  flip ok off=34 err=none val={[1]=".",[3604482]=""} same=0
+  more ok off=34 err=none val=[".",""] same=1
+  key 0 1 0 1
+  seed 290061080815437905
+tree 25: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 11047150559548338706
+tree 26: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1577058304 same=0
+  more ok off=9 err=none val=0 same=1
+  key 1 0 0 1
+  seed 7970800447527093508
+tree 27: 4
+  bytes 030400000000000000
+  dec ok off=9 err=none val=4 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=360287970189639684 same=0
+  more ok off=9 err=none val=4 same=1
+  key 0 1 0 1
+  seed 17411054092649435566
+tree 28: [[]]
+  bytes 05010000000301000000000000000500000000
+  dec ok off=19 err=none val=[{}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip fail off=6 err=unknown tag val="sentinel" same=0
+  more ok off=19 err=none val=[{}] same=0
+  key 0 1 0 1
+  seed 11987119360329362652
+tree 29: 3107922858019666027
+  bytes 036b3894755f8f212b
+  dec ok off=9 err=none val=3107922858019666027 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=3108022913577793643 same=0
+  more ok off=9 err=none val=3107922858019666027 same=1
+  key 0 1 0 1
+  seed 12307732223989918178
+tree 30: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 5347639594394935308
+tree 31: [nil,-9223372036854775808]
+  bytes 0501000000030200000000000000030000000000000080
+  dec ok off=23 err=none val={[2]=-9223372036854775808} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=23 err=none val={[2]=-9223372036854775808} same=0
+  key 0 1 0 1
+  seed 7498306929168203125
+tree 32: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 12200973098940047939
+tree 33: -4191372109531998206
+  bytes 030298ddf14541d5c5
+  dec ok off=9 err=none val=-4191372109531998206 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=4023193610791786498 same=0
+  more ok off=9 err=none val=-4191372109531998206 same=1
+  key 0 1 0 1
+  seed 12790094698286365733
+tree 34: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 5572037242931767642
+tree 35: "\"_"
+  bytes 0402000000225f
+  dec ok off=7 err=none val="\"_" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=7 err=none val="\">" same=0
+  more ok off=7 err=none val="\"_" same=1
+  key 0 1 0 1
+  seed 12233304078068973867
+tree 36: [".\"\"",968785953233694920]
+  bytes 050200000003010000000000000004030000002e222203020000000000000003c8f0e10db1d1710d
+  dec ok off=40 err=none val=[".\"\"",968785953233694920] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=40 err=none val=[".\"\"",968785953224913096] same=0
+  more ok off=40 err=none val=[".\"\"",968785953233694920] same=1
+  key 1 0 0 1
+  seed 3704309617743761918
+tree 37: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 10645689718206354460
+tree 38: {[""]="",[".\xff\x80Z"]=-7229427480071077914}
+  bytes 05020000000400000000040000000004040000002eff805a03e67fea9002eaab9b
+  dec ok off=33 err=none val={[""]="",[".\xff\x80Z"]=-7229427480071077914} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=11 err=truncated string val="sentinel"
+  flip fail off=11 err=unknown tag val="sentinel" same=0
+  more ok off=33 err=none val={[""]="",[".\xff\x80Z"]=-7229427480071077914} same=1
+  key 1 0 0 1
+  seed 12789714506273477496
+tree 39: {[9223372036854775807]=2,["9b"]=nil,["Z\"_"]=[]}
+  bytes 050200000003ffffffffffffff7f03020000000000000004030000005a225f0500000000
+  dec ok off=36 err=none val={[9223372036854775807]=2,["Z\"_"]={}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=32 err=truncated table val="sentinel"
+  flip ok off=36 err=none val={[9223372036854775807]=193514046488578,["Z\"_"]={}} same=0
+  more ok off=36 err=none val={[9223372036854775807]=2,["Z\"_"]={}} same=0
+  key 1 0 0 1
+  seed 11965667226676903242
+tree 40: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 13064950694719675837
+tree 41: -5202512508359896918
+  bytes 03aa90ae0f70f6ccb7
+  dec ok off=9 err=none val=-5202512508359896918 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-5202512508359897018 same=0
+  more ok off=9 err=none val=-5202512508359896918 same=1
+  key 0 1 0 1
+  seed 9841729093225864398
+tree 42: {[""]=7310415705831040750,["._\\Z"]=[],b={[""]=false,[".\\"]=[nil,3],["\xffa\\"]={}}}
+  bytes 0503000000040000000003eee67e2a5ad0736504040000002e5f5c5a0500000000040100000062050300000004000000000104020000002e5c05010000000302000000000000000303000000000000000403000000ff615c0500000000
+  dec ok off=93 err=none val={[""]=7310415705831040750,["._\\Z"]={},b={[""]=false,[".\\"]={[2]=3},["\xffa\\"]={}}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=72 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=93 err=none val={[""]=7310415705831040750,["._\\Z"]={},b={[""]=false,[".\\"]={[2]=3},["\xffa\\"]={}}} same=0
+  key 1 0 0 1
+  seed 2134222402350065870
+tree 43: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 13662293026197509447
+tree 44: [9093686980930403678]
+  bytes 0501000000030100000000000000035e7df3f42044337e
+  dec ok off=23 err=none val=[9093686980930403678] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=23 err=none val=[9093686980930403678] same=1
+  key 0 1 0 1
+  seed 11280036119993422522
+tree 45: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 1463143164851901333
+tree 46: 2197283415303626725
+  bytes 03e59f07e09f517e1e
+  dec ok off=9 err=none val=2197283415303626725 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=2197283415303626710 same=0
+  more ok off=9 err=none val=2197283415303626725 same=1
+  key 0 0 1 1
+  seed 5040125798217831680
+tree 47: {[9223372036854775807]=5089477539606410516,["\x00a_ "]=true,Z=10,_=0}
+  bytes 050400000003ffffffffffffff7f0314b59168db74a146040400000000615f200204010000005a030a0000000000000004010000005f030000000000000000
+  dec ok off=63 err=none val={[9223372036854775807]=5089477539606410516,["\x00a_ "]=true,Z=10,_=0} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=14 err=truncated val="sentinel"
+  flip fail off=53 err=truncated string val="sentinel" same=0
+  more ok off=63 err=none val={[9223372036854775807]=5089477539606410516,["\x00a_ "]=true,Z=10,_=0} same=1
+  key 1 0 0 1
+  seed 13402775321357046645
+tree 48: ". "
+  bytes 04020000002e20
+  dec ok off=7 err=none val=". " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=7 err=none val=". " same=1
+  key 1 0 0 1
+  seed 16289771233602849765
+tree 49: " Zb "
+  bytes 0404000000205a6220
+  dec ok off=9 err=none val=" Zb " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=9 err=none val="\xc9Zb " same=0
+  more ok off=9 err=none val=" Zb " same=1
+  key 1 0 0 1
+  seed 3713674906342227646
+tree 50: -7174569059466170280
+  bytes 0358b002f273cf6e9c
+  dec ok off=9 err=none val=-7174569059466170280 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-7174556964838264744 same=0
+  more ok off=9 err=none val=-7174569059466170280 same=1
+  key 1 0 0 1
+  seed 897511685180679839
+tree 51: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip ok off=1 err=none val=nil same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 15188978267515265006
+tree 52: [true,["",true]]
+  bytes 0502000000030100000000000000020302000000000000000502000000030100000000000000040000000003020000000000000002
+  dec ok off=53 err=none val=[true,["",true]] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=16 err=truncated integer val="sentinel"
+  flip fail off=24 err=table keys out of order val="sentinel" same=0
+  more ok off=53 err=none val=[true,["",true]] same=1
+  key 0 1 0 1
+  seed 13276349086979190537
+tree 53: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 3136283701781829620
+tree 54: {["9\x809"]=[-932716386993677993],["\\Z"]=-780589447860967621}
+  bytes 0502000000040300000039803905010000000301000000000000000357590e4563530ef304020000005c5a033b27d46c08ca2af5
+  dec ok off=52 err=none val={["9\x809"]=[-932716386993677993],["\\Z"]=-780589447860967621} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=19 err=truncated integer val="sentinel"
+  flip ok off=52 err=none val={["9\x809"]={[-1729382256910270463]=-932716386993677993},["\\Z"]=-780589447860967621} same=0
+  more ok off=52 err=none val={["9\x809"]=[-932716386993677993],["\\Z"]=-780589447860967621} same=1
+  key 0 1 0 1
+  seed 6257538523816802237
+tree 55: -9223372036854775808
+  bytes 030000000000000080
+  dec ok off=9 err=none val=-9223372036854775808 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-9223372033281228800 same=0
+  more ok off=9 err=none val=-9223372036854775808 same=1
+  key 0 1 0 1
+  seed 12143240935153010712
+tree 56: "_"
+  bytes 04010000005f
+  dec ok off=6 err=none val="_" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=6 err=none val="_" same=1
+  key 0 1 0 1
+  seed 4205306374651362214
+tree 57: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 6263944126878106427
+tree 58: "9Z"
+  bytes 0402000000395a
+  dec ok off=7 err=none val="9Z" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="9Z" same=1
+  key 0 1 0 1
+  seed 414339874473026426
+tree 59: -7393400968177876850
+  bytes 038e80bac9fd5c6599
+  dec ok off=9 err=none val=-7393400968177876850 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=-7393400968177876850 same=1
+  key 1 0 0 1
+  seed 1737020692562424623
+tree 60: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 9684748112434304771
+tree 61: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 15206194706198369395
+tree 62: {[-9223372036854775808]=-3172430675469554440,[3]=1600901285112103620}
+  bytes 050200000003000000000000008003f8ac15e21b43f9d303030000000000000003c4c292a33c8b3716
+  dec ok off=41 err=none val={[-9223372036854775808]=-3172430675469554440,[3]=1600901285112103620} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=41 err=none val={[-9223372036854775808]=-3172430675456709384,[3]=1600901285112103620} same=0
+  more ok off=41 err=none val={[-9223372036854775808]=-3172430675469554440,[3]=1600901285112103620} same=1
+  key 1 0 0 1
+  seed 10102821563499216666
+tree 63: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 15606841221595358550
+tree 64: " ba"
+  bytes 0403000000206261
+  dec ok off=8 err=none val=" ba" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=8 err=none val=" ba" same=1
+  key 0 1 0 1
+  seed 1790448380874678653
+tree 65: "9"
+  bytes 040100000039
+  dec ok off=6 err=none val="9" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=6 err=none val="9" same=1
+  key 0 1 0 1
+  seed 10610558580874379549
+tree 66: " ."
+  bytes 0402000000202e
+  dec ok off=7 err=none val=" ." same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=7 err=none val=" ." same=1
+  key 1 0 0 1
+  seed 4782982454492031537
+tree 67: {[".\""]=true}
+  bytes 050100000004020000002e2202
+  dec ok off=13 err=none val={[".\""]=true} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated string val="sentinel"
+  flip ok off=13 err=none val={[".\xdd"]=true} same=0
+  more ok off=13 err=none val={[".\""]=true} same=1
+  key 1 0 0 1
+  seed 3070102777638620070
+tree 68: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 4166688760863863437
+tree 69: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=0 same=1
+  key 1 0 0 1
+  seed 9921397264505659005
+tree 70: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 16581336198796658740
+tree 71: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 12730426116367620941
+tree 72: -8307277948710634906
+  bytes 0366baaa30b89eb68c
+  dec ok off=9 err=none val=-8307277948710634906 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-8337958721172096410 same=0
+  more ok off=9 err=none val=-8307277948710634906 same=1
+  key 0 1 0 1
+  seed 8239873392620713584
+tree 73: "\xff_.9"
+  bytes 0404000000ff5f2e39
+  dec ok off=9 err=none val="\xff_.9" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=9 err=none val="\xff_.9" same=1
+  key 0 1 0 1
+  seed 4378446847633961176
+tree 74: {["\\"]=[]}
+  bytes 050100000004010000005c0500000000
+  dec ok off=16 err=none val={["\\"]={}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=12 err=truncated table val="sentinel"
+  flip fail off=10 err=truncated string val="sentinel" same=0
+  more ok off=16 err=none val={["\\"]={}} same=0
+  key 1 0 0 1
+  seed 6427794664811217865
+tree 75: [nil]
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 4899372869200802795
+tree 76: {[" ."]=false,[" \xff"]=false,[".\x00\x00b"]=nil,[".\xff "]=6042170894774834034}
+  bytes 05030000000402000000202e01040200000020ff0104030000002eff20037213427f6a1ada53
+  dec ok off=38 err=none val={[" ."]=false,[" \xff"]=false,[".\xff "]=6042170894774834034} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=14 err=unknown tag val="sentinel" same=0
+  more ok off=38 err=none val={[" ."]=false,[" \xff"]=false,[".\xff "]=6042170894774834034} same=0
+  key 1 0 0 1
+  seed 8803678269399077150
+tree 77: {[-9223372036854775808]=-5,["Z\x00\""]={["\""]={[-5]=nil,[""]=2,Z=nil}},["\x80"]=false}
+  bytes 050300000003000000000000008003fbffffffffffffff04030000005a002205010000000401000000220501000000040000000003020000000000000004010000008001
+  dec ok off=68 err=none val={[-9223372036854775808]=-5,["Z\x00\""]={["\""]={[""]=2}},["\x80"]=false} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip fail off=52 err=truncated string val="sentinel" same=0
+  more ok off=68 err=none val={[-9223372036854775808]=-5,["Z\x00\""]={["\""]={[""]=2}},["\x80"]=false} same=0
+  key 1 0 0 1
+  seed 8612869065376054472
+tree 78: "9\\ "
+  bytes 0403000000395c20
+  dec ok off=8 err=none val="9\\ " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=8 err=none val="9\\ " same=1
+  key 0 1 0 1
+  seed 14465096657173079837
+tree 79: {[2]=nil,[4]="",["b\x00"]=7403306328527777300}
+  bytes 05020000000304000000000000000400000000040200000062000314ae4ca3e1d3bd66
+  dec ok off=35 err=none val={[4]="",["b\x00"]=7403306328527777300} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=26 err=truncated val="sentinel"
+  flip fail off=19 err=truncated string val="sentinel" same=0
+  more ok off=35 err=none val={[4]="",["b\x00"]=7403306328527777300} same=0
+  key 1 0 0 1
+  seed 1760300135034639961
+tree 80: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 3036430786287503082
+tree 81: [nil,{[""]=nil},true]
+  bytes 0502000000030200000000000000050000000003030000000000000002
+  dec ok off=29 err=none val={[2]={},[3]=true} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=28 err=table keys out of order val="sentinel" same=0
+  more ok off=29 err=none val={[2]={},[3]=true} same=0
+  key 0 1 0 1
+  seed 9900030968411785250
+tree 82: "Z 9"
+  bytes 04030000005a2039
+  dec ok off=8 err=none val="Z 9" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="Z \x9d" same=0
+  more ok off=8 err=none val="Z 9" same=1
+  key 1 0 0 1
+  seed 8418757488113274373
+tree 83: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 10985792738487565606
+tree 84: 3
+  bytes 030300000000000000
+  dec ok off=9 err=none val=3 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=22275 same=0
+  more ok off=9 err=none val=3 same=1
+  key 1 0 0 1
+  seed 15602413936654598375
+tree 85: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 6569449905670566432
+tree 86: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 0 1 1
+  seed 7777929619775307059
+tree 87: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 8782715908873066495
+tree 88: 8506534845504324783
+  bytes 03af84c4575f480d76
+  dec ok off=9 err=none val=8506534845504324783 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=291969125180540079 same=0
+  more ok off=9 err=none val=8506534845504324783 same=1
+  key 0 1 0 1
+  seed 10319818699595010226
+tree 89: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 15280204980798590476
+tree 90: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 3982241311844313076
+tree 91: [{},true,nil]
+  bytes 0502000000030100000000000000050000000003020000000000000002
+  dec ok off=29 err=none val=[{},true] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip fail off=15 err=unknown tag val="sentinel" same=0
+  more ok off=29 err=none val=[{},true] same=0
+  key 1 0 0 1
+  seed 790076982045532362
+tree 92: 2
+  bytes 030200000000000000
+  dec ok off=9 err=none val=2 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=42242 same=0
+  more ok off=9 err=none val=2 same=1
+  key 1 0 0 1
+  seed 10788859040950988141
+tree 93: -2361148093836594091
+  bytes 035574c78c51843bdf
+  dec ok off=9 err=none val=-2361148093836594091 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-2361148093836594139 same=0
+  more ok off=9 err=none val=-2361148093836594091 same=1
+  key 0 0 1 1
+  seed 5304207567816361066
+tree 94: {[-1]=false,[3]="\" \\a"}
+  bytes 050200000003ffffffffffffffff01030300000000000000040400000022205c61
+  dec ok off=33 err=none val={[-1]=false,[3]="\" \\a"} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=25 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=33 err=none val={[-1]=false,[3]="\" \\a"} same=1
+  key 1 0 0 1
+  seed 14700100129549396359
+tree 95: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 1130172114249323003
+tree 96: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=432345564227567616 same=0
+  more ok off=9 err=none val=0 same=1
+  key 1 0 0 1
+  seed 11351616818927215787
+tree 97: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 14700631756228542787
+tree 98: [-5400647438985397527,{[9223372036854775807]="___"},nil,-197607087309291973]
+  bytes 050300000003010000000000000003e9fa26a2c40b0db5030200000000000000050100000003ffffffffffffff7f04030000005f5f5f030400000000000000033b7ed4ab66f541fd
+  dec ok off=72 err=none val={[1]=-5400647438985397527,[2]={[9223372036854775807]="___"},[4]=-197607087309291973} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=24 err=truncated integer val="sentinel"
+  flip fail off=32 err=table keys out of order val="sentinel" same=0
+  more ok off=72 err=none val={[1]=-5400647438985397527,[2]={[9223372036854775807]="___"},[4]=-197607087309291973} same=0
+  key 0 0 1 1
+  seed 4247776650450626768
+tree 99: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 5703999050326171626
+tree 100: {["\x809"]=-9223372036854775808}
+  bytes 050100000004020000008039030000000000000080
+  dec ok off=21 err=none val={["\x809"]=-9223372036854775808} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=13 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=21 err=none val={["\x809"]=-9223372036854775808} same=1
+  key 0 1 0 1
+  seed 12852235418656576540
+tree 101: [2,[[],"\x00\x009b"],7933522664711774186,8964053418538377908]
+  bytes 05040000000301000000000000000302000000000000000302000000000000000502000000030100000000000000050000000003020000000000000004040000000000396203030000000000000003eadfa777d488196e03040000000000000003b4229b2f17b7667c
+  dec ok off=105 err=none val=[2,[{},"\x00\x009b"],7933522664711774186,8964053418538377908] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=79 err=truncated integer val="sentinel"
+  flip ok off=105 err=none val=[2,[{},"\x00\x00\xccb"],7933522664711774186,8964053418538377908] same=0
+  more ok off=105 err=none val=[2,[{},"\x00\x009b"],7933522664711774186,8964053418538377908] same=0
+  key 0 1 0 1
+  seed 943481994770303018
+tree 102: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 15712650170161614058
+tree 103: [[nil,[]]]
+  bytes 050100000003010000000000000005010000000302000000000000000500000000
+  dec ok off=33 err=none val=[{[2]={}}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=33 err=none val=[{[2]={}}] same=0
+  key 0 1 0 1
+  seed 4848410494500228723
+tree 104: [-5957439082859686713,false,"a.\\a",-705141931989888479]
+  bytes 050400000003010000000000000003c7941ecfb7ec52ad030200000000000000010303000000000000000404000000612e5c61030400000000000000032192821b26d536f6
+  dec ok off=69 err=none val=[-5957439082859686713,false,"a.\\a",-705141931989888479] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=51 err=truncated val="sentinel"
+  flip fail off=6 err=unknown tag val="sentinel" same=0
+  more ok off=69 err=none val=[-5957439082859686713,false,"a.\\a",-705141931989888479] same=1
+  key 1 0 0 1
+  seed 5838404890036468427
+tree 105: 10
+  bytes 030a00000000000000
+  dec ok off=9 err=none val=10 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=177021372071946 same=0
+  more ok off=9 err=none val=10 same=1
+  key 1 0 0 1
+  seed 11383708818492840028
+tree 106: "a_"
+  bytes 0402000000615f
+  dec ok off=7 err=none val="a_" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="a_" same=1
+  key 1 0 0 1
+  seed 4082836041017972077
+tree 107: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 4959307096256451184
+tree 108: 35
+  bytes 032300000000000000
+  dec ok off=9 err=none val=35 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=35 same=1
+  key 0 1 0 1
+  seed 16179702926245704492
+tree 109: 7043151756510404592
+  bytes 03f09ff8d1344dbe61
+  dec ok off=9 err=none val=7043151756510404592 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=7043151756510404599 same=0
+  more ok off=9 err=none val=7043151756510404592 same=1
+  key 0 0 1 1
+  seed 7290251284419811265
+tree 110: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 10325722682299587824
+tree 111: 4
+  bytes 030400000000000000
+  dec ok off=9 err=none val=4 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=678604832772 same=0
+  more ok off=9 err=none val=4 same=1
+  key 0 1 0 1
+  seed 8218821157170588531
+tree 112: {["_.\xff"]=nil}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 16533961409369578980
+tree 113: [nil,3703054691134313144]
+  bytes 050100000003020000000000000003b892e7389fe46333
+  dec ok off=23 err=none val={[2]=3703054691134313144} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=15 err=unknown tag val="sentinel" same=0
+  more ok off=23 err=none val={[2]=3703054691134313144} same=0
+  key 0 1 0 1
+  seed 9290588105788722682
+tree 114: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 13245540940354453723
+tree 115: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 10255816974603807677
+tree 116: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=1 err=none val=false same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 16099326792650116094
+tree 117: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 0 1 1
+  seed 5178727671407285086
+tree 118: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 12277001996013221463
+tree 119: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 12301767538989767188
+tree 120: 9004739761398128708
+  bytes 0344a0f8941a43f77c
+  dec ok off=9 err=none val=9004739761398128708 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9004739761398104132 same=0
+  more ok off=9 err=none val=9004739761398128708 same=1
+  key 1 0 0 1
+  seed 14372592012941659097
+tree 121: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 9285582118907579983
+tree 122: "\"\""
+  bytes 04020000002222
+  dec ok off=7 err=none val="\"\"" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val="\"\"" same=1
+  key 0 1 0 1
+  seed 5231659764101826849
+tree 123: "Z\x00."
+  bytes 04030000005a002e
+  dec ok off=8 err=none val="Z\x00." same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="Z\x00\x02" same=0
+  more ok off=8 err=none val="Z\x00." same=1
+  key 0 1 0 1
+  seed 4418641076656696835
+tree 124: 3
+  bytes 030300000000000000
+  dec ok off=9 err=none val=3 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=92 same=0
+  more ok off=9 err=none val=3 same=1
+  key 0 1 0 1
+  seed 11238730761916573038
+tree 125: 3411360308791107019
+  bytes 03cb5d5c6e2096572f
+  dec ok off=9 err=none val=3411360308791107019 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=3411361051820449227 same=0
+  more ok off=9 err=none val=3411360308791107019 same=1
+  key 1 0 0 1
+  seed 6012723888298778140
+tree 126: -1
+  bytes 03ffffffffffffffff
+  dec ok off=9 err=none val=-1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=-218802813927425 same=0
+  more ok off=9 err=none val=-1 same=1
+  key 0 1 0 1
+  seed 13228098167198823601
+tree 127: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 2805174605100684529
+tree 128: -4974038950866430312
+  bytes 039856a682eda9f8ba
+  dec ok off=9 err=none val=-4974038950866430312 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=-4974038950866430312 same=1
+  key 0 1 0 1
+  seed 10529862799724949817
+tree 129: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 7165917704538309416
+tree 130: -9223372036854775808
+  bytes 030000000000000080
+  dec ok off=9 err=none val=-9223372036854775808 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-9167921466442776576 same=0
+  more ok off=9 err=none val=-9223372036854775808 same=1
+  key 1 0 0 1
+  seed 6555597501948384708
+tree 131: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 11522052284979062420
+tree 132: "Z\"\\b"
+  bytes 04040000005a225c62
+  dec ok off=9 err=none val="Z\"\\b" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=9 err=none val="Z\"\\b" same=1
+  key 1 0 0 1
+  seed 9821271518831340544
+tree 133: [nil]
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 11000480527856646223
+tree 134: [nil,{[-9223372036854775808]=nil,[3]="._\\",_=[-1,nil,"_",nil],["\xff"]=-2006484905653859066},3]
+  bytes 0502000000030200000000000000050300000003030000000000000004030000002e5f5c04010000005f050200000003010000000000000003ffffffffffffffff03030000000000000004010000005f0401000000ff03068d51ef9b8827e4030300000000000000030300000000000000
+  dec ok off=113 err=none val={[2]={[3]="._\\",_={[1]=-1,[3]="_"},["\xff"]=-2006484905653859066},[3]=3} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=104 err=truncated val="sentinel"
+  flip ok off=113 err=none val={[2]={[3]="._\\",_={[1]=-1,[3]="_"},["\xff"]=-2006484905855185658},[3]=3} same=0
+  more ok off=113 err=none val={[2]={[3]="._\\",_={[1]=-1,[3]="_"},["\xff"]=-2006484905653859066},[3]=3} same=0
+  key 0 1 0 1
+  seed 13195082932655204060
+tree 135: {[""]="",["9 9"]="\xff\x80"}
+  bytes 05020000000400000000040000000004030000003920390402000000ff80
+  dec ok off=30 err=none val={[""]="",["9 9"]="\xff\x80"} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=11 err=truncated string val="sentinel"
+  flip fail off=15 err=truncated string val="sentinel" same=0
+  more ok off=30 err=none val={[""]="",["9 9"]="\xff\x80"} same=1
+  key 0 1 0 1
+  seed 16332090214836407058
+tree 136: {[91]={[10]=40},["\x00\x80"]=nil,["Z.b "]=-8459015969237619613,["\\9\x80"]=true}
+  bytes 0503000000035b000000000000000501000000030a0000000000000003280000000000000004040000005a2e622003632c3c34cb899b8a04030000005c398002
+  dec ok off=64 err=none val={[91]={[10]=40},["Z.b "]=-8459015969237619613,["\\9\x80"]=true} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=14 err=truncated val="sentinel"
+  flip ok off=64 err=none val={[91]={[10]=187},["Z.b "]=-8459015969237619613,["\\9\x80"]=true} same=0
+  more ok off=64 err=none val={[91]={[10]=40},["Z.b "]=-8459015969237619613,["\\9\x80"]=true} same=0
+  key 0 1 0 1
+  seed 1353370579899982668
+tree 137: [-5,nil]
+  bytes 050100000003010000000000000003fbffffffffffffff
+  dec ok off=23 err=none val=[-5] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=23 err=none val={[90194313217]=-5} same=0
+  more ok off=23 err=none val=[-5] same=0
+  key 0 1 0 1
+  seed 3295002844331464394
+tree 138: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 675785189742545269
+tree 139: [nil,false,"\x80"]
+  bytes 050200000003020000000000000001030300000000000000040100000080
+  dec ok off=30 err=none val={[2]=false,[3]="\x80"} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=25 err=truncated string val="sentinel"
+  flip fail off=16 err=unknown tag val="sentinel" same=0
+  more ok off=30 err=none val={[2]=false,[3]="\x80"} same=0
+  key 0 1 0 1
+  seed 11656105309372244448
+tree 140: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 16663124355120302768
+tree 141: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 7870738607507788421
+tree 142: [true,699878573818948920,nil,4]
+  bytes 0503000000030100000000000000020302000000000000000338ad62d2da77b609030400000000000000030400000000000000
+  dec ok off=51 err=none val={[1]=true,[2]=699878573818948920,[4]=4} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=25 err=truncated integer val="sentinel"
+  flip fail off=6 err=unknown tag val="sentinel" same=0
+  more ok off=51 err=none val={[1]=true,[2]=699878573818948920,[4]=4} same=0
+  key 0 1 0 1
+  seed 13417430576973642197
+tree 143: 21
+  bytes 031500000000000000
+  dec ok off=9 err=none val=21 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-2449958197289549803 same=0
+  more ok off=9 err=none val=21 same=1
+  key 1 0 0 1
+  seed 14604048135800963372
+tree 144: {[6]=nil,["Z\x00_a"]=true,["\\\\aZ"]=8415850894420855192,["\\\xff9"]=3291356813962789321}
+  bytes 050300000004040000005a005f610204040000005c5c615a0398c99ba4cc1bcb7404030000005cff3903c941507d953fad2d
+  dec ok off=50 err=none val={["Z\x00_a"]=true,["\\\\aZ"]=8415850894420855192,["\\\xff9"]=3291356813962789321} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=42 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=50 err=none val={["Z\x00_a"]=true,["\\\\aZ"]=8415850894420855192,["\\\xff9"]=3291356813962789321} same=0
+  key 1 0 0 1
+  seed 17664406606223033733
+tree 145: [-9223372036854775808,true,"",{}]
+  bytes 05040000000301000000000000000300000000000000800302000000000000000203030000000000000004000000000304000000000000000500000000
+  dec ok off=61 err=none val=[-9223372036854775808,true,"",{}] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=57 err=truncated table val="sentinel"
+  flip ok off=61 err=none val={[1]=-9223372036854775808,[2]=true,[3]="",[102]={}} same=0
+  more ok off=61 err=none val=[-9223372036854775808,true,"",{}] same=1
+  key 0 1 0 1
+  seed 6564959671413417515
+tree 146: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 5135272919132174686
+tree 147: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 15187562027378572461
+tree 148: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 3626596895279107979
+tree 149: "a\x00."
+  bytes 040300000061002e
+  dec ok off=8 err=none val="a\x00." same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=8 err=none val="a\x00." same=1
+  key 0 1 0 1
+  seed 12179617907406194156
+tree 150: -5
+  bytes 03fbffffffffffffff
+  dec ok off=9 err=none val=-5 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-59373627899909 same=0
+  more ok off=9 err=none val=-5 same=1
+  key 0 1 0 1
+  seed 11103622554925369934
+tree 151: -3297663312000209165
+  bytes 03f3ae6383b0583cd2
+  dec ok off=9 err=none val=-3297663312000209165 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-3255160590516900109 same=0
+  more ok off=9 err=none val=-3297663312000209165 same=1
+  key 1 0 0 1
+  seed 10762465936649389417
+tree 152: 6725598818058372579
+  bytes 03e30528c47d20565d
+  dec ok off=9 err=none val=6725598818058372579 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=6725598818058372559 same=0
+  more ok off=9 err=none val=6725598818058372579 same=1
+  key 0 1 0 1
+  seed 3598048833978857633
+tree 153: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 3015984530036609774
+tree 154: 4
+  bytes 030400000000000000
+  dec ok off=9 err=none val=4 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=5380 same=0
+  more ok off=9 err=none val=4 same=1
+  key 0 1 0 1
+  seed 14949852259429360908
+tree 155: 1956344873934470454
+  bytes 03363d05354c55261b
+  dec ok off=9 err=none val=1956344873934470454 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1956344876685933878 same=0
+  more ok off=9 err=none val=1956344873934470454 same=1
+  key 1 0 0 1
+  seed 7627574585307336512
+tree 156: ".."
+  bytes 04020000002e2e
+  dec ok off=7 err=none val=".." same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val=".." same=1
+  key 0 1 0 1
+  seed 16840631967341126971
+tree 157: [false,-1681659793095013038]
+  bytes 0502000000030100000000000000010302000000000000000352cd83f7538ba9e8
+  dec ok off=33 err=none val=[false,-1681659793095013038] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=25 err=truncated integer val="sentinel"
+  flip ok off=33 err=none val={[1]=false,[844424930131970]=-1681659793095013038} same=0
+  more ok off=33 err=none val=[false,-1681659793095013038] same=1
+  key 0 1 0 1
+  seed 13159235307733802604
+tree 158: {[-5]=[],[-1]=false,["\xffb"]={[-9223372036854775808]=0,[4]=52,[9223372036854775807]={[2]=nil,["9\xff\\"]=9223372036854775807}}}
+  bytes 050300000003fbffffffffffffff050000000003ffffffffffffffff010402000000ff62050300000003000000000000008003000000000000000003040000000000000003340000000000000003ffffffffffffff7f0501000000040300000039ff5c03ffffffffffffff7f
+  dec ok off=108 err=none val={[-5]={},[-1]=false,["\xffb"]={[-9223372036854775808]=0,[4]=52,[9223372036854775807]={["9\xff\\"]=9223372036854775807}}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=41 err=truncated table val="sentinel"
+  flip ok off=108 err=none val={[-5]={},[-1]=false,["\xffb"]={[-9223372036854775808]=2550136832,[4]=52,[9223372036854775807]={["9\xff\\"]=9223372036854775807}}} same=0
+  more ok off=108 err=none val={[-5]={},[-1]=false,["\xffb"]={[-9223372036854775808]=0,[4]=52,[9223372036854775807]={["9\xff\\"]=9223372036854775807}}} same=0
+  key 1 0 0 1
+  seed 6810952966715165092
+tree 159: "\x80"
+  bytes 040100000080
+  dec ok off=6 err=none val="\x80" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=6 err=none val="\x80" same=1
+  key 1 0 0 1
+  seed 13513974807388033308
+tree 160: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 430245709347434390
+tree 161: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 435099490335890521
+tree 162: [6135135726775355366,true,-1481639964513680471,"\"a.\\"]
+  bytes 050400000003010000000000000003e6c7402b706124550302000000000000000203030000000000000003a9c323664d2870eb030400000000000000040400000022612e5c
+  dec ok off=69 err=none val=[6135135726775355366,true,-1481639964513680471,"\"a.\\"] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=69 err=none val={[1]=6135135726775355366,[2]=true,[3]=-1481639964513680471,[4467570830351532036]="\"a.\\"} same=0
+  more ok off=69 err=none val=[6135135726775355366,true,-1481639964513680471,"\"a.\\"] same=1
+  key 0 1 0 1
+  seed 14033755105554108418
+tree 163: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=146028888064 same=0
+  more ok off=9 err=none val=0 same=1
+  key 0 1 0 1
+  seed 1154770249562736898
+tree 164: {[""]=4141773264443244125,["\"Z\x809"]="\"\"",[".b\""]=-7660377939449508532,["\x80.\""]=[-85873001702102049,7399385818454332115]}
+  bytes 05040000000400000000035d7e5907d7887a390404000000225a80390402000000222204030000002e6222034c8ddfb9d9deb0950403000000802e22050200000003010000000000000003dfebbfbdf5eacefe03020000000000000003d39208c132e6af66
+  dec ok off=101 err=none val={[""]=4141773264443244125,["\"Z\x809"]="\"\"",[".b\""]=-7660377939449508532,["\x80.\""]=[-85873001702102049,7399385818454332115]} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=65 err=truncated table val="sentinel"
+  flip ok off=101 err=none val={[""]=4141773264443244125,["\"Z\x049"]="\"\"",[".b\""]=-7660377939449508532,["\x80.\""]=[-85873001702102049,7399385818454332115]} same=0
+  more ok off=101 err=none val={[""]=4141773264443244125,["\"Z\x809"]="\"\"",[".b\""]=-7660377939449508532,["\x80.\""]=[-85873001702102049,7399385818454332115]} same=1
+  key 1 0 0 1
+  seed 13129170762101831555
+tree 165: {[0]=nil,[10]=-8946959037230392671,[""]=9223372036854775807,["\" \x00"]=2}
+  bytes 0503000000030a0000000000000003a15ae99d2804d683040000000003ffffffffffffff7f0403000000222000030200000000000000
+  dec ok off=54 err=none val={[10]=-8946959037230392671,[""]=9223372036854775807,["\" \x00"]=2} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=54 err=none val={[10]=-8946959037230392671,[""]=9223225801808281599,["\" \x00"]=2} same=0
+  more ok off=54 err=none val={[10]=-8946959037230392671,[""]=9223372036854775807,["\" \x00"]=2} same=0
+  key 0 1 0 1
+  seed 11790477949103015245
+tree 166: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 16492506654040669470
+tree 167: "b"
+  bytes 040100000062
+  dec ok off=6 err=none val="b" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=6 err=none val="b" same=1
+  key 0 1 0 1
+  seed 792991987094371121
+tree 168: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 16010601698002028526
+tree 169: ["a\"\\"]
+  bytes 0501000000030100000000000000040300000061225c
+  dec ok off=22 err=none val=["a\"\\"] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=22 err=none val=["\xd9\"\\"] same=0
+  more ok off=22 err=none val=["a\"\\"] same=1
+  key 0 1 0 1
+  seed 6062039157872926758
+tree 170: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 13675144003891425783
+tree 171: "\xffba"
+  bytes 0403000000ff6261
+  dec ok off=8 err=none val="\xffba" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=8 err=none val="\xffba" same=1
+  key 0 1 0 1
+  seed 8165066554418944230
+tree 172: ["\xff",59,-2550182460402954275]
+  bytes 05030000000301000000000000000401000000ff030200000000000000033b0000000000000003030000000000000003dd0f404f90ee9bdc
+  dec ok off=56 err=none val=["\xff",59,-2550182460402954275] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=39 err=truncated integer val="sentinel"
+  flip ok off=56 err=none val=["\xff",721420347,-2550182460402954275] same=0
+  more ok off=56 err=none val=["\xff",59,-2550182460402954275] same=1
+  key 0 1 0 1
+  seed 7808486895421069525
+tree 173: -8500592486650463016
+  bytes 03d83cd8e42bd4078a
+  dec ok off=9 err=none val=-8500592486650463016 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-8455275015400047400 same=0
+  more ok off=9 err=none val=-8500592486650463016 same=1
+  key 0 1 0 1
+  seed 5534304284950942009
+tree 174: "\\"
+  bytes 04010000005c
+  dec ok off=6 err=none val="\\" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=6 err=none val="\xa1" same=0
+  more ok off=6 err=none val="\\" same=1
+  key 0 1 0 1
+  seed 6684548997778363450
+tree 175: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 0 1 1
+  seed 977275250940558089
+tree 176: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 2328732589485267120
+tree 177: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 14020878331193876173
+tree 178: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 4536899402113929491
+tree 179: [3196873219812051460]
+  bytes 050100000003010000000000000003044adb7241935d2c
+  dec ok off=23 err=none val=[3196873219812051460] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated integer val="sentinel"
+  flip ok off=23 err=none val=[3230087267063908868] same=0
+  more ok off=23 err=none val=[3196873219812051460] same=1
+  key 0 1 0 1
+  seed 13560631301498316424
+tree 180: "\x00b\\"
+  bytes 040300000000625c
+  dec ok off=8 err=none val="\x00b\\" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="\x00\xf6\\" same=0
+  more ok off=8 err=none val="\x00b\\" same=1
+  key 1 0 0 1
+  seed 4226398540009816942
+tree 181: -5628348235530620850
+  bytes 034e30009d1917e4b1
+  dec ok off=9 err=none val=-5628348235530620850 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-5628348235530620912 same=0
+  more ok off=9 err=none val=-5628348235530620850 same=1
+  key 1 0 0 1
+  seed 938880296992096697
+tree 182: 2421837208049527533
+  bytes 03edaa9df91b189c21
+  dec ok off=9 err=none val=2421837208049527533 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=2412548533818075885 same=0
+  more ok off=9 err=none val=2421837208049527533 same=1
+  key 1 0 0 1
+  seed 13741338264320879634
+tree 183: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1358954496 same=0
+  more ok off=9 err=none val=0 same=1
+  key 0 1 0 1
+  seed 1414452052658862306
+tree 184: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 3278799384474125357
+tree 185: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 17984499579694108566
+tree 186: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 16845939583043388300
+tree 187: 2
+  bytes 030200000000000000
+  dec ok off=9 err=none val=2 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=43010 same=0
+  more ok off=9 err=none val=2 same=1
+  key 1 0 0 1
+  seed 3488967814458385804
+tree 188: {[-5]={[""]=6874496921595384644,[" 9\x80"]=[],["\xffa "]=true},[-1]=10,[3]=false,[""]=-5}
+  bytes 050400000003fbffffffffffffff05030000000400000000034493350d871e675f040300000020398005000000000403000000ff61200203ffffffffffffffff030a0000000000000003030000000000000001040000000003fbffffffffffffff
+  dec ok off=97 err=none val={[-5]={[""]=6874496921595384644,[" 9\x80"]={},["\xffa "]=true},[-1]=10,[3]=false,[""]=-5} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=51 err=truncated string val="sentinel"
+  flip fail off=47 err=unknown tag val="sentinel" same=0
+  more ok off=97 err=none val={[-5]={[""]=6874496921595384644,[" 9\x80"]={},["\xffa "]=true},[-1]=10,[3]=false,[""]=-5} same=0
+  key 1 0 0 1
+  seed 14999208753490072001
+tree 189: {[".9 "]=[[58,-1,nil,"\\a.\xff"],3,{[-5]=true,["9"]=-5726537599354448418},2]}
+  bytes 050100000004030000002e392005040000000301000000000000000503000000030100000000000000033a0000000000000003020000000000000003ffffffffffffffff03040000000000000004040000005c612eff030200000000000000030300000000000000030300000000000000050200000003fbffffffffffffff0204010000003903de558fd5644087b0030400000000000000030200000000000000
+  dec ok off=161 err=none val={[".9 "]=[{[1]=58,[2]=-1,[4]="\\a.\xff"},3,{[-5]=true,["9"]=-5726537599354448418},2]} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=78 err=truncated string val="sentinel"
+  flip ok off=20 err=none val={[".9 \x05\x04\x00\x00\x00\x03"]=false} same=0
+  more ok off=161 err=none val={[".9 "]=[{[1]=58,[2]=-1,[4]="\\a.\xff"},3,{[-5]=true,["9"]=-5726537599354448418},2]} same=0
+  key 1 0 0 1
+  seed 8039915810011886969
+tree 190: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 6853150333948344482
+tree 191: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 13613886292224011168
+tree 192: 9223372036854775807
+  bytes 03ffffffffffffff7f
+  dec ok off=9 err=none val=9223372036854775807 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9223372036854772991 same=0
+  more ok off=9 err=none val=9223372036854775807 same=1
+  key 0 1 0 1
+  seed 2396657324124095062
+tree 193: -3120144275170815462
+  bytes 031a92791e5005b3d4
+  dec ok off=9 err=none val=-3120144275170815462 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=-3119925472356888038 same=0
+  more ok off=9 err=none val=-3120144275170815462 same=1
+  key 1 0 0 1
+  seed 17859718848596800243
+tree 194: 9020206071604709785
+  bytes 039909d28aa1352e7d
+  dec ok off=9 err=none val=9020206071604709785 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9057923718483937689 same=0
+  more ok off=9 err=none val=9020206071604709785 same=1
+  key 0 1 0 1
+  seed 12321843187487999049
+tree 195: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 15871240745240351530
+tree 196: [[4146464484608079398]]
+  bytes 05010000000301000000000000000501000000030100000000000000032676d6d67a338b39
+  dec ok off=37 err=none val=[[4146464484608079398]] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=20 err=truncated integer val="sentinel"
+  flip fail off=19 err=truncated table val="sentinel" same=0
+  more ok off=37 err=none val=[[4146464484608079398]] same=1
+  key 1 0 0 1
+  seed 14501758875851815670
+tree 197: [nil,"._\x80"]
+  bytes 050100000003020000000000000004030000002e5f80
+  dec ok off=22 err=none val={[2]="._\x80"} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=14 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=22 err=none val={[2]="._\x80"} same=0
+  key 1 0 0 1
+  seed 14252543452343334134
+tree 198: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 12065231687417113923
+tree 199: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 989414594753881258
+tree 200: -5206749482614872442
+  bytes 0386a64a9eeee8bdb7
+  dec ok off=9 err=none val=-5206749482614872442 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=-5235178455262648698 same=0
+  more ok off=9 err=none val=-5206749482614872442 same=1
+  key 0 1 0 1
+  seed 13280351338165378969
+tree 201: {[9223372036854775807]=false,[""]=1315185003130955713,[" "]=nil}
+  bytes 050200000003ffffffffffffff7f01040000000003c1a78acdca794012
+  dec ok off=29 err=none val={[9223372036854775807]=false,[""]=1315185003130955713} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=21 err=truncated integer val="sentinel"
+  flip ok off=29 err=none val={[9223372036854775807]=false,[""]=1315185003127809985} same=0
+  more ok off=29 err=none val={[9223372036854775807]=false,[""]=1315185003130955713} same=0
+  key 1 0 0 1
+  seed 11125762765237034773
+tree 202: [{[9223372036854775807]={[3]=4322975292898793199,[""]=false,["9b"]=nil,["\x8099\\"]=-5927080369811439196},a=nil}]
+  bytes 0501000000030100000000000000050100000003ffffffffffffff7f050300000003030000000000000003efd605f21f4bfe3b04000000000104040000008039395c03a4c13282cec7bead
+  dec ok off=75 err=none val=[{[9223372036854775807]={[3]=4322975292898793199,[""]=false,["\x8099\\"]=-5927080369811439196}}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=58 err=truncated string val="sentinel"
+  flip ok off=75 err=none val=[{[9223372036854775807]={[3]=4322998382642976495,[""]=false,["\x8099\\"]=-5927080369811439196}}] same=0
+  more ok off=75 err=none val=[{[9223372036854775807]={[3]=4322975292898793199,[""]=false,["\x8099\\"]=-5927080369811439196}}] same=0
+  key 0 1 0 1
+  seed 5150281698321751521
+tree 203: {[4]=[false,-324369486108051000,nil,-8703016558218983680],[""]=-1,[". "]=nil,["\xff"]=-1034590832979469983}
+  bytes 050300000003040000000000000005030000000301000000000000000103020000000000000003c8b98dc4ab9b7ffb0304000000000000000300c703058dac3887040000000003ffffffffffffffff0401000000ff03611962701e65a4f1
+  dec ok off=94 err=none val={[4]={[1]=false,[2]=-324369486108051000,[4]=-8703016558218983680},[""]=-1,["\xff"]=-1034590832979469983} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=48 err=truncated integer val="sentinel"
+  flip fail off=56 err=table keys out of order val="sentinel" same=0
+  more ok off=94 err=none val={[4]={[1]=false,[2]=-324369486108051000,[4]=-8703016558218983680},[""]=-1,["\xff"]=-1034590832979469983} same=0
+  key 0 1 0 1
+  seed 9230986232410323659
+tree 204: {[-5]=nil,[9223372036854775807]=nil,_a=true,["\xff\x80"]=-5815121032384642110}
+  bytes 050200000004020000005f61020402000000ff8003c283cf1a3b8a4caf
+  dec ok off=29 err=none val={_a=true,["\xff\x80"]=-5815121032384642110} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=18 err=truncated string val="sentinel" same=0
+  more ok off=29 err=none val={_a=true,["\xff\x80"]=-5815121032384642110} same=0
+  key 0 1 0 1
+  seed 14249453404408469480
+tree 205: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 18081348714204516482
+tree 206: 4032937079814780161
+  bytes 030175dc1be8def737
+  dec ok off=9 err=none val=4032937079814780161 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=4032937079814780228 same=0
+  more ok off=9 err=none val=4032937079814780161 same=1
+  key 0 1 0 1
+  seed 3432585957046537973
+tree 207: {["\"\xff_"]="\xff \xff\""}
+  bytes 0501000000040300000022ff5f0404000000ff20ff22
+  dec ok off=22 err=none val={["\"\xff_"]="\xff \xff\""} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip ok off=22 err=none val={["\xc3\xff_"]="\xff \xff\""} same=0
+  more ok off=22 err=none val={["\"\xff_"]="\xff \xff\""} same=1
+  key 0 1 0 1
+  seed 11396033110326243973
+tree 208: 3611398426060152016
+  bytes 03d05cb807bc431e32
+  dec ok off=9 err=none val=3611398426060152016 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=3611398426060150992 same=0
+  more ok off=9 err=none val=3611398426060152016 same=1
+  key 1 0 0 1
+  seed 16920248825840707916
+tree 209: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 11652840672484856142
+tree 210: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 9728706285781167550
+tree 211: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 5871943186162535391
+tree 212: {["\x00_"]=nil,["\""]=9223372036854775807}
+  bytes 050100000004010000002203ffffffffffffff7f
+  dec ok off=20 err=none val={["\""]=9223372036854775807} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=12 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=20 err=none val={["\""]=9223372036854775807} same=0
+  key 0 1 0 1
+  seed 5965447548351631485
+tree 213: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=43009 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 2657224206503847657
+tree 214: "\x00\"\\"
+  bytes 040300000000225c
+  dec ok off=8 err=none val="\x00\"\\" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=8 err=none val="\x00\"\\" same=1
+  key 0 1 0 1
+  seed 250206232428274398
+tree 215: 5815912873794926437
+  bytes 0365f72ad7f145b650
+  dec ok off=9 err=none val=5815912873794926437 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=5808031574447028069 same=0
+  more ok off=9 err=none val=5815912873794926437 same=1
+  key 0 1 0 1
+  seed 1745183169353106249
+tree 216: -4897275261841312224
+  bytes 0320f6a3a2186209bc
+  dec ok off=9 err=none val=-4897275261841312224 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-4897275261841374688 same=0
+  more ok off=9 err=none val=-4897275261841312224 same=1
+  key 1 0 0 1
+  seed 2118478986024975808
+tree 217: -178947290518904428
+  bytes 0394211a2b634084fd
+  dec ok off=9 err=none val=-178947290518904428 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-178947290509139564 same=0
+  more ok off=9 err=none val=-178947290518904428 same=1
+  key 0 1 0 1
+  seed 8650021877850998678
+tree 218: "\"9\xff\x80"
+  bytes 04040000002239ff80
+  dec ok off=9 err=none val="\"9\xff\x80" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=9 err=none val="\xee9\xff\x80" same=0
+  more ok off=9 err=none val="\"9\xff\x80" same=1
+  key 1 0 0 1
+  seed 16899035115249341162
+tree 219: -8051527046892399416
+  bytes 03c8548746cf3a4390
+  dec ok off=9 err=none val=-8051527046892399416 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-8051527300295469880 same=0
+  more ok off=9 err=none val=-8051527046892399416 same=1
+  key 0 1 0 1
+  seed 2242393716229961939
+tree 220: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 17758990507380106381
+tree 221: {[0]=1861861362944416607,[" Z"]="\\",["\x809\\"]=1}
+  bytes 0503000000030000000000000000035f9b53870ba9d6190402000000205a04010000005c040300000080395c030100000000000000
+  dec ok off=53 err=none val={[0]=1861861362944416607,[" Z"]="\\",["\x809\\"]=1} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated integer val="sentinel"
+  flip fail off=31 err=unknown tag val="sentinel" same=0
+  more ok off=53 err=none val={[0]=1861861362944416607,[" Z"]="\\",["\x809\\"]=1} same=1
+  key 0 0 1 1
+  seed 4507245685992213144
+tree 222: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 12467351307067590533
+tree 223: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=1 err=none val=true same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 12344295779635756005
+tree 224: {[4]=[nil,true,5821175563449938645],[5]={[1]={[1]=" Z\x00\""},[""]=2},["\\Z"]=".a\x00."}
+  bytes 050300000003040000000000000005020000000302000000000000000203030000000000000003d5329e4255f8c850030500000000000000050200000003010000000000000005010000000301000000000000000404000000205a0022040000000003020000000000000004020000005c5a04040000002e61002e
+  dec ok off=123 err=none val={[4]={[2]=true,[3]=5821175563449938645},[5]={[1]=[" Z\x00\""],[""]=2},["\\Z"]=".a\x00."} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=99 err=truncated integer val="sentinel"
+  flip ok off=123 err=none val={[4]={[2]=true,[3]=5821175563449938645},[5893]={[1]=[" Z\x00\""],[""]=2},["\\Z"]=".a\x00."} same=0
+  more ok off=123 err=none val={[4]={[2]=true,[3]=5821175563449938645},[5]={[1]=[" Z\x00\""],[""]=2},["\\Z"]=".a\x00."} same=0
+  key 1 0 0 1
+  seed 12792119726128467470
+tree 225: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 6325683167666373998
+tree 226: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-432345564227567616 same=0
+  more ok off=9 err=none val=0 same=1
+  key 1 0 0 1
+  seed 10423302018722668369
+tree 227: [2351821943507345630,nil]
+  bytes 050100000003010000000000000003de60b9dd9859a320
+  dec ok off=23 err=none val=[2351821943507345630] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=23 err=none val={[781684047873]=2351821943507345630} same=0
+  more ok off=23 err=none val=[2351821943507345630] same=0
+  key 1 0 0 1
+  seed 11831112665301819979
+tree 228: -9223372036854775808
+  bytes 030000000000000080
+  dec ok off=9 err=none val=-9223372036854775808 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-9223371491393929216 same=0
+  more ok off=9 err=none val=-9223372036854775808 same=1
+  key 0 1 0 1
+  seed 6638426188303344211
+tree 229: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 4802536859995290436
+tree 230: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 16742060513445529874
+tree 231: -5
+  bytes 03fbffffffffffffff
+  dec ok off=9 err=none val=-5 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-6149 same=0
+  more ok off=9 err=none val=-5 same=1
+  key 0 1 0 1
+  seed 16217244761817272670
+tree 232: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 13932033617286733758
+tree 233: [[false,"b\x80\xff","_\\9"],nil,-4803139025102127923]
+  bytes 050200000003010000000000000005030000000301000000000000000103020000000000000004030000006280ff03030000000000000004030000005f5c3903030000000000000003cdbcf83981d257bd
+  dec ok off=81 err=none val={[1]=[false,"b\x80\xff","_\\9"],[3]=-4803139025102127923} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=73 err=truncated integer val="sentinel"
+  flip ok off=81 err=none val={[1]={[1]=false,[2]="b\x80\xff",[16387]="_\\9"},[3]=-4803139025102127923} same=0
+  more ok off=81 err=none val={[1]=[false,"b\x80\xff","_\\9"],[3]=-4803139025102127923} same=0
+  key 1 0 0 1
+  seed 8934479964653042000
+tree 234: "\x00 .Z"
+  bytes 040400000000202e5a
+  dec ok off=9 err=none val="\x00 .Z" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=9 err=none val="\x00 .Z" same=1
+  key 0 1 0 1
+  seed 6420020536408214245
+tree 235: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 1510126554629115220
+tree 236: 1659338955305647597
+  bytes 03edfdf500fd270717
+  dec ok off=9 err=none val=1659338955305647597 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1693678902464347629 same=0
+  more ok off=9 err=none val=1659338955305647597 same=1
+  key 0 1 0 1
+  seed 2406999168491453704
+tree 237: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 16262858679818356193
+tree 238: 2
+  bytes 030200000000000000
+  dec ok off=9 err=none val=2 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=149 same=0
+  more ok off=9 err=none val=2 same=1
+  key 0 1 0 1
+  seed 14782851782260191219
+tree 239: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 17705523175203436048
+tree 240: [false,nil,-2778450439507565475]
+  bytes 050200000003010000000000000001030300000000000000035da41fcf0bf670d9
+  dec ok off=33 err=none val={[1]=false,[3]=-2778450439507565475} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=16 err=unknown tag val="sentinel" same=0
+  more ok off=33 err=none val={[1]=false,[3]=-2778450439507565475} same=0
+  key 1 0 0 1
+  seed 14034780553736812828
+tree 241: "\\ \x00\x00"
+  bytes 04040000005c200000
+  dec ok off=9 err=none val="\\ \x00\x00" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=9 err=none val="\\ \x00\x00" same=1
+  key 0 1 0 1
+  seed 5698644058518834685
+tree 242: [[[nil,5311798224634342975],[],10]]
+  bytes 050100000003010000000000000005030000000301000000000000000501000000030200000000000000033f6ee199574cb7490302000000000000000500000000030300000000000000030a00000000000000
+  dec ok off=83 err=none val=[[{[2]=5311798224634342975},{},10]] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=66 err=truncated integer val="sentinel"
+  flip fail off=75 err=unknown tag val="sentinel" same=0
+  more ok off=83 err=none val=[[{[2]=5311798224634342975},{},10]] same=0
+  key 1 0 0 1
+  seed 2764287225092767820
+tree 243: {[""]={[-5]=false,[9223372036854775807]={[" Z"]=2,["\""]=false},[""]=-199869047790130,Z="Z"},[".a "]=-9223372036854775808,["\x80"]="b.\xff "}
+  bytes 05030000000400000000050400000003fbffffffffffffff0103ffffffffffffff7f05020000000402000000205a03020000000000000004010000002201040000000003cea5675c384affff04010000005a04010000005a04030000002e61200300000000000000800401000000800404000000622eff20
+  dec ok off=120 err=none val={[""]={[-5]=false,[9223372036854775807]={[" Z"]=2,["\""]=false},[""]=-199869047790130,Z="Z"},[".a "]=-9223372036854775808,["\x80"]="b.\xff "} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=83 err=truncated string val="sentinel"
+  flip ok off=120 err=none val={[""]={[-5]=false,[9223372036854775807]={[" Z"]=2,["\""]=false},[""]=-8554024557106,Z="Z"},[".a "]=-9223372036854775808,["\x80"]="b.\xff "} same=0
+  more ok off=120 err=none val={[""]={[-5]=false,[9223372036854775807]={[" Z"]=2,["\""]=false},[""]=-199869047790130,Z="Z"},[".a "]=-9223372036854775808,["\x80"]="b.\xff "} same=1
+  key 0 1 0 1
+  seed 17285340400266781906
+tree 244: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 18334514908271680991
+tree 245: -2264624985715894875
+  bytes 03a515eef0926f92e0
+  dec ok off=9 err=none val=-2264624985715894875 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-2264624985715173979 same=0
+  more ok off=9 err=none val=-2264624985715894875 same=1
+  key 1 0 0 1
+  seed 13928499755637963937
+tree 246: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 18038268097120958900
+tree 247: 2
+  bytes 030200000000000000
+  dec ok off=9 err=none val=2 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=62466 same=0
+  more ok off=9 err=none val=2 same=1
+  key 1 0 0 1
+  seed 18158418997225219788
+tree 248: [true,true]
+  bytes 05020000000301000000000000000203020000000000000002
+  dec ok off=25 err=none val=[true,true] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=16 err=truncated integer val="sentinel"
+  flip fail off=25 err=unknown tag val="sentinel" same=0
+  more ok off=25 err=none val=[true,true] same=1
+  key 0 1 0 1
+  seed 13281728604933091818
+tree 249: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 5084718173182131227
+tree 250: 10
+  bytes 030a00000000000000
+  dec ok off=9 err=none val=10 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=194613558116362 same=0
+  more ok off=9 err=none val=10 same=1
+  key 0 1 0 1
+  seed 9865534488918656030
+tree 251: {[-5]=-2121778508391295913,[3]=nil,["_\xff"]=nil}
+  bytes 050100000003fbffffffffffffff0357544733b0ed8de2
+  dec ok off=23 err=none val={[-5]=-2121778508391295913} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=23 err=none val={[-5832709]=-2121778508391295913} same=0
+  more ok off=23 err=none val={[-5]=-2121778508391295913} same=0
+  key 0 1 0 1
+  seed 4075222048772138851
+tree 252: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 12893208546858316008
+tree 253: {[""]=false}
+  bytes 0501000000040000000001
+  dec ok off=11 err=none val={[""]=false} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=11 err=none val={[""]=false} same=1
+  key 0 1 0 1
+  seed 282755326579799363
+tree 254: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 3474282240095382311
+tree 255: {[4]=3255874026884477183,[""]=[-5843682914263959433,[]],[" \\ "]={[-5]=true,[""]=["Z\"_",-9223372036854775808,9223372036854775807],["b\\\""]="_"}}
+  bytes 050300000003040000000000000003ffb0de552d302f2d040000000005020000000301000000000000000377f846c35911e7ae03020000000000000005000000000403000000205c20050300000003fbffffffffffffff020400000000050300000003010000000000000004030000005a225f03020000000000000003000000000000008003030000000000000003ffffffffffffff7f0403000000625c2204010000005f
+  dec ok off=165 err=none val={[4]=3255874026884477183,[""]=[-5843682914263959433,{}],[" \\ "]={[-5]=true,[""]=["Z\"_",-9223372036854775808,9223372036854775807],["b\\\""]="_"}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=151 err=truncated val="sentinel"
+  flip fail off=93 err=truncated string val="sentinel" same=0
+  more ok off=165 err=none val={[4]=3255874026884477183,[""]=[-5843682914263959433,{}],[" \\ "]={[-5]=true,[""]=["Z\"_",-9223372036854775808,9223372036854775807],["b\\\""]="_"}} same=0
+  key 1 0 0 1
+  seed 4008793792860416960
+tree 256: -1
+  bytes 03ffffffffffffffff
+  dec ok off=9 err=none val=-1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-50433 same=0
+  more ok off=9 err=none val=-1 same=1
+  key 1 0 0 1
+  seed 6245401323901312747
+tree 257: {[0]=nil,[10]="\x80",["_\x80Z"]=true}
+  bytes 0502000000030a0000000000000004010000008004030000005f805a02
+  dec ok off=29 err=none val={[10]="\x80",["_\x80Z"]=true} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated string val="sentinel"
+  flip ok off=29 err=none val={[237]="\x80",["_\x80Z"]=true} same=0
+  more ok off=29 err=none val={[10]="\x80",["_\x80Z"]=true} same=0
+  key 1 0 0 1
+  seed 2661217416937950469
+tree 258: [["Z\"",{},true,2348959750475363117],{},[nil,nil,["\xff","a"],{[72]="\"",Z=nil,["\xff_"]="",["\xffaba"]=-5}],nil]
+  bytes 0503000000030100000000000000050400000003010000000000000004020000005a22030200000000000000050000000003030000000000000002030400000000000000032d33c69e722e99200302000000000000000500000000030300000000000000050200000003030000000000000005020000000301000000000000000401000000ff03020000000000000004010000006103040000000000000005030000000348000000000000000401000000220402000000ff5f04000000000404000000ff61626103fbffffffffffffff
+  dec ok off=208 err=none val=[["Z\"",{},true,2348959750475363117],{},{[3]=["\xff","a"],[4]={[72]="\"",["\xff_"]="",["\xffaba"]=-5}}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=190 err=truncated val="sentinel"
+  flip fail off=44 err=table keys out of order val="sentinel" same=0
+  more ok off=208 err=none val=[["Z\"",{},true,2348959750475363117],{},{[3]=["\xff","a"],[4]={[72]="\"",["\xff_"]="",["\xffaba"]=-5}}] same=0
+  key 0 1 0 1
+  seed 5534070770236317870
+tree 259: -5
+  bytes 03fbffffffffffffff
+  dec ok off=9 err=none val=-5 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-35077 same=0
+  more ok off=9 err=none val=-5 same=1
+  key 0 1 0 1
+  seed 4418308044988858894
+tree 260: {[-5]=nil,[0]="",[10]=["",{},10,nil],[" \"\xff\x80"]=7208629724640923368}
+  bytes 05030000000300000000000000000400000000030a00000000000000050300000003010000000000000004000000000302000000000000000500000000030300000000000000030a0000000000000004040000002022ff8003e84e8ba68a320a64
+  dec ok off=97 err=none val={[0]="",[10]=["",{},10],[" \"\xff\x80"]=7208629724640923368} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=29 err=truncated table val="sentinel"
+  flip ok off=97 err=none val={[0]="",[10]=["",{},10],[" \"\xff\x80"]=7496860100792635112} same=0
+  more ok off=97 err=none val={[0]="",[10]=["",{},10],[" \"\xff\x80"]=7208629724640923368} same=0
+  key 0 1 0 1
+  seed 13099931186412153244
+tree 261: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 13990563118423085545
+tree 262: {[-5]={[2]=false},[1]=2,[3]=2,[""]=false}
+  bytes 050400000003fbffffffffffffff050100000003020000000000000001030100000000000000030200000000000000030300000000000000030200000000000000040000000001
+  dec ok off=71 err=none val={[-5]={[2]=false},[1]=2,[3]=2,[""]=false} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=39 err=truncated integer val="sentinel"
+  flip fail off=56 err=table keys out of order val="sentinel" same=0
+  more ok off=71 err=none val={[-5]={[2]=false},[1]=2,[3]=2,[""]=false} same=1
+  key 0 1 0 1
+  seed 4291084638054880889
+tree 263: [7269289260867433166,-4967056006643512165,{}]
+  bytes 050300000003010000000000000003ceb2908311b4e164030200000000000000039b0c8be8e07811bb0303000000000000000500000000
+  dec ok off=55 err=none val=[7269289260867433166,-4967056006643512165,{}] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=24 err=truncated integer val="sentinel"
+  flip ok off=55 err=none val=[7269170513611633358,-4967056006643512165,{}] same=0
+  more ok off=55 err=none val=[7269289260867433166,-4967056006643512165,{}] same=1
+  key 0 1 0 1
+  seed 7377240189038382396
+tree 264: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 274514747481478498
+tree 265: [-2986208221604955943,"\"bb","_",-382439620634079115]
+  bytes 050400000003010000000000000003d9b8e2ad71db8ed6030200000000000000040300000022626203030000000000000004010000005f03040000000000000003751012f8304db1fa
+  dec ok off=73 err=none val=[-2986208221604955943,"\"bb","_",-382439620634079115] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=65 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=73 err=none val=[-2986208221604955943,"\"bb","_",-382439620634079115] same=1
+  key 1 0 0 1
+  seed 7891609990010776645
+tree 266: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 12269312706649597106
+tree 267: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 4989904610722268928
+tree 268: -2912056124527295115
+  bytes 0375c58c2b624c96d7
+  dec ok off=9 err=none val=-2912056124527295115 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-2897137950761630347 same=0
+  more ok off=9 err=none val=-2912056124527295115 same=1
+  key 0 1 0 1
+  seed 10069240306697345726
+tree 269: {[3]=nil}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 4636607573074776972
+tree 270: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=149533581377537 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 12195500379652442018
+tree 271: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 5380375436487710014
+tree 272: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 4783988145902265310
+tree 273: [false,nil,"\\",[[],{[-5]=2},[true,"Z"]]]
+  bytes 05030000000301000000000000000103030000000000000004010000005c03040000000000000005030000000301000000000000000500000000030200000000000000050100000003fbffffffffffffff03020000000000000003030000000000000005020000000301000000000000000203020000000000000004010000005a
+  dec ok off=129 err=none val={[1]=false,[3]="\\",[4]=[{},{[-5]=2},[true,"Z"]]} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=73 err=truncated integer val="sentinel"
+  flip fail off=114 err=unknown tag val="sentinel" same=0
+  more ok off=129 err=none val={[1]=false,[3]="\\",[4]=[{},{[-5]=2},[true,"Z"]]} same=0
+  key 0 1 0 1
+  seed 6195185526159518499
+tree 274: " \xff"
+  bytes 040200000020ff
+  dec ok off=7 err=none val=" \xff" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=7 err=none val=" \xd3" same=0
+  more ok off=7 err=none val=" \xff" same=1
+  key 0 1 0 1
+  seed 452480876603519955
+tree 275: 1525600085348158261
+  bytes 03358b7bd431052c15
+  dec ok off=9 err=none val=1525600085348158261 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1525600085352942389 same=0
+  more ok off=9 err=none val=1525600085348158261 same=1
+  key 1 0 0 1
+  seed 8259661674032724147
+tree 276: {[1]={[47]=9223372036854775807},[3]=[{["."]=true,Z9=-9223372036854775808,ZZ=nil},"_\"9",nil,"_"],["\"\xff\\\""]=2,["\xff"]=-5148781728732978983}
+  bytes 05040000000301000000000000000501000000032f0000000000000003ffffffffffffff7f0303000000000000000503000000030100000000000000050200000004010000002e0204020000005a3903000000000000008003020000000000000004030000005f223903040000000000000004010000005f040400000022ff5c220302000000000000000401000000ff03d960d9104cda8bb8
+  dec ok off=153 err=none val={[1]={[47]=9223372036854775807},[3]={[1]={["."]=true,Z9=-9223372036854775808},[2]="_\"9",[4]="_"},["\"\xff\\\""]=2,["\xff"]=-5148781728732978983} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=138 err=truncated val="sentinel"
+  flip ok off=153 err=none val={[1]={[47]=9223098258459459583},[3]={[1]={["."]=true,Z9=-9223372036854775808},[2]="_\"9",[4]="_"},["\"\xff\\\""]=2,["\xff"]=-5148781728732978983} same=0
+  more ok off=153 err=none val={[1]={[47]=9223372036854775807},[3]={[1]={["."]=true,Z9=-9223372036854775808},[2]="_\"9",[4]="_"},["\"\xff\\\""]=2,["\xff"]=-5148781728732978983} same=0
+  key 1 0 0 1
+  seed 4881564396965392162
+tree 277: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 1630899825380680152
+tree 278: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 16690808347018077631
+tree 279: ["b\x00_",-1450293900979384208,94,nil]
+  bytes 0503000000030100000000000000040300000062005f030200000000000000037050358c6185dfeb030300000000000000035e00000000000000
+  dec ok off=58 err=none val=["b\x00_",-1450293900979384208,94] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=15 err=truncated string val="sentinel"
+  flip ok off=58 err=none val={[1]="b\x00_",[2]=-1450293900979384208,[8060931]=94} same=0
+  more ok off=58 err=none val=["b\x00_",-1450293900979384208,94] same=0
+  key 1 0 0 1
+  seed 4815003615736687533
+tree 280: [{[-5]="b",["._Z"]=true,["\x80b"]={[4]="_.b ",[""]=-3495916704070849526,["\"\x80\xff"]=true,ba=9223372036854775807},["\xff.\x00."]={}}," ZZ"]
+  bytes 0502000000030100000000000000050400000003fbffffffffffffff04010000006204030000002e5f5a0204020000008062050400000003040000000000000004040000005f2e62200400000000030aac80a147027ccf04030000002280ff020402000000626103ffffffffffffff7f0404000000ff2e002e05000000000302000000000000000403000000205a5a
+  dec ok off=143 err=none val=[{[-5]="b",["._Z"]=true,["\x80b"]={[4]="_.b ",[""]=-3495916704070849526,["\"\x80\xff"]=true,ba=9223372036854775807},["\xff.\x00."]={}}," ZZ"] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=39 err=truncated string val="sentinel"
+  flip ok off=143 err=none val=[{[-5]="b",["._Z"]=true,["\x80b"]={[360777252868]="_.b ",[""]=-3495916704070849526,["\"\x80\xff"]=true,ba=9223372036854775807},["\xff.\x00."]={}}," ZZ"] same=0
+  more ok off=143 err=none val=[{[-5]="b",["._Z"]=true,["\x80b"]={[4]="_.b ",[""]=-3495916704070849526,["\"\x80\xff"]=true,ba=9223372036854775807},["\xff.\x00."]={}}," ZZ"] same=1
+  key 0 1 0 1
+  seed 17307015119264020537
+tree 281: "aa\x00\\"
+  bytes 04040000006161005c
+  dec ok off=9 err=none val="aa\x00\\" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=9 err=none val="aaS\\" same=0
+  more ok off=9 err=none val="aa\x00\\" same=1
+  key 1 0 0 1
+  seed 9576227864754418246
+tree 282: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 4594573948070896562
+tree 283: "Z\x80 "
+  bytes 04030000005a8020
+  dec ok off=8 err=none val="Z\x80 " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="Z\x80\x18" same=0
+  more ok off=8 err=none val="Z\x80 " same=1
+  key 1 0 0 1
+  seed 17518613183811690666
+tree 284: 3355221701044650930
+  bytes 03b2c372415c24902e
+  dec ok off=9 err=none val=3355221701044650930 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=3355221941562819506 same=0
+  more ok off=9 err=none val=3355221701044650930 same=1
+  key 0 1 0 1
+  seed 10991657997876370896
+tree 285: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 15280492316200261650
+tree 286: {[9223372036854775807]=-1,["\x00\x00"]="\x00\x80\xffb",b=[-6070559315564073303,true,4624364077703147710]}
+  bytes 050300000003ffffffffffffff7f03ffffffffffffffff0402000000000004040000000080ff62040100000062050300000003010000000000000003a96edd37770ac1ab0302000000000000000203030000000000000003beb092b3a00a2d40
+  dec ok off=96 err=none val={[9223372036854775807]=-1,["\x00\x00"]="\x00\x80\xffb",b=[-6070559315564073303,true,4624364077703147710]} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=31 err=truncated string val="sentinel"
+  flip ok off=96 err=none val={[9223372036854775807]=-1,["\x00\x00"]="\x00\x80\xffb",b=[-6070559315564073262,true,4624364077703147710]} same=0
+  more ok off=96 err=none val={[9223372036854775807]=-1,["\x00\x00"]="\x00\x80\xffb",b=[-6070559315564073303,true,4624364077703147710]} same=1
+  key 0 1 0 1
+  seed 10914644657468011371
+tree 287: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=54273 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 14142521007818253019
+tree 288: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 18232891254130828703
+tree 289: [nil]
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 10266598893070136045
+tree 290: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 16828538356245537738
+tree 291: {[-1]=["b\x80\""],["9\xffZb"]="_9 \x00"}
+  bytes 050200000003ffffffffffffffff05010000000301000000000000000403000000628022040400000039ff5a6204040000005f392000
+  dec ok off=54 err=none val={[-1]=["b\x80\""],["9\xffZb"]="_9 \x00"} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=50 err=truncated string val="sentinel"
+  flip ok off=54 err=none val={[-1]=["b\x80\""],["9\xffZ\x81"]="_9 \x00"} same=0
+  more ok off=54 err=none val={[-1]=["b\x80\""],["9\xffZb"]="_9 \x00"} same=1
+  key 0 1 0 1
+  seed 17040688197153233858
+tree 292: [1599499000775252372,true,true,[true,[],{["b\xff\x00"]="",["\x80"]=nil},{[""]=-4960738785408816553,[" .\\\x80"]=9223372036854775807,["ZZ\x00b"]=nil}]]
+  bytes 0504000000030100000000000000039419cddfdd8f3216030200000000000000020303000000000000000203040000000000000005040000000301000000000000000203020000000000000005000000000303000000000000000501000000040300000062ff0004000000000304000000000000000502000000040000000003576a34985bea27bb0404000000202e5c8003ffffffffffffff7f
+  dec ok off=154 err=none val=[1599499000775252372,true,true,[true,{},{["b\xff\x00"]=""},{[""]=-4960738785408816553,[" .\\\x80"]=9223372036854775807}]] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=154 err=none val=[1599499000775252372,true,true,{[1]=true,[2]={},[3]={["b\xff\x00"]=""},[403726925828]={[""]=-4960738785408816553,[" .\\\x80"]=9223372036854775807}}] same=0
+  more ok off=154 err=none val=[1599499000775252372,true,true,[true,{},{["b\xff\x00"]=""},{[""]=-4960738785408816553,[" .\\\x80"]=9223372036854775807}]] same=0
+  key 0 1 0 1
+  seed 6218925766704054148
+tree 293: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 11731324591137371783
+tree 294: -6289770002651401015
+  bytes 03c9340ed9813fb6a8
+  dec ok off=9 err=none val=-6289770002651401015 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-6289770002651398455 same=0
+  more ok off=9 err=none val=-6289770002651401015 same=1
+  key 1 0 0 1
+  seed 7881052053003853882
+tree 295: 4
+  bytes 030400000000000000
+  dec ok off=9 err=none val=4 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=6192449487634436 same=0
+  more ok off=9 err=none val=4 same=1
+  key 1 0 0 1
+  seed 4353817629633426804
+tree 296: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 1937238476515081135
+tree 297: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=248 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 18424415729286948671
+tree 298: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 15749213677517507113
+tree 299: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 17277937415338745088
+tree 300: "bb\\\""
+  bytes 040400000062625c22
+  dec ok off=9 err=none val="bb\\\"" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val="bb\\\"" same=1
+  key 1 0 0 1
+  seed 18076152307543754155
+tree 301: "Z "
+  bytes 04020000005a20
+  dec ok off=7 err=none val="Z " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=7 err=none val="Z\xe7" same=0
+  more ok off=7 err=none val="Z " same=1
+  key 0 1 0 1
+  seed 1676564253436329008
+tree 302: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 5838692066945672053
+tree 303: "a\xff_"
+  bytes 040300000061ff5f
+  dec ok off=8 err=none val="a\xff_" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="\x1c\xff_" same=0
+  more ok off=8 err=none val="a\xff_" same=1
+  key 0 1 0 1
+  seed 10013622295700653110
+tree 304: 2102073729590911525
+  bytes 032562f277eb102c1d
+  dec ok off=9 err=none val=2102073729590911525 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=2102313423125766693 same=0
+  more ok off=9 err=none val=2102073729590911525 same=1
+  key 0 1 0 1
+  seed 8891242154860440946
+tree 305: [[nil,7813251296591421503,{[-9223372036854775808]=2,[10]=-1988302842706518430,["9\x80\\a"]=true}],{["9"]=false}]
+  bytes 05020000000301000000000000000502000000030200000000000000033f20316aa83e6e6c0303000000000000000503000000030000000000000080030200000000000000030a0000000000000003621e945a192168e4040400000039805c6102030200000000000000050100000004010000003901
+  dec ok off=118 err=none val=[{[2]=7813251296591421503,[3]={[-9223372036854775808]=2,[10]=-1988302842706518430,["9\x80\\a"]=true}},{["9"]=false}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=118 err=none val=[{[2]=7813251296591421503,[3]={[-9223371624537915392]=2,[10]=-1988302842706518430,["9\x80\\a"]=true}},{["9"]=false}] same=0
+  more ok off=118 err=none val=[{[2]=7813251296591421503,[3]={[-9223372036854775808]=2,[10]=-1988302842706518430,["9\x80\\a"]=true}},{["9"]=false}] same=0
+  key 0 1 0 1
+  seed 7736304531878990786
+tree 306: "\xff_\xff"
+  bytes 0403000000ff5fff
+  dec ok off=8 err=none val="\xff_\xff" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=8 err=none val="\xff_\xff" same=1
+  key 1 0 0 1
+  seed 16503891957973019159
+tree 307: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 12419379295450602204
+tree 308: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 12021831384030613968
+tree 309: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 10698868631715860781
+tree 310: {[-5]={[-5]=1,[0]=nil,[""]=nil,["."]="b_a\x00"},[""]=[{}]}
+  bytes 050200000003fbffffffffffffff050200000003fbffffffffffffff03010000000000000004010000002e0404000000625f6100040000000005010000000301000000000000000500000000
+  dec ok off=76 err=none val={[-5]={[-5]=1,["."]="b_a\x00"},[""]=[{}]} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=20 err=truncated integer val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=76 err=none val={[-5]={[-5]=1,["."]="b_a\x00"},[""]=[{}]} same=0
+  key 0 1 0 1
+  seed 4504138911752498591
+tree 311: "\xffb\x809"
+  bytes 0404000000ff628039
+  dec ok off=9 err=none val="\xffb\x809" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=9 err=none val="\xffb\x809" same=1
+  key 0 1 0 1
+  seed 8471063157129451734
+tree 312: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 7006186723757189827
+tree 313: "\x00_\x00"
+  bytes 0403000000005f00
+  dec ok off=8 err=none val="\x00_\x00" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="\xcd_\x00" same=0
+  more ok off=8 err=none val="\x00_\x00" same=1
+  key 0 1 0 1
+  seed 2858530098629809470
+tree 314: {[""]={[-1]="\xffb\xffZ",[1]=nil,[""]=[16,7701627132651031008,-5],b=3235877956323958637},["\\9\x009"]=".Z.a"}
+  bytes 05020000000400000000050300000003ffffffffffffffff0404000000ff62ff5a0400000000050300000003010000000000000003100000000000000003020000000000000003e0c92c7a12ade16a03030000000000000003fbffffffffffffff040100000062036ddf345bdb25e82c04040000005c39003904040000002e5a2e61
+  dec ok off=130 err=none val={[""]={[-1]="\xffb\xffZ",[""]=[16,7701627132651031008,-5],b=3235877956323958637},["\\9\x009"]=".Z.a"} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=62 err=truncated integer val="sentinel"
+  flip ok off=130 err=none val={[""]={[-1]="\xffb\xffZ",[""]=[16,7701627132651030953,-5],b=3235877956323958637},["\\9\x009"]=".Z.a"} same=0
+  more ok off=130 err=none val={[""]={[-1]="\xffb\xffZ",[""]=[16,7701627132651031008,-5],b=3235877956323958637},["\\9\x009"]=".Z.a"} same=0
+  key 1 0 0 1
+  seed 16030135883793279952
+tree 315: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 6311623689438375053
+tree 316: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 8240436184880547846
+tree 317: -5
+  bytes 03fbffffffffffffff
+  dec ok off=9 err=none val=-5 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-60165 same=0
+  more ok off=9 err=none val=-5 same=1
+  key 0 1 0 1
+  seed 4556862947267920386
+tree 318: -9223372036854775808
+  bytes 030000000000000080
+  dec ok off=9 err=none val=-9223372036854775808 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=-9223372036854775808 same=1
+  key 1 0 0 1
+  seed 13267645907371545178
+tree 319: 4308222879032640090
+  bytes 035a82f3ede1e1c93b
+  dec ok off=9 err=none val=4308222879032640090 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=4308056852776845914 same=0
+  more ok off=9 err=none val=4308222879032640090 same=1
+  key 1 0 0 1
+  seed 8259788293918927704
+tree 320: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 1 0 0 1
+  seed 9893898272163731494
+tree 321: 6749719728766404103
+  bytes 03074691ee54d2ab5d
+  dec ok off=9 err=none val=6749719728766404103 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=6740994004488373767 same=0
+  more ok off=9 err=none val=6749719728766404103 same=1
+  key 0 1 0 1
+  seed 4592065553128317616
+tree 322: {[2]=".b9",["\""]=" a",["\xff."]={[""]={[4]=true,[9223372036854775807]=-2164708260468212308,["9"]=".",["999"]=true},["\x00"]=["",nil,"\"_b",1477603649311161886],[" a\xff9"]=-1328807698565311613}}
+  bytes 050300000003020000000000000004030000002e6239040100000022040200000020610402000000ff2e0503000000040000000005040000000304000000000000000203ffffffffffffff7f03ac3d70644e69f5e104010000003904010000002e040300000039393902040100000000050300000003010000000000000004000000000303000000000000000403000000225f62030400000000000000031e3e03bcb080811404040000002061ff390383d3354070208fed
+  dec ok off=184 err=none val={[2]=".b9",["\""]=" a",["\xff."]={[""]={[4]=true,[9223372036854775807]=-2164708260468212308,["9"]=".",["999"]=true},["\x00"]={[1]="",[3]="\"_b",[4]=1477603649311161886},[" a\xff9"]=-1328807698565311613}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=77 err=truncated integer val="sentinel"
+  flip fail off=105 err=table keys out of order val="sentinel" same=0
+  more ok off=184 err=none val={[2]=".b9",["\""]=" a",["\xff."]={[""]={[4]=true,[9223372036854775807]=-2164708260468212308,["9"]=".",["999"]=true},["\x00"]={[1]="",[3]="\"_b",[4]=1477603649311161886},[" a\xff9"]=-1328807698565311613}} same=0
+  key 1 0 0 1
+  seed 4683271934535496744
+tree 323: "_9a"
+  bytes 04030000005f3961
+  dec ok off=8 err=none val="_9a" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=8 err=none val="_\x09a" same=0
+  more ok off=8 err=none val="_9a" same=1
+  key 0 1 0 1
+  seed 12430045005374367082
+tree 324: {["9\x80_"]=-3089222438163026553,["a\x80 "]=-9223372036854775808}
+  bytes 0502000000040300000039805f03876d20558fe020d50403000000618020030000000000000080
+  dec ok off=39 err=none val={["9\x80_"]=-3089222438163026553,["a\x80 "]=-9223372036854775808} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated string val="sentinel"
+  flip ok off=39 err=none val={["9\x80_"]=-3031238592960631417,["a\x80 "]=-9223372036854775808} same=0
+  more ok off=39 err=none val={["9\x80_"]=-3089222438163026553,["a\x80 "]=-9223372036854775808} same=1
+  key 1 0 0 1
+  seed 10211388217976289631
+tree 325: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 13881160077193033134
+tree 326: 6106671931435430394
+  bytes 03fab10e61c441bf54
+  dec ok off=9 err=none val=6106671931435430394 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=6106671931435430394 same=1
+  key 0 1 0 1
+  seed 615269215567289000
+tree 327: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 10800492247706409656
+tree 328: ""
+  bytes 0400000000
+  dec ok off=5 err=none val="" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=5 err=none val="" same=1
+  key 0 1 0 1
+  seed 13691065868029236304
+tree 329: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 5874387999006766509
+tree 330: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 18061165993898915670
+tree 331: {[4]=3,Z="a\\"}
+  bytes 050200000003040000000000000003030000000000000004010000005a0402000000615c
+  dec ok off=36 err=none val={[4]=3,Z="a\\"} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip ok off=36 err=none val={[68398419340689412]=3,Z="a\\"} same=0
+  more ok off=36 err=none val={[4]=3,Z="a\\"} same=1
+  key 1 0 0 1
+  seed 5143411914461840775
+tree 332: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 7863454743710171043
+tree 333: {["9 Z"]=true}
+  bytes 0501000000040300000039205a02
+  dec ok off=14 err=none val={["9 Z"]=true} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated table val="sentinel"
+  flip fail off=10 err=truncated string val="sentinel" same=0
+  more ok off=14 err=none val={["9 Z"]=true} same=1
+  key 0 1 0 1
+  seed 4264361938505976535
+tree 334: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 4087307976217682165
+tree 335: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 1 0 0 1
+  seed 848643751809397617
+tree 336: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 16625400815391191689
+tree 337: -3415106790295057574
+  bytes 035a4b70de771a9bd0
+  dec ok off=9 err=none val=-3415106790295057574 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=-3415106790295057574 same=1
+  key 0 1 0 1
+  seed 16924108226153002844
+tree 338: {[2]="",[9223372036854775807]=489283899261794034,["\x00."]=4}
+  bytes 0503000000030200000000000000040000000003ffffffffffffff7f03f236d1311d49ca060402000000002e030400000000000000
+  dec ok off=53 err=none val={[2]="",[9223372036854775807]=489283899261794034,["\x00."]=4} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=53 err=none val={[2]="",[9223372036854775807]=489283899257272050,["\x00."]=4} same=0
+  more ok off=53 err=none val={[2]="",[9223372036854775807]=489283899261794034,["\x00."]=4} same=1
+  key 1 0 0 1
+  seed 748393686789900710
+tree 339: {[""]=2,["_\"9\x00"]=false,["b\xff\"a"]={[2]=nil,["\xff\\Z"]={[3]=true,[10]="\\b"}}}
+  bytes 0503000000040000000003020000000000000004040000005f22390001040400000062ff226105010000000403000000ff5c5a050200000003030000000000000002030a0000000000000004020000005c62
+  dec ok off=82 err=none val={[""]=2,["_\"9\x00"]=false,["b\xff\"a"]={["\xff\\Z"]={[3]=true,[10]="\\b"}}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=39 err=truncated table val="sentinel"
+  flip fail off=56 err=truncated table val="sentinel" same=0
+  more ok off=82 err=none val={[""]=2,["_\"9\x00"]=false,["b\xff\"a"]={["\xff\\Z"]={[3]=true,[10]="\\b"}}} same=0
+  key 1 0 0 1
+  seed 16171811431595011014
+tree 340: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 3828122996970147478
+tree 341: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 10443095874767641185
+tree 342: -5309770487958615300
+  bytes 03fcca5fa2dfe74fb6
+  dec ok off=9 err=none val=-5309770487958615300 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-5264171541731489028 same=0
+  more ok off=9 err=none val=-5309770487958615300 same=1
+  key 0 1 0 1
+  seed 8913756815474277285
+tree 343: {[1]={[47]=nil,[""]=0,["aa\"\\"]=nil},[3]=true,["9Z"]={["\x00a\\"]=4}}
+  bytes 050300000003010000000000000005010000000400000000030000000000000000030300000000000000020402000000395a0501000000040300000000615c030400000000000000
+  dec ok off=72 err=none val={[1]={[""]=0},[3]=true,["9Z"]={["\x00a\\"]=4}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip ok off=72 err=none val={[1]={[""]=0},[134217731]=true,["9Z"]={["\x00a\\"]=4}} same=0
+  more ok off=72 err=none val={[1]={[""]=0},[3]=true,["9Z"]={["\x00a\\"]=4}} same=0
+  key 1 0 0 1
+  seed 1975785647762125253
+tree 344: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 10077380784148116957
+tree 345: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=3909091328 same=0
+  more ok off=9 err=none val=0 same=1
+  key 0 1 0 1
+  seed 16204043227603942610
+tree 346: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 1 0 0 1
+  seed 7670629845028889790
+tree 347: 4
+  bytes 030400000000000000
+  dec ok off=9 err=none val=4 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=671088644 same=0
+  more ok off=9 err=none val=4 same=1
+  key 0 1 0 1
+  seed 10825963123977412333
+tree 348: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 13977173313859406412
+tree 349: 1232207184883246880
+  bytes 032067a6f8e7ad1911
+  dec ok off=9 err=none val=1232207184883246880 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=1232207184883246929 same=0
+  more ok off=9 err=none val=1232207184883246880 same=1
+  key 1 0 0 1
+  seed 10434125216960168114
+tree 350: -2230658061508068299
+  bytes 03353c73c44f1c0be1
+  dec ok off=9 err=none val=-2230658061508068299 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-2230518423531340747 same=0
+  more ok off=9 err=none val=-2230658061508068299 same=1
+  key 1 0 0 1
+  seed 17726760574484284990
+tree 351: 0
+  bytes 030000000000000000
+  dec ok off=9 err=none val=0 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=44544 same=0
+  more ok off=9 err=none val=0 same=1
+  key 1 0 0 1
+  seed 9101165873491248671
+tree 352: 9223372036854775807
+  bytes 03ffffffffffffff7f
+  dec ok off=9 err=none val=9223372036854775807 same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9223372036845731839 same=0
+  more ok off=9 err=none val=9223372036854775807 same=1
+  key 0 1 0 1
+  seed 4057491595444231998
+tree 353: {[" "]={[4]=523112338049477519,["9 "]={},["\xff"]=1}}
+  bytes 05010000000401000000200503000000030400000000000000038f2b105fe67742070402000000392005000000000401000000ff030100000000000000
+  dec ok off=61 err=none val={[" "]={[4]=523112338049477519,["9 "]={},["\xff"]=1}} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=51 err=truncated string val="sentinel" same=0
+  more ok off=61 err=none val={[" "]={[4]=523112338049477519,["9 "]={},["\xff"]=1}} same=1
+  key 1 0 0 1
+  seed 6583335104761684710
+tree 354: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=1 err=none val=true same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 3980126575864644902
+tree 355: ".Z"
+  bytes 04020000002e5a
+  dec ok off=7 err=none val=".Z" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=7 err=none val="\xafZ" same=0
+  more ok off=7 err=none val=".Z" same=1
+  key 0 0 1 1
+  seed 13448082591165828242
+tree 356: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 10955004014616968489
+tree 357: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 10098612053549022122
+tree 358: {[-5]=-9183479503913576113,["\xff.\\"]=-5281781273916450992}
+  bytes 050200000003fbffffffffffffff034f99261f0cba8d800403000000ff2e5c035057e65aea57b3b6
+  dec ok off=40 err=none val={[-5]=-9183479503913576113,["\xff.\\"]=-5281781273916450992} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip ok off=40 err=none val={[-5]=-9183479503913576113,["\xff.\\"]=-5267707525080918192} same=0
+  more ok off=40 err=none val={[-5]=-9183479503913576113,["\xff.\\"]=-5281781273916450992} same=1
+  key 0 1 0 1
+  seed 10967553533843779588
+tree 359: {["\xff"]=-768591813511177202}
+  bytes 05010000000401000000ff030e9c645ad16955f5
+  dec ok off=20 err=none val={["\xff"]=-768591813511177202} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=20 err=none val={["\xff"]=-768591813511177202} same=1
+  key 1 0 0 1
+  seed 3887760127311759976
+tree 360: [10]
+  bytes 0501000000030100000000000000030a00000000000000
+  dec ok off=23 err=none val=[10] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=14 err=truncated val="sentinel"
+  flip ok off=23 err=none val=[7277816997830721546] same=0
+  more ok off=23 err=none val=[10] same=1
+  key 1 0 0 1
+  seed 11820318290031374526
+tree 361: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 0 1 0 1
+  seed 6787385696002939874
+tree 362: {[2]={},["."]={[-5]={[-9223372036854775808]=nil,["\x00\\"]=nil,["9\""]=nil},["9\xff"]=[false,"\x00a"],["\\Z"]=140304990015622409}}
+  bytes 0502000000030200000000000000050000000004010000002e050300000003fbffffffffffffff0500000000040200000039ff0502000000030100000000000000010302000000000000000402000000006104020000005c5a03098d1822a576f201
+  dec ok off=98 err=none val={[2]={},["."]={[-5]={},["9\xff"]=[false,"\x00a"],["\\Z"]=140304990015622409}} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=67 err=truncated integer val="sentinel"
+  flip fail off=87 err=truncated string val="sentinel" same=0
+  more ok off=98 err=none val={[2]={},["."]={[-5]={},["9\xff"]=[false,"\x00a"],["\\Z"]=140304990015622409}} same=0
+  key 0 1 0 1
+  seed 13180397282302943838
+tree 363: 9212371867747736172
+  bytes 036cdae78b67ebd87f
+  dec ok off=9 err=none val=9212371867747736172 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9212297100957047404 same=0
+  more ok off=9 err=none val=9212371867747736172 same=1
+  key 0 1 0 1
+  seed 11883367047027439489
+tree 364: -6067499610432164504
+  bytes 0368ad5e5540e9cbab
+  dec ok off=9 err=none val=-6067499610432164504 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-6067573277711225496 same=0
+  more ok off=9 err=none val=-6067499610432164504 same=1
+  key 1 0 0 1
+  seed 15070970442318525055
+tree 365: -6438339178393779454
+  bytes 0302c35b08a16ca6a6
+  dec ok off=9 err=none val=-6438339178393779454 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-6438339178391026942 same=0
+  more ok off=9 err=none val=-6438339178393779454 same=1
+  key 1 0 0 1
+  seed 9271277210726202724
+tree 366: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 991733689385654817
+tree 367: ". "
+  bytes 04020000002e20
+  dec ok off=7 err=none val=". " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val=". " same=1
+  key 0 1 0 1
+  seed 14736653093998398079
+tree 368: {["_\x80"]=nil}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 7685835035679566504
+tree 369: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 1 0 0 1
+  seed 10095548869526005929
+tree 370: 9223372036854775807
+  bytes 03ffffffffffffff7f
+  dec ok off=9 err=none val=9223372036854775807 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=9223372036854737407 same=0
+  more ok off=9 err=none val=9223372036854775807 same=1
+  key 1 0 0 1
+  seed 8933281914894643004
+tree 371: "Zb "
+  bytes 04030000005a6220
+  dec ok off=8 err=none val="Zb " same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated string val="sentinel"
+  flip ok off=8 err=none val="\x02b " same=0
+  more ok off=8 err=none val="Zb " same=1
+  key 0 1 0 1
+  seed 5116831064560565770
+tree 372: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 12093239507325034136
+tree 373: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 8734841200744358978
+tree 374: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 7855475127780786391
+tree 375: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 9018721144931320491
+tree 376: "99"
+  bytes 04020000003939
+  dec ok off=7 err=none val="99" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=5 err=truncated string val="sentinel"
+  flip ok off=7 err=none val="9\xe3" same=0
+  more ok off=7 err=none val="99" same=1
+  key 0 1 0 1
+  seed 7025211877600257249
+tree 377: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 0 1 0 1
+  seed 7726104063697329703
+tree 378: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 7358909806170089516
+tree 379: {[""]=-5,["Z\x00Z"]={[-5]="_\"b\x00",[0]={[-5]=9223372036854775807,[1]=2,Za=true},["_ 9"]=true},["\x80\\\x80"]=false}
+  bytes 0503000000040000000003fbffffffffffffff04030000005a005a050300000003fbffffffffffffff04040000005f226200030000000000000000050300000003fbffffffffffffff03ffffffffffffff7f03010000000000000003020000000000000004020000005a610204030000005f2039020403000000805c8001
+  dec ok off=126 err=none val={[""]=-5,["Z\x00Z"]={[-5]="_\"b\x00",[0]={[-5]=9223372036854775807,[1]=2,Za=true},["_ 9"]=true},["\x80\\\x80"]=false} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=109 err=truncated string val="sentinel"
+  flip ok off=126 err=none val={[""]=-5,["Z\x00Z"]={[-5]="_\"b\x00",[0]={[-5]=9223372036854775807,[1]=49539595901075458,Za=true},["_ 9"]=true},["\x80\\\x80"]=false} same=0
+  more ok off=126 err=none val={[""]=-5,["Z\x00Z"]={[-5]="_\"b\x00",[0]={[-5]=9223372036854775807,[1]=2,Za=true},["_ 9"]=true},["\x80\\\x80"]=false} same=1
+  key 1 0 0 1
+  seed 10950051286190588068
+tree 380: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 8504120088818970357
+tree 381: 2
+  bytes 030200000000000000
+  dec ok off=9 err=none val=2 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=781684047874 same=0
+  more ok off=9 err=none val=2 same=1
+  key 0 0 1 1
+  seed 7311700982726654683
+tree 382: {[" "]=nil}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 11062603673065506692
+tree 383: {}
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=1
+  key 1 0 0 1
+  seed 14865988617006303118
+tree 384: " a"
+  bytes 04020000002061
+  dec ok off=7 err=none val=" a" same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=5 err=truncated string val="sentinel" same=0
+  more ok off=7 err=none val=" a" same=1
+  key 1 0 0 1
+  seed 1852032268638033090
+tree 385: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=893353197569 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 14142825001630837718
+tree 386: 1
+  bytes 030100000000000000
+  dec ok off=9 err=none val=1 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=54529 same=0
+  more ok off=9 err=none val=1 same=1
+  key 0 1 0 1
+  seed 14907934226706898671
+tree 387: 129015187301981243
+  bytes 033bdcc319a15aca01
+  dec ok off=9 err=none val=129015187301981243 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip ok off=9 err=none val=128939320999664699 same=0
+  more ok off=9 err=none val=129015187301981243 same=1
+  key 1 0 0 1
+  seed 8241266693999653753
+tree 388: [[[false,true],nil,4,{[-9223372036854775808]="\x80\"Z\""}]]
+  bytes 05010000000301000000000000000503000000030100000000000000050200000003010000000000000001030200000000000000020303000000000000000304000000000000000304000000000000000501000000030000000000000080040400000080225a22
+  dec ok off=103 err=none val=[{[1]=[false,true],[3]=4,[4]={[-9223372036854775808]="\x80\"Z\""}}] same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=86 err=truncated integer val="sentinel"
+  flip fail off=19 err=truncated table val="sentinel" same=0
+  more ok off=103 err=none val=[{[1]=[false,true],[3]=4,[4]={[-9223372036854775808]="\x80\"Z\""}}] same=0
+  key 1 0 0 1
+  seed 1273104720543871083
+tree 389: true
+  bytes 02
+  dec ok off=1 err=none val=true same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=true same=1
+  key 0 1 0 1
+  seed 10362287210122740027
+tree 390: [false]
+  bytes 050100000003010000000000000001
+  dec ok off=15 err=none val=[false] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip ok off=15 err=none val={[9240577]=false} same=0
+  more ok off=15 err=none val=[false] same=1
+  key 1 0 0 1
+  seed 14213498096261993468
+tree 391: 1952124751282211538
+  bytes 03d28a6c551e57171b
+  dec ok off=9 err=none val=1952124751282211538 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=1952124815706720978 same=0
+  more ok off=9 err=none val=1952124751282211538 same=1
+  key 1 0 0 1
+  seed 5149398567897620500
+tree 392: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 1 1 0
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 13117887953122318207
+tree 393: 10
+  bytes 030a00000000000000
+  dec ok off=9 err=none val=10 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=9 err=none val=10 same=1
+  key 1 0 0 1
+  seed 8497645104196776616
+tree 394: [{["_a\x80\x80"]=1439474367489894500,["a_\xff"]={[-9223372036854775808]="\x80Z  ",["\"\x80"]=9223372036854775807,["Z\\"]=-8902675226781655511,["\x80a."]=2}}]
+  bytes 0501000000030100000000000000050200000004040000005f6180800364e883814f0afa130403000000615fff05040000000300000000000000800404000000805a20200402000000228003ffffffffffffff7f04020000005a5c03295e02b50c587384040300000080612e030200000000000000
+  dec ok off=117 err=none val=[{["_a\x80\x80"]=1439474367489894500,["a_\xff"]={[-9223372036854775808]="\x80Z  ",["\"\x80"]=9223372036854775807,["Z\\"]=-8902675226781655511,["\x80a."]=2}}] same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=6 err=truncated integer val="sentinel"
+  flip ok off=117 err=none val=[{["_a\x80\x80"]=1439618403513133156,["a_\xff"]={[-9223372036854775808]="\x80Z  ",["\"\x80"]=9223372036854775807,["Z\\"]=-8902675226781655511,["\x80a."]=2}}] same=0
+  more ok off=117 err=none val=[{["_a\x80\x80"]=1439474367489894500,["a_\xff"]={[-9223372036854775808]="\x80Z  ",["\"\x80"]=9223372036854775807,["Z\\"]=-8902675226781655511,["\x80a."]=2}}] same=1
+  key 1 0 0 1
+  seed 18120404491114410645
+tree 395: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 5497121871570541610
+tree 396: false
+  bytes 01
+  dec ok off=1 err=none val=false same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=false same=1
+  key 0 1 0 1
+  seed 16232605551253130696
+tree 397: -1609709942283794372
+  bytes 033c88c20a5629a9e9
+  dec ok off=9 err=none val=-1609709942283794372 same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated integer val="sentinel"
+  flip ok off=9 err=none val=-1609710122672420804 same=0
+  more ok off=9 err=none val=-1609709942283794372 same=1
+  key 0 1 0 1
+  seed 11896143416434454906
+tree 398: []
+  bytes 0500000000
+  dec ok off=5 err=none val={} same=0
+  eq 0 1 1
+  copyeq 1
+  cut fail off=1 err=truncated table val="sentinel"
+  flip fail off=5 err=truncated table val="sentinel" same=0
+  more ok off=5 err=none val={} same=0
+  key 0 1 0 1
+  seed 5382457663789546283
+tree 399: nil
+  bytes 00
+  dec ok off=1 err=none val=nil same=1
+  eq 0 1 1
+  copyeq 1
+  cut fail off=0 err=truncated val="sentinel"
+  flip fail off=1 err=unknown tag val="sentinel" same=0
+  more ok off=1 err=none val=nil same=1
+  key 1 0 0 1
+  seed 12113071354241928006
+  depth62 ok off=869 err=none val=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[true]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+  depth63 ok off=883 err=none val=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[true]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+  depth64 ok off=897 err=none val=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[true]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+  depth65 fail off=897 err=nested too deep val="sentinel"
+  depth66 fail off=897 err=nested too deep val="sentinel"
+  (empty) fail off=0 err=truncated val="sentinel"
+  06 fail off=1 err=unknown tag val="sentinel"
+  05 fail off=1 err=truncated table val="sentinel"
+  0500000000 ok off=5 err=none val={}
+  050100000002 fail off=5 err=truncated table val="sentinel"
+  0501000000020102 fail off=6 err=a table key that is not an integer or a string val="sentinel"
+  05010000000401000000 fail off=10 err=truncated string val="sentinel"
+  0501000000040100000061 fail off=11 err=truncated val="sentinel"
+  050100000004010000006100 fail off=12 err=a nil table value val="sentinel"
+  05020000000301000000000000000203010000000000000002 fail off=24 err=table keys out of order val="sentinel"
+  05020000000302000000000000000203010000000000000002 fail off=24 err=table keys out of order val="sentinel"
+  0400000000 ok off=5 err=none val=""
+  04ffffffff fail off=5 err=truncated string val="sentinel"
+  05ffffffff fail off=5 err=truncated table val="sentinel"
+  03010203 fail off=1 err=truncated integer val="sentinel"
+  0501000000000102 fail off=6 err=a table key that is not an integer or a string val="sentinel"
+splitmix 0: 16294208416658607535 7960286522194355700 487617019471545679 17909611376780542444 1961750202426094747 6038094601263162090 state 13064056694810536062
+splitmix 1: 10451216379200822465 13757245211066428519 17911839290282890590 8196980753821780235 8195237237126968761 14072917602864530048 state 13064056694810536063
+splitmix 81985529216486895: 1547611027431991965 15380727978956804243 3427440727199435966 11733030637320693740 90156556503711752 1494165161016773746 state 13146042224027022957
+splitmix 18446744073709551615: 16490336266968443936 16834447057089888969 4048727598324417001 7862637804313477842 13015481187462834606 15212506146343009075 state 13064056694810536061
+splitmix 5299989643266: 1711213534267772020 16429631016069706723 12785118238637346251 13268951026061269154 3485756682576260050 10788850412044149726 state 13064061994800179328
+== part B
+new 1 2000000 33554432 0 1 open=1
+new -> ok status=ok instr=0 mem=13117 peak=13165 rng=1
+run sandbox -> ok status=ok instr=0 mem=14315 peak=14580 rng=1 result=true
+run names -> ok status=ok instr=0 mem=18889 peak=18889 rng=1 result="_G _VERSION ai assert each error getmetatable ipairs math next pairs pcall print rawequal rawget rawlen rawset require select setmetatable string table tonumber tostring type utf8 xpcall"
+run strnames -> ok status=ok instr=0 mem=13686 peak=21851 rng=1 result="byte char find format gmatch gsub len lower match rep reverse sub upper"
+run mathnames -> ok status=ok instr=0 mem=18325 peak=21851 rng=1 result="abs:function ceil:function deg:function floor:function fmod:function huge:number max:function maxinteger:number min:function mininteger:number modf:function pi:number rad:function sqrt:function tointeger:function type:function ult:function"
+run ainames -> ok status=ok instr=0 mem=19948 peak=21851 rng=1 result="cost keys random used"
+run tostrings -> ok status=ok instr=0 mem=23597 peak=23597 rng=1 result=["table","function","nil","true","12","1.5","x","meta","table","nan","inf","-inf","9.2233720368548e+18","-0.0","1e+300","3.1415926535898"]
+run tostringnone -> FAIL status=runtime error instr=0 mem=23922 peak=24626 rng=1 result=nil
+  error: tostringnone: tostringnone:1: bad argument #1 to 'tostring' (value expected)
+stack traceback:
+	[C]: in function 'tostring'
+	tostringnone:1: in main chunk
+	[C]: in ?
+run print -> ok status=ok instr=0 mem=22201 peak=32015 rng=1 result=1
+  print: a	1	2.5	table	nil	true	function	m
+  print: 
+  print: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+  print: zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz	1
+run printbadtostring -> FAIL status=runtime error instr=0 mem=23669 peak=32015 rng=1 result=nil
+  error: printbadtostring: printbadtostring:1: '__tostring' must return a string
+stack traceback:
+	[C]: in function 'print'
+	printbadtostring:1: in main chunk
+	[C]: in ?
+run format0 -> ok status=ok instr=0 mem=24576 peak=32015 rng=1 result="table|   ab|3"
+run format1 -> ok status=ok instr=0 mem=25126 peak=32015 rng=1 result="5"
+run format2 -> ok status=ok instr=0 mem=25794 peak=32015 rng=1 result="0.125"
+run format3 -> ok status=ok instr=0 mem=26339 peak=32015 rng=1 result="%"
+run format4 -> ok status=ok instr=0 mem=26959 peak=32015 rng=1 result="    t|"
+run format5 -> ok status=ok instr=0 mem=27542 peak=32015 rng=1 result="ff FF 10 A"
+run format6 -> ok status=ok instr=0 mem=28092 peak=32015 rng=1 result="3"
+run format7 -> ok status=ok instr=0 mem=28689 peak=32015 rng=1 result="5       |+5| 5|0xff"
+run format8 -> ok status=ok instr=0 mem=29370 peak=32015 rng=1 result="function nil"
+run format9 -> ok status=ok instr=0 mem=30122 peak=32015 rng=1 result="1.5 2.500000e+00 1E+20 3.000000E+00"
+run format10 -> ok status=ok instr=0 mem=30798 peak=32015 rng=1 result="    3.1416"
+run format11 -> FAIL status=syntax error instr=0 mem=31384 peak=32015 rng=1 result=nil
+  error: format11: format11:1: unfinished string near <eof>
+stack traceback:
+	[C]: in ?
+run format12 -> FAIL status=runtime error instr=0 mem=32340 peak=32468 rng=1 result=nil
+  error: format12: bad argument #2 to '?' (no value)
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	format12:1: in main chunk
+	[C]: in ?
+run format13 -> ok status=ok instr=0 mem=33069 peak=33093 rng=1 result="1.5"
+run format14 -> ok status=ok instr=0 mem=13669 peak=33651 rng=1 result="3"
+run format15 -> ok status=ok instr=0 mem=14986 peak=33651 rng=1 result="true|tt"
+run format16 -> ok status=ok instr=0 mem=15575 peak=33651 rng=1 result="table"
+run fmt_p -> FAIL status=runtime error instr=0 mem=16596 peak=33651 rng=1 result=nil
+  error: fmt_p: fmt_p:1: string.format: %p prints an address
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_p:1: in main chunk
+	[C]: in ?
+run fmt_a -> FAIL status=runtime error instr=0 mem=17499 peak=33651 rng=1 result=nil
+  error: fmt_a: fmt_a:1: string.format: %a differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_a:1: in main chunk
+	[C]: in ?
+run fmt_A -> FAIL status=runtime error instr=0 mem=18403 peak=33651 rng=1 result=nil
+  error: fmt_A: fmt_A:1: string.format: %A differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_A:1: in main chunk
+	[C]: in ?
+run fmt_qf -> FAIL status=runtime error instr=0 mem=19457 peak=33651 rng=1 result=nil
+  error: fmt_qf: fmt_qf:1: string.format: %q of a float differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_qf:1: in main chunk
+	[C]: in ?
+run fmt_qi -> ok status=ok instr=0 mem=20107 peak=33651 rng=1 result="7"
+run fmt_inf -> FAIL status=runtime error instr=0 mem=21058 peak=33651 rng=1 result=nil
+  error: fmt_inf: fmt_inf:1: string.format: %f of nan or inf differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_inf:1: in main chunk
+	[C]: in ?
+run fmt_nan -> FAIL status=runtime error instr=0 mem=22137 peak=33651 rng=1 result=nil
+  error: fmt_nan: fmt_nan:1: string.format: %g of nan or inf differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_nan:1: in main chunk
+	[C]: in ?
+run fmt_Enan -> FAIL status=runtime error instr=0 mem=23227 peak=33651 rng=1 result=nil
+  error: fmt_Enan: fmt_Enan:1: string.format: %E of nan or inf differs between platforms
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_Enan:1: in main chunk
+	[C]: in ?
+run fmt_missing -> FAIL status=runtime error instr=0 mem=24111 peak=33651 rng=1 result=nil
+  error: fmt_missing: bad argument #3 to '?' (no value)
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	fmt_missing:1: in main chunk
+	[C]: in ?
+run fmt_bad -> FAIL status=runtime error instr=0 mem=24895 peak=33651 rng=1 result=nil
+  error: fmt_bad: invalid conversion '%y' to 'format'
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	fmt_bad:1: in main chunk
+	[C]: in ?
+run fmt_nul -> FAIL status=runtime error instr=0 mem=25678 peak=33651 rng=1 result=nil
+  error: fmt_nul: invalid conversion '%' to 'format'
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	fmt_nul:1: in main chunk
+	[C]: in ?
+run fmt_nul2 -> FAIL status=runtime error instr=0 mem=26588 peak=33651 rng=1 result=nil
+  error: fmt_nul2: invalid conversion '%5' to 'format'
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	fmt_nul2:1: in main chunk
+	[C]: in ?
+run fmt_trailing -> FAIL status=runtime error instr=0 mem=13895 peak=33651 rng=1 result=nil
+  error: fmt_trailing: invalid conversion '%5' to 'format'
+stack traceback:
+	[C]: in ?
+	[C]: in function 'string.format'
+	fmt_trailing:1: in main chunk
+	[C]: in ?
+run fmt_method -> ok status=ok instr=0 mem=14601 peak=33651 rng=1 result="4-table"
+run fmt_noarg -> FAIL status=runtime error instr=0 mem=15449 peak=33651 rng=1 result=nil
+  error: fmt_noarg: fmt_noarg:1: bad argument #1 to 'format' (string expected, got no value)
+stack traceback:
+	[C]: in function 'string.format'
+	fmt_noarg:1: in main chunk
+	[C]: in ?
+run setmeta -> ok status=ok instr=0 mem=16577 peak=33651 rng=1 result=7
+run setmeta_gc -> FAIL status=runtime error instr=0 mem=17853 peak=33651 rng=1 result=nil
+  error: setmeta_gc: setmeta_gc:1: setmetatable: __gc is not allowed (the collector's timing is not deterministic)
+stack traceback:
+	[C]: in function 'setmetatable'
+	setmeta_gc:1: in main chunk
+	[C]: in ?
+run setmeta_mode -> FAIL status=runtime error instr=0 mem=19051 peak=33651 rng=1 result=nil
+  error: setmeta_mode: setmeta_mode:1: setmetatable: __mode is not allowed (the collector's timing is not deterministic)
+stack traceback:
+	[C]: in function 'setmetatable'
+	setmeta_mode:1: in main chunk
+	[C]: in ?
+run setmeta_nil -> ok status=ok instr=0 mem=19995 peak=33651 rng=1 result=true
+run setmeta_bad -> FAIL status=runtime error instr=0 mem=20729 peak=33651 rng=1 result=nil
+  error: setmeta_bad: bad argument #1 to '?' (table expected, got number)
+stack traceback:
+	[C]: in ?
+	[C]: in function 'setmetatable'
+	setmeta_bad:1: in main chunk
+	[C]: in ?
+run setmeta_protected -> FAIL status=runtime error instr=0 mem=21880 peak=33651 rng=1 result=nil
+  error: setmeta_protected: cannot change a protected metatable
+stack traceback:
+	[C]: in ?
+	[C]: in function 'setmetatable'
+	setmeta_protected:1: in main chunk
+	[C]: in ?
+run pow -> FAIL status=bad value instr=0 mem=22423 peak=33651 rng=1 result=nil
+  error: pow: result[1]: a float (only integers, strings, booleans and tables)
+run powfloat -> FAIL status=runtime error instr=0 mem=23272 peak=33651 rng=1 result=nil
+  error: powfloat: powfloat:1: exponent is not an integer ('^' is integral only: pow differs between platforms)
+stack traceback:
+	powfloat:1: in main chunk
+	[C]: in ?
+run powconst -> FAIL status=runtime error instr=0 mem=23973 peak=33651 rng=1 result=nil
+  error: powconst: exponent is not an integer ('^' is integral only: pow differs between platforms)
+stack traceback:
+	[C]: in ?
+stack traceback:
+	[C]: in ?
+run ascii -> ok status=ok instr=0 mem=25120 peak=33651 rng=1 result=true
+run bytecode -> FAIL status=syntax error instr=0 mem=25570 peak=33651 rng=1 result=nil
+  error: bytecode: bytecode:1: unexpected symbol near '\'
+stack traceback:
+	[C]: in ?
+run syntax -> FAIL status=syntax error instr=0 mem=26164 peak=33651 rng=1 result=nil
+  error: syntax: syntax:1: unexpected symbol near '+'
+stack traceback:
+	[C]: in ?
+run sorts -> ok status=ok instr=24000 mem=74604 peak=74604 rng=1 result=[375,390,144,258,72,295,343,151,85,83,479,206,221,344]
+run each -> ok status=ok instr=0 mem=78575 peak=78575 rng=1 result=["-9223372036854775808","-5","1","2","3","9223372036854775807","","B","a","a\x00","aa","b","\xff"]
+run eachbig -> ok status=ok instr=32000 mem=406039 peak=406039 rng=1 result=[2997,[-1353,-1207,-1063,-918,-770,-625,-481,-336,-188,-43,103,246,394,537,683,828,976,1121,1265,1410,"k130","k218","k305","k393","k480","k568","k655","k742","k83","k917"]]
+run eachremove -> ok status=ok instr=0 mem=407775 peak=407775 rng=1 result=[1,3]
+run eachadd -> ok status=ok instr=0 mem=409344 peak=409368 rng=1 result=[1,2]
+run eachbool -> FAIL status=runtime error instr=0 mem=410712 peak=410840 rng=1 result=nil
+  error: eachbool: eachbool:1: each: a boolean key (keys are integers or strings)
+stack traceback:
+	[C]: in function 'each'
+	eachbool:1: in main chunk
+	[C]: in ?
+run eachfloat -> FAIL status=runtime error instr=0 mem=411966 peak=412094 rng=1 result=nil
+  error: eachfloat: eachfloat:1: each: a float key (keys are integers or strings)
+stack traceback:
+	[C]: in function 'each'
+	eachfloat:1: in main chunk
+	[C]: in ?
+run eachtable -> FAIL status=runtime error instr=0 mem=413249 peak=413377 rng=1 result=nil
+  error: eachtable: eachtable:1: each: a table key (keys are integers or strings)
+stack traceback:
+	[C]: in function 'each'
+	eachtable:1: in main chunk
+	[C]: in ?
+run eachnotable -> FAIL status=runtime error instr=0 mem=414385 peak=414513 rng=1 result=nil
+  error: eachnotable: eachnotable:1: bad argument #1 to 'each' (table expected, got number)
+stack traceback:
+	[C]: in function 'each'
+	eachnotable:1: in main chunk
+	[C]: in ?
+run keys -> ok status=ok instr=0 mem=416411 peak=416411 rng=1 result=[[9,10,"z"],{},[2]]
+run keysbad -> FAIL status=runtime error instr=0 mem=417339 peak=417467 rng=1 result=nil
+  error: keysbad: keysbad:1: bad argument #1 to 'keys' (table expected, got string)
+stack traceback:
+	[C]: in field 'keys'
+	keysbad:1: in main chunk
+	[C]: in ?
+run random -> ok status=ok instr=0 mem=420871 peak=420871 rng=6110722306163509217 result=[66,20,91,36,62,49,46,34,21,51,38,71,85,23,17,40,56,42,15,93,47,45,86,77,44,60,10,12,32,55,37,23,94,57,76,81,54,82,89,65,83,80,56,19,22,73,39,19,20,19,1,6,5,1,6,2,4,3,5,3,1,6,3,6,1,5,4,6,2,6,6,4,2,4,3,2,6,5,2,6,-2,-4,-1,4,3,-5,0,-4,1,2,5172761501532508584,7159328670391257150,1,3,-1,3]
+run randomempty -> FAIL status=runtime error instr=0 mem=421744 peak=421872 rng=6110722306163509217 result=nil
+  error: randomempty: randomempty:1: bad argument #2 to 'random' (interval is empty)
+stack traceback:
+	[C]: in field 'random'
+	randomempty:1: in main chunk
+	[C]: in ?
+run randomempty1 -> FAIL status=runtime error instr=0 mem=422643 peak=422771 rng=6110722306163509217 result=nil
+  error: randomempty1: randomempty1:1: bad argument #1 to 'random' (interval is empty)
+stack traceback:
+	[C]: in field 'random'
+	randomempty1:1: in main chunk
+	[C]: in ?
+run randomfloat -> FAIL status=runtime error instr=0 mem=423609 peak=423737 rng=6110722306163509217 result=nil
+  error: randomfloat: randomfloat:1: bad argument #1 to 'random' (number has no integer representation)
+stack traceback:
+	[C]: in field 'random'
+	randomfloat:1: in main chunk
+	[C]: in ?
+run randomnone -> FAIL status=runtime error instr=0 mem=424581 peak=424709 rng=6110722306163509217 result=nil
+  error: randomnone: randomnone:1: bad argument #1 to 'random' (number expected, got no value)
+stack traceback:
+	[C]: in field 'random'
+	randomnone:1: in main chunk
+	[C]: in ?
+run randomstr -> ok status=ok instr=0 mem=425165 peak=425165 rng=17511437125486707702 result=2
+run require -> ok status=ok instr=0 mem=428215 peak=428594 rng=17511437125486707702 result=["hello x",true]
+run require_secret -> FAIL status=no such module instr=0 mem=429109 peak=429237 rng=17511437125486707702 result=nil
+  error: require_secret: require_secret:1: require: no module 'secret' (Data/ai/secret.lua)
+stack traceback:
+	[C]: in function 'require'
+	require_secret:1: in main chunk
+	[C]: in ?
+run require_dots -> FAIL status=no such module instr=0 mem=430187 peak=430315 rng=17511437125486707702 result=nil
+  error: require_dots: require_dots:1: require: '..secret' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	require_dots:1: in main chunk
+	[C]: in ?
+run require_slash -> FAIL status=no such module instr=0 mem=431271 peak=431399 rng=17511437125486707702 result=nil
+  error: require_slash: require_slash:1: require: 'lib/util' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	require_slash:1: in main chunk
+	[C]: in ?
+run require_trail -> FAIL status=no such module instr=0 mem=432339 peak=432467 rng=17511437125486707702 result=nil
+  error: require_trail: require_trail:1: require: 'lib.' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	require_trail:1: in main chunk
+	[C]: in ?
+run require_empty -> FAIL status=no such module instr=0 mem=433391 peak=433519 rng=17511437125486707702 result=nil
+  error: require_empty: require_empty:1: require: '' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	require_empty:1: in main chunk
+	[C]: in ?
+run require_long -> FAIL status=no such module instr=0 mem=434999 peak=435127 rng=17511437125486707702 result=nil
+  error: require_long: require_long:1: require: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	require_long:1: in main chunk
+	[C]: in ?
+run require_long96 -> FAIL status=no such module instr=0 mem=437120 peak=437248 rng=17511437125486707702 result=nil
+  error: require_long96: require_long96:1: require: no module 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' (Data/ai/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.lua)
+stack traceback:
+	[C]: in function 'require'
+	require_long96:1: in main chunk
+	[C]: in ?
+run require_syntax -> FAIL status=syntax error instr=0 mem=438503 peak=438631 rng=17511437125486707702 result=nil
+  error: require_syntax: ai/syntax_error.lua:3: unexpected symbol near 'return'
+stack traceback:
+	[C]: in function 'require'
+	require_syntax:1: in main chunk
+	[C]: in ?
+run require_nostep -> FAIL status=bad value instr=0 mem=439914 peak=439914 rng=17511437125486707702 result=nil
+  error: require_nostep: result.init: a function (only integers, strings, booleans and tables)
+run require_missing_deep -> FAIL status=no such module instr=0 mem=440850 peak=440978 rng=17511437125486707702 result=nil
+  error: require_missing_deep: require_missing_deep:1: require: no module 'lib.deeper.missing' (Data/ai/lib/deeper/missing.lua)
+stack traceback:
+	[C]: in function 'require'
+	require_missing_deep:1: in main chunk
+	[C]: in ?
+run require_num -> FAIL status=no such module instr=0 mem=441677 peak=441805 rng=17511437125486707702 result=nil
+  error: require_num: require_num:1: require: no module '5' (Data/ai/5.lua)
+stack traceback:
+	[C]: in function 'require'
+	require_num:1: in main chunk
+	[C]: in ?
+run require_none -> FAIL status=runtime error instr=0 mem=442599 peak=442727 rng=17511437125486707702 result=nil
+  error: require_none: require_none:1: bad argument #1 to 'require' (string expected, got no value)
+stack traceback:
+	[C]: in function 'require'
+	require_none:1: in main chunk
+	[C]: in ?
+run errtable -> FAIL status=runtime error instr=0 mem=443428 peak=443556 rng=17511437125486707702 result=nil
+  error: errtable: table
+stack traceback:
+	[C]: in function 'error'
+	errtable:1: in main chunk
+	[C]: in ?
+run errmeta -> FAIL status=runtime error instr=0 mem=444670 peak=444798 rng=17511437125486707702 result=nil
+  error: errmeta: custom error
+stack traceback:
+	[C]: in function 'error'
+	errmeta:1: in main chunk
+	[C]: in ?
+run errnil -> FAIL status=runtime error instr=0 mem=445125 peak=445253 rng=17511437125486707702 result=nil
+  error: errnil: nil
+stack traceback:
+	[C]: in function 'error'
+	errnil:1: in main chunk
+	[C]: in ?
+run errnum -> FAIL status=runtime error instr=0 mem=445675 peak=445803 rng=17511437125486707702 result=nil
+  error: errnum: 42
+stack traceback:
+	[C]: in function 'error'
+	errnum:1: in main chunk
+	[C]: in ?
+run errlevel -> FAIL status=runtime error instr=0 mem=447250 peak=447442 rng=17511437125486707702 result=nil
+  error: errlevel: errlevel:1: deep
+stack traceback:
+	[C]: in function 'error'
+	errlevel:1: in upvalue 'f'
+	errlevel:1: in local 'g'
+	errlevel:1: in main chunk
+	[C]: in ?
+run errnested -> FAIL status=runtime error instr=0 mem=450287 peak=453487 rng=17511437125486707702 result=nil
+  error: errnested: errnested:1: bottom
+stack traceback:
+	[C]: in function 'error'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	...	(skipping 11 levels)
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in upvalue 'r'
+	errnested:1: in function <errnested:1>
+	(...tail calls...)
+	[C]: in ?
+run pcallok -> ok status=ok instr=0 mem=450861 peak=453487 rng=17511437125486707702 result=[false,"x",false,"table"]
+run results -> ok status=ok instr=0 mem=451228 peak=453487 rng=17511437125486707702 result=1
+run resultnone -> ok status=ok instr=0 mem=451554 peak=453487 rng=17511437125486707702 result=nil
+run resultfloat -> FAIL status=bad value instr=0 mem=452359 peak=453487 rng=17511437125486707702 result=nil
+  error: resultfloat: result.a.b[2]: a float (only integers, strings, booleans and tables)
+run resultintfloat -> FAIL status=bad value instr=0 mem=452723 peak=453487 rng=17511437125486707702 result=nil
+  error: resultintfloat: result: a float (only integers, strings, booleans and tables)
+run resultfunc -> FAIL status=bad value instr=0 mem=453282 peak=453487 rng=17511437125486707702 result=nil
+  error: resultfunc: result.f: a function (only integers, strings, booleans and tables)
+run resultcycle -> FAIL status=bad value instr=0 mem=453837 peak=454027 rng=17511437125486707702 result=nil
+  error: resultcycle: result.t: a cycle
+run resultshared -> ok status=ok instr=0 mem=454626 peak=454747 rng=17511437125486707702 result={a=[1],b=[1]}
+run resultmeta -> FAIL status=bad value instr=0 mem=455163 peak=455174 rng=17511437125486707702 result=nil
+  error: resultmeta: result: a table with a metatable
+run resultfloatkey -> FAIL status=bad value instr=0 mem=455694 peak=455719 rng=17511437125486707702 result=nil
+  error: resultfloatkey: result: a float key
+run resultboolkey -> FAIL status=bad value instr=0 mem=456208 peak=456221 rng=17511437125486707702 result=nil
+  error: resultboolkey: result: a key that is not an integer or a string
+run resulttablekey -> FAIL status=bad value instr=0 mem=456760 peak=456760 rng=17511437125486707702 result=nil
+  error: resulttablekey: result: a key that is not an integer or a string
+run resultdeep -> ok status=ok instr=0 mem=464361 peak=464361 rng=17511437125486707702 result=[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[{}]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+run resultdeep2 -> FAIL status=bad value instr=0 mem=469897 peak=469897 rng=17511437125486707702 result=nil
+  error: resultdeep2: result[1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1][1]: nested too deep
+run resultdeep3 -> FAIL status=bad value instr=0 mem=476441 peak=476441 rng=17511437125486707702 result=nil
+  error: resultdeep3: result.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x: nested too deep
+run resultholes -> ok status=ok instr=0 mem=476955 peak=476955 rng=17511437125486707702 result={[1]=1,[3]=3}
+run resultarr -> ok status=ok instr=0 mem=478494 peak=478494 rng=17511437125486707702 result=[{},[1,2,{a="b"}],{[0]=1,[1]=2},{[1]=1,[3]=3},{[-1]="n"},"str\x00x\xff"]
+run resultkeysorder -> ok status=ok instr=0 mem=479786 peak=479786 rng=17511437125486707702 result={[-2]=4,[5]=2,[""]=5,["1x"]=7,_u=8,a=3,["a b"]=6,zz=1}
+run resultthread -> FAIL status=bad value instr=0 mem=480275 peak=480296 rng=17511437125486707702 result=nil
+  error: resultthread: result[1]: a function (only integers, strings, booleans and tables)
+run budgetloop -> FAIL status=budget exceeded instr=2001000 mem=480761 peak=480953 rng=17511437125486707702 result=nil
+  error: budgetloop: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	budgetloop:1: in main chunk
+	[C]: in ?
+run budgetpcall -> FAIL status=budget exceeded instr=2002000 mem=481694 peak=481822 rng=17511437125486707702 result=nil
+  error: budgetpcall: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	budgetpcall:1: in main chunk
+	[C]: in ?
+run budgetpcall2 -> FAIL status=budget exceeded instr=2002000 mem=482966 peak=483094 rng=17511437125486707702 result=nil
+  error: budgetpcall2: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	budgetpcall2:1: in main chunk
+	[C]: in ?
+run usual -> ok status=ok instr=40000 mem=483604 peak=484005 rng=17511437125486707702 result=200010000
+run usual2 -> ok status=ok instr=40000 mem=484243 peak=484644 rng=17511437125486707702 result=200010000
+run cost -> ok status=ok instr=10 mem=484930 peak=484930 rng=17511437125486707702 result=[7,10,2000000]
+run costover -> FAIL status=budget exceeded instr=3000000 mem=485801 peak=485929 rng=17511437125486707702 result=nil
+  error: costover: costover:1: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	[C]: in field 'cost'
+	costover:1: in main chunk
+	[C]: in ?
+run costpcall -> FAIL status=budget exceeded instr=3001000 mem=486757 peak=486885 rng=17511437125486707702 result=nil
+  error: costpcall: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	costpcall:1: in main chunk
+	[C]: in ?
+run costmany -> ok status=ok instr=1602000 mem=487851 peak=488183 rng=17511437125486707702 result=[1602000,2000000]
+run costneg -> ok status=ok instr=0 mem=488477 peak=488477 rng=17511437125486707702 result=[7,0,2000000]
+run alloc -> ok status=ok instr=160000 mem=3150255 peak=3150255 rng=17511437125486707702 result=20000
+run strings -> ok status=ok instr=1000 mem=3178311 peak=3178311 rng=17511437125486707702 result=[200,"BCDEFGHIJKLMNOPQRSTUVWXYZABCDE","BCDEF","\xc3\xa9\xe4\xb8\xad",1,"abc,abc,abc",65,1]
+run tablelib -> ok status=ok instr=0 mem=3179898 peak=3179898 rng=17511437125486707702 result=["0,1,3,5,8",9,1,2,3]
+run mathlib -> ok status=ok instr=0 mem=3182052 peak=3182299 rng=17511437125486707702 result={[1]=2,[2]=3,[3]=3,[4]=9,[5]=2,[6]=3,[7]="integer",[8]="float",[10]=true,[11]=1,[12]=true,[13]=9223372036854775807,[14]=-9223372036854775808,[15]=true,[16]=3,[17]=-2,[18]=-4}
+run gsub -> ok status=ok instr=0 mem=3183401 peak=3183401 rng=17511437125486707702 result=["hell0 w0rld",4,"key","val"]
+run selectstuff -> FAIL status=bad value instr=0 mem=3185125 peak=3185125 rng=17511437125486707702 result=nil
+  error: selectstuff: result[10]: a float (only integers, strings, booleans and tables)
+run globals -> ok status=ok instr=0 mem=3185624 peak=3186392 rng=17511437125486707702 result=5
+run globals2 -> ok status=ok instr=0 mem=3186022 peak=3186392 rng=17511437125486707702 result=5
+run ipairs -> ok status=ok instr=0 mem=3187186 peak=3187398 rng=17511437125486707702 result=[8,10,12]
+load test_personality -> ok status=ok instr=0 mem=3191813 peak=3192371 rng=17511437125486707702
+init none -> ok status=ok instr=0 mem=3192160 peak=3192371 rng=17511437125486707702 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=3192408 peak=3192408 rng=10465407871100354571 result={last=785,steps=1,sum=785}
+step echo -> ok status=ok instr=0 mem=3193475 peak=3193475 rng=3419378616714001440 result={big=-9223372036854775808,empty={},emptya={},flag=false,list={[1]=0,[2]=10,[3]=20,[4]=30,[5]=40,[7]=7},name="a\x00b",units={[-3]="tower",[1007]="clubman"}}
+step keys -> ok status=ok instr=0 mem=3194398 peak=3194398 rng=14820093436037199925 result=[40,"alpha","zeta"]
+step big -> ok status=ok instr=0 mem=3222025 peak=3222025 rng=7774064181650846794 result={last=554,steps=4,sum=1584}
+step float -> FAIL status=bad value instr=0 mem=3222329 peak=3222329 rng=728034927264493663 result=nil
+  error: test_personality.step: result.build.count: a float (only integers, strings, booleans and tables)
+step intfloat -> FAIL status=bad value instr=0 mem=3222489 peak=3222489 rng=12128749746587692148 result=nil
+  error: test_personality.step: result.count: a float (only integers, strings, booleans and tables)
+step error -> FAIL status=runtime error instr=0 mem=3223023 peak=3223151 rng=5082720492201339017 result=nil
+  error: test_personality.step: ai/test_personality.lua:23: step failed on purpose
+stack traceback:
+	[C]: in function 'error'
+	ai/test_personality.lua:23: in function <ai/test_personality.lua:13>
+	[C]: in ?
+step loop -> FAIL status=budget exceeded instr=2001000 mem=3223409 peak=3223473 rng=16483435311524537502 result=nil
+  error: test_personality.step: instruction budget exceeded (2000000 instructions)
+stack traceback:
+	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
+	[C]: in ?
+step none -> ok status=ok instr=0 mem=3223897 peak=3223897 rng=9437406057138184371 result={last=220,steps=9,sum=3061}
+opt micro plain 1000 notfound -> ok status=ok instr=0 mem=3223927 peak=3223927 rng=9437406057138184371 result=nil
+opt step plain 0 found -> ok status=ok instr=0 mem=3224189 peak=3224189 rng=2391376802751831240 result={last=160,steps=10,sum=3221}
+opt step loop 20000 notfound -> FAIL status=budget exceeded instr=21000 mem=3224385 peak=3224513 rng=13792091622075029725 result=nil
+  error: test_personality.step: instruction budget exceeded (20000 instructions)
+stack traceback:
+	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
+	[C]: in ?
+opt init plain 0 found -> ok status=ok instr=0 mem=3224665 peak=3224665 rng=13792091622075029725 result={hello="hello none"}
+step plain -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594 result={last=261,steps=1,sum=261}
+save -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594
+  bytes 87 45454c4d01f2d4b632fbd39e5d050300000004040000006e616d6504040000006e6f6e6504040000007365656e050100000003010000000000000003050100000000000004050000007374657073030100000000000000
+getmem -> ok status=ok instr=0 mem=3224977 peak=3224977 rng=6746062367688676594 result={name="none",seen=[261],steps=1}
+step badmemory -> ok status=ok instr=0 mem=3225225 peak=3225225 rng=18146777187011875079 result={last=972,steps=2,sum=1233}
+save -> FAIL status=bad value instr=0 mem=3225225 peak=3225225 rng=18146777187011875079
+  error: memory.bad: a float (only integers, strings, booleans and tables)
+  bytes 0 
+getmem -> FAIL status=bad value instr=0 mem=3225225 peak=3225225 rng=18146777187011875079 result=nil
+  error: memory.bad: a float (only integers, strings, booleans and tables)
+step fixmemory -> ok status=ok instr=0 mem=3225489 peak=3225489 rng=11100747932625521948 result={last=131,steps=3,sum=1364}
+save -> ok status=ok instr=0 mem=3225489 peak=3225489 rng=11100747932625521948
+  bytes 123 45454c4d011ccd4b316ec70d9a050300000004040000006e616d6504040000006e6f6e6504040000007365656e050300000003010000000000000003050100000000000003020000000000000003cc0300000000000003030000000000000003830000000000000004050000007374657073030300000000000000
+reload -> ok status=ok instr=0 mem=3231274 peak=3231541 rng=11100747932625521948
+step none -> ok status=ok instr=0 mem=3231506 peak=3231541 rng=4054718678239168817 result={last=863,steps=4,sum=2227}
+save -> ok status=ok instr=0 mem=3231506 peak=3231541 rng=4054718678239168817
+  bytes 141 45454c4d01314996b027414538050300000004040000006e616d6504040000006e6f6e6504040000007365656e050400000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000004050000007374657073030400000000000000
+restore 0 0 -> ok status=ok instr=0 mem=3231778 peak=3231778 rng=4054718678239168817
+step none -> ok status=ok instr=0 mem=3232074 peak=3232074 rng=15455433497562367302 result={last=231,steps=5,sum=2458}
+restore 1 10 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: not an EELM version 1 block
+restore 1 5 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: not an EELM version 1 block
+restore 1 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: not an EELM version 1 block
+restore 2 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: bytes after the table
+restore 3 0 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: not an EELM version 1 block
+restore 3 4 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: not an EELM version 1 block
+restore 3 13 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: unknown tag
+restore 3 20 -> FAIL status=bad value instr=0 mem=3232074 peak=3232074 rng=15455433497562367302
+  error: memory: truncated string
+step none -> ok status=ok instr=0 mem=3232306 peak=3232306 rng=8409404243176014171 result={last=699,steps=6,sum=3157}
+save -> ok status=ok instr=0 mem=3232306 peak=3232306 rng=8409404243176014171
+  bytes 177 45454c4d015b412baf9a34b474050300000004040000006e616d6504040000006e6f6e6504040000007365656e050600000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000003050000000000000003e70000000000000003060000000000000003bb0200000000000004050000007374657073030600000000000000
+rand 3411870698499120919
+rand 1847537496640338450
+step none -> ok status=ok instr=0 mem=3232538 peak=3232538 rng=5718060553726506394 result={last=776,steps=7,sum=3933}
+new 12345 2000000 33554432 0 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=12345
+load test_personality -> ok status=ok instr=0 mem=20139 peak=20342 rng=12345
+restore 0 0 -> ok status=ok instr=0 mem=20443 peak=20443 rng=8409404243176014171
+step none -> ok status=ok instr=0 mem=20707 peak=20707 rng=1363374988789661040 result={last=920,steps=7,sum=4077}
+save -> ok status=ok instr=0 mem=20707 peak=20707 rng=1363374988789661040
+  bytes 195 45454c4d0170bd752e54aeeb12050300000004040000006e616d6504040000006e6f6e6504040000007365656e050700000003010000000000000003050100000000000003020000000000000003cc03000000000000030300000000000000038300000000000000030400000000000000035f0300000000000003050000000000000003e70000000000000003060000000000000003bb0200000000000003070000000000000003980300000000000004050000007374657073030700000000000000
+new 1 2000000 33554432 0 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
+step none -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+  error: no personality loaded
+init none -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+  error: no personality loaded
+opt step none 0 notfound -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1 result=nil
+  error: no personality loaded
+reload -> FAIL status=no personality loaded instr=0 mem=13011 peak=13059 rng=1
+  error: no personality loaded
+load syntax_error -> FAIL status=syntax error instr=0 mem=14000 peak=14064 rng=1
+  error: syntax_error: ai/syntax_error.lua:3: unexpected symbol near 'return'
+stack traceback:
+	[C]: in function 'require'
+	[C]: in ?
+load no_step -> FAIL status=runtime error instr=0 mem=15015 peak=15079 rng=1
+  error: no_step: personality 'no_step': no step function
+stack traceback:
+	[C]: in ?
+load missing -> FAIL status=no such module instr=0 mem=15253 peak=15317 rng=1
+  error: missing: require: no module 'missing' (Data/ai/missing.lua)
+stack traceback:
+	[C]: in function 'require'
+	[C]: in ?
+load lib.util -> FAIL status=runtime error instr=0 mem=17659 peak=18064 rng=1
+  error: lib.util: personality 'lib.util': no step function
+stack traceback:
+	[C]: in ?
+load bad/name -> FAIL status=no such module instr=0 mem=17990 peak=18064 rng=1
+  error: bad/name: require: 'bad/name' is not a module name (letters, digits, _ and dots: Data/ai/a/b.lua is 'a.b')
+stack traceback:
+	[C]: in function 'require'
+	[C]: in ?
+load test_personality -> ok status=ok instr=0 mem=18652 peak=22561 rng=1
+step none -> FAIL status=runtime error instr=0 mem=19235 peak=22561 rng=1 result=nil
+  error: test_personality.step: ai/test_personality.lua:14: attempt to perform arithmetic on a nil value (field 'steps')
+stack traceback:
+	ai/test_personality.lua:14: in function <ai/test_personality.lua:13>
+	[C]: in ?
+new 5 2000000 33554432 0 6 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=5
+run noreader -> FAIL status=no such module instr=0 mem=14340 peak=14468 rng=5 result=nil
+  error: noreader: noreader:1: require: no module 'lib.util' (Data/ai/lib/util.lua)
+stack traceback:
+	[C]: in function 'require'
+	noreader:1: in main chunk
+	[C]: in ?
+load test_personality -> FAIL status=no such module instr=0 mem=14648 peak=14712 rng=5
+  error: test_personality: require: no module 'test_personality' (Data/ai/test_personality.lua)
+stack traceback:
+	[C]: in function 'require'
+	[C]: in ?
+new 9 2000000 33554432 1 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=9
+load test_personality -> ok status=ok instr=0 mem=20139 peak=20342 rng=9
+init none -> ok status=ok instr=0 mem=20486 peak=20486 rng=9 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=20734 peak=20734 rng=11400714819323198494 result={last=229,steps=1,sum=229}
+step badmemory -> FAIL status=bad value instr=0 mem=20982 peak=20982 rng=4354685564936845363 result={last=107,steps=2,sum=336}
+  error: memory.bad: a float (only integers, strings, booleans and tables)
+step fixmemory -> ok status=ok instr=0 mem=21246 peak=21246 rng=15755400384260043848 result={last=639,steps=3,sum=975}
+step none -> ok status=ok instr=0 mem=21478 peak=21478 rng=8709371129873690717 result={last=585,steps=4,sum=1560}
+opt step badmemory 0 found -> FAIL status=bad value instr=0 mem=16825 peak=21774 rng=1663341875487337586 result={last=602,steps=5,sum=2162}
+  error: memory.bad: a float (only integers, strings, booleans and tables)
+new 3 100000 33554432 0 1 open=1
+new -> ok status=ok instr=0 mem=13117 peak=13165 rng=3
+run small -> ok status=ok instr=40000 mem=13843 peak=14244 rng=3 result=200010000
+run small2 -> FAIL status=budget exceeded instr=101000 mem=14628 peak=14692 rng=3 result=nil
+  error: small2: instruction budget exceeded (100000 instructions)
+stack traceback:
+	small2:1: in main chunk
+	[C]: in ?
+run small3 -> ok status=ok instr=80000 mem=15357 peak=15668 rng=3 result=1
+run small4 -> FAIL status=budget exceeded instr=104000 mem=16387 peak=16515 rng=3 result=nil
+  error: small4: small4:1: instruction budget exceeded (100000 instructions)
+stack traceback:
+	[C]: in field 'cost'
+	small4:1: in main chunk
+	[C]: in ?
+load test_personality -> ok status=ok instr=0 mem=19600 peak=21618 rng=3
+init none -> ok status=ok instr=0 mem=19947 peak=21618 rng=3 result={hello="hello none"}
+step loop -> FAIL status=budget exceeded instr=101000 mem=20367 peak=21618 rng=11400714819323198488 result=nil
+  error: test_personality.step: instruction budget exceeded (100000 instructions)
+stack traceback:
+	ai/test_personality.lua:25: in function <ai/test_personality.lua:13>
+	[C]: in ?
+step none -> ok status=ok instr=0 mem=20679 peak=21618 rng=4354685564936845357 result={last=562,steps=2,sum=616}
+new 1 1000000000 2097152 0 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
+run memlimit -> FAIL status=out of memory instr=108000 mem=2097038 peak=2097102 rng=1 result=nil
+  error: memlimit: not enough memory
+run memrep -> FAIL status=out of memory instr=0 mem=13193 peak=2097134 rng=1 result=nil
+  error: memrep: not enough memory
+run memok -> ok status=ok instr=0 mem=14761 peak=2097134 rng=1 result=1000
+run memstrings -> FAIL status=out of memory instr=145000 mem=2097084 peak=2097150 rng=1 result=nil
+  error: memstrings: not enough memory
+run memafter -> ok status=ok instr=0 mem=142010 peak=2097150 rng=1 result=1
+load test_personality -> ok status=ok instr=0 mem=149074 peak=2097150 rng=1
+init none -> ok status=ok instr=0 mem=149421 peak=2097150 rng=1 result={hello="hello none"}
+step none -> ok status=ok instr=0 mem=149669 peak=2097150 rng=11400714819323198486 result={last=466,steps=1,sum=466}
+new 1 1000000000 300000 0 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
+run memtiny -> FAIL status=out of memory instr=32000 mem=274993 peak=275950 rng=1 result=nil
+  error: memtiny: not enough memory
+load test_personality -> ok status=ok instr=0 mem=282123 peak=282326 rng=1
+new 1 1000000000 40000 0 0 open=1
+new -> ok status=ok instr=0 mem=13011 peak=13059 rng=1
+run memsetup -> ok status=ok instr=0 mem=13369 peak=13409 rng=1 result=1
+new 1 1000000000 4000 0 0 open=0
+new -> FAIL status=no Lua state instr=0 mem=0 peak=3982 rng=1
+  error: lua_newstate failed (memory limit too small?)
+run memnone -> FAIL status=no Lua state instr=0 mem=0 peak=3982 rng=1 result=nil
+  error: no Lua state
+new 1 1000000000 22000 0 1 open=1
+new -> ok status=ok instr=0 mem=13117 peak=13165 rng=1
+run memjustabout -> ok status=ok instr=0 mem=13479 peak=13519 rng=1 result=1
+status 0 ok
+status 1 no Lua state
+status 2 no personality loaded
+status 3 no such module
+status 4 syntax error
+status 5 runtime error
+status 6 budget exceeded
+status 7 out of memory
+status 8 bad value
