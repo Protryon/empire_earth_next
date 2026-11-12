@@ -212,6 +212,9 @@ EeCombatImpactOut EECombatImpact(EEUnitClass* inClass, EEComplexUnit* inUnit, Ee
 // (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
 void EEUCMissile::ActionChanged(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope(1);   // TEST ONLY (CBSO golden): the original body in a lambda
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    [&]() {
     float theVolume;
     float thePan;
     float thePitch;
@@ -277,6 +280,9 @@ void EEUCMissile::ActionChanged(EEComplexUnit* inUnit)
         this->HandleActionChanged(inUnit);
         break;
     }
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_ACTION, inUnit, theBefore);
 }
 
 // FUNCTION: EXE 0x617916
@@ -335,6 +341,9 @@ void EEUCMissile::UpdateEffects(EEComplexUnit* inUnit)
 // Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
 void EEUCMissile::Update(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope(2);   // TEST ONLY (CBSO golden): the original body in a lambda
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    [&]() {
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
         this->mPhysicsModel->Step(inUnit);
     this->UpdateEffects(inUnit);
@@ -360,6 +369,9 @@ void EEUCMissile::Update(EEComplexUnit* inUnit)
     if (theTime < 0)
         theTime = 0;
     inUnit->mCloaked = theTime;
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_UPDATE, inUnit, theBefore);
 }
 
 // ICF-FOLDED: EXE 0x556dd8

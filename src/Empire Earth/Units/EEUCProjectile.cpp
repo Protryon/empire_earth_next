@@ -107,6 +107,9 @@ bool EEUCProjectile::CheckWaterImpact(EEComplexUnit* inUnit)
 // set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
 void EEUCProjectile::ActionChanged(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope(1);   // TEST ONLY (CBSO golden): the original body in a lambda
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    [&]() {
     float theVolume;
     float thePan;
     float thePitch;
@@ -209,6 +212,9 @@ void EEUCProjectile::ActionChanged(EEComplexUnit* inUnit)
         this->HandleActionChanged(inUnit);
         break;
     }
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_ACTION, inUnit, theBefore);
 }
 
 // FUNCTION: EXE 0x6197d3
@@ -275,6 +281,9 @@ void EEUCProjectile::UpdateEffects(EEComplexUnit* inUnit)
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
 void EEUCProjectile::Update(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope(2);   // TEST ONLY (CBSO golden): the original body in a lambda
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    [&]() {
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
         this->mPhysicsModel->Step(inUnit);
     inUnit->UpdateOrbitals();
@@ -295,6 +304,9 @@ void EEUCProjectile::Update(EEComplexUnit* inUnit)
     if (theElapsed == 0)
         theElapsed = 1;
     inUnit->SetFlightTime(inUnit->mFlightTime + theElapsed);
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_UPDATE, inUnit, theBefore);
 }
 
 // ICF-FOLDED: EXE 0x556dd8

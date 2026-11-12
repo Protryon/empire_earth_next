@@ -229,6 +229,8 @@ bool EEUGHealUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
 // to the target's maximum hit points
 void EEUGHealUnit::Work(EEComplexUnit* inUnit)
 {
+    EECombatHostReadScope theScope(3);   // TEST ONLY (CBSO golden): the original body in a lambda
+    [&]() {
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionHealUnit || this->mTarget == NULL || ::gWorld.mInCinematic
         || !(this->mTarget->mHitPoints > 0)
         || (inUnit->mPlayer != this->mTarget->mPlayer && this->mTarget->mPlayer->mEnemies[inUnit->mPlayer->mPlayerID] != 0))
@@ -241,6 +243,9 @@ void EEUGHealUnit::Work(EEComplexUnit* inUnit)
                                   (int32_t)this->mTarget->mStats->mMaxHitPoints};
         this->mTarget->SetHitPoints(EECombatHeal(theHeal).hit_points);
     }
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHealWork(inUnit, this->mTarget, this->mElapsedTime);
 }
 
 // FUNCTION: EXE 0x625828

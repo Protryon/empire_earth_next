@@ -72,10 +72,28 @@ bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
 
-// The nesting guard of a captured read (per thread): mOuter when no other captured read is running
+// CBSO (TEST ONLY): the outcome of a shot's ActionChanged or Update (the unit's command before and after, animation,
+// physics action, hit points, goal and its target, location, rotting, flight and lifetime timers, opacity, velocity,
+// its player's population) or of the heal goal's Work (the target's hit points, the elapsed time); folded like CBQR
+// (EE_SIM_CAPTURE_CBSO_FULL=1: every call), only the outermost call of each kind (scope slots 1 to 3)
+enum {
+    EE_COMBAT_SO_PROJECTILE_ACTION = 1,
+    EE_COMBAT_SO_MISSILE_ACTION = 2,
+    EE_COMBAT_SO_PROJECTILE_UPDATE = 3,
+    EE_COMBAT_SO_MISSILE_UPDATE = 4,
+    EE_COMBAT_SO_TORPEDO_UPDATE = 5,
+    EE_COMBAT_SO_HEAL_WORK = 6,
+};
+uint32_t EECombatCommandOf(const EEComplexUnit* inUnit);
+void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore);
+void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed);
+
+// The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
+// Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running
 struct EECombatHostReadScope {
-    EECombatHostReadScope();
+    explicit EECombatHostReadScope(int inSlot = 0);
     ~EECombatHostReadScope();
+    int mSlot;
     bool mOuter;
 };
 

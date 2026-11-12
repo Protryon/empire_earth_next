@@ -229,12 +229,73 @@ struct EECombatFolder {
 };
 
 EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQR_FULL");
-thread_local int sHostReadDepth = 0;
+EECombatFolder sShots(EE_COMBAT_TAG('C', 'B', 'S', 'O'), "EE_SIM_CAPTURE_CBSO_FULL");
+thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
+
+uint32_t EEShotBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
 
 }   // namespace
 
-EECombatHostReadScope::EECombatHostReadScope() : mOuter(sHostReadDepth++ == 0) {}
-EECombatHostReadScope::~EECombatHostReadScope() { sHostReadDepth--; }
+EECombatHostReadScope::EECombatHostReadScope(int inSlot) : mSlot(inSlot), mOuter(sHostReadDepth[inSlot]++ == 0) {}
+EECombatHostReadScope::~EECombatHostReadScope() { sHostReadDepth[this->mSlot]--; }
+
+uint32_t EECombatCommandOf(const EEComplexUnit* inUnit)
+{
+    return inUnit->mCommand != NULL ? (uint32_t)inUnit->mCommand->mType : 0;
+}
+
+void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t inBefore)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[22];
+    memset(theRecord, 0, sizeof(theRecord));
+    theRecord[0] = inFunc;
+    theRecord[1] = (uint32_t)inUnit->mUnitID;
+    theRecord[2] = inBefore;
+    theRecord[3] = EECombatCommandOf(inUnit);
+    theRecord[4] = (uint32_t)inUnit->mAnimation;
+    theRecord[5] = (uint32_t)inUnit->mCurrentPhysicsAction;
+    theRecord[6] = (uint32_t)inUnit->mHitPoints.Get();
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    theRecord[7] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
+    if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
+        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        theRecord[8] = theTarget != NULL ? (uint32_t)theTarget->mUnitID : 0;
+    } else if (theGoal != NULL && theGoal->mKind == kGoalAttackGround) {
+        const GE3DPoint& thePoint = static_cast<EEUGAttackGround*>(theGoal)->mTarget;
+        theRecord[9] = EEShotBits(thePoint.GetX());
+        theRecord[10] = EEShotBits(thePoint.GetY());
+        theRecord[11] = EEShotBits(thePoint.GetZ());
+    }
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    theRecord[12] = EEShotBits(theLocation.GetX());
+    theRecord[13] = EEShotBits(theLocation.GetY());
+    theRecord[14] = EEShotBits(theLocation.GetZ());
+    theRecord[15] = (uint32_t)inUnit->mRottingAwayTime;
+    theRecord[16] = (uint32_t)inUnit->mFlightTime;
+    theRecord[17] = (uint32_t)inUnit->mCloaked;
+    theRecord[18] = EEShotBits(inUnit->mOpacity);
+    theRecord[19] = EEShotBits(inUnit->mVelocity);
+    theRecord[20] = inUnit->mPlayer != NULL ? (uint32_t)inUnit->mPlayer->mPopulationCount : 0;
+    theRecord[21] = (uint32_t)inUnit->mTileX.Get();
+    sShots.Add(theRecord, sizeof(theRecord));
+}
+
+void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget, unsigned long inElapsed)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[5] = {EE_COMBAT_SO_HEAL_WORK, (uint32_t)inUnit->mUnitID,
+                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
+                             inTarget != NULL ? (uint32_t)inTarget->mHitPoints.Get() : 0, (uint32_t)inElapsed};
+    sShots.Add(theRecord, sizeof(theRecord));
+}
 
 void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
                              uint32_t inExtra0, uint32_t inExtra1, uint32_t inExtra2)
@@ -257,6 +318,7 @@ void EECombatCaptureFlush()
             EEConditionWrite();
     }
     sHostReads.Flush();
+    sShots.Flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
