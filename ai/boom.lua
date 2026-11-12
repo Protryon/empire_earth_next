@@ -705,6 +705,17 @@ function M.step(view, memory)
         reserve.wood = BO.WOOD_BANK
         differs = differs or reserve.wood ~= view.reserve.wood
     end
+    -- (the army's priority spends, boom-defence: memory.priority_spend = the cost of what its answer still has to buy,
+    -- the guard's warships and the towers' attack upgrade; the reserve gives way to it ahead of the epoch's save)
+    if memory.priority_spend ~= nil then
+        for _, r in ipairs(V.resources) do
+            local cut = memory.priority_spend[r] or 0
+            if cut > 0 and reserve[r] > 0 then
+                reserve[r] = math.max(reserve[r] - cut, 0)
+                differs = differs or reserve[r] ~= view.reserve[r]
+            end
+        end
+    end
     if differs then
         order("reserve", {verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone,
                           gold = reserve.gold, iron = reserve.iron})
