@@ -532,7 +532,6 @@ public:
     void GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs);   // 0x1cc4cc
     void GetChecksum(ESChecksum& ioChecksum);       // 0x1cc4ec
     void SumCosts(long inID, long inUnitClass, long* ioCosts);   // 0x1cc5db
-    static bool GetUnitClassMediaMask(EETechTree* inTree, long inUnitClass, unsigned long* outMask);  // 0x1cc710
     static bool IsLatestEffect(EETechTree* inTree, long inID, long inUnitClass, long inKind);  // 0x1cc9e8
     EEPlayer* GetPlayer();                  // 0x1ccb1f
     void AdvanceEpoch();                    // 0x1ccb34

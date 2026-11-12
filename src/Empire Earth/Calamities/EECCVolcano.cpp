@@ -349,12 +349,6 @@ bool EECCVolcano::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsi
     return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
 }
 
-// ICF-FOLDED: EXE 0x563d6f
-// (empty: folded into a shared empty function)
-void EECCVolcano::UpdateVolcano(EECalamity* inCalamity, float inElapsedTime)
-{
-}
-
 // Compiler-generated for this unit (std::sort of ClearArea's tiles with EETileDistanceLess; Dinkum 2.33):
 // TEMPLATE: EXE 0x4b538d
 // TEMPLATE: EXE 0x4b5473

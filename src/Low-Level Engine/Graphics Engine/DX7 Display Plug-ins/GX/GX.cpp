@@ -19,35 +19,26 @@ static_assert(sizeof(GXMATERIAL) == 68, "ee_gx/src/abi.rs");
 
 extern "C" {
 GXRESULT gx_direct_draw_create(void** outDirectDraw);
-GXRESULT gx_direct_draw_enumerate(GXDDENUMCALLBACKEX inCallback, void* inContext);
 unsigned long gx_direct_draw_add_ref(void* inDirectDraw);
 unsigned long gx_direct_draw_release(void* inDirectDraw);
-GXRESULT gx_direct_draw_query_interface(void* inDirectDraw, uint32_t inIID, void** outObject);
 GXRESULT gx_direct_draw_get_caps(GXCAPS* outCaps, GXCAPS* outHELCaps);
-GXRESULT gx_direct_draw_enum_display_modes(void* inDirectDraw, void* inContext, GXENUMMODESCALLBACK inCallback);
-GXRESULT gx_direct_draw_get_display_mode(void* inDirectDraw, GXSURFACEDESC* outMode);
 GXRESULT gx_direct_draw_set_display_mode(void* inDirectDraw, unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount);
 GXRESULT gx_direct_draw_set_cooperative_level(void* inDirectDraw, void* inWindow, unsigned long inFlags);
 GXRESULT gx_direct_draw_create_surface(void* inDirectDraw, GXSURFACEDESC* inDescription, void** outSurface);
-GXRESULT gx_direct_draw_get_available_vid_mem(unsigned long* outTotal, unsigned long* outFree);
 GXRESULT gx_direct_draw_get_device_identifier(GXDEVICEIDENTIFIER* outIdentifier);
-GXRESULT gx_direct_draw_enum_devices(GXENUMDEVICESCALLBACK inCallback, void* inContext);
 GXRESULT gx_direct_draw_create_vertex_buffer(unsigned long inFVF, unsigned long inCount, void** outBuffer);
 GXRESULT gx_direct_draw_create_device(void* inTarget, void** outDevice);
 
 unsigned long gx_surface_add_ref(void* inSurface);
 unsigned long gx_surface_release(void* inSurface);
 GXRESULT gx_surface_add_attached(void* inSurface, void* inOther);
-GXRESULT gx_surface_delete_attached(void* inSurface, void* inOther);
 GXRESULT gx_surface_get_attached(void* inSurface, GXSCAPS* inCaps, void** outSurface);
 GXRESULT gx_surface_blt(void* inSurface, RECT* inDestination, void* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX);
 GXRESULT gx_surface_flip(void* inSurface, unsigned long inFlags);
 GXRESULT gx_surface_lock(void* inSurface, RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags);
 GXRESULT gx_surface_unlock(void* inSurface);
 GXRESULT gx_surface_set_color_key(void* inSurface, GXCOLORKEY* inKey);
-GXRESULT gx_surface_get_desc(void* inSurface, GXSURFACEDESC* outDescription);
 float gx_surface_render_scale(void* inSurface);
-bool gx_surface_is_gpu_resident(void* inSurface);
 GXRESULT gx_surface_draw_text(void* inSurface, const RECT* inBounds, GXSurface::TextCallback inDraw, void* inContext);
 
 unsigned long gx_vertex_buffer_add_ref(void* inBuffer);
@@ -57,23 +48,19 @@ GXRESULT gx_vertex_buffer_lock(void* inBuffer, void** outData, unsigned long* ou
 unsigned long gx_device_add_ref(void* inDevice);
 unsigned long gx_device_release(void* inDevice);
 GXRESULT gx_device_get_caps(GXDEVICEDESC* outCaps);
-GXRESULT gx_device_enum_texture_formats(GXENUMPIXELFORMATSCALLBACK inCallback, void* inContext);
 GXRESULT gx_device_begin_scene();
 GXRESULT gx_device_set_render_target(void* inDevice, void* inTarget);
 GXRESULT gx_device_set_viewport(void* inDevice, GXVIEWPORT* inViewport);
 GXRESULT gx_device_get_viewport(void* inDevice, GXVIEWPORT* outViewport);
 GXRESULT gx_device_clear(void* inDevice, unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ);
 GXRESULT gx_device_set_transform(void* inDevice, uint32_t inState, GXMATRIX* inMatrix);
-GXRESULT gx_device_get_transform(void* inDevice, uint32_t inState, GXMATRIX* outMatrix);
 GXRESULT gx_device_set_render_state(void* inDevice, uint32_t inState, unsigned long inValue);
-GXRESULT gx_device_get_render_state(void* inDevice, uint32_t inState, unsigned long* outValue);
 GXRESULT gx_device_set_stage_state(void* inDevice, unsigned long inStage, uint32_t inState, unsigned long inValue);
 GXRESULT gx_device_set_texture(void* inDevice, unsigned long inStage, void* inTexture);
 GXRESULT gx_device_set_material(void* inDevice, GXMATERIAL* inMaterial);
 GXRESULT gx_device_set_light(void* inDevice, unsigned long inIndex, GXLIGHT* inLight);
 GXRESULT gx_device_get_light(void* inDevice, unsigned long inIndex, GXLIGHT* outLight);
 GXRESULT gx_device_light_enable(void* inDevice, unsigned long inIndex, int inEnable);
-GXRESULT gx_device_draw_primitive_vb(void* inDevice, uint32_t inType, void* inBuffer, unsigned long inStart, unsigned long inCount);
 GXRESULT gx_device_draw_indexed_primitive_vb(void* inDevice, uint32_t inType, void* inBuffer, unsigned long inStart, unsigned long inCount,
                                              unsigned short* inIndices, unsigned long inIndexCount);
 
@@ -88,22 +75,14 @@ unsigned long gx_auto_ui_scale();
 // ---- GXDirectDraw
 
 GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw) { return gx_direct_draw_create(reinterpret_cast<void**>(outDirectDraw)); }
-GXRESULT GXDirectDrawEnumerateEx(GXDDENUMCALLBACKEX inCallback, void* inContext, unsigned long inFlags) { return gx_direct_draw_enumerate(inCallback, inContext); }
 unsigned long GXDirectDraw::AddRef() { return gx_direct_draw_add_ref(this); }
 unsigned long GXDirectDraw::Release() { return gx_direct_draw_release(this); }
-GXRESULT GXDirectDraw::QueryInterface(GXIID inIID, void** outObject) { return gx_direct_draw_query_interface(this, inIID, outObject); }
 GXRESULT GXDirectDraw::GetCaps(GXCAPS* outCaps, GXCAPS* outHELCaps) { return gx_direct_draw_get_caps(outCaps, outHELCaps); }
-GXRESULT GXDirectDraw::EnumDisplayModes(unsigned long inFlags, GXSURFACEDESC* inFilter, void* inContext, GXENUMMODESCALLBACK inCallback) { return gx_direct_draw_enum_display_modes(this, inContext, inCallback); }
-GXRESULT GXDirectDraw::GetDisplayMode(GXSURFACEDESC* outMode) { return gx_direct_draw_get_display_mode(this, outMode); }
 GXRESULT GXDirectDraw::SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount, unsigned long inRefreshRate, unsigned long inFlags) { return gx_direct_draw_set_display_mode(this, inWidth, inHeight, inBitCount); }
 GXRESULT GXDirectDraw::SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags) { return gx_direct_draw_set_cooperative_level(this, inWindow, inFlags); }
 GXRESULT GXDirectDraw::CreateSurface(GXSURFACEDESC* inDescription, GXSurface** outSurface, void* inOuter) { return gx_direct_draw_create_surface(this, inDescription, reinterpret_cast<void**>(outSurface)); }
-GXRESULT GXDirectDraw::GetAvailableVidMem(GXSCAPS* inCaps, unsigned long* outTotal, unsigned long* outFree) { return gx_direct_draw_get_available_vid_mem(outTotal, outFree); }
 GXRESULT GXDirectDraw::GetDeviceIdentifier(GXDEVICEIDENTIFIER* outIdentifier, unsigned long inFlags) { return gx_direct_draw_get_device_identifier(outIdentifier); }
 GXRESULT GXDirectDraw::RestoreAllSurfaces() { return GX_OK; }
-GXRESULT GXDirectDraw::TestCooperativeLevel() { return GX_OK; }
-GXRESULT GXDirectDraw::FlipToGDISurface() { return GX_OK; }
-GXRESULT GXDirectDraw::EnumDevices(GXENUMDEVICESCALLBACK inCallback, void* inContext) { return gx_direct_draw_enum_devices(inCallback, inContext); }
 GXRESULT GXDirectDraw::CreateDevice(GXIID inKind, GXSurface* inTarget, GXDevice** outDevice) { return gx_direct_draw_create_device(inTarget, reinterpret_cast<void**>(outDevice)); }
 GXRESULT GXDirectDraw::CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXVertexBuffer** outBuffer, unsigned long inFlags) { return gx_direct_draw_create_vertex_buffer(inDescription->dwFVF, inDescription->dwNumVertices, reinterpret_cast<void**>(outBuffer)); }
 
@@ -112,17 +91,12 @@ GXRESULT GXDirectDraw::CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXV
 unsigned long GXSurface::AddRef() { return gx_surface_add_ref(this); }
 unsigned long GXSurface::Release() { return gx_surface_release(this); }
 GXRESULT GXSurface::AddAttachedSurface(GXSurface* inSurface) { return gx_surface_add_attached(this, inSurface); }
-GXRESULT GXSurface::DeleteAttachedSurface(unsigned long inFlags, GXSurface* inSurface) { return gx_surface_delete_attached(this, inSurface); }
 GXRESULT GXSurface::GetAttachedSurface(GXSCAPS* inCaps, GXSurface** outSurface) { return gx_surface_get_attached(this, inCaps, reinterpret_cast<void**>(outSurface)); }
 GXRESULT GXSurface::Blt(RECT* inDestination, GXSurface* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX) { return gx_surface_blt(this, inDestination, inSource, inSourceRect, inFlags, inFX); }
 GXRESULT GXSurface::Flip(GXSurface* inOverride, unsigned long inFlags) { return gx_surface_flip(this, inFlags); }
 GXRESULT GXSurface::Lock(RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags, HANDLE inEvent) { return gx_surface_lock(this, inRect, outDescription, inFlags); }
 GXRESULT GXSurface::Unlock(RECT* inRect) { return gx_surface_unlock(this); }
 GXRESULT GXSurface::SetColorKey(unsigned long inFlags, GXCOLORKEY* inKey) { return gx_surface_set_color_key(this, inKey); }
-GXRESULT GXSurface::GetSurfaceDesc(GXSURFACEDESC* outDescription) { return gx_surface_get_desc(this, outDescription); }
-GXRESULT GXSurface::Restore() { return GX_OK; }
-GXRESULT GXSurface::IsLost() { return GX_OK; }
-bool GXSurface::IsGPUResident() const { return gx_surface_is_gpu_resident(const_cast<GXSurface*>(this)); }
 float GXSurface::GetRenderScale() const { return gx_surface_render_scale(const_cast<GXSurface*>(this)); }
 GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext) { return gx_surface_draw_text(this, &inBounds, inDraw, inContext); }
 
@@ -138,7 +112,6 @@ GXRESULT GXVertexBuffer::Unlock() { return GX_OK; }
 unsigned long GXDevice::AddRef() { return gx_device_add_ref(this); }
 unsigned long GXDevice::Release() { return gx_device_release(this); }
 GXRESULT GXDevice::GetCaps(GXDEVICEDESC* outCaps) { return gx_device_get_caps(outCaps); }
-GXRESULT GXDevice::EnumTextureFormats(GXENUMPIXELFORMATSCALLBACK inCallback, void* inContext) { return gx_device_enum_texture_formats(inCallback, inContext); }
 GXRESULT GXDevice::BeginScene() { return gx_device_begin_scene(); }
 GXRESULT GXDevice::EndScene() { return GX_OK; }
 GXRESULT GXDevice::SetRenderTarget(GXSurface* inTarget, unsigned long inFlags) { return gx_device_set_render_target(this, inTarget); }
@@ -146,9 +119,7 @@ GXRESULT GXDevice::SetViewport(GXVIEWPORT* inViewport) { return gx_device_set_vi
 GXRESULT GXDevice::GetViewport(GXVIEWPORT* outViewport) { return gx_device_get_viewport(this, outViewport); }
 GXRESULT GXDevice::Clear(unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ, unsigned long inStencil) { return gx_device_clear(this, inCount, inRects, inFlags, inColor, inZ); }
 GXRESULT GXDevice::SetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* inMatrix) { return gx_device_set_transform(this, inState, inMatrix); }
-GXRESULT GXDevice::GetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* outMatrix) { return gx_device_get_transform(this, inState, outMatrix); }
 GXRESULT GXDevice::SetRenderState(GXRENDERSTATETYPE inState, unsigned long inValue) { return gx_device_set_render_state(this, inState, inValue); }
-GXRESULT GXDevice::GetRenderState(GXRENDERSTATETYPE inState, unsigned long* outValue) { return gx_device_get_render_state(this, inState, outValue); }
 GXRESULT GXDevice::SetTextureStageState(unsigned long inStage, GXTEXTURESTAGESTATETYPE inState, unsigned long inValue) { return gx_device_set_stage_state(this, inStage, inState, inValue); }
 GXRESULT GXDevice::SetTexture(unsigned long inStage, GXSurface* inTexture) { return gx_device_set_texture(this, inStage, inTexture); }
 GXRESULT GXDevice::SetMaterial(GXMATERIAL* inMaterial) { return gx_device_set_material(this, inMaterial); }
@@ -156,7 +127,6 @@ GXRESULT GXDevice::SetLight(unsigned long inIndex, GXLIGHT* inLight) { return gx
 GXRESULT GXDevice::GetLight(unsigned long inIndex, GXLIGHT* outLight) { return gx_device_get_light(this, inIndex, outLight); }
 GXRESULT GXDevice::LightEnable(unsigned long inIndex, BOOL inEnable) { return gx_device_light_enable(this, inIndex, inEnable); }
 GXRESULT GXDevice::ValidateDevice(unsigned long* outPasses) { *outPasses = 1; return GX_OK; }
-GXRESULT GXDevice::DrawPrimitiveVB(GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart, unsigned long inCount, unsigned long inFlags) { return gx_device_draw_primitive_vb(this, inType, inBuffer, inStart, inCount); }
 GXRESULT GXDevice::DrawIndexedPrimitiveVB(GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart, unsigned long inCount, unsigned short* inIndices, unsigned long inIndexCount, unsigned long inFlags) { return gx_device_draw_indexed_primitive_vb(this, inType, inBuffer, inStart, inCount, inIndices, inIndexCount); }
 
 // ---- the display settings

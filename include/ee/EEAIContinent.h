@@ -35,7 +35,6 @@ public:
     void AddPathAreaID(unsigned short inID);   // 0x1d9e0: unless present (0x1e5bd), push_back + sort (0x1e6ac)
     EEAIPathArea* GetPathAreaAt(const U2DPoint<long>& inPoint);   // 0x1dbf4: as EEAIPathSector's
     void RemovePathAreaID(unsigned short inID);   // 0x1e4a1: lower_bound + erase when equal
-    void SortTiles(bool inUnique);          // 0x1e512: sort mShoreTiles, then unique + erase if inUnique
     void AddChokePoint(long inIndex);       // 0x26d84: push_back + sort (EEAIContinentManager::AddChokePoint)
     void AddForestID(unsigned short inID);  // 0x26dca: push_back + sort (0x208cc, the forest's +0x82)
     void AddHillID(unsigned short inID);    // 0x26e13: push_back + sort (0x2033f, the hill's +0x6a)

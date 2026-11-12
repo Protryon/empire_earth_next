@@ -343,14 +343,6 @@ void EEUserInterface::TestScenario()
     gMusicManager->Start();
 }
 
-// FUNCTION: EXE 0x676c9c
-// Closes the IME candidate window when the candidate window option is on
-void EEUserInterface::CloseIMECandidateWindow()
-{
-    if (gGamePreferences.mSettings.mUseCandidateWindow == true)
-        gUIManager->CloseIMECandidateWindow();
-}
-
 // FUNCTION: EXE 0x676cb1
 // Closes the IME composition string
 void EEUserInterface::CloseIMECompositionString()
@@ -1278,17 +1270,6 @@ void EEUserInterface::PostAction(EEAction* inAction)
 {
     inAction->Reference();
     this->PushBack(this->mActionQueue, this->mActionLock, inAction);
-}
-
-// FUNCTION: EXE 0x678f90
-// Opens the IME candidate window (creating it first) when the candidate window option is on
-void EEUserInterface::OpenIMECandidateWindow()
-{
-    if (gGamePreferences.mSettings.mUseCandidateWindow != true)
-        return;
-    if (gUIManager->GetCandidateWindow() == NULL)
-        gUIManager->CreateIMECandidateWindow(gU531938);
-    gUIManager->OpenIMECandidateWindow();
 }
 
 // FUNCTION: EXE 0x678fc0

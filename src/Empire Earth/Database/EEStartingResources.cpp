@@ -174,20 +174,6 @@ void EETagPoint::GetPoint(unsigned long inFrame, const GETransformation& inTrans
     inTransformation.Apply(thePoint, outPoint);
 }
 
-// FUNCTION: EXE 0x4dadfb
-// Computes the tag point's transformation at a frame: a part transform, the model chain, then the given transformation
-void EETagPoint::GetTransformation(unsigned long inFrame, const GETransformation& inTransformation,
-                                   const GETransformation& inPart, GETransformation& outTransformation)
-{
-    GETransformation theResult(inPart);
-    GETransformation thePrevious(false);
-    for (GEModel* theModel = this->mModel; theModel != NULL; theModel = theModel->GetParentModel()) {
-        thePrevious = theResult;
-        theModel->GetInternalTransform(inFrame).Apply(thePrevious, theResult);
-    }
-    inTransformation.Apply(theResult, outTransformation);
-}
-
 // SYNTHETIC: EXE 0x4da984
 // SYNTHETIC: EXE 0x4da98e
 // SYNTHETIC: EXE 0x4da9a6

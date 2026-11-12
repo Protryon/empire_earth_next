@@ -292,22 +292,14 @@ class GXDirectDraw {
 public:
     unsigned long AddRef();
     unsigned long Release();
-    GXRESULT QueryInterface(GXIID inIID, void** outObject);
     GXRESULT GetCaps(GXCAPS* outCaps, GXCAPS* outHELCaps);
-    GXRESULT EnumDisplayModes(unsigned long inFlags, GXSURFACEDESC* inFilter, void* inContext,
-                              GXENUMMODESCALLBACK inCallback);
-    GXRESULT GetDisplayMode(GXSURFACEDESC* outMode);
     GXRESULT SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount,
                             unsigned long inRefreshRate, unsigned long inFlags);
     GXRESULT SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags);   // an HWND in DirectDraw
     GXRESULT CreateSurface(GXSURFACEDESC* inDescription, GXSurface** outSurface, void* inOuter);
-    GXRESULT GetAvailableVidMem(GXSCAPS* inCaps, unsigned long* outTotal, unsigned long* outFree);
     GXRESULT GetDeviceIdentifier(GXDEVICEIDENTIFIER* outIdentifier, unsigned long inFlags);
     GXRESULT RestoreAllSurfaces();
-    GXRESULT TestCooperativeLevel();
-    GXRESULT FlipToGDISurface();
     // IDirect3D7
-    GXRESULT EnumDevices(GXENUMDEVICESCALLBACK inCallback, void* inContext);
     GXRESULT CreateDevice(GXIID inKind, GXSurface* inTarget, GXDevice** outDevice);
     GXRESULT CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXVertexBuffer** outBuffer, unsigned long inFlags);
 
@@ -317,8 +309,6 @@ private:   // handles: Rust owns the objects
 };
 
 GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw);
-// reports one display device: the primary monitor (GUID NULL)
-GXRESULT GXDirectDrawEnumerateEx(GXDDENUMCALLBACKEX inCallback, void* inContext, unsigned long inFlags);
 
 // A DirectDraw surface: primary (the window), back buffer, offscreen plain, texture (+ mip levels), Z buffer
 class GXSurface {
@@ -326,20 +316,14 @@ public:
     unsigned long AddRef();
     unsigned long Release();
     GXRESULT AddAttachedSurface(GXSurface* inSurface);
-    GXRESULT DeleteAttachedSurface(unsigned long inFlags, GXSurface* inSurface);
     GXRESULT GetAttachedSurface(GXSCAPS* inCaps, GXSurface** outSurface);
     GXRESULT Blt(RECT* inDestination, GXSurface* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX);
     GXRESULT Flip(GXSurface* inOverride, unsigned long inFlags);
     GXRESULT Lock(RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags, HANDLE inEvent);
     GXRESULT Unlock(RECT* inRect);
     GXRESULT SetColorKey(unsigned long inFlags, GXCOLORKEY* inKey);
-    GXRESULT GetSurfaceDesc(GXSURFACEDESC* outDescription);
-    GXRESULT Restore();
-    GXRESULT IsLost();
 
     // GX extensions
-    // true when the GPU texture holds the newest pixels (a render target that was drawn into)
-    bool IsGPUResident() const;
     // the GPU copy's pixels per surface pixel (GXRenderScale: a back buffer's; 1 for the others)
     float GetRenderScale() const;
     // draws text (platform/PlatFont.h) inside inBounds: inDraw draws into a 32-bit BGRA target that covers inBounds
@@ -388,7 +372,6 @@ public:
     unsigned long AddRef();
     unsigned long Release();
     GXRESULT GetCaps(GXDEVICEDESC* outCaps);
-    GXRESULT EnumTextureFormats(GXENUMPIXELFORMATSCALLBACK inCallback, void* inContext);
     GXRESULT BeginScene();
     GXRESULT EndScene();
     GXRESULT SetRenderTarget(GXSurface* inTarget, unsigned long inFlags);
@@ -397,9 +380,7 @@ public:
     GXRESULT Clear(unsigned long inCount, GXRECT* inRects, unsigned long inFlags, unsigned long inColor, float inZ,
                    unsigned long inStencil);
     GXRESULT SetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* inMatrix);
-    GXRESULT GetTransform(GXTRANSFORMSTATETYPE inState, GXMATRIX* outMatrix);
     GXRESULT SetRenderState(GXRENDERSTATETYPE inState, unsigned long inValue);
-    GXRESULT GetRenderState(GXRENDERSTATETYPE inState, unsigned long* outValue);
     GXRESULT SetTextureStageState(unsigned long inStage, GXTEXTURESTAGESTATETYPE inState, unsigned long inValue);
     GXRESULT SetTexture(unsigned long inStage, GXSurface* inTexture);
     GXRESULT SetMaterial(GXMATERIAL* inMaterial);
@@ -407,8 +388,6 @@ public:
     GXRESULT GetLight(unsigned long inIndex, GXLIGHT* outLight);
     GXRESULT LightEnable(unsigned long inIndex, BOOL inEnable);
     GXRESULT ValidateDevice(unsigned long* outPasses);
-    GXRESULT DrawPrimitiveVB(GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart,
-                             unsigned long inCount, unsigned long inFlags);
     GXRESULT DrawIndexedPrimitiveVB(GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart,
                                     unsigned long inCount, unsigned short* inIndices, unsigned long inIndexCount,
                                     unsigned long inFlags);

@@ -162,14 +162,6 @@ void ESInitialize(HINSTANCE inInstance)
     ESVERIFY_AT(theResult == keseOK, 671);
 }
 
-// FUNCTION: LLE 0x100016c4
-// Formats a quiet verification failure and discards it (no output in the retail build)
-void ESQuietVerify(const char* inFile, unsigned long inLine, const char* inExpression)
-{
-    char theText[1024];
-    sprintf(theText, "%s (%ld) : Quiet verification failure (%s)", inFile, inLine, inExpression);
-}
-
 // FUNCTION: LLE 0x100016ed
 // Records a nonzero native error and returns it unchanged
 unsigned long ESRecordNativeError(unsigned long inError)
