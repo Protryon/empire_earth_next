@@ -19,11 +19,8 @@ void LobbyRestoreDefaults()
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if(aData == NULL)
         return;
-    int anOldAdapter = aData->mNetworkAdapter;
+    long anOldAdapter = aData->GetNetworkAdapter();
     aData->RestoreDefaults();
-    aData->mUserDirty = true;
-    aData->mGlobalDirty = aData->mSavedLobbySoundEffects != aData->mLobbySoundEffects ||
-        aData->mSavedLobbyMusic != aData->mLobbyMusic ||
-        aData->mNetworkAdapter != anOldAdapter;
+    aData->AfterRestoreDefaults(anOldAdapter);
 }
 }

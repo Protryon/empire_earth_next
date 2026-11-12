@@ -73,6 +73,7 @@ pub mod path;
 pub mod peerauth;
 pub mod persist;
 pub mod plaintext;
+pub mod prefsobj;
 pub mod qsock;
 pub mod random;
 pub mod regkey;
@@ -94,6 +95,7 @@ pub mod text;
 pub mod thread;
 pub mod titlecfg;
 pub mod udpmgr;
+pub mod udpops;
 pub mod wire;
 
 #[cfg(test)]

@@ -94,6 +94,7 @@
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
+#include "rust/ee_rust.h"   // ee_screens_lobby_*: the player rows' decisions (ee_screens lobby.rs)
 static unsigned long sStartTime;           // 0x562fd0: the lobby's Start time (provisional name)
 static long sPlayerTypeMenus[16];        // 0x562f90: the menu each slot's type box holds (provisional name)
 // .data 0x4c6474..0x4c64b0: the string ids of the lobby's difficulty, (unused) 0x4c6480, speed and game type lists
@@ -144,57 +145,29 @@ long LobbyApplySavedGameOptions(EEPSaveGameHeader& inHeader);
 // provisional name). The unit's first function: only ChangePlayerType calls it, and it sits right before CancelLoad
 long PlayerTypeFromMenu(unsigned long inSelection, long inMenu)
 {
-    switch (inMenu) {
-    case 5:
-        switch (inSelection) {
-        case 2:
-            return 0;
-        case 1:
-            return 3;
-        case 0:
-            return 1;
-        }
-        break;
-    case 4:
-        switch (inSelection) {
-        case 1:
-            return 0;
-        case 0:
-            return 3;
-        }
-        break;
-    case 3:
-        switch (inSelection) {
-        case 1:
-            return 2;
-        case 0:
-            return 1;
-        }
-        break;
-    case 2:
-        switch (inSelection) {
-        case 3:
-            return 4;
-        case 2:
-            return 0;
-        case 1:
-            return 3;
-        case 0:
-            return 1;
-        }
-        break;
-    case 1:
-        switch (inSelection) {
-        case 2:
-            return 4;
-        case 1:
-            return 0;
-        case 0:
-            return 3;
-        }
-        break;
-    }
-    return 5;
+    return ee_screens_lobby_type_from_menu(inSelection, inMenu);
+}
+
+// A slot and the lobby's context as the row decisions read them (ee_screens lobby.rs)
+static EeScreensLobbySlot LobbySlotView(const EEGameOptionsPlayer& inPlayer)
+{
+    EeScreensLobbySlot theSlot;
+    theSlot.kind = inPlayer.mType;
+    theSlot.loaded_type = inPlayer.mLoadedType;
+    theSlot.slot = inPlayer.mSlot;
+    theSlot.is_local = inPlayer.mIsLocal;
+    theSlot.is_ready = inPlayer.mIsReady;
+    theSlot.b36 = inPlayer.mB36;
+    return theSlot;
+}
+static EeScreensLobbyContext LobbyContextView(const EEGameOptionsPlayer& inHost)
+{
+    EeScreensLobbyContext theContext;
+    theContext.server = gCommunications->IsServer() == true;
+    theContext.multiplayer = gGameOptions.mIsMultiplayer;
+    theContext.load_type = gGameOptions.mLoadType;
+    theContext.host_ready = inHost.mIsReady;
+    return theContext;
 }
 
 // FUNCTION: EXE 0x5d9dcf
@@ -1337,19 +1310,14 @@ static void LobbyShowEngine(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPl
         return;
     UIComboBox* theBox = static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineCombo));
     UITextLabel* theLabel = static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineLabel));
-    unsigned long theEngine = inPlayer.mEngine < EECPEngineChoiceCount() ? inPlayer.mEngine
-                                                                          : (unsigned long)kEECPChoiceClassic;
+    unsigned long theEngine = ee_screens_lobby_engine(inPlayer.mEngine, EECPEngineChoiceCount());
     LobbyFillEngineBox(theBox);
-    if (inPlayer.mType != 0) {
-        theBox->SetDisplayMode(kDisplayModeHidden);
-        theLabel->SetDisplayMode(kDisplayModeHidden);
-    } else if (gCommunications->IsServer() == true && inHost.mIsReady == false && gGameOptions.mLoadType == 0) {
-        theBox->SetDisplayMode(inPlayer.mSlot < 8);
-        theLabel->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theBox->SetDisplayMode(kDisplayModeHidden);
-        theLabel->SetDisplayMode(inPlayer.mSlot < 8);
-    }
+    EeScreensLobbySlot theSlot = LobbySlotView(inPlayer);
+    EeScreensLobbyContext theContext = LobbyContextView(inHost);
+    EeScreensLobbyPlayer thePlan;
+    ee_screens_lobby_player(&theSlot, &theContext, &thePlan);
+    theBox->SetDisplayMode(thePlan.engine[0]);
+    theLabel->SetDisplayMode(thePlan.engine[1]);
     unsigned long theSelection;
     if (theBox->GetCurrentSelection(theSelection) != kErrorOK || theSelection != theEngine)
         theBox->SetCurrentSelection(theEngine);
@@ -1366,6 +1334,10 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
     if (theForm->GetManager()->IsFormVisible(theForm) != true)
         return;
+    EeScreensLobbySlot theSlot = LobbySlotView(inPlayer);
+    EeScreensLobbyContext theContext = LobbyContextView(inHost);
+    EeScreensLobbyPlayer thePlan;
+    ee_screens_lobby_player(&theSlot, &theContext, &thePlan);
     if (inPlayer.mIsLocal == true && gGameOptions.mIsMultiplayer == true)
     {
         EEUIELEChat* theChat = static_cast<EEUIELEChat*>(theForm->GetControl(kLobbyChatTextEditBox)->GetTriggerEvent(kControlTriggerEnterPressed));
@@ -1379,38 +1351,15 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         LobbyShowName(inPlayer, inHost);
     }
     if (inFlags == 5 || inFlags == 8) {
-        if (inPlayer.mIsLocal == true) {
-            if (gGameOptions.mIsMultiplayer == true) {
-                theForm->GetControl(inPlayer.mSlot + 12)->SetDisplayMode(inPlayer.mSlot < 8);
-                theForm->GetControl(inPlayer.mSlot + 233)->SetDisplayMode(kDisplayModeHidden);
-            } else {
-                theForm->GetControl(inPlayer.mSlot + 12)->SetDisplayMode(kDisplayModeHidden);
-                theForm->GetControl(inPlayer.mSlot + 233)->SetDisplayMode(kDisplayModeHidden);
-            }
-        } else if (inPlayer.mType == 1 || inPlayer.mType == 2) {
-            theForm->GetControl(inPlayer.mSlot + 12)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 233)->SetDisplayMode(inPlayer.mSlot < 8);
-        } else {
-            theForm->GetControl(inPlayer.mSlot + 12)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 233)->SetDisplayMode(kDisplayModeHidden);
-        }
+        theForm->GetControl(inPlayer.mSlot + 12)->SetDisplayMode(thePlan.ready[0]);
+        theForm->GetControl(inPlayer.mSlot + 233)->SetDisplayMode(thePlan.ready[1]);
         static_cast<UICheckBox*>(theForm->GetControl(inPlayer.mSlot + 12))->SetChecked(inPlayer.mIsReady);
         static_cast<UIBitmap*>(theForm->GetControl(inPlayer.mSlot + 233))->SetBitmap(
             inPlayer.mIsReady == true ? gUIManager->GetCheckDownOn() : gUIManager->GetCheckDownOff());
     }
     if (inFlags == 2 || inFlags == 8) {
-        if (inPlayer.mType == 1) {
-            if (inPlayer.mIsLocal == true && inPlayer.mIsReady == false && gGameOptions.mLoadType == 0) {
-                theForm->GetControl(inPlayer.mSlot + 78)->SetDisplayMode(inPlayer.mSlot < 8);
-                theForm->GetControl(inPlayer.mSlot + 110)->SetDisplayMode(kDisplayModeHidden);
-            } else {
-                theForm->GetControl(inPlayer.mSlot + 78)->SetDisplayMode(kDisplayModeHidden);
-                theForm->GetControl(inPlayer.mSlot + 110)->SetDisplayMode(inPlayer.mSlot < 8);
-            }
-        } else {
-            theForm->GetControl(inPlayer.mSlot + 78)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 110)->SetDisplayMode(kDisplayModeHidden);
-        }
+        theForm->GetControl(inPlayer.mSlot + 78)->SetDisplayMode(thePlan.colour[0]);
+        theForm->GetControl(inPlayer.mSlot + 110)->SetDisplayMode(thePlan.colour[1]);
         theForm->GetControl(inPlayer.mSlot + 78)->SetBgOpacity(1.0f);
         theForm->GetControl(inPlayer.mSlot + 78)->SetBgColor(EEGetPlayerColor(inPlayer.mColor));
         if (theForm->GetControl(inPlayer.mSlot + 78)->GetTriggerEvent(kControlTriggerRightButtonUp)) {
@@ -1423,19 +1372,8 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         theForm->GetControl(inPlayer.mSlot + 110)->SetBgColor(EEGetPlayerColor(inPlayer.mColor));
     }
     if (inFlags == 3 || inFlags == 8) {
-        long theLoadType = gGameOptions.mLoadType;
-        if (inPlayer.mType != 1 && inPlayer.mType != 0
-            && !(inPlayer.mType == 3 && gGameOptions.mLoadType == 1 && inHost.mIsReady == true)) {
-            theForm->GetControl(inPlayer.mSlot + 62)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 94)->SetDisplayMode(kDisplayModeHidden);
-        } else if (theLoadType == 0 && inPlayer.mIsReady == false
-                   && (inPlayer.mIsLocal == true || gCommunications->IsServer() && inPlayer.mType == 0)) {
-            theForm->GetControl(inPlayer.mSlot + 62)->SetDisplayMode(inPlayer.mSlot < 8);
-            theForm->GetControl(inPlayer.mSlot + 94)->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theForm->GetControl(inPlayer.mSlot + 62)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 94)->SetDisplayMode(inPlayer.mSlot < 8);
-        }
+        theForm->GetControl(inPlayer.mSlot + 62)->SetDisplayMode(thePlan.team[0]);
+        theForm->GetControl(inPlayer.mSlot + 94)->SetDisplayMode(thePlan.team[1]);
         if (inPlayer.mTeam == 0)
             theText = "-";
         else
@@ -1448,18 +1386,8 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 94))->SetText(theText);
     }
     if (inFlags == 4 || inFlags == 8) {
-        if (inPlayer.mType != 1 && inPlayer.mType != 0
-            && !(inPlayer.mType == 3 && gGameOptions.mLoadType == 1 && inHost.mIsReady == true)) {
-            theForm->GetControl(inPlayer.mSlot + 126)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 142)->SetDisplayMode(kDisplayModeHidden);
-        } else if (gCommunications->IsServer() == true && inHost.mIsReady == false
-                   && gGameOptions.mLoadType == 0) {
-            theForm->GetControl(inPlayer.mSlot + 126)->SetDisplayMode(inPlayer.mSlot < 8);
-            theForm->GetControl(inPlayer.mSlot + 142)->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theForm->GetControl(inPlayer.mSlot + 126)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 142)->SetDisplayMode(inPlayer.mSlot < 8);
-        }
+        theForm->GetControl(inPlayer.mSlot + 126)->SetDisplayMode(thePlan.citizens[0]);
+        theForm->GetControl(inPlayer.mSlot + 142)->SetDisplayMode(thePlan.citizens[1]);
         static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 126))->SetCurrentSelection(inPlayer.mStartingCitizens - 1);
         sprintf(theText, "%ld", inPlayer.mStartingCitizens);
         static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 142))->SetText(theText);
@@ -1468,10 +1396,7 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         LobbyShowEngine(inPlayer, inHost);
     if (inFlags != 1 && inFlags != 8)
         return;
-    if ((inPlayer.mType == 1 || inPlayer.mType == 2) && inPlayer.mSlot != 0)
-        theForm->GetControl(inPlayer.mSlot + 158)->SetDisplayMode(inPlayer.mSlot < 8);
-    else
-        theForm->GetControl(inPlayer.mSlot + 158)->SetDisplayMode(kDisplayModeHidden);
+    theForm->GetControl(inPlayer.mSlot + 158)->SetDisplayMode(thePlan.ping);
     static_cast<EEUICPing*>(theForm->GetControl(inPlayer.mSlot + 158))->SetPing(inPlayer.mPing);
 }
 
@@ -1480,43 +1405,34 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
 void LobbyShowClientRow(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inHost)
 {
     UWideString theText;
-    long theMenu = 1;
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
-    if (gGameOptions.mLoadType == 0 && inPlayer.mIsLocal == true)
-        theMenu = 3;
-    if (sPlayerTypeMenus[inPlayer.mSlot] != theMenu) {
-        LobbyFillPlayerTypes(theMenu, inPlayer, static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30)));
-        sPlayerTypeMenus[inPlayer.mSlot] = theMenu;
+    EeScreensLobbySlot theSlot = LobbySlotView(inPlayer);
+    EeScreensLobbyContext theContext = LobbyContextView(inHost);
+    EeScreensLobbyRow theRow;
+    ee_screens_lobby_row(false, &theSlot, &theContext, &theRow);
+    if (sPlayerTypeMenus[inPlayer.mSlot] != theRow.menu) {
+        LobbyFillPlayerTypes(theRow.menu, inPlayer, static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30)));
+        sPlayerTypeMenus[inPlayer.mSlot] = theRow.menu;
     }
-    if (inPlayer.mType == 0 || inPlayer.mType == 3 && gGameOptions.mLoadType == 1 && inHost.mIsReady == true) {
+    UITextLabel* theName = static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46));
+    switch (theRow.text) {
+    case EE_SCREENS_LOBBY_TEXT_COMPUTER:
         gResource->GetString(IDS_COMPUTER, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
-    } else if (inPlayer.mType == 1 || inPlayer.mType == 2 || inPlayer.mType == 3 && gGameOptions.mLoadType == 2)
-        (static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46)))->SetText(inPlayer.mName);
-    else if (inPlayer.mType == 3) {
+        theName->SetText(theText);
+        break;
+    case EE_SCREENS_LOBBY_TEXT_NAME:
+        theName->SetText(inPlayer.mName);
+        break;
+    case EE_SCREENS_LOBBY_TEXT_OPEN:
         gResource->GetString(IDS_OPEN, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
-    } else {
+        theName->SetText(theText);
+        break;
+    default:
         gResource->GetString(IDS_CLOSED, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
+        theName->SetText(theText);
+        break;
     }
-    if (inPlayer.mType == 0)
-        LobbyShowRowControls(inPlayer.mSlot, 2, 0, 2, 0);
-    else if (inPlayer.mType == 1) {
-        if (inPlayer.mIsLocal == true) {
-            if (gGameOptions.mIsMultiplayer)
-                LobbyShowRowControls(inPlayer.mSlot, 1, 1, 1, 0);
-            else
-                LobbyShowRowControls(inPlayer.mSlot, 1, 1, 1, 1);
-        } else
-            LobbyShowRowControls(inPlayer.mSlot, 0, 0, 0, 0);
-    } else if (inPlayer.mType == 2) {
-        if (inPlayer.mIsLocal == true)
-            LobbyShowRowControls(inPlayer.mSlot, 1, 2, 2, 2);
-        else
-            LobbyShowRowControls(inPlayer.mSlot, 0, 2, 2, 2);
-    } else
-        LobbyShowRowControls(inPlayer.mSlot, 2, 2, 2, 2);
+    LobbyShowRowControls(inPlayer.mSlot, theRow.controls[0], theRow.controls[1], theRow.controls[2], theRow.controls[3]);
 }
 
 // FUNCTION: EXE 0x5dd5b4
@@ -1525,35 +1441,27 @@ void LobbyFillPlayerTypes(long inMenu, EEGameOptionsPlayer& inPlayer, UIComboBox
 {
     UWideString theText;
     inBox->DeleteAllEntries();
-    switch (inMenu) {
-    case 5:
-        inBox->AppendLine(inPlayer.mName);
-        gResource->GetString(IDS_OPEN, theText);
+    uint8_t theLines[4];
+    unsigned long theCount = ee_screens_lobby_type_lines(inMenu, theLines);
+    for (unsigned long i = 0; i < theCount; i++) {
+        switch (theLines[i]) {
+        case EE_SCREENS_LOBBY_LINE_NAME:
+            inBox->AppendLine(inPlayer.mName);
+            continue;
+        case EE_SCREENS_LOBBY_LINE_OPEN:
+            gResource->GetString(IDS_OPEN, theText);
+            break;
+        case EE_SCREENS_LOBBY_LINE_COMPUTER:
+            gResource->GetString(IDS_COMPUTER, theText);
+            break;
+        case EE_SCREENS_LOBBY_LINE_CLOSED:
+            gResource->GetString(IDS_CLOSED, theText);
+            break;
+        default:
+            gResource->GetString(IDS_OBSERVE, theText);
+            break;
+        }
         inBox->AppendLine(theText);
-        gResource->GetString(IDS_COMPUTER, theText);
-        inBox->AppendLine(theText);
-        break;
-    case 4:
-        gResource->GetString(IDS_OPEN, theText);
-        inBox->AppendLine(theText);
-        gResource->GetString(IDS_COMPUTER, theText);
-        inBox->AppendLine(theText);
-        break;
-    case 3:
-        inBox->AppendLine(inPlayer.mName);
-        gResource->GetString(IDS_OBSERVE, theText);
-        inBox->AppendLine(theText);
-        break;
-    case 2:
-        inBox->AppendLine(inPlayer.mName);
-    case 1:
-        gResource->GetString(IDS_OPEN, theText);
-        inBox->AppendLine(theText);
-        gResource->GetString(IDS_COMPUTER, theText);
-        inBox->AppendLine(theText);
-        gResource->GetString(IDS_CLOSED, theText);
-        inBox->AppendLine(theText);
-        break;
     }
     LobbySelectPlayerType(inMenu, inPlayer, inBox);
 }
@@ -1567,46 +1475,9 @@ void LobbySelectPlayerType(long inMenu, EEGameOptionsPlayer& inPlayer, UIComboBo
         theEvent->Reference();
         inBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
     }
-    switch (inMenu) {
-    case 5:
-        if (inPlayer.mType == 3)
-            inBox->SetCurrentSelection(1);
-        else if (inPlayer.mType == 0)
-            inBox->SetCurrentSelection(2);
-        else
-            inBox->SetCurrentSelection(0);
-        break;
-    case 4:
-        if (inPlayer.mType == 3)
-            inBox->SetCurrentSelection(0);
-        else
-            inBox->SetCurrentSelection(1);
-        break;
-    case 3:
-        if (inPlayer.mType == 1)
-            inBox->SetCurrentSelection(0);
-        else
-            inBox->SetCurrentSelection(1);
-        break;
-    case 2:
-        if (inPlayer.mType == 1 || inPlayer.mType == 2)
-            inBox->SetCurrentSelection(0);
-        else if (inPlayer.mType == 3)
-            inBox->SetCurrentSelection(1);
-        else if (inPlayer.mType == 0)
-            inBox->SetCurrentSelection(2);
-        else
-            inBox->SetCurrentSelection(3);
-        break;
-    case 1:
-        if (inPlayer.mType == 3)
-            inBox->SetCurrentSelection(0);
-        else if (inPlayer.mType == 0)
-            inBox->SetCurrentSelection(1);
-        else
-            inBox->SetCurrentSelection(2);
-        break;
-    }
+    unsigned long theLine;
+    if (ee_screens_lobby_type_line(inMenu, inPlayer.mType, &theLine))
+        inBox->SetCurrentSelection(theLine);
     if (theEvent) {
         inBox->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
         theEvent->Dereference();
@@ -1620,41 +1491,25 @@ void LobbyShowRowControls(unsigned long inSlot, unsigned long inReady, unsigned 
                           unsigned long inBonus)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
-    if (inReady < 2) {
-        theForm->GetControl(inSlot + 233)->SetDisplayMode(inReady == 0);
-        theForm->GetControl(inSlot + 12)->SetDisplayMode(inReady == 1);
-    } else {
-        theForm->GetControl(inSlot + 233)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(inSlot + 12)->SetDisplayMode(kDisplayModeHidden);
-    }
-    if (inTeam < 2) {
-        theForm->GetControl(inSlot + 94)->SetDisplayMode(inTeam == 0);
-        theForm->GetControl(inSlot + 62)->SetDisplayMode(inTeam == 1);
-        if (inTeam == 1) {
-            UIEvent* theEvent = new EEUIELEChangeTeam;
-            theForm->GetControl(inSlot + 62)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
-            theEvent->Dereference();
-        } else
-            theForm->GetControl(inSlot + 62)->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    } else {
-        theForm->GetControl(inSlot + 94)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(inSlot + 62)->SetDisplayMode(kDisplayModeHidden);
+    unsigned long thePair[2];
+    ee_screens_lobby_row_pair(inReady, thePair);
+    theForm->GetControl(inSlot + 233)->SetDisplayMode(thePair[0]);
+    theForm->GetControl(inSlot + 12)->SetDisplayMode(thePair[1]);
+    ee_screens_lobby_row_pair(inTeam, thePair);
+    theForm->GetControl(inSlot + 94)->SetDisplayMode(thePair[0]);
+    theForm->GetControl(inSlot + 62)->SetDisplayMode(thePair[1]);
+    if (inTeam == 1) {
+        UIEvent* theEvent = new EEUIELEChangeTeam;
+        theForm->GetControl(inSlot + 62)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        theEvent->Dereference();
+    } else
         theForm->GetControl(inSlot + 62)->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
-    }
-    if (inColor < 2) {
-        theForm->GetControl(inSlot + 110)->SetDisplayMode(inColor == 0);
-        theForm->GetControl(inSlot + 78)->SetDisplayMode(inColor == 1);
-    } else {
-        theForm->GetControl(inSlot + 110)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(inSlot + 78)->SetDisplayMode(kDisplayModeHidden);
-    }
-    if (inBonus < 2) {
-        theForm->GetControl(inSlot + 142)->SetDisplayMode(inBonus == 0);
-        theForm->GetControl(inSlot + 126)->SetDisplayMode(inBonus == 1);
-    } else {
-        theForm->GetControl(inSlot + 142)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(inSlot + 126)->SetDisplayMode(kDisplayModeHidden);
-    }
+    ee_screens_lobby_row_pair(inColor, thePair);
+    theForm->GetControl(inSlot + 110)->SetDisplayMode(thePair[0]);
+    theForm->GetControl(inSlot + 78)->SetDisplayMode(thePair[1]);
+    ee_screens_lobby_row_pair(inBonus, thePair);
+    theForm->GetControl(inSlot + 142)->SetDisplayMode(thePair[0]);
+    theForm->GetControl(inSlot + 126)->SetDisplayMode(thePair[1]);
 }
 
 // FUNCTION: EXE 0x5dd9b6
@@ -1662,38 +1517,20 @@ void LobbyShowRowControls(unsigned long inSlot, unsigned long inReady, unsigned 
 void LobbyShowName(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inHost)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
-    if (gGameOptions.mLoadType != 2 && (gCommunications->IsServer() == true || inPlayer.mIsLocal == true)) {
-        if ((inPlayer.mIsReady == false && inPlayer.mIsLocal == true && gGameOptions.mIsMultiplayer == true
-             || gCommunications->IsServer() == true && inHost.mIsReady == false && inPlayer.mIsLocal == false)
-            && (gGameOptions.mLoadType != 1
-                || inPlayer.mB36 == false && inPlayer.mIsLocal == false && inPlayer.mType != 4)) {
-            theForm->GetControl(inPlayer.mSlot + 30)->SetDisplayMode(inPlayer.mSlot < 8);
-            theForm->GetControl(inPlayer.mSlot + 46)->SetDisplayMode(kDisplayModeHidden);
-        } else {
-            theForm->GetControl(inPlayer.mSlot + 30)->SetDisplayMode(kDisplayModeHidden);
-            theForm->GetControl(inPlayer.mSlot + 46)->SetDisplayMode(inPlayer.mSlot < 8);
-        }
-    } else {
-        theForm->GetControl(inPlayer.mSlot + 30)->SetDisplayMode(kDisplayModeHidden);
-        theForm->GetControl(inPlayer.mSlot + 46)->SetDisplayMode(inPlayer.mSlot < 8);
-    }
-    if (inPlayer.mType == 3 && gGameOptions.mLoadType == 2) {
-        if (inPlayer.mLoadedType == 1)
-            (static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46)))->GetGEText()->SetFgColor(GEColor(1.0f, 0.0f, 0.0f));
-        else
-            (static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46)))->GetGEText()->SetFgColor(GEColor(1.0f, 1.0f, 0.0f));
-    } else {
-        if (inPlayer.mType != 2) {
-            static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30))->GetTextLabel()->GetGEText()
-                ->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-            static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->GetGEText()->SetFgColor(GEColor(1.0f, 1.0f, 1.0f));
-        } else {
-            static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30))->GetTextLabel()->GetGEText()
-                ->SetFgColor(GEColor(0.0f, 1.0f, 0.0f));
-            static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->GetGEText()->SetFgColor(GEColor(0.0f, 1.0f, 0.0f));
-        }
+    EeScreensLobbySlot theSlot = LobbySlotView(inPlayer);
+    EeScreensLobbyContext theContext = LobbyContextView(inHost);
+    EeScreensLobbyName thePlan;
+    ee_screens_lobby_name(&theSlot, &theContext, &thePlan);
+    theForm->GetControl(inPlayer.mSlot + 30)->SetDisplayMode(thePlan.box_mode);
+    theForm->GetControl(inPlayer.mSlot + 46)->SetDisplayMode(thePlan.label_mode);
+    static const GEColor kColours[4] = {GEColor(1.0f, 0.0f, 0.0f), GEColor(1.0f, 1.0f, 0.0f), GEColor(1.0f, 1.0f, 1.0f),
+                                        GEColor(0.0f, 1.0f, 0.0f)};
+    const GEColor& theColour = kColours[thePlan.colour & 3];
+    if (thePlan.box_dirty)   // the type box shows its name in the colour too
+        static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30))->GetTextLabel()->GetGEText()->SetFgColor(theColour);
+    (static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46)))->GetGEText()->SetFgColor(theColour);
+    if (thePlan.box_dirty)
         theForm->GetControl(inPlayer.mSlot + 30)->SetDirty(true);
-    }
     theForm->GetControl(inPlayer.mSlot + 46)->SetDirty(true);
 }
 
@@ -1702,58 +1539,34 @@ void LobbyShowName(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inH
 void LobbyShowHostRow(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inHost)
 {
     UWideString theText;
-    long theMenu = 1;
     UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
-    if (gGameOptions.mLoadType == 0) {
-        if (inPlayer.mIsLocal == true)
-            theMenu = 3;
-        else if (inPlayer.mType == 1 || inPlayer.mType == 2)
-            theMenu = 2;
-    } else if (gGameOptions.mLoadType == 1 && inPlayer.mB36 == false) {
-        if (inPlayer.mType == 1 || inPlayer.mType == 2)
-            theMenu = 5;
-        else
-            theMenu = 4;
+    EeScreensLobbySlot theSlot = LobbySlotView(inPlayer);
+    EeScreensLobbyContext theContext = LobbyContextView(inHost);
+    EeScreensLobbyRow theRow;
+    ee_screens_lobby_row(true, &theSlot, &theContext, &theRow);
+    if (sPlayerTypeMenus[inPlayer.mSlot] != theRow.menu) {
+        LobbyFillPlayerTypes(theRow.menu, inPlayer, static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30)));
+        sPlayerTypeMenus[inPlayer.mSlot] = theRow.menu;
     }
-    if (sPlayerTypeMenus[inPlayer.mSlot] != theMenu) {
-        LobbyFillPlayerTypes(theMenu, inPlayer, static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 30)));
-        sPlayerTypeMenus[inPlayer.mSlot] = theMenu;
-    }
-    if (inPlayer.mType == 0 || inPlayer.mType == 3 && gGameOptions.mLoadType == 1 && inHost.mIsReady == true) {
+    UITextLabel* theName = static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46));
+    switch (theRow.text) {
+    case EE_SCREENS_LOBBY_TEXT_COMPUTER:
         gResource->GetString(IDS_COMPUTER, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
-    } else if (inPlayer.mType == 1 || inPlayer.mType == 2 || inPlayer.mType == 3 && gGameOptions.mLoadType == 2)
-        (static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46)))->SetText(inPlayer.mName);
-    else if (inPlayer.mType == 3) {
+        theName->SetText(theText);
+        break;
+    case EE_SCREENS_LOBBY_TEXT_NAME:
+        theName->SetText(inPlayer.mName);
+        break;
+    case EE_SCREENS_LOBBY_TEXT_OPEN:
         gResource->GetString(IDS_OPEN, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
-    } else {
+        theName->SetText(theText);
+        break;
+    default:
         gResource->GetString(IDS_CLOSED, theText);
-        static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 46))->SetText(theText);
+        theName->SetText(theText);
+        break;
     }
-    if (inPlayer.mType == 0) {
-        if (gGameOptions.mLoadType != 1)
-            LobbyShowRowControls(inPlayer.mSlot, 2, 1, 2, 1);
-        else
-            LobbyShowRowControls(inPlayer.mSlot, 2, 0, 2, 0);
-    } else if (inPlayer.mType == 1) {
-        if (gGameOptions.mLoadType != 1) {
-            if (inPlayer.mIsLocal == true)
-                LobbyShowRowControls(inPlayer.mSlot, 1, 1, 1, 1);
-            else
-                LobbyShowRowControls(inPlayer.mSlot, 0, 0, 0, 0);
-        } else
-            LobbyShowRowControls(inPlayer.mSlot, 2, 0, 2, 0);
-    } else if (inPlayer.mType == 2) {
-        if (gGameOptions.mLoadType != 1) {
-            if (inPlayer.mIsLocal == true)
-                LobbyShowRowControls(inPlayer.mSlot, 1, 2, 2, 2);
-            else
-                LobbyShowRowControls(inPlayer.mSlot, 0, 2, 2, 2);
-        } else
-            LobbyShowRowControls(inPlayer.mSlot, 2, 0, 2, 0);
-    } else
-        LobbyShowRowControls(inPlayer.mSlot, 2, 2, 2, 2);
+    LobbyShowRowControls(inPlayer.mSlot, theRow.controls[0], theRow.controls[1], theRow.controls[2], theRow.controls[3]);
 }
 
 // FUNCTION: EXE 0x5ddd8c

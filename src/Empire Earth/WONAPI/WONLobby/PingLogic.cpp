@@ -42,7 +42,7 @@ PingGameOp::PingGameOp(LobbyGame* inGame, unsigned short inRequestId,
     this->mRetries = 0;
     this->mRequestId = inRequestId;
     this->mReplyFlags = inFlags;
-    this->mAddress = this->mGame->mAddress;
+    this->SetDestAddr(this->mGame->mAddress);
 }
 
 // FUNCTION: WON 0x007e6240
@@ -54,7 +54,7 @@ void PingGameOp::RunHook()
     aBuffer.AppendShort(this->mRequestId);
     aBuffer.AppendByte(this->mGame->GetGameType());
     aBuffer.AppendByte(this->mReplyFlags);
-    this->mOutgoing = aBuffer.ToByteBuffer(true);
+    this->SetOutgoing(aBuffer.ToByteBuffer(true));
     this->mPing = 0xffff;
     UDPManagerSendRecvOp::RunHook();
 }
@@ -150,10 +150,10 @@ void PingLogic::HandleUDPRecv(AsyncOp* inOp)
     UDPManagerRecvOp* anOp = static_cast<UDPManagerRecvOp*>(inOp);
     if (anOp->GetStatus() != WS_Success || anOp->IsKilled())
         return;
-    const ByteBuffer* aBuffer = anOp->mReceivedData.get();
+    const ByteBuffer* aBuffer = anOp->GetMsg();
     ReadBuffer aReadBuffer(aBuffer != NULL ? aBuffer->data() : NULL,
                           aBuffer != NULL ? aBuffer->length() : 0);
-    const IPAddr& anAddr = anOp->mAddress;
+    IPAddr anAddr = anOp->GetFromAddr();
     try {
         int aType = (char)aReadBuffer.ReadByte();
         switch (aType) {

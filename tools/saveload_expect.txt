@@ -1,7 +1,7 @@
 # sim_oracle.py saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt: each save of each
 # setting, END when it continues identically to 2700 s, else the CT lines it ran equal after the load. A gate fails only
-# when a save does worse; rewrite with --write-expect when one does better (R5a.2, eighth round, 2026-11-11, after the merge of rust).
-# late seed 2 1000 s: 0 since the declared rebaseline of the dead fishing boats (its two citizens' active groups, which no save holds).
+# when a save does worse; rewrite with --write-expect when one does better (R5a.2, ninth round, 2026-11-11, after the merge of rust).
+# late seed 2 1000 s: 37 since the active groups are saved (0.279).
 oracle 2 1000 END
 oracle 2 1900 END
 oracle 3 1000 END
@@ -26,14 +26,14 @@ medium-difficulty 2 1000 END
 medium-difficulty 2 1900 406
 medium-difficulty 3 1000 END
 medium-difficulty 3 1900 13
-late 2 1000 0
+late 2 1000 37
 late 2 1900 794
 late 3 1000 143
 late 3 1900 197
 space 2 1000 598
 space 2 1900 745
 space 3 1000 75
-space 3 1900 0
+space 3 1900 271
 calamity 2 1000 END
 calamity 2 1900 END
 calamity 3 1000 END

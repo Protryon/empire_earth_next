@@ -18,6 +18,9 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include <string.h>
+#include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -372,41 +375,94 @@ void EEComplexUnit::UpdateOrbitals()
     }
 }
 
-// FUNCTION: EXE 0x60e0b2
-// Counts the reload timer down by the tick, not below 0
-void EEComplexUnit::UpdateReloadTimer()
+// TEST ONLY: the original's countdown (0x60e0b2, 0x60e0db) over the value the Rust leaf read: -1 for no write
+static long OriginalCountdown(long inTimer)
 {
-    if (!(this->mReloadTimer > 0))
-        return;
-    long theTime = this->mReloadTimer - gPhysics->mTickTimeMs;
+    if (!(inTimer > 0))
+        return -1;
+    long theTime = inTimer - gPhysics->mTickTimeMs;
     if (theTime < 0)
         theTime = 0;
-    this->SetReloadTimer(theTime);
+    return theTime;
+}
+
+// FUNCTION: EXE 0x60e0b2
+// Counts the reload timer down by the tick, not below 0
+// New (R5b.4 leaf 6): the countdown is Rust over the unit store (ee_units step.rs step_countdown); the write is the
+// holder's. TEST ONLY: while the capture runs, the original's statements check it (USTM)
+void EEComplexUnit::UpdateReloadTimer()
+{
+    long theBefore = this->mReloadTimer;
+    int64_t theTime = 0;
+    bool theWritten = ee_units_step_countdown(static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                              EE_UNITS_STEP_RELOAD, theBefore, gPhysics->mTickTimeMs, &theTime);
+    if (theWritten)
+        this->SetReloadTimer((long)theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        long theOriginal = OriginalCountdown(theBefore);
+        if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
+            EEUnitStepDiffers("UpdateReloadTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
+        uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
+                                (uint32_t)this->mReloadTimer.Get()};
+        EEUnitStepNote(kUnitStepReload, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e0db
 // Counts the target search timer down by the tick, not below 0
+// New (R5b.4 leaf 6): Rust over the unit store, as UpdateReloadTimer
 void EEComplexUnit::UpdateTargetSearchTimer()
 {
-    if (!(this->mTargetSearchTimer > 0))
-        return;
-    long theTime = this->mTargetSearchTimer - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
-    this->SetTargetSearchTimer(theTime);
+    long theBefore = this->mTargetSearchTimer;
+    int64_t theTime = 0;
+    bool theWritten = ee_units_step_countdown(static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                              EE_UNITS_STEP_TARGET_SEARCH, theBefore, gPhysics->mTickTimeMs, &theTime);
+    if (theWritten)
+        this->SetTargetSearchTimer((long)theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        long theOriginal = OriginalCountdown(theBefore);
+        if ((theOriginal >= 0) != theWritten || (theWritten && theOriginal != (long)theTime))
+            EEUnitStepDiffers("UpdateTargetSearchTimer", this->mUnitID, theWritten ? (long)theTime : -1, theOriginal);
+        uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
+                                (uint32_t)this->mTargetSearchTimer.Get()};
+        EEUnitStepNote(kUnitStepTargetSearch, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e104
 // Counts the heal search timer (seconds) down by the tick, not below 0
+static uint32_t HealBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// New (R5b.4 leaf 6): Rust over the unit store (ee_units step.rs step_heal: the same f32 operations in order)
 void EEComplexUnit::UpdateHealSearchTimer()
 {
-    float theValue = this->mHealSearchTimer;
-    if (!(theValue > 0.0f))
-        return;
-    theValue -= gPhysics->mTickTime / 1000.0f;
-    if (theValue < 0.0f)
-        theValue = 0.0f;
-    this->SetHealSearchTimer(theValue);
+    float theBefore = this->mHealSearchTimer;
+    float theTime = 0.0f;
+    bool theWritten = ee_units_step_heal(static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                         theBefore, gPhysics->mTickTime, &theTime);
+    if (theWritten)
+        this->SetHealSearchTimer(theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same value
+        float theValue = theBefore;
+        bool theOriginal = false;
+        if (theValue > 0.0f) {
+            theValue -= gPhysics->mTickTime / 1000.0f;
+            if (theValue < 0.0f)
+                theValue = 0.0f;
+            theOriginal = true;
+        }
+        if (theOriginal != theWritten || (theWritten && HealBits(theValue) != HealBits(theTime)))
+            EEUnitStepDiffers("UpdateHealSearchTimer (float bits)", this->mUnitID, theWritten ? (long)HealBits(theTime) : -1,
+                              theOriginal ? (long)HealBits(theValue) : -1);
+        uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
+                                HealBits(this->mHealSearchTimer.Get())};
+        EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e14c

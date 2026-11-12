@@ -35,3 +35,4 @@ ee_plat_sdl = { path = "../ee_plat_sdl" }
 ee_won = { path = "../ee_won" }
 ee_units = { path = "../ee_units" }
 ee_netmsg = { path = "../ee_netmsg" }
+ee_screens = { path = "../ee_screens" }

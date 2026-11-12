@@ -41,6 +41,7 @@
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUCProjectile.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 
 // 0x447338 (3.0, the launch height below which a projectile may hit the ground at once) is ee_combat's (impact.rs)
 // 0x447050: the slow-down per unit of depth below the ground
@@ -252,58 +253,10 @@ bool EEUCProjectile::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& in
 // rotted or dying done (always with an attack-unit goal), target dead or in a container, new target
 long EEUCProjectile::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    long theResult = 0;
-    bool theFlag = false;
-    switch (inEvent) {
-    case kTriggerProjectileHitUnit: {
-        EEUnit* theTarget = this->FindImpactUnit(inUnit);
-        if (theTarget != NULL) {
-            if (EEUUGetIsUnitClassTargetable(inUnit, theTarget->GetUnitClass()))
-                inUnit->SetGoal(new EEUGAttackUnit(inUnit, theTarget, false, false), 0, 0);
-            theFlag = true;
-        }
-        break;
-    }
-    case kTriggerDyingAnimationFinished:
-    case kTriggerResourcesRottedAway:
-    case kTriggerUnitRottedAway:
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit)
-            theFlag = true;
-        else if (EEUnitClass::EvaluateCondition(inUnit, inEvent))
-            theFlag = true;
-        break;
-    case kTriggerFlightTimeAlarm:
-        theFlag = inUnit->mFlightTime >= inUnit->mStats->mFlightTime;
-        break;
-    case kTriggerProjectileHitGround:
-        theFlag = this->CheckGroundImpact(inUnit);
-        break;
-    default:
-        theResult = EEUnitClass::EvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerUnitTargetNoLongerValid: {
-        EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
-            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-            if (theTarget->mHitPoints < 1)
-                theFlag = true;
-            else if (theTarget->mComplexUnit != NULL && theTarget->mComplexUnit->mContainer != NULL)
-                theFlag = true;
-            else
-                theFlag = false;
-        }
-        break;
-    }
-    case kTriggerProjectileHitWater:
-        theFlag = this->CheckWaterImpact(inUnit);
-        break;
-    case kTriggerNewTargetSelected:
-        theFlag = true;
-        break;
-    }
-    if (theFlag)
-        theResult = 1;
-    return theResult;
+    // ee_combat goals.rs condition (CBTC): the target is the attack-unit goal's; a hit unit's attack goal is set here
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_PROJECTILE, inUnit, inEvent, EECombatShotTarget(inUnit));
+    return EECombatCondition(in, inUnit, NULL, this);
 }
 
 // FUNCTION: EXE 0x619ae9

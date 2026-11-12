@@ -39,6 +39,7 @@ pub mod continent_grid;
 pub mod ffi;
 pub mod goals;
 pub mod graph;
+pub mod graph_save;
 pub mod hull;
 pub mod machine;
 pub mod manager;

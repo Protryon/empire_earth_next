@@ -1569,7 +1569,7 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
                 theAmount += 1 + (inMaximum - inMinimum);
         }
     }
-    long* theValue = NULL;
+    int theValue = 0;   // the counter changed below: 1 the reload timer, 2 the power, 3 the rotting time (unit store holders)
     long theBase = 0;
     switch (inAttribute) {
     case kSMUnitAttributeHitPoints:
@@ -1656,7 +1656,7 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     case kSMUnitAttributeReloadTime:
         if (theComplex != NULL) {
             theBase = theStats->mReloadTime;
-            theValue = &theComplex->mReloadTimer;
+            theValue = 1;
         }
         break;
     case kSMUnitAttributeGraphicScale:
@@ -1671,13 +1671,13 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
     case kSMUnitAttributePower:
         if (theComplex != NULL) {
             theBase = theStats->mPower;
-            theValue = &theComplex->mPower;
+            theValue = 2;
         }
         break;
     case kSMUnitAttributeRottingTime:
         if (theComplex != NULL) {
             theBase = theClass->mRottingTime;
-            theValue = &theComplex->mRottingAwayTime;
+            theValue = 3;
         }
         break;
     case kSMUnitAttributeConstructionComplete:
@@ -1694,13 +1694,22 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         }
         break;
     }
-    if (theValue == NULL)
+    if (theValue == 0)
         return;
+    long theCurrent = theValue == 1 ? theComplex->mReloadTimer.Get()
+                    : theValue == 2 ? theComplex->mPower.Get() : theComplex->mRottingAwayTime.Get();
     if (inPercentage) theAmount = UMFloatToLong((float)theBase * theAmount * 0.01f);
-    if (inMode == kSMAttributeModeIncrease) theAmount += *theValue;
-    else if (inMode == kSMAttributeModeDecrease) theAmount = *theValue - theAmount;
+    if (inMode == kSMAttributeModeIncrease) theAmount += theCurrent;
+    else if (inMode == kSMAttributeModeDecrease) theAmount = theCurrent - theAmount;
     if (theAmount < 0) theAmount = 0;
-    if (*theValue != theAmount) *theValue = theAmount;
+    if (theCurrent != theAmount) {
+        if (theValue == 1)
+            theComplex->mReloadTimer = theAmount;
+        else if (theValue == 2)
+            theComplex->mPower = theAmount;
+        else
+            theComplex->mRottingAwayTime = theAmount;
+    }
 }
 
 // FUNCTION: EXE 0x5c9628

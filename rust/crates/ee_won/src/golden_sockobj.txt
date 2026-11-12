@@ -449,4 +449,49 @@ rebind WS_Success
 send WS_Success
 default count 5
 udp done
+== UDP ops
+fresh status WS_None killed 0 verifier 0 msg (null) from 0 invalid socket 0 manager 0
+fresh from status WS_None killed 0 verifier 0 msg (null) from 2130706433 valid socket 0 manager 0
+fresh checked status WS_None killed 0 verifier 1 msg (null) from 2130706433 valid socket 0 manager 0
+fresh unchecked status WS_None killed 0 verifier 0 msg (null) from 2130706433 valid socket 0 manager 0
+fresh sendrecv status WS_None killed 0 dest 0 invalid socket 0 recvop 0 attempts 0 retries 0 timeout 10000 outgoing (null)
+own recv running status WS_Pending killed 0 verifier 1 msg (null) from 2130706433 valid socket 1 manager 0
+two-byte check no
+own recv waiting status WS_Pending killed 0 verifier 1 msg (null) from 2130706433 valid socket 1 manager 0 completions 0
+two-byte check ok
+own recv completed UDPManagerRecvOp WS_Success killed 0 msg (null) from 2130706433 valid
+own recv done status WS_Success killed 0 verifier 1 msg (null) from 2130706433 valid socket 0 manager 0
+given op checks R
+given completed UDPManagerRecvOp WS_ServerReq_Recv killed 0 msg (null) from 0 invalid
+given done status WS_ServerReq_Recv killed 0 verifier 1 msg (null) from 0 invalid socket 1 manager 0 socket open 1
+killed recv running status WS_Pending killed 0 verifier 0 msg (null) from 0 invalid socket 1 manager 0
+killed recv completed UDPManagerRecvOp WS_Killed killed 1 msg (null) from 0 invalid
+killed recv status WS_Killed killed 1 verifier 0 msg (null) from 0 invalid socket 0 manager 0
+late recv completed UDPManagerRecvOp WS_TimedOut killed 0 msg (null) from 0 invalid
+late recv status WS_TimedOut killed 0 verifier 0 msg (null) from 0 invalid socket 0 manager 0
+retry completed TwoByteSendRecv WS_NoReply killed 0
+retry status WS_NoReply killed 0 dest 2130706433 valid socket 0 recvop 0 attempts 2 retries 2 timeout 60 outgoing 1:74
+server got WS_Success 1:74
+server got WS_TimedOut (null)
+server got WS_TimedOut (null)
+retry again running status WS_Pending killed 0 dest 2130706433 valid socket 1 recvop 1 attempts 0 retries 2 timeout 60000 outgoing 1:32
+server got WS_Success 1:32
+two-byte check xx
+retry again waiting status WS_Pending killed 0 dest 2130706433 valid socket 1 recvop 1 attempts 0 retries 2 timeout 60000 outgoing 1:32 completions 1
+two-byte check ok
+retry completed TwoByteSendRecv WS_Success killed 0
+retry again status WS_Success killed 0 dest 2130706433 valid socket 0 recvop 0 attempts 0 retries 2 timeout 60000 outgoing 1:32
+cut running status WS_Pending killed 0 dest 2130706433 valid socket 1 recvop 1 attempts 0 retries 0 timeout 10000 outgoing 1:6b
+cut completed TestSendRecv WS_Killed killed 1
+cut status WS_Killed killed 1 dest 2130706433 valid socket 0 recvop 0 attempts 0 retries 0 timeout 10000 outgoing 1:6b
+cut wait status WS_Killed killed 1 verifier 1 msg (null) from 2130706433 valid socket 1 manager 0
+server got WS_Success 1:6b
+unbound completed TestSendRecv WS_Killed killed 0
+unbound status WS_Killed killed 0 dest 2130706433 valid socket 0 recvop 0 attempts 0 retries 0 timeout 10000 outgoing 1:75
+mgr recv running status WS_Pending killed 0 verifier 0 msg (null) from 2130706433 valid socket 0 manager 1
+mgr recv completed UDPManagerRecvOp WS_Success killed 0 msg 2:6d67 from 2130706433 valid
+mgr recv done status WS_Success killed 0 verifier 0 msg 2:6d67 from 2130706433 valid socket 0 manager 1
+mgr recv completed UDPManagerRecvOp WS_Killed killed 1 msg 2:6d67 from 2130706433 valid
+mgr recv closed status WS_Killed killed 1 verifier 0 msg 2:6d67 from 2130706433 valid socket 0 manager 1
+udp ops done
 core shut down
