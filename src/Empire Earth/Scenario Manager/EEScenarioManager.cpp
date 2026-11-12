@@ -66,6 +66,7 @@
 #include "ee/EEStringIDs.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 // the vector Load/Save helpers (cdecl template COMDATs 0x1b5faf / 0x1b5fff: the count, then each element's slot)
 template<class T> long EESMLoadVector(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                                       std::vector<T>& outVector)
@@ -1001,82 +1002,14 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
 // player with/without nature, 7+ player n-6) into a list; returns the chosen player, -1 for none or a group
 long EEScenarioManager::ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle)
 {
-    if (!EESimCaptureRecord::Active())
-        return this->ChoosePlayerUncaptured(inType, outPlayers, inSingle);
-    unsigned int theSeed = EESMCaptureSeed();
-    long theResult = this->ChoosePlayerUncaptured(inType, outPlayers, inSingle);
-    EESMCapturePlayers(inType, inSingle, theResult, outPlayers, theSeed);
-    return theResult;
-}
-
-// ChoosePlayer's body (ChoosePlayer adds the simulation capture's SMCP record: ee/EEScenarioCapture.h)
-long EEScenarioManager::ChoosePlayerUncaptured(long inType, std::vector<long>* outPlayers, bool inSingle)
-{
-    unsigned long theNumPlayers = gWorld.mNumPlayers;
-    int theResult = -1;
-    std::vector<long> thePlayers;
-    long i;
-    switch (inType) {
-    case 0:
-        theResult = 0;
-        thePlayers.push_back(theResult);
-        break;
-    case 1:
-    case 3:
-        for (i = 1; i < theNumPlayers; i++)
-            if (gWorld.GetPlayer(i)->mHumanPlayer != NULL)
-                thePlayers.push_back(i);
-        if (thePlayers.size() != 0 && inType == 1) {
-            EEAIRandomShuffle(thePlayers.begin(), thePlayers.end());
-            theResult = thePlayers[0];
-            if (inSingle) {
-                thePlayers.clear();
-                thePlayers.push_back(theResult);
-            }
-        }
-        break;
-    case 2:
-    case 4:
-        for (i = 1; i < theNumPlayers; i++)
-            if (gWorld.GetPlayer(i)->mComputerPlayer != NULL)
-                thePlayers.push_back(i);
-        if (thePlayers.size() != 0 && inType == 2) {
-            EEAIRandomShuffle(thePlayers.begin(), thePlayers.end());
-            theResult = thePlayers[0];
-            if (inSingle) {
-                thePlayers.clear();
-                thePlayers.push_back(theResult);
-            }
-        }
-        break;
-    case 5:
-        for (i = 0; i < theNumPlayers; i++)
-            thePlayers.push_back(i);
-        theResult = gPhysics->GetRandom(0L, (long)(theNumPlayers - 1));
-        if (inSingle) {
-            thePlayers.clear();
-            thePlayers.push_back(theResult);
-        }
-        break;
-    case 6:
-        for (i = 1; i < theNumPlayers; i++)
-            thePlayers.push_back(i);
-        theResult = gPhysics->GetRandom(1L, (long)(theNumPlayers - 1));
-        if (inSingle) {
-            thePlayers.clear();
-            thePlayers.push_back(theResult);
-        }
-        break;
-    default:
-        theResult = inType - 6;
-        if (theResult < (long)theNumPlayers)
-            thePlayers.push_back(theResult);
-        else
-            theResult = -1;
-        break;
-    }
+    // the choice is Rust's (ee_scenario condition.rs choose_player, the AI's shuffle with it; the SMCP record too)
+    EeScenarioHost theHost = EESMHost(NULL);
+    int32_t thePlayers[EE_SCENARIO_MAX_PLAYERS];
+    size_t theCount = 0;
+    long theResult = ee_scenario_choose_player(&theHost, (int32_t)inType, inSingle, outPlayers != NULL, thePlayers,
+                                               &theCount);
     if (outPlayers != NULL)
-        *outPlayers = thePlayers;
+        outPlayers->assign(thePlayers, thePlayers + theCount);
     return theResult;
 }
 

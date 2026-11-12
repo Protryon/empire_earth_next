@@ -142,7 +142,6 @@ public:
     // 0x1b260a: a scenario player choice (0 nature, 1/3 humans, 2/4 computers, 5/6 random, 7.. player n - 6) as one
     // player (the result, -1 if none) and the candidate list (provisional name)
     long ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle);
-    long ChoosePlayerUncaptured(long inType, std::vector<long>* outPlayers, bool inSingle);  // (+ SMCP)
     EESMCondition* FindConditionByID(long inID);    // 0x1b322d (mID)
     EESMEffect* FindEffectByID(long inID);  // 0x1b3269 (mID)
     EESMObject* FindObjectByID(long inID);  // 0x1b32a8 (mL64)

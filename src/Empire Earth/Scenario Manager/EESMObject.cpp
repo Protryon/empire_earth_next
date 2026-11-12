@@ -29,6 +29,7 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 #include "ee/EESMArea.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 // 0x246ea2 again, as IsNearTile uses it (provisional name)
 float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
@@ -1872,91 +1873,31 @@ void EESMTrigger::Evaluate(float inTime)
 // Evaluate's body (Evaluate adds the simulation capture's SMTE record: ee/EEScenarioCapture.h)
 void EESMTrigger::EvaluateUncaptured(float inTime)
 {
-    long theChosen = 0;
-    long theRandomCount = 0;
-    bool theContinue = true;
-    bool theResult = false;
-    if (!this->mIsOn || (gWorld.mInCinematic && !this->mIsInCinematic))
-        return;
-    long theCount = this->mConditions.size();
-    long i;
-    for (i = 0; i < theCount && theContinue == true; i++) {
-        theResult = this->GetCondition(i)->Evaluate(theContinue);
-        if (theContinue || this->GetCondition(i)->mOperator != kSMTriggerOperatorAnd)
-            continue;
-        for (long j = i + 1; j < theCount; j++) {
-            if (this->GetCondition(j)->mOperator != kSMTriggerOperatorOr)
-                continue;
-            i = j;
-            j = theCount;
-            theContinue = true;
-        }
-    }
-    if (theResult == true) {
-        if (this->mConditionDuration != 0) {
-            if (this->mConditionStartTime == 0) {
-                this->mConditionStartTime = (long)inTime;
-                return;
-            }
-            if ((float)this->mConditionDuration > (inTime - this->mConditionStartTime) * 0.001f)
-                return;
-        }
-        this->mHasFired = true;
-        this->mConditionStartTime = 0;
-        if (!this->mIsLooping)
-            this->mIsOn = false;
-        long theEffects = this->mEffects.size();
-        long e;
-        for (e = 0; e < theEffects; e++) {
-            if (this->mEffects[e]->mOperator == kSMTriggerOperatorOr)
-                theRandomCount++;
-        }
-        if (theRandomCount > 0)
-            theChosen = gPhysics->GetRandom(0, theRandomCount);
-        theRandomCount = 0;
-        for (long k = 0; k < theEffects; k++) {
-            EESMTEffectWrapper* theWrapper = this->mEffects[k];
-            if (theRandomCount == theChosen) {
-                unsigned long theTime = (long)(theWrapper->mDelay * 1000.0f + inTime);
-                // (the original also calls GetEffect(mL0C) here and discards it, 0x1c9c6d; no stand-in: the row is not exact, r32 close)
-                gWorld.mScenarioManager->AddTimedEffect(theWrapper->mEffectIndex, theTime, this->mIsInCinematic);
-            }
-            if (theWrapper->mOperator == kSMTriggerOperatorOr)
-                theRandomCount++;
-            if (theRandomCount > theChosen)
-                break;
-        }
-        return;
-    }
-    this->mConditionStartTime = 0;
+    // the chain, the duration and the effects' choice are Rust's (ee_scenario trigger.rs); the C++ schedules them
+    EeScenarioTriggerState theState = {this->mIsOn, this->mHasFired, this->mIsLooping, this->mIsInCinematic,
+                                       (uint32_t)this->mConditionDuration, (uint32_t)this->mConditionStartTime};
+    std::vector<EeScenarioConditionEntry> theConditions(this->mConditions.size());
+    for (size_t i = 0; i < theConditions.size(); i++)
+        theConditions[i] = {(uint32_t)this->mConditions[i]->mValue, (int32_t)this->mConditions[i]->mOperator,
+                            this->mConditions[i]->mIsNot};
+    std::vector<EeScenarioEffectEntry> theEffects(this->mEffects.size());
+    for (size_t k = 0; k < theEffects.size(); k++)
+        theEffects[k] = {(int32_t)this->mEffects[k]->mOperator, (uint32_t)this->mEffects[k]->mDelay,
+                         (uint32_t)this->mEffects[k]->mEffectIndex};
+    std::vector<EeScenarioTimedEffect> theTimed(theEffects.size() + 1);
+    size_t theCount = 0;
+    EeScenarioHost theHost = EESMHost(NULL);
+    ee_scenario_trigger_evaluate(&theHost, &theState, gWorld.mInCinematic, theConditions.data(), theConditions.size(),
+                                 theEffects.data(), theEffects.size(), inTime, theTimed.data(), &theCount);
+    this->mIsOn = theState.is_on;
+    this->mHasFired = theState.has_fired;
+    this->mConditionStartTime = theState.condition_start_time;
+    for (size_t t = 0; t < theCount; t++)
+        gWorld.mScenarioManager->AddTimedEffect((long)theTimed[t].effect, theTimed[t].time, this->mIsInCinematic);
 }
 
 // FUNCTION: EXE 0x5c9caf
-// Returns the entry's condition result (negated if set); ioResult says whether the chain goes on (AND: result true,
-// OR: result false, end: never)
-bool EESMTConditionWrapper::Evaluate(bool& ioResult)
-{
-    bool theResult;
-    EESMCondition* theCondition = gWorld.mScenarioManager->GetCondition(this->mValue);
-    if (theCondition != NULL && theCondition->Evaluate())
-        theResult = true;
-    else
-        theResult = false;
-    if (this->mIsNot == true)
-        theResult = !theResult;
-    switch (this->mOperator) {
-    case kSMTriggerOperatorOr:
-        ioResult = !theResult;
-        break;
-    case kSMTriggerOperatorAnd:
-        ioResult = theResult;
-        break;
-    case kSMTriggerOperatorEnd:
-        ioResult = false;
-        break;
-    }
-    return theResult;
-}
+// (EESMTConditionWrapper::Evaluate: ee_scenario trigger.rs entry)
 
 // FUNCTION: EXE 0x5c9d0e
 // Returns the condition entry at an index, or NULL

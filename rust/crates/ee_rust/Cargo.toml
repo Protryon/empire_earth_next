@@ -36,3 +36,4 @@ ee_won = { path = "../ee_won" }
 ee_units = { path = "../ee_units" }
 ee_netmsg = { path = "../ee_netmsg" }
 ee_screens = { path = "../ee_screens" }
+ee_scenario = { path = "../ee_scenario" }

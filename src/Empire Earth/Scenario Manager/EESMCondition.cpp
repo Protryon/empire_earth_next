@@ -17,8 +17,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEScenarioCapture.h"
-
-static const float kSMCHoursPerDay = -24.0f;    // 0x44605c (Evaluate's time of day; unit .rdata; provisional name)
+#include "ee/EEScenarioHost.h"
 
 // FUNCTION: EXE 0x5ba89f
 // Creates a player-attribute condition with default players, attribute and operator, and no trigger or time tests
@@ -60,25 +59,7 @@ EESMCondition::~EESMCondition()
 // Returns whether the value compares to the target under the operator (<, <=, ==, >=, >); false for any other
 bool EESMCondition::Compare(unsigned long inValue, unsigned long inOperator, unsigned long inTarget)
 {
-    bool theResult = false;
-    switch (inOperator) {
-    case kSMCompareLessThan:
-        theResult = inValue < inTarget;
-        break;
-    case kSMCompareLessOrEqual:
-        theResult = inValue <= inTarget;
-        break;
-    case kSMCompareEqual:
-        theResult = inValue == inTarget;
-        break;
-    case kSMCompareGreaterOrEqual:
-        theResult = inValue >= inTarget;
-        break;
-    case kSMCompareGreater:
-        theResult = inValue > inTarget;
-        break;
-    }
-    return theResult;
+    return ee_scenario_compare((uint32_t)inValue, (uint32_t)inOperator, (uint32_t)inTarget);   // ee_scenario condition.rs
 }
 
 // FUNCTION: EXE 0x5ba9e7
@@ -128,135 +109,10 @@ bool EESMCondition::Evaluate()
 // Evaluate's body (Evaluate adds the simulation capture's SMCE record: ee/EEScenarioCapture.h)
 bool EESMCondition::EvaluateUncaptured()
 {
-    std::vector<long> thePlayers;
-    std::vector<long> theOthers;
-    EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObjectIndex);
-    EESMTrigger* theTrigger = gWorld.mScenarioManager->GetTrigger(this->mTrigger);
-    bool theResult = false;
-    bool theTimeResult = true;
-    switch (this->GetType()) {
-    case kSMConditionAlwaysTrue:
-        theResult = true;
-        break;
-    case kSMConditionObject:
-        if (theObject != NULL)
-            theResult = theObject->Evaluate(0);
-        else
-            theResult = false;
-        break;
-    case kSMConditionPlayerAttribute:
-    case kSMConditionPlayerTechnology:
-    case kSMConditionPlayerDiplomacy: {
-        bool theAny = gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, false) == -1;
-        theResult = false;
-        unsigned char j;
-        for (unsigned char i = 0; i < thePlayers.size(); i++) {
-            bool thePlayerResult = false;
-            if (theAny && theResult)
-                break;
-            if (this->GetType() == kSMConditionPlayerDiplomacy) {
-                EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[i]];
-                if (thePlayer != NULL) {
-                    bool theAnyOther = gWorld.mScenarioManager->ChoosePlayer(this->mOtherPlayer, &theOthers, false) == -1;
-                    for (j = 0; j < theOthers.size(); j++) {
-                        if (theAnyOther) {
-                            thePlayerResult = thePlayer->mEnemies[theOthers[j]] == (long)this->mDiplomacy;
-                            if (thePlayerResult)
-                                break;
-                        } else {
-                            if ((thePlayerResult || j == 0)
-                                && thePlayer->mEnemies[theOthers[j]] == (long)this->mDiplomacy) {
-                                thePlayerResult = true;
-                                continue;
-                            }
-                            thePlayerResult = false;
-                        }
-                    }
-                }
-            } else if (this->GetType() == kSMConditionPlayerAttribute) {
-                unsigned long theValue = this->GetPlayerValue(thePlayers[i], this->mAttribute);
-                if (this->mUsesPlayerAttribute == true) {
-                    bool theAnyOther = gWorld.GetScenarioManager()->ChoosePlayer(this->mOtherPlayer, &theOthers, false) == -1;
-                    thePlayerResult = false;
-                    for (j = 0; j < theOthers.size(); j++) {
-                        unsigned long theOtherValue = this->GetPlayerValue(theOthers[j], this->mOtherAttribute);
-                        if (theAnyOther) {
-                            thePlayerResult = this->Compare(theValue, this->mOperator, theOtherValue);
-                            if (thePlayerResult)
-                                break;
-                        } else if ((thePlayerResult || j == 0) && this->Compare(theValue, this->mOperator, theOtherValue))
-                            thePlayerResult = true;
-                        else
-                            thePlayerResult = false;
-                    }
-                } else
-                    thePlayerResult = this->Compare(theValue, this->mOperator, this->mAmount);
-            } else if (this->GetType() == kSMConditionPlayerTechnology) {
-                EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[i]];
-                if (thePlayer != NULL) {
-                    long theTech = this->mTechnology;
-                    if (theTech < EEEpochCount())
-                        thePlayerResult = thePlayer->GetTechTree()->mCurrentEpoch >= theTech;
-                    else {
-                        EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theTech);
-                        if (theNode != NULL && (theNode->mData->mMakesUnit || theNode->mIsResearched)) {
-                            bool theResearched = theNode->mIsResearched;
-                            theNode->mIsResearched = false;
-                            thePlayerResult = theNode->GetIsAvailable();
-                            theNode->mIsResearched = theResearched;
-                        }
-                    }
-                }
-            }
-            if (theAny) {
-                theResult = thePlayerResult;
-                if (thePlayerResult)
-                    break;
-            } else {
-                if ((theResult || i == 0) && thePlayerResult)
-                    theResult = true;
-                else
-                    theResult = false;
-            }
-        }
-        break;
-    }
-    case kSMConditionTriggerAttribute:
-        theResult = true;
-        // a missing trigger has neither fired nor is on (it used to be read through NULL)
-        if (this->mHasTriggerFired)
-            theResult = theTrigger != NULL && theTrigger->mHasFired;
-        if (this->mIsTriggerOn)
-            theResult = theTrigger != NULL && theTrigger->mIsOn;
-        break;
-    case kSMConditionGameAttribute: {
-        if (this->mUsesElapsedTime) {
-            float theTime = gWorld.mScenarioManager->mTime * 0.001f;
-            if ((float)this->mMinTime <= theTime && (float)this->mMaxTime >= theTime)
-                theResult = true;
-            else
-                theResult = false;
-            theTimeResult = theResult;
-        }
-        if (this->mUsesHour && theTimeResult) {
-            unsigned long theHour = (long)(gWorld.GetTimeOfDay() * kSMCHoursPerDay);
-            theResult = !((30 - theHour) % 24 < this->mHour);
-            theTimeResult = theResult;
-        }
-        if (this->mUsesDifficulty && theTimeResult)
-            theResult = gDifficultyLevel == (long)this->mDifficulty;
-        break;
-    }
-    case kSMConditionChatMessageContains: {
-        UWideString theText(this->mChatText);
-        UWideString theChat(gWorld.mScenarioManager->mLastChatText);
-        PlatMbsLwr((unsigned char*)(const char*)theText);
-        PlatMbsLwr((unsigned char*)(const char*)theChat);
-        theResult = theChat.Find(theText, 0) != theChat.GetLength();
-        break;
-    }
-    }
-    return theResult;
+    // the test is Rust's (ee_scenario condition.rs evaluate) over the host's reads (EEScenarioHost.cpp)
+    EeScenarioHost theHost = EESMHost(this);
+    EeScenarioCondition theRecord = EESMConditionRecord(*this);
+    return ee_scenario_condition_evaluate(&theHost, &theRecord);
 }
 
 // FUNCTION: EXE 0x5baf78
@@ -264,96 +120,8 @@ bool EESMCondition::EvaluateUncaptured()
 // variable, tribute sent/received, statistic or mining limit; 0 without a player
 unsigned long EESMCondition::GetPlayerValue(long inPlayer, unsigned long inType)
 {
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    unsigned long theValue = 0;
-    if (thePlayer == NULL)
-        return theValue;
-    switch (inType) {
-    case kSMPlayerValueAnyResource:
-        theValue = this->GetPlayerValue(inPlayer, gPhysics->GetRandom(2L, 6L));
-        break;
-    case kSMPlayerValueAllResources:
-        theValue = thePlayer->mResourceCaps[kResourceIron] + thePlayer->mResourceCaps[kResourceGold] + thePlayer->mResourceCaps[kResourceStone]
-                   + thePlayer->mResourceCaps[kResourceWood] + thePlayer->mResourceCaps[kResourceFood];
-        break;
-    case kSMPlayerValueStone:
-        theValue = thePlayer->mResourceCaps[kResourceStone];
-        break;
-    case kSMPlayerValueGold:
-        theValue = thePlayer->mResourceCaps[kResourceGold];
-        break;
-    case kSMPlayerValueWood:
-        theValue = thePlayer->mResourceCaps[kResourceWood];
-        break;
-    case kSMPlayerValueFood:
-        theValue = thePlayer->mResourceCaps[kResourceFood];
-        break;
-    case kSMPlayerValueIron:
-        theValue = thePlayer->mResourceCaps[kResourceIron];
-        break;
-    case kSMPlayerValueCurrentPop:
-        theValue = thePlayer->GetTotalPopulation(false, false);
-        break;
-    case kSMPlayerValuePopCap:
-        theValue = thePlayer->GetPopulationLimit(0);
-        break;
-    case kSMPlayerValueUnitCount:
-        theValue = thePlayer->mUnitCount;
-        break;
-    case kSMPlayerValueDifficultyLevel:
-        if (thePlayer->mComputerPlayer != NULL)
-            theValue = thePlayer->mComputerPlayer->mDifficulty;
-        break;
-    case kSMPlayerValueVariable0:
-    case kSMPlayerValueVariable1:
-    case kSMPlayerValueVariable2:
-    case kSMPlayerValueVariable3:
-    case kSMPlayerValueVariable4:
-    case kSMPlayerValueVariable5:
-    case kSMPlayerValueVariable6:
-    case kSMPlayerValueVariable7:
-    case kSMPlayerValueVariable8:
-    case kSMPlayerValueVariable9:
-        theValue = thePlayer->mScenarioVariables[inType - 11];
-        break;
-    case kSMPlayerValueStoneSent:
-        theValue = thePlayer->mTributes[2];
-        break;
-    case kSMPlayerValueStoneReceived:
-        theValue = thePlayer->mTributes[7];
-        break;
-    case kSMPlayerValueGoldSent:
-        theValue = thePlayer->mTributes[3];
-        break;
-    case kSMPlayerValueGoldReceived:
-        theValue = thePlayer->mTributes[8];
-        break;
-    case kSMPlayerValueWoodSent:
-        theValue = thePlayer->mTributes[1];
-        break;
-    case kSMPlayerValueWoodReceived:
-        theValue = thePlayer->mTributes[6];
-        break;
-    case kSMPlayerValueFoodSent:
-        theValue = thePlayer->mTributes[0];
-        break;
-    case kSMPlayerValueFoodReceived:
-        theValue = thePlayer->mTributes[5];
-        break;
-    case kSMPlayerValueIronSent:
-        theValue = thePlayer->mTributes[4];
-        break;
-    case kSMPlayerValueIronReceived:
-        theValue = thePlayer->mTributes[9];
-        break;
-    default:
-        if (inType - 30 < 31)
-            theValue = thePlayer->mSavedGroups.GetLastValue(inType - 30);
-        else if (inType == kSMPlayerValueMiningLimit)
-            theValue = thePlayer->mMiningLimit;
-        break;
-    }
-    return theValue;
+    EeScenarioHost theHost = EESMHost(this);   // ee_scenario condition.rs player_value
+    return ee_scenario_player_value(&theHost, (int32_t)inPlayer, (uint32_t)inType);
 }
 
 // FUNCTION: EXE 0x5bb154
