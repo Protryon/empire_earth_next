@@ -40,6 +40,7 @@ local ECON = {
                             -- holds its cost, whatever the citizens or the minutes (§8.51)
     useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
     order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
+    iron_guard = false,     -- from the Copper Age, while saving, the epoch's iron kept from the army's exemption (§8.51)
 }
 
 local PLAN = {
@@ -651,6 +652,12 @@ function M.step(view, memory)
     -- out: the Stone Age for the rest of the game)
     local no_site = memory.no_site or {}
     local function guarded(r)
+        -- (ECON.iron_guard, boom-defence's late-game finding: the Bronze save unpaid 44 minutes on iron alone, stock 3-27,
+        -- the reserve 0 iron while the light army, always short in Copper, retrained spearmen and macemen from it) from
+        -- the Copper Age, while saving, the epoch's iron is kept from the army too
+        if ECON.iron_guard and r == "iron" and age >= 3 and saving and cost[r] > 0 then
+            return true
+        end
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
     end
     -- (balanced's claim_needed) an advance with a resource short that no site the gatherers can reach holds and
