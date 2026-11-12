@@ -4366,6 +4366,27 @@ Determinism on islands (seeds 3 and 5, 60 minutes, --repeat 2, ferries in both) 
 attack groups' crossings (the C++'s ASGSeaTransport: the transports for an attack across water), and why the port
 outgrows the C++ on islands from the first minutes.
 
+### 8.65 Porting everything, 2a: the attack crossings (2026-11-12, EE-SIM)
+
+An attack sub-group whose target lies across water (on an island or planets map, the group's land not reaching
+it) is now carried there, standing in for the C++'s EECPASGSeaTransport (army.lua `cross_step`).
+- **The crossing.** The free transports (none held by a ferry or by another crossing) are taken until they hold the
+  group, and lib.navy's landing carries it: board, sail, unload at the weakest beach of the target's land. Ashore,
+  the group takes up its attack task again.
+- **Too few transports.** One more of the epoch's sea transport is ordered at a time.
+- **Giving up.** A crossing not under way within 5 minutes, or aborted, gives the group a defence task, and no
+  crossing is tried again for 10 minutes.
+- **The group's own orders** wait while it crosses (lib.groups `manual`).
+- **DEVIATION.** The C++'s transport sub-group (its loading, escorts and covered landings) is lib.navy's landing.
+
+Small Islands, balanced, 90 minutes, 8 seeds:
+- 21 crossings started, all 21 boarded, 20 landed. 0 script errors.
+- The C++ asked for 41 transports for its attacks.
+- The result stays 6-0, 2 close: the island gap is still the economy's, which is next.
+
+Determinism on islands (seeds 3 and 5, 90 minutes, --repeat 2, a landing in one of them) is identical. On land maps
+nothing changes (no crossing is needed).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
