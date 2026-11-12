@@ -4210,10 +4210,16 @@ engine and what is not started.
     (10-12 against 3-5).
   - It loses more citizens: 58.6 a game against the C++'s 32.6. The gap is after 60 minutes, in raids on its
     gatherers far from home (§8.58-§8.61). Its fights and its militia cost no more than the C++'s.
-- **classic with the cheats** (the original's decisions with the classic personality's cheats): last measured at
-  §8.49 at 4-0 with 28 close, near level. That bench was paused on the owner's word ("bench only the balanced
-  personality for now"), and the port has changed since (§8.50-§8.61). It needs a fresh 32-seed check before it is
-  called done.
+- **classic with the cheats** (classicX: the classic personality, Hard's seven cheats to both classic seats; seeds
+  2-33, 90 minutes, on main 902a01c's exe), re-checked 2026-11-12: **2-1 with 29 close**, against §8.49's 4-0 with 28
+  close. Parity holds.
+  - Both sides reach the Stone Age in every game (the port at a median 45 minutes, the C++ at 48).
+  - Both stand at the popband's 50 citizens from 20 minutes.
+  - The port's army is larger (17.6 against 8.2 at 30 minutes), as at §8.49. The port loses more citizens (101.3
+    against 25.2), also as at §8.49 (101.1 against 24.5).
+  - 0 script errors. (The cheats must be set with `--set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal,
+    epochs, extra, popband, catchup, retire]"`: Hard keeps none in the data now. Without it, `--cheats all` turns
+    nothing on.)
 
 **The cheat capabilities** (manifest entries in ai/ais.json, declared only by classic_lua, shown in its trace start
 line, AI_LUA_UNITS §11):
@@ -4276,8 +4282,7 @@ line, AI_LUA_UNITS §11):
   late epochs and multi-ally games do.
 - **Open gaps in play:**
   - the late raids on far gatherers (§8.58-§8.61: 1111 citizens lost after 60 minutes against the C++'s 599);
-  - the empty sub-groups' tasks (§8.55);
-  - the classic-with-cheats re-check.
+  - the empty sub-groups' tasks (§8.55).
 
 
 ### 8.9 Next

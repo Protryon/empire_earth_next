@@ -8,6 +8,14 @@
 //   epoch    a player reached an epoch
 //   chat     a chat line, the text last ("text=" to the end of the line): notes typed while playing
 //   end      the game's last sample (the log closes with the next game or the program)
+//   order    TEST ONLY (training data from playtests): a human player's order as it executes in the lockstep
+//            (EEPhysics::DrainInput, so the same in multiplayer and replays): verb= move, attack, convert, gather,
+//            build, repair, stop, garrison, load, unload, patrol, patrol_point, formation, train, research, explore,
+//            attack_ground, heal, rally, return, dropoff, stance, wall, gate, delete, improve, pack, unpack, fanatic,
+//            replant, calamity; for the selected group units=N classes=<class>:<n>,... ids=<id>,... (24 at most);
+//            then target=<id>:<class>:p<owner>@<x>,<y> (a unit), at=<x>,<y> (a tile), class=/tech= (what is
+//            built, trained or researched), queued=1, forced=1, times=5, kind=<n> (formation, stance)
+//   select   TEST ONLY: a human player's selection after a selection message, when it changed (units=, classes=, ids=)
 // With the log on, the computer players' decision trace (ee/EECPTrace.h, the "EE-AI" lines) goes into it too.
 // The log only reads the game; it never changes it (lockstep stays intact).
 // Requires lle/LowLevelEngine.h.
