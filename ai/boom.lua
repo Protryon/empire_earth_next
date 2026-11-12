@@ -1116,7 +1116,10 @@ function M.step(view, memory)
             end
         end
         local swant = ECON.order and memory.plan_want or want   -- (ECON.order: the phase's want, not the touched)
-        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements then
+        -- (BO.OPT.boat_wood: the settlements too wait for the boats in stone_start)
+        local settle_hold = ECON.order and BO.OPT.boat_wood and BO.holds_wood(view, phase)
+        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements
+                and not settle_hold then
             local wanted = {}
             for _, s in ipairs(view.sites) do
                 if keep[s.index] and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil

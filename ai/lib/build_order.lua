@@ -23,6 +23,8 @@ M.OPT = {
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
     food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+    boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
+                            -- bank's wood pays the dock and the boats first
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
