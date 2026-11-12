@@ -75,9 +75,29 @@ impl Random {
     }
 }
 
+/// A fixed base for [`system_seed`] (0: the clocks), for the drivers' goldens of ops that make random keys.
+static TEST_SEED: AtomicI64 = AtomicI64::new(0);
+
+/// From now on [`system_seed`] gives `seed` plus a use counter, the same sequence in every run (0: the clocks
+/// again). For the `tests/won` drivers only: nothing in the game calls it.
+#[no_mangle]
+pub extern "C" fn ee_won_random_test_seed(seed: i64) {
+    TEST_SEED.store(seed, Ordering::Relaxed);
+    USAGE.store(0, Ordering::Relaxed);
+}
+
+/// The `n`th system seed (from 1) after `ee_won_random_test_seed(fixed)`.
+pub fn test_seed(fixed: i64, n: u32) -> [u8; 8] {
+    fixed.wrapping_add(i64::from(n)).to_le_bytes()
+}
+
 /// `getSeed`: 8 bytes that differ between calls and runs.
 pub fn system_seed() -> [u8; 8] {
     let usage = USAGE.fetch_add(1, Ordering::Relaxed) + 1;
+    let fixed = TEST_SEED.load(Ordering::Relaxed);
+    if fixed != 0 {
+        return test_seed(fixed, usage as u32);
+    }
     let wall = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| (d.as_nanos() / 100) as i64).unwrap_or(0);
     thread_local! { static START: Instant = Instant::now(); }
     let ticks = START.with(|s| s.elapsed().as_nanos() as i64);
@@ -128,5 +148,11 @@ mod tests {
     #[test]
     fn system_seeds_differ() {
         assert_ne!(system_seed(), system_seed());
+    }
+
+    #[test]
+    fn a_test_seed_counts_up_from_its_base() {
+        assert_eq!(test_seed(77, 1), 78i64.to_le_bytes());
+        assert_eq!(test_seed(-1, 2), 1i64.to_le_bytes());
     }
 }

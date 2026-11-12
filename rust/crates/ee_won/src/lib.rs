@@ -63,7 +63,9 @@ pub mod guiwin;
 pub mod guiwrap;
 pub mod hostop;
 pub mod http;
+pub mod httpdoc;
 pub mod httpengine;
+pub mod httpget;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
@@ -92,6 +94,7 @@ pub mod random;
 pub mod regkey;
 pub mod reqdir;
 pub mod reqhost;
+pub mod reqlast;
 pub mod reqop;
 pub mod reqops;
 pub mod resource;

@@ -5,6 +5,8 @@
 use super::*;
 use crate::filepush::*;
 use crate::ftpop::*;
+use crate::httpdoc::*;
+use crate::httpget::*;
 use crate::multiping::*;
 use crate::reqhost::*;
 use crate::reqops::{
@@ -28,6 +30,10 @@ struct Standin {
     line: i32,
     /// a request exchange's sequence (its own answers)
     req: bool,
+    /// an HTTP get's sequence (its reply lines: `http_line`)
+    http: bool,
+    /// an HTTP document's sequence (its downloads' statuses: invalid redirects at times)
+    doc: bool,
     auth: i32,
     rands: Vec<i32>,
     addrs: Vec<[u8; 6]>,
@@ -168,6 +174,54 @@ impl Standin {
         b.push(0);
         Some(b)
     }
+    /// an HTTP reply's lines (NUL ended), biased to a session: the status first, then headers, blank lines, chunk
+    /// lengths
+    fn http_line(&mut self) -> Option<Vec<u8>> {
+        const STATUS: [&str; 8] = [
+            "HTTP/1.1 200 OK",
+            "HTTP/1.1 206 Partial",
+            "HTTP/1.1 301 Moved",
+            "HTTP/1.0 302 Found",
+            "HTTP/1.1 304 Not Modified",
+            "HTTP/1.1 404 Not Found",
+            "HTTP/1.1 500 Error",
+            "garbage",
+        ];
+        const HEADERS: [&str; 14] = [
+            "Content-Length: 12",
+            "Content-Type: text/plain",
+            "Last-Modified: Sun, 06 Nov 1994 08:49:37 GMT",
+            "Location: http://www.sierra.com/motd/x.txt",
+            "Location: http://other",
+            "Location: nowhere",
+            "Transfer-Encoding: chunked",
+            "Connection: close",
+            "Date: Sun, 06 Nov 1994 08:49:37 GMT",
+            "Expires: Sun, 06 Nov 1994 09:49:37 GMT",
+            "ETag: \"abc\"x",
+            "ETag: none",
+            "X-Other: y",
+            "no colon",
+        ];
+        const CHUNKS: [&str; 5] = ["c", "0", "1a;ext", "zz", ""];
+        let k = self.pick(10);
+        if k == 0 && self.pick(3) == 0 {
+            return None;
+        }
+        let l = if self.line == 0 || k == 1 {
+            STATUS[self.pick(8) as usize]
+        } else if k < 6 {
+            HEADERS[self.pick(14) as usize]
+        } else if k < 8 {
+            ""
+        } else {
+            CHUNKS[self.pick(5) as usize]
+        };
+        self.line += 1;
+        let mut b = l.as_bytes().to_vec();
+        b.push(0);
+        Some(b)
+    }
     /// a request exchange's reply: a reused session's "expired", a ping reply, a DB proxy reply, anything
     fn req_bytes(&mut self) -> Option<Vec<u8>> {
         let k = self.pick(6);
@@ -301,11 +355,14 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                     s.recv_status()
                 };
                 let v = if s.req && s.pick(6) == 0 { 100053 } else { v };
+                let v = if s.doc && s.pick(4) == 0 { 100094 } else { v };
                 c.out_num = i64::from(v);
                 s.log(format!("st#{o0}={v}"));
             }
             EE_WON_HOST_OP_BYTES => {
-                let b = if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) {
+                let b = if s.http {
+                    s.http_line()
+                } else if s.kinds.get(&o0) == Some(&EE_WON_HOST_OP_RECV_CR_MSG) {
                     s.line_bytes()
                 } else if s.req {
                     s.req_bytes()
@@ -491,6 +548,110 @@ unsafe extern "C" fn host_fn(_host: *mut c_void, call: *mut EeWonHostCall) {
                 c.out_num = i64::from(s.pick(4) != 0);
                 s.log(format!("isrecv#{o0}={}", c.out_num));
             }
+            EE_WON_HOST_SOCKET_CONNECTED => {
+                c.out_num = i64::from(s.pick(3) == 0);
+                s.log(format!("conn?#{o0}={}", c.out_num));
+            }
+            EE_WON_HOST_SOCKET_KILL => s.log(format!("skill#{o0}")),
+            EE_WON_HOST_SOCKET_STATUS => {
+                c.out_num = if s.pick(2) != 0 { 100004 } else { 100001 };
+                s.log(format!("sstat#{o0}={}", c.out_num));
+            }
+            EE_WON_HOST_RECV_CR => {
+                let v = s.send_status();
+                let b = s.http_line();
+                c.out_num = i64::from(v);
+                // SAFETY: during the call
+                unsafe { give(c, &b) };
+                s.log(format!("recvcr#{o0} t{}={v} {}", n0 as u32, blog(&b)));
+            }
+            EE_WON_HOST_FILE_STAT => {
+                const K: [i64; 4] = [0, 12, 4096, 784111777];
+                let v = if n0 == 0 { i64::from(s.pick(3) != 0) } else { K[s.pick(4) as usize] };
+                c.out_num = v;
+                s.log(format!("stat {} {}={v}", hex(&data), n0 as i32));
+            }
+            EE_WON_HOST_TIME => {
+                let v = 784111000 + i64::from(s.pick(9000));
+                c.out_num = v;
+                s.log(format!("time={v}"));
+            }
+            EE_WON_HOST_CACHE_ENTRY => {
+                let id = if s.pick(3) == 0 { 0 } else { s.new_obj() };
+                c.out_obj = id as usize as *mut c_void;
+                s.log(format!("entry#{o0} {}={id}", hex(&data)));
+            }
+            EE_WON_HOST_ENTRY_GET => {
+                if n0 == 0 || n0 == 1 {
+                    let v = if n0 == 0 { i64::from(s.pick(2)) } else { 784111000 + i64::from(s.pick(9000)) };
+                    c.out_num = v;
+                    s.log(format!("eget#{o0} {}={v}", n0 as i32));
+                } else {
+                    const K: [&str; 3] = ["", "_cache1.txt", "\"tag\""];
+                    let b = K[s.pick(3) as usize].as_bytes().to_vec();
+                    // SAFETY: during the call
+                    unsafe { give(c, &Some(b.clone())) };
+                    s.log(format!("eget#{o0} {}={}", n0 as i32, hex(&b)));
+                }
+            }
+            EE_WON_HOST_ENTRY_SET => s.log(format!("eset#{o0} {} {n1} {}", n0 as i32, hex(&data))),
+            EE_WON_HOST_CACHE_UPDATE => s.log(format!("update#{o0} {o1}")),
+            EE_WON_HOST_RECV_SKIP => s.log(format!("skip#{o0}")),
+            EE_WON_HOST_RECV_BINARY => s.log(format!("binary#{o0} {}", n0 as i32)),
+            EE_WON_HOST_RECV_MODIFY_TIME => s.log(format!("mtime#{o0} {n0}")),
+            EE_WON_HOST_HTTP_PROXY => {
+                const K: [&str; 3] = ["", "", "proxy:8080"];
+                let b = K[s.pick(3) as usize].as_bytes().to_vec();
+                // SAFETY: during the call
+                unsafe { give(c, &Some(b.clone())) };
+                s.log(format!("proxy={}", hex(&b)));
+            }
+            EE_WON_HOST_NEW_HTTP_GET => {
+                let id = s.new_obj();
+                c.out_obj = id as usize as *mut c_void;
+                s.log(format!("http#{id} {} {}", n0 as i32, hex(&data)));
+            }
+            EE_WON_HOST_HOSTOP_NUM => {
+                let v = if s.pick(3) == 0 {
+                    i64::from(s.next())
+                } else if s.pick(4) == 0 {
+                    404
+                } else {
+                    i64::from(s.pick(3))
+                };
+                c.out_num = v;
+                s.log(format!("cnum#{o0} {}={v}", n0 as i32));
+            }
+            EE_WON_HOST_HOSTOP_BYTES => {
+                let null = s.pick(5) == 0;
+                let b = if null {
+                    None
+                } else if s.pick(2) != 0 {
+                    Some(Vec::new())
+                } else {
+                    Some(b"x.txt".to_vec())
+                };
+                // SAFETY: during the call
+                unsafe { give(c, &b) };
+                s.log(format!("cbytes#{o0} {}={}", n0 as i32, blog(&b)));
+            }
+            EE_WON_HOST_HOSTOP_SET => s.log(format!("cset#{o0} {} {n1} {} o{o1}", n0 as i32, hex(&data))),
+            EE_WON_HOST_HTTP_MODIFIED => {
+                let v = if s.pick(3) == 0 { 0 } else { 784111000 + i64::from(s.pick(9000)) };
+                c.out_num = v;
+                s.log(format!("hmod#{o0}={v}"));
+            }
+            EE_WON_HOST_FILE_FIRST_CHAR => {
+                const K: [i64; 5] = [-2, -1, b'1' as i64, b'0' as i64, b'<' as i64];
+                let v = K[s.pick(5) as usize];
+                c.out_num = v;
+                s.log(format!("fgetc {}={v}", hex(&data)));
+            }
+            EE_WON_HOST_SESSION_ADD => s.log(format!("sadd#{o0} {o1}")),
+            EE_WON_HOST_TRACKER_EMPTY => {
+                c.out_num = i64::from(s.pick(2));
+                s.log(format!("tempty={}", c.out_num));
+            }
             code => s.log(format!("unknown {code}")),
         }
     });
@@ -640,6 +801,10 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
             }
             _ => {}
         }
+    } else if which == 'H' {
+        ret = http_step(op, kind, a, b, data);
+    } else if which == 'D' {
+        ret = doc_step(op, kind, a, data);
     } else if which == 'P' {
         match kind {
             0 => op.set(EE_WON_FTPGET_LOCAL_PATH, 0, data, None, 0),
@@ -734,6 +899,128 @@ fn step(op: &Op, which: char, kind: i32, a: i64, b: i64, data: &[u8], timer: &mu
     format!("{ret}|{trace}|{d}")
 }
 
+/// The driver's `HttpStep`, Rust half: the step's return.
+fn http_step(op: &Op, kind: i32, a: i64, b: i64, data: &[u8]) -> String {
+    let h = &op.h().op;
+    let obj = |a: i64| if a != 0 { with(|s| s.new_obj()) } else { 0 };
+    let drop_driver_ref = |c: i32| {
+        if c != 0 {
+            with(|s| *s.own.get_mut(&c).unwrap() -= 1);
+        }
+    };
+    match kind {
+        0 => {
+            with(|s| {
+                s.mode = a as i32;
+                s.status = 100000;
+                s.line = 0;
+            });
+            h.run();
+        }
+        1 => {
+            let done = with(|s| {
+                s.serial += 1;
+                s.serial
+            });
+            return if h.callback(a as i32, Obj(done as usize)) { "1" } else { "0" }.into();
+        }
+        2 => h.cleanup(),
+        3 => op.set(EE_WON_HTTPGET_LOCAL_PATH, 0, data, None, 0),
+        4 | 9 | 11 => {
+            let c = obj(a);
+            let which = match kind {
+                4 => EE_WON_HTTPGET_CACHE,
+                9 => EE_WON_HTTPGET_SOCKET,
+                _ => EE_WON_HTTPGET_CHUNK,
+            };
+            op.set(which, if kind == 11 { b } else { 0 }, &[], None, c);
+            drop_driver_ref(c);
+        }
+        5 => op.set(EE_WON_HTTPGET_BINARY, a, &[], None, 0),
+        6 => op.set(EE_WON_HTTPGET_MODE, a, &[], None, 0),
+        7 => op.set(EE_WON_HTTPGET_RANGE_RESUME, a, &[], None, 0),
+        8 => op.set(EE_WON_HTTPGET_CLOSE, a, &[], None, 0),
+        10 => {
+            let mut r = String::new();
+            for w in [
+                EE_WON_HTTPGET_REDIRECTS,
+                EE_WON_HTTPGET_LAST_MODIFIED,
+                EE_WON_HTTPGET_STATUS,
+                EE_WON_HTTPGET_IS_NEW,
+                EE_WON_HTTPGET_CONTENT_LENGTH,
+                EE_WON_HTTPGET_ONLY_SEND,
+                EE_WON_HTTPGET_ONLY_RECV,
+            ] {
+                let _ = write!(r, "{} ", op.num(w, 0));
+            }
+            for w in [
+                EE_WON_HTTPGET_LOCAL_PATH,
+                EE_WON_HTTPGET_HOST,
+                EE_WON_HTTPGET_REMOTE_PATH,
+                EE_WON_HTTPGET_CONTENT_TYPE,
+                EE_WON_HTTPGET_CONTENT,
+                EE_WON_HTTPGET_REDIRECT_HOST,
+                EE_WON_HTTPGET_REDIRECT_PATH,
+            ] {
+                let _ = write!(r, "{} ", h.bytes(w, 0).as_ref().map_or("null".to_string(), |b| hex(b)));
+            }
+            return r;
+        }
+        12 => op.set(EE_WON_HTTPGET_REDIRECTS, a, &[], None, 0),
+        _ => {}
+    }
+    "-".into()
+}
+
+/// The driver's `DocStep`, Rust half: the step's return.
+fn doc_step(op: &Op, kind: i32, a: i64, data: &[u8]) -> String {
+    let h = &op.h().op;
+    match kind {
+        0 => {
+            with(|s| {
+                s.mode = a as i32;
+                s.status = 100000;
+            });
+            h.run();
+        }
+        1 => {
+            let done = with(|s| {
+                s.serial += 1;
+                s.serial
+            });
+            return if h.callback(a as i32, Obj(done as usize)) { "1" } else { "0" }.into();
+        }
+        2 => h.cleanup(),
+        3 => op.set(EE_WON_HTTPDOC_CONFIG, 0, data, None, 0),
+        4 => {
+            let c = if a != 0 { with(|s| s.new_obj()) } else { 0 };
+            op.set(EE_WON_HTTPDOC_SESSION, 0, &[], None, c);
+            if c != 0 {
+                with(|s| *s.own.get_mut(&c).unwrap() -= 1);
+            }
+        }
+        5 => {
+            let mut r = String::new();
+            for w in 0..2 {
+                let d = h.bytes(EE_WON_HTTPDOC_PATH, w).unwrap_or_default();
+                let _ = write!(
+                    r,
+                    "{} {} {} {} {} {} ",
+                    op.num(EE_WON_HTTPDOC_TYPE, w) as i32,
+                    op.num(EE_WON_HTTPDOC_IS_NEW, w) as i32,
+                    op.num(EE_WON_HTTPDOC_STATUS, w) as i32,
+                    op.num(EE_WON_HTTPDOC_HTTP_STATUS, w) as i32,
+                    op.num(EE_WON_HTTPDOC_MODIFIED, w),
+                    hex(&d)
+                );
+            }
+            return r;
+        }
+        _ => {}
+    }
+    "-".into()
+}
+
 fn reset(seed: u32) {
     with(|s| *s = Standin { seed, mode: 2, lfs: 4, ..Standin::default() });
 }
@@ -797,6 +1084,38 @@ fn new_op(which: char, addr: &[u8]) -> Op {
     }
     let op = if which == 'M' {
         ee_won_multiping_new()
+    } else if which == 'D' {
+        const PRODUCTS: [&str; 3] = ["eeaoc", "", "x y"];
+        const NAMES: [&str; 4] = ["motd", "tou", "adv", "zzz"];
+        let (t, p) = (addr[0] as usize, addr[1] as usize);
+        let doc = |owner: usize| {
+            if t < 3 {
+                format!("_won{}{}.txt", if owner == 0 { "sys" } else { PRODUCTS[p] }, NAMES[t])
+            } else {
+                String::new()
+            }
+        };
+        let (a, b) = (doc(0), doc(1));
+        with(|s| s.doc = true);
+        let pr = PRODUCTS[p];
+        // SAFETY: the texts' bytes
+        unsafe { ee_won_httpdoc_new(t as i32, pr.as_ptr(), pr.len(), a.as_ptr(), a.len(), b.as_ptr(), b.len()) }
+    } else if which == 'H' {
+        const URLS: [&str; 4] =
+            ["http://www.sierra.com/motd/sys/motd.txt", "www.sierra.com", "http://h:8080/a/b?c=1", "http://onlyhost"];
+        const HOSTS: [&str; 4] = ["www.sierra.com", "h:8080", "", "x"];
+        const PATHS: [&str; 4] = ["/motd/sys/motd.txt", "/", "", "/a b"];
+        with(|s| s.http = true);
+        // SAFETY: the texts' bytes
+        unsafe {
+            if addr[1] != 0 {
+                let (h, p) = (HOSTS[addr[0] as usize], PATHS[addr[2] as usize]);
+                ee_won_httpget_new(h.as_ptr(), h.len(), p.as_ptr(), p.len())
+            } else {
+                let u = URLS[addr[0] as usize];
+                ee_won_httpget_new_url(u.as_ptr(), u.len())
+            }
+        }
     } else if which == 'P' {
         const URLS: [&str; 4] = [
             "ftp://host.example/dir/file.bin",
