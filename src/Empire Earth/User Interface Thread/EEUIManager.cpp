@@ -132,7 +132,6 @@
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"
-#include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEUIEGrabScroll.h"
 #include "ee/EEUIEHotKeyEvents.h"
 #include "ee/EEUIEHotKeyZoom.h"
@@ -237,7 +236,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     this->RegisterControlEventCallback(EECreateDebugSoundEvent);
     this->RegisterFormEventCallback(EECreateFormEvent);
     this->LoadDatabase(gDataPath, UString());
-    // port: the settings' texture resolution combo box (EEUIEGameSettingsEvents.cpp), in the video tab's right column
+    // port: the settings' texture resolution combo box (ee_screens settings_form.rs), in the video tab's right column
     // below the weather effects check box; a copy of the video card combo box (id 151) with the strings 33100..33102
     UIControlsTable::AddControlLike(this, 151, kTextureResolutionControlID, kGameSettingsTextureResolutionComboBox, 1,
                                     0.2473f, 0.4614f, 0.325f, 0.325f + 0.025f + 3 * 0.022f, kTextureResolutionOriginalString,
@@ -332,118 +331,12 @@ EEUIManager::~EEUIManager()
 }
 
 // FUNCTION: EXE 0x671598
-// Creates the game settings form's event for a control id; NULL for other ids
+// Creates the game settings form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
+// settings_form.rs)
 UIEvent* EECreateGameSettingsEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventGameSettingsOK && inID < 0xfc) {
-        switch (inID) {
-        case kControlEventGameSettingsCancel:
-            theEvent = new EEUIEGSECancel;
-            break;
-        case kControlEventGameSettingsRestoreDefault:
-            theEvent = new EEUIEGSERestoreDefault;
-            break;
-        case kControlEventGameSettingsVideoTab:
-            theEvent = new EEUIEGSEVideoTab;
-            break;
-        case kControlEventGameSettingsAudioTab:
-            theEvent = new EEUIEGSEAudioTab;
-            break;
-        case kControlEventGameSettingsInterfaceTab:
-            theEvent = new EEUIEGSEInterfaceTab;
-            break;
-        case kControlEventGameSettingsVideoCardComboBox:
-            theEvent = new EEUIEGSEVideoCardComboBox;
-            break;
-        case kControlEventGameSettingsRenderingSystem:
-            theEvent = new EEUIEGSERenderingSystemListBox;
-            break;
-        case kControlEventGameSettingsMusicVolume:
-            theEvent = new EEUIEGSEMusicVolumeSlider;
-            break;
-        case kControlEventGameSettingsSoundVolume:
-            theEvent = new EEUIEGSESoundVolumeSlider;
-            break;
-        case kControlEventGameSettingsMusicQualityHigh:
-        case kControlEventGameSettingsMusicQualityLow:
-        case kControlEventGameSettingsMusicOff:
-            theEvent = new EEUIEGSEMusicQualityRadio;
-            break;
-        case kControlEventGameSettingsTestSoundVolume:
-            theEvent = new EEUIEGSETestSoundVolume;
-            break;
-        case kControlEventGameSettingsGQRadio1Lowest:
-        case kControlEventGameSettingsGQRadio2:
-        case kControlEventGameSettingsGQRadio3Middle:
-        case kControlEventGameSettingsGQRadio4:
-        case kControlEventGameSettingsGQRadio5Highest:
-            theEvent = new EEUIEGSEGraphicsQuality;
-            break;
-        case kControlEventGameSettingsModelDetailRadioHigh:
-        case kControlEventGameSettingsModelDetailRadioMed:
-        case kControlEventGameSettingsModelDetailRadioLow:
-        case kControlEventGameSettingsEffectsDetailHigh:
-        case kControlEventGameSettingsEffectsDetailMed:
-        case kControlEventGameSettingsEffectsDetailLow:
-        case kControlEventGameSettingsHiResFilterCheckboxCheck:
-        case kControlEventGameSettingsHiResFilterCheckboxUncheck:
-        case kControlEventGameSettingsHiResLightingCheckboxCheck:
-        case kControlEventGameSettingsHiResLightingCheckboxUncheck:
-        case kControlEventGameSettingsHiResTexturesCheckboxCheck:
-        case kControlEventGameSettingsHiResTexturesCheckboxUncheck:
-        case kControlEventGameSettingsSmoothAnimationsCheckboxCheck:
-        case kControlEventGameSettingsSmoothAnimationsCheckboxUncheck:
-        case kControlEventGameSettingsShadowsCheckboxCheck:
-        case kControlEventGameSettingsShadowsCheckboxUncheck:
-        case kControlEventGameSettingsCloudsCheckboxCheck:
-        case kControlEventGameSettingsCloudsCheckboxUncheck:
-        case kControlEventGameSettingsWeatherEffectsCheckboxCheck:
-        case kControlEventGameSettingsWeatherEffectsCheckboxUncheck:
-        case kControlEventGameSettingsAntiAliasCheckboxCheck:
-        case kControlEventGameSettingsAntiAliasCheckboxUncheck:
-            theEvent = new EEUIEGSEAdvancedGraphicsSettingsChanged;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_settings_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x67180c
-// (EEUIEGSEAudioTab's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671837
-// (EEUIEGSECancel's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671862
-// (EEUIEGSEInterfaceTab's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67188d
-// (EEUIEGSEMusicQualityRadio's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6718b8
-// (EEUIEGSEMusicVolumeSlider's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6718e3
-// (EEUIEGSERenderingSystemListBox's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67190e
-// (EEUIEGSERestoreDefault's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671939
-// (EEUIEGSESoundVolumeSlider's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671964
-// (EEUIEGSETestSoundVolume's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67198f
-// (EEUIEGSEVideoCardComboBox's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6719ba
-// (EEUIEGSEGraphicsQuality's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6719e5
-// (EEUIEGSEAdvancedGraphicsSettingsChanged's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x671a10
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids

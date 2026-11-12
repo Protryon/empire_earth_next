@@ -1,5 +1,5 @@
-//! `extern "C"` for the screens that are Rust's whole (`menus.rs`): `EEScreenEvent::ProcessEvent`'s dispatch, the
-//! control-event table, the menus' state, and the host over the C++ calls (`ee_screenscpp_*`,
+//! `extern "C"` for the screens that are Rust's whole (`menus.rs`, `settings_form.rs`): `EEScreenEvent::ProcessEvent`'s
+//! dispatch, the control-event table, the menus' state, and the host over the C++ calls (`ee_screenscpp_*`,
 //! `UI Events/EEScreens.cpp`).
 #![allow(clippy::missing_safety_doc)]
 
@@ -10,7 +10,7 @@ use crate::menus::*;
 use crate::single_player::EeScreensSinglePlayerSlot;
 
 /// cbindgen:ignore
-mod sys {
+pub(crate) mod sys {
     use core::ffi::c_void;
 
     use crate::single_player::EeScreensSinglePlayerSlot;
@@ -34,6 +34,18 @@ mod sys {
             computer: *const u8,
             computer_length: usize,
         );
+        // the settings form's (settings_form_ffi.rs)
+        pub fn ee_screenscpp_selection(form: *mut c_void, control: u32, list: bool, out: *mut u32) -> i32;
+        pub fn ee_screenscpp_settings(defaults: bool, out: *mut crate::settings_form::EeScreensSettingsRecord);
+        pub fn ee_screenscpp_put_settings(record: *const crate::settings_form::EeScreensSettingsRecord);
+        pub fn ee_screenscpp_modes(
+            rasterizer: u32,
+            screen: u32,
+            out: *mut crate::settings::EeScreensVideoMode,
+            capacity: usize,
+        ) -> usize;
+        pub fn ee_screenscpp_current_mode(screen: u32, out: *mut crate::settings::EeScreensVideoMode);
+        pub fn ee_screenscpp_game_size(percent: u32, windowed: bool, width: *mut u32, height: *mut u32);
     }
 }
 
@@ -44,14 +56,14 @@ static MENUS: Mutex<Menus> = Mutex::new(Menus {
 });
 
 /// The event's form and entity (`UIForm*`, `UIEntity*`).
-struct Form(*mut c_void, *mut c_void);
+pub(crate) struct Form(pub(crate) *mut c_void, pub(crate) *mut c_void);
 
 impl Form {
-    fn op(&mut self, op: u32, a: u32, b: u32, c: u32, d: u32) -> u32 {
+    pub(crate) fn op(&mut self, op: u32, a: u32, b: u32, c: u32, d: u32) -> u32 {
         unsafe { sys::ee_screenscpp_call(self.0, self.1, op, a, b, c, d) }
     }
     /// A text, `None` when the host says it is missing (`usize::MAX`).
-    fn get_checked(&mut self, which: u32, arg: u32) -> Option<Vec<u8>> {
+    pub(crate) fn get_checked(&mut self, which: u32, arg: u32) -> Option<Vec<u8>> {
         let mut out = vec![0u8; 256];
         let n = unsafe { sys::ee_screenscpp_text(self.0, which, arg, out.as_mut_ptr(), out.len()) };
         if n == usize::MAX {
@@ -66,10 +78,10 @@ impl Form {
         }
         Some(out)
     }
-    fn get(&mut self, which: u32, arg: u32) -> Vec<u8> {
+    pub(crate) fn get(&mut self, which: u32, arg: u32) -> Vec<u8> {
         self.get_checked(which, arg).unwrap_or_default()
     }
-    fn put(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
+    pub(crate) fn put(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
         unsafe { sys::ee_screenscpp_put_text(self.0, which, arg, text.as_ptr(), text.len()) }
     }
 }
@@ -164,6 +176,9 @@ impl MenuHost for Form {
 #[no_mangle]
 pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity: *mut c_void) -> c_long {
     let mut host = Form(form, entity);
+    if let Some(result) = crate::settings_form_ffi::dispatch(&mut host, event) {
+        return result;
+    }
     dispatch(&mut host, &MENUS, event);
     0
 }

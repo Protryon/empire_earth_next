@@ -69,7 +69,8 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIESLLoadScreen.h"
 #include "ee/EEUIESLSaveScreen.h"
-#include "ee/EEUIEGameSettingsEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_GS_IN_GAME_OPEN (ee_screens settings_form.rs)
 #include "ee/EEUIEMainGameOptionsEvents.h"
 #include "ee/EEStringIDs.h"
 static void OnResign(UIForm* inForm);
@@ -234,15 +235,11 @@ long EEUIEMGOEGameBriefing::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Opens the game settings form, with the event that sets it up for in-game use
 long EEUIEMGOEGameSettings::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIEvent* theEvent = new EEUIEGSEInGameOpen;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_GS_IN_GAME_OPEN);
     inForm->GetManager()->GetFormByID(kFormGameSettings)->SetFormOpenEvent(theEvent);
     theEvent->Dereference();
     return gUserInterface->OpenForm(inForm->GetManager()->GetFormByID(kFormGameSettings));
 }
-
-// FUNCTION: EXE 0x5e13dc
-// Destroys the in-game settings-open event and frees it when asked (scalar deleting destructor)
-// (EEUIEGSEInGameOpen's ??_G, after its first user)
 
 // FUNCTION: EXE 0x5e1407
 // Asks whether to quit the game

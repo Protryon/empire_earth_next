@@ -223,8 +223,6 @@ constexpr static const uint32_t EE_SCREENS_PC_CUSTOM = 2055;
 constexpr static const uint32_t EE_SCREENS_PC_LEARNING = 2056;
 
 /// The C++ events the menus hang on other forms (built by the host).
-constexpr static const uint32_t EE_SCREENS_CPP_SETTINGS_OPEN = 65537;
-
 constexpr static const uint32_t EE_SCREENS_CPP_LOBBY_SINGLE = 65539;
 
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA = 65540;
@@ -345,6 +343,182 @@ constexpr static const float EE_SCREENS_MINIMUM_MOUSE_SENSITIVITY = 0.01;
 
 /// `ApplySettings`' floor on the sound channels.
 constexpr static const unsigned long EE_SCREENS_MINIMUM_CHANNELS = 8;
+
+/// Opening the form from the main menu, from the game (form-open events), the two OK buttons they hang.
+constexpr static const uint32_t EE_SCREENS_GS_OUT_OF_GAME_OPEN = 1281;
+
+constexpr static const uint32_t EE_SCREENS_GS_IN_GAME_OPEN = 1282;
+
+constexpr static const uint32_t EE_SCREENS_GS_OUT_OF_GAME_OK = 1283;
+
+constexpr static const uint32_t EE_SCREENS_GS_IN_GAME_OK = 1284;
+
+constexpr static const uint32_t EE_SCREENS_GS_CANCEL = 1285;
+
+constexpr static const uint32_t EE_SCREENS_GS_RESTORE_DEFAULT = 1286;
+
+constexpr static const uint32_t EE_SCREENS_GS_VIDEO_TAB = 1287;
+
+constexpr static const uint32_t EE_SCREENS_GS_AUDIO_TAB = 1288;
+
+constexpr static const uint32_t EE_SCREENS_GS_INTERFACE_TAB = 1289;
+
+constexpr static const uint32_t EE_SCREENS_GS_VIDEO_CARD = 1290;
+
+constexpr static const uint32_t EE_SCREENS_GS_RENDERING_SYSTEM = 1291;
+
+constexpr static const uint32_t EE_SCREENS_GS_MUSIC_VOLUME = 1292;
+
+constexpr static const uint32_t EE_SCREENS_GS_SOUND_VOLUME = 1293;
+
+constexpr static const uint32_t EE_SCREENS_GS_MUSIC_QUALITY = 1294;
+
+constexpr static const uint32_t EE_SCREENS_GS_TEST_SOUND = 1295;
+
+constexpr static const uint32_t EE_SCREENS_GS_GRAPHICS_QUALITY = 1296;
+
+constexpr static const uint32_t EE_SCREENS_GS_ADVANCED_CHANGED = 1297;
+
+/// The port's quality combo box's selection.
+constexpr static const uint32_t EE_SCREENS_GS_PORT_QUALITY = 1298;
+
+/// Restore Default's question answered yes (the question's callback, no event object).
+constexpr static const uint32_t EE_SCREENS_GS_RESTORE_YES = 1299;
+
+constexpr static const uint32_t EE_SCREENS_OP_GROUP = 288;
+
+constexpr static const uint32_t EE_SCREENS_OP_BACKGROUND = 289;
+
+constexpr static const uint32_t EE_SCREENS_OP_CHECKBOX = 290;
+
+constexpr static const uint32_t EE_SCREENS_OP_SET_CHECKBOX = 291;
+
+constexpr static const uint32_t EE_SCREENS_OP_RADIO = 292;
+
+constexpr static const uint32_t EE_SCREENS_OP_CHECK_RADIO = 293;
+
+constexpr static const uint32_t EE_SCREENS_OP_RANGE = 294;
+
+constexpr static const uint32_t EE_SCREENS_OP_SET_RANGE = 295;
+
+constexpr static const uint32_t EE_SCREENS_OP_ENTITY_RANGE = 296;
+
+constexpr static const uint32_t EE_SCREENS_OP_COMBO_SELECT = 297;
+
+constexpr static const uint32_t EE_SCREENS_OP_LIST_SELECT = 298;
+
+constexpr static const uint32_t EE_SCREENS_OP_COMBO_CLEAR = 299;
+
+constexpr static const uint32_t EE_SCREENS_OP_LIST_CLEAR = 300;
+
+constexpr static const uint32_t EE_SCREENS_OP_RELEASE_MOUSE = 301;
+
+constexpr static const uint32_t EE_SCREENS_OP_LABEL_NUMBER = 302;
+
+constexpr static const uint32_t EE_SCREENS_OP_ENTITY_ID = 303;
+
+constexpr static const uint32_t EE_SCREENS_OP_CONTROL_ID = 304;
+
+constexpr static const uint32_t EE_SCREENS_OP_TRIGGER_HERE = 305;
+
+constexpr static const uint32_t EE_SCREENS_OP_SLIDER_LABEL = 306;
+
+constexpr static const uint32_t EE_SCREENS_OP_CLOSE_FORM = 307;
+
+constexpr static const uint32_t EE_SCREENS_OP_DISPLAY_CHANGED = 308;
+
+constexpr static const uint32_t EE_SCREENS_OP_RESIZE_MENU = 309;
+
+constexpr static const uint32_t EE_SCREENS_OP_SRAND_TIME = 310;
+
+constexpr static const uint32_t EE_SCREENS_OP_RAND = 311;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CONDUCTOR_VOLUME = 320;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GET_CONDUCTOR_VOLUME = 321;
+
+constexpr static const uint32_t EE_SCREENS_GAME_REVERB = 322;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CONDUCTOR_STATE = 323;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GET_CONDUCTOR_STATE = 324;
+
+constexpr static const uint32_t EE_SCREENS_GAME_UI_MUSIC_VOLUME = 325;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MASTER_VOLUME = 326;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GET_MASTER_VOLUME = 327;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GET_CHANNELS = 328;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CHANNELS = 329;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MUSIC_START = 330;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MUSIC_STOP = 331;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MOUSE_SENSITIVITY = 332;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LEFT_HANDED = 333;
+
+constexpr static const uint32_t EE_SCREENS_GAME_IS_SERVER = 334;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PAUSE = 335;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CURRENT_RASTERIZER = 336;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CHANGE_RASTERIZER = 337;
+
+constexpr static const uint32_t EE_SCREENS_GAME_APPLY_PORT = 338;
+
+constexpr static const uint32_t EE_SCREENS_GAME_VIEW = 339;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MIP_FILTER = 340;
+
+constexpr static const uint32_t EE_SCREENS_GAME_TEXTURE_RESOLUTION = 341;
+
+constexpr static const uint32_t EE_SCREENS_GAME_AMBIENT = 342;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVE = 343;
+
+constexpr static const uint32_t EE_SCREENS_GAME_NOT_KOREAN = 344;
+
+constexpr static const uint32_t EE_SCREENS_GAME_TEST_SOUND = 345;
+
+constexpr static const uint32_t EE_SCREENS_GAME_WINDOW_MODE = 346;
+
+constexpr static const uint32_t EE_SCREENS_GAME_RASTERIZER_COUNT = 348;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SCREEN_COUNT = 349;
+
+/// Texts (ee_screenscpp_text / _put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_MUSIC_FILE = 32;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_RASTERIZER_SETTING = 33;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_AUDIO_DEVICE = 34;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DISPLAY_RASTERIZER = 35;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DISPLAY_SCREEN = 36;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_RASTERIZER_NAME = 37;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LIST_DATA = 38;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_COMBO_DATA = 39;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_ADAPTERS = 40;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_OUTPUT_DEVICES = 41;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_COMBO_APPEND = 42;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_COMBO_INSERT = 43;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LIST_APPEND = 44;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_QUESTION = 45;
 
 /// A slot of the random map's table: the human's, the computer's, or a closed one.
 constexpr static const uint32_t EE_SCREENS_SP_HUMAN = 0;
@@ -720,178 +894,6 @@ struct EeScreensLobbyStart {
   uint32_t messages[EE_SCREENS_START_MESSAGES];
 };
 
-/// The graphics controls' states as `GetGraphicsQuality` reads them.
-struct EeScreensGraphics {
-  /// The check boxes, in [`CHECK_CONTROLS`]' order.
-  bool checks[9];
-  /// The model detail radio buttons: high, medium, low ([`MODEL_RADIOS`]).
-  bool model[3];
-  /// The effects detail radio buttons: high, medium, low ([`EFFECT_RADIOS`]).
-  bool effect[3];
-};
-
-/// What `SetGraphicsQuality` sets for a preset: the check boxes ([`CHECK_CONTROLS`]' order: the C++ calls
-/// `SetChecked` in that order), then the model and the effects detail radio to check (0 low, 1 medium, 2 high).
-struct EeScreensPreset {
-  bool checks[9];
-  long model;
-  long effect;
-};
-
-/// The settings `ShowGraphics` puts on the video tab's graphics controls.
-struct EeScreensGraphicsSettings {
-  bool trilinear_filter;
-  bool unit_lighting;
-  bool shadows;
-  bool clouds;
-  bool battlefield_ambients;
-  bool weather_effects;
-  bool anti_aliasing;
-  bool wait_for_vsync;
-  long mip_levels_to_drop;
-  long terrain_mip_levels_to_drop;
-  long texture_resolution;
-  long model_detail;
-  long effect_detail;
-};
-
-/// `ShowGraphics`' plan: the check boxes' states in [`CHECK_CONTROLS`]' order (the C++ sets 82, 83, 84, the texture
-/// resolution line, 86, 87, 110, 88, 105, the detail radios, then 85, the v-sync box, last), the texture resolution
-/// line and the detail radios (0 low, 1 medium, 2 high).
-struct EeScreensGraphicsShow {
-  bool checks[9];
-  unsigned long texture_line;
-  long model;
-  long effect;
-};
-
-/// The controls `ApplySettings` reads.
-struct EeScreensApplyControls {
-  /// 13: show blood.
-  bool show_blood;
-  /// 82, 83, 84: the trilinear filter, unit lighting, full-resolution textures.
-  bool trilinear;
-  bool unit_lighting;
-  bool full_textures;
-  /// 111, the port's texture resolution combo box: whether it is there with a selection, and the selection.
-  bool texture_selected;
-  unsigned long texture_line;
-  /// 86, 87, 110, 88: shadows, clouds, battlefield ambients, weather effects.
-  bool shadows;
-  bool clouds;
-  bool battlefield_ambients;
-  bool weather_effects;
-  /// The model and the effects detail radios: high, medium, low (75..77, 79..81).
-  bool model[3];
-  bool effect[3];
-  /// 66: the ambient sounds.
-  bool ambient_sounds;
-  /// 39: the voices slider (percent of the mixer's channels).
-  long voices;
-  /// The mixer's channels (`GetMaxChannels`).
-  unsigned long max_channels;
-  /// 29 music off, 27 reverb on, 28 reverb off.
-  bool music_off;
-  bool reverb_on;
-  bool reverb_off;
-  /// 56, 49, 62: the mouse sensitivity and the side and grab scroll speeds (percent).
-  long mouse_sensitivity;
-  long side_scroll;
-  long grab_scroll;
-  /// 53: the right-handed mouse.
-  bool right_handed;
-  /// 91, 94: the autosave minutes and count.
-  long autosave_minutes;
-  long autosave_count;
-};
-
-/// The settings `ApplySettings` writes, in and out: a detail level, the reverb and the texture resolution stay when
-/// no control decides them.
-struct EeScreensApplied {
-  bool show_blood;
-  bool trilinear;
-  bool unit_lighting;
-  long mip_levels_to_drop;
-  long terrain_mip_levels_to_drop;
-  /// Whether the texture resolution is set (and `EESetTextureResolution` called), and its value.
-  bool set_texture_resolution;
-  long texture_resolution;
-  bool shadows;
-  bool clouds;
-  bool battlefield_ambients;
-  bool weather_effects;
-  long model_detail;
-  long effect_detail;
-  bool ambient_sounds;
-  /// The voices factor (`mMaxNumberOfSounds`) and the channels it leaves (`SetMaxChannels`).
-  float max_number_of_sounds;
-  unsigned long channels;
-  bool music_enabled;
-  bool reverb;
-  float mouse_sensitivity;
-  float side_scroll;
-  float grab_scroll;
-  bool right_handed;
-  unsigned long autosave_ms;
-  unsigned long autosaves;
-};
-
-/// The audio tab's settings as `ShowAudio` reads them (with the defaults' volumes: a volume equal to its default is
-/// put into effect, as Restore Default does).
-struct EeScreensAudioSettings {
-  float music_volume;
-  float default_music_volume;
-  float sound_volume;
-  float default_sound_volume;
-  float max_number_of_sounds;
-  bool reverb;
-  bool music_enabled;
-};
-
-/// `ShowAudio`'s plan: whether to put the music and the sound volume into effect, the voices slider, the reverb
-/// radio to check (27 on, else 28 off) and whether to check music off (29). The music and sound sliders show the
-/// engine's volumes afterwards ([`slider_percent`]).
-struct EeScreensAudioShow {
-  bool set_music_volume;
-  bool set_sound_volume;
-  long voices;
-  bool reverb_on;
-  bool music_off;
-};
-
-/// The interface tab's settings as `ShowInterface` reads them.
-struct EeScreensInterfaceSettings {
-  float mouse_sensitivity;
-  float side_scroll;
-  float grab_scroll;
-  long network_adapter;
-  /// The adapters the protocol lists (the box holds Default, then them).
-  unsigned long adapters;
-  bool right_handed;
-  unsigned long autosave_ms;
-  unsigned long autosaves;
-};
-
-/// `ShowInterface`'s plan: the three sliders, the adapter box's line (an adapter past the list: Default), the mouse
-/// hand (`SetMouseLeftHanded`; 53 or 54 checked) and the autosave sliders' and labels' values.
-struct EeScreensInterfaceShow {
-  long mouse_sensitivity;
-  long side_scroll;
-  long grab_scroll;
-  unsigned long adapter_line;
-  bool left_handed;
-  long autosave_minutes;
-  long autosaves;
-};
-
-/// A video mode as the settings' lists see it (`GEVideoMode` without its pixel format).
-struct EeScreensVideoMode {
-  unsigned long width;
-  unsigned long height;
-  unsigned long refresh_rate;
-  unsigned long bit_count;
-};
-
 /// A slot's fields the random map sets (a closed slot: a new slot's, with `slot` 4, as the original's).
 struct EeScreensSinglePlayerSlot {
   /// `EE_SCREENS_SP_*`: whose slot (the human's and the computer's take their names; a closed one keeps a new
@@ -902,6 +904,61 @@ struct EeScreensSinglePlayerSlot {
   unsigned long slot;
   bool local;
   bool ready;
+};
+
+/// The settings the form reads and writes (`EEGameSettings`' fields; the texts are the host's).
+struct EeScreensSettingsRecord {
+  float mouse_sensitivity;
+  float side_scroll_speed;
+  float grab_scroll_speed;
+  float sound_volume;
+  float music_volume;
+  float max_number_of_sounds;
+  long game_bit_depth;
+  unsigned long game_window_height;
+  unsigned long game_window_width;
+  long mip_levels_to_drop;
+  long model_detail;
+  long effect_detail;
+  long network_adapter;
+  long screen_id;
+  long terrain_mip_levels_to_drop;
+  long texture_bit_depth;
+  unsigned long number_of_auto_saves;
+  unsigned long auto_save_in_milliseconds;
+  long texture_resolution;
+  long ui_scale;
+  long render_resolution;
+  long window_mode;
+  long frame_rate_limit;
+  long texture_filtering;
+  long brightness;
+  long master_volume;
+  long maximum_zoom_out;
+  bool zoom_enabled;
+  bool display_clouds;
+  bool display_shadows;
+  bool display_battlefield_ambients;
+  bool trilinear_filter;
+  bool full_screen;
+  bool reverb_enabled;
+  bool wait_for_vsync;
+  bool ambient_sounds;
+  bool show_blood;
+  bool music_enabled;
+  bool right_hand_mouse_orientation;
+  bool unit_lighting;
+  bool display_weather_effects;
+  bool anti_aliasing;
+  bool mute_in_background;
+};
+
+/// A video mode as the settings' lists see it (`GEVideoMode` without its pixel format).
+struct EeScreensVideoMode {
+  unsigned long width;
+  unsigned long height;
+  unsigned long refresh_rate;
+  unsigned long bit_count;
 };
 
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
@@ -1075,54 +1132,8 @@ long ee_screens_event(uint32_t event,
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
 
-/// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
-unsigned long ee_screens_graphics_quality(const EeScreensGraphics *controls);
-
-/// `SetGraphicsQuality`: whether `quality` is a preset (`out` then its plan).
-bool ee_screens_quality_preset(unsigned long quality, EeScreensPreset *out);
-
-/// The quality radio button (0..4, 5 Custom) a quality checks.
-unsigned long ee_screens_quality_radio(unsigned long quality);
-
-/// `ShowGraphics`' plan for the settings.
-void ee_screens_graphics_show(const EeScreensGraphicsSettings *settings,
-                              EeScreensGraphicsShow *out);
-
-/// `PortSelect`: the line of value table `table` nearest `value` (0 for an unknown table).
-unsigned long ee_screens_settings_nearest(uint32_t table, long value);
-
-/// `PortRead`: whether line `selection` of value table `table` exists (`out` then its value).
-bool ee_screens_settings_value(uint32_t table, unsigned long selection, long *out);
-
-/// `ApplySettings`' values from the controls; `io` holds the current settings on entry.
-void ee_screens_settings_apply(const EeScreensApplyControls *controls, EeScreensApplied *io);
-
-/// `ShowAudio`'s plan for the settings.
-void ee_screens_settings_audio(const EeScreensAudioSettings *settings, EeScreensAudioShow *out);
-
-/// A factor as a slider's percent (`(long)(inValue * 100.0f)`).
-long ee_screens_settings_percent(float value);
-
-/// `ShowInterface`'s plan for the settings.
-void ee_screens_settings_interface(const EeScreensInterfaceSettings *settings,
-                                   EeScreensInterfaceShow *out);
-
-/// `EEVideoModeGreater`: whether `a` sorts before `b` in the resolution list (largest first).
-bool ee_screens_video_mode_greater(const EeScreensVideoMode *a, const EeScreensVideoMode *b);
-
-/// `ShowResolutions`' line over the sorted modes (`count` of them).
-unsigned long ee_screens_resolution_line(const EeScreensVideoMode *list,
-                                         size_t count,
-                                         const EeScreensVideoMode *current,
-                                         const EeScreensVideoMode *default_);
-
-/// `ApplySettings`' mode index over the sorted modes (`count` of them).
-unsigned long ee_screens_mode_index(const EeScreensVideoMode *list,
-                                    size_t count,
-                                    const EeScreensVideoMode *settings);
-
-/// `ShowScreens`' line among the rasterizer's `count` screens (`c_ulong::MAX`: none).
-unsigned long ee_screens_screen_line(size_t count, unsigned long screen_id);
+/// The settings form's event code for a control event id, 0 for another form's.
+uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);

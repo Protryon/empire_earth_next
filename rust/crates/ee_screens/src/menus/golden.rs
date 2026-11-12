@@ -48,7 +48,7 @@ struct Driver {
 fn event_name(event: u32) -> &'static str {
     match event {
         EE_SCREENS_SP_OPEN => "class EEUIESPEOpen",
-        EE_SCREENS_CPP_SETTINGS_OPEN => "class EEUIEGSEOutOfGameOpen",
+        crate::settings_form::EE_SCREENS_GS_OUT_OF_GAME_OPEN => "class EEUIEGSEOutOfGameOpen",
         EE_SCREENS_PC_OPEN => "class EEUIEPCEFormOpen",
         EE_SCREENS_PC_MOUSE_OVER => "class EEUIEPCEMouseOver",
         EE_SCREENS_CPP_SCENARIOS_OPEN => "class EEUIECSSEFormOpen",

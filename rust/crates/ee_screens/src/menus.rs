@@ -61,7 +61,6 @@ pub const EE_SCREENS_PC_CUSTOM: u32 = 0x0807;
 pub const EE_SCREENS_PC_LEARNING: u32 = 0x0808;
 
 /// The C++ events the menus hang on other forms (built by the host).
-pub const EE_SCREENS_CPP_SETTINGS_OPEN: u32 = 0x1_0001; // EEUIEGSEOutOfGameOpen
 pub const EE_SCREENS_CPP_LOBBY_SINGLE: u32 = 0x1_0003; // EEUIELEActivateSinglePlayer
 pub const EE_SCREENS_CPP_DUMP_MEDIA: u32 = 0x1_0004; // EEUIEMGDumpLoadedMedia(false)
 pub const EE_SCREENS_CPP_DUMP_MEDIA_ALL: u32 = 0x1_0005; // EEUIEMGDumpLoadedMedia(true)
@@ -345,7 +344,7 @@ pub fn dispatch<H: MenuHost>(host: &mut H, state: &Mutex<Menus>, event: u32) -> 
             host.call(EE_SCREENS_GAME_DELETE_WON);
         }
         EE_SCREENS_MAIN_GAME_SETTINGS => {
-            host.set_open_event(FORM_GAME_SETTINGS, EE_SCREENS_CPP_SETTINGS_OPEN);
+            host.set_open_event(FORM_GAME_SETTINGS, crate::settings_form::EE_SCREENS_GS_OUT_OF_GAME_OPEN);
             host.push(FORM_GAME_SETTINGS);
         }
         EE_SCREENS_MAIN_EXIT => host.call(EE_SCREENS_GAME_QUIT),
@@ -550,7 +549,7 @@ mod tests {
     fn events_outside_the_menus_do_nothing() {
         let mut h = Rec::default();
         assert!(!dispatch(&mut h, &Mutex::default(), 0x0500));
-        assert!(!dispatch(&mut h, &Mutex::default(), EE_SCREENS_CPP_SETTINGS_OPEN));
+        assert!(!dispatch(&mut h, &Mutex::default(), crate::settings_form::EE_SCREENS_GS_OUT_OF_GAME_OPEN));
         assert!(h.calls.is_empty());
         assert!(run(EE_SCREENS_MAIN_TEST, "").is_empty());
         assert!(run(EE_SCREENS_SP_LEARNING, "").is_empty());
@@ -571,7 +570,7 @@ mod tests {
         );
         assert_eq!(run(EE_SCREENS_MAIN_SINGLE_PLAYER, ""), ["call 3", "call 4", "open 6 0x601", "push 6"]);
         assert_eq!(run(EE_SCREENS_MAIN_MULTI_PLAYER, ""), ["call 3", "call 5", "call 2"]);
-        assert_eq!(run(EE_SCREENS_MAIN_GAME_SETTINGS, ""), ["open 5 0x10001", "push 5"]);
+        assert_eq!(run(EE_SCREENS_MAIN_GAME_SETTINGS, ""), ["open 5 0x501", "push 5"]);
     }
 
     #[test]
