@@ -8,12 +8,13 @@
 //! fills the same record from the object (the store's own C++ fill), so a read of a unit never needs the reads' host.
 //! The same holds for a player object without a table.
 //!
-//! The fills of the goals' records (`EECombatFillCondition`, `EECombatFillStep`) are here too: every field the store
+//! The fills of the goals' records (`EECombatFillCondition`, `EECombatFillStep`, the heal goal's work) are here too: every field the store
 //! holds, read from it; the C++ adds the rest (the stats, which upgrades change in place, and `IsHuman`, a virtual).
 //!
 //! Determinism: plain copies of the C++ values; no float operation, no random draw.
 
 use crate::goals::{EeCombatConditionIn, EeCombatStepIn};
+use crate::shots::EeCombatHealWorkIn;
 use crate::walks::EeCombatHandle;
 
 /// The unit store's fields the combat reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge).
@@ -192,6 +193,32 @@ pub fn fill_step(i: &mut EeCombatStepIn, kind: i32, unit: EeCombatHandle, target
     i.command = u.command as u32;
     i.unit_id = u.id;
     i.target_id = unit_of(target).map_or(0, |t| t.id);
+}
+
+/// `EEUGHealUnit::Work`'s record, its store part: zeroed, the healer's command, the target's hit points and players
+/// (the enemy table only for another player's target, both players there). The C++ adds the cinematic flag, the
+/// goal's elapsed time, the tick and the stats.
+pub fn fill_heal_work(i: &mut EeCombatHealWorkIn, unit: EeCombatHandle, target: EeCombatHandle) {
+    *i = EeCombatHealWorkIn::default();
+    let u = unit_of(unit).unwrap_or_default();
+    i.command = u.command as u32;
+    let Some(t) = unit_of(target) else { return };
+    i.has_target = 1;
+    i.target_hp = t.hit_points as i32;
+    i.same_player = i32::from(u.player == t.player);
+    if i.same_player == 0 && t.player != 0 && u.player != 0 {
+        let own = player_of(u.player).unwrap_or_default();
+        i.target_enemy_of = i32::from(at_war(t.player, own.id));
+    }
+}
+
+/// `EEUGHealUnit::Work`'s store part over `input` (see [`fill_heal_work`]).
+///
+/// # Safety
+/// `input` must point to a writable record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_fill_heal_work(input: *mut EeCombatHealWorkIn, unit: u64, target: u64) {
+    fill_heal_work(unsafe { &mut *input }, unit, target);
 }
 
 /// `EECombatFillCondition`'s store part over `input` (see [`fill_condition`]).

@@ -150,3 +150,33 @@ fn no_object_no_record() {
     assert_eq!(unit_of(0xdead), None);
     assert!(!at_war(0xdead, 1));
 }
+
+#[test]
+fn the_heal_work_record_takes_command_hit_points_and_players() {
+    let mut u = complex(0x130, 71, 0x9200);
+    u.command = 16001;
+    put_unit(u);
+    let mut t = complex(0x230, 72, 0x9300);
+    t.hit_points = 40;
+    put_unit(t);
+    put_player(0x9200, 1, &[]);
+    put_player(0x9300, 2, &[1]);
+    let mut i = EeCombatHealWorkIn { elapsed: 9, healing: 3, ..Default::default() };
+    fill_heal_work(&mut i, 0x130, 0x230);
+    let want = EeCombatHealWorkIn {
+        command: 16001,
+        has_target: 1,
+        target_hp: 40,
+        same_player: 0,
+        target_enemy_of: 1,
+        ..Default::default()
+    };
+    assert_eq!(i, want);
+    // no target: the command alone
+    fill_heal_work(&mut i, 0x130, 0);
+    assert_eq!(i, EeCombatHealWorkIn { command: 16001, ..Default::default() });
+    // the same player: no enemy table read
+    put_unit(complex(0x231, 73, 0x9200));
+    fill_heal_work(&mut i, 0x130, 0x231);
+    assert_eq!((i.same_player, i.target_enemy_of), (1, 0));
+}

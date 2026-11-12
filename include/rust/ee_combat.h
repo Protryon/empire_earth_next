@@ -2269,6 +2269,12 @@ void ee_combat_shot_update(int32_t kind, uint64_t unit, const EeCombatShotHost *
 /// `input` must point to a valid record.
 EeCombatHealWorkOut ee_combat_heal_work(const EeCombatHealWorkIn *input);
 
+/// `EEUGHealUnit::Work`'s store part over `input` (see [`fill_heal_work`]).
+///
+/// # Safety
+/// `input` must point to a writable record.
+void ee_combat_fill_heal_work(EeCombatHealWorkIn *input, uint64_t unit, uint64_t target);
+
 /// `EECombatFillCondition`'s store part over `input` (see [`fill_condition`]).
 ///
 /// # Safety
