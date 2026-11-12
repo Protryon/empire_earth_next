@@ -7,7 +7,7 @@ use crate::*;
 use std::collections::BTreeMap;
 
 /// The tags (the little-endian u32 of the four letters) and their formulas' names.
-pub const TAGS: [(&[u8; 4], &str); 25] = [
+pub const TAGS: [(&[u8; 4], &str); 34] = [
     (b"CBAF", "attack factor"),
     (b"CBDM", "damage"),
     (b"CBEL", "elevation"),
@@ -33,6 +33,15 @@ pub const TAGS: [(&[u8; 4], &str); 25] = [
     (b"CBDP", "drop point (model and tile)"),
     (b"CBTL", "tile line"),
     (b"CBWP", "weapon tag point height"),
+    (b"CBLS", "shot launch"),
+    (b"CBLT", "turret launch"),
+    (b"CBAP", "attach point"),
+    (b"CBPJ", "projectile launch step"),
+    (b"CBPS", "projectile step"),
+    (b"CBMA", "missile acceleration"),
+    (b"CBMH", "missile homing"),
+    (b"CBFS", "new target screen"),
+    (b"CBHD", "hit distance"),
 ];
 
 pub fn tag(name: &[u8; 4]) -> u32 {
@@ -108,6 +117,12 @@ unsafe impl Plain for EeCombatDropIn {}
 unsafe impl Plain for EeCombatDropOut {}
 unsafe impl Plain for crate::geometry::EeCombatWeaponIn {}
 unsafe impl Plain for [f32; 16] {}
+unsafe impl Plain for crate::launch::EeCombatLaunchIn {}
+unsafe impl Plain for crate::launch::EeCombatLaunchOut {}
+unsafe impl Plain for crate::flight::EeCombatFlightIn {}
+unsafe impl Plain for crate::flight::EeCombatFlightOut {}
+unsafe impl Plain for crate::screen::EeCombatScreenIn {}
+unsafe impl Plain for crate::screen::EeCombatHitDistanceIn {}
 
 fn bytes_of<T: Plain>(value: &T) -> &[u8] {
     // SAFETY: a Plain value is size_of::<T>() initialized bytes (4-byte fields, no padding)
@@ -213,6 +228,32 @@ pub fn replay(record: &Record) -> Option<Result<bool, String>> {
         let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[size + 64 * n..size + 64 * n + 64])).collect();
         let height = crate::geometry::weapon_height(&input, &links);
         Ok(height.to_bits().to_le_bytes() == p[p.len() - 4..])
+    } else if t == tag(b"CBFS") {
+        check(p, crate::screen::screen)
+    } else if t == tag(b"CBHD") {
+        check(p, crate::screen::hit_distance)
+    } else if t == tag(b"CBPJ") {
+        check(p, crate::flight::projectile_launch)
+    } else if t == tag(b"CBPS") {
+        check(p, crate::flight::projectile_step)
+    } else if t == tag(b"CBMA") {
+        check(p, crate::flight::missile_accelerate)
+    } else if t == tag(b"CBMH") {
+        check(p, crate::flight::missile_home)
+    } else if t == tag(b"CBLS") || t == tag(b"CBLT") || t == tag(b"CBAP") {
+        // the input, its chain's matrices, the output
+        let size = std::mem::size_of::<crate::launch::EeCombatLaunchIn>();
+        let out = std::mem::size_of::<crate::launch::EeCombatLaunchOut>();
+        if p.len() < size + out {
+            return Some(Err(format!("payload of {} bytes", p.len())));
+        }
+        let input: crate::launch::EeCombatLaunchIn = from_bytes(&p[..size]);
+        let chain = input.chain.max(0) as usize;
+        if p.len() != size + 64 * chain + out {
+            return Some(Err(format!("payload of {} bytes, not {}", p.len(), size + 64 * chain + out)));
+        }
+        let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[size + 64 * n..size + 64 * n + 64])).collect();
+        Ok(bytes_of(&crate::launch::launch(&input, &links)) == &p[size + 64 * chain..])
     } else {
         return None;
     })

@@ -7028,3 +7028,60 @@ in player 4's lists; round 7 saves them as ghosts so that a load matches).
   saveload gate PASS with the new expect file; `rust_build.py gate` PASS (1750 tests); `--test-profile
   windowed-software` 0/0. No harness session (tours, AI games, LAN) was run; the fix is in the computer player's
   simulation only (EE-SIM covers it; no renderer or UI path changed).
+
+## R5b.2, fourth round: the weapon point's other users, the flight steps, the screens and the unit-list search's sweep (ee_combat launch.rs, flight.rs, screen.rs; branch rust-combat4, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the shot's launch transform, tile, tag point and flaming arrows | `EEUnitClass::LaunchShot` | `launch::launch_shot`, `launch_index` | CBLS (replayed) |
+| the turret's launch | `EEUnitClass::LaunchFromTurret` | `launch::launch_from_turret` | CBLT (replayed) |
+| the attach point | `EEApproachAttachPoint` | `launch::attach_point` | CBAP (replayed) |
+| the projectile's placement on its arc, its tick | `EEPMProjectile::Step0`, `Step2` | `flight::projectile_launch`, `projectile_step` | CBPJ, CBPS (replayed) |
+| the missile's boost and homing ticks | `EEPMMissile::Accelerate`, `Home` | `flight::missile_accelerate`, `missile_home` | CBMA, CBMH (no game records one: unit tests only) |
+| the new target search's screens | `EEFOFindNewTargetInMeleeRange`, `EEFOFindNewTargetNearOldTarget` `Virtual04/08` | `screen::screen_accepts` over a distance callback | CBFS (replayed) |
+| the hit distance's arithmetic | `EEGetHitDistanceSquared` | `screen::hit_distance` | CBHD (replayed) |
+| the unit-list search (round 3's move) | `EESearchTargetAlongList` | `search::search_along_list` | CBSL, now from EE-SIM's end sweep |
+
+- **Golden first.** Commit 7d8fe54a put TEST ONLY probes into the unmodified C++ (the record layouts as local C
+  structs in `EECombatFormulas.h`, the decisions read off the original branches: the tag point index it took, whether
+  the flaming-arrow branch ran, which early return Step2 took). The goldens were recorded from that commit with one
+  more, temporary change: round 3's C++ `EESearchTargetAlongList` (from cfe840e7, its trace helper renamed) in place
+  of the Rust-backed one, so CBSL is the C++ search's. Every earlier digest of those runs equalled the existing
+  goldens in all four profiles. The moves then replaced the local structs with ee_combat's records (same layout).
+- **All of this round's tags replay.** Each is a pure function of its record: `combat_replay` recomputes every
+  CBLS/CBLT/CBAP (the record, the model chain's matrices, the output), CBPJ/CBPS/CBMA/CBMH, CBFS and CBHD byte for
+  byte. CBSL is a world walk: gated by its digest.
+- **The model chain once more.** `EECombatTagPointChain` (a template, so `EECombatFormulas.h` needs no model header)
+  gathers a tag point's local point at a frame and its model chain's internal transforms, as round 3's line of fire
+  did; `geometry::up_the_chain` walks it, `launch_from_turret` also composes the chain's transforms over the turret's
+  turn for the launch's orientation (`EETagPoint::GetTransformation`). `EEUnitClass.cpp` now includes `lle/GEModel.h`.
+- **The C++ literals are the std constants.** 3.1415927f, 6.2831855f, 1.5707964f and 0.31830987f have the bits of
+  `f32::consts::PI`, `TAU`, `FRAC_PI_2` and `FRAC_1_PI` (clippy's approx_constant rejects the literals); the
+  missile's dot product clamp stays the C++'s two tests (`allow(clippy::manual_clamp)`).
+- **Laziness kept at the seams.** Step2 reads the ground point only at or below height 0 (`!(z > 0)`, NaN included,
+  as the original's early return), the screens ask the distance (a drop point for the melee screen: CBDP and CBHD
+  records) only for a living candidate (`ee_combat_screen` calls the host back and writes `read`/`distance` into the
+  record for the capture).
+- **The unit-list search's sweep.** No game of the four profiles reaches `EESearchTargetAlongList` (anti-air ammo
+  only). EE-SIM now runs it once, when a captured game ends (`FinishGame` before `Finish`), over each player's newest
+  64 armed units on the map (priests left out: a list unit without a complex unit reaches `CanAttackClass` through
+  NULL there), at the unit's tile and two tiles off with 1.5 times the range. It must not change anything another
+  record sees: `EESimCaptureRecord::Only(tag)` (thread-local) drops every other tag's record while it runs (the
+  CBAF/CBLB/CBDP/CBHD records of the tests it calls), each unit's `mIgnoredTargets` is copied back after each call
+  (`IgnoreTarget`, the expired entries' erase), and nothing simulates after it. 180 to 230 CBSL records a game.
+- **The first CBSL comparison found a record difference, not a behaviour one.** Round 3's C++ probe wrote the
+  search's `inScale` after the original's `inScale = theRange * inScale`, the Rust-backed record wrote the argument:
+  every trace, best and score were equal (134 of 134 records of a seed, all but that field). The moved record now
+  writes `in.range * inScale` (the golden is the C++'s). Round 3 had no CBSL golden, so this had never been compared.
+- **Coverage.** CBLT comes only from the space profile (turrets); CBFS from none to a few hundred screens a game
+  (absent in 3 late and 2 calamity seeds and every space seed); CBHD from every search's distance (100k+ a game).
+  **No game of the four profiles flies a missile: CBMA and CBMH have no golden** and `missile_accelerate` and
+  `missile_home` are gated by their unit tests only (a capture of a later profile with missiles would add them).
+- **Process.** A second `build.py` started while the first still ran (the first's compile errors were printed mid
+  build) collided on the object files (`PermissionError` unlinking an .obj): wait for the build's own end. A
+  `rust_build.py header` piped into `tail` hid its failure and a commit went out without its header: check the
+  header for the new names before building. The python `check` re-digests every capture file; the golden runs here
+  digested seed pairs and deleted them right away (disk), and compared the digests with the golden files directly.
+- **What stays C++:** the shot's creation, goal and launch, the closest tile, the turret part lookup, the drop target,
+  the ground point, `EEUpdateUnitTile`, the projectiles' and missiles' ground and water impact tests
+  (`CheckGroundImpact`, `CheckWaterImpact`), `DistanceSquaredTo`, the screens' objects.

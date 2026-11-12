@@ -140,6 +140,21 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
+
+/// `LaunchFromTurret` (a turret part found): the tag point turned by the turret's yaw, the launch along the chain.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_TURRET = 1;
+
+/// `EEApproachAttachPoint`: the world point of the current tag point (or half a tile up).
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_ATTACH = 2;
+
+/// `EEFOFindNewTargetInMeleeRange`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
+
+/// `EEFOFindNewTargetNearOldTarget`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_NEAR_OLD = 1;
+
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
 /// complex unit may be missing).
@@ -3914,6 +3929,45 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// A flight step's outputs.
+struct EeCombatFlightOut {
+  /// the unit moved (Step2 may not; its location is then the input's)
+  int32_t moved;
+  /// the new velocity (Accelerate, Home)
+  float speed;
+  /// the new location
+  float matrix[16];
+};
+
+/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
+struct EeCombatFlightIn {
+  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
+  float location[16];
+  /// the projectile's launch point (`mProjectileStart`) (Step0)
+  float start[3];
+  /// the drop target's point (Home)
+  float target[3];
+  /// the projectile's yaw (Step0)
+  float yaw;
+  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
+  float move_y;
+  float move_z;
+  float pitch;
+  /// the class's gravity (`mAcceleration`) (Step2)
+  float gravity;
+  /// the tick's seconds
+  float step;
+  /// the unit's velocity
+  float speed;
+  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
+  float max_speed;
+  float accel;
+  float max_angular;
+  /// the ground point was read (Step2: only at or below height 0) and its height
+  int32_t ground_read;
+  float ground_z;
+};
+
 /// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
 /// point's model first, then each parent) are passed beside it.
 struct EeCombatWeaponIn {
@@ -3934,6 +3988,56 @@ struct EeCombatWeaponIn {
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
+struct EeCombatLaunchIn {
+  /// `EE_COMBAT_LAUNCH_KIND_*`
+  int32_t kind;
+  /// the shooter's `mIsSpecialAttack` (shot)
+  int32_t special;
+  /// the launcher class's `mHasSpecialAttack` (shot)
+  int32_t has_special;
+  /// the shooter is a Sp15 capital ship or the Yamato (shot)
+  int32_t capital;
+  /// the shooter is a Roman legionnaire (shot)
+  int32_t legionnaire;
+  /// the animation's tag points (0 without a list) (shot, attach)
+  int32_t point_count;
+  /// `mWeaponTagPoint` (shot, attach)
+  int32_t weapon_index;
+  /// the launcher class is a building: the shot faces the target (shot)
+  int32_t building;
+  /// not a bomb's launcher: the shot turns to the target about its own axis (shot)
+  int32_t turn;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// the stats' scale
+  float scale;
+  /// the turret's yaw (turret)
+  float yaw;
+  /// the tag point at the frame, in its model's space (when there is one)
+  float point[3];
+  /// the target location (shot)
+  float target[3];
+  /// the number of model chain transforms
+  int32_t chain;
+};
+
+/// A launch's outputs.
+struct EeCombatLaunchOut {
+  /// the tag point fired from (-1 without one) (shot)
+  int32_t index;
+  /// a special attack fires flaming arrows (shot)
+  int32_t flaming;
+  /// the unit has a tag point (attach)
+  int32_t result;
+  /// the launch transform (shot, turret)
+  float launch[16];
+  /// the attach point (attach)
+  float point[3];
+  /// the launch's floor tile (shot)
+  int32_t tile[2];
 };
 
 /// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
@@ -3973,6 +4077,33 @@ struct EeCombatSearchHost {
   void (*ignore)(void *ctx, uint64_t unit);
   void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
+/// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
+/// and the answer.
+struct EeCombatScreenIn {
+  /// `EE_COMBAT_SCREEN_KIND_*`
+  int32_t kind;
+  /// the candidate's hit points
+  int32_t hit_points;
+  /// the screen's squared range
+  float range;
+  int32_t read;
+  float distance;
+};
+
+/// The host's distance of a screen's candidate (asked only for a living one).
+using EeCombatScreenDistance = float(*)(void *context);
+
+/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
+struct EeCombatHitDistanceIn {
+  /// the unit's position
+  float from[3];
+  /// the target's point (its drop point, a melee unit's: its position)
+  float to[3];
+  /// the point to measure from instead of the unit's (x -10000: none)
+  float x;
+  float y;
 };
 
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
@@ -9859,6 +9990,30 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
+/// `EEPMProjectile::Step0`'s placement on the arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_launch(const EeCombatFlightIn *input);
+
+/// `EEPMProjectile::Step2`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_step(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Accelerate`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_accelerate(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Home`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_home(const EeCombatFlightIn *input);
+
 /// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
 /// a larger buffer when it exceeds `capacity`).
 ///
@@ -9880,11 +10035,38 @@ uint32_t ee_combat_tile_line(int32_t x1,
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
 
+/// The tag point `LaunchShot` fires from (-1: none).
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_launch_index(const EeCombatLaunchIn *input);
+
+/// The launch of `input.kind` over `input.chain` model transforms.
+///
+/// # Safety
+/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
+EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
+                                   const float (*chain)[16]);
+
 /// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
 ///
 /// # Safety
 /// `host` must point to a valid record whose callbacks are callable with its `ctx`.
 uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
+///
+/// # Safety
+/// `input` must point to a valid record; `distance` is called with `context` (it must not touch the record).
+int32_t ee_combat_screen(EeCombatScreenIn *input,
+                         void *context,
+                         EeCombatScreenDistance distance);
+
+/// `EEGetHitDistanceSquared`'s arithmetic.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///
