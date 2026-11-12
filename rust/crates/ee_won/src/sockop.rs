@@ -3,8 +3,9 @@
 //! flag and the wait flags and event indices; so does `SocketOp::RunHook` (start, then the socket thread or the
 //! blocking continue). `RecvCRMsgOp`'s line buffer and its start and continue steps are here as well. The C++
 //! classes are shims; the virtual `Start` / `Continue`, `Finish`, the run mode, the socket thread's add and the
-//! socket's references come back as the [`EeWonSocketOpBaseHooks`]. The behaviour is `golden_sockobj.txt`, recorded
-//! over the C++ classes.
+//! socket's references come back as the [`EeWonSocketOpBaseHooks`]. Since round 15 the object also holds the state of
+//! the op's class ([`OpKind`], sockops.rs: the send, receive, datagram, connect and accept ops), whose C++ side
+//! comes back through the same table. The behaviour is `golden_sockobj.txt`, recorded over the C++ classes.
 
 use std::cell::UnsafeCell;
 use std::ffi::{c_long, c_void};
@@ -14,6 +15,7 @@ use std::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, Ordering::Relaxed};
 use crate::buffer::EeWonByteBuffer;
 use crate::ops::{self, OpTiming};
 use crate::sockobj::EeWonAsyncSocket;
+use crate::sockops::OpKind;
 use crate::status::*;
 
 /// A C++ call on a socket op (`SocketOp*`).
@@ -39,6 +41,26 @@ pub struct EeWonSocketOpBaseHooks {
     pub socket_release: EeWonSocketRefFn,
     /// the socket's Rust object (`socket->mSock`)
     pub socket_object: Option<unsafe extern "C" fn(socket: *mut c_void) -> *mut EeWonAsyncSocket>,
+    /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+    pub ref_add: EeWonSocketRefFn,
+    pub ref_release: EeWonSocketRefFn,
+    /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+    pub bytes_of: Option<unsafe extern "C" fn(buffer: *mut c_void) -> *const EeWonByteBuffer>,
+    pub bytes_adopt: Option<unsafe extern "C" fn(bytes: *mut EeWonByteBuffer) -> *mut c_void>,
+    /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+    /// result's
+    pub transform: Option<unsafe extern "C" fn(socket: *mut c_void, message: *mut *mut c_void, send: bool) -> c_long>,
+    /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+    /// modify time (`utime`)
+    pub file_open:
+        Option<unsafe extern "C" fn(path: *const u8, length: usize, binary: bool, append: bool) -> *mut c_void>,
+    pub file_write: Option<unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: usize) -> usize>,
+    pub file_close: Option<unsafe extern "C" fn(file: *mut c_void) -> i32>,
+    pub file_set_time: Option<unsafe extern "C" fn(path: *const u8, length: usize, time: i64)>,
+    /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+    pub progress: Option<unsafe extern "C" fn(op: *mut c_void, completion: *mut c_void)>,
+    /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+    pub accept: Option<unsafe extern "C" fn(socket: *mut c_void, out: *mut *mut c_void) -> c_long>,
 }
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
@@ -54,6 +76,8 @@ pub struct EeWonSocketOp {
     event_index: [AtomicI32; 3],
     /// `RecvCRMsgOp::mBuffer`: the line so far (the op runs on one thread at a time: its runner or the socket thread)
     line: UnsafeCell<Vec<u8>>,
+    /// the op class's own state (sockops.rs), as the line
+    kind: UnsafeCell<OpKind>,
 }
 
 // SAFETY: the fields are atomics; the line is touched by the op's one runner at a time (the C++ contract)
@@ -73,7 +97,19 @@ impl EeWonSocketOp {
             wait_for_event: [AtomicBool::new(false), AtomicBool::new(false), AtomicBool::new(false)],
             event_index: [AtomicI32::new(-1), AtomicI32::new(-1), AtomicI32::new(-1)],
             line: UnsafeCell::new(Vec::new()),
+            kind: UnsafeCell::new(OpKind::Base),
         }
+    }
+
+    pub(crate) fn kind_cell(&self) -> &UnsafeCell<OpKind> {
+        &self.kind
+    }
+    pub(crate) fn base_hooks(&self) -> &'static EeWonSocketOpBaseHooks {
+        self.hooks
+    }
+    /// the C++ `SocketOp*`
+    pub(crate) fn cpp_op(&self) -> *mut c_void {
+        self.op
     }
 
     pub fn socket(&self) -> *mut c_void {
@@ -207,7 +243,9 @@ impl EeWonSocketOp {
 
 impl Drop for EeWonSocketOp {
     fn drop(&mut self) {
-        // the socket's reference (the C++ SmartPtr member's destructor)
+        // the op class's references (its SmartPtr members' destructors), then the socket's
+        let kind = std::mem::take(self.kind.get_mut());
+        self.release_kind(kind);
         // SAFETY: null
         unsafe { self.set_socket(null_mut()) };
     }
@@ -403,6 +441,17 @@ mod tests {
         socket_add_ref: Some(add_ref),
         socket_release: Some(release),
         socket_object: Some(object),
+        ref_add: None,
+        ref_release: None,
+        bytes_of: None,
+        bytes_adopt: None,
+        transform: None,
+        file_open: None,
+        file_write: None,
+        file_close: None,
+        file_set_time: None,
+        progress: None,
+        accept: None,
     };
 
     fn run(script: Script, socket: usize) -> Vec<String> {

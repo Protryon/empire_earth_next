@@ -269,89 +269,68 @@ public:
 };
 
 // waits for a connection on its (listening) socket
+// (a Rust object since round 15, rust/crates/ee_won/src/sockops.rs: the accepted socket, +0x5c, a reference held)
 class AcceptOp : public SocketOp {
 public:
-    AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket) { this->SetWaitForEvent(0,true); }
-    AsyncSocket* GetAcceptedSocket() { return this->mAcceptedSocket.get(); }
+    AcceptOp(AsyncSocket* inSocket) : SocketOp(inSocket)
+    { this->SetWaitForEvent(0,true); ee_won_socketop_init_accept(this->GetSocketOpObject()); }
+    AsyncSocket* GetAcceptedSocket()
+    { return static_cast<AsyncSocket*>(static_cast<RefCount*>(ee_won_socketop_accepted(this->GetSocketOpObject()))); }
     virtual WONStatus Continue();           // +0x10 0x2b0310 (WONAPI)
     virtual AsyncOp* Duplicate() { return new AcceptOp(this->GetSocket()); }  // +0x14 0x291ab7
-
-private:
-    SmartPtr<AsyncSocket> mAcceptedSocket;  // +0x5c
 };
 
 // connects its socket to an address (RTTI ConnectOp > SocketOp, vtable 0x84c480; 0x84 bytes: EELobbyFileTransfer
 // 0x291b79 news it and inlines the ctor: SocketOp(NULL), the IPAddr copy ctor 0x291d59 at +0x5c, the vptr, then
-// +0x59 and +0x5a = true; argument order inferred)
+// +0x59 and +0x5a = true; argument order inferred). A Rust object since round 15 (sockops.rs: the address, +0x5c)
 class ConnectOp : public SocketOp {
 public:
-    ConnectOp(const IPAddr& inAddr, AsyncSocket* inSocket = NULL) : SocketOp(inSocket), mAddr(inAddr)
+    ConnectOp(const IPAddr& inAddr, AsyncSocket* inSocket = NULL) : SocketOp(inSocket)
     {
         this->SetWaitForEvent(1,true);
         this->SetWaitForEvent(2,true);
+        ee_won_socketop_init_connect(this->GetSocketOpObject(),inAddr.GetValue());
     }
     virtual WONStatus Start();              // +0x0c 0x2b2320 (WONAPI)
     virtual WONStatus Continue();           // +0x10 0x2b2330 (WONAPI)
 
-    const IPAddr& GetAddr() const { return this->mAddr; }
-private:
-    IPAddr mAddr;                           // +0x5c
+    // a copy (the original returned a reference to the member)
+    IPAddr GetAddr() const { return IPAddr::FromValue(ee_won_socketop_address(this->GetSocketOpObject())); }
 };
 
-// receives bytes from its socket into a buffer or a file
+// receives bytes from its socket into a buffer or a file. A Rust object since round 15 (sockops.rs: the write buffer
+// +0x5c, the received bytes +0x74, the length, count, skip flag, file, path, file flags and modify time +0x78..+0x9c,
+// the progress completion, interval and count +0xa0..+0xa8; RecvMsgOp's message +0xac and stage +0xb0; and StartRecv
+// 0x2b5000, ContinueRecv 0x2b50c0, CloseFile 0x2b5410, FinishRecv 0x2b54a0, StartRecvBody 0x2b5b50, FinishRecvMsg
+// 0x2b5d20)
 class RecvBytesOp : public SocketOp {
 public:
-    WONStatus StartRecv(); //2b5000
-    WONStatus ContinueRecv(); //2b50c0
-    WONStatus CloseFile(WONStatus); //2b5410, finishes the file
-    WONStatus FinishRecv(WONStatus); //2b54a0, finishes the receive
-
     RecvBytesOp(unsigned long inLength, AsyncSocket* inSocket = NULL); //2b4de0
-    // Implicit dtor2ab5a0 must naturally inline in RecvMsgOp dtor2ab470.
     virtual void CleanupHook(); //2b5580
     virtual WONStatus Start();     //2b4ee0
     virtual WONStatus Continue();  //2b4ef0
     virtual AsyncOp* Duplicate(); //2b4f00
     void SetProgressCompletion(CompletionBase<AsyncOpPtr>*, long inInterval);
     ByteBufferPtr GetBytes() const; //2b1df0, owning return by value
-    void SetFilePath(const std::string& theFilePath) { this->mPath=theFilePath; }
-    void SetAppendFile(bool theVal) { this->mAppend=theVal; }
-    void SetBinaryFile(bool isBinary) { this->mBinary=isBinary; }
-    void SetFileModifyTime(time_t theTime) { this->mFileModifyTime=theTime; }
-    void SetSkipBytes(bool skip) { this->mSkipBytes=skip; }
-    const std::string& GetFilePath() const { return this->mPath; }
-    unsigned long GetBytesRead() const { return this->mBytesRead; }
-private:
-    friend class RecvMsgOp; // its length prefix and body steps
-    WriteBuffer mWriteBuffer; //5c,18
-    ByteBufferPtr mReceivedData; //74
-    unsigned long mLength; //78
-    unsigned long mBytesRead; //7c
-    bool mSkipBytes; //80 (inferred)
-    FILE* mFile; //84, natural alignment before pointer
-    std::string mPath; //88
-    bool mAppend; //98
-    bool mOwnFile; //99
-    bool mBinary; //9a
-    long mFileModifyTime; //9c, 32-bit time_t, natural alignment before scalar
-    SmartPtr<CompletionBase<AsyncOpPtr> > mProgressCompletion; //a0
-    long mProgressInterval; //a4
-    unsigned long mBytesSinceProgress; //a8
+    void SetFilePath(const std::string& theFilePath)
+    { ee_won_socketop_set_path(this->GetSocketOpObject(),reinterpret_cast<const uint8_t*>(theFilePath.data()),theFilePath.size()); }
+    void SetAppendFile(bool theVal) { ee_won_socketop_set_flag(this->GetSocketOpObject(),0,theVal); }
+    void SetBinaryFile(bool isBinary) { ee_won_socketop_set_flag(this->GetSocketOpObject(),1,isBinary); }
+    void SetFileModifyTime(time_t theTime) { ee_won_socketop_set_modify_time(this->GetSocketOpObject(),static_cast<int64_t>(theTime)); }
+    void SetSkipBytes(bool skip) { ee_won_socketop_set_flag(this->GetSocketOpObject(),2,skip); }
+    std::string GetFilePath() const; // a copy (the original returned a reference to the member)
+    unsigned long GetBytesRead() const { return ee_won_socketop_bytes_read(this->GetSocketOpObject()); }
+protected:
+    struct MessageTag {};
+    RecvBytesOp(AsyncSocket* inSocket, MessageTag); // RecvMsgOp's
 };
 class RecvMsgOp : public RecvBytesOp {
 public:
-    WONStatus StartRecvBody(); //2b5b50
-    WONStatus FinishRecvMsg(); //2b5d20
-
-    RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(0, inSocket) {}
-    // Implicit dtor2ab470; no own-vptr store, full base cleanup inlined.
+    RecvMsgOp(AsyncSocket* inSocket = NULL) : RecvBytesOp(inSocket, MessageTag()) {}
     virtual WONStatus Start();     //2b5b00
     virtual WONStatus Continue();  //2b5e20
     virtual AsyncOp* Duplicate(); //2ab3d0
     ByteBufferPtr GetMsg() const; //2ab770, owning return by value
-private:
-    ByteBufferPtr mMessage; //ac
-    int mState; //b0, ctor uninitialized, RunHook sets1
 };
 
 // vtable 44ca78, six slots
@@ -464,66 +443,41 @@ public:
 
 // further socket operations and managers
 
-// TD4d4198, VT44c9bc, total6c. Constructor body3e0e80 is ordinary
-// compiler-emitted inline support. Implicit destructor2abad0 has no own-vptr store.
+// TD4d4198, VT44c9bc, total6c. A Rust object since round 15 (sockops.rs: the bytes +0x68, a reference held, and the
+// read position of the original's ReadBuffer +0x5c)
 class SendBytesOp : public SocketOp {
 public:
-    // SendMsgOp passes NULL (its Start sets the data). ByteBuffer's `this ? ...` getters are undefined behaviour for
-    // NULL, which clang folds away (the clang-built op crashed here), so the test is made here
-    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL)
-        : SocketOp(inSocket),
-          mReadBuffer(inData != NULL ? inData->data() : NULL, inData != NULL ? inData->length() : 0),
-          mBuffer(inData)
-    { this->SetWaitForEvent(1,true); }
+    SendBytesOp(const ByteBuffer* inData, AsyncSocket* inSocket = NULL); // SendMsgOp passes NULL
     virtual WONStatus Start();     //2b5e50
     virtual WONStatus Continue();  //2b5e70
-private:
-    friend class SendMsgOp; // its transformed message's send
-    ReadBuffer mReadBuffer; //5c, 0x0c bytes
-    ByteBufferPtr mBuffer; //68
 };
 
-// TD4d41c0, VT44c9a0, total70. Implicit destructor2abb80 has no own-vptr store.
+// TD4d41c0, VT44c9a0, total70 (the message +0x6c is the Rust object's)
 class SendMsgOp : public SendBytesOp {
 public:
-    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL)
-        : SendBytesOp(NULL, inSocket), mMessage(inMessage) {}
+    SendMsgOp(const ByteBuffer* inMessage, AsyncSocket* inSocket = NULL);
     virtual WONStatus Start();     //2b5fa0
     virtual WONStatus Continue();  //2b6020
-private:
-    ByteBufferPtr mMessage; //6c
 };
 
-// TD4d4040, VT44c948, total88. Allocation and inline ctor at 3e469e..4793.
-// Implicit destructor2aa980 destroys IPAddr60, buffer5c, socket54, AsyncOp.
+// TD4d4040, VT44c948, total88 (the bytes +0x5c and the address +0x60 are the Rust object's)
 class SendBytesToOp : public SocketOp {
 public:
-    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress,
-                  AsyncSocket* inSocket = NULL)
-        : SocketOp(inSocket), mBuffer(inData), mAddress(inAddress)
-    { this->SetWaitForEvent(1,true); }
+    SendBytesToOp(const ByteBuffer* inData, const IPAddr& inAddress, AsyncSocket* inSocket = NULL);
     virtual WONStatus Continue();  //2b5f10
-private:
-    ByteBufferPtr mBuffer; //5c
-    IPAddr mAddress; //60, 0x28 bytes
 };
 
-// TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0.
-// Explicit destructor 2b56f0 stores the own vtable and deletes the raw array at 5c before the owned members.
+// TD4d4440, VT44caf4, total90. Original out-of-line constructor2b55a0. A Rust object since round 15 (sockops.rs:
+// the buffer +0x5c, the datagram +0x60, the size +0x64, the sender +0x68)
 class RecvBytesFromOp : public SocketOp {
 public:
     RecvBytesFromOp(unsigned short inMaxLength, AsyncSocket* inSocket = NULL);
-    virtual ~RecvBytesFromOp(); //2b56f0, explicit: own vtable store, raw-array delete before the owned members
+    virtual ~RecvBytesFromOp(); //2b56f0
     virtual void RunHook();   //2b57d0
     virtual WONStatus Continue();  //2b5820
     virtual AsyncOp* Duplicate(); //2b5660, fresh allocation of the same class
     SmartPtr<ByteBuffer> GetBytes() const; //2aa920, owning51B sret/AddRef, field60
-    const IPAddr& GetAddr() const { return this->mFromAddress; }
-private:
-    char* mRawBuffer; //5c, owned array: allocate/transfer/clear; the explicit destructor deletes the rest
-    SmartPtr<ByteBuffer> mReceivedData; //60, initializednull
-    unsigned short mMaxLength; //64, first constructor argument
-    IPAddr mFromAddress; //68, natural two-byte alignment before this member
+    IPAddr GetAddr() const; // a copy (the original returned a reference to the member)
 };
 
 // AoC UDP records: four slots each; the archived UDP header's extra

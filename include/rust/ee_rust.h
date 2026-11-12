@@ -7337,6 +7337,25 @@ struct EeWonSocketOpBaseHooks {
   EeWonSocketRefFn socket_release;
   /// the socket's Rust object (`socket->mSock`)
   EeWonAsyncSocket *(*socket_object)(void *socket);
+  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+  EeWonSocketRefFn ref_add;
+  EeWonSocketRefFn ref_release;
+  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+  /// modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+  long (*accept)(void *socket, void **out);
 };
 
 /// A C++ call on a socket op (`SocketOp*`).
@@ -18230,6 +18249,135 @@ void ee_won_socketop_line_reset(const EeWonSocketOp *o);
 long ee_won_socketop_line_continue(const EeWonSocketOp *o,
                                    EeWonOpTiming timing,
                                    EeWonByteBuffer **message);
+
+/// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
+///
+/// # Safety
+/// `o` is a live op object (so for every call below); `data` and `message` are null or live `ByteBuffer`s.
+void ee_won_socketop_init_send(const EeWonSocketOp *o,
+                               void *data,
+                               void *message,
+                               bool is_msg);
+
+/// `SendBytesToOp(data, address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `to` is a live value.
+void ee_won_socketop_init_send_to(const EeWonSocketOp *o, void *data, const EeWonIpAddr *to);
+
+/// `RecvBytesOp(length)` / `RecvMsgOp` (`is_msg`, length 0).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv(const EeWonSocketOp *o, uint32_t length, bool is_msg);
+
+/// `RecvBytesFromOp(maxLength)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv_from(const EeWonSocketOp *o, uint16_t max);
+
+/// `ConnectOp(address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `addr` is a live value.
+void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *addr);
+
+/// `AcceptOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// The op class's `Start`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_start(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// The op class's `Continue`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_continue(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// `RecvBytesFromOp::RunHook`'s buffer and reset (the base's run follows).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::CloseFile(status)` (its `CleanupHook`'s).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// The received bytes: a borrowed `ByteBuffer*` (null for none).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_received(const EeWonSocketOp *o);
+
+/// `RecvMsgOp::GetMsg`: a borrowed `ByteBuffer*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_message(const EeWonSocketOp *o);
+
+/// `ConnectOp::GetAddr` / `RecvBytesFromOp::GetAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+EeWonIpAddr *ee_won_socketop_address(const EeWonSocketOp *o);
+
+/// `AcceptOp::GetAcceptedSocket`: a borrowed `AsyncSocket*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_accepted(const EeWonSocketOp *o);
+
+/// A receive's length / a datagram op's maximum.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_length(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetBytesRead`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_bytes_read(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetFilePath`: the bytes to `sink`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; the sink is called during the call only.
+void ee_won_socketop_path(const EeWonSocketOp *o, EeWonByteSink sink, void *context);
+
+/// `SetFilePath`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `path` holds `length` bytes.
+void ee_won_socketop_set_path(const EeWonSocketOp *o, const uint8_t *path, size_t length);
+
+/// `SetAppendFile` (0), `SetBinaryFile` (1), `SetSkipBytes` (2).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_flag(const EeWonSocketOp *o, int32_t which, bool on);
+
+/// `SetFileModifyTime`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
+
+/// `SetProgressCompletion(completion, interval)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
+void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
 /// # Safety
 /// `hooks` lives for the program.
