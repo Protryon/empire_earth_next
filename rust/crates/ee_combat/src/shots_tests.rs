@@ -279,3 +279,43 @@ fn the_heal_goal_works_each_second() {
     // another player's unit that is not at war with the healer's is healed
     assert_eq!(heal_work(&EeCombatHealWorkIn { same_player: 0, ..i }).heal, 1);
 }
+
+#[test]
+fn the_shots_plain_reads_come_from_the_unit_store() {
+    crate::store::tests::put_unit(EeCombatStoredUnit {
+        object: 0x700,
+        command: 6002,
+        location: [1.0f32.to_bits(), 2.0f32.to_bits(), (-0.5f32).to_bits()],
+        goal_kind: -1,
+        unit_type: 0x2d5,
+        hit_points: 12,
+        tile_x: -10000,
+        rotting_away_time: 300,
+        flight_time: 77,
+        cloak_timer: 0x1_0000_0005,
+        ..Default::default()
+    });
+    let mut m = Mock::with(&[(EE_COMBAT_SHOT_R_TICK, 25)]);
+    let mut h = StoredShot { host: &mut m, unit: 0x700 };
+    let reads = [
+        (EE_COMBAT_SHOT_R_COMMAND, 6002),
+        (EE_COMBAT_SHOT_R_LOCATION_X, f(1.0)),
+        (EE_COMBAT_SHOT_R_LOCATION_Y, f(2.0)),
+        (EE_COMBAT_SHOT_R_LOCATION_Z, f(-0.5)),
+        (EE_COMBAT_SHOT_R_GOAL_KIND, -1),
+        (EE_COMBAT_SHOT_R_UNIT_TYPE, 0x2d5),
+        (EE_COMBAT_SHOT_R_HIT_POINTS, 12),
+        (EE_COMBAT_SHOT_R_TILE_X, -10000),
+        (EE_COMBAT_SHOT_R_ROTTING, 300),
+        (EE_COMBAT_SHOT_R_FLIGHT_TIME, 77),
+        (EE_COMBAT_SHOT_R_CLOAKED, 5),
+    ];
+    for (op, want) in reads {
+        assert_eq!(h.op(op, 0, 0), want, "read {op}");
+    }
+    assert_eq!(h.op(EE_COMBAT_SHOT_R_TICK, 0, 0), 25, "the host's");
+    assert_eq!(m.log, vec![(EE_COMBAT_SHOT_R_TICK, 0, 0)]);
+    // no record: the host's
+    let mut m = Mock::with(&[(EE_COMBAT_SHOT_R_COMMAND, 6007)]);
+    assert_eq!(StoredShot { host: &mut m, unit: 0x701 }.op(EE_COMBAT_SHOT_R_COMMAND, 0, 0), 6007);
+}

@@ -15,7 +15,9 @@ use ee_ge::types::{Ge3DLine, Ge3DPoint, GeTransformation, GeVector};
 use ee_ge::um::um_arccos;
 
 use crate::geometry::matrix;
+use crate::store::{self, EeCombatStoredUnit, EE_COMBAT_STORED_COMPLEX_UNIT};
 use crate::walks::EeCombatHandle;
+use crate::world;
 
 // ---- the reads (`QueryHost::read`): 0/1, an integer, or an f32's bits where noted
 
@@ -633,122 +635,64 @@ fn turrets_face_point(
 /// `RTSUnit::mUnitID` of the object (the store's key).
 pub const EE_COMBAT_Q_ID: i32 = 45;
 
-/// A host whose plain reads of a unit come from the core lane's unit store (ee_units' `store`) when the unit has a
-/// record there (it is in a player's list, and the record is of that object: the store's `object` is the
-/// `RTSUnit*`, the `EEUnit*`'s address); the other reads, and these when the store has no record, go to the host.
-/// The store is written through at every write of a field it mirrors, so a record equals the object at any point.
+/// A host whose plain reads of a unit come from the core lane's unit store ([`crate::store`]: the record of the object,
+/// the store's own or, for a unit out of every list, filled from the object) and whose player reads come from the
+/// players' tables; the other reads go to the host (and these too when there is no record: no object, or a test's
+/// store without it).
 pub struct Stored<'a, H: QueryHost> {
     pub host: &'a mut H,
-    /// the last object asked about and its id (a body reads one unit's fields in a row)
-    last: (EeCombatHandle, u32),
 }
 
 impl<'a, H: QueryHost> Stored<'a, H> {
     pub fn new(host: &'a mut H) -> Self {
-        Stored { host, last: (0, 0) }
-    }
-
-    fn record(&mut self, object: EeCombatHandle) -> Option<UnitRecord> {
-        if object == 0 {
-            return None;
-        }
-        if self.last.0 != object {
-            self.last = (object, self.host.read(EE_COMBAT_Q_ID, object, 0));
-        }
-        let id = self.last.1;
-        stored_record(id).filter(|r| r.object == object)
+        Stored { host }
     }
 }
 
-type UnitRecord = EeCombatStoredUnit;
-
-/// The unit store's fields the reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge: ee_combat does not
-/// depend on ee_units, whose crate imports C++ functions no test binary of this crate has).
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct EeCombatStoredUnit {
-    /// the `RTSUnit*` the record is of (the `EEUnit*`'s address)
-    pub object: u64,
-    /// ee_units' `EE_OBJECT_*` (`EE_COMBAT_STORED_COMPLEX_UNIT`: an `EEComplexUnit`)
-    pub object_kind: u8,
-    pub built: u8,
-    pub tile_x: i64,
-    pub tile_y: i64,
-    pub hit_points: i64,
-    /// -1: no class
-    pub unit_type: i64,
-    pub category: i64,
-    pub command: i64,
-    /// the location's x, y, z as float bits
-    pub location: [u32; 3],
-    /// `EEComplexUnit::mTargetSearchTimer`
-    pub target_search_timer: i64,
-}
-
-/// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
-pub const EE_COMBAT_STORED_COMPLEX_UNIT: u8 = 2;
-
-/// ee_rust defines the bridge (and declares it in its header): cbindgen must not declare it here again.
-/// cbindgen:ignore
-#[cfg(not(test))]
-mod bridge {
-    use super::EeCombatStoredUnit;
-    extern "C" {
-        /// ee_rust's bridge to the core lane's unit store: the record under `id` into `out`; false for none.
-        pub fn ee_combat_store_unit(id: u32, out: *mut EeCombatStoredUnit) -> bool;
-    }
-}
-
-/// The store's record under `id` (in the unit tests their own map).
-fn stored_record(id: u32) -> Option<UnitRecord> {
-    #[cfg(not(test))]
-    {
-        let mut out = EeCombatStoredUnit::default();
-        // SAFETY: the bridge writes one record into `out`
-        unsafe { bridge::ee_combat_store_unit(id, &mut out) }.then_some(out)
-    }
-    #[cfg(test)]
-    {
-        tests::stored(id)
-    }
+/// A store read of a unit's record: the C++'s value as the host answered it (the `long`s' low 32 bits).
+fn stored_field(r: &EeCombatStoredUnit, code: i32) -> Option<u32> {
+    Some(match code {
+        EE_COMBAT_Q_ID => r.id,
+        EE_COMBAT_Q_TILE_X => r.tile_x as u32,
+        EE_COMBAT_Q_TILE_Y => r.tile_y as u32,
+        EE_COMBAT_Q_HIT_POINTS => r.hit_points as u32,
+        EE_COMBAT_Q_UNIT_TYPE => r.unit_type as u32,
+        EE_COMBAT_Q_CATEGORY => r.category as u32,
+        EE_COMBAT_Q_CLASS_FLAGS => u32::from(r.class_flags),
+        EE_COMBAT_Q_BUILT => u32::from(r.built),
+        EE_COMBAT_Q_COMMAND => r.command as u32,
+        EE_COMBAT_Q_SEARCH_TIMER => r.target_search_timer as u32,
+        world::EE_COMBAT_Q_DOMAINS => u32::from(r.domains),
+        world::EE_COMBAT_Q_CONTAINER => u32::from(r.container),
+        // -1 for none: `EE_COMBAT_Q_NONE`
+        world::EE_COMBAT_Q_GOAL_KIND => r.goal_kind as u32,
+        world::EE_COMBAT_Q_LAND_BUILDING => u32::from(r.land_building),
+        world::EE_COMBAT_Q_RELOAD_TIMER => r.reload_timer as u32,
+        _ => return None,
+    })
 }
 
 impl<H: QueryHost> QueryHost for Stored<'_, H> {
     fn read(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> u32 {
-        // the store's `long`s are the C++ values; the reads answer their low 32 bits as the host does
-        let field = |r: &UnitRecord| -> Option<u32> {
-            match code {
-                EE_COMBAT_Q_TILE_X => Some(r.tile_x as u32),
-                EE_COMBAT_Q_TILE_Y => Some(r.tile_y as u32),
-                EE_COMBAT_Q_HIT_POINTS => Some(r.hit_points as u32),
-                EE_COMBAT_Q_UNIT_TYPE if r.unit_type != -1 => Some(r.unit_type as u32),
-                EE_COMBAT_Q_CATEGORY if r.category != -1 => Some(r.category as u32),
-                EE_COMBAT_Q_BUILT if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(u32::from(r.built)),
-                EE_COMBAT_Q_COMMAND if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(r.command as u32),
-                EE_COMBAT_Q_SEARCH_TIMER if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => {
-                    Some(r.target_search_timer as u32)
-                }
-                _ => None,
+        let value = match code {
+            // a player object's
+            EE_COMBAT_Q_PLAYER_ID => store::player_of(object).map(|p| p.id),
+            EE_COMBAT_Q_ENEMY => {
+                store::player_of(object).and_then(|p| p.enemies.get(arg as usize).map(|&e| u32::from(e != 0)))
             }
+            _ => store::unit_of(object).and_then(|r| stored_field(&r, code)),
         };
-        if matches!(
-            code,
-            EE_COMBAT_Q_TILE_X
-                | EE_COMBAT_Q_TILE_Y
-                | EE_COMBAT_Q_HIT_POINTS
-                | EE_COMBAT_Q_UNIT_TYPE
-                | EE_COMBAT_Q_CATEGORY
-                | EE_COMBAT_Q_BUILT
-                | EE_COMBAT_Q_COMMAND
-                | EE_COMBAT_Q_SEARCH_TIMER
-        ) {
-            if let Some(value) = self.record(object).as_ref().and_then(field) {
-                return value;
-            }
+        match value {
+            Some(v) => v,
+            None => self.host.read(code, object, arg),
         }
-        self.host.read(code, object, arg)
     }
     fn handle(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> EeCombatHandle {
+        if code == EE_COMBAT_H_PLAYER {
+            if let Some(r) = store::unit_of(object) {
+                return r.player;
+            }
+        }
         self.host.handle(code, object, arg)
     }
     fn act(&mut self, code: i32, object: EeCombatHandle, arg: i32) {
@@ -758,7 +702,7 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
         self.host.location(object)
     }
     fn position(&mut self, object: EeCombatHandle) -> Ge3DPoint {
-        if let Some(r) = self.record(object).filter(|r| r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT) {
+        if let Some(r) = store::unit_of(object).filter(|r| r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT) {
             return Ge3DPoint {
                 x: f32::from_bits(r.location[0]),
                 y: f32::from_bits(r.location[1]),

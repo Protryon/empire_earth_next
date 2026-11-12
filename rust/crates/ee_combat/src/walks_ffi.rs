@@ -5,6 +5,7 @@
 use std::ffi::c_void;
 
 use crate::decide::*;
+use crate::store;
 use crate::walks::*;
 
 /// # Safety
@@ -172,10 +173,8 @@ pub struct EeCombatTargetHost {
         unsafe extern "C" fn(ctx: *mut c_void, left: i32, top: i32, right: i32, bottom: i32, out: *mut [i32; 4]),
     pub region_len: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
     pub region_unit: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32, index: i32) -> u64,
-    pub unit_tile: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [i32; 2]),
     pub screen: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
     pub multiple: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub unit_id: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> u32,
     pub test: unsafe extern "C" fn(ctx: *mut c_void, test: u32, unit: u64) -> i32,
     /// Appends a candidate to the C++'s list (`ee_combat_units_in_area`'s result).
     pub push: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
@@ -197,10 +196,8 @@ impl TargetHost for EeCombatTargetHost {
         unsafe { (self.region_unit)(self.ctx, x, y, index) }
     }
     fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
-        let mut out = [0i32; 2];
-        // SAFETY: as above
-        unsafe { (self.unit_tile)(self.ctx, unit, &mut out) };
-        (out[0], out[1])
+        // the unit store's record (ee_combat store.rs: every handle here a live complex unit)
+        store::unit_of(unit).map_or((0, 0), |r| (r.tile_x as i32, r.tile_y as i32))
     }
     fn screen(&mut self, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
@@ -211,8 +208,7 @@ impl TargetHost for EeCombatTargetHost {
         unsafe { (self.multiple)(self.ctx, unit) != 0 }
     }
     fn unit_id(&mut self, unit: EeCombatHandle) -> u32 {
-        // SAFETY: as above
-        unsafe { (self.unit_id)(self.ctx, unit) }
+        store::unit_of(unit).map_or(0, |r| r.id)
     }
     fn test(&mut self, test: u32, unit: EeCombatHandle) -> bool {
         // SAFETY: as above
