@@ -22,6 +22,8 @@ public:
     virtual ~EECCLeprosy();                 // 0xb1928
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb1958
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb1a07
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual EEContagionFunctor* GetContagionFunctor();           // +0x0c 0xb1a4e: mFunctor
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb1b7c
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 0xb1c06

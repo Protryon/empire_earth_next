@@ -73,15 +73,30 @@ static EeWonLanMsg LanRead(const ByteBuffer* inBuffer, size_t inSkip, LanTexts& 
     return aMsg;
 }
 
+// The LAN socket's client and time are a Rust object (rust/crates/ee_won/src/qsock.rs EeWonLanSocket); its calls
+// back: the client's references and back link
+static void LanClientAddRef(void* inClient) { static_cast<LobbyLanClient*>(inClient)->AddRef(); }
+static void LanClientRelease(void* inClient) { static_cast<LobbyLanClient*>(inClient)->Release(); }
+static void LanClientSetSocket(void* inClient, void* inSocket)
+{
+    static_cast<LobbyLanClient*>(inClient)->mSocket = static_cast<LobbyLanSocket*>(inSocket);
+}
+static const EeWonLanSocketHooks kLanSocketHooks = {LanClientAddRef, LanClientRelease, LanClientSetSocket};
+
+// A stream socket with a 2-byte length field and no client
+LobbyLanSocket::LobbyLanSocket() : BlockingSocket(0)
+{
+    this->mLan = ee_won_lansocket_new(static_cast<void*>(this), &kLanSocketHooks);
+    this->SetLengthFieldSize(2);
+}
+// The client's reference goes with the Rust object
+LobbyLanSocket::~LobbyLanSocket() { ee_won_lansocket_free(this->mLan); }
+
 // FUNCTION: WON 0x007dfb90
 // Links the socket and a LAN client both ways, unlinking the previous client
 void LobbyLanSocket::SetClient(LobbyLanClient* inClient)
 {
-    if (this->mClient.get() != NULL)
-        this->mClient->mSocket = NULL;
-    this->mClient = inClient;
-    if (this->mClient.get() != NULL)
-        this->mClient->mSocket = this;
+    ee_won_lansocket_set_client(this->mLan, inClient);
 }
 // FUNCTION: WON 0x007dfc00
 // Creates the LAN logic with an empty client list and empty LAN and direct-connect game lists
@@ -231,13 +246,13 @@ void LanLogic::CloseConnections()
 void LanLogic::HandleSocketClosed(AsyncOp* inOp)
 {
     LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(
-        static_cast<SocketOp*>(inOp)->mSocket.get());
+        static_cast<SocketOp*>(inOp)->GetSocket());
     EeWonLanClosed aClosed = ee_won_lanlogic_socket_closed(
-        aSocket != NULL, this->IsCaptain(), aSocket != NULL && aSocket->mClient.get() != NULL,
+        aSocket != NULL, this->IsCaptain(), aSocket != NULL && aSocket->GetClient() != NULL,
         aSocket != NULL && aSocket == this->mServerSocket.get());
     if (aClosed.announce_left) {
         std::string aMessage;
-        ee_won_lan_client_left(aSocket->mClient->GetClientId(), LanAppendBytes, &aMessage);
+        ee_won_lan_client_left(aSocket->GetClient()->GetClientId(), LanAppendBytes, &aMessage);
         aSocket->SetClient(NULL);
         this->BroadcastMessage(LanMessage(aMessage).get(), true);
     }
@@ -260,7 +275,7 @@ void LanLogic::HandleNetworkTimer(AsyncOp* inOp)
         long aTime = time(NULL);
         for (std::set<SmartPtr<LobbyLanSocket> >::iterator anItr = this->mPendingSockets.begin();
              anItr != this->mPendingSockets.end(); ++anItr)
-            if (ee_won_lan_host_socket_stale(aTime, (*anItr)->mLastMessageTime))
+            if (ee_won_lan_host_socket_stale(aTime, (*anItr)->GetLastMessageTime()))
                 (*anItr)->QueueClose(1000);
     } else if (this->mServerSocket.get() != NULL && ee_won_lan_joiner_ping_due(time(NULL), this->mLastServerPing)) {
         std::string aMessage;
@@ -293,7 +308,8 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
     unsigned char aPeerNet[2] = {0, 0}, aLocalNet[2] = {0, 0};
     if (aGame->GetGameType() == 1) {
         IPAddr aLocalAddr = IPAddr::GetLocalAddr();
-        const char* aPeerBytes = inSocket->GetDestAddr().GetSixByte();
+        IPAddr aPeerAddr = inSocket->GetDestAddr();   // a copy: the bytes point into it
+        const char* aPeerBytes = aPeerAddr.GetSixByte();
         const char* aLocalBytes = aLocalAddr.GetSixByte();
         aPeerNet[0] = aPeerBytes[2];
         aPeerNet[1] = aPeerBytes[3];
@@ -390,18 +406,18 @@ void LanLogic::HandleNewSocketMessage(const ByteBuffer* inBuffer, LobbyLanSocket
 void LanLogic::HandleRecvMsg(AsyncOp* inOp)
 {
     RecvMsgOp* anOp = static_cast<RecvMsgOp*>(inOp);
-    LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(anOp->mSocket.get());
+    LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(anOp->GetSocket());
     bool anOk = inOp->GetStatus() == WS_Success && !inOp->IsKilled();
-    EeWonLanRecv aRecv = ee_won_lanlogic_recv(anOk, this->IsCaptain(), anOk && aSocket->mClient.get() != NULL);
+    EeWonLanRecv aRecv = ee_won_lanlogic_recv(anOk, this->IsCaptain(), anOk && aSocket->GetClient() != NULL);
     if (!aRecv.handle)
         return;
     if (aRecv.stamp)
-        aSocket->mLastMessageTime = time(NULL);
+        aSocket->SetLastMessageTime(time(NULL));
     if (aRecv.new_socket) {
         this->HandleNewSocketMessage(anOp->GetMsg().get(), aSocket);
         return;
     }
-    this->HandleMessage(anOp->GetMsg().get(), aSocket->mClient.get());
+    this->HandleMessage(anOp->GetMsg().get(), aSocket->GetClient());
 }
 // FUNCTION: WON 0x007e13b0
 // Host: starts receiving messages on an accepted socket and keeps it in the socket set
@@ -410,7 +426,7 @@ void LanLogic::AddPendingSocket(LobbyLanSocket* inSocket)
     inSocket->SetCloseCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleSocketClosed, this));
     inSocket->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleRecvMsg, this));
     inSocket->SetRepeatOp(new RecvMsgOp);
-    inSocket->mLastMessageTime = time(NULL);
+    inSocket->SetLastMessageTime(time(NULL));
     this->mPendingSockets.insert(inSocket);
 }
 // FUNCTION: WON 0x007e1840
@@ -460,7 +476,7 @@ void LanLogic::BroadcastMessage(const ByteBuffer* inBuffer, bool inDeliverLocal)
         return;
     std::vector<char> aHasClient(aSockets.size()), aSend(aSockets.size());
     for (size_t i = 0; i < aSockets.size(); ++i)
-        aHasClient[i] = aSockets[i]->mClient.get() != NULL;
+        aHasClient[i] = aSockets[i]->GetClient() != NULL;
     ee_won_lanlogic_broadcast(aCaptain, false, reinterpret_cast<const bool*>(&aHasClient[0]),
                               reinterpret_cast<bool*>(&aSend[0]), aSockets.size());
     for (size_t i = 0; i < aSockets.size(); ++i)
@@ -1020,10 +1036,10 @@ void LanLogic::HandleGameRemoved(unsigned short inPort, const IPAddr& inAddress)
 void LanLogic::HandleDiscoveryRecv(AsyncOp* inOp)
 {
     RecvBytesFromOp* anOp = static_cast<RecvBytesFromOp*>(inOp);
-    if (anOp->mSocket.get() != this->mDiscoverySocket.get() || !anOp->Succeeded())
+    if (anOp->GetSocket() != this->mDiscoverySocket.get() || !anOp->Succeeded())
         return;
     const ByteBuffer* aBytes = anOp->GetBytes().get();
-    const IPAddr& aFrom = anOp->mFromAddress;
+    const IPAddr& aFrom = anOp->GetAddr();
     uint8_t aKind = 0;
     uint16_t aPort = 0;
     if (!ee_won_lan_read_discovery(reinterpret_cast<const uint8_t*>(aBytes->data()), aBytes->length(), &aKind, &aPort))
@@ -1140,7 +1156,7 @@ void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
 void LanLogic::HandleAccept(AsyncOp* inOp)
 {
     if(inOp->GetStatus()!=WS_Success || inOp->IsKilled()) return;
-    LobbyLanSocket* socket=static_cast<LobbyLanSocket*>(static_cast<AcceptOp*>(inOp)->mAcceptedSocket.get());
+    LobbyLanSocket* socket=static_cast<LobbyLanSocket*>(static_cast<AcceptOp*>(inOp)->GetAcceptedSocket());
     if(this->mRequirePeerAuth) {
         AuthContext* auth=GetLobbyAuthContext();
         if(!auth) return;

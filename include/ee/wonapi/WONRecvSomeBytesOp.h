@@ -21,7 +21,7 @@ protected:
 
 	virtual WONStatus Start();
 	virtual WONStatus Continue();
-	virtual AsyncOp* Duplicate() { return new RecvSomeBytesOp(this->mMaxBytes,this->mSocket,this->mDoDelay); }
+	virtual AsyncOp* Duplicate() { return new RecvSomeBytesOp(this->mMaxBytes,this->GetSocket(),this->mDoDelay); }
 
 public:
 	static DWORD mInitDelay;

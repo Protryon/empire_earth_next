@@ -509,10 +509,14 @@ EEPlayer* EETechTree::GetPlayer()
 // Advances to the next epoch unless the end epoch is reached
 void EETechTree::AdvanceEpoch()
 {
-    long theEpoch = this->mCurrentEpoch + 1;
-    if (theEpoch <= this->mEndEpoch) {
-        this->SetEpoch(theEpoch);
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    // the next epoch and the test are Rust (ee_tech tree.rs advance_epoch)
+    EeTechAdvance theAdvance = ee_tech_advance_epoch((int32_t)this->mCurrentEpoch, (int32_t)this->mEndEpoch);
+    long theEpoch = (long)this->mCurrentEpoch + 1;   // (TNWK, TEST ONLY: the record's epoch)
+    if (theAdvance.advances) {
+        this->SetEpoch(theAdvance.epoch);
     }
+    EETechCaptureWalk(8, this, NULL, theEpoch, this->mEndEpoch, theAdvance.advances ? 1 : 0);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5ccb4a
@@ -836,12 +840,16 @@ void EETechTree::SetEpoch(long inEpoch)
         EETechCaptureTree(theRecord, this);
         theRecord.Commit();
     }
-    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < this->mEpochs.size()) || !(inEpoch >= this->mCurrentEpoch))
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    if (!ee_tech_set_epoch_allowed((int32_t)inEpoch, (int32_t)this->mEpochs.size(), (int32_t)this->mCurrentEpoch)) {   // (ee_tech tree.rs)
+        EETechCaptureWalk(7, this, NULL, inEpoch, 0, 0);   // TNWK (TEST ONLY)
         return;
+    }
     this->mCurrentEpoch = inEpoch;
     if (inEpoch != kTechEpochPrehistoric)
         this->mPlayer->mSavedGroups.Set(0xc, inEpoch);
     this->ResearchToEpoch(inEpoch);
+    EETechCaptureWalk(7, this, NULL, inEpoch, 0, 1);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cd2ed
@@ -876,9 +884,12 @@ void EETechTree::ResetEpochRange(long inStart, long inEnd)
 void EETechTree::SetNodeAvailable(long inID, bool inValue)
 {
     EETechTreeNode* theNode = this->Get(inID);
-    if (theNode != NULL && theNode->mResearchDelay == 0) {
+    EETechCaptureWalkBegin();   // TNWK (TEST ONLY)
+    long theAction = theNode == NULL ? 0 : theNode->mResearchDelay == 0 ? 1 : 2;   // TNWK (TEST ONLY)
+    if (theNode != NULL && ee_tech_node_availability_settable((int32_t)theNode->mResearchDelay)) {   // (ee_tech tree.rs)
         theNode->mIsAvailable = inValue;
     }
+    EETechCaptureWalk(9, this, theNode, inID, inValue ? 1 : 0, theAction);   // TNWK (TEST ONLY)
 }
 
 // FUNCTION: EXE 0x5cd358

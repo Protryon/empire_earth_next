@@ -140,6 +140,34 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// An effect's start without a tag point list (`EEE2DLinearProjectile`, `EEE3DPulseCannonBall`, `EEE3DTracers`): the
+/// model's default point (in `top`) under the unscaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
+
+/// `EEUCProjectile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_GROUND = 0;
+
+/// `EEUCProjectile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_WATER = 1;
+
+/// `EEUCMissile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_GROUND = 2;
+
+/// `EEUCMissile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_WATER = 3;
+
+/// `EEUCTorpedo::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_TORPEDO_GROUND = 4;
+
+/// No new goal.
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_NONE = 0;
+
+/// An attack-ground goal at the ground point (the position's x and y, the ground's height).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_GROUND = 1;
+
+/// An attack-ground goal at the position on the water plane (height 0).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_WATER = 2;
+
 /// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
 constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
 
@@ -796,6 +824,15 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
+constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
+
+/// `kActionCircle`.
+constexpr static const int32_t ACTION_CIRCLE = 1008;
+
+/// `kActionIdle`.
+constexpr static const int32_t ACTION_IDLE = 5000;
+
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
 constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
 
@@ -810,6 +847,33 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
+constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
+
+/// The functor infects allies only (`InfectsAlliesOnly()`).
+constexpr static const uint32_t EE_CONTAGION_ALLIES_ONLY = 2;
+
+/// The calamity's class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CONTAGION_BLOCKED_BY_IMMUNITY = 4;
+
+/// [`EeContagionOp::NearView`]: the list's entry is a unit.
+constexpr static const uint32_t EE_CONTAGION_NEAR_UNIT = 1;
+
+/// The functor's `CanInfectType` accepts its category and type.
+constexpr static const uint32_t EE_CONTAGION_NEAR_TYPE = 2;
+
+/// It is the held unit's player's.
+constexpr static const uint32_t EE_CONTAGION_NEAR_SAME_PLAYER = 4;
+
+/// Its player is no enemy of the held unit's player (`mEnemies[...] == 0`).
+constexpr static const uint32_t EE_CONTAGION_NEAR_NOT_ENEMY = 8;
+
+/// [`EeContagionOp::NewView`]: the new unit is a complex unit.
+constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
+
+/// The helper holds it already.
+constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
 
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
@@ -2523,6 +2587,33 @@ enum class EeCalamityOp : int32_t {
   CasterIsRadioMan = 66,
   /// `EEIsTileFree(tile)`: ok.
   TileFree = 67,
+  /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
+  StopSound = 68,
+  /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
+  DestroyHelper = 69,
+  /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
+  StartHelper = 70,
+  /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
+  /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
+  StartSound = 71,
+  /// The calamity's height (`mHeight`) set to x.
+  SetHeight = 72,
+  /// The target unit killed, deselected and cleared.
+  KillTarget = 73,
+  /// The caster's `SightOffHere`.
+  CasterSightOff = 74,
+  /// The caster's sight: x.
+  CasterSight = 75,
+  /// The caster's sight set to x, then `SightOnHere`.
+  CasterSightOn = 76,
+  /// The target unit is protected (`IsProtected`): ok.
+  TargetProtected = 77,
+  /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
+  TileTerrain = 78,
+  /// The target unit exists, is complex and alive: ok.
+  TargetComplexAlive = 79,
+  /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
+  ClassStep = 80,
 };
 
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
@@ -2561,6 +2652,62 @@ enum class EeTechUnitWalk : uint32_t {
   PendingHitPoints,
   /// The player's or the pending units, for the flight time rescale.
   FlightTime,
+};
+
+/// The host calls (`EeContagionCall::op`).
+enum class EeContagionOp : int32_t {
+  /// The functor's `UpdateUnits(&mUnits)` (a functor that skips the spread).
+  UpdateUnits = 1,
+  /// The functor's `Update(x, calamity)`.
+  FunctorUpdate = 2,
+  /// The helper's unit count: value.
+  UnitCount = 3,
+  /// Held unit `index` is alive: ok.
+  UnitAlive = 4,
+  /// The functor's `Apply(held unit index, x, calamity)`.
+  Apply = 5,
+  /// Held unit `index` removed and cured (`RemoveUnit(iterator, true)`).
+  Remove = 6,
+  /// Held unit `index` is a complex unit: ok.
+  HeldComplex = 7,
+  /// `GetUnitsInArea(x, held unit index)` into the near list (replacing the last): value its size.
+  NearUnits = 8,
+  /// Near unit `index` against held unit `index2`: flags `EE_CONTAGION_NEAR_*`, id its unit id.
+  NearView = 9,
+  /// `gPhysics->mRandom.Generate()`: x.
+  Random = 10,
+  /// The distance squared from held unit `index2` to near unit `index`: x.
+  DistanceSquared = 11,
+  /// Near unit `index` added to the new units.
+  AddNew = 12,
+  /// New unit `index`: flags `EE_CONTAGION_NEW_*`, id its unit id.
+  NewView = 13,
+  /// New unit `index`'s immunity (effect kind 3): ok when it has one (the host plays its effect).
+  Immune = 14,
+  /// New unit `index` added and infected (`AddUnit(unit, true)`).
+  AddUnit = 15,
+  /// The capture's record of a step (TEST ONLY, `EECalamityCaptureContagionEvent(value, index, index2, x, y)`).
+  Capture = 16,
+};
+
+/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
+enum class EeTechUnlockAction : int32_t {
+  /// An obsolete node is left alone.
+  Nothing = 0,
+  /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
+  MakeAvailable = 1,
+  /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+  SetPrerequisite = 2,
+};
+
+/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
+enum class EeTechMakeObsolete : int32_t {
+  /// Another id: the epoch's node with it (if any) is made obsolete.
+  Node = 1,
+  /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
+  Epoch = 2,
+  /// The epoch itself, obsolete already or reached: nothing.
+  Nothing = 3,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -2808,6 +2955,9 @@ struct EeSubSectorLinks;
 /// `AsyncOp`'s state, lock, completion and container.
 struct EeWonAsyncOp;
 
+/// `AsyncSocket`'s state and steps.
+struct EeWonAsyncSocket;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -2816,6 +2966,13 @@ struct EeWonByteBuffer;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// `IPAddr`'s value.
+struct EeWonIpAddr;
+
+/// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
+/// its last message came (`time(NULL)`; the original left it unset until then, here 0).
+struct EeWonLanSocket;
 
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
@@ -2828,6 +2985,12 @@ struct EeWonOpTracker;
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
 
+/// `QueueSocket`'s state and steps.
+struct EeWonQueueSocket;
+
+/// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
+struct EeWonSocketOp;
+
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
 
@@ -2837,6 +3000,9 @@ struct EeWonThread;
 /// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
+
+/// `UDPManager`'s state and steps.
+struct EeWonUdpManager;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -4243,10 +4409,95 @@ struct EeCombatWeaponIn {
   float yaw;
   /// the tag point at the frame, in its model's space
   float point[3];
-  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
+  /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// An impact test's outcome.
+struct EeCombatImpactOut {
+  /// the test's answer
+  int32_t result;
+  /// where it returned (for the capture): projectile ground 0 not yet, 1 above the ground, 2 impact; missile ground
+  /// 0 not its goal, 1 boosting or near its target, 2 no goal, 3 above the ground, 4 on the ground; water 0 not yet
+  /// (projectile), 1 dry or above, 2 impact; torpedo 1 above, 2 impact
+  int32_t stage;
+  /// `EE_COMBAT_IMPACT_GOAL_*`
+  int32_t goal;
+  float goal_point[3];
+  /// leave a shell hole (projectile: at the ground point; missile: at the position placed on the ground)
+  int32_t decal;
+  /// the missile is placed on the ground and moved `offset` up (missile ground)
+  int32_t place;
+  float offset;
+};
+
+/// An impact test's reads (the capture's CBGI and CBWI layout). The `*_read` fields and the values beside them are
+/// the lazy reads, written by the test.
+struct EeCombatImpactIn {
+  /// `EE_COMBAT_IMPACT_*`
+  int32_t kind;
+  /// the class is a bomb's (projectile)
+  int32_t bomb;
+  /// `mFlightTime` (projectile: ms flown; missile: the launch delay left)
+  int32_t flight_time;
+  /// `mProjectileStart`'s height (projectile ground)
+  float start_z;
+  float position[3];
+  /// the floor tile under the position is on the map (projectile ground)
+  int32_t tile_present;
+  /// the unit's tile's height, read for an off-map position (projectile ground)
+  float tile_height;
+  int32_t has_goal;
+  /// the goal's `mKind` (0 without one)
+  int32_t goal_kind;
+  /// the goal's location, read past the first test (missile ground)
+  float goal_location[3];
+  /// the attack target is a land building or a wall, its tile, its size, the unit's tile; read at an impact under
+  /// an attack-unit goal (projectile ground)
+  int32_t target_building;
+  int32_t target_tile[2];
+  int32_t target_size;
+  int32_t unit_tile[2];
+  /// the class has a shell hole effect
+  int32_t shell_hole;
+  /// the launcher is a missile base (`kUnitTypeCpMissileBase`, `kUnitTypeMissileBase`) (missile ground)
+  int32_t launcher_cp_base;
+  int32_t launcher_missile_base;
+  int32_t ground_read;
+  /// `EEMap::GetGroundPoint`'s height under the position
+  float ground_z;
+  /// `EEIsOnTargetTiles` (missile ground, an attack-unit goal)
+  int32_t on_target_read;
+  int32_t on_target;
+  /// the goal location's tile is the unit's (missile ground, a missile base's)
+  int32_t same_tile_read;
+  int32_t same_tile;
+  /// `CanMoveOnTerrain` on the unit's tile (water, at or below height 0)
+  int32_t move_read;
+  int32_t can_move;
+};
+
+/// The attack target's footprint (projectile ground).
+struct EeCombatImpactTarget {
+  int32_t building;
+  int32_t tile[2];
+  int32_t size;
+  int32_t unit_tile[2];
+};
+
+/// The host's lazy reads (`ctx` is the C++'s).
+struct EeCombatImpactHost {
+  void *ctx;
+  float (*ground_z)(void *ctx, float x, float y, float z);
+  float (*tile_height)(void *ctx);
+  void (*target)(void *ctx, EeCombatImpactTarget *out);
+  void (*goal_location)(void *ctx, float *out);
+  int32_t (*on_target_tiles)(void *ctx);
+  int32_t (*same_tile)(void *ctx, float x, float y);
+  int32_t (*can_move)(void *ctx);
 };
 
 /// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
@@ -5580,6 +5831,12 @@ struct EeCalamityParams {
   int32_t area_time2;
   /// The morale's effect duration.
   int32_t morale_delay;
+  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+  float start_size;
+  /// The line of sight's bonus.
+  float sight_bonus;
+  /// The earthquake's source effect speed.
+  float quake_source_speed;
 };
 
 /// The calamity's members an update reads and writes (`EECalamity`).
@@ -5689,6 +5946,76 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
+struct EeContagionState {
+  float since_spread;
+  float since_update;
+};
+
+/// One host call.
+struct EeContagionCall {
+  EeContagionOp op;
+  int32_t index;
+  int32_t index2;
+  int32_t value;
+  float x;
+  float y;
+};
+
+/// The host's answer.
+struct EeContagionReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  float x;
+};
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+struct EeContagionHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, const EeContagionCall *call, EeContagionReply *reply);
+};
+
+/// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
+/// unsigned), and the time left (`elapsed -= updates * discrete`, the count converted to a float).
+struct EeCalamityDiscrete {
+  uint32_t updates;
+  float elapsed;
+};
+
+/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
+struct EeTechSetObsolete {
+  /// The node's flag after.
+  bool obsolete;
+  /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
+  bool fires;
+  /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
+  bool check_media;
+  uint8_t pad;
+};
+
+/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
+struct EeTechAdvance {
+  bool advances;
+  uint8_t pad[3];
+  int32_t epoch;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -6819,31 +7146,6 @@ using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *n
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
 
-/// WON's socket state, embedded in the C++ `AsyncSocket` (`mCore`).
-struct EeWonSocket {
-  /// The platform socket (`PLAT_SOCKET_INVALID` when closed).
-  ptrdiff_t handle;
-  /// [`KIND_STREAM`] or [`KIND_DATAGRAM`].
-  int32_t kind;
-  /// Connected (a stream connect was started or accepted; a datagram socket's peer was set).
-  bool connected;
-  /// Opened since the last close.
-  bool open;
-  /// The last socket error recorded (`WS_None` after an open).
-  long status;
-  /// When data last arrived (seconds since 1970; the original's 32-bit `time(NULL)`).
-  int64_t last_recv_time;
-  /// When the first of the current run of blocked sends failed (0: the last send went out).
-  int64_t first_blocked_send_time;
-};
-
-/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
-struct EeWonOpTiming {
-  int32_t run_mode;
-  uint32_t start;
-  uint32_t timeout;
-};
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -7394,6 +7696,15 @@ struct EeWonUrl {
   size_t path_len;
 };
 
+/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
+struct EeWonAddr {
+  uint8_t sockaddr[16];
+  bool valid;
+  bool remember_host;
+  const uint8_t *host;
+  size_t host_len;
+};
+
 /// A received message (`HandleRecvMsg`): whether the socket's time is stamped, and whether it is a new socket's
 /// first message (only a join request counts) or goes to `HandleMessage`; nothing for a failed or killed op.
 struct EeWonLanRecv {
@@ -7500,6 +7811,13 @@ struct EeWonAsyncOpHooks {
   EeWonAsyncOpFn op_kill;
 };
 
+/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
+struct EeWonOpTiming {
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+};
+
 /// A string field's or a number's assignment.
 struct EeWonPatchField {
   /// the field (the record's order), or `EE_WON_PATCH_CUT`
@@ -7581,6 +7899,59 @@ struct EeWonPrefsEvent {
 
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A C++ call on one object (an op, a completion or the socket).
+using EeWonQueueFn = void(*)(void *object);
+
+/// A C++ call making a new object (its reference not yet taken).
+using EeWonQueueNewFn = void*(*)(void *socket);
+
+/// What the queue object calls back in the C++. One static table serves every queue socket.
+struct EeWonQueueSocketHooks {
+  /// `completion->AddRef()`, `->Release()`, `->Complete(op)`
+  EeWonQueueFn completion_add_ref;
+  EeWonQueueFn completion_release;
+  void (*completion_call)(void *completion, void *op);
+  /// `op->AddRef()`, `->Release()` (any `AsyncOp*`)
+  EeWonQueueFn op_add_ref;
+  EeWonQueueFn op_release;
+  /// `op->GetStatus()`, `->IsKilled()`, `->GetTimeout()`, `->GetCompletion()`
+  long (*op_status)(void *op);
+  bool (*op_killed)(void *op);
+  uint32_t (*op_timeout)(void *op);
+  void *(*op_completion)(void *op);
+  /// `op->SetCompletion(c)`, `->SetTimeout(t)`, `->RunAsync(t)`, `->Kill(true)`, `->ForceFinish(s)`,
+  /// `->SetRunAsyncImmediately(false)`
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_set_timeout)(void *op, uint32_t timeout);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonQueueFn op_kill;
+  void (*op_force_finish)(void *op, long status);
+  /// a socket op's `SetSocket(socket)` and the virtual `Duplicate()` (a new op, or null)
+  void (*op_set_socket)(void *op, void *socket);
+  void *(*op_duplicate)(void *op);
+  /// `dynamic_cast<QueueOpFastCompletion*>(completion)`'s original completion, or null
+  void *(*fast_original)(void *completion);
+  /// new objects: `ParamCompletion(StaticOpCallback, socket)`, `QueueOpFastCompletion(StaticOpCallback,
+  /// socket, original)`, a close timer (`AsyncOp` with `ParamCompletion(StaticCloseTimerCallback, socket)`),
+  /// `QueueCloseOp`, `CloseOp(socket)`
+  EeWonQueueNewFn new_op_completion;
+  void *(*new_fast_completion)(void *socket, void *original);
+  EeWonQueueNewFn new_close_timer;
+  EeWonQueueNewFn new_queue_close_op;
+  EeWonQueueNewFn new_close_op;
+  /// the socket's `Close()`, `IsValid()`, `GetType() == UDP`
+  EeWonQueueFn socket_close;
+  bool (*socket_valid)(void *socket);
+  bool (*socket_datagram)(void *socket);
+};
+
+/// What a LAN socket object calls back: the client's references and its back link (`client->mSocket = socket`).
+struct EeWonLanSocketHooks {
+  EeWonQueueFn client_add_ref;
+  EeWonQueueFn client_release;
+  void (*client_set_socket)(void *client, void *socket);
+};
 
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonResource {
@@ -7678,15 +8049,6 @@ struct EeWonServerPick {
   bool language;
 };
 
-/// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
-struct EeWonAddr {
-  uint8_t sockaddr[16];
-  bool valid;
-  bool remember_host;
-  const uint8_t *host;
-  size_t host_len;
-};
-
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
 using EeWonRand = int32_t(*)(bool seed);
 
@@ -7769,6 +8131,68 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A C++ call on a socket (`AsyncSocket*`).
+using EeWonAsyncSocketFn = void(*)(void *socket);
+
+/// A transform's `Send` / `Recv` on a message (`MsgTransform*`, `ByteBufferPtr*`): its status.
+using EeWonTransformFn = long(*)(void *transform, void *message);
+
+/// What the socket object calls back in the C++. One static table serves every socket.
+struct EeWonAsyncSocketHooks {
+  /// the virtual `OpenHook`, `CloseHook`, `KillHook`
+  EeWonAsyncSocketFn open_hook;
+  EeWonAsyncSocketFn close_hook;
+  EeWonAsyncSocketFn kill_hook;
+  /// `transform->Send(message)`, `transform->Recv(message)`
+  EeWonTransformFn transform_send;
+  EeWonTransformFn transform_recv;
+  /// `delete transform`
+  void (*transform_free)(void *transform);
+};
+
+/// A C++ call on a socket op (`SocketOp*`).
+using EeWonSocketOpBaseFn = void(*)(void *op);
+
+/// A C++ call on a socket (`AsyncSocket*`).
+using EeWonSocketRefFn = void(*)(void *socket);
+
+/// What the op object calls back in the C++. One static table serves every socket op.
+struct EeWonSocketOpBaseHooks {
+  /// the virtual `Start()` and `Continue()`
+  long (*start)(void *op);
+  long (*continue_op)(void *op);
+  /// `Finish(status)`
+  void (*finish)(void *op, long status);
+  /// `GetMode()`
+  int32_t (*mode)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonSocketOpBaseFn add_to_socket_thread;
+  /// `socket->AddRef()`, `socket->Release()`
+  EeWonSocketRefFn socket_add_ref;
+  EeWonSocketRefFn socket_release;
+  /// the socket's Rust object (`socket->mSock`)
+  EeWonAsyncSocket *(*socket_object)(void *socket);
+  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+  EeWonSocketRefFn ref_add;
+  EeWonSocketRefFn ref_release;
+  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+  /// modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+  long (*accept)(void *socket, void **out);
+};
 
 /// A C++ call on a socket op (`SocketOp*`).
 using EeWonSocketOpFn = void(*)(void *op);
@@ -7867,6 +8291,44 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// A C++ call on one object.
+using EeWonUdpFn = void(*)(void *object);
+
+/// What the manager calls back in the C++. One static table serves every manager.
+struct EeWonUdpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpFn ref_add;
+  EeWonUdpFn ref_release;
+  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
+  /// `ForceFinish(s)`, `TimeLeft()`
+  long (*op_status)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpFn op_kill;
+  void (*op_finish)(void *op, long status);
+  void (*op_force_finish)(void *op, long status);
+  uint32_t (*op_time_left)(void *op);
+  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
+  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  EeWonIpAddr *(*recv_address)(void *op);
+  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
+  void (*recv_set_msg)(void *op, void *bytes);
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
+  void *(*new_recv_op)(const EeWonIpAddr *addr);
+  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
+  void *(*socket_new)();
+  EeWonUdpFn socket_kill;
+  void (*socket_set_broadcast)(void *socket, bool on);
+  long (*socket_bind)(void *socket, int32_t port);
+  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
+  /// `SetRepeatOp(new RecvBytesFromOp(size))`
+  void (*socket_repeat)(void *socket, void *manager, int32_t size);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -10475,6 +10937,22 @@ uint32_t ee_combat_tile_line(int32_t x1,
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
 
+/// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
+///
+/// # Safety
+/// `input` must point to a valid record, `chain` to `input.chain` matrices (or be NULL when it is 0) and `out` to
+/// three floats.
+void ee_combat_weapon_point(const EeCombatWeaponIn *input,
+                            const float (*chain)[16],
+                            float *out);
+
+/// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
+///
+/// # Safety
+/// `input` must point to a valid record and `host` to a valid table whose functions may be called with its `ctx`.
+EeCombatImpactOut ee_combat_impact(EeCombatImpactIn *input,
+                                   const EeCombatImpactHost *host);
+
 /// The tag point `LaunchShot` fires from (-1: none).
 ///
 /// # Safety
@@ -12695,6 +13173,22 @@ int32_t ee_calamity_update(const EeCalamityParams *params,
                            float elapsed,
                            const EeCalamityHostFfi *host);
 
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+bool ee_calamity_start(const EeCalamityParams *params,
+                       EeCalamityState *state,
+                       const EeCalamityHostFfi *host);
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+void ee_calamity_stop(const EeCalamityParams *params,
+                      EeCalamityState *state,
+                      const EeCalamityHostFfi *host);
+
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
 ///
 /// # Safety
@@ -12753,6 +13247,79 @@ EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, 
 /// # Safety
 /// `unit` must be valid for reads.
 uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+void ee_contagion_update(const EeContagionParams *params,
+                         EeContagionState *state,
+                         float elapsed,
+                         const EeContagionHostFfi *host);
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);
+
+/// A functor's damage per update (`contagion::tick_damage`).
+int32_t ee_contagion_tick_damage(int32_t damage, uint32_t updates);
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+int32_t ee_contagion_fire_burn(int32_t burn, int32_t max_hit_points);
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hit_points);
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
+                                         const EeTechTreeState *tree,
+                                         bool available_with_epoch);
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
+
+/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
+bool ee_tech_research_kind_takes(int32_t node_kind,
+                                 int32_t kind,
+                                 bool epoch_only,
+                                 bool researched_with_epoch);
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
+bool ee_tech_node_is_outdated(bool obsolete,
+                              int32_t obsolete_epoch,
+                              int32_t current_epoch);
+
+/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
+EeTechMakeObsolete ee_tech_epoch_make_obsolete(int32_t epoch_id,
+                                               int32_t id,
+                                               bool epoch_obsolete,
+                                               int32_t current_epoch);
+
+/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
+EeTechSetObsolete ee_tech_set_obsolete(bool value, bool keep_media, bool obsolete);
+
+/// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
+bool ee_tech_needs_unit_media(bool has_class,
+                              int32_t family,
+                              bool editor_obsoleted,
+                              int32_t obsolete_epoch,
+                              int32_t start_epoch);
+
+/// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
+int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
+
+/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
+bool ee_tech_set_epoch_allowed(int32_t epoch, int32_t epoch_count, int32_t current_epoch);
+
+EeTechAdvance ee_tech_advance_epoch(int32_t current_epoch, int32_t end_epoch);
+
+/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
+bool ee_tech_node_availability_settable(int32_t research_delay);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
@@ -15506,213 +16073,20 @@ void ee_won_netstats_add(uint32_t counter,
 
 int64_t ee_won_netstats_get(uint32_t counter);
 
-/// `Fn2B2660`: a dotted address or a host name (looked up) and a host-order port -> the address; false when it does
-/// not resolve.
-///
-/// # Safety
-/// `host` holds `length` bytes; the out-parameters are valid.
-bool ee_won_ipaddr_resolve(const uint8_t *host,
-                           size_t length,
-                           uint16_t port,
-                           uint32_t *address,
-                           uint16_t *port_out);
-
-/// `Fn2B2890`'s port: the text after the colon as `atoi` reads it, cut to 16 bits (host order).
-///
-/// # Safety
-/// `text_in` holds `length` bytes.
-uint16_t ee_won_ipaddr_port_of(const uint8_t *text_in, size_t length);
-
-/// `SetWithDefaultPortNoDNS`.
-///
-/// # Safety
-/// As `ee_won_ipaddr_resolve`.
-bool ee_won_ipaddr_parse_no_dns(const uint8_t *text_in,
-                                size_t length,
-                                uint16_t default_port,
-                                uint32_t *address,
-                                uint16_t *port);
-
-/// The dotted form of a network-order address into `out` (16 bytes).
-///
-/// # Safety
-/// `out` has 16 bytes.
-void ee_won_ipaddr_dotted(uint32_t address, char *out);
-
-/// `GetHostAndPortString`: "host:port" (at most 49 bytes) into `out` (50 bytes); returns its length.
-///
-/// # Safety
-/// `host` holds `length` bytes; `out` has 50 bytes.
-size_t ee_won_ipaddr_host_and_port(const uint8_t *host,
-                                   size_t length,
-                                   uint16_t port,
-                                   char *out);
-
-/// The order of two addresses' 6-byte wire forms (`operator<`, `==`): negative, 0 or positive.
-///
-/// # Safety
-/// `a` and `b` point at 6 bytes each (a `PlatSockAddrIn`'s port and address).
-int32_t ee_won_ipaddr_compare_six(const uint8_t *a, const uint8_t *b);
-
-/// `StringCompare` (network-order addresses and ports).
-int32_t ee_won_ipaddr_string_compare(uint32_t a_address,
-                                     uint16_t a_port,
-                                     uint32_t b_address,
-                                     uint16_t b_port);
-
 /// `LobbyGetNetAddresses`: each of this machine's addresses to `sink`, in order.
 ///
 /// # Safety
 /// The sink is called during the call only.
 void ee_won_ipaddr_local_addresses(bool details, EeWonAddressSink sink, void *context);
 
-/// Whether a host-order address is one of this machine's (`SetLocalHost`'s test: the host name's addresses).
-bool ee_won_ipaddr_is_local(uint32_t host);
-
-/// This machine's name into `out` (`size` bytes); false when the system gives none.
-///
-/// # Safety
-/// `out` has `size` bytes.
-bool ee_won_ipaddr_host_name(char *out, size_t size);
-
 /// `AsyncSocket::HasInternetConnection`.
 bool ee_won_has_internet_connection();
-
-/// The constructor: a closed socket of `kind` (0 stream, 1 datagram) into `core`.
-///
-/// # Safety
-/// `core` points at an `EeWonSocket` (uninitialised is fine).
-void ee_won_socket_init(EeWonSocket *core, int32_t kind);
-
-/// The destructor's count (after the C++ closed the socket).
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_destroyed(EeWonSocket *core);
 
 /// `StartWinsock`.
 long ee_won_socket_start();
 
 /// `StopWinsock`.
 long ee_won_socket_stop();
-
-/// `GetLastSocketError`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_last_error(EeWonSocket *core);
-
-/// `Open`'s handle (after the C++ closed a valid socket; the C++ runs the open hook on 0).
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_open(EeWonSocket *core);
-
-/// `Bind` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_bind(EeWonSocket *core, uint32_t address, uint16_t port, bool reuse);
-
-/// The connect of `Fn2B0E60` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_connect(EeWonSocket *core, uint32_t address, uint16_t port);
-
-/// `Listen`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_listen(EeWonSocket *core, int32_t backlog);
-
-/// `Accept`'s system part: the accepted handle and the peer, or the error.
-///
-/// # Safety
-/// `core` is a socket; the out-parameters are valid.
-long ee_won_socket_accept(EeWonSocket *core, ptrdiff_t *handle, uint32_t *address, uint16_t *port);
-
-/// The accepted handle into the new socket's core (open, connected).
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_adopt(EeWonSocket *core, ptrdiff_t handle);
-
-/// A wait on a handle without the lock (`WaitForRead` 1, `WaitForWrite` 2).
-void ee_won_socket_wait(ptrdiff_t handle, uint32_t mask, uint32_t timeout);
-
-/// `WaitForConnect`'s wait on a handle, without the lock.
-long ee_won_socket_wait_for_connect(ptrdiff_t handle, uint32_t timeout);
-
-/// `Send`; `*sent` (when not null) is set when the send did not fail.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-long ee_won_socket_send(EeWonSocket *core, const void *data, int32_t length, int32_t *sent);
-
-/// `Recv`; `*received` (when not null) is set when bytes came.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes.
-long ee_won_socket_recv(EeWonSocket *core, void *data, int32_t length, int32_t *received);
-
-/// `SendTo` / `RecvFrom`'s test of the socket's kind.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_datagram_only(const EeWonSocket *core);
-
-/// `SendTo` on an open datagram socket.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-long ee_won_socket_send_to(EeWonSocket *core,
-                           const void *data,
-                           int32_t length,
-                           uint32_t address,
-                           uint16_t port);
-
-/// `RecvFrom`: on success the sender in `*address` / `*port` and `*from` true, `*received` (when not null) set.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes; the out-parameters are valid.
-long ee_won_socket_recv_from(EeWonSocket *core,
-                             void *data,
-                             int32_t length,
-                             uint32_t *address,
-                             uint16_t *port,
-                             bool *from,
-                             int32_t *received);
-
-/// `ClosePrv`.
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_close(EeWonSocket *core);
-
-/// `Disconnect` of a datagram socket: false when dissolving the peer failed.
-///
-/// # Safety
-/// `core` is a socket.
-bool ee_won_socket_dissolve_peer(EeWonSocket *core);
-
-/// `GetLocalPort`.
-///
-/// # Safety
-/// `core` is a socket.
-uint16_t ee_won_socket_local_port(const EeWonSocket *core);
-
-/// `SetBroadcast`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_set_broadcast(EeWonSocket *core, bool on);
-
-/// `SetNagling`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
 
 /// WON's millisecond tick (`WONTickCount`).
 uint32_t ee_won_tick();
@@ -15734,28 +16108,6 @@ bool ee_won_op_valid_length_field(uint32_t size);
 
 /// `RecvBytesOp`'s chunk read size.
 int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
-
-/// `SendBytesOp::Continue`: sends `data[*pos..length]`; `*pos` follows.
-///
-/// # Safety
-/// `core` is the socket and `lock` its `PlatMutex`, both alive during the call; `data` holds `length` bytes.
-long ee_won_op_send_all(EeWonSocket *core,
-                        void *lock,
-                        const uint8_t *data,
-                        size_t length,
-                        uint32_t *pos,
-                        EeWonOpTiming timing);
-
-/// `RecvCRMsgOp::Continue`: each byte to `sink` until a CR-LF; `last` is the line so far's last byte (-1 for none).
-///
-/// # Safety
-/// As `ee_won_op_send_all`; the sink is called during the call only.
-long ee_won_op_recv_line(EeWonSocket *core,
-                         void *lock,
-                         int32_t last,
-                         EeWonOpTiming timing,
-                         EeWonByteSink sink,
-                         void *context);
 
 /// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
 EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
@@ -17899,6 +18251,168 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
+/// `IPAddr()`: zero, invalid, no remembered host.
+EeWonIpAddr *ee_won_ipaddr_new();
+
+/// The copy constructor: a copy of `a`'s whole value.
+///
+/// # Safety
+/// `a` is a live value (so for every `ee_won_ipaddr_` call taking one).
+EeWonIpAddr *ee_won_ipaddr_clone(const EeWonIpAddr *a);
+
+/// `operator=`: `to` becomes a copy of `from` (the same value is fine).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_assign(EeWonIpAddr *to, const EeWonIpAddr *from);
+
+/// The destructor.
+///
+/// # Safety
+/// `a` came from `ee_won_ipaddr_new` / `_clone` and is freed once.
+void ee_won_ipaddr_free(EeWonIpAddr *a);
+
+/// `SetRememberHostString`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_remember_host(EeWonIpAddr *a, bool on);
+
+/// `GetSockAddrIn`: the value's `PlatSockAddrIn` (valid while the value lives and is not set again).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+const void *ee_won_ipaddr_sockaddr(const EeWonIpAddr *a);
+
+/// `GetSixByte`: the 6-byte wire form inside the value (the sockaddr's port and address).
+///
+/// # Safety
+/// As `ee_won_ipaddr_sockaddr`.
+const char *ee_won_ipaddr_six(const EeWonIpAddr *a);
+
+/// `Fn2B2660` (a host-order port).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `host` holds `length` bytes.
+bool ee_won_ipaddr_set_resolve(EeWonIpAddr *a, const uint8_t *host, size_t length, uint16_t port);
+
+/// `Fn2B2890`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_host_port(EeWonIpAddr *a, const uint8_t *text, size_t length);
+
+/// `SetSixByte`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `six` points at 6 bytes.
+void ee_won_ipaddr_set_six(EeWonIpAddr *a, const uint8_t *six);
+
+/// `Fn2B2B00`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `sa` points at a `PlatSockAddrIn`.
+void ee_won_ipaddr_set_sockaddr(EeWonIpAddr *a, const void *sa);
+
+/// `Fn2B2C20` (host order).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_host_order(EeWonIpAddr *a, uint32_t host, uint16_t port);
+
+/// `SetWithDefaultPortNoDNS`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_no_dns(EeWonIpAddr *a,
+                              const uint8_t *text,
+                              size_t length,
+                              uint16_t default_port);
+
+/// `SetWithDefaultPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_set_resolve`.
+bool ee_won_ipaddr_set_with_default_port(EeWonIpAddr *a,
+                                         const uint8_t *text,
+                                         size_t length,
+                                         uint16_t default_port);
+
+/// `GetHostString` to `sink`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; the sink is called once during the call.
+void ee_won_ipaddr_host_string(const EeWonIpAddr *a,
+                               bool use_original,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `GetHostAndPortString` to `sink`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_host_string`.
+void ee_won_ipaddr_host_and_port_string(const EeWonIpAddr *a,
+                                        bool use_original,
+                                        EeWonByteSink sink,
+                                        void *context);
+
+/// `GetPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+uint16_t ee_won_ipaddr_port(const EeWonIpAddr *a);
+
+/// `SetPort`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+void ee_won_ipaddr_set_port(EeWonIpAddr *a, uint16_t port);
+
+/// `GetHost`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+long ee_won_ipaddr_host(const EeWonIpAddr *a);
+
+/// `IsValid`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+bool ee_won_ipaddr_valid(const EeWonIpAddr *a);
+
+/// `operator<` / `==`: negative, 0 or positive.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`, for both.
+int32_t ee_won_ipaddr_compare(const EeWonIpAddr *a, const EeWonIpAddr *b);
+
+/// `StringCompare`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_compare`.
+int32_t ee_won_ipaddr_string_compare_values(const EeWonIpAddr *a, const EeWonIpAddr *b);
+
+/// `GetLocalHost`.
+long ee_won_ipaddr_local_host();
+
+/// `SetLocalHost`.
+bool ee_won_ipaddr_set_local_host(long host, bool validate);
+
+/// `GetLocalAddr`: a new value.
+EeWonIpAddr *ee_won_ipaddr_local_addr();
+
+/// ServerContext's `ToRust`: the value as servctx.rs's `EeWonAddr` (the host borrowed while the value lives).
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`.
+EeWonAddr ee_won_ipaddr_to_raw(const EeWonIpAddr *a);
+
+/// ServerContext's `FromRust`: the value set from an `EeWonAddr`.
+///
+/// # Safety
+/// As `ee_won_ipaddr_clone`; `raw` is valid, its host `host_len` bytes.
+void ee_won_ipaddr_from_raw(EeWonIpAddr *a, const EeWonAddr *raw);
+
 EeWonLanRecv ee_won_lanlogic_recv(bool op_ok, bool is_captain, bool socket_has_client);
 
 size_t ee_won_lanlogic_message_offset(bool is_captain, bool from_me);
@@ -18411,6 +18925,154 @@ int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
 
 uint16_t ee_won_prefs_default_lan_number(uint32_t host);
 
+/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` and `lock` outlive the object.
+EeWonQueueSocket *ee_won_queuesocket_new(void *socket,
+                                         const EeWonQueueSocketHooks *hooks,
+                                         void *lock);
+
+/// Frees the queue object (its references go).
+///
+/// # Safety
+/// `q` came from `ee_won_queuesocket_new` and is freed once.
+void ee_won_queuesocket_free(EeWonQueueSocket *q);
+
+/// `SetRepeatCompletion`.
+///
+/// # Safety
+/// `q` is a live queue object (so for every `ee_won_queuesocket_` call); the objects passed are live C++ objects
+/// of the kinds named or null.
+void ee_won_queuesocket_set_repeat_completion(const EeWonQueueSocket *q,
+                                              void *c);
+
+/// `SetCloseCompletion`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_close_completion(const EeWonQueueSocket *q, void *c);
+
+/// `SetQueueCompletion`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_queue_completion(const EeWonQueueSocket *q, void *c);
+
+/// `StartCloseTimer`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_start_close_timer(const EeWonQueueSocket *q, long timeout);
+
+/// `CancelCloseTimer`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_cancel_close_timer(const EeWonQueueSocket *q);
+
+/// `CloseTimerCallback`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_close_timer_callback(const EeWonQueueSocket *q, void *timer);
+
+/// `OpCallback`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_op_callback(const EeWonQueueSocket *q, void *op);
+
+/// `SetRepeatOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_repeat_op(const EeWonQueueSocket *q, void *op);
+
+/// `RunRepeatOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_run_repeat_op(const EeWonQueueSocket *q);
+
+/// `QueueOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_op(const EeWonQueueSocket *q, void *op, long timeout);
+
+/// `RunQueueOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_run_queue_op(const EeWonQueueSocket *q);
+
+/// `QueueClose`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_close(const EeWonQueueSocket *q, long timeout);
+
+/// `QueueOpFast`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_op_fast(const EeWonQueueSocket *q, void *op, uint32_t timeout);
+
+/// `OpenHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`; the caller holds the socket's lock.
+void ee_won_queuesocket_open_hook(const EeWonQueueSocket *q);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_open_hook`.
+void ee_won_queuesocket_close_hook(const EeWonQueueSocket *q);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_open_hook`.
+void ee_won_queuesocket_kill_hook(const EeWonQueueSocket *q);
+
+/// A new LAN socket object for the C++ `socket`.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` outlives the object.
+EeWonLanSocket *ee_won_lansocket_new(void *socket, const EeWonLanSocketHooks *hooks);
+
+/// Frees the LAN socket object.
+///
+/// # Safety
+/// `l` came from `ee_won_lansocket_new` and is freed once.
+void ee_won_lansocket_free(EeWonLanSocket *l);
+
+/// `GetClient`.
+///
+/// # Safety
+/// `l` is a live LAN socket object (so for every `ee_won_lansocket_` call).
+void *ee_won_lansocket_client(const EeWonLanSocket *l);
+
+/// `SetClient`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`; `client` is null or a live client.
+void ee_won_lansocket_set_client(const EeWonLanSocket *l, void *client);
+
+/// `mLastMessageTime`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`.
+int64_t ee_won_lansocket_last_message_time(const EeWonLanSocket *l);
+
+/// `mLastMessageTime = t`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`.
+void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -18721,6 +19383,495 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` outlives the object.
+EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
+                                         const EeWonAsyncSocketHooks *hooks,
+                                         int32_t kind);
+
+/// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
+///
+/// # Safety
+/// `s` came from `ee_won_asyncsocket_new` and is freed once.
+void ee_won_asyncsocket_free(EeWonAsyncSocket *s);
+
+/// `GetType`.
+///
+/// # Safety
+/// `s` is a live socket object (so for every `ee_won_asyncsocket_` call).
+int32_t ee_won_asyncsocket_kind(const EeWonAsyncSocket *s);
+
+/// `IsValid`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_valid(const EeWonAsyncSocket *s);
+
+/// `IsOpen`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_open(const EeWonAsyncSocket *s);
+
+/// `IsConnected`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_connected(const EeWonAsyncSocket *s);
+
+/// The last socket error recorded (the original's `mStatus`, +0x54).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_status(const EeWonAsyncSocket *s);
+
+/// `GetLengthFieldSize`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+uint8_t ee_won_asyncsocket_length_field_size(const EeWonAsyncSocket *s);
+
+/// `SetLengthFieldSize`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_set_length_field_size(const EeWonAsyncSocket *s, uint8_t size);
+
+/// `mThreadCloseCallback = callback` (a `void (*)(AsyncSocket*)`, null for none).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `callback` is null or such a function.
+void ee_won_asyncsocket_set_close_callback(const EeWonAsyncSocket *s, void *callback);
+
+/// `GetLastSocketError`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_last_error(const EeWonAsyncSocket *s);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_close(const EeWonAsyncSocket *s);
+
+/// `Kill`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_kill(const EeWonAsyncSocket *s);
+
+/// `Open`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_open(const EeWonAsyncSocket *s);
+
+/// `Bind` (network-order address and port).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
+                             uint32_t address,
+                             uint16_t port,
+                             bool reuse);
+
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+long ee_won_asyncsocket_connect_to(const EeWonAsyncSocket *s,
+                                   const EeWonIpAddr *addr,
+                                   uint32_t local_host);
+
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void *ee_won_asyncsocket_mutex(const EeWonAsyncSocket *s);
+
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+EeWonIpAddr *ee_won_asyncsocket_dest_addr(const EeWonAsyncSocket *s);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+void ee_won_asyncsocket_set_dest_addr(const EeWonAsyncSocket *s, const EeWonIpAddr *addr);
+
+/// `Listen`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_listen(const EeWonAsyncSocket *s, int32_t backlog);
+
+/// `Accept`'s system part: the accepted handle and the peer, or the error.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; the out-parameters are valid.
+long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
+                               ptrdiff_t *handle,
+                               uint32_t *address,
+                               uint16_t *port);
+
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s,
+                              ptrdiff_t handle,
+                              uint32_t address,
+                              uint16_t port);
+
+/// `WaitForConnect`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_wait_for_connect(const EeWonAsyncSocket *s, uint32_t timeout);
+
+/// `WaitForRead` (mask 1) / `WaitForWrite` (mask 2).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_wait(const EeWonAsyncSocket *s, uint32_t mask, uint32_t timeout);
+
+/// `Send` (`sent` may be null).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes.
+long ee_won_asyncsocket_send(const EeWonAsyncSocket *s,
+                             const void *data,
+                             int32_t length,
+                             int32_t *sent);
+
+/// `Recv` (`received` may be null).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` has room for `length` bytes.
+long ee_won_asyncsocket_recv(const EeWonAsyncSocket *s,
+                             void *data,
+                             int32_t length,
+                             int32_t *received);
+
+/// `SendTo`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes.
+long ee_won_asyncsocket_send_to(const EeWonAsyncSocket *s,
+                                const void *data,
+                                int32_t length,
+                                uint32_t address,
+                                uint16_t port);
+
+/// `RecvFrom`: the sender in `*address` / `*port` and true in `*from` on success.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` has room for `length` bytes; the out-parameters are valid (`received` may
+/// be null).
+long ee_won_asyncsocket_recv_from(const EeWonAsyncSocket *s,
+                                  void *data,
+                                  int32_t length,
+                                  uint32_t *address,
+                                  uint16_t *port,
+                                  bool *from,
+                                  int32_t *received);
+
+/// `Disconnect`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_disconnect(const EeWonAsyncSocket *s);
+
+/// `SetType`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_set_type(const EeWonAsyncSocket *s, int32_t kind);
+
+/// `GetLocalPort`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+uint16_t ee_won_asyncsocket_local_port(const EeWonAsyncSocket *s);
+
+/// `SetBroadcast`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_set_broadcast(const EeWonAsyncSocket *s, bool on);
+
+/// `SetNagling`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_set_nagling(const EeWonAsyncSocket *s, bool on);
+
+/// `AddMsgTransform` (the socket owns `transform`).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `transform` is a `MsgTransform*` the hooks delete.
+void ee_won_asyncsocket_add_transform(const EeWonAsyncSocket *s, void *transform);
+
+/// `RemoveAllMsgTransforms`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_remove_all_transforms(const EeWonAsyncSocket *s);
+
+/// `TransformSendMsg` (`message` is the caller's `ByteBufferPtr*`).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_transform_send(const EeWonAsyncSocket *s, void *message);
+
+/// `TransformRecvMsg`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_transform_recv(const EeWonAsyncSocket *s, void *message);
+
+/// `SendBytesOp::Continue`'s loop on the socket: sends `data[*pos..length]`; `*pos` follows.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes; `pos` is valid.
+long ee_won_asyncsocket_send_all(const EeWonAsyncSocket *s,
+                                 const uint8_t *data,
+                                 size_t length,
+                                 uint32_t *pos,
+                                 EeWonOpTiming timing);
+
+/// `ClosePrv`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_close_handle(const EeWonAsyncSocket *s);
+
+/// `RecvCRMsgOp::Continue`'s loop on the socket: each byte to `sink` until a CR-LF; `last` is the line so far's
+/// last byte (-1 for none).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; the sink is called during the call only.
+long ee_won_asyncsocket_recv_line(const EeWonAsyncSocket *s,
+                                  int32_t last,
+                                  EeWonOpTiming timing,
+                                  EeWonByteSink sink,
+                                  void *context);
+
+/// A new op object for the C++ `op`.
+///
+/// # Safety
+/// `hooks` is a static table; `op` outlives the object.
+EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonSocketOpBaseHooks *hooks);
+
+/// Frees the op object (the socket's reference goes).
+///
+/// # Safety
+/// `o` came from `ee_won_socketop_new` and is freed once.
+void ee_won_socketop_free(EeWonSocketOp *o);
+
+/// `GetSocket`.
+///
+/// # Safety
+/// `o` is a live op object (so for every `ee_won_socketop_` call).
+void *ee_won_socketop_socket(const EeWonSocketOp *o);
+
+/// `SetSocket`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`; `socket` is null or a live C++ socket.
+void ee_won_socketop_set_socket(const EeWonSocketOp *o, void *socket);
+
+/// `mInSocketThread`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+bool ee_won_socketop_in_socket_thread(const EeWonSocketOp *o);
+
+/// `mInSocketThread = on`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_in_socket_thread(const EeWonSocketOp *o, bool on);
+
+/// `mWaitForEvent[i]` (i < 3).
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+bool ee_won_socketop_wait_for_event(const EeWonSocketOp *o, int32_t i);
+
+/// `mWaitForEvent[i] = on`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_wait_for_event(const EeWonSocketOp *o, int32_t i, bool on);
+
+/// `mEventIndex[i]`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+int32_t ee_won_socketop_event_index(const EeWonSocketOp *o, int32_t i);
+
+/// `mEventIndex[i] = index`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_event_index(const EeWonSocketOp *o, int32_t i, int32_t index);
+
+/// `SocketOp::RunHook`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_run_hook(const EeWonSocketOp *o);
+
+/// `RecvCRMsgOp::Start`'s buffer reset.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_line_reset(const EeWonSocketOp *o);
+
+/// `RecvCRMsgOp::Continue`: the status, and on success the message in `*message` (a new `EeWonByteBuffer` the
+/// C++ `ByteBuffer` adopts; null otherwise).
+///
+/// # Safety
+/// As `ee_won_socketop_socket`; `message` is valid.
+long ee_won_socketop_line_continue(const EeWonSocketOp *o,
+                                   EeWonOpTiming timing,
+                                   EeWonByteBuffer **message);
+
+/// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
+///
+/// # Safety
+/// `o` is a live op object (so for every call below); `data` and `message` are null or live `ByteBuffer`s.
+void ee_won_socketop_init_send(const EeWonSocketOp *o,
+                               void *data,
+                               void *message,
+                               bool is_msg);
+
+/// `SendBytesToOp(data, address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `to` is a live value.
+void ee_won_socketop_init_send_to(const EeWonSocketOp *o, void *data, const EeWonIpAddr *to);
+
+/// `RecvBytesOp(length)` / `RecvMsgOp` (`is_msg`, length 0).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv(const EeWonSocketOp *o, uint32_t length, bool is_msg);
+
+/// `RecvBytesFromOp(maxLength)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv_from(const EeWonSocketOp *o, uint16_t max);
+
+/// `ConnectOp(address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `addr` is a live value.
+void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *addr);
+
+/// `AcceptOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// The op class's `Start`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_start(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// The op class's `Continue`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_continue(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// `RecvBytesFromOp::RunHook`'s buffer and reset (the base's run follows).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::CloseFile(status)` (its `CleanupHook`'s).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// The received bytes: a borrowed `ByteBuffer*` (null for none).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_received(const EeWonSocketOp *o);
+
+/// `RecvMsgOp::GetMsg`: a borrowed `ByteBuffer*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_message(const EeWonSocketOp *o);
+
+/// `ConnectOp::GetAddr` / `RecvBytesFromOp::GetAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+EeWonIpAddr *ee_won_socketop_address(const EeWonSocketOp *o);
+
+/// `AcceptOp::GetAcceptedSocket`: a borrowed `AsyncSocket*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_accepted(const EeWonSocketOp *o);
+
+/// A receive's length / a datagram op's maximum.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_length(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetBytesRead`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_bytes_read(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetFilePath`: the bytes to `sink`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; the sink is called during the call only.
+void ee_won_socketop_path(const EeWonSocketOp *o, EeWonByteSink sink, void *context);
+
+/// `SetFilePath`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `path` holds `length` bytes.
+void ee_won_socketop_set_path(const EeWonSocketOp *o, const uint8_t *path, size_t length);
+
+/// `SetAppendFile` (0), `SetBinaryFile` (1), `SetSkipBytes` (2).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_flag(const EeWonSocketOp *o, int32_t which, bool on);
+
+/// `SetFileModifyTime`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
+
+/// `SetProgressCompletion(completion, interval)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
+void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
+
 /// # Safety
 /// `hooks` lives for the program.
 EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
@@ -18986,6 +20137,76 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// A new manager object for the C++ `manager`.
+///
+/// # Safety
+/// `hooks` is a static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+
+/// Frees the object (its references go).
+///
+/// # Safety
+/// `m` came from `ee_won_udpmanager_new` and is freed once.
+void ee_won_udpmanager_free(EeWonUdpManager *m);
+
+/// `Bind`.
+///
+/// # Safety
+/// `m` is a live manager object (so for every call below).
+long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_close(const EeWonUdpManager *m);
+
+/// `SetAutoRecv`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_set_auto_recv(const EeWonUdpManager *m, bool on);
+
+/// `QueueOp` (`op` a `UDPManagerRecvOp` as `RefCount*`).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `op` is live.
+void ee_won_udpmanager_queue_op(const EeWonUdpManager *m, void *op, uint32_t timeout);
+
+/// `Send`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `bytes` is a live `ByteBuffer` (or null), `addr` a live value.
+void ee_won_udpmanager_send(const EeWonUdpManager *m, void *bytes, const EeWonIpAddr *addr);
+
+/// `CleanOps`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_clean_ops(const EeWonUdpManager *m);
+
+/// `SetDefaultCompletion`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `completion` is null or live.
+void ee_won_udpmanager_set_default_completion(const EeWonUdpManager *m, void *completion);
+
+/// The socket (a borrowed `QueueSocket*` as `RefCount*`, null when unbound).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void *ee_won_udpmanager_socket(const EeWonUdpManager *m);
+
+/// `RecvCallback`: the datagram (`bytes`, its `data`) and its sender.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `data` holds `length` bytes; `from` is a live value.
+void ee_won_udpmanager_recv(const EeWonUdpManager *m,
+                            void *bytes,
+                            const uint8_t *data,
+                            size_t length,
+                            const EeWonIpAddr *from);
 
 }  // extern "C"
 

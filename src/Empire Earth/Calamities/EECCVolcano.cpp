@@ -145,14 +145,10 @@ void EECCVolcano::ClearArea(EEUnitClass* inClass, long inX, long inY)
 // nearby; always returns true
 bool EECCVolcano::Start(EECalamity* inCalamity)
 {
-    GE3DPoint theLocation;
-    inCalamity->GetTargetLocation(theLocation);
-    theLocation.SetX(theLocation.GetX() - 0.5f);
-    theLocation.SetY(theLocation.GetY() - 1.5f);
-    gEffectManager->CreatePlacedEffect(theLocation, this->mGraphicEffect1, NULL);
-    inCalamity->mHeight = this->GetMaximumHeight(theLocation) + this->mGraphicEffect1->GetSize();
-    this->PlaySound(inCalamity);
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.start_size = this->mGraphicEffect1->GetSize();
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCVolcano::StartStep);
 }
 
 // FUNCTION: EXE 0x4b4b62
@@ -208,14 +204,10 @@ bool EECCVolcano::CreateVolcano(EECalamity* inCalamity)
 // Stops the volcano's sound and kills and deselects its volcano unit
 void EECCVolcano::Stop(EECalamity* inCalamity)
 {
-    EEUnit* theVolcano = NULL;
-    inCalamity->StopSound();
-    inCalamity->GetTargetUnit(theVolcano);
-    if (theVolcano == NULL)
-        return;
-    theVolcano->Kill(0, 0, 0);
-    theVolcano->mPlayer->DeselectUnit(theVolcano);
-    inCalamity->SetTargetUnit(NULL);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.start_size = this->mGraphicEffect1->GetSize();
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCVolcano::StartStep);
 }
 
 // FUNCTION: EXE 0x4b4e74
@@ -379,3 +371,25 @@ void EECCVolcano::UpdateVolcano(EECalamity* inCalamity, float inElapsedTime)
 // TEMPLATE: EXE 0x4b5a3c
 // TEMPLATE: EXE 0x4b5ab4
 // TEMPLATE: EXE 0x4b5b29
+
+// New (port): EECCVolcano's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCVolcano::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCVolcano* theClass = static_cast<EECCVolcano*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        // the placed effect at the volcano, then the highest ground around it
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
+        gEffectManager->CreatePlacedEffect(theLocation, theClass->mGraphicEffect1, NULL);
+        outReply.x = theClass->GetMaximumHeight(theLocation);
+        return true;
+    }
+    default:
+        return false;
+    }
+}

@@ -1372,7 +1372,7 @@ void RoutingLogic::ConnectionClosed(AsyncOp* inBaseOp)
 {
     SocketOp* inOp = static_cast<SocketOp*>(inBaseOp);
     // Both RefCount subobjects sit at offset 0, so the socket and connection compare as RefCount pointers
-    RefCount* aSocket = inOp->mSocket.get();
+    RefCount* aSocket = inOp->GetSocket();
     RefCount* aConnection = this->GetConnection();
     if (aSocket != aConnection) return;
     LobbyBroadcastEvent(new LeftRoomEvent(4, true, true), true);

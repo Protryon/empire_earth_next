@@ -42,7 +42,7 @@ RoutingClientInfoPtr SmartRoutingConnection::GetNewClientInfo()
 // Returns the client with an id (the client being handled first), or NULL
 RoutingClientInfoPtr SmartRoutingConnection::GetClient(unsigned short id)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     if(this->mHandlerClient.get()!=NULL && this->mHandlerClient->mClientId==id)
         return this->mHandlerClient;
     RoutingClientMap::iterator i=this->mClientMap.find(id);
@@ -53,7 +53,7 @@ RoutingClientInfoPtr SmartRoutingConnection::GetClient(unsigned short id)
 // Returns the group with an id (the group being handled first), or NULL
 RoutingGroupInfoPtr SmartRoutingConnection::GetGroup(unsigned short id)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     if(this->mHandlerGroup.get()!=NULL && this->mHandlerGroup->mId==id)
         return this->mHandlerGroup;
     RoutingGroupMap::iterator i=this->mGroupMap.find(id);
@@ -140,7 +140,7 @@ void SmartRoutingConnection::InitHandlerVariables(RoutingGroupInfo* group,Routin
 // Updates the client, group and member maps from a finished routing op or notification, by op type
 void SmartRoutingConnection::RoutingOpCompleteHook(RoutingOp *theOp)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 	this->mHandlerClient = NULL;
 	this->mHandlerGroup = NULL;
 	this->mHandlerMember = NULL;
@@ -301,7 +301,7 @@ void SmartRoutingConnection::HandleDataObjectModified(RoutingDataObjectModifiedO
 // Stores the CD-key id read from a _KeyId data object on the client (0 if the data is short)
 void SmartRoutingConnection::SetClientCDKeyIdFromDataObject(unsigned short theClientID, ByteBufferPtr theBuf)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 
 	// Set the client key hash
 	RoutingClientInfoPtr theClientInfo = this->GetClient(theClientID);
@@ -392,7 +392,7 @@ void SmartRoutingConnection::HandleGetMembersOfGroup(RoutingGetMembersOfGroupOp 
 // Merges a new member list into a group's members, keeping client records and group counts in step
 void SmartRoutingConnection::SyncMemberMapWithClientMap(RoutingMemberMap &theOldMap, const RoutingMemberMap &theNewMap)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 	RoutingMemberMap::iterator anOldItr = theOldMap.begin();
 	RoutingMemberMap::const_iterator aNewItr = theNewMap.begin();
 
@@ -451,7 +451,7 @@ void SmartRoutingConnection::SyncMemberMapWithClientMap(RoutingMemberMap &theOld
 // Links every member of a new group to its shared client record, counting the group on each client
 void SmartRoutingConnection::SyncMemberMapWithClientMap(RoutingMemberMap &theMap)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 	RoutingMemberMap::iterator anItr = theMap.begin();
 
 	while(anItr!=theMap.end())
@@ -580,7 +580,7 @@ void SmartRoutingConnection::HandleClientLeftServer(RoutingClientLeftServerOp *t
 // Re-marks every known client as ignored or not from the ignore list
 void SmartRoutingConnection::SyncClientMapWithIgnoreList()
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 
 	RoutingClientMap::iterator aClientItr = this->mClientMap.begin();
 	while(aClientItr!=this->mClientMap.end())
@@ -730,7 +730,7 @@ void SmartRoutingConnection::HandlePeerChat(RoutingPeerChatOp *theOp)
 // Sets the path of the ignore list file
 void SmartRoutingConnection::SetProductName(const std::string &thePath)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 	this->mIgnoreFilePath = thePath;
 }
 
@@ -738,7 +738,7 @@ void SmartRoutingConnection::SetProductName(const std::string &thePath)
 // Adds the names from the ignore list file (NUL-separated wide strings) to the ignore set
 void SmartRoutingConnection::LoadIgnoreSet()
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     if(this->mIgnoreFilePath.empty()) return;
     FILE* file=PlatFOpen(this->mIgnoreFilePath.c_str(),"rb");
     if(file==NULL) return;
@@ -760,7 +760,7 @@ void SmartRoutingConnection::LoadIgnoreSet()
 // Writes the ignore set to the ignore list file as NUL-terminated wide strings
 void SmartRoutingConnection::SaveIgnoreSet()
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     if(this->mIgnoreFilePath.empty()) return;
     FILE* file=PlatFOpen(this->mIgnoreFilePath.c_str(),"wb");
     if(file==NULL) return;
@@ -793,7 +793,7 @@ static bool RoutingNamesMatch(const std::wstring& query,const std::wstring& name
 SmartRoutingConnection::MatchResult SmartRoutingConnection::FindClient(
     const std::wstring& inName,RoutingClientInfoPtr& outClient)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     MatchResult result=MatchResult_NotFound;
     for(RoutingClientMap::iterator i=this->mClientMap.begin();i!=this->mClientMap.end();++i) {
         const std::wstring& aName=i->second->mName;
@@ -815,7 +815,7 @@ SmartRoutingConnection::MatchResult SmartRoutingConnection::FindClient(
 // Ignores or unignores a client by name and saves the ignore list
 void SmartRoutingConnection::IgnoreClient(RoutingClientInfo *theClient, bool on)
 {
-	AutoCrit aCrit(this->mDataCrit);
+	AutoCrit aCrit(this->GetDataLock());
 
 	static_cast<SmartRoutingClientInfo*>(theClient)->mIgnored = on;
 	if(on)
@@ -829,14 +829,14 @@ void SmartRoutingConnection::IgnoreClient(RoutingClientInfo *theClient, bool on)
 // Maps a chat command word (case-insensitive) to a command
 void SmartRoutingConnection::AddCommandString(const std::wstring& inText, InputCommand inCommand)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     this->mCommandStringMap[WStringToUpperCase(inText)] = inCommand;
 }
 // FUNCTION: WON 0x6c3a50
 // Registers the user chat commands (whisper, emote, ignore, away)
 void SmartRoutingConnection::AddDefaultUserCommandStrings()
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     this->AddCommandString(L"W", InputCommand_Whisper);
     this->AddCommandString(L"WHISPER", InputCommand_Whisper);
     this->AddCommandString(L"ME", InputCommand_Emote);
@@ -850,7 +850,7 @@ void SmartRoutingConnection::AddDefaultUserCommandStrings()
 // Registers the moderator chat commands (moderator mode, mute, ban, unmute, server-wide forms)
 void SmartRoutingConnection::AddDefaultModeratorCommandStrings()
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     this->AddCommandString(L"MOD", InputCommand_BecomeModerator);
     this->AddCommandString(L"SMUTE", InputCommand_ServerMute);
     this->AddCommandString(L"SBAN", InputCommand_ServerBan);
@@ -863,7 +863,7 @@ void SmartRoutingConnection::AddDefaultModeratorCommandStrings()
 // Sets whether chat commands accept a unique name prefix or only exact names
 void SmartRoutingConnection::SetAllowPartialNameMatch(bool inAllow)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     if(inAllow)
         this->mMatchTolerance = MatchResult_Partial;
     else
@@ -873,7 +873,7 @@ void SmartRoutingConnection::SetAllowPartialNameMatch(bool inAllow)
 // Sets whether mute/ban commands apply server-wide
 void SmartRoutingConnection::SetServerWideCommands(bool inOn)
 {
-    AutoCrit crit(this->mDataCrit);
+    AutoCrit crit(this->GetDataLock());
     this->mServerWideCommands = inOn;
 }
 // FUNCTION: WON 0x006c4120

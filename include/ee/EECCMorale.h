@@ -17,6 +17,8 @@ public:
     virtual ~EECCMorale();                  // 0xb2bdf
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb2bfe
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb2cad
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb2d13
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (ICF-folded 0xb1c06: mBoolPlaceHolder1 off)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xb2d6d

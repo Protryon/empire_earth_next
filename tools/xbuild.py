@@ -381,12 +381,15 @@ WON_TESTS = {
                                                          "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
                                                          "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
                                                          "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
-                                                         "SocketThread.cpp")],
+                                                         "SocketThread.cpp", "UDPManager.cpp",
+                                                         "UDPManagerDefaults.cpp")],
                      *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
                                                           "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
+    # the socket classes' events (golden: rust/crates/ee_won/src/golden_sockobj.txt, recorded over the C++ classes)
+    "won_sockobj_test": "won_ops_test",
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
     "won_lan_test": [],
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's

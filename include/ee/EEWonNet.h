@@ -21,6 +21,8 @@ class UIControl;
 class UITextLabel;
 
 struct EeWonAuthSecrets; // rust/ee_rust.h
+struct EeWonIpAddr; // rust/ee_rust.h (ipobj.rs)
+struct EeWonAddr; // rust/ee_rust.h (servctx.rs)
 namespace WONAPI {
 // 0x2a6280 (WONAPI string utilities, /GX): narrows a wide string
 std::string WStringToString(const std::wstring& inString);
@@ -46,15 +48,17 @@ inline const wchar_t* WStringGetCStr(const std::wstring &theStr)
 }
 
 
-// WONAPI's network address (passed by value: 0x28 bytes; layout not decoded; provisional class name)
+// WONAPI's network address (passed by value: 0x28 bytes in the original; provisional class name). A Rust value since
+// round 14 (rust/crates/ee_won/src/ipobj.rs EeWonIpAddr: the remember flag +0x00, the host text +0x04, the
+// PlatSockAddrIn +0x14 and the validity +0x24); this class is its handle, copied with the value at every copy
+// (the copy constructor clones it, the assignment copies it, the destructor frees it), as the original's implicit
+// copy constructor (COMDAT 0x291d59) and operator= (0x29181b) copied the members
 class IPAddr {
-private:
-    static long mLocalHost; //genuine SDK host-order local IPv4, native565f40
 public:
-    static long GetLocalHost() { return mLocalHost; } //genuine SDK inline getter
-    void SetRememberHostString(bool remember) { mRememberHostString=remember; }
+    static long GetLocalHost(); //genuine SDK getter of the host-order local IPv4 (native565f40, Rust's now)
+    void SetRememberHostString(bool remember);
     IPAddr(const PlatSockAddrIn&); //2b2380, primary concrete IPv4 socket-address constructor
-    const PlatSockAddrIn& GetSockAddrIn() const; //2b31e0, LEA14/RET; no invented pointer API
+    const PlatSockAddrIn& GetSockAddrIn() const; //2b31e0, LEA14/RET; the value's (valid until it is set again)
     void Fn2B2B00(const PlatSockAddrIn&); //2b2b00, actual Set address/string/validity
 
     IPAddr(const std::string&,unsigned short); //2b23e0, native complete28 ctor
@@ -78,15 +82,24 @@ public:
     bool operator!=(const IPAddr&) const; //2b3240
     void SetPort(unsigned short inPort);    // 0x2b2f90
     bool IsValid() const;                   // 0x2b31d0
-    const char* GetSixByte() const;         // 0x2b29c0: address of sockaddr port/IP bytes at +0x16
+    const char* GetSixByte() const;         // 0x2b29c0: the value's sockaddr port/IP bytes
     void SetSixByte(const void* inAddress); // 0x2b29d0: consumes six bytes, clears host and sets validity
-    bool operator<(const IPAddr& inOther) const; // 0x2b31f0: six network-order port/IP bytes at +0x16
+    bool operator<(const IPAddr& inOther) const; // 0x2b31f0: six network-order port/IP bytes
 
-    // implicit copy ctor (COMDAT 0x291d59), operator= (COMDAT 0x29181b) and dtor (provisional names)
-    bool mRememberHostString;               // +0x00
-    std::string mHost;                      // +0x04
-    PlatSockAddrIn mAddr;                   // +0x14 (sockaddr_in: 16 bytes, copied as four dwords)
-    bool mIsValid;                          // +0x24
+    IPAddr(const IPAddr&);
+    IPAddr& operator=(const IPAddr&);
+    ~IPAddr();
+    // ServerContext's conversions to and from servctx.rs's EeWonAddr (the host borrowed while this value lives)
+    EeWonAddr ToRaw() const;
+    void FromRaw(const EeWonAddr& inRaw);
+    // the Rust value, for the Rust objects that copy it (a socket's destination, an op's address)
+    const EeWonIpAddr* GetValue() const { return this->mAddr; }
+    // an address taking a value a Rust object made (owned from then on)
+    static IPAddr FromValue(EeWonIpAddr* inValue) { return IPAddr(inValue, AdoptTag()); }
+private:
+    struct AdoptTag {};
+    IPAddr(EeWonIpAddr* inValue, AdoptTag); // takes a value the Rust side made (GetLocalAddr)
+    EeWonIpAddr* mAddr;                     // owned
 };
 
 // WONAPI's intrusive reference count base (inferred reconstruction: AddRef is InterlockedIncrement of +4 in
@@ -119,18 +132,21 @@ public:
 
 // Actual nonpolymorphic eight-byte lock guard: critical reference0, unsigned count4.
 // Original34B destructor29f2c0 leaves exactly the entered nesting count.
+// It holds the lock's platform mutex: a CriticalSection's, or one a Rust object owns (a socket's GetDataLock()).
 class AutoCrit {
-    CriticalSection& mCritR;
+    PlatMutex* mCrit;
     unsigned int mEnterCt;
     AutoCrit();
     AutoCrit(const AutoCrit&);
     AutoCrit& operator=(const AutoCrit&);
 public:
     explicit AutoCrit(CriticalSection& inCrit,bool inEnterNow=true)
-        : mCritR(inCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
-    ~AutoCrit() { while (mEnterCt>0) { mCritR.Leave(); --mEnterCt; } }
-    void Enter() { mCritR.Enter(); ++mEnterCt; }
-    void Leave() { if (mEnterCt>0) { mCritR.Leave(); --mEnterCt; } }
+        : mCrit(inCrit.mCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
+    explicit AutoCrit(PlatMutex* inCrit,bool inEnterNow=true)
+        : mCrit(inCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
+    ~AutoCrit() { while (mEnterCt>0) { PlatMutexUnlock(mCrit); --mEnterCt; } }
+    void Enter() { PlatMutexLock(mCrit); ++mEnterCt; }
+    void Leave() { if (mEnterCt>0) { PlatMutexUnlock(mCrit); --mEnterCt; } }
 };
 
 // a directory server entry of WONAPI (class name and layout PROVISIONAL: the server list form shows mDisplayName,

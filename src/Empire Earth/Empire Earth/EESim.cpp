@@ -183,6 +183,11 @@
 #include "ee/EECombatFormulas.h"
 #include "ee/EEAreaUtilities.h"     // EECanHeal (the sweep)
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
+#include "lle/GEQuaternion.h"
+#include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
+#include "ee/EEUCMissile.h"         // the missile sweep's impact tests
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGAttackGround.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EECalamity.h"
@@ -331,6 +336,104 @@ static void EECombatListSearchSweep()
     EESimCaptureRecord::Only(0);
 }
 
+// TEST ONLY: the missile sweep (CBMA, CBMH and the impact tests' records). No game of the capture profiles flies a
+// missile (EEPMMissile: the missile and torpedo classes), so with EE_SIM_CAPTURE and --missile-sweep (the capture's
+// missile profile: the oracle's game, its own golden digests of those tags), when the game ends (after the
+// unit-list search's sweep), each player's newest four armed units on the map launch one missile of every missile and
+// torpedo class at the newest armed unit of the next player: the missile is created on the unit's tile 1.5 above it,
+// its launcher class the first class that fires it (else the unit's), alternately at the unit (attack unit) and at its
+// position (attack ground), launched as LaunchShot launches it (LaunchProjectile; a class without a launch delay gets
+// 0.3 s of boost so both steps fly) and put on the map as FlushWorld puts it (the queued placements, the pending
+// units). Then up to 120 ticks of the missile's update without its effects and sound: the physics model's step, the
+// flight time's count down, the water and ground impact tests (the first true ends it). Only the flight steps' and
+// impact tests' records are written, and no other thread's while it runs; the game is over and nothing simulates
+// after it.
+static void EECombatMissileSweep()
+{
+    const unsigned int kTags[] = {EE_COMBAT_TAG('C', 'B', 'M', 'A'), EE_COMBAT_TAG('C', 'B', 'M', 'H'),
+                                  EE_COMBAT_TAG('C', 'B', 'G', 'I'), EE_COMBAT_TAG('C', 'B', 'W', 'I')};
+    EESimCaptureRecord::Only(kTags, 4);
+    EESimCaptureRecord::Exclusive(true);
+    std::vector<EEUCMissile*> theClasses;
+    std::vector<EEUnitClass*> theLaunchers;
+    for (EEUnitClass* theClass : gUnitClassTable) {
+        if (theClass == NULL
+            || (theClass->mCategory != kUnitCategoryMissile && theClass->mCategory != kUnitCategoryTorpedo))
+            continue;
+        EEUnitClass* theLauncher = NULL;
+        for (EEUnitClass* theOther : gUnitClassTable)
+            if (theOther != NULL && theOther->mProjectileClass == theClass) {
+                theLauncher = theOther;
+                break;
+            }
+        theClasses.push_back(static_cast<EEUCMissile*>(theClass));
+        theLaunchers.push_back(theLauncher);
+    }
+    std::vector<std::vector<EEComplexUnit*>> theArmed;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        std::vector<EEComplexUnit*> theAll;
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
+             theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL && theComplex->mTileNode != NULL
+                && theComplex->GetTileX() != -10000 && theComplex->mStats->GetAttack() > 0.0f
+                && theComplex->mUnitClass->mCategory != kUnitCategoryMissile
+                && theComplex->mUnitClass->mCategory != kUnitCategoryTorpedo)
+                theAll.push_back(theComplex);
+        }
+        if (!theAll.empty())
+            theArmed.push_back(theAll);
+    }
+    for (size_t p = 0; theArmed.size() > 1 && p < theArmed.size(); p++) {
+        EEComplexUnit* theTarget = theArmed[(p + 1) % theArmed.size()].back();
+        const std::vector<EEComplexUnit*>& theUnits = theArmed[p];
+        size_t theFirst = theUnits.size() > 4 ? theUnits.size() - 4 : 0;
+        for (size_t i = theFirst; i < theUnits.size(); i++) {
+            EEComplexUnit* a = theUnits[i];
+            for (size_t k = 0; k < theClasses.size(); k++) {
+                if (theTarget->mHitPoints <= 0 || theTarget->GetTileX() == -10000)
+                    break;
+                EEUCMissile* theClass = theClasses[k];
+                EEUnit* theCreated = theClass->CreateUnit(a->GetTileX(), a->GetTileY(), a->mPlayer->GetPlayerID(), false, a);
+                EEComplexUnit* m = theCreated != NULL ? theCreated->GetComplexUnit() : NULL;
+                if (m == NULL)
+                    continue;
+                GETransformation theStart(a->mPhysicalModel.GetLocation());
+                theStart.SetZ(theStart.GetZ() + 1.5f);
+                m->mPhysicalModel.SetLocation(theStart);
+                m->SetLauncherClass(theLaunchers[k] != NULL ? theLaunchers[k] : a->mUnitClass);
+                m->SetOwner(a);
+                GE3DPoint theAt;
+                theTarget->GetPosition(theAt);
+                EEUnitGoal* theGoal;
+                if (((i + k) & 1) == 0)
+                    theGoal = new EEUGAttackUnit(m, theTarget, false, false);
+                else
+                    theGoal = new EEUGAttackGround(theAt, false);
+                m->SetGoal(theGoal, false, false);
+                m->SetVelocity(a->GetVelocity());
+                theClass->LaunchProjectile(m, theAt);
+                if (m->mFlightTime == 0)
+                    m->SetFlightTime(300);
+                // onto the map, as the next tick's EEPhysics::FlushWorld puts a launched shot
+                gWorld.FlushQueuedPlacements();
+                a->mPlayer->AddPendingUnits(false, true);
+                for (int t = 0; t < 120 && m->mTileX != -10000 && m->mGoalState != NULL; t++) {
+                    theClass->mPhysicsModel->Step0(m);
+                    long theElapsed = gPhysics->mTickTimeMs != 0 ? gPhysics->mTickTimeMs : 1;
+                    if (m->mFlightTime != 0)
+                        m->SetFlightTime(m->mFlightTime > theElapsed ? m->mFlightTime - theElapsed : 0);
+                    if (theClass->CheckWaterImpact(m) || theClass->CheckGroundImpact(m))
+                        break;
+                }
+            }
+        }
+    }
+    EESimCaptureRecord::Exclusive(false);
+    EESimCaptureRecord::Only(0);
+}
+
 namespace {
 
 // ------------------------------------------------------------------------------------------------ options
@@ -356,6 +459,7 @@ struct Options {
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
     long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
+    bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -564,6 +668,11 @@ void FinishGame(const char* inOutcome)
     if (EESimCaptureRecord::Active() && !sSwept) {
         sSwept = true;
         EECombatListSearchSweep();
+        if (sOptions.mMissileSweep) {
+            EECombatMissileSweep();
+            // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
+            EESimCaptureRecord::Close();
+        }
     }
     Finish(inOutcome);
 }
@@ -1614,6 +1723,8 @@ const char* kUsage =
     "                         free port at each bind)\n"
     "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
+    "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
+    "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
     "  --quiet                no progress on stderr\n";
 
 // a path made absolute now (the game moves the current directory to its data root at start)
@@ -1772,6 +1883,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mQuiet = true;
         else if (a == "--calamities")
             sOptions.mCalamities = true;
+        else if (a == "--missile-sweep")
+            sOptions.mMissileSweep = true;
         else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")

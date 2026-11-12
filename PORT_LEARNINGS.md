@@ -6747,6 +6747,70 @@ below them keeps its C++ API as shims over the Rust objects.
   the broadcast and join timeouts through the timer thread. EE-SIM never loads the lobby: the oracle cannot see a
   fault here; the lead's LAN game is the end-to-end check.
 
+## R5b.2, third round: the calamity classes' Start and Stop, the contagion helpers and functors, Unlock, ResearchAll and the tech tree's walks in Rust (ee_tech calamity_start.rs, contagion.rs, tree.rs; branch rust-tech3, 2026-11-11)
+
+Every calamity class's `Start` and `Stop`, the contagion helper's `Update` with its spread, the functors' damage
+arithmetic and the calamity's discrete updates, the epoch's `Unlock` and `ResearchAll` and the tech tree's remaining
+walks and tests are Rust. The C++ keeps the classes, the helper and its unit list, the functors' world calls, the
+nodes and every world step.
+
+- **Capture first, from the unmodified C++** (commits 965c6833, 6630937e; `ee/EETechCapture.h`):
+  CALT (every `Start` and `Stop`: the calamity's numeric state with its rectangle and sounds, its target's and
+  caster's unit state (hit points, disabled flag and reason, sight, morale counts, cloak, calamity flags, fire effect,
+  area effects), the contagion manager's helper count and next id and the effect manager's sizes, before and after;
+  the effects a start places with their locations and the sounds it places with their volume and pan; the result),
+  CONT (every contagion helper update: its timers, the calamity's discrete timer and the held units before and after,
+  and in order the spread with its chance, every near unit with what passed and the draw and distance it took, the
+  new units (added, immune, skipped), the functor's update, the applies, the removals, the functors' infects, cures
+  and damage), TNWK (Unlock, ResearchAll, ResearchKind, an epoch's ObsoleteOutdatedNodes and MakeObsolete, a node's
+  SetObsolete and NeedsUnitMedia, an epoch's GetBuildTime, SetEpoch, AdvanceEpoch, SetNodeAvailable: the arguments,
+  the per-node steps, the node and the tree after, the result; walks nest through the events their steps fire, so
+  each opens its own step list). In the same runs every existing digest of the four profiles equalled its golden.
+- **Start and Stop over the update's host.** `calamity_start::start`/`stop` dispatch on the class enum and run the
+  class's decisions; the shared world steps are new `EeCalamityOp`s answered in `EECalamityUpdate.cpp` (the sounds,
+  the helper's creation and `ESVERIFY`ed destruction, the height, the killed storm or volcano, the caster's sight,
+  the target's protection and liveness, a tile's terrain), a class's own are `EeCalamityOp::ClassStep` calls its new
+  static `StartStep` answers (its effects, units, payments, orders). The calamity's state travels as for the
+  updates; the cloak's area effect waits in the host (`mPending`) between the steps that create it and cloak the
+  group. `CreateSourceEffect` is gone (its decisions are the earthquake's start, its world part a step).
+  `EECCAreaEffect::Start` called `GetSourceLocation` and ignored the point (a pure read): the call is dropped. The
+  `DestroyContagionHelper` checks keep their line numbers but now name `EECalamityUpdate.cpp` as their file.
+- **The contagion.** `contagion::update` is the helper's `Update` and `Spread` over `EEContagionHelperHost`: the
+  functor's getters (spread time, chance, radius, skips the spread, allies only) and the class's immunity flag are
+  read once up front (plain getters; the C++ asked some of them per candidate); the near test keeps the
+  short-circuit order (the type test, the allies test, then a draw only when both passed, then the distance only
+  when the draw passed), so the physics draws are the C++'s in count and order. The held units are asked for by
+  index each turn of the loop (the C++'s iterator test), the dead removed in place. The unsigned spread time is
+  compared and subtracted as a float, as the C++ converted it. The functors' arithmetic: the fire's burn
+  `lrintf((burn * 0.01f) * max hit points)`, the tick `damage * updates` (a long times an unsigned long: the
+  32-bit product), the leprosy's Windows `min` with hit points - 1, the area effect's unsigned product converted to
+  a float times the attack stat; `GetDiscreteUpdates` (`lrintf`, stored unsigned, the time left less the count as
+  a float times the period).
+- **The tree.** Per node, as each walk reaches it (an event a step fires can change the tree): Unlock's action
+  (nothing for an obsolete node, available with the epoch, else the epoch prerequisite), ResearchAll's and
+  ResearchKind's choice, ObsoleteOutdatedNodes' test; MakeObsolete's choice, SetObsolete's decision (the flag, the
+  event, whether the media is checked), NeedsUnitMedia, the epoch's build time (half for a computer player, the C
+  division), SetEpoch's test, AdvanceEpoch, SetNodeAvailable's test.
+- **Only the calamity profile exercises the starts and the contagion** (no oracle game casts); the walks run in
+  every profile. Nothing here draws: no change is tour-only, but the start's sounds and effects are world calls the
+  headless EE-SIM makes without a renderer (the effect manager's sizes are in CALT).
+- **A capture record that was not deterministic.** The full run after the port gave TNWK digests unequal to the
+  golden in five oracle seeds and one late seed, and two runs of one build differed: `NeedsUnitMedia` is also asked
+  on the media loader's thread, so its records fell between the game thread's at timing's whim, and its walk used
+  the game thread's step stack. Its records and `GetBuildTime`'s are TNMT now, the step stacks are per thread,
+  and TNWK and TNMT were recorded again from the unmodified C++ (6630937e with the capture change, in a worktree of
+  its own) and compared with the port's. TNMT's order, like TCST's, can move under load.
+- **Found on the way.** A script that cut the classes' bodies by regex took an empty `Stop` (`{` `}`) through the next
+  function (`Initialize`): the link's four unresolved symbols showed it. The four classes whose Start is trivial
+  (meteor storm, conscription, special attack and location) keep their empty C++ `Stop`; their `Start` is Rust.
+- **What is left of the tech tree and the events (C++):** the saved games (`EETechTree::Load` 49 lines and `Save` 65,
+  the epoch's `Load` 71, the node's `Load` 64, `ApplySavedResearch` 17, `ApplySavedScenEditorObsoleted` 25,
+  `ApplySavedState` 16), the media (`BuildUnitClassInfo` 59, `GetUnitClassMediaMask` 34, `IsLatestEffect` 37, the
+  node's `LoadMedia`/`UnloadMedia` 37 each, the epoch's `LoadMedia` 14), the editor's `SetScenEditorObsoleted` 36,
+  the interface (`GetCostString` 48, `UpdateInterface` 10), `EEEvent::LoadEvents` 29 and the effects that touch
+  media, sounds and buttons; the orchestration bodies (`ResearchToEpoch` 49, `RunEffectUncaptured` 52) call Rust
+  for every decision.
+
 ## R5b.2, third round: the target searches' scoring, EEGetPursuerOf, the tile line, the weapon tag point and the damage table storage in Rust (ee_combat search.rs, pursuer.rs, geometry.rs, damage_table.rs; branch rust-combat3, 2026-11-11)
 
 | Piece | C++ caller | Rust | Tag |
@@ -7165,6 +7229,113 @@ Branch `rust-won-net3`. As before, nothing in the game reaches this code except 
   timer test `timers_under_a_factor_fire_at_the_scaled_rate_until_stopped` failed once under load and passed
   alone. Not run: any harness session, macOS or Linux builds.
 
+## R6: WON's socket classes and IPAddr as Rust objects (ee_won sockobj.rs, sockop.rs, qsock.rs, ipobj.rs; branch rust-r6-won14, 2026-11-11)
+
+Round 14 of R6 (RUST_PLAN "R6 WON, the rest"), the third round of whole-class moves: the socket layer under the
+lobby's LAN game now keeps its state in Rust objects; the C++ classes are shims while C++ callers remain.
+
+- **Accessors first, again.** AsyncSocket, SocketOp and its ops, QueueSocket and LobbyLanSocket made their members
+  private and the compiler listed the sites; `build/w14/fix.py` rewrote them by (class, member) from the error's
+  class name, so the many other classes with an `mSocket`, `mDataCrit` or `mLengthFieldSize` of their own were left
+  alone. Header-inline code reports its errors with the header's path (the script's pattern took only `src/` paths:
+  those few were edited by hand), and a derived op of the same family (RecvMsgOp, SendMsgOp) is the base's
+  `friend` rather than growing accessors for every buffer. Files touched outside the lane (mechanical, accessor
+  calls only): EEWonNet.cpp; WONMisc DetectFirewallOp, HTTPGetOp; WONRouting RoutingConnection,
+  SmartRoutingConnection(+Commands, +Snapshots); WONServer ServerConnection, ServerContext (IPAddr's conversions);
+  the lobby's InitLogic, LanLogic, RoutingLogic, EELobbyFileTransfer; WONSocket's own units.
+- **What moved.** `EeWonAsyncSocket` (sockobj.rs): the socket's core, length field size, message transforms (the
+  C++ `MsgTransform` objects, owned) and the socket thread's close callback, and every step of AsyncSocket.cpp,
+  under the C++ `mDataCrit`'s mutex (the subclasses lock it around their own state too, so the C++ keeps the
+  `CriticalSection` and the object borrows its mutex). `EeWonSocketOp` (sockop.rs): every socket op's base (its
+  socket and the reference, the thread flag, the wait flags and event indices) and `RunHook`; RecvCRMsgOp's line.
+  `EeWonQueueSocket` (qsock.rs): the queue, the queued and repeat ops, the four completions and the close timer
+  (a reference each, dropped under the lock where a C++ `SmartPtr` assignment dropped it), the queued-close flag and
+  every step of QueueSocket.cpp; the ops and completions it makes (`ParamCompletion`, `QueueOpFastCompletion`,
+  `QueueCloseOp`, `CloseOp`, the timer) come from C++ hooks. `EeWonLanSocket`: LobbyLanSocket's client (a
+  reference) and time, and `SetClient`'s two-way link. `EeWonIpAddr` (ipobj.rs): IPAddr's value; the C++ class is a
+  handle whose copy constructor clones, assignment copies and destructor frees the value (every copy site copies the
+  whole value, as the original's implicit copy did); `mLocalHost` is Rust's. BlockingSocket has no state (each call
+  makes one op and runs it blocking): nothing to move. Deleted C ABI: `ee_won_socket_init` .. `_set_nagling` (all
+  but start / stop), `ee_won_op_send_all`, `ee_won_op_recv_line`, and the IPAddr helpers the C++ called.
+- **Goldens, recorded first.** `won_sockobj_test` (new, `xbuild wontest`): 319 lines over 127.0.0.1, recorded over
+  the C++ classes before each move (the IPAddr part before IPAddr's): AsyncSocket's steps and hooks, the
+  transforms' order and refusals, the ops blocking and async, each op's Duplicate, QueueSocket's queue, repeat op,
+  QueueOpFast, queued close, close timer and hooks, and IPAddr's parses, texts, wire form, order, copies and local
+  host. The same over the Rust objects, run after run. Driver traps: MSVC's ABI evaluates `"x" + St(op->Run()) +
+  St(op->GetStatus())` right to left (the status was read before the run: `LOG2` evaluates the call first); a
+  socket op's repeat copy is queued in the op container, not started, until the next pump (pump before changing
+  the socket under it, or two ops race to fail); a datagram longer than the buffer is the system's (WSAEMSGSIZE on
+  Windows, cut on POSIX) and the setsockopt error of a closed socket too (`WSAENOTSOCK` / `EBADF`): left out so the
+  golden holds on every system; an op with no socket is not run (RunHook finishes it and starts it anyway: every
+  start reads the socket). LobbyLanSocket needs the lobby's headers and units, so only the LAN game runs it.
+- **Found: an unset sockaddr.** `IPAddr(const std::string&)` on a text without a colon set only the remember flag
+  and the validity: the sockaddr was whatever the stack held (the C++ golden line showed the previous temporary's
+  10.1.2.3:8080, the same run after run). The Rust value starts at zero; that one golden line was re-recorded.
+- **Behaviour changes.** That address is 0.0.0.0:0; RecvCRMsgOp on a socket-less op returns
+  `WS_AsyncSocket_InvalidSocket` instead of reading a null socket; LobbyLanSocket's last message time starts at 0
+  (the original left it unset); every IPAddr is a small heap value (a copy allocates). Nothing else: the same
+  locks, threads and order.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game
+  (`lan_game.py`) is the end-to-end check, and it runs every moved class: the lobby start-up (IPAddr's local
+  address, the adapters), LanLogic's discovery socket (a datagram QueueSocket: RecvBytesFromOp as the repeat op,
+  SendBytesToOp broadcasts, IPAddr from the sender), the host's listening LobbyLanSocket (AcceptOp as the repeat op,
+  the accepted socket's Duplicate, SetClient), the joiner's ConnectOp, the game room's messages (RecvMsgOp repeat
+  ops and SendMsgOp queued ops with the 2-byte length field, through the socket thread and the op container), the
+  close timers and queued closes at the start, and the sockets' destruction.
+
+## R5b.2, fifth round: a missile capture profile, the impact tests and the effects' weapon points in Rust, the combat audit (ee_combat impact.rs, geometry.rs; branch rust-combat5, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the missile's boost and homing ticks (round 4's move) | `EEPMMissile::Accelerate`, `Home` | `flight::missile_accelerate`, `missile_home` | CBMA, CBMH (the missile profile, replayed) |
+| a projectile's ground and water tests | `EEUCProjectile::CheckGroundImpact`, `CheckWaterImpact` | `impact::projectile_ground`, `projectile_water` | CBGI, CBWI (replayed) |
+| a missile's ground and water tests | `EEUCMissile::CheckGroundImpact`, `CheckWaterImpact` | `impact::missile_ground`, `missile_water` | CBGI, CBWI |
+| a torpedo's ground test | `EEUCTorpedo::CheckGroundImpact` | `impact::torpedo_ground` | CBGI |
+| the effects' start at the weapon tag point | `EEE2DLinearProjectile` (2 ctors), `EEE2DMuzzleFlash::SetUp`, `EEE2DSmokeMuzzleBlast` (2 ctors), `EEE3DPulseCannonBall`, `EEE3DTracers` | `geometry::weapon_point` (the line of fire's start, now shared) | CBEW (replayed) |
+
+- **A fifth capture profile, `missile`.** No game of the four profiles flies a missile, and a sweep at the end of
+  their games could not go into them: the missiles it creates stay on the map, and the AI and UI threads, which keep
+  running after the end, then make other `GetCost` calls (TCST: +40 records in oracle seed 2, the same in two runs:
+  the state's doing, not timing). So EE-SIM `--missile-sweep` (TEST ONLY) runs the sweep only in the missile profile
+  (the oracle's game), whose golden file `golden_cpp_missile.txt` lists only CBMA, CBMH, CBGI and CBWI; its other
+  tags are the oracle profile's and show as "without a golden". The four profiles are unchanged.
+- **The sweep.** When the game ends, after the unit-list search's sweep: each player's newest four armed units launch
+  one missile of every missile and torpedo class at the next player's newest armed unit, alternately attack unit and
+  attack ground, the launcher class the first class that fires it; `LaunchProjectile` as `LaunchShot` calls it (0.3 s
+  of boost when the launcher has no launch delay, so both steps fly), then up to 120 ticks of the physics step, the
+  flight time's count down and the water and ground tests. 1,267 to 2,172 CBMA and 6,204 to 10,719 CBMH records a
+  game.
+- **A created unit is not on the map until the next tick's `FlushWorld`.** `CreateUnit` queues the unit
+  (`AddUnitEntry`, the player's pending units); the first sweep crashed in `RTSUnit::Link` when `Home` moved a
+  missile across a tile. The sweep now does what `FlushWorld` does first (`FlushQueuedPlacements`, `AddPendingUnits`).
+- **The capture's new controls.** `EESimCaptureRecord::Only` takes up to four tags (the sweep's), `Exclusive(true)`
+  drops other threads' records while the sweep runs, `Close()` ends the capture after it (missile profile only).
+- **Golden first, one temporary tree.** Commits 747bd2a6 (CBGI/CBWI) and f3723a16 (CBEW) put TEST ONLY probes into
+  the unmodified C++; the goldens were recorded from that tree with one more, temporary change: round 4's C++
+  `Accelerate`/`Home` bodies (from 7d8fe54a) in place of the Rust-backed ones. Every earlier digest of those runs
+  equalled the existing goldens. The CBMA/CBMH digests of the C++ bodies equal the Rust steps' (round 4's move had
+  only unit tests): seed 2's `a47f32c7fdb66775`/`13d0d23dcf7e76f6` from both.
+- **Lazy reads at the seam.** Each test reads the ground height, the off-map tile's height, the attack target's
+  footprint, the goal's location, the missile's target tiles (`EEIsOnTargetTiles`), the missile base's same-tile test
+  and the terrain test only where the original does; Rust asks them of a host table (`EeCombatImpactHost`) and writes
+  each answer with its flag into the record. The replay runs the test over the record's eager part with a host that
+  answers from the record and must write the same record and outcome. `EEIsOnTargetTiles` and the tile lookups stay
+  C++ behind the host.
+- **The weapon point, once.** Round 3's line of fire start (`weapon_height`) and the effects compute the same point:
+  the location's rows scaled (`EETagPointList::Scale`), the tag point turned by its turret part on a model with parts
+  (the identity part applied when it is no turret part: a `-0` may become `+0`, so it is applied, not skipped), up the
+  model chain. `geometry::weapon_point` is both; the effects' default point without a tag list is a new kind
+  (`EE_COMBAT_WEAPON_KIND_DEFAULT`, the point in `top`). CBEW comes from the late and space profiles only (the oracle
+  games stay in the epochs without muzzle flashes): the effects are created in EE-SIM (effect detail 2), but **only a
+  tour draws them**: the lead should look at muzzle flashes and tracers in a later-epoch tour.
+- **Fast digests.** `sim_capture.py digest` is a Python byte loop (about 1 s per MB): a late or space seed pair took
+  over 15 minutes. The golden and verification runs here used a scratch Rust digester of the same lines, checked
+  against the Python one on a seed.
+- **What stays C++:** the projectile's and missile's `ActionChanged`, `EvaluateCondition`, `Update`,
+  `LaunchProjectile`, `EEIsOnTargetTiles`, the shell hole (`EEPlaceImpactDecal`), the placement on the ground, the
+  tracer beam's per-frame start (`EEE3DTracerBeam`, drawn only; not moved) and the audit's list in RUST_PLAN's R5b.2
+  combat row.
+
 ## R5a.2, eighth round: calamity helper ids, the next engine's site walkers, the goals' units out of the world, the units' tile searches (save 0.273-0.276, branch rust-r5a-aisave7, 2026-11-11)
 
 Continues "R5a.2, seventh round" (its matrix: 13 of 40 saves continue identically). Same test:
@@ -7227,3 +7398,79 @@ concerns. All of it is save and load code (the plain oracle stays identical), ex
     mediterranean 2394 s): a state both saves lose, read much later;
   - the AI resource lists rebuilt differently at the load (the dumps' `mines=` and `fish=`: 21 against 9; outside the
     checksums so far).
+
+## R6: WON's socket ops, AsyncSocket's lock and destination, and UDPManager as Rust objects (ee_won sockops.rs, udpmgr.rs, sockobj.rs; branch rust-r6-won15, 2026-11-11)
+
+Round 15 of R6 (RUST_PLAN "R6 WON, the rest"), the fourth round of whole-class moves: the socket layer under the
+lobby's LAN game now keeps all of its state in Rust objects.
+
+- **The golden first.** `won_sockobj_test` grew from 319 to 452 lines, recorded over the unmodified C++ before any
+  move (commit `R6 WON: won_sockobj_test's round 15 golden`): the destination's set, copy and connect; the data
+  lock's recursion and a second thread waiting on it; a 2 MB send continued on the socket thread while the receiver
+  reads blocking (progress chunks); the chunks' bytes read; re-runs of a timed-out RecvBytesOp and RecvMsgOp; file
+  receives (append, text mode, the modify time, the path); the message length limits; refusing transforms on each
+  side; connect and accept async, an invalid address, a refused connect; datagram ops on a connected socket; and
+  UDPManager with its receive and request ops (unbound kills, the auto-receive op, address and address-less ops with
+  checks, WS_ServerReq_Recv's new op, a time-out, the blocking refusals, Send, a request through the manager with a
+  wrong then a right reply, retransmits to WS_NoReply, the ops' own sockets, Close, a rebind). The same 452 lines
+  over the C++ five times and after each of the three moves (4 more runs each). `won_ops_test`'s units now include
+  UDPManager.cpp. Driver traps: an op's RunAsync only queues it in the op container (pump once before blocking on its
+  peer, or the peer waits for a send that has not started); two completions finishing on two threads (the send and
+  the receive of one transfer, a connect and its accept) come in either order: count them and log afterwards.
+- **Found: the re-run quirk.** A RecvBytesOp run again after a time-out keeps its write buffer: the second
+  `StartRecv` reserves the same length, so the receive reads only the room left, then asks for 0 bytes, which the
+  system reports as a close (`WS_AsyncSocket_Shutdown`); a RecvMsgOp re-run reads the old prefix bytes as the body
+  (`WS_RecvMsg_InvalidMessageLength`). The original's behaviour, kept and in the golden.
+- **AsyncSocket's lock and destination** (sockobj.rs). EeWonAsyncSocket owns the recursive lock (created with the
+  object, destroyed after its close) and the destination (an EeWonIpAddr under the lock); `Fn2B0E60` is Rust's whole
+  (`ee_won_asyncsocket_connect_to`), Accept's adopt sets the accepted socket's destination from the peer. The C++
+  keeps `GetDataLock()` (the mutex), `GetDestAddr()` (now a copy: `IPAddr::FromValue` adopts a Rust value) and
+  `SetDestAddr`. `AutoCrit` holds a `PlatMutex*` and takes a CriticalSection or a mutex. Mechanical edits outside
+  the lane (`GetDataCrit()` -> `GetDataLock()`): EEWonNet.cpp; WONRouting RoutingConnection, SmartRoutingConnection
+  (+Commands, +Snapshots); WONServer ServerConnection; QueueSocket. LanLogic's join check held a pointer into the
+  temporary that `GetDestAddr()` now returns: it keeps a copy (look for the same shape when a getter turns from a
+  reference into a value: `x->Get().Bytes()` kept past the statement).
+- **The socket ops** (sockops.rs). SendBytesOp, SendMsgOp, SendBytesToOp, RecvBytesOp, RecvMsgOp, RecvBytesFromOp,
+  ConnectOp and AcceptOp keep their state in an `OpKind` inside their EeWonSocketOp (the bytes and position, the
+  message and its transformed copy, the destination, the receive's write buffer, length, count, skip flag, file,
+  path, file flags and modify time, the progress completion, the message stage, the datagram buffer and sender, the
+  connect address, the accepted socket), and every step of SocketOps.cpp and SocketOperationDispatch.cpp runs in
+  Rust. The C++ classes are shims (constructors, Start/Continue, accessors, Duplicate). What stays C++ is in
+  SocketOp's one hook table: the `RefCount*` references (ByteBuffers, the progress completion, the accepted socket),
+  a ByteBuffer's bytes and a new one adopting Rust's, the socket's transform chain on a message slot, the target
+  file (PlatFOpen's modes, fwrite, fclose, utime), the progress chunk (a RecvChunkOp in the op's mode; its completion
+  reads the op's bytes so far, so no borrow of the state lives across it), and `AsyncSocket::Accept` (the virtual
+  Duplicate). `ConnectOp::GetAddr`, `RecvBytesFromOp::GetAddr` and `RecvBytesOp::GetFilePath` return copies.
+  RecvMsgOp's constructor takes a tag type: a `(AsyncSocket*, bool)` overload was ambiguous with
+  `RecvBytesOp(0, NULL)`.
+- **UDPManager** (udpmgr.rs). EeWonUdpManager holds the socket, the default completion, the auto-receive op, the
+  address-less list and the by-sender multimap (the address's wire order, so the port first; an equal address after
+  those already there) with their clean-up cursors, and does Bind, Close, SetAutoRecv, QueueOp, Send, CleanOps, the
+  iterator-keeping erases and RecvCallback's dispatch. The iterators are the entries' ids (end is none), so a cursor
+  survives inserts and erases as the original's node-based containers allowed, including the new op that
+  WS_ServerReq_Recv queues into the map during the walk (the walk reaches it, as the golden shows). Like the
+  original it takes no lock. The ops it holds (`UDPManagerRecvOp`, `UDPManagerSendRecvOp`) stay C++: they are
+  AsyncOps the lobby subclasses (PingGameOp, RoutingGetUserStatusOp) with public members the lobby reads. Mechanical
+  edit outside the lane: PingLogic's `mDefaultCompletion =` became `SetDefaultCompletion` (UDPManager.cpp and the
+  ops are the Internet lane's file, but entirely socket plumbing: moved here by agreement).
+- **Behaviour changes.** An op without a socket returns `WS_AsyncSocket_InvalidSocket` (the original read a null
+  socket); a progress interval of 0 resets the count (the original divided by zero); `UDPManager::Send` while
+  unbound does nothing (the original used the null socket); `GetDestAddr` and the ops' address getters are copies.
+  Nothing else: the same locks, threads and order.
+- **What runs it.** EE-SIM never loads the lobby, so the oracle cannot see a fault here. The lead's LAN game is the
+  end-to-end check; it exercises: the discovery socket (a datagram QueueSocket: RecvBytesFromOp as its repeat op,
+  `RecvBytesFromOp::RunHook`'s buffer, the datagram and its sender; SendBytesToOp broadcasts on an unconnected
+  socket, SendTo), the host's listening socket (AcceptOp as the repeat op, the hook's Accept and Duplicate, the
+  accepted socket's destination from Rust's adopt, which LanLogic's join subnet check reads through GetDestAddr), the
+  joiner's ConnectOp (`connect_to`, the destination, the wait), the game room's RecvMsgOp repeat ops (the 2-byte
+  length prefix, `StartRecvBody`, `FinishRecvMsg`, no transforms on LAN sockets) and SendMsgOp queued ops, the locks
+  of QueueSocket and the sockets through `GetDataLock`, and the lobby's UDPManager (LobbyBindUDPPort's Bind with
+  broadcast, SetAutoRecv, the repeat receive, PingLogic's default completion for unsolicited datagrams; a game ping, PingGameOp's request through the
+  manager's Send and its reply op in the map, runs only for a direct-connect game or the game list's Ping action,
+  which lan_game.py does not use). RecvBytesOp with a file, the progress chunks, CloseFile and SendBytesOp alone are reached by the lobby's file
+  transfer and the Internet code only.
+- **Left.** UDPManagerRecvOp and UDPManagerSendRecvOp (C++ AsyncOps over the manager); BlockingSocket has no
+  state; the lobby model and logic (LobbyModel 1587 lines: LobbyClient, LobbyFriend, LobbyGroup, LobbyServer,
+  LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
+  persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
+  comes before its move).
