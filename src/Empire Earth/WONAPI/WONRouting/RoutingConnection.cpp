@@ -359,10 +359,14 @@ void RoutingConnection::MsgCallback(const ByteBuffer* inData)
     WONStatus status;
     try {
         ReadBuffer msg(inData->data(), inData->length());
-        msg.ReadByte();
-        unsigned char service = msg.ReadByte();
-        unsigned char msgType = msg.ReadByte();
-        bool derived = service != 7;
+        // the header and the dispatch rule are Rust's (ee_won routemsg.rs)
+        unsigned char msgType = 0;
+        bool derived = false;
+        uint32_t aHeaderEnd = 0;
+        if (!ee_won_route_header(reinterpret_cast<const uint8_t*>(inData->data()), inData->length(), &msgType,
+                                 &derived, &aHeaderEnd))
+            throw ReadBufferException("Attempt to read past end of buffer.");
+        msg.SetPos((int)aHeaderEnd);
         int savedPos = msg.pos();
         op = this->GetUnsolicitedOp(msgType, derived);
         if (op.get() != NULL) {
@@ -373,8 +377,9 @@ void RoutingConnection::MsgCallback(const ByteBuffer* inData)
             op = *itr;
             if (derived == op->mIsDerivedServerOp) {
             status = op->HandleReply(msgType, msg);
-            if (status == (WONStatus)100105) break;
-            if (status != (WONStatus)100104) {
+            int aStep = ee_won_route_dispatch((int32_t)status);
+            if (aStep == 1) break;
+            if (aStep == 2) {
                 this->mOpList.erase(itr);
                 crit.Leave();
                 op->SetMode(OP_MODE_BLOCK);
@@ -488,33 +493,34 @@ SmartPtr<RoutingOp> RoutingConnection::GetUnsolicitedOp(unsigned char messageTyp
 {
     SmartPtr<RoutingOp> op;
     if(!derived) {
-        switch(messageType) {
-        case 6: op=new RoutingClientFlagsChangedOp(this); break;
-        case 7: op=new RoutingClientJoinedGroupOp(this); break;
-        case 8: op=new RoutingClientJoinedServerOp(this); break;
-        case 9: op=new RoutingClientLeftGroupOp(this); break;
-        case 10: op=new RoutingClientLeftServerOp(this); break;
-        case 14: op=new RoutingDataObjectCreatedOp(this); break;
-        case 15: op=new RoutingDataObjectDeletedOp(this); break;
-        case 16: op=new RoutingDataObjectModifiedOp(this); break;
-        case 31: op=new RoutingGroupCaptainChangedOp(this); break;
-        case 32: op=new RoutingGroupCreatedOp(this); break;
-        case 33: op=new RoutingGroupDeletedOp(this); break;
-        case 34: op=new RoutingGroupFlagsChangedOp(this); break;
-        case 35: op=new RoutingGroupInvitationOp(this); break;
-        case 36: op=new RoutingGroupJoinAttemptOp(this); break;
-        case 37: op=new RoutingGroupMaxPlayersChangedOp(this); break;
-        case 71: op=new RoutingGroupMemberCountOp(this); break;
-        case 38: op=new RoutingGroupNameChangedOp(this); break;
-        case 39: op=new RoutingGroupObserverCountOp(this); break;
-        case 44: op=new RoutingMemberFlagsChangedOp(this); break;
-        case 47: op=new RoutingPeerChatOp(this); break;
-        case 48: op=new RoutingPeerDataOp(this); break;
-        case 57: op=new RoutingServerAlertOp(this); break;
-        case 58: op=new RoutingServerShutdownAbortedOp(this); break;
-        case 59: op=new RoutingServerShutdownStartedOp(this); break;
-        case 69: op=new RoutingYouWereBannedOp(this); break;
-        case 70: op=new RoutingYouWereMutedOp(this); break;
+        // which notification a message type is: Rust's table (ee_won routemsg.rs)
+        switch(ee_won_route_unsolicited(messageType)) {
+        case EE_WON_RT_N_CLIENT_FLAGS: op=new RoutingClientFlagsChangedOp(this); break;
+        case EE_WON_RT_N_CLIENT_JOINED_GROUP: op=new RoutingClientJoinedGroupOp(this); break;
+        case EE_WON_RT_N_CLIENT_JOINED_SERVER: op=new RoutingClientJoinedServerOp(this); break;
+        case EE_WON_RT_N_CLIENT_LEFT_GROUP: op=new RoutingClientLeftGroupOp(this); break;
+        case EE_WON_RT_N_CLIENT_LEFT_SERVER: op=new RoutingClientLeftServerOp(this); break;
+        case EE_WON_RT_N_DATA_CREATED: op=new RoutingDataObjectCreatedOp(this); break;
+        case EE_WON_RT_N_DATA_DELETED: op=new RoutingDataObjectDeletedOp(this); break;
+        case EE_WON_RT_N_DATA_MODIFIED: op=new RoutingDataObjectModifiedOp(this); break;
+        case EE_WON_RT_N_CAPTAIN_CHANGED: op=new RoutingGroupCaptainChangedOp(this); break;
+        case EE_WON_RT_N_GROUP_CREATED: op=new RoutingGroupCreatedOp(this); break;
+        case EE_WON_RT_N_GROUP_DELETED: op=new RoutingGroupDeletedOp(this); break;
+        case EE_WON_RT_N_GROUP_FLAGS: op=new RoutingGroupFlagsChangedOp(this); break;
+        case EE_WON_RT_N_INVITATION: op=new RoutingGroupInvitationOp(this); break;
+        case EE_WON_RT_N_JOIN_ATTEMPT: op=new RoutingGroupJoinAttemptOp(this); break;
+        case EE_WON_RT_N_MAX_PLAYERS: op=new RoutingGroupMaxPlayersChangedOp(this); break;
+        case EE_WON_RT_N_MEMBER_COUNT: op=new RoutingGroupMemberCountOp(this); break;
+        case EE_WON_RT_N_GROUP_NAME: op=new RoutingGroupNameChangedOp(this); break;
+        case EE_WON_RT_N_OBSERVER_COUNT: op=new RoutingGroupObserverCountOp(this); break;
+        case EE_WON_RT_N_MEMBER_FLAGS: op=new RoutingMemberFlagsChangedOp(this); break;
+        case EE_WON_RT_N_PEER_CHAT: op=new RoutingPeerChatOp(this); break;
+        case EE_WON_RT_N_PEER_DATA: op=new RoutingPeerDataOp(this); break;
+        case EE_WON_RT_N_SERVER_ALERT: op=new RoutingServerAlertOp(this); break;
+        case EE_WON_RT_N_SHUTDOWN_ABORTED: op=new RoutingServerShutdownAbortedOp(this); break;
+        case EE_WON_RT_N_SHUTDOWN_STARTED: op=new RoutingServerShutdownStartedOp(this); break;
+        case EE_WON_RT_N_BANNED: op=new RoutingYouWereBannedOp(this); break;
+        case EE_WON_RT_N_MUTED: op=new RoutingYouWereMutedOp(this); break;
         }
     } else
         op=this->GetUnsolicitedDerivedOp(messageType);
@@ -568,6 +574,7 @@ void RoutingConnection::BanClientByCDKeyId(unsigned short groupId,bool isBanned,
 #include "ee/wonapi/WONRoutingGroupAdmin.h"
 #include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include "ee/wonapi/WONRoutingDisconnectClientOp.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 void RoutingConnection::DisconnectClient(CompletionBase<AsyncOpPtr> *theCompletion)
 {

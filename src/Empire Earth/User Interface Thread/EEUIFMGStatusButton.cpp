@@ -945,7 +945,7 @@ long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind)
                     float theChance = 0.0f;
                     long theClass = theUnit->GetUnitClass()->mFamily;
                     if (theUnit->GetUnitClass()->CanBeAttacked())
-                        theChance = gDamageTable[theClass][inKind];
+                        theChance = EEDamageFactor(theClass, inKind);
                     if (theChance > 0.0f)
                         gMouse->mPointer = 1;
                 }

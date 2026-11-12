@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -23,18 +24,8 @@ RoutingMuteClientOp::RoutingMuteClientOp(RoutingConnection* inConnection)
 // Sends the routing server the mute/unmute request, naming the client by WON id, CD-key id or client id
 void RoutingMuteClientOp::SendRequest()
 {
-    this->InitSendMsg(46);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendBool(this->mIsMuted);
-    this->mSendMsg.AppendLong(this->mMuteTime);
-    this->mSendMsg.AppendWString(this->mMuteComment, 2);
-    if (this->mMuteByWONId) {
-        this->mSendMsg.AppendByte(this->mWONIdIsCDKeyId ? 3 : 2);
-        this->mSendMsg.AppendLong(this->mWONId);
-    } else {
-        this->mSendMsg.AppendByte(1);
-        this->mSendMsg.AppendShort(this->mClientId);
-    }
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendMute(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -42,8 +33,8 @@ void RoutingMuteClientOp::SendRequest()
 // Same body as 0x6c8e90 in the original (folded by the linker)
 WONStatus RoutingMuteClientOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType != 66) return (WONStatus)WS_RoutingOp_DontWantReply;
-    return inMsg.ReadShort();
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(inMsgType, inMsg);
 }
 // FUNCTION: WON 0x006c7930
 // Returns the op type (mute client)

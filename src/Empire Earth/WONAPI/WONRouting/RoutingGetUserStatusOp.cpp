@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006c6630
 // Creates a friend status query to a server address, with 3 retransmits and a 1 s message timeout
@@ -29,37 +30,16 @@ void RoutingGetUserStatusOp::AddWONUserId(unsigned long inUserId)
 // Builds the user status datagram listing every queried WON id and starts the send/receive
 void RoutingGetUserStatusOp::RunHook()
 {
-    WriteBuffer message(0, true);
-    message.AppendByte(3);
-    message.AppendByte(7);
-    message.AppendByte(72);
-    message.AppendByte((unsigned char)this->mFriendStatusMap.size());
-    FriendStatusMap::const_iterator i = this->mFriendStatusMap.begin();
-    while (true) {
-        if (i == this->GetFriendStatusMap().end()) break;
-        message.AppendLong(i->first);
-        ++i;
-    }
-    this->mOutgoing = message.ToByteBuffer(true);
+    // the datagram is Rust's (ee_won routemsg.rs)
+    this->mOutgoing = RouteUserStatusRequest(this->mFriendStatusMap);
     UDPManagerSendRecvOp::RunHook();
 }
 // FUNCTION: WON 0x006c6ab0
 // Checks the status reply header and count and stores each user's status byte; returns the result
 WONStatus RoutingGetUserStatusOp::CheckResponse(ReadBuffer& inMessage)
 {
-    try {
-        if (inMessage.ReadByte() != 3) return (WONStatus)WS_None;
-        if (inMessage.ReadByte() != 7) return (WONStatus)WS_None;
-        if (inMessage.ReadByte() != 73) return (WONStatus)WS_None;
-        unsigned char count = inMessage.ReadByte();
-        if (count != this->mFriendStatusMap.size()) return (WONStatus)WS_InvalidMessage;
-        FriendStatusMap::iterator i = this->mFriendStatusMap.begin();
-        for (int j = 0; j < count; ++i, ++j)
-            i->second = inMessage.ReadByte();
-        return (WONStatus)WS_Success;
-    } catch (ReadBufferException&) {
-        return (WONStatus)WS_MessageUnpackFailure;
-    }
+    // the read is Rust's (ee_won routemsg.rs); a reply cut short is an unpack failure, what was read kept
+    return RouteUserStatusReply(this->mFriendStatusMap, inMessage);
 }
 }
 

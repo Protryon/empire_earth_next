@@ -6746,3 +6746,76 @@ below them keeps its C++ API as shims over the Rust objects.
   message (`WriteBuffer` built, `ReadBuffer` read), the LAN socket ops queued and completed through the container,
   the broadcast and join timeouts through the timer thread. EE-SIM never loads the lobby: the oracle cannot see a
   fault here; the lead's LAN game is the end-to-end check.
+
+## R5b.2, third round: the target searches' scoring, EEGetPursuerOf, the tile line, the weapon tag point and the damage table storage in Rust (ee_combat search.rs, pursuer.rs, geometry.rs, damage_table.rs; branch rust-combat3, 2026-11-11)
+
+| Piece | C++ caller | Rust | Tag |
+|---|---|---|---|
+| the region target search (`EEUUTargetSearch`, both `EEUUSearchTiles`) | `EESearchTarget` | `search::search_target` over `EeCombatSearchHost` | CBST |
+| the unit-list target search | `EESearchTargetAlongList` | `search::search_along_list` | CBSL |
+| the nearest pursuer | `EEGetPursuerOf` | `pursuer::pursuer_of` | CBPU |
+| the tiles of a line | `EEGetTileLine` | `geometry::tile_line` | CBTL (replayed) |
+| the line of fire's start (the weapon tag point's height) | `EELineOfFireStartHeight` | `geometry::weapon_height` over `EeCombatWeaponIn` | CBWP (replayed) |
+| the damage tables' storage | `EETerrainTypeTable::LoadDamageTables`, `ClearDamageTables` | `damage_table` (`ee_combat_damage_factor`, `_row`) | CBDT |
+
+- **Golden first, then the move.** Commit 1510a730 put TEST ONLY probes into the unmodified C++: each Score call (and
+  each list unit the list search looks at) appended (unit id, outcome, score) to a trace, outcome 0 rejected, 1 a
+  large unit scored already, 2 not better, 3 the best so far, 4 unreachable and ignored, 5 the preferred type; the
+  record holds the call's inputs, the trace, the best and its score. CBPU lists each pursuer with its distance, CBTL
+  the line's tiles, CBWP the weapon point's inputs as the Rust record takes them (the model chain's transforms
+  appended) and the height. The moved code reports the same trace through the host's `trace` callback, so the
+  candidate order, the scores and the ties are compared record by record.
+- **No draw in these searches.** `PermuteValues` (the region order) takes `gPhysics->mTickRandom`, a value drawn once a
+  tick, not a draw of its own: `search::permute` is the shuffle, the URandom stream is untouched. The draws behind
+  `EEIsAttackReachable` stay C++ behind the host.
+- **Test order is the gate.** Several tests write (IsTargetIgnored erases expired entries; GetAttackFactor and
+  EEIsLineToUnitBlocked write CBAF / CBLB records): the Rust asks each when the original evaluated it, short-circuits
+  included. Two quirks kept: the list search's backward side has no `mShootsHigh` test, and its loop ends when the
+  forward neighbour is missing even with the backward side going on; a preferred unit there ends the search
+  before the step. The technology kind is read before the tests (eager in the original too). The region search's
+  priest test is the candidate's class, the list search's the searching unit's (as written in each original).
+- **Handles differ by search.** A region holds complex units, the list holds units whose complex unit may be missing;
+  one host table (`EeCombatSearchHost`) serves both, its context saying which (`EESearchContext::mKind`), and each
+  test is the original expression for its search (a NULL complex unit reaches `CanAttackClass` exactly where the
+  original dereferenced it).
+- **The multimap of the melee search** is a vector with `partition_point(!(key < k))` inserts: equal distances keep
+  insertion order, as `std::multimap::insert` does.
+- **The tile line** is a straight transcription of the four-step rasteriser (its `theSteep ? (y, x) : (x, y)` is
+  one closure); the mutations of `++theX` / `theY += theStep` inside the pushes are done before each push. CBTL is
+  replayed byte for byte by `combat_replay`, as is CBWP.
+- **The weapon tag point**: the C++ gathers the tag point at the frame, the model chain's internal transforms
+  (`EETagPoint::GetPoint`'s walk), the turret's yaw and the box; Rust does `EETagPointList::Scale`,
+  `SetOrientationYPR(yaw, 0, 0)` and the applies with ee_ge's `GeTransformation` (the header's summation order).
+- **The damage tables** are boxed rows in a `RwLock` (written only while the db loads); `gDamageTable` and the twins
+  stay `float**` arrays whose rows point into the Rust storage, so the direct readers keep working. CBDT is now
+  recorded from the Rust rows (the same bytes). See below for the AI's sites.
+- **The AI's direct reads.** 24 reads of `gDamageTable[row][column]` (EECPASGAir, Submarine, UHero, UMechProphet,
+  UProphet, EECPAttackSubGroup(Unit), EEHerd, EEMessage, EEUCBasicPriest, EEUGAttackUnit, EEUnitAI,
+  EEFOFindNewTargetNearOldTarget, EEUIFMGStatusButton, GetAttackFactor) now call `EEDamageFactor` (EmpireEarth.h),
+  ee_combat's checked accessor: the same value inside the table, 0 outside it (where the C++ read before or past
+  an array: the -1 ammo column the earlier rounds guarded). The sim oracle and the four capture profiles stayed
+  identical with the switch. The two stores (the load) stay; the float** arrays stay for any reader left.
+- **CBCH in every profile.** Round 2 recorded CBCH (EE-SIM's sweep over `EECanHeal`) only for the oracle profile. The
+  late, space and calamity lines were recorded from a temporary build whose `EECanHeal` ran b96a53c2's C++ test
+  (the world otherwise this round's, every other digest of those runs equal to the C++ goldens).
+- **Coverage.** No game of the four profiles calls `EESearchTargetAlongList` (anti-air ammunition 0x3c only reaches
+  it through `EEFindNearbyTarget`): CBSL has no golden and the list search is gated by its unit tests only. The
+  searches only change what an AI game simulates through the host's tests, so the oracle covers the rest.
+- **Builds are slow on a loaded machine** (27 minutes for `build.py -j 3 --sim`): the goldens of all five tags were
+  recorded from one instrumented build (its EE-SIM copied aside, so the moves could build while the four profiles
+  ran), and pieces that touch different units were built together, then committed one by one (the intermediate
+  commits' headers regenerated for each).
+- **What stays C++:** every candidate test, `EEIsAttackReachable`, `IgnoreTarget`, `GetNearestFootprintTile`, the
+  goal casts, the model data walk (tag points, chains, boxes), `EEFindNewTarget`'s screens, the other weapon point
+  users (`LaunchShot`, `LaunchFromTurret`, `EEApproachAttachPoint`, the effects).
+
+## R6: WON's Internet code, round 2 (the routing protocol, WONDB)
+
+Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (the WON servers are gone): only the drivers exercise it, and no tour, LAN game or EE-SIM run does.
+
+- **A reply as a list of assignments.** A routing op's `HandleReply` assigns its members, builds records through the connection's virtual factories, inserts them into maps, calls `CheckLeaveGroup` in the middle and sometimes hands the message to a temporary inner op. Rust (`routemsg.rs`) reads the message and returns the original's assignments in its order: a field to a member slot, a new record from a factory, a record field, an insert into a container, an action. The C++ applies them (`WONRoutingMsg.h`) and throws `ReadBufferException` where the original's read failed. A cut reply then leaves exactly what the original left: a member list's member is inserted before its client's name is read, a group only after all its members, the newsletter entry of `ProfileData::UnpackGetData` exists (false) before its value is read.
+- **A string cut after its length is erased.** `ReadRawString` and `ReadRawWString` erase the target before `ReadBytes` throws. A partial read is an assignment of the empty string, not "nothing assigned"; a buffer (`ReadBuf`) cut short is never assigned.
+- **The order of assignments is the order of reads.** The first version of the members reply read the observer count before it assigned the two client-flag bools; the driver failed on replies cut at that short. The rule applies to every reader that hands values back: emit each assignment right after the read that produced it.
+- **Templates over the op for the driver.** The op classes cannot be linked into a test (AsyncOp, the connection and sockets come with them), so each op's request and reply is a template over the op in the header, and the driver instantiates it on a stand-in with the ops' members and types (`mFlags` is a byte, a short or a long depending on the op). Members that are private (`RoutingDetectFirewallOp`, the group admin ops, `RoutingDerivedServerOp`'s protected ones, the account ops) are handed over by reference instead; access is checked in the template's context, not the caller's.
+- **ProfileData wholly in Rust.** Nothing outside `ProfileData.cpp` read its members, so the class is a shim over a Rust `EeWonProfile` (birth date, newsletter map, custom action). `GetBirthDate` was computed in a signed int (`year << 16` goes negative from 32768); the FFI returns an `i32` and the shim widens it as the original did.
+- **Network-layer APIs these call** (for the lobby lane's whole move): `WriteBuffer(size, true)`, `Reset`, `AppendBytes`, `ToByteBuffer`, `data()`, `length()`; `ReadBuffer(data, length)`, `data()`, `length()`, `pos()`, `SetPos`; `ByteBuffer(data, length, false)`; `ReadBufferException`; `WonByteBufferSink`; `WideAppendUtf16LE`, `WideAssignUtf16LE`.

@@ -484,6 +484,13 @@ WON_TESTS = {
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
     "won_dirops_test": [],
+    # the routing server's protocol (every routing op's request and reply, the notifications, the user status
+    # datagram, the group list request, the connection's header, dispatch rule and table), the original's
+    # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module
+    "won_routemsg_test": [],
+    # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
+    # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
+    "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

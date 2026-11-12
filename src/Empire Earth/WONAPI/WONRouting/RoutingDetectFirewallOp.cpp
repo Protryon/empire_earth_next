@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONRoutingDetectFirewallOp.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 RoutingDetectFirewallOp::RoutingDetectFirewallOp(RoutingConnection *theConnection) :
 	RoutingOp(theConnection),
@@ -60,8 +61,8 @@ void RoutingDetectFirewallOp::SendRequest()
 
 
 	this->mWaitingForStatusReply = true;
-	this->mSendMsg.AppendShort(this->mListenPort);
-	this->mSendMsg.AppendLong(this->mMaxConnectWaitTime);
+	// the message is Rust's (ee_won routemsg.rs)
+	RouteSendFirewall(this, this->mListenPort, this->mMaxConnectWaitTime);
 	this->SendMsg();
 	this->AddOp();
 }
@@ -70,24 +71,8 @@ void RoutingDetectFirewallOp::SendRequest()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RoutingDetectFirewallOp::HandleReply(unsigned char theMsgType, ReadBuffer &theMsg)
 {
-	WONStatus aStatus;
-	if(this->mWaitingForStatusReply && theMsgType==66 /* SDK RoutingStatusReply */)
-	{
-		this->mWaitingForStatusReply = false;
-		aStatus = (WONStatus)theMsg.ReadShort();
-		if(aStatus!=0)
-			return aStatus;
-		else
-			return WS_RoutingOp_NeedMoreReplies /* SDK WS_RoutingOp_NeedMoreReplies */;
-	}
-	else if(theMsgType==19 /* SDK RoutingDetectFirewallResult */)
-	{
-		aStatus = (WONStatus)theMsg.ReadShort();
-		this->mListenPort = theMsg.ReadShort();
-		return aStatus;
-	}
-	else
-		return WS_RoutingOp_DontWantReply /* SDK WS_RoutingOp_DontWantReply */;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteFirewall(this->mWaitingForStatusReply, this->mListenPort, theMsgType, theMsg);
 }
 
 }

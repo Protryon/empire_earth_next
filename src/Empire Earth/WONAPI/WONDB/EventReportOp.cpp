@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONEventReportOp.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 using namespace WONAPI;
 
 void EventReportOp::Init()
@@ -40,73 +41,41 @@ EventReportOp::EventReportOp(const IPAddr &theAddr) : ServerRequestOp(theAddr)
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus EventReportOp::GetNextRequest()
 {
-	WriteBuffer aBuf(this->mLengthFieldSize,true);
-	aBuf.AppendByte(5);			// small message
-	aBuf.AppendShort(4);		// Event Service
-	aBuf.AppendShort(1);		// Report Event
-
-	unsigned char aContentFlags = 0;
-	if (this->mHasRelatedServer) aContentFlags |= 0x02;
-	if (this->mHasRelatedClient) aContentFlags |= 0x04;
-	if (this->mHasRelatedUser)   aContentFlags |= 0x08;
-	aBuf.AppendByte(aContentFlags);
-
-	aBuf.AppendByte(this->mDetailList.size());
-	aBuf.AppendByte(this->mAttachmentList.size());
-	
-	// general info
-	aBuf.AppendShort(this->mActivityType);
-	
-	// server info
-	if (this->mHasRelatedServer)
+	// the request is Rust's (ee_won db.rs)
+	DbRequest q(0,this->mLengthFieldSize);
+	EeWonDbEvent e;
+	memset(&e,0,sizeof(e));
+	e.field_size = this->mLengthFieldSize;
+	e.activity_type = this->mActivityType;
+	e.has_server = this->mHasRelatedServer;
+	e.server_type = this->mServerType;
+	e.server_name = q.Text(this->mServerLogicalName);
+	e.server_addr = DbRequest::Narrow(this->mServerNetAddress);
+	e.has_client = this->mHasRelatedClient;
+	e.client_name = q.Text(this->mClientName);
+	e.client_addr = DbRequest::Narrow(this->mClientNetAddress);
+	e.has_user = this->mHasRelatedUser;
+	e.user_id = (uint32_t)this->mUserId;
+	e.user_name = q.Text(this->mUserName);
+	std::vector<EeWonDbDetail> aDetails;
+	for(DetailList::iterator i = this->mDetailList.begin(); i != this->mDetailList.end(); ++i)
 	{
-		aBuf.AppendShort(this->mServerType);
-		aBuf.AppendWString(this->mServerLogicalName,2);
-		aBuf.AppendString(this->mServerNetAddress);
+		EeWonDbDetail d = {i->mDetailType, (int32_t)i->mDataType, (uint32_t)i->mNumber, q.Text(i->mString)};
+		aDetails.push_back(d);
 	}
-
-    // client info
-	if (this->mHasRelatedClient)
+	std::vector<EeWonDbAttachment> anAttachments;
+	for(AttachmentList::iterator i = this->mAttachmentList.begin(); i != this->mAttachmentList.end(); ++i)
 	{
-		aBuf.AppendWString(this->mClientName,2);
-		aBuf.AppendString(this->mClientNetAddress);
+		EeWonDbAttachment a = {q.Text(i->mDescription), i->mContentType, DbRequest::Buffer(i->mData.get())};
+		anAttachments.push_back(a);
 	}
-
-	// user info
-	if (this->mHasRelatedUser)
-	{
-		aBuf.AppendShort(1); // Auth 1
-		aBuf.AppendLong(this->mUserId);
-		aBuf.AppendWString(this->mUserName,2);
-	}
-
-	// details
-	DetailList::iterator aDetailItr = this->mDetailList.begin();
-	while(aDetailItr!=this->mDetailList.end())
-	{
-		aBuf.AppendShort(aDetailItr->mDetailType);
-		aBuf.AppendByte(aDetailItr->mDataType);
-		switch(aDetailItr->mDataType)
-		{
-			case DetailStruct::DataType_Long: aBuf.AppendLong(aDetailItr->mNumber); break;
-			case DetailStruct::DataType_WString: aBuf.AppendWString(aDetailItr->mString,2); break;
-		}
-
-		++aDetailItr;
-	}
-
-	// attachments
-	AttachmentList::iterator anAttachmentItr = this->mAttachmentList.begin();
-	while(anAttachmentItr != this->mAttachmentList.end())
-	{
-		aBuf.AppendWString(anAttachmentItr->mDescription,2);
-		aBuf.AppendByte(anAttachmentItr->mContentType);
-		aBuf.AppendBuffer(anAttachmentItr->mData,4);
-
-		++anAttachmentItr;
-	}
-
-	this->mRequest = aBuf.ToByteBuffer(true);
+	e.details = aDetails.empty() ? NULL : &aDetails[0];
+	e.detail_count = aDetails.size();
+	e.attachments = anAttachments.empty() ? NULL : &anAttachments[0];
+	e.attachment_count = anAttachments.size();
+	ByteBufferPtr aRequest;
+	ee_won_db_event_request(&e, WonByteBufferSink, &aRequest);
+	this->mRequest = aRequest;
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -114,16 +83,12 @@ WONStatus EventReportOp::GetNextRequest()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus EventReportOp::CheckResponse()
 {
-	ReadBuffer aMsg(this->mResponse->data(),this->mResponse->length());
-	unsigned char aHeaderType = aMsg.ReadByte();
-	unsigned short aServiceType = aMsg.ReadShort();
-	unsigned short aMessageType = aMsg.ReadShort();
-	if(aHeaderType!=5 || aServiceType!=4 || aMessageType!=2)
+	// the reply's read is Rust's (ee_won db.rs)
+	bool anInvalid=false;
+	WONStatus aStatus=DbContestReply(this->mResponse.get(),NULL,&anInvalid);
+	if(anInvalid)
 		return this->InvalidReplyHeader();
-
-
-	short aStatus = aMsg.ReadShort();
-	return (WONStatus)aStatus;
+	return aStatus;
 }
 
 
