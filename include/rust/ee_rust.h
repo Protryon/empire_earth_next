@@ -2718,6 +2718,26 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// A number of the parser.
+enum class EeWonChatParserNumber {
+  Error = 0,
+  Command = 1,
+  Prefix = 2,
+  RoomFlags = 3,
+  Duration = 4,
+  Invitation = 5,
+  MatchThreshold = 6,
+  AllowColonEmote = 7,
+};
+
+/// A text of the parser.
+enum class EeWonChatParserText {
+  /// `mInput`: the reply target's name
+  Input = 0,
+  TargetName = 1,
+  Text = 2,
+};
+
 /// What an upper-cased token is in a group.
 enum class EeWonCfgToken {
   /// `}`: the group's end.
@@ -3014,6 +3034,9 @@ struct EeWonAuthSecrets;
 
 /// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
 struct EeWonByteBuffer;
+
+/// `ChatCommandParser`'s state (see the module).
+struct EeWonChatParser;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
@@ -15247,6 +15270,76 @@ size_t ee_won_chat_help(uint32_t room_flags,
                         bool game_captain,
                         bool admin,
                         int32_t *out);
+
+/// A new parser (the constructor's state).
+EeWonChatParser *ee_won_chatparser_new();
+
+/// Frees the parser.
+///
+/// # Safety
+/// `p` from `ee_won_chatparser_new` (or null), not used after.
+void ee_won_chatparser_free(EeWonChatParser *p);
+
+/// A number.
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_chatparser_number(const EeWonChatParser *p, EeWonChatParserNumber n);
+
+/// Sets a number.
+///
+/// # Safety
+/// `p` is live.
+void ee_won_chatparser_set_number(EeWonChatParser *p, EeWonChatParserNumber n, int64_t v);
+
+/// A text (`count` gets its units), valid until the parser changes.
+///
+/// # Safety
+/// `p` is live, `count` writable.
+const uint32_t *ee_won_chatparser_text(const EeWonChatParser *p,
+                                       EeWonChatParserText t,
+                                       size_t *count);
+
+/// Sets a text (`count` units of `unit_size` bytes).
+///
+/// # Safety
+/// `p` is live; `text` holds the units.
+void ee_won_chatparser_set_text(EeWonChatParser *p,
+                                EeWonChatParserText t,
+                                const void *text,
+                                size_t count,
+                                uint32_t unit_size);
+
+/// `AddCommand`.
+///
+/// # Safety
+/// As `ee_won_chatparser_set_text`.
+void ee_won_chatparser_add_command(EeWonChatParser *p,
+                                   const void *name,
+                                   size_t count,
+                                   uint32_t unit_size,
+                                   int32_t id);
+
+/// `GetCommandString`'s text (`count` gets its units), valid until the parser changes.
+///
+/// # Safety
+/// `p` is live, `count` writable.
+const uint32_t *ee_won_chatparser_command_string(const EeWonChatParser *p,
+                                                 int32_t id,
+                                                 size_t *count);
+
+/// `HandleInput` over the room's client names (`clients`, `client_count`; `has_clients` whether the parser has a
+/// list): the result; `target` gets the target client's position, or -1 for none.
+///
+/// # Safety
+/// `p` is live; the texts as `EeWonChatText` of `wchar_size` units; `target` writable.
+bool ee_won_chatparser_handle_input(EeWonChatParser *p,
+                                    EeWonChatText text,
+                                    const EeWonChatText *clients,
+                                    size_t client_count,
+                                    bool has_clients,
+                                    uint32_t wchar_size,
+                                    int32_t *target);
 
 EeWonConfigLexer *ee_won_config_new();
 

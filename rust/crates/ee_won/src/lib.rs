@@ -15,6 +15,7 @@ pub mod buffer;
 pub mod cdkey;
 pub mod cert;
 pub mod chat;
+pub mod chatobj;
 pub mod config;
 pub mod configobj;
 pub mod crc16;

@@ -80,9 +80,10 @@ public:
     bool mWide;
 };
 
+// The parser's state is a Rust object (round 17, rust/crates/ee_won/src/chatobj.rs EeWonChatParser: the command
+// tables, the settings, what a parse leaves); the class keeps the room's client list and the target client.
 class ChatCommandParser : public RefCount {
 public:
-    typedef std::map<std::wstring, int, WStringLessNoCase> CommandMap;
     ChatCommandParser();                  // 0x355750
     virtual ~ChatCommandParser();         // 0x3559f0; only virtual slot
     void InitCommands();
@@ -92,44 +93,34 @@ public:
     const char* GetCommandName(int inId);
     void AddCommands(const std::wstring& inCommands, int inId);
     LobbyClient* FindClient(const GUIString& inName, int* outMatch);
-    bool ParseCommand(const GUIString& inInput);
-    bool HandleInput(const GUIString& inInput);
+    bool HandleInput(const GUIString& inInput); // with ParseCommand (0x756f40), chatobj.rs's
     void AddHelpEntry(int inId, const GUIString& inCommand, GUIString& outHelp);
     GUIString GetHelp(unsigned short inClientId);
 
-    int GetCommand() const { return this->mCommand; }
-    const GUIString& GetTargetName() const { return this->mTargetName; }
-    int GetPrefix() const { return this->mPrefix; }
+    int GetCommand() const;
+    GUIString GetTargetName() const; // the texts are copies (the original returned references to the members)
+    int GetPrefix() const;
     LobbyClient* GetTarget() const { return this->mTarget.get(); }
-    const GUIString& GetText() const { return this->mText; }
-    unsigned long GetDuration() const { return this->mDuration; }
-    unsigned long GetRoomFlags() const { return this->mRoomFlags; }
+    GUIString GetText() const;
+    unsigned long GetDuration() const;
+    unsigned long GetRoomFlags() const;
     LobbyClientList* GetClients() const { return this->mClients.get(); }
-    int GetError() const { return this->mError; }
-    bool GetInvitation() const { return this->mInvitation; }
-    void SetCommand(int inCommand) { this->mCommand = inCommand; }
-    void SetInput(const GUIString& inInput) { this->mInput = inInput; } // the reply target's name
-    void SetPrefix(int inPrefix) { this->mPrefix = inPrefix; }
-    void SetMatchThreshold(int inThreshold) { this->mMatchThreshold = inThreshold; }
-    void SetAllowColonEmote(bool inAllow) { this->mAllowColonEmote = inAllow; }
-    void SetText(const GUIString& inText) { this->mText = inText; }
-    void SetInvitation(bool inInvitation) { this->mInvitation = inInvitation; }
+    int GetError() const;
+    bool GetInvitation() const;
+    void SetCommand(int inCommand);
+    void SetInput(const GUIString& inInput); // the reply target's name
+    void SetPrefix(int inPrefix);
+    void SetMatchThreshold(int inThreshold);
+    void SetAllowColonEmote(bool inAllow);
+    void SetText(const GUIString& inText);
+    void SetInvitation(bool inInvitation);
+private:
+    ChatCommandParser(const ChatCommandParser&);
+    ChatCommandParser& operator=(const ChatCommandParser&);
+    GUIString Text(EeWonChatParserText inText) const;
     SmartPtr<LobbyClientList> mClients;    // +0x08
-    GUIString mInput;                     // +0x0c
-    CommandMap mCommands;                 // +0x10
-    std::map<int, std::wstring> mCommandStrings; // +0x1c
-    int mMatchThreshold;                  // +0x28
-    bool mB2C;
-    bool mAllowColonEmote;                // +0x2d
-    int mError;                           // +0x30
-    int mCommand;                         // +0x34
     SmartPtr<LobbyClient> mTarget;         // +0x38
-    GUIString mTargetName;                // +0x3c
-    GUIString mText;                      // +0x40
-    bool mInvitation;                     // +0x44
-    unsigned long mDuration;              // +0x48
-    int mPrefix;                          // +0x4c
-    unsigned long mRoomFlags;             // +0x50 (GetHelp 0x7579c0 shifts it with shr)
+    EeWonChatParser* mParser;              // the original's +0x0c..+0x50 but these two
 };
 }
 #endif

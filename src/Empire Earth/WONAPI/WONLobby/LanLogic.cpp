@@ -600,7 +600,7 @@ void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSender
                 LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
             ChatCommandParser* aParser = LobbyGetChatCommandParser();
             if (aParser != NULL)
-                aParser->mInput = aSender->mName;
+                aParser->SetInput(aSender->mName);
         }
     }
     LobbyBroadcastEvent(new RecvChatEvent(8, aFlags, aSender,
@@ -784,14 +784,14 @@ void LanLogic::HandleChatCommand(Component* inTarget)
     if (!this->IsConnected())
         return;
     ChatCommandParser* aParser = LobbyGetChatCommandParser();
-    if (aParser == NULL || !(aParser->mRoomFlags & 8))
+    if (aParser == NULL || !(aParser->GetRoomFlags() & 8))
         return;
-    LobbyClient* aClient = aParser->mTarget.get();
-    EeWonLanChatCommand aCommand = ee_won_lanlogic_chat_command(true, aParser->mRoomFlags, aParser->mCommand,
+    LobbyClient* aClient = aParser->GetTarget();
+    EeWonLanChatCommand aCommand = ee_won_lanlogic_chat_command(true, aParser->GetRoomFlags(), aParser->GetCommand(),
                                                                 aClient != NULL);
     switch (aCommand.action) {
     case 1:
-        this->SendChat(aParser->mText, aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
+        this->SendChat(aParser->GetText(), aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
         return;
     case 2:
         LobbySetClientIgnored(aClient, !aClient->mIgnored, 4);

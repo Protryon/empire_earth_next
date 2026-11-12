@@ -661,7 +661,7 @@ void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
     if (inOp->IsWhisper() && aTarget != NULL && aTarget->GetClientId() == inServer->GetMyClientId()) {
         if (LobbyGetChatSoundEffects()) LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
         ChatCommandParser* aParser = LobbyGetChatCommandParser();
-        if (aParser != NULL) aParser->mInput = aSender->GetName();
+        if (aParser != NULL) aParser->SetInput(aSender->GetName());
     }
     if ((inOp->GetFlags() & 0x10) && LobbyGetLobbySoundEffects())
         LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
