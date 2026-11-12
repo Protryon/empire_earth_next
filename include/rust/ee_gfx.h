@@ -42,6 +42,12 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_CIRCULAR_ICONS = 16;
 /// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SQUARE_ICONS = 15;
 
+/// The 2D particle (a billboard).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_2D = 46;
+
+/// The 3D particle (a model).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_PARTICLE_3D = 57;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -419,6 +425,30 @@ struct EeGfxEffectPlume {
   EeGe3DPoint velocity;
 };
 
+/// `EEE2DParticle`'s and `EEE3DParticle`'s state.
+struct EeGfxEffectParticle {
+  /// `mVelocity` (saved)
+  EeGe3DPoint velocity;
+  /// the renderer's moved position (2D `mDrawPosition`, 3D `mPosition`)
+  EeGe3DPoint draw_position;
+  /// 0..1 (2D `mDrawAge`, 3D `mLifeFraction`)
+  float draw_age;
+  /// `mAge`: ms (saved)
+  float age;
+  /// 2D `mRotation`, 3D `mYaw` (saved), 3D `mPitch`, `mRoll` (saved)
+  float yaw;
+  float pitch;
+  float roll;
+  /// `mBrightness` (saved)
+  float brightness;
+  /// `mLastTime`: the game clock at the last move (saved)
+  float last_time;
+  /// `mDuration`
+  float duration;
+  /// `mMoved`: the renderer moved it (the tick applies the position)
+  bool moved;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -446,6 +476,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectSmoke smoke;
   /// `EEE2DSmokePlume`'s
   EeGfxEffectPlume plume;
+  /// the pooled particles'
+  EeGfxEffectParticle particle;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -545,6 +577,42 @@ struct EeGfxPlumeTick {
   int32_t int_param1;
   float param3;
   bool flag1;
+};
+
+/// What a particle's set-up reads from its graphic effect: `mIntParam1` (0: random turn), `GetParam2()`,
+/// `GetParam3()` and (the 3D particle's other spelling of the same values) `mParam2`, `mParam3`.
+struct EeGfxParticleSetUp {
+  int32_t int_param1;
+  float param2;
+  float param3;
+};
+
+/// What a particle's move reads (the C++ fills it per call).
+struct EeGfxParticleTick {
+  /// `gPhysics->mGameClock`, `mGameOver`
+  float now;
+  bool game_over;
+  /// `gWorld.mWindDirection`
+  EeGe3DPoint wind;
+  /// the effect's position (2D: `mPosition`; 3D: the transformation's)
+  EeGe3DPoint position;
+  /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
+  uint32_t duration;
+  float param4;
+  float param8;
+  float param9;
+  float param10;
+  float param11;
+  bool flag2;
+};
+
+/// The terrain a bouncing particle asks (`gWorld.mMap->mTerrainMesh`; `context`: unused).
+struct EeGfxParticleGround {
+  void *context;
+  bool (*is_valid_tile)(void *context, uint32_t x, uint32_t y);
+  bool (*is_space_tile)(void *context, uint32_t x, uint32_t y);
+  float (*mesh_z)(void *context, float x, float y);
+  void (*mesh_normal)(void *context, float x, float y, EeGe3DPoint *normal);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1305,6 +1373,48 @@ size_t ee_gfx_effect_marching_offsets(int32_t kind,
 
 /// The square icons' bounding radius (`sqrt(2 r r)`).
 float ee_gfx_effect_square_icons_radius(float half_side);
+
+/// The particles' `SetUp` state (their draws).
+///
+/// # Safety
+/// `r` is a live record; `setup` is valid.
+void ee_gfx_effect_particle_set_up(EeGfxEffectRecord *r, const EeGfxParticleSetUp *setup);
+
+/// The particles' `Clear` state.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_effect_particle_clear(EeGfxEffectRecord *r);
+
+/// The particles' `Update` (the renderer's move): 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `tick` and `ground` are valid.
+int32_t ee_gfx_effect_particle_update(EeGfxEffectRecord *r,
+                                      const EeGfxParticleTick *tick,
+                                      const EeGfxParticleGround *ground);
+
+/// The particles' `Step`: 7 when it ends; `move_to`: the C++ applies the moved position.
+///
+/// # Safety
+/// `r` is a live record; `move_to` is writable.
+int32_t ee_gfx_effect_particle_step(EeGfxEffectRecord *r, float now, bool *move_to);
+
+/// The particles' own Load reads; `loaded`: the C++ sets the draw position and duration.
+///
+/// # Safety
+/// `r` is a live record; `file` and `loaded` are valid.
+int32_t ee_gfx_effect_load_particle(EeGfxEffectRecord *r,
+                                    const EeGfxEffectFile *file,
+                                    uint32_t major,
+                                    uint32_t minor,
+                                    bool *loaded);
+
+/// The particles' own Save writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_particle(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

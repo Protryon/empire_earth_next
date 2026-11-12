@@ -69,6 +69,11 @@ unsigned long EEEffectRandomSeed();
 
 // An FSFile as ee_gfx effect_state.rs's typed reads and writes (EEEffect.cpp)
 EeGfxEffectFile EEEffectFile(FSFile& inFile);
+// The terrain mesh as the particles' move asks it (EEEffect.cpp)
+EeGfxParticleGround EEParticleGround();
+// The particles' move reads: the clock, the wind, the graphic effect's parameters, the effect's position
+// (EEE2DParticle.cpp)
+EeGfxParticleTick EEParticleTick(EEGraphicEffect* inEffect, const GE3DPoint& inPosition);
 
 class EEEffect : public UReferenceCounter {
 public:

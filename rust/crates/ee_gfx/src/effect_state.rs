@@ -50,6 +50,32 @@ pub struct EeGfxEffectPlume {
     pub velocity: Ge3DPoint,
 }
 
+/// `EEE2DParticle`'s and `EEE3DParticle`'s state.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEffectParticle {
+    /// `mVelocity` (saved)
+    pub velocity: Ge3DPoint,
+    /// the renderer's moved position (2D `mDrawPosition`, 3D `mPosition`)
+    pub draw_position: Ge3DPoint,
+    /// 0..1 (2D `mDrawAge`, 3D `mLifeFraction`)
+    pub draw_age: f32,
+    /// `mAge`: ms (saved)
+    pub age: f32,
+    /// 2D `mRotation`, 3D `mYaw` (saved), 3D `mPitch`, `mRoll` (saved)
+    pub yaw: f32,
+    pub pitch: f32,
+    pub roll: f32,
+    /// `mBrightness` (saved)
+    pub brightness: f32,
+    /// `mLastTime`: the game clock at the last move (saved)
+    pub last_time: f32,
+    /// `mDuration`
+    pub duration: f32,
+    /// `mMoved`: the renderer moved it (the tick applies the position)
+    pub moved: bool,
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -79,6 +105,8 @@ pub struct EeGfxEffectRecord {
     pub smoke: EeGfxEffectSmoke,
     /// `EEE2DSmokePlume`'s
     pub plume: EeGfxEffectPlume,
+    /// the pooled particles'
+    pub particle: EeGfxEffectParticle,
 }
 
 /// The identity (`GETransformation()`).
@@ -107,6 +135,7 @@ impl EeGfxEffectRecord {
             position: Ge3DPoint::default(),
             smoke: EeGfxEffectSmoke::default(),
             plume: EeGfxEffectPlume::default(),
+            particle: EeGfxEffectParticle::default(),
         }
     }
 
@@ -845,6 +874,248 @@ pub fn square_radius(half_side: f32) -> f32 {
     um::sqrt(half_side * half_side + half_side * half_side)
 }
 
+// ---- the pooled particles (EEE2DParticle, kind 0x2e; EEE3DParticle, kind 0x39)
+
+/// The 2D particle (a billboard).
+pub const EE_GFX_EFFECT_KIND_PARTICLE_2D: i32 = 0x2e;
+/// The 3D particle (a model).
+pub const EE_GFX_EFFECT_KIND_PARTICLE_3D: i32 = 0x39;
+
+/// What a particle's set-up reads from its graphic effect: `mIntParam1` (0: random turn), `GetParam2()`,
+/// `GetParam3()` and (the 3D particle's other spelling of the same values) `mParam2`, `mParam3`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxParticleSetUp {
+    pub int_param1: i32,
+    pub param2: f32,
+    pub param3: f32,
+}
+
+/// `EEE2DParticle::SetUp`'s and `EEE3DParticle::SetUp`'s state (the C++ sets the radius and loads the graphic):
+/// age 0, the turn (2D: one draw for the rotation when int param 1 is 0; 3D: yaw, pitch and roll), then the
+/// brightness in param 2 +- param 3 clamped to 0..1 (the 3D particle spells the range differently: kept).
+pub fn particle_set_up(r: &mut EeGfxEffectRecord, s: &EeGfxParticleSetUp) {
+    let p = &mut r.particle;
+    let random_turn = s.int_param1 == 0;
+    p.age = 0.0;
+    if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D {
+        p.yaw = if random_turn { random() * 6.2831855 } else { 0.0 };
+        p.pitch = if random_turn { random() * 6.2831855 } else { 0.0 };
+        p.roll = if random_turn { random() * 6.2831855 } else { 0.0 };
+        let difference = s.param2 - s.param3;
+        let mut b = random() * (s.param3 + s.param2 - difference) + difference;
+        b = if b > 0.0 { b } else { 0.0 };
+        b = if b < 1.0 { b } else { 1.0 };
+        p.brightness = b;
+    } else {
+        p.yaw = if random_turn { random() * 6.2831855 } else { 0.0 };
+        let minimum = s.param2 - s.param3;
+        let maximum = s.param2 + s.param3;
+        let mut b = random() * (maximum - minimum) + minimum;
+        b = if b > 0.0 { b } else { 0.0 };
+        b = if b < 1.0 { b } else { 1.0 };
+        p.brightness = b;
+    }
+}
+
+/// What a particle's move reads (the C++ fills it per call).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxParticleTick {
+    /// `gPhysics->mGameClock`, `mGameOver`
+    pub now: f32,
+    pub game_over: bool,
+    /// `gWorld.mWindDirection`
+    pub wind: Ge3DPoint,
+    /// the effect's position (2D: `mPosition`; 3D: the transformation's)
+    pub position: Ge3DPoint,
+    /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
+    pub duration: u32,
+    pub param4: f32,
+    pub param8: f32,
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    pub flag2: bool,
+}
+
+/// The terrain a bouncing particle asks (`GETerrainMesh`).
+pub trait ParticleGround {
+    fn is_valid_tile(&mut self, x: u32, y: u32) -> bool;
+    fn is_space_tile(&mut self, x: u32, y: u32) -> bool;
+    fn mesh_z(&mut self, x: f32, y: f32) -> f32;
+    fn mesh_normal(&mut self, x: f32, y: f32) -> Ge3DPoint;
+}
+
+/// `GEVector::DotProduct` (`v.z * n.z + v.y * n.y + v.x * n.x`).
+fn dot(n: Ge3DPoint, v: Ge3DPoint) -> f32 {
+    v.z * n.z + v.y * n.y + v.x * n.x
+}
+
+/// `EEE2DParticle::Update` / `EEE3DParticle::Update` (run by the renderer's `Queue`): the move by the game time since
+/// the last one (drag, gravity, wind and lift, a bounce off the ground with flag 2); 7 once past the duration (the
+/// 2D particle also off the map).
+pub fn particle_update<G: ParticleGround>(r: &mut EeGfxEffectRecord, t: &EeGfxParticleTick, ground: &mut G) -> i32 {
+    let three_d = r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D;
+    let p = &mut r.particle;
+    let mut result = 0;
+    let elapsed = t.now - p.last_time;
+    if !(elapsed < -0.0001 || elapsed > 0.0001) || (!three_d && t.game_over) {
+        return 0;
+    }
+    p.last_time = t.now;
+    p.age += elapsed;
+    if !(p.age <= t.duration as f32) {
+        return 7;
+    }
+    let mut fall = -t.param8;
+    let mut pos = t.position;
+    let step = elapsed / 1000.0;
+    let drag = -t.param11;
+    let force = Ge3DPoint { x: p.velocity.x * drag, y: p.velocity.y * drag, z: p.velocity.z * drag };
+    fall += force.z;
+    p.velocity.x = force.x * step + p.velocity.x;
+    p.velocity.y = force.y * step + p.velocity.y;
+    p.velocity.z = fall * step + p.velocity.z;
+    pos.x = t.param9 * t.wind.x * step + p.velocity.x * step + pos.x;
+    pos.y = t.param9 * t.wind.y * step + p.velocity.y * step + pos.y;
+    pos.z = t.param9 * t.wind.z * step + t.param4 * step + p.velocity.z * step + pos.z;
+    if t.flag2 {
+        // the original's floor order: 2D y after x, 3D y first (both pure)
+        let x = um::floor_unsigned(pos.x);
+        let y = um::floor_unsigned(pos.y);
+        if !ground.is_valid_tile(x, y) {
+            if three_d {
+                // the 3D particle freezes over an invalid tile: nothing more this time
+                return 0;
+            }
+            result = 7;
+        } else {
+            let height = ground.mesh_z(pos.x, pos.y);
+            if pos.z <= height && (three_d || !ground.is_space_tile(x, y)) {
+                let n = ground.mesh_normal(pos.x, pos.y);
+                if dot(n, p.velocity) < 0.0 {
+                    pos.z = height;
+                    let bounce = dot(n, p.velocity) * (-1.0 - t.param10) / dot(n, n);
+                    p.velocity.x = n.x * bounce + p.velocity.x;
+                    p.velocity.y = n.y * bounce + p.velocity.y;
+                    p.velocity.z = n.z * bounce + p.velocity.z;
+                }
+            }
+        }
+    }
+    if result == 0 {
+        p.draw_age = p.age / t.duration as f32;
+        p.draw_position = pos;
+        p.moved = true;
+    }
+    result
+}
+
+/// `EEE2DParticle::Step` / `EEE3DParticle::Step`: 7 once past the duration (`now - last + age` against it: the 2D
+/// particle by `<=`, the 3D by `!(>)`); else `move_to` when the renderer's move left a position to apply (the C++
+/// then sets the effect there; the flag is cleared here).
+pub fn particle_step(r: &mut EeGfxEffectRecord, now: f32, move_to: &mut bool) -> i32 {
+    let p = &mut r.particle;
+    *move_to = false;
+    let t = now - p.last_time + p.age;
+    let alive = if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D { !(t > p.duration) } else { t <= p.duration };
+    if !alive {
+        return 7;
+    }
+    if p.moved {
+        p.moved = false;
+        *move_to = true;
+    }
+    0
+}
+
+/// `Clear`'s state (the C++ drops the graphic object).
+pub fn particle_clear(r: &mut EeGfxEffectRecord) {
+    r.particle = EeGfxEffectParticle::default();
+}
+
+/// The particles' Load after the base's (result ignored) and the C++'s media load: the velocity, age, the turn (2D
+/// rotation; 3D yaw, pitch, roll), brightness, and from 0.218 the last move's clock; the first error. On success
+/// the C++ sets the draw position from the effect's and the duration from the graphic effect (`loaded`).
+pub fn load_particle<F: EffectFile>(
+    r: &mut EeGfxEffectRecord,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+    loaded: &mut bool,
+) -> i32 {
+    let three_d = r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D;
+    let p = &mut r.particle;
+    *loaded = false;
+    let mut res = load_point(f, &mut p.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut p.age);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut p.yaw);
+    if res != OK {
+        return res;
+    }
+    if three_d {
+        res = f.read_f32(&mut p.pitch);
+        if res != OK {
+            return res;
+        }
+        res = f.read_f32(&mut p.roll);
+        if res != OK {
+            return res;
+        }
+    }
+    res = f.read_f32(&mut p.brightness);
+    if res != OK {
+        return res;
+    }
+    if major == 0 && minor <= 0xd9 {
+        p.last_time = 0.0;
+    } else {
+        res = f.read_f32(&mut p.last_time);
+    }
+    p.moved = false;
+    *loaded = true;
+    res
+}
+
+/// The particles' Save after the base's (result ignored).
+pub fn save_particle<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let p = &r.particle;
+    let mut res = save_point(f, &p.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(p.age);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(p.yaw);
+    if res != OK {
+        return res;
+    }
+    if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D {
+        res = f.write_f32(p.pitch);
+        if res != OK {
+            return res;
+        }
+        res = f.write_f32(p.roll);
+        if res != OK {
+            return res;
+        }
+    }
+    res = f.write_f32(p.brightness);
+    if res == OK {
+        res = f.write_f32(p.last_time);
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1134,6 +1405,115 @@ mod tests {
         assert_eq!(square_radius(1.0), (2.0f64).sqrt() as f32);
     }
 
+    struct Flat(f32, bool, bool);
+
+    impl ParticleGround for Flat {
+        fn is_valid_tile(&mut self, _x: u32, _y: u32) -> bool {
+            self.1
+        }
+        fn is_space_tile(&mut self, _x: u32, _y: u32) -> bool {
+            self.2
+        }
+        fn mesh_z(&mut self, _x: f32, _y: f32) -> f32 {
+            self.0
+        }
+        fn mesh_normal(&mut self, _x: f32, _y: f32) -> Ge3DPoint {
+            Ge3DPoint { x: 0.0, y: 0.0, z: 1.0 }
+        }
+    }
+
+    #[test]
+    fn particles_move_bounce_age_and_save() {
+        let tick = EeGfxParticleTick {
+            now: 100.0,
+            game_over: false,
+            wind: Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 },
+            position: Ge3DPoint { x: 5.0, y: 5.0, z: 0.05 },
+            duration: 1000,
+            param4: 0.0,
+            param8: 10.0,
+            param9: 0.5,
+            param10: 0.5,
+            param11: 0.0,
+            flag2: true,
+        };
+        // falls onto the ground at 0 and bounces up at half speed
+        let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        r.particle.velocity = Ge3DPoint { x: 0.0, y: 0.0, z: -1.0 };
+        assert_eq!(particle_update(&mut r, &tick, &mut Flat(0.0, true, false)), 0);
+        let vz = 10.0f32 * -1.0 * 0.1 + -1.0;
+        let bounce = vz * (-1.0 - 0.5) / 1.0;
+        assert_eq!(r.particle.velocity.z, 1.0 * bounce + vz);
+        assert_eq!(r.particle.draw_position.z, 0.0);
+        assert_eq!(r.particle.draw_position.x, 0.5 * 1.0 * 0.1 + 0.0 * 0.1 + 5.0);
+        assert_eq!(
+            (r.particle.age, r.particle.last_time, r.particle.draw_age, r.particle.moved),
+            (100.0, 100.0, 0.1, true)
+        );
+        // no time passed: nothing
+        assert_eq!(particle_update(&mut r, &tick, &mut Flat(0.0, true, false)), 0);
+        assert_eq!(r.particle.age, 100.0);
+        // off the map: the 2D particle ends, the 3D one freezes
+        let t2 = EeGfxParticleTick { now: 200.0, ..tick };
+        let mut a = r;
+        assert_eq!(particle_update(&mut a, &t2, &mut Flat(0.0, false, false)), 7);
+        let mut b = r;
+        b.kind = EE_GFX_EFFECT_KIND_PARTICLE_3D;
+        b.particle.moved = false;
+        assert_eq!(particle_update(&mut b, &t2, &mut Flat(0.0, false, false)), 0);
+        assert!(!b.particle.moved);
+        // the game over stops the 2D particle only
+        let mut g2 = r;
+        assert_eq!(
+            particle_update(&mut g2, &EeGfxParticleTick { game_over: true, ..t2 }, &mut Flat(0.0, true, false)),
+            0
+        );
+        assert_eq!(g2.particle.age, 100.0);
+        // past the duration
+        let mut c = r;
+        assert_eq!(particle_update(&mut c, &EeGfxParticleTick { now: 2000.0, ..tick }, &mut Flat(0.0, true, false)), 7);
+        // the tick applies a moved position once and ends past the duration
+        let mut moved = false;
+        r.particle.duration = 1000.0;
+        assert_eq!(particle_step(&mut r, 100.0, &mut moved), 0);
+        assert!(moved && !r.particle.moved);
+        assert_eq!(particle_step(&mut r, 100.0, &mut moved), 0);
+        assert!(!moved);
+        assert_eq!(particle_step(&mut r, 1001.0, &mut moved), 7);
+        // save and load: the 3D particle's three angles, the clock from 0.218
+        let mut s = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        s.particle = EeGfxEffectParticle {
+            velocity: Ge3DPoint { x: 1.0, y: 2.0, z: 3.0 },
+            age: 4.0,
+            yaw: 5.0,
+            pitch: 6.0,
+            roll: 7.0,
+            brightness: 0.5,
+            last_time: 9.0,
+            ..Default::default()
+        };
+        let mut f = Mem::default();
+        assert_eq!(save_particle(&s, &mut f), 0);
+        assert_eq!(f.items.len(), 3 + 6);
+        let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        let mut loaded = false;
+        assert_eq!(load_particle(&mut back, &mut g, 0, 0x10c, &mut loaded), 0);
+        assert!(loaded);
+        assert_eq!(back.particle, s.particle);
+        let mut old = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_particle(&mut old, &mut g, 0, 0xd9, &mut loaded), 0);
+        assert_eq!((old.particle.last_time, g.at), (0.0, 8));
+        let mut two = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        two.particle = s.particle;
+        let mut f2 = Mem::default();
+        save_particle(&two, &mut f2);
+        assert_eq!(f2.items.len(), 3 + 4);
+        particle_clear(&mut two);
+        assert_eq!(two.particle, EeGfxEffectParticle::default());
+    }
+
     #[test]
     fn regions_floor_then_divide() {
         assert_eq!(EeGfxEffectRecord::region_of(17.9, 0.0, 8), (2, 0));
@@ -1297,6 +1677,28 @@ mod tests {
         check.generate();
         check.generate();
         assert_eq!(p.plume.brightness, 0.0);
+        assert_eq!(random_seed(), check.seed);
+
+        // the particles' set-ups: the 2D rotation then brightness; the 3D yaw, pitch, roll then brightness
+        let mut q = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        particle_set_up(&mut q, &EeGfxParticleSetUp { int_param1: 0, param2: 0.5, param3: 0.25 });
+        let rot = check.generate() * 6.2831855;
+        let b = check.generate() * (0.75 - 0.25) + 0.25;
+        assert_eq!((q.particle.yaw, q.particle.brightness), (rot, b));
+        particle_set_up(&mut q, &EeGfxParticleSetUp { int_param1: 1, param2: 0.5, param3: 0.25 });
+        check.generate();
+        assert_eq!(q.particle.yaw, 0.0);
+        let mut d = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        particle_set_up(&mut d, &EeGfxParticleSetUp { int_param1: 0, param2: 0.5, param3: 0.25 });
+        let y = check.generate() * 6.2831855;
+        let pi = check.generate() * 6.2831855;
+        let ro = check.generate() * 6.2831855;
+        let diff = 0.5f32 - 0.25;
+        let b3 = check.generate() * (0.25 + 0.5 - diff) + diff;
+        assert_eq!(
+            (d.particle.yaw, d.particle.pitch, d.particle.roll, d.particle.brightness),
+            (y, pi, ro, b3.min(1.0))
+        );
         assert_eq!(random_seed(), check.seed);
     }
 }
