@@ -405,34 +405,6 @@ pub unsafe extern "C" fn ee_gfx_effect_save_plume(r: *const EeGfxEffectRecord, f
     }
 }
 
-/// `EEE2DMarchingIcons::ComputeOffsets`' candidates (the C++ keeps those `IsIconShown` takes): up to `capacity`
-/// points into `out`; their count.
-///
-/// # Safety
-/// `out` has room for `capacity` points.
-#[no_mangle]
-pub unsafe extern "C" fn ee_gfx_effect_marching_offsets(
-    kind: i32,
-    count: i32,
-    angle: f32,
-    radius: f32,
-    half_side: f32,
-    out: *mut Ge3DPoint,
-    capacity: usize,
-) -> usize {
-    let points = effect_state::marching_offsets(kind, count, angle, radius, half_side);
-    let n = points.len().min(capacity);
-    // SAFETY: the function's contract
-    unsafe { std::ptr::copy_nonoverlapping(points.as_ptr(), out, n) };
-    n
-}
-
-/// The square icons' bounding radius (`sqrt(2 r r)`).
-#[no_mangle]
-pub extern "C" fn ee_gfx_effect_square_icons_radius(half_side: f32) -> f32 {
-    effect_state::square_radius(half_side)
-}
-
 /// `EEEffect::GetRandom`.
 #[no_mangle]
 pub extern "C" fn ee_gfx_effect_random() -> f32 {
