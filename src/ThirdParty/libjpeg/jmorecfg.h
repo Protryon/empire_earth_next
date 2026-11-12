@@ -211,7 +211,7 @@ typedef unsigned int JDIMENSION;
 
 #ifdef NEED_FAR_POINTERS
 #define FAR  far
-#else
+#elif !defined(FAR)   /* fork: windows.h defines it (the WON lobby's JPGDecoder includes both) */
 #define FAR
 #endif
 

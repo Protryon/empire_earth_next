@@ -212,71 +212,12 @@ EeCombatImpactOut EECombatImpact(EEUnitClass* inClass, EEComplexUnit* inUnit, Ee
 // (attack-unit goals, ICBM ground strikes); switches to attack ground; on retarget follows the target's container
 void EEUCMissile::ActionChanged(EEComplexUnit* inUnit)
 {
-    float theVolume;
-    float thePan;
-    float thePitch;
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint theGround(0.0f, 0.0f, 0.0f);
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionSwitchToAttackGround: {
-        GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-        theGoal->GetGoalLocation(theTarget);
-        inUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
-        inUnit->StartAction(kActionAdvance);
-        this->ActionChanged(inUnit);
-        break;
-    }
-    case kActionHitTarget: {
-        thePosition.SetX(inUnit->mPhysicalModel.GetLocation().GetX());
-        thePosition.SetY(inUnit->mPhysicalModel.GetLocation().GetY());
-        thePosition.SetZ(inUnit->mPhysicalModel.GetLocation().GetZ());
-        if (thePosition.GetZ() < 0.0f && inUnit->mTile->GetHeight() < 0.0f && theGoal->mKind != kGoalAttackUnit && this->mSplashEffect != NULL) {
-            thePosition.SetZ(0.0f);
-            gEffectManager->CreatePlacedEffect(thePosition, this->mSplashEffect, NULL);
-        } else if (this->mDeathEffect != NULL) {
-            if (thePosition.GetZ() < inUnit->mTile->GetHeight())
-                ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-            else
-                theGround = thePosition;
-            // the location's x, y, z set in place, as the original's const_cast stores did (New, R5b.4: through the
-            // setter, which reports them to the unit store)
-            inUnit->mPhysicalModel.SetLocationXYZ(theGround);
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        }
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
-        if (inUnit->mHitPoints > 0)
-            this->FireShot(inUnit);
-        if (inUnit->mGoalState->mKind == kGoalAttackUnit
-            || (inUnit->mUnitClass->mUnitType == kUnitTypeCpICBM && inUnit->mGoalState->mKind == kGoalAttackGround)) {
-            inUnit->StartAction(kActionDead);
-            this->ActionChanged(inUnit);
-            if (inUnit->mUnitClass->GetPopulationCost() > 0)
-                inUnit->mPlayer->mPopulationCount -= inUnit->mUnitClass->GetPopulationCost();
-            gMiniMap->MoveUnit(inUnit, inUnit->mTileX, inUnit->mTileY, -10000, -10000);
-        }
-        break;
-    }
-    case kActionSelectNewTarget: {
-        EEUGAttackUnit* theAttack = static_cast<EEUGAttackUnit*>(theGoal);
-        if (theAttack->mTarget->mHitPoints < 1) {
-            inUnit->StartAction(kActionDying);
-            this->ActionChanged(inUnit);
-        } else
-            theAttack->SetTarget(theAttack->mTarget->mComplexUnit->mContainer);
-        break;
-    }
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    EECombatHostReadScope theScope(1);
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    // ee_combat shots.rs action_changed over EEUCProjectile.cpp's host; CBSO records the outcome
+    EECombatShotAction(EE_COMBAT_SHOT_MISSILE, this, inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_ACTION, inUnit, theBefore);
 }
 
 // FUNCTION: EXE 0x617916
@@ -335,28 +276,12 @@ void EEUCMissile::UpdateEffects(EEComplexUnit* inUnit)
 // Steps the missile's physics, effects and sound, and counts down its rotting time, launch delay and lifetime
 void EEUCMissile::Update(EEComplexUnit* inUnit)
 {
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    this->RefreshSound(inUnit);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        inUnit->UpdateRottingAwayTime();
-    }
-    long theElapsed = gPhysics->mTickTimeMs;
-    if (theElapsed == 0)
-        theElapsed = 1;
-    if (inUnit->mFlightTime != 0) {
-        long theTime = inUnit->mFlightTime - theElapsed;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetFlightTime(theTime);
-    }
-    if ((long)inUnit->mCloaked <= 0)
-        return;
-    long theTime = inUnit->mCloaked - theElapsed;
-    if (theTime < 0)
-        theTime = 0;
-    inUnit->mCloaked = theTime;
+    EECombatHostReadScope theScope(2);
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    // ee_combat shots.rs update over EEUCProjectile.cpp's host; CBSO records the outcome
+    EECombatShotUpdate(EE_COMBAT_SHOT_MISSILE, this, inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_MISSILE_UPDATE, inUnit, theBefore);
 }
 
 // ICF-FOLDED: EXE 0x556dd8

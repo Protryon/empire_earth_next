@@ -1187,7 +1187,6 @@ public:
     void CreateRipples(EEComplexUnit* inUnit);  // 0x234779 (void, ret4; transform effects)
     void HealGarrison(EEComplexUnit* inUnit);  // 0x239c74 (void, ret4; passenger healing)
     void UpdateCloakDetection(EEComplexUnit* inUnit); // original void thiscall, ret4
-    bool TurretsFacePoint(EEComplexUnit* inUnit, const GE3DPoint& inPoint, bool inFlag); // original AL result, ret12
     void Regenerate(EEComplexUnit* inUnit);  // 0x239d8a (units whose stats +0x15c is positive)
     bool SharesResearch(long inUnitType);   // 0x234fbd (EEMResearchTechnology: another type that may research; provisional name)
     bool IsDropSite();                      // 0x4249 (inline in the real header: an out-of-line COMDAT; EEUGBuildRepair::FindNextWork) (provisional name)

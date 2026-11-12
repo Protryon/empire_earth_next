@@ -231,22 +231,12 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
 // Returns whether the target is a gate's middle part whose gate is not closed (despite the name)
 bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 {
-    bool theResult = false;
-    if (this->mTarget->mUnitClass->mCategory == kUnitCategoryGate) {
-        EEUCGate* theGate = EEUnitClassCast<EEUCGate>(this->mTarget->GetUnitClass());
-        EEComplexUnit* theComplexUnit = this->mTarget->mComplexUnit;
-        if (!theGate->IsSidePart(theComplexUnit)) {
-            EEComplexUnit* theCarrier = theComplexUnit;
-            while (theCarrier->mPreviousPart != NULL)
-                theCarrier = theCarrier->mPreviousPart;
-            if ((theCarrier->mCommand ? theCarrier->mCommand->mType : 0) != kActionClosed)
-                theResult = true;
-            else
-                theResult = false;
-        } else
-            theResult = false;
-    }
-    return theResult;
+    EECombatHostReadScope theScope;
+    // ee_combat reads.rs gate_closed over the C++ host (EECombatGoals.cpp); CBQR records the outcome
+    bool theClosed = EECombatIsGateClosed(inUnit, this);
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, this->mTarget, theClosed);
+    return theClosed;
 }
 
 // FUNCTION: EXE 0x61d857
@@ -254,20 +244,14 @@ bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
 // the unit starts ignoring it
 bool EEUGAttackUnit::IsStillReachable(EEComplexUnit* inUnit)
 {
-    U2DPoint<long> theTile;
-    bool theResult;
-    if (!inUnit->mUnitClass->mIsMelee || (theResult = inUnit->CanReachUnit(this->mTarget)) != false) {
-        theResult = EEIsAttackReachable(inUnit, this->mTarget->GetComplexUnit(), &theTile);
-        if (theResult) {
-            theResult = (unsigned long)this->mPathAttempts <= 0x19;
-            if (theResult)
-                return theResult;
-        }
-    }
-    EEComplexUnit* theComplexUnit = this->mTarget->mComplexUnit;
-    if (theComplexUnit != NULL && !inUnit->IsTargetIgnored(theComplexUnit, true))
-        inUnit->IgnoreTarget(theComplexUnit);
-    return theResult;
+    EECombatHostReadScope theScope;
+    EEUnit* theTarget = this->mTarget;
+    // ee_combat reads.rs still_reachable over the C++ host; CBQR records the outcome
+    bool theReachable = EECombatIsStillReachable(inUnit, this);
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_STILL_REACHABLE, inUnit, theTarget, theReachable, (uint32_t)this->mPathAttempts,
+                                (uint32_t)inUnit->mIgnoredTargets.size());
+    return theReachable;
 }
 
 // FUNCTION: EXE 0x61d8d7

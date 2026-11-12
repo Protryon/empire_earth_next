@@ -71,6 +71,7 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEGameSound.h"
@@ -1914,137 +1915,24 @@ void EEUnitClass::ReleaseUnitClasses()
 // enemies); a hit on a non-target wall makes the launcher fire high
 EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition;
-    GE3DLine theLine;
-    GEVector theDirection;
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
-    EEComplexUnit* theResult = NULL;
-    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-    thePosition.SetX(theLocation.GetX());
-    thePosition.SetY(theLocation.GetY());
-    thePosition.SetZ(theLocation.GetZ());
-    const GE3DPoint& theGoal = inUnit->mInitialContactLocation;
-    theDirection.SetX(theGoal.GetX() - thePosition.GetX());
-    theDirection.SetY(theGoal.GetY() - thePosition.GetY());
-    theDirection.SetZ(theGoal.GetZ() - thePosition.GetZ());
-    bool theSegment = theDirection.GetMagnitudeSquared() >
-        inUnit->mPhysicalModel.GetScale() * inUnit->mPhysicalModel.GetScale();
-    if (theSegment) {
-        theLine.SetStart(thePosition);
-        theLine.SetDirection(theDirection);
+    EECombatHostReadScope theScope;
+    // ee_combat reads.rs impact_unit over the C++ host (EECombatGoals.cpp); CBQR records the outcome
+    EEUnit* theFound = EECombatFindImpactUnit(inUnit);
+    if (theScope.mOuter) {
+        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
+        EECombatCaptureHostRead(EE_COMBAT_HR_IMPACT_UNIT, inUnit, theGoal != NULL ? theGoal->mTarget : NULL, theFound != NULL,
+                                theFound != NULL ? (uint32_t)theFound->mUnitID : 0,
+                                inUnit->mOwner != NULL ? (uint32_t)inUnit->mOwner->mIsFiringHigh : 0xffffffffu);
     }
-    if (theAttack != NULL && theAttack->mTarget != NULL) {
-        EEComplexUnit* theTarget = theAttack->mTarget->GetComplexUnit();
-        if (theTarget != NULL && theTarget->mPhysicalModel.GetModel() != NULL) {
-            if (inUnit->mPhysicalModel.GetLocation().DistanceSquaredTo(theTarget->mPhysicalModel.GetLocation()) <=
-                (inUnit->GetStats()->GetScale() + theTarget->GetStats()->GetScale()) *
-                (inUnit->GetStats()->GetScale() + theTarget->GetStats()->GetScale())) {
-                unsigned long theLOD = theTarget->GetStats()->GetScale() < kLargeUnitScale ? 1 : 2;
-                if (!(theTarget->mIsBuilt)) {
-                    float theHealth = (float)theTarget->GetHitPoints() / (float)theTarget->GetStats()->mMaxHitPoints;
-                    if (theHealth != 0.0f) {
-                        if (theHealth < kMinConstructionScale)
-                            theHealth = kMinConstructionScale;
-                        if (inUnit->mPhysicalModel.Intersects(&theTarget->mPhysicalModel, theLine,
-                            theSegment, theLOD, 1.0f, 1.0f, theHealth))
-                            theResult = theTarget;
-                    }
-                } else {
-                    if (inUnit->mPhysicalModel.Intersects(&theTarget->mPhysicalModel, theLine,
-                        theSegment, theLOD, 1.0f, 1.0f, 1.0f))
-                        theResult = theTarget;
-                }
-            }
-        }
-    }
-    if (theResult == NULL) {
-        if (inUnit->mUnitClass->GetUnitType() == kUnitTypeFlamingArrow || inUnit->mUnitClass->GetUnitType() == kUnitTypePilum ||
-            inUnit->mUnitClass->GetUnitType() == kUnitTypeCpICBM)
-            return theResult;
-        RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
-        long theRegionX = inUnit->GetTileX() / theTable->mRegionSize;
-        long theRegionY = inUnit->GetTileY() / theTable->mRegionSize;
-        std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(theRegionX, theRegionY);
-        if (theRegion == NULL)
-            return theResult;
-        unsigned long theCount = theRegion->size();
-        for (unsigned long i = 0; i < theCount && theResult == NULL; ++i) {
-            EEComplexUnit* theCandidate = (*theRegion)[i];
-            if (!EEUUGetIsUnitClassTargetable(NULL, theCandidate->mUnitClass) || theCandidate == inUnit->mOwner)
-                continue;
-            EEUnitClass* theClass = theCandidate->mUnitClass;
-            if ((theClass->mIsParatrooperBomber && inUnit->mOwner->mUnitClass->mIsParatrooperBomber) ||
-                theCandidate->mPhysicalModel.GetModel() == NULL)
-                continue;
-            unsigned long theLOD = 1;
-            if (theCandidate->GetStats()->GetScale() >= kLargeUnitScale)
-                theLOD = 2;
-            if (theClass->mIsWall) {
-                if (theCandidate->IsPassableBy(inUnit))
-                    continue;
-                EEComplexUnit* theGoalCarrier;
-                if (theAttack != NULL && (theGoalCarrier = theAttack->mTarget->GetComplexUnit()) != 0) {
-                    EEComplexUnit* theNext;
-                    while ((theNext = theGoalCarrier->mPreviousPart) != 0)
-                        theGoalCarrier = theNext;
-                } else
-                    theGoalCarrier = NULL;
-                EEComplexUnit* theCarrier = theCandidate;
-                while (theCarrier->mPreviousPart != NULL)
-                    theCarrier = theCarrier->mPreviousPart;
-                if (theGoalCarrier != theCarrier && inUnit->mOwner->GetStats()->mCanFireOverWalls && inUnit->mOwner->mIsFiringHigh)
-                    continue;
-                if (theCandidate->mIsBuilt) {
-                    if (inUnit->mPhysicalModel.Intersects(&theCandidate->mPhysicalModel, theLine,
-                        theSegment, theLOD, 1.0f, 1.0f, 1.0f))
-                        theResult = theCandidate;
-                } else {
-                    float theHealth = (float)theCandidate->GetHitPoints() / (float)theCandidate->GetStats()->mMaxHitPoints;
-                    if (theHealth == 0.0f)
-                        continue;
-                    if (theHealth < kMinConstructionScale)
-                        theHealth = kMinConstructionScale;
-                    if (inUnit->mPhysicalModel.Intersects(&theCandidate->mPhysicalModel, theLine,
-                        theSegment, theLOD, 1.0f, 1.0f, theHealth))
-                        theResult = theCandidate;
-                }
-            } else {
-                if (theCandidate->GetPlayer() == inUnit->GetPlayer() ||
-                    inUnit->GetPlayer()->mEnemies[theCandidate->GetPlayer()->GetPlayerID()] == 0 ||
-                    theCandidate->GetHitPoints() <= 0 || theClass->mIsProjectile)
-                    continue;
-                unsigned long theCategory = theClass->GetCategory();
-                if ((inUnit->mUnitClass->GetCategory() != kUnitCategoryBomb && inUnit->mUnitClass->GetUnitType() != kUnitTypeMeteor &&
-                    (theCategory == kUnitCategoryBuilding || theCategory == kUnitCategoryBuilding19 || theCategory == kUnitCategoryMiningBuilding || theCategory == kUnitCategoryFortress)) ||
-                    theClass->GetUnitType() == kUnitTypeResFish)
-                    continue;
-                if (theCandidate->mIsBuilt) {
-                    if (inUnit->mPhysicalModel.Intersects(&theCandidate->mPhysicalModel, theLine,
-                        theSegment, theLOD, 1.0f, 1.0f, 1.0f))
-                        theResult = theCandidate;
-                } else {
-                    float theHealth = (float)theCandidate->GetHitPoints() / (float)theCandidate->GetStats()->mMaxHitPoints;
-                    if (theHealth == 0.0f)
-                        continue;
-                    if (theHealth < kMinConstructionScale)
-                        theHealth = kMinConstructionScale;
-                    if (inUnit->mPhysicalModel.Intersects(&theCandidate->mPhysicalModel, theLine,
-                        theSegment, theLOD, 1.0f, 1.0f, theHealth))
-                        theResult = theCandidate;
-                }
-            }
-        }
-    }
-    if (theResult != NULL && theAttack != NULL && inUnit->mOwner != NULL && theResult != theAttack->mTarget &&
-        gUnitSetManager.Contains(theResult->mUnitClass->GetUnitType(), 0x2a) && inUnit->mOwner->mIsFiringHigh != true)
-        inUnit->mOwner->mIsFiringHigh = true;
-    return theResult;
+    return theFound;
 }
 
 // FUNCTION: EXE 0x633a14
 // Returns whether the unit faces the target unit (or its tile's centre)
 bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUseTolerance)
 {
+    EECombatHostReadScope theScope;   // CBQR records the outcome (the original body in a lambda)
+    bool theFaces = [&]() -> bool {
     GE3DPoint theLocation;
     EEComplexUnit* theOwner = inTarget->GetComplexUnit();
     if (theOwner != NULL) {
@@ -2055,6 +1943,10 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
         theLocation.SetY(inTarget->GetTileY() + 0.5f);
     }
     return this->FacesPoint(inUnit, theLocation, inUseTolerance);
+    }();
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_TARGET, inUnit, inTarget, theFaces, 0, 0, inUseTolerance);
+    return theFaces;
 }
 
 // FUNCTION: EXE 0x633a72
@@ -2062,93 +1954,22 @@ bool EEUnitClass::FacesTarget(EEComplexUnit* inUnit, EEUnit* inTarget, bool inUs
 // ships also count the opposite side
 bool EEUnitClass::FacesPoint(EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance)
 {
-    GETransformation theLocation(inUnit->mPhysicalModel.GetLocation());
-    GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
-    GE3DPoint theTarget(inLocation);
-    GEVector theUp(0.0f, 1.0f, 0.0f);
-    GEVector theRotated;
-    GEVector theForward;
-    GEVector theDirection;
-    EEGraphicObject* theModel = inUnit->GetModel();
-    float theTolerance = this->mFiringArc;
-    if ((inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato) && inUnit->mIsSpecialAttack)
-        theTolerance = 0.5235988f;
-    if (theModel->GetNumParts() > 0)
-        return this->TurretsFacePoint(inUnit, theTarget, inUseTolerance);
-    if ((theTarget.GetX() == thePosition.GetX() && theTarget.GetY() == thePosition.GetY()) ||
-        theTolerance == 6.2831855f)
-        return true;
-    GETransformation theRotation;
-    theDirection.SetX(theTarget.GetX() - thePosition.GetX());
-    theDirection.SetY(theTarget.GetY() - thePosition.GetY());
-    theDirection.Normalize();
-    theRotation.SetOrientationYPR(this->mFacingOffset, 0.0f, 0.0f);
-    theRotation.Apply(theUp, theRotated);
-    theLocation.Apply(theRotated, theForward);
-    theForward.SetZ(0.0f);
-    theForward.Normalize();
-    float theDot = theForward.DotProduct(theDirection);
-    if (theDot > 1.0f)
-        theDot = 1.0f;
-    else if (theDot < -1.0f)
-        theDot = -1.0f;
-    float theAngle = UMAbs(UMArcCos(theDot));
-    if (!this->mFiresBroadside) {
-        if (inUseTolerance)
-            return theAngle <= theTolerance * 0.5f;
-        return theAngle <= kFacingTolerance;
+    EECombatHostReadScope theScope;
+    // ee_combat reads.rs faces_point (with TurretsFacePoint) over the plain reads; CBQR records the outcome
+    bool theFaces = EECombatFacesPoint(this, inUnit, inLocation, inUseTolerance);
+    if (theScope.mOuter) {
+        float theX = inLocation.GetX();
+        float theY = inLocation.GetY();
+        uint32_t theBits[2];
+        memcpy(&theBits[0], &theX, 4);
+        memcpy(&theBits[1], &theY, 4);
+        EECombatCaptureHostRead(EE_COMBAT_HR_FACES_POINT, inUnit, NULL, theFaces, theBits[0], theBits[1], inUseTolerance);
     }
-    float theOppositeAngle = UMAbs(theAngle - 3.1415927f);
-    if (inUseTolerance) {
-        float theHalfTolerance = theTolerance * 0.5f;
-        return theAngle <= theHalfTolerance || theOppositeAngle <= theHalfTolerance;
-    }
-    return theAngle <= kFacingTolerance || theOppositeAngle <= kFacingTolerance;
+    return theFaces;
 }
 
 // FUNCTION: EXE 0x633ccc
-// Returns whether every turret of the unit faces a point within the firing arc or the fixed tolerance
-bool EEUnitClass::TurretsFacePoint(EEComplexUnit* inUnit, const GE3DPoint& inPoint, bool inFlag)
-{
-    GE3DPoint theOffset;
-    GE3DPoint theWorldPosition;
-    GEVector theForward(0.0f, 1.0f, 0.0f);
-    GEVector theRotated, thePartFacing, theWorldFacing, theDirection;
-    GETransformation theRotation;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    EEModel* theModel = inUnit->GetModel();
-    unsigned long theCount = theModel->mTurretParts.size();
-    bool theResult = true;
-    for (unsigned long i = 0; i < theCount; ++i) {
-        if (!theResult) return false;
-        EETurretPart* thePart = *(theModel->mTurretParts.begin() + i);
-        theOffset = thePart->mPosition;
-        theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-        theOffset.SetY(theStats->GetScale() * theOffset.GetY());
-        theOffset.SetZ(theStats->GetScale() * theOffset.GetZ());
-        inUnit->mPhysicalModel.GetLocation().Apply(theOffset, theWorldPosition);
-        theDirection.SetX(inPoint.GetX() - theWorldPosition.GetX());
-        theDirection.SetY(inPoint.GetY() - theWorldPosition.GetY());
-        theDirection.SetZ(0.0f);
-        theDirection.Normalize();
-        GEModel* thePartModel = theModel->GetTurretPartModel(i);   // unused: the original makes the call (0x233e02) and drops the result
-        theRotation.SetOrientationYPR(inUnit->mTurretAngles[i], 0.0f, 0.0f);
-        theRotation.Apply(theForward, theRotated);
-        theModel->GetTurretPartTransformation(i).Apply(theRotated, thePartFacing);
-        inUnit->mPhysicalModel.GetLocation().Apply(thePartFacing, theWorldFacing);
-        theWorldFacing.SetZ(0.0f);
-        theWorldFacing.Normalize();
-        float theDot = theWorldFacing.GetZ() * theDirection.GetZ() +
-            theWorldFacing.GetY() * theDirection.GetY() + theDirection.GetX() * theWorldFacing.GetX();
-        if (theDot > 1.0f) theDot = 1.0f;
-        else if (!(theDot >= -1.0f)) theDot = -1.0f;
-        float theAngle = UMArcCos(theDot);
-        if (!(theAngle >= 0.0f)) theAngle = -theAngle;
-        if (inFlag) theResult = !(theAngle > this->mFiringArc * 0.5f);
-        else theResult = !(theAngle > kFacingTolerance);
-    }
-    return theResult;
-}
+// EEUnitClass::TurretsFacePoint: ee_combat reads.rs turrets_face_point (FacesPoint's only callee)
 
 // FUNCTION: EXE 0x633f0e
 // Starts a unit's death: spawns the death class, plays the death effect and sound (not for ICBMs), the dying animation,

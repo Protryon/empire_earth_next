@@ -40,6 +40,8 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUCProjectile.h"
+#include "ee/EEUCMissile.h"
+#include "ee/EEMiniMap.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
 
@@ -107,108 +109,12 @@ bool EEUCProjectile::CheckWaterImpact(EEComplexUnit* inUnit)
 // set a target on fire (flaming arrows), dies and leaves remains; retargets a dead target's tile or its container
 void EEUCProjectile::ActionChanged(EEComplexUnit* inUnit)
 {
-    float theVolume;
-    float thePan;
-    float thePitch;
-    bool theAlive;
-    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint theGround(0.0f, 0.0f, 0.0f);
-    EEUnitGoal* theGoal = inUnit->mGoalState;
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionUnitRotting:
-        inUnit->SetAnimation(5, -1, 0);
-        inUnit->SetRottingAwayTime(this->mRottingTime);
-        break;
-    case kActionHitTarget: {
-        thePosition.SetX(inUnit->mPhysicalModel.GetLocation().GetX());
-        thePosition.SetY(inUnit->mPhysicalModel.GetLocation().GetY());
-        float theZ = inUnit->mPhysicalModel.GetLocation().GetZ();
-        thePosition.SetZ(theZ);
-        if (thePosition.GetZ() < 0.0f && inUnit->mTile->GetHeight() < 0.0f && theGoal->mKind != kGoalAttackUnit && this->mSplashEffect != NULL) {
-            thePosition.SetZ(0.0f);
-            gEffectManager->CreatePlacedEffect(thePosition, this->mSplashEffect, NULL);
-        } else if (this->mDeathEffect != NULL) {
-            // the original keeps the z in st(0) (theZ) and compares z < height (EEUCMissile's twin shape)
-            if (thePosition.GetZ() < inUnit->mTile->GetHeight())
-                ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-            else
-                theGround = thePosition;
-            // the location's x, y, z set in place, as the original's const_cast stores did (New, R5b.4: through the
-            // setter, which reports them to the unit store)
-            inUnit->mPhysicalModel.SetLocationXYZ(theGround);
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        }
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeParachuteBomb) {
-            inUnit->UnloadCargoAtTile((long)thePosition.GetX(), (long)thePosition.GetY(), false);
-            if (inUnit->GetNumCargoUnits() != 0)
-                inUnit->KillCargo();
-        } else {
-            this->FireShot(inUnit);
-        }
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeBombForSASExplosiveExpert && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit) {
-            EEUnit* theUnit = static_cast<EEUGAttackUnit*>(inUnit->mGoalState)->mTarget;
-            EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(theUnit);
-            if (theTarget != NULL)
-                theTarget->SetIsTinted(false);
-        }
-        if (inUnit->GetLineOfSight() > 0.0f) {
-            inUnit->SightOffHere();
-            theAlive = true;
-        } else {
-            theAlive = false;
-        }
-        inUnit->SetHitPoints(0);
-        if (theAlive)
-            inUnit->SightOnHere();
-        if (inUnit->mUnitClass->mUnitType == kUnitTypeFlamingArrow && inUnit->mComplexUnit->mGoalState->mKind == kGoalAttackUnit) {
-            EECalamityClass* theClass = NULL;
-            USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x17, theClass);
-            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(inUnit->mComplexUnit->mGoalState)->mTarget;
-            if (gUnitSetManager.GetSet(theClass->GetUnitSet())->Contains(theTarget->mUnitClass->mUnitType)) {
-                EECivPower* thePower = gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows);
-                float theRoll = gPhysics->mRandom.Generate() * 100.0f;
-                if (theRoll <= thePower->mChance)
-                    USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(
-                        0x18, -1, static_cast<EEUGAttackUnit*>(inUnit->mComplexUnit->mGoalState)->mTarget->GetUnitID(),
-                        inUnit->mPlayer->GetPlayerID());
-            }
-        }
-        if (inUnit->mGoalState->mKind == kGoalAttackUnit)
-            inUnit->StartAction(kActionDead);
-        else
-            inUnit->StartAction(kActionDying);
-        this->ActionChanged(inUnit);
-        if (this->mRemainsClass != NULL && this->mIsProjectile && !gWorldClearing && !gFreeCamera)
-            this->CreateRemainsUnit(inUnit);
-        break;
-    }
-    case kActionSelectNewTarget: {
-        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-        if (theTarget->mHitPoints < 1) {
-            thePosition.SetX((float)(static_cast<EEUGAttackUnit*>(theGoal))->mTarget->mTileX);
-            thePosition.SetY((float)(static_cast<EEUGAttackUnit*>(theGoal))->mTarget->mTileY);
-            EEMapTile* theTile = ::gWorld.mMap->GetTile(static_cast<EEUGAttackUnit*>(theGoal)->mTarget->mTileX,
-                                                        static_cast<EEUGAttackUnit*>(theGoal)->mTarget->mTileY);
-            if (theTile != NULL)
-                thePosition.SetZ(theTile->GetHeight());
-            inUnit->SetGoal(new EEUGAttackGround(thePosition, false), 0, 0);
-        } else {
-            static_cast<EEUGAttackUnit*>(theGoal)->SetTarget(theTarget->mComplexUnit->mContainer);
-        }
-        break;
-    }
-    default:
-        this->HandleActionChanged(inUnit);
-        break;
-    }
+    EECombatHostReadScope theScope(1);
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    // ee_combat shots.rs action_changed: the plan's operations on this host (EECombatShotAction); CBSO records the outcome
+    EECombatShotAction(EE_COMBAT_SHOT_PROJECTILE, this, inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_ACTION, inUnit, theBefore);
 }
 
 // FUNCTION: EXE 0x6197d3
@@ -275,23 +181,12 @@ void EEUCProjectile::UpdateEffects(EEComplexUnit* inUnit)
 // Steps the projectile's physics, effects and sound, counts down rotting, fades it below z 0 in space, adds flight time
 void EEUCProjectile::Update(EEComplexUnit* inUnit)
 {
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    inUnit->UpdateOrbitals();
-    this->UpdateEffects(inUnit);
-    this->RefreshSound(inUnit);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        inUnit->UpdateRottingAwayTime();
-    } else if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFadingOutInSpace) {
-        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-        inUnit->GetPosition(thePosition);
-        if (thePosition.GetZ() < 0.0f)
-            inUnit->SetOpacityChain(1.0f - thePosition.GetZ() * -0.16666667f);
-    }
-    unsigned long theElapsed = gPhysics->mTickTimeMs;
-    if (theElapsed == 0)
-        theElapsed = 1;
-    inUnit->SetFlightTime(inUnit->mFlightTime + theElapsed);
+    EECombatHostReadScope theScope(2);
+    uint32_t theBefore = EECombatCommandOf(inUnit);
+    // ee_combat shots.rs update: the plan's operations on this host; CBSO records the outcome
+    EECombatShotUpdate(EE_COMBAT_SHOT_PROJECTILE, this, inUnit);
+    if (theScope.mOuter)
+        EECombatCaptureShot(EE_COMBAT_SO_PROJECTILE_UPDATE, inUnit, theBefore);
 }
 
 // ICF-FOLDED: EXE 0x556dd8
@@ -304,4 +199,287 @@ void EEUCProjectile::AddToRegion(class EEUnit *)
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUCProjectile::RemoveFromRegion(class EEUnit *)
 {
+}
+
+// New (port): the host of ee_combat shots.rs's plans (EEUCProjectile/EEUCMissile::ActionChanged and Update,
+// EEUCTorpedo::Update): each read the original's expression, each operation its statement, on the unit and its
+// class (the original's `this`, cast as the original's member function saw it: virtual calls dispatch as they did).
+
+namespace {
+
+struct EEShotContext {
+    EEComplexUnit* mUnit;
+    EEUnitClass* mClass;
+    int32_t mKind;                          // EE_COMBAT_SHOT_*
+};
+
+uint32_t EEShotFloat(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+float EEShotArg(int32_t inBits)
+{
+    float theValue;
+    memcpy(&theValue, &inBits, 4);
+    return theValue;
+}
+
+GE3DPoint EEShotLocation(EEComplexUnit* inUnit)
+{
+    const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
+    return GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+}
+
+EEUGAttackUnit* EEShotAttack(EEComplexUnit* inUnit)
+{
+    return static_cast<EEUGAttackUnit*>(inUnit->mGoalState);
+}
+
+int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
+{
+    EEShotContext* theContext = (EEShotContext*)inContext;
+    EEComplexUnit* theUnit = theContext->mUnit;
+    EEUnitClass* theClass = theContext->mClass;
+    bool theMissile = theContext->mKind != EE_COMBAT_SHOT_PROJECTILE;
+    switch (inOp) {
+    // ---- reads
+    case EE_COMBAT_SHOT_R_COMMAND:
+        return theUnit->mCommand ? (int32_t)theUnit->mCommand->mType : 0;
+    case EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME:
+        return (int32_t)theClass->mRottingTime;
+    case EE_COMBAT_SHOT_R_LOCATION_X:
+        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetX());
+    case EE_COMBAT_SHOT_R_LOCATION_Y:
+        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetY());
+    case EE_COMBAT_SHOT_R_LOCATION_Z:
+        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetZ());
+    case EE_COMBAT_SHOT_R_TILE_HEIGHT:
+        return (int32_t)EEShotFloat(theUnit->mTile->GetHeight());
+    case EE_COMBAT_SHOT_R_GOAL_KIND:
+        return theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
+    case EE_COMBAT_SHOT_R_SPLASH_EFFECT:
+        return theClass->mSplashEffect != NULL;
+    case EE_COMBAT_SHOT_R_DEATH_EFFECT:
+        return theClass->mDeathEffect != NULL;
+    case EE_COMBAT_SHOT_R_DEATH_SOUND:
+        return theUnit->mStats->mDeathSound != NULL;
+    case EE_COMBAT_SHOT_R_UNIT_TYPE:
+        return (int32_t)theUnit->mUnitClass->mUnitType;
+    case EE_COMBAT_SHOT_R_CARGO:
+        return (int32_t)theUnit->GetNumCargoUnits();
+    case EE_COMBAT_SHOT_R_LINE_OF_SIGHT:
+        return (int32_t)EEShotFloat(theUnit->GetLineOfSight());
+    case EE_COMBAT_SHOT_R_COMPLEX_GOAL_KIND:
+        return (int32_t)theUnit->mComplexUnit->mGoalState->mKind;
+    case EE_COMBAT_SHOT_R_FLAMING_SET: {
+        EECalamityClass* theCalamity = NULL;
+        USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x17, theCalamity);
+        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theUnit->mComplexUnit->mGoalState)->mTarget;
+        return gUnitSetManager.GetSet(theCalamity->GetUnitSet())->Contains(theTarget->mUnitClass->mUnitType);
+    }
+    case EE_COMBAT_SHOT_R_RANDOM:
+        return (int32_t)EEShotFloat(gPhysics->mRandom.Generate());
+    case EE_COMBAT_SHOT_R_FLAMING_CHANCE:
+        return (int32_t)EEShotFloat((float)gCivPowersManager.GetPowerRecord(kCivPowerFlamingArrows)->mChance);
+    case EE_COMBAT_SHOT_R_REMAINS:
+        return theClass->mRemainsClass != NULL;
+    case EE_COMBAT_SHOT_R_IS_PROJECTILE:
+        return theClass->mIsProjectile;
+    case EE_COMBAT_SHOT_R_WORLD_CLEARING:
+        return gWorldClearing;
+    case EE_COMBAT_SHOT_R_FREE_CAMERA:
+        return gFreeCamera;
+    case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS:
+        return (int32_t)EEShotAttack(theUnit)->mTarget->mHitPoints;
+    case EE_COMBAT_SHOT_R_HIT_POINTS:
+        return (int32_t)theUnit->mHitPoints;
+    case EE_COMBAT_SHOT_R_POPULATION_COST:
+        return (int32_t)theUnit->mUnitClass->GetPopulationCost();
+    case EE_COMBAT_SHOT_R_PHYSICS_MODEL:
+        return theClass->mPhysicsModel != NULL;
+    case EE_COMBAT_SHOT_R_TILE_X:
+        return (int32_t)theUnit->mTileX;
+    case EE_COMBAT_SHOT_R_ROTTING:
+        return (int32_t)theUnit->mRottingAwayTime;
+    case EE_COMBAT_SHOT_R_TICK:
+        return (int32_t)gPhysics->mTickTimeMs;
+    case EE_COMBAT_SHOT_R_FLIGHT_TIME:
+        return (int32_t)theUnit->mFlightTime;
+    case EE_COMBAT_SHOT_R_CLOAKED:
+        return (int32_t)(long)theUnit->mCloaked;
+    case EE_COMBAT_SHOT_R_POSITION_Z: {
+        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
+        theUnit->GetPosition(thePosition);
+        return (int32_t)EEShotFloat(thePosition.GetZ());
+    }
+    // ---- operations
+    case EE_COMBAT_SHOT_SET_ANIMATION:
+        theUnit->SetAnimation(inArg, -1, 0);
+        break;
+    case EE_COMBAT_SHOT_SET_ROTTING:
+        theUnit->SetRottingAwayTime(inArg);
+        break;
+    case EE_COMBAT_SHOT_SPLASH: {
+        GE3DPoint thePosition = EEShotLocation(theUnit);
+        thePosition.SetZ(0.0f);
+        gEffectManager->CreatePlacedEffect(thePosition, theClass->mSplashEffect, NULL);
+        break;
+    }
+    case EE_COMBAT_SHOT_GROUND_LOCATION: {
+        GE3DPoint thePosition = EEShotLocation(theUnit);
+        GE3DPoint theGround(0.0f, 0.0f, 0.0f);
+        ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
+        // the location's x, y, z set in place, as the original's const_cast stores did (through the setter, which
+        // reports them to the unit store)
+        theUnit->mPhysicalModel.SetLocationXYZ(theGround);
+        break;
+    }
+    case EE_COMBAT_SHOT_SAME_LOCATION: {
+        GE3DPoint thePosition = EEShotLocation(theUnit);
+        theUnit->mPhysicalModel.SetLocationXYZ(thePosition);
+        break;
+    }
+    case EE_COMBAT_SHOT_DEATH_EFFECT:
+        gEffectManager->CreateUnitEffect(theUnit, theClass->mDeathEffect, NULL, 0, 0, 0);
+        break;
+    case EE_COMBAT_SHOT_DEATH_SOUND: {
+        float theVolume;
+        float thePan;
+        float thePitch;
+        EESoundObject* theSound = theUnit->mStats->mDeathSound;
+        theClass->GetSoundParameters(theUnit, theSound, &theVolume, &thePan, &thePitch);
+        gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
+        break;
+    }
+    case EE_COMBAT_SHOT_PHYSICS_ACTION:
+        theUnit->SetCurrentPhysicsAction((unsigned long)inArg);
+        break;
+    case EE_COMBAT_SHOT_DROP_PATH:
+        theUnit->DropPath();
+        break;
+    case EE_COMBAT_SHOT_UNLOAD_CARGO:
+        theUnit->UnloadCargoAtTile((long)EEShotArg(inArg), (long)EEShotArg(inArg1), false);
+        break;
+    case EE_COMBAT_SHOT_KILL_CARGO:
+        theUnit->KillCargo();
+        break;
+    case EE_COMBAT_SHOT_FIRE_SHOT:
+        if (theMissile)
+            static_cast<EEUCMissile*>(theClass)->FireShot(theUnit);
+        else
+            static_cast<EEUCProjectile*>(theClass)->FireShot(theUnit);
+        break;
+    case EE_COMBAT_SHOT_UNTINT_TARGET: {
+        EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(EEShotAttack(theUnit)->mTarget);
+        if (theTarget != NULL)
+            theTarget->SetIsTinted(false);
+        break;
+    }
+    case EE_COMBAT_SHOT_SIGHT_OFF:
+        theUnit->SightOffHere();
+        break;
+    case EE_COMBAT_SHOT_SET_HIT_POINTS:
+        theUnit->SetHitPoints(inArg);
+        break;
+    case EE_COMBAT_SHOT_SIGHT_ON:
+        theUnit->SightOnHere();
+        break;
+    case EE_COMBAT_SHOT_CREATE_CALAMITY:
+        USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(
+            0x18, -1, static_cast<EEUGAttackUnit*>(theUnit->mComplexUnit->mGoalState)->mTarget->GetUnitID(),
+            theUnit->mPlayer->GetPlayerID());
+        break;
+    case EE_COMBAT_SHOT_START_ACTION:
+        theUnit->StartAction((unsigned long)inArg);
+        break;
+    case EE_COMBAT_SHOT_ACTION_CHANGED:
+        theClass->ActionChanged(theUnit);
+        break;
+    case EE_COMBAT_SHOT_CREATE_REMAINS:
+        theClass->CreateRemainsUnit(theUnit);
+        break;
+    case EE_COMBAT_SHOT_ATTACK_TARGET_TILE: {
+        EEUGAttackUnit* theGoal = EEShotAttack(theUnit);
+        GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
+        thePosition.SetX((float)theGoal->mTarget->mTileX);
+        thePosition.SetY((float)theGoal->mTarget->mTileY);
+        EEMapTile* theTile = ::gWorld.mMap->GetTile(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY);
+        if (theTile != NULL)
+            thePosition.SetZ(theTile->GetHeight());
+        theUnit->SetGoal(new EEUGAttackGround(thePosition, false), 0, 0);
+        break;
+    }
+    case EE_COMBAT_SHOT_RETARGET_CONTAINER: {
+        EEUGAttackUnit* theGoal = EEShotAttack(theUnit);
+        theGoal->SetTarget(theGoal->mTarget->mComplexUnit->mContainer);
+        break;
+    }
+    case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED:
+        theClass->HandleActionChanged(theUnit);
+        break;
+    case EE_COMBAT_SHOT_ATTACK_GOAL_LOCATION: {
+        EEUnitGoal* theGoal = theUnit->mGoalState;
+        GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
+        theGoal->GetGoalLocation(theTarget);
+        theUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
+        break;
+    }
+    case EE_COMBAT_SHOT_POPULATION:
+        theUnit->mPlayer->mPopulationCount -= inArg;
+        break;
+    case EE_COMBAT_SHOT_MINIMAP_OFF:
+        gMiniMap->MoveUnit(theUnit, theUnit->mTileX, theUnit->mTileY, -10000, -10000);
+        break;
+    case EE_COMBAT_SHOT_STEP_PHYSICS:
+        theClass->mPhysicsModel->Step(theUnit);
+        break;
+    case EE_COMBAT_SHOT_ORBITALS:
+        theUnit->UpdateOrbitals();
+        break;
+    case EE_COMBAT_SHOT_EFFECTS:
+        if (theMissile)
+            static_cast<EEUCMissile*>(theClass)->UpdateEffects(theUnit);
+        else
+            static_cast<EEUCProjectile*>(theClass)->UpdateEffects(theUnit);
+        break;
+    case EE_COMBAT_SHOT_REFRESH_SOUND:
+        theClass->RefreshSound(theUnit);
+        break;
+    case EE_COMBAT_SHOT_SET_OPACITY:
+        theUnit->SetOpacityChain(EEShotArg(inArg));
+        break;
+    case EE_COMBAT_SHOT_SET_FLIGHT_TIME:
+        theUnit->SetFlightTime(inArg);
+        break;
+    case EE_COMBAT_SHOT_SET_CLOAKED:
+        theUnit->mCloaked = (unsigned long)(long)inArg;
+        break;
+    case EE_COMBAT_SHOT_WATER_PLANE: {
+        GETransformation theTransformation(false);
+        theTransformation = theUnit->mPhysicalModel.GetLocation();
+        theTransformation.SetZ(0.0f);
+        theUnit->SetTransformation(theTransformation, true);
+        break;
+    }
+    }
+    return 0;
+}
+
+}   // namespace
+
+void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEShotContext theContext = {inUnit, inClass, inKind};
+    EeCombatShotHost theHost = {&theContext, EEShotOp};
+    ee_combat_shot_action_changed(inKind, &theHost);
+}
+
+void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    EEShotContext theContext = {inUnit, inClass, inKind};
+    EeCombatShotHost theHost = {&theContext, EEShotOp};
+    ee_combat_shot_update(inKind, &theHost);
 }

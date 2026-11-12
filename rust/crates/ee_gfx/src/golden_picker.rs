@@ -440,13 +440,7 @@ impl Case {
 
     fn entry_in_view(&mut self, e: Entry, planes: &[Ge3DPlane; 4]) -> bool {
         let m = e.model;
-        let mut t = e.location.compose(&self.models[m].transforms[e.frame as usize]);
-        if e.scale != 1.0 {
-            t.scale(e.scale, e.scale, e.scale);
-            t.m[0][3] = e.location.m[0][3];
-            t.m[1][3] = e.location.m[1][3];
-            t.m[2][3] = e.location.m[2][3];
-        }
+        let t = entry_transform(&e.location, &self.models[m].transforms[e.frame as usize], e.scale);
         let center = t.apply_point(self.models[m].center);
         let below = sphere_below(center, planes);
         if !below.iter().any(|b| *b) {

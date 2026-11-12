@@ -11,7 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "ee/wonapi/WONLobbyTextImage.h"
 namespace WONAPI {
 // FUNCTION: WON 0x00713c60
 // FUNCTION: WON 0x00713c80
@@ -44,14 +43,3 @@ void TextArea::AddSegment(const GUIString& text,int color,Font* font,bool lineBr
 }
 }
 
-namespace WONAPI {
-// Appends an inline image segment with its copy text (not identified in the original exe)
-void TextArea::AddImage(Image *theImage, const GUIString &theCopyText, bool lineBreak)
-{
-	SmartPtr<TextImage> aSeg = new TextImage;
-	aSeg->mImage = theImage;
-	aSeg->mText = theCopyText;
-	aSeg->mLineBreak = lineBreak;
-	this->AddSegment(aSeg.get());
-}
-}
