@@ -14,6 +14,9 @@ from a capture of the C++ leaves before they were deleted: a later build whose g
 the same records, so `check` gates the whole path (the inputs the game hands a leaf and its outputs), and `replay`
 gates the Rust leaves alone over the C++ capture, even after the game has changed.
 
+EFMU is the effect manager's state after every Update (EEEffectManager.cpp: the last handle, the sizes and an
+FNV-1a 64 of the index, the list and the destruction queue); its golden lines come from the C++ manager (R4.4, sixth
+round; the missile profile's golden does not list it).
 ASRN is the tile A* searches' record (ee/EEAIAStarCapture.h): one per EEAIAStarMachine::Run, with the run's inputs,
 the count and FNV-1a digest of everything the machine asked its goal and the goal asked its view (in order, with the
 answers), and the run's outputs (the machine's members, the goal's flags, a digest of every storage node in list

@@ -749,6 +749,8 @@ bool EEUGBuildRepair::IsFootprintClear()
         EEGetFootprintTiles(this->mTarget, theTiles);
         for (unsigned long i = 0; i < theTiles.size() && theResult; ++i) {
             EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
+            if (theTile == NULL)   // port: a footprint tile off the map (a site at the map's edge, Small Islands seed 11): nothing stands there
+                continue;
             EEGetBlockingUnits(this->mPlayer, this->mTargetType, theTile, 0, theUnits);
             if (theUnits.empty() || (theUnits.size() == 1 && theUnits[0] == this->mTarget)
                 || (theUnits.size() == 1 && theUnits[0]->GetUnitClass()->GetUnitType() == kUnitTypeAirportRunway && this->mTargetType == 0x42))
@@ -1050,7 +1052,8 @@ void EEUGBuildRepair::BeginRepair(EEComplexUnit* inUnit)
     inUnit->mAngularVelocity = GEOrientation();
     inUnit->SetAnimation(7, -1, 0);
     long theType = this->mTarget->mUnitClass->GetUnitType();
-    if (theType != kUnitTypeFarm && theType != kUnitTypeRoboticFarm)
+    // port: a site not placed yet (a pending foundation: its tile is NULL) has no footprint to clear
+    if (theType != kUnitTypeFarm && theType != kUnitTypeRoboticFarm && this->mTarget->mTile != NULL && this->mTarget->mIsValid)
         this->ClearBuildSite(this->mTarget->mComplexUnit);
 }
 

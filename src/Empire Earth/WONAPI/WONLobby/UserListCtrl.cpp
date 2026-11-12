@@ -68,8 +68,8 @@ UserListCtrl::~UserListCtrl() {}
 Image* GetLobbyClientIcon(LobbyClient* inClient,bool inMode)
 {
     if(inClient==NULL) return NULL;
-    if(inClient->mIgnored) return ::UserListCtrl_Ignored_Image.get();
-    if(inClient->mBlocked) return ::UserListCtrl_Blocked_Image.get();
+    if(inClient->IsIgnored()) return ::UserListCtrl_Ignored_Image.get();
+    if(inClient->IsBlocked()) return ::UserListCtrl_Blocked_Image.get();
     if(inClient->IsMuted(inMode)) return ::UserListCtrl_Muted_Image.get();
     if(inClient->IsAway()) return ::UserListCtrl_Away_Image.get();
     if(inClient->IsAdmin()) return ::UserListCtrl_Admin_Image.get();
@@ -86,7 +86,7 @@ void UserListCtrl::UpdateItem(LobbyClient* inClient,UserListItem* inItem)
     else if(inClient->IsModerator()) sortKey=4;
     else sortKey = inClient->IsFriend() && !inClient->IsAnonymous() ? 2 : 0;
     inItem->mSortKey=sortKey;
-    inItem->mText=inClient->mName;
+    inItem->mText=inClient->GetName();
     inItem->mImage=GetLobbyClientIcon(inClient,(this->mModeFlags&2)!=0);
     if(inClient->IsFriend() && !inClient->IsAnonymous()) inItem->mFont=this->GetDefaultFontMod(1,0);
     else inItem->mFont=this->GetDefaultFont();
@@ -137,7 +137,7 @@ UserListItem* UserListCtrl::FindItem(LobbyClient* inClient)
 {
     for(int i=0;i<this->mUserList->GetNumItems();++i) {
         UserListItem* item=static_cast<UserListItem*>(this->mUserList->GetItem(i));
-        if(item->mClient.get()!=NULL && item->mClient->mClientId==inClient->mClientId)
+        if(item->mClient.get()!=NULL && item->mClient->GetClientId()==inClient->GetClientId())
             return item;
     }
     return NULL;
@@ -167,7 +167,7 @@ void UserListCtrl::UpdateButtons()
     } else {
         this->mWhisperButton->SetEnabled(true);
         this->mIgnoreButton->SetEnabled(true);
-        if(client->mIgnored) this->mIgnoreButton->SetText(::UserListCtrl_Unignore_String,true);
+        if(client->IsIgnored()) this->mIgnoreButton->SetText(::UserListCtrl_Unignore_String,true);
         else this->mIgnoreButton->SetText(::UserListCtrl_Ignore_String,true);
     }
 }

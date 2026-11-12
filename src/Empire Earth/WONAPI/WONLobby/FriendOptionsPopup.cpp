@@ -31,7 +31,7 @@ void FriendOptionsPopup::Init(LobbyFriend* inFriend,int inRoomSpec)
     SmartPtr<Font> anOldFont=this->mPopupMenu->mFont.get();
     SmartPtr<Font> aBoldFont=this->GetFontMod(anOldFont.get(),1,0);
     this->mPopupMenu->SetFont(aBoldFont);
-    this->mPopupMenu->AddItem(inFriend->mName,0)->mSelectable=false;
+    this->mPopupMenu->AddItem(inFriend->GetName(),0)->mSelectable=false;
     this->mPopupMenu->SetFont(anOldFont);
     this->mPopupMenu->AddSeperator();
     this->AddItem(::FriendOptionsCtrl_Locate_String,1);

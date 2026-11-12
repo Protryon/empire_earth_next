@@ -57,7 +57,9 @@ bool LobbyClient::IsModerator() { return (this->mClientFlags & 1) ? true : false
 bool LobbyClient::IsCaptain(bool inGame) { return inGame ? this->mIsGameCaptain : this->mIsChatCaptain; }
 LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
 LobbyClientList::~LobbyClientList() {}
-void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients.Set(inClient->mClientId, inClient); }
+void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients.Set(inClient->GetClientId(), inClient); }
+// LobbyModel.cpp's (the clients' captain flags are private since round 19)
+void LobbyClient::SetCaptain(bool inCaptain, bool inGame) { if (inGame) this->mIsGameCaptain = inCaptain; else this->mIsChatCaptain = inCaptain; }
 LobbyClient* LobbyClientList::FindClient(unsigned short inId) { return this->mClients.Get(inId); }
 }
 
@@ -122,11 +124,11 @@ static void Run(const char* inPass, int inThreshold, bool inColon, wchar_t inPre
     SmartPtr<LobbyClientList> aHold = aList;
     for (size_t i = 0; i < sizeof(kClients) / sizeof(kClients[0]); i++) {
         LobbyClient* aClient = new LobbyClient;
-        aClient->mClientId = kClients[i].mId;
-        aClient->mName = GUIString(kClients[i].mName);
-        aClient->mClientFlags = kClients[i].mFlags;
-        aClient->mIsGameCaptain = kClients[i].mGameCaptain;
-        aClient->mIsChatCaptain = kClients[i].mChatCaptain;
+        aClient->SetClientId(kClients[i].mId);
+        aClient->SetName(GUIString(kClients[i].mName));
+        aClient->SetClientFlags(kClients[i].mFlags);
+        aClient->SetCaptain(kClients[i].mGameCaptain, true);
+        aClient->SetCaptain(kClients[i].mChatCaptain, false);
         aList->AddClient(aClient);
     }
     if (inClients)
@@ -140,7 +142,7 @@ static void Run(const char* inPass, int inThreshold, bool inColon, wchar_t inPre
         char aLine[4096];
         snprintf(aLine, sizeof(aLine), "%s i%02d r=%d err=%d cmd=%d name=%s target=%d text=%s dur=%u inv=%d", inPass,
                  (int)i, r ? 1 : 0, aParser.GetError(), aParser.GetCommand(), Units(aParser.GetTargetName()).c_str(),
-                 aTarget != NULL ? (int)aTarget->mClientId : -1, Units(aParser.GetText()).c_str(),
+                 aTarget != NULL ? (int)aTarget->GetClientId() : -1, Units(aParser.GetText()).c_str(),
                  (unsigned)aParser.GetDuration(), aParser.GetInvitation() ? 1 : 0);
         sLines.push_back(aLine);
     }
@@ -160,11 +162,11 @@ static void RunTables()
     SmartPtr<LobbyClientList> aHold = aList;
     for (size_t i = 0; i < sizeof(kClients) / sizeof(kClients[0]); i++) {
         LobbyClient* aClient = new LobbyClient;
-        aClient->mClientId = kClients[i].mId;
-        aClient->mName = GUIString(kClients[i].mName);
-        aClient->mClientFlags = kClients[i].mFlags;
-        aClient->mIsGameCaptain = kClients[i].mGameCaptain;
-        aClient->mIsChatCaptain = kClients[i].mChatCaptain;
+        aClient->SetClientId(kClients[i].mId);
+        aClient->SetName(GUIString(kClients[i].mName));
+        aClient->SetClientFlags(kClients[i].mFlags);
+        aClient->SetCaptain(kClients[i].mGameCaptain, true);
+        aClient->SetCaptain(kClients[i].mChatCaptain, false);
         aList->AddClient(aClient);
     }
     static const int kRoomFlags[] = {0, 2, 8, 10, 0x0f};
@@ -189,7 +191,7 @@ static std::string State(const char* inTag, ChatCommandParser& p, bool r)
     LobbyClient* aTarget = p.GetTarget();
     char aLine[4096];
     snprintf(aLine, sizeof(aLine), "%s r=%d err=%d cmd=%d name=%s target=%d text=%s dur=%u inv=%d", inTag, r ? 1 : 0,
-             p.GetError(), p.GetCommand(), Units(p.GetTargetName()).c_str(), aTarget != NULL ? (int)aTarget->mClientId : -1,
+             p.GetError(), p.GetCommand(), Units(p.GetTargetName()).c_str(), aTarget != NULL ? (int)aTarget->GetClientId() : -1,
              Units(p.GetText()).c_str(), (unsigned)p.GetDuration(), p.GetInvitation() ? 1 : 0);
     return aLine;
 }
@@ -199,11 +201,11 @@ static void RunState()
     SmartPtr<LobbyClientList> aHold = aList;
     for (size_t i = 0; i < sizeof(kClients) / sizeof(kClients[0]); i++) {
         LobbyClient* aClient = new LobbyClient;
-        aClient->mClientId = kClients[i].mId;
-        aClient->mName = GUIString(kClients[i].mName);
-        aClient->mClientFlags = kClients[i].mFlags;
-        aClient->mIsGameCaptain = kClients[i].mGameCaptain;
-        aClient->mIsChatCaptain = kClients[i].mChatCaptain;
+        aClient->SetClientId(kClients[i].mId);
+        aClient->SetName(GUIString(kClients[i].mName));
+        aClient->SetClientFlags(kClients[i].mFlags);
+        aClient->SetCaptain(kClients[i].mGameCaptain, true);
+        aClient->SetCaptain(kClients[i].mChatCaptain, false);
         aList->AddClient(aClient);
     }
     ChatCommandParser p;
@@ -245,7 +247,7 @@ static void RunState()
         int aMatch = -7;
         LobbyClient* c = p.FindClient(GUIString(kFind[i]), &aMatch);
         char aLine[256];
-        snprintf(aLine, sizeof(aLine), "state find %d match=%d id=%d", (int)i, aMatch, c != NULL ? (int)c->mClientId : -1);
+        snprintf(aLine, sizeof(aLine), "state find %d match=%d id=%d", (int)i, aMatch, c != NULL ? (int)c->GetClientId() : -1);
         sLines.push_back(aLine);
     }
 }

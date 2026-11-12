@@ -39,10 +39,6 @@
 static const float kPMFiveDegrees = 0.08726647f;   // 0x4428fc (unit-local const: PushMoving's heading test; provisional name)
 static const float kPMContactWindow = 0.25f;   // 0x442900 (unit-local const: PushMoving's contact-time tests; provisional name)
 static const float kPMTurnEpsilon = 0.001f;   // 0x442904 (unit-local const; provisional name)
-static const float kPMMinimumStep = 0.005f;   // 0x442910 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
-static const float kPMStopDistance = 0.02f;   // 0x442914 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
-static const float kPMMinimumSpeed = 1.0f;   // 0x442918 (unit-local const, as EEPhysicsModel.cpp's; provisional name)
-static const float kPMMoveDistance = 0.03f;   // 0x44291c (unit-local const, as EEPhysicsModel.cpp's; provisional name)
 
 extern unsigned long gCollisionPeriod;      // 0x4c237c (EEPhysics.cpp; provisional name)
 
@@ -171,108 +167,7 @@ void EEPMNaval::Step1(EEComplexUnit* inUnit)
 // the new tile, plays or stops the idle push animation, then clears the push
 void EEPMNaval::Move(EEComplexUnit* inUnit)
 {
-    EETileCoordinate theTile(0, 0);
-    bool theBlocked = false;
-    float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
-    if (inUnit->GetMaxVelocity() > theLimit)
-        theLimit = inUnit->GetMaxVelocity();
-    float theTicks = (float) gCollisionPeriod;
-    float theDX = inUnit->mPushVelocityX;
-    theDX *= theTicks;
-    float theDY = inUnit->mPushVelocityY;
-    theDY *= theTicks;
-    float theSignX;
-    if (theDX > 0.0f)
-        theSignX = 1.0f;
-    else
-        theSignX = -1.0f;
-    float theSignY;
-    if (theDY > 0.0f)
-        theSignY = 1.0f;
-    else
-        theSignY = -1.0f;
-    if (theDX < 0.0f)
-        theDX = -theDX;
-    if (theDY < 0.0f)
-        theDY = -theDY;
-    if (theDY + theDX < kPMStopDistance) {
-        theDY = 0.0f;
-        theDX = 0.0f;
-    }
-    if (theDX != 0.0f || theDY != 0.0f) {
-        if (theDX > theLimit || theDY > theLimit) {
-            if (theDX > theDY) {
-                theDY = theLimit / theDX * theDY;
-                theDX = theLimit;
-            } else {
-                theDX = theLimit / theDY * theDX;
-                theDY = theLimit;
-            }
-        }
-        float theX = gPhysics->GetTickSeconds() * theSignX * theDX;
-        theX += inUnit->mPhysicalModel.GetLocation().GetX();
-        float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
-        theY += inUnit->mPhysicalModel.GetLocation().GetY();
-        long theTileY = UMFloor(theY);
-        long theTileX = UMFloor(theX);
-        theTile.mX = theTileX;
-        theTile.mY = theTileY;
-        bool theOk = EECanStandOn(theTile, inUnit);
-        if (theOk && UMAbs(inUnit->GetTileX() - theTile.mX) == 1 && UMAbs(inUnit->GetTileY() - theTile.mY) == 1) {
-            EETileCoordinate theSide1;
-            theSide1.mX = theTile.mX;
-            theSide1.mY = inUnit->GetTileY();
-            if (!EECanStandOn(theSide1, inUnit)) {
-                EETileCoordinate theSide2;
-                theSide2.mX = inUnit->GetTileX();
-                theSide2.mY = theTile.mY;
-                if (!EECanStandOn(theSide2, inUnit))
-                    theOk = false;
-            }
-        }
-        if (theOk) {
-            float theTime = inUnit->mCollisionResolutionCount;
-            if ((theTile.mX != inUnit->GetTileX() || theTile.mY != inUnit->GetTileY()) && theTime == 0.0f
-                && inUnit->mF24C != 0.0f)
-                theTime = gPhysics->GetTickTime() + inUnit->GetF24C();
-            inUnit->SetLocationXY(theX, theY, true);
-            inUnit->mCollisionResolutionCount = theTime;
-            if (inUnit->mCurrentPhysicsAction == 5 && inUnit->mCollisionRadius >= kPMMinimumSpeed) {
-                inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
-                EEPhysicsTrace("Collision: Turning Unit %08x angular velocity set to %f\n", inUnit->GetUnitID(), GEOrientation(0.0f, 0.0f, 0.0f));
-            }
-            if (inUnit->mCurrentPhysicsAction != 5 && inUnit->mCurrentPhysicsAction != 0) {
-                if (theDY + theDX > kPMMoveDistance) {
-                    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle
-                        && (inUnit->mAnimation == 0 || inUnit->mAnimation == 7 || inUnit->mAnimation == 8)) {
-                        inUnit->SetAnimation(0xd, -1, 1);
-                        if (inUnit->mIsAnimationPaused)
-                            inUnit->mIsAnimationPaused = false;
-                        unsigned long theFrames = inUnit->GetModel()->mFrameTimes[13];
-                        if (inUnit->mAnimationTime != theFrames)
-                            inUnit->mAnimationTime = theFrames;
-                    } else if (inUnit->mAnimation == 0xd) {
-                        if (inUnit->mIsAnimationPaused)
-                            inUnit->mIsAnimationPaused = false;
-                    }
-                } else {
-                    theBlocked = true;
-                }
-            }
-            inUnit->mCollisionResolutionCount += gPhysics->GetTickTime();
-            inUnit->SetTransformation(inUnit->mPhysicalModel.GetLocation(), true);
-        } else {
-            theBlocked = true;
-        }
-    } else {
-        theBlocked = true;
-    }
-    if (theBlocked && (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
-        inUnit->SetAnimation(7, -1, 1);
-    if (inUnit->mPushVelocityX != 0.0f)
-        inUnit->mPushVelocityX = 0.0f;
-    if (inUnit->mPushVelocityY != 0.0f)
-        inUnit->mPushVelocityY = 0.0f;
+    this->MoveByPush(inUnit, false);
 }
 
 // FUNCTION: EXE 0x55be0e
@@ -332,58 +227,15 @@ void EEPMNaval::Step2(EEComplexUnit* inUnit)
 // the rate is capped by the class's turn rate
 void EEPMNaval::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float inTarget, float* outRate, float* outNew)
 {
-    float theStep = gPhysics->mTickSeconds;
-    inTarget = inTarget - inCurrent;
-    float theAccel = inUnit->mUnitClass->GetAngularAcceleration();
-    float theMax = inUnit->mUnitClass->GetMaxAngularVelocity();
-    float theRate = inUnit->mAngularVelocity.mPitch;
-    switch (this->PitchMode(inUnit, theRate, inTarget)) {
-    case 2:
-        break;
-    case 3:
-        if (inTarget < 0.0f) {
-            theRate = theRate - theAccel * theStep;
-            if (theRate < -theMax)
-                theRate = -theMax;
-        } else {
-            theRate = theAccel * theStep + theRate;
-            if (theMax < theRate)
-                theRate = theMax;
-        }
-        break;
-    case 4:
-        if (inTarget < 0.0f) {
-            theRate = 1.0f * theAccel * theStep + theRate;
-            if (theRate <= 0.0f)
-                break;
-        } else {
-            theRate = theRate - theAccel * theStep;
-            if (theRate >= 0.0f)
-                break;
-        }
-    default:
-        theRate = 0.0f;
-        break;
-    }
-    *outRate = theRate;
-    *outNew = theRate * theStep + inCurrent;
+    long theMode = this->PitchMode(inUnit, inUnit->mAngularVelocity.mPitch, inTarget - inCurrent);
+    EEPMApproachPitch(inUnit, true, theMode, inCurrent, inTarget, outRate, outNew);
 }
 
 // FUNCTION: EXE 0x55c146
 // Returns 4 (brake) when the pitch rate needs the whole remaining angle to stop, else 3 (accelerate)
 long EEPMNaval::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
 {
-    if (inAngle < 0.0f)
-        inAngle = -inAngle;
-    if (inRate < 0.0f)
-        inRate = -inRate;
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    float theTime = gPhysics->mTicksPerGameSecond;
-    float theTicks = theTime * inRate / theClass->GetAngularAcceleration();
-    float theStep = gPhysics->mTickSeconds;
-    float theStop = (theTicks + 1.0f) * theTicks * 0.5f;
-    theStop = theStop * (theStep * theStep) * theClass->GetAngularAcceleration();
-    return inAngle <= theStop ? 4 : 3;
+    return EEPMPitchMode(inUnit, true, inRate, inAngle);
 }
 
 // NEAR: GE3DLine/GE3DPoint copies, x87 order

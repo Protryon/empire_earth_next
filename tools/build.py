@@ -6,11 +6,11 @@ static UCRT).
 
 -> <out>/exe/EE-AOC.exe with its .map and .pdb (default out: build/clang), linked at the fixed image base 0x400000
 (as the x64 build has always run). x86_64 is the only target (--x64 is accepted and ignored). The exe holds the game
-with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
+with the engine (and its libjpeg, which the lobby's JPEG reader uses too), the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
-of every object, the image libraries (an archive), the Windows SDK import libraries, the static libraries (SDL3,
+of every object, the Windows SDK import libraries, the static libraries (SDL3,
 the Rust library) and runtime, and the resources.
 Every symbol is defined in source (the WON library too: module won).
 
@@ -44,7 +44,7 @@ import units
 import verify
 import ee
 import rust_build
-from ee import CLANG, LLD_LINK, LLVM_LIB, MODULE_FLAGS, ROOT, RUNTIME_LIBS, lib_paths, module_units
+from ee import CLANG, LLD_LINK, MODULE_FLAGS, ROOT, RUNTIME_LIBS, lib_paths, module_units
 
 TEST_PROFILES = {
     "windowed-software": {
@@ -149,30 +149,18 @@ def run(cmd, cwd):
 
 def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     """One lld-link of the exe: every object (the engine's and the plug-ins' first: global constructors run in
-    object order, and the game's use engine globals, as when the engine DLL loaded first), the image libraries as an
-    archive (only the members the game uses), the import and static libraries, the resources and the static
-    runtime -> 0 when it links with no unresolved and no duplicate symbol."""
+    object order, and the game's use engine globals, as when the engine DLL loaded first), the import and static
+    libraries, the resources and the static runtime -> 0 when it links with no unresolved and no duplicate symbol."""
     import rsrc_rebuild
     print(f"--- exe: link {name}.exe", flush=True)
     dst = out / "exe"
-    lib = dst / ("lib" if name == "EE-AOC" else f"lib-{name}")
-    shutil.rmtree(lib, ignore_errors=True)
-    lib.mkdir(parents=True)
-    game, img = [], []
-    for mod in ("exe", "exeimg"):
-        for _, _, p in module_units(mod):
-            if mod == "exeimg" and units.rel_src(p).parts[1] == "libjpeg":
-                continue   # the engine's libjpeg (module jpeg, every file) serves the game too
-            (game if mod == "exe" else img).append(objs(p, MODULE_FLAGS[mod]))
-    rest = [m for m in units.TARGET_MODULES["exe"] if m not in ("exe", "exeimg")]
+    # the image libraries' archive (libpng, zlib) of builds before their removal
+    shutil.rmtree(dst / ("lib" if name == "EE-AOC" else f"lib-{name}"), ignore_errors=True)
+    game = [objs(p, MODULE_FLAGS["exe"]) for _, _, p in module_units("exe")]
+    rest = [m for m in units.TARGET_MODULES["exe"] if m != "exe"]
     first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] + [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
     game += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
     game += [objs(j[1], j[2]) for j in units.lib_jobs(["exe"])]   # the game's own libraries (Lua)
-    (lib / "exeimg.rsp").write_text("".join(f'"{o}"\n' for o in img))
-    for cmd in ([str(LLVM_LIB), "/nologo", "/out:exeimg.lib", "@exeimg.rsp"],):
-        code, log = run(cmd, lib)
-        if code:
-            sys.exit(f"{cmd[-1]}: {log}")
     res = [rsrc_rebuild.compile_rc(units.EXE_RC, out / "rsrc"),
            rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
     # the language strings are a generated table (LanguageStrings.cpp): it must be current and equal to rc.exe's
@@ -182,7 +170,7 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     _, theRc = lang_strings.parse_rc()
     if {k: v for k, v in theRc.items() if v} != lang_strings.parse_res(res[1]):
         sys.exit("the language string table differs from rc.exe's string tables (tools/lang_strings.py --check-res)")
-    inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game, lib / "exeimg.lib",
+    inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game,
               *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
               *static_libs(), *res, *RUNTIME_LIBS]
     if entry is not None:   # --sim: the console entry first among the game's objects

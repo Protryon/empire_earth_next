@@ -59,7 +59,6 @@ bool ScreenContainerConfig::Virtual24(const std::string& key)
 }
 
 
-#include "ee/wonapi/WONLobbyAnimationComponent.h"
 #include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
@@ -82,28 +81,12 @@ void ImageComponentConfig::SetComponent(Component *theComponent)
 	this->mImageComponent = static_cast<ImageComponent*>(theComponent);
 }
 
-void AnimationComponentConfig::SetComponent(Component *theComponent)
-{
-	ComponentConfig::SetComponent(theComponent);
-	this->mAnimationComponent = static_cast<AnimationComponent*>(theComponent);
-}
-
 // FUNCTION: WON 0x00794e30
 // Binds the config to its screen container (calls the component-level binder, so the container pointer stays unset)
 void ScreenContainerConfig::SetComponent(Component *theComponent)
 {
 	ComponentConfig::SetComponent(theComponent);
 	this->mScreenContainer = static_cast<ScreenContainer*>(theComponent);
-}
-
-// FUNCTION: WON 0x00794e10
-// Passes every animation component key to the base component config (no keys of its own)
-bool AnimationComponentConfig::Virtual24(const std::string &theInstruction)
-{
-	if(ComponentConfig::Virtual24(theInstruction))
-		return true;
-
-	return false;
 }
 
 // FUNCTION: WON 0x0079b030
@@ -125,13 +108,6 @@ Component* RectangleComponent3DConfig::CompFactory()
 Component* ImageComponentConfig::CompFactory()
 {
     return new ImageComponent;
-}
-
-// FUNCTION: WON 0x0079b240
-// Creates a new animation component
-Component* AnimationComponentConfig::CompFactory()
-{
-    return new AnimationComponent;
 }
 
 // FUNCTION: WON 0x0079b2f0

@@ -243,6 +243,16 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+/// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
+constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
+
+constexpr static const int32_t EE_UNITS_MODE_ACCELERATE = 3;
+
+constexpr static const int32_t EE_UNITS_MODE_BRAKE = 4;
+
+/// The player ids (`gWorld.mPlayers`, `mEnemies`: 17 entries).
+constexpr static const size_t EE_UNITS_PLAYER_COUNT = 17;
+
 /// `kUnitTypePathPoint` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_PATH_POINT = 223;
 
@@ -377,6 +387,46 @@ constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_Y = 34;
 /// `EEComplexUnit::mRoll` (float bits)
 constexpr static const uint32_t EE_UNIT_FIELD_ROLL = 35;
 
+/// the combat lane's fields (its trigger record's fill, `EECombatFillCondition`; RUST_PLAN's combat row, store fields
+/// (1) and (8)): `EEComplexUnit::mFlightTime`, `mCloaked` (the cloak's timer, an `unsigned long`), `mIsCloakable`,
+/// `mIsCloaked`, `mHerd != NULL`, `mContainer != NULL`
+constexpr static const uint32_t EE_UNIT_FIELD_FLIGHT_TIME = 36;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAK_TIMER = 37;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAKABLE = 38;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAKED = 39;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HERD = 40;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CONTAINER = 41;
+
+/// `EEUnit::mUnitClass` too (reported with it, fixed once the db's classes are made): the class's `mFamily`,
+/// `mCloakRadius`, `IsCrusader()`, `mIsParatrooperBomber`, `GetHealThreshold()` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_FAMILY = 42;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CLOAK_RADIUS = 43;
+
+constexpr static const uint32_t EE_UNIT_FIELD_CRUSADER = 44;
+
+constexpr static const uint32_t EE_UNIT_FIELD_PARATROOPER_BOMBER = 45;
+
+constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
+
+/// `EEUnit::mUnitClass` too: the class's flags the combat reads test (`EE_UNIT_CLASS_*`: the combat lane's
+/// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
+constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
+
+/// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
+constexpr static const uint8_t EE_UNIT_CLASS_WALL = 1;
+
+constexpr static const uint8_t EE_UNIT_CLASS_PROJECTILE = 2;
+
+constexpr static const uint8_t EE_UNIT_CLASS_PARATROOPER_BOMBER = 4;
+
+constexpr static const uint8_t EE_UNIT_CLASS_MELEE = 8;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -384,6 +434,90 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
 constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
+
+constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
+
+constexpr static const int32_t EE_UNITS_UPDATE_NAVAL = 2;
+
+/// `mPhysicalModel.GetFrame()`
+constexpr static const int32_t EE_UNITS_UPD_R_FRAME = 1;
+
+/// `EEHerd::IsAnimalOnMap(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_R_ANIMAL_ON_MAP = 2;
+
+/// the class's `mPhysicsModel != NULL`
+constexpr static const int32_t EE_UNITS_UPD_R_PHYSICS_MODEL = 3;
+
+/// the class's `mIsMedic`
+constexpr static const int32_t EE_UNITS_UPD_R_MEDIC = 4;
+
+/// `mStats->mRegeneration > 0`
+constexpr static const int32_t EE_UNITS_UPD_R_REGENERATES = 5;
+
+/// the store's fields for a unit with no record: `mHerd != NULL`, `mPlayer->mPlayerID`, `mTileX`,
+/// `mCommand ? mCommand->mType : 0`, `mGoalState ? mGoalState->mKind : -1`, the class's `mUnitType`
+constexpr static const int32_t EE_UNITS_UPD_R_HERD = 10;
+
+constexpr static const int32_t EE_UNITS_UPD_R_OWNER = 11;
+
+constexpr static const int32_t EE_UNITS_UPD_R_TILE_X = 12;
+
+constexpr static const int32_t EE_UNITS_UPD_R_COMMAND = 13;
+
+constexpr static const int32_t EE_UNITS_UPD_R_GOAL_KIND = 14;
+
+constexpr static const int32_t EE_UNITS_UPD_R_UNIT_TYPE = 15;
+
+/// `SetLastHitPoints(mHitPoints)`
+constexpr static const int32_t EE_UNITS_UPD_LAST_HIT_POINTS = 20;
+
+/// `mPhysicsModel->Step(inUnit)`, `UpdateTurrets()`, `UpdateWheels()`, `UpdateOrbitals()`
+constexpr static const int32_t EE_UNITS_UPD_PHYSICS_STEP = 21;
+
+constexpr static const int32_t EE_UNITS_UPD_TURRETS = 22;
+
+constexpr static const int32_t EE_UNITS_UPD_WHEELS = 23;
+
+constexpr static const int32_t EE_UNITS_UPD_ORBITALS = 24;
+
+/// the class's `UpdateEffects(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_EFFECTS = 25;
+
+/// `UpdateReloadTimer()`, `UpdateTargetSearchTimer()`, the class's `UpdateCamouflageTimer(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_RELOAD_TIMER = 26;
+
+constexpr static const int32_t EE_UNITS_UPD_TARGET_SEARCH_TIMER = 27;
+
+constexpr static const int32_t EE_UNITS_UPD_CAMOUFLAGE_TIMER = 28;
+
+/// the class's `Animate(inUnit)`: its result
+constexpr static const int32_t EE_UNITS_UPD_ANIMATE = 29;
+
+/// the class's `RefreshSound(inUnit)`, `RegeneratePower(inUnit)`; `UpdateFanaticismColor()`
+constexpr static const int32_t EE_UNITS_UPD_REFRESH_SOUND = 30;
+
+constexpr static const int32_t EE_UNITS_UPD_REGENERATE_POWER = 31;
+
+constexpr static const int32_t EE_UNITS_UPD_FANATICISM_COLOR = 32;
+
+/// the class's `FireOnAttackFrame(inUnit, a: the animation's result, b: the frame)`
+constexpr static const int32_t EE_UNITS_UPD_FIRE_ON_ATTACK_FRAME = 33;
+
+/// `UpdateRottingAwayTime()`, `UpdateHealSearchTimer()`, `mGoalState->Work(inUnit)`, the class's
+/// `Regenerate(inUnit)`, `UpdateDone(inUnit)`, `UpdateAnimal(inUnit)`, `UpdateResourceUnit(inUnit)`
+constexpr static const int32_t EE_UNITS_UPD_ROTTING = 34;
+
+constexpr static const int32_t EE_UNITS_UPD_HEAL_SEARCH_TIMER = 35;
+
+constexpr static const int32_t EE_UNITS_UPD_GOAL_WORK = 36;
+
+constexpr static const int32_t EE_UNITS_UPD_REGENERATE = 37;
+
+constexpr static const int32_t EE_UNITS_UPD_DONE = 38;
+
+constexpr static const int32_t EE_UNITS_UPD_ANIMAL = 39;
+
+constexpr static const int32_t EE_UNITS_UPD_RESOURCE_UNIT = 40;
 
 /// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
 /// unit waiting, 4 evaluated), the gather's action, the two evaluations' results (`u32::MAX`: not evaluated).
@@ -519,6 +653,24 @@ struct EeUnitRecord {
   uint32_t push_velocity_y;
   /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
   uint32_t roll;
+  /// `EEComplexUnit::mFlightTime`, `mCloaked` (an `unsigned long`), `mIsCloakable`, `mIsCloaked`, `mHerd != NULL`,
+  /// `mContainer != NULL` (the combat reads')
+  int64_t flight_time;
+  int64_t cloak_timer;
+  uint8_t cloakable;
+  uint8_t cloaked;
+  uint8_t herd;
+  uint8_t container;
+  /// the class's `IsCrusader()`, `mIsParatrooperBomber` (0: no class)
+  uint8_t crusader;
+  uint8_t paratrooper_bomber;
+  /// the class's `mFamily` (an `unsigned long`), `mCloakRadius` (0: no class)
+  int64_t family;
+  int64_t cloak_radius;
+  /// the class's `GetHealThreshold()` as float bits (0: no class)
+  uint32_t heal_threshold;
+  /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
+  uint8_t class_flags;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -577,6 +729,70 @@ struct EeUnitsPushIn {
   float tick_seconds;
 };
 
+/// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
+struct EeUnitsTurn {
+  float delta;
+  float rate;
+  float heading;
+};
+
+/// The unit's values a turn reads (`TurnTowardAngle`, `YawMode`).
+struct EeUnitsTurnIn {
+  /// `gPhysics->mTickSeconds`, `gPhysics->mTicksPerGameSecond`
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetAngularAcceleration()`, `GetMaxAngularVelocity()`, `GetInverseAngularAcceleration()`
+  float accel;
+  float max;
+  float inverse_accel;
+  /// `mAngularVelocity.mYaw`
+  float rate;
+  /// the heading and the bearing to turn to
+  float current;
+  float target;
+  /// `inFlag`: aim the class's facing offset (`GetFacingOffset()`), either side for a broadside ship
+  /// (`mFiresBroadside`); both 0 without the flag
+  uint8_t use_facing;
+  uint8_t broadside;
+  float facing_offset;
+};
+
+/// The unit's values a speed reads (`Accelerate`, `SpeedMode`).
+struct EeUnitsSpeedIn {
+  float tick_seconds;
+  float ticks_per_second;
+  /// `GetVelocity()`, `GetMaxVelocity()`, `GetAcceleration()`, `GetInverseAcceleration()`
+  float speed;
+  float max_speed;
+  float accel;
+  float inverse_accel;
+  /// `mAngularVelocity.GetYaw()`
+  float yaw_rate;
+  /// the class's `mSlopeSpeedPenalty` (the helicopter's has none)
+  float slope_penalty;
+  /// `mWaypoints.size()`
+  int32_t waypoints;
+  /// `GetPathLength` (read when the mode needs it: two waypoints or more), `GetTerrainPitch` of the location
+  /// (read when the penalty is under 1)
+  float path_length;
+  float terrain_pitch;
+};
+
+/// The unit's values a pitch reads (`ApproachPitch`, `PitchMode`): the base model's are the unit's (its active
+/// group's), the naval model's the class's.
+struct EeUnitsPitchIn {
+  float tick_seconds;
+  float ticks_per_second;
+  float accel;
+  float max;
+  /// the base model's `GetInverseAngularAcceleration()` (the naval model divides by `accel`)
+  float inverse_accel;
+  /// `mAngularVelocity.mPitch`
+  float rate;
+  /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
+  uint8_t naval;
+};
+
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
 /// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
 struct EeUnitsPowerIn {
@@ -615,6 +831,13 @@ struct EeUnitsTickHost {
   void (*update_player)(void *ctx, uint32_t index);
   /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
   void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
+/// The C++ side of a unit's `Update` (`ctx`: the host's: the class and the unit).
+struct EeUnitsUpdateHost {
+  void *ctx;
+  int64_t (*read)(void *ctx, int32_t code);
+  int64_t (*act)(void *ctx, int32_t code, int64_t a, int64_t b);
 };
 
 extern "C" {
@@ -1078,6 +1301,91 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
 
+/// `TurnTowardAngle` over the C++'s values.
+///
+/// # Safety
+/// `input` points to a valid record.
+EeUnitsTurn ee_units_pm_turn(const EeUnitsTurnIn *input);
+
+/// `YawMode` over the C++'s values (`rate`, `angle`: the call's).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_yaw_mode(const EeUnitsTurnIn *input, float rate, float angle);
+
+/// `SpinDown` (the heading is the caller's).
+EeUnitsTurn ee_units_pm_spin_down(float rate,
+                                  float heading,
+                                  float tick_seconds,
+                                  float accel,
+                                  float max);
+
+/// `SteadyTurn` (the heading is the caller's).
+EeUnitsTurn ee_units_pm_steady_turn(float rate,
+                                    float heading,
+                                    float tick_seconds,
+                                    float accel,
+                                    float max,
+                                    int32_t order,
+                                    uint32_t command);
+
+/// `SpeedMode` (`helicopter`: `EEPMHelicopter::SpeedMode`).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_speed_mode(const EeUnitsSpeedIn *input,
+                               float distance,
+                               float turn,
+                               bool helicopter);
+
+/// `Accelerate`'s speed after the mode.
+///
+/// # Safety
+/// `input` points to a valid record.
+float ee_units_pm_accelerate(const EeUnitsSpeedIn *input, float distance, int32_t mode);
+
+/// `PitchMode` (the base model's or the naval one's).
+///
+/// # Safety
+/// `input` points to a valid record.
+int32_t ee_units_pm_pitch_mode(const EeUnitsPitchIn *input, float rate, float angle);
+
+/// `ApproachPitch` with its mode: the new rate (`rate`) and pitch (`heading`).
+///
+/// # Safety
+/// `input` points to a valid record.
+EeUnitsTurn ee_units_pm_approach_pitch(const EeUnitsPitchIn *input,
+                                       float current,
+                                       float target,
+                                       int32_t mode);
+
+/// A player's table: its id and its 17 stances (`enemies` has 17 words).
+///
+/// # Safety
+/// `enemies` points to 17 readable words.
+void ee_units_player_set(uint64_t object, uint32_t id, const uint32_t *enemies);
+
+/// The player object goes (`~RTSPlayer`).
+bool ee_units_player_drop(uint64_t object);
+
+/// `mEnemies[other]` of the player object into `out`; false when it has no table (or `other` is out of range).
+///
+/// # Safety
+/// `out` points to a writable word.
+bool ee_units_player_enemy(uint64_t object,
+                           uint32_t other,
+                           uint32_t *out);
+
+/// TEST ONLY: the world's players' tables (`objects`, `ids`: `count` each; `enemies`: 17 words a player) against the
+/// Rust ones; the count that differ.
+///
+/// # Safety
+/// The pointers hold `count` (`enemies`: `17 * count`) readable entries, or `count` is 0.
+uint32_t ee_units_player_check(const uint64_t *objects,
+                               const uint32_t *ids,
+                               const uint32_t *enemies,
+                               size_t count);
+
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.
 ///
@@ -1156,6 +1464,15 @@ float ee_units_step_cloak_fade(float opacity,
 /// # Safety
 /// `host` points to a valid table whose calls are valid for its `ctx`.
 uint32_t ee_units_update_units(const EeUnitsTickHost *host);
+
+/// A class's `Update` of the unit `id` (`object`: its address, the record's check) over the store and `host`.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+bool ee_units_update(int32_t kind,
+                     uint32_t id,
+                     uint64_t object,
+                     const EeUnitsUpdateHost *host);
 
 }  // extern "C"
 

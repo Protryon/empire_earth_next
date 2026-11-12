@@ -130,8 +130,7 @@ public:
 
     EEUnit* mUnit;                          // +0x08 (referenced; RTSUnit::Dereference in the dtor; saved as its id)
     EEGraphicEffect* mGraphicEffect;        // +0x0c (referenced; Load/Unload)
-    EEEffect* mNext;                        // +0x10 (the next effect of EEEffectManager +0x20's list)
-    EEEffect* mPrevious;                    // +0x14 (the previous effect of that list: Add 0x5055d0 stores it, Remove 0x5072d0 writes its mNext)
+    // (+0x10 / +0x14: the manager's list links, now its Rust store's: ee_gfx effect_store.rs)
     long mKind;                             // +0x18 (ctor argument; the fire functor tests 0x3e = EEEDamagedEffect)
     EEEffectHandle mHandle;                 // +0x1c (= kNoEffectHandle; provisional name)
     long mPlayer;                           // +0x20 (compared with gU5318C4)

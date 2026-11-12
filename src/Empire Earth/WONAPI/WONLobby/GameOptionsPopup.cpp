@@ -30,7 +30,7 @@ void GameOptionsPopup::Init(LobbyGame* inGame)
     SmartPtr<Font> anOldFont=this->mPopupMenu->mFont.get();
     SmartPtr<Font> aBoldFont=this->mPopupMenu->GetFontMod(anOldFont.get(),1,0);
     this->mPopupMenu->SetFont(aBoldFont);
-    this->mPopupMenu->AddItem(inGame->mName,0)->mSelectable=false;
+    this->mPopupMenu->AddItem(inGame->GetName(),0)->mSelectable=false;
     this->mPopupMenu->SetFont(anOldFont);
     this->mPopupMenu->AddSeperator();
     if(inGame->CanJoin()) this->AddItem(::GameOptionsPopup_Join_String,1);

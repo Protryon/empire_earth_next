@@ -190,6 +190,13 @@ inline bool EESaveHasActiveGroups(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 279;
 }
+// port: from 0.280 a save holds each computer player's per-unit Lua interface state after its next engine's
+// (EEPPlayerHelper, ee/EECPNextUnits.h: a uint32 length, 0 for none, then the bytes). It was 0.254 on main until the
+// merge of main 79be8619, whose 0.254 here is EESaveHasLiveState
+inline bool EESaveHasUnitsLuaState(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 280;
+}
 class FSFile;
 void EESaveActiveGroups(FSFile& outFile);
 long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)

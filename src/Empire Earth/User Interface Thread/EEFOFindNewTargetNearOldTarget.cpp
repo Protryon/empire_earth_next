@@ -72,6 +72,7 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEPhysics.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicObject.h"
@@ -443,6 +444,8 @@ bool EEGetMovableTileUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, 
                std::vector<EEUnit*>& outUnits)
 {
     outUnits.clear();
+    if (inTile == NULL)   // port: a tile off the map
+        return false;
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && EEGetTileUnitStanding(theUnit, inPlayer, inUnitType, inIgnoreOwner) == 1)
@@ -2315,12 +2318,6 @@ static uint64_t EESearchRegionUnit(void* inContext, int32_t inX, int32_t inY, in
     return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
 }
 
-static void EESearchUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
-{
-    (*outTile)[0] = (int32_t)EESearchUnit(inUnit)->mTileX;
-    (*outTile)[1] = (int32_t)EESearchUnit(inUnit)->mTileY;
-}
-
 static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
 {
     EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
@@ -2529,7 +2526,7 @@ static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int3
 
 static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
 {
-    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit, EESearchUnitTile,
+    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit,
                                   EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
                                   EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
                                   EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
@@ -2960,6 +2957,15 @@ void EEDepositLoad(EEComplexUnit* inUnit, EEComplexUnit* inContainer)
         ::gWorld.mEffectManager->CreateUnitEffect(inUnit, EEGraphicEffect::Get(kGraphicEffectDisbandUnitEmitter), &theHandle, 1, 0, 0);
     }
     inContainer->mPlayer->AddResource(inUnit->mResourceType, theAmount);
+    // TEST ONLY (docs/AI_RESEARCH.md §8.51, EE_AI_TRACE with EE_AI_EXP deposits): each deposit of a computer player,
+    // to time a gatherer's loads (trace only: nothing here changes the game)
+    if (gCPTraceOn) {
+        EEComputerPlayer* theComputer = dynamic_cast<EEComputerPlayer*>(inContainer->mPlayer);
+        if (theComputer != NULL && EECPExperiment(theComputer, "deposits"))
+            EE_CP_TRACE(theComputer, "deposit", "unit=%lu cls=%ld res=%lu carried=%ld amount=%ld bonus=%.3f store=%lu t=%lu",
+                (unsigned long)inUnit->GetUnitID(), (long)inUnit->mUnitClass->mUnitType, theKind, theCarried, theAmount,
+                (double)theBonus, (unsigned long)inContainer->GetUnitID(), (unsigned long)gPhysics->mGameTime);
+    }
     switch (inUnit->mResourceType) {
     case kResourceFood:
         inContainer->mPlayer->mSavedGroups.Reset(7, theAmount);
@@ -3183,12 +3189,6 @@ static uint64_t EENewTargetRegionUnit(void* inContext, int32_t inX, int32_t inY,
     return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
 }
 
-static void EENewTargetUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
-{
-    (*outTile)[0] = (int32_t)EENewTargetUnit(inUnit)->GetTileX();
-    (*outTile)[1] = (int32_t)EENewTargetUnit(inUnit)->GetTileY();
-}
-
 static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
 {
     return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
@@ -3197,11 +3197,6 @@ static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
 static int32_t EENewTargetMultiple(void* inContext, uint64_t inUnit)
 {
     return EENewTargetUnit(inUnit)->mUnitClass->mTileSize > 1;
-}
-
-static uint32_t EENewTargetUnitID(void* inContext, uint64_t inUnit)
-{
-    return (uint32_t)EENewTargetUnit(inUnit)->GetUnitID();
 }
 
 static int32_t EENewTargetTest(void* inContext, uint32_t inTest, uint64_t inHandle)
@@ -3252,9 +3247,9 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
                 EETileCoordinate* inTile, long inRadius, bool inArg6, long inArg7)
 {
     EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
+    // (the units' tiles and ids: ee_combat's reads of the unit store)
     EeCombatTargetHost theHost = {&theContext, EENewTargetRegions, EENewTargetRegionLength, EENewTargetRegionUnit,
-                                  EENewTargetUnitTile, EENewTargetScreen, EENewTargetMultiple, EENewTargetUnitID,
-                                  EENewTargetTest, EENewTargetPush};
+                                  EENewTargetScreen, EENewTargetMultiple, EENewTargetTest, EENewTargetPush};
     EeCombatFindTargetIn in = {};
     in.left = (int32_t)(inTile->GetX() - inRadius);
     in.top = (int32_t)(inTile->GetY() - inRadius);
@@ -6353,13 +6348,22 @@ void EEStepAsideFromSite(EEUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlaye
     }
     for (i = 0; theTiles.size() > 0 && i < theTiles.size(); i++) {
         EETile* theMapTile = ::gWorld.GetMap()->RTSMap::GetTile(theTiles[i].GetX(), theTiles[i].GetY());
+        if (theMapTile == NULL)   // port: a footprint tile off the map (a site at the map's edge): the fault of Small Islands seed 11
+            continue;
         for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
             EEUnit* theOther = theNode->mUnit;
             EEComplexUnit* theComplexUnit;
             if (theOther == NULL || (theComplexUnit = theOther->GetComplexUnit()) == NULL || theComplexUnit->IsFoundation())
                 continue;
+            // port: a unit removed while its tile node lingers (PORT_LEARNINGS: the x-sorted list and the tile lists
+            // keep a removed unit's node until it is freed), or one without stats or a tile (a path point, a unit
+            // not placed yet): nothing to step aside. A builder beginning on a granary beside removed path points
+            // faulted here (EEUGBuildRepair::BeginRepair, Small Islands seed 11)
+            if (!theOther->mIsValid || theOther->mTile == NULL || theComplexUnit->GetStats() == NULL || theComplexUnit->GetClass() == NULL)
+                continue;
             if ((theComplexUnit->GetClass()->GetFamily() != kUnitFamilyAnimal || theComplexUnit->GetStats()->GetAttack() != 0.0f) && !inForce) {
-                if (theOther->GetPlayer() != inPlayer && inPlayer->mEnemies[theOther->mPlayer->GetPlayerID()] != 0)
+                if (theOther->GetPlayer() != inPlayer && (theOther->mPlayer == NULL || inPlayer == NULL
+                                                          || inPlayer->mEnemies[theOther->mPlayer->GetPlayerID()] != 0))
                     continue;
                 long theCommand = theComplexUnit->mCommand != NULL ? theComplexUnit->mCommand->mType : 0;
                 if (theCommand != kActionIdle && theCommand != kActionWaitForOpenPosition && theCommand != kActionGatherResource)

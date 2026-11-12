@@ -66,12 +66,8 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIESLLoadScreen.h"
-#include "ee/EEUIESLSaveScreen.h"
-#include "ee/EEUIEGameSettingsEvents.h"
-#include "ee/EEUIEMainGameOptionsEvents.h"
-
-#include "ee/EEUIEMainGameOptionsEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // the in-game options menu's open event (main_game_options.rs)
 #include "ee/EEGamePreferences.h"
 #include "ee/EEMouse.h"
 #include "ee/EECameraControl.h"
@@ -182,16 +178,12 @@ long EEUIEMGDisplayDiplomacy::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Switches to the in-game options form, with the event that sets it up when it opens
 long EEUIEMGDisplayOptions::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIEvent* theEvent = new EEUIEMGOEOpenOptionsScreen;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_GO_OPEN);
     inForm->GetManager()->GetFormByID(kFormGameOptions)->SetFormOpenEvent(theEvent);
     theEvent->Dereference();
     gUserInterface->SwitchToForm(inForm->GetManager()->GetFormByID(kFormGameOptions));
     return kErrorOK;
 }
-
-// FUNCTION: EXE 0x660026
-// Destroys the open-options event and frees it when asked (scalar deleting destructor)
-// (EEUIEMGOEOpenOptionsScreen's ??_G, emitted after its first `new`)
 
 // FUNCTION: EXE 0x660051
 // Sends the enter-shift-mode message at the current game time

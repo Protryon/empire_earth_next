@@ -72,6 +72,13 @@ the play frame: the game view must be lit and varied, the mini map must show ter
 `EE_GX_STATS=<n>` in the environment makes GX log a summary of the 3D draws every n scenes (debug strings in the
 session log).
 
+**The human command log** (TEST ONLY; the game log, on in every normal game, config.yaml debug "Game Log"): one
+`EE-GAME <ms> p<n> order verb=<verb> units=<n> classes=<class>:<n>,... ids=<id>,... [target=<id>:<class>:p<owner>
+@<x>,<y>] [at=<x>,<y>] [class=|tech=<name>] [queued=1] [forced=1]` line per human order as it executes in the
+lockstep (EEPhysics::DrainInput: the same in multiplayer and replays), and `EE-GAME <ms> p<n> select units=...` when a
+human's selection changes. The verbs and fields are in `include/ee/EEGameLog.h`. It only reads; the sim (no game
+log) is unchanged by it. Off in the headless simulation.
+
 **AI decision trace and benchmark** (docs/AI_RESEARCH.md stage 0). `EE_AI_TRACE=1` in the environment makes the
 game write one `EE-AI` debug string per computer-player decision (`ee/EECPTrace.h`); `EE_AI_CHEATS` keeps only the
 named AI cheats (`none` turns every one off; sets separated by `/` go to the players in turn from player 1, the idle

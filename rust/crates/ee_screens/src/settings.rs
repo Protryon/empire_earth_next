@@ -2,21 +2,18 @@
 //! (which preset the detail controls match, what a preset sets), the video tab's controls from the settings
 //! (`ShowGraphics`), and the port's combo boxes, whose lines are values (`PortSelect`, `PortRead`).
 //!
-//! The C++ keeps the controls: it reads the check boxes and radio buttons into [`EeScreensGraphics`], and makes the
-//! `SetChecked`/`Check`/`SetCurrentSelection` calls these plans name, in its own order.
+//! The form itself (its events, state and calls, in the original's order) is [`settings_form`](crate::settings_form),
+//! which reads the check boxes and radio buttons into [`EeScreensGraphics`] and makes the calls these plans name.
 
 use core::ffi::{c_long, c_ulong};
 
 /// The graphics check boxes in the order `GetGraphicsQuality` tests them (the form's control indices): 82 the
 /// trilinear filter, 83 unit lighting, 84 the full-resolution textures, 85 v-sync, 86 shadows, 87 clouds, 110 the
 /// battlefield ambients, 88 the weather effects, 105 full-screen anti-aliasing.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const CHECK_CONTROLS: [c_ulong; 9] = [82, 83, 84, 85, 86, 87, 110, 88, 105];
 
 /// The presets' detail controls: the model detail's high, medium and low radio buttons, the effects' likewise.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const MODEL_RADIOS: [c_ulong; 3] = [75, 76, 77];
-#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) const EFFECT_RADIOS: [c_ulong; 3] = [79, 80, 81];
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.

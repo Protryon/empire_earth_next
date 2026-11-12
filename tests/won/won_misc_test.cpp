@@ -2,7 +2,7 @@
 // and PatchData's wire forms and the version type split; the version filter; CheckValidVersionOp's,
 // GetPatchListOp's and ReportPatchStatusOp's request and reply data): the original's statements (copied from
 // FTPGetOp.cpp, PatchTypes.cpp, GetVersionOp.cpp, CheckValidVersionOp.cpp, GetPatchListOp.cpp and
-// ReportPatchStatusOp.cpp before the port, over stand-ins) against include/ee/wonapi/WONFtpMsg.h and
+// ReportPatchStatusOp.cpp before the port, over stand-ins) against tests/won/won_ftp_msg.h and
 // WONPatchMsg.h over ee_won's ftp and patch modules, over the same stand-ins and generated input, cut at every
 // length and mutated. The exit code is the number of failed checks.
 #include <windows.h>
@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONHttpMsg.h"
-#include "ee/wonapi/WONFtpMsg.h"
+#include "won_ftp_msg.h"
 #include "ee/wonapi/WONPatchMsg.h"
 #include "rust/ee_rust.h"
 

@@ -510,10 +510,12 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     for (long i = 0; i < kNextResources; i++) {
         outView.stock[i] = inPlayer->mResourceCaps[kResourceFood + i];
         outView.income[i] = theState->mIncomeTotal[i] - theState->mIncomeRing[theSlot][i];
+        outView.income_total[i] = theState->mIncomeTotal[i];
         outView.reserve[i] = theState->mReserve[i];
         outView.gatherers[i] = 0;
         outView.wanted[i] = i == 0 ? theState->mFoodLand : (long)theResources->mWantedGatherers[kResourceFood + i];
         outView.next_epoch_cost[i] = 0;
+        outView.epoch2_cost[i] = 0;
     }
     outView.idle = 0;
     for (long r = 0; r < 7; r++)
@@ -773,6 +775,11 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             outView.next_epoch_cost[i] = inPlayer->ScaleCost(theNode->GetCost(kResourceFood + i, kUnitTypeTownCenter, 1.0f));
         long theMissing = theEpoch->GetRequiredSOL() - theEpoch->GetCurrentSOL();
         outView.sol_missing = theMissing > 0 ? theMissing : 0;
+        if (theNext + 1 < EEEpochCount() && theNext + 1 < (long)theTree->mEpochs.size() && theNext < gWorld.mGameOptions.mEpochEnd) {
+            EETechTreeNode* theNode2 = theTree->Get(theTree->mEpochs[theNext + 1].mData->mID);
+            for (long i = 0; theNode2 != NULL && i < kNextResources; i++)
+                outView.epoch2_cost[i] = inPlayer->ScaleCost(theNode2->GetCost(kResourceFood + i, kUnitTypeTownCenter, 1.0f));
+        }
     }
 
     // what the player can make now

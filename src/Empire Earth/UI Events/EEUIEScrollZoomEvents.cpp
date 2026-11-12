@@ -4,7 +4,7 @@
 // unit's vtables (0x446480 0.05 keyboard, 0x446484 0.07 grab, 0x446488/0x44648c zoom), so the keyboard's constant
 // precedes the grab's although the grab's code comes first (definition order in one object). Their ctors/??_G sit with
 // their creators elsewhere. 0x1d9d67 (PlayerTypeFromMenu, called only by the lobby: 0x1db039, 0x1db068) is the first
-// function of EEUIELobbyEvents.cpp, so this unit ends at 0x1d9d67. Unit flags: the exe module set.
+// function of EEUIELobbyEvents.cpp (now ee_screens lobby_form.rs), so this unit ends at 0x1d9d67. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>

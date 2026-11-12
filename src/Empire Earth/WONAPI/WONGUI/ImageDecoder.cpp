@@ -10,7 +10,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
-#include "ee/wonapi/WONLobbyAnimation.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONLobbyPlatform.h"
 namespace WONAPI {
@@ -23,7 +22,6 @@ ImageDecoder::ImageDecoder()
     this->mFileReader=NULL;
 }
 ImageDecoder::~ImageDecoder() {}
-SmartPtr<Animation> ImageDecoder::GetAnimation() { return NULL; }
 // FUNCTION: WON 0x00747910
 // (??_GImageDecoder@WONAPI@@UAEPAXI@Z)
 
@@ -152,29 +150,25 @@ bool MultiImageDecoder::GetImageAttributes(const char* path,ImageAttributes& att
     return ImageDecoder::GetImageAttributes(path,attributes);
 }
 // FUNCTION: WON 0x007484e0
-// Decodes the current reader into a native image with the current extension's decoder, keeping that
-// decoder's animation; NULL when no decoder handles the extension
+// Decodes the current reader into a native image with the current extension's decoder (the SDK kept the
+// decoder's animation; the port has none); NULL when no decoder handles the extension
 SmartPtr<NativeImage> MultiImageDecoder::DoDecode(DisplayContext* context)
 {
-    this->mAnimation=NULL;
     DecoderMap::iterator i=this->mDecoderMap.find(this->mCurExtension);
     if(i==this->mDecoderMap.end()) return NULL;
     ImageDecoder* decoder=i->second;
     SmartPtr<NativeImage> image=decoder->Decode(context,*this->mFileReader);
-    if(image.get()!=NULL) this->mAnimation=decoder->GetAnimation();
     return image;
 }
 // FUNCTION: WON 0x00748670
-// Decodes the current reader into a raw image with the current extension's decoder, keeping that
-// decoder's animation; NULL when no decoder handles the extension
+// Decodes the current reader into a raw image with the current extension's decoder; NULL when no decoder
+// handles the extension
 SmartPtr<RawImage> MultiImageDecoder::DoDecodeRaw()
 {
-    this->mAnimation=NULL;
     DecoderMap::iterator i=this->mDecoderMap.find(this->mCurExtension);
     if(i==this->mDecoderMap.end()) return NULL;
     ImageDecoder* decoder=i->second;
     SmartPtr<RawImage> image=decoder->DecodeRaw(*this->mFileReader);
-    if(image.get()!=NULL) this->mAnimation=decoder->GetAnimation();
     return image;
 }
 // FUNCTION: WON 0x007487f0
@@ -185,14 +179,6 @@ bool MultiImageDecoder::DoGetAttrib(ImageAttributes& attributes)
     if(i==this->mDecoderMap.end()) return false;
     ImageDecoder* aDecoder=i->second;
     return aDecoder->GetImageAttributes(*this->mFileReader,attributes);
-}
-// FUNCTION: WON 0x00748870
-// Returns the last decoded animation; NULL for a single-frame one unless evenIfOnlyOneFrame is set
-SmartPtr<Animation> MultiImageDecoder::GetAnimation(bool evenIfOnlyOneFrame)
-{
-    if(evenIfOnlyOneFrame) return this->mAnimation;
-    else if(this->mAnimation.get()==NULL || this->mAnimation->GetNumFrames()<=1) return NULL;
-    else return this->mAnimation;
 }
 // FUNCTION: WON 0x007488e0
 // Creates a copy of the multi-decoder with a duplicate of every per-extension decoder
@@ -211,39 +197,6 @@ ImageDecoder* MultiImageDecoder::Duplicate()
 }
 }
 
-
-// Decoder overloads that read from a memory buffer (not identified in the original exe)
-namespace WONAPI {
-SmartPtr<NativeImage> ImageDecoder::Decode(DisplayContext *theContext, const void *theData, unsigned long theDataLen)
-{
-	FileReader aReader(theData,theDataLen);
-	return this->Decode(theContext, aReader);
-}
-
-SmartPtr<RawImage> ImageDecoder::DecodeRaw(const void *theData, unsigned long theDataLen)
-{
-	FileReader aReader(theData,theDataLen);
-	return this->DecodeRaw(aReader);
-}
-
-bool ImageDecoder::GetImageAttributes(const void *theData, unsigned long theDataLen, ImageAttributes &theAttrib)
-{
-	FileReader aReader(theData,theDataLen);
-	return this->GetImageAttributes(aReader,theAttrib);
-}
-}
-
-namespace WONAPI {
-// Raw image allocation helpers for decoders (not identified in the original exe)
-SmartPtr<RawImage32> ImageDecoder::CreateRawImage32(int theWidth,int theHeight)
-{
-    return new RawImage32(theWidth,theHeight);
-}
-SmartPtr<RawImage8> ImageDecoder::CreateRawImage8(int theWidth,int theHeight,Palette* thePalette)
-{
-    return new RawImage8(theWidth,theHeight,thePalette);
-}
-}
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x00747900

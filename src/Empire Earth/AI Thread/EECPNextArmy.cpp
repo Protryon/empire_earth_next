@@ -58,6 +58,7 @@
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 
 static const long kNextArmyMaxCount = 100;     // a larger count in one order is a bad argument
@@ -958,6 +959,7 @@ static void EECPNextFreeSoldiers(EEComputerPlayer* inPlayer, EECPNextState* inSt
 {
     outUnits.clear();
     std::set<long> theHeld = EECPNextHeld(inState);
+    { std::vector<long> theOwn; EECPUnitsHeld(inPlayer, theOwn); theHeld.insert(theOwn.begin(), theOwn.end()); }   // the script's units (ee/EECPNextUnits.h)
     std::vector<EECPNextCandidate> theFree;
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (!EECPNextArmySoldier(theUnit) || theUnit->mComplexUnit->mContainer != NULL || theUnit->mComplexUnit->mIsDisabled
@@ -1288,6 +1290,7 @@ void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView)
         ioView.groups.push_back(theEntry);
     }
     std::set<long> theHeld = EECPNextHeld(theState);
+    { std::vector<long> theOwn; EECPUnitsHeld(inPlayer, theOwn); theHeld.insert(theOwn.begin(), theOwn.end()); }   // the script's units (ee/EECPNextUnits.h)
     ioView.free_soldiers = 0;
     ioView.free_strength = 0;
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))

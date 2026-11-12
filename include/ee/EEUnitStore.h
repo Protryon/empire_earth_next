@@ -52,10 +52,20 @@ enum EEUnitStoreFieldID {
     kUnitFieldVelocity = 32,            // EEComplexUnit::mVelocity
     kUnitFieldPushVelocityX = 33,       // EEComplexUnit::mPushVelocityX
     kUnitFieldPushVelocityY = 34,       // EEComplexUnit::mPushVelocityY
-    kUnitFieldRoll = 35                 // EEComplexUnit::mRoll
+    kUnitFieldRoll = 35,                // EEComplexUnit::mRoll
+    // the combat reads' fields (R5b.4, twelfth round: the combat lane's trigger record; store.rs)
+    kUnitFieldFlightTime = 36,          // EEComplexUnit::mFlightTime
+    kUnitFieldCloakTimer = 37,          // EEComplexUnit::mCloaked (the cloak's timer)
+    kUnitFieldCloakable = 38,           // EEComplexUnit::mIsCloakable
+    kUnitFieldCloaked = 39,             // EEComplexUnit::mIsCloaked
+    kUnitFieldHerd = 40,                // EEComplexUnit::mHerd (the record's: set or not)
+    kUnitFieldContainer = 41            // EEComplexUnit::mContainer (the record's: set or not)
 };
 // reported with kUnitFieldUnitClass (store.rs EE_UNIT_FIELD_DOMAINS, EE_UNIT_FIELD_LAND_BUILDING,
-// EE_UNIT_FIELD_CAN_ATTACK_GROUND): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its constructor
+// EE_UNIT_FIELD_CAN_ATTACK_GROUND, and the combat reads' EE_UNIT_FIELD_FAMILY, _CLOAK_RADIUS, _CRUSADER,
+// _PARATROOPER_BOMBER, _HEAL_THRESHOLD): the class's mDomains, IsLandBuilding() and mCanAttackGround, fixed by its
+// constructor, and its mFamily, mCloakRadius, IsCrusader(), mIsParatrooperBomber and GetHealThreshold(), fixed once the
+// db's classes are made (EEUnitClass::InitUnitClasses)
 
 // a holder's member was written (EEUnitStore.cpp: the owner from the member's offset)
 void EEUnitStoreWrote(unsigned int inField, const void* inMember);
@@ -109,8 +119,13 @@ long EEUnitStoreRead(File& inFile, Field& ioField)
 // RTSUnit::FreeNode, a no-op unless a teardown dropped the list's reference first)
 void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* inPlayer);
 void EEUnitStoreRemove(RTSUnit* inUnit);
-// a player object goes (~RTSPlayer): the records of its list go, by the object (temporary players may share an id)
+// a player object goes (~RTSPlayer): the records of its list go, by the object (temporary players may share an id), and
+// its diplomacy table (ee_units players.rs)
 void EEUnitStoreClearPlayer(const RTSPlayer* inPlayer);
+class EEPlayer;
+// the player's mEnemies (and id) were written: its diplomacy table in the store (ee_units players.rs; EEPlayer::Reset,
+// the loads, SetDiplomaticStance; USCK compares the world's players with the tables)
+void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
@@ -180,7 +195,25 @@ enum EEUnitStateKind {
     kUnitStateAIStep = 1,       // EEComplexUnit::AIStep
     kUnitStateCondition = 2,    // EEUnitTrigger::Evaluate's EvaluateCondition calls
     kUnitStateRoll = 3,         // EEPhysicsModel::AfterStep's roll decay
-    kUnitStatePush = 4          // EEPhysicsModel::Move's push arithmetic
+    kUnitStatePush = 4,         // EEPhysicsModel::Move's push arithmetic (and the subclasses' copies: Helicopter,
+                                // Naval, Spaceship, SubmergedNaval; the helicopter's speed is its velocity)
+    // the twelfth round's: the physics models' step arithmetic (float bits; ee_units physics.rs's inputs in its
+    // structs' order, then the outputs). Turn [tick seconds, ticks per game second, angular acceleration, maximum, its
+    // inverse, yaw rate, heading, target, use facing, broadside, facing offset, angle left, rate, heading after];
+    // spin down and steady turn [tick seconds, acceleration, maximum, rate, heading, (steady: physics order, command,)
+    // rate after, heading after]; Accelerate [tick seconds, speed, top speed, acceleration, waypoints, distance, mode,
+    // speed after]; SpeedMode [helicopter, tick seconds, ticks per game second, speed, top speed, acceleration, its
+    // inverse, yaw rate, slope penalty (0: the helicopter's), waypoints, the remaining distance, the terrain pitch (0:
+    // not read), distance, turn, mode]; PitchMode [naval, tick seconds, ticks per game second, acceleration, its
+    // inverse (0: naval), rate, angle, mode]; ApproachPitch [naval, tick seconds, acceleration, maximum, rate, pitch,
+    // target, mode, rate after, pitch after]
+    kUnitStateTurn = 5,         // EEPhysicsModel::TurnTowardAngle (with YawMode)
+    kUnitStateSpinDown = 6,     // EEPhysicsModel::SpinDown
+    kUnitStateSteadyTurn = 7,   // EEPhysicsModel::SteadyTurn
+    kUnitStateAccelerate = 8,   // EEPhysicsModel::Accelerate, EEPMSeaAnimal::Accelerate
+    kUnitStateSpeedMode = 9,    // EEPhysicsModel::SpeedMode, EEPMHelicopter::SpeedMode
+    kUnitStatePitchMode = 10,   // EEPhysicsModel::PitchMode, EEPMNaval::PitchMode, EEPMSpaceship::PitchMode
+    kUnitStateApproachPitch = 11   // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
 };
 void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
 // TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and

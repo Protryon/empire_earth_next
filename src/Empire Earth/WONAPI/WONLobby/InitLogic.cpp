@@ -404,7 +404,7 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
         if (anOutcome == 1) {
             ServerContext* versions = LobbyGetPatchServers();
             if (versions != NULL)
-                versions->NotifyFailed(static_cast<CheckValidVersionOp*>(inOp)->GetCurAddr());
+                versions->NotifyFailed(static_cast<ServerRequestOp*>(inOp)->GetCurAddr());
         }
         GUIString description = LobbyFormatString(::LobbyContainer_VersionCheckFailure_String,GetWONStatusString(status));
         this->SetError(0x40,description);
@@ -536,9 +536,13 @@ void InitLogic::StartVersionCheck()
     if (versions == NULL || config == NULL)
         return;
     LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_CheckingVersion_String,gEmptyGUIString,false,0),true);
-    SmartPtr<CheckValidVersionOp> op = new CheckValidVersionOp(config->mProductName,versions);
-    op->SetConfigName(config->mLanguage);
-    op->SetVersion(config->mVersion);
+    // CheckValidVersionOp: a Rust op (ee_won reqops.rs) with the product, config and version
+    const std::string& aProduct = config->mProductName;
+    const std::string& aConfig = config->mLanguage;
+    const std::string& aVersion = config->mVersion;
+    SmartPtr<ServerRequestOp> op = new ServerRequestOp(versions, ee_won_reqop_version_check(
+        reinterpret_cast<const uint8_t*>(aProduct.data()), aProduct.size(), reinterpret_cast<const uint8_t*>(aConfig.data()),
+        aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()));
     this->RunTrackedOp(op.get(),new LogicCompletion<InitLogic>(&InitLogic::VersionCompletion,this),0);
 }
 }
