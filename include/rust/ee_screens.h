@@ -204,16 +204,40 @@ constexpr static const uint32_t EE_SCREENS_SP_MAIN_MENU = 1542;
 
 constexpr static const uint32_t EE_SCREENS_SP_RANDOM_MAP = 1543;
 
+/// The play campaign screen: Back, the three campaigns, the mouse over their buttons, its open event (set by the
+/// single player screen's Campaign), Custom Campaign, the learning campaign.
+constexpr static const uint32_t EE_SCREENS_PC_BACK = 2049;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_1 = 2050;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_2 = 2051;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_3 = 2052;
+
+constexpr static const uint32_t EE_SCREENS_PC_MOUSE_OVER = 2053;
+
+constexpr static const uint32_t EE_SCREENS_PC_OPEN = 2054;
+
+constexpr static const uint32_t EE_SCREENS_PC_CUSTOM = 2055;
+
+constexpr static const uint32_t EE_SCREENS_PC_LEARNING = 2056;
+
 /// The C++ events the menus hang on other forms (built by the host).
 constexpr static const uint32_t EE_SCREENS_CPP_SETTINGS_OPEN = 65537;
-
-constexpr static const uint32_t EE_SCREENS_CPP_CAMPAIGN_OPEN = 65538;
 
 constexpr static const uint32_t EE_SCREENS_CPP_LOBBY_SINGLE = 65539;
 
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA = 65540;
 
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA_ALL = 65541;
+
+constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_OPEN = 65542;
+
+constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_CLOSE = 65543;
+
+constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_OPEN = 65544;
+
+constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_CLOSE = 65545;
 
 constexpr static const uint32_t EE_SCREENS_GAME_QUIT = 1;
 
@@ -241,10 +265,16 @@ constexpr static const uint32_t EE_SCREENS_GAME_LOBBY_BEGIN = 12;
 
 constexpr static const uint32_t EE_SCREENS_GAME_LOBBY_END = 13;
 
+constexpr static const uint32_t EE_SCREENS_GAME_SHOW_SINGLE_PLAYER = 14;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN = 15;
+
 /// The game's texts (MenuHost::text).
 constexpr static const uint32_t EE_SCREENS_TEXT_VERSION = 1;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_PLAYER = 2;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN = 8;
 
 constexpr static const uint32_t EE_SCREENS_OP_PUSH = 257;
 
@@ -258,6 +288,14 @@ constexpr static const uint32_t EE_SCREENS_OP_SHOW = 261;
 
 constexpr static const uint32_t EE_SCREENS_OP_HOT_KEY = 262;
 
+constexpr static const uint32_t EE_SCREENS_OP_CLOSE_EVENT = 263;
+
+constexpr static const uint32_t EE_SCREENS_OP_TRIGGER = 264;
+
+constexpr static const uint32_t EE_SCREENS_OP_OPEN_FORM = 265;
+
+constexpr static const uint32_t EE_SCREENS_OP_ENTITY_INDEX = 266;
+
 constexpr static const uint32_t EE_SCREENS_TEXT_EDIT = 3;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_STRING = 4;
@@ -267,6 +305,22 @@ constexpr static const uint32_t EE_SCREENS_TEXT_LABEL = 5;
 constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE = 6;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SERVER = 7;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_STRING_CHECKED = 9;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LABEL_LINES = 10;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_NAME = 11;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION = 12;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_FIRST = 13;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOAD = 14;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
@@ -1013,8 +1067,10 @@ bool ee_screens_lobby_map_type_changed(const uint8_t *name,
                                        const uint8_t *current,
                                        size_t current_len);
 
-/// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`); `kErrorOK` (0).
-long ee_screens_event(uint32_t event, void *form, void *_entity);
+/// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
+long ee_screens_event(uint32_t event,
+                      void *form,
+                      void *entity);
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);

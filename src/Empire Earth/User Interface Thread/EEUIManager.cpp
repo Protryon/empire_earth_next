@@ -143,7 +143,6 @@
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
-#include "ee/EEUIEPlayCampaignEvents.h"
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
 #include "ee/EEUIESLLoadScreen.h"
@@ -186,7 +185,6 @@ UIEvent* EECreateChatLogEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateCivilizationBuilderEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreatePlayCampaignEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID);
@@ -229,8 +227,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     this->RegisterControlEventCallback(EECreateGameSettingsEvent);
     this->RegisterControlEventCallback(EECreateSaveLoadEvent);
     this->RegisterControlEventCallback(EECreateMainGameEvent);
-    this->RegisterControlEventCallback(EECreateMainScreenEvent);   // and the single player form's (Rust's table)
-    this->RegisterControlEventCallback(EECreatePlayCampaignEvent);
+    this->RegisterControlEventCallback(EECreateMainScreenEvent);   // + single player, play campaign (Rust's table)
     this->RegisterControlEventCallback(EECreatePostGameSummaryEvent);
     this->RegisterControlEventCallback(EECreateScenarioIntroEvent);
     this->RegisterControlEventCallback(EECreateScenarioLoadEvent);
@@ -978,63 +975,13 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 // (EEUIEFormationChange's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6734c5
-// Creates the main screen's, the editors' sub-menu's and the single player form's event for a control id (the menus
-// are Rust's whole: ee_screens menus.rs; the original's single player factory, 0x674200, folded in); NULL for other ids
+// Creates the main screen's, the editors' sub-menu's, the single player form's and the play campaign form's event for
+// a control id (the menus are Rust's whole: ee_screens menus.rs; the original's single player and play campaign
+// factories, 0x674200 and 0x673836, folded in); NULL for other ids
 UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID)
 {
     return EECreateScreenEvent(ee_screens_menus_event_for(inID));
 }
-
-// FUNCTION: EXE 0x673836
-// Creates the play campaign form's event for a control id; NULL for other ids
-UIEvent* EECreatePlayCampaignEvent(UIForm* inForm, unsigned long inID)
-{
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventPCBackToSinglePlayer && inID <= kControlEventPCLearningCampaigns) {
-        switch (inID) {
-        case kControlEventPCBackToSinglePlayer:
-            theEvent = new EEUIEPCEBackToSinglePlayer;
-            break;
-        case kControlEventPCCampaignI:
-            theEvent = new EEUIEPCECampaign1;
-            break;
-        case kControlEventPCCampaignII:
-            theEvent = new EEUIEPCECampaign2;
-            break;
-        case kControlEventPCCampaignIII:
-            theEvent = new EEUIEPCECampaign3;
-            break;
-        case kControlEventPCPlaySavedGame:
-            theEvent = EECreateScreenEvent(EE_SCREENS_SP_LOAD_GAME);
-            break;
-        case kControlEventPCCustomCampaign:
-            theEvent = new EEUIEPCECustomCampaign;
-            break;
-        case kControlEventPCLearningCampaigns:
-            theEvent = new EEUIEPCELearningCampaign;
-            break;
-        }
-    }
-    return theEvent;
-}
-
-// SYNTHETIC: EXE 0x67395c
-// (EEUIEPCEBackToSinglePlayer's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673987
-// (EEUIEPCECampaign1's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6739b2
-// (EEUIEPCECampaign2's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6739dd
-// (EEUIEPCECampaign3's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673a08
-// (EEUIEPCECustomCampaign's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673a33
-// (EEUIEPCELearningCampaign's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x673a89
 // Creates the post-game summary's event for a control id; NULL for other ids

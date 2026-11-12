@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
-// player screen; docs/RUST_PLAN.md "R6 game screens", step 2): EEScreenEvent's ProcessEvent, the C++ events the
-// screens still hang on other forms, and the toolkit's and the game's calls the Rust dispatchers make
+// player and play campaign screens; docs/RUST_PLAN.md "R6 game screens", step 2): EEScreenEvent's ProcessEvent, the
+// C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust dispatchers make
 // (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
-// EEUIEEmpireEarthEditorsEvents.cpp and EEUIESinglePlayerEvents.cpp.
+// EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp and EEUIEPlayCampaignEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -76,7 +76,9 @@
 #include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEUIELobbyEvents.h"
-#include "ee/EEUIEPlayCampaignEvents.h"
+#include "ee/EECampaignFormManager.h"
+#include "ee/EEUIECampaignSelectScreenEvents.h"
+#include "ee/EEUIEChooseCustomCampaignEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"
 
@@ -95,8 +97,14 @@ UIEvent* EECreateScreenEvent(unsigned long inEvent)
         return NULL;
     case EE_SCREENS_CPP_SETTINGS_OPEN:
         return new EEUIEGSEOutOfGameOpen;
-    case EE_SCREENS_CPP_CAMPAIGN_OPEN:
-        return new EEUIEPCEFormOpen;
+    case EE_SCREENS_CPP_SCENARIOS_OPEN:
+        return new EEUIECSSEFormOpen;
+    case EE_SCREENS_CPP_SCENARIOS_CLOSE:
+        return new EEUIECSSEFormClose;
+    case EE_SCREENS_CPP_CUSTOM_OPEN:
+        return new EEUIECCCEFormOpen;
+    case EE_SCREENS_CPP_CUSTOM_CLOSE:
+        return new EEUIECCCEFormClose;
     case EE_SCREENS_CPP_LOBBY_SINGLE:
         return new EEUIELEActivateSinglePlayer;
     case EE_SCREENS_CPP_DUMP_MEDIA:
@@ -111,8 +119,9 @@ static UWideString Text(const uint8_t* inText, size_t inLength)
     return UWideString(std::string((const char*)inText, inLength).c_str());
 }
 
-// the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form
-extern "C" void ee_screenscpp_call(void* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC, uint32_t inD)
+// the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
+extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                       uint32_t inC, uint32_t inD)
 {
     UIForm* theForm = static_cast<UIForm*>(inForm);
     EEUIManager* theManager = static_cast<EEUIManager*>(theForm->GetManager());
@@ -126,12 +135,24 @@ extern "C" void ee_screenscpp_call(void* inForm, uint32_t inOp, uint32_t inA, ui
     case EE_SCREENS_OP_SWITCH:
         gUserInterface->SwitchToForm(theManager->GetFormByID(inA));
         break;
-    case EE_SCREENS_OP_OPEN_EVENT: {
-        UIEvent* theEvent = EECreateScreenEvent(inB);
-        theManager->GetFormByID(inA)->SetFormOpenEvent(theEvent);
+    case EE_SCREENS_OP_OPEN_EVENT:
+    case EE_SCREENS_OP_CLOSE_EVENT:
+    case EE_SCREENS_OP_TRIGGER: {
+        UIEvent* theEvent = EECreateScreenEvent(inOp == EE_SCREENS_OP_TRIGGER ? inD : inB);
+        if (inOp == EE_SCREENS_OP_OPEN_EVENT)
+            theManager->GetFormByID(inA)->SetFormOpenEvent(theEvent);
+        else if (inOp == EE_SCREENS_OP_CLOSE_EVENT)
+            theManager->GetFormByID(inA)->SetFormCloseEvent(theEvent);
+        else
+            theManager->GetFormByID(inA)->GetControl(inB)->SetTriggerEvent(inC, theEvent);
         theEvent->Dereference();
         break;
     }
+    case EE_SCREENS_OP_OPEN_FORM:
+        gUserInterface->OpenForm(theManager->GetFormByID(inA));
+        break;
+    case EE_SCREENS_OP_ENTITY_INDEX:
+        return static_cast<UIControl*>(inEntity)->GetIndex();
     case EE_SCREENS_OP_SHOW:
         theForm->GetControl(inA)->SetDisplayMode(inB);
         break;
@@ -183,7 +204,14 @@ extern "C" void ee_screenscpp_call(void* inForm, uint32_t inOp, uint32_t inA, ui
     case EE_SCREENS_GAME_LOBBY_END:
         gWorld.GetLobbyOptions().mLock->WriteUnlock();
         break;
+    case EE_SCREENS_GAME_SHOW_SINGLE_PLAYER:
+        EEShowSinglePlayerScreen();
+        break;
+    case EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN:
+        EECampaignFormManager::Get()->mAllScenariosOpen = inA != 0;
+        break;
     }
+    return 0;
 }
 
 // a text of the game (EE_SCREENS_TEXT_*) into outText (up to inCapacity bytes); its length in bytes
@@ -203,15 +231,31 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     case EE_SCREENS_TEXT_STRING:
         gResource->GetString(inArg, theText);
         break;
+    case EE_SCREENS_TEXT_STRING_CHECKED:
+        if (gResource->GetString(inArg, theText) != 0)
+            return (size_t)-1;
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN: {
+        const UWideString* const kCampaigns[4] = {&gCampaignAOCRoman, &gCampaignAOCPacific, &gCampaignAOCAsian,
+                                                  &gCampaignEELearning};
+        theText = *kCampaigns[inArg & 3];
+        break;
+    }
+    case EE_SCREENS_TEXT_CAMPAIGN_LOADED:
+        theText = EECampaignFormManager::Get()->mCampaign.GetDescription();
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_CIV:
+        theText = EECampaignFormManager::Get()->mCampaign.GetRequiredCiv();
+        break;
     }
     size_t theLength = theText.GetTCHARLength();
     memcpy(outText, (const char*)theText, theLength < inCapacity ? theLength : inCapacity);
     return theLength;
 }
 
-// a text into the game (EE_SCREENS_TEXT_*)
-extern "C" void ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint32_t inArg, const uint8_t* inText,
-                                       size_t inLength)
+// a text into the game (EE_SCREENS_TEXT_*); 1 for a campaign that loads
+extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint32_t inArg, const uint8_t* inText,
+                                           size_t inLength)
 {
     UWideString theText = Text(inText, inLength);
     UIForm* theForm = static_cast<UIForm*>(inForm);
@@ -226,8 +270,29 @@ extern "C" void ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint32_t 
         static_cast<UITextLabel*>(theForm->GetControl(inArg))->SetText(theText);
         break;
     case EE_SCREENS_TEXT_MESSAGE:
-        gUIManager->DisplayMessage(theText, true, NULL, 0, true);
+        gUIManager->DisplayMessage(theText, true, NULL, 0, inArg != 0);
         break;
+    case EE_SCREENS_TEXT_LABEL_LINES: {
+        UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff));
+        theLabel->DeleteArray();
+        theLabel->AppendText(theText);
+        break;
+    }
+    case EE_SCREENS_TEXT_CAMPAIGN_NAME:
+        EECampaignFormManager::Get()->SetCampaignName(theText);
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION:
+        EECampaignFormManager::Get()->SetDescription(theText);
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_FIRST:
+        EECampaignFormManager::Get()->SetFirstScenario(theText);
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_LOAD: {
+        UWideString theFile;
+        UWideString theError;
+        theFile = "Campaigns\\" + theText + gCampaignExtension;
+        return EECampaignFormManager::Get()->mCampaign.Load(theFile, theError, false) ? 1 : 0;
+    }
     case EE_SCREENS_TEXT_SERVER:
         // the random map's local server (the old communications deleted) and the human's connection request
         if (gCommunications)
@@ -239,6 +304,7 @@ extern "C" void ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint32_t 
                                                kSlotNone);
         break;
     }
+    return 0;
 }
 
 // the random map's lobby options inside the write lock (EE_SCREENS_GAME_LOBBY_BEGIN): single player, the slots from
