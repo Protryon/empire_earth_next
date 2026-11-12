@@ -316,9 +316,10 @@ function M.shore_scout(view, memory, saving)
             S.done = true
             return
         end
-        local a = (S.i - 1) * math.pi / 4
-        local x = math.max(view.town_x + math.floor(M.SCOUT_RING * math.cos(a) + 0.5), 0)
-        local y = math.max(view.town_y + math.floor(M.SCOUT_RING * math.sin(a) + 0.5), 0)
+        -- (the 8 directions in tenths: no trigonometry in the sandbox)
+        local d = ({{10, 0}, {7, 7}, {0, 10}, {-7, 7}, {-10, 0}, {-7, -7}, {0, -10}, {7, -7}})[S.i]
+        local x = math.max(view.town_x + M.SCOUT_RING * d[1] // 10, 0)
+        local y = math.max(view.town_y + M.SCOUT_RING * d[2] // 10, 0)
         ai.move({S.id}, x, y)
         S.t = view.time
     end
