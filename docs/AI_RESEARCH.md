@@ -3675,6 +3675,21 @@ and a 15-minute gate of three quarters of the force. Same exe (with boom-econ's 
 - **The order itself** (o0, boom-econ's, still off on main) has 15 defeats against the classic, against rs0's 8 on
   the earlier exe. That is boom-econ's bench to read; the raid adds to it, not to rs0.
 
+**The raid on the earlier latch (boom-econ's c2a6e309).** Order on in both; 32 seeds, the same exe.
+
+| Variant | Opponent | Defeats | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|
+| o2, the order | Age of AI | 0/32 | 5/17/10 | 32, 22.4 | 28, 47.3 | 23, 78.0 |
+| | improved classic | 15/32 | 1/29/2 | 26, 24.6 | 16, 48.6 | 10, 74.6 |
+| o3, the order + the raid | Age of AI | 0/32 | 4/14/14 | 32, 22.4 | 24, 49.9 | 21, 74.4 |
+| | improved classic | 17/32 | 1/28/3 | 26, 24.6 | 13, 50.0 | 7, 80.6 |
+
+- The build now begins at minute 35-38. It still takes 13-15 minutes: about 1.3 soldiers a minute with the citizens
+  yielding. So the raid goes at minute 50-52 with 17-18 soldiers. It kills 2-3 citizens and 2-5 soldiers for 1-5 of
+  its own, and costs the Copper Age 1-3 minutes and two defeats.
+- The order's 15 defeats against the classic did not move with the wood-bank fix on this exe: 26 of 32 games reach
+  the Stone Age, against 30 for rs0 on the earlier exe.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
