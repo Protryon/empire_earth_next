@@ -110,7 +110,8 @@ bool EESMCondition::Evaluate()
 bool EESMCondition::EvaluateUncaptured()
 {
     // the test is Rust's (ee_scenario condition.rs evaluate) over the host's reads (EEScenarioHost.cpp)
-    EeScenarioHost theHost = EESMHost(this);
+    EESMHostContext theContext = {this, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
     EeScenarioCondition theRecord = EESMConditionRecord(*this);
     return ee_scenario_condition_evaluate(&theHost, &theRecord);
 }
@@ -120,7 +121,8 @@ bool EESMCondition::EvaluateUncaptured()
 // variable, tribute sent/received, statistic or mining limit; 0 without a player
 unsigned long EESMCondition::GetPlayerValue(long inPlayer, unsigned long inType)
 {
-    EeScenarioHost theHost = EESMHost(this);   // ee_scenario condition.rs player_value
+    EESMHostContext theContext = {this, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);   // ee_scenario condition.rs player_value
     return ee_scenario_player_value(&theHost, (int32_t)inPlayer, (uint32_t)inType);
 }
 

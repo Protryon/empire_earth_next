@@ -9,13 +9,17 @@
 //! - [`host`]: the world's reads by operation code, and the C ABI's host table.
 //! - [`condition`]: `EESMCondition::Compare`, `Evaluate` and `GetPlayerValue`, `EEScenarioManager::ChoosePlayer`
 //!   with the AI's shuffle.
+//! - [`area`]: `EESMArea::ContainsTile`, `ContainsUnit` and `GetCenterTile` (rectangles, continents, towns).
+//! - [`object`]: `EESMObject::AcceptsClass` and `PickUnitType` (the class filter by epoch, family, AI kind, set).
 //! - [`trigger`]: `EESMTrigger::Evaluate` with its condition chain (`EESMTConditionWrapper::Evaluate`), duration
 //!   and the timed effects it schedules.
 //! - [`ffi`]: the C ABI the C++ classes call.
 
+pub mod area;
 pub mod condition;
 pub mod ffi;
 pub mod host;
+pub mod object;
 pub mod trigger;
 
 /// The C cast `(long)inValue` of a float as the x86-64 build compiles it (`cvttss2si`): toward zero, and the

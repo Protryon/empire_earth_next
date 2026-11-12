@@ -1003,7 +1003,8 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
 long EEScenarioManager::ChoosePlayer(long inType, std::vector<long>* outPlayers, bool inSingle)
 {
     // the choice is Rust's (ee_scenario condition.rs choose_player, the AI's shuffle with it; the SMCP record too)
-    EeScenarioHost theHost = EESMHost(NULL);
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
     int32_t thePlayers[EE_SCENARIO_MAX_PLAYERS];
     size_t theCount = 0;
     long theResult = ee_scenario_choose_player(&theHost, (int32_t)inType, inSingle, outPlayers != NULL, thePlayers,

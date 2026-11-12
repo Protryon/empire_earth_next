@@ -33,6 +33,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EETown.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 
 static const long kNoArea = -10000;
 
@@ -70,25 +71,12 @@ bool EESMArea::ContainsUnit(EEUnit* inUnit)
 // ContainsUnit's body (ContainsUnit adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
 bool EESMArea::ContainsUnitUncaptured(EEUnit* inUnit)
 {
-    bool theResult = false;
-    if (inUnit != NULL) {
-        // The tile is read only after the NULL test (it was read first).
-        U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
-        if (this->IsUnset()) {
-            if (inUnit->GetTileX() == kNoArea)
-                theResult = true;
-        } else if (this->IsOffMap()) {
-            EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-            if (theUnit == NULL)
-                theResult = true;
-            else if (theUnit->mU0DC.GetX() == theTile.mX && theUnit->mU0DC.GetY() == theTile.mY)
-                theResult = true;
-            else
-                theResult = false;
-        } else
-            theResult = this->ContainsTile(theTile);
-    }
-    return theResult;
+    if (inUnit == NULL)
+        return false;
+    EESMHostContext theContext = {NULL, inUnit};   // ee_scenario area.rs contains_unit
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
+    return ee_scenario_area_contains_unit(&theHost, &theRecord);
 }
 
 // FUNCTION: EXE 0x5ba154
@@ -105,41 +93,10 @@ bool EESMArea::ContainsTile(const U2DPoint<long>& inTile)
 // ContainsTile's body (ContainsTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
 bool EESMArea::ContainsTileUncaptured(const U2DPoint<long>& inTile)
 {
-    std::vector<EETown*> theTowns;
-    GE2DPoint thePoint;
-    bool theResult = false;
-    EETown* theTown;
-    switch (this->mSelectMode) {
-    case 0:
-        thePoint.SetX((float)inTile.GetX());
-        thePoint.SetY((float)inTile.GetY());
-        theResult = this->mRect.Contains(thePoint);
-        break;
-    case 1:
-        if (inTile.GetX() >= 0 && inTile.GetY() >= 0) {
-            unsigned short theContinent = gContinentManager.GetContinentID(this->mAnchor.GetX(), this->mAnchor.GetY());
-            if (gContinentManager.GetContinentID(inTile.GetX(), inTile.GetY()) == theContinent)
-                theResult = true;
-        }
-        break;
-    case 2:
-        {
-            for (long i = gWorld.GetNumPlayers() - 1; i > 0; i--) {
-                EEPlayer* thePlayer = gWorld.GetPlayer(i);
-                for (long j = thePlayer->GetNumTowns() - 1; j >= 0; j--) {
-                    theTown = thePlayer->mTowns[j];
-                    if (theTown->mHull.BoundedContains(this->mAnchor))
-                        theTowns.push_back(theTown);
-                }
-            }
-            for (long k = theTowns.size() - 1; k >= 0 && !theResult; k--) {
-                theTown = theTowns[k];
-                theResult = theTown->mHull.BoundedContains(inTile);
-            }
-        }
-        break;
-    }
-    return theResult;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario area.rs contains_tile
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
+    return ee_scenario_area_contains_tile(&theHost, &theRecord, (int32_t)inTile.GetX(), (int32_t)inTile.GetY());
 }
 
 // FUNCTION: EXE 0x5ba2b2
@@ -173,34 +130,14 @@ U2DPoint<long> EESMArea::GetCenterTile()
 // GetCenterTile's body (GetCenterTile adds the simulation capture's SMAR record: ee/EEScenarioCapture.h)
 U2DPoint<long> EESMArea::GetCenterTileUncaptured()
 {
-    U2DPoint<long> theTile;
-    GE2DPoint thePoint;
-    bool theFound = false;
-    if (this->mCenterTile.mX != kNoArea)
-        return this->mCenterTile;
-    if (this->mSelectMode == 0) {
-        this->mRect.GetCenter(thePoint);
-        this->mCenterTile.mX = (long)thePoint.GetX();
-        this->mCenterTile.mY = (long)thePoint.GetY();
-    } else if (this->mSelectMode == 1) {
-        unsigned short theContinent = gContinentManager.GetContinentID(this->mAnchor.GetX(), this->mAnchor.GetY());
-        gContinentManager.GetContinentCenter(theContinent, theTile);
-        this->mCenterTile = theTile;
-    } else {
-        for (long i = gWorld.GetNumPlayers() - 1; i > 0 && !theFound; --i) {
-            EEPlayer* thePlayer = gWorld.GetPlayer(i);
-            for (long j = thePlayer->GetNumTowns() - 1; j >= 0 && !theFound; --j) {
-                EETown* theTown = thePlayer->mTowns[j];
-                if (theTown->mHull.BoundedContains(this->mAnchor)) {
-                    this->mCenterTile = theTown->mHull.GetCenter();
-                    theFound = true;
-                }
-            }
-        }
-        if (!theFound)
-            this->mCenterTile = this->mAnchor;
-    }
-    return this->mCenterTile;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario area.rs center_tile (the cache kept here)
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioAreaRecord theRecord = EESMAreaRecord(*this);
+    int32_t theTile[2];
+    ee_scenario_area_center_tile(&theHost, &theRecord, &theTile);
+    this->mCenterTile.mX = theRecord.center_x;
+    this->mCenterTile.mY = theRecord.center_y;
+    return U2DPoint<long>(theTile[0], theTile[1]);
 }
 
 // FUNCTION: EXE 0x5ba45e

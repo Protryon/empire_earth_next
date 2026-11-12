@@ -2,8 +2,10 @@
 //! `Scenario Manager/EEScenarioHost.cpp`). Plain records in and out; the world through the host's reads, and no
 //! Rust reference lives across one (a read may run a condition's or an object's `Evaluate`, which calls back here).
 
+use crate::area::{self, EeScenarioAreaRecord};
 use crate::condition::{self, EeScenarioCondition};
 use crate::host::EeScenarioHost;
+use crate::object::{self, EeScenarioObjectFilter};
 use crate::trigger::{
     self, EeScenarioConditionEntry, EeScenarioEffectEntry, EeScenarioTimedEffect, EeScenarioTriggerState,
 };
@@ -122,4 +124,83 @@ pub unsafe extern "C" fn ee_scenario_trigger_evaluate(
         std::ptr::copy_nonoverlapping(timed.as_ptr(), out, timed.len());
         *out_count = timed.len();
     }
+}
+
+/// `EESMArea::ContainsTile`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_contains_tile(
+    host: *const EeScenarioHost,
+    area: *const EeScenarioAreaRecord,
+    x: i32,
+    y: i32,
+) -> bool {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut host, area) = unsafe { (host_of(host), *area) };
+    area::contains_tile(&mut host, &area, x, y)
+}
+
+/// `EESMArea::ContainsUnit` of the host's unit (not called for no unit).
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_contains_unit(
+    host: *const EeScenarioHost,
+    area: *const EeScenarioAreaRecord,
+) -> bool {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut host, area) = unsafe { (host_of(host), *area) };
+    area::contains_unit(&mut host, &area)
+}
+
+/// `EESMArea::GetCenterTile`: the centre into `out` (x, y); `area`'s cached centre updated.
+///
+/// # Safety
+/// `host` must be valid for the call, `area` for a read and a write, `out` for two writes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_area_center_tile(
+    host: *const EeScenarioHost,
+    area: *mut EeScenarioAreaRecord,
+    out: *mut [i32; 2],
+) {
+    // SAFETY: the caller's contract; the record is copied before the first read and written back after the last
+    let (mut host, mut a) = unsafe { (host_of(host), *area) };
+    let (x, y) = area::center_tile(&mut host, &mut a);
+    // SAFETY: the caller's contract
+    unsafe {
+        *area = a;
+        *out = [x, y];
+    }
+}
+
+/// `EESMObject::AcceptsClass`.
+///
+/// # Safety
+/// `host` and `filter` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_accepts_class(
+    host: *const EeScenarioHost,
+    filter: *const EeScenarioObjectFilter,
+    class: u32,
+) -> bool {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut host, filter) = unsafe { (host_of(host), *filter) };
+    object::accepts_class(&mut host, &filter, class)
+}
+
+/// `EESMObject::PickUnitType`.
+///
+/// # Safety
+/// `host` and `filter` must be valid for the call.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_pick_unit_type(
+    host: *const EeScenarioHost,
+    filter: *const EeScenarioObjectFilter,
+) -> i32 {
+    // SAFETY: the caller's contract; the record is copied before the first read
+    let (mut host, filter) = unsafe { (host_of(host), *filter) };
+    object::pick_unit_type(&mut host, &filter)
 }

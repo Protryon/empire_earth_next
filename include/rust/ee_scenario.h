@@ -133,6 +133,51 @@ constexpr static const uint32_t EE_SCENARIO_READ_UNIT_PREVIOUS_TILE = 33;
 /// not (ee/EEScenarioCapture.h).
 constexpr static const uint32_t EE_SCENARIO_READ_CAPTURE_SEED = 49;
 
+/// `EEUnitClassCount()`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_COUNT = 34;
+
+/// `gUnitClassTable[a] != NULL` (1/0; 0 past the table).
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_EXISTS = 35;
+
+/// `gUnitClassTable[a]->mIsScenarioSelectable` (0 for no class).
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_SELECTABLE = 36;
+
+/// `gUnitClassTable[a]->mCategory`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_CATEGORY = 37;
+
+/// `gUnitClassTable[a]->mEpoch`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_EPOCH = 38;
+
+/// `gUnitClassTable[a]->mFamily`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_FAMILY = 39;
+
+/// `gUnitClassTable[a]->mAIKind`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_AI_KIND = 40;
+
+/// `gUnitClassTable[a]->GetUnitType()`.
+constexpr static const uint32_t EE_SCENARIO_READ_CLASS_TYPE = 41;
+
+/// `gUnitSetManager.Contains(a, b)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_CATEGORY_IN_SET = 42;
+
+/// `gUnitSetManager.GetSize()`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SET_COUNT = 43;
+
+/// `gUnitSetManager.GetSet(a)`: -1 without the set, else its `Contains(b)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SET_HAS = 44;
+
+/// `GetScenarioObject(a) != NULL` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_EXISTS = 45;
+
+/// `GetScenarioObject(a)->GetIsSelectOnMap()` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP = 46;
+
+/// The class (`GetUnitType()`) of the first unit of `GetScenarioObject(a)->GetUnits`, -1 for no units or no unit.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE = 47;
+
+/// `GetScenarioObject(a)->PickUnitType()`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJECT_PICK = 48;
+
 /// `kSMTriggerOperator*`.
 constexpr static const int32_t EE_SCENARIO_OPERATOR_END = 0;
 
@@ -210,6 +255,27 @@ struct EeScenarioTimedEffect {
   uint32_t time;
 };
 
+/// An area's settings and its cached centre (`EESMArea`'s plain members).
+struct EeScenarioAreaRecord {
+  uint32_t select_mode;
+  int32_t anchor_x;
+  int32_t anchor_y;
+  float left;
+  float top;
+  float right;
+  float bottom;
+  /// `mCenterTile` (in and out: the cache, -10000 while unset)
+  int32_t center_x;
+  int32_t center_y;
+};
+
+/// The object's filter (`EESMObject`'s plain members).
+struct EeScenarioObjectFilter {
+  uint32_t class_;
+  uint32_t family;
+  uint32_t parent;
+};
+
 extern "C" {
 
 /// `EESMCondition::Compare`.
@@ -257,6 +323,44 @@ void ee_scenario_trigger_evaluate(const EeScenarioHost *host,
                                   float time,
                                   EeScenarioTimedEffect *out,
                                   size_t *out_count);
+
+/// `EESMArea::ContainsTile`.
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+bool ee_scenario_area_contains_tile(const EeScenarioHost *host,
+                                    const EeScenarioAreaRecord *area,
+                                    int32_t x,
+                                    int32_t y);
+
+/// `EESMArea::ContainsUnit` of the host's unit (not called for no unit).
+///
+/// # Safety
+/// `host` and `area` must be valid for the call.
+bool ee_scenario_area_contains_unit(const EeScenarioHost *host, const EeScenarioAreaRecord *area);
+
+/// `EESMArea::GetCenterTile`: the centre into `out` (x, y); `area`'s cached centre updated.
+///
+/// # Safety
+/// `host` must be valid for the call, `area` for a read and a write, `out` for two writes.
+void ee_scenario_area_center_tile(const EeScenarioHost *host,
+                                  EeScenarioAreaRecord *area,
+                                  int32_t (*out)[2]);
+
+/// `EESMObject::AcceptsClass`.
+///
+/// # Safety
+/// `host` and `filter` must be valid for the call.
+bool ee_scenario_object_accepts_class(const EeScenarioHost *host,
+                                      const EeScenarioObjectFilter *filter,
+                                      uint32_t class_);
+
+/// `EESMObject::PickUnitType`.
+///
+/// # Safety
+/// `host` and `filter` must be valid for the call.
+int32_t ee_scenario_object_pick_unit_type(const EeScenarioHost *host,
+                                          const EeScenarioObjectFilter *filter);
 
 }  // extern "C"
 

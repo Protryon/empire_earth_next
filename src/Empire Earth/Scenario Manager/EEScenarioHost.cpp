@@ -16,6 +16,16 @@
 #include "ee/EESMCondition.h"
 #include "ee/EESMObject.h"
 #include "ee/EESMTrigger.h"
+#include "ee/EESMArea.h"
+#include "ee/EEUnit.h"
+#include "lle/U2DSparseArray.h"
+#include "lle/U2DPolygon.h"
+#include "ee/AStarGraphableObjectBase.h"
+#include "ee/EEAIAStarStorage.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EETown.h"
+#include "ee/EEUnitSetManager.h"
 #include "ee/EEScenarioCapture.h"
 #include "ee/EEScenarioHost.h"
 
@@ -27,6 +37,18 @@ EEPlayer* Player(int32_t inA)
     return inA >= 0 && inA < (int32_t)(sizeof(gWorld.mPlayers) / sizeof(gWorld.mPlayers[0])) ? gWorld.mPlayers[inA] : NULL;
 }
 
+// two longs as one read: x in the low 32 bits, y in the high (ee_scenario area.rs unpack)
+int64_t Pack(long inX, long inY)
+{
+    return (int64_t)(uint32_t)inX | (int64_t)((uint64_t)(uint32_t)inY << 32);
+}
+
+// the unit class inA (NULL past the table)
+EEUnitClass* Class(int32_t inA)
+{
+    return inA >= 0 && (unsigned long)inA < EEUnitClassCount() ? gUnitClassTable[inA] : NULL;
+}
+
 int64_t FloatBits(float inValue)
 {
     uint32_t theBits;
@@ -36,7 +58,8 @@ int64_t FloatBits(float inValue)
 
 int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC, int32_t inD)
 {
-    EESMCondition* theCondition = static_cast<EESMCondition*>(inContext);
+    EESMHostContext* theContext = static_cast<EESMHostContext*>(inContext);
+    EESMCondition* theCondition = theContext->mCondition;
     EEScenarioManager* theManager = gWorld.mScenarioManager;
     EEPlayer* thePlayer = Player(inA);
     switch (inOp) {
@@ -89,6 +112,47 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
         return theChat.Find(theText, 0) != theChat.GetLength();
     }
     case EE_SCENARIO_READ_CAPTURE_SEED: return EESimCaptureRecord::Active() ? (int64_t)EESMCaptureSeed() : -1;
+    case EE_SCENARIO_READ_CONTINENT: return gContinentManager.GetContinentID(inA, inB);
+    case EE_SCENARIO_READ_CONTINENT_CENTER: {
+        U2DPoint<long> theTile;
+        gContinentManager.GetContinentCenter((unsigned short)inA, theTile);
+        return Pack(theTile.mX, theTile.mY);
+    }
+    case EE_SCENARIO_READ_TOWN_COUNT: return gWorld.GetPlayer(inA)->GetNumTowns();
+    case EE_SCENARIO_READ_TOWN_CONTAINS: return gWorld.GetPlayer(inA)->mTowns[inB]->mHull.BoundedContains(U2DPoint<long>(inC, inD));
+    case EE_SCENARIO_READ_TOWN_CENTER: {
+        U2DPoint<long> theCenter = gWorld.GetPlayer(inA)->mTowns[inB]->mHull.GetCenter();
+        return Pack(theCenter.mX, theCenter.mY);
+    }
+    case EE_SCENARIO_READ_UNIT_TILE: return Pack(theContext->mUnit->GetTileX(), theContext->mUnit->GetTileY());
+    case EE_SCENARIO_READ_UNIT_HAS_COMPLEX: return theContext->mUnit->GetComplexUnit() != NULL;
+    case EE_SCENARIO_READ_UNIT_PREVIOUS_TILE: {
+        EEComplexUnit* theUnit = theContext->mUnit->GetComplexUnit();
+        return Pack(theUnit->mU0DC.GetX(), theUnit->mU0DC.GetY());
+    }
+    case EE_SCENARIO_READ_CLASS_COUNT: return EEUnitClassCount();
+    case EE_SCENARIO_READ_CLASS_EXISTS: return Class(inA) != NULL;
+    case EE_SCENARIO_READ_CLASS_SELECTABLE: return Class(inA) != NULL && Class(inA)->mIsScenarioSelectable;
+    case EE_SCENARIO_READ_CLASS_CATEGORY: return Class(inA)->mCategory;
+    case EE_SCENARIO_READ_CLASS_EPOCH: return Class(inA)->mEpoch;
+    case EE_SCENARIO_READ_CLASS_FAMILY: return Class(inA)->mFamily;
+    case EE_SCENARIO_READ_CLASS_AI_KIND: return Class(inA)->mAIKind;
+    case EE_SCENARIO_READ_CLASS_TYPE: return Class(inA)->GetUnitType();
+    case EE_SCENARIO_READ_CATEGORY_IN_SET: return gUnitSetManager.Contains((long)inA, (unsigned long)inB);
+    case EE_SCENARIO_READ_UNIT_SET_COUNT: return gUnitSetManager.GetSize();
+    case EE_SCENARIO_READ_UNIT_SET_HAS: {
+        EEUnitSet* theSet = gUnitSetManager.GetSet((unsigned long)inA);
+        return theSet == NULL ? -1 : theSet->Contains((unsigned long)inB);
+    }
+    case EE_SCENARIO_READ_OBJECT_EXISTS: return theManager->GetScenarioObject((unsigned long)inA) != NULL;
+    case EE_SCENARIO_READ_OBJECT_SELECT_ON_MAP: return theManager->GetScenarioObject((unsigned long)inA)->GetIsSelectOnMap();
+    case EE_SCENARIO_READ_OBJECT_FIRST_UNIT_TYPE: {
+        std::vector<unsigned long> theUnits;
+        theManager->GetScenarioObject((unsigned long)inA)->GetUnits(theUnits);
+        EEUnit* theUnit = theUnits.size() > 0 ? gWorld.GetUnit(theUnits[0]) : NULL;
+        return theUnit != NULL ? theUnit->mUnitClass->GetUnitType() : -1;
+    }
+    case EE_SCENARIO_READ_OBJECT_PICK: return theManager->GetScenarioObject((unsigned long)inA)->PickUnitType();
     case EE_SCENARIO_READ_CONDITION: {
         EESMCondition* theOther = theManager->GetCondition((unsigned long)inA);
         return theOther == NULL ? -1 : theOther->Evaluate();
@@ -107,10 +171,26 @@ void Players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inList
 
 }   // namespace
 
-EeScenarioHost EESMHost(EESMCondition* inCondition)
+EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
-    EeScenarioHost theHost = {inCondition, Read, Players};
+    EeScenarioHost theHost = {inContext, Read, Players};
     return theHost;
+}
+
+// EESMObject's filter as the Rust record
+EeScenarioObjectFilter EESMObjectFilter(const EESMObject& inObject)
+{
+    EeScenarioObjectFilter theFilter = {(uint32_t)inObject.mClass, (uint32_t)inObject.mFamily, (uint32_t)inObject.mParent};
+    return theFilter;
+}
+
+// EESMArea's members as the Rust record
+EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea)
+{
+    EeScenarioAreaRecord theRecord = {(uint32_t)inArea.mSelectMode, (int32_t)inArea.mAnchor.mX, (int32_t)inArea.mAnchor.mY,
+                                inArea.mRect.GetLeft(), inArea.mRect.GetTop(), inArea.mRect.GetRight(),
+                                inArea.mRect.GetBottom(), (int32_t)inArea.mCenterTile.mX, (int32_t)inArea.mCenterTile.mY};
+    return theRecord;
 }
 
 // EESMCondition's members as the Rust record

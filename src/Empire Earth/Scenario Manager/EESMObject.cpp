@@ -81,34 +81,10 @@ EESMObject::~EESMObject()
 // (provisional name)
 bool EESMObject::AcceptsClass(unsigned long inClass)
 {
-    bool theResult;
-    if (this->mClass != 0)
-        theResult = this->mClass == (long)inClass;
-    else
-        theResult = gUnitClassTable[inClass]->mIsScenarioSelectable;
-    if (theResult) {
-        EEUnitClass* theClass = gUnitClassTable[inClass];
-        if (theClass != NULL) {
-            long theType = theClass->mCategory;
-            if (theType == kUnitCategoryProjectile || theType == kUnitCategoryBomb || theType == kUnitCategoryMissile || theType == kUnitCategoryTorpedo
-                || gUnitSetManager.Contains(theType, 0x79)) {
-                theResult = false;
-            } else if (this->mFamily == 0) {
-                theResult = true;
-            } else if ((unsigned long)this->mFamily <= 0xf) {
-                theResult = this->mFamily == theClass->mEpoch + 1;
-            } else if ((unsigned long)this->mFamily <= 0x4b) {
-                theResult = this->mFamily - 0x10 == theClass->mFamily;
-            } else if ((unsigned long)this->mFamily <= 0x74) {
-                theResult = this->mFamily - 0x4c == theClass->mAIKind;
-            } else if ((unsigned long)this->mFamily <= gUnitSetManager.GetSize() + 0x74) {
-                EEUnitSet* theSet = gUnitSetManager.GetSet(this->mFamily - 0x75);
-                if (theSet != NULL)
-                    theResult = theSet->Contains(inClass);
-            }
-        }
-    }
-    return theResult;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs accepts_class
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
+    return ee_scenario_object_accepts_class(&theHost, &theFilter, (uint32_t)inClass);
 }
 
 // FUNCTION: EXE 0x5c6148
@@ -366,63 +342,10 @@ bool EESMObject::EvaluateUncaptured(bool inIncludeDead)
 // class matching its epoch/family/AI kind/unit set filter; -1 if none
 long EESMObject::PickUnitType()
 {
-    std::vector<long> theClasses;
-    std::vector<unsigned long> theUnits;
-    EESMObject* theParent = gWorld.GetScenarioManager()->GetScenarioObject(this->GetParent());
-    long theResult = -1;
-    if (theParent != NULL && this->GetParent() != 0) {
-        if (theParent->GetIsSelectOnMap()) {
-            theParent->GetUnits(theUnits);
-            if (theUnits.size() > 0) {
-                EEUnit* theUnit = gWorld.GetUnit(theUnits[0]);
-                if (theUnit != NULL)
-                    theResult = theUnit->mUnitClass->GetUnitType();
-            }
-        } else {
-            theResult = theParent->PickUnitType();
-        }
-    } else {
-        if (this->GetClass() != 0)
-            theResult = this->GetClass();
-        else {
-            for (long i = 0; i < EEUnitClassCount(); i++) {
-                EEUnitClass* theClass = gUnitClassTable[i];
-                if (theClass == NULL)
-                    continue;
-                long theCategory = theClass->mCategory;
-                if (theCategory != kUnitCategoryProjectile && theCategory != kUnitCategoryBomb && theCategory != kUnitCategoryMissile && theCategory != kUnitCategoryTorpedo) {
-                    if (this->GetFamily() == 0) {
-                        long theType = theClass->GetUnitType();
-                        theClasses.push_back(theType);
-                    } else if (this->GetFamily() <= 0xf) {
-                        if (this->GetFamily() == theClass->mEpoch + 1) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->GetFamily() <= 0x4b) {
-                        if (this->GetFamily() - 0x10 == theClass->mFamily) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->GetFamily() <= 0x74) {
-                        if (this->GetFamily() - 0x4c == theClass->mAIKind) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    } else if (this->mFamily <= gUnitSetManager.GetSize() + 0x74) {
-                        EEUnitSet* theSet = gUnitSetManager.GetSet(this->GetFamily() - 0x75);
-                        if (theSet != NULL && theSet->Contains(theClass->GetUnitType())) {
-                            long theType = theClass->GetUnitType();
-                            theClasses.push_back(theType);
-                        }
-                    }
-                }
-            }
-            if (theClasses.size() > 0)
-                theResult = theClasses[gPhysics->GetRandom(0L, (long)theClasses.size() - 1)];
-        }
-    }
-    return theResult;
+    EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs pick_unit_type
+    EeScenarioHost theHost = EESMHost(&theContext);
+    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
+    return ee_scenario_object_pick_unit_type(&theHost, &theFilter);
 }
 
 #include "lle/GE3DPoint.h"
@@ -1886,7 +1809,8 @@ void EESMTrigger::EvaluateUncaptured(float inTime)
                          (uint32_t)this->mEffects[k]->mEffectIndex};
     std::vector<EeScenarioTimedEffect> theTimed(theEffects.size() + 1);
     size_t theCount = 0;
-    EeScenarioHost theHost = EESMHost(NULL);
+    EESMHostContext theContext = {NULL, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
     ee_scenario_trigger_evaluate(&theHost, &theState, gWorld.mInCinematic, theConditions.data(), theConditions.size(),
                                  theEffects.data(), theEffects.size(), inTime, theTimed.data(), &theCount);
     this->mIsOn = theState.is_on;
