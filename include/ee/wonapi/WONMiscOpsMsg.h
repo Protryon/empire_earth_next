@@ -1,6 +1,6 @@
-// FindPatchOp's patch choice, DetectFirewallOp's request, reply and datagram wait, and RegAuth's password cipher and
-// port default through ee_won's miscops module (rust/crates/ee_won/src/miscops.rs); these apply them to the ops'
-// members in the original's order (FindPatchOp.cpp's, DetectFirewallOp.cpp's and RegAuth.cpp's statements).
+// FindPatchOp's patch choice and RegAuth's password cipher and port default through ee_won's miscops module
+// (rust/crates/ee_won/src/miscops.rs); these apply them to the ops' members in the original's order (FindPatchOp.cpp's
+// and RegAuth.cpp's statements). DetectFirewallOp is a Rust object (fwop.rs).
 // Templates over the op so that tests/won/won_miscops_test.cpp runs the same code over stand-ins. WONStatus comes
 // from WONRouting.h, included first.
 #pragma once
@@ -85,34 +85,6 @@ template <class Op> struct FindPatchMsg {
     {
         uint32_t v = 0;
         if (ee_won_findpatch_le32(static_cast<const uint8_t*>(inData), inLength, &v)) ioValue = v;
-    }
-};
-
-// Op has mLengthFieldSize, mUseUDP, mListenPort, mWaitForConnect, mMaxConnectWaitTime, mRequest, mResponse,
-// mPublicAddr and InvalidReplyHeader() and RecvServerDatagram()
-template <class Op> struct FirewallMsg {
-    static long GetNextRequest(Op& o)
-    {
-        ee_won_firewall_request(o.mLengthFieldSize, o.mUseUDP, o.mListenPort, o.mWaitForConnect,
-                                static_cast<uint32_t>(o.mMaxConnectWaitTime), WonByteBufferSink, &o.mRequest);
-        return WS_ServerReq_Recv;
-    }
-    static long CheckResponse(Op& o)
-    {
-        int16_t aStatus = 0;
-        int32_t aHost = 0;
-        bool aHasHost = false;
-        int aKind = ee_won_firewall_reply(reinterpret_cast<const uint8_t*>(o.mResponse->data()), o.mResponse->length(),
-                                          &aStatus, &aHost, &aHasHost);
-        if (aKind < 0) throw ReadBufferException("Attempt to read past end of buffer.");
-        if (aKind == 0) return o.InvalidReplyHeader();
-        if (aHasHost) o.mPublicAddr.Fn2B2C20(static_cast<long>(aHost), 0);
-        if (o.mUseUDP) return o.RecvServerDatagram();
-        return aStatus;
-    }
-    static unsigned long Wait(unsigned long inTimeLeft, unsigned long inMaxWait, bool inAsync)
-    {
-        return ee_won_firewall_wait(static_cast<uint32_t>(inTimeLeft), static_cast<uint32_t>(inMaxWait), inAsync);
     }
 };
 

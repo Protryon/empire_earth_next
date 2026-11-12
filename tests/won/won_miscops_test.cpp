@@ -1,6 +1,6 @@
 // FindPatchOp's patch choice (GetPatchList, GetValidPatchList, GetHighestPatchList and DoFinish's patch ids and 4-byte
-// data), DetectFirewallOp's GetNextRequest, CheckResponse and datagram wait, and RegAuth's password cipher and port
-// default: the original's statements (copied from FindPatchOp.cpp, DetectFirewallOp.cpp and RegAuth.cpp before the
+// data) and RegAuth's password cipher and port default (DetectFirewallOp is won_fwop_test's): the original's
+// statements (copied from FindPatchOp.cpp and RegAuth.cpp before the
 // port, over stand-ins) against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module, on generated input.
 // The version compares log their calls, so their order and count are compared too.
 //
@@ -238,102 +238,9 @@ static void FindCase(bool inPrint)
     CHECK(va == vb);
 }
 
-// ---- DetectFirewallOp
-
-struct SAddr {
-    string mLog;
-    void Fn2B2C20(long h, unsigned short p)
-    {
-        char b[48];
-        snprintf(b, sizeof(b), "[%ld:%u]", h, (unsigned)p);
-        this->mLog += b;
-    }
-};
-struct SFw {
-    unsigned char mLengthFieldSize;
-    bool mUseUDP, mWaitForConnect;
-    unsigned short mListenPort;
-    unsigned long mMaxConnectWaitTime;
-    ByteBufferPtr mRequest, mResponse;
-    SAddr mPublicAddr;
-    WONStatus InvalidReplyHeader() { return 100057; }
-    WONStatus RecvServerDatagram() { this->mPublicAddr.mLog += "recv;"; return 777; }
-};
-
-namespace OrigFw {
-static WONStatus GetNextRequest(SFw& o)
-{
-    WriteBuffer request(o.mLengthFieldSize, true);
-    request.AppendByte(5);
-    request.AppendShort(3);
-    request.AppendShort(o.mUseUDP ? 3 : 1);
-    request.AppendShort(o.mListenPort);
-    if (!o.mUseUDP) {
-        request.AppendBool(o.mWaitForConnect);
-        request.AppendLong(o.mMaxConnectWaitTime);
-        request.AppendBool(false);
-    }
-    o.mRequest = request.ToByteBuffer(true);
-    return WS_ServerReq_Recv;
-}
-static WONStatus CheckResponse(SFw& o)
-{
-    ReadBuffer reply(o.mResponse->data(), o.mResponse->length());
-    unsigned char header = reply.ReadByte();
-    unsigned short service = reply.ReadShort();
-    unsigned short message = reply.ReadShort();
-    if (header != 5 || service != 3 || message != 2) return o.InvalidReplyHeader();
-    short status = reply.ReadShort();
-    if (reply.Available() >= 4) {
-        long host = reply.ReadLong();
-        if (host != 0) o.mPublicAddr.Fn2B2C20(host, 0);
-    }
-    if (o.mUseUDP) return o.RecvServerDatagram();
-    return status;
-}
-static unsigned long Wait(unsigned long inTimeLeft, unsigned long mMaxConnectWaitTime, bool inAsync)
-{
-    unsigned long wait = inTimeLeft;
-    if (mMaxConnectWaitTime > 0 && mMaxConnectWaitTime < wait)
-        wait = mMaxConnectWaitTime;
-    if (inAsync && wait == 0) wait = 0xffffffff;
-    return wait;
-}
-} // namespace OrigFw
+// ---- RegAuth
 
 static string Bytes(const ByteBuffer* b) { return b ? string(b->data(), b->length()) : string("*"); }
-
-static void FirewallCase()
-{
-    SFw o;
-    static const unsigned char kLfs[] = {0, 1, 2, 4};
-    o.mLengthFieldSize = kLfs[Pick(4)];
-    o.mUseUDP = Pick(2) != 0;
-    o.mWaitForConnect = Pick(2) != 0;
-    o.mListenPort = (unsigned short)Next();
-    o.mMaxConnectWaitTime = Pick(3) ? Pick(100) : Next() << 8;
-    SFw p = o;
-    CHECK(OrigFw::GetNextRequest(o) == FirewallMsg<SFw>::GetNextRequest(p));
-    CHECK(Bytes(o.mRequest.get()) == Bytes(p.mRequest.get()));
-    // replies: well-formed with and without a host, then cut and mutated
-    string r = string(1, (char)(Pick(8) ? 5 : Pick(8))) + "\x03" + string(1, '\0') + string(1, (char)(Pick(8) ? 2 : 3)) +
-               string(1, '\0') + RandBytes(2) + (Pick(2) ? (Pick(3) ? RandBytes(4) : string(4, '\0')) : string()) +
-               RandBytes(Pick(3));
-    if (Pick(3) == 0) r = r.substr(0, Pick((int)r.size() + 1));
-    if (Pick(6) == 0 && !r.empty()) r[Pick((int)r.size())] ^= (char)(1 << Pick(8));
-    o.mResponse = new ByteBuffer(r.data(), (unsigned long)r.size(), false);
-    p.mResponse = o.mResponse;
-    long sa = -1, sb = -1;
-    bool ta = false, tb = false;
-    try { sa = OrigFw::CheckResponse(o); } catch (ReadBufferException&) { ta = true; }
-    try { sb = FirewallMsg<SFw>::CheckResponse(p); } catch (ReadBufferException&) { tb = true; }
-    CHECK(ta == tb && sa == sb && o.mPublicAddr.mLog == p.mPublicAddr.mLog);
-    unsigned long tl = Pick(3) ? Pick(200) : Next() << 8, mw = Pick(3) ? Pick(200) : Next() << 8;
-    bool as = Pick(2) != 0;
-    CHECK(OrigFw::Wait(tl, mw, as) == FirewallMsg<SFw>::Wait(tl, mw, as));
-}
-
-// ---- RegAuth
 
 static void RegAuthCase()
 {
@@ -374,7 +281,6 @@ int main(int argc, char** argv)
         return 0;
     }
     for (int i = 0; i < 200000; i++) FindCase(false);
-    for (int i = 0; i < 200000; i++) FirewallCase();
     for (int i = 0; i < 50000; i++) RegAuthCase();
     printf("won_miscops_test: %lld checks, %d failures\n", sChecks, sFailures);
     return sFailures;

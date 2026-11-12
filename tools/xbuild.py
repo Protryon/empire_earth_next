@@ -507,6 +507,9 @@ WON_TESTS = {
     # version filter; the patch ops' requests and replies), the original's statements against
     # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
+    # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
+    "won_fwop_test": [],
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
     # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
     "won_admin_test": [],
