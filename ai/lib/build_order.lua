@@ -209,6 +209,30 @@ function M.trace(view, memory, phase, army)
         memory.raid ~= nil and tostring(memory.raid.state) or "-"))
 end
 
+-- the town centre's gathering techs (dbtechtree: kind 0, researched at b_town_center or b_capitol; the owner takes them at
+-- once, epoch by epoch): {tech, its epoch}. Their events name what they raise (hafts: stone, hand axe and saw: wood,
+-- metal working and amalgamation: gold, shaft mining: iron, windlass: stone, land conservation: farms ...)
+M.TECHS = {
+    {"hafts_tech", 1}, {"hand_axe_tech_from_town_center", 2}, {"fine_flaked_tools", 2}, {"metal_working_tech", 3},
+    {"hardened_chisel_tech", 3}, {"falconry_tech", 4}, {"saw_tech", 4}, {"amalgamation_tech", 5},
+    {"shaft_mining_tech", 5}, {"windlass_tech", 6}, {"land_conservation_tech", 7}, {"forestry_tech", 7},
+    {"steam_engine_tech", 8}, {"mining_explosives_tech", 8}, {"hammer_drilling_rigs_tech", 10},
+    {"enviromental_law_tech", 10}, {"mechanized_logging_tech", 10}, {"oxygen_furnace_tech", 11},
+    {"hydraulic_mining_tech", 11}, {"self_sufficiency_tech", 12}, {"atom_manipulation_tech", 13},
+    {"core_mining_tech", 13},
+}
+
+-- the next gathering tech to research now (nil: none due); memory.techs: the ones ordered
+function M.next_tech(view, memory)
+    memory.techs = memory.techs or {}
+    for _, t in ipairs(M.TECHS) do
+        if t[2] <= view.epoch and not memory.techs[t[1]] then
+            return t[1]
+        end
+    end
+    return nil
+end
+
 local TOWERS = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle"}
 function M.towers(view)
     local n = 0
