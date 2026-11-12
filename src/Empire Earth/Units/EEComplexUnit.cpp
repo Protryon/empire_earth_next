@@ -288,6 +288,7 @@ void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
         long theTime = gPhysics->mGameTime;
         (*theIterator).mTime = theTime + 30000;
     }
+    EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
 }
 
 // FUNCTION: EXE 0x5f5d8b
@@ -2106,6 +2107,7 @@ bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocatio
         } else
             theResult = true;
     }
+    EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, this, inTarget, theResult, inCheckLocation);
     return theResult;
 }
 
@@ -2156,6 +2158,7 @@ bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
 // Returns whether the unit can get to a target, directly or through connected continents
 bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
 {
+    bool theReach = [&]() -> bool {   // TEST ONLY (CBXR golden): the original body in a lambda
     bool theResult = gContinentManager.CanGetToUnit(this, inTarget);
     if (theResult)
         return theResult;
@@ -2167,6 +2170,9 @@ bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
             theResult = gContinentManager.AreConnectedForUnit(inTarget, theFrom, theTo);
     }
     return theResult;
+    }();
+    EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theReach);
+    return theReach;
 }
 
 // FUNCTION: EXE 0x5fa7f6
@@ -4202,6 +4208,7 @@ bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
             }
         }
     }
+    EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, inTarget, theFound);
     return theFound;
 }
 

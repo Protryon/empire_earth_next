@@ -93,6 +93,34 @@ void EECombatCaptureHealWork(const EEComplexUnit* inUnit, const EEUnit* inTarget
 void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
 void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit);
 
+// CBXR (TEST ONLY): one call of the eighth round's reads (R5b.2), its outcome: the function, the unit's and target's
+// ids (0 without one), the result and what the call left behind (per function below); folded like CBQR
+// (EE_SIM_CAPTURE_CBXR_FULL=1 writes every call). Every call records (none of them calls another).
+enum {
+    EE_COMBAT_XR_IS_IGNORED = 1,        // IsTargetIgnored: extra 0 inCheckLocation, 1 the list's size after, 2 its hash
+    EE_COMBAT_XR_IGNORE = 2,            // IgnoreTarget: extra 1 the list's size after, 2 its hash
+    EE_COMBAT_XR_CAN_REACH_UNIT = 3,    // CanReachUnit
+    EE_COMBAT_XR_ATTACK_REACHABLE = 4,  // EEIsAttackReachable: extra 0, 1 the tile's x, y after
+    EE_COMBAT_XR_BORDERING = 5,         // IsOnTileBorderingTarget
+};
+void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                          uint32_t inExtra0 = 0, uint32_t inExtra1 = 0);
+// IsTargetIgnored's and IgnoreTarget's record: the list's size and FNV-1a 32 (each entry's six fields in order)
+void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
+                            uint32_t inCheckLocation);
+// CBXA (TEST ONLY): the outcome of FireShot, Attacked, ApplyHit and ApplyAreaDamage, at each call's end: the unit's
+// command, animation, hit points, reload timer, weapon tag point, ammunition, flight time, special attack and
+// firing high flags, experience, goal kind and attack target, last attacker and the target's hit points and
+// resource amount (inTarget: FireShot's attack goal's target after the shot, ApplyHit's and ApplyAreaDamage's
+// inTarget, none for Attacked); folded like CBQR (EE_SIM_CAPTURE_CBXA_FULL=1)
+enum {
+    EE_COMBAT_XA_FIRE_SHOT = 1,
+    EE_COMBAT_XA_ATTACKED = 2,          // inBefore: the last attacker's id before
+    EE_COMBAT_XA_APPLY_HIT = 3,
+    EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
+};
+void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore);
+
 // The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
 // Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running
 struct EECombatHostReadScope {

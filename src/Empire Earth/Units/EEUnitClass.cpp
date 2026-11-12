@@ -905,6 +905,7 @@ struct EEAreaDamageHost {
     long mKind;
     long mColumn;
     std::vector<int32_t> mVictims;  // TEST ONLY (the CBAD capture)
+    std::vector<EEComplexUnit*> mVictimUnits;   // TEST ONLY (the CBXA capture)
 };
 
 static EEComplexUnit* EEAreaDamageUnit(uint64_t inHandle)
@@ -951,8 +952,10 @@ static void EEAreaDamageHit(void* inContext, uint64_t inHandle)
     EEComplexUnit* theUnit = EEAreaDamageUnit(inHandle);
     EEUnitClass* theClass = theHost->mDamageClass;
     EEGraphicEffect* theEffect = NULL;
-    if (EESimCaptureRecord::Active())
+    if (EESimCaptureRecord::Active()) {
         theHost->mVictims.push_back((int32_t)theUnit->GetUnitID());
+        theHost->mVictimUnits.push_back(theUnit);
+    }
     if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcanoProjectile && theUnit->GetEffect(3, theEffect)) {
         if (theEffect != NULL)
             gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
@@ -978,7 +981,8 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                            EEUnit* inTarget)
 {
     EEUnitClass* theClass = inUnit->mLauncherClass != NULL ? inUnit->mLauncherClass : this;
-    EEAreaDamageHost theContext = {this, theClass, inUnit, inDamage, inKind, inColumn, std::vector<int32_t>()};
+    EEAreaDamageHost theContext = {this, theClass, inUnit, inDamage, inKind, inColumn, std::vector<int32_t>(),
+                                   std::vector<EEComplexUnit*>()};
     EeCombatAreaHost theHost = {&theContext, EEAreaDamageTileFirst, EEAreaDamageNodeNext, EEAreaDamageNodeUnit,
                                 EEAreaDamageDistance, EEAreaDamageTargetable, EEAreaDamageSamePlayer, EEAreaDamageHit};
     EeCombatAreaIn in = {};
@@ -1000,6 +1004,16 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
         for (size_t i = 0; i < theContext.mVictims.size(); i++)
             theRecord.I32(theContext.mVictims[i]);
         theRecord.Commit();
+        uint32_t theHash = 0x811c9dc5u;
+        for (size_t i = 0; i < theContext.mVictimUnits.size(); i++) {
+            EEComplexUnit* theVictim = theContext.mVictimUnits[i];
+            uint32_t theFields[3] = {(uint32_t)theVictim->mUnitID, (uint32_t)theVictim->GetHitPoints(),
+                                     (uint32_t)theVictim->GetResourceAmount()};
+            const unsigned char* theBytes = (const unsigned char*)theFields;
+            for (size_t k = 0; k < sizeof(theFields); k++)
+                theHash = (theHash ^ theBytes[k]) * 0x01000193u;
+        }
+        EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, inUnit, inTarget, theHash);
     }
 }
 
@@ -1011,6 +1025,7 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
 // less; against an own or allied unit nothing, or a tenth (rounded up) for herd animals
 void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
+    [&]() {   // TEST ONLY (CBXA golden): the original body in a lambda
     EEComplexUnit* theTarget = NULL;
     EEGraphicEffect* theEffect = NULL;
     if (inTarget != NULL)
@@ -1048,6 +1063,8 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
     long theRemaining = UMFloatToLong(theTarget->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
     if (theTarget->mResourceAmount != theRemaining)
         theTarget->mResourceAmount = theRemaining;
+    }();
+    EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, inUnit, inTarget, 0);
 }
 
 // FUNCTION: EXE 0x631312
@@ -1059,6 +1076,7 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 // tag point
 void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 {
+    [&]() {   // TEST ONLY (CBXA golden): the original body in a lambda
     GE3DPoint thePoint;
     EEUnit* theBlocker = NULL;
     EEModel* theModel = inUnit->GetModel();
@@ -1154,6 +1172,8 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
     }
     if (inUnit->mWeaponTagPoint != theNext)
         inUnit->mWeaponTagPoint = theNext;
+    }();
+    EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
 }
 
 // FUNCTION: EXE 0x631723
@@ -3615,6 +3635,7 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 // Turns an attacked unit on its attacker (or to its location when unseen) and calls idle nearby soldiers to help
 void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 {
+    uint32_t theBefore = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;   // TEST ONLY
     GE3DPoint thePosition;
     std::vector<EEUnit*> theUnits;
     U2DPoint<long> theTile;
@@ -3665,6 +3686,7 @@ void EEUnitClass::Attacked(EEComplexUnit* inUnit)
     if (inUnit->mLastAttacker != NULL)
         inUnit->mLastAttacker->Dereference();
     inUnit->mLastAttacker = NULL;
+    EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
 }
 
 // FUNCTION: EXE 0x637ca6

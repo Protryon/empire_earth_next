@@ -230,6 +230,8 @@ struct EECombatFolder {
 
 EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQR_FULL");
 EECombatFolder sShots(EE_COMBAT_TAG('C', 'B', 'S', 'O'), "EE_SIM_CAPTURE_CBSO_FULL");
+EECombatFolder sXReads(EE_COMBAT_TAG('C', 'B', 'X', 'R'), "EE_SIM_CAPTURE_CBXR_FULL");
+EECombatFolder sXActions(EE_COMBAT_TAG('C', 'B', 'X', 'A'), "EE_SIM_CAPTURE_CBXA_FULL");
 thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
 
 uint32_t EEShotBits(float inValue)
@@ -308,6 +310,66 @@ void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const
     sHostReads.Add(theRecord, sizeof(theRecord));
 }
 
+void EECombatCaptureXRead(uint32_t inFunc, const EEComplexUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                          uint32_t inExtra0, uint32_t inExtra1)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[6] = {inFunc, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
+                             inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, inExtra0, inExtra1};
+    sXReads.Add(theRecord, sizeof(theRecord));
+}
+
+void EECombatCaptureIgnored(uint32_t inFunc, const EEComplexUnit* inUnit, const EEComplexUnit* inTarget, int32_t inResult,
+                            uint32_t inCheckLocation)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theHash = 0x811c9dc5u;
+    for (size_t i = 0; i < inUnit->mIgnoredTargets.size(); i++) {
+        const EEComplexUnitAttacker& theEntry = inUnit->mIgnoredTargets[i];
+        uint32_t theFields[6] = {(uint32_t)theEntry.mTileX, (uint32_t)theEntry.mTileY, (uint32_t)theEntry.mFromX,
+                                 (uint32_t)theEntry.mFromY, (uint32_t)theEntry.mUnitID, (uint32_t)theEntry.mTime};
+        const unsigned char* theBytes = (const unsigned char*)theFields;
+        for (size_t k = 0; k < sizeof(theFields); k++)
+            theHash = (theHash ^ theBytes[k]) * 0x01000193u;
+    }
+    uint32_t theRecord[7] = {inFunc, (uint32_t)inUnit->mUnitID, inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0,
+                             (uint32_t)inResult, inCheckLocation, (uint32_t)inUnit->mIgnoredTargets.size(), theHash};
+    sXReads.Add(theRecord, sizeof(theRecord));
+}
+
+void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[20];
+    memset(theRecord, 0, sizeof(theRecord));
+    theRecord[0] = inFunc;
+    theRecord[1] = (uint32_t)inUnit->mUnitID;
+    theRecord[2] = inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0;
+    theRecord[3] = inBefore;
+    theRecord[4] = EECombatCommandOf(inUnit);
+    theRecord[5] = (uint32_t)inUnit->mAnimation;
+    theRecord[6] = (uint32_t)inUnit->GetHitPoints();
+    theRecord[7] = (uint32_t)inUnit->mReloadTimer.Get();
+    theRecord[8] = (uint32_t)inUnit->mWeaponTagPoint;
+    theRecord[9] = (uint32_t)inUnit->mAmmunition;
+    theRecord[10] = (uint32_t)inUnit->mFlightTime;
+    theRecord[11] = inUnit->mIsSpecialAttack;
+    theRecord[12] = inUnit->mIsFiringHigh;
+    theRecord[13] = inUnit->mExperience;
+    EEUnitGoal* theGoal = inUnit->mGoalState;
+    theRecord[14] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
+    EEUnit* theGoalTarget = EECombatShotTarget(inUnit);
+    theRecord[15] = theGoalTarget != NULL ? (uint32_t)theGoalTarget->mUnitID : 0;
+    theRecord[16] = inTarget != NULL ? (uint32_t)inTarget->GetHitPoints() : 0;
+    theRecord[17] = inTarget != NULL ? (uint32_t)inTarget->GetResourceAmount() : 0;
+    theRecord[18] = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;
+    theRecord[19] = (uint32_t)inUnit->mTargetSearchTimer.Get();
+    sXActions.Add(theRecord, sizeof(theRecord));
+}
+
 void EECombatCaptureFlush()
 {
     if (!EESimCaptureRecord::Active())
@@ -319,6 +381,8 @@ void EECombatCaptureFlush()
     }
     sHostReads.Flush();
     sShots.Flush();
+    sXReads.Flush();
+    sXActions.Flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)

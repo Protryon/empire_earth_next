@@ -1915,6 +1915,8 @@ bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoin
             theModifier->Dereference();
         }
     }
+    EECombatCaptureXRead(EE_COMBAT_XR_ATTACK_REACHABLE, inUnit, inTarget, theResult, (uint32_t)outTile->mX,
+                         (uint32_t)outTile->mY);
     return theResult;
 }
 
