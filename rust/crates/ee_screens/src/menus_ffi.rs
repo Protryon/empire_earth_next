@@ -86,6 +86,33 @@ impl Form {
     }
 }
 
+impl crate::custom_campaign::CustomCampaignHost for Form {
+    fn set_trigger(&mut self, form: u32, control: u32, trigger: u32, event: u32) {
+        self.op(EE_SCREENS_OP_TRIGGER, form, control, trigger, event);
+    }
+    fn set_open_event(&mut self, form: u32, event: u32) {
+        self.op(EE_SCREENS_OP_OPEN_EVENT, form, event, 0, 0);
+    }
+    fn set_close_event(&mut self, form: u32, event: u32) {
+        self.op(EE_SCREENS_OP_CLOSE_EVENT, form, event, 0, 0);
+    }
+    fn call(&mut self, op: u32, a: u32, b: u32, c: u32) -> u32 {
+        self.op(op, a, b, c, 0)
+    }
+    fn text(&mut self, which: u32, arg: u32) -> Vec<u8> {
+        self.get(which, arg)
+    }
+    fn put_text(&mut self, which: u32, arg: u32, text: &[u8]) -> u32 {
+        self.put(which, arg, text)
+    }
+    fn string(&mut self, id: u32) -> Vec<u8> {
+        self.get(EE_SCREENS_TEXT_STRING, id)
+    }
+    fn string_checked(&mut self, id: u32) -> Option<Vec<u8>> {
+        self.get_checked(EE_SCREENS_TEXT_STRING_CHECKED, id)
+    }
+}
+
 impl MenuHost for Form {
     fn push(&mut self, form: u32) {
         self.op(EE_SCREENS_OP_PUSH, form, 0, 0, 0);
@@ -178,6 +205,9 @@ pub unsafe extern "C" fn ee_screens_event(event: u32, form: *mut c_void, entity:
     let mut host = Form(form, entity);
     if let Some(result) = crate::settings_form_ffi::dispatch(&mut host, event) {
         return result;
+    }
+    if crate::custom_campaign::dispatch(&mut host, event) {
+        return 0;
     }
     dispatch(&mut host, &MENUS, event);
     0

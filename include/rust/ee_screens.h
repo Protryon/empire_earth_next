@@ -46,6 +46,43 @@ constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
 /// [`EeScreensPanelButton`]: the stop command on the first action button.
 constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
 
+/// The form's open event (set by the play campaign screen), its close event (nothing), the campaign list's
+/// selection, OK, Cancel, and the no-campaigns message's callback (no event object).
+constexpr static const uint32_t EE_SCREENS_CC_OPEN = 8705;
+
+constexpr static const uint32_t EE_SCREENS_CC_CLOSE = 8706;
+
+constexpr static const uint32_t EE_SCREENS_CC_SELECT = 8707;
+
+constexpr static const uint32_t EE_SCREENS_CC_OK = 8708;
+
+constexpr static const uint32_t EE_SCREENS_CC_CANCEL = 8709;
+
+constexpr static const uint32_t EE_SCREENS_CC_NONE_FOUND = 8710;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_CLEAR = 352;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_COUNT = 353;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_SELECT = 354;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_SELECTION = 355;
+
+/// Texts (ee_screenscpp_text / _put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_FORM_LIST_DATA = 48;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FORM_LIST_APPEND = 49;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_FILES = 50;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_EXTENSION = 51;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN = 52;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_ERROR = 53;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_NONE_FOUND = 54;
+
 /// A display mode as `UIControl::SetDisplayMode` takes it: 0 hidden, 1 shown.
 constexpr static const unsigned long EE_SCREENS_HIDDEN = 0;
 
@@ -232,10 +269,6 @@ constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA_ALL = 65541;
 constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_OPEN = 65542;
 
 constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_CLOSE = 65543;
-
-constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_OPEN = 65544;
-
-constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_CLOSE = 65545;
 
 constexpr static const uint32_t EE_SCREENS_GAME_QUIT = 1;
 

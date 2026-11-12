@@ -128,7 +128,6 @@
 #include "ee/EEUIECampaignEditorEvents.h"
 #include "ee/EEUIECampaignSelectScreenEvents.h"
 #include "ee/EEUIEChatEvents.h"
-#include "ee/EEUIEChooseCustomCampaignEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
 #include "ee/EEUIEFormationChange.h"

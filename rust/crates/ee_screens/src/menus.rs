@@ -66,8 +66,6 @@ pub const EE_SCREENS_CPP_DUMP_MEDIA: u32 = 0x1_0004; // EEUIEMGDumpLoadedMedia(f
 pub const EE_SCREENS_CPP_DUMP_MEDIA_ALL: u32 = 0x1_0005; // EEUIEMGDumpLoadedMedia(true)
 pub const EE_SCREENS_CPP_SCENARIOS_OPEN: u32 = 0x1_0006; // EEUIECSSEFormOpen
 pub const EE_SCREENS_CPP_SCENARIOS_CLOSE: u32 = 0x1_0007; // EEUIECSSEFormClose
-pub const EE_SCREENS_CPP_CUSTOM_OPEN: u32 = 0x1_0008; // EEUIECCCEFormOpen
-pub const EE_SCREENS_CPP_CUSTOM_CLOSE: u32 = 0x1_0009; // EEUIECCCEFormClose
 
 // ---- the game's calls (MenuHost::call, call_with)
 
@@ -418,8 +416,8 @@ pub fn dispatch<H: MenuHost>(host: &mut H, state: &Mutex<Menus>, event: u32) -> 
             }
         }
         EE_SCREENS_PC_CUSTOM => {
-            host.set_open_event(FORM_CUSTOM_CAMPAIGN, EE_SCREENS_CPP_CUSTOM_OPEN);
-            host.set_close_event(FORM_CUSTOM_CAMPAIGN, EE_SCREENS_CPP_CUSTOM_CLOSE);
+            host.set_open_event(FORM_CUSTOM_CAMPAIGN, crate::custom_campaign::EE_SCREENS_CC_OPEN);
+            host.set_close_event(FORM_CUSTOM_CAMPAIGN, crate::custom_campaign::EE_SCREENS_CC_CLOSE);
             host.switch_to(FORM_CUSTOM_CAMPAIGN);
         }
         EE_SCREENS_PC_LEARNING => {
@@ -629,8 +627,8 @@ mod tests {
                 "open 33 0x10006",
                 "close 33 0x10007",
                 "switch 33",
-                "open 34 0x10008",
-                "close 34 0x10009",
+                "open 34 0x2201",
+                "close 34 0x2202",
                 "switch 34",
                 "pop",
                 "call 14"

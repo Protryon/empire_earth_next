@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <string>
 #include <list>
+#include <set>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -84,7 +85,6 @@
 #include "ee/EEUIELobbyEvents.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEUIECampaignSelectScreenEvents.h"
-#include "ee/EEUIEChooseCustomCampaignEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGameSound.h"
@@ -110,6 +110,14 @@ long EEScreenEvent::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     return ee_screens_event(this->mEvent, inForm, inEntity);
 }
 
+static UWideString sCampaignError;   // the last campaign load's error (EE_SCREENS_TEXT_CAMPAIGN_ERROR)
+
+// the custom campaign form's no-campaigns message, closed
+static void EEScreensNoCustomCampaigns(UIForm* inForm)
+{
+    ee_screens_event(EE_SCREENS_CC_NONE_FOUND, inForm, NULL);
+}
+
 // the settings form's Restore Default question, answered yes
 static void EEScreensRestoreDefaultYes(UIForm* inForm)
 {
@@ -125,10 +133,6 @@ UIEvent* EECreateScreenEvent(unsigned long inEvent)
         return new EEUIECSSEFormOpen;
     case EE_SCREENS_CPP_SCENARIOS_CLOSE:
         return new EEUIECSSEFormClose;
-    case EE_SCREENS_CPP_CUSTOM_OPEN:
-        return new EEUIECCCEFormOpen;
-    case EE_SCREENS_CPP_CUSTOM_CLOSE:
-        return new EEUIECCCEFormClose;
     case EE_SCREENS_CPP_LOBBY_SINGLE:
         return new EEUIELEActivateSinglePlayer;
     case EE_SCREENS_CPP_DUMP_MEDIA:
@@ -385,6 +389,20 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         }
         break;
     }
+    // the custom campaign form's (custom_campaign.rs): a list box of form inA
+    case EE_SCREENS_OP_FORM_LIST_CLEAR:
+        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->DeleteAllEntries();
+        break;
+    case EE_SCREENS_OP_FORM_LIST_COUNT:
+        return static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->GetLineCount();
+    case EE_SCREENS_OP_FORM_LIST_SELECT:
+        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->ChangeSelectionIndex(inC, true, false);
+        break;
+    case EE_SCREENS_OP_FORM_LIST_SELECTION: {
+        unsigned long theSelection = 0;
+        static_cast<UIListBox<UWideString>*>(theManager->GetFormByID(inA)->GetControl(inB))->GetCurrentSelection(theSelection);
+        return theSelection;
+    }
     case EE_SCREENS_GAME_RASTERIZER_COUNT:
         return (uint32_t)gDisplayRasterizers.size();
     case EE_SCREENS_GAME_SCREEN_COUNT:
@@ -488,6 +506,34 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
             theText = theBox->GetData(inArg & 0xffff);
         break;
     }
+    case EE_SCREENS_TEXT_FORM_LIST_DATA: {
+        UIListBox<UWideString>* theBox =
+            static_cast<UIListBox<UWideString>*>(gUIManager->GetFormByID(inArg >> 24)->GetControl((inArg >> 16) & 0xff));
+        if ((inArg & 0xffff) < theBox->GetLineCount())
+            theText = theBox->GetData(inArg & 0xffff);
+        break;
+    }
+    case EE_SCREENS_TEXT_CAMPAIGN_FILES: {
+        // the files of data\Campaigns with the campaign extension (a set: in its order)
+        std::set<UString> theFiles;
+        FSFileSpec theDirectory;
+        FSPath* thePath = new FSPath;
+        theDirectory.SetVolume(gStartupVolume);
+        theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
+        thePath->AddDirectory(theDirectory, true);
+        UString thePattern = UString("*") + gCampaignExtension;
+        thePath->ListFiles(thePattern, theFiles);
+        thePath->Dereference();
+        for (std::set<UString>::iterator it = theFiles.begin(); it != theFiles.end(); it++)
+            theList.append((const char*)*it).push_back('\0');
+        break;
+    }
+    case EE_SCREENS_TEXT_CAMPAIGN_EXTENSION:
+        theText = gCampaignExtension;
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_ERROR:
+        theText = sCampaignError;
+        break;
     case EE_SCREENS_TEXT_ADAPTERS: {
         NEProtocol* theProtocol = NULL;
         std::vector<UWideString> theAdapters;
@@ -577,6 +623,14 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         if (UILBString* theBox = static_cast<UILBString*>(theForm->GetControl(inArg)))
             theBox->AppendLine(theText);
         break;
+    case EE_SCREENS_TEXT_FORM_LIST_APPEND:
+        static_cast<UIListBox<UWideString>*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff))->AppendLine(theText);
+        break;
+    case EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN:
+        return EECampaignFormManager::GetBuiltInCampaign(theText) != 0;
+    case EE_SCREENS_TEXT_MESSAGE_NONE_FOUND:
+        gUIManager->DisplayMessage(theText, true, NULL, EEScreensNoCustomCampaigns, true);
+        break;
     case EE_SCREENS_TEXT_QUESTION:
         gUIManager->DisplayQuestion(theText, true, theForm, EEScreensRestoreDefaultYes, NULL);
         break;
@@ -608,7 +662,9 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         UWideString theFile;
         UWideString theError;
         theFile = "Campaigns\\" + theText + gCampaignExtension;
-        return EECampaignFormManager::Get()->mCampaign.Load(theFile, theError, false) ? 1 : 0;
+        bool theLoaded = EECampaignFormManager::Get()->mCampaign.Load(theFile, theError, false);
+        sCampaignError = theError;
+        return theLoaded ? 1 : 0;
     }
     case EE_SCREENS_TEXT_SERVER:
         // the random map's local server (the old communications deleted) and the human's connection request
