@@ -192,7 +192,7 @@ void ScrollArea::SetScrollDimension(int theWidth, int theHeight)
 }
 
 namespace WONAPI {
-// Attach a scrollbar or scroll button, creating the matching scroller on first use (not identified in the original exe)
+// Attach a scrollbar, creating the scrollbar scroller on first use (not identified in the original exe)
 void ScrollArea::SetScrollbar(Scrollbar *theScrollbar)
 {
 	ScrollbarScroller *aScroller = dynamic_cast<ScrollbarScroller*>(this->mScroller);
@@ -203,18 +203,6 @@ void ScrollArea::SetScrollbar(Scrollbar *theScrollbar)
 	}
 
 	aScroller->SetScrollbar(theScrollbar);
-}
-
-void ScrollArea::SetScrollButton(Button *theButton, Direction theDirection)
-{
-	ButtonScroller *aScroller = dynamic_cast<ButtonScroller*>(this->mScroller);
-	if(aScroller==NULL)
-	{
-		aScroller = new ButtonScroller;
-		this->SetScroller(aScroller);
-	}
-
-	aScroller->SetButton(theButton, theDirection);
 }
 }
 

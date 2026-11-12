@@ -66,6 +66,42 @@ use ee_won as _;
 #[cfg(not(test))]
 use ee_units as _;
 
+/// The combat reads' bridge to the unit store (ee_combat reads.rs `Stored`: ee_combat cannot depend on ee_units, whose
+/// host imports C++): ee_units' record under `id`, its plain fields into `out`; false for none (always in a test
+/// binary, which has no store's host).
+///
+/// # Safety
+/// `out` must point to a writable record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_store_unit(id: u32, out: *mut ee_combat::reads::EeCombatStoredUnit) -> bool {
+    #[cfg(not(test))]
+    {
+        let Some(r) = ee_units::store::with_store(|s| s.get(id).copied()) else { return false };
+        // SAFETY: the function's contract
+        unsafe {
+            *out = ee_combat::reads::EeCombatStoredUnit {
+                object: r.object,
+                object_kind: r.object_kind,
+                built: r.built,
+                tile_x: r.tile_x,
+                tile_y: r.tile_y,
+                hit_points: r.hit_points,
+                unit_type: r.unit_type,
+                category: r.category,
+                command: r.command,
+                location: r.location,
+                target_search_timer: r.target_search_timer,
+            }
+        };
+        true
+    }
+    #[cfg(test)]
+    {
+        let _ = (id, out);
+        false
+    }
+}
+
 // the game messages' wire codec (ee_netmsg/src/ffi.rs), called by EEMessage.cpp's ExportMessage/ImportMessage
 use ee_netmsg as _;
 // the game screens' decisions (ee_screens: the settings form's presets and value tables) behind the C++ event classes

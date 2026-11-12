@@ -276,56 +276,6 @@ pub unsafe extern "C" fn ee_won_findpatch_le32(data: *const u8, len: usize, out:
     }
 }
 
-/// [`firewall_request`] handed to `sink`.
-///
-/// # Safety
-/// `sink` is valid with `context`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_firewall_request(
-    lfs: u8,
-    udp: bool,
-    port: u16,
-    wait_for_connect: bool,
-    max_wait: u32,
-    sink: EeWonByteSink,
-    context: *mut c_void,
-) {
-    unsafe { give(sink, context, &firewall_request(lfs, udp, port, wait_for_connect, max_wait)) };
-}
-
-/// [`firewall_reply`]: -1 cut short, 0 a bad header, 1 a status (`*status`; `*host` and true in `*has_host` for a
-/// public address).
-///
-/// # Safety
-/// `reply` holds `len` bytes; the outputs are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_firewall_reply(
-    reply: *const u8,
-    len: usize,
-    status: *mut i16,
-    host: *mut i32,
-    has_host: *mut bool,
-) -> i32 {
-    match firewall_reply(unsafe { sl(reply, len) }) {
-        Err(PastEnd) => -1,
-        Ok(FirewallReply::BadHeader) => 0,
-        Ok(FirewallReply::Status(s, h)) => {
-            unsafe {
-                *status = s;
-                *has_host = h.is_some();
-                *host = h.unwrap_or(0);
-            }
-            1
-        }
-    }
-}
-
-/// [`firewall_wait`].
-#[no_mangle]
-pub extern "C" fn ee_won_firewall_wait(time_left: u32, max_wait: u32, asynchronous: bool) -> u32 {
-    firewall_wait(time_left, max_wait, asynchronous)
-}
-
 /// [`password`] handed to `sink`; false where the cipher gave nothing (the original's NULL).
 ///
 /// # Safety

@@ -30,6 +30,8 @@ constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
 
 constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
 
+constexpr static const uint32_t TYPE_CP_ICBM = 750;
+
 extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.

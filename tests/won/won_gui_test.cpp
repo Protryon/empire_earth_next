@@ -89,19 +89,6 @@ static void CheckGraphicsRules(Window* inWindow)
     theRaw->SetDoTransparency(true);
     g.DrawImage(theRaw.get(), 8, 0);
     CHECK(Pixel(theImage.get(), 8, 0) == 0x00FF00 && Pixel(theImage.get(), 9, 0) == 0);
-    // a 2x2 24-bit bottom-up BMP: bottom row red, white; top row blue, green
-    static const unsigned char kBMP[] = {
-        'B', 'M', 70, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0, 40, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 24, 0,
-        0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 255, 255, 255, 255, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0};
-    BMPDecoder theDecoder;
-    SmartPtr<NativeImage> theBMP = theDecoder.Decode(theImage->mDisplayContext.get(), kBMP, sizeof(kBMP));
-    CHECK(theBMP.get() != NULL);
-    if (theBMP.get() != NULL) {
-        CHECK(theBMP->GetWidth() == 2 && theBMP->GetHeight() == 2);
-        CHECK(Pixel(theBMP.get(), 0, 1) == 0xFF0000 && Pixel(theBMP.get(), 1, 1) == 0xFFFFFF);
-        CHECK(Pixel(theBMP.get(), 0, 0) == 0x0000FF && Pixel(theBMP.get(), 1, 0) == 0x00FF00);
-    }
     SmartPtr<RawImage32> theBack = static_cast<PlatNativeImage*>(theImage.get())->GetRaw();
     CHECK((theBack->mImageData[16 + 1] >> 24) == 0);       // GetDIBits: the alpha byte reads 0
 }

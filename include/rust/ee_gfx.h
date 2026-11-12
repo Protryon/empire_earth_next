@@ -18,6 +18,12 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// The most vertices (and triangles) a selection ring has: ten segments (model detail 2 and above).
+constexpr static const size_t EE_GFX_SELECTION_MAX_VERTICES = 20;
+
+/// Three indices per triangle.
+constexpr static const size_t EE_GFX_SELECTION_MAX_INDICES = 60;
+
 /// `kU441C28`: the depth tolerance, in clipping ranges.
 constexpr static const float PICK_TOLERANCE = 3.0;
 
@@ -48,8 +54,6 @@ constexpr static const uint32_t CATEGORY_AMBIENT = 0;
 constexpr static const uint32_t FAMILY_AA_BUILDING = 46;
 
 constexpr static const uint32_t TYPE_PATH_POINT = 223;
-
-constexpr static const uint32_t TYPE_CP_ICBM = 750;
 
 /// `kBarFraction`: the filled part's share of a bar's own width.
 constexpr static const float BAR_FRACTION = 0.75;
@@ -246,6 +250,105 @@ struct EeGfxRingSegments {
   uint32_t ring;
   uint32_t highlight;
 };
+
+/// `GETextureCoordinate`'s storage.
+struct EeGfxTexCoord {
+  float u;
+  float v;
+};
+
+/// The area-effect ring: its points and texture coordinates by vertex and its triangles' vertex indices.
+struct EeGfxRingModel {
+  EeGe3DPoint points[26];
+  EeGfxTexCoord coords[26];
+  uint32_t indices[30];
+};
+
+/// One selection ring: `count` vertices (twice the segments) and as many triangles; `colors` names each vertex's
+/// colour (0: the light one, 0x5294a0; 1: the middle one, 0x529490; 2: `gSelectionRingDark`).
+struct EeGfxSelectionModel {
+  uint32_t count;
+  EeGe3DPoint points[EE_GFX_SELECTION_MAX_VERTICES];
+  EeGfxTexCoord coords[EE_GFX_SELECTION_MAX_VERTICES];
+  uint32_t indices[EE_GFX_SELECTION_MAX_INDICES];
+  uint32_t colors[EE_GFX_SELECTION_MAX_VERTICES];
+};
+
+/// `GEColor`'s storage: red, green, blue.
+struct EeGfxColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// One frame's sky: the fog colour (the lowest band's), the sky dome's vertex colours and points, and the outer and
+/// inner star models' points (the inner a quarter of the outer).
+struct EeGfxSkyFrame {
+  EeGfxColor fog;
+  EeGfxColor sky_colors[20];
+  EeGe3DPoint sky_points[20];
+  EeGe3DPoint outer_stars[24];
+  EeGe3DPoint inner_stars[24];
+};
+
+/// One frame's cloud layer: its eight points (the outer square's four, then the inner's), their texture
+/// coordinates, and the cloud offset (`wrapped`: it was 1 or more and is now its fraction, to be stored back).
+struct EeGfxCloudLayer {
+  EeGe3DPoint points[8];
+  EeGfxTexCoord coords[8];
+  float offset;
+  bool wrapped;
+};
+
+/// One of `Queue`'s rows: the row's distance along the crack (its local y) and the texture's v there.
+struct EeGfxQuakeRow {
+  float y;
+  float front_v;
+};
+
+/// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
+/// edges between usable and unusable cells `gBarBackColor` (`back` 1).
+struct EeGfxPlacementLine {
+  uint32_t back;
+  EeGe2DPoint start;
+  EeGe2DPoint end;
+};
+
+/// `DrawLabels`' clip rectangles: above the bottom strip (`view`) and the strip's part beside the panels
+/// (`strip`), the strip's top (`bottom`) and the font (0: the default, 1: Tahoma 12, 2: Tahoma 16).
+struct EeGfxLabelClip {
+  EeGeRectangle view;
+  EeGeRectangle strip;
+  float bottom;
+  uint32_t font;
+};
+
+/// The rasterizer's fog for `GetEffectFogFactor`: its state (1 linear) and its range.
+struct EeGfxEffectFog {
+  uint32_t state;
+  float start;
+  float end;
+  float scale;
+};
+
+/// One quad of an effect batch: its colour and normal (the same at every corner) and its four corners in the order
+/// they are set (the batch's indices `count` .. `count + 3`).
+struct EeGfxEffectQuad {
+  EeGfxColor color;
+  EeGeVector normal;
+  EeGe3DPoint points[4];
+  EeGfxTexCoord coords[4];
+  float opacities[4];
+};
+
+/// The box's lines (`DrawPolygons`): four shadow lines a pixel down and right, then four white ones, each a start
+/// and an end.
+struct EeGfxSelectLines {
+  EeGe2DPoint points[8][2];
+};
+
+/// The texture's u across the five vertices of a row.
+constexpr static const float EE_GFX_QUAKE_ROW_U[5] = { 0.0, 0.25, 0.5, 0.75, 1.0, };
 
 extern "C" {
 
@@ -541,6 +644,223 @@ EeGfxSelectionRing ee_gfx_units_selection_ring(float size);
 
 /// `DrawRings`' segment colours for an area-effect strength.
 EeGfxRingSegments ee_gfx_units_ring_segments(uint32_t strength);
+
+/// `LoadMedia`'s area-effect ring: its points, texture coordinates and triangles.
+EeGfxRingModel ee_gfx_units_area_effect_ring();
+
+/// The selection rings' segments at a model detail (`gModelDetail`).
+uint32_t ee_gfx_units_selection_segments(int32_t detail);
+
+/// `LoadMedia`'s selection ring of size `size` (0..2; larger is held at 2) at a model detail.
+EeGfxSelectionModel ee_gfx_units_selection_model(int32_t detail, uint32_t size);
+
+/// `UpdateSkyColors`: the four bands' blend at `time_of_day` from `colors` (`gSkyColors`, 68 entries) and the sky
+/// and star models' points over a map of `size` tiles a side and width `width`.
+///
+/// # Safety
+/// `colors` points at 68 colours.
+EeGfxSkyFrame ee_gfx_terrain_sky_frame(float time_of_day,
+                                       const EeGfxColor *colors,
+                                       int32_t size,
+                                       int32_t width);
+
+/// `UpdateCloudLayer`: the layer's points and scrolled texture coordinates and the wrapped cloud offset.
+EeGfxCloudLayer ee_gfx_terrain_cloud_layer(int32_t size,
+                                           int32_t width,
+                                           float offset);
+
+/// `StepGridMode`: the editor's grid mode stepped forwards or backwards through 0..17.
+int32_t ee_gfx_terrain_grid_mode_step(int32_t mode, bool backwards);
+
+/// Segment `segment`'s eight triangles into `out` (24 vertex indices).
+///
+/// # Safety
+/// `out` points at 24 writable indices.
+void ee_gfx_quake_segment_polygons(uint32_t segment, uint32_t *out);
+
+/// `BuildModel`'s texture v of each of `count` segments' far rows.
+///
+/// # Safety
+/// `out` points at `count` writable floats (or `count` is 0).
+void ee_gfx_quake_build_rows(float *out, size_t count);
+
+/// `Queue`'s rows of `count` segments for a front `distance` along the crack.
+///
+/// # Safety
+/// `out` points at `count` writable rows (or `count` is 0).
+void ee_gfx_quake_queue_rows(float distance, EeGfxQuakeRow *out, size_t count);
+
+/// The hold time of a growing crack that reached space.
+float ee_gfx_quake_hold_time(float length, float distance, float speed);
+
+/// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
+/// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.
+///
+/// # Safety
+/// The pointers are valid; `heights` and `cells` hold 144 elements, `out` `capacity`.
+size_t ee_gfx_units_placement_lines(const EeGeViewport *viewport,
+                                    bool orthographic,
+                                    int32_t size,
+                                    int32_t tile_x,
+                                    int32_t tile_y,
+                                    const float *heights,
+                                    const uint8_t *cells,
+                                    EeGfxPlacementLine *out,
+                                    size_t capacity);
+
+/// `DrawLabels`' clip rectangles from the game view's rectangle `*view` and the window's size.
+///
+/// # Safety
+/// `view` is valid.
+EeGfxLabelClip ee_gfx_units_label_clip(const EeGeRectangle *view,
+                                       uint32_t width,
+                                       uint32_t height,
+                                       bool free_camera,
+                                       bool panel_active);
+
+/// Which clip rectangles a label at screen height `y` is drawn to (bit 0 the view, 1 the strip, 2 the editor's).
+uint32_t ee_gfx_units_label_targets(float y,
+                                    float text_height,
+                                    float bottom,
+                                    bool free_camera);
+
+/// The debug label's place: the bar tag (`*bar` scaled by `scale` through `*transformation`) on the screen, above
+/// `bars` extra bars.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_units_label_point(const EeGeViewport *viewport,
+                              bool orthographic,
+                              const EeGeTransformation *transformation,
+                              const EeGe3DPoint *bar,
+                              float scale,
+                              uint64_t bars,
+                              EeGe2DPoint *out);
+
+/// `GetEffectFogFactor`: the fog's fade at `*point` (`fog.state` 1: linear fog).
+///
+/// # Safety
+/// The pointers are valid.
+float ee_gfx_effect_fog_factor(const EeGe3DPoint *point,
+                               const EeGfxEffectFog *fog,
+                               const EeGeTransformation *camera_inverse);
+
+/// `AddGlowSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_glow_sprite(const EeGe3DPoint *position,
+                                          const EeGfxColor *color,
+                                          float rotation,
+                                          float size,
+                                          float alpha,
+                                          float brightness,
+                                          float fog,
+                                          float camera_yaw,
+                                          float camera_pitch);
+
+/// `AddGroundSprite`'s and `AddGroundQuad`'s quad; `opacities` holds the four corners'.
+///
+/// # Safety
+/// The pointers are valid; `opacities` holds four floats.
+EeGfxEffectQuad ee_gfx_effect_ground_sprite(const EeGe3DPoint *position,
+                                            const EeGfxColor *color,
+                                            float rotation,
+                                            float size,
+                                            const float *opacities,
+                                            float brightness);
+
+/// `AddBlendedSprite`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_blended_sprite(const EeGe3DPoint *position,
+                                             const EeGfxColor *color,
+                                             float rotation,
+                                             float size,
+                                             float alpha,
+                                             float brightness,
+                                             float camera_yaw,
+                                             float camera_pitch);
+
+/// `AddGroundStrip`'s quad.
+///
+/// # Safety
+/// The pointers are valid.
+EeGfxEffectQuad ee_gfx_effect_ground_strip(const EeGe3DPoint *from,
+                                           const EeGe3DPoint *to,
+                                           float height,
+                                           const EeGfxColor *color,
+                                           const EeGfxTexCoord *origin,
+                                           const EeGfxTexCoord *extent,
+                                           float alpha,
+                                           float brightness);
+
+/// `StartSelection`'s drag start: `*location` rounded.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_start(const EeGe2DPoint *location, EeGe2DPoint *out);
+
+/// `MouseMove`'s drag end: `*location` rounded, clamped to the game view `*view`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_drag_end(const EeGe2DPoint *location,
+                            const EeGeRectangle *view,
+                            EeGe2DPoint *out);
+
+/// Whether the drag from `*start` to `*end` has gone far enough to start.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_gfx_select_starts_drag(const EeGe2DPoint *start, const EeGe2DPoint *end);
+
+/// The box from `*start` to `*end`: `MouseMove`'s (`release` false) or `MouseLButtonUp`'s.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_select_box(const EeGe2DPoint *start,
+                       const EeGe2DPoint *end,
+                       bool release,
+                       EeGeRectangle *out);
+
+/// `DrawPolygons`' eight lines round the box `*rectangle`.
+///
+/// # Safety
+/// `rectangle` is valid.
+EeGfxSelectLines ee_gfx_select_box_lines(const EeGeRectangle *rectangle);
+
+/// `EEUIMiniMap::CenterCamera`'s mini-map point for the mouse at `*mouse`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_minimap_center_point(const EeGe2DPoint *mouse,
+                                 const EeGe2DPoint *origin,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 const EeGeRectangle *bounds,
+                                 EeGe2DPoint *out);
+
+/// `EEUIMiniMap::MouseRButtonDown`'s mini-map point (its own clamp; `minimap::press_point`).
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_minimap_press_point(const EeGe2DPoint *mouse,
+                                const EeGe2DPoint *origin,
+                                uint32_t width,
+                                uint32_t height,
+                                const EeGeRectangle *bounds,
+                                EeGe2DPoint *out);
+
+/// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_pick_entry_transform(const EeGeTransformation *location,
+                                 const EeGeTransformation *internal,
+                                 float scale,
+                                 EeGeTransformation *out);
 
 }  // extern "C"
 

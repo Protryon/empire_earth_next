@@ -65,21 +65,6 @@ public:
     virtual ImageDecoder* Duplicate(); //14 3488e0
     virtual SmartPtr<Animation> GetAnimation(bool=true); //new slot18 348870; noarg base slot10 inherited
 };
-class BMPDecoder : public ImageDecoder {
-protected:
-    virtual SmartPtr<NativeImage> DoDecode(DisplayContext*); //00 3ce870 platform decode
-    virtual SmartPtr<RawImage> DoDecodeRaw(); //04 336720
-    virtual bool DoGetAttrib(ImageAttributes&); //08 336690
-public:
-    virtual ImageDecoder* Duplicate(); // slot 0x14, at 0x0072b9f0 (allocates 8 bytes)
-};
-class WIMDecoder : public ImageDecoder {
-protected:
-    virtual SmartPtr<RawImage> DoDecodeRaw(); //04 34a600
-    virtual bool DoGetAttrib(ImageAttributes&); //08 34a560
-public:
-    virtual ImageDecoder* Duplicate(); // slot 0x14, at 0x0072ba40 (allocates 8 bytes)
-};
 // Fieldless PNG/JPG decoders: ImageDecoder (8 bytes), six slots; vtables 0x008547c8 and 0x008547e4.
 // The inherited slots 0x00/0x0c/0x10 are unchanged.
 class PNGDecoder : public ImageDecoder {
