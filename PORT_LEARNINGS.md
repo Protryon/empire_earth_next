@@ -8673,3 +8673,31 @@ inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted fo
   ee_astar's global rename `Unit = EeAStarUnit`: the split header gave the alias to ee_units.h, and ee_astar.h's users
   failed ("field has incomplete type 'EeAStarUnit'"). A generic private struct also stopped the splitter ("cannot name
   the header item `template<...>`"). Name even private Rust types with the module's prefix (`UpdateReads`).
+
+## R5b.2, ninth round: the combat reads from the unit store, the hosts' plain reads deleted (ee_combat store.rs; branch rust-combat9, 2026-11-12)
+
+| Read | Was (C++) | Now (Rust) |
+|---|---|---|
+| the reads' unit fields (tile, hit points, class type, category, class flags, built, command, search and reload timers, domains, container, goal kind, land building, id, player handle) | `EEQueryRead`/`EEQueryHandle` cases, `Stored`'s id read per object | `reads::Stored` over `store::unit_of` (the record by object) |
+| a player's id and enemy table | `EEQueryRead` cases | `store::player_of` (ee_units players.rs) |
+| the shots' command, location, goal kind, type, hit points, tile x, rotting, flight and cloak times | `EEShotOp` read cases | `shots::StoredShot` |
+| the trigger record (`EECombatFillCondition`), the step record (`EECombatFillStep`), the heal work record | the C++ fills | `store::fill_condition`, `fill_step`, `fill_heal_work`; the C++ adds `IsHuman` and the stats |
+| the target searches' unit tile, `EEFindNewTarget`'s unit tile and id | `EESearchUnitTile`, `EENewTargetUnitTile`, `EENewTargetUnitID` callbacks | the search hosts' impls read the store |
+
+- **A unit out of every list.** The store holds a unit only while it is in a player's list. Every combat read
+  now goes to the store, so a unit without a record (no C++ case is left to answer it) is filled by the store's own
+  C++ fill (`EEUnitStore.cpp` `ee_combat_host_unit_record`: `Fill` with the unit's `mPlayer`), through ee_rust's
+  bridge; a player object without a table is read the same way (`ee_combat_host_player_table`). Measured with a
+  temporary counter (two oracle and two calamity games): every fallback was a valid complex unit with id
+  0xffffffff (a unit never inserted in a list: the shots), 16k to 32k a game; no player fell back. The shots' reads
+  therefore come mostly from the fill, not the store: when the core lane gives the shots records, nothing here changes.
+- **The player handle is the record's.** `RTSPlayer::InsertUnit` sets `mPlayer` and inserts the record with that
+  player; the record's `player` is the `RTSPlayer*` (`EEPlayer` derives from it alone: the same address).
+- **The fills zero the record in Rust.** `EeCombatConditionIn`, `EeCombatStepIn` and `EeCombatHealWorkIn` have no
+  padding (all 32-bit fields), so the Rust struct assignment writes the bytes the C++'s `memset` did (CBTC and CBGS
+  record the bytes).
+- **C++ deleted, per commit.** The reads, shots and record fills: EECombatGoals.cpp -91, EEUCProjectile.cpp -20,
+  EEUnitStore.cpp +17 (the fallback fills): net -94; the heal work's fill: -6; the searches' tile and id callbacks: -17.
+  In all 153 deleted, 36 added, net -117.
+- **Golden records unchanged.** Read-source changes only: every capture digest equal to its golden in the five
+  profiles, the sim oracle identical.
