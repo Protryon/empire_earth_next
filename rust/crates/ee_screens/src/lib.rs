@@ -7,6 +7,10 @@
 //!
 //! - [`settings`]: the game settings form (form 5): the graphics quality presets, the video tab's controls from the
 //!   settings, the port's value combo boxes.
+//! - [`lobby`]: the game lobby (form 0x1a: the random map setup and the multiplayer staging screen): the player
+//!   rows' controls, type menus, names and colours.
 
+pub mod lobby;
+mod lobby_ffi;
 pub mod settings;
 mod settings_ffi;
