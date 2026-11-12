@@ -1,0 +1,14 @@
+[package]
+name = "ee_ai"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The computer player's leaves (docs/RUST_PLAN.md R5a.8): the next engine's save blocks ("EENS", "EENU"), the AI
+# manifest (Data/ai/ais.json) and the seat choice, the next engine's name tables. No game state: the C++ hands plain
+# values over and keeps its objects.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_plat_core = { path = "../ee_plat_core" }

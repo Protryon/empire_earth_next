@@ -100,13 +100,6 @@ void EEUCSeaAnimal::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& io
     }
 }
 
-// FUNCTION: EXE 0x619fd7
-// Updates the sea animal as a submerged ship
-void EEUCSeaAnimal::Update(EEComplexUnit* inUnit)
-{
-    EEUCSubmergedNaval::Update(inUnit);
-}
-
 // ICF-FOLDED: EXE 0x60d336
 // Updates a living citizen's water ripples when the effect detail allows them
 // (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)

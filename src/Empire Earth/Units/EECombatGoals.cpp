@@ -56,6 +56,8 @@
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EERules.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUnitAction.h"
@@ -63,6 +65,8 @@
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"
+
+extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
 // the store's part in Rust (ee_combat store.rs: the unit's and target's plain fields, the players' tables); here the
 // unit's player's IsHuman (a virtual) and the stats (which upgrades change in place)
@@ -703,6 +707,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_HIGH_TECH_TOOLS:
         return EEGetRules().Epoch(theObject->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;   // epochs.yaml
     case EE_COMBAT_Q_SPARKS_EFFECT: return theObject->mUnitClass->mImpactSparksEffect != NULL;
+    case EE_COMBAT_Q_RESOURCE_TYPE: return (uint32_t)theObject->mResourceType;
     }
     return 0;
 }
@@ -920,7 +925,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         gWorld.GetEffectManager()->CreatePlacedEffect(theSpot, EEGraphicEffect::Get(kGraphicEffectImpactSparks), NULL);
         return 0;
     }
-    case EE_COMBAT_W_APPLY_HIT: theClass->ApplyHit(theObject, EEQueryUnit(inOther)); return 0;
     case EE_COMBAT_W_LAUNCH_SHOT:
         theClass->LaunchShot(theObject, EEQueryUnit(inOther), theContext->mPoint, NULL);
         return 0;
@@ -943,6 +947,105 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
     case EE_COMBAT_W_SET_AMMUNITION: theObject->SetAmmunition((unsigned long)a[0]); return 0;
     case EE_COMBAT_W_SET_FLIGHT_TIME: theObject->SetFlightTime((long)a[0]); return 0;
     case EE_COMBAT_W_SPECIAL_OFF: theObject->mIsSpecialAttack = false; return 0;
+    // damage.rs (R5b.2, tenth round): ApplyHit, ApplyAreaDamage, ComputeDamage
+    case EE_COMBAT_W_DAMAGE_IN: {
+        EeCombatDamageIn& in = *(EeCombatDamageIn*)(uintptr_t)a[0];
+        EEUnit* theTarget = EEQueryUnit(inOther);
+        if (in.form != kDamageDirect || in.attack > 0.0f) {   // a direct hit without attack reads no factor
+            in.attack_factor = gToHitTable.GetAttackFactor((long)a[1], theTarget->mUnitClass,
+                                                           theObject->mPlayer->GetPlayerID(), theTarget->mPlayer->GetPlayerID());
+            in.weapon_factor = gWeaponToHitFactors[theTarget->mUnitClass->mWeapon][a[2]];
+        }
+        in.armor = theTarget->mStats->mArmor[a[2]];
+        const EECombatRules& theRules = EEGetRules().mCombat;
+        in.minimum_damage = theRules.mMinimumDamage;
+        in.fanatic_factor = EERuleFloat(theRules.mFanaticFactor);
+        in.elevation_step = theRules.mElevationStep;
+        in.ally_factor = theRules.mAllyFactor;
+        in.herd_ally_factor = theRules.mHerdAllyFactor;
+        in.trample_damage = theRules.mTrampleDamage;
+        in.trample_threshold = theRules.mTrampleThreshold;
+        return 0;
+    }
+    case EE_COMBAT_W_ELEVATION: return EEConditionBits(theClass->GetElevationFactor(theObject, theOther));
+    case EE_COMBAT_W_DAMAGE_CAPTURE:
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'M'), *(const EeCombatDamageIn*)(uintptr_t)a[0],
+                        *(const EeCombatDamageOut*)(uintptr_t)a[1]);
+        return 0;
+    case EE_COMBAT_W_HIT_CLASS: {   // a capital ship's special weapon, else the launcher's or this class; the splash's
+        EEUnitClass* theHit = theObject->mUnitClass->mCategory == kUnitCategorySpaceship && theObject->mIsSpecialAttack
+            ? gUnitClassTable[kUnitTypeCapitalShipSpecialWeapon]
+            : theObject->mLauncherClass == NULL ? theClass : theObject->mLauncherClass;
+        EEUnitClass* theSplash = theObject->mLauncherClass != NULL ? theObject->mLauncherClass : theClass;
+        EEUnitClassUpgrade* theUpgrade = theObject->mPlayer->GetUpgrade(theHit->mUnitType);
+        a[0] = EEConditionBits(theUpgrade != NULL ? theUpgrade->GetAttack() : theHit->mAttack);
+        a[1] = EEConditionBits(theUpgrade != NULL ? theUpgrade->mAreaEffect : theHit->mAreaEffect);
+        a[2] = theHit->mAmmoType;
+        a[3] = theHit->mWeapon;
+        a[4] = theHit->mCategory;
+        a[5] = EEConditionBits(theSplash->mFriendlyDamageFactor);
+        a[6] = theSplash->mCategory;
+        a[7] = EEConditionBits(EEGetRules().mCombat.mDeadFoodShare);
+        a[8] = theClass->mShotEffect != NULL;
+        return 0;
+    }
+    case EE_COMBAT_W_UNIT_EFFECT: {
+        EEGraphicEffect* theEffect = NULL;
+        if (!theObject->GetEffect(3, theEffect))
+            return 0;
+        if (theEffect != NULL)
+            gEffectManager->CreateUnitEffect(theObject, theEffect, NULL, false, 0, 0);
+        return 1;
+    }
+    case EE_COMBAT_W_TAKE_HIT:
+        EEQueryUnit(inObject)->TakeHit(theOther, (long)a[0], theOther->mPlayer->GetPlayerID(), 1);
+        return 0;
+    case EE_COMBAT_W_UNIT_DAMAGED:
+        EEQueryUnit(inObject)->mUnitClass->UnitDamaged(EEQueryUnit(inObject)->GetComplexUnit(), theOther, (long)a[0]);
+        return 0;
+    case EE_COMBAT_W_EXPERIENCE: theObject->mExperience++; return 0;
+    case EE_COMBAT_W_SET_RESOURCE: EEQueryUnit(inObject)->mResourceAmount = (long)a[0]; return 0;
+    case EE_COMBAT_W_TILE_UNITS: {
+        EEMapTile* theTile = ::gWorld.mMap->GetTile((long)a[0], (long)a[1]);
+        return theTile != NULL ? (uint64_t)(uintptr_t)theTile->mUnits : 0;
+    }
+    case EE_COMBAT_W_NODE_NEXT: return (uint64_t)(uintptr_t)((RTSTileUnitNode*)(uintptr_t)inObject)->mNext;
+    case EE_COMBAT_W_NODE_UNIT:
+        return EEQueryHandleOf(((RTSTileUnitNode*)(uintptr_t)inObject)->mUnit->GetComplexUnit());
+    case EE_COMBAT_W_AREA_CAPTURE: {   // TEST ONLY: CBAD (the victims), CBXA (their FNV-1a 32 after the hits)
+        if (!EESimCaptureRecord::Active())
+            return 0;
+        const uint64_t* theVictims = (const uint64_t*)(uintptr_t)a[0];
+        EEUnit* theTarget = EEQueryUnit(inOther);
+        uint32_t theBits = (uint32_t)a[4];
+        float theRadius;
+        memcpy(&theRadius, &theBits, 4);
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'A', 'D'));
+        theRecord.I32((int32_t)theObject->GetUnitID());
+        theRecord.I32((int32_t)a[2]);
+        theRecord.I32((int32_t)a[3]);
+        theRecord.F32(theRadius);
+        theRecord.I32((int32_t)a[5]);
+        theRecord.I32(theTarget != NULL && theTarget->GetComplexUnit() != NULL ? (int32_t)theTarget->GetUnitID() : -1);
+        theRecord.I32((int32_t)a[1]);
+        for (int64_t i = 0; i < a[1]; i++)
+            theRecord.I32((int32_t)EEQueryUnit(theVictims[i])->GetUnitID());
+        theRecord.Commit();
+        uint32_t theHash = 0x811c9dc5u;
+        for (int64_t i = 0; i < a[1]; i++) {
+            EEComplexUnit* theVictim = EEQueryComplex(theVictims[i]);
+            uint32_t theFields[3] = {(uint32_t)theVictim->mUnitID, (uint32_t)theVictim->GetHitPoints(),
+                                     (uint32_t)theVictim->GetResourceAmount()};
+            const unsigned char* theBytes = (const unsigned char*)theFields;
+            for (size_t k = 0; k < sizeof(theFields); k++)
+                theHash = (theHash ^ theBytes[k]) * 0x01000193u;
+        }
+        EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, theObject, theTarget, theHash);
+        return 0;
+    }
+    case EE_COMBAT_W_HIT_CAPTURE:   // TEST ONLY: CBXA
+        EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, theObject, EEQueryUnit(inOther), 0);
+        return 0;
     }
     return 0;
 }
@@ -986,6 +1089,19 @@ int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarge
         *ioY = theTile[1];
     }
     return theResult;
+}
+
+bool EECombatComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, float inAttack, long inAmmo, long inWeapon,
+                           float inFriendlyFactor, long& outAmount)
+{
+    EEQueryContext theContext = {inUnit, NULL, NULL};
+    theContext.mClass = inUnit->mUnitClass;
+    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp};
+    EeCombatDamageCall theCall = {inForm, inAttack, (int32_t)inAmmo, (int32_t)inWeapon, inFriendlyFactor, 0};
+    if (!ee_combat_compute_damage(&theCall, EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost))
+        return false;
+    outAmount = theCall.amount;
+    return true;
 }
 
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)

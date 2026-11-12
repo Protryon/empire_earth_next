@@ -128,7 +128,8 @@
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEMainGameEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_MG_*: the main game form's events (ee_screens main_game.rs)
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EESEEHideUI.h"
@@ -487,9 +488,9 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->mGrabScroll = new EEUIEGrabScroll;
     this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
     this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
-    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGToggleShowHiddenUnits, NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIEMGDumpLoadedMedia(false, false), NULL, 1, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyShift, kKeyNone, NULL, NULL, new EEUIEMGDumpLoadedMedia(true, false), NULL, 1, false);
+    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR), NULL, 1, false);
+    this->AddHotKey(kKeyD, kKeyControl, kKeyShift, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR_ALL), NULL, 1, false);
     this->mIsSwitching = false;
     this->mIsSuspended = false;
     this->mIsUIHidden = false;

@@ -1,4 +1,5 @@
 use super::*;
+use crate::damage::{EE_COMBAT_W_DAMAGE_IN, EE_COMBAT_W_HIT_CAPTURE};
 use crate::reads::{EE_COMBAT_CLASS_PROJECTILE, EE_COMBAT_Q_ENEMY};
 use ee_ge::types::{Ge3DLine, GeTransformation};
 use std::collections::HashMap;
@@ -32,9 +33,13 @@ impl World {
     fn tile(&mut self, object: u64, x: i32, y: i32) -> &mut Self {
         self.set(EE_COMBAT_Q_TILE_X, object, x as u32).set(EE_COMBAT_Q_TILE_Y, object, y as u32)
     }
-    /// the codes of the logged operations
+    /// the codes of the logged operations (a hit's (damage.rs) only as its end, `APPLY_HIT`)
     fn ops(&self) -> Vec<i32> {
-        self.log.iter().map(|l| l.0).collect()
+        self.log.iter().map(|l| l.0).filter(|c| !(EE_COMBAT_W_DAMAGE_IN..APPLY_HIT).contains(c)).collect()
+    }
+    /// the first logged operation `code`
+    fn first(&self, code: i32) -> (i32, u64, u64, EeCombatWorldArgs) {
+        *self.log.iter().find(|l| l.0 == code).unwrap()
     }
 }
 
@@ -112,6 +117,9 @@ impl WorldHost for World {
         self.answers.get(&(code, object, other)).copied().unwrap_or(0)
     }
 }
+
+/// ApplyHit's end (its capture operation): where the C++ ApplyHit was called
+const APPLY_HIT: i32 = EE_COMBAT_W_HIT_CAPTURE;
 
 const UNIT: u64 = 0x100;
 const TARGET: u64 = 0x200;
@@ -608,8 +616,8 @@ fn the_reload_timer_is_drawn_when_run_out_and_half_again_when_firing_high_over_w
 fn a_direct_shot_hits_the_target_or_its_blocker() {
     let mut w = shot_world(0);
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_LINE_BLOCKED, EE_COMBAT_W_APPLY_HIT]);
-    assert_eq!(w.log[2].2, DROP);
+    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_LINE_BLOCKED, APPLY_HIT]);
+    assert_eq!(w.first(APPLY_HIT).2, DROP);
     // the weapon tag point moves on (0 + 1) % 3
     assert_eq!(w.acts, vec![(EE_COMBAT_A_WEAPON_TAG, UNIT, 1)]);
 
@@ -624,13 +632,13 @@ fn a_direct_shot_hits_the_target_or_its_blocker() {
     w.set(EE_COMBAT_Q_PLAYER_ID, ENEMY, 3);
     w.reads.insert((EE_COMBAT_Q_ENEMY, PLAYER), 1);
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.log.last().map(|l| (l.0, l.2)), Some((EE_COMBAT_W_APPLY_HIT, BLOCKER)));
+    assert_eq!(w.log.last().map(|l| (l.0, l.2)), Some((APPLY_HIT, BLOCKER)));
 
     // an allied blocker only sparks (when its class has sparks)
     w.reads.insert((EE_COMBAT_Q_ENEMY, PLAYER), 0);
     w.log.clear();
     fire_shot(&mut w, UNIT);
-    assert!(!w.ops().contains(&EE_COMBAT_W_SPARKS_ON) && !w.ops().contains(&EE_COMBAT_W_APPLY_HIT));
+    assert!(!w.ops().contains(&EE_COMBAT_W_SPARKS_ON) && !w.ops().contains(&APPLY_HIT));
     w.set(EE_COMBAT_Q_SPARKS_EFFECT, BLOCKER, 1);
     w.log.clear();
     fire_shot(&mut w, UNIT);
@@ -651,7 +659,7 @@ fn a_direct_shot_hits_the_target_or_its_blocker() {
     let mut w = shot_world(0);
     w.real(EE_COMBAT_Q_RANGE, UNIT, 1.0);
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_APPLY_HIT]);
+    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, APPLY_HIT]);
 }
 
 #[test]
@@ -667,7 +675,7 @@ fn a_projectile_class_launches_from_the_model_or_its_turrets() {
     w.set(EE_COMBAT_Q_UNIT_TYPE, UNIT, W_TYPE_ROMAN_LEGIONNAIRE);
     w.log.clear();
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_APPLY_HIT]);
+    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, APPLY_HIT]);
     // with it, it throws (and plays no shot effect)
     w.set(EE_COMBAT_Q_SPECIAL_ATTACK, UNIT, 1).set(
         EE_COMBAT_Q_SHOT_CLASS,
@@ -690,20 +698,20 @@ fn a_capital_ships_special_attack_fires_from_its_last_tag_point_once() {
         vec![
             EE_COMBAT_W_FIND_DROP,
             EE_COMBAT_W_SPECIAL_EFFECT,
-            EE_COMBAT_W_APPLY_HIT,
+            APPLY_HIT,
             EE_COMBAT_W_CAN_ATTACK_CLASS,
             EE_COMBAT_W_START_ACTION,
             EE_COMBAT_W_SPECIAL_OFF,
         ]
     );
-    assert_eq!(w.log[4].3[0], W_ACTION_IDLE);
+    assert_eq!(w.first(EE_COMBAT_W_START_ACTION).3[0], W_ACTION_IDLE);
     // the last tag point (2) set; the mock keeps the read at 0, so the next is (0 + 1) % 3 = 1
     assert_eq!(w.acts, vec![(EE_COMBAT_A_WEAPON_TAG, UNIT, 2), (EE_COMBAT_A_WEAPON_TAG, UNIT, 1)]);
     // a capital ship skips its last (special) tag point in the turn
     let mut w = shot_world(EE_COMBAT_SHOT_CLASS_PROJECTILE);
     w.set(EE_COMBAT_Q_UNIT_TYPE, UNIT, W_TYPE_CAPITAL_SHIP_YAMATO).set(EE_COMBAT_Q_WEAPON_TAG, UNIT, 1);
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_APPLY_HIT]);
+    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, APPLY_HIT]);
     assert_eq!(w.acts, vec![(EE_COMBAT_A_WEAPON_TAG, UNIT, 0)]);
 }
 
@@ -731,7 +739,7 @@ fn the_effects_follow_the_tag_points_and_a_low_tech_citizen_plays_no_shot() {
     w.log.clear();
     w.acts.clear();
     fire_shot(&mut w, UNIT);
-    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, EE_COMBAT_W_APPLY_HIT]);
+    assert_eq!(w.ops(), vec![EE_COMBAT_W_FIND_DROP, APPLY_HIT]);
     assert!(w.acts.is_empty());
 }
 

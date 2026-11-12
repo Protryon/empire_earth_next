@@ -1,6 +1,7 @@
-// WONAPI parser for the directory server's entity replies. The reading is ee_won's (rust/crates/ee_won/src/dir.rs);
-// this makes the DirEntity objects from what it read and throws ReadBufferException for a reply cut short, as
-// ReadBuffer did (the entities read whole before the cut are kept).
+// The directory server's entity replies: the reading is ee_won's (rust/crates/ee_won/src/dir.rs), the ops that read
+// them Rust's (reqdir.rs); this makes the DirEntity objects of what they read (RustServerOp::GetEntities). The
+// parsers' statements (ParseMultiEntityReply 2f0510, ParseSingleEntityReply, OnlyDirs 2f04f0, OnlyServices 2f0500)
+// are tests/won/won_dir_test.cpp's original half.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -27,9 +28,9 @@ static void DirAssign(std::wstring& outText, const uint16_t* inUnits, size_t inC
     WideAssignUtf16LE(outText, aBytes.data(), (unsigned long)inCount);
 }
 
-// the read fields onto a new DirEntity (the others keep the constructor's values); the ACL values converted as the
-// originals' locals did (the multi-entity reader's long / short, the single-entity reader's unsigned ones)
-static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity, bool inSigned)
+// the read fields onto a new DirEntity (the others keep the constructor's values). The ACL values: the
+// multi-entity reader's locals were long / short, the single-entity reader's unsigned, the same bits in the members.
+static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity)
 {
     DirEntityPtr anEntity = new DirEntity;
     uint32_t f = inEntity->fields;
@@ -64,73 +65,20 @@ static DirEntityPtr DirMakeEntity(const EeWonDirEntity* inEntity, bool inSigned)
         const EeWonDirAcl& aRead = inEntity->acls[i];
         DirACL acl;
         acl.mType = (char)aRead.kind;
-        if (inSigned) {
-            long user = aRead.user;
-            long comm = aRead.community;
-            short trust = aRead.trust;
-            acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
-        } else {
-            unsigned long user = (unsigned long)(long)aRead.user;
-            unsigned long comm = (unsigned long)(long)aRead.community;
-            unsigned short trust = (unsigned short)aRead.trust;
-            acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
-        }
+        long user = aRead.user;
+        long comm = aRead.community;
+        short trust = aRead.trust;
+        acl.mUser = user; acl.mCommunity = comm; acl.mTrust = trust;
         anEntity->mACLs.push_back(acl);
     }
     return anEntity;
 }
 
-static void DirTakeMulti(void* inContext, const EeWonDirEntity* inEntity)
+// No original address identified: the parsers' entity sink, for the Rust ops' results
+// Appends a DirEntity made of what ee_won read to a DirEntityList
+void DirEntityReplyParser::TakeEntity(void* inList, const EeWonDirEntity* inEntity)
 {
-    static_cast<DirEntityList*>(inContext)->push_back(DirMakeEntity(inEntity, true));
-}
-
-static void DirTakeSingle(void* inContext, const EeWonDirEntity* inEntity)
-{
-    *static_cast<DirEntityPtr*>(inContext) = DirMakeEntity(inEntity, false);
-}
-
-// FUNCTION: WON 0x006f04f0
-// Returns whether the get flags ask for directories only (no services)
-bool DirEntityReplyParser::OnlyDirs(DWORD inFlags)
-{
-    return (inFlags & 2) == 0;
-}
-// FUNCTION: WON 0x006f0500
-// Returns whether the get flags ask for services only (no directories)
-bool DirEntityReplyParser::OnlyServices(DWORD inFlags)
-{
-    return (inFlags & 5) == 0;
-}
-// FUNCTION: WON 0x006f0510
-// Parses a multi-entity reply into entities with the fields its flags include; says whether more replies follow
-WONStatus DirEntityReplyParser::ParseMultiEntityReply(const void* inData,
-    unsigned long inLength, DirEntityList& outEntities, unsigned char* outSequence)
-{
-    EeWonDirReply aReply = ee_won_dir_parse_multi(static_cast<const uint8_t*>(inData), inLength, DirTakeMulti,
-                                                  &outEntities);
-    if (aReply.has_sequence && outSequence != NULL) *outSequence = aReply.sequence;
-    switch (aReply.kind) {
-    case 0: return (WONStatus)aReply.status;
-    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
-    case 2: return (WONStatus)aReply.status;
-    default: throw ReadBufferException("Attempt to read past end of buffer.");
-    }
-}
-}
-
-// No original address identified: WON SDK single-entity reply parser
-namespace WONAPI {
-WONStatus DirEntityReplyParser::ParseSingleEntityReply(const void *theMsg, unsigned long theMsgLen, DirEntityPtr &theEntity)
-{
-    EeWonDirReply aReply = ee_won_dir_parse_single(static_cast<const uint8_t*>(theMsg), theMsgLen, DirTakeSingle,
-                                                   &theEntity);
-    switch (aReply.kind) {
-    case 0: return (WONStatus)WS_Success;
-    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
-    case 2: return (WONStatus)aReply.status;
-    default: throw ReadBufferException("Attempt to read past end of buffer.");
-    }
+    static_cast<DirEntityList*>(inList)->push_back(DirMakeEntity(inEntity));
 }
 }
 

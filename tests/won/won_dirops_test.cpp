@@ -19,6 +19,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "rust/ee_won.h"
+#include "won_dir_msg.h" // DirDataTypeSet
 
 using namespace WONAPI;
 

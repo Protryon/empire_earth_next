@@ -24,15 +24,25 @@
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
+//! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
+//! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
+//!   aircraft; the player's units as records).
+//! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events over the C++ host).
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
+pub mod chat;
+#[cfg(not(test))]
+mod chat_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod custom_campaign;
+pub mod hot_keys;
+#[cfg(not(test))]
+mod hot_keys_ffi;
 pub mod hud;
 mod hud_ffi;
 pub mod lobby;
@@ -40,6 +50,9 @@ pub mod lobby_form;
 #[cfg(not(test))]
 mod lobby_form_ffi;
 pub mod lobby_options;
+pub mod main_game;
+#[cfg(not(test))]
+mod main_game_ffi;
 pub mod main_game_options;
 #[cfg(not(test))]
 mod main_game_options_ffi;

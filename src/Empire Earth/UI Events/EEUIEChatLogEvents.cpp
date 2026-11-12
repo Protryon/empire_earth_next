@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\UI Events\EEUIEChatLogEvents.cpp (file name inferred: no __FILE__; class prefix EEUIECLE).
 // 0x1d321b..0x1d3a77: the init chain of the unused file-static key, EEUIECLEFormManager's members, the entry's
-// implicit members after their first users, the three ProcessEvents, then the deque<EEChatLogEntry> template members
+// implicit members after their first users, the three ProcessEvents (now Rust's: ee_screens chat.rs), then the deque<EEChatLogEntry> template members
 // (VC6 emits template COMDATs at the end of the unit). Unit flags: the exe's module set.
 #include <windows.h>
 #include <mbstring.h>
@@ -183,61 +183,7 @@ long EEUIECLEFormManager::Save(unsigned long inVersion, unsigned long inSize, FS
 // Copies a chat log entry
 // (EEChatLogEntry's implicit operator=)
 
-// FUNCTION: EXE 0x5d3565
-// Pauses the game and fills the chat log form with the logged lines ("<name>" ours, "[name]" others, "-" system),
-// or a centred "no chat messages" line, scrolled to the end
-long EEUIECLEOpenChatLog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UWideString theLine;
-    UWideString theString;
-    ::gWorld.PauseGame();
-    UIForm* theForm = gUIManager->GetFormByID(kFormChatLog);
-    EEUIECLEFormManager* theManager = EEUIECLEFormManager::Get();
-    UITextLabel* theLabel = static_cast<UITextLabel*>(theForm->GetControl(kChatLogChatLogTextBox));
-    theLabel->DeleteArray();
-    theLabel->SetAlignment(kTextAlignLeft);
-    for (unsigned long i = 0; i < theManager->mEntries.size(); i++) {
-        if (theManager->mEntries[i].mName.GetLength() == 0)
-            theLine = "  - ";
-        else if (theManager->mEntries[i].mName == ::gWorld.GetCurrentPlayer()->mName)
-            theLine = "  <" + theManager->mEntries[i].mName + "> ";
-        else
-            theLine = "  [" + theManager->mEntries[i].mName + "] ";
-        theLabel->AppendText(theLine + theManager->mEntries[i].mText + "\n");
-    }
-    if (theManager->mEntries.size() == 0) {
-        theLabel->SetAlignment(kTextAlignCenter);
-        gResource->GetString(IDS_NO_CHAT_MESSAGES, theString);
-        theLabel->AppendText(theString + "\n");
-    }
-    theLabel->SetStartingDisplayLine(theLabel->GetLineCount() - 1);
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5d3826
-// Unpauses the game and closes the chat log form
-long EEUIECLECloseChatLog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ::gWorld.UnpauseGame();
-    gUIManager->Pop();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5d3841
-// Closes the chat log when the mouse is pressed outside the form
-long EEUIECLEMousePressed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (!inForm->GetRectangle().Contains(inForm->GetMouseLocation())) {
-        UIEvent* theEvent = new EEUIECLECloseChatLog;
-        gUserInterface->PostEvent(theEvent, NULL);
-        theEvent->Dereference();
-    }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5d389c
-// Destroys the close-chat-log event and frees it when asked (scalar deleting destructor)
-// (??_G of EEUIECLECloseChatLog)
+// (0x5d3565..0x5d38c7: the chat log form's events, Rust's whole: ee_screens chat.rs)
 
 // FUNCTION: EXE 0x5d38c7
 // Removes the oldest chat log entry

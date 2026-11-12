@@ -53,7 +53,7 @@ DEFAULTS={175:'Random Map',177:'Small',179:'Continental',181:'Standard - High',1
 # control 17 is AcceptChanges (would request the civilization's upgrades: a simulation input). Cancel.
 # An unknown form is recorded (form<id>.txt in the evidence) and, if it stalls physics for 90 s, fails the run.
 DISMISS={35:'click 35 0',7:'click 7 16'}
-OPTIONS=28                # in-game options (EEUIEMGDisplayOptions on main-form control 3); control 0 = EEUIEMGOEReturnToGame
+OPTIONS=28                # in-game options (EE_SCREENS_MG_DISPLAY_OPTIONS on main-form control 3); control 0 = EEUIEMGOEReturnToGame
 
 
 def parse_state(text):
@@ -208,7 +208,7 @@ def run_ai_game(stage,evidence,addresses,options,ui,results,play_seconds):
         # The civilization timer (EEPhysics::CivilizationTimer) sends EEMCivTimerExpired at 240/270/300 game s through the
         # local input path, so the PT where it executes depends on wall time (hash agent: inputs counter and the computers'
         # mBB49 differ between two original runs from PT ~11214). Execute (0x4bd008) does nothing when the local player's
-        # mBB4A is set. Opening the civilization builder (main-form control 5, EEUIEMGDisplayCivBuilder) sets mBB4A (and
+        # mBB4A is set. Opening the civilization builder (main-form control 5, EE_SCREENS_MG_DISPLAY_CIV_BUILDER) sets mBB4A (and
         # the local mBB49) like a player who looks at it; Cancel sends nothing. Done at once so only those two flags of
         # the idle human change, early, on the UI thread.
         before=sample(pid,addresses,players=True)

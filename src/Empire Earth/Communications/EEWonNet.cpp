@@ -1088,9 +1088,7 @@ void EEWonNet::MOTDCallback(AsyncOp* inOp)
 // cancellable "connecting" message. (r25pre-won-2)
 void EEWonNet::GetTitanServerList()
 {
-    this->mDirOp = new GetDirOp(this->mDirServers.get());
-    this->mDirOp->SetFlags(0x703003a);
-    this->mDirOp->SetPath(kWonProductDirectory);
+    this->mDirOp = RustServerOp::NewGetDir(this->mDirServers.get(), kWonProductDirectory, 0x703003a);
     this->mDirOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetTitanServerListCompletion));
     this->mDirOp->RunAsync(15000);
 }
@@ -1100,13 +1098,14 @@ void EEWonNet::GetTitanServerList()
 // into their ServerContexts, starts the MOTD request and reports through the UI. (r25pre-won-2)
 void EEWonNet::GetTitanServerListCompletion(AsyncOp* inOp)
 {
-    GetDirOp* theOp = static_cast<GetDirOp*>((AsyncOp*)inOp);
+    RustServerOp* theOp = static_cast<RustServerOp*>((AsyncOp*)inOp);
     DirEntityList::const_iterator theEntity;
 
     this->mServers.clear();
     if (static_cast<AsyncOp*>(inOp) != (AsyncOp*)this->mDirOp.get() || inOp->GetStatus() != WS_Success)
         return;
-    for (theEntity = theOp->GetDirEntityList().begin(); theEntity != theOp->GetDirEntityList().end(); theEntity++) {
+    const DirEntityList theList = theOp->GetEntities(EE_WON_REQOP_DIR_LIST);
+    for (theEntity = theList.begin(); theEntity != theList.end(); theEntity++) {
         if ((*theEntity)->mName == kWonRoutingServerType)
             this->mServers.push_back(*theEntity);
     }
@@ -1192,15 +1191,11 @@ void EEWonNet::FnCFFF2()
 // Starts a WON account update with the new name and password and the e-mail flag
 void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPassword, bool inFlag)
 {
-    SmartPtr<UpdateAccountOp> theOp = new UpdateAccountOp(this->mAuthServers, this->mUser);
-
-    theOp->mAuthType = AUTH_TYPE_SESSION;
-    theOp->mAuthContext = this->mUser;
-    theOp->mEmail = std::string(inPassword);
-    theOp->mNewPassword = this->ToWString(inName);
+    SmartPtr<RustServerOp> theOp = RustServerOp::NewUpdateAccount(this->mAuthServers, this->mUser,
+                                                                  this->ToWString(inName), std::string(inPassword));
     theOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::UpdateAccountCallback));
-    theOp->mProfileData->ClearNewsletterSubs();
-    theOp->mProfileData->AddNewsletterSub(1, inFlag);
+    theOp->SetNum(EE_WON_REQOP_ACCOUNT_CLEAR_NEWSLETTERS, 0);
+    theOp->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1 | (inFlag ? 0x10000 : 0));
     theOp->RunAsync(15000);
 }
 
@@ -1229,12 +1224,11 @@ void EEWonNet::OpenUpdateAccount()
 {
     UWideString theMessage;
 
-    this->mAccountOp = new GetAccountOp(this->mAuthServers, this->mUser);
-    this->mAccountOp->mAuthType = AUTH_TYPE_SESSION;
-    this->mAccountOp->mAuthContext = this->mUser;
+    this->mAccountOp = RustServerOp::NewGetAccount(this->mAuthServers, this->mUser);
     this->mAccountOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetAccountCallback));
     this->mAccountOp->RunAsync(15000);
-    this->mAccountOp->mProfileData->AddNewsletterSub(true, false);
+    // after RunAsync, as the original (the setter waits for the Rust op's lock)
+    this->mAccountOp->SetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1);
     gResource->GetString(IDS_GETTING_CURRENT_USER_INFO, theMessage);
     gUIManager->DisplayCancel(theMessage, 1, (UIForm*)this->mAccountOp.get(), CancelOpCallback,
                               gUIManager->GetFormByID(kFormUpdateSierraAccount));
@@ -1260,8 +1254,8 @@ void EEWonNet::GetAccountCallback(AsyncOp* inOp)
     if (theStatus != WS_Killed) {
         if (theStatus == WS_Success) {
             gUserInterface->CloseForm(NULL);
-            theChecked = static_cast<GetAccountOp*>(inOp)->mProfileData->GetNewsletterSub(true);
-            theName = static_cast<GetAccountOp*>(inOp)->mEmail;
+            theChecked = static_cast<RustServerOp*>(inOp)->GetNum(EE_WON_REQOP_ACCOUNT_NEWSLETTER, 1) != 0;
+            theName = static_cast<RustServerOp*>(inOp)->GetBytes(EE_WON_REQOP_ACCOUNT_EMAIL);
             static_cast<UICheckBox*>(gUIManager->GetFormByID(kFormUpdateSierraAccount)->GetControl(kUpdateAccountSendMeEmailCheckbox))->SetChecked(theChecked);
             static_cast<UIEditBox*>(gUIManager->GetFormByID(kFormUpdateSierraAccount)->GetControl(kUpdateAccountEnterEmailEditBox))->SetText(UWideString(theName.c_str()));
         } else {

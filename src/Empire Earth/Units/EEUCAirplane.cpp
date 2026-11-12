@@ -206,13 +206,6 @@ void EEUCAirplane::UpdateEffects(EEComplexUnit* inUnit)
         this->UpdateRipples(inUnit);
 }
 
-// FUNCTION: EXE 0x60b9f0
-// Updates the plane like any landable aircraft
-void EEUCAirplane::Update(EEComplexUnit* inUnit)
-{
-    EEUCLandable::Update(inUnit);
-}
-
 // ICF-FOLDED: EXE 0x61b361
 // The stopping tile, the first cargo tile and the final unload tile are all the destination
 // (no address of its own: the same body as EEUCTransport::FindUnloadTiles, which ICF kept)

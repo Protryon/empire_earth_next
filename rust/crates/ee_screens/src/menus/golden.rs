@@ -56,8 +56,8 @@ fn event_name(event: u32) -> &'static str {
         crate::custom_campaign::EE_SCREENS_CC_OPEN => "class EEUIECCCEFormOpen",
         crate::custom_campaign::EE_SCREENS_CC_CLOSE => "class EEUIECCCEFormClose",
         crate::lobby_form::EE_SCREENS_LE_ACTIVATE_SINGLE => "class EEUIELEActivateSinglePlayer",
-        EE_SCREENS_CPP_DUMP_MEDIA => "class EEUIEMGDumpLoadedMedia(0,1)",
-        EE_SCREENS_CPP_DUMP_MEDIA_ALL => "class EEUIEMGDumpLoadedMedia(1,1)",
+        crate::main_game::EE_SCREENS_MG_DUMP_MEDIA => "class EEUIEMGDumpLoadedMedia(0,1)",
+        crate::main_game::EE_SCREENS_MG_DUMP_MEDIA_ALL => "class EEUIEMGDumpLoadedMedia(1,1)",
         _ => panic!("no name for {event:#x}"),
     }
 }

@@ -21,7 +21,6 @@ public:
     EEUCAirplane(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1)
     virtual ~EEUCAirplane() {}              // +0x00 dtor 0x2305ee
     virtual void ActionChanged(EEComplexUnit* inUnit); // +0x74 0x20b192
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x20b9f0 trivial: push dword ptr [esp + 4]; call 0x616a11; ret 4 (ICF: EEUCPlanetSpaceship)
     virtual void UpdateEffects(EEComplexUnit*); // +0xbc 0x20b9b4
     // +0xe4 0x21b361 (ICF: EEUCAirAnimal, EEUCHelicopterTransport...): as EEUCTransport's +0xe8 (EEUGUnloadTransport 0x228739)
     virtual void FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);

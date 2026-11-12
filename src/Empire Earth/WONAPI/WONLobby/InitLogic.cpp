@@ -336,13 +336,10 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         return;
     WONStatus status = inOp->GetStatus();
     if (ee_won_init_dir_answered(status)) {
-    GetMultiDirOp* op = static_cast<GetMultiDirOp*>(inOp);
-    const GetEntityRequestList& requests = op->GetRequestList();
-    GetEntityRequestList::const_iterator i = requests.begin();
-    int index = 0;
-    for (; i != requests.end(); ++i,++index) {
-        GetEntityRequest* request = i->get();
-        if (request->GetStatus() != 0)
+    RustServerOp* op = static_cast<RustServerOp*>(inOp);
+    int count = (int)op->GetNum(EE_WON_REQOP_DIR_LISTS);
+    for (int index = 0; index < count; ++index) {
+        if (op->GetNum(EE_WON_REQOP_DIR_STATUS, index) != 0)
             continue;
         ServerContext* selected = NULL;
         switch (ee_won_init_dir_request_target(index, !config->mAuthServers.empty())) {
@@ -352,7 +349,7 @@ void InitLogic::DirectoryCompletion(AsyncOp* inOp)
         case 4: selected = versions; break;
         }
         if (selected != NULL)
-            selected->AddAddressesFromDir(request->GetDirEntityList(),NULL);
+            selected->AddAddressesFromDir(op->GetEntities(EE_WON_REQOP_DIR_LIST, index),NULL);
     }
     if (auth->GetNumAddresses() == 0 || account->GetNumAddresses() == 0 ||
         versions->GetNumAddresses() == 0) {
@@ -404,7 +401,7 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
         if (anOutcome == 1) {
             ServerContext* versions = LobbyGetPatchServers();
             if (versions != NULL)
-                versions->NotifyFailed(static_cast<ServerRequestOp*>(inOp)->GetCurAddr());
+                versions->NotifyFailed(static_cast<RustServerOp*>(inOp)->GetCurAddr());
         }
         GUIString description = LobbyFormatString(::LobbyContainer_VersionCheckFailure_String,GetWONStatusString(status));
         this->SetError(0x40,description);
@@ -514,14 +511,11 @@ void InitLogic::StartDirectoryQuery()
     if (context == NULL)
         return;
     LobbyBroadcastEvent(new LoginInitStatusEvent(::LobbyContainer_QueryingServers_String, gEmptyGUIString, false, 0), true);
-    SmartPtr<GetMultiDirOp> op = new GetMultiDirOp(context);
-    op->SetFlags(0x04000002);
-    op->AddPath(L"/TitanServers/Auth");
-    op->AddPath(L"/TitanServers/DBProxy");
-    op->AddPath(L"/TitanServers/Firewall");
+    std::wstring paths[4] = { L"/TitanServers/Auth", L"/TitanServers/DBProxy", L"/TitanServers/Firewall" };
     LobbyConfig* config = GetLobbyConfig();
     if (config != NULL)
-        op->AddPath(config->mProductDirectory + L"/Patch");
+        paths[3] = config->mProductDirectory + L"/Patch";
+    SmartPtr<RustServerOp> op = RustServerOp::NewGetMultiDir(context, 0x04000002, paths, config != NULL ? 4 : 3);
     this->RunTrackedOp(op.get(), new LogicCompletion<InitLogic>(&InitLogic::DirectoryCompletion, this), 0);
 }
 }
@@ -540,9 +534,9 @@ void InitLogic::StartVersionCheck()
     const std::string& aProduct = config->mProductName;
     const std::string& aConfig = config->mLanguage;
     const std::string& aVersion = config->mVersion;
-    SmartPtr<ServerRequestOp> op = new ServerRequestOp(versions, ee_won_reqop_version_check(
+    SmartPtr<RustServerOp> op = RustServerOp::NewRequest(ee_won_reqop_version_check(
         reinterpret_cast<const uint8_t*>(aProduct.data()), aProduct.size(), reinterpret_cast<const uint8_t*>(aConfig.data()),
-        aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()));
+        aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()), versions);
     this->RunTrackedOp(op.get(),new LogicCompletion<InitLogic>(&InitLogic::VersionCompletion,this),0);
 }
 }

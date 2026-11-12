@@ -1,10 +1,12 @@
 // C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
-// 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the
-// game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp,
-// EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp,
-// EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp and EEUIEMainGameOptionsEvents.cpp.
+// 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
+// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
+// and the toolkit's and the game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces
+// EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp,
+// EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp,
+// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp, EEUIEChatEvents.cpp and EEUIEHotKeyEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -89,7 +91,6 @@
 #include "ee/EEWonNet.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIEMainGameEvents.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEMouse.h"
@@ -125,9 +126,27 @@
 #include "ee/EEPlayer.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/TSThread.h"
+#include "ee/EEUIFMGMainGroup.h"
+#include "ee/EEUIEChatLogEvents.h"
+#include "ee/EEUnitAction.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUIBSavedGroup.h"
+#include "ee/EEMiniMap.h"
+#include "lle/GETransformation.h"
+#include "lle/GETerrainMesh.h"
+#include "ee/EEMap.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEAPlayerEvent.h"
+#include "ee/EECheatCodes.h"
+#include "lle/GETextAlignment.h"
+#include "ee/EEUnit.h"
+#include "ee/EEUnitUtilities.h"
+#include "ee/EERenderObject.h"
+#include "ee/EECameraControl.h"
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
+extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
 unsigned long EEMenuWidth();   // Empire Earth.cpp
@@ -375,13 +394,8 @@ static void EEScreensExitYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_EXIT_YES,
 
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
 {
-    switch (inEvent) {
-    case 0:
+    if (inEvent == 0)
         return NULL;
-    case EE_SCREENS_CPP_DUMP_MEDIA:
-    case EE_SCREENS_CPP_DUMP_MEDIA_ALL:
-        return new EEUIEMGDumpLoadedMedia(inEvent == EE_SCREENS_CPP_DUMP_MEDIA_ALL);
-    }
     return new EEScreenEvent(inEvent);
 }
 
@@ -401,6 +415,412 @@ static uint32_t Bits(float inValue)
 static UWideString Text(const uint8_t* inText, size_t inLength)
 {
     return UWideString(std::string((const char*)inText, inLength).c_str());
+}
+
+// ---- the hot keys' (hot_keys.rs): inForm is the main game form
+
+// the last snapshot's complex units (EE_SCREENS_GAME_HK_CENTER's record index), filled by ee_screenscpp_hot_key_units
+static std::vector<EEComplexUnit*> sHotKeyUnits;
+
+// the current player's units as the hot keys see them (hot_keys.rs EeScreensHotKeyUnit; the aircraft's with the
+// squared distances from the point under the view's centre); up to inCapacity into outUnits; their count
+extern "C" size_t ee_screenscpp_hot_key_units(bool inAircraft, EeScreensHotKeyUnit* outUnits, size_t inCapacity)
+{
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
+    GE3DPoint theTarget;
+    GE3DPoint theLocation;
+    if (inAircraft) {
+        GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
+        if (gWorld.mMap->GetLocationAt(theCursor, theTarget, true) == NULL) {
+            long theX;
+            long theY;
+            gWorld.mMap->GetTileAt(theCursor, theX, theY);
+            theTarget.SetX(theX + 0.5f);
+            theTarget.SetY(theY + 0.5f);
+        }
+        theTarget.SetZ(0.0f);
+        theLocation.SetZ(0.0f);
+    }
+    sHotKeyUnits.clear();
+    size_t theCount = 0;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit; theUnit = static_cast<EEUnit*>(theUnit->mNext), theCount++) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        sHotKeyUnits.push_back(theComplex);
+        if (theCount >= inCapacity)
+            continue;
+        EeScreensHotKeyUnit& r = outUnits[theCount];
+        r = EeScreensHotKeyUnit();
+        r.unit_id = theUnit->mUnitID;
+        if (theComplex == NULL)
+            continue;
+        r.flags |= EE_SCREENS_HK_F_COMPLEX;
+        if (theUnit->mHitPoints > 0)
+            r.flags |= EE_SCREENS_HK_F_ALIVE;
+        if (theUnit->mTile != NULL)
+            r.flags |= EE_SCREENS_HK_F_ON_TILE;
+        if ((r.flags & (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) == (EE_SCREENS_HK_F_ALIVE | EE_SCREENS_HK_F_ON_TILE)) {
+            // the unit selection's fields
+            r.complex_id = theComplex->mUnitID;
+            r.unit_type = theUnit->mUnitClass->mUnitType;
+            r.category = theUnit->mUnitClass->mCategory;
+            r.command = theComplex->mCommand ? theComplex->mCommand->mType : 0;
+            r.max_velocity = Bits(theUnit->mStats->mMaxVelocity);
+        }
+        if (theGroup->Contains(theUnit->GetComplexUnit()))
+            r.flags |= EE_SCREENS_HK_F_SELECTED;
+        // the aircraft's fields (of the complex unit)
+        r.c_category = theComplex->mUnitClass->mCategory;
+        r.c_hit_points = theComplex->mHitPoints;
+        if (theComplex->mIsCommandable)
+            r.flags |= EE_SCREENS_HK_F_C_COMMANDABLE;
+        if (theComplex->mTileX != -10000)
+            r.flags |= EE_SCREENS_HK_F_C_TILE;
+        if (theComplex->mContainer)
+            r.flags |= EE_SCREENS_HK_F_C_CONTAINER;
+        if (theComplex->mIsDisabled)
+            r.flags |= EE_SCREENS_HK_F_C_DISABLED;
+        if (theComplex->mPreviousPart != NULL)
+            r.flags |= EE_SCREENS_HK_F_C_PREVIOUS_PART;
+        if (theComplex->mGoalState) {
+            r.flags |= EE_SCREENS_HK_F_C_GOAL;
+            r.c_goal_kind = theComplex->mGoalState->mKind;
+        }
+        r.c_family = theComplex->mUnitClass->mFamily;
+        r.c_ammo = theComplex->mUnitClass->mAmmoType;
+        r.c_type = theComplex->mUnitClass->mUnitType;
+        r.c_max_hit_points = theComplex->mStats->mMaxHitPoints;
+        if (inAircraft) {
+            if (theComplex->mContainer == NULL) {
+                theLocation.SetX(theComplex->mPhysicalModel.GetLocation().GetX());
+                theLocation.SetY(theComplex->mPhysicalModel.GetLocation().GetY());
+            } else {
+                theLocation.SetX(theComplex->mContainer->mPhysicalModel.GetLocation().GetX());
+                theLocation.SetY(theComplex->mContainer->mPhysicalModel.GetLocation().GetY());
+            }
+            r.distance = Bits(theLocation.DistanceToSquared(theTarget));
+        }
+    }
+    return theCount;
+}
+
+static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    switch (inOp) {
+    case EE_SCREENS_GAME_HK_UPDATE_SELECTION:
+        thePlayer->UpdateSelection(NULL, true);
+        break;
+    case EE_SCREENS_GAME_HK_RESET_SAVED:
+        thePlayer->mSavedGroups.Reset(0x14, true);
+        break;
+    case EE_SCREENS_GAME_HK_GROUP:
+        if (inA == 0)
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupSelect((unsigned char)inB, inC != 0), kSlotNone);
+        else if (inA == 1)
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupAddSelection((unsigned char)inB), kSlotNone);
+        else
+            gCommunications->ProcessLocalUserInput(new EEMSavedGroupCreate((unsigned char)inB), kSlotNone);
+        break;
+    case EE_SCREENS_OP_HK_GROUP_BUTTON:
+        static_cast<EEUIBSavedGroup*>(inForm->GetControl(inA))->SetUnit(thePlayer->mSelectedGroup->GetFirstUnit());
+        break;
+    case EE_SCREENS_GAME_HK_PLAYER_EVENT: {
+        EEAction* theAction = new EEAPlayerEvent;
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_SCREENS_GAME_HK_SHIFT: {
+        ISEntity* theKey;
+        gISKeyboard->GetEntity(kKeyShift, theKey);
+        return (uint32_t)theKey->GetValue();
+    }
+    case EE_SCREENS_GAME_HK_SELECT_UNIT:
+        gCommunications->ProcessLocalUserInput(new EEMSelectUnit(inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_HK_ADD_UNIT:
+        gCommunications->ProcessLocalUserInput(new EEMAlwaysAddUnitToSelectedGroup(inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_HK_CENTER: {
+        // the camera on the unit, the mini map refreshed, the camera no longer following
+        const GETransformation& theTransformation = sHotKeyUnits[inA]->mPhysicalModel.GetLocation();
+        GE3DPoint theCenter;
+        theCenter.SetX(theTransformation.GetX());
+        theCenter.SetY(theTransformation.GetY());
+        theCenter.SetZ(theTransformation.GetZ());
+        gWorld.mCameraControl.SetChanged();
+        gWorld.mCameraControl.SetLocation(theCenter, false, true);
+        gMiniMap->Refresh();
+        gCameraFollowing = false;
+        break;
+    }
+    case EE_SCREENS_GAME_HK_ALARM:
+        if (EESoundObject::Get(kSoundHotKeyAlarm))
+            gSoundManager->Play(EESoundObject::Get(kSoundHotKeyAlarm)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
+        break;
+    }
+    return 0;
+}
+
+// ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
+static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_CH_CHAT_TYPE:
+        gCommunications->ProcessLocalUserInput(new EEMSelectPlayerChatType((long)inA), kSlotNone);
+        break;
+    case EE_SCREENS_OP_CH_SEND_KEYS: {
+        // Enter: one event for the hot key and the edit box's Enter
+        UIHotKey theHotKey;
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        theHotKey.SetKey(DIK_RETURN);
+        theHotKey.SetJustPressedEvent(theEvent);
+        inForm->GetControl(kChatTextEditBox)->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
+        theEvent->Dereference();
+        inForm->AddHotKey(theHotKey, 0);
+        break;
+    }
+    case EE_SCREENS_OP_CH_HOT_KEY:
+        inForm->AddHotKey(inA, inB, kKeyNone, kKeyNone, EECreateScreenEvent(inC), NULL, NULL, NULL, 0, false);
+        break;
+    case EE_SCREENS_GAME_CH_OBSERVER:
+        return gWorld.GetCurrentPlayer()->mObserverMode != false;
+    case EE_SCREENS_GAME_CH_PLAYER_TYPE:
+        return gWorld.GetCurrentPlayer()->mChatType;
+    case EE_SCREENS_OP_CH_TABBED_TO:
+        inForm->GetControl(inA)->TabbedTo();
+        break;
+    case EE_SCREENS_OP_CH_KEYBOARD_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        inForm->SetFormKeyboardCapturedEvent(theEvent);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_CH_KEYBOARD_CAPTURED:
+        return inForm->GetIsKeyboardCaptured();
+    case EE_SCREENS_OP_CH_TAB_STOP:
+        inForm->SetTabStop(inA);
+        break;
+    case EE_SCREENS_GAME_CH_CLOSE:
+        return (uint32_t)gUserInterface->CloseForm(gUIManager->mMainGameForm);
+    case EE_SCREENS_OP_CH_MOUSE_INSIDE:
+        return inForm->GetRectangle().Contains(inForm->GetMouseLocation());
+    case EE_SCREENS_GAME_CH_CHEATS:
+        return gWorld.GetCheatsEnabled();
+    case EE_SCREENS_OP_CL_BEGIN: {
+        UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox));
+        theLabel->DeleteArray();
+        theLabel->SetAlignment(kTextAlignLeft);
+        break;
+    }
+    case EE_SCREENS_GAME_CL_COUNT:
+        return EEUIECLEFormManager::Get()->mEntries.size();
+    case EE_SCREENS_OP_CL_CENTER:
+        static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->SetAlignment(kTextAlignCenter);
+        break;
+    case EE_SCREENS_OP_CL_END: {
+        UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox));
+        theLabel->SetStartingDisplayLine(theLabel->GetLineCount() - 1);
+        break;
+    }
+    case EE_SCREENS_GAME_CL_UNPAUSE:
+        gWorld.UnpauseGame();
+        break;
+    default:
+        return EEScreensHotKeyCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+// ---- the main game form's events' (main_game.rs): inForm is the main game form (or the editor's, for the media
+// dump); the behaviour menu's calls are on the manager's main game form, as the original's
+static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_MG_UI_STATE:
+        return (uint32_t)inForm->mUIState;
+    case EE_SCREENS_GAME_MG_GHOSTS:
+        return gWorld.GetNumGhostUnits();
+    case EE_SCREENS_GAME_MG_CLEAR_GHOSTS:
+        gWorld.mGhostUnitsLock->Enter();
+        gWorld.ClearGhostUnits();
+        gWorld.mGhostUnitsLock->Leave();
+        break;
+    case EE_SCREENS_GAME_MG_CLEAR_GATE_GHOSTS:
+        inForm->mBuildGate.ClearGhostUnits();
+        break;
+    case EE_SCREENS_GAME_MG_SET_UI_STATE:
+        inForm->SetUIState((long)(int32_t)inA);
+        break;
+    case EE_SCREENS_GAME_MG_POINTER:
+        gMouse->mPointer = (long)(int32_t)inA;
+        break;
+    case EE_SCREENS_GAME_MG_CURSOR_LOCK:
+        inForm->mIsCursorLocked = inA != 0;
+        break;
+    case EE_SCREENS_GAME_MG_REFRESH_GROUP:
+        if (gUIManager->mMainGameForm)
+            gUIManager->mMainGameForm->mRefreshGroup = true;
+        break;
+    case EE_SCREENS_GAME_MG_DUMP_MEDIA: {
+        // Media Dump.txt in the startup folder (replaced when inA), the loaded media (and leaks when inB) appended
+        FSFileSpec theFile;
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gStartupDirectory);
+        theFile.SetFile("Media Dump.txt");
+        if (inA)
+            theFile.Delete();
+        theFile.Create();
+        long theResult = theFile.FOpen("a+");
+        if (theResult == 0) {
+            gUserInterface->AddChatLogEntry("Dumped Media Information.", theResult);
+            gWorld.DumpMedia(theFile, inB != 0);
+            theFile.Close();
+        }
+        return (uint32_t)theResult;
+    }
+    case EE_SCREENS_GAME_MG_SHOW_DIALOG:
+        return (uint32_t)gPhysics->PostShowDialogMessage();
+    case EE_SCREENS_GAME_MG_CURRENT_GROUP:
+        inForm->mCurrentGroup = inA;
+        break;
+    case EE_SCREENS_GAME_MG_ENTITY_GROUP:
+        inForm->SetEntityGroup((long)inA);
+        break;
+    case EE_SCREENS_GAME_MG_REFRESH_FORM:
+        inForm->FnE123D();
+        break;
+    case EE_SCREENS_GAME_MG_CIV_BUILDER:
+        return (uint32_t)gUserInterface->PostDisplayCivBuilder();
+    case EE_SCREENS_GAME_MG_HAS_PLAYER:
+        return gWorld.GetCurrentPlayer() != NULL;
+    case EE_SCREENS_GAME_MG_SHIFT:
+        if (inA)
+            gCommunications->ProcessLocalUserInput(new EEMEnterShiftMode(gPhysics->mGameTime), kSlotNone);
+        else
+            gCommunications->ProcessLocalUserInput(new EEMExitShiftMode(gPhysics->mGameTime), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_MG_AIRPORT_SELECTED: {
+        EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+        for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
+            EEComplexUnit* theUnit = theGroup->GetUnit(i);
+            if (theUnit && theUnit->mUnitClass->mUnitType == kUnitTypeAirport)
+                return 1;
+        }
+        return 0;
+    }
+    case EE_SCREENS_GAME_MG_RALLY:
+        gCommunications->ProcessLocalUserInput(new EEMIncrementRallyTimer((unsigned char)inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_MG_HOT_KEY_MODE:
+        return gUIManager->mMainGameForm->mHotKeyMode;
+    case EE_SCREENS_GAME_MG_TO_EDITOR: {
+        // back from a test game to the scenario editor: the ghosts cleared, the player to the editor slot, the
+        // simulation stopped, the editor switch and the pause posted
+        NEProtocol* theProtocol = NULL;
+        gWorld.mGhostUnitsLock->Enter();
+        gWorld.ClearGhostUnits();
+        gWorld.mGhostUnitsLock->Leave();
+        NEProtocol::GetProtocol(0, theProtocol);
+        gWorld.MovePlayerToSlot(0xfe, gWorld.GetCurrentPlayer()->GetSlot(), 1, theProtocol->GetLocalAddress(gNetworkAdapter), 0);
+        gPhysics->mThread->Post(0x402, NULL, NULL, true);
+        long theResult = gUserInterface->PostEnterScenarioEditor(gUIManager->GetInScenarioEditor());
+        gUserInterface->PostPauseInformation(true);
+        return (uint32_t)theResult;
+    }
+    case EE_SCREENS_GAME_MG_QUICK_SAVE: {
+        // the timestamped quick save (remembered in the settings) to every player
+        UWideString theName;
+        TMTime theTime;
+        NESynchronousServer* theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
+        TMGetTimeOfDay(theTime);
+        sprintf(theName, "%s %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds%s", "QuickSave", theTime.mYear, theTime.mMonth + 1,
+                theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
+        gGamePreferences.mSettings.mLastQuickSave = theName;
+        gGamePreferences.Save();
+        theServer->SendToAllAndWait(new EEMLoadOrSaveGame(theName, TMGetTime(), 0, 1,
+                                                          gCommunications->GetNumberOfCTsProcessedInPhysics(), 0),
+                                    15000, 12);
+        break;
+    }
+    case EE_SCREENS_GAME_MG_DIALOG_SHOWN: {
+        UIControl* theMessage = inForm->GetControl(kMainGameDialogMessage);
+        return (theMessage != NULL && theMessage->GetDisplayMode() == kDisplayModeShown) || gWorld.mInCinematic;
+    }
+    case EE_SCREENS_GAME_MG_CLOCK:
+        return (uint32_t)inForm->mClockMode;
+    case EE_SCREENS_GAME_MG_SET_CLOCK:
+        inForm->mClockMode = (long)inA;
+        break;
+    case EE_SCREENS_GAME_MG_KILL:
+        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMKillUnit(inA != 0), kSlotNone);
+    case EE_SCREENS_GAME_MG_ATTACK:
+        return (uint32_t)gCommunications->ProcessLocalUserInput(new EEMAttackPlayers(gWorld.mCurrentPlayer, inA != 0),
+                                                                kSlotNone);
+    case EE_SCREENS_GAME_MG_HIDDEN_MODE:
+        return (uint32_t)gHiddenUnitsMode;
+    case EE_SCREENS_GAME_MG_SET_HIDDEN_MODE:
+        gHiddenUnitsMode = (long)inA;
+        break;
+    case EE_SCREENS_GAME_MG_MARK_HIDDEN_MOVED:
+        for (EEUnit* theUnit = (EEUnit*)gWorld.mUnits.mFirst; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mTileNode->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex && theComplex->mCanBeHidden)
+                theComplex->mHiddenFlags |= kHiddenFlagMoved;
+        }
+        break;
+    case EE_SCREENS_GAME_MG_FOLLOW_LEAD: {
+        EEUnit* theUnit = gWorld.GetUnit(EEGetLeadUnitID(gWorld.GetCurrentPlayer()));
+        gWorld.mCameraControl.Follow(theUnit, inA != 0, 1.0f, 0.0f, 0.0f);
+        if (inA == 0)
+            gWorld.mCameraControl.SetChanged();
+        break;
+    }
+    case EE_SCREENS_GAME_MG_CAMERA_MODE:
+        return (uint32_t)gWorld.mCameraControl.mMode;
+    case EE_SCREENS_GAME_MG_SET_CAMERA_MODE:
+        gWorld.mCameraControl.SetMode((long)inA);
+        break;
+    case EE_SCREENS_GAME_MG_ZOOM_STYLE:
+        gGamePreferences.mSettings.mZoomStyle = gWorld.mCameraControl.mMode;
+        break;
+    case EE_SCREENS_GAME_MG_LOCK_SPEED:
+        return gWorld.mGameOptions.GetLockSpeed() != false;
+    case EE_SCREENS_GAME_MG_GAME_SPEED:
+        return Bits(gWorld.GetGameSpeed());
+    case EE_SCREENS_GAME_MG_SPEED_TABLE:
+        return Bits(inA == 0   ? gWorldTable.GetFloatValue(kWorldGameSpeedStep)
+                    : inA == 1 ? gWorldTable.GetFloatValue(kWorldGameSpeedRange)
+                               : gWorldTable.GetFloatValue2(kWorldGameSpeedRange));
+    case EE_SCREENS_GAME_MG_SEND_SPEED:
+        gCommunications->ProcessLocalUserInput(new EEMGameSpeed(Float(inA)), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_MG_SELECTED_COMMAND: {
+        EEUIFMGMainGroup* theGroup = static_cast<EEUIFMGMainGroup*>(gUIManager->mMainGameForm->mGroups[0]);
+        EEUnit* theUnit = theGroup->GetSelectedUnit();
+        if (!theUnit || !theUnit->mComplexUnit || !theUnit->mUnitClass)
+            return 0;
+        return theUnit->mUnitClass->mCommands[inA];
+    }
+    case EE_SCREENS_GAME_MG_BEHAVIOR:
+        gCommunications->ProcessLocalUserInput(new EEMSetUnitBehavior((long)inA), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS:
+        gUIManager->mMainGameForm->GetEntityGroup(9)->Disable();
+        gUIManager->mMainGameForm->GetBackgroundByID(0x97)->SetVisibility(false);
+        break;
+    case EE_SCREENS_GAME_MG_COPY_BITMAPS: {
+        UIButton* theButton = static_cast<UIButton*>(gUIManager->mMainGameForm->GetControl(inA));
+        UIButton* theSource = static_cast<UIButton*>(gUIManager->mMainGameForm->GetControl(inB));
+        theButton->SetNormalBitmap(theSource->GetNormalBitmap());
+        theButton->SetPressedBitmap(theSource->GetPressedBitmap());
+        break;
+    }
+    default:
+        return EEScreensChatCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
 }
 
 // the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
@@ -1197,9 +1617,14 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         gUserInterface->PostEnterScenarioEditor(gUIManager->mInScenarioEditor);
         gUserInterface->PostPauseInformation(true);
         break;
-    case EE_SCREENS_GAME_GO_USER_PAUSE:
-        gUserInterface->PostAction(new EEAUserPauseGame);
+    case EE_SCREENS_GAME_GO_USER_PAUSE: {
+        // (1: our reference dropped, as the main game form's pause did; the options menu's original kept it)
+        EEAction* theAction = new EEAUserPauseGame;
+        gUserInterface->PostAction(theAction);
+        if (inA)
+            theAction->Dereference();
         break;
+    }
     case EE_SCREENS_GAME_GO_REQUEST_PAUSE:
         gCommunications->ProcessLocalUserInput(new NEMClientRequestPause, kSlotNone);
         break;
@@ -1247,6 +1672,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
+    default:
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB, inC);
     }
     return 0;
 }
@@ -1266,6 +1693,15 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     switch (inWhich) {
     case EE_SCREENS_TEXT_MUSIC_FILE:
         theText = theForm->GetMusicFileName();
+        break;
+    case EE_SCREENS_TEXT_CL_NAME:
+        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mName;
+        break;
+    case EE_SCREENS_TEXT_CL_TEXT:
+        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mText;
+        break;
+    case EE_SCREENS_TEXT_CL_PLAYER:
+        theText = gWorld.GetCurrentPlayer()->mName;
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -1568,6 +2004,37 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_MESSAGE:
         gUIManager->DisplayMessage(theText, true, NULL, 0, inArg != 0);
         break;
+    case EE_SCREENS_TEXT_MG_CHAT_LOG:
+        gUserInterface->AddChatLogEntry(theText, 0);
+        break;
+    case EE_SCREENS_TEXT_CH_CHEAT: {
+        long theCode = 0;
+        long theParameter = 0;
+        gCheatCodes->ParseCheatCode(theText, theCode, theParameter);
+        if (theCode != 0)
+            gCommunications->ProcessLocalUserInput(new EEMCheatCode(theCode, theParameter), kSlotNone);
+        break;
+    }
+    case EE_SCREENS_TEXT_CH_CHAT:
+        gCommunications->ProcessLocalUserInput(new EEMInGameChat(theText), kSlotNone);
+        break;
+    case EE_SCREENS_TEXT_CL_APPEND:
+        static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
+        break;
+    case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
+        // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found
+        UWideString theName = inArg ? gGamePreferences.mSettings.mLastAutoSave : gGamePreferences.mSettings.mLastQuickSave;
+        FSFileSpec* theFile = new FSFileSpec;
+        long theResult = EEOpenSaveGameFile((const char*)theName, "Saved Games\\", theFile);
+        if (theResult == kErrorOK) {
+            theFile->SetFile((const char*)theName);
+            gUserInterface->PostLoadSavedGame(*theFile);
+        } else
+            gUIManager->DisplayMessage(theText, 1, NULL, 0, true);
+        if (theFile)
+            delete theFile;
+        break;
+    }
     case EE_SCREENS_TEXT_LABEL_LINES: {
         UITextLabel* theLabel = static_cast<UITextLabel*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff));
         theLabel->DeleteArray();

@@ -1,6 +1,6 @@
 // The chat log form's events and its form manager (RECONSTRUCTION; header and file names inferred, from the class
 // prefix EEUIECLE). EEUIEChatLogEvents.cpp (0x1d321b..0x1d3a77) defines EEUIECLEFormManager (the form 0x1d's
-// manager: the last 40 chat lines, saved with the game) and the events' ProcessEvents. The UI thread adds the lines
+// manager: the last 40 chat lines, saved with the game); its events are Rust's (ee_screens chat.rs). The UI thread adds the lines
 // (EEUserInterface 0x2787fe, 0x27892d); EESaveLoad calls Load/Save (0x14c383, 0x14c50b). Names are provisional.
 // Requires <deque>, lle/GEColor.h, lle/UIFormManager.h, lle/UIEvent.h.
 #ifndef EE_EEUIECHATLOGEVENTS_H
@@ -29,24 +29,6 @@ public:
     static long Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile);   // 0x1d3434
 
     std::deque<EEChatLogEntry> mEntries;    // +0x04
-};
-
-class EEUIECLEOpenChatLog : public UIEvent {
-public:
-    virtual ~EEUIECLEOpenChatLog() {}   // user-declared: its ??_G stores the own vptr first (EEUIManager.cpp)
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIECLECloseChatLog : public UIEvent {         // vtable 0x446298
-public:
-    virtual ~EEUIECLECloseChatLog() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIECLEMousePressed : public UIEvent {
-public:
-    virtual ~EEUIECLEMousePressed() {}   // user-declared: its ??_G stores the own vptr first (EEUIManager.cpp)
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 };
 
 #endif

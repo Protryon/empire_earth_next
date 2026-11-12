@@ -717,7 +717,7 @@ void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void*
         gWorld.mLock->WriteUnlock();
         break;
     case 0x508:
-        if (gWorld.mScenarioManager)
+        if (gWorld.mScenarioManager && !gScenarioSimDialogs)
             gWorld.mScenarioManager->ShowDialogMessage();
         break;
     case 0x509:
@@ -1584,6 +1584,7 @@ static void TickStep(void* inContext, uint32_t inIndex, uint32_t inID)
                           inIndex < gWorld.mUpdateUnits.size() ? (long)gWorld.mUpdateUnits[inIndex].GetSavedID() : -1);
     gPhysicsSteppingUnit = gWorld.mUpdateUnits[inIndex];   // TEST ONLY: named by EE-SIM's random-draw trace
     gWorld.mUpdateUnits[inIndex]->Step();
+    EEUnitUpdateCommit(inID);   // TEST ONLY (USST kind 12)
 }
 
 unsigned long EEPhysics::UpdateUnits()

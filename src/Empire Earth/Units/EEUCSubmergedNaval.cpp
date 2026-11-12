@@ -16,6 +16,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -113,26 +115,9 @@ EEUnit* EEUCSubmergedNaval::CreateUnit(long inX, long inY, long inPlayer, bool i
 // path dropped); other actions use the common handling
 void EEUCSubmergedNaval::ActionChanged(EEComplexUnit* inUnit)
 {
-    std::vector<EETileCoordinate> theTiles;
-    float theVolume;
-    float thePan;
-    float thePitch;
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionDying) {
-        this->HandleActionChanged(inUnit);
-    } else {
-        if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        EESoundObject* theSound = inUnit->mStats->mDeathSound;
-        if (theSound != NULL) {
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
-            gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
-        }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
-        inUnit->SetVelocity(0.0f);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
-    }
+    // New (R5b.4, the thirteenth round): the decision is Rust (ee_units actions.rs), its operations
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassActionChanged(EE_UNITS_ACTION_SUBMERGED_NAVAL, this, inUnit);
 }
 
 // FUNCTION: EXE 0x61aef9
@@ -188,28 +173,9 @@ long EEUCSubmergedNaval::EvaluateCondition(EEComplexUnit* inUnit, unsigned long 
 // and counts down its rotting time
 void EEUCSubmergedNaval::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    this->UpdateDone(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_SUBMERGED_NAVAL, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61884e

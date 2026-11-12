@@ -58,6 +58,8 @@ struct Standin {
     int mSerial, mStatus, mMode, mLfs, mLastSocket, mCalls;
     unsigned mTick;
     int mLine; // the next line of the session LineBytes gives
+    bool mReq; // a request exchange's sequence (its own answers: ReqBytes, the peer auth's statuses)
+    int mAuth; // the request's mAuthType
     std::vector<int> mRands;
     std::vector<string> mAddrs;
     std::map<int, int> mOwn;  // the op's own references per object (NEW_*, ADD_REF, RELEASE)
@@ -158,6 +160,31 @@ static string LineBytes(bool* outNull)
     if (*outNull) return string();
     return string(k[i]) + '\0';
 }
+// a request exchange's reply: a reused session's "expired", a ping reply, anything
+static string ReqBytes(bool* outNull)
+{
+    int k = APick(6);
+    if (k == 0) {
+        *outNull = false;
+        const char r[10] = { 1, 0, 0, 0, 15, 0, 0, 0, (char)APick(3), 0 };
+        return string(r, 10);
+    }
+    if (k == 1 || k == 2) {
+        *outNull = false;
+        unsigned t = S.mTick - APick(50);
+        const char r[] = { 3, 1, 6, (char)(t & 0xff), (char)((t >> 8) & 0xff), (char)((t >> 16) & 0xff),
+                           (char)(t >> 24), (char)APick(2) };
+        return string(r, k == 1 ? 7 : 8);
+    }
+    if (k == 3) { // a DB proxy reply (the user id lookup's), the last one or not
+        *outNull = false;
+        const char r[] = { 5, 14, 0, (char)0xea, 3, 17, 0, 0, 0, 0, 0, (char)(APick(3) ? 0x80 : 0), 7, 0, 0, 0 };
+        string b(r, sizeof(r));
+        if (APick(4) == 0) b.resize(APick((int)sizeof(r)));
+        return b;
+    }
+    return Bytes(outNull);
+}
 static string Addr()
 {
     if (!S.mAddrs.empty() && APick(4) != 0) return S.mAddrs[APick((int)S.mAddrs.size())];
@@ -244,6 +271,7 @@ static void Call(EeWonHostCall* c)
     case EE_WON_HOST_OP_STATUS: {
         std::map<int, int>::const_iterator k = S.mKinds.find(o0);
         int v = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? SendStatus() : RecvStatus();
+        if (S.mReq && APick(6) == 0) v = 100053; // WS_PeerAuth_GetCertFailure
         c->out_num = v;
         Log("st#%d=%d", o0, v);
         break;
@@ -251,7 +279,8 @@ static void Call(EeWonHostCall* c)
     case EE_WON_HOST_OP_BYTES: {
         bool isNull;
         std::map<int, int>::const_iterator k = S.mKinds.find(o0);
-        string b = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? LineBytes(&isNull) : Bytes(&isNull);
+        string b = (k != S.mKinds.end() && k->second == EE_WON_HOST_OP_RECV_CR_MSG) ? LineBytes(&isNull)
+                   : S.mReq ? ReqBytes(&isNull) : Bytes(&isNull);
         Give(c, b, isNull);
         Log("bytes#%d=%s", o0, BytesLog(b, isNull).c_str());
         break;
@@ -313,7 +342,7 @@ static void Call(EeWonHostCall* c)
     case EE_WON_HOST_RECV_MSG: {
         int v = SendStatus();
         bool isNull;
-        string b = c->code == EE_WON_HOST_RECV_BYTES ? AckBytes(&isNull) : StatusBytes(&isNull);
+        string b = c->code == EE_WON_HOST_RECV_BYTES ? AckBytes(&isNull) : S.mReq ? ReqBytes(&isNull) : StatusBytes(&isNull);
         c->out_num = v;
         Give(c, b, isNull);
         if (c->code == EE_WON_HOST_RECV_BYTES)
@@ -386,6 +415,43 @@ static void Call(EeWonHostCall* c)
     case EE_WON_HOST_BASE_CLEANUP: Log("basecleanup"); break;
     case EE_WON_HOST_RELEASE: S.mOwn[o0]--; break;
     case EE_WON_HOST_ADD_REF: S.mOwn[o0]++; break;
+    case EE_WON_HOST_AUTH_TYPE: c->out_num = S.mAuth; break;
+    case EE_WON_HOST_HAS_AUTH: c->out_num = APick(5) != 0; Log("hasauth=%d", (int)c->out_num); break;
+    case EE_WON_HOST_CONNECT_TIME:
+    case EE_WON_HOST_TIMEOUT: {
+        unsigned v = APick(2) ? 20000 : 0;
+        c->out_num = v;
+        Log("%s=%u", c->code == EE_WON_HOST_TIMEOUT ? "timeout" : "ctime", v);
+        break;
+    }
+    case EE_WON_HOST_CERT_USER_ID: c->out_num = ANext(); Log("uid=%u", (unsigned)c->out_num); break;
+    case EE_WON_HOST_CTX_ADDRS: {
+        int n = APick(4);
+        string b;
+        for (int i = 0; i < n; i++) b += Addr();
+        Give(c, b, n == 0 && APick(2) == 0);
+        Log("addrs#%d=%s", o0, Hex(b).c_str());
+        break;
+    }
+    case EE_WON_HOST_CTX_FAILED: Log("failed#%d %s", o0, Hex(addr).c_str()); break;
+    case EE_WON_HOST_GET_SESSION:
+    case EE_WON_HOST_PEER_AUTH_SESSION: {
+        int id = APick(3) == 0 ? 0 : NewObj();
+        c->out_obj = P(id);
+        if (c->code == EE_WON_HOST_GET_SESSION) Log("session %s=%d", Hex(addr).c_str(), id);
+        else Log("psession#%d=%d", o0, id);
+        break;
+    }
+    case EE_WON_HOST_PUT_SESSION: Log("put %s %d", Hex(addr).c_str(), o0); break;
+    case EE_WON_HOST_ADD_CRYPT: Log("crypt#%d %d", o0, o1); break;
+    case EE_WON_HOST_KILL_ALL: Log("killall"); break;
+    case EE_WON_HOST_PEER_AUTH_CERT: {
+        static const int k[] = { 0, 100001, 100062, 100072 };
+        c->out_num = k[APick(4)];
+        Log("cert#%d=%d", o0, (int)c->out_num);
+        break;
+    }
+    case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = APick(4) != 0; Log("isrecv#%d=%d", o0, (int)c->out_num); break;
     default: Log("unknown %d", c->code); break;
     }
 }
@@ -1136,6 +1202,342 @@ static string Results(const Op& o)
 }
 }
 
+// ---- the original's statements: ServerRequestOp.cpp before round 10 (its exchange is server.rs's, as the C++
+// called it; its primitives over the op stand-in, a Rust op derived from it the request's own: ee_won_reqop_*).
+// The iterator before any RunHook (default-constructed there) and after the context's copy (left dangling there)
+// is the list's begin; the reuse and expiry flags, unset before a RunHook, false.
+
+namespace OrigReq {
+typedef std::list<string> AddrList;
+struct Op {
+    AddrList mAddrList;
+    AddrList::iterator mAddrItr;
+    int mCurSession, mUsedSession, mSocket, mServerContext, mUDPSocket;
+    bool mReusingSession, mSessionExpired, mUseAuth2, mCloseConnection, mUseLast;
+    int32_t mGetCertStatus, mLastServerError;
+    string mCurAddr;
+    bool mHasRequest, mHasResponse;
+    string mRequest, mResponse;
+    EeWonReqOp* mRustOp;
+    explicit Op(EeWonReqOp* inOp)
+        : mCurSession(0), mUsedSession(0), mSocket(0), mServerContext(0), mUDPSocket(0), mReusingSession(false),
+          mSessionExpired(false), mUseAuth2(true), mCloseConnection(true), mUseLast(false), mGetCertStatus(100004),
+          mLastServerError(100004), mCurAddr(6, '\0'), mHasRequest(false), mHasResponse(false), mRustOp(inOp)
+    {
+        this->mUseAuth2 = ee_won_reqop_use_auth2(inOp);
+        this->mAddrItr = this->mAddrList.begin();
+    }
+    ~Op() { ee_won_reqop_free(this->mRustOp); }
+};
+// a SmartPtr's assignment: a new object (its reference the slot's), or none
+static void Adopt(int& ioSlot, int inObj)
+{
+    int anOld = ioSlot;
+    ioSlot = inObj;
+    if (anOld) Do(EE_WON_HOST_RELEASE, anOld);
+}
+// a SmartPtr's assignment from another's object
+static void Assign(int& ioSlot, int inObj)
+{
+    if (inObj) Do(EE_WON_HOST_ADD_REF, inObj);
+    Adopt(ioSlot, inObj);
+}
+static void SetLastServerError(Op& o, int inError)
+{
+    int32_t aLast = o.mLastServerError;
+    ee_won_server_req_last_error(&aLast, &o.mUseLast, inError);
+    o.mLastServerError = aLast;
+}
+static void ReqSink(void* inContext, const uint8_t* inData, size_t inLength)
+{
+    string* s = static_cast<string*>(inContext);
+    s->assign(reinterpret_cast<const char*>(inData), inLength);
+    s->push_back('\x01');
+}
+static int GetNextRequest(Op& o, bool inDatagram)
+{
+    unsigned aUserId = 0;
+    if (ee_won_reqop_needs_user_id(o.mRustOp)) aUserId = (unsigned)Do(EE_WON_HOST_CERT_USER_ID).mNum;
+    ee_won_reqop_set_env(o.mRustOp, aUserId, (unsigned)Do(EE_WON_HOST_TICK).mNum);
+    unsigned char aLfs = inDatagram ? 0 : (unsigned char)Do(EE_WON_HOST_LFS).mNum;
+    string aRequest;
+    int aStatus = ee_won_reqop_next_request(o.mRustOp, aLfs, ReqSink, &aRequest);
+    if (!aRequest.empty()) {
+        aRequest.resize(aRequest.size() - 1);
+        o.mHasRequest = true;
+        o.mRequest = aRequest;
+    }
+    return aStatus;
+}
+static int CheckResponse(Op& o, bool* outThrew)
+{
+    *outThrew = false;
+    ee_won_reqop_set_env(o.mRustOp, 0, (unsigned)Do(EE_WON_HOST_TICK).mNum);
+    int32_t aVerdict = 0;
+    long aStatus = ee_won_reqop_check_response(
+        o.mRustOp, o.mHasResponse ? reinterpret_cast<const uint8_t*>(o.mResponse.data()) : NULL,
+        o.mHasResponse ? o.mResponse.size() : 0, &aVerdict);
+    if (aVerdict == EE_WON_REQOP_CUT) {
+        *outThrew = true;
+        return 0;
+    }
+    if (aVerdict == EE_WON_REQOP_INVALID_HEADER) {
+        SetLastServerError(o, 100063);
+        return 100057;
+    }
+    return (int)aStatus;
+}
+static void QueueSocketOp(Op& o, int inOp, unsigned inTimeout)
+{
+    Do(EE_WON_HOST_TRACK, inOp, 0, 1);
+    Do(EE_WON_HOST_QUEUE, o.mSocket, inOp, inTimeout);
+    Do(EE_WON_HOST_RELEASE, inOp);
+}
+static int NewPeerAuth(Op& o)
+{
+    return Do(EE_WON_HOST_NEW_PEER_AUTH, o.mSocket, 0, o.mUseAuth2 ? 1 : 0, 0, string(), o.mCurAddr).mObj;
+}
+
+struct Glue {
+    Op* mOp;
+    int mDone;
+};
+static Op& O(void* g) { return *static_cast<Glue*>(g)->mOp; }
+static int32_t RStatus(void*) { return (int)Do(EE_WON_HOST_STATUS).mNum; }
+static uint32_t RTimeLeft(void*) { return (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum; }
+static bool RIsAsync(void*) { return Do(EE_WON_HOST_MODE).mNum == 1; }
+static int32_t RAuthType(void*) { return (int)Do(EE_WON_HOST_AUTH_TYPE).mNum; }
+static void RFinish(void*, int32_t s) { Do(EE_WON_HOST_FINISH, 0, 0, s); }
+static void RFinishSave(void* g, int32_t s)
+{
+    Op& o = O(g);
+    Do(EE_WON_HOST_FINISH, 0, 0, s);
+    if (Do(EE_WON_HOST_AUTH_TYPE).mNum == 1)
+        Do(EE_WON_HOST_PUT_SESSION, o.mCurSession, 0, 0, 0, string(), o.mCurAddr);
+    Assign(o.mUsedSession, o.mCurSession);
+    Adopt(o.mCurSession, 0);
+}
+static void RKill(void*) { Do(EE_WON_HOST_KILL, 0, 0, 1); }
+static bool RPrepare(void* g)
+{
+    Op& o = O(g);
+    Adopt(o.mUsedSession, 0);
+    if (o.mServerContext) {
+        o.mAddrList.clear();
+        Res r = Do(EE_WON_HOST_CTX_ADDRS, o.mServerContext);
+        for (size_t i = 0; i + 6 <= r.mBytes.size(); i += 6) o.mAddrList.push_back(r.mBytes.substr(i, 6));
+        o.mAddrItr = o.mAddrList.begin(); // the old iterator dangled (an empty copy finishes before the rewind)
+    }
+    return !o.mAddrList.empty();
+}
+static void RRewind(void* g) { O(g).mAddrItr = O(g).mAddrList.begin(); }
+static bool RAtBegin(void* g) { return O(g).mAddrItr == O(g).mAddrList.begin(); }
+static bool RAtEnd(void* g) { return O(g).mAddrItr == O(g).mAddrList.end(); }
+static bool RHasContext(void* g) { return O(g).mServerContext != 0; }
+static bool RHasAuthContext(void*) { return Do(EE_WON_HOST_HAS_AUTH).mNum != 0; }
+static void RNotify(void* g) { Do(EE_WON_HOST_CTX_FAILED, O(g).mServerContext, 0, 0, 0, string(), O(g).mCurAddr); }
+static void RNextAddr(void* g)
+{
+    Op& o = O(g);
+    Adopt(o.mSocket, Do(EE_WON_HOST_NEW_SOCKET, 0, 0, 0).mObj);
+    long long aLfs = Do(EE_WON_HOST_LFS).mNum;
+    Do(EE_WON_HOST_SOCKET_SET_LFS, o.mSocket, 0, aLfs);
+    o.mCurAddr = *o.mAddrItr;
+    ++o.mAddrItr;
+}
+static void RRetreat(void* g) { --O(g).mAddrItr; }
+static void RReset(void* g)
+{
+    Op& o = O(g);
+    Do(EE_WON_HOST_KILL_ALL);
+    ee_won_reqop_reset(o.mRustOp);
+    if (o.mSocket) {
+        Do(EE_WON_HOST_CLOSE, o.mSocket);
+        Adopt(o.mSocket, 0);
+    }
+}
+static void RLoadSession(void* g)
+{
+    Op& o = O(g);
+    Adopt(o.mCurSession, Do(EE_WON_HOST_GET_SESSION, 0, 0, 0, 0, string(), o.mCurAddr).mObj);
+}
+static void RClearSession(void* g) { Adopt(O(g).mCurSession, 0); }
+static bool RHasSession(void* g) { return O(g).mCurSession != 0; }
+static void RAddCrypt(void* g) { Do(EE_WON_HOST_ADD_CRYPT, O(g).mSocket, O(g).mCurSession); }
+static void RQueueConnect(void* g)
+{
+    Op& o = O(g);
+    int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_CONNECT, 0, string(), o.mCurAddr).mObj;
+    QueueSocketOp(o, anOp, (unsigned)Do(EE_WON_HOST_CONNECT_TIME).mNum);
+}
+static int32_t RConnectBlock(void* g)
+{
+    Op& o = O(g);
+    unsigned t = (unsigned)Do(EE_WON_HOST_CONNECT_TIME).mNum;
+    return (int)Do(EE_WON_HOST_CONNECT, o.mSocket, 0, t, 0, string(), o.mCurAddr).mNum;
+}
+static void RPeerAuthAsync(void* g)
+{
+    Op& o = O(g);
+    int p = NewPeerAuth(o);
+    Do(EE_WON_HOST_TRACK, p, 0, 2);
+    Do(EE_WON_HOST_RUN_ASYNC, p, 0, 0xffffffffu);
+    Do(EE_WON_HOST_RELEASE, p);
+}
+static bool RPeerAuthBlock(void* g, int32_t* outStatus, int32_t* outCert)
+{
+    Op& o = O(g);
+    int p = NewPeerAuth(o);
+    unsigned t = (unsigned)Do(EE_WON_HOST_TIME_LEFT).mNum;
+    if (Do(EE_WON_HOST_RUN_BLOCK, p, 0, t).mNum != 0) {
+        Adopt(o.mCurSession, Do(EE_WON_HOST_PEER_AUTH_SESSION, p).mObj);
+        Do(EE_WON_HOST_RELEASE, p);
+        return true;
+    }
+    *outStatus = (int)Do(EE_WON_HOST_OP_STATUS, p).mNum;
+    *outCert = (int)Do(EE_WON_HOST_PEER_AUTH_CERT, p).mNum;
+    Do(EE_WON_HOST_RELEASE, p);
+    return false;
+}
+static int32_t RGetNextRequest(void* g) { return GetNextRequest(O(g), false); }
+static void RQueueSend(void* g)
+{
+    Op& o = O(g);
+    int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_SEND_MSG, 0, o.mHasRequest ? o.mRequest : string()).mObj;
+    QueueSocketOp(o, anOp, (unsigned)Do(EE_WON_HOST_SEND_TIME).mNum);
+}
+static int32_t RSendBlock(void* g)
+{
+    Op& o = O(g);
+    unsigned t = (unsigned)Do(EE_WON_HOST_SEND_TIME).mNum;
+    return (int)Do(EE_WON_HOST_SEND_MSG, o.mSocket, 0, t, 0, o.mHasRequest ? o.mRequest : string()).mNum;
+}
+static void RQueueRecv(void* g)
+{
+    Op& o = O(g);
+    int anOp = Do(EE_WON_HOST_NEW_OP, 0, 0, EE_WON_HOST_OP_RECV_MSG).mObj;
+    QueueSocketOp(o, anOp, (unsigned)Do(EE_WON_HOST_RECV_TIME).mNum);
+}
+static int32_t RRecvBlock(void* g)
+{
+    Op& o = O(g);
+    unsigned t = (unsigned)Do(EE_WON_HOST_RECV_TIME).mNum;
+    Res r = Do(EE_WON_HOST_RECV_MSG, o.mSocket, 0, t);
+    o.mHasResponse = !r.mNull;
+    o.mResponse = r.mBytes;
+    return (int)r.mNum;
+}
+static void RResponse(void* g, const uint8_t** outData, size_t* outLength)
+{
+    Op& o = O(g);
+    *outData = o.mHasResponse ? reinterpret_cast<const uint8_t*>(o.mResponse.data()) : NULL;
+    *outLength = o.mHasResponse ? o.mResponse.size() : 0;
+}
+static int32_t RCheckResponse(void* g, bool* outThrew) { return CheckResponse(O(g), outThrew); }
+static void RTakeOpSession(void* g)
+{
+    Adopt(O(g).mCurSession, Do(EE_WON_HOST_PEER_AUTH_SESSION, static_cast<Glue*>(g)->mDone).mObj);
+}
+static void RTakeOpResponse(void* g)
+{
+    Res r = Do(EE_WON_HOST_OP_BYTES, static_cast<Glue*>(g)->mDone);
+    O(g).mHasResponse = !r.mNull;
+    O(g).mResponse = r.mBytes;
+}
+static EeWonServerReqHooks Hooks(Glue* g)
+{
+    Op& o = *g->mOp;
+    EeWonServerReqHooks h = {g, &o.mLastServerError, &o.mGetCertStatus, &o.mUseLast, &o.mReusingSession,
+                             &o.mSessionExpired, RStatus, RTimeLeft, RIsAsync, RAuthType, RFinish, RFinishSave, RKill,
+                             RPrepare, RRewind, RAtBegin, RAtEnd, RHasContext, RHasAuthContext, RNotify, RNextAddr,
+                             RRetreat, RReset, RLoadSession, RClearSession, RHasSession, RAddCrypt, RQueueConnect,
+                             RConnectBlock, RPeerAuthAsync, RPeerAuthBlock, RGetNextRequest, RQueueSend, RSendBlock,
+                             RQueueRecv, RRecvBlock, RResponse, RCheckResponse, RTakeOpSession, RTakeOpResponse};
+    return h;
+}
+
+static void RunDatagram(Op& o)
+{
+    if (o.mAddrList.empty()) {
+        Do(EE_WON_HOST_FINISH, 0, 0, 100055);
+        return;
+    }
+    string anAddr = o.mAddrList.front();
+    ee_won_reqop_reset(o.mRustOp);
+    GetNextRequest(o, true);
+    int anOp = Do(EE_WON_HOST_NEW_OP, o.mUDPSocket, 0, EE_WON_HOST_OP_SEND_BYTES_TO, 0,
+                  o.mHasRequest ? o.mRequest : string(), anAddr).mObj;
+    int aMode = (int)Do(EE_WON_HOST_MODE).mNum;
+    unsigned aTimeout = (unsigned)Do(EE_WON_HOST_TIMEOUT).mNum;
+    if (aMode == 1) Do(EE_WON_HOST_RUN_ASYNC, anOp, 0, aTimeout);
+    else Do(EE_WON_HOST_RUN_BLOCK, anOp, 0, aTimeout);
+    Do(EE_WON_HOST_FINISH, 0, 0, 0);
+    Do(EE_WON_HOST_RELEASE, anOp);
+}
+static void RunHook(Op& o)
+{
+    int32_t aFinish = 0;
+    if (!ee_won_reqop_run_hook(o.mRustOp, (int)Do(EE_WON_HOST_AUTH_TYPE).mNum, &aFinish)) {
+        Do(EE_WON_HOST_FINISH, 0, 0, aFinish);
+        return;
+    }
+    if (o.mUDPSocket) {
+        RunDatagram(o);
+        return;
+    }
+    Glue g = {&o, 0};
+    EeWonServerReqHooks h = Hooks(&g);
+    ee_won_server_req_run(&h);
+}
+static void CleanupHook(Op& o)
+{
+    Do(EE_WON_HOST_BASE_CLEANUP);
+    int aStatus = (int)Do(EE_WON_HOST_STATUS).mNum;
+    bool aKilled = Do(EE_WON_HOST_OP_KILLED).mNum != 0;
+    unsigned aPlan = ee_won_server_req_cleanup_plan(aStatus, aKilled, o.mServerContext != 0, o.mSocket != 0,
+                                                    o.mCloseConnection);
+    if (aPlan & 1) Do(EE_WON_HOST_CTX_FAILED, o.mServerContext, 0, 0, 0, string(), o.mCurAddr);
+    if (aPlan & 2) {
+        Do(EE_WON_HOST_CLOSE, o.mSocket);
+        Adopt(o.mSocket, 0);
+    }
+    Adopt(o.mCurSession, 0);
+}
+static bool CallbackHook(Op& o, int inOp, int inParam)
+{
+    EeWonServerReqDone aDone;
+    aDone.killed = Do(EE_WON_HOST_OP_KILLED, inOp).mNum != 0;
+    aDone.status = (int)Do(EE_WON_HOST_OP_STATUS, inOp).mNum;
+    aDone.param = inParam;
+    aDone.cert_status = 0;
+    if (inParam == 2 && !aDone.killed && aDone.status == 100053)
+        aDone.cert_status = (int)Do(EE_WON_HOST_PEER_AUTH_CERT, inOp).mNum;
+    aDone.is_recv = inParam == 1 && Do(EE_WON_HOST_OP_IS_RECV_MSG, inOp).mNum != 0;
+    Glue g = {&o, inOp};
+    EeWonServerReqHooks h = Hooks(&g);
+    return ee_won_server_req_callback(&h, &aDone);
+}
+static void DescribeTo(void* c, const uint8_t* b, size_t n)
+{
+    static_cast<string*>(c)->assign(reinterpret_cast<const char*>(b), n);
+}
+static string Describe(const Op& o)
+{
+    char b[200];
+    string a;
+    for (AddrList::const_iterator i = o.mAddrList.begin(); i != o.mAddrList.end(); ++i) a += Hex(*i) + ",";
+    int at = 0;
+    for (AddrList::const_iterator i = o.mAddrList.begin(); i != o.mAddrList.end() && i != o.mAddrItr; ++i) at++;
+    snprintf(b, sizeof(b), " i%d cur %s s%d/%d sock %d udp %d f%d%d%d%d l%d c%d ", at, Hex(o.mCurAddr).c_str(),
+             o.mCurSession, o.mUsedSession, o.mSocket, o.mUDPSocket, (int)o.mReusingSession, (int)o.mSessionExpired,
+             (int)o.mUseLast, (int)o.mUseAuth2, (int)o.mLastServerError, (int)o.mGetCertStatus);
+    string r;
+    ee_won_reqop_describe(o.mRustOp, DescribeTo, &r);
+    return a + b + (o.mHasRequest ? Hex(o.mRequest) : string("null")) + " " +
+           (o.mHasResponse ? Hex(o.mResponse) : string("null")) + " | " + r;
+}
+} // namespace OrigReq
+
 // ---- the Rust half: the ops through the base's C interface, bound to the same stand-in
 
 static void DescribeSink(void* inContext, const uint8_t* inData, size_t inLength)
@@ -1405,6 +1807,127 @@ static string PushStep(OrigPush::Op* o, EeWonHostOp* r, const Step& s)
     return ret + "|" + S.mTrace + "|" + d;
 }
 
+// the request exchange's ops: a contest call, a ping, a user id lookup (Rust ops derived from ServerRequestOp)
+static EeWonReqOp* NewReqOp(int inKind, int inArg)
+{
+    if (inKind == 0) {
+        static const char kData[] = "\x01\x02\x03";
+        EeWonAdminValue v[3] = {{inArg, NULL, 0}, {inArg & 1, NULL, 0}, {0, reinterpret_cast<const uint8_t*>(kData), 3}};
+        return ee_won_reqops_new(EE_WON_REQOPS_CONTEST, v, 3);
+    }
+    if (inKind == 1) {
+        EeWonAdminValue v[2] = {{(inArg & 1) ? 2 : 4, NULL, 0}, {(inArg >> 1) & 1, NULL, 0}};
+        return ee_won_reqops_new(EE_WON_REQOPS_PING, v, 2);
+    }
+    static const char kName[] = "b\0o\0b\0";
+    return ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(kName), 6);
+}
+static Step MakeReqStep()
+{
+    static const int kKinds[] = { 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4, 4, 5, 6 };
+    Step s;
+    s.mKind = kKinds[Pick(14)];
+    s.mA = s.mB = 0;
+    switch (s.mKind) {
+    case 0: s.mA = Pick(2) + 1; s.mB = Pick(4) == 0 ? 0 : Pick(3); break; // run (mode, auth type)
+    case 5: s.mA = Pick(3) == 0; break;                                   // the datagram socket, or none
+    default: break;
+    }
+    return s;
+}
+static string ReqResults(OrigReq::Op* o, EeWonHostOp* r)
+{
+    static const int kNums[] = { EE_WON_REQOP_PING_LAG, EE_WON_REQOP_PING_VERSION, EE_WON_REQOP_USER_ID };
+    static const int kBytes[] = { EE_WON_REQOP_CONTEST_REPLY, EE_WON_REQOP_PING_TEXT };
+    string out;
+    if (o) out = Hex(o->mCurAddr);
+    else {
+        string a;
+        ee_won_hostop_bytes(r, EE_WON_REQHOST_CUR_ADDR, 0, DescribeSink, &a);
+        out = Hex(a);
+    }
+    char b[40];
+    for (int i = 0; i < 3; i++) {
+        long long n = o ? ee_won_reqop_num(o->mRustOp, kNums[i]) : ee_won_hostop_num(r, kNums[i], 0);
+        snprintf(b, sizeof(b), " %lld", n);
+        out += b;
+    }
+    for (int i = 0; i < 2; i++) {
+        string d;
+        bool has = o ? ee_won_reqop_bytes(o->mRustOp, kBytes[i], DescribeSink, &d)
+                     : ee_won_hostop_bytes(r, kBytes[i], 0, DescribeSink, &d);
+        out += " " + (has ? Hex(d) : string("null"));
+    }
+    return out;
+}
+static string ReqStep(OrigReq::Op* o, EeWonHostOp* r, const Step& s)
+{
+    S.mTrace.clear();
+    S.mCalls = 0;
+    string ret = "-";
+    switch (s.mKind) {
+    case 0:
+        S.mMode = (int)s.mA;
+        S.mAuth = (int)s.mB;
+        S.mStatus = 100000;
+        if (o) OrigReq::RunHook(*o); else ee_won_hostop_run(r);
+        break;
+    case 1: case 2: case 3: {
+        int done = ++S.mSerial;
+        int param = s.mKind == 3 ? 7 : s.mKind;
+        bool b = o ? OrigReq::CallbackHook(*o, done, param) : ee_won_hostop_callback(r, param, P(done));
+        ret = b ? "1" : "0";
+        break;
+    }
+    case 4: if (o) OrigReq::CleanupHook(*o); else ee_won_hostop_cleanup(r); break;
+    case 5: {
+        int u = s.mA ? NewObj() : 0;
+        if (o) OrigReq::Assign(o->mUDPSocket, u); else RSet(r, EE_WON_REQHOST_UDP_SOCKET, 0, string(), NULL, u);
+        if (u) S.mOwn[u]--;
+        break;
+    }
+    case 6: ret = ReqResults(o, r); break;
+    }
+    string d;
+    if (o) d = OrigReq::Describe(*o);
+    else ee_won_hostop_describe(r, DescribeSink, &d);
+    return ret + "|" + S.mTrace + "|" + d;
+}
+// the sequence's op: kind, its argument, a server context (else one address) and the address
+static void ReqSetup(const string& inHead, OrigReq::Op** outOrig, EeWonHostOp** outRust)
+{
+    int aKind = inHead[0], anArg = inHead[1];
+    bool aContext = inHead[2] != 0;
+    string anAddr(kAddrs[(int)inHead[3]], 6);
+    S.mReq = true;
+    if (outOrig) {
+        OrigReq::Op* o = new OrigReq::Op(NewReqOp(aKind, anArg));
+        S.mLfs = ee_won_reqop_length_field_size(o->mRustOp);
+        if (aContext) {
+            int c = NewObj();
+            OrigReq::Assign(o->mServerContext, c);
+            S.mOwn[c]--;
+        } else {
+            o->mAddrList.push_back(anAddr);
+            o->mAddrItr = o->mAddrList.begin();
+        }
+        *outOrig = o;
+        return;
+    }
+    EeWonReqOp* aRustOp = NewReqOp(aKind, anArg);
+    S.mLfs = ee_won_reqop_length_field_size(aRustOp);
+    EeWonHostOp* r = ee_won_hostop_request(aRustOp);
+    ee_won_hostop_bind(r, HostFn, NULL);
+    if (aContext) {
+        int c = NewObj();
+        RSet(r, EE_WON_REQHOST_CONTEXT, 0, string(), NULL, c);
+        S.mOwn[c]--;
+    } else {
+        RSet(r, EE_WON_REQHOST_ADDR, 0, string(), &anAddr);
+    }
+    *outRust = r;
+}
+
 static void Reset(unsigned inSeed)
 {
     S.mSeed = inSeed;
@@ -1416,6 +1939,8 @@ static void Reset(unsigned inSeed)
     S.mCalls = 0;
     S.mTick = 0;
     S.mLine = 0;
+    S.mReq = false;
+    S.mAuth = 0;
     S.mRands.clear();
     S.mAddrs.clear();
     S.mOwn.clear();
@@ -1439,12 +1964,20 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     unsigned aSeed = Next();
     std::vector<Step> steps;
     for (int i = 0; i < inSteps; i++)
-        steps.push_back(inOp == 'M' ? MakePingStep() : inOp == 'F' ? MakePushStep() : MakeFtpStep());
+        steps.push_back(inOp == 'M' ? MakePingStep() : inOp == 'F' ? MakePushStep() : inOp == 'R' ? MakeReqStep()
+                                                                                    : MakeFtpStep());
     string addr(kAddrs[Pick(6)], 6);
     if (inOp == 'P') { // FTPGetOp(url, extract): the URL's index and the flag
         addr.assign(2, '\0');
         addr[0] = (char)Pick(4);
         addr[1] = (char)Pick(2);
+    }
+    if (inOp == 'R') { // the request's op, its argument, a server context or one address, the address
+        addr.assign(4, ' ');
+        addr[0] = (char)Pick(3);
+        addr[1] = (char)Pick(4);
+        addr[2] = (char)Pick(2);
+        addr[3] = (char)Pick(6);
     }
     if (inPrint) printf("S %c %u %d %s\n", inOp, aSeed, inSteps, Hex(addr).c_str());
     // the original
@@ -1456,6 +1989,11 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     } else if (inOp == 'F') {
         OrigPush::Op f(addr);
         for (size_t i = 0; i < steps.size(); i++) orig.push_back(PushStep(&f, NULL, steps[i]));
+    } else if (inOp == 'R') {
+        OrigReq::Op* q = NULL;
+        ReqSetup(addr, &q, NULL);
+        for (size_t i = 0; i < steps.size(); i++) orig.push_back(ReqStep(q, NULL, steps[i]));
+        delete q;
     } else {
         OrigFtp::Op f;
         FtpMsg<OrigFtp::Op>::FromURL(f, kFtpUrls[(int)addr[0]], addr[1] != 0);
@@ -1470,14 +2008,17 @@ static void Sequence(char inOp, int inSteps, bool inPrint)
     EeWonHostOp* r;
     if (inOp == 'M') r = ee_won_multiping_new();
     else if (inOp == 'F') r = ee_won_filepush_new(reinterpret_cast<const uint8_t*>(addr.data()));
+    else if (inOp == 'R') ReqSetup(addr, NULL, &r);
     else {
         const char* u = kFtpUrls[(int)addr[0]];
         r = ee_won_ftpget_new_url(reinterpret_cast<const uint8_t*>(u), strlen(u), addr[1] != 0);
     }
     ee_won_hostop_bind(r, HostFn, NULL);
     for (size_t i = 0; i < steps.size(); i++) {
-        string got = inOp == 'M' ? PingStep(NULL, r, steps[i]) : inOp == 'F' ? PushStep(NULL, r, steps[i])
-                                                                              : FtpStep(NULL, r, steps[i]);
+        string got = inOp == 'M'   ? PingStep(NULL, r, steps[i])
+                     : inOp == 'F' ? PushStep(NULL, r, steps[i])
+                     : inOp == 'R' ? ReqStep(NULL, r, steps[i])
+                                   : FtpStep(NULL, r, steps[i]);
         CHECK(got == orig[i]);
         if (got != orig[i] && sFailures < 6)
             printf("%s\n  orig %s\n  rust %s\n", StepText(inOp, steps[i]).c_str(), orig[i].c_str(), got.c_str());
@@ -1498,11 +2039,13 @@ int main(int argc, char** argv)
         for (int i = 0; i < aPrint; i++) Sequence('M', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('F', 8 + Pick(40), true);
         for (int i = 0; i < aPrint; i++) Sequence('P', 8 + Pick(40), true);
+        for (int i = 0; i < aPrint; i++) Sequence('R', 8 + Pick(40), true);
         return 0;
     }
     for (int i = 0; i < aCount; i++) Sequence('M', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('F', 8 + Pick(40), false);
     for (int i = 0; i < aCount; i++) Sequence('P', 8 + Pick(40), false);
+    for (int i = 0; i < aCount; i++) Sequence('R', 8 + Pick(40), false);
     printf("won_hostop_test: %lld checks, %d failed\n", sChecks, sFailures);
     return sFailures;
 }

@@ -29,6 +29,7 @@ public:
     EESMTConditionWrapper* GetCondition(unsigned long inIndex);  // 0x1c9d0e (0 past the end)
     EESMTEffectWrapper* GetEffect(unsigned long inIndex);        // 0x1c9d32 (0 past the end)
     void Evaluate(float inTime);            // 0x1c9ab5 (runs the effects when the conditions hold; provisional name)
+    void EvaluateUncaptured(float inTime);  // Evaluate's body (Evaluate adds the capture's SMTE record)
     void SetCondition(unsigned long inIndex, bool inNot, unsigned long inCondition);   // 0x1ca29d
     void SetConditionOperator(unsigned long inIndex, long inOperator);  // 0x1ca2c3 (appends a wrapper after the last)
     void CopyConditions(const std::vector<EESMTConditionWrapper*>& inConditions);  // 0x1ca331

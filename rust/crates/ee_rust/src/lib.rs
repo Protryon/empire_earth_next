@@ -37,6 +37,9 @@ use ee_combat as _;
 // the tech tree's research and prerequisites, the event effects' arithmetic, the calamities' timing (ee_tech/src/ffi.rs),
 // called by the C++ tech tree, EEEvent.cpp and the calamity classes
 use ee_tech as _;
+// the scenario manager's conditions, player choices and triggers (ee_scenario/src/ffi.rs), called by the C++
+// EESMCondition, EESMTrigger and EEScenarioManager over their host (Scenario Manager/EEScenarioHost.cpp)
+use ee_scenario as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 
@@ -182,6 +185,7 @@ fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeComba
         cloak_timer: r.cloak_timer,
         family: r.family,
         cloak_radius: r.cloak_radius,
+        resource_amount: r.resource_amount,
     }
 }
 
@@ -191,6 +195,9 @@ use ee_netmsg as _;
 // (the menus' FFI imports the C++ host's calls, absent from a test binary)
 #[cfg(not(test))]
 use ee_screens as _;
+// the computer player's leaves (ee_ai/src/ffi.rs): the next engine's save blocks, the AI manifest and the seat choice,
+// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp
+use ee_ai as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
