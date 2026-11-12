@@ -333,7 +333,7 @@ static void OpMachinery(WONAPICore& inCore)
         anOp->SetTimeout(7);
         CHECK(anOp->GetTimeout() == 5000);
         anOp->Kill(false);
-        CHECK(anOp->mKilled);
+        CHECK(anOp->IsKilled());
         CHECK_STATUS(anOp->GetStatus(), WS_Pending);
         inCore.Pump(20);
         CHECK(aDone->mCount == 0);

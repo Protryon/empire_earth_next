@@ -162,7 +162,7 @@ bool FTPGetOp::DoConnect()
 	// Connect
 	IPAddr anAddr;
 	anAddr.SetWithDefaultPort(this->mHost,21);
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mRequestSocket->QueueOp(static_cast<SocketOp*>(this->Track(new ConnectOp(anAddr),FTP_Track_RequestConnect)),-1);
 		return false;
@@ -206,7 +206,7 @@ bool FTPGetOp::SendRequest()
 	}
 	aReq+="\r\n";
 
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mRequestSocket->QueueOp(static_cast<SocketOp*>(this->Track(new SendBytesOp(new ByteBuffer(aReq.c_str(),aReq.length(),false)),0)),-1);
 		this->RecvLineAsync();
@@ -255,7 +255,7 @@ bool FTPGetOp::HandleReply(RecvCRMsgOp *theReply)
 	int aLen = theReply->GetMsg()->length();
 	if(aLen>=4 && aLine[3]=='-') // still more reply lines
 	{
-		if((this->mRunMode==OP_MODE_ASYNC))
+		if((this->GetMode()==OP_MODE_ASYNC))
 			this->RecvLineAsync();
 		
 		return true;
@@ -327,7 +327,7 @@ bool FTPGetOp::HandleReply(RecvCRMsgOp *theReply)
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::DoDataConnection()
 {
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->mDataSocket->QueueOp(static_cast<SocketOp*>(this->Track(new ConnectOp(this->mDataAddr),FTP_Track_DataConnect)),-1);
 		return false;
@@ -358,7 +358,7 @@ void FTPGetOp::RecvContent()
 //		aRecvBytes->SetFileModifyTime(mLastModified);
 	}	
 
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->Track(aRecvBytes,FTP_Track_RecvContent);
 		aRecvBytes->RunAsync(-1);
@@ -379,7 +379,7 @@ void FTPGetOp::RecvContent()
 ///////////////////////////////////////////////////////////////////////////////
 bool FTPGetOp::CallbackHook(AsyncOp *theOp, int theParam)
 {
-	if(theOp->mKilled) 
+	if(theOp->IsKilled()) 
 	{
 		this->Kill(true);
 		return true;

@@ -32,7 +32,7 @@ WONStatus BlockingSocket::RecvCRMsg(ByteBufferPtr& outMessage,unsigned long inTi
 {
     SmartPtr<RecvCRMsgOp> op=new RecvCRMsgOp(this);
     if (op->RunBlock(inTimeout)) outMessage=op->GetMsg();
-    return op->mStatus;
+    return op->GetStatus();
 }
 // 2b1d00, 0x228 bytes in the original
 // FUNCTION: WON 0x006b1d00

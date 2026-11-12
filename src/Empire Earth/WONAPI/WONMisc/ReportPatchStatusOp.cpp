@@ -82,7 +82,7 @@ void ReportPatchStatusOp::RunHook()
 	this->GetNextRequest();
 	this->mLengthFieldSize=aLengthFieldSize;
 	SmartPtr<SendBytesToOp> anOp = new SendBytesToOp(this->mRequest, anAddr, this->mUDPSocket);
-	anOp->Run(this->mRunMode,this->mTimeout);
+	anOp->Run(this->GetMode(),this->GetTimeout());
 	this->Finish((WONStatus)WS_Success);
 }
 

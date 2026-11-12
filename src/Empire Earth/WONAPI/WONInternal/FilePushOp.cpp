@@ -137,7 +137,7 @@ bool FilePushOp::HandleFactStatusReply(const ByteBuffer *theReply)
 ///////////////////////////////////////////////////////////////////////////////
 bool FilePushOp::RecvFactStatusReply()
 {
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->RecvMsgAsync(TRACK_STATUS_REPLY);
 		return false;
@@ -158,7 +158,7 @@ bool FilePushOp::HandleAck(char theAck)
 	if(theAck==1)
 	{
 		this->DoProgressCompletion();
-		if((this->mRunMode==OP_MODE_ASYNC))
+		if((this->GetMode()==OP_MODE_ASYNC))
 			this->SendFileChunk();
 
 		return true;
@@ -171,7 +171,7 @@ bool FilePushOp::HandleAck(char theAck)
 ///////////////////////////////////////////////////////////////////////////////
 bool FilePushOp::RecvAck()
 {
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		SmartPtr<RecvBytesOp> anOp = new RecvBytesOp(1,this->mSocket);
 		this->Track(anOp, TRACK_ACK);
@@ -208,7 +208,7 @@ bool FilePushOp::SendFileChunk()
 	// Send bytes
 	this->mLastBytesSent = aLen;
 	this->mTotalBytesSent += aLen;
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 		this->mSocket->QueueOp(static_cast<SocketOp*>(this->Track(new SendBytesOp(aBuf.ToByteBuffer(true)),0)),-1);
 	else
 	{
@@ -237,7 +237,7 @@ bool FilePushOp::SendStreamFileRequest()
 	aMsg.AppendLong(this->mModifyTime.dwLowDateTime);
 	aMsg.AppendString(this->mComment);
 
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->SendMsgAsync(aMsg.ToByteBuffer(true),TRACK_STREAM_REQUEST);
 		this->RecvFactStatusReply();
@@ -275,7 +275,7 @@ void FilePushOp::RunHook(void)
 
 	SmartPtr<PeerAuthOp> aPeerAuthOp = new PeerAuthOp(this->mConnectAddr, this->mAuthContext, this->mAuthType, this->mSocket,true);
 	aPeerAuthOp->CopyMaxTimes(this);
-	if((this->mRunMode==OP_MODE_ASYNC))
+	if((this->GetMode()==OP_MODE_ASYNC))
 	{
 		this->Track(aPeerAuthOp,TRACK_AUTH);
 		aPeerAuthOp->RunAsync(-1);

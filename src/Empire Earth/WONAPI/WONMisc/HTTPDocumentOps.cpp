@@ -49,7 +49,7 @@ void GetHTTPDocumentOp::CheckHostAndPath(HTTPDocType inType)
 bool GetHTTPDocumentOp::CallbackHook(AsyncOp* inOp,int inParam)
 {
     this->OpFinished(static_cast<HTTPGetOp*>(inOp),inParam);
-    if (this->mTracker.mMaps.mEntries.empty()) this->DoFinish();
+    if (this->mTracker.IsEmpty()) this->DoFinish();
     return true;
 }
 // FUNCTION: WON 0x006d0840
@@ -75,7 +75,7 @@ void GetHTTPDocumentOp::TryHTTPOp(HTTPDocOwner inOwner,bool inForceDefault)
     SmartPtr<HTTPGetOp> op=new HTTPGetOp(GetHost(),path+document);
     op->SetDoRangeResume(false);
     op->SetLocalPath(this->mDocuments[inOwner]);
-    if (this->mRunMode==OP_MODE_ASYNC) {
+    if (this->GetMode()==OP_MODE_ASYNC) {
         this->Track(op.get(),inOwner);
         if (this->mSession.get()!=NULL) this->mSession->AddOp(op.get());
         else op->RunAsync(-1);

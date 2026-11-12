@@ -7,7 +7,7 @@ use crate::*;
 use std::collections::BTreeMap;
 
 /// The tags (the little-endian u32 of the four letters) and their formulas' names.
-pub const TAGS: [(&[u8; 4], &str); 23] = [
+pub const TAGS: [(&[u8; 4], &str); 25] = [
     (b"CBAF", "attack factor"),
     (b"CBDM", "damage"),
     (b"CBEL", "elevation"),
@@ -31,6 +31,8 @@ pub const TAGS: [(&[u8; 4], &str); 23] = [
     (b"CBCN", "can convert"),
     (b"CBCH", "can heal"),
     (b"CBDP", "drop point (model and tile)"),
+    (b"CBTL", "tile line"),
+    (b"CBWP", "weapon tag point height"),
 ];
 
 pub fn tag(name: &[u8; 4]) -> u32 {
@@ -104,6 +106,8 @@ unsafe impl Plain for EeCombatCanConvertOut {}
 unsafe impl Plain for EeCombatCanHealIn {}
 unsafe impl Plain for EeCombatDropIn {}
 unsafe impl Plain for EeCombatDropOut {}
+unsafe impl Plain for crate::geometry::EeCombatWeaponIn {}
+unsafe impl Plain for [f32; 16] {}
 
 fn bytes_of<T: Plain>(value: &T) -> &[u8] {
     // SAFETY: a Plain value is size_of::<T>() initialized bytes (4-byte fields, no padding)
@@ -186,9 +190,36 @@ pub fn replay(record: &Record) -> Option<Result<bool, String>> {
             return None;
         }
         Ok(bytes_of(&drop_point(&input)) == &p[size..size + 12])
+    } else if t == tag(b"CBTL") {
+        // the ends and flags, the count, the tiles
+        if p.len() < 28 || p.len() != 28 + 8 * i32_at(p, 24) as usize {
+            return Some(Err(format!("payload of {} bytes", p.len())));
+        }
+        let v: Vec<i32> = (0..p.len() / 4).map(|n| i32_at(p, n * 4)).collect();
+        let line = crate::geometry::tile_line(v[0], v[1], v[2], v[3], v[4] != 0, v[5] != 0);
+        let tiles: Vec<(i32, i32)> = v[7..].chunks(2).map(|c| (c[0], c[1])).collect();
+        Ok(line == tiles)
+    } else if t == tag(b"CBWP") {
+        // the input, its chain's matrices, the height
+        let size = std::mem::size_of::<crate::geometry::EeCombatWeaponIn>();
+        if p.len() < size + 4 {
+            return Some(Err(format!("payload of {} bytes", p.len())));
+        }
+        let input: crate::geometry::EeCombatWeaponIn = from_bytes(&p[..size]);
+        let chain = input.chain.max(0) as usize;
+        if p.len() != size + 64 * chain + 4 {
+            return Some(Err(format!("payload of {} bytes, not {}", p.len(), size + 64 * chain + 4)));
+        }
+        let links: Vec<[f32; 16]> = (0..chain).map(|n| from_bytes(&p[size + 64 * n..size + 64 * n + 64])).collect();
+        let height = crate::geometry::weapon_height(&input, &links);
+        Ok(height.to_bits().to_le_bytes() == p[p.len() - 4..])
     } else {
         return None;
     })
+}
+
+fn i32_at(p: &[u8], at: usize) -> i32 {
+    i32::from_le_bytes(p[at..at + 4].try_into().unwrap())
 }
 
 /// Per tag: records, equal records, errors.

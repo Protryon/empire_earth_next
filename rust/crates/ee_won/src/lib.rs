@@ -55,6 +55,7 @@ pub mod md5;
 pub mod model;
 /// cbindgen:ignore
 pub mod netstats;
+pub mod opobj;
 pub mod ops;
 pub mod parser;
 pub mod path;
@@ -68,6 +69,7 @@ pub mod routing;
 pub mod servctx;
 pub mod server;
 pub mod socket;
+pub mod sockthread;
 pub mod staging;
 /// cbindgen:ignore
 pub mod status;

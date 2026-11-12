@@ -38,7 +38,7 @@ public:
     // Run (0x7ee8a0) does nothing once the logic or the op is killed, or when the op's server is unknown
     virtual void Run(WONAPI::AsyncOp* inOp)
     {
-        if (this->mLogic->mKilled || inOp->mKilled) return;
+        if (this->mLogic->mKilled || inOp->IsKilled()) return;
         WONAPI::RoutingOp* anOp = static_cast<WONAPI::RoutingOp*>(inOp);
         WONAPI::LobbyServer* aServer = this->mLogic->GetServer(anOp);
         if (aServer != NULL) (this->mLogic.get()->*mCallback)(anOp, aServer);
@@ -1128,7 +1128,7 @@ void RoutingLogic::QuickPlay(QuickPlayEvent* inEvent)
             SmartPtr<AsyncOp> aWaitOp = new AsyncOp;
             LobbyRunOpWithStatus(aWaitOp.get(), ::RoutingLogic_CollectingPingsTitle_String,
                           ::RoutingLogic_CollectingPingsDetails_String, 2, 1000);
-            if (aWaitOp->mKilled) return;
+            if (aWaitOp->IsKilled()) return;
         } else {
             if (LobbyDoYesNoDialog(::GameStagingLogic_NoQuickPlayGameTitle_String, ::GameStagingLogic_NoQuickPlayGameDetails_String, true) == 100001)
                 LobbyHostGame();
@@ -1521,7 +1521,7 @@ bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
             LobbyRunOpWithStatus(anOp.get(), ::RoutingLogic_JoinGroupTitle_String, ::RoutingLogic_JoinGroupDetails_String, 1, 0);
         if (anOp->GetStatus() == WS_Success) break;
         if (!aConnection->IsConnected()) return false;
-        if (anOp->mKilled) {
+        if (anOp->IsKilled()) {
             aConnection->CancelJoinGroup(inGroupId, true, NULL);
             return false;
         }
@@ -1682,7 +1682,7 @@ void RoutingLogic::EditBadUserList(bool inMuted, bool inServerWide, int inRoomSp
     SmartPtr<RoutingGetBadUserListOp> op =
         new RoutingGetBadUserListOp(connection, listType, groupId, 0x0f);
     LobbyRunOpWithStatus(op.get(), ::RoutingLogic_GetBadUsersTitle_String, ::RoutingLogic_GetBadUsersDetails_String, 1, 0);
-    if (op->mStatus != WS_Success) return;
+    if (op->GetStatus() != WS_Success) return;
     this->mBadUserDialog->SetUserList(op->mBadUserList, !moderator);
     if (LobbyDoDialog(this->mBadUserDialog.get()) != 100001) return;
     connection = this->GetConnection();

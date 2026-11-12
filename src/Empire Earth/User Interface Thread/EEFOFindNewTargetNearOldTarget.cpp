@@ -2303,252 +2303,304 @@ bool EEPlayerBlockTakes(EEPlayer* inPlayer, long inUnitType, long inX, long inY,
     return theResult;
 }
 
-// The target search of 0x243d43 (ctor 0x243e0a out of line right after its first user; the tile searches 0x24fcd1 /
-// 0x2503d7 call its filter 0x24ffca and its scoring 0x25000c, both inline COMDATs; sizeof >= 0x70; the implicit dtor
-// frees mScratch) (provisional names; moved here from ee/EEUnitUtilities.h: only this unit uses it)
-struct EEUUTargetSearch {
-    EEUUTargetSearch(EEComplexUnit* inUnit, long inX, long inY, float inScale);
-    // 0x24ffca: an enemy's live unit (and not an unprotected +0x347 one)
-    bool IsCandidate(EEComplexUnit* inTarget)
-    {
-        return inTarget->mPlayer != this->mPlayer && this->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0
-            && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
-    }
-    bool Score(EEComplexUnit* inTarget);    // 0x25000c (inline below; always false)
-    std::vector<EEComplexUnit*> mScratch;   // +0x00 (the large units already scored)
-    float mCenterX;                         // +0x10 (inX + 0.5)
-    float mCenterY;                         // +0x14
-    EEUnit* mBest;                          // +0x18 the result
-    EEComplexUnit* mUnit;                   // +0x1c
-    EEPlayer* mPlayer;                      // +0x20
-    EEUnitClassUpgrade* mStats;             // +0x24
-    float mReach;                           // +0x28 (GetLineOfSight)
-    float mMaxVelocity;                     // +0x2c
-    float mRange;                           // +0x30 (mStats->mF9C)
-    float mScaledRange;                     // +0x34
-    float mScaledRangeSquared;              // +0x38
-    float mMinRangeSquared;                 // +0x3c (the class's mMinRange squared)
-    float mOuterSquared;                    // +0x40
-    float mReachSquared;                    // +0x44
-    long mCategory;                         // +0x48
-    long mAmmoType;                         // +0x4c (the class's mPreviousPart)
-    long mMode;                             // +0x50 (0: +0x318 class, 1, 2: range beyond reach)
-    unsigned long mPlayerID;                // +0x54
-    long mAttack;                           // +0x58 (mStats->mFD8 rounded)
-    long mX;                                // +0x5c
-    long mY;                                // +0x60
-    long mRoundedReach;                     // +0x64 (mScaledRange rounded)
-    long mBestScore;                        // +0x68 (-100000)
-    bool mIsImmobile;                       // +0x6c (mFAC == 0)
-    bool mIsDone;                           // +0x6d (done)
-    bool mIsDisabled;                       // +0x6e (the unit's mIsDisabled)
+// (The target search of 0x243d43, EEUUTargetSearch with its filter 0x24ffca and scoring 0x25000c, and the tile
+// searches 0x24fcd1 / 0x2503d7, EEUUSearchTiles: ee_combat's search_target, search.rs; its constructor 0x643e0a is
+// Search::new there. The world it asks is below.)
+
+// ---- the target searches' world (ee_combat search.rs): handles are the units' pointers (a region's complex units
+// for EESearchTarget, the unit list's units for EESearchTargetAlongList and EEGetPursuerOf)
+
+enum EESearchKind { kSearchRegions, kSearchAlongList, kSearchPursuer };
+
+struct EESearchContext {
+    EESearchKind mKind;
+    EEComplexUnit* mUnit;
+    U2DPoint<long> mTile;                   // EESearchTargetAlongList's EEIsAttackReachable tile (kept across calls)
+    std::vector<int32_t> mTrace;            // the capture's
 };
 
-// 0x25000c: scores inTarget against the targeting table row of mMode; the best so far (EEIsAttackReachable finds a tile to
-// attack it from) becomes mBest, mSavedLobbyMusic ends the search; a large unit is scored once (mScratch)
-inline bool EEUUTargetSearch::Score(EEComplexUnit* inTarget)
+static EEUnit* EESearchUnit(uint64_t inHandle)
 {
-    bool theFinal = false;
+    return (EEUnit*)(uintptr_t)inHandle;
+}
+
+// a handle's complex unit: the region's own, a list unit's mComplexUnit
+static EEComplexUnit* EESearchComplex(EESearchContext* inContext, uint64_t inHandle)
+{
+    if (inContext->mKind == kSearchRegions)
+        return (EEComplexUnit*)(uintptr_t)inHandle;
+    return EESearchUnit(inHandle)->mComplexUnit;
+}
+
+static void EESearchRegions(void* inContext, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom,
+                            int32_t (*outRegions)[4])
+{
+    U2DRectangle<long> theArea;
+    theArea.mLeft = inLeft;
+    theArea.mTop = inTop;
+    theArea.mRight = inRight;
+    theArea.mBottom = inBottom;
+    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(theArea);
+    (*outRegions)[0] = (int32_t)theRegions.GetTopLeft().mX;
+    (*outRegions)[1] = (int32_t)theRegions.GetTopLeft().mY;
+    (*outRegions)[2] = (int32_t)theRegions.GetBottomRight().mX;
+    (*outRegions)[3] = (int32_t)theRegions.GetBottomRight().mY;
+}
+
+static int32_t EESearchRegionLength(void* inContext, int32_t inX, int32_t inY)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return theRegion != NULL ? (int32_t)theRegion->size() : -1;
+}
+
+static uint64_t EESearchRegionUnit(void* inContext, int32_t inX, int32_t inY, int32_t inIndex)
+{
+    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
+    return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
+}
+
+static void EESearchUnitTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
+{
+    (*outTile)[0] = (int32_t)EESearchUnit(inUnit)->mTileX;
+    (*outTile)[1] = (int32_t)EESearchUnit(inUnit)->mTileY;
+}
+
+static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
+{
+    EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
+    (*outPosition)[0] = theUnit->mPhysicalModel.GetLocation().GetX();
+    (*outPosition)[1] = theUnit->mPhysicalModel.GetLocation().GetY();
+}
+
+static uint64_t EESearchListNext(void* inContext, uint64_t inUnit, int32_t inPrevious)
+{
+    EEUnit* theUnit = EESearchUnit(inUnit);
+    EEUnit* theNext = static_cast<EEUnit*>(inPrevious ? theUnit->mTileNode->mPrev : theUnit->mTileNode->mNext);
+    return (uint64_t)(uintptr_t)theNext;
+}
+
+static int32_t EESearchDummyHead(void* inContext, uint64_t inUnit)
+{
+    return RTSDummyHead(EESearchUnit(inUnit)) != NULL;
+}
+
+// EEUUTargetSearch::IsCandidate and Score's tests of a region's complex unit
+static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, EEComplexUnit* inTarget)
+{
+    EEComplexUnit* theUnit = inContext->mUnit;
+    EEPlayer* thePlayer = theUnit->mPlayer;
     EEUnitClass* theClass = inTarget->mUnitClass;
+    switch (inTest) {
+    case EE_COMBAT_SEARCH_TEST_CANDIDATE:
+        return inTarget->mPlayer != thePlayer && thePlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] != 0
+            && inTarget->mHitPoints > 0 && (!inTarget->mIsDisabled || inTarget->IsProtected());
+    case EE_COMBAT_SEARCH_TEST_NATURE:
+        return inTarget->mPlayer->GetPlayerID() == 0;
+    case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
+        return EEIsAttackedBy(theUnit, inTarget);
+    case EE_COMBAT_SEARCH_TEST_WALL:
+        return theClass->mIsWall && !theClass->mIsTower;
+    case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
+        return EECanTargetClass(theUnit, theClass);
+    case EE_COMBAT_SEARCH_TEST_FOUNDATION:
+        return inTarget->IsFoundation();
+    case EE_COMBAT_SEARCH_TEST_SEEN:
+        return EEIsSeenBy(inTarget, theUnit->GetPlayer(), true);
+    case EE_COMBAT_SEARCH_TEST_OTHER_CONTINENT:
+        return theUnit->IsOnOtherContinentThan(inTarget);
+    case EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT:
+        return theClass->IsPartLeftOut(inTarget);
+    case EE_COMBAT_SEARCH_TEST_PRIEST:
+        return theClass->IsPriest();
+    case EE_COMBAT_SEARCH_TEST_CAN_PRIEST_CONVERT:
+        return EECanPriestConvert(theUnit, inTarget);
+    case EE_COMBAT_SEARCH_TEST_CAN_ATTACK_CLASS:
+        return theUnit->CanAttackClass(theClass);
+    case EE_COMBAT_SEARCH_TEST_IGNORED:
+        return theUnit->mIgnoredTargets.size() != 0 && theUnit->IsTargetIgnored(inTarget, true);
+    case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
+        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inTarget->GetGoal());
+        return theGoal != NULL && theGoal->mTarget->mComplexUnit == theUnit;
+    }
+    }
+    return 0;
+}
+
+// EESearchTargetAlongList's and EEGetPursuerOf's tests of a list unit (its complex unit may be missing)
+static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEUnit* inTarget)
+{
+    EEComplexUnit* theUnit = inContext->mUnit;
+    EEPlayer* thePlayer = theUnit->mPlayer;
     EEPlayer* theOwner = inTarget->mPlayer;
+    EEComplexUnit* theTarget = inTarget->mComplexUnit;
+    switch (inTest) {
+    case EE_COMBAT_SEARCH_TEST_NOT_ENEMY:
+        return !(theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0);
+    case EE_COMBAT_SEARCH_TEST_NATURE:
+        return theOwner->GetPlayerID() == 0;
+    case EE_COMBAT_SEARCH_TEST_ATTACKED_BY:
+        return EEIsAttackedBy(theUnit, inTarget);
+    case EE_COMBAT_SEARCH_TEST_TECH_KIND_6: {
+        EETechTreeNode* theNode = theOwner->mTechnologies->Get(inTarget->GetUnitClass()->mTechnology);
+        return (theNode != NULL ? theNode->mData->mKind : -1) == 6;
+    }
+    case EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS:
+        return EECanTargetClass(theUnit, inTarget->GetUnitClass());
+    case EE_COMBAT_SEARCH_TEST_FOUNDATION:
+        return theTarget != NULL && theTarget->IsFoundation();
+    case EE_COMBAT_SEARCH_TEST_ALIVE:
+        return inTarget->mHitPoints > 0;
+    case EE_COMBAT_SEARCH_TEST_SEEN:
+        return EEIsSeenBy(theTarget, theUnit->GetPlayer(), true);
+    case EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT:
+        return inTarget->GetUnitClass()->IsPartLeftOut(theTarget);
+    case EE_COMBAT_SEARCH_TEST_PRIEST:
+        return theUnit->GetUnitClass()->IsPriest();
+    case EE_COMBAT_SEARCH_TEST_CAN_PRIEST_CONVERT:
+        return theTarget != NULL && EECanPriestConvert(theUnit, theTarget);
+    case EE_COMBAT_SEARCH_TEST_CAN_ATTACK_CLASS:
+        return theUnit->CanAttackClass(theTarget->GetUnitClass());   // (NULL for a list unit without one, as in the original)
+    case EE_COMBAT_SEARCH_TEST_IGNORED:
+        return theUnit->mIgnoredTargets.size() != 0 && theTarget != NULL && theUnit->IsTargetIgnored(theTarget, true);
+    case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
+        EEUGAttackUnit* theGoal;
+        return theTarget != NULL && (theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->GetGoal())) != NULL
+            && theGoal->mTarget->mComplexUnit == theUnit;
+    }
+    case EE_COMBAT_SEARCH_TEST_PURSUES: {
+        if (theTarget == NULL || theTarget->mLauncherClass != NULL || theTarget->mGoalState == NULL)
+            return 0;
+        EEUnitGoal* theGoal = theTarget->mGoalState;
+        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+        return (theAttack != NULL && theAttack->mTarget->mComplexUnit == theUnit)
+            || (theGather != NULL && theGather->mResource == theUnit);
+    }
+    }
+    return 0;
+}
+
+static int32_t EESearchTest(void* inContext, uint32_t inTest, uint64_t inUnit)
+{
+    EESearchContext* theContext = (EESearchContext*)inContext;
+    if (theContext->mKind == kSearchRegions)
+        return EESearchRegionTest(theContext, inTest, (EEComplexUnit*)(uintptr_t)inUnit);
+    return EESearchListTest(theContext, inTest, EESearchUnit(inUnit));
+}
+
+static void EESearchTargetValues(void* inContext, uint64_t inUnit, EeCombatSearchTarget* outTarget)
+{
+    EESearchContext* theContext = (EESearchContext*)inContext;
+    if (theContext->mKind == kSearchRegions) {
+        EEComplexUnit* theTarget = (EEComplexUnit*)(uintptr_t)inUnit;
+        outTarget->multiple = theTarget->mUnitClass->mTileSize > 1;
+        outTarget->unit_type = (int32_t)theTarget->mUnitClass->mUnitType;
+        outTarget->attack = theTarget->mStats->GetAttack();
+        outTarget->max_velocity = theTarget->mStats->mMaxVelocity;
+    } else {
+        EEUnit* theTarget = EESearchUnit(inUnit);
+        outTarget->multiple = theTarget->GetUnitClass()->mTileSize > 1;
+        outTarget->unit_type = (int32_t)theTarget->GetUnitClass()->mUnitType;
+        outTarget->attack = theTarget->mStats->GetAttack();
+        outTarget->max_velocity = theTarget->mStats->GetMaxVelocity();
+    }
+}
+
+static float EESearchHitDistance(void* inContext, uint64_t inUnit, float inX, float inY)
+{
+    return EEGetHitDistanceSquared(((EESearchContext*)inContext)->mUnit, EESearchUnit(inUnit), inX, inY);
+}
+
+static float EESearchAttackFactor(void* inContext, uint64_t inUnit)
+{
+    EEComplexUnit* theUnit = ((EESearchContext*)inContext)->mUnit;
+    EEUnit* theTarget = EESearchUnit(inUnit);
+    return gToHitTable.GetAttackFactor(theUnit->GetUnitClass()->mAmmoType, theTarget->GetUnitClass(),
+                                       theUnit->mPlayer->GetPlayerID(), theTarget->mPlayer->GetPlayerID());
+}
+
+static int32_t EESearchLineBlocked(void* inContext, uint64_t inUnit)
+{
     EEUnit* theBlocker;
     long theA = -10000;
     long theB = -10000;
-    if (theClass->mTileSize > 1) {
-        if (std::find(this->mScratch.begin(), this->mScratch.end(), inTarget) != this->mScratch.end())
-            return false;
-        if (theClass->mTileSize > 1)
-            this->mScratch.push_back(inTarget);
-    }
-    float theDistance;
-    if (this->mUnit->mTileX == this->mX && this->mUnit->mTileY == this->mY)
-        theDistance = EEGetHitDistanceSquared(this->mUnit, inTarget, -10000.0f, -10000.0f);
-    else
-        theDistance = EEGetHitDistanceSquared(this->mUnit, inTarget, this->mCenterX, this->mCenterY);
-    if (theDistance > this->mReachSquared)
-        return false;
-    if (theOwner->GetPlayerID() == 0 && !EEIsAttackedBy(this->mUnit, inTarget))
-        return false;
-    if (theClass->mIsWall && !theClass->mIsTower)
-        return false;
-    if (!EECanTargetClass(this->mUnit, theClass))
-        return false;
-    if (inTarget->IsFoundation())
-        return false;
-    if (!EEIsSeenBy(inTarget, this->mUnit->GetPlayer(), true))
-        return false;
-    if (this->mUnit->IsOnOtherContinentThan(inTarget))
-        return false;
-    if (theClass->IsPartLeftOut(inTarget))
-        return false;
-    if (theClass->IsPriest() && !EECanPriestConvert(this->mUnit, inTarget) && !this->mUnit->CanAttackClass(theClass))
-        return false;
-    if (this->mUnit->mIgnoredTargets.size() != 0 && this->mUnit->IsTargetIgnored(inTarget, true))
-        return false;
-    float theToHit = gToHitTable.GetAttackFactor(this->mAmmoType, theClass, this->mUnit->mPlayer->GetPlayerID(), theOwner->GetPlayerID());
-    if (this->mIsImmobile && this->mMode == 1 && theDistance >= this->mScaledRangeSquared)
-        return false;
-    if (theDistance < this->mMinRangeSquared)
-        return false;
-    if (theToHit <= 0.0f)
-        return false;
-    if (!this->mUnit->mUnitClass->mShootsHigh && !this->mUnit->mStats->mCanFireOverWalls && EEIsLineToUnitBlocked(this->mUnit, inTarget, &theBlocker, &theA, &theB))
-        return false;
-    float theTargetFAC = inTarget->mStats->mMaxVelocity;
-    long theScore = 0;
-    if (theClass->mUnitType == EEAIUnitTargetingTable::sTable[this->mMode][5]) {
-        theFinal = true;
-    } else {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inTarget->GetGoal());
-        if (theGoal != NULL && theGoal->mTarget->mComplexUnit == this->mUnit)
-            theScore = EEAIUnitTargetingTable::sTable[this->mMode][0];
-        if (theDistance <= this->mScaledRangeSquared)
-            theScore += EEAIUnitTargetingTable::sTable[this->mMode][2];
-        if (inTarget->mStats->GetAttack() < (float)this->mAttack)
-            theScore += EEAIUnitTargetingTable::sTable[this->mMode][4];
-        if (theTargetFAC < this->mMaxVelocity)
-            theScore += EEAIUnitTargetingTable::sTable[this->mMode][3];
-        if (theTargetFAC == 0.0f || inTarget->mUnitClass->mUnitType == kUnitType14AntiMissileBattery)
-            theScore += EEAIUnitTargetingTable::sTable[this->mMode][8];
-        long theNear = UMFloatToLong(EEAIUnitTargetingTable::sTable[this->mMode][7] / theDistance);
-        long theHit = UMFloatToLong(EEAIUnitTargetingTable::sTable[this->mMode][6] * theToHit);
-        theScore += theHit + theNear;
-        if (theScore <= this->mBestScore)
-            return false;
-    }
-    U2DPoint<long> theTile;
-    theTile.mX = 0;
-    theTile.mY = 0;
-    if (EEIsAttackReachable(this->mUnit, inTarget, &theTile)) {
-        this->mBest = inTarget;
-        this->mBestScore = theScore;
-        if (theFinal == true || theScore >= EEAIUnitTargetingTable::sTable[this->mMode][9])
-            this->mIsDone = true;
-    } else {
-        this->mUnit->IgnoreTarget(inTarget);
-    }
-    return false;
+    return EEIsLineToUnitBlocked(((EESearchContext*)inContext)->mUnit, EESearchUnit(inUnit), &theBlocker, &theA, &theB);
 }
 
-// 0x24fcd1 (template COMDAT after the range): the unit regions of inArea, the nine around inTile's region first, each
-// in the order of a permutation (PermuteValues with the physics' random value); inSearch's candidates it scores (it never
-// keeps one in outUnits) until it is done. Returns outUnits.size() (provisional name)
-template <class F> long EEUUSearchTiles(const U2DPoint<long>& inTile, U2DRectangle<long>* inArea,
-                                        std::vector<EEComplexUnit*>& outUnits, F& inSearch)
+static int32_t EESearchReachable(void* inContext, uint64_t inUnit)
 {
-    std::vector<std::vector<EEComplexUnit*>*> theOuter;
-    std::vector<std::vector<EEComplexUnit*>*> theInner;
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(*inArea);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-    U2DPoint<long> theEndX = theRegions.GetBottomRight();
-    U2DPoint<long> theEndY = theRegions.GetBottomRight();
-    long thePass = 0;
-    bool theGoing = true;
-    U2DPoint<long> theCenter = U2DPoint<long>(inTile.mX / theTable->mRegionSize, inTile.mY / theTable->mRegionSize);
-    theInner.reserve(9);
-    U2DPoint<long> theStart = theRegions.GetTopLeft();
-    for (long x = theStart.mX; x <= theEndX.mX; x++) {
-        U2DPoint<long> theRowStart = theRegions.GetTopLeft();
-        for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            if ((theCenter.mX - x >= 0 ? theCenter.mX - x : x - theCenter.mX) <= 1
-                && (theCenter.mY - y >= 0 ? theCenter.mY - y : y - theCenter.mY) <= 1) {
-                std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-                if (theRegion != NULL)
-                    theInner.push_back(theRegion);
-            } else {
-                std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-                if (theRegion != NULL)
-                    theOuter.push_back(theRegion);
-            }
-        }
+    EESearchContext* theContext = (EESearchContext*)inContext;
+    if (theContext->mKind == kSearchRegions) {
+        U2DPoint<long> theTile;
+        theTile.mX = 0;
+        theTile.mY = 0;
+        return EEIsAttackReachable(theContext->mUnit, (EEComplexUnit*)(uintptr_t)inUnit, &theTile);
     }
-    for (; thePass < 2; thePass++) {
-        std::vector<std::vector<EEComplexUnit*>*>& theList = thePass != 0 ? theOuter : theInner;
-        PermuteValues(theList, gPhysics->mTickRandom);
-        for (long i = theList.size() - 1; i >= 0; i--) {
-            std::vector<EEComplexUnit*>* theRegion = theList[i];
-            for (long j = theRegion->size() - 1; j >= 0; j--) {
-                EEComplexUnit* theUnit = (*theRegion)[j];
-                if (inArea->Contains(theUnit->GetTileX(), theUnit->GetTileY())
-                    && inSearch.IsCandidate(theUnit) && inSearch.Score(theUnit))
-                    outUnits.push_back(theUnit);
-                if (!inSearch.mIsDone)
-                    continue;
-                theGoing = false;
-                i = -1;
-                break;
-            }
-        }
-        if (!theGoing)
-            break;
-    }
-    return outUnits.size();
+    return EEIsAttackReachable(theContext->mUnit, EESearchUnit(inUnit)->mComplexUnit, &theContext->mTile);
 }
 
-// 0x2503d7 (template COMDAT after the range): as 0x24fcd1 for a unit with a free position: the units of the nine
-// regions around inTile's in the order of their distance from inPosition (a multimap), then the other regions
-// (provisional name)
-template <class F> long EEUUSearchTiles(const GE2DPoint& inPosition, const U2DPoint<long>& inTile,
-                                        U2DRectangle<long>* inArea, std::vector<EEComplexUnit*>& outUnits, F& inSearch)
+static void EESearchIgnore(void* inContext, uint64_t inUnit)
 {
-    std::vector<std::vector<EEComplexUnit*>*> theOuter;
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(*inArea);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-    std::multimap<float, EEComplexUnit*> theNear;
-    U2DPoint<long> theEndX = theRegions.GetBottomRight();
-    U2DPoint<long> theEndY = theRegions.GetBottomRight();
-    U2DPoint<long> theCenter = U2DPoint<long>(inTile.mX / theTable->mRegionSize, inTile.mY / theTable->mRegionSize);
-    U2DPoint<long> theStart = theRegions.GetTopLeft();
-    for (long x = theStart.mX; x <= theEndX.mX; x++) {
-        U2DPoint<long> theRowStart = theRegions.GetTopLeft();
-        for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            if ((theCenter.mX - x >= 0 ? theCenter.mX - x : x - theCenter.mX) <= 1
-                && (theCenter.mY - y >= 0 ? theCenter.mY - y : y - theCenter.mY) <= 1) {
-                std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-                if (theRegion != NULL) {
-                    for (long j = theRegion->size() - 1; j >= 0; j--) {
-                        EEComplexUnit* theUnit = (*theRegion)[j];
-                        if (!(theUnit->mTileX >= inArea->mLeft) || !(theUnit->mTileX <= inArea->mRight)
-                            || !(theUnit->mTileY >= inArea->mTop) || !(theUnit->mTileY <= inArea->mBottom)
-                            || !inSearch.IsCandidate(theUnit))
-                            continue;
-                        GE3DPoint thePoint(theUnit->mPhysicalModel.GetLocation().GetX(),
-                                           theUnit->mPhysicalModel.GetLocation().GetY(),
-                                           theUnit->mPhysicalModel.GetLocation().GetZ());
-                        float theDistance = inPosition.DistanceToSquared(thePoint.Get2DPoint());
-                        theNear.insert(std::multimap<float, EEComplexUnit*>::value_type(theDistance, theUnit));
-                    }
-                }
-            } else {
-                std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-                if (theRegion != NULL)
-                    theOuter.push_back(theRegion);
-            }
-        }
-    }
-    for (std::multimap<float, EEComplexUnit*>::iterator it = theNear.begin(); it != theNear.end(); it++) {
-        EEComplexUnit* theUnit = it->second;
-        if (inSearch.IsCandidate(theUnit))
-            inSearch.Score(theUnit);
-        if (inSearch.mIsDone)
-            return outUnits.size();
-    }
-    PermuteValues(theOuter, gPhysics->mTickRandom);
-    for (long i = theOuter.size() - 1; i >= 0; i--) {
-        std::vector<EEComplexUnit*>* theRegion = *(theOuter.begin() + i);
-        for (long j = theRegion->size() - 1; j >= 0; j--) {
-            EEComplexUnit* theUnit = *(theRegion->begin() + j);
-            if (theUnit->mTileX >= inArea->mLeft && theUnit->mTileX <= inArea->mRight
-                && theUnit->mTileY >= inArea->mTop && theUnit->mTileY <= inArea->mBottom
-                && inSearch.IsCandidate(theUnit) && inSearch.Score(theUnit))
-                outUnits.push_back(theUnit);
-            if (inSearch.mIsDone) {
-                i = -1;
-                break;
-            }
-        }
-    }
-    return outUnits.size();
+    EESearchContext* theContext = (EESearchContext*)inContext;
+    theContext->mUnit->IgnoreTarget(EESearchComplex(theContext, inUnit));
+}
+
+static void EESearchFootprintTile(void* inContext, uint64_t inUnit, int32_t (*outTile)[2])
+{
+    long theX;
+    long theY;
+    ((EESearchContext*)inContext)->mUnit->GetNearestFootprintTile(EESearchUnit(inUnit), &theX, &theY);
+    (*outTile)[0] = (int32_t)theX;
+    (*outTile)[1] = (int32_t)theY;
+}
+
+// the capture's trace: the candidate's id (a pursuer's complex unit's), its outcome (a pursuer's distance), the score
+static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int32_t inScore)
+{
+    EESearchContext* theContext = (EESearchContext*)inContext;
+    if (!EESimCaptureRecord::Active())
+        return;
+    EEUnit* theUnit = EESearchUnit(inUnit);
+    if (theContext->mKind != kSearchAlongList)
+        theUnit = EESearchComplex(theContext, inUnit);
+    if (theContext->mKind == kSearchPursuer)
+        theUnit = EESearchUnit(inUnit)->mComplexUnit;
+    theContext->mTrace.push_back((int32_t)theUnit->GetUnitID());
+    theContext->mTrace.push_back(inCode);
+    if (theContext->mKind != kSearchPursuer)
+        theContext->mTrace.push_back(inScore);
+}
+
+static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
+{
+    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit, EESearchUnitTile,
+                                  EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
+                                  EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
+                                  EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
+    return theHost;
+}
+
+// the search's inputs from the unit (EEUUTargetSearch's constructor's reads; EESearchTargetAlongList's locals)
+static EeCombatSearchIn EESearchInput(EEComplexUnit* inUnit, long inX, long inY, float inScale)
+{
+    EeCombatSearchIn in = {};
+    in.attack = inUnit->mStats->GetAttack();
+    in.reach = inUnit->GetLineOfSight();
+    in.max_velocity = inUnit->mStats->GetMaxVelocity();
+    in.range = inUnit->mStats->GetRange();
+    in.scale = inScale;
+    in.min_range = inUnit->mUnitClass->mMinRange;
+    in.melee = inUnit->mUnitClass->mIsMelee;
+    in.shoots_high = inUnit->mUnitClass->mShootsHigh;
+    in.over_walls = inUnit->mStats->mCanFireOverWalls;
+    in.unit_x = (int32_t)inUnit->mTileX;
+    in.unit_y = (int32_t)inUnit->mTileY;
+    in.x = (int32_t)inX;
+    in.y = (int32_t)inY;
+    for (long i = 0; i < 3; i++)
+        for (long j = 0; j < 10; j++)
+            in.table[i * 10 + j] = (int32_t)EEAIUnitTargetingTable::sTable[i][j];
+    return in;
 }
 
 // (0x250806, EEUUGetUnitsInArea, the units of an area's unit regions that a screen passes: ee_combat's units_in_area,
@@ -2570,65 +2622,46 @@ struct EEUUCircleScreen {
 // FUNCTION: EXE 0x643d43
 // Returns the best target for a unit around a tile, scored by a target search
 // The best target for inUnit around (inX, inY) (the tile search 0x24fcd1, or 0x2503d7 from its position for a
-// class with +0x318), scored by an EEUUTargetSearch
+// class with +0x318), scored by an EEUUTargetSearch (new: the search, its walks and scores are ee_combat's
+// search_target; the tests stay here)
 EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long inX, long inY, float inScale)
 {
-    EEUUTargetSearch theSearch(inUnit, inX, inY, inScale);
-    std::vector<EEComplexUnit*> theScratch;
-    if (!inUnit->mUnitClass->mIsMelee) {
-        U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
-        EEUUSearchTiles(theTile, inArea, theScratch, theSearch);
-    } else {
-        GE2DPoint thePosition(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY());
-        U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
-        EEUUSearchTiles(thePosition, theTile, inArea, theScratch, theSearch);
+    EESearchContext theContext;
+    theContext.mKind = kSearchRegions;
+    theContext.mUnit = inUnit;
+    EeCombatSearchHost theHost = EESearchHost(&theContext);
+    EeCombatSearchIn in = EESearchInput(inUnit, inX, inY, inScale);
+    in.left = (int32_t)inArea->mLeft;
+    in.top = (int32_t)inArea->mTop;
+    in.right = (int32_t)inArea->mRight;
+    in.bottom = (int32_t)inArea->mBottom;
+    in.region_size = (int32_t)gWorld.mMap->mUnitRegions->mRegionSize;
+    in.tick_random = (int32_t)gPhysics->mTickRandom;
+    in.position_x = inUnit->mPhysicalModel.GetLocation().GetX();
+    in.position_y = inUnit->mPhysicalModel.GetLocation().GetY();
+    EeCombatSearchOut theOut = ee_combat_search_target(&in, &theHost);
+    EEComplexUnit* theBest = (EEComplexUnit*)(uintptr_t)theOut.best;
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'S', 'T'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)inX);
+        theRecord.I32((int32_t)inY);
+        theRecord.F32(inScale);
+        theRecord.I32((int32_t)inArea->mLeft);
+        theRecord.I32((int32_t)inArea->mTop);
+        theRecord.I32((int32_t)inArea->mRight);
+        theRecord.I32((int32_t)inArea->mBottom);
+        theRecord.I32(inUnit->mUnitClass->mIsMelee);
+        theRecord.I32((int32_t)gPhysics->mTickRandom);
+        theRecord.I32((int32_t)(theContext.mTrace.size() / 3));
+        for (size_t i = 0; i < theContext.mTrace.size(); i++)
+            theRecord.I32(theContext.mTrace[i]);
+        theRecord.I32(theBest != NULL ? (int32_t)theBest->GetUnitID() : -1);
+        theRecord.I32(theOut.score);
+        theRecord.I32(theOut.done);
+        theRecord.Commit();
     }
-    return theSearch.mBest;
-}
-
-// FUNCTION: EXE 0x643e0a
-// Creates a target search for a unit around a tile: its attack, sight, speed and range, no best target yet
-EEUUTargetSearch::EEUUTargetSearch(EEComplexUnit* inUnit, long inX, long inY, float inScale)
-{
-    this->mCenterX = 0.0f;
-    this->mCenterY = 0.0f;
-    this->mX = inX;
-    this->mUnit = inUnit;
-    this->mY = inY;
-    this->mBest = NULL;
-    this->mBestScore = -100000;
-    this->mIsDone = false;
-    this->mPlayer = inUnit->mPlayer;
-    this->mPlayerID = this->mPlayer->GetPlayerID();
-    this->mStats = inUnit->mStats;
-    this->mAttack = UMFloatToLong(this->mStats->GetAttack());
-    this->mReach = inUnit->GetLineOfSight();
-    this->mMaxVelocity = this->mStats->GetMaxVelocity();
-    this->mRange = this->mStats->GetRange();
-    this->mScaledRange = this->mRange * inScale;
-    this->mCategory = inUnit->mUnitClass->mCategory;
-    this->mAmmoType = inUnit->mUnitClass->mAmmoType;
-    this->mScaledRangeSquared = UMSquare(this->mScaledRange);
-    this->mIsDisabled = inUnit->mIsDisabled;
-    this->mRoundedReach = UMFloatToLong(this->mReach);
-    if (this->mScaledRange > this->mReach) {
-        this->mReachSquared = this->mScaledRangeSquared;
-        this->mOuterSquared = UMSquare(this->mScaledRange + 4.0f);
-    } else {
-        this->mReachSquared = UMSquare(this->mReach);
-        this->mOuterSquared = UMSquare(this->mReach + 4.0f);
-    }
-    // NEAR: the original loads +0x120 as a float (fld): EEUnitClass::mL120 is a float
-    this->mMinRangeSquared = UMSquare(inUnit->mUnitClass->mMinRange);
-    if (inUnit->mUnitClass->mIsMelee)
-        this->mMode = 0;
-    else if (this->mRange <= this->mReach)
-        this->mMode = 1;
-    else
-        this->mMode = 2;
-    this->mIsImmobile = this->mMaxVelocity == 0.0f;
-    this->mCenterX = (float)inX + 0.5f;
-    this->mCenterY = (float)inY + 0.5f;
+    return theBest;
 }
 
 // FUNCTION: EXE 0x643f78
@@ -2643,196 +2676,29 @@ EEUnit* EEFindNearbyTarget(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x643fa7
 // Returns the best target for a unit around a tile along the x-sorted unit list, scored by its targeting table
 // The best target for inUnit around (inX, inY) along the x-sorted unit list (both ways), scored by the targeting
-// table row of its mode (the unit-list twin of EEUUTargetSearch)
+// table row of its mode (the unit-list twin of EEUUTargetSearch) (new: the walk and the scores are ee_combat's
+// search_along_list; the tests stay here)
 EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float inScale)
 {
-    U2DPoint<long> theTile;
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    unsigned long thePlayerID = thePlayer->GetPlayerID();
-    long theAttack = UMFloatToLong(theStats->GetAttack());
-    float theReach = inUnit->GetLineOfSight();
-    float theMaxVelocity = theStats->GetMaxVelocity();
-    float theRange = theStats->GetRange();
-    EEComplexUnit* theTarget;
-    float theToHit;
-    inScale = theRange * inScale;
-    long theCategory = inUnit->GetUnitClass()->mAmmoType;
-    float theScaledRangeSquared = UMSquare(inScale);
-    long theWholeReach = UMFloatToLong(theReach);
-    float theReachSquared;
-    float theOuterSquared;
-    if (inScale > theReach) {
-        theReachSquared = theScaledRangeSquared;
-        theOuterSquared = UMSquare(inScale + 4.0f);
-    } else {
-        theReachSquared = UMSquare(theReach);
-        theOuterSquared = UMSquare(theReach + 4.0f);
-    }
-    float theMinRangeSquared = UMSquare(inUnit->GetUnitClass()->mMinRange);
-    long theMode;
-    if (inUnit->GetUnitClass()->mIsMelee) {
-        theMode = 0;
-    } else {
-        theMode = 1;
-        if (theRange > theReach)
-            theMode = 2;
-    }
-    bool theIsStationary = theMaxVelocity == 0.0f;
-    EEUnit* theForward = static_cast<EEUnit*>(inUnit->mTileNode->mPrev);
-    EEUnit* theBackward = static_cast<EEUnit*>(inUnit->mTileNode->mNext);
-    bool theDone = false;
-    bool theBackDone = false;
-    EEUnit* theBest = NULL;
-    long theBestScore = -100000;
-    EEUnit* theA;
-    long theB;
-    long theC;
-    if (inUnit->mStats->GetAttack() == 0.0f) {
-        theDone = true;
-        theBackDone = true;
-    }
-    while ((!theDone || !theBackDone) && theForward != NULL) {
-        if (!theDone) {
-            if (RTSDummyHead(theForward) != NULL
-                || (float)((inX - theForward->mTileX) * (inX - theForward->mTileX)) > theOuterSquared) {
-                theDone = true;
-            } else {
-                EEPlayer* theOwner = theForward->mPlayer;
-                EETechTreeNode* theNode = theOwner->mTechnologies->Get(theForward->GetUnitClass()->mTechnology);
-                long theKind = theNode != NULL ? theNode->mData->mKind : -1;
-                theTarget = theForward->mComplexUnit;
-                if (theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0
-                    && (theOwner->GetPlayerID() != 0 || EEIsAttackedBy(inUnit, theForward)) && theKind != 6
-                    && EECanTargetClass(inUnit, theForward->GetUnitClass()) && (theTarget == NULL || !theTarget->IsFoundation())
-                    && theForward->mHitPoints > 0 && EEIsSeenBy(theTarget, inUnit->GetPlayer(), true)
-                    && !theForward->GetUnitClass()->IsPartLeftOut(theTarget)
-                    && (!inUnit->GetUnitClass()->IsPriest() || (theTarget != NULL && EECanPriestConvert(inUnit, theTarget))
-                        || inUnit->CanAttackClass(theTarget->GetUnitClass()))
-                    && (inUnit->mIgnoredTargets.size() == 0 || theTarget == NULL || !inUnit->IsTargetIgnored(theTarget, true))) {
-                    float theDistance;
-                    if (inUnit->mTileX == inX && inUnit->mTileY == inY)
-                        theDistance = EEGetHitDistanceSquared(inUnit, theForward, -10000.0f, -10000.0f);
-                    else
-                        theDistance = EEGetHitDistanceSquared(inUnit, theForward, (float)inX + 0.5f, (float)inY + 0.5f);
-                    theToHit = gToHitTable.GetAttackFactor(theCategory, theForward->GetUnitClass(), thePlayerID,
-                                                          theOwner->GetPlayerID());
-                    if (theDistance <= theReachSquared
-                        && (!theIsStationary || theMode != 1 || theDistance < theScaledRangeSquared)
-                        && theDistance >= theMinRangeSquared && theToHit > 0.0f
-                        && (inUnit->GetUnitClass()->mShootsHigh || inUnit->mStats->mCanFireOverWalls
-                            || !EEIsLineToUnitBlocked(inUnit, theForward, &theA, &theC, &theB))) {
-                        float theTargetFAC = theForward->mStats->GetMaxVelocity();
-                        long theScore = 0;
-                        if (theForward->GetUnitClass()->mUnitType == EEAIUnitTargetingTable::sTable[theMode][5]) {
-                            theBest = theForward;
-                            theDone = true;
-                            theBackDone = true;
-                            continue;
-                        }
-                        EEUGAttackUnit* theGoal;
-                        if (theForward->mComplexUnit != NULL
-                            && (theGoal = dynamic_cast<EEUGAttackUnit*>(theForward->mComplexUnit->GetGoal())) != NULL
-                            && theGoal->mTarget->mComplexUnit == inUnit)
-                            theScore = EEAIUnitTargetingTable::sTable[theMode][0];
-                        if (theDistance <= theScaledRangeSquared)
-                            theScore += EEAIUnitTargetingTable::sTable[theMode][2];
-                        if (theForward->mStats->GetAttack() < (float)theAttack)
-                            theScore += EEAIUnitTargetingTable::sTable[theMode][4];
-                        if (theTargetFAC < theMaxVelocity)
-                            theScore += EEAIUnitTargetingTable::sTable[theMode][3];
-                        if (theTargetFAC == 0.0f)
-                            theScore += EEAIUnitTargetingTable::sTable[theMode][8];
-                        long theNear = UMFloatToLong(EEAIUnitTargetingTable::sTable[theMode][7] / theDistance);
-                        long theHit = UMFloatToLong(EEAIUnitTargetingTable::sTable[theMode][6] * theToHit);
-                        theScore += theHit + theNear;
-                        if (theScore > theBestScore) {
-                            if (EEIsAttackReachable(inUnit, theTarget, &theTile)) {
-                                theBest = theForward;
-                                theBestScore = theScore;
-                                if (theScore >= EEAIUnitTargetingTable::sTable[theMode][9]) {
-                                    theDone = true;
-                                    theBackDone = true;
-                                }
-                            } else {
-                                inUnit->IgnoreTarget(theTarget);
-                            }
-                        }
-                    }
-                }
-                theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
-            }
-        }
-        if (theBackDone)
-            continue;
-        if (theBackward == NULL
-            || (float)((theBackward->mTileX - inX) * (theBackward->mTileX - inX)) > theOuterSquared) {
-            theBackDone = true;
-        } else {
-            EEPlayer* theOwner = theBackward->mPlayer;
-            EETechTreeNode* theNode = theOwner->mTechnologies->Get(theBackward->GetUnitClass()->mTechnology);
-            long theKind = theNode != NULL ? theNode->mData->mKind : -1;
-            theTarget = theBackward->mComplexUnit;
-            if (theOwner != thePlayer && thePlayer->mEnemies[theOwner->GetPlayerID()] != 0
-                && (theOwner->GetPlayerID() != 0 || EEIsAttackedBy(inUnit, theBackward)) && theKind != 6
-                && EECanTargetClass(inUnit, theBackward->GetUnitClass()) && (theTarget == NULL || !theTarget->IsFoundation())
-                && theBackward->mHitPoints > 0 && EEIsSeenBy(theTarget, inUnit->GetPlayer(), true)
-                && !theBackward->GetUnitClass()->IsPartLeftOut(theTarget)
-                && (!inUnit->GetUnitClass()->IsPriest() || (theTarget != NULL && EECanPriestConvert(inUnit, theTarget))
-                    || inUnit->CanAttackClass(theTarget->GetUnitClass()))
-                && (inUnit->mIgnoredTargets.size() == 0 || theTarget == NULL || !inUnit->IsTargetIgnored(theTarget, true))) {
-                float theDistance;
-                if (inUnit->mTileX == inX && inUnit->mTileY == inY)
-                    theDistance = EEGetHitDistanceSquared(inUnit, theBackward, -10000.0f, -10000.0f);
-                else
-                    theDistance = EEGetHitDistanceSquared(inUnit, theBackward, (float)inX + 0.5f, (float)inY + 0.5f);
-                theToHit = gToHitTable.GetAttackFactor(theCategory, theBackward->GetUnitClass(), thePlayerID,
-                                                      theBackward->mPlayer->GetPlayerID());
-                // (no mB2E5 test on this side, as in the original)
-                if (theDistance <= theReachSquared
-                    && (!theIsStationary || theMode != 1 || theDistance < theScaledRangeSquared)
-                    && theDistance >= theMinRangeSquared && theToHit > 0.0f
-                    && (inUnit->mStats->mCanFireOverWalls || !EEIsLineToUnitBlocked(inUnit, theBackward, &theA, &theC, &theB))) {
-                    float theTargetFAC = theBackward->mStats->GetMaxVelocity();
-                    long theScore = 0;
-                    if (theBackward->GetUnitClass()->mUnitType == EEAIUnitTargetingTable::sTable[theMode][5]) {
-                        theBest = theBackward;
-                        theDone = true;
-                        theBackDone = true;
-                        continue;
-                    }
-                    EEUGAttackUnit* theGoal;
-                    if (theBackward->mComplexUnit != NULL
-                        && (theGoal = dynamic_cast<EEUGAttackUnit*>(theBackward->mComplexUnit->GetGoal())) != NULL
-                        && theGoal->mTarget->mComplexUnit == inUnit)
-                        theScore = EEAIUnitTargetingTable::sTable[theMode][0];
-                    if (theDistance <= theScaledRangeSquared)
-                        theScore += EEAIUnitTargetingTable::sTable[theMode][2];
-                    if (theBackward->mStats->GetAttack() < (float)theAttack)
-                        theScore += EEAIUnitTargetingTable::sTable[theMode][4];
-                    if (theTargetFAC < theMaxVelocity)
-                        theScore += EEAIUnitTargetingTable::sTable[theMode][3];
-                    if (theTargetFAC == 0.0f)
-                        theScore += EEAIUnitTargetingTable::sTable[theMode][8];
-                    long theNear = UMFloatToLong(EEAIUnitTargetingTable::sTable[theMode][7] / theDistance);
-                    long theHit = UMFloatToLong(EEAIUnitTargetingTable::sTable[theMode][6] * theToHit);
-                    theScore += theHit + theNear;
-                    if (theScore > theBestScore) {
-                        if (EEIsAttackReachable(inUnit, theTarget, &theTile)) {
-                            theBest = theBackward;
-                            theBestScore = theScore;
-                            if (theScore >= EEAIUnitTargetingTable::sTable[theMode][9]) {
-                                theDone = true;
-                                theBackDone = true;
-                            }
-                        } else {
-                            inUnit->IgnoreTarget(theTarget);
-                        }
-                    }
-                }
-            }
-            theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
-        }
+    EESearchContext theContext;
+    theContext.mKind = kSearchAlongList;
+    theContext.mUnit = inUnit;
+    EeCombatSearchHost theHost = EESearchHost(&theContext);
+    EeCombatSearchIn in = EESearchInput(inUnit, inX, inY, inScale);
+    EeCombatSearchOut theOut = ee_combat_search_along_list(&in, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
+    EEUnit* theBest = EESearchUnit(theOut.best);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'S', 'L'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)inX);
+        theRecord.I32((int32_t)inY);
+        theRecord.F32(inScale);
+        theRecord.I32((int32_t)(theContext.mTrace.size() / 3));
+        for (size_t i = 0; i < theContext.mTrace.size(); i++)
+            theRecord.I32(theContext.mTrace[i]);
+        theRecord.I32(theBest != NULL ? (int32_t)theBest->GetUnitID() : -1);
+        theRecord.I32(theOut.score);
+        theRecord.Commit();
     }
     return theBest;
 }
@@ -3348,70 +3214,28 @@ EEComplexUnit* EEFindFreeFarm(EEComplexUnit* inUnit, bool inFreeOnly, long* ioRi
 
 // FUNCTION: EXE 0x645bc4
 // Returns the nearest unit that attacks or gathers from the unit
+// (new: the walk along the unit list and the choice are ee_combat's pursuer_of; the goal tests stay here)
 EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
 {
-    long theBest = -1;
+    EESearchContext theContext;
+    theContext.mKind = kSearchPursuer;
+    theContext.mUnit = inUnit;
+    EeCombatSearchHost theHost = EESearchHost(&theContext);
     long theX = inUnit->GetTileX();
     long theY = inUnit->GetTileY();
-    EEComplexUnit* theResult = NULL;
-    EEUnit* theForward = static_cast<EEUnit*>(inUnit->mTileNode->mPrev);
-    EEUnit* theBackward = static_cast<EEUnit*>(inUnit->mTileNode->mNext);
-    bool theForwardDone;
-    bool theBackwardDone;
-    long theTileX;
-    long theTileY;
-    EEComplexUnit* theUnit;
-    EEUGAttackUnit* theAttack;
-    EEUGGather* theGather;
-    long theDistance;
-
-    if (RTSDummyHead(theForward) != NULL || theForward == NULL)
-        theForwardDone = true;
-    else
-        theForwardDone = false;
-    theBackwardDone = theBackward == NULL;
-    while (!theForwardDone || !theBackwardDone) {
-        if (!theForwardDone) {
-            theUnit = theForward->mComplexUnit;
-            if (theUnit != NULL && theUnit->mLauncherClass == NULL && theUnit->mGoalState != NULL) {
-                EEUnitGoal* theGoal = theUnit->mGoalState;
-                theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-                theGather = dynamic_cast<EEUGGather*>(theGoal);
-                if ((theAttack != NULL && theAttack->mTarget->mComplexUnit == inUnit)
-                    || (theGather != NULL && theGather->mResource == inUnit)) {
-                    inUnit->GetNearestFootprintTile(theForward, &theTileX, &theTileY);
-                    theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
-                    if (theBest == -1 || theDistance < theBest) {
-                        theResult = theUnit;
-                        theBest = theDistance;
-                    }
-                }
-            }
-            theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
-            if (RTSDummyHead(theForward) != NULL || theForward == NULL)
-                theForwardDone = true;
-            else
-                theForwardDone = false;
-        }
-        if (theBackwardDone)
-            continue;
-        theUnit = theBackward->mComplexUnit;
-        if (theUnit != NULL && theUnit->mLauncherClass == NULL && theUnit->mGoalState != NULL) {
-            EEUnitGoal* theGoal = theUnit->mGoalState;
-            theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-            theGather = dynamic_cast<EEUGGather*>(theGoal);
-            if ((theAttack != NULL && theAttack->mTarget->mComplexUnit == inUnit)
-                || (theGather != NULL && theGather->mResource == inUnit)) {
-                inUnit->GetNearestFootprintTile(theBackward, &theTileX, &theTileY);
-                theDistance = (theY - theTileY) * (theY - theTileY) + (theX - theTileX) * (theX - theTileX);
-                if (theBest == -1 || theDistance < theBest) {
-                    theResult = theUnit;
-                    theBest = theDistance;
-                }
-            }
-        }
-        theBackward = static_cast<EEUnit*>(theBackward->mTileNode->mNext);
-        theBackwardDone = theBackward == NULL;
+    uint64_t thePursuer = ee_combat_pursuer_of((uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), (int32_t)theX,
+                                               (int32_t)theY, &theHost);
+    EEComplexUnit* theResult = thePursuer != 0 ? EESearchUnit(thePursuer)->mComplexUnit : NULL;
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'P', 'U'));
+        theRecord.I32((int32_t)inUnit->GetUnitID());
+        theRecord.I32((int32_t)theX);
+        theRecord.I32((int32_t)theY);
+        theRecord.I32((int32_t)(theContext.mTrace.size() / 2));
+        for (size_t i = 0; i < theContext.mTrace.size(); i++)
+            theRecord.I32(theContext.mTrace[i]);
+        theRecord.I32(theResult != NULL ? (int32_t)theResult->GetUnitID() : -1);
+        theRecord.Commit();
     }
     return theResult;
 }
@@ -4206,7 +4030,7 @@ bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
     if (inClass != NULL) {
         if (inAttacker != NULL && inAttacker->mUnitClass->mAmmoType == 0x3c) {
             unsigned long theKind = inClass->mFamily;
-            if (!inClass->CanBeAttacked() || gDamageTable[theKind][0x3c] <= 0.0f)
+            if (!inClass->CanBeAttacked() || EEDamageFactor(theKind, 0x3c) <= 0.0f)
                 return false;
         } else {
             long theCategory = inClass->mCategory;
@@ -4969,244 +4793,37 @@ void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint
 // Collects the tiles of a line, walking in from both ends (optionally the end tiles and 4-connected)
 // The tiles of the line (inX1, inY1)-(inX2, inY2): a symmetric double-step rasteriser that walks in from both ends
 // (inEnds: the two end tiles too; !inThin: the extra tiles that make the line 4-connected), in order from (inX1, inY1)
+// (new: the rasteriser is ee_combat's tile_line)
 void EEGetTileLine(long inX1, long inY1, long inX2, long inY2, std::vector<U2DPoint<long> >* outTiles, bool inEnds,
                 bool inThin)
 {
-    long theSwap;
-    long theIncrement1;
-    long theD;
-    long i;
-    long theHalf2;
-    std::vector<U2DPoint<long> > theBack;
-    std::vector<U2DPoint<long> > theFront;
     long theDX = inX1 - inX2;
     if (theDX < 0)
         theDX = -theDX;
     long theDY = inY1 - inY2;
     if (theDY < 0)
         theDY = -theDY;
-    bool theForward = false;
-    theBack.reserve(theDY + theDX);
-    theFront.reserve(theDY + theDX);
-    long theSignX = inX2 - inX1 >= 0 ? 1 : -1;
-    long theLengthX = (inX2 - inX1) * theSignX;
-    long theSignY = inY2 - inY1 >= 0 ? 1 : -1;
-    long theLengthY = (inY2 - inY1) * theSignY;
-    long theStep = theSignX != theSignY ? -1 : 1;
-    long theSteep;
-    if (theLengthY > theLengthX) {
-        theSwap = inX1;
-        inX1 = inY1;
-        inY1 = theSwap;
-        theSwap = inX2;
-        inX2 = inY2;
-        inY2 = theSwap;
-        theSwap = theLengthX;
-        theLengthX = theLengthY;
-        theLengthY = theSwap;
-        theSteep = 1;
-    } else {
-        theSteep = 0;
-    }
-    long theX;
-    long theY;
-    long theEndX;
-    long theEndY;
-    if (inX1 > inX2) {
-        theX = inX2;
-        theY = inY2;
-        theEndX = inX1;
-        theEndY = inY1;
-    } else {
-        theX = inX1;
-        theY = inY1;
-        theEndX = inX2;
-        theEndY = inY2;
-        theForward = true;
-    }
-    long theQuads = (theLengthX - 1) / 4;
-    long theLeft = (theLengthX - 1) % 4;
-    if (inEnds) {
-        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-    }
-    if (!inThin && theLeft == 0 && theQuads == 0 && theLengthX == 1 && theLengthY == 1)
-        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-    long theHalf = theLengthY * 2;
-    long theIncrement2 = (theHalf - theLengthX) * 2;
-    if (theLeft >= 0) {
-        if (theIncrement2 < 0) {
-            theIncrement1 = theLengthY * 4;
-            theD = theIncrement1 - theLengthX;
-            for (i = 0; i < theQuads; i++) {
-                theX++;
-                theEndX--;
-                if (theD < 0) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                    if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theD += theIncrement1;
-                } else {
-                    if (theD < theHalf) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX) : U2DPoint<long>(theX, theY + theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX) : U2DPoint<long>(theEndX, theEndY - theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    }
-                    theD += theIncrement2;
-                }
-            }
-            if (theLeft != 0) {
-                if (theD < 0) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    if (theLeft > 1)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                } else if (theD < theHalf) {
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    if (theLeft > 1) {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 1) : U2DPoint<long>(theX + 1, theY + theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                    }
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                    if (theLeft > 1)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 2)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                }
-            }
-        } else {
-            theHalf2 = (theLengthY - theLengthX) * 2;
-            theD = theLengthX + (theLengthY - theLengthX) * 4;
-            for (i = 0; i < theQuads; i++) {
-                theX++;
-                theEndX--;
-                if (theD < 1) {
-                    if (theD < theHalf2) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, ++theX) : U2DPoint<long>(++theX, theY));
-                        if (!inThin)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, --theEndX) : U2DPoint<long>(--theEndX, theEndY));
-                        if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    }
-                    theD += theIncrement2;
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX) : U2DPoint<long>(theX, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX) : U2DPoint<long>(theX, theY += theStep));
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX) : U2DPoint<long>(theX, theY + theStep));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, ++theX) : U2DPoint<long>(++theX, theY += theStep));
-                    if (!inThin)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX) : U2DPoint<long>(theEndX, theEndY));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, theEndX) : U2DPoint<long>(theEndX, theEndY -= theStep));
-                    if (!inThin)
-                        theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX) : U2DPoint<long>(theEndX, theEndY - theStep));
-                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY -= theStep, --theEndX) : U2DPoint<long>(--theEndX, theEndY -= theStep));
-                    theD += (theLengthY - theLengthX) * 4;
-                    if (i == theQuads - 1 && theLeft == 0 && !inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                }
-            }
-            if (theLeft != 0) {
-                if (theD < 1) {
-                    if (theD < theHalf2) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        if (theLeft > 1) {
-                            if (!inThin)
-                                theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 1) : U2DPoint<long>(theX + 1, theY + theStep));
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        }
-                        if (theLeft > 2)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                    } else {
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                        if (theLeft > 1) {
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                            if (!inThin)
-                                theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        }
-                        if (theLeft > 2) {
-                            if (theD > theHalf2) {
-                                if (!inThin)
-                                    theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                                theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                            } else {
-                                theBack.push_back(theSteep ? U2DPoint<long>(theEndY, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY));
-                            }
-                        }
-                    }
-                } else {
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 1) : U2DPoint<long>(theX + 1, theY));
-                    theFront.push_back(theSteep ? U2DPoint<long>(theY += theStep, theX + 1) : U2DPoint<long>(theX + 1, theY += theStep));
-                    if (!inThin)
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY, theX + 2) : U2DPoint<long>(theX + 2, theY));
-                    if (theLeft > 1) {
-                        theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep));
-                        if (!inThin)
-                            theFront.push_back(theSteep ? U2DPoint<long>(theY + theStep + theStep, theX + 2) : U2DPoint<long>(theX + 2, theY + theStep + theStep));
-                        if (theLeft > 2)
-                            theBack.push_back(theSteep ? U2DPoint<long>(theEndY - theStep, theEndX - 1) : U2DPoint<long>(theEndX - 1, theEndY - theStep));
-                    }
-                }
-            }
-        }
+    // a line has at most two tiles a step, and its two ends
+    std::vector<int32_t> thePairs((size_t)(theDX + theDY) * 4 + 8);
+    uint32_t theCapacity = (uint32_t)(thePairs.size() / 2);
+    uint32_t theCount = ee_combat_tile_line((int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin,
+                                            (int32_t(*)[2])&thePairs[0], theCapacity);
+    if (theCount > theCapacity) {
+        thePairs.resize((size_t)theCount * 2);
+        ee_combat_tile_line((int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin,
+                            (int32_t(*)[2])&thePairs[0], theCount);
     }
     outTiles->clear();
-    outTiles->reserve(theFront.size() + theBack.size());
-    *outTiles = theForward ? theFront : theBack;
-    if (theForward) {
-        for (i = theBack.size() - 1; i >= 0; i--)
-            outTiles->push_back(theBack[i]);
-    } else {
-        for (i = theFront.size() - 1; i >= 0; i--)
-            outTiles->push_back(theFront[i]);
+    outTiles->reserve(theCount);
+    for (uint32_t i = 0; i < theCount; i++)
+        outTiles->push_back(U2DPoint<long>(thePairs[i * 2], thePairs[i * 2 + 1]));
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'T', 'L'));
+        int32_t theIn[6] = {(int32_t)inX1, (int32_t)inY1, (int32_t)inX2, (int32_t)inY2, inEnds, inThin};
+        theRecord.Bytes(theIn, sizeof(theIn));
+        theRecord.I32((int32_t)theCount);
+        theRecord.Bytes(&thePairs[0], theCount * 8);
+        theRecord.Commit();
     }
 }
 
@@ -6394,44 +6011,63 @@ struct EELineOfFireHost {
     std::vector<int32_t> mPairs;
 };
 
-// the shot's start: the shooter's height, or (not bare) its weapon tag point's (the original's arithmetic)
+// the shot's start: the shooter's height, or (not bare) its weapon tag point's. The model's data at its frame is
+// gathered here (the tag point, the model chain's transforms, the turret's yaw, the box); the arithmetic is ee_combat's
+// weapon_height (geometry.rs)
 static float EELineOfFireStartHeight(void* inContext, int32_t inBare)
 {
-    EELineOfFireHost* theHost = (EELineOfFireHost*)inContext;
-    EEComplexUnit* inUnit = theHost->mUnit;
-    GE3DPoint theStart;
-    GETransformation theTransformation;
-    GETransformation theOrientation;
-    unsigned long thePart;
-    float theHeight;
-    theHeight = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ();
-    if (!inBare) {
-        theTransformation = inUnit->GetComplexUnit()->mPhysicalModel.GetLocation();
-        float theScale = inUnit->GetComplexUnit()->mPhysicalModel.GetScale();
-        EEModel* theModel = inUnit->GetModel();
-        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
+    EEComplexUnit* theUnit = ((EELineOfFireHost*)inContext)->mUnit->GetComplexUnit();
+    EeCombatWeaponIn in = {};
+    std::vector<float> theChain;
+    memcpy(in.location, theUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    if (inBare) {
+        in.kind = EE_COMBAT_WEAPON_KIND_BARE;
+    } else {
+        EEModel* theModel = ((EELineOfFireHost*)inContext)->mUnit->GetModel();
         EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
         unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
         unsigned long theIndex = theUnit->mWeaponTagPoint;
-        EETagPointList::Scale(theTransformation, theScale);
+        in.list_present = theList != NULL;
+        in.scale = theUnit->mPhysicalModel.GetScale();
+        EETagPoint* thePoint = NULL;
         if (theModel->GetNumParts() > 0) {
-            theOrientation.MakeIdentity();
-            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)
-                theOrientation.SetOrientationYPR(theUnit->mTurretAngles[thePart], 0.0f, 0.0f);
-            (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theOrientation, theStart);
+            in.kind = EE_COMBAT_WEAPON_KIND_TURRET;
+            unsigned long thePart;
+            if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0) {
+                in.turret = 1;
+                in.yaw = theUnit->mTurretAngles[thePart];
+            }
+            thePoint = *(theList->mPoints.begin() + theIndex);
         } else if (theList != NULL && theList->mPoints.size() > theIndex) {
-            theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
+            in.kind = EE_COMBAT_WEAPON_KIND_POINT;
+            thePoint = theList->GetTagPoint(theIndex);
         } else {
-            theUnit = inUnit->GetComplexUnit();
-            const GE3DPoint& theTop =
-                theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
-            theStart.SetX(theTop.GetX());
-            theStart.SetY(theTop.GetY());
-            theStart.SetZ(theTop.GetZ() * 0.5f);
-            theUnit->mPhysicalModel.GetLocation().Apply(theStart, theStart);
+            in.kind = EE_COMBAT_WEAPON_KIND_BOX;
+            const GE3DPoint& theTop = theModel->mModels[theUnit->mAnimation]->GetBoundingBox(theFrame).GetTopRightBack();
+            in.top[0] = theTop.GetX();
+            in.top[1] = theTop.GetY();
+            in.top[2] = theTop.GetZ();
         }
-        if (theList != NULL)
-            theHeight = theStart.GetZ();
+        if (thePoint != NULL) {
+            const GE3DPoint& theLocal = thePoint->mModel->GetTagPoint(thePoint->mIndex, theFrame);
+            in.point[0] = theLocal.GetX();
+            in.point[1] = theLocal.GetY();
+            in.point[2] = theLocal.GetZ();
+            for (GEModel* theLink = thePoint->mModel; theLink != NULL; theLink = theLink->GetParentModel()) {
+                const GETransformation& theStep = theLink->GetInternalTransform(theFrame);
+                theChain.insert(theChain.end(), &theStep.mMatrix[0][0], &theStep.mMatrix[0][0] + 16);
+                in.chain++;
+            }
+        }
+    }
+    float theHeight = ee_combat_weapon_height(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+    if (EESimCaptureRecord::Active()) {
+        EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'W', 'P'));
+        theRecord.Bytes(&in, sizeof(in));
+        if (!theChain.empty())
+            theRecord.F32s(&theChain[0], (unsigned int)theChain.size());
+        theRecord.F32(theHeight);
+        theRecord.Commit();
     }
     return theHeight;
 }

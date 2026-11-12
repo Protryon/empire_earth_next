@@ -1028,7 +1028,7 @@ void EEWonNet::Login(const char* inName, const char* inPassword)
 
     if (theKey.LoadFromRegistry() && theKey.mValid) {
         this->mLoginOp = new GetCertOp(this->mUser);
-        this->mLoginOp->mCompletion = new EEWonNetCompletion(&EEWonNet::LoginCallback);
+        this->mLoginOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::LoginCallback));
         this->mLoginOp->SetCreateAccount(false);
         this->mLoginOp->RunAsync(15000);
     }
@@ -1053,7 +1053,7 @@ void EEWonNet::LoginCallback(AsyncOp* inOp)
 void EEWonNet::RequestMOTD()
 {
     this->mMOTDOp = new GetMOTDOp(kWonProductName);
-    this->mMOTDOp->mCompletion = new EEWonNetCompletion(&EEWonNet::MOTDCallback);
+    this->mMOTDOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::MOTDCallback));
     this->mMOTDOp->RunAsync(15000);
 }
 
@@ -1091,7 +1091,7 @@ void EEWonNet::GetTitanServerList()
     this->mDirOp = new GetDirOp(this->mDirServers.get());
     this->mDirOp->SetFlags(0x703003a);
     this->mDirOp->SetPath(kWonProductDirectory);
-    this->mDirOp->mCompletion = new EEWonNetCompletion(&EEWonNet::GetTitanServerListCompletion);
+    this->mDirOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetTitanServerListCompletion));
     this->mDirOp->RunAsync(15000);
 }
 
@@ -1198,7 +1198,7 @@ void EEWonNet::UpdateAccount(const UWideString& inName, const UWideString& inPas
     theOp->mAuthContext = this->mUser;
     theOp->mEmail = std::string(inPassword);
     theOp->mNewPassword = this->ToWString(inName);
-    theOp->mCompletion = new EEWonNetCompletion(&EEWonNet::UpdateAccountCallback);
+    theOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::UpdateAccountCallback));
     theOp->mProfileData->ClearNewsletterSubs();
     theOp->mProfileData->AddNewsletterSub(1, inFlag);
     theOp->RunAsync(15000);
@@ -1232,7 +1232,7 @@ void EEWonNet::OpenUpdateAccount()
     this->mAccountOp = new GetAccountOp(this->mAuthServers, this->mUser);
     this->mAccountOp->mAuthType = AUTH_TYPE_SESSION;
     this->mAccountOp->mAuthContext = this->mUser;
-    this->mAccountOp->mCompletion = new EEWonNetCompletion(&EEWonNet::GetAccountCallback);
+    this->mAccountOp->SetCompletion(new EEWonNetCompletion(&EEWonNet::GetAccountCallback));
     this->mAccountOp->RunAsync(15000);
     this->mAccountOp->mProfileData->AddNewsletterSub(true, false);
     gResource->GetString(IDS_GETTING_CURRENT_USER_INFO, theMessage);

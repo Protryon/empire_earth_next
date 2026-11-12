@@ -138,8 +138,8 @@ WONStatus RecvBytesOp::ContinueRecv()
             this->mBytesSinceProgress += aRead;
             if (this->mBytesSinceProgress > this->mProgressInterval) {
                 SmartPtr<RecvChunkOp> anOp = new RecvChunkOp(this);
-                anOp->mCompletion = this->mProgressCompletion;
-                long aMode = this->mRunMode;
+                anOp->SetCompletion(this->mProgressCompletion);
+                long aMode = this->GetMode();
                 anOp->Run(aMode, 0);
                 this->mBytesSinceProgress %= this->mProgressInterval;
             }
@@ -261,7 +261,7 @@ WONStatus RecvBytesOp::CloseFile(WONStatus inStatus)
 void RecvBytesOp::CleanupHook()
 {
     SocketOp::CleanupHook();
-    this->CloseFile(this->mStatus);
+    this->CloseFile(this->GetStatus());
 }
 
 

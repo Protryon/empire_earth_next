@@ -83,7 +83,7 @@ WONStatus GetCertOp::SendLoginConfirm()
 void GetCertOp::CleanupHook()
 {
 	// Give the pub key block to the AuthContext if we managed to at least get that
-	if(this->mStatus!=WS_Success && this->mKeyBlock->IsValid() && !this->mAuthContext->GetPeerData()->GetPubKeyBlock()->IsValid())
+	if(this->GetStatus()!=WS_Success && this->mKeyBlock->IsValid() && !this->mAuthContext->GetPeerData()->GetPubKeyBlock()->IsValid())
 		this->mAuthContext->SetPeerData(new AuthPeerData(this->mKeyBlock));
 
 	ServerRequestOp::CleanupHook();
