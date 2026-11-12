@@ -213,6 +213,7 @@ void EEPMNaval::Move(EEComplexUnit* inUnit)
         theX += inUnit->mPhysicalModel.GetLocation().GetX();
         float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
         theY += inUnit->mPhysicalModel.GetLocation().GetY();
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), true, theDX, theDY, theX, theY);   // TEST ONLY (USST)
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         theTile.mX = theTileX;
@@ -266,6 +267,7 @@ void EEPMNaval::Move(EEComplexUnit* inUnit)
         }
     } else {
         theBlocked = true;
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), false, 0.0f, 0.0f, 0.0f, 0.0f);   // TEST ONLY (USST)
     }
     if (theBlocked && (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
         inUnit->SetAnimation(7, -1, 1);
@@ -333,11 +335,14 @@ void EEPMNaval::Step2(EEComplexUnit* inUnit)
 void EEPMNaval::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float inTarget, float* outRate, float* outNew)
 {
     float theStep = gPhysics->mTickSeconds;
+    float theTarget0 = inTarget;   // TEST ONLY (USST)
     inTarget = inTarget - inCurrent;
     float theAccel = inUnit->mUnitClass->GetAngularAcceleration();
     float theMax = inUnit->mUnitClass->GetMaxAngularVelocity();
     float theRate = inUnit->mAngularVelocity.mPitch;
-    switch (this->PitchMode(inUnit, theRate, inTarget)) {
+    float theRate0 = theRate;   // TEST ONLY (USST)
+    long theMode = this->PitchMode(inUnit, theRate, inTarget);
+    switch (theMode) {
     case 2:
         break;
     case 3:
@@ -367,12 +372,19 @@ void EEPMNaval::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float inTa
     }
     *outRate = theRate;
     *outNew = theRate * theStep + inCurrent;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[10] = {1, EEPMBits(theStep), EEPMBits(theAccel), EEPMBits(theMax), EEPMBits(theRate0),
+                                 EEPMBits(inCurrent), EEPMBits(theTarget0), (uint32_t)theMode, EEPMBits(*outRate),
+                                 EEPMBits(*outNew)};
+        EEUnitStateNote(kUnitStateApproachPitch, inUnit->mUnitID, theWords, 10);
+    }
 }
 
 // FUNCTION: EXE 0x55c146
 // Returns 4 (brake) when the pitch rate needs the whole remaining angle to stop, else 3 (accelerate)
 long EEPMNaval::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
 {
+    float theRate0 = inRate, theAngle0 = inAngle;   // TEST ONLY (USST)
     if (inAngle < 0.0f)
         inAngle = -inAngle;
     if (inRate < 0.0f)
@@ -383,7 +395,13 @@ long EEPMNaval::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
     float theStep = gPhysics->mTickSeconds;
     float theStop = (theTicks + 1.0f) * theTicks * 0.5f;
     theStop = theStop * (theStep * theStep) * theClass->GetAngularAcceleration();
-    return inAngle <= theStop ? 4 : 3;
+    long theMode = inAngle <= theStop ? 4 : 3;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[8] = {1, EEPMBits(theStep), EEPMBits(theTime), EEPMBits(theClass->GetAngularAcceleration()), 0,
+                                EEPMBits(theRate0), EEPMBits(theAngle0), (uint32_t)theMode};
+        EEUnitStateNote(kUnitStatePitchMode, inUnit->mUnitID, theWords, 8);
+    }
+    return theMode;
 }
 
 // NEAR: GE3DLine/GE3DPoint copies, x87 order

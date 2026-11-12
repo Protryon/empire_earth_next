@@ -57,6 +57,7 @@ static const float kPMMinimumSpeed = 1.0f;   // 0x442390 (a unit-local const: Vi
 static const float kPMContactWindow = 0.25f;  // 0x442398 (unit-local const: Virtual44's two contact-time tests; provisional name)
 static const float kPMRateScale = 1.0f;       // 0x44239c (unit-local const: Virtual18/24/28 multiply by it from memory; provisional name)
 static const float kPMMaximumTilt = 0.34906587f;  // 0x4423a0 (unit-local const, 20 degrees: Virtual20; provisional name)
+static uint32_t PMBits(float inValue);
 
 // FUNCTION: EXE 0x5543b7
 // Creates the twelve physics model singletons (land to spaceship) and reads world table entry 79's float
@@ -86,8 +87,10 @@ void EEPhysicsModel::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float
     float theAccel = inUnit->GetAngularAcceleration();
     float theMax = inUnit->GetMaxAngularVelocity();
     float theRate = inUnit->mAngularVelocity.mPitch;
+    float theRate0 = theRate;   // TEST ONLY (USST)
     float theDelta = inTarget - inCurrent;
-    switch (this->PitchMode(inUnit, theRate, theDelta)) {
+    long theMode = this->PitchMode(inUnit, theRate, theDelta);
+    switch (theMode) {
     case 2:
         break;
     case 3:
@@ -118,6 +121,11 @@ void EEPhysicsModel::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float
     }
     *outRate = theRate;
     *outNew = theRate * theStep + inCurrent;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[10] = {0, EEPMBits(theStep), EEPMBits(theAccel), EEPMBits(theMax), EEPMBits(theRate0),
+                                 EEPMBits(inCurrent), EEPMBits(inTarget), (uint32_t)theMode, EEPMBits(*outRate), EEPMBits(*outNew)};
+        EEUnitStateNote(kUnitStateApproachPitch, inUnit->mUnitID, theWords, 10);
+    }
 }
 
 // FUNCTION: EXE 0x55463e
@@ -166,6 +174,7 @@ void EEPhysicsModel::TurnTowardAngle(EEComplexUnit* inUnit, float inCurrent, flo
     float theAccel = inUnit->GetAngularAcceleration();
     float theMax = inUnit->GetMaxAngularVelocity();
     float theRate = inUnit->mAngularVelocity.mYaw;
+    float theTarget0 = inTarget;   // TEST ONLY (USST)
     float theDelta;
     if (!inFlag) {
         theDelta = inTarget - inCurrent;
@@ -245,6 +254,14 @@ void EEPhysicsModel::TurnTowardAngle(EEComplexUnit* inUnit, float inCurrent, flo
     *outA = theDelta;
     *outB = theNew;
     *outC = theMove + inCurrent;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[14] = {EEPMBits(theStep), EEPMBits(gPhysics->mTicksPerGameSecond), EEPMBits(theAccel),
+                                 EEPMBits(theMax), EEPMBits(inUnit->GetInverseAngularAcceleration()), EEPMBits(theRate),
+                                 EEPMBits(inCurrent), EEPMBits(theTarget0), inFlag ? 1u : 0u,
+                                 inFlag && theClass->mFiresBroadside ? 1u : 0u, inFlag ? EEPMBits(theClass->GetFacingOffset()) : 0u,
+                                 EEPMBits(*outA), EEPMBits(*outB), EEPMBits(*outC)};
+        EEUnitStateNote(kUnitStateTurn, inUnit->mUnitID, theWords, 14);
+    }
 }
 
 // FUNCTION: EXE 0x554a25
@@ -271,6 +288,7 @@ void EEPhysicsModel::SteadyTurn(EEComplexUnit* inUnit, float* outA, float* outB,
     float theMax = inUnit->mStats->GetMaxAngularVelocity();
     float theRate = inUnit->mAngularVelocity.mYaw;
     long theState = inUnit->mCurrentPhysicsOrder;
+    float theMax0 = theMax;   // TEST ONLY (USST)
     if (theMax > kPMMaximumTilt) {
         long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
         if (theCommand != kActionFaceEnemyUnit)
@@ -291,6 +309,12 @@ void EEPhysicsModel::SteadyTurn(EEComplexUnit* inUnit, float* outA, float* outB,
     *outA = 0.0f;
     *outB = theNew;
     *outC = theNew * theStep + theHeading;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[9] = {EEPMBits(theStep), EEPMBits(theAccel), EEPMBits(theMax0), EEPMBits(theRate),
+                                EEPMBits(theHeading), (uint32_t)theState,
+                                (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0), EEPMBits(*outB), EEPMBits(*outC)};
+        EEUnitStateNote(kUnitStateSteadyTurn, inUnit->mUnitID, theWords, 9);
+    }
 }
 
 // FUNCTION: EXE 0x554bde
@@ -304,7 +328,8 @@ float EEPhysicsModel::Accelerate(EEComplexUnit* inUnit, float inDistance, float 
     float theStep = gPhysics->mTickSeconds;
     long theKind = inUnit->mWaypoints.size();
     float theResult;
-    switch (this->SpeedMode(inUnit, inDistance, inTurn)) {
+    long theMode = this->SpeedMode(inUnit, inDistance, inTurn);
+    switch (theMode) {
     case 2:
         theResult = theSpeed;
         break;
@@ -324,6 +349,11 @@ float EEPhysicsModel::Accelerate(EEComplexUnit* inUnit, float inDistance, float 
         theResult = 0.0f;
         break;
     }
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[8] = {EEPMBits(theStep), EEPMBits(theSpeed), EEPMBits(theMaxSpeed), EEPMBits(theAccel),
+                                (uint32_t)theKind, EEPMBits(inDistance), (uint32_t)theMode, EEPMBits(theResult)};
+        EEUnitStateNote(kUnitStateAccelerate, inUnit->mUnitID, theWords, 8);
+    }
     return theResult;
 }
 
@@ -334,6 +364,20 @@ float EEComplexUnit::GetAcceleration()
     if (this->mActiveGroup)
         return this->mActiveGroup->GetAcceleration(this);
     return this->mStats->GetAcceleration();
+}
+
+// TEST ONLY (USST): a speed mode's inputs and result (the remaining distance and the terrain pitch as read)
+void EEPMNoteSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inRemaining, float inPitch, float inDistance,
+                       float inTurn, long inMode)
+{
+    if (!EEUnitStepNoting())
+        return;
+    uint32_t theWords[15] = {inHelicopter ? 1u : 0u, EEPMBits(gPhysics->mTickSeconds), EEPMBits(gPhysics->mTicksPerGameSecond),
+                             EEPMBits(inUnit->GetVelocity()), EEPMBits(inUnit->GetMaxVelocity()), EEPMBits(inUnit->GetAcceleration()),
+                             EEPMBits(inUnit->GetInverseAcceleration()), EEPMBits(inUnit->mAngularVelocity.GetYaw()),
+                             inHelicopter ? 0u : EEPMBits(inUnit->mUnitClass->mSlopeSpeedPenalty), (uint32_t)inUnit->mWaypoints.size(),
+                             EEPMBits(inRemaining), EEPMBits(inPitch), EEPMBits(inDistance), EEPMBits(inTurn), (uint32_t)inMode};
+    EEUnitStateNote(kUnitStateSpeedMode, inUnit->mUnitID, theWords, 15);
 }
 
 // FUNCTION: EXE 0x554cb2
@@ -372,9 +416,12 @@ long EEPhysicsModel::SpeedMode(EEComplexUnit* inUnit, float inDistance, float in
         theRemaining = inDistance;
     if (theRemaining <= theStopDistance)
         theResult = 4;
-    if (!(theTurnPenalty < 1.0f))
+    if (!(theTurnPenalty < 1.0f)) {
+        EEPMNoteSpeedMode(inUnit, false, theRemaining, 0.0f, inDistance, inTurn, theResult);   // TEST ONLY (USST)
         return theResult;
-    float theSlope = ::gWorld.mMap->GetTerrainPitch(inUnit->mPhysicalModel.GetLocation()) * 1.9098593f;
+    }
+    float theSlope0 = ::gWorld.mMap->GetTerrainPitch(inUnit->mPhysicalModel.GetLocation());   // TEST ONLY (USST): the read
+    float theSlope = theSlope0 * 1.9098593f;
     if (theSlope < 0.0f) {
         theSlope = 0.0f;
     } else {
@@ -383,6 +430,7 @@ long EEPhysicsModel::SpeedMode(EEComplexUnit* inUnit, float inDistance, float in
     }
     if ((1.0f - theSlope * theTurnPenalty) * inUnit->GetMaxVelocity() < inUnit->GetVelocity())
         theResult = 4;
+    EEPMNoteSpeedMode(inUnit, false, theRemaining, theSlope0, inDistance, inTurn, theResult);   // TEST ONLY (USST)
     return theResult;
 }
 
@@ -399,6 +447,7 @@ float EEComplexUnit::GetInverseAcceleration()
 // Returns 4 (brake) when the pitch rate needs the whole remaining angle to stop, else 3 (accelerate)
 long EEPhysicsModel::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
 {
+    float theRate0 = inRate, theAngle0 = inAngle;   // TEST ONLY (USST)
     if (inAngle < 0.0f)
         inAngle = -inAngle;
     if (inRate < 0.0f)
@@ -409,9 +458,13 @@ long EEPhysicsModel::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngl
     float theTicks = theDecel;
     theTicks *= theTime * inRate;
     float theTurn = theStep;
-    if ((theTicks + 1.0f) * theTicks * 0.5f * (theTurn * theStep * inUnit->GetAngularAcceleration()) >= inAngle)
-        return 4;
-    return 3;
+    long theMode = (theTicks + 1.0f) * theTicks * 0.5f * (theTurn * theStep * inUnit->GetAngularAcceleration()) >= inAngle ? 4 : 3;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[8] = {0, EEPMBits(theStep), EEPMBits(theTime), EEPMBits(inUnit->GetAngularAcceleration()),
+                                EEPMBits(theDecel), EEPMBits(theRate0), EEPMBits(theAngle0), (uint32_t)theMode};
+        EEUnitStateNote(kUnitStatePitchMode, inUnit->mUnitID, theWords, 8);
+    }
+    return theMode;
 }
 
 // FUNCTION: EXE 0x554f39
@@ -506,6 +559,12 @@ void EEPhysicsModel::SpinDown(EEComplexUnit* inUnit, float* outRate, float* outN
     }
     *outRate = theNew;
     *outNew = theNew * theStep + theHeading;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[7] = {EEPMBits(theStep), EEPMBits(inUnit->GetAngularAcceleration()),
+                                EEPMBits(inUnit->GetMaxAngularVelocity()), EEPMBits(theRate), EEPMBits(theHeading),
+                                EEPMBits(*outRate), EEPMBits(*outNew)};
+        EEUnitStateNote(kUnitStateSpinDown, inUnit->mUnitID, theWords, 7);
+    }
 }
 
 // Twin of EEPMNaval::PushMoving 0x55c1cb
@@ -847,6 +906,30 @@ static uint32_t PMBits(float inValue)
 }
 
 // TEST ONLY (USST): the original's push statements (0x556213, the scale to the new point) over the same values
+uint32_t EEPMBits(float inValue)
+{
+    return PMBits(inValue);
+}
+
+void EEPMNotePush(EEComplexUnit* inUnit, float inSpeed, bool inMoving, float inDX, float inDY, float inX, float inY)
+{
+    if (!EEUnitStepNoting())
+        return;
+    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX.Get()), PMBits(inUnit->mPushVelocityY.Get()),
+                             (uint32_t)gCollisionPeriod, PMBits(inSpeed), PMBits(gPhysics->GetTickSeconds()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
+    if (inMoving) {
+        theWords[7] = 1;
+        theWords[8] = inDY + inDX > kPMMoveDistance ? 1u : 0u;
+        theWords[9] = PMBits(inDX);
+        theWords[10] = PMBits(inDY);
+        theWords[11] = PMBits(inX);
+        theWords[12] = PMBits(inY);
+    }
+    EEUnitStateNote(kUnitStatePush, inUnit->mUnitID, theWords, 13);
+}
+
 static void CheckPush(EEComplexUnit* inUnit, const EeUnitsPushIn& inIn, const EeUnitsPush& inPush, float inLimit)
 {
     float theSpeed = max(inIn.max_velocity, inLimit);

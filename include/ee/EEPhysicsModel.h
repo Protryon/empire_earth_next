@@ -13,6 +13,15 @@ class GE3DPoint;
 class GETransformation;
 class EEPMLand;
 
+// TEST ONLY (USST, R5b.4 leaf 6, the twelfth round; EEPhysicsModel.cpp): a float's bits; the push arithmetic's note
+// (kUnitStatePush: the members' push and location, the collision period, inSpeed the speed it is capped at; a move's
+// sizes and point, zeros for none)
+uint32_t EEPMBits(float inValue);
+void EEPMNotePush(EEComplexUnit* inUnit, float inSpeed, bool inMoving, float inDX, float inDY, float inX, float inY);
+// a speed mode's note (kUnitStateSpeedMode: the remaining distance and the terrain pitch as the mode read them)
+void EEPMNoteSpeedMode(EEComplexUnit* inUnit, bool inHelicopter, float inRemaining, float inPitch, float inDistance,
+                       float inTurn, long inMode);
+
 class EEPhysicsModel {
 public:
     virtual ~EEPhysicsModel() {}                                                        // +0x00 (??_G 0x156ddb)

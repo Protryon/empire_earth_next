@@ -188,6 +188,7 @@ void EEPMSubmergedNaval::Move(EEComplexUnit* inUnit)
         theX += inUnit->mPhysicalModel.GetLocation().GetX();
         float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
         theY += inUnit->mPhysicalModel.GetLocation().GetY();
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), true, theDX, theDY, theX, theY);   // TEST ONLY (USST)
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         theTile.mX = theTileX;
@@ -216,6 +217,8 @@ void EEPMSubmergedNaval::Move(EEComplexUnit* inUnit)
             this->AdjustDiveDepth(inUnit, theLocation);
             inUnit->SetLocation(theLocation, true);
         }
+    } else {
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), false, 0.0f, 0.0f, 0.0f, 0.0f);   // TEST ONLY (USST)
     }
     if (inUnit->mPushVelocityX != 0.0f)
         inUnit->mPushVelocityX = 0.0f;

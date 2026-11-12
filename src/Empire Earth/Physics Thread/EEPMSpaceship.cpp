@@ -216,6 +216,7 @@ void EEPMSpaceship::Move(EEComplexUnit* inUnit)
         theX += inUnit->mPhysicalModel.GetLocation().GetX();
         float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
         theY += inUnit->mPhysicalModel.GetLocation().GetY();
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), true, theDX, theDY, theX, theY);   // TEST ONLY (USST)
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         theTile.mX = theTileX;
@@ -269,6 +270,7 @@ void EEPMSpaceship::Move(EEComplexUnit* inUnit)
         }
     } else {
         theBlocked = true;
+        EEPMNotePush(inUnit, inUnit->GetMaxVelocity(), false, 0.0f, 0.0f, 0.0f, 0.0f);   // TEST ONLY (USST)
     }
     if (theBlocked && (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
         inUnit->SetAnimation(7, -1, 1);
@@ -629,6 +631,7 @@ bool EEPMSpaceship::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3D
 // (no address of its own: the same body as EEPMNaval::PitchMode, which ICF kept)
 long EEPMSpaceship::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
 {
+    float theRate0 = inRate, theAngle0 = inAngle;   // TEST ONLY (USST)
     if (inAngle < 0.0f)
         inAngle = -inAngle;
     if (inRate < 0.0f)
@@ -639,5 +642,11 @@ long EEPMSpaceship::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle
     float theStep = gPhysics->mTickSeconds;
     float theStop = (theTicks + 1.0f) * theTicks * 0.5f;
     theStop = theStop * (theStep * theStep) * theClass->GetAngularAcceleration();
-    return inAngle <= theStop ? 4 : 3;
+    long theMode = inAngle <= theStop ? 4 : 3;
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[8] = {1, EEPMBits(theStep), EEPMBits(theTime), EEPMBits(theClass->GetAngularAcceleration()), 0,
+                                EEPMBits(theRate0), EEPMBits(theAngle0), (uint32_t)theMode};
+        EEUnitStateNote(kUnitStatePitchMode, inUnit->mUnitID, theWords, 8);
+    }
+    return theMode;
 }

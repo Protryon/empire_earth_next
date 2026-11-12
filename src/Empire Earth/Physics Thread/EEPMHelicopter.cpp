@@ -230,6 +230,7 @@ void EEPMHelicopter::Move(EEComplexUnit* inUnit)
         }
         float theX = gPhysics->GetTickSeconds() * theSignX * theDX + inUnit->mPhysicalModel.GetLocation().GetX();
         float theY = gPhysics->GetTickSeconds() * theSignY * theDY + inUnit->mPhysicalModel.GetLocation().GetY();
+        EEPMNotePush(inUnit, inUnit->GetVelocity(), true, theDX, theDY, theX, theY);   // TEST ONLY (USST)
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         EETileCoordinate theTile(theTileX, theTileY);
@@ -241,6 +242,8 @@ void EEPMHelicopter::Move(EEComplexUnit* inUnit)
             }
             inUnit->mCollisionResolutionCount += gPhysics->mTickTime;
         }
+    } else {
+        EEPMNotePush(inUnit, inUnit->GetVelocity(), false, 0.0f, 0.0f, 0.0f, 0.0f);   // TEST ONLY (USST)
     }
     if (inUnit->mPushVelocityX != 0.0f)
         inUnit->mPushVelocityX = 0.0f;
@@ -309,6 +312,7 @@ long EEPMHelicopter::SpeedMode(EEComplexUnit* inUnit, float inDistance, float in
         theRemaining = inDistance;
     if (theRemaining <= theStop)
         theResult = 4;
+    EEPMNoteSpeedMode(inUnit, true, theRemaining, 0.0f, inDistance, inTurn, theResult);   // TEST ONLY (USST)
     return theResult;
 }
 

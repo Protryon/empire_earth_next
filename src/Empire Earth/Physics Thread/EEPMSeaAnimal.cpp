@@ -144,7 +144,8 @@ float EEPMSeaAnimal::Accelerate(EEComplexUnit* inUnit, float inDistance, float i
         theAccel *= theFactor;
     }
     float theResult;
-    switch (this->SpeedMode(inUnit, inDistance, inTurn)) {
+    long theMode = this->SpeedMode(inUnit, inDistance, inTurn);
+    switch (theMode) {
     case 2:
         theResult = theSpeed;
         break;
@@ -163,6 +164,11 @@ float EEPMSeaAnimal::Accelerate(EEComplexUnit* inUnit, float inDistance, float i
     default:
         theResult = 0.0f;
         break;
+    }
+    if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+        uint32_t theWords[8] = {EEPMBits(theStep), EEPMBits(theSpeed), EEPMBits(theMaxSpeed), EEPMBits(theAccel),
+                                (uint32_t)theKind, EEPMBits(inDistance), (uint32_t)theMode, EEPMBits(theResult)};
+        EEUnitStateNote(kUnitStateAccelerate, inUnit->mUnitID, theWords, 8);
     }
     return theResult;
 }

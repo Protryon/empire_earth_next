@@ -190,7 +190,25 @@ enum EEUnitStateKind {
     kUnitStateAIStep = 1,       // EEComplexUnit::AIStep
     kUnitStateCondition = 2,    // EEUnitTrigger::Evaluate's EvaluateCondition calls
     kUnitStateRoll = 3,         // EEPhysicsModel::AfterStep's roll decay
-    kUnitStatePush = 4          // EEPhysicsModel::Move's push arithmetic
+    kUnitStatePush = 4,         // EEPhysicsModel::Move's push arithmetic (and the subclasses' copies: Helicopter,
+                                // Naval, Spaceship, SubmergedNaval; the helicopter's speed is its velocity)
+    // the twelfth round's: the physics models' step arithmetic (float bits; ee_units physics.rs's inputs in its
+    // structs' order, then the outputs). Turn [tick seconds, ticks per game second, angular acceleration, maximum, its
+    // inverse, yaw rate, heading, target, use facing, broadside, facing offset, angle left, rate, heading after];
+    // spin down and steady turn [tick seconds, acceleration, maximum, rate, heading, (steady: physics order, command,)
+    // rate after, heading after]; Accelerate [tick seconds, speed, top speed, acceleration, waypoints, distance, mode,
+    // speed after]; SpeedMode [helicopter, tick seconds, ticks per game second, speed, top speed, acceleration, its
+    // inverse, yaw rate, slope penalty (0: the helicopter's), waypoints, the remaining distance, the terrain pitch (0:
+    // not read), distance, turn, mode]; PitchMode [naval, tick seconds, ticks per game second, acceleration, its
+    // inverse (0: naval), rate, angle, mode]; ApproachPitch [naval, tick seconds, acceleration, maximum, rate, pitch,
+    // target, mode, rate after, pitch after]
+    kUnitStateTurn = 5,         // EEPhysicsModel::TurnTowardAngle (with YawMode)
+    kUnitStateSpinDown = 6,     // EEPhysicsModel::SpinDown
+    kUnitStateSteadyTurn = 7,   // EEPhysicsModel::SteadyTurn
+    kUnitStateAccelerate = 8,   // EEPhysicsModel::Accelerate, EEPMSeaAnimal::Accelerate
+    kUnitStateSpeedMode = 9,    // EEPhysicsModel::SpeedMode, EEPMHelicopter::SpeedMode
+    kUnitStatePitchMode = 10,   // EEPhysicsModel::PitchMode, EEPMNaval::PitchMode, EEPMSpaceship::PitchMode
+    kUnitStateApproachPitch = 11   // EEPhysicsModel::ApproachPitch, EEPMNaval::ApproachPitch
 };
 void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
 // TEST ONLY: a leaf's Rust result differs from the original's statements over the same values: prints the leaf and
