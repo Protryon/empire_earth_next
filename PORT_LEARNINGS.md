@@ -7851,3 +7851,10 @@ state (UDPManager's two ops) and the first piece of the lobby's model.
 - **For new FFI:** include `rust/<your crate>.h`, not `rust/ee_rust.h`. After merging, rerun
   `python -I tools/rust_includes.py` to narrow any umbrella include a branch added meanwhile. A new crate needs
   nothing more than today (cbindgen.toml's include and extra_bindings): its header appears by itself.
+- **Measured** (EE-AOC, -j 3, a private object store so that no other lane's build evicts anything; one parameter
+  of `ee_won_md5_update` renamed): before, 853 of 1358 units recompiled (660 s); after, 476 (419 s). `ee_won` is
+  the worst case, because `WONBuffer.h` and the message headers bring it into the whole WON library. The other
+  crates' units, from the same builds' dependency sets: ee_ui 122, ee_astar 113, ee_units 49, ee_tech 36, ee_ge 34
+  (with ee_gfx's and ee_openformats'), ee_combat 19, ee_dx7 10, every other crate 7 or fewer. The shared store's
+  miss count is no measure while other lanes build: at its 4 GB cap it prunes during a build (649 misses for
+  the same change).
