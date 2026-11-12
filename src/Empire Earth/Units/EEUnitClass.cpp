@@ -152,7 +152,6 @@ static const float k447ADC = 0.40824828f;        // 0x447adc (1 / sqrt(6))
 static const float kFacingTolerance = 0.043633234f;  // 0x447ae0
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 static const float kFleeDistanceScale = 1.5f;    // 0x447ae8
-static const float kCallForHelpRadius = 5.0f;    // 0x447aec
 static const float k447AF0 = 0.01f;              // 0x447af0
 static const float kLargeUnitScale = 1.5f;       // 0x447af4
 static const float kMinConstructionScale = 0.1f;  // 0x447af8
@@ -1076,103 +1075,9 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 // tag point
 void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 {
-    [&]() {   // TEST ONLY (CBXA golden): the original body in a lambda
-    GE3DPoint thePoint;
-    EEUnit* theBlocker = NULL;
-    EEModel* theModel = inUnit->GetModel();
-    long theBlockX = 0;
-    long theBlockY = 0;
-    unsigned long theCount;
-    theCount = theModel->mTagPoints[inUnit->GetAnimation()] != NULL ? theModel->mTagPoints[inUnit->GetAnimation()]->GetNumTagPoints() : 0;
-    unsigned long theNext = 0;
-    bool theDone = false;
-    if (inUnit->mUnitClass->GetUnitType() == kUnitTypeCpMissileBase) {
-        this->LaunchStoredMissile(inUnit);
-        return;
-    }
-    if (inUnit->mReloadTimer == 0)
-        inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-    if (inUnit->mStats->mCanFireOverWalls && inUnit->mIsFiringHigh)
-        inUnit->SetRandomReloadTimer(UMFloatToLong(inUnit->mReloadTimer * 1.5f));
-    EEUnit* theTarget;
-    EEFindDropLocation(inUnit, &theTarget, &thePoint, NULL);
-    if (this->mProjectileClass == NULL) {
-        if (inUnit->mStats->mRange > 1.0f && theTarget != NULL && !inUnit->mStats->mCanFireOverWalls &&
-            EEIsLineToUnitBlocked(inUnit, theTarget, &theBlocker, &theBlockX, &theBlockY)) {
-            if (theBlocker != NULL) {
-                theTarget = theBlocker;
-                if (theBlocker->mPlayer == inUnit->mPlayer ||
-                    inUnit->mPlayer->mEnemies[theBlocker->mPlayer->GetPlayerID()] == 0) {
-                    if (theBlocker->mUnitClass->mImpactSparksEffect != NULL)
-                        gWorld.GetEffectManager()->CreateUnitEffect(theBlocker, theBlocker->mUnitClass->mImpactSparksEffect, NULL, 0, 0, 0);
-                } else {
-                    this->ApplyHit(inUnit, theTarget);
-                }
-            } else {
-                GE3DPoint theSpot((float)theBlockX + 0.5f, (float)theBlockY + 0.5f,
-                                  gWorld.mMap->GetTile(theBlockX, theBlockY)->mHeight);
-                gWorld.GetEffectManager()->CreatePlacedEffect(theSpot, EEGraphicEffect::Get(kGraphicEffectImpactSparks), NULL);
-            }
-        } else {
-            this->ApplyHit(inUnit, theTarget);
-        }
-    } else {
-        unsigned long theType = inUnit->mUnitClass->GetUnitType();
-        if (theType != kUnitTypeX04RomanLegionnaire && theType != kUnitTypeSp15CapitalShip && theType != kUnitTypeCapitalShipYamato) {
-            if (theModel->mTurretParts.size() == 0)
-                this->LaunchShot(inUnit, theTarget, thePoint, NULL);
-            else
-                this->LaunchFromTurret(inUnit, theTarget, thePoint);
-        } else if (inUnit->mIsSpecialAttack) {
-            if (theType == kUnitTypeSp15CapitalShip || theType == kUnitTypeCapitalShipYamato) {
-                unsigned long thePart = inUnit->GetAnimation();
-                unsigned long theLast = inUnit->GetModel()->mTagPoints[thePart]->mPoints.size() - 1;
-                if (inUnit->mWeaponTagPoint != theLast)
-                    inUnit->mWeaponTagPoint = theLast;
-                gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theTarget, this->mSpecialAttackEffect, NULL);
-                this->ApplyHit(inUnit, theTarget);
-                if (!inUnit->CanAttackClass(theTarget->GetUnitClass()))
-                    inUnit->StartAction(kActionIdle);
-            } else {
-                this->LaunchShot(inUnit, theTarget, thePoint, NULL);
-            }
-            theDone = true;
-        } else {
-            this->ApplyHit(inUnit, theTarget);
-        }
-    }
-    if (theCount != 0) {
-        if (this->mMuzzleFlashEffect != NULL)
-            gWorld.GetEffectManager()->CreateUnitEffect(inUnit, this->mMuzzleFlashEffect, NULL, 0, 0, 0);
-        if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen &&
-            !EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)   // epochs.yaml citizen
-            theDone = true;
-        if (this->mShotEffect != NULL && !theDone) {
-            if (theTarget != NULL)
-                gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theTarget, this->mShotEffect, NULL);
-            else
-                gWorld.GetEffectManager()->CreateEffect(inUnit, thePoint, this->mShotEffect, NULL, 0);
-        }
-    }
-    if (this->mUsesAmmunition) {
-        if (inUnit->mAmmunition > 1) {
-            inUnit->SetAmmunition(inUnit->mAmmunition - 1);
-        } else {
-            inUnit->SetAmmunition(0);
-            inUnit->SetFlightTime(0);
-        }
-    }
-    if (inUnit->mIsSpecialAttack && (inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato))
-        inUnit->mIsSpecialAttack = false;
-    if (theCount != 0) {
-        theNext = (inUnit->mWeaponTagPoint + 1) % theCount;
-        if ((inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato) &&
-            theNext == theCount - 1)
-            theNext = 0;
-    }
-    if (inUnit->mWeaponTagPoint != theNext)
-        inUnit->mWeaponTagPoint = theNext;
-    }();
+    // ee_combat world.rs fire_shot: the plan's operations on the world host (EECombatGoals.cpp: the drop point, the
+    // line, the hit, the launch and the effects stay C++ behind them); CBXA records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_FIRE_SHOT, inUnit, NULL, this);
     EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
 }
 
@@ -3636,56 +3541,8 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 {
     uint32_t theBefore = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;   // TEST ONLY
-    GE3DPoint thePosition;
-    std::vector<EEUnit*> theUnits;
-    U2DPoint<long> theTile;
-    EEComplexUnit* theTarget = inUnit->mLastAttacker;
-    EEUnitGoal* theGoal;
-    if (!EEIsSeenByOwnerOf(theTarget, inUnit) && inUnit->GetStats()->mMaxVelocity != 0.0f) {
-        theGoal = new EEUGLocation(theTarget->mPhysicalModel.GetLocation().GetX(),
-            theTarget->mPhysicalModel.GetLocation().GetY(), 0.0f, false, false, false, 0.0f, false, 0);
-    } else {
-        theGoal = new EEUGAttackUnit(inUnit, theTarget, false, false);
-    }
-    inUnit->SetGoal(theGoal, 1, 0);
-    if (inUnit->GetPlayer()->GetPlayerID() != 0 &&
-        ((inUnit->GetUnitClass()->GetCategory() != kUnitCategoryLandCitizen && inUnit->GetUnitClass()->GetCategory() != kUnitCategoryNavalCitizen) || theTarget->GetPlayer()->GetPlayerID() != 0)) {
-        const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-        thePosition.SetX(theLocation.GetX());
-        thePosition.SetY(theLocation.GetY());
-        thePosition.SetZ(theLocation.GetZ());
-        EEGetUnitsNear(thePosition, kCallForHelpRadius, theUnits);
-        for (long i = (long)theUnits.size() - 1; i >= 0; --i) {
-            // The original uses the returned object as an EEComplexUnit directly.
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
-            if (!(theUnit->GetHitPoints() > 0) || theUnit->GetPlayer() != inUnit->GetPlayer() ||
-                !theUnit->mBehavior->mCanTargetEnemies || !theUnit->mBehavior->CanMoveFreely(theUnit) || theUnit->GetUnitClass()->mIsProjectile ||
-                theUnit->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || !theUnit->CanAttackClass(theTarget->GetUnitClass()) ||
-                theUnit->IsTargetIgnored(theTarget, true))
-                continue;
-            EEUnitGoal* theCurrent = theUnit->mGoalState;
-            if (theCurrent != NULL) {
-                if (theCurrent->GetB1C() || theCurrent->mKind != kGoalAttackUnit)
-                    continue;
-                if (!static_cast<EEUGAttackUnit*>(theCurrent)->mTarget->GetUnitClass()->IsLandBuilding() || static_cast<EEUGAttackUnit*>(theUnit->mGoalState)->mTarget->GetStats()->mAttack != 0.0f)
-                    continue;
-            }
-            if (!(!EEIsAttackReachable(theUnit, theTarget, &theTile))) {
-                EEUnitGoal* theCopy = theGoal->Clone();
-                if (theUnit->GetClass()->FindAction(theCopy->GetStartAction()) != NULL) {
-                    theUnit->SetGoal(theCopy, 1, 0);
-                    theUnit->StartAction(theCopy->GetStartAction());
-                    theUnit->GetUnitClass()->ActionChanged(theUnit);
-                }
-            } else {
-                theUnit->IgnoreTarget(theTarget);
-            }
-        }
-        theUnits.clear();
-    }
-    if (inUnit->mLastAttacker != NULL)
-        inUnit->mLastAttacker->Dereference();
-    inUnit->mLastAttacker = NULL;
+    // ee_combat world.rs attacked: the plan's operations on the world host (EECombatGoals.cpp); CBXA records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_ATTACKED, inUnit, NULL, this);
     EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
 }
 

@@ -723,6 +723,208 @@ constexpr static const uint32_t EE_COMBAT_TARGET_TEST_CAN_ATTACK_CLASS = 10;
 /// The unit has ignored targets and `IsTargetIgnored(candidate, inArg7 != 0)` (which may drop expired ones).
 constexpr static const uint32_t EE_COMBAT_TARGET_TEST_IGNORED = 11;
 
+/// `gPhysics->mGameTime`.
+constexpr static const int32_t EE_COMBAT_Q_GAME_TIME = 46;
+
+/// `mUnitClass->mTileSize`.
+constexpr static const int32_t EE_COMBAT_Q_TILE_SIZE = 47;
+
+/// a complex unit's `mIgnoredTargets.size()`.
+constexpr static const int32_t EE_COMBAT_Q_IGNORED_COUNT = 48;
+
+/// `mUnitClass->mMaxVelocity` (f32).
+constexpr static const int32_t EE_COMBAT_Q_CLASS_MAX_VELOCITY = 49;
+
+/// `mUnitClass->mDomains`.
+constexpr static const int32_t EE_COMBAT_Q_DOMAINS = 50;
+
+/// a complex unit's `mContainer != NULL`.
+constexpr static const int32_t EE_COMBAT_Q_CONTAINER = 51;
+
+/// `gWorld.mMap->mSize`.
+constexpr static const int32_t EE_COMBAT_Q_MAP_SIZE = 52;
+
+/// `<the call's unit>->DistanceSquaredTo(<the unit>)` (f32).
+constexpr static const int32_t EE_COMBAT_Q_DISTANCE_SQUARED = 53;
+
+/// `GetStats()->mMaxVelocity` (f32).
+constexpr static const int32_t EE_COMBAT_Q_STATS_MAX_VELOCITY = 54;
+
+/// a complex unit's `mBehavior->mCanTargetEnemies`, `mBehavior->CanMoveFreely(<it>)`.
+constexpr static const int32_t EE_COMBAT_Q_TARGETS_ENEMIES = 55;
+
+constexpr static const int32_t EE_COMBAT_Q_MOVES_FREELY = 56;
+
+/// a complex unit's `mGoalState->mKind` ([`EE_COMBAT_Q_NONE`] without a goal), `mGoalState->GetB1C()`.
+constexpr static const int32_t EE_COMBAT_Q_GOAL_KIND = 57;
+
+constexpr static const int32_t EE_COMBAT_Q_GOAL_B1C = 58;
+
+/// `GetUnitClass()->IsLandBuilding()`, `GetStats()->mAttack` (f32).
+constexpr static const int32_t EE_COMBAT_Q_LAND_BUILDING = 59;
+
+constexpr static const int32_t EE_COMBAT_Q_ATTACK = 60;
+
+/// a complex unit's `mReloadTimer`, `mStats->mReloadTime`, `mAmmunition`.
+constexpr static const int32_t EE_COMBAT_Q_RELOAD_TIMER = 61;
+
+constexpr static const int32_t EE_COMBAT_Q_RELOAD_TIME = 62;
+
+constexpr static const int32_t EE_COMBAT_Q_AMMUNITION = 63;
+
+/// the shot's class's (`FireShot`'s `this`) fields: `EE_COMBAT_SHOT_CLASS_*`.
+constexpr static const int32_t EE_COMBAT_Q_SHOT_CLASS = 64;
+
+/// `GetModel()->mTurretParts.size()`.
+constexpr static const int32_t EE_COMBAT_Q_TURRET_PARTS = 65;
+
+/// the player's epoch's `mHighTechTools` (epochs.yaml: a citizen's shot plays its effect).
+constexpr static const int32_t EE_COMBAT_Q_HIGH_TECH_TOOLS = 66;
+
+/// `mUnitClass->mImpactSparksEffect != NULL`.
+constexpr static const int32_t EE_COMBAT_Q_SPARKS_EFFECT = 67;
+
+/// [`EE_COMBAT_Q_SHOT_CLASS`]: `mProjectileClass`, `mUsesAmmunition`, `mMuzzleFlashEffect`, `mShotEffect`.
+constexpr static const uint32_t EE_COMBAT_SHOT_CLASS_PROJECTILE = 1;
+
+constexpr static const uint32_t EE_COMBAT_SHOT_CLASS_AMMUNITION = 2;
+
+constexpr static const uint32_t EE_COMBAT_SHOT_CLASS_MUZZLE_FLASH = 4;
+
+constexpr static const uint32_t EE_COMBAT_SHOT_CLASS_SHOT_EFFECT = 8;
+
+/// `object`'s ignored entry `args[0]` into `args[0..6]` (tile x, y, from x, y, unit id, time).
+constexpr static const int32_t EE_COMBAT_W_IGNORED_ENTRY = 1;
+
+/// `object`'s ignored entries `args[0]` to `args[1]` (-1: the end) erased.
+constexpr static const int32_t EE_COMBAT_W_IGNORED_ERASE = 2;
+
+/// an entry `args[0..6]` pushed at the front of `object`'s list.
+constexpr static const int32_t EE_COMBAT_W_IGNORED_PUSH = 3;
+
+/// `object`'s entry `args[0]`'s time set to `args[1]`.
+constexpr static const int32_t EE_COMBAT_W_IGNORED_TIME = 4;
+
+/// `EEIsCornerBlocked(args[0], args[1], args[2], args[3])`.
+constexpr static const int32_t EE_COMBAT_W_CORNER_BLOCKED = 5;
+
+/// `gContinentManager.CanGetToUnit(object, other)`.
+constexpr static const int32_t EE_COMBAT_W_CAN_GET_TO_UNIT = 6;
+
+/// `gContinentManager.GetContinentAt(object)` (a continent's handle).
+constexpr static const int32_t EE_COMBAT_W_CONTINENT_AT = 7;
+
+/// `gContinentManager.mTileFlags[object->mID * mFlagsWidth + other->mID]` (two continents).
+constexpr static const int32_t EE_COMBAT_W_CONTINENT_LINK = 8;
+
+/// `gContinentManager.AreConnectedForUnit(args[0] (a unit), object, other)` (two continents).
+constexpr static const int32_t EE_COMBAT_W_CONNECTED_FOR_UNIT = 9;
+
+/// `object->IsOnOtherContinentThan(other)`.
+constexpr static const int32_t EE_COMBAT_W_OTHER_CONTINENT = 10;
+
+/// `gPathManager.FindPath(object, map, from, to, bounds, path, 0xb, limit, <an attackable-by modifier of object and
+/// other>)`, `args`: from x, y, to x, y, bounds top, left, bottom, right, limit; answers the path's length, its first
+/// tile in `args[0..2]`.
+constexpr static const int32_t EE_COMBAT_W_FIND_PATH = 11;
+
+/// `EEIsSeenByOwnerOf(object, other)`.
+constexpr static const int32_t EE_COMBAT_W_SEEN_BY_OWNER = 12;
+
+/// `Attacked`'s goal on `object` against `other` (`args[0]`: a location goal at its x, y, else an attack goal), set
+/// (`SetGoal(goal, 1, 0)`) and kept for the helpers.
+constexpr static const int32_t EE_COMBAT_W_ATTACKED_GOAL = 13;
+
+/// `EEGetUnitsNear(<object's location>, kCallForHelpRadius, units)` kept; answers their count.
+constexpr static const int32_t EE_COMBAT_W_UNITS_NEAR = 14;
+
+/// the kept units' `args[0]`th.
+constexpr static const int32_t EE_COMBAT_W_NEAR_UNIT = 15;
+
+/// `object->CanAttackClass(other->GetUnitClass())`.
+constexpr static const int32_t EE_COMBAT_W_CAN_ATTACK_CLASS = 16;
+
+/// `object->IsTargetIgnored(other, true)`.
+constexpr static const int32_t EE_COMBAT_W_IS_IGNORED = 17;
+
+/// `EEIsAttackReachable(object, other, &tile)`.
+constexpr static const int32_t EE_COMBAT_W_ATTACK_REACHABLE = 18;
+
+/// the kept goal's clone on `object`, when its class has the goal's start action: set, started, `ActionChanged`.
+constexpr static const int32_t EE_COMBAT_W_HELP = 19;
+
+/// `object->IgnoreTarget(other)`.
+constexpr static const int32_t EE_COMBAT_W_IGNORE = 20;
+
+/// `object`'s `mLastAttacker` dereferenced and cleared.
+constexpr static const int32_t EE_COMBAT_W_RELEASE_ATTACKER = 21;
+
+/// `object`'s `mLastAttacker`.
+constexpr static const int32_t EE_COMBAT_W_LAST_ATTACKER = 22;
+
+/// the class's `LaunchStoredMissile(object)`.
+constexpr static const int32_t EE_COMBAT_W_LAUNCH_STORED_MISSILE = 23;
+
+/// `object->SetRandomReloadTimer(args[0])`.
+constexpr static const int32_t EE_COMBAT_W_RELOAD = 24;
+
+/// `EEFindDropLocation(object, &target, &point, NULL)`: answers the target, keeps the point.
+constexpr static const int32_t EE_COMBAT_W_FIND_DROP = 25;
+
+/// `EEIsLineToUnitBlocked(object, other, &blocker, &x, &y)`: `args[0]` the blocker's handle, `args[1..3]` x, y.
+constexpr static const int32_t EE_COMBAT_W_LINE_BLOCKED = 26;
+
+/// the impact sparks of `object`'s class on it; the impact sparks placed on tile `args[0..2]` (+0.5, its height).
+constexpr static const int32_t EE_COMBAT_W_SPARKS_ON = 27;
+
+constexpr static const int32_t EE_COMBAT_W_SPARKS_AT = 28;
+
+/// the class's `ApplyHit(object, other)`.
+constexpr static const int32_t EE_COMBAT_W_APPLY_HIT = 29;
+
+/// the class's `LaunchShot(object, other, point, NULL)`, `LaunchFromTurret(object, other, point)`.
+constexpr static const int32_t EE_COMBAT_W_LAUNCH_SHOT = 30;
+
+constexpr static const int32_t EE_COMBAT_W_LAUNCH_FROM_TURRET = 31;
+
+/// the class's `mSpecialAttackEffect` between `object` and `other`.
+constexpr static const int32_t EE_COMBAT_W_SPECIAL_EFFECT = 32;
+
+/// `object->StartAction(args[0])`.
+constexpr static const int32_t EE_COMBAT_W_START_ACTION = 33;
+
+/// the class's `mMuzzleFlashEffect` on `object`.
+constexpr static const int32_t EE_COMBAT_W_MUZZLE_FLASH = 34;
+
+/// the class's `mShotEffect` between `object` and `other`, or at the point.
+constexpr static const int32_t EE_COMBAT_W_SHOT_EFFECT_BETWEEN = 35;
+
+constexpr static const int32_t EE_COMBAT_W_SHOT_EFFECT_AT = 36;
+
+/// `object->SetAmmunition(args[0])`, `SetFlightTime(args[0])`, `mIsSpecialAttack = false`.
+constexpr static const int32_t EE_COMBAT_W_SET_AMMUNITION = 37;
+
+constexpr static const int32_t EE_COMBAT_W_SET_FLIGHT_TIME = 38;
+
+constexpr static const int32_t EE_COMBAT_W_SPECIAL_OFF = 39;
+
+/// The functions of [`ee_combat_world`].
+constexpr static const int32_t EE_COMBAT_WORLD_IS_IGNORED = 1;
+
+constexpr static const int32_t EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE = 2;
+
+constexpr static const int32_t EE_COMBAT_WORLD_IGNORE = 3;
+
+constexpr static const int32_t EE_COMBAT_WORLD_CAN_REACH_UNIT = 4;
+
+constexpr static const int32_t EE_COMBAT_WORLD_BORDERING = 5;
+
+constexpr static const int32_t EE_COMBAT_WORLD_ATTACK_REACHABLE = 6;
+
+constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED = 7;
+
+constexpr static const int32_t EE_COMBAT_WORLD_FIRE_SHOT = 8;
+
 /// The unit store's fields the reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge: ee_combat does not
 /// depend on ee_units, whose crate imports C++ functions no test binary of this crate has).
 struct EeCombatStoredUnit {
@@ -1740,6 +1942,15 @@ struct EeCombatTargetHost {
   void (*push)(void *ctx, uint64_t unit);
 };
 
+/// The argument block of an operation.
+using EeCombatWorldArgs = int64_t[12];
+
+/// The C++ host of the bodies here: the reads' table and the operations (`ctx`: the reads' context).
+struct EeCombatWorldHost {
+  EeCombatQueryHost query;
+  uint64_t (*op)(void *ctx, int32_t code, uint64_t object, uint64_t other, EeCombatWorldArgs *args);
+};
+
 extern "C" {
 
 /// Loads the tables from `count` rows of percentages (replacing any loaded ones); returns the row count.
@@ -2116,6 +2327,17 @@ int32_t ee_combat_choose_target(const uint64_t *units,
                                 uint32_t count,
                                 int32_t skip_kind,
                                 const EeCombatTargetHost *host);
+
+/// One body of this module (`EE_COMBAT_WORLD_*`) of `unit` on `target` over `host`: the answer (0/1); the attack
+/// reach writes its tile into `tile` when it sets one.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context, `tile` to two writable values.
+int32_t ee_combat_world(int32_t function,
+                        uint64_t unit,
+                        uint64_t target,
+                        const EeCombatWorldHost *host,
+                        int32_t (*tile)[2]);
 
 }  // extern "C"
 

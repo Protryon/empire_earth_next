@@ -688,12 +688,15 @@ pub struct EeCombatStoredUnit {
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
 pub const EE_COMBAT_STORED_COMPLEX_UNIT: u8 = 2;
 
-// ee_rust defines it (and declares it in its header): cbindgen must not declare it here again
+/// ee_rust defines the bridge (and declares it in its header): cbindgen must not declare it here again.
 /// cbindgen:ignore
 #[cfg(not(test))]
-extern "C" {
-    /// ee_rust's bridge to the core lane's unit store: the record under `id` into `out`; false for none.
-    fn ee_combat_store_unit(id: u32, out: *mut EeCombatStoredUnit) -> bool;
+mod bridge {
+    use super::EeCombatStoredUnit;
+    extern "C" {
+        /// ee_rust's bridge to the core lane's unit store: the record under `id` into `out`; false for none.
+        pub fn ee_combat_store_unit(id: u32, out: *mut EeCombatStoredUnit) -> bool;
+    }
 }
 
 /// The store's record under `id` (in the unit tests their own map).
@@ -702,7 +705,7 @@ fn stored_record(id: u32) -> Option<UnitRecord> {
     {
         let mut out = EeCombatStoredUnit::default();
         // SAFETY: the bridge writes one record into `out`
-        unsafe { ee_combat_store_unit(id, &mut out) }.then_some(out)
+        unsafe { bridge::ee_combat_store_unit(id, &mut out) }.then_some(out)
     }
     #[cfg(test)]
     {

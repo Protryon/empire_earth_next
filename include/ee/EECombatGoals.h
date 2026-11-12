@@ -120,6 +120,12 @@ enum {
     EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
 };
 void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore);
+// A body of ee_combat world.rs (EE_COMBAT_WORLD_*: IsTargetIgnored, IgnoreTarget, CanReachUnit,
+// IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host
+// (EECombatGoals.cpp); inClass the class of Attacked or FireShot (`this`), ioX, ioY EEIsAttackReachable's tile (written
+// when the body sets it). Returns the body's answer (0/1).
+int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
+                      long* ioX = NULL, long* ioY = NULL);
 
 // The nesting guard of a captured read (per thread and slot: 0 the reads, 1 the shots' ActionChanged, 2 their
 // Update, 3 the heal goal's Work): mOuter when no other captured call of the slot is running

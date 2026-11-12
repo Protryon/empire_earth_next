@@ -35,6 +35,7 @@ pub mod walks;
 pub mod walks_ffi;
 #[cfg(test)]
 mod walks_tests;
+pub mod world;
 
 use ee_ge::um::{lrintf, sqrt, um_arccos, um_arctan, um_cos, HALF_PI};
 

@@ -273,21 +273,8 @@ void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
 // Ignores a target for 30 seconds from both units' current tiles, or renews an existing ignore entry
 void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
 {
-    std::deque<EEComplexUnitAttacker>::iterator theIterator;
-    EEComplexUnitAttacker theAttacker;
-    theIterator = std::find(this->mIgnoredTargets.begin(), this->mIgnoredTargets.end(), inTarget->GetUnitID());
-    if (theIterator == this->mIgnoredTargets.end()) {
-        theAttacker.mTileX = this->GetTileX();
-        theAttacker.mTileY = this->GetTileY();
-        theAttacker.mFromX = inTarget->GetTileX();
-        theAttacker.mFromY = inTarget->GetTileY();
-        theAttacker.mUnitID = inTarget->mUnitID;
-        theAttacker.mTime = gPhysics->mGameTime + 30000;
-        this->mIgnoredTargets.push_front(theAttacker);  // newest first: 0x2000f9 is deque::push_front (_Myoff ? _Myoff : _Mapsize * 0xaa, then --); IsTargetIgnored erases from an expired entry to the end
-    } else {
-        long theTime = gPhysics->mGameTime;
-        (*theIterator).mTime = theTime + 30000;
-    }
+    // ee_combat world.rs ignore_target over the world host (EECombatGoals.cpp); CBXR records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_IGNORE, this, inTarget);
     EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
 }
 
@@ -2085,28 +2072,9 @@ float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
 // Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
 bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocation)
 {
-    bool theResult = false;
-    unsigned long theUnitID = inTarget->mUnitID;
-    std::deque<EEComplexUnitAttacker>::iterator theIterator = std::find(this->mIgnoredTargets.begin(), this->mIgnoredTargets.end(), theUnitID);
-    if (theIterator != this->mIgnoredTargets.end()) {
-        long theX = this->GetTileX();
-        long theY = this->GetTileY();
-        long theFromX = inTarget->GetTileX();
-        long theFromY = inTarget->GetTileY();
-        unsigned long theNow = gPhysics->mGameTime;
-        if ((*theIterator).mTime <= theNow)
-            this->mIgnoredTargets.erase(theIterator, this->mIgnoredTargets.end());
-        else if (inCheckLocation) {
-            if ((*theIterator).mTileX == theX && (*theIterator).mTileY == theY && (*theIterator).mFromX == theFromX
-                && (*theIterator).mFromY == theFromY)
-                theResult = true;
-            else {
-                theResult = false;
-                this->mIgnoredTargets.erase(theIterator, theIterator + 1);
-            }
-        } else
-            theResult = true;
-    }
+    // ee_combat world.rs is_target_ignored over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(inCheckLocation ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, this,
+                                   inTarget) != 0;
     EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, this, inTarget, theResult, inCheckLocation);
     return theResult;
 }
@@ -2158,21 +2126,10 @@ bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
 // Returns whether the unit can get to a target, directly or through connected continents
 bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
 {
-    bool theReach = [&]() -> bool {   // TEST ONLY (CBXR golden): the original body in a lambda
-    bool theResult = gContinentManager.CanGetToUnit(this, inTarget);
-    if (theResult)
-        return theResult;
-    EEAIContinent* theFrom = gContinentManager.GetContinentAt(this);
-    EEAIContinent* theTo = gContinentManager.GetContinentAt(inTarget);
-    if (theFrom != NULL && theTo != NULL) {
-        theResult = gContinentManager.mTileFlags[theFrom->mID * gContinentManager.mFlagsWidth + theTo->mID];
-        if (!theResult)
-            theResult = gContinentManager.AreConnectedForUnit(inTarget, theFrom, theTo);
-    }
+    // ee_combat world.rs can_reach_unit over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, this, inTarget) != 0;
+    EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theResult);
     return theResult;
-    }();
-    EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theReach);
-    return theReach;
 }
 
 // FUNCTION: EXE 0x5fa7f6
@@ -4186,30 +4143,10 @@ void EEComplexUnit::AIStep()
 // Returns true if a range-1 unit stands on the target's tile or a tile along its sides or corners
 bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    long theY = this->GetTileY();
-    long theX = this->GetTileX();
-    long theTargetX = inTarget->GetTileX();
-    long theTargetY = inTarget->GetTileY();
-    long theSize = inTarget->mUnitClass->mTileSize;
-    bool theFound = false;
-    if (this->GetStats()->mRange == 1.0f) {
-        if (theX == theTargetX && theY == theTargetY)
-            theFound = true;
-        else {
-            EEGetSideTiles(theTargetX, theTargetY, theSize, theTiles);
-            std::vector<U2DPoint<long> >::iterator it;
-            for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++)
-                theFound = theX == it->mX && theY == it->GetY();
-            if (!theFound) {
-                EEGetCornerTiles(0, theTargetX, theTargetY, theSize, theTiles);
-                for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++)
-                    theFound = theX == it->mX && theY == it->GetY();
-            }
-        }
-    }
-    EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, inTarget, theFound);
-    return theFound;
+    // ee_combat world.rs on_tile_bordering over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(EE_COMBAT_WORLD_BORDERING, this, inTarget) != 0;
+    EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, inTarget, theResult);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x5ff4f9
