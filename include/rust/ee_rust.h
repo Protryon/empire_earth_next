@@ -140,6 +140,21 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
+
+/// `LaunchFromTurret` (a turret part found): the tag point turned by the turret's yaw, the launch along the chain.
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_TURRET = 1;
+
+/// `EEApproachAttachPoint`: the world point of the current tag point (or half a tile up).
+constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_ATTACH = 2;
+
+/// `EEFOFindNewTargetInMeleeRange`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_MELEE = 0;
+
+/// `EEFOFindNewTargetNearOldTarget`.
+constexpr static const int32_t EE_COMBAT_SCREEN_KIND_NEAR_OLD = 1;
+
 /// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
 /// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
 /// complex unit may be missing).
@@ -922,6 +937,31 @@ constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 /// `kControlTriggerScrollingFinished`.
 constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
 
+/// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
+constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
+
+constexpr static const int64_t EE_UNIT_TYPE_GRANARY = 52;
+
+constexpr static const int64_t EE_UNIT_TYPE_GRANARY_IMPROVED = 698;
+
+/// `kGoalBuildRepair` (`EEUnitGoal::mKind`)
+constexpr static const int32_t EE_GOAL_KIND_VALUE_BUILD_REPAIR = 4;
+
+/// `kActionIdle`, `kActionMoveToStorage`, `kActionCalamityPreCast` (ee/EEUnitAction.h)
+constexpr static const int32_t EE_ACTION_IDLE = 5000;
+
+constexpr static const int32_t EE_ACTION_MOVE_TO_STORAGE = 8009;
+
+constexpr static const int32_t EE_ACTION_CALAMITY_PRE_CAST = 2030;
+
+/// `kTechTeleport`, `kTechConquistadorsSpell` (ee/EETechTreeTechID.h)
+constexpr static const int32_t EE_TECH_TELEPORT = 1916;
+
+constexpr static const int32_t EE_TECH_CONQUISTADORS_SPELL = 7020;
+
+/// the calamity class whose cast every selected caster takes a copy of (`mClassEnum` 0x12)
+constexpr static const int32_t EE_CALAMITY_CLASS_GROUP_CAST = 18;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
@@ -1003,6 +1043,13 @@ constexpr static const uint32_t EE_GOAL_CTOR_UNLOAD_TRANSPORT = 9;
 
 /// `new EEUGLocation(point[0], point[1], 0.0f, false, true, false, 0.0f, false, 0)` (EEMUnloadTransport's move)
 constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_XY = 10;
+
+/// `new EEUGLocation(GE2DPoint(point[0], point[1]), true, true, false, 0.0f, false, 0)` (EEMSmartFarmers' move)
+constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_2D = 11;
+
+/// `new EEUGCastCalamity(unit_a, unit_b, ints[0], ints[1], ints[2], flag_a)` (the caster's complex unit, the target
+/// or none, the tile x and y, the technology)
+constexpr static const uint32_t EE_GOAL_CTOR_CAST_CALAMITY = 12;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
@@ -1166,6 +1213,25 @@ constexpr static const uint32_t EE_UNIT_FIELD_RESOURCE_AMOUNT = 15;
 /// on the map: linked into the world's unit chain (`gWorld.mUnits`, x-sorted, through `mTileNode`), reported by
 /// `RTSUnit::Link` and `Unlink`; the domain of the out-of-sync checksum's unit walk
 constexpr static const uint32_t EE_UNIT_FIELD_ON_MAP = 16;
+
+/// `EEComplexUnit::mPhysicalModel.GetLocation()`'s x, y and z, as their float bits (`EEUnitStoreModel`'s setters)
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_X = 17;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Y = 18;
+
+constexpr static const uint32_t EE_UNIT_FIELD_LOCATION_Z = 19;
+
+/// `EEComplexUnit::mHeight` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_HEIGHT = 20;
+
+/// `EEComplexUnit::mTimesUpdated`
+constexpr static const uint32_t EE_UNIT_FIELD_TIMES_UPDATED = 21;
+
+/// `EEComplexUnit::mActiveGroup != NULL`
+constexpr static const uint32_t EE_UNIT_FIELD_ACTIVE_GROUP = 22;
+
+/// `EEComplexUnit::mCommand`'s `mType` (0: none; an action's type is fixed by its constructor)
+constexpr static const uint32_t EE_UNIT_FIELD_COMMAND = 23;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -2807,6 +2873,9 @@ struct EeWonThread;
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
 
+/// `UDPManager`'s state and steps.
+struct EeWonUdpManager;
+
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
 
@@ -4153,6 +4222,45 @@ struct EeCombatDamageRowOut {
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
 };
 
+/// A flight step's outputs.
+struct EeCombatFlightOut {
+  /// the unit moved (Step2 may not; its location is then the input's)
+  int32_t moved;
+  /// the new velocity (Accelerate, Home)
+  float speed;
+  /// the new location
+  float matrix[16];
+};
+
+/// A flight step's inputs (the capture's CBPJ, CBPS, CBMA, CBMH layout; each step reads its own fields).
+struct EeCombatFlightIn {
+  /// the unit's location (`mMatrix`, row by row) (Step2, Accelerate, Home)
+  float location[16];
+  /// the projectile's launch point (`mProjectileStart`) (Step0)
+  float start[3];
+  /// the drop target's point (Home)
+  float target[3];
+  /// the projectile's yaw (Step0)
+  float yaw;
+  /// the arc's move along the heading and up, and its pitch (`ee_combat_arc`) (Step0)
+  float move_y;
+  float move_z;
+  float pitch;
+  /// the class's gravity (`mAcceleration`) (Step2)
+  float gravity;
+  /// the tick's seconds
+  float step;
+  /// the unit's velocity
+  float speed;
+  /// the stats' top speed, acceleration and turn rate (Accelerate, Home)
+  float max_speed;
+  float accel;
+  float max_angular;
+  /// the ground point was read (Step2: only at or below height 0) and its height
+  int32_t ground_read;
+  float ground_z;
+};
+
 /// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
 /// point's model first, then each parent) are passed beside it.
 struct EeCombatWeaponIn {
@@ -4173,6 +4281,56 @@ struct EeCombatWeaponIn {
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
+struct EeCombatLaunchIn {
+  /// `EE_COMBAT_LAUNCH_KIND_*`
+  int32_t kind;
+  /// the shooter's `mIsSpecialAttack` (shot)
+  int32_t special;
+  /// the launcher class's `mHasSpecialAttack` (shot)
+  int32_t has_special;
+  /// the shooter is a Sp15 capital ship or the Yamato (shot)
+  int32_t capital;
+  /// the shooter is a Roman legionnaire (shot)
+  int32_t legionnaire;
+  /// the animation's tag points (0 without a list) (shot, attach)
+  int32_t point_count;
+  /// `mWeaponTagPoint` (shot, attach)
+  int32_t weapon_index;
+  /// the launcher class is a building: the shot faces the target (shot)
+  int32_t building;
+  /// not a bomb's launcher: the shot turns to the target about its own axis (shot)
+  int32_t turn;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// the stats' scale
+  float scale;
+  /// the turret's yaw (turret)
+  float yaw;
+  /// the tag point at the frame, in its model's space (when there is one)
+  float point[3];
+  /// the target location (shot)
+  float target[3];
+  /// the number of model chain transforms
+  int32_t chain;
+};
+
+/// A launch's outputs.
+struct EeCombatLaunchOut {
+  /// the tag point fired from (-1 without one) (shot)
+  int32_t index;
+  /// a special attack fires flaming arrows (shot)
+  int32_t flaming;
+  /// the unit has a tag point (attach)
+  int32_t result;
+  /// the launch transform (shot, turret)
+  float launch[16];
+  /// the attach point (attach)
+  float point[3];
+  /// the launch's floor tile (shot)
+  int32_t tile[2];
 };
 
 /// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
@@ -4212,6 +4370,33 @@ struct EeCombatSearchHost {
   void (*ignore)(void *ctx, uint64_t unit);
   void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
   void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
+/// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
+/// and the answer.
+struct EeCombatScreenIn {
+  /// `EE_COMBAT_SCREEN_KIND_*`
+  int32_t kind;
+  /// the candidate's hit points
+  int32_t hit_points;
+  /// the screen's squared range
+  float range;
+  int32_t read;
+  float distance;
+};
+
+/// The host's distance of a screen's candidate (asked only for a living one).
+using EeCombatScreenDistance = float(*)(void *context);
+
+/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
+struct EeCombatHitDistanceIn {
+  /// the unit's position
+  float from[3];
+  /// the target's point (its drop point, a melee unit's: its position)
+  float to[3];
+  /// the point to measure from instead of the unit's (x -10000: none)
+  float x;
+  float y;
 };
 
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
@@ -6238,6 +6423,15 @@ struct EeUnitRecord {
   int64_t resource_amount;
   /// in the world's unit chain (`EE_UNIT_FIELD_ON_MAP`)
   uint8_t on_map;
+  /// `EEComplexUnit::mActiveGroup != NULL`
+  uint8_t active_group;
+  /// the location's x, y, z and `mHeight` as float bits
+  uint32_t location[3];
+  uint32_t height;
+  /// `EEComplexUnit::mTimesUpdated` (an `unsigned long`)
+  int64_t times_updated;
+  /// `mCommand ? mCommand->mType : 0` (an `unsigned long`)
+  int64_t command;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -6268,6 +6462,8 @@ struct EeGoalSpec {
   /// a value (the location's facing)
   float value;
   uint8_t flag_c;
+  /// integer arguments (the cast's tile and technology)
+  int64_t ints[3];
 };
 
 /// A member handed over.
@@ -7738,6 +7934,25 @@ struct EeWonSocketOpBaseHooks {
   EeWonSocketRefFn socket_release;
   /// the socket's Rust object (`socket->mSock`)
   EeWonAsyncSocket *(*socket_object)(void *socket);
+  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+  EeWonSocketRefFn ref_add;
+  EeWonSocketRefFn ref_release;
+  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+  /// modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+  long (*accept)(void *socket, void **out);
 };
 
 /// A C++ call on a socket op (`SocketOp*`).
@@ -7870,6 +8085,44 @@ struct EeWonTitleFlags {
   bool save_session_key;
   bool get_key_id;
   bool ascii_account_names;
+};
+
+/// A C++ call on one object.
+using EeWonUdpFn = void(*)(void *object);
+
+/// What the manager calls back in the C++. One static table serves every manager.
+struct EeWonUdpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpFn ref_add;
+  EeWonUdpFn ref_release;
+  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
+  /// `ForceFinish(s)`, `TimeLeft()`
+  long (*op_status)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpFn op_kill;
+  void (*op_finish)(void *op, long status);
+  void (*op_force_finish)(void *op, long status);
+  uint32_t (*op_time_left)(void *op);
+  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
+  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  EeWonIpAddr *(*recv_address)(void *op);
+  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
+  void (*recv_set_msg)(void *op, void *bytes);
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
+  void *(*new_recv_op)(const EeWonIpAddr *addr);
+  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
+  void *(*socket_new)();
+  EeWonUdpFn socket_kill;
+  void (*socket_set_broadcast)(void *socket, bool on);
+  long (*socket_bind)(void *socket, int32_t port);
+  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
+  /// `SetRepeatOp(new RecvBytesFromOp(size))`
+  void (*socket_repeat)(void *socket, void *manager, int32_t size);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -10387,6 +10640,30 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
 
+/// `EEPMProjectile::Step0`'s placement on the arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_launch(const EeCombatFlightIn *input);
+
+/// `EEPMProjectile::Step2`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_projectile_step(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Accelerate`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_accelerate(const EeCombatFlightIn *input);
+
+/// `EEPMMissile::Home`'s tick.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatFlightOut ee_combat_missile_home(const EeCombatFlightIn *input);
+
 /// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
 /// a larger buffer when it exceeds `capacity`).
 ///
@@ -10408,11 +10685,38 @@ uint32_t ee_combat_tile_line(int32_t x1,
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
 
+/// The tag point `LaunchShot` fires from (-1: none).
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_launch_index(const EeCombatLaunchIn *input);
+
+/// The launch of `input.kind` over `input.chain` model transforms.
+///
+/// # Safety
+/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
+EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
+                                   const float (*chain)[16]);
+
 /// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
 ///
 /// # Safety
 /// `host` must point to a valid record whose callbacks are callable with its `ctx`.
 uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
+///
+/// # Safety
+/// `input` must point to a valid record; `distance` is called with `context` (it must not touch the record).
+int32_t ee_combat_screen(EeCombatScreenIn *input,
+                         void *context,
+                         EeCombatScreenDistance distance);
+
+/// `EEGetHitDistanceSquared`'s arithmetic.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///
@@ -13788,6 +14092,17 @@ uint32_t ee_units_store_clear_player(uint64_t player);
 /// A holder's write (`EE_UNIT_FIELD_*`); ignored unless the record under `id` is `object`'s.
 bool ee_units_store_set(uint32_t id, uint64_t object, uint32_t field, int64_t value);
 
+/// The location's write (`EEUnitStoreModel`'s setters): x, y and z as float bits, in one call; ignored unless the
+/// record under `id` is `object`'s.
+bool ee_units_store_set_location(uint32_t id,
+                                 uint64_t object,
+                                 uint32_t x,
+                                 uint32_t y,
+                                 uint32_t z);
+
+/// The out-of-sync checksum's flag 2 over the store's units on the map (`Store::checksum_flag2`).
+uint64_t ee_units_store_checksum_flag2();
+
 /// The record under `id` into `out`; false (and `out` untouched) when there is none.
 ///
 /// # Safety
@@ -13933,6 +14248,30 @@ void ee_units_dropoff_resource(void *player,
                                void *selection,
                                uint32_t dropoff);
 
+/// `EEMBuildUnit::Execute`'s body (`commands::build_unit`) for the sender, its selection, the technology, the tile
+/// (the message's point through the original's `(long)` casts) and the queued flag.
+void ee_units_build_unit(void *player,
+                         void *selection,
+                         int32_t technology,
+                         int64_t x,
+                         int64_t y,
+                         bool queued);
+
+/// `EEMSmartFarmers::Execute`'s body (`commands::smart_farmers`) for the sender, its selection and the target id.
+void ee_units_smart_farmers(void *player,
+                            void *selection,
+                            uint32_t target);
+
+/// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
+/// target id (-1: none), the tile and the technology.
+void ee_units_cast_calamity(void *player,
+                            void *selection,
+                            uint32_t caster,
+                            int32_t target,
+                            int32_t x,
+                            int32_t y,
+                            int32_t technology);
+
 extern size_t ee_units_host_group_ids(void *group, uint32_t *out, size_t capacity);
 
 extern void *ee_units_host_goal_new(const EeGoalSpec *spec);
@@ -14041,6 +14380,87 @@ extern void ee_units_host_goal_set_transport(void *goal, uint32_t unit);
 extern uint8_t ee_units_host_goal_can_unload(void *goal);
 
 extern void ee_units_host_unload_warning(void *player, int64_t x, int64_t y);
+
+extern int64_t ee_units_host_technology_unit_class(void *player,
+                                                   int32_t technology,
+                                                   uint8_t *found);
+
+extern int64_t ee_units_host_player_num_capitols(void *player);
+
+extern uint8_t ee_units_host_can_produce(void *player, int32_t technology);
+
+extern uint8_t ee_units_host_can_place_on_tile(void *player,
+                                               int64_t unit_type,
+                                               int64_t x,
+                                               int64_t y);
+
+extern uint32_t ee_units_host_make_building(void *player, int64_t unit_type, int64_t x, int64_t y);
+
+extern size_t ee_units_host_free_farms(uint32_t unit, uint32_t *out, size_t capacity);
+
+extern void ee_units_host_sort_farms(uint32_t *farms,
+                                     size_t count,
+                                     int64_t x,
+                                     int64_t y,
+                                     uint8_t greater);
+
+extern void ee_units_host_unit_add_farm_target(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_unit_order_build(uint32_t unit, uint32_t target);
+
+extern void ee_units_host_unit_start_action(uint32_t unit, int32_t action);
+
+extern uint32_t ee_units_host_unit_load_farm(uint32_t unit);
+
+extern size_t ee_units_host_farm_drop_sites(uint32_t farm,
+                                            uint32_t *out,
+                                            size_t capacity,
+                                            uint8_t *found);
+
+extern uint8_t ee_units_host_can_take(uint32_t target, uint32_t unit);
+
+extern void ee_units_host_unit_drop_gathered(uint32_t unit);
+
+extern void ee_units_host_work_farm(uint32_t farm, uint32_t unit);
+
+extern void ee_units_host_unit_set_goal(uint32_t unit, void *goal);
+
+extern void ee_units_host_group_finish(void *group);
+
+extern void *ee_units_host_calamity_of(void *player,
+                                       int32_t technology,
+                                       int32_t *class_enum,
+                                       uint8_t *cast_by_all);
+
+extern int64_t ee_units_host_calamity_can_cast_at(void *class_,
+                                                  uint32_t unit,
+                                                  int32_t x,
+                                                  int32_t y,
+                                                  uint32_t target);
+
+extern uint8_t ee_units_host_technology_contains(void *player,
+                                                 int32_t technology,
+                                                 int64_t unit_type);
+
+extern int64_t ee_units_host_unit_power(uint32_t unit);
+
+extern int64_t ee_units_host_calamity_cost(void *class_);
+
+extern void *ee_units_host_unit_player(uint32_t unit);
+
+extern void ee_units_host_group_split_calamity_casters(void *group,
+                                                       void *class_,
+                                                       void *player,
+                                                       int32_t technology,
+                                                       uint32_t target);
+
+extern void *ee_units_host_goal_clone(void *goal);
+
+extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
+
+extern void ee_units_host_unit_clear_goals(uint32_t unit);
+
+extern int64_t ee_units_host_object_hit_points(uint32_t unit);
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
 ///
@@ -18786,13 +19206,12 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
-/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `hooks` is a static table; `socket` outlives the object.
 EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
                                          const EeWonAsyncSocketHooks *hooks,
-                                         void *lock,
                                          int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
@@ -18882,17 +19301,31 @@ long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
                              uint16_t port,
                              bool reuse);
 
-/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
 ///
 /// # Safety
-/// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect_prepare(const EeWonAsyncSocket *s, uint32_t local_host);
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+long ee_won_asyncsocket_connect_to(const EeWonAsyncSocket *s,
+                                   const EeWonIpAddr *addr,
+                                   uint32_t local_host);
 
-/// `Fn2B0E60`'s connect.
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect(const EeWonAsyncSocket *s, uint32_t address, uint16_t port);
+void *ee_won_asyncsocket_mutex(const EeWonAsyncSocket *s);
+
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+EeWonIpAddr *ee_won_asyncsocket_dest_addr(const EeWonAsyncSocket *s);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+void ee_won_asyncsocket_set_dest_addr(const EeWonAsyncSocket *s, const EeWonIpAddr *addr);
 
 /// `Listen`.
 ///
@@ -18909,11 +19342,14 @@ long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
                                uint32_t *address,
                                uint16_t *port);
 
-/// The accepted handle into the new socket `s`.
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s, ptrdiff_t handle);
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s,
+                              ptrdiff_t handle,
+                              uint32_t address,
+                              uint16_t port);
 
 /// `WaitForConnect`.
 ///
@@ -19129,6 +19565,135 @@ void ee_won_socketop_line_reset(const EeWonSocketOp *o);
 long ee_won_socketop_line_continue(const EeWonSocketOp *o,
                                    EeWonOpTiming timing,
                                    EeWonByteBuffer **message);
+
+/// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
+///
+/// # Safety
+/// `o` is a live op object (so for every call below); `data` and `message` are null or live `ByteBuffer`s.
+void ee_won_socketop_init_send(const EeWonSocketOp *o,
+                               void *data,
+                               void *message,
+                               bool is_msg);
+
+/// `SendBytesToOp(data, address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `to` is a live value.
+void ee_won_socketop_init_send_to(const EeWonSocketOp *o, void *data, const EeWonIpAddr *to);
+
+/// `RecvBytesOp(length)` / `RecvMsgOp` (`is_msg`, length 0).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv(const EeWonSocketOp *o, uint32_t length, bool is_msg);
+
+/// `RecvBytesFromOp(maxLength)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv_from(const EeWonSocketOp *o, uint16_t max);
+
+/// `ConnectOp(address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `addr` is a live value.
+void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *addr);
+
+/// `AcceptOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// The op class's `Start`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_start(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// The op class's `Continue`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_continue(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// `RecvBytesFromOp::RunHook`'s buffer and reset (the base's run follows).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::CloseFile(status)` (its `CleanupHook`'s).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// The received bytes: a borrowed `ByteBuffer*` (null for none).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_received(const EeWonSocketOp *o);
+
+/// `RecvMsgOp::GetMsg`: a borrowed `ByteBuffer*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_message(const EeWonSocketOp *o);
+
+/// `ConnectOp::GetAddr` / `RecvBytesFromOp::GetAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+EeWonIpAddr *ee_won_socketop_address(const EeWonSocketOp *o);
+
+/// `AcceptOp::GetAcceptedSocket`: a borrowed `AsyncSocket*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_accepted(const EeWonSocketOp *o);
+
+/// A receive's length / a datagram op's maximum.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_length(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetBytesRead`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_bytes_read(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetFilePath`: the bytes to `sink`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; the sink is called during the call only.
+void ee_won_socketop_path(const EeWonSocketOp *o, EeWonByteSink sink, void *context);
+
+/// `SetFilePath`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `path` holds `length` bytes.
+void ee_won_socketop_set_path(const EeWonSocketOp *o, const uint8_t *path, size_t length);
+
+/// `SetAppendFile` (0), `SetBinaryFile` (1), `SetSkipBytes` (2).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_flag(const EeWonSocketOp *o, int32_t which, bool on);
+
+/// `SetFileModifyTime`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
+
+/// `SetProgressCompletion(completion, interval)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
+void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
 /// # Safety
 /// `hooks` lives for the program.
@@ -19451,6 +20016,76 @@ void ee_won_titlecfg_community_text(const uint8_t *header,
                                     size_t pair_count,
                                     EeWonByteSink sink,
                                     void *context);
+
+/// A new manager object for the C++ `manager`.
+///
+/// # Safety
+/// `hooks` is a static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+
+/// Frees the object (its references go).
+///
+/// # Safety
+/// `m` came from `ee_won_udpmanager_new` and is freed once.
+void ee_won_udpmanager_free(EeWonUdpManager *m);
+
+/// `Bind`.
+///
+/// # Safety
+/// `m` is a live manager object (so for every call below).
+long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_close(const EeWonUdpManager *m);
+
+/// `SetAutoRecv`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_set_auto_recv(const EeWonUdpManager *m, bool on);
+
+/// `QueueOp` (`op` a `UDPManagerRecvOp` as `RefCount*`).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `op` is live.
+void ee_won_udpmanager_queue_op(const EeWonUdpManager *m, void *op, uint32_t timeout);
+
+/// `Send`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `bytes` is a live `ByteBuffer` (or null), `addr` a live value.
+void ee_won_udpmanager_send(const EeWonUdpManager *m, void *bytes, const EeWonIpAddr *addr);
+
+/// `CleanOps`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_clean_ops(const EeWonUdpManager *m);
+
+/// `SetDefaultCompletion`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `completion` is null or live.
+void ee_won_udpmanager_set_default_completion(const EeWonUdpManager *m, void *completion);
+
+/// The socket (a borrowed `QueueSocket*` as `RefCount*`, null when unbound).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void *ee_won_udpmanager_socket(const EeWonUdpManager *m);
+
+/// `RecvCallback`: the datagram (`bytes`, its `data`) and its sender.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `data` holds `length` bytes; `from` is a live value.
+void ee_won_udpmanager_recv(const EeWonUdpManager *m,
+                            void *bytes,
+                            const uint8_t *data,
+                            size_t length,
+                            const EeWonIpAddr *from);
 
 }  // extern "C"
 

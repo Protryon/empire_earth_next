@@ -97,7 +97,7 @@ namespace WONAPI {
 // Creates a queue socket of the given type with no ops queued
 QueueSocket::QueueSocket(int inType) : AsyncSocket(inType)
 {
-    this->mQueue = ee_won_queuesocket_new(static_cast<void*>(this), &kQueueHooks, this->GetDataCrit().mCrit);
+    this->mQueue = ee_won_queuesocket_new(static_cast<void*>(this), &kQueueHooks, this->GetDataLock());
 }
 
 // The queue's references go (the original's implicit destructor of the members, 2b3a60)

@@ -51,6 +51,10 @@ void ee_units_host_unit_order_repair(uint32_t inUnit, uint32_t inTarget);
 void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit);
 }
 
+// the farm sorts of EEMBuildUnit (EETileDistanceLess) and EEMSmartFarmers (EEFarmDistanceGreater: inGreater) around
+// the tile (inX, inY): the bodies' std::sorts, in EEMessage.cpp with their comparators
+void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool inGreater);
+
 // TEST ONLY: the dry host (above). Begin makes the selection (a dry group of inUnits, returned as the reference the
 // bodies take); End returns the log (words: an event code and its values) and the keeps' disagreements (the store's
 // test against the object's), and frees the dry groups and goals.

@@ -1603,15 +1603,36 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 }
 
 // FUNCTION: EXE 0x641e21
-// Accepts a living unit within the screen's distance of the old target
+// Accepts a living unit within the screen's distance of the old target (new: ee_combat's screen)
+// the old target's screen's candidate distance (asked by ee_combat's screen for a living candidate only)
+struct EENearOldScreenContext {
+    EEComplexUnit* mCandidate;
+    EEComplexUnit* mTarget;
+};
+
+static float EENearOldScreenDistance(void* inContext)
+{
+    EENearOldScreenContext* theContext = (EENearOldScreenContext*)inContext;
+    return theContext->mCandidate->DistanceSquaredTo(theContext->mTarget);
+}
+
+static bool EENearOldScreen(EEFOFindNewTargetNearOldTarget* inScreen, EEComplexUnit* inUnit)
+{
+    EENearOldScreenContext theContext = {inUnit, inScreen->mTarget};
+    EeCombatScreenIn in = {EE_COMBAT_SCREEN_KIND_NEAR_OLD, (int32_t)inUnit->mHitPoints, inScreen->mDistanceSquared, 0, 0.0f};
+    int32_t theResult = ee_combat_screen(&in, &theContext, EENearOldScreenDistance);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'F', 'S'), in, theResult);
+    return theResult != 0;
+}
+
 bool EEFOFindNewTargetNearOldTarget::Virtual04(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && inUnit->DistanceSquaredTo(this->mTarget) < this->mDistanceSquared;
+    return EENearOldScreen(this, inUnit);
 }
 
 bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
 {
-    return inUnit->mHitPoints > 0 && inUnit->DistanceSquaredTo(this->mTarget) < this->mDistanceSquared;
+    return EENearOldScreen(this, inUnit);
 }
 
 // FUNCTION: EXE 0x641e49
@@ -2692,7 +2713,8 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
         theRecord.I32((int32_t)inUnit->GetUnitID());
         theRecord.I32((int32_t)inX);
         theRecord.I32((int32_t)inY);
-        theRecord.F32(inScale);
+        // the scaled range, as the C++ search's record had it (it wrote its inScale after `inScale = theRange * inScale`)
+        theRecord.F32(in.range * inScale);
         theRecord.I32((int32_t)(theContext.mTrace.size() / 3));
         for (size_t i = 0; i < theContext.mTrace.size(); i++)
             theRecord.I32(theContext.mTrace[i]);
@@ -3544,28 +3566,26 @@ bool EEGetAreaEffectBounds(long inKind, EEComplexUnit* inUnit, EEAIAStarBounds* 
 // FUNCTION: EXE 0x646889
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
 // The world position of inUnit's current tag point (its model part's list, the unit's frame), scaled by its size;
-// false (and the point half a tile up) when the part has no tag points
+// false (and the point half a tile up) when the part has no tag points (new: ee_combat's attach_point)
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 {
-    GE3DPoint theOffset;
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    bool theResult = false;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    if (theList == NULL || theList->GetNumTagPoints() == 0) {
-        theOffset.SetZ(0.5f);
-        theOffset.SetX(0.0f);
-        theOffset.SetY(0.0f);
-    } else {
-        unsigned long theFrame = inUnit->GetModel()->mSound1Frames[0];
-        theList->GetTagPoint(inUnit->mWeaponTagPoint)->GetOffset(theFrame, theOffset);
-        theResult = true;
-    }
-    theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-    theOffset.SetY(theOffset.GetY() * theStats->GetScale());
-    theOffset.SetZ(theOffset.GetZ() * theStats->GetScale());
-    theTransformation.Apply(theOffset, outPoint);
-    return theResult;
+    EeCombatLaunchIn in = {};
+    std::vector<float> theChain;
+    in.kind = EE_COMBAT_LAUNCH_KIND_ATTACH;
+    in.point_count = theList != NULL ? (int32_t)theList->GetNumTagPoints() : 0;
+    in.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.scale = inUnit->GetStats()->GetScale();
+    if (in.point_count != 0)
+        EECombatTagPointChain(theList->GetTagPoint(inUnit->mWeaponTagPoint), inUnit->GetModel()->mSound1Frames[0], in.point,
+                              theChain, in.chain);
+    EeCombatLaunchOut theOut = ee_combat_launch(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+    EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'A', 'P'), in, theChain, theOut);
+    outPoint.SetX(theOut.point[0]);
+    outPoint.SetY(theOut.point[1]);
+    outPoint.SetZ(theOut.point[2]);
+    return theOut.result != 0;
 }
 
 // FUNCTION: EXE 0x64697b
@@ -4733,13 +4753,12 @@ float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX
         EEFindDropLocation(inUnit, &theDropTarget, &theTarget, inTarget);
     else
         inTarget->GetPosition(theTarget);
-    if (inX != -10000.0f) {
-        thePosition.SetX(inX);
-        thePosition.SetY(inY);
-    }
-    thePosition.SetZ(0.0f);
-    theTarget.SetZ(0.0f);
-    return thePosition.DistanceToSquared(theTarget);
+    // the arithmetic is ee_combat's hit_distance (screen.rs)
+    EeCombatHitDistanceIn in = {{thePosition.GetX(), thePosition.GetY(), thePosition.GetZ()},
+                                {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()}, inX, inY};
+    float theDistance = ee_combat_hit_distance(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'D'), in, theDistance);
+    return theDistance;
 }
 
 // FUNCTION: EXE 0x649560

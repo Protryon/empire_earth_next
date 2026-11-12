@@ -80,6 +80,7 @@ pub mod server;
 pub mod socket;
 pub mod sockobj;
 pub mod sockop;
+pub mod sockops;
 pub mod sockthread;
 pub mod staging;
 /// cbindgen:ignore
@@ -88,6 +89,7 @@ pub mod strcase;
 pub mod text;
 pub mod thread;
 pub mod titlecfg;
+pub mod udpmgr;
 pub mod wire;
 
 #[cfg(test)]

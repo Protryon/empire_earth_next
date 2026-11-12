@@ -1609,8 +1609,9 @@ long EECPResourceManager::Load(unsigned long inMajorVersion, unsigned long inMin
                     for (size_t k = 0; k < theOrder[r].size(); k++) {
                         EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theOrder[r][k]));
                         EEComplexUnit* theComplex = theUnit != NULL ? theUnit->GetComplexUnit() : NULL;
-                        // a dead unit the running list still held (a fishing boat: ee/EESaveGameFiles.h
-                        // EECPOutOfWorldGatherers): its ghost, from the saves that have it. The ghosts' own fixup
+                        // a dead unit the running list still held (ee/EESaveGameFiles.h EECPOutOfWorldGatherers: a
+                        // fishing boat in the saves of a build before the UnitLost fix): its ghost, from the saves that
+                        // have it. The ghosts' own fixup
                         // (EEPWorldHelper's LoadGhosts) runs after this one: the players load before the world helper
                         if (theComplex == NULL)
                             theComplex = EEFindLoadedGhost(theOrder[r][k]);
