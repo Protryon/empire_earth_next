@@ -4344,6 +4344,28 @@ citizens at 40 minutes. This changes the opponent of every bench against the cla
 need a new baseline. The port, the same code against a stronger opponent, now trails 12-16 (Copper 20 against 27).
 That is near the edge of the noise, and it is to be watched as 2a goes on. On islands the C++ now plays, but the
 port still wins 6-0 with 2 close (66.8 citizens at 40 minutes against 40.5). That gap is 2a's.
+### 8.64 Porting everything, 2a: the ferries (2026-11-12, EE-SIM)
+
+The classic's ferries (EECPResourceManager::RequestFerry / FerryGatherers / TransportIdle, IsIslandExpansionDue,
+ChooseTransportClass's sea transports) are now `ai/classic_lua/ferry.lua`. On an island or planets map a mineral can
+be wanted, or the island expansion due (its timer: island_expansion_timer minutes, started again after each ferry).
+When the resource's first target lies on land the town's idle citizens cannot walk to, a free transport takes as
+many as it holds to it. The crossing is lib.navy's landing: board, sail, unload. Ashore, the citizens are sent to
+gather. With no free transport, one more is ordered while fewer than 4 exist and none is requested or being made.
+The citizens on a trip are left alone by the gatherer assignment and the builders.
+
+Small Islands, balanced, 60 minutes, 16 seeds:
+- **Ferries:** 67 started, 50 landed, 6 aborted, 0 script errors. The C++ asked for 240 transports for its
+  ferries and 35 for its attacks.
+- **The result:** Lua 10-3, 3 close. The 8 seeds before the ferry gave 6-0, 2 close (§8.63), so the island gap is
+  the economy's, not the ferry's.
+- **Citizens:** the port has more from 10 minutes (23.8 against 21.0; 63.8 against 34.2 at 40 minutes).
+- **Copper:** 12 of 16 games against 5.
+
+Determinism on islands (seeds 3 and 5, 60 minutes, --repeat 2, ferries in both) is identical. Next in 2a: the
+attack groups' crossings (the C++'s ASGSeaTransport: the transports for an attack across water), and why the port
+outgrows the C++ on islands from the first minutes.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
