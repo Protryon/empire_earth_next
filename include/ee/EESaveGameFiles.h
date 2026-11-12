@@ -139,6 +139,13 @@ inline bool EESaveHasIntelligence(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 271;
 }
+// port: from 0.272 each ghost (EESaveHasGhosts) also holds its resource type and amount, and the ghosts include the
+// resources and drop sites the gather goals still hold out of the world (a hunted animal's carcass gone, its gatherer
+// still walking to it): a load read NULL there, and the gatherer was counted with no resource (GetGatherCapacity)
+inline bool EESaveHasGhostResources(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 272;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
@@ -157,6 +164,11 @@ unsigned long EEContinentRegionsDigest();
 // when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
 class EEComplexUnit;
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
+// the units out of the world the computer players' gatherer lists still hold (EECPResourceManager::mGatherers): a
+// lost unit of a citizen category but neither citizen type (the fishing boats: EECPCivilizationManager::UnitLost calls
+// CitizenLost only for those two types) stays filed, dead, for the rest of the game. They are saved as ghosts too
+// (EEPWorldHelper's SaveGhosts) and put back in their lists as saved (EECPResourceManager::Load)
+void EECPOutOfWorldGatherers(std::vector<EEComplexUnit*>& ioUnits);
 // port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
 // of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
 void EEAfterLoad(std::function<void()> inFixup);

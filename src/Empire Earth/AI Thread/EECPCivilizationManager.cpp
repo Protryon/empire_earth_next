@@ -1015,11 +1015,12 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
             if (!theUnit->IsPathMarker())
                 this->AdjustUnitCount(theUnit->mUnitClass->mUnitType, 1);
         }
-        if (this->mNextEpochAdvanceTime > 4000000000) {
-            this->mAdvancingEpoch = false;
-            this->mScheduleEpochAdvance = true;
-        } else
-            this->mNextEpochAdvanceTime += gPhysics->mGameTime;
+        // the saved delay is the advance time less the save's game time. The original took a delay past due (the
+        // advance time already behind) for no time at all: it dropped the advance under way and scheduled a new one,
+        // drawing a random delay the running game never drew. The port puts the time back as it was (the unsigned sum
+        // wraps back to it): the next engine never sets the time (0, so always past due) and lost its advance at every
+        // load (every save version alike: the bytes are the same)
+        this->mNextEpochAdvanceTime += gPhysics->mGameTime;
         unsigned long theID = this->mGarrison.GetSavedID();
         this->mGarrison = NULL;
         if (!UIsNone32(theID)) {
