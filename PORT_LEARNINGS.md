@@ -7890,3 +7890,68 @@ over the forwarders printing the same, and the same on seeds 2-4 at ten times th
   simulation: EE-SIM never runs it, so the oracle only shows it does not disturb the game.
 - **Behaviour:** none on Windows. The variant event no longer walks past the variants' list when a line holds no
   selectable variant (the original read past it); a start check colour past 16 no longer indexes past its table.
+
+## R6: the game screens, third round: the status box's Fill and Refresh, the command panel, the lobby's type events, the settings' display lists (ee_screens; branch rust-screens3, 2026-11-12)
+
+Round 2 (the section above) left the status box's `Fill` and `Refresh`, the command panel, the lobby's map type and
+game type events and the settings' rasterizer and resolution lists; this round moves them. Same rules: the C++
+functions keep their names, signatures, objects and call order; the decisions are Rust over a view the C++ reads; each
+move is pinned by a golden trace of the unmodified unit (scratch drivers in `build/sc3`, `drv.py` as before),
+replayed in Rust, the driver relinked over the forwarders printing the same, and the same on seeds 2-4 at ten times
+the size.
+
+- **Moved** (`rust/crates/ee_screens`):
+  - `hud.rs`: the status box's `Fill` (which attribute icons show and where: attack, range, speed, area effect,
+    repair, the six armor kinds, transport; the bars: hit points, flight time or power on the bar the unit type
+    picks, garrison, each with its range), `FillArmorAttributes`' icons (every armor icon stretched over the first
+    armor icon's rectangle, as the original), `Refresh`'s numbers (hit points and bonus, the five "base+bonus" texts,
+    the cargo through an `unsigned long`, flight time, power, garrison, the carried resource's icon, carbon wood
+    included, and its text). The view (`EeScreensHudUnit`) is everything the box reads of the unit, its class, its
+    stats, the stats' own class and the complex unit; `friendly` (owner or not at war) is read only when the class
+    carries or garrisons. `Fill` asks for a friendly owner before it puts power on the third bar; `Refresh` does not
+    (kept).
+  - `command_panel.rs` (new): `EEUIFMGMainGroup::ShowCommands`' layout (the gate, the five modes, the market, the
+    fanaticism and just-in-time buttons, the nine command slots, the research buttons with their positions clamped
+    to 0x5f, kind 3 commands taking the next free slot, the original's search that never runs in mode 2 because no
+    slot was counted there); each button's availability (`CopyData`: the command's test, the calamity's power test or
+    `CanProduce`) and its icon (none for the group buttons by the button's last `mButton`, a technology button's
+    included); the tooltip's plan (`GetHelpString`: the name's source, the power cost, the population cost, the
+    unit's name); `Command`'s eleven targeting modes (the UI state, the locked cursor's pointer). The C++ asks only
+    for the per-unit facts the button's test needs (the set and cloak for fanaticism, the node's types for a
+    calamity), and calls `IsHuman` last, as the original.
+  - `settings.rs`: the resolution list's order (`EEVideoModeGreater`), `ShowResolutions`' line, `ApplySettings`' mode
+    index, `ShowScreens`' line. `lobby_options.rs`: the game type box's action and the map type box's change test.
+- **Driver lessons** (scratch, `build/sc3`):
+  - Controls calloc'ed with the fake vtable answer every virtual through a stub: call a member's own body with a
+    qualified name (`theButton->EEUIFMGStatusButton::CopyData()`), or the stub's 0 comes back and the trace looks
+    plausible but empty.
+  - A fake whose answer is by key (a unit set's or a tech node's `Contains(type)`) answers for the first unit of that
+    type: the replay must model the fake's key, not the unit's own flag.
+  - `UIControl::GetDisplayMode` reads the control's own `mDisplayMode`, not the driver's shadow of `SetDisplayMode`:
+    a control the code under test reads must have the field set.
+  - An object a driver copies through a faked `operator=` (the game type event copies `gGameOptions` and shows the
+    copy) needs the copy to be real for the fields read later, or the shown options are a stack's garbage.
+  - Several kinds of fake objects need several stub tables (the controls', a player's, a group's, a class's, a
+    node's): one shared table's slots collide.
+  - Unresolved functions under `/FORCE` call address 0x100000000 (`callq 0x100000000` in `llvm-objdump` at the crash):
+    `EEButtonObject::Get` and `GEText::ComputeTextExtent` were two.
+  - The Bash tool turns `\\n` into a newline in heredocs and in `sed` replacements alike; driver edits go through
+    files written whole.
+- **What the harness reaches:** the settings captures (`settings-video`): on open `ShowVideo` fills the rasterizer,
+  screen and resolution lists (`ShowScreens`, `ShowResolutions` and their sort), but the port hides all three (the
+  port's display combo boxes replace them), so no capture shows them and their selection events never fire;
+  `ApplySettings`' mode index is the settings' OK (a person's). The lobby: no gate selects the game type box (a
+  person: saved games and scenarios); the ai-game gate selects the map type box (`fixture_driver`'s map type), which
+  fires the event only when that line differs from the one shown. In game: `gates.sh`'s tour plays 120 s without
+  `--box-select`/`--orders`, so with no selection the main group shows the empty box (`Fill(NULL)`) and lays out no
+  button; with `--box-select` the status box's `Fill` and every tick's `Refresh` run for the selection (its texts,
+  bars and icons are on the game captures); with `--orders` the patrol and attack ground buttons are found among the
+  shown buttons (`ShowCommands`), `CopyData` runs on each frame for every shown button, and attack ground runs
+  `Command`'s targeting mode (UI state 0x13, the locked cursor's pointer 0x17). **Only a person reaches:** the
+  tooltips (`GetHelpString`, a hover), the market's and the civ powers' buttons, the calamity buttons, the other
+  targeting modes, the game type box. None of this is simulation: EE-SIM never runs it, so the oracle only shows it
+  does not disturb the game; goldens never draw, so only a tour shows the box and the panel on screen.
+- **Behaviour:** none on Windows. The panel reads the fanaticism and just-in-time button objects' positions only
+  when they exist (the original dereferenced them when it showed them); a button reads its pure test's
+  inputs (a unit's set membership, cloak, power) for every selected unit the button's test covers instead of
+  stopping at the first that passes.
