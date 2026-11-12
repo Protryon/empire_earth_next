@@ -6961,3 +6961,70 @@ load code (the loaded game, not the running one; the plain oracle stays identica
   empty class lists; late: the dead boats; space: the turret angles; next: the past-due epoch advance; plains: the
   carcass ghosts). Six settings x (1 continued + 2 loaded games): 18 games, 355 s wall at --jobs 2 on this machine
   (measured after the merge of rust: `saveload expect: PASS`; the 60-game run took 1067 s).
+
+## Dead fishing boats leave the computer player's gatherer lists (a declared rebaseline; branch rust-fishboat, 2026-11-11)
+
+The owner's declared rebaseline (RUST_PLAN 2.1: a deliberate behaviour change in its own commits, with new references).
+Found by the save lane ("R5a.2, sixth round" and "seventh round": the late game's loads parted on dead class 109 units
+in player 4's lists; round 7 saves them as ghosts so that a load matches).
+
+- **The bug.** `EECPCivilizationManager::UnitLost` (0x470ed1) calls `EECPResourceManager::CitizenLost` (RemoveGatherer
+  and a citizen's cost back on the needs) only for `kUnitTypeCitizen` and `kUnitTypeFemaleCitizen`, but the gatherer
+  lists take every unit of the two citizen categories: `EECPUnitManager::AddAllUnits` and
+  `EEComputerPlayer::UnitGoalDone` file land citizens (category 6) and naval citizens (category 22) with
+  `AddIdleGatherer`, `UnitsSwapped` moves both. The units of those categories in the db: `citizen`, `female_citizen`,
+  `x10_engineer` (category 6, neither citizen type) and the five fishing boats (`s02_fishing_boat_stone`,
+  `s04_..._bronze` = class 109, `s08_..._imperial`, `s11_..._modern`, `s13_digital_fishing_boat`). A fishing boat
+  that was sunk, converted or deleted stayed in its list (mostly the idle list: a boat goes there whenever its goal
+  ends), dead and referenced, for the rest of the game. Every list sum counted it: `EECPRMWantedGatherers`' total
+  (`of=` in the demand trace) and with it the wanted gatherers per resource, the idle list that AssignGatherers walks.
+- **The fix** (EECPCivilizationManager.cpp, one `else if`): a lost unit of a citizen category that is neither citizen
+  type leaves every list (`RemoveGatherer`, dropping the lists' references); no citizen cost is added (CitizenLost's
+  `AddCosts` is the citizen's price). The citizens' path is unchanged.
+- **The ghosts** (round 7's `EECPOutOfWorldGatherers`, `SaveGhosts`, the gatherer lists' load fixup) stay as they are:
+  a fixed game's lists lose every unit the player loses, so it writes no gatherer ghost; a 0.272 save of an unfixed
+  build holds its dead boats as ghosts and loads them back as that game held them (no format change, no version). One
+  way is left for a dead unit to stay in the lists: a unit lost while its computer player is inactive (`SetActive`
+  false: UnitTaken skips the managers, ReleaseUnits does not clear the lists); the ghosts still cover it. Comments in
+  EESaveGameFiles.h and EECPResourceManager::Load say so.
+- **Where it shows** (EE-SIM, the unfixed build of the same tree against the fixed, `--checksums`):
+  - The sim oracle (2 AIs, seeds 2-7): **identical** to `ref`, every decision line and every checksum line (3086
+    ticks a seed). Its computer players fish (the food lines' `fish=` up to 8 boats) but none loses a boat in 2700 s.
+    `ref` is therefore **not** re-recorded: other lanes keep comparing against the main checkout's `ref` as before.
+  - sim_capture: oracle, space and calamity profiles equal to their goldens on all six seeds; the late profile
+    (Middle Ages start, 3 AIs, the original's cheats: navies) differs on seeds 2, 6 and 7 (seeds 3-5 equal).
+  - The late game's first divergent tick (`ticks`): seed 2 CT 696 (game ms 609000), seed 6 CT 2940 (2572500), seed
+    7 CT 1389 (1215375); each time `rng, oos, units`, the `ai` checksum still equal (it sums no gatherer list).
+  - The cause at each: the state dump at the last equal tick (`--dump-at`, the AI line's `gath=` filed/wanted per
+    list, round 7) shows exactly one entry more in the unfixed game's idle list (list 0), with the same number of
+    living boats (`food=` third field, the unit manager's count): seed 2 player 4 10 against 9; seed 7 player 2 6
+    against 5 (and the wanted wood/gold 8/6 against 7/5); seed 6 player 3 6 against 5 (wanted wood 7 against 6).
+    The first differing decision of seed 2 is player 4's demand at 602687 ms, `of=23` against `of=22`: the dead boat
+    counted as a gatherer. The unfixed build's late captures of seeds 2, 6 and 7 equal the old golden.
+- **The rebaseline** (its own commit): `tools/sim_capture/golden_cpp_late.txt`, seeds 2, 6 and 7, from the fixed
+  build (the tree merged with rust): every tag of those seeds changed (the game parts at 609/2572/1215 s: A* areas and
+  searches, combat, formations, tech costs, unit store checks), which they can only through the game itself; no
+  record format changed. CALC/CALS/CALU/CALW of seeds 2 and 7 and CBCN of seed 7 are no longer recorded (the new
+  games cast no calamity, and seed 7 tests no conversion) and were dropped from the golden (144 lines changed, 9
+  dropped): the late golden now holds no calamity record (the calamity profile still covers them all). The other
+  three goldens and `ref` are unchanged. The captures were digested seed by seed and deleted at once (the disk was
+  under 5 GB), with sim_capture's own digest functions (`build/fbhunt/cap.py`, scratch).
+- **The load test.** The gate (`saveload --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at
+  1000,1900 --expect`) and the whole matrix (`--settings all --seeds 2-3`, 1018 s wall at --jobs 2): 38 of the 40
+  saves have the outcomes of `tools/saveload_expect.txt`; late seed 2, a new game from 609 s, went 1900 s 484 -> 794
+  ticks and 1000 s 822 -> **0**. That save parts at the load's first tick on two citizens of player 2 that the
+  continued game holds in an active group (`EEComplexUnit::mActiveGroup`, the dumps' `grp=1`; the unit checksum adds
+  `mActiveGroup != NULL`), which no save version stores: the group a unit moves with after a group order is lost by
+  every load. The old game had no unit in a group at its 1000 s save. Not a dead-boat cause, and not fixed here (it is
+  the save lane's: the active groups in the save); the expect file's two late seed 2 rows are re-recorded (own commit)
+  with a comment that says so, so the gate passes on the new game. Seen in the same dump, outside the checksums: the
+  loaded computer players' resource lists (`mines=` 21 against 9, `fish=` 65 against 70 in the AI lines), rebuilt by
+  the load where the running game refreshes them on its own schedule.
+- **What other lanes do**: nothing for the sim oracle (`ref` is unchanged; compare against the main checkout's `ref`
+  as before). A lane whose late capture check runs before it merges this branch sees seeds 2, 6 and 7 fail on every
+  tag: merge `rust` (with this) first. The saveload gate needs the new expect rows (in this branch).
+- **Gates** (the tree merged with rust at d1894b28): `build.py -j 3 --sim` 0/0 (EE-AOC, EE-SIM); the sim oracle seeds
+  2-7 identical to `ref`; sim_capture oracle, late, space and calamity equal to their goldens (late: the new one); the
+  saveload gate PASS with the new expect file; `rust_build.py gate` PASS (1750 tests); `--test-profile
+  windowed-software` 0/0. No harness session (tours, AI games, LAN) was run; the fix is in the computer player's
+  simulation only (EE-SIM covers it; no renderer or UI path changed).
