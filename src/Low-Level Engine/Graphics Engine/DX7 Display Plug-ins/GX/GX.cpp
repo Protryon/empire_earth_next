@@ -69,7 +69,6 @@ void gx_set_frame_limit(long inFramesPerSecond);
 void gx_set_texture_filtering(unsigned long inMode);
 void gx_set_brightness(float inGamma);
 void gx_game_size(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
-unsigned long gx_auto_ui_scale();
 }
 
 // ---- GXDirectDraw
@@ -136,4 +135,3 @@ void GXSetFrameLimit(long inFramesPerSecond) { gx_set_frame_limit(inFramesPerSec
 void GXSetTextureFiltering(unsigned long inMode) { gx_set_texture_filtering(inMode); }
 void GXSetBrightness(float inGamma) { gx_set_brightness(inGamma); }
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight) { gx_game_size(inPercent, inWindowed, outWidth, outHeight); }
-unsigned long GXAutoUIScale() { return gx_auto_ui_scale(); }

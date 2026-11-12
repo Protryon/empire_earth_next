@@ -360,11 +360,9 @@ void GXSetFrameLimit(long inFramesPerSecond);
 void GXSetTextureFiltering(unsigned long inMode);
 // a gamma applied when presenting (1 unchanged; above 1 brighter)
 void GXSetBrightness(float inGamma);
-// the game's resolution for a UI scale in percent (0: GXAutoUIScale) in full screen (the display's logical size
+// the game's resolution for a UI scale in percent (0: Auto, ee_gx gx_auto_ui_scale) in full screen (the display's logical size
 // divided by the scale) or windowed (a window of 80% of it); GX lists every such size as a display mode
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
-// the UI scale "Auto" stands for: the display's logical height over 1080 lines, at least 100 percent
-unsigned long GXAutoUIScale();
 
 // A fixed-function 3D device rendering into a target surface (IDirect3DDevice7)
 class GXDevice {

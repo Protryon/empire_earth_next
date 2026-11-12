@@ -53,12 +53,6 @@ public:
     long mBattleFlagsHeight;                // +0x158 (= 0x40)
 };
 
-// One cell of the mini map's two 0x1000-cell tables (provisional name; the ctor zeroes both dwords)
-struct EEMiniMapCell {
-    long mA;
-    long mB;
-};
-
 // RTTI EEMiniMap > RTSMiniMap (vtable 0x441d44; ctor 0x11e3d4, sizeof 0x12188).
 class EEDoppelganger;
 class EEUnit;
