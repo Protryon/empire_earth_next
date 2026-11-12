@@ -150,17 +150,10 @@ bool gUnitSelected;                         // 0x56488c (a unit is selected: the
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
 extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
-// the information panel's message (ShowInformation 0x26533e; layout from its reads) (provisional name)
-class EEUIFMGInformation {
-public:
-    long mL00;                              // +0x00
-    UWideString mText;                      // +0x04
-    UString mSound;                         // +0x18 (under "Sounds\\")
-    long mL28;                              // +0x28
-    long mL2C;                              // +0x2c
-    long mUnitType;                         // +0x30 (the portrait's unit class)
-    unsigned long mTime;                    // +0x34 the scroll time
-};
+// the information panel's message is the scenario's dialog message (EEUserInterface's message 0x422 hands over an
+// EESMDialogMessage; ShowInformation 0x26533e read it through the 32-bit offsets of a stand-in class, whose fields
+// lined up there and not on x64: the portrait's class was read from the duration, the scroll time from the unit id)
+#include "ee/EESMDialogMessage.h"
 
 // chain at 0x66272b (wrapper)
 //   object 0x8372c0  ctor None  dtor __imp_??1UWideString@@UAE@XZ
@@ -943,18 +936,20 @@ void EEUIFMainGame::DisplayChat(const GEColor& inColor, const UWideString& inNam
 // without a text control
 void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
 {
+    const EESMDialogMessage* theMessage = reinterpret_cast<const EESMDialogMessage*>(inInformation);
     UITLScrolling* theText = static_cast<UITLScrolling*>(this->GetControl(kMainGameDialogMessage));
     UIBitmap* thePortrait = static_cast<UIBitmap*>(this->GetControl(kMainGameDialogPortrait));
     unsigned long theSampleID;
     unsigned long theLength;
 
     if (theText != NULL) {
-        theText->SetText(inInformation->mText);
+        theText->SetText(theMessage->mText);
         theText->SetDisplayMode(kDisplayModeShown);
         if (thePortrait != NULL) {
             EEButtonObject* theButton;
-            if (gUnitClassTable[inInformation->mUnitType] != NULL &&
-                (theButton = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[inInformation->mUnitType]->mButton) != NULL) {
+            // (a class past the table is no portrait)
+            if (theMessage->mUnitType < (unsigned long)EEUnitClassCount() && gUnitClassTable[theMessage->mUnitType] != NULL &&
+                (theButton = gWorld.GetCurrentPlayer()->mUnitClassUpgrades[theMessage->mUnitType]->mButton) != NULL) {
                 GEBitmap* theBitmap = new GEBitmap;
                 theButton->SetFaceBitmap(theBitmap, thePortrait->GetRectangle(), thePortrait->GetScreenIndex());
                 thePortrait->SetBitmap(theBitmap);
@@ -965,11 +960,11 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
                 thePortrait->SetDisplayMode(kDisplayModeHidden);
             }
         }
-        EELoadSound("Sounds\\" + UString((const char*)inInformation->mSound), 0x31, theSampleID, theLength, 1);
+        EELoadSound("Sounds\\" + UString((const char*)theMessage->mSound), 0x31, theSampleID, theLength, 1);
         if (!UIsNone32(theLength))
-            theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, inInformation->mTime);
+            theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, theMessage->mDuration);
         else
-            theText->ScrollText(inInformation->mTime, 0);
+            theText->ScrollText(theMessage->mDuration, 0);
         this->SetChatTop(UMFloatToLong(theText->GetRectangle().GetBottom() - theText->GetRectangle().mTop + 5.0f));
     } else
         this->HideMessages();

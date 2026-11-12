@@ -9682,3 +9682,69 @@ AI_RESEARCH to §8.62) merged into `rust` as `git merge origin/main` (branch rus
   goals, the messages, another unit's rotting) and nests; its notes are gathered under a depth-counted scope and
   written when the outermost call returns, with the outer unit's id. The golden put the scope in every instrumented
   body, the Rust build has it in the one C++ entry (`EEUnitClassActionChanged`): the same words in the same order.
+
+## R5b.5: the scenario manager mapped, a scenario capture profile, its conditions, player choices, triggers, areas and objects' class filter in Rust (ee_scenario; branch rust-triggers1, 2026-11-12)
+
+A new lane: `src/Empire Earth/Scenario Manager` (seven units, 10,662 lines, untouched by the port until now). The map
+is in RUST_PLAN's row "R5b.5"; what follows is what was learned getting it exercised and moving the first leaves.
+
+- **No random map runs a trigger.** A random map's manager is `Reset`'s defaults (one Always True condition, one Do
+  Nothing effect, the None object, the Off Map and Previous Location areas, no trigger): `Update` only advances its
+  clocks, so the oracle and the five capture profiles never reach a condition, object, area or effect. Scenarios
+  (load type 1, `Data\Scenarios`), campaign scenarios (type 4, from the campaign archive), saved games of either and
+  the editor's test do. The triggers are evaluated only while a human plays (`IsHuman() && !mObserverMode`): EE-SIM's
+  idle human counts.
+- **EE-SIM --scenario FILE** stages the file as `Data\Scenarios\EE-SIM scenario.scn` and goes through the lobby as a
+  person does (`tools/harness/scenario_game.py`'s standalone path): the game type box to Scenario (control 175 line 2:
+  the lobby pushes form 4, the Play Scenario screen), the file selected in its list (control 4), Load (control 1: the
+  lobby takes the scenario's options and players), Start. Controls by form and index (the forms are data), so the
+  screens lane's Rust lobby keeps it working. The 26 retail scenarios are in the campaign archives (`.ssa`, PK01
+  entries: `tools/eedata/ssa.py`); `sim_capture.py` extracts the profile's six into `build/sim_capture/scenarios`
+  (retail data, never committed). Campaign scenarios played standalone load and run; their campaign media are not
+  needed headless.
+- **The dialogs gate the scenario, and they ran on the wall clock.** A shown dialog message (`mIsShowingDialog`) ends
+  when the UI's scrolling label finishes (EEUIEMGEndScenarioDialog posts physics message 0x508), and the End
+  Cinematic effect waits for every message to have shown: in EE-SIM the first scenario sat in its opening cinematic
+  for the whole game (the End Cinematic effect re-armed 2,061 times). Under EE-SIM --scenario (`gScenarioSimDialogs`)
+  the driver ends a shown message at the next communications tick and the UI's 0x508 is ignored, so dialogs and the
+  cinematics waiting on them follow the ticks: two runs of a scenario give identical SM digests (checked on seeds 4
+  and 6). The letterbox (`gF4BE374`) stays 1 without rendering, so `ExitCinematic` follows `EndCinematic` at once.
+- **A real x64 bug, every scenario dialog:** `EEUIFMainGame::ShowInformation` read the `EESMDialogMessage` the UI
+  thread is handed through a 32-bit stand-in class (`EEUIFMGInformation`: a long, the text, a UString, two longs, the
+  unit type, the time). Its fields lined up on x86 only; on x64 the portrait's class came from the duration and the
+  scroll time from the unit id, and an out-of-table class crashed (EE-SIM: `SetFaceBitmap` on a garbage button).
+  Fixed to read the real class; a class past the table shows no portrait. Only a tour of a scenario shows the panel.
+- **The unit store does not follow a loaded scenario's units** (the core lane's): with EE_SIM_CAPTURE on, USCK
+  finds 64 on-the-map records differing from the unit chain at tick 0 of "A Conqueror Learns His Trade" (every
+  listed unit's fields equal; the chain test and the checksum's flags 1 and 2 differ) and EE-SIM stopped with exit 3.
+  `EE_SIM_STORE_CHECK_SOFT` (set by the scenario profile) reports it once and goes on. The out-of-sync checksum's
+  flags come from the store, so a scenario's multiplayer checksum is affected; the game's own reads are not (every
+  field the Rust reads matched).
+- **The records** (ee/EEScenarioCapture.h): SMCE (every condition test: settings, text hashes, clock, seeds, result),
+  SMTE (every trigger: state before, time, state after, the timed effects), SMOB (every object evaluation: settings,
+  units before and after as count and FNV, seeds, result), SMCP and SMAR (player choices and area queries outside an
+  object's evaluation: inside one SMOB covers them, and per-unit records would be millions), SMEX (every effect run),
+  SMUP (each 500 ms trigger round). The physics random seed before and after each record pins the draws (the player
+  choices' shuffles, Any Resource, the effect groups' choice, object shuffles). Six scenarios of 1800 game seconds:
+  0.15-0.26 GB of capture each, SMTE 150k-394k, SMCE 69k-286k, SMOB 50k-174k records; the golden file lists only
+  the SM tags.
+- **A record that moves with the code.** SMCP was written by the C++ `ChoosePlayer`; once the conditions called the
+  Rust choice directly, SMCP fell from 6,324 to 44 records (every other digest equal). The record is now written
+  from the Rust choice through a host callback (`EeScenarioHost::players`, only while the capture is on), for every
+  caller, so it is again every choice the original made.
+- **The host.** One read callback by op code with four integer arguments (`EE_SCENARIO_READ_*`, host.rs; pairs of
+  tile coordinates packed in one `i64`), each case the original's expression; a context carries the condition (chat
+  text) and the unit (area tests). Reads can run game code (an object's `Evaluate`, another condition's, a random
+  draw), so the Rust makes each read where and as often as the original did and holds no reference across one.
+- **Quirks kept.** A trigger's chain after a false AND skips to after the next OR entry (the loop's increment skips
+  that entry's own condition); an unknown operator leaves the chain going; the effect group is drawn from 0 to the
+  number of OR entries inclusive (a draw past the last group schedules nothing); a group choice ("every computer")
+  is "any of them", a single chosen player "all of the listed"; the time of day's hour is the C cast's 32-bit result
+  in unsigned arithmetic; Any Resource draws only when the player exists.
+- **C++ lines** (the seven units; the host and the TEST ONLY capture unit apart): 10,662 at the start; 10,771 with
+  the capture hooks (each captured function a wrapper and its body); 10,413 + 142 host after the conditions, choices
+  and triggers; 10,277 + 222 host after the areas and the objects' class filter (-385 in the units, -163 with the
+  host). The capture unit is 291 lines. A host case is one line per read, so the deletion grows with the leaves
+  that read little (the objects' Evaluate, the effects' decisions) and when the classes move whole.
+- **What only a tour or a person reaches:** the dialogs' text and portrait (the x64 fix), cinematics' camera, the
+  editor. EE-SIM never draws.

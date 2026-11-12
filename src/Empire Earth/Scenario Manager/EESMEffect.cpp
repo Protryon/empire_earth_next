@@ -72,6 +72,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EEScenarioCapture.h"
 
 // FUNCTION: EXE 0x5bb5a5
 // Creates a scenario effect with the default settings (see Reset)
@@ -929,6 +930,18 @@ static const float kSMEZoomStep = 0.02f;
 // Runs the effect: an object action, a player action (victory, diplomacy, tech tree, camera, flare...), trigger state,
 // media (sound, text, dialogue, chat), a game action (time of day, calamity, graphic effect, cinematic) or an AI action
 void EESMEffect::Execute(bool inIsCinematic)
+{
+    if (!EESimCaptureRecord::Active()) {
+        this->ExecuteUncaptured(inIsCinematic);
+        return;
+    }
+    unsigned int theSeed = EESMCaptureSeed();
+    this->ExecuteUncaptured(inIsCinematic);
+    EESMCaptureEffect(this, inIsCinematic, theSeed);
+}
+
+// Execute's body (Execute adds the simulation capture's SMEX record: ee/EEScenarioCapture.h)
+void EESMEffect::ExecuteUncaptured(bool inIsCinematic)
 {
     unsigned long theSample;
     std::vector<EEUnit*> theUnits;

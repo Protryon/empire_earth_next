@@ -717,7 +717,7 @@ void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void*
         gWorld.mLock->WriteUnlock();
         break;
     case 0x508:
-        if (gWorld.mScenarioManager)
+        if (gWorld.mScenarioManager && !gScenarioSimDialogs)
             gWorld.mScenarioManager->ShowDialogMessage();
         break;
     case 0x509:
