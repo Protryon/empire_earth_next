@@ -29,8 +29,6 @@ public:
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x21655a (ICF: EEUCAirplane, EEUCPlanetSpaceship)
     virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x216a11
     virtual long Animate(EEComplexUnit*);   // +0xc0 0x20afe9 trivial: push dword ptr [esp + 4]; call 0x638ce7; ret 4 (ICF: EEUCAirAnimal, EEUCAirplane...)
-    // +0xe0 0x21695d NEW (ICF: EEUCAirAnimal, EEUCAirplane...): the flight state from GetNextFlightState
-    virtual void UpdateFlightState(EEComplexUnit* inUnit, long inTime, long inLeft);
     // non-virtual members (EEUCAirAnimal::ReturnToAirport / VirtualB8 call them) (provisional name)
     void FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit);  // 0x214402
     unsigned long GetNextFlightState(EEComplexUnit* inUnit);  // 0x215ccf (the unit's next flight state: EEComplexUnit::mCurrentPhysicsOrder)

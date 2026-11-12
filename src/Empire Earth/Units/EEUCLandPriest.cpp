@@ -55,9 +55,3 @@ void EEUCLandPriest::UnitCreated(EEComplexUnit* inUnit)
     EEUCBasicPriest::UnitCreated(inUnit);
 }
 
-// FUNCTION: EXE 0x616dd7
-// Updates the land priest as a priest
-void EEUCLandPriest::Update(EEComplexUnit* inUnit)
-{
-    EEUCBasicPriest::Update(inUnit);
-}

@@ -100,10 +100,3 @@ void EEUCPlanetSpaceship::ActionChanged(EEComplexUnit* inUnit)
     }
 }
 
-// ICF-FOLDED: EXE 0x60b9f0
-// Updates the plane like any landable aircraft
-// (no address of its own: the same body as EEUCAirplane::Update, which ICF kept)
-void EEUCPlanetSpaceship::Update(EEComplexUnit* inUnit)
-{
-    EEUCLandable::Update(inUnit);
-}

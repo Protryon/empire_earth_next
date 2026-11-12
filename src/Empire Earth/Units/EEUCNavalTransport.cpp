@@ -162,13 +162,6 @@ void EEUCNavalTransport::UnloadAt(EEComplexUnit* inTransport, long inX, long inY
     EEUCTransport::UnloadAt(inTransport, inX, inY);
 }
 
-// FUNCTION: EXE 0x618e28
-// Updates the transport as a base transport
-void EEUCNavalTransport::Update(EEComplexUnit* inUnit)
-{
-    EEUCTransport::Update(inUnit);
-}
-
 void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inArg);   // EEUCNaval.cpp
 
 // ICF-FOLDED: EXE 0x61aaa9

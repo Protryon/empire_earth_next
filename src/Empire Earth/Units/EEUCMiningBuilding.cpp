@@ -13,7 +13,8 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -98,23 +99,7 @@ long EEUCMiningBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long 
 // the resource to the player and restarts the timer
 void EEUCMiningBuilding::Update(EEComplexUnit* inUnit)
 {
-    EEUCBuilding::Update(inUnit);
-    if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionGatherResource)
-        return;
-    long theTime = inUnit->mWorkTimer;
-    EEUnit* theMine = inUnit->mMine;
-    unsigned long theElapsed = gPhysics->mTickTimeMs;
-    if (theTime > 0) {
-        if (theElapsed == 0)
-            theElapsed = 1;
-        long theRemaining = theTime - theElapsed;
-        if (theRemaining < 0)
-            theRemaining = 0;
-        (EEUNA(SET_WORK_TIMER, theRemaining, 0), inUnit->SetWorkTimer(theRemaining));
-    }
-    if (theTime != 0 || theMine == NULL)
-        return;
-    (EEUN(DEPLETE_MINE), theMine->DepleteResource(1));
-    (EEUNA(ADD_RESOURCE, theMine->mResourceType, 1), inUnit->mPlayer->AddResource(theMine->mResourceType, 1));
-    (EEUNA(SET_WORK_TIMER, inUnit->mStats->mGatherTimes[2], 0), inUnit->SetWorkTimer(inUnit->mStats->mGatherTimes[2]));
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_MINING_BUILDING, this, inUnit);
 }

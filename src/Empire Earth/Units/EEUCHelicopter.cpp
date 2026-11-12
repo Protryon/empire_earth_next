@@ -17,7 +17,8 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -137,31 +138,9 @@ void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
 // Advances a helicopter each tick: physics, orbitals, timers, animation and sound, attack frames, rotting, regeneration
 void EEUCHelicopter::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
-    (EEUN(ORBITALS), inUnit->UpdateOrbitals());
-    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
-    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
-    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
-    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
-    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
-    unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
-    switch (theCommand) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
-        break;
-    case kActionUnitRotting: {
-        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
-        break;
-    }
-    }
-    if (inUnit->mStats->mRegeneration > 0)
-        (EEUN(REGENERATE), this->Regenerate(inUnit));
-    (EEUN(DONE), this->UpdateDone(inUnit));
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_HELICOPTER, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

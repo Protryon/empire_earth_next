@@ -228,14 +228,6 @@ void EEUCHelicopterPriest::RemoveFromTile(EEUnit* inUnit)
         theTile->RemoveUnit(theUnit);
 }
 
-// ICF-FOLDED: EXE 0x616dd7
-// Updates the land priest as a priest
-// (no address of its own: the same body as EEUCLandPriest::Update, which ICF kept)
-void EEUCHelicopterPriest::Update(EEComplexUnit* inUnit)
-{
-    EEUCBasicPriest::Update(inUnit);
-}
-
 // ICF-FOLDED: EXE 0x557269
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)
 void EEUCHelicopterPriest::UpdateEffects(class EEComplexUnit *)

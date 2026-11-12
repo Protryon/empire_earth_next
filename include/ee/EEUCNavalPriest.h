@@ -21,7 +21,6 @@ public:
     virtual EEUnit* CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x30 0x218605 (ICF: EEUCNaval, EEUCNavalBuilding...)
     virtual EEUnit* CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x34 0x218909 (ICF: EEUCNaval, EEUCNavalBuilding...)
     virtual long EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0xa0 0x218942
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x216dd7 trivial: push dword ptr [esp + 4]; call 0x60df05; ret 4 (ICF: EEUCHelicopterPriest, EEUCLandPriest)
     // NB: EEUCBasicPriest's sizeof (0x32c) is ASSUMED = the smallest derived class's (no new site)
 };
 

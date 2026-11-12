@@ -15,7 +15,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -161,9 +162,9 @@ void EEUCFortress::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 // Updates the fortress as a transport; a teleporter also regains faith
 void EEUCFortress::Update(EEComplexUnit* inUnit)
 {
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-        (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
-    EEUCTransport::Update(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_FORTRESS, this, inUnit);
 }
 
 // Gives an unloaded unit's population cost back to the player's count (ICF copy: +0x1c's body is identical to

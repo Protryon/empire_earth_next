@@ -16,7 +16,6 @@ public:
     EEUCLandMilitaryHero();                 // inline
     EEUCLandMilitaryHero(EEUnitClassRecord* inRecord);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1)
     virtual ~EEUCLandMilitaryHero() {}      // +0x00 dtor 0x2305ee
-    virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x216d4b trivial: push dword ptr [esp + 4]; call 0x613abf; ret 4
 };
 
 #endif

@@ -17,7 +17,8 @@
 #include "lle/GEModel.h"
 #include "lle/U2DSparseArray.h"
 
-#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -137,10 +138,9 @@ long EEUCNavalBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long i
 // Steps the dock's physics and sound, then updates it as a building
 void EEUCNavalBuilding::Update(EEComplexUnit* inUnit)
 {
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
-    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
-    EEUCBuilding::Update(inUnit);
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL_BUILDING, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61a11d

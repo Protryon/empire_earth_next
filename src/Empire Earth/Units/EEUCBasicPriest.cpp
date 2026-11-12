@@ -20,6 +20,8 @@
 
 #include <string.h>
 #include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EESimCapture.h"
 #include "rust/ee_combat.h"
 #include "rust/ee_units.h"
@@ -320,48 +322,9 @@ void EEUCBasicPriest::UnloadMedia(EEPlayer* inPlayer)
 // not converting, ends any conversion and its effects
 void EEUCBasicPriest::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
-    if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
-        (EEUN(TURRETS), inUnit->UpdateTurrets());
-        (EEUN(ORBITALS), inUnit->UpdateOrbitals());
-    }
-    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
-    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
-    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
-    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
-    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
-    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
-    if (this->mIsMedic) {
-        (EEUN(HEAL_SEARCH_TIMER), inUnit->UpdateHealSearchTimer());
-        if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalHealUnit)
-            (EEUN(GOAL_WORK), inUnit->mGoalState->Work(inUnit));
-    }
-    if (inUnit->mStats->mRegeneration > 0)
-        (EEUN(REGENERATE), this->Regenerate(inUnit));
-    (EEUN(DONE), this->UpdateDone(inUnit));
-    (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
-        break;
-    case kActionConvertEnemyUnit:
-        (EEUN(UPDATE_CONVERSION), this->UpdateConversion(inUnit));
-        return;
-    case kActionResourcesRotting:
-        return;
-    case kActionUnitRotting: {
-        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
-        break;
-    }
-    }
-    if (inUnit->mConversionStartTime != 0)
-        (EEUN(CLEAR_CONVERSION_START), inUnit->mConversionStartTime = 0);
-    (EEUN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
-    (EEUN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
+    // New (R5b.4 leaf 6, the thirteenth round): the sequence is Rust (ee_units update.rs), the leaves
+    // EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_BASIC_PRIEST, this, inUnit);
 }
 
 // FUNCTION: EXE 0x60e086
