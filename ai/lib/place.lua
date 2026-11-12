@@ -16,7 +16,8 @@ local JOB_MS = 180000       -- a job's builders are released after this, built o
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
 local BAD_MS = 300000       -- a key whose spot failed waits this long
 local TESTS = 24            -- ai.can_place calls per spot at most (300 instructions each)
-local BUILDERS = 2
+local BUILDERS = 3          -- (C3 against the C++ verb: 4 settlements at minute 8 against 6, 6 at 12 against 7)
+local NEAR = 20             -- builders from this near first (a wood gatherer 40 tiles off walked while the patch waited)
 
 -- the building of a class standing (or going up) with its anchor exactly at x, y (nil: none; the build's own id is a
 -- pending unit's until a builder reaches the tile, then the building's)
@@ -109,10 +110,10 @@ end
 -- the builders for a spot: citizens near it the engine holds, the wood gatherers first, then the idle and the others
 -- but food, gold and iron (the owner: never the food gatherers; a mine's gatherer pulled to build costs the mine its
 -- gathering), the nearest first in each; food, gold or iron only when no other is near
-local function builders(x, y)
+local function builders(x, y, reach)
     local rank = {wood = 1, ["nil"] = 2, stone = 3, gold = 5, iron = 5, food = 6}
     local cands = {}
-    for i, id in ipairs(ai.units{category = "citizen", held = "engine", near = {x, y, 40}, limit = 16}) do
+    for i, id in ipairs(ai.units{category = "citizen", held = "engine", near = {x, y, reach or NEAR}, limit = 16}) do
         local u = ai.unit(id)
         if u ~= nil and u.action ~= "build" and u.inside == nil then
             cands[#cands + 1] = {id = id, r = rank[tostring(u.gathers)] or 4, i = i}
@@ -129,6 +130,9 @@ local function builders(x, y)
         if #picked < BUILDERS and (c.r < 5 or #picked == 0) then
             picked[#picked + 1] = c.id
         end
+    end
+    if #picked == 0 and (reach or NEAR) < 40 then
+        return builders(x, y, 40)
     end
     return picked
 end
