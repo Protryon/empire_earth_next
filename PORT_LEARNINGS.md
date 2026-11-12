@@ -7474,3 +7474,39 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
+## Build speed: the Rust C interface split into a header per crate
+
+- **Why.** `include/rust/ee_rust.h` was one cbindgen header over every crate, included by 223 sources and 29 headers.
+  The object cache (`tools/objcache.py`) keys a unit on the content of every file it read, so any FFI change in any
+  crate (nine lanes add some every day) changed that one file and missed the cache for nearly every unit: 11-13
+  minute rebuilds for everyone.
+- **How it is generated.** `xtask cbindgen` (`python -I tools/rust_build.py header`) still runs cbindgen once over
+  `ee_rust`, so the global renames, the declaration order and the dropped duplicates stay exactly those of one
+  shared header. `rust/crates/xtask/src/split.rs` then cuts that output into its top-level items (blank lines outside
+  braces; braces inside `///` comments do not count) and gives each to the crate that defines it, found by scanning
+  the crates' sources (`pub struct/enum/type/const/fn NAME`, renamed names mapped back, test sources skipped). It
+  writes `include/rust/<crate>.h` for every crate with items, `ee_rust_common.h`, and `ee_rust.h` as an umbrella that
+  includes them all. A crate header includes the headers of the crates its items name (today only `ee_gfx` and
+  `ee_openformats` include `ee_ge.h`). A cycle between the crates' headers is an error, and so is a name in two
+  headers. The item text is cbindgen's, byte for byte. The xtask test
+  `the_split_headers_declare_what_the_single_header_declares` checks it: the union of the split headers equals the
+  single output, item for item. Each header also compiled alone (`clang++ -fsyntax-only`, once, by hand).
+- **Names more than one crate defines.** The 20 such names in today's header (`OK`, `FAILED`, `IDENTITY`, `Handle`
+  renamed `EeDx7Handle`, `Rect` renamed `EeRmapRect`, ...) go to the crate whose definition matches cbindgen's item:
+  the `///` doc comment first, then the field and variant names, then the numbers. 14 are resolved that way. The
+  other six are identical bare constants (`OK`, `NOT_FOUND`, `FAILED`, `END_OF_FILE`, `ALIGN_CENTER`,
+  `ALIGN_RIGHT`). They go to `ee_rust_common.h` with `ee_rust`'s own items, and no crate header needs it. The
+  matching also shows which crate cbindgen kept: `EeFormationRotation` is `ee_formations`' and `EeDx7Handle`
+  `ee_dx7`'s, though `ee_rmap` and `ee_ui` define the same Rust names. Imports a crate declares (`extern int
+  tolower(int c);` in `ee_won.h`) are not its names.
+- **Includes.** `tools/rust_includes.py` replaced each `#include "rust/ee_rust.h"` with the headers of the crates
+  whose names the file uses (comments and strings not read). It then added a crate header to every file that names a
+  crate but got it only from its includer. Names a file declares itself (`struct EeWonIpAddr;`, an `extern "C"`
+  prototype) do not count, so headers that forward-declare on purpose stay light. The new include goes after the
+  last include outside any `#if`, else after the include guard. It is byte-preserving, so CRLF files stay CRLF.
+  `EEMessageExecute.h` names nothing itself and only exists to declare `ee_netmsg`; it now includes
+  `rust/ee_netmsg.h` (edited by hand).
+- **For new FFI:** include `rust/<your crate>.h`, not `rust/ee_rust.h`. After merging, rerun
+  `python -I tools/rust_includes.py` to narrow any umbrella include a branch added meanwhile. A new crate needs
+  nothing more than today (cbindgen.toml's include and extra_bindings): its header appears by itself.
