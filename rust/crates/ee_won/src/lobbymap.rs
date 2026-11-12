@@ -397,11 +397,7 @@ pub unsafe extern "C" fn ee_won_lobbymap_assign(to: *mut EeWonLobbyMap, from: *c
     let (old, to_hooks) = {
         let t = map_mut!(to);
         let old = t.clear();
-        t.entries = keys
-            .into_iter()
-            .zip(copies)
-            .map(|((key, num, text), obj)| Entry { key, obj, num, text })
-            .collect();
+        t.entries = keys.into_iter().zip(copies).map(|((key, num, text), obj)| Entry { key, obj, num, text }).collect();
         (old, t.hooks)
     };
     unsafe { EeWonLobbyMap::release(to_hooks, old) };
@@ -504,7 +500,11 @@ pub unsafe extern "C" fn ee_won_lobbymap_key_addr(m: *const EeWonLobbyMap, i: us
 /// # Safety
 /// `m` is live, `count` writable.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_lobbymap_key_text(m: *const EeWonLobbyMap, i: usize, count: *mut usize) -> *const c_void {
+pub unsafe extern "C" fn ee_won_lobbymap_key_text(
+    m: *const EeWonLobbyMap,
+    i: usize,
+    count: *mut usize,
+) -> *const c_void {
     let (p, n) = match map!(m).entries.get(i).map(|e| &e.key) {
         Some(Key::Units(u)) => (u.as_ptr() as *const c_void, u.len()),
         Some(Key::Bytes(b)) => (b.as_ptr() as *const c_void, b.len()),
@@ -526,11 +526,37 @@ mod tests {
     const HOSTS: [u32; 8] = [0x7f000001, 0x0a000001, 0xc0a80105, 0x0a000001, 0x7f000001, 0, 0xffffffff, 0x01020304];
     const PORTS: [u16; 8] = [8585, 8585, 15100, 15101, 1, 0, 65535, 0x0100];
     const WIDE: [&str; 17] = [
-        "Alpha", "alpha", "ALPHA", "Beta", "beta2", "", "Gamma", "gAmma", "Zed", "a", "A", "_x", "[x", "zz", "Alph",
-        "Alpha ", "\u{e9}t\u{e9}",
+        "Alpha",
+        "alpha",
+        "ALPHA",
+        "Beta",
+        "beta2",
+        "",
+        "Gamma",
+        "gAmma",
+        "Zed",
+        "a",
+        "A",
+        "_x",
+        "[x",
+        "zz",
+        "Alph",
+        "Alpha ",
+        "\u{e9}t\u{e9}",
     ];
-    const NARROW: [&[u8]; 11] =
-        [b"Server.won.net", b"server.WON.net", b"a", b"B", b"_c", b"[d", b"", b"Zz", b"\xc3\xa9", b"server.won.net2", b"b"];
+    const NARROW: [&[u8]; 11] = [
+        b"Server.won.net",
+        b"server.WON.net",
+        b"a",
+        b"B",
+        b"_c",
+        b"[d",
+        b"",
+        b"Zz",
+        b"\xc3\xa9",
+        b"server.won.net2",
+        b"b",
+    ];
 
     fn kind_of(k: usize) -> EeWonLobbyKeyKind {
         use EeWonLobbyKeyKind as K;
@@ -677,10 +703,12 @@ mod tests {
 
     /// The objects through the FFI: set, replace, erase, copy, clear and free drop or copy each through the hooks.
     #[test]
+    #[allow(clippy::manual_dangling_ptr)] // the objects are tokens the hooks record
     fn objects_through_hooks() {
         let hooks = EeWonLobbyMapHooks { copy: Some(copy_hook), drop: Some(drop_hook) };
         let m = ee_won_lobbymap_new(EeWonLobbyKeyKind::Unsigned, hooks);
-        let k = |n: u64| EeWonLobbyKey { num: n, addr: std::ptr::null(), text: std::ptr::null(), count: 0, unit_size: 0 };
+        let k =
+            |n: u64| EeWonLobbyKey { num: n, addr: std::ptr::null(), text: std::ptr::null(), count: 0, unit_size: 0 };
         unsafe {
             let mut new = false;
             let i = ee_won_lobbymap_insert(m, &k(5), &mut new);
@@ -721,13 +749,22 @@ mod tests {
             let t = ee_won_lobbymap_text(m, i, &mut n);
             assert_eq!(std::slice::from_raw_parts(t, n), &[0x41, 0xe9, 0x42]);
             assert_eq!((ee_won_lobbymap_num(m, i, 0), ee_won_lobbymap_num(m, i, 1)), (0, -7));
-            assert_eq!((*ee_won_lobbymap_key_addr(m, i)).addr(), Addr { address: 0x0a000001u32.to_be(), port: 8585u16.to_be() });
+            assert_eq!(
+                (*ee_won_lobbymap_key_addr(m, i)).addr(),
+                Addr { address: 0x0a000001u32.to_be(), port: 8585u16.to_be() }
+            );
             assert!(ee_won_lobbymap_key_addr(m, 1).is_null());
             ee_won_lobbymap_free(m);
         }
         let n = ee_won_lobbymap_new(EeWonLobbyKeyKind::NarrowNoCase, Default::default());
         let name = b"Server";
-        let key = EeWonLobbyKey { num: 0, addr: std::ptr::null(), text: name.as_ptr() as *const c_void, count: 6, unit_size: 1 };
+        let key = EeWonLobbyKey {
+            num: 0,
+            addr: std::ptr::null(),
+            text: name.as_ptr() as *const c_void,
+            count: 6,
+            unit_size: 1,
+        };
         unsafe {
             ee_won_lobbymap_insert(n, &key, std::ptr::null_mut());
             let upper = b"SERVER";
