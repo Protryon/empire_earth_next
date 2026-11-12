@@ -9,6 +9,7 @@
 #define EE_EECOMBATFORMULAS_H
 
 #include <stdint.h>
+#include <vector>
 
 #include "rust/ee_rust.h"
 #include "ee/EESimCapture.h"
@@ -150,6 +151,43 @@ inline void EECombatDamageRow(const EeCombatDamageRowIn& in, EeCombatDamageRowOu
 {
     ee_combat_damage_row(&in, &out);
     EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'T'), in, out);
+}
+
+// ---- the weapon point's other users, the flight steps, the screens (round 4)
+
+// The round 4 records (ee_combat launch.rs, flight.rs, screen.rs; recorded from the unmodified C++ first): CBLS
+// (LaunchShot), CBLT (LaunchFromTurret), CBAP (EEApproachAttachPoint): EeCombatLaunchIn, the tag point's model chain
+// (16 floats a link), EeCombatLaunchOut. CBPJ, CBPS (EEPMProjectile::Step0, Step2), CBMA, CBMH (EEPMMissile::Accelerate,
+// Home): EeCombatFlightIn, EeCombatFlightOut. CBFS: a screen's EeCombatScreenIn and its result; CBHD:
+// EEGetHitDistanceSquared's EeCombatHitDistanceIn and the distance.
+
+// A tag point's local point at a frame and its model chain's internal transforms (the point's model first), as
+// EETagPoint's walks take them (TagPoint is EETagPoint: ee/EEGraphicObject.h)
+template <class TagPoint> inline void EECombatTagPointChain(TagPoint* inPoint, unsigned long inFrame, float* outPoint,
+                                                           std::vector<float>& outChain, int32_t& outCount)
+{
+    const auto& theLocal = inPoint->mModel->GetTagPoint(inPoint->mIndex, inFrame);
+    outPoint[0] = theLocal.GetX();
+    outPoint[1] = theLocal.GetY();
+    outPoint[2] = theLocal.GetZ();
+    for (auto theLink = inPoint->mModel; theLink != NULL; theLink = theLink->GetParentModel()) {
+        const auto& theStep = theLink->GetInternalTransform(inFrame);
+        outChain.insert(outChain.end(), &theStep.mMatrix[0][0], &theStep.mMatrix[0][0] + 16);
+        outCount++;
+    }
+}
+
+template <class In, class Out>
+inline void EECombatChainCapture(unsigned int inTag, const In& inInput, const std::vector<float>& inChain, const Out& inOutput)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(inTag);
+    theRecord.Bytes(&inInput, sizeof(In));
+    if (!inChain.empty())
+        theRecord.F32s(&inChain[0], (unsigned int)inChain.size());
+    theRecord.Bytes(&inOutput, sizeof(Out));
+    theRecord.Commit();
 }
 
 #endif

@@ -10,6 +10,7 @@
 namespace {
 
 std::mutex sCaptureLock;
+thread_local unsigned int sOnlyTag = 0;
 
 FILE* CaptureFile()
 {
@@ -30,10 +31,15 @@ bool EESimCaptureRecord::Active()
     return CaptureFile() != NULL;
 }
 
+void EESimCaptureRecord::Only(unsigned int inTag)
+{
+    sOnlyTag = inTag;
+}
+
 void EESimCaptureRecord::Commit()
 {
     FILE* theFile = CaptureFile();
-    if (theFile == NULL)
+    if (theFile == NULL || (sOnlyTag != 0 && this->mTag != sOnlyTag))
         return;
     unsigned int theHeader[2] = {this->mTag, (unsigned int)this->mData.size()};
     std::lock_guard<std::mutex> theGuard(sCaptureLock);

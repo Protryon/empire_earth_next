@@ -2319,8 +2319,7 @@ private:
     enum State { GETTING_PUB_KEYS=1,GETTING_CHALLENGE=2,GETTING_CERTIFICATE=3 } mState; //11dc, ctor untouched
     ERROR_LIST mErrorList; //11e0..11f0
     COMMUNITY_STATUS_LIST mCommunityStatusList; //11f0..11fc
-    WONStatus HandleLoginReply(ReadBuffer&); //2e4880 RET4; full reply parser
-    WONStatus HandleLoginChallenge(ReadBuffer&); //2e5800 RET4
+    template <class> friend struct CertMsg; // its messages (WONCertMsg.h)
     WONStatus SendPubKeyRequest(); //2e4270 RET0
     WONStatus SendLoginRequest(); //2e4380 RET0
     WONStatus SendLoginConfirm(); //2e46a0 RET0

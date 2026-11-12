@@ -113,6 +113,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EEMessageExecute.h"
 #include "rust/ee_rust.h"   // ee_netmsg
+#include "ee/EEUnitHost.h"   // EESortFarms
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
 static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
 
@@ -1219,69 +1220,13 @@ inline bool EETileDistanceLess::operator()(EEComplexUnit* inFirst, EEComplexUnit
 // for a granary, also hands them the free farms nearby, nearest first; plays an acknowledgement
 void EEMBuildUnit::Execute()
 {
-    std::vector<EEComplexUnit*> theNearUnits;
-    std::vector<EEUnit*> theMovedUnits;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    long theCount = 1;
-    EEActiveGroup* theActiveGroup = NULL;
-    EEComplexUnit* theUnit;
-    if (theGroup->GetFirstUnit()) {
-        theActiveGroup = new EEActiveGroup(thePlayer);
-        theActiveGroup->Fill(theGroup, 0, 0);
-        thePlayer->mPendingGroups.push_back(theActiveGroup);
-        theActiveGroup->KeepCitizens();
-        if (theActiveGroup->GetFirstUnit()) {
-            long theUnitType = thePlayer->mTechnologies->Get(this->mTechnology)->mData->mUnitClass;
-            if (theUnitType != kUnitTypeCapitol || thePlayer->mNumCapitols == 0) {
-                if (thePlayer->CanProduce(this->mTechnology, 0x20, 1, true, 3, NULL)) {
-                    if (EECanPlaceOnTile(thePlayer, theUnitType, (long)this->mPoint.GetX(), (long)this->mPoint.GetY(), 0, 1)) {
-                        EEUnit* theBuilding = EEMakeBuilding(thePlayer, theUnitType, (long)this->mPoint.GetX(), (long)this->mPoint.GetY());
-                        if (theUnitType == kUnitTypeGranary || theUnitType == kUnitTypeGranaryImproved) {
-                            do {
-                                theUnit = EEFindFreeFarm(theBuilding->GetComplexUnit(), 1, &theCount);
-                                if (theUnit)
-                                    theNearUnits.push_back(theUnit);
-                            } while (theUnit);
-                            if (theNearUnits.size() > 0)
-                                std::sort(theNearUnits.begin(), theNearUnits.end(),
-                                          EETileDistanceLess(theActiveGroup->GetFirstUnit()->GetTile()));
-                        }
-                        unsigned long i = 0;
-                        unsigned long j = 0;
-                        for (; i < theActiveGroup->GetNumUnits(); i++, j++) {
-                            unsigned long theNumUnits = theActiveGroup->GetNumUnits();
-                            EEComplexUnit* theWorker = theActiveGroup->GetUnit(i);
-                            if (this->mIsQueued) {
-                                theWorker->AddBuildTarget(theBuilding);
-                                // Port: no smart task after a shift-queued build (EEUGBuildRepair::Step)
-                                theWorker->mHasShiftQueuedBuild = true;
-                                if (theWorker->mGoalState && theWorker->mGoalState->mKind != kGoalBuildRepair) {
-                                    theWorker->StartAction(kActionIdle);
-                                    theWorker->mUnitClass->ActionChanged(theWorker);
-                                }
-                            } else
-                                theWorker->OrderRepair(theBuilding);
-                            if (theUnitType == kUnitTypeGranary || theUnitType == kUnitTypeGranaryImproved) {
-                                if (j < theNearUnits.size())
-                                    theWorker->AddBuildTarget(theNearUnits[j]);
-                                else if (theNearUnits.size() > 0)
-                                    theWorker->AddBuildTarget(theNearUnits[gPhysics->GetRandom(0L, (long)theNearUnits.size() - 1)]);
-                            }
-                            if (theActiveGroup->GetNumUnits() != theNumUnits) {
-                                i--;
-                                theMovedUnits.push_back(theWorker);
-                            }
-                        }
-                        for (i = 0; i < theMovedUnits.size(); i++)
-                            theActiveGroup->AddMember(theMovedUnits[i]->mComplexUnit, true);
-                        if (theActiveGroup->GetNumUnits() > 0)
-                            thePlayer->PlayAcknowledgement(theActiveGroup->GetUnit(gPhysics->GetRandom(0L, (long)theActiveGroup->GetNumUnits() - 1)));
-                    }
-                }
-            }
-        }
-    }
+    // New (R5b.4): the body is Rust (ee_units commands.rs build_unit: with a selection, one active group of it keeps its
+    // citizens; the technology's class is made where allowed, a granary's free farms sorted around the first unit;
+    // each unit builds it, queued or at once, and takes a farm; one unit drawn acknowledges) over the world calls of
+    // EEUnitHost.cpp; the tile is the point's (long) casts, as the original's
+    ee_units_build_unit(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mTechnology,
+                        (int64_t)(long)this->mPoint.GetX(), (int64_t)(long)this->mPoint.GetY(), this->mIsQueued);
 }
 
 // EEMBuildUnit's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -1441,75 +1386,13 @@ bool EEMCameraLocationInfo::IsResponse(NEMessage* inMessage)
 // all-cast powers) gets the cast goal; calamity class 0x12 gives every selected caster a copy of the goal
 void EEMCastCalamity::Execute()
 {
-    unsigned long i; GE3DPoint theLocation;
-    EEUnit* theTarget = NULL;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    bool theCast = false;
-    EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    EEComplexUnit* theCaster = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(this->mCasterID));
-    if (theCaster == NULL || theCaster->mHitPoints <= 0)
-        return;
-    EETechTreeNode* theNode = thePlayer->mTechnologies->Get(this->mTechnology);
-    if (theNode == NULL)
-        return;
-    EECalamityClass* theClass =
-        EECalamityManager::GetInstance()->GetCalamityClass((EECalamityEnum)theNode->mData->mCalamity);
-    if (this->mTargetID != -1)
-        theTarget = gWorld.GetUnit(this->mTargetID);
-    if (theClass->mClassEnum == 0x12) {
-        if (theClass->CanCastAt(theCaster, theLocation, this->mTileX, this->mTileY, true, theTarget) != 0)
-            return;
-        EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-        theGroup->Fill(theSelection, 0, 0);
-        theGroup->SplitCalamityCasters(theClass, theNode, theTarget);
-        if (theGroup->GetNumUnits() > 0) {
-            std::vector<EEUnit*> theUnits;
-            EEUGCastCalamity* theGoal = new EEUGCastCalamity(theCaster, theTarget, this->mTileX, this->mTileY, this->mTechnology, true);
-            for (i = 0; i < theGroup->GetNumUnits(); i++)
-                theUnits.push_back(theGroup->GetUnit(i));
-            for (std::vector<EEUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
-                 theIterator++) {
-                EEComplexUnit* theUnit = (*theIterator)->mComplexUnit;
-                theGroup->RemoveUnit(theUnit);
-                theUnit->ClearGoals(0);
-                theUnit->SetGoal(theGoal->Clone(), 0, 0);
-                theUnit->StartAction(kActionPrepareToMove);
-                theUnit->mUnitClass->ActionChanged(theUnit);
-            }
-            delete theGoal;
-            theGroup->Dereference();
-        }
-        return;
-    }
-    EEActiveGroup* theGroup = new EEActiveGroup(theCaster->mPlayer);
-    if (this->mTechnology != kTechTeleport && !theClass->mIsCastByAllSelected) {
-        unsigned long theCount = theSelection->GetNumUnits();
-        for (i = 0; i < theCount && !theCast; i++) {
-            EEComplexUnit* theUnit = theSelection->GetUnit(i);
-            long theResult = theClass->CanCastAt(theUnit, theLocation, this->mTileX, this->mTileY, true, theTarget);
-            if (theUnit->mHitPoints > 0 && theResult == 0 && theNode->Contains(theUnit->mUnitClass->mUnitType)
-                && theUnit->mPower >= theClass->GetCost()) {
-                theUnit->SetGoal(new EEUGCastCalamity(theUnit, theTarget, this->mTileX, this->mTileY, this->mTechnology, true), 0, 0);
-                if (theUnit->mUnitClass->mUnitType == kUnitTypeCapitol || this->mTechnology == kTechConquistadorsSpell) theUnit->StartAction(kActionCalamityPreCast); else theUnit->StartAction(kActionPrepareToMove);
-                theUnit->mUnitClass->ActionChanged(theUnit);
-                theGroup->AddMember(theUnit, true);
-                theCast = true;
-            }
-        }
-    } else {
-        for (i = 0; i < theSelection->GetNumUnits(); i++) {
-            EEComplexUnit* theUnit = theSelection->GetUnit(i);
-            if (theUnit->mHitPoints > 0 && theNode->Contains(theUnit->mUnitClass->mUnitType)
-                && theClass->CanCastAt(theUnit, theLocation, this->mTileX, this->mTileY, true, theTarget) == 0) {
-                theUnit->SetGoal(new EEUGCastCalamity(theUnit, theTarget, this->mTileX, this->mTileY, this->mTechnology, true), 0, 0);
-                theUnit->StartAction(kActionPrepareToMove);
-                theUnit->mUnitClass->ActionChanged(theUnit);
-                theGroup->AddMember(theUnit, true);
-            }
-        }
-    }
-    if (theGroup != NULL)
-        thePlayer->mPendingGroups.push_back(theGroup);
+    // New (R5b.4): the body is Rust (ee_units commands.rs cast_calamity: a living caster, the technology's calamity
+    // class; class 0x12 gives every selected caster a copy of the cast goal, else the first able caster, or every
+    // one for teleport and all-cast powers, gets its own) over the world calls of EEUnitHost.cpp (CanCastAt, the cost,
+    // the casters' split: the calamity classes' C++)
+    ee_units_cast_calamity(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mCasterID,
+                           this->mTargetID, this->mTileX, this->mTileY, this->mTechnology);
 }
 
 // EEMCastCalamity's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -7175,72 +7058,21 @@ bool EEFarmDistanceGreater::operator()(EEComplexUnit* inFirst, EEComplexUnit* in
 // nearest free farm, else gather to or move to the target
 void EEMSmartFarmers::Execute()
 {
-    std::vector<EEComplexUnit*> theFarms;
-    std::vector<EEUnit*> theOccupants;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EESelectedGroup* theSelection = thePlayer->mActiveGroup;
-    EEComplexUnit* theFirstUnit = theSelection->GetFirstUnit();
-    long theTargetID = this->mTargetID;
-    EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(gWorld.GetUnit(theTargetID));
-    long theIndex = 1;
-    if (theFirstUnit == NULL || theTarget == NULL)
-        return;
-    EEActiveGroup* theGroup = new EEActiveGroup(thePlayer);
-    theGroup->Fill(theSelection, 0, 0);
-    theGroup->KeepCitizens();
-    long theCount = theGroup->GetNumUnits();
-    if (theCount > 0) {
-        EEComplexUnit* theFarm;
-        do {
-            theFarm = EEFindFreeFarm(theTarget, 1, &theIndex);
-            if (theFarm != NULL)
-                theFarms.push_back(theFarm);
-        } while (theFarm != NULL);
-        for (long i = 0; i < theCount; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            EEUGGather* theGather = EEGoalCast<EEUGGather>(theUnit->GetLoadGoal());
-            if (theGather == NULL || theGather->mResource == NULL || theGather->mResource->mUnitClass->mUnitType != kUnitTypeFarm)
-                theFarm = NULL;
-            else {
-                theFarm = theGather->mResource->mComplexUnit;
-                theOccupants.clear();
-                if (EEGetFarmDropSites(theFarm, theOccupants)) {
-                    if (std::find(theOccupants.begin(), theOccupants.end(), theTarget) != theOccupants.end()
-                        && theTarget->CanTake(theUnit, theUnit->mResourceType)) {
-                        theUnit->SetGatheredResource(NULL);
-                        theUnit->StartAction(kActionMoveToStorage);
-                        theUnit->mUnitClass->ActionChanged(theUnit);
-                        continue;
-                    }
-                } else
-                    theFarm = NULL;
-            }
-            if (theFarm == NULL && theFarms.size() > 0) {
-                std::sort(theFarms.begin(), theFarms.end(), EEFarmDistanceGreater(theUnit->GetTile()));
-                theFarm = theFarms.back();
-                theFarms.pop_back();
-            }
-            if (theFarm != NULL) {
-                EEWorkFarm(theFarm, theUnit);
-                continue;
-            }
-            if (theUnit->mResourceAmount > 0 && theTarget->CanTake(theUnit, theUnit->mResourceType)) {
-                theUnit->SetGoal(new EEUGGather(NULL, theTarget, true), 0, 0);
-                theUnit->StartAction(kActionMoveToStorage);
-            } else {
-                theUnit->SetGoal(new EEUGLocation(GE2DPoint((float)theTarget->GetTileX(), (float)theTarget->GetTileY()), true,
-                                                  true, false, 0.0f, false, 0), 0, 0);
-                theUnit->StartAction(kActionPrepareToMove);
-            }
-            theUnit->mUnitClass->ActionChanged(theUnit);
-        }
-        if (theGroup->GetNumUnits() > 0)
-            thePlayer->PlayAcknowledgement(theGroup->GetUnit(gPhysics->GetRandom(0L, (long)theGroup->GetNumUnits() - 1)));
-    }
-    if (theGroup != NULL) {
-        thePlayer->mPendingGroups.push_back(theGroup);
-        theGroup->Finish();
-    }
+    // New (R5b.4): the body is Rust (ee_units commands.rs smart_farmers: with a selection and a complex target, one
+    // active group of it keeps its citizens; each drops its load at the target, keeps its farm, takes the nearest free
+    // farm, drops what it carries or moves to the target; one unit drawn acknowledges; the group finishes) over the
+    // world calls of EEUnitHost.cpp
+    ee_units_smart_farmers(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), (uint32_t)this->mTargetID);
+}
+
+// New (R5b.4): the two farm sorts for the host (ee/EEUnitHost.h), here with their comparators
+void EESortFarms(std::vector<EEComplexUnit*>& ioFarms, long inX, long inY, bool inGreater)
+{
+    if (inGreater)
+        std::sort(ioFarms.begin(), ioFarms.end(), EEFarmDistanceGreater(EETileCoordinate(inX, inY)));
+    else
+        std::sort(ioFarms.begin(), ioFarms.end(), EETileDistanceLess(EETileCoordinate(inX, inY)));
 }
 
 // EEMSmartFarmers's members as the codec's slots, in wire order (ee_netmsg classes.rs)
