@@ -4314,6 +4314,65 @@ line, AI_LUA_UNITS §11):
   - the empty sub-groups' tasks (§8.55).
 
 
+### 8.63 Porting everything: the inventory, and the C++ classic on islands (2026-11-12, EE-SIM)
+
+The owner's direction: port all of the C++ classic into Lua, so that its decision code can be deleted. The order:
+1. the inventory (below);
+2. the missing parts by value: transports and island play (2a), walls (2b), air, space and submarines (2c), the
+   wonder race and the ICBM (2d), allies (2e), the rest (2f);
+3. benches beyond Small land maps;
+4. classic_lua as the lobby's classic for a soak;
+5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
+
+**The inventory.**
+- **Decision code: about 47,900 lines.**
+  - Managers and commanders: 34,374. These are EEComputerPlayer, the civilization, unit, build, research and
+    resource managers, the resource centres, the walls, the combat manager and its strategy, the attack
+    commander/groups/sub-groups and formations, the unit selector, the personnel, the intelligence, the defence
+    commander and aid packages, the exploration, the player interaction and EEAIFunctionObjects.
+  - Sub-group and unit state machines (ASG*, ASGU*): 13,481.
+- **What stays:** the Lua engine and its helpers (12,706) and the engine proper (pathfinding, continents, influence,
+  towns, herds: about 15,800).
+- **classic_lua today:** 7,324 lines, with lib.groups for the army's movement and fighting.
+- **Not started:**
+  - the walls;
+  - the transports and ferries (RequestFerry / FerryGatherers / TransportIdle, ChooseTransportClass, the sea
+    transport sub-groups, covered landings);
+  - the air, space and submarine groups, carriers and paratroopers;
+  - the wonder race and the ICBM;
+  - the allies (AidAllies, AttackPlayer / DefendPlayer, CheckRaids / Retaliate);
+  - BuildUp (deathmatch);
+  - the prophets' and priests' micro (calamities), GiveImprovements, the WW1 groups, flares;
+  - BalanceProduction, BuildingAbandoned / BuilderLost, CitizenLost's re-cost;
+  - the robotic farm, the island map's hired garrison citizens, the chat taunts.
+
+**The C++ classic on islands.** The first island bench (Small Islands, balanced, 8 seeds, 60 minutes) gave the port
+7-0, 1 close. The C++ stood at 22 citizens from minute 10 and reached Copper in no game. Neither side used a
+transport.
+- **How it stalls.** A citizen request stood from minute 8 and never started: the epoch reserve held the food.
+  Two bush gatherers fed it. The demand split wanted 2 on food with 1,108 food short.
+- **Why.** The food room (GetGatherCapacity) counted only untapped sites. A resource's hit points fall from 1 when
+  it is first gathered from (§8.57), and an island has little food outside its centres, so the room fell to about
+  2 gatherers.
+- **The fix, in both** (the owner's rule for such bugs). GetGatherCapacity counts the untapped sites for the
+  citizen target only (GetWantedCitizens, inResource -1). A resource's own room counts every site with something
+  left. The port did this already (§8.58's deviation), which is now gone: the port and the C++ agree.
+
+| bench | before | after |
+|---|---|---|
+| Small Islands, 8 seeds: Lua won-lost | 7-0, 1 close | 6-0, 2 close |
+| islands: the C++'s Stone / Copper | 6/8 at 35 min / 0/8 | 8/8 at 25 min / 2/8 at 55 min |
+| islands: the C++'s citizens at 40 min | 22 | 40.5 |
+| land (balanced, 32 seeds): Lua won-lost | 12-13, 7 close (§8.61) | 12-16, 4 close |
+| land: the C++'s Copper / Bronze | 21 / 3 | 27 / 6 |
+| land: the C++'s citizens at 30 / 40 min | 27.5 / 41.4 | 33.5 / 48.2 |
+| land: Lua's Copper / Bronze | 24 / 12 | 20 / 11 |
+
+**On land the C++ classic is stronger now.** It reaches Copper in 27 of 32 games, not 21, and it has 7 more
+citizens at 40 minutes. This changes the opponent of every bench against the classic: the benches before this fix
+need a new baseline. The port, the same code against a stronger opponent, now trails 12-16 (Copper 20 against 27).
+That is near the edge of the noise, and it is to be watched as 2a goes on. On islands the C++ now plays, but the
+port still wins 6-0 with 2 close (66.8 citizens at 40 minutes against 40.5). That gap is 2a's.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
