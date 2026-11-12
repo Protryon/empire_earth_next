@@ -50,24 +50,24 @@ ServerDetailsItem::~ServerDetailsItem() {}
 void ServerDetailsItem::SetGame(LobbyGame* inGame)
 {
     this->mGame=inGame;
-    if(this->mGame->mGameType==3)
+    if(this->mGame->GetGameType()==3)
     {
-        this->mIPAddrStr=this->mGame->mAddress.GetHostAndPortString(true);
+        this->mIPAddrStr=this->mGame->GetAddress().GetHostAndPortString(true);
     }
 }
 // FUNCTION: WON 0x007c5800
 // Picks the row's status icon: in progress, invite-only (invited/host or not), ask to join, password or open
 void ServerDetailsItem::CalcIcon()
 {
-    if(this->mGame->mInProgress) this->mIconId=0x176;
-    else if(this->mGame->mInviteOnly)
+    if(this->mGame->IsInProgress()) this->mIconId=0x176;
+    else if(this->mGame->GetInviteOnly())
     {
-        bool aOwned=this->mGame->mInvited || this->mGame->mIsHost;
+        bool aOwned=this->mGame->IsInvited() || this->mGame->GetIsHost();
         if(aOwned) this->mIconId=0x171;
         else this->mIconId=0x175;
     }
-    else if(this->mGame->mAskToJoin) this->mIconId=0x173;
-    else if(this->mGame->mHasPassword) this->mIconId=0x174;
+    else if(this->mGame->GetAskToJoin()) this->mIconId=0x173;
+    else if(this->mGame->GetHasPassword()) this->mIconId=0x174;
     else this->mIconId=0x172;
 }
 // FUNCTION: WON 0x007c5080
@@ -77,27 +77,27 @@ int ServerDetailsItem::CompareIcon(const ServerDetailsItem* a,const ServerDetail
 // FUNCTION: WON 0x007c50a0
 // Orders two rows by the games' skill level
 int ServerDetailsItem::CompareSkill(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
-{ return a->mGame->mSkill-b->mGame->mSkill; }
+{ return a->mGame->GetSkill()-b->mGame->GetSkill(); }
 // FUNCTION: WON 0x007c50c0
 // Orders two rows by game name, ignoring case
 int ServerDetailsItem::CompareGameName(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
-{ return a->mGame->mName.CompareNoCase(b->mGame->mName); }
+{ return a->mGame->GetName().CompareNoCase(b->mGame->GetName()); }
 // FUNCTION: WON 0x007c50e0
 // Orders two rows by the games' network address
 int ServerDetailsItem::CompareAddress(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
-{ return a->mGame->mAddress.StringCompare(b->mGame->mAddress); }
+{ return a->mGame->GetAddress().StringCompare(b->mGame->GetAddress()); }
 // FUNCTION: WON 0x007c5100
 // Orders two rows by player count, then the game with more player slots first
 int ServerDetailsItem::CompareNumPlayers(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
 {
-    int result=a->mGame->mNumPlayers-b->mGame->mNumPlayers;
-    if(result==0) result=b->mGame->mNumOpenSlots-a->mGame->mNumOpenSlots;
+    int result=a->mGame->GetNumPlayers()-b->mGame->GetNumPlayers();
+    if(result==0) result=b->mGame->GetMaxPlayers()-a->mGame->GetMaxPlayers();
     return result;
 }
 // FUNCTION: WON 0x007c5130
 // Orders two rows by ping time
 int ServerDetailsItem::ComparePing(const ServerDetailsItem* a,const ServerDetailsItem* b,ServerListCtrl*)
-{ return a->mGame->mPing-b->mGame->mPing; }
+{ return a->mGame->GetPing()-b->mGame->GetPing(); }
 // FUNCTION: WON 0x007c51e0
 // Returns true for a digit or a sign character
 bool ServerDetailsItem::IsStartOfNumber(char c)
@@ -142,7 +142,7 @@ void ServerDetailsItem::FilterSkill(const GUIString& inFilter,ServerDetailsList&
     for(ServerDetailsList::iterator it=ioList.begin();it!=ioList.end();)
     {
         ServerDetailsItem* anItem=*it;
-        if(anItem->mGame->mSkill<aLower || anItem->mGame->mSkill>aUpper) ioList.erase(it++);
+        if(anItem->mGame->GetSkill()<aLower || anItem->mGame->GetSkill()>aUpper) ioList.erase(it++);
         else ++it;
     }
 }
@@ -152,7 +152,7 @@ void ServerDetailsItem::FilterGameName(const GUIString& inFilter,ServerDetailsLi
 {
     for(ServerDetailsList::iterator it=ioList.begin();it!=ioList.end();)
     {
-        if((*it)->mGame->mName.findNoCase(inFilter,0)>=0) ++it;
+        if((*it)->mGame->GetName().findNoCase(inFilter,0)>=0) ++it;
         else ioList.erase(it++);
     }
 }
@@ -174,7 +174,7 @@ void ServerDetailsItem::FilterPing(const GUIString& inFilter,ServerDetailsList& 
     if(!ServerDetailsItem::ParseIntFilter(inFilter,aLower,aUpper)) return;
     for(ServerDetailsList::iterator it=ioList.begin();it!=ioList.end();)
     {
-        int aPing=10-(*it)->mGame->mPing/100;
+        int aPing=10-(*it)->mGame->GetPing()/100;
         if(aPing<aLower || aPing>aUpper) ioList.erase(it++);
         else ++it;
     }
@@ -192,7 +192,7 @@ void ServerDetailsItem::CalcDimensions(ListArea* inList)
         this->mSummaryHeight=static_cast<unsigned char>(imageHeight);
     this->mSummaryHeight+=2;
     this->mHeight=this->mSummaryHeight;
-    if(!this->mGame->mShowDetails)
+    if(!this->mGame->GetShowDetails())
         return;
     int aHeight=this->GetDetailsHeightHook(static_cast<MultiListArea*>(inList));
     if(aHeight<aFont->GetHeight()) aHeight=aFont->GetHeight();
@@ -210,10 +210,10 @@ void ServerDetailsItem::MouseDown(ListArea* inList,int x,int y,int inButton)
 {
     if(inButton!=0) return;
     if(x>static_cast<MultiListArea*>(inList)->GetColumnWidth(0) || y>this->mSummaryHeight) return;
-    this->mGame->mShowDetails=!this->mGame->mShowDetails;
+    this->mGame->SetShowDetails(!this->mGame->GetShowDetails());
     inList->RefreshItem(this);
     inList->EnsureVisible(this);
-    if(this->mGame->mShowDetails)
+    if(this->mGame->GetShowDetails())
         inList->DeliverEvent(new PingGameEvent(this->mGame.get(),true),true);
 }
 // The vertical centring divides as int and truncates toward zero
@@ -227,7 +227,7 @@ static void DrawServerImage(Graphics& g,Image* inImage,ServerDetailsItem* inItem
 // Paints the expand/collapse arrow and the game's status icon
 void ServerDetailsItem::PaintIcon(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
-    if(inItem->mGame->mShowDetails)
+    if(inItem->mGame->GetShowDetails())
         DrawServerImage(g,::ServerListCtrl_GameExpanded_Image.get(),inItem,15);
     else
         DrawServerImage(g,::ServerListCtrl_GameNotExpanded_Image.get(),inItem,15);
@@ -237,7 +237,7 @@ void ServerDetailsItem::PaintIcon(Graphics& g,ServerDetailsItem* inItem,ServerLi
 // Paints the skill level image for skill levels 0 to 4
 void ServerDetailsItem::PaintSkill(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
-    unsigned char aSkill=static_cast<unsigned char>(inItem->mGame->mSkill);
+    unsigned char aSkill=static_cast<unsigned char>(inItem->mGame->GetSkill());
     if(aSkill<5) DrawServerImage(g,::LobbyResource_GetImage((LobbyResourceId)(aSkill+0x177)),inItem,0);
 }
 // FUNCTION: WON 0x007c5920
@@ -245,7 +245,7 @@ void ServerDetailsItem::PaintSkill(Graphics& g,ServerDetailsItem* inItem,ServerL
 void ServerDetailsItem::PaintGameName(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl* inCtrl)
 {
     g.SetFont(inCtrl->mBoldFont.get());
-    g.DrawString(inItem->mGame->mName,5,0);
+    g.DrawString(inItem->mGame->GetName(),5,0);
 }
 // FUNCTION: WON 0x007c5950
 // Paints the game's address text
@@ -272,8 +272,8 @@ void ServerDetailsItem::FilterNumPlayers(const GUIString& inFilter,ServerDetails
     for(ServerDetailsList::iterator it=ioList.begin();it!=ioList.end();)
     {
         ServerDetailsItem* anItem=*it;
-        int aCount=anItem->mGame->mNumPlayers;
-        int aMax=anItem->mGame->mNumOpenSlots;
+        int aCount=anItem->mGame->GetNumPlayers();
+        int aMax=anItem->mGame->GetMaxPlayers();
         if(aMax==0) aMax=0x7ffffff;
         if(aCount<aLower || aCount>aUpper || (aFull && aCount<aMax) ||
             (aNotFull && aCount>=aMax) || (aOpen && !anItem->mGame->CanJoin())) ioList.erase(it++);
@@ -299,7 +299,7 @@ void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
     MultiListArea* aList=static_cast<MultiListArea*>(inList);
     int aColumn=aList->GetColumnPaintContext();
     ServerListCtrl* aCtrl=static_cast<ServerListCtrl*>(aList->mParent->mParent);
-    unsigned long aColor; if(this->mGame->GetInProgress()) aColor=g.GetStandardColor(StandardColor_GrayText); else aColor=g.GetStandardColor(StandardColor_Text);
+    unsigned long aColor; if(this->mGame->IsInProgress()) aColor=g.GetStandardColor(StandardColor_GrayText); else aColor=g.GetStandardColor(StandardColor_Text);
     if(this->mSelected) aColor=aList->GetSelColor().GetForegroundColor(g,aColor);
     g.SetColor(aColor);
     g.SetFont(aList->mFont.get());
@@ -310,10 +310,10 @@ void ServerDetailsItem::Paint(Graphics& g,ListArea* inList)
             g.SetColor(aList->GetSelColor().GetBackgroundColor(g));
             g.FillRect(0,0,aList->mPaintWidth,this->mSummaryHeight);
         }
-        if(!this->mGame->mShowDetails) return;
+        if(!this->mGame->GetShowDetails()) return;
         int aWidth=aList->GetColumnWidth(0);
         g.Translate(aWidth,this->mSummaryHeight);
-        if(this->mGame->mHaveDetails) this->PaintDetailsHook(g,aList);
+        if(this->mGame->GetHaveDetails()) this->PaintDetailsHook(g,aList);
         else
         {
             g.SetFont(aList->mFont.get());
@@ -355,7 +355,7 @@ int ServerDetailsItem::Compare(const ListItem* inOther,ListArea* inList) const
 // Paints the game's ping bars
 void ServerDetailsItem::PaintPing(Graphics& g,ServerDetailsItem* inItem,ServerListCtrl*)
 {
-    DrawLobbyPing(&g,inItem->mGame->mPing,inItem->mSummaryHeight,0,0);
+    DrawLobbyPing(&g,inItem->mGame->GetPing(),inItem->mSummaryHeight,0,0);
 }
 // FUNCTION: WON 0x007c6340
 // Adds a column's default filter strings to the persistent filter options
@@ -394,7 +394,7 @@ void ServerListCtrl::FilterInProgressGames(ServerDetailsList& ioList)
 {
     for(ServerDetailsList::iterator it=ioList.begin();it!=ioList.end();)
     {
-        if((*it)->mGame->mInProgress) ioList.erase(it++);
+        if((*it)->mGame->IsInProgress()) ioList.erase(it++);
         else ++it;
     }
 }
@@ -448,7 +448,7 @@ void ServerListCtrl::AddEntries(const ServerDetailsList& inList)
     {
         ServerDetailsItem* aItem=*it;
         this->mList->ListArea::InsertItem(aItem,-1);
-        aItem->mGame->mIsFiltered=false;
+        aItem->mGame->SetIsFiltered(false);
         if(aItem->mGame.get()==aSelectedGame)
         {
             int aPos=this->mList->GetItemPos(aItem);
@@ -483,7 +483,7 @@ void ServerListCtrl::AddFilteredEntries_All(bool inPreserve)
     ServerDetailsList aList;
     for(ServerDetailsMap::iterator it=this->mServerDetailsMap.begin();it!=this->mServerDetailsMap.end();++it)
     {
-        it->second->mGame->mIsFiltered=true;
+        it->second->mGame->SetIsFiltered(true);
         aList.push_back(it->second.get());
     }
     this->AddFilteredEntries(inPreserve,aList);
@@ -577,7 +577,7 @@ void ServerListCtrl::HandleGameChanged(GameChangedEvent* inEvent)
         anItem->SetGame(aGame);
         this->mServerDetailsMap[aGame]=anItem;
         bool aFits=this->FitsFilter(anItem.get());
-        aGame->mIsFiltered=!aFits;
+        aGame->SetIsFiltered(!aFits);
         if(aFits) this->mList->ListArea::InsertItem(anItem.get(),-1);
     }
     else if(inEvent->IsDelete())
@@ -596,7 +596,7 @@ void ServerListCtrl::HandleGameChanged(GameChangedEvent* inEvent)
         ServerDetailsItem* anItem=it->second.get();
         bool aVisible=this->mList->GetItemPos(anItem)>=0;
         bool aFits=this->FitsFilter(anItem);
-        anItem->mGame->mIsFiltered=!aFits;
+        anItem->mGame->SetIsFiltered(!aFits);
         if(aVisible)
         {
             if(aFits) this->mList->RefreshItem(anItem);

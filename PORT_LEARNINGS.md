@@ -8730,3 +8730,63 @@ C++ made them; the WON servers are gone): only the drivers exercise the Rust ops
   (`GetEntry`, `IsValid`, `SetValid`, expiry, entity tag, `UpdateEntry`), `WONFile`'s stat, the receive op's skip,
   binary and modify time flags and a child op for the redirect: codes enough for the base, but the accessors in the
   lobby lane's files first.
+
+## R6 WON round 19: libpng and zlib out, the partly dead units trimmed, the lobby model's fields behind accessors (branch rust-r6-won19, 2026-11-12)
+
+Measured as round 18 (lines of `src/Empire Earth/WONAPI` + `include/ee/wonapi`): 100,456 -> 99,671, -785, in three
+code commits. Plus 22,930 lines of vendored C and tooling (libpng 1.0, zlib 1.1) out of the tree.
+
+- **libpng and zlib** (commit `build: libpng and zlib (module exeimg) out of the link and the tree`). Nothing called
+  them since the lobby's PNG decoder moved onto ee_openformats. Module `exeimg` (its unit list held libpng, zlib
+  and libjpeg rows; the libjpeg rows were already skipped for the engine's module `jpeg`) is gone from units.py,
+  ee.py, build.py (no `exeimg.lib` archive; the old `exe/lib` folder is still cleaned) and xbuild.py (no
+  `libexeimg.a`; a stale one is removed). `won_image_test` (125 pictures, 46 of the lobby's) is the proof that the
+  lobby's PNG and JPEG pictures still decode. The POSIX build's link line changed too: not built on a Mac here.
+- **The census lies about inlined callees.** A function absent from all three link maps is not always dead in the
+  source: under -O2 a small callee is inlined into its only caller and its own COMDAT dropped
+  (`ImageDecoder::GetImageAttributes(FileReader&)`, `LanLogic::GetNextClientId`, `PercentLayoutParam::Init`,
+  `LobbyGroup::IsInviteOnly` all show "dead"). Every candidate was grepped for a caller before it went; of the
+  fifteen "dead" functions in the four lobby logic units, none was really dead.
+- **The partly dead units** (commit `R6 WON: the partly dead units' dead parts deleted`): ConfigObject's eleven
+  unused Register*Value (RegisterIntValue and RegisterIntListListValue stay: the Internet lane's TitleConfig);
+  ResourceConfig's Add* except AddSound; ChildLayoutList, VerticalFlowLayout (its arithmetic stays in
+  guilayout.rs for won_guilayout_test), CenterLayout's list forms and five unused percentage constructors;
+  Animation, AnimationFrame, AnimationComponent and AnimationComponentConfig with ImageDecoder's animation (no
+  lobby .cfg names "AnimationComponent"; no decoder made an animation since GIF went), its memory-buffer forms
+  and CreateRawImage helpers; StringParser's string ReadValue forwarders and the bool list and nested bool,
+  string and wide-string list reads and formats. `won_parse_test`'s golden re-recorded from the driver's
+  `--print`, checked first to equal the old golden less its `strlists` / `bools` lines and the formats line's two
+  nested lists (3537 -> 3121 lines); `parser_golden.rs` follows.
+- **The lobby logic slice, measured again.** Round 18's "~600 references in 39 files" counted type names. The real
+  C ABI cost is the field reads and writes: making the data members of LobbyClient, LobbyGame, LobbyPlayer,
+  LobbyFriend, LobbyGroup and LobbyServer private (a scratch header edit and `clang_build.py --only` with
+  `/clang:-ferror-limit=0` added to the module flags for the run) gave **344 sites in 28 files**: 300 in the won
+  module (114 RoutingLogic, 41 ServerListCtrl, 79 inside LanLogic / StagingLogic / LobbyModel) and 44 in the game
+  code under WONLobby/GameCode, which is module exe: `--only WON won` missed them and the full build found them.
+  The four logic units reach outward through ~128 distinct C++ entry points (events, Lobby* helpers, ops,
+  dialogs; a grep of `new *Event` / `Lobby*(` / `new *Op`) and are 4,252 lines (+ ~400 of headers).
+- **Fields behind accessors** (commit `R6 WON: the lobby model's element classes' data members private`). Each
+  class's data members moved into one private block at its end, order kept (the layout does not change); ~60
+  inline accessors (const references for GUIString, IPAddr and the SmartPtrs, so `.get()`, `->` and `.mPtr` sites
+  read the same), two duplicate getters folded (GetAskToJoinFlag, GetInProgress). The 344 sites (and won_chat_test's 19, which now defines LobbyClient::SetCaptain as LobbyModel.cpp does) were rewritten
+  by a script from the compiler's (file, line, column, class, member): a read becomes the getter, `x->m = e;`
+  becomes `x->SetM(e);`, `--x->m` becomes `x->SetM(x->GetM()-1)`; sites on one line right to left. It compiled
+  on the first pass. RoutingLogic (Internet, kept) now calls through the accessors. Net +42 lines: the price
+  of the next step, where a Rust LobbyModel or LanLogic needs only these accessors as its inward C ABI instead
+  of 344 field sites; ratio for that move about 4.6k lines out against ~190 C ABI entries (~60 in, ~128 out).
+- **What runs it.** EE-SIM never loads the lobby, so the oracle sees none of this. The accessors are inline and
+  the layout is unchanged: a mistake would be a wrong field (a getter for the wrong member), which only the
+  lead's LAN game (LanLogic, StagingLogic, the game code's EELobbyGame, the staging and game list screens) and a
+  lobby tour (the lists, the chat, the options popups) exercise; ServerListCtrl's filters and RoutingLogic's
+  sites are Internet screens nothing reaches. The deletions remove code no build reaches.
+- **won_regkey_test's intermittent failures were a PlatConfig bug** (commit `ee_plat_core: PlatConfig's save waits
+  for a reader that holds config.yaml`). Every set or delete rewrites the file through `config.yaml.new` and
+  `MoveFileExA(..., MOVEFILE_REPLACE_EXISTING)`; while another process holds the file open without delete sharing
+  (Defender or the search indexer scanning the just-written file under load, an editor, any C runtime or Python
+  reader) the replace fails with access denied, the set returns 0 and the value lives only in memory: the
+  failures were "set=0", "deletesub child=0" lines. A Python loop holding `won_regkey.yaml` for 2 ms at a time
+  made 20 of 20 runs fail. Now the replace is retried for half a second on access denied, sharing and lock
+  violations, then the file is rewritten in place (such readers share writing). With the same loop and a full
+  build running, 50 of 50 runs pass, and 50 more under the build alone; cargo test
+  `a_set_waits_for_a_reader_that_holds_the_file` holds the file 800 ms. In the game this was a settings write
+  (the options, the lobby's saved state) silently lost while a scanner had config.yaml open.

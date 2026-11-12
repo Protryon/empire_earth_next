@@ -41,7 +41,7 @@ void GameStagingCtrl::UpdateStartButton()
     if(game==NULL)
         return;
     bool enabled;
-    if(game->mIsHost) enabled=game->CanStartGame();
+    if(game->GetIsHost()) enabled=game->CanStartGame();
     else {
         if(this->mLastReady!=LobbyIAmReady()) {
             this->mLastReady=LobbyIAmReady();
@@ -60,7 +60,7 @@ void GameStagingCtrl::JoinedGame()
     if(game==NULL||!game->MatchesRoomSpec(this->mRoomSpecFlags))
         return;
     this->mInGame=true;
-    if(game->mIsHost) {
+    if(game->GetIsHost()) {
         this->mLeaveGameButton->SetText(::GameStagingCtrl_DissolveGame_String,true);
         this->mStartGameButton->SetText(::GameStagingCtrl_StartGame_String,true);
     } else {

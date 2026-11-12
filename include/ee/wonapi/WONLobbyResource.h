@@ -211,12 +211,6 @@ public:
     Image* SafeGetImage(const std::string&); // at 0x007938b0 (borrowed result)
     Sound* SafeGetSound(const std::string&); // at 0x007938d0 (borrowed result)
     void AddSound(const std::string&,Sound*); //3934a0
-    void AddString(const std::string&,const GUIString&);
-    void AddImage(const std::string&,Image*);
-    void AddFont(const std::string&,Font*);
-    void AddColor(const std::string&,DWORD);
-    void AddBackground(const std::string&,const Background&);
-    void AddInt(const std::string&,int);
     Font* SafeGetFont(const std::string&);
     DWORD SafeGetColor(const std::string&);
     const Background& SafeGetBackground(const std::string&);

@@ -174,16 +174,16 @@ bool RoutingLogic::HostGame(LobbyGame* inGame)
     PendingServerCleanup aCleanup(this);
     if (!this->ConnectToServer(aServer, false)) return false;
     unsigned long aFlags = 0;
-    if (inGame->GetAskToJoinFlag()) aFlags = 0x100;
-    if (inGame->mInviteOnly) aFlags |= 0x80;
+    if (inGame->GetAskToJoin()) aFlags = 0x100;
+    if (inGame->GetInviteOnly()) aFlags |= 0x80;
     unsigned short aGroupId;
-    if (!this->CreateGroup(this->mPendingServer.get(), inGame->mName, inGame->mPassword,
+    if (!this->CreateGroup(this->mPendingServer.get(), inGame->GetName(), inGame->GetPassword(),
                       aFlags, aGroupId)) return false;
     this->JoinedGroup(aGroupId, true);
     if (this->GetConnection() == NULL) return false;
-    inGame->mGroupId = aGroupId;
-    aServer->mClients->ClearInvited();
-    if (this->mGameGroup.get() != NULL) inGame->SetClients(this->mGameGroup->mClients.get());
+    inGame->SetGroupId(aGroupId);
+    aServer->GetClients()->ClearInvited();
+    if (this->mGameGroup.get() != NULL) inGame->SetClients(this->mGameGroup->GetClients().get());
     return true;
 }
 
@@ -192,12 +192,12 @@ bool RoutingLogic::HostGame(LobbyGame* inGame)
 bool RoutingLogic::JoinGame(LobbyGame* inGame)
 {
     if (this->IsConnecting() || this->mGameGroup.get() != NULL || this->mCurrentServer.get() == NULL ||
-        inGame->mGameType != 2) return false;
+        inGame->GetGameType() != 2) return false;
     PendingServerCleanup aCleanup(this);
     if (!this->ConnectToServer(this->mCurrentServer.get(), false)) return false;
     if (!this->JoinGroup(this->mPendingServer.get(), inGame->GetGroupId())) return false;
-    this->JoinedGroup(inGame->mGroupId, true);
-    if (this->mGameGroup.get() != NULL) inGame->SetClients(this->mGameGroup->mClients.get());
+    this->JoinedGroup(inGame->GetGroupId(), true);
+    if (this->mGameGroup.get() != NULL) inGame->SetClients(this->mGameGroup->GetClients().get());
     return true;
 }
 
@@ -215,8 +215,8 @@ void RoutingLogic::ClearPendingServer()
 int RoutingLogic::GetRoomSpec(unsigned short inGroupId)
 {
     return ee_won_routing_room_spec(inGroupId,
-                                    this->mChatGroup.get() != NULL ? (int32_t)this->mChatGroup->mId : -1,
-                                    this->mGameGroup.get() != NULL ? (int32_t)this->mGameGroup->mId : -1);
+                                    this->mChatGroup.get() != NULL ? (int32_t)this->mChatGroup->GetId() : -1,
+                                    this->mGameGroup.get() != NULL ? (int32_t)this->mGameGroup->GetId() : -1);
 }
 
 // FUNCTION: WON 0x007e72f0
@@ -232,7 +232,7 @@ int RoutingLogic::GetRoomSpec(LobbyGroup* inGroup, LobbyServer* inServer)
 // Returns the player list of the current server, or NULL when not connected
 LobbyClientList* RoutingLogic::GetClientList()
 {
-    if (this->mCurrentServer.get() != NULL) return this->mCurrentServer->mClients.get();
+    if (this->mCurrentServer.get() != NULL) return this->mCurrentServer->GetClients().get();
     return NULL;
 }
 
@@ -245,7 +245,7 @@ bool RoutingLogic::IsConnected() { return this->mCurrentServer.get() != NULL; }
 RoutingConnection* RoutingLogic::GetConnection()
 {
     if (this->mCurrentServer.get() == NULL) return NULL;
-    return this->mCurrentServer->mConnection.get();
+    return this->mCurrentServer->GetConnection().get();
 }
 
 // FUNCTION: WON 0x007ea2b0
@@ -271,10 +271,10 @@ LobbyServer* RoutingLogic::GetServer(const IPAddr& inAddress)
 LobbyServer* RoutingLogic::GetServer(RoutingOp* inOp)
 {
     if (this->mCurrentServer.get() != NULL &&
-        inOp->mConnection.get() == this->mCurrentServer->mConnection.get())
+        inOp->mConnection.get() == this->mCurrentServer->GetConnection().get())
         return this->mCurrentServer.get();
     if (this->mPendingServer.get() != NULL &&
-        inOp->mConnection.get() == this->mPendingServer->mConnection.get())
+        inOp->mConnection.get() == this->mPendingServer->GetConnection().get())
         return this->mPendingServer.get();
     return NULL;
 }
@@ -291,7 +291,7 @@ LobbyServer* RoutingLogic::GetDefaultServer()
     for (size_t anItr = 0; anItr < aServers->GetCount(); ++anItr) {
         LobbyServer* aServer = aServers->ServerAt(anItr);
         EeWonServerPick aPick;
-        aPick.last_used = aServer->mName == LobbyGetLastServerName();
+        aPick.last_used = aServer->GetName() == LobbyGetLastServerName();
         aPick.clients = aServer->GetNumClients();
         aPick.language = aServer->HasAddress(aConfig->mLanguage);
         aList.push_back(aServer);
@@ -319,7 +319,7 @@ void RoutingLogic::SendToCaptain(const ByteBuffer* inData)
 {
     RoutingConnection* aConnection = this->GetConnection();
     if (aConnection != NULL && this->mGameGroup.get() != NULL)
-        aConnection->SendData(inData, 0, this->mGameGroup->mCaptainId, NULL);
+        aConnection->SendData(inData, 0, this->mGameGroup->GetCaptainId(), NULL);
 }
 
 // FUNCTION: WON 0x007eeb20
@@ -328,7 +328,7 @@ void RoutingLogic::BroadcastToGame(const ByteBuffer* inData)
 {
     RoutingConnection* aConnection = this->GetConnection();
     if (aConnection != NULL && this->mGameGroup.get() != NULL)
-        aConnection->SendData(inData, 0, this->mGameGroup->mId, NULL);
+        aConnection->SendData(inData, 0, this->mGameGroup->GetId(), NULL);
 }
 
 // FUNCTION: WON 0x007eeb50
@@ -337,7 +337,7 @@ void RoutingLogic::SendToClient(LobbyClient* inClient, const ByteBuffer* inData)
 {
     RoutingConnection* aConnection = this->GetConnection();
     if (aConnection != NULL && this->mGameGroup.get() != NULL)
-        aConnection->SendData(inData, 0, inClient->mClientId, NULL);
+        aConnection->SendData(inData, 0, inClient->GetClientId(), NULL);
 }
 
 // FUNCTION: WON 0x007eeb80
@@ -348,7 +348,7 @@ void RoutingLogic::AdvertiseGame(LobbyGame* inGame)
     if (aConnection == NULL || this->mGameGroup.get() == NULL) return;
     WriteBuffer aBuffer(0, true);
     inGame->WriteSummary(aBuffer);
-    aConnection->CreateDataObject(true, this->mGameGroup->mId, this->mGameDataType,
+    aConnection->CreateDataObject(true, this->mGameGroup->GetId(), this->mGameDataType,
                                   gEmptyWideString, aBuffer.ToByteBuffer(true).get(), NULL);
 }
 
@@ -378,7 +378,7 @@ void RoutingLogic::SetGameInProgress(bool inClose)
 {
     RoutingConnection* aConnection = this->GetConnection();
     if (aConnection == NULL || this->mGameGroup.get() == NULL) return;
-    aConnection->SetGroupFlags(this->mGameGroup->mId, 2, inClose ? 2 : 0, 0, 0, NULL);
+    aConnection->SetGroupFlags(this->mGameGroup->GetId(), 2, inClose ? 2 : 0, 0, 0, NULL);
 }
 
 // FUNCTION: WON 0x007e7b40
@@ -404,7 +404,7 @@ void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
     RoutingClientFlagsChangedOp* inOp = static_cast<RoutingClientFlagsChangedOp*>(inBaseOp);
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
     if (aClient == NULL) return;
-    aClient->mClientFlags = inOp->mClientFlags;
+    aClient->SetClientFlags(inOp->mClientFlags);
     unsigned int aRoomSpec = 4;
     LobbyBroadcastEvent(new ClientChangedEvent(aClient, aRoomSpec, 2), true);
     if (!aClient->IsFriend()) return;
@@ -419,10 +419,10 @@ void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
 bool RoutingLogic::ShouldLocateFriend(LobbyFriend* inFriend, unsigned long inNow)
 {
     LobbyServerList* aServers = this->mServerList.get();
-    bool aLocating = (inFriend->mFlags & 4) != 0;
-    bool aHere = !aLocating && this->mCurrentServer.get() != NULL && inFriend->mAddress == this->mCurrentServer->mAddress;
+    bool aLocating = (inFriend->GetFlags() & 4) != 0;
+    bool aHere = !aLocating && this->mCurrentServer.get() != NULL && inFriend->GetAddress() == this->mCurrentServer->GetAddress();
     return ee_won_routing_should_locate_friend(aLocating, aHere, aServers->GetCount(), this->mCurrentServer.get() != NULL,
-                                               (uint32_t)inNow, (uint32_t)inFriend->mLastLocate);
+                                               (uint32_t)inNow, (uint32_t)inFriend->GetLastLocate());
 }
 
 // FUNCTION: WON 0x007ebd10
@@ -433,20 +433,20 @@ bool RoutingLogic::AnnounceClientLocation(LobbyClient* inClient, bool inForce,
     if (this->mCurrentServer.get() == NULL || inClient == NULL) return false;
     GUIString aChatRoom;
     GUIString aGameRoom;
-    if (inFindByUserId && inClient->mWONUserId != 0) {
-        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inClient->mWONUserId);
+    if (inFindByUserId && inClient->GetWONUserId() != 0) {
+        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inClient->GetWONUserId());
         if (aClient != NULL) inClient = aClient;
         else goto announce;
     }
     if (inClient->IsInChatGroup()) {
         int aKey = inClient->GetChatGroupId();
         LobbyGroup* aGroup = this->mCurrentServer->GetGroup(aKey);
-        if (aGroup != NULL) aChatRoom = aGroup->mName;
+        if (aGroup != NULL) aChatRoom = aGroup->GetName();
     }
     if (inClient->IsInGameGroup()) {
         int aKey = inClient->GetGameGroupId();
         LobbyGroup* aGroup = this->mCurrentServer->GetGroup(aKey);
-        if (aGroup != NULL) aGameRoom = aGroup->mName;
+        if (aGroup != NULL) aGameRoom = aGroup->GetName();
     }
 announce:
     if (aChatRoom.length() == 0 && aGameRoom.length() == 0 && !inForce) return false;
@@ -527,7 +527,7 @@ void RoutingLogic::GroupDeleted(RoutingOp* inBaseOp, LobbyServer* inServer)
 void RoutingLogic::UpdateFriend(LobbyClient* inClient)
 {
     if (!inClient->IsFriend()) return;
-    LobbyFriend* aFriend = LobbyFindFriend(inClient->mWONUserId);
+    LobbyFriend* aFriend = LobbyFindFriend(inClient->GetWONUserId());
     if (aFriend == NULL) return;
     aFriend->SetStatusFromClient(inClient);
     LobbyBroadcastEvent(new FriendChangedEvent(aFriend, 2), true);
@@ -538,8 +538,8 @@ void RoutingLogic::UpdateFriend(LobbyClient* inClient)
 void RoutingLogic::AnnounceFriendLocation(LobbyFriend* inFriend, int inRoomSpec)
 {
     if (inFriend == NULL) return;
-    if (this->mCurrentServer.get() != NULL && inFriend->mAddress == this->mCurrentServer->mAddress) {
-        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inFriend->mUserId);
+    if (this->mCurrentServer.get() != NULL && inFriend->GetAddress() == this->mCurrentServer->GetAddress()) {
+        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inFriend->GetUserId());
         if (aClient != NULL && this->AnnounceClientLocation(aClient, false, inRoomSpec, false)) return;
     }
     LobbyBroadcastEvent(new AnnounceFriendEvent(inFriend, inRoomSpec, 2), true);
@@ -553,8 +553,8 @@ void RoutingLogic::ClientJoinedServer(RoutingOp* inBaseOp, LobbyServer* inServer
     LobbyClient* aClient = inServer->AddClient(inOp->mClientInfo.get());
     LobbyFriend* aFriend = LobbyFindFriend(aClient->GetWONUserId());
     if (aFriend == NULL) return;
-    aClient->mIsFriend = true;
-    aFriend->SetLocation(inServer->mAddress, inServer->mName, 0);
+    aClient->SetIsFriend(true);
+    aFriend->SetLocation(inServer->GetAddress(), inServer->GetName(), 0);
     aFriend->SetAnonymous(aClient->IsAnonymous());
     LobbyBroadcastEvent(new FriendChangedEvent(aFriend, 2), true);
     if (inServer != this->mCurrentServer.get() || aClient->IsAnonymous()) return;
@@ -589,13 +589,13 @@ void RoutingLogic::GroupInvitation(RoutingOp* inBaseOp, LobbyServer* inServer)
     RoutingGroupInvitationOp* inOp = static_cast<RoutingGroupInvitationOp*>(inBaseOp);
     if (inServer != this->mCurrentServer.get()) return;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
-    if (aClient == NULL || aClient->IsIgnored() || aClient->mBlocked) return;
+    if (aClient == NULL || aClient->IsIgnored() || aClient->IsBlocked()) return;
     LobbyGame* aGame = this->mGameList->GetGame(inOp->GetGroupId());
     if (aGame == NULL) return;
-    aGame->mInvited = inOp->GetInvited();
+    aGame->SetInvited(inOp->GetInvited());
     LobbyBroadcastEvent(new GameChangedEvent(aGame, 2), true);
     if (LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_InviteRecv_Sound.get());
-    LobbyBroadcastEvent(new GroupInvitationEvent(4, aGame->mName, aGame->GetGroupId(),
+    LobbyBroadcastEvent(new GroupInvitationEvent(4, aGame->GetName(), aGame->GetGroupId(),
         aClient, inOp->GetInvited(), GUIString(new GUIStringData(inOp->mComment)), false), true);
 }
 
@@ -605,9 +605,9 @@ void RoutingLogic::GroupJoinAttempt(RoutingOp* inBaseOp, LobbyServer* inServer)
 {
     RoutingGroupJoinAttemptOp* inOp = static_cast<RoutingGroupJoinAttemptOp*>(inBaseOp);
     if (inServer != this->mCurrentServer.get() || this->mGameGroup.get() == NULL ||
-        inOp->mGroupId != this->mGameGroup->mId) return;
+        inOp->mGroupId != this->mGameGroup->GetId()) return;
     LobbyClient* aClient = inServer->GetClient(inOp->GetClientId());
-    if (aClient == NULL || aClient->mIgnored || aClient->mBlocked) return;
+    if (aClient == NULL || aClient->IsIgnored() || aClient->IsBlocked()) return;
     if (LobbyGetStagingSoundEffects()) LobbyPlaySound(::LobbyGlobal_AskToJoinRecv_Sound.get());
     LobbyBroadcastEvent(new GroupJoinAttemptEvent(6, aClient,
         GUIString(new GUIStringData(inOp->mComment))), true);
@@ -712,13 +712,13 @@ void RoutingLogic::YouWereMuted(RoutingOp* inBaseOp, LobbyServer* inServer)
     GUIString aRoomName;
     if (aGroupId == 0xffff) {
         aRoomSpec = 0;
-        aRoomName = inServer->mName;
+        aRoomName = inServer->GetName();
     } else if (this->mGameGroup.get() != NULL && aGroupId == this->mGameGroup->GetId()) {
         aRoomSpec = 2;
-        aRoomName = this->mGameGroup->mName;
+        aRoomName = this->mGameGroup->GetName();
     } else if (this->mChatGroup.get() != NULL && aGroupId == this->mChatGroup->GetId()) {
         aRoomSpec = 1;
-        aRoomName = this->mChatGroup->mName;
+        aRoomName = this->mChatGroup->GetName();
     } else return;
     LobbyClient* aClient = inServer->GetMyClient();
     LobbyBroadcastEvent(new ClientModeratedEvent(aClient, ModeratedRoomSpec(aRoomSpec),
@@ -842,8 +842,8 @@ void RoutingLogic::DataObjectCreated(RoutingOp* inBaseOp, LobbyServer* inServer)
         aGame->ReadGroup(aGroup);
         if (this->mGameGroup.get() != NULL) {
             LobbyGame* aMyGame = GetMyLobbyGame();
-            if (aMyGame != NULL && aMyGame->mIsHost && aGame->GetGroupId() == aMyGame->mGroupId)
-                aGame->mInvited = true;
+            if (aMyGame != NULL && aMyGame->GetIsHost() && aGame->GetGroupId() == aMyGame->GetGroupId())
+                aGame->SetInvited(true);
         }
         if (LobbyGetAutoPingGames()) LobbyPingGame(aGame, false);
     }
@@ -869,13 +869,13 @@ void RoutingLogic::YouWereBanned(RoutingOp* inBaseOp, LobbyServer* inServer)
     int aRoomSpec;
     if (aGroupId == 0xffff) {
         aRoomSpec = 0;
-        aRoomName = inServer->mName;
+        aRoomName = inServer->GetName();
     } else if (this->mGameGroup.get() != NULL && aGroupId == this->mGameGroup->GetId()) {
         aRoomSpec = 2;
-        aRoomName = this->mGameGroup->mName;
+        aRoomName = this->mGameGroup->GetName();
     } else if (this->mChatGroup.get() != NULL && aGroupId == this->mChatGroup->GetId()) {
         aRoomSpec = 1;
-        aRoomName = this->mChatGroup->mName;
+        aRoomName = this->mChatGroup->GetName();
     } else return;
     LobbyClient* aMyClient = inServer->GetMyClient();
     if (IsGameRoomSpec(aRoomSpec)) {
@@ -911,13 +911,13 @@ bool RoutingLogic::JoinDefaultRoom(bool inShowStatus)
     while (anItr < aServer->GetGroupCount()) {
         LobbyGroup* aGroup = aServer->GroupAt(anItr);
         if (aGroup->IsPublicChatGroup()) {
-            if (aGroup->mName == LobbyGetLastRoomName()) {
+            if (aGroup->GetName() == LobbyGetLastRoomName()) {
                 aBestGroup = aGroup;
                 break;
             }
             if (aBestGroup == NULL ||
-                (static_cast<int>(aGroup->mNumClients) > static_cast<int>(aBestGroup->mNumClients) &&
-                 static_cast<int>(aGroup->mNumClients) < 50)) aBestGroup = aGroup;
+                (static_cast<int>(aGroup->GetNumClients()) > static_cast<int>(aBestGroup->GetNumClients()) &&
+                 static_cast<int>(aGroup->GetNumClients()) < 50)) aBestGroup = aGroup;
         }
         anItr++;
     }
@@ -936,7 +936,7 @@ void RoutingLogic::RefreshGameList()
     this->mGameList->Rewind();
     while (this->mGameList->HasMore()) {
         LobbyGame* aGame = this->mGameList->Next();
-        if (!aGame->mIsFiltered) LobbyPingGame(aGame, false);
+        if (!aGame->GetIsFiltered()) LobbyPingGame(aGame, false);
     }
     LobbyBroadcastLobbyEvent(100058, true);
 }
@@ -957,18 +957,18 @@ void RoutingLogic::JoinedGroup(unsigned short inGroupId, bool inGameGroup)
             aConnection->SubscribeDataObject(0xffff, this->mGameDataType, false,
                 new RoutingOpCompletion(&RoutingLogic::ReadGameListComplete, this));
     } else if (anOldGroup != NULL && this->mCurrentServer.get() != NULL &&
-               this->mCurrentServer->mConnection.get() != NULL) {
-        this->mCurrentServer->mConnection->LeaveGroup(anOldGroup->GetId(), NULL);
+               this->mCurrentServer->GetConnection().get() != NULL) {
+        this->mCurrentServer->GetConnection()->LeaveGroup(anOldGroup->GetId(), NULL);
     }
     if (this->mCurrentServer.get() == NULL) return;
     LobbyGroup* aGroup = this->mCurrentServer->GetGroup(inGroupId);
     if (inGameGroup) this->mGameGroup = aGroup; else this->mChatGroup = aGroup;
     if (aGroup == NULL) return;
     if (aGroup->IsPublicChatGroup() && this->mCurrentServer.get() != NULL)
-        LobbySetLastRoom(this->mCurrentServer->mName, aGroup->mName);
+        LobbySetLastRoom(this->mCurrentServer->GetName(), aGroup->GetName());
     unsigned int aRoomSpec = (inGameGroup ? 2 : 1) | 4;
-    LobbyBroadcastEvent(new JoinedRoomEvent(this->mCurrentServer->mName, aGroup->mName,
-        aRoomSpec, this->mCurrentServer->GetMyClientId(), aGroup->mClients.get()), true);
+    LobbyBroadcastEvent(new JoinedRoomEvent(this->mCurrentServer->GetName(), aGroup->GetName(),
+        aRoomSpec, this->mCurrentServer->GetMyClientId(), aGroup->GetClients().get()), true);
 }
 
 // FUNCTION: WON 0x007e8df0
@@ -1000,7 +1000,7 @@ void RoutingLogic::ReadGameListComplete(RoutingOp* inBaseOp, LobbyServer* inServ
 void RoutingLogic::AcceptClient(AcceptClientEvent* inEvent)
 {
     if (this->mCurrentServer.get() == NULL || this->mGameGroup.get() == NULL) return;
-    RoutingConnection* aConnection = this->mCurrentServer->mConnection.get();
+    RoutingConnection* aConnection = this->mCurrentServer->GetConnection().get();
     if (aConnection == NULL || inEvent->mClient.get() == NULL) return;
     LobbyClient* aClient = this->mCurrentServer->GetClient(inEvent->mClient->GetClientId());
     if (aClient != inEvent->mClient.get()) return;
@@ -1014,14 +1014,14 @@ void RoutingLogic::RemoveFriend(LobbyFriend* inFriend)
 {
     if (inFriend == NULL) return;
     if (this->mCurrentServer.get() != NULL) {
-        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inFriend->mUserId);
+        LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(inFriend->GetUserId());
         if (aClient != NULL) {
-            aClient->mIsFriend = false;
+            aClient->SetIsFriend(false);
             LobbyBroadcastEvent(new ClientChangedEvent(aClient, 4, 2), true);
         }
     }
     LobbyBroadcastEvent(new FriendChangedEvent(inFriend, 1), true);
-    LobbyRemoveFriend(inFriend->mUserId);
+    LobbyRemoveFriend(inFriend->GetUserId());
 }
 
 // FUNCTION: WON 0x007ec870
@@ -1036,7 +1036,7 @@ void RoutingLogic::FriendAction(FriendActionEvent* inEvent)
     switch (anAction) {
     case 5:
         if (this->mCurrentServer.get() != NULL) {
-            LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(aFriend->mUserId);
+            LobbyClient* aClient = this->mCurrentServer->FindClientByWONId(aFriend->GetUserId());
             if (aClient != NULL) {
                 this->ShowClientOptions(aClient, aRoomSpec);
                 return;
@@ -1091,12 +1091,12 @@ LobbyGame* RoutingLogic::SelectGame(int inGameType, unsigned short inPingLimit)
 void RoutingLogic::JumpToRoom(JumpToRoomEvent* inEvent)
 {
     if (this->IsConnecting() || this->mCurrentServer.get() == NULL ||
-        this->mCurrentServer->mAddress != inEvent->mAddress) return;
+        this->mCurrentServer->GetAddress() != inEvent->mAddress) return;
     LobbyGroup* aGroup = this->mCurrentServer->GetGroup(inEvent->mGroupId);
     if (aGroup == NULL) return;
     if (aGroup->IsGameGroup()) {
         LobbyGame* aGame = this->mGameList->GetGame(inEvent->mGroupId);
-        if (aGame != NULL && aGame->mName == inEvent->mRoomName)
+        if (aGame != NULL && aGame->GetName() == inEvent->mRoomName)
             LobbyJoinGame(aGame);
     } else {
         this->JoinChatRoom(this->mCurrentServer.get(), inEvent->mGroupId);
@@ -1142,7 +1142,7 @@ void RoutingLogic::QuickPlay(QuickPlayEvent* inEvent)
 void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
 {
     if (this->mCurrentServer.get() == NULL) return;
-    RoutingConnection* aConnection = this->mCurrentServer->mConnection.get();
+    RoutingConnection* aConnection = this->mCurrentServer->GetConnection().get();
     if (aConnection == NULL) return;
     if (!((inEvent->GetRoomSpec() & 4) ? true : false)) return;
     LobbyClient* aClient = inEvent->GetClient();
@@ -1156,13 +1156,13 @@ void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
         break;
     case 1: {
         if (aClient->GetWONUserId() == 0 || aClient->IsFriend() || !this->CanAddFriend()) return;
-        aClient->mIsFriend = true;
+        aClient->SetIsFriend(true);
         LobbyBroadcastEvent(new ClientChangedEvent(aClient, 4, 2), true);
-        LobbyFriend* aFriend = LobbyAddFriend(aClient->mName, aClient->GetWONUserId());
+        LobbyFriend* aFriend = LobbyAddFriend(aClient->GetName(), aClient->GetWONUserId());
         if (aFriend == NULL) return;
         LobbyClient* aCurrentClient = this->mCurrentServer->FindClientByWONId(aClient->GetWONUserId());
         if (aCurrentClient != NULL) {
-            aFriend->SetLocation(this->mCurrentServer->mAddress, this->mCurrentServer->mName, 0);
+            aFriend->SetLocation(this->mCurrentServer->GetAddress(), this->mCurrentServer->GetName(), 0);
             aFriend->SetStatusFromClient(aCurrentClient);
         }
         LobbyBroadcastEvent(new FriendChangedEvent(aFriend, 0), true);
@@ -1170,7 +1170,7 @@ void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
     }
     case 9: {
         if (!aClient->IsFriend()) return;
-        aClient->mIsFriend = false;
+        aClient->SetIsFriend(false);
         LobbyBroadcastEvent(new ClientChangedEvent(aClient, 4, 2), true);
         LobbyFriend* aFriend = LobbyFindFriend(aClient->GetWONUserId());
         if (aFriend != NULL)
@@ -1205,7 +1205,7 @@ void RoutingLogic::ClientAction(ClientActionEvent* inEvent)
         LobbySetClientIgnored(aClient, false, 4);
         break;
     case 16:
-        LobbyBroadcastEvent(new SetChatInputEvent(2, aClient->mName,
+        LobbyBroadcastEvent(new SetChatInputEvent(2, aClient->GetName(),
                                             inEvent->GetRoomSpec(), false), true);
         break;
     case 17: {
@@ -1229,13 +1229,13 @@ bool RoutingLogic::InviteClient(LobbyClient* inClient, bool inInvite,
 {
     if (inClient == NULL || this->mGameGroup.get() == NULL) return false;
     LobbyGame* aMyGame = GetMyLobbyGame();
-    if (aMyGame == NULL || !aMyGame->mIsHost) return false;
+    if (aMyGame == NULL || !aMyGame->GetIsHost()) return false;
     RoutingConnection* aConnection = this->GetConnection();
     if (aConnection == NULL) return false;
-    inClient->mInvited = inInvite;
+    inClient->SetInvited(inInvite);
     aConnection->InviteClient(this->mGameGroup->GetId(), inClient->GetClientId(), inInvite,
                                inComment, NULL);
-    LobbyBroadcastEvent(new GroupInvitationEvent(4, this->mGameGroup->mName,
+    LobbyBroadcastEvent(new GroupInvitationEvent(4, this->mGameGroup->GetName(),
         this->mGameGroup->GetId(), inClient, inInvite, inComment, true), true);
     return true;
 }
@@ -1245,7 +1245,7 @@ bool RoutingLogic::InviteClient(LobbyClient* inClient, bool inInvite,
 void RoutingLogic::ChatInput(Component* inTarget)
 {
     if (this->mCurrentServer.get() == NULL) return;
-    RoutingConnection* aConnection = this->mCurrentServer->mConnection.get();
+    RoutingConnection* aConnection = this->mCurrentServer->GetConnection().get();
     if (aConnection == NULL) return;
     ChatCommandParser* aParser = LobbyGetChatCommandParser();
     if (aParser == NULL || !(aParser->GetRoomFlags() & 4)) return;
@@ -1329,10 +1329,10 @@ void RoutingLogic::ChatInput(Component* inTarget)
         else this->EditBadUserList(true, true, aParser->GetRoomFlags());
         break;
     case LobbyChatCommand_Ignore:
-        if (aTarget != NULL) LobbySetClientIgnored(aTarget, !aTarget->mIgnored, 4);
+        if (aTarget != NULL) LobbySetClientIgnored(aTarget, !aTarget->IsIgnored(), 4);
         break;
     case LobbyChatCommand_Block:
-        if (aTarget != NULL) LobbySetClientBlocked(aTarget, !aTarget->mBlocked, 4);
+        if (aTarget != NULL) LobbySetClientBlocked(aTarget, !aTarget->IsBlocked(), 4);
         break;
     case LobbyChatCommand_Unban:
         this->EditBadUserList(false, false, aParser->GetRoomFlags());
@@ -1443,7 +1443,7 @@ void RoutingLogic::JoinFriendsRoom(JoinFriendsRoomEvent* inEvent)
     if (this->IsConnecting()) return;
     LobbyFriend* aFriend = inEvent->mFriend.get();
     if (aFriend == NULL) return;
-    IPAddr anAddress = aFriend->mAddress;
+    IPAddr anAddress = aFriend->GetAddress();
     if (!anAddress.IsValid()) return;
     LobbyServer* aServer = this->GetServer(anAddress);
     if (aServer == NULL) return;
@@ -1452,9 +1452,9 @@ void RoutingLogic::JoinFriendsRoom(JoinFriendsRoomEvent* inEvent)
     LobbyClient* aClient = aServer->FindClientByWONId(aFriend->GetUserId());
     if (aClient == NULL) return;
     unsigned short aGroupId = 0;
-    if (aClient->IsInChatGroup()) aGroupId = aClient->mChatGroupId;
+    if (aClient->IsInChatGroup()) aGroupId = aClient->GetChatGroupId();
     if (this->mChatGroup.get() != NULL && aServer == this->mCurrentServer.get() &&
-        aGroupId == this->mChatGroup->mId) {
+        aGroupId == this->mChatGroup->GetId()) {
         LobbyMessageBox(::RoutingLogic_AlreadyJoinedTitle_String, ::RoutingLogic_AlreadyInRoom_String);
         return;
     }
@@ -1475,7 +1475,7 @@ bool RoutingLogic::CreateGroup(LobbyServer* inServer,
     int inRoomFlags, unsigned short& outGroupId)
 {
     if (inServer != NULL) {
-    SmartPtr<RoutingConnection> aConnection = inServer->mConnection;
+    SmartPtr<RoutingConnection> aConnection = inServer->GetConnection();
     if (aConnection.get() == NULL) return false;
     SmartPtr<RoutingCreateGroupOp> anOp = new RoutingCreateGroupOp(aConnection.get());
     anOp->SetGroupPassword(inPassword);
@@ -1497,7 +1497,7 @@ bool RoutingLogic::CreateGroup(LobbyServer* inServer,
 bool RoutingLogic::JoinGroup(LobbyServer* inServer, int inGroupId)
 {
     if (inServer == NULL) return false;
-    SmartPtr<RoutingConnection> aConnection = inServer->mConnection;
+    SmartPtr<RoutingConnection> aConnection = inServer->GetConnection();
     if (aConnection.get() == NULL) return false;
     SmartPtr<LobbyGroup> aGroup = inServer->GetGroup(inGroupId);
     if (aGroup.get() == NULL) {
@@ -1677,7 +1677,7 @@ void RoutingLogic::EditBadUserList(bool inMuted, bool inServerWide, int inRoomSp
     if (!inServerWide) {
         LobbyGroup* group = this->GetGroup(inRoomSpec);
         if (group == NULL) return;
-        groupId = group->mId;
+        groupId = group->GetId();
     }
     SmartPtr<RoutingGetBadUserListOp> op =
         new RoutingGetBadUserListOp(connection, listType, groupId, 0x0f);
@@ -1710,7 +1710,7 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
 {
     if(inFriend==NULL) return;
     if(!this->ShouldLocateFriend(inFriend,(unsigned long)time(NULL))) {
-        if(!(inFriend->mFlags&4)) this->AnnounceFriendLocation(inFriend,inRoomSpec);
+        if(!(inFriend->GetFlags()&4)) this->AnnounceFriendLocation(inFriend,inRoomSpec);
         return;
     }
     UDPManager* manager=LobbyGetUDPManager();
@@ -1719,7 +1719,7 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
     LobbyServerList* servers=this->mServerList.get();
     for(size_t it=0;it<servers->GetCount();++it) {
         IPAddr anAddress=servers->AddressAt(it);
-        if(this->mCurrentServer.get()!=NULL && this->mCurrentServer->mAddress==anAddress) continue;
+        if(this->mCurrentServer.get()!=NULL && this->mCurrentServer->GetAddress()==anAddress) continue;
         SmartPtr<RoutingGetUserStatusOp> op=new RoutingGetUserStatusOp(anAddress,manager);
         op->AddWONUserId(inFriend->GetUserId());
         this->RunOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete,this),10000);
@@ -1728,7 +1728,7 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
     if(count<=0)
         return;
     inFriend->StartLocate(inRoomSpec);
-    inFriend->mLastSearch=count;
+    inFriend->SetLastSearch(count);
     LobbyBroadcastEvent(new FriendChangedEvent(inFriend,2),true);
 }
 
@@ -1745,14 +1745,14 @@ void RoutingLogic::GetUserStatusComplete(AsyncOp* inBaseOp)
     for(RoutingGetUserStatusOp::FriendStatusMap::iterator it=op->mFriendStatusMap.begin();
         it!=op->mFriendStatusMap.end();++it) {
         LobbyFriend* friendInfo=LobbyFindFriend(it->first);
-        if(friendInfo==NULL || !(friendInfo->mFlags&4)) continue;
+        if(friendInfo==NULL || !(friendInfo->GetFlags()&4)) continue;
         bool found=false;
         if(it->second!=0 && server!=NULL) {
-            friendInfo->SetLocation(server->mAddress,server->mName,it->second);
+            friendInfo->SetLocation(server->GetAddress(),server->GetName(),it->second);
             found=true;
         }
-        --friendInfo->mLastSearch;
-        int remaining=friendInfo->mLastSearch;
+        friendInfo->SetLastSearch(friendInfo->GetLastSearch()-1);
+        int remaining=friendInfo->GetLastSearch();
         if(remaining>0 && !found) continue;
         lastChanged=friendInfo;
         ++changed;
@@ -1777,7 +1777,7 @@ void RoutingLogic::LocateFriends()
     LobbyServerList* servers = this->mServerList.get();
     int count = 0;
     for (size_t scanServer = 0; scanServer < servers->GetCount(); ++scanServer) {
-        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == servers->AddressAt(scanServer))
+        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->GetAddress() == servers->AddressAt(scanServer))
             continue;
         ++count;
     }
@@ -1788,7 +1788,7 @@ void RoutingLogic::LocateFriends()
         LobbyFriend* friendInfo = LobbyGetFriendAt(friendItr);
         if (this->ShouldLocateFriend(friendInfo,now)) {
             friendInfo->StartLocate(0);
-            friendInfo->mLastSearch = count;
+            friendInfo->SetLastSearch(count);
             requested[friendInfo->GetUserId()] = 0;
         }
         ++friendItr;
@@ -1796,7 +1796,7 @@ void RoutingLogic::LocateFriends()
     if (requested.empty()) return;
     for (size_t queryServer = 0; queryServer < servers->GetCount(); ++queryServer) {
         IPAddr anAddress = servers->AddressAt(queryServer);
-        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == anAddress)
+        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->GetAddress() == anAddress)
             continue;
         SmartPtr<RoutingGetUserStatusOp> op = new RoutingGetUserStatusOp(anAddress,manager);
         op->mFriendStatusMap = requested;
@@ -1843,7 +1843,7 @@ bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
     connection->mCompletions[49] = new ::RoutingOpCompletion(&RoutingLogic::ServerShutdownAborted, this);
 
     SmartPtr<ServerConnectionConnectOp> connectOp =
-        new ServerConnectionConnectOp(connection.get(), inServer->mAddress);
+        new ServerConnectionConnectOp(connection.get(), inServer->GetAddress());
     LobbyRunOpWithStatus(connectOp.get(), ::RoutingLogic_ConnectTitle_String, ::RoutingLogic_ConnectDetails_String, 1, 0);
     if (connectOp->GetStatus() != WS_Success) return false;
 
@@ -1851,7 +1851,7 @@ bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
     if (this->mWantToBeModerator) registerFlags = 0x1d;
     SmartPtr<RoutingRegisterClientOp> registerOp = new RoutingRegisterClientOp(connection.get());
     registerOp->mRegisterFlags = registerFlags;
-    registerOp->mReconnectId = LobbyGetReconnectId(inServer->mAddress);
+    registerOp->mReconnectId = LobbyGetReconnectId(inServer->GetAddress());
     unsigned long clientFlags = 0;
     if (!LobbyGetFilterDirtyWords()) clientFlags = 4;
     if (LobbyGetAnonymousToFriends() || inFlag) clientFlags |= 0x40;
@@ -1859,9 +1859,9 @@ bool RoutingLogic::ConnectToServer(LobbyServer* inServer, bool inFlag)
     LobbyRunOpWithStatus(registerOp.get(), ::RoutingLogic_RegisterTitle_String, ::RoutingLogic_RegisterDetails_String, 1, 0);
     if (registerOp->GetStatus() != WS_Success) return false;
 
-    LobbySetReconnectId(inServer->mAddress, registerOp->GetReconnectId());
+    LobbySetReconnectId(inServer->GetAddress(), registerOp->GetReconnectId());
     inServer->SyncClients(registerOp->GetClientMap());
-    inServer->mMyClientId = registerOp->GetClientId();
+    inServer->SetMyClientId(registerOp->GetClientId());
     connection->SetCloseCompletion(new LogicCompletion<RoutingLogic>(&RoutingLogic::ConnectionClosed, this));
     if (inFlag && !LobbyGetAnonymousToFriends()) connection->SetClientFlags(0x40, 0, 0, 0, NULL);
 
@@ -1897,8 +1897,8 @@ void RoutingLogic::AddFriend()
     if(this->mCurrentServer.get()) {
         LobbyClient* client=this->mCurrentServer->FindClientByWONId(friendEntry->GetUserId());
         if(client) {
-            client->mIsFriend=true;
-            friendEntry->SetLocation(this->mCurrentServer->mAddress,this->mCurrentServer->mName,0);
+            client->SetIsFriend(true);
+            friendEntry->SetLocation(this->mCurrentServer->GetAddress(),this->mCurrentServer->GetName(),0);
             friendEntry->SetStatusFromClient(client);
             LobbyBroadcastEvent(new ClientChangedEvent(client,4,2),true);
         }
@@ -1918,10 +1918,10 @@ void RoutingLogic::QueryServerGroupsDone(AsyncOp* inBaseOp)
     RoutingGetGroupListReqOp* op=static_cast<RoutingGetGroupListReqOp*>(inBaseOp);
     LobbyServer* server=servers->FindServer(op->GetAddr());
     if(!server) return;
-    server->mQueryingGroups=false;
+    server->SetQueryingGroups(false);
     if(op->GetStatus()!=WS_Success) {
         this->mLastServerRefresh=0;
-        server->mLastPing=0;
+        server->SetLastPing(0);
     }
     server->SyncGroups(op->mOp->mGroupMap,false);
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
@@ -1933,13 +1933,13 @@ void RoutingLogic::HandleQueryServerGroups(QueryServerGroupsEvent* event)
     LobbyServer* server=this->GetServer(event->mAddress);
     if(!server) return;
     time_t now=time(NULL);
-    if(server->IsConnected() || server->mQueryingGroups || static_cast<long>(now-server->GetLastPing())<30)
+    if(server->IsConnected() || server->GetQueryingGroups() || static_cast<long>(now-server->GetLastPing())<30)
         return;
     server->ClearGroups();
     LobbyBroadcastEvent(new ServerChangedEvent(server,2),true);
-    server->mQueryingGroups=true;
-    server->mLastPing=now;
-    SmartPtr<RoutingGetGroupListReqOp> op=new RoutingGetGroupListReqOp(server->mAddress,0);
+    server->SetQueryingGroups(true);
+    server->SetLastPing(now);
+    SmartPtr<RoutingGetGroupListReqOp> op=new RoutingGetGroupListReqOp(server->GetAddress(),0);
     op->mOp->mFlags=0x29;
     this->RunTrackedOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::QueryServerGroupsDone,this),0);
 }

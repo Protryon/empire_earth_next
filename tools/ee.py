@@ -13,7 +13,6 @@ MODULE_SRC = {
     "dx7hrtnl": "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins",
     "exe": "",
     "jpeg": "ThirdParty/libjpeg",
-    "exeimg": "ThirdParty",
     "won": "Empire Earth/WONAPI",
 }
 EEX_INCLUDE_DIRS = ["Low-Level Engine/Thread System", "Low-Level Engine/Graphics Engine",
@@ -38,7 +37,6 @@ MODULE_FLAGS = {
     "dx7hrtnl": f"-MT -GR {FP} -DEE_STATIC -DLLE_CURRENT_HEADERS",
     "exe": f"-MT -GR {FP} -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
     "jpeg": f"-MT {FP}",
-    "exeimg": f"-MT {FP}",
     # the WON library (online lobby, routing, the lobby GUI toolkit): C++ exceptions on (it was built -GX)
     "won": f"-MT -GR -EHsc {FP} -DEE_STATIC",
 }

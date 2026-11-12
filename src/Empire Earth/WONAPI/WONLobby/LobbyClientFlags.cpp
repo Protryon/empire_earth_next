@@ -23,7 +23,7 @@ void LobbySetClientBlocked(LobbyClient* client,bool inBlocked,unsigned int roomS
     WONLobbyPrv* data=gLobbyData.get();
     if(data==NULL || !data->mConfig->mCDKeyCheck) return;
     if(client->IsBlocked()==inBlocked) return;
-    client->mBlocked=inBlocked;
+    client->SetBlocked(inBlocked);
     LobbyBroadcastEvent(new ClientChangedEvent(client,roomSpec,2),true);
 }
 // FUNCTION: WON 0x0075b7b0
@@ -32,8 +32,8 @@ void LobbySetClientIgnored(LobbyClient* client,bool inIgnored,unsigned int roomS
 {
     if(gLobbyData.get()==NULL) return;
     if(client->IsIgnored()==inIgnored) return;
-    client->mIgnored=inIgnored;
-    LobbySetNameIgnored(client->mName,inIgnored);
+    client->SetIgnored(inIgnored);
+    LobbySetNameIgnored(client->GetName(),inIgnored);
     LobbyBroadcastEvent(new ClientChangedEvent(client,roomSpec,2),true);
 }
 

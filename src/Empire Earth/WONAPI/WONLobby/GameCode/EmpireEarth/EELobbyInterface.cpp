@@ -215,7 +215,7 @@ UWideString& EEGetLocalAddress(NEProtocol* inProtocol, unsigned long inAdapter)
     if (theGame == NULL)
         return inProtocol->GetLocalAddress(inAdapter);
     static UWideString theAddress;
-    theAddress = theGame->mAddress.GetHostString(true).c_str();
+    theAddress = theGame->GetAddress().GetHostString(true).c_str();
     return theAddress;
 }
 
@@ -229,7 +229,7 @@ bool EELobbyHostGame()
     UString theUnused3;
     UWideString theUnused4;
     EEGameOptionsPlayer theMe;
-    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->mName);
+    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName());
     EELobbySyncNetworkAdapter();
     bool theFlag = LobbyIsBehindFirewall();
     if (gCommunications != NULL) {
@@ -623,7 +623,7 @@ void EELobbyJoinGame()
     UString theService;
     UWideString theGameName;
     EEGameOptionsPlayer thePlayer;
-    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->mName);
+    gPlayerName = EELobbyToWideString(GetMyLobbyClient()->GetName());
     EELobbySyncNetworkAdapter();
     bool theFlag = LobbyIsBehindFirewall();
     if (gCommunications == NULL) {
@@ -644,8 +644,8 @@ void EELobbyJoinGame()
         gGameOptions.mLock->WriteUnlock();
         theService = "EEService";
         theGameName = gEmptyString;
-        theAddress = GetMyLobbyGame()->mAddress.GetHostString(true).c_str();
-        UWideString theName = EELobbyToWideString(GetMyLobbyClient()->mName);
+        theAddress = GetMyLobbyGame()->GetAddress().GetHostString(true).c_str();
+        UWideString theName = EELobbyToWideString(GetMyLobbyClient()->GetName());
         if (static_cast<NESynchronousClient*>(gCommunications)->Connect(theAddress, theService, theGameName) == 0) {
             NEMClientConnectionRequest* theRequest =
                 new NEMClientConnectionRequest(theName, gGameVersion, gBinaryChecksum, theFlag);

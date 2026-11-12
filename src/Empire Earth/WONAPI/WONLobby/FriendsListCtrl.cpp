@@ -112,7 +112,7 @@ FriendsListItem* FriendsListCtrl::FindFriend(LobbyFriend* inFriend)
 {
     for(int i=0;i<this->mFriendsList->GetNumItems();i++) {
         FriendsListItem* item=static_cast<FriendsListItem*>(this->mFriendsList->GetItem(i));
-        if(item->mFriend.get()!=NULL&&item->mFriend->mUserId==inFriend->mUserId)
+        if(item->mFriend.get()!=NULL&&item->mFriend->GetUserId()==inFriend->GetUserId())
             return item;
     }
     return NULL;

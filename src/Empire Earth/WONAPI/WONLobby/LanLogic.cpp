@@ -317,7 +317,7 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
         aLocalNet[1] = aLocalBytes[3];
     }
     short aStatus = ee_won_lan_join_status(aGame->GetGameType(), aPeerNet[0], aPeerNet[1], aLocalNet[0], aLocalNet[1],
-                                           inPassword == std::wstring(aGame->mPassword));
+                                           inPassword == std::wstring(aGame->GetPassword()));
     if (aStatus != 0) {
         std::string aRefusal;
         ee_won_lan_join_refused(aStatus, LanAppendBytes, &aRefusal);
@@ -325,10 +325,10 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
         return;
     }
     SmartPtr<LobbyLanClient> aClient = new LobbyLanClient;
-    aClient->mName = inName;
-    aClient->mClientId = this->GetNextClientId();
+    aClient->SetName(inName);
+    aClient->SetClientId(this->GetNextClientId());
     this->mClients->AddClient(aClient.get());
-    std::string aName = LanUtf16(aClient->mName);
+    std::string aName = LanUtf16(aClient->GetName());
     std::string aNotify;
     ee_won_lan_client_joined(aClient->GetClientId(), reinterpret_cast<const uint8_t*>(aName.data()), aName.length(),
                              LanAppendBytes, &aNotify);
@@ -340,7 +340,7 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
     for (size_t anItr = 0; anItr < this->mClients->GetCount(); ++anItr) {
         LobbyClient* aListedClient = this->mClients->ClientAt(anItr);
         anIds.push_back(aListedClient->GetClientId());
-        aNames += LanUtf16(aListedClient->mName);
+        aNames += LanUtf16(aListedClient->GetName());
         anOffsets.push_back(aNames.length());
     }
     std::string aReply;
@@ -371,12 +371,12 @@ int LanLogic::ReadJoinReply(const ByteBuffer* inBuffer, LobbyGame* inGame)
     int aStatus = ee_won_lan_read_join_reply(reinterpret_cast<const uint8_t*>(inBuffer->data()), inBuffer->length(),
                                              &aHaveCaptain, &aCaptainId, &aMyId, Players::Add, &aPlayers);
     if (aHaveCaptain)
-        inGame->mCaptainId = aCaptainId;
+        inGame->SetCaptainId(aCaptainId);
     for (size_t i = 0; i < aPlayers.mList.size(); ++i) {
         unsigned short anId = aPlayers.mList[i].first;
         SmartPtr<LobbyLanClient> aClient = new LobbyLanClient;
-        aClient->mClientId = anId;
-        aClient->mName = GUIString(new GUIStringData(aPlayers.mList[i].second));
+        aClient->SetClientId(anId);
+        aClient->SetName(GUIString(new GUIStringData(aPlayers.mList[i].second)));
         this->mClients->AddClient(aClient.get());
         switch (ee_won_lanlogic_reply_role(anId, aMyId, aCaptainId)) {
         case 1: this->mMyClient = aClient; break;
@@ -523,8 +523,8 @@ void LanLogic::HandleClientJoined(unsigned short inId, const std::wstring& inNam
         aClient = this->mClients->FindClient(inId);
     else {
         SmartPtr<LobbyLanClient> aNewClient = new LobbyLanClient;
-        aNewClient->mClientId = inId;
-        aNewClient->mName = GUIString(new GUIStringData(inName));
+        aNewClient->SetClientId(inId);
+        aNewClient->SetName(GUIString(new GUIStringData(inName)));
         aClient = aNewClient.get();
         this->mClients->AddClient(aClient.get());
     }
@@ -587,7 +587,7 @@ void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSender
     LobbyClient* aSender = this->mClients->FindClient(inSenderId);
     if (aSender == NULL)
         return;
-    if (aSender->mIgnored)
+    if (aSender->IsIgnored())
         return;
     LobbyClient* aTarget = NULL;
     unsigned short aFlags = ee_won_lan_chat_line_flags(inFlags);
@@ -600,7 +600,7 @@ void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSender
                 LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
             ChatCommandParser* aParser = LobbyGetChatCommandParser();
             if (aParser != NULL)
-                aParser->SetInput(aSender->mName);
+                aParser->SetInput(aSender->GetName());
         }
     }
     LobbyBroadcastEvent(new RecvChatEvent(8, aFlags, aSender,
@@ -696,8 +696,8 @@ void LanLogic::HandleChangeDirectConnect(ChangeDirectConnectEvent* inEvent)
 {
     if (inEvent->IsDelete()) {
         if (inEvent->mGame.get() != NULL) {
-            LobbyRemoveDirectConnect(inEvent->mGame->mAddress);
-            this->mDirectGames->RemoveGame(inEvent->mGame->mAddress);
+            LobbyRemoveDirectConnect(inEvent->mGame->GetAddress());
+            this->mDirectGames->RemoveGame(inEvent->mGame->GetAddress());
             LobbyBroadcastEvent(new GameChangedEvent(inEvent->mGame.get(), 1), true);
         }
     }
@@ -723,7 +723,7 @@ void LanLogic::HandleChangeDirectConnect(ChangeDirectConnectEvent* inEvent)
             aName = this->mDirectConnectDialog->GetAddress();
         bool aFlag = false;
         LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(anAddress, &aFlag);
-        aGame->mName = aName;
+        aGame->SetName(aName);
         LobbyAddDirectConnect(anAddress, aName);
         LobbyBroadcastEvent(new GameChangedEvent(aGame, ee_won_lanlogic_direct_event(aFlag)), true);
         }
@@ -756,7 +756,7 @@ void LanLogic::HandleClientAction(ClientActionEvent* inEvent)
         LobbySetClientIgnored(aClient, false, 8);
         return;
     case 16:
-        LobbyBroadcastEvent(new SetChatInputEvent(2, aClient->mName,
+        LobbyBroadcastEvent(new SetChatInputEvent(2, aClient->GetName(),
             inEvent->mRoomSpec, false), true);
         return;
     case 7:
@@ -791,10 +791,10 @@ void LanLogic::HandleChatCommand(Component* inTarget)
                                                                 aClient != NULL);
     switch (aCommand.action) {
     case 1:
-        this->SendChat(aParser->GetText(), aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
+        this->SendChat(aParser->GetText(), aCommand.flags, aCommand.whisper ? aClient->GetClientId() : 0);
         return;
     case 2:
-        LobbySetClientIgnored(aClient, !aClient->mIgnored, 4);
+        LobbySetClientIgnored(aClient, !aClient->IsIgnored(), 4);
         return;
     case 3:
         LobbySendEventTo(new ChatCommandErrorEvent(::RoutingLogic_InvalidCommand_String), inTarget);
@@ -833,7 +833,7 @@ void LanLogic::EnterLanScreen()
     this->mDirectGames->Clear();
     for (size_t anItr = 0; anItr < LobbyGetDirectConnectCount(); ++anItr) {
         LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(LobbyGetDirectConnectAddressAt(anItr), NULL);
-        aGame->mName = LobbyGetDirectConnectNameAt(anItr);
+        aGame->SetName(LobbyGetDirectConnectNameAt(anItr));
     }
     LobbyBroadcastEvent(new SyncGameListEvent(this->mDirectGames.get()), true);
     this->StartDiscovery();
@@ -852,8 +852,8 @@ bool LanLogic::HostGame(LobbyGame* inGame)
     LobbyKillFirewallTest();
     this->mIsCaptain = true;
     this->mMyClient = new LobbyLanClient;
-    this->mMyClient->mClientId = this->GetNextClientId();
-    this->mMyClient->mName = LobbyGetLanName();
+    this->mMyClient->SetClientId(this->GetNextClientId());
+    this->mMyClient->SetName(LobbyGetLanName());
     this->mMyClient->SetCaptain(true, true);
     this->mClients->AddClient(this->mMyClient.get());
     inGame->SetClients(this->mClients.get());
@@ -871,7 +871,7 @@ bool LanLogic::HostGame(LobbyGame* inGame)
     this->mListenSocket->SetRepeatCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleAccept, this));
     this->mListenSocket->SetRepeatOp(new AcceptOp(NULL));
     LobbyBroadcastEvent(new JoinedRoomEvent("",
-        inGame->mName, 10, this->mMyClient->GetClientId(), inGame->mClients.get()), true);
+        inGame->GetName(), 10, this->mMyClient->GetClientId(), inGame->GetClients().get()), true);
     this->mLastBroadcastTime = 0;
     this->StartNetworkTimer();
     return true;
@@ -923,7 +923,7 @@ void LanLogic::BroadcastGameSummary(LobbyGame* inGame, const IPAddr& inAddress)
     if (!this->CanBroadcastGame(inGame))
         return;
     std::string aHead;
-    ee_won_lan_discovery(1, inGame->mAddress.GetPort(), LanAppendBytes, &aHead);
+    ee_won_lan_discovery(1, inGame->GetAddress().GetPort(), LanAppendBytes, &aHead);
     WriteBuffer aBuffer(0, true);
     aBuffer.AppendBytes(aHead.data(), (unsigned long)aHead.length());
     inGame->WriteSummary(aBuffer);
@@ -941,7 +941,7 @@ void LanLogic::BroadcastGameKeepAlive(LobbyGame* inGame)
         this->BroadcastGameSummary(inGame, this->mDiscoveryAddress);
     else {
         std::string aKeepAlive;
-        ee_won_lan_discovery(2, inGame->mAddress.GetPort(), LanAppendBytes, &aKeepAlive);
+        ee_won_lan_discovery(2, inGame->GetAddress().GetPort(), LanAppendBytes, &aKeepAlive);
         this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aKeepAlive).get(), this->mDiscoveryAddress), -1);
     }
     this->mLastBroadcastTime = aTime;
@@ -954,7 +954,7 @@ void LanLogic::BroadcastGameRemoved(LobbyGame* inGame)
     if (!this->CanBroadcastGame(inGame))
         return;
     std::string aRemoved;
-    ee_won_lan_discovery(3, inGame->mAddress.GetPort(), LanAppendBytes, &aRemoved);
+    ee_won_lan_discovery(3, inGame->GetAddress().GetPort(), LanAppendBytes, &aRemoved);
     this->mDiscoverySocket->QueueOp(new SendBytesToOp(LanMessage(aRemoved).get(), this->mDiscoveryAddress), -1);
 }
 // FUNCTION: WON 0x007e4be0
@@ -993,7 +993,7 @@ void LanLogic::HandleGameSummary(unsigned short inPort, ReadBuffer& inBuffer, co
     EeWonLanSummary anOutcome = ee_won_lanlogic_summary(aGame->ReadSummary(inBuffer), aFlag);
     SmartPtr<LobbyGame> aHeldGame = aGame;
     if (anOutcome.keep)
-        aGame->mLastSeenTime = time(NULL);
+        aGame->SetLastSeenTime(time(NULL));
     else
         this->mLanGames->RemoveGame(anAddress);
     if (anOutcome.event >= 0)
@@ -1012,7 +1012,7 @@ void LanLogic::HandleGameKeepAlive(unsigned short inPort, const IPAddr& inAddres
     LobbyGame* aGame = this->mLanGames->GetGame(anAddress);
     if (aGame == NULL)
         return;
-    aGame->mLastSeenTime = time(NULL);
+    aGame->SetLastSeenTime(time(NULL));
 }
 
 // FUNCTION: WON 0x007e5050
@@ -1199,7 +1199,7 @@ bool LanLogic::JoinGame(LobbyGame* game)
     }
     this->mServerSocket=new LobbyLanSocket;
     bool joined=false;
-    bool needPassword=game->mHasPassword;
+    bool needPassword=game->GetHasPassword();
     bool needConnect=true;
     while(!joined) {
         GUIString password(GetEmptyGUIStringData());
@@ -1210,8 +1210,8 @@ bool LanLogic::JoinGame(LobbyGame* game)
         }
         if(needConnect) {
             SmartPtr<AsyncOp> connect;
-            if(this->mRequirePeerAuth) connect=new PeerAuthOp(game->mAddress,auth.get(),AUTH_TYPE_PERSISTENT,this->mServerSocket.get(),true);
-            else connect=new ConnectOp(game->mAddress,this->mServerSocket.get());
+            if(this->mRequirePeerAuth) connect=new PeerAuthOp(game->GetAddress(),auth.get(),AUTH_TYPE_PERSISTENT,this->mServerSocket.get(),true);
+            else connect=new ConnectOp(game->GetAddress(),this->mServerSocket.get());
             LobbyRunOpWithStatus(connect.get(),::LANLogic_ConnectToGameTitle_String,::LANLogic_ConnectToGameDetails_String,1,0);
             if(connect->GetStatus()!=WS_Success) return false;
             needConnect=false;
@@ -1245,7 +1245,7 @@ bool LanLogic::JoinGame(LobbyGame* game)
     this->mServerSocket->SetRepeatOp(new RecvMsgOp);
     this->StartNetworkTimer();
     game->SetClients(this->mClients.get());
-    LobbyBroadcastEvent(new JoinedRoomEvent(GUIString(new GUIStringData("")),game->mName,10,this->mMyClient->GetClientId(),game->mClients.get()),true);
+    LobbyBroadcastEvent(new JoinedRoomEvent(GUIString(new GUIStringData("")),game->GetName(),10,this->mMyClient->GetClientId(),game->GetClients().get()),true);
     return true;
 }
 }

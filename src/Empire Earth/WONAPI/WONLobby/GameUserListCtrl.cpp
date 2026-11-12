@@ -51,7 +51,7 @@ int GameUserListItem::Compare(const ListItem* inOther,ListArea*) const
     int mine=this->mClient->IsCaptain(1)?1:0;
     int theirs=other->mClient->IsCaptain(1)?1:0;
     if(mine!=theirs) return theirs-mine;
-    return this->mClient->mName.CompareNoCase(other->mClient->mName);
+    return this->mClient->GetName().CompareNoCase(other->mClient->GetName());
 }
 // The ready mark is centered by the status icon's height, not its own (as in the original)
 // FUNCTION: WON 0x007bce60
@@ -80,7 +80,7 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
         return;
     case 2:
         inGraphics.SetFont(this->mFont.get());
-        inGraphics.DrawString(this->mClient->mName,0,(this->mHeight-this->mFont->GetHeight())/2);
+        inGraphics.DrawString(this->mClient->GetName(),0,(this->mHeight-this->mFont->GetHeight())/2);
         return;
     case 3:
         DrawLobbyPing(&inGraphics,this->mClient->GetPing(),this->mHeight-2,0,0);
@@ -105,7 +105,7 @@ GameUserListItem* GameUserListCtrl::GetListItem(LobbyClient* inClient)
     for(int i=0;i<int(this->mUserList->mItems.size());++i) {
         GameUserListItem* item=static_cast<GameUserListItem*>(this->mUserList->GetItem(i));
         LobbyClient* client=item->mClient.get();
-        if(client!=NULL && client->mClientId==inClient->mClientId) return item;
+        if(client!=NULL && client->GetClientId()==inClient->GetClientId()) return item;
     }
     return NULL;
 }
@@ -123,9 +123,9 @@ void GameUserListCtrl::UpdateKickButton()
     if(!this->mInGame || this->mKickButton.get()==NULL) return;
     LobbyGame* game=GetMyLobbyGame();
     if(game==NULL) return;
-    if(game->mIsHost) {
+    if(game->GetIsHost()) {
         LobbyClient* client=this->GetSelectedClient();
-        if(client!=NULL && client->mClientId!=game->mCaptainId) this->mKickButton->SetEnabled(true);
+        if(client!=NULL && client->GetClientId()!=game->GetCaptainId()) this->mKickButton->SetEnabled(true);
         else this->mKickButton->SetEnabled(false);
     } else this->mKickButton->SetEnabled(false);
 }
@@ -189,7 +189,7 @@ void GameUserListCtrl::HandleJoinedGame()
 {
     LobbyGame* game=GetMyLobbyGame();
     if(game==NULL || !game->MatchesRoomSpec(this->mRoomSpecFlags)) return;
-    LobbyClientList* clients=game->mClients.get();
+    LobbyClientList* clients=game->GetClients().get();
     if(clients==NULL) return;
     if(this->mKickButton.get()!=NULL) {
         if(this->mRoomSpecFlags&4) this->mKickButton->SetText(::GameUserListCtrl_Ban_String,true);
@@ -229,7 +229,7 @@ void GameUserListCtrl::HandleComponentEvent(ComponentEvent* inEvent)
         if(clicked->mButton==2)
             this->DeliverEvent(new ClientActionEvent(18,this->GetRoomSpecFlags(),client),false);
         else if(clicked->mButton==0 && clicked->mDoubleClick)
-            LobbyBroadcastEvent(new SetChatInputEvent(2,client->mName,this->mRoomSpecFlags,false),true);
+            LobbyBroadcastEvent(new SetChatInputEvent(2,client->GetName(),this->mRoomSpecFlags,false),true);
         return;
     }
     case LobbyEvent_ClientChanged: this->HandleClientChanged(static_cast<ClientChangedEvent*>(inEvent)); return;

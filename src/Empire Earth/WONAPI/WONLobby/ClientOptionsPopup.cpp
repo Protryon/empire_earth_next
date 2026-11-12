@@ -38,7 +38,7 @@ void ClientOptionsPopup::Init(LobbyClient* inClient,LobbyClient* inMyClient,int 
     SmartPtr<Font> anOldFont=this->mPopupMenu->mFont;
     SmartPtr<Font> aBoldFont=this->GetFontMod(anOldFont.get(),1,0);
     this->mPopupMenu->SetFont(aBoldFont);
-    this->mPopupMenu->AddItem(inClient->mName,0)->mSelectable=false;
+    this->mPopupMenu->AddItem(inClient->GetName(),0)->mSelectable=false;
     if(isModerator) {
         char aBuffer[256];
         sprintf(aBuffer,"%d",inClient->GetWONUserId());
@@ -48,7 +48,7 @@ void ClientOptionsPopup::Init(LobbyClient* inClient,LobbyClient* inMyClient,int 
     this->mPopupMenu->mFont=anOldFont;
     this->AddItem(::ClientOptionsCtrl_Whisper_String,16);
     if(!isSelf && inMyClient->IsCaptain(1) && inClient->GetGameGroupId()!=inMyClient->GetGameGroupId()) {
-        if(!this->mClient->mInvited) this->AddItem(::ClientOptionsCtrl_Invite_String,6);
+        if(!this->mClient->IsInvited()) this->AddItem(::ClientOptionsCtrl_Invite_String,6);
         else this->AddItem(::ClientOptionsCtrl_Uninvite_String,13);
     }
     if(isGame) {
@@ -61,10 +61,10 @@ void ClientOptionsPopup::Init(LobbyClient* inClient,LobbyClient* inMyClient,int 
         if(inClient->IsAway()) this->AddItem(::ClientOptionsCtrl_ClearAFK_String,4);
         else this->AddItem(::ClientOptionsCtrl_SetAFK_String,10);
     } else {
-        if(!inClient->mIgnored) this->AddItem(::ClientOptionsCtrl_Ignore_String,5);
+        if(!inClient->IsIgnored()) this->AddItem(::ClientOptionsCtrl_Ignore_String,5);
         else this->AddItem(::ClientOptionsCtrl_Unignore_String,12);
         if(isGame) {
-            if(!inClient->mBlocked) this->AddItem(::ClientOptionsCtrl_Block_String,3);
+            if(!inClient->IsBlocked()) this->AddItem(::ClientOptionsCtrl_Block_String,3);
             else this->AddItem(::ClientOptionsCtrl_Unblock_String,11);
         }
     }

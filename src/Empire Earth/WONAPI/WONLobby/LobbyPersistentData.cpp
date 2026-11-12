@@ -530,7 +530,7 @@ void LobbyPersistentData::SaveUserPrefs()
         anIgnored.Add(this->mIgnoredNames.KeyAt(n));
     for (size_t f = 0; f < this->mFriends.size(); ++f)
     {
-        aFriendNames.Add(this->mFriends.At(f)->mName);
+        aFriendNames.Add(this->mFriends.At(f)->GetName());
         aFriendIds.push_back((uint32_t)this->mFriends.KeyAt(f));
     }
     for (size_t u = 0; u < this->mBlockedCDKeyIds.size(); ++u)

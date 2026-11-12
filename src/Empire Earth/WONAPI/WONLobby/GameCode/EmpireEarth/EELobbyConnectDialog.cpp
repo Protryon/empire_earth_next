@@ -65,7 +65,7 @@ bool EELobbyConnectDialog::Run(EELobbyGame* inGame)
     if (this->mIsRunning)
         return false;
     bool theAllConnected = true;
-    this->mCancelButton->SetText(inGame->mIsHost ? gEELobbyConnectDialog_AbortLaunch : gEELobbyConnectDialog_LeaveGame, true);
+    this->mCancelButton->SetText(inGame->GetIsHost() ? gEELobbyConnectDialog_AbortLaunch : gEELobbyConnectDialog_LeaveGame, true);
     this->mConnectList->BeginUpdate();
     this->mConnectList->Clear(true);
     for (int i = 0; i < 8; i++) {

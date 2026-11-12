@@ -145,7 +145,6 @@
 305760 305c0e WONGUI/ScrollbarScroller.cpp
 305fa0 30683e WONGUI/Scrollbar.cpp
 306870 306e08 WONGUI/ImageComponent.cpp
-306e10 307060 WONGUI/AnimationComponent.cpp
 307060 30815f WONGUI/Splitter.cpp
 308280 3094c5 WONGUI/TabCtrl.cpp
 309880 3098cd WONGUI/PaletteLifetime.cpp
@@ -207,7 +206,6 @@
 32b520 32b65d WONGUI/ComponentEvent.cpp
 32b660 33531e WONGUI/WindowManager.cpp
 32c380 32e7c9 WONGUI/WindowManagerBaseDefaults.cpp
-335340 335ca9 WONGUI/Animation.cpp
 335cb0 336000 WONGUI/Background.cpp
 336000 33668e WONGUI/BackgroundGrabber.cpp
 3372c0 337be2 WONGUI/ChildLayoutsAdvanced.cpp
