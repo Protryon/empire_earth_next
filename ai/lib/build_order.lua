@@ -38,7 +38,9 @@ M.FILL = {
     stone_start = {{"food", 18}, {"wood", 12}, {"stone", 2}, {"gold", 2}, {"iron", 2}},
     stone_grow = {{"food", 18}, {"wood", 10}, {"stone", 2}, {"gold", 2}, {"iron", 2}, {"iron", 12}, {"gold", 12},
                   {"stone", 6}, {"iron", 15}, {"gold", 15}, {"wood", 12}, {"iron", 18}, {"gold", 18}, {"wood", 15}},
-    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20}},
+    -- (the owner's Copper town: 120-133 citizens, food 25-44 with 13 boats, wood 16-42; "not enough cits" at 80 min)
+    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20},
+              {"food", 40}, {"wood", 30}},
 }
 M.FILL.stone_developed = M.FILL.stone_grow
 
@@ -68,7 +70,7 @@ M.PHASE = {
     stone_developed = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
                        army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45, settlements = 14,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    copper = {citizens = 90, citizens_max = 100, boats = 13, docks = 1, granaries = 3, settlements = 16, save_at = 75,
+    copper = {citizens = 120, citizens_max = 130, boats = 13, docks = 1, granaries = 3, settlements = 16, save_at = 75,
               save_after = 12},
 }
 

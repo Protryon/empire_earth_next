@@ -1437,7 +1437,10 @@ function M.step(view, memory)
             elseif V.total(granaries) < 1 and V.cost(view, "b_granary") ~= nil then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})
             elseif (farms == nil or farms.queued < 2) and V.total(farms) < plan.farms
-                    and patch_room < food_wanted - view.gatherers.food + 4 then
+                    and (patch_room < food_wanted - view.gatherers.food + 4
+                         -- (ECON.order, the owner's playtest: "granary built but not farms?"; the owner's 3 granaries are
+                         -- farmed at once: 8 farms a finished granary)
+                         or (ECON.order and V.total(farms) < 8 * ((granaries or {}).finished or 0))) then
                 order("farm", {verb = "build", type = "b_farm", near = "town"})
             elseif V.total(farms) >= 8 and V.total(granaries) < plan.granaries then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})
