@@ -42,6 +42,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DPulseCannonBall.h"
+#include "ee/EECombatFormulas.h"
 
 // SYNTHETIC: EXE 0x4f69e3
 // SYNTHETIC: EXE 0x4f69ed
@@ -84,6 +85,7 @@ EEE3DPulseCannonBall::EEE3DPulseCannonBall(EEUnit* inUnit, const GE3DPoint& inTa
     } else {
         theUnitTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
     }
+    EECombatEffectPointCapture(6, theUnit, theModel, theList, theList != NULL && theList->GetNumTagPoints() != 0, theStart);   // TEST ONLY
     theDirection.SetX(inTarget.GetX() - theStart.GetX());
     theDirection.SetY(inTarget.GetY() - theStart.GetY());
     theDirection.SetZ(inTarget.GetZ() - theStart.GetZ());

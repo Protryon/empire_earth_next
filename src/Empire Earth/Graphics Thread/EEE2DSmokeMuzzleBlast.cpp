@@ -41,6 +41,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DSmokeMuzzleBlast.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EECombatFormulas.h"
 // the lift over a flying or raised target (0x440014; this unit's own .rdata constant, read once; provisional name)
 static const float kSMBTargetLift = 15.0f;
 
@@ -82,6 +83,7 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, EEUnit* inTarget, E
     } else {
         (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theStart);
     }
+    EECombatEffectPointCapture(4, theUnit, theModel, theList, true, theStart);   // TEST ONLY
     EETagPointList::Scale(theTargetTransformation, theTargetScale);
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
@@ -131,6 +133,7 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, const GE3DPoint& in
     } else {
         theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
     }
+    EECombatEffectPointCapture(5, theUnit, theModel, theList, true, theStart);   // TEST ONLY
     this->mVelocity.SetX(inTarget.GetX() - theStart.GetX());
     this->mVelocity.SetY(inTarget.GetY() - theStart.GetY());
     this->mVelocity.SetZ(inTarget.GetZ() - theStart.GetZ());

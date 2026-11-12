@@ -43,6 +43,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DTracers.h"
+#include "ee/EECombatFormulas.h"
 
 // SYNTHETIC: EXE 0x4fd330
 // SYNTHETIC: EXE 0x4fd33a
@@ -88,6 +89,7 @@ EEE3DTracers::EEE3DTracers(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGrap
     } else {
         theFromTransformation.Apply(inFrom->GetModel()->mDefaultPoint, theStart);
     }
+    EECombatEffectPointCapture(7, theUnit, theModel, theList, theList != NULL && theList->GetNumTagPoints() != 0, theStart);   // TEST ONLY
     theOffset = inTo->GetModel()->PickPoint();
     theToTransformation.Apply(theOffset, theEnd);
     theDirection.SetX(theEnd.GetX() - theStart.GetX());

@@ -43,6 +43,7 @@
 #include "ee/EEE2DLinearProjectile.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EERenderSnapshot.h"
+#include "ee/EECombatFormulas.h"
 
 // SYNTHETIC: EXE 0x4e2edd
 // SYNTHETIC: EXE 0x4e2ee7
@@ -101,6 +102,7 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, E
         // the target's point is on its scaled model whatever the shooter has
         ScaleTargetTransformation(theTargetTransformation, theTargetScale);
     }
+    EECombatEffectPointCapture(1, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);   // TEST ONLY
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
     theDirection.SetX(theEnd.GetX() - theStart.GetX());
@@ -151,6 +153,7 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, const GE3DPoint& in
     } else {
         theTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
     }
+    EECombatEffectPointCapture(2, theUnit, theModel, theList, theList && theList->mPoints.size(), theStart);   // TEST ONLY
     theDirection.SetX(inTarget.GetX() - theStart.GetX());
     theDirection.SetY(inTarget.GetY() - theStart.GetY());
     theDirection.SetZ(inTarget.GetZ() - theStart.GetZ());

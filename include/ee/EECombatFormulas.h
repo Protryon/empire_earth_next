@@ -9,6 +9,7 @@
 #define EE_EECOMBATFORMULAS_H
 
 #include <stdint.h>
+#include <string.h>
 #include <vector>
 
 #include "rust/ee_rust.h"
@@ -231,5 +232,49 @@ struct EECombatImpactRecordOut {
     int32_t place;
     float offset;
 };
+
+// TEST ONLY until the move (recorded from the unmodified C++ first): CBEW, an effect's start at the shooter's weapon
+// tag point (EEE2DLinearProjectile, EEE2DMuzzleFlash, EEE2DSmokeMuzzleBlast, EEE3DPulseCannonBall, EEE3DTracers): the
+// site, the shooter's model data at its frame as EeCombatWeaponIn (kind 4: no tag point list, the model's default point
+// in `top` under the unscaled location), the model chain, the start the effect computed. Unit is EEComplexUnit, Model
+// EEModel, List EETagPointList (templates: this header needs no model header)
+template <class Unit, class Model, class List>
+inline void EECombatEffectPointCapture(int32_t inSite, Unit* inUnit, Model* inModel, List* inList, bool inHasList,
+                                       const GE3DPoint& inStart)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EeCombatWeaponIn in = {};
+    std::vector<float> theChain;
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.list_present = 1;
+    in.scale = inUnit->mPhysicalModel.GetScale();
+    if (!inHasList) {
+        in.kind = 4;
+        in.top[0] = inModel->mDefaultPoint.GetX();
+        in.top[1] = inModel->mDefaultPoint.GetY();
+        in.top[2] = inModel->mDefaultPoint.GetZ();
+    } else {
+        auto* thePoint = inList->mPoints[inUnit->mWeaponTagPoint];
+        if (inModel->GetNumParts() > 0) {
+            in.kind = EE_COMBAT_WEAPON_KIND_TURRET;
+            unsigned long thePart;
+            if (inModel->FindTurretPart(thePoint->mModel, thePart) == 0) {
+                in.turret = 1;
+                in.yaw = inUnit->mTurretAngles[thePart];
+            }
+        } else
+            in.kind = EE_COMBAT_WEAPON_KIND_POINT;
+        EECombatTagPointChain(thePoint, inUnit->mPhysicalModel.GetFrame(), in.point, theChain, in.chain);
+    }
+    float theStart[3] = {inStart.GetX(), inStart.GetY(), inStart.GetZ()};
+    EESimCaptureRecord theRecord(EE_COMBAT_TAG('C', 'B', 'E', 'W'));
+    theRecord.I32(inSite);
+    theRecord.Bytes(&in, sizeof(in));
+    if (!theChain.empty())
+        theRecord.F32s(&theChain[0], (unsigned int)theChain.size());
+    theRecord.F32s(theStart, 3);
+    theRecord.Commit();
+}
 
 #endif

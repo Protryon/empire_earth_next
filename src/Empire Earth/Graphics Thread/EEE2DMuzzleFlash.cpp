@@ -40,6 +40,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DImpact.h"
 #include "ee/EEE2DMuzzleFlash.h"
+#include "ee/EECombatFormulas.h"
 
 // FUNCTION: EXE 0x4e4529
 // Creates a muzzle flash (an impact of kind 9) on a firing unit
@@ -95,6 +96,7 @@ long EEE2DMuzzleFlash::SetUp()
             thePartTransformation.SetOrientationYPR(theUnit->mTurretAngles[theModelIndex], 0.0f, 0.0f);
         (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, thePartTransformation, this->mStart);
     }
+    EECombatEffectPointCapture(3, theUnit, theModel, theList, true, this->mStart);   // TEST ONLY
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
     this->mTime = 0.0f;
