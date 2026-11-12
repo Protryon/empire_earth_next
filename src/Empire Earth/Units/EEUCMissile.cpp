@@ -389,10 +389,7 @@ void EEUCMissile::Update(EEComplexUnit* inUnit)
     this->UpdateEffects(inUnit);
     this->RefreshSound(inUnit);
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
     }
     long theElapsed = gPhysics->mTickTimeMs;
     if (theElapsed == 0)

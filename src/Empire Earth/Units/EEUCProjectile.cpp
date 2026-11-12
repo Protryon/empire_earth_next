@@ -328,10 +328,7 @@ void EEUCProjectile::Update(EEComplexUnit* inUnit)
     this->UpdateEffects(inUnit);
     this->RefreshSound(inUnit);
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
     } else if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionFadingOutInSpace) {
         GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
         inUnit->GetPosition(thePosition);

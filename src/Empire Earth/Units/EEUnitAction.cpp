@@ -467,6 +467,10 @@ long EEUnitTrigger::Evaluate(EEComplexUnit* inUnit, EEUnitAction*& outAction)
         for (i = 0; i < theCount; i++) {
             long theTrigger = this->mTriggers[i];
             long theEvent = theClass->EvaluateCondition(inUnit, theTrigger);
+            if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+                uint32_t theWords[2] = {(uint32_t)theTrigger, (uint32_t)theEvent};
+                EEUnitStateNote(kUnitStateCondition, inUnit->mUnitID, theWords, 2);
+            }
             if (theEvent == 0)
                 break;
             if (theEvent == 2)
@@ -489,6 +493,10 @@ long EEUnitTrigger::Evaluate(EEComplexUnit* inUnit, EEUnitAction*& outAction)
         for (i = 0; i < theCount; i++) {
             long theTrigger = this->mTriggers[i];
             long theEvent = theClass->EvaluateCondition(inUnit, theTrigger);
+            if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+                uint32_t theWords[2] = {(uint32_t)theTrigger, (uint32_t)theEvent};
+                EEUnitStateNote(kUnitStateCondition, inUnit->mUnitID, theWords, 2);
+            }
             if (theEvent == 0)
                 continue;
             if (theEvent == 2)

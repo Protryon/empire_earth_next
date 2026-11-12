@@ -837,6 +837,14 @@ void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
     }
 }
 
+// TEST ONLY (USST): a float's bits
+static uint32_t PMBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
 // FUNCTION: EXE 0x556213
 // Applies the collision push to the unit (times the collision period, capped at its speed) onto a tile it
 // can stand on, puts it on the ground, and starts or stops an idle unit's shuffle animation
@@ -846,12 +854,18 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
     EETileCoordinate theTile(0, 0);
     float theLimit = kPMMinimumStep / gPhysics->GetTickSeconds();
     bool theStopped = false;
-    float theSpeed = max(inUnit->GetMaxVelocity(), theLimit);
+    float theMaxVelocity = inUnit->GetMaxVelocity();
+    float theSpeed = max(theMaxVelocity, theLimit);
     float theTicks = (float) gCollisionPeriod;
     float theDX = inUnit->mPushVelocityX;
     theDX *= theTicks;
     float theDY = inUnit->mPushVelocityY;
     theDY *= theTicks;
+    // TEST ONLY (USST): the push arithmetic's inputs and outputs
+    uint32_t theWords[13] = {PMBits(inUnit->mPushVelocityX.Get()), PMBits(inUnit->mPushVelocityY.Get()),
+                             (uint32_t)gCollisionPeriod, PMBits(theMaxVelocity), PMBits(gPhysics->GetTickSeconds()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetX()),
+                             PMBits(inUnit->mPhysicalModel.GetLocation().GetY()), 0, 0, 0, 0, 0, 0};
     float theSignX;
     if (theDX > 0.0f)
         theSignX = 1.0f;
@@ -884,6 +898,15 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
         theX += inUnit->mPhysicalModel.GetLocation().GetX();
         float theY = gPhysics->GetTickSeconds() * theSignY * theDY;
         theY += inUnit->mPhysicalModel.GetLocation().GetY();
+        if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+            theWords[7] = 1;
+            theWords[8] = theDY + theDX > kPMMoveDistance ? 1u : 0u;
+            theWords[9] = PMBits(theDX);
+            theWords[10] = PMBits(theDY);
+            theWords[11] = PMBits(theX);
+            theWords[12] = PMBits(theY);
+            EEUnitStateNote(kUnitStatePush, inUnit->mUnitID, theWords, 13);
+        }
         long theTileY = UMFloor(theY);
         long theTileX = UMFloor(theX);
         theTile.mX = theTileX;
@@ -951,6 +974,8 @@ void EEPhysicsModel::Move(EEComplexUnit* inUnit)
         }
     } else {
         theStopped = true;
+        if (EEUnitStepNoting())   // TEST ONLY (USST): no move
+            EEUnitStateNote(kUnitStatePush, inUnit->mUnitID, theWords, 13);
     }
     if (theStopped && (inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionIdle && inUnit->mAnimation == 0xd)
         inUnit->SetAnimation(7, -1, 1);
@@ -984,6 +1009,7 @@ bool EEComplexUnit::HasSwimAnimation()
 void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
 {
     if (inUnit->GetRoll() != 0.0f) {
+        float theRollBefore = inUnit->GetRoll();   // TEST ONLY (USST)
         float theRoll;
         if (inUnit->GetRoll() > 0.0f) {
             theRoll = inUnit->GetRoll();
@@ -996,6 +1022,10 @@ void EEPhysicsModel::AfterStep(EEComplexUnit* inUnit)
                 theRoll = 0.0f;
         }
         inUnit->mRoll = theRoll;
+        if (EEUnitStepNoting()) {   // TEST ONLY (USST)
+            uint32_t theWords[3] = {PMBits(theRollBefore), PMBits(gPhysics->mTickSeconds), PMBits(inUnit->mRoll.Get())};
+            EEUnitStateNote(kUnitStateRoll, inUnit->mUnitID, theWords, 3);
+        }
     }
     if ((!inUnit->mIsCollidable || !(inUnit->mContacts.mCount > 0)) && inUnit->GetCollisionResolutionCount() == 0.0f)
         return;

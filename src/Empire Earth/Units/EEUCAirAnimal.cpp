@@ -382,23 +382,11 @@ void EEUCAirAnimal::Update(EEComplexUnit* inUnit)
     this->Animate(inUnit);
     this->RefreshSound(inUnit);
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionResourcesRotting: {
-        long theTotal = gPhysics->mTickTimeMs + inUnit->mRottingAwayTime;
-        if (theTotal > 4000) {
-            long theHitPoints = inUnit->mResourceAmount - theTotal / 4000;
-            if (theHitPoints < 0)
-                theHitPoints = 0;
-            inUnit->SetResourceAmount(theHitPoints);
-            theTotal %= 4000;
-        }
-        inUnit->SetRottingAwayTime(theTotal);
+    case kActionResourcesRotting:
+        inUnit->UpdateResourcesRotting();
         break;
-    }
     case kActionUnitRotting: {
-        long theLeft = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theLeft < 0)
-            theLeft = 0;
-        inUnit->SetRottingAwayTime(theLeft);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }

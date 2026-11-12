@@ -351,10 +351,7 @@ void EEUCBasicPriest::Update(EEComplexUnit* inUnit)
     case kActionResourcesRotting:
         return;
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }
@@ -462,6 +459,46 @@ void EEComplexUnit::UpdateHealSearchTimer()
         uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
                                 HealBits(this->mHealSearchTimer.Get())};
         EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
+    }
+}
+
+// New (R5b.4 leaf 6): the rotting countdown of the classes' Updates (kActionUnitRotting; 19 inline copies of it were
+// in the classes' Update bodies): the time left minus the tick, not below 0, written through the holder; returns the
+// time (the callers that rot linked parts give them the same). TEST ONLY: USTM notes each call
+long EEComplexUnit::UpdateRottingAwayTime()
+{
+    long theBefore = this->mRottingAwayTime;
+    long theTime = theBefore - gPhysics->mTickTimeMs;
+    if (theTime < 0)
+        theTime = 0;
+    this->SetRottingAwayTime(theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        uint32_t theWords[3] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, (uint32_t)this->mRottingAwayTime.Get()};
+        EEUnitStepNote(kUnitStepRotting, this->mUnitID, theWords, 3);
+    }
+    return theTime;
+}
+
+// New (R5b.4 leaf 6): the resources' rotting of the classes' Updates (kActionResourcesRotting; 3 inline copies: the
+// animals, the fish, the default): the time plus the tick; past 4 s the resource amount loses one per whole 4 s (not
+// below 0) and the time keeps the rest. TEST ONLY: USTM notes each call
+void EEComplexUnit::UpdateResourcesRotting()
+{
+    long theBefore = this->mRottingAwayTime;
+    long theAmountBefore = this->mResourceAmount;
+    long theTime = theBefore + gPhysics->mTickTimeMs;
+    if (theTime > 4000) {
+        long theAmount = this->mResourceAmount - theTime / 4000;
+        if (theAmount < 0)
+            theAmount = 0;
+        this->SetResourceAmount(theAmount);
+        theTime %= 4000;
+    }
+    this->SetRottingAwayTime(theTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        uint32_t theWords[5] = {(uint32_t)theBefore, (uint32_t)theAmountBefore, (uint32_t)gPhysics->mTickTimeMs,
+                                (uint32_t)this->mRottingAwayTime.Get(), (uint32_t)this->mResourceAmount.Get()};
+        EEUnitStepNote(kUnitStepResourcesRotting, this->mUnitID, theWords, 5);
     }
 }
 

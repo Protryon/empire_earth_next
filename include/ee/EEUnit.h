@@ -520,6 +520,8 @@ public:
     void UpdateReloadTimer();               // 0x20e0b2 (EEUCSpaceship::Update) (provisional name)
     void UpdateTargetSearchTimer();         // 0x20e0db (EEUCSpaceship::Update) (provisional name)
     void UpdateHealSearchTimer();           // 0x20e104 (EEUCBasicPriest::Update: mHealSearchTimer down by 0.001 per ms) (provisional name)
+    long UpdateRottingAwayTime();           // New (R5b.4 leaf 6): the classes' kActionUnitRotting countdown (returns the time)
+    void UpdateResourcesRotting();          // New (R5b.4 leaf 6): the classes' kActionResourcesRotting step
     float GetF220() const { return this->mF220; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; faddp) (provisional name)
     void SetF220(float inValue) { if (this->mF220 != inValue) this->mF220 = inValue; }
     // inline (EEPMNaval::PushMoving 0x55c1cb: fld; fadd; fcom; je; fstp) (provisional names)
