@@ -67,6 +67,8 @@ M.opts = {
                           -- fish (the engine's naval flee reflex off for them); M.boat_spots gives the economy its
                           -- tower spots by the dock and the fishing grounds
     boat_max_ms = 180000, -- a boat waits at the dock this long at most
+    shore_towers = false, -- (B2, off) the boats' tower spots on the shore between the fish and the open water, not
+                          -- by the dock
     camp_ms = 40000,      -- ... unless the raid has camped this long within camp_r of one spot: 1-3 rock throwers
     camp_r = 10,          -- by a food patch for 15 minutes starved two towns that fled them and never fought
                           -- (seeds 18 and 25 against the improved classic, AI_RESEARCH §8.41)
@@ -919,11 +921,46 @@ function M.boat_spots()
                 sx, sy, n = sx + f.x, sy + f.y, n + 1
             end
         end
-        if n > 0 and #out < 3 then
+        if n > 0 and M.opts.shore_towers then
+            -- (B2) two shore tiles on the open-water side of the fish: the points 6 tiles past the fish from the town,
+            -- turned 45 degrees either way, brought to the nearest land by that water (ai.shore)
+            local fx, fy = sx // n, sy // n
+            local dock = out[1]
+            local dx, dy = fx - (dock ~= nil and dock.x or fx - 1), fy - (dock ~= nil and dock.y or fy)
+            local l = math.max(math.abs(dx), math.abs(dy), 1)
+            dx, dy = dx * 6 // l, dy * 6 // l
+            out = {}
+            for _, r in ipairs({{dx - dy, dy + dx}, {dx + dy, dy - dx}}) do
+                local lx, ly = ai.shore(fx + r[1], fy + r[2], {max = 10})
+                if lx ~= nil then
+                    out[#out + 1] = {x = lx, y = ly}
+                end
+            end
+        elseif n > 0 and #out < 3 then
             out[#out + 1] = {x = sx // n, y = sy // n}
         end
     end
     return out
+end
+
+-- the centre of the fish the own boats work (nil: none)
+function M.fish_centre()
+    local boats = ai.units{category = "boat", limit = 16}
+    if #boats == 0 then
+        return nil
+    end
+    local c = ai.get(boats, {"target"})
+    local sx, sy, n = 0, 0, 0
+    for k = 1, #boats do
+        local f = c.target[k] ~= nil and ai.unit(c.target[k]) or nil
+        if f ~= nil then
+            sx, sy, n = sx + f.x, sy + f.y, n + 1
+        end
+    end
+    if n == 0 then
+        return nil
+    end
+    return sx // n, sy // n
 end
 
 -- whether the script's claims should leave a site now (hurt_safety; false when it is off)
@@ -972,6 +1009,11 @@ function M.micro(mem, events, now, tx, ty, epoch)
         end
     end
     CLUSTERS = raids
+    for _, cl in ipairs(CLUSTERS) do
+        if cl.ship then
+            mem.ships_seen = now   -- (boom's answers to warships start from the first one seen)
+        end
+    end
     -- the camps: where a raid has stood (a spot kept while a raid is within camp_r of it; forgotten 30 s after)
     mem.camps = mem.camps or {}
     for _, cl in ipairs(CLUSTERS) do
