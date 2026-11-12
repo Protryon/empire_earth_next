@@ -1239,6 +1239,10 @@ function M.step(view, memory)
                             if placed then
                                 memory.settle_at[spot_of(s)] = view.time
                             end
+                        elseif #rids == 0 and not s.explored then
+                            -- (a claimed mine nobody has seen: its units are not listed until a citizen walks there; the
+                            -- Copper Age's second iron mine stood claimed and unexplored for 30 minutes)
+                            PL.walk(view, memory, spot_of(s), s.x, s.y)
                         end
                     elseif ECON.order and BO.OPT.place then
                         local spot = "w" .. c.x .. "," .. c.y
