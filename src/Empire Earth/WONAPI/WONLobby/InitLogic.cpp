@@ -404,7 +404,7 @@ void InitLogic::VersionCompletion(AsyncOp* inOp)
         if (anOutcome == 1) {
             ServerContext* versions = LobbyGetPatchServers();
             if (versions != NULL)
-                versions->NotifyFailed(static_cast<ServerRequestOp*>(inOp)->GetCurAddr());
+                versions->NotifyFailed(static_cast<RustServerOp*>(inOp)->GetCurAddr());
         }
         GUIString description = LobbyFormatString(::LobbyContainer_VersionCheckFailure_String,GetWONStatusString(status));
         this->SetError(0x40,description);
@@ -540,9 +540,9 @@ void InitLogic::StartVersionCheck()
     const std::string& aProduct = config->mProductName;
     const std::string& aConfig = config->mLanguage;
     const std::string& aVersion = config->mVersion;
-    SmartPtr<ServerRequestOp> op = new ServerRequestOp(versions, ee_won_reqop_version_check(
+    SmartPtr<RustServerOp> op = RustServerOp::NewRequest(ee_won_reqop_version_check(
         reinterpret_cast<const uint8_t*>(aProduct.data()), aProduct.size(), reinterpret_cast<const uint8_t*>(aConfig.data()),
-        aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()));
+        aConfig.size(), reinterpret_cast<const uint8_t*>(aVersion.data()), aVersion.size()), versions);
     this->RunTrackedOp(op.get(),new LogicCompletion<InitLogic>(&InitLogic::VersionCompletion,this),0);
 }
 }

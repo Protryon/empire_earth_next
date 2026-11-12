@@ -792,7 +792,7 @@ constexpr static const int32_t EE_WON_HOST_OP_SOCKET = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 constexpr static const int32_t EE_WON_HOST_PEER_AUTH_KEY = 24;
 
-/// `op->IsKilled()` -> out_num
+/// `op->IsKilled()` (NULL: the op itself) -> out_num
 constexpr static const int32_t EE_WON_HOST_OP_KILLED = 25;
 
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
@@ -878,6 +878,48 @@ constexpr static const int32_t EE_WON_HOST_RELEASE = 69;
 
 /// `obj0->AddRef()`
 constexpr static const int32_t EE_WON_HOST_ADD_REF = 70;
+
+/// `mAuthType` -> out_num
+constexpr static const int32_t EE_WON_HOST_AUTH_TYPE = 80;
+
+/// `mAuthContext != NULL` -> out_num
+constexpr static const int32_t EE_WON_HOST_HAS_AUTH = 81;
+
+/// `ServerOp::ConnectTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CONNECT_TIME = 82;
+
+/// `GetTimeout()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIMEOUT = 83;
+
+/// `mAuthContext->GetPeerData()->GetCertificate()->GetUserId()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_USER_ID = 84;
+
+/// a server context obj0's `CopyAddresses(list)` -> the sink (six bytes each)
+constexpr static const int32_t EE_WON_HOST_CTX_ADDRS = 85;
+
+/// a server context obj0's `NotifyFailed(addr)`
+constexpr static const int32_t EE_WON_HOST_CTX_FAILED = 86;
+
+/// `mAuthContext->GetSession(addr)` -> out_obj (a reference; none: NULL)
+constexpr static const int32_t EE_WON_HOST_GET_SESSION = 87;
+
+/// `mAuthContext->PutSession(addr, obj0)`
+constexpr static const int32_t EE_WON_HOST_PUT_SESSION = 88;
+
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+constexpr static const int32_t EE_WON_HOST_ADD_CRYPT = 89;
+
+/// `mTracker.KillAll()` (may call back)
+constexpr static const int32_t EE_WON_HOST_KILL_ALL = 90;
+
+/// a peer auth op's `GetSession()` -> out_obj (a reference; none: NULL)
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_SESSION = 91;
+
+/// a peer auth op's `GetGetCertStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_CERT = 92;
+
+/// `dynamic_cast<RecvMsgOp*>(obj0) != NULL` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_IS_RECV_MSG = 93;
 
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
@@ -996,6 +1038,18 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
 constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
+
+/// The current server's address (`GetCurAddr()`, six bytes): `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_REQHOST_CUR_ADDR = -1;
+
+/// `SetServerContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_REQHOST_CONTEXT = -2;
+
+/// `SetAddr(addr)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
+
+/// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
+constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -7450,6 +7504,15 @@ void ee_won_hostop_set(const EeWonHostOp *op,
                        const uint8_t *addr,
                        void *obj);
 
+/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
+/// length field size and the connect, send and receive limits.
+///
+/// # Safety
+/// `op` is a live op; `lfs` is writable, `times` three writable values.
+void ee_won_hostop_setup(const EeWonHostOp *op,
+                         uint8_t *lfs,
+                         uint32_t *times);
+
 /// The members, one line (the drivers' form).
 ///
 /// # Safety
@@ -8882,6 +8945,13 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+/// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
+/// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).
+///
+/// # Safety
+/// `op` came from a Rust op constructor and is not used after.
+EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
 
 /// Frees an op.
 ///

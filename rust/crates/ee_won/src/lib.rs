@@ -85,6 +85,7 @@ pub mod prefsobj;
 pub mod qsock;
 pub mod random;
 pub mod regkey;
+pub mod reqhost;
 pub mod reqop;
 pub mod reqops;
 pub mod resource;

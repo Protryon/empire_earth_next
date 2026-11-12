@@ -104,8 +104,8 @@ void AccountLogic::HandleLostPassword(ComponentEvent* inEvent)
     // RequestPasswordEmailOp: a Rust op (ee_won adminop.rs)
     std::string aName;
     WideAppendUtf16LE(aName, static_cast<GetLostPasswordEvent*>(inEvent)->mUserName);
-    SmartPtr<ServerRequestOp> op = new ServerRequestOp(
-        account, ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(aName.data()), aName.size()));
+    SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
+        ee_won_reqop_password_email(reinterpret_cast<const uint8_t*>(aName.data()), aName.size()), account);
     LobbyRunOpWithStatus(op.get(), ::LobbyContainer_RetrievePasswordTitle_String, ::LobbyContainer_RetrievePasswordDetails_String, 0, 0);
 }
 // FUNCTION: WON 0x007db920
@@ -117,8 +117,8 @@ void AccountLogic::HandleLostUsername(ComponentEvent* inEvent)
         return;
     // RequestAccountInfoEmailOp: a Rust op (ee_won adminop.rs)
     const std::string& aEmail = static_cast<GetLostUserNameEvent*>(inEvent)->mEmail;
-    SmartPtr<ServerRequestOp> op = new ServerRequestOp(
-        account, ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(aEmail.data()), aEmail.size()));
+    SmartPtr<RustServerOp> op = RustServerOp::NewRequest(
+        ee_won_reqop_info_email(reinterpret_cast<const uint8_t*>(aEmail.data()), aEmail.size()), account);
     LobbyRunOpWithStatus(op.get(), ::LobbyContainer_RetrieveUsernameTitle_String, ::LobbyContainer_RetrieveUsernameDetails_String, 0, 0);
 }
 // FUNCTION: WON 0x007dbee0

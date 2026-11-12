@@ -71,7 +71,7 @@ pub const EE_WON_HOST_OP_ADDR: i32 = 22;
 pub const EE_WON_HOST_OP_SOCKET: i32 = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 pub const EE_WON_HOST_PEER_AUTH_KEY: i32 = 24;
-/// `op->IsKilled()` -> out_num
+/// `op->IsKilled()` (NULL: the op itself) -> out_num
 pub const EE_WON_HOST_OP_KILLED: i32 = 25;
 // Immediate socket calls:
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
@@ -133,6 +133,35 @@ pub const EE_WON_HOST_BASE_CLEANUP: i32 = 68;
 pub const EE_WON_HOST_RELEASE: i32 = 69;
 /// `obj0->AddRef()`
 pub const EE_WON_HOST_ADD_REF: i32 = 70;
+// The request exchange (reqhost.rs: `ServerRequestOp`'s statements):
+/// `mAuthType` -> out_num
+pub const EE_WON_HOST_AUTH_TYPE: i32 = 80;
+/// `mAuthContext != NULL` -> out_num
+pub const EE_WON_HOST_HAS_AUTH: i32 = 81;
+/// `ServerOp::ConnectTime()` -> out_num
+pub const EE_WON_HOST_CONNECT_TIME: i32 = 82;
+/// `GetTimeout()` -> out_num
+pub const EE_WON_HOST_TIMEOUT: i32 = 83;
+/// `mAuthContext->GetPeerData()->GetCertificate()->GetUserId()` -> out_num
+pub const EE_WON_HOST_CERT_USER_ID: i32 = 84;
+/// a server context obj0's `CopyAddresses(list)` -> the sink (six bytes each)
+pub const EE_WON_HOST_CTX_ADDRS: i32 = 85;
+/// a server context obj0's `NotifyFailed(addr)`
+pub const EE_WON_HOST_CTX_FAILED: i32 = 86;
+/// `mAuthContext->GetSession(addr)` -> out_obj (a reference; none: NULL)
+pub const EE_WON_HOST_GET_SESSION: i32 = 87;
+/// `mAuthContext->PutSession(addr, obj0)`
+pub const EE_WON_HOST_PUT_SESSION: i32 = 88;
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+pub const EE_WON_HOST_ADD_CRYPT: i32 = 89;
+/// `mTracker.KillAll()` (may call back)
+pub const EE_WON_HOST_KILL_ALL: i32 = 90;
+/// a peer auth op's `GetSession()` -> out_obj (a reference; none: NULL)
+pub const EE_WON_HOST_PEER_AUTH_SESSION: i32 = 91;
+/// a peer auth op's `GetGetCertStatus()` -> out_num
+pub const EE_WON_HOST_PEER_AUTH_CERT: i32 = 92;
+/// `dynamic_cast<RecvMsgOp*>(obj0) != NULL` -> out_num
+pub const EE_WON_HOST_OP_IS_RECV_MSG: i32 = 93;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`
@@ -228,6 +257,11 @@ pub(crate) trait Plan: Send + Sized + 'static {
     }
     /// a setter by number (the value as a number, bytes, an address or an object)
     fn set(_h: &Host<Self>, _which: i32, _value: &SetValue) {}
+    /// the C++ side's `ServerOp` members the op's constructor set: (`mLengthFieldSize`, `mMaxConnectTime`,
+    /// `mMaxSendTime`, `mMaxRecvTime`)
+    fn setup(&self) -> (u8, [u32; 3]) {
+        (4, [60000; 3])
+    }
     /// the members, one line (the drivers' and goldens' form)
     fn describe(&self) -> String;
     /// every object reference held, taken (the destructor releases them)
@@ -462,6 +496,52 @@ impl<P: Plan> Host<P> {
         self.num_of(EE_WON_HOST_COMPLETE, completion, [0, 0]);
     }
 
+    // ---- the request exchange
+    pub(crate) fn auth_type(&self) -> i32 {
+        self.num_of(EE_WON_HOST_AUTH_TYPE, Obj::none(), [0, 0]) as i32
+    }
+    pub(crate) fn has_auth(&self) -> bool {
+        self.num_of(EE_WON_HOST_HAS_AUTH, Obj::none(), [0, 0]) != 0
+    }
+    pub(crate) fn connect_time(&self) -> u32 {
+        self.num_of(EE_WON_HOST_CONNECT_TIME, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn timeout(&self) -> u32 {
+        self.num_of(EE_WON_HOST_TIMEOUT, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn cert_user_id(&self) -> u32 {
+        self.num_of(EE_WON_HOST_CERT_USER_ID, Obj::none(), [0, 0]) as u32
+    }
+    pub(crate) fn ctx_addrs(&self, context: Obj) -> Vec<[u8; 6]> {
+        let b =
+            self.invoke(EE_WON_HOST_CTX_ADDRS, [context, Obj::none()], [0, 0], &[], [0; 6]).bytes.unwrap_or_default();
+        b.chunks_exact(6).map(|c| [c[0], c[1], c[2], c[3], c[4], c[5]]).collect()
+    }
+    pub(crate) fn ctx_failed(&self, context: Obj, addr: [u8; 6]) {
+        self.invoke(EE_WON_HOST_CTX_FAILED, [context, Obj::none()], [0, 0], &[], addr);
+    }
+    pub(crate) fn get_session(&self, addr: [u8; 6]) -> Obj {
+        self.invoke(EE_WON_HOST_GET_SESSION, [Obj::none(); 2], [0, 0], &[], addr).obj
+    }
+    pub(crate) fn put_session(&self, addr: [u8; 6], session: Obj) {
+        self.invoke(EE_WON_HOST_PUT_SESSION, [session, Obj::none()], [0, 0], &[], addr);
+    }
+    pub(crate) fn add_crypt(&self, socket: Obj, session: Obj) {
+        self.invoke(EE_WON_HOST_ADD_CRYPT, [socket, session], [0, 0], &[], [0; 6]);
+    }
+    pub(crate) fn kill_all(&self) {
+        self.num_of(EE_WON_HOST_KILL_ALL, Obj::none(), [0, 0]);
+    }
+    pub(crate) fn peer_auth_session(&self, op: Obj) -> Obj {
+        self.invoke(EE_WON_HOST_PEER_AUTH_SESSION, [op, Obj::none()], [0, 0], &[], [0; 6]).obj
+    }
+    pub(crate) fn peer_auth_cert(&self, op: Obj) -> i32 {
+        self.num_of(EE_WON_HOST_PEER_AUTH_CERT, op, [0, 0]) as i32
+    }
+    pub(crate) fn op_is_recv_msg(&self, op: Obj) -> bool {
+        self.num_of(EE_WON_HOST_OP_IS_RECV_MSG, op, [0, 0]) != 0
+    }
+
     /// `slot = o` for an object slot of the members (`o` carries the reference the slot keeps; the old one goes
     /// after, outside the lock).
     pub(crate) fn replace(&self, slot: impl FnOnce(&mut P) -> &mut Obj, o: Obj) {
@@ -480,6 +560,7 @@ trait HostDyn: Send + Sync {
     fn bytes(&self, which: i32, index: i64) -> Option<Vec<u8>>;
     fn set(&self, which: i32, value: &SetValue);
     fn describe(&self) -> String;
+    fn setup(&self) -> (u8, [u32; 3]);
     fn release_all(&self);
 }
 
@@ -507,6 +588,9 @@ impl<P: Plan> HostDyn for Host<P> {
     }
     fn describe(&self) -> String {
         self.st().describe()
+    }
+    fn setup(&self) -> (u8, [u32; 3]) {
+        self.st().setup()
     }
     fn release_all(&self) {
         let objs = self.st().take_objects();
@@ -626,6 +710,22 @@ pub unsafe extern "C" fn ee_won_hostop_set(
     let v = SetValue { num, data, addr: a, obj: Obj::of(obj) };
     // SAFETY: as above
     unsafe { (*op).op.set(which, &v) }
+}
+
+/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
+/// length field size and the connect, send and receive limits.
+///
+/// # Safety
+/// `op` is a live op; `lfs` is writable, `times` three writable values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_setup(op: *const EeWonHostOp, lfs: *mut u8, times: *mut u32) {
+    // SAFETY: as above
+    let (l, t) = unsafe { (*op).op.setup() };
+    // SAFETY: the caller's out values
+    unsafe {
+        *lfs = l;
+        std::ptr::copy_nonoverlapping(t.as_ptr(), times, 3);
+    }
 }
 
 /// The members, one line (the drivers' form).

@@ -1733,12 +1733,18 @@ public:
 };
 
 // An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
-// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url);
-// this class runs its hooks there and answers its calls on the C++ objects (ServerOp.cpp's HostCall). Results and
-// setters by number: ee_won_hostop_num, ee_won_hostop_bytes, ee_won_hostop_set.
+// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new, FTPGetOp: ee_won_ftpget_new and _new_url;
+// the ops derived from ServerRequestOp: NewRequest over reqhost.rs); this class runs its hooks there and answers
+// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
+// ee_won_hostop_bytes, ee_won_hostop_set.
 class RustServerOp : public ServerOp {
 public:
-    explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; a 4-byte length field, no auth
+    explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; its length field and time limits, no auth
+    // ServerRequestOp(context or address) with a Rust op derived from it (ee_won_reqop_* constructors), taken
+    static RustServerOp* NewRequest(EeWonReqOp* inOp, ServerContext* inContext);
+    static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
+    IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
+    void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
     virtual void RunHook();
     virtual void CleanupHook();
@@ -1749,6 +1755,7 @@ public:
 protected:
     virtual ~RustServerOp();
 private:
+    static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
     EeWonHostOp* mRustOp; // owned
     FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
 };
@@ -1800,12 +1807,6 @@ public:
     WONStatus Recv(); //2ae2d0
     bool CheckExpiredSession(); //2ae200
     ServerRequestOp(ServerContext*); //2acf60
-    // an op derived in Rust (ee_won reqop.rs, e.g. ee_won_adminop_new): its RunHook statements, request, reply and
-    // Reset are Rust's (the virtuals below when not overridden); the request owns it
-    ServerRequestOp(ServerContext*, EeWonReqOp* inRustOp);
-    ServerRequestOp(const IPAddr&, EeWonReqOp* inRustOp);
-    // a Rust op's request sent as one datagram on this socket instead (ReportPatchStatusOp's SetUDPSocket)
-    void SetUDPSocket(AsyncSocket* inSocket) { this->mUDPSocket = inSocket; }
     const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
     virtual void RunHook();   //2ae390
     virtual void CleanupHook(); //2ae4c0
@@ -1815,7 +1816,6 @@ public:
     virtual void Reset();     //326b60
 protected:
     WONStatus InvalidReplyHeader(); //2ad6a0, protected, 16 bytes; returns 100057
-    void RunDatagram(); // the request without a length field to the first address, then Success
     virtual ~ServerRequestOp(); //2ad110, explicit own-vptr store
 public:
     typedef std::list<IPAddr> AddrList;
@@ -1834,8 +1834,6 @@ public:
     SmartPtr<ServerContext> mServerContext; //e8
     ByteBufferPtr mRequest; //ec
     ByteBufferPtr mResponse; //f0..f4
-    EeWonReqOp* mRustOp; // NULL: a C++ derived op (or none)
-    SmartPtr<AsyncSocket> mUDPSocket; // a Rust op's datagram socket (NULL: the exchange)
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.

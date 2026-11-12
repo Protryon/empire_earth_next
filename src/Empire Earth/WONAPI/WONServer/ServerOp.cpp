@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONPing.h" // the MultiPingOp helpers over RustServerOp
+#include "ee/wonapi/WONAuthPeerData.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006acc10
 // Creates a server op with 60-second connect, send and receive limits and an 8-byte key size
@@ -133,9 +134,40 @@ SocketOp* NewSocketOp(const EeWonHostCall* c)
 
 RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp), mFile(NULL)
 {
-    this->mLengthFieldSize = 4;
+    uint32_t aTimes[3];
+    ee_won_hostop_setup(inRustOp, &this->mLengthFieldSize, aTimes);
+    this->SetMaxTimes(aTimes[0], aTimes[1], aTimes[2]);
     this->mAuthType = AUTH_TYPE_NONE;
     ee_won_hostop_bind(inRustOp, RustServerOp::HostCall, this);
+}
+RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, ServerContext* inContext)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
+    anOp->Set(EE_WON_REQHOST_CONTEXT, static_cast<RefCount*>(inContext));
+    return anOp;
+}
+RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_hostop_request(inOp));
+    ee_won_hostop_set(anOp->mRustOp, EE_WON_REQHOST_ADDR, 0, NULL, 0, reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()),
+                      NULL);
+    return anOp;
+}
+void RustServerOp::Set(int inWhich, RefCount* inObj)
+{
+    ee_won_hostop_set(this->mRustOp, inWhich, 0, NULL, 0, NULL, inObj);
+}
+IPAddr RustServerOp::GetCurAddr() const
+{
+    std::string anAddr;
+    ee_won_hostop_bytes(this->mRustOp, EE_WON_REQHOST_CUR_ADDR, 0, StrSink, &anAddr);
+    IPAddr a;
+    if (anAddr.size() == 6) a.SetSixByte(anAddr.data());
+    return a;
+}
+void RustServerOp::StrSink(void* inContext, const uint8_t* inData, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inData), inLength);
 }
 RustServerOp::~RustServerOp()
 {
@@ -197,7 +229,7 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         if (aSession != NULL) Give(c, aSession->GetKey().GetKey(), aSession->GetKey().GetKeyLen());
         break;
     }
-    case EE_WON_HOST_OP_KILLED: c->out_num = Op(o0)->IsKilled() ? 1 : 0; break;
+    case EE_WON_HOST_OP_KILLED: c->out_num = (o0 != NULL ? Op(o0) : o)->IsKilled() ? 1 : 0; break;
     case EE_WON_HOST_RESOLVE: {
         IPAddr anAddr;
         c->out_num = anAddr.SetWithDefaultPort(std::string(reinterpret_cast<const char*>(c->data), c->len),
@@ -277,6 +309,41 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_BASE_CLEANUP: o->AsyncOpWithTracker::CleanupHook(); break;
     case EE_WON_HOST_RELEASE: Obj(o0)->Release(); break;
     case EE_WON_HOST_ADD_REF: Obj(o0)->AddRef(); break;
+    // the request exchange (ee_won reqhost.rs: ServerRequestOp's statements)
+    case EE_WON_HOST_AUTH_TYPE: c->out_num = o->mAuthType; break;
+    case EE_WON_HOST_HAS_AUTH: c->out_num = o->mAuthContext.get() != NULL; break;
+    case EE_WON_HOST_CONNECT_TIME: c->out_num = o->ConnectTime(); break;
+    case EE_WON_HOST_TIMEOUT: c->out_num = (DWORD)o->GetTimeout(); break;
+    case EE_WON_HOST_CERT_USER_ID:
+        c->out_num = (uint32_t)o->mAuthContext->GetPeerData()->GetCertificate()->GetUserId(); // WONUserSeq
+        break;
+    case EE_WON_HOST_CTX_ADDRS: {
+        ServerContext::AddrList aList;
+        static_cast<ServerContext*>(Obj(o0))->CopyAddresses(aList);
+        std::string aBytes;
+        for (ServerContext::AddrList::const_iterator i = aList.begin(); i != aList.end(); ++i)
+            aBytes.append(reinterpret_cast<const char*>(i->GetSixByte()), 6);
+        Give(c, aBytes.data(), aBytes.size());
+        break;
+    }
+    case EE_WON_HOST_CTX_FAILED: static_cast<ServerContext*>(Obj(o0))->NotifyFailed(Addr(c)); break;
+    case EE_WON_HOST_GET_SESSION: {
+        SmartPtr<AuthSession> aSession = o->mAuthContext->GetSession(Addr(c));
+        c->out_obj = aSession.get() != NULL ? Out(aSession.get()) : NULL;
+        break;
+    }
+    case EE_WON_HOST_PUT_SESSION: o->mAuthContext->PutSession(Addr(c), static_cast<AuthSession*>(Obj(o0))); break;
+    case EE_WON_HOST_ADD_CRYPT:
+        Sock(o0)->AddMsgTransform(new CryptTransform(static_cast<AuthSession*>(Obj(c->obj[1]))));
+        break;
+    case EE_WON_HOST_KILL_ALL: o->mTracker.KillAll(); break;
+    case EE_WON_HOST_PEER_AUTH_SESSION: {
+        AuthSession* aSession = static_cast<PeerAuthOp*>(Op(o0))->GetSession();
+        c->out_obj = aSession != NULL ? Out(aSession) : NULL;
+        break;
+    }
+    case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
+    case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
     default: break;
     }
 }

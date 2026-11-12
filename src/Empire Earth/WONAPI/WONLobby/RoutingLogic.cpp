@@ -1888,9 +1888,9 @@ void RoutingLogic::AddFriend()
     std::wstring aWide=name;
     std::string aName;
     WideAppendUtf16LE(aName,aWide);
-    SmartPtr<ServerRequestOp> op=new ServerRequestOp(servers,ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(aName.data()),aName.size()));
+    SmartPtr<RustServerOp> op=RustServerOp::NewRequest(ee_won_reqop_user_id(reinterpret_cast<const uint8_t*>(aName.data()),aName.size()),servers);
     LobbyRunOpWithStatus(op.get(),::AddFriendDialog_StatusTitle_String,::AddFriendDialog_StatusDetails_String,1,0);
-    unsigned long aUserId=(unsigned long)ee_won_reqop_num(op->mRustOp,EE_WON_REQOP_USER_ID);
+    unsigned long aUserId=(unsigned long)ee_won_hostop_num(op->GetRustOp(),EE_WON_REQOP_USER_ID,0);
     if(op->GetStatus()!=WS_Success || aUserId==0) return;
     LobbyFriend* friendEntry=LobbyAddFriend(name,aUserId);
     if(friendEntry) {
