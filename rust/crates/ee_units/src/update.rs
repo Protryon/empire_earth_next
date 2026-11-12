@@ -226,6 +226,20 @@ impl UpdateHost for &EeUnitsUpdateHost {
     }
 }
 
+/// The stats reads of the update and `ActionChanged` hosts from a stats record (the hosts' expressions over
+/// `mStats`); None for another code. (The death sound stays a host read: the media loader sets it.)
+pub(crate) fn stat_field(s: &crate::stats::EeUnitStatsRecord, code: i32) -> Option<i64> {
+    Some(match code {
+        // `mStats != NULL && mStats->mRegeneration > 0`
+        EE_UNITS_UPD_R_REGENERATES => i64::from(s.regeneration > 0),
+        EE_UNITS_UPD_R_STATS_POWER => s.power,
+        EE_UNITS_UPD_R_GATHER_TIME_2 => s.gather_times[2],
+        EE_UNITS_UPD_R_GATHER_TIME_6 => s.gather_times[6],
+        crate::actions::EE_UNITS_ACT_R_FIRE_OVER_WALLS => i64::from(s.can_fire_over_walls),
+        _ => return None,
+    })
+}
+
 /// A unit's store fields, read at a point of the sequence: the record (`record`, a copy) or the host's.
 struct UpdateReads<'a> {
     host: &'a mut dyn UpdateHost,
@@ -253,6 +267,13 @@ impl UpdateReads<'_> {
     }
     fn read(&mut self, code: i32) -> i64 {
         self.host.read(code)
+    }
+    /// a read of the unit's stats: the stats table's record of its stats object (stats.rs), else the host's
+    fn stat(&mut self, code: i32) -> i64 {
+        match (self.record)().and_then(|r| crate::stats::stats_of(r.stats)) {
+            Some(s) => stat_field(&s, code).unwrap_or_else(|| self.host.read(code)),
+            None => self.host.read(code),
+        }
     }
     fn on(&mut self, code: i32) -> bool {
         self.host.read(code) != 0
@@ -314,7 +335,7 @@ impl UpdateReads<'_> {
     }
     /// the regeneration when the stats regenerate
     fn regenerate(&mut self) {
-        if self.on(EE_UNITS_UPD_R_REGENERATES) {
+        if self.stat(EE_UNITS_UPD_R_REGENERATES) != 0 {
             self.act(EE_UNITS_UPD_REGENERATE);
         }
     }
@@ -608,7 +629,7 @@ fn building(u: &mut UpdateReads<'_>) {
         if u.read(EE_UNITS_UPD_R_PHYSICS_ACTION) == 2 && u.can_step() {
             u.act(EE_UNITS_UPD_PHYSICS_STEP);
         }
-        if unit_type == UNIT_TYPE_CAPITOL && u.read(EE_UNITS_UPD_R_STATS_POWER) > 0 {
+        if unit_type == UNIT_TYPE_CAPITOL && u.stat(EE_UNITS_UPD_R_STATS_POWER) > 0 {
             u.act(EE_UNITS_UPD_DONE);
             u.act(EE_UNITS_UPD_REGENERATE_POWER);
         }
@@ -625,7 +646,7 @@ fn building(u: &mut UpdateReads<'_>) {
     u.host.act(EE_UNITS_UPD_ADD_RESOURCE, RESOURCE_FOOD, 1);
     u.act(EE_UNITS_UPD_SAVED_GROUPS_RESET);
     let time = u.read(EE_UNITS_UPD_R_GAME_TIME) as i32;
-    let delay = u.read(EE_UNITS_UPD_R_GATHER_TIME_6) as i32;
+    let delay = u.stat(EE_UNITS_UPD_R_GATHER_TIME_6) as i32;
     let scale = f32::from_bits(u.read(EE_UNITS_UPD_R_WORK_TIME_FACTOR) as u32);
     let graze = time.wrapping_add(lrintf(scale * delay as f32)) as u32;
     u.act_with(EE_UNITS_UPD_SET_GRAZE_TIME, i64::from(graze));
@@ -683,7 +704,7 @@ fn mining_building(u: &mut UpdateReads<'_>) {
     u.act(EE_UNITS_UPD_DEPLETE_MINE);
     let resource = u.read(EE_UNITS_UPD_R_MINE_RESOURCE_TYPE);
     u.host.act(EE_UNITS_UPD_ADD_RESOURCE, resource, 1);
-    let gather = u.read(EE_UNITS_UPD_R_GATHER_TIME_2);
+    let gather = u.stat(EE_UNITS_UPD_R_GATHER_TIME_2);
     u.act_with(EE_UNITS_UPD_SET_WORK_TIMER, gather);
 }
 

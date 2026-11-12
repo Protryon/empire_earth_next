@@ -6,6 +6,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GERectangle.h"
+#include "ee/EEUnitStore.h"
 #include "ee/EmpireEarth.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -507,6 +508,7 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
         for (unsigned long i = 0; i < theClasses.size(); i++) {
             theClass = theClasses[i];
             EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[theClass->GetUnitType()];
+            EEUnitStatsScope theStatsScope(theUpgrade);   // New (R5b.4, the fourteenth round): the stats table
             EESimCaptureRecord theClassRecord(EECaptureTag("EVAT"));
             if (theCapture) {
                 theClassRecord.U32(1);
@@ -788,6 +790,7 @@ long SetEventPrerequisite(EEEventEffect* inEffect, long inPlayerIndex, long inPr
 void ApplyEventGatherRate(EEEventEffect* inEffect, long inIndex, EEPlayer* inPlayer,
               EEUnitClass* inClass, EEUnitClassUpgrade* inUpgrade)
 {
+    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     if (inUpgrade == NULL)
         return;
     EeTechEffectValues theValues = EETechEffectView(inEffect);

@@ -97,6 +97,8 @@ pub const EE_UNIT_FIELD_HEAL_THRESHOLD: u32 = 46;
 /// `EEUnit::mUnitClass` too: the class's flags the combat reads test (`EE_UNIT_CLASS_*`: the combat lane's
 /// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
 pub const EE_UNIT_FIELD_CLASS_FLAGS: u32 = 47;
+/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
+pub const EE_UNIT_FIELD_STATS: u32 = 48;
 /// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
 pub const EE_UNIT_CLASS_WALL: u8 = 1;
 pub const EE_UNIT_CLASS_PROJECTILE: u8 = 2;
@@ -205,6 +207,8 @@ pub struct EeUnitRecord {
     pub heal_threshold: u32,
     /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
     pub class_flags: u8,
+    /// `mStats`: the unit's stats object (its player's upgrade of the class; 0: none), the stats table's key
+    pub stats: u64,
 }
 
 impl EeUnitRecord {
@@ -258,6 +262,7 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_PARATROOPER_BOMBER => self.paratrooper_bomber = value as u8,
             EE_UNIT_FIELD_HEAL_THRESHOLD => self.heal_threshold = value as u32,
             EE_UNIT_FIELD_CLASS_FLAGS => self.class_flags = value as u8,
+            EE_UNIT_FIELD_STATS => self.stats = value as u64,
             _ => return false,
         }
         true
@@ -333,6 +338,7 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_PARATROOPER_BOMBER, self.paratrooper_bomber == other.paratrooper_bomber),
             (EE_UNIT_FIELD_HEAL_THRESHOLD, self.heal_threshold == other.heal_threshold),
             (EE_UNIT_FIELD_CLASS_FLAGS, self.class_flags == other.class_flags),
+            (EE_UNIT_FIELD_STATS, self.stats == other.stats),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -756,6 +762,7 @@ mod tests {
             (EE_UNIT_FIELD_PARATROOPER_BOMBER, 1),
             (EE_UNIT_FIELD_HEAL_THRESHOLD, i64::from(0.75f32.to_bits())),
             (EE_UNIT_FIELD_CLASS_FLAGS, i64::from(EE_UNIT_CLASS_WALL | EE_UNIT_CLASS_MELEE)),
+            (EE_UNIT_FIELD_STATS, 0x7ff6_1234_5678),
         ] {
             let before = r;
             assert!(r.set(f, v));

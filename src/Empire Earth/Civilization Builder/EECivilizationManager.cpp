@@ -44,6 +44,7 @@
 #include "lle/UIButton.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
+#include "ee/EEUnitStore.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
@@ -604,6 +605,7 @@ static long EECBModeValue(long inCurrent, long inMode, float inValue)
 static void EECBApplyStat(const EECivApply& inApply, EEUnitClassUpgrade* inUpgrade, long inUnitType, float inValue,
                           EEPlayer* inPlayer)
 {
+    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     EEUnitClass* theClass = inUpgrade->mUnitClass;
     long theMode = inApply.mMode;
     bool theShare = theMode == kCivModeShare;
@@ -786,6 +788,7 @@ void EECivilizationManager::ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, uns
 // fadd [mem])
 void EECBUpgradeArmor(EEUnitClassUpgrade* inUpgrade, long inKind, float inValue)
 {
+    EEUnitStatsScope theStatsScope(inUpgrade);   // New (R5b.4, the fourteenth round): the stats table (ee/EEUnitStore.h)
     long theAdd = (long)(inUpgrade->mUnitClass->mArmor[inKind] * inValue + 0.5f);
     if (theAdd < 1)
         theAdd = 1;

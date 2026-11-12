@@ -346,6 +346,7 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.hit_points = (int64_t)theUnit->mHitPoints.Get();
         outRecord.resource_amount = (int64_t)theUnit->mResourceAmount.Get();
         outRecord.complex = (uint8_t)ComplexOf(theUnit);
+        outRecord.stats = reinterpret_cast<uintptr_t>(theUnit->mStats);
         EEUnitClass* theClass = theUnit->mUnitClass.Get();
         if (theClass != NULL) {
             outRecord.category = (int64_t)theClass->mCategory;
@@ -405,6 +406,57 @@ void EEUnitStoreInsertUnlisted(RTSUnit* inUnit)
     Fill(inUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), theRecord);
     ee_units_store_insert_unlisted(&theRecord);
     inUnit->mInUnitStore = true;
+}
+
+// New (R5b.4, the fourteenth round): a stats object's fields as its record (ee_units stats.rs EeUnitStatsRecord)
+static void StatsFill(EEUnitClassUpgrade* inStats, EeUnitStatsRecord& outRecord)
+{
+    memset(&outRecord, 0, sizeof(outRecord));
+    outRecord.object = reinterpret_cast<uintptr_t>(inStats);
+    outRecord.unit_type = inStats->mUnitClass != NULL ? (int64_t)inStats->mUnitClass->mUnitType : -1;
+    outRecord.scale = FloatBits(inStats->mScale);
+    outRecord.range = FloatBits(inStats->mRange);
+    outRecord.area_effect = FloatBits(inStats->mAreaEffect);
+    outRecord.line_of_sight = FloatBits(inStats->mLineOfSight);
+    outRecord.acceleration = FloatBits(inStats->mAcceleration);
+    outRecord.max_velocity = FloatBits(inStats->mMaxVelocity);
+    outRecord.max_angular_velocity = FloatBits(inStats->mMaxAngularVelocity);
+    outRecord.attack = FloatBits(inStats->mAttack);
+    outRecord.leadership = FloatBits(inStats->mLeadership);
+    for (int i = 0; i < 6; i++)
+        outRecord.armor[i] = FloatBits(inStats->mArmor[i]);
+    for (int i = 0; i < 7; i++)
+        outRecord.gather_times[i] = (int64_t)inStats->mGatherTimes[i];
+    outRecord.power_regeneration = (int64_t)inStats->mPowerRegeneration;
+    outRecord.flight_time = (int64_t)inStats->mFlightTime;
+    outRecord.work_rate = (int64_t)inStats->mWorkRate;
+    outRecord.reload_time = (int64_t)inStats->mReloadTime;
+    outRecord.max_hit_points = (int64_t)inStats->mMaxHitPoints;
+    outRecord.power = (int64_t)inStats->mPower;
+    outRecord.healing_points = (int64_t)inStats->mHealingPoints;
+    outRecord.regeneration = (int64_t)inStats->mRegeneration;
+    outRecord.can_fire_over_walls = inStats->mCanFireOverWalls ? 1 : 0;
+    outRecord.converts_buildings = inStats->mConvertsBuildings ? 1 : 0;
+    outRecord.converts_priests = inStats->mConvertsPriests ? 1 : 0;
+    outRecord.death_sound = inStats->mDeathSound != NULL ? 1 : 0;
+}
+
+void EEUnitStatsReport(EEUnitClassUpgrade* inStats)
+{
+    EeUnitStatsRecord theRecord;
+    StatsFill(inStats, theRecord);
+    ee_units_stats_report(&theRecord);
+}
+
+void EEUnitStatsRemove(EEUnitClassUpgrade* inStats)
+{
+    ee_units_stats_remove(reinterpret_cast<uintptr_t>(inStats));
+}
+
+void EEUnitStoreStatsChanged(EEUnit* inUnit)
+{
+    if (inUnit->mInUnitStore)
+        Set(inUnit, EE_UNIT_FIELD_STATS, (int64_t)reinterpret_cast<uintptr_t>(inUnit->mStats));
 }
 
 void EEUnitStoreInsert(RTSUnit* inUnit, unsigned long inOwner, const RTSPlayer* inPlayer)
@@ -645,6 +697,44 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
         if (theUnlistedBad != 0) {
             fprintf(stderr, "EE-UNIT-STORE: %u of the %zu unlisted units differ from the store\n", theUnlistedBad, theCount);
             theCheck.mismatches += theUnlistedBad;
+        }
+    }
+    // the stats objects of every unit (listed and unlisted) against the stats table (ee_units stats.rs); a difference
+    // counts like a field's
+    {
+        static std::vector<EeUnitRecord> sUnlistedRecords;
+        static std::vector<EeUnitStatsRecord> sStats;
+        static std::vector<uint64_t> sStatsSeen;
+        size_t theCount = ee_units_store_unlisted(NULL, 0);
+        static std::vector<uint64_t> sUnlisted;
+        sUnlisted.resize(theCount);
+        if (theCount != 0)
+            ee_units_store_unlisted(&sUnlisted[0], theCount);
+        sUnlistedRecords.clear();
+        for (size_t i = 0; i < theCount; i++) {
+            RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(sUnlisted[i]));
+            EeUnitRecord theRecord;
+            Fill(theUnit, 0, NULL, theRecord);
+            sUnlistedRecords.push_back(theRecord);
+        }
+        sStats.clear();
+        sStatsSeen.clear();
+        for (size_t i = 0; i < sObjects.size() + sUnlistedRecords.size(); i++) {
+            const EeUnitRecord& theRecord = i < sObjects.size() ? sObjects[i] : sUnlistedRecords[i - sObjects.size()];
+            if (theRecord.stats == 0)
+                continue;
+            if (std::find(sStatsSeen.begin(), sStatsSeen.end(), theRecord.stats) != sStatsSeen.end())
+                continue;
+            sStatsSeen.push_back(theRecord.stats);
+            EeUnitStatsRecord theStats;
+            StatsFill(reinterpret_cast<EEUnitClassUpgrade*>(static_cast<uintptr_t>(theRecord.stats)), theStats);
+            sStats.push_back(theStats);
+        }
+        uint32_t theStatsBad = ee_units_stats_check(sStats.empty() ? NULL : &sStats[0], sStats.size());
+        if (theStatsBad != 0) {
+            fprintf(stderr, "EE-UNIT-STORE: %u of the %zu units' stats objects differ from the stats table\n", theStatsBad,
+                    sStats.size());
+            theCheck.mismatches += theStatsBad;
         }
     }
     // the world's unit chain (the out-of-sync checksum's walk) against the records' on-the-map flags, and the

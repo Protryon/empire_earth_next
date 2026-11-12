@@ -768,6 +768,9 @@ constexpr static const uint32_t EE_UNIT_FIELD_HEAL_THRESHOLD = 46;
 /// `EE_COMBAT_CLASS_*` bits), fixed once the db's classes are made
 constexpr static const uint32_t EE_UNIT_FIELD_CLASS_FLAGS = 47;
 
+/// the fourteenth round's: `mStats` (the `EEUnitClassUpgrade*`'s address; the stats table's key: stats.rs)
+constexpr static const uint32_t EE_UNIT_FIELD_STATS = 48;
+
 /// The class flags: `mIsWall`, `mIsProjectile`, `mIsParatrooperBomber`, `mIsMelee`.
 constexpr static const uint8_t EE_UNIT_CLASS_WALL = 1;
 
@@ -784,6 +787,17 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
 constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
+
+/// The records by id, and the ids by object (the combat lane's handle-to-record lookup: RUST_PLAN's combat row, store
+/// field (3); a handle is the `RTSUnit*`'s address, the record's `object`).
+///
+/// The fourteenth round's unlisted table: the units of id 0xffffffff have their record by object here, as records by
+/// id cannot hold them: the shots (made by `CreateUnit` with no list: `EEUnitStoreInsertUnlisted`, until a list takes
+/// one or its destructor) and a scenario's path points (listed, every one of id 0xffffffff: `insert`). The holders'
+/// writes reach them by object, `by_object` answers from both tables, and the out-of-sync checksum's flags and the
+/// on-map check count those on the map (the chain holds them).
+/// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
+constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
 
 constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 
@@ -1181,6 +1195,8 @@ struct EeUnitRecord {
   uint32_t heal_threshold;
   /// the class's `EE_UNIT_CLASS_*` flags (0: no class)
   uint8_t class_flags;
+  /// `mStats`: the unit's stats object (its player's upgrade of the class; 0: none), the stats table's key
+  uint64_t stats;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -1301,6 +1317,46 @@ struct EeUnitsPitchIn {
   float rate;
   /// 1: `EEPMNaval`'s (and `EEPMSpaceship`'s) mode, 0: the base model's
   uint8_t naval;
+};
+
+/// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
+struct EeUnitStatsRecord {
+  /// the `EEUnitClassUpgrade*`'s address (the key)
+  uint64_t object;
+  /// the reports that changed this record (1: the first); set by the table, not compared
+  uint32_t version;
+  /// `mUnitClass->mUnitType` (-1: no class)
+  int64_t unit_type;
+  /// `mScale`, `mRange`, `mAreaEffect`, `mLineOfSight`, `mAcceleration`, `mMaxVelocity`, `mMaxAngularVelocity`,
+  /// `mAttack`, `mLeadership` (float bits)
+  uint32_t scale;
+  uint32_t range;
+  uint32_t area_effect;
+  uint32_t line_of_sight;
+  uint32_t acceleration;
+  uint32_t max_velocity;
+  uint32_t max_angular_velocity;
+  uint32_t attack;
+  uint32_t leadership;
+  /// `mArmor[6]` (float bits)
+  uint32_t armor[6];
+  /// `mGatherTimes[7]`
+  int64_t gather_times[7];
+  /// `mPowerRegeneration`, `mFlightTime`, `mWorkRate`, `mReloadTime`, `mMaxHitPoints`, `mPower`, `mHealingPoints`,
+  /// `mRegeneration` (`long`s)
+  int64_t power_regeneration;
+  int64_t flight_time;
+  int64_t work_rate;
+  int64_t reload_time;
+  int64_t max_hit_points;
+  int64_t power;
+  int64_t healing_points;
+  int64_t regeneration;
+  /// `mCanFireOverWalls`, `mConvertsBuildings`, `mConvertsPriests`, `mDeathSound != NULL`
+  uint8_t can_fire_over_walls;
+  uint8_t converts_buildings;
+  uint8_t converts_priests;
+  uint8_t death_sound;
 };
 
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
@@ -1918,6 +1974,32 @@ uint32_t ee_units_player_check(const uint64_t *objects,
                                const uint32_t *ids,
                                const uint32_t *enemies,
                                size_t count);
+
+/// A stats object's report (its fields may have changed). Returns its version.
+///
+/// # Safety
+/// `record` points to a valid record.
+uint32_t ee_units_stats_report(const EeUnitStatsRecord *record);
+
+/// A stats object's destructor.
+void ee_units_stats_remove(uint64_t object);
+
+/// Copies a stats object's record into `out`; false (and `out` untouched) when the table has none.
+///
+/// # Safety
+/// `out` points to a writable record.
+bool ee_units_stats_get(uint64_t object, EeUnitStatsRecord *out);
+
+/// TEST ONLY: the objects of `objects` (`count` records filled from the units' stats) whose record is missing or
+/// differs.
+///
+/// # Safety
+/// `objects` points to `count` records (or is null with `count` 0).
+uint32_t ee_units_stats_check(const EeUnitStatsRecord *objects,
+                              size_t count);
+
+/// The table's records (TEST ONLY: the teardown's leak check).
+uint32_t ee_units_stats_count();
 
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.

@@ -388,6 +388,13 @@ impl ActionReads<'_> {
     fn on(&mut self, code: i32) -> bool {
         self.host.read(code) != 0
     }
+    /// a read of the unit's stats: the stats table's record of its stats object (stats.rs), else the host's
+    fn stat(&mut self, code: i32) -> i64 {
+        match (self.record)().and_then(|r| crate::stats::stats_of(r.stats)) {
+            Some(s) => crate::update::stat_field(&s, code).unwrap_or_else(|| self.host.read(code)),
+            None => self.host.read(code),
+        }
+    }
     fn act(&mut self, code: i32) -> i64 {
         self.host.act(code, 0, 0)
     }
@@ -624,10 +631,10 @@ fn idle(u: &mut ActionReads<'_>) {
         u.animation(2, 0);
     } else if (!u.on(EE_UNITS_ACT_R_LAND_BUILDING) || u.on(EE_UNITS_ACT_R_CLASS_ARMED))
         && state != 7
-        && (u.on(EE_UNITS_ACT_R_FIRE_OVER_WALLS) || state != 8)
+        && ((u.stat(EE_UNITS_ACT_R_FIRE_OVER_WALLS) != 0) || state != 8)
     {
         let draw = f32::from_bits(u.host.read(EE_UNITS_ACT_R_RANDOM) as u32);
-        if draw < 0.5 || u.on(EE_UNITS_ACT_R_FIRE_OVER_WALLS) {
+        if draw < 0.5 || (u.stat(EE_UNITS_ACT_R_FIRE_OVER_WALLS) != 0) {
             u.animation(7, 0);
         } else {
             u.animation(8, 0);
@@ -930,7 +937,7 @@ fn mining_building(u: &mut ActionReads<'_>) {
     if u.command() != ACTION_GATHER_RESOURCE {
         building(u);
     } else {
-        let time = u.host.read(EE_UNITS_UPD_R_GATHER_TIME_2);
+        let time = u.stat(EE_UNITS_UPD_R_GATHER_TIME_2);
         u.act_with(EE_UNITS_ACT_SET_WORK_TIMER, time);
     }
 }
@@ -1576,6 +1583,29 @@ mod tests {
         assert!(!ops(&run(EE_UNITS_ACTION_BASIC_PRIEST, &mut m)).contains(&EE_UNITS_ACT_SET_WORK_TIMER));
         let mut m = unit(ACTION_WAIT_FOR_RELOAD);
         assert_eq!(run(EE_UNITS_ACTION_BASIC_PRIEST, &mut m).len(), 4);
+    }
+
+    #[test]
+    fn the_stats_reads_come_from_the_table() {
+        let object = 0x5157_0000_0001u64;
+        let mut stats = crate::stats::EeUnitStatsRecord { object, can_fire_over_walls: 1, ..Default::default() };
+        stats.gather_times[2] = 1234;
+        // SAFETY: a valid record
+        unsafe { crate::stats::ee_units_stats_report(&stats) };
+        let record =
+            EeUnitRecord { command: ACTION_GATHER_RESOURCE, goal_kind: -1, stats: object, ..Default::default() };
+        // the mine's work timer: the table's gather time, not the host's (0)
+        let mut m = unit(ACTION_GATHER_RESOURCE);
+        assert!(action_changed(EE_UNITS_ACTION_MINING_BUILDING, &mut m, &mut || Some(record)));
+        assert_eq!(m.log, vec![(EE_UNITS_ACT_SET_WORK_TIMER, 1234, 0)]);
+        assert!(!m.asked.contains(&EE_UNITS_UPD_R_GATHER_TIME_2));
+        // idling with fire over walls (the table's): stance 7 whatever the draw
+        let mut m = unit(ACTION_IDLE);
+        m.reads.insert(EE_UNITS_ACT_R_RANDOM, i64::from(0.75f32.to_bits()));
+        let idle = EeUnitRecord { command: ACTION_IDLE, ..record };
+        assert!(action_changed(EE_UNITS_ACTION_BASE, &mut m, &mut || Some(idle)));
+        assert!(m.log.contains(&(EE_UNITS_ACT_SET_ANIMATION, 7, 0)));
+        crate::stats::ee_units_stats_remove(object);
     }
 
     #[test]

@@ -32,6 +32,7 @@ pub mod physics;
 pub mod players;
 pub mod registry;
 pub mod select;
+pub mod stats;
 pub mod step;
 pub mod store;
 pub mod tick;

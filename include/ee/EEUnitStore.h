@@ -129,6 +129,20 @@ void EEUnitStorePlayerTable(const EEPlayer* inPlayer);
 // the unit was linked into or unlinked from the world's unit chain (RTSUnit::Link, RTSUnit::Unlink): the record's
 // on-the-map flag (store.rs EE_UNIT_FIELD_ON_MAP), the domain of the out-of-sync checksum's unit walk
 void EEUnitStoreLinked(RTSUnit* inUnit);
+// New (R5b.4, the fourteenth round): the stats table (ee_units stats.rs). A stats object's fields may have changed
+// (its Init, an improvement, the civilization builder's and the scenario events' writes, the setters): its record
+// again; its destructor drops it. EEUnitStatsScope reports its object when the writer returns (every return).
+class EEUnitClassUpgrade;
+void EEUnitStatsReport(EEUnitClassUpgrade* inStats);
+void EEUnitStatsRemove(EEUnitClassUpgrade* inStats);
+struct EEUnitStatsScope {
+    explicit EEUnitStatsScope(EEUnitClassUpgrade* inStats) : mStats(inStats) {}
+    ~EEUnitStatsScope() { if (mStats != NULL) EEUnitStatsReport(mStats); }
+    EEUnitClassUpgrade* mStats;
+};
+// a unit's mStats was assigned: its record's stats handle (EE_UNIT_FIELD_STATS)
+class EEUnit;
+void EEUnitStoreStatsChanged(EEUnit* inUnit);
 // New (R5b.4, the fourteenth round): a unit of id 0xffffffff in no list (a shot: CreateUnit with no list): its record
 // in the store's unlisted table by object until a list takes it or its destructor. The store keeps every unit of id
 // 0xffffffff there, listed or not (a scenario's path points are listed, all with that id): records by id cannot hold
