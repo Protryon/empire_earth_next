@@ -139,14 +139,14 @@ void RoomCtrl::AddServer(LobbyServer* inServer,bool inOpen,int inPos)
     this->mRoomList->BeginUpdate();
     RoomListItem* aItem=new RoomListItem(inServer,false);
     TreeItem* aServer=this->mRoomList->InsertTreeItem(NULL,aItem,inPos);
-    LobbyGroupMap::iterator it=inServer->mGroups.begin();
-    while(it!=inServer->mGroups.end())
+    size_t it=0;
+    while(it<inServer->GetGroupCount())
     {
-        LobbyGroup* aGroup=it->second.get();
+        LobbyGroup* aGroup=inServer->GroupAt(it);
         if(aGroup->IsChatGroup()) this->AddGroup(aServer,inServer,aGroup);
         ++it;
     }
-    if(!inServer->IsConnected() && inServer->mGroups.empty())
+    if(!inServer->IsConnected() && inServer->GetGroupCount()==0)
     {
         this->mRoomList->RemoveAllItems(aServer);
         RoomListItem* aLoading=new RoomListItem(inServer,true);
@@ -226,8 +226,8 @@ void RoomCtrl::HandleSetRoomList()
     if(aServers==NULL) return;
     this->mRoomList->BeginUpdate();
     this->mRoomList->ClearTree(true);
-    for(LobbyServerMap::iterator it=aServers->mServers.begin();it!=aServers->mServers.end();++it)
-        this->AddServer(it->second.get(),false,-1);
+    for(size_t it=0;it<aServers->GetCount();++it)
+        this->AddServer(aServers->ServerAt(it),false,-1);
     this->mRoomList->EndUpdate();
     LobbyGroup* aGroup=LobbyGetChatGroup();
     LobbyServer* aServer=LobbyGetCurrentServer();

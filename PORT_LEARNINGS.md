@@ -7980,3 +7980,79 @@ over the forwarders printing the same, and the same on seeds 2-4 at ten times th
   simulation: EE-SIM never runs it, so the oracle only shows it does not disturb the game.
 - **Behaviour:** none on Windows. The variant event no longer walks past the variants' list when a line holds no
   selectable variant (the original read past it); a start check colour past 16 no longer indexes past its table.
+
+## R6: the lobby's containers as Rust objects: LobbyModel's lists, LobbyPersistentData's maps and the chat command parser (ee_won lobbymap.rs, chatobj.rs, WONLobbyMap.h; branch rust-r6-won17, 2026-11-12)
+
+Round 17 of R6 (RUST_PLAN "R6 WON, the rest"), the sixth round of whole-class moves: every ordered container the
+lobby's model and saved settings held.
+
+- **The golden first.** `won_model_test` records the lobby's containers as the original's `std::map` / `std::set`
+  statements with the original comparators (ids unsigned and signed, `IPAddr::operator<`, `GUIStringLessNoCase` and
+  `GUIString::operator<` over `wchar_t` units, `StringLessNoCase` over bytes, LobbyOptionSet's `Add` / `Erase` /
+  `clear`): six seeds of 160 steps per key kind (insert, `operator[]=`, find, erase, lower and upper bound, erase at
+  a position, erase to the end, clear, copy) and six option-set scripts, `golden_lobbymap.txt` (6480 lines; commit
+  `R6 WON: won_model_test's round 17 golden`, three runs the same). The keys are indices into candidate lists both
+  sides repeat. The no-case candidates are ASCII: the cargo replay's `CrtChat` is the C locale's model, the C++ run
+  the CRT's `towupper`.
+- **One container type.** `EeWonLobbyMap`: an ordered vector under its kind's comparator (a key present keeps its
+  first spelling, as in a `std::map`), each entry an object pointer, two numbers and a text. The objects are owned
+  through the map's hooks (`copy`, `drop`): a SmartPtr's reference (AddRef / Release) or a record (copy constructor /
+  delete). The hooks run after the map's borrow ends: a Release can destroy a LobbyGroup whose client list frees
+  another map. `WONLobbyMap.h` wraps it: `LobbyKeyedMap<K>` (sets, and maps of a number or a text),
+  `LobbyRefMap<K, T>` (`std::map<K, SmartPtr<T> >`), `LobbyOwnedMap<K, T>` (`std::map<K, T>`, the record made on first
+  use as `operator[]` made it) and `LobbyMapCursor` (an iterator's walk: the entry after the last one visited, so an
+  insert or erase elsewhere keeps the walk's place, where the original's iterator was invalid only when its own entry
+  went). Positions are indices into the order, valid until the container changes.
+- **LobbyModel** (commit `R6 WON: LobbyModel's containers as Rust objects`): LobbyClientList's clients and its two
+  iterators, LobbyServer's rooms and address names, LobbyServerList's servers, LobbyGameList's two maps and cursors.
+  The maps are private; the classes give counts and positions (`GetCount` / `ClientAt`, `GetGroupCount` / `GroupAt`,
+  `ServerAt` / `AddressAt`). SyncClients / SyncGroups walk the merge plan by position, moved past an entry inserted
+  before it. Eight callers iterate by position. Behaviour change: `LobbyGameList::Next` at the end gives NULL (the
+  original read past `end()`).
+- **LobbyPersistentData** (commit `R6 WON: LobbyPersistentData's containers and LobbyOptionSet as Rust objects`):
+  users (owned LobbyUserInfo records: their pointers, which LobbyAddUser, LobbyFindUser and LobbyGetCurrentUser hand
+  out and LobbyGetTOUTimes writes through, stay stable), user ids, ignored names, blocked keys, friends (LobbyFriend
+  references), both option tables (owned LobbyOptionSets), reconnect ids (the two numbers), LAN names (the number) and
+  direct connects (the text). LobbyOptionSet is one container in insertion order. The six Lobby* functions that
+  returned references to the C++ maps (0x75ce60, 0x75d270, 0x75cfc0, 0x75d660, 0x75d8e0, 0x75dc80) are counts and
+  positions (`LobbyGetUserCount` / `NameAt` / `LastUseAt`, `LobbyGetFriendCount` / `FriendAt`, ...) and
+  `LobbyGetFilterValues` (a copy). **Found:** the original copied option sets memberwise (`LobbyResetFilters`, the
+  user load's defaults), so the copy's index held list iterators into the source's list: the copy's first `Erase`
+  was undefined behaviour. A copy is a copy now. Also changed: a new reconnect entry's id starts at 0 (unset in the
+  original until assigned).
+- **Check.** cargo test `lobbymap` (the golden replayed, the hooks, the values); `won_model_test` runs the same
+  scripts through the C ABI as the wrappers call it and compares its lines with the std containers' (614,416 checks).
+  The header change (`ee_rust.h`) recompiled most units once; the second commit added no FFI.
+- **What runs it.** EE-SIM never loads the lobby: the oracle cannot see these. The lead's LAN game exercises, at
+  every lobby load and LAN login: LobbyPersistentData's constructor (every container made), LoadGlobalPrefs (the
+  users map cleared and filled from the file when one exists), SetCurrentUser(LAN) -> LoadUserPrefs (the clears, the
+  user file's LAN names, direct connects, reconnects, ignored names, friends, options; the defaults' copy when the file
+  has no options), SelectRecentLanName over the LAN names; the LAN screen's direct connects (LanLogic's
+  `LobbyGetDirectConnectCount` loop into the direct game list); LanLogic's client list (AddClient, FindClient,
+  RemoveClient, the join reply's client walk, LobbyClientIterator for the broadcasts and chat targets); the LAN game
+  list (GetOrCreateGame by address, GetGame, RemoveGame, RemoveStaleGames, and ServerListCtrl's Rewind / HasMore /
+  Next when the list is shown); StagingLogic's LobbyClientSetIterator over the game's players, LobbyGame::AreAllReady, ClearPlayers and the
+  join request's name check; the user lists (UserListCtrl, GameUserListCtrl) and the chat parser's client names;
+  SaveUserPrefs / SaveGlobalPrefs at exit. Only a person reaches: the options dialog's LAN name combo, LAN name
+  removal and pruning past 50 names, the ignore command and its list, filters (ServerListCtrl, LobbyAddFilterValue,
+  Reset Filters), direct-connect add and remove, the direct games' ping refresh (LanLogic's
+  Rewind / HasMore / Next). Internet only (nothing reaches it, the servers are gone): the server
+  list, rooms and their syncs, friends' location, the login users' combo, LobbyAddUser and PruneUsers.
+- **ChatCommandParser** (commits `R6 WON: ChatCommandParser's accessors and won_chat_test's round 17 golden` and
+  `R6 WON: ChatCommandParser as a Rust object`). Accessors first (`GetError`, `GetInvitation`, the setters the
+  driver and LanLogic / RoutingLogic used on the members), then `golden_chat.txt` grew from 439 to 564 lines over the
+  unmodified class: the tables after an overriding name, an empty one, a second name, a name list and a built-in
+  short name; four passes of seventeen inputs with no reset between them (no list; a list with room flags 2;
+  colon emotes, threshold 3 and a reply target; the list dropped and the prefix '!'), each step's whole state;
+  FindClient. The driver's first run printed `inv=154`: the constructor leaves the invitation unset, so the driver
+  starts it false. Then `chatobj.rs` EeWonChatParser holds the command tables (`WStringLessNoCase`; a name present
+  keeps its spelling and takes the new id; an id's string is its first name), the settings and what a parse leaves,
+  and runs HandleInput with ParseCommand over chat.rs; the class keeps the client list and the target and hands the
+  clients' names in. `GetTargetName` / `GetText` return copies. cargo test `chat_golden` replays the state lines on
+  the object; `won_chat_test` gives the 564 lines over it. Behaviour change: the error, command and invitation start
+  at 0 / 0 / false (unset in the original). The lead's LAN game reaches the constructor and InitCommands (every
+  lobby load) and its destructor at exit; the parser is fetched (LobbyGetRoomChatParser: SetClientList)
+  only around chat, and `lan_game.py` sends none, so HandleInput, the commands, the help, the reply target
+  (SetInput on a received whisper) and LanLogic's command handling only a person reaches.
+- **Left.** StagingLogic and InitLogic as Rust objects, then LanLogic; the model's element classes (LobbyClient,
+  LobbyGame with the game code's hooks, LobbyGroup, LobbyServer, LobbyFriend) stay C++ objects the containers hold.

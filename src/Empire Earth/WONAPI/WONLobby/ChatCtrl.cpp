@@ -438,7 +438,7 @@ void ChatCtrl::HandleSetChatInput(SetChatInputEvent* inEvent)
     if(parser==NULL) return;
     this->mChatInput->RequestFocus();
     GUIString input(GetEmptyGUIStringData());
-    input.append(parser->mPrefix);
+    input.append(parser->GetPrefix());
     input.append(parser->GetCommandString(inEvent->mCommand));
     input.append(GUIString(" \""));
     input.append(inEvent->mText);
@@ -493,9 +493,9 @@ void ChatCtrl::HandleGroupJoinAttempt(GroupJoinAttemptEvent* inEvent)
 void ChatCtrl::ShowParserError(ChatCommandParser* inParser)
 {
     GUIString error(GetEmptyGUIStringData());
-    switch(inParser->mError) {
-    case 3:error=LobbyFormatString(::RoutingLogic_ClientNotFound_String,inParser->mTargetName);break;
-    case 4:error=LobbyFormatString(::RoutingLogic_ClientAmbiguous_String,inParser->mTargetName);break;
+    switch(inParser->GetError()) {
+    case 3:error=LobbyFormatString(::RoutingLogic_ClientNotFound_String,inParser->GetTargetName());break;
+    case 4:error=LobbyFormatString(::RoutingLogic_ClientAmbiguous_String,inParser->GetTargetName());break;
     case 1:error=::RoutingLogic_InvalidCommand_String;break;
     case 2:error=::RoutingLogic_RequireName_String;break;
     case 7:error=::RoutingLogic_BadTimeSpec_String;break;
@@ -572,10 +572,10 @@ void ChatCtrl::SendInput()
         if(parser->GetText().length()!=0) break;
         {
             GUIString command;
-            command.append(parser->mPrefix);
+            command.append(parser->GetPrefix());
             command.append(parser->GetCommandString(LobbyChatCommand_Whisper));
             command.append(GUIString(" \""));
-            command.append(parser->mTargetName);
+            command.append(parser->GetTargetName());
             command.append(GUIString("\" "));
             this->mChatInput->SetText(command,false);
             this->mChatInput->SelectRange(-1,-1);
@@ -598,12 +598,12 @@ void ChatCtrl::SendInput()
         return;
     }
     case LobbyChatCommand_Ignore:
-        if(parser->mTargetName.length()!=0) break;
+        if(parser->GetTargetName().length()!=0) break;
         {
             GUIString names;
-            for(LobbyIgnoredNameSet::const_iterator i=LobbyFn35CFC0().begin();i!=LobbyFn35CFC0().end();++i) {
+            for(size_t i=0;i<LobbyGetIgnoredNameCount();++i) {
                 if(names.length()!=0) names.append(GUIString(", "));
-                names.append(*i);
+                names.append(LobbyGetIgnoredNameAt(i));
             }
             this->AddTextLine(::ChatCtrl_IgnoreList_String,names,true);
         }

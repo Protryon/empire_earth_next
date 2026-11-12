@@ -22,6 +22,10 @@ constexpr static const int32_t FAILED = 9;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+constexpr static const uint32_t RESOURCE_WOOD = 3;
+
+constexpr static const uint32_t RESOURCE_STONE = 4;
+
 extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.

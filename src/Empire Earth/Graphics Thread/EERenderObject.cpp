@@ -1149,6 +1149,7 @@ std::vector<GETexture*> gU4E8EF0;
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
+#include "rust/ee_gfx.h"
 
 // FUNCTION: EXE 0x50d3ad
 // Fills a render unit for a unit and files it in the picker and the texture maps

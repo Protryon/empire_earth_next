@@ -68,7 +68,7 @@ void RoomLabelCtrl::HandleComponentEvent(ComponentEvent* inEvent)
             if((this->mRoomSpecFlags&aEvent->GetRoomSpec())!=aEvent->GetRoomSpec()) return;
             this->mServer=aEvent->mServerName;
             this->mRoom=aEvent->mGroupName;
-            if(this->mUserCt>=0) this->mUserCt=aEvent->mClients->mClients.size();
+            if(this->mUserCt>=0) this->mUserCt=aEvent->mClients->GetCount();
             this->CalcLabel();
         }
         return;

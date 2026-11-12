@@ -91,7 +91,7 @@
 #include "ee/EEUIFMGStatusBar.h"
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_rust.h"   // ee_screens_hud_*: the attribute texts (ee_screens hud.rs)
+#include "rust/ee_screens.h"   // ee_screens_hud_*: the attribute texts (ee_screens hud.rs)
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4

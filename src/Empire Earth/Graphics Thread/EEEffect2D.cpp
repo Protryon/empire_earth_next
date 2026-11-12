@@ -43,6 +43,7 @@
 #include "ee/EEEffect2D.h"
 
 #include <math.h>
+#include "rust/ee_gfx.h"
 
 // SYNTHETIC: EXE 0x50428c
 // SYNTHETIC: EXE 0x504296
