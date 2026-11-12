@@ -12,6 +12,7 @@ pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
 pub mod buffer;
+pub mod cachemap;
 pub mod cdkey;
 pub mod cert;
 pub mod chat;

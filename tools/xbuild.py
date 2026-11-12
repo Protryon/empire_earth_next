@@ -521,6 +521,11 @@ WON_TESTS = {
     # original's statements against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module
     # (golden: rust/crates/ee_won/src/golden_miscops.txt)
     "won_miscops_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    # HTTPCache's index file (cachemap.dat read and written on the Rust file layer, the kept entries and the deleted
+    # files), the original's statements over the real FileReader / FileWriter against WONHttpCacheMsg.h over ee_won's
+    # cachemap module
+    "won_cachemap_test": [WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
+                                                             "FileWriter.cpp", "WONFile.cpp", "StringUtil.cpp")],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

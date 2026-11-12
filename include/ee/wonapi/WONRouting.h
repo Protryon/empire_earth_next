@@ -2093,8 +2093,10 @@ public:
 class FileReader;
 class FileWriter;
 // Cache entry, 0x68 bytes; ctor 2d1260; implicit dtor 2d1330 (no own-vtable store).
+template <class Cache, class Entry> struct HttpCacheMsg;
 class HTTPCacheEntry : public RefCount {
     friend class HTTPCache;
+    template <class Cache, class Entry> friend struct HttpCacheMsg;
     int mId; //08
     bool mIsValid; //0c,naturalpadding0d..0f
     std::string mRemoteLocation; //10
@@ -2106,8 +2108,7 @@ class HTTPCacheEntry : public RefCount {
     time_t mLastAccessTime; //64
 public:
     HTTPCacheEntry(); //2d1260
-    void ReadFromFile(FileReader&); //2d1450
-    void WriteToFile(FileWriter&); //2d14c0
+    // ReadFromFile 2d1450 and WriteToFile 2d14c0 are ee_won's (cachemap.rs, through WONHttpCacheMsg.h)
     bool IsValid(); //2d1540, small getter, out of line
     void SetValid(bool inValid) {this->mIsValid=inValid;}
     void SetExpirationTime(time_t inTime) {this->mExpirationTime=inTime;}
@@ -2128,6 +2129,8 @@ protected:
     int mNextFreeId; //30
     void ReadCacheMap(); //2d1a10
     void WriteCacheMap(); //2d1ca0
+    void DeleteCachedFile(HTTPCacheEntry*); // WriteCacheMap's deletion of a dropped entry's file
+    template <class Cache, class Entry> friend struct HttpCacheMsg;
     int GetFreeId(); //2d2170
     virtual ~HTTPCache(); //2d1820 explicitownVT then WriteCacheMap
 public:

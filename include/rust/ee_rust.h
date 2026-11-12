@@ -6317,6 +6317,16 @@ struct EeWonReadBuffer {
   long length;
 };
 
+/// An entry across the C ABI: the fields, then the four strings (remote location, file name, type, entity tag).
+struct EeWonCacheEntry {
+  int32_t id;
+  bool valid;
+  int64_t expiration;
+  int64_t last_access;
+  const uint8_t *strings[4];
+  size_t lengths[4];
+};
+
 /// Bytes handed over by the C++ (`present` false: a NULL buffer).
 struct EeWonDirBytes {
   const uint8_t *data;
@@ -14275,6 +14285,30 @@ bool ee_won_reader_take(EeWonReadBuffer *r, uint64_t amount, const uint8_t **out
 /// # Safety
 /// As `ee_won_reader_take`.
 bool ee_won_reader_length(EeWonReadBuffer *r, uint8_t size, uint32_t *out);
+
+/// `ReadCacheMap`'s file: opened (nothing when it cannot be), read with [`read_map`], each entry handed to `put`
+/// (valid during the call), closed.
+///
+/// # Safety
+/// `path` is a C string; `put` is callable with `context`.
+void ee_won_cachemap_read(const char *path,
+                          int32_t version,
+                          void (*put)(void*, const EeWonCacheEntry*),
+                          void *context);
+
+/// `WriteCacheMap`'s file: opened for writing (nothing when it cannot be), written with [`write_map`] (the entries
+/// in the id map's order, `delete` called with an index for each one not kept), closed.
+///
+/// # Safety
+/// `path` is a C string; `entries` holds `count` entries whose strings hold their lengths; `delete` is callable
+/// with `context`.
+void ee_won_cachemap_write(const char *path,
+                           int32_t version,
+                           int64_t now,
+                           const EeWonCacheEntry *entries,
+                           size_t count,
+                           void (*delete_)(void*, size_t),
+                           void *context);
 
 /// A request's message into `sink`.
 ///
