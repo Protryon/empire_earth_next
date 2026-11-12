@@ -98,7 +98,7 @@ bool EEGetFirstSelectedUnit(EEComplexUnit*& outUnit);
 void EEPostF9Key();
 class EEUIFMainGame;
 extern EEUIFMainGame* gSavedMainGameForm;  // 0x563144 (LoadScenario stores gUIManager->mMainGameForm; provisional name)
-extern UString gMultiplayerString;         // 0x562fd8 (defined by EEUIEMultiplayerScreenEvents.cpp, ""; provisional name)
+extern UString gMultiplayerString;         // 0x562fd8 (defined by UI Events/EEScreens.cpp, ""; provisional name)
 bool EEIsMultiplayerGame(bool inFlag);     // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
 void EEStartExternalLobby();               // 0x297276 (the main screen's MultiPlayer when the check passes; provisional name)
 void EEShowSinglePlayerScreen();           // 0x13fe97 (the campaign choice's Back, after Pop; provisional name)

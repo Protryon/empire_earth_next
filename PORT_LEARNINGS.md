@@ -8528,3 +8528,59 @@ no tour, LAN game or EE-SIM run does.
   HTTPGetOp/FTPGetOp/GetHTTPDocumentOp (a socket state machine, next); the ops the lobby uses (GetDirOp,
   GetMultiDirOp, the account ops, CheckValidVersionOp, GetUserIdFromNameOp), which need their accessors on the
   narrow ABI.
+
+## R6: the game screens, fourth round: the out-of-game menus whole in Rust (ee_screens menus.rs, EEScreens.cpp; branch rust-screens4, 2026-11-12)
+
+Rounds 1-3 moved the screens' decisions but kept every C++ function as a call into Rust, so almost no C++ went. This
+round starts RUST_PLAN's step 2 (a form's state and events in Rust, one dispatcher) and is measured by the C++ deleted:
+the main menu, the editors' sub-menu, the single player screen and the play campaign screen moved whole.
+
+- **Deleted:** `EEUIEMainScreenEvents.cpp` (the main menu's five events; `EEUIESSEOpen`, the loading screen's, stays in its
+  own unit, its class in the trimmed header), `EEUIEMultiplayerScreenEvents.cpp` (its one event could never be created:
+  the branch of `MultiPlayer` that made it was dead), `EEUIEEmpireEarthEditorsEvents.cpp`, `EEUIESinglePlayerEvents.cpp`,
+  `EEUIEPlayCampaignEvents.cpp`, the headers `EEUIESinglePlayerEvents.h`, `EEUIEEmpireEarthEditorsEvents.h`,
+  `EEUIEPlayCampaignEvents.h`, the two empty events in `EEUIManagerEvents.h`, the single player and play campaign
+  factories in `EEUIManager.cpp` and their `??_G` notes; their `link/exe/units.txt` lines. C++ lines of the screens
+  (UI Events, User Interface Thread, `include/ee/EEUI*.h`, the new header, `EECommandLine.cpp`, `EESim.cpp`): 43,267
+  before, 42,749 after the menus' commit (-518), 42,424 after the play campaign's (-325). Over all C++: +402, -1,245.
+- **What replaced them:** one event class, `EEScreenEvent` (`ee/EEScreenEvent.h`: a code, `ProcessEvent` ->
+  `ee_screens_event`), one Rust dispatcher (`menus::dispatch`) over a host trait, the control-event table in Rust
+  (`ee_screens_menus_event_for`, registered where the main screen's factory was; the single player and play campaign
+  factories folded into it: no factory between their old places claims their ids, so the first-match order is kept),
+  and the host `UI Events/EEScreens.cpp` (an EXTRA unit): `ee_screenscpp_call` (toolkit and game calls by op code, one
+  case each), `_text`/`_put_text` (texts as UTF-8 bytes, D6), `_lobby_fill` (the random map's slots). The play campaign
+  screen's file statics (three campaigns' descriptions and first scenarios, the learning campaign's; the unused demo
+  campaign's are gone) are a Rust record, `Menus`, in a static `Mutex` taken only around its own reads and writes: a
+  host call such as a push can run another form's open event at once, so no lock or Rust reference lives across one.
+- **The pattern** is written in RUST_PLAN's row (codes `form << 8 | n`, `EE_SCREENS_CPP_*` past 0xffff for the C++
+  events a moved form hangs on forms still C++, the shared toolkit ops, the golden through the host's trace).
+- **Golden drivers** (scratch, `build/sc4`: `menus_driver.cpp`, `campaign_driver.cpp`, `drv.py` as before with
+  `SC4_DEFINES` for extra units): the old build `#include`s the unmodified units, the new one `EEScreens.cpp`; the events
+  are made by class (old) or code (new), and an `EEScreenEvent` handed to a fake (`SetFormOpenEvent`, `SetTriggerEvent`)
+  is printed under its old class's name, so both builds print the same text. `golden_menus.txt`: 2,000 cases of the 16
+  events (a third the random map) with the typed name (empty, valid, refused characters, UTF-8, a lone lead byte), the
+  player name, the flags the events change, the WON connection, the adapter and the civilization builder's points;
+  `golden_campaign.txt`: 2,000 cases of the play campaign's 8 events with the entity, the files loading or not, the
+  Please wait string missing or not, state carried across cases. Both replay in Rust over a host printing the fakes'
+  lines; seeds 1-4 (20,000 cases each for 2-4) are identical old against new. Mutations checked (the empty-name test,
+  the forgotten main form, the multiplayer flag, a failed campaign load clearing the first scenario, Please wait's
+  message flag) each fail a replay; checking a name's bytes instead of its characters' first bytes cannot fail one (a
+  continuation byte is never refused nor a space).
+- **Lessons:**
+  - On Windows, Python's `read_text`/`write_text` turns LF into CR LF: six LF files became CR LF in one edit. Edit with
+    `read_bytes`/`write_bytes` only (and check `git diff --stat` after any scripted edit).
+  - A record that only a C++ host function takes (`EeScreensSinglePlayerSlot`, once its exported function went) drops
+    out of the generated header: list it in `cbindgen.toml`'s `[export] include`.
+  - `std::min` does not compile under `<windows.h>`'s `min` macro in the game's units.
+  - The legacy debugger harness breaks on these names: `tools/harness/save_load.py` (`EEUIESPELoadGame`'s mangled
+    `ProcessEvent`) and `scenario_game.py` (`EEUIESPECampaign`, `EEUIEPCECampaign*`); the fixture driver does not name
+    classes. `EESim.cpp`'s `--load-save` finds the Load Game button by its `EEScreenEvent` code now.
+- **What the harness reaches:** the tour's `main-menu` capture (the main menu's open event: the copyright label, the
+  version label, the media dump hot keys), its Single Player click (`single-player` capture: the name box from the
+  player name) and Random Map (`random-map-setup`: the name check, the lobby's options, the local server); the LAN game
+  and `lan_game.py` click MultiPlayer (the external lobby); the ai-game gate goes through the same single player
+  screen. **Only a person reaches:** the editors' sub-menu, the civilization builder, Load Game from the menu (EE-SIM's
+  `--load-save` does), the play campaign screen and its campaigns. None of this is simulation: EE-SIM never runs it, so
+  the oracle only shows it does not disturb the game; goldens never draw, so the tour must show the menus.
+- **Behaviour:** none intended. `gUIManager` and the event form's manager are the same object, so the host uses the
+  latter where the original named either.

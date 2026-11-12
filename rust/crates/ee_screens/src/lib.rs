@@ -16,6 +16,8 @@
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
 //! - [`command_panel`]: the in-game command panel: its layout (which buttons show where), each button's
 //!   availability and icon, its tooltip's plan and the targeting modes of its commands.
+//! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
+//!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -27,6 +29,10 @@ pub mod lobby;
 mod lobby_ffi;
 pub mod lobby_options;
 mod lobby_options_ffi;
+pub mod menus;
+// imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
+#[cfg(not(test))]
+mod menus_ffi;
 pub mod settings;
 mod settings_ffi;
 pub mod single_player;
