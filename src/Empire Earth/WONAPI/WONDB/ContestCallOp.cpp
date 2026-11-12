@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONContestCallOp.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 using namespace WONAPI;
 
 void ContestCallOp::Init()
@@ -50,20 +51,12 @@ void ContestCallOp::RunHook()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus ContestCallOp::GetNextRequest()
 {
-	WriteBuffer aBuf(this->mLengthFieldSize,true);
-
-	aBuf.AppendByte(3);			// mini message
-	aBuf.AppendByte(4);		// Contest Service
-	aBuf.AppendByte(1);		// ContestDBCall
-
-	aBuf.AppendLong(this->mAuthContext->GetPeerData()->GetCertificate()->GetUserId()); // WONUserSeq
-	aBuf.AppendShort(this->mProcNum); // Contest DB Procedure number
-
-	for(int i=0; i<16; i++) // 16 Byte GUID (not needed)
-		aBuf.AppendByte(0);
-
-	aBuf.AppendBuffer(this->mRequestData);
-	this->mRequest = aBuf.ToByteBuffer(true);
+	// the request is Rust's (ee_won db.rs)
+	DbRequest q(EE_WON_DB_REQ_CONTEST,this->mLengthFieldSize);
+	q.mReq.user_id=(uint32_t)this->mAuthContext->GetPeerData()->GetCertificate()->GetUserId(); // WONUserSeq
+	q.mReq.message=(short)this->mProcNum; // Contest DB Procedure number
+	q.mReq.data=DbRequest::Buffer(this->mRequestData.get());
+	this->mRequest = q.Build();
 	return (WONStatus)WS_ServerReq_Recv;
 }
 
@@ -71,16 +64,11 @@ WONStatus ContestCallOp::GetNextRequest()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus ContestCallOp::CheckResponse()
 {
-	ReadBuffer aMsg(this->mResponse->data(),this->mResponse->length());
-	unsigned char aHeaderType = aMsg.ReadByte();
-	unsigned short aServiceType = aMsg.ReadByte();
-	unsigned short aMessageType = aMsg.ReadByte();
-	if(aHeaderType!=3 || aServiceType!=4 || aMessageType!=2)
+	// the reply's read is Rust's (ee_won db.rs)
+	bool anInvalid=false;
+	WONStatus aStatus=DbContestReply(this->mResponse.get(),&this->mReplyData,&anInvalid);
+	if(anInvalid)
 		return this->InvalidReplyHeader();
-
-	short aStatus = aMsg.ReadShort();
-	this->mReplyData = new ByteBuffer(aMsg.data() + aMsg.pos(), aMsg.Available(),false);
-
-	return (WONStatus)aStatus;
+	return aStatus;
 }
 

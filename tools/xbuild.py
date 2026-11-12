@@ -490,6 +490,10 @@ WON_TESTS = {
     # datagram, the group list request, the connection's header, dispatch rule and table), the original's
     # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module
     "won_routemsg_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
+    # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
+    "won_db_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+                    WON_SRC / "WONDB" / "ProfileData.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

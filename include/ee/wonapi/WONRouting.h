@@ -2430,15 +2430,16 @@ public:
     void PackRequestData(WriteBuffer&,bool); //2cdcc0
     void UnpackGetData(ReadBuffer&); //2cde20
     void SetBirthDate(unsigned char inMonth,unsigned char inDay,unsigned short inYear); //2ce070
+    // the Rust profile (ee_won db.rs), for the requests that pack it
+    const EeWonProfile* GetProfile() const { return this->mProfile; }
 protected:
     virtual ~ProfileData(); //2cd830, explicit own-vtable store at 2cd852
-public:
-    unsigned char mBirthMonth; //08
-    unsigned char mBirthDay; //09
-    unsigned short mBirthYear; //0a
-    std::map<unsigned short,bool> mNewsletterSubs; //0c..18
-    unsigned short mCustomActionId; //18, natural padding1a..1b
-    ByteBufferPtr mCustomActionData; //1c..20
+private:
+    ProfileData(const ProfileData&);
+    ProfileData& operator=(const ProfileData&);
+    static void Append(void*,const uint8_t*,size_t);
+    // the birth date, the newsletter subscriptions and the custom action: a Rust object (ee_won db.rs)
+    EeWonProfile* mProfile;
 };
 class DBProxyOp : public ServerRequestOp {
 public:

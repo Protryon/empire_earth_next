@@ -1078,6 +1078,64 @@ constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 /// The sink's `which`: the text.
 constexpr static const int32_t EE_WON_CHAT_TEXT = 1;
 
+/// The reply kinds (`ee_won_db_reply`).
+constexpr static const int32_t EE_WON_DB_PROXY = 0;
+
+/// `CreateAccountOp` waiting for the server's public key
+constexpr static const int32_t EE_WON_DB_CREATE_KEY = 1;
+
+/// `CreateAccountOp` past the key
+constexpr static const int32_t EE_WON_DB_CREATE = 2;
+
+constexpr static const int32_t EE_WON_DB_GET_ACCOUNT = 3;
+
+constexpr static const int32_t EE_WON_DB_UPDATE_ACCOUNT = 4;
+
+constexpr static const int32_t EE_WON_DB_CONTEST = 5;
+
+constexpr static const int32_t EE_WON_DB_EVENT = 6;
+
+/// What the op does after the read.
+/// Return `status`.
+constexpr static const int32_t EE_WON_DB_RETURN = 0;
+
+/// Return `InvalidReplyHeader()`.
+constexpr static const int32_t EE_WON_DB_INVALID_HEADER = 1;
+
+/// DBProxy: keep the rest (`rest_*`) and receive the next reply.
+constexpr static const int32_t EE_WON_DB_RECEIVE = 2;
+
+/// DBProxy: keep the rest, then take the collected data as the reply and return `status`.
+constexpr static const int32_t EE_WON_DB_DONE = 3;
+
+/// CreateAccount: set the public key at `key_*` (its failure: an invalid key, the next server; else the
+/// session key goes next)
+constexpr static const int32_t EE_WON_DB_PUBLIC_KEY = 4;
+
+/// The DBProxy family's requests (`EeWonDbRequest::kind`).
+constexpr static const int32_t EE_WON_DB_REQ_PROXY = 0;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_KEY = 1;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_SESSION = 2;
+
+/// the account data to encrypt
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_DATA = 3;
+
+constexpr static const int32_t EE_WON_DB_REQ_CREATE_ACCOUNT = 4;
+
+constexpr static const int32_t EE_WON_DB_REQ_GET_ACCOUNT = 5;
+
+constexpr static const int32_t EE_WON_DB_REQ_UPDATE_ACCOUNT = 6;
+
+constexpr static const int32_t EE_WON_DB_REQ_USER_ID = 7;
+
+constexpr static const int32_t EE_WON_DB_REQ_PASSWORD_EMAIL = 8;
+
+constexpr static const int32_t EE_WON_DB_REQ_INFO_EMAIL = 9;
+
+constexpr static const int32_t EE_WON_DB_REQ_CONTEST = 10;
+
 constexpr static const int32_t GET_DIR = 0;
 
 constexpr static const int32_t GET_MULTI_DIR = 1;
@@ -2402,6 +2460,9 @@ struct EeWonAuthSecrets;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// An account's profile: newsletter subscriptions, a custom action and a birth date.
+struct EeWonProfile;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
@@ -5848,6 +5909,95 @@ struct EeWonConfigState {
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
 
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
+
+/// A request's fields from the C++ (texts as UTF-16 LE bytes).
+struct EeWonDbRequest {
+  int32_t kind;
+  uint8_t field_size;
+  int16_t message;
+  int16_t sub;
+  uint32_t user_id;
+  /// the request data, the encrypted key or account data
+  EeWonDirBytes data;
+  EeWonDirBytes name;
+  EeWonDirBytes password;
+  EeWonDirBytes email;
+  const EeWonProfile *profile;
+};
+
+/// An event detail from the C++.
+struct EeWonDbDetail {
+  uint16_t detail_type;
+  int32_t data_type;
+  uint32_t number;
+  EeWonDirBytes text;
+};
+
+/// An event attachment from the C++.
+struct EeWonDbAttachment {
+  EeWonDirBytes description;
+  uint8_t content_type;
+  EeWonDirBytes data;
+};
+
+/// An event report from the C++ (`present` false on a part: not related).
+struct EeWonDbEvent {
+  uint8_t field_size;
+  uint16_t activity_type;
+  bool has_server;
+  uint16_t server_type;
+  EeWonDirBytes server_name;
+  EeWonDirBytes server_addr;
+  bool has_client;
+  EeWonDirBytes client_name;
+  EeWonDirBytes client_addr;
+  bool has_user;
+  uint32_t user_id;
+  EeWonDirBytes user_name;
+  const EeWonDbDetail *details;
+  size_t detail_count;
+  const EeWonDbAttachment *attachments;
+  size_t attachment_count;
+};
+
+/// A DBProxy-style reply read for the C++.
+struct EeWonDbReply {
+  /// how many of the header's fields were read whole (header, service, message, sub-message, status, error
+  /// string, flags): the members the original assigned on the way are the message (3), the sub-message (4)
+  /// and the error string (6)
+  uint8_t read;
+  /// the error string's length was read but not its bytes: the original erased the string
+  bool error_erased;
+  int16_t message;
+  int16_t sub;
+  int32_t status;
+  uint32_t error_at;
+  uint32_t error_len;
+  /// the original threw `ReadBufferException` after the assignments
+  bool cut;
+  int32_t verdict;
+  /// what the op returns with `EE_WON_DB_RETURN` / `EE_WON_DB_DONE`
+  int32_t result;
+  /// the rest of the reply (DBProxy's data, the contest's reply data)
+  uint32_t rest_at;
+  uint32_t rest_len;
+  /// the server's public key (create account)
+  uint32_t key_at;
+  uint32_t key_len;
+  /// the email (get account): 0 not read, 1 erased, 2 read whole at `email_*`
+  uint8_t email;
+  uint32_t email_at;
+  uint32_t email_len;
+  /// where the profile starts (get account)
+  uint32_t profile_at;
+};
+
 /// A parse's end across the C ABI: `kind` 0 parsed (`status` the reply's status), 1 invalid header, 2 the server's
 /// negative `status`, 3 cut short; `sequence` when `has_sequence`.
 struct EeWonDirReply {
@@ -5903,13 +6053,6 @@ struct EeWonDirEntity {
 
 /// Receives an entity; valid only during the call.
 using EeWonDirEntitySink = void(*)(void *context, const EeWonDirEntity *entity);
-
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
 
 /// A data object.
 struct EeWonDirObject {
@@ -13368,6 +13511,95 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              size_t base_length,
                              EeWonByteSink sink,
                              void *context);
+
+/// `new ProfileData`.
+EeWonProfile *ee_won_profile_new();
+
+/// # Safety
+/// `p` came from `ee_won_profile_new` and is not used again.
+void ee_won_profile_free(EeWonProfile *p);
+
+/// `AddNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_newsletter(EeWonProfile *p, uint16_t id, bool on);
+
+/// `GetNewsletterSub`.
+///
+/// # Safety
+/// `p` is a live profile.
+bool ee_won_profile_newsletter(const EeWonProfile *p, uint16_t id);
+
+/// `ClearNewsletterSub` (`all`: `ClearNewsletterSubs`).
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_clear_newsletter(EeWonProfile *p, uint16_t id, bool all);
+
+/// `SetCustomAction` (`data` NULL: no data) and `ClearCustomAction` (id 0, NULL).
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes when not NULL.
+void ee_won_profile_set_custom_action(EeWonProfile *p,
+                                      uint16_t id,
+                                      const uint8_t *data,
+                                      size_t length,
+                                      bool present);
+
+/// `SetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+void ee_won_profile_set_birth_date(EeWonProfile *p, uint8_t month, uint8_t day, uint16_t year);
+
+/// `GetBirthDate`.
+///
+/// # Safety
+/// `p` is a live profile.
+int32_t ee_won_profile_birth_date(const EeWonProfile *p);
+
+/// `PackRequestData`'s bytes (to append) into `sink`.
+///
+/// # Safety
+/// `p` is a live profile; `sink` accepts `context`.
+void ee_won_profile_pack(const EeWonProfile *p, bool is_set, EeWonByteSink sink, void *context);
+
+/// `UnpackGetData` from `pos`; returns the reader's position after it.
+///
+/// # Safety
+/// `p` is a live profile; `data` holds `length` bytes.
+size_t ee_won_profile_unpack(EeWonProfile *p, const uint8_t *data, size_t length, size_t pos);
+
+/// A request's message (or data) into `sink`.
+///
+/// # Safety
+/// `r` and what it points to are valid (`profile` a live profile where the kind reads one); `sink` accepts
+/// `context`.
+void ee_won_db_request(const EeWonDbRequest *r,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `EventReportOp::GetNextRequest` into `sink`.
+///
+/// # Safety
+/// `e` and what it points to are valid; `sink` accepts `context`.
+void ee_won_db_event_request(const EeWonDbEvent *e, EeWonByteSink sink, void *context);
+
+/// A reply's read into `out`.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+void ee_won_db_reply(int32_t kind, const uint8_t *data, size_t length, EeWonDbReply *out);
+
+/// `GetUserIdFromNameOp`'s id from the reply data; false when it is cut short.
+///
+/// # Safety
+/// `data` holds `length` bytes; `out` is valid.
+bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
+
+/// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
+bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
 
 bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
 
