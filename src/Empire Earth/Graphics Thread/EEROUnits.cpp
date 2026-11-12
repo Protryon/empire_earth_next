@@ -146,8 +146,7 @@ static GERhombus* sBGBar;          // 0x52950c
 long gCollisionSphereMode;                  // 0x529510 (ee/EmpireEarth.h; read-only: EERenderObject, EEMessage. .bss after this
                                             // unit's statics, before EEROUserInterface's gUIViewport 0x529518: either unit)
 
-// the selection model by ring size (0x4be73c; .data)
-static float sSelectionSizes[3] = { 0.75f, 1.5f, 100.0f };
+// the selection model by ring size (0x4be73c; .data): ee_gfx units.rs SELECTION_SIZES
 // the selection models' ring widths by size (0x4be748)
 static float sSelectionWidths[3] = { 0.08f, 0.05f, 0.025f };
 // the bars' size (0x4be754..0x4be75c; .data, recomputed per frame from the window size)
@@ -160,7 +159,7 @@ const float kMinAlphaRef = 0.03f;           // 0x441ba4
 const float kZWriteOpacity = 0.6f;          // 0x441ba8
 const float kTranslucentAmbientScale = 0.59f;  // 0x441bac
 const float kBarFraction = 0.75f;           // 0x441bb0
-const float kSelectionGrow = 0.3f;          // 0x441bb4
+// 0x441bb4 (0.3, kSelectionGrow): ee_gfx units.rs SELECTION_GROW
 // after the vtable (0x441bd0..0x441be4)
 // 0x441bd0..0x441bd8: DrawBars's bar literals 0.0013020834f (1 / 768), 24.0f and 1 / 1024 (orig fmul [1/1024]; fmul [24]:
 // 24.0f * (theWidth / 1024.0f) keeps the two multiplies, and max() reuses the product)
@@ -249,20 +248,13 @@ void EEROUnits::DrawRings()
             theTransformation.SetX(theUnit->mTransformation.GetX());
             theTransformation.SetY(theUnit->mTransformation.GetY());
             theTransformation.SetZ(theUnit->mTransformation.GetZ());
-            unsigned long theSegment = 1;
-            for (; theSegment <= theUnit->mAreaEffectStrength; theSegment++) {
-                sRingModel->GetVertexArray(0)->SetColor(gRingColor, theVertex);
-                theVertex++;
-                sRingModel->GetVertexArray(0)->SetColor(gRingColor, theVertex);
-                theVertex++;
+            // the segments' colours: ee_gfx units.rs (a strength past 7 colours past the ring's seven, as before)
+            EeGfxRingSegments theSegments = ee_gfx_units_ring_segments((uint32_t)theUnit->mAreaEffectStrength);
+            for (uint32_t k = 0; k < theSegments.ring * 3; k++) {
                 sRingModel->GetVertexArray(0)->SetColor(gRingColor, theVertex);
                 theVertex++;
             }
-            for (; theSegment < 8; theSegment++) {
-                sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, theVertex);
-                theVertex++;
-                sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, theVertex);
-                theVertex++;
+            for (uint32_t k = 0; k < theSegments.highlight * 3; k++) {
                 sRingModel->GetVertexArray(0)->SetColor(gRingHighlightColor, theVertex);
                 theVertex++;
             }
@@ -499,15 +491,11 @@ void EEROUnits::DrawSelection()
         EERenderUnit* theUnit = EERenderLists::sInstance.mSelectedUnits[i];
         if (!(theUnit->mSelectionSize > 0.0f) || (theUnit->mInfo->mDomains & kMovementAir) != 0)
             continue;
-        long theSize;
-        for (theSize = 0; theSize < 2; theSize++) {
-            if (theUnit->mSelectionSize <= sSelectionSizes[theSize])
-                break;
-        }
+        // the size choice and the growth: ee_gfx units.rs
+        EeGfxSelectionRing theRing = ee_gfx_units_selection_ring(theUnit->mSelectionSize);
+        unsigned long theSize = theRing.model;
         sSelectionModels[theSize]->SetGraphicsPostModelTransform(theUnit->mTransformation);
-        float theScale = kSelectionGrow * theUnit->mSelectionSize;
-        theScale += theUnit->mSelectionSize;
-        sSelectionModels[theSize]->SetGraphicsScale(theScale);
+        sSelectionModels[theSize]->SetGraphicsScale(theRing.scale);
         sSelectionModels[theSize]->PrepareTransforms();
         gRasterizer->Draw(sSelectionModels[theSize], theScreen, 1.0f, gOrthographicView);
     }

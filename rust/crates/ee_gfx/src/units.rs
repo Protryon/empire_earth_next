@@ -163,6 +163,49 @@ pub fn object_bar(screen: Ge2DPoint, health: f32, sizes: &EeGfxBarSizes) -> EeGf
     out
 }
 
+/// `sSelectionSizes`: the largest selection size each ground ring model fits (the last takes the rest).
+pub(crate) const SELECTION_SIZES: [f32; 3] = [0.75, 1.5, 100.0];
+/// `kSelectionGrow`: a ground ring's growth over its unit's selection size.
+pub(crate) const SELECTION_GROW: f32 = 0.3;
+
+/// A ground unit's selection ring: which of the three models (`sSelectionModels`) and its scale.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxSelectionRing {
+    pub model: u32,
+    pub scale: f32,
+}
+
+/// `DrawSelection`'s size choice: the first model whose size the unit's does not exceed (of the first two; else the
+/// third), grown by 0.3 of the size.
+pub fn selection_ring(size: f32) -> EeGfxSelectionRing {
+    let mut model = 0;
+    while model < 2 {
+        if size <= SELECTION_SIZES[model] {
+            break;
+        }
+        model += 1;
+    }
+    let mut scale = SELECTION_GROW * size;
+    scale += size;
+    EeGfxSelectionRing { model: model as u32, scale }
+}
+
+/// The area-effect ring's segments: `ring` in the ring colour (one per strength point), then `highlight` in the
+/// highlight colour up to seven in all; three vertices each.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxRingSegments {
+    pub ring: u32,
+    pub highlight: u32,
+}
+
+/// `DrawRings`' colours. A strength past 7 colours more than the ring's seven segments, as the original did (its
+/// first loop runs to the strength).
+pub fn ring_segments(strength: u32) -> EeGfxRingSegments {
+    EeGfxRingSegments { ring: strength, highlight: 7_u32.saturating_sub(strength) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
