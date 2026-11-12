@@ -457,12 +457,34 @@ fn file_exists(path: &[u8]) -> bool {
     !file.is_null()
 }
 
+/// How long a replace waits for another process to let go of the file (Windows), in 10 ms steps.
+#[cfg(windows)]
+const REPLACE_TRIES: u32 = 50;
+
+/// Replaces `path` with `temporary`. Another process that has the file open without delete sharing (a virus
+/// scanner, the search indexer, a reader such as an editor or a test's dump) makes MoveFileEx fail with access
+/// denied or a sharing violation for as long as it holds it: the replace is retried for up to half a second then
+/// (`write_file` then rewrites the file in place).
 #[cfg(windows)]
 fn replace_file(temporary: &[u8], path: &[u8]) -> bool {
+    use windows_sys::Win32::Foundation::{
+        GetLastError, ERROR_ACCESS_DENIED, ERROR_LOCK_VIOLATION, ERROR_SHARING_VIOLATION,
+    };
     use windows_sys::Win32::Storage::FileSystem::{MoveFileExA, MOVEFILE_REPLACE_EXISTING};
     let (from, to) = (c_string(temporary), c_string(path));
-    // SAFETY: both are NUL-terminated.
-    unsafe { MoveFileExA(from.as_ptr(), to.as_ptr(), MOVEFILE_REPLACE_EXISTING) != 0 }
+    for _ in 0..REPLACE_TRIES {
+        // SAFETY: both are NUL-terminated.
+        if unsafe { MoveFileExA(from.as_ptr(), to.as_ptr(), MOVEFILE_REPLACE_EXISTING) } != 0 {
+            return true;
+        }
+        // SAFETY: no arguments.
+        let error = unsafe { GetLastError() };
+        if error != ERROR_ACCESS_DENIED && error != ERROR_SHARING_VIOLATION && error != ERROR_LOCK_VIOLATION {
+            return false;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    false
 }
 
 #[cfg(unix)]
@@ -491,7 +513,24 @@ fn write_file(path: &[u8], data: &[u8]) -> bool {
     }
     // SAFETY: NUL-terminated.
     unsafe { libc::remove(c_temporary.as_ptr().cast()) };
-    false
+    // a file another process keeps open without delete sharing cannot be replaced, but one that shares writing
+    // (as scanners and the C runtime's readers do) can still be rewritten in place
+    written && flushed && closed && write_in_place(path, data)
+}
+
+/// Rewrites the file itself (no replace): the last resort when another process holds it.
+fn write_in_place(path: &[u8], data: &[u8]) -> bool {
+    let c_path = c_string(path);
+    // SAFETY: both arguments are NUL-terminated.
+    let file = unsafe { libc::fopen(c_path.as_ptr().cast(), c"wb".as_ptr()) };
+    if file.is_null() {
+        return false;
+    }
+    // SAFETY: `data` is readable for its length and `file` is open until the fclose.
+    let written = unsafe { libc::fwrite(data.as_ptr().cast(), 1, data.len(), file) } == data.len();
+    let flushed = unsafe { libc::fflush(file) } == 0;
+    let closed = unsafe { libc::fclose(file) } == 0;
+    written && flushed && closed
 }
 
 fn getenv(name: &CStr) -> Option<Vec<u8>> {
@@ -1062,6 +1101,35 @@ mod tests {
         assert!(store.get(b"a", b"b").is_none());
         assert!(store.set(b"a.c", b"d", b"7".to_vec(), true)); // the value "a" becomes a block again
         assert_eq!(store.get(b"a.c", b"d").unwrap(), b"7");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// A reader holding config.yaml without delete sharing (as a scanner does) delays a set's replace or makes it write in
+    /// place; it never fails it
+    /// (won_regkey_test failed its sets under load before the retry).
+    #[cfg(windows)]
+    #[test]
+    fn a_set_waits_for_a_reader_that_holds_the_file() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let dir = test_dir("config_held");
+        let path = dir.join("config.yaml");
+        std::fs::write(
+            &path, b"a: 1
+",
+        )
+        .unwrap();
+        let mut store = store_in(&dir);
+        // FILE_SHARE_READ | FILE_SHARE_WRITE, no FILE_SHARE_DELETE: MoveFileEx cannot replace it while it is open
+        let held = std::fs::OpenOptions::new().read(true).share_mode(0x1 | 0x2).open(&path).unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(800)); // past the replace's retries: in place
+            drop(held);
+        });
+        assert!(store.set(b"", b"b", b"2".to_vec(), true));
+        release.join().unwrap();
+        let mut again = store_in(&dir);
+        assert_eq!(again.get(b"", b"b").unwrap(), b"2");
+        assert_eq!(again.get(b"", b"a").unwrap(), b"1");
         std::fs::remove_dir_all(dir).unwrap();
     }
 

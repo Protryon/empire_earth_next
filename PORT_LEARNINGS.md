@@ -8459,3 +8459,14 @@ code commits. Plus 22,930 lines of vendored C and tooling (libpng 1.0, zlib 1.1)
   lead's LAN game (LanLogic, StagingLogic, the game code's EELobbyGame, the staging and game list screens) and a
   lobby tour (the lists, the chat, the options popups) exercise; ServerListCtrl's filters and RoutingLogic's
   sites are Internet screens nothing reaches. The deletions remove code no build reaches.
+- **won_regkey_test's intermittent failures were a PlatConfig bug** (commit `ee_plat_core: PlatConfig's save waits
+  for a reader that holds config.yaml`). Every set or delete rewrites the file through `config.yaml.new` and
+  `MoveFileExA(..., MOVEFILE_REPLACE_EXISTING)`; while another process holds the file open without delete sharing
+  (Defender or the search indexer scanning the just-written file under load, an editor, any C runtime or Python
+  reader) the replace fails with access denied, the set returns 0 and the value lives only in memory: the
+  failures were "set=0", "deletesub child=0" lines. A Python loop holding `won_regkey.yaml` for 2 ms at a time
+  made 20 of 20 runs fail. Now the replace is retried for half a second on access denied, sharing and lock
+  violations, then the file is rewritten in place (such readers share writing). With the same loop and a full
+  build running, 50 of 50 runs pass, and 50 more under the build alone; cargo test
+  `a_set_waits_for_a_reader_that_holds_the_file` holds the file 800 ms. In the game this was a settings write
+  (the options, the lobby's saved state) silently lost while a scanner had config.yaml open.
