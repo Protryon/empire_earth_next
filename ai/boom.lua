@@ -1330,12 +1330,18 @@ function M.step(view, memory)
         end
 
         -- fishing: from the Stone Age's first minute, two docks and the boats (they pay for themselves in food)
-        if plan.boats > 0 then
+        -- (ECON.order with BO.OPT.pre_dock: the dock goes up while the Stone Age is saved for, so the boats start at
+        -- the advance; the owner had 8 boats 3 minutes into Stone, boom 10 at 6)
+        local docks = plan.docks or 0
+        if ECON.order and BO.OPT.pre_dock and phase == "pre" and saving then
+            docks = 1
+        end
+        if plan.boats > 0 or docks > 0 then
             local boats = plan.boats
             if #memory.boats_lost >= BOATS_LOST_MAX then
                 boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
             end
-            order("fish", {verb = "fish", boats = boats, docks = plan.docks})
+            order("fish", {verb = "fish", boats = boats, docks = docks})
         end
 
         -- the trainers: a barracks once the town has ten citizens, then an archery range, then the second of each as
