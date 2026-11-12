@@ -321,7 +321,7 @@ def aipersonalities(ids, spec):
                   f'      moves_per_cycle: {v["moves"]:<12}# busy gatherers moved to a short resource per 10 s',
                   f'      demand_split: {v["demand_split"]:<15}# gatherers by the tiered demand less the stock (false: the needs ledger)',
                   f'      coast_fishing: {v["coast_fishing"]:<14}# from the Stone Age: a dock and up to 8 fishing boats off any coast',
-                  f'      forage_patches: {v["forage_patches"]:<13}# about mining_limit a patch, settlements on patches, hunting, 16 boats',
+                  f'      forage_patches: {v["forage_patches"]:<13}# about mining_limit a patch, settlements on patches, hunting, 32 boats',
                   f'      claim_needed: {v["claim_needed"]:<15}# claim the next epoch\'s missing stone/gold/iron; no reserve when unreachable',
                   f'      early_town_centers: {v["town_centers"]:<9}# before Bronze: settlements upgraded below this many town centres, no capitol (0: the timers)',
                   f'      early_trainers: {v["trainers"]:<13}# before Copper: at most this many barracks and archery ranges each (0: no cap)',

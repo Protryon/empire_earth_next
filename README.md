@@ -175,7 +175,19 @@ python -I tools/sim_bench.py --name base --seeds 2-7 --repeat 2 --jobs 2      # 
 python -I tools/sim_bench.py --name floor --seeds 2-7 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
 python -I tools/sim.py -- --seed 3 --engine next,classic --report r.json     # p2 the next engine, p3 classic
 python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;next,classic"   # ';' between variants
+python -I tools/sim_bench.py --name base --seeds 2-33 --engine boom,classic --cache    # a rerun reuses the games
+python -I tools/sim_bench.py --name v1 --seeds 2-33 --engine boom,classic --ai-scripts X --screen 2-17 --screen-baseline build/sim/bench/base
 ```
+
+`--cache` keeps every finished game (report, gzipped trace, progress) in the main checkout's `build/sim/cache`, keyed
+by everything the game depends on: the EE-SIM exe's bytes, the data tree, the rules documents, the AI scripts'
+contents (`--ai-scripts` by content, not by path), every option and `EE_*` variable, the seed. A bench whose runs
+have all been played before (e.g. the baseline of each round) takes seconds; any change to the exe or the scripts
+misses. `--screen SEEDS` plays those seeds first and drops every variant whose first computer is defeated at least
+twice as often as the baseline's, and 3 games more (`--screen-factor`, `--screen-margin`); the rest go on to
+`--seeds`. With 16 first-stage seeds it only catches gross regressions (32-seed defeat counts move by several games
+from chance alone). The games run below normal priority (`--normal-priority` turns that off), so the windowed
+gates can run beside a bench.
 
 `tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
 EE-SIM.exe its options (`EE-SIM.exe --help`). `--engine` picks each computer seat's engine (classic, next, random;
@@ -183,6 +195,30 @@ docs/AI_LUA_PLAN.md) through the lobby's engine boxes, as the lobby's host does:
 list by seat. The report (JSON) holds the outcome, the game time and per player the
 epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
 headless simulation" for what it shares with the game and where it differs.
+
+**Benches on a Linux machine** (headless, many cores; Ubuntu 24.04 x86_64). `python3 -I tools/xbuild.py sim` builds
+the game and links `ee-sim` beside it (`build/xbuild/linux-x86_64/game/`): the same exe, started as the simulation by
+its name (`ee-aoc --sim` is the same). It needs no display (SDL's dummy video driver) and no GPU, but a Vulkan
+adapter: Mesa's lavapipe (`mesa-vulkan-drivers`). The sim tools find it by default. On a fresh machine:
+
+```
+sudo apt-get install -y git gh && gh auth login            # access to the private repository and its releases
+gh repo clone Protryon/empire_earth_next && cd empire_earth_next
+bash tools/setup_linux_bench.sh                            # packages, ports, build, data/ (release parts), smoke game
+python3 -I tools/sim_bench.py --name base --data open --ai-scripts ai --seeds 2-65 --jobs $(nproc)
+python3 -I tools/ai_scorecard.py build/sim/bench/base
+```
+
+`--data open` takes `build/open_data/tree` when there is one, else `data/` (tools/fetch_data.py, without the 4x
+textures). After a pull: `python3 -I tools/xbuild.py sim --incremental` (a header change: a full build), and
+`tools/fetch_data.py data --without textures-4x` when a db release changed. A crash prints `EE-SIM FAULT signal ...`
+frames as `ee-sim(+0xOFFSET)` in the run's err.txt: `addr2line -f -C -e build/xbuild/linux-x86_64/game/ee-sim
+0xOFFSET`. The cross-platform check (the same seeds on Windows and Linux, the same data release and scripts):
+
+```
+python -I tools/sim_bench.py --name xplat --data DATA --ai-scripts ai --seeds 2-9 --difficulty Medium   # each machine
+python -I tools/sim_compare.py WINDOWS_BENCH LINUX_BENCH     # build/sim/bench/xplat of each; exit 0: identical
+```
 
 ## Upstream
 
@@ -193,3 +229,8 @@ The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` bran
 
 No license is granted. Empire Earth is the property of its rights holders. The third-party libraries under
 `src/ThirdParty/` keep their own licenses.
+
+The "Age of AI" computer player (`ai/ageofai/`) is a Lua port of Grille's
+[Empire Earth: Age of AI](https://github.com/Grille/Empire-Earth-Age-of-AI) (GPL-3.0, Copyright Grille and the Age
+of AI contributors), ported with the author's permission; those files are GPL-3.0 (`ai/ageofai/LICENSE`), and
+`ai/ageofai/UPSTREAM` names the upstream commit they follow.

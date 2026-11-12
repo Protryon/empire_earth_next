@@ -520,6 +520,7 @@ public:
     unsigned char mEngine = 0;
     char _gapF57[0xf58 - 0xf57];
     struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
+    struct EECPUnitsState* mUnitsState;     // new: the per-unit Lua interface's state (ee/EECPNextUnits.h; NULL until used)
 };
 
 // Computer player difficulty (EEComputerPlayer::mDifficulty, from the game options).

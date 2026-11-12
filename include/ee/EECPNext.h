@@ -271,6 +271,7 @@ struct EECPNextView {
     long advancing;             // 1: the epoch advance is queued or under way
     long stock[kNextResources];
     long income[kNextResources];    // gathered over the last 60 s
+    long income_total[kNextResources];   // gathered since the game's start (every AddResource: the classic ledger's Spend)
     long reserve[kNextResources];   // the reserve the strategy set
     long gatherers[kNextResources]; // land gatherers per resource (boats not counted)
     long wanted[kNextResources];    // the wanted land gatherers (gather)
@@ -289,6 +290,7 @@ struct EECPNextView {
     long threat_strength;       // the sum over threats
     std::vector<EECPNextEnemy> enemies;
     long next_epoch_cost[kNextResources];   // all 0 at the last epoch
+    long epoch2_cost[kNextResources];       // the epoch after the next (the copper plan holds both before farms); 0 when none
     long sol_missing;           // the next epoch's SOL still missing
     std::vector<EECPNextClassCost> costs;
     std::vector<EECPNextEvent> events;      // since the last step
@@ -328,7 +330,8 @@ enum EECPNextFoodPrefer {
 };
 
 // gather(resource, n[, prefer]): n land gatherers wanted on resource 0..4 (food: plus the boats fishing)
-EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer = kNextPreferPatch);
+EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer = kNextPreferPatch,
+    long inExact = -1);
 // claim(site) / release(site): gather from a resource centre or stop (EECPResourceCenter::SetActive)
 EECPNextResult EECPNextClaim(EEComputerPlayer* inPlayer, long inSite);
 EECPNextResult EECPNextRelease(EEComputerPlayer* inPlayer, long inSite);
@@ -463,6 +466,8 @@ struct EECPNextState {
     long mReserve[kNextResources];
     long mFoodPrefer;                       // EECPNextFoodPrefer
     long mFoodLand;                         // the land food gatherers asked for (gather adds the boats)
+    long mExact;                            // gather(exact = 1): no gatherer kept past the wanted count (the rebalance's
+                                            // one of slack off; docs/AI_RESEARCH.md §8.51; transient, the next order sets it)
     long mEpoch;                            // the epoch at the last step, and since when
     unsigned long mEpochStart;
     unsigned long mNextRepairTime;
@@ -527,6 +532,7 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 long EECPNextClassByName(const std::string& inName);
 long EECPNextTechByName(const std::string& inName);
 std::string EECPNextClassName(long inClass);
+std::string EECPNextTechName(long inTech);
 // the save (EEPPlayerHelper, from version 0.252): the state that must survive as bytes, and back. Load creates the
 // state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
 bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);

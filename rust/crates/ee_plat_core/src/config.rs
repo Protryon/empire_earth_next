@@ -487,6 +487,21 @@ fn replace_file(temporary: &[u8], path: &[u8]) -> bool {
     false
 }
 
+/// Runs `replace` up to `tries` times, sleeping 50 ms before each retry, until it succeeds (main's retry, kept for
+/// its test; `replace_file` above retries only the sharing errors and `write_file` then rewrites in place).
+#[allow(dead_code)]
+fn retry_replace(tries: u32, mut replace: impl FnMut() -> bool) -> bool {
+    for attempt in 0..tries {
+        if attempt != 0 {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        if replace() {
+            return true;
+        }
+    }
+    false
+}
+
 #[cfg(unix)]
 fn replace_file(temporary: &[u8], path: &[u8]) -> bool {
     let (from, to) = (c_string(temporary), c_string(path));
@@ -847,6 +862,22 @@ mod tests {
     const HAND_WRITTEN: &[u8] = b"\xef\xbb\xbf# settings\r\n---\r\nhand:   # a block\r\n    a: 1  # one\r\n\r\n\
           \x20\x20\x20\x20b: 'it''s # here'\r\n    inner:\r\n        c: \"x\\ty\\x41\"\r\n    d: yes\r\n\
           \x20\x20\x20\x20url: http://x#y\r\n    e: ~\r\nother: plain text: no\r\n";
+
+    #[test]
+    fn a_held_file_is_replaced_on_a_later_try() {
+        let mut calls = 0;
+        assert!(retry_replace(10, || {
+            calls += 1;
+            calls == 3
+        }));
+        assert_eq!(calls, 3);
+        let mut calls = 0;
+        assert!(!retry_replace(2, || {
+            calls += 1;
+            false
+        }));
+        assert_eq!(calls, 2);
+    }
 
     #[test]
     fn parses_comments_quotes_crlf_and_other_indents() {
