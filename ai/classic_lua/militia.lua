@@ -116,6 +116,8 @@ local function militia(memory, victim, attacker_player, time)
             nhp, nat = nhp + (c.hp or 0), nat + (c.attack or 0)
             R.add_idle(rm, c.id)
         end
+        print(string.format("classic_lua militia fight citizens=%d soldiers=%d raiders=%d odds=%.2f tower=%d", #all - #soldiers,
+            #soldiers, #raiders, rhp * rat > 0 and hp * at / (rhp * rat) or 0, tower ~= nil and 1 or 0))
         -- each to the nearest raider (batched by target)
         local by = {}
         for _, u in ipairs(all) do
@@ -157,6 +159,8 @@ local function militia(memory, victim, attacker_player, time)
                 hx = nil
             end
         end
+        print(string.format("classic_lua militia run citizens=%d soldiers=%d raiders=%d odds=%.2f tower=%d", hx ~= nil and #citizens or 0,
+            #soldiers, #raiders, rhp * rat > 0 and hp * at / (rhp * rat) or 0, tower ~= nil and 1 or 0))
         if hx ~= nil and #citizens > 0 then
             local ids = {}
             for _, c in ipairs(citizens) do
