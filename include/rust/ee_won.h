@@ -1300,6 +1300,12 @@ struct EeWonChatParser;
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `DetectFirewallOp`'s state.
+struct EeWonFirewallOp;
+
+/// `GetCertOp`'s state: the members and the session key.
+struct EeWonGetCert;
+
 /// `HTTPConnection`.
 struct EeWonHttpConn;
 
@@ -1457,26 +1463,6 @@ struct EeWonCacheEntry {
   size_t lengths[4];
 };
 
-/// Bytes handed over by the C++ (`present` false: a NULL buffer).
-struct EeWonDirBytes {
-  const uint8_t *data;
-  size_t len;
-  bool present;
-};
-
-/// One step of a reply's read.
-struct EeWonCertEvent {
-  uint8_t tag;
-  uint8_t kind;
-  int32_t num;
-  uint32_t id;
-  uint32_t at;
-  uint32_t len;
-};
-
-/// The events of a reply's read, handed over once.
-using EeWonCertSink = void(*)(void *context, const EeWonCertEvent *events, size_t count);
-
 /// `wchar_t` text handed in: `length` units of `wchar_size` bytes.
 struct EeWonChatText {
   const void *text;
@@ -1533,6 +1519,13 @@ struct EeWonConfigState {
 
 /// Receives a saved state; valid only during the call.
 using EeWonConfigStateSink = void(*)(void *context, const EeWonConfigState *state);
+
+/// Bytes handed over by the C++ (`present` false: a NULL buffer).
+struct EeWonDirBytes {
+  const uint8_t *data;
+  size_t len;
+  bool present;
+};
 
 /// A request's fields from the C++ (texts as UTF-16 LE bytes).
 struct EeWonDbRequest {
@@ -1849,6 +1842,76 @@ struct EeWonFtpStep {
   bool no_resume;
   uint32_t host;
   uint16_t port;
+};
+
+/// The C++ side of a `DetectFirewallOp`: `context` is the op; objects are `RefCount*`. `set_public` is NULL for
+/// the real op (the address is this object's).
+struct EeWonFirewallHooks {
+  void *context;
+  void (*release)(void*);
+  void *(*new_socket)(void*, bool);
+  long (*bind)(void*, void*, uint16_t);
+  long (*listen)(void*, void*);
+  uint16_t (*local_port)(void*, void*);
+  void (*close)(void*, void*);
+  void *(*new_recv)(void*, void*);
+  long (*recv_run)(void*, void*, uint32_t);
+  bool (*recv_from_current)(void*, void*);
+  uint32_t (*time_left)(void*);
+  int32_t (*mode)(void*);
+  void (*set_request)(void*, const uint8_t*, size_t);
+  void (*response)(void*, EeWonByteSink, void*);
+  long (*invalid_header)(void*);
+  void (*set_public)(void*, int32_t);
+};
+
+/// The C++ side of a `GetCertOp`: `context` is the op (the hooks' first argument); objects are `RefCount*`. The
+/// four key hooks are NULL for the real op (the session key is the object's own `Blowfish`); a driver hands
+/// stand-ins.
+struct EeWonGetCertHooks {
+  void *context;
+  void (*add_ref)(void*);
+  void (*release)(void*);
+  bool (*verifier_public)(void*, void*);
+  void *(*ctx_peer)(void*, void*);
+  void *(*peer_block)(void*, void*);
+  int64_t (*peer_delta)(void*, void*);
+  void (*load_secrets)(void*, void*);
+  long (*op_status)(void*);
+  bool (*block_valid)(void*, void*);
+  void (*set_peer_from_block)(void*, void*, void*);
+  uint16_t (*block_id)(void*, void*);
+  /// false for NULL
+  bool (*block_encrypt)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*key_create)(void*, int32_t);
+  void (*key)(void*, EeWonByteSink, void*);
+  bool (*key_encrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  bool (*key_decrypt)(void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*user)(void*, void*, EeWonByteSink, void*);
+  void (*password)(void*, void*, EeWonByteSink, void*);
+  void (*community)(void*, void*, EeWonByteSink, void*);
+  void (*hashes)(void*, void*, const uint8_t*, size_t, EeWonByteSink, void*);
+  void (*set_request)(void*, const uint8_t*, size_t);
+  void (*response)(void*, EeWonByteSink, void*);
+  void (*set_last_error)(void*, long);
+  long (*invalid_header)(void*);
+  void (*add_secret)(void*, void*, const uint8_t*, size_t);
+  void (*remove_secret)(void*, void*, const uint8_t*, size_t);
+  void *(*new_cert)(void*, int32_t, const uint8_t*, size_t);
+  bool (*cert_valid)(void*, int32_t, void*);
+  bool (*block_verify)(void*, void*, int32_t, void*);
+  int64_t (*cert_delta)(void*, int32_t, void*);
+  void (*cert_times)(void*, int32_t, void*, int64_t*, int64_t*);
+  void *(*new_block)(void*, const uint8_t*, size_t);
+  bool (*block_verified)(void*, void*, void*);
+  void (*commit)(void*, void*, int64_t, int64_t);
+  void *(*priv_new)(void*);
+  bool (*priv_set)(void*, void*, const uint8_t*, size_t);
+  void (*priv_free)(void*, void*);
+  void *(*new_peer)(void*, void*, void*, void*, int64_t, void*);
+  void (*set_password)(void*, void*, const uint8_t*, size_t);
+  void (*set_peer)(void*, void*, void*);
+  void (*clear_one_time)(void*, void*);
 };
 
 /// The C++ side of an expression: its StringParser and `GetIntValue` (which returns false after catching what
@@ -3495,46 +3558,6 @@ void ee_won_cachemap_write(const char *path,
                            void (*delete_)(void*, size_t),
                            void *context);
 
-/// A request's message into `sink`.
-///
-/// # Safety
-/// `a` and `b` describe readable bytes; `sink` accepts `context`.
-void ee_won_cert_request(int32_t kind,
-                         int16_t key_id,
-                         EeWonDirBytes a,
-                         EeWonDirBytes b,
-                         EeWonByteSink sink,
-                         void *context);
-
-/// The login data's first part (the strings as UTF-16 LE bytes) into `sink`.
-///
-/// # Safety
-/// `key` holds two bytes; the strings describe readable bytes; `sink` accepts `context`.
-void ee_won_cert_login_data(const uint8_t *key,
-                            int16_t key_id,
-                            bool create_account,
-                            EeWonDirBytes user,
-                            EeWonDirBytes password,
-                            EeWonDirBytes new_password,
-                            EeWonByteSink sink,
-                            void *context);
-
-/// `CheckResponse`'s read in `state` into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-void ee_won_cert_reply(const uint8_t *data,
-                       size_t length,
-                       int32_t state,
-                       EeWonCertSink sink,
-                       void *context);
-
-/// The login reply's decrypted part into `sink`.
-///
-/// # Safety
-/// `data` holds `length` bytes; `sink` accepts `context`.
-void ee_won_cert_decrypted(const uint8_t *data, size_t length, EeWonCertSink sink, void *context);
-
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
 
@@ -4946,6 +4969,275 @@ void ee_won_ftp_reply(const uint8_t *line,
                       bool has_directory,
                       bool resume,
                       EeWonFtpStep *out);
+
+/// `DetectFirewallOp`'s members after `Init`.
+EeWonFirewallOp *ee_won_fwop_new();
+
+/// The destructor: the socket and the receive op let go.
+///
+/// # Safety
+/// `op` came from `ee_won_fwop_new` (or is NULL); `hooks` is valid.
+void ee_won_fwop_free(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
+
+/// `SetListenPort`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_listen_port(EeWonFirewallOp *op, uint16_t port);
+
+/// `SetDoListen`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_do_listen(EeWonFirewallOp *op, bool value);
+
+/// `SetWaitForConnect`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_set_wait_for_connect(EeWonFirewallOp *op, bool value);
+
+/// The drivers' setup: the UDP flag and the longest connect wait (no setter sets them).
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_fwop_setup(EeWonFirewallOp *op, bool udp, uint32_t max_wait);
+
+/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `op`, `hooks` and `status` are valid.
+bool ee_won_fwop_run_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks, long *status);
+
+/// `CallbackHook(op, param)` with `op`'s status: 0 the base's hook, 1 `RecvServerDatagram()` then true, 2
+/// `Finish(*finish)` then true.
+///
+/// # Safety
+/// `op`, `hooks` and `finish` are valid.
+int32_t ee_won_fwop_callback_hook(EeWonFirewallOp *op,
+                                  const EeWonFirewallHooks *hooks,
+                                  int32_t param,
+                                  long status,
+                                  long *finish);
+
+/// `CleanupHook` after `ServerRequestOp::CleanupHook`.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+void ee_won_fwop_cleanup_hook(EeWonFirewallOp *op, const EeWonFirewallHooks *hooks);
+
+/// `GetNextRequest` with the base's length field size.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+long ee_won_fwop_get_next_request(EeWonFirewallOp *op,
+                                  const EeWonFirewallHooks *hooks,
+                                  uint8_t length_field_size);
+
+/// `CheckResponse`: `*kind` -1 cut short (the caller throws `ReadBufferException`), 1 `return
+/// RecvServerDatagram()`, 0 return the status.
+///
+/// # Safety
+/// `op`, `hooks` and `kind` are valid.
+long ee_won_fwop_check_response(EeWonFirewallOp *op,
+                                const EeWonFirewallHooks *hooks,
+                                int32_t *kind);
+
+/// `RecvServerDatagram`: true to `Track` the receive op (`ee_won_fwop_recv_op`) as 1000, `RunAsync(*wait)` it and
+/// return `WS_ServerReq_ExitCommunicationLoop`; false to return `*status`.
+///
+/// # Safety
+/// `op`, `hooks`, `wait` and `status` are valid.
+bool ee_won_fwop_recv_datagram(EeWonFirewallOp *op,
+                               const EeWonFirewallHooks *hooks,
+                               uint32_t *wait,
+                               long *status);
+
+/// The receive op (borrowed, or NULL).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_fwop_recv_op(const EeWonFirewallOp *op);
+
+/// The listening socket (borrowed, or NULL).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_fwop_listen_socket(const EeWonFirewallOp *op);
+
+/// `GetPublicAddr`'s host into `*host`: false while unset.
+///
+/// # Safety
+/// `op` and `host` are valid.
+bool ee_won_fwop_public_host(const EeWonFirewallOp *op, int32_t *host);
+
+/// The listen port.
+///
+/// # Safety
+/// `op` is valid.
+uint16_t ee_won_fwop_listen_port(const EeWonFirewallOp *op);
+
+/// The longest connect wait.
+///
+/// # Safety
+/// `op` is valid.
+uint32_t ee_won_fwop_max_wait(const EeWonFirewallOp *op);
+
+/// The listen flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_do_listen(const EeWonFirewallOp *op);
+
+/// The wait-for-connect flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_wait_for_connect(const EeWonFirewallOp *op);
+
+/// The UDP flag.
+///
+/// # Safety
+/// `op` is valid.
+bool ee_won_fwop_use_udp(const EeWonFirewallOp *op);
+
+/// `GetCertOp(context)`: the op keeps a reference to `context` (taken here).
+///
+/// # Safety
+/// `hooks` is valid; `context` is a `RefCount*` or NULL.
+EeWonGetCert *ee_won_getcert_new(const EeWonGetCertHooks *hooks, void *context);
+
+/// The destructor: every reference released.
+///
+/// # Safety
+/// `op` came from `ee_won_getcert_new` (or is NULL); `hooks` is valid.
+void ee_won_getcert_free(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `SetAuthContext`.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `context` is a `RefCount*` or NULL.
+void ee_won_getcert_set_context(EeWonGetCert *op, const EeWonGetCertHooks *hooks, void *context);
+
+/// `SetCreateAccount`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_set_create_account(EeWonGetCert *op, bool value);
+
+/// `SetNewPassword` (UTF-16 LE bytes).
+///
+/// # Safety
+/// `op` is valid; `data` holds `length` bytes.
+void ee_won_getcert_set_new_password(EeWonGetCert *op, const uint8_t *data, size_t length);
+
+/// `RunHook`: true to `Finish(*status)`, false to go on to `ServerRequestOp::RunHook`.
+///
+/// # Safety
+/// `op`, `hooks` and `status` are valid.
+bool ee_won_getcert_run_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks, long *status);
+
+/// `CleanupHook` up to `ServerRequestOp::CleanupHook`, which the caller calls next.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+void ee_won_getcert_cleanup_hook(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `Reset`.
+///
+/// # Safety
+/// `op` is valid.
+void ee_won_getcert_reset(EeWonGetCert *op);
+
+/// `GetNextRequest`.
+///
+/// # Safety
+/// `op` and `hooks` are valid.
+long ee_won_getcert_get_next_request(EeWonGetCert *op, const EeWonGetCertHooks *hooks);
+
+/// `CheckResponse`: `*cut` true where the original threw `ReadBufferException` (the caller throws it).
+///
+/// # Safety
+/// `op`, `hooks` and `cut` are valid.
+long ee_won_getcert_check_response(EeWonGetCert *op,
+                                   const EeWonGetCertHooks *hooks,
+                                   bool *cut);
+
+/// `GetPeerData` (borrowed; NULL before a login).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_peer_data(const EeWonGetCert *op);
+
+/// `GetSessionKey`: the C++ `Blowfish` is this one `EeWonBlowfish` (pointer-interconvertible).
+///
+/// # Safety
+/// `op` is valid; the pointer lives as long as the op.
+const EeWonBlowfish *ee_won_getcert_session_key(const EeWonGetCert *op);
+
+/// The state (`GETTING_PUB_KEYS` 1, `GETTING_CHALLENGE` 2, `GETTING_CERTIFICATE` 3).
+///
+/// # Safety
+/// `op` is valid.
+int32_t ee_won_getcert_state(const EeWonGetCert *op);
+
+/// The key block (borrowed).
+///
+/// # Safety
+/// `op` is valid.
+void *ee_won_getcert_key_block(const EeWonGetCert *op);
+
+/// The auth server's clock delta (`mAuthDelta`).
+///
+/// # Safety
+/// `op` is valid.
+int64_t ee_won_getcert_auth_delta(const EeWonGetCert *op);
+
+/// The challenge seed into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_seed(const EeWonGetCert *op, EeWonByteSink sink, void *context);
+
+/// The number of error strings (`GetErrorList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_error_count(const EeWonGetCert *op);
+
+/// Error string `index` into `sink`.
+///
+/// # Safety
+/// `op` is valid; `sink` accepts `context`.
+void ee_won_getcert_error(const EeWonGetCert *op, size_t index, EeWonByteSink sink, void *context);
+
+/// The number of community statuses (`GetCommunityStatusList`).
+///
+/// # Safety
+/// `op` is valid.
+size_t ee_won_getcert_community_count(const EeWonGetCert *op);
+
+/// Community status `index`: the status and id, the name's UTF-16 LE bytes into `sink`.
+///
+/// # Safety
+/// `op`, `status` and `id` are valid; `sink` accepts `context`.
+void ee_won_getcert_community(const EeWonGetCert *op,
+                              size_t index,
+                              int16_t *status,
+                              uint32_t *id,
+                              EeWonByteSink sink,
+                              void *context);
+
+/// The drivers' setup: the state, the challenge seed and the key block a scenario starts with.
+///
+/// # Safety
+/// `op` and `hooks` are valid; `seed` holds `length` bytes; `block` is a `RefCount*` or NULL.
+void ee_won_getcert_setup(EeWonGetCert *op,
+                          const EeWonGetCertHooks *hooks,
+                          int32_t state,
+                          const uint8_t *seed,
+                          size_t length,
+                          void *block);
 
 /// `parse_expression` through `host`: 0 with the value in `out`, else the `ExprError`.
 ///
@@ -7201,32 +7493,6 @@ ptrdiff_t ee_won_findpatch_id_split(const uint8_t *id, size_t len);
 /// # Safety
 /// `data` holds `len` bytes; `out` is valid.
 bool ee_won_findpatch_le32(const uint8_t *data, size_t len, uint32_t *out);
-
-/// [`firewall_request`] handed to `sink`.
-///
-/// # Safety
-/// `sink` is valid with `context`.
-void ee_won_firewall_request(uint8_t lfs,
-                             bool udp,
-                             uint16_t port,
-                             bool wait_for_connect,
-                             uint32_t max_wait,
-                             EeWonByteSink sink,
-                             void *context);
-
-/// [`firewall_reply`]: -1 cut short, 0 a bad header, 1 a status (`*status`; `*host` and true in `*has_host` for a
-/// public address).
-///
-/// # Safety
-/// `reply` holds `len` bytes; the outputs are valid.
-int32_t ee_won_firewall_reply(const uint8_t *reply,
-                              size_t len,
-                              int16_t *status,
-                              int32_t *host,
-                              bool *has_host);
-
-/// [`firewall_wait`].
-uint32_t ee_won_firewall_wait(uint32_t time_left, uint32_t max_wait, bool asynchronous);
 
 /// [`password`] handed to `sink`; false where the cipher gave nothing (the original's NULL).
 ///

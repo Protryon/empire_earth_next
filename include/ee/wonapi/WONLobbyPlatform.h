@@ -1,5 +1,5 @@
 // The WONAPI GUI's backend on the platform layer (every system), in place of the original's Win32 GDI backend
-// (WONLobbyGUIMS.h). The lobby is not a set of native windows any more: its windows are rectangles of one lobby
+// (deleted in round 18). The lobby is not a set of native windows any more: its windows are rectangles of one lobby
 // surface the game shows in its own window.
 //
 //  - PlatWindowManager (the WindowManager) owns the event loop while the lobby runs: GetNextEvent waits for a

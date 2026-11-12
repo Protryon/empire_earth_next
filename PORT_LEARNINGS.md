@@ -8057,6 +8057,227 @@ lobby's model and saved settings held.
 - **Left.** StagingLogic and InitLogic as Rust objects, then LanLogic; the model's element classes (LobbyClient,
   LobbyGame with the game code's hooks, LobbyGroup, LobbyServer, LobbyFriend) stay C++ objects the containers hold.
 
+## R6: WON's C++ shrinks: the lobby's PNG decoder on ee_openformats, the dead decoders, codec copies, GDI backend and linker-dropped classes deleted (branch rust-r6-won18, 2026-11-12)
+
+Round 18 of R6 (RUST_PLAN "R6 WON, the rest"). The goal changed: net C++ deletion, measured as the lines of
+`src/Empire Earth/WONAPI` + `include/ee/wonapi` (`find ... -name '*.cpp' -o -name '*.h' -o -name '*.inl' | xargs cat | wc -l`).
+Rounds 12-17's bottom-up class moves had not shrunk it (119,299 before round 17, 119,471 after): every moved class
+kept a C++ wrapper for its remaining C++ callers. This round: 117,746 (round 17 merged with rust) -> 100,456 lines,
+-17,290, in three code commits.
+
+- **Measuring the slices first.** The suggested vertical slice (StagingLogic + InitLogic + LanLogic with LobbyModel's
+  element classes and WONLobbyMap.h, ~4.9k lines) has ~600 references to LobbyClient / LobbyGame / LobbyGroup /
+  LobbyServer / LobbyFriend and their lists in 39 other files (RoutingLogic 151, the GUI controls, the events, the
+  game code, EETestFixture): moving it means a C ABI under most of the lobby, a poor delete/keep ratio this round.
+  The image decoders were the best: ~9k lines deleted for one existing Rust call kept. Then the linker's own
+  answer: lld-link `/OPT:REF` drops every function no live code reaches (clang-cl `/O1` implies `/Gy`), so a
+  WON object's text symbols that appear in none of `EE-AOC.map`, `EE-SIM.map` and the test profile's
+  `EE-AOC.map` are dead in every build. Counting only symbols defined in one object (inline and template copies
+  excluded) gave whole files with nothing kept; each class name was then grepped over src, include, tests, tools
+  and the Rust sources before deleting. Scripts: a census over `llvm-nm --defined-only` and the map (kept out of the
+  repo, ~40 lines).
+- **PNG on the game's reader** (commit `R6 WON: the lobby's PNG decoder on ee_openformats...`). The golden first:
+  `tests/won/won_image_test.cpp` links the real PNGDecoder.cpp and JPGDecoder.cpp (with Image.cpp, ImageDecoder.cpp,
+  the file reader, libpng 1.0, zlib, the engine's libjpeg; the display stubbed) and prints per picture the
+  attributes call and the raw decode's size, transparency and pixel hash: the 46 PNG and JPEG pictures of
+  `Data/WONLobby Resources` and 79 PNGs it writes itself (every colour type and depth, tRNS on gray, RGB and
+  palette, Adam7, truncated, header only, not a PNG). `won_image_golden.txt`, 125 lines, three runs the same, then
+  the same over the new decoder. PNGDecoder now calls `ee_of_png_to_picture` (GESurface::LoadPNG's): its depth 32
+  (alpha or tRNS) is the original's transparency rule and its B, G, R, A bytes are the original's ARGB DWORD.
+  DoGetAttrib walks the signature, IHDR and the chunks to the first IDAT as `png_read_info` did (a header-only file
+  answers false, a truncated body true; CRCs unchecked, libpng checked them). Trap: the first walk forgot IHDR's CRC
+  (29 bytes, not 33) and every attribute failed; the driver caught it.
+- **Deleted with it.** `include/ee/wonapi/codec`: libpng 1.0, zlib and libjpeg header copies (7,393 lines); the WON
+  copy of libjpeg's headers was the engine's text but jmorecfg.h's FAR guard, now in `src/ThirdParty/libjpeg`
+  (windows.h defines FAR; the library's own units never include it). GIFDecoder and TGADecoder were never
+  registered (not in the original exe); WindowManager registered BMPDecoder and WIMDecoder, but the open data has
+  no .bmp, .wim, .gif or .tga picture and D9 makes the game read PNG (and the lobby's JPEG) only. libpng and zlib
+  (module `exeimg`) now have no caller and stay linked, unreferenced: removing the module is a tooling change
+  (units.py, build.py, xbuild.py, ee.py) left for the lead.
+- **The never-compiled backend.** `units.WON_REPLACED` kept WONGUI's Win32/GDI backend (MSWindowManager, MSWindow,
+  MSGraphics, MSNativeImage, MSRawImage, MSFont, DisplayContext, Clipboard, MSSound) out of every link since the
+  platform backend replaced it, and WON_NOT_LINKED the open/save dialog and WinSkin; they stayed for upstream merges,
+  which WON no longer takes. Deleted with WONLobbyGUIMS.h (included by nothing) and the three headers only they
+  included: -3,352 lines, no compiled change.
+- **Linker-dropped classes** (commit `R6 WON: the linker-dropped WONGUI classes, WONBigFile and RecvSomeBytesOp
+  deleted`): WONSound (the SDK's mixer; the lobby plays its sounds through EELobbySoundDecoder and the platform layer), ResourceCollection and its writer,
+  SpecialPurposeControls and BorderComponent, Spinner and MSSpinner, GridLayout, LayoutHelper, MSToolControls,
+  MenuBar, ComponentScrollArea, ButtonScroller (with ScrollArea::SetScrollButton and ButtonScrollerConfig),
+  TextImage (with TextArea::AddImage), EndDialogEvent, WONBigFile, RecvSomeBytesOp; their twelve headers and the
+  declarations in WONLobbyGUI.h, WONLobbyResourceConfig.h and WONLobbyTextAreaConfig.h: -5,015 lines. All were SDK
+  code the original exe did not contain (none in link/won/units.txt). The Rust code that modelled some of them
+  (guimenu.rs's menu bar, guiscroll.rs's button scroller, the ButtonScrollerConfig key tables in guiconf.rs) is
+  now reached only by its own tests and the won_gui*_test drivers' copied statements; it stays.
+- **Left dead, measured** (functions no build keeps, in files that keep others): ConfigValue's unused template
+  instantiations (151 of 186), ResourceConfigSound (44 of 50), ChildLayoutsAdvanced's ChildLayoutList and
+  VerticalFlowLayout (40 of 55), Animation's frames (20 of 24), StringParserCollections (all 48, but
+  won_parse_test's golden covers it), the Internet lane's ops (theirs).
+- **What runs it.** EE-SIM never loads the lobby: the oracle cannot see these. Only the PNG change runs: every lobby
+  load decodes the skin, icons and images (39 PNG through ee_openformats, 7 JPEG through libjpeg as before), so
+  the lead's LAN game and any lobby tour exercise it; a wrong pixel order or transparency would show in the
+  lobby's captures, not in a gate's verdict. The deletions remove code no build reaches.
+
+## R4.4, fourth round: the placement footprint, the labels' clip rectangles, the box selection, the mini map's camera point and the effects' quads in Rust (ee_gfx units.rs, select.rs, minimap.rs, effects.rs, pick.rs; branch rust-gfx10, 2026-11-12)
+
+The fourth round's five leaves, each pinned as before: a scratch driver (`build/gx10_golden`, not in the repository)
+#includes the unit of the commit before the work (7da90274, `git show`) over the real GE math units, `GEViewport`
+and `UWideString`, with fakes whose calls log; an LCG seeded 1 draws the cases and each prints an FNV-1a 64 of its
+log. The Rust tests draw the same stream and replay the C++ glue; each driver relinked over the forwarders printed
+the same bytes, and so did seeds 2 and 3 at four times the size.
+
+- **`DrawPlacement`'s footprint (`units.rs`).** `ee_gfx_units_placement_lines` gives the edges in the original's
+  order (the outline in the bar colour, then every edge with an unusable cell on exactly one side, toggled per cell
+  as the original did) as window points; the C++ keeps the `GELine`s, their texture coordinates and colours, and
+  the draw every 64 lines. 1,240 cases (sizes 0 to 11, the cells all usable, none or a random share). A grid side
+  past 11 indexed past the record's 12 x 12 arrays (and overran the original's stack); it now draws no edges (no
+  retail building is that large; a mod could make one).
+- **`DrawLabels`' rectangles (`units.rs`).** The view above the bottom strip, the strip beside the unit panel, the
+  strip's top and the font by the window's width (`ee_gfx_units_label_clip`), which rectangles a label is drawn to
+  (`ee_gfx_units_label_targets`: above the strip, below it, or both when the text crosses its top; the editor's
+  view with the free camera) and the debug label's place above the bars (`ee_gfx_units_label_point`). 1,240 frames
+  of up to six units, most near the strip's top; the fonts are fakes whose `ComputeTextExtent` sets a height per font.
+- **The box selection (`select.rs`, `pick.rs`).** `EEUICSelectUnits`' press point, the drag's end (rounded, clamped
+  a pixel short of the view's bottom when outside), the ten-pixel drag start, the move's and the release's boxes
+  (two functions: the original built them two ways) and `DrawPolygons`' eight lines; and the picker's
+  `GetIsEntryInView` model transformation (`ee_gfx_pick_entry_transform`). The selection driver built the control
+  with its own constructor over a no-op `UIControl` one (the unit emits the vtable; `GELine::GELine` and
+  `GERhombus::GERhombus` defined in the driver) and logged every `UIControl` member it calls; 600 presses with up to
+  four moves, copies and draws, the control's state running on across the cases. The round-three picker driver,
+  relinked over the new forwarder, printed its golden again (2,184 cases; `golden_picker.rs` now calls
+  `entry_transform`).
+- **`EEUIMiniMap::CenterCamera` (`minimap.rs`).** The mouse in mini-map units (the window over 800 x 600), clamped
+  to `sBounds` when outside: `ee_gfx_minimap_center_point`, 2,000 cases. `MouseRButtonDown` has the same arithmetic
+  with a different clamp (two separate tests per axis, not `else if`); it stays C++, not covered by this driver.
+- **The effects' quads (`effects.rs`).** `AddGlowSprite`, `AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite` and
+  `AddGroundStrip` now take their four vertices (colour, points, normal, texture corners, opacities) from Rust;
+  `GetEffectFogFactor` is `ee_gfx_effect_fog_factor`. The C++ keeps the batches (the count, the flush when full,
+  the alpha reference, the `SetVertex` calls). 2,040 cases with the counts near full, so both flushes run.
+- **Fake vtables see garbage in unused argument registers.** The first quads golden logged the second integer
+  register of every rasterizer slot; `SetCulling` takes one argument and `SetAlphaTestingRefValue` a float (in an
+  XMM register), so those words were whatever the caller left there and would differ between the original and the
+  forwarder builds. Log only the arguments each slot takes; and never log a pointer's value (ASLR): log "p".
+- **The vtable stubs ran out.** `GERasterizer` has more than 64 slots: `SetZBuffer` jumped past the 64-slot table
+  into `type_info`'s vtable (a DEP fault). `common.h` has a 200-slot table now.
+- **Statics with unresolved constructors.** A driver that defines `gRenderSnapshot` runs `EERenderSnapshot`'s
+  out-of-line constructor at start-up (unresolved: a jump to zero before `main`); define it as raw storage under its
+  decorated name (`__asm__("?gRenderSnapshot@@3UEERenderSnapshot@@A")`). `UWideString`'s assignment needs the
+  platform's string functions: the scratch Rust library links `ee_plat_core` too.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: a building's placement footprint
+  (choose a building to place, over usable and blocked ground), the labels (a rally label, a selected unit under the
+  strip's top, the scenario editor's labels), the box selection (drag a box, past the view's edges; the box-select
+  fixture check clicks through it), the mini map (click and drag on it) and every 2D effect's quads (fire, smoke,
+  glows, the energy wave's strip) run only in the windowed game.
+
+## R4.4, fifth round: the mini map's press, the ring models, the sky and clouds and the earthquake's crack in Rust (ee_gfx minimap.rs, models.rs, terrain.rs, quake.rs; branch rust-gfx11, 2026-11-12)
+
+Four leaves, pinned as before: a scratch driver (`build/gx11_golden`, not in the repository) #includes the unit of
+the commit before the work (929fa637, `git show`) over the real GE math units, an LCG seeded 1 draws the cases and
+each prints an FNV-1a 64 of its log; the Rust tests replay the C++ glue; each driver relinked over the forwarders
+printed the same bytes, and the random ones on seeds 2 and 3 at four times the size.
+
+- **`EEUIMiniMap::MouseRButtonDown` (`minimap.rs` `press_point`).** The press's clamp makes two separate tests per
+  axis where `CenterCamera`'s uses `else if`; they part only with inverted bounds (left past right), which the
+  driver draws in 8 % of the cases (the test asserts the stream reaches it). 2,000 presses with the modifiers.
+- **The ring models (`models.rs`, `EEROUnits::LoadMedia`).** The area-effect ring's 26 vertices (six turns of
+  -2 pi / 14 through `revolve`), texture coordinates and 10 triangles; the selection rings' segments (6, 8, 10 by
+  model detail), points (the turns accumulate in one transformation, as the original's), coordinates, triangles
+  and colour pattern. `LoadMedia` has no input but `gModelDetail`: the driver loads it at details 0, 1, 2, 3, -1
+  and 7 and dumps every model's final state. The C++ now stores the values in index order where the original
+  stored them in its own order; nothing reads between the stores except the ring's coordinate loop, which read
+  the points it had just stored, so the final state is the contract. The driver prints the calls (textures,
+  lines, creations) on a line of their own: the relink compares those, the Rust test only the models.
+- **The sky and clouds (`terrain.rs`, `EEROTerrain.cpp`).** `UpdateSkyColors`' blend of the four bands, the sky
+  dome's and the star models' points, `UpdateCloudLayer`'s points, scrolled coordinates and wrapped offset (the
+  original read the points back from the vertex array for its distances: Rust takes them from its own array),
+  and `StepGridMode`. A time of day past 1 read past a band, and past `gSkyColors` from 17/16 on, in the original;
+  the index is held at the table's last entry (the golden stays within 0..1). 1,240 cases.
+- **The earthquake's crack (`quake.rs`, `EEE3DEarthquake.cpp`).** The strip's triangles, `BuildModel`'s texture
+  rows, `Queue`'s rows (each row's front and v) and the hold time of a crack stopped over space. The C++ keeps the
+  ground: the five vertices across each row on `GetGroundPoint` and the middle one's space test, in the original's
+  order (the first row's z carries into the next vertex's transform, as before). 300 cracks, 1,230 calls.
+- **Fake models that store.** `fakemodel.h` subclasses `GEVertexArray` and `GEPolygonArray` for real (their
+  constructors and destructors defined in the driver), stores every set, logs a read of an unset slot or an index
+  past the array, and dumps the final state: a better contract than call order for builders that write arrays.
+  `GEMaterial`'s private ranges are read through its `friend struct GEStoreDigest`, defined by the driver.
+- **Virtual members on a zeroed object.** A pointer to a virtual member dispatches through the vtable even when
+  taken with `&Class::Member`: on a calloc'd control it jumped through a null vptr (the press is virtual). Call
+  the body by its decorated name (`__asm__("?MouseRButtonDown@EEUIMiniMap@@MEAAJXZ")`; `M` for protected, `U`
+  public) or with a qualified call (`q->EEE3DEarthquake::Queue(...)`).
+- **cbindgen and computed array lengths.** `[T; 2 * CONST]` in a `#[repr(C)]` struct made cbindgen emit the struct
+  as opaque (a forward declaration only); use a named constant for each length.
+- **A build without the environment.** One build was started from a shell that had not sourced the round's
+  environment, so `EE_ORIG_SRC_ROOT` was unset and it began staging into the default `C:\EEX` (stopped within
+  seconds). Source the environment in the same command as every build.
+- **Only the game reaches these.** Goldens and EE-SIM never draw or take input: the mini map's right click
+  (orders to a point; drag past the map's edges), the area-effect and selection rings at each model detail, the
+  sky at each time of day and the clouds' scroll (and the stars on a space map), the editor's grid mode keys and
+  an earthquake (a calamity power) growing over land and stopping at space run only in the windowed game.
+
+## R6: the game screens, third round: the status box's Fill and Refresh, the command panel, the lobby's type events, the settings' display lists (ee_screens; branch rust-screens3, 2026-11-12)
+
+Round 2 ("R6: the game screens, second round" above) left the status box's `Fill` and `Refresh`, the command panel, the lobby's map type and
+game type events and the settings' rasterizer and resolution lists; this round moves them. Same rules: the C++
+functions keep their names, signatures, objects and call order; the decisions are Rust over a view the C++ reads; each
+move is pinned by a golden trace of the unmodified unit (scratch drivers in `build/sc3`, `drv.py` as before),
+replayed in Rust, the driver relinked over the forwarders printing the same, and the same on seeds 2-4 at ten times
+the size.
+
+- **Moved** (`rust/crates/ee_screens`):
+  - `hud.rs`: the status box's `Fill` (which attribute icons show and where: attack, range, speed, area effect,
+    repair, the six armor kinds, transport; the bars: hit points, flight time or power on the bar the unit type
+    picks, garrison, each with its range), `FillArmorAttributes`' icons (every armor icon stretched over the first
+    armor icon's rectangle, as the original), `Refresh`'s numbers (hit points and bonus, the five "base+bonus" texts,
+    the cargo through an `unsigned long`, flight time, power, garrison, the carried resource's icon, carbon wood
+    included, and its text). The view (`EeScreensHudUnit`) is everything the box reads of the unit, its class, its
+    stats, the stats' own class and the complex unit; `friendly` (owner or not at war) is read only when the class
+    carries or garrisons. `Fill` asks for a friendly owner before it puts power on the third bar; `Refresh` does not
+    (kept).
+  - `command_panel.rs` (new): `EEUIFMGMainGroup::ShowCommands`' layout (the gate, the five modes, the market, the
+    fanaticism and just-in-time buttons, the nine command slots, the research buttons with their positions clamped
+    to 0x5f, kind 3 commands taking the next free slot, the original's search that never runs in mode 2 because no
+    slot was counted there); each button's availability (`CopyData`: the command's test, the calamity's power test or
+    `CanProduce`) and its icon (none for the group buttons by the button's last `mButton`, a technology button's
+    included); the tooltip's plan (`GetHelpString`: the name's source, the power cost, the population cost, the
+    unit's name); `Command`'s eleven targeting modes (the UI state, the locked cursor's pointer). The C++ asks only
+    for the per-unit facts the button's test needs (the set and cloak for fanaticism, the node's types for a
+    calamity), and calls `IsHuman` last, as the original.
+  - `settings.rs`: the resolution list's order (`EEVideoModeGreater`), `ShowResolutions`' line, `ApplySettings`' mode
+    index, `ShowScreens`' line. `lobby_options.rs`: the game type box's action and the map type box's change test.
+- **Driver lessons** (scratch, `build/sc3`):
+  - Controls calloc'ed with the fake vtable answer every virtual through a stub: call a member's own body with a
+    qualified name (`theButton->EEUIFMGStatusButton::CopyData()`), or the stub's 0 comes back and the trace looks
+    plausible but empty.
+  - A fake whose answer is by key (a unit set's or a tech node's `Contains(type)`) answers for the first unit of that
+    type: the replay must model the fake's key, not the unit's own flag.
+  - `UIControl::GetDisplayMode` reads the control's own `mDisplayMode`, not the driver's shadow of `SetDisplayMode`:
+    a control the code under test reads must have the field set.
+  - An object a driver copies through a faked `operator=` (the game type event copies `gGameOptions` and shows the
+    copy) needs the copy to be real for the fields read later, or the shown options are a stack's garbage.
+  - Several kinds of fake objects need several stub tables (the controls', a player's, a group's, a class's, a
+    node's): one shared table's slots collide.
+  - Unresolved functions under `/FORCE` call address 0x100000000 (`callq 0x100000000` in `llvm-objdump` at the crash):
+    `EEButtonObject::Get` and `GEText::ComputeTextExtent` were two.
+  - The Bash tool turns `\\n` into a newline in heredocs and in `sed` replacements alike; driver edits go through
+    files written whole.
+- **What the harness reaches:** the settings captures (`settings-video`): on open `ShowVideo` fills the rasterizer,
+  screen and resolution lists (`ShowScreens`, `ShowResolutions` and their sort), but the port hides all three (the
+  port's display combo boxes replace them), so no capture shows them and their selection events never fire;
+  `ApplySettings`' mode index is the settings' OK (a person's). The lobby: no gate selects the game type box (a
+  person: saved games and scenarios); the ai-game gate selects the map type box (`fixture_driver`'s map type), which
+  fires the event only when that line differs from the one shown. In game: `gates.sh`'s tour plays 120 s without
+  `--box-select`/`--orders`, so with no selection the main group shows the empty box (`Fill(NULL)`) and lays out no
+  button; with `--box-select` the status box's `Fill` and every tick's `Refresh` run for the selection (its texts,
+  bars and icons are on the game captures); with `--orders` the patrol and attack ground buttons are found among the
+  shown buttons (`ShowCommands`), `CopyData` runs on each frame for every shown button, and attack ground runs
+  `Command`'s targeting mode (UI state 0x13, the locked cursor's pointer 0x17). **Only a person reaches:** the
+  tooltips (`GetHelpString`, a hover), the market's and the civ powers' buttons, the calamity buttons, the other
+  targeting modes, the game type box. None of this is simulation: EE-SIM never runs it, so the oracle only shows it
+  does not disturb the game; goldens never draw, so only a tour shows the box and the panel on screen.
+- **Behaviour:** none on Windows. The panel reads the fanaticism and just-in-time button objects' positions only
+  when they exist (the original dereferenced them when it showed them); a button reads its pure test's
+  inputs (a unit's set membership, cloak, power) for every selected unit the button's test covers instead of
+  stopping at the first that passes.
+
 ## R5b.2, seventh round: the reads behind the hosts, the shots' actions and ticks, the heal goal's work and the unit store's plain reads in Rust (ee_combat reads.rs, shots.rs; branch rust-combat7, 2026-11-12)
 
 | Piece | C++ caller | Rust | Tag |
@@ -8140,3 +8361,52 @@ lobby's model and saved settings held.
   `EEIsInContactRange`, `EEIsAttackReachable`, `CanReachUnit`, `IsTargetIgnored`/`IgnoreTarget`, `EEIsSeenBy`,
   `Intersects`, `GetNearestFootprintTile`), the shots' objects behind the operations, `LaunchProjectile`,
   `EEIsOnTargetTiles`, the goals' objects and saves.
+
+## R6: WON's Internet code, round 6 (GetCertOp and DetectFirewallOp as whole Rust ops)
+
+Branch `rust-won-net6`. As before, nothing in the game reaches this code (the WON servers are gone; the lobby makes
+a GetCertOp or a DetectFirewallOp only for an Internet login): only the drivers exercise it, and no tour, LAN game
+or EE-SIM run does.
+
+- **A whole op over a ServerRequestOp shim.** `GetCertOp` (getcert.rs) and `DetectFirewallOp` (fwop.rs) keep every
+  member in a Rust object and run every step there; the C++ class is the `ServerRequestOp` the base's exchange calls
+  through its virtuals, plus one hook table for the C++ objects the op holds or makes (the auth context, key
+  blocks, certificates, peer data and the private key; the listening socket and the datagram receive ops). What can
+  complete the op or call back into it is never called from Rust: `Finish`, the base class's `RunHook`,
+  `CleanupHook` and `CallbackHook`, `Track` with `RunAsync`, and the virtual `RecvServerDatagram` come back as the
+  step's outcome and the C++ shim runs them as its next statement, after the call returned. So no Rust borrow lives
+  across a call that can re-enter the object, without a lock.
+- **The session key is the object's.** GetCertOp's `Blowfish` is the Rust object's `Blowfish` (`GetSessionKey`
+  returns it as the C++ class, one `EeWonBlowfish`). A random key cannot be replayed, so its four hooks are nullable
+  function pointers: the real op passes NULL and Rust uses its own key; the driver passes the stand-in key of the
+  original's run. The real key's path is a Rust test (a login request decrypted with the key it carries).
+- **Goldens first, both from the original's half.** `won_cert_test --print-ops` (400 sequences of RunHook,
+  GetNextRequest, CheckResponse, Reset, CleanupHook and the setters on one op) was recorded before getcert.rs
+  existed; `won_fwop_test` was first compiled with its Rust half switched off to record `golden_fwop.txt` (500
+  sequences). Each driver then compares the original's statements with the Rust op on 100,000 sequences (497,094
+  and 550,479 steps), and the Rust tests replay the goldens over Rust stand-ins. Mutations: CleanupHook's status test
+  inverted (38,208 failed checks), the datagram's host test inverted (11,215), both also failing the Rust replays.
+- **A stand-in's log is cut at 255 bytes.** The drivers' `Log` formats into a 256-byte buffer, so a long user
+  name's hex was cut in the golden; the Rust replay's stand-in has to cut the same way (the first replay failed
+  there). And a Rust stand-in that counts references must let a peer data's key block go when the peer goes, or a
+  balance check reports the block alive.
+- **cbindgen exports private aliases.** A module-private `type Sink = EeWonByteSink;` used in an exported hook
+  struct came out as a bare C++ `Sink` in ee_rust.h (the driver then failed to assign its `EeWonByteSink`
+  functions). Write the prefixed type in exported signatures, never a local alias.
+- **clippy: `c_long` is `i32` on Windows.** Its casts to and from `i32` are needed on LP64 and flagged on Windows
+  (`unnecessary_cast`): both modules allow it at their top.
+- **The original's NULL dereferences, defined.** GetCertOp's CleanupHook after RunHook finished for a missing
+  verifier key read a NULL key block: no key block is not valid here. DetectFirewallOp's CallbackHook for a
+  successful datagram with no receive op read NULL: it finishes. A login request whose session-key encryption gives
+  NULL dereferenced it: an empty block is sent. (The drivers never generate these.) The members the constructors
+  left indeterminate (GetCertOp's state and clock delta) start at `GETTING_PUB_KEYS` and 0.
+- **Behaviour changes.** None intended. `GetErrorList`, `GetCommunityStatusList` and `GetPublicAddr` return copies
+  (InitLogic's `LobbySetPublicAddress(op->GetPublicAddr())` binds the temporary). The dead C ABI went with its last
+  C++ user: `ee_won_cert_request`, `_login_data`, `_reply`, `_decrypted` and `ee_won_firewall_request`, `_reply`,
+  `_wait` (their Rust functions stay, used by the ops); `WONCertMsg.h` and `FirewallMsg` are deleted.
+- **Not moved this round, and why.** HTTPGetOp (650 lines, 30 public members read by GetHTTPDocumentOp and
+  HTTPEngine, a state machine over socket ops and a child op for redirects) and FTPGetOp need scripted-socket drivers
+  the size of `won_httpengine_test`'s: next. PeerAuthServerOp's only state is `mPeerAuthServer`, which LanLogic reads
+  directly (`op->mPeerAuthServer.GetClientCertificate()`): an accessor there first (the lobby lane's file).
+  FindPatchOp's state is VersionBaseOp's sets plus a list of PatchInfo maps of ByteBuffers: it follows VersionBaseOp.
+  PeerAuthOp, FilePushOp, the routing and DB op families and ServerRequestOp's object remain.

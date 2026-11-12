@@ -1,4 +1,4 @@
-// JPEG image decoder on libjpeg, reading through a FileReader
+// JPEG image decoder on the engine's libjpeg 6b (src/ThirdParty/libjpeg), reading through a FileReader
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <stdio.h>
@@ -17,8 +17,8 @@
 #include "ee/wonapi/WONLobbyAnimation.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 namespace WONJPG { extern "C" {
-#include "ee/wonapi/codec/jpeglib.h"
-#include "ee/wonapi/codec/jerror.h"
+#include "../../../ThirdParty/libjpeg/jpeglib.h"
+#include "../../../ThirdParty/libjpeg/jerror.h"
 struct my_error_mgr { jpeg_error_mgr pub; jmp_buf setjmp_buffer; };
 typedef my_error_mgr* my_error_ptr;
 struct my_source_mgr {

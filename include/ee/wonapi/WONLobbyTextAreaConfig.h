@@ -150,7 +150,6 @@ public:
     void CopySelection(); //313b60
     void EnforceMaxChars(); // at 0x00712f70
     void EnforceMaxLines(); // at 0x00712fd0
-    void AddImage(Image*,const GUIString&,bool=false); // adds a retained inline-image segment
     void AddSegment(const GUIString&,bool=false); // at 0x00713c60
     void AddSegment(const GUIString&,int,bool=false); // at 0x00713c80
     void AddSegment(const GUIString&,int,Font*,bool=false); // at 0x00713da0

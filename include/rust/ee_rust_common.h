@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "ee_combat.h"
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
@@ -27,16 +26,11 @@ constexpr static const uint32_t RESOURCE_WOOD = 3;
 
 constexpr static const uint32_t RESOURCE_STONE = 4;
 
-extern "C" {
+constexpr static const uint32_t CATEGORY_LAND_CITIZEN = 6;
 
-/// The combat reads' bridge to the unit store (ee_combat reads.rs `Stored`: ee_combat cannot depend on ee_units, whose
-/// host imports C++): ee_units' record under `id`, its plain fields into `out`; false for none (always in a test
-/// binary, which has no store's host).
-///
-/// # Safety
-/// `out` must point to a writable record.
-bool ee_combat_store_unit(uint32_t id,
-                          EeCombatStoredUnit *out);
+constexpr static const uint32_t CATEGORY_NAVAL_CITIZEN = 22;
+
+extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.
 uint32_t ee_rust_abi_version();

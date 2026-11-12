@@ -206,6 +206,173 @@ pub fn ring_segments(strength: u32) -> EeGfxRingSegments {
     EeGfxRingSegments { ring: strength, highlight: 7_u32.saturating_sub(strength) }
 }
 
+/// `EERenderUnitRecord`'s footprint grid (`mHeights`, `mCells`: 12 x 12 corners and cells).
+pub(crate) const PLACEMENT_GRID: usize = 12;
+
+/// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
+/// edges between usable and unusable cells `gBarBackColor` (`back` 1).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxPlacementLine {
+    pub back: u32,
+    pub start: Ge2DPoint,
+    pub end: Ge2DPoint,
+}
+
+/// `DrawPlacement`'s footprint edges for a `size` x `size` grid round tile (`tile_x`, `tile_y`), in the order the
+/// original drew them: the outline (bar colour), then every edge with an unusable cell (`cells[x][y] == 0`) on
+/// exactly one side (back colour). `heights[x][y]` are the grid's corner heights. Writes at most `out.len()` lines
+/// and returns their count. A size past 11 would index past the 12 x 12 grid (the original's stack overrun): it
+/// draws no edges.
+#[allow(clippy::too_many_arguments)]
+pub fn placement_lines(
+    vp: &GeViewport,
+    orthographic: bool,
+    size: i32,
+    tile_x: i32,
+    tile_y: i32,
+    heights: &[[f32; PLACEMENT_GRID]; PLACEMENT_GRID],
+    cells: &[[u8; PLACEMENT_GRID]; PLACEMENT_GRID],
+    out: &mut [EeGfxPlacementLine],
+) -> usize {
+    if size >= PLACEMENT_GRID as i32 {
+        return 0;
+    }
+    let half = if size % 2 == 0 { size as f32 * 0.5 } else { (size - 1) as f32 * 0.5 };
+    let left = tile_x as f32 - half;
+    let top = tile_y as f32 - half;
+    let mut n = 0usize;
+    // the edge from corner (j, x) one tile along x (`along_x`) or along y
+    let mut push = |back: u32, j: i32, x: i32, along_x: bool| {
+        if n >= out.len() {
+            return;
+        }
+        let (ju, xu) = (j as usize, x as usize);
+        let line_x = j as f32 + left;
+        let line_y = x as f32 + top;
+        let start = screen_point(vp, orthographic, Ge3DPoint { x: line_x, y: line_y, z: heights[ju][xu] });
+        let end = if along_x {
+            screen_point(vp, orthographic, Ge3DPoint { x: line_x + 1.0, y: line_y, z: heights[ju + 1][xu] })
+        } else {
+            screen_point(vp, orthographic, Ge3DPoint { x: line_x, y: line_y + 1.0, z: heights[ju][xu + 1] })
+        };
+        out[n] = EeGfxPlacementLine { back, start, end };
+        n += 1;
+    };
+    for x in 0..=size {
+        for j in 0..=size {
+            if (x == 0 || x == size) && j != size {
+                push(0, j, x, true);
+            }
+            if (j != 0 && j != size) || x == size {
+                continue;
+            }
+            push(0, j, x, false);
+        }
+    }
+    let mut rows = [[false; PLACEMENT_GRID]; PLACEMENT_GRID];
+    let mut columns = [[false; PLACEMENT_GRID]; PLACEMENT_GRID];
+    let cells_side = size.max(0) as usize;
+    for x in 0..cells_side {
+        for j in 0..cells_side {
+            if cells[j][x] != 0 {
+                continue;
+            }
+            rows[j][x] ^= true;
+            rows[j][x + 1] ^= true;
+            columns[j][x] ^= true;
+            columns[j + 1][x] ^= true;
+        }
+    }
+    for x in 0..=size {
+        for j in 0..=size {
+            let (ju, xu) = (j as usize, x as usize);
+            if rows[ju][xu] && j != size {
+                push(1, j, x, true);
+            }
+            if !columns[ju][xu] || x == size {
+                continue;
+            }
+            push(1, j, x, false);
+        }
+    }
+    n
+}
+
+/// `kLabelBottom`: the top of the main game form's bottom strip over the window's height (548 / 768).
+pub(crate) const LABEL_BOTTOM: f32 = 0.7135417;
+/// `kLabelMargin`: the unit panel's width over the window's (185 / 1024).
+pub(crate) const LABEL_MARGIN: f32 = 0.18066406;
+
+/// `DrawLabels`' clip rectangles: above the bottom strip (`view`) and the strip's part beside the panels
+/// (`strip`), the strip's top (`bottom`) and the font (0: the default, 1: Tahoma 12, 2: Tahoma 16).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxLabelClip {
+    pub view: GeRectangle,
+    pub strip: GeRectangle,
+    pub bottom: f32,
+    pub font: u32,
+}
+
+/// `DrawLabels`' rectangles from the game view's rectangle and the window's size. With the free camera (the
+/// scenario editor) the view is the whole game view and the strip unused (all zero).
+pub fn label_clip(view: GeRectangle, width: u32, height: u32, free_camera: bool, panel_active: bool) -> EeGfxLabelClip {
+    let window_width = width as f32;
+    let mut view = view;
+    let mut strip = GeRectangle::default();
+    let mut margin = window_width;
+    margin *= LABEL_MARGIN;
+    let bottom = height as f32 * LABEL_BOTTOM;
+    if !free_camera {
+        strip.left = view.left;
+        strip.top = bottom;
+        strip.bottom = view.bottom;
+        if panel_active {
+            strip.left = margin;
+        }
+        strip.right = window_width - margin;
+        view.bottom = bottom;
+    }
+    let font = if width >= 0x640 {
+        2
+    } else if width >= 0x500 {
+        1
+    } else {
+        0
+    };
+    EeGfxLabelClip { view, strip, bottom, font }
+}
+
+/// Which rectangles a label at screen height `y` is drawn clipped to: bit 0 the main form's view, bit 1 its strip
+/// (both: the text crosses the strip's top; the view first), bit 2 the scenario editor's view (the free camera).
+pub fn label_targets(y: f32, text_height: f32, bottom: f32, free_camera: bool) -> u32 {
+    if free_camera {
+        4
+    } else if y + text_height < bottom {
+        1
+    } else if y - text_height > bottom {
+        2
+    } else {
+        3
+    }
+}
+
+/// The debug label's place: the unit's bar tag on the screen, above its `bars` extra bars and ten pixels more.
+pub fn label_point(
+    vp: &GeViewport,
+    orthographic: bool,
+    transformation: &GeTransformation,
+    bar: Ge3DPoint,
+    scale: f32,
+    bars: u64,
+) -> Ge2DPoint {
+    let location = unit_bar_point(transformation, bar, scale);
+    let mut p = screen_point(vp, orthographic, location);
+    p.y = p.y - bars as f32 * 5.0 - 10.0;
+    p
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +411,44 @@ mod tests {
         assert_eq!((b.kind, b.count), (1, 2));
         assert_eq!(b.rects[0], rect(8.0, 15.0, 14.0, 17.0));
         assert_eq!(b.rects[1], rect(14.0, 15.0, 32.0, 17.0));
+    }
+
+    #[test]
+    fn a_footprint_draws_its_outline_and_the_blocked_cells() {
+        let vp = GeViewport::default();
+        let heights = [[0.0f32; PLACEMENT_GRID]; PLACEMENT_GRID];
+        let mut cells = [[1u8; PLACEMENT_GRID]; PLACEMENT_GRID];
+        let mut out = [EeGfxPlacementLine::default(); 320];
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 12);
+        assert!(out[..12].iter().all(|l| l.back == 0));
+        // one blocked cell inside: its four edges in the back colour
+        cells[1][1] = 0;
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 16);
+        assert!(out[12..16].iter().all(|l| l.back == 1));
+        // two blocked neighbours: the edge between them is not drawn
+        cells[2][1] = 0;
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 12 + 6);
+        assert_eq!(placement_lines(&vp, false, 0, 10, 10, &heights, &cells, &mut out), 0);
+        assert_eq!(placement_lines(&vp, false, 12, 10, 10, &heights, &cells, &mut out), 0);
+        let all = [[0u8; PLACEMENT_GRID]; PLACEMENT_GRID];
+        assert_eq!(placement_lines(&vp, false, 11, 10, 10, &heights, &all, &mut out), 44 + 44);
+    }
+
+    #[test]
+    fn labels_clip_above_and_beside_the_strip() {
+        let view = rect(0.0, 0.0, 1024.0, 768.0);
+        let c = label_clip(view, 1024, 768, false, true);
+        assert_eq!(c.bottom, 768.0 * LABEL_BOTTOM);
+        assert_eq!(c.view, rect(0.0, 0.0, 1024.0, c.bottom));
+        assert_eq!(c.strip, rect(1024.0 * LABEL_MARGIN, c.bottom, 1024.0 - 1024.0 * LABEL_MARGIN, 768.0));
+        assert_eq!(c.font, 0);
+        assert_eq!(label_clip(view, 1280, 768, false, false).font, 1);
+        assert_eq!(label_clip(view, 1600, 768, false, false).font, 2);
+        let free = label_clip(view, 1024, 768, true, true);
+        assert_eq!((free.view, free.strip), (view, GeRectangle::default()));
+        assert_eq!(label_targets(100.0, 14.0, 548.0, false), 1);
+        assert_eq!(label_targets(600.0, 14.0, 548.0, false), 2);
+        assert_eq!(label_targets(540.0, 14.0, 548.0, false), 3);
+        assert_eq!(label_targets(540.0, 14.0, 548.0, true), 4);
     }
 }

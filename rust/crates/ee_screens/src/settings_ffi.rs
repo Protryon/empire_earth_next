@@ -7,7 +7,7 @@ use core::ffi::{c_long, c_ulong};
 use crate::settings::{
     self, EeScreensApplied, EeScreensApplyControls, EeScreensAudioSettings, EeScreensAudioShow, EeScreensGraphics,
     EeScreensGraphicsSettings, EeScreensGraphicsShow, EeScreensInterfaceSettings, EeScreensInterfaceShow,
-    EeScreensPreset,
+    EeScreensPreset, EeScreensVideoMode,
 };
 
 /// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
@@ -89,4 +89,48 @@ pub unsafe extern "C" fn ee_screens_settings_interface(
     out: *mut EeScreensInterfaceShow,
 ) {
     out.write(settings::interface_show(&*settings));
+}
+
+unsafe fn modes<'a>(modes: *const EeScreensVideoMode, count: usize) -> &'a [EeScreensVideoMode] {
+    if modes.is_null() || count == 0 {
+        &[]
+    } else {
+        core::slice::from_raw_parts(modes, count)
+    }
+}
+
+/// `EEVideoModeGreater`: whether `a` sorts before `b` in the resolution list (largest first).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_video_mode_greater(
+    a: *const EeScreensVideoMode,
+    b: *const EeScreensVideoMode,
+) -> bool {
+    settings::video_mode_greater(&*a, &*b)
+}
+
+/// `ShowResolutions`' line over the sorted modes (`count` of them).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_resolution_line(
+    list: *const EeScreensVideoMode,
+    count: usize,
+    current: *const EeScreensVideoMode,
+    default: *const EeScreensVideoMode,
+) -> c_ulong {
+    settings::resolution_line(modes(list, count), &*current, &*default)
+}
+
+/// `ApplySettings`' mode index over the sorted modes (`count` of them).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_mode_index(
+    list: *const EeScreensVideoMode,
+    count: usize,
+    settings: *const EeScreensVideoMode,
+) -> c_ulong {
+    settings::mode_index(modes(list, count), &*settings)
+}
+
+/// `ShowScreens`' line among the rasterizer's `count` screens (`c_ulong::MAX`: none).
+#[no_mangle]
+pub extern "C" fn ee_screens_screen_line(count: usize, screen_id: c_ulong) -> c_ulong {
+    settings::screen_line(count as c_ulong, screen_id)
 }

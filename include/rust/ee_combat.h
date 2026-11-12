@@ -925,27 +925,6 @@ constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED = 7;
 
 constexpr static const int32_t EE_COMBAT_WORLD_FIRE_SHOT = 8;
 
-/// The unit store's fields the reads take (ee_units' `EeUnitRecord`'s, copied by ee_rust's bridge: ee_combat does not
-/// depend on ee_units, whose crate imports C++ functions no test binary of this crate has).
-struct EeCombatStoredUnit {
-  /// the `RTSUnit*` the record is of (the `EEUnit*`'s address)
-  uint64_t object;
-  /// ee_units' `EE_OBJECT_*` (`EE_COMBAT_STORED_COMPLEX_UNIT`: an `EEComplexUnit`)
-  uint8_t object_kind;
-  uint8_t built;
-  int64_t tile_x;
-  int64_t tile_y;
-  int64_t hit_points;
-  /// -1: no class
-  int64_t unit_type;
-  int64_t category;
-  int64_t command;
-  /// the location's x, y, z as float bits
-  uint32_t location[3];
-  /// `EEComplexUnit::mTargetSearchTimer`
-  int64_t target_search_timer;
-};
-
 /// `EEToHitTable::GetAttackFactor`'s inputs.
 struct EeCombatAttackFactorIn {
   /// `gDamageTable[the target class's family][the attack kind]`

@@ -65,15 +65,6 @@ public:
     virtual void SetComponent(Component*); //original external SetComponent
     Scroller* mScroller; //98, prefix9c
 };
-// ButtonScrollerConfig (not identified in the original exe).
-class ButtonScrollerConfig : public ScrollerConfig {
-protected:
-    ButtonScroller* mButtonScroller; //borrowed, source model9c after existing ScrollerConfig9c
-    ScrollButtonCondition GetScrollButtonCondition();
-public:
-    virtual void SetComponent(Component* component) { ScrollerConfig::SetComponent(component); this->mButtonScroller=static_cast<ButtonScroller*>(component); }
-    virtual bool Virtual24(const std::string&);
-};
 class ScrollbarScrollerConfig : public ScrollerConfig {
 public:
     virtual bool Virtual24(const std::string&); //3948a0
