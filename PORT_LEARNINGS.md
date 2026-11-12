@@ -8861,3 +8861,54 @@ inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted fo
   (EECPRMNavalFlee) calls AddIdleGatherer on the C++ resource manager; for a Lua seat that list is empty, so a fled
   boat stayed on the script's food list, idle at the far dock, and was never sent to fish again (most of the port's
   boats died idle). The script now moves a boat off its fish back to its idle list itself.
+
+## The merge of main 79be8619 into the rust branch (the Lua AI, the per-unit interface, the boat fixes; 2026-11-12)
+
+344 commits of main (112 files, mostly the Lua AI: `EECPNextUnits`, `ai/ageofai`, `ai/classic_lua`, `boom_order`,
+AI_RESEARCH to §8.62) merged into `rust` as `git merge origin/main` (branch rust-mainmerge).
+
+- **Main's platform fixes landed in deleted files.** `src/Platform/Common/PlatConfig.cpp`, `Posix/PlatMessage.cpp`
+  and `Posix/PlatSocket.cpp` are Rust here (R1.1-R1.3); git reported modify/delete. The three changes went into the
+  Rust bodies, each with a test: the settings file's replace is tried ten times 50 ms apart (`ee_plat_core`
+  config.rs `retry_replace`: a scanner or the harness may hold the file), the headless simulation never calls a
+  message handler (message.rs: a box would wait for ever), and POSIX stream sockets get `SO_REUSEADDR`
+  (`ee_plat_sys` socket_posix.rs: the benches rebind a port pair game after game; its test runs on POSIX only).
+- **Both lines took save version 0.254 again.** Main's 0.254 is the per-unit Lua interface's state after a computer
+  player's next-engine block (`EEPPlayerHelper`, `EECPUnitsSave`/`Load`); here 0.254 is `EESaveHasLiveState` and the
+  format was at 0.279. Git merged `EEPPlayerHelper.cpp` without a conflict, keeping main's `inMinorVersion >= 254`:
+  every 0.254-0.279 save of this branch would have read a length from the next player's bytes. The merged format is
+  0.280 (`EESaveHasUnitsLuaState`, ee/EESaveGameFiles.h); the block is read from 0.280 only. As at the merge of
+  ce3df9e4: read both sides' version gates, not only the conflicts. Other lanes that bump the version take 0.281.
+- **The dead-code lane had deleted what main now calls.** `EECPNextTechName` (no caller when the census ran) is
+  called by main's human command log (`EEPhysics::DrainInput`) and by `EECPNextUnits.cpp`: the build failed on it, and
+  it is restored. A census deletion is only as good as the branch it ran on; none of the census's other names is
+  used by main's new code.
+- **Retired options came back through the tools.** Main's new `sim_profile.py` defaulted to `--data binary`, and
+  `sim_bench.py` to the binary tree and per-slot `--port-offset`s; here the binary tree is retired (D9) and EE-SIM's
+  server binds ports the system picks. Both default to the open tree now; main's cache and priority options stay.
+- PORT_LEARNINGS.md is still LF on main and CRLF here: merged as LF copies with `git merge-file --union` (both
+  sides' sections at the end), written back as CRLF.
+- **The oracle changed, by main's classic-AI change.** Seeds 2 and 3 part from `ref` (first divergent tick seed 2 CT
+  2881, game ms 2520875, `oos, units`; seed 3 CT 2503, 2190125 ms, `rng, oos, units`; seeds 4-7 identical, every
+  decision and checksum line). The trace's new kinds (`cp unit.death`, `dc.ladder`, the braces fix of `cp losses`)
+  are trace only. The cause: `kCoastBoatsLater` 16 -> 32 (main's AI_RESEARCH 8.56, the "foodeco"/forage boats; the
+  dump at 2520 s (`--dump-at`) shows the AI line's boat cap `food=7/16/6` against `7/32/6`). The proof is a control
+  build of the merged tree with only that constant back at 16: identical to `ref` on seeds 2-7 (every decision line
+  but the new trace kinds). Ruled out one by one first, each by a control build equal to the merge: the boat count
+  fix (`EECPUGatherSpecialUnitsCount` by class), the build-site guards (`EEStepAsideFromSite`, `BeginRepair`),
+  `UMRint` (cvtss2si for lrintf: no change, as main measured) and the soldier-death trace. Main's per-unit hooks
+  (`EECPUnitsHolds`, `ReflexOn`, the micro tick) are inert for classic seats (no units state).
+- **The rebaseline** (declared; its own commit): the new reference is the merged build's oracle run with the
+  checksum lines (`build/rust_oracle/mm-ref` in this worktree: copy it to the main checkout's `ref`). Capture
+  goldens, all five profiles run two seeds at a time and deleted at once: oracle seeds 2-3 (127 lines) and missile
+  seeds 2-3 (20) from the boat cap alone (the 16-boat control equals the old goldens), late seeds 4-7 (215 lines
+  changed, CBEW/CBFS/CBFT of seed 4 no longer recorded and dropped) from both boat changes (the cap and the count by
+  class: navies; a control with both back equals the old golden, one with only the cap does not). Space and calamity
+  unchanged. `tools/saveload_expect.txt` unchanged: `saveload --settings all --seeds 2-3 --at 1000,1900` gives
+  exactly its 40 rows (19 continue identically; `saveload expect: PASS`), with the next engine 4/4.
+- **The Lua AIs.** EE-SIM `--engine next` (boom), `classic_lua` and `ageofai,classic`, seeds 2-3, Small Hard: six
+  games to the time cap, no Lua error (sim_bench `lua_errors` 0). The main checkout's open tree predates
+  `ai/classic_lua`, `ai/ageofai` and `boom_order` (its `Data/ai` has boom, rush, balanced and the old manifest): run
+  them with `--ai-scripts ai`, or `python -I tools/open_data.py ai TREE` (seconds; it rewrites the tree's `Data/ai`).
+  Main's `open_data.py` change (the notice files) also changes the converters' hash: tools warn on the old tree, and
+  the harness rebuilds it (about 4 minutes).
