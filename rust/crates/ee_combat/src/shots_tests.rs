@@ -177,7 +177,7 @@ fn a_missile_hit_dies_with_its_attack_goal_or_as_an_icbm() {
         ]
     );
     assert!(m.log.contains(&(EE_COMBAT_SHOT_POPULATION, 3, 0)));
-    let m = hit(3, TYPE_CP_ICBM, 0, 0);
+    let m = hit(3, TYPE_ICBM, 0, 0);
     assert_eq!(
         m.ops()[3..].to_vec(),
         vec![EE_COMBAT_SHOT_START_ACTION, EE_COMBAT_SHOT_ACTION_CHANGED, EE_COMBAT_SHOT_MINIMAP_OFF]

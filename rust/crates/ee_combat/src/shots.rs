@@ -154,7 +154,7 @@ const GOAL_ATTACK_UNIT: i32 = 2;
 const GOAL_ATTACK_GROUND: i32 = 3;
 const TYPE_PARACHUTE_BOMB: i32 = 0xd5;
 const TYPE_FLAMING_ARROW: i32 = 0x2d5;
-const TYPE_CP_ICBM: i32 = 0x2ee;
+const TYPE_ICBM: i32 = 0x2ee;
 const TYPE_BOMB_FOR_SAS: i32 = 0x305;
 const OFF_MAP: i32 = -10000;
 
@@ -332,7 +332,7 @@ fn missile_action<H: ShotHost>(p: &mut Plan<'_, H>) {
             }
             let goal = p.read(EE_COMBAT_SHOT_R_GOAL_KIND);
             if goal == GOAL_ATTACK_UNIT
-                || (p.read(EE_COMBAT_SHOT_R_UNIT_TYPE) == TYPE_CP_ICBM
+                || (p.read(EE_COMBAT_SHOT_R_UNIT_TYPE) == TYPE_ICBM
                     && p.read(EE_COMBAT_SHOT_R_GOAL_KIND) == GOAL_ATTACK_GROUND)
             {
                 p.act(EE_COMBAT_SHOT_START_ACTION, A_DEAD);

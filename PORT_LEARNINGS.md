@@ -8447,3 +8447,43 @@ or EE-SIM run does.
   the run's stage slots and rerun before suspecting the code.
 - **Only a tour or a played game runs** the fixture's repair "home" path (the camera on a town building before the
   scan); the self test's stand-in covers the driver's side.
+
+## R5b.2, eighth round: the attack's world steps in Rust (ee_combat world.rs; branch rust-combat8, 2026-11-12)
+
+| Piece | C++ caller (body gone) | Rust | Tag |
+|---|---|---|---|
+| the ignored targets | `EEComplexUnit::IsTargetIgnored`, `IgnoreTarget` | `world::is_target_ignored`, `ignore_target` | CBXR |
+| reach | `EEComplexUnit::CanReachUnit`, `EEIsAttackReachable` | `world::can_reach_unit`, `attack_reachable` | CBXR |
+| the bordering tile | `EEComplexUnit::IsOnTileBorderingTarget` | `world::on_tile_bordering` | CBXR |
+| the attacked unit's reaction | `EEUnitClass::Attacked` | `world::attacked` (a plan) | CBXA |
+| one shot | `EEUnitClass::FireShot` | `world::fire_shot` (a plan) | CBXA |
+
+- **One world host.** `EeCombatWorldHost` is the reads' `EeCombatQueryHost` (so `Stored` serves the store's fields)
+  plus one operation callback: a code, two handles and an `int64_t[12]` argument block in and out. The ignored list
+  (a `std::deque` the saves and EESim copy) stays C++: Rust reads its entries, erases a range and pushes or renews
+  one; a continent is a handle (`EEAIContinent*`); the path search is one operation (bounds and limit in, the path's
+  length and first tile out; the attackable-by modifier is made and released inside it, after the window's arithmetic
+  instead of before: nothing between reads it). `Attacked`'s goal, its units near and the helpers' shared
+  `EEIsAttackReachable` tile live in the host's context, as `FireShot`'s drop point and class do.
+- **The quirks kept.** `IsOnTileBorderingTarget`'s second corner test passes `inHeight + 1` as its last y (the
+  original's `EEGetRingCorners`), all four corners are tested before the search; `IsTargetIgnored` erases from an
+  expired entry to the end, a moved one alone; `EEIsAttackReachable` leaves the tile untouched for a target off the
+  map or on another continent (so `Attacked`'s helpers see the previous helper's tile); a capital ship skips its last
+  (special) tag point in the turn; `Attacked` reads the helper's goal target twice.
+- **C++ deleted, measured.** The seven bodies were 294 lines; the host's 28 reads and 39 operations, the forwarders and
+  the declaration add 260 (one line a case where it fits): net 34. Moving object work behind an operation host costs about as many lines as it
+  removes: the deletion comes when the store holds the fields (RUST_PLAN's combat row lists them by count) and when
+  the goals, effects and the ignored list move whole. `LaunchShot`, `ApplyHit` and `ComputeDamage`'s fill were left
+  for that reason.
+- **Goldens.** CBXR (every call: the function, the ids, the result, the ignored list's size and FNV-1a, the reach
+  tile) and CBXA (at each end: the unit's command, animation, hit points, reload timer, weapon tag point, ammunition,
+  flight time, special attack and firing high flags, experience, goal and its target, last attacker, search timer,
+  and the target's hit points and resource amount; the splash's victims hashed) were recorded from the original
+  bodies (14aa3e1d) in the five profiles, seeds 2-7, every other tag equal to its golden in that run. CBX was free in
+  every golden file. A capture-only count of the hosts' callbacks (one oracle game) ordered the store field list.
+- **cbindgen and the split headers.** A private `const` named like another crate's public one (`TYPE_CP_ICBM`,
+  `CATEGORY_LAND_CITIZEN`) moves that crate's constant into `ee_rust_common.h`: the splitter counts every definition.
+  world.rs's constants carry a `W_` prefix.
+- **What only a combat tour shows:** the shots' effects (muzzle flash, the shot effect between the units or at the
+  drop point, the impact sparks on a friendly blocker or open ground, the capital ships' special attack effect) and
+  that idle soldiers near an attacked unit join the fight.
