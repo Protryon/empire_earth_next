@@ -135,7 +135,6 @@
 #include "ee/EEUIEHotKeyZoom.h"
 #include "ee/EEUIEKeyboardScroll.h"
 #include "ee/EEUIEMainGameEvents.h"
-#include "ee/EEUIEMainGameOptionsEvents.h"
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
@@ -673,7 +672,7 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         break;
     case kControlEventSRMLargeScenBriefingAlert:
     case kControlEventSRMGameInfoScenarioIntroduction:
-        theEvent = new EEUIEMGDisplayScenarioIntro;
+        theEvent = EECreateScreenEvent(EE_SCREENS_GO_DISPLAY_INTRO);
         break;
     case kControlEventSRMTempBoxLoadUnit:
         theEvent = new EEUIELoadUnit;
@@ -763,9 +762,6 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 
 // SYNTHETIC: EXE 0x673405
 // (EEUIEMGDisplayDiplomacy's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x673430
-// (EEUIEMGDisplayScenarioIntro's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x67345b
 // (EEUIEMGIncrementRallyTimer's scalar deleting destructor, after its first user)

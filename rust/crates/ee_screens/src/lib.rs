@@ -24,6 +24,7 @@
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
+//! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
@@ -39,6 +40,9 @@ pub mod lobby_form;
 #[cfg(not(test))]
 mod lobby_form_ffi;
 pub mod lobby_options;
+pub mod main_game_options;
+#[cfg(not(test))]
+mod main_game_options_ffi;
 pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]

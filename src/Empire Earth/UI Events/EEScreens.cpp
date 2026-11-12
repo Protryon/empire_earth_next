@@ -1,10 +1,10 @@
 // C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
-// 2; lobby_form.rs: the lobby and its load screens): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the
+// 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the
 // game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp,
 // EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp,
-// EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp and EEUIELobbyEvents.cpp.
+// EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp and EEUIEMainGameOptionsEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -120,6 +120,11 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 #include "ee/EETechTreeTechID.h"
+#include "ee/EEAUserPauseGame.h"
+#include "ee/EEPhysics.h"
+#include "ee/EEPlayer.h"
+#include "lle/NESynchronousClient.h"
+#include "lle/TSThread.h"
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
@@ -361,6 +366,13 @@ static uint32_t EEScreensLobbyLoad(const UString& inFile, const UString& inDirec
     return EE_SCREENS_LE_LOAD_MISMATCH;
 }
 
+// ---- the in-game options menu's (main_game_options.rs): its questions' answers
+
+static void EEScreensResignYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RESIGN_YES, NULL, NULL); }
+static void EEScreensRestartYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RESTART_YES, NULL, NULL); }
+static void EEScreensToEditorYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_RETURN_TO_EDITOR_YES, NULL, NULL); }
+static void EEScreensExitYes(UIForm*) { ee_screens_event(EE_SCREENS_GO_EXIT_YES, NULL, NULL); }
+
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
 {
     switch (inEvent) {
@@ -424,8 +436,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_OP_OPEN_FORM:
-        gUserInterface->OpenForm(theManager->GetFormByID(inA));
-        break;
+        return (uint32_t)gUserInterface->OpenForm(theManager->GetFormByID(inA));
     case EE_SCREENS_OP_ENTITY_INDEX:
         return static_cast<UIControl*>(inEntity)->GetIndex();
     case EE_SCREENS_OP_SHOW:
@@ -511,8 +522,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     }
     case EE_SCREENS_OP_CLOSE_FORM:
-        gUserInterface->CloseForm(NULL);
-        break;
+        return (uint32_t)gUserInterface->CloseForm(NULL);
     case EE_SCREENS_OP_DISPLAY_CHANGED:
         gUserInterface->PostDisplayChanged(false);
         break;
@@ -1174,6 +1184,69 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         sLobbyCopy->mLoadType = 0;
         gGameOptions = *sLobbyCopy;
         break;
+    // the in-game options menu's (main_game_options.rs)
+    case EE_SCREENS_GAME_GO_RESIGN:
+        gCommunications->ProcessLocalUserInput(new EEMResign, kSlotNone);
+        break;
+    case EE_SCREENS_GAME_GO_RESTART:
+        gUserInterface->PostRestartGame();
+        break;
+    case EE_SCREENS_GAME_GO_TO_EDITOR:
+        // back to the scenario editor from its single player test game: the simulation stopped, the editor posted
+        gPhysics->mThread->Post(0x402, NULL, NULL, true);
+        gUserInterface->PostEnterScenarioEditor(gUIManager->mInScenarioEditor);
+        gUserInterface->PostPauseInformation(true);
+        break;
+    case EE_SCREENS_GAME_GO_USER_PAUSE:
+        gUserInterface->PostAction(new EEAUserPauseGame);
+        break;
+    case EE_SCREENS_GAME_GO_REQUEST_PAUSE:
+        gCommunications->ProcessLocalUserInput(new NEMClientRequestPause, kSlotNone);
+        break;
+    case EE_SCREENS_GAME_GO_FORM_EXISTS:
+        return gUIManager->GetFormByID(inA) != NULL;
+    case EE_SCREENS_GAME_GO_TO_SCENARIO_LOAD: {
+        // Play Scenario: the scenario load form swapped in for the menu (keeping its music), the game paused, the main
+        // game form remembered
+        UWideString theMusic;
+        EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
+        theMusic = gUIManager->GetFormByID(kFormScenarioLoad)->GetMusicFileName();
+        gUIManager->GetFormByID(kFormScenarioLoad)->SetMusicFileName("");
+        gUIManager->Pop();
+        gUIManager->SwapForm(gUIManager->GetFormByID(kFormScenarioLoad));
+        gUIManager->GetFormByID(kFormScenarioLoad)->SetMusicFileName(theMusic);
+        dynamic_cast<EEServer*>(gCommunications)->PauseGame();
+        gUserInterface->PostPauseInformation(true);
+        theIntro->mIsInGame = false;
+        theIntro->mIsLoadingFromGame = true;
+        gSavedMainGameForm = gUIManager->mMainGameForm;
+        break;
+    }
+    case EE_SCREENS_GAME_GO_BRIEFING:
+        EEDisplayScenarioIntro();
+        break;
+    case EE_SCREENS_GAME_GO_CANNOT_EXIT:
+        return gCommunications->IsServer() ? static_cast<NESynchronousServer*>(gCommunications)->IsMigrating()
+                                           : static_cast<NESynchronousClient*>(gCommunications)->IsPlaybackRecordingSession();
+    case EE_SCREENS_GAME_GO_EXIT:
+        EEExitGame();
+        break;
+    case EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF:
+        static_cast<UIBlinkingButton*>(gUIManager->mMainGameForm->GetControl(kMainGameIngameOptions))->SetIsBlinking(false);
+        break;
+    case EE_SCREENS_GAME_GO_USER_PAUSED:
+        return gWorld.mUserPaused == true;
+    case EE_SCREENS_OP_GO_REMOVE_HOT_KEYS:
+        theForm->RemoveAllHotKeys();
+        break;
+    case EE_SCREENS_OP_GO_HOT_KEY:
+        theForm->AddHotKey(inA, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(inB), NULL, NULL, NULL, 0, false);
+        break;
+    case EE_SCREENS_OP_GO_STRING_ID:
+        Ctl()->SetStringTableID(inB);
+        break;
+    case EE_SCREENS_GAME_GO_HIDE_RESIGN:
+        return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     }
     return 0;
 }
@@ -1684,6 +1757,21 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         gUIManager->DisplayQuestion(theText, true, reinterpret_cast<UIForm*>(sLobbyBoot), EEScreensBootYes,
                                     EEScreensBootNo);
         break;
+    // the in-game options menu's (main_game_options.rs)
+    case EE_SCREENS_TEXT_GO_QUESTION: {
+        EEUIManager* theManager = theForm ? static_cast<EEUIManager*>(theForm->GetManager()) : gUIManager;
+        EEUIFErrorCallback theYes = inArg == EE_SCREENS_GO_RESIGN_YES    ? EEScreensResignYes
+                                  : inArg == EE_SCREENS_GO_RESTART_YES   ? EEScreensRestartYes
+                                  : inArg == EE_SCREENS_GO_RETURN_TO_EDITOR_YES ? EEScreensToEditorYes
+                                                                          : EEScreensExitYes;
+        theManager->DisplayQuestion(theText, true, NULL, theYes, 0);
+        break;
+    }
+    case EE_SCREENS_TEXT_GO_BUTTON: {
+        UIButton* theButton = static_cast<UIButton*>(theForm->GetControl(inArg));
+        theButton->SetText(theText, theButton->GetGEText()->GetFont());
+        break;
+    }
     }
     return 0;
 }

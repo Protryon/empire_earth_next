@@ -462,6 +462,87 @@ constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SCENARIO = 2;
 /// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
 constexpr static const uint32_t EE_SCREENS_GAME_TYPE_RANDOM_MAP = 3;
 
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_GAME = 7169;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESIGN = 7170;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESTART = 7171;
+
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_EDITOR = 7172;
+
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SAVED_GAME = 7173;
+
+constexpr static const uint32_t EE_SCREENS_GO_SAVE_GAME = 7174;
+
+constexpr static const uint32_t EE_SCREENS_GO_PAUSE = 7175;
+
+constexpr static const uint32_t EE_SCREENS_GO_PREVIOUS_MESSAGES = 7176;
+
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SCENARIO = 7177;
+
+constexpr static const uint32_t EE_SCREENS_GO_BRIEFING = 7178;
+
+constexpr static const uint32_t EE_SCREENS_GO_SETTINGS = 7179;
+
+constexpr static const uint32_t EE_SCREENS_GO_EXIT = 7180;
+
+/// The form's open event (the main game form's options button) and its close event (nothing).
+constexpr static const uint32_t EE_SCREENS_GO_OPEN = 7181;
+
+constexpr static const uint32_t EE_SCREENS_GO_CLOSE = 7182;
+
+/// The main game form's briefing (`EEUIEMGDisplayScenarioIntro`: the briefing's body, the manager's factory).
+constexpr static const uint32_t EE_SCREENS_GO_DISPLAY_INTRO = 7183;
+
+/// The questions answered yes (no event object: the host's callbacks).
+constexpr static const uint32_t EE_SCREENS_GO_RESIGN_YES = 7184;
+
+constexpr static const uint32_t EE_SCREENS_GO_RESTART_YES = 7185;
+
+constexpr static const uint32_t EE_SCREENS_GO_RETURN_TO_EDITOR_YES = 7186;
+
+constexpr static const uint32_t EE_SCREENS_GO_EXIT_YES = 7187;
+
+/// Play Scenario's posted run (the original posted its own object, its flag set: that run loads).
+constexpr static const uint32_t EE_SCREENS_GO_LOAD_SCENARIO_POSTED = 7188;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_RESIGN = 512;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_RESTART = 513;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_TO_EDITOR = 514;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_USER_PAUSE = 515;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_REQUEST_PAUSE = 516;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_FORM_EXISTS = 517;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_TO_SCENARIO_LOAD = 518;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_BRIEFING = 519;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_CANNOT_EXIT = 520;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_EXIT = 521;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_OPTIONS_BLINK_OFF = 522;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_USER_PAUSED = 523;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_REMOVE_HOT_KEYS = 524;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_HOT_KEY = 525;
+
+constexpr static const uint32_t EE_SCREENS_OP_GO_STRING_ID = 526;
+
+constexpr static const uint32_t EE_SCREENS_GAME_GO_HIDE_RESIGN = 527;
+
+/// Texts (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_GO_QUESTION = 112;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_GO_BUTTON = 113;
+
 /// The main menu's open event (form event 1).
 constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
 
