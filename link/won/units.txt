@@ -358,7 +358,6 @@
 3db150 3dc3ef WONLobby/AccountLogic.cpp
 3dc3f0 3dd0f5 WONLobby/DialogLogic.cpp
 3dd100 3dfb83 WONLobby/InitLogic.cpp
-3dfb90 3e5922 WONLobby/LanLogic.cpp
 3e5930 3e5c10 WONLobby/LobbyLogic.cpp
 3e5c10 3e5ec9 WONLobby/LobbyLogicMgr.cpp
 3e5ed0 3e6e75 WONLobby/PingLogic.cpp

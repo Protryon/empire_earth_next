@@ -1,7 +1,7 @@
 // The lobby logic objects' C++ host (NEW, no original address: units.EXTRA_UNITS): the shells of the logic modules
 // that are Rust objects (StagingLogic: rust/crates/ee_won/src/stagingobj.rs) and ee_won_lobbycpp_call, the one
 // table of their calls out (lobbyhost.rs EeWonLobbyOp): each op is a run of the original's C++ statements with no
-// decision between them. It replaces StagingLogic.cpp.
+// decision between them (LanLogic's in LanLogicHost.cpp). It replaces StagingLogic.cpp.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyStaging.h"
+#include "ee/wonapi/WONLobbyLan.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
@@ -32,6 +33,7 @@ void LobbyNetLeaveGame(LobbyGame*);
 }
 using namespace WONAPI;
 
+intptr_t LanLogicHostCall(LanLogic* inLan, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC, intptr_t inD);
 extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC,
                                          intptr_t inD);
 
@@ -107,6 +109,8 @@ static const GUIString* const kTexts[][2] = {
     {&::GameStagingLogic_LeaveGame_String, &::GameStagingLogic_LeaveGameConfirm_String},
     {&::GameStagingLogic_VerifyingPingTitle_String, &::GameStagingLogic_VerifyingPingDetails_String},
     {&::GameStagingLogic_GettingGameInfoTitle_String, &::GameStagingLogic_GettingGameInfoDetails_String},
+    {&::GameStagingLogic_JoinGameErrorTitle_String, &::LobbyGameStatus_InvalidPassword_String},
+    {&::LANLogic_RegisterTitle_String, &::LANLogic_InvalidSubnet_String},
 };
 
 static void AppendBytes(void* inContext, const uint8_t* inBytes, size_t inLength)
@@ -132,7 +136,8 @@ static intptr_t Held(LobbyGame* inGame)
 extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void* inA, void* inB, intptr_t inC,
                                          intptr_t inD)
 {
-    StagingLogic* st = static_cast<StagingLogic*>(static_cast<LobbyLogic*>(inLogic));
+    // the C++ object the Rust one belongs to (a StagingLogic for the St ops; a LanLogic's ops go to LanLogicHost.cpp)
+    StagingLogic* st = static_cast<StagingLogic*>(inLogic);
     LobbyGame* g = static_cast<LobbyGame*>(inA);
     LobbyClient* cl = static_cast<LobbyClient*>(inA);
     LobbyClient* clB = static_cast<LobbyClient*>(inB);
@@ -349,6 +354,6 @@ extern "C" intptr_t ee_won_lobbycpp_call(void* inLogic, EeWonLobbyOp inOp, void*
     }
     case EeWonLobbyOp::Exit: LobbyExit((int)inC); return 0;
     case EeWonLobbyOp::Now: return (intptr_t)time(NULL);
+    default: return LanLogicHostCall(static_cast<LanLogic*>(inLogic), inOp, inA, inB, inC, inD);
     }
-    return 0;
 }

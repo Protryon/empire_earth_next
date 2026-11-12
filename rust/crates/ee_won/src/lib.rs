@@ -61,6 +61,7 @@ pub mod ipaddr;
 pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
+pub mod lanobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;

@@ -46,6 +46,8 @@ pub enum EeWonLobbyText {
     LeaveGame = 10,
     VerifyingPing = 11,
     GettingGameInfo = 12,
+    WrongPassword = 13,
+    OtherSubnet = 14,
 }
 
 /// The lobby sounds an op plays.
@@ -202,6 +204,193 @@ pub enum EeWonLobbyOp {
     Exit,
     /// `time(NULL)`.
     Now,
+    // ---- LanLogic (`logic` a LanLogic; the C++ shell keeps its SmartPtrs, the socket set and the addresses). A
+    // "take" op appends bytes (UTF-16 LE for a text) to the Rust buffer `b` with `ee_won_lobby_sink`.
+    /// `mMyClient.get()`.
+    LanMyClient = 200,
+    /// `mMyClient = a`.
+    LanSetMyClient,
+    LanListenSocket,
+    LanServerSocket,
+    LanNetworkTimer,
+    LanDiscoveryTimer,
+    LanDiscoverySocket,
+    /// `&mDiscoveryAddress`.
+    LanDiscoveryAddress,
+    /// the lobby's auth context, if any, stops refreshing its certificate.
+    LanAuthAutoRefreshOff,
+    /// CloseConnections' sockets: the listen socket killed, the host socket closed, the network timer killed, every
+    /// pending socket closed, `mMyClient`, the socket set and the client list cleared.
+    LanCloseSockets,
+    /// `static_cast<SocketOp*>(a)->GetSocket()`.
+    LanOpSocket,
+    /// a LobbyLanSocket's client.
+    LanSocketClient,
+    /// `a->SetClient(b)`.
+    LanSocketSetClient,
+    /// `mPendingSockets.erase(a)`.
+    LanForgetSocket,
+    /// `mServerSocket->Kill()`, `mServerSocket = NULL`, `LobbyGameDisconnected(true)`.
+    LanLoseHost,
+    LanPendingCount,
+    /// the pending socket `c` in the set's order.
+    LanPendingAt,
+    LanSocketLastTime,
+    /// `a->QueueClose(c)`.
+    LanSocketClose,
+    LanStartNetworkTimer,
+    /// `GetMyLobbyGame()`.
+    LanMyGame,
+    /// a LAN join's subnet bytes: the peer's `GetSixByte()[2..4]` and ours, packed low to high.
+    LanSubnets,
+    /// whether the password (`c` UTF-16 units, `d` of them) is `a`'s.
+    LanGamePasswordIs,
+    /// a SendMsgOp of the message queued on the socket `b`.
+    LanSocketSend,
+    /// a new LobbyLanClient named `c`/`d` (UTF-16 units); held.
+    LanNewClient,
+    /// `a->SetClientId(c)`, `mClients->AddClient(a)`.
+    LanAddClient,
+    ClientHold,
+    ClientRelease,
+    /// `a`'s name, taken.
+    ClientNameTake,
+    LanClientCount,
+    /// the client `c` in the list's order.
+    LanClientAt,
+    /// `mClients->FindClient(c)`.
+    LanFindClient,
+    /// `mClients->RemoveClient(c)`; held.
+    LanRemoveClient,
+    /// `new ClientChangedEvent(a, 8, c)` broadcast.
+    LanClientChanged,
+    /// `LobbyClientLeftGame(a)`.
+    ClientLeftGame,
+    GameSetCaptainId,
+    /// `mServerSocket->SetClient(a)`, `a->SetCaptain(true, true)`.
+    LanServerClientIsCaptain,
+    /// the receive op succeeded and was not killed.
+    LanRecvOk,
+    /// the socket's last message time is now.
+    LanSocketStamp,
+    /// the receive op's message (its ByteBuffer, or 0), taken.
+    LanRecvMsgTake,
+    /// AddPendingSocket: the close and receive completions, the receive op, the time, the set.
+    LanAddPending,
+    /// a LobbyLanClient's socket.
+    LanClientSocket,
+    /// a SendMsgOp of the message queued on the client `b`'s socket.
+    LanClientSocketSend,
+    /// `mServerSocket->QueueOp(new SendMsgOp(message))`.
+    LanServerSend,
+    ClientIsIgnored,
+    /// a whisper received: the sound (if the chat sounds are on), the parser's reply name.
+    LanWhisperReceived,
+    /// `new RecvChatEvent(8, d >> 32, a, text, b)` broadcast; the text is `c` with `d & 0xffffffff` units.
+    LanRecvChat,
+    /// the staging message (the bytes from its type byte) read past the type and handed to the staging logic.
+    LanStagingRead,
+    /// ChangeLanName's dialog: Reset, LobbyDoDialog.
+    LanNameDialogRun,
+    LanNameDialogLength,
+    /// `LobbySetLanName(dialog's name)`, the lobby event 0x186d2.
+    LanNameDialogSave,
+    LanBroadcastPort,
+    /// ChangeLanPort's dialog: the game port, the port `c`, Reset, LobbyDoDialog.
+    LanPortDialogRun,
+    LanPortDialogPort,
+    /// `LobbySetLanBroadcastPort(c)`, the lobby event 0x186d2.
+    LanSetBroadcastPort,
+    /// `a->mComponent`.
+    EventComponent,
+    EventDirectIsDelete,
+    EventDirectIsAdd,
+    EventDirectGame,
+    /// a saved direct-connect game removed: the saved one, the list's, a `GameChangedEvent(a, 1)`.
+    LanDirectRemove,
+    /// HandleChangeDirectConnect's add: the dialog and the address (its DNS check), the game and its event.
+    LanDirectAdd,
+    /// a ClientOptionsPopup for `a` (room spec `c`).
+    LanShowClientOptions,
+    EventClientActionClient,
+    EventClientActionRoomSpec,
+    EventClientActionAction,
+    /// `LobbySetClientIgnored(a, c, d)`.
+    SetClientIgnored,
+    /// `new SetChatInputEvent(2, a's name, c, false)` broadcast.
+    LanSetChatInput,
+    /// `LobbyKickClient(a, false)`.
+    KickClientFromLobby,
+    /// `LobbyGetChatCommandParser()`.
+    ChatParser,
+    ParserRoomFlags,
+    ParserTarget,
+    ParserCommand,
+    ParserTextTake,
+    /// `LobbySendEventTo(new ChatCommandErrorEvent(InvalidCommand), a)`.
+    LanChatCommandError,
+    /// the LAN games cleared and synced.
+    LanClearLanGames,
+    /// every unfiltered direct-connect game pinged, the lobby event 0x186da.
+    LanPingDirectGames,
+    /// EnterLanScreen's lists: no current user, the games cleared, the saved direct-connect games, their sync.
+    LanEnterScreenLists,
+    ShowLanScreen,
+    DoCDKeyCheck,
+    KillFirewallTest,
+    /// RefreshCertificate.
+    LanRefreshCertificate,
+    /// HostGame's client: a new LobbyLanClient (id `c`, the LAN name, captain) added, the game's clients.
+    LanHostMyClient,
+    /// HostGame's listen socket bound and listening (an error dialog when not), its accept op, JoinedRoomEvent.
+    LanHostListen,
+    GameAddressPort,
+    /// the summary: the head (the message), the game's summary, sent to the address `b`.
+    LanSendSummary,
+    /// a SendBytesToOp of the message to the address `b`.
+    LanDiscoverySend,
+    /// stale LAN games removed (synced if any).
+    LanRemoveStaleGames,
+    LanStartDiscoveryTimer,
+    /// the discovery receive op is the discovery socket's and succeeded.
+    LanDiscoveryOk,
+    /// its bytes, taken.
+    LanDiscoveryTake,
+    /// HandleGameSummary from the packet past its head (port `c`).
+    LanGameSummary,
+    /// HandleGameKeepAlive (port `c`).
+    LanGameKeepAlive,
+    /// HandleGameRemoved (port `c`).
+    LanGameRemoved,
+    /// the receive op's sender address.
+    LanRecvFrom,
+    /// StartDiscovery's socket: the address, the QueueSocket, its bind (0 when bound).
+    LanOpenDiscovery,
+    /// the discovery socket's receive completion and op.
+    LanDiscoveryArm,
+    LanStopDiscovery,
+    LanClearDirectGames,
+    /// the accept op's socket (NULL when it failed or was killed).
+    LanAcceptedSocket,
+    /// a PeerAuthServerOp on the socket, tracked (30 s); nothing without an auth context.
+    LanStartPeerAuth,
+    /// `mServerSocket = new LobbyLanSocket`.
+    LanNewServerSocket,
+    GameHasPassword,
+    /// JoinGame's password: emptied.
+    LanJoinPasswordClear,
+    /// the password dialog: Reset, LobbyDoDialog, the password kept on OK.
+    LanPasswordDialogRun,
+    /// a PeerAuthOp (`c`) or ConnectOp to the game run with status: whether it succeeded.
+    LanConnect,
+    /// `LobbyGetLanName()`, taken.
+    LanNameTake,
+    LanJoinPasswordTake,
+    /// a RecvMsgOp on the host socket run with status: -1 failed, 0 no message, 1 its bytes taken.
+    LanRecvReplyTake,
+    /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
+    /// JoinedRoomEvent.
+    LanJoinArm,
 }
 
 /// A Rust lobby object's way out: the host and the C++ object it belongs to.
@@ -283,4 +472,17 @@ impl Drop for HeldGame {
             self.host.on(EeWonLobbyOp::GameRelease, self.game);
         }
     }
+}
+
+/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_lobby_sink(sink: *mut c_void, bytes: *const u8, length: usize) {
+    if sink.is_null() || bytes.is_null() || length == 0 {
+        return;
+    }
+    // SAFETY: the contract
+    unsafe { (*(sink as *mut Vec<u8>)).extend_from_slice(std::slice::from_raw_parts(bytes, length)) };
 }

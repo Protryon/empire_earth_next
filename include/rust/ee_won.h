@@ -1154,109 +1154,6 @@ enum class EeWonLanJoinStep {
   Again = 4,
 };
 
-/// A container's key kind (its comparator).
-enum class EeWonLobbyKeyKind {
-  /// `unsigned short` / `unsigned long` ids
-  Unsigned = 0,
-  /// `long` ids
-  Signed = 1,
-  /// `IPAddr`
-  Addr = 2,
-  /// `GUIString`, `GUIStringLessNoCase`
-  NoCase = 3,
-  /// `GUIString`, `operator<`
-  Text = 4,
-  /// `std::string`, `StringLessNoCase`
-  NarrowNoCase = 5,
-  /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
-  InOrder = 6,
-};
-
-/// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
-/// cut given).
-enum class EeWonPrefsRead {
-  Whole = 0,
-  OtherVersion = 1,
-  Cut = 2,
-};
-
-/// A read's event for the C++: `kind`, a number (a time, an id, a flag, a port, a setting's index for a text or
-/// flag in `index`), the text (UTF-16 units, `units`/`count`) or bytes (`bytes`/`length`), an address (six bytes).
-enum class EeWonPrefsEventKind {
-  User,
-  UserTime,
-  UserId,
-  UserValue04,
-  UserValue08,
-  UserPassword,
-  SoundEffects,
-  Music,
-  NetworkAdapter,
-  LanName,
-  LanNamesDone,
-  DirectConnect,
-  BroadcastPort,
-  Reconnect,
-  ReconnectTime,
-  ReconnectId,
-  Ignored,
-  Friend,
-  Blocked,
-  Flag,
-  SettingText,
-  ConnectionSpeed,
-  OptionsBegin,
-  OptionName,
-  OptionValue,
-};
-
-/// A flag of the saved settings (the C++ `LobbyPersistentData::Flag`).
-enum class EeWonPrefsFlag {
-  FilterDirtyWords = 0,
-  DoAutoAfk = 1,
-  CrossPromotion = 2,
-  LobbySoundEffects = 3,
-  LobbyMusic = 4,
-  ChatSoundEffects = 5,
-  StagingSoundEffects = 6,
-  ShowConfirmations = 7,
-  AutoPingGames = 8,
-  ShowGamesInProgress = 9,
-  AnonymousToFriends = 10,
-  SavedLobbySoundEffects = 11,
-  SavedLobbyMusic = 12,
-  GlobalDirty = 13,
-  UserDirty = 14,
-};
-
-/// A number of the saved settings.
-enum class EeWonPrefsNumber {
-  ConnectionSpeed = 0,
-  LanBroadcastPort = 1,
-};
-
-/// A text of the saved settings.
-enum class EeWonPrefsText {
-  TabSelect = 0,
-  LanName = 1,
-  LastServerName = 2,
-  LastRoomName = 3,
-};
-
-/// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
-enum class EeWonResKind {
-  String = 0,
-  Image = 1,
-  Sound = 2,
-};
-
-/// The sound `UpdateReadyState` plays (if the staging sounds are on).
-enum class EeWonReadySound {
-  Silent = 0,
-  AllReady = 1,
-  NotReady = 2,
-};
-
 /// The op codes. Arguments: `a`, `b` pointers, `c`, `d` integers (a message is `a` = its `ByteBuffer*` or NULL for
 /// one Rust built, `c` = its bytes, `d` = their length).
 enum class EeWonLobbyOp : uint32_t {
@@ -1395,6 +1292,322 @@ enum class EeWonLobbyOp : uint32_t {
   Exit,
   /// `time(NULL)`.
   Now,
+  /// `mMyClient.get()`.
+  LanMyClient = 200,
+  /// `mMyClient = a`.
+  LanSetMyClient,
+  LanListenSocket,
+  LanServerSocket,
+  LanNetworkTimer,
+  LanDiscoveryTimer,
+  LanDiscoverySocket,
+  /// `&mDiscoveryAddress`.
+  LanDiscoveryAddress,
+  /// the lobby's auth context, if any, stops refreshing its certificate.
+  LanAuthAutoRefreshOff,
+  /// CloseConnections' sockets: the listen socket killed, the host socket closed, the network timer killed, every
+  /// pending socket closed, `mMyClient`, the socket set and the client list cleared.
+  LanCloseSockets,
+  /// `static_cast<SocketOp*>(a)->GetSocket()`.
+  LanOpSocket,
+  /// a LobbyLanSocket's client.
+  LanSocketClient,
+  /// `a->SetClient(b)`.
+  LanSocketSetClient,
+  /// `mPendingSockets.erase(a)`.
+  LanForgetSocket,
+  /// `mServerSocket->Kill()`, `mServerSocket = NULL`, `LobbyGameDisconnected(true)`.
+  LanLoseHost,
+  LanPendingCount,
+  /// the pending socket `c` in the set's order.
+  LanPendingAt,
+  LanSocketLastTime,
+  /// `a->QueueClose(c)`.
+  LanSocketClose,
+  LanStartNetworkTimer,
+  /// `GetMyLobbyGame()`.
+  LanMyGame,
+  /// a LAN join's subnet bytes: the peer's `GetSixByte()[2..4]` and ours, packed low to high.
+  LanSubnets,
+  /// whether the password (`c` UTF-16 units, `d` of them) is `a`'s.
+  LanGamePasswordIs,
+  /// a SendMsgOp of the message queued on the socket `b`.
+  LanSocketSend,
+  /// a new LobbyLanClient named `c`/`d` (UTF-16 units); held.
+  LanNewClient,
+  /// `a->SetClientId(c)`, `mClients->AddClient(a)`.
+  LanAddClient,
+  ClientHold,
+  ClientRelease,
+  /// `a`'s name, taken.
+  ClientNameTake,
+  LanClientCount,
+  /// the client `c` in the list's order.
+  LanClientAt,
+  /// `mClients->FindClient(c)`.
+  LanFindClient,
+  /// `mClients->RemoveClient(c)`; held.
+  LanRemoveClient,
+  /// `new ClientChangedEvent(a, 8, c)` broadcast.
+  LanClientChanged,
+  /// `LobbyClientLeftGame(a)`.
+  ClientLeftGame,
+  GameSetCaptainId,
+  /// `mServerSocket->SetClient(a)`, `a->SetCaptain(true, true)`.
+  LanServerClientIsCaptain,
+  /// the receive op succeeded and was not killed.
+  LanRecvOk,
+  /// the socket's last message time is now.
+  LanSocketStamp,
+  /// the receive op's message (its ByteBuffer, or 0), taken.
+  LanRecvMsgTake,
+  /// AddPendingSocket: the close and receive completions, the receive op, the time, the set.
+  LanAddPending,
+  /// a LobbyLanClient's socket.
+  LanClientSocket,
+  /// a SendMsgOp of the message queued on the client `b`'s socket.
+  LanClientSocketSend,
+  /// `mServerSocket->QueueOp(new SendMsgOp(message))`.
+  LanServerSend,
+  ClientIsIgnored,
+  /// a whisper received: the sound (if the chat sounds are on), the parser's reply name.
+  LanWhisperReceived,
+  /// `new RecvChatEvent(8, d >> 32, a, text, b)` broadcast; the text is `c` with `d & 0xffffffff` units.
+  LanRecvChat,
+  /// the staging message (the bytes from its type byte) read past the type and handed to the staging logic.
+  LanStagingRead,
+  /// ChangeLanName's dialog: Reset, LobbyDoDialog.
+  LanNameDialogRun,
+  LanNameDialogLength,
+  /// `LobbySetLanName(dialog's name)`, the lobby event 0x186d2.
+  LanNameDialogSave,
+  LanBroadcastPort,
+  /// ChangeLanPort's dialog: the game port, the port `c`, Reset, LobbyDoDialog.
+  LanPortDialogRun,
+  LanPortDialogPort,
+  /// `LobbySetLanBroadcastPort(c)`, the lobby event 0x186d2.
+  LanSetBroadcastPort,
+  /// `a->mComponent`.
+  EventComponent,
+  EventDirectIsDelete,
+  EventDirectIsAdd,
+  EventDirectGame,
+  /// a saved direct-connect game removed: the saved one, the list's, a `GameChangedEvent(a, 1)`.
+  LanDirectRemove,
+  /// HandleChangeDirectConnect's add: the dialog and the address (its DNS check), the game and its event.
+  LanDirectAdd,
+  /// a ClientOptionsPopup for `a` (room spec `c`).
+  LanShowClientOptions,
+  EventClientActionClient,
+  EventClientActionRoomSpec,
+  EventClientActionAction,
+  /// `LobbySetClientIgnored(a, c, d)`.
+  SetClientIgnored,
+  /// `new SetChatInputEvent(2, a's name, c, false)` broadcast.
+  LanSetChatInput,
+  /// `LobbyKickClient(a, false)`.
+  KickClientFromLobby,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  ParserRoomFlags,
+  ParserTarget,
+  ParserCommand,
+  ParserTextTake,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(InvalidCommand), a)`.
+  LanChatCommandError,
+  /// the LAN games cleared and synced.
+  LanClearLanGames,
+  /// every unfiltered direct-connect game pinged, the lobby event 0x186da.
+  LanPingDirectGames,
+  /// EnterLanScreen's lists: no current user, the games cleared, the saved direct-connect games, their sync.
+  LanEnterScreenLists,
+  ShowLanScreen,
+  DoCDKeyCheck,
+  KillFirewallTest,
+  /// RefreshCertificate.
+  LanRefreshCertificate,
+  /// HostGame's client: a new LobbyLanClient (id `c`, the LAN name, captain) added, the game's clients.
+  LanHostMyClient,
+  /// HostGame's listen socket bound and listening (an error dialog when not), its accept op, JoinedRoomEvent.
+  LanHostListen,
+  GameAddressPort,
+  /// the summary: the head (the message), the game's summary, sent to the address `b`.
+  LanSendSummary,
+  /// a SendBytesToOp of the message to the address `b`.
+  LanDiscoverySend,
+  /// stale LAN games removed (synced if any).
+  LanRemoveStaleGames,
+  LanStartDiscoveryTimer,
+  /// the discovery receive op is the discovery socket's and succeeded.
+  LanDiscoveryOk,
+  /// its bytes, taken.
+  LanDiscoveryTake,
+  /// HandleGameSummary from the packet past its head (port `c`).
+  LanGameSummary,
+  /// HandleGameKeepAlive (port `c`).
+  LanGameKeepAlive,
+  /// HandleGameRemoved (port `c`).
+  LanGameRemoved,
+  /// the receive op's sender address.
+  LanRecvFrom,
+  /// StartDiscovery's socket: the address, the QueueSocket, its bind (0 when bound).
+  LanOpenDiscovery,
+  /// the discovery socket's receive completion and op.
+  LanDiscoveryArm,
+  LanStopDiscovery,
+  LanClearDirectGames,
+  /// the accept op's socket (NULL when it failed or was killed).
+  LanAcceptedSocket,
+  /// a PeerAuthServerOp on the socket, tracked (30 s); nothing without an auth context.
+  LanStartPeerAuth,
+  /// `mServerSocket = new LobbyLanSocket`.
+  LanNewServerSocket,
+  GameHasPassword,
+  /// JoinGame's password: emptied.
+  LanJoinPasswordClear,
+  /// the password dialog: Reset, LobbyDoDialog, the password kept on OK.
+  LanPasswordDialogRun,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game run with status: whether it succeeded.
+  LanConnect,
+  /// `LobbyGetLanName()`, taken.
+  LanNameTake,
+  LanJoinPasswordTake,
+  /// a RecvMsgOp on the host socket run with status: -1 failed, 0 no message, 1 its bytes taken.
+  LanRecvReplyTake,
+  /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
+  /// JoinedRoomEvent.
+  LanJoinArm,
+};
+
+/// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
+/// message is `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonLanCall : uint32_t {
+  /// The LAN name (1), LAN port (2), refresh (3) and LAN screen (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  HostGame,
+  JoinGame,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  AdvertiseGame,
+  RemoveGameAdvertisement,
+  /// `KickClient(b)`.
+  KickClient,
+  LeaveGame,
+  Logout,
+  /// The completions (`a` the op).
+  SocketClosed,
+  NetworkTimer,
+  RecvMsg,
+  DiscoveryTimer,
+  DiscoveryRecv,
+  Accept,
+};
+
+/// A container's key kind (its comparator).
+enum class EeWonLobbyKeyKind {
+  /// `unsigned short` / `unsigned long` ids
+  Unsigned = 0,
+  /// `long` ids
+  Signed = 1,
+  /// `IPAddr`
+  Addr = 2,
+  /// `GUIString`, `GUIStringLessNoCase`
+  NoCase = 3,
+  /// `GUIString`, `operator<`
+  Text = 4,
+  /// `std::string`, `StringLessNoCase`
+  NarrowNoCase = 5,
+  /// LobbyOptionSet: `GUIString` values unique by `Compare`, in insertion order
+  InOrder = 6,
+};
+
+/// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
+/// cut given).
+enum class EeWonPrefsRead {
+  Whole = 0,
+  OtherVersion = 1,
+  Cut = 2,
+};
+
+/// A read's event for the C++: `kind`, a number (a time, an id, a flag, a port, a setting's index for a text or
+/// flag in `index`), the text (UTF-16 units, `units`/`count`) or bytes (`bytes`/`length`), an address (six bytes).
+enum class EeWonPrefsEventKind {
+  User,
+  UserTime,
+  UserId,
+  UserValue04,
+  UserValue08,
+  UserPassword,
+  SoundEffects,
+  Music,
+  NetworkAdapter,
+  LanName,
+  LanNamesDone,
+  DirectConnect,
+  BroadcastPort,
+  Reconnect,
+  ReconnectTime,
+  ReconnectId,
+  Ignored,
+  Friend,
+  Blocked,
+  Flag,
+  SettingText,
+  ConnectionSpeed,
+  OptionsBegin,
+  OptionName,
+  OptionValue,
+};
+
+/// A flag of the saved settings (the C++ `LobbyPersistentData::Flag`).
+enum class EeWonPrefsFlag {
+  FilterDirtyWords = 0,
+  DoAutoAfk = 1,
+  CrossPromotion = 2,
+  LobbySoundEffects = 3,
+  LobbyMusic = 4,
+  ChatSoundEffects = 5,
+  StagingSoundEffects = 6,
+  ShowConfirmations = 7,
+  AutoPingGames = 8,
+  ShowGamesInProgress = 9,
+  AnonymousToFriends = 10,
+  SavedLobbySoundEffects = 11,
+  SavedLobbyMusic = 12,
+  GlobalDirty = 13,
+  UserDirty = 14,
+};
+
+/// A number of the saved settings.
+enum class EeWonPrefsNumber {
+  ConnectionSpeed = 0,
+  LanBroadcastPort = 1,
+};
+
+/// A text of the saved settings.
+enum class EeWonPrefsText {
+  TabSelect = 0,
+  LanName = 1,
+  LastServerName = 2,
+  LastRoomName = 3,
+};
+
+/// A resource's kind (the `ResourceConfig::SafeGet*` that reads it).
+enum class EeWonResKind {
+  String = 0,
+  Image = 1,
+  Sound = 2,
+};
+
+/// The sound `UpdateReadyState` plays (if the staging sounds are on).
+enum class EeWonReadySound {
+  Silent = 0,
+  AllReady = 1,
+  NotReady = 2,
 };
 
 /// The inward calls (StagingLogic's methods the lobby calls). `a`, `b` pointers, `c`, `d` integers; a message is
@@ -1466,6 +1679,8 @@ enum class EeWonLobbyText : uint32_t {
   LeaveGame = 10,
   VerifyingPing = 11,
   GettingGameInfo = 12,
+  WrongPassword = 13,
+  OtherSubnet = 14,
 };
 
 /// The lobby sounds an op plays.
@@ -1517,6 +1732,9 @@ struct EeWonHttpSession;
 
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
+
+/// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
+struct EeWonLan;
 
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
@@ -2712,6 +2930,14 @@ struct EeWonLanChatCommand {
   bool whisper;
 };
 
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
+
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
 struct EeWonLobbyMapHooks {
@@ -3295,14 +3521,6 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
-
-/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
-using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
-                                      EeWonLobbyOp op,
-                                      void *a,
-                                      void *b,
-                                      ptrdiff_t c,
-                                      ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -7540,6 +7758,32 @@ int32_t ee_won_lanlogic_direct_default_port(bool have_config,
 bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `lan` came from `ee_won_lan_new` (or is NULL) and is not used again.
+void ee_won_lan_free(EeWonLan *lan);
+
+/// One of LanLogic's methods (`EeWonLanCall`).
+///
+/// # Safety
+/// `lan` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
+                          EeWonLanCall call,
+                          void *a,
+                          void *b,
+                          ptrdiff_t c,
+                          ptrdiff_t d);
+
+/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
+void ee_won_lobby_sink(void *sink,
+                       const uint8_t *bytes,
+                       size_t length);
 
 /// A new, empty container.
 EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
