@@ -1,6 +1,8 @@
-// No original address identified: WON SDK registry authentication settings
+// No original address identified: WON SDK registry authentication settings; the password's cipher and the port's
+// default are ee_won's (rust/crates/ee_won/src/miscops.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include "ee/wonapi/WONRegAuth.h"
+#include "ee/wonapi/WONMiscOpsMsg.h"
 
 
 
@@ -24,9 +26,8 @@ bool WONAPI::ReadAuthSettings(string& theAuthAddressR,
 		// QueryDWORD clears the port when the value is missing; a key that does not exist kept 15200, and every
 		// key opens now (config.yaml)
 		DWORD anAuthPort(15200);
-		if(aKey.QueryDWORD(VALUE_AUTHSERVERPORT, anAuthPort) == 1)
-			anAuthPort = 15200;
-		theAuthPortR = anAuthPort;
+		int aResult = aKey.QueryDWORD(VALUE_AUTHSERVERPORT, anAuthPort);
+		theAuthPortR = ee_won_regauth_port(aResult, anAuthPort);
 		aKey.GetValue(VALUE_USERNAME, theLoginNameR);
 		aKey.GetValue(VALUE_COMMUNITY, theCommunityNameR);
 
@@ -34,10 +35,10 @@ bool WONAPI::ReadAuthSettings(string& theAuthAddressR,
 		aKey.QueryBinary(VALUE_PASSWORD, anEncryptP);
 		if(anEncryptP.get() != NULL)
 		{
-			ByteBufferPtr aCryptReturnP = gPasswordKey.Decrypt(anEncryptP->data(), anEncryptP->length());
-			if(aCryptReturnP.get() != NULL)
+			std::string aPassword;
+			if(RegAuthPassword(true, anEncryptP->data(), anEncryptP->length(), aPassword))
 			{
-				thePasswordR.assign((char*)aCryptReturnP->data(), aCryptReturnP->length());
+				thePasswordR = aPassword;
 				return true;
 			}
 		}
@@ -63,10 +64,10 @@ bool WONAPI::WriteAuthSettings(const string& theAuthAddress,
 
 	if(!thePassword.empty())
 	{
-		ByteBufferPtr aCryptReturnP = gPasswordKey.Encrypt((const char*)thePassword.c_str(), thePassword.size());
-		if(aCryptReturnP.get() != NULL)
+		std::string aCrypt;
+		if(RegAuthPassword(false, thePassword.data(), thePassword.size(), aCrypt))
 		{
-			aKey.SetValue(VALUE_PASSWORD, aCryptReturnP->data(), aCryptReturnP->length());
+			aKey.SetValue(VALUE_PASSWORD, aCrypt.data(), aCrypt.size());
 			return true;
 		}
 	}
@@ -89,10 +90,10 @@ bool WONAPI::ReadAuthSettings(string& theLoginNameR,
 		aKey.QueryBinary(VALUE_PASSWORD, anEncryptP);
 		if(anEncryptP.get() != NULL)
 		{
-			ByteBufferPtr aCryptReturnP = gPasswordKey.Decrypt(anEncryptP->data(), anEncryptP->length());
-			if(aCryptReturnP.get() != NULL)
+			std::string aPassword;
+			if(RegAuthPassword(true, anEncryptP->data(), anEncryptP->length(), aPassword))
 			{
-				thePasswordR.assign((char*)aCryptReturnP->data(), aCryptReturnP->length());
+				thePasswordR = aPassword;
 				return true;
 			}
 		}
@@ -114,10 +115,10 @@ bool WONAPI::WriteAuthSettings(const string& theLoginName,
 
 	if(!thePassword.empty())
 	{
-		ByteBufferPtr aCryptReturnP = gPasswordKey.Encrypt((const char*)thePassword.c_str(), thePassword.size());
-		if(aCryptReturnP.get() != NULL)
+		std::string aCrypt;
+		if(RegAuthPassword(false, thePassword.data(), thePassword.size(), aCrypt))
 		{
-			aKey.SetValue(VALUE_PASSWORD, aCryptReturnP->data(), aCryptReturnP->length());
+			aKey.SetValue(VALUE_PASSWORD, aCrypt.data(), aCrypt.size());
 			return true;
 		}
 	}

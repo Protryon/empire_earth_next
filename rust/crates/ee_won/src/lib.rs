@@ -56,6 +56,7 @@ pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod md5;
+pub mod miscops;
 pub mod model;
 /// cbindgen:ignore
 pub mod netstats;

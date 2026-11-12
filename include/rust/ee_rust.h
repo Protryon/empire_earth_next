@@ -7249,6 +7249,22 @@ struct EeWonLanChatCommand {
   bool whisper;
 };
 
+/// One patch as the C++ hands it over.
+struct EeWonPatchRef {
+  const uint8_t *from;
+  size_t from_len;
+  const uint8_t *to;
+  size_t to_len;
+};
+
+/// The op's version compare and set lookups, called back with byte strings.
+struct EeWonPatchHooks {
+  void *context;
+  int32_t (*compare)(void*, const uint8_t*, size_t, const uint8_t*, size_t);
+  /// in the valid set (`GetValidPatchList`) or the filtered set (`GetHighestPatchList`)
+  bool (*in_set)(void*, const uint8_t*, size_t);
+};
+
 /// A `SyncStep` for the C++: `kind` 0 erase, 1 insert, 2 update, 3 erase the rest.
 struct EeWonSyncStep {
   uint8_t kind;
@@ -17678,6 +17694,73 @@ int32_t ee_won_lanlogic_direct_default_port(bool have_config,
 bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
+
+/// Which list: 0 `GetPatchList`, 1 `GetValidPatchList`, 2 `GetHighestPatchList(from, to)`. The chosen patches'
+/// indices go to `put` in the list's order.
+///
+/// # Safety
+/// The pointers hold their lengths; the hooks and `put` are callable with their contexts.
+void ee_won_findpatch_list(int32_t which,
+                           const uint8_t *from,
+                           size_t from_len,
+                           const uint8_t *to,
+                           size_t to_len,
+                           const EeWonPatchRef *patches,
+                           size_t count,
+                           const EeWonPatchHooks *hooks,
+                           void (*put)(void*, size_t),
+                           void *put_context);
+
+/// [`patch_id_split`]: the `~`'s position, -1 for none.
+///
+/// # Safety
+/// `id` holds `len` bytes.
+ptrdiff_t ee_won_findpatch_id_split(const uint8_t *id, size_t len);
+
+/// [`le32_field`]: false unless the data is 4 bytes long.
+///
+/// # Safety
+/// `data` holds `len` bytes; `out` is valid.
+bool ee_won_findpatch_le32(const uint8_t *data, size_t len, uint32_t *out);
+
+/// [`firewall_request`] handed to `sink`.
+///
+/// # Safety
+/// `sink` is valid with `context`.
+void ee_won_firewall_request(uint8_t lfs,
+                             bool udp,
+                             uint16_t port,
+                             bool wait_for_connect,
+                             uint32_t max_wait,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// [`firewall_reply`]: -1 cut short, 0 a bad header, 1 a status (`*status`; `*host` and true in `*has_host` for a
+/// public address).
+///
+/// # Safety
+/// `reply` holds `len` bytes; the outputs are valid.
+int32_t ee_won_firewall_reply(const uint8_t *reply,
+                              size_t len,
+                              int16_t *status,
+                              int32_t *host,
+                              bool *has_host);
+
+/// [`firewall_wait`].
+uint32_t ee_won_firewall_wait(uint32_t time_left, uint32_t max_wait, bool asynchronous);
+
+/// [`password`] handed to `sink`; false where the cipher gave nothing (the original's NULL).
+///
+/// # Safety
+/// `data` holds `len` bytes; `sink` is valid with `context`.
+bool ee_won_regauth_password(bool decrypt,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// [`auth_port`].
+uint16_t ee_won_regauth_port(int32_t query_result, uint32_t value);
 
 /// `sync_plan` into `out` (room for `existing_count + incoming_count` steps); returns the step count.
 ///

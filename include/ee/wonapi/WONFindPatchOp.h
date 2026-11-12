@@ -32,9 +32,9 @@ typedef std::list<PatchInfo> PatchList;
 ///////////////////////////////////////////////////////////////////////////////
 class FindPatchOp : public VersionBaseOp
 {
+	template <class Op> friend struct FindPatchMsg;
 private:
-	PatchList mPatchList;
-	bool ValidFromVersion(const std::string &theFromVersion, const PatchInfo &theInfo);
+	PatchList mPatchList; // ValidFromVersion and the lists are ee_won's (miscops.rs, through WONMiscOpsMsg.h)
 
 protected:
 	void DoFinish(GetDirOp *theOp);

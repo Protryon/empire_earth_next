@@ -517,6 +517,10 @@ WON_TESTS = {
     # statements against include/ee/wonapi/WONPeerAuthMsg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won/src/golden_peerauth.txt)
     "won_peerauth_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
+    # original's statements against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module
+    # (golden: rust/crates/ee_won/src/golden_miscops.txt)
+    "won_miscops_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

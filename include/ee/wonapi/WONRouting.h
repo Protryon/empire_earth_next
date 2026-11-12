@@ -2566,6 +2566,7 @@ protected:
     virtual WONStatus GetNextRequest(); //2cf970
     virtual WONStatus CheckResponse(); //2cfad0
     virtual WONStatus RecvServerDatagram(); //2cfba0, eighth slot SetupReceiveTracker
+    template <class Op> friend struct FirewallMsg;
 private:
     unsigned short mListenPort; //f4, naturalalignmentf6/f7
     unsigned long mMaxConnectWaitTime; //f8
