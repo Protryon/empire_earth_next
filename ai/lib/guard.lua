@@ -36,6 +36,14 @@ M.opts = {
     home_r = 6,           -- units further than this from the post walk back while nothing is fought
     building_r = 10,      -- a raid this near an own building is in the zone
     focus_hits = 3,       -- a target takes units until their attack x this reaches its hit points
+    detach_small = true,  -- (S2, on; AI_RESEARCH §8.50: 42% of the Stone deaths against the classic had no own soldier
+                          -- within 10 tiles) a raid of detach_n or fewer in the zone gets the detach_k nearest healthy
+                          -- units; the rest of the guard fights the larger raids as a block, or waits at its post
+    detach_n = 3,
+    detach_k = 3,
+    detach_r = 0,         -- (off; AI_RESEARCH §8.50, the waves after Copper: a wave of 4-8 seen as 2-3 clusters of 1-3 got 3
+                          -- soldiers each while the rest of the guard waited at its post, half the waves) a raid is small
+                          -- only when the raiders of every raid within detach_r tiles of it are detach_n or fewer
     fallback = false,     -- outnumbered (a raid in the zone it does not engage): the guard falls back to the town
                           -- centre, where the citizens run, instead of holding its post (no garrison: a town
                           -- centre's garrison absorbs its citizens, EEComplexUnit::AddGarrison)
@@ -136,7 +144,15 @@ end
 
 -- trains towards a guard of n soldiers by the mix: each role's lack from its producer, at most `per` an order, one
 -- order a class at a time (as boom's own training)
-function M.train(view, mem, n, order, per)
+-- iron_free (AI_RESEARCH §8.50: the Bronze save sat unpaid 44 minutes on average, short of iron only, while the
+-- spearmen and macemen retrained against the waves spent every iron unit): the ranged units only (bowmen and
+-- slingers: wood and gold, which pile up), no new iron infantry
+-- with no ranged producer (no archery range) the usual mix (AI_RESEARCH §8.50: else nothing
+-- trained at all, a town 70 minutes at 0-4 soldiers)
+-- spare (AI_RESEARCH §8.50, the waves after Copper: an order the reserve left unaffordable sat queued for 14 minutes
+-- and kept its class from being ordered again, the army 12 -> 1): the stock less the reserve; an order is cut to what
+-- it pays, and a class it cannot pay one of is not ordered (nil: no limit)
+function M.train(view, mem, n, order, per, iron_free, spare)
     local have = {pierce = 0, ranged = 0, shock = 0, cavalry = 0}
     local total = 0
     for _, s in ipairs(view.soldiers or {}) do
@@ -159,6 +175,12 @@ function M.train(view, mem, n, order, per)
         return
     end
     local mix = M.mix(view, mem)
+    if iron_free and class_for(view, "ranged") == nil then
+        iron_free = false
+    end
+    if iron_free then
+        mix = {pierce = 0, ranged = 100, shock = 0}
+    end
     -- each role's lack, the largest first; a role with no class to train gives its share to pierce
     local lack = {}
     local spill = 0
@@ -166,7 +188,7 @@ function M.train(view, mem, n, order, per)
         local want = (n * mix[r] + 50) // 100
         local c = class_for(view, r)
         if c == nil then
-            spill = spill + math.max(want - have[r], 0)
+            spill = iron_free and 0 or spill + math.max(want - have[r], 0)
         else
             lack[#lack + 1] = {role = r, n = math.max(want - have[r], 0), c = c}
         end
@@ -186,6 +208,13 @@ function M.train(view, mem, n, order, per)
     local busy = {}
     for _, l in ipairs(lack) do
         local k = math.min(l.n, need, (per or 2) * math.max(l.c.producers, 1))   -- (on every producer of the class)
+        if spare ~= nil then
+            for r, v in pairs(l.c.cost) do
+                if v > 0 then
+                    k = math.min(k, math.max(spare[r] or 0, 0) // v)
+                end
+            end
+        end
         if k > 0 and l.c.requested == 0 and not busy[l.c.producer] then
             order("soldier_" .. l.c.producer, {verb = "train", type = l.c.type, n = k})
             busy[l.c.producer] = true
@@ -546,6 +575,71 @@ function M.step(view, mem, opts)
     end
     recs = ships(view, g, recs)
     local raids = raids_in_zone(view, zone)
+    if M.opts.detach_small and #raids > 0 then
+        -- (S2) the small raids: each its detach_k nearest healthy units, on its raider nearest them; the rest go on
+        local big, used = {}, {}
+        local by = {}
+        local near_n = {}
+        for i, r in ipairs(raids) do
+            near_n[i] = r.cl.n
+            if M.opts.detach_r > 0 then
+                for j, q in ipairs(raids) do
+                    if j ~= i and d2(r.cl.x, r.cl.y, q.cl.x, q.cl.y) <= M.opts.detach_r * M.opts.detach_r then
+                        near_n[i] = near_n[i] + q.cl.n
+                    end
+                end
+            end
+        end
+        for i, r in ipairs(raids) do
+            if near_n[i] <= M.opts.detach_n then
+                local sent = 0
+                while sent < M.opts.detach_k do
+                    local best, bd = nil, nil
+                    for _, u in ipairs(recs) do
+                        if not used[u.id] and not g.hurt[u.id] then
+                            local d = d2(u.x, u.y, r.cl.x, r.cl.y)
+                            if bd == nil or d < bd then
+                                best, bd = u, d
+                            end
+                        end
+                    end
+                    if best == nil then
+                        break
+                    end
+                    used[best.id] = true
+                    sent = sent + 1
+                    local tid, td = nil, nil
+                    for k = 1, r.cl.n do
+                        local d = d2(best.x, best.y, r.cl.xs[k], r.cl.ys[k])
+                        if td == nil or d < td then
+                            tid, td = r.cl.ids[k], d
+                        end
+                    end
+                    if g.aims[best.id] ~= tid or (best.action ~= "attack" and best.action ~= "move") then
+                        by[tid] = by[tid] or {}
+                        local l = by[tid]
+                        l[#l + 1] = best.id
+                    end
+                    g.aims[best.id] = tid
+                end
+            else
+                big[#big + 1] = r
+            end
+        end
+        for _, tid in ipairs(ai.keys(by)) do
+            ai.attack(by[tid], tid)
+        end
+        local rest = {}
+        for _, u in ipairs(recs) do
+            if not used[u.id] then
+                rest[#rest + 1] = u
+            end
+        end
+        recs, raids = rest, big
+        if #raids == 0 then
+            return   -- (the rest wait where they are; the next step without raids sends them home)
+        end
+    end
     -- the raids to fight: at the odds with the towers, or under a tower
     local fight = {}
     for _, r in ipairs(raids) do
