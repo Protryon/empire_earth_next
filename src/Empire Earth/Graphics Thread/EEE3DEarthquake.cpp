@@ -45,6 +45,8 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DEarthquake.h"
+#include "rust/ee_rust.h"   // ee_gfx quake.rs (RUST_PLAN R4.4)
+#include <vector>
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4ec6e4
@@ -110,90 +112,41 @@ long EEE3DEarthquake::BuildModel()
     EEMap* theMap = gWorld.mMap;
     unsigned long theVertexCount = (this->mSegmentCount + 1) * 5;
     GE3DPoint theGround;
-    float theV = 0.0f;
     this->mModel = gModelManager->CreateModel(this->mSegmentCount * 8, theVertexCount, 1, 0, 1, 0, "earthquake model", 1);
     this->mModel->Reference();
     this->mModel->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
     this->mModel->GetMaterial(0)->SetPolygonRangeLength(this->mSegmentCount * 8, 0);
     this->mModel->GetMaterial(0)->SetVertexStartingIndex(0);
     this->mModel->GetMaterial(0)->SetVertexRangeLength(theVertexCount);
-    thePoint.SetX(-2.0f);
-    theTransformation.Apply(thePoint, theGround);
-    theMap->GetGroundPoint(theGround, theGround);
-    thePoint.SetZ(theGround.GetZ());
-    this->mModel->GetVertexArray(0)->SetPoint(thePoint, 0);
-    thePoint.SetX(-1.0f);
-    theTransformation.Apply(thePoint, theGround);
-    theMap->GetGroundPoint(theGround, theGround);
-    thePoint.SetZ(theGround.GetZ());
-    this->mModel->GetVertexArray(0)->SetPoint(thePoint, 1);
-    thePoint.SetX(0.0f);
-    theTransformation.Apply(thePoint, theGround);
-    theMap->GetGroundPoint(theGround, theGround);
-    thePoint.SetZ(theGround.GetZ());
-    this->mModel->GetVertexArray(0)->SetPoint(thePoint, 2);
-    thePoint.SetX(1.0f);
-    theTransformation.Apply(thePoint, theGround);
-    theMap->GetGroundPoint(theGround, theGround);
-    thePoint.SetZ(theGround.GetZ());
-    this->mModel->GetVertexArray(0)->SetPoint(thePoint, 3);
-    thePoint.SetX(2.0f);
-    theTransformation.Apply(thePoint, theGround);
-    theMap->GetGroundPoint(theGround, theGround);
-    thePoint.SetZ(theGround.GetZ());
-    this->mModel->GetVertexArray(0)->SetPoint(thePoint, 4);
-    GETextureCoordinate theCoordinate(0.0f, 0.0f);
-    this->mModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, 0);
-    theCoordinate.SetU(0.25f);
-    theCoordinate.SetV(0.0f);
-    this->mModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, 1);
-    theCoordinate.SetU(0.5f);
-    theCoordinate.SetV(0.0f);
-    this->mModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, 2);
-    theCoordinate.SetU(0.75f);
-    theCoordinate.SetV(0.0f);
-    this->mModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, 3);
-    theCoordinate.SetU(1.0f);
-    theCoordinate.SetV(0.0f);
-    this->mModel->GetVertexArray(0)->SetTextureCoordinate(theCoordinate, 4);
+    // the first row on the ground; the strip's triangles and texture rows: ee_gfx quake.rs (RUST_PLAN R4.4)
+    unsigned long i;
+    for (i = 0; i < 5; i++) {
+        thePoint.SetX((float)i - 2.0f);
+        theTransformation.Apply(thePoint, theGround);
+        theMap->GetGroundPoint(theGround, theGround);
+        thePoint.SetZ(theGround.GetZ());
+        this->mModel->GetVertexArray(0)->SetPoint(thePoint, i);
+    }
+    for (i = 0; i < 5; i++)
+        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(EE_GFX_QUAKE_ROW_U[i], 0.0f), i);
     thePoint.SetX(0.0f);
     thePoint.SetY(0.0f);
     thePoint.SetZ(0.0f);
-    for (unsigned long i = 5; i < theVertexCount; i++)
+    for (i = 5; i < theVertexCount; i++)
         this->mModel->GetVertexArray(0)->SetPoint(thePoint, i);
+    std::vector<float> theRows(this->mSegmentCount);
+    ee_gfx_quake_build_rows(theRows.data(), theRows.size());
     for (unsigned long theSegment = 0; theSegment < this->mSegmentCount; theSegment++) {
-        unsigned long thePolygon = theSegment * 8;
-        unsigned long theVertex = theSegment * 5;
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + 5);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 6);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 1, theVertex + 6);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 1, theVertex);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 1, theVertex + 1);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 2, theVertex + 6);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 2, theVertex + 1);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 2, theVertex + 7);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 3, theVertex + 7);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 3, theVertex + 1);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 3, theVertex + 2);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 4, theVertex + 7);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 4, theVertex + 2);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 4, theVertex + 8);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 5, theVertex + 8);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 5, theVertex + 2);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 5, theVertex + 3);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 6, theVertex + 8);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 6, theVertex + 3);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 6, theVertex + 9);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex1(thePolygon + 7, theVertex + 9);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex2(thePolygon + 7, theVertex + 3);
-        this->mModel->GetPolygonArray(0)->SetVertexIndex3(thePolygon + 7, theVertex + 4);
-        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.0f, theV), theVertex + 5);
-        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.25f, theV), theVertex + 6);
-        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, theV), theVertex + 7);
-        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.75f, theV), theVertex + 8);
-        this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(1.0f, theV), theVertex + 9);
-        theV += 0.25f;
+        uint32_t thePolygons[24];
+        ee_gfx_quake_segment_polygons((uint32_t)theSegment, thePolygons);
+        for (unsigned long k = 0; k < 8; k++) {
+            this->mModel->GetPolygonArray(0)->SetVertexIndex1(theSegment * 8 + k, thePolygons[k * 3]);
+            this->mModel->GetPolygonArray(0)->SetVertexIndex2(theSegment * 8 + k, thePolygons[k * 3 + 1]);
+            this->mModel->GetPolygonArray(0)->SetVertexIndex3(theSegment * 8 + k, thePolygons[k * 3 + 2]);
+        }
+        for (i = 0; i < 5; i++)
+            this->mModel->GetVertexArray(0)->SetTextureCoordinate(
+                GETextureCoordinate(EE_GFX_QUAKE_ROW_U[i], theRows[theSegment]), theSegment * 5 + 5 + i);
     }
     this->mModel->ComputeModelNormals();
     this->mModel->ComputeBoundingVolumes();
@@ -212,65 +165,32 @@ long EEE3DEarthquake::Queue(EEEffectQueue* inQueues)
     GE3DPoint thePoint;
     EEMap* theMap = gWorld.mMap;
     bool theOverSpace = false;
-    float theV = 0.25f;
     GE3DPoint theGround;
-    float theEnd = 1.0f;
     long theResult = EEEffect3D::Queue(inQueues);
     if (theResult == 0) {
+        // each row's front and texture v: ee_gfx quake.rs; the five vertices across it on the ground
+        std::vector<EeGfxQuakeRow> theRows(this->mSegmentCount);
+        ee_gfx_quake_queue_rows(this->mDistance, theRows.data(), theRows.size());
         for (unsigned long theSegment = 0; theSegment < this->mSegmentCount; theSegment++) {
             unsigned long theVertex = theSegment * 5 + 5;
-            float theFrontV;
-            float theY;
-            if (this->mDistance < theEnd) {
-                theY = this->mDistance;
-                theFrontV = (1.0f - (theEnd - this->mDistance)) * 0.25f + theV - 0.25f;
-            } else {
-                theY = theEnd;
-                theFrontV = theV;
+            thePoint.SetY(theRows[theSegment].y);
+            for (unsigned long i = 0; i < 5; i++) {
+                thePoint.SetZ(0.0f);
+                thePoint.SetX((float)i - 2.0f);
+                theTransformation.Apply(thePoint, theGround);
+                theMap->GetGroundPoint(theGround, theGround);
+                thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
+                this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex + i);
+                if (i == 2 && theMap->mTerrainMesh.GetIsSpaceTile(UMFloorUnsigned(theGround.GetX()),
+                                                                  UMFloorUnsigned(theGround.GetY())))
+                    theOverSpace = true;
             }
-            thePoint.SetY(theY);
-            thePoint.SetZ(0.0f);
-            thePoint.SetX(-2.0f);
-            theTransformation.Apply(thePoint, theGround);
-            theMap->GetGroundPoint(theGround, theGround);
-            thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
-            this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex);
-            thePoint.SetZ(0.0f);
-            thePoint.SetX(-1.0f);
-            theTransformation.Apply(thePoint, theGround);
-            theMap->GetGroundPoint(theGround, theGround);
-            thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
-            this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex + 1);
-            thePoint.SetX(0.0f);
-            thePoint.SetZ(0.0f);
-            theTransformation.Apply(thePoint, theGround);
-            theMap->GetGroundPoint(theGround, theGround);
-            thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
-            this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex + 2);
-            if (theMap->mTerrainMesh.GetIsSpaceTile(UMFloorUnsigned(theGround.GetX()), UMFloorUnsigned(theGround.GetY())))
-                theOverSpace = true;
-            thePoint.SetX(1.0f);
-            thePoint.SetZ(0.0f);
-            theTransformation.Apply(thePoint, theGround);
-            theMap->GetGroundPoint(theGround, theGround);
-            thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
-            this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex + 3);
-            thePoint.SetZ(0.0f);
-            thePoint.SetX(2.0f);
-            theTransformation.Apply(thePoint, theGround);
-            theMap->GetGroundPoint(theGround, theGround);
-            thePoint.SetZ(theGround.GetZ() + kHeightEpsilon);
-            this->mModel->GetVertexArray(0)->SetPoint(thePoint, theVertex + 4);
-            this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.0f, theFrontV), theVertex);
-            this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.25f, theFrontV), theVertex + 1);
-            this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.5f, theFrontV), theVertex + 2);
-            this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(0.75f, theFrontV), theVertex + 3);
-            this->mModel->GetVertexArray(0)->SetTextureCoordinate(GETextureCoordinate(1.0f, theFrontV), theVertex + 4);
-            theEnd += 1.0f;
-            theV += 0.25f;
+            for (unsigned long i = 0; i < 5; i++)
+                this->mModel->GetVertexArray(0)->SetTextureCoordinate(
+                    GETextureCoordinate(EE_GFX_QUAKE_ROW_U[i], theRows[theSegment].front_v), theVertex + i);
         }
         if (this->mGrowing && theOverSpace) {
-            this->mHoldTime = (this->mLength - this->mDistance) / this->mSpeed * 2.0f + 15000.0f;
+            this->mHoldTime = ee_gfx_quake_hold_time(this->mLength, this->mDistance, this->mSpeed);
             this->mGrowing = false;
         }
         this->mModel->ComputeModelNormals();

@@ -17,6 +17,7 @@ use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::models::{self, EeGfxRingModel, EeGfxSelectionModel};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
+use crate::quake::{self, EeGfxQuakeRow};
 use crate::select::{self, EeGfxSelectLines};
 use crate::terrain::{self, EeGfxCloudLayer, EeGfxSkyFrame};
 use crate::units::{
@@ -674,6 +675,51 @@ pub extern "C" fn ee_gfx_terrain_cloud_layer(size: i32, width: i32, offset: f32)
 #[no_mangle]
 pub extern "C" fn ee_gfx_terrain_grid_mode_step(mode: i32, backwards: bool) -> i32 {
     terrain::grid_mode_step(mode, backwards)
+}
+
+// ---- the earthquake's crack (quake.rs, EEE3DEarthquake.cpp)
+
+/// Segment `segment`'s eight triangles into `out` (24 vertex indices).
+///
+/// # Safety
+/// `out` points at 24 writable indices.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_quake_segment_polygons(segment: u32, out: *mut u32) {
+    let p = quake::segment_polygons(segment);
+    // SAFETY: the function's contract
+    unsafe { std::ptr::copy_nonoverlapping(p.as_ptr(), out, 24) };
+}
+
+/// `BuildModel`'s texture v of each of `count` segments' far rows.
+///
+/// # Safety
+/// `out` points at `count` writable floats (or `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_quake_build_rows(out: *mut f32, count: usize) {
+    if count == 0 {
+        return;
+    }
+    // SAFETY: the function's contract
+    quake::build_rows(unsafe { std::slice::from_raw_parts_mut(out, count) });
+}
+
+/// `Queue`'s rows of `count` segments for a front `distance` along the crack.
+///
+/// # Safety
+/// `out` points at `count` writable rows (or `count` is 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_quake_queue_rows(distance: f32, out: *mut EeGfxQuakeRow, count: usize) {
+    if count == 0 {
+        return;
+    }
+    // SAFETY: the function's contract
+    quake::queue_rows(distance, unsafe { std::slice::from_raw_parts_mut(out, count) });
+}
+
+/// The hold time of a growing crack that reached space.
+#[no_mangle]
+pub extern "C" fn ee_gfx_quake_hold_time(length: f32, distance: f32, speed: f32) -> f32 {
+    quake::hold_time(length, distance, speed)
 }
 
 // ---- the placement footprint and the labels (units.rs, EEROUnits.cpp)

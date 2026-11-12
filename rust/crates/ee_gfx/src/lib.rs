@@ -5,7 +5,7 @@
 //! ray and ranking (`pick.rs`, `EEUnitPicker.cpp`), the mini map's transforms and view trapezoid (`minimap.rs`,
 //! `EEMiniMap.cpp`), the effects' frustum test and the buildings' near fade (`view.rs`) and the units' ring
 //! models (`models.rs`, `EEROUnits::LoadMedia`) and the sky's colours, the sky, star and cloud models' points
-//! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`).
+//! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`) and the earthquake's crack (`quake.rs`).
 //!
 //! The camera's `Update` also runs in the simulation tick, so its math is deterministic code under RUST_PLAN 2.1;
 //! the tests replay golden values from the unmodified C++ (`golden_camera.txt`).
@@ -41,6 +41,8 @@ mod golden_press;
 #[cfg(test)]
 mod golden_quads;
 #[cfg(test)]
+mod golden_quake;
+#[cfg(test)]
 mod golden_rings;
 #[cfg(test)]
 mod golden_rounits;
@@ -54,6 +56,7 @@ pub mod minimap;
 pub mod models;
 pub mod mouse;
 pub mod pick;
+pub mod quake;
 pub mod select;
 pub mod terrain;
 pub mod units;

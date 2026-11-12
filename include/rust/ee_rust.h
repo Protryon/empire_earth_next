@@ -6150,6 +6150,12 @@ struct EeGfxCloudLayer {
   bool wrapped;
 };
 
+/// One of `Queue`'s rows: the row's distance along the crack (its local y) and the texture's v there.
+struct EeGfxQuakeRow {
+  float y;
+  float front_v;
+};
+
 /// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
 /// edges between usable and unusable cells `gBarBackColor` (`back` 1).
 struct EeGfxPlacementLine {
@@ -9413,6 +9419,9 @@ struct EeUiDirtyRect {
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 
+
+/// The texture's u across the five vertices of a row.
+constexpr static const float EE_GFX_QUAKE_ROW_U[5] = { 0.0, 0.25, 0.5, 0.75, 1.0, };
 
 /// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
 constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
@@ -13259,6 +13268,27 @@ EeGfxCloudLayer ee_gfx_terrain_cloud_layer(int32_t size,
 
 /// `StepGridMode`: the editor's grid mode stepped forwards or backwards through 0..17.
 int32_t ee_gfx_terrain_grid_mode_step(int32_t mode, bool backwards);
+
+/// Segment `segment`'s eight triangles into `out` (24 vertex indices).
+///
+/// # Safety
+/// `out` points at 24 writable indices.
+void ee_gfx_quake_segment_polygons(uint32_t segment, uint32_t *out);
+
+/// `BuildModel`'s texture v of each of `count` segments' far rows.
+///
+/// # Safety
+/// `out` points at `count` writable floats (or `count` is 0).
+void ee_gfx_quake_build_rows(float *out, size_t count);
+
+/// `Queue`'s rows of `count` segments for a front `distance` along the crack.
+///
+/// # Safety
+/// `out` points at `count` writable rows (or `count` is 0).
+void ee_gfx_quake_queue_rows(float distance, EeGfxQuakeRow *out, size_t count);
+
+/// The hold time of a growing crack that reached space.
+float ee_gfx_quake_hold_time(float length, float distance, float speed);
 
 /// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
 /// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.
