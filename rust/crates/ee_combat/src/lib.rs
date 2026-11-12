@@ -29,6 +29,7 @@ pub mod search_ffi;
 #[cfg(test)]
 mod search_tests;
 pub mod shots;
+pub mod store;
 #[cfg(test)]
 mod tests;
 pub mod walks;

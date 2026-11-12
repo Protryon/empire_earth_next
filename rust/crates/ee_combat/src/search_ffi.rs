@@ -1,10 +1,11 @@
 //! The C ABI of the target searches (`search.rs`). The searches' world comes
 //! through `EeCombatSearchHost`, a table of C callbacks filled per call by the C++ (`ctx` is its state, every handle
-//! a C++ pointer). Nothing is kept after a call returns.
+//! a C++ pointer). Nothing is kept after a call returns. A unit's tile is the unit store's (`store.rs`).
 
 use std::ffi::c_void;
 
 use crate::search::*;
+use crate::store;
 use crate::walks::EeCombatHandle;
 
 /// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
@@ -18,7 +19,6 @@ pub struct EeCombatSearchHost {
         unsafe extern "C" fn(ctx: *mut c_void, left: i32, top: i32, right: i32, bottom: i32, out: *mut [i32; 4]),
     pub region_len: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> i32,
     pub region_unit: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32, index: i32) -> u64,
-    pub unit_tile: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [i32; 2]),
     pub unit_position: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, out: *mut [f32; 2]),
     pub list_next: unsafe extern "C" fn(ctx: *mut c_void, unit: u64, prev: i32) -> u64,
     pub dummy_head: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
@@ -48,9 +48,8 @@ impl SearchHost for EeCombatSearchHost {
         unsafe { (self.region_unit)(self.ctx, x, y, index) }
     }
     fn unit_tile(&mut self, unit: EeCombatHandle) -> (i32, i32) {
-        let mut out = [0i32; 2];
-        unsafe { (self.unit_tile)(self.ctx, unit, &mut out) };
-        (out[0], out[1])
+        // the unit store's record (ee_combat store.rs: every handle here a live complex unit)
+        store::unit_of(unit).map_or((0, 0), |r| (r.tile_x as i32, r.tile_y as i32))
     }
     fn unit_position(&mut self, unit: EeCombatHandle) -> (f32, f32) {
         let mut out = [0f32; 2];

@@ -1,4 +1,6 @@
-// StringParser list and nested-list reads and formatting from the WON SDK
+// StringParser's int list and nested int list reads and formats from the WON SDK (the Internet lane's TitleConfig
+// registers a nested int list; the bool, string and wide-string nested forms had no caller), and the wide-string
+// list's format
 // No original address identified
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
@@ -12,16 +14,6 @@
 #include "ee/wonapi/WONLobbyParser.h"
 
 namespace WONAPI {
-// String ReadValue forms forward to the existing ReadString scanners
-bool StringParser::ReadValue(std::string &theStr, bool stopAtWhitespace)
-{
-    return this->ReadString(theStr,stopAtWhitespace);
-}
-bool StringParser::ReadValue(std::wstring &theStr, bool stopAtWhitespace)
-{
-    return this->ReadString(theStr,stopAtWhitespace);
-}
-
 // Generic comma-separated list reader (the string and wide-string lists are StringParserLists.cpp's)
 template<class T>
 static bool ReadList(StringParser *theParser, std::list<T> &theList)
@@ -40,7 +32,6 @@ static bool ReadList(StringParser *theParser, std::list<T> &theList)
     return true;
 }
 
-bool StringParser::ReadValue(std::list<bool> &theList) { return ReadList<bool>(this,theList); }
 bool StringParser::ReadValue(std::list<int> &theList) { return ReadList<int>(this,theList); }
 
 // Parenthesized list-of-lists reader; on a failed element or missing ')' the groups read so far stay
@@ -62,10 +53,7 @@ static bool ReadListList(StringParser *theParser, std::list<std::list<T> > &theL
     return true;
 }
 
-bool StringParser::ReadValue(std::list<std::list<bool> > &theList) { return ReadListList<bool>(this,theList); }
 bool StringParser::ReadValue(std::list<std::list<int> > &theList) { return ReadListList<int>(this,theList); }
-bool StringParser::ReadValue(std::list<std::list<std::string> > &theList) { return ReadListList<std::string>(this,theList); }
-bool StringParser::ReadValue(std::list<std::list<std::wstring> > &theList) { return ReadListList<std::wstring>(this,theList); }
 
 // Generic list formatter: values separated by ", "
 template<class T>
@@ -81,7 +69,6 @@ static void ListToString(const std::list<T> &theList, std::string &theStr)
     }
 }
 
-void StringParser::ValueToString(const std::list<bool> &theVal,std::string &theStr) { ListToString<bool>(theVal,theStr); }
 void StringParser::ValueToString(const std::list<int> &theVal,std::string &theStr) { ListToString<int>(theVal,theStr); }
 void StringParser::ValueToString(const std::list<std::wstring> &theVal,std::string &theStr) { ListToString<std::wstring>(theVal,theStr); }
 
@@ -101,8 +88,5 @@ static void ListListToString(const std::list<std::list<T> > &theList,std::string
     }
 }
 
-void StringParser::ValueToString(const std::list<std::list<bool> > &theVal,std::string &theStr) { ListListToString<bool>(theVal,theStr); }
 void StringParser::ValueToString(const std::list<std::list<int> > &theVal,std::string &theStr) { ListListToString<int>(theVal,theStr); }
-void StringParser::ValueToString(const std::list<std::list<std::string> > &theVal,std::string &theStr) { ListListToString<std::string>(theVal,theStr); }
-void StringParser::ValueToString(const std::list<std::list<std::wstring> > &theVal,std::string &theStr) { ListListToString<std::wstring>(theVal,theStr); }
 }

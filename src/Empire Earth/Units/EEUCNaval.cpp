@@ -32,6 +32,8 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEUCNaval.h"
+#include "ee/EEUnitUpdate.h"
+#include "rust/ee_units.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEMap.h"
 #include "ee/EmpireEarth.h"
@@ -159,37 +161,15 @@ void EEUCNaval::UpdateResourceUnit(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x618055
 // Updates a ship each tick (fish as a resource): physics, turrets, effects, timers, animation, firing on attack frames
+static void EEUCNavalResourceUnit(EEUnitClass* inClass, EEComplexUnit* inUnit)
+{
+    static_cast<EEUCNaval*>(inClass)->UpdateResourceUnit(inUnit);
+}
+
 void EEUCNaval::Update(EEComplexUnit* inUnit)
 {
-    long theFrame = inUnit->mPhysicalModel.GetFrame();
-    if (this->mUnitType == kUnitTypeResFish) {
-        this->UpdateResourceUnit(inUnit);
-        return;
-    }
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
-    if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-    }
-    inUnit->UpdateOrbitals();
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionAttackEnemyUnit:
-    case kActionAttackLocation:
-    case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
-        break;
-    case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
-        break;
-    }
-    }
-    this->UpdateDone(inUnit);
+    // New (R5b.4 leaf 6): the sequence is Rust (ee_units update.rs naval), the leaves EEUCLand.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL, this, inUnit, EEUCNavalResourceUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

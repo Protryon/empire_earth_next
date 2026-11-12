@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONAuthPeerData.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006acf10
 // Sets the defaults: 4-byte length field, no auth, 20-second limits, auth2 and close-after-use
@@ -36,13 +37,25 @@ ServerRequestOp::ServerRequestOp(const IPAddr& inAddress) : mAddrItr(AddrList::i
     this->Init();
     this->SetAddr(inAddress);
 }
-// A request running an op derived in Rust (ee_won reqop.rs), with the length field the op asks for
+// A request running an op derived in Rust (ee_won reqop.rs), with the length field and auth2 flag the op asks for
+static void AdoptRustOp(ServerRequestOp* inOp, EeWonReqOp* inRustOp)
+{
+    inOp->mRustOp = inRustOp;
+    if (inRustOp == NULL) return;
+    inOp->mLengthFieldSize = ee_won_reqop_length_field_size(inRustOp);
+    inOp->mUseAuth2 = ee_won_reqop_use_auth2(inRustOp);
+}
 ServerRequestOp::ServerRequestOp(ServerContext* inContext, EeWonReqOp* inRustOp) : mAddrItr(AddrList::iterator())
 {
     this->Init();
     this->SetServerContext(inContext);
-    this->mRustOp = inRustOp;
-    this->mLengthFieldSize = ee_won_reqop_length_field_size(inRustOp);
+    AdoptRustOp(this, inRustOp);
+}
+ServerRequestOp::ServerRequestOp(const IPAddr& inAddress, EeWonReqOp* inRustOp) : mAddrItr(AddrList::iterator())
+{
+    this->Init();
+    this->SetAddr(inAddress);
+    AdoptRustOp(this, inRustOp);
 }
 // FUNCTION: WON 0x006ad110
 // Destroys the request (members only; a Rust op is freed)
@@ -292,10 +305,38 @@ WONStatus ServerRequestOp::Recv()
 // Runs the request: asynchronously, or blocking over each server until one completes
 void ServerRequestOp::RunHook()
 {
-    if (this->mRustOp != NULL) ee_won_reqop_run_hook(this->mRustOp);
+    if (this->mRustOp != NULL) {
+        // a Rust op's RunHook first: it may finish the op (the contest call without an auth type)
+        int32_t aFinish = 0;
+        if (!ee_won_reqop_run_hook(this->mRustOp, this->mAuthType, &aFinish)) {
+            this->Finish(static_cast<WONStatus>(aFinish));
+            return;
+        }
+        if (this->mUDPSocket.get() != NULL) {
+            this->RunDatagram();
+            return;
+        }
+    }
     ServerRequestGlue aGlue = {this, NULL};
     EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
     ee_won_server_req_run(&aHooks);
+}
+// ReportPatchStatusOp's UDP path (WON SDK): the request built without a length field, sent to the first address
+void ServerRequestOp::RunDatagram()
+{
+    IPAddr anAddr = this->GetAddr();
+    if (!anAddr.IsValid()) {
+        this->Finish(WS_ServerReq_NoServersSpecified);
+        return;
+    }
+    this->Reset();
+    unsigned char aLengthFieldSize = this->mLengthFieldSize;
+    this->mLengthFieldSize = 0;
+    this->GetNextRequest();
+    this->mLengthFieldSize = aLengthFieldSize;
+    SmartPtr<SendBytesToOp> anOp = new SendBytesToOp(this->mRequest, anAddr, this->mUDPSocket);
+    anOp->Run(this->GetMode(), this->GetTimeout());
+    this->Finish(WS_Success);
 }
 // FUNCTION: WON 0x006ae4c0
 // Marks a timed-out or killed server as failed and closes the socket unless it should stay open
@@ -355,12 +396,17 @@ namespace WONAPI {
 WONStatus ServerRequestOp::GetNextRequest()
 {
     if (this->mRustOp == NULL) return WS_ServerReq_Recv;
+    uint32_t aUserId = 0;
+    if (ee_won_reqop_needs_user_id(this->mRustOp))
+        aUserId = (uint32_t)this->mAuthContext->GetPeerData()->GetCertificate()->GetUserId(); // WONUserSeq
+    ee_won_reqop_set_env(this->mRustOp, aUserId, WONTickCount());
     return (WONStatus)ee_won_reqop_next_request(this->mRustOp, this->mLengthFieldSize, WonByteBufferSink, &this->mRequest);
 }
 // A Rust op reads the reply: its cut read throws and its invalid header tries the next server, as the C++ ops did
 WONStatus ServerRequestOp::CheckResponse()
 {
     if (this->mRustOp == NULL) return WS_Success;
+    ee_won_reqop_set_env(this->mRustOp, 0, WONTickCount());
     int32_t aVerdict = 0;
     const ByteBuffer* r = this->mResponse.get();
     long aStatus = ee_won_reqop_check_response(this->mRustOp, r != NULL ? reinterpret_cast<const uint8_t*>(r->data()) : NULL,

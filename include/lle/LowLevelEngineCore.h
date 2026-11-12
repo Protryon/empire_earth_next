@@ -21,6 +21,9 @@
 #endif
 
 #include <math.h>     // lrintf (UMFloatToLong)
+#if defined(_M_X64) || defined(__x86_64__)
+#include <xmmintrin.h>   // _mm_cvtss_si32 (UMRint)
+#endif
 #include <stdint.h>   // uintptr_t (USavedID)
 #include <vector>   // UString::Tokenize
 #include "platform/Platform.h"   // the platform layer (time, threads, ...): every engine and game unit sees it
@@ -138,10 +141,22 @@ inline bool UIsNone32(unsigned long inValue)
 {
     return static_cast<uint32_t>(inValue) == 0xffffffffu;
 }
+// lrintf: the float rounded in the current rounding mode. On x86-64 a value well inside 32 bits is rounded by
+// cvtss2si, which rounds in MXCSR's mode, where the CRT's lrintf rounds too (_controlfp sets it; same result), but
+// without the UCRT's floating-point environment calls around it (12% of a late headless game). Other values and other
+// machines: lrintf itself.
+inline long UMRint(float inValue)
+{
+#if defined(_M_X64) || defined(__x86_64__)
+    if (inValue > -1073741824.0f && inValue < 1073741824.0f)   // 2^30 (a NaN fails both)
+        return (long)_mm_cvtss_si32(_mm_set_ss(inValue));
+#endif
+    return lrintf(inValue);
+}
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
 inline long UMFloatToLong(float inValue)
 {
-    return lrintf(inValue);
+    return UMRint(inValue);
 }
 // Provisional name (not exported: a free inline). Default.dll 0xc29f: `fld r; fld st0; fmul st1` (the
 // argument loaded once and squared), where `r * r` would give `fld r; fmul r`.
@@ -161,14 +176,14 @@ inline float UMSquare(float inValue)
 // value is compared through `fild qword` (an unsigned result variable inside the helper).
 inline unsigned long UMFloorUnsigned(float inValue)
 {
-    unsigned long theResult = (unsigned long)lrintf(inValue);   // round to nearest, as fld/fistp
+    unsigned long theResult = (unsigned long)UMRint(inValue);   // round to nearest, as fld/fistp
     if (theResult > inValue)
         theResult--;
     return theResult;
 }
 inline long UMFloor(float inValue)
 {
-    long theResult = (long)lrintf(inValue);   // round to nearest, as fld/fistp
+    long theResult = (long)UMRint(inValue);   // round to nearest, as fld/fistp
     if (theResult > inValue)
         theResult--;
     return theResult;
@@ -177,7 +192,7 @@ inline long UMFloor(float inValue)
 // `fild r; fcomp v; jae; inc r`: rounds up when the rounded value is below the input.
 inline long UMCeil(float inValue)
 {
-    long theResult = (long)lrintf(inValue);   // round to nearest, as fld/fistp
+    long theResult = (long)UMRint(inValue);   // round to nearest, as fld/fistp
     if (theResult < inValue)
         theResult++;
     return theResult;
@@ -189,7 +204,7 @@ inline long UMCeil(float inValue)
 // which only an inlined asm helper produces, then compares the unsigned result through `fild qword`.
 inline unsigned long UMCeilUnsigned(float inValue)
 {
-    unsigned long theResult = (unsigned long)lrintf(inValue);   // round to nearest, as fld/fistp
+    unsigned long theResult = (unsigned long)UMRint(inValue);   // round to nearest, as fld/fistp
     if (theResult < inValue)
         theResult++;
     return theResult;

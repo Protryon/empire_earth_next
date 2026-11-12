@@ -859,7 +859,8 @@ struct RustOp {
     ~RustOp() { ee_won_reqop_free(this->mOp); }
     string Request()
     {
-        ee_won_reqop_run_hook(this->mOp);
+        int32_t aFinish = 0;
+        ee_won_reqop_run_hook(this->mOp, 0, &aFinish);
         string r;
         long s = ee_won_reqop_next_request(this->mOp, 4, StrSink, &r);
         return Num(s) + " " + Hex(r);

@@ -88,55 +88,10 @@ void ConfigObject::KeyAdd(const char* key,std::wstring& value,const wchar_t* ini
 void ConfigObject::KeyAdd(const char* key,std::list<std::string>& value,const char* initial,bool additive) {this->RegisterKeyValue(key,new ConfigListValue<std::list<std::string> >(value,initial,additive));}
 }
 namespace WONAPI {
-// No original address identified: WON SDK typed key registration
-void ConfigObject::RegisterInt64Value(const char *theKey, __int64 &theInt64, __int64 theDefVal)
-{
-	this->RegisterKeyValue(theKey, new SimpleConfigValue<__int64>(theInt64,theDefVal));
-}
-
+// No original address identified: WON SDK typed key registration (the two the Internet lane's TitleConfig uses)
 void ConfigObject::RegisterIntValue(const char *theKey, int &theInt, int theDefVal)
 {
 	this->RegisterKeyValue(theKey, new SimpleConfigValue<int>(theInt,theDefVal));
-}
-
-void ConfigObject::RegisterLongValue(const char *theKey, long &theLong, long theDefVal)
-{
-	this->RegisterKeyValue(theKey, new SimpleConfigValue<long>(theLong, theDefVal));
-}
-
-void ConfigObject::RegisterShortValue(const char *theKey, short &theShort, short theDefVal)
-{
-	this->RegisterKeyValue(theKey, new SimpleConfigValue<short>(theShort, theDefVal));
-}
-
-void ConfigObject::RegisterByteValue(const char *theKey, char &theByte, char theDefVal)
-{
-	this->RegisterKeyValue(theKey, new SimpleConfigValue<char>(theByte,theDefVal));
-}
-
-void ConfigObject::RegisterUInt64Value(const char *theKey, unsigned __int64 &theInt64, unsigned __int64 theDefVal)
-{
-	this->RegisterKeyValue(theKey, new SimpleConfigValue<unsigned __int64>(theInt64,theDefVal));
-}
-
-void ConfigObject::RegisterBoolListValue(const char *theKey, std::list<bool> &theBoolList, const char *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<bool> >(theBoolList, theDefVal, additive));
-}
-
-void ConfigObject::RegisterIntListValue(const char *theKey, std::list<int> &theIntList, const char *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<int> >(theIntList, theDefVal, additive));
-}
-
-void ConfigObject::RegisterWStringListValue(const char *theKey, std::list<std::wstring> &theStringList, const wchar_t *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::wstring> >(theStringList, theDefVal, additive));
-}
-
-void ConfigObject::RegisterBoolListListValue(const char *theKey, std::list<std::list<bool> > &theBoolListList, const char *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::list<bool> > >(theBoolListList, theDefVal, additive));
 }
 
 void ConfigObject::RegisterIntListListValue(const char *theKey, std::list<std::list<int> > &theIntListList, const char *theDefVal, bool additive)
@@ -144,15 +99,6 @@ void ConfigObject::RegisterIntListListValue(const char *theKey, std::list<std::l
 	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::list<int> > >(theIntListList, theDefVal, additive));
 }
 
-void ConfigObject::RegisterStringListListValue(const char *theKey, std::list<std::list<std::string> > &theStringListList, const char *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::list<std::string> > >(theStringListList, theDefVal, additive));
-}
-
-void ConfigObject::RegisterWStringListListValue(const char *theKey, std::list<std::list<std::wstring> > &theStringListList, const wchar_t *theDefVal, bool additive)
-{
-	this->RegisterKeyValue(theKey, new ConfigListValue<std::list<std::list<std::wstring> > >(theStringListList, theDefVal, additive));
-}
 }
 
 // Compiler-generated and header-inline functions this unit emits:

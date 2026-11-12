@@ -128,6 +128,8 @@ class Build:
         })
         d["EE_SHOWSCENE_RVA"] = self.rva("exe", SHOWSCENE)
         d["EE_SIZE_UWIDESTRING"] = self.layout.size("UWideString") if "UWideString" in self.layout.records else 0x14
+        # EEScreenEvent::mEvent (ee/EEScreenEvent.h) follows its UIEvent base
+        d["EE_OFF_SCREEN_EVENT_CODE"] = self.layout.size("UIEvent") if "UIEvent" in self.layout.records else 0x18
         return d
 
     def renderer_guards(self):

@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 struct lua_State;
@@ -65,6 +66,7 @@ public:
     size_t Size() const { return mItems.size(); }
     const EECPLuaValue& At(size_t inIndex) const { return mItems[inIndex]; }
     EECPLuaValue& Push(const EECPLuaValue& inValue);   // an array: appends
+    EECPLuaValue& Push(EECPLuaValue&& inValue);        // (the same, moving the value in)
 
     // a map's fields, in key order
     size_t FieldCount() const { return mKeys.size(); }
@@ -72,6 +74,8 @@ public:
     const EECPLuaValue& ValueAt(size_t inIndex) const { return mItems[inIndex]; }
     EECPLuaValue& Set(const EECPLuaKey& inKey, const EECPLuaValue& inValue);   // a map: inserts or replaces
     EECPLuaValue& Set(const char* inKey, const EECPLuaValue& inValue) { return Set(EECPLuaKey::Str(inKey), inValue); }
+    EECPLuaValue& Set(const EECPLuaKey& inKey, EECPLuaValue&& inValue);   // (the same, moving the value in)
+    EECPLuaValue& Set(const char* inKey, EECPLuaValue&& inValue) { return Set(EECPLuaKey::Str(inKey), std::move(inValue)); }
     const EECPLuaValue* Find(const EECPLuaKey& inKey) const;
     const EECPLuaValue* Find(const char* inKey) const { return Find(EECPLuaKey::Str(inKey)); }
 
@@ -136,6 +140,10 @@ struct EECPLuaConfig {
     EECPLuaWrite mWrite = nullptr;               // nullptr: print discards
     void* mWriteContext = nullptr;
     bool mCheckMemory = false;                   // after each Init/Step, fail when the memory holds what cannot be saved
+    // called once while the state is set up, with the `ai` table on top of the stack: adds more functions to it
+    // (docs/AI_LUA_UNITS.md: the next engine's unit queries and commands); it must leave the stack as it found it
+    void (*mOpen)(lua_State* inL, void* inContext) = nullptr;
+    void* mOpenContext = nullptr;
 };
 enum { kEECPLuaHookStep = 1000 };
 
@@ -160,6 +168,9 @@ public:
     // developer console; the name is the chunk's name in error messages.
     bool Run(const char* inSource, const char* inName, EECPLuaValue& outResult);
 
+    // Another entry of the personality, if it has one: personality[inName](inArg, memory) with inBudget (0: the
+    // config's) -> its return value converted. outFound false: no such function (and true is returned).
+    bool CallOptional(const char* inName, const EECPLuaValue& inArg, EECPLuaValue& outResult, int64_t inBudget, bool& outFound);
     // The memory and the RNG state as bytes ("EELM", version 1, the RNG state as uint64 LE, the memory table as an
     // EECPLuaEncode value) / restored from them (a loaded game: LoadPersonality first, then RestoreMemory, no Init).
     bool SaveMemory(std::string& outBytes);
@@ -170,6 +181,7 @@ public:
     EECPLuaStatus LastStatus() const { return this->mStatus; }
     const std::string& LastError() const { return this->mError; }
     int64_t LastInstructions() const { return this->mUsed; }    // the last call's count (a multiple of the hook step)
+    int64_t Budget() const { return this->mConfig.mBudget; }    // the instructions a call may use
     size_t MemoryUsed() const { return this->mBytes; }
     size_t MemoryPeak() const { return this->mPeak; }
     uint64_t RngState() const { return this->mRng; }
@@ -181,6 +193,10 @@ public:
     bool ReadModule(const char* inPath, std::string& outText);
     void* Allocate(void* inBlock, size_t inOld, size_t inNew);
     void OnHook(lua_State* inL);
+    // A C function's cost in instruction equivalents (docs/AI_LUA_UNITS.md §2.1): added to the call's count, which
+    // the budget bounds; over the budget it raises as the hook does
+    void Charge(lua_State* inL, int64_t inAmount);
+    void OpenExtension(lua_State* inL);   // the setup's call of mOpen
     bool mNoFile = false;           // this call: require found no module (or a bad name)
     bool mSyntax = false;           // this call: a chunk did not compile
     bool mAllocFailed = false;      // this call: the allocator refused a block

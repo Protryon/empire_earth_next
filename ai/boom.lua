@@ -8,7 +8,39 @@
 -- Everything it decides comes from the view and the previous step's results. Each minute it prints a `plan` line (the
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
-local A = require("lib.army")
+local G = require("lib.groups")
+local D = require("lib.defence")   -- the citizens' raid answer and militia (AI_RESEARCH §8.41)
+local GD = require("lib.guard")    -- the home guard: its post, mix, focus fire (AI_RESEARCH §8.41)
+local SC = require("lib.scout")    -- the watcher (plan.watch; off until benched)
+local AT = require("lib.attack")   -- attacks in windows from strength (plan.attack; off until benched)
+local N = require("lib.navy")     -- (plan.boat_guard: the warships that guard the fishing grounds)
+local RD = require("lib.raid")     -- the owner's Stone raid of ~20 and the reserve (plan.raid; AI_RESEARCH §8.50)
+local ES = require("lib.econ_stats")   -- the bench metrics (idle town centres, crowded patches)
+local EU = require("lib.econ_units")   -- the economy on the per-unit interface (the second town centre ...)
+local DM = require("lib.demand")       -- the split's stock correction and the saving ramp (balanced's rules)
+local BO = require("lib.build_order")  -- the owner's build order, phase by phase (ECON.order, AI_RESEARCH §8.51)
+local PL = require("lib.place")        -- (ECON.order) settlements touching their resource, built at that tile
+
+-- the economy rules (docs/AI_RESEARCH.md §8.43): each one switchable for the bench
+local ECON = {
+    demand = false,         -- the stock correction of the gatherer split (lib.demand.correct)
+    unreachable = false,    -- no reserve for an advance with a short resource nobody can gather
+    ramp = false,           -- the epoch reserve ramps up (the plan's save_ramp) instead of all at once
+    tc = false,             -- a second town centre (the plan's town_centers, tc_at; lib.econ_units)
+    army_slack = false,     -- past the soldiers-first window the reserve waits for 3/4 of the light army only
+    ratchet = false,        -- the epoch reserve never shrinks while kept (the army's margin cannot eat it)
+    parallel = false,       -- the Stone Age's citizens and soldiers in parallel (the owner: no citizen stop for the army)
+    full_target = false,    -- the gatherers aim at the advance's whole cost, not the army-lowered reserve
+    food_dry = false,       -- the Prehistoric claim (and hunting) reaches farther when the forage runs dry
+    wood_floor = false,     -- wood keeps its plan floor while under 150 (the settlements by the metals need it)
+    account = false,        -- from the Copper Age the reserve is an epoch account of a share of the income (Age of AI)
+    wood_surplus = false,   -- wood piled past what the plan spends soon: its gatherers down to WOOD_SURPLUS_KEEP (§8.51)
+    places = false,         -- from the Copper Age the plan's `places` overrides: more mines, farms and metal gatherers
+    paid_go = false,        -- from the Copper Age the next epoch is saved for (and its buildings built) once the stock
+                            -- holds its cost, whatever the citizens or the minutes (§8.51)
+    useful_cap = false,     -- from the Copper Age, as in the Prehistoric, no more citizens than the places have work for
+    order = false,          -- the owner's build order (lib.build_order): the phases, their exact gatherers and buildings
+}
 
 local PLAN = {
     {   -- Prehistoric
@@ -35,13 +67,19 @@ local PLAN = {
                                 -- second home patch, iron, gold, stone, wood and a third patch)
         barracks = 1, ranges = 0,
         barracks_at = 28,       -- citizens: the first barracks stands when the Stone Age's army is trained
+        town_centers = 1,       -- town centres (balanced's early_town_centers: a settlement filled with citizens) ...
+        tc_at = 0,              -- ... from this many citizens
         boats = 0, docks = 0,
         claim_max = 30,
+        claim_dry = 42,         -- (ECON.food_dry) the claim's reach while the food places are under half the food wanted
     },
     {   -- Stone
         -- first 20 soldiers (spearmen from two barracks, one defend group at home), then the citizens (18 food, 12
         -- gold, 12-18 iron, 6 stone, 10-15 wood, the boats on top), then the Copper Age
         citizens = 64, citizens_max = 90, save_at = 60, save_after = 10,
+        -- (ECON.ramp: the reserve grows from nothing to the whole cost over these minutes into the epoch or these
+        -- citizens; the Prehistoric keeps save_at / save_after: a ramp there held the citizens at 28, §8.43)
+        save_ramp = {from_min = 6, full_min = 14, from_cit = 52, full_cit = 64},
         floor = {wood = 10, stone = 6, gold = 12, iron = 12},
         cap = {wood = 15, stone = 6, gold = 12, iron = 18},
         bank = {wood = 150, stone = 0, gold = 100, iron = 100},
@@ -50,7 +88,12 @@ local PLAN = {
         patches = 5,
         hunt = 8,
         soldiers = 20, soldiers_max = 30,
+        -- (balanced's standing army: a quarter of the citizens, at least the owner's 20; on 32 seeds against the
+        -- floor of 10: 6 defeats against 13 by the improved classic, 13 against 14 by the cheating one, AI_RESEARCH §8.41)
+        army_per = 25, army_floor = 20,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
+        town_centers = 2, tc_at = 30,   -- (balanced: early_town_centers 2; research §4.2: a second citizen producer;
+                                -- tc_float = n: only while the food floats n above the reserve, not benched yet)
         towers = 7,
         settlements = 12,       -- (§8.36: every worked mine has its own)
         barracks = 2, ranges = 1,
@@ -61,6 +104,7 @@ local PLAN = {
     {   -- Copper and later (S5 extends it)
         -- the same, with 2-3 granaries of farms; 12-18 gold, 12-18 iron, 6 stone, 15-20 wood
         citizens = 90, citizens_max = 100, save_at = 95, save_after = 25,
+        save_ramp = {from_min = 15, full_min = 25, from_cit = 80, full_cit = 95},
         floor = {wood = 15, stone = 6, gold = 12, iron = 12},
         cap = {wood = 20, stone = 6, gold = 18, iron = 18},
         bank = {wood = 300, stone = 0, gold = 200, iron = 200},
@@ -68,14 +112,19 @@ local PLAN = {
         food = 18,
         patches = 5,
         hunt = 8,
-        soldiers = 20, soldiers_max = 40,
+        soldiers = 20, soldiers_max = 60, army_per = 35, army_floor = 20,   -- (§8.50: a third of the citizens from Copper)
         barracks_at = 10,
         towers = 10,
         settlements = 14,
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,
+        epoch_share = 50,       -- (ECON.account) percent of the income into the epoch account (Age of AI's 40, its army 65)
+        town_centers = 2, tc_at = 30,
         claim_max = 45,
+        -- (ECON.places, §8.51: from the Copper Age 12-20 citizens past the plan's places stood on wood, 30-40 on it
+        -- against 18-20 wanted, while the next epoch waited on gold and iron) more places for them
+        places = {mine_sites = 5, farms = 36, cap = {wood = 20, stone = 6, gold = 24, iron = 24}},
     },
 }
 
@@ -84,6 +133,7 @@ local THREAT_MS = 90000         -- a threat seen keeps the town on guard this lo
 local THREAT_MIN = 2500         -- weaker than this (a scout) is left to the militia and the towers
 local BACKOFF_MS = 60000        -- an order refused for want of a site or producer is not repeated for this long
 local SITE_PLACES = 6           -- gatherers a mine unit holds (the mining limit); a forage patch holds 6 in all
+local ORDER_MINE_REACH = 8     -- (ECON.order) tiles past the claim range a mine is still the town's (a drop site's reach)
 local FAR_REACH = 45            -- tiles: how far a mineral with no site in the claim range is looked for (was 60:
                                 -- on a Small map that is the other town, §8.35)
 local UNKNOWN_REACH = 38        -- tiles: how far out a site is taken while no enemy town has been seen
@@ -102,6 +152,8 @@ local BOATS_LOST_MS = 300000   -- fishing boats sunk within this long ...
 local BOATS_LOST_MAX = 3        -- ... this many times: none are replaced until fewer are
 local ARMY_FIRST_MIN = 5        -- minutes into the epoch the citizens wait at most for the army_first soldiers
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
+local WOOD_SURPLUS = 400        -- (ECON.wood_surplus) wood this far above its stock target is a surplus ...
+local WOOD_SURPLUS_KEEP = 3     -- ... and keeps this many on wood (the Stone Age's wood sat at 1000-3000 with 15 on it)
 local ESCORT_MIN = 2            -- soldiers an escort of a contested site takes at least (the guard keeps 2) ...
 local ESCORT_MAX = 6            -- ... and at most
 local ESCORT_WAIT = 120000      -- a new escort no sooner than this after the last one was sent
@@ -142,27 +194,6 @@ end
 
 local function going_up(entry)
     return entry ~= nil and entry.unfinished + entry.queued > 0
-end
-
--- the soldier each trainer makes now: the first of PREFERRED it can make (the owner: "an army of spearmen waiting"),
--- else the cheapest (by the sum of its cost)
-local PREFERRED = {inf04_phalanx = 1, inf02_spearman = 2}
-local function soldier_classes(view)
-    local best = {}
-    for _, c in ipairs(view.costs) do
-        if not c.building and c.military and c.producer ~= nil then
-            for _, k in ipairs(TRAINERS) do
-                if c.producer == k then
-                    local s = V.sum(c.cost)
-                    local rank = PREFERRED[c.type] or 100
-                    if best[k] == nil or rank < best[k].rank or (rank == best[k].rank and s < best[k].sum) then
-                        best[k] = {type = c.type, sum = s, cost = c, rank = rank}
-                    end
-                end
-            end
-        end
-    end
-    return best
 end
 
 -- the sites holding a resource, the home ones (the start resources by the town) first, then nearest first (patch:
@@ -250,6 +281,9 @@ end
 -- a site the gatherers can be sent to now: no enemy or danger near, not by another player's land (a claimed site not
 -- seen yet is gathered from all the same: the first gatherer there explores it)
 local function open_site(s)
+    if D.site_blocked(s.x, s.y) then
+        return false   -- (lib.defence hurt_safety: hurt there lately, AI_RESEARCH §8.41)
+    end
     return s.blocked == nil or s.blocked == "unexplored"
 end
 
@@ -307,7 +341,10 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
     if want_sites > most then
         want_sites = most
     end
-    local reach = patch and range or FAR_REACH
+    -- (ECON.order, the owner: "only claim iron/gold near home") the minerals within the claim range only
+    -- (C7: the minerals within the town's own area, the claim range and a drop site's reach past it; safe_site keeps
+    -- them on the town's side, never toward the enemy)
+    local reach = patch and range or (ECON.order and range + ORDER_MINE_REACH or FAR_REACH)
     local kept, places, open, open_places = 0, 0, 0, 0
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
@@ -353,10 +390,29 @@ local function release_unkept(view, order, keep)
     end
 end
 
+-- a variant's settings before the game starts (ai/boom_order.lua; each seat has its own Lua state, so a variant's
+-- module changes only its own seat): econ = ECON switches, plan = PLAN fields from the Stone Age on, defence =
+-- lib.defence options
+function M.configure(o)
+    for k, v in pairs(o.econ or {}) do
+        ECON[k] = v
+    end
+    for age = 2, #PLAN do
+        for k, v in pairs(o.plan or {}) do
+            PLAN[age][k] = v
+        end
+    end
+    for k, v in pairs(o.defence or {}) do
+        D.opts[k] = v
+    end
+    return M
+end
+
 function M.init(view, memory)
     memory.backoff = {}
     memory.tags = {}
     memory.threat_until = 0
+    D.setup()   -- (the engine's militia and danger-zone reflexes off: lib.defence does both)
     local parts = {}
     for _, t in ipairs({"citizen", "b_barracks", "b_settlement", "b_guard_tower_paleo", "inf01_clubman",
                         "inf01_rock_thrower"}) do
@@ -395,7 +451,20 @@ function M.step(view, memory)
             -- its tiles are in sight)
             memory.settle_at[memory.spots[i]] = nil
         end
-        if tag ~= nil and r.code == "refused" and tag == "improve" then
+        if tag == "tech" and r.code == "refused" and memory.tech_last ~= nil and memory.techs ~= nil then
+            -- (a gathering tech refused: busy, no producer yet; tried again later; not in this epoch: next epoch)
+            memory.tech_fail = memory.tech_fail or {}
+            local n = (memory.tech_fail[memory.tech_last] or 0) + 1
+            memory.tech_fail[memory.tech_last] = n
+            memory.techs[memory.tech_last] = n >= 3 or nil   -- (three refusals: given up, the next one comes)
+            memory.backoff[tag] = view.time + BACKOFF_MS
+        end
+        if tag ~= nil and r.code == "refused" and tag == "improve_atk" then
+            if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
+                memory.improved_atk = memory.improve_atk_class
+            end
+            memory.backoff[tag] = view.time + BACKOFF_MS
+        elseif tag ~= nil and r.code == "refused" and tag == "improve" then
             -- a tower improvement: no level left waits for the next tower class, else a minute
             if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
                 memory.improved = memory.improve_class
@@ -448,6 +517,25 @@ function M.step(view, memory)
     end
     local age = view.epoch < 2 and view.epoch + 1 or 3
     local plan = PLAN[age]
+    if ECON.places and plan.places ~= nil then
+        local p = {}
+        for k, v in pairs(plan) do
+            p[k] = v
+        end
+        for k, v in pairs(plan.places) do
+            p[k] = v
+        end
+        plan = p
+    end
+    -- (ECON.order) the phase of the owner's build order, its plan overlay; memory.phase is the army's signal
+    local phase = nil
+    if ECON.order then
+        phase = BO.phase(view, memory)
+        plan = BO.plan(plan, phase)
+    end
+    if plan.army_per ~= nil then
+        plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
+    end
     local citizen = V.cost(view, "citizen")
     local in_epoch = (view.time - view.epoch_start) // 60000
     local towers, towers_built, towers_busy = tower_counts(view)
@@ -485,10 +573,33 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (plan.emergency, off; AI_RESEARCH §8.41 D6, balanced's prehistoric_army "unless a stronger enemy is near"): while
+    -- a wave of lib.defence's wave size is seen in the claim range, up to this many soldiers (and a barracks), the
+    -- reserve giving way; none once it has been gone 60 s
+    local emergency = false
+    if plan.emergency ~= nil then
+        for _, cl in ipairs(D.clusters()) do
+            local r = view.claim_range + 5
+            local dx, dy = cl.x - view.town_x, cl.y - view.town_y
+            if cl.n >= D.opts.wave_size and dx * dx + dy * dy <= r * r then
+                memory.emergency_until = view.time + 60000
+            end
+        end
+        emergency = view.time <= (memory.emergency_until or -1)
+        if emergency then
+            soldiers_wanted = math.max(soldiers_wanted, plan.emergency)
+        end
+    end
+    -- (plan.raid, the owner's build order: the raid force on top while it builds, the home reserve beside it while
+    -- it is out; lib.raid)
+    if plan.raid or memory.raid ~= nil then
+        soldiers_wanted = math.min(RD.wanted(memory, soldiers_wanted), math.max(plan.soldiers_max, soldiers_wanted))
+    end
     local army_short = view.army_count < soldiers_wanted
     -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
     -- stand in for an empty army: they cover only the land round them)
-    local scramble = threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers)
+    local scramble = (threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers))
+        or (emergency and army_short)
 
     -- saving for the next epoch: once the town has its citizens (or the epoch has run long) the reserve holds the
     -- advance's cost, and the advance is asked for only when it is paid. From the Stone Age the gold and iron are kept
@@ -496,9 +607,33 @@ function M.step(view, memory)
     local last = view.epoch >= view.last_epoch
     local saving = not last and not view.advancing
         and (view.citizens >= plan.save_at or in_epoch >= plan.save_after)
+    -- (§8.51, seed 2 against Age of AI: 20 minutes into the Copper Age the stock held the Bronze Age's cost twice over,
+    -- 4284 food, 1296 gold and iron, and the town waited for save_after) a cost the stock already holds is saved for
+    if ECON.paid_go and age >= 3 and not last and not view.advancing and not saving then
+        local holds = true
+        for _, r in ipairs(V.resources) do
+            holds = holds and view.stock[r] >= view.next_epoch_cost[r]
+        end
+        saving = holds
+    end
+    if ECON.order and not last and not view.advancing then
+        saving = BO.saving(view, memory, phase, saving)
+    end
+    -- (lib.demand, balanced's epoch_pressure start/full) the reserve ramps up to the advance's cost
+    local pressure = saving and 100 or 0
+    if ECON.ramp and plan.save_ramp ~= nil and not last and not view.advancing then
+        pressure = DM.pressure(plan.save_ramp, view.time - view.epoch_start, view.citizens)
+        saving = pressure > 0
+    end
     local cost = view.next_epoch_cost
     -- the light army comes before the reserve: what its missing soldiers cost is left out of it
     local missing = plan.soldiers - view.army_count
+    if ECON.army_slack and in_epoch >= ARMY_FIRST_MIN then
+        -- (§8.43) past the soldiers-first window the reserve leaves out only the first three quarters of the light
+        -- army: a town 2 soldiers short (iron-bound, 18 of 20) kept the reserve at 0 for 10 minutes, and the citizens
+        -- took the Copper Age's food
+        missing = plan.soldiers * 3 // 4 - view.army_count
+    end
     local soldier_cost = nil
     for _, c in ipairs(view.costs) do
         if not c.building and c.military and c.producer == "b_barracks"
@@ -518,12 +653,51 @@ function M.step(view, memory)
     local function guarded(r)
         return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
     end
+    -- (balanced's claim_needed) an advance with a resource short that no site the gatherers can reach holds and
+    -- nobody gathers reserves nothing: the town never stalls saving for what it cannot gather
+    local unreachable = false
+    for _, r in ipairs(V.resources) do
+        if ECON.unreachable and r ~= "food" and cost[r] > view.stock[r] and no_site[r] == true
+                and (view.gatherers[r] or 0) == 0 then
+            unreachable = true
+        end
+    end
+    -- the epoch account (ECON.account): a share of each step's gathering, kept per resource; emptied when the epoch
+    -- changes or the advance is under way
+    memory.acc = memory.acc or {}
+    memory.acc_frac = memory.acc_frac or {}
+    if ECON.account and plan.epoch_share ~= nil and view.income_total ~= nil then
+        local was = memory.acc_seen or {}
+        local fresh = memory.acc_epoch ~= view.epoch or view.advancing
+        for _, r in ipairs(V.resources) do
+            local got = math.max((view.income_total[r] or 0) - (was[r] or view.income_total[r] or 0), 0)
+            if fresh then
+                memory.acc[r], memory.acc_frac[r] = 0, 0
+            else
+                local f = (memory.acc_frac[r] or 0) + got * plan.epoch_share
+                memory.acc[r] = math.min((memory.acc[r] or 0) + f // 100, cost[r])
+                memory.acc_frac[r] = f % 100
+            end
+        end
+        memory.acc_epoch = view.advancing and -1 or view.epoch
+        memory.acc_seen = {}
+        for _, r in ipairs(V.resources) do
+            memory.acc_seen[r] = view.income_total[r] or 0
+        end
+    end
     local reserve, differs = {}, false
+    local epoch_need = {}   -- the advance's whole cost of each resource kept (the gatherers' target, ECON.full_target)
     for _, r in ipairs(V.resources) do
         local want = 0
-        local kept = not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron")))
+        -- (ECON.order: only while saving; the raid force's spearmen, 30 food and 30 iron each, wait on no reserve)
+        local kept = not last and not view.advancing and not unreachable
+            and (saving or (age >= 2 and (r == "gold" or r == "iron") and not ECON.order))
         if kept then
             want = cost[r]
+            epoch_need[r] = cost[r]
+            if pressure < 100 and not (age >= 2 and (r == "gold" or r == "iron")) then
+                want = cost[r] * pressure // 100 // 50 * 50   -- (in steps of 50: the reserve changes seldom)
+            end
             if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 and not guarded(r) then
                 -- the missing light army is never locked out by the reserve: at most the stock less what it costs
                 -- (in steps of 100, so the reserve changes seldom)
@@ -534,8 +708,46 @@ function M.step(view, memory)
         if scramble and r ~= "stone" and not (kept and guarded(r)) then
             want = 0
         end
+        -- (§8.43) the epoch's reserve never shrinks while it is kept: the missing light army's cap follows the stock,
+        -- so with the army short of iron (18 of 20) the food reserve went to 0 for 10 minutes and the citizens ate the
+        -- Copper Age's food. Ratcheted, what came in stays saved; the soldiers (and citizens) share only the margin
+        -- of the missing soldiers' cost above it
+        memory.res_floor = memory.res_floor or {}
+        if ECON.ratchet then
+            if kept and want > 0 and not scramble and memory.res_epoch == view.epoch then
+                want = math.max(want, math.min(memory.res_floor[r] or 0, cost[r]))
+            end
+            memory.res_floor[r] = (kept and not scramble) and want or 0
+        end
+        -- (§8.43, Age of AI's epoch account, ai/ageofai/econ.lua after upstream econ.c by Grille and the Age of AI
+        -- contributors, GPL-3.0): from the plan's account_epoch on, the reserve is an account that takes
+        -- plan.epoch_share percent of what is gathered (the remainder carried, PORT_LEARNINGS), up to the advance's
+        -- cost; the rest of the income is free for the army and the citizens. Upstream's army took 65% from farms on
+        -- and out-grew boom after 90 minutes (139 citizens / 64 soldiers against 102 / 25)
+        if ECON.account and plan.epoch_share ~= nil and kept and not scramble then
+            want = math.min(cost[r], memory.acc[r] or 0)
+        end
         reserve[r] = want
         differs = differs or reserve[r] ~= view.reserve[r]
+    end
+    memory.res_epoch = view.epoch
+    -- (ECON.order) the Prehistoric bank: wood is kept while the Stone Age is saved for (the dock and the boats come first)
+    -- (only while saving: banked from 26 citizens the settlements waited, the patches had no drop site, the food places
+    -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
+    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK then
+        reserve.wood = BO.WOOD_BANK
+        differs = differs or reserve.wood ~= view.reserve.wood
+    end
+    -- (the army's priority spends, boom-defence: memory.priority_spend = the cost of what its answer still has to buy,
+    -- the guard's warships and the towers' attack upgrade; the reserve gives way to it ahead of the epoch's save)
+    if memory.priority_spend ~= nil then
+        for _, r in ipairs(V.resources) do
+            local cut = memory.priority_spend[r] or 0
+            if cut > 0 and reserve[r] > 0 then
+                reserve[r] = math.max(reserve[r] - cut, 0)
+                differs = differs or reserve[r] ~= view.reserve[r]
+            end
+        end
     end
     if differs then
         order("reserve", {verb = "reserve", food = reserve.food, wood = reserve.wood, stone = reserve.stone,
@@ -544,6 +756,13 @@ function M.step(view, memory)
     local paid = true
     for _, r in ipairs(V.resources) do
         paid = paid and view.stock[r] >= cost[r]
+    end
+    -- (ECON.order: the Prehistoric advance waits for the food the Stone Age's first soldiers need on top of its cost;
+    -- spent to 3-48 food, the town stood 5-10 minutes with 0-4 of 8 soldiers under raids, boom-defence's seeds 4, 24)
+    -- (C3: it put the Stone Age 2 minutes later, 27.1 against 25.1 against the improved classic, and the owner's own
+    -- bank came from his income: BO.FOOD_BANK 0 until the Prehistoric food is his)
+    if ECON.order and phase == "pre" and BO.FOOD_BANK > 0 and view.stock.food < cost.food + BO.FOOD_BANK then
+        paid = false
     end
     if saving and view.sol_missing == 0 and paid then
         order("advance", {verb = "advance"})
@@ -557,7 +776,7 @@ function M.step(view, memory)
     if planned >= cap and view.stock.food >= reserve.food + 100 then
         cap = plan.citizens_max
     end
-    if plan.army_first then
+    if plan.army_first and not ECON.parallel then
         -- the soldiers first: while the army and the soldiers coming are short of the plan, the citizens are only
         -- replaced up to the last epoch's count (for ARMY_FIRST_MIN minutes at most)
         local coming = 0
@@ -573,14 +792,19 @@ function M.step(view, memory)
     -- (§8.35, the owner: "if there is only 12 spots for a resource available, use only that 12"): in the Prehistoric no
     -- more citizens than the patches, the game near the town, the planned wood and the mines' places can take (from
     -- the Stone Age the claims grow with the town: a cap there kept iron at one site and the Copper Age 7 min later)
-    if age == 1 and memory.useful ~= nil and cap > memory.useful then
+    -- (ECON.useful_cap, §8.51: from the Copper Age the citizens past the places stood on wood, 26-35 on it against 3-20
+    -- wanted, in every matchup)
+    -- (ECON.order: not in the Stone Age, where the owner trains on without a pause, 35 to 86 in 15 minutes; capped at
+    -- the touched places the town grew by 1.5 a minute and the town centres stood idle 2780 s by minute 60)
+    if (age == 1 or (ECON.useful_cap and age >= 3) or (ECON.order and (age ~= 2 or not BO.OPT.stone_uncap))) and memory.useful ~= nil
+            and cap > memory.useful then
         cap = memory.useful
     end
     -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
     -- soldiers-first window, while the light army is short and the food gatherers fill the food places, a citizen is
     -- trained only from the food above what two soldiers cost, when the soldiers' other resource is in stock (the
     -- citizens took every 50 food as it came in, and the army was 5 at 30 minutes)
-    if plan.army_first and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
+    if plan.army_first and not ECON.parallel and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
             and view.gatherers.food >= ((memory.want or {}).food or 0) then
         local soldiers_payable = true
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
@@ -592,9 +816,17 @@ function M.step(view, memory)
             cap = math.min(cap, planned)
         end
     end
-    if citizen and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
+    -- (ECON.order, lib.raid: memory.raid.priority while the raid force trains) no new citizens are queued then
+    local yield = ECON.order and memory.raid ~= nil and memory.raid.priority == true
+    if citizen and not yield and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
             and view.population < view.population_cap then
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
+    end
+    ES.step(view, memory, view.citizens + making < cap)
+    memory.econ = memory.econ or {}
+    if ECON.tc or (ECON.order and age >= 2) then
+        EU.town_centers(view, memory.econ, {want = plan.town_centers, min_citizens = plan.tc_at,
+                                              float = plan.tc_float, safe = not threatened})
     end
 
     local tower = tower_class(view)
@@ -606,7 +838,17 @@ function M.step(view, memory)
         -- next epoch's first minutes), within the plan's floor and cap; food takes the rest and never less than its
         -- share (less once the advance's food is paid: food is finite until the farms)
         local land = view.citizens
-        local target = stock_targets(view, plan, reserve, towers, soldiers_wanted)
+        -- (§8.43) the gatherers aim at the advance's whole cost, not at the reserve the missing army has lowered: with
+        -- the light army short of iron the iron reserve was 0, the stock above the bank, no iron gatherer was wanted
+        -- and the army and the Copper Age both waited on iron for the rest of the game
+        local aim = reserve
+        if ECON.full_target or ECON.account then   -- (an account fills slowly: the gatherers aim at the cost)
+            aim = {}
+            for _, r in ipairs(V.resources) do
+                aim[r] = math.max(reserve[r], epoch_need[r] or 0)
+            end
+        end
+        local target = stock_targets(view, plan, aim, towers, soldiers_wanted)
         local want = {}
         local others = 0
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
@@ -623,8 +865,18 @@ function M.step(view, memory)
             if n > plan.cap[r] then
                 n = plan.cap[r]
             end
+            -- (§8.51, seed 2 against the improved classic: from the Stone Age wood piled to 1000-3000 with 12-16
+            -- gatherers on it while the Copper Age waited on gold and food) a surplus keeps only a few on wood
+            if ECON.wood_surplus and r == "wood" and view.stock.wood > target.wood + WOOD_SURPLUS then
+                n = math.min(n, WOOD_SURPLUS_KEEP)
+            end
             want[r] = n
             others = others + n
+        end
+        -- (ECON.order) the phase's exact gatherers, filled in the owner's order as the citizens come
+        if ECON.order then
+            want = BO.fill(phase, land)
+            others = want.wood + want.stone + want.gold + want.iron
         end
         local share = plan.food_share
         if saving and view.stock.food >= reserve.food + 200 then
@@ -637,7 +889,7 @@ function M.step(view, memory)
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
             needed[r] = math.max(target[r] - view.stock[r], 0) // PER_GATHERER
         end
-        while others > 0 and land - others < food_min do
+        while not ECON.order and others > 0 and land - others < food_min do
             local big, big_n = nil, nil
             -- (while the army is short the soldiers' iron gives way only when nothing else is left: the Copper Age's
             -- gold counted as the larger lack, so iron went to 0 in a third of the bench's Stone Age minutes and the
@@ -647,6 +899,12 @@ function M.step(view, memory)
                 if army_short and r == "iron" then
                     spare = -1000000
                 end
+                -- (§8.43) nor wood up to its floor while the wood is under 150: in the Stone Age the settlements by
+                -- the gold and iron mines were queued for minutes unpaid (wood 5-55), so the Copper Age's metals had
+                -- no drop site and no gatherer
+                if ECON.wood_floor and r == "wood" and view.stock.wood < 150 and want.wood <= plan.floor.wood then
+                    spare = -999999
+                end
                 if want[r] > 0 and (big_n == nil or spare > big_n) then
                     big, big_n = r, spare
                 end
@@ -654,9 +912,25 @@ function M.step(view, memory)
             want[big] = want[big] - 1
             others = others - 1
         end
-        want.food = land - others
+        if not ECON.order then
+            want.food = land - others
+        end
         if want.food < 0 then
             want.food = 0
+        end
+        -- (lib.demand, balanced's surplus / low_stock rules) half the gatherers off a resource piled past 1000, and a
+        -- floor share for one the plan wants that is under 150 (the Stone Age's wood sat at 0-50 for 30 minutes with
+        -- no gatherer: no boats, settlements or towers), taken from gold, stone and iron (iron kept while the army is
+        -- short), then from food down to 4 under its minimum (with food and the army's iron the whole town, nothing
+        -- else could give, §8.43); wood's floor 15% (the owner's 10-15 on wood in the Stone Age)
+        if ECON.demand and not ECON.order then
+            local lacks = {wood = true}
+            for _, r in ipairs({"stone", "gold", "iron"}) do
+                lacks[r] = target[r] > view.stock[r]
+            end
+            DM.correct(want, land, view.stock, reserve, {lacks = lacks, give = {"gold", "stone", "iron", "food"},
+                floor = {food = 10, wood = 15, stone = 5, gold = 5, iron = 5},
+                keep = {iron = army_short and want.iron or 0, food = math.max(food_min - 4, 0)}})
         end
         -- claims: forage patches for the food gatherers (the hunters take the rest), the minerals' nearest sites for
         -- theirs; the claim grows only when no patch is left in it, and never past the plan's reach. A mineral with no
@@ -685,8 +959,19 @@ function M.step(view, memory)
             hunt_cap = math.max(hunt_cap, plan.food - patch_places)
             hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         end
+        -- (§8.43, the defence agent's seed 7: the forage ran out before the Stone Age, 24-29 citizens on 5-55 food a
+        -- minute for 25 minutes) with fewer food places than half the plan's food the claim, and with it the hunting
+        -- and the patches, may grow to claim_dry
+        local claim_max = plan.claim_max
+        -- (ECON.order, §8.51, boom-defence's o4b: in 12 of 14 lost towns the Stone Age's forage ran out before the Copper
+        -- Age was paid, the food gatherers fell from 18 to 0-7 and the save stalled 37-96 minutes) the claim, and with it
+        -- the patches and the hunting, reaches out while the food places are short
+        if (ECON.food_dry or (ECON.order and BO.OPT.food_reach)) and plan.claim_dry ~= nil
+                and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
+            claim_max = math.max(claim_max, plan.claim_dry)
+        end
         if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
-                and range < math.min(plan.claim_max, view.claim_range_max) then
+                and range < math.min(claim_max, view.claim_range_max) then
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
@@ -702,7 +987,12 @@ function M.step(view, memory)
                     unsettled_r[s.index] = true
                 end
             end
-            local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range, unsettled_r)
+            -- (ECON.order: the mines are claimed, and so settled, for the phase's whole target ahead of the citizens)
+            local claim_want = want[r]
+            if ECON.order and BO.OPT.claim_target then
+                claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
+            end
+            local places, c = claim_sites(view, order, keep, r, false, claim_want, plan.mine_sites or 3, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -711,6 +1001,29 @@ function M.step(view, memory)
             if want[r] > places then
                 want.food = want.food + want[r] - places
                 want[r] = places
+            end
+        end
+        -- (ECON.order, §8.51: no gatherers on a mine until its touching settlement stands, they would walk to the
+        -- town centre) the mines' places counted only where a drop site touches the mine; memory.settle_short: a kept
+        -- mine waits for its settlement (it comes before any other wood spend)
+        local touched_places = {stone = 0, gold = 0, iron = 0}
+        memory.settle_short = false
+        if ECON.order then
+            for _, s in ipairs(view.sites) do
+                if keep[s.index] and not s.patch then
+                    for _, r in ipairs(MINERALS) do
+                        if s.holds[r] > 0 and (want[r] > 0 or BO.most(phase, r) > 0) then
+                            -- (the mine units a drop site touches, the mining limit each: gatherers on a unit 4 tiles
+                            -- past the settlement walk too)
+                            local rids = ai.resources{kind = r, source = "mine", near = {s.x, s.y, 6}, limit = 8}
+                            local n = #rids > 0 and PL.touched_units(rids) or 0
+                            touched_places[r] = touched_places[r] + math.min(n * SITE_PLACES, places_of(s, r))
+                            if #rids > 0 and n == 0 then
+                                memory.settle_short = true
+                            end
+                        end
+                    end
+                end
             end
         end
         -- no more on food than it has places for (§8.35: 16 on two patches of 6, the rest waiting; the owner: "if
@@ -727,6 +1040,9 @@ function M.step(view, memory)
                 spill = spill - n
             end
             local n = math.min(spill, math.max(plan.cap.wood - want.wood, 0))
+            if ECON.wood_surplus and view.stock.wood > target.wood + WOOD_SURPLUS then
+                n = 0   -- (the rest wait for places rather than pile more wood)
+            end
             want.wood = want.wood + n
         end
         local useful = food_cap + plan.cap.wood + 2
@@ -735,15 +1051,51 @@ function M.step(view, memory)
         end
         memory.useful = useful
         memory.food_cap = food_cap
+        -- (ECON.order) the fill again within the places the claims found: a resource with no room passes its step on
+        -- (the engine put the extra on gold: 5 on it against the owner's 2), and the citizens are capped at the work
+        if ECON.order then
+            -- (food has no room limit: past the patches the engine hunts what it finds; capped at the patches' 6 a
+            -- Prehistoric town on one patch starved to 20 citizens and was raided out, seed 14)
+            -- (§8.51 O5: the mines' room counted from the touched units only starved the metals, gold and iron 12 a
+            -- minute, 14 defeats; the deposit trace shows a working mine gatherer at the requirement's pace without
+            -- it, 151-160 s a load: the claimed places again, the touched ones only in the order line)
+            local room = {stone = mineral_places.stone, gold = mineral_places.gold, iron = mineral_places.iron}
+            -- (what the phase wants at its whole target, before the touched places: the settlements follow it, ahead
+            -- of the citizens)
+            local target = BO.fill(phase, plan.citizens_max)
+            memory.plan_want = {}
+            for _, r in ipairs(V.resources) do
+                memory.plan_want[r] = math.max(want[r] or 0, target[r] or 0)
+            end
+            want = BO.fill(phase, land, room)
+            -- (the army's priority spends, memory.priority_spend: up to 4 from food to wood while the stock lacks the wood)
+            local ps = memory.priority_spend
+            if ps ~= nil and (ps.wood or 0) > view.stock.wood then
+                local k = math.max(math.min(4, want.food - 12), 0)
+                want.food, want.wood = want.food - k, want.wood + k
+            end
+            -- (a mine's settlement waits on wood: up to 4 more on wood until it is paid)
+            local settle = V.cost(view, "b_settlement")
+            if false and memory.settle_short and settle ~= nil and view.stock.wood < settle.cost.wood * 2 then
+                local k = math.max(math.min(4, want.food - 12), 0)
+                want.food, want.wood = want.food - k, want.wood + k
+            end
+            memory.order_room = room   -- (the developed test: the mines' places)
+            memory.touched_room = touched_places   -- (the order line's tplaces)
+            memory.useful = BO.capacity(phase, room)
+        end
         release_unkept(view, order, keep)
         memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
 
-        local tower_wanted = tower ~= nil and towers < plan.towers
+        -- (plan.towers_saving: the towers wanted once the next epoch is reserved - the reserve keeps them off its cost;
+        -- AI_RESEARCH §8.41 D3c)
+        local tower_target = saving and plan.towers_saving or plan.towers
+        local tower_wanted = tower ~= nil and towers < tower_target
         local boats_changed = (memory.boats_seen or -1) ~= view.boats
         memory.boats_seen = view.boats
         for _, r in ipairs(V.resources) do
             if want[r] ~= view.wanted[r] or (r == "food" and boats_changed) then
-                order("gather_" .. r, {verb = "gather", resource = r, n = want[r]})
+                order("gather_" .. r, {verb = "gather", resource = r, n = want[r], exact = ECON.order and 1 or nil})
             end
         end
         memory.want = want
@@ -763,6 +1115,7 @@ function M.step(view, memory)
                 memory.settle_at[k] = nil
             end
         end
+        local swant = ECON.order and memory.plan_want or want   -- (ECON.order: the phase's want, not the touched)
         if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements then
             local wanted = {}
             for _, s in ipairs(view.sites) do
@@ -771,9 +1124,35 @@ function M.step(view, memory)
                     local rank = nil
                     -- (by resource: a centre's iron may lie 6 tiles from the settlement by its gold)
                     for _, r in ipairs({"food", "iron", "gold", "stone"}) do
-                        if want[r] > 0 and s.holds[r] > 0 and s.drop[r] == 0 and (r ~= "food" or s.patch)
+                        if swant[r] > 0 and s.holds[r] > 0 and s.drop[r] == 0 and (r ~= "food" or s.patch)
                                 and (rank == nil or SETTLE_RANK[r] < rank) then
                             rank = SETTLE_RANK[r]
+                        end
+                    end
+                    -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
+                    -- site, but the gatherers walk: it gets its own touching settlement)
+                    -- (from the start too: the owner's rule, every patch and mine has its own touching settlement)
+                    if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                            or s.holds.stone > 0) then
+                        local kinds = {}
+                        for _, r in ipairs({"food", "iron", "gold", "stone"}) do
+                            if swant[r] > 0 and s.holds[r] > 0 and (r ~= "food" or s.patch) then
+                                kinds[#kinds + 1] = r
+                            end
+                        end
+                        local rids = {}
+                        for _, r in ipairs(kinds) do
+                            for _, id in ipairs(ai.resources{kind = r, source = r == "food" and "bush" or "mine",
+                                                            near = {s.x, s.y, 6}, limit = 8}) do
+                                rids[#rids + 1] = id
+                            end
+                        end
+                        if #rids > 0 and not PL.touched(rids) then
+                            for _, r in ipairs(kinds) do
+                                if rank == nil or SETTLE_RANK[r] < rank then
+                                    rank = SETTLE_RANK[r]
+                                end
+                            end
                         end
                     end
                     if rank ~= nil then
@@ -782,7 +1161,7 @@ function M.step(view, memory)
                 end
             end
             local w = view.wood
-            if w ~= nil and not w.ready and not w.has_drop and want.wood > 0
+            if w ~= nil and not w.ready and not w.has_drop and swant.wood > 0
                     and our_side(view, w.x, w.y, w.distance, false)
                     and memory.bad_spots["w" .. w.x .. "," .. w.y] == nil
                     and memory.settle_at["w" .. w.x .. "," .. w.y] == nil then
@@ -803,7 +1182,44 @@ function M.step(view, memory)
             for _, c in ipairs(wanted) do
                 if going < SETTLE_AT_ONCE and total < plan.settlements then
                     local placed = false
-                    if c.site ~= nil then
+                    -- (ECON.order, §8.51, the owner: every settlement directly touches its resource; lib.place finds
+                    -- the touching tile and builds there; the wood above the reserve pays)
+                    local settle_cost = V.cost(view, "b_settlement")
+                    local payable = settle_cost ~= nil and view.stock.wood - reserve.wood >= settle_cost.cost.wood
+                    if ECON.order and BO.OPT.place and c.site ~= nil then
+                        local s = c.site
+                        local rids = {}
+                        local function add(list)
+                            for _, id in ipairs(list) do
+                                rids[#rids + 1] = id
+                            end
+                        end
+                        if s.patch then
+                            add(ai.resources{kind = "food", source = "bush", near = {s.x, s.y, 6}, limit = 12})
+                        end
+                        for _, r in ipairs(MINERALS) do
+                            if s.holds[r] > 0 and (s.drop[r] == 0 or s.home) and swant[r] > 0 then
+                                add(ai.resources{kind = r, source = "mine", near = {s.x, s.y, 6}, limit = 8})
+                            end
+                        end
+                        if payable and #rids > 0 then
+                            local got = PL.request(view, memory, spot_of(s), "b_settlement", rids, s.x, s.y)
+                            placed = got == "building" or got == "walking"
+                            if placed then
+                                memory.settle_at[spot_of(s)] = view.time
+                            end
+                        end
+                    elseif ECON.order and BO.OPT.place then
+                        local spot = "w" .. c.x .. "," .. c.y
+                        local rids = ai.resources{kind = "wood", source = "tree", near = {c.x, c.y, 3}, limit = 10}
+                        if payable and #rids > 0 then
+                            local got = PL.request(view, memory, spot, "b_settlement", rids, c.x, c.y)
+                            placed = got == "building" or got == "walking"
+                            if placed then
+                                memory.settle_at[spot] = view.time
+                            end
+                        end
+                    elseif c.site ~= nil then
                         placed = order("settlement", {verb = "build", type = "b_settlement", near = "site",
                                                       site = c.site.index}, spot_of(c.site))
                         if placed then
@@ -825,16 +1241,54 @@ function M.step(view, memory)
             end
         end
 
+        -- (ECON.order, §8.51, the owner takes the town centre's gathering techs at once, epoch by epoch) one at a time,
+        -- from the food and wood above the reserve
+        if ECON.order and BO.OPT.techs and not view.advancing then
+            local tech = BO.next_tech(view, memory)
+            if tech ~= nil and view.stock.food - reserve.food >= 100 and view.stock.wood - reserve.wood >= 75
+                    and order("tech", {verb = "research", tech = tech}) then
+                memory.techs[tech] = true
+                memory.tech_last = tech
+            end
+        end
+
         -- (§8.35, the owner: "upgrading tower range is worth it for AI") the towers' range, a level at a time, once
         -- three towers stand, from the Stone Age, never out of the reserve (the verb keeps it)
-        if age >= 2 and tower ~= nil and towers_built >= 3 and not scramble and memory.improved ~= tower then
+        local ships_seen = plan.tower_up_ships and memory.def ~= nil and memory.def.ships_seen ~= nil
+        if age >= 2 and tower ~= nil and (towers_built >= 3 or ships_seen) and (not scramble or ships_seen)
+                and memory.improved ~= tower then
             memory.improve_class = tower
             order("improve", {verb = "improve", type = tower, what = "range"})
+        end
+        -- (plan.tower_up_ships, the owner's frigates: the towers' attack too once a warship has been seen)
+        if ships_seen and tower ~= nil and memory.improved_atk ~= tower then
+            memory.improve_atk_class = tower
+            order("improve_atk", {verb = "improve", type = tower, what = "attack"})
         end
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
         -- threat one more at the town
-        if tower_wanted and not towers_busy and view.citizens >= 10 then
+        -- (ECON.order, the owner: the fishing boats protected from mid-Stone) a tower at each of the army's boat spots
+        -- (memory.boat_towers, boom-defence's: by the dock and the fishing grounds), ahead of the other towers
+        if ECON.order and tower ~= nil and age >= 2 and phase ~= "stone_start" and not towers_busy
+                and memory.boat_towers ~= nil then
+            for _, b in ipairs(memory.boat_towers) do
+                if b.x ~= nil and b.y ~= nil and not towers_busy then
+                    local near = 0
+                    for _, t in ipairs(TOWER_CLASSES) do
+                        near = near + #ai.units{type = t, near = {b.x, b.y, 4}, limit = 1}
+                    end
+                    if near == 0 and memory.bad_spots["bt" .. b.x .. "," .. b.y] == nil
+                            and order("tower_boats", {verb = "build", type = tower, near = "tile", x = b.x, y = b.y},
+                                      "bt" .. b.x .. "," .. b.y) then
+                        towers_busy = true
+                    end
+                end
+            end
+        end
+        -- (ECON.order) while the Stone Age's boats come, the bank's wood goes to the dock and the boats first
+        local hold = ECON.order and BO.holds_wood(view, phase)
+        if tower_wanted and not towers_busy and view.citizens >= (plan.tower_at or 10) and not hold then
             if towers == 0 or (threatened and towers < 2) then
                 order("tower_town", {verb = "build", type = tower, near = "town"})
             else
@@ -888,11 +1342,18 @@ function M.step(view, memory)
         -- the town grows or a threat comes
         local barracks = V.buildings(view, "b_barracks")
         local ranges = V.buildings(view, "b_archery_range")
-        if view.citizens >= (plan.barracks_at or 10) and V.total(barracks) < 1 then
+        -- (ECON.order: a mine's settlement first, the barracks and the range wait while one is short of wood)
+        local settle_first = false   -- (§8.51 O5: holding the barracks for the mines' settlements cost defeats)
+        -- (ECON.order, C1: the Stone Age's food sat at 3-43 for its first 15 minutes, the town centres idle; the boats
+        -- that would feed it waited on wood, 20-60 in stock, while the second barracks and the range took 400+: they
+        -- wait for the boats, as the owner's "a dock and 10 fishing boats at once")
+        if settle_first or hold then
+            -- (nothing)
+        elseif (view.citizens >= (plan.barracks_at or 10) or emergency) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
         elseif age >= 2 and V.cost(view, "b_archery_range") ~= nil and not going_up(barracks)
                 and not going_up(ranges) then
-            if plan.army_first and V.total(barracks) < plan.barracks then
+            if (plan.army_first or ECON.order) and V.total(barracks) < plan.barracks then
                 order("barracks", {verb = "build", type = "b_barracks", near = "town"})   -- the army's second barracks
             elseif V.total(ranges) < 1 and plan.ranges > 0 then
                 order("range", {verb = "build", type = "b_archery_range", near = "town"})
@@ -913,7 +1374,11 @@ function M.step(view, memory)
                     patch_room = patch_room + s.room
                 end
             end
-            if V.total(granaries) < 1 and V.cost(view, "b_granary") ~= nil then
+            if ECON.order and V.total(granaries) < plan.granaries and not going_up(granaries)
+                    and V.cost(view, "b_granary") ~= nil then
+                -- (the owner: 3 granaries at once in the Copper Age, the patch workers and hunters farm them)
+                order("granary", {verb = "build", type = "b_granary", near = "town"})
+            elseif V.total(granaries) < 1 and V.cost(view, "b_granary") ~= nil then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})
             elseif (farms == nil or farms.queued < 2) and V.total(farms) < plan.farms
                     and patch_room < food_wanted - view.gatherers.food + 4 then
@@ -927,79 +1392,124 @@ function M.step(view, memory)
     -- the soldiers, from each trainer in turn, while the army is short (the reserve keeps them off the advance's
     -- resources unless the town scrambles)
     if army_short then
-        local classes = soldier_classes(view)
-        local queued = 0
-        for _, k in ipairs(TRAINERS) do
-            local c = classes[k]
-            if c ~= nil then
-                queued = queued + c.cost.requested + c.cost.in_production
-            end
-        end
-        local need = soldiers_wanted - view.army_count - queued
-        for _, k in ipairs(TRAINERS) do
-            local c = classes[k]
-            if need > 0 and c ~= nil and c.cost.producers > 0 and c.cost.requested == 0 then
-                local n = math.min(need, scramble and 3 or 2)
-                order("soldier_" .. k, {verb = "train", type = c.type, n = n})
-                need = need - n
-            end
-        end
+        -- (lib.guard: the classes by the mix for the raiders seen, AI_RESEARCH §8.41)
+        -- (lib.raid: while the Stone raid's force builds, 3 an order as under a threat)
+        GD.train(view, memory, soldiers_wanted, order, (scramble or RD.state(memory) == "build") and 3 or 2)
     end
 
-    -- the groups (lib.army; docs/AI_LUA_PLAN.md "S4 as built"): the soldiers guard the town together (a defence of the
-    -- claim range: they fight what comes onto the claimed land and come back), and one of them scouts, the nearest
-    -- claimed site not explored yet first (the gatherers go only to what the player has seen), then the land beyond
-    A.collect(view, memory)
-    local home = A.role(view, memory, "home")
-    local scout = A.role(view, memory, "scout")
-    if scout ~= nil and scout.state == "done" then
-        order("scout_done", {verb = "disband", group = scout.id})
+    -- the groups (lib.groups; docs/AI_LUA_UNITS.md §8 L5: Lua groups on the per-unit interface): the soldiers guard
+    -- the town together (a defence of the claim range: they fight what comes onto the claimed land and come back), and
+    -- one of them scouts, the nearest claimed site not explored yet first (the gatherers go only to what the player
+    -- has seen), then the land beyond
+    -- (lib.guard, AI_RESEARCH §8.41: the home guard waits at its post under a tower, fights the raids in the claim
+    -- range with focus fire and pulls its hurt back; an old save's defend group "home" is disbanded into it)
+    local old_home = G.role(memory, "home")
+    if old_home ~= nil then
+        G.disband(memory, old_home)
     end
+    local home = GD.group(memory)
+    local scout = G.role(memory, "scout")
+    if scout ~= nil and scout.state == "done" then
+        G.disband(memory, scout)
+        scout = nil
+    end
+    local free = G.free_soldiers(view.town_x, view.town_y)
     if scout == nil and view.time >= SCOUT_AT and (memory.scouts or 0) < SCOUTS
-            and (view.free_soldiers > 0 or (home ~= nil and home.units > 1)) then
-        local o = {verb = "scout", n = 1}
+            and (#free > 0 or (home ~= nil and #home.units > 1)) then
         local first = nil
         for _, s in ipairs(view.sites) do
             if s.claimed and not s.explored and (first == nil or s.distance < first.distance) then
                 first = s
             end
         end
-        if first ~= nil then
-            o.x, o.y = first.x, first.y
-        end
-        if view.free_soldiers == 0 then
-            o.from = home.id
-        end
-        if order("scout", o) then
-            A.track(memory, orders, "scout")
+        local g = G.create(memory, {task = "scout", role = "scout", x = first and first.x or -1, y = first and first.y or -1})
+        local n = G.recruit(memory, g, 1, {from = #free == 0 and home or nil, x = view.town_x, y = view.town_y})
+        if n == 0 then
+            G.disband(memory, g)
+        else
             memory.scouts = (memory.scouts or 0) + 1
+            free = G.free_soldiers(view.town_x, view.town_y)
         end
     end
-    if view.free_soldiers > 0 then
-        if home ~= nil then
-            order("guard", {verb = "defend", group = home.id, n = view.free_soldiers})
-        elseif order("guard", {verb = "defend", n = view.free_soldiers}) then
-            A.track(memory, orders, "home")
-        end
+    memory.town_x, memory.town_y = view.town_x, view.town_y   -- (the micro step's town)
+    memory.epoch_now = view.epoch
+    GD.step(view, memory, {zone = view.claim_range})
+    home = GD.group(memory)
+    if plan.watch then
+        SC.step(view, memory, {from = home})
+    end
+    if plan.attack then
+        AT.step(view, memory, {guard = home, keep = plan.attack_keep or 8})
+    end
+    if plan.raid or memory.raid ~= nil then
+        -- (ready: boom-econ's phase signal; before it lands, 8 minutes into the Stone Age)
+        local ready = memory.phase == "stone_developed"
+            or (memory.phase == nil and view.epoch == 1 and view.time - view.epoch_start >= 480000)
+        RD.step(view, memory, {guard = home, ready = ready})
     end
 
     -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
     -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
     -- the town is threatened (its soldiers go back to the guard). A lost escort is sent again after ESCORT_WAIT.
-    local escort = A.role(view, memory, "escort")
+    local escort = G.role(memory, "escort")
     local contested = memory.contest
-    if escort == nil and contested ~= nil and not threatened and home ~= nil and home.units >= ESCORT_MIN + 2
+    if escort == nil and contested ~= nil and not threatened and home ~= nil and #home.units >= ESCORT_MIN + 2
             and view.time >= (memory.escort_next or 0) then
-        if order("escort", {verb = "defend", n = math.min(home.units - 2, ESCORT_MAX), x = contested.x,
-                            y = contested.y, radius = 8, from = home.id}) then
-            A.track(memory, orders, "escort")
-            memory.escort_next = view.time + ESCORT_WAIT
+        local g = G.create(memory, {task = "defend", role = "escort", x = contested.x, y = contested.y, radius = 8})
+        if G.recruit(memory, g, math.min(#home.units - 2, ESCORT_MAX), {from = home, x = contested.x, y = contested.y}) == 0 then
+            G.disband(memory, g)
         end
-    elseif escort ~= nil and (contested == nil or threatened or escort.tx ~= contested.x or escort.ty ~= contested.y) then
-        order("escort_done", {verb = "disband", group = escort.id})
+        memory.escort_next = view.time + ESCORT_WAIT
+    elseif escort ~= nil and (contested == nil or threatened or escort.x ~= contested.x or escort.y ~= contested.y) then
+        G.disband(memory, escort)
+    end
+    G.step(view, memory)
+    memory.def = memory.def or {}
+    D.step(view, memory.def)
+    -- (the owner: towers by the dock and the fishing grounds from the middle of the Stone Age; boom-econ builds them at
+    -- these spots, lib.defence boats)
+    if D.opts.boats and view.time % 30000 < 1000 then
+        memory.boat_towers = D.boat_spots()
+    end
+    -- (plan.boat_guard, the owner: "sometimes a ship works") from the first enemy warship seen, this many warships of
+    -- our own from the dock, guarding the fishing grounds (lib.navy's fleet step: they fight what comes in reach and
+    -- fall back from 1.5 x)
+    if plan.boat_guard ~= nil and memory.def ~= nil and memory.def.ships_seen ~= nil then
+        local have = #ai.units{category = "ship", armed = true}
+        local best = nil
+        for _, c in ipairs(view.costs) do
+            if c.military and not c.building and c.producer == "b_dock" and c.producers > 0
+                    and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
+                best = c
+            end
+        end
+        if best ~= nil and have + best.requested + best.in_production < plan.boat_guard and best.requested == 0 then
+            order("warship", {verb = "train", type = best.type, n = 1})
+        end
+        -- (AI_RESEARCH §8.50: the answer came 1-12 minutes after the first warship, its orders unaffordable under the
+        -- epoch reserve) what the answer still needs, for boom-econ's reserve to give way to: the warships missing and,
+        -- while the towers' attack upgrade is due, its next level's cost
+        local need = {food = 0, wood = 0, stone = 0, gold = 0, iron = 0}
+        local missing = best ~= nil and math.max(plan.boat_guard - have, 0) or 0
+        for _, r in ipairs(V.resources) do
+            need[r] = missing * (best ~= nil and best.cost[r] or 0)
+        end
+        -- (not the towers' attack level: their improvement point goes to their range, so it is never bought - 1,392
+        -- refusals in 32 games, AI_RESEARCH §8.50)
+        memory.priority_spend = V.sum(need) > 0 and need or nil
+        if have > 0 then
+            local fx, fy = D.fish_centre()
+            N.fleet_step(memory, {x = fx, y = fy})
+        end
     end
 
+    if ECON.order then
+        PL.step(view, memory)   -- (the settlements' builders back to the engine once they stand)
+    end
     -- the plan line, once a minute
+    if view.time % 60000 < 1000 and ECON.order then
+        BO.trace(view, memory, phase, view.army_count)
+    end
     if view.time % 60000 < 1000 then
         local w = memory.want or {}
         print(string.format("plan e=%d save=%s paid=%s threat=%d seen=%d army=%d/%d cit=%d/%d towers=%d boats=%d "
@@ -1026,6 +1536,13 @@ function M.step(view, memory)
     end
     memory.tags, memory.spots = tags, spots
     return orders
+end
+
+-- every 250 game ms (docs/AI_LUA_UNITS.md §5): the raid answer (lib.defence) on the events since the last call
+function M.micro(info, memory)
+    memory.def = memory.def or {}
+    D.micro(memory.def, ai.events(), info.time, memory.town_x, memory.town_y, memory.epoch_now)
+    return nil
 end
 
 return M

@@ -272,7 +272,10 @@ mod imp {
     }
 
     pub unsafe fn show(title: *const c_char, text: *const c_char, flags: u32) {
-        if let Some(handler) = handler() {
+        // the headless simulation: stderr (as on Windows), never a box (it has no display, and a box would wait for
+        // ever)
+        let handler = if crate::sim::gPlatSimMode.get() != 0 { None } else { handler() };
+        if let Some(handler) = handler {
             handler(
                 if title.is_null() { c"".as_ptr() } else { title },
                 if text.is_null() { c"".as_ptr() } else { text },
@@ -478,6 +481,10 @@ mod tests {
             let _guard = crate::test_globals();
             PlatMessageSetHandler(Some(handler));
             unsafe { PlatMessageShow(std::ptr::null(), c"x".as_ptr(), 7) };
+            // the headless simulation never calls the handler (no box): the line goes to stderr
+            crate::sim::gPlatSimMode.set(1);
+            unsafe { PlatMessageShow(c"title".as_ptr(), c"text".as_ptr(), 7) };
+            crate::sim::gPlatSimMode.set(0);
             PlatMessageSetHandler(None);
             assert_eq!(CALLS.load(Ordering::SeqCst), 1);
         }

@@ -2,8 +2,9 @@
 //! remote path's directory and file, the reply's status and its rules, the commands, the passive reply's address
 //! and the reply's step through the login, directory, type, passive, restart and retrieve states.
 //!
-//! `FTPGetOp` stays a C++ object (an `AsyncOp` over two C++ `BlockingSocket`s); it hands its lines and members
-//! over and acts on the step. Reached by nothing in the game (the WON patch servers are gone).
+//! `FTPGetOp` is ftpop.rs's op on the Rust op base (round 9), which calls these directly; the C ABI below serves
+//! `tests/won/won_ftp_msg.h`, the original's statements the drivers keep. Reached by nothing in the game (the WON
+//! patch servers are gone).
 
 use std::ffi::c_void;
 

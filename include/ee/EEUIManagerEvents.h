@@ -35,24 +35,6 @@ public:
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 };
 
-class EEUIESPLECancel : public UIEvent {
-public:
-    virtual ~EEUIESPLECancel() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUISIEMouseOutButton : public UIEvent {
-public:
-    virtual ~EEUISIEMouseOutButton() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUISIEMouseOverButton : public UIEvent {
-public:
-    virtual ~EEUISIEMouseOverButton() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
 class EEUIECECampaignNameChanged : public UIEvent {
 public:
     virtual ~EEUIECECampaignNameChanged() {}

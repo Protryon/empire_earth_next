@@ -32,7 +32,7 @@ public:
     ChatLink(WONAPI::LobbyClient* inClient,WONAPI::Font* inFont,int inColor) : mKind(3)
     {
         this->mClient=inClient;
-        this->mText=inClient->mName;
+        this->mText=inClient->GetName();
         this->mColor=inColor;
         this->mFont=inFont;
         this->mEnabled=true;
@@ -47,12 +47,12 @@ public:
         this->mFont=inFont;
         this->mEnabled=true;
         this->mPrevious=NULL;
-        if(inServer!=NULL) this->mAddress=inServer->mAddress;
+        if(inServer!=NULL) this->mAddress=inServer->GetAddress();
     }
     ChatLink(WONAPI::LobbyFriend* inFriend,WONAPI::Font* inFont,int inColor) : mKind(4)
     {
         this->mFriend=inFriend;
-        this->mText=inFriend->mName;
+        this->mText=inFriend->GetName();
         this->mColor=inColor;
         this->mFont=inFont;
         this->mEnabled=true;
@@ -229,19 +229,19 @@ void ChatCtrl::HandleAnnounceFriend(AnnounceFriendEvent* inEvent)
     }
     if(inEvent->mHandled || !this->IsRootVisible()) return;
     inEvent->mHandled=true;
-    IPAddr aAddress=aFriend->mAddress;
-    GUIString aLocation=aFriend->mLocation;
-    bool hasLocation=(aFriend->mFlags&3)!=0 && aAddress.IsValid() && aLocation.length()!=0;
+    IPAddr aAddress=aFriend->GetAddress();
+    GUIString aLocation=aFriend->GetLocation();
+    bool hasLocation=(aFriend->GetFlags()&3)!=0 && aAddress.IsValid() && aLocation.length()!=0;
     SmartPtr<ChatLink> aFriendLink=new ChatLink(aFriend,this->mChatOutput->mFont.get(),this->mUserColor);
     SmartPtr<ChatLink> aLocationLink;
     if(hasLocation) aLocationLink=new ChatLink(aFriend,aLocation,aAddress,this->mChatOutput->mFont.get(),this->mUserColor);
     TextSegmentBase* aLinks[2]={aFriendLink.get(),aLocationLink.get()};
     GUIString aFormat(GetEmptyGUIStringData());
     if(!hasLocation) aFormat=::ChatCtrl_FriendIsNotOnline_String;
-    else if((aFriend->mFlags&1)!=0) {
-        if((aFriend->mFlags&2)!=0) aFormat=::ChatCtrl_FriendIsInGameStaging_String;
+    else if((aFriend->GetFlags()&1)!=0) {
+        if((aFriend->GetFlags()&2)!=0) aFormat=::ChatCtrl_FriendIsInGameStaging_String;
         else aFormat=::ChatCtrl_FriendIsChatting_String;
-    } else if((aFriend->mFlags&2)!=0) aFormat=::ChatCtrl_FriendIsPlaying_String;
+    } else if((aFriend->GetFlags()&2)!=0) aFormat=::ChatCtrl_FriendIsPlaying_String;
     else aFormat=::ChatCtrl_FriendIsOn_String;
     this->AddFormattedText(aFormat,NULL,0,aLinks,2,true);
 }
@@ -316,14 +316,14 @@ void ChatCtrl::HandleRecvChat(RecvChatEvent* inEvent)
     if(inEvent->IsEmote()) aFormat=crossRoom?::ChatCtrl_TeamEmote_String : ::ChatCtrl_Emote_String;
     else if(inEvent->IsWhisper() && inEvent->mTarget.get()!=NULL) {
         if(inEvent->mSender->GetClientId()==this->mClientId)
-            if(inEvent->mTarget->mClientId==this->mClientId) aFormat=::ChatCtrl_YouWhisperToYourself_String;
+            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_YouWhisperToYourself_String;
             else aFormat=::ChatCtrl_YouWhisper_String;
         else aFormat=::ChatCtrl_SomeoneWhispersToYou_String;
     } else if(inEvent->IsWarning() && inEvent->mTarget.get()!=NULL) {
         if(inEvent->mSender->GetClientId()==this->mClientId)
-            if(inEvent->mTarget->mClientId==this->mClientId) aFormat=::ChatCtrl_YouWarnYourself_String;
+            if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_YouWarnYourself_String;
             else aFormat=::ChatCtrl_YouWarnSomeone_String;
-        else if(inEvent->mTarget->mClientId==this->mClientId) aFormat=::ChatCtrl_SomeoneWarnsYou_String;
+        else if(inEvent->mTarget->GetClientId()==this->mClientId) aFormat=::ChatCtrl_SomeoneWarnsYou_String;
         else aFormat=::ChatCtrl_SomeoneWarnsSomeone_String;
     } else aFormat=crossRoom?::ChatCtrl_TeamChat_String : ::ChatCtrl_NormalChat_String;
     if(aFormat.length()!=0) this->AddFormattedText(aFormat,&aText,1,aLinks,count,true);

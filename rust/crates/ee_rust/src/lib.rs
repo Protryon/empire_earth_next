@@ -66,39 +66,122 @@ use ee_won as _;
 #[cfg(not(test))]
 use ee_units as _;
 
-/// The combat reads' bridge to the unit store (ee_combat reads.rs `Stored`: ee_combat cannot depend on ee_units, whose
-/// host imports C++): ee_units' record under `id`, its plain fields into `out`; false for none (always in a test
-/// binary, which has no store's host).
+/// The combat reads' bridge to the unit store (ee_combat store.rs: ee_combat cannot depend on ee_units, whose host
+/// imports C++): the record of the unit object (an `EEUnit*`'s address: ee_units' object index) into `out`; a unit
+/// the store has no record of (one out of every player's list) filled from the object by the store's own C++ fill.
+/// False for no object (always in a test binary, which has no store's host).
 ///
 /// # Safety
-/// `out` must point to a writable record.
+/// `out` must point to a writable record; `object` is 0 or a live unit.
 #[no_mangle]
-pub unsafe extern "C" fn ee_combat_store_unit(id: u32, out: *mut ee_combat::reads::EeCombatStoredUnit) -> bool {
+pub unsafe extern "C" fn ee_combat_store_unit_of(object: u64, out: *mut ee_combat::store::EeCombatStoredUnit) -> bool {
     #[cfg(not(test))]
     {
-        let Some(r) = ee_units::store::with_store(|s| s.get(id).copied()) else { return false };
-        // SAFETY: the function's contract
-        unsafe {
-            *out = ee_combat::reads::EeCombatStoredUnit {
-                object: r.object,
-                object_kind: r.object_kind,
-                built: r.built,
-                tile_x: r.tile_x,
-                tile_y: r.tile_y,
-                hit_points: r.hit_points,
-                unit_type: r.unit_type,
-                category: r.category,
-                command: r.command,
-                location: r.location,
-                target_search_timer: r.target_search_timer,
+        if object == 0 {
+            return false;
+        }
+        let r = match ee_units::store::with_store(|s| s.by_object(object).copied()) {
+            Some(r) => r,
+            None => {
+                let mut r = ee_units::store::EeUnitRecord::default();
+                // SAFETY: the C++ fills one record of the live unit
+                unsafe { host::ee_combat_host_unit_record(object, &mut r) };
+                r
             }
         };
+        // SAFETY: the function's contract
+        unsafe { *out = combat_stored(&r) };
         true
     }
     #[cfg(test)]
     {
-        let _ = (id, out);
+        let _ = (object, out);
         false
+    }
+}
+
+/// The bridge of the players' tables (ee_combat store.rs): the table of the player object (an `EEPlayer*`'s address)
+/// into `out`; one without a table read from the object by the C++. False for no object (always in a test binary).
+///
+/// # Safety
+/// `out` must point to a writable table; `object` is 0 or a live player.
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_store_player_of(
+    object: u64,
+    out: *mut ee_combat::store::EeCombatStoredPlayer,
+) -> bool {
+    #[cfg(not(test))]
+    {
+        if object == 0 {
+            return false;
+        }
+        let table = match ee_units::players::with_players(|p| p.get(object).copied()) {
+            Some(p) => ee_combat::store::EeCombatStoredPlayer { id: p.id, enemies: p.enemies },
+            None => {
+                let mut t = ee_combat::store::EeCombatStoredPlayer::default();
+                // SAFETY: the C++ reads the live player's id and 17 stances
+                unsafe { host::ee_combat_host_player_table(object, &mut t.id, t.enemies.as_mut_ptr()) };
+                t
+            }
+        };
+        // SAFETY: the function's contract
+        unsafe { *out = table };
+        true
+    }
+    #[cfg(test)]
+    {
+        let _ = (object, out);
+        false
+    }
+}
+
+/// The store's C++ fills the bridges fall back on (EEUnitStore.cpp; declared nowhere else: cbindgen must not).
+/// cbindgen:ignore
+#[cfg(not(test))]
+mod host {
+    extern "C" {
+        /// The record of the live unit `object` as its object is now (its `mPlayer` as the list's player).
+        pub fn ee_combat_host_unit_record(object: u64, out: *mut ee_units::store::EeUnitRecord);
+        /// The live player `object`'s `mPlayerID` and 17 `mEnemies` words.
+        pub fn ee_combat_host_player_table(object: u64, id: *mut u32, enemies: *mut u32);
+    }
+}
+
+#[cfg(not(test))]
+fn combat_stored(r: &ee_units::store::EeUnitRecord) -> ee_combat::store::EeCombatStoredUnit {
+    ee_combat::store::EeCombatStoredUnit {
+        object: r.object,
+        player: r.player,
+        id: r.id,
+        object_kind: r.object_kind,
+        complex: r.complex,
+        built: r.built,
+        cloakable: r.cloakable,
+        cloaked: r.cloaked,
+        herd: r.herd,
+        container: r.container,
+        crusader: r.crusader,
+        paratrooper_bomber: r.paratrooper_bomber,
+        class_flags: r.class_flags,
+        domains: r.domains,
+        land_building: r.land_building,
+        goal_kind: r.goal_kind,
+        tile_x: r.tile_x,
+        tile_y: r.tile_y,
+        hit_points: r.hit_points,
+        unit_type: r.unit_type,
+        category: r.category,
+        command: r.command,
+        location: r.location,
+        velocity: r.velocity,
+        heal_threshold: r.heal_threshold,
+        target_search_timer: r.target_search_timer,
+        reload_timer: r.reload_timer,
+        rotting_away_time: r.rotting_away_time,
+        flight_time: r.flight_time,
+        cloak_timer: r.cloak_timer,
+        family: r.family,
+        cloak_radius: r.cloak_radius,
     }
 }
 

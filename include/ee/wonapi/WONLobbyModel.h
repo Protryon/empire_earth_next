@@ -17,23 +17,27 @@ public:
     void SetAnonymous(bool);
     void StartLocate(unsigned long);
     void EndLocate(unsigned long);
-    GUIString mName;             // 0x08
     unsigned long GetUserId() { return this->mUserId; }
+    void SetLastLocate(unsigned long inTime) { this->mLastLocate = inTime; }
+    unsigned long GetSearchStart() const { return this->mSearchStart; }
+    bool GetAnonymous() const { return this->mAnonymous; }
+    const GUIString& GetName() const { return this->mName; }
+    unsigned char GetFlags() const { return this->mFlags; }
+    const IPAddr& GetAddress() const { return this->mAddress; }
+    const GUIString& GetLocation() const { return this->mLocation; }
+    unsigned long GetLastLocate() const { return this->mLastLocate; }
+    unsigned long GetLastSearch() const { return this->mLastSearch; }
+    void SetLastSearch(unsigned long inCount) { this->mLastSearch = inCount; }
+private:
+    GUIString mName;             // 0x08
     unsigned long mUserId;       // 0x0c
     IPAddr mAddress;             // 0x10
     GUIString mLocation;         // 0x38
     unsigned long mLastSearch;   // 0x3c (meaning inferred): zeroed by the constructor, kept on reset
     unsigned char mFlags;       // 0x40
-    void SetLastLocate(unsigned long inTime) { this->mLastLocate = inTime; }
     unsigned long mLastLocate;   // 0x44
     unsigned long mSearchStart;  // 0x48
     bool mAnonymous;             // 0x4c
-public:
-    unsigned long GetSearchStart() const { return this->mSearchStart; }
-    bool GetAnonymous() const { return this->mAnonymous; }
-public:
-    const GUIString& GetName() const { return this->mName; }
-    unsigned char GetFlags() const { return this->mFlags; }
 };
 
 // LobbyGroup: a routing group, i.e. a chat room or a game (member meanings inferred).
@@ -55,8 +59,14 @@ public:
     bool IsChatGroup();
     bool IsGameGroup();
     bool IsPublicChatGroup();
-    GUIString mName;                   // 0x08
     unsigned short GetId() { return this->mId; }
+    const GUIString& GetName() const { return this->mName; }
+    unsigned short GetCaptainId() const { return this->mCaptainId; }
+    unsigned long GetNumClients() const { return this->mNumClients; }
+    unsigned long GetFlags() const { return this->mFlags; }
+    const SmartPtr<LobbyClientList>& GetClients() const { return this->mClients; }
+private:
+    GUIString mName;                   // 0x08
     unsigned short mId;               // 0x0c
     unsigned short mCaptainId;        // 0x0e
     unsigned long mNumClients;        // 0x10
@@ -99,24 +109,28 @@ public:
     size_t GetGroupCount() const { return this->mGroups.size(); }
     LobbyGroup* GroupAt(size_t i) const { return this->mGroups.At(i); } // in id order
 
-    GUIString mName;                       // +0x08
+    unsigned long GetLastPing() const { return this->mLastPing; }
+    unsigned short GetMyClientId() const { return this->mMyClientId; }
+    const GUIString& GetName() const { return this->mName; }
+    const IPAddr& GetAddress() const { return this->mAddress; }
+    const SmartPtr<LobbyClientList>& GetClients() const { return this->mClients; }
+    const SmartPtr<RoutingConnection>& GetConnection() const { return this->mConnection; }
+    void SetLastPing(unsigned long inTime) { this->mLastPing = inTime; }
+    void SetMyClientId(unsigned short inId) { this->mMyClientId = inId; }
+    bool GetQueryingGroups() const { return this->mQueryingGroups; }
+    void SetQueryingGroups(bool inValue) { this->mQueryingGroups = inValue; }
 private:
+    GUIString mName;                       // +0x08
     LobbyServerAddressSet mAddresses;      // +0x0c
-public:
     IPAddr mAddress;                       // +0x18
     int mNumChatClients;                   // +0x40
     int mNumClients;                       // +0x44
     unsigned long mLastPing;               // +0x48
     bool mQueryingGroups;                  // +0x4c
-private:
     LobbyGroupMap mGroups;                 // +0x50
-public:
     SmartPtr<LobbyClientList> mClients;    // +0x5c
     SmartPtr<RoutingConnection> mConnection; // +0x60
     unsigned short mMyClientId;            // +0x64
-public:
-    unsigned long GetLastPing() const { return this->mLastPing; }
-    unsigned short GetMyClientId() const { return this->mMyClientId; }
 };
 
 typedef LobbyRefMap<IPAddr, LobbyServer> LobbyServerMap;

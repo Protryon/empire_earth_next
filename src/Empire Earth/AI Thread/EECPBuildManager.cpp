@@ -60,6 +60,7 @@
 #include "ee/EECPIntelligence.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
@@ -430,6 +431,8 @@ void EECPBuildManager::AssignBuilders()
     this->mManager->mUnitManager->GetCitizens(theWorkers);
     bool theNext = EECPNextEngine(this->mPlayer);
     for (std::vector<EEUnit*>::iterator it = theBuildings.begin(); it != theBuildings.end(); it++) {
+        if (EECPUnitsHolds(this->mPlayer, (*it)->mComplexUnit))
+            continue;   // a script's foundation (ee/EECPNextUnits.h): its own builders
         long theUnsafe = theNext ? EECPNextBuildUnsafe(this->mPlayer, (*it)->mTileX, (*it)->mTileY) : kNextBlockedNone;
         if (theUnsafe != kNextBlockedNone) {
             // the next engine (§8.35): no builder is sent; its builders leave it; a foundation under a seen enemy tower

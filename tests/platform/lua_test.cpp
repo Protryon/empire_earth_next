@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "ee/EECPLua.h"
+#include "ee/EELuaApi.h"
 
 static int sChecks;
 static int sFailures;
@@ -401,6 +402,45 @@ static void TestMemory()
     CHECK(t.Reload() && t.SaveMemory(x) && x == y);
 }
 
+// the extension hook (EECPLuaConfig::mOpen), Charge and CallOptional (docs/AI_LUA_UNITS.md: the unit functions)
+static int LuaCost(lua_State* L)
+{
+    EECPLuaState::From(L)->Charge(L, (int64_t)luaL_checkinteger(L, 1));
+    lua_pushinteger(L, 7);
+    return 1;
+}
+
+static void OpenTest(lua_State* L, void* inContext)
+{
+    lua_pushcfunction(L, LuaCost);
+    lua_setfield(L, -2, (const char*)inContext);
+}
+
+static void TestExtension()
+{
+    Section("extension");
+    EECPLuaConfig c = Config();
+    c.mOpen = OpenTest;
+    c.mOpenContext = (void*)"cost";
+    c.mBudget = 100000;
+    EECPLuaState s(c);
+    CHECK(s.IsOpen());
+    CHECK(IsTrue(s, "return ai.cost(10) == 7 and type(ai.random) == 'function'"));
+    // a charge counts against the budget like instructions, and a pcall cannot swallow it
+    CHECK(RunStatus(s, "return ai.cost(200000)") == kEECPLuaBudget);
+    CHECK(RunStatus(s, "local ok = pcall(ai.cost, 200000) return 1") == kEECPLuaBudget);
+    CHECK(RunStatus(s, "for i = 1, 20 do ai.cost(4000) end return 1") == kEECPLuaOK);
+    CHECK(RunStatus(s, "for i = 1, 30 do ai.cost(4000) end return 1") == kEECPLuaBudget);
+    // an optional entry: found or not, with its own budget
+    EECPLuaValue a;
+    bool theFound = true;
+    CHECK(s.LoadPersonality("test_personality") && s.Init(View("plain"), a));
+    CHECK(s.CallOptional("micro", View("plain"), a, 1000, theFound) && !theFound && a.IsNil());
+    CHECK(s.CallOptional("step", View("plain"), a, 0, theFound) && theFound);
+    CHECK(!s.CallOptional("step", View("loop"), a, 20000, theFound) && s.LastStatus() == kEECPLuaBudget);
+    CHECK(s.Step(View("plain"), a));   // the config's budget is back
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
@@ -418,6 +458,7 @@ int main(int argc, char** argv)
     TestErrors();
     TestRequire();
     TestMemory();
+    TestExtension();
     printf("%d checks, %d failed\n", sChecks, sFailures);
     return sFailures > 100 ? 100 : sFailures;
 }
