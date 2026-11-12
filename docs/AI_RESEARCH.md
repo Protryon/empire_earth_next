@@ -3821,6 +3821,31 @@ within 20 s of their first hit, and 362 with no soldier of their own near. The p
 `move` deaths), and where the port's raided gatherers stand against the C++'s (distance from the town and drop
 sites).
 
+**What moves the C++'s hit citizens.** The engine's unit AI (EEUnitAI: run from or retaliate against an attacker)
+treats both seats alike. Its run trigger needs a goal that is not player-initiated, and both the classic and
+`ai.gather` give gather goals that are. The C++'s `move` deaths are its own location goals: the militia's run, the
+naval flight (land units under a warship's fire go to the town centre), and EECPRMFleeRaids, which moves the
+gatherers out of the danger zones. The C++ fled 774 times in 16 games. Its zones come from the militia's runs and
+from every naval flight. A Lua seat's naval flight is still the engine's: it moves the port's units, but it puts its
+zone on the classic's own lists, which the port's gatherers are not on. Giving the port that zone (a zone at the
+victim when a warship hits a citizen or a boat, once every 4 s) did not help, and was not kept. Balanced 32 seeds:
+12-15, 5 close (13-14 before). Citizens lost: 64.8 (60.8 before), 1267 after 60 minutes (1128 before), and 161
+killed by ships.
+
+**Where the port's raided gatherers stand.** Seeds 2-17, the citizens killed by an enemy:
+
+| tiles from the town | < 10 | 10-20 | 20-30 | 30-45 | 45+ |
+|---|---|---|---|---|---|
+| the C++ (502) | 107 | 198 | 134 | 51 | 12 |
+| the port (789) | 114 | 274 | 148 | 185 | 68 |
+
+The extra losses are mostly far out. 253 of the port's die 30 or more tiles from the town, against the C++'s 63.
+The port's hunters die at a median of 35 tiles (137; 40 to enemy Prehistoric towers), its gold miners at 27 and its
+stone miners at 29. The C++'s die near home: those killed fighting (which include its hunters) at a median of 15
+tiles, those moving at 20. The port also loses 55 citizens to ships against the C++'s 7.
+Next: the port's far gathering against the C++'s: the game it hunts, which lies beyond the explored land the C++
+sees whole (fog); the mines it takes; and the enemy towers near both.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
