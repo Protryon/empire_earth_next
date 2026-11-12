@@ -20,7 +20,7 @@ ServerConnection::ServerConnection() : BlockingSocket(0)
 // Restarts the keep-alive timer (none when the period is 0)
 void ServerConnection::StartKeepAlive()
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     if(this->mKeepAliveOp.get()!=NULL) {
         this->mKeepAliveOp->Kill(true);
         this->mKeepAliveOp=NULL;
@@ -37,7 +37,7 @@ void ServerConnection::StartKeepAlive()
 // Sets the auth context and auth type used when connecting
 void ServerConnection::SetAuth(AuthContext* inContext,AuthType inType)
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     this->mAuthContext=inContext;
     this->mAuthType=inType;
 }
@@ -51,7 +51,7 @@ void ServerConnection::StaticConnectCallback(AsyncOpPtr inOp,SmartPtr<RefCount> 
 // Reports the connect result; on success starts receiving messages and the keep-alive timer
 void ServerConnection::ConnectCallback(PeerAuthOp* inOp)
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     if(inOp!=this->mPeerAuthOp.get()) return;
     OpCompletionBasePtr aCompletion=this->mConnectCompletion;
     this->mPeerAuthOp=NULL;
@@ -82,7 +82,7 @@ void ServerConnection::StaticKeepAliveCallback(AsyncOpPtr inOp,SmartPtr<RefCount
 // Sends a no-op message and restarts the timer when the current keep-alive timer fires
 void ServerConnection::KeepAliveCallback(AsyncOp* inOp)
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     if(inOp==this->mKeepAliveOp.get()) {
         this->mKeepAliveOp=NULL;
         if(inOp->IsKilled()) return;
@@ -107,7 +107,7 @@ void ServerConnection::SendNoOp()
 // Sets the completion called when a connect finishes
 void ServerConnection::SetConnectCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     this->mConnectCompletion=inCompletion;
 }
 // FUNCTION: WON 0x006abe70
@@ -172,7 +172,7 @@ void ServerConnectionConnectOp::CleanupHook()
 // Closes the socket and starts an asynchronous authenticated connect; returns the peer auth op
 PeerAuthOp* ServerConnection::ConnectAsync(const IPAddr& address,unsigned long timeout)
 {
-    AutoCrit aCrit(this->GetDataCrit());
+    AutoCrit aCrit(this->GetDataLock());
     this->Close();
     this->mPeerAuthOp=new PeerAuthOp(address,this->mAuthContext.get(),this->mAuthType,this,true);
     this->mPeerAuthOp->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
@@ -186,13 +186,13 @@ PeerAuthOp* ServerConnection::ConnectAsync(const IPAddr& address,unsigned long t
 namespace WONAPI {
 void ServerConnection::SetKeepAlivePeriod(DWORD theSeconds)
 {
-	AutoCrit aCrit(this->GetDataCrit());
+	AutoCrit aCrit(this->GetDataLock());
 	this->mKeepAlivePeriod = theSeconds;
 }
 
 WONStatus ServerConnection::ConnectBlock(const IPAddr &theAddr, DWORD theTimeout)
 {
-	AutoCrit aCrit(this->GetDataCrit());
+	AutoCrit aCrit(this->GetDataLock());
 	this->Close();
 	this->mPeerAuthOp = new PeerAuthOp(theAddr, this->mAuthContext, this->mAuthType, this,true);
 	SmartPtr<PeerAuthOp> aPeerAuthOp = this->mPeerAuthOp;

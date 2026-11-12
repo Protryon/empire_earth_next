@@ -92,6 +92,10 @@ public:
     // ServerContext's conversions to and from servctx.rs's EeWonAddr (the host borrowed while this value lives)
     EeWonAddr ToRaw() const;
     void FromRaw(const EeWonAddr& inRaw);
+    // the Rust value, for the Rust objects that copy it (a socket's destination, an op's address)
+    const EeWonIpAddr* GetValue() const { return this->mAddr; }
+    // an address taking a value a Rust object made (owned from then on)
+    static IPAddr FromValue(EeWonIpAddr* inValue) { return IPAddr(inValue, AdoptTag()); }
 private:
     struct AdoptTag {};
     IPAddr(EeWonIpAddr* inValue, AdoptTag); // takes a value the Rust side made (GetLocalAddr)
@@ -128,18 +132,21 @@ public:
 
 // Actual nonpolymorphic eight-byte lock guard: critical reference0, unsigned count4.
 // Original34B destructor29f2c0 leaves exactly the entered nesting count.
+// It holds the lock's platform mutex: a CriticalSection's, or one a Rust object owns (a socket's GetDataLock()).
 class AutoCrit {
-    CriticalSection& mCritR;
+    PlatMutex* mCrit;
     unsigned int mEnterCt;
     AutoCrit();
     AutoCrit(const AutoCrit&);
     AutoCrit& operator=(const AutoCrit&);
 public:
     explicit AutoCrit(CriticalSection& inCrit,bool inEnterNow=true)
-        : mCritR(inCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
-    ~AutoCrit() { while (mEnterCt>0) { mCritR.Leave(); --mEnterCt; } }
-    void Enter() { mCritR.Enter(); ++mEnterCt; }
-    void Leave() { if (mEnterCt>0) { mCritR.Leave(); --mEnterCt; } }
+        : mCrit(inCrit.mCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
+    explicit AutoCrit(PlatMutex* inCrit,bool inEnterNow=true)
+        : mCrit(inCrit),mEnterCt(0) { if (inEnterNow) Enter(); }
+    ~AutoCrit() { while (mEnterCt>0) { PlatMutexUnlock(mCrit); --mEnterCt; } }
+    void Enter() { PlatMutexLock(mCrit); ++mEnterCt; }
+    void Leave() { if (mEnterCt>0) { PlatMutexUnlock(mCrit); --mEnterCt; } }
 };
 
 // a directory server entry of WONAPI (class name and layout PROVISIONAL: the server list form shows mDisplayName,

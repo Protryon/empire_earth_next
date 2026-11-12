@@ -47,10 +47,20 @@ CALC/CALS/CALU calamities, TSWP the tech trees' sweep every five game minutes) a
 computer players stay in the first epochs and never cast a calamity, so --profile late and space play other games
 (later start epochs, the computer players' cheats, more players) and --profile calamity the oracle's game with every
 calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_<profile>.txt.
+--profile missile is the oracle's game with EE-SIM --missile-sweep: when it ends, the players' units fire every missile
+and torpedo class (CBMA/CBMH, the missile's flight steps, and its impact tests' CBGI/CBWI); its golden file lists only
+those tags, every other tag of it is the oracle profile's (reported as without a golden).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
 the C++ before the calamity updates, CanCastAt, ResearchToEpoch and the effects' unit walks moved (R5b.2, round 2).
+CALT (every calamity class's Start and Stop with the calamity's, its units' and the contagion manager's state and the
+start's placed effects and sounds), CONT (every contagion helper update: the spread's candidates with their draws and
+distances, the new, applied and removed units, the functors' damage) and TNWK (the tech tree's walks and tests:
+Unlock, ResearchAll, ResearchKind, ObsoleteOutdatedNodes, MakeObsolete, SetObsolete, NeedsUnitMedia, GetBuildTime,
+SetEpoch, AdvanceEpoch, SetNodeAvailable) were recorded from the C++ before those moved (R5b.2, round 3).
+GetBuildTime and NeedsUnitMedia, asked from the media loader's thread too, are TNMT: their records' order and count
+depend on timing, so TNMT has no golden (TNWK was recorded again without them from the unmodified C++).
 NM** are the game messages' records (ee/EEMessageCapture.h, R5b.4): NMIM every message the game's factory builds (the
 bytes it came from, the bytes it exports again, its members as the import left them), NMSW the same for a sweep of
 every game message type over edge payloads (once, at the first sweep), NMCU the box selection's unit packing, NMNE
@@ -101,6 +111,9 @@ PROFILES = {
     "space": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "all", "--ai", "3", "--lobby", "183=#9"],
     # the oracle's game with every calamity class cast in turn (EE-SIM --calamities: the computer players cast none)
     "calamity": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--calamities"],
+    # the oracle's game, then every missile class fired at its end (EE-SIM --missile-sweep: no game of the other
+    # profiles flies a missile); its golden lists only the sweep's tags (CBMA, CBMH, CBGI, CBWI)
+    "missile": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--missile-sweep"],
 }
 
 

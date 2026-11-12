@@ -845,7 +845,7 @@ long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         unsigned long theID = USavedID(this->mResource);
         this->mResource = static_cast<EEUnit*>(::gWorld.GetUnit(theID));
         if (this->mResource == NULL)   // port (0.272): a resource gone from the world the running goal still held
-            this->mResource = EEFindLoadedGhost(theID);
+            this->mResource = EEFindLoadedGhostUnit(theID);   // (0.275: a simple one too)
         if (this->mResource != NULL)
             this->mResource->Reference();
         else

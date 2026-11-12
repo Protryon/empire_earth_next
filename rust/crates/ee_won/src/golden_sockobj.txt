@@ -316,4 +316,137 @@ tlistener destroyed
 accepted destroyed
 rclient destroyed
 rlistener destroyed
+== lock and destination
+dest new 0 invalid port 0
+dest set 167772167 valid port 99
+dest copy 167772167 valid now 167772168 valid
+connect invalid WS_InvalidAddress dest 167772168 valid
+locked twice, open WS_Success valid 1
+main unlocking
+thread locked
+udp connect WS_Success dest 2130706433 valid port 9 connected 1
+udp disconnected dest 2130706433 valid connected 1
+== more socket ops
+mlistener OpenHook
+m bind WS_Success
+m listen WS_Success
+mclient OpenHook
+m connect WS_Success
+mlistener Duplicate
+m accept WS_Success
+bigrecv run 1 WS_Success read 2097152
+bigrecv length 2097152 same 1 chunks 1
+bigsend WS_Success count 1
+sendbytes WS_Success
+chunk read 5
+chunked part WS_TimedOut read 5
+sendbytes WS_Success
+chunk read 7
+chunked run 0 WS_AsyncSocket_Shutdown (null)
+chunked rest WS_Success 4:6d6e6f70
+path won_sockobj_r15.bin
+sendbytes WS_Success
+recv append 1 WS_Success (null)
+file 9 head-tail
+mtime 1000000000
+sendbytes WS_Success
+chunk read 3
+recv text 1 WS_Success
+file 3 txt
+sendbytes WS_Success
+recvmsg length 2 WS_RecvMsg_InvalidMessageLength
+sendbytes WS_Success
+recvmsg 256000 WS_RecvMsg_InvalidMessageLength
+refuse send 7:070000006f6b21
+sendmsg refused 0 WS_Killed
+sendmsg WS_Success
+refuse recv 3:6f6b21
+recvmsg refused 0 WS_Killed 3:6f6b21 3:6f6b21
+sendbytes WS_Success
+recvmsg part WS_TimedOut (null)
+sendbytes WS_Success
+recvmsg rest WS_RecvMsg_InvalidMessageLength (null)
+sendmsg WS_Success
+msg completed RecvMsgOp WS_Success killed 0
+msg message 3:6f6b21
+e OpenHook
+mlistener Duplicate
+conn WS_Success acc WS_Success
+accepted 1 connected 1 peer port 1
+connect addr 2130706433 valid e dest 2130706433 valid
+connectop invalid 0 WS_InvalidAddress
+g OpenHook
+connectop refused 0 WS_WSAECONNREFUSED
+acceptop short 0 WS_TimedOut accepted 0
+accepted CloseHook
+e CloseHook
+g CloseHook
+u bind WS_Success v bind WS_Success
+u connect WS_Success
+v connect WS_Success
+sendbytesto connected 1 WS_Success
+recvbytesfrom connected 1 WS_Success 4:636f6e6e from 2130706433 valid 1
+recvbytesfrom none 0 WS_TimedOut (null)
+send WS_Success
+dgram completed RecvBytesFromOp WS_Success killed 0
+dgram 4:6c617465 1
+mclient CloseHook
+accepted CloseHook
+mlistener CloseHook
+more ops done
+g destroyed
+e destroyed
+accepted destroyed
+accepted destroyed
+mclient destroyed
+mlistener destroyed
+== UDPManager
+early completed UDPManagerRecvOp WS_Killed killed 1 msg (null) from 0 invalid
+early status WS_Killed killed 1
+bind WS_Success
+bound port set
+send WS_Success
+udp default completed UDPManagerRecvOp WS_Success killed 0 msg 5:68656c6c6f from 2130706433 valid
+addr op status WS_Pending verifier 1
+send WS_Success
+addr op checks B
+udp default completed UDPManagerRecvOp WS_Success killed 0 msg 2:4278 from 2130706433 valid
+send WS_Success
+addr op checks R
+udp default completed UDPManagerRecvOp WS_Success killed 0 msg 2:5279 from 2130706433 valid
+send WS_Success
+addr op checks A
+addr completed UDPManagerRecvOp WS_Success killed 0 msg 2:417a from 2130706433 valid
+send WS_Success
+udp default completed UDPManagerRecvOp WS_Success killed 0 msg 2:4377 from 2130706433 valid
+send WS_Success
+any op checks Q
+any completed UDPManagerRecvOp WS_Success killed 0 msg 2:5171 from 2130706433 valid
+short completed UDPManagerRecvOp WS_TimedOut killed 0 msg (null) from 2130706433 valid
+recvop block 0 WS_BlockMode_NotSupported
+sendrecv block 0 WS_BlockMode_NotSupported
+server got WS_Success 2:4d6d
+server got WS_Success 2:6131
+response z
+udp default completed UDPManagerRecvOp WS_Success killed 0 msg 2:7a7a from 2130706433 valid
+response b
+sendrecv completed TestSendRecv WS_Success killed 0
+sendrecv dest 2130706433 valid
+noreply completed TestSendRecv WS_NoReply killed 0
+server got WS_Success 1:6e
+server got WS_Success 1:6e
+server got WS_Success 1:6f
+response p
+own completed TestSendRecv WS_Success killed 0
+own socket gone 1
+self socket port set
+self completed UDPManagerRecvOp WS_Success killed 0 msg (null) from 0 invalid
+self socket gone 1
+wait completed UDPManagerRecvOp WS_Killed killed 1 msg (null) from 2130706433 valid
+wait2 completed UDPManagerRecvOp WS_Killed killed 1 msg (null) from 0 invalid
+closed socket 1
+rebind WS_Success
+send WS_Success
+default count 5
+udp done
 core shut down

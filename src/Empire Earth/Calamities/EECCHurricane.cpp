@@ -67,14 +67,12 @@ EECCHurricane::~EECCHurricane()
 // to above the target; always returns true
 bool EECCHurricane::Start(EECalamity* inCalamity)
 {
-    GE3DPoint theLocation;
-    inCalamity->mHeight = this->mGraphicEffect2->GetSize();
-    if (this->mGraphicEffect1 != NULL && inCalamity->mCasterUnit != NULL) {
-        theLocation = inCalamity->mTargetLocation;
-        theLocation.SetZ(theLocation.GetZ() + inCalamity->GetHeight());
-        gEffectManager->CreateEffect(inCalamity->mCasterUnit, theLocation, this->mGraphicEffect1, NULL, 0);
-    }
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.start_size = this->mGraphicEffect2->GetSize();
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCHurricane::StartStep);
 }
 
 // FUNCTION: EXE 0x4b1226
@@ -107,15 +105,12 @@ bool EECCHurricane::CreateStorm(EECalamity* inCalamity)
 // Stops the hurricane's sounds and kills and deselects its storm unit
 void EECCHurricane::Stop(EECalamity* inCalamity)
 {
-    EEUnit* theStorm = NULL;
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    inCalamity->GetTargetUnit(theStorm);
-    if (theStorm == NULL)
-        return;
-    theStorm->Kill(0, 0, 0);
-    theStorm->mPlayer->DeselectUnit(theStorm);
-    inCalamity->SetTargetUnit(NULL);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.start_size = this->mGraphicEffect2->GetSize();
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCHurricane::StartStep);
 }
 
 // FUNCTION: EXE 0x4b1324
@@ -256,4 +251,24 @@ bool EECCHurricane::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, un
     theCast.over_water = this->mOverWater;
     theCast.area = (int32_t)this->mArea;
     return EECalamityValidLocation(this, theCast, inUnit, this->mUnitClassIndex);
+}
+
+// New (port): EECCHurricane's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCHurricane::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCHurricane* theClass = static_cast<EECCHurricane*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
+        gEffectManager->CreateEffect(theCalamity->mCasterUnit, theLocation, theClass->mGraphicEffect1, NULL, 0);
+        return true;
+    }
+    default:
+        return false;
+    }
 }

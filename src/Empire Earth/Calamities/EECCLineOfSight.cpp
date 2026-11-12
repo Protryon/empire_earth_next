@@ -37,25 +37,20 @@ EECCLineOfSight::~EECCLineOfSight()
 // Raises the caster's sight by the class's bonus, redoing its sight on the map; returns false without a caster
 bool EECCLineOfSight::Start(EECalamity* inCalamity)
 {
-    if (inCalamity->mCasterUnit == NULL)
-        return false;
-    EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
-    theUnit->SightOffHere();
-    theUnit->SetSight(theUnit->GetSight() + this->mSightBonus);
-    theUnit->SightOnHere();
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    theParams.sight_bonus = this->mSightBonus;
+    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b1fc4
 // Takes the sight bonus back from the caster if it is still alive
 void EECCLineOfSight::Stop(EECalamity* inCalamity)
 {
-    if (inCalamity->mCasterUnit == NULL || !(inCalamity->mCasterUnit->mHitPoints > 0))
-        return;
-    EEComplexUnit* theUnit = inCalamity->mCasterUnit->mComplexUnit;
-    theUnit->SightOffHere();
-    theUnit->SetSight(theUnit->GetSight() - this->mSightBonus);
-    theUnit->SightOnHere();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    theParams.sight_bonus = this->mSightBonus;
+    EECalamityRunStop(this, inCalamity, theParams, NULL, NULL, NULL);
 }
 
 // FUNCTION: EXE 0x4b2000

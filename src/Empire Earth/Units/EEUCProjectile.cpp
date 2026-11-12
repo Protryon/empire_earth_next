@@ -40,9 +40,9 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUCProjectile.h"
+#include "ee/EECombatFormulas.h"
 
-// 0x447338: the height below which a projectile has landed (one .rdata copy per unit: a named const)
-static const float kProjectileLowHeight = 3.0f;
+// 0x447338 (3.0, the launch height below which a projectile may hit the ground at once) is ee_combat's (impact.rs)
 // 0x447050: the slow-down per unit of depth below the ground
 
 // 0x241a6a (cdecl): the launch angle from inOwner at inLocation for the ammunition (provisional name)
@@ -53,60 +53,52 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // unless it came down on its target building or wall, and leaves a shell hole on land
 bool EEUCProjectile::CheckGroundImpact(EEComplexUnit* inUnit)
 {
+    // the test is ee_combat's projectile_ground (impact.rs); the ground point, the goal and the shell hole stay here
     GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint theGround(0.0f, 0.0f, 0.0f);
-    bool theResult = false;
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    if (this->mCategory != kUnitCategoryBomb && !(inUnit->mProjectileStart.GetZ() < kProjectileLowHeight) && !(inUnit->mFlightTime > 1000))
-        return theResult;
+    EeCombatImpactIn in = {};
+    in.kind = EE_COMBAT_IMPACT_PROJECTILE_GROUND;
+    in.bomb = this->mCategory == kUnitCategoryBomb;
+    in.flight_time = (int32_t)inUnit->mFlightTime;
+    in.start_z = inUnit->mProjectileStart.GetZ();
     inUnit->GetPosition(thePosition);
-    if (::gWorld.mMap->GetTile(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY())) != NULL) {
-        ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
-    } else {
-        theGround = thePosition;
-        theGround.SetZ(inUnit->mTile->GetHeight());
-    }
-    if (!(thePosition.GetZ() <= theGround.GetZ()))
-        return theResult;
-    bool theOnTarget = false;
-    if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
-        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-        EEUnitClass* theClass = theTarget->GetUnitClass();
-        if (theClass->IsLandBuilding() || theClass->mIsWall) {
-            unsigned long theX = theTarget->GetTileX();
-            unsigned long theY = theTarget->GetTileY();
-            if ((unsigned long)inUnit->GetTileX() >= theX && (unsigned long)inUnit->GetTileX() < theX + theClass->mTileSize
-                && (unsigned long)inUnit->GetTileY() >= theY && (unsigned long)inUnit->GetTileY() < theY + theClass->mTileSize)
-                theOnTarget = true;
-        }
-    }
-    if (!theOnTarget)
+    in.position[0] = thePosition.GetX();
+    in.position[1] = thePosition.GetY();
+    in.position[2] = thePosition.GetZ();
+    in.tile_present = ::gWorld.mMap->GetTile(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY())) != NULL;
+    in.has_goal = theGoal != NULL;
+    in.goal_kind = theGoal != NULL ? (int32_t)theGoal->mKind : 0;
+    in.shell_hole = inUnit->GetUnitClass()->mShellHoleEffect != NULL;
+    EeCombatImpactOut theOut = EECombatImpact(this, inUnit, in);
+    if (!theOut.result)
+        return false;
+    // the ground point: the position at the ground's height (the unit's tile's off the map)
+    GE3DPoint theGround(thePosition.GetX(), thePosition.GetY(), in.ground_read ? in.ground_z : in.tile_height);
+    if (theOut.goal == EE_COMBAT_IMPACT_GOAL_GROUND)
         inUnit->SetGoal(new EEUGAttackGround(theGround, false), 0, 0);
-    if (theGround.GetZ() >= 0.0f && inUnit->GetUnitClass()->mShellHoleEffect != NULL)
+    if (theOut.decal)
         EEPlaceImpactDecal(inUnit, theGround);
-    theResult = true;
-    return theResult;
+    return true;
 }
 
 // FUNCTION: EXE 0x6192d0
 // Returns whether a bomb, or a projectile after 1 s of flight, hit water it cannot cross; if so, it attacks the ground
 bool EEUCProjectile::CheckWaterImpact(EEComplexUnit* inUnit)
 {
-    bool theResult = false;
+    // the test is ee_combat's projectile_water (impact.rs)
     GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-    GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-    if (inUnit->mFlightTime > 1000 || this->mCategory == kUnitCategoryBomb) {
-        long theTerrain = inUnit->mTile->mTerrainType;
-        inUnit->GetPosition(thePosition);
-        if (thePosition.GetZ() <= 0.0f && !this->CanMoveOnTerrain(inUnit, theTerrain)) {
-            theTarget.SetX(thePosition.GetX());
-            theTarget.SetY(thePosition.GetY());
-            theTarget.SetZ(0.0f);
-            inUnit->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
-            theResult = true;
-        }
-    }
-    return theResult;
+    EeCombatImpactIn in = {};
+    in.kind = EE_COMBAT_IMPACT_PROJECTILE_WATER;
+    in.bomb = this->mCategory == kUnitCategoryBomb;
+    in.flight_time = (int32_t)inUnit->mFlightTime;
+    inUnit->GetPosition(thePosition);
+    in.position[0] = thePosition.GetX();
+    in.position[1] = thePosition.GetY();
+    in.position[2] = thePosition.GetZ();
+    EeCombatImpactOut theOut = EECombatImpact(this, inUnit, in);
+    if (theOut.goal == EE_COMBAT_IMPACT_GOAL_WATER)
+        inUnit->SetGoal(new EEUGAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
+    return theOut.result != 0;
 }
 
 // FUNCTION: EXE 0x619388

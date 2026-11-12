@@ -23,6 +23,7 @@
 #include "ee/EEContagionHelper.h"
 #include "ee/EEContagionManager.h"
 #include "ee/EEUnit.h"
+#include "ee/EESaveGameFiles.h"
 
 const UString EEContagionManager::mNumHelpersStringID("NumHelpers-StringID");
 const UString EEContagionManager::mCalamityHelperOffsetStringID("CalamityHelperOffset-StringID");
@@ -160,6 +161,11 @@ long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMino
             this->mHelpers.push_back(theHelper);
             this->mCalamityIndexes.push_back(theCalamityIndex);
         }
+    // port (0.273, ee/EESaveGameFiles.h EESaveHasContagionCounter): the running game's last helper id, which
+    // RestorePointers goes on from; an older save goes on from its highest helper's id as the original did
+    this->mNextHelperID = 0;
+    if (theResult == kErrorOK && EESaveHasContagionCounter(inMajorVersion, inMinorVersion))
+        theResult = inFile.Read(this->mNextHelperID);
     return theResult;
 }
 
@@ -169,7 +175,7 @@ long EEContagionManager::Load(unsigned long inMajorVersion, unsigned long inMino
 long EEContagionManager::RestorePointers(std::vector<EECalamity*>& inCalamities)
 {
     std::vector<long> theDeadHelpers;
-    this->mNextHelperID = 0;
+    // port (0.273): from the saved last helper id (Load: 0 for an older save, where the original started from 0)
     std::vector<unsigned long>::iterator theIndex = this->mCalamityIndexes.begin();
     for (std::vector<EEContagionHelper*>::iterator theIterator = this->mHelpers.begin(); theIterator != this->mHelpers.end();
          ++theIterator, ++theIndex) {
@@ -209,6 +215,8 @@ long EEContagionManager::Save(unsigned long inMajorVersion, unsigned long inMino
                     theResult = (*theIterator)->Save(inMajorVersion, inMinorVersion, outFile);
             } else
                 theResult = 9;
+    if (theResult == kErrorOK && EESaveHasContagionCounter(inMajorVersion, inMinorVersion))   // port (0.273)
+        theResult = outFile.Write(this->mNextHelperID);
     return theResult;
 }
 

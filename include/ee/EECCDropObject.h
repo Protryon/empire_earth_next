@@ -8,12 +8,17 @@
 
 class EEGraphicEffect;
 
+struct EECalamityUpdateHost;
+struct EeCalamityCall;
+struct EeCalamityReply;
 class EECCDropObject : public EEUnitCalamityClass {
 public:
     EECCDropObject();                       // 0xafef9
     virtual ~EECCDropObject();              // 0xaff35
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xaff6e
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb004f (the drop)
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb0252
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
     // +0x28/+0x34: the same bodies as the area effects' (same field layout): ICF-folded into 0xaf5f2/0xaf632

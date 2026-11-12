@@ -4,15 +4,19 @@
 
 use crate::calamity::{self, EeCalamityAge};
 use crate::calamity_cast::{self, EeCalamityCast};
+use crate::calamity_start;
 use crate::calamity_update::{self, CalamityHost, EeCalamityCall, EeCalamityParams, EeCalamityReply, EeCalamityState};
+use crate::contagion::{
+    self, ContagionHost, EeCalamityDiscrete, EeContagionCall, EeContagionParams, EeContagionReply, EeContagionState,
+};
 use crate::effects::{
     self, EeTechAttribute, EeTechConversion, EeTechEffectHandler, EeTechEffectValues, EeTechUnitStep, EeTechUnitView,
     EeTechUnitWalk,
 };
 use crate::tree::{
-    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate, EeTechNode,
-    EeTechPrerequisite, EeTechResearch, EeTechTreeResearchAfter, EeTechTreeState, PrerequisiteView, SumCostsNode,
-    SumCostsView,
+    self, EeTechChecksumEntry, EeTechCostInput, EeTechEpochCounter, EeTechEpochStep, EeTechEpochUpdate,
+    EeTechMakeObsolete, EeTechNode, EeTechPrerequisite, EeTechResearch, EeTechSetObsolete, EeTechTreeResearchAfter,
+    EeTechTreeState, EeTechUnlockAction, PrerequisiteView, SumCostsNode, SumCostsView,
 };
 use std::ffi::c_void;
 
@@ -437,6 +441,41 @@ pub unsafe extern "C" fn ee_calamity_update(
     result
 }
 
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_start(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    host: *const EeCalamityHostFfi,
+) -> bool {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    let result = calamity_start::start(&mut FfiCalamityHost(host), &mut s, &params);
+    // SAFETY: as above
+    unsafe { *state = s };
+    result
+}
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_calamity_stop(
+    params: *const EeCalamityParams,
+    state: *mut EeCalamityState,
+    host: *const EeCalamityHostFfi,
+) {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    calamity_start::stop(&mut FfiCalamityHost(host), &mut s, &params);
+    // SAFETY: as above
+    unsafe { *state = s };
+}
+
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
 ///
 /// # Safety
@@ -630,4 +669,173 @@ mod tests {
         assert_eq!(ee_tech_tree_research_after(1500, 0, 15, -1, 4, 15), EeTechTreeResearchAfter::Nothing);
         assert_eq!(ee_tech_tree_research_after(1500, 0, 15, 1, 4, 15), EeTechTreeResearchAfter::CountTowardNextEpoch);
     }
+}
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct EeContagionHostFfi {
+    pub ctx: *mut c_void,
+    pub call: unsafe extern "C" fn(ctx: *mut c_void, call: *const EeContagionCall, reply: *mut EeContagionReply),
+}
+
+struct FfiContagionHost(EeContagionHostFfi);
+
+impl ContagionHost for FfiContagionHost {
+    fn call(&mut self, call: &EeContagionCall) -> EeContagionReply {
+        let mut reply = EeContagionReply::default();
+        // SAFETY: the C++ host's contract: valid pointers for the call's duration
+        unsafe { (self.0.call)(self.0.ctx, call, &mut reply) };
+        reply
+    }
+}
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_contagion_update(
+    params: *const EeContagionParams,
+    state: *mut EeContagionState,
+    elapsed: f32,
+    host: *const EeContagionHostFfi,
+) {
+    // SAFETY: the caller's contract; copies, so no reference into C++ memory lives across the host's calls
+    let (params, mut s, host) = unsafe { (*params, *state, *host) };
+    contagion::update(&mut FfiContagionHost(host), &mut s, &params, elapsed);
+    // SAFETY: as above
+    unsafe { *state = s };
+}
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+#[no_mangle]
+pub extern "C" fn ee_calamity_discrete_updates(elapsed: f32, discrete: f32) -> EeCalamityDiscrete {
+    contagion::discrete_updates(elapsed, discrete)
+}
+
+/// A functor's damage per update (`contagion::tick_damage`).
+#[no_mangle]
+pub extern "C" fn ee_contagion_tick_damage(damage: i32, updates: u32) -> i32 {
+    contagion::tick_damage(damage, updates)
+}
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+#[no_mangle]
+pub extern "C" fn ee_contagion_fire_burn(burn: i32, max_hit_points: i32) -> i32 {
+    contagion::fire_burn(burn, max_hit_points)
+}
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_leprosy_damage(damage: i32, updates: u32, hit_points: i32) -> i32 {
+    contagion::leprosy_damage(damage, updates, hit_points)
+}
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+#[no_mangle]
+pub extern "C" fn ee_contagion_area_damage(damage: i32, updates: u32, attack: f32) -> i32 {
+    contagion::area_damage(damage, updates, attack)
+}
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+#[no_mangle]
+pub unsafe extern "C" fn ee_tech_unlock_action(
+    node: *const EeTechNode,
+    tree: *const EeTechTreeState,
+    available_with_epoch: bool,
+) -> EeTechUnlockAction {
+    // SAFETY: the caller's contract
+    unsafe { tree::unlock_action(&*node, &*tree, available_with_epoch) }
+}
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+#[no_mangle]
+pub extern "C" fn ee_tech_research_all_takes(researched_with_epoch: bool, all_nodes: bool) -> bool {
+    tree::research_all_takes(researched_with_epoch, all_nodes)
+}
+
+/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
+#[no_mangle]
+pub extern "C" fn ee_tech_research_kind_takes(
+    node_kind: i32,
+    kind: i32,
+    epoch_only: bool,
+    researched_with_epoch: bool,
+) -> bool {
+    tree::research_kind_takes(node_kind, kind, epoch_only, researched_with_epoch)
+}
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
+#[no_mangle]
+pub extern "C" fn ee_tech_node_is_outdated(obsolete: bool, obsolete_epoch: i32, current_epoch: i32) -> bool {
+    tree::node_is_outdated(obsolete, obsolete_epoch, current_epoch)
+}
+
+/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
+#[no_mangle]
+pub extern "C" fn ee_tech_epoch_make_obsolete(
+    epoch_id: i32,
+    id: i32,
+    epoch_obsolete: bool,
+    current_epoch: i32,
+) -> EeTechMakeObsolete {
+    tree::epoch_make_obsolete(epoch_id, id, epoch_obsolete, current_epoch)
+}
+
+/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
+#[no_mangle]
+pub extern "C" fn ee_tech_set_obsolete(value: bool, keep_media: bool, obsolete: bool) -> EeTechSetObsolete {
+    tree::set_obsolete(value, keep_media, obsolete)
+}
+
+/// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
+#[no_mangle]
+pub extern "C" fn ee_tech_needs_unit_media(
+    has_class: bool,
+    family: i32,
+    editor_obsoleted: bool,
+    obsolete_epoch: i32,
+    start_epoch: i32,
+) -> bool {
+    tree::needs_unit_media(has_class, family, editor_obsoleted, obsolete_epoch, start_epoch)
+}
+
+/// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
+#[no_mangle]
+pub extern "C" fn ee_tech_epoch_build_time(is_human: i32, build_time: i32) -> i32 {
+    tree::epoch_build_time(is_human, build_time)
+}
+
+/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
+#[no_mangle]
+pub extern "C" fn ee_tech_set_epoch_allowed(epoch: i32, epoch_count: i32, current_epoch: i32) -> bool {
+    tree::set_epoch_allowed(epoch, epoch_count, current_epoch)
+}
+
+/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeTechAdvance {
+    pub advances: bool,
+    pub pad: [u8; 3],
+    pub epoch: i32,
+}
+
+#[no_mangle]
+pub extern "C" fn ee_tech_advance_epoch(current_epoch: i32, end_epoch: i32) -> EeTechAdvance {
+    match tree::advance_epoch(current_epoch, end_epoch) {
+        Some(epoch) => EeTechAdvance { advances: true, pad: [0; 3], epoch },
+        None => EeTechAdvance::default(),
+    }
+}
+
+/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
+#[no_mangle]
+pub extern "C" fn ee_tech_node_availability_settable(research_delay: i32) -> bool {
+    tree::node_availability_settable(research_delay)
 }

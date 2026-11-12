@@ -77,47 +77,22 @@ EECCAreaEffect::~EECCAreaEffect()
 // target's tile) with the sound; returns whether it started
 bool EECCAreaEffect::Start(EECalamity* inCalamity)
 {
-    bool theResult = false;
-    GE3DPoint theSourceLocation;
-    GE3DPoint theLocation;
-
-    if (this->mGraphicEffect1 != NULL && inCalamity->GetCasterUnit() != NULL) {
-        this->GetSourceLocation(inCalamity, theSourceLocation);
-        inCalamity->GetTargetLocation(theLocation);
-        // the effect's height at the target comes from the target's tile (water: sea level), as Infect tests
-        long theTerrainType = 0;
-        if (::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY())) != NULL)
-            theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))->mTerrainType;
-        if (theTerrainType != 1 && theTerrainType != 10)
-            theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
-        else
-            theLocation.SetZ(0.0f);
-        EEEffectHandle theEffectHandle;
-        gEffectManager->CreateEffect(inCalamity->GetCasterUnit(), theLocation, this->mGraphicEffect1, &theEffectHandle, 0);
-        inCalamity->SetEffectHandle(theEffectHandle);
-        if (this->mSound != NULL) {
-            inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(),
-                                                                            0.0f, 1.0f, this->mSound->GetLooping(), NULL));
-            if (inCalamity->mSound != NULL)
-                inCalamity->mSound->Dereference();
-        }
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
 }
 
 // FUNCTION: EXE 0x4af3a8
 // Stops the calamity: destroys its effect, stops both sounds and removes its contagion helper
 void EECCAreaEffect::Stop(EECalamity* inCalamity)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    if (inCalamity->mEffectHandle != kNoEffectHandle) {
-        gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
-        inCalamity->mEffectHandle = kNoEffectHandle;
-    }
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID), 150);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    if (this->mGraphicEffect1 != NULL)
+        theParams.flags |= EE_CALAMITY_EFFECT1;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCAreaEffect::StartStep);
 }
 
 // ICF-FOLDED: EXE 0x52c734
@@ -303,4 +278,27 @@ void EECCAreaEffect::GetSourceLocation(EECalamity* inCalamity, GE3DPoint& outLoc
         outLocation.SetZ(theTransformation.GetZ());
     } else
         outLocation = inCalamity->mTargetLocation;
+}
+
+// New (port): EECCAreaEffect's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCAreaEffect::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCAreaEffect* theClass = static_cast<EECCAreaEffect*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        // the first effect from the caster to the location (the handle: kept by the area effect only)
+        GE3DPoint theLocation(inCall.x, inCall.y, inCall.z);
+        EEEffectHandle theEffectHandle;
+        EECalamityCaptureStartPoint(1, theLocation.mX, theLocation.mY, theLocation.mZ);   // CALT (TEST ONLY)
+        gEffectManager->CreateEffect(theCalamity->mCasterUnit, theLocation, theClass->mGraphicEffect1, &theEffectHandle, 0);
+        outReply.id = theEffectHandle.mValue;
+        return true;
+    }
+    default:
+        return false;
+    }
 }

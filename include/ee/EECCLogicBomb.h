@@ -20,6 +20,8 @@ public:
     virtual ~EECCLogicBomb();               // 0xb2076
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb20af
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb221e
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb22ad
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 (empty: ICF-folded 0x157269)
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 (ICF-folded 0xaf5f2)

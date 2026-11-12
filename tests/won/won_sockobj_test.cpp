@@ -5,8 +5,10 @@
 // CR-LF lines, datagrams, the op without a socket, each op's Duplicate), the same ops run async through WONAPICore's
 // socket thread, QueueSocket (queued ops in order with their completions, the default completion, the repeat op and
 // its duplicates, QueueOpFast, QueueClose, the close timer, the close and kill hooks) and BlockingSocket's calls
-// (LobbyLanSocket needs the lobby's headers and units: the LAN game is its check). The golden was recorded over the
-// C++ classes before their move to Rust (round 14). The timeouts
+// (LobbyLanSocket needs the lobby's headers and units: the LAN game is its check); round 15's part: the socket's lock
+// and destination, more of each op (a large send continued on the socket thread, progress chunks, file receives,
+// message limits, refusing transforms, re-runs, connect and accept async, connected datagram ops) and UDPManager with
+// its receive and request ops. Each part was recorded over the C++ classes before their move to Rust. The timeouts
 // are long where an op succeeds and short (or 0) where it times out, so no line depends on the clock; async
 // completions are waited for before the next step, so their order is the queue's. `--print` prints the lines
 // instead. The exit code is the number of failures.
@@ -20,6 +22,7 @@
 #include <set>
 #include <vector>
 #include <typeinfo>
+#include <sys/stat.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
@@ -716,6 +719,494 @@ static void Queues()
     Log("queues done");
 }
 
+// ---- round 15: the socket's lock and destination, more of each socket op, UDPManager (recorded over the C++
+// classes before their move)
+
+// the socket's data lock (the subclasses' and connections' lock)
+static void LockData(AsyncSocket* inSocket) { PlatMutexLock(inSocket->GetDataLock()); }
+static void UnlockData(AsyncSocket* inSocket) { PlatMutexUnlock(inSocket->GetDataLock()); }
+
+struct LockProbe {
+    AsyncSocket* mSocket;
+    static uint32_t Run(void* inProbe)
+    {
+        LockProbe* p = static_cast<LockProbe*>(inProbe);
+        LockData(p->mSocket);
+        Log("thread locked");
+        UnlockData(p->mSocket);
+        return 0;
+    }
+};
+
+// logs each progress chunk with the receiving op's bytes so far
+class ChunkDone : public CompletionBase<AsyncOpPtr> {
+public:
+    ChunkDone() : mCount(0), mLog(true) {}
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        RecvChunkOp* aChunk = dynamic_cast<RecvChunkOp*>(inOp.get());
+        this->mCount++;
+        if (this->mLog)
+            Log("chunk read " + N(aChunk != NULL ? (long long)aChunk->GetRecvOp()->GetBytesRead() : -1));
+    }
+    int mCount;
+    bool mLog;
+};
+
+class RefuseTransform : public MsgTransform {
+public:
+    virtual WONStatus Send(ByteBufferPtr& ioMessage) { Log("refuse send " + Hex(ioMessage)); return WS_Killed; }
+    virtual WONStatus Recv(ByteBufferPtr& ioMessage) { Log("refuse recv " + Hex(ioMessage)); return WS_Killed; }
+};
+
+static std::string FileText(const char* inPath)
+{
+    FILE* f = fopen(inPath, "rb");
+    if (f == NULL)
+        return "(no file)";
+    char aRead[64];
+    size_t n = fread(aRead, 1, sizeof(aRead), f);
+    fclose(f);
+    return N((long long)n) + " " + std::string(aRead, n);
+}
+
+static void WaitCount(ChunkDone* inDone, int inCount)
+{
+    uint64_t anEnd = PlatTimeMilliseconds64() + 10000;
+    while (inDone->mCount < inCount && PlatTimeMilliseconds64() < anEnd)
+        sCore->Pump(5);
+    if (inDone->mCount < inCount)
+        Log("TIMED OUT waiting for " + N(inCount));
+}
+
+static void LockAndDest()
+{
+    Log("== lock and destination");
+    SmartPtr<BlockingSocket> s = new BlockingSocket(0);
+    Log("dest new " + Addr(s->GetDestAddr()) + " port " + N(s->GetDestAddr().GetPort()));
+    s->SetDestAddr(IPAddr("10.0.0.7", 99));
+    Log("dest set " + Addr(s->GetDestAddr()) + " port " + N(s->GetDestAddr().GetPort()));
+    IPAddr aCopy = s->GetDestAddr();
+    s->SetDestAddr(IPAddr("10.0.0.8", 98));
+    Log("dest copy " + Addr(aCopy) + " now " + Addr(s->GetDestAddr()));
+    LOG2("connect invalid ", St(s->Fn2B0E60(IPAddr())), " dest " + Addr(s->GetDestAddr()));
+    // the lock is recursive, and the socket's own calls take it under a held lock
+    LockData(s);
+    LockData(s);
+    LOG2("locked twice, open ", St(s->Open()), " valid " + N(s->IsValid()));
+    UnlockData(s);
+    UnlockData(s);
+    // another thread waits for it
+    LockProbe aProbe = {s.get()};
+    LockData(s);
+    uint32_t anId = 0;
+    PlatThread* aThread = PlatThreadCreate(&LockProbe::Run, &aProbe, 0, 0, &anId);
+    PlatSleep(50);
+    Log("main unlocking");
+    UnlockData(s);
+    PlatThreadWait(aThread, PLAT_WAIT_INFINITE);
+    PlatThreadClose(aThread);
+    // a datagram socket's connect sets the destination
+    SmartPtr<BlockingSocket> u = new BlockingSocket(1);
+    LOG2("udp connect ", St(u->Fn2B0E60(IPAddr("127.0.0.1", 9))), " dest " + Addr(u->GetDestAddr()) + " port "
+         + N(u->GetDestAddr().GetPort()) + " connected " + N(u->IsConnected()));
+    u->Disconnect();
+    Log("udp disconnected dest " + Addr(u->GetDestAddr()) + " connected " + N(u->IsConnected()));
+    s->Close();
+    u->Close();
+}
+
+static void MoreOps()
+{
+    Log("== more socket ops");
+    Pair p;
+    p.Make("m");
+    BlockingSocket* s = p.Server();
+    BlockingSocket* c = p.mClient.get();
+
+    // a large send continued on the socket thread while the receiver reads blocking, with progress chunks
+    const unsigned long kBig = 2 * 1024 * 1024;
+    std::string aBig(kBig, '\0');
+    unsigned long aSum = 0;
+    for (unsigned long i = 0; i < kBig; i++) {
+        aBig[i] = (char)(i * 7 + (i >> 11));
+        aSum = aSum * 31 + (unsigned char)aBig[i];
+    }
+    // (counted, not logged: the send can finish before or after the receive, the system's choice)
+    SmartPtr<ChunkDone> aBigSent = new ChunkDone;
+    aBigSent->mLog = false;
+    SmartPtr<SendBytesOp> aBigSend = new SendBytesOp(Bytes(aBig.data(), kBig), c);
+    aBigSend->SetCompletion(aBigSent);
+    aBigSend->RunAsync(60000);
+    // (queued in the op container: the pump starts it, and the socket thread continues it)
+    sCore->Pump(5);
+    SmartPtr<RecvBytesOp> aBigRecv = new RecvBytesOp(kBig, s);
+    SmartPtr<ChunkDone> aChunks = new ChunkDone;
+    aChunks->mLog = false;
+    aBigRecv->SetProgressCompletion(aChunks, 700000);
+    LOG2("bigrecv run ", N(aBigRecv->RunBlock(20000)), " " + St(aBigRecv->GetStatus()) + " read "
+         + N((long long)aBigRecv->GetBytesRead()));
+    ByteBufferPtr aBigGot = aBigRecv->GetBytes();
+    unsigned long aGotSum = 0;
+    for (unsigned long i = 0; aBigGot.get() != NULL && i < aBigGot->length(); i++)
+        aGotSum = aGotSum * 31 + (unsigned char)aBigGot->data()[i];
+    Log("bigrecv length " + N(aBigGot.get() != NULL ? (long long)aBigGot->length() : -1) + " same " + N(aGotSum == aSum)
+        + " chunks " + N(aChunks->mCount > 0));
+    WaitCount(aBigSent, 1);
+    LOG2("bigsend ", St(aBigSend->GetStatus()), " count " + N(aBigSent->mCount));
+
+    // the progress chunks see the bytes read so far
+    SmartPtr<RecvBytesOp> aChunked = new RecvBytesOp(12, s);
+    aChunked->SetProgressCompletion(new ChunkDone, 2);
+    Log("sendbytes " + St(c->SendBytes(Bytes("abcde", 5), 5000)));
+    LOG2("chunked part ", St(aChunked->Run(OP_MODE_BLOCK, 50)), " read " + N((long long)aChunked->GetBytesRead()));
+    Log("sendbytes " + St(c->SendBytes(Bytes("fghijklmnop", 11), 5000)));
+    LOG2("chunked run ", N(aChunked->RunBlock(5000)), " " + St(aChunked->GetStatus()) + " " + Hex(aChunked->GetBytes()));
+    LOG2("chunked rest ", St(s->RecvBytes(aBigGot, 4, 5000)), " " + Hex(aBigGot));
+
+    // files: append, text mode on bytes without line ends, the modify time, the path
+    const char* aPath = "won_sockobj_r15.bin";
+    remove(aPath);
+    FILE* f = fopen(aPath, "wb");
+    fwrite("head-", 1, 5, f);
+    fclose(f);
+    SmartPtr<RecvBytesOp> anAppend = new RecvBytesOp(4, s);
+    anAppend->SetFilePath(aPath);
+    anAppend->SetAppendFile(true);
+    anAppend->SetFileModifyTime(1000000000);
+    Log("path " + anAppend->GetFilePath());
+    Log("sendbytes " + St(c->SendBytes(Bytes("tail", 4), 5000)));
+    LOG2("recv append ", N(anAppend->RunBlock(5000)), " " + St(anAppend->GetStatus()) + " " + Hex(anAppend->GetBytes()));
+    Log("file " + FileText(aPath));
+    struct stat aStat;
+    Log("mtime " + N(stat(aPath, &aStat) == 0 ? (long long)aStat.st_mtime : -1));
+    SmartPtr<RecvBytesOp> aText = new RecvBytesOp(3, s);
+    aText->SetFilePath(aPath);
+    aText->SetBinaryFile(false);
+    aText->SetProgressCompletion(new ChunkDone, 1);
+    Log("sendbytes " + St(c->SendBytes(Bytes("txt", 3), 5000)));
+    LOG2("recv text ", N(aText->RunBlock(5000)), " " + St(aText->GetStatus()));
+    Log("file " + FileText(aPath));
+    remove(aPath);
+
+    // message lengths at the limits, a refusing transform on each side
+    s->SetLengthFieldSize(2);
+    const unsigned char aTwo[] = {2, 0};
+    Log("sendbytes " + St(c->SendBytes(Bytes(aTwo, 2), 5000)));
+    Log("recvmsg length 2 " + St(s->RecvMsg(aBigGot, 5000)));
+    s->SetLengthFieldSize(4);
+    const unsigned char aHuge[] = {0x00, 0xe8, 0x03, 0x00};
+    Log("sendbytes " + St(c->SendBytes(Bytes(aHuge, 4), 5000)));
+    Log("recvmsg 256000 " + St(s->RecvMsg(aBigGot, 5000)));
+    const unsigned char aOk[] = {7, 0, 0, 0, 'o', 'k', '!'};
+    c->AddMsgTransform(new RefuseTransform);
+    SmartPtr<SendMsgOp> aRefused = new SendMsgOp(Bytes(aOk, sizeof(aOk)), c);
+    LOG2("sendmsg refused ", N(aRefused->RunBlock(5000)), " " + St(aRefused->GetStatus()));
+    c->RemoveAllMsgTransforms();
+    s->AddMsgTransform(new RefuseTransform);
+    Log("sendmsg " + St(c->SendMsg(Bytes(aOk, sizeof(aOk)), 5000)));
+    SmartPtr<RecvMsgOp> aRecvRefused = new RecvMsgOp(s);
+    LOG2("recvmsg refused ", N(aRecvRefused->RunBlock(5000)), " " + St(aRecvRefused->GetStatus()) + " "
+         + Hex(aRecvRefused->GetMsg()) + " " + Hex(aRecvRefused->GetBytes()));
+    s->RemoveAllMsgTransforms();
+    // a message whose body arrives later continues from the body
+    const unsigned char aHead[] = {9, 0, 0, 0, 'l'};
+    Log("sendbytes " + St(c->SendBytes(Bytes(aHead, sizeof(aHead)), 5000)));
+    SmartPtr<RecvMsgOp> aLater = new RecvMsgOp(s);
+    LOG2("recvmsg part ", St(aLater->Run(OP_MODE_BLOCK, 50)), " " + Hex(aLater->GetMsg()));
+    Log("sendbytes " + St(c->SendBytes(Bytes("ater", 4), 5000)));
+    LOG2("recvmsg rest ", St(aLater->Run(OP_MODE_BLOCK, 5000)), " " + Hex(aLater->GetMsg()));
+    // a message received async
+    SmartPtr<Done> aMsgDone = new Done("msg");
+    SmartPtr<RecvMsgOp> anAsyncMsg = new RecvMsgOp(s);
+    anAsyncMsg->SetCompletion(aMsgDone);
+    anAsyncMsg->RunAsync(60000);
+    Log("sendmsg " + St(c->SendMsg(Bytes(aOk, sizeof(aOk)), 5000)));
+    PumpUntil(aMsgDone, 1);
+
+    // connect and accept as ops: async with completions, an invalid address, a refusal
+    // (counted: the two finish on two threads in either order)
+    SmartPtr<ChunkDone> aConnDone = new ChunkDone, anAccDone = new ChunkDone;
+    aConnDone->mLog = anAccDone->mLog = false;
+    SmartPtr<AcceptOp> anAccept = new AcceptOp(p.mListener);
+    anAccept->SetCompletion(anAccDone);
+    anAccept->RunAsync(60000);
+    SmartPtr<LogSocket> e = new LogSocket("e");
+    SmartPtr<ConnectOp> aConn = new ConnectOp(IPAddr("127.0.0.1", p.mListener->GetLocalPort()), e);
+    aConn->SetCompletion(aConnDone);
+    aConn->RunAsync(60000);
+    WaitCount(aConnDone, 1);
+    WaitCount(anAccDone, 1);
+    LOG2("conn ", St(aConn->GetStatus()), " acc " + St(anAccept->GetStatus()));
+    AsyncSocket* anAccepted = anAccept->GetAcceptedSocket();
+    Log("accepted " + N(anAccepted != NULL) + " connected " + N(anAccepted != NULL && anAccepted->IsConnected())
+        + " peer port " + N(anAccepted != NULL && anAccepted->GetDestAddr().GetPort() == e->GetLocalPort()));
+    Log("connect addr " + Addr(aConn->GetAddr()) + " e dest " + Addr(e->GetDestAddr()));
+    SmartPtr<ConnectOp> aBadConn = new ConnectOp(IPAddr(), e);
+    LOG2("connectop invalid ", N(aBadConn->RunBlock(5000)), " " + St(aBadConn->GetStatus()));
+    unsigned short aClosed = 0;
+    {
+        SmartPtr<BlockingSocket> aGone = new BlockingSocket(0);
+        aGone->Bind(IPAddr("127.0.0.1", 0), false);
+        aGone->Listen(1);
+        aClosed = aGone->GetLocalPort();
+        aGone->Close();
+    }
+    SmartPtr<LogSocket> g = new LogSocket("g");
+    SmartPtr<ConnectOp> aRefusedConn = new ConnectOp(IPAddr("127.0.0.1", aClosed), g);
+    LOG2("connectop refused ", N(aRefusedConn->RunBlock(5000)), " " + St(aRefusedConn->GetStatus()));
+    SmartPtr<AcceptOp> anIdle = new AcceptOp(p.mListener);
+    LOG2("acceptop short ", N(anIdle->RunBlock(50)), " " + St(anIdle->GetStatus()) + " accepted "
+         + N(anIdle->GetAcceptedSocket() != NULL));
+    if (anAccepted != NULL)
+        anAccepted->Close();
+    e->Close();
+    g->Close();
+
+    // datagram ops on a connected socket: the send is a Send, the receive's sender is the destination
+    SmartPtr<BlockingSocket> u = new BlockingSocket(1), v = new BlockingSocket(1);
+    LOG2("u bind ", St(u->Bind(IPAddr("127.0.0.1", 0), false)), " v bind " + St(v->Bind(IPAddr("127.0.0.1", 0), false)));
+    Log("u connect " + St(u->Fn2B0E60(IPAddr("127.0.0.1", v->GetLocalPort()))));
+    Log("v connect " + St(v->Fn2B0E60(IPAddr("127.0.0.1", u->GetLocalPort()))));
+    SmartPtr<SendBytesToOp> aTo = new SendBytesToOp(Bytes("conn", 4), IPAddr("10.9.9.9", 1), u);
+    LOG2("sendbytesto connected ", N(aTo->RunBlock(5000)), " " + St(aTo->GetStatus()));
+    SmartPtr<RecvBytesFromOp> aFrom = new RecvBytesFromOp(16, v);
+    LOG2("recvbytesfrom connected ", N(aFrom->RunBlock(5000)), " " + St(aFrom->GetStatus()) + " " + Hex(aFrom->GetBytes())
+         + " from " + Addr(aFrom->GetAddr()) + " " + N(aFrom->GetAddr().GetPort() == u->GetLocalPort()));
+    LOG2("recvbytesfrom none ", N(aFrom->RunBlock(0)), " " + St(aFrom->GetStatus()) + " " + Hex(aFrom->GetBytes()));
+    // async, the datagram sent after the start
+    SmartPtr<Done> aDgram = new Done("dgram");
+    SmartPtr<RecvBytesFromOp> anAsyncFrom = new RecvBytesFromOp(16, v);
+    anAsyncFrom->SetCompletion(aDgram);
+    anAsyncFrom->RunAsync(60000);
+    Log("send " + St(u->SendBytes(Bytes("late", 4), 5000)));
+    PumpUntil(aDgram, 1);
+    Log("dgram " + Hex(anAsyncFrom->GetBytes()) + " " + N(anAsyncFrom->GetAddr().GetPort() == u->GetLocalPort()));
+    u->Close();
+    v->Close();
+    c->Close();
+    s->Close();
+    p.mListener->Close();
+    Log("more ops done");
+}
+
+// a datagram check: accepts messages starting with mTag (WS_ServerReq_Recv for mAgain), else none
+struct Verifier {
+    char mTag;
+    char mAgain;
+    const char* mName;
+    static WONStatus Check(ReadBuffer& inMessage, void* inContext)
+    {
+        Verifier* v = static_cast<Verifier*>(inContext);
+        char c = (char)inMessage.ReadByte();
+        Log(std::string(v->mName) + " checks " + std::string(1, c));
+        if (c == v->mAgain)
+            return WS_ServerReq_Recv;
+        return c == v->mTag ? WS_Success : WS_None;
+    }
+};
+
+// logs a UDP op's completion with its message and sender
+class UdpDone : public CompletionBase<AsyncOpPtr> {
+public:
+    UdpDone(const char* inName) : mName(inName), mCount(0) {}
+    virtual void Complete(AsyncOpPtr inOp)
+    {
+        this->mCount++;
+        AsyncOp* anOp = inOp.get();
+        std::string s = this->mName + " completed " + TypeName(anOp, typeid(*anOp)) + " " + St(anOp->GetStatus())
+            + " killed " + N(anOp->IsKilled());
+        UDPManagerRecvOp* aRecv = dynamic_cast<UDPManagerRecvOp*>(anOp);
+        if (aRecv != NULL)
+            s += " msg " + Hex(aRecv->GetMsg()) + " from " + Addr(aRecv->GetFromAddr());
+        Log(s);
+    }
+    std::string mName;
+    int mCount;
+};
+
+static void PumpFor(UdpDone* inDone, int inCount)
+{
+    uint64_t anEnd = PlatTimeMilliseconds64() + 5000;
+    while (inDone->mCount < inCount && PlatTimeMilliseconds64() < anEnd)
+        sCore->Pump(5);
+    if (inDone->mCount < inCount)
+        Log(inDone->mName + " TIMED OUT waiting for " + N(inCount));
+}
+
+// receives inCount requests on the server socket (blocking), answering each with its first byte + 1 when asked
+static void Answer(BlockingSocket* inServer, int inCount, bool inReply)
+{
+    for (int i = 0; i < inCount; i++) {
+        ByteBufferPtr aGot;
+        IPAddr aFrom;
+        WONStatus aStatus = inServer->RecvBytesFrom(aGot, 512, aFrom, 5000);
+        Log("server got " + std::string(St(aStatus)) + " " + Hex(aGot));
+        if (aStatus == WS_Success && inReply) {
+            char aReply[2] = {(char)(aGot->data()[0] + 1), 'r'};
+            inServer->SendBytesTo(Bytes(aReply, 2), aFrom, 5000);
+        }
+    }
+}
+
+class TestSendRecv : public UDPManagerSendRecvOp {
+public:
+    TestSendRecv(char inExpect) : mExpect(inExpect) {}
+    virtual WONStatus CheckResponse(ReadBuffer& inMessage)
+    {
+        char c = (char)inMessage.ReadByte();
+        Log("response " + std::string(1, c));
+        return c == this->mExpect ? WS_Success : WS_None;
+    }
+    char mExpect;
+};
+
+static void Udp()
+{
+    Log("== UDPManager");
+    SmartPtr<UDPManager> m = new UDPManager;
+    SmartPtr<UdpDone> aDefault = new UdpDone("udp default");
+    m->SetDefaultCompletion(aDefault);
+    // unbound: a queued op is killed
+    SmartPtr<UdpDone> anEarly = new UdpDone("early");
+    SmartPtr<UDPManagerRecvOp> anEarlyOp = new UDPManagerRecvOp;
+    anEarlyOp->SetCompletion(anEarly);
+    m->QueueOp(anEarlyOp, 1000);
+    PumpFor(anEarly, 1);
+    LOG2("early status ", St(anEarlyOp->GetStatus()), " killed " + N(anEarlyOp->IsKilled()));
+    Log("bind " + std::string(St(m->Bind(0, false))));
+    unsigned short aPort = m->GetSocket()->GetLocalPort();
+    Log("bound " + Port(aPort));
+    m->SetAutoRecv(true);
+    SmartPtr<BlockingSocket> u = new BlockingSocket(1);
+    u->Bind(IPAddr("127.0.0.1", 0), false);
+    IPAddr aMgr("127.0.0.1", aPort);
+    IPAddr aU("127.0.0.1", u->GetLocalPort());
+    // nothing waits: the auto-receive op takes it with the default completion
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("hello", 5), aMgr, 5000))));
+    PumpFor(aDefault, 1);
+    // an op for u's address with a check: a datagram it refuses goes to the auto-receive op
+    Verifier aCheck = {'A', 'R', "addr op"};
+    SmartPtr<UdpDone> anAddrDone = new UdpDone("addr");
+    SmartPtr<UDPManagerRecvOp> anAddrOp = new UDPManagerRecvOp(aU);
+    anAddrOp->SetMessageVerifier(&Verifier::Check, &aCheck);
+    anAddrOp->SetCompletion(anAddrDone);
+    m->QueueOp(anAddrOp, 60000);
+    LOG2("addr op status ", St(anAddrOp->GetStatus()), " verifier " + N(anAddrOp->HasVerifier()));
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("Bx", 2), aMgr, 5000))));
+    PumpFor(aDefault, 2);
+    // WS_ServerReq_Recv queues a new op for the address (no check: it takes the next datagram from there)
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("Ry", 2), aMgr, 5000))));
+    PumpFor(aDefault, 3);
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("Az", 2), aMgr, 5000))));
+    PumpFor(anAddrDone, 1);
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("Cw", 2), aMgr, 5000))));
+    PumpFor(aDefault, 4);
+    // an address-less op with a check takes any sender's matching datagram (and keeps the sender)
+    Verifier aAny = {'Q', 0, "any op"};
+    SmartPtr<UdpDone> anAnyDone = new UdpDone("any");
+    SmartPtr<UDPManagerRecvOp> anAnyOp = new UDPManagerRecvOp;
+    anAnyOp->SetMessageVerifier(&Verifier::Check, &aAny);
+    anAnyOp->SetCompletion(anAnyDone);
+    m->QueueOp(anAnyOp, 60000);
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("Qq", 2), aMgr, 5000))));
+    PumpFor(anAnyDone, 1);
+    // a timed-out op
+    SmartPtr<UdpDone> aShortDone = new UdpDone("short");
+    SmartPtr<UDPManagerRecvOp> aShortOp = new UDPManagerRecvOp(IPAddr("127.0.0.1", 1));
+    aShortOp->SetCompletion(aShortDone);
+    m->QueueOp(aShortOp, 30);
+    PumpFor(aShortDone, 1);
+    // blocking runs are refused
+    SmartPtr<UDPManagerRecvOp> aBlock = new UDPManagerRecvOp;
+    LOG2("recvop block ", N(aBlock->RunBlock(100)), " " + std::string(St(aBlock->GetStatus())));
+    SmartPtr<TestSendRecv> aBlockSR = new TestSendRecv('b');
+    LOG2("sendrecv block ", N(aBlockSR->RunBlock(100)), " " + std::string(St(aBlockSR->GetStatus())));
+
+    // the manager's Send
+    SmartPtr<BlockingSocket> srv = new BlockingSocket(1);
+    srv->Bind(IPAddr("127.0.0.1", 0), false);
+    IPAddr aSrv("127.0.0.1", srv->GetLocalPort());
+    m->Send(Bytes("Mm", 2), aSrv);
+    sCore->Pump(20);
+    Answer(srv, 1, false);
+    // a request through the manager: a wrong reply (to the auto-receive op), then the right one
+    SmartPtr<UdpDone> aSRDone = new UdpDone("sendrecv");
+    SmartPtr<TestSendRecv> aSR = new TestSendRecv('b');
+    aSR->SetUDPManager(m);
+    aSR->SetDestAddr(aSrv);
+    aSR->mOutgoing = Bytes("a1", 2);
+    aSR->SetCompletion(aSRDone);
+    aSR->RunAsync(60000);
+    sCore->Pump(20);
+    Answer(srv, 1, false);
+    srv->SendBytesTo(Bytes("zz", 2), aMgr, 5000);
+    PumpFor(aDefault, 5);
+    srv->SendBytesTo(Bytes("bb", 2), aMgr, 5000);
+    PumpFor(aSRDone, 1);
+    Log("sendrecv dest " + Addr(aSR->GetDestAddr()));
+    // no reply: one retransmit, then WS_NoReply
+    SmartPtr<UdpDone> aNoDone = new UdpDone("noreply");
+    SmartPtr<TestSendRecv> aNo = new TestSendRecv('b');
+    aNo->SetUDPManager(m);
+    aNo->SetDestAddr(aSrv);
+    aNo->SetNumRetransmits(1);
+    aNo->SetMsgTimeout(60);
+    aNo->mOutgoing = Bytes("n", 1);
+    aNo->SetCompletion(aNoDone);
+    aNo->RunAsync(60000);
+    PumpFor(aNoDone, 1);
+    Answer(srv, 2, false);
+    // without a manager: the op's own socket
+    SmartPtr<UdpDone> anOwnDone = new UdpDone("own");
+    SmartPtr<TestSendRecv> anOwn = new TestSendRecv('p');
+    anOwn->SetDestAddr(aSrv);
+    anOwn->mOutgoing = Bytes("o", 1);
+    anOwn->SetCompletion(anOwnDone);
+    anOwn->RunAsync(60000);
+    sCore->Pump(20);
+    Answer(srv, 1, true);
+    PumpFor(anOwnDone, 1);
+    Log("own socket gone " + N(anOwn->mSocket.get() == NULL));
+    // a receive op on its own socket
+    SmartPtr<UdpDone> aSelfDone = new UdpDone("self");
+    SmartPtr<UDPManagerRecvOp> aSelf = new UDPManagerRecvOp;
+    aSelf->SetCompletion(aSelfDone);
+    aSelf->RunAsync(60000);
+    sCore->Pump(20);
+    unsigned short aSelfPort = aSelf->mSocket.get() != NULL ? aSelf->mSocket->GetLocalPort() : 0;
+    Log("self socket " + Port(aSelfPort));
+    srv->SendBytesTo(Bytes("ss", 2), IPAddr("127.0.0.1", aSelfPort), 5000);
+    PumpFor(aSelfDone, 1);
+    Log("self socket gone " + N(aSelf->mSocket.get() == NULL));
+
+    // close: the waiting ops are killed
+    SmartPtr<UdpDone> aWaitDone = new UdpDone("wait");
+    SmartPtr<UDPManagerRecvOp> aWait = new UDPManagerRecvOp(aSrv);
+    aWait->SetCompletion(aWaitDone);
+    m->QueueOp(aWait, 60000);
+    SmartPtr<UdpDone> aWait2Done = new UdpDone("wait2");
+    SmartPtr<UDPManagerRecvOp> aWait2 = new UDPManagerRecvOp;
+    aWait2->SetMessageVerifier(&Verifier::Check, &aAny);
+    aWait2->SetCompletion(aWait2Done);
+    m->QueueOp(aWait2, 60000);
+    m->Close();
+    PumpFor(aWaitDone, 1);
+    PumpFor(aWait2Done, 1);
+    Log("closed socket " + N(m->GetSocket() == NULL));
+    m->Close();
+    // a rebind with broadcast, then auto-receive off
+    Log("rebind " + std::string(St(m->Bind(0, true))));
+    m->SetAutoRecv(false);
+    Log("send " + std::string(St(u->SendBytesTo(Bytes("lost", 4), IPAddr("127.0.0.1", m->GetSocket()->GetLocalPort()), 5000))));
+    sCore->Pump(50);
+    Log("default count " + N(aDefault->mCount));
+    m->Close();
+    u->Close();
+    srv->Close();
+    Log("udp done");
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -737,6 +1228,9 @@ int main(int argc, char** argv)
         sCore = &aCore;
         AsyncOps();
         Queues();
+        LockAndDest();
+        MoreOps();
+        Udp();
         aCore.Pump(50);
         aCore.Shutdown();
     }

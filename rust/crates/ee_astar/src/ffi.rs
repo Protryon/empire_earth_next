@@ -126,6 +126,43 @@ unsafe fn st<'a>(s: *mut EeAStarStorage) -> &'a mut Storage {
     unsafe { &mut (*s).0 }
 }
 
+/// The storage as bytes (`storage_save`): writes them to `out` when `capacity` holds them; returns their length.
+///
+/// # Safety
+/// As `st`; `out` must be null or hold `capacity` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_save(s: *mut EeAStarStorage, out: *mut u8, capacity: u32) -> u32 {
+    let bytes = unsafe { st(s) }.to_bytes();
+    if !out.is_null() && bytes.len() <= capacity as usize {
+        // SAFETY: the caller's contract (capacity bytes at out)
+        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len()) };
+    }
+    bytes.len() as u32
+}
+
+/// The storage replaced by the one `ee_astar_save` wrote (its own kind); false, the storage unchanged, for other
+/// bytes.
+///
+/// # Safety
+/// As `st`; `data` must hold `length` readable bytes (or `length` be 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_load(s: *mut EeAStarStorage, data: *const u8, length: u32) -> bool {
+    let storage = unsafe { st(s) };
+    let bytes: &[u8] = if length == 0 || data.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, length as usize) }
+    };
+    match Storage::from_bytes(storage.kind, bytes) {
+        Some(loaded) => {
+            *storage = loaded;
+            true
+        }
+        None => false,
+    }
+}
+
 /// A new storage of the given kind (`StorageKind`: 0 hashed, 1 bounded, 2 terrain).
 #[no_mangle]
 pub extern "C" fn ee_astar_new(kind: StorageKind) -> *mut EeAStarStorage {

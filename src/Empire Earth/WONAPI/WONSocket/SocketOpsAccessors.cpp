@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 namespace WONAPI {
-// Same body as 0x2b1df0 in the original (folded by the linker)
-ByteBufferPtr RecvBytesOp::GetBytes() const { return this->mReceivedData; }
+// Same body as 0x2b1df0 in the original (folded by the linker); the bytes are the op's Rust object's
+ByteBufferPtr RecvBytesOp::GetBytes() const
+{ return static_cast<const ByteBuffer*>(static_cast<RefCount*>(ee_won_socketop_received(this->GetSocketOpObject()))); }
 }

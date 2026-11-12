@@ -140,6 +140,34 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
 /// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 
+/// An effect's start without a tag point list (`EEE2DLinearProjectile`, `EEE3DPulseCannonBall`, `EEE3DTracers`): the
+/// model's default point (in `top`) under the unscaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
+
+/// `EEUCProjectile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_GROUND = 0;
+
+/// `EEUCProjectile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_PROJECTILE_WATER = 1;
+
+/// `EEUCMissile::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_GROUND = 2;
+
+/// `EEUCMissile::CheckWaterImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_MISSILE_WATER = 3;
+
+/// `EEUCTorpedo::CheckGroundImpact`.
+constexpr static const int32_t EE_COMBAT_IMPACT_TORPEDO_GROUND = 4;
+
+/// No new goal.
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_NONE = 0;
+
+/// An attack-ground goal at the ground point (the position's x and y, the ground's height).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_GROUND = 1;
+
+/// An attack-ground goal at the position on the water plane (height 0).
+constexpr static const int32_t EE_COMBAT_IMPACT_GOAL_WATER = 2;
+
 /// `LaunchShot`: the shot's launch from the weapon tag point (or half a tile up), turned toward the target.
 constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_SHOT = 0;
 
@@ -796,6 +824,15 @@ constexpr static const uint32_t EE_CALAMITY_TARGET_DISABLED = 128;
 
 constexpr static const uint32_t EE_CALAMITY_TARGET_VOLCANO = 256;
 
+/// [`EeCalamityParams::flags`]: the morale class counts positive morale (`EECCMorale::mPositive`).
+constexpr static const uint32_t EE_CALAMITY_POSITIVE = 32;
+
+/// `kActionCircle`.
+constexpr static const int32_t ACTION_CIRCLE = 1008;
+
+/// `kActionIdle`.
+constexpr static const int32_t ACTION_IDLE = 5000;
+
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).
 constexpr static const uint32_t EE_CALAMITY_BLOCKED_BY_IMMUNITY = 1;
 
@@ -810,6 +847,33 @@ constexpr static const uint32_t EE_CALAMITY_EFFECT1 = 8;
 
 /// The class has its second graphic effect.
 constexpr static const uint32_t EE_CALAMITY_EFFECT2 = 16;
+
+/// [`EeContagionParams::flags`]: the functor skips the spread (`SkipsSpread()`: it updates its units instead).
+constexpr static const uint32_t EE_CONTAGION_SKIPS_SPREAD = 1;
+
+/// The functor infects allies only (`InfectsAlliesOnly()`).
+constexpr static const uint32_t EE_CONTAGION_ALLIES_ONLY = 2;
+
+/// The calamity's class is blocked by immunity (`mIsBlockedByImmunity`).
+constexpr static const uint32_t EE_CONTAGION_BLOCKED_BY_IMMUNITY = 4;
+
+/// [`EeContagionOp::NearView`]: the list's entry is a unit.
+constexpr static const uint32_t EE_CONTAGION_NEAR_UNIT = 1;
+
+/// The functor's `CanInfectType` accepts its category and type.
+constexpr static const uint32_t EE_CONTAGION_NEAR_TYPE = 2;
+
+/// It is the held unit's player's.
+constexpr static const uint32_t EE_CONTAGION_NEAR_SAME_PLAYER = 4;
+
+/// Its player is no enemy of the held unit's player (`mEnemies[...] == 0`).
+constexpr static const uint32_t EE_CONTAGION_NEAR_NOT_ENEMY = 8;
+
+/// [`EeContagionOp::NewView`]: the new unit is a complex unit.
+constexpr static const uint32_t EE_CONTAGION_NEW_COMPLEX = 1;
+
+/// The helper holds it already.
+constexpr static const uint32_t EE_CONTAGION_NEW_HELD = 2;
 
 /// [`EeTechUnitView::flags`]: the unit has a complex unit.
 constexpr static const uint32_t EE_TECH_UNIT_COMPLEX = 1;
@@ -2552,6 +2616,33 @@ enum class EeCalamityOp : int32_t {
   CasterIsRadioMan = 66,
   /// `EEIsTileFree(tile)`: ok.
   TileFree = 67,
+  /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
+  StopSound = 68,
+  /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
+  DestroyHelper = 69,
+  /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
+  StartHelper = 70,
+  /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
+  /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
+  StartSound = 71,
+  /// The calamity's height (`mHeight`) set to x.
+  SetHeight = 72,
+  /// The target unit killed, deselected and cleared.
+  KillTarget = 73,
+  /// The caster's `SightOffHere`.
+  CasterSightOff = 74,
+  /// The caster's sight: x.
+  CasterSight = 75,
+  /// The caster's sight set to x, then `SightOnHere`.
+  CasterSightOn = 76,
+  /// The target unit is protected (`IsProtected`): ok.
+  TargetProtected = 77,
+  /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
+  TileTerrain = 78,
+  /// The target unit exists, is complex and alive: ok.
+  TargetComplexAlive = 79,
+  /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
+  ClassStep = 80,
 };
 
 /// Which `CanCastAt` runs (`EeCalamityCast::mode`).
@@ -2590,6 +2681,62 @@ enum class EeTechUnitWalk : uint32_t {
   PendingHitPoints,
   /// The player's or the pending units, for the flight time rescale.
   FlightTime,
+};
+
+/// The host calls (`EeContagionCall::op`).
+enum class EeContagionOp : int32_t {
+  /// The functor's `UpdateUnits(&mUnits)` (a functor that skips the spread).
+  UpdateUnits = 1,
+  /// The functor's `Update(x, calamity)`.
+  FunctorUpdate = 2,
+  /// The helper's unit count: value.
+  UnitCount = 3,
+  /// Held unit `index` is alive: ok.
+  UnitAlive = 4,
+  /// The functor's `Apply(held unit index, x, calamity)`.
+  Apply = 5,
+  /// Held unit `index` removed and cured (`RemoveUnit(iterator, true)`).
+  Remove = 6,
+  /// Held unit `index` is a complex unit: ok.
+  HeldComplex = 7,
+  /// `GetUnitsInArea(x, held unit index)` into the near list (replacing the last): value its size.
+  NearUnits = 8,
+  /// Near unit `index` against held unit `index2`: flags `EE_CONTAGION_NEAR_*`, id its unit id.
+  NearView = 9,
+  /// `gPhysics->mRandom.Generate()`: x.
+  Random = 10,
+  /// The distance squared from held unit `index2` to near unit `index`: x.
+  DistanceSquared = 11,
+  /// Near unit `index` added to the new units.
+  AddNew = 12,
+  /// New unit `index`: flags `EE_CONTAGION_NEW_*`, id its unit id.
+  NewView = 13,
+  /// New unit `index`'s immunity (effect kind 3): ok when it has one (the host plays its effect).
+  Immune = 14,
+  /// New unit `index` added and infected (`AddUnit(unit, true)`).
+  AddUnit = 15,
+  /// The capture's record of a step (TEST ONLY, `EECalamityCaptureContagionEvent(value, index, index2, x, y)`).
+  Capture = 16,
+};
+
+/// `EETechTreeEpoch::Unlock`'s step for one of the epoch's nodes.
+enum class EeTechUnlockAction : int32_t {
+  /// An obsolete node is left alone.
+  Nothing = 0,
+  /// `MakeAvailable()`: the node comes with the epoch (`mAvailableWithEpoch`).
+  MakeAvailable = 1,
+  /// `SetPrerequisite(epoch)`: the epoch is one of its prerequisites.
+  SetPrerequisite = 2,
+};
+
+/// `EETechTreeEpoch::MakeObsolete(id)`'s choice.
+enum class EeTechMakeObsolete : int32_t {
+  /// Another id: the epoch's node with it (if any) is made obsolete.
+  Node = 1,
+  /// The epoch itself, still ahead and not obsolete: obsoleted (its event fires, the interface refreshes).
+  Epoch = 2,
+  /// The epoch itself, obsolete already or reached: nothing.
+  Nothing = 3,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -2882,6 +3029,9 @@ struct EeWonThread;
 /// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
+
+/// `UDPManager`'s state and steps.
+struct EeWonUdpManager;
 
 /// `WriteBuffer`'s state.
 struct EeWonWriteBuffer;
@@ -4284,10 +4434,95 @@ struct EeCombatWeaponIn {
   float yaw;
   /// the tag point at the frame, in its model's space
   float point[3];
-  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`), the model's default point
+  /// (`EE_COMBAT_WEAPON_KIND_DEFAULT`)
   float top[3];
   /// the number of model chain transforms
   int32_t chain;
+};
+
+/// An impact test's outcome.
+struct EeCombatImpactOut {
+  /// the test's answer
+  int32_t result;
+  /// where it returned (for the capture): projectile ground 0 not yet, 1 above the ground, 2 impact; missile ground
+  /// 0 not its goal, 1 boosting or near its target, 2 no goal, 3 above the ground, 4 on the ground; water 0 not yet
+  /// (projectile), 1 dry or above, 2 impact; torpedo 1 above, 2 impact
+  int32_t stage;
+  /// `EE_COMBAT_IMPACT_GOAL_*`
+  int32_t goal;
+  float goal_point[3];
+  /// leave a shell hole (projectile: at the ground point; missile: at the position placed on the ground)
+  int32_t decal;
+  /// the missile is placed on the ground and moved `offset` up (missile ground)
+  int32_t place;
+  float offset;
+};
+
+/// An impact test's reads (the capture's CBGI and CBWI layout). The `*_read` fields and the values beside them are
+/// the lazy reads, written by the test.
+struct EeCombatImpactIn {
+  /// `EE_COMBAT_IMPACT_*`
+  int32_t kind;
+  /// the class is a bomb's (projectile)
+  int32_t bomb;
+  /// `mFlightTime` (projectile: ms flown; missile: the launch delay left)
+  int32_t flight_time;
+  /// `mProjectileStart`'s height (projectile ground)
+  float start_z;
+  float position[3];
+  /// the floor tile under the position is on the map (projectile ground)
+  int32_t tile_present;
+  /// the unit's tile's height, read for an off-map position (projectile ground)
+  float tile_height;
+  int32_t has_goal;
+  /// the goal's `mKind` (0 without one)
+  int32_t goal_kind;
+  /// the goal's location, read past the first test (missile ground)
+  float goal_location[3];
+  /// the attack target is a land building or a wall, its tile, its size, the unit's tile; read at an impact under
+  /// an attack-unit goal (projectile ground)
+  int32_t target_building;
+  int32_t target_tile[2];
+  int32_t target_size;
+  int32_t unit_tile[2];
+  /// the class has a shell hole effect
+  int32_t shell_hole;
+  /// the launcher is a missile base (`kUnitTypeCpMissileBase`, `kUnitTypeMissileBase`) (missile ground)
+  int32_t launcher_cp_base;
+  int32_t launcher_missile_base;
+  int32_t ground_read;
+  /// `EEMap::GetGroundPoint`'s height under the position
+  float ground_z;
+  /// `EEIsOnTargetTiles` (missile ground, an attack-unit goal)
+  int32_t on_target_read;
+  int32_t on_target;
+  /// the goal location's tile is the unit's (missile ground, a missile base's)
+  int32_t same_tile_read;
+  int32_t same_tile;
+  /// `CanMoveOnTerrain` on the unit's tile (water, at or below height 0)
+  int32_t move_read;
+  int32_t can_move;
+};
+
+/// The attack target's footprint (projectile ground).
+struct EeCombatImpactTarget {
+  int32_t building;
+  int32_t tile[2];
+  int32_t size;
+  int32_t unit_tile[2];
+};
+
+/// The host's lazy reads (`ctx` is the C++'s).
+struct EeCombatImpactHost {
+  void *ctx;
+  float (*ground_z)(void *ctx, float x, float y, float z);
+  float (*tile_height)(void *ctx);
+  void (*target)(void *ctx, EeCombatImpactTarget *out);
+  void (*goal_location)(void *ctx, float *out);
+  int32_t (*on_target_tiles)(void *ctx);
+  int32_t (*same_tile)(void *ctx, float x, float y);
+  int32_t (*can_move)(void *ctx);
 };
 
 /// A launch's inputs (the capture's CBLS, CBLT, CBAP layout). The model chain's transforms are passed beside it.
@@ -5621,6 +5856,12 @@ struct EeCalamityParams {
   int32_t area_time2;
   /// The morale's effect duration.
   int32_t morale_delay;
+  /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+  float start_size;
+  /// The line of sight's bonus.
+  float sight_bonus;
+  /// The earthquake's source effect speed.
+  float quake_source_speed;
 };
 
 /// The calamity's members an update reads and writes (`EECalamity`).
@@ -5730,6 +5971,76 @@ struct EeTechConversion {
   bool move_queued;
   /// The new units take their class's behaviour (tech 0x413 or 0x138d).
   bool set_behavior;
+};
+
+/// The functor's answers an update reads (all plain getters, read once before it).
+struct EeContagionParams {
+  /// `GetSpreadTime()`.
+  uint32_t spread_time;
+  /// `GetChance()`.
+  float chance;
+  /// `GetRadius()`.
+  float radius;
+  /// `EE_CONTAGION_*` bits.
+  uint32_t flags;
+};
+
+/// The helper's timers (`mTimeSinceLastSpread`, `mTimeSinceLastUpdate`).
+struct EeContagionState {
+  float since_spread;
+  float since_update;
+};
+
+/// One host call.
+struct EeContagionCall {
+  EeContagionOp op;
+  int32_t index;
+  int32_t index2;
+  int32_t value;
+  float x;
+  float y;
+};
+
+/// The host's answer.
+struct EeContagionReply {
+  bool ok;
+  uint8_t pad[3];
+  uint32_t flags;
+  int32_t value;
+  uint32_t id;
+  float x;
+};
+
+/// The C++ host of a contagion helper's update (`EEContagionHelperHost`, `EEContagionHelper.cpp`): `call` answers
+/// one [`EeContagionCall`] on the helper.
+struct EeContagionHostFfi {
+  void *ctx;
+  void (*call)(void *ctx, const EeContagionCall *call, EeContagionReply *reply);
+};
+
+/// `EECalamity::GetDiscreteUpdates`: the whole periods of `discrete` in the elapsed time (`UMFloatToLong`, stored
+/// unsigned), and the time left (`elapsed -= updates * discrete`, the count converted to a float).
+struct EeCalamityDiscrete {
+  uint32_t updates;
+  float elapsed;
+};
+
+/// `EETechTreeNode::SetObsolete(value, keep media)`'s decision.
+struct EeTechSetObsolete {
+  /// The node's flag after.
+  bool obsolete;
+  /// It becomes obsolete now: its obsolete event fires and the interface refreshes.
+  bool fires;
+  /// Then its unit media is unloaded if it needs it and has it loaded (`NeedsUnitMedia`, asked only then).
+  bool check_media;
+  uint8_t pad;
+};
+
+/// `EETechTree::AdvanceEpoch` (`tree::advance_epoch`): whether the tree advances, and to which epoch.
+struct EeTechAdvance {
+  bool advances;
+  uint8_t pad[3];
+  int32_t epoch;
 };
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
@@ -7922,6 +8233,25 @@ struct EeWonSocketOpBaseHooks {
   EeWonSocketRefFn socket_release;
   /// the socket's Rust object (`socket->mSock`)
   EeWonAsyncSocket *(*socket_object)(void *socket);
+  /// the ops' objects (`RefCount*`: byte buffers, completions, sockets): `AddRef()`, `Release()`
+  EeWonSocketRefFn ref_add;
+  EeWonSocketRefFn ref_release;
+  /// a `ByteBuffer`'s bytes (its `mBytes`); a new `ByteBuffer` adopting Rust's bytes, a reference taken
+  const EeWonByteBuffer *(*bytes_of)(void *buffer);
+  void *(*bytes_adopt)(EeWonByteBuffer *bytes);
+  /// `socket->TransformSendMsg(*message)` / `TransformRecvMsg`: `*message` holds a reference, replaced by the
+  /// result's
+  long (*transform)(void *socket, void **message, bool send);
+  /// the target file: `PlatFOpen` (binary or text, appending or not; null on failure), `fwrite`, `fclose`, the
+  /// modify time (`utime`)
+  void *(*file_open)(const uint8_t *path, size_t length, bool binary, bool append);
+  size_t (*file_write)(void *file, const uint8_t *data, size_t length);
+  int32_t (*file_close)(void *file);
+  void (*file_set_time)(const uint8_t *path, size_t length, int64_t time);
+  /// a progress chunk: a `RecvChunkOp` of the op with the completion, run in the op's mode
+  void (*progress)(void *op, void *completion);
+  /// `socket->Accept(out)`: on success `*out` is the new socket with a reference
+  long (*accept)(void *socket, void **out);
 };
 
 /// A C++ call on a socket op (`SocketOp*`).
@@ -8021,6 +8351,44 @@ struct EeWonContainerHooks {
   /// `Kill(true)`
   EeWonOpCall kill;
   void *context;
+};
+
+/// A C++ call on one object.
+using EeWonUdpFn = void(*)(void *object);
+
+/// What the manager calls back in the C++. One static table serves every manager.
+struct EeWonUdpHooks {
+  /// any object's `AddRef()` / `Release()` (`RefCount*`)
+  EeWonUdpFn ref_add;
+  EeWonUdpFn ref_release;
+  /// an op's `GetStatus()`, `GetCompletion()`, `SetCompletion(c)`, `RunAsync(t)`, `Kill(true)`, `Finish(s)`,
+  /// `ForceFinish(s)`, `TimeLeft()`
+  long (*op_status)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonUdpFn op_kill;
+  void (*op_finish)(void *op, long status);
+  void (*op_force_finish)(void *op, long status);
+  uint32_t (*op_time_left)(void *op);
+  /// a receive op's `mAddress` (a new value) and its store, its `SetMsg(bytes)`, and its virtual
+  /// `CheckMessage` over the datagram (`*threw` for a `ReadBufferException`)
+  EeWonIpAddr *(*recv_address)(void *op);
+  void (*recv_set_address)(void *op, const EeWonIpAddr *addr);
+  void (*recv_set_msg)(void *op, void *bytes);
+  long (*recv_check)(void *op, const uint8_t *data, size_t length, bool *threw);
+  /// `new UDPManagerRecvOp` (from `addr`, none for null), a reference taken
+  void *(*new_recv_op)(const EeWonIpAddr *addr);
+  /// `new QueueSocket(UDP)`, a reference taken; its `Kill()`, `SetBroadcast(on)`, `Fn2B0D90(port, false)`
+  void *(*socket_new)();
+  EeWonUdpFn socket_kill;
+  void (*socket_set_broadcast)(void *socket, bool on);
+  long (*socket_bind)(void *socket, int32_t port);
+  /// the repeat receive: `SetRepeatCompletion(ParamCompletion(StaticRecvCallback, manager))` and
+  /// `SetRepeatOp(new RecvBytesFromOp(size))`
+  void (*socket_repeat)(void *socket, void *manager, int32_t size);
+  /// `QueueOp(new SendBytesToOp(bytes, addr), -1)`
+  void (*socket_send)(void *socket, void *bytes, const EeWonIpAddr *addr);
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -8293,6 +8661,23 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+/// The storage as bytes (`storage_save`): writes them to `out` when `capacity` holds them; returns their length.
+///
+/// # Safety
+/// As `st`; `out` must be null or hold `capacity` writable bytes.
+uint32_t ee_astar_save(EeAStarStorage *s,
+                       uint8_t *out,
+                       uint32_t capacity);
+
+/// The storage replaced by the one `ee_astar_save` wrote (its own kind); false, the storage unchanged, for other
+/// bytes.
+///
+/// # Safety
+/// As `st`; `data` must hold `length` readable bytes (or `length` be 0).
+bool ee_astar_load(EeAStarStorage *s,
+                   const uint8_t *data,
+                   uint32_t length);
 
 /// A new storage of the given kind (`StorageKind`: 0 hashed, 1 bounded, 2 terrain).
 EeAStarStorage *ee_astar_new(EeAStarStorageKind kind);
@@ -10583,6 +10968,22 @@ uint32_t ee_combat_tile_line(int32_t x1,
 float ee_combat_weapon_height(const EeCombatWeaponIn *input,
                               const float (*chain)[16]);
 
+/// The weapon tag point's world point (`weapon_point`) into `out` (three floats).
+///
+/// # Safety
+/// `input` must point to a valid record, `chain` to `input.chain` matrices (or be NULL when it is 0) and `out` to
+/// three floats.
+void ee_combat_weapon_point(const EeCombatWeaponIn *input,
+                            const float (*chain)[16],
+                            float *out);
+
+/// The impact test of `input.kind`; the lazy reads go to `host` and are written into `*input`.
+///
+/// # Safety
+/// `input` must point to a valid record and `host` to a valid table whose functions may be called with its `ctx`.
+EeCombatImpactOut ee_combat_impact(EeCombatImpactIn *input,
+                                   const EeCombatImpactHost *host);
+
 /// The tag point `LaunchShot` fires from (-1: none).
 ///
 /// # Safety
@@ -12803,6 +13204,22 @@ int32_t ee_calamity_update(const EeCalamityParams *params,
                            float elapsed,
                            const EeCalamityHostFfi *host);
 
+/// A calamity class's `Start(calamity)` (`calamity_start::start`); `state` in and out; whether it started.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+bool ee_calamity_start(const EeCalamityParams *params,
+                       EeCalamityState *state,
+                       const EeCalamityHostFfi *host);
+
+/// A calamity class's `Stop(calamity)` (`calamity_start::stop`); `state` in and out.
+///
+/// # Safety
+/// As [`ee_calamity_update`].
+void ee_calamity_stop(const EeCalamityParams *params,
+                      EeCalamityState *state,
+                      const EeCalamityHostFfi *host);
+
 /// `CanCastAt` (`calamity_cast::can_cast_at`) over the C++ cast host.
 ///
 /// # Safety
@@ -12861,6 +13278,79 @@ EeTechConversion ee_tech_conversion(bool has_unit, bool in_set, bool has_class, 
 /// # Safety
 /// `unit` must be valid for reads.
 uint32_t ee_tech_conversion_unit(const EeTechUnitView *unit);
+
+/// `EEContagionHelper::Update(elapsed)` (`contagion::update`); `state` (the helper's timers) in and out.
+///
+/// # Safety
+/// `params`, `state` and `host` must be valid; the host's `call` must answer every op.
+void ee_contagion_update(const EeContagionParams *params,
+                         EeContagionState *state,
+                         float elapsed,
+                         const EeContagionHostFfi *host);
+
+/// `EECalamity::GetDiscreteUpdates` (`contagion::discrete_updates`).
+EeCalamityDiscrete ee_calamity_discrete_updates(float elapsed, float discrete);
+
+/// A functor's damage per update (`contagion::tick_damage`).
+int32_t ee_contagion_tick_damage(int32_t damage, uint32_t updates);
+
+/// The fire's burn on infection (`contagion::fire_burn`).
+int32_t ee_contagion_fire_burn(int32_t burn, int32_t max_hit_points);
+
+/// The leprosy's damage (`contagion::leprosy_damage`; 0: no hit).
+int32_t ee_contagion_leprosy_damage(int32_t damage, uint32_t updates, int32_t hit_points);
+
+/// An area effect's damage (`contagion::area_damage`; 0: no hit).
+int32_t ee_contagion_area_damage(int32_t damage, uint32_t updates, float attack);
+
+/// `EETechTreeEpoch::Unlock`'s step for one node (`tree::unlock_action`).
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+EeTechUnlockAction ee_tech_unlock_action(const EeTechNode *node,
+                                         const EeTechTreeState *tree,
+                                         bool available_with_epoch);
+
+/// `EETechTreeEpoch::ResearchAll`: whether a node is researched (`tree::research_all_takes`).
+bool ee_tech_research_all_takes(bool researched_with_epoch, bool all_nodes);
+
+/// `EETechTreeEpoch::ResearchKind`: whether a node is researched (`tree::research_kind_takes`).
+bool ee_tech_research_kind_takes(int32_t node_kind,
+                                 int32_t kind,
+                                 bool epoch_only,
+                                 bool researched_with_epoch);
+
+/// `EETechTreeEpoch::ObsoleteOutdatedNodes`: whether a node is past its obsolete epoch (`tree::node_is_outdated`).
+bool ee_tech_node_is_outdated(bool obsolete,
+                              int32_t obsolete_epoch,
+                              int32_t current_epoch);
+
+/// `EETechTreeEpoch::MakeObsolete`'s choice (`tree::epoch_make_obsolete`).
+EeTechMakeObsolete ee_tech_epoch_make_obsolete(int32_t epoch_id,
+                                               int32_t id,
+                                               bool epoch_obsolete,
+                                               int32_t current_epoch);
+
+/// `EETechTreeNode::SetObsolete`'s decision (`tree::set_obsolete`).
+EeTechSetObsolete ee_tech_set_obsolete(bool value, bool keep_media, bool obsolete);
+
+/// `EETechTreeNode::NeedsUnitMedia` (`tree::needs_unit_media`).
+bool ee_tech_needs_unit_media(bool has_class,
+                              int32_t family,
+                              bool editor_obsoleted,
+                              int32_t obsolete_epoch,
+                              int32_t start_epoch);
+
+/// `EETechTreeEpoch::GetBuildTime` (`tree::epoch_build_time`).
+int32_t ee_tech_epoch_build_time(int32_t is_human, int32_t build_time);
+
+/// `EETechTree::SetEpoch`'s test (`tree::set_epoch_allowed`).
+bool ee_tech_set_epoch_allowed(int32_t epoch, int32_t epoch_count, int32_t current_epoch);
+
+EeTechAdvance ee_tech_advance_epoch(int32_t current_epoch, int32_t end_epoch);
+
+/// `EETechTree::SetNodeAvailable`'s test (`tree::node_availability_settable`).
+bool ee_tech_node_availability_settable(int32_t research_delay);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
@@ -18989,13 +19479,12 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
 
-/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+/// A new socket object for the C++ `socket` (the hooks get it), with its own lock.
 ///
 /// # Safety
-/// `hooks` is a static table; `socket` and `lock` outlive the object.
+/// `hooks` is a static table; `socket` outlives the object.
 EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
                                          const EeWonAsyncSocketHooks *hooks,
-                                         void *lock,
                                          int32_t kind);
 
 /// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
@@ -19085,17 +19574,31 @@ long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
                              uint16_t port,
                              bool reuse);
 
-/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+/// `Fn2B0E60` (`local_host` is `IPAddr::GetLocalHost()`, host order).
 ///
 /// # Safety
-/// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect_prepare(const EeWonAsyncSocket *s, uint32_t local_host);
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+long ee_won_asyncsocket_connect_to(const EeWonAsyncSocket *s,
+                                   const EeWonIpAddr *addr,
+                                   uint32_t local_host);
 
-/// `Fn2B0E60`'s connect.
+/// The lock (a `PlatMutex*`, recursive), alive as long as the object.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-long ee_won_asyncsocket_connect(const EeWonAsyncSocket *s, uint32_t address, uint16_t port);
+void *ee_won_asyncsocket_mutex(const EeWonAsyncSocket *s);
+
+/// `GetDestAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+EeWonIpAddr *ee_won_asyncsocket_dest_addr(const EeWonAsyncSocket *s);
+
+/// `SetDestAddr`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `addr` is a live value.
+void ee_won_asyncsocket_set_dest_addr(const EeWonAsyncSocket *s, const EeWonIpAddr *addr);
 
 /// `Listen`.
 ///
@@ -19112,11 +19615,14 @@ long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
                                uint32_t *address,
                                uint16_t *port);
 
-/// The accepted handle into the new socket `s`.
+/// The accepted handle into the new socket `s`, the peer (network order) its destination.
 ///
 /// # Safety
 /// As `ee_won_asyncsocket_kind`.
-void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s, ptrdiff_t handle);
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s,
+                              ptrdiff_t handle,
+                              uint32_t address,
+                              uint16_t port);
 
 /// `WaitForConnect`.
 ///
@@ -19332,6 +19838,135 @@ void ee_won_socketop_line_reset(const EeWonSocketOp *o);
 long ee_won_socketop_line_continue(const EeWonSocketOp *o,
                                    EeWonOpTiming timing,
                                    EeWonByteBuffer **message);
+
+/// `SendBytesOp(data)` (`message` null) / `SendMsgOp(message)` (`is_msg`).
+///
+/// # Safety
+/// `o` is a live op object (so for every call below); `data` and `message` are null or live `ByteBuffer`s.
+void ee_won_socketop_init_send(const EeWonSocketOp *o,
+                               void *data,
+                               void *message,
+                               bool is_msg);
+
+/// `SendBytesToOp(data, address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `to` is a live value.
+void ee_won_socketop_init_send_to(const EeWonSocketOp *o, void *data, const EeWonIpAddr *to);
+
+/// `RecvBytesOp(length)` / `RecvMsgOp` (`is_msg`, length 0).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv(const EeWonSocketOp *o, uint32_t length, bool is_msg);
+
+/// `RecvBytesFromOp(maxLength)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_recv_from(const EeWonSocketOp *o, uint16_t max);
+
+/// `ConnectOp(address)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `addr` is a live value.
+void ee_won_socketop_init_connect(const EeWonSocketOp *o, const EeWonIpAddr *addr);
+
+/// `AcceptOp`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_init_accept(const EeWonSocketOp *o);
+
+/// The op class's `Start`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_start(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// The op class's `Continue`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_continue(const EeWonSocketOp *o, EeWonOpTiming timing);
+
+/// `RecvBytesFromOp::RunHook`'s buffer and reset (the base's run follows).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_recv_from_prepare(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::CloseFile(status)` (its `CleanupHook`'s).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+long ee_won_socketop_close_file(const EeWonSocketOp *o, long status);
+
+/// The received bytes: a borrowed `ByteBuffer*` (null for none).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_received(const EeWonSocketOp *o);
+
+/// `RecvMsgOp::GetMsg`: a borrowed `ByteBuffer*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_message(const EeWonSocketOp *o);
+
+/// `ConnectOp::GetAddr` / `RecvBytesFromOp::GetAddr`: a new value (the C++ `IPAddr` adopts it).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+EeWonIpAddr *ee_won_socketop_address(const EeWonSocketOp *o);
+
+/// `AcceptOp::GetAcceptedSocket`: a borrowed `AsyncSocket*`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void *ee_won_socketop_accepted(const EeWonSocketOp *o);
+
+/// A receive's length / a datagram op's maximum.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_length(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetBytesRead`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+uint32_t ee_won_socketop_bytes_read(const EeWonSocketOp *o);
+
+/// `RecvBytesOp::GetFilePath`: the bytes to `sink`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; the sink is called during the call only.
+void ee_won_socketop_path(const EeWonSocketOp *o, EeWonByteSink sink, void *context);
+
+/// `SetFilePath`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `path` holds `length` bytes.
+void ee_won_socketop_set_path(const EeWonSocketOp *o, const uint8_t *path, size_t length);
+
+/// `SetAppendFile` (0), `SetBinaryFile` (1), `SetSkipBytes` (2).
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_flag(const EeWonSocketOp *o, int32_t which, bool on);
+
+/// `SetFileModifyTime`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`.
+void ee_won_socketop_set_modify_time(const EeWonSocketOp *o, int64_t time);
+
+/// `SetProgressCompletion(completion, interval)`.
+///
+/// # Safety
+/// As `ee_won_socketop_init_send`; `completion` is null or a live completion.
+void ee_won_socketop_set_progress(const EeWonSocketOp *o, void *completion, int32_t interval);
 
 /// # Safety
 /// `hooks` lives for the program.
@@ -19598,6 +20233,76 @@ size_t ee_won_container_len(const EeWonOpContainer *c);
 /// # Safety
 /// `c` is valid.
 void *ee_won_container_current(const EeWonOpContainer *c);
+
+/// A new manager object for the C++ `manager`.
+///
+/// # Safety
+/// `hooks` is a static table; `manager` outlives the object.
+EeWonUdpManager *ee_won_udpmanager_new(void *manager, const EeWonUdpHooks *hooks);
+
+/// Frees the object (its references go).
+///
+/// # Safety
+/// `m` came from `ee_won_udpmanager_new` and is freed once.
+void ee_won_udpmanager_free(EeWonUdpManager *m);
+
+/// `Bind`.
+///
+/// # Safety
+/// `m` is a live manager object (so for every call below).
+long ee_won_udpmanager_bind(const EeWonUdpManager *m, int32_t port, bool broadcast);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_close(const EeWonUdpManager *m);
+
+/// `SetAutoRecv`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_set_auto_recv(const EeWonUdpManager *m, bool on);
+
+/// `QueueOp` (`op` a `UDPManagerRecvOp` as `RefCount*`).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `op` is live.
+void ee_won_udpmanager_queue_op(const EeWonUdpManager *m, void *op, uint32_t timeout);
+
+/// `Send`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `bytes` is a live `ByteBuffer` (or null), `addr` a live value.
+void ee_won_udpmanager_send(const EeWonUdpManager *m, void *bytes, const EeWonIpAddr *addr);
+
+/// `CleanOps`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void ee_won_udpmanager_clean_ops(const EeWonUdpManager *m);
+
+/// `SetDefaultCompletion`.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `completion` is null or live.
+void ee_won_udpmanager_set_default_completion(const EeWonUdpManager *m, void *completion);
+
+/// The socket (a borrowed `QueueSocket*` as `RefCount*`, null when unbound).
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`.
+void *ee_won_udpmanager_socket(const EeWonUdpManager *m);
+
+/// `RecvCallback`: the datagram (`bytes`, its `data`) and its sender.
+///
+/// # Safety
+/// As `ee_won_udpmanager_bind`; `data` holds `length` bytes; `from` is a live value.
+void ee_won_udpmanager_recv(const EeWonUdpManager *m,
+                            void *bytes,
+                            const uint8_t *data,
+                            size_t length,
+                            const EeWonIpAddr *from);
 
 }  // extern "C"
 

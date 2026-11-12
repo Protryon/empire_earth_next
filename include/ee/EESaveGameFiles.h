@@ -146,6 +146,28 @@ inline bool EESaveHasGhostResources(unsigned long inMajorVersion, unsigned long 
 {
     return inMajorVersion > 0 || inMinorVersion >= 272;
 }
+// port: from 0.273 a save holds the contagion manager's last helper id after its helpers (EEContagionManager): a load
+// went on from the highest saved helper's id (0 with none), so a calamity cast after it kept another helper id in its
+// placeholder than the running game's (the calamity's out-of-synch checksum differed from the next cast on)
+inline bool EESaveHasContagionCounter(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 273;
+}
+// port: from 0.275 an attack goal writes its target while it holds one, dying or dead (the original wrote -1 for a
+// target with no hit points left, and the loaded unit lost the goal: RepairPointers failed and cleared the queue), and
+// the ghosts (EESaveHasGhosts) include the attack goals' targets and the gather goals' simple resources (a tree or a
+// mine used up while its gatherer still holds it) out of the world, each record with a complex flag
+inline bool EESaveHasGoalGhosts(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 275;
+}
+// port: from 0.276 a save holds the units' tile searches in progress (EEPathManager::SaveSearches: the machine, its
+// goal and its storage as ee_astar's bytes): a load asked each of those units' path again (RequestPendingPaths), so
+// the path came later, through a graph search first, or another one
+inline bool EESaveHasPathSearches(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 276;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
@@ -163,7 +185,10 @@ unsigned long EEContinentRegionsDigest();
 // the dead attacker of that id, made from the save as a unit out of the world (EEComplexUnit::RepairPointers); NULL
 // when the save has none of that id. Each one is kept by its references from the loaded game's first tick on
 class EEComplexUnit;
+class EEUnit;
 EEComplexUnit* EEFindLoadedGhost(unsigned long inID);
+// the same for any unit, simple ones too (0.275: the goals' resources and targets out of the world)
+EEUnit* EEFindLoadedGhostUnit(unsigned long inID);
 // the units out of the world the computer players' gatherer lists still hold (EECPResourceManager::mGatherers). They
 // are saved as ghosts too (EEPWorldHelper's SaveGhosts) and put back in their lists as saved (EECPResourceManager::Load).
 // Before the port's fix in EECPCivilizationManager::UnitLost a lost unit of a citizen category but neither citizen type

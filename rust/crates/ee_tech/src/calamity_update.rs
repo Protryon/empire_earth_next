@@ -184,6 +184,34 @@ pub enum EeCalamityOp {
     CasterIsRadioMan = 66,
     /// `EEIsTileFree(tile)`: ok.
     TileFree = 67,
+    // the starts and stops' (calamity_start.rs)
+    /// `StopSound` (index 0) or `StopSecondarySound` (index 1).
+    StopSound = 68,
+    /// `ESVERIFY_AT(DestroyContagionHelper(index), value)`.
+    DestroyHelper = 69,
+    /// A contagion helper for the class's functor at the calamity, no unit: value its id, ok when it exists.
+    StartHelper = 70,
+    /// The class's sound started for the calamity: at its volume (value 0) or with the volume, pan and pitch
+    /// `EEComputeSoundParameters` gives at (x, y, z) (value 1).
+    StartSound = 71,
+    /// The calamity's height (`mHeight`) set to x.
+    SetHeight = 72,
+    /// The target unit killed, deselected and cleared.
+    KillTarget = 73,
+    /// The caster's `SightOffHere`.
+    CasterSightOff = 74,
+    /// The caster's sight: x.
+    CasterSight = 75,
+    /// The caster's sight set to x, then `SightOnHere`.
+    CasterSightOn = 76,
+    /// The target unit is protected (`IsProtected`): ok.
+    TargetProtected = 77,
+    /// The terrain type of the tile (index, index2): ok when the tile exists, value the type.
+    TileTerrain = 78,
+    /// The target unit exists, is complex and alive: ok.
+    TargetComplexAlive = 79,
+    /// The class's own start or stop step `index` (its unit's `StartStep`), with (x, y, z) and value.
+    ClassStep = 80,
 }
 
 /// The calamity's members an update reads and writes (`EECalamity`).
@@ -251,6 +279,13 @@ pub struct EeCalamityParams {
     pub area_time2: i32,
     /// The morale's effect duration.
     pub morale_delay: i32,
+    // the starts' (calamity_start.rs)
+    /// The hurricane's second effect's size, the volcano's first's (the calamity's height above its ground).
+    pub start_size: f32,
+    /// The line of sight's bonus.
+    pub sight_bonus: f32,
+    /// The earthquake's source effect speed.
+    pub quake_source_speed: f32,
 }
 
 /// [`EeCalamityParams::flags`]: the class is blocked by immunity (`mIsBlockedByImmunity`).

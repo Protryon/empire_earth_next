@@ -63,27 +63,18 @@ EECCTeleport::~EECCTeleport()
 // without a live caster
 bool EECCTeleport::Start(EECalamity* inCalamity)
 {
-    EEUnit* theCaster = inCalamity->GetCasterUnit();
-    bool theResult = false;
-    if (theCaster != NULL && theCaster->mHitPoints > 0) {
-        theCaster->mComplexUnit->SetDisabled(1, 0x10);
-        gEffectManager->CreateUnitEffect(theCaster, this->mGraphicEffect1, NULL, 0, 0, 0);
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(),
-                                                                        0.0f, 1.0f, this->mSound->GetLooping(), NULL));
-        if (inCalamity->mSound != NULL)
-            inCalamity->mSound->Dereference();
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTeleport::StartStep);
 }
 
 // FUNCTION: EXE 0x4b3592
 // Re-enables the caster and stops the sounds
 void EECCTeleport::Stop(EECalamity* inCalamity)
 {
-    inCalamity->mCasterUnit->mComplexUnit->SetDisabled(0, 0);
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, this->mSecondarySound);
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, this->mSecondarySound, &EECCTeleport::StartStep);
 }
 
 // FUNCTION: EXE 0x4b35b8
@@ -251,4 +242,27 @@ bool EECCTeleport::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, uns
     // the rule is Rust (ee_tech calamity_cast.rs; ee/EECalamityUpdate.h)
     EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
     return EECalamityValidLocation(this, theCast, inUnit, 0);
+}
+
+// New (port): EECCTeleport's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCTeleport::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCTeleport* theClass = static_cast<EECCTeleport*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        EEUnit* theCaster = theCalamity->GetCasterUnit();
+        theCaster->mComplexUnit->SetDisabled(1, 0x10);
+        gEffectManager->CreateUnitEffect(theCaster, theClass->mGraphicEffect1, NULL, 0, 0, 0);
+        return true;
+    }
+    case 2:
+        theCalamity->mCasterUnit->mComplexUnit->SetDisabled(0, 0);
+        return true;
+    default:
+        return false;
+    }
 }
