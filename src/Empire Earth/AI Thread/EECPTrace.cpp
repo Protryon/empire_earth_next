@@ -742,6 +742,12 @@ void EECPOutOfSynchDump(FILE* inFile)
                 }
                 if (theCiv->mUnitManager != NULL)
                     fprintf(inFile, " waiting=%lu", (unsigned long)theCiv->mUnitManager->mNumWaiting);
+                if (theCiv->mResourceManager != NULL) {   // each resource's gatherers: filed/wanted
+                    fprintf(inFile, " gath=");
+                    for (int r = 0; r < 7; r++)
+                        fprintf(inFile, "%s%zu/%lu", r ? "," : "", theCiv->mResourceManager->mGatherers[r].size(),
+                                (unsigned long)theCiv->mResourceManager->mWantedGatherers[r]);
+                }
                 if (theCiv->mResourceManager != NULL)   // the claim range and the danger zones (save 0.265)
                     fprintf(inFile, " claim=%ld/%lu danger=%zu", EECPClaimRange(theCP), (unsigned long)sClaimLast[theCP->mPlayerID < 64 ? theCP->mPlayerID : 63],
                             theCiv->mResourceManager->mDangerZones.size());
