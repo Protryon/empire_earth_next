@@ -26,18 +26,19 @@ public:
 
 class LobbyLanSocket : public BlockingSocket {
 public:
-    // Inline constructor (in Duplicate 0x7e3af0, HostGame and JoinGame): BlockingSocket(0), mClient(NULL),
-    // then SetLengthFieldSize(2); mLastMessageTime (0xa4) is left uninitialized.
-    LobbyLanSocket() : BlockingSocket(0) { this->SetLengthFieldSize(2); }
-    // Implicit destructor 0x7e3ba0: destroys the queue members inline, then calls the AsyncSocket destructor.
+    // The original's inline constructor (in Duplicate 0x7e3af0, HostGame and JoinGame): BlockingSocket(0),
+    // mClient(NULL), then SetLengthFieldSize(2); LanLogic.cpp's now (the Rust object)
+    LobbyLanSocket();
+    virtual ~LobbyLanSocket(); // the Rust object (the original's was implicit, 0x7e3ba0)
     virtual AsyncSocket* Duplicate() { return new LobbyLanSocket; } // 0x7e3af0; returns a new LobbyLanSocket
     void SetClient(LobbyLanClient* inClient); // 0x7dfb90; also points the client back at this socket
-    LobbyLanClient* GetClient() const { return this->mClient.get(); }
-    long GetLastMessageTime() const { return this->mLastMessageTime; }
-    void SetLastMessageTime(long inTime) { this->mLastMessageTime=inTime; }
+    LobbyLanClient* GetClient() const { return static_cast<LobbyLanClient*>(ee_won_lansocket_client(this->mLan)); }
+    long GetLastMessageTime() const { return static_cast<long>(ee_won_lansocket_last_message_time(this->mLan)); }
+    void SetLastMessageTime(long inTime) { ee_won_lansocket_set_last_message_time(this->mLan,inTime); }
 private:
-    SmartPtr<LobbyLanClient> mClient; // 0xa0, owned
-    long mLastMessageTime; // 0xa4: time(NULL), written at 0x7e12e9 and 0x7e14da
+    // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonLanSocket): the client (0xa0, a reference
+    // held) and the last message's time (0xa4, time(NULL); 0 until the first)
+    EeWonLanSocket* mLan;
 };
 
 // LanLogic: 0xb8 bytes (allocated at 0x762f7f); members start at 0x40.

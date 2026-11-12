@@ -426,8 +426,7 @@ public:
     void RunRepeatOp(); //2b45b0, RunRepeatOp
     void RunQueueOp(); //2b48b0, RunQueueOp
     QueueSocket(int inType); //2b3930; fresh factory2b39d0 newa0
-    // IMPLICIT destructor: ordinary2b3a60 has no own-vptr store and naturally inlines
-    // into BlockingSocket/LobbyLanSocket; do not add bare out-of-line dtor declaration.
+    virtual ~QueueSocket(); // the Rust object (the original's was implicit, 2b3a60)
     virtual void OpenHook();  //2b4c00, byte9c=false,ret
     virtual void CloseHook(); //2b4c10,noargs/void, SDK CloseHook
     virtual void KillHook();  //2b4d40,noargs/void, SDK KillHook
@@ -441,15 +440,10 @@ public:
     void QueueClose(long inTimeout); //2b4a70, distinct from Close() 2b1b50
 
 private:
-    SmartPtr<CompletionBase<AsyncOpPtr> > mDefaultQueueCompletion; //74
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCurQueueCompletion; //78
-    SmartPtr<CompletionBase<AsyncOpPtr> > mRepeatCompletion; //7c
-    SmartPtr<CompletionBase<AsyncOpPtr> > mCloseCompletion; //80
-    SmartPtr<SocketOp> mRepeatOp; //84
-    SmartPtr<SocketOp> mQueueOp; //88
-    AsyncOpPtr mCloseTimer; //8c, original StartCloseTimer new44/AsyncOpctor
-    std::list<SmartPtr<SocketOp> > mOpQueue; //90 allocator,94head,98count
-    bool mCloseQueued; //9c, AoC-only flag; natural padding 9d..9f
+    // A Rust object since round 14 (rust/crates/ee_won/src/qsock.rs EeWonQueueSocket): the default, current, repeat
+    // and close completions (+0x74..+0x80), the repeat and queued ops (+0x84, +0x88), the close timer (+0x8c), the
+    // op queue (+0x90) and the queued-close flag (+0x9c), each a reference held, and every step of QueueSocket.cpp
+    EeWonQueueSocket* mQueue;
 };
 
 class BlockingSocket : public QueueSocket {

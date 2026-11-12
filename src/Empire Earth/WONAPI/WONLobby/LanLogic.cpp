@@ -73,15 +73,30 @@ static EeWonLanMsg LanRead(const ByteBuffer* inBuffer, size_t inSkip, LanTexts& 
     return aMsg;
 }
 
+// The LAN socket's client and time are a Rust object (rust/crates/ee_won/src/qsock.rs EeWonLanSocket); its calls
+// back: the client's references and back link
+static void LanClientAddRef(void* inClient) { static_cast<LobbyLanClient*>(inClient)->AddRef(); }
+static void LanClientRelease(void* inClient) { static_cast<LobbyLanClient*>(inClient)->Release(); }
+static void LanClientSetSocket(void* inClient, void* inSocket)
+{
+    static_cast<LobbyLanClient*>(inClient)->mSocket = static_cast<LobbyLanSocket*>(inSocket);
+}
+static const EeWonLanSocketHooks kLanSocketHooks = {LanClientAddRef, LanClientRelease, LanClientSetSocket};
+
+// A stream socket with a 2-byte length field and no client
+LobbyLanSocket::LobbyLanSocket() : BlockingSocket(0)
+{
+    this->mLan = ee_won_lansocket_new(static_cast<void*>(this), &kLanSocketHooks);
+    this->SetLengthFieldSize(2);
+}
+// The client's reference goes with the Rust object
+LobbyLanSocket::~LobbyLanSocket() { ee_won_lansocket_free(this->mLan); }
+
 // FUNCTION: WON 0x007dfb90
 // Links the socket and a LAN client both ways, unlinking the previous client
 void LobbyLanSocket::SetClient(LobbyLanClient* inClient)
 {
-    if (this->mClient.get() != NULL)
-        this->mClient->mSocket = NULL;
-    this->mClient = inClient;
-    if (this->mClient.get() != NULL)
-        this->mClient->mSocket = this;
+    ee_won_lansocket_set_client(this->mLan, inClient);
 }
 // FUNCTION: WON 0x007dfc00
 // Creates the LAN logic with an empty client list and empty LAN and direct-connect game lists

@@ -1,4 +1,4 @@
-// WON's socket classes over 127.0.0.1, one line per event, compared with rust/crates/ee_won/src/golden_sockobj.txt:
+// WON's socket classes over 127.0.0.1 and IPAddr's values, one line per event, compared with rust/crates/ee_won/src/golden_sockobj.txt:
 // AsyncSocket (open, bind, listen, connect, accept and the accepted socket's Duplicate, the hooks, the message
 // transforms' order and refusals, sends and receives, datagrams, type changes, close, kill, disconnect), the socket
 // ops run blocking (connect, accept, close, raw bytes with the progress completion, length-prefixed messages,
@@ -172,6 +172,77 @@ struct Pair {
     }
     BlockingSocket* Server() { return static_cast<BlockingSocket*>(this->mServer.get()); }
 };
+
+// IPAddr's value (dotted addresses only: a name lookup is the system's): the parses, the text forms, the wire
+// form, the order, the copies (a copy keeps its value when the original changes), the remembered host, the local
+// host
+static std::string IpShow(const char* inName, const IPAddr& inAddr)
+{
+    return std::string(inName) + " host " + N(inAddr.GetHost()) + " port " + N(inAddr.GetPort()) + " valid "
+        + N(inAddr.IsValid()) + " text " + inAddr.GetHostString(true) + " / " + inAddr.GetHostString(false) + " "
+        + inAddr.GetHostAndPortString(true);
+}
+static void Addresses()
+{
+    Log("== IPAddr");
+    Log(IpShow("default", IPAddr()));
+    Log(IpShow("host port", IPAddr("10.1.2.3", 80)));
+    Log(IpShow("colon", IPAddr("10.1.2.3:8080")));
+    Log(IpShow("no colon", IPAddr("10.1.2.3")));
+    Log(IpShow("numeric", IPAddr(0x7f000001, 25)));
+    Log(IpShow("broadcast", IPAddr::GetBroadcastAddr(9999)));
+    Log(IpShow("port text", IPAddr("1.2.3.4: 77x")));
+    IPAddr a;
+    LOG2("nodns ", N(a.SetWithDefaultPortNoDNS("192.168.0.9", 33)), " " + IpShow("a", a));
+    LOG2("nodns port ", N(a.SetWithDefaultPortNoDNS("192.168.0.9:44", 33)), " " + IpShow("a", a));
+    LOG2("nodns name ", N(a.SetWithDefaultPortNoDNS("somewhere", 33)), " " + IpShow("a", a));
+    LOG2("default port ", N(a.SetWithDefaultPort("10.0.0.1", 55)), " " + IpShow("a", a));
+    LOG2("default port colon ", N(a.SetWithDefaultPort("10.0.0.2:66", 55)), " " + IpShow("a", a));
+    IPAddr r;
+    r.SetRememberHostString(true);
+    LOG2("remember ", N(r.Fn2B2660("10.9.8.7", 21)), " " + IpShow("r", r));
+    IPAddr rc = r;
+    r.Fn2B2C20(0x0a000001, 22);
+    Log(IpShow("r numeric", r));
+    Log(IpShow("r copy", rc));
+    rc.SetPort(23);
+    Log(IpShow("r copy port", rc));
+    rc = r;
+    Log(IpShow("r assigned", rc));
+    rc = rc;
+    Log(IpShow("r self", rc));
+    const char* six = r.GetSixByte();
+    std::string aSix;
+    for (int i = 0; i < 6; i++)
+        aSix += N(static_cast<unsigned char>(six[i])) + ",";
+    Log("six " + aSix);
+    IPAddr s;
+    const unsigned char aWire[6] = {0x04, 0xd2, 127, 0, 0, 1};
+    s.SetSixByte(aWire);
+    Log(IpShow("six set", s));
+    PlatSockAddrIn sa = s.GetSockAddrIn();
+    Log("sockaddr family " + N(sa.mFamily) + " port " + N(sa.mPort) + " address " + N(sa.mAddress));
+    Log(IpShow("from sockaddr", IPAddr(sa)));
+    // the order: the wire form (port first); StringCompare: the address first
+    IPAddr x(0x01000000, 2), y(0x02000000, 1), z(0x01000000, 2);
+    Log("x<y " + N(x < y) + " y<x " + N(y < x) + " x==z " + N(x == z) + " x!=y " + N(x != y) + " strcmp "
+        + N(x.StringCompare(y)) + " " + N(y.StringCompare(x)) + " " + N(x.StringCompare(z)));
+    std::map<IPAddr, int> aMap;
+    aMap[IPAddr(0x0a000001, 3)] = 1;
+    aMap[IPAddr(0x0a000002, 1)] = 2;
+    aMap[IPAddr(0x0a000001, 2)] = 3;
+    aMap[IPAddr(0x0a000001, 3)] = 4;
+    std::string aOrder;
+    for (std::map<IPAddr, int>::iterator i = aMap.begin(); i != aMap.end(); ++i)
+        aOrder += i->first.GetHostAndPortString(true) + "=" + N(i->second) + " ";
+    Log("map " + aOrder);
+    // the local host
+    Log("local host " + N(IPAddr::GetLocalHost()));
+    LOG2("set local 7f000002 ", N(IPAddr::SetLocalHost(0x7f000002, false)), " " + N(IPAddr::GetLocalHost()));
+    Log(IpShow("local addr", IPAddr::GetLocalAddr()));
+    LOG2("set local bad ", N(IPAddr::SetLocalHost(0x01020304, true)), " " + N(IPAddr::GetLocalHost()));
+    LOG2("set local 0 ", N(IPAddr::SetLocalHost(0, true)), " " + N(IPAddr::GetLocalHost()));
+}
 
 static void Sockets()
 {
@@ -654,6 +725,7 @@ static std::string GoldenPath()
 int main(int argc, char** argv)
 {
     AsyncSocket::StartWinsock();
+    Addresses();
     Sockets();
     BlockingOps();
     {

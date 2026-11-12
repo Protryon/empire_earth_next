@@ -60,6 +60,7 @@ pub mod parser;
 pub mod path;
 pub mod persist;
 pub mod plaintext;
+pub mod qsock;
 pub mod random;
 pub mod regkey;
 pub mod resource;

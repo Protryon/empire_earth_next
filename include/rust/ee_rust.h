@@ -2550,6 +2550,10 @@ struct EeWonByteBuffer;
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
 
+/// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
+/// its last message came (`time(NULL)`; the original left it unset until then, here 0).
+struct EeWonLanSocket;
+
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
 
@@ -2560,6 +2564,9 @@ struct EeWonOpTracker;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
+
+/// `QueueSocket`'s state and steps.
+struct EeWonQueueSocket;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -7044,6 +7051,59 @@ struct EeWonPrefsEvent {
 
 /// Receives each event of a read in order.
 using EeWonPrefsSink = void(*)(void *context, const EeWonPrefsEvent *event);
+
+/// A C++ call on one object (an op, a completion or the socket).
+using EeWonQueueFn = void(*)(void *object);
+
+/// A C++ call making a new object (its reference not yet taken).
+using EeWonQueueNewFn = void*(*)(void *socket);
+
+/// What the queue object calls back in the C++. One static table serves every queue socket.
+struct EeWonQueueSocketHooks {
+  /// `completion->AddRef()`, `->Release()`, `->Complete(op)`
+  EeWonQueueFn completion_add_ref;
+  EeWonQueueFn completion_release;
+  void (*completion_call)(void *completion, void *op);
+  /// `op->AddRef()`, `->Release()` (any `AsyncOp*`)
+  EeWonQueueFn op_add_ref;
+  EeWonQueueFn op_release;
+  /// `op->GetStatus()`, `->IsKilled()`, `->GetTimeout()`, `->GetCompletion()`
+  long (*op_status)(void *op);
+  bool (*op_killed)(void *op);
+  uint32_t (*op_timeout)(void *op);
+  void *(*op_completion)(void *op);
+  /// `op->SetCompletion(c)`, `->SetTimeout(t)`, `->RunAsync(t)`, `->Kill(true)`, `->ForceFinish(s)`,
+  /// `->SetRunAsyncImmediately(false)`
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_set_timeout)(void *op, uint32_t timeout);
+  void (*op_run_async)(void *op, long timeout);
+  EeWonQueueFn op_kill;
+  void (*op_force_finish)(void *op, long status);
+  /// a socket op's `SetSocket(socket)` and the virtual `Duplicate()` (a new op, or null)
+  void (*op_set_socket)(void *op, void *socket);
+  void *(*op_duplicate)(void *op);
+  /// `dynamic_cast<QueueOpFastCompletion*>(completion)`'s original completion, or null
+  void *(*fast_original)(void *completion);
+  /// new objects: `ParamCompletion(StaticOpCallback, socket)`, `QueueOpFastCompletion(StaticOpCallback,
+  /// socket, original)`, a close timer (`AsyncOp` with `ParamCompletion(StaticCloseTimerCallback, socket)`),
+  /// `QueueCloseOp`, `CloseOp(socket)`
+  EeWonQueueNewFn new_op_completion;
+  void *(*new_fast_completion)(void *socket, void *original);
+  EeWonQueueNewFn new_close_timer;
+  EeWonQueueNewFn new_queue_close_op;
+  EeWonQueueNewFn new_close_op;
+  /// the socket's `Close()`, `IsValid()`, `GetType() == UDP`
+  EeWonQueueFn socket_close;
+  bool (*socket_valid)(void *socket);
+  bool (*socket_datagram)(void *socket);
+};
+
+/// What a LAN socket object calls back: the client's references and its back link (`client->mSocket = socket`).
+struct EeWonLanSocketHooks {
+  EeWonQueueFn client_add_ref;
+  EeWonQueueFn client_release;
+  void (*client_set_socket)(void *client, void *socket);
+};
 
 /// A row for the C++: NUL-terminated texts; `new_section` when the section differs from the previous row's.
 struct EeWonResource {
@@ -17250,6 +17310,154 @@ void ee_won_prefs_prune_lan_names(const int64_t *times, size_t count, bool *drop
 int64_t ee_won_prefs_recent_lan_name(const int64_t *times, size_t count);
 
 uint16_t ee_won_prefs_default_lan_number(uint32_t host);
+
+/// A new queue object for the C++ `socket` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` and `lock` outlive the object.
+EeWonQueueSocket *ee_won_queuesocket_new(void *socket,
+                                         const EeWonQueueSocketHooks *hooks,
+                                         void *lock);
+
+/// Frees the queue object (its references go).
+///
+/// # Safety
+/// `q` came from `ee_won_queuesocket_new` and is freed once.
+void ee_won_queuesocket_free(EeWonQueueSocket *q);
+
+/// `SetRepeatCompletion`.
+///
+/// # Safety
+/// `q` is a live queue object (so for every `ee_won_queuesocket_` call); the objects passed are live C++ objects
+/// of the kinds named or null.
+void ee_won_queuesocket_set_repeat_completion(const EeWonQueueSocket *q,
+                                              void *c);
+
+/// `SetCloseCompletion`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_close_completion(const EeWonQueueSocket *q, void *c);
+
+/// `SetQueueCompletion`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_queue_completion(const EeWonQueueSocket *q, void *c);
+
+/// `StartCloseTimer`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_start_close_timer(const EeWonQueueSocket *q, long timeout);
+
+/// `CancelCloseTimer`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_cancel_close_timer(const EeWonQueueSocket *q);
+
+/// `CloseTimerCallback`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_close_timer_callback(const EeWonQueueSocket *q, void *timer);
+
+/// `OpCallback`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_op_callback(const EeWonQueueSocket *q, void *op);
+
+/// `SetRepeatOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_set_repeat_op(const EeWonQueueSocket *q, void *op);
+
+/// `RunRepeatOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_run_repeat_op(const EeWonQueueSocket *q);
+
+/// `QueueOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_op(const EeWonQueueSocket *q, void *op, long timeout);
+
+/// `RunQueueOp`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_run_queue_op(const EeWonQueueSocket *q);
+
+/// `QueueClose`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_close(const EeWonQueueSocket *q, long timeout);
+
+/// `QueueOpFast`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`.
+void ee_won_queuesocket_queue_op_fast(const EeWonQueueSocket *q, void *op, uint32_t timeout);
+
+/// `OpenHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_set_repeat_completion`; the caller holds the socket's lock.
+void ee_won_queuesocket_open_hook(const EeWonQueueSocket *q);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_open_hook`.
+void ee_won_queuesocket_close_hook(const EeWonQueueSocket *q);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_queuesocket_open_hook`.
+void ee_won_queuesocket_kill_hook(const EeWonQueueSocket *q);
+
+/// A new LAN socket object for the C++ `socket`.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` outlives the object.
+EeWonLanSocket *ee_won_lansocket_new(void *socket, const EeWonLanSocketHooks *hooks);
+
+/// Frees the LAN socket object.
+///
+/// # Safety
+/// `l` came from `ee_won_lansocket_new` and is freed once.
+void ee_won_lansocket_free(EeWonLanSocket *l);
+
+/// `GetClient`.
+///
+/// # Safety
+/// `l` is a live LAN socket object (so for every `ee_won_lansocket_` call).
+void *ee_won_lansocket_client(const EeWonLanSocket *l);
+
+/// `SetClient`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`; `client` is null or a live client.
+void ee_won_lansocket_set_client(const EeWonLanSocket *l, void *client);
+
+/// `mLastMessageTime`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`.
+int64_t ee_won_lansocket_last_message_time(const EeWonLanSocket *l);
+
+/// `mLastMessageTime = t`.
+///
+/// # Safety
+/// As `ee_won_lansocket_client`.
+void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
 
 /// `config_name`.
 ///
