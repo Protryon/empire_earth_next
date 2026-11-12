@@ -850,8 +850,10 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && EELoadContinentRegions(inFile) == kErrorOK   // port (0.263): the continent manager as it was
             && EESaveHasResourceState(inMajorVersion, inMinorVersion)
             && EECPLoadResourceState(inFile) == kErrorOK   // port (0.265): the claim ranges and danger zones
-            && EESaveHasPlayerUnitOrder(inMajorVersion, inMinorVersion))
-            LoadPlayerUnitOrder(inFile);   // port (0.270): the order of each player's unit list
+            && EESaveHasPlayerUnitOrder(inMajorVersion, inMinorVersion)
+            && LoadPlayerUnitOrder(inFile) == kErrorOK   // port (0.270): the order of each player's unit list
+            && EESaveHasPathSearches(inMajorVersion, inMinorVersion))
+            gPathManager.LoadSearches(inFile);   // port (0.276): the units' tile searches in progress
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -920,6 +922,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 EECPSaveResourceState(outFile);   // port (0.265): the claim ranges and danger zones
             if (EESaveHasPlayerUnitOrder(inMajorVersion, inMinorVersion))
                 SavePlayerUnitOrder(outFile);   // port (0.270): the order of each player's unit list
+            if (EESaveHasPathSearches(inMajorVersion, inMinorVersion))
+                gPathManager.SaveSearches(outFile);   // port (0.276): the units' tile searches in progress
         }
     }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);

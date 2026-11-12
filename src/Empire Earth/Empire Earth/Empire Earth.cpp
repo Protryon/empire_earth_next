@@ -883,8 +883,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 273 the contagion manager's last helper id (EESaveHasContagionCounter)
 // 274 the next engine's site walkers (EECPNextState::mExplore: its state block's version 4, EECPNextLua.cpp)
 // 275 the attack goals' dying targets and the goals' units out of the world, simple ones too (EESaveHasGoalGhosts)
+// 276 the units' tile searches in progress (EESaveHasPathSearches)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 275;
+const unsigned long kSaveGameMinorVersion = 276;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

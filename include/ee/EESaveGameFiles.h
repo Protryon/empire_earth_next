@@ -161,6 +161,13 @@ inline bool EESaveHasGoalGhosts(unsigned long inMajorVersion, unsigned long inMi
 {
     return inMajorVersion > 0 || inMinorVersion >= 275;
 }
+// port: from 0.276 a save holds the units' tile searches in progress (EEPathManager::SaveSearches: the machine, its
+// goal and its storage as ee_astar's bytes): a load asked each of those units' path again (RequestPendingPaths), so
+// the path came later, through a graph search first, or another one
+inline bool EESaveHasPathSearches(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 276;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
