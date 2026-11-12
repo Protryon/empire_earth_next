@@ -20,6 +20,7 @@ void ServerRequestOp::Init()
     this->mUseAuth2=true;
     this->mUseLastServerErrorForFinishStatus=false;
     this->mCloseConnection=true;
+    this->mRustOp=NULL;
 }
 // FUNCTION: WON 0x006acf60
 // Creates a request that tries the servers of a server context
@@ -35,10 +36,19 @@ ServerRequestOp::ServerRequestOp(const IPAddr& inAddress) : mAddrItr(AddrList::i
     this->Init();
     this->SetAddr(inAddress);
 }
+// A request running an op derived in Rust (ee_won reqop.rs), with the length field the op asks for
+ServerRequestOp::ServerRequestOp(ServerContext* inContext, EeWonReqOp* inRustOp) : mAddrItr(AddrList::iterator())
+{
+    this->Init();
+    this->SetServerContext(inContext);
+    this->mRustOp = inRustOp;
+    this->mLengthFieldSize = ee_won_reqop_length_field_size(inRustOp);
+}
 // FUNCTION: WON 0x006ad110
-// Destroys the request (members only)
+// Destroys the request (members only; a Rust op is freed)
 ServerRequestOp::~ServerRequestOp()
 {
+    ee_won_reqop_free(this->mRustOp);
 }
 // FUNCTION: WON 0x006ad2e0
 // Sets the server context whose addresses are tried
@@ -282,6 +292,7 @@ WONStatus ServerRequestOp::Recv()
 // Runs the request: asynchronously, or blocking over each server until one completes
 void ServerRequestOp::RunHook()
 {
+    if (this->mRustOp != NULL) ee_won_reqop_run_hook(this->mRustOp);
     ServerRequestGlue aGlue = {this, NULL};
     EeWonServerReqHooks aHooks = ReqHooks(&aGlue);
     ee_won_server_req_run(&aHooks);
@@ -340,10 +351,28 @@ namespace WONAPI {
 // WON SDK default virtual methods
 
 // FUNCTION: WON 0x006ad020
-// Builds no request and asks to receive (default)
-WONStatus ServerRequestOp::GetNextRequest() { return WS_ServerReq_Recv; }
-WONStatus ServerRequestOp::CheckResponse() { return WS_Success; }
-void ServerRequestOp::Reset() {}
+// Builds no request and asks to receive (default); a Rust op builds its request
+WONStatus ServerRequestOp::GetNextRequest()
+{
+    if (this->mRustOp == NULL) return WS_ServerReq_Recv;
+    return (WONStatus)ee_won_reqop_next_request(this->mRustOp, this->mLengthFieldSize, WonByteBufferSink, &this->mRequest);
+}
+// A Rust op reads the reply: its cut read throws and its invalid header tries the next server, as the C++ ops did
+WONStatus ServerRequestOp::CheckResponse()
+{
+    if (this->mRustOp == NULL) return WS_Success;
+    int32_t aVerdict = 0;
+    const ByteBuffer* r = this->mResponse.get();
+    long aStatus = ee_won_reqop_check_response(this->mRustOp, r != NULL ? reinterpret_cast<const uint8_t*>(r->data()) : NULL,
+                                               r != NULL ? r->length() : 0, &aVerdict);
+    if (aVerdict == EE_WON_REQOP_CUT) throw ReadBufferException("Attempt to read past end of buffer.");
+    if (aVerdict == EE_WON_REQOP_INVALID_HEADER) return this->InvalidReplyHeader();
+    return (WONStatus)aStatus;
+}
+void ServerRequestOp::Reset()
+{
+    if (this->mRustOp != NULL) ee_won_reqop_reset(this->mRustOp);
+}
 }
 
 // Compiler-generated and header-inline functions this unit emits:

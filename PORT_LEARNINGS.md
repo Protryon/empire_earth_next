@@ -8487,3 +8487,44 @@ or EE-SIM run does.
 - **What only a combat tour shows:** the shots' effects (muzzle flash, the shot effect between the units or at the
   drop point, the impact sparks on a friendly blocker or open ground, the capital ships' special attack effect) and
   that idle soldiers near an attacked unit join the fight.
+
+## R6: WON's Internet code, round 7 (ops derived in Rust: the admin, directory change, email and patch list ops)
+
+Branch `rust-won-net7`. The goal was net C++ deletion: round 6's whole-op moves left a C++ shim per op whose hook
+table outgrew the statements it replaced. As before nothing in the game reaches this code except the lobby's lost
+password and lost user name requests (an Internet login; the servers are gone): only the drivers exercise it, and
+no tour, LAN game or EE-SIM run does.
+
+- **The order, by delete/keep ratio.** Measured first: of the Internet directories' 15,212 lines, the op classes
+  no C++ outside their own file uses (WONInternal's admin ops, WONDir's entity changes, the email and patch list
+  ops) delete with no C++ left behind but one generic dispatch; moving `ServerRequestOp`'s object would keep a hook
+  for each C++ object it touches (the address list, the socket and its ops, the sessions, `PeerAuthOp`), so it
+  deletes little until those are Rust too. So the derived ops went first, the base stays a C++ class.
+- **An op derived in Rust.** `reqop.rs`'s `RequestOp` trait is the op's `RunHook` prelude, `GetNextRequest`,
+  `CheckResponse`, `Reset` and its members' description; `EeWonReqOp` boxes one. The C++ `ServerRequestOp` gained a
+  constructor taking an `EeWonReqOp*` and its default virtuals run it (a cut read is thrown, an invalid header calls
+  `InvalidReplyHeader`, both after the Rust call returned): one 40-line dispatch in place of a class per op.
+  `DbProxy` is `DBProxyOp`'s statements (the replies' data collected until the last-reply flag; `Reset` never clears
+  it, as the original did not).
+- **Goldens from the original's half, which outlives the C++.** The drivers' original half is the ops' statements
+  over stand-ins (`won_adminop_test`, `won_dirop_test`), recorded with the Rust half compiled out before the C++
+  classes were deleted, so it still compiles after. `WONAdminMsg.h` moved to `tests/won/won_admin_msg.h`: the ops it
+  served are gone, and `won_admin_test` still checks it against the pre-port statements, which keeps the chain from
+  the original to the Rust op. Mutations: the key check's list not cleared (211 failed checks), the proxy data not
+  collected (18,510), the address read for directories (7,087), a patch size bit (1,460); each also failed its
+  Rust replay.
+- **C++ evaluation order.** `Num(b.GetNextRequest()) + " " + Hex(Bytes(b.mRequest.get()))` read `mRequest` before
+  the call (clang evaluates `operator+`'s right operand first here): the first golden had no requests. Split into
+  statements.
+- **A wide string's length counts units.** The CD key account reply's ranges (admin.rs) give UTF-16 lengths in
+  units; the Rust op first took them as bytes.
+- **Users a basename search misses.** `RequestAccountEmail.cpp` defines `RequestPasswordEmailOp` and
+  `RequestAccountInfoEmailOp`, which AccountLogic makes: search for the class names, not the file's. AccountLogic now
+  makes a `ServerRequestOp` over `ee_won_reqop_password_email` / `ee_won_reqop_info_email` (a mechanical call-site
+  edit; the lobby lane's files were not touched).
+- **Not moved, and why.** `ServerRequestOp`'s object (above); `FindEntityOp` and `GetAliasDirOp` (their results are
+  C++ `DirEntity` lists); `ContestCallOp` (reads the auth context's certificate), `EventReportOp`,
+  `ReportPatchStatusOp` (a UDP send), `PingOp`/`MultiPingOp`, `FilePushOp` (a `ServerOp` streaming a file);
+  HTTPGetOp/FTPGetOp/GetHTTPDocumentOp (a socket state machine, next); the ops the lobby uses (GetDirOp,
+  GetMultiDirOp, the account ops, CheckValidVersionOp, GetUserIdFromNameOp), which need their accessors on the
+  narrow ABI.
