@@ -8790,3 +8790,76 @@ code commits. Plus 22,930 lines of vendored C and tooling (libpng 1.0, zlib 1.1)
   build running, 50 of 50 runs pass, and 50 more under the build alone; cargo test
   `a_set_waits_for_a_reader_that_holds_the_file` holds the file 800 ms. In the game this was a settings write
   (the options, the lobby's saved state) silently lost while a scanner had config.yaml open.
+
+## R6 WON round 20: StagingLogic and LanLogic as Rust objects over one outward call table (ee_won stagingobj.rs, lanobj.rs, lobbyhost.rs; branch rust-r6-won20, 2026-11-12)
+
+Measured as rounds 18 and 19 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`):
+100,938 -> 100,575 (StagingLogic, -363) -> 99,914 (LanLogic, -661): -1,024 in two code commits.
+
+- **The design (one host, generic both ways).** A Rust lobby logic object reaches C++ through ONE function,
+  `ee_won_lobbycpp_call(logic, op, a, b, c, d) -> intptr_t` (`WONLobby/LobbyLogicHost.cpp`), whose op codes are
+  `lobbyhost.rs` `EeWonLobbyOp`; the lobby reaches the object through one entry, `ee_won_staging_call(obj, call,
+  a, b, c, d)` (`EeWonStagingCall`), plus new/free. Four C ABI functions for StagingLogic's whole surface, not ~190.
+  The host function pointer is given to `ee_won_staging_new`, so the tests pass a scripted host without a global.
+- **What an op is.** A run of the original's C++ statements with no decision between them: `StLogoutTail` is the
+  seven calls after Logout's LeaveGame, `GameLeaveNet` ClearPlayers / mMyClient = NULL / PreNetLeaveGame /
+  LobbyNetLeaveGame / PostNetLeaveGame, `ClientBroadcastJoined` the head, the player's bytes and the broadcast. So
+  the host is a switch of short cases (86 ops, ~300 lines with the shell) and the Rust keeps every branch and the
+  call order. Text pairs (title, details) and sounds are small enums (`EeWonLobbyText`, `EeWonLobbySound`).
+- **What stays C++.** The shell (`WONLobbyStaging.h`) keeps the SmartPtrs the lobby reads (`mGame`, `mMyClient`,
+  `mJoinOp`, `mCreateGameDialog`) and the vtable; its methods are one-line inline forwarders, so LobbyStagingSupport
+  and WONLobbyPrv did not change. The scalar state (the join status, the staging and ready flags, the last
+  all-ready time) is Rust's, in `Cell`s behind a shared reference: the modal dialogs and the join's status wait run
+  the lobby, and the host's reply arrives through `HandleMessage` *during* `JoinGame` (that is how the join
+  finishes), so no `&mut` may live across a call out.
+- **The original's local SmartPtrs** (`SmartPtr<LobbyGame> aGame` in HostGame, JoinGame, LeaveGame) are `HeldGame`
+  (an op returns the game with a reference added, `GameRelease` on drop), declared in the original's order with
+  the StagingLeaveOnError guard: HostGame's guard drops before its game, JoinGame's after, as the C++ destructors ran.
+- **ReadBufferException** may not unwind through Rust frames: the four ops that read a room message
+  (`GameJoinReplySend`, `GameHandleJoinReply`, `ClientReadPlayer`, `GameHandleGameMessage`) catch it in the host and
+  return `EeWonLobbyResult::Threw`; the Rust handler then stops, as the original's `catch` in HandleMessage did (each
+  of those reads was the handler's first or last act). `HandleMessageBuffer`'s re-entry into HandleMessage is the op
+  `HandleBytes` (the host builds the ReadBuffer and calls the shell).
+- **The golden.** `won_stagingobj_test` holds the original StagingLogic.cpp's methods with every object call
+  replaced by the op that makes it, and runs them and the Rust object over one scripted host (each op's answer drawn
+  from a seeded stream; a game's type fixed per pointer, or the ping wait is never reached): 20,000 sequences of six
+  random inward calls, 950,662 trace lines (every op, its arguments, its answer, the messages' bytes), all 86 ops and
+  20 calls met, identical. A mutated Rust (one event kind changed) fails 3,014 sequences. The first 100 sequences
+  and each later one that meets a new op are `golden_stagingobj.txt` (106 sequences, 5,088 lines), which
+  `stagingobj::tests` replays op for op with cargo alone.
+- **What runs it.** EE-SIM never loads the lobby: the oracle is unchanged by construction. Only the lead's LAN game
+  (`lan_game.py`: the host's HostGame through the create-game dialog, the joiner's JoinGame with its join request and
+  status wait, the room messages over LanLogic, the ready flags and the start) and a lobby tour reach this code.
+  The Internet paths (ping verification before a join, the firewall warnings, kicks from the routing server) run
+  only in the golden.
+- **LanLogic, the same way** (commit `R6 WON: LanLogic as a Rust object over the lobby host`). `lanobj.rs` holds
+  its methods and scalar state (the next client id, the captain and peer-auth flags, the last host ping and
+  broadcast times) over `lan` and `lanlogic`; the shell (`WONLobbyLan.h`) keeps the SmartPtrs, the socket set,
+  the discovery address, the completions' member functions (one-line forwarders) and the steps that are C++ alone
+  (AddPendingSocket, the two timers' start, StopDiscovery, RefreshCertificate, HandlePeerAuthDone, the summary,
+  keep-alive and removal reads on IPAddr, the direct-connect add), all in `WONLobby/LanLogicHost.cpp` with its
+  109 ops (the one host function hands every op from `LanMyClient` on to `LanLogicHostCall`). LanLogic.cpp deleted.
+- **Texts and received bytes cross as "take" ops.** A name, a password, a chat text or a received message is
+  appended by the host to a Rust `Vec<u8>` through `ee_won_lobby_sink` (UTF-16 LE for a text, as the original's
+  LanUtf16 made it); texts going out are `(units, count)`. The C++ ByteBuffer of a received message still rides
+  along as the message's identity, never dereferenced in Rust.
+- **The original's iterations over the socket set and the client list** are count / at(i) ops re-asked each step,
+  as the iterators met them (the network timer's stale sockets, the team chat, the join reply's list);
+  BroadcastMessage keeps the original's snapshot of the sockets before its sends.
+- **The LAN golden.** `won_lanobj_test` (as the staging one): 20,000 sequences of eight inward calls (the buttons
+  and events, hosting, joining through every join reply, the staging sends, every completion with generated game
+  messages, replies and discovery packets; the builders' 2-byte length stripped as a socket's receive does, or the
+  join never got past its reply), 984,226 trace lines identical, 133 distinct ops and calls met; a mutated
+  message offset fails 4,475 sequences. `golden_lanobj.txt` (110 sequences, 5,723 lines) is replayed by cargo.
+- **One deliberate difference:** KickClient's `mSocket->QueueClose(1000)` on a client without a socket crashed the
+  original; the op skips a NULL socket.
+- **PeerAuthServerOp::GetClientCertificate.** `rust-won-net8` was not in `rust` this round: HandlePeerAuthDone (now
+  in LanLogicHost.cpp, C++) still reads `op->mPeerAuthServer.GetClientCertificate()`; switching it is one line there.
+- **What runs it.** The lead's LAN game exercises the LAN paths end to end: the host's HostGame (LanHostMyClient,
+  LanHostListen) and AdvertiseGame / the discovery timer's keep-alive, the joiner's discovery (StartDiscovery,
+  DiscoveryRecv's summaries) and JoinGame (connect, join request, LanRecvReplyTake, ReadJoinReply), the host's
+  HandleAccept / AddPendingSocket / HandleRecvMsg / HandleNewSocketMessage / HandleJoinRequest, the room's
+  staging messages both ways (LanStagingRead into StagingLogic, StagingLogic's sends through SendToCaptain /
+  BroadcastToGame / SendToClient), the chat if typed, and the start. Peer authentication (direct connect with the
+  CD key check), the LAN name and port dialogs, the direct-connect list, kicks and a lost host run only in the
+  golden.

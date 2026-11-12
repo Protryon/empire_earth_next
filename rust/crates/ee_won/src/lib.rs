@@ -66,6 +66,8 @@ pub mod ipaddr;
 pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
+pub mod lanobj;
+pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
 pub mod miscops;
@@ -98,6 +100,7 @@ pub mod sockop;
 pub mod sockops;
 pub mod sockthread;
 pub mod staging;
+pub mod stagingobj;
 /// cbindgen:ignore
 pub mod status;
 pub mod strcase;
