@@ -209,7 +209,7 @@ impl Storage {
         let tiles = (self.width.max(0) as i64) * (self.height.max(0) as i64);
         let table_ok = |t: &Option<Vec<i32>>, len: Option<i64>| match t {
             None => true,
-            Some(v) => v.iter().all(|&i| ok(i)) && len.map_or(true, |l| v.len() as i64 == l),
+            Some(v) => v.iter().all(|&i| ok(i)) && len.is_none_or(|l| v.len() as i64 == l),
         };
         self.nodes.iter().all(|x| ok(x.parent) && ok(x.next) && ok(x.prev))
             && [
@@ -227,7 +227,7 @@ impl Storage {
             && table_ok(&self.closed_table, None)
             && table_ok(&self.open_table, None)
             && table_ok(&self.node_map, Some(tiles))
-            && self.flags.as_ref().map_or(true, |f| f.len() as i64 == tiles)
+            && self.flags.as_ref().is_none_or(|f| f.len() as i64 == tiles)
     }
 }
 
