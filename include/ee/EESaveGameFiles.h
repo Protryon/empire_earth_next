@@ -139,6 +139,13 @@ inline bool EESaveHasIntelligence(unsigned long inMajorVersion, unsigned long in
 {
     return inMajorVersion > 0 || inMinorVersion >= 271;
 }
+// port: from 0.272 each ghost (EESaveHasGhosts) also holds its resource type and amount, and the ghosts include the
+// resources and drop sites the gather goals still hold out of the world (a hunted animal's carcass gone, its gatherer
+// still walking to it): a load read NULL there, and the gatherer was counted with no resource (GetGatherCapacity)
+inline bool EESaveHasGhostResources(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 272;
+}
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;
