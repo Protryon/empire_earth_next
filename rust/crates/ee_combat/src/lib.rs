@@ -17,6 +17,7 @@ pub mod damage_table;
 pub mod decide;
 pub mod ffi;
 pub mod geometry;
+pub mod launch;
 pub mod pursuer;
 pub mod search;
 pub mod search_ffi;

@@ -160,20 +160,6 @@ inline void EECombatDamageRow(const EeCombatDamageRowIn& in, EeCombatDamageRowOu
 // the tag point's model chain (16 floats a link), the launch output. CBPJ, CBPS (EEPMProjectile::Step0, Step2), CBMA,
 // CBMH (EEPMMissile::Accelerate, Home): the flight record and its output. CBFS: a screen's test; CBHD:
 // EEGetHitDistanceSquared's arithmetic.
-struct EECombatLaunchRecordIn {
-    int32_t kind, special, has_special, capital, legionnaire, point_count, weapon_index, building, turn;
-    float location[16];
-    float scale, yaw;
-    float point[3];
-    float target[3];
-    int32_t chain;
-};
-struct EECombatLaunchRecordOut {
-    int32_t index, flaming, result;
-    float launch[16];
-    float point[3];
-    int32_t tile[2];
-};
 struct EECombatFlightRecordIn {
     float location[16];
     float start[3];

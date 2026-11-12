@@ -3560,46 +3560,26 @@ bool EEGetAreaEffectBounds(long inKind, EEComplexUnit* inUnit, EEAIAStarBounds* 
 // FUNCTION: EXE 0x646889
 // Returns the world position of a unit's current attach point; false (half a tile up) without one
 // The world position of inUnit's current tag point (its model part's list, the unit's frame), scaled by its size;
-// false (and the point half a tile up) when the part has no tag points
+// false (and the point half a tile up) when the part has no tag points (new: ee_combat's attach_point)
 bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint)
 {
-    GE3DPoint theOffset;
-    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
-    bool theResult = false;
     EETagPointList* theList = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    if (theList == NULL || theList->GetNumTagPoints() == 0) {
-        theOffset.SetZ(0.5f);
-        theOffset.SetX(0.0f);
-        theOffset.SetY(0.0f);
-    } else {
-        unsigned long theFrame = inUnit->GetModel()->mSound1Frames[0];
-        theList->GetTagPoint(inUnit->mWeaponTagPoint)->GetOffset(theFrame, theOffset);
-        theResult = true;
-    }
-    theOffset.SetX(theStats->GetScale() * theOffset.GetX());
-    theOffset.SetY(theOffset.GetY() * theStats->GetScale());
-    theOffset.SetZ(theOffset.GetZ() * theStats->GetScale());
-    theTransformation.Apply(theOffset, outPoint);
-    if (EESimCaptureRecord::Active()) {   // TEST ONLY (the CBAP capture)
-        EECombatLaunchRecordIn theCaptureIn = {};
-        EECombatLaunchRecordOut theCaptureOut = {};
-        std::vector<float> theCaptureChain;
-        theCaptureIn.kind = 2;
-        theCaptureIn.point_count = theList != NULL ? (int32_t)theList->GetNumTagPoints() : 0;
-        theCaptureIn.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
-        memcpy(theCaptureIn.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(theCaptureIn.location));
-        theCaptureIn.scale = theStats->GetScale();
-        if (theResult)
-            EECombatTagPointChain(theList->GetTagPoint(inUnit->mWeaponTagPoint), inUnit->GetModel()->mSound1Frames[0],
-                                  theCaptureIn.point, theCaptureChain, theCaptureIn.chain);
-        theCaptureOut.result = theResult;
-        theCaptureOut.point[0] = outPoint.GetX();
-        theCaptureOut.point[1] = outPoint.GetY();
-        theCaptureOut.point[2] = outPoint.GetZ();
-        EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'A', 'P'), theCaptureIn, theCaptureChain, theCaptureOut);
-    }
-    return theResult;
+    EeCombatLaunchIn in = {};
+    std::vector<float> theChain;
+    in.kind = EE_COMBAT_LAUNCH_KIND_ATTACH;
+    in.point_count = theList != NULL ? (int32_t)theList->GetNumTagPoints() : 0;
+    in.weapon_index = (int32_t)inUnit->mWeaponTagPoint;
+    memcpy(in.location, inUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.location));
+    in.scale = inUnit->GetStats()->GetScale();
+    if (in.point_count != 0)
+        EECombatTagPointChain(theList->GetTagPoint(inUnit->mWeaponTagPoint), inUnit->GetModel()->mSound1Frames[0], in.point,
+                              theChain, in.chain);
+    EeCombatLaunchOut theOut = ee_combat_launch(&in, theChain.empty() ? NULL : (const float(*)[16])&theChain[0]);
+    EECombatChainCapture(EE_COMBAT_TAG('C', 'B', 'A', 'P'), in, theChain, theOut);
+    outPoint.SetX(theOut.point[0]);
+    outPoint.SetY(theOut.point[1]);
+    outPoint.SetZ(theOut.point[2]);
+    return theOut.result != 0;
 }
 
 // FUNCTION: EXE 0x64697b
