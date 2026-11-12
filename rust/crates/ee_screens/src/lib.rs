@@ -10,6 +10,8 @@
 //!   interface tabs' conversions.
 //! - [`lobby`]: the game lobby (form 0x1a: the random map setup and the multiplayer staging screen): the player
 //!   rows' controls, type menus, names and colours.
+//! - [`lobby_form`]: the lobby whole (form 26 and its load screens): its events, state and every toolkit and game
+//!   call, over the C++ host.
 //! - [`lobby_options`]: the lobby's game options (what is shown and editable), the option events' messages and
 //!   the start check.
 //! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
@@ -33,9 +35,10 @@ pub mod custom_campaign;
 pub mod hud;
 mod hud_ffi;
 pub mod lobby;
-mod lobby_ffi;
+pub mod lobby_form;
+#[cfg(not(test))]
+mod lobby_form_ffi;
 pub mod lobby_options;
-mod lobby_options_ffi;
 pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]

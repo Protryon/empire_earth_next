@@ -70,12 +70,12 @@
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
 #include "ee/EEWonNet.h"
-#include "ee/EEUIELobbyEvents.h"
+#include "ee/EEScreenEvent.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEAction.h"
 #include "ee/EEAJoinOrHostAGame.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_screens.h"   // ee_screens_valid_name (ee_screens single_player.rs)
+#include "rust/ee_screens.h"   // ee_screens_valid_name (single_player.rs), the lobby's open events (lobby_form.rs)
 // FUNCTION: EXE 0x402086
 // Creates the join/host action for a mode, player name and game name
 EEAJoinOrHostAGame::EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName)
@@ -164,7 +164,7 @@ void EEAJoinOrHostAGame::Virtual4()
                         new NEMClientConnectionRequest(this->mPlayerName, gGameVersion, gBinaryChecksum, theBehindFirewall);
                     static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
                     gCommunications->ProcessLocalUserInput(theRequest, kSlotNone);
-                    UIEvent* theEvent = new EEUIELEActivateMultiPlayerClient;
+                    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_LE_ACTIVATE_CLIENT);
                     gUIManager->GetFormByID(kFormLobby)->SetFormOpenEvent(theEvent);
                     theEvent->Dereference();
                     if (this->mMode == 3)
@@ -187,7 +187,7 @@ void EEAJoinOrHostAGame::Virtual4()
                             static_cast<NESynchronousClient*>(gCommunications)->SendStartConnectMessage(theRequest);
                             gCommunications->ProcessLocalUserInput(theRequest, kSlotNone);
                             gPlayerName = this->mPlayerName;
-                            UIEvent* theEvent = new EEUIELEActivateMultiPlayerClient;
+                            UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_LE_ACTIVATE_CLIENT);
                             gUIManager->GetFormByID(kFormLobby)->SetFormOpenEvent(theEvent);
                             theEvent->Dereference();
                         }
@@ -198,7 +198,7 @@ void EEAJoinOrHostAGame::Virtual4()
             }
             case 0:
             case 4: {
-                UIEvent* theEvent = new EEUIELEActivateMultiPlayerServer;
+                UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_LE_ACTIVATE_SERVER);
                 gUIManager->GetFormByID(kFormLobby)->SetFormOpenEvent(theEvent);
                 theEvent->Dereference();
                 thePlayer.mSlot = 0;
@@ -221,12 +221,6 @@ void EEAJoinOrHostAGame::Virtual4()
         gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
     }
 }
-
-// SYNTHETIC: EXE 0x402713
-// (EEUIELEActivateMultiPlayerServer's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x40273e
-// (EEUIELEActivateMultiPlayerClient's scalar deleting destructor)
 
 // SYNTHETIC: EXE 0x402769
 // (NEMClientConnectionRequest's scalar deleting destructor: the game's own vtable copy of the imported class)

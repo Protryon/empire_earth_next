@@ -61,7 +61,6 @@ pub const EE_SCREENS_PC_CUSTOM: u32 = 0x0807;
 pub const EE_SCREENS_PC_LEARNING: u32 = 0x0808;
 
 /// The C++ events the menus hang on other forms (built by the host).
-pub const EE_SCREENS_CPP_LOBBY_SINGLE: u32 = 0x1_0003; // EEUIELEActivateSinglePlayer
 pub const EE_SCREENS_CPP_DUMP_MEDIA: u32 = 0x1_0004; // EEUIEMGDumpLoadedMedia(false)
 pub const EE_SCREENS_CPP_DUMP_MEDIA_ALL: u32 = 0x1_0005; // EEUIEMGDumpLoadedMedia(true)
 
@@ -274,7 +273,7 @@ fn random_map<H: MenuHost>(host: &mut H) {
     if single_player::valid_name(&first_bytes(&name)) {
         let computer = host.string(IDS_COMPUTER);
         host.lobby_fill(&single_player::random_map_slots(), &name, &computer);
-        host.set_open_event(FORM_LOBBY, EE_SCREENS_CPP_LOBBY_SINGLE);
+        host.set_open_event(FORM_LOBBY, crate::lobby_form::EE_SCREENS_LE_ACTIVATE_SINGLE);
         host.start_local_server(&name);
     } else {
         let text = host.string(IDS_PLAYER_NAME_IS_INVALID);
@@ -538,7 +537,11 @@ mod tests {
             assert!(e == 0 || is_menu_event(e), "{i}");
         }
         assert_eq!(event_for_control(29), event_for_control(187));
-        assert!(!is_menu_event(0) && !is_menu_event(0x0600) && !is_menu_event(EE_SCREENS_CPP_LOBBY_SINGLE));
+        assert!(
+            !is_menu_event(0)
+                && !is_menu_event(0x0600)
+                && !is_menu_event(crate::lobby_form::EE_SCREENS_LE_ACTIVATE_SINGLE)
+        );
     }
 
     #[test]
@@ -575,7 +578,7 @@ mod tests {
         assert_eq!(run(EE_SCREENS_SP_MAIN_MENU, "Max"), ["player Max", "pop"]);
         assert_eq!(
             run(EE_SCREENS_SP_RANDOM_MAP, ""),
-            ["call 12", "fill S20552 S30241", "open 26 0x10003", "server S20552"]
+            ["call 12", "fill S20552 S30241", "open 26 0x1a25", "server S20552"]
         );
         assert_eq!(run(EE_SCREENS_SP_RANDOM_MAP, " x"), ["call 12", "player  x", "message S10004 1", "call 13"]);
         // a name's characters are checked by their first bytes: a lone lead byte is a character of its own

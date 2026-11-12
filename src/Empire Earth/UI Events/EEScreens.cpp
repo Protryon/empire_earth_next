@@ -1,10 +1,10 @@
 // C:\EEX\Empire Earth\UI Events\EEScreens.cpp (NEW, no original address: units.EXTRA_UNITS). The host of the game
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
-// 2): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the
+// 2; lobby_form.rs: the lobby and its load screens): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the
 // game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp,
 // EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp,
-// EEUIEPlayCampaignEvents.cpp and EEUIEGameSettingsEvents.cpp.
+// EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp and EEUIELobbyEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -73,6 +73,8 @@
 #include "lle/UILayoutUtility.h"
 #include "lle/UITextureBackground.h"
 #include "lle/UIBFull.h"
+#include "lle/UIBitmap.h"
+#include "lle/UIBlinkingButton.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
@@ -88,7 +90,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIEMainGameEvents.h"
-#include "ee/EEUIELobbyEvents.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEMouse.h"
@@ -110,6 +111,15 @@
 #include "ee/EECampaignProgress.h"
 #include "ee/EEUIBMapBackground.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEUICPing.h"
+#include "ee/EEARemovePlayer.h"
+#include "ee/EECPEngine.h"
+#include "ee/EERandomMapGenerators.h"
+#include "ee/EEStartingResources.h"
+#include "ee/EEGameVariant.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
+#include "ee/EETechTreeTechID.h"
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
@@ -219,13 +229,143 @@ static std::vector<UString> Parts(const uint8_t* inText, size_t inLength)
     return theParts;
 }
 
+// ---- the lobby's and its load screens' (lobby_form.rs)
+
+static EEGameOptionsPlayer* sLobbyBoot;   // the boot question's slot copy (its answer frees it)
+static EEPSaveGameHeader* sLobbyHeader;   // the load screen's header (the next load replaces it)
+static FSFileSpec* sLobbyFile;            // its file (the transfers read it; never freed, as the original's)
+static EEGameOptions* sLobbyCopy;         // the game type's copy of the options (a random map's)
+static UWideString sLobbyMissing;         // the last options check's missing lines, each ended by a line break
+static unsigned long sLobbyStartTime;     // 0x562fd0: the lobby's Start time (provisional name)
+
+// the boot question's answers: the copy the question was asked on, then the lobby's
+static void EEScreensBootYes(UIForm* inCopy)
+{
+    sLobbyBoot = reinterpret_cast<EEGameOptionsPlayer*>(inCopy);
+    ee_screens_event(EE_SCREENS_LE_BOOT_YES, NULL, NULL);
+}
+static void EEScreensBootNo(UIForm* inCopy)
+{
+    sLobbyBoot = reinterpret_cast<EEGameOptionsPlayer*>(inCopy);
+    ee_screens_event(EE_SCREENS_LE_BOOT_NO, NULL, NULL);
+}
+
+// the options of a source (EE_SCREENS_LE_SOURCE_*: the lobby's, the loaded header's, the game type's copy) and a slot
+static EEGameOptions* EEScreensLobbyOptions(uint32_t inSource)
+{
+    if (inSource == EE_SCREENS_LE_SOURCE_HEADER && sLobbyHeader)
+        return &sLobbyHeader->mGameOptions;
+    if (inSource == EE_SCREENS_LE_SOURCE_COPY && sLobbyCopy)
+        return sLobbyCopy;
+    return &gGameOptions;
+}
+static EEGameOptionsPlayer* EEScreensLobbySlot(uint32_t inSource, uint32_t inIndex)
+{
+    if (inSource == EE_SCREENS_LE_SOURCE_BOOT)
+        return sLobbyBoot;
+    if (inIndex >= 16)
+        return NULL;
+    return &EEScreensLobbyOptions(inSource)->mPlayers[inIndex];
+}
+
+// an option (EEMGameOptions' numbers; 0 the load type) of the lobby options
+static void EEScreensLobbySetOption(uint32_t inOption, long inValue)
+{
+    EEGameOptions& theOptions = gGameOptions;
+    switch (inOption) {
+    case 0: theOptions.mLoadType = inValue; break;
+    case EE_SCREENS_OPTION_MAP_SIZE: theOptions.mMapSize = inValue; break;
+    case EE_SCREENS_OPTION_RESOURCES: theOptions.mResources = inValue; break;
+    case EE_SCREENS_OPTION_EPOCH_START: theOptions.mEpochStart = inValue; break;
+    case EE_SCREENS_OPTION_EPOCH_END: theOptions.mEpochEnd = inValue; break;
+    case EE_SCREENS_OPTION_UNIT_LIMIT: theOptions.mUnitLimit = inValue; break;
+    case EE_SCREENS_OPTION_WONDERS: theOptions.mWondersForVictory = inValue; break;
+    case EE_SCREENS_OPTION_VARIANT: theOptions.mVariant = inValue; break;
+    case EE_SCREENS_OPTION_DIFFICULTY: theOptions.mDifficulty = inValue; break;
+    case EE_SCREENS_OPTION_SPEED: theOptions.mGameSpeed = inValue; break;
+    case EE_SCREENS_OPTION_RECORD_GAMES: theOptions.mRecordGames = inValue != 0; break;
+    case EE_SCREENS_OPTION_CUSTOM_CIVS: theOptions.mAllowCustomCivs = inValue != 0; break;
+    case EE_SCREENS_OPTION_REVEAL_MAP: theOptions.mRevealMap = inValue != 0; break;
+    case EE_SCREENS_OPTION_LOCK_TEAMS: theOptions.mLockTeams = inValue != 0; break;
+    case EE_SCREENS_OPTION_LOCK_SPEED: theOptions.mLockSpeed = inValue != 0; break;
+    case EE_SCREENS_OPTION_CHEAT_CODES: theOptions.mCheatCodes = inValue != 0; break;
+    case 17: theOptions.mVictory = inValue != 0; break;
+    }
+}
+
+// a value of the rules' tables the lobby lists (EE_SCREENS_LE_RULE_*)
+static uint32_t EEScreensLobbyRule(uint32_t inWhich, uint32_t inArg)
+{
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // gameoptions.yaml
+    switch (inWhich) {
+    case EE_SCREENS_LE_RULE_EPOCHS: return (uint32_t)EEEpochCount();
+    case EE_SCREENS_LE_RULE_UNIT_MINIMUM: return (uint32_t)EERuleLong(theRules.mUnitLimitMinimum);
+    case EE_SCREENS_LE_RULE_UNIT_MAXIMUM: return (uint32_t)EERuleLong(theRules.mUnitLimitMaximum);
+    case EE_SCREENS_LE_RULE_UNIT_STEP: return (uint32_t)theRules.mUnitLimitStep;
+    case EE_SCREENS_LE_RULE_WONDERS_MAXIMUM: return (uint32_t)EERuleLong(theRules.mWondersMaximum);
+    case EE_SCREENS_LE_RULE_MAP_SIZES: return (uint32_t)theRules.mMapSizes.size();
+    case EE_SCREENS_LE_RULE_MAP_SIZE_NAME:
+        return inArg < theRules.mMapSizes.size() ? (uint32_t)theRules.mMapSizes[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_DIFFICULTIES: return (uint32_t)theRules.mDifficulties.size();
+    case EE_SCREENS_LE_RULE_DIFFICULTY_NAME:
+        return inArg < theRules.mDifficulties.size() ? (uint32_t)theRules.mDifficulties[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_SPEEDS: return (uint32_t)theRules.mSpeeds.size();
+    case EE_SCREENS_LE_RULE_SPEED_NAME:
+        return inArg < theRules.mSpeeds.size() ? (uint32_t)theRules.mSpeeds[inArg].mNameID : 0;
+    case EE_SCREENS_LE_RULE_VARIANTS: return (uint32_t)gGameVariants.size();
+    case EE_SCREENS_LE_RULE_VARIANT_SELECTABLE:
+        return inArg < gGameVariants.size() && gGameVariants[inArg]->mSelectable == true;
+    case EE_SCREENS_LE_RULE_VARIANT_NAME:
+        return inArg < gGameVariants.size() ? (uint32_t)EEGetGameVariantAt(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_RESOURCE_LEVELS: return (uint32_t)EEGetNumberOfResourceLevels();
+    case EE_SCREENS_LE_RULE_RESOURCE_LEVEL_NAME: return (uint32_t)EEGetResourceLevel((long)inArg)->GetNameID();
+    case EE_SCREENS_LE_RULE_STARTING_RESOURCES_NAME:
+        return inArg < EEStartingResources::sTable.size() ? (uint32_t)EEStartingResources::Get(inArg)->mNameID : 0;
+    case EE_SCREENS_LE_RULE_EPOCH_TITLE: return (uint32_t)EEEpochTitleID((long)(int32_t)inArg);
+    case EE_SCREENS_LE_RULE_GENERATORS: return (uint32_t)EERMGetNumberOfGenerators();
+    case EE_SCREENS_LE_RULE_ENGINES: return (uint32_t)EECPEngineChoiceCount();
+    case EE_SCREENS_LE_RULE_DEFAULT_COLOUR: return inArg < 16 ? (uint32_t)gDefaultPlayerColors[inArg] : 0;
+    case EE_SCREENS_LE_RULE_STARTING_CITIZENS: return gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    }
+    return 0;
+}
+
+// a save file's header and the options check: the start's (against the lobby options) or the load screen's (against
+// a copy with the load type), EE_SCREENS_LE_LOAD_*; the missing lines kept
+static uint32_t EEScreensLobbyLoad(const UString& inFile, const UString& inDirectory, EEPSaveGameHeader& ioHeader,
+                                   FSFileSpec*& outFile, bool inStart, unsigned long inLoadType)
+{
+    if (EEOpenSaveGameFile(inFile, inDirectory, outFile) != kErrorOK)
+        return EE_SCREENS_LE_LOAD_NOT_FOUND;
+    ioHeader.mMajorVersion = kSaveGameMajorVersion;
+    ioHeader.mMinorVersion = kSaveGameMinorVersion;
+    if (ioHeader.LoadFromFile(*outFile) != kErrorOK)
+        return EE_SCREENS_LE_LOAD_READ_ERROR;
+    EEGameOptions theOptions;
+    std::vector<UWideString> theMissing;
+    bool theMatch;
+    theOptions = ioHeader.mGameOptions;
+    if (inStart)
+        theMatch = EECheckSavedGameOptions(theOptions, gGameOptions, true, theMissing, ioHeader.mNumPlayers - 1);
+    else {
+        EEGameOptions theCurrent;
+        theCurrent = gGameOptions;
+        theCurrent.mLoadType = inLoadType;
+        theMatch = EECheckSavedGameOptions(theOptions, theCurrent, false, theMissing, ioHeader.mNumPlayers - 1);
+    }
+    if (theMatch)
+        return EE_SCREENS_LE_LOAD_OK;
+    sLobbyMissing = "";
+    for (unsigned long i = 0; i < theMissing.size(); i++)
+        sLobbyMissing += theMissing[i] + "\n";
+    return EE_SCREENS_LE_LOAD_MISMATCH;
+}
+
 UIEvent* EECreateScreenEvent(unsigned long inEvent)
 {
     switch (inEvent) {
     case 0:
         return NULL;
-    case EE_SCREENS_CPP_LOBBY_SINGLE:
-        return new EEUIELEActivateSinglePlayer;
     case EE_SCREENS_CPP_DUMP_MEDIA:
     case EE_SCREENS_CPP_DUMP_MEDIA_ALL:
         return new EEUIEMGDumpLoadedMedia(inEvent == EE_SCREENS_CPP_DUMP_MEDIA_ALL);
@@ -279,7 +419,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
             theManager->GetFormByID(inA)->SetFormCloseEvent(theEvent);
         else
             theManager->GetFormByID(inA)->GetControl(inB)->SetTriggerEvent(inC, theEvent);
-        theEvent->Dereference();
+        if (theEvent)
+            theEvent->Dereference();
         break;
     }
     case EE_SCREENS_OP_OPEN_FORM:
@@ -354,7 +495,8 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_OP_TRIGGER_HERE: {
         UIEvent* theEvent = EECreateScreenEvent(inC);
         Ctl()->SetTriggerEvent(inB, theEvent);
-        theEvent->Dereference();
+        if (theEvent)
+            theEvent->Dereference();
         break;
     }
     case EE_SCREENS_OP_SLIDER_LABEL: {
@@ -811,6 +953,227 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
         break;
     case EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN_GET:
         return EECampaignFormManager::Get()->mAllScenariosOpen;
+    // the lobby's and its load screens' (lobby_form.rs)
+    case EE_SCREENS_GAME_LE_LOCK:
+        switch (inA) {
+        case EE_SCREENS_LE_READ_LOCK: gGameOptions.mLock->ReadLock(); break;
+        case EE_SCREENS_LE_READ_UNLOCK: gGameOptions.mLock->ReadUnlock(); break;
+        case EE_SCREENS_LE_WRITE_LOCK: gGameOptions.mLock->WriteLock(); break;
+        default: gGameOptions.mLock->WriteUnlock(); break;
+        }
+        break;
+    case EE_SCREENS_GAME_LE_IS_CLIENT:
+        return gCommunications->IsClient() == true;
+    case EE_SCREENS_GAME_LE_PLAYER_INFO:
+        gCommunications->ProcessGuaranteedLocalUserInput(
+            new EEMPlayerInformation((long)inA, (long)inB, (long)(int32_t)inC, 0.0f), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_LE_SEND_OPTION:
+        gCommunications->ProcessGuaranteedLocalUserInput(
+            new EEMGameOptions((long)(int32_t)inA, (long)(int32_t)inB, UWideString("")), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_LE_SET_OPTION:
+        EEScreensLobbySetOption(inA, (long)(int32_t)inB);
+        break;
+    case EE_SCREENS_GAME_LE_DIFFICULTY_LEVELS:
+        gDifficultyLevel = (long)(int32_t)inA;
+        gDifficultyLevel2 = (long)(int32_t)inA;
+        break;
+    case EE_SCREENS_OP_LE_COMBO_DELETE_LINE:
+        static_cast<UIComboBox*>(Ctl())->DeleteLine(inB);
+        break;
+    case EE_SCREENS_OP_LE_COMBO_LINES:
+        return (uint32_t)static_cast<UIComboBox*>(Ctl())->GetListBox()->GetLineCount();
+    case EE_SCREENS_OP_LE_TYPE_SELECT: {
+        // LobbySelectPlayerType: the line without firing the box's change event
+        UIComboBox* theBox = static_cast<UIComboBox*>(Ctl());
+        UIEvent* theEvent = theBox->GetTriggerEvent(kControlTriggerSelectionChanged);
+        if (theEvent) {
+            theEvent->Reference();
+            theBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+        }
+        if (inB)
+            theBox->SetCurrentSelection(inC);
+        if (theEvent) {
+            theBox->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+            theEvent->Dereference();
+        }
+        break;
+    }
+    case EE_SCREENS_OP_LE_HAS_TRIGGER:
+        return Ctl()->GetTriggerEvent(inB) != NULL;
+    case EE_SCREENS_OP_LE_PLAYER_COLOUR:
+        Ctl()->SetBgColor(EEGetPlayerColor(inB));
+        break;
+    case EE_SCREENS_OP_LE_OPACITY:
+        Ctl()->SetBgOpacity(1.0f);
+        break;
+    case EE_SCREENS_OP_LE_BITMAP:
+        static_cast<UIBitmap*>(Ctl())->SetBitmap(inB ? gUIManager->GetCheckDownOn() : gUIManager->GetCheckDownOff());
+        break;
+    case EE_SCREENS_OP_LE_NAME_COLOUR: {
+        // a slot's name colour: loaded game, observer, normal, the local player's (the type box's label too)
+        static const GEColor kColours[4] = {GEColor(1.0f, 0.0f, 0.0f), GEColor(1.0f, 1.0f, 0.0f),
+                                            GEColor(1.0f, 1.0f, 1.0f), GEColor(0.0f, 1.0f, 0.0f)};
+        if (inC)
+            static_cast<UIComboBox*>(Ctl())->GetTextLabel()->GetGEText()->SetFgColor(kColours[inB & 3]);
+        else
+            static_cast<UITextLabel*>(Ctl())->GetGEText()->SetFgColor(kColours[inB & 3]);
+        break;
+    }
+    case EE_SCREENS_OP_LE_DIRTY:
+        Ctl()->SetDirty(true);
+        break;
+    case EE_SCREENS_OP_LE_PING:
+        static_cast<EEUICPing*>(Ctl())->SetPing(Float(inB));
+        break;
+    case EE_SCREENS_OP_LE_FORM_VISIBLE:
+        return theManager->IsFormVisible(theManager->GetFormByID(inA));
+    case EE_SCREENS_OP_LE_KEYBOARD_EVENT: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        theForm->SetFormKeyboardCapturedEvent(theEvent);
+        if (theEvent)
+            theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_LE_KEYBOARD_CAPTURED:
+        return theForm->GetIsKeyboardCaptured();
+    case EE_SCREENS_OP_LE_BLINKING:
+        static_cast<UIBlinkingButton*>(Ctl())->SetIsBlinking(true);
+        break;
+    case EE_SCREENS_OP_LE_EDIT_DELETE:
+        static_cast<UIEditBox*>(Ctl())->DeleteText();
+        break;
+    case EE_SCREENS_GAME_LE_DISCONNECT:
+        gCommunications->ProcessGuaranteedLocalUserInput(new NEMClientDisconnectionNotification(false), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_LE_REMOVE_HOST: {
+        EEAction* theAction = new EEARemovePlayer(0xfe);
+        gUserInterface->PostAction(theAction);
+        theAction->Dereference();
+        break;
+    }
+    case EE_SCREENS_GAME_LE_WON_REJOIN: {
+        // the lobby's Cancel: back to WON's room (the form closes unless that failed)
+        bool theClose = true;
+        if (gWonNet) {
+            gWonNet->ClearGameList();
+            theClose = gWonNet->RejoinRoom(true);
+        }
+        return theClose;
+    }
+    case EE_SCREENS_GAME_LE_WON_LEAVE:
+        if (gWonNet)
+            gWonNet->LeaveRoom();
+        break;
+    case EE_SCREENS_GAME_LE_START_SERVER: {
+        // Start: the server closed to new players (WON's game told the humans and players), its transfers reset
+        EEServer* theServer = static_cast<EEServer*>(gCommunications);
+        EEWonNetGameInfo theInfo;
+        sLobbyStartTime = TMGetTime();
+        theServer->AllowNewPlayers(false);
+        theServer->SetGameState(2);
+        theServer->mNumLoadResponses = false;
+        if (gWonNet) {
+            gWonNet->GetGameInfo(theInfo);
+            theInfo.mFlags &= ~1;
+            theInfo.mPlayers = (unsigned char)inB;
+            theInfo.mHumans = (unsigned char)inA;
+            gWonNet->SetGameInfo(theInfo);
+        }
+        theServer->StopPing();
+        theServer->ResetXfer();
+        theServer->mLoadState = true;
+        theServer->AllowNewPlayers(false);
+        break;
+    }
+    case EE_SCREENS_GAME_LE_START_LOADING:
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMStartLoading((unsigned char)inA, (long)(int32_t)inB),
+                                                         kSlotNone);
+        break;
+    case EE_SCREENS_GAME_LE_SAVE_LAST_OPTIONS:
+        gGamePreferences.SetLastGameOptions(gGameOptions);
+        break;
+    case EE_SCREENS_GAME_LE_START_PING:
+        static_cast<EEServer*>(gCommunications)->StartPing();
+        break;
+    case EE_SCREENS_GAME_LE_FULL_PLAYER:
+        if (inA < 16)
+            gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullPlayerInformation(gGameOptions.mPlayers[inA]),
+                                                             kSlotNone);
+        break;
+    case EE_SCREENS_GAME_LE_RULE:
+        return EEScreensLobbyRule(inA, inB);
+    case EE_SCREENS_GAME_LE_FIND_GENERATOR: {
+        unsigned long theLine = 0;
+        bool theFound = EERMFindGenerator(EEScreensLobbyOptions(inA)->GetMapType(), theLine) == 0;
+        return (uint32_t)(theLine & 0x7fffffff) | (theFound ? 0 : 0x80000000u);
+    }
+    case EE_SCREENS_GAME_LE_BOOT_FREE:
+        delete sLobbyBoot;
+        sLobbyBoot = NULL;
+        break;
+    case EE_SCREENS_GAME_LE_BOOT_REFUSE: {
+        // the boot answered yes: WON's counts, the slot's client refused (the copy, reset)
+        EEServer* theServer = dynamic_cast<EEServer*>(gCommunications);
+        EEWonNetGameInfo theInfo;
+        if (gWonNet)
+            gWonNet->GetGameInfo(theInfo);
+        if (inA != 0)
+            theInfo.mHumans--;
+        if (inA == 4)
+            theInfo.mPlayers--;
+        if (theServer && sLobbyBoot)
+            theServer->RefuseClient(*sLobbyBoot);
+        if (gWonNet)
+            gWonNet->SetGameInfo(theInfo);
+        break;
+    }
+    case EE_SCREENS_GAME_LE_XFER: {
+        // a joined human's transfer of the loaded file: the old one aborted, the new one's id
+        unsigned long theID = inB;
+        if (!sLobbyHeader || !sLobbyFile)
+            return 0;
+        static_cast<NESynchronousServer*>(gCommunications)->AbortXfer(theID);
+        theID = 0;
+        static_cast<NESynchronousServer*>(gCommunications)->XferFileToClient(*sLobbyFile, sLobbyHeader->mChecksum,
+            static_cast<EEServer*>(gCommunications)->GetSendToSlot((unsigned char)inA), theID, false);
+        return (uint32_t)theID;
+    }
+    case EE_SCREENS_GAME_LE_HEADER_PLAYERS:
+        return sLobbyHeader ? (uint32_t)sLobbyHeader->mNumPlayers : 0;
+    case EE_SCREENS_GAME_LE_APPLY_SAVED: {
+        // LobbyApplySavedGameOptions: the loaded header's options (a copy) into the lobby options, sent
+        if (!sLobbyHeader)
+            break;
+        EEGameOptions theOptions(sLobbyHeader->mGameOptions);
+        gGameOptions.mMapSize = theOptions.mMapSize;
+        gGameOptions.mResources = theOptions.mResources;
+        gGameOptions.mEpochStart = theOptions.mEpochStart;
+        gGameOptions.mEpochEnd = theOptions.mEpochEnd;
+        gGameOptions.mUnitLimit = theOptions.mUnitLimit;
+        gGameOptions.mWondersForVictory = theOptions.mWondersForVictory;
+        gGameOptions.mVariant = theOptions.mVariant;
+        gGameOptions.mDifficulty = theOptions.mDifficulty;
+        gGameOptions.mGameSpeed = theOptions.mGameSpeed;
+        gGameOptions.mRecordGames = theOptions.mRecordGames;
+        gGameOptions.mAllowCustomCivs = theOptions.mAllowCustomCivs;
+        gGameOptions.mRevealMap = theOptions.mRevealMap;
+        gGameOptions.mLockTeams = theOptions.mLockTeams;
+        gGameOptions.mLockSpeed = theOptions.mLockSpeed;
+        gGameOptions.mCheatCodes = theOptions.mCheatCodes;
+        gGameOptions.mVictory = theOptions.mVictory;
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullGameOptions(gGameOptions), kSlotNone);
+        break;
+    }
+    case EE_SCREENS_GAME_LE_RANDOM_MAP_OPTIONS:
+        // the game type's random map: the options copied (the assignment checks each value) with load type 0, and back
+        if (!sLobbyCopy)
+            sLobbyCopy = new EEGameOptions;
+        *sLobbyCopy = gGameOptions;
+        sLobbyCopy->mLoadType = 0;
+        gGameOptions = *sLobbyCopy;
+        break;
     }
     return 0;
 }
@@ -986,6 +1349,38 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     case EE_SCREENS_TEXT_LOAD_SCENARIO_NAME:
         theText = gLoadScenarioName;
         break;
+    // the lobby's (lobby_form.rs)
+    case EE_SCREENS_TEXT_LE_MAP_TYPE:
+        theText = EEScreensLobbyOptions(inArg)->mMapType;
+        break;
+    case EE_SCREENS_TEXT_LE_GENERATOR_DISPLAY:
+        theText = UWideString((const char*)EERMGetGeneratorDisplayName((unsigned long)inArg));
+        break;
+    case EE_SCREENS_TEXT_LE_MAP_DISPLAY:
+        theText = EERMGetGeneratorDisplayName(EEScreensLobbyOptions(inArg)->GetMapType());
+        break;
+    case EE_SCREENS_TEXT_LE_GENERATOR_NAME:
+        theText = EERMGetGeneratorName(inArg);
+        break;
+    case EE_SCREENS_TEXT_LE_ENGINE: {
+        // an engine choice (ee/EECPEngine.h): the strings Classic and Random, an AI's manifest name
+        const EECPAIEntry* theAI = EECPAIByChoice(inArg);
+        if (theAI != NULL)
+            theText = UWideString(theAI->mName.c_str());
+        else
+            gResource->GetString(kLobbyEngineClassicString + (inArg == kEECPChoiceRandom ? 1 : 0), theText);
+        break;
+    }
+    case EE_SCREENS_TEXT_LE_MISSING:
+        theText = sLobbyMissing;
+        break;
+    case EE_SCREENS_TEXT_LE_CHECK_LABEL: {
+        UICheckBox* theBox = static_cast<UICheckBox*>(theForm->GetControl(inArg));
+        if (!theBox || !theBox->GetTextLabel())
+            return (size_t)-1;
+        theText = theBox->GetTextLabel()->GetText(0);
+        break;
+    }
     }
     if (!theList.empty()) {
         memcpy(outText, theList.data(), theList.size() < inCapacity ? theList.size() : inCapacity);
@@ -1259,6 +1654,36 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_FORM_EDIT:
         static_cast<UIEditBox*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff))->SetText(theText);
         break;
+    // the lobby's (lobby_form.rs)
+    case EE_SCREENS_TEXT_LE_MAP_TYPE:
+        gGameOptions.mMapType = theText;
+        break;
+    case EE_SCREENS_TEXT_LE_SEND_MAP_TYPE:
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMGameOptions(2, (long)inArg, theText), kSlotNone);
+        break;
+    case EE_SCREENS_TEXT_LE_CHAT:
+        gCommunications->ProcessGuaranteedLocalUserInput(new EEMChat(0, theText), kSlotNone);
+        break;
+    case EE_SCREENS_TEXT_LE_CHECK_LOAD: {
+        // the start's check of the loaded game's file (a header of its own)
+        std::vector<UString> theParts = Parts(inText, inLength);
+        EEPSaveGameHeader theHeader;
+        FSFileSpec* theStream = NULL;
+        return EEScreensLobbyLoad(theParts[0], theParts[1], theHeader, theStream, true, 0);
+    }
+    case EE_SCREENS_TEXT_LE_OPEN_HEADER: {
+        // the load screen's: the header kept for the transfers, the options and the slots
+        std::vector<UString> theParts = Parts(inText, inLength);
+        if (sLobbyHeader)
+            delete sLobbyHeader;
+        sLobbyHeader = new EEPSaveGameHeader;
+        sLobbyFile = NULL;
+        return EEScreensLobbyLoad(theParts[0], theParts[1], *sLobbyHeader, sLobbyFile, false, inArg);
+    }
+    case EE_SCREENS_TEXT_LE_BOOT_QUESTION:
+        gUIManager->DisplayQuestion(theText, true, reinterpret_cast<UIForm*>(sLobbyBoot), EEScreensBootYes,
+                                    EEScreensBootNo);
+        break;
     }
     return 0;
 }
@@ -1388,4 +1813,82 @@ extern "C" void ee_screenscpp_game_size(uint32_t inPercent, bool inWindowed, uin
     GXGameSize(inPercent, inWindowed, &theWidth, &theHeight);
     *outWidth = theWidth;
     *outHeight = theHeight;
+}
+
+// ---- the lobby's records (lobby_form.rs)
+
+// a slot of a source (EE_SCREENS_LE_SOURCE_*) into outPlayer, its name into outName (up to inCapacity bytes); the
+// name's length (a missing slot: zeros, 0)
+extern "C" size_t ee_screenscpp_lobby_player(uint32_t inSource, uint32_t inIndex, EeScreensLobbyPlayerRecord* outPlayer,
+                                             uint8_t* outName, size_t inCapacity)
+{
+    const EEGameOptionsPlayer* thePlayer = EEScreensLobbySlot(inSource, inIndex);
+    if (!thePlayer) {
+        memset(outPlayer, 0, sizeof(*outPlayer));
+        return 0;
+    }
+    outPlayer->kind = thePlayer->mType;
+    outPlayer->loaded_type = thePlayer->mLoadedType;
+    outPlayer->ping = thePlayer->mPing;
+    outPlayer->slot = thePlayer->mSlot;
+    outPlayer->color = thePlayer->mColor;
+    outPlayer->team = thePlayer->mTeam;
+    outPlayer->citizens = thePlayer->mStartingCitizens;
+    outPlayer->transfer = thePlayer->mTransferID;
+    outPlayer->is_local = thePlayer->mIsLocal;
+    outPlayer->is_ready = thePlayer->mIsReady;
+    outPlayer->b36 = thePlayer->mB36;
+    outPlayer->engine = thePlayer->mEngine;
+    size_t theLength = thePlayer->mName.GetTCHARLength();
+    memcpy(outName, (const char*)thePlayer->mName, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+// a slot of a source from a record and a name (the boot question's copy made when there is none)
+extern "C" void ee_screenscpp_put_lobby_player(uint32_t inSource, uint32_t inIndex,
+                                               const EeScreensLobbyPlayerRecord* inPlayer, const uint8_t* inName,
+                                               size_t inLength)
+{
+    if (inSource == EE_SCREENS_LE_SOURCE_BOOT && !sLobbyBoot)
+        sLobbyBoot = new EEGameOptionsPlayer;
+    EEGameOptionsPlayer* thePlayer = EEScreensLobbySlot(inSource, inIndex);
+    if (!thePlayer)
+        return;
+    thePlayer->mType = inPlayer->kind;
+    thePlayer->mLoadedType = inPlayer->loaded_type;
+    thePlayer->mName = Text(inName, inLength);
+    thePlayer->mPing = inPlayer->ping;
+    thePlayer->mSlot = inPlayer->slot;
+    thePlayer->mColor = inPlayer->color;
+    thePlayer->mTeam = inPlayer->team;
+    thePlayer->mStartingCitizens = inPlayer->citizens;
+    thePlayer->mTransferID = inPlayer->transfer;
+    thePlayer->mIsLocal = inPlayer->is_local;
+    thePlayer->mIsReady = inPlayer->is_ready;
+    thePlayer->mB36 = inPlayer->b36;
+    thePlayer->mEngine = inPlayer->engine;
+}
+
+// the options of a source into outOptions
+extern "C" void ee_screenscpp_lobby_options(uint32_t inSource, EeScreensLobbyOptionsRecord* outOptions)
+{
+    const EEGameOptions& o = *EEScreensLobbyOptions(inSource);
+    outOptions->load_type = o.mLoadType;
+    outOptions->map_size = o.mMapSize;
+    outOptions->resources = o.mResources;
+    outOptions->epoch_start = o.mEpochStart;
+    outOptions->epoch_end = o.mEpochEnd;
+    outOptions->unit_limit = o.mUnitLimit;
+    outOptions->wonders = o.mWondersForVictory;
+    outOptions->variant = o.mVariant;
+    outOptions->difficulty = o.mDifficulty;
+    outOptions->speed = o.mGameSpeed;
+    outOptions->multiplayer = o.mIsMultiplayer;
+    outOptions->record_games = o.mRecordGames;
+    outOptions->custom_civs = o.mAllowCustomCivs;
+    outOptions->reveal_map = o.mRevealMap;
+    outOptions->lock_teams = o.mLockTeams;
+    outOptions->lock_speed = o.mLockSpeed;
+    outOptions->cheat_codes = o.mCheatCodes;
+    outOptions->victory = o.mVictory;
 }
