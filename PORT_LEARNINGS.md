@@ -7868,7 +7868,8 @@ state (UDPManager's two ops) and the first piece of the lobby's model.
   operation (virtual: the class dispatches as before). The parachute's cargo tile is the position's x, y passed as
   f32 bits, truncated by the host's `(long)` casts.
 - **The unit store's plain reads (step 4).** The reads' host is wrapped (`reads::Stored`): a unit's tile, hit
-  points, class type and category, built flag, command and location's x, y, z come from the core lane's store when it
+  points, class type and category, built flag, command, location's x, y, z and (since the core lane's tenth round)
+  target search timer come from the core lane's store when it
   holds a record of that object (the store's `object` is the `RTSUnit*`, the `EEUnit*`'s address; the id is one host
   read per unit in a row), else from the C++ as before. ee_combat cannot depend on ee_units: its crate imports C++
   functions (the store's world host), and a `#[no_mangle]` crate's exports are linked into every test binary that
@@ -7883,8 +7884,9 @@ state (UDPManager's two ops) and the first piece of the lobby's model.
   (wall, projectile, melee, paratrooper bomber, crusader, heal range and threshold, firing arc, facing offset,
   broadside, cloak radius, family, projectile class, rotting time, effects present), the player (its id and the
   enemy table), the physical model (scale, model present, the full location matrix, the frame), the goal's target id
-  and kind-specific fields (path attempts, the attack goal's tile, the attack-ground point), the timers (reload,
-  target search, flight, rotting, `mCloaked`), the flags (firing high, special attack, cloaked/cloakable, herd),
+  and kind-specific fields (path attempts, the attack goal's tile, the attack-ground point), the timers (flight,
+  `mCloaked`; the reload and rotting timers are in the store now, read by the trigger records and the shots' plans
+  through the C++ still), the flags (firing high, special attack, cloaked/cloakable, herd),
   velocity, collision radius, weapon tag point, animation, owner and previous part, container, the initial contact
   location, turret angles, the line of sight and the tile chain's neighbours.
 - **Overlapping builds.** Two `build.py` of one worktree started a few minutes apart (a first one that had failed

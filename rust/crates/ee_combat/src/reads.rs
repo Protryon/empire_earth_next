@@ -681,6 +681,8 @@ pub struct EeCombatStoredUnit {
     pub command: i64,
     /// the location's x, y, z as float bits
     pub location: [u32; 3],
+    /// `EEComplexUnit::mTargetSearchTimer`
+    pub target_search_timer: i64,
 }
 
 /// ee_units' `EE_OBJECT_COMPLEX_UNIT`.
@@ -718,6 +720,9 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
                 EE_COMBAT_Q_CATEGORY if r.category != -1 => Some(r.category as u32),
                 EE_COMBAT_Q_BUILT if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(u32::from(r.built)),
                 EE_COMBAT_Q_COMMAND if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => Some(r.command as u32),
+                EE_COMBAT_Q_SEARCH_TIMER if r.object_kind == EE_COMBAT_STORED_COMPLEX_UNIT => {
+                    Some(r.target_search_timer as u32)
+                }
                 _ => None,
             }
         };
@@ -730,6 +735,7 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
                 | EE_COMBAT_Q_CATEGORY
                 | EE_COMBAT_Q_BUILT
                 | EE_COMBAT_Q_COMMAND
+                | EE_COMBAT_Q_SEARCH_TIMER
         ) {
             if let Some(value) = self.record(object).as_ref().and_then(field) {
                 return value;

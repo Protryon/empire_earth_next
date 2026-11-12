@@ -3720,6 +3720,8 @@ struct EeCombatStoredUnit {
   int64_t command;
   /// the location's x, y, z as float bits
   uint32_t location[3];
+  /// `EEComplexUnit::mTargetSearchTimer`
+  int64_t target_search_timer;
 };
 
 /// A node as the goals and the capture see it.

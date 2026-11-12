@@ -541,6 +541,7 @@ fn plain_reads_come_from_the_unit_store() {
     unit.tile_x = 9;
     unit.hit_points = -3;
     unit.location = [7.5f32.to_bits(), 0, 0];
+    unit.target_search_timer = 250;
     let (other_id, mut other) = record(900_062, 99);
     other.tile_x = 9;
     STORE.with(|s| {
@@ -553,6 +554,7 @@ fn plain_reads_come_from_the_unit_store() {
         assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 61, 0), 9, "the store's");
         assert_eq!(h.read(EE_COMBAT_Q_HIT_POINTS, 61, 0), (-3i32) as u32);
         assert_eq!(h.position(61).x, 7.5);
+        assert_eq!(h.read(EE_COMBAT_Q_SEARCH_TIMER, 61, 0), 250);
         // a read the store does not mirror, a record of another object, no record: the host's
         assert_eq!(h.read(EE_COMBAT_Q_LINE_OF_SIGHT, 61, 0), 2.0f32.to_bits());
         assert_eq!(h.read(EE_COMBAT_Q_TILE_X, 62, 0), 5);

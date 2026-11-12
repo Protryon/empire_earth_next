@@ -90,6 +90,7 @@ pub unsafe extern "C" fn ee_combat_store_unit(id: u32, out: *mut ee_combat::read
                 category: r.category,
                 command: r.command,
                 location: r.location,
+                target_search_timer: r.target_search_timer,
             }
         };
         true
