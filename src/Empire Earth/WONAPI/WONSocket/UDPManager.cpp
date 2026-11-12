@@ -33,9 +33,9 @@ static void UdpOpKill(void* inOp) { OpOf(inOp)->Kill(true); }
 static void UdpOpFinish(void* inOp, long inStatus) { OpOf(inOp)->Finish(inStatus); }
 static void UdpOpForceFinish(void* inOp, long inStatus) { OpOf(inOp)->ForceFinish(inStatus); }
 static uint32_t UdpOpTimeLeft(void* inOp) { return static_cast<uint32_t>(OpOf(inOp)->TimeLeft()); }
-static EeWonIpAddr* UdpRecvAddress(void* inOp) { return ee_won_ipaddr_clone(RecvOpOf(inOp)->mAddress.GetValue()); }
+static EeWonIpAddr* UdpRecvAddress(void* inOp) { return ee_won_ipaddr_clone(RecvOpOf(inOp)->GetFromAddr().GetValue()); }
 static void UdpRecvSetAddress(void* inOp, const EeWonIpAddr* inAddr)
-{ RecvOpOf(inOp)->mAddress = IPAddr::FromValue(ee_won_ipaddr_clone(inAddr)); }
+{ RecvOpOf(inOp)->SetFromAddr(IPAddr::FromValue(ee_won_ipaddr_clone(inAddr))); }
 static void UdpRecvSetMsg(void* inOp, void* inBytes)
 { RecvOpOf(inOp)->SetMsg(static_cast<const ByteBuffer*>(static_cast<RefCount*>(inBytes))); }
 static long UdpRecvCheck(void* inOp, const uint8_t* inData, size_t inLength, bool* outThrew)
@@ -234,7 +234,7 @@ void UDPManagerRecvOp::RunHook()
 
 // FUNCTION: WON 0x006b70b0
 // Creates a request/reply op with no retries and a 10-second reply wait
-UDPManagerSendRecvOp::UDPManagerSendRecvOp() : mRetryLimit(0) { this->mReceiveTimeout=10000; }
+UDPManagerSendRecvOp::UDPManagerSendRecvOp() : mRetryLimit(0), mAttemptCount(0) { this->mReceiveTimeout=10000; }
 
 // FUNCTION: WON 0x006b7260
 // Sends the request datagram (via the manager or the op's socket) and waits for a matching reply

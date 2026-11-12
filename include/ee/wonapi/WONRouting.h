@@ -490,27 +490,29 @@ public:
     bool HasVerifier();
     void SetUDPManager(UDPManager* theManager);
     void SetSocket(QueueSocket* theSocket);
-    const IPAddr& GetFromAddr();
+    IPAddr GetFromAddr() const; // a copy (the original returned a reference to the member)
     void SetFromAddr(const IPAddr& theAddr);
     const ByteBuffer* GetMsg() { return this->mReceivedData.get(); }
     void SetMsg(const ByteBuffer* theMsg) { this->mReceivedData=theMsg; }
+    QueueSocket* GetSocket() const { return this->mSocket.get(); }
+    UDPManager* GetUDPManager() const;
     // Implicit destructor2b6930, no own-vptr store; natural owned-member cleanup.
     virtual void RunHook();   //2b6fb0
     virtual void CleanupHook(); //2b6f60
     virtual WONStatus CheckMessage(ReadBuffer&); //2b6c10, new slot 0c
+    typedef WONStatus (*MessageVerifier)(ReadBuffer&, void*);
+    void SetMessageVerifier(MessageVerifier,void*); //2b6bf0
+    void QueueRecv(); //2b6c30
+    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b6d70, owning values
+    void RecvCallback(RecvBytesFromOp*); //2b6e60
+private:
     SmartPtr<QueueSocket> mSocket; //44
     SmartPtr<UDPManager> mManager; //48
     bool mOwnSocket; //4c; the ctor leaves it unset until Run/setup
     IPAddr mAddress; //50..77, naturalalignment4d..4f
     ByteBufferPtr mReceivedData; //78
-    typedef WONStatus (*MessageVerifier)(ReadBuffer&, void*);
     MessageVerifier mVerifier; //7c, initializedNULL
     void* mVerifierContext; //80; originalctor leaves until setter
-    void SetMessageVerifier(MessageVerifier,void*); //2b6bf0
-    void QueueRecv(); //2b6c30
-    static void StaticRecvCallback(AsyncOpPtr,SmartPtr<RefCount>); //2b6d70, owning values
-    void RecvCallback(RecvBytesFromOp*); //2b6e60
-
 };
 
 class UDPManagerSendRecvOp : public AsyncOp {
@@ -525,18 +527,26 @@ public:
     void SetMsgTimeout(DWORD theTimeout);
     void SetNumRetransmits(int theNum);
     void SetDestAddr(const IPAddr& theAddr);
-    const IPAddr& GetDestAddr() { return this->mAddress; }
+    IPAddr GetDestAddr() const { return this->mAddress; } // a copy (the original returned a reference)
+    void SetOutgoing(const ByteBuffer* theMsg) { this->mOutgoing = theMsg; } // the request datagram
+    const ByteBuffer* GetOutgoing() const { return this->mOutgoing.get(); }
+    QueueSocket* GetSocket() const { return this->mSocket.get(); } // the op's own socket (none with a manager)
+    UDPManagerRecvOp* GetRecvOp() const { return this->mRecvOp.get(); } // the reply wait
+    int GetAttemptCount() const { return this->mAttemptCount; }
+    int GetNumRetransmits() const { return this->mRetryLimit; }
+    unsigned long GetMsgTimeout() const { return this->mReceiveTimeout; }
     // Implicit destructor2b7140, no own-vptr; naturally inlined into globalPingGameOp.
     virtual void RunHook();   //2b7470
     virtual void CleanupHook(); //2b7630
     virtual WONStatus CheckResponse(ReadBuffer&); //2ad870, returns status 0 by default (ret4)
+private:
     SmartPtr<UDPManager> mManager; //44
     SmartPtr<QueueSocket> mSocket; //48
     ByteBufferPtr mOutgoing; //4c
     IPAddr mAddress; //50..77
     SmartPtr<UDPManagerRecvOp> mRecvOp; //78, NOT a ByteBuffer
     int mRetryLimit; //7c, signed compare; int as in the SDK
-    int mAttemptCount; //80, RunHook clears it; the ctor leaves it unset
+    int mAttemptCount; //80, RunHook clears it; the original's ctor left it unset (0 here)
     unsigned long mReceiveTimeout; //84, initialized to 10000; DWORD in the SDK
 };
 
@@ -569,7 +579,8 @@ private:
 inline bool UDPManagerRecvOp::HasVerifier() { return this->mVerifier!=NULL; }
 inline void UDPManagerRecvOp::SetUDPManager(UDPManager* theManager) { this->mManager=theManager; }
 inline void UDPManagerRecvOp::SetSocket(QueueSocket* theSocket) { this->mSocket=theSocket; this->mOwnSocket=false; }
-inline const IPAddr& UDPManagerRecvOp::GetFromAddr() { return this->mAddress; }
+inline IPAddr UDPManagerRecvOp::GetFromAddr() const { return this->mAddress; }
+inline UDPManager* UDPManagerRecvOp::GetUDPManager() const { return this->mManager.get(); }
 inline void UDPManagerRecvOp::SetFromAddr(const IPAddr& theAddr) { this->mAddress=theAddr; }
 inline void UDPManagerSendRecvOp::SetUDPManager(UDPManager* theManager) { this->mManager=theManager; }
 inline void UDPManagerSendRecvOp::SetMsgTimeout(DWORD theTimeout) { this->mReceiveTimeout=theTimeout; }
