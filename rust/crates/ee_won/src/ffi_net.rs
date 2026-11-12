@@ -2,11 +2,10 @@
 //! and the socket ops' algorithms. Addresses cross as (address, port), both in network byte order (a
 //! `PlatSockAddrIn`'s `mAddress` and `mPort`). Statuses are `long` (the C++ `WONStatus`).
 
-use crate::ffi::EeWonByteSink;
 use crate::ipaddr::{self, Addr};
 use crate::netstats;
-use crate::ops::{self, LengthStep, LockedSocket, OpTiming};
-use crate::socket::{self, raw, raw_mut, Socket};
+use crate::ops::{self, LengthStep};
+use crate::socket;
 use crate::status;
 use std::ffi::{c_char, c_long, c_void};
 
@@ -213,25 +212,7 @@ pub extern "C" fn ee_won_has_internet_connection() -> bool {
     ipaddr::has_internet_connection()
 }
 
-// ---- AsyncSocket (the caller holds the socket's lock unless said otherwise)
-
-/// The constructor: a closed socket of `kind` (0 stream, 1 datagram) into `core`.
-///
-/// # Safety
-/// `core` points at an `EeWonSocket` (uninitialised is fine).
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_init(core: *mut Socket, kind: i32) {
-    unsafe { core.write(Socket::new(kind)) }
-}
-
-/// The destructor's count (after the C++ closed the socket).
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_destroyed(core: *mut Socket) {
-    unsafe { (*core).destroyed() }
-}
+// ---- AsyncSocket's socket system (the socket itself is sockobj.rs's object)
 
 /// `StartWinsock`.
 #[no_mangle]
@@ -243,229 +224,6 @@ pub extern "C" fn ee_won_socket_start() -> c_long {
 #[no_mangle]
 pub extern "C" fn ee_won_socket_stop() -> c_long {
     socket::stop() as c_long
-}
-
-/// `GetLastSocketError`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_last_error(core: *mut Socket) -> c_long {
-    unsafe { (*core).last_error() as c_long }
-}
-
-/// `Open`'s handle (after the C++ closed a valid socket; the C++ runs the open hook on 0).
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_open(core: *mut Socket) -> c_long {
-    unsafe { (*core).open_handle() as c_long }
-}
-
-/// `Bind` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_bind(core: *mut Socket, address: u32, port: u16, reuse: bool) -> c_long {
-    unsafe { (*core).bind(Addr { address, port }, reuse) as c_long }
-}
-
-/// The connect of `Fn2B0E60` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_connect(core: *mut Socket, address: u32, port: u16) -> c_long {
-    unsafe { (*core).connect(Addr { address, port }) as c_long }
-}
-
-/// `Listen`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_listen(core: *mut Socket, backlog: i32) -> c_long {
-    unsafe { (*core).listen(backlog) as c_long }
-}
-
-/// `Accept`'s system part: the accepted handle and the peer, or the error.
-///
-/// # Safety
-/// `core` is a socket; the out-parameters are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_accept(
-    core: *mut Socket,
-    handle: *mut isize,
-    address: *mut u32,
-    port: *mut u16,
-) -> c_long {
-    match unsafe { (*core).accept() } {
-        Ok((h, a)) => {
-            unsafe {
-                *handle = h;
-                *address = a.address;
-                *port = a.port;
-            }
-            0
-        }
-        Err(s) => s as c_long,
-    }
-}
-
-/// The accepted handle into the new socket's core (open, connected).
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_adopt(core: *mut Socket, handle: isize) {
-    unsafe { (*core).adopt(handle) }
-}
-
-/// A wait on a handle without the lock (`WaitForRead` 1, `WaitForWrite` 2).
-#[no_mangle]
-pub extern "C" fn ee_won_socket_wait(handle: isize, mask: u32, timeout: u32) {
-    socket::wait(handle, mask, timeout)
-}
-
-/// `WaitForConnect`'s wait on a handle, without the lock.
-#[no_mangle]
-pub extern "C" fn ee_won_socket_wait_for_connect(handle: isize, timeout: u32) -> c_long {
-    socket::wait_for_connect(handle, timeout) as c_long
-}
-
-/// `Send`; `*sent` (when not null) is set when the send did not fail.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_send(
-    core: *mut Socket,
-    data: *const c_void,
-    length: i32,
-    sent: *mut i32,
-) -> c_long {
-    let mut n = -1;
-    let s = unsafe { (*core).send(raw(data, length), &mut n) };
-    if !sent.is_null() && n >= 0 {
-        unsafe { *sent = n };
-    }
-    s as c_long
-}
-
-/// `Recv`; `*received` (when not null) is set when bytes came.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_recv(
-    core: *mut Socket,
-    data: *mut c_void,
-    length: i32,
-    received: *mut i32,
-) -> c_long {
-    let mut n = -1;
-    let s = unsafe { (*core).recv(raw_mut(data, length), &mut n) };
-    if !received.is_null() && n >= 0 {
-        unsafe { *received = n };
-    }
-    s as c_long
-}
-
-/// `SendTo` / `RecvFrom`'s test of the socket's kind.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_datagram_only(core: *const Socket) -> c_long {
-    unsafe { (*core).datagram_only() as c_long }
-}
-
-/// `SendTo` on an open datagram socket.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_send_to(
-    core: *mut Socket,
-    data: *const c_void,
-    length: i32,
-    address: u32,
-    port: u16,
-) -> c_long {
-    unsafe { (*core).send_to(raw(data, length), Addr { address, port }) as c_long }
-}
-
-/// `RecvFrom`: on success the sender in `*address` / `*port` and `*from` true, `*received` (when not null) set.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes; the out-parameters are valid.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_recv_from(
-    core: *mut Socket,
-    data: *mut c_void,
-    length: i32,
-    address: *mut u32,
-    port: *mut u16,
-    from: *mut bool,
-    received: *mut i32,
-) -> c_long {
-    let mut peer = None;
-    let mut n = 0;
-    let s = unsafe { (*core).recv_from(raw_mut(data, length), &mut peer, &mut n) };
-    unsafe {
-        *from = put_addr(peer, address, port);
-        if !received.is_null() && peer.is_some() {
-            *received = n;
-        }
-    }
-    s as c_long
-}
-
-/// `ClosePrv`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_close(core: *mut Socket) {
-    unsafe { (*core).close_handle() }
-}
-
-/// `Disconnect` of a datagram socket: false when dissolving the peer failed.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_dissolve_peer(core: *mut Socket) -> bool {
-    unsafe { (*core).dissolve_peer() }
-}
-
-/// `GetLocalPort`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_local_port(core: *const Socket) -> u16 {
-    unsafe { (*core).local_port() }
-}
-
-/// `SetBroadcast`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_set_broadcast(core: *mut Socket, on: bool) -> c_long {
-    unsafe { (*core).set_broadcast(on) as c_long }
-}
-
-/// `SetNagling`.
-///
-/// # Safety
-/// `core` is a socket.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_socket_set_nagling(core: *mut Socket, on: bool) -> c_long {
-    unsafe { (*core).set_nagling(on) as c_long }
 }
 
 // ---- the ops
@@ -509,42 +267,6 @@ pub extern "C" fn ee_won_op_valid_length_field(size: u32) -> bool {
 #[no_mangle]
 pub extern "C" fn ee_won_op_chunk_length(length: u32, bytes_read: u32) -> i32 {
     ops::chunk_length(length, bytes_read)
-}
-
-/// `SendBytesOp::Continue`: sends `data[*pos..length]`; `*pos` follows.
-///
-/// # Safety
-/// `core` is the socket and `lock` its `PlatMutex`, both alive during the call; `data` holds `length` bytes.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_send_all(
-    core: *mut Socket,
-    lock: *mut c_void,
-    data: *const u8,
-    length: usize,
-    pos: *mut u32,
-    timing: OpTiming,
-) -> c_long {
-    let s = LockedSocket { core, lock };
-    unsafe { ops::send_all(&s, text(data, length), &mut *pos, timing) as c_long }
-}
-
-/// `RecvCRMsgOp::Continue`: each byte to `sink` until a CR-LF; `last` is the line so far's last byte (-1 for none).
-///
-/// # Safety
-/// As `ee_won_op_send_all`; the sink is called during the call only.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_op_recv_line(
-    core: *mut Socket,
-    lock: *mut c_void,
-    last: i32,
-    timing: OpTiming,
-    sink: EeWonByteSink,
-    context: *mut c_void,
-) -> c_long {
-    let s = LockedSocket { core, lock };
-    let mut last = last;
-    // SAFETY: the sink's contract
-    ops::recv_line(&s, &mut last, timing, |b| unsafe { sink(context, &b, 1) }) as c_long
 }
 
 #[cfg(test)]

@@ -23,6 +23,7 @@ pub const WS_ASYNC_SOCKET_STREAM_NOT_ALLOWED: Status = 100018;
 pub const WS_ASYNC_SOCKET_DATAGRAM_NOT_ALLOWED: Status = 100019;
 pub const WS_ASYNC_SOCKET_SHUTDOWN: Status = 100020;
 pub const WS_ASYNC_SOCKET_CONNECT_FAILED: Status = 100021;
+pub const WS_SOCKET_OP_INVALID_SOCKET: Status = 100022;
 pub const WS_RECV_MSG_INVALID_LENGTH_FIELD_SIZE: Status = 100023;
 pub const WS_RECV_MSG_INVALID_MESSAGE_LENGTH: Status = 100024;
 /// The DB proxy's game-specific error range, named by number.

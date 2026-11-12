@@ -39,7 +39,7 @@ WONStatus AcceptOp::Continue()
 // Removes the op from the socket thread if it was handed there
 void SocketOp::CleanupHook()
 {
-    if(this->mInSocketThread)
+    if(this->IsInSocketThread())
         WONAPICore::RemoveFromSocketThread(this);
 }
 }

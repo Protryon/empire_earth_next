@@ -42,7 +42,7 @@ QueueSocket::QueueSocket(int inType) : AsyncSocket(inType)
 // Returns a new, unopened queue socket of the same type
 AsyncSocket* QueueSocket::Duplicate()
 {
-    return new QueueSocket(this->GetCore().kind);
+    return new QueueSocket(this->GetType());
 }
 
 // FUNCTION: WON 0x006b3bf0

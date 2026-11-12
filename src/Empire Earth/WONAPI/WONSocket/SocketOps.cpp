@@ -30,7 +30,7 @@ WONStatus SendBytesOp::Start()
 WONStatus SendBytesOp::Continue()
 {
     uint32_t aPos = static_cast<uint32_t>(this->mReadBuffer.pos());
-    WONStatus aStatus = ee_won_op_send_all(&this->GetSocket()->GetCore(), this->GetSocket()->GetDataCrit().mCrit,
+    WONStatus aStatus = ee_won_asyncsocket_send_all(this->GetSocket()->GetSocketObject(),
         reinterpret_cast<const uint8_t*>(this->mReadBuffer.data()), this->mReadBuffer.length(), &aPos,
         this->GetTiming());
     this->mReadBuffer.SetPos(static_cast<int>(aPos));

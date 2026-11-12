@@ -2538,6 +2538,9 @@ struct EeSubSectorLinks;
 /// `AsyncOp`'s state, lock, completion and container.
 struct EeWonAsyncOp;
 
+/// `AsyncSocket`'s state and steps.
+struct EeWonAsyncSocket;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -2557,6 +2560,9 @@ struct EeWonOpTracker;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
+
+/// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
+struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
@@ -6384,31 +6390,6 @@ using EeWonLanClientSink = void(*)(void *context, uint16_t id, const uint16_t *n
 /// Receives one local address: its name (`length` bytes) and the host-order address.
 using EeWonAddressSink = void(*)(void *context, const uint8_t *name, size_t length, uint32_t host);
 
-/// WON's socket state, embedded in the C++ `AsyncSocket` (`mCore`).
-struct EeWonSocket {
-  /// The platform socket (`PLAT_SOCKET_INVALID` when closed).
-  ptrdiff_t handle;
-  /// [`KIND_STREAM`] or [`KIND_DATAGRAM`].
-  int32_t kind;
-  /// Connected (a stream connect was started or accepted; a datagram socket's peer was set).
-  bool connected;
-  /// Opened since the last close.
-  bool open;
-  /// The last socket error recorded (`WS_None` after an open).
-  long status;
-  /// When data last arrived (seconds since 1970; the original's 32-bit `time(NULL)`).
-  int64_t last_recv_time;
-  /// When the first of the current run of blocked sends failed (0: the last send went out).
-  int64_t first_blocked_send_time;
-};
-
-/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
-struct EeWonOpTiming {
-  int32_t run_mode;
-  uint32_t start;
-  uint32_t timeout;
-};
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -6995,6 +6976,13 @@ struct EeWonAsyncOpHooks {
   EeWonAsyncOpFn op_kill;
 };
 
+/// An op's run timing (`AsyncOp`'s `mRunMode`, `mStartTime`, `mTimeout`).
+struct EeWonOpTiming {
+  int32_t run_mode;
+  uint32_t start;
+  uint32_t timeout;
+};
+
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
 struct EeWonTextList {
   const void *data;
@@ -7244,6 +7232,49 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A C++ call on a socket (`AsyncSocket*`).
+using EeWonAsyncSocketFn = void(*)(void *socket);
+
+/// A transform's `Send` / `Recv` on a message (`MsgTransform*`, `ByteBufferPtr*`): its status.
+using EeWonTransformFn = long(*)(void *transform, void *message);
+
+/// What the socket object calls back in the C++. One static table serves every socket.
+struct EeWonAsyncSocketHooks {
+  /// the virtual `OpenHook`, `CloseHook`, `KillHook`
+  EeWonAsyncSocketFn open_hook;
+  EeWonAsyncSocketFn close_hook;
+  EeWonAsyncSocketFn kill_hook;
+  /// `transform->Send(message)`, `transform->Recv(message)`
+  EeWonTransformFn transform_send;
+  EeWonTransformFn transform_recv;
+  /// `delete transform`
+  void (*transform_free)(void *transform);
+};
+
+/// A C++ call on a socket op (`SocketOp*`).
+using EeWonSocketOpBaseFn = void(*)(void *op);
+
+/// A C++ call on a socket (`AsyncSocket*`).
+using EeWonSocketRefFn = void(*)(void *socket);
+
+/// What the op object calls back in the C++. One static table serves every socket op.
+struct EeWonSocketOpBaseHooks {
+  /// the virtual `Start()` and `Continue()`
+  long (*start)(void *op);
+  long (*continue_op)(void *op);
+  /// `Finish(status)`
+  void (*finish)(void *op, long status);
+  /// `GetMode()`
+  int32_t (*mode)(void *op);
+  /// `WONAPICore::AddToSocketThread(op)`
+  EeWonSocketOpBaseFn add_to_socket_thread;
+  /// `socket->AddRef()`, `socket->Release()`
+  EeWonSocketRefFn socket_add_ref;
+  EeWonSocketRefFn socket_release;
+  /// the socket's Rust object (`socket->mSock`)
+  EeWonAsyncSocket *(*socket_object)(void *socket);
+};
 
 /// A C++ call on a socket op (`SocketOp*`).
 using EeWonSocketOpFn = void(*)(void *op);
@@ -14780,141 +14811,11 @@ bool ee_won_ipaddr_host_name(char *out, size_t size);
 /// `AsyncSocket::HasInternetConnection`.
 bool ee_won_has_internet_connection();
 
-/// The constructor: a closed socket of `kind` (0 stream, 1 datagram) into `core`.
-///
-/// # Safety
-/// `core` points at an `EeWonSocket` (uninitialised is fine).
-void ee_won_socket_init(EeWonSocket *core, int32_t kind);
-
-/// The destructor's count (after the C++ closed the socket).
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_destroyed(EeWonSocket *core);
-
 /// `StartWinsock`.
 long ee_won_socket_start();
 
 /// `StopWinsock`.
 long ee_won_socket_stop();
-
-/// `GetLastSocketError`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_last_error(EeWonSocket *core);
-
-/// `Open`'s handle (after the C++ closed a valid socket; the C++ runs the open hook on 0).
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_open(EeWonSocket *core);
-
-/// `Bind` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_bind(EeWonSocket *core, uint32_t address, uint16_t port, bool reuse);
-
-/// The connect of `Fn2B0E60` on an open socket.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_connect(EeWonSocket *core, uint32_t address, uint16_t port);
-
-/// `Listen`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_listen(EeWonSocket *core, int32_t backlog);
-
-/// `Accept`'s system part: the accepted handle and the peer, or the error.
-///
-/// # Safety
-/// `core` is a socket; the out-parameters are valid.
-long ee_won_socket_accept(EeWonSocket *core, ptrdiff_t *handle, uint32_t *address, uint16_t *port);
-
-/// The accepted handle into the new socket's core (open, connected).
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_adopt(EeWonSocket *core, ptrdiff_t handle);
-
-/// A wait on a handle without the lock (`WaitForRead` 1, `WaitForWrite` 2).
-void ee_won_socket_wait(ptrdiff_t handle, uint32_t mask, uint32_t timeout);
-
-/// `WaitForConnect`'s wait on a handle, without the lock.
-long ee_won_socket_wait_for_connect(ptrdiff_t handle, uint32_t timeout);
-
-/// `Send`; `*sent` (when not null) is set when the send did not fail.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-long ee_won_socket_send(EeWonSocket *core, const void *data, int32_t length, int32_t *sent);
-
-/// `Recv`; `*received` (when not null) is set when bytes came.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes.
-long ee_won_socket_recv(EeWonSocket *core, void *data, int32_t length, int32_t *received);
-
-/// `SendTo` / `RecvFrom`'s test of the socket's kind.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_datagram_only(const EeWonSocket *core);
-
-/// `SendTo` on an open datagram socket.
-///
-/// # Safety
-/// `core` is a socket; `data` holds `length` bytes.
-long ee_won_socket_send_to(EeWonSocket *core,
-                           const void *data,
-                           int32_t length,
-                           uint32_t address,
-                           uint16_t port);
-
-/// `RecvFrom`: on success the sender in `*address` / `*port` and `*from` true, `*received` (when not null) set.
-///
-/// # Safety
-/// `core` is a socket; `data` has room for `length` bytes; the out-parameters are valid.
-long ee_won_socket_recv_from(EeWonSocket *core,
-                             void *data,
-                             int32_t length,
-                             uint32_t *address,
-                             uint16_t *port,
-                             bool *from,
-                             int32_t *received);
-
-/// `ClosePrv`.
-///
-/// # Safety
-/// `core` is a socket.
-void ee_won_socket_close(EeWonSocket *core);
-
-/// `Disconnect` of a datagram socket: false when dissolving the peer failed.
-///
-/// # Safety
-/// `core` is a socket.
-bool ee_won_socket_dissolve_peer(EeWonSocket *core);
-
-/// `GetLocalPort`.
-///
-/// # Safety
-/// `core` is a socket.
-uint16_t ee_won_socket_local_port(const EeWonSocket *core);
-
-/// `SetBroadcast`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_set_broadcast(EeWonSocket *core, bool on);
-
-/// `SetNagling`.
-///
-/// # Safety
-/// `core` is a socket.
-long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
 
 /// WON's millisecond tick (`WONTickCount`).
 uint32_t ee_won_tick();
@@ -14936,28 +14837,6 @@ bool ee_won_op_valid_length_field(uint32_t size);
 
 /// `RecvBytesOp`'s chunk read size.
 int32_t ee_won_op_chunk_length(uint32_t length, uint32_t bytes_read);
-
-/// `SendBytesOp::Continue`: sends `data[*pos..length]`; `*pos` follows.
-///
-/// # Safety
-/// `core` is the socket and `lock` its `PlatMutex`, both alive during the call; `data` holds `length` bytes.
-long ee_won_op_send_all(EeWonSocket *core,
-                        void *lock,
-                        const uint8_t *data,
-                        size_t length,
-                        uint32_t *pos,
-                        EeWonOpTiming timing);
-
-/// `RecvCRMsgOp::Continue`: each byte to `sink` until a CR-LF; `last` is the line so far's last byte (-1 for none).
-///
-/// # Safety
-/// As `ee_won_op_send_all`; the sink is called during the call only.
-long ee_won_op_recv_line(EeWonSocket *core,
-                         void *lock,
-                         int32_t last,
-                         EeWonOpTiming timing,
-                         EeWonByteSink sink,
-                         void *context);
 
 /// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
 EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
@@ -17681,6 +17560,350 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// A new socket object for the C++ `socket` (the hooks get it), on the C++ lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `socket` and `lock` outlive the object.
+EeWonAsyncSocket *ee_won_asyncsocket_new(void *socket,
+                                         const EeWonAsyncSocketHooks *hooks,
+                                         void *lock,
+                                         int32_t kind);
+
+/// `~AsyncSocket`: closes the socket, deletes the transforms, frees the object.
+///
+/// # Safety
+/// `s` came from `ee_won_asyncsocket_new` and is freed once.
+void ee_won_asyncsocket_free(EeWonAsyncSocket *s);
+
+/// `GetType`.
+///
+/// # Safety
+/// `s` is a live socket object (so for every `ee_won_asyncsocket_` call).
+int32_t ee_won_asyncsocket_kind(const EeWonAsyncSocket *s);
+
+/// `IsValid`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_valid(const EeWonAsyncSocket *s);
+
+/// `IsOpen`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_open(const EeWonAsyncSocket *s);
+
+/// `IsConnected`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+bool ee_won_asyncsocket_is_connected(const EeWonAsyncSocket *s);
+
+/// The last socket error recorded (the original's `mStatus`, +0x54).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_status(const EeWonAsyncSocket *s);
+
+/// `GetLengthFieldSize`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+uint8_t ee_won_asyncsocket_length_field_size(const EeWonAsyncSocket *s);
+
+/// `SetLengthFieldSize`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_set_length_field_size(const EeWonAsyncSocket *s, uint8_t size);
+
+/// `mThreadCloseCallback = callback` (a `void (*)(AsyncSocket*)`, null for none).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `callback` is null or such a function.
+void ee_won_asyncsocket_set_close_callback(const EeWonAsyncSocket *s, void *callback);
+
+/// `GetLastSocketError`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_last_error(const EeWonAsyncSocket *s);
+
+/// `Close`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_close(const EeWonAsyncSocket *s);
+
+/// `Kill`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_kill(const EeWonAsyncSocket *s);
+
+/// `Open`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_open(const EeWonAsyncSocket *s);
+
+/// `Bind` (network-order address and port).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_bind(const EeWonAsyncSocket *s,
+                             uint32_t address,
+                             uint16_t port,
+                             bool reuse);
+
+/// `Fn2B0E60`'s first part (`local_host` is `IPAddr::GetLocalHost()`, host order).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_connect_prepare(const EeWonAsyncSocket *s, uint32_t local_host);
+
+/// `Fn2B0E60`'s connect.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_connect(const EeWonAsyncSocket *s, uint32_t address, uint16_t port);
+
+/// `Listen`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_listen(const EeWonAsyncSocket *s, int32_t backlog);
+
+/// `Accept`'s system part: the accepted handle and the peer, or the error.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; the out-parameters are valid.
+long ee_won_asyncsocket_accept(const EeWonAsyncSocket *s,
+                               ptrdiff_t *handle,
+                               uint32_t *address,
+                               uint16_t *port);
+
+/// The accepted handle into the new socket `s`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_adopt(const EeWonAsyncSocket *s, ptrdiff_t handle);
+
+/// `WaitForConnect`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_wait_for_connect(const EeWonAsyncSocket *s, uint32_t timeout);
+
+/// `WaitForRead` (mask 1) / `WaitForWrite` (mask 2).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_wait(const EeWonAsyncSocket *s, uint32_t mask, uint32_t timeout);
+
+/// `Send` (`sent` may be null).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes.
+long ee_won_asyncsocket_send(const EeWonAsyncSocket *s,
+                             const void *data,
+                             int32_t length,
+                             int32_t *sent);
+
+/// `Recv` (`received` may be null).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` has room for `length` bytes.
+long ee_won_asyncsocket_recv(const EeWonAsyncSocket *s,
+                             void *data,
+                             int32_t length,
+                             int32_t *received);
+
+/// `SendTo`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes.
+long ee_won_asyncsocket_send_to(const EeWonAsyncSocket *s,
+                                const void *data,
+                                int32_t length,
+                                uint32_t address,
+                                uint16_t port);
+
+/// `RecvFrom`: the sender in `*address` / `*port` and true in `*from` on success.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` has room for `length` bytes; the out-parameters are valid (`received` may
+/// be null).
+long ee_won_asyncsocket_recv_from(const EeWonAsyncSocket *s,
+                                  void *data,
+                                  int32_t length,
+                                  uint32_t *address,
+                                  uint16_t *port,
+                                  bool *from,
+                                  int32_t *received);
+
+/// `Disconnect`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_disconnect(const EeWonAsyncSocket *s);
+
+/// `SetType`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_set_type(const EeWonAsyncSocket *s, int32_t kind);
+
+/// `GetLocalPort`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+uint16_t ee_won_asyncsocket_local_port(const EeWonAsyncSocket *s);
+
+/// `SetBroadcast`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_set_broadcast(const EeWonAsyncSocket *s, bool on);
+
+/// `SetNagling`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_set_nagling(const EeWonAsyncSocket *s, bool on);
+
+/// `AddMsgTransform` (the socket owns `transform`).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `transform` is a `MsgTransform*` the hooks delete.
+void ee_won_asyncsocket_add_transform(const EeWonAsyncSocket *s, void *transform);
+
+/// `RemoveAllMsgTransforms`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_remove_all_transforms(const EeWonAsyncSocket *s);
+
+/// `TransformSendMsg` (`message` is the caller's `ByteBufferPtr*`).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_transform_send(const EeWonAsyncSocket *s, void *message);
+
+/// `TransformRecvMsg`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+long ee_won_asyncsocket_transform_recv(const EeWonAsyncSocket *s, void *message);
+
+/// `SendBytesOp::Continue`'s loop on the socket: sends `data[*pos..length]`; `*pos` follows.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; `data` holds `length` bytes; `pos` is valid.
+long ee_won_asyncsocket_send_all(const EeWonAsyncSocket *s,
+                                 const uint8_t *data,
+                                 size_t length,
+                                 uint32_t *pos,
+                                 EeWonOpTiming timing);
+
+/// `ClosePrv`.
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`.
+void ee_won_asyncsocket_close_handle(const EeWonAsyncSocket *s);
+
+/// `RecvCRMsgOp::Continue`'s loop on the socket: each byte to `sink` until a CR-LF; `last` is the line so far's
+/// last byte (-1 for none).
+///
+/// # Safety
+/// As `ee_won_asyncsocket_kind`; the sink is called during the call only.
+long ee_won_asyncsocket_recv_line(const EeWonAsyncSocket *s,
+                                  int32_t last,
+                                  EeWonOpTiming timing,
+                                  EeWonByteSink sink,
+                                  void *context);
+
+/// A new op object for the C++ `op`.
+///
+/// # Safety
+/// `hooks` is a static table; `op` outlives the object.
+EeWonSocketOp *ee_won_socketop_new(void *op, const EeWonSocketOpBaseHooks *hooks);
+
+/// Frees the op object (the socket's reference goes).
+///
+/// # Safety
+/// `o` came from `ee_won_socketop_new` and is freed once.
+void ee_won_socketop_free(EeWonSocketOp *o);
+
+/// `GetSocket`.
+///
+/// # Safety
+/// `o` is a live op object (so for every `ee_won_socketop_` call).
+void *ee_won_socketop_socket(const EeWonSocketOp *o);
+
+/// `SetSocket`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`; `socket` is null or a live C++ socket.
+void ee_won_socketop_set_socket(const EeWonSocketOp *o, void *socket);
+
+/// `mInSocketThread`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+bool ee_won_socketop_in_socket_thread(const EeWonSocketOp *o);
+
+/// `mInSocketThread = on`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_in_socket_thread(const EeWonSocketOp *o, bool on);
+
+/// `mWaitForEvent[i]` (i < 3).
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+bool ee_won_socketop_wait_for_event(const EeWonSocketOp *o, int32_t i);
+
+/// `mWaitForEvent[i] = on`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_wait_for_event(const EeWonSocketOp *o, int32_t i, bool on);
+
+/// `mEventIndex[i]`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+int32_t ee_won_socketop_event_index(const EeWonSocketOp *o, int32_t i);
+
+/// `mEventIndex[i] = index`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_set_event_index(const EeWonSocketOp *o, int32_t i, int32_t index);
+
+/// `SocketOp::RunHook`.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_run_hook(const EeWonSocketOp *o);
+
+/// `RecvCRMsgOp::Start`'s buffer reset.
+///
+/// # Safety
+/// As `ee_won_socketop_socket`.
+void ee_won_socketop_line_reset(const EeWonSocketOp *o);
+
+/// `RecvCRMsgOp::Continue`: the status, and on success the message in `*message` (a new `EeWonByteBuffer` the
+/// C++ `ByteBuffer` adopts; null otherwise).
+///
+/// # Safety
+/// As `ee_won_socketop_socket`; `message` is valid.
+long ee_won_socketop_line_continue(const EeWonSocketOp *o,
+                                   EeWonOpTiming timing,
+                                   EeWonByteBuffer **message);
 
 /// # Safety
 /// `hooks` lives for the program.

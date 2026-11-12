@@ -68,6 +68,8 @@ pub mod routing;
 pub mod servctx;
 pub mod server;
 pub mod socket;
+pub mod sockobj;
+pub mod sockop;
 pub mod sockthread;
 pub mod staging;
 /// cbindgen:ignore
