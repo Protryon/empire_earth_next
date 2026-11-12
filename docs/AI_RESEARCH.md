@@ -4003,6 +4003,37 @@ After 60 minutes the port's wanted citizens are 180 in every line, as the C++'s.
 minutes: 786, of which 66 have no killer, against the C++'s 597. Citizens at 89 minutes: 97 against 109.
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
 
+### 8.58 The classic computer player in Lua: the untapped sites on new seeds, the late losses (2026-11-11, EE-SIM)
+
+§8.57's untapped rule held on seeds 2-33 (12-13), but on new seeds (34-65) the port fell to 5-20, with Copper 18
+against the C++'s 27. Without the rule, the same seeds gave 12-17 with Copper 25 against 21. The citizens at 40 minutes fell
+from 47 to 38. The cause is the per-resource room. The port's centres hold the explored resources only (fog), so at
+4 minutes they hold 3/1/3/3 food, stone, gold and iron sites against the C++'s whole-map 7/7/9/9. Counting only the
+untapped ones on top of that left the demand split short of gold and food (gold wanted 2.0 against the C++'s 3.8 at
+10 minutes). Two remedies were tried:
+- **Every resource for the sees_all seat** (ai.resources and ai.unit through the fog, as the classic's grouping of
+  the whole map): 5-25. The port sent its gatherers to far resources. Reverted.
+- **The untapped rule for the citizen target only** (GetWantedCitizens), with every site counted for the per-resource
+  room (a DEVIATION, in ORIGIN and econ.lua): kept.
+
+| seeds | stage | Lua won-lost | Lua / C++ Copper | citizens deleted | Lua / C++ citizens lost after 60 min |
+|---|---|---|---|---|---|
+| 34-65 | before §8.57 | 12-17, 3 close | 25 / 21 | - | - |
+| 34-65 | §8.57 (untapped everywhere) | 5-20, 7 close | 18 / 27 | - | 1155 / 576 |
+| 34-65 | every resource (sees_all) | 5-25, 2 close | 17 / 27 | 2 | 1225 / 510 |
+| 34-65 | untapped for the target only | 12-17, 3 close | 25 / 22 | 50 | 1138 / 773 |
+| 2-33 | untapped for the target only | 13-14, 5 close | 26 / 21 | 33 | 1128 / 662 |
+
+The Copper swing §8.57 saw (Lua 22 / C++ 25) was this regression: the port is back at 25-26 against 21-22.
+
+**The late losses.** After 60 minutes the port still loses about 1.6 times the C++'s citizens (1128-1138 against
+662-773 in 32 games). It loses 649 while fighting (the militia, with no guard near), 375 at gold, 304 at wood, 234
+hunting and 192 at iron. Most die with fewer than 3 enemies near (1520 of 2266), so these are small raids rather than
+the attack groups. Next: the port's militia and its flight from small raids against the C++'s (EECPRMNoteDanger,
+the militia odds).
+
+Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
