@@ -805,6 +805,24 @@ constexpr static const size_t MAX_IDS = 63;
 /// The largest buffer: the owner, then for 63 ids in 63 groups a three-byte run head and the id.
 constexpr static const size_t MAX_BUFFER = (1 + (MAX_IDS * 4));
 
+/// `GetGraphicsQuality`'s answer when no preset matches: Custom.
+constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
+
+/// The port's combo boxes whose lines are values (`kWindowModes` ...), by the number the C++ names them with.
+constexpr static const uint32_t EE_SCREENS_TABLE_WINDOW_MODE = 0;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_UI_SCALE = 1;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_RENDER_RESOLUTION = 2;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_FRAME_RATE = 3;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_TEXTURE_FILTERING = 4;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_BRIGHTNESS = 5;
+
+constexpr static const uint32_t EE_SCREENS_TABLE_ZOOM_OUT = 6;
+
 /// [`EeCalamityOp::TargetView`]'s flags.
 constexpr static const uint32_t EE_CALAMITY_TARGET_ON_MAP = 1;
 
@@ -5626,6 +5644,51 @@ struct EeOfPicture {
   uint32_t height;
   uint32_t depth;
   EeOfBytes bgra;
+};
+
+/// The graphics controls' states as `GetGraphicsQuality` reads them.
+struct EeScreensGraphics {
+  /// The check boxes, in [`CHECK_CONTROLS`]' order.
+  bool checks[9];
+  /// The model detail radio buttons: high, medium, low ([`MODEL_RADIOS`]).
+  bool model[3];
+  /// The effects detail radio buttons: high, medium, low ([`EFFECT_RADIOS`]).
+  bool effect[3];
+};
+
+/// What `SetGraphicsQuality` sets for a preset: the check boxes ([`CHECK_CONTROLS`]' order: the C++ calls
+/// `SetChecked` in that order), then the model and the effects detail radio to check (0 low, 1 medium, 2 high).
+struct EeScreensPreset {
+  bool checks[9];
+  long model;
+  long effect;
+};
+
+/// The settings `ShowGraphics` puts on the video tab's graphics controls.
+struct EeScreensGraphicsSettings {
+  bool trilinear_filter;
+  bool unit_lighting;
+  bool shadows;
+  bool clouds;
+  bool battlefield_ambients;
+  bool weather_effects;
+  bool anti_aliasing;
+  bool wait_for_vsync;
+  long mip_levels_to_drop;
+  long terrain_mip_levels_to_drop;
+  long texture_resolution;
+  long model_detail;
+  long effect_detail;
+};
+
+/// `ShowGraphics`' plan: the check boxes' states in [`CHECK_CONTROLS`]' order (the C++ sets 82, 83, 84, the texture
+/// resolution line, 86, 87, 110, 88, 105, the detail radios, then 85, the v-sync box, last), the texture resolution
+/// line and the detail radios (0 low, 1 medium, 2 high).
+struct EeScreensGraphicsShow {
+  bool checks[9];
+  unsigned long texture_line;
+  long model;
+  long effect;
 };
 
 /// The conductor's scalar members (the C++ object's, read and written around each call).
@@ -12590,6 +12653,25 @@ void ee_of_texture_free(EeOfTexture *texture);
 /// # Safety
 /// `data` is valid for `len` bytes, `out` and `err` for writing.
 bool ee_of_png_to_picture(const uint8_t *data, size_t len, EeOfPicture *out, EeOfBytes *err);
+
+/// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
+unsigned long ee_screens_graphics_quality(const EeScreensGraphics *controls);
+
+/// `SetGraphicsQuality`: whether `quality` is a preset (`out` then its plan).
+bool ee_screens_quality_preset(unsigned long quality, EeScreensPreset *out);
+
+/// The quality radio button (0..4, 5 Custom) a quality checks.
+unsigned long ee_screens_quality_radio(unsigned long quality);
+
+/// `ShowGraphics`' plan for the settings.
+void ee_screens_graphics_show(const EeScreensGraphicsSettings *settings,
+                              EeScreensGraphicsShow *out);
+
+/// `PortSelect`: the line of value table `table` nearest `value` (0 for an unknown table).
+unsigned long ee_screens_settings_nearest(uint32_t table, long value);
+
+/// `PortRead`: whether line `selection` of value table `table` exists (`out` then its value).
+bool ee_screens_settings_value(uint32_t table, unsigned long selection, long *out);
 
 /// An empty score table (the constructor).
 EeConductor *ee_conductor_create();
