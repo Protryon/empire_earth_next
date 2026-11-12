@@ -9,7 +9,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/SEMixer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_sound.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 

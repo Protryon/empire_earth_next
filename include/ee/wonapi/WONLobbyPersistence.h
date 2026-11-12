@@ -113,8 +113,13 @@ struct LobbyUserInfo {
     GUIString mUserName; // 0x10
     GUIString mPassword; // 0x14
 };
-typedef std::map<GUIString, LobbyUserInfo, GUIStringLessNoCase> LobbyUserInfoMap;
-const LobbyUserInfoMap& LobbyFn35CE60(); // 0x75ce60 (an empty function-local static map without lobby data)
+// the saved settings' containers are Rust objects (round 17, WONLobbyMap.h; lobbymap.rs): the Lobby* functions that
+// handed out references to the C++ maps (0x75ce60, 0x75d270, 0x75cfc0, 0x75d660, 0x75d8e0, 0x75dc80) are counts and
+// positions now, in the maps' order, empty without lobby data
+typedef LobbyOwnedMap<GUIString, LobbyUserInfo> LobbyUserInfoMap; // GUIStringLessNoCase
+size_t LobbyGetUserCount(); // the saved login users (0x75ce60's map), by name
+GUIString LobbyGetUserNameAt(size_t inPos); // the map's key
+long LobbyGetUserLastUseAt(size_t inPos);
 GUIString LobbyGetUserPassword(const GUIString& inUserName);
 LobbyUserInfo* LobbyFindUser(const GUIString& inUserName);
 LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPassword, bool inExistingOnly);
@@ -158,8 +163,9 @@ GUIString LobbyGetLastServerName(); // 0x75dc40 (0x74)
 GUIString LobbyGetLastRoomName(); // 0x75dc60 (0x78)
 
 // 0x75d270 returns the friends map (its 0x30), or the static empty map 0x966300 without lobby data
-typedef std::map<unsigned long, SmartPtr<LobbyFriend> > LobbyFriendMap;
-const LobbyFriendMap& LobbyFn35D270();
+typedef LobbyRefMap<unsigned long, LobbyFriend> LobbyFriendMap;
+size_t LobbyGetFriendCount(); // the friends (0x75d270's map), by user id
+LobbyFriend* LobbyGetFriendAt(size_t inPos); // not owned
 LobbyFriend* LobbyFindFriend(unsigned long inUserId); // 0x75d3f0 (not owned)
 void LobbyRemoveFriend(unsigned long inUserId);
 void LobbySetLastRoom(const GUIString& inServerName, const GUIString& inGroupName);
@@ -168,29 +174,39 @@ void LobbyAddDirectConnect(const IPAddr& inAddress, const GUIString& inName);
 void LobbyRemoveDirectConnect(const IPAddr& inAddress);
 
 // 0x75cfc0 returns the ignored names (its 0x18), or the static empty set 0x966320 without lobby data
-typedef std::set<GUIString, GUIStringLessNoCase> LobbyIgnoredNameSet;
-const LobbyIgnoredNameSet& LobbyFn35CFC0();
+typedef LobbyKeyedMap<GUIString> LobbyIgnoredNameSet; // GUIStringLessNoCase
+size_t LobbyGetIgnoredNameCount(); // the ignored names (0x75cfc0's set)
+GUIString LobbyGetIgnoredNameAt(size_t inPos);
 // 0x75d460: adds a friend (a new LobbyFriend, 0x50 bytes)
 LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inUserId);
 
-typedef std::map<GUIString, long, GUIStringLessNoCase> LobbyLanNameInfoMap;
-typedef std::map<IPAddr, GUIString> LobbyDirectConnectMap;
+typedef LobbyKeyedMap<GUIString> LobbyLanNameInfoMap; // GUIStringLessNoCase; the number: the last use time
+typedef LobbyKeyedMap<IPAddr> LobbyDirectConnectMap; // the text: the name
+typedef LobbyKeyedMap<IPAddr> LobbyReconnectInfoMap; // the numbers: the last use time, the reconnect id
 GUIString LobbyGetLanName(); // 0x75d640 (0x68, or the empty string)
-const LobbyLanNameInfoMap& LobbyFn35D660(); // 0x75d660 (0x114c, or the static 0x966388)
+size_t LobbyGetLanNameCount(); // the recent LAN names (0x75d660's map)
+GUIString LobbyGetLanNameAt(size_t inPos);
 void LobbyRemoveLanName(); // 0x75d770 (case-insensitive compare 0x728030)
 void LobbyResetFilters(); // 0x75df00
-const LobbyDirectConnectMap& LobbyFn35D8E0(); // 0x75d8e0 (0x1158, or the static 0x966330)
+size_t LobbyGetDirectConnectCount(); // the saved direct connects (0x75d8e0's map), by address
+IPAddr LobbyGetDirectConnectAddressAt(size_t inPos);
+GUIString LobbyGetDirectConnectNameAt(size_t inPos);
 void LobbySetCurrentUser(LobbyUserInfo* inUser); // 0x75cf90 (then reads the user)
-// a set of strings with a lookup index (0x18 bytes; constructor 0x75dd20; Add 0x75baa0, Erase 0x75bc20)
+// a set of strings in insertion order (0x18 bytes; constructor 0x75dd20; Add 0x75baa0, Erase 0x75bc20): the original's
+// list with an index of list iterators is one Rust container in insertion order, unique by GUIString::Compare. A
+// copy is a copy (the original's memberwise copy kept the source's list iterators in its index: undefined behaviour
+// at the copy's first Erase)
 class LobbyOptionSet {
 public:
-    typedef std::list<GUIString> StringList;
-    typedef std::map<GUIString, StringList::iterator> StringMap;
+    LobbyOptionSet() : mValues(EeWonLobbyKeyKind::InOrder, EeWonLobbyMapHooks()) {}
     void Add(const GUIString& inValue); // 0x75baa0
     bool Erase(const GUIString& inValue); // 0x75bc20
     void clear(); // as the SDK's ServerListFilterSet::clear
-    StringMap mIndex; // 0x00
-    StringList mValues; // 0x0c
+    size_t size() const { return this->mValues.size(); }
+    bool empty() const { return this->mValues.empty(); }
+    GUIString ValueAt(size_t inPos) const { return this->mValues.KeyAt(inPos); } // in insertion order
+private:
+    LobbyKeyedMap<GUIString> mValues;
 };
 
 // the lobby's saved settings: users, friends, ignored names, options and LAN data (0x1164 bytes)
@@ -251,16 +267,17 @@ public:
     void SetLastRoomName(const GUIString& inText);
     void SetLastRoom(const GUIString& inServer, const GUIString& inRoom); // LobbySetLastRoom's rule
     void AfterRestoreDefaults(long inOldAdapter); // LobbyRestoreDefaults' rule after RestoreDefaults
-    std::set<long>& UserIds() { return this->mUserIds; }
-    std::set<GUIString, GUIStringLessNoCase>& IgnoredNames() { return this->mIgnoredNames; }
-    std::set<unsigned long>& BlockedCDKeyIds() { return this->mBlockedCDKeyIds; }
-    std::map<unsigned long, SmartPtr<LobbyFriend> >& Friends() { return this->mFriends; }
-    std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>& DefaultGameOptions() { return this->mDefaultGameOptions; }
-    std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>& GameOptions() { return this->mGameOptions; }
+    typedef LobbyOwnedMap<GUIString, LobbyOptionSet> OptionMap; // GUIStringLessNoCase
+    LobbyKeyedMap<long>& UserIds() { return this->mUserIds; }
+    LobbyIgnoredNameSet& IgnoredNames() { return this->mIgnoredNames; }
+    LobbyKeyedMap<unsigned long>& BlockedCDKeyIds() { return this->mBlockedCDKeyIds; }
+    LobbyFriendMap& Friends() { return this->mFriends; }
+    OptionMap& DefaultGameOptions() { return this->mDefaultGameOptions; }
+    OptionMap& GameOptions() { return this->mGameOptions; }
     LobbyUserInfoMap& Users() { return this->mUsers; }
-    std::map<IPAddr, LobbyReconnectInfo>& ReconnectInfoMap() { return this->mReconnectInfoMap; }
-    std::map<GUIString, long, GUIStringLessNoCase>& LanNameInfoMap() { return this->mLanNameInfoMap; }
-    std::map<IPAddr, GUIString>& DirectConnectMap() { return this->mDirectConnectMap; }
+    LobbyReconnectInfoMap& ReconnectInfoMap() { return this->mReconnectInfoMap; }
+    LobbyLanNameInfoMap& LanNameInfoMap() { return this->mLanNameInfoMap; }
+    LobbyDirectConnectMap& DirectConnectMap() { return this->mDirectConnectMap; }
 private:
     friend struct PersistGlobalLoad; // the files' events applied (LobbyPersistentData.cpp)
     friend struct PersistUserLoad;
@@ -269,25 +286,24 @@ private:
     GUIString GetText(EeWonPrefsText inText) const;
     void SetText(EeWonPrefsText inText, const GUIString& inValue);
     EeWonLobbyPrefs* mPrefs; // the scalar state (the original's 0x14 and 0x54..0x7d)
-    std::set<long> mUserIds;                  // 0x08 (the insert at 0x75fa52 gives the type)
-std::set<GUIString, GUIStringLessNoCase> mIgnoredNames; // 0x18
-std::set<unsigned long> mBlockedCDKeyIds; // 0x24 (loaded and saved, but nothing in the lobby fills it)
-std::map<unsigned long, SmartPtr<LobbyFriend> > mFriends; // 0x30
-std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase> mDefaultGameOptions; // 0x3c
-std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase> mGameOptions; // 0x48
-
-LobbyUserInfoMap mUsers; // 0x80
-std::map<IPAddr, LobbyReconnectInfo> mReconnectInfoMap; // 0x8c
-Blowfish mEncryptKey; // 0x98..0x114c (0x10b4 bytes)
-std::map<GUIString, long, GUIStringLessNoCase> mLanNameInfoMap; // 0x114c
-std::map<IPAddr, GUIString> mDirectConnectMap; // 0x1158 (0x1164 bytes in all)
+    LobbyKeyedMap<long> mUserIds;              // 0x08 (std::set<long>: the insert at 0x75fa52 gives the type)
+    LobbyIgnoredNameSet mIgnoredNames;         // 0x18
+    LobbyKeyedMap<unsigned long> mBlockedCDKeyIds; // 0x24 (loaded and saved, but nothing in the lobby fills it)
+    LobbyFriendMap mFriends;                   // 0x30
+    OptionMap mDefaultGameOptions;             // 0x3c
+    OptionMap mGameOptions;                    // 0x48
+    LobbyUserInfoMap mUsers;                   // 0x80
+    LobbyReconnectInfoMap mReconnectInfoMap;   // 0x8c (LobbyReconnectInfo's two fields as the entry's numbers)
+    Blowfish mEncryptKey;                      // 0x98..0x114c (0x10b4 bytes)
+    LobbyLanNameInfoMap mLanNameInfoMap;       // 0x114c
+    LobbyDirectConnectMap mDirectConnectMap;   // 0x1158 (0x1164 bytes in all)
 
 };
 LobbyPersistentData* GetLobbyPersistentData(); // 0x75c900 (the lobby's instance; not owned)
 int LobbyGetReconnectId(const IPAddr& inAddress); // 0x75db00 (0 when missing)
 void LobbySetReconnectId(const IPAddr& inAddress, int inReconnectId); // 0x75d940 (then saves)
 // the filter sets are LobbyOptionSet records (the SDK calls them ServerListFilterSet)
-const LobbyOptionSet& LobbyFn35DC80(const GUIString& inColumn);
+LobbyOptionSet LobbyGetFilterValues(const GUIString& inColumn); // 0x75dc80 (a copy; empty for a column without values)
 void LobbyAddFilterValue(const GUIString& inColumn, const GUIString& inValue);
 void LobbyRemoveFilterValue(const GUIString& inColumn, const GUIString& inValue);
 }

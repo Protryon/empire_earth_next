@@ -88,7 +88,7 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_rust.h"   // ee_screens_button_*, ee_screens_command_*: the command panel (ee_screens command_panel.rs)
+#include "rust/ee_screens.h"   // ee_screens_button_*, ee_screens_command_*: the command panel (ee_screens command_panel.rs)
 extern float& gSavedGameSpeed;               // 0x5318b0 (the cinematic's end time) (provisional name)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFortress.cpp defines it)
 extern long& gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)

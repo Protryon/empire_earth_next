@@ -18,7 +18,7 @@
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 // gShowParseTime and gLinesParsed (0x00966b30/0x00966b34) belonged to the original ComponentConfig.cpp, which is not

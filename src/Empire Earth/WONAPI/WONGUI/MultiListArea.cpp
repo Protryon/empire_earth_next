@@ -9,7 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // The column at an x, the column resizes and positions, the dynamic column, the auto-grow test and the partner
 // links are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs); this unit keeps the columns' viewports,

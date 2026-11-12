@@ -7,6 +7,7 @@
 // graph machine's steps 0x27434/0x274a3 called directly) are the Rust storage's Terrain kind (ee_astar graph.rs).
 #ifndef EE_EEAIASTARGRAPHTERRAINSTORAGE_H
 #define EE_EEAIASTARGRAPHTERRAINSTORAGE_H
+#include "rust/ee_astar.h"
 
 class EEAIAStarGraphTerrainStorage : public EEAIAStarGraphStorage {
 public:

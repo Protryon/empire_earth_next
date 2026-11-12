@@ -461,7 +461,7 @@ void LobbyWork(int)
              EELobbyIsShown() ? 1 : 0, LobbyGetGameScreenType(), LobbyOnLanScreen() ? 1 : 0, LobbyOnLoginScreen() ? 1 : 0,
              (theManager != NULL && theManager->mModalComponent != NULL) ? 1 : 0, theGame != NULL ? 1 : 0,
              (theGame != NULL && theGame->mIsHost) ? 1 : 0,
-             (theGame != NULL && theGame->mClients.get() != NULL) ? (int)theGame->mClients->mClients.size() : 0,
+             (theGame != NULL && theGame->mClients.get() != NULL) ? (int)theGame->mClients->GetCount() : 0,
              (theClient != NULL && theClient->IsReady()) ? 1 : 0, (theGame != NULL && theGame->AreAllReady()) ? 1 : 0,
              theGame != NULL ? GUIText(theGame->mName).c_str() : "-");
     theText += theLine;

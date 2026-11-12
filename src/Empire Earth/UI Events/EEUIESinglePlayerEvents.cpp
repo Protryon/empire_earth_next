@@ -69,7 +69,7 @@
 #include "ee/EEUIELobbyEvents.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
-#include "rust/ee_rust.h"   // ee_screens_single_player_slots (ee_screens single_player.rs)
+#include "rust/ee_screens.h"   // ee_screens_single_player_slots (ee_screens single_player.rs)
 #include "ee/EEUIEPlayCampaignEvents.h"
 #include "ee/EEUIESinglePlayerEvents.h"
 #include "ee/EEStringIDs.h"

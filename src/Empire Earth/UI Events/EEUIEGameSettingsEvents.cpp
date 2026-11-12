@@ -87,7 +87,7 @@
 #include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEStringIDs.h"
 #include "platform/PlatWindow.h"
-#include "rust/ee_rust.h"   // ee_screens_*: the presets, the video tab's plan, the value tables (ee_screens settings.rs)
+#include "rust/ee_screens.h"   // ee_screens_*: the presets, the video tab's plan, the value tables (ee_screens settings.rs)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>

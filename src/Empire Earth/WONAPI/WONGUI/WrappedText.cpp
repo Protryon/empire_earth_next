@@ -9,7 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 // The word wrap and the rewrap rule are ee_won's guiwrap module (rust/crates/ee_won/src/guiwrap.rs); this unit
 // keeps the text, the font, the break list and the paint.

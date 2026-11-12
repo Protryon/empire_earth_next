@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
 using namespace WONAPI;
 // The lines' metrics, alignment and wrap test, the bottom rule, the delayed wrap, the limits' trims and the

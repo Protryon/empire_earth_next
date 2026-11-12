@@ -9,7 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The +/- box test and a child's indent and place are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs);
 // the walks over the items, the range, last-child, open, insert, remove and mouse rules are its guitree module
 // (guitree.rs); this unit keeps the rows, their children, the list rows and the paint.

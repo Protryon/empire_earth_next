@@ -20,7 +20,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 // FUNCTION: EXE 0x4b6e58
 // Creates the leprosy functor with its damage, spread time, unit set and hit mode

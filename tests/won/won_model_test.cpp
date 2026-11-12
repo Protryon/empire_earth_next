@@ -16,7 +16,10 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "rust/ee_rust.h"
+#include <list>
+#include <iterator>
+#include <wchar.h>
+#include "rust/ee_won.h"
 
 static int sFailures;
 static int sChecks;
@@ -360,8 +363,447 @@ static void TestDirObjects()
         }
 }
 
-int main()
+// ---- round 17: the lobby's containers (LobbyModel's client, room, game and server maps, the server's address
+// names; LobbyPersistentData's users, ids, ignored names, friends, options, reconnect ids, LAN names and direct
+// connects; LobbyOptionSet) as the original's std::map / std::set statements with the original comparators: an id
+// (unsigned short / unsigned long, or long), IPAddr::operator< (the Rust value's compare, as the class calls it),
+// GUIStringLessNoCase (GUIStringData::CompareNoCase) and GUIString::operator< (Compare) over wchar_t units,
+// StringLessNoCase (StringCompareNoCase) over bytes, and LobbyOptionSet's Add / Erase. Each step's result is a
+// line, compared with rust/crates/ee_won/src/golden_lobbymap.txt (recorded over these std containers before the
+// move; `--print` prints the lines). Keys are named by their index into the candidate lists below, which the Rust
+// replay (lobbymap.rs) repeats.
+
+static std::vector<std::string> sGolden;
+static void Golden(const std::string& inLine) { sGolden.push_back(inLine); }
+static std::string Num(long long inValue)
 {
+    char aBuffer[32];
+    snprintf(aBuffer, sizeof(aBuffer), "%lld", inValue);
+    return aBuffer;
+}
+
+// the candidates: ids, addresses (host order, port), wide texts, narrow texts
+static const unsigned long kMapIds[] = { 0, 1, 2, 3, 7, 10, 0xfffe, 0xffff, 0x10000, 0x7fffffff, 0x80000000u, 0xffffffffu };
+static const long kMapSigned[] = { 0, 1, -1, 2, -2, 100, -100, 0x7fffffff, -0x7fffffff - 1, 5 };
+static const unsigned long kMapHosts[] = { 0x7f000001u, 0x0a000001u, 0xc0a80105u, 0x0a000001u, 0x7f000001u, 0, 0xffffffffu, 0x01020304u };
+static const unsigned short kMapPorts[] = { 8585, 8585, 15100, 15101, 1, 0, 65535, 0x0100 };
+static const wchar_t* const kMapWide[] = { L"Alpha", L"alpha", L"ALPHA", L"Beta", L"beta2", L"", L"Gamma", L"gAmma",
+                                           L"Zed", L"a", L"A", L"_x", L"[x", L"zz", L"Alph", L"Alpha ", L"\x00e9t\x00e9" };
+static const size_t kMapWideCount = sizeof(kMapWide) / sizeof(kMapWide[0]);
+static const size_t kMapWideNoCase = kMapWideCount - 1; // the no-case maps' candidates: ASCII (the C locale's towupper)
+static const char* const kMapNarrow[] = { "Server.won.net", "server.WON.net", "a", "B", "_c", "[d", "", "Zz", "\xc3\xa9",
+                                          "server.won.net2", "b" };
+static const size_t kMapNarrowCount = sizeof(kMapNarrow) / sizeof(kMapNarrow[0]);
+
+// the key kinds (the Rust EeWonLobbyKeyKind's order)
+enum MapKind { kUnsigned, kSigned, kAddr, kNoCase, kText, kNarrowNoCase, kKinds };
+static size_t CandidateCount(int inKind)
+{
+    switch (inKind) {
+    case kUnsigned: return sizeof(kMapIds) / sizeof(kMapIds[0]);
+    case kSigned: return sizeof(kMapSigned) / sizeof(kMapSigned[0]);
+    case kAddr: return sizeof(kMapHosts) / sizeof(kMapHosts[0]);
+    case kNoCase: return kMapWideNoCase;
+    case kText: return kMapWideCount;
+    default: return kMapNarrowCount;
+    }
+}
+
+// a key: the candidate's index, compared as the original's comparator compares the candidate
+struct MapKey {
+    int mKind;
+    int mIndex;
+};
+static EeWonIpAddr* sMapAddrs[sizeof(kMapHosts) / sizeof(kMapHosts[0])];
+static int MapCompare(const MapKey& a, const MapKey& b)
+{
+    switch (a.mKind) {
+    case kUnsigned: {
+        unsigned long x = kMapIds[a.mIndex], y = kMapIds[b.mIndex];
+        return x < y ? -1 : x > y ? 1 : 0;
+    }
+    case kSigned: {
+        long x = kMapSigned[a.mIndex], y = kMapSigned[b.mIndex];
+        return x < y ? -1 : x > y ? 1 : 0;
+    }
+    case kAddr: return ee_won_ipaddr_compare(sMapAddrs[a.mIndex], sMapAddrs[b.mIndex]);
+    case kNoCase:
+    case kText: {
+        const wchar_t* x = kMapWide[a.mIndex];
+        const wchar_t* y = kMapWide[b.mIndex];
+        return ee_won_guistring_op(a.mKind == kNoCase ? EeWonGuiStringOp::CompareNoCase : EeWonGuiStringOp::Compare,
+                                   x, (uint16_t)wcslen(x), y, (uint16_t)wcslen(y), 0, sizeof(wchar_t));
+    }
+    default: {
+        const char* x = kMapNarrow[a.mIndex];
+        const char* y = kMapNarrow[b.mIndex];
+        return ee_won_compare_no_case(reinterpret_cast<const uint8_t*>(x), strlen(x),
+                                      reinterpret_cast<const uint8_t*>(y), strlen(y));
+    }
+    }
+}
+struct MapLess {
+    bool operator()(const MapKey& a, const MapKey& b) const { return MapCompare(a, b) < 0; }
+};
+typedef std::map<MapKey, int, MapLess> OrigMap;
+
+static std::string Dump(const OrigMap& inMap)
+{
+    std::string s = Num((long long)inMap.size()) + ":";
+    for (OrigMap::const_iterator it = inMap.begin(); it != inMap.end(); ++it)
+        s += " " + Num(it->first.mIndex) + "=" + Num(it->second);
+    return s;
+}
+static long long Index(const OrigMap& inMap, OrigMap::const_iterator inItr)
+{
+    return inItr == inMap.end() ? -1 : (long long)std::distance(inMap.begin(), inItr);
+}
+
+// one map's script: insert (insert(value_type(k, 0))), set (m[k] = v), find, erase by key, lower and upper bound,
+// erase at a position, erase from a position to the end (SyncClients's tail), clear, copy, dump
+static void MapScript(int inKind, unsigned inSeed)
+{
+    unsigned r = inSeed * 2654435761u + (unsigned)inKind;
+    OrigMap m;
+    OrigMap aCopy;
+    const std::string aHead = "map " + Num(inKind) + " " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 160; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 20;
+        MapKey k = { inKind, (int)((r >> 16) % CandidateCount(inKind)) };
+        int v = (int)((r >> 24) % 100);
+        std::string s;
+        if (anOp < 5) {
+            std::pair<OrigMap::iterator, bool> p = m.insert(OrigMap::value_type(k, 0));
+            s = "ins " + Num(k.mIndex) + " -> " + Num(Index(m, p.first)) + " " + Num(p.second);
+        } else if (anOp < 9) {
+            m[k] = v;
+            s = "set " + Num(k.mIndex) + " " + Num(v) + " -> " + Num(Index(m, m.find(k)));
+        } else if (anOp < 12) {
+            s = "find " + Num(k.mIndex) + " -> " + Num(Index(m, m.find(k)));
+        } else if (anOp < 14) {
+            s = "erase " + Num(k.mIndex) + " -> " + Num((long long)m.erase(k));
+        } else if (anOp == 14) {
+            s = "lb " + Num(k.mIndex) + " -> " + Num(Index(m, m.lower_bound(k)));
+        } else if (anOp == 15) {
+            s = "ub " + Num(k.mIndex) + " -> " + Num(Index(m, m.upper_bound(k)));
+        } else if (anOp == 16) {
+            if (m.empty()) s = "eraseat none";
+            else {
+                size_t i = (r >> 16) % m.size();
+                OrigMap::iterator it = m.begin();
+                std::advance(it, i);
+                m.erase(it);
+                s = "eraseat " + Num((long long)i);
+            }
+        } else if (anOp == 17) {
+            size_t i = m.empty() ? 0 : (r >> 16) % (m.size() + 1);
+            if ((r >> 28) % 4 == 0) {
+                OrigMap::iterator it = m.begin();
+                std::advance(it, i);
+                m.erase(it, m.end());
+                s = "erasefrom " + Num((long long)i);
+            } else s = "dump";
+        } else if (anOp == 18) {
+            if ((r >> 28) % 8 == 0) {
+                m.clear();
+                s = "clear";
+            } else {
+                aCopy = m;
+                s = "copy";
+            }
+        } else {
+            s = "copied " + Dump(aCopy);
+        }
+        Golden(aHead + s + " | " + Dump(m));
+    }
+}
+
+// LobbyOptionSet's statements (Add, Erase, clear) over the wide candidates, GUIString::operator< as the index
+struct WideLess {
+    bool operator()(int a, int b) const
+    {
+        MapKey x = { kText, a }, y = { kText, b };
+        return MapCompare(x, y) < 0;
+    }
+};
+struct OrigOptionSet {
+    typedef std::list<int> StringList;
+    typedef std::map<int, StringList::iterator, WideLess> StringMap;
+    StringMap mIndex;
+    StringList mValues;
+    void Add(int inValue)
+    {
+        std::pair<StringMap::iterator, bool> aResult = this->mIndex.insert(StringMap::value_type(inValue, this->mValues.end()));
+        if (!aResult.second)
+            return;
+        this->mValues.push_back(inValue);
+        StringList::iterator anItr = this->mValues.end();
+        --anItr;
+        aResult.first->second = anItr;
+    }
+    bool Erase(int inValue)
+    {
+        StringMap::iterator anItr = this->mIndex.find(inValue);
+        if (anItr != this->mIndex.end()) {
+            this->mValues.erase(anItr->second);
+            this->mIndex.erase(anItr);
+            return true;
+        }
+        return false;
+    }
+    void clear()
+    {
+        this->mIndex.clear();
+        this->mValues.clear();
+    }
+};
+static void OptionScript(unsigned inSeed)
+{
+    unsigned r = inSeed * 2246822519u;
+    OrigOptionSet o;
+    const std::string aHead = "opt " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 120; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 10;
+        int v = (int)((r >> 16) % kMapWideCount);
+        std::string s;
+        if (anOp < 5) {
+            size_t aBefore = o.mValues.size();
+            o.Add(v);
+            s = "add " + Num(v) + " -> " + Num(o.mValues.size() != aBefore);
+        } else if (anOp < 9) {
+            s = "erase " + Num(v) + " -> " + Num(o.Erase(v));
+        } else {
+            o.clear();
+            s = "clear";
+        }
+        s += " |";
+        for (OrigOptionSet::StringList::iterator it = o.mValues.begin(); it != o.mValues.end(); ++it)
+            s += " " + Num(*it);
+        Golden(aHead + s);
+    }
+}
+
+static std::string GoldenPath()
+{
+    std::string aPath = __FILE__;
+    size_t aSlash = aPath.find_last_of("/\\");
+    aPath.resize(aSlash == std::string::npos ? 0 : aSlash + 1);
+    return aPath + "../../rust/crates/ee_won/src/golden_lobbymap.txt";
+}
+
+// ---- the same scripts over the Rust container (lobbymap.rs) through its C ABI, as WONLobbyMap.h calls it: the
+// lines must be the golden's
+
+static std::vector<std::string> sPortGolden;
+static const EeWonLobbyKeyKind kPortKinds[] = { EeWonLobbyKeyKind::Unsigned, EeWonLobbyKeyKind::Signed,
+                                                EeWonLobbyKeyKind::Addr, EeWonLobbyKeyKind::NoCase,
+                                                EeWonLobbyKeyKind::Text, EeWonLobbyKeyKind::NarrowNoCase };
+static EeWonLobbyKey PortKey(int inKind, int i)
+{
+    EeWonLobbyKey k = { 0, NULL, NULL, 0, 0 };
+    switch (inKind) {
+    case kUnsigned: k.num = kMapIds[i]; break;
+    case kSigned: k.num = (uint64_t)(int64_t)kMapSigned[i]; break;
+    case kAddr: k.addr = sMapAddrs[i]; break;
+    case kNoCase:
+    case kText:
+        k.text = kMapWide[i];
+        k.count = wcslen(kMapWide[i]);
+        k.unit_size = sizeof(wchar_t);
+        break;
+    default:
+        k.text = kMapNarrow[i];
+        k.count = strlen(kMapNarrow[i]);
+        k.unit_size = 1;
+        break;
+    }
+    return k;
+}
+// the candidate the stored key at a position is (its spelling)
+static int PortKeyIndex(int inKind, const EeWonLobbyMap* m, size_t inAt)
+{
+    for (size_t i = 0; i < CandidateCount(inKind == kNoCase ? kText : inKind); i++) {
+        switch (inKind) {
+        case kUnsigned: if (ee_won_lobbymap_key_num(m, inAt) == kMapIds[i]) return (int)i; break;
+        case kSigned: if ((int64_t)ee_won_lobbymap_key_num(m, inAt) == kMapSigned[i]) return (int)i; break;
+        case kAddr: if (ee_won_ipaddr_compare(ee_won_lobbymap_key_addr(m, inAt), sMapAddrs[i]) == 0) return (int)i; break;
+        case kNoCase:
+        case kText: {
+            size_t n = 0;
+            const uint32_t* u = static_cast<const uint32_t*>(ee_won_lobbymap_key_text(m, inAt, &n));
+            const wchar_t* w = kMapWide[i];
+            bool aSame = n == wcslen(w);
+            for (size_t j = 0; aSame && j < n; j++) aSame = u[j] == (uint32_t)w[j];
+            if (aSame) return (int)i;
+            break;
+        }
+        default: {
+            size_t n = 0;
+            const char* b = static_cast<const char*>(ee_won_lobbymap_key_text(m, inAt, &n));
+            if (n == strlen(kMapNarrow[i]) && memcmp(b, kMapNarrow[i], n) == 0) return (int)i;
+            break;
+        }
+        }
+    }
+    return -1;
+}
+static std::string PortDump(int inKind, const EeWonLobbyMap* m)
+{
+    size_t n = ee_won_lobbymap_len(m);
+    std::string s = Num((long long)n) + ":";
+    for (size_t i = 0; i < n; i++)
+        s += " " + Num(PortKeyIndex(inKind, m, i)) + "=" + Num(ee_won_lobbymap_num(m, i, 0));
+    return s;
+}
+static long long PortIndex(const EeWonLobbyMap* m, size_t i) { return i < ee_won_lobbymap_len(m) ? (long long)i : -1; }
+
+static void MapScriptPort(int inKind, unsigned inSeed)
+{
+    unsigned r = inSeed * 2654435761u + (unsigned)inKind;
+    EeWonLobbyMapHooks aNoHooks = { NULL, NULL };
+    EeWonLobbyMap* m = ee_won_lobbymap_new(kPortKinds[inKind], aNoHooks);
+    EeWonLobbyMap* aCopy = ee_won_lobbymap_new(kPortKinds[inKind], aNoHooks);
+    const std::string aHead = "map " + Num(inKind) + " " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 160; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 20;
+        int ki = (int)((r >> 16) % CandidateCount(inKind));
+        EeWonLobbyKey k = PortKey(inKind, ki);
+        int v = (int)((r >> 24) % 100);
+        size_t aSize = ee_won_lobbymap_len(m);
+        std::string s;
+        if (anOp < 5) {
+            bool aNew = false;
+            size_t i = ee_won_lobbymap_insert(m, &k, &aNew);
+            s = "ins " + Num(ki) + " -> " + Num((long long)i) + " " + Num(aNew);
+        } else if (anOp < 9) {
+            size_t i = ee_won_lobbymap_insert(m, &k, NULL);
+            ee_won_lobbymap_set_num(m, i, 0, v);
+            s = "set " + Num(ki) + " " + Num(v) + " -> " + Num((long long)i);
+        } else if (anOp < 12) {
+            s = "find " + Num(ki) + " -> " + Num((long long)ee_won_lobbymap_find(m, &k));
+        } else if (anOp < 14) {
+            s = "erase " + Num(ki) + " -> " + Num(ee_won_lobbymap_erase(m, &k));
+        } else if (anOp == 14) {
+            s = "lb " + Num(ki) + " -> " + Num(PortIndex(m, ee_won_lobbymap_lower_bound(m, &k)));
+        } else if (anOp == 15) {
+            s = "ub " + Num(ki) + " -> " + Num(PortIndex(m, ee_won_lobbymap_upper_bound(m, &k)));
+        } else if (anOp == 16) {
+            if (aSize == 0) s = "eraseat none";
+            else {
+                size_t i = (r >> 16) % aSize;
+                ee_won_lobbymap_erase_at(m, i);
+                s = "eraseat " + Num((long long)i);
+            }
+        } else if (anOp == 17) {
+            size_t i = aSize == 0 ? 0 : (r >> 16) % (aSize + 1);
+            if ((r >> 28) % 4 == 0) {
+                ee_won_lobbymap_erase_from(m, i);
+                s = "erasefrom " + Num((long long)i);
+            } else s = "dump";
+        } else if (anOp == 18) {
+            if ((r >> 28) % 8 == 0) {
+                ee_won_lobbymap_clear(m);
+                s = "clear";
+            } else {
+                ee_won_lobbymap_assign(aCopy, m);
+                s = "copy";
+            }
+        } else {
+            s = "copied " + PortDump(inKind, aCopy);
+        }
+        sPortGolden.push_back(aHead + s + " | " + PortDump(inKind, m));
+    }
+    ee_won_lobbymap_free(m);
+    ee_won_lobbymap_free(aCopy);
+}
+static void OptionScriptPort(unsigned inSeed)
+{
+    unsigned r = inSeed * 2246822519u;
+    EeWonLobbyMapHooks aNoHooks = { NULL, NULL };
+    EeWonLobbyMap* o = ee_won_lobbymap_new(EeWonLobbyKeyKind::InOrder, aNoHooks);
+    const std::string aHead = "opt " + Num(inSeed) + " ";
+    for (int aStep = 0; aStep < 120; aStep++) {
+        r = r * 1103515245u + 12345u;
+        unsigned anOp = (r >> 8) % 10;
+        int v = (int)((r >> 16) % kMapWideCount);
+        EeWonLobbyKey k = PortKey(kText, v);
+        std::string s;
+        if (anOp < 5) {
+            bool aNew = false;
+            ee_won_lobbymap_insert(o, &k, &aNew);
+            s = "add " + Num(v) + " -> " + Num(aNew);
+        } else if (anOp < 9) {
+            s = "erase " + Num(v) + " -> " + Num(ee_won_lobbymap_erase(o, &k));
+        } else {
+            ee_won_lobbymap_clear(o);
+            s = "clear";
+        }
+        s += " |";
+        for (size_t i = 0; i < ee_won_lobbymap_len(o); i++)
+            s += " " + Num(PortKeyIndex(kText, o, i));
+        sPortGolden.push_back(aHead + s);
+    }
+    ee_won_lobbymap_free(o);
+}
+
+static void TestContainers(bool inPrint)
+{
+    for (size_t i = 0; i < sizeof(kMapHosts) / sizeof(kMapHosts[0]); i++) {
+        sMapAddrs[i] = ee_won_ipaddr_new();
+        ee_won_ipaddr_set_host_order(sMapAddrs[i], (uint32_t)kMapHosts[i], kMapPorts[i]);
+    }
+    for (int aKind = 0; aKind < kKinds; aKind++)
+        for (unsigned aSeed = 1; aSeed <= 6; aSeed++) {
+            MapScript(aKind, aSeed);
+            MapScriptPort(aKind, aSeed);
+        }
+    for (unsigned aSeed = 1; aSeed <= 6; aSeed++) {
+        OptionScript(aSeed);
+        OptionScriptPort(aSeed);
+    }
+    CHECK(sPortGolden == sGolden);
+    for (size_t i = 0; i < sGolden.size() && i < sPortGolden.size(); i++)
+        if (sGolden[i] != sPortGolden[i] && sFailures < 40) {
+            printf("  port line %u: std '%s', rust '%s'\n", (unsigned)(i + 1), sGolden[i].c_str(), sPortGolden[i].c_str());
+            sFailures++;
+        }
+    for (size_t i = 0; i < sizeof(kMapHosts) / sizeof(kMapHosts[0]); i++)
+        ee_won_ipaddr_free(sMapAddrs[i]);
+    if (inPrint) {
+        for (size_t i = 0; i < sGolden.size(); i++)
+            printf("%s\n", sGolden[i].c_str());
+        return;
+    }
+    FILE* aFile = fopen(GoldenPath().c_str(), "rb");
+    CHECK(aFile != NULL);
+    if (aFile == NULL)
+        return;
+    std::vector<std::string> aWant;
+    static char aLine[65536];
+    while (fgets(aLine, sizeof(aLine), aFile)) {
+        size_t n = strlen(aLine);
+        while (n && (aLine[n - 1] == '\n' || aLine[n - 1] == '\r'))
+            aLine[--n] = 0;
+        aWant.push_back(aLine);
+    }
+    fclose(aFile);
+    CHECK(aWant.size() == sGolden.size());
+    for (size_t i = 0; i < aWant.size() && i < sGolden.size(); i++) {
+        CHECK(aWant[i] == sGolden[i]);
+        if (aWant[i] != sGolden[i] && sFailures < 40)
+            printf("  golden line %u: want '%s', got '%s'\n", (unsigned)(i + 1), aWant[i].c_str(), sGolden[i].c_str());
+    }
+}
+
+int main(int argc, char** argv)
+{
+    bool aPrint = argc > 1 && strcmp(argv[1], "--print") == 0;
+    TestContainers(aPrint);
+    if (aPrint)
+        return 0;
     TestSync();
     TestPopulation();
     TestFlags();

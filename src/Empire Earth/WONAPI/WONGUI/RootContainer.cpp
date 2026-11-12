@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The window drag's start, place and end and the cursor component's place are ee_won's guievent module
 // (rust/crates/ee_won/src/guievent.rs); this unit keeps the root, the cursor component, the backgrounds and the calls.
 using namespace WONAPI;

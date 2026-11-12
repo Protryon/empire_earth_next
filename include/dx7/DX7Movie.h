@@ -10,6 +10,7 @@
 #include "dx7/DX7Common.h"
 #include "lle/GERectangle.h"
 #include "lle/GEMovie.h"
+#include "rust/ee_dx7.h"
 
 class TSCriticalSection;
 class TSEvent;

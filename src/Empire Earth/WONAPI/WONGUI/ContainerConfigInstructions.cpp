@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs).
 // The LAYOUT rule's instruction names and its offsets' rule are ee_won's guilayout module

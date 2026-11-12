@@ -9,7 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // SetSize's and SetSizeAtLeast's size rules are ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 #include "ee/wonapi/WONComponentFlags.h"
 namespace WONAPI {

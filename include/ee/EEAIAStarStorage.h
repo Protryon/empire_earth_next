@@ -14,7 +14,7 @@
 
 #include "ee/EETileCoordinate.h"     // EETileCoordinate (the inline Set needs the whole type; was a forward declaration)
 #include "lle/U2DRectangle.h"     // EEAIAStarBounds (exe view: no statics)
-#include "rust/ee_rust.h"         // EeAStarStorage, the storage kinds and slots
+#include "rust/ee_astar.h"         // EeAStarStorage, the storage kinds and slots
 
 // A search node as the goals see one (the machine's hooks hand IsGoalNode / CheckNode a node of the tile; the links
 // and costs are Rust's and zero here). Names are provisional.

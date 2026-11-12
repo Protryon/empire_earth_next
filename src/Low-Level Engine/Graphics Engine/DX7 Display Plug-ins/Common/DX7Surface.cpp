@@ -11,7 +11,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/Graphics Engine.h"
 #include "dx7/DX7Surface.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 
 // The surface algorithms are in Rust (rust/crates/ee_dx7/src/surface.rs); this class keeps the fields (the harness reads
 // mSurface), the attached-surface vector and the reference counts. Each method forwards to its ee_dx7s_* function.

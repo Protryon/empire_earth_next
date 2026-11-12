@@ -8,7 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The comparisons, searches, case maps, number read and narrowing are ee_won's guistring module
 // (rust/crates/ee_won/src/guistring.rs); this class keeps the buffer, its length and capacity.
 namespace WONAPI {

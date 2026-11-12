@@ -75,7 +75,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAJoinOrHostAGame.h"
 #include "ee/EEStringIDs.h"
-#include "rust/ee_rust.h"   // ee_screens_valid_name (ee_screens single_player.rs)
+#include "rust/ee_screens.h"   // ee_screens_valid_name (ee_screens single_player.rs)
 // FUNCTION: EXE 0x402086
 // Creates the join/host action for a mode, player name and game name
 EEAJoinOrHostAGame::EEAJoinOrHostAGame(long inMode, const UWideString& inPlayerName, const UWideString& inGameName)

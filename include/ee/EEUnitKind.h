@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "rust/ee_rust.h"   // the EE_GOAL_KIND_* and EE_CLASS_KIND_* bits
+#include "rust/ee_units.h"   // the EE_GOAL_KIND_* and EE_CLASS_KIND_* bits
 #include "ee/EEUnitStore.h"   // the unit store's holders (EEUnitStoreField: mGoalState, mUnitClass)
 
 // the tables (kinds.rs; cbindgen exports no statics)
