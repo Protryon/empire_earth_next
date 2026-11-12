@@ -770,7 +770,7 @@ void EECPAttackSubGroup::RankUnits()
         }
         for (long j = this->mUnits.size() - 1; j >= 0 && !this->mCanAttackShore; j--) {
             if (this->mUnits[j] && this->mUnits[j]->GetUnit())
-                this->mCanAttackShore = gDamageTable[0x2c][(*(this->mUnits.begin() + j))->GetUnit()->GetClass()->mAmmoType] != 0.0f;
+                this->mCanAttackShore = EEDamageFactor(0x2c, (*(this->mUnits.begin() + j))->GetUnit()->GetClass()->mAmmoType) != 0.0f;
         }
     }
     this->mStats.Compute(this->mUnits);

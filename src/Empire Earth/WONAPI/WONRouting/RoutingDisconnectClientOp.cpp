@@ -9,10 +9,12 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRoutingDisconnectClientOp.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 void RoutingDisconnectClientOp::SendRequest()
 {
-	this->InitSendMsg(20);
-	this->SendMsg();
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendBare(this, EE_WON_RT_REQ_DISCONNECT);
+    this->SendMsg();
 }
 }

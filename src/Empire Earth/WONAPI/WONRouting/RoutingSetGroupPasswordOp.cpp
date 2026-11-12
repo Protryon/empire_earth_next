@@ -9,6 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONRoutingGroupAdmin.h"
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
@@ -16,22 +17,18 @@ namespace WONAPI {
 ///////////////////////////////////////////////////////////////////////////////
 void RoutingSetGroupPasswordOp::SendRequest()
 {
-	this->InitSendMsg(64 /* SDK RoutingSetGroupPasswordRequest */);
-	this->mSendMsg.AppendShort(this->mGroupId);
-	this->mSendMsg.AppendWString(this->mGroupPassword,2);
-	this->SendMsg();
-	this->AddOp();
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendGroupText(this, EE_WON_RT_REQ_SET_GROUP_PASSWORD, this->mGroupId, this->mGroupPassword);
+    this->SendMsg();
+    this->AddOp();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus RoutingSetGroupPasswordOp::HandleReply(unsigned char theMsgType, ReadBuffer &theMsg)
 {
-	if(theMsgType!=66 /* SDK RoutingStatusReply */)
-		return WS_RoutingOp_DontWantReply /* SDK WS_RoutingOp_DontWantReply */;
-
-	WONStatus aStatus = (WONStatus)theMsg.ReadShort();
-	return aStatus;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteStatusReply(theMsgType, theMsg);
 }
 
 

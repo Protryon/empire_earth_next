@@ -25,11 +25,12 @@ void ServerConnection::StartKeepAlive()
         this->mKeepAliveOp->Kill(true);
         this->mKeepAliveOp=NULL;
     }
-    if(this->mKeepAlivePeriod!=0) {
+    uint32_t aMs;
+    if(ee_won_server_keep_alive_ms(this->mKeepAlivePeriod,&aMs)) {
         this->mKeepAliveOp=new AsyncOp;
         this->mKeepAliveOp->mCompletion=new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
             ServerConnection::StaticKeepAliveCallback,SmartPtr<RefCount>(this));
-        this->mKeepAliveOp->RunAsync(this->mKeepAlivePeriod*1000);
+        this->mKeepAliveOp->RunAsync(aMs);
     }
 }
 // FUNCTION: WON 0x006ab0a0
@@ -90,14 +91,17 @@ void ServerConnection::KeepAliveCallback(AsyncOp* inOp)
     }
 }
 // FUNCTION: WON 0x006ab910
-// Queues a no-op message to keep the connection alive
+// Queues a no-op message to keep the connection alive (the bytes are Rust's, ee_won server.rs)
+static void NoOpAppend(void* inContext,const uint8_t* inBytes,size_t inLength)
+{
+    static_cast<std::string*>(inContext)->append(reinterpret_cast<const char*>(inBytes),inLength);
+}
 void ServerConnection::SendNoOp()
 {
-    WriteBuffer aBuf(this->mLengthFieldSize,true);
-    aBuf.AppendByte(3);
-    aBuf.AppendByte(1);
-    aBuf.AppendByte(7);
-    this->QueueOp(new SendMsgOp(aBuf.ToByteBuffer(true).get()),-1);
+    std::string aBytes;
+    ee_won_server_no_op(this->mLengthFieldSize,NoOpAppend,&aBytes);
+    ByteBufferPtr aMsg=new ByteBuffer(aBytes.data(),(unsigned long)aBytes.length(),false);
+    this->QueueOp(new SendMsgOp(aMsg.get()),-1);
 }
 // FUNCTION: WON 0x006abdc0
 // Sets the completion called when a connect finishes

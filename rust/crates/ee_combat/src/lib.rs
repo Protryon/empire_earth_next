@@ -13,8 +13,15 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 pub mod capture;
+pub mod damage_table;
 pub mod decide;
 pub mod ffi;
+pub mod geometry;
+pub mod pursuer;
+pub mod search;
+pub mod search_ffi;
+#[cfg(test)]
+mod search_tests;
 #[cfg(test)]
 mod tests;
 pub mod walks;

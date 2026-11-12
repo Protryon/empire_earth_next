@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss; defined in EEWonNet.cpp)
 namespace WONAPI {
 // FUNCTION: WON 0x006cd3a0
@@ -27,9 +28,10 @@ void GetUserIdFromNameOp::RunHook()
 {
     this->mMessageType=1002;
     this->mSubMessageType=16;
-    WriteBuffer request(0,true);
-    request.AppendWString(this->mUserName,2);
-    this->mRequestData=request.ToByteBuffer(true);
+    // the request data is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_USER_ID,0);
+    q.mReq.name=q.Text(this->mUserName);
+    this->mRequestData=q.Build();
     ServerRequestOp::RunHook();
 }
 // FUNCTION: WON 0x006cd700
@@ -38,9 +40,9 @@ WONStatus GetUserIdFromNameOp::CheckResponse()
 {
     WONStatus result=DBProxyOp::CheckResponse();
     if (result!=WS_Success) return result;
-    if (this->mSubMessageReplyType!=17) return this->InvalidReplyHeader();
-    ReadBuffer reply(this->mReplyData->data(),this->mReplyData->length());
-    this->mUserId=reply.ReadLong();
+    // the reply's read is Rust's (ee_won db.rs)
+    if (!ee_won_db_answers(this->mSubMessageReplyType,16)) return this->InvalidReplyHeader();
+    this->mUserId=DbUserId(this->mReplyData.get());
     return WS_Success;
 }
 }

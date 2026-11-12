@@ -88,7 +88,7 @@ WONStatus GetCertOp::SendLoginRequest()
     loginData.AppendWString(this->mNewPassword,2);
     this->mAuthContext->AppendCommunityData(loginData);
 
-    ByteBufferPtr encryptedLoginData=this->mSessionKey.Encrypt(loginData.mData,loginData.mLength);
+    ByteBufferPtr encryptedLoginData=this->mSessionKey.Encrypt(loginData.data(),loginData.length());
     msg.AppendShort(encryptedLoginData->length());
     msg.AppendBytes(encryptedLoginData->data(),encryptedLoginData->length());
     this->mRequest=msg.ToByteBuffer(true);
@@ -107,7 +107,7 @@ WONStatus GetCertOp::SendLoginConfirm()
 
     WriteBuffer dataBlock(0,true);
     this->mAuthContext->AppendHashes(dataBlock,this->mChallengeSeed);
-    ByteBufferPtr encrypted=this->mSessionKey.Encrypt(dataBlock.mData,dataBlock.mLength);
+    ByteBufferPtr encrypted=this->mSessionKey.Encrypt(dataBlock.data(),dataBlock.length());
     msg.AppendShort(encrypted->length());
     msg.AppendBytes(encrypted->data(),encrypted->length());
     this->mRequest=msg.ToByteBuffer(true);
@@ -278,7 +278,7 @@ WONStatus GetCertOp::HandleLoginReply(ReadBuffer &theMsg)
 	this->mAuthContext->CommitSecrets(anAuthTime, aCertDuration);
 
 	
-	int aNumLeft = theMsg.length() - theMsg.mPos;
+	int aNumLeft = theMsg.length() - theMsg.pos();
 
 	ByteBufferPtr aDecryptBuf = this->mSessionKey.Decrypt(theMsg.ReadBytes(aNumLeft),aNumLeft);
 	if(aDecryptBuf.get()==NULL)

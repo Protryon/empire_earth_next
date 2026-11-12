@@ -10,14 +10,17 @@ pub mod authctx;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
+pub mod buffer;
 pub mod cdkey;
 pub mod chat;
 pub mod config;
 pub mod configobj;
 pub mod crc16;
+pub mod db;
 pub mod der;
 pub mod dialogs;
 pub mod dir;
+pub mod dirops;
 pub mod elgamal;
 pub mod ffi;
 pub mod ffi_lan;
@@ -59,15 +62,21 @@ pub mod plaintext;
 pub mod random;
 pub mod regkey;
 pub mod resource;
+pub mod routemsg;
 pub mod routing;
+pub mod servctx;
+pub mod server;
 pub mod socket;
 pub mod staging;
 /// cbindgen:ignore
 pub mod status;
 pub mod strcase;
 pub mod text;
+pub mod thread;
 pub mod wire;
 
+#[cfg(test)]
+mod buffer_golden;
 #[cfg(test)]
 mod chat_golden;
 #[cfg(test)]

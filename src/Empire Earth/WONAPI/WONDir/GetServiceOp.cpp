@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONDirExtended.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 using namespace std;
 using namespace WONAPI;
 
@@ -50,25 +51,14 @@ void GetServiceOp::Reset()
 ///////////////////////////////////////////////////////////////////////////////
 WONStatus GetServiceOp::GetNextRequest()
 {
-	WriteBuffer aMsg(this->mLengthFieldSize,true);
-	aMsg.AppendByte(5);						// Small Header
-	aMsg.AppendShort(2);					// DirServer
-	aMsg.AppendShort(105);					// GetServiceEx
-
-	aMsg.AppendLong(this->mFlags);				// GetFlags
-	aMsg.AppendWString(this->mPath,2);				// Directory Path
-	aMsg.AppendWString(this->mName,2);				// Name of service
-	aMsg.AppendBuffer(this->mNetAddr,1);			// Net address
-	aMsg.AppendShort(this->mDataTypes.size());	// Number of data types requested
-	
-	DirDataTypeSet::iterator anItr = this->mDataTypes.begin();
-	while(anItr!=this->mDataTypes.end())
-	{
-		aMsg.AppendString(*anItr,1);
-		++anItr;
-	}
-
-	this->mRequest = aMsg.ToByteBuffer(true);
+	// the message's bytes are Rust's (ee_won dirops.rs)
+	DirRequestFields aFields(3, true);
+	aFields.mReq.flags = this->mFlags;
+	aFields.mReq.path = aFields.Text(this->mPath);
+	aFields.mReq.name = aFields.Text(this->mName);
+	aFields.mReq.net_addr = DirRequestFields::Buffer(this->mNetAddr.get());
+	aFields.Types(this->mDataTypes);
+	this->mRequest = aFields.Build(this->mLengthFieldSize);
 	return (WONStatus)WS_ServerReq_Recv;
 }
 

@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDirRequest.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006f1520
@@ -60,20 +61,11 @@ void GetMultiDirOp::AddPath(const std::wstring& inPath)
 // Builds the multi-get message holding every query and starts reading replies at the first
 WONStatus GetMultiDirOp::GetNextRequest()
 {
-    WriteBuffer message(this->mLengthFieldSize,true);
-    message.AppendByte(5);
-    message.AppendShort(2);
-    message.AppendShort(113);
-    message.AppendShort(0);
-    message.AppendByte(static_cast<unsigned char>(this->mRequestList.size()));
-    GetEntityRequestList::iterator i;
-    i=this->mRequestList.begin();
-    while(true) {
-        if(!(i!=this->mRequestList.end())) break;
-        (*i)->Pack(&message,GetEntityRequest::Pack_GetMultiDirOp);
-        ++i;
-    }
-    this->mRequest=message.ToByteBuffer(true);
+    // the message's bytes are Rust's (ee_won dirops.rs)
+    DirRequestFields aFields(1, true);
+    for(GetEntityRequestList::iterator i=this->mRequestList.begin();i!=this->mRequestList.end();++i)
+        aFields.AddQuery((*i)->GetFlags(),(*i)->GetPath(),(*i)->GetDataTypes());
+    this->mRequest=aFields.Build(this->mLengthFieldSize);
     this->mCurRequest=this->mRequestList.begin();
     return WS_ServerReq_Recv;
 }
@@ -86,16 +78,13 @@ WONStatus GetMultiDirOp::CheckResponse()
         return request->ParseMultiEntityReply(this->mResponse->data(),this->mResponse->length());
     }
     (*this->mCurRequest)->ParseMultiEntityReply(this->mResponse->data(),this->mResponse->length());
-    if((*this->mCurRequest)->GetStatus()!=100059) {
-        if((*this->mCurRequest)->GetStatus()!=0)
-            ++this->mNumFailedRequests;
+    // the accounting is Rust's (ee_won dirops.rs)
+    int32_t aFailed=this->mNumFailedRequests;
+    if(ee_won_dir_multi_step((*this->mCurRequest)->GetStatus(),&aFailed))
         ++this->mCurRequest;
-    }
-    if(this->mCurRequest==this->mRequestList.end()) {
-        if(this->mNumFailedRequests==0)
-            return WS_Success;
-        return this->mNumFailedRequests==static_cast<int>(this->mRequestList.size())?-1224:-1223;
-    }
+    this->mNumFailedRequests=aFailed;
+    if(this->mCurRequest==this->mRequestList.end())
+        return (WONStatus)ee_won_dir_multi_end(this->mNumFailedRequests,this->mRequestList.size());
     return WS_ServerReq_Recv;
 }
 } // WONAPI

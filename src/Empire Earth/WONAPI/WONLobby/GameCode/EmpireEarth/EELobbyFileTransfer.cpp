@@ -101,11 +101,11 @@ WONStatus SendFileOp::Start()
 WONStatus SendFileOp::Continue()
 {
     for (;;) {
-        if ((unsigned long)this->mReadBuffer.mPos < (unsigned long)this->mReadBuffer.mLength) {
+        if ((unsigned long)this->mReadBuffer.pos() < (unsigned long)this->mReadBuffer.length()) {
             this->mSocket->WaitForWrite(this->TimeLeft());
             int theSent = 0;
-            WONStatus theStatus = this->mSocket->Send(this->mReadBuffer.mData + this->mReadBuffer.mPos,
-                this->mReadBuffer.mLength - this->mReadBuffer.mPos, &theSent);
+            WONStatus theStatus = this->mSocket->Send(this->mReadBuffer.data() + this->mReadBuffer.pos(),
+                this->mReadBuffer.length() - this->mReadBuffer.pos(), &theSent);
             if ((long)theSent > 0)
                 this->mReadBuffer.ReadBytes(theSent);
             if (theStatus == WS_TimedOut && this->TimeLeft() == 0)
