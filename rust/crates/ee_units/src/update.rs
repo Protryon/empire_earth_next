@@ -184,7 +184,8 @@ const ACTION_UNIT_ROTTING: i64 = 6002;
 const ACTION_FADING_OUT_IN_SPACE: i64 = 6009;
 const ACTION_OPENING: i64 = 15002;
 const ACTION_CLOSING: i64 = 15003;
-const GOAL_HEAL_UNIT: i64 = 13;
+/// `kGoalHealUnit` (ee/EEUnitGoal.h; the twelfth round's 13 was wrong: a land medic never worked its heal goal)
+const GOAL_HEAL_UNIT: i64 = 15;
 const UNIT_TYPE_HOUSE: i64 = 0x25;
 const UNIT_TYPE_CAPITOL: i64 = 0x29;
 const UNIT_TYPE_RES_FISH: i64 = 0x13b;
@@ -869,7 +870,7 @@ mod tests {
         let mut m = soldier();
         m.reads.insert(EE_UNITS_UPD_R_TILE_X, OFF_MAP);
         m.reads.insert(EE_UNITS_UPD_R_MEDIC, 1);
-        m.reads.insert(EE_UNITS_UPD_R_GOAL_KIND, GOAL_HEAL_UNIT);
+        m.reads.insert(EE_UNITS_UPD_R_GOAL_KIND, 15); // kGoalHealUnit
         m.reads.insert(EE_UNITS_UPD_R_REGENERATES, 1);
         run(EE_UNITS_UPDATE_LAND, &mut m);
         let o = ops(&m);
