@@ -204,6 +204,8 @@ void EEUCProjectile::RemoveFromRegion(class EEUnit *)
 // New (port): the host of ee_combat shots.rs's plans (EEUCProjectile/EEUCMissile::ActionChanged and Update,
 // EEUCTorpedo::Update): each read the original's expression, each operation its statement, on the unit and its
 // class (the original's `this`, cast as the original's member function saw it: virtual calls dispatch as they did).
+// The unit's plain fields (command, location, goal kind, type, hit points, tile x, rotting, flight and cloak times) are
+// the unit store's (shots.rs StoredShot), never asked here.
 
 namespace {
 
@@ -246,28 +248,16 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     bool theMissile = theContext->mKind != EE_COMBAT_SHOT_PROJECTILE;
     switch (inOp) {
     // ---- reads
-    case EE_COMBAT_SHOT_R_COMMAND:
-        return theUnit->mCommand ? (int32_t)theUnit->mCommand->mType : 0;
     case EE_COMBAT_SHOT_R_CLASS_ROTTING_TIME:
         return (int32_t)theClass->mRottingTime;
-    case EE_COMBAT_SHOT_R_LOCATION_X:
-        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetX());
-    case EE_COMBAT_SHOT_R_LOCATION_Y:
-        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetY());
-    case EE_COMBAT_SHOT_R_LOCATION_Z:
-        return (int32_t)EEShotFloat(theUnit->mPhysicalModel.GetLocation().GetZ());
     case EE_COMBAT_SHOT_R_TILE_HEIGHT:
         return (int32_t)EEShotFloat(theUnit->mTile->GetHeight());
-    case EE_COMBAT_SHOT_R_GOAL_KIND:
-        return theUnit->mGoalState != NULL ? (int32_t)theUnit->mGoalState->mKind : -1;
     case EE_COMBAT_SHOT_R_SPLASH_EFFECT:
         return theClass->mSplashEffect != NULL;
     case EE_COMBAT_SHOT_R_DEATH_EFFECT:
         return theClass->mDeathEffect != NULL;
     case EE_COMBAT_SHOT_R_DEATH_SOUND:
         return theUnit->mStats->mDeathSound != NULL;
-    case EE_COMBAT_SHOT_R_UNIT_TYPE:
-        return (int32_t)theUnit->mUnitClass->mUnitType;
     case EE_COMBAT_SHOT_R_CARGO:
         return (int32_t)theUnit->GetNumCargoUnits();
     case EE_COMBAT_SHOT_R_LINE_OF_SIGHT:
@@ -294,22 +284,12 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         return gFreeCamera;
     case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS:
         return (int32_t)EEShotAttack(theUnit)->mTarget->mHitPoints;
-    case EE_COMBAT_SHOT_R_HIT_POINTS:
-        return (int32_t)theUnit->mHitPoints;
     case EE_COMBAT_SHOT_R_POPULATION_COST:
         return (int32_t)theUnit->mUnitClass->GetPopulationCost();
     case EE_COMBAT_SHOT_R_PHYSICS_MODEL:
         return theClass->mPhysicsModel != NULL;
-    case EE_COMBAT_SHOT_R_TILE_X:
-        return (int32_t)theUnit->mTileX;
-    case EE_COMBAT_SHOT_R_ROTTING:
-        return (int32_t)theUnit->mRottingAwayTime;
     case EE_COMBAT_SHOT_R_TICK:
         return (int32_t)gPhysics->mTickTimeMs;
-    case EE_COMBAT_SHOT_R_FLIGHT_TIME:
-        return (int32_t)theUnit->mFlightTime;
-    case EE_COMBAT_SHOT_R_CLOAKED:
-        return (int32_t)(long)theUnit->mCloaked;
     case EE_COMBAT_SHOT_R_POSITION_Z: {
         GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
         theUnit->GetPosition(thePosition);
@@ -477,12 +457,12 @@ void EECombatShotAction(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inU
 {
     EEShotContext theContext = {inUnit, inClass, inKind};
     EeCombatShotHost theHost = {&theContext, EEShotOp};
-    ee_combat_shot_action_changed(inKind, &theHost);
+    ee_combat_shot_action_changed(inKind, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
 }
 
 void EECombatShotUpdate(int32_t inKind, EEUnitClass* inClass, EEComplexUnit* inUnit)
 {
     EEShotContext theContext = {inUnit, inClass, inKind};
     EeCombatShotHost theHost = {&theContext, EEShotOp};
-    ee_combat_shot_update(inKind, &theHost);
+    ee_combat_shot_update(inKind, (uint64_t)(uintptr_t)static_cast<EEUnit*>(inUnit), &theHost);
 }

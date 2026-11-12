@@ -19,14 +19,14 @@ using namespace WONAPI;
 // FUNCTION: WON 0x007c19a0
 // Creates a room tree entry for a server, or its 'querying server' placeholder when loading
 RoomListItem::RoomListItem(WONAPI::LobbyServer* inServer,bool inLoading)
-    :mColor(-1),mLoading(inLoading),mAddress(inServer->mAddress),mGroupId(0xffff)
+    :mColor(-1),mLoading(inLoading),mAddress(inServer->GetAddress()),mGroupId(0xffff)
 {
     this->UpdateText(inServer,NULL);
 }
 // FUNCTION: WON 0x007c1c50
 // Creates a room tree entry for a chat room on a server
 RoomListItem::RoomListItem(WONAPI::LobbyGroup* inGroup,WONAPI::LobbyServer* inServer)
-    :mColor(-1),mLoading(false),mAddress(inServer->mAddress),mGroupId(inGroup->GetId())
+    :mColor(-1),mLoading(false),mAddress(inServer->GetAddress()),mGroupId(inGroup->GetId())
 {
     this->UpdateText(inServer,inGroup);
 }
@@ -44,15 +44,15 @@ void RoomListItem::UpdateText(WONAPI::LobbyServer* inServer,WONAPI::LobbyGroup* 
     if(this->mLoading) this->mText=::RoomCtrl_QueryingServer_String;
     else if(inGroup!=NULL)
     {
-        sprintf(aCount," (%d)",inGroup->mNumClients);
-        this->mText=inGroup->mName;
-        if(static_cast<int>(inGroup->mNumClients)>0)
+        sprintf(aCount," (%d)",inGroup->GetNumClients());
+        this->mText=inGroup->GetName();
+        if(static_cast<int>(inGroup->GetNumClients())>0)
             this->mText.append(aCount);
     }
     else if(inServer!=NULL)
     {
         sprintf(aCount," (%d)",inServer->GetNumClients());
-        this->mText=inServer->mName;
+        this->mText=inServer->GetName();
         if(inServer->GetNumClients()!=0)
             this->mText.append(aCount);
     }
@@ -187,14 +187,14 @@ TreeItem* RoomCtrl::GetGroupItem(const IPAddr& inAddress,int inGroupId)
 // Returns a server's entry, or NULL
 TreeItem* RoomCtrl::GetServerItem(LobbyServer* inServer)
 {
-    if(inServer!=NULL) return this->GetServerItem(inServer->mAddress);
+    if(inServer!=NULL) return this->GetServerItem(inServer->GetAddress());
     return NULL;
 }
 // FUNCTION: WON 0x007c2be0
 // Returns a chat room's entry on a server, or NULL
 TreeItem* RoomCtrl::GetGroupItem(LobbyServer* inServer,LobbyGroup* inGroup)
 {
-    if(inServer!=NULL && inGroup!=NULL) return this->GetGroupItem(inServer->mAddress,inGroup->GetId());
+    if(inServer!=NULL && inGroup!=NULL) return this->GetGroupItem(inServer->GetAddress(),inGroup->GetId());
     return NULL;
 }
 

@@ -87,7 +87,8 @@
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EECampaignFormManager.h"
 #include "ee/EEUIBMapBackground.h"
-#include "ee/EEUIECampaignSelectScreenEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEUIPGSLineGraph.h"
 #include "ee/EEPGSFormManager.h"
@@ -537,8 +538,8 @@ long EEUIEPGSEExit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
                 theManager->mAllScenariosOpen = true;
             else
                 theManager->mAllScenariosOpen = false;
-            theForm->SetFormOpenEvent(new EEUIECSSEFormOpen);
-            theForm->SetFormCloseEvent(new EEUIECSSEFormClose);
+            theForm->SetFormOpenEvent(EECreateScreenEvent(EE_SCREENS_CS_OPEN));   // (ee_screens scenario_screens.rs)
+            theForm->SetFormCloseEvent(EECreateScreenEvent(EE_SCREENS_CS_CLOSE));
             gUserInterface->OpenForm(theForm);
         } else {
             theManager->SetCampaignName("");

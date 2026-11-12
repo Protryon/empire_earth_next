@@ -68,10 +68,17 @@ def converters_hash():
     return h.hexdigest()[:16]
 
 
+AI_NOTICES = ('LICENSE', 'UPSTREAM', 'README', 'NOTICE', 'COPYING')   # a ported AI's notices ship with its scripts
+
+
 def ai_files():
-    """The repository's ai/ files a data tree gets: the AI manifest ais.json (the lobby's AIs, ee/EECPEngine.h) and
-    every Lua script."""
-    return sorted([*AI_SCRIPTS.rglob('*.lua'), *([AI_SCRIPTS / 'ais.json'] if (AI_SCRIPTS / 'ais.json').exists() else [])])
+    """The repository's ai/ files a data tree gets: the AI manifest ais.json (the lobby's AIs, ee/EECPEngine.h), every
+    Lua script, and the notice files a ported AI ships (ai/ageofai/LICENSE, UPSTREAM: the GPL-3.0 text and the
+    upstream pin). The game's own AI folder hash (EECPAIFolderHash, the multiplayer checksum) covers ais.json and the
+    scripts only; the notices change no behaviour."""
+    notices = [p for p in AI_SCRIPTS.rglob('*') if p.is_file() and p.name.split('.')[0].upper() in AI_NOTICES]
+    return sorted([*AI_SCRIPTS.rglob('*.lua'), *([AI_SCRIPTS / 'ais.json'] if (AI_SCRIPTS / 'ais.json').exists() else []),
+                   *notices])
 
 
 def scripts_hash():
@@ -85,7 +92,7 @@ def scripts_hash():
 
 
 def refresh_scripts(tree):
-    """Data/ai of a tree replaced by the repository's ai/ (ais.json, *.lua), its hash recorded in open_data.json -> the hash.
+    """Data/ai of a tree replaced by the repository's ai/ (ais.json, *.lua, the notices), its hash recorded in open_data.json -> the hash.
     The old files are unlinked first, so a staged copy's hard links into another tree are never written through."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'ai'

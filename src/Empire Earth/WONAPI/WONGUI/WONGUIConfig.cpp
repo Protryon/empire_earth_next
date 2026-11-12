@@ -42,7 +42,6 @@ void WONGUIConfig_Init(ResourceConfigTable* table)
     table->AddAllocator("RectangleComponent",RectangleComponentConfig::CfgFactory,RectangleComponentConfig::CompFactory);
     table->AddAllocator("RectangleComponent3D",RectangleComponent3DConfig::CfgFactory,RectangleComponent3DConfig::CompFactory);
     table->AddAllocator("ImageComponent",ImageComponentConfig::CfgFactory,ImageComponentConfig::CompFactory);
-    table->AddAllocator("AnimationComponent",AnimationComponentConfig::CfgFactory,AnimationComponentConfig::CompFactory);
     table->AddAllocator("ScreenContainer",ScreenContainerConfig::CfgFactory,ScreenContainerConfig::CompFactory);
     MSComponentConfig_Init(table);
     ImageConfig_Init(table);
@@ -82,13 +81,6 @@ ComponentConfig* RectangleComponent3DConfig::CfgFactory()
 ComponentConfig* ImageComponentConfig::CfgFactory()
 {
     return new ImageComponentConfig;
-}
-
-// FUNCTION: WON 0x0079b2a0
-// Creates a new animation component config for the skin loader
-ComponentConfig* AnimationComponentConfig::CfgFactory()
-{
-    return new AnimationComponentConfig;
 }
 
 // FUNCTION: WON 0x0079b350

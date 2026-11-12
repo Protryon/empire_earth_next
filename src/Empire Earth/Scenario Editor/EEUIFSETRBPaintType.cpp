@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\Scenario Editor\EEUIFSETRBPaintType.cpp (file name inferred: no __FILE__). 0x1ac48b..0x1afa90,
-// with the functions of EEUIESLLoadScreen.cpp folded in (the editor's tool bar events, the load screen event,
-// EESMDialogMessage's Load/Save). Unit flags: the exe module set.
+// with the functions of EEUIESLLoadScreen.cpp folded in (the editor's tool bar events, EESMDialogMessage's
+// Load/Save; the load screen event is a screen code, ee_screens save_load.rs). Unit flags: the exe module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -14,7 +14,6 @@
 #include "lle/UIForm.h"
 #include "lle/UIEvent.h"
 #include "lle/UString.h"
-#include "ee/EEUIESLLoadScreen.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEAction.h"
@@ -129,7 +128,8 @@ void EESEExitWithoutSaving(UIForm* inForm);
 #include "ee/EEButtonObject.h"
 #include "ee/EESEEditorEvents.h"
 
-#include "ee/EEUIESLLoadScreen.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 #include "lle/UICheckBox.h"
 #include "ee/EESEEHideUI.h"
 #include "ee/EESEEQuickLoad.h"
@@ -239,26 +239,11 @@ long EESEEQuickLoad::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Opens the load screen for scenarios in the editor, or for saved games elsewhere
 long EESEELoadScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    EEUIESLLoadScreen* theEvent;
-    if (gUIManager->GetInScenarioEditor() == true)
-        theEvent = new EEUIESLLoadScreen(gScenarioExtension, UString("data\\") + UString("Scenarios\\"));
-    else
-        theEvent = new EEUIESLLoadScreen(gSavedGameExtension, UString("data\\") + UString("Saved Games\\"));
+    UIEvent* theEvent = EECreateScreenEvent(gUIManager->GetInScenarioEditor() == true ? EE_SCREENS_SL_LOAD_SCREEN_SCENARIO
+                                                                                      : EE_SCREENS_SL_LOAD_SCREEN_GAME);
     static_cast<EEUIFScenarioEditor*>(inForm)->PostLoadEvent(theEvent);
     theEvent->Dereference();
     return kErrorOK;
-}
-
-// FUNCTION: EXE 0x5af6c1
-// Creates a load screen event for files with the given extension in the given folder (inline ctor, out of line)
-
-// SYNTHETIC: EXE 0x5af703
-// (the scalar deleting destructor, emitted with the vtable)
-
-// FUNCTION: EXE 0x5af71f
-// Destroys the load screen event
-EEUIESLLoadScreen::~EEUIESLLoadScreen()
-{
 }
 
 // FUNCTION: EXE 0x5af74a

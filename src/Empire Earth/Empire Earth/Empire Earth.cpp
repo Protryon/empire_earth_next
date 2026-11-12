@@ -887,8 +887,10 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 277 the wall manager's path request (EESaveHasWallRequest)
 // 278 the graph searches in progress (EESaveHasGraphSearches)
 // 279 the players' active groups (EESaveHasActiveGroups)
+// 280 the per-unit Lua interface's state after the next engine's, EEPPlayerHelper, ee/EECPNextUnits.h (main's 254,
+// EESaveHasUnitsLuaState)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 279;
+const unsigned long kSaveGameMinorVersion = 280;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"
@@ -2297,8 +2299,13 @@ void EESimGameEnded(int inResult);
 int main(int argc, char** argv)
 {
     std::string theCommandLine;
-    if (argc > 1 && !strcmp(argv[1], "--sim")) {
-        int theResult = EESimMain(argc - 1, argv + 1);
+    // the simulation: "ee-aoc --sim ...", or the exe started as ee-sim (the link tools/xbuild.py game makes beside it)
+    const char* theName = argc > 0 && argv[0] ? argv[0] : "";
+    theName = strrchr(theName, '/') ? strrchr(theName, '/') + 1 : theName;
+    bool theSimFlag = argc > 1 && !strcmp(argv[1], "--sim");
+    if (theSimFlag || !strncmp(theName, "ee-sim", 6)) {
+        int theSkip = theSimFlag ? 1 : 0;
+        int theResult = EESimMain(argc - theSkip, argv + theSkip);
         if (theResult != -1)
             return theResult;
         argc = 1;   // the simulation's own options are not the game's command line

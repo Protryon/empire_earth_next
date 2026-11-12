@@ -9,6 +9,8 @@
 
 use std::ffi::c_void;
 
+use crate::store::{self, EeCombatStoredUnit};
+use crate::walks::EeCombatHandle;
 use crate::{heal, heal_step, EeCombatHealIn, EeCombatHealStepIn};
 
 /// `EEUCProjectile` (and `EEUCBomb`, which runs its action and update).
@@ -176,6 +178,57 @@ impl ShotHost for EeCombatShotHost {
     fn op(&mut self, op: i32, arg: i32, arg1: i32) -> i32 {
         // SAFETY: the table's contract: `ctx` is live for the call that handed it over
         unsafe { (self.op)(self.ctx, op, arg, arg1) }
+    }
+}
+
+/// A shot's host whose reads of the unit's plain fields (its command, location, goal kind, class type, hit points,
+/// tile x, rotting, flight and cloak times) come from the unit store's record of it ([`crate::store`]); the other
+/// reads and the operations, and these without a record (a test's store), go to the host.
+pub struct StoredShot<'a, H: ShotHost> {
+    pub host: &'a mut H,
+    /// the shot (an `EEUnit*`)
+    pub unit: EeCombatHandle,
+}
+
+/// A store read of the shot's record: the C++'s `int32_t` of the value.
+fn shot_field(r: &EeCombatStoredUnit, op: i32) -> i32 {
+    match op {
+        EE_COMBAT_SHOT_R_COMMAND => r.command as i32,
+        EE_COMBAT_SHOT_R_LOCATION_X => r.location[0] as i32,
+        EE_COMBAT_SHOT_R_LOCATION_Y => r.location[1] as i32,
+        EE_COMBAT_SHOT_R_LOCATION_Z => r.location[2] as i32,
+        EE_COMBAT_SHOT_R_GOAL_KIND => r.goal_kind,
+        EE_COMBAT_SHOT_R_UNIT_TYPE => r.unit_type as i32,
+        EE_COMBAT_SHOT_R_HIT_POINTS => r.hit_points as i32,
+        EE_COMBAT_SHOT_R_TILE_X => r.tile_x as i32,
+        EE_COMBAT_SHOT_R_ROTTING => r.rotting_away_time as i32,
+        EE_COMBAT_SHOT_R_FLIGHT_TIME => r.flight_time as i32,
+        // `(int32_t)(long)mCloaked`
+        _ => r.cloak_timer as i32,
+    }
+}
+
+impl<H: ShotHost> ShotHost for StoredShot<'_, H> {
+    fn op(&mut self, op: i32, arg: i32, arg1: i32) -> i32 {
+        if matches!(
+            op,
+            EE_COMBAT_SHOT_R_COMMAND
+                | EE_COMBAT_SHOT_R_LOCATION_X
+                | EE_COMBAT_SHOT_R_LOCATION_Y
+                | EE_COMBAT_SHOT_R_LOCATION_Z
+                | EE_COMBAT_SHOT_R_GOAL_KIND
+                | EE_COMBAT_SHOT_R_UNIT_TYPE
+                | EE_COMBAT_SHOT_R_HIT_POINTS
+                | EE_COMBAT_SHOT_R_TILE_X
+                | EE_COMBAT_SHOT_R_ROTTING
+                | EE_COMBAT_SHOT_R_FLIGHT_TIME
+                | EE_COMBAT_SHOT_R_CLOAKED
+        ) {
+            if let Some(r) = store::unit_of(self.unit) {
+                return shot_field(&r, op);
+            }
+        }
+        self.host.op(op, arg, arg1)
     }
 }
 
@@ -475,14 +528,14 @@ pub fn heal_work(i: &EeCombatHealWorkIn) -> EeCombatHealWorkOut {
     out
 }
 
-/// A shot's `ActionChanged` over the C++ host.
+/// A shot's `ActionChanged` over the C++ host (`unit`: the shot, its plain reads the store's).
 ///
 /// # Safety
 /// `host` must point to a valid table whose function may be called with its context.
 #[no_mangle]
-pub unsafe extern "C" fn ee_combat_shot_action_changed(kind: i32, host: *const EeCombatShotHost) {
+pub unsafe extern "C" fn ee_combat_shot_action_changed(kind: i32, unit: u64, host: *const EeCombatShotHost) {
     let mut h = unsafe { *host };
-    action_changed(kind, &mut h);
+    action_changed(kind, &mut StoredShot { host: &mut h, unit });
 }
 
 /// A shot's `Update` over the C++ host.
@@ -490,9 +543,9 @@ pub unsafe extern "C" fn ee_combat_shot_action_changed(kind: i32, host: *const E
 /// # Safety
 /// As [`ee_combat_shot_action_changed`].
 #[no_mangle]
-pub unsafe extern "C" fn ee_combat_shot_update(kind: i32, host: *const EeCombatShotHost) {
+pub unsafe extern "C" fn ee_combat_shot_update(kind: i32, unit: u64, host: *const EeCombatShotHost) {
     let mut h = unsafe { *host };
-    update(kind, &mut h);
+    update(kind, &mut StoredShot { host: &mut h, unit });
 }
 
 /// `EEUGHealUnit::Work` over its reads.

@@ -6,6 +6,36 @@
       "script": "boom",
       "random": true,
       "description": "Builds its economy first: food, many citizens, towers at the town and its sites, a small defence that grows with the threat it sees, no attacks; advances an epoch once it is paid for."
+    },
+    {
+      "id": "boom_order",
+      "name": "Boom (owner order)",
+      "script": "boom_order",
+      "random": false,
+      "description": "Boom on the owner's build order (AI_RESEARCH §8.51): 12 on the forage patches and settlements touching them, 3-6 hunting, 5-8 wood, 2 each on the mines; in Stone a dock and 13 fishing boats, then 12-18 gold and iron, 6 stone, 10-15 wood; the Copper save once that economy stands; 3 granaries in Copper; the town centre's gathering techs. Its fishing grounds guarded by warships and the boats' flight to a dock."
+    },
+    {
+      "id": "ageofai",
+      "name": "Age of AI",
+      "script": "ageofai.main",
+      "random": false,
+      "description": "A port of Grille's Empire Earth: Age of AI (GPL-3.0, ai/ageofai/UPSTREAM): a budget with an epoch reserve and a military account, workers by shortfall, towers by the town first and at the fronts, one land army ordered as one that pushes at the attack time when it beats what it knows at the target and comes home as one when it is losing; the navy, the landings and the towns; the diplomacy (war answered, opinions, peace, alliance blocks, vassals, capitulation)."
+    },
+    {
+      "id": "rush",
+      "name": "Rush",
+      "script": "rush",
+      "random": false,
+      "description": "An early army from two barracks, raids on the enemy's gatherers and waves at its town from the Prehistoric; falls back to a boom when two waves are lost (a test opponent for the other AIs' defence)."
+    },
+    {
+      "id": "classic_lua",
+      "name": "Classic (Lua)",
+      "script": "classic_lua.main",
+      "random": false,
+      "sees_all": true,
+      "fills_garrison": true,
+      "description": "A port of the classic computer player's managers to Lua (ai/classic_lua/ORIGIN): the resource centres and the gatherer split, the request queues of units, buildings and research, the epoch timer, the building counts, the garrisons; the personality and difficulty from the rules data as the C++ classic reads them."
     }
   ]
 }

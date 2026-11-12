@@ -293,7 +293,7 @@ enum EEGameSettingsControl {
     // port: not in the database (EEUIManager's ctor adds it: UIControlsTable::AddControlLike, a copy of the video
     // card combo box; strings kTextureResolutionOriginalString..)
     kGameSettingsTextureResolutionComboBox = 111,
-    // port: the modern display and audio settings (EEUIManager.cpp AddControlLike; EEUIEGameSettingsEvents.cpp)
+    // port: the modern display and audio settings (EEUIManager.cpp AddControlLike; ee_screens settings_form.rs)
     kGameSettingsWindowModeComboBox = 112,
     kGameSettingsUIScaleComboBox = 113,
     kGameSettingsRenderResolutionComboBox = 114,

@@ -2,7 +2,10 @@
 //! WSAEventSelect with one poll thread, started by the first PlatSocketSelectEvent: each registered socket is "armed"
 //! until the poll finds it ready, then its event is set and it is disarmed until the next receive or accept on it
 //! re-arms it (Winsock's re-enabling rule: a recv that leaves data behind signals again). A self-pipe wakes the poll
-//! when the set changes. Sends never raise SIGPIPE (MSG_NOSIGNAL / SO_NOSIGPIPE).
+//! when the set changes. Sends never raise SIGPIPE (MSG_NOSIGNAL / SO_NOSIGPIPE). Stream sockets get SO_REUSEADDR: a
+//! listening port whose last connection is in TIME_WAIT binds again at once, as on Windows (Linux refuses it for a
+//! minute without; the headless simulation's benches bind one port pair per slot, game after game). Two live listeners
+//! still cannot share a port.
 
 #![allow(clippy::unnecessary_cast)]
 
@@ -260,6 +263,16 @@ pub unsafe extern "C" fn PlatSocketOpen(kind: i32) -> PlatSocket {
     }
     libc::fcntl(socket, libc::F_SETFD, libc::FD_CLOEXEC);
     set_no_sigpipe(socket);
+    if kind == PLAT_SOCKET_STREAM {
+        let on: c_int = 1;
+        libc::setsockopt(
+            socket,
+            libc::SOL_SOCKET,
+            libc::SO_REUSEADDR,
+            (&raw const on).cast(),
+            size_of::<c_int>() as libc::socklen_t,
+        );
+    }
     socket as PlatSocket
 }
 

@@ -815,3 +815,20 @@ void EEFillSweep()
         }
     }
 }
+
+// New (R5b.2 combat, ninth round): the fills behind the combat reads' store bridges (ee_rust's ee_combat_store_unit_of,
+// ee_combat_store_player_of) for a unit out of every list (a killed unit a goal still names) or a player without a
+// table: the same record and words as the store's, from the live object (its mPlayer as the list's player)
+extern "C" void ee_combat_host_unit_record(uint64_t inObject, EeUnitRecord* outRecord)
+{
+    RTSUnit* theUnit = reinterpret_cast<RTSUnit*>(static_cast<uintptr_t>(inObject));
+    EEPlayer* thePlayer = theUnit->mPlayer;
+    Fill(theUnit, thePlayer != NULL ? thePlayer->mPlayerID : 0, static_cast<const RTSPlayer*>(thePlayer), *outRecord);
+}
+
+extern "C" void ee_combat_host_player_table(uint64_t inObject, uint32_t* outID, uint32_t* outEnemies)
+{
+    const EEPlayer* thePlayer = reinterpret_cast<const EEPlayer*>(static_cast<uintptr_t>(inObject));
+    *outID = (uint32_t)thePlayer->mPlayerID;
+    PlayerWords(thePlayer, outEnemies);
+}

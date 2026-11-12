@@ -92,6 +92,25 @@ EECPLuaValue& EECPLuaValue::Push(const EECPLuaValue& inValue)
     return this->mItems.back();
 }
 
+EECPLuaValue& EECPLuaValue::Push(EECPLuaValue&& inValue)
+{
+    this->mItems.push_back(std::move(inValue));
+    return this->mItems.back();
+}
+
+EECPLuaValue& EECPLuaValue::Set(const EECPLuaKey& inKey, EECPLuaValue&& inValue)
+{
+    std::vector<EECPLuaKey>::iterator it = std::lower_bound(this->mKeys.begin(), this->mKeys.end(), inKey);
+    size_t i = (size_t)(it - this->mKeys.begin());
+    if (it != this->mKeys.end() && *it == inKey) {
+        this->mItems[i] = std::move(inValue);
+        return this->mItems[i];
+    }
+    this->mKeys.insert(it, inKey);
+    this->mItems.insert(this->mItems.begin() + (ptrdiff_t)i, std::move(inValue));
+    return this->mItems[i];
+}
+
 EECPLuaValue& EECPLuaValue::Set(const EECPLuaKey& inKey, const EECPLuaValue& inValue)
 {
     std::vector<EECPLuaKey>::iterator it = std::lower_bound(this->mKeys.begin(), this->mKeys.end(), inKey);
@@ -479,7 +498,7 @@ struct Converter {
             EECPLuaValue theValue;
             theOK = this->Convert(lua_gettop(L), theValue);
             if (theOK)
-                theFields.push_back(std::make_pair(theKey, theValue));
+                theFields.push_back(std::make_pair(std::move(theKey), std::move(theValue)));
             this->mPath.resize(thePathLength);
             lua_pop(L, 1);
         }
@@ -497,11 +516,63 @@ struct Converter {
         outValue = theArray ? EECPLuaValue::NewArray() : EECPLuaValue::NewMap();
         for (size_t i = 0; i < theFields.size(); i++) {
             if (theArray)
-                outValue.Push(theFields[i].second);
+                outValue.Push(std::move(theFields[i].second));
             else
-                outValue.Set(theFields[i].first, theFields[i].second);   // in order: appends
+                outValue.Set(theFields[i].first, std::move(theFields[i].second));   // in order: appends
         }
         return true;
+    }
+
+    // Convert's walk without the value (no copies, no path, no sort): false exactly where Convert fails, in the same
+    // Lua calls. EECPLuaState::CheckMemory runs it after every step (it was a third of a late game's time) and
+    // converts again only for a failure's message.
+    bool Check(int inIndex)
+    {
+        lua_State* L = this->mL;
+        switch (lua_type(L, inIndex)) {
+        case LUA_TNIL:
+        case LUA_TBOOLEAN:
+        case LUA_TSTRING:
+            return true;
+        case LUA_TNUMBER:
+            return lua_isinteger(L, inIndex) != 0;
+        case LUA_TTABLE:
+            return this->CheckTable(lua_absindex(L, inIndex));
+        default:
+            return false;
+        }
+    }
+
+    bool CheckTable(int inIndex)
+    {
+        lua_State* L = this->mL;
+        const void* theTable = lua_topointer(L, inIndex);
+        if (std::find(this->mOpen.begin(), this->mOpen.end(), theTable) != this->mOpen.end())
+            return false;
+        if ((int)this->mOpen.size() >= kEECPLuaMaxDepth)
+            return false;
+        if (lua_getmetatable(L, inIndex)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        if (!lua_checkstack(L, 4))
+            return false;
+        this->mOpen.push_back(theTable);
+        int theTop = lua_gettop(L);
+        bool theOK = true;
+        lua_pushnil(L);
+        while (theOK && lua_next(L, inIndex)) {
+            int theKeyType = lua_type(L, -2);
+            if (!(theKeyType == LUA_TNUMBER && lua_isinteger(L, -2)) && theKeyType != LUA_TSTRING) {
+                theOK = false;
+                break;
+            }
+            theOK = this->Check(lua_gettop(L));
+            lua_pop(L, 1);
+        }
+        lua_settop(L, theTop);
+        this->mOpen.pop_back();
+        return theOK;
     }
 };
 
@@ -945,6 +1016,7 @@ void Setup(lua_State* L, Job& j)
     lua_setfield(L, -2, "random");
     lua_pushcfunction(L, LuaKeys);
     lua_setfield(L, -2, "keys");
+    EECPLuaState::From(L)->OpenExtension(L);
     lua_setfield(L, 1, "ai");
     lua_getfield(L, 1, LUA_STRLIBNAME);   // 2 (also the strings' __index)
     for (const char* n : kStringRemoved) {
@@ -1147,6 +1219,25 @@ void EECPLuaState::OnHook(lua_State* inL)
     }
 }
 
+void EECPLuaState::Charge(lua_State* inL, int64_t inAmount)
+{
+    if (inAmount > 0)
+        this->mUsed += inAmount;
+    if (this->mOverBudget || this->mUsed > this->mConfig.mBudget) {
+        if (!this->mOverBudget) {
+            this->mOverBudget = true;
+            lua_sethook(inL, LuaHook, LUA_MASKCOUNT, 1);
+        }
+        luaL_error(inL, "instruction budget exceeded (%I instructions)", (lua_Integer)this->mConfig.mBudget);
+    }
+}
+
+void EECPLuaState::OpenExtension(lua_State* inL)
+{
+    if (this->mConfig.mOpen != nullptr)
+        this->mConfig.mOpen(inL, this->mConfig.mOpenContext);
+}
+
 EECPLuaState::EECPLuaState(const EECPLuaConfig& inConfig) : mConfig(inConfig), mRng(inConfig.mSeed)
 {
     this->mPersonality = LUA_NOREF;
@@ -1260,6 +1351,33 @@ bool EECPLuaState::CallEntry(const char* inName, bool inOptional, const EECPLuaV
     return !this->mConfig.mCheckMemory || this->CheckMemory();
 }
 
+bool EECPLuaState::CallOptional(const char* inName, const EECPLuaValue& inArg, EECPLuaValue& outResult, int64_t inBudget,
+    bool& outFound)
+{
+    outResult = EECPLuaValue();
+    outFound = false;
+    if (!this->mL)
+        return this->Fail(kEECPLuaNoState, "no Lua state");
+    if (this->mPersonality == LUA_NOREF || this->mPersonality == LUA_REFNIL)
+        return this->Fail(kEECPLuaNotLoaded, "no personality loaded");
+    Job j = NewJob(kJobEntry, &this->mPersonality, &this->mMemory);
+    j.mText = inName;
+    j.mOptional = true;
+    j.mValue = &inArg;
+    std::string theWhat = this->mModule + "." + inName;
+    int64_t theBudget = this->mConfig.mBudget;
+    if (inBudget > 0)
+        this->mConfig.mBudget = inBudget;
+    bool theOK = this->Call((void*)&j, &outResult, theWhat.c_str());
+    this->mConfig.mBudget = theBudget;
+    if (!theOK)
+        return false;
+    outFound = j.mFound;
+    if (!j.mFound)
+        outResult = EECPLuaValue();
+    return !this->mConfig.mCheckMemory || this->CheckMemory();
+}
+
 bool EECPLuaState::Init(const EECPLuaValue& inView, EECPLuaValue& outOrders)
 {
     return this->CallEntry("init", true, inView, outOrders);
@@ -1305,6 +1423,21 @@ bool EECPLuaState::GetMemory(EECPLuaValue& outMemory)
 
 bool EECPLuaState::CheckMemory()
 {
+    // GetMemory's answer and state without building the value (Converter::Check); a failure converts for the message
+    if (this->mL) {
+        lua_State* L = this->mL;
+        int theBase = lua_gettop(L);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, this->mMemory);
+        Converter c;
+        c.mL = L;
+        bool theOK = c.Check(-1);
+        lua_settop(L, theBase);
+        if (theOK) {
+            this->mStatus = kEECPLuaOK;
+            this->mError.clear();
+            return true;
+        }
+    }
     EECPLuaValue theMemory;
     return this->GetMemory(theMemory);
 }

@@ -2,11 +2,15 @@
 //! `AddGroundSprite`, `AddGroundQuad`, `AddBlendedSprite` and `AddGroundStrip` add to the two quad batches (their
 //! colour, points, normal, texture coordinates and opacities), and `GetEffectFogFactor`'s fade. The C++ keeps the
 //! batches: their counts, the flush when full, the alpha reference and every `SetVertex`, in the original's order.
+//! And the two shared plane models (`CreateHorizontalPlaneModel`, `CreateStandingPlaneModel`): a unit square on the
+//! ground facing up and one standing facing -y, white, opaque, two triangles; the C++ creates and stores them.
 //!
 //! This is the renderer's, not the simulation's: nothing here is simulation state.
 
 use ee_ge::transform::RotationOrder;
 use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
+
+use crate::mesh::{EeGfxMeshTriangle, EeGfxMeshVertex, Mesh};
 
 /// `GEColor`'s storage: red, green, blue.
 #[repr(C)]
@@ -199,9 +203,52 @@ pub fn ground_strip(
     EeGfxEffectQuad { color: color.scaled(brightness), normal, points, coords, opacities: [alpha; 4] }
 }
 
+/// A plane model's mesh (four vertices, two triangles): standing (the 2D effects' quad, facing -y) or on the ground.
+pub fn plane(standing: bool, mesh: &mut Mesh) {
+    let (points, normal) = if standing {
+        ([(-0.5, 0.0, 0.5), (0.5, 0.0, 0.5), (-0.5, 0.0, -0.5), (0.5, 0.0, -0.5)], GeVector { x: 0.0, y: -1.0, z: 0.0 })
+    } else {
+        ([(-0.5, 0.5, 0.0), (0.5, 0.5, 0.0), (-0.5, -0.5, 0.0), (0.5, -0.5, 0.0)], GeVector { x: 0.0, y: 0.0, z: 1.0 })
+    };
+    const COORDS: [(f32, f32); 4] = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)];
+    for (i, (x, y, z)) in points.into_iter().enumerate() {
+        let i = i as i64;
+        mesh.point(i, Ge3DPoint { x, y, z });
+        mesh.normal(i, normal);
+        mesh.color(i, EeGfxColor { red: 1.0, green: 1.0, blue: 1.0 });
+        mesh.opacity(i, 1.0);
+        mesh.coord(i, COORDS[i as usize].0, COORDS[i as usize].1);
+    }
+    mesh.triangle(0, 0, 1, 2);
+    mesh.triangle(1, 2, 1, 3);
+}
+
+/// `plane` into fixed arrays.
+pub fn plane_arrays(standing: bool) -> ([EeGfxMeshVertex; 4], [EeGfxMeshTriangle; 2]) {
+    let mut v = [EeGfxMeshVertex::default(); 4];
+    let mut t = [EeGfxMeshTriangle::default(); 2];
+    plane(standing, &mut Mesh::new(&mut v, &mut t));
+    (v, t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mesh::EE_GFX_MESH_POINT;
+
+    #[test]
+    fn the_planes_are_unit_squares() {
+        let (v, t) = plane_arrays(false);
+        assert!(v.iter().all(|x| x.set == 31 && x.opacity == 1.0 && x.color.red == 1.0));
+        assert_eq!(v[0].point, Ge3DPoint { x: -0.5, y: 0.5, z: 0.0 });
+        assert_eq!(v[3].coord, EeGfxTexCoord { u: 1.0, v: 1.0 });
+        assert_eq!(v[1].normal, GeVector { x: 0.0, y: 0.0, z: 1.0 });
+        assert_eq!([t[0].v, t[1].v], [[0, 1, 2], [2, 1, 3]]);
+        let (v, _) = plane_arrays(true);
+        assert_eq!(v[2].point, Ge3DPoint { x: -0.5, y: 0.0, z: -0.5 });
+        assert_eq!(v[2].normal.y, -1.0);
+        assert_ne!(v[0].set & EE_GFX_MESH_POINT, 0);
+    }
 
     #[test]
     fn the_fog_fades_from_its_start_to_its_end() {

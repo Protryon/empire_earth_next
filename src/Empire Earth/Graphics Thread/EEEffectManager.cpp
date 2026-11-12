@@ -108,6 +108,7 @@
 #include "ee/EEE3DRain.h"
 #include "ee/EEE3DPulseCannonBall.h"
 #include "ee/EEE3DParticle.h"
+#include "ee/EESimCapture.h"
 
 // SYNTHETIC: EXE 0x5054ec
 // SYNTHETIC: EXE 0x5054f6
@@ -116,18 +117,19 @@
 // the guarded atexit dtor says a class static
 const UString EEEffectManager::sData("EEEffectManager-Data");
 
-// the last handle given out (0x4e8e48; saved first by Save). A unit global, not a class static: as a second one in the
-// header it flips the count canary 0x5e964a. External linkage: AddEffect 0x5055d0 increments
-// it in memory and reloads it (inc [g]; mov esi, [g]), which VC6 emits only for a global it cannot keep in a register
-unsigned long sEffectManagerHandle;
+// The manager's containers (the last handle given out, 0x4e8e48 in the original, saved first; the effects by handle;
+// the effect list, newest first, which Update steps in its order; the destruction queue) are ee_gfx effect_store.rs's
+// (RUST_PLAN R4.4): the effects are opaque pointers there
+static EEEffect* EEStoreEffect(void* inEffect)
+{
+    return static_cast<EEEffect*>(inEffect);
+}
 
 // FUNCTION: EXE 0x50552f
 // Creates an effect manager with no effects and no queued destructions
 EEEffectManager::EEEffectManager()
 {
-    this->mEffectsByHandle.clear();
-    this->mDestroyedHandles.clear();
-    this->mEffects = NULL;
+    this->mStore = ee_gfx_effects_new();
 }
 
 // SYNTHETIC: EXE 0x50558c
@@ -138,6 +140,8 @@ EEEffectManager::EEEffectManager()
 EEEffectManager::~EEEffectManager()
 {
     this->ClearEffects();
+    ee_gfx_effects_free(this->mStore);
+    this->mStore = NULL;
 }
 
 // FUNCTION: EXE 0x5055d0
@@ -145,20 +149,8 @@ EEEffectManager::~EEEffectManager()
 // taking a reference
 void EEEffectManager::AddEffect(EEEffect* inEffect, bool inNewHandle)
 {
-    unsigned long theHandle;
-    if (inNewHandle) {
-        sEffectManagerHandle++;
-        theHandle = sEffectManagerHandle;
-        inEffect->mHandle.mValue = theHandle;
-    } else
-        theHandle = inEffect->mHandle.mValue;
-    inEffect->mNext = this->mEffects;
-    inEffect->mPrevious = NULL;
-    if (this->mEffects)
-        this->mEffects->mPrevious = inEffect;
-    this->mEffects = inEffect;
+    inEffect->mHandle.mValue = ee_gfx_effects_add(this->mStore, inEffect, inNewHandle, inEffect->mHandle.mValue);
     inEffect->Reference();
-    this->mEffectsByHandle.insert(std::map<unsigned long, EEEffect*>::value_type(theHandle, inEffect));
 }
 
 // FUNCTION: EXE 0x50562c
@@ -687,21 +679,20 @@ long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& i
 long EEEffectManager::DestroyQueued()
 {
     long theResult = 0;
-    std::vector<unsigned long>::iterator it = this->mDestroyedHandles.begin();
-    while (it != this->mDestroyedHandles.end()) {
+    uint32_t theHandle;
+    // every handle leaves the queue: handles of effects that already removed themselves (or of none) have nothing
+    // left to destroy
+    while (ee_gfx_effects_take_destroyed(this->mStore, &theHandle)) {
         theResult = 9;
-        if (*it != kNoEffectHandle.mValue) {
+        if (theHandle != kNoEffectHandle.mValue) {
             theResult = 3;
-            std::map<unsigned long, EEEffect*>::iterator theFound = this->mEffectsByHandle.find(*it);
-            if (theFound != this->mEffectsByHandle.end()) {
-                theFound->second->Release();
-                this->RemoveEffect(theFound->second);
-                this->mEffectsByHandle.erase(theFound);
+            EEEffect* theFound = EEStoreEffect(ee_gfx_effects_find(this->mStore, theHandle));
+            if (theFound) {
+                theFound->Release();
+                this->RemoveEffect(theFound);
+                ee_gfx_effects_erase(this->mStore, theHandle);
             }
         }
-        // unqueue every handle: handles of effects that already removed themselves (or of none) have nothing left
-        // to destroy
-        it = this->mDestroyedHandles.erase(it);
     }
     return theResult;
 }
@@ -710,24 +701,20 @@ long EEEffectManager::DestroyQueued()
 // Returns the effect with the given handle, or null
 EEEffect* EEEffectManager::GetEffect(EEEffectHandle inHandle)
 {
-    EEEffect* theEffect = NULL;
-    if (inHandle != kNoEffectHandle) {
-        std::map<unsigned long, EEEffect*>::iterator it = this->mEffectsByHandle.find(inHandle.mValue);
-        if (it != this->mEffectsByHandle.end())
-            theEffect = it->second;
-    }
-    return theEffect;
+    if (inHandle == kNoEffectHandle)
+        return NULL;
+    return EEStoreEffect(ee_gfx_effects_find(this->mStore, inHandle.mValue));
 }
 
 // FUNCTION: EXE 0x506889
 // Unlinks and releases every effect and empties the handle index
 void EEEffectManager::ClearEffects()
 {
-    std::map<unsigned long, EEEffect*>::iterator it = this->mEffectsByHandle.begin();
-    while (it != this->mEffectsByHandle.end()) {
-        it->second->Release();
-        this->RemoveEffect(it->second);
-        it = this->mEffectsByHandle.erase(it);
+    uint32_t theHandle;
+    while (EEEffect* theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(this->mStore, 0, &theHandle))) {
+        theEffect->Release();
+        this->RemoveEffect(theEffect);
+        ee_gfx_effects_erase(this->mStore, theHandle);
     }
 }
 
@@ -735,7 +722,7 @@ void EEEffectManager::ClearEffects()
 // Queues an effect for destruction at the next update; returns 0
 long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
 {
-    this->mDestroyedHandles.push_back(inHandle.mValue);
+    ee_gfx_effects_queue_destroy(this->mStore, inHandle.mValue);
     return 0;
 }
 
@@ -744,17 +731,21 @@ long EEEffectManager::DestroyEffect(EEEffectHandle inHandle)
 // detail setting, then the goal markers'; returns the first other error
 long EEEffectManager::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    std::map<unsigned long, EEEffect*>::iterator it;
     long theResult = 0;
-    for (it = this->mEffectsByHandle.begin(); it != this->mEffectsByHandle.end() && theResult == 0; ) {
-        theResult = it->second->RepairPointers();
-        if (theResult == 7 || it->second->mGraphicEffect->mDetailLevel > gEffectDetail) {
-            it->second->Release();
-            this->RemoveEffect(it->second);
-            it = this->mEffectsByHandle.erase(it);
+    uint32_t theHandle;
+    uint64_t theCursor = 0;
+    while (theResult == 0) {
+        EEEffect* theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(this->mStore, theCursor, &theHandle));
+        if (theEffect == NULL)
+            break;
+        theCursor = (uint64_t)theHandle + 1;
+        theResult = theEffect->RepairPointers();
+        if (theResult == 7 || theEffect->mGraphicEffect->mDetailLevel > gEffectDetail) {
+            theEffect->Release();
+            this->RemoveEffect(theEffect);
+            ee_gfx_effects_erase(this->mStore, theHandle);
             theResult = 0;
-        } else
-            it++;
+        }
     }
     if (theResult == 0)
         theResult = this->mGoals.RepairPointers(inFirst, inSecond);
@@ -772,8 +763,8 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     unsigned long theHandleCount;
     unsigned long theHandle;
     EEEffect* theEffect = NULL;
-    long theResult = inFile.Read(sEffectManagerHandle);
-    theLastHandle = sEffectManagerHandle;
+    long theResult = inFile.Read(theLastHandle);
+    ee_gfx_effects_set_last_handle(this->mStore, theLastHandle);
     if (theResult == kErrorOK) {
         theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
@@ -973,7 +964,7 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                     for (unsigned long j = 0; j < theHandleCount && theResult == kErrorOK; j++) {
                         theResult = inFile.Read(theHandle);
                         if (theResult == kErrorOK && theHandle != kNoEffectHandle.mValue)
-                            this->mDestroyedHandles.push_back(theHandle);
+                            ee_gfx_effects_queue_destroy(this->mStore, theHandle);
                     }
                 }
             }
@@ -989,12 +980,7 @@ long EEEffectManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
 // Unlinks an effect from the effect list and releases it
 void EEEffectManager::RemoveEffect(EEEffect* inEffect)
 {
-    if (inEffect->mPrevious)
-        inEffect->mPrevious->mNext = inEffect->mNext;
-    if (inEffect->mNext)
-        inEffect->mNext->mPrevious = inEffect->mPrevious;
-    if (this->mEffects == inEffect)
-        this->mEffects = inEffect->mNext;
+    ee_gfx_effects_unlink(this->mStore, inEffect);
     inEffect->Release();
 }
 
@@ -1003,30 +989,36 @@ void EEEffectManager::RemoveEffect(EEEffect* inEffect)
 // error can be overwritten by the next effect's result
 long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    std::map<unsigned long, EEEffect*>::iterator it;
     unsigned long theHandleCount = 0;
     long theCount = 0;
     unsigned long theKind;
-    long theResult = outFile.Write(sEffectManagerHandle);
+    uint32_t theHandle;
+    EEEffect* theEffect;
+    unsigned long theLastHandle = ee_gfx_effects_last_handle(this->mStore);
+    long theResult = outFile.Write(theLastHandle);
     if (theResult == 0) {
-        for (it = this->mEffectsByHandle.begin(); it != this->mEffectsByHandle.end(); it++)
-            if (it->second->mIsSaved)
+        for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(this->mStore, c, &theHandle)));
+             c = (uint64_t)theHandle + 1)
+            if (theEffect->mIsSaved)
                 theCount++;
         theResult = outFile.Write(theCount);
         if (theResult == 0) {
-            for (it = this->mEffectsByHandle.begin(); it != this->mEffectsByHandle.end(); it++) {
-                if (!it->second->mIsSaved)
+            for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(this->mStore, c, &theHandle)));
+                 c = (uint64_t)theHandle + 1) {
+                if (!theEffect->mIsSaved)
                     continue;
-                theKind = it->second->mKind;
+                theKind = theEffect->mKind;
                 theResult = outFile.Write(theKind);
                 if (theResult == 0)
-                    theResult = it->second->Save(inMajorVersion, inMinorVersion, outFile);
+                    theResult = theEffect->Save(inMajorVersion, inMinorVersion, outFile);
             }
             if (theResult == 0) {
-                theHandleCount = this->mDestroyedHandles.size();
+                theHandleCount = ee_gfx_effects_destroyed_len(this->mStore);
                 theResult = outFile.Write(theHandleCount);
-                for (unsigned long i = 0; i < theHandleCount && theResult == 0; i++)
-                    theResult = outFile.Write(this->mDestroyedHandles[i]);
+                for (unsigned long i = 0; i < theHandleCount && theResult == 0; i++) {
+                    unsigned long theQueued = ee_gfx_effects_destroyed_at(this->mStore, i);
+                    theResult = outFile.Write(theQueued);
+                }
             }
         }
     }
@@ -1037,8 +1029,52 @@ long EEEffectManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
 // Moves every effect on the old unit to the new one
 void EEEffectManager::ReplaceUnit(EEUnit* inOld, EEUnit* inNew)
 {
-    for (EEEffect* theEffect = this->mEffects; theEffect; theEffect = theEffect->mNext)
+    for (EEEffect* theEffect = this->First(); theEffect; theEffect = this->Next(theEffect))
         theEffect->ReplaceUnit(inOld, inNew);
+}
+
+// TEST ONLY (tools/sim_capture.py EFMU): the manager's state after every Update, folded: the last handle, the
+// index's, the list's and the destruction queue's sizes and an FNV-1a 64 of the index (handle, the effect's kind and
+// own handle, in handle order), the list (handle and kind from the head) and the queue (R4.4, sixth round)
+static void EECaptureEffectManager(EEEffectManager* inManager)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    unsigned long long theHash = 0xcbf29ce484222325ull;
+    struct Fold {
+        static void Word(unsigned long long& ioHash, unsigned int inValue)
+        {
+            for (int i = 0; i < 4; i++) {
+                ioHash ^= (inValue >> (i * 8)) & 0xff;
+                ioHash *= 0x100000001b3ull;
+            }
+        }
+    };
+    unsigned int theListCount = 0;
+    uint32_t theHandle;
+    EEEffect* theEffect;
+    for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(inManager->mStore, c, &theHandle)));
+         c = (uint64_t)theHandle + 1) {
+        Fold::Word(theHash, (unsigned int)theHandle);
+        Fold::Word(theHash, (unsigned int)theEffect->mKind);
+        Fold::Word(theHash, (unsigned int)theEffect->mHandle.mValue);
+    }
+    for (theEffect = inManager->First(); theEffect; theEffect = inManager->Next(theEffect)) {
+        Fold::Word(theHash, (unsigned int)theEffect->mHandle.mValue);
+        Fold::Word(theHash, (unsigned int)theEffect->mKind);
+        theListCount++;
+    }
+    for (unsigned long i = 0; i < inManager->DestroyedCount(); i++)
+        Fold::Word(theHash, (unsigned int)ee_gfx_effects_destroyed_at(inManager->mStore, i));
+    EESimCaptureRecord theRecord((unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) |
+                                 ((unsigned int)'U' << 24));
+    theRecord.U32((unsigned int)ee_gfx_effects_last_handle(inManager->mStore));
+    theRecord.U32((unsigned int)inManager->Count());
+    theRecord.U32(theListCount);
+    theRecord.U32((unsigned int)inManager->DestroyedCount());
+    theRecord.U32((unsigned int)theHash);
+    theRecord.U32((unsigned int)(theHash >> 32));
+    theRecord.Commit();
 }
 
 // FUNCTION: EXE 0x507450
@@ -1048,28 +1084,26 @@ void EEEffectManager::Update()
 {
     this->mGoals.Update();
     this->DestroyQueued();
-    EEEffect* theEffect = this->mEffects;
+    EEEffect* theEffect = this->First();
     while (theEffect) {
-        EEEffect* theNext = theEffect->mNext;
+        EEEffect* theNext = this->Next(theEffect);
         if (theEffect->Step() == 7) {
-            EEEffectHandle theHandle = theEffect->mHandle;
-            std::map<unsigned long, EEEffect*>::iterator it = this->mEffectsByHandle.find(theHandle.mValue);
-            if (it != this->mEffectsByHandle.end())
-                this->mEffectsByHandle.erase(it);
+            ee_gfx_effects_erase(this->mStore, theEffect->mHandle.mValue);
             this->RemoveEffect(theEffect);
             theEffect->Release();
         }
         theEffect = theNext;
     }
+    EECaptureEffectManager(this);
 }
 
 // FUNCTION: EXE 0x5074c9
 // Tells every effect that the terrain height changed in a tile rectangle
 void EEEffectManager::ElevationChanged(long inLeft, long inTop, long inRight, long inBottom)
 {
-    EEEffect* theEffect = this->mEffects;
+    EEEffect* theEffect = this->First();
     while (theEffect) {
-        EEEffect* theNext = theEffect->mNext;
+        EEEffect* theNext = this->Next(theEffect);
         theEffect->ElevationChanged(inLeft, inTop, inRight, inBottom);
         theEffect = theNext;
     }

@@ -280,6 +280,29 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+/// `SetFile`, `SetRemoteFile`, `SetComment` (the bytes)
+constexpr static const int32_t EE_WON_FILEPUSH_FILE = 1;
+
+constexpr static const int32_t EE_WON_FILEPUSH_REMOTE_FILE = 2;
+
+constexpr static const int32_t EE_WON_FILEPUSH_COMMENT = 3;
+
+/// `SetCompress`, `SetBlockTransferSize` (the number)
+constexpr static const int32_t EE_WON_FILEPUSH_COMPRESS = 4;
+
+constexpr static const int32_t EE_WON_FILEPUSH_BLOCK_SIZE = 5;
+
+/// `SetModifyTime` (the number: high 32 bits `dwHighDateTime`, low `dwLowDateTime`)
+constexpr static const int32_t EE_WON_FILEPUSH_MODIFY_TIME = 6;
+
+/// `SetProgressCompletion` (the object)
+constexpr static const int32_t EE_WON_FILEPUSH_PROGRESS = 7;
+
+/// `GetTotalBytesSent`, `GetLastBytesSent`
+constexpr static const int32_t EE_WON_FILEPUSH_TOTAL_SENT = 10;
+
+constexpr static const int32_t EE_WON_FILEPUSH_LAST_SENT = 11;
+
 /// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
 constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
 
@@ -321,6 +344,34 @@ constexpr static const int32_t EE_WON_FTP_RECV = 4;
 
 /// return false (an unknown state)
 constexpr static const int32_t EE_WON_FTP_NONE = 5;
+
+/// `SetLocalPath`, `SetRemotePath`, `SetUserName`, `SetPassword` (the bytes)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL_PATH = 1;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE_PATH = 2;
+
+constexpr static const int32_t EE_WON_FTPGET_USER = 3;
+
+constexpr static const int32_t EE_WON_FTPGET_PASSWORD = 4;
+
+/// `SetIsBinary`, `SetDoResume` (the number)
+constexpr static const int32_t EE_WON_FTPGET_BINARY = 5;
+
+constexpr static const int32_t EE_WON_FTPGET_RESUME = 6;
+
+/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
+constexpr static const int32_t EE_WON_FTPGET_CHUNK = 7;
+
+/// `GetFTPStatus()` (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FTPGET_STATUS = 10;
+
+/// `GetContent()` (`ee_won_hostop_bytes`; none: NULL)
+constexpr static const int32_t EE_WON_FTPGET_CONTENT = 11;
+
+/// `GetLocalPath()`, `GetRemotePath()` (`ee_won_hostop_bytes`)
+constexpr static const int32_t EE_WON_FTPGET_LOCAL = 12;
+
+constexpr static const int32_t EE_WON_FTPGET_REMOTE = 13;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -686,6 +737,172 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+/// `GetStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_STATUS = 1;
+
+/// `GetMode()` -> out_num
+constexpr static const int32_t EE_WON_HOST_MODE = 2;
+
+/// `TimeLeft()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIME_LEFT = 3;
+
+/// `WONTickCount()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TICK = 4;
+
+/// `rand()` -> out_num
+constexpr static const int32_t EE_WON_HOST_RAND = 5;
+
+/// `srand(time(NULL))`
+constexpr static const int32_t EE_WON_HOST_SRAND = 6;
+
+/// `ServerOp::mLengthFieldSize` -> out_num
+constexpr static const int32_t EE_WON_HOST_LFS = 7;
+
+/// `ServerOp::SendTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SEND_TIME = 8;
+
+/// `ServerOp::RecvTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_RECV_TIME = 9;
+
+/// `new BlockingSocket(num0)` (0 TCP, 1 UDP) -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_SOCKET = 10;
+
+/// a new socket op of kind num0 (`EE_WON_HOST_OP_*`) on socket obj0 (NULL: the queue's) with data, addr and
+/// length num1 -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_OP = 11;
+
+/// `new AsyncOp` whose completion calls the op back with id num0 (`ee_won_hostop_callback`) -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_TIMER = 12;
+
+/// `new PeerAuthOp(addr, mAuthContext, mAuthType, obj0, num0)` with `CopyMaxTimes(this)` -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_PEER_AUTH = 13;
+
+/// `op->GetStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_STATUS = 20;
+
+/// a receive op's bytes (`GetBytes` / `GetMsg`; none: NULL) -> the sink
+constexpr static const int32_t EE_WON_HOST_OP_BYTES = 21;
+
+/// a datagram receive's sender (`GetAddr`) -> out_addr
+constexpr static const int32_t EE_WON_HOST_OP_ADDR = 22;
+
+/// a socket op's socket (`GetSocket`) -> out_obj, borrowed
+constexpr static const int32_t EE_WON_HOST_OP_SOCKET = 23;
+
+/// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_KEY = 24;
+
+/// `op->IsKilled()` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_KILLED = 25;
+
+/// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_BIND = 30;
+
+/// `socket->SetLengthFieldSize(num0)`
+constexpr static const int32_t EE_WON_HOST_SOCKET_SET_LFS = 31;
+
+/// `IPAddr::SetWithDefaultPort(data, num0)` (a name lookup) -> out_addr, out_num (valid)
+constexpr static const int32_t EE_WON_HOST_RESOLVE = 32;
+
+/// a receive op's `SetProgressCompletion(obj1, num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_PROGRESS = 33;
+
+/// a receive op's `SetFilePath(data)`, `SetAppendFile(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_FILE = 34;
+
+/// `socket->SendBytesTo(data, addr, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_BYTES_TO = 40;
+
+/// `socket->RecvBytesFrom(bytes, num0, addr, num1)` -> the sink, out_addr
+constexpr static const int32_t EE_WON_HOST_RECV_BYTES_FROM = 41;
+
+/// `socket->SendBytes(data, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_BYTES = 42;
+
+/// `socket->SendMsg(data, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_MSG = 43;
+
+/// `socket->RecvBytes(bytes, num0, num1)` -> the sink
+constexpr static const int32_t EE_WON_HOST_RECV_BYTES = 44;
+
+/// `socket->RecvMsg(bytes, num0)` -> the sink
+constexpr static const int32_t EE_WON_HOST_RECV_MSG = 45;
+
+/// `op->RunBlock(num0)` -> out_num (0/1)
+constexpr static const int32_t EE_WON_HOST_RUN_BLOCK = 46;
+
+/// `socket->Connect(addr, num0)`
+constexpr static const int32_t EE_WON_HOST_CONNECT = 47;
+
+/// `mFile.Attach(PlatFOpen(data, "rb"))` -> out_num (0: none)
+constexpr static const int32_t EE_WON_HOST_FILE_OPEN = 50;
+
+/// `fread(buffer, 1, num0, file)` -> the sink
+constexpr static const int32_t EE_WON_HOST_FILE_READ = 51;
+
+/// `mFile.Detach()`
+constexpr static const int32_t EE_WON_HOST_FILE_CLOSE = 52;
+
+/// `stat(data)`'s size -> out_num (-1: no file)
+constexpr static const int32_t EE_WON_HOST_FILE_SIZE = 53;
+
+/// `Finish(num0)`
+constexpr static const int32_t EE_WON_HOST_FINISH = 60;
+
+/// `obj0->Kill(num0)` (NULL: the op itself)
+constexpr static const int32_t EE_WON_HOST_KILL = 61;
+
+/// `Track(obj0, num0)`
+constexpr static const int32_t EE_WON_HOST_TRACK = 62;
+
+/// `obj0->QueueOp(obj1, num0)` (the socket, the op)
+constexpr static const int32_t EE_WON_HOST_QUEUE = 63;
+
+/// `obj0->RunAsync(num0)`
+constexpr static const int32_t EE_WON_HOST_RUN_ASYNC = 64;
+
+/// `obj0->Close()` (a socket)
+constexpr static const int32_t EE_WON_HOST_CLOSE = 65;
+
+/// `obj0->SetRepeatCompletion(...)` calling the op back with id num0, then `obj0->SetRepeatOp(obj1)`
+constexpr static const int32_t EE_WON_HOST_SET_REPEAT = 66;
+
+/// `obj0->Complete(this)` (a completion)
+constexpr static const int32_t EE_WON_HOST_COMPLETE = 67;
+
+/// `AsyncOpWithTracker::CleanupHook()`
+constexpr static const int32_t EE_WON_HOST_BASE_CLEANUP = 68;
+
+/// `obj0->Release()`
+constexpr static const int32_t EE_WON_HOST_RELEASE = 69;
+
+/// `obj0->AddRef()`
+constexpr static const int32_t EE_WON_HOST_ADD_REF = 70;
+
+/// `ConnectOp(addr)`
+constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
+
+/// `SendBytesOp(data)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_BYTES = 1;
+
+/// `SendBytesToOp(data, addr)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_BYTES_TO = 2;
+
+/// `SendMsgOp(data)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_MSG = 3;
+
+/// `RecvBytesOp(num1)`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_BYTES = 4;
+
+/// `RecvMsgOp()`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_MSG = 5;
+
+/// `RecvCRMsgOp()`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_CR_MSG = 6;
+
+/// `RecvBytesFromOp(num1)`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_BYTES_FROM = 7;
+
 /// `URL`'s types (`URLType`).
 constexpr static const int32_t EE_WON_URL_NONE = 0;
 
@@ -694,6 +911,39 @@ constexpr static const int32_t EE_WON_URL_FILE = 1;
 constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// the finished list's length
+constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
+
+/// an element's address (six bytes)
+constexpr static const int32_t EE_WON_MULTIPING_ADDR = 2;
+
+/// an element's ping time (-1: no reply)
+constexpr static const int32_t EE_WON_MULTIPING_TIME = 3;
+
+/// an element's failures
+constexpr static const int32_t EE_WON_MULTIPING_FAILURES = 4;
+
+/// an element's directory entity (`DirEntity*`, borrowed; NULL: none)
+constexpr static const int32_t EE_WON_MULTIPING_ENTITY = 5;
+
+/// whether `GetServerContext(true)` keeps the element (`GetServerContext(false)`: [`EE_WON_MULTIPING_KEEPS_ALL`])
+constexpr static const int32_t EE_WON_MULTIPING_KEEPS = 6;
+
+constexpr static const int32_t EE_WON_MULTIPING_KEEPS_ALL = 7;
+
+/// `SetBatchSize`, `SetMaxFailures`, `SetMaxPingTime` (the number)
+constexpr static const int32_t EE_WON_MULTIPING_BATCH_SIZE = 10;
+
+constexpr static const int32_t EE_WON_MULTIPING_MAX_FAILURES = 11;
+
+constexpr static const int32_t EE_WON_MULTIPING_MAX_PING_TIME = 12;
+
+/// `AddServer(addr)` / `AddServers`' element (the address, the entity or NULL)
+constexpr static const int32_t EE_WON_MULTIPING_ADD = 13;
+
+/// `ClearServers`
+constexpr static const int32_t EE_WON_MULTIPING_CLEAR = 14;
 
 /// The read failed here: the original threw `ReadBufferException` (`at`: the reader's position).
 constexpr static const uint8_t EE_WON_PATCH_CUT = 255;
@@ -755,6 +1005,56 @@ constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
 
 /// throw `ReadBufferException`
 constexpr static const int32_t EE_WON_REQOP_CUT = 2;
+
+/// `ContestCallOp`: the procedure number, whether there is request data, the data
+constexpr static const int32_t EE_WON_REQOPS_CONTEST = 1;
+
+/// `EventReportOp`: the activity type; has-server, server type, logical name (UTF-16 LE), net address; has-client,
+/// name (UTF-16 LE), net address; has-user, user id, name (UTF-16 LE); the detail count, each detail's type, data
+/// type, number, text (UTF-16 LE); the attachment count, each one's description (UTF-16 LE), content type,
+/// has-data, data
+constexpr static const int32_t EE_WON_REQOPS_EVENT = 2;
+
+/// `ReportPatchStatusOp`: product, config, from, to, net address, the patch status
+constexpr static const int32_t EE_WON_REQOPS_PATCH_STATUS = 3;
+
+/// `PingOp`: the length field size, the extended flag
+constexpr static const int32_t EE_WON_REQOPS_PING = 4;
+
+/// `GetUserIdFromNameOp`: the user name (UTF-16 LE)
+constexpr static const int32_t EE_WON_REQOPS_USER_ID = 5;
+
+/// `CheckValidVersionOp`: the product, the version record's config and version
+constexpr static const int32_t EE_WON_REQOPS_VERSION_CHECK = 6;
+
+/// the contest's `GetReplyData()` (bytes; none while NULL)
+constexpr static const int32_t EE_WON_REQOP_CONTEST_REPLY = 1;
+
+/// the patch status report's `mReplyData` (bytes; none while NULL)
+constexpr static const int32_t EE_WON_REQOP_PROXY_REPLY = 2;
+
+/// the ping's `mAppName`, `mLogicalName`, `mImage`, `mPorts`, `mRegData`, `mServData` (bytes, `+0` .. `+5`)
+constexpr static const int32_t EE_WON_REQOP_PING_TEXT = 10;
+
+/// the ping's `mLag` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_LAG = 20;
+
+/// the ping's `mVersion` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_VERSION = 21;
+
+/// the ping's `mPID` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_PID = 22;
+
+/// the ping's `mIsAuth` (number)
+constexpr static const int32_t EE_WON_REQOP_PING_IS_AUTH = 23;
+
+/// the user id lookup's `GetUserId()` (number)
+constexpr static const int32_t EE_WON_REQOP_USER_ID = 30;
+
+/// the version check's newest version and its description URL (bytes)
+constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
+
+constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
@@ -1238,6 +1538,359 @@ enum class EeWonLanJoinStep {
   Again = 4,
 };
 
+/// The op codes. Arguments: `a`, `b` pointers, `c`, `d` integers (a message is `a` = its `ByteBuffer*` or NULL for
+/// one Rust built, `c` = its bytes, `d` = their length).
+enum class EeWonLobbyOp : uint32_t {
+  /// `mGame.get()`.
+  StGame = 1,
+  /// `mMyClient.get()`.
+  StMyClient,
+  /// `mMyClient = LobbyGetNetMyClient()`; returns it.
+  StSetMyClientFromNet,
+  /// `mGame = a`.
+  StSetGame,
+  /// `mJoinOp = new AsyncOp`.
+  StJoinOpNew,
+  /// `if (mJoinOp) mJoinOp->Finish(WS_Success)`.
+  StJoinOpFinish,
+  /// `LobbyRunOpWithStatus(mJoinOp, GettingGameInfo, 1, 0)`, then `mJoinOp = NULL`.
+  StJoinOpRun,
+  /// `if (mJoinOp) { mJoinOp->Kill(true); mJoinOp = NULL; }`.
+  StJoinOpKill,
+  /// `mGame->GetJoinRequest()` sent with `this->SendToCaptain`.
+  StSendJoinRequest,
+  /// `mCreateGameDialog->SetGameType(c); Reset(false); return LobbyDoDialog(dialog)`.
+  StCreateDialogRun,
+  /// `aGame = mCreateGameDialog->GetGame(); aGame->SetAddress(LobbyGetMyAddress(c)); mGame = aGame`; held.
+  StTakeDialogGame,
+  /// Logout's tail: `mCreateGameDialog->Reset(true)`, `LobbyNetLogout`, `LobbyKillPings(0)`,
+  /// `LobbyShowLoginScreen`, `LobbySaveGlobalPrefs(false)`, `LobbySaveUserPrefs(false)`, the logon sound stopped.
+  StLogoutTail,
+  /// `new ClientModeratedEvent(a, c, mGame->GetName(), d >> 1, 0, d & 1, "")` broadcast.
+  StClientModerated,
+  /// `a->AddRef()`: Rust holds it (returns `a`).
+  GameHold = 39,
+  GameRelease = 40,
+  GameIsHost,
+  GameFindClient,
+  GameType,
+  GameIsInProgress,
+  GameAreAllReady,
+  GameCanReady,
+  /// `CanStartGame() && TryStartGame()`.
+  GameCanStartAndTry,
+  GamePingReplied,
+  GameIsPinging,
+  /// `a->IsSameGame(b)`.
+  GameIsSameGame,
+  GameJoinStatus,
+  GamePing,
+  /// `LobbyGame::CreateGame(a's type)` with `CopyFrom(a)`; held.
+  GameNewCopy,
+  GamePreNetCreate,
+  GamePostNetCreate,
+  GamePreNetJoin,
+  GamePostNetJoin,
+  /// `SetIsHost(true)`, `SetCaptainId(b's id)`, `b->SetCaptain(true, true)`.
+  GameBecomeHost,
+  /// `GetClients()->AddClient(b)`, `HandleHostGame(b)`.
+  GameAddHostClient,
+  /// `ClearPlayers()`, `mMyClient = NULL`, `PreNetLeaveGame()`, `LobbyNetLeaveGame(a)`, `PostNetLeaveGame()`.
+  GameLeaveNet,
+  GameRemoveClient,
+  GameHandlePlayerJoined,
+  /// `SetInProgress(c)`, `LobbyNetSetGameInProgress(c)`, `LobbyNetAdvertiseGame()`.
+  GameSetInProgressNet,
+  /// every client with a player: `SetReady(false)` and a `PlayerChangedEvent(client, 2)`.
+  GameResetReadyFlags,
+  /// `a->GetJoinReply(*b, d)`; if not NULL sent with `this->SendToClient(d, reply)`: 1 sent, 0 none, Threw.
+  GameJoinReplySend,
+  /// `a->HandleJoinReply(*b)` or Threw.
+  GameHandleJoinReply,
+  /// `a->HandleGameMessage(c, *b, d)`: 0 or Threw.
+  GameHandleGameMessage,
+  /// `LobbyMessageBox(JoinGameErrorTitle, a->GetStatusString(c))`.
+  GameShowStatus,
+  /// `LobbyPingGame(a, true)` and a `GameChangedEvent(a, 2)`.
+  GamePingAndNotify,
+  /// `LobbyQueryGameDetails(a)`, `SetShowDetails(true)`, a `GameChangedEvent(a, 2)`.
+  GameShowDetails,
+  /// `SetShowDetails(false)`, a `GameChangedEvent(a, 2)`.
+  GameHideDetails,
+  /// `LobbyDispatchEvent(new ChangeDirectConnectEvent(1, a))`.
+  GameDirectConnect,
+  /// a `GameOptionsPopup` for `a` opened as a standard popup.
+  GameShowOptions,
+  ClientHasPlayer = 80,
+  ClientPlayer,
+  ClientIsReady,
+  ClientId,
+  /// `IsCaptain(1)`.
+  ClientIsGameCaptain,
+  /// `a->IsTeammate(b)`.
+  ClientIsTeammate,
+  ClientPlayerSetReady,
+  ClientPlayerSetPing,
+  /// a new player read from `*b` set on `a`: 1, 0 when the read failed, or Threw.
+  ClientReadPlayer,
+  /// the player-joined head for `a` and its player's bytes broadcast with `this->BroadcastToGame`.
+  ClientBroadcastJoined,
+  /// `new PlayerChangedEvent(a, c)` broadcast.
+  ClientChanged,
+  /// `new PlayerTeamChangedEvent(a, c)` broadcast.
+  ClientTeamChanged,
+  /// `b->SetPos(b->pos() + c)`.
+  BufSkip = 110,
+  /// a `ReadBuffer` over the message handed to `this->HandleMessage(.., b)`.
+  HandleBytes,
+  /// `LobbyNetSendToCaptain(message)`.
+  NetSendToCaptain,
+  /// `LobbyNetBroadcastToGame(message)`.
+  NetBroadcastToGame,
+  /// `LobbyNetSendToClient(b, message)`.
+  NetSendToClient,
+  NetKickClient,
+  NetRemoveGameAdvertisement,
+  NetHostGame,
+  NetJoinGame,
+  NetAdvertiseGame,
+  /// `static_cast<JoinGameEvent*>(a)->mGame.get()`.
+  EventJoinGame,
+  /// `static_cast<GameActionEvent*>(a)->mGame.get()`.
+  EventActionGame,
+  /// `static_cast<GameActionEvent*>(a)->mAction`.
+  EventAction,
+  BroadcastLobbyEvent = 140,
+  MessageBox,
+  YesNo,
+  /// a new AsyncOp run with status (text `c`, mode `d`, 500 ms); returns whether it was killed.
+  RunWaitOp,
+  PlaySound,
+  StagingSoundEffects,
+  ShowConfirmations,
+  FirewallTestDone,
+  BehindFirewall,
+  GameScreenType,
+  /// -1 without a lobby config, else its `mAllowJoinGameWithoutPing`.
+  AllowJoinWithoutPing,
+  Exit,
+  /// `time(NULL)`.
+  Now,
+  /// `mMyClient.get()`.
+  LanMyClient = 200,
+  /// `mMyClient = a`.
+  LanSetMyClient,
+  LanListenSocket,
+  LanServerSocket,
+  LanNetworkTimer,
+  LanDiscoveryTimer,
+  LanDiscoverySocket,
+  /// `&mDiscoveryAddress`.
+  LanDiscoveryAddress,
+  /// the lobby's auth context, if any, stops refreshing its certificate.
+  LanAuthAutoRefreshOff,
+  /// CloseConnections' sockets: the listen socket killed, the host socket closed, the network timer killed, every
+  /// pending socket closed, `mMyClient`, the socket set and the client list cleared.
+  LanCloseSockets,
+  /// `static_cast<SocketOp*>(a)->GetSocket()`.
+  LanOpSocket,
+  /// a LobbyLanSocket's client.
+  LanSocketClient,
+  /// `a->SetClient(b)`.
+  LanSocketSetClient,
+  /// `mPendingSockets.erase(a)`.
+  LanForgetSocket,
+  /// `mServerSocket->Kill()`, `mServerSocket = NULL`, `LobbyGameDisconnected(true)`.
+  LanLoseHost,
+  LanPendingCount,
+  /// the pending socket `c` in the set's order.
+  LanPendingAt,
+  LanSocketLastTime,
+  /// `a->QueueClose(c)`.
+  LanSocketClose,
+  LanStartNetworkTimer,
+  /// `GetMyLobbyGame()`.
+  LanMyGame,
+  /// a LAN join's subnet bytes: the peer's `GetSixByte()[2..4]` and ours, packed low to high.
+  LanSubnets,
+  /// whether the password (`c` UTF-16 units, `d` of them) is `a`'s.
+  LanGamePasswordIs,
+  /// a SendMsgOp of the message queued on the socket `b`.
+  LanSocketSend,
+  /// a new LobbyLanClient named `c`/`d` (UTF-16 units); held.
+  LanNewClient,
+  /// `a->SetClientId(c)`, `mClients->AddClient(a)`.
+  LanAddClient,
+  ClientHold,
+  ClientRelease,
+  /// `a`'s name, taken.
+  ClientNameTake,
+  LanClientCount,
+  /// the client `c` in the list's order.
+  LanClientAt,
+  /// `mClients->FindClient(c)`.
+  LanFindClient,
+  /// `mClients->RemoveClient(c)`; held.
+  LanRemoveClient,
+  /// `new ClientChangedEvent(a, 8, c)` broadcast.
+  LanClientChanged,
+  /// `LobbyClientLeftGame(a)`.
+  ClientLeftGame,
+  GameSetCaptainId,
+  /// `mServerSocket->SetClient(a)`, `a->SetCaptain(true, true)`.
+  LanServerClientIsCaptain,
+  /// the receive op succeeded and was not killed.
+  LanRecvOk,
+  /// the socket's last message time is now.
+  LanSocketStamp,
+  /// the receive op's message (its ByteBuffer, or 0), taken.
+  LanRecvMsgTake,
+  /// AddPendingSocket: the close and receive completions, the receive op, the time, the set.
+  LanAddPending,
+  /// a LobbyLanClient's socket.
+  LanClientSocket,
+  /// a SendMsgOp of the message queued on the client `b`'s socket.
+  LanClientSocketSend,
+  /// `mServerSocket->QueueOp(new SendMsgOp(message))`.
+  LanServerSend,
+  ClientIsIgnored,
+  /// a whisper received: the sound (if the chat sounds are on), the parser's reply name.
+  LanWhisperReceived,
+  /// `new RecvChatEvent(8, d >> 32, a, text, b)` broadcast; the text is `c` with `d & 0xffffffff` units.
+  LanRecvChat,
+  /// the staging message (the bytes from its type byte) read past the type and handed to the staging logic.
+  LanStagingRead,
+  /// ChangeLanName's dialog: Reset, LobbyDoDialog.
+  LanNameDialogRun,
+  LanNameDialogLength,
+  /// `LobbySetLanName(dialog's name)`, the lobby event 0x186d2.
+  LanNameDialogSave,
+  LanBroadcastPort,
+  /// ChangeLanPort's dialog: the game port, the port `c`, Reset, LobbyDoDialog.
+  LanPortDialogRun,
+  LanPortDialogPort,
+  /// `LobbySetLanBroadcastPort(c)`, the lobby event 0x186d2.
+  LanSetBroadcastPort,
+  /// `a->mComponent`.
+  EventComponent,
+  EventDirectIsDelete,
+  EventDirectIsAdd,
+  EventDirectGame,
+  /// a saved direct-connect game removed: the saved one, the list's, a `GameChangedEvent(a, 1)`.
+  LanDirectRemove,
+  /// HandleChangeDirectConnect's add: the dialog and the address (its DNS check), the game and its event.
+  LanDirectAdd,
+  /// a ClientOptionsPopup for `a` (room spec `c`).
+  LanShowClientOptions,
+  EventClientActionClient,
+  EventClientActionRoomSpec,
+  EventClientActionAction,
+  /// `LobbySetClientIgnored(a, c, d)`.
+  SetClientIgnored,
+  /// `new SetChatInputEvent(2, a's name, c, false)` broadcast.
+  LanSetChatInput,
+  /// `LobbyKickClient(a, false)`.
+  KickClientFromLobby,
+  /// `LobbyGetChatCommandParser()`.
+  ChatParser,
+  ParserRoomFlags,
+  ParserTarget,
+  ParserCommand,
+  ParserTextTake,
+  /// `LobbySendEventTo(new ChatCommandErrorEvent(InvalidCommand), a)`.
+  LanChatCommandError,
+  /// the LAN games cleared and synced.
+  LanClearLanGames,
+  /// every unfiltered direct-connect game pinged, the lobby event 0x186da.
+  LanPingDirectGames,
+  /// EnterLanScreen's lists: no current user, the games cleared, the saved direct-connect games, their sync.
+  LanEnterScreenLists,
+  ShowLanScreen,
+  DoCDKeyCheck,
+  KillFirewallTest,
+  /// RefreshCertificate.
+  LanRefreshCertificate,
+  /// HostGame's client: a new LobbyLanClient (id `c`, the LAN name, captain) added, the game's clients.
+  LanHostMyClient,
+  /// HostGame's listen socket bound and listening (an error dialog when not), its accept op, JoinedRoomEvent.
+  LanHostListen,
+  GameAddressPort,
+  /// the summary: the head (the message), the game's summary, sent to the address `b`.
+  LanSendSummary,
+  /// a SendBytesToOp of the message to the address `b`.
+  LanDiscoverySend,
+  /// stale LAN games removed (synced if any).
+  LanRemoveStaleGames,
+  LanStartDiscoveryTimer,
+  /// the discovery receive op is the discovery socket's and succeeded.
+  LanDiscoveryOk,
+  /// its bytes, taken.
+  LanDiscoveryTake,
+  /// HandleGameSummary from the packet past its head (port `c`).
+  LanGameSummary,
+  /// HandleGameKeepAlive (port `c`).
+  LanGameKeepAlive,
+  /// HandleGameRemoved (port `c`).
+  LanGameRemoved,
+  /// the receive op's sender address.
+  LanRecvFrom,
+  /// StartDiscovery's socket: the address, the QueueSocket, its bind (0 when bound).
+  LanOpenDiscovery,
+  /// the discovery socket's receive completion and op.
+  LanDiscoveryArm,
+  LanStopDiscovery,
+  LanClearDirectGames,
+  /// the accept op's socket (NULL when it failed or was killed).
+  LanAcceptedSocket,
+  /// a PeerAuthServerOp on the socket, tracked (30 s); nothing without an auth context.
+  LanStartPeerAuth,
+  /// `mServerSocket = new LobbyLanSocket`.
+  LanNewServerSocket,
+  GameHasPassword,
+  /// JoinGame's password: emptied.
+  LanJoinPasswordClear,
+  /// the password dialog: Reset, LobbyDoDialog, the password kept on OK.
+  LanPasswordDialogRun,
+  /// a PeerAuthOp (`c`) or ConnectOp to the game run with status: whether it succeeded.
+  LanConnect,
+  /// `LobbyGetLanName()`, taken.
+  LanNameTake,
+  LanJoinPasswordTake,
+  /// a RecvMsgOp on the host socket run with status: -1 failed, 0 no message, 1 its bytes taken.
+  LanRecvReplyTake,
+  /// JoinGame's end: the host socket's completions and receive op, the network timer, the game's clients,
+  /// JoinedRoomEvent.
+  LanJoinArm,
+};
+
+/// The inward calls (LanLogic's virtual slots and its completions). `a`, `b` pointers, `c`, `d` integers; a
+/// message is `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonLanCall : uint32_t {
+  /// The LAN name (1), LAN port (2), refresh (3) and LAN screen (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  HostGame,
+  JoinGame,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  AdvertiseGame,
+  RemoveGameAdvertisement,
+  /// `KickClient(b)`.
+  KickClient,
+  LeaveGame,
+  Logout,
+  /// The completions (`a` the op).
+  SocketClosed,
+  NetworkTimer,
+  RecvMsg,
+  DiscoveryTimer,
+  DiscoveryRecv,
+  Accept,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -1341,6 +1994,170 @@ enum class EeWonReadySound {
   NotReady = 2,
 };
 
+/// The inward calls (StagingLogic's methods the lobby calls). `a`, `b` pointers, `c`, `d` integers; a message is
+/// `a` its `ByteBuffer*`, `c` its bytes, `d` their length.
+enum class EeWonStagingCall : uint32_t {
+  /// The host (1), leave (2), logout (3) and start/ready (4) buttons (`c`).
+  Control = 1,
+  /// A component event: `c` its type, `a` the event.
+  ComponentEvent,
+  /// `HandleMessage(*a, b)`: `c` the bytes from the buffer's position, `d` their length.
+  HandleMessage,
+  SendToCaptain,
+  BroadcastToGame,
+  /// `SendToClient(b, message)`.
+  SendToClient,
+  IAmCaptain,
+  IAmReady,
+  JoinGame,
+  HostGame,
+  Logout,
+  /// `KickClient(b, c)`.
+  KickClient,
+  HandleDisconnect,
+  /// `HandleClientLeft(b)`.
+  HandleClientLeft,
+  /// `HandleKicked(b, c)`.
+  HandleKicked,
+  ResetReadyFlags,
+  SetGameInProgress,
+  LeaveGame,
+  NotifyStagingChange,
+  NotifyPingChange,
+};
+
+/// The op codes. `a`..`d` are integers or pointers as each says.
+enum class EeWonGuiOp : uint32_t {
+  /// the field `a` (`EeWonGuiField`).
+  Get = 1,
+  /// the field `a` = `b`.
+  Set,
+  /// `ScrollArea::Virtual08()` (it calls the virtual AdjustPosition back).
+  BaseSizeChanged,
+  /// `ScrollArea::AdjustPosition(a != 0)`.
+  BaseAdjustPosition,
+  /// `ScrollArea::NotifyRootVisibility(a != 0)`.
+  BaseNotifyRootVisibility,
+  /// `ScrollArea::MouseDown(a, b, c)`.
+  BaseMouseDown,
+  /// `ScrollArea::MouseUp(a, b, c)`.
+  BaseMouseUp,
+  /// `ScrollArea::MouseExit()`.
+  BaseMouseExit,
+  /// `ScrollArea::MouseMove(a, b)`.
+  BaseMouseMove,
+  /// `ScrollArea::MouseEnter(a, b)`.
+  BaseMouseEnter,
+  /// `ScrollArea::MouseDrag(a, b)`.
+  BaseMouseDrag,
+  /// `ScrollArea::KeyDown(a)` (0 or 1).
+  BaseKeyDown,
+  /// `ScrollArea::KeyChar(a)` (0 or 1).
+  BaseKeyChar,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `Invalidate()`.
+  Invalidate = 30,
+  /// `RequestTimer(a != 0)`.
+  RequestTimer,
+  /// `RequestFocus()`.
+  RequestFocus,
+  /// `GetMousePos(*a, *b)` (`a`, `b` point at i32s).
+  GetMousePos,
+  /// `GetKeyMod()`.
+  KeyMod,
+  /// `mParent->SetCursor(a)` (`EeWonGuiCursor`).
+  SetParentCursor,
+  /// the selection colours into `*a` (an `EeWonSelColor`).
+  SelColor,
+  /// `mLinkParam = a->GetLinkParam(); DeliverEvent(new TextLinkActivatedEvent(this, a), false)`.
+  LinkActivated,
+  /// the copied text (a GUIString the C++ object keeps) `.append(a->mText, b, c)`.
+  SelTextAppend,
+  /// the copied text `.append("\r\n")`.
+  SelTextBreak,
+  /// `Clipboard::Set(copied text)`, then the copied text emptied.
+  SelTextCopy,
+  /// `a->AddRef()`.
+  SegHold = 60,
+  /// `a->Release()`.
+  SegRelease,
+  /// `a->mLineBreak` (0 or 1).
+  SegLineBreak,
+  /// `a->GetLength()`.
+  SegLength,
+  /// `a->CalcDimensions()`'s measures into `*b` (three i32s: the text's width, the font's height and ascent).
+  SegMeasure,
+  /// `a->mFont->GetStringWidth(a->mText, b, c)`.
+  SegStringWidth,
+  /// `a->mFont->GetCharacterWidth(a->mText[b])`.
+  SegCharWidth,
+  /// `a`'s text units appended to the Rust buffer `b` with `ee_won_gui_sink_units`.
+  SegTextTake,
+  /// `a->IsLink()` (0 or 1).
+  SegIsLink,
+  /// `a->Pressed()`.
+  SegPressed,
+  /// `a->Released()` (0 or 1).
+  SegReleased,
+  /// `a->mColor`.
+  SegColor,
+  /// executes the draw operation `*b` (an `EeWonDrawOp`) on the Graphics `a`, its font and string slots the
+  /// segment `c`'s font and text (none when `c` is 0).
+  Draw = 90,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
+enum class EeWonTextCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseMove(a, b)`.
+  MouseMove,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `TimerEvent()` (0 or 1).
+  TimerEvent,
+  /// `KeyChar(a)` (0 or 1).
+  KeyChar,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `NotifyRootVisibility(a != 0)`.
+  NotifyRootVisibility,
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `CheckSel(a, b, c != 0)`.
+  CheckSel,
+  /// `Reset(a != 0)`.
+  Reset,
+  /// `AddSegment(a)` (a C++ `TextSegment` or one derived from it).
+  AddSegment,
+  /// `LineBreak(a)`.
+  LineBreak,
+  /// `SetLineAlignment(a)` (`HorzAlign`).
+  SetLineAlignment,
+  /// `SetTextFlags(a, b != 0)`.
+  SetTextFlags,
+  /// `SetMaxChars(a)`.
+  SetMaxChars,
+  /// `SetMaxLines(a)`.
+  SetMaxLines,
+  /// `SetWrapIndentSize(a)`.
+  SetWrapIndentSize,
+  /// `GetNumLines()`.
+  GetNumLines,
+  /// `mTextFlags`.
+  TextFlags,
+};
+
 /// What `HandleInstruction` does with an instruction its `ConfigObject` base did not take.
 enum class EeWonTitleInstr {
   /// Not a title instruction: `false`.
@@ -1355,6 +2172,76 @@ enum class EeWonTitleInstr {
   ErrorTitleInCommunity,
   /// `"You can't nest communities!"`.
   ErrorNestCommunity,
+};
+
+/// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
+/// caught it in `HandleMessage` and did nothing more); outside every `short` status.
+enum class EeWonLobbyResult {
+  Threw = 65536,
+};
+
+/// The string pairs (title, details) of the message boxes, yes/no dialogs and status waits.
+enum class EeWonLobbyText : uint32_t {
+  GameDissolved = 0,
+  AlreadyJoined = 1,
+  NoPingReply = 2,
+  Disconnected = 3,
+  Banned = 4,
+  Kicked = 5,
+  ConnectWarning1 = 6,
+  ConnectWarning2 = 7,
+  ConnectWarning3 = 8,
+  DissolveGame = 9,
+  LeaveGame = 10,
+  VerifyingPing = 11,
+  GettingGameInfo = 12,
+  WrongPassword = 13,
+  OtherSubnet = 14,
+};
+
+/// The lobby sounds an op plays.
+enum class EeWonLobbySound : uint32_t {
+  PlayerJoined = 0,
+  AllReady = 1,
+  AllNotReady = 2,
+};
+
+/// A base class field the Rust object reads or writes (`Get` / `Set`).
+enum class EeWonGuiField : uint32_t {
+  /// `mScrollArea.width`.
+  ScrollWidth = 0,
+  /// `mScrollArea.height`.
+  ScrollHeight,
+  /// `mVertOffset`.
+  VertOffset,
+  /// `mHorzOffset`.
+  HorzOffset,
+  /// `mTotalWidth`.
+  TotalWidth,
+  /// `mTotalHeight`.
+  TotalHeight,
+  /// `mExtraHeight`.
+  ExtraHeight,
+  /// `mUserHasScrolled` (0 or 1).
+  UserHasScrolled,
+  /// `mUpScrollAmount`.
+  UpScrollAmount,
+  /// `mDownScrollAmount`.
+  DownScrollAmount,
+  /// `Width()` (read only).
+  Width,
+  /// `Height()` (read only).
+  Height,
+};
+
+/// The cursor `SetParentCursor` sets on the parent.
+enum class EeWonGuiCursor : uint32_t {
+  /// NULL (the parent's own).
+  None = 0,
+  /// `Cursor::GetStandardCursor(StandardCursor_Hand)`.
+  Hand = 1,
+  /// `Cursor::GetStandardCursor(StandardCursor_IBeam)`.
+  IBeam = 2,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -1390,6 +2277,9 @@ struct EeWonFirewallOp;
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
 
+/// An op of the Rust op base, as the C++ `RustServerOp` holds it.
+struct EeWonHostOp;
+
 /// `HTTPConnection`.
 struct EeWonHttpConn;
 
@@ -1399,6 +2289,9 @@ struct EeWonHttpSession;
 
 /// `IPAddr`'s value.
 struct EeWonIpAddr;
+
+/// LanLogic's scalar state (the original's 0x6c, 0x74, 0xa8, 0xb4, 0xb6).
+struct EeWonLan;
 
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
@@ -1432,6 +2325,12 @@ struct EeWonSocketOp;
 
 /// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
 struct EeWonSocketThread;
+
+/// StagingLogic's state (the original's members 0x4c..0x54).
+struct EeWonStaging;
+
+/// The Rust TextArea.
+struct EeWonText;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -2442,6 +3341,26 @@ struct EeWonBreak {
   int32_t width;
 };
 
+/// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
+/// (not called: NULL).
+struct EeWonHostCall {
+  int32_t code;
+  void *obj[2];
+  int64_t num[2];
+  const uint8_t *data;
+  size_t len;
+  /// an address's six bytes (`IPAddr::GetSixByte`)
+  uint8_t addr[6];
+  void *out_obj;
+  int64_t out_num;
+  uint8_t out_addr[6];
+  EeWonByteSink out_sink;
+  void *out_context;
+};
+
+/// The C++ side's one function: `host` is the `RustServerOp` (or a driver's stand-in).
+using EeWonHostFn = void(*)(void *host, EeWonHostCall *call);
+
 /// One header line's reading.
 struct EeWonHttpHeader {
   /// false: no colon (the line is ignored)
@@ -2593,6 +3512,14 @@ struct EeWonLanChatCommand {
   uint16_t flags;
   bool whisper;
 };
+
+/// The host: `(logic, op, a, b, c, d) -> result`. `logic` is the C++ object the Rust one belongs to.
+using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
+                                      EeWonLobbyOp op,
+                                      void *a,
+                                      void *b,
+                                      ptrdiff_t c,
+                                      ptrdiff_t d);
 
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
@@ -3177,6 +4104,14 @@ struct EeWonGameSummary {
   uint32_t read;
   size_t rest;
 };
+
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
 /// to auto-delete, `destroy(context)` (the C++ deletes the object, and with it this one).
@@ -4946,6 +5881,12 @@ int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
 
+/// `new FilePushOp(addr)` (the address's six bytes): the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `addr` points to six bytes.
+EeWonHostOp *ee_won_filepush_new(const uint8_t *addr);
+
 EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
 
 EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
@@ -5081,6 +6022,21 @@ void ee_won_ftp_reply(const uint8_t *line,
                       bool has_directory,
                       bool resume,
                       EeWonFtpStep *out);
+
+/// `new FTPGetOp(host, remotePath)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_ftpget_new(const uint8_t *host,
+                               size_t host_len,
+                               const uint8_t *path,
+                               size_t path_len);
+
+/// `new FTPGetOp(url, doExtractUserAndPassword)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_ftpget_new_url(const uint8_t *url, size_t len, bool extract);
 
 /// `DetectFirewallOp`'s members after `Init`.
 EeWonFirewallOp *ee_won_fwop_new();
@@ -6113,6 +7069,15 @@ bool ee_won_gui_button_state_cell(int32_t state,
                                   int32_t *out_state,
                                   int32_t *out_checked);
 
+/// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `units` holds `count` units of `unit_size` bytes.
+void ee_won_gui_sink_units(void *sink,
+                           const void *units,
+                           size_t count,
+                           size_t unit_size);
+
 /// The LAYOUT keyword `index` (0-14) as a NUL-terminated ASCII name and its flag; false past the table.
 ///
 /// # Safety
@@ -7050,6 +8015,74 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// Binds the C++ side's function (`host` its first argument) before any other call.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
+
+/// `RunHook`.
+///
+/// # Safety
+/// `op` is a live, bound op.
+void ee_won_hostop_run(const EeWonHostOp *op);
+
+/// `CallbackHook(done, id)` for a tracked op, or a completion this op made (a timer's, a repeating receive's) with
+/// its id: whether the op knew the id.
+///
+/// # Safety
+/// `op` is a live, bound op; `done` the finished C++ op.
+bool ee_won_hostop_callback(const EeWonHostOp *op,
+                            int32_t id,
+                            void *done);
+
+/// `CleanupHook`.
+///
+/// # Safety
+/// `op` is a live, bound op.
+void ee_won_hostop_cleanup(const EeWonHostOp *op);
+
+/// A result by number (the op's `EE_WON_*` constants).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_hostop_num(const EeWonHostOp *op, int32_t which, int64_t index);
+
+/// A result's bytes by number, to `sink`: false (the sink not called) for none.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+bool ee_won_hostop_bytes(const EeWonHostOp *op,
+                         int32_t which,
+                         int64_t index,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or
+/// an object (the op takes its own reference).
+///
+/// # Safety
+/// `op` is a live, bound op; `data` holds `len` bytes; `addr` is NULL or six bytes.
+void ee_won_hostop_set(const EeWonHostOp *op,
+                       int32_t which,
+                       int64_t num,
+                       const uint8_t *data,
+                       size_t len,
+                       const uint8_t *addr,
+                       void *obj);
+
+/// The members, one line (the drivers' form).
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+void ee_won_hostop_describe(const EeWonHostOp *op, EeWonByteSink sink, void *context);
+
+/// Frees the op, releasing every object it holds through the bound function first.
+///
+/// # Safety
+/// `op` is NULL or an op from one of the constructors, not used after.
+void ee_won_hostop_free(EeWonHostOp *op);
+
 /// `MakeInternetDateTime` into `sink`.
 ///
 /// # Safety
@@ -7440,6 +8473,32 @@ bool ee_won_lanlogic_direct_name_is_address(size_t name_length);
 
 int32_t ee_won_lanlogic_direct_event(bool existed);
 
+/// A new LanLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonLan *ee_won_lan_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `lan` came from `ee_won_lan_new` (or is NULL) and is not used again.
+void ee_won_lan_free(EeWonLan *lan);
+
+/// One of LanLogic's methods (`EeWonLanCall`).
+///
+/// # Safety
+/// `lan` is live; the call's arguments as documented.
+ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
+                          EeWonLanCall call,
+                          void *a,
+                          void *b,
+                          ptrdiff_t c,
+                          ptrdiff_t d);
+
+/// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
+///
+/// # Safety
+/// `sink` is the `b` of a take op; `bytes` holds `length` bytes.
+void ee_won_lobby_sink(void *sink,
+                       const uint8_t *bytes,
+                       size_t length);
+
 /// A new, empty container.
 EeWonLobbyMap *ee_won_lobbymap_new(EeWonLobbyKeyKind kind, EeWonLobbyMapHooks hooks);
 
@@ -7681,6 +8740,9 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
+EeWonHostOp *ee_won_multiping_new();
 
 /// # Safety
 /// `hooks` lives for the program; `op` is the C++ op being constructed.
@@ -8480,11 +9542,49 @@ void ee_won_reqop_free(EeWonReqOp *op);
 /// `op` is a live op.
 uint8_t ee_won_reqop_length_field_size(const EeWonReqOp *op);
 
-/// The op's `RunHook` statements before the base's.
+/// The `mUseAuth2` the op asks for.
 ///
 /// # Safety
 /// `op` is a live op.
-void ee_won_reqop_run_hook(EeWonReqOp *op);
+bool ee_won_reqop_use_auth2(const EeWonReqOp *op);
+
+/// The op's `RunHook` statements before the base's, for the request's `mAuthType`: false when the op finished
+/// instead (`*finish` the status to finish with; the base's `RunHook` does not run).
+///
+/// # Safety
+/// `op` is a live op; `finish` is writable.
+bool ee_won_reqop_run_hook(EeWonReqOp *op,
+                           int32_t auth_type,
+                           int32_t *finish);
+
+/// Whether the op's request reads the certificate's user id (the C++ reads it only then).
+///
+/// # Safety
+/// `op` is a live op.
+bool ee_won_reqop_needs_user_id(const EeWonReqOp *op);
+
+/// The certificate's user id and `WONTickCount()`, before `GetNextRequest` and before `CheckResponse`.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_reqop_set_env(EeWonReqOp *op,
+                          uint32_t user_id,
+                          uint32_t now);
+
+/// A result's bytes (the op's `EE_WON_REQOP_*` number) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+bool ee_won_reqop_bytes(const EeWonReqOp *op,
+                        int32_t which,
+                        EeWonByteSink sink,
+                        void *context);
+
+/// A result's number (the op's `EE_WON_REQOP_*` number).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_reqop_num(const EeWonReqOp *op, int32_t which);
 
 /// `GetNextRequest`: the request into `sink` (when there is one), the status returned.
 ///
@@ -8515,6 +9615,32 @@ void ee_won_reqop_reset(EeWonReqOp *op);
 /// # Safety
 /// `op` is a live op; `sink` accepts `context`.
 void ee_won_reqop_describe(const EeWonReqOp *op, EeWonByteSink sink, void *context);
+
+/// An op of `kind` (`EE_WON_REQOPS_*`) with its members, for a C++ `ServerRequestOp` to run; NULL for an unknown
+/// kind.
+///
+/// # Safety
+/// `values` holds `count` values whose byte ranges are valid.
+EeWonReqOp *ee_won_reqops_new(int32_t kind,
+                              const EeWonAdminValue *values,
+                              size_t count);
+
+/// The lobby's friend id lookup (`GetUserIdFromNameOp` with its user name, UTF-16 LE).
+///
+/// # Safety
+/// `name` holds `len` bytes.
+EeWonReqOp *ee_won_reqop_user_id(const uint8_t *name, size_t len);
+
+/// The lobby's version check (`CheckValidVersionOp` with its product, config and version).
+///
+/// # Safety
+/// Each pointer holds its length's bytes.
+EeWonReqOp *ee_won_reqop_version_check(const uint8_t *product,
+                                       size_t product_len,
+                                       const uint8_t *config,
+                                       size_t config_len,
+                                       const uint8_t *version,
+                                       size_t version_len);
 
 size_t ee_won_resource_count();
 
@@ -9380,6 +10506,24 @@ void ee_won_game_read_summary(const uint8_t *bytes,
                               EeWonUnitSink name_sink,
                               void *context);
 
+/// A new StagingLogic state for the C++ shell `logic`, calling out through `host`.
+EeWonStaging *ee_won_staging_new(void *logic, EeWonLobbyHostFn host);
+
+/// # Safety
+/// `staging` came from `ee_won_staging_new` (or is NULL) and is not used again.
+void ee_won_staging_free(EeWonStaging *staging);
+
+/// One of StagingLogic's methods (`EeWonStagingCall`).
+///
+/// # Safety
+/// `staging` is live; the call's arguments as documented.
+ptrdiff_t ee_won_staging_call(const EeWonStaging *staging,
+                              EeWonStagingCall call,
+                              void *a,
+                              void *b,
+                              ptrdiff_t c,
+                              ptrdiff_t d);
+
 /// Upper-cases (`upper`) or lower-cases `length` bytes in place.
 ///
 /// # Safety
@@ -9424,6 +10568,23 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// A new Rust TextArea for the C++ `component`, its calls out through `host`.
+EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `text` came from `ee_won_text_new` (or is NULL) and is not used again.
+void ee_won_text_free(EeWonText *text);
+
+/// One of TextArea's methods (`EeWonTextCall`).
+///
+/// # Safety
+/// `text` is live; the call's arguments as documented.
+ptrdiff_t ee_won_text_call(const EeWonText *text,
+                           EeWonTextCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 EeWonThread *ee_won_thread_new(EeWonThreadBody body);
 

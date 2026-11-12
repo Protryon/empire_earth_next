@@ -15,23 +15,13 @@ public:
     bool StartsWith(const char* theStr);
     bool Is(const char* theStr);
     void SkipNonWhitespace();
-    bool ReadValue(std::string& theStr,bool stopAtWhitespace=false);
-    bool ReadValue(std::wstring& theStr,bool stopAtWhitespace=false);
-    bool ReadValue(std::list<bool>& theList);
     bool ReadValue(std::list<int>& theList);
     bool ReadValue(std::list<std::string>& theList);
     bool ReadValue(std::list<std::wstring>& theList);
-    bool ReadValue(std::list<std::list<bool> >& theList);
     bool ReadValue(std::list<std::list<int> >& theList);
-    bool ReadValue(std::list<std::list<std::string> >& theList);
-    bool ReadValue(std::list<std::list<std::wstring> >& theList);
-    static void ValueToString(const std::list<bool>& theVal,std::string& theStr);
     static void ValueToString(const std::list<int>& theVal,std::string& theStr);
     static void ValueToString(const std::list<std::wstring>& theVal,std::string& theStr);
-    static void ValueToString(const std::list<std::list<bool> >& theVal,std::string& theStr);
     static void ValueToString(const std::list<std::list<int> >& theVal,std::string& theStr);
-    static void ValueToString(const std::list<std::list<std::string> >& theVal,std::string& theStr);
-    static void ValueToString(const std::list<std::list<std::wstring> >& theVal,std::string& theStr);
     StringParser() : mPos(0), mWide(false) { mNarrow=""; }
     void Set(const char* theStr) { mNarrow=theStr; this->mPos=0; this->mWide=false; }
     void Set(const wchar_t* theStr) { mWideText=theStr; this->mPos=0; this->mWide=true; }

@@ -1,5 +1,8 @@
 """TEST ONLY: run the headless simulation EE-SIM.exe (build.py --sim; src/Empire Earth/Empire Earth/EESim.cpp).
 
+On Linux and macOS the simulation is ee-sim (tools/xbuild.py sim or game: the game's exe under that name; ee-aoc
+--sim is the same), by default build/xbuild/<host>/game/ee-sim; --exe takes either.
+
 EE-SIM.exe plays a seeded computer-vs-computer random-map game with the game's own code (no window, rendering,
 sound or debugger harness) as fast as the CPU allows and writes a JSON report. It reads the data root EE_DATA_ROOT
 and writes into it (error logs, the folders saved games go to), so every run gets a staged copy of a data tree here:
@@ -38,14 +41,29 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OPEN_DATA = ROOT / "build" / "open_data"
 STAGES = ROOT / "build" / "sim" / "stage"
-DEFAULT_EXE = ROOT / "build" / "clang" / "exe" / "EE-SIM.exe"
+
+
+def default_exe():
+    """EE-SIM.exe (build.py --sim) on Windows; elsewhere ee-sim beside the game (tools/xbuild.py sim; EE_XBUILD_OUT
+    moves it as it moves the build)"""
+    import platform
+    if sys.platform == "win32":
+        return ROOT / "build" / "clang" / "exe" / "EE-SIM.exe"
+    arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x86_64"
+    host = f"{'macos' if sys.platform == 'darwin' else 'linux'}-{arch}"
+    return pathlib.Path(os.environ.get("EE_XBUILD_OUT", ROOT / "build" / "xbuild")) / host / "game" / "ee-sim"
+
+
+DEFAULT_EXE = default_exe()
+BUILD_HINT = "python -I build.py --sim" if sys.platform == "win32" else "python3 -I tools/xbuild.py sim"
 WRITABLE = {"saved games", "scenarios"}   # Data folders the game writes into: copied, not linked (exe_boot.py)
 RULE_DOCS = ("combat", "gameoptions", "civbuilder", "civpowers", "aipersonalities", "epochs")
 
 
 def data_tree(kind):
     """The data tree: 'open' (build/open_data/tree) or a directory. The main checkout's tree is used when this
-    checkout has none (a worktree; it is only read)."""
+    checkout has none (a worktree; it is only read); 'open' is last the released data that tools/fetch_data.py pulls
+    into data/ (a machine without the retail installs)."""
     if kind == "binary":
         sys.exit("--data binary: the binary tree is retired (RUST_PLAN D9): the game reads only the open forms")
     if kind != "open":
@@ -57,8 +75,11 @@ def data_tree(kind):
             main = pathlib.Path(subprocess.run(["git", "-C", str(ROOT), "worktree", "list", "--porcelain"],
                                                capture_output=True, text=True).stdout.split("\n")[0].split(" ", 1)[1])
             tree = main / "build" / "open_data" / name
+            if not (tree / "Data").is_dir() and kind == "open" and (main / "data" / "Data").is_dir():
+                tree = main / "data"
     if not (tree / "Data").is_dir():
-        sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...)")
+        sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...; without the retail installs: "
+                 f"python -I tools/fetch_data.py, then --data open)")
     # a tree built by other converter code may not load in this build (the text db and rules formats change with the
     # code; the harness rebuilds such a tree, this tool only reads it)
     sys.path.insert(0, str(ROOT / "tools"))
@@ -153,7 +174,9 @@ def prepare(data="open", slot="default", sets=()):
 
 def command(exe, stage, args, config=None):
     cfg = config or (stage / "config.yaml")
-    return [str(exe), "--data", str(stage), "--config", str(cfg), *args]
+    # the game's own POSIX exe runs the simulation with --sim first (ee-sim and EE-SIM.exe need none)
+    sim = ["--sim"] if pathlib.Path(exe).name == "ee-aoc" else []
+    return [str(exe), *sim, "--data", str(stage), "--config", str(cfg), *args]
 
 
 def resolve(map_path, addresses):
@@ -200,7 +223,7 @@ def main():
     a = ap.parse_args()
     args = a.args[1:] if a.args[:1] == ["--"] else a.args
     if not a.exe.exists():
-        sys.exit(f"{a.exe} is missing: python -I build.py --sim")
+        sys.exit(f"{a.exe} is missing: {BUILD_HINT}")
     sets = [args[k + 1] for k, v in enumerate(args) if v == "--set" and k + 1 < len(args)]
     if a.ai_scripts:
         os.environ["EE_AI_SCRIPTS"] = str(a.ai_scripts.resolve())   # absolute: the game runs in its data root

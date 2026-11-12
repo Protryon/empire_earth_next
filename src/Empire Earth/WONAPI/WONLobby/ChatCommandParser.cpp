@@ -72,7 +72,7 @@ struct ChatClients {
             return;
         for (size_t i = 0; i < inList->GetCount(); ++i) {
             this->mClients.push_back(inList->ClientAt(i));
-            this->mNames.push_back(ChatText(inList->ClientAt(i)->mName));
+            this->mNames.push_back(ChatText(inList->ClientAt(i)->GetName()));
         }
     }
     const EeWonChatText* Names() const { return this->mNames.empty() ? NULL : &this->mNames[0]; }

@@ -64,6 +64,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPExperimentTimers.h"
 
@@ -299,6 +300,8 @@ void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEU
 // Adds a unit to a resource's gatherer list (referencing it) unless it is already there
 void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
 {
+    if (EECPUnitsHolds(this->mManager->mPlayer, inUnit))
+        return;   // the script's unit (ee/EECPNextUnits.h): never on the runners' lists
     std::deque<EEComplexUnit*>::iterator theIt =
         std::find(this->mGatherers[inResource].begin(), this->mGatherers[inResource].end(), inUnit);
     if (theIt == this->mGatherers[inResource].end()) {
@@ -2015,7 +2018,7 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 // worked from the player's built dock (one is queued while there is none); farms stay as they are.
 static const long kCoastFishRange = 30;
 static const unsigned long kCoastBoats = 8;
-static const unsigned long kCoastBoatsLater = 16;   // the experiment "foodeco": "then lots of fishing boats" (the owner)
+static const unsigned long kCoastBoatsLater = 32;   // the experiment "foodeco": "then lots of fishing boats" (the owner); 32 (AI_RESEARCH 8.56: the boats the uncounted cap made)
 static const unsigned long kCoastBoatsPerFish = 2;
 
 static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)
@@ -2085,7 +2088,9 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
     if (theBuilt == 0)
         return;
     long theClass = theManager->GetFishingBoatClass();
-    EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, false);
+    // fixed: the boats it has are counted (by class; the coast fishing's first version passed inByClass false, which
+    // walks no units, so the wanted count never capped it: one more boat every 30 s, 13-47 a game; AI_RESEARCH 8.56)
+    EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, true);
     theManager->mUnitManager->GatherUnits(theCount);
     if (theRush) {
         // the experiment "boatrush" (the owner: "I spam boats ASAP at stone"): every boat short of the wanted count is
@@ -2786,7 +2791,10 @@ void EECPResourceManager::RebalanceGatherers()
     unsigned long theMoves = 0;
     unsigned long theMaxMoves = (unsigned long)EECPPersonality(this->mManager->mPlayer).mMovesPerCycle;
     for (long r = 2; r < 7 && theMoves < theMaxMoves; r++) {
-        while (theMoves < theMaxMoves && this->mGatherers[r].size() > this->mWantedGatherers[r] + 1) {
+        // (the next engine's gather(exact = 1), §8.51: the owner's build order counts exactly, no one of slack)
+        EECPNextState* theNextState = EECPNextEngine(this->mManager->mPlayer) ? EECPNextGetState(this->mManager->mPlayer) : NULL;
+        unsigned long theSlack = theNextState != NULL && theNextState->mExact != 0 ? 0 : 1;
+        while (theMoves < theMaxMoves && this->mGatherers[r].size() > this->mWantedGatherers[r] + theSlack) {
             EEComplexUnit* theUnit = this->mGatherers[r].back();
             if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0
                 || theUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
@@ -3077,8 +3085,8 @@ void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigne
     // running costs more work than it saves lives (docs/AI_RESEARCH.md §8.22)
     if (inAttacker == 0 || inAttacker >= gWorld.mNumPlayers || gWorld.mPlayers[inAttacker] == NULL)
         return;
-    if (EECPMilitiaOn(inManager->mManager->mPlayer)) {
-        EECPRMMilitia(inManager, inCitizen, inAttacker);
+    if (EECPMilitiaOn(inManager->mManager->mPlayer) && EECPUnitsReflexOn(inManager->mManager->mPlayer, "militia")) {
+        EECPRMMilitia(inManager, inCitizen, inAttacker);   // (ai.reflex{militia = false}: a script's own militia instead)
         return;
     }
     if (!gWorld.mPlayers[inAttacker]->IsHuman() && !EECPExperiment(inManager->mManager->mPlayer, "flee"))
