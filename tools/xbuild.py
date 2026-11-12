@@ -521,6 +521,9 @@ WON_TESTS = {
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
     # over the same stand-ins (golden: rust/crates/ee_won/src/golden_authflow.txt)
     "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
+    # HTTPEngine (HTTPSession, HTTPConnection), the original's statements against ee_won's httpengine objects over the
+    # same stand-ins (golden: rust/crates/ee_won/src/golden_httpengine.txt)
+    "won_httpengine_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # FindPatchOp's patch choice, DetectFirewallOp's request, reply and wait, RegAuth's password and port, the
     # original's statements against include/ee/wonapi/WONMiscOpsMsg.h over ee_won's miscops module
     # (golden: rust/crates/ee_won/src/golden_miscops.txt)
