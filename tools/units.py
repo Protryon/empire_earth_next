@@ -89,7 +89,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)
                        "Empire Earth/Graphics Thread/EERenderSnapshot.cpp",
                        # the host of the screens that are Rust's whole: their event class and toolkit and game calls
-                       # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign)
+                       # (ee/EEScreenEvent.h; ee_screens menus.rs: the main menu, the editors' menu, single player, play campaign;
+                       # settings_form.rs: the game settings; custom_campaign.rs: the custom campaign form)
                        "Empire Earth/UI Events/EEScreens.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)
                        "Empire Earth/Language/LanguageStrings.cpp",

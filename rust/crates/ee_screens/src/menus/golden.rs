@@ -48,13 +48,13 @@ struct Driver {
 fn event_name(event: u32) -> &'static str {
     match event {
         EE_SCREENS_SP_OPEN => "class EEUIESPEOpen",
-        EE_SCREENS_CPP_SETTINGS_OPEN => "class EEUIEGSEOutOfGameOpen",
+        crate::settings_form::EE_SCREENS_GS_OUT_OF_GAME_OPEN => "class EEUIEGSEOutOfGameOpen",
         EE_SCREENS_PC_OPEN => "class EEUIEPCEFormOpen",
         EE_SCREENS_PC_MOUSE_OVER => "class EEUIEPCEMouseOver",
         EE_SCREENS_CPP_SCENARIOS_OPEN => "class EEUIECSSEFormOpen",
         EE_SCREENS_CPP_SCENARIOS_CLOSE => "class EEUIECSSEFormClose",
-        EE_SCREENS_CPP_CUSTOM_OPEN => "class EEUIECCCEFormOpen",
-        EE_SCREENS_CPP_CUSTOM_CLOSE => "class EEUIECCCEFormClose",
+        crate::custom_campaign::EE_SCREENS_CC_OPEN => "class EEUIECCCEFormOpen",
+        crate::custom_campaign::EE_SCREENS_CC_CLOSE => "class EEUIECCCEFormClose",
         EE_SCREENS_CPP_LOBBY_SINGLE => "class EEUIELEActivateSinglePlayer",
         EE_SCREENS_CPP_DUMP_MEDIA => "class EEUIEMGDumpLoadedMedia(0,1)",
         EE_SCREENS_CPP_DUMP_MEDIA_ALL => "class EEUIEMGDumpLoadedMedia(1,1)",

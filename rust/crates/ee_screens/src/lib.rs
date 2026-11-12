@@ -16,6 +16,9 @@
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
 //! - [`command_panel`]: the in-game command panel: its layout (which buttons show where), each button's
 //!   availability and icon, its tooltip's plan and the targeting modes of its commands.
+//! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
+//!   C++ host).
+//! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
@@ -23,6 +26,7 @@
 
 pub mod command_panel;
 mod command_panel_ffi;
+pub mod custom_campaign;
 pub mod hud;
 mod hud_ffi;
 pub mod lobby;
@@ -34,6 +38,8 @@ pub mod menus;
 #[cfg(not(test))]
 mod menus_ffi;
 pub mod settings;
-mod settings_ffi;
+pub mod settings_form;
+#[cfg(not(test))]
+mod settings_form_ffi;
 pub mod single_player;
 mod single_player_ffi;

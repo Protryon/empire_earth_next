@@ -21,6 +21,9 @@ static void* ee_sym(const char* name)
     return NULL;
 }
 /* member functions are called as plain functions: x64 has one convention (this is the first argument) */
+#ifndef EE_OFF_SCREEN_EVENT_CODE
+#define EE_OFF_SCREEN_EVENT_CODE 0x18   /* EEScreenEvent::mEvent: right after its UIEvent base (presentation_bridge.py) */
+#endif
 #ifndef EE_SIZE_UWIDESTRING
 #define EE_SIZE_UWIDESTRING 0x14   /* sizeof(UWideString) in the build's layout (presentation_bridge.py) */
 #endif
@@ -138,7 +141,13 @@ static void ui_test(void) {
             fprintf(state,"\n");
             for(unsigned long i=0;i<count && i<2000;i++)if(controls[i]) {
                 void* event=get(controls[i],0x3f0);
-                if(event)fprintf(state,"control %lu event-rva %08lx\n",i,(unsigned long)((BYTE*)(*(void***)event)[1]-(BYTE*)GetModuleHandleA(NULL)));
+                if(!event)continue;
+                void* process=(*(void***)event)[1];
+                fprintf(state,"control %lu event-rva %08lx",i,(unsigned long)((BYTE*)process-(BYTE*)GetModuleHandleA(NULL)));
+                /* the game screens' one event class (ee/EEScreenEvent.h): its code tells the events apart */
+                if(process==ee_sym("?ProcessEvent@EEScreenEvent@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z"))
+                    fprintf(state," screen %lx",(unsigned long)*(DWORD*)((BYTE*)event+EE_OFF_SCREEN_EVENT_CODE));
+                fprintf(state,"\n");
             }
             for(unsigned long i=0;i<count && i<2000;i++)if(controls[i]) {
                 void* vtbl=*(void**)controls[i];

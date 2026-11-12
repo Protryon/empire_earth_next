@@ -8585,6 +8585,83 @@ the main menu, the editors' sub-menu, the single player screen and the play camp
 - **Behaviour:** none intended. `gUIManager` and the event form's manager are the same object, so the host uses the
   latter where the original named either.
 
+## R6: the game screens, fifth round: the settings form and the custom campaign form whole in Rust (ee_screens settings_form.rs, custom_campaign.rs; branch rust-screens5, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the two next forms; measured by the C++ deleted.
+
+- **Deleted:** `EEUIEGameSettingsEvents.cpp` (1,174 lines: 18 event classes, the port's display and audio code, the
+  statics) and its header, `EECreateGameSettingsEvent`'s cases and the twelve `??_G` notes in `EEUIManager.cpp` (the
+  factory is one line over `ee_screens_settings_event_for`), `EEUIEMainGameOptionsEvents.cpp`'s `new
+  EEUIEGSEInGameOpen` (now `EECreateScreenEvent(EE_SCREENS_GS_IN_GAME_OPEN)`); `EEUIEChooseCustomCampaignEvents.cpp`
+  and its header (5 classes); their `link/exe/units.txt` lines; the Rust `settings_ffi.rs` (its forwarders had no C++
+  caller left). C++ lines of the screens (UI Events, User Interface Thread, `include/ee/EEUI*.h`, `EEScreenEvent.h`,
+  `EECommandLine.cpp`, `EESim.cpp`): 42,307 before, 41,307 after the settings form (-1,000; git over the C++ +432
+  -1,432), 41,127 after the custom campaign form (-180; +62 -242).
+- **What replaced them:** `settings_form.rs` (codes 0x0501..0x0513: both open events, both OKs, Cancel, Restore
+  Default and its yes, the tabs, the lists, the sliders, the radios, the test sound, the quality radios, the advanced
+  controls, the port's quality box) over a `SettingsHost` whose methods are each one call; its statics (the form's
+  music, in game, the output devices, the port's display change and quality guard, the last rasterizer and screen
+  names) are a `SettingsForm` record in a static `Mutex`, never held across a host call. `custom_campaign.rs` (codes
+  0x2201..0x2206) over a `CustomCampaignHost`, no state of its own. The host (`EEScreens.cpp`) gained the control ops
+  (check box, radio, slider, combo and list box reads and writes; groups and backgrounds of the event's form or of a
+  form by id; a `UIESliderChange` label; a trigger on the event's form), the engine ops (conductor, mixer, music
+  manager, mouse, rasterizer change, the port's apply, view rectangle, MIP filter, texture resolution, ambient sound,
+  save, test sound, window mode), `ee_screenscpp_selection` (a `GetCurrentSelection`'s result and selection),
+  `ee_screenscpp_settings`/`_put_settings` (the 43 fields of `EEGameSettings` the form uses, one X-macro list),
+  `ee_screenscpp_modes` (`FillModes`' search; Rust sorts), `_current_mode`, `_game_size`, and the texts (the music
+  file, the rasterizer setting and the audio device of the settings or the defaults, the display tables' names, the
+  adapters and output devices as 0-ended lists, the campaign files, the built-in test, the last load error). The
+  menus' `EE_SCREENS_CPP_SETTINGS_OPEN` and `_CUSTOM_OPEN`/`_CLOSE` are screen codes now (pattern (d)).
+- **Golden drivers** (scratch, `build/sc5`: `settings_driver.cpp`, `custom_driver.cpp`, `drv.py` as round 4's, the old
+  headers under `orig/inc`): the old build includes the unmodified unit, the new one `EEScreens.cpp`; both print the
+  same text (an `EEScreenEvent` printed under its old class's name). `golden_settings_form.txt`: 2,000 cases of the 19
+  events with random settings and defaults (the defaults' volumes half the time), control states (several or no
+  radios of a group checked), display tables (repeated indices, modes of the settings', the port's and other sizes),
+  the mixer, conductor, channels, adapters, output devices, server, Korean, save and setter results, the test sounds
+  present or not, GERasterizer's names and the current one, the screens' current modes; the settings dumped when the
+  port applies them, when they are saved and after each case; the statics carried. `golden_custom_campaign.txt`: 2,000
+  cases of the 6 events with campaign files of every kind (the extension in any case, four characters or fewer, UTF-8,
+  a lone lead byte, built-in names, repeats), loads that succeed or fail with or without an error, Please wait
+  missing. Both replay in Rust; seeds 1-4 (20,000 cases each for 2-4) are identical old against new; the round-4
+  menus and campaign drivers relinked over the new host still print their goldens. Mutations checked: the music on's
+  in-game test, the zoom flag, the extension's lower-casing, the four-character rule, the failed load's empty fields,
+  OK's all-open flag each fail a replay; two cannot (the list box's selection result is only 0 or 13, so `== 13` and
+  `!= 0` agree; the output devices' names are distinct, so the first and the last match agree).
+- **Lessons:**
+  - The Bash tool's heredocs turn `\\n` and `\\r\\n` inside a Python script into real line breaks (round 3 met it with
+    `sed`): write edit scripts with the file tool, and check their output.
+  - The harness's Python files are CR LF (`ai_game.py`, `save_load.py`, `scenario_game.py`), its C is LF: an edit
+    script must normalise and restore.
+  - A driver's stdout is text mode: goldens are CR LF. `str::lines` hides it; a replay over bytes must strip the `\r`.
+  - Two control kinds on one stub table collide: a label's `AppendText` and a list box's `AppendLine` have the same
+    slot. The list box gets its own table (round 3's lesson for the HUD again).
+  - `UIListBox<T>::GetCurrentSelection` is defined in its header but not inline: a driver needs an explicit
+    instantiation, or the first call jumps to `/FORCE`'s 0x100000000. `GERScreenState`'s constructor calls the
+    out-of-line `GEViewport` one: calloc the state instead.
+  - Private `const`s count for the header split: a private `SHOWN` beside `ee_ui`'s public one moved that name into
+    `ee_rust_common.h`. Every const of the module is prefixed (`GS_`, `CC_`).
+  - `c_ulong` is `u32` on Windows and `u64` on LP64: the `as u32` casts between it and the host's arguments are
+    clippy's `unnecessary_cast` here and needed there (a module-level allow, with the reason).
+  - Git Bash rewrites `/DNAME` in an environment variable into a path: pass the drivers' defines as `-DNAME`.
+  - The presentation bridge printed every trigger event's ProcessEvent rva: after round 4 all moved events share
+    `EEScreenEvent`'s, so the legacy tools could not tell the Load Game or Campaign buttons apart. The bridge adds the
+    event's code (`screen CODE`, at the layout's `sizeof(UIEvent)`), `ai_game.parse_state` keeps it, and
+    `save_load.symbol_rvas` gives (rva, code) for a class the full link no longer has (`SCREEN_CODES`).
+- **What the harness reaches:** the tour's `settings-video` capture (the main menu's Game Settings: the out-of-game
+  open event whole in Rust: every tab's `Show*`, the port's combo boxes and quality box, the video tab), `settings-audio`
+  and `settings-interface` (the tab events), `settings-closed` (Cancel: the volumes, reverb, music, mouse reset from
+  the preferences, the form closed); those four are the lead's pixel compare. **Only a person reaches:** the settings'
+  OK (`ApplySettings`, the port's apply and the window mode), Restore Default, the sliders, radios, the quality
+  controls, the test sound, the in-game open and OK, and the whole custom campaign form (play campaign -> Custom
+  Campaign). `save_load.py` and `scenario_game.py` (legacy, debugger harness) run only on the lead's machine: their
+  new lookup is unit-checked by hand (a stand-in map and ui-state) and by the selftest (ALL PASS), not by a session.
+  None of this is simulation: EE-SIM never runs it.
+- **Behaviour:** none intended where the original was defined. The host's control ops answer 0 for a missing control
+  (in the game every control exists); where the original read past a list (a list box's or combo box's `GetData`, the
+  display table by an unchecked selection, `GERasterizer::GetRasterizer` past its list, the in-game OK's mode list
+  when it is empty) the host gives an empty text or a zero mode. Custom campaign's OK no longer leaks a reference of
+  the scenario screen's open and close events (the original's `new` had no `Dereference`).
+
 ## Dead code across the game and engine: the linker's census, and why it finds little (tools/dead_census.py; branch rust-deadcode1, 2026-11-12)
 
 A new lane: delete the first-party C++ that no build reaches, outside WON (src/Empire Earth/WONAPI and
