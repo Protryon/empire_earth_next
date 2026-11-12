@@ -617,9 +617,8 @@ public:
 
 // HTTPConnection (partial), RTTI 44d3a4 > RefCount
 // Held only through SmartPtr (maps); never constructed, sized or copied here.
-class HTTPGetOp;
+class RustServerOp; // an HTTPGetOp (httpget.rs)
 class HTTPSession;
-class HTTPGetOp;
 // HTTPConnection: a host's keep-alive connection; its socket, queues, running ops, pipelining and retry state are
 // ee_won's (rust/crates/ee_won/src/httpengine.rs EeWonHttpConn): this class is the RefCount its ops' completions hold
 class HTTPConnection : public RefCount {
@@ -627,13 +626,13 @@ public:
     HTTPConnection(HTTPSession* inSession = NULL); //2d2c80,new64 at2d2a97
     virtual ~HTTPConnection(); //2d2d50, the members
     void Kill(); //2d3600
-    void QueueOp(HTTPGetOp*); //2d33a0,ret4
-    void QueueOp(HTTPGetOp*,int); //2d3290,ret8
+    void QueueOp(RustServerOp*); //2d33a0,ret4
+    void QueueOp(RustServerOp*,int); //2d3290,ret8
     void RunOp(int); //2d3430,ret4
     int GetNumOps();
     static void StaticOpCallback(AsyncOpPtr,SmartPtr<RefCount>); //2d2df0, two owning by-value args
 protected:
-    void OpCallback(HTTPGetOp*); //2d2e80, 1030 bytes; protected in the SDK
+    void OpCallback(RustServerOp*); //2d2e80, 1030 bytes; protected in the SDK
 private:
     friend struct HTTPEngineHooks;
     CriticalSection mDataCrit; //08..20
@@ -648,7 +647,7 @@ class HTTPSession : public RefCount {
 public:
     HTTPSession();                          //2d27b0, out of line
     virtual ~HTTPSession();                 //2d2870, the map
-    void AddOp(HTTPGetOp*);                  //2d28f0, queues a completed op
+    void AddOp(RustServerOp*);               //2d28f0, queues a completed op
     void KillAll();                         //2d2bc0
     int GetNumOps();
 private:
@@ -1769,6 +1768,14 @@ public:
                                           bool inNewsletter, unsigned char inMonth, unsigned char inDay,
                                           unsigned short inYear);
     static RustServerOp* NewGroupListReq(const IPAddr& inAddr, unsigned char inFlags);
+    // HTTPGetOp(host, path) and HTTPGetOp(url) (ee_won httpget.rs; the web proxy file read at the first one made),
+    // a bytes setter, and its readers that are the C++ side's: GetSocket() (NULL unless connected) and
+    // GetLastModifiedTime() (the local file's time when the reply had none)
+    static RustServerOp* NewHttpGet(const std::string& inHost, const std::string& inPath);
+    static RustServerOp* NewHttpGet(const std::string& inURL);
+    void SetBytes(int inWhich, const std::string& inBytes);
+    BlockingSocket* GetHttpSocket() const;
+    time_t GetHttpLastModifiedTime();
     virtual void RunHook();
     virtual void CleanupHook();
     virtual bool CallbackHook(AsyncOp* inOp, int inParam);
@@ -2011,99 +2018,8 @@ public:
     static void SetGlobalCache(HTTPCache*);
     void UpdateEntry(HTTPCacheEntry*); //2fa500, called with an empty version
 };
-class HTTPGetOp : public AsyncOpWithTracker {
-private:
-    enum TrackType { HTTP_Track_Connect=1,HTTP_Track_RecvStatus=2,HTTP_Track_RecvHeader=3,
-        HTTP_Track_RecvContent=4,HTTP_Track_Redirect=5,HTTP_Track_RecvChunkLength=6,
-        HTTP_Track_RecvChunkCRLF=7,HTTP_Track_RecvFooter=8,HTTP_Track_SendRequest=9 };
-    bool ExtractHeaderLine(const char*); //2d47e0
-    bool SendRequest(); //2d5270
-    void AsyncRecvCRMsg(TrackType); //2d6170
-    bool DoConnect(); //2d5090
-    bool ExtractChunkLength(const char*); //2d6240
-    bool RecvChunkLength(); //2d6430
-    bool DoneRecvContent(RecvBytesOp*); //2d65c0
-    void RecvContent(); //2d6730, full receiver
-    void FinishRedirect(HTTPGetOp*); //2d6d90
-    void FollowRedirect(); //2d6f80
-    void DoneRecvHeader(); //2d7140
-    static std::string mStaticProxyHost; //565fb0
-public:
-    time_t GetLastModifiedTime(); //2d7870, lazy file timestamp cache
-    void SetSocket(BlockingSocket*); //2d77f0, owning assignment of member 78
-    BlockingSocket* GetSocket(); //2d7850, returns NULL unless socket is connected
-    void DoFinish(); //2d4370
-    void SetProxy(const std::string&); //2d4390/325 (WON SDK)
-    bool CheckStatus(WONStatus); //2d4550, forwards the status
-    bool ExtractStatus(const char*); //2d4570
-    bool ExtractRedirect(const char*); //2d45f0
-
-    HTTPGetOp(const std::string& inURL); //2d3f90, called at 3ddd81
-    void Init();
-    HTTPGetOp(const std::string& inHost,const std::string& inPath); //2d3b10
-    void SetRecvChunkCompletion(CompletionBase<AsyncOpPtr>*,DWORD); //2d44e0, 107-byte ownership setter
-    static void ReadProxyHostFile(bool inForce=true); //2d3830
-    static bool WriteProxyHostFile(const std::string&);
-    static const std::string& GetStaticProxyHost();
-    static void SetProxyHostFileName(std::string&);
-    void SetProxy(const std::string&,unsigned short);
-    virtual void RunHook();   //2d7330
-    virtual void CleanupHook(); //2d7770
-    virtual bool CallbackHook(AsyncOp* inOp,int inParam); //2d6a50
-    // Implicit destructor: 2d3d50 (567 bytes) has no own-vptr store; member/base cleanup below.
-    const std::string& GetLocalPath() { return this->mLocalPath; }
-    const std::string& GetHost() {return this->mHost;}
-    const std::string& GetRemotePath() {return this->mRemotePath;}
-    const std::string& GetEndingHost() {return this->mRedirectHost.empty()?this->mHost:this->mRedirectHost;}
-    const std::string& GetEndingPath() {return this->mRedirectPath.empty()?this->mRemotePath:this->mRedirectPath;}
-    int GetHTTPStatus() {return this->mHTTPStatus;}
-    void SetHTTPCache(HTTPCache* inCache) { this->mHTTPCache=inCache; }
-    void SetLocalPath(const std::string& thePath) { this->mLocalPath=thePath; }
-    void SetBinaryFile(bool isBinary) { this->mBinaryFile=isBinary; }
-    void SetOnlySend() { this->mOnlySend=true; this->mOnlyRecv=false; }
-    void SetOnlyRecv() { this->mOnlyRecv=true; this->mOnlySend=false; }
-    void SetSendAndRecv() { this->mOnlySend=false; this->mOnlyRecv=false; }
-    bool GetOnlySend() { return this->mOnlySend; }
-    bool GetOnlyRecv() { return this->mOnlyRecv; }
-    void SetDoRangeResume(bool doRangeResume) { this->mDoRangeResume=doRangeResume; }
-    void SetCloseConnection(bool closeConnection) { this->mCloseConnection=closeConnection; }
-    bool ContentIsNew() { return this->mContentIsNew; }
-    SmartPtr<BlockingSocket> mSocket; //78
-    SmartPtr<HTTPCache> mHTTPCache; //7c
-    SmartPtr<HTTPCacheEntry> mHTTPCacheEntry; //80
-    std::string mHost; //84
-    std::string mRemotePath; //94
-    std::string mLocalPath; //a4
-    bool mIfRange; //b4
-    bool mContentIsChunked; //b5
-    bool mIsFirstChunk; //b6
-    bool mBinaryFile; //b7
-    bool mCloseConnection; //b8
-    bool mDoClose; //b9
-    bool mDoRangeResume; //ba,naturalpadbb
-    std::string mProxyHost; //bc
-    std::string mRedirectHost; //cc
-    std::string mRedirectPath; //dc
-    time_t mServerTime; //ec
-    time_t mExpireTime; //f0
-    time_t mLastModified; //f4
-    time_t mLocalFileModifyTime; //f8
-    size_t mLocalFileSize; //fc
-    std::string mEntityTag; //100
-    std::string mContentType; //110
-    DWORD mContentLength; //120
-    DWORD mChunkLength; //124
-    ByteBufferPtr mContent; //128
-    WriteBuffer mContentAccumulator; //12c..144
-    int mHTTPStatus; //144
-    bool mContentIsNew; //148,naturalpad149..14b
-    OpCompletionBasePtr mRecvChunkCompletion; //14c
-    DWORD mRecvChunkSize; //150
-    bool mOnlySend; //154
-    bool mOnlyRecv; //155
-    bool mAutoRedirect; //156,naturalpad157
-    int mNumRedirects; //158..15c
-};
+// HTTPGetOp is a Rust op on the base (rust/crates/ee_won/src/httpget.rs): RustServerOp::NewHttpGet, its members by
+// EE_WON_HTTPGET_* number
 
 // DNS operation, 0x7c bytes; explicit destructor and borrowed address getter.
 // ThreadBase 0x14 / Thread 0x1c. Event (8 bytes) comes from AsyncOpContainer above.
@@ -2200,7 +2116,7 @@ class GetHTTPDocumentOp : public AsyncOpWithTracker {
 public:
     void SetDocType(HTTPDocType); //2d0340
     void DoFinish(); //2d06c0
-    void OpFinished(HTTPGetOp*,int); //2d0700
+    void OpFinished(RustServerOp*,int); //2d0700
     void TryHTTPOp(HTTPDocOwner,bool=false); //2d0840
     static void CheckHostAndPath(HTTPDocType); //2cffb0, static
 

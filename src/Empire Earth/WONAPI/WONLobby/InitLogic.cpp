@@ -200,8 +200,8 @@ void InitLogic::CrossPromotionImageCompletion(AsyncOp* inOp)
 {
     if (inOp->GetStatus() != WS_Success)
         return;
-    HTTPGetOp* op = static_cast<HTTPGetOp*>(inOp);
-    SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(op->GetLocalPath().c_str());
+    RustServerOp* op = static_cast<RustServerOp*>(inOp);
+    SmartPtr<NativeImage> image = Window::GetDefaultWindow()->DecodeImage(op->GetBytes(EE_WON_HTTPGET_LOCAL_PATH).c_str());
     LobbyBroadcastEvent(new SetCrossPromotionEvent(image.get(),this->mCrossPromotion),true);
 }
 }
@@ -225,8 +225,8 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
     std::string imageURL(aLines.mImage);
     this->mCrossPromotion = aLines.mLink;
     if (!imageURL.empty()) {
-        SmartPtr<HTTPGetOp> op = new HTTPGetOp(imageURL);
-        op->SetHTTPCache(HTTPCache::GetGlobalCache());
+        SmartPtr<RustServerOp> op = RustServerOp::NewHttpGet(imageURL);
+        op->Set(EE_WON_HTTPGET_CACHE, HTTPCache::GetGlobalCache());
         op->SetCompletion(new LogicCompletion<InitLogic>(&InitLogic::CrossPromotionImageCompletion,this));
         this->mHTTPSession->AddOp(op.get());
     }

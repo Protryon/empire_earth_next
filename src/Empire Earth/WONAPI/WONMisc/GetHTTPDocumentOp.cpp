@@ -56,17 +56,17 @@ void GetHTTPDocumentOp::DoFinish()
 
 // FUNCTION: WON 0x006d0700
 // Records one download's result (retrying once on a bad redirect or 404); for a MOTD reads the is-new flag
-void GetHTTPDocumentOp::OpFinished(HTTPGetOp* inOp, int inOwner)
+void GetHTTPDocumentOp::OpFinished(RustServerOp* inOp, int inOwner)
 {
-    if (!this->mRetried[inOwner] && (inOp->GetStatus() == WS_HTTP_InvalidRedirect || inOp->mHTTPStatus == 404)) {
+    if (!this->mRetried[inOwner] && (inOp->GetStatus() == WS_HTTP_InvalidRedirect || inOp->GetNum(EE_WON_HTTPGET_STATUS) == 404)) {
         this->TryHTTPOp(static_cast<HTTPDocOwner>(inOwner),true);
         return;
     }
     this->mDocumentStatus[inOwner] = inOp->GetStatus();
-    this->mHTTPStatus[inOwner] = inOp->mHTTPStatus;
-    this->mLastModified[inOwner] = inOp->GetLastModifiedTime();
+    this->mHTTPStatus[inOwner] = (int)inOp->GetNum(EE_WON_HTTPGET_STATUS);
+    this->mLastModified[inOwner] = inOp->GetHttpLastModifiedTime();
     if (inOp->GetStatus() != WS_Success) return;
-    this->mIsNew[inOwner] = inOp->mContentIsNew;
+    this->mIsNew[inOwner] = inOp->GetNum(EE_WON_HTTPGET_IS_NEW) != 0;
     if (this->mDocumentType != HTTPDocType_MOTD) return;
     FILE* file = PlatFOpen(this->mDocuments[inOwner].c_str(),"r");
     if (file != NULL) {

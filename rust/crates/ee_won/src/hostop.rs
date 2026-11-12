@@ -231,6 +231,44 @@ pub const EE_WON_HOST_CERT_SET_PASSWORD: i32 = 127;
 pub const EE_WON_HOST_CERT_SET_PEER: i32 = 128;
 /// ctx obj0's `ClearOneTimeData()`
 pub const EE_WON_HOST_CERT_CLEAR_ONE_TIME: i32 = 129;
+// HTTPGetOp's (httpget.rs):
+/// a socket obj0's `IsConnected()` -> out_num
+pub const EE_WON_HOST_SOCKET_CONNECTED: i32 = 130;
+/// a socket obj0's `Kill()`
+pub const EE_WON_HOST_SOCKET_KILL: i32 = 131;
+/// a socket obj0's `GetSocketStatus()` -> out_num
+pub const EE_WON_HOST_SOCKET_STATUS: i32 = 132;
+/// a socket obj0's `RecvCRMsg(line, num0)` -> out_num (the status), the line (none: NULL)
+pub const EE_WON_HOST_RECV_CR: i32 = 133;
+/// `WONFile(data)`'s `Exists()` (num0 0), `GetSize()` (1), `GetModifyTime()` (2) -> out_num
+pub const EE_WON_HOST_FILE_STAT: i32 = 134;
+/// `time(NULL)` -> out_num
+pub const EE_WON_HOST_TIME: i32 = 135;
+/// a cache obj0's `GetEntry(data)` -> out_obj (a reference taken; none: NULL)
+pub const EE_WON_HOST_CACHE_ENTRY: i32 = 136;
+/// a cache entry obj0's `IsValid()` (num0 0), `GetExpirationTime()` (1) -> out_num; `GetLocalPath()` (2),
+/// `GetEntityTag()` (3) -> the bytes
+pub const EE_WON_HOST_ENTRY_GET: i32 = 137;
+/// a cache entry obj0's `SetValid(num1)` (num0 0), `SetExpirationTime(num1)` (1), `SetEntityTag(data)` (3)
+pub const EE_WON_HOST_ENTRY_SET: i32 = 138;
+/// a cache obj0's `UpdateEntry(obj1)`
+pub const EE_WON_HOST_CACHE_UPDATE: i32 = 139;
+/// a receive op obj0's `SetSkipBytes(true)`
+pub const EE_WON_HOST_RECV_SKIP: i32 = 140;
+/// a receive op obj0's `SetBinaryFile(num0)`
+pub const EE_WON_HOST_RECV_BINARY: i32 = 141;
+/// a receive op obj0's `SetFileModifyTime(num0)`
+pub const EE_WON_HOST_RECV_MODIFY_TIME: i32 = 142;
+/// the web proxy file's host (`HTTPGetOp::mStaticProxyHost`) -> the bytes
+pub const EE_WON_HOST_HTTP_PROXY: i32 = 143;
+/// `new HTTPGetOp(host, path)` (data: the host's num0 bytes, then the path) -> out_obj (a `RustServerOp`)
+pub const EE_WON_HOST_NEW_HTTP_GET: i32 = 144;
+/// a `RustServerOp` obj0's result num0 (element num1) -> out_num
+pub const EE_WON_HOST_HOSTOP_NUM: i32 = 145;
+/// a `RustServerOp` obj0's result bytes num0 (element num1) -> the bytes (none: NULL)
+pub const EE_WON_HOST_HOSTOP_BYTES: i32 = 146;
+/// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
+pub const EE_WON_HOST_HOSTOP_SET: i32 = 147;
 
 // Socket op kinds (`EE_WON_HOST_NEW_OP`'s num0):
 /// `ConnectOp(addr)`

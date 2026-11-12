@@ -89,6 +89,8 @@ void ServerOp::RecvMsgAsync(int theTrackId)
 #include <vector>
 #include <sys/stat.h>
 #include "platform/PlatFile.h"
+#include "ee/wonapi/WONLobbyResource.h" // WONFile
+#include "ee/wonapi/WONLobbyGUI.h" // WONAPICore::GetDefaultFileDirectory
 namespace WONAPI {
 namespace {
 // the param of a completion this op made: the op (a reference, as the original's completions held theirs) and the id
@@ -313,6 +315,74 @@ RustServerOp* RustServerOp::NewGroupListReq(const IPAddr& inAddr, unsigned char 
     ReqMembers m;
     return NewRequest(m.N(inFlags).Make(EE_WON_REQOPS_GROUP_LIST), inAddr);
 }
+namespace {
+CriticalSection& HttpProxyCrit()
+{
+    static CriticalSection aCrit;
+    return aCrit;
+}
+// HTTPGetOp::mStaticProxyHost
+std::string& HttpProxyHost()
+{
+    static std::string aHost;
+    return aHost;
+}
+// HTTPGetOp::ReadProxyHostFile(false) as its constructors ran it: _wonwebproxy.txt in the WON directory, its first
+// line, once per process (the constructors prefixed the directory to the file name at every op; only the first
+// read happened, so the name is the first prefix's)
+void ReadHttpProxyFile()
+{
+    static bool checked = false;
+    AutoCrit aCrit(HttpProxyCrit());
+    if (checked) return;
+    checked = true;
+    FILE* aFile = PlatFOpen((WONAPICore::GetDefaultFileDirectory() + "_wonwebproxy.txt").c_str(), "r");
+    if (aFile == NULL) return;
+    char aProxyBuf[512];
+    aProxyBuf[0] = '\0';
+    fgets(aProxyBuf, 500, aFile);
+    fclose(aFile);
+    char* aPtr = strchr(aProxyBuf, '\n');
+    if (aPtr != NULL) *aPtr = '\0';
+    HttpProxyHost() = aProxyBuf;
+}
+const std::string& HttpStaticProxyHost() { return HttpProxyHost(); }
+}
+RustServerOp* RustServerOp::NewHttpGet(const std::string& inHost, const std::string& inPath)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_httpget_new(reinterpret_cast<const uint8_t*>(inHost.data()), inHost.size(),
+                                                             reinterpret_cast<const uint8_t*>(inPath.data()), inPath.size()));
+    ReadHttpProxyFile();
+    return anOp;
+}
+RustServerOp* RustServerOp::NewHttpGet(const std::string& inURL)
+{
+    RustServerOp* anOp = new RustServerOp(ee_won_httpget_new_url(reinterpret_cast<const uint8_t*>(inURL.data()), inURL.size()));
+    ReadHttpProxyFile();
+    return anOp;
+}
+void RustServerOp::SetBytes(int inWhich, const std::string& inBytes)
+{
+    ee_won_hostop_set(this->mRustOp, inWhich, 0, reinterpret_cast<const uint8_t*>(inBytes.data()), inBytes.size(), NULL,
+                      NULL);
+}
+BlockingSocket* RustServerOp::GetHttpSocket() const
+{
+    BlockingSocket* aSocket = Sock(reinterpret_cast<void*>((intptr_t)this->GetNum(EE_WON_HTTPGET_SOCKET)));
+    if (aSocket == NULL || !aSocket->IsConnected()) return NULL;
+    return aSocket;
+}
+time_t RustServerOp::GetHttpLastModifiedTime()
+{
+    time_t aTime = (time_t)this->GetNum(EE_WON_HTTPGET_LAST_MODIFIED);
+    if (aTime != 0) return aTime;
+    std::string aLocal = this->GetBytes(EE_WON_HTTPGET_LOCAL_PATH);
+    if (aLocal.empty()) return 0;
+    WONFile aFile(aLocal);
+    aTime = aFile.GetModifyTime();
+    this->SetNum(EE_WON_HTTPGET_LAST_MODIFIED, (long long)aTime);
+    return aTime;
+}
 RustServerOp::~RustServerOp()
 {
     ee_won_hostop_free(this->mRustOp); // its objects released through HostCall
@@ -489,6 +559,69 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
     // DetectFirewallOp's (ee_won fwhost.rs)
+    // HTTPGetOp's (ee_won httpget.rs)
+    case EE_WON_HOST_SOCKET_CONNECTED: c->out_num = Sock(o0)->IsConnected() ? 1 : 0; break;
+    case EE_WON_HOST_SOCKET_KILL: Sock(o0)->Kill(); break;
+    case EE_WON_HOST_SOCKET_STATUS: c->out_num = Sock(o0)->GetSocketStatus(); break;
+    case EE_WON_HOST_RECV_CR: {
+        ByteBufferPtr aLine;
+        c->out_num = Sock(o0)->RecvCRMsg(aLine, (unsigned long)n0);
+        Give(c, aLine.get());
+        break;
+    }
+    case EE_WON_HOST_FILE_STAT: {
+        WONFile aFile(std::string(reinterpret_cast<const char*>(c->data), c->len));
+        c->out_num = n0 == 0 ? (aFile.Exists() ? 1 : 0) : n0 == 1 ? (long long)aFile.GetSize() : (long long)aFile.GetModifyTime();
+        break;
+    }
+    case EE_WON_HOST_TIME: c->out_num = (long long)time(NULL); break;
+    case EE_WON_HOST_CACHE_ENTRY: {
+        HTTPCacheEntry* anEntry = static_cast<HTTPCache*>(Obj(o0))->GetEntry(
+            std::string(reinterpret_cast<const char*>(c->data), c->len));
+        c->out_obj = anEntry != NULL ? Out(anEntry) : NULL;
+        break;
+    }
+    case EE_WON_HOST_ENTRY_GET: {
+        HTTPCacheEntry* e = static_cast<HTTPCacheEntry*>(Obj(o0));
+        if (n0 == 0) c->out_num = e->IsValid() ? 1 : 0;
+        else if (n0 == 1) c->out_num = (long long)e->GetExpirationTime();
+        else {
+            const std::string& s = n0 == 2 ? e->GetLocalPath() : e->GetEntityTag();
+            Give(c, s.data(), s.size());
+        }
+        break;
+    }
+    case EE_WON_HOST_ENTRY_SET: {
+        HTTPCacheEntry* e = static_cast<HTTPCacheEntry*>(Obj(o0));
+        if (n0 == 0) e->SetValid(n1 != 0);
+        else if (n0 == 1) e->SetExpirationTime((time_t)n1);
+        else e->SetEntityTag(std::string(reinterpret_cast<const char*>(c->data), c->len));
+        break;
+    }
+    case EE_WON_HOST_CACHE_UPDATE:
+        static_cast<HTTPCache*>(Obj(o0))->UpdateEntry(static_cast<HTTPCacheEntry*>(Obj(c->obj[1])));
+        break;
+    case EE_WON_HOST_RECV_SKIP: static_cast<RecvBytesOp*>(Op(o0))->SetSkipBytes(true); break;
+    case EE_WON_HOST_RECV_BINARY: static_cast<RecvBytesOp*>(Op(o0))->SetBinaryFile(n0 != 0); break;
+    case EE_WON_HOST_RECV_MODIFY_TIME: static_cast<RecvBytesOp*>(Op(o0))->SetFileModifyTime((time_t)n0); break;
+    case EE_WON_HOST_HTTP_PROXY: {
+        const std::string& aProxy = HttpStaticProxyHost();
+        Give(c, aProxy.data(), aProxy.size());
+        break;
+    }
+    case EE_WON_HOST_NEW_HTTP_GET: {
+        std::string aTarget(reinterpret_cast<const char*>(c->data), c->len);
+        c->out_obj = Out(NewHttpGet(aTarget.substr(0, (size_t)n0), aTarget.substr((size_t)n0)));
+        break;
+    }
+    case EE_WON_HOST_HOSTOP_NUM: c->out_num = static_cast<RustServerOp*>(Op(o0))->GetNum((int)n0, n1); break;
+    case EE_WON_HOST_HOSTOP_BYTES:
+        ee_won_hostop_bytes(static_cast<RustServerOp*>(Op(o0))->GetRustOp(), (int)n0, n1, c->out_sink, c->out_context);
+        break;
+    case EE_WON_HOST_HOSTOP_SET:
+        ee_won_hostop_set(static_cast<RustServerOp*>(Op(o0))->GetRustOp(), (int)n0, n1, c->data, c->len, NULL,
+                          c->obj[1]);
+        break;
     case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
     case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;
     case EE_WON_HOST_RUN: c->out_num = Op(o0)->Run((long)n0, (unsigned long)n1); break;

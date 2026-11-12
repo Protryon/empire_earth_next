@@ -64,6 +64,7 @@ pub mod guiwrap;
 pub mod hostop;
 pub mod http;
 pub mod httpengine;
+pub mod httpget;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;

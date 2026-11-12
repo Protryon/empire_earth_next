@@ -48,7 +48,7 @@ void GetHTTPDocumentOp::CheckHostAndPath(HTTPDocType inType)
 // Records a finished download and finishes the op when no download is left
 bool GetHTTPDocumentOp::CallbackHook(AsyncOp* inOp,int inParam)
 {
-    this->OpFinished(static_cast<HTTPGetOp*>(inOp),inParam);
+    this->OpFinished(static_cast<RustServerOp*>(inOp),inParam);
     if (this->mTracker.IsEmpty()) this->DoFinish();
     return true;
 }
@@ -72,9 +72,9 @@ void GetHTTPDocumentOp::TryHTTPOp(HTTPDocOwner inOwner,bool inForceDefault)
     std::string path;
     if (inOwner==HTTPDocOwner_Sys) path=GetPath()+"sys/";
     else if (inOwner==HTTPDocOwner_Game) path=GetPath()+StringToLowerCase(this->mProduct)+"/";
-    SmartPtr<HTTPGetOp> op=new HTTPGetOp(GetHost(),path+document);
-    op->SetDoRangeResume(false);
-    op->SetLocalPath(this->mDocuments[inOwner]);
+    SmartPtr<RustServerOp> op=RustServerOp::NewHttpGet(GetHost(),path+document);
+    op->SetNum(EE_WON_HTTPGET_RANGE_RESUME,0);
+    op->SetBytes(EE_WON_HTTPGET_LOCAL_PATH,this->mDocuments[inOwner]);
     if (this->GetMode()==OP_MODE_ASYNC) {
         this->Track(op.get(),inOwner);
         if (this->mSession.get()!=NULL) this->mSession->AddOp(op.get());
