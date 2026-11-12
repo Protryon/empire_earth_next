@@ -8,7 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The thumb's layout and drag and the line and page steps are ee_won's guiscroll module
 // (rust/crates/ee_won/src/guiscroll.rs); this unit keeps the controls and their SetPos / SetSize / SetVisible calls.
 namespace WONAPI {

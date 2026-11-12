@@ -12,7 +12,7 @@
 #include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 #include "lle/URandom.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_astar.h"
 
 static_assert(sizeof(EePoint) == 8, "EePoint");
 

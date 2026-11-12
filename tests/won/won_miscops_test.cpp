@@ -21,7 +21,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLittleEndian.h"
 #include "ee/wonapi/WONMiscOpsMsg.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 using std::string;

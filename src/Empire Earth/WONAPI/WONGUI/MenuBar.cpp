@@ -13,7 +13,7 @@
 #include "ee/wonapi/WONLobbyRoomServer.h"
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The bar's keys, item choice, menu place and flags, presses, events and the items' places and sizes are ee_won's
 // guimenu module (rust/crates/ee_won/src/guimenu.rs); this unit keeps the bar, its items, the menus and the paint.
 namespace WONAPI {

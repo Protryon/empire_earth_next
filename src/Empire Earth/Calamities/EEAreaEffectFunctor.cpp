@@ -27,7 +27,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 extern EEEffectManager*& gEffectManager;
 extern EEWorld gWorld;

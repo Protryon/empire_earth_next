@@ -27,7 +27,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 const UString EEContagionHelper::mNumUnitsStringID("ContagionHelperNumUnits-StringID");
 const UString EEContagionHelper::mUnitIDStringID("ContagionHelperUnitID-StringID");

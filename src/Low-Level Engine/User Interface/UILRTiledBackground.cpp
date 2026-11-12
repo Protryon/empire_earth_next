@@ -6,7 +6,7 @@
 // chains start at 0x10078c81.
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

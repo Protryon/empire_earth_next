@@ -7,6 +7,7 @@
 // Requires lle/U2DRectangle.h, ee/EEAIPathGoalModifierBase.h, ee/EEAIBoundedPathGoalModifierBase.h.
 #ifndef EE_EESTORMMODIFIERS_H
 #define EE_EESTORMMODIFIERS_H
+#include "rust/ee_astar.h"
 
 class EEAIBPGModifierStormShaper : public EEAIBoundedPathGoalModifierBase {
 public:

@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The buttons' places over the columns, the sort a press asks for, a column's shown sort, the resize edge under
 // the mouse and the dragged width are ee_won's guimulti module (rust/crates/ee_won/src/guimulti.rs); this unit
 // keeps the buttons, the cursor and the events.

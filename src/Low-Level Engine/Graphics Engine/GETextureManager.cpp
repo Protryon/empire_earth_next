@@ -29,7 +29,8 @@
 #include "lle/GETexture.h"
 #include "lle/GERenderState.h"
 #include "GEOpenFormats.h"   // GEFindTextureFile: a texture's PNG frames
-#include "rust/ee_rust.h"       // ee_of_texture_free; the manager's logic (ee_ge managers.rs)
+#include "rust/ee_ge.h"       // ee_of_texture_free; the manager's logic (ee_ge managers.rs)
+#include "rust/ee_openformats.h"
 // (sTextureNumber 0x100d9ca8, appended to made textures' names, counts in Rust: ee_ge_texman_made_name)
 
 // port (D9): a texture's cache name, which is also the stem of its PNG files: the name as given, or without its last

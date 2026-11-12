@@ -1,8 +1,9 @@
 // New (port): the plain data of a formation's Place in Rust (ee_formations; rust/ee_rust.h, docs/RUST_PLAN.md R5b.1):
 // the frame, the units' outer collision radii in input order, room for the slots (which name units by index).
-// Requires ee/EEFormation.h and rust/ee_rust.h.
+// Requires ee/EEFormation.h.
 #ifndef EE_EEFORMATIONRUST_H
 #define EE_EEFORMATIONRUST_H
+#include "rust/ee_formations.h"
 
 struct EEFormationRadii {
     EEFormationRadii(const EEFormation* inFormation, std::vector<EEComplexUnit*>& inUnits);

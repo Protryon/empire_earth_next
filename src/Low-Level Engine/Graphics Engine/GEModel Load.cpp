@@ -35,7 +35,7 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "GERustMath.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_ge.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 

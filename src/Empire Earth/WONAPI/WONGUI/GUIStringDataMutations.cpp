@@ -10,7 +10,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 // FUNCTION: WON 0x00727460
 // Constructs the global empty GUIString and registers its exit-time destructor

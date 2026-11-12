@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The centring shift is ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs).
 namespace WONAPI {
 // FUNCTION: WON 0x007375a0

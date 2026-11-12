@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The split, its clamp and percentages, the panes' and bars' rectangles, the drag and the maximise buttons' rules
 // are ee_won's guictl module (rust/crates/ee_won/src/guictl.rs); this unit keeps the panes, bars, buttons,
 // cursors and events.

@@ -28,7 +28,7 @@
 #include "lle/U2DRectangle.h"
 #include "lle/GERasterizer.h"
 #include "lle/GEMaterial.h"
-#include "rust/ee_rust.h"       // ee_ge_material_size_of (ee_ge texture.rs)
+#include "rust/ee_ge.h"       // ee_ge_material_size_of (ee_ge texture.rs)
 
 // FUNCTION: LLE 0x10016b9b
 // Creates an untextured, opaque material with a texture slot per screen and a polygon range per detail level

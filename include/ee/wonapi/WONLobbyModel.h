@@ -65,8 +65,9 @@ public:
     SmartPtr<LobbyClientList> mClients;  // 0x1c
 };
 
-typedef std::set<std::string, StringLessNoCase> LobbyServerAddressSet;
-typedef std::map<unsigned short, SmartPtr<LobbyGroup> > LobbyGroupMap;
+// the containers are Rust objects (round 17, WONLobbyMap.h; lobbymap.rs)
+typedef LobbyKeyedMap<std::string> LobbyServerAddressSet; // StringLessNoCase
+typedef LobbyRefMap<unsigned short, LobbyGroup> LobbyGroupMap;
 LobbyFriend* LobbyFindFriend(unsigned long inUserId); // looks the user up in the persistent friend list
 
 // LobbyServer: a WON routing server with its groups and clients; 0x68 bytes, RTTI LobbyServer : RefCount.
@@ -95,15 +96,21 @@ public:
     int GetNumClients();
     bool IsConnected();
     void ClearGroups();
+    size_t GetGroupCount() const { return this->mGroups.size(); }
+    LobbyGroup* GroupAt(size_t i) const { return this->mGroups.At(i); } // in id order
 
     GUIString mName;                       // +0x08
+private:
     LobbyServerAddressSet mAddresses;      // +0x0c
+public:
     IPAddr mAddress;                       // +0x18
     int mNumChatClients;                   // +0x40
     int mNumClients;                       // +0x44
     unsigned long mLastPing;               // +0x48
     bool mQueryingGroups;                  // +0x4c
+private:
     LobbyGroupMap mGroups;                 // +0x50
+public:
     SmartPtr<LobbyClientList> mClients;    // +0x5c
     SmartPtr<RoutingConnection> mConnection; // +0x60
     unsigned short mMyClientId;            // +0x64
@@ -112,17 +119,23 @@ public:
     unsigned short GetMyClientId() const { return this->mMyClientId; }
 };
 
-typedef std::map<IPAddr, SmartPtr<LobbyServer> > LobbyServerMap;
+typedef LobbyRefMap<IPAddr, LobbyServer> LobbyServerMap;
 class LobbyServerList : public RefCount {
 public:
     LobbyServerList();
     virtual ~LobbyServerList();
     void UpdateFromDirectory(const DirEntityList& inEntities);
     LobbyServer* FindServer(const IPAddr& inAddress);
+    // the servers in address order
+    size_t GetCount() const { return this->mServers.size(); }
+    bool IsEmpty() const { return this->mServers.empty(); }
+    LobbyServer* ServerAt(size_t i) const { return this->mServers.At(i); }
+    IPAddr AddressAt(size_t i) const { return this->mServers.KeyAt(i); }
+private:
     LobbyServerMap mServers;               // +0x08; allocation 0x14, node 0x3c
 };
-typedef std::map<unsigned short,SmartPtr<LobbyGame> > LobbyIdGameMap;
-typedef std::map<IPAddr,SmartPtr<LobbyGame> > LobbyAddrGameMap;
+typedef LobbyRefMap<unsigned short, LobbyGame> LobbyIdGameMap;
+typedef LobbyRefMap<IPAddr, LobbyGame> LobbyAddrGameMap;
 // Vtable 0x852c44, RTTI locator 0x87aca0, type descriptor 0x8ded08; 0x2c bytes (allocated at 0x7e6e80).
 class LobbyGameList : public RefCount {
 public:
@@ -142,11 +155,12 @@ public:
     bool IsEmpty();
     bool RemoveStaleGames(long);
     long GetType() const { return this->mType; }
+private:
     long mType;                            // 0x08
     LobbyIdGameMap mIdGames;                // 0x0c
     LobbyAddrGameMap mAddrGames;            // 0x18
-    LobbyIdGameMap::iterator mIdItr;        // 0x24
-    LobbyAddrGameMap::iterator mAddrItr;    // 0x28
+    LobbyMapCursor<LobbyIdGameMap, unsigned short> mIdItr; // 0x24
+    LobbyMapCursor<LobbyAddrGameMap, IPAddr> mAddrItr;     // 0x28
 };
 
 

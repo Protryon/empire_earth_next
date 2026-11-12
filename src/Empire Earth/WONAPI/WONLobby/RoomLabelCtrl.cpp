@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyRoomServer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
@@ -68,7 +68,7 @@ void RoomLabelCtrl::HandleComponentEvent(ComponentEvent* inEvent)
             if((this->mRoomSpecFlags&aEvent->GetRoomSpec())!=aEvent->GetRoomSpec()) return;
             this->mServer=aEvent->mServerName;
             this->mRoom=aEvent->mGroupName;
-            if(this->mUserCt>=0) this->mUserCt=aEvent->mClients->mClients.size();
+            if(this->mUserCt>=0) this->mUserCt=aEvent->mClients->GetCount();
             this->CalcLabel();
         }
         return;

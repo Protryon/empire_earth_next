@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rust/ee_rust.h"   // the unit registry (rust/crates/ee_units)
+#include "rust/ee_units.h"   // the unit registry (rust/crates/ee_units)
 
 // New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h) is Rust (ee_units): a lock-free radix
 // tree over the id's bits, so any thread may resolve a handle while another thread inserts a unit or runs its

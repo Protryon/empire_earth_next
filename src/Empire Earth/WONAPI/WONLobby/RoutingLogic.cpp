@@ -22,7 +22,7 @@
 #include "ee/wonapi/WONLobbyChatCommands.h"
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONRoutingTypes.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The room flags, Quick Play's pick, the friend search rule, the default server, the settings' client flags and
 // the friends list's limit are ee_won's routing module (rust/crates/ee_won/src/routing.rs); this unit keeps the
 // servers, rooms, connection, ops, dialogs and events (Internet only: the routing servers are gone).
@@ -287,9 +287,9 @@ LobbyServer* RoutingLogic::GetDefaultServer()
     if (aConfig == NULL) return NULL;
     std::vector<LobbyServer*> aList;
     std::vector<EeWonServerPick> aPicks;
-    const LobbyServerMap& aServers = this->mServerList->mServers;
-    for (LobbyServerMap::const_iterator anItr = aServers.begin(); anItr != aServers.end(); ++anItr) {
-        LobbyServer* aServer = anItr->second.get();
+    LobbyServerList* aServers = this->mServerList.get();
+    for (size_t anItr = 0; anItr < aServers->GetCount(); ++anItr) {
+        LobbyServer* aServer = aServers->ServerAt(anItr);
         EeWonServerPick aPick;
         aPick.last_used = aServer->mName == LobbyGetLastServerName();
         aPick.clients = aServer->GetNumClients();
@@ -418,10 +418,10 @@ void RoutingLogic::ClientFlagsChanged(RoutingOp* inBaseOp, LobbyServer* inServer
 // Says whether a friend needs a server search: not already searching, not here, other servers, 30 s since the last
 bool RoutingLogic::ShouldLocateFriend(LobbyFriend* inFriend, unsigned long inNow)
 {
-    const LobbyServerMap& aServers = this->mServerList->mServers;
+    LobbyServerList* aServers = this->mServerList.get();
     bool aLocating = (inFriend->mFlags & 4) != 0;
     bool aHere = !aLocating && this->mCurrentServer.get() != NULL && inFriend->mAddress == this->mCurrentServer->mAddress;
-    return ee_won_routing_should_locate_friend(aLocating, aHere, aServers.size(), this->mCurrentServer.get() != NULL,
+    return ee_won_routing_should_locate_friend(aLocating, aHere, aServers->GetCount(), this->mCurrentServer.get() != NULL,
                                                (uint32_t)inNow, (uint32_t)inFriend->mLastLocate);
 }
 
@@ -661,7 +661,7 @@ void RoutingLogic::PeerChat(RoutingOp* inBaseOp, LobbyServer* inServer)
     if (inOp->IsWhisper() && aTarget != NULL && aTarget->GetClientId() == inServer->GetMyClientId()) {
         if (LobbyGetChatSoundEffects()) LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
         ChatCommandParser* aParser = LobbyGetChatCommandParser();
-        if (aParser != NULL) aParser->mInput = aSender->GetName();
+        if (aParser != NULL) aParser->SetInput(aSender->GetName());
     }
     if ((inOp->GetFlags() & 0x10) && LobbyGetLobbySoundEffects())
         LobbyPlaySound(::LobbyGlobal_Error_Sound.get());
@@ -907,9 +907,9 @@ bool RoutingLogic::JoinDefaultRoom(bool inShowStatus)
     PendingServerCleanup aCleanup(this);
     if (!this->ConnectToServer(aServer, inShowStatus)) return false;
     LobbyGroup* aBestGroup = NULL;
-    LobbyGroupMap::iterator anItr = aServer->mGroups.begin();
-    while (anItr != aServer->mGroups.end()) {
-        LobbyGroup* aGroup = anItr->second.get();
+    size_t anItr = 0;
+    while (anItr < aServer->GetGroupCount()) {
+        LobbyGroup* aGroup = aServer->GroupAt(anItr);
         if (aGroup->IsPublicChatGroup()) {
             if (aGroup->mName == LobbyGetLastRoomName()) {
                 aBestGroup = aGroup;
@@ -1717,9 +1717,10 @@ void RoutingLogic::LocateFriend(LobbyFriend* inFriend,int inRoomSpec)
     if(manager==NULL) return;
     int count=0;
     LobbyServerList* servers=this->mServerList.get();
-    for(LobbyServerMap::iterator it=servers->mServers.begin();it!=servers->mServers.end();++it) {
-        if(this->mCurrentServer.get()!=NULL && this->mCurrentServer->mAddress==it->first) continue;
-        SmartPtr<RoutingGetUserStatusOp> op=new RoutingGetUserStatusOp(it->first,manager);
+    for(size_t it=0;it<servers->GetCount();++it) {
+        IPAddr anAddress=servers->AddressAt(it);
+        if(this->mCurrentServer.get()!=NULL && this->mCurrentServer->mAddress==anAddress) continue;
+        SmartPtr<RoutingGetUserStatusOp> op=new RoutingGetUserStatusOp(anAddress,manager);
         op->AddWONUserId(inFriend->GetUserId());
         this->RunOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete,this),10000);
         ++count;
@@ -1773,20 +1774,18 @@ void RoutingLogic::LocateFriends()
     UDPManager* manager = LobbyGetUDPManager();
     if (manager == NULL) return;
     unsigned long now = (unsigned long)time(NULL);
-    const LobbyFriendMap& friends = LobbyFn35D270();
     LobbyServerList* servers = this->mServerList.get();
     int count = 0;
-    for (LobbyServerMap::iterator scanServer = servers->mServers.begin();
-         scanServer != servers->mServers.end(); ++scanServer) {
-        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == scanServer->first)
+    for (size_t scanServer = 0; scanServer < servers->GetCount(); ++scanServer) {
+        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == servers->AddressAt(scanServer))
             continue;
         ++count;
     }
     if (count == 0) return;
     RoutingGetUserStatusOp::FriendStatusMap requested;
-    LobbyFriendMap::const_iterator friendItr = friends.begin();
-    while(friendItr != friends.end()) {
-        LobbyFriend* friendInfo = friendItr->second.get();
+    size_t friendItr = 0;
+    while(friendItr < LobbyGetFriendCount()) {
+        LobbyFriend* friendInfo = LobbyGetFriendAt(friendItr);
         if (this->ShouldLocateFriend(friendInfo,now)) {
             friendInfo->StartLocate(0);
             friendInfo->mLastSearch = count;
@@ -1795,11 +1794,11 @@ void RoutingLogic::LocateFriends()
         ++friendItr;
     }
     if (requested.empty()) return;
-    for (LobbyServerMap::iterator queryServer = servers->mServers.begin();
-         queryServer != servers->mServers.end(); ++queryServer) {
-        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == queryServer->first)
+    for (size_t queryServer = 0; queryServer < servers->GetCount(); ++queryServer) {
+        IPAddr anAddress = servers->AddressAt(queryServer);
+        if (this->mCurrentServer.get() != NULL && this->mCurrentServer->mAddress == anAddress)
             continue;
-        SmartPtr<RoutingGetUserStatusOp> op = new RoutingGetUserStatusOp(queryServer->first,manager);
+        SmartPtr<RoutingGetUserStatusOp> op = new RoutingGetUserStatusOp(anAddress,manager);
         op->mFriendStatusMap = requested;
         this->RunOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete,this),10000);
     }
@@ -1952,7 +1951,7 @@ void RoutingLogic::RefreshServerList()
     if(!context.get() || !config) return;
     time_t refreshTime=time(NULL);
     if(static_cast<long>(static_cast<unsigned long>(refreshTime)-static_cast<unsigned long>(this->mLastServerRefresh))>=300 ||
-       this->mServerList->mServers.empty()) {
+       this->mServerList->IsEmpty()) {
         SmartPtr<GetDirOp> op=new GetDirOp(context.get());
         op->SetPath(config->mProductDirectory);
         op->SetFlags(0x04000622);
@@ -1966,9 +1965,9 @@ void RoutingLogic::RefreshServerList()
     }
     time_t now=time(NULL);
     LobbyServerList* servers=this->mServerList.get();
-    LobbyServerMap::const_iterator it=servers->mServers.begin();
-    while(it!=servers->mServers.end()) {
-        LobbyServer* server=it->second.get();
+    size_t it=0;
+    while(it<servers->GetCount()) {
+        LobbyServer* server=servers->ServerAt(it);
         if(!server->IsConnected() && static_cast<long>(static_cast<unsigned long>(now)-server->GetLastPing())>=30)
             server->ClearGroups();
         ++it;
@@ -1980,7 +1979,7 @@ void RoutingLogic::RefreshServerList()
 void RoutingLogic::EnterInternetScreen(bool joinDefaultRoom)
 {
     this->RefreshServerList();
-    if(this->mServerList->mServers.empty()) {
+    if(this->mServerList->IsEmpty()) {
         LobbyMessageBox(::RoutingLogic_NoServersTitle_String,::RoutingLogic_NoServersDetails_String);
         return;
     }
@@ -2067,7 +2066,7 @@ namespace WONAPI {
 // Returns false with a message box when the friends list already holds 255 entries
 bool RoutingLogic::CanAddFriend()
 {
-    if(!ee_won_routing_can_add_friend(LobbyFn35D270().size())) {
+    if(!ee_won_routing_can_add_friend(LobbyGetFriendCount())) {
         LobbyMessageBox(::RoutingLogic_TooManyFriendsTitle_String,
                         ::RoutingLogic_TooManyFriendsDetails_String);
         return false;

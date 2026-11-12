@@ -5,6 +5,7 @@
 #define GERUSTVIEWPORT_H
 
 #include <stddef.h>
+#include "rust/ee_ge.h"
 
 // the private members are reached by this friend (declared in GEViewport.h)
 struct GERustViewportLayout {

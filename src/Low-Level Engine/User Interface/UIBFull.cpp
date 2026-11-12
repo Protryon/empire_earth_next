@@ -10,7 +10,7 @@
 // bfull_draw, full_tile_name; docs/RUST_PLAN.md R6); the bitmaps, textures and draws stay here.
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

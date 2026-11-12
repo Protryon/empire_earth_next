@@ -15,7 +15,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyAccountLogic.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The start-up checks' decisions (which errors stay, which server list a directory answer fills, what a version
 // status or a firewall connect-back means, which terms of use are saved, the advert's lines) are ee_won's flow
 // module (rust/crates/ee_won/src/flow.rs); this unit keeps the ops, the server lists, the files and the events.

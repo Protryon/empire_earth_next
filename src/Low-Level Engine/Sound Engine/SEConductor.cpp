@@ -19,7 +19,7 @@
 #include "lle/SEConductor.h"
 #include "lle/SEMixer.h"
 #include "lle/SEScore.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_sound.h"
 
 // The C++ side of the Rust conductor
 struct SEConductor::Rust {

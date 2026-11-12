@@ -7,7 +7,7 @@
 #include <windows.h>
 #include <mbstring.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
