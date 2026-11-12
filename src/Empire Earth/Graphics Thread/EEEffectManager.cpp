@@ -108,6 +108,7 @@
 #include "ee/EEE3DRain.h"
 #include "ee/EEE3DPulseCannonBall.h"
 #include "ee/EEE3DParticle.h"
+#include "ee/EESimCapture.h"
 
 // SYNTHETIC: EXE 0x5054ec
 // SYNTHETIC: EXE 0x5054f6
@@ -1041,6 +1042,48 @@ void EEEffectManager::ReplaceUnit(EEUnit* inOld, EEUnit* inNew)
         theEffect->ReplaceUnit(inOld, inNew);
 }
 
+// TEST ONLY (tools/sim_capture.py EFMU): the manager's state after every Update, folded: the last handle, the
+// index's, the list's and the destruction queue's sizes and an FNV-1a 64 of the index (handle, the effect's kind and
+// own handle, in handle order), the list (handle and kind from the head) and the queue (R4.4, sixth round)
+static void EECaptureEffectManager(EEEffectManager* inManager)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    unsigned long long theHash = 0xcbf29ce484222325ull;
+    struct Fold {
+        static void Word(unsigned long long& ioHash, unsigned int inValue)
+        {
+            for (int i = 0; i < 4; i++) {
+                ioHash ^= (inValue >> (i * 8)) & 0xff;
+                ioHash *= 0x100000001b3ull;
+            }
+        }
+    };
+    unsigned int theListCount = 0;
+    for (std::map<unsigned long, EEEffect*>::iterator it = inManager->mEffectsByHandle.begin();
+         it != inManager->mEffectsByHandle.end(); ++it) {
+        Fold::Word(theHash, (unsigned int)it->first);
+        Fold::Word(theHash, (unsigned int)it->second->mKind);
+        Fold::Word(theHash, (unsigned int)it->second->mHandle.mValue);
+    }
+    for (EEEffect* theEffect = inManager->mEffects; theEffect; theEffect = theEffect->mNext) {
+        Fold::Word(theHash, (unsigned int)theEffect->mHandle.mValue);
+        Fold::Word(theHash, (unsigned int)theEffect->mKind);
+        theListCount++;
+    }
+    for (unsigned long i = 0; i < inManager->mDestroyedHandles.size(); i++)
+        Fold::Word(theHash, (unsigned int)inManager->mDestroyedHandles[i]);
+    EESimCaptureRecord theRecord((unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) |
+                                 ((unsigned int)'U' << 24));
+    theRecord.U32((unsigned int)sEffectManagerHandle);
+    theRecord.U32((unsigned int)inManager->mEffectsByHandle.size());
+    theRecord.U32(theListCount);
+    theRecord.U32((unsigned int)inManager->mDestroyedHandles.size());
+    theRecord.U32((unsigned int)theHash);
+    theRecord.U32((unsigned int)(theHash >> 32));
+    theRecord.Commit();
+}
+
 // FUNCTION: EXE 0x507450
 // Updates the goal markers, destroys the queued effects, then steps every effect, removing those that finish
 // (Step returns 7)
@@ -1061,6 +1104,7 @@ void EEEffectManager::Update()
         }
         theEffect = theNext;
     }
+    EECaptureEffectManager(this);
 }
 
 // FUNCTION: EXE 0x5074c9
