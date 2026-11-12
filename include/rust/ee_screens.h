@@ -7,6 +7,75 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The grave key's press and release around the free camera's rotation (`EEUIEDisableMouseMove`,
+/// `EEUIEEnableMouseMove`).
+constexpr static const uint32_t EE_SCREENS_CAM_DISABLE_MOUSE_MOVE = 2880;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ENABLE_MOUSE_MOVE = 2881;
+
+/// The free camera's revolve (the scenario editor's) and rotate (both forms', the grave key held).
+constexpr static const uint32_t EE_SCREENS_CAM_REVOLVE = 2882;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ROTATE = 2883;
+
+/// The arrow keys (`EEUIEKeyboardScroll(0..3)`: up, down, left, right).
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_UP = 2884;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_DOWN = 2885;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_LEFT = 2886;
+
+constexpr static const uint32_t EE_SCREENS_CAM_SCROLL_RIGHT = 2887;
+
+/// The bracket keys (`EEUIEHotKeyZoom(0)` in, `(1)` out).
+constexpr static const uint32_t EE_SCREENS_CAM_ZOOM_IN = 2888;
+
+constexpr static const uint32_t EE_SCREENS_CAM_ZOOM_OUT = 2889;
+
+/// The mouse wheel.
+constexpr static const uint32_t EE_SCREENS_CAM_WHEEL_ZOOM = 2890;
+
+/// The middle button's grab scroll of the main game form and of the scenario editor's form (`EECreateGrabScroll`).
+constexpr static const uint32_t EE_SCREENS_CAM_GRAB_MAIN = 2891;
+
+constexpr static const uint32_t EE_SCREENS_CAM_GRAB_EDITOR = 2892;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_FREEZE = 640;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MOUSE_PRESENT = 641;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MOUSE_VALUE = 642;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_FREE = 643;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_REVOLVE = 644;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ROTATE = 645;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ZOOM = 646;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_GRAB_SPEED = 647;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_SCROLL = 648;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_ZOOM_ENABLED = 649;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_CINEMATIC = 650;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_RESET_ZOOM = 651;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_CHANGED = 652;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_SET_ZOOM = 653;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_MAX_ZOOM = 654;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAM_COS = 655;
+
+constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_BEGIN = 656;
+
+constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_END = 657;
+
 /// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
 constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
 
@@ -90,6 +159,117 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CL_PLAYER = 121;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CL_APPEND = 122;
 
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_CHANGE_NAME = 1793;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_CHANGE_NAME = 1794;
+
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_LOAD = 1795;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_LOAD = 1796;
+
+constexpr static const uint32_t EE_SCREENS_CB_SHOW_SAVE = 1797;
+
+/// The save, load and name dialogs' cancel buttons (one body in the original, three classes).
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_SAVE = 1798;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_LOAD = 1799;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_NAME = 1800;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_SAVE = 1801;
+
+constexpr static const uint32_t EE_SCREENS_CB_SAVE_NAME_SELECTED = 1802;
+
+constexpr static const uint32_t EE_SCREENS_CB_PURCHASED_SELECTED = 1803;
+
+constexpr static const uint32_t EE_SCREENS_CB_POTENTIAL_SELECTED = 1804;
+
+constexpr static const uint32_t EE_SCREENS_CB_PURCHASE = 1805;
+
+constexpr static const uint32_t EE_SCREENS_CB_RETURNED = 1806;
+
+constexpr static const uint32_t EE_SCREENS_CB_UPDATE_CONTROLS = 1807;
+
+constexpr static const uint32_t EE_SCREENS_CB_CANCEL_CHANGES = 1808;
+
+constexpr static const uint32_t EE_SCREENS_CB_ACCEPT_CHANGES = 1809;
+
+/// The load and save dialogs' delete buttons.
+constexpr static const uint32_t EE_SCREENS_CB_DELETE = 1810;
+
+/// The builder form's close event: the edited civilization deleted.
+constexpr static const uint32_t EE_SCREENS_CB_CLEAN_UP = 1811;
+
+/// The builder form's open event: this code plus its five flags (bit 0 the accept button shown, 1 exit, 2 load,
+/// 3 save, 4 the points hidden).
+constexpr static const uint32_t EE_SCREENS_CB_BUTTONS = 1824;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_NAME_DIALOG = 672;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_TYPED = 673;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ACCEPT_NAME = 674;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLOSE = 675;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SAVE_AS = 676;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_LOAD = 677;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SHOW_SAVE = 678;
+
+/// (list: 0 CivBuilderGetLoadFileList, 1 the event form's save list) -> its GetCurrentSelection, or
+/// [`EE_SCREENS_CB_NO_LIST`]; the load list's selected file name kept
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SELECTION = 679;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SET_NAME_FROM_CIVILIZATION = 680;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLOSE_FORM = 681;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_UNCHANGED = 682;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_SAVE_NAME_SELECTED = 683;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CAN_CHANGE = 684;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RESET_AVAILABLE = 685;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RESET_BOUGHT = 686;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_LOCKED = 687;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_BUY = 688;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_RETURN = 689;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_POINTS_LEFT = 690;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ASK_ACCEPT = 691;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ACCEPT_CHANGES = 692;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_FORM_ID = 693;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_ASK_DELETE = 694;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_CLEAN_UP = 695;
+
+constexpr static const uint32_t EE_SCREENS_OP_CB_SHOW = 696;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CB_HIDE_POINTS = 697;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_NAME = 126;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_CIVILIZATION_NAME = 127;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_SET_NAME = 128;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CB_LOAD = 129;
+
+/// `EE_SCREENS_GAME_CB_SELECTION`'s answer for no list.
+constexpr static const uint32_t EE_SCREENS_CB_NO_LIST = 4294967295;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 
@@ -165,6 +345,56 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN = 52;
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_ERROR = 53;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_NONE_FOUND = 54;
+
+/// The form's open event (`EECreateFormEvent`'s `kFormEventDSOpen`).
+constexpr static const uint32_t EE_SCREENS_DS_OPEN = 6913;
+
+/// The allied and custom chat check boxes' events (empty: OK reads the boxes).
+constexpr static const uint32_t EE_SCREENS_DS_ALLIED = 6914;
+
+constexpr static const uint32_t EE_SCREENS_DS_CUSTOM_CHAT = 6915;
+
+/// A tribute button's left click (raise) and right click (lower).
+constexpr static const uint32_t EE_SCREENS_DS_TRIBUTE_RAISE = 6916;
+
+constexpr static const uint32_t EE_SCREENS_DS_TRIBUTE_LOWER = 6917;
+
+constexpr static const uint32_t EE_SCREENS_DS_OK = 6918;
+
+constexpr static const uint32_t EE_SCREENS_DS_CLEAR = 6919;
+
+constexpr static const uint32_t EE_SCREENS_DS_CANCEL = 6920;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_PLAYERS = 624;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_CURRENT = 625;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_TEAMS_LOCKED = 626;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_UV = 627;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_BG = 628;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_FG = 629;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_DISABLE = 630;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_BUTTON_NUMBER = 631;
+
+constexpr static const uint32_t EE_SCREENS_OP_DS_LABEL_NUMBER = 632;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_RESOURCES = 633;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_STANCE = 634;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DS_CHAT = 635;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_NAME = 123;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
 
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
@@ -688,6 +918,9 @@ constexpr static const uint32_t EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE = 2853;
 
 constexpr static const uint32_t EE_SCREENS_MG_PREVIOUS_MESSAGES = 2854;
 
+/// The formation menu's eight buttons (`EEUIEFormationChange(0..7)`): this code plus the formation type.
+constexpr static const uint32_t EE_SCREENS_MG_FORMATION = 2855;
+
 constexpr static const uint32_t EE_SCREENS_GAME_MG_UI_STATE = 528;
 
 constexpr static const uint32_t EE_SCREENS_GAME_MG_GHOSTS = 529;
@@ -769,6 +1002,10 @@ constexpr static const uint32_t EE_SCREENS_GAME_MG_BEHAVIOR = 567;
 constexpr static const uint32_t EE_SCREENS_GAME_MG_CLOSE_BEHAVIORS = 568;
 
 constexpr static const uint32_t EE_SCREENS_GAME_MG_COPY_BITMAPS = 569;
+
+/// (type) EEFormation::Create, EEMChangeFormation posted, the formation menu (group 8, background 0x98) closed, the
+/// formation the selected group's
+constexpr static const uint32_t EE_SCREENS_GAME_MG_SET_FORMATION = 570;
 
 /// Texts (ee_screenscpp_put_text).
 constexpr static const uint32_t EE_SCREENS_TEXT_MG_CHAT_LOG = 114;
@@ -1802,11 +2039,29 @@ struct EeScreensHotKeyUnit {
   uint32_t distance;
 };
 
+/// A player as the diplomacy form reads it (`ee_screenscpp_diplomacy_player`).
+struct EeScreensDiplomacyPlayer {
+  uint32_t player_id;
+  uint32_t game_result;
+  bool observer;
+  bool human;
+  uint8_t slot;
+  /// `GetResource(kResourceFood..kResourceIron)`.
+  int32_t resources[5];
+  uint32_t enemies[17];
+  bool send_chat[17];
+  float tribute_fee;
+};
+
 /// The armor kind each of the six armor attributes shows (`mAttributes[4..9]`): shock, arrow, pierce, gun, laser,
 /// missile as the original's blocks read `mArmor`.
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
 extern "C" {
+
+/// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
+/// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
+void ee_screens_camera_grab_reset(uint32_t form);
 
 /// The test a command button's availability takes (`EE_SCREENS_BUTTON_*`).
 uint32_t ee_screens_button_command_test(unsigned long button);

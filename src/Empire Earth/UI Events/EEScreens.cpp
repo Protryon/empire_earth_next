@@ -2,11 +2,14 @@
 // screens that are Rust's whole (rust/crates/ee_screens menus.rs: the main menu, the editors' sub-menu, the single
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
-// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys): EEScreenEvent's ProcessEvent, the C++ events the screens still hang on other forms,
-// and the toolkit's and the game's calls the Rust dispatchers make (ee_screenscpp_*). It replaces
-// EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp, EEUIEEmpireEarthEditorsEvents.cpp,
-// EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp, EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp,
-// EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp, EEUIEChatEvents.cpp and EEUIEHotKeyEvents.cpp.
+// the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:
+// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events): EEScreenEvent's
+// ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust
+// dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
+// EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp,
+// EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp, EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp,
+// EEUIEChatEvents.cpp, EEUIEHotKeyEvents.cpp, EEUIEDiplomacyEvents.cpp, EEUIECameraEvents.cpp,
+// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp and EECBUIEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -144,8 +147,13 @@
 #include "ee/EERenderObject.h"
 #include "ee/EECameraControl.h"
 #include "platform/PlatWindow.h"
+#include "ee/EEFormation.h"
+#include "ee/EECivilizationBuilder.h"
+#include "ee/EECBEditableCivilization.h"
+#include "ee/EEScenarioEditorIDs.h"
 #include "rust/ee_screens.h"
 
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp (the farther zoom-out; 1.0 in the original)
 extern GEViewport gU4E8F08;   // 0x4e8f08 (EERenderObject.cpp; the render viewport: the aircraft hot keys' point)
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
@@ -819,6 +827,282 @@ static uint32_t EEScreensMainGameCall(EEUIFMainGame* inForm, uint32_t inOp, uint
     }
     default:
         return EEScreensChatCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+// ---- the civilization builder's (civ_builder.rs): inForm is the builder's form or one of its dialogs
+
+static UWideString sCivBuilderText;   // the typed name or the load list's selected file (EE_SCREENS_TEXT_CB_NAME)
+
+// ---- the camera, scroll and zoom events' (camera.rs): inForm is the main game form or the scenario editor's
+
+static UIEvent* sGrabSaved[2];   // each form's grab scroll: the mouse move event it saved (referenced) while grabbing
+
+UIEvent* EECreateGrabScroll(unsigned long inForm)
+{
+    EEReleaseGrabScroll(inForm);
+    return EECreateScreenEvent(inForm ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+}
+
+void EEReleaseGrabScroll(unsigned long inForm)
+{
+    if (sGrabSaved[inForm] != NULL) {
+        sGrabSaved[inForm]->Dereference();
+        sGrabSaved[inForm] = NULL;
+    }
+    ee_screens_camera_grab_reset(inForm);
+}
+
+// the mouse's X axis, Y axis, middle button and wheel (EE_SCREENS_CAM_AXIS_*)
+static ISEntity* EEScreensMouseEntity(uint32_t inAxis)
+{
+    static const unsigned long kAxes[] = {kMouseXAxis, kMouseYAxis, kMouseMiddleButton, kMouseZAxis};
+    ISEntity* theEntity = NULL;
+    gISMouse->GetEntity(kAxes[inAxis & 3], theEntity);
+    return theEntity;
+}
+
+static uint32_t EEScreensCameraCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
+{
+    EECameraControl& theCamera = gWorld.mCameraControl;
+    switch (inOp) {
+    case EE_SCREENS_GAME_CAM_FREEZE:
+        gMouse->mIsFrozen = inA != 0;
+        break;
+    case EE_SCREENS_GAME_CAM_MOUSE_PRESENT:
+        return EEScreensMouseEntity(inA) != NULL;
+    case EE_SCREENS_GAME_CAM_MOUSE_VALUE: {
+        ISEntity* theEntity = EEScreensMouseEntity(inA);
+        return (uint32_t)(inB ? theEntity->GetNormalizedValue() : theEntity->GetValue());
+    }
+    case EE_SCREENS_GAME_CAM_FREE:
+        return gFreeCamera;
+    case EE_SCREENS_GAME_CAM_REVOLVE:
+        theCamera.Revolve(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ROTATE:
+        theCamera.Rotate(GE3DPoint(Float(inA), Float(inB), 0.0f));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM:
+        return Bits(theCamera.GetZoom());
+    case EE_SCREENS_GAME_CAM_GRAB_SPEED:
+        return Bits(gGamePreferences.mSettings.GetGrabScrollSpeed());
+    case EE_SCREENS_GAME_CAM_SCROLL:
+        theCamera.Scroll(Float(inA), Float(inB));
+        break;
+    case EE_SCREENS_GAME_CAM_ZOOM_ENABLED:
+        return inA ? gZoomEnabled : gGamePreferences.mSettings.mZoomEnabled;
+    case EE_SCREENS_GAME_CAM_CINEMATIC:
+        return gWorld.mInCinematic;
+    case EE_SCREENS_GAME_CAM_RESET_ZOOM:
+        theCamera.ResetZoom();
+        break;
+    case EE_SCREENS_GAME_CAM_CHANGED:
+        theCamera.SetChanged();
+        break;
+    case EE_SCREENS_GAME_CAM_SET_ZOOM:
+        theCamera.SetZoom(Float(inA));
+        break;
+    case EE_SCREENS_GAME_CAM_MAX_ZOOM:
+        return Bits(gCameraMaxZoom);
+    case EE_SCREENS_GAME_CAM_COS:
+        return Bits(UMCos(Float(inA)));
+    case EE_SCREENS_OP_CAM_GRAB_BEGIN: {
+        // the form's mouse move event saved; the grab its mouse move event while the button is down
+        sGrabSaved[inA] = inForm->GetMouseMoveEvent();
+        if (sGrabSaved[inA])
+            sGrabSaved[inA]->Reference();
+        UIEvent* theGrab = EECreateScreenEvent(inA ? EE_SCREENS_CAM_GRAB_EDITOR : EE_SCREENS_CAM_GRAB_MAIN);
+        inForm->SetMouseMoveEvent(theGrab);
+        theGrab->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_CAM_GRAB_END:
+        inForm->SetMouseMoveEvent(sGrabSaved[inA]);
+        if (sGrabSaved[inA]) {
+            sGrabSaved[inA]->Dereference();
+            sGrabSaved[inA] = NULL;
+        }
+        break;
+    case EE_SCREENS_GAME_MG_SET_FORMATION: {
+        // the selected group's formation, posted; the formation menu closed
+        EEFormation* theFormation = EEFormation::Create((long)inA);
+        gCommunications->ProcessLocalUserInput(new EEMChangeFormation((long)inA), kSlotNone);
+        gUIManager->mMainGameForm->GetEntityGroup(8)->Disable();
+        gUIManager->mMainGameForm->GetBackgroundByID(0x98)->SetVisibility(false);
+        theFormation->mB5C = true;
+        gWorld.mPlayers[gWorld.mCurrentPlayer]->mSelectedGroup->SetFormation(theFormation);
+        theFormation->Dereference();
+        break;
+    }
+    default:
+        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(inForm), inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+// ---- the diplomacy form's (diplomacy.rs): inForm is the diplomacy form
+
+// player inIndex of the world as the diplomacy form reads it; false for an empty entry
+extern "C" bool ee_screenscpp_diplomacy_player(uint32_t inIndex, EeScreensDiplomacyPlayer* outPlayer)
+{
+    EEPlayer* thePlayer = gWorld.GetPlayer(inIndex);
+    if (thePlayer == NULL)
+        return false;
+    outPlayer->player_id = thePlayer->GetPlayerID();
+    outPlayer->game_result = thePlayer->GetGameResult();
+    outPlayer->observer = thePlayer->GetObserverMode();
+    outPlayer->human = thePlayer->IsHuman();
+    outPlayer->slot = thePlayer->GetSlot();
+    for (long r = 0; r < 5; r++)
+        outPlayer->resources[r] = thePlayer->GetResource(kResourceFood + r);
+    for (unsigned long q = 0; q < 17; q++) {
+        outPlayer->enemies[q] = thePlayer->GetEnemy(q);
+        outPlayer->send_chat[q] = thePlayer->GetSendChatMessage(q);
+    }
+    outPlayer->tribute_fee = thePlayer->GetTributeFee();
+    return true;
+}
+
+// a tribute to player inTo (food, wood, gold, stone, iron) to the local input
+extern "C" void ee_screenscpp_diplomacy_tribute(uint32_t inTo, const uint32_t* inAmounts)
+{
+    gCommunications->ProcessLocalUserInput(new EEMPayTribute((unsigned char)inTo, inAmounts[0], inAmounts[1], inAmounts[2],
+                                                             inAmounts[3], inAmounts[4]), kSlotNone);
+}
+
+static uint32_t EEScreensDiplomacyCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC,
+                                       uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_DS_PLAYERS:
+        return gWorld.GetNumPlayers();
+    case EE_SCREENS_GAME_DS_CURRENT:
+        return gWorld.mCurrentPlayer;
+    case EE_SCREENS_GAME_DS_TEAMS_LOCKED:
+        return gWorld.GetTeamsLocked();
+    case EE_SCREENS_OP_DS_UV: {
+        GETextureCoordinate theTopLeft, theTopRight, theBottomRight, theBottomLeft;
+        theTopLeft.mU = Float(inB);
+        theTopLeft.mV = 0.0f;
+        theTopRight.mU = Float(inC);
+        theTopRight.mV = 0.0f;
+        theBottomRight.mU = Float(inB);
+        theBottomRight.mV = Float(inD);
+        theBottomLeft.mU = Float(inC);
+        theBottomLeft.mV = Float(inD);
+        static_cast<UIBitmap*>(inForm->GetControl(inA))->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRight,
+                                                                                            theBottomRight, theBottomLeft);
+        break;
+    }
+    case EE_SCREENS_OP_DS_BG:
+        inForm->GetControl(inA)->SetBgColor(GEColor(Float(inB), Float(inC), Float(inD)));
+        break;
+    case EE_SCREENS_OP_DS_FG: {
+        UIControl* theControl = inForm->GetControl(inA);
+        GEText* theText = inC ? static_cast<UIButton*>(theControl)->GetGEText()
+                              : static_cast<UITextLabel*>(theControl)->GetGEText();
+        theText->SetFgColor(gWorld.GetPlayer(inB)->GetColor());
+        break;
+    }
+    case EE_SCREENS_OP_DS_DISABLE:
+        static_cast<UICheckBox*>(inForm->GetControl(inA))->SetDisabled(true);
+        break;
+    case EE_SCREENS_OP_DS_BUTTON_NUMBER:
+        return (uint32_t)atoi(static_cast<UIButton*>(inForm->GetControl(inA))->GetGEText()->GetText());
+    case EE_SCREENS_OP_DS_LABEL_NUMBER:
+        return (uint32_t)static_cast<UITextLabel*>(inForm->GetControl(inA))->GetTextAsInt(0);
+    case EE_SCREENS_GAME_DS_RESOURCES:
+        gCommunications->ProcessLocalUserInput(new EEMAddRemoveResources(inA, (long)inB, inC, (unsigned char)inD), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_STANCE:
+        gCommunications->ProcessLocalUserInput(new EEMSetDiplomaticStance((long)inA, (long)inB), kSlotNone);
+        break;
+    case EE_SCREENS_GAME_DS_CHAT:
+        gCommunications->ProcessLocalUserInput(new EEMSelectCustomPlayerForChat((long)inA, inB != 0), kSlotNone);
+        break;
+    default:
+        return EEScreensCameraCall(inForm, inOp, inA, inB, inC);
+    }
+    return 0;
+}
+
+static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                        uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_CB_SHOW_NAME_DIALOG:
+        return (uint32_t)CivBuilderShowNameDialog();
+    case EE_SCREENS_GAME_CB_TYPED:
+        sCivBuilderText = UWideString();
+        return (uint32_t)(inA ? CivBuilderGetTypedFileName(sCivBuilderText) : CivBuilderGetTypedName(sCivBuilderText));
+    case EE_SCREENS_GAME_CB_ACCEPT_NAME:
+        return (uint32_t)CivBuilderAcceptName();
+    case EE_SCREENS_GAME_CB_CLOSE:
+        return (uint32_t)CivBuilderClose(inA != 0);
+    case EE_SCREENS_GAME_CB_SAVE_AS:
+        return (uint32_t)CivBuilderSaveAs();
+    case EE_SCREENS_GAME_CB_SHOW_LOAD:
+        return (uint32_t)CivBuilderShowLoad();
+    case EE_SCREENS_GAME_CB_SHOW_SAVE:
+        return (uint32_t)CivBuilderShowSave();
+    case EE_SCREENS_GAME_CB_SELECTION: {
+        // the load list (the builder's helper finds it) or the event form's save list; the load list's file kept
+        UIFileListBox* theList = inA ? static_cast<UIFileListBox*>(inForm->GetControlById(kCivBuilderIdSaveCivFileListBox))
+                                     : CivBuilderGetLoadFileList();
+        if (theList == NULL)
+            return EE_SCREENS_CB_NO_LIST;
+        unsigned long theSelection;
+        long theResult = theList->GetCurrentSelection(theSelection);
+        if (theResult == kErrorOK && !inA)
+            sCivBuilderText = theList->GetData(theSelection);
+        return (uint32_t)theResult;
+    }
+    case EE_SCREENS_GAME_CB_SET_NAME_FROM_CIVILIZATION:
+        return (uint32_t)CivBuilderSetName(*gEditableCivilization->GetName());
+    case EE_SCREENS_GAME_CB_CLOSE_FORM:
+        return (uint32_t)CivBuilderCloseForm();
+    case EE_SCREENS_GAME_CB_UNCHANGED:
+        return gEditableCivilization->GetIsUnchanged();
+    case EE_SCREENS_GAME_CB_SAVE_NAME_SELECTED:
+        return (uint32_t)CivBuilderSaveNameSelected();
+    case EE_SCREENS_GAME_CB_CAN_CHANGE:
+        return CivBuilderCanChange();
+    case EE_SCREENS_GAME_CB_RESET_AVAILABLE:
+        return (uint32_t)CivBuilderResetAvailableSelection(inForm);
+    case EE_SCREENS_GAME_CB_RESET_BOUGHT:
+        return (uint32_t)CivBuilderResetBoughtSelection(inForm);
+    case EE_SCREENS_GAME_CB_LOCKED:
+        return gB565566;
+    case EE_SCREENS_GAME_CB_BUY:
+        return (uint32_t)CivBuilderBuyUpgrade(0);
+    case EE_SCREENS_GAME_CB_RETURN:
+        return (uint32_t)CivBuilderReturnUpgrade();
+    case EE_SCREENS_GAME_CB_POINTS_LEFT:
+        return (uint32_t)gEditableCivilization->GetPointsLeft();
+    case EE_SCREENS_GAME_CB_ASK_ACCEPT:
+        return (uint32_t)CivBuilderAskAccept(inForm);
+    case EE_SCREENS_GAME_CB_ACCEPT_CHANGES:
+        CivBuilderAcceptChanges(NULL);
+        break;
+    case EE_SCREENS_GAME_CB_FORM_ID:
+        return inForm->GetFormID();
+    case EE_SCREENS_GAME_CB_ASK_DELETE:
+        return (uint32_t)CivBuilderAskDelete(inForm, inEntity);
+    case EE_SCREENS_GAME_CB_CLEAN_UP:
+        delete gEditableCivilization;
+        gEditableCivilization = NULL;
+        break;
+    case EE_SCREENS_OP_CB_SHOW:
+        gUIManager->GetFormByID(kFormCivBuilder)->GetControl(inA >> 1)->SetDisplayMode(inA & 1 ? kDisplayModeShown
+                                                                                                 : kDisplayModeHidden);
+        break;
+    case EE_SCREENS_GAME_CB_HIDE_POINTS:
+        CivBuilderHidePoints();
+        break;
+    default:
+        return EEScreensDiplomacyCall(inForm, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1673,7 +1957,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensMainGameCall(static_cast<EEUIFMainGame*>(theForm), inOp, inA, inB, inC);
+        return EEScreensCivBuilderCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -1702,6 +1986,15 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         break;
     case EE_SCREENS_TEXT_CL_PLAYER:
         theText = gWorld.GetCurrentPlayer()->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_NAME:
+        theText = gWorld.GetPlayer(inArg)->mName;
+        break;
+    case EE_SCREENS_TEXT_DS_CIVILIZATION:
+        theText = UWideString(gWorld.GetPlayer(inArg)->mCivilization.mName);
+        break;
+    case EE_SCREENS_TEXT_CB_NAME:
+        theText = sCivBuilderText;
         break;
     case EE_SCREENS_TEXT_RASTERIZER_SETTING:
         theText = (inArg ? EEGamePreferences::sDefaultSettings : gGamePreferences.GetSettings()).mRasterizerName;
@@ -2021,6 +2314,18 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_CL_APPEND:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->AppendText(theText);
         break;
+    case EE_SCREENS_TEXT_DS_BUTTON: {
+        UIButton* theButton = static_cast<UIButton*>(theForm->GetControl(inArg));
+        theButton->SetText(theText, theButton->GetGEText()->GetFont());
+        break;
+    }
+    case EE_SCREENS_TEXT_CB_CIVILIZATION_NAME:
+        CivBuilderSetCivilizationName(theText);
+        break;
+    case EE_SCREENS_TEXT_CB_SET_NAME:
+        return (uint32_t)CivBuilderSetName(theText);
+    case EE_SCREENS_TEXT_CB_LOAD:
+        return (uint32_t)CivBuilderLoadCivilization(UString(std::string((const char*)inText, inLength).c_str()));
     case EE_SCREENS_TEXT_MG_QUICK_LOAD: {
         // the last quick save's (the auto save's when inArg) load; theText shown when its file is not found
         UWideString theName = inArg ? gGamePreferences.mSettings.mLastAutoSave : gGamePreferences.mSettings.mLastQuickSave;

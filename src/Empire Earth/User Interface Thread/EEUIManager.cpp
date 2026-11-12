@@ -124,25 +124,16 @@
 #include "ee/RTSMousePointer.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIECivilizationBuilderEvents.h"
-#include "ee/EEUIEDiplomacyEvents.h"
-#include "ee/EEUIEFormationChange.h"
-#include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEHotKeyZoom.h"
-#include "ee/EEUIEKeyboardScroll.h"
 #include "ee/EEUIEMainScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
-#include "ee/EEUIEWheelZoom.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
 #include "ee/EEUIEWonNetModifyUserAccountEvents.h"
 #include "ee/EEUIEWonNetStatsEvents.h"
-#include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEDSUIEvents.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBitmapBackground.h"
@@ -368,7 +359,7 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIEPGSEClose;
         break;
     case kFormEventDSOpen:
-        theEvent = new EEUIEDSOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
         break;
     case kFormEventCEOpen:
         theEvent = new EEUIECEOpen;
@@ -398,9 +389,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 
 // SYNTHETIC: EXE 0x671e5b
 // (EEUIEPGSEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671e86
-// (EEUIEDSOpen's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671eb1
 // (EEUIECEOpen's scalar deleting destructor, after its first user)
@@ -563,68 +551,68 @@ UIEvent* EECreateCivilizationBuilderEvent(UIForm* inForm, unsigned long inID)
     UIEvent* theEvent = NULL;
     switch (inID) {
     case kControlEventCBSaveGameNameSelected:
-        theEvent = new EEUIECBSaveNameSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SAVE_NAME_SELECTED);
         break;
     case kControlEventCBCancelNewCivDialog:
-        theEvent = new EEUIECBCancelChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_NAME);
         break;
     case kControlEventCBShowLoadCivDialog:
-        theEvent = new EEUIECBShowLoadCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_LOAD);
         break;
     case kControlEventCBCancelLoadCivDialog:
-        theEvent = new EEUIECBCancelLoadCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_LOAD);
         break;
     case kControlEventCBShowSaveCivDialog:
-        theEvent = new EEUIECBShowSaveCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_SAVE);
         break;
     case kControlEventCBCancelSaveCivDialog:
-        theEvent = new EEUIECBCancelSaveCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_SAVE);
         break;
     case kControlEventCBPurchasedUpgradeSelected:
-        theEvent = new EEUIECBPurchasedUpgradeSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASED_SELECTED);
         break;
     case kControlEventCBPotentialUpgradeSelected:
-        theEvent = new EEUIECBPotentialUpgradeSelected;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_POTENTIAL_SELECTED);
         break;
     case kControlEventCBUpgradePurchased:
-        theEvent = new EEUIECBUpgradePurchaseAttempt;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASE);
         break;
     case kControlEventCBUpgradeReturned:
-        theEvent = new EEUIECBUpgradeReturned;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_RETURNED);
         break;
     case kControlEventCBUpdateControls:
-        theEvent = new EEUIECBUpdateControls;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_UPDATE_CONTROLS);
         break;
     case kControlEventCBCancelChanges:
-        theEvent = new EEUIECBCancelChanges;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_CHANGES);
         break;
     case kControlEventCBAcceptChanges:
-        theEvent = new EEUIECBAcceptChanges;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGES);
         break;
     case kControlEventCBShowChangeNameDialog:
-        theEvent = new EEUIECBShowChangeNameDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_CHANGE_NAME);
         break;
     case kControlEventCBSaveCivEnterPressed:
-        theEvent = new EEUIECBAcceptSaveCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
         break;
     case kControlEventCBAcceptLoadCivilization:
-        theEvent = new EEUIECBAcceptLoadCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
         break;
     case kControlEventCBAcceptChangeName:
-        theEvent = new EEUIECBAcceptChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
         break;
     case kControlEventCBDisplayDeleteCivDialogInLoad:
     case kControlEventCBDisplayDeleteCivDialogInSave:
-        theEvent = new EEUIECBDisplayDeleteCivDialog;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_DELETE);
         break;
     case kControlEventCBAcceptChangeNameEnterPressed:
-        theEvent = new EEUIECBAcceptChangeName;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
         break;
     case kControlEventCBAcceptLoadCivilizationDoubleClicked:
-        theEvent = new EEUIECBAcceptLoadCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
         break;
     case kControlEventCBAcceptSaveCivilization:
-        theEvent = new EEUIECBAcceptSaveCivilization;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
         break;
     }
     return theEvent;
@@ -696,28 +684,28 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE);
         break;
     case kControlEventSRMSetFormationShortLine:
-        theEvent = new EEUIEFormationChange(0);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 0);
         break;
     case kControlEventSRMSetFormationLongLine:
-        theEvent = new EEUIEFormationChange(1);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 1);
         break;
     case kControlEventSRMSetFormationLooseLine:
-        theEvent = new EEUIEFormationChange(2);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 2);
         break;
     case kControlEventSRMSetFormationStaggeredLine:
-        theEvent = new EEUIEFormationChange(3);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 3);
         break;
     case kControlEventSRMSetFormationDeepWedge:
-        theEvent = new EEUIEFormationChange(4);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 4);
         break;
     case kControlEventSRMSetFormationShallowWedge:
-        theEvent = new EEUIEFormationChange(5);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 5);
         break;
     case kControlEventSRMSetFormationInwardCircle:
-        theEvent = new EEUIEFormationChange(6);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 6);
         break;
     case kControlEventSRMSetFormationOutwardCircle:
-        theEvent = new EEUIEFormationChange(7);
+        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 7);
         break;
     case kControlEventSRMDisplayChatLog:
         theEvent = EECreateScreenEvent(EE_SCREENS_MG_PREVIOUS_MESSAGES);
@@ -732,9 +720,6 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 
 // SYNTHETIC: EXE 0x673359
 // (EEUIELoadUnit's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67349a
-// (EEUIEFormationChange's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6734c5
 // Creates the main screen's, the editors' sub-menu's, the single player form's and the play campaign form's event for
