@@ -14,7 +14,6 @@
 #include "ee/EEUnitHandle.h"
 
 class EEUIMiniMap;
-class EEUIEGrabScroll;
 class UIFullBackground;
 class UIButton;
 class EEUIFSEUndo;
@@ -119,7 +118,7 @@ public:
     EEUIFSEBrushGroup* GetBrushGroup() const { return this->mBrushGroup; }
     EEUIFSEBrushGroup* mBrushGroup;         // +0x244 (new 0x30, ctor 0x1a0315; SetPaintArea)
     UIFullBackground* mFullBackground;                   // +0x248
-    EEUIEGrabScroll* mGrabScroll;           // +0x24c (the ctor: new EEUIEGrabScroll, the middle button's events)
+    UIEvent* mGrabScroll;                   // +0x24c (the ctor: EECreateGrabScroll(1), the middle button's events)
     UIComboBox* mPlayerComboBox;            // +0x250
     UIButton* mLoadButton;                       // +0x254
     UIButton* mTestButton;                       // +0x258

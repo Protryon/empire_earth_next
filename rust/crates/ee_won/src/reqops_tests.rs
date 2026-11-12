@@ -31,7 +31,7 @@ fn verdict(c: Checked) -> String {
     match c {
         Checked::Status(s) => s.to_string(),
         Checked::InvalidHeader => "inv".into(),
-        Checked::Cut => "cut".into(),
+        Checked::Cut | Checked::Datagram => "cut".into(),
     }
 }
 

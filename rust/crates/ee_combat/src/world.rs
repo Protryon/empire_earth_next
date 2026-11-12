@@ -9,6 +9,7 @@
 //! arithmetic are here. Every handle is an `EEUnit*` (a continent's: an `EEAIContinent*`), 0 for none.
 
 use crate::ceil;
+use crate::damage::apply_hit;
 use crate::reads::{
     EeCombatQueryHost, QueryHost, Stored, EE_COMBAT_A_WEAPON_TAG, EE_COMBAT_CLASS_PROJECTILE, EE_COMBAT_H_GOAL_TARGET,
     EE_COMBAT_H_PLAYER, EE_COMBAT_Q_CATEGORY, EE_COMBAT_Q_CLASS_FLAGS, EE_COMBAT_Q_ENEMY, EE_COMBAT_Q_FIRE_OVER_WALLS,
@@ -128,8 +129,7 @@ pub const EE_COMBAT_W_LINE_BLOCKED: i32 = 26;
 /// the impact sparks of `object`'s class on it; the impact sparks placed on tile `args[0..2]` (+0.5, its height).
 pub const EE_COMBAT_W_SPARKS_ON: i32 = 27;
 pub const EE_COMBAT_W_SPARKS_AT: i32 = 28;
-/// the class's `ApplyHit(object, other)`.
-pub const EE_COMBAT_W_APPLY_HIT: i32 = 29;
+// 29 was the class's `ApplyHit` (damage.rs `apply_hit` since the tenth round)
 /// the class's `LaunchShot(object, other, point, NULL)`, `LaunchFromTurret(object, other, point)`.
 pub const EE_COMBAT_W_LAUNCH_SHOT: i32 = 30;
 pub const EE_COMBAT_W_LAUNCH_FROM_TURRET: i32 = 31;
@@ -561,7 +561,7 @@ pub fn fire_shot<H: WorldHost>(h: &mut H, unit: EeCombatHandle) {
                         op(h, EE_COMBAT_W_SPARKS_ON, blocker, 0);
                     }
                 } else {
-                    op(h, EE_COMBAT_W_APPLY_HIT, unit, target);
+                    apply_hit(h, unit, target);
                 }
             } else {
                 let mut spot = [0; 12];
@@ -569,7 +569,7 @@ pub fn fire_shot<H: WorldHost>(h: &mut H, unit: EeCombatHandle) {
                 h.op(EE_COMBAT_W_SPARKS_AT, 0, 0, &mut spot);
             }
         } else {
-            op(h, EE_COMBAT_W_APPLY_HIT, unit, target);
+            apply_hit(h, unit, target);
         }
     } else {
         let unit_type = read(h, EE_COMBAT_Q_UNIT_TYPE, unit);
@@ -587,7 +587,7 @@ pub fn fire_shot<H: WorldHost>(h: &mut H, unit: EeCombatHandle) {
                     h.act(EE_COMBAT_A_WEAPON_TAG, unit, last as i32);
                 }
                 op(h, EE_COMBAT_W_SPECIAL_EFFECT, unit, target);
-                op(h, EE_COMBAT_W_APPLY_HIT, unit, target);
+                apply_hit(h, unit, target);
                 if op(h, EE_COMBAT_W_CAN_ATTACK_CLASS, unit, target) == 0 {
                     op1(h, EE_COMBAT_W_START_ACTION, unit, W_ACTION_IDLE);
                 }
@@ -596,7 +596,7 @@ pub fn fire_shot<H: WorldHost>(h: &mut H, unit: EeCombatHandle) {
             }
             done = true;
         } else {
-            op(h, EE_COMBAT_W_APPLY_HIT, unit, target);
+            apply_hit(h, unit, target);
         }
     }
     if count != 0 {

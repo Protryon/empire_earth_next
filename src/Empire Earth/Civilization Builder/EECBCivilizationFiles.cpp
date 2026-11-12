@@ -86,6 +86,8 @@
 #include "ee/EEPhysics.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_CB_*: the builder's events (ee_screens civ_builder.rs)
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fdfe (wrapper)
@@ -595,12 +597,18 @@ long CivBuilderOpenForm()
     UString theDirectory;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     EEPlayer* thePlayer = ::gWorld.GetCurrentPlayer();
-    EEUIECBShowOrHideButtons* theEvent;
+    // the open event shows or hides the accept, exit, load and save buttons and may hide the points (bits 0..4 of its
+    // code: ee_screens civ_builder.rs)
+    auto Buttons = [](bool inAccept, bool inExit, bool inLoad, bool inSave, bool inHidePoints) {
+        return EECreateScreenEvent(EE_SCREENS_CB_BUTTONS + (inAccept | inExit << 1 | inLoad << 2 | inSave << 3 |
+                                                            inHidePoints << 4));
+    };
+    UIEvent* theEvent;
     if (thePlayer != NULL) {
         if (gFreeCamera) {
             gB565566 = false;
             gB565567 = false;
-            theEvent = new EEUIECBShowOrHideButtons(false, true, true, true, true);
+            theEvent = Buttons(false, true, true, true, true);
         } else {
             gB565566 = thePlayer->mCivilizationLocked;
             if (::gWorld.mGameOptions.CanBuyCivilization()) {
@@ -608,21 +616,21 @@ long CivBuilderOpenForm()
                 bool theWasOpen = thePlayer->mCivilizationChosen;
                 thePlayer->mCivilizationLocked = true;
                 if (!theWasOpen)
-                    theEvent = new EEUIECBShowOrHideButtons(true, false, true, false, false);
+                    theEvent = Buttons(true, false, true, false, false);
                 else
-                    theEvent = new EEUIECBShowOrHideButtons(false, true, false, false, false);
+                    theEvent = Buttons(false, true, false, false, false);
             } else {
-                theEvent = new EEUIECBShowOrHideButtons(true, true, false, false, false);
+                theEvent = Buttons(true, true, false, false, false);
             }
         }
     } else {
-        theEvent = new EEUIECBShowOrHideButtons(false, true, true, true, false);
+        theEvent = Buttons(false, true, true, true, false);
         gB565566 = false;
     }
     theForm->SetFormOpenEvent(theEvent);
     if (theEvent != NULL)
         theEvent->Dereference();
-    UIEvent* theClose = new EEUIECBCleanUp;
+    UIEvent* theClose = EECreateScreenEvent(EE_SCREENS_CB_CLEAN_UP);
     theForm->SetFormCloseEvent(theClose);
     theClose->Dereference();
     long theResult = CivBuilderPushBuilderForm();
@@ -646,41 +654,6 @@ long CivBuilderOpenForm()
         }
     }
     return theResult;
-}
-
-// FUNCTION: EXE 0x680e8e
-// Deletes the edited civilization when the builder closes
-long EEUIECBCleanUp::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    delete gEditableCivilization;
-    gEditableCivilization = NULL;
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x680eab
-// Shows or hides the builder's accept, exit, load and save buttons, and optionally hides its points controls
-long EEUIECBShowOrHideButtons::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    if (this->mB0C)
-        theForm->GetControl(kCivBuilderCivAcceptChangesButton)->SetDisplayMode(kDisplayModeShown);
-    else
-        theForm->GetControl(kCivBuilderCivAcceptChangesButton)->SetDisplayMode(kDisplayModeHidden);
-    if (this->mB0D)
-        theForm->GetControl(kCivBuilderCivExitButton)->SetDisplayMode(kDisplayModeShown);
-    else
-        theForm->GetControl(kCivBuilderCivExitButton)->SetDisplayMode(kDisplayModeHidden);
-    if (this->mB0E)
-        theForm->GetControl(kCivBuilderLoadCivButton)->SetDisplayMode(kDisplayModeShown);
-    else
-        theForm->GetControl(kCivBuilderLoadCivButton)->SetDisplayMode(kDisplayModeHidden);
-    if (this->mB0F)
-        theForm->GetControl(kCivBuilderCivSaveButton)->SetDisplayMode(kDisplayModeShown);
-    else
-        theForm->GetControl(kCivBuilderCivSaveButton)->SetDisplayMode(kDisplayModeHidden);
-    if (this->mB10)
-        CivBuilderHidePoints();
-    return kErrorOK;
 }
 
 // FUNCTION: EXE 0x680f34

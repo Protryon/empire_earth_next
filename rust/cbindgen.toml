@@ -7,13 +7,13 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_gfx", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech", "ee_units", "ee_netmsg", "ee_screens", "ee_scenario", "ee_ai"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields", "TableKey", "Trigger", "DirtyRect", "EeGoalSpec", "EeCombatConditionIn", "EeCombatConditionOut", "EeCombatStepIn", "EeScreensSinglePlayerSlot", "EeWonLobbyResult", "EeWonLobbyText", "EeWonLobbySound", "EeWonGuiField", "EeWonGuiCursor", "EeScreensSettingsRecord", "EeScreensVideoMode", "EeScreensLobbyPlayerRecord", "EeScreensLobbyOptionsRecord", "EeScreensHotKeyUnit", "EeScreensDiplomacyPlayer"]
 # Rust-to-Rust bridges no C++ calls (ee_rust defines them for a crate that imports them; listed twice otherwise)
 exclude = ["ee_combat_store_unit_of", "ee_combat_store_player_of"]
 

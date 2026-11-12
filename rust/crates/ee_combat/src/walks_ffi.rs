@@ -104,62 +104,7 @@ pub unsafe extern "C" fn ee_combat_line_blocked(
     line_blocked(unsafe { read(input) }, &mut host)
 }
 
-// ---- splash damage
-
-/// `ApplyAreaDamage`'s world (see `AreaHost`).
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct EeCombatAreaHost {
-    pub ctx: *mut c_void,
-    pub tile_first: unsafe extern "C" fn(ctx: *mut c_void, x: i32, y: i32) -> u64,
-    pub node_next: unsafe extern "C" fn(ctx: *mut c_void, node: u64) -> u64,
-    pub node_unit: unsafe extern "C" fn(ctx: *mut c_void, node: u64) -> u64,
-    pub distance_squared: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> f32,
-    pub targetable: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub same_player: unsafe extern "C" fn(ctx: *mut c_void, unit: u64) -> i32,
-    pub hit: unsafe extern "C" fn(ctx: *mut c_void, unit: u64),
-}
-
-impl AreaHost for EeCombatAreaHost {
-    fn tile_first(&mut self, x: i32, y: i32) -> EeCombatHandle {
-        // SAFETY: the table's contract: `ctx` is live for the call that handed it over
-        unsafe { (self.tile_first)(self.ctx, x, y) }
-    }
-    fn node_next(&mut self, node: EeCombatHandle) -> EeCombatHandle {
-        // SAFETY: as above
-        unsafe { (self.node_next)(self.ctx, node) }
-    }
-    fn node_unit(&mut self, node: EeCombatHandle) -> EeCombatHandle {
-        // SAFETY: as above
-        unsafe { (self.node_unit)(self.ctx, node) }
-    }
-    fn distance_squared(&mut self, unit: EeCombatHandle) -> f32 {
-        // SAFETY: as above
-        unsafe { (self.distance_squared)(self.ctx, unit) }
-    }
-    fn targetable(&mut self, unit: EeCombatHandle) -> bool {
-        // SAFETY: as above
-        unsafe { (self.targetable)(self.ctx, unit) != 0 }
-    }
-    fn same_player(&mut self, unit: EeCombatHandle) -> bool {
-        // SAFETY: as above
-        unsafe { (self.same_player)(self.ctx, unit) != 0 }
-    }
-    fn hit(&mut self, unit: EeCombatHandle) {
-        // SAFETY: as above
-        unsafe { (self.hit)(self.ctx, unit) }
-    }
-}
-
-/// `ApplyAreaDamage`'s walk: calls `host.hit` for every victim in order.
-///
-/// # Safety
-/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_area_victims(input: *const EeCombatAreaIn, host: *const EeCombatAreaHost) {
-    let mut host = unsafe { *host };
-    area_victims(unsafe { read(input) }, &mut host)
-}
+// (splash damage: damage.rs walks `area_victims` over the world host since the tenth round)
 
 // ---- the new target search
 

@@ -177,6 +177,33 @@ constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
 /// The clear part's end: the rest (`at`, `len`) is the encrypted part.
 constexpr static const uint8_t EE_WON_CERT_REST = 10;
 
+/// `GetPeerData()` (a borrowed `RefCount*`, NULL before a login): `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_PEER = 1;
+
+/// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_SESSION_KEY = 2;
+
+/// the number of error strings: `ee_won_hostop_num`; string `index`: `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_GETCERT_ERRORS = 3;
+
+/// the number of community statuses: `ee_won_hostop_num`; status `index`'s name (UTF-16 LE): `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITIES = 4;
+
+/// community status `index`'s status: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_STATUS = 5;
+
+/// community status `index`'s id: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_COMMUNITY_ID = 6;
+
+/// `SetCreateAccount(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_CREATE_ACCOUNT = 7;
+
+/// `SetNewPassword(data)` (UTF-16 LE): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_NEW_PASSWORD = 8;
+
+/// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_GETCERT_AUTH_CONTEXT = 9;
+
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
 
@@ -372,6 +399,21 @@ constexpr static const int32_t EE_WON_FTPGET_CONTENT = 11;
 constexpr static const int32_t EE_WON_FTPGET_LOCAL = 12;
 
 constexpr static const int32_t EE_WON_FTPGET_REMOTE = 13;
+
+/// `SetListenPort(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_LISTEN_PORT = 1;
+
+/// `SetDoListen(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_DO_LISTEN = 2;
+
+/// `SetWaitForConnect(num)`: `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_FWOP_WAIT_FOR_CONNECT = 3;
+
+/// whether the server gave our public address (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FWOP_HAS_PUBLIC = 4;
+
+/// the public address's host, set with port 0 (`ee_won_hostop_num`)
+constexpr static const int32_t EE_WON_FWOP_PUBLIC_HOST = 5;
 
 /// BrowserComponentConfig::GetPredefinedComponent(name) in BrowserComponentConfig.cpp: instruction keys (exact).
 constexpr static const int32_t EE_WON_CFG_KEYS_BROWSERCOMPONENTCONFIG_GETPREDEFINEDCOMPONENT_NAME = 0;
@@ -792,7 +834,7 @@ constexpr static const int32_t EE_WON_HOST_OP_SOCKET = 23;
 /// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
 constexpr static const int32_t EE_WON_HOST_PEER_AUTH_KEY = 24;
 
-/// `op->IsKilled()` -> out_num
+/// `op->IsKilled()` (NULL: the op itself) -> out_num
 constexpr static const int32_t EE_WON_HOST_OP_KILLED = 25;
 
 /// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
@@ -878,6 +920,158 @@ constexpr static const int32_t EE_WON_HOST_RELEASE = 69;
 
 /// `obj0->AddRef()`
 constexpr static const int32_t EE_WON_HOST_ADD_REF = 70;
+
+/// `mAuthType` -> out_num
+constexpr static const int32_t EE_WON_HOST_AUTH_TYPE = 80;
+
+/// `mAuthContext != NULL` -> out_num
+constexpr static const int32_t EE_WON_HOST_HAS_AUTH = 81;
+
+/// `ServerOp::ConnectTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CONNECT_TIME = 82;
+
+/// `GetTimeout()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIMEOUT = 83;
+
+/// `mAuthContext->GetPeerData()->GetCertificate()->GetUserId()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_USER_ID = 84;
+
+/// a server context obj0's `CopyAddresses(list)` -> the sink (six bytes each)
+constexpr static const int32_t EE_WON_HOST_CTX_ADDRS = 85;
+
+/// a server context obj0's `NotifyFailed(addr)`
+constexpr static const int32_t EE_WON_HOST_CTX_FAILED = 86;
+
+/// `mAuthContext->GetSession(addr)` -> out_obj (a reference; none: NULL)
+constexpr static const int32_t EE_WON_HOST_GET_SESSION = 87;
+
+/// `mAuthContext->PutSession(addr, obj0)`
+constexpr static const int32_t EE_WON_HOST_PUT_SESSION = 88;
+
+/// a socket obj0's `AddMsgTransform(new CryptTransform(obj1))` (a session)
+constexpr static const int32_t EE_WON_HOST_ADD_CRYPT = 89;
+
+/// `mTracker.KillAll()` (may call back)
+constexpr static const int32_t EE_WON_HOST_KILL_ALL = 90;
+
+/// a peer auth op's `GetSession()` -> out_obj (a reference; none: NULL)
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_SESSION = 91;
+
+/// a peer auth op's `GetGetCertStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_CERT = 92;
+
+/// `dynamic_cast<RecvMsgOp*>(obj0) != NULL` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_IS_RECV_MSG = 93;
+
+/// a socket obj0's `Listen(1000)` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_LISTEN = 94;
+
+/// a socket obj0's `GetLocalPort()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_PORT = 95;
+
+/// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
+constexpr static const int32_t EE_WON_HOST_RUN = 96;
+
+/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
+constexpr static const int32_t EE_WON_HOST_REQ_NEXT = 97;
+
+/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
+/// `ReadBufferException`
+constexpr static const int32_t EE_WON_HOST_REQ_CHECK = 98;
+
+/// `Reset()`
+constexpr static const int32_t EE_WON_HOST_REQ_RESET = 99;
+
+/// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_VERIFIER_PUBLIC = 100;
+
+/// ctx obj0's `GetPeerData()` -> out_obj (a reference)
+constexpr static const int32_t EE_WON_HOST_CERT_CTX_PEER = 101;
+
+/// peer obj0's `GetPubKeyBlock()` -> out_obj (borrowed)
+constexpr static const int32_t EE_WON_HOST_CERT_PEER_BLOCK = 102;
+
+/// peer obj0's `GetAuthDelta()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_PEER_DELTA = 103;
+
+/// ctx obj0's `LoadSecretList()`
+constexpr static const int32_t EE_WON_HOST_CERT_LOAD_SECRETS = 104;
+
+/// block obj0's `IsValid()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_BLOCK_VALID = 105;
+
+/// ctx obj0's `SetPeerData(new AuthPeerData(obj1))` (a block)
+constexpr static const int32_t EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK = 106;
+
+/// block obj0's `GetId()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_BLOCK_ID = 107;
+
+/// block obj0's `GetCurrentKey().Encrypt(data)` -> the sink (NULL: not called)
+constexpr static const int32_t EE_WON_HOST_CERT_BLOCK_ENCRYPT = 108;
+
+/// ctx obj0's `GetUserName()` (UTF-16 LE) -> the sink
+constexpr static const int32_t EE_WON_HOST_CERT_USER = 109;
+
+/// ctx obj0's `GetPassword()` (UTF-16 LE) -> the sink
+constexpr static const int32_t EE_WON_HOST_CERT_PASSWORD = 110;
+
+/// what ctx obj0's `AppendCommunityData` appends -> the sink
+constexpr static const int32_t EE_WON_HOST_CERT_COMMUNITY = 111;
+
+/// what ctx obj0's `AppendHashes(data)` appends -> the sink
+constexpr static const int32_t EE_WON_HOST_CERT_HASHES = 112;
+
+/// ctx obj0's `AddSecret(data)`
+constexpr static const int32_t EE_WON_HOST_CERT_ADD_SECRET = 113;
+
+/// ctx obj0's `RemoveSecret(data)`
+constexpr static const int32_t EE_WON_HOST_CERT_REMOVE_SECRET = 114;
+
+/// `new AuthCertificate(data)` (num0 1) or `new Auth2Certificate(data)` -> out_obj
+constexpr static const int32_t EE_WON_HOST_CERT_NEW = 115;
+
+/// certificate obj0 (kind num0)'s `IsValid()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_VALID = 116;
+
+/// block obj0's `Verify(obj1)` (a certificate of kind num0) -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_BLOCK_VERIFY = 117;
+
+/// certificate obj0 (kind num0)'s `ComputeAuthDelta()` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_DELTA = 118;
+
+/// certificate obj0 (kind num0)'s issue and expire times -> the sink (two 64-bit LE numbers)
+constexpr static const int32_t EE_WON_HOST_CERT_TIMES = 119;
+
+/// `new AuthPubKeyBlock(data)` -> out_obj
+constexpr static const int32_t EE_WON_HOST_CERT_NEW_BLOCK = 120;
+
+/// block obj0's `IsValidAndVerified(AuthContext::GetVerifierKey())` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_BLOCK_VERIFIED = 121;
+
+/// ctx obj0's `CommitSecrets(num0, num1)`
+constexpr static const int32_t EE_WON_HOST_CERT_COMMIT = 122;
+
+/// a new private key (`ElGamal`, not a `RefCount`) -> out_obj
+constexpr static const int32_t EE_WON_HOST_CERT_PRIV_NEW = 123;
+
+/// private key obj0's `SetPrivateKey(data)` -> out_num
+constexpr static const int32_t EE_WON_HOST_CERT_PRIV_SET = 124;
+
+/// `delete` private key obj0
+constexpr static const int32_t EE_WON_HOST_CERT_PRIV_FREE = 125;
+
+/// `new AuthPeerData(obj0, obj1, *key num0, num1, obj2)` (certificate, block, the private key, the delta, the
+/// second certificate) -> out_obj
+constexpr static const int32_t EE_WON_HOST_CERT_NEW_PEER = 126;
+
+/// ctx obj0's `SetPassword(data)` (UTF-16 LE)
+constexpr static const int32_t EE_WON_HOST_CERT_SET_PASSWORD = 127;
+
+/// ctx obj0's `SetPeerData(obj1)`
+constexpr static const int32_t EE_WON_HOST_CERT_SET_PEER = 128;
+
+/// ctx obj0's `ClearOneTimeData()`
+constexpr static const int32_t EE_WON_HOST_CERT_CLEAR_ONE_TIME = 129;
 
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
@@ -996,6 +1190,72 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
 constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
+
+/// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
+constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
+
+/// `GetMultiDirOp`: the query count, each query as `GetDirOp`'s
+constexpr static const int32_t EE_WON_REQOPS_DIR_MULTI = 8;
+
+/// `GetAliasDirOp`: the product name, then the queries as `GetMultiDirOp`'s
+constexpr static const int32_t EE_WON_REQOPS_DIR_ALIAS = 9;
+
+/// `FindEntityOp`: is-service, the get flags, the match mode, the find flags, the path, name and display name
+/// (UTF-16 LE), has-net-address and the address, the find data object count and each one's type, has-data and
+/// data, the data type count and each type
+constexpr static const int32_t EE_WON_REQOPS_DIR_FIND = 10;
+
+/// `GetServiceOp`: the flags, the path and name (UTF-16 LE), has-net-address and the address, the data types
+constexpr static const int32_t EE_WON_REQOPS_DIR_SERVICE = 11;
+
+/// `GetAccountOp`: the profile (the newsletter count and each id and subscription; the birth month, day and year;
+/// the custom action id, has-data and data)
+constexpr static const int32_t EE_WON_REQOPS_ACCOUNT_GET = 12;
+
+/// `UpdateAccountOp`: the new password (UTF-16 LE), the email, the profile
+constexpr static const int32_t EE_WON_REQOPS_ACCOUNT_UPDATE = 13;
+
+/// the number of queries (number)
+constexpr static const int32_t EE_WON_REQOP_DIR_LISTS = 40;
+
+/// a query's status (number; the element: the query's index)
+constexpr static const int32_t EE_WON_REQOP_DIR_STATUS = 41;
+
+/// a query's entities (entities; the element: the query's index; the find's own list is 0)
+constexpr static const int32_t EE_WON_REQOP_DIR_LIST = 42;
+
+/// the find's and the get service's `GetService()` (entities: none or one)
+constexpr static const int32_t EE_WON_REQOP_DIR_SERVICE = 43;
+
+/// the get account's `mEmail` (bytes)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_EMAIL = 44;
+
+/// the account ops' `mErrorString` (bytes)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_ERROR = 45;
+
+/// the profile's `GetNewsletterSub(id)` (number; the element: the id); a setter: `AddNewsletterSub` (the number:
+/// the id, with the subscription at bit 16)
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_NEWSLETTER = 46;
+
+/// a setter: the profile's `ClearNewsletterSubs()`
+constexpr static const int32_t EE_WON_REQOP_ACCOUNT_CLEAR_NEWSLETTERS = 47;
+
+/// The current server's address (`GetCurAddr()`, six bytes): `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_REQHOST_CUR_ADDR = -1;
+
+/// `SetServerContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_REQHOST_CONTEXT = -2;
+
+/// `SetAddr(addr)`: `ee_won_hostop_set`; `GetAddr()` (the first address, six bytes; none: invalid):
+/// `ee_won_hostop_bytes`
+constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
+
+/// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
+constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
+
+/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
+/// `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_REQHOST_LAST_ERROR = -5;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -3345,7 +3605,8 @@ struct EeWonBreak {
 /// (not called: NULL).
 struct EeWonHostCall {
   int32_t code;
-  void *obj[2];
+  /// the objects (a third only where a statement takes three)
+  void *obj[3];
   int64_t num[2];
   const uint8_t *data;
   size_t len;
@@ -4597,6 +4858,10 @@ void ee_won_cachemap_write(const char *path,
                            size_t count,
                            void (*delete_)(void*, size_t),
                            void *context);
+
+/// A new `GetCertOp`: its auth context (`EE_WON_GETCERT_AUTH_CONTEXT`) and its server context
+/// (`EE_WON_REQHOST_CONTEXT`, the auth context's) are set after the bind.
+EeWonHostOp *ee_won_hostop_getcert();
 
 /// `GetCommandName`.
 const char *ee_won_chat_command_name(int32_t command);
@@ -6037,6 +6302,9 @@ EeWonHostOp *ee_won_ftpget_new(const uint8_t *host,
 /// # Safety
 /// `url` holds `len` bytes.
 EeWonHostOp *ee_won_ftpget_new_url(const uint8_t *url, size_t len, bool extract);
+
+/// A new `DetectFirewallOp`: its server context (`EE_WON_REQHOST_CONTEXT`) is set after the bind.
+EeWonHostOp *ee_won_hostop_firewall();
 
 /// `DetectFirewallOp`'s members after `Init`.
 EeWonFirewallOp *ee_won_fwop_new();
@@ -8058,6 +8326,17 @@ bool ee_won_hostop_bytes(const EeWonHostOp *op,
                          EeWonByteSink sink,
                          void *context);
 
+/// A result list of directory entities by number (`EE_WON_REQOP_DIR_*`), each to `sink` in order, outside the op's
+/// locks (the sink makes the C++ `DirEntity` objects); returns how many.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+size_t ee_won_hostop_entities(const EeWonHostOp *op,
+                              int32_t which,
+                              int64_t index,
+                              EeWonDirEntitySink sink,
+                              void *context);
+
 /// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or
 /// an object (the op takes its own reference).
 ///
@@ -8070,6 +8349,15 @@ void ee_won_hostop_set(const EeWonHostOp *op,
                        size_t len,
                        const uint8_t *addr,
                        void *obj);
+
+/// The C++ side's `ServerOp` members the op's constructor set (`RustServerOp`'s constructor reads them): the
+/// length field size and the connect, send and receive limits.
+///
+/// # Safety
+/// `op` is a live op; `lfs` is writable, `times` three writable values.
+void ee_won_hostop_setup(const EeWonHostOp *op,
+                         uint8_t *lfs,
+                         uint32_t *times);
 
 /// The members, one line (the drivers' form).
 ///
@@ -9529,6 +9817,17 @@ int32_t ee_won_regkey_binary_value(const uint8_t *text,
 
 /// `root_valid`.
 bool ee_won_regkey_root_valid(int32_t root);
+
+/// An op derived from `ServerRequestOp` on the base: the round 7/8 Rust op (`ee_won_reqop_*`'s constructors), taken.
+/// Its server context or address are set after the bind (`EE_WON_REQHOST_CONTEXT`, `EE_WON_REQHOST_ADDR`).
+///
+/// # Safety
+/// `op` came from a Rust op constructor and is not used after.
+EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
+
+/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
+/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
+EeWonHostOp *ee_won_hostop_cpp_request();
 
 /// Frees an op.
 ///

@@ -22,6 +22,38 @@ using namespace WONAPI;
 
 static std::vector<std::string> sLines;
 
+// DirEntityReplyParser's parsers as they were before the ops that read the replies became Rust ops (the reading
+// ee_won's, the DirEntity objects DirEntityReplyParser::TakeEntity's)
+static void TakeSingle(void* inContext, const EeWonDirEntity* inEntity)
+{
+    DirEntityList aList;
+    DirEntityReplyParser::TakeEntity(&aList, inEntity);
+    *static_cast<DirEntityPtr*>(inContext) = aList.front();
+}
+static WONStatus ParseMultiEntityReply(const void* inData, unsigned long inLength, DirEntityList& outEntities,
+                                       unsigned char* outSequence)
+{
+    EeWonDirReply aReply = ee_won_dir_parse_multi(static_cast<const uint8_t*>(inData), inLength,
+                                                  DirEntityReplyParser::TakeEntity, &outEntities);
+    if (aReply.has_sequence && outSequence != NULL) *outSequence = aReply.sequence;
+    switch (aReply.kind) {
+    case 0: return (WONStatus)aReply.status;
+    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
+    case 2: return (WONStatus)aReply.status;
+    default: throw ReadBufferException("Attempt to read past end of buffer.");
+    }
+}
+static WONStatus ParseSingleEntityReply(const void* theMsg, unsigned long theMsgLen, DirEntityPtr& theEntity)
+{
+    EeWonDirReply aReply = ee_won_dir_parse_single(static_cast<const uint8_t*>(theMsg), theMsgLen, TakeSingle, &theEntity);
+    switch (aReply.kind) {
+    case 0: return (WONStatus)WS_Success;
+    case 1: return (WONStatus)WS_ServerReq_InvalidReplyHeader;
+    case 2: return (WONStatus)aReply.status;
+    default: throw ReadBufferException("Attempt to read past end of buffer.");
+    }
+}
+
 static std::string Hex(const void* inData, size_t inLength)
 {
     std::string anOut;
@@ -128,7 +160,7 @@ static std::string Multi(const std::string& inReply)
     unsigned char aSequence = 0xee;
     std::string anOut;
     try {
-        WONStatus aStatus = DirEntityReplyParser::ParseMultiEntityReply(inReply.data(), (unsigned long)inReply.size(),
+        WONStatus aStatus = ParseMultiEntityReply(inReply.data(), (unsigned long)inReply.size(),
                                                                         aList, &aSequence);
         char aBuffer[64];
         snprintf(aBuffer, sizeof(aBuffer), "status %d seq %02x", (int)aStatus, aSequence);
@@ -148,7 +180,7 @@ static std::string Single(const std::string& inReply)
     DirEntityPtr anEntity;
     std::string anOut;
     try {
-        WONStatus aStatus = DirEntityReplyParser::ParseSingleEntityReply(inReply.data(), (unsigned long)inReply.size(),
+        WONStatus aStatus = ParseSingleEntityReply(inReply.data(), (unsigned long)inReply.size(),
                                                                          anEntity);
         char aBuffer[32];
         snprintf(aBuffer, sizeof(aBuffer), "status %d", (int)aStatus);

@@ -124,11 +124,8 @@
 #include "ee/EESMCondition.h"
 #include <stdio.h>
 #include "ee/EEUIMiniMap.h"
-#include "ee/EEUIEWheelZoom.h"
-#include "ee/EEUIEHotKeyZoom.h"
-#include "ee/EEUIECameraEvents.h"
-#include "ee/EEUIEGrabScroll.h"
-#include "ee/EEUIEMainGameEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EESEEHideUI.h"
@@ -454,20 +451,20 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->GetEntityGroup(0)->Enable();
 
     // the camera
-    this->mWheelZoomEvent = new EEUIEWheelZoom;
+    this->mWheelZoomEvent = EECreateScreenEvent(EE_SCREENS_CAM_WHEEL_ZOOM);
     this->SetMouseWheelMoveEvent(this->mWheelZoomEvent);
-    this->mZoomInEvent = new EEUIEHotKeyZoom(0);
+    this->mZoomInEvent = EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_IN);
     theHotKey.SetKey(kKeyRBracket);
     theHotKey.SetPressedEvent(this->mZoomInEvent);
     this->AddHotKey(theHotKey, 0);
-    this->mZoomOutEvent = new EEUIEHotKeyZoom(1);
+    this->mZoomOutEvent = EECreateScreenEvent(EE_SCREENS_CAM_ZOOM_OUT);
     theHotKey.SetKey(kKeyLBracket);
     theHotKey.SetPressedEvent(this->mZoomOutEvent);
     this->AddHotKey(theHotKey, 0);
-    this->mDisableMouseMoveEvent = new EEUIEDisableMouseMove;
-    this->mEnableMouseMoveEvent = new EEUIEEnableMouseMove;
-    this->mRevolveCameraEvent = new EEUIERevolveCamera;
-    this->mRotateCameraEvent = new EEUIERotateCamera;
+    this->mDisableMouseMoveEvent = EECreateScreenEvent(EE_SCREENS_CAM_DISABLE_MOUSE_MOVE);
+    this->mEnableMouseMoveEvent = EECreateScreenEvent(EE_SCREENS_CAM_ENABLE_MOUSE_MOVE);
+    this->mRevolveCameraEvent = EECreateScreenEvent(EE_SCREENS_CAM_REVOLVE);
+    this->mRotateCameraEvent = EECreateScreenEvent(EE_SCREENS_CAM_ROTATE);
     theHotKey.SetKey(kKeyGrave);
     theHotKey.SetJustPressedEvent(this->mDisableMouseMoveEvent);
     theHotKey.SetPressedEvent(this->mRotateCameraEvent);
@@ -484,12 +481,12 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     // the trigger-only save and load, the grab scroll, the debug hot keys
     this->AddHotKey(kKeyS, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIESaveScenarioTriggersOnly, NULL, 0, false);
     this->AddHotKey(kKeyL, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIELoadScenarioTriggersOnly, NULL, 0, false);
-    this->mGrabScroll = new EEUIEGrabScroll;
+    this->mGrabScroll = EECreateGrabScroll(1);
     this->SetMouseMiddleButtonPressedEvent(this->mGrabScroll);
     this->SetMouseMiddleButtonUnpressedEvent(this->mGrabScroll);
-    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGToggleShowHiddenUnits, NULL, NULL, NULL, 0, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, new EEUIEMGDumpLoadedMedia(false, false), NULL, 1, false);
-    this->AddHotKey(kKeyD, kKeyControl, kKeyShift, kKeyNone, NULL, NULL, new EEUIEMGDumpLoadedMedia(true, false), NULL, 1, false);
+    this->AddHotKey(kKeyTab, kKeyNone, kKeyNone, kKeyNone, EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyD, kKeyControl, kKeyNone, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR), NULL, 1, false);
+    this->AddHotKey(kKeyD, kKeyControl, kKeyShift, kKeyNone, NULL, NULL, EECreateScreenEvent(EE_SCREENS_MG_DUMP_MEDIA_EDITOR_ALL), NULL, 1, false);
     this->mIsSwitching = false;
     this->mIsSuspended = false;
     this->mIsUIHidden = false;
@@ -526,8 +523,9 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 // Destroys and frees the rotate-camera event (scalar deleting destructor, emitted with its vtable)
 
 // ---- 0x19e2d2..0x19eba9 (formerly EEUIEGrabScroll.cpp; one TU with the form) ----
-// The grab scroll, the form's events' deleting destructors and the form's own members (once kept as
-// C:\EEX\Empire Earth\Scenario Editor\EEUIEGrabScroll.cpp; file name inferred: no __FILE__).
+// The form's events' deleting destructors and the form's own members (once kept as
+// C:\EEX\Empire Earth\Scenario Editor\EEUIEGrabScroll.cpp; file name inferred: no __FILE__). The grab scroll's ctor
+// (0x19e2d2) and dtor (0x19e309) are gone with it: its record is Rust's (ee_screens camera.rs, EECreateGrabScroll).
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
 #include "lle/ESChecksum.h"
@@ -566,7 +564,6 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 #include "lle/URandom.h"
 #include "lle/UString.h"
 #include "lle/UWideString.h"
-#include "ee/EEUIEGrabScroll.h"
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
@@ -606,26 +603,6 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 #include "ee/EEMouse.h"
 
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
-
-// FUNCTION: EXE 0x59e2d2
-// Creates the middle-button grab-scroll event, not grabbing and with no saved mouse-move event
-EEUIEGrabScroll::EEUIEGrabScroll()
-{
-    this->mSavedMouseMoveEvent = NULL;
-    this->mIsGrabbing = false;
-}
-
-// SYNTHETIC: EXE 0x59e2ed
-// (the scalar deleting destructor, emitted with the vtable; slot EEUIEGrabScroll+0x0)
-
-// FUNCTION: EXE 0x59e309
-// Destroys the grab-scroll event, releasing the mouse-move event it saved
-EEUIEGrabScroll::~EEUIEGrabScroll()
-{
-    if (this->mSavedMouseMoveEvent != NULL) {
-        this->mSavedMouseMoveEvent->Dereference();
-    }
-}
 
 // FUNCTION: EXE 0x59e32f
 // Destroys and frees the new-player event (scalar deleting destructor, emitted with its vtable)
@@ -680,6 +657,7 @@ EEUIFScenarioEditor::~EEUIFScenarioEditor()
     this->mZoomInEvent->Dereference();
     this->mZoomOutEvent->Dereference();
     this->mGrabScroll->Dereference();
+    EEReleaseGrabScroll(1);
 }
 
 // FUNCTION: EXE 0x59e606
