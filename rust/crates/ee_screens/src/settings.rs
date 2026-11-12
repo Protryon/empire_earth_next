@@ -461,9 +461,68 @@ pub fn interface_show(s: &EeScreensInterfaceSettings) -> EeScreensInterfaceShow 
     }
 }
 
+/// A video mode as the settings' lists see it (`GEVideoMode` without its pixel format).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeScreensVideoMode {
+    pub width: c_ulong,
+    pub height: c_ulong,
+    pub refresh_rate: c_ulong,
+    pub bit_count: c_ulong,
+}
+
+impl EeScreensVideoMode {
+    fn same_size(&self, other: &EeScreensVideoMode) -> bool {
+        self.width == other.width && self.height == other.height && self.bit_count == other.bit_count
+    }
+}
+
+/// `EEVideoModeGreater`: the resolution list's order, largest first (width, height, bits, then refresh rate).
+pub fn video_mode_greater(a: &EeScreensVideoMode, b: &EeScreensVideoMode) -> bool {
+    (a.width, a.height, a.bit_count, a.refresh_rate) > (b.width, b.height, b.bit_count, b.refresh_rate)
+}
+
+/// `ShowResolutions`' line over the sorted modes: the last mode of the settings' size, else the first of the
+/// defaults' size before any of the settings', else the first line.
+pub fn resolution_line(
+    modes: &[EeScreensVideoMode],
+    current: &EeScreensVideoMode,
+    default: &EeScreensVideoMode,
+) -> c_ulong {
+    let mut line = 0;
+    let mut found = false;
+    for (i, mode) in modes.iter().enumerate() {
+        if mode.same_size(current) {
+            line = i;
+            found = true;
+        }
+        if !found && mode.same_size(default) {
+            line = i;
+            found = true;
+        }
+    }
+    line as c_ulong
+}
+
+/// `ApplySettings`' mode index: the last mode of the settings' size, else 0.
+pub fn mode_index(modes: &[EeScreensVideoMode], settings: &EeScreensVideoMode) -> c_ulong {
+    modes.iter().rposition(|m| m.same_size(settings)).unwrap_or(0) as c_ulong
+}
+
+/// `ShowScreens`' line: the settings' screen when the rasterizer has it, else none (`c_ulong::MAX`).
+pub fn screen_line(count: c_ulong, screen_id: c_ulong) -> c_ulong {
+    if screen_id < count {
+        screen_id
+    } else {
+        c_ulong::MAX
+    }
+}
+
 #[cfg(test)]
 mod golden;
 #[cfg(test)]
 mod golden2;
+#[cfg(test)]
+mod golden3;
 #[cfg(test)]
 mod tests;

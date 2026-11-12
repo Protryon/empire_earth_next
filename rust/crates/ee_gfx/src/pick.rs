@@ -7,7 +7,7 @@
 //!
 //! This is the UI's and the renderer's, not the simulation's.
 
-use ee_ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeVector};
+use ee_ge::types::{Ge2DPoint, Ge3DPlane, Ge3DPoint, GeTransformation, GeVector};
 use ee_ge::um::lrintf;
 use ee_ge::viewport::GeViewport;
 
@@ -295,12 +295,38 @@ pub fn point_in_view(planes: &[Ge3DPlane; 4], point: Ge3DPoint) -> bool {
     planes.iter().all(|p| p.is_point_on_or_above(point))
 }
 
+/// `GetIsEntryInView`'s model transformation for the box selection's frustum: the entry's `location` composed with
+/// the frame's internal transform, scaled by the pick scale about the entry's own position when that is not 1.
+pub fn entry_transform(location: &GeTransformation, internal: &GeTransformation, scale: f32) -> GeTransformation {
+    let mut t = location.compose(internal);
+    if scale != 1.0 {
+        t.scale(scale, scale, scale);
+        t.m[0][3] = location.m[0][3];
+        t.m[1][3] = location.m[1][3];
+        t.m[2][3] = location.m[2][3];
+    }
+    t
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn hit(distance: f32, priority: u32, exact: bool) -> EeGfxPickHit {
         EeGfxPickHit { distance, priority, kind: priority as i32, exact, ..Default::default() }
+    }
+
+    #[test]
+    fn an_entrys_scale_keeps_its_position() {
+        let mut location = GeTransformation::IDENTITY;
+        location.m[0][3] = 3.0;
+        location.m[1][3] = 4.0;
+        let mut internal = GeTransformation::IDENTITY;
+        internal.m[2][3] = 1.0;
+        let t = entry_transform(&location, &internal, 1.0);
+        assert_eq!((t.m[0][3], t.m[1][3], t.m[2][3]), (3.0, 4.0, 1.0));
+        let s = entry_transform(&location, &internal, 2.0);
+        assert_eq!((s.m[0][0], s.m[0][3], s.m[1][3], s.m[2][3]), (2.0, 3.0, 4.0, 0.0));
     }
 
     #[test]

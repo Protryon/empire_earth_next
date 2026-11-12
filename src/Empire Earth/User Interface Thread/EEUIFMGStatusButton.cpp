@@ -88,6 +88,7 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEStringIDs.h"
+#include "rust/ee_screens.h"   // ee_screens_button_*, ee_screens_command_*: the command panel (ee_screens command_panel.rs)
 extern float& gSavedGameSpeed;               // 0x5318b0 (the cinematic's end time) (provisional name)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFortress.cpp defines it)
 extern long& gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)
@@ -282,59 +283,17 @@ void EEUIFMGStatusButton::ReleaseButton()
 // mAvailable; VC6 merges the stores)
 long EEUIFMGStatusButton::CopyData()
 {
+    // the test, the availability and the icon are Rust's (ee_screens command_panel.rs); the C++ reads what the
+    // test needs and keeps every call
     UWideString theString;
-    bool theFound = false;
-    unsigned long theButton;
-    EESelectedGroup* theGroup;
-    unsigned long theCount;
-    unsigned long i;
-    EEComplexUnit* theUnit;
-    EETechTreeNode* theNode;
-    RTSTechTreeNodeData* theData;
-    EECalamityClass* theClass;
-    GEBitmap* theBitmap;
+    EeScreensButtonFacts theFacts;
+    memset(&theFacts, 0, sizeof(theFacts));
+    std::vector<EeScreensButtonUnit> theUnits;
+    EETechTreeNode* theNode = NULL;
+    unsigned long theTest;
     this->mShowCount = false;
     if (this->mIsCommand) {
-        theButton = this->mButton;
-        if (theButton == 0x28) {
-            theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-            if (theGroup) {
-                theCount = theGroup->GetNumUnits();
-                for (i = 0; i < theCount; i++) {
-                    if (theFound)
-                        break;
-                    theUnit = theGroup->GetUnit(i);
-                    if (theUnit && gUnitSetManager.GetSet(0x2f)->Contains(theUnit->GetUnitClass()->GetUnitType()) &&
-                        !theUnit->IsCloaked())
-                        theFound = true;
-                    else
-                        theFound = false;
-                }
-            }
-            this->mAvailable = theFound;
-        } else if (theButton == 2) {
-            theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-            if (theGroup) {
-                theCount = theGroup->GetNumUnits();
-                for (i = 0; i < theCount; i++) {
-                    if (theFound)
-                        break;
-                    theUnit = theGroup->GetUnit(i);
-                    if (theUnit == NULL ||
-                        (theUnit->GetUnitClass()->GetUnitType() == kUnitTypeTeleporter && theUnit->GetPower() < gFortressUnloadCost))
-                        theFound = false;
-                    else
-                        theFound = true;
-                }
-            }
-            this->mAvailable = theFound;
-        } else if (theButton >= 0x5dc && theButton <= 0x5e3) {
-            this->mAvailable = EECanAffordTrade(theButton);
-        } else if (theButton == 0x29 || theButton == 0x2a) {
-            this->mAvailable = gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000) ? false : true;
-        } else {
-            this->mAvailable = true;
-        }
+        theTest = ee_screens_button_command_test(this->mButton);
     } else {
         theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
         if (this->mCount) {
@@ -342,46 +301,66 @@ long EEUIFMGStatusButton::CopyData()
             this->mBuildQueue->SetText(theString);
             this->mShowCount = true;
         }
-        theData = theNode->mData;
-        if (theData->mKind == 5 && theData->GetCalamity()) {
-            EECalamityEnum theCalamity = (EECalamityEnum)theData->GetCalamity();
-            theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
-            if (theClass->GetCost()) {
-                theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-                if (theGroup) {
-                    theCount = theGroup->GetNumUnits();
-                    for (i = 0; i < theCount; i++) {
-                        if (theFound)
-                            break;
-                        theUnit = theGroup->GetUnit(i);
-                        if (theUnit && theUnit->GetPower() >= theClass->GetCost() &&
-                            theNode->Contains(theUnit->GetUnitClass()->GetUnitType()))
-                            theFound = true;
-                        else
-                            theFound = false;
-                    }
-                }
-                this->mAvailable = theFound;
-            } else {
-                this->mAvailable = gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, NULL);
-            }
-        } else {
-            this->mAvailable = gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, NULL);
+        RTSTechTreeNodeData* theData = theNode->mData;
+        bool theCalamity = ee_screens_button_tech_is_calamity(theData->mKind, theData->GetCalamity());
+        if (theCalamity) {
+            EECalamityEnum theEnum = (EECalamityEnum)theData->GetCalamity();
+            theFacts.calamity_cost = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theEnum)->GetCost();
         }
+        theTest = ee_screens_button_tech_test(theCalamity, theFacts.calamity_cost);
     }
+    switch (theTest) {
+    case EE_SCREENS_BUTTON_FANATIC:
+    case EE_SCREENS_BUTTON_UNLOAD:
+    case EE_SCREENS_BUTTON_POWER: {
+        EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+        theFacts.has_group = theGroup != NULL;
+        theFacts.unload_cost = gFortressUnloadCost;
+        unsigned long theCount = theGroup ? theGroup->GetNumUnits() : 0;
+        for (unsigned long i = 0; i < theCount; i++) {
+            EEComplexUnit* theUnit = theGroup->GetUnit(i);
+            EeScreensButtonUnit theView;
+            memset(&theView, 0, sizeof(theView));
+            theView.present = theUnit != NULL;
+            if (theUnit) {
+                theView.unit_type = theUnit->GetUnitClass()->GetUnitType();
+                theView.power = theUnit->GetPower();
+                if (theTest == EE_SCREENS_BUTTON_FANATIC) {
+                    theView.in_set = gUnitSetManager.GetSet(0x2f)->Contains(theView.unit_type);
+                    theView.cloaked = theUnit->IsCloaked();
+                } else if (theTest == EE_SCREENS_BUTTON_POWER) {
+                    theView.in_node = theNode->Contains(theView.unit_type);
+                }
+            }
+            theUnits.push_back(theView);
+        }
+        break;
+    }
+    case EE_SCREENS_BUTTON_TRADE:
+        theFacts.affordable = EECanAffordTrade(this->mButton);
+        break;
+    case EE_SCREENS_BUTTON_JIT:
+        theFacts.game_resources = gGameResources;
+        theFacts.clock = gPhysics->GetGameClock();
+        theFacts.jit_delay = gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay);
+        break;
+    case EE_SCREENS_BUTTON_PRODUCE:
+        theFacts.can_produce = gWorld.GetCurrentPlayer()->CanProduce(this->mTechnology, this->mUnitType, 1, true, 3, NULL);
+        break;
+    default:
+        break;
+    }
+    this->mAvailable = ee_screens_button_available(theTest, &theFacts, theUnits.empty() ? NULL : &theUnits[0],
+                                                   theUnits.size());
     // the icon: none for the two group buttons
-
-    if (this->mButtonObject == NULL || this->mButton == 0x1d || this->mButton == 0x1e) {
+    unsigned long theIcon = ee_screens_button_icon(this->mButtonObject != NULL, this->mButton, this->mState,
+                                                   this->GetNormalBitmap() == this->GetPressedBitmap(),
+                                                   this->GetFocusedBitmap() == this->GetPressedBitmap(),
+                                                   this->GetPressedBitmap() == NULL);
+    if (theIcon == EE_SCREENS_BUTTON_ICON_NONE) {
         this->mDrawIcon = false;
     } else {
-        theBitmap = NULL;
-        if (this->mState == kButtonStateNormal)
-            theBitmap = this->GetNormalBitmap();
-        else if (this->mState == kButtonStateFocused)
-            theBitmap = this->GetFocusedBitmap();
-        else if (this->mState == kButtonStatePressed)
-            theBitmap = this->GetPressedBitmap();
-        if (theBitmap == this->GetPressedBitmap())
+        if (theIcon == EE_SCREENS_BUTTON_ICON_PRESSED)
             this->mButtonObject->SetPressedBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
         else
             this->mButtonObject->SetFaceBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
@@ -426,7 +405,6 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
     UWideString theCost;
     UWideString theString;
     EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    unsigned long theCount = 0;
     if (this->mIsCommand) {
         unsigned long theButton = this->mButton;
         if (theButton >= 0x5dc && theButton <= 0x5e3) {
@@ -443,8 +421,8 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
             sprintf(theName, " %ld %s", thePrice, (const char*)theCost);
             outString += theName;
         } else {
-            gResource->GetString(theButton + IDS_ACTION_BUTTON_HELP_FIRST, outString);
-            if (this->mButton == 0x14 || this->mButton == 0x23) {
+            gResource->GetString(ee_screens_command_help_string(theButton), outString);
+            if (ee_screens_command_help_priest(this->mButton)) {
                 if (thePlayer->mSelectedGroup->GetNumUnits() > 0) {
                     EEComplexUnit* theUnit = thePlayer->mSelectedGroup->GetUnit(0);
                     if (theUnit && theUnit->GetUnitClass()->IsPriest()) {
@@ -468,43 +446,51 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
         EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
         if (theNode == NULL)
             return true;
+        // the plan is Rust's (ee_screens command_panel.rs tech_help)
         long theClassIndex = theNode->mData->mUnitClass;
-        EEUnitClass* theClass;
-        if (theClassIndex > 0 && (theClass = gUnitClassTable[theClassIndex]) != NULL) {
+        EEUnitClass* theClass = theClassIndex > 0 ? gUnitClassTable[theClassIndex] : NULL;
+        long thePopulation = 0;
+        bool theNamed = false;
+        if (theClass != NULL) {
             // (no size() here: the original reads the record vector through begin() + type only)
-            if (thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() == 0)
-                gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, outString);
-            else
-                outString = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName;
-            theCount = theClass->GetPopulationCost();
-        } else {
+            theNamed = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName.GetLength() != 0;
+            thePopulation = theClass->GetPopulationCost();
+        }
+        EECalamityClass* theCalamityClass = NULL;
+        long theCalamityCost = 0;
+        if (theNode->mData->mKind == 5) {
+            EECalamityEnum theCalamity = (EECalamityEnum)theNode->mData->mCalamity;
+            theCalamityClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
+            theCalamityCost = theCalamityClass->GetCost();
+        }
+        EeScreensTechHelp thePlan;
+        ee_screens_button_tech_help(theClass != NULL, theNamed, thePopulation, theNode->mData->mKind, theCalamityCost,
+                                    theNode->mData->mMakesUnit, theNode->mData->mNameID, &thePlan);
+        if (thePlan.name == 1)
+            outString = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mName;
+        else if (thePlan.name == 0)
+            gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, outString);
+        else {
             gResource->GetString(theNode->mData->mNameID, theName);
             sprintf(outString, "%s", (const char*)theName);
         }
         outString += ": ";
-        if (theNode->mData->mKind != 5) {
-            theNode->GetCostString(theCost, this->mUnitType, 1.0f);
+        if (thePlan.power) {
+            gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
+            theCost = theName;
+            theCost += ": ";
+            sprintf(theName, "%ld", theCalamityCost);
+            theCost += theName;
         } else {
-            EECalamityEnum theCalamity = (EECalamityEnum)theNode->mData->mCalamity;
-            EECalamityClass* theCalamityClass =
-                USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
-            if (theCalamityClass->GetCost() == 0) {
-                theNode->GetCostString(theCost, this->mUnitType, 1.0f);
-            } else {
-                gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
-                theCost = theName;
-                theCost += ": ";
-                sprintf(theName, "%ld", theCalamityClass->GetCost());
-                theCost += theName;
-            }
+            theNode->GetCostString(theCost, this->mUnitType, 1.0f);
         }
         outString += theCost;
-        if (theCount > 1) {
+        if (thePlan.population) {
             gResource->GetString(IDS_POP_COST, theName);
-            sprintf(theCost, " %s: %ld", (const char*)theName, theCount);
+            sprintf(theCost, " %s: %ld", (const char*)theName, (unsigned long)thePopulation);
             outString += theCost;
         }
-        if (theNode->mData->mMakesUnit && theNode->mData->mNameID > 0) {
+        if (thePlan.unit_name) {
             gResource->GetString(theNode->mData->mNameID, theName);
             outString += " ";
             outString += theName;
@@ -639,78 +625,6 @@ void EEUIFMGStatusButton::Command()
             gCommunications->ProcessLocalUserInput(new EEMSelfDestruct, kSlotNone);
             static_cast<EEUIFMainGame*>(this->GetForm())->SetUIState(0);
             break;
-        case 5:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(0xc);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 6:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->mIsCursorLocked = true;
-            gMouse->mPointer = 0x17;
-            theForm->SetUIState(0x13);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 7:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(2);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 9:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(8);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 10:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(9);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0x26:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(0x14);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0xc:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(10);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0xd:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(0xf);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0xe:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(0xe);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
-        case 0xf:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->SetUIState(0xd);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
-            break;
         case 0x1b:
         case 0x22:
             static_cast<EEUIFMainGame*>(this->GetForm())->mIsCursorLocked = true;
@@ -732,15 +646,6 @@ void EEUIFMGStatusButton::Command()
             break;
         case 0x17:
             gCommunications->ProcessLocalUserInput(new EEMExplore, kSlotNone);
-            break;
-        case 0x18:
-            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            theForm->mIsCursorLocked = true;
-            gMouse->mPointer = 0x15;
-            theForm->SetUIState(7);
-            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
-            if (gUIManager->GetMainGameForm())
-                gUIManager->GetMainGameForm()->mRefreshGroup = true;
             break;
         case 0x19:
             gCommunications->ProcessLocalUserInput(new EEMLockUnlock(true), kSlotNone);
@@ -790,6 +695,22 @@ void EEUIFMGStatusButton::Command()
             if (EECanAffordTrade(theButton) && EEDecodeTradeButton(this->mButton, theResource, theSell))
                 gCommunications->ProcessLocalUserInput(
                     new EEMExchangeResources(theSell, theResource, UIControl::ShiftKeyPressed()), kSlotNone);
+            break;
+        }
+        default: {
+            // the targeting modes: the UI state, the locked cursor's pointer (ee_screens command_panel.rs command_mode)
+            EeScreensCommandMode theMode;
+            if (!ee_screens_command_mode(theButton, &theMode))
+                break;
+            theForm = static_cast<EEUIFMainGame*>(this->GetForm());
+            if (theMode.lock_cursor) {
+                theForm->mIsCursorLocked = true;
+                gMouse->mPointer = theMode.pointer;
+            }
+            theForm->SetUIState(theMode.ui_state);
+            theForm->GetControl(kMainGameCancelUIMode)->SetDisplayMode(kDisplayModeShown);
+            if (gUIManager->GetMainGameForm())
+                gUIManager->GetMainGameForm()->mRefreshGroup = true;
             break;
         }
         }

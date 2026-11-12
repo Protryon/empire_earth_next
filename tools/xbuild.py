@@ -502,9 +502,9 @@ WON_TESTS = {
     # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
     # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
     "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
-    # GetCertOp's requests and replies (the reply's entries read in Rust, the certificate, key block and key checks
-    # applied in order), the original's statements against include/ee/wonapi/WONCertMsg.h over ee_won's cert
-    # module (golden: rust/crates/ee_won/src/golden_cert.txt)
+    # GetCertOp (its requests, replies and the whole op's steps), the original's statements against the Rust op
+    # (ee_won getcert.rs) through its hooks over stand-ins (goldens: rust/crates/ee_won/src/golden_cert.txt,
+    # golden_getcert.txt)
     "won_cert_test": [],
     # WONMisc's HTTP (HTTPGetOp's dates, lines, request and URL split, URL, HTTPCache's ids and names), the
     # original's statements against include/ee/wonapi/WONHttpMsg.h over ee_won's http module and the URL unit
@@ -515,6 +515,9 @@ WON_TESTS = {
     # version filter; the patch ops' requests and replies), the original's statements against
     # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
     "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # DetectFirewallOp as a whole op (its steps over scripted sockets and receive ops), the original's statements
+    # against the Rust op (ee_won fwop.rs) through its hooks (golden: rust/crates/ee_won/src/golden_fwop.txt)
+    "won_fwop_test": [],
     # WONInternal's admin ops (the key ops', account's, version and patch ops' requests and replies), the original's
     # statements against include/ee/wonapi/WONAdminMsg.h over ee_won's admin module
     "won_admin_test": [],

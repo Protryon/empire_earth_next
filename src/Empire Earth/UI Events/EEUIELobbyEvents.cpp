@@ -2115,21 +2115,21 @@ long EEUIELEGameType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     unsigned long theSelection;
     if (theBox->GetCurrentSelection(theSelection) == kErrorOK) {
         gGameOptions.mLock->WriteLock();
-        switch (theSelection) {
-        case 2:
+        // the action is Rust's (ee_screens lobby_options.rs game_type_action)
+        switch (ee_screens_lobby_game_type_action(theSelection, gGameOptions.mLoadType)) {
+        case EE_SCREENS_GAME_TYPE_SCENARIO:
             inForm->GetManager()->GetFormByID(kFormLoadGame)->SetFormOpenEvent(new EEUIELEOpenLoadScenarioGame);
             inForm->GetManager()->Push(inForm->GetManager()->GetFormByID(kFormLoadGame));
             static_cast<EEUIELECancelLoad*>(inForm->GetManager()->GetCurrentForm()->GetControl(2)->GetTriggerEvent(kControlTriggerButtonUp))
                 ->SetLoadType(gGameOptions.GetLoadType());
             break;
-        case 1:
+        case EE_SCREENS_GAME_TYPE_SAVED_GAME:
             inForm->GetManager()->GetFormByID(kFormLoadGame)->SetFormOpenEvent(new EEUIELEOpenLoadSavedGame);
             inForm->GetManager()->Push(inForm->GetManager()->GetFormByID(kFormLoadGame));
             static_cast<EEUIELECancelLoad*>(inForm->GetManager()->GetCurrentForm()->GetControl(2)->GetTriggerEvent(kControlTriggerButtonUp))
                 ->SetLoadType(gGameOptions.GetLoadType());
             break;
-        case 0:
-            if (gGameOptions.mLoadType != 0) {
+        case EE_SCREENS_GAME_TYPE_RANDOM_MAP: {
                 NEMessage* theMessage = new EEMGameOptions(0, 0, UWideString(""));
                 gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
                 EEGameOptions& theGameOptions = gGameOptions;
@@ -2143,6 +2143,8 @@ long EEUIELEGameType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
                     LobbyShowPlayer(thePlayer, theHost, 8);
                 }
             }
+            break;
+        default:
             break;
         }
         gGameOptions.mLock->WriteUnlock();
@@ -2231,7 +2233,10 @@ long EEUIELEGameMapType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         gGameOptions.mLock->WriteLock();
         theName = EERMGetGeneratorName(theSelection);
         UWideString& theMapType = gGameOptions.mMapType;
-        if (theName != theMapType) {
+        // the generator's name changed (ee_screens lobby_options.rs map_type_changed, over the UTF-8 bytes)
+        if (ee_screens_lobby_map_type_changed((const uint8_t*)(const char*)theName, theName.GetTCHARLength(),
+                                              (const uint8_t*)(const char*)theMapType,
+                                              theMapType.GetTCHARLength())) {
             NEMessage* theMessage = new EEMGameOptions(2, theSelection, theName);
             gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
             theMapType = theName;

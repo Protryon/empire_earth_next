@@ -22,11 +22,13 @@ pub mod goals;
 pub mod impact;
 pub mod launch;
 pub mod pursuer;
+pub mod reads;
 pub mod screen;
 pub mod search;
 pub mod search_ffi;
 #[cfg(test)]
 mod search_tests;
+pub mod shots;
 #[cfg(test)]
 mod tests;
 pub mod walks;
