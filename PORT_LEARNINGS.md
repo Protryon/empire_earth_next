@@ -10147,3 +10147,35 @@ the Civilization Builder folder and its headers (`EECB*.h`, `EECivilizationBuild
   from the server's slot.
 - **Behaviour:** none intended where the original was defined. The civilization choice's Ok and its hot keys and
   double click now hold separate event objects (the original shared one, referenced four times).
+
+## R6: the game screens, eleventh round: the loading screen, the chat log and the line graph's axis texts in Rust (ee_screens splash.rs, chat_log.rs, post_game.rs; branch rust-screens11, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game UI's events; round 10's count.
+
+- **Deleted:** `EEUIESSEOpen.cpp` (119) and its header `EEUIEMainScreenEvents.h`; `EEUIEChatLogEvents.cpp` (215,
+  the chat log's form manager). Game UI C++ lines 39,227 -> 39,144 -> 38,998; git over the C++ +60 -143, +86 -232.
+  The line graph's axis texts moved without deleting a unit (`EEUIPGSLineGraph.cpp` stays the toolkit's control
+  subclass): +15 -9, so 38,998 -> 39,004.
+- **The loading screen** (form 23, code 0x1701) is the one form every game load shows: the tour, the ai-game gate
+  and the LAN game (two humans: its rows and bars) all run `splash.rs` now. The decryption of the two lines stays
+  the host's (`UEDecryptUString`, a text op each); the lobby slots reach Rust as one packed op (type, local flag).
+- **The chat log** is a Rust record; `EEUIECLEFormManager` keeps only its static entry points so the UI thread,
+  the main game form, `EEWorld` and the saved games call it unchanged. A saved game's `Load`/`Save` sequence is Rust's
+  over three host calls (`ee_screenscpp_cl_read`, `_last`, `_write`), each one `FSFile` read or write
+  (`UWideString::Load`/`Save` with its Windows-1252 conversion, `GEColor::Load`/`Save`). The original attached its
+  form manager to the chat log form on first use; nothing read it, so there is none now (the one behaviour change,
+  unobservable). `sim_oracle saveload` PASS on seeds 2-3.
+- **The axis texts:** `FormatYValues` is `(long)(v + 0.5f)` (32-bit `cvttss2si`); `FormatXValues`' `(unsigned long)`
+  is clang's 64-bit `cvttss2si` kept to 32 bits, so 2^32 and above wrap and NaN or values past 2^63 become 0, which
+  `GetMinutesAndSeconds` replaces with the game's time. The golden's edges (2^32, NaN, infinities) pin both.
+- **Golden drivers** (scratch, `build/sc11`: `ss_driver.cpp`, `cl_driver.cpp`, `lg_driver.cpp`; `drv.py`'s
+  `SC10_LLE` links `GEColor.cpp`/`UGraph.cpp`): 2,000, 2,000 and 3,000 cases over the unmodified units, replayed in
+  Rust (each with a mutation that fails it), relinked over the new host printing the same on seeds 1-4.
+- **Lessons:**
+  - A qualified call (`p->EEUIPGSLineGraph::FormatYValues(...)`) calls a virtual member without a vtable: the
+    driver's calloc'ed control needs none.
+  - A file script with independent failure odds per read never reaches a long log: half the drawn loads fail
+    nothing, so the 40-line cap is reached (the first golden missed a mutation of it).
+- **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
+  the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
+  the summary and the main game form read), the civilization builder's helpers.
