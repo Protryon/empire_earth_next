@@ -20,19 +20,22 @@ void LobbySetCurrentUser(LobbyUserInfo* user)
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL)
         return;
-    if(user==NULL) data->mCurrentUserId=0;
-    else data->mCurrentUserId=user->mUserId;
+    if(user==NULL) data->SetCurrentUserId(0);
+    else data->SetCurrentUserId(user->mUserId);
     data->LoadUserPrefs();
 }
 
 // FUNCTION: WON 0x0075cfc0
-// Returns the current user's ignored player names (an empty set without lobby data)
-const LobbyIgnoredNameSet& LobbyFn35CFC0()
+// The current user's ignored player names (none without lobby data), in their order
+size_t LobbyGetIgnoredNameCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->mIgnoredNames;
-    static LobbyIgnoredNameSet empty;
-    return empty;
+    return data!=NULL?data->IgnoredNames().size():0;
+}
+GUIString LobbyGetIgnoredNameAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->IgnoredNames().KeyAt(inPos):gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075d010
@@ -41,8 +44,7 @@ bool LobbyIsNameIgnored(const GUIString& name)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return false;
-    LobbyIgnoredNameSet::iterator it=data->mIgnoredNames.find(name);
-    return it!=data->mIgnoredNames.end();
+    return data->IgnoredNames().Contains(name);
 }
 
 // FUNCTION: WON 0x0075d090
@@ -51,18 +53,20 @@ bool LobbyIsCDKeyBlocked(unsigned long id)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return false;
-    std::set<unsigned long>::iterator it=data->mBlockedCDKeyIds.find(id);
-    return it!=data->mBlockedCDKeyIds.end();
+    return data->BlockedCDKeyIds().Contains(id);
 }
 
 // FUNCTION: WON 0x0075d270
-// Returns the current user's friend list (an empty map without lobby data)
-const LobbyFriendMap& LobbyFn35D270()
+// The current user's friends (none without lobby data), by user id
+size_t LobbyGetFriendCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->mFriends;
-    static LobbyFriendMap empty;
-    return empty;
+    return data!=NULL?data->Friends().size():0;
+}
+LobbyFriend* LobbyGetFriendAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->Friends().At(inPos):NULL;
 }
 
 // FUNCTION: WON 0x0075d3f0
@@ -71,41 +75,39 @@ LobbyFriend* LobbyFindFriend(unsigned long id)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return NULL;
-    LobbyFriendMap::iterator it=data->mFriends.find(id);
-    if(it==data->mFriends.end()) return NULL;
-    return it->second.get();
+    return data->Friends().Get(id);
 }
 
 // FUNCTION: WON 0x0075d640
 // Returns the current LAN player name
-const GUIString& LobbyGetLanName()
+GUIString LobbyGetLanName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mLanName:gEmptyGUIString;
+    return data!=NULL?data->GetLanName():gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075dc40
 // Returns the name of the server the user last joined
-const GUIString& LobbyGetLastServerName()
+GUIString LobbyGetLastServerName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mLastServerName:gEmptyGUIString;
+    return data!=NULL?data->GetLastServerName():gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075dc60
 // Returns the name of the room the user last joined
-const GUIString& LobbyGetLastRoomName()
+GUIString LobbyGetLastRoomName()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mLastRoomName:gEmptyGUIString;
+    return data!=NULL?data->GetLastRoomName():gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075e2d0
 // Returns the name of the lobby tab to open at start (Quick Play, LAN ...)
-const GUIString& LobbyGetTabSelect()
+GUIString LobbyGetTabSelect()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mTabSelect:gEmptyGUIString;
+    return data!=NULL?data->GetTabSelect():gEmptyGUIString;
 }
 
 // FUNCTION: WON 0x0075e2f0
@@ -113,7 +115,7 @@ const GUIString& LobbyGetTabSelect()
 bool LobbyGetFilterDirtyWords()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mFilterDirtyWords:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kFilterDirtyWords):false;
 }
 
 // FUNCTION: WON 0x0075e300
@@ -121,7 +123,7 @@ bool LobbyGetFilterDirtyWords()
 bool LobbyGetDoAutoAFK()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mDoAutoAFK:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kDoAutoAFK):false;
 }
 
 // FUNCTION: WON 0x0075e310
@@ -129,7 +131,7 @@ bool LobbyGetDoAutoAFK()
 bool LobbyGetCrossPromotion()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mCrossPromotion:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kCrossPromotion):false;
 }
 
 // FUNCTION: WON 0x0075e320
@@ -137,7 +139,7 @@ bool LobbyGetCrossPromotion()
 bool LobbyGetLobbySoundEffects()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mLobbySoundEffects:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kLobbySoundEffects):false;
 }
 
 // FUNCTION: WON 0x0075e330
@@ -145,7 +147,7 @@ bool LobbyGetLobbySoundEffects()
 bool LobbyGetChatSoundEffects()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mChatSoundEffects:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kChatSoundEffects):false;
 }
 
 // FUNCTION: WON 0x0075e340
@@ -153,7 +155,7 @@ bool LobbyGetChatSoundEffects()
 bool LobbyGetStagingSoundEffects()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mStagingSoundEffects:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kStagingSoundEffects):false;
 }
 
 // FUNCTION: WON 0x0075e350
@@ -161,7 +163,7 @@ bool LobbyGetStagingSoundEffects()
 bool LobbyGetLobbyMusic()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mLobbyMusic:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kLobbyMusic):false;
 }
 
 // FUNCTION: WON 0x0075e360
@@ -169,7 +171,7 @@ bool LobbyGetLobbyMusic()
 bool LobbyGetShowConfirmations()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mShowConfirmations:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kShowConfirmations):false;
 }
 
 // FUNCTION: WON 0x0075e370
@@ -177,7 +179,7 @@ bool LobbyGetShowConfirmations()
 bool LobbyGetAutoPingGames()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mAutoPingGames:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kAutoPingGames):false;
 }
 
 // FUNCTION: WON 0x0075e380
@@ -185,7 +187,7 @@ bool LobbyGetAutoPingGames()
 bool LobbyGetShowGamesInProgress()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mShowGamesInProgress:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kShowGamesInProgress):false;
 }
 
 // FUNCTION: WON 0x0075e390
@@ -193,7 +195,7 @@ bool LobbyGetShowGamesInProgress()
 bool LobbyGetAnonymousToFriends()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mAnonymousToFriends:false;
+    return data!=NULL?data->GetFlag(LobbyPersistentData::kAnonymousToFriends):false;
 }
 
 // FUNCTION: WON 0x0075e3a0
@@ -201,7 +203,7 @@ bool LobbyGetAnonymousToFriends()
 unsigned short LobbyGetConnectionSpeed()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->mConnectionSpeed;
+    if(data!=NULL) return data->GetConnectionSpeed();
     return 50;
 }
 
@@ -210,7 +212,7 @@ unsigned short LobbyGetConnectionSpeed()
 unsigned short LobbyGetLanBroadcastPort()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL) return data->mLanBroadcastPort;
+    if(data!=NULL) return data->GetLanBroadcastPort();
     return 8585;
 }
 
@@ -219,7 +221,7 @@ unsigned short LobbyGetLanBroadcastPort()
 long LobbyGetNetworkAdapter()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    return data!=NULL?data->mNetworkAdapter:0;
+    return data!=NULL?data->GetNetworkAdapter():0;
 }
 }
 

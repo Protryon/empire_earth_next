@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLobbyEvents.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyScreens.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {
@@ -197,8 +197,8 @@ void GameUserListCtrl::HandleJoinedGame()
     }
     this->mUserList->BeginUpdate();
     this->mUserList->Clear(true);
-    for(LobbyClientMap::iterator i=clients->mClients.begin();i!=clients->mClients.end();++i) {
-        LobbyClient* client=i->second.get();
+    for(size_t i=0;i<clients->GetCount();++i) {
+        LobbyClient* client=clients->ClientAt(i);
         if(!client->HasPlayer())
             continue;
         SmartPtr<GameUserListItem> item=new GameUserListItem(client);

@@ -10,7 +10,7 @@
 #include "lle/UReferenceCounter.h"
 #include "lle/NEPlayer.h"
 #include "lle/NEMessage.h"
-#include "rust/ee_rust.h"   // ee_netmsg: the engine messages' wire layout
+#include "rust/ee_netmsg.h"   // ee_netmsg: the engine messages' wire layout
 
 NEMessage* (*NEMessage::sConstructors[256])(unsigned char*);
 

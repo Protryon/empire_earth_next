@@ -17,13 +17,14 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include <vector>
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss)
 using namespace WONAPI;
 // The parsing (the command word, targets by full name or unique prefix, texts, durations, the input's kind, the help
-// lines a client is shown, the short names) is ee_won's chat module (rust/crates/ee_won/src/chat.rs). This class keeps
-// its members, the command tables and the client list, and applies what the module returns.
+// lines a client is shown, the short names) is ee_won's chat module (rust/crates/ee_won/src/chat.rs); the parser's
+// state (the command tables, the settings, what a parse leaves) is a Rust object since round 17 (chatobj.rs). This
+// class keeps the client list and the target client and hands the clients' names over.
 namespace {
 EeWonChatText ChatText(const GUIString& inText)
 {
@@ -69,9 +70,9 @@ struct ChatClients {
     {
         if (inList == NULL)
             return;
-        for (LobbyClientMap::iterator i = inList->mClients.begin(); i != inList->mClients.end(); ++i) {
-            this->mClients.push_back(i->second.get());
-            this->mNames.push_back(ChatText(i->second->mName));
+        for (size_t i = 0; i < inList->GetCount(); ++i) {
+            this->mClients.push_back(inList->ClientAt(i));
+            this->mNames.push_back(ChatText(inList->ClientAt(i)->mName));
         }
     }
     const EeWonChatText* Names() const { return this->mNames.empty() ? NULL : &this->mNames[0]; }
@@ -79,19 +80,43 @@ struct ChatClients {
 }
 // FUNCTION: WON 0x755750
 // Creates the chat command parser: '/' prefix, unique name prefixes accepted, colon emotes off, no room flags
-ChatCommandParser::ChatCommandParser()
-{
- this->mB2C=false;
- this->mAllowColonEmote=false;
- this->mMatchThreshold=2;
- this->mDuration=0;
- this->mPrefix='/';
- this->mRoomFlags=0;
-}
+ChatCommandParser::ChatCommandParser() : mParser(ee_won_chatparser_new()) {}
 
 // FUNCTION: WON 0x7559f0
 // Destroys the chat command parser (members only)
-ChatCommandParser::~ChatCommandParser() {}
+ChatCommandParser::~ChatCommandParser() { ee_won_chatparser_free(this->mParser); }
+
+GUIString ChatCommandParser::Text(EeWonChatParserText inText) const
+{
+ size_t n=0;
+ const uint32_t* u=ee_won_chatparser_text(this->mParser,inText,&n);
+ return ChatString(u,n);
+}
+static int64_t ChatNumber(const EeWonChatParser* p,EeWonChatParserNumber n) { return ee_won_chatparser_number(p,n); }
+int ChatCommandParser::GetCommand() const { return (int)ChatNumber(this->mParser,EeWonChatParserNumber::Command); }
+GUIString ChatCommandParser::GetTargetName() const { return this->Text(EeWonChatParserText::TargetName); }
+int ChatCommandParser::GetPrefix() const { return (int)ChatNumber(this->mParser,EeWonChatParserNumber::Prefix); }
+GUIString ChatCommandParser::GetText() const { return this->Text(EeWonChatParserText::Text); }
+unsigned long ChatCommandParser::GetDuration() const
+{ return (unsigned long)ChatNumber(this->mParser,EeWonChatParserNumber::Duration); }
+unsigned long ChatCommandParser::GetRoomFlags() const
+{ return (unsigned long)ChatNumber(this->mParser,EeWonChatParserNumber::RoomFlags); }
+int ChatCommandParser::GetError() const { return (int)ChatNumber(this->mParser,EeWonChatParserNumber::Error); }
+bool ChatCommandParser::GetInvitation() const { return ChatNumber(this->mParser,EeWonChatParserNumber::Invitation)!=0; }
+void ChatCommandParser::SetCommand(int inCommand)
+{ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::Command,inCommand); }
+void ChatCommandParser::SetInput(const GUIString& inInput)
+{ ee_won_chatparser_set_text(this->mParser,EeWonChatParserText::Input,inInput.mData->mText,inInput.length(),sizeof(wchar_t)); }
+void ChatCommandParser::SetPrefix(int inPrefix)
+{ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::Prefix,inPrefix); }
+void ChatCommandParser::SetMatchThreshold(int inThreshold)
+{ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::MatchThreshold,inThreshold); }
+void ChatCommandParser::SetAllowColonEmote(bool inAllow)
+{ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::AllowColonEmote,inAllow?1:0); }
+void ChatCommandParser::SetText(const GUIString& inText)
+{ ee_won_chatparser_set_text(this->mParser,EeWonChatParserText::Text,inText.mData->mText,inText.length(),sizeof(wchar_t)); }
+void ChatCommandParser::SetInvitation(bool inInvitation)
+{ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::Invitation,inInvitation?1:0); }
 
 // FUNCTION: WON 0x755b50
 // Registers the localized names of every chat command (whisper, block, emote, ignore, ... alert, warn)
@@ -128,34 +153,23 @@ void ChatCommandParser::InitCommands()
 void ChatCommandParser::SetClientList(LobbyClientList* clients,int roomFlags)
 {
  this->mClients=clients;
- this->mRoomFlags=roomFlags;
+ ee_won_chatparser_set_number(this->mParser,EeWonChatParserNumber::RoomFlags,(unsigned long)(long)roomFlags);
 }
 
 // FUNCTION: WON 0x756220
 // Maps a command name to its command id; the first name added for an id becomes its display name
 void ChatCommandParser::AddCommand(const GUIString& text,int command)
 {
- if(text.empty()) return;
- GUIString key=text;
- this->mCommands[key]=command;
- std::map<int,std::wstring>::iterator i=this->mCommandStrings.find(command);
- if(i==this->mCommandStrings.end())
-  this->mCommandStrings.insert(std::map<int,std::wstring>::value_type(command,text));
+ ee_won_chatparser_add_command(this->mParser,text.mData->mText,text.length(),sizeof(wchar_t),command);
 }
 
 // FUNCTION: WON 0x7564b0
 // Returns a command id's display name, else any name registered for it, else an empty string
 GUIString ChatCommandParser::GetCommandString(int command)
 {
- std::map<int,std::wstring>::iterator i=this->mCommandStrings.find(command);
- if(i!=this->mCommandStrings.end()) return GUIString(i->second);
- ChatCommandParser::CommandMap::iterator j=this->mCommands.begin();
- while(true) {
-  if(j==this->mCommands.end()) break;
-  if(j->second==command) return GUIString(j->first);
-  ++j;
- }
- return GUIString("");
+ size_t n=0;
+ const uint32_t* u=ee_won_chatparser_command_string(this->mParser,command,&n);
+ return n!=0 ? ChatString(u,n) : GUIString("");
 }
 
 // FUNCTION: WON 0x756620
@@ -196,50 +210,19 @@ LobbyClient* ChatCommandParser::FindClient(const GUIString& name,int* outMatch)
  return index>=0 ? clients.mClients[index] : NULL;
 }
 
-// FUNCTION: WON 0x756f40
-// Parses a slash command: looks it up, resolves its target client, reads its text or duration; sets an error code
-bool ChatCommandParser::ParseCommand(const GUIString& text)
-{
- GUIString command;
- int pos=ee_won_chat_command_word(ChatText(text),sizeof(wchar_t),ChatWordSink,&command);
- ChatCommandParser::CommandMap::iterator i=this->mCommands.find(command);
- int id=i==this->mCommands.end() ? -1 : i->second;
- ChatClients clients(this->mClients.get());
- ChatTexts texts;
- EeWonChatOutcome outcome;
- ee_won_chat_parse(ChatText(text),pos,id,ChatText(this->mInput),clients.Names(),clients.mNames.size(),
-                   this->mMatchThreshold,sizeof(wchar_t),&outcome,ChatTextSink,&texts);
- this->mCommand=outcome.command;
- if(outcome.error!=0) this->mError=outcome.error;
- if(texts.mHasTargetName) this->mTargetName=texts.mTargetName;
- if(outcome.target_set) this->mTarget=outcome.target>=0 ? clients.mClients[outcome.target] : NULL;
- if(texts.mHasText) this->mText=texts.mText;
- if(outcome.duration_set) this->mDuration=outcome.duration;
- if(outcome.invitation_set) this->mInvitation=outcome.invitation;
- return outcome.ok;
-}
-
+// FUNCTION: WON 0x756f40 (ParseCommand: a slash command looked up, its target, text or duration read) and
 // FUNCTION: WON 0x757630
 // Parses a line of chat input as a slash command, a colon emote or a broadcast; false with an error code if bad
+// (chatobj.rs handle_input; the target is the client at the position it returns)
 bool ChatCommandParser::HandleInput(const GUIString& text)
 {
- this->mError=0;
  this->mTarget=NULL;
- this->mTargetName=GetEmptyGUIStringData();
- ChatTexts texts;
- int kind=ee_won_chat_input(ChatText(text),sizeof(wchar_t),this->mPrefix,this->mAllowColonEmote,
-                            this->mClients.get()!=NULL,ChatTextSink,&texts);
- switch(kind) {
- case 0: this->mError=6; return false;
- case 1: return this->ParseCommand(text);
- case 2: case 3:
-  this->mCommand=LobbyChatCommand_Emote;
-  this->mText=texts.mText;
-  if(kind==3) { this->mError=5; return false; }
-  return true;
- case 4: this->mCommand=LobbyChatCommand_Broadcast; this->mText=text; return true;
- default: this->mCommand=LobbyChatCommand_Broadcast; this->mError=5; return false;
- }
+ ChatClients clients(this->mClients.get());
+ int target=-1;
+ bool ok=ee_won_chatparser_handle_input(this->mParser,ChatText(text),clients.Names(),clients.mNames.size(),
+                                        this->mClients.get()!=NULL,sizeof(wchar_t),&target);
+ if(target>=0) this->mTarget=clients.mClients[target];
+ return ok;
 }
 
 // FUNCTION: WON 0x757800
@@ -289,7 +272,7 @@ GUIString ChatCommandParser::GetHelp(unsigned short clientId)
   LobbyClient* client=this->mClients->FindClient(clientId);
   if(client!=NULL) {
    isModerator=client->IsModerator();
-   isRoomCaptain=client->IsCaptain((this->mRoomFlags>>1)&1);
+   isRoomCaptain=client->IsCaptain((this->GetRoomFlags()>>1)&1);
    isGameCaptain=client->IsCaptain(1);
    isAdmin=client->IsAdmin();
   }
@@ -297,7 +280,7 @@ GUIString ChatCommandParser::GetHelp(unsigned short clientId)
  GUIString out=::ChatCommandLogic_HelpHeader_String;
  out.append(GUIString("<n>"));
  int32_t commands[32];
- size_t count=ee_won_chat_help((uint32_t)this->mRoomFlags,isModerator,isRoomCaptain,isGameCaptain,isAdmin,commands);
+ size_t count=ee_won_chat_help((uint32_t)this->GetRoomFlags(),isModerator,isRoomCaptain,isGameCaptain,isAdmin,commands);
  for(size_t k=0;k<count;k++) this->AddHelpEntry(commands[k],ChatHelpString(commands[k]),out);
  return out;
 }

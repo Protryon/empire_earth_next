@@ -24,7 +24,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 // FUNCTION: EXE 0x4b6bd1
 // Creates the fire functor with its burning effect (referenced), burn, radius, chance, damage, spread time, unit set

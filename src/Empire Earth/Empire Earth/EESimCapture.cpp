@@ -60,6 +60,18 @@ void EESimCaptureRecord::Close()
     sClosed.store(true);
 }
 
+bool EESimCaptureRecord::Keeps(unsigned int inTag)
+{
+    if (CaptureFile() == NULL || sClosed.load() || (sExclusive.load() && !sExclusiveOwner))
+        return false;
+    if (sOnlyCount == 0)
+        return true;
+    for (unsigned int i = 0; i < sOnlyCount; i++)
+        if (inTag == sOnlyTags[i])
+            return true;
+    return false;
+}
+
 void EESimCaptureRecord::Commit()
 {
     FILE* theFile = CaptureFile();

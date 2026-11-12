@@ -326,7 +326,7 @@ fn every_input_and_table_matches_the_cpp() {
     run("t1", 1, false, '!', true, &mut got);
     run("none", 2, false, '/', false, &mut got);
     run_tables(&mut got);
-    let want: Vec<&str> = GOLDEN.lines().collect();
+    let want: Vec<&str> = GOLDEN.lines().filter(|l| !l.starts_with("state ")).collect();
     assert_eq!(got.len(), want.len());
     for (g, w) in got.iter().zip(&want) {
         assert_eq!(g, w);
@@ -349,4 +349,99 @@ fn durations_and_matches() {
     assert_eq!((o.ok, o.duration, o.text), (true, Some(7200), Some(Vec::new())));
     assert_eq!(c.atoi(b" -12x"), -12);
     assert_eq!(c.atoi(b"99999999999"), i32::MAX);
+}
+
+/// The `state` lines (round 17): the parser's object (chatobj.rs) over the driver's sequences, with no reset between
+/// inputs, as the C++ class gave them before its move.
+#[test]
+fn the_parser_object_matches_the_cpp_class() {
+    use crate::chatobj::{EeWonChatParser, EeWonChatParserNumber as N, EeWonChatParserText as T};
+    let mut p = EeWonChatParser::new();
+    for &(id, list) in COMMANDS {
+        let parts: Vec<String> = list.split(',').map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect();
+        let parts = if parts.is_empty() { vec![command_name(id).to_str().unwrap().to_string()] } else { parts };
+        for name in parts {
+            p.add_command(&w(&name), id);
+        }
+    }
+    p.add_command(&w("W"), 99);
+    p.add_command(&w(""), 5);
+    p.add_command(&w("zap"), 2);
+    p.add_command(&w("Foo"), 40);
+    p.add_command(&w("BAR"), 40);
+    p.add_command(&w(command_name(3).to_str().unwrap()), 3);
+    let mut got = Vec::new();
+    for id in (0..=41).chain([99]) {
+        got.push(format!("state command {id} string={}", units(p.command_string(id))));
+    }
+    p.set_number(N::Command, -1);
+    p.set_number(N::Invitation, 0);
+    let clients: Vec<Vec<u32>> = CLIENTS.iter().map(|c| w(c.1)).collect();
+    let seq = [
+        "/W Bob hi",
+        "/w Bob hi",
+        "/zap Bob",
+        "/foo",
+        "/bar x",
+        "hello",
+        "/r again",
+        "/i",
+        "/smute Bob 5m",
+        "/smute Bob",
+        "/invite Bob",
+        "/nosuch",
+        ":wave",
+        "/e",
+        "/w nobody x",
+        "/w al x",
+        "/block Bobby",
+    ];
+    let mut has_list = false;
+    for pass in 0..4 {
+        if pass == 1 {
+            has_list = true;
+            p.set_number(N::RoomFlags, 2);
+        }
+        if pass == 2 {
+            p.set_number(N::AllowColonEmote, 1);
+            p.set_number(N::MatchThreshold, 3);
+            p.set_text(T::Input, w("Alice"));
+        }
+        if pass == 3 {
+            has_list = false;
+            p.set_number(N::RoomFlags, 8);
+            p.set_number(N::Prefix, i64::from(b'!'));
+        }
+        let names: &[Vec<u32>] = if has_list { &clients } else { &[] };
+        for (i, input) in seq.iter().enumerate() {
+            let (ok, target) = p.handle_input(&w(input), names, has_list);
+            let target = target.map_or(-1, |t| i32::from(CLIENTS[t].0));
+            got.push(format!(
+                "state p{pass} s{i:02} r={} err={} cmd={} name={} target={target} text={} dur={} inv={}",
+                u8::from(ok),
+                p.number(N::Error),
+                p.number(N::Command),
+                units(p.text(T::TargetName)),
+                units(p.text(T::Text)),
+                p.number(N::Duration),
+                p.number(N::Invitation)
+            ));
+        }
+        got.push(format!(
+            "state p{pass} flags={} prefix={} clients={}",
+            p.number(N::RoomFlags),
+            p.number(N::Prefix),
+            if has_list { CLIENTS.len() as i32 } else { -1 }
+        ));
+    }
+    for (i, name) in ["Alice", "alice", "al", "Ali", "bob", "Bo", "x", "", "Dave", "dav"].iter().enumerate() {
+        let (m, found) = find_client(&w(name), &clients, &CChat);
+        let id = found.map_or(-1, |t| i32::from(CLIENTS[t].0));
+        got.push(format!("state find {i} match={m} id={id}"));
+    }
+    let want: Vec<&str> = GOLDEN.lines().filter(|l| l.starts_with("state ")).collect();
+    assert_eq!(got.len(), want.len());
+    for (g, w) in got.iter().zip(&want) {
+        assert_eq!(g, w);
+    }
 }

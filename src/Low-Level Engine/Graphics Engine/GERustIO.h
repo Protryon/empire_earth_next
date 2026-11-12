@@ -2,9 +2,10 @@
 // docs/RUST_PLAN.md R4.3): Rust decides the order, the checks and the error handling, and every field still goes
 // through the file's own typed Read/Write, so the bytes, the per-class short-read rules and the position a failed
 // load leaves are the C++'s. Include after lle/FSFile.h (and lle/FSFileSpec.h for GERustFieldIO(FSFileSpec&), which
-// adds the position) and rust/ee_rust.h.
+// adds the position).
 #ifndef GERUSTIO_H
 #define GERUSTIO_H
+#include "rust/ee_ge.h"
 
 struct GERustIO {
     static long ReadU8(void* inFile, uint8_t* outValue) { return static_cast<FSFile*>(inFile)->Read(*outValue); }

@@ -181,6 +181,7 @@
 #include "ee/EETown.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEAreaUtilities.h"     // EECanHeal (the sweep)
 #include "ee/EEUnitUtilities.h"     // EESearchTargetAlongList (the end sweep)
 #include "lle/GEQuaternion.h"
@@ -671,9 +672,11 @@ void FinishGame(const char* inOutcome)
         if (sOptions.mMissileSweep) {
             EECombatMissileSweep();
             // the missiles it made stay on the map (the AI and UI threads would see them): nothing records after it
+            EECombatCaptureFlush();
             EESimCaptureRecord::Close();
         }
     }
+    EECombatCaptureFlush();
     Finish(inOutcome);
 }
 

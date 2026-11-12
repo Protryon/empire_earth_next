@@ -69,6 +69,7 @@
 #include "ee/EEUIELobbyEvents.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
+#include "rust/ee_screens.h"   // ee_screens_single_player_slots (ee_screens single_player.rs)
 #include "ee/EEUIEPlayCampaignEvents.h"
 #include "ee/EEUIESinglePlayerEvents.h"
 #include "ee/EEStringIDs.h"
@@ -153,25 +154,27 @@ long EEUIESPERandomMap::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     else
         gPlayerName = theName;
     if (EEIsValidName(theName)) {
-        theHuman.mColor = 0;
-        theHuman.mIsLocal = true;
-        theHuman.mName = theName;
-        theHuman.mSlot = 0;
-        theHuman.mIsReady = true;
-        theHuman.mType = 1;
-        gResource->GetString(IDS_COMPUTER, theName);
-        theComputer.mIsLocal = false;
-        theComputer.mColor = 1;
-        theComputer.mName = theName;
+        // the slot table is Rust's (ee_screens single_player.rs random_map_slots): the human, the computer, the
+        // closed slots (a new slot's, as the original's)
+        EeScreensSinglePlayerSlot theSlots[16];
+        ee_screens_single_player_slots(theSlots);
+        UWideString theComputerName;
+        gResource->GetString(IDS_COMPUTER, theComputerName);
         gWorld.GetLobbyOptions().mIsMultiplayer = false;
-        gWorld.GetLobbyOptions().mPlayers[theHuman.mSlot] = theHuman;
-        theComputer.mSlot = 1;
-        theComputer.mIsReady = true;
-        theComputer.mType = 0;
-        theClosed.mSlot = 4;
-        gWorld.GetLobbyOptions().mPlayers[theComputer.mSlot] = theComputer;
-        for (unsigned char i = 2; i < 16; i++)
-            gWorld.GetLobbyOptions().mPlayers[i] = theClosed;
+        for (unsigned long i = 0; i < 16; i++) {
+            const EeScreensSinglePlayerSlot& theSlot = theSlots[i];
+            EEGameOptionsPlayer& thePlayer = theSlot.source == EE_SCREENS_SP_HUMAN ? theHuman
+                                           : theSlot.source == EE_SCREENS_SP_COMPUTER ? theComputer : theClosed;
+            if (theSlot.source != EE_SCREENS_SP_CLOSED) {
+                thePlayer.mType = theSlot.kind;
+                thePlayer.mColor = theSlot.color;
+                thePlayer.mIsLocal = theSlot.local;
+                thePlayer.mIsReady = theSlot.ready;
+                thePlayer.mName = theSlot.source == EE_SCREENS_SP_HUMAN ? theName : theComputerName;
+            }
+            thePlayer.mSlot = theSlot.slot;
+            gWorld.GetLobbyOptions().mPlayers[i] = thePlayer;
+        }
         gWorld.GetLobbyOptions().mLock->WriteUnlock();
         UIEvent* theEvent = new EEUIELEActivateSinglePlayer;
         theManager->GetFormByID(kFormLobby)->SetFormOpenEvent(theEvent);

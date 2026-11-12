@@ -18,25 +18,32 @@ namespace WONAPI {
 LobbyUserInfo* LobbyGetCurrentUser()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data==NULL || data->mCurrentUserId==0)
+    if(data==NULL || data->GetCurrentUserId()==0)
         return NULL;
-    for(LobbyUserInfoMap::iterator it=data->mUsers.begin();it!=data->mUsers.end();++it)
+    for(size_t it=0;it<data->Users().size();++it)
     {
-        LobbyUserInfo& user=it->second;
-        if(user.mUserId==data->mCurrentUserId)
+        LobbyUserInfo& user=data->Users().At(it);
+        if(user.mUserId==data->GetCurrentUserId())
             return &user;
     }
     return NULL;
 }
 // FUNCTION: WON 0x0075ce60
-// Returns all saved login users by name (an empty map without lobby data)
-const LobbyUserInfoMap& LobbyFn35CE60()
+// The saved login users by name (none without lobby data): the count, a name, its last use
+size_t LobbyGetUserCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL)
-        return data->mUsers;
-    static LobbyUserInfoMap empty;
-    return empty;
+    return data!=NULL?data->Users().size():0;
+}
+GUIString LobbyGetUserNameAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->Users().KeyAt(inPos):gEmptyGUIString;
+}
+long LobbyGetUserLastUseAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->Users().At(inPos).mLastUseTime:0;
 }
 // FUNCTION: WON 0x0075cec0
 // Returns the saved password of a login user, or an empty string if the user is unknown
@@ -53,52 +60,56 @@ LobbyUserInfo* LobbyFindUser(const GUIString& name)
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL)
         return NULL;
-    LobbyUserInfoMap::iterator it=data->mUsers.find(name);
-    if(it==data->mUsers.end()) return NULL;
-    return &it->second;
+    return data->Users().Get(name);
 }
 // FUNCTION: WON 0x0075d660
-// Returns the recent LAN names with their last use times (an empty map without lobby data)
-const LobbyLanNameInfoMap& LobbyFn35D660()
+// The recent LAN names (none without lobby data), in their order
+size_t LobbyGetLanNameCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL)
-        return data->mLanNameInfoMap;
-    static LobbyLanNameInfoMap empty;
-    return empty;
+    return data!=NULL?data->LanNameInfoMap().size():0;
+}
+GUIString LobbyGetLanNameAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->LanNameInfoMap().KeyAt(inPos):gEmptyGUIString;
 }
 // FUNCTION: WON 0x0075d8e0
-// Returns the saved direct-connect addresses and names (an empty map without lobby data)
-const LobbyDirectConnectMap& LobbyFn35D8E0()
+// The saved direct-connect addresses and names (none without lobby data), by address
+size_t LobbyGetDirectConnectCount()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL)
-        return data->mDirectConnectMap;
-    static LobbyDirectConnectMap empty;
-    return empty;
+    return data!=NULL?data->DirectConnectMap().size():0;
+}
+IPAddr LobbyGetDirectConnectAddressAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->DirectConnectMap().KeyAt(inPos):IPAddr();
+}
+GUIString LobbyGetDirectConnectNameAt(size_t inPos)
+{
+    LobbyPersistentData* data=GetLobbyPersistentData();
+    return data!=NULL?data->DirectConnectMap().TextAt(inPos):gEmptyGUIString;
 }
 // FUNCTION: WON 0x0075dc80
-// Returns the user's filter values for a game list column (an empty set if the column has none)
-const LobbyOptionSet& LobbyFn35DC80(const GUIString& column)
+// The user's filter values for a game list column (empty if the column has none); a copy
+LobbyOptionSet LobbyGetFilterValues(const GUIString& column)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL) {
-        std::map<GUIString,LobbyOptionSet,GUIStringLessNoCase>::iterator it=data->mGameOptions.find(column);
-        if(it!=data->mGameOptions.end())
-            return it->second;
+        LobbyOptionSet* anOptions=data->GameOptions().Get(column);
+        if(anOptions!=NULL)
+            return *anOptions;
     }
-    static LobbyOptionSet empty;
-    return empty;
+    return LobbyOptionSet();
 }
 // FUNCTION: WON 0x0075e470
 // Sets the lobby tab to open at start, marking the user's preferences changed
 void LobbySetTabSelect(const GUIString& name)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && name!=data->mTabSelect) {
-        data->mTabSelect=name;
-        data->mUserDirty=true;
-    }
+    if(data!=NULL)
+        data->ChangeTabSelect(name);
 }
 }
 

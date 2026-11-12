@@ -70,6 +70,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAreaEffectKindIDs.h"
+#include "rust/ee_ge.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -151,7 +152,7 @@ EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's rend
 // (provisional name)
 static long sL52906C;
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
-static const float kEERenderObject_F44136C = 0.5f;    // 0x44136c
+// 0x44136c (0.5, the near fade's depth): ee_gfx view.rs NEAR_FADE_DEPTH
 static const float kEERenderObject_F441358 = 0.6f;    // 0x441358 (the second light set's ambient scale)
 static const float kEERenderObject_F44135C = 10.0f;   // 0x44135c (its light's z scale)
 static const float kEERenderObject_F441364 = 4.0f;    // 0x441364 (the fog band)
@@ -1148,6 +1149,7 @@ std::vector<GETexture*> gU4E8EF0;
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
+#include "rust/ee_gfx.h"
 
 // FUNCTION: EXE 0x50d3ad
 // Fills a render unit for a unit and files it in the picker and the texture maps
@@ -1749,12 +1751,9 @@ bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
         theResult = Fn23CEE2(theComplexUnit, theResult, outOpacity);
     if (inUnit->mUnitClass->IsLandBuilding() && !gWorld.mInCinematic && !gOrthographicView) {
         GE3DPoint theCenter;
-        GE3DPoint theView;
         float theScale;
         unsigned long theFrame;
         GEModel* theModel;
-        float theRange = 1.0f / (gViewport.GetRearClippingDistance() - gViewport.GetFrontClippingDistance());
-        float theLimit = kEERenderObject_F44136C * theRange;
         if (theComplexUnit != NULL) {
             theModel = inUnit->GetModel()->mModels[theComplexUnit->GetAnimation()];
             theScale = theComplexUnit->mPhysicalModel.GetScale();
@@ -1770,17 +1769,9 @@ bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
             theScale = inUnit->mStats->GetScale();
             theLocation.Apply(theModel->GetCenterPoint(), theCenter);
         }
-        gViewport.GetCameraInverse().Apply(theCenter, theView);
-        float theDepth = (theView.GetY() - theModel->GetBoundingRadius(theFrame) * theScale
-                          - gViewport.GetFrontClippingDistance()) * theRange;
-        if (theDepth < theLimit) {
-            theDepth /= theLimit;
-            theResult = true;
-            if (theDepth < 0.0f)
-                theDepth = 0.0f;
-            if (theDepth < outOpacity)
-                outOpacity = theDepth;
-        }
+        // the near fade: ee_gfx view.rs (RUST_PLAN R4.4)
+        ee_gfx_unit_near_fade(reinterpret_cast<const EeGeViewport*>(&gViewport), reinterpret_cast<const EeGe3DPoint*>(&theCenter),
+                              theModel->GetBoundingRadius(theFrame), theScale, &theResult, &outOpacity);
     }
     return theResult;
 }

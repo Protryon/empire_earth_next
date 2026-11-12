@@ -4,7 +4,7 @@
 #ifndef LLE_FSCHUNK_H
 #define LLE_FSCHUNK_H
 
-#include "rust/ee_rust.h"                   // EeFsChunk (rust/crates/ee_fs/src/chunk.rs), embedded below
+#include "rust/ee_fs.h"                   // EeFsChunk (rust/crates/ee_fs/src/chunk.rs), embedded below
 
 class FSDebugFile;
 class FSFile;

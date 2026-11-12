@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The list box's size, the input box's selection rule, the keys and the item searches are ee_won's guictl module
 // (rust/crates/ee_won/src/guictl.rs); this unit keeps the combo box, its children, the popup and the events.
 namespace WONAPI {

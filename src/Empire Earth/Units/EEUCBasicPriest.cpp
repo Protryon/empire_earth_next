@@ -20,7 +20,8 @@
 
 #include <string.h>
 #include "ee/EESimCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_combat.h"
+#include "rust/ee_units.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"

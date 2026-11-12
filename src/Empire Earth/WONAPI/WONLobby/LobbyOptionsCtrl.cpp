@@ -111,10 +111,9 @@ void LobbyOptionsCtrl::RefreshLanOptions() {
     if(!this->mIsLan)
         return;
     this->mUserNameCombo->Clear(true);
-    const LobbyLanNameInfoMap& names=LobbyFn35D660();
-    LobbyLanNameInfoMap::const_iterator i=names.begin();
-    while(i!=names.end()) {
-        this->mUserNameCombo->AddString(i->first,-1);
+    size_t i=0;
+    while(i<LobbyGetLanNameCount()) {
+        this->mUserNameCombo->AddString(LobbyGetLanNameAt(i),-1);
         ++i;
     }
     ComboBox* combo=this->mUserNameCombo.get(); // the original keeps the combo box in esi (0x7bed24) before calling the getter

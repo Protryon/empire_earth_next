@@ -30,7 +30,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 #include "ee/EETechCapture.h"
 
 // FUNCTION: EXE 0x4adcd9

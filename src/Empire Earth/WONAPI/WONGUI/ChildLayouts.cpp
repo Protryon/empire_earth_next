@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The layouts' arithmetic is ee_won's guilayout module (rust/crates/ee_won/src/guilayout.rs); this unit keeps the
 // layout objects, their lists and the SetPos / SetSize calls.
 namespace WONAPI {

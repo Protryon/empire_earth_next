@@ -89,7 +89,7 @@
 #include "ee/EEMessageCapture.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
-#include "rust/ee_rust.h"   // ee_units_store_checksum_flag1
+#include "rust/ee_units.h"   // ee_units_store_checksum_flag1
 #include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -509,6 +509,13 @@ void EEAfterLoad(std::function<void()> inFixup)
     sAfterLoad.push_back(inFixup);
 }
 
+static std::vector<std::function<void()> > sAfterLoadLast;   // EEAfterLoadLast's
+
+void EEAfterLoadLast(std::function<void()> inFixup)
+{
+    sAfterLoadLast.push_back(inFixup);
+}
+
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
@@ -760,6 +767,12 @@ void EEPhysics::Tick()
         for (size_t i = 0; i < theFixups.size(); i++)
             theFixups[i]();
         EEUnitOrderReset();   // New (R5b.4): the stepped units as a fixup ordered them (ee/EEUnitStore.h)
+    }
+    if (!sAfterLoadLast.empty()) {   // port: then those that wait for the others (EEAfterLoadLast)
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoadLast);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
     }
     this->ReportStatistics();
     if (this->mTicksToProcess == 0) {

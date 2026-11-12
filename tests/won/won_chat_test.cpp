@@ -1,7 +1,8 @@
 // The lobby's chat command parser (ChatCommandParser: slash commands, emotes, broadcasts, name matching, durations,
 // the help text): every input of a table through HandleInput under several settings, one line per case, compared
 // with rust/crates/ee_won/src/golden_chat.txt (recorded over the C++ parser before its port; the Rust test
-// `chat_golden` replays the same table). `--print` prints the lines instead. The exit code is the number of failures.
+// `chat_golden` replays the same table; round 17's `state` lines, the object's state over sequences, recorded over
+// the C++ class before its move to chatobj.rs). `--print` prints the lines instead. The exit code is the number of failures.
 // The command names are the lobby's own (_LobbyResource.cfg's ChatCommandLogic resource); this driver stands in for
 // the resource table, whose globals it defines.
 #include <windows.h>
@@ -40,7 +41,8 @@ CHAT_STRINGS(DEFINE_STRING)
 
 wchar_t gEmptyWideString[2];
 
-// LobbyModel.cpp's client and client list, the parts the parser uses (copied: that unit links the whole lobby)
+// LobbyModel.cpp's client and client list, the parts the parser uses (copied: that unit links the whole lobby; the
+// list's clients are the Rust container since round 17)
 namespace WONAPI {
 LobbyClient::LobbyClient() : mName(GetEmptyGUIStringData())
 {
@@ -53,14 +55,10 @@ LobbyClient::~LobbyClient() {}
 bool LobbyClient::IsAdmin() { return (this->mClientFlags & 0x20) ? true : false; }
 bool LobbyClient::IsModerator() { return (this->mClientFlags & 1) ? true : false; }
 bool LobbyClient::IsCaptain(bool inGame) { return inGame ? this->mIsGameCaptain : this->mIsChatCaptain; }
-LobbyClientList::LobbyClientList() {}
+LobbyClientList::LobbyClientList() : mClients(EeWonLobbyKeyKind::Unsigned) {}
 LobbyClientList::~LobbyClientList() {}
-void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients[inClient->mClientId] = inClient; }
-LobbyClient* LobbyClientList::FindClient(unsigned short inId)
-{
-    LobbyClientMap::iterator anItr = this->mClients.find(inId);
-    return anItr != this->mClients.end() ? anItr->second.get() : NULL;
-}
+void LobbyClientList::AddClient(LobbyClient* inClient) { this->mClients.Set(inClient->mClientId, inClient); }
+LobbyClient* LobbyClientList::FindClient(unsigned short inId) { return this->mClients.Get(inId); }
 }
 
 static std::vector<std::string> sLines;
@@ -115,11 +113,11 @@ static void Run(const char* inPass, int inThreshold, bool inColon, wchar_t inPre
 {
     ChatCommandParser aParser;
     aParser.InitCommands();
-    aParser.mMatchThreshold = inThreshold;
-    aParser.mAllowColonEmote = inColon;
-    aParser.mPrefix = inPrefix;
-    aParser.mInput = GUIString(L"Bob");
-    aParser.mCommand = -1; // the constructor leaves it unset
+    aParser.SetMatchThreshold(inThreshold);
+    aParser.SetAllowColonEmote(inColon);
+    aParser.SetPrefix(inPrefix);
+    aParser.SetInput(GUIString(L"Bob"));
+    aParser.SetCommand(-1); // the constructor leaves it unset
     LobbyClientList* aList = new LobbyClientList;
     SmartPtr<LobbyClientList> aHold = aList;
     for (size_t i = 0; i < sizeof(kClients) / sizeof(kClients[0]); i++) {
@@ -135,15 +133,15 @@ static void Run(const char* inPass, int inThreshold, bool inColon, wchar_t inPre
         aParser.SetClientList(aList, 0);
     for (size_t i = 0; i < sizeof(kInputs) / sizeof(kInputs[0]); i++) {
         // what a parse leaves alone shows the previous case's value: reset what ParseCommand may not set
-        aParser.mText = GUIString(L"~");
-        aParser.mInvitation = false;
+        aParser.SetText(GUIString(L"~"));
+        aParser.SetInvitation(false);
         bool r = aParser.HandleInput(GUIString(kInputs[i]));
         LobbyClient* aTarget = aParser.GetTarget();
         char aLine[4096];
         snprintf(aLine, sizeof(aLine), "%s i%02d r=%d err=%d cmd=%d name=%s target=%d text=%s dur=%u inv=%d", inPass,
-                 (int)i, r ? 1 : 0, aParser.mError, aParser.mCommand, Units(aParser.mTargetName).c_str(),
-                 aTarget != NULL ? (int)aTarget->mClientId : -1, Units(aParser.mText).c_str(),
-                 (unsigned)aParser.mDuration, aParser.mInvitation ? 1 : 0);
+                 (int)i, r ? 1 : 0, aParser.GetError(), aParser.GetCommand(), Units(aParser.GetTargetName()).c_str(),
+                 aTarget != NULL ? (int)aTarget->mClientId : -1, Units(aParser.GetText()).c_str(),
+                 (unsigned)aParser.GetDuration(), aParser.GetInvitation() ? 1 : 0);
         sLines.push_back(aLine);
     }
 }
@@ -184,6 +182,74 @@ static void RunTables()
     sLines.push_back("help nolist " + Units(aNoList.GetHelp(1)));
 }
 
+// round 17: the parser's object state over sequences (no reset between inputs: what a parse leaves stays), the
+// command tables after extra and overriding names, FindClient's matches, the client list set and dropped
+static std::string State(const char* inTag, ChatCommandParser& p, bool r)
+{
+    LobbyClient* aTarget = p.GetTarget();
+    char aLine[4096];
+    snprintf(aLine, sizeof(aLine), "%s r=%d err=%d cmd=%d name=%s target=%d text=%s dur=%u inv=%d", inTag, r ? 1 : 0,
+             p.GetError(), p.GetCommand(), Units(p.GetTargetName()).c_str(), aTarget != NULL ? (int)aTarget->mClientId : -1,
+             Units(p.GetText()).c_str(), (unsigned)p.GetDuration(), p.GetInvitation() ? 1 : 0);
+    return aLine;
+}
+static void RunState()
+{
+    LobbyClientList* aList = new LobbyClientList;
+    SmartPtr<LobbyClientList> aHold = aList;
+    for (size_t i = 0; i < sizeof(kClients) / sizeof(kClients[0]); i++) {
+        LobbyClient* aClient = new LobbyClient;
+        aClient->mClientId = kClients[i].mId;
+        aClient->mName = GUIString(kClients[i].mName);
+        aClient->mClientFlags = kClients[i].mFlags;
+        aClient->mIsGameCaptain = kClients[i].mGameCaptain;
+        aClient->mIsChatCaptain = kClients[i].mChatCaptain;
+        aList->AddClient(aClient);
+    }
+    ChatCommandParser p;
+    p.InitCommands();
+    p.AddCommand(GUIString(L"W"), 99);       // an existing name (no case) gets the new id; 99's string is "W"
+    p.AddCommand(GUIString(L""), 5);         // ignored
+    p.AddCommand(GUIString(L"zap"), 2);      // a second name: 2's display name stays the first
+    p.AddCommands(std::wstring(L"Foo, BAR"), 40);
+    p.AddCommands(std::wstring(L""), 3);     // the built-in short name
+    for (int id = 0; id <= 41; id++) {
+        char aLine[512];
+        snprintf(aLine, sizeof(aLine), "state command %d string=%s", id, Units(p.GetCommandString(id)).c_str());
+        sLines.push_back(aLine);
+    }
+    sLines.push_back("state command 99 string=" + Units(p.GetCommandString(99)));
+    p.SetCommand(-1);       // the constructor leaves the command and the invitation unset
+    p.SetInvitation(false);
+    static const wchar_t* const kSeq[] = {
+        L"/W Bob hi", L"/w Bob hi", L"/zap Bob", L"/foo", L"/bar x", L"hello", L"/r again", L"/i", L"/smute Bob 5m",
+        L"/smute Bob", L"/invite Bob", L"/nosuch", L":wave", L"/e", L"/w nobody x", L"/w al x", L"/block Bobby",
+    };
+    for (int aPass = 0; aPass < 4; aPass++) {
+        if (aPass == 1) p.SetClientList(aList, 2);
+        if (aPass == 2) { p.SetAllowColonEmote(true); p.SetMatchThreshold(3); p.SetInput(GUIString(L"Alice")); }
+        if (aPass == 3) { p.SetClientList(NULL, 8); p.SetPrefix('!'); }
+        for (size_t i = 0; i < sizeof(kSeq) / sizeof(kSeq[0]); i++) {
+            bool r = p.HandleInput(GUIString(kSeq[i]));
+            char aTag[64];
+            snprintf(aTag, sizeof(aTag), "state p%d s%02d", aPass, (int)i);
+            sLines.push_back(State(aTag, p, r));
+        }
+        sLines.push_back("state p" + std::string(1, (char)('0' + aPass)) + " flags=" +
+                         std::to_string((unsigned long)p.GetRoomFlags()) + " prefix=" + std::to_string(p.GetPrefix()) +
+                         " clients=" + std::to_string(p.GetClients() != NULL ? (int)p.GetClients()->GetCount() : -1));
+    }
+    p.SetClientList(aList, 0);
+    static const wchar_t* const kFind[] = {L"Alice", L"alice", L"al", L"Ali", L"bob", L"Bo", L"x", L"", L"Dave", L"dav"};
+    for (size_t i = 0; i < sizeof(kFind) / sizeof(kFind[0]); i++) {
+        int aMatch = -7;
+        LobbyClient* c = p.FindClient(GUIString(kFind[i]), &aMatch);
+        char aLine[256];
+        snprintf(aLine, sizeof(aLine), "state find %d match=%d id=%d", (int)i, aMatch, c != NULL ? (int)c->mClientId : -1);
+        sLines.push_back(aLine);
+    }
+}
+
 static std::string GoldenPath()
 {
     std::string aPath = __FILE__;
@@ -200,6 +266,7 @@ int main(int argc, char** argv)
     Run("t1", 1, false, '!', true);
     Run("none", 2, false, '/', false);
     RunTables();
+    RunState();
     if (argc > 1 && strcmp(argv[1], "--print") == 0) {
         for (size_t i = 0; i < sLines.size(); i++)
             printf("%s\n", sLines[i].c_str());

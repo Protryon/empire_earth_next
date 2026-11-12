@@ -1158,6 +1158,68 @@ pub unsafe extern "C" fn ee_astar_graph_list_objects(
     nodes.len() as u32
 }
 
+/// A graph object by its index, as the C++ loader finds it (`ee_astar_graph_load`, `ee_astar_graph_objects_match`):
+/// the handle, null for none.
+pub type EeAStarGraphObjectOf = extern "C" fn(ctx: *mut c_void, index: i32) -> *mut c_void;
+
+/// The graph storage as bytes (`graph_save.rs`): writes them into `out` when they fit in `capacity`, returns their
+/// length.
+///
+/// # Safety
+/// As `gst`; `out` valid for `capacity` writes (or null).
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_save(s: *mut EeAStarGraphStorage, out: *mut u8, capacity: u32) -> u32 {
+    let bytes = unsafe { gst(s) }.to_bytes();
+    if !out.is_null() && bytes.len() <= capacity as usize {
+        // SAFETY: the caller's contract (capacity bytes at out)
+        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), out, bytes.len()) };
+    }
+    bytes.len() as u32
+}
+
+/// Whether each live node's object is the one `object_of` gives for its index (a save checks it before it writes
+/// the storage: the load finds the objects so).
+///
+/// # Safety
+/// As `gst`; `object_of` callable with `ctx`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_objects_match(
+    s: *mut EeAStarGraphStorage,
+    object_of: EeAStarGraphObjectOf,
+    ctx: *mut c_void,
+) -> bool {
+    unsafe { gst(s) }.objects_match(&mut |i| object_of(ctx, i) as Obj)
+}
+
+/// The storage replaced by the one `ee_astar_graph_save` wrote (its own kind), each live node's object from
+/// `object_of`; false, the storage unchanged, for other bytes or an object not found.
+///
+/// # Safety
+/// As `gst`; `data` must hold `length` readable bytes (or `length` be 0); `object_of` callable with `ctx`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_astar_graph_load(
+    s: *mut EeAStarGraphStorage,
+    data: *const u8,
+    length: u32,
+    object_of: EeAStarGraphObjectOf,
+    ctx: *mut c_void,
+) -> bool {
+    let storage = unsafe { gst(s) };
+    let bytes: &[u8] = if length == 0 || data.is_null() {
+        &[]
+    } else {
+        // SAFETY: the caller's contract
+        unsafe { std::slice::from_raw_parts(data, length as usize) }
+    };
+    match GraphStorage::from_bytes(storage.kind, bytes, &mut |i| object_of(ctx, i) as Obj) {
+        Some(loaded) => {
+            *storage = loaded;
+            true
+        }
+        None => false,
+    }
+}
+
 /// The graph machine's `Start`.
 ///
 /// # Safety

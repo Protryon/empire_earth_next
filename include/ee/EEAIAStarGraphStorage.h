@@ -15,7 +15,7 @@
 #define EE_EEAIASTARGRAPHSTORAGE_H
 #include <vector>
 #include "ee/EEAIKindIDs.h"
-#include "rust/ee_rust.h"         // EeAStarGraphStorage, EeAStarGraphKind, EeAStarGraphList, EeAStarGraphNodeView
+#include "rust/ee_astar.h"         // EeAStarGraphStorage, EeAStarGraphKind, EeAStarGraphList, EeAStarGraphNodeView
 
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
 class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h

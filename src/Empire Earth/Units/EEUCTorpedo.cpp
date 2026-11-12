@@ -21,9 +21,11 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackGround.h"
+#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EECombatGoals.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EmpireEarth.h"
@@ -52,19 +54,10 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
 // class
 long EEUCTorpedo::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
-    long theResult = 0;
-    switch (inEvent) {
-    case kTriggerProjectileHitGround:
-        if (this->CheckGroundImpact(inUnit))
-            theResult = 1;
-        break;
-    case kTriggerProjectileHitWater:
-        break;
-    default:
-        theResult = EEUCMissile::EvaluateCondition(inUnit, inEvent);
-        break;
-    }
-    return theResult;
+    // ee_combat goals.rs condition (CBTC); the missile's test is the host's base read
+    EeCombatConditionIn in;
+    EECombatFillCondition(in, EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit));
+    return EECombatCondition(in, inUnit, NULL, this);
 }
 
 // FUNCTION: EXE 0x61b232

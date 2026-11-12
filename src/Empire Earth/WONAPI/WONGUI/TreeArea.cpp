@@ -9,7 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The expand button's event, the sort's plan and the tree flags are ee_won's guitree module
 // (rust/crates/ee_won/src/guitree.rs); this unit keeps the root, the items and the list rows.
 namespace WONAPI {

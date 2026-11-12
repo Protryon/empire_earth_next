@@ -5,7 +5,7 @@
 #pragma once
 #include <string>
 #include "ee/wonapi/WONHttpMsg.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 

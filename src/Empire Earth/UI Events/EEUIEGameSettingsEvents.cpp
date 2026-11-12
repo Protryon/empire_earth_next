@@ -87,6 +87,7 @@
 #include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEStringIDs.h"
 #include "platform/PlatWindow.h"
+#include "rust/ee_screens.h"   // ee_screens_*: the presets, the video tab's plan, the value tables (ee_screens settings.rs)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
@@ -100,24 +101,26 @@ unsigned long EEMenuHeight();
 static UWideString sMusicFileName;          // 0x562f78 (init chain 0x1d6b94): the form's music while it is open
 static bool sInGame;                        // 0x562f8c: opened from the game (InGameOpen), not the main screen
 
-// the game view rectangle the settings reset (0x4463c0..: separate .rdata words, so named constants)
+// the game view rectangle the settings reset (0x4463c0..: separate .rdata words, so named constants; the mouse
+// sensitivity floor beside them, 0.01, is Rust's: EE_SCREENS_MINIMUM_MOUSE_SENSITIVITY)
 static const float kGameViewLeft = 0.0f;
 static const float kGameViewRight = 1600.0f;
 static const float kGameViewTop = 35.0f;
 static const float kGameViewBottom = 1085.0f;
-static const float kMinimumMouseSensitivity = 0.01f;
-// the graphics quality presets (0..4): the radio groups (0x4463d4, 0x4463e8) and the check boxes 82..88, 110, 105
-static const long kQualityRadios1[5] = { 0, 1, 1, 2, 2 };
-static const long kQualityRadios2[5] = { 0, 1, 1, 2, 2 };
-static const bool kQualityCheck82[5] = { false, false, false, false, true };
-static const bool kQualityCheck83[5] = { false, false, false, true, true };
-static const bool kQualityCheck84[5] = { false, false, false, true, true };
-static const bool kQualityCheck85[5] = { true, true, true, true, true };
-static const bool kQualityCheck86[5] = { false, false, true, true, true };
-static const bool kQualityCheck87[5] = { false, false, true, true, true };
-static const bool kQualityCheck110[5] = { false, false, true, true, true };
-static const bool kQualityCheck88[5] = { false, false, false, false, false };
-static const bool kQualityCheck105[5] = { false, false, false, false, false };
+// the graphics quality presets (0..4; the original's radio groups 0x4463d4, 0x4463e8 and the check boxes 82..88, 110,
+// 105) are Rust's (ee_screens settings.rs): GetGraphicsQuality, SetGraphicsQuality and ShowGraphics forward to it.
+// The check boxes in the order the presets list them (EeScreensGraphics::checks), the detail radios high to low.
+static const unsigned long kQualityChecks[9] = {kGameSettingsHiResFilterCheckbox, kGameSettingsHiResLightingCheckbox,
+    kGameSettingsHiResTexturesCheckbox, kGameSettingsVsyncCheckbox, kGameSettingsShadowsCheckbox,
+    kGameSettingsCloudsCheckbox, kGameSettingsBattlefieldAmbientsCheckBox, kGameSettingsWeatherEffectsCheckbox,
+    kGameSettingsFullscreenAntialiasCheckbox};
+static const unsigned long kModelRadios[3] = {kGameSettingsModelDetailRadioHigh, kGameSettingsModelDetailRadioMed,
+    kGameSettingsModelDetailRadioLow};
+static const unsigned long kEffectRadios[3] = {kGameSettingsEffectsDetailHigh, kGameSettingsEffectsDetailMed,
+    kGameSettingsEffectsDetailLow};
+// the quality radio buttons 0 (lowest) .. 4 (highest), then Custom
+static const unsigned long kQualityRadios[6] = {kGameSettingsGQRadio1Lowest, kGameSettingsGQRadio2,
+    kGameSettingsGQRadio3Middle, kGameSettingsGQRadio4, kGameSettingsGQRadio5Highest, kGameSettingsGQRadio6Custom};
 
 // the modes of a screen, largest first (the sort's predicate; its operator() is the COMDAT 0x1d9554)
 struct EEVideoModeGreater {
@@ -159,35 +162,25 @@ static void ShowRasterizers(UIForm* inForm, EEGameSettings inSettings);
 static void ShowGraphics(UIForm* inForm, EEGameSettings inSettings);
 
 // ---- port: the modern display and audio settings (EEGameSettings mUIScale..mAudioDevice; config.yaml)
-// Each combo box line is a value; the selection is the line whose value is nearest the setting.
-static const long kWindowModes[] = {0, 1};
-static const long kUIScales[] = {0, 100, 125, 150, 175, 200, 250, 300};
-static const long kRenderResolutions[] = {100, 75, 67, 50};
-static const long kFrameRates[] = {0, 60, 120, -1};
-static const long kTextureFilterings[] = {0, 1, 2};
-static const long kBrightnesses[] = {70, 80, 90, 100, 110, 120, 130};
-static const long kZoomOuts[] = {100, 125, 150, 175, 200, 225, 250, 275, 300};
+// Each combo box line is a value (the tables are Rust's: EE_SCREENS_TABLE_*); the selection is the line whose value
+// is nearest the setting.
 static std::vector<std::string> sOutputDevices;
 static bool sPortDisplayChanged;   // ApplySettings -> OutOfGameOk   // the output device combo's lines after "System Default"
 
-template <size_t N> static void PortSelect(UIForm* inForm, unsigned long inIndex, const long (&inValues)[N], long inValue)
+static void PortSelect(UIForm* inForm, unsigned long inIndex, uint32_t inTable, long inValue)
 {
     UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(inIndex));
     if (!theBox)
         return;
-    size_t theBest = 0;
-    for (size_t i = 1; i < N; i++)
-        if (labs(inValues[i] - inValue) < labs(inValues[theBest] - inValue))
-            theBest = i;
-    theBox->SetCurrentSelection((unsigned long)theBest);
+    theBox->SetCurrentSelection(ee_screens_settings_nearest(inTable, inValue));
 }
 
-template <size_t N> static void PortRead(UIForm* inForm, unsigned long inIndex, const long (&inValues)[N], long& outValue)
+static void PortRead(UIForm* inForm, unsigned long inIndex, uint32_t inTable, long& outValue)
 {
     UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(inIndex));
     unsigned long theSelection;
-    if (theBox && theBox->GetCurrentSelection(theSelection) == kErrorOK && theSelection < N)
-        outValue = inValues[theSelection];
+    if (theBox && theBox->GetCurrentSelection(theSelection) == kErrorOK)
+        ee_screens_settings_value(inTable, theSelection, &outValue);
 }
 
 static unsigned long GetGraphicsQuality(UIForm* inForm);
@@ -246,12 +239,12 @@ static void PortShowVideo(UIForm* inForm, const EEGameSettings& inSettings)
         if (inForm->GetControl(i))
             inForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
     PortShowQuality(inForm);
-    PortSelect(inForm, kGameSettingsWindowModeComboBox, kWindowModes, inSettings.mWindowMode);
-    PortSelect(inForm, kGameSettingsUIScaleComboBox, kUIScales, inSettings.mUIScale);
-    PortSelect(inForm, kGameSettingsRenderResolutionComboBox, kRenderResolutions, inSettings.mRenderResolution);
-    PortSelect(inForm, kGameSettingsFrameRateComboBox, kFrameRates, inSettings.mFrameRateLimit);
-    PortSelect(inForm, kGameSettingsTextureFilteringComboBox, kTextureFilterings, inSettings.mTextureFiltering);
-    PortSelect(inForm, kGameSettingsBrightnessComboBox, kBrightnesses, inSettings.mBrightness);
+    PortSelect(inForm, kGameSettingsWindowModeComboBox, EE_SCREENS_TABLE_WINDOW_MODE, inSettings.mWindowMode);
+    PortSelect(inForm, kGameSettingsUIScaleComboBox, EE_SCREENS_TABLE_UI_SCALE, inSettings.mUIScale);
+    PortSelect(inForm, kGameSettingsRenderResolutionComboBox, EE_SCREENS_TABLE_RENDER_RESOLUTION, inSettings.mRenderResolution);
+    PortSelect(inForm, kGameSettingsFrameRateComboBox, EE_SCREENS_TABLE_FRAME_RATE, inSettings.mFrameRateLimit);
+    PortSelect(inForm, kGameSettingsTextureFilteringComboBox, EE_SCREENS_TABLE_TEXTURE_FILTERING, inSettings.mTextureFiltering);
+    PortSelect(inForm, kGameSettingsBrightnessComboBox, EE_SCREENS_TABLE_BRIGHTNESS, inSettings.mBrightness);
 }
 
 static void PortShowAudio(UIForm* inForm, const EEGameSettings& inSettings)
@@ -284,7 +277,7 @@ static void PortShowInterface(UIForm* inForm, const EEGameSettings& inSettings)
     for (unsigned long i = 107; i <= kGameSettingsAdaptorSeletionComboBox; i++)
         if (inForm->GetControl(i))
             inForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
-    PortSelect(inForm, kGameSettingsMaximumZoomOutComboBox, kZoomOuts, inSettings.mMaximumZoomOut);
+    PortSelect(inForm, kGameSettingsMaximumZoomOutComboBox, EE_SCREENS_TABLE_ZOOM_OUT, inSettings.mMaximumZoomOut);
 }
 
 // Reads the controls into the settings; -> whether the window mode, the UI scale or the render resolution changed
@@ -292,13 +285,13 @@ static bool PortApply(UIForm* inForm, EEGameSettings& ioSettings)
 {
     long theWindowMode = ioSettings.mWindowMode, theUIScale = ioSettings.mUIScale;
     long theRenderResolution = ioSettings.mRenderResolution;
-    PortRead(inForm, kGameSettingsWindowModeComboBox, kWindowModes, ioSettings.mWindowMode);
-    PortRead(inForm, kGameSettingsUIScaleComboBox, kUIScales, ioSettings.mUIScale);
-    PortRead(inForm, kGameSettingsRenderResolutionComboBox, kRenderResolutions, ioSettings.mRenderResolution);
-    PortRead(inForm, kGameSettingsFrameRateComboBox, kFrameRates, ioSettings.mFrameRateLimit);
-    PortRead(inForm, kGameSettingsTextureFilteringComboBox, kTextureFilterings, ioSettings.mTextureFiltering);
-    PortRead(inForm, kGameSettingsBrightnessComboBox, kBrightnesses, ioSettings.mBrightness);
-    PortRead(inForm, kGameSettingsMaximumZoomOutComboBox, kZoomOuts, ioSettings.mMaximumZoomOut);
+    PortRead(inForm, kGameSettingsWindowModeComboBox, EE_SCREENS_TABLE_WINDOW_MODE, ioSettings.mWindowMode);
+    PortRead(inForm, kGameSettingsUIScaleComboBox, EE_SCREENS_TABLE_UI_SCALE, ioSettings.mUIScale);
+    PortRead(inForm, kGameSettingsRenderResolutionComboBox, EE_SCREENS_TABLE_RENDER_RESOLUTION, ioSettings.mRenderResolution);
+    PortRead(inForm, kGameSettingsFrameRateComboBox, EE_SCREENS_TABLE_FRAME_RATE, ioSettings.mFrameRateLimit);
+    PortRead(inForm, kGameSettingsTextureFilteringComboBox, EE_SCREENS_TABLE_TEXTURE_FILTERING, ioSettings.mTextureFiltering);
+    PortRead(inForm, kGameSettingsBrightnessComboBox, EE_SCREENS_TABLE_BRIGHTNESS, ioSettings.mBrightness);
+    PortRead(inForm, kGameSettingsMaximumZoomOutComboBox, EE_SCREENS_TABLE_ZOOM_OUT, ioSettings.mMaximumZoomOut);
     if (UISlider* theMaster = static_cast<UISlider*>(inForm->GetControl(kGameSettingsMasterVolumeSlider)))
         ioSettings.mMasterVolume = theMaster->GetCurrentRangeValue();
     if (UICheckBox* theMute = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsMuteInBackgroundCheckBox)))
@@ -630,41 +623,14 @@ long EEUIEGSEGraphicsQuality::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Checks the quality radio that matches the advanced graphics choices, or shows and checks Custom
 long EEUIEGSEAdvancedGraphicsSettingsChanged::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UIRadioButton* theQuality3 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio4));
-    UIRadioButton* theQuality1 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio2));
     UIRadioButton* theCustom = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio6Custom));
-    UIRadioButton* theQuality0 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio1Lowest));
-    UIRadioButton* theQuality4 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio5Highest));
-    UIRadioButton* theQuality2 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio3Middle));
-    unsigned long theQuality = GetGraphicsQuality(inForm);
+    unsigned long theRadio = ee_screens_quality_radio(GetGraphicsQuality(inForm));
     theCustom->SetDisplayMode(kDisplayModeHidden);
-    switch (theQuality) {
-    default:
+    UIRadioButton* theButton = static_cast<UIRadioButton*>(inForm->GetControl(kQualityRadios[theRadio]));
+    if (theRadio == EE_SCREENS_QUALITY_CUSTOM)
         theCustom->SetDisplayMode(kDisplayModeShown);
-        if (!theCustom->GetIsChecked())
-            theCustom->Check();
-        break;
-    case 4:
-        if (!theQuality4->GetIsChecked())
-            theQuality4->Check();
-        break;
-    case 3:
-        if (!theQuality3->GetIsChecked())
-            theQuality3->Check();
-        break;
-    case 2:
-        if (!theQuality2->GetIsChecked())
-            theQuality2->Check();
-        break;
-    case 1:
-        if (!theQuality1->GetIsChecked())
-            theQuality1->Check();
-        break;
-    case 0:
-        if (!theQuality0->GetIsChecked())
-            theQuality0->Check();
-        break;
-    }
+    if (!theButton->GetIsChecked())
+        theButton->Check();
     PortShowQuality(inForm);   // port: the quality combo box
     return kErrorOK;
 }
@@ -714,112 +680,34 @@ static void FillModes(unsigned long inRasterizer, unsigned long inScreen, std::v
 // Returns the graphics quality preset (0..4) the advanced check boxes and detail radios match, else 5 (custom)
 static unsigned long GetGraphicsQuality(UIForm* inForm)
 {
-    long theQuality;
-    UICheckBox* theCheck82 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResFilterCheckbox));
-    UICheckBox* theCheck83 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResLightingCheckbox));
-    UICheckBox* theCheck84 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResTexturesCheckbox));
-    UICheckBox* theCheck85 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsVsyncCheckbox));
-    UICheckBox* theCheck86 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsShadowsCheckbox));
-    UICheckBox* theCheck87 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsCloudsCheckbox));
-    UICheckBox* theCheck110 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsBattlefieldAmbientsCheckBox));
-    UICheckBox* theCheck88 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsWeatherEffectsCheckbox));
-    UICheckBox* theCheck105 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsFullscreenAntialiasCheckbox));
-    UIRadioButton* theRadio75 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioHigh));
-    UIRadioButton* theRadio76 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioMed));
-    UIRadioButton* theRadio77 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioLow));
-    UIRadioButton* theRadio79 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailHigh));
-    UIRadioButton* theRadio80 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailMed));
-    UIRadioButton* theRadio81 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailLow));
-    for (theQuality = 0; 5 > theQuality; theQuality++) {
-        if (theCheck82->GetIsChecked() == kQualityCheck82[theQuality]
-            && theCheck83->GetIsChecked() == kQualityCheck83[theQuality]
-            && theCheck84->GetIsChecked() == kQualityCheck84[theQuality]
-            && theCheck85->GetIsChecked() == kQualityCheck85[theQuality]
-            && theCheck86->GetIsChecked() == kQualityCheck86[theQuality]
-            && theCheck87->GetIsChecked() == kQualityCheck87[theQuality]
-            && theCheck110->GetIsChecked() == kQualityCheck110[theQuality]
-            && theCheck88->GetIsChecked() == kQualityCheck88[theQuality]
-            && theCheck105->GetIsChecked() == kQualityCheck105[theQuality]
-            && (!theRadio75->GetIsChecked() || kQualityRadios1[theQuality] == 2)
-            && (!theRadio76->GetIsChecked() || kQualityRadios1[theQuality] == 1)
-            && (!theRadio77->GetIsChecked() || kQualityRadios1[theQuality] == 0)
-            && (!theRadio79->GetIsChecked() || kQualityRadios2[theQuality] == 2)
-            && (!theRadio80->GetIsChecked() || kQualityRadios2[theQuality] == 1)
-            && (!theRadio81->GetIsChecked() || kQualityRadios2[theQuality] == 0))
-            return theQuality;
+    EeScreensGraphics theControls;
+    for (int i = 0; i < 9; i++)
+        theControls.checks[i] = static_cast<UICheckBox*>(inForm->GetControl(kQualityChecks[i]))->GetIsChecked();
+    for (int i = 0; i < 3; i++) {
+        theControls.model[i] = static_cast<UIRadioButton*>(inForm->GetControl(kModelRadios[i]))->GetIsChecked();
+        theControls.effect[i] = static_cast<UIRadioButton*>(inForm->GetControl(kEffectRadios[i]))->GetIsChecked();
     }
-    return 5;
+    return ee_screens_graphics_quality(&theControls);
+}
+
+// Checks a detail radio of a group (kModelRadios, kEffectRadios) by its level: 0 low, 1 medium, 2 high
+static void CheckDetail(UIForm* inForm, const unsigned long (&inRadios)[3], long inLevel)
+{
+    if (inLevel >= 0 && inLevel <= 2)
+        static_cast<UIRadioButton*>(inForm->GetControl(inRadios[2 - inLevel]))->Check();
 }
 
 // FUNCTION: EXE 0x5d7cd0
 // Sets the advanced check boxes and detail radios to a graphics quality preset (0..4)
 static void SetGraphicsQuality(UIForm* inForm, unsigned long inQuality)
 {
-    UICheckBox* theCheck82 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResFilterCheckbox));
-    UICheckBox* theCheck85 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsVsyncCheckbox));
-    UICheckBox* theCheck86 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsShadowsCheckbox));
-    UICheckBox* theCheck87 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsCloudsCheckbox));
-    UICheckBox* theCheck110 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsBattlefieldAmbientsCheckBox));
-    UICheckBox* theCheck88 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsWeatherEffectsCheckbox));
-    UICheckBox* theCheck105 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsFullscreenAntialiasCheckbox));
-    UIRadioButton* theRadio75 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioHigh));
-    UIRadioButton* theRadio76 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioMed));
-    UIRadioButton* theRadio77 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioLow));
-    UICheckBox* theCheck84 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResTexturesCheckbox));
-    UIRadioButton* theRadio79 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailHigh));
-    UICheckBox* theCheck83 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResLightingCheckbox));
-    UIRadioButton* theRadio80 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailMed));
-    UIRadioButton* theRadio81 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailLow));
-    if (inQuality >= 5)
+    EeScreensPreset thePreset;
+    if (!ee_screens_quality_preset(inQuality, &thePreset))
         return;
-    if (kQualityCheck82[inQuality])
-        theCheck82->SetChecked(true);
-    else
-        theCheck82->SetChecked(false);
-    if (kQualityCheck83[inQuality])
-        theCheck83->SetChecked(true);
-    else
-        theCheck83->SetChecked(false);
-    if (kQualityCheck84[inQuality])
-        theCheck84->SetChecked(true);
-    else
-        theCheck84->SetChecked(false);
-    if (kQualityCheck85[inQuality])
-        theCheck85->SetChecked(true);
-    else
-        theCheck85->SetChecked(false);
-    if (kQualityCheck86[inQuality])
-        theCheck86->SetChecked(true);
-    else
-        theCheck86->SetChecked(false);
-    if (kQualityCheck87[inQuality])
-        theCheck87->SetChecked(true);
-    else
-        theCheck87->SetChecked(false);
-    if (kQualityCheck110[inQuality])
-        theCheck110->SetChecked(true);
-    else
-        theCheck110->SetChecked(false);
-    if (kQualityCheck88[inQuality])
-        theCheck88->SetChecked(true);
-    else
-        theCheck88->SetChecked(false);
-    if (kQualityCheck105[inQuality])
-        theCheck105->SetChecked(true);
-    else
-        theCheck105->SetChecked(false);
-    if (kQualityRadios1[inQuality] == 2)
-        theRadio75->Check();
-    else if (kQualityRadios1[inQuality] == 1)
-        theRadio76->Check();
-    else if (kQualityRadios1[inQuality] == 0)
-        theRadio77->Check();
-    if (kQualityRadios2[inQuality] == 2)
-        theRadio79->Check();
-    else if (kQualityRadios2[inQuality] == 1)
-        theRadio80->Check();
-    else if (kQualityRadios2[inQuality] == 0)
-        theRadio81->Check();
+    for (int i = 0; i < 9; i++)
+        static_cast<UICheckBox*>(inForm->GetControl(kQualityChecks[i]))->SetChecked(thePreset.checks[i]);
+    CheckDetail(inForm, kModelRadios, thePreset.model);
+    CheckDetail(inForm, kEffectRadios, thePreset.effect);
 }
 
 // FUNCTION: EXE 0x5d7e9b
@@ -893,71 +781,79 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
     theViewRectangle.SetRight(kGameViewRight);
     theViewRectangle.SetTop(kGameViewTop);
     EESetGameViewRectangle(theViewRectangle);
-    gGamePreferences.GetSettings().mShowBlood = theCheck13->GetIsChecked();
-    gGamePreferences.GetSettings().mZoomEnabled = true;
-    gGamePreferences.GetSettings().mTrilinearFilter = theCheck82->GetIsChecked();
-    if (theCheck82->GetIsChecked())
-        gTextureManager->UpdateMIPFilterMode(kMipFilterLinear);
-    else
-        gTextureManager->UpdateMIPFilterMode(kMipFilterPoint);
-    gGamePreferences.GetSettings().mUnitLighting = theCheck83->GetIsChecked();
-    if (theCheck84->GetIsChecked()) {
-        gGamePreferences.GetSettings().mMIPLevelsToDrop = 0;
-        gGamePreferences.GetSettings().mTerrainMIPLevelsToDrop = 0;
-    } else {
-        gGamePreferences.GetSettings().mMIPLevelsToDrop = 1;
-        gGamePreferences.GetSettings().mTerrainMIPLevelsToDrop = 1;
-    }
+    // the values from the controls are Rust's (ee_screens settings.rs apply); the C++ writes them and calls the
+    // engine in the original order
+    EEGameSettings& theSettings = gGamePreferences.GetSettings();
+    EeScreensApplyControls theControls;
+    theControls.show_blood = theCheck13->GetIsChecked();
+    theControls.trilinear = theCheck82->GetIsChecked();
+    theControls.unit_lighting = theCheck83->GetIsChecked();
+    theControls.full_textures = theCheck84->GetIsChecked();
     // port: the texture resolution combo box (Original, 2x, 4x); world textures loaded from now on use it
     UIComboBox* theTextureResolution = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsTextureResolutionComboBox));
-    unsigned long theTextureSelection;
-    if (theTextureResolution && theTextureResolution->GetCurrentSelection(theTextureSelection) == kErrorOK
-        && theTextureSelection < 3) {
-        gGamePreferences.GetSettings().mTextureResolution = theTextureSelection == 0 ? 0 : theTextureSelection == 1 ? 2 : 4;
-        EESetTextureResolution(gGamePreferences.GetSettings().mTextureResolution);
+    theControls.texture_selected = theTextureResolution
+        && theTextureResolution->GetCurrentSelection(theControls.texture_line) == kErrorOK;
+    theControls.shadows = theCheck86->GetIsChecked();
+    theControls.clouds = theCheck87->GetIsChecked();
+    theControls.battlefield_ambients = theCheck110->GetIsChecked();
+    theControls.weather_effects = theCheck88->GetIsChecked();
+    theControls.model[0] = theRadio75->GetIsChecked();
+    theControls.model[1] = theRadio76->GetIsChecked();
+    theControls.model[2] = theRadio77->GetIsChecked();
+    theControls.effect[0] = theRadio79->GetIsChecked();
+    theControls.effect[1] = theRadio80->GetIsChecked();
+    theControls.effect[2] = theRadio81->GetIsChecked();
+    theControls.ambient_sounds = theAmbientSounds->GetIsChecked();
+    theControls.voices = theVoiceVolume->GetCurrentRangeValue();
+    theControls.max_channels = gSoundManager->GetMaxChannels();
+    theControls.music_off = theMusicOff->GetIsChecked();
+    theControls.reverb_on = theReverbOn->GetIsChecked();
+    theControls.reverb_off = theReverbOff->GetIsChecked();
+    theControls.mouse_sensitivity = theMouseSensitivity->GetCurrentRangeValue();
+    theControls.side_scroll = theSideScrollSpeed->GetCurrentRangeValue();
+    theControls.grab_scroll = theGrabScrollSpeed->GetCurrentRangeValue();
+    theControls.right_handed = theRightHanded->GetIsChecked();
+    theControls.autosave_minutes = theAutoSaveTime->GetCurrentRangeValue();
+    theControls.autosave_count = theAutoSaveCount->GetCurrentRangeValue();
+    EeScreensApplied theApplied = {};
+    theApplied.texture_resolution = theSettings.mTextureResolution;
+    theApplied.model_detail = theSettings.mModelDetail;
+    theApplied.effect_detail = theSettings.mEffectDetail;
+    theApplied.reverb = theSettings.mReverbEnabled;
+    ee_screens_settings_apply(&theControls, &theApplied);
+    theSettings.mShowBlood = theApplied.show_blood;
+    theSettings.mZoomEnabled = true;
+    theSettings.mTrilinearFilter = theApplied.trilinear;
+    gTextureManager->UpdateMIPFilterMode(theApplied.trilinear ? kMipFilterLinear : kMipFilterPoint);
+    theSettings.mUnitLighting = theApplied.unit_lighting;
+    theSettings.mMIPLevelsToDrop = theApplied.mip_levels_to_drop;
+    theSettings.mTerrainMIPLevelsToDrop = theApplied.terrain_mip_levels_to_drop;
+    if (theApplied.set_texture_resolution) {
+        theSettings.mTextureResolution = theApplied.texture_resolution;
+        EESetTextureResolution(theSettings.mTextureResolution);
     }
-    gGamePreferences.GetSettings().mDisplayShadows = theCheck86->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayClouds = theCheck87->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayBattlefieldAmbients = theCheck110->GetIsChecked();
-    gGamePreferences.GetSettings().mDisplayWeatherEffects = theCheck88->GetIsChecked();
-    if (theRadio77->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 0;
-    else if (theRadio76->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 1;
-    else if (theRadio75->GetIsChecked())
-        gGamePreferences.GetSettings().mModelDetail = 2;
-    if (theRadio81->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 0;
-    else if (theRadio80->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 1;
-    else if (theRadio79->GetIsChecked())
-        gGamePreferences.GetSettings().mEffectDetail = 2;
-    gGamePreferences.GetSettings().mAmbientSounds = theAmbientSounds->GetIsChecked();
-    gAmbientSoundManager.SetEnabled(theAmbientSounds->GetIsChecked());
-    gGamePreferences.GetSettings().mSoundVolume = gSoundManager->GetMasterVolume();
-    float theVoiceFactor = gGamePreferences.GetSettings().mMaxNumberOfSounds = theVoiceVolume->GetCurrentRangeValue() * 0.01f;
-    unsigned long theChannels = (unsigned long)(gSoundManager->GetMaxChannels() * theVoiceFactor);
-    if (theChannels < 8)
-        theChannels = 8;
-    gSoundManager->SetMaxChannels(theChannels);
-    gGamePreferences.GetSettings().mMusicEnabled = theMusicOff->GetIsChecked() == false;
-    if (theReverbOn->GetIsChecked())
-        gGamePreferences.GetSettings().mReverbEnabled = true;
-    else if (theReverbOff->GetIsChecked())
-        gGamePreferences.GetSettings().mReverbEnabled = false;
-    gGamePreferences.GetSettings().mMusicVolume = gConductor->GetConductor().GetVolume();
-    float theSensitivity = theMouseSensitivity->GetCurrentRangeValue() * 0.01f;
-    if (theSensitivity < kMinimumMouseSensitivity)
-        theSensitivity = kMinimumMouseSensitivity;
-    gMouse->SetSensitivity(theSensitivity);
-    gGamePreferences.GetSettings().mMouseSensitivity = theSensitivity;
-    gGamePreferences.GetSettings().mSideScrollSpeed = theSideScrollSpeed->GetCurrentRangeValue() * 0.01f;
-    gGamePreferences.GetSettings().mGrabScrollSpeed = theGrabScrollSpeed->GetCurrentRangeValue() * 0.01f;
-    bool theRight = theRightHanded->GetIsChecked();
-    UIManager::SetMouseLeftHanded(theRight == false);
-    gGamePreferences.GetSettings().mRightHandMouseOrientation = theRight;
-    gGamePreferences.GetSettings().mAutoSaveInMilliseconds = theAutoSaveTime->GetCurrentRangeValue() * 60000;
-    gGamePreferences.GetSettings().mNumberOfAutoSaves = theAutoSaveCount->GetCurrentRangeValue();
+    theSettings.mDisplayShadows = theApplied.shadows;
+    theSettings.mDisplayClouds = theApplied.clouds;
+    theSettings.mDisplayBattlefieldAmbients = theApplied.battlefield_ambients;
+    theSettings.mDisplayWeatherEffects = theApplied.weather_effects;
+    theSettings.mModelDetail = theApplied.model_detail;
+    theSettings.mEffectDetail = theApplied.effect_detail;
+    theSettings.mAmbientSounds = theApplied.ambient_sounds;
+    gAmbientSoundManager.SetEnabled(theApplied.ambient_sounds);
+    theSettings.mSoundVolume = gSoundManager->GetMasterVolume();
+    theSettings.mMaxNumberOfSounds = theApplied.max_number_of_sounds;
+    gSoundManager->SetMaxChannels(theApplied.channels);
+    theSettings.mMusicEnabled = theApplied.music_enabled;
+    theSettings.mReverbEnabled = theApplied.reverb;
+    theSettings.mMusicVolume = gConductor->GetConductor().GetVolume();
+    gMouse->SetSensitivity(theApplied.mouse_sensitivity);
+    theSettings.mMouseSensitivity = theApplied.mouse_sensitivity;
+    theSettings.mSideScrollSpeed = theApplied.side_scroll;
+    theSettings.mGrabScrollSpeed = theApplied.grab_scroll;
+    UIManager::SetMouseLeftHanded(!theApplied.right_handed);
+    theSettings.mRightHandMouseOrientation = theApplied.right_handed;
+    theSettings.mAutoSaveInMilliseconds = theApplied.autosave_ms;
+    theSettings.mNumberOfAutoSaves = theApplied.autosaves;
     (void)theWaitForVSync;   // port: the frame rate combo box decides v-sync (PortApply)
     long theResult = gGamePreferences.Save();
     return theResult;
@@ -1034,20 +930,31 @@ static void ShowAudio(UIForm* inForm, EEGameSettings inSettings)
     UISlider* theSoundVolume = static_cast<UISlider*>(inForm->GetControl(kGameSettingsSoundVolumeSlider));
     UIRadioButton* theReverbOff = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsMusicQualLowRadio));
     UIRadioButton* theMusicOff = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsMusicOffRadioButton));
-    if (inSettings.mMusicVolume == EEGamePreferences::sDefaultSettings.mMusicVolume) {
+    // the plan is Rust's (ee_screens settings.rs audio_show)
+    EeScreensAudioSettings theAudio;
+    theAudio.music_volume = inSettings.mMusicVolume;
+    theAudio.default_music_volume = EEGamePreferences::sDefaultSettings.mMusicVolume;
+    theAudio.sound_volume = inSettings.mSoundVolume;
+    theAudio.default_sound_volume = EEGamePreferences::sDefaultSettings.mSoundVolume;
+    theAudio.max_number_of_sounds = inSettings.mMaxNumberOfSounds;
+    theAudio.reverb = inSettings.mReverbEnabled;
+    theAudio.music_enabled = inSettings.mMusicEnabled;
+    EeScreensAudioShow theShow;
+    ee_screens_settings_audio(&theAudio, &theShow);
+    if (theShow.set_music_volume) {
         gConductor->GetConductor().SetVolume(inSettings.mMusicVolume);
         gUIManager->SetMusicVolume(inSettings.mMusicVolume);
     }
-    theMusicVolume->SetCurrentRangeValue((long)(gConductor->GetConductor().GetVolume() * 100.0f));
-    if (inSettings.mSoundVolume == EEGamePreferences::sDefaultSettings.mSoundVolume)
+    theMusicVolume->SetCurrentRangeValue(ee_screens_settings_percent(gConductor->GetConductor().GetVolume()));
+    if (theShow.set_sound_volume)
         gSoundManager->SetMasterVolume(inSettings.mSoundVolume);
-    theSoundVolume->SetCurrentRangeValue((long)(gSoundManager->GetMasterVolume() * 100.0f));
-    theVoiceVolume->SetCurrentRangeValue((long)(inSettings.mMaxNumberOfSounds * 100.0f));
-    if (inSettings.mReverbEnabled)
+    theSoundVolume->SetCurrentRangeValue(ee_screens_settings_percent(gSoundManager->GetMasterVolume()));
+    theVoiceVolume->SetCurrentRangeValue(theShow.voices);
+    if (theShow.reverb_on)
         theReverbOn->Check();
     else
         theReverbOff->Check();
-    if (!inSettings.mMusicEnabled)
+    if (theShow.music_off)
         theMusicOff->Check();
     theAmbientSounds->SetChecked(inSettings.mAmbientSounds);
     PortShowAudio(inForm, inSettings);   // port
@@ -1068,31 +975,40 @@ static void ShowInterface(UIForm* inForm, EEGameSettings inSettings)
     NEProtocol* theProtocol = NULL;
     std::vector<UWideString> theAdapters;
     UWideString theText;
-    theMouseSensitivity->SetCurrentRangeValue((long)(inSettings.mMouseSensitivity * 100.0f));
-    gMouse->SetSensitivity(inSettings.mMouseSensitivity);
-    theSideScrollSpeed->SetCurrentRangeValue((long)(inSettings.mSideScrollSpeed * 100.0f));
-    theGrabScrollSpeed->SetCurrentRangeValue((long)(inSettings.mGrabScrollSpeed * 100.0f));
+    // the plan is Rust's (ee_screens settings.rs interface_show); the adapters are listed first (a query: the
+    // original listed them after the sliders)
     NEProtocol::GetProtocol(0, theProtocol);
     unsigned long theCount = theProtocol->EnumerateNetworkAdapters(theAdapters);
-    unsigned long theAdapter = inSettings.mNetworkAdapter;
+    EeScreensInterfaceSettings theInterface;
+    theInterface.mouse_sensitivity = inSettings.mMouseSensitivity;
+    theInterface.side_scroll = inSettings.mSideScrollSpeed;
+    theInterface.grab_scroll = inSettings.mGrabScrollSpeed;
+    theInterface.network_adapter = inSettings.mNetworkAdapter;
+    theInterface.adapters = theCount;
+    theInterface.right_handed = inSettings.mRightHandMouseOrientation;
+    theInterface.autosave_ms = inSettings.mAutoSaveInMilliseconds;
+    theInterface.autosaves = inSettings.mNumberOfAutoSaves;
+    EeScreensInterfaceShow theShow;
+    ee_screens_settings_interface(&theInterface, &theShow);
+    theMouseSensitivity->SetCurrentRangeValue(theShow.mouse_sensitivity);
+    gMouse->SetSensitivity(inSettings.mMouseSensitivity);
+    theSideScrollSpeed->SetCurrentRangeValue(theShow.side_scroll);
+    theGrabScrollSpeed->SetCurrentRangeValue(theShow.grab_scroll);
     theAdapterBox->DeleteAllEntries();
     gResource->GetString(IDS_CIV_POWER_DEFAULT, theText);
     theAdapterBox->AppendLine(theText);
     for (unsigned long i = 0; i < theCount; i++)
         theAdapterBox->AppendLine(theAdapters[i]);
-    if (theAdapter > theCount)
-        theAdapter = 0;
-    theAdapterBox->SetCurrentSelection(theAdapter);
-    bool theRight = inSettings.mRightHandMouseOrientation;
-    UIManager::SetMouseLeftHanded(theRight == false);
-    if (theRight)
+    theAdapterBox->SetCurrentSelection(theShow.adapter_line);
+    UIManager::SetMouseLeftHanded(theShow.left_handed);
+    if (!theShow.left_handed)
         theRightHanded->Check();
     else
         theLeftHanded->Check();
-    theAutoSaveTime->SetCurrentRangeValue(inSettings.mAutoSaveInMilliseconds / 60000);
-    theAutoSaveCount->SetCurrentRangeValue(inSettings.mNumberOfAutoSaves);
-    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosaveFreqNumberLabel))->SetText((long)(inSettings.mAutoSaveInMilliseconds / 60000));
-    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel))->SetText(inSettings.mNumberOfAutoSaves);
+    theAutoSaveTime->SetCurrentRangeValue(theShow.autosave_minutes);
+    theAutoSaveCount->SetCurrentRangeValue(theShow.autosaves);
+    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosaveFreqNumberLabel))->SetText(theShow.autosave_minutes);
+    static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel))->SetText(theShow.autosaves);
     PortShowInterface(inForm, inSettings);   // port
 }
 
@@ -1183,108 +1099,39 @@ static void ShowRasterizers(UIForm* inForm, EEGameSettings inSettings)
 // Fills the graphics check boxes and detail radios from the settings and checks the matching quality preset (or Custom)
 static void ShowGraphics(UIForm* inForm, EEGameSettings inSettings)
 {
-    UICheckBox* theCheck82 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResFilterCheckbox));
-    UICheckBox* theCheck86 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsShadowsCheckbox));
-    UICheckBox* theCheck87 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsCloudsCheckbox));
-    UICheckBox* theCheck110 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsBattlefieldAmbientsCheckBox));
-    UICheckBox* theCheck88 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsWeatherEffectsCheckbox));
-    UICheckBox* theWaitForVSync = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsVsyncCheckbox));
-    UICheckBox* theCheck105 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsFullscreenAntialiasCheckbox));
-    UIRadioButton* theQuality0 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio1Lowest));
-    UIRadioButton* theQuality1 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio2));
-    UIRadioButton* theQuality2 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio3Middle));
-    UIRadioButton* theQuality3 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio4));
-    UIRadioButton* theQuality4 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio5Highest));
-    UIRadioButton* theCustom = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio6Custom));
-    UIRadioButton* theRadio75 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioHigh));
-    UIRadioButton* theRadio76 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioMed));
-    UIRadioButton* theRadio77 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsModelDetailRadioLow));
-    UICheckBox* theCheck84 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResTexturesCheckbox));
-    UIRadioButton* theRadio79 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailHigh));
-    UICheckBox* theCheck83 = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsHiResLightingCheckbox));
-    UIRadioButton* theRadio80 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailMed));
-    UIRadioButton* theRadio81 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailLow));
-    if (inSettings.mTrilinearFilter)
-        theCheck82->SetChecked(true);
-    else
-        theCheck82->SetChecked(false);
-    if (inSettings.mUnitLighting)
-        theCheck83->SetChecked(true);
-    else
-        theCheck83->SetChecked(false);
-    if (inSettings.mMIPLevelsToDrop == 0 && inSettings.mTerrainMIPLevelsToDrop == 0)
-        theCheck84->SetChecked(true);
-    else
-        theCheck84->SetChecked(false);
+    EeScreensGraphicsSettings theSettings;
+    theSettings.trilinear_filter = inSettings.mTrilinearFilter;
+    theSettings.unit_lighting = inSettings.mUnitLighting;
+    theSettings.shadows = inSettings.mDisplayShadows;
+    theSettings.clouds = inSettings.mDisplayClouds;
+    theSettings.battlefield_ambients = inSettings.mDisplayBattlefieldAmbients;
+    theSettings.weather_effects = inSettings.mDisplayWeatherEffects;
+    theSettings.anti_aliasing = inSettings.mAntiAliasing;
+    theSettings.wait_for_vsync = inSettings.mWaitForVSync;
+    theSettings.mip_levels_to_drop = inSettings.mMIPLevelsToDrop;
+    theSettings.terrain_mip_levels_to_drop = inSettings.mTerrainMIPLevelsToDrop;
+    theSettings.texture_resolution = inSettings.mTextureResolution;
+    theSettings.model_detail = inSettings.mModelDetail;
+    theSettings.effect_detail = inSettings.mEffectDetail;
+    EeScreensGraphicsShow theShow;
+    ee_screens_graphics_show(&theSettings, &theShow);
+    // the original's order: 82, 83, 84, the texture resolution, 86, 87, 110, 88, 105, the detail radios, 85 (v-sync)
+    for (int i = 0; i < 3; i++)
+        static_cast<UICheckBox*>(inForm->GetControl(kQualityChecks[i]))->SetChecked(theShow.checks[i]);
     UIComboBox* theTextureResolution = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsTextureResolutionComboBox));
     if (theTextureResolution)   // port
-        theTextureResolution->SetCurrentSelection(inSettings.mTextureResolution == 4 ? 2 : inSettings.mTextureResolution == 2 ? 1 : 0);
-    if (inSettings.mDisplayShadows)
-        theCheck86->SetChecked(true);
-    else
-        theCheck86->SetChecked(false);
-    if (inSettings.mDisplayClouds)
-        theCheck87->SetChecked(true);
-    else
-        theCheck87->SetChecked(false);
-    if (inSettings.mDisplayBattlefieldAmbients)
-        theCheck110->SetChecked(true);
-    else
-        theCheck110->SetChecked(false);
-    if (inSettings.mDisplayWeatherEffects)
-        theCheck88->SetChecked(true);
-    else
-        theCheck88->SetChecked(false);
-    if (inSettings.mAntiAliasing)
-        theCheck105->SetChecked(true);
-    else
-        theCheck105->SetChecked(false);
-    switch (inSettings.mModelDetail) {
-    default:
-        theRadio75->Check();
-        break;
-    case 1:
-        theRadio76->Check();
-        break;
-    case 0:
-        theRadio77->Check();
-        break;
-    }
-    switch (inSettings.mEffectDetail) {
-    default:
-        theRadio79->Check();
-        break;
-    case 1:
-        theRadio80->Check();
-        break;
-    case 0:
-        theRadio81->Check();
-        break;
-    }
-    theWaitForVSync->SetChecked(inSettings.mWaitForVSync);
-    unsigned long theQuality = GetGraphicsQuality(inForm);
+        theTextureResolution->SetCurrentSelection(theShow.texture_line);
+    for (int i = 4; i < 9; i++)
+        static_cast<UICheckBox*>(inForm->GetControl(kQualityChecks[i]))->SetChecked(theShow.checks[i]);
+    CheckDetail(inForm, kModelRadios, theShow.model);
+    CheckDetail(inForm, kEffectRadios, theShow.effect);
+    static_cast<UICheckBox*>(inForm->GetControl(kQualityChecks[3]))->SetChecked(theShow.checks[3]);
+    unsigned long theRadio = ee_screens_quality_radio(GetGraphicsQuality(inForm));
+    UIRadioButton* theCustom = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsGQRadio6Custom));
     theCustom->SetDisplayMode(kDisplayModeHidden);
-    switch (theQuality) {
-    default:
-        theCustom->Check();
+    static_cast<UIRadioButton*>(inForm->GetControl(kQualityRadios[theRadio]))->Check();
+    if (theRadio == EE_SCREENS_QUALITY_CUSTOM)
         theCustom->SetDisplayMode(kDisplayModeShown);
-        break;
-    case 4:
-        theQuality4->Check();
-        break;
-    case 3:
-        theQuality3->Check();
-        break;
-    case 2:
-        theQuality2->Check();
-        break;
-    case 1:
-        theQuality1->Check();
-        break;
-    case 0:
-        theQuality0->Check();
-        break;
-    }
 }
 
 // SYNTHETIC: EXE 0x5d6b94

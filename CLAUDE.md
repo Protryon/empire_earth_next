@@ -20,6 +20,9 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
 python -I tools/rust_build.py gate                                 # the Rust library: tests, clippy, rustfmt, header check
 ```
 
+- The Rust library's C interface is one generated header per crate: include `rust/<crate>.h` (e.g. `rust/ee_won.h`)
+  for the crates a file calls, not the umbrella `rust/ee_rust.h` (it rebuilds every unit on any FFI change).
+  `tools/rust_includes.py` narrows umbrella includes by the names a file uses.
 - Requirements: LLVM, the VS 2022 Build Tools C++ workload (MSVC STL, UCRT, Windows SDK), Rust through rustup, Python 3.12 and 7-Zip.
   The harness also needs MSYS2 `mingw-w64-x86_64-gcc` and pip `pefile capstone`. See README.md.
 - A full build takes about 2 minutes. A link must report `0 unresolved, 0 duplicates`.

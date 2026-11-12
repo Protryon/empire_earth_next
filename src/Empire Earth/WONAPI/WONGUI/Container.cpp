@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // FindChildAt's verdict on the child hit is ee_won's guifocus module (rust/crates/ee_won/src/guifocus.rs); the
 // child under the mouse's exit and enter, the release's child, the desired size and the insert place under the
 // always-on-top children are its guievent module (guievent.rs).

@@ -24,7 +24,7 @@
 #include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONLobbyEventTypes.h"
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 // The LAN protocol's messages and the host's decisions about them are ee_won's (rust/crates/ee_won/src/lan.rs),
 // and so is the flow over the objects (lanlogic.rs: what a received message, a closed socket, a summary, a join
@@ -337,9 +337,8 @@ void LanLogic::HandleJoinRequest(const std::wstring& inName, const std::wstring&
     std::vector<uint16_t> anIds;
     std::vector<size_t> anOffsets(1, 0);
     std::string aNames;
-    for (LobbyClientMap::iterator anItr = this->mClients->mClients.begin();
-         anItr != this->mClients->mClients.end(); ++anItr) {
-        LobbyClient* aListedClient = anItr->second.get();
+    for (size_t anItr = 0; anItr < this->mClients->GetCount(); ++anItr) {
+        LobbyClient* aListedClient = this->mClients->ClientAt(anItr);
         anIds.push_back(aListedClient->GetClientId());
         aNames += LanUtf16(aListedClient->mName);
         anOffsets.push_back(aNames.length());
@@ -601,7 +600,7 @@ void LanLogic::HandleChatMessage(unsigned short inFlags, unsigned short inSender
                 LobbyPlaySound(::LobbyGlobal_WhisperRecv_Sound.get());
             ChatCommandParser* aParser = LobbyGetChatCommandParser();
             if (aParser != NULL)
-                aParser->mInput = aSender->mName;
+                aParser->SetInput(aSender->mName);
         }
     }
     LobbyBroadcastEvent(new RecvChatEvent(8, aFlags, aSender,
@@ -785,14 +784,14 @@ void LanLogic::HandleChatCommand(Component* inTarget)
     if (!this->IsConnected())
         return;
     ChatCommandParser* aParser = LobbyGetChatCommandParser();
-    if (aParser == NULL || !(aParser->mRoomFlags & 8))
+    if (aParser == NULL || !(aParser->GetRoomFlags() & 8))
         return;
-    LobbyClient* aClient = aParser->mTarget.get();
-    EeWonLanChatCommand aCommand = ee_won_lanlogic_chat_command(true, aParser->mRoomFlags, aParser->mCommand,
+    LobbyClient* aClient = aParser->GetTarget();
+    EeWonLanChatCommand aCommand = ee_won_lanlogic_chat_command(true, aParser->GetRoomFlags(), aParser->GetCommand(),
                                                                 aClient != NULL);
     switch (aCommand.action) {
     case 1:
-        this->SendChat(aParser->mText, aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
+        this->SendChat(aParser->GetText(), aCommand.flags, aCommand.whisper ? aClient->mClientId : 0);
         return;
     case 2:
         LobbySetClientIgnored(aClient, !aClient->mIgnored, 4);
@@ -832,11 +831,9 @@ void LanLogic::EnterLanScreen()
     LobbySetCurrentUser(NULL);
     this->mLanGames->Clear();
     this->mDirectGames->Clear();
-    const LobbyDirectConnectMap& aSavedGames = LobbyFn35D8E0();
-    LobbyDirectConnectMap::const_iterator anItr;
-    for (anItr = aSavedGames.begin(); anItr != aSavedGames.end(); ++anItr) {
-        LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(anItr->first, NULL);
-        aGame->mName = anItr->second;
+    for (size_t anItr = 0; anItr < LobbyGetDirectConnectCount(); ++anItr) {
+        LobbyGame* aGame = this->mDirectGames->GetOrCreateGame(LobbyGetDirectConnectAddressAt(anItr), NULL);
+        aGame->mName = LobbyGetDirectConnectNameAt(anItr);
     }
     LobbyBroadcastEvent(new SyncGameListEvent(this->mDirectGames.get()), true);
     this->StartDiscovery();

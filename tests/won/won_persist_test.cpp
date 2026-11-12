@@ -6,7 +6,8 @@
 // file name, the first free id, pruning users and LAN names, the most recent LAN name, the default name's number)
 // against the original's statements too. A password's "encryption" is a fixed XOR on both sides (the Blowfish key
 // is the machine's). Links FileReader / FileWriter / WONFile, the buffers and CRC16. Prints one line per failed
-// check; the exit code is the number of failed checks.
+// check; the exit code is the number of failed checks. Round 16: the scalar state's Rust object (prefsobj.rs)
+// against the original's setters, defaults and dirty rules over random sequences.
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +21,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONCRC16.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 namespace WONAPI { std::wstring StringToWString(const std::string& inString); } // StringUtil.cpp
 
@@ -787,6 +788,282 @@ static Prefs Sample(int inVariant)
     return p;
 }
 
+// ---- round 16: the saved settings' scalar state as a Rust object (ee_won prefsobj.rs) against the original's
+// statements: the constructor, RestoreDefaults, the Lobby* setters, LobbySaveNetworkAdapter, LobbyRestoreDefaults,
+// LobbySetLastRoom, LobbySetCurrentUser, the end of SaveGlobalPrefs and LoadUserPrefs, LoadGlobalPrefs's sound and
+// music, copied from the C++ before the move (texts as UTF-8: GUIString's Compare compared the code units)
+
+struct OrigScalars {
+    long mCurrentUserId;
+    bool mFilterDirtyWords, mDoAutoAFK, mCrossPromotion;
+    std::string mTabSelect;
+    bool mLobbySoundEffects, mLobbyMusic, mChatSoundEffects, mStagingSoundEffects, mShowConfirmations, mAutoPingGames,
+        mShowGamesInProgress, mAnonymousToFriends;
+    unsigned short mConnectionSpeed, mLanBroadcastPort;
+    std::string mLanName;
+    bool mSavedLobbySoundEffects, mSavedLobbyMusic;
+    long mNetworkAdapter;
+    std::string mLastServerName, mLastRoomName;
+    bool mGlobalDirty, mUserDirty;
+
+    // the constructor (mCurrentUserId: the original left it unset before the reset; 0 here, as the port)
+    OrigScalars() : mCurrentUserId(0)
+    {
+        this->RestoreDefaults();
+        this->mLanBroadcastPort = 8585;
+        this->mGlobalDirty = false;
+        this->mUserDirty = false;
+        this->mSavedLobbySoundEffects = true;
+        this->mSavedLobbyMusic = true;
+    }
+    void RestoreDefaults()
+    {
+        this->mLastServerName = "";
+        this->mLastRoomName = "";
+        if (this->mCurrentUserId != 0)
+            this->mTabSelect = "QuickPlay";
+        else {
+            this->mTabSelect = "Lan";
+            this->mLanName = "Default 1234";
+        }
+        this->mFilterDirtyWords = true;
+        this->mDoAutoAFK = true;
+        this->mCrossPromotion = true;
+        this->mLobbySoundEffects = true;
+        this->mLobbyMusic = true;
+        this->mShowConfirmations = true;
+        this->mChatSoundEffects = true;
+        this->mStagingSoundEffects = true;
+        this->mAutoPingGames = true;
+        this->mShowGamesInProgress = true;
+        this->mAnonymousToFriends = false;
+        this->mLanBroadcastPort = 8585;
+        this->mConnectionSpeed = 25;
+        this->mNetworkAdapter = 0;
+    }
+};
+// the setters (LobbyPersistentSetters.cpp, LobbyPersistentQueries.cpp, LobbyPersistentFilters.cpp,
+// LobbyRestoreDefaults.cpp, LobbyPersistentData.cpp, LobbyPersistentAccessors.cpp), data never NULL here
+#define ORIG_SET(name, member)                                                                                         \
+    static void OrigSet##name(OrigScalars* data, bool value)                                                           \
+    {                                                                                                                  \
+        if (data != NULL && value != data->member) {                                                                   \
+            data->member = value;                                                                                      \
+            data->mUserDirty = true;                                                                                   \
+        }                                                                                                              \
+    }
+ORIG_SET(FilterDirtyWords, mFilterDirtyWords)
+ORIG_SET(DoAutoAFK, mDoAutoAFK)
+ORIG_SET(CrossPromotion, mCrossPromotion)
+ORIG_SET(ChatSoundEffects, mChatSoundEffects)
+ORIG_SET(StagingSoundEffects, mStagingSoundEffects)
+ORIG_SET(ShowConfirmations, mShowConfirmations)
+ORIG_SET(AutoPingGames, mAutoPingGames)
+ORIG_SET(ShowGamesInProgress, mShowGamesInProgress)
+ORIG_SET(AnonymousToFriends, mAnonymousToFriends)
+static void OrigSetLobbySoundEffects(OrigScalars* data, bool value)
+{
+    if (data == NULL || value == data->mLobbySoundEffects)
+        return;
+    data->mLobbySoundEffects = value;
+    data->mUserDirty = true;
+    data->mGlobalDirty = value != data->mSavedLobbySoundEffects;
+}
+static void OrigSetLobbyMusic(OrigScalars* data, bool value)
+{
+    if (data == NULL || value == data->mLobbyMusic)
+        return;
+    data->mLobbyMusic = value;
+    data->mUserDirty = true;
+    data->mGlobalDirty = value != data->mSavedLobbyMusic;
+}
+static void OrigSetConnectionSpeed(OrigScalars* data, unsigned short value)
+{
+    if (data != NULL && value != data->mConnectionSpeed) {
+        data->mConnectionSpeed = value;
+        data->mUserDirty = true;
+    }
+}
+static void OrigSetLanBroadcastPort(OrigScalars* data, unsigned short value)
+{
+    if (data != NULL && value != data->mLanBroadcastPort) {
+        data->mLanBroadcastPort = value;
+        data->mUserDirty = true;
+    }
+}
+static void OrigSetTabSelect(OrigScalars* data, const std::string& name)
+{
+    if (data != NULL && name != data->mTabSelect) {
+        data->mTabSelect = name;
+        data->mUserDirty = true;
+    }
+}
+static void OrigSaveNetworkAdapter(OrigScalars* data, long localHost)
+{
+    if (data != NULL && data->mNetworkAdapter != localHost) {
+        data->mNetworkAdapter = localHost;
+        data->mGlobalDirty = true;
+    }
+}
+static void OrigLobbyRestoreDefaults(OrigScalars* aData)
+{
+    if (aData == NULL)
+        return;
+    int anOldAdapter = aData->mNetworkAdapter;
+    aData->RestoreDefaults();
+    aData->mUserDirty = true;
+    aData->mGlobalDirty = aData->mSavedLobbySoundEffects != aData->mLobbySoundEffects ||
+        aData->mSavedLobbyMusic != aData->mLobbyMusic || aData->mNetworkAdapter != anOldAdapter;
+}
+static void OrigSetLastRoom(OrigScalars* aData, const std::string& inServer, const std::string& inGroup)
+{
+    if (inServer == aData->mLastServerName && inGroup == aData->mLastRoomName) return;
+    aData->mLastServerName = inServer;
+    aData->mLastRoomName = inGroup;
+    aData->mUserDirty = true;
+}
+static void OrigAfterGlobalSave(OrigScalars* d)
+{
+    d->mSavedLobbySoundEffects = d->mLobbySoundEffects;
+    d->mSavedLobbyMusic = d->mLobbyMusic;
+    d->mGlobalDirty = false;
+}
+static void OrigAfterUserLoad(OrigScalars* d)
+{
+    d->mGlobalDirty = d->mLobbySoundEffects != d->mSavedLobbySoundEffects || d->mSavedLobbyMusic != d->mLobbyMusic;
+    d->mUserDirty = false;
+}
+
+static std::string PortText(const EeWonLobbyPrefs* p, EeWonPrefsText t)
+{
+    size_t n = 0;
+    const uint8_t* s = ee_won_lobbyprefs_text(p, t, &n);
+    return std::string(reinterpret_cast<const char*>(s), n);
+}
+static bool SameScalars(const OrigScalars& o, const EeWonLobbyPrefs* p)
+{
+    const bool aFlags[15] = {o.mFilterDirtyWords, o.mDoAutoAFK, o.mCrossPromotion, o.mLobbySoundEffects,
+                             o.mLobbyMusic, o.mChatSoundEffects, o.mStagingSoundEffects, o.mShowConfirmations,
+                             o.mAutoPingGames, o.mShowGamesInProgress, o.mAnonymousToFriends,
+                             o.mSavedLobbySoundEffects, o.mSavedLobbyMusic, o.mGlobalDirty, o.mUserDirty};
+    for (int f = 0; f < 15; f++)
+        if (ee_won_lobbyprefs_flag(p, (EeWonPrefsFlag)f) != aFlags[f])
+            return false;
+    return ee_won_lobbyprefs_current_user(p) == o.mCurrentUserId &&
+           ee_won_lobbyprefs_number(p, EeWonPrefsNumber::ConnectionSpeed) == o.mConnectionSpeed &&
+           ee_won_lobbyprefs_number(p, EeWonPrefsNumber::LanBroadcastPort) == o.mLanBroadcastPort &&
+           ee_won_lobbyprefs_network_adapter(p) == o.mNetworkAdapter &&
+           PortText(p, EeWonPrefsText::TabSelect) == o.mTabSelect &&
+           PortText(p, EeWonPrefsText::LanName) == o.mLanName &&
+           PortText(p, EeWonPrefsText::LastServerName) == o.mLastServerName &&
+           PortText(p, EeWonPrefsText::LastRoomName) == o.mLastRoomName;
+}
+static void PortSetText(EeWonLobbyPrefs* p, EeWonPrefsText t, const std::string& s)
+{
+    ee_won_lobbyprefs_set_text(p, t, reinterpret_cast<const uint8_t*>(s.data()), s.size());
+}
+// the port's RestoreDefaults as the C++ class does it: the Rust reset, then the default LAN name for the LAN user
+static void PortRestoreDefaults(EeWonLobbyPrefs* p)
+{
+    if (ee_won_lobbyprefs_restore_defaults(p, reinterpret_cast<const uint8_t*>("QuickPlay"), 9,
+                                           reinterpret_cast<const uint8_t*>("Lan"), 3))
+        PortSetText(p, EeWonPrefsText::LanName, "Default 1234");
+}
+
+static void ScalarObject()
+{
+    static const char* const kTexts[] = {"", "Lan", "lan", "QuickPlay", "Server A", "Room \xc3\xa9", "Default 1234"};
+    static const long kAdapters[] = {0, 1, 0x0a000001, -1062731515 /* 192.168.1.5 */, 0x7fffffff};
+    static const unsigned short kNumbers[] = {0, 25, 50, 8585, 65535};
+    for (int aSeed = 1; aSeed <= 200; aSeed++) {
+        OrigScalars o;
+        EeWonLobbyPrefs* p = ee_won_lobbyprefs_new();
+        PortRestoreDefaults(p);   // the class's constructor runs RestoreDefaults after the object's
+        CHECK(SameScalars(o, p));
+        uint32_t r = (uint32_t)aSeed * 2654435761u;
+        for (int aStep = 0; aStep < 500; aStep++) {
+            r = r * 1103515245u + 12345u;
+            unsigned aOp = (r >> 8) % 24;
+            bool aValue = ((r >> 20) & 1) != 0;
+            const std::string aText = kTexts[(r >> 21) % 7];
+            const std::string aText2 = kTexts[(r >> 24) % 7];
+            unsigned short aNumber = kNumbers[(r >> 27) % 5];
+            long anAdapter = kAdapters[(r >> 13) % 5];
+            switch (aOp) {
+            case 0: OrigSetFilterDirtyWords(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::FilterDirtyWords, aValue); break;
+            case 1: OrigSetDoAutoAFK(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::DoAutoAfk, aValue); break;
+            case 2: OrigSetCrossPromotion(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::CrossPromotion, aValue); break;
+            case 3: OrigSetLobbySoundEffects(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::LobbySoundEffects, aValue); break;
+            case 4: OrigSetLobbyMusic(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::LobbyMusic, aValue); break;
+            case 5: OrigSetChatSoundEffects(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::ChatSoundEffects, aValue); break;
+            case 6: OrigSetStagingSoundEffects(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::StagingSoundEffects, aValue); break;
+            case 7: OrigSetShowConfirmations(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::ShowConfirmations, aValue); break;
+            case 8: OrigSetAutoPingGames(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::AutoPingGames, aValue); break;
+            case 9: OrigSetShowGamesInProgress(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::ShowGamesInProgress, aValue); break;
+            case 10: OrigSetAnonymousToFriends(&o, aValue); ee_won_lobbyprefs_change_flag(p, EeWonPrefsFlag::AnonymousToFriends, aValue); break;
+            case 11: OrigSetConnectionSpeed(&o, aNumber); ee_won_lobbyprefs_change_number(p, EeWonPrefsNumber::ConnectionSpeed, aNumber); break;
+            case 12: OrigSetLanBroadcastPort(&o, aNumber); ee_won_lobbyprefs_change_number(p, EeWonPrefsNumber::LanBroadcastPort, aNumber); break;
+            case 13:
+                OrigSetTabSelect(&o, aText);
+                ee_won_lobbyprefs_change_tab_select(p, reinterpret_cast<const uint8_t*>(aText.data()), aText.size());
+                break;
+            case 14: OrigSaveNetworkAdapter(&o, anAdapter); ee_won_lobbyprefs_save_network_adapter(p, anAdapter); break;
+            case 15: {
+                OrigLobbyRestoreDefaults(&o);
+                int64_t anOld = ee_won_lobbyprefs_network_adapter(p);
+                PortRestoreDefaults(p);
+                ee_won_lobbyprefs_after_restore(p, anOld);
+                break;
+            }
+            case 16:
+                OrigSetLastRoom(&o, aText, aText2);
+                ee_won_lobbyprefs_set_last_room(p, reinterpret_cast<const uint8_t*>(aText.data()), aText.size(),
+                                                reinterpret_cast<const uint8_t*>(aText2.data()), aText2.size());
+                break;
+            case 17: OrigAfterGlobalSave(&o); ee_won_lobbyprefs_after_global_save(p); break;
+            case 18: OrigAfterUserLoad(&o); ee_won_lobbyprefs_after_user_load(p); break;
+            case 19: {
+                // LobbySetCurrentUser's id (its LoadUserPrefs starts with RestoreDefaults)
+                long anId = aValue ? (long)((r >> 9) % 4) : 0;
+                o.mCurrentUserId = anId;
+                o.RestoreDefaults();
+                ee_won_lobbyprefs_set_current_user(p, anId);
+                PortRestoreDefaults(p);
+                break;
+            }
+            case 20:
+                // LoadGlobalPrefs's sound and music events
+                o.mLobbySoundEffects = o.mSavedLobbySoundEffects = aValue;
+                ee_won_lobbyprefs_set_flag(p, EeWonPrefsFlag::LobbySoundEffects, aValue);
+                ee_won_lobbyprefs_set_flag(p, EeWonPrefsFlag::SavedLobbySoundEffects, aValue);
+                break;
+            case 21:
+                o.mLobbyMusic = o.mSavedLobbyMusic = aValue;
+                ee_won_lobbyprefs_set_flag(p, EeWonPrefsFlag::LobbyMusic, aValue);
+                ee_won_lobbyprefs_set_flag(p, EeWonPrefsFlag::SavedLobbyMusic, aValue);
+                break;
+            case 22:
+                // a user file's flags and texts (the load's assignments)
+                o.mChatSoundEffects = aValue;
+                ee_won_lobbyprefs_set_flag(p, EeWonPrefsFlag::ChatSoundEffects, aValue);
+                o.mLanName = aText;
+                PortSetText(p, EeWonPrefsText::LanName, aText);
+                o.mConnectionSpeed = aNumber;
+                ee_won_lobbyprefs_set_number(p, EeWonPrefsNumber::ConnectionSpeed, aNumber);
+                break;
+            default:
+                o.mNetworkAdapter = anAdapter;
+                ee_won_lobbyprefs_set_network_adapter(p, anAdapter);
+                break;
+            }
+            CHECK(SameScalars(o, p));
+            if (!SameScalars(o, p) && sFailures < 40)
+                printf("  scalars seed %d step %d op %u\n", aSeed, aStep, aOp);
+        }
+        ee_won_lobbyprefs_free(p);
+    }
+}
+
 int main()
 {
     const char* kOrig = "won_persist_orig.dat";
@@ -943,6 +1220,7 @@ int main()
         CHECK(ee_won_prefs_default_lan_number(kHosts[h]) == (unsigned short)(aCRC.Get() % 10000));
     }
 
+    ScalarObject();
     printf("won_persist_test: %d checks, %d failures\n", sChecks, sFailures);
     return sFailures;
 }

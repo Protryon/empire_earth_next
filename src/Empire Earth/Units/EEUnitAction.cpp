@@ -25,7 +25,7 @@
 #include "ee/EEUnitTrigger.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_units.h"
 
 extern FSPath* gDataPath;                   // 0x531908
 
