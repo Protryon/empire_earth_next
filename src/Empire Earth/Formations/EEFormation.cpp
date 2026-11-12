@@ -62,7 +62,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_formations.h"
 #include "ee/EEFormationRust.h"
 
 // FUNCTION: EXE 0x4ddcc6

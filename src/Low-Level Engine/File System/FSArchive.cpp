@@ -10,7 +10,7 @@
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
 #include "lle/FSArchive.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_fs.h"
 #include "FSRustOps.h"
 
 namespace {

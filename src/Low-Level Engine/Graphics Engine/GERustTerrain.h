@@ -6,6 +6,7 @@
 #define GERUSTTERRAIN_H
 
 #include <stddef.h>
+#include "rust/ee_ge.h"
 
 struct GERustTerrainLayout {
     typedef GETerrainMesh::GETMPoint Point;

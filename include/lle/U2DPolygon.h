@@ -22,7 +22,7 @@ const UString kU2DPolygonPointCountKey("U2DPolygon-PointCount");
 #ifdef LLE_EXE_HEADERS
 #include <map>
 #include <vector>
-#include "rust/ee_rust.h"
+#include "rust/ee_astar.h"
 
 // New (port), TEST ONLY (EE_SIM_CAPTURE, tools/sim_capture.py; defined in EEAIContinentCapture.cpp): the records of
 // the hulls' geometry (HULL: kind 1 SetPoints, 2 GetClosestOutlinePoint, 3 GetClosestPoints, 4 GetClosestPoint,

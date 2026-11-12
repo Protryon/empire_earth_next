@@ -37,7 +37,7 @@
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
 #include "lle/Graphics Engine.h"
-#include "rust/ee_rust.h"       // the pixel formats (ee_ge pixel.rs)
+#include "rust/ee_ge.h"       // the pixel formats (ee_ge pixel.rs)
 
 void GEShutdown(bool inForced);
 

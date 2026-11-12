@@ -59,7 +59,7 @@
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitKind.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
 {

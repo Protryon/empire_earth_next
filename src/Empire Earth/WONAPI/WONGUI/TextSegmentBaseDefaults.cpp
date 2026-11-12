@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 // Returns 1: a plain segment counts as one character (the linker folds this body into the identical one at 0x006be2e0)
 int TextSegmentBase::GetLength() { return 1; }

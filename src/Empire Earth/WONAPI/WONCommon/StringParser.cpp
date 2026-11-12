@@ -15,7 +15,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 namespace WONAPI {
 static const void* ParserText(const StringParser* inParser)
 {

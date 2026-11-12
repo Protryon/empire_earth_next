@@ -34,7 +34,7 @@
 #include "ee/EEMedia.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EEMusicManager.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_sound.h"
 
 static UString sThreadName("MusicManager");
 

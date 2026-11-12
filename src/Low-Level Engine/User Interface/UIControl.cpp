@@ -7,7 +7,7 @@
 // starts at 0x10065f69.
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"

@@ -12,7 +12,7 @@
 #include <string.h>
 #include <vector>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_combat.h"
 #include "ee/EESimCapture.h"
 
 // The records (EeCombat*In, EeCombat*Out) and the formulas are ee_combat's (rust/crates/ee_combat; the field order

@@ -21,7 +21,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EETechCapture.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 // FUNCTION: EXE 0x4b6fb1
 // Creates the plague functor with its radius, chance, damage, damage time, unit set and hit mode

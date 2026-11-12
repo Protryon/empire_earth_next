@@ -17,7 +17,7 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONMD5Digest.h"
 #include "platform/PlatFile.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 using namespace WONAPI;
 

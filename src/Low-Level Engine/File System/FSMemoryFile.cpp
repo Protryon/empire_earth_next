@@ -11,7 +11,7 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_fs.h"
 #include "FSRustOps.h"
 
 static int32_t FileReadU32(void* inContext, uint32_t* ioValue)

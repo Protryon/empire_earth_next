@@ -6,7 +6,7 @@
 #include <time.h>
 #include <string>
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 

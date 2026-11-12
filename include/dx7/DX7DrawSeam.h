@@ -3,7 +3,7 @@
 #ifndef DX7_DX7DRAWSEAM_H
 #define DX7_DX7DRAWSEAM_H
 
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 #include "dx7/DX7Rasterizer.h"
 
 // The rasterizer's protected members, for the forwarders and the ee_dx7cpp_* seam (a view of the same object: no data

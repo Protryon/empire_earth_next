@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include "ee/wonapi/WONBuffer.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 namespace WONAPI {
 
