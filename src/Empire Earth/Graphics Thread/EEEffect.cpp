@@ -345,6 +345,12 @@ float EEEffect::GetRandom()
     return sEffectRandom.Generate();
 }
 
+// TEST ONLY (tools/sim_capture.py EFST): the effects' random seed
+unsigned long EEEffectRandomSeed()
+{
+    return sEffectRandom.GetSeed();
+}
+
 // FUNCTION: EXE 0x502f96
 // Returns the graphic object (media) of the effect's graphic effect, or null without one
 EEGraphicObject* EEEffect::GetGraphicObject()

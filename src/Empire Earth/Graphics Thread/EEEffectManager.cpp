@@ -109,6 +109,8 @@
 #include "ee/EEE3DPulseCannonBall.h"
 #include "ee/EEE3DParticle.h"
 #include "ee/EESimCapture.h"
+#include "ee/EESaveGameFiles.h"
+#include "lle/FSMemoryFile.h"
 
 // SYNTHETIC: EXE 0x5054ec
 // SYNTHETIC: EXE 0x5054f6
@@ -1077,6 +1079,48 @@ static void EECaptureEffectManager(EEEffectManager* inManager)
     theRecord.Commit();
 }
 
+// TEST ONLY (tools/sim_capture.py EFST): every effect's state after every Update (R4.4, seventh round): the effects'
+// random seed, then per effect of the index in handle order its handle, kind, player and the local-only and saved
+// flags, and a saved effect's own Save bytes (the base classes' and the leaf's state as a save writes it), folded
+// into the record's count, length and an FNV-1a 64
+static void EECaptureEffectStates(EEEffectManager* inManager)
+{
+    static const unsigned int kTag = (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) |
+                                     ((unsigned int)'T' << 24);
+    if (!EESimCaptureRecord::Active() || !EESimCaptureRecord::Keeps(kTag))
+        return;
+    FSMemoryFile theFile;
+    unsigned int theCount = 0;
+    uint32_t theHandle;
+    EEEffect* theEffect;
+    for (uint64_t c = 0; (theEffect = EEStoreEffect(ee_gfx_effects_at_or_after(inManager->mStore, c, &theHandle)));
+         c = (uint64_t)theHandle + 1) {
+        theFile.Write((uint32_t)theHandle);
+        theFile.Write((int32_t)theEffect->mKind);
+        theFile.Write((int32_t)theEffect->mPlayer);
+        theFile.Write(theEffect->mIsLocalOnly);
+        theFile.Write(theEffect->mIsSaved);
+        if (theEffect->mIsSaved)
+            theEffect->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
+        theCount++;
+    }
+    unsigned long theLength = 0;
+    theFile.GetLength(theLength);
+    const unsigned char* theData = theFile.GetData();
+    unsigned long long theHash = 0xcbf29ce484222325ull;
+    for (unsigned long i = 0; i < theLength; i++) {
+        theHash ^= theData[i];
+        theHash *= 0x100000001b3ull;
+    }
+    EESimCaptureRecord theRecord(kTag);
+    theRecord.U32((unsigned int)EEEffectRandomSeed());
+    theRecord.U32(theCount);
+    theRecord.U32((unsigned int)theLength);
+    theRecord.U32((unsigned int)theHash);
+    theRecord.U32((unsigned int)(theHash >> 32));
+    theRecord.Commit();
+}
+
 // FUNCTION: EXE 0x507450
 // Updates the goal markers, destroys the queued effects, then steps every effect, removing those that finish
 // (Step returns 7)
@@ -1095,6 +1139,7 @@ void EEEffectManager::Update()
         theEffect = theNext;
     }
     EECaptureEffectManager(this);
+    EECaptureEffectStates(this);
 }
 
 // FUNCTION: EXE 0x5074c9

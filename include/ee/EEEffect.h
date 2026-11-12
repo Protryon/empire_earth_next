@@ -60,6 +60,8 @@ float GetEffectRandomFloat(float inMinimum, float inMaximum);
 // 0x102f57 (cdecl, in EEEffect.cpp's range): a random integer in [inMinimum, inMaximum] (EEE2DBattlefieldAmbient's
 // effect variant pick) (provisional name)
 long GetEffectRandomLong(long inMinimum, long inMaximum);
+// TEST ONLY (tools/sim_capture.py EFST): the effects' random generator's seed
+unsigned long EEEffectRandomSeed();
 
 class EEEffect : public UReferenceCounter {
 public:
