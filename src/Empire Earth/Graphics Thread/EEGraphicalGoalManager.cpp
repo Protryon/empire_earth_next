@@ -387,13 +387,6 @@ long EEGraphicalGoalManager::RepairPointers(unsigned long inFirst, unsigned long
     return 0;
 }
 
-// FUNCTION: EXE 0x508af0
-// Returns a player's marker list of a type, creating it empty when missing
-std::vector<EEGraphicalGoal>& EEGraphicalGoalManager::GetGoals(unsigned long inPlayer, unsigned long inType)
-{
-    return this->mGoals[inPlayer][inType];
-}
-
 // FUNCTION: EXE 0x508b0c
 // Returns the number of a player's markers of a type (creating the empty list when missing)
 unsigned long EEGraphicalGoalManager::GetGoalCount(long inPlayer, long inType)

@@ -148,9 +148,6 @@ static unsigned long sU529090;              // 0x529090 (the music check's last 
 static unsigned long sU529094;              // 0x529094 (the sway clock's last time; provisional name)
 static unsigned long sL52908C;              // 0x52908c (the frame counter; provisional name)
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
-// 0x52906c: how the selection ring is sized (0: the class, 1: GetLineOfSight, 2: the stats; only read: FillUnit)
-// (provisional name)
-static long sL52906C;
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
 // 0x44136c (0.5, the near fade's depth): ee_gfx view.rs NEAR_FADE_DEPTH
 static const float kEERenderObject_F441358 = 0.6f;    // 0x441358 (the second light set's ambient scale)
@@ -1255,17 +1252,8 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             || (gFreeCamera && inUnit->mIsEditorSelected)
             || std::find(gU4E9230.begin(), gU4E9230.end(), inUnit->GetUnitID()) != gU4E9230.end()) {
             if (!inUnit->mUnitClass->IsLandBuilding() || inUnit->GetHitPoints() != 0) {
-                switch (sL52906C) {
-                case 0:
-                    outUnit->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
-                    break;
-                case 1:
-                    outUnit->mSelectionSize = theComplex->GetLineOfSight() * 2.0f;
-                    break;
-                case 2:
-                    outUnit->mSelectionSize = inUnit->mStats->mRange * 2.0f;
-                    break;
-                }
+                // the class's ring size (the original's never-set 0x52906c could pick the line of sight or the range)
+                outUnit->mSelectionSize = inUnit->mUnitClass->mSelectionSize;
                 if (theComplex->GetNumCargoUnits() > 0
                     && (theComplex->GetPlayer() == theCurrent || theComplex->GetPlayer()->mEnemies[theCurrent->GetPlayerID()] == 0)) {
                     outUnit->mHealthBars.resize(theComplex->GetNumCargoUnits() + 1, 0.0f);

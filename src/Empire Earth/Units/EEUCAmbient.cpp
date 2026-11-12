@@ -113,10 +113,7 @@ void EEUCAmbient::Update(EEComplexUnit* inUnit)
 {
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionUnitRotting)
         return;
-    long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
-    inUnit->SetRottingAwayTime(theTime);
+    long theTime = inUnit->UpdateRottingAwayTime();
     for (EEComplexUnit* theUnit = inUnit->mNextPart; theUnit != NULL; theUnit = theUnit->mNextPart)
         theUnit->SetRottingAwayTime(theTime);
 }

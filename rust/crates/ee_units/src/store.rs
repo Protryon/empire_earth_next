@@ -70,6 +70,14 @@ pub const EE_UNIT_FIELD_POWER: u32 = 29;
 pub const EE_UNIT_FIELD_POWER_REGEN_TIMER: u32 = 30;
 /// `EEComplexUnit::mCamouflageTimer` (an `unsigned long`)
 pub const EE_UNIT_FIELD_CAMOUFLAGE_TIMER: u32 = 31;
+/// `EEComplexUnit::mVelocity` (float bits)
+pub const EE_UNIT_FIELD_VELOCITY: u32 = 32;
+/// `EEComplexUnit::mPushVelocityX` (float bits)
+pub const EE_UNIT_FIELD_PUSH_VELOCITY_X: u32 = 33;
+/// `EEComplexUnit::mPushVelocityY` (float bits)
+pub const EE_UNIT_FIELD_PUSH_VELOCITY_Y: u32 = 34;
+/// `EEComplexUnit::mRoll` (float bits)
+pub const EE_UNIT_FIELD_ROLL: u32 = 35;
 
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
@@ -147,6 +155,14 @@ pub struct EeUnitRecord {
     pub power_regen_timer: i64,
     /// `EEComplexUnit::mCamouflageTimer` (the step's leaves read it: `step`)
     pub camouflage_timer: i64,
+    /// `EEComplexUnit::mVelocity` as float bits (the physics models' arithmetic reads it: `step`)
+    pub velocity: u32,
+    /// `EEComplexUnit::mPushVelocityX` as float bits (the physics models' arithmetic reads it: `step`)
+    pub push_velocity_x: u32,
+    /// `EEComplexUnit::mPushVelocityY` as float bits (the physics models' arithmetic reads it: `step`)
+    pub push_velocity_y: u32,
+    /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
+    pub roll: u32,
 }
 
 impl EeUnitRecord {
@@ -184,6 +200,10 @@ impl EeUnitRecord {
             EE_UNIT_FIELD_POWER => self.power = value,
             EE_UNIT_FIELD_POWER_REGEN_TIMER => self.power_regen_timer = value,
             EE_UNIT_FIELD_CAMOUFLAGE_TIMER => self.camouflage_timer = value,
+            EE_UNIT_FIELD_VELOCITY => self.velocity = value as u32,
+            EE_UNIT_FIELD_PUSH_VELOCITY_X => self.push_velocity_x = value as u32,
+            EE_UNIT_FIELD_PUSH_VELOCITY_Y => self.push_velocity_y = value as u32,
+            EE_UNIT_FIELD_ROLL => self.roll = value as u32,
             _ => return false,
         }
         true
@@ -243,6 +263,10 @@ impl EeUnitRecord {
             (EE_UNIT_FIELD_POWER, self.power == other.power),
             (EE_UNIT_FIELD_POWER_REGEN_TIMER, self.power_regen_timer == other.power_regen_timer),
             (EE_UNIT_FIELD_CAMOUFLAGE_TIMER, self.camouflage_timer == other.camouflage_timer),
+            (EE_UNIT_FIELD_VELOCITY, self.velocity == other.velocity),
+            (EE_UNIT_FIELD_PUSH_VELOCITY_X, self.push_velocity_x == other.push_velocity_x),
+            (EE_UNIT_FIELD_PUSH_VELOCITY_Y, self.push_velocity_y == other.push_velocity_y),
+            (EE_UNIT_FIELD_ROLL, self.roll == other.roll),
         ];
         pairs.iter().find(|(_, same)| !same).map(|(f, _)| *f)
     }
@@ -467,6 +491,10 @@ mod tests {
             power: 0,
             power_regen_timer: 0,
             camouflage_timer: 0,
+            velocity: 0,
+            push_velocity_x: 0,
+            push_velocity_y: 0,
+            roll: 0,
         }
     }
 
@@ -522,6 +550,10 @@ mod tests {
             (EE_UNIT_FIELD_POWER, 77),
             (EE_UNIT_FIELD_POWER_REGEN_TIMER, 5000),
             (EE_UNIT_FIELD_CAMOUFLAGE_TIMER, 0x8000_0100),
+            (EE_UNIT_FIELD_VELOCITY, i64::from(2.5f32.to_bits())),
+            (EE_UNIT_FIELD_PUSH_VELOCITY_X, i64::from((-0.25f32).to_bits())),
+            (EE_UNIT_FIELD_PUSH_VELOCITY_Y, i64::from(0.125f32.to_bits())),
+            (EE_UNIT_FIELD_ROLL, i64::from(0.3f32.to_bits())),
         ] {
             let before = r;
             assert!(r.set(f, v));

@@ -846,22 +846,6 @@ EEPlayer* EEWorld::GetPlayerBySlot(unsigned char inSlot)
     return theResult;
 }
 
-// FUNCTION: EXE 0x5396a9
-// Returns the queued (not yet placed) waypoint on a tile whose hit points field holds the given unit id, or NULL
-EEComplexUnit* EEWorld::FindQueuedUnitAt(long inX, long inY, unsigned long inUnitID)
-{
-    EEComplexUnit* theResult = NULL;
-    for (std::vector<RTSWorldUnitEntry>::iterator it = this->mQueuedPlacements.begin(); it != this->mQueuedPlacements.end(); ++it) {
-        EEComplexUnit* theUnit = (EEComplexUnit*)it->mUnit;
-        if (theUnit != NULL && theUnit->mTileX == inX && theUnit->mTileY == inY
-            && theUnit->mUnitClass->mUnitType == kUnitTypeWaypoint && theUnit->mHitPoints == (long)inUnitID) {
-            theResult = theUnit;
-            break;
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x5396f3
 // Counts one more gatherer on a resource unit
 void EEWorld::AddResourceUser(EEUnit* inUnit)

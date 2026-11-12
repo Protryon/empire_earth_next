@@ -5,6 +5,7 @@
 //! classes of `src/Empire Earth/WONAPI` that remain call these through `ffi` and `ffi_net`.
 
 pub mod admin;
+pub mod adminop;
 pub mod asyncop;
 pub mod auth;
 pub mod authctx;
@@ -25,6 +26,7 @@ pub mod db;
 pub mod der;
 pub mod dialogs;
 pub mod dir;
+pub mod dirchange;
 pub mod dirops;
 pub mod elgamal;
 pub mod ffi;
@@ -79,6 +81,7 @@ pub mod prefsobj;
 pub mod qsock;
 pub mod random;
 pub mod regkey;
+pub mod reqop;
 pub mod resource;
 pub mod routemsg;
 pub mod routing;

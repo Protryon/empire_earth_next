@@ -1844,77 +1844,11 @@ bool EECanPriestConvert(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 // it can (outTile)
 bool EEIsAttackReachable(EEComplexUnit* inUnit, EEComplexUnit* inTarget, U2DPoint<long>* outTile)
 {
-    bool theResult = false;
-    EEUnitClass* theClass;
-    float theRange;
-    long theX;
-    long theY;
-    long theRadius;
-    long theMargin;
-    long theLimit;
-    float theDistance;
-    if (inTarget->GetTileX() == -10000 || inUnit->IsOnOtherContinentThan(inTarget)) {
-        theResult = false;
-    } else {
-        std::vector<U2DPoint<long> > thePath;
-        U2DPoint<long> theFrom(inUnit->GetTileX(), inUnit->GetTileY());
-        U2DPoint<long> theTo(inTarget->GetTileX(), inTarget->GetTileY());
-        EEAIAStarBounds theBounds;
-        theClass = inUnit->mUnitClass;
-        theRange = UMSquare(inUnit->mStats->mRange);
-        if (theClass->mUnitType == kUnitTypeX04RomanLegionnaire && inUnit->mIsSpecialAttack)
-            theRange = UMSquare(theClass->mHealRange);
-        if (inTarget->mUnitClass->mTileSize > 1) {
-            theX = theTo.mX;
-            theY = theTo.mY;
-            inUnit->GetNearestFootprintTile(inTarget, &theX, &theY);
-            theTo.mX = theX;
-            theTo.mY = theY;
-        }
-        if (theRange < 2.0f)
-            theRange = 2.0f;
-        outTile->mX = 0;
-        outTile->mY = 0;
-        if (theClass->mMaxVelocity == 0.0f || (theClass->mDomains & kMovementLandOrSea) == 0 || inUnit->DistanceSquaredTo(inTarget) <= theRange) {
-            theResult = true;
-        } else if (inUnit->mContainer == NULL && inTarget->mContainer == NULL) {
-            EEAIBPGModifierEnemyIsAttackableByUnit* theModifier =
-                new EEAIBPGModifierEnemyIsAttackableByUnit(inUnit, inTarget);
-            theBounds.Set(theFrom);
-            theBounds.Extend(theTo);
-            if (inUnit->GetLineOfSight() > theRange) {
-                theDistance = inUnit->GetLineOfSight();
-                theRadius = UMCeil(theDistance);
-            } else {
-                theRadius = UMCeil(theRange);
-            }
-            theMargin = theRadius * 2;
-            theBounds.mTop -= theMargin;
-            if (theBounds.mTop <= 0)
-                theBounds.mTop = 0;
-            theBounds.mLeft -= theMargin;
-            if (theBounds.mLeft <= 0)
-                theBounds.mLeft = 0;
-            theBounds.mBottom = min(theBounds.mBottom + theMargin, ::gWorld.mMap->mSize - 1);
-            theBounds.mRight = min(theBounds.mRight + theMargin, ::gWorld.mMap->mSize - 1);
-            theLimit = theFrom.DistanceToSquared(theTo);
-            if (theMargin > theLimit)
-                theLimit = theMargin;
-            theLimit *= 2;
-            if (theLimit > 0x23)
-                theLimit = 0x23;
-            gPathManager.FindPath(inUnit, ::gWorld.mMap, theFrom, theTo, theBounds, thePath, 0xb, theLimit,
-                                  theModifier, NULL);
-            if (thePath.size() != 0) {
-                *outTile = thePath[0];
-                if ((float)outTile->DistanceToSquared(theTo) <= theRange)
-                    theResult = true;
-                else
-                    theResult = false;
-            }
-            theModifier->Dereference();
-        }
-    }
+    // ee_combat world.rs attack_reachable over the world host (EECombatGoals.cpp: the path search); CBXR records the
+    // outcome
+    bool theResult = EECombatWorld(EE_COMBAT_WORLD_ATTACK_REACHABLE, inUnit, inTarget, NULL, &outTile->mX, &outTile->mY) != 0;
+    EECombatCaptureXRead(EE_COMBAT_XR_ATTACK_REACHABLE, inUnit, inTarget, theResult, (uint32_t)outTile->mX,
+                         (uint32_t)outTile->mY);
     return theResult;
 }
 
