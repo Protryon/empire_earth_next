@@ -6897,5 +6897,5 @@ load code (the loaded game, not the running one; the plain oracle stays identica
 - **A gate for the merge chain**: `python -I tools/sim_oracle.py saveload NAME --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --jobs 2 --clean --expect tools/saveload_expect.txt`
   covers every cause fixed in rounds 6 and 7 (the oracle setting: the 18 saves' causes at two times; calamity: the
   empty class lists; late: the dead boats; space: the turret angles; next: the past-due epoch advance; plains: the
-  carcass ghosts). Six settings x (1 continued + 2 loaded games): 18 games, about 5 minutes at --jobs 2 on this machine
-  (the 60-game run took 1067 s).
+  carcass ghosts). Six settings x (1 continued + 2 loaded games): 18 games, 355 s wall at --jobs 2 on this machine
+  (measured after the merge of rust: `saveload expect: PASS`; the 60-game run took 1067 s).
