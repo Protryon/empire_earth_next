@@ -133,6 +133,11 @@ local function builders(x, y)
     return picked
 end
 
+-- the player's drop sites a mine's or patch's gatherers can use
+local DROPS = {"b_settlement", "b_town_center", "b_capitol"}
+
+-- whether a drop site of the player's touches one of the resource units (gap 0): a home mine served by the town centre
+-- 7 tiles off is not, and gets its own settlement
 function M.touched(rids)
     return M.touched_units(rids) > 0
 end
