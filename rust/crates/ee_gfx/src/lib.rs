@@ -33,6 +33,8 @@ mod golden_picker;
 #[cfg(test)]
 mod golden_placement;
 #[cfg(test)]
+mod golden_press;
+#[cfg(test)]
 mod golden_quads;
 #[cfg(test)]
 mod golden_rings;

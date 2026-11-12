@@ -13340,6 +13340,17 @@ void ee_gfx_minimap_center_point(const EeGe2DPoint *mouse,
                                  const EeGeRectangle *bounds,
                                  EeGe2DPoint *out);
 
+/// `EEUIMiniMap::MouseRButtonDown`'s mini-map point (its own clamp; `minimap::press_point`).
+///
+/// # Safety
+/// The pointers are valid.
+void ee_gfx_minimap_press_point(const EeGe2DPoint *mouse,
+                                const EeGe2DPoint *origin,
+                                uint32_t width,
+                                uint32_t height,
+                                const EeGeRectangle *bounds,
+                                EeGe2DPoint *out);
+
 /// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
 ///
 /// # Safety

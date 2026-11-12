@@ -195,6 +195,32 @@ pub fn center_point(mouse: Ge2DPoint, origin: Ge2DPoint, width: u32, height: u32
     p
 }
 
+/// `EEUIMiniMap::MouseRButtonDown`'s mini-map point: the same mouse arithmetic as [`center_point`], but its clamp
+/// makes two separate tests per axis (left then right, top then bottom), not `else if`: with inverted bounds a
+/// point past both ends takes the second.
+pub fn press_point(mouse: Ge2DPoint, origin: Ge2DPoint, width: u32, height: u32, bounds: &GeRectangle) -> Ge2DPoint {
+    let mut p = Ge2DPoint {
+        x: (mouse.x - origin.x) / (width as f32 * 0.00125),
+        y: (mouse.y - origin.y) / (height as f32 * 0.0016666667),
+    };
+    let inside = p.x >= bounds.left && p.x <= bounds.right && p.y >= bounds.top && p.y <= bounds.bottom;
+    if !inside {
+        if bounds.left > p.x {
+            p.x = bounds.left;
+        }
+        if bounds.right < p.x {
+            p.x = bounds.right;
+        }
+        if p.y < bounds.top {
+            p.y = bounds.top;
+        }
+        if p.y > bounds.bottom {
+            p.y = bounds.bottom;
+        }
+    }
+    p
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -211,6 +237,19 @@ mod tests {
             assert!((q.x - x).abs() < 1e-3 && (q.y - y).abs() < 1e-3, "{q:?}");
         }
         assert!(t.pixel_width >= 1 && t.pixel_height >= 1);
+    }
+
+    #[test]
+    fn the_press_clamps_twice_per_axis() {
+        // inverted bounds (left 10, right 0): the press takes the right edge, the camera's centre the left
+        let b = GeRectangle { left: 10.0, top: 0.0, right: 0.0, bottom: 5.0 };
+        let m = Ge2DPoint { x: -4.0, y: 2.0 };
+        let o = Ge2DPoint { x: 0.0, y: 0.0 };
+        assert_eq!(press_point(m, o, 800, 600, &b).x, 0.0);
+        assert_eq!(center_point(m, o, 800, 600, &b).x, 10.0);
+        let inside = Ge2DPoint { x: 4.0, y: 2.0 };
+        let b = GeRectangle { left: 0.0, top: 0.0, right: 10.0, bottom: 5.0 };
+        assert_eq!(press_point(inside, o, 800, 600, &b), Ge2DPoint { x: 4.0, y: 2.0 });
     }
 
     #[test]

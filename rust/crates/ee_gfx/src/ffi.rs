@@ -887,6 +887,26 @@ pub unsafe extern "C" fn ee_gfx_minimap_center_point(
     }
 }
 
+/// `EEUIMiniMap::MouseRButtonDown`'s mini-map point (its own clamp; `minimap::press_point`).
+///
+/// # Safety
+/// The pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_minimap_press_point(
+    mouse: *const Ge2DPoint,
+    origin: *const Ge2DPoint,
+    width: u32,
+    height: u32,
+    bounds: *const GeRectangle,
+    out: *mut Ge2DPoint,
+) {
+    // SAFETY: the function's contract (the inputs copied before the store)
+    unsafe {
+        let p = minimap::press_point(*mouse, *origin, width, height, &*bounds);
+        *out = p;
+    }
+}
+
 /// `GetIsEntryInView`'s model transformation (the box selection's frustum test).
 ///
 /// # Safety
