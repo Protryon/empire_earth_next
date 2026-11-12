@@ -3615,6 +3615,45 @@ Within noise. Determinism: seeds 2 and 5, 60 minutes, --repeat 2: identical. 0 s
 Next: the balanced late game - the port's citizens lost to the C++'s soldiers after 60 minutes and its Copper Age
 in 22 games against 27.
 
+### 8.54 The classic computer player in Lua: the defence ladder against the C++'s own (2026-11-11, EE-SIM)
+
+§8.53's port chose choke 20 and hill 9 of about 390 tasks; the data's guard_chokepoint_percentage is 68%. A trace-only
+`dc.ladder` line on the C++'s AssignSubGroupTask (which step gave the task, and the sub-group's common move flags)
+shows the C++'s own distribution on the same games. Seeds 2-9 (balanced, 90 minutes):
+
+| step | the C++ | the port before | the port, forest gated | the port, re-tasked after fights (32 games) | the C++ (32 games) |
+|---|---|---|---|---|---|
+| choke | 31 | 8 | 12 | 76 | 166 |
+| hill | 25 | 4 | 14 | 63 | 108 |
+| forest | 12 | 33 | 2 | 20 | 86 |
+| town | 15 | 4 | 2 | 16 | 51 |
+| land | 3 | - | - | - | 23 |
+| adjacent | 1 | - | - | - | 13 |
+
+Two gaps, both closed:
+- **The forest step's gate.** The C++ takes the forest only when every unit of the sub-group crosses forest
+  (UpdateCommonMoveFlags over EEUnitClass::GetTerrainFlags); most of its groups mix units that cannot (flags 00), so
+  the forest is rare and the hill and choke steps come next. The port took every soldier group for foot soldiers. The
+  own unit records now have `crosses_forest` / `crosses_cliff` (AI_LUA_UNITS §11). (The C++'s forest tasks with flags
+  11 are mostly empty sub-groups: an empty group passes every test.)
+- **The re-tasking.** A C++ land sub-group whose fight is over goes idle and is given a task again (EECPASGLand: Attack
+  -> Idle -> AssignTask); the port's stayed at its place. The port's ladder now runs 175 times in 32 games against the
+  C++'s 449 (from 137); the rest is the C++'s other idle paths (a task no longer valid, the empty sub-groups).
+
+Bench (balanced, 32 seeds; before = §8.53's he):
+
+| stage | Lua won-lost | Lua Copper | the C++'s Copper | Lua citizens lost by 20 / all |
+|---|---|---|---|---|
+| §8.53 (he) | 7-20, 5 close | 22/32 | 27/32 | 2.1 / 58.5 |
+| forest gated (tf, 2 lobby faults) | 9-16, 5 close | 21/30 | 21/30 | 2.3 / 60.0 |
+| re-tasked after fights (rt) | 10-18, 4 close | 23/32 | 22/32 | 2.2 / 57.5 |
+
+The port now reaches Copper as often as the C++ (23 against 22). Determinism: seeds 2 and 5, 60 minutes, --repeat 2:
+identical. 0 script errors.
+
+Next: the C++'s other re-task paths (an invalid task, the empty sub-groups' tasks), then the late balanced game - the
+citizens lost to the C++'s soldiers after 60 minutes.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
