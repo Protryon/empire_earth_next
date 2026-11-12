@@ -29,9 +29,9 @@ namespace WONAPI {
 void LobbySaveNetworkAdapter()
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && data->mNetworkAdapter!=WONAPI::IPAddr::GetLocalHost()) {
-        data->mNetworkAdapter=WONAPI::IPAddr::GetLocalHost();
-        data->mGlobalDirty=true;
+    if(data!=NULL && data->GetNetworkAdapter()!=WONAPI::IPAddr::GetLocalHost()) {
+        data->SetNetworkAdapter(WONAPI::IPAddr::GetLocalHost());
+        data->SetFlag(LobbyPersistentData::kGlobalDirty, true);
     }
 }
 // FUNCTION: WON 0x0075dea0
@@ -40,8 +40,8 @@ void LobbyAddFilterValue(const GUIString& column,const GUIString& value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data!=NULL) {
-        data->mGameOptions[column].Add(value);
-        data->mUserDirty=true;
+        data->GameOptions()[column].Add(value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 // FUNCTION: WON 0x0075ded0
@@ -50,8 +50,8 @@ void LobbyRemoveFilterValue(const GUIString& column,const GUIString& value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
     if(data==NULL) return;
-    LobbyOptionSet& options=data->mGameOptions[column];
-    if(options.Erase(value)) data->mUserDirty=true;
+    LobbyOptionSet& options=data->GameOptions()[column];
+    if(options.Erase(value)) data->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 }
 

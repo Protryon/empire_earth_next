@@ -299,25 +299,25 @@ LobbyUserInfo* LobbyAddUser(const GUIString& inUserName, const GUIString& inPass
         return NULL;
     if (!inExistingOnly)
         aData->PruneUsers();
-    LobbyUserInfoMap::iterator anItr = aData->mUsers.insert(
+    LobbyUserInfoMap::iterator anItr = aData->Users().insert(
         LobbyUserInfoMap::value_type(inUserName, LobbyUserInfo())).first;
     LobbyUserInfo& aUser = anItr->second;
     if (inExistingOnly && aUser.mLastUseTime == 0)
     {
-        aData->mUsers.erase(anItr);
+        aData->Users().erase(anItr);
         return NULL;
     }
     if (aUser.mUserId == 0)
     {
         aUser.mUserId = aData->FindUnusedUserId();
-        aData->mUserIds.insert(aUser.mUserId);
+        aData->UserIds().insert(aUser.mUserId);
         WONFile aFile(aData->GetUserFileName(aUser.mUserId));
         aFile.Delete(true);
     }
     aUser.mLastUseTime = time(NULL);
     aUser.mUserName = inUserName;
     aUser.mPassword = inPassword;
-    aData->mGlobalDirty = true;
+    aData->SetFlag(LobbyPersistentData::kGlobalDirty, true);
     return &aUser;
 }
 
@@ -361,12 +361,12 @@ LobbyFriend* LobbyAddFriend(const GUIString& inName, unsigned long inUserId)
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL)
         return NULL;
-    std::pair<LobbyFriendMap::iterator,bool> aPair = aData->mFriends.insert(
+    std::pair<LobbyFriendMap::iterator,bool> aPair = aData->Friends().insert(
         LobbyFriendMap::value_type(inUserId, SmartPtr<LobbyFriend>()));
     if (aPair.first->second.get() == NULL)
     {
         aPair.first->second = new LobbyFriend(inName, inUserId);
-        aData->mUserDirty = true;
+        aData->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
     return aPair.first->second.get();
 }
@@ -376,7 +376,7 @@ void LobbyRemoveFriend(unsigned long inUserId)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData != NULL)
-        aData->mUserDirty = aData->mFriends.erase(inUserId) > 0;
+        aData->SetFlag(LobbyPersistentData::kUserDirty, aData->Friends().erase(inUserId) > 0);
 }
 
 }
@@ -616,7 +616,7 @@ void LobbySetReconnectId(const IPAddr& inAddress, int inReconnectId)
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL)
         return;
-    std::pair<std::map<IPAddr, LobbyReconnectInfo>::iterator,bool> aPair = aData->mReconnectInfoMap.insert(
+    std::pair<std::map<IPAddr, LobbyReconnectInfo>::iterator,bool> aPair = aData->ReconnectInfoMap().insert(
         std::map<IPAddr, LobbyReconnectInfo>::value_type(inAddress, LobbyReconnectInfo()));
     LobbyReconnectInfo& anInfo = aPair.first->second;
     anInfo.mLastUseTime = time(NULL);
@@ -630,8 +630,8 @@ int LobbyGetReconnectId(const IPAddr& inAddress)
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL)
         return 0;
-    std::map<IPAddr, LobbyReconnectInfo>::iterator anItr = aData->mReconnectInfoMap.find(inAddress);
-    return anItr == aData->mReconnectInfoMap.end() ? 0 : anItr->second.mReconnectId;
+    std::map<IPAddr, LobbyReconnectInfo>::iterator anItr = aData->ReconnectInfoMap().find(inAddress);
+    return anItr == aData->ReconnectInfoMap().end() ? 0 : anItr->second.mReconnectId;
 }
 // FUNCTION: WON 0x0075e040
 // Adds comma-separated values to a default game filter column; skips a column that already has values unless
@@ -641,7 +641,7 @@ void LobbyAddGameOption(const GUIString& inName, const GUIString& inValues, bool
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL)
         return;
-    LobbyOptionSet& anOptions = aData->mDefaultGameOptions[inName];
+    LobbyOptionSet& anOptions = aData->DefaultGameOptions()[inName];
     if (!anOptions.mIndex.empty() && !inAppend)
         return;
     std::wstring aValues = inValues;
@@ -668,10 +668,10 @@ void LobbySetNameIgnored(const GUIString& inName, bool inIgnore)
         return;
     bool aDirty;
     if (inIgnore)
-        aDirty = aData->mIgnoredNames.insert(inName).second;
+        aDirty = aData->IgnoredNames().insert(inName).second;
     else
-        aDirty = aData->mIgnoredNames.erase(inName) > 0;
-    aData->mUserDirty = aDirty;
+        aDirty = aData->IgnoredNames().erase(inName) > 0;
+    aData->SetFlag(LobbyPersistentData::kUserDirty, aDirty);
 }
 // FUNCTION: WON 0x0075d6c0
 // Makes a non-empty name the current LAN name, stamping its use time and keeping the 50 most recent names
@@ -679,12 +679,12 @@ void LobbySetLanName(const GUIString& inName)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL || inName.mData->mLength == 0 ||
-        inName.mData->Compare(aData->mLanName.mData.get()) == 0) return;
+        inName.mData->Compare(aData->GetLanName().mData.get()) == 0) return;
     long aTime = time(NULL);
-    aData->mLanNameInfoMap[inName] = aTime;
-    aData->mLanName = inName;
+    aData->LanNameInfoMap()[inName] = aTime;
+    aData->SetLanName(inName);
     aData->PruneLanNames();
-    aData->mUserDirty = true;
+    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 // FUNCTION: WON 0x0075d770
 // Forgets the current LAN name and falls back to the most recently used remaining one
@@ -692,12 +692,12 @@ void LobbyRemoveLanName()
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
-    LobbyLanNameInfoMap::iterator anItr = aData->mLanNameInfoMap.find(aData->mLanName);
-    if (anItr == aData->mLanNameInfoMap.end())
+    LobbyLanNameInfoMap::iterator anItr = aData->LanNameInfoMap().find(aData->GetLanName());
+    if (anItr == aData->LanNameInfoMap().end())
         return;
-    aData->mLanNameInfoMap.erase(anItr);
+    aData->LanNameInfoMap().erase(anItr);
     aData->SelectRecentLanName();
-    aData->mUserDirty = true;
+    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 // FUNCTION: WON 0x0075d7f0
 // Saves a named direct-connect address
@@ -705,8 +705,8 @@ void LobbyAddDirectConnect(const IPAddr& inAddress, const GUIString& inName)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
-    aData->mDirectConnectMap[inAddress] = inName;
-    aData->mUserDirty = true;
+    aData->DirectConnectMap()[inAddress] = inName;
+    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 // FUNCTION: WON 0x0075d870
 // Forgets a saved direct-connect address
@@ -714,10 +714,10 @@ void LobbyRemoveDirectConnect(const IPAddr& inAddress)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
-    LobbyDirectConnectMap::iterator anItr = aData->mDirectConnectMap.find(inAddress);
-    if (anItr != aData->mDirectConnectMap.end()) {
-        aData->mDirectConnectMap.erase(anItr);
-        aData->mUserDirty = true;
+    LobbyDirectConnectMap::iterator anItr = aData->DirectConnectMap().find(inAddress);
+    if (anItr != aData->DirectConnectMap().end()) {
+        aData->DirectConnectMap().erase(anItr);
+        aData->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 // FUNCTION: WON 0x0075db70
@@ -726,11 +726,11 @@ void LobbySetLastRoom(const GUIString& inServer, const GUIString& inGroup)
 {
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
-    if (inServer.mData->Compare(aData->mLastServerName.mData.get()) == 0 &&
-        inGroup.mData->Compare(aData->mLastRoomName.mData.get()) == 0) return;
-    aData->mLastServerName = inServer;
-    aData->mLastRoomName = inGroup;
-    aData->mUserDirty = true;
+    if (inServer.mData->Compare(aData->GetLastServerName().mData.get()) == 0 &&
+        inGroup.mData->Compare(aData->GetLastRoomName().mData.get()) == 0) return;
+    aData->SetLastServerName(inServer);
+    aData->SetLastRoomName(inGroup);
+    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 // FUNCTION: WON 0x0075df00
 // Resets the user's game filters to the configured defaults
@@ -739,8 +739,8 @@ void LobbyResetFilters()
     LobbyPersistentData* aData = GetLobbyPersistentData();
     if (aData == NULL) return;
     // The original copies the option sets memberwise, stored list iterators included
-    aData->mGameOptions = aData->mDefaultGameOptions;
-    aData->mUserDirty = true;
+    aData->GameOptions() = aData->DefaultGameOptions();
+    aData->SetFlag(LobbyPersistentData::kUserDirty, true);
 }
 // FUNCTION: WON 0x0075e7e0
 // Keeps at most 50 recent LAN names, dropping the least recently used (persist.rs prune_lan_names chooses)
@@ -803,6 +803,22 @@ GUIString LobbyPersistentData::GetDefaultLanName()
 }
 
 namespace WONAPI {
+// the flags by name (the Lobby* functions' accessors)
+bool LobbyPersistentData::* LobbyPersistentData::FlagMember(Flag inFlag)
+{
+    static bool LobbyPersistentData::* const kPersistFlags[] = {
+    &LobbyPersistentData::mFilterDirtyWords, &LobbyPersistentData::mDoAutoAFK, &LobbyPersistentData::mCrossPromotion,
+    &LobbyPersistentData::mLobbySoundEffects, &LobbyPersistentData::mLobbyMusic,
+    &LobbyPersistentData::mChatSoundEffects, &LobbyPersistentData::mStagingSoundEffects,
+    &LobbyPersistentData::mShowConfirmations, &LobbyPersistentData::mAutoPingGames,
+    &LobbyPersistentData::mShowGamesInProgress, &LobbyPersistentData::mAnonymousToFriends,
+    &LobbyPersistentData::mSavedLobbySoundEffects, &LobbyPersistentData::mSavedLobbyMusic,
+    &LobbyPersistentData::mGlobalDirty, &LobbyPersistentData::mUserDirty};
+    return kPersistFlags[inFlag];
+}
+bool LobbyPersistentData::GetFlag(Flag inFlag) const { return this->*FlagMember(inFlag); }
+void LobbyPersistentData::SetFlag(Flag inFlag, bool inOn) { this->*FlagMember(inFlag) = inOn; }
+
 // FUNCTION: WON 0x0075bcb0
 // Creates the lobby's saved settings with default options and a password key bound to this machine
 LobbyPersistentData::LobbyPersistentData()

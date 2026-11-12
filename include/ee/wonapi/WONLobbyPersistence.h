@@ -218,6 +218,45 @@ public:
     void SaveUserPrefs(); // 0x760770
     void PruneLanNames(); // 0x75e7e0 (keeps the 50 most recent LAN names)
     void SelectRecentLanName(); // 0x75ea40
+
+    // the members behind accessors (round 16; the Lobby* functions read them through these)
+    enum Flag { kFilterDirtyWords, kDoAutoAFK, kCrossPromotion, kLobbySoundEffects, kLobbyMusic, kChatSoundEffects,
+                kStagingSoundEffects, kShowConfirmations, kAutoPingGames, kShowGamesInProgress, kAnonymousToFriends,
+                kSavedLobbySoundEffects, kSavedLobbyMusic, kGlobalDirty, kUserDirty };
+    bool GetFlag(Flag inFlag) const;
+    void SetFlag(Flag inFlag, bool inOn);
+    long GetCurrentUserId() const { return this->mCurrentUserId; }
+    void SetCurrentUserId(long inId) { this->mCurrentUserId = inId; }
+    unsigned short GetConnectionSpeed() const { return this->mConnectionSpeed; }
+    void SetConnectionSpeed(unsigned short inSpeed) { this->mConnectionSpeed = inSpeed; }
+    unsigned short GetLanBroadcastPort() const { return this->mLanBroadcastPort; }
+    void SetLanBroadcastPort(unsigned short inPort) { this->mLanBroadcastPort = inPort; }
+    long GetNetworkAdapter() const { return this->mNetworkAdapter; }
+    void SetNetworkAdapter(long inAdapter) { this->mNetworkAdapter = inAdapter; }
+    const GUIString& GetTabSelect() const { return this->mTabSelect; }
+    void SetTabSelect(const GUIString& inText) { this->mTabSelect = inText; }
+    const GUIString& GetLanName() const { return this->mLanName; }
+    void SetLanName(const GUIString& inText) { this->mLanName = inText; }
+    const GUIString& GetLastServerName() const { return this->mLastServerName; }
+    void SetLastServerName(const GUIString& inText) { this->mLastServerName = inText; }
+    const GUIString& GetLastRoomName() const { return this->mLastRoomName; }
+    void SetLastRoomName(const GUIString& inText) { this->mLastRoomName = inText; }
+    std::set<long>& UserIds() { return this->mUserIds; }
+    std::set<GUIString, GUIStringLessNoCase>& IgnoredNames() { return this->mIgnoredNames; }
+    std::set<unsigned long>& BlockedCDKeyIds() { return this->mBlockedCDKeyIds; }
+    std::map<unsigned long, SmartPtr<LobbyFriend> >& Friends() { return this->mFriends; }
+    std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>& DefaultGameOptions() { return this->mDefaultGameOptions; }
+    std::map<GUIString, LobbyOptionSet, GUIStringLessNoCase>& GameOptions() { return this->mGameOptions; }
+    LobbyUserInfoMap& Users() { return this->mUsers; }
+    std::map<IPAddr, LobbyReconnectInfo>& ReconnectInfoMap() { return this->mReconnectInfoMap; }
+    std::map<GUIString, long, GUIStringLessNoCase>& LanNameInfoMap() { return this->mLanNameInfoMap; }
+    std::map<IPAddr, GUIString>& DirectConnectMap() { return this->mDirectConnectMap; }
+private:
+    friend struct PersistGlobalLoad; // the files' events applied (LobbyPersistentData.cpp)
+    friend struct PersistUserLoad;
+    LobbyPersistentData(const LobbyPersistentData&);
+    LobbyPersistentData& operator=(const LobbyPersistentData&);
+    static bool LobbyPersistentData::* FlagMember(Flag inFlag);
     std::set<long> mUserIds;                  // 0x08 (the insert at 0x75fa52 gives the type)
 long mCurrentUserId; // 0x14
 std::set<GUIString, GUIStringLessNoCase> mIgnoredNames; // 0x18

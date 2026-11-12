@@ -18,9 +18,9 @@ namespace WONAPI {
 void LobbySetLanBroadcastPort(unsigned short value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mLanBroadcastPort) {
-        data->mLanBroadcastPort=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetLanBroadcastPort()) {
+        data->SetLanBroadcastPort(value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -29,9 +29,9 @@ void LobbySetLanBroadcastPort(unsigned short value)
 void LobbySetFilterDirtyWords(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mFilterDirtyWords) {
-        data->mFilterDirtyWords=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kFilterDirtyWords)) {
+        data->SetFlag(LobbyPersistentData::kFilterDirtyWords, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -40,9 +40,9 @@ void LobbySetFilterDirtyWords(bool value)
 void LobbySetDoAutoAFK(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mDoAutoAFK) {
-        data->mDoAutoAFK=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kDoAutoAFK)) {
+        data->SetFlag(LobbyPersistentData::kDoAutoAFK, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -51,9 +51,9 @@ void LobbySetDoAutoAFK(bool value)
 void LobbySetCrossPromotion(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mCrossPromotion) {
-        data->mCrossPromotion=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kCrossPromotion)) {
+        data->SetFlag(LobbyPersistentData::kCrossPromotion, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -63,11 +63,11 @@ void LobbySetCrossPromotion(bool value)
 void LobbySetLobbySoundEffects(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data==NULL || value==data->mLobbySoundEffects)
+    if(data==NULL || value==data->GetFlag(LobbyPersistentData::kLobbySoundEffects))
         return;
-    data->mLobbySoundEffects=value;
-    data->mUserDirty=true;
-    data->mGlobalDirty=value!=data->mSavedLobbySoundEffects;
+    data->SetFlag(LobbyPersistentData::kLobbySoundEffects, value);
+    data->SetFlag(LobbyPersistentData::kUserDirty, true);
+    data->SetFlag(LobbyPersistentData::kGlobalDirty, value!=data->GetFlag(LobbyPersistentData::kSavedLobbySoundEffects));
 }
 
 // FUNCTION: WON 0x0075e510
@@ -75,9 +75,9 @@ void LobbySetLobbySoundEffects(bool value)
 void LobbySetChatSoundEffects(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mChatSoundEffects) {
-        data->mChatSoundEffects=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kChatSoundEffects)) {
+        data->SetFlag(LobbyPersistentData::kChatSoundEffects, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -86,9 +86,9 @@ void LobbySetChatSoundEffects(bool value)
 void LobbySetStagingSoundEffects(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mStagingSoundEffects) {
-        data->mStagingSoundEffects=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kStagingSoundEffects)) {
+        data->SetFlag(LobbyPersistentData::kStagingSoundEffects, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -98,11 +98,11 @@ void LobbySetStagingSoundEffects(bool value)
 void LobbySetLobbyMusic(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data==NULL || value==data->mLobbyMusic)
+    if(data==NULL || value==data->GetFlag(LobbyPersistentData::kLobbyMusic))
         return;
-    data->mLobbyMusic=value;
-    data->mUserDirty=true;
-    data->mGlobalDirty=value!=data->mSavedLobbyMusic;
+    data->SetFlag(LobbyPersistentData::kLobbyMusic, value);
+    data->SetFlag(LobbyPersistentData::kUserDirty, true);
+    data->SetFlag(LobbyPersistentData::kGlobalDirty, value!=data->GetFlag(LobbyPersistentData::kSavedLobbyMusic));
 }
 
 // FUNCTION: WON 0x0075e580
@@ -110,9 +110,9 @@ void LobbySetLobbyMusic(bool value)
 void LobbySetShowConfirmations(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mShowConfirmations) {
-        data->mShowConfirmations=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kShowConfirmations)) {
+        data->SetFlag(LobbyPersistentData::kShowConfirmations, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -121,9 +121,9 @@ void LobbySetShowConfirmations(bool value)
 void LobbySetAutoPingGames(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mAutoPingGames) {
-        data->mAutoPingGames=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kAutoPingGames)) {
+        data->SetFlag(LobbyPersistentData::kAutoPingGames, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -132,9 +132,9 @@ void LobbySetAutoPingGames(bool value)
 void LobbySetShowGamesInProgress(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mShowGamesInProgress) {
-        data->mShowGamesInProgress=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kShowGamesInProgress)) {
+        data->SetFlag(LobbyPersistentData::kShowGamesInProgress, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -143,9 +143,9 @@ void LobbySetShowGamesInProgress(bool value)
 void LobbySetAnonymousToFriends(bool value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mAnonymousToFriends) {
-        data->mAnonymousToFriends=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetFlag(LobbyPersistentData::kAnonymousToFriends)) {
+        data->SetFlag(LobbyPersistentData::kAnonymousToFriends, value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -154,9 +154,9 @@ void LobbySetAnonymousToFriends(bool value)
 void LobbySetConnectionSpeed(unsigned short value)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && value!=data->mConnectionSpeed) {
-        data->mConnectionSpeed=value;
-        data->mUserDirty=true;
+    if(data!=NULL && value!=data->GetConnectionSpeed()) {
+        data->SetConnectionSpeed(value);
+        data->SetFlag(LobbyPersistentData::kUserDirty, true);
     }
 }
 
@@ -165,7 +165,7 @@ void LobbySetConnectionSpeed(unsigned short value)
 void LobbySaveGlobalPrefs(bool force)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && (force || data->mGlobalDirty))
+    if(data!=NULL && (force || data->GetFlag(LobbyPersistentData::kGlobalDirty)))
         data->SaveGlobalPrefs();
 }
 
@@ -174,7 +174,7 @@ void LobbySaveGlobalPrefs(bool force)
 void LobbySaveUserPrefs(bool force)
 {
     LobbyPersistentData* data=GetLobbyPersistentData();
-    if(data!=NULL && (force || data->mUserDirty))
+    if(data!=NULL && (force || data->GetFlag(LobbyPersistentData::kUserDirty)))
         data->SaveUserPrefs();
 }
 }
