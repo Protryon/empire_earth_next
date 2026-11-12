@@ -500,6 +500,10 @@ WON_TESTS = {
     # (golden: rust/crates/ee_won/src/golden_http.txt)
     "won_http_test": [WON_SRC / "WONMisc" / "URL.cpp", WON_SRC / "WONCommon" / "WONFile.cpp",
                       WON_SRC / "WONCommon" / "StringUtil.cpp"],
+    # WONMisc's FTP and patch code (FTPGetOp's URL, commands and reply steps; the version and patch records; the
+    # version filter; the patch ops' requests and replies), the original's statements against
+    # include/ee/wonapi/WONFtpMsg.h and WONPatchMsg.h over ee_won's ftp and patch modules
+    "won_misc_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)

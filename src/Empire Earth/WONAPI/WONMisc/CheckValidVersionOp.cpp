@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONPatchMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006d8c80
 // Creates a version check for the named product against the given servers
@@ -29,24 +30,8 @@ WONStatus CheckValidVersionOp::CheckResponse()
     if (result<WS_DBProxyServ_ValidNotLatest || (result>WS_DBProxyServ_OutOfDate && result!=WS_Success))
         return result;
     if (this->mSubMessageReplyType!=this->mMsgType+1) return this->InvalidReplyHeader();
-    ReadBuffer reply(this->mReplyData->data(),this->mReplyData->length());
-    // Constructed and destroyed without being read (as in the original)
-    std::string unusedVersion;
-    std::string unusedURL;
-    reply.ReadString(this->mVersionTo);
-    reply.ReadString(this->mVersionToDescriptionURL);
-    int count=(unsigned short)reply.ReadShort();
-    for (int i=0;i<count;++i) {
-        unsigned short length=reply.ReadShort();
-        SmartPtr<PatchData> patch=new PatchData;
-        patch->SetFromVersion(this->mVersionData->GetVersion());
-        patch->SetToVersion(this->mVersionTo);
-        patch->SetIsActive(true);
-        patch->SetConfigName(this->mVersionData->GetConfigName());
-        ReadBuffer data(reply.ReadBytes(length),length);
-        patch->ReadFromBuffer(data,false);
-        this->mPatchDataList.push_back(patch);
-    }
+    PatchReplyData<PatchData>(this->mReplyData.get(),this->mVersionData.get(),&this->mVersionTo,
+                              &this->mVersionToDescriptionURL,this->mPatchDataList);
     return result;
 }
 // FUNCTION: WON 0x006d9250
@@ -55,12 +40,13 @@ void CheckValidVersionOp::RunHook()
 {
     this->mMessageType=1004;
     this->mSubMessageType=this->mMsgType;
-    WriteBuffer request(0,true);
-    const std::string& aProductName=this->mProductName;
-    request.AppendString(aProductName);
-    this->mVersionData->WriteToBuffer(request,0);
-    request.AppendBool(this->mGetPatchList);
-    this->mRequestData=request.ToByteBuffer(true);
+    std::vector<std::string> aStrings;
+    aStrings.push_back(this->mProductName);
+    aStrings.push_back(this->mVersionData->GetConfigName());
+    aStrings.push_back(this->mVersionData->GetVersion());
+    const VersionTypeList& aTypes=this->mVersionData->GetVersionTypeList();
+    for (VersionTypeList::const_iterator i=aTypes.begin();i!=aTypes.end();++i) aStrings.push_back(*i);
+    this->mRequestData=PatchRequest(0,aStrings,this->mGetPatchList);
     DBProxyOp::RunHook();
 }
 // FUNCTION: WON 0x006d9380
