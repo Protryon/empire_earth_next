@@ -8,6 +8,8 @@
 
 #include <map>
 #include <deque>
+#include <string.h>
+#include <new>
 
 class EEUnit;
 class EEGraphicEffect;
@@ -65,6 +67,16 @@ unsigned long EEEffectRandomSeed();
 
 class EEEffect : public UReferenceCounter {
 public:
+    // New (port, R4.4): effects are allocated zeroed. The original's constructors leave members to SetUp, to the
+    // first step or to a tag point that may not exist (EEE2DImpact's tag index, EEE2DLightGlow's, ...), and a save or
+    // the EFST capture wrote whatever the heap held; zero-filled storage makes those values the same in every run
+    // (the pools' objects too: `new T[]`).
+    static void* operator new(size_t inSize) { return EEEffect::Zeroed(::operator new(inSize), inSize); }
+    static void* operator new[](size_t inSize) { return EEEffect::Zeroed(::operator new[](inSize), inSize); }
+    static void* operator new(size_t, void* inWhere) { return inWhere; }
+    static void operator delete(void* inMemory) { ::operator delete(inMemory); }
+    static void operator delete[](void* inMemory) { ::operator delete[](inMemory); }
+    static void* Zeroed(void* inMemory, size_t inSize) { memset(inMemory, 0, inSize); return inMemory; }
     static const UString sData;             // "EEEffect-Data" (chain 0x10251d)
     // 0x10258e: vptr, Init(), then the arguments (both pointers referenced), mKind, mB2C, and the media load
     // `Virtual04(gU5318D8 == false)`
