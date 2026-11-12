@@ -275,7 +275,7 @@ void LanLogic::StartNetworkTimer()
 {
     if (this->mNetworkTimer.get() == NULL) {
         this->mNetworkTimer = new AsyncOp;
-        this->mNetworkTimer->mCompletion = new LogicCompletion<LanLogic>(&LanLogic::HandleNetworkTimer, this);
+        this->mNetworkTimer->SetCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleNetworkTimer, this));
     }
     this->mNetworkTimer->RunAsTimer(120000);
 }
@@ -391,7 +391,7 @@ void LanLogic::HandleRecvMsg(AsyncOp* inOp)
 {
     RecvMsgOp* anOp = static_cast<RecvMsgOp*>(inOp);
     LobbyLanSocket* aSocket = static_cast<LobbyLanSocket*>(anOp->mSocket.get());
-    bool anOk = inOp->mStatus == WS_Success && !inOp->mKilled;
+    bool anOk = inOp->GetStatus() == WS_Success && !inOp->IsKilled();
     EeWonLanRecv aRecv = ee_won_lanlogic_recv(anOk, this->IsCaptain(), anOk && aSocket->mClient.get() != NULL);
     if (!aRecv.handle)
         return;
@@ -1051,7 +1051,7 @@ void LanLogic::StartDiscoveryTimer()
 {
     if (this->mDiscoveryTimer.get() == NULL) {
         this->mDiscoveryTimer = new AsyncOp;
-        this->mDiscoveryTimer->mCompletion = new LogicCompletion<LanLogic>(&LanLogic::HandleDiscoveryTimer, this);
+        this->mDiscoveryTimer->SetCompletion(new LogicCompletion<LanLogic>(&LanLogic::HandleDiscoveryTimer, this));
     }
     this->mDiscoveryTimer->RunAsTimer(15000);
 }
@@ -1139,7 +1139,7 @@ void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
 // Host: takes an accepted connection, running peer authentication first when required
 void LanLogic::HandleAccept(AsyncOp* inOp)
 {
-    if(inOp->GetStatus()!=WS_Success || inOp->mKilled) return;
+    if(inOp->GetStatus()!=WS_Success || inOp->IsKilled()) return;
     LobbyLanSocket* socket=static_cast<LobbyLanSocket*>(static_cast<AcceptOp*>(inOp)->mAcceptedSocket.get());
     if(this->mRequirePeerAuth) {
         AuthContext* auth=GetLobbyAuthContext();

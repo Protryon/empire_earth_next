@@ -6819,3 +6819,65 @@ Branch `rust-won-net2`. As in round 1, nothing in the game reaches this code (th
 - **Templates over the op for the driver.** The op classes cannot be linked into a test (AsyncOp, the connection and sockets come with them), so each op's request and reply is a template over the op in the header, and the driver instantiates it on a stand-in with the ops' members and types (`mFlags` is a byte, a short or a long depending on the op). Members that are private (`RoutingDetectFirewallOp`, the group admin ops, `RoutingDerivedServerOp`'s protected ones, the account ops) are handed over by reference instead; access is checked in the template's context, not the caller's.
 - **ProfileData wholly in Rust.** Nothing outside `ProfileData.cpp` read its members, so the class is a shim over a Rust `EeWonProfile` (birth date, newsletter map, custom action). `GetBirthDate` was computed in a signed int (`year << 16` goes negative from 32768); the FFI returns an `i32` and the shim widens it as the original did.
 - **Network-layer APIs these call** (for the lobby lane's whole move): `WriteBuffer(size, true)`, `Reset`, `AppendBytes`, `ToByteBuffer`, `data()`, `length()`; `ReadBuffer(data, length)`, `data()`, `length()`, `pos()`, `SetPos`; `ByteBuffer(data, length, false)`; `ReadBufferException`; `WonByteBufferSink`; `WideAppendUtf16LE`, `WideAssignUtf16LE`.
+
+## R6: WON's AsyncOp, AsyncOpTracker and SocketThreadSimple as Rust objects (ee_won opobj.rs, sockthread.rs; branch rust-r6-won13, 2026-11-11)
+
+Round 13 of R6 (RUST_PLAN "R6 WON, the rest"), the second round of whole-class moves: the op every WON service
+derives from, its sub-op tracker and the socket thread now keep their state in Rust objects; the C++ classes are
+shims while C++ callers remain.
+
+- **Accessors first, then the move.** About 40 files read `AsyncOp`'s members directly (`mStatus`, `mKilled`,
+  `mRunMode`, `mTimeout`, `mCompletion`, `mContainer`, `mStartTime`) and two read `AsyncOpTracker`'s multimaps
+  (PingLogic, HTTPDocumentOps). The members were made private and the compiler listed the sites; a script rewrote
+  each at the reported line and column (a read becomes `GetStatus()`, `IsKilled()`, `GetMode()`, `GetTimeout()`,
+  `GetCompletion()`, `GetStartTime()`, `GetContainer()`; an assignment `x->mCompletion = e;` becomes
+  `x->SetCompletion(e);`, ending at the statement's first `;` outside parentheses). That commit changed no
+  behaviour and carried the new golden; the next swapped the implementation under the same accessors. clang-cl
+  reports only a few errors per unit after a template's first one, so the loop ran the build until no private-member
+  error was left (six passes). Files touched outside the lane (mechanical, accessor calls only): EEWonNet.cpp;
+  WONAPI.cpp; WONAuth AuthContext, GetCertOp, PeerAuthOp, PeerAuthServerOp; WONInternal FilePushOp; WONMisc
+  DetectFirewallOp, FTPGetOp, FindPatchOp, GetHTTPDocumentOp, GetVersionOp, HTTPDocumentOps, HTTPEngine, HTTPGetOp,
+  ReportPatchStatusOp; WONRouting RoutingConnection, RoutingCreateGroupOp, RoutingOp, SmartRoutingConnection;
+  WONServer MultiPingOp, ServerConnection, ServerOp, ServerRequestOp; WONSocket BlockingSocket, QueueSocket,
+  SocketOps, SocketRunHooks, UDPManager; the lobby's InitLogic, LanLogic, LobbyLogic, PingLogic, RoutingLogic,
+  StagingLogic, EELobbyFileTransfer.
+- **What moved.** `EeWonAsyncOp`: the run state as atomics (the original read `mStatus`, `mTimeout` and
+  `mCompletion` outside the lock in `Run`'s result, `StartRunAsync` and `Complete`; atomics keep those reads without
+  a data race), the lock (the platform's recursive mutex, taken where the C++ took it), the completion's reference,
+  the container (the C++ object for `GetContainer`, its Rust `EeWonOpContainer` for the queueing), and every step:
+  `Run`, `RunAsTimer`, `StartRunAsync`, `Finish`, `ForceFinish`, `Kill`, `Complete`, `QueueInOpContainer`, the time
+  left. The C++ `AsyncOp` holds the object; its virtual `RunHook`/`CleanupHook`, the completion's `Complete` and
+  references, WONAPICore's queue and timer, and the ops' references and kill come back through one static hook
+  table in AsyncOp.cpp. `EeWonOpTracker` is `AsyncOpTracker` whole (the two multimaps `AsyncOpTrackerMaps` and
+  `AsyncOpTrackerEntry` are deleted). `EeWonSocketThread` is `SocketThreadSimple`'s op set, lock, `DoOp`, pump,
+  purge, adds and removes; the C++ class keeps the `Thread` shim and waits on its signal for the time the pump
+  returns. Deleted C ABI: the `OpState` copies (`ee_won_op_state_init`, `_run`, `_finish`, `_kill`, ...,
+  `ee_won_op_time_left`), the op set's (`ee_won_opset_*`), `ee_won_socket_op_finishes`, `ee_won_socket_pump_wait`.
+- **The tracker's order.** The original inserted with the id's first entry as the hint, and MSVC's multimap puts a
+  hinted equal key before the hint: among equal ids the latest op comes first (`KillAll`'s and PingLogic's order).
+  The golden shows it (`kd kf kb ka ke` for ids 0, 1, 1, 1, 7 added as ka, kb, kd, ke, kf).
+- **Goldens, recorded first.** `won_asyncop_test` grew from 128 to 285 lines: 120 over the C++ AsyncOp and tracker
+  (finish twice, force-finish pending and delivered, an idle kill, a blocking run left pending, the completion's
+  references, the time left of blocking and async runs, the tracker's order, refusals, remove, `KillAll`, deletion,
+  `AsyncOpWithTracker`'s `CallbackHook` and cleanup), then 37 over the C++ socket thread (adds, pumps logged sorted
+  by name since the set is in address order, removes, an op finishing in its own `Continue`, the purge, the thread's
+  loop, ops held at deletion). Each part printed the same over the Rust objects, 30 runs out of 30 under a parallel
+  build. Driver traps: `a + f(x) + f(x)` evaluates right to left under the MSVC ABI (the two `RemoveOp` results came
+  out swapped: sequence the calls); a parent op's completion must not cast it as the test's own op class; a 1 ms
+  timeout "past" after `PlatSleep(5)` is not, at the system clock's 15.6 ms resolution (sleep 40); a socket op handed
+  to `WONAPICore::AddToSocketThread` with no core started is killed (the `killed 1` in the golden is the original's).
+- **Behaviour changes.** A tracked op holds one reference (two before: the op map's key and the entry);
+  `KillAll` takes the first op each turn, so an op tracked during a kill is killed as well (the original's iterator
+  had passed it). Nothing else: the same locks, threads and order.
+- **Not moved, and why.** IPAddr is a value type (copied into maps, messages and every socket, its `std::string`
+  host by value) whose members the Internet lane's ServerContext reads directly; its logic is Rust's since round 2,
+  and making it a Rust object means a handle with copy semantics on every copy site. AsyncSocket, the socket ops,
+  RecvCRMsgOp, BlockingSocket, QueueSocket and LobbyLanSocket are next: about 80 files name `mCore`, `mDataCrit`,
+  `mLengthFieldSize` and friends (many of them other classes' members of the same name), so the same
+  private-members pass comes first.
+- **What runs it.** Every WON op of the lobby (the LAN socket ops, the broadcast and join timers, the lobby
+  logics' tracked ops, PingLogic's pings) now runs through `EeWonAsyncOp`; the LAN game's socket ops are pumped by
+  `EeWonSocketThread`. EE-SIM never loads the lobby, so the oracle cannot see a fault here; the lead's LAN game is
+  the end-to-end check (`lan_game.py`: the lobby start-up, LanLogic's discovery and game-channel sockets, their
+  QueueSocket and BlockingSocket ops through the container, socket thread and timer thread, the join, the game
+  room's messages, the start).

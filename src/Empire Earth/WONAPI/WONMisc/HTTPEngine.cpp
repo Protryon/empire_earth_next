@@ -68,7 +68,7 @@ void HTTPConnection::Kill()
         }
         for (OpQueue::iterator it=this->mOpQueue[id].begin(); it!=this->mOpQueue[id].end(); ++it) {
             HTTPGetOp* op = it->get();
-            bool wasNotPending = op->mStatus != WS_Pending;
+            bool wasNotPending = op->GetStatus() != WS_Pending;
             op->Kill(true);
             if (wasNotPending) op->ForceFinish(WS_Killed);
         }
@@ -125,8 +125,8 @@ void HTTPConnection::RunOp(int inId)
     this->mOpQueue[inId].pop_front();
     this->mCurOp[inId]=op.get();
     this->mCurOpCompletion[inId]=this->mCurOp[inId]->GetCompletion();
-    this->mCurOp[inId]->mCompletion=new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
-        HTTPConnection::StaticOpCallback,SmartPtr<RefCount>(this));
+    this->mCurOp[inId]->SetCompletion(new ParamCompletion<AsyncOpPtr,SmartPtr<RefCount> >(
+        HTTPConnection::StaticOpCallback,SmartPtr<RefCount>(this)));
     this->mCurOp[inId]->SetCloseConnection(false);
     this->mCurOp[inId]->SetDoRangeResume(false);
     this->mCurOp[inId]->SetSocket(this->mSocket.get());

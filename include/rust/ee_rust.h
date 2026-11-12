@@ -2535,6 +2535,9 @@ struct EeSparseArray;
 /// The `LinkSubSectors` calls of a walk (opaque to C++; `ee_astar_sub_sector_links_free` releases it).
 struct EeSubSectorLinks;
 
+/// `AsyncOp`'s state, lock, completion and container.
+struct EeWonAsyncOp;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -2547,8 +2550,16 @@ struct EeWonConfigLexer;
 /// `AsyncOpContainer`: the queue of ops (a reference each), the op being pumped, the lock and the signal.
 struct EeWonOpContainer;
 
+/// `AsyncOpTracker`: the ops tracked by id (a reference each), in id order; among equal ids the latest first (the
+/// original's hinted multimap insert at the id's first entry); an op tracked once (every tracker was made with
+/// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
+struct EeWonOpTracker;
+
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
+
+/// `SocketThreadSimple`'s op set and lock (the base's `mDataCrit`).
+struct EeWonSocketThread;
 
 /// `ThreadBase` + `Thread`'s state.
 struct EeWonThread;
@@ -2562,9 +2573,6 @@ struct EeWonWriteBuffer;
 
 /// An ElGamal key with its own random generator.
 struct EeWonElGamal;
-
-/// `SocketThreadSimple::mOpSet`: the ops in address order (the `SmartPtr` comparator's).
-struct EeWonOpSet;
 
 /// A texture's frames and the size of the surfaces they go into (frame 0's, or its "ee:surface" text).
 struct EeOfTexture;
@@ -6401,22 +6409,6 @@ struct EeWonOpTiming {
   uint32_t timeout;
 };
 
-/// `AsyncOp`'s run state: `mStatus`, `mRunMode`, `mStartTime`, `mTimeout`, `mCompletionPending`, `mKilled` and
-/// `mRunAsyncImmediately`, copied in and out by the C++ under the op's lock.
-struct EeWonOpState {
-  /// The `WONStatus` (a 32-bit `long` in the C++).
-  int32_t status;
-  int32_t run_mode;
-  uint32_t start;
-  uint32_t timeout;
-  bool completion_pending;
-  bool killed;
-  bool run_async_immediately;
-};
-
-/// A sink for the ops a queue hands back.
-using EeWonOpSink = void(*)(void *context, void *op);
-
 /// `QueueSocket::OpCallback`'s decisions: `completion` 0 none, 1 the queued op's own, 2 the repeat completion,
 /// 3 a fast op's original; `next` 0 nothing, 1 run the next queued op, 2 duplicate and rerun the repeat op,
 /// 3 forget the repeat op.
@@ -6974,6 +6966,35 @@ struct EeWonMemberReady {
   bool ready;
 };
 
+/// A C++ call on an op (`AsyncOp*`).
+using EeWonAsyncOpFn = void(*)(void *op);
+
+/// A C++ call on a completion (`CompletionBase<AsyncOpPtr>*`).
+using EeWonAsyncOpCompletionFn = void(*)(void *completion);
+
+/// What the op object calls back in the C++. One static table serves every op.
+struct EeWonAsyncOpHooks {
+  /// the virtual `RunHook`
+  EeWonAsyncOpFn run_hook;
+  /// the virtual `CleanupHook`
+  EeWonAsyncOpFn cleanup_hook;
+  /// `WONAPICore::QueueOp` (an op without a container)
+  EeWonAsyncOpFn core_queue;
+  /// `WONAPICore::AddTimerOp(op, timeout)`
+  void (*timer_add)(void *op, uint32_t timeout);
+  /// `WONAPICore::RemoveTimerOp(op)`
+  EeWonAsyncOpFn timer_remove;
+  /// `completion->AddRef()`, `completion->Release()`
+  EeWonAsyncOpCompletionFn completion_add_ref;
+  EeWonAsyncOpCompletionFn completion_release;
+  /// `completion->Complete(op)` (the C++ makes the `AsyncOpPtr`)
+  void (*completion_call)(void *completion, void *op);
+  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)` (the tracker's)
+  EeWonAsyncOpFn op_add_ref;
+  EeWonAsyncOpFn op_release;
+  EeWonAsyncOpFn op_kill;
+};
+
 /// A list of texts: `count` texts, text `i` the units (or bytes) from `offsets[i]` to `offsets[i + 1]`.
 struct EeWonTextList {
   const void *data;
@@ -7223,6 +7244,25 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
+
+/// A C++ call on a socket op (`SocketOp*`).
+using EeWonSocketOpFn = void(*)(void *op);
+
+/// What the socket thread calls back in the C++. One static table serves every socket thread.
+struct EeWonSocketOpHooks {
+  /// `op->GetStatus()`
+  long (*status)(void *op);
+  /// the virtual `op->Continue()`
+  long (*continue_op)(void *op);
+  /// `op->Finish(status)`
+  void (*finish)(void *op, long status);
+  /// `op->mInSocketThread = on`
+  void (*set_in_thread)(void *op, bool on);
+  /// `op->AddRef()`, `op->Release()`, `op->Kill(true)`
+  EeWonSocketOpFn add_ref;
+  EeWonSocketOpFn release;
+  EeWonSocketOpFn kill;
+};
 
 /// A room message's fields (`RoomMsg`).
 struct EeWonRoomMsg {
@@ -14879,9 +14919,6 @@ long ee_won_socket_set_nagling(EeWonSocket *core, bool on);
 /// WON's millisecond tick (`WONTickCount`).
 uint32_t ee_won_tick();
 
-/// `AsyncOp::TimeLeft` now.
-uint32_t ee_won_op_time_left(EeWonOpTiming timing);
-
 /// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
 uint32_t ee_won_real_time_left(uint32_t start, uint32_t timeout);
 
@@ -14921,105 +14958,6 @@ long ee_won_op_recv_line(EeWonSocket *core,
                          EeWonOpTiming timing,
                          EeWonByteSink sink,
                          void *context);
-
-/// `AsyncOp::AsyncOp`'s state.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_state_init(EeWonOpState *state);
-
-/// `AsyncOp::Run` now: 0 already running (`WS_Pending`), 1 awaiting completion, 2 start the async run at once,
-/// 3 queue it in the container, 4 run blocking.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_run(EeWonOpState *state,
-                      int32_t mode,
-                      uint32_t timeout);
-
-/// `AsyncOp::RunAsTimer` now: true when the timer is to be armed.
-///
-/// # Safety
-/// `state` is valid.
-bool ee_won_op_run_as_timer(EeWonOpState *state, uint32_t timeout);
-
-/// `AsyncOp::Finish`: 0 nothing, 1 queue the op in its container, 2 complete it now (blocking).
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_finish(EeWonOpState *state, long status);
-
-/// `AsyncOp::ForceFinish`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_force_finish(EeWonOpState *state, long status);
-
-/// `AsyncOp::Kill`, as `ee_won_op_finish`.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_kill(EeWonOpState *state, bool finish);
-
-/// `AsyncOp::Complete`: true when a completion was pending (deliver it).
-///
-/// # Safety
-/// `state` is valid.
-bool ee_won_op_complete(EeWonOpState *state);
-
-/// `AsyncOp::StartRunAsync` after the run hook: 0 nothing, 1 arm the timeout, 2 time out now.
-///
-/// # Safety
-/// `state` is valid.
-int32_t ee_won_op_after_run_hook(const EeWonOpState *state);
-
-/// `AsyncOp::SetTimeout`.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_set_timeout(EeWonOpState *state, uint32_t timeout);
-
-/// `AsyncOp::SetMode`.
-///
-/// # Safety
-/// `state` is valid.
-void ee_won_op_set_mode(EeWonOpState *state, int32_t mode);
-
-EeWonOpSet *ee_won_opset_new();
-
-/// # Safety
-/// `set` came from `ee_won_opset_new` (null: nothing) and is used no more.
-void ee_won_opset_destroy(EeWonOpSet *set);
-
-/// `AddSocketOp`: true when the op was not held yet (the C++ references it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_insert(EeWonOpSet *set, void *op);
-
-/// `RemoveSocketOp`: true when the op was held (the C++ releases it then).
-///
-/// # Safety
-/// `set` is live.
-bool ee_won_opset_remove(EeWonOpSet *set, void *op);
-
-/// The held ops, in order, to the sink (a copy: the sink may remove from the set).
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_snapshot(const EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `PurgeOps`: every op to the sink, the set emptied.
-///
-/// # Safety
-/// `set` is live during the call.
-void ee_won_opset_take_all(EeWonOpSet *set, EeWonOpSink sink, void *context);
-
-/// `SocketThread::DoOp`: whether an op's `Continue` result finishes it.
-bool ee_won_socket_op_finishes(long status);
-
-/// `SocketThreadSimple::Pump`'s wait.
-uint32_t ee_won_socket_pump_wait(uint32_t wait);
 
 /// `QueueSocket::OpCallback` for an op of `kind` (0 the queued op, 1 the repeat op, 2 another).
 EeWonQueueDecision ee_won_queue_socket_callback(int32_t kind,
@@ -17124,6 +17062,194 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 size_t data_length,
                                 uint16_t *out_count);
 
+/// # Safety
+/// `hooks` lives for the program; `op` is the C++ op being constructed.
+EeWonAsyncOp *ee_won_asyncop_new(void *op, const EeWonAsyncOpHooks *hooks);
+
+/// # Safety
+/// `o` came from `ee_won_asyncop_new` (or is null).
+void ee_won_asyncop_free(EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run mode.
+///
+/// # Safety
+/// `o` is valid.
+int32_t ee_won_asyncop_run_mode(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s start time.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_start_time(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s timeout.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_timeout(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s completion pending.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_completion_pending(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s killed.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_killed(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run async immediately.
+///
+/// # Safety
+/// `o` is valid.
+bool ee_won_asyncop_run_async_immediately(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s timing.
+///
+/// # Safety
+/// `o` is valid.
+EeWonOpTiming ee_won_asyncop_timing(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s completion.
+///
+/// # Safety
+/// `o` is valid.
+void *ee_won_asyncop_completion(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s container.
+///
+/// # Safety
+/// `o` is valid.
+void *ee_won_asyncop_container(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s time left.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_time_left(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s real time left.
+///
+/// # Safety
+/// `o` is valid.
+uint32_t ee_won_asyncop_real_time_left(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s set completion.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_completion(const EeWonAsyncOp *o, void *completion);
+
+/// `AsyncOp`'s set container.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_container(const EeWonAsyncOp *o, void *container, EeWonOpContainer *obj);
+
+/// `AsyncOp`'s set timeout.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_timeout(const EeWonAsyncOp *o, uint32_t timeout);
+
+/// `AsyncOp`'s set mode.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_mode(const EeWonAsyncOp *o, int32_t mode);
+
+/// `AsyncOp`'s set run async immediately.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_set_run_async_immediately(const EeWonAsyncOp *o, bool on);
+
+/// `AsyncOp`'s queue in container.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_queue_in_container(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s kill.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_kill(const EeWonAsyncOp *o, bool finish);
+
+/// `AsyncOp`'s complete.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_complete(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s start run async.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_start_run_async(const EeWonAsyncOp *o);
+
+/// `AsyncOp`'s run as timer.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_run_as_timer(const EeWonAsyncOp *o, uint32_t timeout);
+
+/// `AsyncOp::GetStatus` (a `WONStatus`, the platform's `long`).
+///
+/// # Safety
+/// `o` is valid.
+long ee_won_asyncop_status(const EeWonAsyncOp *o);
+
+/// `AsyncOp::Finish`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_finish(const EeWonAsyncOp *o, long status);
+
+/// `AsyncOp::ForceFinish`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_won_asyncop_force_finish(const EeWonAsyncOp *o, long status);
+
+/// `AsyncOp::Run`: the status after the start.
+///
+/// # Safety
+/// `o` is valid.
+long ee_won_asyncop_run(const EeWonAsyncOp *o, int32_t mode, uint32_t timeout);
+
+/// # Safety
+/// `hooks` lives for the program.
+EeWonOpTracker *ee_won_op_tracker_new(const EeWonAsyncOpHooks *hooks);
+
+/// # Safety
+/// `t` came from `ee_won_op_tracker_new` (or is null).
+void ee_won_op_tracker_free(EeWonOpTracker *t);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void *ee_won_op_tracker_add(const EeWonOpTracker *t, void *op, uint32_t id);
+
+/// # Safety
+/// `t` is valid.
+bool ee_won_op_tracker_remove(const EeWonOpTracker *t, void *op);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_op_tracker_kill_all(const EeWonOpTracker *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
+
+/// The op at `index` in id order, null past the end.
+///
+/// # Safety
+/// `t` is valid.
+void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
+
 /// `SetFilePath`'s separators.
 ///
 /// # Safety
@@ -17555,6 +17681,42 @@ bool ee_won_server_multi_ping_keeps(int32_t ping_time, bool discard_unanswered);
 /// # Safety
 /// `order` holds `count` entries.
 void ee_won_server_shuffle(size_t count, EeWonDraw draw, size_t *order);
+
+/// # Safety
+/// `hooks` lives for the program.
+EeWonSocketThread *ee_won_socket_thread_new(const EeWonSocketOpHooks *hooks);
+
+/// # Safety
+/// `t` came from `ee_won_socket_thread_new` (or is null).
+void ee_won_socket_thread_free(EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_add(const EeWonSocketThread *t, void *op);
+
+/// # Safety
+/// `t` is valid; `op` is a live op.
+void ee_won_socket_thread_remove(const EeWonSocketThread *t, void *op);
+
+/// The pump's work; the time to wait on the thread's signal after it.
+///
+/// # Safety
+/// `t` is valid.
+uint32_t ee_won_socket_thread_pump(const EeWonSocketThread *t, uint32_t wait);
+
+/// # Safety
+/// `t` is valid.
+void ee_won_socket_thread_purge(const EeWonSocketThread *t);
+
+/// # Safety
+/// `t` is valid.
+size_t ee_won_socket_thread_len(const EeWonSocketThread *t);
+
+/// `SocketThread::DoOp` (a static of the C++ class).
+///
+/// # Safety
+/// `hooks` is valid; `op` is a live op.
+bool ee_won_socket_thread_do_op(const EeWonSocketOpHooks *hooks, void *op);
 
 /// Reads a room message (`read_room`): 0 read (into `out`), 1 dropped while joining, 2 too short.
 ///

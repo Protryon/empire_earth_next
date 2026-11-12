@@ -244,7 +244,7 @@ void GetVersionOp::RunHook()
 	DWORD aFlags = DIR_GF_DECOMPROOT | DIR_GF_ADDDATAOBJECTS | DIR_GF_ADDDOTYPE | DIR_GF_ADDDODATA;
 
 	anOp->SetFlags(aFlags);
-	if(this->mRunMode==OP_MODE_ASYNC)
+	if(this->GetMode()==OP_MODE_ASYNC)
 	{
 		this->Track(anOp,0);
 		anOp->RunAsync(INFINITE);

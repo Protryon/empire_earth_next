@@ -476,12 +476,6 @@ pub extern "C" fn ee_won_tick() -> u32 {
     ops::tick()
 }
 
-/// `AsyncOp::TimeLeft` now.
-#[no_mangle]
-pub extern "C" fn ee_won_op_time_left(timing: OpTiming) -> u32 {
-    timing.time_left(ops::tick())
-}
-
 /// `AsyncOp::RealTimeLeft` / `AsyncSocket::TimeLeft` now.
 #[no_mangle]
 pub extern "C" fn ee_won_real_time_left(start: u32, timeout: u32) -> u32 {

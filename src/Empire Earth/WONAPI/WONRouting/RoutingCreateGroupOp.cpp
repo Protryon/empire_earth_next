@@ -50,7 +50,7 @@ WONStatus RoutingCreateGroupOp::HandleReply(unsigned char inMsgType, ReadBuffer&
 // Leaves the new group again (async) when the op already ended before success arrived and leave-on-cancel is set
 void RoutingCreateGroupOp::CheckLeaveGroup(short inStatus)
 {
-    if (inStatus != 0 || this->mStatus == (WONStatus)WS_Pending || !this->mLeaveGroupOnCancel)
+    if (inStatus != 0 || this->GetStatus() == (WONStatus)WS_Pending || !this->mLeaveGroupOnCancel)
         return;
     this->mLeaveGroupOnCancel = false;
     SmartPtr<RoutingLeaveGroupOp> op = new RoutingLeaveGroupOp(this->mConnection.get(),this->mGroupId);
