@@ -6881,3 +6881,83 @@ shims while C++ callers remain.
   the end-to-end check (`lan_game.py`: the lobby start-up, LanLogic's discovery and game-channel sockets, their
   QueueSocket and BlockingSocket ops through the container, socket thread and timer thread, the join, the game
   room's messages, the start).
+
+## R5a.2, seventh round: the load test over other games, empty unit lists, past-due epoch advances, dead gatherers and carcasses (save 0.272, branch rust-r5a-aisave6, 2026-11-11)
+
+Continues "R5a.2, sixth round", whose 18 saves (seeds 2-7, the oracle's game) all continue identically. This round
+widens the test and fixes what the wider test found. Each fix was built (0/0 for EE-AOC and EE-SIM), checked with the
+oracle on seeds 2-3 (identical to ref) and the Rust gate, and measured with the matrix below. All of it is save and
+load code (the loaded game, not the running one; the plain oracle stays identical) except the TEST ONLY tools.
+
+- **The matrix** (`sim_oracle.py saveload NAME --settings LIST|all [--clean]`, committed): SETTINGS holds the games:
+  `oracle`, `plains-medium-3ai`, `islands` (Large Islands), `highlands-large-4ai`, `mediterranean-easy`,
+  `medium-difficulty` (the lobby's middle difficulty; gameoptions has three), `late` and `space` (sim_capture's
+  profiles: Middle Ages / Atomic Age start, 3 AIs, the original's cheats), `calamity` (--calamities) and `next`
+  (--engine next). Each setting goes to build/rust_oracle/NAME-SETTING; the loaded game gets the continued game's
+  options (cheats, casts and engines are not in the save); every game's stage slot is deleted when it ends and
+  --clean deletes the saves, AI traces and reports once compared (a whole matrix run leaves about 6 MB). It ends with a
+  table of the saves that continue identically per setting. Saves at 1000 and 1900 s (not multiples of 300 s, where
+  the calamity casts fall). EE-SIM: a loaded game with --calamities casts on the continued game's five-minute schedule
+  (it cast at its first tick before, a harness artefact).
+- **First matrix** (seed 2, 1000/1900 s, 519 s wall at --jobs 2): oracle 2/2, islands 2/2, medium difficulty 1/2, all
+  the others 0/2: plains-medium-3ai 3/168 ticks, highlands-large-4ai 149/82, mediterranean-easy 168/564, medium
+  difficulty -/406, late 3/3, space 12/0, calamity 1/1, next 0/0.
+- **The unit manager's empty class lists** (no format change). GetUnits returns an empty list for a class the player
+  tracked and lost every unit of, NULL for one it never tracked; TryResearch resets the epoch advance (to retry it)
+  only for the empty list. The 0.266 order lists every class the running manager holds, empty ones too: the first tick
+  now makes an empty list for each saved class the load lacks and drops an empty one the save lacks. Found in the
+  calamity game: a player whose town centre a calamity destroyed retried the epoch advance every second (a random
+  draw each time, SetNextEpochAdvanceTime) where the loaded player never did (dumps' new `advflags=` and `rq=`).
+  Calamity 1/1 -> 229/228 ticks (both then part at the next cast).
+- **The next epoch advance time past due** (no format change). Save writes the time less the game time; the
+  original's Restore took a negative delay for none: it dropped the advance under way and scheduled a new one, a
+  random draw the running game never made. The next engine never sets the time (0, always past due), so every load of
+  it lost its advance. The sum is now put back as it was (the unsigned arithmetic wraps back). Next 1900 s save 0 ->
+  identical to the end.
+- **Dead fishing boats in the gatherer lists** (ghosts, no format change). UnitLost calls CitizenLost only for the two
+  citizen types, so a lost fishing boat (a naval citizen, class 109) stays, dead, in its resource manager's gatherer
+  list for the rest of the game; the 0.261 order dropped such an id at the load. SaveGhosts now writes these units too
+  (EECPOutOfWorldGatherers) and the gatherer lists' fixup takes the ghost for an id the world lacks (the players'
+  fixups run before the ghosts' own, the players load before the world helper). Late 3/3 -> 822/484 ticks. Found with a
+  temporary stack print in AssignGatherers (four dead class 109 units in player 4's lists).
+- **0.272, a gather goal's carcass** (`EESaveHasGhostResources`). EEUGGather::Save wrote -1 for a resource no longer
+  valid (a hunted animal eaten up while its gatherer still walks to it); the loaded goal had no resource and
+  EECPRMFoodOutsideCenters counted one hunter less, so the food capacity (the dumps' new `cap=` and `food=`) and with it
+  the wanted gatherers parted at the first resource update. The goal now writes the id, SaveGhosts adds the gather
+  goals' resources and drop sites out of the world, every ghost record also holds its resource type and amount, and
+  RepairPointers takes the ghost. Plains 1000 s 3 -> 1197 ticks.
+- **The turret angles** (no format change). Save writes the model's part count of turret angles and Load reads them,
+  but the load's LoadMedia makes the array again, all zero, after Load (the running game never sets mNumTurretAngles;
+  only Load and RepairPointers' resize do). A loaded frigate's turrets pointed ahead, so FacesTarget failed and it
+  turned to its target (FaceEnemyUnit, the dumps' `cmd=2012`) where the continued one fired (`cmd=2021`
+  WaitForReload, a shell in the world). The angles read are put back with the other live state at the first tick.
+  Space 12/0 -> 598/745 ticks. Found with a temporary print in FacesPoint (the angles 0 against -1.41 and 1.98).
+- **Tools** (TEST ONLY, committed): the dumps' AI line shows the epoch advance's guards (`advflags=`, `later=`), the
+  research queues (`rq=`), each resource's gatherers filed/wanted (`gath=`), the gather capacities (`cap=`), the food
+  capacity's parts and lists (`food= fish= mines= minelist= food2=`) and the resource centers (`rc=`); each unit line
+  its animation, frame, animation time, pause flag and reload timer (`anim= reload=`). Scratch under build/hunt:
+  `pair7.py SETTING SEED T SAVE_MS` (a continued and a loaded game of one save of a setting, dumps at chosen ticks,
+  the draw trace; the continued game's dump-load.txt is the saved state at SAVE_MS - 875), `rd.py` (the first differing
+  draw of two draw traces, its callers resolved), `rs.sh` (exe-relative addresses through EE-SIM.map: image base
+  0x400000), `dl.py` (a dump diff).
+- **Lesson: a dead unit the running game still references is state.** Three of this round's four causes were the same
+  shape as 0.262's dead attackers: a list or goal that keeps a unit out of the world (dead boats, an eaten carcass, a
+  lost class's empty list). The save must say what the running game holds, dead or not; the ghosts are the way.
+- **The numbers** (`saveload as7-fin --settings all --seeds 2-3 --at 1000,1900`, 1067 s wall at --jobs 2, after the
+  merge of rust; END = identical to 2700 s, else the CT lines equal after the load; seed 2 1000/1900, seed 3
+  1000/1900): oracle END/END END/END; plains-medium-3ai 1197/168 END/END; islands END/END 1429/400;
+  highlands-large-4ai 149/82 4/0; mediterranean-easy 168/564 434/133; medium-difficulty END/406 END/0; late 822/484
+  143/197; space 598/745 75/0; calamity 229/228 229/228; next 0/END END/END. **13 of 40 saves continue identically**
+  (first matrix: 5 of 20 on seed 2; this round's fixes moved seed 2's plains 3 -> 1197, late 3/3 -> 822/484, space
+  12/0 -> 598/745, calamity 1/1 -> 229/228, next 1900 s 0 -> END). `tools/saveload_expect.txt` holds these outcomes;
+  `--expect` fails only when a save does worse.
+- **Left** (each names its own cause with the same tools): the calamity casts (both saves part at the next cast,
+  1200/2100 s: the cast after a load differs, oos only); the next engine's 1000 s save on seed 2 (a citizen of player 3
+  gets an exploration route at the load's first tick: EECPNextExploring's state or the Lua step); the AI-only
+  divergences (`oos, ai`: plains 2048 s, highlands 1973 s, mediterranean 2394 s); the 0-4 tick ones of seed 3
+  (highlands 1000/1900 s, medium difficulty 1900 s, space 1900 s); late and islands on seed 3.
+- **A gate for the merge chain**: `python -I tools/sim_oracle.py saveload NAME --settings oracle,calamity,late,space,next,plains-medium-3ai --seeds 2 --at 1000,1900 --jobs 2 --clean --expect tools/saveload_expect.txt`
+  covers every cause fixed in rounds 6 and 7 (the oracle setting: the 18 saves' causes at two times; calamity: the
+  empty class lists; late: the dead boats; space: the turret angles; next: the past-due epoch advance; plains: the
+  carcass ghosts). Six settings x (1 continued + 2 loaded games): 18 games, 355 s wall at --jobs 2 on this machine
+  (measured after the merge of rust: `saveload expect: PASS`; the 60-game run took 1067 s).
