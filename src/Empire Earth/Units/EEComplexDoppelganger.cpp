@@ -732,7 +732,13 @@ LoadFinalVersions:
             bool mRunning = false;
             unsigned long mFrame = 0;
             long mFlightTime = 0, mRottingAwayTime = 0, mCurrentResearch = 0, mLastHitPoints = 0, mGarrisonCount = 0, mPower = 0;
+            // the turret angles as read above: the load's LoadMedia makes the array again, all zero, after Load (a
+            // frigate's turrets then had to turn to their target again: space game, seed 2's 1900 s save, where the
+            // continued frigate fired at its first tick)
+            std::vector<float> mTurretAngles;
         } theLive;
+        for (long q = 0; q < this->mNumTurretAngles && this->mTurretAngles != NULL; q++)
+            theLive.mTurretAngles.push_back(this->mTurretAngles[q]);
         unsigned long theLiveCount = 0;
         if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
             && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
@@ -799,6 +805,9 @@ LoadFinalVersions:
                     theUnit->mGarrisonCount = theLive.mGarrisonCount;
                     theUnit->mPower = theLive.mPower;
                 }
+                unsigned long theParts = theUnit->GetModel() != NULL ? theUnit->GetModel()->GetNumParts() : 0;
+                for (unsigned long q = 0; q < theLive.mTurretAngles.size() && q < theParts && theUnit->mTurretAngles != NULL; q++)
+                    theUnit->mTurretAngles[q] = theLive.mTurretAngles[q];
             });
     }
     return theResult;
