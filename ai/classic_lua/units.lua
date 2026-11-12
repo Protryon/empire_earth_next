@@ -311,7 +311,7 @@ function M.wanted_citizens_now(view, memory)
     local share = memory.t.personality.max_citizen_share_k or 0
     if share > 0 then
         local E = require("classic_lua.econ")
-        local capacity = E.gather_capacity(view, memory, nil)
+        local capacity = E.gather_capacity(view, memory, nil, true)
         local ceiling = cap * share // 1000
         if capacity > ceiling then
             capacity = ceiling
