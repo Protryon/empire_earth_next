@@ -40,6 +40,7 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEUCProjectile.h"
+#include "ee/EECombatFormulas.h"
 
 // 0x447338: the height below which a projectile has landed (one .rdata copy per unit: a named const)
 static const float kProjectileLowHeight = 3.0f;
@@ -57,21 +58,51 @@ bool EEUCProjectile::CheckGroundImpact(EEComplexUnit* inUnit)
     GE3DPoint theGround(0.0f, 0.0f, 0.0f);
     bool theResult = false;
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    if (this->mCategory != kUnitCategoryBomb && !(inUnit->mProjectileStart.GetZ() < kProjectileLowHeight) && !(inUnit->mFlightTime > 1000))
+    // TEST ONLY (the CBGI capture): the reads, in the record's order
+    EECombatImpactRecordIn theCapIn = {};
+    EECombatImpactRecordOut theCapOut = {};
+    theCapIn.kind = 0;
+    theCapIn.bomb = this->mCategory == kUnitCategoryBomb;
+    theCapIn.flight_time = (int32_t)inUnit->mFlightTime;
+    theCapIn.start_z = inUnit->mProjectileStart.GetZ();
+    inUnit->GetPosition(thePosition);
+    theCapIn.position[0] = thePosition.GetX();
+    theCapIn.position[1] = thePosition.GetY();
+    theCapIn.position[2] = thePosition.GetZ();
+    theCapIn.tile_present = ::gWorld.mMap->GetTile(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY())) != NULL;
+    theCapIn.has_goal = theGoal != NULL;
+    theCapIn.goal_kind = theGoal != NULL ? (int32_t)theGoal->mKind : 0;
+    theCapIn.shell_hole = inUnit->GetUnitClass()->mShellHoleEffect != NULL;
+    if (this->mCategory != kUnitCategoryBomb && !(inUnit->mProjectileStart.GetZ() < kProjectileLowHeight) && !(inUnit->mFlightTime > 1000)) {
+        theCapOut.stage = 0;
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'G', 'I'), theCapIn, theCapOut);
         return theResult;
+    }
     inUnit->GetPosition(thePosition);
     if (::gWorld.mMap->GetTile(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY())) != NULL) {
         ::gWorld.mMap->GetGroundPoint(thePosition, theGround);
+        theCapIn.ground_read = 1;
+        theCapIn.ground_z = theGround.GetZ();
     } else {
         theGround = thePosition;
         theGround.SetZ(inUnit->mTile->GetHeight());
+        theCapIn.tile_height = theGround.GetZ();
     }
-    if (!(thePosition.GetZ() <= theGround.GetZ()))
+    if (!(thePosition.GetZ() <= theGround.GetZ())) {
+        theCapOut.stage = 1;
+        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'G', 'I'), theCapIn, theCapOut);
         return theResult;
+    }
     bool theOnTarget = false;
     if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
         EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
         EEUnitClass* theClass = theTarget->GetUnitClass();
+        theCapIn.target_building = theClass->IsLandBuilding() || theClass->mIsWall;
+        theCapIn.target_tile[0] = (int32_t)theTarget->GetTileX();
+        theCapIn.target_tile[1] = (int32_t)theTarget->GetTileY();
+        theCapIn.target_size = (int32_t)theClass->mTileSize;
+        theCapIn.unit_tile[0] = (int32_t)inUnit->GetTileX();
+        theCapIn.unit_tile[1] = (int32_t)inUnit->GetTileY();
         if (theClass->IsLandBuilding() || theClass->mIsWall) {
             unsigned long theX = theTarget->GetTileX();
             unsigned long theY = theTarget->GetTileY();
@@ -80,6 +111,17 @@ bool EEUCProjectile::CheckGroundImpact(EEComplexUnit* inUnit)
                 theOnTarget = true;
         }
     }
+    theCapOut.stage = 2;
+    if (!theOnTarget) {
+        theCapOut.goal = 1;
+        theCapOut.goal_point[0] = theGround.GetX();
+        theCapOut.goal_point[1] = theGround.GetY();
+        theCapOut.goal_point[2] = theGround.GetZ();
+    }
+    if (theGround.GetZ() >= 0.0f && inUnit->GetUnitClass()->mShellHoleEffect != NULL)
+        theCapOut.decal = 1;
+    theCapOut.result = 1;
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'G', 'I'), theCapIn, theCapOut);
     if (!theOnTarget)
         inUnit->SetGoal(new EEUGAttackGround(theGround, false), 0, 0);
     if (theGround.GetZ() >= 0.0f && inUnit->GetUnitClass()->mShellHoleEffect != NULL)
@@ -95,17 +137,42 @@ bool EEUCProjectile::CheckWaterImpact(EEComplexUnit* inUnit)
     bool theResult = false;
     GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
     GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
+    // TEST ONLY (the CBWI capture)
+    EECombatImpactRecordIn theCapIn = {};
+    EECombatImpactRecordOut theCapOut = {};
+    theCapIn.kind = 1;
+    theCapIn.bomb = this->mCategory == kUnitCategoryBomb;
+    theCapIn.flight_time = (int32_t)inUnit->mFlightTime;
+    inUnit->GetPosition(thePosition);
+    theCapIn.position[0] = thePosition.GetX();
+    theCapIn.position[1] = thePosition.GetY();
+    theCapIn.position[2] = thePosition.GetZ();
+    theCapOut.stage = 0;
     if (inUnit->mFlightTime > 1000 || this->mCategory == kUnitCategoryBomb) {
+        theCapOut.stage = 1;
         long theTerrain = inUnit->mTile->mTerrainType;
         inUnit->GetPosition(thePosition);
+        if (thePosition.GetZ() <= 0.0f) {
+            theCapIn.move_read = 1;
+            theCapIn.can_move = this->CanMoveOnTerrain(inUnit, theTerrain);
+        }
         if (thePosition.GetZ() <= 0.0f && !this->CanMoveOnTerrain(inUnit, theTerrain)) {
             theTarget.SetX(thePosition.GetX());
             theTarget.SetY(thePosition.GetY());
             theTarget.SetZ(0.0f);
+            theCapOut.stage = 2;
+            theCapOut.result = 1;
+            theCapOut.goal = 2;
+            theCapOut.goal_point[0] = theTarget.GetX();
+            theCapOut.goal_point[1] = theTarget.GetY();
+            theCapOut.goal_point[2] = theTarget.GetZ();
+            EECombatCapture(EE_COMBAT_TAG('C', 'B', 'W', 'I'), theCapIn, theCapOut);
             inUnit->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
             theResult = true;
+            return theResult;
         }
     }
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'W', 'I'), theCapIn, theCapOut);
     return theResult;
 }
 

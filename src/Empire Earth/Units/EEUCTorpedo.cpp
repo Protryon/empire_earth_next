@@ -23,6 +23,7 @@
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EmpireEarth.h"
@@ -37,6 +38,25 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
     bool theResult = false;
     inUnit->GetPosition(thePosition);
     ::gWorld.mMap->GetGroundPoint(thePosition, theTarget);
+    // TEST ONLY (the CBGI capture)
+    EECombatImpactRecordIn theCapIn = {};
+    EECombatImpactRecordOut theCapOut = {};
+    theCapIn.kind = 4;
+    theCapIn.position[0] = thePosition.GetX();
+    theCapIn.position[1] = thePosition.GetY();
+    theCapIn.position[2] = thePosition.GetZ();
+    theCapIn.ground_read = 1;
+    theCapIn.ground_z = theTarget.GetZ();
+    theCapOut.stage = 1;
+    if (thePosition.GetZ() <= theTarget.GetZ() && theTarget.GetZ() >= 0.0f) {
+        theCapOut.stage = 2;
+        theCapOut.result = 1;
+        theCapOut.goal = 1;
+        theCapOut.goal_point[0] = theTarget.GetX();
+        theCapOut.goal_point[1] = theTarget.GetY();
+        theCapOut.goal_point[2] = theTarget.GetZ();
+    }
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'G', 'I'), theCapIn, theCapOut);
     if (thePosition.GetZ() <= theTarget.GetZ() && theTarget.GetZ() >= 0.0f) {
         inUnit->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
         theResult = true;

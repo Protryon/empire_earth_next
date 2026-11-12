@@ -190,4 +190,46 @@ inline void EECombatChainCapture(unsigned int inTag, const In& inInput, const st
     theRecord.Commit();
 }
 
+// ---- the impact tests (round 5)
+
+// TEST ONLY until the move (recorded from the unmodified C++ first): CBGI (EEUCProjectile/EEUCMissile/EEUCTorpedo::
+// CheckGroundImpact) and CBWI (EEUCProjectile/EEUCMissile::CheckWaterImpact): the inputs the test reads (the lazy reads
+// with their flags: the ground height, the target tiles, the same-tile test, the terrain test), the outcome
+struct EECombatImpactRecordIn {
+    int32_t kind;              // 0 projectile ground, 1 projectile water, 2 missile ground, 3 missile water, 4 torpedo ground
+    int32_t bomb;
+    int32_t flight_time;
+    float start_z;
+    float position[3];
+    int32_t tile_present;
+    float tile_height;
+    int32_t has_goal;
+    int32_t goal_kind;
+    float goal_location[3];
+    int32_t target_building;
+    int32_t target_tile[2];
+    int32_t target_size;
+    int32_t unit_tile[2];
+    int32_t shell_hole;
+    int32_t launcher_cp_base;
+    int32_t launcher_missile_base;
+    int32_t ground_read;
+    float ground_z;
+    int32_t on_target_read;
+    int32_t on_target;
+    int32_t same_tile_read;
+    int32_t same_tile;
+    int32_t move_read;
+    int32_t can_move;
+};
+struct EECombatImpactRecordOut {
+    int32_t result;
+    int32_t stage;
+    int32_t goal;              // 0 none, 1 attack ground at the ground point, 2 attack ground at the position, z 0
+    float goal_point[3];
+    int32_t decal;
+    int32_t place;
+    float offset;
+};
+
 #endif
