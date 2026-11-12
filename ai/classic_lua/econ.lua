@@ -19,6 +19,10 @@ local function B()
     return require("classic_lua.build")
 end
 
+local function F()
+    return require("classic_lua.ferry")
+end
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- GetGatherCapacity(r): what the centres' units hold (the active centres; all when none is): the mining limit a unit,
 -- wood the personality's wood_slots; food also what works farms, fish and game (forage_patches: the game near home
@@ -778,6 +782,8 @@ local function assign_gatherers(view, memory)
                     if key == "idle" then   -- (the classic: every boat of the idle list, whatever it does)
                         boats[#boats + 1] = u
                     end
+                elseif F().busy(memory, u.id) then
+                    -- (on a ferry trip: the landing has them)
                 elseif u.action == "idle" or u.action == "explore" or (u.action == "gather" and u.waiting) then
                     -- (an exploring citizen: one with nothing known to gather; a gatherer waiting for room at its
                     -- resource, as the classic's idle list takes it)
@@ -792,7 +798,9 @@ local function assign_gatherers(view, memory)
     if #idle > 0 then
         for _, r in ipairs(RES) do
             local wanted = rm.wanted[r] - #rm.lists[r]
-            if wanted > 0 then
+            -- (IsIslandExpansionDue: the minerals are looked at with none wanted, for the ferry below)
+            local mineral = r == "stone" or r == "gold" or r == "iron"
+            if wanted > 0 or (mineral and F().due(view, memory)) then
                 if r == "food" and fishes(view, memory) and #boats < 8 and view.time >= rm.next_fish_boat then
                     request_boats(view, memory)
                     rm.next_fish_boat = view.time + 30000
@@ -905,7 +913,29 @@ local function assign_gatherers(view, memory)
                             target = R.find_resource_target(view, memory, r, idle[1], true)
                         end
                     end
-                    -- (the ferry to another island's minerals: the navy stage)
+                    -- RequestFerry: wanted (or the island expansion due) on a water map, the resource's first target with
+                    -- no unit's reach test; the idle citizens of the town's land that cannot walk to it are ferried
+                    if (wanted > 0 or F().due(view, memory)) and F().water_map(memory) and #idle > 0 then
+                        local far = R.find_resource_target(view, memory, r, nil, true)
+                        local tx, ty = R.town(view)
+                        if far ~= nil and tx ~= nil then
+                            local stranded = {}
+                            for _, u in ipairs(idle) do
+                                if ai.reach(tx, ty, u.x, u.y) and not ai.reach(u.x, u.y, far.x, far.y) then
+                                    stranded[#stranded + 1] = u
+                                end
+                            end
+                            if #stranded > 0 and F().request(view, memory, stranded, far) then
+                                local keep = {}
+                                for _, u in ipairs(idle) do
+                                    if not F().busy(memory, u.id) then
+                                        keep[#keep + 1] = u
+                                    end
+                                end
+                                idle = keep
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -939,6 +969,7 @@ function M.update(view, memory)
         rm.init = true
     end
     R.spend_income(view, memory)
+    F().step(view, memory)
     settlement_for(view, memory)
     if view.time >= rm.next_wanted then
         update_wanted(view, memory)

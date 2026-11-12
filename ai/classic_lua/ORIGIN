@@ -113,8 +113,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the influence regions round the tile. BuildSettlementFor (the gather goal's
                 storage search asks the AI for a settlement when the drop site is far; the engine hook skips a script's
                 seat): PORTED in econ.lua, every 4 s over the gatherers at work (the nearest drop site stands for the
-                gatherer's storage; the site in the rings round the resource). NOT STARTED: RequestFerry / FerryGatherers / TransportIdle (the navy stage),
-                CitizenLost's re-cost.
+                gatherer's storage; the site in the rings round the resource). RequestFerry / FerryGatherers / TransportIdle, IsIslandExpansionDue,
+                ChooseTransportClass (the sea): PORTED -> ferry.lua on lib.navy's landing (board, sail, unload; the
+                citizens ashore sent to gather). DEVIATION: the air and space transports are not chosen yet. NOT
+                STARTED: CitizenLost's re-cost.
   EECPResourceCenter.cpp
                 PORTED -> resource.lua (update_groups, flag_group, centre_middle, find_resource_unit) and build.lua
                 (centre_drop: AdoptDropSite). DEVIATION (fog): the original groups every resource of the map at the
