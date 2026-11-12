@@ -25,6 +25,7 @@
 #include "lle/U2DPoint.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -1210,17 +1211,17 @@ void EEUCLandable::UpdateFlightState(EEComplexUnit* inUnit, long inTime, long in
     if (theCommand == kActionCircle || theCommand == kActionWaitForLandingClearance || theCommand == kActionCircleAirtrafficController)
         return;
     unsigned long theState = inUnit->mCurrentPhysicsOrder;
-    unsigned long theNew = this->GetNextFlightState(inUnit);
+    unsigned long theNew = (EEUN(NEXT_FLIGHT_STATE), this->GetNextFlightState(inUnit));
     if (theState == 5) {
         if (theNew != 5)
-            inUnit->SetCurrentPhysicsOrder(theNew);
+            (EEUNA(SET_PHYSICS_ORDER, theNew, 0), inUnit->SetCurrentPhysicsOrder(theNew));
     } else if (theNew == 5)
-        inUnit->SetCurrentPhysicsOrder(5);
+        (EEUNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
     else if (theState != theNew) {
         long theNow = inTime / 1000;
         long theLast = inLeft / 1000;
         if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionFaceEnemyUnit && (theNow > theLast || theLast == 0))
-            inUnit->SetCurrentPhysicsOrder(theNew);
+            (EEUNA(SET_PHYSICS_ORDER, theNew, 0), inUnit->SetCurrentPhysicsOrder(theNew));
     }
 }
 
@@ -1237,9 +1238,10 @@ void EEUCLandable::Update(EEComplexUnit* inUnit)
         if (theLeft < 0)
             theLeft = 0;
         if (!::gWorld.mInCinematic && inUnit->mPlayer->mPlayerID != 0)
-            inUnit->SetFlightTime(theLeft);
+            (EEUNA(SET_FLIGHT_TIME, theLeft, 0), inUnit->SetFlightTime(theLeft));
         this->UpdateFlightState(inUnit, theTime, theLeft);
     }
+    EEUN(GOAL_QUEUES);
     unsigned long theCount = inUnit->GetNumGoalQueues();
     for (unsigned long i = 0; i < theCount; i++) {
         if (!inUnit->mGoalQueues[i].mStarted || inUnit->mGoalQueues[i].mGoals.size() <= 0)
@@ -1249,31 +1251,31 @@ void EEUCLandable::Update(EEComplexUnit* inUnit)
         inUnit->RefreshActiveGoal();
     }
     if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    inUnit->UpdateOrbitals();
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(ORBITALS), inUnit->UpdateOrbitals());
+    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
+    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
+    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:
     case kActionAttackLocation:
     case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
+        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
         break;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     case kActionFadingOutInSpace:
         inUnit->GetPosition(thePosition);
         if (thePosition.GetZ() < 0.0f)
-            inUnit->SetOpacityChain(1.0f - thePosition.GetZ() * -0.16666667f);
+            (EEUNA(OPACITY_CHAIN, EEUNBits(1.0f - thePosition.GetZ() * -0.16666667f), 0), inUnit->SetOpacityChain(1.0f - thePosition.GetZ() * -0.16666667f));
         break;
     }
-    this->UpdateDone(inUnit);
+    (EEUN(DONE), this->UpdateDone(inUnit));
 }
 
 // FUNCTION: EXE 0x616c22

@@ -22,6 +22,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -762,27 +763,27 @@ void EEUCBuilding::Update(EEComplexUnit* inUnit)
 {
     if ((inUnit->mUnitClass->mFamily == kUnitFamilyWalls || inUnit->mUnitClass->mUnitType == kUnitTypeHouse) && inUnit->mHitPoints > 0) {
         if (USingleton<EECalamityManager>::GetInstance()->IsCalamityActive(0x17))
-            this->UpdateCamouflageTimer(inUnit);
+            (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
         return;
     }
     if ((this->mAttack == 0.0f && !this->IsPriest()) || this->mUnitType == kUnitTypeCpMissileBase) {
         if (inUnit->mCurrentPhysicsAction == 2 && this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-            this->mPhysicsModel->Step(inUnit);
+            (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
         if (this->mUnitType == kUnitTypeCapitol && inUnit->mStats->mPower > 0) {
-            this->UpdateDone(inUnit);
-            this->RegeneratePower(inUnit);
+            (EEUN(DONE), this->UpdateDone(inUnit));
+            (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
         }
-        this->UpdateBuilding(inUnit);
+        (EEUN(UPDATE_BUILDING), this->UpdateBuilding(inUnit));
     } else
-        this->UpdateArmed(inUnit);
+        (EEUN(UPDATE_ARMED), this->UpdateArmed(inUnit));
     if (inUnit->mUnitClass->mUnitType != kUnitTypeRoboticFarm || !((unsigned long)gPhysics->mGameTime >= inUnit->mGrazeTime) || !inUnit->mIsBuilt)
         return;
-    inUnit->mPlayer->AddResource(kResourceFood, 1);
-    inUnit->mPlayer->mSavedGroups.Reset(7, 1);
+    (EEUNA(ADD_RESOURCE, kResourceFood, 1), inUnit->mPlayer->AddResource(kResourceFood, 1));
+    (EEUN(SAVED_GROUPS_RESET), inUnit->mPlayer->mSavedGroups.Reset(7, 1));
     long theTime = gPhysics->mGameTime;
     long theDelay = inUnit->mStats->mGatherTimes[6];
     float theScale = ::gWorld.GetGameVariant()->mWorkTimeFactor;
-    inUnit->SetGrazeTime(theTime + UMFloatToLong(theScale * theDelay));
+    (EEUNA(SET_GRAZE_TIME, (uint32_t)(theTime + UMFloatToLong(theScale * theDelay)), 0), inUnit->SetGrazeTime(theTime + UMFloatToLong(theScale * theDelay)));
 }
 
 // FUNCTION: EXE 0x60fef9

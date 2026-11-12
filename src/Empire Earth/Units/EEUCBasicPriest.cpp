@@ -19,6 +19,7 @@
 #include "lle/SESoundManager.h"
 
 #include <string.h>
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EESimCapture.h"
 #include "rust/ee_combat.h"
 #include "rust/ee_units.h"
@@ -158,24 +159,25 @@ void EEUCBasicPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarg
 // or uses the common handling
 void EEUCBasicPriest::ActionChanged(EEComplexUnit* inUnit)
 {
-    inUnit->ReleaseConversionEffect();
-    inUnit->ReleaseHealEffect();
-    this->HideConversionEffects(inUnit);
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
+    (EEACN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
+    (EEACN(RELEASE_HEAL_EFFECT), inUnit->ReleaseHealEffect());
+    (EEACN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionConvertEnemyUnit:
-        inUnit->SetCurrentPhysicsAction(1);
-        inUnit->SetTargetSearchTimer(0);
-        inUnit->SetAnimation(9, -1, 0);
+        (EEACNA(SET_PHYSICS_ACTION, 1, 0), inUnit->SetCurrentPhysicsAction(1));
+        (EEACNA(SET_TARGET_SEARCH_TIMER, 0, 0), inUnit->SetTargetSearchTimer(0));
+        (EEACNA(SET_ANIMATION, 9, 0), inUnit->SetAnimation(9, -1, 0));
         if (inUnit->mConversionStartTime == 0) {
             if (inUnit->mConversionStartTime != gPhysics->mGameTime)
-                inUnit->mConversionStartTime = gPhysics->mGameTime;
-            inUnit->SetWorkTimer(0);
+                (EEACNA(SET_CONVERSION_START, gPhysics->mGameTime, 0), inUnit->mConversionStartTime = gPhysics->mGameTime);
+            (EEACNA(SET_WORK_TIMER, 0, 0), inUnit->SetWorkTimer(0));
             EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
         }
-        inUnit->DropPath();
+        (EEACN(DROP_PATH), inUnit->DropPath());
         break;
     case kActionWaitForReload:
-        inUnit->SetCurrentPhysicsAction(3);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
         break;
     default:
         this->HandleActionChanged(inUnit);
@@ -319,47 +321,47 @@ void EEUCBasicPriest::UnloadMedia(EEPlayer* inPlayer)
 void EEUCBasicPriest::Update(EEComplexUnit* inUnit)
 {
     long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
-        inUnit->UpdateOrbitals();
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+        (EEUN(TURRETS), inUnit->UpdateTurrets());
+        (EEUN(ORBITALS), inUnit->UpdateOrbitals());
     }
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
+    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
+    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     if (this->mIsMedic) {
-        inUnit->UpdateHealSearchTimer();
+        (EEUN(HEAL_SEARCH_TIMER), inUnit->UpdateHealSearchTimer());
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalHealUnit)
-            inUnit->mGoalState->Work(inUnit);
+            (EEUN(GOAL_WORK), inUnit->mGoalState->Work(inUnit));
     }
     if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
-    this->RegeneratePower(inUnit);
+        (EEUN(REGENERATE), this->Regenerate(inUnit));
+    (EEUN(DONE), this->UpdateDone(inUnit));
+    (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:
     case kActionAttackLocation:
     case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
+        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
         break;
     case kActionConvertEnemyUnit:
-        this->UpdateConversion(inUnit);
+        (EEUN(UPDATE_CONVERSION), this->UpdateConversion(inUnit));
         return;
     case kActionResourcesRotting:
         return;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     }
     if (inUnit->mConversionStartTime != 0)
-        inUnit->mConversionStartTime = 0;
-    inUnit->ReleaseConversionEffect();
-    this->HideConversionEffects(inUnit);
+        (EEUN(CLEAR_CONVERSION_START), inUnit->mConversionStartTime = 0);
+    (EEUN(RELEASE_CONVERSION_EFFECT), inUnit->ReleaseConversionEffect());
+    (EEUN(HIDE_CONVERSION_EFFECTS), this->HideConversionEffects(inUnit));
 }
 
 // FUNCTION: EXE 0x60e086

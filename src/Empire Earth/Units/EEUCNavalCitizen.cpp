@@ -19,6 +19,7 @@
 #include "lle/GEBoundingBox.h"
 #include "lle/GEModel.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -119,18 +120,18 @@ long EEUCNavalCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
 // Updates a fishing boat each tick: physics, effects, camouflage, animation, sound, rotting, then its citizen work
 void EEUCNavalCitizen::Update(EEComplexUnit* inUnit)
 {
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    this->UpdateCamouflageTimer(inUnit);
-    this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
     if (theCommand == kActionUnitRotting) {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
     }
-    this->UpdateCitizen(inUnit);
+    (EEUN(UPDATE_CITIZEN), this->UpdateCitizen(inUnit));
 }
 
 // ICF-FOLDED: EXE 0x618909

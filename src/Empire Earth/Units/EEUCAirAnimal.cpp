@@ -19,6 +19,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -365,28 +366,28 @@ void EEUCAirAnimal::Update(EEComplexUnit* inUnit)
         if (theLeft < 0)
             theLeft = 0;
         if (!::gWorld.mInCinematic)
-            inUnit->SetFlightTime(theLeft);
+            (EEUNA(SET_FLIGHT_TIME, theLeft, 0), inUnit->SetFlightTime(theLeft));
         if (theCommand != kActionCircle && theCommand != kActionWaitForLandingClearance && theCommand != kActionCircleAirtrafficController) {
-            unsigned long theNew = this->GetNextFlightState(inUnit);
+            unsigned long theNew = (EEUN(NEXT_FLIGHT_STATE), this->GetNextFlightState(inUnit));
             if (theState == 5) {
                 if (theNew != 5)
-                    inUnit->SetCurrentPhysicsOrder(theNew);
+                    (EEUNA(SET_PHYSICS_ORDER, theNew, 0), inUnit->SetCurrentPhysicsOrder(theNew));
             } else if (theNew == 5)
-                inUnit->SetCurrentPhysicsOrder(5);
+                (EEUNA(SET_PHYSICS_ORDER, 5, 0), inUnit->SetCurrentPhysicsOrder(5));
             else if (theState != theNew && (theTime / 1000 > theLeft / 1000 || theLeft / 1000 == 0))
-                inUnit->SetCurrentPhysicsOrder(theNew);
+                (EEUNA(SET_PHYSICS_ORDER, theNew, 0), inUnit->SetCurrentPhysicsOrder(theNew));
         }
     }
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionResourcesRotting:
-        inUnit->UpdateResourcesRotting();
+        (EEUN(RESOURCES_ROTTING), inUnit->UpdateResourcesRotting());
         break;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     }

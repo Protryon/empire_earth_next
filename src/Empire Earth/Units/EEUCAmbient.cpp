@@ -14,6 +14,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -113,7 +114,8 @@ void EEUCAmbient::Update(EEComplexUnit* inUnit)
 {
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionUnitRotting)
         return;
-    long theTime = inUnit->UpdateRottingAwayTime();
+    long theTime = (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
+    EEUNA(SET_PARTS_ROTTING, theTime, 0);
     for (EEComplexUnit* theUnit = inUnit->mNextPart; theUnit != NULL; theUnit = theUnit->mNextPart)
         theUnit->SetRottingAwayTime(theTime);
 }

@@ -13,6 +13,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -109,11 +110,11 @@ void EEUCMiningBuilding::Update(EEComplexUnit* inUnit)
         long theRemaining = theTime - theElapsed;
         if (theRemaining < 0)
             theRemaining = 0;
-        inUnit->SetWorkTimer(theRemaining);
+        (EEUNA(SET_WORK_TIMER, theRemaining, 0), inUnit->SetWorkTimer(theRemaining));
     }
     if (theTime != 0 || theMine == NULL)
         return;
-    theMine->DepleteResource(1);
-    inUnit->mPlayer->AddResource(theMine->mResourceType, 1);
-    inUnit->SetWorkTimer(inUnit->mStats->mGatherTimes[2]);
+    (EEUN(DEPLETE_MINE), theMine->DepleteResource(1));
+    (EEUNA(ADD_RESOURCE, theMine->mResourceType, 1), inUnit->mPlayer->AddResource(theMine->mResourceType, 1));
+    (EEUNA(SET_WORK_TIMER, inUnit->mStats->mGatherTimes[2], 0), inUnit->SetWorkTimer(inUnit->mStats->mGatherTimes[2]));
 }

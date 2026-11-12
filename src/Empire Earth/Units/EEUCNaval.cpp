@@ -19,6 +19,7 @@
 #include "lle/GEModel.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -53,25 +54,26 @@ void EEUCNaval::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath
 // Starts a ship sinking: the class's death effect and sound, then the sinking state; other actions go to the base
 void EEUCNaval::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionDying) {
         this->HandleActionChanged(inUnit);
         return;
     }
     if (this->mDeathEffect != NULL)
-        gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
+        (EEACN(DEATH_EFFECT), gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0));
     EESoundObject* theSound = inUnit->mStats->mDeathSound;
     if (theSound != NULL) {
         float theVolume;
         float thePan;
         float thePitch;
-        this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
+        (EEACN(DEATH_SOUND), this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch));
         gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
     }
-    inUnit->SetCurrentPhysicsAction(2);
-    inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
+    (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+    (EEACN(STOP), inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f));
     inUnit->SetVelocity(0.0f);
-    inUnit->SetAnimation(4, -1, 0);
-    inUnit->DropPath();
+    (EEACNA(SET_ANIMATION, 4, 0), inUnit->SetAnimation(4, -1, 0));
+    (EEACN(DROP_PATH), inUnit->DropPath());
 }
 
 // FUNCTION: EXE 0x617d6a
@@ -161,15 +163,10 @@ void EEUCNaval::UpdateResourceUnit(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x618055
 // Updates a ship each tick (fish as a resource): physics, turrets, effects, timers, animation, firing on attack frames
-static void EEUCNavalResourceUnit(EEUnitClass* inClass, EEComplexUnit* inUnit)
-{
-    static_cast<EEUCNaval*>(inClass)->UpdateResourceUnit(inUnit);
-}
-
 void EEUCNaval::Update(EEComplexUnit* inUnit)
 {
-    // New (R5b.4 leaf 6): the sequence is Rust (ee_units update.rs naval), the leaves EEUCLand.cpp's host calls
-    EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL, this, inUnit, EEUCNavalResourceUnit);
+    // New (R5b.4 leaf 6): the sequence is Rust (ee_units update.rs naval), the leaves EEUnitUpdate.cpp's host calls
+    EEUnitClassUpdate(EE_UNITS_UPDATE_NAVAL, this, inUnit);
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

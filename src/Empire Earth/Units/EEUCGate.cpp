@@ -49,6 +49,7 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -784,7 +785,7 @@ void EEUCGate::Update(EEComplexUnit* inUnit)
             if (kGateClosed > theOpen)
                 theOpen = kGateClosed;
         }
-        inUnit->SetOpenFraction(theOpen);
+        (EEUNA(SET_OPEN_FRACTION, EEUNBits(theOpen), 0), inUnit->SetOpenFraction(theOpen));
         this->GetLastLinkedCarrier(inUnit)->SetOpenFraction(theOpen);
         this->GetLastLinked(inUnit)->SetOpenFraction(theOpen);
     }

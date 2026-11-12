@@ -20,6 +20,7 @@
 #include "lle/U2DPolygon.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -605,18 +606,18 @@ void EEUCTransport::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 // regenerates when its stats allow
 void EEUCTransport::Update(EEComplexUnit* inUnit)
 {
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    this->UpdateCamouflageTimer(inUnit);
-    this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
     }
     if (inUnit->mStats != NULL && inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
+        (EEUN(REGENERATE), this->Regenerate(inUnit));
 }
 
 // FUNCTION: EXE 0x61c9e1

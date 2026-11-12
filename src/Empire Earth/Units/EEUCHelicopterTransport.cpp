@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -200,7 +201,7 @@ long EEUCHelicopterTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned 
 void EEUCHelicopterTransport::Update(EEComplexUnit* inUnit)
 {
     EEUCTransport::Update(inUnit);
-    inUnit->UpdateOrbitals();
+    (EEUN(ORBITALS), inUnit->UpdateOrbitals());
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

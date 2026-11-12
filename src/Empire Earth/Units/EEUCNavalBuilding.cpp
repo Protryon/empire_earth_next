@@ -17,6 +17,7 @@
 #include "lle/GEModel.h"
 #include "lle/U2DSparseArray.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -137,8 +138,8 @@ long EEUCNavalBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long i
 void EEUCNavalBuilding::Update(EEComplexUnit* inUnit)
 {
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     EEUCBuilding::Update(inUnit);
 }
 

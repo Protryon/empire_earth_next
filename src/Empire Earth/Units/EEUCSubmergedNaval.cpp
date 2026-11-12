@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -113,6 +114,7 @@ EEUnit* EEUCSubmergedNaval::CreateUnit(long inX, long inY, long inPlayer, bool i
 // path dropped); other actions use the common handling
 void EEUCSubmergedNaval::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
     std::vector<EETileCoordinate> theTiles;
     float theVolume;
     float thePan;
@@ -121,17 +123,17 @@ void EEUCSubmergedNaval::ActionChanged(EEComplexUnit* inUnit)
         this->HandleActionChanged(inUnit);
     } else {
         if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
+            (EEACN(DEATH_EFFECT), gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0));
         EESoundObject* theSound = inUnit->mStats->mDeathSound;
         if (theSound != NULL) {
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
+            (EEACN(DEATH_SOUND), this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch));
             gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         }
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
+        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+        (EEACN(STOP), inUnit->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f));
         inUnit->SetVelocity(0.0f);
-        inUnit->SetAnimation(4, -1, 0);
-        inUnit->DropPath();
+        (EEACNA(SET_ANIMATION, 4, 0), inUnit->SetAnimation(4, -1, 0));
+        (EEACN(DROP_PATH), inUnit->DropPath());
     }
 }
 
@@ -189,27 +191,27 @@ long EEUCSubmergedNaval::EvaluateCondition(EEComplexUnit* inUnit, unsigned long 
 void EEUCSubmergedNaval::Update(EEComplexUnit* inUnit)
 {
     long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->UpdateEffects(inUnit);
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(EFFECTS), this->UpdateEffects(inUnit));
+    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
+    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:
     case kActionAttackLocation:
     case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
+        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
         break;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     }
-    this->UpdateDone(inUnit);
+    (EEUN(DONE), this->UpdateDone(inUnit));
 }
 
 // ICF-FOLDED: EXE 0x61884e

@@ -21,6 +21,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -117,17 +118,19 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
 // rotting), then restarts the current goal's timer
 void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
 {
-    inUnit->ReleaseHealEffect();
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
+    (EEACN(RELEASE_HEAL_EFFECT), inUnit->ReleaseHealEffect());
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAnimalParentalVengance:
-        inUnit->mHerd->AttackBack(inUnit, true);
+        (EEACN(HERD_ATTACK_BACK), inUnit->mHerd->AttackBack(inUnit, true));
         break;
     case kActionAnimalRetaliation:
         if (inUnit->mHerd != NULL)
-            inUnit->mHerd->HandleUnitHit(inUnit);
+            (EEACN(HERD_UNIT_HIT), inUnit->mHerd->HandleUnitHit(inUnit));
         break;
     case kActionCheckRange:
         if (inUnit->mInitialContactHeading == kUnitAINoHeading) {
+            EEACN(CONTACT_CHECK_RANGE);
             GEVector theUp(0.0f, 1.0f, 0.0f);
             GEVector theDirection(0.0f, 0.0f, 0.0f);
             const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
@@ -141,13 +144,14 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
         }
         break;
     case kActionRetaliateAgainstAttacker:
-        this->Attacked(inUnit);
+        (EEACN(ATTACKED), this->Attacked(inUnit));
         break;
     case kActionRunFromAttacker:
-        this->FleeAttacker(inUnit);
+        (EEACN(FLEE_ATTACKER), this->FleeAttacker(inUnit));
         break;
     case kActionShouldIFollowEnemyUnit:
         if (inUnit->mInitialContactHeading == kUnitAINoHeading) {
+            EEACN(CONTACT_FOLLOW);
             GEVector theUp(0.0f, 1.0f, 0.0f);
             GEVector theDirection(0.0f, 0.0f, 0.0f);
             const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
@@ -162,93 +166,94 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
     case kActionWaitForReload:
         if ((inUnit->mUnitClass->mDomains & kMovementAir) == 0 && inUnit->mUnitClass->mCategory != kUnitCategoryPlanetSpaceship
             && inUnit->GetAnimation() != (unsigned long)EEGetAttackFrameSet(inUnit)) {
-            inUnit->SetCurrentPhysicsAction(3);
+            (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
             if (inUnit->GetAnimation() != 0)
-                inUnit->SetAnimation(0, -1, 1);
+                (EEACNA(SET_ANIMATION, 0, 1), inUnit->SetAnimation(0, -1, 1));
         }
         break;
     case kActionReturnToInitialContactLocation: {
         EEUnitGoal* theLocation = new EEUGLocation(&inUnit->mInitialContactLocation, false, false, true, inUnit->mInitialContactHeading, false, false);
         EEUnitGoal* theGoal = inUnit->mGoalState;
         if (theGoal != NULL && (theGoal->mKind == kGoalPatrol || theGoal->mKind == kGoalLocation || theGoal->mKind == kGoalExplore))
-            inUnit->SetGoal(theLocation, 1, 0);
+            (EEACNA(RETURN_TO_CONTACT, 1, 0), inUnit->SetGoal(theLocation, 1, 0));
         else
-            inUnit->SetGoal(theLocation, 0, 0);
-        inUnit->SetTargetSearchTimer(0);
+            (EEACNA(RETURN_TO_CONTACT, 0, 0), inUnit->SetGoal(theLocation, 0, 0));
+        (EEACNA(SET_TARGET_SEARCH_TIMER, 0, 0), inUnit->SetTargetSearchTimer(0));
         break;
     }
     case kActionPostCalamityFlee:
-        inUnit->FleeAfterCalamity(0);
+        (EEACN(FLEE_AFTER_CALAMITY), inUnit->FleeAfterCalamity(0));
         break;
     case kActionIdle: {
-        inUnit->SetCurrentPhysicsAction(3);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
         EEUnitClassUpgrade* theStats = inUnit->mStats;
-        inUnit->mNextTriggerTime = -1;
+        (EEACNA(SET_NEXT_TRIGGER_TIME, -1, 0), inUnit->mNextTriggerTime = -1);
         unsigned long theState = inUnit->GetAnimation();
         if (inUnit->IsSwimming())
-            inUnit->SetAnimation(2, -1, 0);
+            (EEACNA(SET_ANIMATION, 2, 0), inUnit->SetAnimation(2, -1, 0));
         else if ((!this->IsLandBuilding() || this->mAttack > 0) && theState != 7 && (inUnit->mStats->mCanFireOverWalls || theState != 8)) {
             if (gPhysics->GetRandom() < 0.5f || inUnit->mStats->mCanFireOverWalls)
-                inUnit->SetAnimation(7, -1, 0);
+                (EEACNA(SET_ANIMATION, 7, 0), inUnit->SetAnimation(7, -1, 0));
             else
-                inUnit->SetAnimation(8, -1, 0);
-            inUnit->SetIsAnimationPaused(true);
-            inUnit->SetAnimationTime(gPhysics->GetRandom(0L, (long)theStats->mModel->mHoldTimes[inUnit->GetAnimation()]));
+                (EEACNA(SET_ANIMATION, 8, 0), inUnit->SetAnimation(8, -1, 0));
+            (EEACN(PAUSE_ANIMATION), inUnit->SetIsAnimationPaused(true));
+            EEACN(RANDOM_ANIMATION_TIME);
+        inUnit->SetAnimationTime(gPhysics->GetRandom(0L, (long)theStats->mModel->mHoldTimes[inUnit->GetAnimation()]));
         }
-        inUnit->DropPath();
+        (EEACN(DROP_PATH), inUnit->DropPath());
         if (this->mDomains & kMovementSeaOrSpace)
-            inUnit->UpdateWaterState(false);
-        inUnit->mPlayer->UnitGoalDone(inUnit);
+            (EEACN(UPDATE_WATER_STATE), inUnit->UpdateWaterState(false));
+        (EEACN(UNIT_GOAL_DONE), inUnit->mPlayer->UnitGoalDone(inUnit));
         if (!((inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen || inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen) && inUnit->mContainer != NULL
               && inUnit->GetQueueGoals(0).size() > 1))
-            inUnit->ClearGoals(0);
-        inUnit->mInitialContactHeading = kUnitAINoHeading;
+            (EEACNA(CLEAR_GOALS, 0, 0), inUnit->ClearGoals(0));
+        (EEACN(CLEAR_HEADING), inUnit->mInitialContactHeading = kUnitAINoHeading);
         if (inUnit->mGoalState == NULL)
-            gPathManager.CancelPaths(inUnit, true);
+            (EEACN(CANCEL_PATHS), gPathManager.CancelPaths(inUnit, true));
         break;
     }
     case kActionResourcesRotting:
-        inUnit->SetCurrentPhysicsAction(6);
+        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
         if (!inUnit->mUnitClass->mIsWall)
-            inUnit->SetAnimation(5, -1, 0);
-        inUnit->SetRottingAwayTime(0);
-        inUnit->ClearGoals(0);
+            (EEACNA(SET_ANIMATION, 5, 0), inUnit->SetAnimation(5, -1, 0));
+        (EEACNA(SET_ROTTING, 0, 0), inUnit->SetRottingAwayTime(0));
+        (EEACNA(CLEAR_GOALS, 0, 0), inUnit->ClearGoals(0));
         if (inUnit->mNextPart != NULL) {
-            inUnit->mNextPart->StartAction(kActionResourcesRotting);
+            (EEACNA(NEXT_PART_ACTION, kActionResourcesRotting, 0), inUnit->mNextPart->StartAction(kActionResourcesRotting));
             inUnit->mNextPart->mUnitClass->ActionChanged(inUnit->mNextPart);
         }
         break;
     case kActionDying:
-        this->UnitDied(inUnit);
+        (EEACN(UNIT_DIED), this->UnitDied(inUnit));
         break;
     case kActionReacquireGoal:
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalLoadTransport)
-            inUnit->mGoalState->Step(inUnit);
+            (EEACN(GOAL_STEP), inUnit->mGoalState->Step(inUnit));
         break;
     case kActionUnitRotting:
-        inUnit->mPlayer->DeselectUnit(inUnit);
-        inUnit->SetRottingAwayTime(this->mRottingTime);
+        (EEACN(DESELECT), inUnit->mPlayer->DeselectUnit(inUnit));
+        (EEACNA(SET_ROTTING, this->mRottingTime, 0), inUnit->SetRottingAwayTime(this->mRottingTime));
         if (inUnit->mNextPart != NULL) {
-            inUnit->mNextPart->StartAction(kActionUnitRotting);
+            (EEACNA(NEXT_PART_ACTION, kActionUnitRotting, 0), inUnit->mNextPart->StartAction(kActionUnitRotting));
             inUnit->mNextPart->mUnitClass->ActionChanged(inUnit->mNextPart);
         }
         break;
     case kActionFadingOutInSpace:
-        inUnit->SetCloakedChain(true);
-        inUnit->SetOpacityChain(1.0f);
+        (EEACN(CLOAK_CHAIN), inUnit->SetCloakedChain(true));
+        (EEACN(OPAQUE_CHAIN), inUnit->SetOpacityChain(1.0f));
         break;
     case kActionKillSilently:
-        inUnit->Kill(false, false, false);
+        (EEACNA(KILL, 0, 0), inUnit->Kill(false, false, false));
         break;
     case kActionKill:
-        inUnit->Kill(true, false, false);
+        (EEACNA(KILL, 1, 0), inUnit->Kill(true, false, false));
         break;
     case kActionResourcesDepleting:
-        inUnit->SetCurrentPhysicsAction(3);
+        (EEACNA(SET_PHYSICS_ACTION, 3, 0), inUnit->SetCurrentPhysicsAction(3));
         break;
     case kActionDead: {
-        inUnit->SetCurrentPhysicsAction(6);
-        inUnit->mPlayer->KillUnit(inUnit, false);
+        (EEACNA(SET_PHYSICS_ACTION, 6, 0), inUnit->SetCurrentPhysicsAction(6));
+        (EEACN(KILL_UNIT_AND_PARTS), inUnit->mPlayer->KillUnit(inUnit, false));
         for (EEComplexUnit* theUnit = inUnit->mNextPart; theUnit != NULL; theUnit = theUnit->mNextPart)
             inUnit->mPlayer->KillUnit(theUnit, false);
         break;
@@ -256,73 +261,73 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
     case kActionPrepareToMove: {
         EEUnitGoal* theGoal = inUnit->mGoalState;
         if ((unsigned long)theGoal->mPathAttempts > (unsigned long)theGoal->GetMaxPathAttempts()) {
-            inUnit->StartAction(kActionIdle);
+            (EEACN(START_IDLE), inUnit->StartAction(kActionIdle));
             inUnit->mUnitClass->ActionChanged(inUnit);
         } else
-            this->PathToGoal(inUnit);
+            (EEACN(PATH_TO_GOAL), this->PathToGoal(inUnit));
         break;
     }
     case kActionMoveToValidMapLocation:
-        this->MoveToTileCentre(inUnit);
+        (EEACN(MOVE_TO_TILE_CENTRE), this->MoveToTileCentre(inUnit));
         break;
     case kActionGetNextAutoWaypoint:
-        inUnit->ClearGoals(0);
+        (EEACNA(CLEAR_GOALS, 0, 0), inUnit->ClearGoals(0));
         break;
     case kActionGetNextPatrolPoint:
-        inUnit->mInitialContactHeading = kUnitAINoHeading;
+        (EEACN(CLEAR_HEADING), inUnit->mInitialContactHeading = kUnitAINoHeading);
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalPatrol)
-            inUnit->mGoalState->Step(inUnit);
+            (EEACN(GOAL_STEP), inUnit->mGoalState->Step(inUnit));
         break;
     case kActionFleeDanger:
-        this->Flee(inUnit);
+        (EEACN(FLEE), this->Flee(inUnit));
         break;
     case kActionGetNextMoveWaypoint:
-        this->NextWaypoint(inUnit);
+        (EEACN(NEXT_WAYPOINT), this->NextWaypoint(inUnit));
         break;
     case kActionFindSafeLocation:
-        this->FindSafeLocation(inUnit);
+        (EEACN(FIND_SAFE_LOCATION), this->FindSafeLocation(inUnit));
         break;
     case kActionAdvance:
-        inUnit->SetCurrentPhysicsAction(0);
-        inUnit->SetHasArrived(false);
+        (EEACNA(SET_PHYSICS_ACTION, 0, 0), inUnit->SetCurrentPhysicsAction(0));
+        (EEACN(CLEAR_ARRIVED), inUnit->SetHasArrived(false));
         if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && inUnit->mResourceAmount > 0 && inUnit->mUnitClass->mResourceAmount == 0)
-            inUnit->SetAnimation(2, -1, 0);
+            (EEACNA(SET_ANIMATION, 2, 0), inUnit->SetAnimation(2, -1, 0));
         else if (inUnit->IsSwimming())
-            inUnit->SetAnimation(2, -1, 0);
+            (EEACNA(SET_ANIMATION, 2, 0), inUnit->SetAnimation(2, -1, 0));
         else
-            inUnit->SetAnimation(0xd, -1, 0);
+            (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
         break;
     case kActionTurnToUnitFacing: {
         EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (theGoal != NULL && theGoal->mKind == kGoalLocation && static_cast<EEUGLocation*>(theGoal)->FaceYaw(inUnit))
+        if (theGoal != NULL && theGoal->mKind == kGoalLocation && (EEACN(FACE_YAW), static_cast<EEUGLocation*>(theGoal)->FaceYaw(inUnit)))
             break;
-        inUnit->SetCurrentPhysicsAction(5);
+        (EEACNA(SET_PHYSICS_ACTION, 5, 0), inUnit->SetCurrentPhysicsAction(5));
         if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && inUnit->mResourceAmount > 0 && inUnit->mUnitClass->mResourceAmount == 0
             && inUnit->GetAnimation() != 2)
-            inUnit->SetAnimation(2, -1, 0);
+            (EEACNA(SET_ANIMATION, 2, 0), inUnit->SetAnimation(2, -1, 0));
         else if (inUnit->IsSwimming())
-            inUnit->SetAnimation(2, -1, 0);
+            (EEACNA(SET_ANIMATION, 2, 0), inUnit->SetAnimation(2, -1, 0));
         else if (inUnit->GetAnimation() != 0xd)
-            inUnit->SetAnimation(0xd, -1, 0);
+            (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
         break;
     }
     case kActionRepathAroundObstacle:
-        this->FindPath(inUnit);
+        (EEACN(FIND_PATH), this->FindPath(inUnit));
         break;
     case kActionHealUnit:
-        this->Heal(inUnit);
+        (EEACN(HEAL), this->Heal(inUnit));
         break;
     case kActionLookForHealee: {
         EEUnit* theTarget = NULL;
         EEUnitGoal* theGoal = inUnit->mGoalState;
-        if (this->FindTargetNear(inUnit, inUnit->mStats->GetLineOfSight(), &theTarget)) {
+        if ((EEACN(FIND_HEALEE), this->FindTargetNear(inUnit, inUnit->mStats->GetLineOfSight(), &theTarget))) {
             EEUnitGoal* theHeal = new EEUGHealUnit(static_cast<EEComplexUnit*>(theTarget), false);
             if (theGoal != NULL && (theGoal->mKind == kGoalPatrol || theGoal->mKind == kGoalLocation || theGoal->mKind == kGoalExplore))
-                inUnit->SetGoal(theHeal, 1, 0);
+                (EEACNA(SET_HEAL_GOAL, 1, 0), inUnit->SetGoal(theHeal, 1, 0));
             else
-                inUnit->SetGoal(theHeal, 0, 0);
+                (EEACNA(SET_HEAL_GOAL, 0, 0), inUnit->SetGoal(theHeal, 0, 0));
         }
-        inUnit->SetHealSearchTimer(this->mHealDelay);
+        (EEACN(RESET_HEAL_SEARCH), inUnit->SetHealSearchTimer(this->mHealDelay));
         break;
     }
     case kActionAttackEnemyUnit:
@@ -351,7 +356,7 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
     case kActionCannotReachContainer:
     case kActionTurnToFaceHealee:
         if (inUnit->mGoalState != NULL)
-            inUnit->mGoalState->Step(inUnit);
+            (EEACN(GOAL_STEP), inUnit->mGoalState->Step(inUnit));
         break;
     case kActionSpecialLocation:
         break;
@@ -360,7 +365,7 @@ void EEUnitClass::ActionChanged(EEComplexUnit* inUnit)
     }
     EEUnitGoal* theGoal = inUnit->mGoalState;
     if (theGoal != NULL && !gWorldClearing)
-        theGoal->SetStartTime(gPhysics->mGameTime);
+        (EEACN(GOAL_START_TIME), theGoal->SetStartTime(gPhysics->mGameTime));
 }
 
 // FUNCTION: EXE 0x62e47a

@@ -17,6 +17,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -137,30 +138,30 @@ void EEUCHelicopter::ActionChanged(EEComplexUnit* inUnit)
 void EEUCHelicopter::Update(EEComplexUnit* inUnit)
 {
     long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    inUnit->UpdateOrbitals();
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(ORBITALS), inUnit->UpdateOrbitals());
+    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
+    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
     switch (theCommand) {
     case kActionAttackEnemyUnit:
     case kActionAttackLocation:
     case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
+        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
         break;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     }
     if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
+        (EEUN(REGENERATE), this->Regenerate(inUnit));
+    (EEUN(DONE), this->UpdateDone(inUnit));
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

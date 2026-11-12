@@ -19,6 +19,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -99,7 +100,7 @@ void EEUCLandTransport::BadlyHurt(EEUnit* inUnit)
 void EEUCLandTransport::Update(EEComplexUnit* inUnit)
 {
     EEUCTransport::Update(inUnit);
-    inUnit->UpdateWheels();
+    (EEUN(WHEELS), inUnit->UpdateWheels());
 }
 
 // UnloadAt: unloads at a tile the common transport way

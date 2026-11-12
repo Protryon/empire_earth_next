@@ -15,6 +15,7 @@
 #include "lle/GETerrainMesh.h"
 
 #include "lle/U2DSparseArray.h"
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEUnitKind.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
@@ -109,10 +110,10 @@ bool EEUCSpaceBuilding::HasArrived(EEComplexUnit* inUnit, float inValue)
 void EEUCSpaceBuilding::Update(EEComplexUnit* inUnit)
 {
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000)
-        this->mPhysicsModel->Step(inUnit);
-    this->RefreshSound(inUnit);
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
     if (inUnit->mStats != NULL && inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
+        (EEUN(REGENERATE), this->Regenerate(inUnit));
     EEUCBuilding::Update(inUnit);
 }
 

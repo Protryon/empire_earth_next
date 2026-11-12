@@ -16,6 +16,7 @@
 #include "lle/SESoundManager.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -86,10 +87,11 @@ void EEUCSpaceship::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, f
 // Handles a spaceship's new action: idle restarts its flight animation; dying plays its sound and death effect
 void EEUCSpaceship::ActionChanged(EEComplexUnit* inUnit)
 {
+    EEUnitActionScope theGoldenScope(inUnit->mUnitID);   // TEST ONLY (round 13's golden)
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionIdle:
         this->HandleActionChanged(inUnit);
-        inUnit->SetAnimation(0xd, -1, 0);
+        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
         break;
     case kActionDying: {
         EESoundObject* theSound = inUnit->mStats->mDeathSound;
@@ -97,14 +99,14 @@ void EEUCSpaceship::ActionChanged(EEComplexUnit* inUnit)
             float theVolume;
             float thePan;
             float thePitch;
-            this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch);
+            (EEACN(DEATH_SOUND), this->GetSoundParameters(inUnit, theSound, &theVolume, &thePan, &thePitch));
             gSoundManager->Play(theSound->mSampleID, theVolume, thePan, thePitch, theSound->mLooping, NULL);
         }
         if (this->mDeathEffect != NULL)
-            gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0);
-        inUnit->SetCurrentPhysicsAction(2);
-        inUnit->SetAnimation(0xd, -1, 0);
-        inUnit->DropPath();
+            (EEACN(DEATH_EFFECT), gEffectManager->CreateUnitEffect(inUnit, this->mDeathEffect, NULL, 0, 0, 0));
+        (EEACNA(SET_PHYSICS_ACTION, 2, 0), inUnit->SetCurrentPhysicsAction(2));
+        (EEACNA(SET_ANIMATION, 0xd, 0), inUnit->SetAnimation(0xd, -1, 0));
+        (EEACN(DROP_PATH), inUnit->DropPath());
         break;
     }
     case kActionResourcesRotting:
@@ -159,32 +161,32 @@ long EEUCSpaceship::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEve
 void EEUCSpaceship::Update(EEComplexUnit* inUnit)
 {
     long theFrame = inUnit->mPhysicalModel.GetFrame();
-    inUnit->SetLastHitPoints(inUnit->mHitPoints);
+    (EEUN(LAST_HIT_POINTS), inUnit->SetLastHitPoints(inUnit->mHitPoints));
     if (this->mPhysicsModel != NULL && inUnit->mTileX != -10000) {
-        this->mPhysicsModel->Step(inUnit);
-        inUnit->UpdateTurrets();
+        (EEUN(PHYSICS_STEP), this->mPhysicsModel->Step(inUnit));
+        (EEUN(TURRETS), inUnit->UpdateTurrets());
     }
-    inUnit->UpdateOrbitals();
-    inUnit->UpdateReloadTimer();
-    inUnit->UpdateTargetSearchTimer();
-    this->UpdateCamouflageTimer(inUnit);
-    long theAttack = this->Animate(inUnit);
-    this->RefreshSound(inUnit);
-    this->RegeneratePower(inUnit);
+    (EEUN(ORBITALS), inUnit->UpdateOrbitals());
+    (EEUN(RELOAD_TIMER), inUnit->UpdateReloadTimer());
+    (EEUN(TARGET_SEARCH_TIMER), inUnit->UpdateTargetSearchTimer());
+    (EEUN(CAMOUFLAGE_TIMER), this->UpdateCamouflageTimer(inUnit));
+    long theAttack = (EEUN(ANIMATE), this->Animate(inUnit));
+    (EEUN(REFRESH_SOUND), this->RefreshSound(inUnit));
+    (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
     case kActionAttackEnemyUnit:
     case kActionAttackLocation:
     case kActionWaitForReload:
-        this->FireOnAttackFrame(inUnit, theAttack, theFrame);
+        (EEUNA(FIRE_ON_ATTACK_FRAME, theAttack, theFrame), this->FireOnAttackFrame(inUnit, theAttack, theFrame));
         break;
     case kActionUnitRotting: {
-        inUnit->UpdateRottingAwayTime();
+        (EEUN(ROTTING), inUnit->UpdateRottingAwayTime());
         break;
     }
     }
     if (inUnit->mStats->mRegeneration > 0)
-        this->Regenerate(inUnit);
-    this->UpdateDone(inUnit);
+        (EEUN(REGENERATE), this->Regenerate(inUnit));
+    (EEUN(DONE), this->UpdateDone(inUnit));
 }
 
 // ICF-FOLDED: EXE 0x61aaa9

@@ -15,6 +15,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EEUnitUpdateGolden.h"   // TEST ONLY (round 13's golden)
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
@@ -161,7 +162,7 @@ void EEUCFortress::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 void EEUCFortress::Update(EEComplexUnit* inUnit)
 {
     if (inUnit->mUnitClass->mUnitType == kUnitTypeTeleporter)
-        this->RegeneratePower(inUnit);
+        (EEUN(REGENERATE_POWER), this->RegeneratePower(inUnit));
     EEUCTransport::Update(inUnit);
 }
 
