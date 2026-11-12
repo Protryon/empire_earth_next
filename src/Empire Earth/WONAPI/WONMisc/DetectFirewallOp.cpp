@@ -55,12 +55,12 @@ void DetectFirewallOp::RunHook()
 bool DetectFirewallOp::CallbackHook(AsyncOp* inOp,int inParam)
 {
     if (inParam!=1000) return ServerRequestOp::CallbackHook(inOp,inParam);
-    if (inOp->mStatus==WS_Success &&
+    if (inOp->GetStatus()==WS_Success &&
         this->mRecvBytesFromOp->mFromAddress.GetHost()!=this->GetCurAddr().GetHost()) {
         this->RecvServerDatagram();
         return true;
     }
-    this->Finish(inOp->mStatus);
+    this->Finish(inOp->GetStatus());
     return true;
 }
 // FUNCTION: WON 0x006cf920
@@ -111,7 +111,7 @@ WONStatus DetectFirewallOp::CheckResponse()
 // Waits for a datagram from the server's host on the UDP socket, async or blocking; returns the status
 WONStatus DetectFirewallOp::RecvServerDatagram()
 {
-    if (this->mRunMode==OP_MODE_ASYNC) {
+    if (this->GetMode()==OP_MODE_ASYNC) {
         this->mRecvBytesFromOp=new RecvBytesFromOp(255,this->mListenSocket.get());
         unsigned long wait=this->TimeLeft();
         if (this->mMaxConnectWaitTime>0 && this->mMaxConnectWaitTime<wait)

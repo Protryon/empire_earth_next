@@ -8,6 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONDBMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006ce840
 // Sets 4-byte length fields and creates an empty profile
@@ -31,15 +32,12 @@ UpdateAccountOp::UpdateAccountOp(ServerContext* inContext,AuthContext* inAuth)
 // Builds the update message: new password, email and profile fields
 WONStatus UpdateAccountOp::GetNextRequest()
 {
-    WriteBuffer aRequest(this->mLengthFieldSize,true);
-    aRequest.AppendByte(5);
-    aRequest.AppendShort(14);
-    aRequest.AppendShort(1002);
-    aRequest.AppendShort(4);
-    aRequest.AppendWString(this->mNewPassword,2);
-    aRequest.AppendString(this->mEmail,2);
-    this->mProfileData->PackRequestData(aRequest,true);
-    this->mRequest=aRequest.ToByteBuffer(true);
+    // the request is Rust's (ee_won db.rs)
+    DbRequest q(EE_WON_DB_REQ_UPDATE_ACCOUNT,this->mLengthFieldSize);
+    q.mReq.password=q.Text(this->mNewPassword);
+    q.mReq.email=DbRequest::Narrow(this->mEmail);
+    q.mReq.profile=this->mProfileData->GetProfile();
+    this->mRequest=q.Build();
     return WS_ServerReq_Recv;
 }
 
@@ -47,21 +45,11 @@ WONStatus UpdateAccountOp::GetNextRequest()
 // Checks the update reply; returns the status
 WONStatus UpdateAccountOp::CheckResponse()
 {
-    ReadBuffer aReply(this->mResponse->data(),this->mResponse->length());
-    unsigned char aHeader=aReply.ReadByte();
-    unsigned short aService=aReply.ReadShort();
-    unsigned short aMessage=aReply.ReadShort();
-    unsigned short aSubMessage=aReply.ReadShort();
-    WONStatus aStatus=aReply.ReadShort();
-    aReply.ReadString(this->mErrorString,2);
-    aReply.ReadByte();
-    if (aHeader!=5 || aService!=14)
+    // the reply's read is Rust's (ee_won db.rs)
+    EeWonDbReply r=DbAccountReply(EE_WON_DB_UPDATE_ACCOUNT,this->mResponse.get(),this->mErrorString);
+    if (r.verdict==EE_WON_DB_INVALID_HEADER)
         return this->InvalidReplyHeader();
-    if (aStatus!=0)
-        return aStatus;
-    if (aMessage!=1002 || aSubMessage!=5)
-        return this->InvalidReplyHeader();
-    return WS_Success;
+    return (WONStatus)r.result;
 }
 }
 

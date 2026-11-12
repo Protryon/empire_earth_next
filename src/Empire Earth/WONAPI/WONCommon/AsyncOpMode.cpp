@@ -10,11 +10,6 @@
 #include "ee/wonapi/WONStatus.h"
 namespace WONAPI {
 // FUNCTION: WON 0x0069f190
-// Sets the op's run mode unless the op is already running (Rust decides: ee_won asyncop OpState::set_mode)
-void AsyncOp::SetMode(AsyncRunMode mode)
-{
-    EeWonOpState aState=this->GetState();
-    ee_won_op_set_mode(&aState,static_cast<int32_t>(mode));
-    this->SetState(aState);
-}
+// Sets the op's run mode unless the op is already running (the Rust op object: ee_won opobj.rs)
+void AsyncOp::SetMode(AsyncRunMode mode) { ee_won_asyncop_set_mode(this->mOp,static_cast<int32_t>(mode)); }
 }

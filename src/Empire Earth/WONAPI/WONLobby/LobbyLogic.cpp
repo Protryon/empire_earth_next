@@ -47,7 +47,7 @@ void LobbyLogic::Kill()
 void LobbyLogic::RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion,
                              unsigned long inTimeout)
 {
-    inOp->mCompletion = inCompletion;
+    inOp->SetCompletion(inCompletion);
     if (inCompletion != NULL)
         inCompletion->mCheckTracker = true;
     this->mTracker.AddOp(inOp, 0);
@@ -59,7 +59,7 @@ void LobbyLogic::RunTrackedOp(AsyncOp* inOp, LogicCompletionBase* inCompletion,
 void LobbyLogic::RunOp(AsyncOp* inOp, CompletionBase<AsyncOpPtr>* inCompletion,
                       unsigned long inTimeout)
 {
-    inOp->mCompletion = inCompletion;
+    inOp->SetCompletion(inCompletion);
     LobbyRunOp(inOp, inTimeout);
 }
 

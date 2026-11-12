@@ -264,7 +264,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::MayGo(EECPAttackSubGroupUnit* inUn
         EEUnitClass* theClass = theUnit->mUnitClass;
         long theDefense = theClass->mAmmoType;
         long theAttack = theOwnClass->mFamily;
-        if (theOwnClass->CanBeAttacked() && gDamageTable[theAttack][theDefense] != 0.0f) {
+        if (theOwnClass->CanBeAttacked() && EEDamageFactor(theAttack, theDefense) != 0.0f) {
             float theDistance = inUnit->GetUnit()->DistanceSquaredTo(this->GetUnit());
             float theRange = inUnit->mUnit->mStats->mRange;
             if (theDistance >= theRange * theRange && inUnit->mCourage >= 0.5f && !theClass->mHasCalamityPowers &&

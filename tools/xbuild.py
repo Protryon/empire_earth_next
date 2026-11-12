@@ -235,12 +235,12 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
-def run_program(target, exe, args=(), env=None):
+def run_program(target, exe, args=(), env=None, cwd=None):
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
         return 0
     print(f"running {exe.name} {' '.join(args)}", flush=True)
-    r = subprocess.run([str(exe), *args], env=env)
+    r = subprocess.run([str(exe), *args], env=env, cwd=cwd)
     print(f"{exe.name}: exit {r.returncode}")
     return r.returncode
 
@@ -382,7 +382,8 @@ WON_TESTS = {
                                                          "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
                                                          "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
                                                          "SocketThread.cpp")],
-                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "WONDebug.cpp")],
+                     *[WON_SRC / "WONCommon" / f for f in ("AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpTracker.cpp",
+                                                          "AsyncOpWithTracker.cpp", "WONDebug.cpp")],
                      WON_SRC / "WONAPI.cpp"],
     # the async machinery's events (golden: rust/crates/ee_won/src/golden_asyncop.txt, recorded over the C++ classes)
     "won_asyncop_test": "won_ops_test",
@@ -411,7 +412,7 @@ WON_TESTS = {
     # WONServer's exchange (ServerRequestOp's RunHook and CallbackHook over scripted servers, the time limits, the
     # ping requests and replies, MultiPingOp's rules and order, the context's shuffle), the original's statements
     # against ee_won's server module
-    "won_server_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_server_test": [],
     # WONGUI's layout arithmetic (rectangles, sizes, the child layout instructions and layouts, the LAYOUT rule), the
     # original's statements against ee_won's guilayout module
     "won_guilayout_test": [],
@@ -482,7 +483,14 @@ WON_TESTS = {
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the directory server's ops (every request's bytes, the status replies, the multi-directory accounting, the
     # find's parser choice, the listing's grouping), the original's statements against ee_won's dirops module
-    "won_dirops_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_dirops_test": [],
+    # the routing server's protocol (every routing op's request and reply, the notifications, the user status
+    # datagram, the group list request, the connection's header, dispatch rule and table), the original's
+    # statements against include/ee/wonapi/WONRoutingMsg.h over ee_won's routemsg module
+    "won_routemsg_test": [],
+    # WONDB (ProfileData's shim over the Rust profile, the DBProxy family's, the contest's and the event report's
+    # requests and replies), the original's statements against include/ee/wonapi/WONDBMsg.h over ee_won's db module
+    "won_db_test": [WON_SRC / "WONDB" / "ProfileData.cpp"],
     # WONFile's path logic (golden: rust/crates/ee_won/src/golden_path.txt)
     "won_path_test": [WON_SRC / "WONCommon" / "WONFile.cpp"],
     # RegKey on config.yaml (golden: rust/crates/ee_won/src/golden_regkey.txt)
@@ -561,7 +569,12 @@ def cmd_wontest(a):
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:
-            result |= run_program(t, exe)
+            # each program in its own directory: their scratch files (won_regkey.yaml as $EE_CONFIG, the config,
+            # file and persist tests' files) are relative to the current directory, and two runs, or two programs,
+            # sharing one would see each other's
+            scratch = exe.parent / "run"
+            scratch.mkdir(exist_ok=True)
+            result |= run_program(t, exe, cwd=scratch)
     return result
 
 

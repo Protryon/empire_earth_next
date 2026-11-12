@@ -32,9 +32,9 @@ PeerAuthServerOp::~PeerAuthServerOp()
 // Feeds each received message to the handshake, sends the reply and finishes after the last send
 bool PeerAuthServerOp::CallbackHook(AsyncOp* op,int type)
 {
-    if(op->mStatus!=WS_Success)
+    if(op->GetStatus()!=WS_Success)
     {
-        this->Finish(op->mStatus);
+        this->Finish(op->GetStatus());
         return true;
     }
     if(type==1) // PeerAuth_Track_Recv
@@ -84,7 +84,7 @@ void PeerAuthServerOp::RunHook()
 {
     this->mLengthFieldSize=this->mSocket->GetLengthFieldSize();
     this->mPeerAuthServer.Start(this->mAuthContext->GetPeerData(),this->mLengthFieldSize);
-    if(this->mRunMode==OP_MODE_ASYNC)
+    if(this->GetMode()==OP_MODE_ASYNC)
     {
         this->AsyncRun();
         return;
@@ -103,7 +103,7 @@ void PeerAuthServerOp::RunHook()
 
     status=this->mSocket->SendMsg(sendMsg.get(),this->SendTime());
     this->CheckStatus(status);
-    if(this->mStatus!=WS_Pending)
+    if(this->GetStatus()!=WS_Pending)
         return;
 
     status=this->mSocket->RecvMsg(recvMsg,this->RecvTime());

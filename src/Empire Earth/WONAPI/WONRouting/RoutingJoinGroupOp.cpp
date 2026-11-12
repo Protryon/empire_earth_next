@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 #include "ee/wonapi/WONStatus.h"
 
 namespace WONAPI {
@@ -25,12 +26,8 @@ RoutingJoinGroupOp::RoutingJoinGroupOp(RoutingConnection* inConnection)
 // Sends the routing server the join request (group, password, comment, join and member flags)
 void RoutingJoinGroupOp::SendRequest()
 {
-    this->InitSendMsg(42);
-    this->mSendMsg.AppendShort(this->mGroupId);
-    this->mSendMsg.AppendWString(this->mGroupPassword, 2);
-    this->mSendMsg.AppendWString(this->mJoinComment, 2);
-    this->mSendMsg.AppendByte(this->mJoinFlags);
-    this->mSendMsg.AppendByte(this->mMemberFlags);
+    // the message is Rust's (ee_won routemsg.rs)
+    RouteSendJoinGroup(this);
     this->SendMsg();
     this->AddOp();
 }
@@ -39,24 +36,8 @@ void RoutingJoinGroupOp::SendRequest()
 // Reads the join status for this group (waits on when pending or members follow) and the member list that follows
 WONStatus RoutingJoinGroupOp::HandleReply(unsigned char inMsgType, ReadBuffer& inMsg)
 {
-    if (inMsgType == 41) {
-        WONStatus status = inMsg.ReadShort();
-        unsigned short groupId = inMsg.ReadShort();
-        if (groupId == this->mGroupId) {
-            inMsg.ReadWString(this->mJoinComment, 2);
-            if (status == (WONStatus)-2541) return (WONStatus)WS_RoutingOp_NeedMoreReplies;
-            if (status != 0) return status;
-            return (this->mJoinFlags & 1) ? (WONStatus)100105 : (WONStatus)0;
-        }
-    } else if (inMsgType == 29) {
-        SmartPtr<RoutingGetMembersOfGroupOp> op =
-            new RoutingGetMembersOfGroupOp(this->mConnection.get());
-        op->SetGroupId(this->mGroupId);
-        WONStatus status = op->HandleReply(29, inMsg);
-        if (status == WS_Success) this->mMemberMap = op->GetMembers();
-        return status;
-    }
-    return (WONStatus)WS_RoutingOp_DontWantReply;
+    // the read is Rust's (ee_won routemsg.rs)
+    return RouteJoinGroup(this, inMsgType, inMsg);
 }
 }
 

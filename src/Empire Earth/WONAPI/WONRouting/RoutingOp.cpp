@@ -10,15 +10,14 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONRoutingMsg.h"
 namespace WONAPI {
 // FUNCTION: WON 0x6c7bc0
 // Starts a new outgoing routing message with the header for this message type (routing or derived service)
 void RoutingOp::InitSendMsg(unsigned char inType)
 {
-    this->mSendMsg.Reset();
-    this->mSendMsg.AppendByte(3);
-    this->mSendMsg.AppendByte(this->mIsDerivedServerOp ? 8 : 7);
-    this->mSendMsg.AppendByte(inType);
+    // the header is Rust's (ee_won routemsg.rs)
+    RouteSendHeader(this,inType);
 }
 
 // FUNCTION: WON 0x6c7c00
@@ -48,7 +47,7 @@ RoutingOp::RoutingOp(RoutingConnection* connection)
 // Sends the request; fails at once in blocking mode, which routing ops do not support
 void RoutingOp::RunHook()
 {
-    if(this->mRunMode==OP_MODE_BLOCK) {
+    if(this->GetMode()==OP_MODE_BLOCK) {
         this->Finish((WONStatus)WS_BlockMode_NotSupported);
         return;
     }

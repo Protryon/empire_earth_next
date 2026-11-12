@@ -630,7 +630,7 @@ bool HTTPGetOp::DoConnect()
         anAddress.SetWithDefaultPort(this->mProxyHost,80);
     else
         anAddress.SetWithDefaultPort(this->mHost,80);
-    if (this->mRunMode==1) {
+    if (this->GetMode()==1) {
         this->mSocket->QueueOp(static_cast<SocketOp*>(this->Track(
             new ConnectOp(anAddress),HTTP_Track_Connect)),-1);
         return false;
@@ -708,7 +708,7 @@ bool HTTPGetOp::ExtractChunkLength(const char* inLine)
                 this->mHTTPCacheEntry->SetValid(true);
             if (this->mLocalPath.empty())
                 this->mContent=this->mContentAccumulator.ToByteBuffer(true);
-            if (this->mRunMode==1) {
+            if (this->GetMode()==1) {
                 this->AsyncRecvCRMsg(HTTP_Track_RecvFooter);
                 return false;
             }
@@ -733,7 +733,7 @@ bool HTTPGetOp::RecvChunkLength()
 {
     if (this->mIsFirstChunk)
         this->mContentLength=0;
-    if (this->mRunMode==1) {
+    if (this->GetMode()==1) {
         if (!this->mIsFirstChunk)
             this->AsyncRecvCRMsg(HTTP_Track_RecvChunkCRLF);
         this->AsyncRecvCRMsg(HTTP_Track_RecvChunkLength);
@@ -811,7 +811,7 @@ void HTTPGetOp::RecvContent()
                 recv->SetFileModifyTime(this->mLastModified);
             }
         }
-        if (this->mRunMode==1) {
+        if (this->GetMode()==1) {
             this->Track(recv.get(),HTTP_Track_RecvContent);
             recv->RunAsync(-1);
             return;
@@ -828,12 +828,12 @@ void HTTPGetOp::RecvContent()
 // Advances the async request state machine as each connect, send or receive step finishes
 bool HTTPGetOp::CallbackHook(AsyncOp* inOp,int inParam)
 {
-    if (inOp->mKilled) {
+    if (inOp->IsKilled()) {
         this->Kill(true);
         return true;
     }
-    if (inOp->mStatus!=0) {
-        this->Finish(inOp->mStatus);
+    if (inOp->GetStatus()!=0) {
+        this->Finish(inOp->GetStatus());
         return true;
     }
     switch (inParam) {
@@ -927,7 +927,7 @@ void HTTPGetOp::FollowRedirect()
     anOp->mNumRedirects=this->mNumRedirects+1;
     if (this->mRecvChunkCompletion.get()!=NULL)
         anOp->SetRecvChunkCompletion(this->mRecvChunkCompletion.get(),this->mRecvChunkSize);
-    if (this->mRunMode==1) {
+    if (this->GetMode()==1) {
         this->Track(anOp.get(),HTTP_Track_Redirect);
         anOp->RunAsync(-1);
         return;
@@ -1004,7 +1004,7 @@ void HTTPGetOp::RunHook()
         this->Finish(100097);
         return;
     }
-    if (this->mOnlyRecv && this->mRunMode==1) {
+    if (this->mOnlyRecv && this->GetMode()==1) {
         this->AsyncRecvCRMsg(HTTP_Track_RecvStatus);
         return;
     }

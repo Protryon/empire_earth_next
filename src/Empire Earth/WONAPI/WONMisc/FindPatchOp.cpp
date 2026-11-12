@@ -283,7 +283,7 @@ void FindPatchOp::RunHook()
 
 	anOp->SetFlags(aGetFlags);
 
-	if(this->mRunMode==OP_MODE_ASYNC)
+	if(this->GetMode()==OP_MODE_ASYNC)
 	{
 		this->Track(anOp,0);
 		anOp->RunAsync(INFINITE);
