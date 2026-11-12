@@ -77,6 +77,14 @@ public:
     // mPending and puts the searches back at the loaded game's first tick, before the queue's others
     void SaveSearches(FSFile& outFile);
     long LoadSearches(FSFile& inFile);
+    // port (save version 0.278, EESaveHasGraphSearches): the graph searches in progress (mAutoPaths) as they are:
+    // node, machine, goal, modifier, request and storage. The original saved none: their owners (attack sub groups,
+    // units) asked again at the loaded game's first tick. LoadGraphSearches takes their units out of mPending; at the
+    // first tick the searches go back to the queue's front and each request to the owner that waited for it
+    // (EEAwaitAutoPathRequest, ee/EEAutoPathRequest.h)
+    void SaveGraphSearches(FSFile& outFile);
+    long LoadGraphSearches(FSFile& inFile);
+    void RequestPendingPath(EEComplexUnit* inUnit, const EETileCoordinate& inTile);   // RequestPendingPaths' one unit
     void Update();                      // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
     void Reset();                       // 0xa8778 (before a scenario starts; provisional name)
     void RequestPendingPaths(EEMap* inMap);  // 0xa8582 (EEWorld::StartGame; provisional name)

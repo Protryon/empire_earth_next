@@ -6,6 +6,9 @@
 #include <windows.h>
 #include <stdio.h>
 #include <cstddef>
+#include <string.h>
+#include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
@@ -4679,17 +4682,54 @@ void EEComplexUnit::SetCamouflaged(bool inValue)
 // Restores a unit's power by its regeneration rate every 5 seconds, up to its maximum (not during cinematics)
 void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
-    if (!(inUnit->mStats->mPowerRegeneration > 0) || ::gWorld.mInCinematic || (this->IsLandBuilding() && !inUnit->mIsBuilt))
-        return;
-    long theRemaining = inUnit->mPowerRegenTimer - gPhysics->mTickTimeMs;
-    if (theRemaining <= 0) {
-        long theValue = inUnit->mStats->mPowerRegeneration + inUnit->mPower;
-        if (theValue > inUnit->mStats->mPower)
-            theValue = inUnit->mStats->mPower;
-        inUnit->SetPower(theValue);
-        theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
+    uint32_t theWords[13] = {(uint32_t)inUnit->mStats->mPowerRegeneration, (uint32_t)inUnit->mStats->mPower,
+                             ::gWorld.mInCinematic ? 1u : 0u, this->IsLandBuilding() ? 1u : 0u, inUnit->mIsBuilt ? 1u : 0u,
+                             (uint32_t)inUnit->mPower.Get(), (uint32_t)inUnit->mPowerRegenTimer.Get(),
+                             (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
+                             0, 0, 0, 0};
+    // New (R5b.4 leaf 6): the regeneration is Rust over the unit store (ee_units step.rs regenerate_power); the
+    // writes are the holders'. TEST ONLY: while the capture runs, the original's statements check it (USTM)
+    EeUnitsPowerIn theIn;
+    theIn.regeneration = inUnit->mStats->mPowerRegeneration;
+    theIn.max_power = inUnit->mStats->mPower;
+    theIn.in_cinematic = ::gWorld.mInCinematic ? 1 : 0;
+    theIn.interval = EEGetRules().mCombat.mPowerRegenerationInterval;
+    theIn.tick_ms = gPhysics->mTickTimeMs;
+    EeUnitsPowerOut theOut;
+    ee_units_step_power(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit), inUnit->mPower.Get(),
+                        inUnit->mPowerRegenTimer.Get(), inUnit->mIsBuilt ? 1 : 0, this->IsLandBuilding() ? 1 : 0, &theIn,
+                        &theOut);
+    if (theOut.write) {
+        if (theOut.set_power)
+            inUnit->SetPower((long)theOut.power);
+        inUnit->SetPowerRegenTimer((long)theOut.regen_timer);
     }
-    inUnit->SetPowerRegenTimer(theRemaining);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
+        long thePower = (long)theWords[5];
+        bool theWrite = false, theSet = false;
+        long theRemaining = 0;
+        if (inUnit->mStats->mPowerRegeneration > 0 && !::gWorld.mInCinematic && !(this->IsLandBuilding() && !theWords[4])) {
+            theWrite = true;
+            theRemaining = (long)theWords[6] - gPhysics->mTickTimeMs;
+            if (theRemaining <= 0) {
+                long theValue = inUnit->mStats->mPowerRegeneration + thePower;
+                if (theValue > inUnit->mStats->mPower)
+                    theValue = inUnit->mStats->mPower;
+                thePower = theValue;
+                theSet = true;
+                theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
+            }
+        }
+        if (theWrite != (theOut.write != 0) || theSet != (theOut.set_power != 0)
+            || (theSet && thePower != (long)theOut.power) || (theWrite && theRemaining != (long)theOut.regen_timer))
+            EEUnitStepDiffers("RegeneratePower (timer)", inUnit->mUnitID, theOut.write ? (long)theOut.regen_timer : -1,
+                              theWrite ? theRemaining : -1);
+        theWords[9] = theOut.write;
+        theWords[10] = theOut.set_power;
+        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower.Get() : 0u;
+        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer.Get() : 0u;
+        EEUnitStepNote(kUnitStepPower, inUnit->mUnitID, theWords, 13);
+    }
 }
 
 extern GEViewport gViewport;

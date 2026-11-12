@@ -69,6 +69,70 @@ static char VerifierKeyBuf[] =
 	"\x15\x2e\x39\x29\x6f\x95\x4b\xf4\x94\x74\xeb\xd8\xe3\x4a\xfb\x41\xa8\x4c\x5c\x3d\xb6"
 	"\x42\xc0\x15\x35\x9e\x1a\xe2\x54\x2c\x0c\x0b\x34\x5f\xe2\x35\x8d\x30\x73";
 namespace WONAPI {
+// The hooks of the sessions and certificate flow (ee_won authflow.rs): the objects it holds are RefCounts
+struct AuthContextFlow {
+    static RefCount* Obj(void* p) { return static_cast<RefCount*>(p); }
+    static AsyncOp* Op(void* p) { return static_cast<AsyncOp*>(Obj(p)); }
+    static void AddRef(void* p) { Obj(p)->AddRef(); }
+    static void Release(void* p) { Obj(p)->Release(); }
+    static int64_t LastUse(void* p) { return (int64_t)static_cast<AuthSession*>(Obj(p))->GetLastUseTime(); }
+    static void Kill(void* p) { Op(p)->Kill(true); }
+    static bool Killed(void* p) { return Op(p)->IsKilled(); }
+    static long Status(void* p) { return Op(p)->GetStatus(); }
+    static void RunAsync(void* p, long t) { Op(p)->RunAsync(t); }
+    static long Run(void* p, long m, unsigned long t) { return Op(p)->Run(m, t); }
+    static void Finish(void* p, long s) { Op(p)->Finish(s); }
+    static void* NewTimer(void* c)
+    {
+        AsyncOp* op = new AsyncOp;
+        op->AddRef();
+        op->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(&AuthContext::StaticAutoRefreshCallback,static_cast<AuthContext*>(c)));
+        return static_cast<RefCount*>(op);
+    }
+    static void* NewCertOp(void* c, bool completion)
+    {
+        GetCertOp* op = new GetCertOp(static_cast<AuthContext*>(c));
+        op->AddRef();
+        if(completion)
+            op->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,static_cast<AuthContext*>(c)));
+        return static_cast<RefCount*>(static_cast<AsyncOp*>(op));
+    }
+    static void* CertPeerData(void* p)
+    {
+        const AuthPeerData* peer = static_cast<GetCertOp*>(Op(p))->GetPeerData();
+        if(peer==NULL) return NULL;
+        peer->CreateRef();
+        return const_cast<RefCount*>(static_cast<const RefCount*>(peer));
+    }
+    static void LightSetPeerData(void* l, void* p)
+    {
+        static_cast<LightGetCertOp*>(Op(l))->SetPeerData(p!=NULL?static_cast<const AuthPeerData*>(Obj(p)):NULL);
+    }
+    static bool PeerValid(void* c) { return static_cast<AuthContext*>(c)->mPeerData->IsValid(); }
+    static int64_t PeerExpireDelta(void* c) { return (int64_t)static_cast<AuthContext*>(c)->mPeerData->GetExpireDelta(); }
+    static EeWonAuthFlow* New(AuthContext* c)
+    {
+        EeWonAuthFlowHooks h;
+        h.context = c;
+        h.add_ref = AddRef;
+        h.release = Release;
+        h.session_last_use = LastUse;
+        h.op_kill = Kill;
+        h.op_killed = Killed;
+        h.op_status = Status;
+        h.op_run_async = RunAsync;
+        h.op_run = Run;
+        h.op_finish = Finish;
+        h.new_timer = NewTimer;
+        h.new_cert_op = NewCertOp;
+        h.cert_peer_data = CertPeerData;
+        h.light_set_peer_data = LightSetPeerData;
+        h.peer_valid = PeerValid;
+        h.peer_expire_delta = PeerExpireDelta;
+        return ee_won_auth_flow_new(&h);
+    }
+};
+
 // Class statics: the signing public key (0x566018, 0x1a8 bytes) and its file-checked flag (0x5661e1)
 ElGamal AuthContext::mVerifierKey(VerifierKeyBuf,sizeof(VerifierKeyBuf),false);
 bool AuthContext::mCheckedVerifierFile=false;
@@ -77,13 +141,11 @@ bool AuthContext::mCheckedVerifierFile=false;
 // Sets up the peer data, login-secret file path and server context, and loads the key file once per process
 void AuthContext::Init()
 {
-    this->mSessionCleanItr=this->mSessionMap.begin();
+    this->mFlow=AuthContextFlow::New(this);
     this->mSecrets=ee_won_auth_secrets_new();
     this->mPeerData=new AuthPeerData;
     this->mLoginSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
     this->mServerContext=new ServerContext;
-    this->mDoAutoRefresh=false;
-    this->mRefreshStatus=0x186a4;
     AutoCrit lock(GetVerifierCrit());
     if(AuthContext::mCheckedVerifierFile) return;
     AuthContext::LoadVerifierKey(WONAPICore::GetDefaultFileDirectory()+"_wonkver.pub");
@@ -98,8 +160,12 @@ AuthContext::AuthContext()
 // Destroys the auth context (members only)
 AuthContext::~AuthContext()
 {
+    ee_won_auth_flow_free(this->mFlow);
     ee_won_auth_secrets_free(this->mSecrets);
 }
+
+// The peer sessions and the certificate flow are ee_won's (authflow.rs): the session map and its clean-up cursor,
+// the waiting ops, the GetCertOp, the auto-refresh timer and the refresh status and flag; the lock stays here.
 
 // FUNCTION: WON 0x006deeb0
 // Caches a peer session for an address and drops up to five map entries unused for over 300 seconds
@@ -107,74 +173,46 @@ void AuthContext::PutSession(const IPAddr& address,AuthSession* session)
 {
     AutoCrit lock(this->mDataCrit);
     if(session==NULL) return;
-    SessionStruct& record=this->mSessionMap[address];
-    time_t now=time(NULL);
-    record.mLastUseTime=now;
-    record.mSessionList.push_back(session);
-    for(int i=0;i<5;++i) {
-        if(this->mSessionCleanItr==this->mSessionMap.end()) {
-            this->mSessionCleanItr=this->mSessionMap.begin();
-            break;
-        }
-        if(now-this->mSessionCleanItr->second.mLastUseTime>300)
-            this->mSessionMap.erase(this->mSessionCleanItr++);
-        else ++this->mSessionCleanItr;
-    }
+    ee_won_auth_flow_put_session(this->mFlow,address.GetValue(),static_cast<RefCount*>(session),(int64_t)time(NULL));
 }
 // FUNCTION: WON 0x006df080
 // Takes a session used within 300 seconds for the address out of the cache; NULL when none
 SmartPtr<AuthSession> AuthContext::GetSession(const IPAddr& address)
 {
     AutoCrit lock(this->mDataCrit);
-    SessionMap::iterator found=this->mSessionMap.find(address);
-    if(found==this->mSessionMap.end()) return NULL;
-    time_t now=time(NULL);
-    SessionStruct& record=found->second;
-    record.mLastUseTime=now;
-    SessionList& sessions=record.mSessionList;
-    SessionList::iterator next=sessions.begin();
-    while(next!=sessions.end()) {
-        SmartPtr<AuthSession> session=*next;
-        sessions.erase(next++);
-        if(now-session->GetLastUseTime()<300) return session;
-    }
-    return NULL;
+    void* aSession=ee_won_auth_flow_get_session(this->mFlow,address.GetValue(),(int64_t)time(NULL));
+    if(aSession==NULL) return NULL;
+    SmartPtr<AuthSession> session(static_cast<AuthSession*>(static_cast<RefCount*>(aSession)));
+    static_cast<RefCount*>(aSession)->Release();
+    return session;
 }
 // FUNCTION: WON 0x006de7f0
 // Starts a certificate refresh when the current auto-refresh timer fires (not when killed)
 void AuthContext::AutoRefreshCallback(AsyncOp* op)
 {
     AutoCrit lock(this->mDataCrit);
-    if(op!=this->mAutoRefreshOp.get()) return;
-    this->mAutoRefreshOp=NULL;
-    if(op->IsKilled()) return;
-    this->RefreshAsync(NULL,INFINITE);
+    ee_won_auth_flow_auto_refresh_callback(this->mFlow,static_cast<RefCount*>(op));
 }
 // FUNCTION: WON 0x006de8e0
 // Kills and drops the pending auto-refresh timer
 void AuthContext::StopAutoRefresh()
 {
     AutoCrit lock(this->mDataCrit);
-    if(this->mAutoRefreshOp.get()!=NULL) {
-        this->mAutoRefreshOp->Kill(true);
-        this->mAutoRefreshOp=NULL;
-    }
+    ee_won_auth_flow_stop_auto_refresh(this->mFlow);
 }
 // FUNCTION: WON 0x006deb30
 // Turns certificate auto-refresh on or off and restarts the timer
 void AuthContext::SetDoAutoRefresh(bool enabled)
 {
     AutoCrit lock(this->mDataCrit);
-    this->mDoAutoRefresh=enabled;
-    this->StartAutoRefresh(false);
+    ee_won_auth_flow_set_do_auto_refresh(this->mFlow,enabled);
 }
 // FUNCTION: WON 0x006df260
 // Kills the running certificate request and the auto-refresh timer
 void AuthContext::Kill()
 {
     AutoCrit lock(this->mDataCrit);
-    if(this->mGetCertOp.get()!=NULL) this->mGetCertOp->Kill(true);
-    this->StopAutoRefresh();
+    ee_won_auth_flow_kill(this->mFlow);
 }
 
 // FUNCTION: WON 0x006de760
@@ -188,19 +226,7 @@ void AuthContext::StaticAutoRefreshCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCou
 void AuthContext::StartAutoRefresh(bool force)
 {
     AutoCrit lock(this->mDataCrit);
-    this->StopAutoRefresh();
-    // the wait (ee_won authctx.rs): two minutes before a valid certificate expires, at least two, or five when forced
-    bool valid=this->mDoAutoRefresh && this->mPeerData->IsValid();
-    long long aWait=ee_won_auth_auto_refresh_wait(this->mDoAutoRefresh,force,valid,
-                                                  valid?(long long)this->mPeerData->GetExpireDelta():0);
-    if(aWait>=0) {
-        time_t wait=(time_t)aWait;
-        {
-            this->mAutoRefreshOp=new AsyncOp;
-            this->mAutoRefreshOp->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(&AuthContext::StaticAutoRefreshCallback,this));
-            this->mAutoRefreshOp->RunAsync(static_cast<long>(static_cast<unsigned long>(wait)*1000UL));
-        }
-    }
+    ee_won_auth_flow_start_auto_refresh(this->mFlow,force);
 }
 
 
@@ -278,8 +304,7 @@ void AuthContext::SetPeerData(const AuthPeerData* data)
 {
     AutoCrit lock(this->mDataCrit);
     this->mPeerData=data;
-    this->mSessionMap.clear();
-    this->mSessionCleanItr=this->mSessionMap.begin();
+    ee_won_auth_flow_clear_sessions(this->mFlow);
 }
 
 
@@ -398,46 +423,21 @@ void AuthContext::StaticGetCertCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCount> 
 void AuthContext::GetCertCallback(GetCertOp* op)
 {
     AutoCrit lock(this->mDataCrit);
-    if(op!=this->mGetCertOp.get()) return;
-    ConstSmartPtr<AuthPeerData> peerData=op->GetPeerData();
-    std::set<SmartPtr<LightGetCertOp>,SmartPtr<LightGetCertOp>::Comp>::iterator next=this->mRefreshSet.begin();
-    while(next!=this->mRefreshSet.end()) {
-        LightGetCertOp* waiting=next->get();
-        waiting->SetPeerData(peerData);
-        waiting->Finish(op->GetStatus());
-        ++next;
-    }
-    this->mRefreshSet.clear();
-    this->mGetCertOp=NULL;
-    this->mRefreshStatus=op->GetStatus();
-    this->StartAutoRefresh(true);
+    ee_won_auth_flow_get_cert_callback(this->mFlow,static_cast<RefCount*>(static_cast<AsyncOp*>(op)));
 }
 // FUNCTION: WON 0x006deba0
 // Queues a refresh op and starts a certificate request when none is running
 void AuthContext::RefreshAsync(LightGetCertOp* op,DWORD timeout)
 {
     AutoCrit lock(this->mDataCrit);
-    this->StopAutoRefresh();
-    if(op!=NULL) {
-        this->mRefreshSet.insert(op);
-        op->RunAsync((long)timeout);
-    }
-    if(this->mGetCertOp.get()==NULL) {
-        this->mGetCertOp=new GetCertOp(this);
-        this->mGetCertOp->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,this));
-        this->mRefreshStatus=this->mGetCertOp->Run(1,60000);
-    }
+    ee_won_auth_flow_refresh_async(this->mFlow,op!=NULL?static_cast<RefCount*>(op):NULL,timeout);
 }
 // FUNCTION: WON 0x006dedf0
-// Fetches a new certificate synchronously; restarts auto-refresh on success and returns the status
+// Fetches a new certificate synchronously; restarts auto-refresh on success and returns the status (no lock, as
+// the original)
 WONStatus AuthContext::RefreshBlock(DWORD timeout)
 {
-    SmartPtr<GetCertOp> op;
-    op=new GetCertOp(this);
-    this->mRefreshStatus=op->Run(2,timeout);
-    if(this->mRefreshStatus==0) this->StartAutoRefresh(false);
-    WONStatus status=this->mRefreshStatus;
-    return status;
+    return ee_won_auth_flow_refresh_block(this->mFlow,timeout);
 }
 
 

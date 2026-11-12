@@ -1,4 +1,6 @@
-// PeerAuthServer: server side of the WON peer authentication handshake
+// PeerAuthServer: server side of the WON peer authentication handshake. The messages, the state and the checks are
+// ee_won's (rust/crates/ee_won/src/peerauth.rs, through include/ee/wonapi/WONPeerAuthMsg.h); the certificates, the
+// peer data's keys and the two secrets stay this class's, reached as hooks.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <time.h>
@@ -12,7 +14,9 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONAuthPeerData.h"
+#include "ee/wonapi/WONAuthCertificate.h"
 #include "ee/wonapi/WONStatus.h"
+#include "ee/wonapi/WONPeerAuthMsg.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x006e7d30
@@ -20,158 +24,87 @@ namespace WONAPI {
 void PeerAuthServer::Start(const AuthPeerData* data,unsigned char lengthFieldSize)
 {
     this->mPeerData=data;
-    this->mLengthFieldSize=lengthFieldSize;
-    this->mState=STATE_AWAITING_REQUEST;
-}
-
-// FUNCTION: WON 0x006e7dd0
-// Builds challenge 1: a new secret encrypted with the client key, plus our certificate
-WONStatus PeerAuthServer::GetChallenge1(ByteBufferPtr& challenge)
-{
-    WriteBuffer msg(this->mLengthFieldSize,true);
-    msg.AppendLong(203);
-    msg.AppendLong(51);
-    this->mSecretB.Create(8);
-    WriteBuffer secret(0,true);
-    secret.AppendShort(this->mSecretB.GetKeyLen());
-    secret.AppendBytes(this->mSecretB.GetKey(),this->mSecretB.GetKeyLen());
-
-    ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.data(),secret.length());
-    if(encrypted.get()==NULL)
-        return WS_PeerAuthServer_FailedToEncryptWithClientPubKey;
-
-    msg.AppendShort(encrypted->length());
-    msg.AppendBytes(encrypted->data(),encrypted->length());
-    if(this->mUseAuth2)
-        msg.AppendBuffer(this->mPeerData->GetCertificate2()->GetRawBuf().get(),2);
-    else
-        msg.AppendBuffer(this->mPeerData->GetCertificate()->GetRawBuf().get(),2);
-    challenge=msg.ToByteBuffer(true);
-    return WS_Success;
-}
-
-// FUNCTION: WON 0x006e80a0
-// Checks the client's auth request and certificate, then builds challenge 1; returns the status
-WONStatus PeerAuthServer::HandleRequest(ReadBuffer& request,ByteBufferPtr& challenge)
-{
-    unsigned char authMode=request.ReadByte();
-    unsigned char encryptType=request.ReadByte();
-    request.ReadShort(); // encryption flags are consumed even though this version ignores them
-    if(authMode!=1)
-        return WS_PeerAuthServer_InvalidAuthMode;
-    if(encryptType!=0 && encryptType!=1)
-        return WS_PeerAuthServer_InvalidEncryptType;
-    bool encrypted=encryptType==1;
-    this->mAuthType=encrypted?AUTH_TYPE_PERSISTENT:AUTH_TYPE_PERSISTENT_NOCRYPT;
-
-    unsigned short len=request.ReadShort();
-    if(this->mUseAuth2)
-        this->mClientCertificate=new Auth2Certificate(request.ReadBytes(len),len);
-    else
-        this->mClientCertificate=new AuthCertificate(request.ReadBytes(len),len);
-
-    if(!this->mClientCertificate->IsValid())
-        return WS_PeerAuthServer_InvalidClientCertificate;
-    if(this->mClientCertificate->IsExpired(this->mPeerData->GetAuthDelta()))
-        return WS_PeerAuthServer_ExpiredClientCertificate;
-    if(!this->mPeerData->Verify(this->mClientCertificate.get()))
-        return WS_PeerAuthServer_FailedToVerifyClientCertificate;
-    return this->GetChallenge1(challenge);
-}
-
-// FUNCTION: WON 0x006e8300
-// Builds the complete message (error text, or the client secret encrypted) and creates the session on success
-WONStatus PeerAuthServer::GetComplete(WONStatus status,ByteBufferPtr& complete)
-{
-    this->mState=STATE_NOT_STARTED;
-    WriteBuffer msg(this->mLengthFieldSize,true);
-    msg.AppendLong(203);
-    msg.AppendLong(53);
-    if(status!=0)
-    {
-        msg.AppendShort(-4); // WS_CommServ_InvalidParameters
-        msg.AppendShort(1);
-        msg.AppendString(WONStatusToString(status));
-    }
-    else
-    {
-        msg.AppendShort(0);
-        WriteBuffer secret(0,true);
-        secret.AppendShort(this->mSecretA.GetKeyLen());
-        secret.AppendBytes(this->mSecretA.GetKey(),this->mSecretA.GetKeyLen());
-        ByteBufferPtr encrypted=this->mClientCertificate->GetPubKey().Encrypt(secret.data(),secret.length());
-        if(encrypted.get()==NULL)
-            return WS_PeerAuthServer_FailedToEncryptWithClientPubKey;
-        msg.AppendShort(encrypted->length());
-        msg.AppendBytes(encrypted->data(),encrypted->length());
-        this->mSession=new AuthSession(this->mAuthType,0,this->mSecretB,this->mLengthFieldSize);
-    }
-    complete=msg.ToByteBuffer(true);
-    return WS_Success;
-}
-
-// FUNCTION: WON 0x006e8630
-// Decrypts challenge 2, checks our secret came back, stores the client secret and builds complete
-WONStatus PeerAuthServer::HandleChallenge2(ReadBuffer& challenge,ByteBufferPtr& complete)
-{
-    unsigned short encryptedLen=challenge.ReadShort();
-    ByteBufferPtr decrypted=this->mPeerData->GetPrivateKey().Decrypt(challenge.ReadBytes(encryptedLen),encryptedLen);
-    if(decrypted.get()==NULL)
-        return WS_PeerAuthServer_FailedToDecryptWithPrivateKey;
-    ReadBuffer msg(decrypted->data(),decrypted->length());
-    unsigned short secretBLen=msg.ReadShort();
-    if(secretBLen!=this->mSecretB.GetKeyLen() || memcmp(this->mSecretB.GetKey(),msg.ReadBytes(secretBLen),secretBLen)!=0)
-        return WS_PeerAuthServer_InvalidSecretB;
-    if(!this->mSecretA.SetKey(msg.data()+msg.pos(),msg.length()-msg.pos()))
-        return WS_PeerAuthServer_InvalidSecretA;
-    return this->GetComplete(0,complete);
+    PeerAuthMsg<PeerAuthServer>::ServerStart(*this,lengthFieldSize);
 }
 
 // FUNCTION: WON 0x006e87c0
-// Dispatches a received handshake message by state; on failure builds a failure complete message
+// Dispatches a received handshake message by state (the request 0x6e80a0 and challenge 1 0x6e7dd0, challenge 2
+// 0x6e8630, the complete 0x6e8300); on failure builds a failure complete message
 WONStatus PeerAuthServer::HandleRecvMsg(const void* data,unsigned long len,ByteBufferPtr& output)
 {
     output=NULL;
-    if(this->mState==STATE_NOT_STARTED)
-        return WS_PeerAuthServer_NotStarted;
-    WONStatus status;
-    try
-    {
-        ReadBuffer msg(data,len);
-        DWORD serviceType=msg.ReadLong();
-        DWORD messageType=msg.ReadLong();
-        if(serviceType!=203)
-            return WS_PeerAuthServer_InvalidServiceType;
-        if(messageType==50)
-        {
-            if(this->mState!=STATE_AWAITING_REQUEST)
-                return WS_PeerAuthServer_UnexpectedRequest;
-            status=this->HandleRequest(msg,output);
-            this->mState=STATE_AWAITING_CHALLENGE2;
-        }
-        else if(messageType==52)
-        {
-            if(this->mState!=STATE_AWAITING_CHALLENGE2)
-                return WS_PeerAuthServer_UnexpectedChallenge;
-            status=this->HandleChallenge2(msg,output);
-        }
-        else
-            return WS_PeerAuthServer_InvalidMessage;
-    }
-    catch(ReadBufferException&)
-    {
-        status=100043; // WS_PeerAuthServer_MsgUnpackFailure
-    }
-    if(status!=0)
-        this->GetComplete(status,output);
-    return status;
+    return PeerAuthMsg<PeerAuthServer>::ServerRecv(*this,data,len,WonByteBufferSink,&output);
 }
-
 
 PeerAuthServer::PeerAuthServer()
 {
     this->mState=STATE_NOT_STARTED;
     this->mUseAuth2=true;
+}
+
+// ---- the hooks (WONPeerAuthMsg.h): the original's statements on the certificates, keys and secrets
+bool PeerAuthServer::PaPrivateDecrypt(const void* data,unsigned long len,std::string& out)
+{
+    ByteBufferPtr buf=this->mPeerData->GetPrivateKey().Decrypt(data,len);
+    if(buf.get()==NULL)
+        return false;
+    out.assign(buf->data(),buf->length());
+    return true;
+}
+bool PeerAuthServer::PaMakeCert(bool auth2,const void* data,unsigned long len)
+{
+    if(auth2)
+        this->mClientCertificate=new Auth2Certificate(data,len);
+    else
+        this->mClientCertificate=new AuthCertificate(data,len);
+    return this->mClientCertificate->IsValid();
+}
+bool PeerAuthServer::PaVerifyCert() { return this->mPeerData->Verify(this->mClientCertificate.get()); }
+bool PeerAuthServer::PaCertExpired() { return this->mClientCertificate->IsExpired(this->mPeerData->GetAuthDelta()); }
+bool PeerAuthServer::PaCertEncrypt(const void* data,unsigned long len,std::string& out)
+{
+    ByteBufferPtr buf=this->mClientCertificate->GetPubKey().Encrypt(data,len);
+    if(buf.get()==NULL)
+        return false;
+    out.assign(buf->data(),buf->length());
+    return true;
+}
+bool PeerAuthServer::PaHasOwnCert2() { return this->mPeerData->GetCertificate2()!=NULL; }
+void PeerAuthServer::PaOwnCertRaw(bool auth2,std::string& out)
+{
+    ByteBufferPtr raw=auth2 ? this->mPeerData->GetCertificate2()->GetRawBuf() : this->mPeerData->GetCertificate()->GetRawBuf();
+    if(raw.get()!=NULL && raw->length()>0)
+        out.assign(raw->data(),raw->length());
+}
+void PeerAuthServer::PaSecretCreate(int which,int len) { (which ? this->mSecretB : this->mSecretA).Create(len); }
+bool PeerAuthServer::PaSecretSetKey(int which,const void* key,int len)
+{
+    return (which ? this->mSecretB : this->mSecretA).SetKey(key,len);
+}
+void PeerAuthServer::PaSecretKey(int which,std::string& out)
+{
+    const Blowfish& key=which ? this->mSecretB : this->mSecretA;
+    out.assign(static_cast<const char*>(key.GetKey()),key.GetKeyLen());
+}
+void PeerAuthServer::PaNewSession(int type,unsigned short id,int which,unsigned char lengthFieldSize)
+{
+    this->mSession=new AuthSession((AuthType)type,id,which ? this->mSecretB : this->mSecretA,lengthFieldSize);
+}
+void PeerAuthServer::PaGetState(EeWonPeerState& s)
+{
+    s.state=this->mState;
+    s.auth_type=this->mAuthType;
+    s.length_field_size=this->mLengthFieldSize;
+    s.use_auth2=this->mUseAuth2;
+    s.use_client_secret=false;
+    s.client_key_size=0;
+}
+void PeerAuthServer::PaSetState(const EeWonPeerState& s)
+{
+    this->mState=(PeerAuthServerState)s.state;
+    this->mAuthType=(AuthType)s.auth_type;
+    this->mLengthFieldSize=s.length_field_size;
+    this->mUseAuth2=s.use_auth2;
 }
 
 }

@@ -8,10 +8,12 @@ pub mod admin;
 pub mod asyncop;
 pub mod auth;
 pub mod authctx;
+pub mod authflow;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
 pub mod buffer;
+pub mod cachemap;
 pub mod cdkey;
 pub mod cert;
 pub mod chat;
@@ -50,12 +52,14 @@ pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
 pub mod http;
+pub mod httpengine;
 /// cbindgen:ignore
 pub mod ipaddr;
 pub mod ipobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod md5;
+pub mod miscops;
 pub mod model;
 /// cbindgen:ignore
 pub mod netstats;
@@ -64,8 +68,10 @@ pub mod ops;
 pub mod parser;
 pub mod patch;
 pub mod path;
+pub mod peerauth;
 pub mod persist;
 pub mod plaintext;
+pub mod prefsobj;
 pub mod qsock;
 pub mod random;
 pub mod regkey;
@@ -85,7 +91,9 @@ pub mod status;
 pub mod strcase;
 pub mod text;
 pub mod thread;
+pub mod titlecfg;
 pub mod udpmgr;
+pub mod udpops;
 pub mod wire;
 
 #[cfg(test)]

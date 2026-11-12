@@ -24,6 +24,9 @@ public:
     static void Exclusive(bool inOn);
     // No record of any thread after it (the game's end, after its sweeps: the units a sweep made must not add any)
     static void Close();
+    // Whether a record of inTag committed now on this thread would be written (a caller that folds many records into
+    // one checks each before folding it in)
+    static bool Keeps(unsigned int inTag);
 
     explicit EESimCaptureRecord(unsigned int inTag) : mTag(inTag) {}
     void U32(unsigned int inValue) { this->Bytes(&inValue, 4); }

@@ -31,7 +31,7 @@ void RoutingGetUserStatusOp::AddWONUserId(unsigned long inUserId)
 void RoutingGetUserStatusOp::RunHook()
 {
     // the datagram is Rust's (ee_won routemsg.rs)
-    this->mOutgoing = RouteUserStatusRequest(this->mFriendStatusMap);
+    this->SetOutgoing(RouteUserStatusRequest(this->mFriendStatusMap));
     UDPManagerSendRecvOp::RunHook();
 }
 // FUNCTION: WON 0x006c6ab0

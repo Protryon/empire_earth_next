@@ -44,6 +44,9 @@
 //   move     a commandable, living unit with a movement domain: a Location goal (EEMPathTo's formation lays the goals
 //            out; their points are not judged); immobile ones: skip.
 // "ok" for a unit that has what the rule says, "bad" for one that does not, "skip" where the rule is not judged here.
+// A click that gives no message within 10 s is retried once (note "retry", then "retried" through the verdict): the
+// camera centred on the target's tile, the view scanned and the plan chosen again, the group selected again; the
+// refusal is "no-message" when the second click gives none either ("retry-no-pick" when the new view has no target).
 // Every poll writes "order seq <s> kind <k> phase <p> type <t> target <id> point <x> <y> queued <q> units <n> ok <n>
 // bad <n> skip <n> note <word>" (phase 1 choosing, 2 the input sent, 3 judged, 9 refused: the note says why) and per
 // unit "orderunit <seq> <id> <ok|bad|skip> <expected> <found>".
@@ -894,6 +897,102 @@ void Scout(int inKind, OrderPlan& ioPlan)
     sOrder.mNote = "-";
 }
 
+// the group inUnits selected (EEMSelectTheseUnits unless it already is) -> whether the UI's selection matches
+bool SelectGroup(std::vector<long>& inUnits)
+{
+    if (Selected(inUnits))
+        return true;
+    Post(new EEMSelectTheseUnits(inUnits));
+    for (int k = 0; k < 40; k++) {
+        Wait(150);
+        if (Selected(inUnits))
+            return true;
+    }
+    return false;
+}
+
+// the order's input (the click on the plan's point, or the status button inButton, then the ground point) and the
+// wait for its message's verdict (at most 10 s) -> the phase then (2: no message executed)
+int SendOrder(int inKind, const OrderPlan& inPlan, const GE2DPoint& inButton)
+{
+    switch (inKind) {
+    case kOrderGather:
+    case kOrderRepair:
+    case kOrderMove:
+        Click(inPlan.mClick.GetX(), inPlan.mClick.GetY(), 3, false);
+        break;
+    case kOrderRepairQueued:
+        Click(inPlan.mClick.GetX(), inPlan.mClick.GetY(), 3, true);
+        break;
+    case kOrderPatrol:
+        Click(inButton.GetX(), inButton.GetY(), 1, false);
+        break;
+    case kOrderAttackGround:
+        Click(inButton.GetX(), inButton.GetY(), 1, false);
+        Wait(400);
+        Click(inPlan.mClick.GetX(), inPlan.mClick.GetY(), 1, false);
+        break;
+    }
+    int thePhase = 2;
+    for (int k = 0; k < 100 && thePhase == 2; k++) {
+        Wait(100);
+        std::lock_guard<std::mutex> theLock(sOrderMutex);
+        thePhase = sOrder.mPhase;
+    }
+    return thePhase;
+}
+
+// the retry after a click that gave no message (the lead's run 2026-11-11, orders_b6.log: a repair right after a
+// gather that scouted for 14 s; the click on the building gave none): the camera centred on the target's tile (a unit
+// target), the view scanned and the plan chosen again (ioPlan), the group selected again, the button found again
+// -> the refusal (NULL: ready for the second click)
+const char* RetryPlan(int inKind, OrderPlan& ioPlan, GE2DPoint& outButton)
+{
+    {
+        std::lock_guard<std::mutex> theLock(sOrderMutex);
+        sOrder.mNote = "retry";
+    }
+    long theX = -10000, theY = -10000;
+    if (ioPlan.mTarget >= 0) {
+        gWorld.mLock->ReadLock();
+        EEUnit* theTarget = static_cast<EEUnit*>(gWorld.GetUnit((unsigned long)ioPlan.mTarget));
+        if (theTarget != NULL) {
+            theX = theTarget->GetTileX();
+            theY = theTarget->GetTileY();
+        }
+        gWorld.mLock->ReadUnlock();
+    }
+    if (theX != -10000) {
+        EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
+        theAction->SetLocation(theX, theY);
+        theAction->Dereference();
+    }
+    Wait(1500);   // frames drawn from the new view fill the picker
+    OrderPlan thePlan;
+    gWorld.mLock->ReadLock();
+    Choose(inKind, thePlan);
+    gWorld.mLock->ReadUnlock();
+    if (thePlan.mRefusal != NULL)
+        return "retry-no-pick";
+    if (thePlan.mDamage >= 0 && thePlan.mDamage != ioPlan.mDamage) {   // TEST ONLY, as OrderRun's first damage
+        gWorld.mLock->WriteLock();
+        EEComplexUnit* theBuilding = OwnComplex(thePlan.mDamage);
+        if (theBuilding != NULL && theBuilding->mHitPoints > theBuilding->GetStats()->GetMaxHitPoints() / 2)
+            theBuilding->mHitPoints = theBuilding->GetStats()->GetMaxHitPoints() / 2;
+        gWorld.mLock->WriteUnlock();
+    }
+    ioPlan = thePlan;
+    if (!SelectGroup(ioPlan.mUnits))
+        return "not-selected";
+    Wait(800);   // the group panel shows the selection's buttons
+    unsigned long theWanted = inKind == kOrderPatrol ? kButtonPatrol : kButtonAttackGround;
+    if ((inKind == kOrderPatrol || inKind == kOrderAttackGround) && !FindButton(theWanted, outButton))
+        return "no-button";
+    std::lock_guard<std::mutex> theLock(sOrderMutex);
+    sOrder.mNote = "retried";   // kept through the verdict: the driver logs it
+    return NULL;
+}
+
 void OrderRun(unsigned long inSeq, int inKind)
 {
     OrderPlan thePlan;
@@ -947,32 +1046,19 @@ void OrderRun(unsigned long inSeq, int inKind)
         sOrder.mArmed = true;
         sOrder.mPhase = 2;
     }
-    switch (inKind) {
-    case kOrderGather:
-    case kOrderRepair:
-    case kOrderMove:
-        Click(thePlan.mClick.GetX(), thePlan.mClick.GetY(), 3, false);
-        break;
-    case kOrderRepairQueued:
-        Click(thePlan.mClick.GetX(), thePlan.mClick.GetY(), 3, true);
-        break;
-    case kOrderPatrol:
-        Click(theButton.GetX(), theButton.GetY(), 1, false);
-        break;
-    case kOrderAttackGround:
-        Click(theButton.GetX(), theButton.GetY(), 1, false);
-        Wait(400);
-        Click(thePlan.mClick.GetX(), thePlan.mClick.GetY(), 1, false);
-        break;
-    }
-    int thePhase = 2;
-    for (int k = 0; k < 100 && thePhase == 2; k++) {
-        Wait(100);
-        std::lock_guard<std::mutex> theLock(sOrderMutex);
-        thePhase = sOrder.mPhase;
+    int thePhase = SendOrder(inKind, thePlan, theButton);
+    const char* theRetry = NULL;
+    if (thePhase == 2) {   // no message: once more from a fresh view (the hook stays armed: a late message counts)
+        theRetry = RetryPlan(inKind, thePlan, theButton);
+        {
+            std::lock_guard<std::mutex> theLock(sOrderMutex);
+            thePhase = sOrder.mPhase;
+        }
+        if (thePhase == 2 && theRetry == NULL)
+            thePhase = SendOrder(inKind, thePlan, theButton);
     }
     if (thePhase == 2) {
-        Refuse("no-message");
+        Refuse(theRetry != NULL ? theRetry : "no-message");
         fprintf(stderr, "TEST UI order-refused order control %d value 0 on form 0 (seq %lu, top form 0)\n", inKind, inSeq);
     } else
         fprintf(stderr, "TEST UI order-done order control %d value 0 on form 0 (seq %lu, top form 0)\n", inKind, inSeq);

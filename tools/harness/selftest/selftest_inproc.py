@@ -285,7 +285,7 @@ def fixture(arch, d):
         if g.verdict(seq) != "rejected":
             problems.append(f"rejected box verdict {g.verdict(seq)}")
         ordered = fixture_driver.orders(g, 11)
-        if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1:
+        if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1 or ordered["steps"][1]["note"] != "retried":
             problems.append(f"orders {ordered}")
         try:   # the second gather's scouting ends "scout-unseen": not a skip, the step fails
             fixture_driver.order_step(g, 11, "gather")
