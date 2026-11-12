@@ -9710,3 +9710,13 @@ block's two functions changed here, nothing else.
 - The Rust gate's `ee_won` test `reqops::tests::contest_through_the_abi` aborted once under full load
   (`ptr::copy_nonoverlapping` precondition) and passed alone and on the gate's rerun: a race in that crate's tests,
   not this lane's.
+- **The end of the round, merged with rust (001dada0)**: the shared open tree (the main checkout's
+  `build/open_data/tree`) was rebuilt by another session at 10:57-11:04, in the middle of the first full oracle run
+  (four seeds crashed reading a half-written tree; its `Data/ai` is now main's, five AIs). Everything was then run
+  before (the unmodified exe, kept) and after on the new tree: the oracle seeds 2-7 identical (against `ref` only the
+  manifest's log line differs, `1 AIs (boom)` -> `5 AIs (...)`: the tree's `Data/ai`); boom, classic_lua and
+  ageofai seeds 2-3 identical again (decisions, checksum lines, saved blocks); the five capture profiles PASS (oracle
+  494, late 499, space 501, calamity 526, missile 60 digests); `saveload --settings all --seeds 2-3 --at 1000,1900`
+  as before except `next` 2/4: seeds 2 and 3 at 1000 s part 647 and 1217 ticks after the load, and the unmodified
+  exe parts at the same ticks on this tree, so `tools/saveload_expect.txt`'s `next` lines (END) need the tree's new
+  boom looked at (not this lane's: the codecs give the same bytes); the Rust gate PASS; the test profile links 0/0.
