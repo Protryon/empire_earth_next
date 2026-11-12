@@ -886,8 +886,9 @@ static const float kWaterRippleAmplitude = 0.05f;
 // 276 the units' tile searches in progress (EESaveHasPathSearches)
 // 277 the wall manager's path request (EESaveHasWallRequest)
 // 278 the graph searches in progress (EESaveHasGraphSearches)
+// 279 the players' active groups (EESaveHasActiveGroups)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 278;
+const unsigned long kSaveGameMinorVersion = 279;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

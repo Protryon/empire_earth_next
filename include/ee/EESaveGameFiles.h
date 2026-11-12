@@ -183,6 +183,16 @@ inline bool EESaveHasGraphSearches(unsigned long inMajorVersion, unsigned long i
 {
     return inMajorVersion > 0 || inMinorVersion >= 278;
 }
+// port: from 0.279 a save holds the players' active groups (EESaveActiveGroups, EEActiveGroup.cpp: units, formation,
+// speeds, reserved destinations, flags and path requests; not the goal), written before the graph searches: a load had
+// none (the units moved at their own speeds, the groups' requests and finishes were gone)
+inline bool EESaveHasActiveGroups(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    return inMajorVersion > 0 || inMinorVersion >= 279;
+}
+class FSFile;
+void EESaveActiveGroups(FSFile& outFile);
+long EELoadActiveGroups(FSFile& inFile);   // the groups back at the loaded game's first tick (EEAfterLoad)
 // an area's part of the continent block's format (serial, kind, tiles as they are, hull, bounds) as bytes
 // (EEAIContinentSave.cpp; the towns' block)
 class EEAIArea;

@@ -854,6 +854,8 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             && LoadPlayerUnitOrder(inFile) == kErrorOK   // port (0.270): the order of each player's unit list
             && EESaveHasPathSearches(inMajorVersion, inMinorVersion)
             && gPathManager.LoadSearches(inFile) == kErrorOK   // port (0.276): the units' tile searches in progress
+            && (!EESaveHasActiveGroups(inMajorVersion, inMinorVersion)
+                || EELoadActiveGroups(inFile) == kErrorOK)   // port (0.279): the active groups, before their searches
             && EESaveHasGraphSearches(inMajorVersion, inMinorVersion))
             gPathManager.LoadGraphSearches(inFile);   // port (0.278): the graph searches in progress
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
@@ -926,6 +928,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
                 SavePlayerUnitOrder(outFile);   // port (0.270): the order of each player's unit list
             if (EESaveHasPathSearches(inMajorVersion, inMinorVersion))
                 gPathManager.SaveSearches(outFile);   // port (0.276): the units' tile searches in progress
+            if (EESaveHasActiveGroups(inMajorVersion, inMinorVersion))
+                EESaveActiveGroups(outFile);   // port (0.279): the active groups, before their searches
             if (EESaveHasGraphSearches(inMajorVersion, inMinorVersion))
                 gPathManager.SaveGraphSearches(outFile);   // port (0.278): the graph searches in progress
         }
