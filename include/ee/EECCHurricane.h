@@ -19,6 +19,8 @@ public:
     virtual ~EECCHurricane();               // 0xb1186
     virtual bool Start(EECalamity* inCalamity);                  // +0x04 0xb11bf
     virtual void Stop(EECalamity* inCalamity);                   // +0x08 0xb12d4
+    // the class's own steps of its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+    static bool StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply);
     virtual void Initialize(EECalamityData* inData);             // +0x20 0xb1324
     virtual void Reset(EECalamity* inCalamity);                  // +0x24 0xb13be
     virtual void LoadMedia(EEPlayer* inPlayer, bool inIsOnDemand);  // +0x28 0xb13c9

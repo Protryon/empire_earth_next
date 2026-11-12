@@ -70,48 +70,10 @@ EECCEarthquake::~EECCEarthquake()
 // Starts an earthquake: sends the source effect from the caster and plays the sound; the quake itself waits
 bool EECCEarthquake::Start(EECalamity* inCalamity)
 {
-    bool theResult = this->CreateSourceEffect(inCalamity);
-    if (theResult) {
-        this->PlaySound(inCalamity);
-        theResult = true;
-    }
-    inCalamity->mBoolPlaceHolder1 = false;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x4b0409
-// Sets the quake's area around the target and sends the source effect from the caster to it; the
-// travel time becomes the delay before the quake (0 without a caster). Returns true
-bool EECCEarthquake::CreateSourceEffect(EECalamity* inCalamity)
-{
-    GERectangle theRectangle;
-    GE3DPoint theLocation;
-    GE3DPoint theSource;
-    EEUnit* theCaster = inCalamity->mCasterUnit;
-    if (theCaster != NULL) {
-        inCalamity->GetTargetLocation(theLocation);
-        GE2DPoint theTopLeft;
-        GE2DPoint theBottomRight;
-        theTopLeft.SetX(theLocation.GetX() - this->mRadius);
-        theTopLeft.SetY(theLocation.GetY() - this->mRadius);
-        theBottomRight.SetX(theLocation.GetX() + this->mRadius);
-        theBottomRight.SetY(theLocation.GetY() + this->mRadius);
-        theRectangle.SetTopLeft(theTopLeft);
-        theRectangle.SetBottomRight(theBottomRight);
-        inCalamity->SetRectangle(theRectangle);
-        EEComplexUnit* theUnit = theCaster->mComplexUnit;
-        if (theUnit != NULL) {
-            GETransformation theTransformation(false);
-            theTransformation = theUnit->mPhysicalModel.GetLocation();
-            theSource.SetX(theTransformation.GetX());
-            theSource.SetY(theTransformation.GetY());
-            theSource.SetZ(theTransformation.GetZ());
-            if (gWorld.GetEffectManager()->CreateEffectBetween(theSource, theLocation, this->mGraphicEffect2, NULL) == 0)
-                inCalamity->mFloatPlaceHolder2 = theSource.DistanceTo(theLocation) / this->mSourceSpeed;
-        }
-    } else
-        inCalamity->mFloatPlaceHolder2 = 0.0f;
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.quake_source_speed = this->mSourceSpeed;
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCEarthquake::StartStep);
 }
 
 // FUNCTION: EXE 0x4b0502
@@ -191,8 +153,10 @@ long EECCEarthquake::CreateCrack(GE3DPoint& inFrom, float inX, float inY)
 // Stops the quake's sounds
 void EECCEarthquake::Stop(EECalamity* inCalamity)
 {
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    theParams.quake_source_speed = this->mSourceSpeed;
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCEarthquake::StartStep);
 }
 
 // FUNCTION: EXE 0x4b0765
@@ -326,4 +290,46 @@ void EECCEarthquake::UnloadMedia(EEPlayer* inPlayer)
 EEGameVariant* EEGameVariant::GetGameVariant(long inIndex)
 {
     return gGameVariants[inIndex];
+}
+
+// New (port): EECCEarthquake's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCEarthquake::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCEarthquake* theClass = static_cast<EECCEarthquake*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1: {
+        // CreateSourceEffect's caster part: the quake's area around the target, the source effect from the caster
+        GERectangle theRectangle;
+        GE3DPoint theLocation;
+        GE3DPoint theSource;
+        theCalamity->GetTargetLocation(theLocation);
+        GE2DPoint theTopLeft;
+        GE2DPoint theBottomRight;
+        theTopLeft.SetX(theLocation.GetX() - theClass->mRadius);
+        theTopLeft.SetY(theLocation.GetY() - theClass->mRadius);
+        theBottomRight.SetX(theLocation.GetX() + theClass->mRadius);
+        theBottomRight.SetY(theLocation.GetY() + theClass->mRadius);
+        theRectangle.SetTopLeft(theTopLeft);
+        theRectangle.SetBottomRight(theBottomRight);
+        theCalamity->SetRectangle(theRectangle);
+        EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
+        if (theUnit != NULL) {
+            GETransformation theTransformation(false);
+            theTransformation = theUnit->mPhysicalModel.GetLocation();
+            theSource.SetX(theTransformation.GetX());
+            theSource.SetY(theTransformation.GetY());
+            theSource.SetZ(theTransformation.GetZ());
+            outReply.ok = true;
+            outReply.value = (int32_t)gWorld.GetEffectManager()->CreateEffectBetween(theSource, theLocation, theClass->mGraphicEffect2, NULL);
+            outReply.x = theSource.DistanceTo(theLocation);
+        }
+        return true;
+    }
+    default:
+        return false;
+    }
 }

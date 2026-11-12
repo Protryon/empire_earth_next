@@ -382,6 +382,7 @@ public:
     long Load(FSFile& inFile, EETechTree* inTree);  // 0x1cf370 (one 0x10c-byte database record)
     bool Contains(long inUnitClass);        // 0x1cf6e5 (std::find in mU08->mUnitClasses)
     bool NeedsUnitMedia();                  // 0x1cf75b
+    bool NeedsUnitMediaUncaptured();        // (TNWK, TEST ONLY: NeedsUnitMedia records its answer)
     bool DependsOn(long inID);              // 0x1cf79a (recursive over the prerequisites)
     void SetPrerequisite(long inID);        // 0x1cf995
     void MakeAvailable();                   // 0x1cfa3c

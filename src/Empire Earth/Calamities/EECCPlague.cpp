@@ -59,18 +59,18 @@ EECCPlague::~EECCPlague()
 // Starts a plague by showing its effect from the caster to the target; always returns true
 bool EECCPlague::Start(EECalamity* inCalamity)
 {
-    this->ShowEffect(inCalamity);
-    return true;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, NULL, NULL, &EECCPlague::StartStep);
 }
 
 // FUNCTION: EXE 0x4b2fba
 // Stops the plague's sounds and removes its contagion helper (asserts that it existed)
 void EECCPlague::Stop(EECalamity* inCalamity)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID), 86);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, NULL, NULL);
+    EECalamityRunStop(this, inCalamity, theParams, NULL, NULL, &EECCPlague::StartStep);
 }
 
 // FUNCTION: EXE 0x4b3001
@@ -170,4 +170,21 @@ long EECCPlague::Update(EECalamity* inCalamity, float inElapsedTime)
 bool EECCPlague::IsValidTarget(EEComplexUnit* inUnit, EEUnit* inTargetUnit)
 {
     return this->mFunctor->CanInfect(inTargetUnit);
+}
+
+// New (port): EECCPlague's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCPlague::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCPlague* theClass = static_cast<EECCPlague*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1:
+        theClass->ShowEffect(theCalamity);
+        return true;
+    default:
+        return false;
+    }
 }

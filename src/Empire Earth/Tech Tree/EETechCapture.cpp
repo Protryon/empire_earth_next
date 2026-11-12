@@ -26,6 +26,9 @@
 #include "ee/EETechCapture.h"
 #include "ee/EECalamity.h"
 #include "ee/EEMap.h"
+#include "ee/EEEffectManager.h"
+#include "ee/EEContagionHelper.h"
+#include "ee/EEContagionManager.h"
 
 void EETechCaptureNode(EESimCaptureRecord& ioRecord, EETechTreeNode* inNode)
 {
@@ -549,4 +552,230 @@ void EETechCaptureUnitWalk(long inLoop, long inEffect, long inUnitType, long inA
     theRecord.Commit();
     sUnitSteps.clear();
     sUnitStepCount = 0;
+}
+
+// ---- CALT: a calamity's Start and Stop ----------------------------------------------------------------------------
+
+namespace {
+
+std::vector<unsigned char> sStartEvents;
+unsigned int sStartEventCount = 0;
+long sStartCollecting = 0;
+std::vector<unsigned char> sContagionEvents;
+unsigned int sContagionEventCount = 0;
+long sContagionCollecting = 0;
+// per thread: NeedsUnitMedia also runs on the media loader's thread
+thread_local std::vector<std::vector<long> > sWalks;
+
+void Event(std::vector<unsigned char>& ioEvents, unsigned int& ioCount, long inOp, long inA, long inB, float inC,
+           float inD)
+{
+    int theInts[3] = {(int)inOp, (int)inA, (int)inB};
+    float theFloats[2] = {inC, inD};
+    Append(ioEvents, theInts, sizeof(theInts));
+    Append(ioEvents, theFloats, sizeof(theFloats));
+    ioCount++;
+}
+
+// what a start or stop changes on a unit (none: its id 0xffffffff)
+void UnitState(EESimCaptureRecord& ioRecord, EEUnit* inUnit)
+{
+    ioRecord.U32(UnitID(inUnit));
+    if (inUnit == NULL)
+        return;
+    ioRecord.I32(inUnit->mHitPoints);
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    ioRecord.U32(theUnit != NULL ? 1 : 0);
+    if (theUnit == NULL)
+        return;
+    ioRecord.U32((theUnit->mIsDisabled ? 1u : 0u) | (theUnit->mIsTinted ? 2u : 0u) | (theUnit->mIsDeletable ? 4u : 0u));
+    ioRecord.U32(theUnit->mDisabledReason);
+    ioRecord.F32(theUnit->mSight);
+    ioRecord.I32(theUnit->mPositiveMorale);
+    ioRecord.I32(theUnit->mNegativeMorale);
+    ioRecord.U32(theUnit->mCloaked);
+    ioRecord.U32(theUnit->mCalamityFlags);
+    ioRecord.U32(theUnit->mFireEffect.mValue);
+    ioRecord.U32(theUnit->mNumAreaEffects);
+}
+
+void StartState(EESimCaptureRecord& ioRecord, EECalamity* inCalamity)
+{
+    CalamityState(ioRecord, inCalamity);
+    ioRecord.F32(inCalamity->mRectangle.GetLeft());
+    ioRecord.F32(inCalamity->mRectangle.GetTop());
+    ioRecord.F32(inCalamity->mRectangle.GetRight());
+    ioRecord.F32(inCalamity->mRectangle.GetBottom());
+    ioRecord.U32((inCalamity->mSound != NULL ? 1u : 0u) | (inCalamity->mSecondarySound != NULL ? 2u : 0u));
+    UnitState(ioRecord, inCalamity->mTargetUnit);
+    UnitState(ioRecord, inCalamity->mCasterUnit);
+    EEContagionManager* theManager = ::gWorld.GetContagionManager();
+    ioRecord.U32((unsigned int)theManager->mHelpers.size());
+    ioRecord.I32(theManager->mNextHelperID);
+    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->mEffectsByHandle.size() : 0u);
+    ioRecord.U32(gEffectManager != NULL ? (unsigned int)gEffectManager->mDestroyedHandles.size() : 0u);
+}
+
+void StartRecord(long inKind, EECalamityClass* inClass, EECalamity* inCalamity, EESimCaptureRecord& ioRecord)
+{
+    ioRecord.I32(inKind);
+    ioRecord.I32(inClass->mClassEnum);
+    StartState(ioRecord, inCalamity);
+    sStartEvents.clear();
+    sStartEventCount = 0;
+}
+
+void StartCommit(EECalamity* inCalamity, EESimCaptureRecord& ioRecord, long inResult)
+{
+    StartState(ioRecord, inCalamity);
+    ioRecord.I32(inResult);
+    ioRecord.U32(sStartEventCount);
+    if (!sStartEvents.empty())
+        ioRecord.Bytes(sStartEvents.data(), (unsigned int)sStartEvents.size());
+    ioRecord.Commit();
+    sStartEvents.clear();
+    sStartEventCount = 0;
+}
+
+}   // namespace
+
+void EECalamityCaptureStartEvent(long inOp, long inA, long inB, float inC, float inD)
+{
+    if (sStartCollecting == 0)
+        return;
+    Event(sStartEvents, sStartEventCount, inOp, inA, inB, inC, inD);
+}
+
+void EECalamityCaptureStartPoint(long inWhich, float inX, float inY, float inZ)
+{
+    if (sStartCollecting == 0)
+        return;
+    int theZ;
+    memcpy(&theZ, &inZ, 4);
+    Event(sStartEvents, sStartEventCount, kCalamityStartEffect, inWhich, theZ, inX, inY);
+}
+
+bool EECalamityCaptureStart(EECalamityClass* inClass, EECalamity* inCalamity)
+{
+    if (!EESimCaptureRecord::Active() || sStartCollecting != 0)
+        return inClass->Start(inCalamity);
+    EESimCaptureRecord theRecord(EECaptureTag("CALT"));
+    StartRecord(0, inClass, inCalamity, theRecord);
+    sStartCollecting++;
+    bool theResult = inClass->Start(inCalamity);
+    sStartCollecting--;
+    StartCommit(inCalamity, theRecord, theResult ? 1 : 0);
+    return theResult;
+}
+
+void EECalamityCaptureStop(EECalamityClass* inClass, EECalamity* inCalamity)
+{
+    if (!EESimCaptureRecord::Active() || sStartCollecting != 0) {
+        inClass->Stop(inCalamity);
+        return;
+    }
+    EESimCaptureRecord theRecord(EECaptureTag("CALT"));
+    StartRecord(1, inClass, inCalamity, theRecord);
+    sStartCollecting++;
+    inClass->Stop(inCalamity);
+    sStartCollecting--;
+    StartCommit(inCalamity, theRecord, 0);
+}
+
+// ---- CONT: a contagion helper's Update ----------------------------------------------------------------------------
+
+namespace {
+
+void HelperState(EESimCaptureRecord& ioRecord, EEContagionHelper* inHelper)
+{
+    ioRecord.I32(inHelper->mHelperID);
+    ioRecord.F32(inHelper->mTimeSinceLastSpread);
+    ioRecord.F32(inHelper->mTimeSinceLastUpdate);
+    ioRecord.F32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mTimeElapsedSinceLastUpdate : 0.0f);
+    ioRecord.F32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mDiscreteUpdateTime : 0.0f);
+    ioRecord.U32((unsigned int)inHelper->mUnits.size());
+    for (size_t i = 0; i < inHelper->mUnits.size(); i++) {
+        EEUnit* theUnit = inHelper->mUnits[i];
+        ioRecord.U32(theUnit->mUnitID);
+        ioRecord.I32(theUnit->mHitPoints);
+        ioRecord.U32(theUnit->mComplexUnit != NULL ? theUnit->mComplexUnit->mCalamityFlags : 0xffffffffu);
+    }
+}
+
+}   // namespace
+
+void EECalamityCaptureContagionEvent(long inOp, long inA, long inB, float inC, float inD)
+{
+    if (sContagionCollecting == 0)
+        return;
+    Event(sContagionEvents, sContagionEventCount, inOp, inA, inB, inC, inD);
+}
+
+void EECalamityCaptureContagion(EEContagionHelper* inHelper, float inElapsedTime)
+{
+    if (!EESimCaptureRecord::Active() || sContagionCollecting != 0) {
+        inHelper->Update(inElapsedTime);
+        return;
+    }
+    EESimCaptureRecord theRecord(EECaptureTag("CONT"));
+    theRecord.I32(inHelper->mCalamity != NULL ? inHelper->mCalamity->mClass->mClassEnum : -1);
+    HelperState(theRecord, inHelper);
+    theRecord.F32(inElapsedTime);
+    sContagionEvents.clear();
+    sContagionEventCount = 0;
+    sContagionCollecting++;
+    inHelper->Update(inElapsedTime);
+    sContagionCollecting--;
+    HelperState(theRecord, inHelper);
+    theRecord.U32(sContagionEventCount);
+    if (!sContagionEvents.empty())
+        theRecord.Bytes(sContagionEvents.data(), (unsigned int)sContagionEvents.size());
+    theRecord.Commit();
+    sContagionEvents.clear();
+    sContagionEventCount = 0;
+}
+
+// ---- TNWK: the tech tree's walks ------------------------------------------------------------------------------------
+
+void EETechCaptureWalkBegin()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    sWalks.push_back(std::vector<long>());
+}
+
+void EETechCaptureWalkStep(long inID, long inAction)
+{
+    if (!EESimCaptureRecord::Active() || sWalks.empty())
+        return;
+    sWalks.back().push_back(inID);
+    sWalks.back().push_back(inAction);
+}
+
+void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, long inA, long inB, long inResult)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    // GetBuildTime and NeedsUnitMedia are asked from other threads too (the media loader's): their records' order
+    // against the game thread's is timing's, so they are TNMT, apart from the game thread's walks
+    bool theOtherThreads = inKind == 6 || inKind == 10;
+    EESimCaptureRecord theRecord(theOtherThreads ? EECaptureTag("TNMT") : EECaptureTag("TNWK"));
+    theRecord.I32(inKind);
+    theRecord.I32(inTree != NULL ? EETechCapturePlayerIndex(inTree) : -1);
+    theRecord.I32(inA);
+    theRecord.I32(inB);
+    theRecord.I32(inResult);
+    std::vector<long> theSteps;
+    if (!sWalks.empty()) {
+        theSteps.swap(sWalks.back());
+        sWalks.pop_back();
+    }
+    theRecord.U32((unsigned int)theSteps.size() / 2);
+    for (size_t i = 0; i < theSteps.size(); i++)
+        theRecord.I32(theSteps[i]);
+    if (inNode != NULL)
+        EETechCaptureNode(theRecord, inNode);
+    if (inTree != NULL)
+        EETechCaptureTree(theRecord, inTree);
+    theRecord.Commit();
 }

@@ -70,28 +70,18 @@ EECCLeprosy::~EECCLeprosy()
 // the helper could not be created
 bool EECCLeprosy::Start(EECalamity* inCalamity)
 {
-    bool theResult = false;
-    long theCalamityHelperID = ::gWorld.GetContagionManager()->CreateContagionHelper(this->mFunctor, inCalamity, NULL);
-    if (::gWorld.GetContagionManager()->GetContagionHelper(theCalamityHelperID) != NULL) {
-        inCalamity->mIntPlaceHolder1 = theCalamityHelperID;
-        this->ShowEffects(inCalamity);
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSound->GetSampleID(), this->mSound->GetVolume(),
-                                                                        0.0f, 1.0f, this->mSound->GetLooping(), NULL));
-        if (inCalamity->mSound != NULL)
-            inCalamity->mSound->Dereference();
-        theResult = true;
-    }
-    return theResult;
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    return EECalamityRunStart(this, inCalamity, theParams, this->mSound, NULL, &EECCLeprosy::StartStep);
 }
 
 // FUNCTION: EXE 0x4b1a07
 // Stops the leprosy's sounds and removes its contagion helper (asserts that it existed)
 void EECCLeprosy::Stop(EECalamity* inCalamity)
 {
-    long theCalamityHelperID = inCalamity->mIntPlaceHolder1;
-    inCalamity->StopSound();
-    inCalamity->StopSecondarySound();
-    ESVERIFY_AT(::gWorld.GetContagionManager()->DestroyContagionHelper(theCalamityHelperID), 112);
+    // the decisions are Rust (ee_tech calamity_start.rs; ee/EECalamityUpdate.h); the world steps are StartStep's
+    EeCalamityParams theParams = EECalamityBaseParams(this, this->mSound, NULL);
+    EECalamityRunStop(this, inCalamity, theParams, this->mSound, NULL, &EECCLeprosy::StartStep);
 }
 
 // FUNCTION: EXE 0x4b1a4e
@@ -262,4 +252,21 @@ bool EECCLeprosy::IsValidLocation(EEComplexUnit* inUnit, unsigned long inX, unsi
     EeCalamityCast theCast = EECalamityCastOf(this, inUnit, inX, inY);
     theCast.radius = (uint32_t)this->mRadius;
     return EECalamityValidLocation(this, theCast, inUnit, 0);
+}
+
+// New (port): EECCLeprosy's own steps for its Rust Start and Stop (ee/EECalamityUpdate.h: EeCalamityOp::ClassStep)
+bool EECCLeprosy::StartStep(EECalamityUpdateHost& ioHost, const EeCalamityCall& inCall, EeCalamityReply& outReply)
+{
+    EECCLeprosy* theClass = static_cast<EECCLeprosy*>(ioHost.mClass);
+    EECalamity* theCalamity = ioHost.mCalamity;
+    (void)theClass;
+    if (inCall.op != EeCalamityOp::ClassStep)
+        return false;
+    switch (inCall.index) {
+    case 1:
+        theClass->ShowEffects(theCalamity);
+        return true;
+    default:
+        return false;
+    }
 }
