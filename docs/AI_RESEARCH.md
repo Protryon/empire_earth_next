@@ -3650,6 +3650,31 @@ home reserve on the dispatch. 32 seeds against main's scripts (lb0):
   citizens, and costs two defeats and 1-5 minutes against the classic. Its timing depends on the economy: boom-econ's
   phase signal and its pause of the Copper save while the raid builds (on boom-econ's branch) are the parts it needs.
 
+**The raid on boom-econ's real signal (boom-econ's f0fc8d79 merged into boom-defence; its order on).** Both variants
+turn on boom-econ's build order (ECON.order), which carries rs0's 8 Stone soldiers in its phase tables. o1 adds the
+raid with the training priority: 3 soldiers an order while it builds, the citizens yielding (memory.raid.priority),
+and a 15-minute gate of three quarters of the force. Same exe (with boom-econ's release fix), 32 seeds, --cache.
+
+| Variant | Opponent | Defeats | Under 30 | W/L/C | Stone | Copper | Bronze |
+|---|---|---|---|---|---|---|---|
+| o0, the order | Age of AI | 0/31 | 0 | 3/15/13 | 31, 22.6 | 26, 47.1 | 23, 73.5 |
+| | improved classic | 15/32 | 18 | 2/28/2 | 26, 25.0 | 14, 46.0 | 10, 74.8 |
+| o1, the order + the raid | Age of AI | 0/31 | 1 | 2/14/15 | 31, 22.6 | 26, 51.4 | 23, 75.8 |
+| | improved classic | 16/32 | 19 | 1/26/5 | 26, 25.0 | 15, 50.1 | 11, 76.7 |
+
+| The raids (o1) | Built from (min) | Sent | Units | Sent at (min) | Out (s) | Own losses | Killed (citizens / soldiers) |
+|---|---|---|---|---|---|---|---|
+| improved classic | 43.2 (26 games) | 16 | 17.6 | 54.3 | 339 | 4.7 | 3.6 / 4.2 |
+| Age of AI | 38.7 (31 games) | 20 | 19.5 | 49.8 | 329 | 1.4 | 3.9 / 1.6 |
+
+- **The priority works:** the raid now goes with 18-20 soldiers (10 before). It kills about 4 citizens and 2-4
+  soldiers for 1-5 of its own.
+- **It goes late:** `stone_developed` comes at minute 39-43, so the force builds through minutes 40-54. The raid
+  costs the Copper Age 4 minutes against both opponents and one defeat more against the classic. Its timing is set
+  by the phase signal.
+- **The order itself** (o0, boom-econ's, still off on main) has 15 defeats against the classic, against rs0's 8 on
+  the earlier exe. That is boom-econ's bench to read; the raid adds to it, not to rs0.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
