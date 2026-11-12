@@ -5,8 +5,8 @@
 //! campaign form manager's fields are the game's, behind the host).
 
 use crate::menus::{
-    EE_SCREENS_CPP_SCENARIOS_CLOSE, EE_SCREENS_CPP_SCENARIOS_OPEN, EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN,
-    EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION, EE_SCREENS_TEXT_CAMPAIGN_FIRST, EE_SCREENS_TEXT_CAMPAIGN_NAME,
+    EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION, EE_SCREENS_TEXT_CAMPAIGN_FIRST,
+    EE_SCREENS_TEXT_CAMPAIGN_NAME,
 };
 use ee_plat_core::utf8;
 
@@ -145,8 +145,8 @@ pub fn dispatch<H: CustomCampaignHost>(host: &mut H, event: u32) -> bool {
         EE_SCREENS_CC_OK => {
             // the chosen campaign's scenario choice (its open scenarios only), this form closed behind Please wait
             host.call(EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, 0, 0, 0);
-            host.set_open_event(CC_FORM_SCENARIOS, EE_SCREENS_CPP_SCENARIOS_OPEN);
-            host.set_close_event(CC_FORM_SCENARIOS, EE_SCREENS_CPP_SCENARIOS_CLOSE);
+            host.set_open_event(CC_FORM_SCENARIOS, crate::scenario_screens::EE_SCREENS_CS_OPEN);
+            host.set_close_event(CC_FORM_SCENARIOS, crate::scenario_screens::EE_SCREENS_CS_CLOSE);
             if let Some(text) = host.string_checked(CC_IDS_PLEASE_WAIT) {
                 host.call(crate::settings_form::EE_SCREENS_OP_CLOSE_FORM, 0, 0, 0);
                 host.put_text(crate::menus::EE_SCREENS_TEXT_MESSAGE, 0, &text);

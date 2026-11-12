@@ -70,6 +70,9 @@
 #include "lle/UIScrollBar.h"
 #include "lle/UIFileListBox.h"
 #include "lle/FSRestorable.h"
+#include "lle/UILayoutUtility.h"
+#include "lle/UITextureBackground.h"
+#include "lle/UIBFull.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
@@ -87,7 +90,6 @@
 #include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEUIELobbyEvents.h"
 #include "ee/EECampaignFormManager.h"
-#include "ee/EEUIECampaignSelectScreenEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGameSound.h"
@@ -105,6 +107,9 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EEUIFMainGame.h"
+#include "ee/EECampaignProgress.h"
+#include "ee/EEUIBMapBackground.h"
+#include "ee/EEStringIDs.h"
 #include "platform/PlatWindow.h"
 #include "rust/ee_screens.h"
 
@@ -169,6 +174,32 @@ static void EEScreensDropSave(UIForm* inObject)
     reinterpret_cast<UReferenceCounter*>(inObject)->Dereference();
 }
 
+// ---- the campaign scenario select and scenario intro forms' (scenario_screens.rs)
+
+static UString sCampaignDefaultUser("default");   // 0x5d2ae0 (gCampaignDefaultUser): the campaign progress's user
+
+// the intro's scenario file (GetScenario's, for Start's load or game)
+static FSFileSpec& EEScreensScenario()
+{
+    static FSFileSpec sScenario;
+    return sScenario;
+}
+
+// a campaign scenario's sound and map below the campaign's scenario prefix
+struct EEScreensMedia {
+    static void Prefix(EESMMediaStrings& ioStrings)
+    {
+        ioStrings.mSoundFile = gU52A280 + ioStrings.mSoundFile;
+        ioStrings.mMapFile = gU52A280 + ioStrings.mMapFile;
+    }
+};
+
+// the campaign's open-error message, closed
+static void EEScreensCloseCampaign(UIForm* inForm)
+{
+    ee_screens_event(EE_SCREENS_CS_CLOSE_CALLBACK, inForm, NULL);
+}
+
 // a put's texts joined by 0 bytes
 static std::vector<UString> Parts(const uint8_t* inText, size_t inLength)
 {
@@ -193,10 +224,6 @@ UIEvent* EECreateScreenEvent(unsigned long inEvent)
     switch (inEvent) {
     case 0:
         return NULL;
-    case EE_SCREENS_CPP_SCENARIOS_OPEN:
-        return new EEUIECSSEFormOpen;
-    case EE_SCREENS_CPP_SCENARIOS_CLOSE:
-        return new EEUIECSSEFormClose;
     case EE_SCREENS_CPP_LOBBY_SINGLE:
         return new EEUIELEActivateSinglePlayer;
     case EE_SCREENS_CPP_DUMP_MEDIA:
@@ -576,8 +603,222 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM:
         gUserInterface->OpenForm(gSavedMainGameForm);
         break;
+    // the campaign scenario select and scenario intro forms' (scenario_screens.rs)
+    case EE_SCREENS_OP_REMOVE_BACKGROUND:
+        if (UIBackground* theBackground = theForm->GetBackgroundByID((long)(int32_t)inA))
+            theForm->RemoveBackground(theBackground);
+        break;
+    case EE_SCREENS_OP_TAB_STOP:
+        theForm->SetTabStop(inA);
+        break;
+    case EE_SCREENS_OP_LABEL_CLEAR:
+        static_cast<UITextLabel*>(Ctl())->DeleteArray();
+        break;
+    case EE_SCREENS_OP_LABEL_LINE_COUNT:
+        return static_cast<UITextLabel*>(Ctl())->GetLineCount();
+    case EE_SCREENS_OP_LABEL_START_LINE:
+        static_cast<UITextLabel*>(Ctl())->SetStartingDisplayLine(inB);
+        break;
+    case EE_SCREENS_OP_ADD_TRIGGER: {
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        theManager->AddEventToTrigger(theEvent, theForm, NULL);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_OP_SLEEP:
+        PlatSleep(inA);
+        break;
+    case EE_SCREENS_OP_OPEN_MAIN_GAME_FORM:
+        gUserInterface->OpenForm(gUIManager->mMainGameForm);
+        break;
+    case EE_SCREENS_GAME_SI_FLAGS: {
+        EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
+        return (theIntro->mIsInGame ? EE_SCREENS_SI_FLAG_IN_GAME : 0) |
+               (theIntro->mIsLoadingFromGame ? EE_SCREENS_SI_FLAG_LOADING : 0) |
+               (theIntro->mIsCampaign ? EE_SCREENS_SI_FLAG_CAMPAIGN : 0) |
+               (theIntro->mScrollBriefingToEnd ? EE_SCREENS_SI_FLAG_SCROLL : 0);
+    }
+    case EE_SCREENS_GAME_SI_SET_FLAG: {
+        EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
+        bool* const theFlags[4] = {&theIntro->mIsInGame, &theIntro->mIsLoadingFromGame, &theIntro->mIsCampaign,
+                                   &theIntro->mScrollBriefingToEnd};
+        for (unsigned long i = 0; i < 4; i++)
+            if (inA == (1u << i))
+                *theFlags[i] = inB != 0;
+        break;
+    }
+    case EE_SCREENS_GAME_SI_BLINK_OFF:
+        EEUISCIFormManager::Get()->SetBlinking(false);
+        break;
+    case EE_SCREENS_GAME_SOUND_STOP:
+        gSoundManager->Stop(inA, false);
+        break;
+    case EE_SCREENS_GAME_SOUND_LATENCY:
+        gSoundManager->SetLatency(inA);
+        break;
+    case EE_SCREENS_GAME_SI_OPEN_MAP:
+        return EEUISCIFormManager::Get()->OpenMap();
+    case EE_SCREENS_GAME_SI_OPEN_MOVIE:
+        return EEUISCIFormManager::Get()->OpenMovie();
+    case EE_SCREENS_GAME_SI_OPEN_SOUND:
+        return EEUISCIFormManager::Get()->OpenSound();
+    case EE_SCREENS_GAME_SI_PLAY_MOVIE: {
+        FSFileSpec theMovie;
+        UIEvent* theEvent = EECreateScreenEvent(inA);
+        EEUISCIFormManager::Get()->GetMovie(theMovie);
+        gUserInterface->PostPlayMovie(theMovie, theEvent);
+        theEvent->Dereference();
+        break;
+    }
+    case EE_SCREENS_GAME_SI_PLAY_SOUND: {
+        // the briefing sound once (below Sounds\ unless its file names the folder)
+        FSFileSpec theSound;
+        UString theFile;
+        UString theLower;
+        UString theDirectory;
+        unsigned long theSample;
+        unsigned long theID = inA;
+        EEUISCIFormManager::Get()->GetSound(theSound);
+        theFile = theSound.GetFile();
+        theLower = theFile;
+        theLower.ToLower();
+        theDirectory = UWideString("Sounds\\");
+        theDirectory.ToLower();
+        if (theLower.Find(theDirectory, 0) == theLower.GetLength())
+            theFile = UString("Sounds\\") + theFile;
+        gSoundManager->SetLatency(500);
+        EELoadSound(theFile, 0x31, theSample, theID, 0);
+        gSoundManager->RegisterOneShotSound(theSample, theID);
+        return (uint32_t)theID;
+    }
+    case EE_SCREENS_GAME_SI_MAP_BACKDROP: {
+        // the scenario's map picture as the form's backdrop (-2), unless it already is
+        FSFileSpec theMap;
+        UString theFile;
+        UString theLower;
+        UString theDirectory;
+        GERectangle theRectangle;
+        GETextureDescription theDescription;
+        theDescription.mPixelDepth = 16;
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mFrameFormat = 0;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        UILayoutUtility theLayout;
+        EEUISCIFormManager* theIntro = EEUISCIFormManager::Get();
+        UIBackground* theBackground = theForm->GetBackgroundByID(-2);
+        theIntro->GetMap(theMap);
+        theFile = theMap.GetFile();
+        theLower = theFile;
+        theLower.ToLower();
+        theDirectory = UWideString("Scenarios\\");
+        theDirectory.ToLower();
+        if (theLower.Find(theDirectory, 0) == theLower.GetLength())
+            theFile = UString("Scenarios\\") + theFile;
+        if (theBackground == NULL || strcmp(static_cast<UITextureBackground*>(theBackground)->GetTextureFileName(), theFile) != 0) {
+            if (theBackground)
+                theForm->RemoveBackground(theBackground);
+            if (theIntro->OpenMap()) {
+                theForm->LockDrawBackground();
+                UIBackground* theBackdrop = new EEUIBMapBackground(-2, theFile, theDescription, theRectangle, theLayout,
+                                                                   theForm, 2, 0, 0, true);
+                theBackdrop->Open();
+                theForm->UnlockDrawBackground();
+            }
+        }
+        break;
+    }
+    case EE_SCREENS_GAME_SI_GET_SCENARIO:
+        return EEUISCIFormManager::Get()->GetScenario(EEScreensScenario());
+    case EE_SCREENS_GAME_SI_POST_LOAD:
+        gUserInterface->PostLoadSavedGame(EEScreensScenario());
+        break;
+    case EE_SCREENS_GAME_SI_START_GAME: {
+        // a single player game of the scenario (inA: the campaign's), a new local server, start loading
+        gGameOptions.mLock->WriteLock();
+        gGameOptions.SetDefaults();
+        if (inA) {
+            EECampaignFormManager* theCampaign = EECampaignFormManager::Get();
+            gGameOptions.mLoadType = 4;
+            gGameOptions.mDifficulty = theCampaign->mDifficultyLevel;
+            gGameOptions.mCampaignName = theCampaign->mCampaignName;
+            gGameOptions.mCampaignChecksum = theCampaign->mChecksum;
+            gGameOptions.mScenarioName = theCampaign->mScenarioName;
+            gGameOptions.mMapName = theCampaign->mFirstScenario;
+        } else {
+            gGameOptions.mLoadType = 1;
+            gLoadScenarioName = EEScreensScenario().GetFile().GetIndexedSubstring(0, EEScreensScenario().GetFile().GetLength() - 5);
+        }
+        gGameOptions.SetMapType((const char*)EEScreensScenario().GetFile());
+        gGameOptions.mIsMultiplayer = false;
+        gGameOptions.mLock->WriteUnlock();
+        if (gCommunications)
+            delete gCommunications;
+        gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
+        static_cast<EEServer*>(gCommunications)->StartThreads();
+        static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
+        static_cast<EEServer*>(gCommunications)->StopPing();
+        static_cast<EEServer*>(gCommunications)->mLoadState = true;
+        NEMessage* theMessage = new EEMStartLoading(1, TMGetTime());
+        gLocalPlayerOut = false;
+        gCommunications->ProcessLocalUserInput(theMessage, kSlotNone);
+        break;
+    }
+    case EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM:
+        EECampaignFormManager::Get()->UpdateChecksum();
+        break;
+    case EE_SCREENS_GAME_CAMPAIGN_CHECKSUM:
+        return EECampaignFormManager::Get()->mChecksum;
+    case EE_SCREENS_GAME_CS_MAP_BACKDROP: {
+        // the campaign's background image (a file of Scenarios) as the form's backdrop (-2)
+        GERectangle theRectangle;
+        GETextureDescription theDescription;
+        theDescription.mPixelDepth = 16;
+        theDescription.mNumMipLevelsToDrop = 0;
+        theDescription.mSurfaceVolatility = 1;
+        theDescription.mFrameFormat = 0;
+        theDescription.mIs3DRenderable = false;
+        theDescription.mIsTransparencyEnabled = false;
+        theDescription.mHasAlpha = true;
+        theDescription.mCreateMIPMaps = true;
+        UILayoutUtility theLayout;
+        FSFileSpec* theMapSpec = NULL;
+        UWideString theMapName = EECampaignFormManager::Get()->mCampaign.GetBackgroundImage();
+        UString theMapFile = UString("Scenarios\\" + gU52A280 + theMapName);
+        if (gDataPath->FindFile(theMapFile, theMapSpec) == kErrorOK) {
+            theForm->LockDrawBackground();
+            UIBackground* theMap = new EEUIBMapBackground(-2, theMapFile, theDescription, theRectangle, theLayout, theForm,
+                                                          2, 0, 0, true);
+            theMap->Open();
+            theForm->UnlockDrawBackground();
+            if (theMapSpec)
+                delete theMapSpec;
+        }
+        break;
+    }
+    case EE_SCREENS_GAME_DIFFICULTY:
+        return (uint32_t)gDifficultyLevel;
+    case EE_SCREENS_GAME_CS_SET_DIFFICULTY:
+        EECampaignFormManager::Get()->mDifficultyLevel = (long)inA;
+        gDifficultyLevel = (long)inA;
+        gDifficultyLevel2 = (long)inA;
+        gGameOptions.mLock->WriteLock();
+        gGameOptions.mDifficulty = inA;
+        gGameOptions.mLock->WriteUnlock();
+        break;
+    case EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN_GET:
+        return EECampaignFormManager::Get()->mAllScenariosOpen;
     }
     return 0;
+}
+
+// the manager's form of an id (scenario_screens.rs: a call on a named form)
+extern "C" void* ee_screenscpp_form(uint32_t inID)
+{
+    return gUIManager->GetFormByID(inID);
 }
 
 // a text of the game (EE_SCREENS_TEXT_*) into outText (up to inCapacity bytes); its length in bytes
@@ -700,6 +941,45 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     case EE_SCREENS_TEXT_SCENARIO_EXTENSION:
         theText = gScenarioExtension;
         break;
+    case EE_SCREENS_TEXT_SI_BRIEFING:
+        theText = EEUISCIFormManager::Get()->GetBriefing();
+        break;
+    case EE_SCREENS_TEXT_SI_HINTS:
+        theText = EEUISCIFormManager::Get()->GetHints();
+        break;
+    case EE_SCREENS_TEXT_SI_HISTORY:
+        theText = EEUISCIFormManager::Get()->GetHistory();
+        break;
+    case EE_SCREENS_TEXT_CS_CAMPAIGN_NAME:
+        theText = EECampaignFormManager::Get()->mCampaignName;
+        break;
+    case EE_SCREENS_TEXT_CS_DESCRIPTION:
+        theText = EECampaignFormManager::Get()->mDescription;
+        break;
+    case EE_SCREENS_TEXT_CS_SCENARIOS: {
+        std::vector<UWideString> theScenarios = EECampaignFormManager::Get()->mCampaign.GetScenarios();
+        for (size_t i = 0; i < theScenarios.size(); i++)
+            theList.append((const char*)theScenarios[i], theScenarios[i].GetTCHARLength()).push_back('\0');
+        break;
+    }
+    case EE_SCREENS_TEXT_CS_COMPLETED: {
+        // the campaign progress of the default user: its completed scenarios (none when it does not load)
+        EECampaignProgress theProgress;
+        std::vector<UWideString> theCompleted;
+        EECampaignFormManager* theManager = EECampaignFormManager::Get();
+        if (theProgress.Load(UWideString(sCampaignDefaultUser), theManager->mCampaignName, theManager->GetChecksum(),
+                             false) == kErrorOK)
+            theProgress.GetCompletedScenarios(theCompleted);
+        for (size_t i = 0; i < theCompleted.size(); i++)
+            theList.append((const char*)theCompleted[i], theCompleted[i].GetTCHARLength()).push_back('\0');
+        break;
+    }
+    case EE_SCREENS_TEXT_CS_PROGRESS: {
+        UWideString theString;
+        gResource->GetString(IDS_CAMPAIGN_IN_PROGRESS_OF_COMPLETED, theString);
+        sprintf(theText, theString, (size_t)(inArg >> 16), (size_t)(inArg & 0xffff));   // (the sizes, as the original)
+        break;
+    }
     case EE_SCREENS_TEXT_LOAD_SAVED_NAME:
         theText = gLoadSavedGameName;
         break;
@@ -754,9 +1034,59 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         static_cast<UIListBox<UWideString>*>(gUIManager->GetFormByID(inArg >> 16)->GetControl(inArg & 0xffff))->AppendLine(theText);
         break;
     case EE_SCREENS_TEXT_CAMPAIGN_BUILT_IN:
-        return EECampaignFormManager::GetBuiltInCampaign(theText) != 0;
+        return EECampaignFormManager::GetBuiltInCampaign(theText);   // (its number: the checksum it must have)
     case EE_SCREENS_TEXT_MESSAGE_NONE_FOUND:
         gUIManager->DisplayMessage(theText, true, NULL, EEScreensNoCustomCampaigns, true);
+        break;
+    case EE_SCREENS_TEXT_MESSAGE_CLOSE_CAMPAIGN:
+        gUIManager->DisplayMessage(theText, true, NULL, EEScreensCloseCampaign, true);
+        break;
+    case EE_SCREENS_TEXT_CS_ARCHIVE: {
+        // the campaign's file on the data path; a valid one's archive added to it
+        FSFileSpec* theArchiveFile = NULL;
+        FSArchive theArchive;
+        long theResult = gDataPath->FindFile(Parts(inText, inLength)[0], theArchiveFile);
+        bool theAdded = theResult == kErrorOK && inArg != 0;
+        if (theAdded) {
+            theArchive.SetArchive(*theArchiveFile);
+            gDataPath->AddArchive(theArchive, true);
+            EESetDataPaths();
+        }
+        if (theArchiveFile)
+            delete theArchiveFile;
+        return theAdded;
+    }
+    case EE_SCREENS_TEXT_CS_SCENARIO_HEADER:
+    case EE_SCREENS_TEXT_CS_START: {
+        // a campaign scenario's header: for Start, its media strings (the campaign's prefix on the sound and map) and
+        // file into the intro form's manager (2; 1: the header does not load, 0: no file)
+        EEPSaveGameHeader theHeader;
+        FSFileSpec* theFile = NULL;
+        if (gDataPath->FindFile(UString("Scenarios\\" + gU52A280 + theText + gScenarioExtension), theFile) != kErrorOK) {
+            if (theFile)
+                delete theFile;
+            return 0;
+        }
+        if (theHeader.LoadFromFile(*theFile) != kErrorOK) {
+            delete theFile;
+            return inWhich == EE_SCREENS_TEXT_CS_START ? 1 : 0;
+        }
+        if (inWhich == EE_SCREENS_TEXT_CS_SCENARIO_HEADER) {
+            delete theFile;
+            return 1;
+        }
+        EESMMediaStrings theMediaStrings;
+        theMediaStrings = theHeader.mMediaStrings;
+        EEUISCIFormManager* theInfo = EEUISCIFormManager::Get();
+        EEScreensMedia::Prefix(theMediaStrings);
+        EECampaignFormManager::Get()->UpdateChecksum();
+        theInfo->mMediaStrings = theMediaStrings;
+        theInfo->SetFile(theFile);
+        theInfo->mIsCampaign = true;
+        return 2;
+    }
+    case EE_SCREENS_TEXT_CS_SCENARIO_NAME:
+        EECampaignFormManager::Get()->mScenarioName = theText;
         break;
     case EE_SCREENS_TEXT_QUESTION:
         gUIManager->DisplayQuestion(theText, true, theForm, EEScreensRestoreDefaultYes, NULL);

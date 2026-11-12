@@ -11,10 +11,10 @@ enum EEFormEventID {
     kFormEventChatFormClose = 4,        // db dbuiformevents id 4 'Chat Form Close'; EECreateFormEvent: new EEUIECECloseChat
     kFormEventChatMLBPressed = 5,       // db dbuiformevents id 5 'Chat MLB Pressed'; EECreateFormEvent: new EEUIECECancel
     kFormEventChatMRBPressed = 6,       // db dbuiformevents id 6 'Chat MRB Pressed'; EECreateFormEvent: new EEUIECECancel
-    kFormEventScenarioIntroOpen = 7,    // db dbuiformevents id 7 'Scenario Intro Open'; EECreateFormEvent: new EEUIESIEOpen
+    kFormEventScenarioIntroOpen = 7,    // db dbuiformevents id 7 'Scenario Intro Open'; EECreateFormEvent: EE_SCREENS_SI_OPEN
     kFormEventWNSFormOpen = 8,          // db dbuiformevents id 8 'WNS Form Open'; EECreateFormEvent: new EEUIEWNSOpen
     kFormEventSSFormOpen = 9,           // db dbuiformevents id 9 'SS Form Open'; EECreateFormEvent: new EEUIESSEOpen
-    kFormEventScenarioIntroClose = 10,  // db dbuiformevents id 10 'Scenario Intro Close'; EECreateFormEvent: new EEUIESIEClose
+    kFormEventScenarioIntroClose = 10,  // db dbuiformevents id 10 'Scenario Intro Close'; EECreateFormEvent: EE_SCREENS_SI_CLOSE
     kFormEventSinglePlayerLoadOpen = 11,  // db dbuiformevents id 11 'Single Player Load Open'; EECreateFormEvent: EE_SCREENS_SPL_OPEN
     kFormEventScenarioLoadOpen = 12,    // db dbuiformevents id 12 'Scenario Load Open'; EECreateFormEvent: EE_SCREENS_SCL_OPEN
     kFormEventPGSOpen = 13,             // db dbuiformevents id 13 'PGS Open'; EECreateFormEvent: new EEUIEPGSEOpen

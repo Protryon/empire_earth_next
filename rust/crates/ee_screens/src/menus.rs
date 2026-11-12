@@ -64,8 +64,6 @@ pub const EE_SCREENS_PC_LEARNING: u32 = 0x0808;
 pub const EE_SCREENS_CPP_LOBBY_SINGLE: u32 = 0x1_0003; // EEUIELEActivateSinglePlayer
 pub const EE_SCREENS_CPP_DUMP_MEDIA: u32 = 0x1_0004; // EEUIEMGDumpLoadedMedia(false)
 pub const EE_SCREENS_CPP_DUMP_MEDIA_ALL: u32 = 0x1_0005; // EEUIEMGDumpLoadedMedia(true)
-pub const EE_SCREENS_CPP_SCENARIOS_OPEN: u32 = 0x1_0006; // EEUIECSSEFormOpen
-pub const EE_SCREENS_CPP_SCENARIOS_CLOSE: u32 = 0x1_0007; // EEUIECSSEFormClose
 
 // ---- the game's calls (MenuHost::call, call_with)
 
@@ -318,8 +316,8 @@ fn start_campaign<H: MenuHost>(host: &mut H, state: &Mutex<Menus>, campaign: usi
     host.set_campaign(EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION, &description);
     host.call_with(EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN, learning as u32);
     host.set_campaign(EE_SCREENS_TEXT_CAMPAIGN_FIRST, &first);
-    host.set_open_event(FORM_CAMPAIGN_SELECT, EE_SCREENS_CPP_SCENARIOS_OPEN);
-    host.set_close_event(FORM_CAMPAIGN_SELECT, EE_SCREENS_CPP_SCENARIOS_CLOSE);
+    host.set_open_event(FORM_CAMPAIGN_SELECT, crate::scenario_screens::EE_SCREENS_CS_OPEN);
+    host.set_close_event(FORM_CAMPAIGN_SELECT, crate::scenario_screens::EE_SCREENS_CS_CLOSE);
     match host.string_checked(IDS_PLEASE_WAIT) {
         Some(text) => {
             host.message(&text, false);
@@ -603,8 +601,8 @@ mod tests {
                 "campaign 12 DT8.0",
                 "call 15",
                 "campaign 13 FT8.0",
-                "open 33 0x10006",
-                "close 33 0x10007",
+                "open 33 0x2101",
+                "close 33 0x2102",
                 "message S31842 0",
                 "openform 33"
             ]
@@ -624,8 +622,8 @@ mod tests {
                 "campaign 12 DT8.3",
                 "call 15 1",
                 "campaign 13 FT8.3",
-                "open 33 0x10006",
-                "close 33 0x10007",
+                "open 33 0x2101",
+                "close 33 0x2102",
                 "switch 33",
                 "open 34 0x2201",
                 "close 34 0x2202",

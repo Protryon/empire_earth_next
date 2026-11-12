@@ -126,7 +126,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIECampaignSelectScreenEvents.h"
 #include "ee/EEUIEChatEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
@@ -143,7 +142,6 @@
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
-#include "ee/EEUIEScenarioIntroEvents.h"
 #include "ee/EEUIEWheelZoom.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
@@ -354,10 +352,10 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIEWNSOpen;
         break;
     case kFormEventScenarioIntroOpen:
-        theEvent = new EEUIESIEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SI_OPEN);
         break;
     case kFormEventScenarioIntroClose:
-        theEvent = new EEUIESIEClose;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SI_CLOSE);
         break;
     case kFormEventScenarioLoadOpen:
         theEvent = EECreateScreenEvent(EE_SCREENS_SCL_OPEN);
@@ -906,54 +904,10 @@ void EEUIManager::CreateScenarioEditor()
 }
 
 // FUNCTION: EXE 0x673eac
-// Creates the scenario intro form's event for a control id; NULL for other ids
+// Creates the scenario intro form's event for a control id; NULL for other ids (ee_screens scenario_screens.rs)
 UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventSIBack && inID <= kControlEventSIBackMouseOut) {
-        switch (inID) {
-        case kControlEventSIBack:
-            theEvent = new EEUIESIEBack;
-            break;
-        case kControlEventSIBriefing:
-            theEvent = new EEUIESIEBriefing;
-            break;
-        case kControlEventSIHints:
-            theEvent = new EEUIESIEHints;
-            break;
-        case kControlEventSIHistory:
-            theEvent = new EEUIESIEHistory;
-            break;
-        case kControlEventSIMap:
-            theEvent = new EEUIESIEMap;
-            break;
-        case kControlEventSIMovie:
-            theEvent = new EEUIESIEMovie;
-            break;
-        case kControlEventSIStart:
-            theEvent = new EEUIESIEStart;
-            break;
-        case kControlEventSIMapMouseOver:
-        case kControlEventSIBriefingMouseOver:
-        case kControlEventSIHistoryMouseOver:
-        case kControlEventSIHintsMouseOver:
-        case kControlEventSIMovieMouseOver:
-        case kControlEventSIStartMouseOver:
-        case kControlEventSIBackMouseOver:
-            theEvent = new EEUISIEMouseOverButton;
-            break;
-        case kControlEventSIMapMouseOut:
-        case kControlEventSIBriefingMouseOut:
-        case kControlEventSIHistoryMouseOut:
-        case kControlEventSIHintsMouseOut:
-        case kControlEventSIMovieMouseOut:
-        case kControlEventSIStartMouseOut:
-        case kControlEventSIBackMouseOut:
-            theEvent = new EEUISIEMouseOutButton;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_scenario_intro_event_for(inID));
 }
 
 // FUNCTION: EXE 0x67406e
@@ -1261,30 +1215,6 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     return UIManager::UpdateMouse(inMouseLocation);
 }
 
-// SYNTHETIC: EXE 0x675205
-// (EEUIESIEBack's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675230
-// (EEUIESIEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67525b
-// (EEUIESIEHints's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675286
-// (EEUIESIEHistory's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6752b1
-// (EEUIESIEMap's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6752dc
-// (EEUISIEMouseOverButton's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675307
-// (EEUISIEMouseOutButton's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675332
-// (EEUIESIEOpen's scalar deleting destructor, after its first user)
-
 // FUNCTION: EXE 0x67535d
 // Appends a callback to a callback vector (std::vector::push_back, ICF-shared)
 // (std::vector<long>::push_back (ICF: the callback vectors' push_back))
@@ -1313,16 +1243,3 @@ long EEUIECEClose::ProcessEvent(class UIForm *,class UIEntity *)
     return 0;
 }
 
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUISIEMouseOutButton::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUISIEMouseOverButton::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}

@@ -35,7 +35,10 @@ SCREEN_CODES={'EEUIESPELoadGame':0x0605,'EEUIESPECampaign':0x0602,'EEUIEPCECampa
               'EEUIEPCECampaign2':0x0803,'EEUIEPCECampaign3':0x0804,'EEUIEPCELearningCampaign':0x0808,
               # the load and save screens (ee_screens save_load.rs): a game's Save (not the editor's 0x0303), the
               # single player Load, the save screen's Cancel
-              'EEUIESLESaveFile':0x0302,'EEUIESPLELoadFile':0x0d03,'EEUIESLECancelSave':0x0307}
+              'EEUIESLESaveFile':0x0302,'EEUIESPLELoadFile':0x0d03,'EEUIESLECancelSave':0x0307,
+              # the campaign scenario select's Start and the scenario intro's Start (scenario_screens.rs;
+              # scenario_game.py)
+              'EEUIECSSEStartScenario':0x2106,'EEUIESIEStart':0x130a}
 SAVE_DIR=('Data','Saved Games')
 EXT='.ees'
 
