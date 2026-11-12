@@ -47,6 +47,9 @@ CALC/CALS/CALU calamities, TSWP the tech trees' sweep every five game minutes) a
 computer players stay in the first epochs and never cast a calamity, so --profile late and space play other games
 (later start epochs, the computer players' cheats, more players) and --profile calamity the oracle's game with every
 calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_<profile>.txt.
+--profile missile is the oracle's game with EE-SIM --missile-sweep: when it ends, the players' units fire every missile
+and torpedo class (CBMA/CBMH, the missile's flight steps, and its impact tests' CBGI/CBWI); its golden file lists only
+those tags, every other tag of it is the oracle profile's (reported as without a golden).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -96,6 +99,9 @@ PROFILES = {
     "space": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "all", "--ai", "3", "--lobby", "183=#9"],
     # the oracle's game with every calamity class cast in turn (EE-SIM --calamities: the computer players cast none)
     "calamity": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--calamities"],
+    # the oracle's game, then every missile class fired at its end (EE-SIM --missile-sweep: no game of the other
+    # profiles flies a missile); its golden lists only the sweep's tags (CBMA, CBMH, CBGI, CBWI)
+    "missile": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--missile-sweep"],
 }
 
 
