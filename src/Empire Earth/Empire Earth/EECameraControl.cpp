@@ -200,15 +200,6 @@ long EECameraControl::AddKey(const EECameraKey& inKey)
     return 5;
 }
 
-// FUNCTION: EXE 0x527804
-// Keeps a camera transformation above the terrain at its position and one front clipping distance ahead of it
-void EECameraControl::ClampHeight(GETransformation& ioTransformation)
-{
-    GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-    ee_gfx_camera_clamp_height(EE_CAM_T(ioTransformation), this->mMode, gViewport.GetFrontClippingDistance(), EE_CAM_PLAIN,
-                               EECameraGround(theMesh));
-}
-
 // FUNCTION: EXE 0x5279f0
 // FUNCTION: EXE 0x527c09
 // Sets the viewport's front and rear clipping distances from the view rays through the screen's top, centre and bottom
@@ -336,14 +327,6 @@ void EECameraControl::GetGroundPoint(const GE3DLine& inLine, GE3DPoint& outPoint
     this->GetOffset(this->mFraction, theStart);
     ee_gfx_camera_ground_point(EE_CAM_L(inLine), &thePlanes, EE_CAM_P(theStart), (int32_t)this->mMode,
                                EECameraGround(theMesh), EE_CAM_P(outPoint));
-}
-
-// FUNCTION: EXE 0x5282c3
-// Moves a point back to where a line first crosses one of the map's four edge planes, nudged just inside
-void EECameraControl::ClipToEdges(const GE3DLine& inLine, GE3DPoint& ioPoint)
-{
-    EeGfxEdgePlanes thePlanes = EECameraEdgePlanes(gWorld.GetMap()->mTerrainMesh);
-    ee_gfx_camera_clip_to_edges(EE_CAM_L(inLine), &thePlanes, EE_CAM_P(ioPoint));
 }
 
 // FUNCTION: EXE 0x52844f

@@ -520,7 +520,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     if (thePartsResult != 0)
         goto LoadFlags;
     if ((theResult = EEUnitStoreRead(inFile, this->mHeight)) != 0
-        || (theResult = inFile.Read(this->mVelocity)) != 0
+        || (theResult = EEUnitStoreRead(inFile, this->mVelocity)) != 0
         || (theResult = inFile.Read(this->mF220)) != 0
         || (theResult = inFile.Read(this->mF21C)) != 0
         || (theResult = inFile.Read(this->mCurrentResearch)) != 0

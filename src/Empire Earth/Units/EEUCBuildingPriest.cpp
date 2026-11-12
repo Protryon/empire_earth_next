@@ -319,10 +319,7 @@ void EEUCBuildingPriest::PriestVirtualB8(EEComplexUnit* inUnit)
     case kActionResourcesRotting:
         return;
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }

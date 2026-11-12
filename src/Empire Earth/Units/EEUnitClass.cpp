@@ -152,7 +152,6 @@ static const float k447ADC = 0.40824828f;        // 0x447adc (1 / sqrt(6))
 static const float kFacingTolerance = 0.043633234f;  // 0x447ae0
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 static const float kFleeDistanceScale = 1.5f;    // 0x447ae8
-static const float kCallForHelpRadius = 5.0f;    // 0x447aec
 static const float k447AF0 = 0.01f;              // 0x447af0
 static const float kLargeUnitScale = 1.5f;       // 0x447af4
 static const float kMinConstructionScale = 0.1f;  // 0x447af8
@@ -905,6 +904,7 @@ struct EEAreaDamageHost {
     long mKind;
     long mColumn;
     std::vector<int32_t> mVictims;  // TEST ONLY (the CBAD capture)
+    std::vector<EEComplexUnit*> mVictimUnits;   // TEST ONLY (the CBXA capture)
 };
 
 static EEComplexUnit* EEAreaDamageUnit(uint64_t inHandle)
@@ -951,8 +951,10 @@ static void EEAreaDamageHit(void* inContext, uint64_t inHandle)
     EEComplexUnit* theUnit = EEAreaDamageUnit(inHandle);
     EEUnitClass* theClass = theHost->mDamageClass;
     EEGraphicEffect* theEffect = NULL;
-    if (EESimCaptureRecord::Active())
+    if (EESimCaptureRecord::Active()) {
         theHost->mVictims.push_back((int32_t)theUnit->GetUnitID());
+        theHost->mVictimUnits.push_back(theUnit);
+    }
     if (inUnit->GetUnitClass()->GetUnitType() == kUnitTypeVolcanoProjectile && theUnit->GetEffect(3, theEffect)) {
         if (theEffect != NULL)
             gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
@@ -978,7 +980,8 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                            EEUnit* inTarget)
 {
     EEUnitClass* theClass = inUnit->mLauncherClass != NULL ? inUnit->mLauncherClass : this;
-    EEAreaDamageHost theContext = {this, theClass, inUnit, inDamage, inKind, inColumn, std::vector<int32_t>()};
+    EEAreaDamageHost theContext = {this, theClass, inUnit, inDamage, inKind, inColumn, std::vector<int32_t>(),
+                                   std::vector<EEComplexUnit*>()};
     EeCombatAreaHost theHost = {&theContext, EEAreaDamageTileFirst, EEAreaDamageNodeNext, EEAreaDamageNodeUnit,
                                 EEAreaDamageDistance, EEAreaDamageTargetable, EEAreaDamageSamePlayer, EEAreaDamageHit};
     EeCombatAreaIn in = {};
@@ -1000,6 +1003,16 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
         for (size_t i = 0; i < theContext.mVictims.size(); i++)
             theRecord.I32(theContext.mVictims[i]);
         theRecord.Commit();
+        uint32_t theHash = 0x811c9dc5u;
+        for (size_t i = 0; i < theContext.mVictimUnits.size(); i++) {
+            EEComplexUnit* theVictim = theContext.mVictimUnits[i];
+            uint32_t theFields[3] = {(uint32_t)theVictim->mUnitID, (uint32_t)theVictim->GetHitPoints(),
+                                     (uint32_t)theVictim->GetResourceAmount()};
+            const unsigned char* theBytes = (const unsigned char*)theFields;
+            for (size_t k = 0; k < sizeof(theFields); k++)
+                theHash = (theHash ^ theBytes[k]) * 0x01000193u;
+        }
+        EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, inUnit, inTarget, theHash);
     }
 }
 
@@ -1011,6 +1024,7 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
 // less; against an own or allied unit nothing, or a tenth (rounded up) for herd animals
 void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
+    [&]() {   // TEST ONLY (CBXA golden): the original body in a lambda
     EEComplexUnit* theTarget = NULL;
     EEGraphicEffect* theEffect = NULL;
     if (inTarget != NULL)
@@ -1048,6 +1062,8 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
     long theRemaining = UMFloatToLong(theTarget->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
     if (theTarget->mResourceAmount != theRemaining)
         theTarget->mResourceAmount = theRemaining;
+    }();
+    EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, inUnit, inTarget, 0);
 }
 
 // FUNCTION: EXE 0x631312
@@ -1059,101 +1075,10 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 // tag point
 void EEUnitClass::FireShot(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePoint;
-    EEUnit* theBlocker = NULL;
-    EEModel* theModel = inUnit->GetModel();
-    long theBlockX = 0;
-    long theBlockY = 0;
-    unsigned long theCount;
-    theCount = theModel->mTagPoints[inUnit->GetAnimation()] != NULL ? theModel->mTagPoints[inUnit->GetAnimation()]->GetNumTagPoints() : 0;
-    unsigned long theNext = 0;
-    bool theDone = false;
-    if (inUnit->mUnitClass->GetUnitType() == kUnitTypeCpMissileBase) {
-        this->LaunchStoredMissile(inUnit);
-        return;
-    }
-    if (inUnit->mReloadTimer == 0)
-        inUnit->SetRandomReloadTimer(inUnit->mStats->mReloadTime);
-    if (inUnit->mStats->mCanFireOverWalls && inUnit->mIsFiringHigh)
-        inUnit->SetRandomReloadTimer(UMFloatToLong(inUnit->mReloadTimer * 1.5f));
-    EEUnit* theTarget;
-    EEFindDropLocation(inUnit, &theTarget, &thePoint, NULL);
-    if (this->mProjectileClass == NULL) {
-        if (inUnit->mStats->mRange > 1.0f && theTarget != NULL && !inUnit->mStats->mCanFireOverWalls &&
-            EEIsLineToUnitBlocked(inUnit, theTarget, &theBlocker, &theBlockX, &theBlockY)) {
-            if (theBlocker != NULL) {
-                theTarget = theBlocker;
-                if (theBlocker->mPlayer == inUnit->mPlayer ||
-                    inUnit->mPlayer->mEnemies[theBlocker->mPlayer->GetPlayerID()] == 0) {
-                    if (theBlocker->mUnitClass->mImpactSparksEffect != NULL)
-                        gWorld.GetEffectManager()->CreateUnitEffect(theBlocker, theBlocker->mUnitClass->mImpactSparksEffect, NULL, 0, 0, 0);
-                } else {
-                    this->ApplyHit(inUnit, theTarget);
-                }
-            } else {
-                GE3DPoint theSpot((float)theBlockX + 0.5f, (float)theBlockY + 0.5f,
-                                  gWorld.mMap->GetTile(theBlockX, theBlockY)->mHeight);
-                gWorld.GetEffectManager()->CreatePlacedEffect(theSpot, EEGraphicEffect::Get(kGraphicEffectImpactSparks), NULL);
-            }
-        } else {
-            this->ApplyHit(inUnit, theTarget);
-        }
-    } else {
-        unsigned long theType = inUnit->mUnitClass->GetUnitType();
-        if (theType != kUnitTypeX04RomanLegionnaire && theType != kUnitTypeSp15CapitalShip && theType != kUnitTypeCapitalShipYamato) {
-            if (theModel->mTurretParts.size() == 0)
-                this->LaunchShot(inUnit, theTarget, thePoint, NULL);
-            else
-                this->LaunchFromTurret(inUnit, theTarget, thePoint);
-        } else if (inUnit->mIsSpecialAttack) {
-            if (theType == kUnitTypeSp15CapitalShip || theType == kUnitTypeCapitalShipYamato) {
-                unsigned long thePart = inUnit->GetAnimation();
-                unsigned long theLast = inUnit->GetModel()->mTagPoints[thePart]->mPoints.size() - 1;
-                if (inUnit->mWeaponTagPoint != theLast)
-                    inUnit->mWeaponTagPoint = theLast;
-                gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theTarget, this->mSpecialAttackEffect, NULL);
-                this->ApplyHit(inUnit, theTarget);
-                if (!inUnit->CanAttackClass(theTarget->GetUnitClass()))
-                    inUnit->StartAction(kActionIdle);
-            } else {
-                this->LaunchShot(inUnit, theTarget, thePoint, NULL);
-            }
-            theDone = true;
-        } else {
-            this->ApplyHit(inUnit, theTarget);
-        }
-    }
-    if (theCount != 0) {
-        if (this->mMuzzleFlashEffect != NULL)
-            gWorld.GetEffectManager()->CreateUnitEffect(inUnit, this->mMuzzleFlashEffect, NULL, 0, 0, 0);
-        if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen &&
-            !EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)   // epochs.yaml citizen
-            theDone = true;
-        if (this->mShotEffect != NULL && !theDone) {
-            if (theTarget != NULL)
-                gWorld.GetEffectManager()->CreateEffectBetweenUnits(inUnit, theTarget, this->mShotEffect, NULL);
-            else
-                gWorld.GetEffectManager()->CreateEffect(inUnit, thePoint, this->mShotEffect, NULL, 0);
-        }
-    }
-    if (this->mUsesAmmunition) {
-        if (inUnit->mAmmunition > 1) {
-            inUnit->SetAmmunition(inUnit->mAmmunition - 1);
-        } else {
-            inUnit->SetAmmunition(0);
-            inUnit->SetFlightTime(0);
-        }
-    }
-    if (inUnit->mIsSpecialAttack && (inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato))
-        inUnit->mIsSpecialAttack = false;
-    if (theCount != 0) {
-        theNext = (inUnit->mWeaponTagPoint + 1) % theCount;
-        if ((inUnit->mUnitClass->GetUnitType() == kUnitTypeSp15CapitalShip || inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitalShipYamato) &&
-            theNext == theCount - 1)
-            theNext = 0;
-    }
-    if (inUnit->mWeaponTagPoint != theNext)
-        inUnit->mWeaponTagPoint = theNext;
+    // ee_combat world.rs fire_shot: the plan's operations on the world host (EECombatGoals.cpp: the drop point, the
+    // line, the hit, the launch and the effects stay C++ behind them); CBXA records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_FIRE_SHOT, inUnit, NULL, this);
+    EECombatCaptureXAction(EE_COMBAT_XA_FIRE_SHOT, inUnit, EECombatShotTarget(inUnit), 0);
 }
 
 // FUNCTION: EXE 0x631723
@@ -3615,56 +3540,10 @@ bool EEFOFindNewTargetInMeleeRange::Virtual08(EEComplexUnit* inUnit)
 // Turns an attacked unit on its attacker (or to its location when unseen) and calls idle nearby soldiers to help
 void EEUnitClass::Attacked(EEComplexUnit* inUnit)
 {
-    GE3DPoint thePosition;
-    std::vector<EEUnit*> theUnits;
-    U2DPoint<long> theTile;
-    EEComplexUnit* theTarget = inUnit->mLastAttacker;
-    EEUnitGoal* theGoal;
-    if (!EEIsSeenByOwnerOf(theTarget, inUnit) && inUnit->GetStats()->mMaxVelocity != 0.0f) {
-        theGoal = new EEUGLocation(theTarget->mPhysicalModel.GetLocation().GetX(),
-            theTarget->mPhysicalModel.GetLocation().GetY(), 0.0f, false, false, false, 0.0f, false, 0);
-    } else {
-        theGoal = new EEUGAttackUnit(inUnit, theTarget, false, false);
-    }
-    inUnit->SetGoal(theGoal, 1, 0);
-    if (inUnit->GetPlayer()->GetPlayerID() != 0 &&
-        ((inUnit->GetUnitClass()->GetCategory() != kUnitCategoryLandCitizen && inUnit->GetUnitClass()->GetCategory() != kUnitCategoryNavalCitizen) || theTarget->GetPlayer()->GetPlayerID() != 0)) {
-        const GETransformation& theLocation = inUnit->mPhysicalModel.GetLocation();
-        thePosition.SetX(theLocation.GetX());
-        thePosition.SetY(theLocation.GetY());
-        thePosition.SetZ(theLocation.GetZ());
-        EEGetUnitsNear(thePosition, kCallForHelpRadius, theUnits);
-        for (long i = (long)theUnits.size() - 1; i >= 0; --i) {
-            // The original uses the returned object as an EEComplexUnit directly.
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
-            if (!(theUnit->GetHitPoints() > 0) || theUnit->GetPlayer() != inUnit->GetPlayer() ||
-                !theUnit->mBehavior->mCanTargetEnemies || !theUnit->mBehavior->CanMoveFreely(theUnit) || theUnit->GetUnitClass()->mIsProjectile ||
-                theUnit->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || !theUnit->CanAttackClass(theTarget->GetUnitClass()) ||
-                theUnit->IsTargetIgnored(theTarget, true))
-                continue;
-            EEUnitGoal* theCurrent = theUnit->mGoalState;
-            if (theCurrent != NULL) {
-                if (theCurrent->GetB1C() || theCurrent->mKind != kGoalAttackUnit)
-                    continue;
-                if (!static_cast<EEUGAttackUnit*>(theCurrent)->mTarget->GetUnitClass()->IsLandBuilding() || static_cast<EEUGAttackUnit*>(theUnit->mGoalState)->mTarget->GetStats()->mAttack != 0.0f)
-                    continue;
-            }
-            if (!(!EEIsAttackReachable(theUnit, theTarget, &theTile))) {
-                EEUnitGoal* theCopy = theGoal->Clone();
-                if (theUnit->GetClass()->FindAction(theCopy->GetStartAction()) != NULL) {
-                    theUnit->SetGoal(theCopy, 1, 0);
-                    theUnit->StartAction(theCopy->GetStartAction());
-                    theUnit->GetUnitClass()->ActionChanged(theUnit);
-                }
-            } else {
-                theUnit->IgnoreTarget(theTarget);
-            }
-        }
-        theUnits.clear();
-    }
-    if (inUnit->mLastAttacker != NULL)
-        inUnit->mLastAttacker->Dereference();
-    inUnit->mLastAttacker = NULL;
+    uint32_t theBefore = inUnit->mLastAttacker != NULL ? (uint32_t)inUnit->mLastAttacker->mUnitID : 0;   // TEST ONLY
+    // ee_combat world.rs attacked: the plan's operations on the world host (EECombatGoals.cpp); CBXA records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_ATTACKED, inUnit, NULL, this);
+    EECombatCaptureXAction(EE_COMBAT_XA_ATTACKED, inUnit, NULL, theBefore);
 }
 
 // FUNCTION: EXE 0x637ca6
@@ -4358,10 +4237,7 @@ void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
     this->UpdateCamouflageTimer(inUnit);
     this->UpdateEffects(inUnit);
     if ((inUnit->mCommand != NULL ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        long theTime = inUnit->UpdateRottingAwayTime();
         for (EEComplexUnit* theLinked = inUnit->mNextPart; theLinked != NULL; theLinked = theLinked->mNextPart)
             theLinked->SetRottingAwayTime(theTime);
     }
@@ -4388,104 +4264,217 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
     case kActionWaitForReload:
         this->FireOnAttackFrame(inUnit, theResult, theFrame);
         break;
-    case kActionResourcesRotting: {
-        long theTime = inUnit->mRottingAwayTime + gPhysics->mTickTimeMs;
-        if (theTime > 4000) {
-            long theAmount = inUnit->mResourceAmount - theTime / 4000;
-            if (theAmount < 0)
-                theAmount = 0;
-            inUnit->SetResourceAmount(theAmount);
-            theTime %= 4000;
-        }
-        inUnit->SetRottingAwayTime(theTime);
+    case kActionResourcesRotting:
+        inUnit->UpdateResourcesRotting();
         break;
-    }
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }
     this->UpdateDone(inUnit);
 }
 
+// TEST ONLY (USTM): the camouflage timers' call as words (the inputs, each event in order, the outputs)
+struct EECamouflageNote {
+    uint32_t mWords[48];
+    unsigned int mCount;
+    void Add(uint32_t inWord)
+    {
+        if (this->mCount < 48)
+            this->mWords[this->mCount++] = inWord;
+    }
+};
+
+// TEST ONLY (USTM): a float's bits
+static uint32_t CloakBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// TEST ONLY (USTM): the original's timer statements (0x63978b) over the same values, as the decision's event codes
+// (a mini map move's code without its 0x100: the C++'s test is made where the event is applied)
+static void OriginalCamouflageEvents(unsigned long inTimer, unsigned long inSecond, bool inNoVital, long inTick,
+                                     EECamouflageNote& ioNote)
+{
+    unsigned long theSecond = inSecond;
+    unsigned long theRemaining = inTimer & 0x7fffffff;
+    if (theRemaining > 0) {
+        if (inNoVital) {
+            ioNote.Add(1u);
+            ioNote.Add(3u);
+            ioNote.Add(5u);
+            ioNote.Add(9u);
+            ioNote.Add(0u);
+            theSecond = 0;
+            ioNote.Add(10u);
+            ioNote.Add(0u);
+        } else {
+            long theTime = theRemaining - inTick;
+            if (theTime > 0) {
+                ioNote.Add(9u);
+                ioNote.Add((uint32_t)theTime);
+                ioNote.Add(7u);
+            } else {
+                ioNote.Add(9u);
+                ioNote.Add(0u);
+                ioNote.Add(8u);
+                ioNote.Add(4u);
+                ioNote.Add(6u);
+                theSecond = 0;
+                ioNote.Add(10u);
+                ioNote.Add(0u);
+                ioNote.Add(2u);
+            }
+        }
+    }
+    if (theSecond > 0) {
+        if (inNoVital) {
+            ioNote.Add(1u);
+            ioNote.Add(3u);
+            ioNote.Add(5u);
+            ioNote.Add(9u);
+            ioNote.Add(0u);
+            theSecond = 0;
+            ioNote.Add(10u);
+            ioNote.Add(0u);
+        } else {
+            long theTime = theSecond - inTick;
+            if (theTime > 0) {
+                theSecond = theTime;
+                ioNote.Add(10u);
+                ioNote.Add((uint32_t)theTime);
+            } else {
+                ioNote.Add(1u);
+                theSecond = 0;
+                ioNote.Add(10u);
+                ioNote.Add(0u);
+                ioNote.Add(3u);
+                ioNote.Add(5u);
+            }
+        }
+    }
+}
+
 // FUNCTION: EXE 0x63978b
 // Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
 void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
 {
-    unsigned long theRemaining = inUnit->mCamouflageTimer & 0x7fffffff;
-    if (theRemaining > 0) {
-        if (inUnit->mPlayer->mNumVitalBuildings < 1) {
-            bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-            if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
+    // TEST ONLY (USTM): the events, in the codes of ee_units step.rs (EE_UNITS_CAMO_*)
+    EECamouflageNote theNote;
+    theNote.mCount = 0;
+    bool theNoting = EESimCaptureRecord::Active()
+                     && ((inUnit->mCamouflageTimer & 0x7fffffff) > 0 || inUnit->mU32C > 0);
+    theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+    theNote.Add((uint32_t)inUnit->mU32C);
+    theNote.Add(inUnit->mPlayer->mNumVitalBuildings < 1 ? 1u : 0u);
+    theNote.Add((uint32_t)gPhysics->mTickTimeMs);
+    // New (R5b.4 leaf 6): the timers' decision is Rust over the unit store (ee_units step.rs camouflage); its events are
+    // applied here in order (a mini map move only when the unit is then a cloaked enemy of the local player, the
+    // original's test). TEST ONLY: while the capture runs, the original's statements check the events (USTM)
+    EeUnitsCamoEvent theEvents[EE_UNITS_CAMO_MAX_EVENTS];
+    bool theNoVital = inUnit->mPlayer->mNumVitalBuildings < 1;
+    unsigned long theTimerBefore = inUnit->mCamouflageTimer, theSecondBefore = inUnit->mU32C;
+    uint32_t theCount = ee_units_step_camouflage(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
+                                                 (uint32_t)theTimerBefore, (uint32_t)theSecondBefore, theNoVital ? 1 : 0,
+                                                 gPhysics->mTickTimeMs, theEvents);
+    EECamouflageNote theCodes;   // TEST ONLY (USTM): the Rust events' codes, for the check
+    theCodes.mCount = 0;
+    for (uint32_t i = 0; i < theCount; i++) {
+        const EeUnitsCamoEvent& theEvent = theEvents[i];
+        theCodes.Add(theEvent.code);
+        if (theEvent.code == EE_UNITS_CAMO_SET_TIMER || theEvent.code == EE_UNITS_CAMO_SET_SECOND)
+            theCodes.Add(theEvent.value);
+        switch (theEvent.code) {
+        case EE_UNITS_CAMO_SHOW:
+        case EE_UNITS_CAMO_HIDE: {
+            bool theMoved = EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
+            if (theMoved && theEvent.code == EE_UNITS_CAMO_SHOW)
                 gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-            inUnit->SetCloakableChain(false);
-            inUnit->SetCloakedChain(false);
-            inUnit->mCamouflageTimer = 0;
-            inUnit->mU32C = 0;
-        } else {
-            long theTime = theRemaining - gPhysics->mTickTimeMs;
-            if (theTime > 0) {
-                inUnit->mCamouflageTimer = theTime;
-                inUnit->SetCamouflaged(false);
-            } else {
-                inUnit->mCamouflageTimer = 0;
-                inUnit->SetCamouflaged(true);
-                inUnit->SetCloakableChain(true);
-                inUnit->SetCloakedChain(true);
-                inUnit->mU32C = 0;
-                if (EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                    gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
-            }
+            else if (theMoved)
+                gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
+            theNote.Add(theEvent.code | (theMoved ? 0x100u : 0u));
+            break;
+        }
+        case EE_UNITS_CAMO_CLOAKABLE_OFF:
+        case EE_UNITS_CAMO_CLOAKABLE_ON:
+            inUnit->SetCloakableChain(theEvent.code == EE_UNITS_CAMO_CLOAKABLE_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_CLOAKED_OFF:
+        case EE_UNITS_CAMO_CLOAKED_ON:
+            inUnit->SetCloakedChain(theEvent.code == EE_UNITS_CAMO_CLOAKED_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_CAMOUFLAGED_OFF:
+        case EE_UNITS_CAMO_CAMOUFLAGED_ON:
+            inUnit->SetCamouflaged(theEvent.code == EE_UNITS_CAMO_CAMOUFLAGED_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_SET_TIMER:
+            inUnit->mCamouflageTimer = theEvent.value;
+            theNote.Add(theEvent.code);
+            theNote.Add(theEvent.value);
+            break;
+        case EE_UNITS_CAMO_SET_SECOND:
+            inUnit->mU32C = theEvent.value;
+            theNote.Add(theEvent.code);
+            theNote.Add(theEvent.value);
+            break;
         }
     }
-    if (inUnit->mU32C > 0) {
-        if (inUnit->mPlayer->mNumVitalBuildings < 1) {
-            bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-            if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-            inUnit->SetCloakableChain(false);
-            inUnit->SetCloakedChain(false);
-            inUnit->mCamouflageTimer = 0;
-            inUnit->mU32C = 0;
-        } else {
-            long theTime = inUnit->mU32C - gPhysics->mTickTimeMs;
-            if (theTime > 0)
-                inUnit->mU32C = theTime;
-            else {
-                bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-                if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                    gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-                inUnit->mU32C = 0;
-                inUnit->SetCloakableChain(false);
-                inUnit->SetCloakedChain(false);
-            }
-        }
+    if (theNoting) {   // TEST ONLY (USTM): the original's events over the same values
+        EECamouflageNote theOriginal;
+        theOriginal.mCount = 0;
+        OriginalCamouflageEvents(theTimerBefore, theSecondBefore, theNoVital, gPhysics->mTickTimeMs, theOriginal);
+        if (theOriginal.mCount != theCodes.mCount
+            || memcmp(theOriginal.mWords, theCodes.mWords, theCodes.mCount * sizeof(uint32_t)) != 0)
+            EEUnitStepDiffers("UpdateCamouflageTimer (the events)", inUnit->mUnitID, (long)theCodes.mCount,
+                              (long)theOriginal.mCount);
+    }
+    if (theNoting) {   // TEST ONLY (USTM)
+        theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+        theNote.Add((uint32_t)inUnit->mU32C);
+        EEUnitStepNote(kUnitStepCamouflage, inUnit->mUnitID, theNote.mWords, theNote.mCount);
     }
     if (!inUnit->mIsCloakable)
         return;
     this->UpdateCloakDetection(inUnit);
     float theOpacity = inUnit->mOpacity;
+    float theOpacityBefore = theOpacity;   // TEST ONLY (USTM)
     bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-    if (!theCloaked) {
-        if (theOpacity < kCloakFadeMaxOpacity)
-            theOpacity = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOpacity;
-        if (theOpacity > kCloakFadeMaxOpacity)
-            theOpacity = kCloakFadeMaxOpacity;
-    } else {
-        if (theOpacity > kCloakFadeMinOpacity)
-            theOpacity = theOpacity - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
-        if (theOpacity < kCloakFadeMinOpacity)
-            theOpacity = kCloakFadeMinOpacity;
-    }
-    if (inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitol && inUnit->mStats->mPower > 0 &&
-        !EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()) && inUnit->mCloaked != 0) {
-        long theTime = gPhysics->mGameTime % 2000;
-        if (theTime >= 1000)
-            theTime = 1999 - theTime;
-        theOpacity = theTime * 0.00033333333f + 0.2f;
+    bool thePulse = inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitol && inUnit->mStats->mPower > 0 &&
+                    !EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()) && inUnit->mCloaked != 0;
+    // New (R5b.4 leaf 6): the fade is Rust (ee_units step.rs cloak_fade: the same f32 operations in order)
+    theOpacity = ee_units_step_cloak_fade(theOpacityBefore, theCloaked ? 1 : 0, gPhysics->GetTickTime(), thePulse ? 1 : 0,
+                                          gPhysics->mGameTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
+        float theOriginal = theOpacityBefore;
+        if (!theCloaked) {
+            if (theOriginal < kCloakFadeMaxOpacity)
+                theOriginal = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOriginal;
+            if (theOriginal > kCloakFadeMaxOpacity)
+                theOriginal = kCloakFadeMaxOpacity;
+        } else {
+            if (theOriginal > kCloakFadeMinOpacity)
+                theOriginal = theOriginal - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
+            if (theOriginal < kCloakFadeMinOpacity)
+                theOriginal = kCloakFadeMinOpacity;
+        }
+        if (thePulse) {
+            long theTime = gPhysics->mGameTime % 2000;
+            if (theTime >= 1000)
+                theTime = 1999 - theTime;
+            theOriginal = theTime * 0.00033333333f + 0.2f;
+        }
+        if (CloakBits(theOriginal) != CloakBits(theOpacity))
+            EEUnitStepDiffers("UpdateCamouflageTimer (the cloak fade's bits)", inUnit->mUnitID, (long)CloakBits(theOpacity),
+                              (long)CloakBits(theOriginal));
+        uint32_t theWords[6] = {CloakBits(theOpacityBefore), theCloaked ? 1u : 0u, CloakBits(gPhysics->GetTickTime()),
+                                thePulse ? 1u : 0u, (uint32_t)gPhysics->mGameTime, CloakBits(theOpacity)};
+        EEUnitStepNote(kUnitStepCloakFade, inUnit->mUnitID, theWords, 6);
     }
     inUnit->SetOpacityChain(theOpacity);
 }

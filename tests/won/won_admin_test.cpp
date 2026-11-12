@@ -2,7 +2,7 @@
 // account, the version and patch requests, the version and module lists) and TitleConfig's rules: the original's
 // statements (copied from MasterKeyOp.cpp, BannedKeyOp.cpp, KeySubscribeOp.cpp, GetAccountFromCDKeyOp.cpp,
 // GetAccountFromCDKeyExOp.cpp, the version and patch op files, GetPatchServerModuleList.cpp and TitleConfig.cpp
-// before the port, over stand-ins with the ops' members) against include/ee/wonapi/WONAdminMsg.h over ee_won's admin
+// before the port, over stand-ins with the ops' members) against tests/won/won_admin_msg.h over ee_won's admin
 // module: every request over generated members, every reply generated, cut at every length and mutated. The exit
 // code is the number of failed checks.
 #include <windows.h>
@@ -17,7 +17,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONAdminMsg.h"
+#include "won_admin_msg.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

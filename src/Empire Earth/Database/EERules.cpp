@@ -43,14 +43,6 @@ EERuleNumber EERuleNumber::Constant(float inValue)
     return n;
 }
 
-EERuleNumber EERuleNumber::Integer(long inValue)
-{
-    EERuleNumber n;
-    n.mFloat = (float)inValue;
-    n.mLong = inValue;
-    return n;
-}
-
 EERuleNumber EERuleNumber::World(long inRow, int inValue)
 {
     EERuleNumber n;

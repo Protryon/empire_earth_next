@@ -285,8 +285,14 @@ def fixture(arch, d):
         if g.verdict(seq) != "rejected":
             problems.append(f"rejected box verdict {g.verdict(seq)}")
         ordered = fixture_driver.orders(g, 11)
-        if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1 or ordered["steps"][1]["note"] != "retried":
+        if ordered["ran"] != ["gather", "repair", "repair-queued", "patrol", "move"]                 or ordered["skipped"] != {"attack-ground": "no-unit"}                 or [len(r["units"]) for r in ordered["steps"]] != [2, 2, 2, 2, 0, 2]                 or ordered["steps"][2]["queued"] != 1 or ordered["steps"][1]["note"] != "retried"                 or ordered["steps"][2]["note"] != "homed":
             problems.append(f"orders {ordered}")
+        try:   # the second queued repair's new view shows no building: "home-no-pick", not a skip, the step fails
+            fixture_driver.order_step(g, 11, "repair-queued")
+            problems.append("a repair whose camera found no building passed")
+        except RuntimeError as error:
+            if "home-no-pick" not in str(error):
+                problems.append(f"home-no-pick repair: {error}")
         try:   # the second gather's scouting ends "scout-unseen": not a skip, the step fails
             fixture_driver.order_step(g, 11, "gather")
             problems.append("a gather whose scouting saw nothing passed")

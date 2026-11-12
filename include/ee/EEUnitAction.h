@@ -460,4 +460,8 @@ enum EEUnitTriggerID {
     kTriggerCanISeeEnemy = 20002,                         // EEUnitTrigger::RegisterAll 0x62a8e5 Register("CanISeeEnemy", 20002)
 };
 
+// New (R5b.4 leaf 6): the C++ calls of AIStep and the script's decision for a unit (EEUnitAction.cpp; ee_units ai.rs)
+struct EeUnitsAIHost;
+void EEUnitAIHostFor(EEComplexUnit* inUnit, EeUnitsAIHost& outHost);
+
 #endif

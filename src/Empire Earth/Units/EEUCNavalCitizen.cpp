@@ -128,10 +128,7 @@ void EEUCNavalCitizen::Update(EEComplexUnit* inUnit)
     this->RefreshSound(inUnit);
     unsigned long theCommand = inUnit->mCommand ? inUnit->mCommand->mType : 0;
     if (theCommand == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
     }
     this->UpdateCitizen(inUnit);
 }

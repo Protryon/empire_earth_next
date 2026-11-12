@@ -208,26 +208,12 @@ void EEMusicManager::Pause()
     this->mPause->Set();
 }
 
-// FUNCTION: EXE 0x531f70
-// Pauses the playing music
-void EEMusicManager::DoPause()
-{
-    ee_music_do(this, 0);
-}
-
 // FUNCTION: EXE 0x531f87
 // Requests a new music intensity, delaying a drop by five seconds; the music thread applies it
 void EEMusicManager::SetIntensity(unsigned long inIntensity)
 {
     ee_music_request_intensity(this, (uint32_t)inIntensity);
     this->mSetIntensity->Set();
-}
-
-// FUNCTION: EXE 0x531fb7
-// Applies the requested music intensity (a drop waits for its delay) and, while playing, transitions the score
-void EEMusicManager::DoSetIntensity()
-{
-    ee_music_do(this, 1);
 }
 
 // FUNCTION: EXE 0x532000
@@ -237,34 +223,11 @@ void EEMusicManager::Start()
     this->mStart->Set();
 }
 
-// FUNCTION: EXE 0x532009
-// Starts a random song of the current epoch (or resumes the paused one) with its reverb, fading in when the music
-// was audible, and schedules the next song in five to seven minutes
-void EEMusicManager::DoStart()
-{
-    ee_music_do(this, 2);
-}
-
 // FUNCTION: EXE 0x5321b1
 // Asks the music thread to stop the music
 void EEMusicManager::Stop()
 {
     this->mStop->Set();
-}
-
-// FUNCTION: EXE 0x5321ba
-// Stops the music and unloads the current song's score
-void EEMusicManager::DoStop()
-{
-    ee_music_do(this, 3);
-}
-
-// FUNCTION: EXE 0x5321ef
-// Switches to another random song of the current epoch (fading out and in when audible) and schedules the next
-// song in five to seven minutes
-void EEMusicManager::NextSong()
-{
-    ee_music_do(this, 4);
 }
 
 // FUNCTION: EXE 0x532410

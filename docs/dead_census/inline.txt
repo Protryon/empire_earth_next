@@ -1,0 +1,12 @@
+# inline functions and template instances that first-party units emit and no map keeps (tools/dead_census.py)
+# 10 symbols; the class, then its dead members
+
+EEContagionFunctor (4): CanInfectType, GetUnitSet, Infect, Update
+
+EEAIPathGoalModifierBase (2): CanEnter, GetCost
+
+EEAIFOUnitSelectionScreener (1): Screen
+
+EEFOLocationScreenBase (1): Screen
+
+EEUUUnitFunctor (1): Apply

@@ -1,0 +1,10 @@
+# dead-code census of module default (tools/dead_census.py)
+# maps: build/clang/exe/EE-AOC.map, build/clang/exe/EE-SIM.map, build/clang-test/exe/EE-AOC.map
+# 2 units, 2223 lines; 2 of 92 functions no map keeps; 14 lines in their definitions
+# columns: dead lines, unit lines, dead/defined functions, unit ('ALL' = no function kept)
+
+    14   1707    2/49   Empire Earth/Random Map/Random Map Generators/Default/Unit10.cpp
+
+# dead functions by class
+
+(free functions) (2): GetAttributeType, GetKeyword

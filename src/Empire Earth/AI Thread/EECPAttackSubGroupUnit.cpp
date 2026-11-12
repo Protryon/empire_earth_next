@@ -139,21 +139,6 @@ static float ASGUWonderValue2(EEComplexUnit* inUnit)
     return ASGUWonderValue(inUnit);
 }
 
-// FUNCTION: EXE 0x463166
-// Tells whether a unit class falls under the prejudice: by AI unit line if one is set, else by family,
-// else by unit type
-bool EECPAttackSubGroupUnitPrejudice::Matches(EEUnitClass* inClass)
-{
-    bool theResult;
-    if (this->mUnitLine != kAIKindNone)
-        theResult = inClass->mAIKind == this->mUnitLine;
-    else if (this->mUnitFamily != kUnitFamilyNoFamily)
-        theResult = inClass->mFamily == this->mUnitFamily;
-    else
-        theResult = inClass->mUnitType == this->mUnitType;
-    return theResult;
-}
-
 // FUNCTION: EXE 0x46319f
 // Creates the attack entry for a unit in a sub group (both referenced), idle and without target or escort;
 // importance is the class influence times a hero/siege/calamity/range factor; then rolls a personality

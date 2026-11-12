@@ -11,17 +11,22 @@
 //! calls a decision makes (a group's units as ids, goals as handles) are `host`'s; the box selection's pick over the
 //! store is `select`, the active groups' Fill test and the group commands `group` and `commands`. The units stepped
 //! every tick, in their order, are `order`; the smallest leaves of a unit's step (the
-//! countdowns, the power's regeneration) over the store are `step`.
+//! countdowns, the power's regeneration, the camouflage) over the store are `step`, its AI step and the AI script's
+//! decision `ai`, the physics models' arithmetic over the store's velocities `motion`; the physics tick's unit loop
+//! over the stepped units' list `tick`.
 
+pub mod ai;
 pub mod commands;
 pub mod ffi;
 pub mod group;
 pub mod host;
 pub mod kinds;
+pub mod motion;
 pub mod order;
 pub mod registry;
 pub mod select;
 pub mod step;
 pub mod store;
+pub mod tick;
 
 pub use registry::Registry;
