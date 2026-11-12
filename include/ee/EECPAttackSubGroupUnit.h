@@ -33,9 +33,6 @@ public:
         this->mUnitFamily = inOther.mUnitFamily;
     }
     virtual ~EECPAttackSubGroupUnitPrejudice() {}
-    // 0x63166 (EECPAttackSubGroupUnit.cpp's helpers): mL08 set -> inClass->mAIKind == mL08; else mL0C set ->
-    // inClass->mFamily == mL0C; else inClass->mUnitType == mUnitType
-    bool Matches(EEUnitClass* inClass);
 
     long mUnitType;                         // +0x04 (EEUnitClass +0x1bc)
     long mUnitLine;                         // +0x08 (EEUnitClass +0x1d0)

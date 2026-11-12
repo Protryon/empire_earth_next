@@ -110,14 +110,8 @@ bool EEIsSameResearch(long inFirst, long inSecond);
 // the colour of a time-warped unit (SetDisabled 0x1fe5b3: SetColor when +0x358 is 0x1a/0x1c) (provisional name)
 const GEColor kTimeWarpColor(0.2f, 0.2f, 1.0f);
 
-// 0x963234: when set, DropPath moves the unit through its waypoints instead of dropping them (only this unit
-// reads it) (provisional name)
-static bool sB563234;
 // 0x963238: the time of the last fanaticism colour update (UpdateFanaticismColor; only this unit) (provisional name)
 static unsigned long sU563238;
-// 0x963abc: gUnitClassTable[0x104], the unit class whose units mark the waypoints while sB563234 is set
-// (only AddWaypoint reads it; the address is a gUnitClassTable slot, filled by CreateUnitClasses like every
-// other class; no separate static)
 // SYNTHETIC: EXE 0x5f57d3   (wrapper)
 // SYNTHETIC: EXE 0x5f57dd   (ctor)
 // SYNTHETIC: EXE 0x5f57f8   (registrar)
@@ -273,21 +267,9 @@ void EEComplexUnit::SetHolder(EEComplexUnit* inUnit)
 // Ignores a target for 30 seconds from both units' current tiles, or renews an existing ignore entry
 void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
 {
-    std::deque<EEComplexUnitAttacker>::iterator theIterator;
-    EEComplexUnitAttacker theAttacker;
-    theIterator = std::find(this->mIgnoredTargets.begin(), this->mIgnoredTargets.end(), inTarget->GetUnitID());
-    if (theIterator == this->mIgnoredTargets.end()) {
-        theAttacker.mTileX = this->GetTileX();
-        theAttacker.mTileY = this->GetTileY();
-        theAttacker.mFromX = inTarget->GetTileX();
-        theAttacker.mFromY = inTarget->GetTileY();
-        theAttacker.mUnitID = inTarget->mUnitID;
-        theAttacker.mTime = gPhysics->mGameTime + 30000;
-        this->mIgnoredTargets.push_front(theAttacker);  // newest first: 0x2000f9 is deque::push_front (_Myoff ? _Myoff : _Mapsize * 0xaa, then --); IsTargetIgnored erases from an expired entry to the end
-    } else {
-        long theTime = gPhysics->mGameTime;
-        (*theIterator).mTime = theTime + 30000;
-    }
+    // ee_combat world.rs ignore_target over the world host (EECombatGoals.cpp); CBXR records the outcome
+    EECombatWorld(EE_COMBAT_WORLD_IGNORE, this, inTarget);
+    EECombatCaptureIgnored(EE_COMBAT_XR_IGNORE, this, inTarget, 0, 0);
 }
 
 // FUNCTION: EXE 0x5f5d8b
@@ -496,8 +478,6 @@ void EEComplexUnit::AddWaypoint(const GE3DPoint& inLocation, bool inSnapToMap)
     }
     if (!theValid)
         return;
-    if (sB563234 && gUnitClassTable[kUnitTypeWaypoint] != NULL)
-        gUnitClassTable[kUnitTypeWaypoint]->CreateUnit(theX, theY, this->mPlayer->mPlayerID, false, NULL)->SetHitPoints(this->mUnitID);
     if (theSize > 0) {
         float theDistance = sqrt((inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
                                      * (inLocation.GetX() - this->mWaypoints[theLast].mLocation.GetX())
@@ -892,16 +872,12 @@ void EEComplexUnit::ReleaseFireEffect()
 }
 
 // FUNCTION: EXE 0x5f7112
-// Drops the unit's waypoints (or steps through them all while waypoint marking is on)
+// Drops the unit's waypoints (the original stepped through them instead while its never-set waypoint marking flag
+// 0x963234 was on)
 void EEComplexUnit::DropPath()
 {
-    if (!sB563234) {
-        this->mWaypoints.clear();
-        this->mCollisionResolutionCount = 0.0f;
-        return;
-    }
-    while (this->NextWaypoint() == 0)
-        ;
+    this->mWaypoints.clear();
+    this->mCollisionResolutionCount = 0.0f;
 }
 
 // FUNCTION: EXE 0x5f713d
@@ -1752,27 +1728,6 @@ void EEComplexUnit::ApplyAreaEffects()
     ::gAEManager.CollectEffects(theRadius, theLocation, thePlayerID, &this->mAreaEffects, this);
 }
 
-// FUNCTION: EXE 0x5f9c12
-// Returns this unit's waypoint marker at a tile, on the map or in the world's queued units
-EEComplexUnit* EEComplexUnit::FindWaypointMarker(long inX, long inY)
-{
-    EEComplexUnit* theResult = NULL;
-    EEMapTile* theTile = ::gWorld.mMap->GetTile(inX, inY);
-    if (theTile != NULL) {
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-            if (theResult != NULL)
-                return theResult;
-            EEUnit* theUnit = theNode->mUnit;
-            if (theUnit != NULL && theUnit->mUnitClass->GetUnitType() == kUnitTypeWaypoint && (unsigned long)theUnit->mHitPoints == this->mUnitID
-                && theUnit->mIsQueuedForDelete == false)
-                theResult = static_cast<EEComplexUnit*>(theUnit);
-        }
-        if (theResult != NULL)
-            return theResult;
-    }
-    return ::gWorld.FindQueuedUnitAt(inX, inY, this->mUnitID);
-}
-
 // FUNCTION: EXE 0x5f9c9b
 // Tries random points away from a threat until the screen accepts one; returns whether one was found
 bool EEComplexUnit::FindFleePoint(GE3DPoint* inTarget, GE3DPoint* outPoint, long inTries, float inMinAngle,
@@ -2006,7 +1961,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
         ioString += theString;
     }
     ioString += ":";
-    sprintf(theString, "vel %.4f:", this->mVelocity);
+    sprintf(theString, "vel %.4f:", this->mVelocity.Get());
     ioString += theString;
     if (!theGoal)
         return;
@@ -2084,28 +2039,10 @@ float EEComplexUnit::GetEffectHeight(bool inUseCurrentFrame)
 // Returns whether a target is ignored (optionally only from the same tiles), dropping expired entries
 bool EEComplexUnit::IsTargetIgnored(EEComplexUnit* inTarget, bool inCheckLocation)
 {
-    bool theResult = false;
-    unsigned long theUnitID = inTarget->mUnitID;
-    std::deque<EEComplexUnitAttacker>::iterator theIterator = std::find(this->mIgnoredTargets.begin(), this->mIgnoredTargets.end(), theUnitID);
-    if (theIterator != this->mIgnoredTargets.end()) {
-        long theX = this->GetTileX();
-        long theY = this->GetTileY();
-        long theFromX = inTarget->GetTileX();
-        long theFromY = inTarget->GetTileY();
-        unsigned long theNow = gPhysics->mGameTime;
-        if ((*theIterator).mTime <= theNow)
-            this->mIgnoredTargets.erase(theIterator, this->mIgnoredTargets.end());
-        else if (inCheckLocation) {
-            if ((*theIterator).mTileX == theX && (*theIterator).mTileY == theY && (*theIterator).mFromX == theFromX
-                && (*theIterator).mFromY == theFromY)
-                theResult = true;
-            else {
-                theResult = false;
-                this->mIgnoredTargets.erase(theIterator, theIterator + 1);
-            }
-        } else
-            theResult = true;
-    }
+    // ee_combat world.rs is_target_ignored over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(inCheckLocation ? EE_COMBAT_WORLD_IS_IGNORED : EE_COMBAT_WORLD_IS_IGNORED_ANYWHERE, this,
+                                   inTarget) != 0;
+    EECombatCaptureIgnored(EE_COMBAT_XR_IS_IGNORED, this, inTarget, theResult, inCheckLocation);
     return theResult;
 }
 
@@ -2156,16 +2093,9 @@ bool EEComplexUnit::IsOnOtherContinent(long inTileX, long inTileY)
 // Returns whether the unit can get to a target, directly or through connected continents
 bool EEComplexUnit::CanReachUnit(EEUnit* inTarget)
 {
-    bool theResult = gContinentManager.CanGetToUnit(this, inTarget);
-    if (theResult)
-        return theResult;
-    EEAIContinent* theFrom = gContinentManager.GetContinentAt(this);
-    EEAIContinent* theTo = gContinentManager.GetContinentAt(inTarget);
-    if (theFrom != NULL && theTo != NULL) {
-        theResult = gContinentManager.mTileFlags[theFrom->mID * gContinentManager.mFlagsWidth + theTo->mID];
-        if (!theResult)
-            theResult = gContinentManager.AreConnectedForUnit(inTarget, theFrom, theTo);
-    }
+    // ee_combat world.rs can_reach_unit over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(EE_COMBAT_WORLD_CAN_REACH_UNIT, this, inTarget) != 0;
+    EECombatCaptureXRead(EE_COMBAT_XR_CAN_REACH_UNIT, this, inTarget, theResult);
     return theResult;
 }
 
@@ -2778,18 +2708,11 @@ void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 }
 
 // FUNCTION: EXE 0x5fbdd1
-// Drops the unit's first waypoint (and its marker while waypoint markers are on); returns 0, or 7 if there was none
+// Drops the unit's first waypoint; returns 0, or 7 if there was none
 long EEComplexUnit::NextWaypoint()
 {
     long theResult;
     if (this->mWaypoints.size() > 0) {
-        long theX = UMFloor((*this->mWaypoints.begin()).mLocation.GetX());
-        long theY = UMFloor((*this->mWaypoints.begin()).mLocation.GetY());
-        EEMap* theMap = ::gWorld.mMap;
-        if (theMap->GetTile(theX, theY) == NULL)
-            theMap->GetClosestTile(&(*this->mWaypoints.begin()).mLocation, &theX, &theY);
-        if (sB563234)
-            this->RemoveWaypointMarker(theX, theY);
         this->mWaypoints.pop_front();
         theResult = 0;
     } else
@@ -3464,15 +3387,6 @@ void EEComplexUnit::TakeOffMap()
     this->ReleaseFireEffect();
 }
 
-// FUNCTION: EXE 0x5fdc39
-// Kills the waypoint marker unit on the given tile
-void EEComplexUnit::RemoveWaypointMarker(long inX, long inY)
-{
-    EEComplexUnit* theUnit = this->FindWaypointMarker(inX, inY);
-    if (theUnit)
-        theUnit->mPlayer->KillUnit(theUnit, false);
-}
-
 // FUNCTION: EXE 0x5fdc58
 // Starts the next build-queue entry the built building can produce (a citizen may come out female), dropping and
 // refunding unavailable entries
@@ -4137,72 +4051,45 @@ bool EEComplexUnit::CanReachTile(long inX, long inY)
 }
 
 
+// TEST ONLY (USST): AIStep's call as words: the inputs, the path, the results, the outputs
+static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
+{
+    ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
+    ioWords[8] = (uint32_t)inUnit->mNextTriggerTime.Get();
+    EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
+}
+
 // FUNCTION: EXE 0x5ff2e8
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
 // evaluating 350 ticks after it went idle until its trigger time is reset
+// New (R5b.4 leaf 6): Rust over the unit store (ee_units ai.rs ai_step), the goal's activity, the actions' starts and
+// changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    unsigned long theAction;
-    EEUnitAction* theCommand;
-    if (this->mIsCitizen && this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather && !this->mGoalState->IsActive(&theAction)) {
-        this->StartAction(theAction);
-        this->GetUnitClass()->ActionChanged(this);
-        return;
+    bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
+    uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime.Get(),
+                            (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
+    EeUnitsAIHost theHost;
+    EEUnitAIHostFor(this, theHost);
+    EeUnitsAIStepOut theOut = ee_units_ai_step(&theHost, static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                               this->mIsCitizen ? 1 : 0, gPhysics->mGameTime);
+    if (theNoting) {
+        theWords[3] = theOut.path;
+        theWords[4] = theOut.action;
+        theWords[5] = theOut.first;
+        theWords[6] = theOut.second;
+        NoteAIStep(this, theWords);
     }
-    if (this->mCommand == NULL)
-        return;
-    if (this->mCommand->mType == kActionIdle && this->mNextTriggerTime < gPhysics->mGameTime)
-        return;
-    long theResult = this->mCommand->Evaluate(this, theCommand);
-    if (theResult != 0) {
-        if (theResult == 2) {
-            this->DropFinishedGoals(false);
-            if (this->mGoalState != NULL) {
-                theCommand = NULL;
-                theResult = this->mCommand->Evaluate(this, theCommand);
-            } else {
-                this->StartAction(kActionIdle);
-                this->GetUnitClass()->ActionChanged(this);
-                theResult = 0;
-            }
-        }
-        if (theResult == 1) {
-            this->UpdateCamouflage(theCommand->mType);
-            this->mCommand = theCommand;
-            this->GetUnitClass()->ActionChanged(this);
-        }
-    }
-    if ((this->mCommand ? this->mCommand->mType : 0) == kActionIdle)
-        this->mNextTriggerTime = gPhysics->mGameTime + 350;
 }
 
 // FUNCTION: EXE 0x5ff400
 // Returns true if a range-1 unit stands on the target's tile or a tile along its sides or corners
 bool EEComplexUnit::IsOnTileBorderingTarget(EEUnit* inTarget)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    long theY = this->GetTileY();
-    long theX = this->GetTileX();
-    long theTargetX = inTarget->GetTileX();
-    long theTargetY = inTarget->GetTileY();
-    long theSize = inTarget->mUnitClass->mTileSize;
-    bool theFound = false;
-    if (this->GetStats()->mRange == 1.0f) {
-        if (theX == theTargetX && theY == theTargetY)
-            theFound = true;
-        else {
-            EEGetSideTiles(theTargetX, theTargetY, theSize, theTiles);
-            std::vector<U2DPoint<long> >::iterator it;
-            for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++)
-                theFound = theX == it->mX && theY == it->GetY();
-            if (!theFound) {
-                EEGetCornerTiles(0, theTargetX, theTargetY, theSize, theTiles);
-                for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++)
-                    theFound = theX == it->mX && theY == it->GetY();
-            }
-        }
-    }
-    return theFound;
+    // ee_combat world.rs on_tile_bordering over the world host; CBXR records the outcome
+    bool theResult = EECombatWorld(EE_COMBAT_WORLD_BORDERING, this, inTarget) != 0;
+    EECombatCaptureXRead(EE_COMBAT_XR_BORDERING, this, inTarget, theResult);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x5ff4f9

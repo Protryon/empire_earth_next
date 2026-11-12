@@ -53,12 +53,6 @@ public:
     long mBattleFlagsHeight;                // +0x158 (= 0x40)
 };
 
-// One cell of the mini map's two 0x1000-cell tables (provisional name; the ctor zeroes both dwords)
-struct EEMiniMapCell {
-    long mA;
-    long mB;
-};
-
 // RTTI EEMiniMap > RTSMiniMap (vtable 0x441d44; ctor 0x11e3d4, sizeof 0x12188).
 class EEDoppelganger;
 class EEUnit;
@@ -115,7 +109,6 @@ struct MMMapUnit {
     void GetPixelColor(long inX, long inY, GEColor& outColor);  // 0x11f272 (the terrain colour of a mini-map pixel)
     void Recolor();                         // 0x11fa55 (the dots take the players' current colours)
     void RedrawCell(long inX, long inY);    // 0x11fb2a (one cell's pixel)
-    static void ProjectToGround(const GEViewport& inViewport, const GE2DPoint& inPoint, float inZ, GE2DPoint& outPoint);  // 0x11ff72
     void RedrawPixels(long inLeft, long inRight, long inBottom, long inTop);  // 0x1202f2 (the terrain texture's pixels)
 
     // +0x0015c / +0x0815c: UList<EEMiniMapDot>[0x1000] / UList<EEMiniMapUnitDot>[0x1000] in the original (the dots

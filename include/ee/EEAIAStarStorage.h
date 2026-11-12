@@ -59,7 +59,6 @@ public:
     EEAIAStarBounds GetSearchBounds();
     bool GetHasBounds();
     void SetHasBounds(bool inHasBounds);
-    EEAIAStarBounds GetDirtyBounds();
     void SetDirtyBounds(const EEAIAStarBounds& inBounds);  // EEAIAStarTerrainStorage::mDirtyBounds (the flood goals)
 
     long GetWidth() const { return this->mWidth; }

@@ -8411,6 +8411,83 @@ or EE-SIM run does.
   FindPatchOp's state is VersionBaseOp's sets plus a list of PatchInfo maps of ByteBuffers: it follows VersionBaseOp.
   PeerAuthOp, FilePushOp, the routing and DB op families and ServerRequestOp's object remain.
 
+## R5b.4, eleventh round: the rotting and camouflage leaves, AIStep and the script's decision, the physics arithmetic and the unit loop in Rust (ee_units step.rs, ai.rs, motion.rs, tick.rs; branch rust-r5b4-core11, 2026-11-12)
+
+- **Golden first, once for the round.** One C++ commit noted every new piece from the original's statements: USTM
+  kinds 5-8 (the rotting countdown, the resources' rotting, the camouflage timers' events, the cloak fade) and a new
+  per-tick digest, USST (AIStep's inputs, path, results and outputs; each `EvaluateCondition` of the script's
+  triggers with its answer; `AfterStep`'s roll decay; `Move`'s push arithmetic). Its goldens (oracle, late, space,
+  calamity, seeds 2-7) were recorded from that build in one capture pass; each Rust commit after it was checked
+  against them (and the original's statements recheck each call while the capture runs). A new kind changes the
+  per-tick digest of every tick: record the goldens of all the round's kinds together, before any Rust body.
+- **The 19 rotting copies were one statement shape** (`long t = m - tick; if (t < 0) t = 0; Set(t);`), so a regex
+  replaced them, keeping the returned time where a linked-parts loop follows (the ambient's and the default class's).
+  The resources' rotting (`kActionResourcesRotting`: the animals, the fish, the default) is a second helper.
+- **The camouflage timers as a decision with events.** The original's two blocks interleave world calls
+  (`gMiniMap->MoveUnit`, the cloak chain setters) with the timers' writes, and its mini map tests
+  (`theCloaked && EEIsCloakedEnemyOf(...)`) read flags the setters just changed. The Rust returns the events in the
+  statement order; the C++ applies them and makes the mini map test where the event is applied (`theCloaked &&` is
+  implied: `EEIsCloakedEnemyOf` tests `mIsCloakable ? mIsCloaked : false` itself). The second timer (`mU32C`) is not
+  in the store (handed in). `long theTime = <unsigned long> - tick` is computed as the Windows build's 32-bit words.
+- **The store's lock and host calls.** `AIStep`'s host calls (`ActionChanged`, `StartAction`, `DropFinishedGoals`)
+  write holders, which take the store's lock: the Rust reads the record under the lock and releases it before every
+  host call, and reads it again after each call that can change the command or the goal.
+- **The script's conditions are `long`s** (32-bit on Windows): the host copies a trigger's ids into a 64-bit buffer
+  before the Rust reads them (no Rust reference to C++ data across a host call).
+- **`far` and `near` are `<windows.h>` macros**: a cbindgen struct field named `far` broke the C++ compile
+  ("expected unqualified-id"); the field is `past_move`.
+- **The object cache is capped** (`store 4096 MB, ... pruned`): switching the tree between two states (a stash for a
+  separate commit) rebuilds almost everything both ways (about 12 minutes each under load).
+- **The unit loop** (`EEPhysics::UpdateUnits`) is Rust over the stepped units' list: the collision period
+  (`UMCeilUnsigned` as `lrintf` and the compare), the players' updates and the steps from the last to the first as
+  host calls. The step indexes the deque by the list's index (the object is the deque's), and while the capture runs
+  it checks the list's id; a count that differs resets the list from the deque (never seen).
+- **A staging failure that is not the build's.** One capture run's six seeds all failed at once with "db table is
+  missing" (exit -1) right after a killed background start of another run; the same build passed on a rerun. Delete
+  the run's stage slots and rerun before suspecting the code.
+- **Only a tour or a played game runs** the fixture's repair "home" path (the camera on a town building before the
+  scan); the self test's stand-in covers the driver's side.
+
+## R5b.2, eighth round: the attack's world steps in Rust (ee_combat world.rs; branch rust-combat8, 2026-11-12)
+
+| Piece | C++ caller (body gone) | Rust | Tag |
+|---|---|---|---|
+| the ignored targets | `EEComplexUnit::IsTargetIgnored`, `IgnoreTarget` | `world::is_target_ignored`, `ignore_target` | CBXR |
+| reach | `EEComplexUnit::CanReachUnit`, `EEIsAttackReachable` | `world::can_reach_unit`, `attack_reachable` | CBXR |
+| the bordering tile | `EEComplexUnit::IsOnTileBorderingTarget` | `world::on_tile_bordering` | CBXR |
+| the attacked unit's reaction | `EEUnitClass::Attacked` | `world::attacked` (a plan) | CBXA |
+| one shot | `EEUnitClass::FireShot` | `world::fire_shot` (a plan) | CBXA |
+
+- **One world host.** `EeCombatWorldHost` is the reads' `EeCombatQueryHost` (so `Stored` serves the store's fields)
+  plus one operation callback: a code, two handles and an `int64_t[12]` argument block in and out. The ignored list
+  (a `std::deque` the saves and EESim copy) stays C++: Rust reads its entries, erases a range and pushes or renews
+  one; a continent is a handle (`EEAIContinent*`); the path search is one operation (bounds and limit in, the path's
+  length and first tile out; the attackable-by modifier is made and released inside it, after the window's arithmetic
+  instead of before: nothing between reads it). `Attacked`'s goal, its units near and the helpers' shared
+  `EEIsAttackReachable` tile live in the host's context, as `FireShot`'s drop point and class do.
+- **The quirks kept.** `IsOnTileBorderingTarget`'s second corner test passes `inHeight + 1` as its last y (the
+  original's `EEGetRingCorners`), all four corners are tested before the search; `IsTargetIgnored` erases from an
+  expired entry to the end, a moved one alone; `EEIsAttackReachable` leaves the tile untouched for a target off the
+  map or on another continent (so `Attacked`'s helpers see the previous helper's tile); a capital ship skips its last
+  (special) tag point in the turn; `Attacked` reads the helper's goal target twice.
+- **C++ deleted, measured.** The seven bodies were 294 lines; the host's 28 reads and 39 operations, the forwarders and
+  the declaration add 260 (one line a case where it fits): net 34. Moving object work behind an operation host costs about as many lines as it
+  removes: the deletion comes when the store holds the fields (RUST_PLAN's combat row lists them by count) and when
+  the goals, effects and the ignored list move whole. `LaunchShot`, `ApplyHit` and `ComputeDamage`'s fill were left
+  for that reason.
+- **Goldens.** CBXR (every call: the function, the ids, the result, the ignored list's size and FNV-1a, the reach
+  tile) and CBXA (at each end: the unit's command, animation, hit points, reload timer, weapon tag point, ammunition,
+  flight time, special attack and firing high flags, experience, goal and its target, last attacker, search timer,
+  and the target's hit points and resource amount; the splash's victims hashed) were recorded from the original
+  bodies (14aa3e1d) in the five profiles, seeds 2-7, every other tag equal to its golden in that run. CBX was free in
+  every golden file. A capture-only count of the hosts' callbacks (one oracle game) ordered the store field list.
+- **cbindgen and the split headers.** A private `const` named like another crate's public one (`TYPE_CP_ICBM`,
+  `CATEGORY_LAND_CITIZEN`) moves that crate's constant into `ee_rust_common.h`: the splitter counts every definition.
+  world.rs's constants carry a `W_` prefix.
+- **What only a combat tour shows:** the shots' effects (muzzle flash, the shot effect between the units or at the
+  drop point, the impact sparks on a friendly blocker or open ground, the capital ships' special attack effect) and
+  that idle soldiers near an attacked unit join the fight.
+
 ## R6: WON's Internet code, round 7 (ops derived in Rust: the admin, directory change, email and patch list ops)
 
 Branch `rust-won-net7`. The goal was net C++ deletion: round 6's whole-op moves left a C++ shim per op whose hook
@@ -8451,6 +8528,112 @@ no tour, LAN game or EE-SIM run does.
   HTTPGetOp/FTPGetOp/GetHTTPDocumentOp (a socket state machine, next); the ops the lobby uses (GetDirOp,
   GetMultiDirOp, the account ops, CheckValidVersionOp, GetUserIdFromNameOp), which need their accessors on the
   narrow ABI.
+
+## R6: the game screens, fourth round: the out-of-game menus whole in Rust (ee_screens menus.rs, EEScreens.cpp; branch rust-screens4, 2026-11-12)
+
+Rounds 1-3 moved the screens' decisions but kept every C++ function as a call into Rust, so almost no C++ went. This
+round starts RUST_PLAN's step 2 (a form's state and events in Rust, one dispatcher) and is measured by the C++ deleted:
+the main menu, the editors' sub-menu, the single player screen and the play campaign screen moved whole.
+
+- **Deleted:** `EEUIEMainScreenEvents.cpp` (the main menu's five events; `EEUIESSEOpen`, the loading screen's, stays in its
+  own unit, its class in the trimmed header), `EEUIEMultiplayerScreenEvents.cpp` (its one event could never be created:
+  the branch of `MultiPlayer` that made it was dead), `EEUIEEmpireEarthEditorsEvents.cpp`, `EEUIESinglePlayerEvents.cpp`,
+  `EEUIEPlayCampaignEvents.cpp`, the headers `EEUIESinglePlayerEvents.h`, `EEUIEEmpireEarthEditorsEvents.h`,
+  `EEUIEPlayCampaignEvents.h`, the two empty events in `EEUIManagerEvents.h`, the single player and play campaign
+  factories in `EEUIManager.cpp` and their `??_G` notes; their `link/exe/units.txt` lines. C++ lines of the screens
+  (UI Events, User Interface Thread, `include/ee/EEUI*.h`, the new header, `EECommandLine.cpp`, `EESim.cpp`): 43,267
+  before, 42,749 after the menus' commit (-518), 42,424 after the play campaign's (-325). Over all C++: +402, -1,245.
+- **What replaced them:** one event class, `EEScreenEvent` (`ee/EEScreenEvent.h`: a code, `ProcessEvent` ->
+  `ee_screens_event`), one Rust dispatcher (`menus::dispatch`) over a host trait, the control-event table in Rust
+  (`ee_screens_menus_event_for`, registered where the main screen's factory was; the single player and play campaign
+  factories folded into it: no factory between their old places claims their ids, so the first-match order is kept),
+  and the host `UI Events/EEScreens.cpp` (an EXTRA unit): `ee_screenscpp_call` (toolkit and game calls by op code, one
+  case each), `_text`/`_put_text` (texts as UTF-8 bytes, D6), `_lobby_fill` (the random map's slots). The play campaign
+  screen's file statics (three campaigns' descriptions and first scenarios, the learning campaign's; the unused demo
+  campaign's are gone) are a Rust record, `Menus`, in a static `Mutex` taken only around its own reads and writes: a
+  host call such as a push can run another form's open event at once, so no lock or Rust reference lives across one.
+- **The pattern** is written in RUST_PLAN's row (codes `form << 8 | n`, `EE_SCREENS_CPP_*` past 0xffff for the C++
+  events a moved form hangs on forms still C++, the shared toolkit ops, the golden through the host's trace).
+- **Golden drivers** (scratch, `build/sc4`: `menus_driver.cpp`, `campaign_driver.cpp`, `drv.py` as before with
+  `SC4_DEFINES` for extra units): the old build `#include`s the unmodified units, the new one `EEScreens.cpp`; the events
+  are made by class (old) or code (new), and an `EEScreenEvent` handed to a fake (`SetFormOpenEvent`, `SetTriggerEvent`)
+  is printed under its old class's name, so both builds print the same text. `golden_menus.txt`: 2,000 cases of the 16
+  events (a third the random map) with the typed name (empty, valid, refused characters, UTF-8, a lone lead byte), the
+  player name, the flags the events change, the WON connection, the adapter and the civilization builder's points;
+  `golden_campaign.txt`: 2,000 cases of the play campaign's 8 events with the entity, the files loading or not, the
+  Please wait string missing or not, state carried across cases. Both replay in Rust over a host printing the fakes'
+  lines; seeds 1-4 (20,000 cases each for 2-4) are identical old against new. Mutations checked (the empty-name test,
+  the forgotten main form, the multiplayer flag, a failed campaign load clearing the first scenario, Please wait's
+  message flag) each fail a replay; checking a name's bytes instead of its characters' first bytes cannot fail one (a
+  continuation byte is never refused nor a space).
+- **Lessons:**
+  - On Windows, Python's `read_text`/`write_text` turns LF into CR LF: six LF files became CR LF in one edit. Edit with
+    `read_bytes`/`write_bytes` only (and check `git diff --stat` after any scripted edit).
+  - A record that only a C++ host function takes (`EeScreensSinglePlayerSlot`, once its exported function went) drops
+    out of the generated header: list it in `cbindgen.toml`'s `[export] include`.
+  - `std::min` does not compile under `<windows.h>`'s `min` macro in the game's units.
+  - The legacy debugger harness breaks on these names: `tools/harness/save_load.py` (`EEUIESPELoadGame`'s mangled
+    `ProcessEvent`) and `scenario_game.py` (`EEUIESPECampaign`, `EEUIEPCECampaign*`); the fixture driver does not name
+    classes. `EESim.cpp`'s `--load-save` finds the Load Game button by its `EEScreenEvent` code now.
+- **What the harness reaches:** the tour's `main-menu` capture (the main menu's open event: the copyright label, the
+  version label, the media dump hot keys), its Single Player click (`single-player` capture: the name box from the
+  player name) and Random Map (`random-map-setup`: the name check, the lobby's options, the local server); the LAN game
+  and `lan_game.py` click MultiPlayer (the external lobby); the ai-game gate goes through the same single player
+  screen. **Only a person reaches:** the editors' sub-menu, the civilization builder, Load Game from the menu (EE-SIM's
+  `--load-save` does), the play campaign screen and its campaigns. None of this is simulation: EE-SIM never runs it, so
+  the oracle only shows it does not disturb the game; goldens never draw, so the tour must show the menus.
+- **Behaviour:** none intended. `gUIManager` and the event form's manager are the same object, so the host uses the
+  latter where the original named either.
+
+## Dead code across the game and engine: the linker's census, and why it finds little (tools/dead_census.py; branch rust-deadcode1, 2026-11-12)
+
+A new lane: delete the first-party C++ that no build reaches, outside WON (src/Empire Earth/WONAPI and
+include/ee/wonapi are the WON lanes'). Measured as `python -I tools/dead_census.py --lines`: src without ThirdParty
+and WONAPI, include without the generated rust headers, the third-party copies and wonapi. 416,370 -> 415,913 lines
+(-457) in four code commits (415,196 merged with rust); the census tool and its report (docs/dead_census/<module>.txt,
+inline.txt; on the merged tree 593 of 17,094 functions dropped, all accounted for below) are committed.
+
+- **The census.** lld-link /OPT:REF drops every function no live code reaches (clang-cl /O1 implies /Gy), and its
+  /MAP lists every kept symbol, ICF-folded copies included at their leader's address (checked: 2,767 map addresses
+  carry more than one name). A text symbol a first-party object defines that none of EE-AOC.map, EE-SIM.map and the
+  test profile's EE-AOC.map lists is dropped in every build. First census: 640 of 17,106 functions, ~3,700 lines.
+- **Dropped is not dead.** Almost all of them are inlined: a function defined in a unit and called only from that
+  unit is inlined into every caller at /O1, and its out-of-line copy (external, so still emitted) is dropped.
+  Same for constructors and destructors (the ??_G deleting destructor in the vtable holds the inlined body), base
+  classes' virtual functions (the base vtable's store is optimised away once the base constructor is inlined into
+  the derived one: 50 first-party vtables are in no map, none of them a class nobody builds but EEWonNet), and
+  calls behind constants. A grep over src, include, tests, tools, ai and rust, with the uses inside proven-dead
+  definitions discounted (a fixpoint), left 43 functions with no caller; Rust and Python tokens of the same name and
+  other files that never name the class are discounted for members. That is the WON lane's method; WON's SDK had
+  whole unused classes, the game has almost none: its sources were rebuilt from the original exe, which was itself
+  linked with /OPT:REF, so every reconstructed function existed in a binary that reached it. What is dead is what
+  the port made dead (a caller moved to Rust, a DirectX path replaced) and the original's never-set debug flags.
+- **Deleted.** The 43 callerless functions (EEAIAStarStorage::GetDirtyBounds, EEAIContinent::SortTiles,
+  EECPAttackSubGroupUnitPrejudice::Matches, EECPChoiceName, EECPNextTechName, EECCVolcano::UpdateVolcano,
+  EERuleNumber::Integer, EETagPoint::GetTransformation, EECameraControl::ClampHeight/ClipToEdges, EEMusicManager's
+  five Do* steps, EEGraphicalGoalManager::GetGoals, EEMiniMap::ProjectToGround, both EEApplyEventEffect,
+  EETechTree::GetUnitClassMediaMask, EEUserInterface::Open/CloseIMECandidateWindow, ESQuietVerify, 18 GX shim
+  methods with their extern "C" declarations); UFromChars.h and EESCTChatText.h (no #include), EEMiniMapCell,
+  the comment-only EEAGIncreasingVelocityUnitSorter.cpp; and the branches behind three zero-initialised statics
+  nothing writes: sB563234 (the waypoint marker units: AddWaypoint's marker, DropPath stepping through the
+  waypoints, EEComplexUnit::FindWaypointMarker and RemoveWaypointMarker, EEWorld::FindQueuedUnitAt), sL52906C
+  (FillUnit's line-of-sight and range ring sizes) and gRecordToDebuggerOnly (ESBeginRecording). A scan for every
+  other never-written scalar global found none.
+- **Kept on purpose.** EEWonNet and what only it reaches (gWonNet is only ever set to NULL and the EEWonNet constructor is in no map, so
+  the WON front end is unreachable: EEWonNet.cpp/.h and EEWonNetAvailableGameFormManager, ~2,700 lines, plus the
+  gWonNet branches in EEClient, EEServer and the lobby events; the owner keeps WON's Internet code): EEWonNet.cpp, EEWonNetAvailableGameFormManager, EEUserInterface::PostLoginDone/PostMOTD. The GX methods
+  tools/gx_test and tests/platform/sdl_test call (GXDevice's state setters, CreateDevice, SetColorKey, ...);
+  EECPLuaState::Run/Reload and EECPLuaValue::ToText (tests/lua_test); EERules::SetMusicFromDbmusicFile
+  (tools/eedata gate); ee_units_host_goal_kind (ee_units calls it). The Rust functions some deleted shims forwarded
+  to (gx_device_get_transform, ee_gfx_camera_clamp_height, ee_tech_effect_f32, ...) stay: Rust was not touched.
+- **POSIX.** No POSIX link map: a Linux game build needs the Linux Rust library and a full cross compile. Code only
+  `#if !defined(_WIN32)` compiles is in no Windows object, so a function only it calls looks dead here; the grep
+  covers that (every candidate was searched over the whole tree, POSIX sources included).
+- **Rerunning it.** `python -I tools/dead_census.py` after `build.py --sim` and `--test-profile windowed-software`
+  rewrites docs/dead_census and build/dead_census/dead.tsv (unit, definitions, mangled and demangled name of every
+  dropped symbol); the remaining entries are inlined live code, base-class virtuals, EEWonNet's, and what tests and
+  tools reach. The next real yield is semantic, not the linker's: code reachable only through a never-set pointer
+  (gWonNet) or a menu entry the game no longer shows.
 
 ## R6: WON's Internet code, round 8 (the ops no C++ made, and the lobby's user id lookup and version check, as Rust ops)
 

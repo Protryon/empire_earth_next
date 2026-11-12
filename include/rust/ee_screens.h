@@ -161,6 +161,167 @@ constexpr static const uint32_t EE_SCREENS_GAME_TYPE_SCENARIO = 2;
 /// [`game_type_action`]: back to a random map: the loaded game's options cleared, sent and shown again.
 constexpr static const uint32_t EE_SCREENS_GAME_TYPE_RANDOM_MAP = 3;
 
+/// The main menu's open event (form event 1).
+constexpr static const uint32_t EE_SCREENS_MAIN_OPEN = 3073;
+
+constexpr static const uint32_t EE_SCREENS_MAIN_SINGLE_PLAYER = 3074;
+
+constexpr static const uint32_t EE_SCREENS_MAIN_MULTI_PLAYER = 3075;
+
+constexpr static const uint32_t EE_SCREENS_MAIN_EXIT = 3076;
+
+/// The "Learning Scenarios" button, which opens the game settings.
+constexpr static const uint32_t EE_SCREENS_MAIN_GAME_SETTINGS = 3077;
+
+/// The test button: does nothing.
+constexpr static const uint32_t EE_SCREENS_MAIN_TEST = 3078;
+
+/// The main menu's editors button: opens the sub-menu (form 9).
+constexpr static const uint32_t EE_SCREENS_EDITORS_OPEN = 2305;
+
+constexpr static const uint32_t EE_SCREENS_EDITORS_SCENARIO_EDITOR = 2306;
+
+constexpr static const uint32_t EE_SCREENS_EDITORS_CAMPAIGN_EDITOR = 2307;
+
+constexpr static const uint32_t EE_SCREENS_EDITORS_MAIN_MENU = 2308;
+
+constexpr static const uint32_t EE_SCREENS_EDITORS_CIV_BUILDER = 2309;
+
+/// The single player screen's open event (set by the main menu's Single Player).
+constexpr static const uint32_t EE_SCREENS_SP_OPEN = 1537;
+
+constexpr static const uint32_t EE_SCREENS_SP_CAMPAIGN = 1538;
+
+constexpr static const uint32_t EE_SCREENS_SP_CIV_CAMPAIGN = 1539;
+
+/// The "Game Settings" control event of the single player screen (the original's Learning Scenarios): does nothing.
+constexpr static const uint32_t EE_SCREENS_SP_LEARNING = 1540;
+
+/// Load Game (also the play campaign screen's Play Saved Game).
+constexpr static const uint32_t EE_SCREENS_SP_LOAD_GAME = 1541;
+
+constexpr static const uint32_t EE_SCREENS_SP_MAIN_MENU = 1542;
+
+constexpr static const uint32_t EE_SCREENS_SP_RANDOM_MAP = 1543;
+
+/// The play campaign screen: Back, the three campaigns, the mouse over their buttons, its open event (set by the
+/// single player screen's Campaign), Custom Campaign, the learning campaign.
+constexpr static const uint32_t EE_SCREENS_PC_BACK = 2049;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_1 = 2050;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_2 = 2051;
+
+constexpr static const uint32_t EE_SCREENS_PC_CAMPAIGN_3 = 2052;
+
+constexpr static const uint32_t EE_SCREENS_PC_MOUSE_OVER = 2053;
+
+constexpr static const uint32_t EE_SCREENS_PC_OPEN = 2054;
+
+constexpr static const uint32_t EE_SCREENS_PC_CUSTOM = 2055;
+
+constexpr static const uint32_t EE_SCREENS_PC_LEARNING = 2056;
+
+/// The C++ events the menus hang on other forms (built by the host).
+constexpr static const uint32_t EE_SCREENS_CPP_SETTINGS_OPEN = 65537;
+
+constexpr static const uint32_t EE_SCREENS_CPP_LOBBY_SINGLE = 65539;
+
+constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA = 65540;
+
+constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA_ALL = 65541;
+
+constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_OPEN = 65542;
+
+constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_CLOSE = 65543;
+
+constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_OPEN = 65544;
+
+constexpr static const uint32_t EE_SCREENS_CPP_CUSTOM_CLOSE = 65545;
+
+constexpr static const uint32_t EE_SCREENS_GAME_QUIT = 1;
+
+constexpr static const uint32_t EE_SCREENS_GAME_EXTERNAL_LOBBY = 2;
+
+constexpr static const uint32_t EE_SCREENS_GAME_EDITOR_MODE_OFF = 3;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SINGLE = 4;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MULTI = 5;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DELETE_EDITOR = 6;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DELETE_WON = 7;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CREATE_EDITOR = 8;
+
+constexpr static const uint32_t EE_SCREENS_GAME_START_EDITOR = 9;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CIV_BUILDER = 10;
+
+constexpr static const uint32_t EE_SCREENS_GAME_FORGET_MAIN_FORM = 11;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LOBBY_BEGIN = 12;
+
+constexpr static const uint32_t EE_SCREENS_GAME_LOBBY_END = 13;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SHOW_SINGLE_PLAYER = 14;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN = 15;
+
+/// The game's texts (MenuHost::text).
+constexpr static const uint32_t EE_SCREENS_TEXT_VERSION = 1;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PLAYER = 2;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN = 8;
+
+constexpr static const uint32_t EE_SCREENS_OP_PUSH = 257;
+
+constexpr static const uint32_t EE_SCREENS_OP_POP = 258;
+
+constexpr static const uint32_t EE_SCREENS_OP_SWITCH = 259;
+
+constexpr static const uint32_t EE_SCREENS_OP_OPEN_EVENT = 260;
+
+constexpr static const uint32_t EE_SCREENS_OP_SHOW = 261;
+
+constexpr static const uint32_t EE_SCREENS_OP_HOT_KEY = 262;
+
+constexpr static const uint32_t EE_SCREENS_OP_CLOSE_EVENT = 263;
+
+constexpr static const uint32_t EE_SCREENS_OP_TRIGGER = 264;
+
+constexpr static const uint32_t EE_SCREENS_OP_OPEN_FORM = 265;
+
+constexpr static const uint32_t EE_SCREENS_OP_ENTITY_INDEX = 266;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_EDIT = 3;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_STRING = 4;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LABEL = 5;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE = 6;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SERVER = 7;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_STRING_CHECKED = 9;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LABEL_LINES = 10;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_NAME = 11;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_DESCRIPTION = 12;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_FIRST = 13;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOAD = 14;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
+
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
 
@@ -906,6 +1067,14 @@ bool ee_screens_lobby_map_type_changed(const uint8_t *name,
                                        const uint8_t *current,
                                        size_t current_len);
 
+/// `EEScreenEvent::ProcessEvent`: the screen event `event` on `form` (`UIForm*`) from `entity`; `kErrorOK` (0).
+long ee_screens_event(uint32_t event,
+                      void *form,
+                      void *entity);
+
+/// The menus' event code for a control event id, 0 for another form's.
+uint32_t ee_screens_menus_event_for(unsigned long id);
+
 /// `GetGraphicsQuality`: the preset (0..4) the controls match, else 5 (Custom).
 unsigned long ee_screens_graphics_quality(const EeScreensGraphics *controls);
 
@@ -957,9 +1126,6 @@ unsigned long ee_screens_screen_line(size_t count, unsigned long screen_id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
-
-/// The random map's slot table: 16 slots into `out`.
-void ee_screens_single_player_slots(EeScreensSinglePlayerSlot *out);
 
 }  // extern "C"
 

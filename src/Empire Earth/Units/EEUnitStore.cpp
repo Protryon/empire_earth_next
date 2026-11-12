@@ -196,6 +196,30 @@ void EEUnitStoreWrote(unsigned int inField, const void* inMember)
             Set(theUnit, EE_UNIT_FIELD_HEAL_SEARCH_TIMER, (int64_t)FloatBits(theUnit->mHealSearchTimer.Get()));
         break;
     }
+    case kUnitFieldVelocity: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mVelocity));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_VELOCITY, (int64_t)FloatBits(theUnit->mVelocity.Get()));
+        break;
+    }
+    case kUnitFieldPushVelocityX: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityX));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_X, (int64_t)FloatBits(theUnit->mPushVelocityX.Get()));
+        break;
+    }
+    case kUnitFieldPushVelocityY: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mPushVelocityY));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_PUSH_VELOCITY_Y, (int64_t)FloatBits(theUnit->mPushVelocityY.Get()));
+        break;
+    }
+    case kUnitFieldRoll: {
+        EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mRoll));
+        if (theUnit->mInUnitStore)
+            Set(theUnit, EE_UNIT_FIELD_ROLL, (int64_t)FloatBits(theUnit->mRoll.Get()));
+        break;
+    }
     case kUnitFieldNextTriggerTime: {
         EEComplexUnit* theUnit = OwnerOf<EEComplexUnit>(inMember, offsetof(EEComplexUnit, mNextTriggerTime));
         if (theUnit->mInUnitStore)
@@ -302,6 +326,10 @@ static void Fill(RTSUnit* inUnit, unsigned long inOwner, const void* inPlayer, E
         outRecord.power = (int64_t)theUnit->mPower.Get();
         outRecord.power_regen_timer = (int64_t)theUnit->mPowerRegenTimer.Get();
         outRecord.camouflage_timer = (int64_t)theUnit->mCamouflageTimer.Get();
+        outRecord.velocity = FloatBits(theUnit->mVelocity.Get());
+        outRecord.push_velocity_x = FloatBits(theUnit->mPushVelocityX.Get());
+        outRecord.push_velocity_y = FloatBits(theUnit->mPushVelocityY.Get());
+        outRecord.roll = FloatBits(theUnit->mRoll.Get());
     }
 }
 
@@ -378,6 +406,33 @@ void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inW
     sStepCalls++;
 }
 
+bool EEUnitStepNoting()
+{
+    return EESimCaptureRecord::Active();
+}
+
+static uint64_t sStateDigest = 0xcbf29ce484222325ull;
+static uint32_t sStateCalls = 0;
+
+static void StateFNV(uint32_t inWord)
+{
+    for (int i = 0; i < 4; i++) {
+        sStateDigest ^= (inWord >> (8 * i)) & 0xff;
+        sStateDigest *= 0x100000001b3ull;
+    }
+}
+
+void EEUnitStateNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    StateFNV(inKind);
+    StateFNV(static_cast<uint32_t>(inID));
+    for (unsigned int i = 0; i < inCount; i++)
+        StateFNV(inWords[i]);
+    sStateCalls++;
+}
+
 void EEUnitStepDiffers(const char* inLeaf, unsigned long inID, long inRust, long inOriginal)
 {
     fprintf(stderr, "EE-UNIT-STEP: %s of unit 0x%08lx: Rust %ld, the original %ld\n", inLeaf, inID, inRust, inOriginal);
@@ -402,6 +457,14 @@ void EEUnitStepCommit()
     theRecord.Commit();
     sStepDigest = 0xcbf29ce484222325ull;
     sStepCalls = 0;
+    EESimCaptureRecord theState(0x54535355u);   // "USST"
+    theState.U32((unsigned int)gPhysics->mNumTicksDone);
+    theState.U32(sStateCalls);
+    theState.U32((unsigned int)(sStateDigest & 0xffffffffu));
+    theState.U32((unsigned int)(sStateDigest >> 32));
+    theState.Commit();
+    sStateDigest = 0xcbf29ce484222325ull;
+    sStateCalls = 0;
 }
 
 unsigned long EEUnitStoreCheck(unsigned long inWhere)

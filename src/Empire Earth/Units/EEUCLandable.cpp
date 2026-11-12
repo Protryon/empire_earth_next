@@ -1264,10 +1264,7 @@ void EEUCLandable::Update(EEComplexUnit* inUnit)
         this->FireOnAttackFrame(inUnit, theAttack, theFrame);
         break;
     case kActionUnitRotting: {
-        long theLeft = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theLeft < 0)
-            theLeft = 0;
-        inUnit->SetRottingAwayTime(theLeft);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     case kActionFadingOutInSpace:

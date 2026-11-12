@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// `kActionIdle` (the idle action's id).
+constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
+
+/// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
+constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
+
 /// `kUnitTypeCapitol`, `kUnitTypeGranary`, `kUnitTypeGranaryImproved` (ee/EEUnitClassIDs.h)
 constexpr static const int64_t EE_UNIT_TYPE_CAPITOL = 41;
 
@@ -245,6 +251,33 @@ constexpr static const uint32_t EE_UNITS_STEP_RELOAD = 1;
 
 constexpr static const uint32_t EE_UNITS_STEP_TARGET_SEARCH = 2;
 
+/// The camouflage decision's events (`EeUnitsCamoEvent::code`), in the order the C++ applies them: a mini map move,
+/// made only when the unit is then a cloaked enemy of the local player (`EEIsCloakedEnemyOf`, the C++'s test at the
+/// event), from nowhere to its tile (`SHOW`) or back (`HIDE`); the chain setters; the camouflaged bit; the two timers'
+/// writes (`value`).
+constexpr static const uint32_t EE_UNITS_CAMO_SHOW = 1;
+
+constexpr static const uint32_t EE_UNITS_CAMO_HIDE = 2;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKABLE_OFF = 3;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKABLE_ON = 4;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKED_OFF = 5;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CLOAKED_ON = 6;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CAMOUFLAGED_OFF = 7;
+
+constexpr static const uint32_t EE_UNITS_CAMO_CAMOUFLAGED_ON = 8;
+
+constexpr static const uint32_t EE_UNITS_CAMO_SET_TIMER = 9;
+
+constexpr static const uint32_t EE_UNITS_CAMO_SET_SECOND = 10;
+
+/// The most events one call makes (two blocks of five).
+constexpr static const size_t EE_UNITS_CAMO_MAX_EVENTS = 16;
+
 /// The record's fields that a holder reports (`EEUnitStoreFieldID` in ee/EEUnitStore.h: the same values).
 constexpr static const uint32_t EE_UNIT_FIELD_TILE_X = 1;
 
@@ -332,6 +365,18 @@ constexpr static const uint32_t EE_UNIT_FIELD_POWER_REGEN_TIMER = 30;
 /// `EEComplexUnit::mCamouflageTimer` (an `unsigned long`)
 constexpr static const uint32_t EE_UNIT_FIELD_CAMOUFLAGE_TIMER = 31;
 
+/// `EEComplexUnit::mVelocity` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_VELOCITY = 32;
+
+/// `EEComplexUnit::mPushVelocityX` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_X = 33;
+
+/// `EEComplexUnit::mPushVelocityY` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_PUSH_VELOCITY_Y = 34;
+
+/// `EEComplexUnit::mRoll` (float bits)
+constexpr static const uint32_t EE_UNIT_FIELD_ROLL = 35;
+
 /// `EEUnit::mComplexUnit`: NULL, the unit itself, another object (never seen: `Init` sets it to the unit itself,
 /// `ResetEEUnit` clears it)
 constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
@@ -339,6 +384,64 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_NONE = 0;
 constexpr static const uint8_t EE_UNIT_COMPLEX_SELF = 1;
 
 constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
+
+/// What `AIStep` did (the USST words): the path (1 the gather goal restarted its action, 2 no command, 3 an idle
+/// unit waiting, 4 evaluated), the gather's action, the two evaluations' results (`u32::MAX`: not evaluated).
+struct EeUnitsAIStepOut {
+  uint32_t path;
+  uint32_t action;
+  uint32_t first;
+  uint32_t second;
+};
+
+/// What `AIStep` reads of the unit: from its record, or from the members when it has none (a killed unit still
+/// stepped).
+struct EeUnitsAIState {
+  /// `mCommand ? mCommand->mType : 0`
+  int64_t command;
+  /// `mNextTriggerTime`
+  int64_t next_trigger_time;
+  /// `mGoalState ? mGoalState->mKind : -1`
+  int32_t goal_kind;
+};
+
+/// A trigger of an action, read by the host: `conditions` points to `count` trigger ids (the C++ vector's data,
+/// copied before any other host call).
+struct EeUnitsTrigger {
+  const int64_t *conditions;
+  uint32_t count;
+  uint8_t all_of;
+  uint8_t any_of;
+  int64_t true_id;
+  int64_t false_id;
+  uint64_t true_action;
+  uint64_t false_action;
+};
+
+/// The C++ calls of `AIStep` and the script's decision. `ctx` is the host's (the unit).
+struct EeUnitsAIHost {
+  void *ctx;
+  /// the members `EeUnitsAIState` mirrors
+  void (*members)(void *ctx, EeUnitsAIState *out);
+  /// `mCommand` as a handle (0: none)
+  uint64_t (*command)(void *ctx);
+  /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
+  bool (*gather_inactive)(void *ctx, uint32_t *out_action);
+  /// the trigger `index` of `action` into `out`; false past the last
+  bool (*trigger)(void *ctx, uint64_t action, uint32_t index, EeUnitsTrigger *out);
+  /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
+  int64_t (*condition)(void *ctx, int64_t trigger);
+  /// an action's `mType`
+  uint32_t (*action_type)(void *ctx, uint64_t action);
+  /// `StartAction(action)`, then `GetUnitClass()->ActionChanged(unit)`
+  void (*start_action)(void *ctx, uint32_t action);
+  /// `DropFinishedGoals(false)`
+  void (*drop_finished_goals)(void *ctx);
+  /// `UpdateCamouflage(action_type)`, `mCommand = action`, `GetUnitClass()->ActionChanged(unit)`
+  void (*set_command)(void *ctx, uint64_t action, uint32_t action_type);
+  /// `mNextTriggerTime = value` (the holder's write)
+  void (*set_next_trigger_time)(void *ctx, uint32_t value);
+};
 
 /// One unit's plain state. Fields an object of its kind does not have (an `RTSUnit`'s hit points, an `EEUnit`'s
 /// built flag and goal) are 0 / -1.
@@ -408,6 +511,14 @@ struct EeUnitRecord {
   int64_t power_regen_timer;
   /// `EEComplexUnit::mCamouflageTimer` (the step's leaves read it: `step`)
   int64_t camouflage_timer;
+  /// `EEComplexUnit::mVelocity` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t velocity;
+  /// `EEComplexUnit::mPushVelocityX` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t push_velocity_x;
+  /// `EEComplexUnit::mPushVelocityY` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t push_velocity_y;
+  /// `EEComplexUnit::mRoll` as float bits (the physics models' arithmetic reads it: `step`)
+  uint32_t roll;
 };
 
 /// The result of a consistency check (`Store::check`).
@@ -442,6 +553,30 @@ struct EeGoalSpec {
   int64_t ints[3];
 };
 
+/// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
+/// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
+struct EeUnitsPush {
+  uint8_t moving;
+  uint8_t past_move;
+  float dx;
+  float dy;
+  float x;
+  float y;
+};
+
+/// The members `step_push` reads from the record (the push velocities, the location's x and y).
+struct EeUnitsPushIn {
+  float push_x;
+  float push_y;
+  float loc_x;
+  float loc_y;
+  /// `gCollisionPeriod`
+  uint32_t period;
+  /// the unit's `GetMaxVelocity()`
+  float max_velocity;
+  float tick_seconds;
+};
+
 /// What `RegeneratePower` reads besides the unit's record: the unit's stats (`mStats->mPowerRegeneration`,
 /// `->mPower`), the world's cinematic flag, the rules' interval and the tick.
 struct EeUnitsPowerIn {
@@ -461,7 +596,56 @@ struct EeUnitsPowerOut {
   int64_t regen_timer;
 };
 
+/// One event of the camouflage decision.
+struct EeUnitsCamoEvent {
+  uint32_t code;
+  uint32_t value;
+};
+
+/// The C++ calls of the unit loop (EEPhysics.cpp). `ctx` is the host's.
+struct EeUnitsTickHost {
+  void *ctx;
+  /// `gWorld.mNumPlayers`
+  uint32_t num_players;
+  /// `gCollisionDetectionUnit`
+  uint32_t detection_unit;
+  /// `gCollisionPeriod = value`
+  void (*set_collision_period)(void *ctx, uint32_t value);
+  /// `gWorld.mPlayers[index]->UpdatePlayer()` when the slot has a player
+  void (*update_player)(void *ctx, uint32_t index);
+  /// `gWorld.mUpdateUnits[index]->Step()` (the list's id at the index handed in: the host checks it)
+  void (*step)(void *ctx, uint32_t index, uint32_t id);
+};
+
 extern "C" {
+
+/// `EEComplexUnit::AIStep` over the store and the host's calls.
+///
+/// # Safety
+/// `host` points to a valid table whose calls are valid for its `ctx`.
+EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
+                                  uint32_t id,
+                                  uint64_t object,
+                                  uint8_t is_citizen,
+                                  int64_t game_time);
+
+/// `EEUnitAction::Evaluate` (`action`) over the host's calls (only the trigger, condition and table are used): the
+/// result, and the picked action in `out_action` when it is not 0.
+///
+/// # Safety
+/// `host` points to a valid table, `out_action` to a writable u64.
+int64_t ee_units_action_evaluate(const EeUnitsAIHost *host,
+                                 uint64_t action,
+                                 uint64_t *out_action);
+
+/// `EEUnitTrigger::Evaluate` (`trigger`: the trigger's view) over the host's conditions: the result, and the picked
+/// action in `out_action` when it is not 0.
+///
+/// # Safety
+/// `host` and `trigger` point to valid values (the trigger's `count` ids readable), `out_action` to a writable u64.
+int64_t ee_units_trigger_evaluate(const EeUnitsAIHost *host,
+                                  const EeUnitsTrigger *trigger,
+                                  uint64_t *out_action);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -885,6 +1069,15 @@ extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
 extern int64_t ee_units_host_object_hit_points(uint32_t unit);
 
+/// `AfterStep`'s roll decay over the store: the new roll.
+float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_seconds);
+
+/// `Move`'s push arithmetic over the store.
+///
+/// # Safety
+/// `member` points to a valid input.
+EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
+
 /// `UpdateReloadTimer` / `UpdateTargetSearchTimer` (`which`: `EE_UNITS_STEP_*`) over the store: true and the new
 /// timer in `out` when the C++ writes it.
 ///
@@ -922,6 +1115,47 @@ void ee_units_step_power(uint32_t id,
 /// Both point to writable u32s.
 void ee_units_step_reads(uint32_t *out_mismatches,
                          uint32_t *out_unrecorded);
+
+/// `UpdateRottingAwayTime` over the store: the new time (the C++ writes it through the holder).
+int64_t ee_units_step_rotting(uint32_t id, uint64_t object, int64_t member, int64_t tick_ms);
+
+/// `UpdateResourcesRotting` over the store: the new time, and true with the new amount in `out_amount` past 4 s.
+///
+/// # Safety
+/// Both outputs point to writable i64s.
+bool ee_units_step_resources_rotting(uint32_t id,
+                                     uint64_t object,
+                                     int64_t member_time,
+                                     int64_t member_amount,
+                                     int64_t tick_ms,
+                                     int64_t *out_time,
+                                     int64_t *out_amount);
+
+/// `UpdateCamouflageTimer`'s timers over the store: the events in `out` (room for `EE_UNITS_CAMO_MAX_EVENTS`), their
+/// count returned.
+///
+/// # Safety
+/// `out` points to `EE_UNITS_CAMO_MAX_EVENTS` writable events.
+uint32_t ee_units_step_camouflage(uint32_t id,
+                                  uint64_t object,
+                                  uint32_t member_timer,
+                                  uint32_t second,
+                                  uint8_t no_vital,
+                                  int64_t tick_ms,
+                                  EeUnitsCamoEvent *out);
+
+/// `UpdateCamouflageTimer`'s cloak opacity (the pulse test and the game time handed in).
+float ee_units_step_cloak_fade(float opacity,
+                               uint8_t cloaked,
+                               float tick_time,
+                               uint8_t pulse,
+                               int64_t game_time);
+
+/// `EEPhysics::UpdateUnits` over the stepped units' list (`order::ORDER`).
+///
+/// # Safety
+/// `host` points to a valid table whose calls are valid for its `ctx`.
+uint32_t ee_units_update_units(const EeUnitsTickHost *host);
 
 }  // extern "C"
 

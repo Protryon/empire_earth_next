@@ -67,7 +67,8 @@
 #include "ee/EEAJoinOrHostAGame.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIEMainScreenEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_MAIN_MULTI_PLAYER (ee_screens menus.rs)
 #include "ee/EECameraControl.h"
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
@@ -285,7 +286,7 @@ bool EEHostGameFromCommandLine(const UString& inPlayerName, const UString& inGam
     gPlayerName = UWideString((const char*)inPlayerName);
     gGamePreferences.mSettings.mHostGameName = UWideString((const char*)inGameName);
     gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    EEUIEMSEMultiPlayer* theEvent = new EEUIEMSEMultiPlayer;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_MULTI_PLAYER);
     theEvent->ProcessEvent(gUIManager->GetFormByID(kFormMainMenu), NULL);
     theEvent->Dereference();
     EEAction* theAction = new EEAJoinOrHostAGame(0, UWideString((const char*)inPlayerName),
@@ -308,7 +309,7 @@ bool EEJoinByIPFromCommandLine(const UString& inPlayerName, const UString& inAdd
     static_cast<EEClient*>(gCommunications)->StartThreads();
     gPlayerName = UWideString((const char*)inPlayerName);
     gUIManager->Push(gUIManager->GetFormByID(kFormMainMenu));
-    EEUIEMSEMultiPlayer* theEvent = new EEUIEMSEMultiPlayer;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_MULTI_PLAYER);
     theEvent->ProcessEvent(gUIManager->GetFormByID(kFormMainMenu), NULL);
     theEvent->Dereference();
     EEAction* theAction = new EEAJoinOrHostAGame(2, UWideString((const char*)inPlayerName),
