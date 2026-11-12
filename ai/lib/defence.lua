@@ -51,6 +51,9 @@ M.opts = {
                           -- citizens: seed 4 against the classic lost a citizen in each such fight, odds or not) ...
     wave_n = 8,           -- a raid of this many or more (0: off) is a wave: the citizens run away from it, to a
                           -- refuge further from it (the settlements too), not to the nearest tower in its path
+    guard_refuge = false, -- (off; AI_RESEARCH §8.50, the waves after Copper: 60% of their dead were caught running, 1.6
+                          -- tiles from their killer, 15 tiles out) the guard's post is a refuge as a tower is, while the
+                          -- script sets mem.guard_post = {x, y} (a guard of 4 or more)
     bait = false,         -- [ageofai tactics.lua tower_bait, upstream early.c] a citizen with an enemy soldier within
                           -- 5 tiles, out of its towers' reach, runs to the spot 1.5 tiles behind the nearest
                           -- shooting building within 25 (to the Copper Age): the raider follows under its fire
@@ -153,6 +156,8 @@ end
 -- ---------------------------------------------------------------------------------------------------------------
 -- The scan: the raiders, clustered; the refuges
 
+local GUARD_POST = nil   -- (guard_refuge) this step's guard post, from the memory
+
 local function scan(tx, ty)
     CLUSTERS, REFUGES = {}, {}
     local o = M.opts
@@ -211,6 +216,9 @@ local function scan(tx, ty)
                 REFUGES[#REFUGES + 1] = {id = tw[k], x = c.x[k], y = c.y[k], tower = true, range = (c.range[k] or 0) // 100}
             end
         end
+    end
+    if GUARD_POST ~= nil then
+        REFUGES[#REFUGES + 1] = {id = -1, x = GUARD_POST[1], y = GUARD_POST[2], tower = false, post = true, range = 0}
     end
     for _, t in ipairs({"b_town_center", "b_capitol", "b_settlement"}) do
         for _, id in ipairs(ai.units{type = t, built = true, limit = 8}) do
@@ -271,7 +279,7 @@ local function refuge_for(x, y, rx, ry, ship, wave)
         if wave then
             ok = dr >= dc + 16   -- (a wave: only away from it, settlements too)
         else
-            ok = not r.drop and ((r.tower and not ship) or dr >= dc)
+            ok = not r.drop and (((r.tower or r.post) and not ship) or dr >= dc)
         end
         if ok then   -- (from a warship: away from it, a tower outranged)
             local d = d2(x, y, r.x, r.y)
@@ -1009,6 +1017,7 @@ function M.micro(mem, events, now, tx, ty, epoch)
         return
     end
     mem.scan_t = now
+    GUARD_POST = M.opts.guard_refuge and mem.guard_post or nil
     for _, id in ipairs(ai.keys(mem.attackers)) do
         if now - mem.attackers[id] > M.opts.hostile_ms then
             mem.attackers[id] = nil

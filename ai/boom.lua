@@ -1464,6 +1464,9 @@ function M.step(view, memory)
     memory.epoch_now = view.epoch
     GD.step(view, memory, {zone = view.claim_range})
     home = GD.group(memory)
+    if memory.def ~= nil then   -- (lib.defence's guard_refuge: the guard's post, while it holds 4 or more)
+        memory.def.guard_post = home ~= nil and home.post_x ~= nil and #home.units >= 4 and {home.post_x, home.post_y} or nil
+    end
     if plan.watch then
         SC.step(view, memory, {from = home})
     end
