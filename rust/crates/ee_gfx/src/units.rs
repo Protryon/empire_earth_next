@@ -206,6 +206,99 @@ pub fn ring_segments(strength: u32) -> EeGfxRingSegments {
     EeGfxRingSegments { ring: strength, highlight: 7_u32.saturating_sub(strength) }
 }
 
+/// `EERenderUnitRecord`'s footprint grid (`mHeights`, `mCells`: 12 x 12 corners and cells).
+pub(crate) const PLACEMENT_GRID: usize = 12;
+
+/// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
+/// edges between usable and unusable cells `gBarBackColor` (`back` 1).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxPlacementLine {
+    pub back: u32,
+    pub start: Ge2DPoint,
+    pub end: Ge2DPoint,
+}
+
+/// `DrawPlacement`'s footprint edges for a `size` x `size` grid round tile (`tile_x`, `tile_y`), in the order the
+/// original drew them: the outline (bar colour), then every edge with an unusable cell (`cells[x][y] == 0`) on
+/// exactly one side (back colour). `heights[x][y]` are the grid's corner heights. Writes at most `out.len()` lines
+/// and returns their count. A size past 11 would index past the 12 x 12 grid (the original's stack overrun): it
+/// draws no edges.
+#[allow(clippy::too_many_arguments)]
+pub fn placement_lines(
+    vp: &GeViewport,
+    orthographic: bool,
+    size: i32,
+    tile_x: i32,
+    tile_y: i32,
+    heights: &[[f32; PLACEMENT_GRID]; PLACEMENT_GRID],
+    cells: &[[u8; PLACEMENT_GRID]; PLACEMENT_GRID],
+    out: &mut [EeGfxPlacementLine],
+) -> usize {
+    if size >= PLACEMENT_GRID as i32 {
+        return 0;
+    }
+    let half = if size % 2 == 0 { size as f32 * 0.5 } else { (size - 1) as f32 * 0.5 };
+    let left = tile_x as f32 - half;
+    let top = tile_y as f32 - half;
+    let mut n = 0usize;
+    // the edge from corner (j, x) one tile along x (`along_x`) or along y
+    let mut push = |back: u32, j: i32, x: i32, along_x: bool| {
+        if n >= out.len() {
+            return;
+        }
+        let (ju, xu) = (j as usize, x as usize);
+        let line_x = j as f32 + left;
+        let line_y = x as f32 + top;
+        let start = screen_point(vp, orthographic, Ge3DPoint { x: line_x, y: line_y, z: heights[ju][xu] });
+        let end = if along_x {
+            screen_point(vp, orthographic, Ge3DPoint { x: line_x + 1.0, y: line_y, z: heights[ju + 1][xu] })
+        } else {
+            screen_point(vp, orthographic, Ge3DPoint { x: line_x, y: line_y + 1.0, z: heights[ju][xu + 1] })
+        };
+        out[n] = EeGfxPlacementLine { back, start, end };
+        n += 1;
+    };
+    for x in 0..=size {
+        for j in 0..=size {
+            if (x == 0 || x == size) && j != size {
+                push(0, j, x, true);
+            }
+            if (j != 0 && j != size) || x == size {
+                continue;
+            }
+            push(0, j, x, false);
+        }
+    }
+    let mut rows = [[false; PLACEMENT_GRID]; PLACEMENT_GRID];
+    let mut columns = [[false; PLACEMENT_GRID]; PLACEMENT_GRID];
+    let cells_side = size.max(0) as usize;
+    for x in 0..cells_side {
+        for j in 0..cells_side {
+            if cells[j][x] != 0 {
+                continue;
+            }
+            rows[j][x] ^= true;
+            rows[j][x + 1] ^= true;
+            columns[j][x] ^= true;
+            columns[j + 1][x] ^= true;
+        }
+    }
+    for x in 0..=size {
+        for j in 0..=size {
+            let (ju, xu) = (j as usize, x as usize);
+            if rows[ju][xu] && j != size {
+                push(1, j, x, true);
+            }
+            if !columns[ju][xu] || x == size {
+                continue;
+            }
+            push(1, j, x, false);
+        }
+    }
+    n
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +337,26 @@ mod tests {
         assert_eq!((b.kind, b.count), (1, 2));
         assert_eq!(b.rects[0], rect(8.0, 15.0, 14.0, 17.0));
         assert_eq!(b.rects[1], rect(14.0, 15.0, 32.0, 17.0));
+    }
+
+    #[test]
+    fn a_footprint_draws_its_outline_and_the_blocked_cells() {
+        let vp = GeViewport::default();
+        let heights = [[0.0f32; PLACEMENT_GRID]; PLACEMENT_GRID];
+        let mut cells = [[1u8; PLACEMENT_GRID]; PLACEMENT_GRID];
+        let mut out = [EeGfxPlacementLine::default(); 320];
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 12);
+        assert!(out[..12].iter().all(|l| l.back == 0));
+        // one blocked cell inside: its four edges in the back colour
+        cells[1][1] = 0;
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 16);
+        assert!(out[12..16].iter().all(|l| l.back == 1));
+        // two blocked neighbours: the edge between them is not drawn
+        cells[2][1] = 0;
+        assert_eq!(placement_lines(&vp, false, 3, 10, 10, &heights, &cells, &mut out), 12 + 6);
+        assert_eq!(placement_lines(&vp, false, 0, 10, 10, &heights, &cells, &mut out), 0);
+        assert_eq!(placement_lines(&vp, false, 12, 10, 10, &heights, &cells, &mut out), 0);
+        let all = [[0u8; PLACEMENT_GRID]; PLACEMENT_GRID];
+        assert_eq!(placement_lines(&vp, false, 11, 10, 10, &heights, &all, &mut out), 44 + 44);
     }
 }

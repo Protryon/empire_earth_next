@@ -15,7 +15,7 @@ use crate::camera::{
 use crate::minimap::{self, EeGfxMiniMapTransforms, EeGfxMiniMapView};
 use crate::mouse::{self, EeGfxMouseInput, EeGfxMouseMove};
 use crate::pick::{self, EeGfxPickAdd, EeGfxPickHit, EeGfxPickRay, EeGfxPickTolerances, EeGfxPickUnit};
-use crate::units::{self, EeGfxBarRects, EeGfxBarSizes, EeGfxRingSegments, EeGfxSelectionRing};
+use crate::units::{self, EeGfxBarRects, EeGfxBarSizes, EeGfxPlacementLine, EeGfxRingSegments, EeGfxSelectionRing};
 use crate::view;
 use ee_ge::viewport::GeViewport;
 
@@ -617,4 +617,34 @@ pub extern "C" fn ee_gfx_units_selection_ring(size: f32) -> EeGfxSelectionRing {
 #[no_mangle]
 pub extern "C" fn ee_gfx_units_ring_segments(strength: u32) -> EeGfxRingSegments {
     units::ring_segments(strength)
+}
+
+// ---- the placement footprint (units.rs, EEROUnits.cpp)
+
+/// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
+/// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.
+///
+/// # Safety
+/// The pointers are valid; `heights` and `cells` hold 144 elements, `out` `capacity`.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ee_gfx_units_placement_lines(
+    viewport: *const GeViewport,
+    orthographic: bool,
+    size: i32,
+    tile_x: i32,
+    tile_y: i32,
+    heights: *const f32,
+    cells: *const u8,
+    out: *mut EeGfxPlacementLine,
+    capacity: usize,
+) -> usize {
+    // SAFETY: the function's contract (the grids copied before any store)
+    unsafe {
+        let vp = *viewport;
+        let heights = *(heights as *const [[f32; units::PLACEMENT_GRID]; units::PLACEMENT_GRID]);
+        let cells = *(cells as *const [[u8; units::PLACEMENT_GRID]; units::PLACEMENT_GRID]);
+        let out = std::slice::from_raw_parts_mut(out, capacity);
+        units::placement_lines(&vp, orthographic, size, tile_x, tile_y, &heights, &cells, out)
+    }
 }

@@ -28,6 +28,8 @@ mod golden_mouse;
 #[cfg(test)]
 mod golden_picker;
 #[cfg(test)]
+mod golden_placement;
+#[cfg(test)]
 mod golden_rings;
 #[cfg(test)]
 mod golden_rounits;

@@ -5685,6 +5685,14 @@ struct EeGfxRingSegments {
   uint32_t highlight;
 };
 
+/// One edge of a placed building's footprint, in window coordinates: the outline is `gBarColor` (`back` 0), the
+/// edges between usable and unusable cells `gBarBackColor` (`back` 1).
+struct EeGfxPlacementLine {
+  uint32_t back;
+  EeGe2DPoint start;
+  EeGe2DPoint end;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -12337,6 +12345,21 @@ EeGfxSelectionRing ee_gfx_units_selection_ring(float size);
 
 /// `DrawRings`' segment colours for an area-effect strength.
 EeGfxRingSegments ee_gfx_units_ring_segments(uint32_t strength);
+
+/// `DrawPlacement`'s footprint edges: `heights` and `cells` are the record's 12 x 12 `mHeights` and `mCells`
+/// (`[x][y]`); writes at most `capacity` lines to `out` and returns their count.
+///
+/// # Safety
+/// The pointers are valid; `heights` and `cells` hold 144 elements, `out` `capacity`.
+size_t ee_gfx_units_placement_lines(const EeGeViewport *viewport,
+                                    bool orthographic,
+                                    int32_t size,
+                                    int32_t tile_x,
+                                    int32_t tile_y,
+                                    const float *heights,
+                                    const uint8_t *cells,
+                                    EeGfxPlacementLine *out,
+                                    size_t capacity);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

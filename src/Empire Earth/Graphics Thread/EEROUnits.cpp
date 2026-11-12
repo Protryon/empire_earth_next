@@ -165,6 +165,8 @@ const float kBarFraction = 0.75f;           // 0x441bb0
 const float kLabelBottom = 0.7135417f;      // 0x441bdc (548 / 768: the main game form's bottom strip)
 const float kLabelMargin = 0.18066406f;     // 0x441be0 (185 / 1024)
 const float kRingStep = -0.44879895f;       // 0x441be4 (-2 pi / 14)
+// DrawPlacement's edges at most: an 11 x 11 grid's outline (44) and its inner edges (264)
+const size_t kPlacementLineCapacity = 320;
 
 // The bars' sizes, the bar rectangles and GetScreenPoint are ee_gfx units.rs (RUST_PLAN R4.4); the GE value classes
 // pass as their #[repr(C)] mirrors (the same storage)
@@ -317,20 +319,12 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
 {
     GETextureCoordinate theStart;
     GETextureCoordinate theEnd;
-    GE3DPoint thePoint;
-    GE2DPoint theScreenPoint;
     GERFogAttributes theFogAttributes;
     unsigned long theScreen = gScreenIndex;
     long theSize = inRecord.mUnit.mGridSize;
     long theX = inRecord.mTileX;
     long theY = inRecord.mTileY;
     unsigned long theLineCount = 0;
-    float theLineX;
-    float theLineY;
-    bool theRows[12][12];
-    bool theColumns[12][12];
-    memset(theRows, 0, sizeof(theRows));
-    memset(theColumns, 0, sizeof(theColumns));
     inRecord.mUnit.mOpacity = 1.0f;
     if (inRecord.mUnit.mScale != 0.0f) {
         gRasterizer->SetShadingColorSource(0, gScreenIndex);
@@ -366,104 +360,23 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     gRasterizer->SetViewport(gU4E8F08, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetZCompare(kCompareLess, theScreen);
-    float theHalf;
-    if (theSize % 2 == 0)
-        theHalf = (float)theSize * 0.5f;
-    else
-        theHalf = (float)(theSize - 1) * 0.5f;
     theStart.SetU(gU4E9330);
-    float theLeft = (float)theX - theHalf;
-    float theTop = (float)theY - theHalf;
     theEnd.SetU(gU4E9330 + 3.0f);
-    long j;
-    for (theX = 0; theX <= theSize; theX++) {
-        for (j = 0; j <= theSize; j++) {
-            if ((theX == 0 || theX == theSize) && j != theSize) {
-                sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-                sLines[theLineCount].SetColor(gBarColor);
-                thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = theX + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetStartPoint(theScreenPoint);
-                thePoint.SetX(theLineX + 1.0f);
-                thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetEndPoint(theScreenPoint);
-                if (++theLineCount == 0x40) {
-                    gRasterizer->Draw(sLines, theLineCount, theScreen);
-                    theLineCount = 0;
-                }
-            }
-            if ((j != 0 && j != theSize) || theX == theSize)
-                continue;
-            sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-            sLines[theLineCount].SetColor(gBarColor);
-            thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = theX + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][theX]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetStartPoint(theScreenPoint);
-            thePoint.SetX(theLineX);
-            thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetEndPoint(theScreenPoint);
-            if (++theLineCount == 0x40) {
-                gRasterizer->Draw(sLines, theLineCount, theScreen);
-                theLineCount = 0;
-            }
-        }
-    }
-    for (theX = 0; theX < theSize; theX++) {
-        for (j = 0; j < theSize; j++) {
-            if (inRecord.mCells[j][theX])
-                continue;
-            theRows[j][theX] ^= 1;
-            theRows[j][theX + 1] ^= 1;
-            theColumns[j][theX] ^= 1;
-            theColumns[j + 1][theX] ^= 1;
-        }
-    }
-    for (theX = 0; theX <= theSize; theX++) {
-        for (j = 0; j <= theSize; j++) {
-            if (theRows[j][theX] && j != theSize) {
-                sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-                sLines[theLineCount].SetColor(gBarBackColor);
-                thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = theX + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetStartPoint(theScreenPoint);
-                thePoint.SetX(theLineX + 1.0f);
-                thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
-                GetScreenPoint(thePoint, theScreenPoint);
-                sLines[theLineCount].SetEndPoint(theScreenPoint);
-                if (++theLineCount == 0x40) {
-                    gRasterizer->Draw(sLines, theLineCount, theScreen);
-                    theLineCount = 0;
-                }
-            }
-            if (!theColumns[j][theX] || theX == theSize)
-                continue;
-            sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
-            sLines[theLineCount].SetColor(gBarBackColor);
-            thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = theX + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][theX]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetStartPoint(theScreenPoint);
-            thePoint.SetX(theLineX);
-            thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
-            GetScreenPoint(thePoint, theScreenPoint);
-            sLines[theLineCount].SetEndPoint(theScreenPoint);
-            if (++theLineCount == 0x40) {
-                gRasterizer->Draw(sLines, theLineCount, theScreen);
-                theLineCount = 0;
-            }
+    // the outline, then the edges round the unusable cells: ee_gfx units.rs (RUST_PLAN R4.4)
+    static_assert(sizeof(inRecord.mHeights) == 144 * sizeof(float) && sizeof(inRecord.mCells) == 144, "the grid");
+    EeGfxPlacementLine theLines[kPlacementLineCapacity];
+    size_t theCount = ee_gfx_units_placement_lines(reinterpret_cast<const EeGeViewport*>(&gU4E8F08),
+                                                   gOrthographicView, (int32_t)theSize, (int32_t)theX,
+                                                   (int32_t)theY, &inRecord.mHeights[0][0], &inRecord.mCells[0][0],
+                                                   theLines, kPlacementLineCapacity);
+    for (size_t i = 0; i < theCount; i++) {
+        sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
+        sLines[theLineCount].SetColor(theLines[i].back != 0 ? gBarBackColor : gBarColor);
+        sLines[theLineCount].SetStartPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].start));
+        sLines[theLineCount].SetEndPoint(*reinterpret_cast<const GE2DPoint*>(&theLines[i].end));
+        if (++theLineCount == 0x40) {
+            gRasterizer->Draw(sLines, theLineCount, theScreen);
+            theLineCount = 0;
         }
     }
     if (theLineCount > 0)
