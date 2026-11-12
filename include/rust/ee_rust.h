@@ -104,6 +104,15 @@ constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
 /// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
 constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
 
+/// The base table (`gDamageTable`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_BASE = 0;
+
+/// The first difficulty twin (`gDamageTableScaled1`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_SCALED1 = 1;
+
+/// The second difficulty twin (`gDamageTableScaled2`).
+constexpr static const uint32_t EE_COMBAT_DAMAGE_SCALED2 = 2;
+
 /// `EEFindDropLocation`'s point kinds (`EeCombatDropIn::kind`).
 /// The goal's location (the C++ asks the goal; not computed here).
 constexpr static const int32_t EE_COMBAT_DROP_KIND_GOAL = 0;
@@ -116,6 +125,100 @@ constexpr static const int32_t EE_COMBAT_DROP_KIND_TILE = 2;
 
 /// Neither: no target.
 constexpr static const int32_t EE_COMBAT_DROP_KIND_NONE = 3;
+
+/// The start height's case, as the C++ finds it.
+/// Bare (a melee shooter): its location's z.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BARE = 0;
+
+/// A model with turret parts: the tag point turned by its part's turret yaw (identity when the point's model is no
+/// turret part), up the model chain, then the scaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_TURRET = 1;
+
+/// The tag point list's point: up the model chain, then the scaled location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_POINT = 2;
+
+/// No such point: half the height of the model's box's top right back corner, under the (unscaled) location.
+constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
+
+/// The tests a search asks of a candidate (`SearchHost::test`). The C++ host answers each as its search's original
+/// expression did (`EESearchTarget`'s candidate is a complex unit, `EESearchTargetAlongList`'s a list unit whose
+/// complex unit may be missing).
+/// `IsCandidate`: an enemy's live unit (not disabled unless protected).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CANDIDATE = 1;
+
+/// The candidate's owner is player 0 (nature).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_NATURE = 2;
+
+/// `EEIsAttackedBy(unit, candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ATTACKED_BY = 3;
+
+/// The candidate's class is a wall and not a tower.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_WALL = 4;
+
+/// `EECanTargetClass(unit, candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_TARGET_CLASS = 5;
+
+/// The candidate (its complex unit) `IsFoundation`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_FOUNDATION = 6;
+
+/// `EEIsSeenBy(candidate, unit's player, true)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_SEEN = 7;
+
+/// `unit->IsOnOtherContinentThan(candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_OTHER_CONTINENT = 8;
+
+/// The candidate's class `IsPartLeftOut(candidate)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PART_LEFT_OUT = 9;
+
+/// The unit's (`EESearchTargetAlongList`) or the candidate's (`EESearchTarget`) class `IsPriest`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PRIEST = 10;
+
+/// `EECanPriestConvert(unit, candidate)` (false for a list unit without a complex unit).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_PRIEST_CONVERT = 11;
+
+/// `unit->CanAttackClass(candidate's class)`.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_CAN_ATTACK_CLASS = 12;
+
+/// The unit has ignored targets and `IsTargetIgnored(candidate, true)` (which may drop expired ones).
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_IGNORED = 13;
+
+/// The candidate's goal attacks the unit.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT = 14;
+
+/// The candidate's owner is the unit's player or not its enemy.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_NOT_ENEMY = 15;
+
+/// The candidate class's technology in its owner's tree is of kind 6.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_TECH_KIND_6 = 16;
+
+/// The candidate's hit points are positive.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_ALIVE = 17;
+
+/// The candidate pursues the unit (`EEGetPursuerOf`): a complex unit, no projectile, whose goal attacks the unit or
+/// gathers from it.
+constexpr static const uint32_t EE_COMBAT_SEARCH_TEST_PURSUES = 18;
+
+/// The outcome of one candidate in the capture's trace (`SearchHost::trace`).
+/// Rejected by a test.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_REJECTED = 0;
+
+/// A large unit scored already (`EESearchTarget`'s scratch list).
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_SCORED = 1;
+
+/// Scored, not better than the best.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_NOT_BETTER = 2;
+
+/// Reachable: the best so far.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_BEST = 3;
+
+/// Not reachable: ignored by the unit from now on.
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_IGNORED = 4;
+
+/// Of the targeting table's preferred unit type (`EESearchTargetAlongList`: the search ends on it).
+constexpr static const int32_t EE_COMBAT_SEARCH_TRACE_PREFERRED = 5;
+
+/// `kUnitType14AntiMissileBattery`: always scored as a still target.
+constexpr static const int32_t EE_COMBAT_ANTI_MISSILE_BATTERY = 741;
 
 /// The tests `find_new_target` asks of a candidate (`TargetHost::test`), in its order.
 /// `EETechnology::mData->mKind` of the candidate class's technology in the unit's tree is 6 (asked only when the
@@ -3445,6 +3548,108 @@ struct EeCombatDamageRowOut {
   float base[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
   float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
+};
+
+/// The weapon tag point's inputs (the shooter's model data at its frame). The model chain's internal transforms (the
+/// point's model first, then each parent) are passed beside it.
+struct EeCombatWeaponIn {
+  /// `WEAPON_KIND_*`
+  int32_t kind;
+  /// the animation's tag point list exists (else the height stays the location's z)
+  int32_t list_present;
+  /// the shooter's location (`mMatrix`, row by row)
+  float location[16];
+  /// its physical model's scale
+  float scale;
+  /// the point's model is a turret part (`FindTurretPart` found it): `yaw` is its turret angle
+  int32_t turret;
+  float yaw;
+  /// the tag point at the frame, in its model's space
+  float point[3];
+  /// the box's top right back corner (`EE_COMBAT_WEAPON_KIND_BOX`)
+  float top[3];
+  /// the number of model chain transforms
+  int32_t chain;
+};
+
+/// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
+struct EeCombatSearchTarget {
+  /// its class's `mTileSize > 1`
+  int32_t multiple;
+  /// its class's `mUnitType`
+  int32_t unit_type;
+  /// its stats' attack and maximum velocity
+  float attack;
+  float max_velocity;
+};
+
+/// The searches' world (see `SearchHost`). A search calls only the callbacks its walk needs; the others may be any
+/// function of the right type.
+struct EeCombatSearchHost {
+  void *ctx;
+  /// The regions' rectangle into `out` (left, top, right, bottom).
+  void (*regions)(void *ctx,
+                  int32_t left,
+                  int32_t top,
+                  int32_t right,
+                  int32_t bottom,
+                  int32_t (*out)[4]);
+  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
+  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  void (*unit_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
+  uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
+  int32_t (*dummy_head)(void *ctx, uint64_t unit);
+  int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
+  void (*target)(void *ctx, uint64_t unit, EeCombatSearchTarget *out);
+  float (*hit_distance_squared)(void *ctx, uint64_t unit, float x, float y);
+  float (*attack_factor)(void *ctx, uint64_t unit);
+  int32_t (*line_blocked)(void *ctx, uint64_t unit);
+  int32_t (*reachable)(void *ctx, uint64_t unit);
+  void (*ignore)(void *ctx, uint64_t unit);
+  void (*footprint_tile)(void *ctx, uint64_t unit, int32_t (*out)[2]);
+  void (*trace)(void *ctx, uint64_t unit, int32_t code, int32_t score);
+};
+
+/// A search's result: the best target (0 for none), its score, and whether the search ended early.
+struct EeCombatSearchOut {
+  uint64_t best;
+  int32_t score;
+  int32_t done;
+};
+
+/// A search's inputs: the searching unit's stats and tile, the search's tile, area and scale, and the targeting
+/// table (`EEAIUnitTargetingTable::sTable`, three rows of ten).
+struct EeCombatSearchIn {
+  /// its stats' `GetAttack`, `GetMaxVelocity`, `GetRange`; its `GetLineOfSight`
+  float attack;
+  float max_velocity;
+  float range;
+  float reach;
+  float scale;
+  /// its class's `mMinRange`
+  float min_range;
+  /// its class's `mIsMelee`, `mShootsHigh`; its stats' `mCanFireOverWalls`
+  int32_t melee;
+  int32_t shoots_high;
+  int32_t over_walls;
+  /// its tile
+  int32_t unit_x;
+  int32_t unit_y;
+  /// the search's tile
+  int32_t x;
+  int32_t y;
+  /// `EESearchTarget`: the area (inclusive), the unit regions' size, the physics' tick value, the unit's location
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
+  int32_t region_size;
+  int32_t tick_random;
+  float position_x;
+  float position_y;
+  /// the targeting table, row by row
+  int32_t table[30];
 };
 
 /// `EECanConvert`'s result and its out flag (written only when `flag_written`).
@@ -8959,6 +9164,31 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         EeCodecSink sink,
                         void *context);
 
+/// Loads the tables from `count` rows of percentages (replacing any loaded ones); returns the row count.
+///
+/// # Safety
+/// `percent` must point to `count` rows (or be NULL with `count` 0). Every row pointer handed out before is invalid
+/// afterwards.
+uint32_t ee_combat_damage_table_load(const int32_t (*percent)[EE_COMBAT_DAMAGE_COLUMNS],
+                                     uint32_t count,
+                                     float scale,
+                                     float twin1,
+                                     float twin2);
+
+/// Frees the tables (`ClearDamageTables`). Every row pointer handed out before is invalid afterwards.
+void ee_combat_damage_table_clear();
+
+/// The loaded row count (0 when none).
+uint32_t ee_combat_damage_table_rows();
+
+/// Row `row` of table `table` (`EE_COMBAT_DAMAGE_*`): `DAMAGE_COLUMNS` floats, valid until the next load or clear;
+/// NULL out of range.
+const float *ee_combat_damage_table_row(uint32_t table,
+                                        uint32_t row);
+
+/// `gDamageTable[row][column]` (the base table): 0 out of range or before a load.
+float ee_combat_damage_factor(int32_t row, int32_t column);
+
 /// `EEToHitTable::GetAttackFactor`.
 ///
 /// # Safety
@@ -9081,6 +9311,48 @@ int32_t ee_combat_within_range(float distance_squared, float range);
 /// # Safety
 /// `input` must point to a valid record and `output` to writable room for one.
 void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `EEGetTileLine`: writes up to `capacity` (x, y) pairs to `out` and returns the line's tile count (call again with
+/// a larger buffer when it exceeds `capacity`).
+///
+/// # Safety
+/// `out` must point to `capacity` pairs (or be NULL with `capacity` 0).
+uint32_t ee_combat_tile_line(int32_t x1,
+                             int32_t y1,
+                             int32_t x2,
+                             int32_t y2,
+                             int32_t ends,
+                             int32_t thin,
+                             int32_t (*out)[2],
+                             uint32_t capacity);
+
+/// The line of fire's start height (the weapon tag point's world z) over `input.chain` model transforms.
+///
+/// # Safety
+/// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
+float ee_combat_weapon_height(const EeCombatWeaponIn *input,
+                              const float (*chain)[16]);
+
+/// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
+///
+/// # Safety
+/// `host` must point to a valid record whose callbacks are callable with its `ctx`.
+uint64_t ee_combat_pursuer_of(uint64_t unit, int32_t x, int32_t y, const EeCombatSearchHost *host);
+
+/// `EESearchTarget`.
+///
+/// # Safety
+/// `input` and `host` must point to valid records; the host's callbacks must be callable with its `ctx`.
+EeCombatSearchOut ee_combat_search_target(const EeCombatSearchIn *input,
+                                          const EeCombatSearchHost *host);
+
+/// `EESearchTargetAlongList` from `unit` (the searching unit's handle in the list).
+///
+/// # Safety
+/// As `ee_combat_search_target`.
+EeCombatSearchOut ee_combat_search_along_list(const EeCombatSearchIn *input,
+                                              uint64_t unit,
+                                              const EeCombatSearchHost *host);
 
 /// `EECanConvert`.
 ///

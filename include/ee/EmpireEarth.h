@@ -164,8 +164,10 @@ extern UWideString gU52A280;               // 0x52a280 "een1ve1s_" (prefixed to 
 extern UWideString gU530BC8;               // 0x530bc8 (Empire Earth.cpp; EEUIESSEOpen appends it to label 0's text)
 
 // 0x4e8708: a float table indexed [unit class +0x1c8][other unit class +0x1cc] (19 readers, e.g. the AI Hero unit;
-// two stores). Name is provisional
+// two stores). Name is provisional. The rows are ee_combat's (damage_table.rs); EEDamageFactor is the checked read
+// (0 off the table, where an index of -1 read before the array)
 extern float** gDamageTable;
+float EEDamageFactor(long inRow, long inColumn);
 
 // (provisional name for the window; the font names are Empire Earth.cpp's assert strings, e.g. "gFontTahoma12"): the
 // game window (EEUIFError: GetWidth +0xc, GetHeight +0x10 scale its layout) and the Tahoma fonts
