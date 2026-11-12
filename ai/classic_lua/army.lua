@@ -1381,12 +1381,14 @@ local function defence_task(view, memory, g)
     if x == nil or x < 0 then
         x, y = rally_point(view)
     end
-    -- the forest (the units' common move flags hold forest: foot soldiers)
+    -- the forest (UpdateCommonMoveFlags: every unit of the group crosses forest, the records' crosses_forest)
     local infantry = true
-    for _, id in ipairs(g.units) do
-        local u = R.unit(id)
-        if u ~= nil and u.category ~= "soldier" then
-            infantry = false
+    if #g.units > 0 then
+        local cols = ai.get(g.units, {"crosses_forest"})
+        for k = 1, #g.units do
+            if not cols.crosses_forest[k] then
+                infantry = false
+            end
         end
     end
     if infantry and T.random_k() < 800 then
@@ -1513,7 +1515,7 @@ local function assign_task(view, memory, g)
     if home ~= nil then
         -- (CounterAttack's task: the town, in combat mode)
         set_place(g, "defend", ai.random(home.l, home.r), ai.random(home.t, home.b), GUARD_RADIUS, 0)
-        why = "town"
+        why = "aid"
     elseif g.mission == 2 or g.mission == 0 then
         local regions = target_regions(memory, g.enemy)
         local pick = regions[#regions]
@@ -1569,7 +1571,12 @@ local function update_groups(view, memory)
                     assign_task(view, memory, g)
                 end
             elseif g.phase == "task" and #g.units > 0 then
-                if g.task == "attack" and g.state == "arrived" then
+                -- (EECPASGLand: a sub-group whose fight is over goes idle and is given a task again)
+                local fought = g.was_fighting and g.state ~= "fighting"
+                g.was_fighting = g.state == "fighting"
+                if fought and not g.sea and g.mission ~= 3 then
+                    assign_task(view, memory, g)
+                elseif g.task == "attack" and g.state == "arrived" then
                     assign_task(view, memory, g)
                 elseif g.task == "defend" and g.mission ~= 3 and g.state ~= "fighting"
                         and view.time >= (g.task_check or 0) then
