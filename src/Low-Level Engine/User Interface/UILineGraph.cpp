@@ -9,7 +9,7 @@
 // docs/RUST_PLAN.md R6); the points, the line and the draws stay here.
 #include <windows.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"

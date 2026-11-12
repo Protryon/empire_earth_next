@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <list>
 #include <vector>
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 static int sFailures;
 static int sChecks;

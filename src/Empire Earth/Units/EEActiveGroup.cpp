@@ -68,7 +68,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitUtilities.h"
-#include "rust/ee_rust.h"   // ee_units_keeps_ground_attacker
+#include "rust/ee_units.h"   // ee_units_keeps_ground_attacker
 
 // The order Fill sorts a slot's units in (RTTI EEAGIncreasingVelocityUnitSorter; vtable 0x446d50: only its
 // user-declared empty virtual dtor, whose ??_G 0x1edaa8 follows Fill, its first user): slower first, the same

@@ -47,7 +47,8 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEWorld.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_rust.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx effects.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 // SYNTHETIC: EXE 0x50251d
 // SYNTHETIC: EXE 0x502527

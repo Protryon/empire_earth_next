@@ -31,7 +31,7 @@
 #include "ee/EEVectorIO.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 const UString EECalamity::mEffectGenerationStringID("EffectGenerationStringID");
 const UString EECalamity::mTargetUnitStringID("TargetUnitStringID");

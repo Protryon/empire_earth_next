@@ -16,7 +16,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONStatus.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The room messages' bytes, their reads, who acts on which and the ready state's sounds are ee_won's staging module
 // (rust/crates/ee_won/src/staging.rs), the flow's decisions (where a message goes, what hosting, joining, leaving,
 // readying, a kick or a game action does) its flow module (flow.rs); this class keeps the game, the clients, the

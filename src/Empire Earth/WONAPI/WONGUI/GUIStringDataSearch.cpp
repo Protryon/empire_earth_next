@@ -9,7 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The searches are ee_won's guistring module (rust/crates/ee_won/src/guistring.rs)
 namespace WONAPI {
 // FUNCTION: WON 0x00728410

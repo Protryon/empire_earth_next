@@ -26,7 +26,7 @@
 #include "platform/PlatWindow.h"
 #include "platform/PlatSim.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 
 // The screen algorithms are in Rust (rust/crates/ee_dx7/src/screen.rs); this class keeps the fields, the attached
 // surfaces and the window, each method forwards or is a trampoline of ee_dx7cpp_screen_*.

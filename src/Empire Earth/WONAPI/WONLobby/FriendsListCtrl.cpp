@@ -165,10 +165,9 @@ void FriendsListCtrl::FillFriends() {
     this->mFriendsList->BeginUpdate();
     this->mFriendsList->Clear(true);
     this->mFriendsList->InsertItem(this->mSeparator.get(),-1);
-    const LobbyFriendMap& friends=LobbyFn35D270();
-    for(LobbyFriendMap::const_iterator i=friends.begin();i!=friends.end();++i) {
+    for(size_t i=0;i<LobbyGetFriendCount();++i) {
         SmartPtr<FriendsListItem> item=new FriendsListItem;
-        this->UpdateFriend(i->second.get(),item.get());
+        this->UpdateFriend(LobbyGetFriendAt(i),item.get());
         this->mFriendsList->InsertItem(item.get(),-1);
     }
     this->mFriendsList->EndUpdate();

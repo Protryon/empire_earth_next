@@ -38,11 +38,12 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EERenderObject.h"
-#include "rust/ee_rust.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
 
 #include <math.h>
+#include "rust/ee_gfx.h"
 
 // SYNTHETIC: EXE 0x50428c
 // SYNTHETIC: EXE 0x504296

@@ -63,7 +63,8 @@
 #include "ee/EEALasso.h"
 #include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
-#include "rust/ee_rust.h"   // ee_gfx select.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx select.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 
 static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);   // 0x564580

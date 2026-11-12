@@ -14,7 +14,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatString.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include <stdexcept>
 // The path logic (separators, splits, normalisation, the absolute and relative paths) is ee_won's path module
 // (rust/crates/ee_won/src/path.rs); this class keeps the strings, the cache flags and the platform calls.

@@ -437,3 +437,128 @@ help flags=15 client=8 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n
 help flags=15 client=9 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
 help flags=15 client=10 Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>ShowTeamHelp<n>
 help nolist Header<n>HelpHelp<n>WhisperHelp<n>ReplyHelp<n>EmoteHelp<n>IgnoreHelp<n>ClearHelp<n>BlockHelp<n>AwayHelp<n>
+state command 0 string=-
+state command 1 string=-
+state command 2 string=w
+state command 3 string=e
+state command 4 string=block
+state command 5 string=i
+state command 6 string=away
+state command 7 string=mod
+state command 8 string=smute
+state command 9 string=sban
+state command 10 string=mute
+state command 11 string=ban
+state command 12 string=unmute
+state command 13 string=sunmute
+state command 14 string=unban
+state command 15 string=sunban
+state command 16 string=invite
+state command 17 string=uninvite
+state command 18 string=r
+state command 19 string=clr
+state command 20 string=?
+state command 21 string=team
+state command 22 string=alert
+state command 23 string=startshutdown
+state command 24 string=abortshutdown
+state command 25 string=warn
+state command 26 string=-
+state command 27 string=-
+state command 28 string=-
+state command 29 string=-
+state command 30 string=-
+state command 31 string=-
+state command 32 string=-
+state command 33 string=-
+state command 34 string=-
+state command 35 string=-
+state command 36 string=-
+state command 37 string=-
+state command 38 string=-
+state command 39 string=-
+state command 40 string=Foo
+state command 41 string=-
+state command 99 string=W
+state p0 s00 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s01 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s02 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s03 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s04 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s05 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s06 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s07 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s08 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s09 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s10 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s11 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s12 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s13 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s14 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s15 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 s16 r=0 err=6 cmd=-1 name=- target=-1 text=- dur=0 inv=0
+state p0 flags=0 prefix=47 clients=-1
+state p1 s00 r=1 err=0 cmd=99 name=- target=-1 text=- dur=0 inv=0
+state p1 s01 r=1 err=0 cmd=99 name=- target=-1 text=- dur=0 inv=0
+state p1 s02 r=0 err=5 cmd=2 name=Bob target=3 text=- dur=0 inv=0
+state p1 s03 r=1 err=0 cmd=40 name=- target=-1 text=- dur=0 inv=0
+state p1 s04 r=1 err=0 cmd=40 name=- target=-1 text=- dur=0 inv=0
+state p1 s05 r=1 err=0 cmd=1 name=- target=-1 text=hello dur=0 inv=0
+state p1 s06 r=0 err=2 cmd=18 name=- target=-1 text=hello dur=0 inv=0
+state p1 s07 r=1 err=0 cmd=5 name=- target=-1 text=hello dur=0 inv=0
+state p1 s08 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=300 inv=0
+state p1 s09 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=300 inv=0
+state p1 s10 r=1 err=0 cmd=16 name=Bob target=3 text=- dur=300 inv=1
+state p1 s11 r=0 err=1 cmd=0 name=- target=-1 text=- dur=300 inv=1
+state p1 s12 r=1 err=0 cmd=1 name=- target=-1 text=:wave dur=300 inv=1
+state p1 s13 r=0 err=5 cmd=3 name=- target=-1 text=:wave dur=300 inv=1
+state p1 s14 r=1 err=0 cmd=99 name=- target=-1 text=:wave dur=300 inv=1
+state p1 s15 r=1 err=0 cmd=99 name=- target=-1 text=:wave dur=300 inv=1
+state p1 s16 r=1 err=0 cmd=4 name=Bobby target=4 text=:wave dur=300 inv=1
+state p1 flags=2 prefix=47 clients=9
+state p2 s00 r=1 err=0 cmd=99 name=- target=-1 text=:wave dur=300 inv=1
+state p2 s01 r=1 err=0 cmd=99 name=- target=-1 text=:wave dur=300 inv=1
+state p2 s02 r=0 err=5 cmd=2 name=Bob target=3 text=:wave dur=300 inv=1
+state p2 s03 r=1 err=0 cmd=40 name=- target=-1 text=:wave dur=300 inv=1
+state p2 s04 r=1 err=0 cmd=40 name=- target=-1 text=:wave dur=300 inv=1
+state p2 s05 r=1 err=0 cmd=1 name=- target=-1 text=hello dur=300 inv=1
+state p2 s06 r=1 err=0 cmd=2 name=Alice target=1 text=again dur=300 inv=1
+state p2 s07 r=1 err=0 cmd=5 name=- target=-1 text=again dur=300 inv=1
+state p2 s08 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=300 inv=1
+state p2 s09 r=1 err=0 cmd=8 name=Bob target=3 text=- dur=300 inv=1
+state p2 s10 r=1 err=0 cmd=16 name=Bob target=3 text=- dur=300 inv=1
+state p2 s11 r=0 err=1 cmd=0 name=- target=-1 text=- dur=300 inv=1
+state p2 s12 r=1 err=0 cmd=3 name=- target=-1 text=wave dur=300 inv=1
+state p2 s13 r=0 err=5 cmd=3 name=- target=-1 text=wave dur=300 inv=1
+state p2 s14 r=1 err=0 cmd=99 name=- target=-1 text=wave dur=300 inv=1
+state p2 s15 r=1 err=0 cmd=99 name=- target=-1 text=wave dur=300 inv=1
+state p2 s16 r=1 err=0 cmd=4 name=Bobby target=4 text=wave dur=300 inv=1
+state p2 flags=2 prefix=47 clients=9
+state p3 s00 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s01 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s02 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s03 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s04 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s05 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s06 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s07 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s08 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s09 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s10 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s11 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s12 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s13 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s14 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s15 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 s16 r=0 err=6 cmd=4 name=- target=-1 text=wave dur=300 inv=1
+state p3 flags=8 prefix=33 clients=-1
+state find 0 match=3 id=1
+state find 1 match=3 id=1
+state find 2 match=1 id=-1
+state find 3 match=1 id=-1
+state find 4 match=3 id=3
+state find 5 match=1 id=-1
+state find 6 match=0 id=-1
+state find 7 match=1 id=-1
+state find 8 match=1 id=-1
+state find 9 match=1 id=-1

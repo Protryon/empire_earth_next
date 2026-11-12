@@ -12,7 +12,7 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "platform/PlatConfig.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 
 // The port has no registry (the harness stops on any registry write, and POSIX has none): a key is the config.yaml
 // block "won.<path>", the path's '\' (or '/') separators turned into the block separator '.'. HKEY_CURRENT_USER and

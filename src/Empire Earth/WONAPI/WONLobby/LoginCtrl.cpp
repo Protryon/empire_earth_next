@@ -46,13 +46,13 @@ void LoginCtrl::UpdateLoginButton()
 void LoginCtrl::FillUserNames()
 {
     this->mUserNameCombo->Clear(true);
-    const LobbyUserInfoMap& users=LobbyFn35CE60();
     long newest=0;
     ListItem* latest=NULL;
-    LobbyUserInfoMap::const_iterator i=users.begin();
-    while(i!=users.end()) {
-        ListItem* item=this->mUserNameCombo->AddString(i->first,-1);
-        if(i->second.mLastUseTime>newest) { newest=i->second.mLastUseTime;latest=item; }
+    size_t i=0;
+    while(i<LobbyGetUserCount()) {
+        ListItem* item=this->mUserNameCombo->AddString(LobbyGetUserNameAt(i),-1);
+        long aLastUse=LobbyGetUserLastUseAt(i);
+        if(aLastUse>newest) { newest=aLastUse;latest=item; }
         ++i;
     }
     if(latest!=NULL) {

@@ -14,6 +14,7 @@
 #include "ee/wonapi/EELobbySound.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONAPICore.h"
+#include "ee/wonapi/WONLobbyMap.h"
 
 namespace WONAPI {
 
@@ -2277,8 +2278,9 @@ public:
 class LobbyServer;
 LobbyServer* LobbyGetCurrentServer();       // 0x35b6f0; NULL outside a server
 
-// RTTI LobbyClientList : RefCount; constructor 0x3a55f0, 0x14 bytes.
-typedef std::map<unsigned short, SmartPtr<LobbyClient> > LobbyClientMap;
+// RTTI LobbyClientList : RefCount; constructor 0x3a55f0, 0x14 bytes. The clients are a Rust container (round 17,
+// WONLobbyMap.h; lobbymap.rs): GetCount / ClientAt walk them in id order.
+typedef LobbyRefMap<unsigned short, LobbyClient> LobbyClientMap;
 class LobbyClientList : public RefCount {
 public:
     LobbyClientList();
@@ -2291,18 +2293,26 @@ public:
     SmartPtr<LobbyClient> RemoveClient(unsigned short inId);
     LobbyClient* FindClientByWONId(unsigned long inId);
     void ClearInvited();
+    size_t GetCount() const { return this->mClients.size(); }
+    LobbyClient* ClientAt(size_t i) const { return this->mClients.At(i); } // in id order
+private:
+    friend class LobbyClientIterator;
+    friend class LobbyClientSetIterator;
     LobbyClientMap mClients;               // +0x08
 };
 
-// Generic non-owning client iterator: 0x3a5f70..0x3a6140; size 0x08.
+// Generic non-owning client iterator: 0x3a5f70..0x3a6140; size 0x08. It walks as the map's iterator walked: the
+// next client after the last one returned.
 class LobbyClientIterator {
 public:
     LobbyClientIterator(LobbyClientList* inList);
     bool HasMore();
     LobbyClient* Next();
     void Rewind();
-    LobbyClientMap* mClients;
-    LobbyClientMap::iterator mItr;
+private:
+    const LobbyClientMap& Clients() const;
+    LobbyClientList* mList;                 // NULL: no clients
+    LobbyMapCursor<LobbyClientMap, unsigned short> mItr;
 };
 
 // Iterator over the clients that have players (provisional name); 0x0c bytes.
@@ -2312,8 +2322,10 @@ public:
     bool HasMore();
     LobbyPlayer* Next(LobbyClient** outClient);
     void Rewind();
-    LobbyClientMap* mClients;
-    LobbyClientMap::iterator mItr;
+private:
+    const LobbyClientMap& Clients() const;
+    LobbyClientList* mList;
+    LobbyMapCursor<LobbyClientMap, unsigned short> mItr;
     bool mReady;
 };
 bool LobbyIsNameIgnored(const GUIString& inName); // persistent ignore predicates; cdecl

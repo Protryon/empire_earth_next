@@ -70,7 +70,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEMouse.h"
 #include "ee/EEAreaEffectKindIDs.h"
-#include "rust/ee_rust.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx view.rs: GetUnitOpacity's near fade (RUST_PLAN R4.4)
 
 // the 3D lines (0x529050) and a name (0x529030): one guard byte (0x529048) (provisional names)
 std::vector<EERenderLine> gU529050;
@@ -1149,6 +1149,7 @@ std::vector<GETexture*> gU4E8EF0;
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
+#include "rust/ee_gfx.h"
 
 // FUNCTION: EXE 0x50d3ad
 // Fills a render unit for a unit and files it in the picker and the texture maps

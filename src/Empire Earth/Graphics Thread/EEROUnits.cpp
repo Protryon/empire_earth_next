@@ -35,7 +35,8 @@
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
 #include "GEWindow.h"
-#include "rust/ee_rust.h"   // ee_gfx units.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx units.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEMap.h"

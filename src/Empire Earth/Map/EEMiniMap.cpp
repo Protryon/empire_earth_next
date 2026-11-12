@@ -46,7 +46,8 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 #include "lle/GERenderState.h"
-#include "rust/ee_rust.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)

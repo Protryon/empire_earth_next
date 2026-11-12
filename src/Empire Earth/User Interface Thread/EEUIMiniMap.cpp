@@ -60,7 +60,8 @@
 #include "ee/EEAction.h"
 #include "ee/EEAMiniMap.h"
 #include "ee/EEUIMiniMap.h"
-#include "rust/ee_rust.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx minimap.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 

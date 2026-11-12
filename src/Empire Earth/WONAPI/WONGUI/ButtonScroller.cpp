@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The scroll buttons' conditions and which can still scroll are ee_won's guiscroll module
 // (rust/crates/ee_won/src/guiscroll.rs).
 namespace WONAPI {

@@ -11,7 +11,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyLayout.h"
 #include "ee/wonapi/WONComponentFlags.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The tabs' places, the bar's scroll and arrows, the page area, the arrow keys' target and the tab after a
 // removal are ee_won's guictl module (rust/crates/ee_won/src/guictl.rs); this unit keeps the bars, buttons,
 // pages, focus and events.

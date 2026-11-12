@@ -60,7 +60,7 @@ bool ScreenContainerConfig::Virtual24(const std::string& key)
 
 
 #include "ee/wonapi/WONLobbyAnimationComponent.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The instruction keys and the flag and value names this unit compares are ee_won's guiconf tables
 // (rust/crates/ee_won/src/guiconf.rs); this unit keeps the reads, the objects and what each entry does.
 namespace WONAPI {

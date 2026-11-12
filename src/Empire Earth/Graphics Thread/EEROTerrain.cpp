@@ -51,7 +51,8 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
 #include "ee/EERenderSnapshot.h"
-#include "rust/ee_rust.h"   // ee_gfx terrain.rs (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx terrain.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 static_assert(sizeof(GEColor) == sizeof(EeGfxColor) && sizeof(GE3DPoint) == sizeof(EeGe3DPoint) &&
                   sizeof(GETextureCoordinate) == sizeof(EeGfxTexCoord),

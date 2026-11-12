@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_tech.h"
 
 class EECalamity;
 class EECalamityClass;

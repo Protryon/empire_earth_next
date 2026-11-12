@@ -10,7 +10,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONRouting.h" // WONTickCount
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // Which call an input event makes (enter, drag or move, the double click, the exit after a drag, the resize's delay,
 // the hover, the cursor's refresh, centring, closing) is ee_won's guievent module (rust/crates/ee_won/src/guievent.rs);
 // this unit keeps the window, its root container and the calls.

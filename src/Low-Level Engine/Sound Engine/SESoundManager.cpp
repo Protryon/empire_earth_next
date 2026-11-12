@@ -18,7 +18,7 @@
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "lle/SESoundManager.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_sound.h"
 
 UMemoryPool<SESMInstanceNode> SESoundManager::sSoundsPool;
 TSCriticalSection* SESoundManager::sSoundNodePoolLock;

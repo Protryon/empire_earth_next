@@ -13,7 +13,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "lle/PIMModule.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_net_tcp.h"
 
 NEProtocolConfiguration gConfiguration(0, 1);    // 0x72d8
 UString gProtocolName("TCP/IP Protocol");        // 0x72a8

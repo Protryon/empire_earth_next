@@ -26,7 +26,8 @@
 #include "ee/EEGraphics.h"
 #include "ee/EEEffect.h"
 #include "ee/EEEffect3D.h"
-#include "rust/ee_rust.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
+#include "rust/ee_ge.h"   // ee_gfx view.rs: the frustum test (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"
 
 // SYNTHETIC: EXE 0x5050fb
 // SYNTHETIC: EXE 0x505105

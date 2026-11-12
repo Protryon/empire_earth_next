@@ -7,6 +7,7 @@
 // ee/EEAIAStarBoundedStorage.h, ee/EEAIAStarGoalBase.h, ee/EEAIAStarPathfindingGoalBase.h, <vector>, lle/U2DPoint.h.
 #ifndef EE_EEAIASTARBOUNDEDPATHGOAL_H
 #define EE_EEAIASTARBOUNDEDPATHGOAL_H
+#include "rust/ee_astar.h"
 
 class EEMap;
 class EEAIBoundedPathGoalModifierBase;

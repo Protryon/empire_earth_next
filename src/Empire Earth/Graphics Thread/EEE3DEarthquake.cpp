@@ -45,7 +45,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DEarthquake.h"
-#include "rust/ee_rust.h"   // ee_gfx quake.rs (RUST_PLAN R4.4)
+#include "rust/ee_gfx.h"   // ee_gfx quake.rs (RUST_PLAN R4.4)
 #include <vector>
 #include "ee/EEEffectKindIDs.h"
 

@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_data.h"
 
 namespace EEDataText {
 
