@@ -67,7 +67,6 @@
 #include "ee/EECivilizationManager.h"
 #include "EEDataText.h"   // the keyed .civ text
 #include "platform/PlatMessage.h"
-#include "ee/EEUIEPDCSEvents.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIBlinkingButton.h"

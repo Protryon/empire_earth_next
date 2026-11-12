@@ -114,7 +114,6 @@
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
-#include "ee/EEUIEPDCSEvents.h"
 #include "ee/EEUIEWonNetServerSelectEvents.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEUIFScenarioEditor.h"

@@ -140,6 +140,8 @@
 #include "ee/EEMap.h"
 #include "ee/EESoundObject.h"
 #include "ee/EEGraphicObject.h"
+#include "ee/EECBUIListBox.h"
+#include "ee/EECivilizationManager.h"
 #include "ee/EEAPlayerEvent.h"
 #include "ee/EECheatCodes.h"
 #include "lle/GETextAlignment.h"
@@ -1108,6 +1110,77 @@ static uint32_t EEScreensCivBuilderCall(UIForm* inForm, UIEntity* inEntity, uint
     return 0;
 }
 
+// ---- the civilization choice form's (civ_choice.rs): the form 35 by the manager, or the event's form
+static std::vector<EECivilizationEntry> sPdcsCivs;   // EE_SCREENS_GAME_PDCS_CIVS's, for the names and files
+static UWideString sPdcsName;                        // the last EE_SCREENS_TEXT_PDCS_LOAD's civilization
+static std::vector<EECivUpgrade> sPdcsUpgrades;
+
+static EECBUIListBox* EEScreensPdcsControl(unsigned long inIndex)
+{
+    return static_cast<EECBUIListBox*>(gUIManager->GetFormByID(kFormPredefinedCiv)->GetControl(inIndex));
+}
+
+static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                       uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_OP_PDCS_STYLE: {
+        EECBUIListBox* theList = static_cast<EECBUIListBox*>(inForm->GetControl(inA));
+        theList->SetAutoSelect(false);
+        if (inB & 2) {
+            theList->mShowPoints = false;
+            theList->mSelectUpgradesOnly = false;
+        }
+        theList->SetSortLines((inB & 1) != 0);
+        theList->mC13C = GEColor(Float(inC), Float(inC), Float(inD));
+        break;
+    }
+    case EE_SCREENS_GAME_PDCS_FILL:
+        gCivilizationManager.FillCivilizationList(static_cast<EECBUIListBox*>(inForm->GetControl(inA)));
+        break;
+    case EE_SCREENS_OP_PDCS_HAS_SELECTION:
+        return static_cast<EECBUIListBox*>(inForm->GetControl(inA))->GetHasSelection();
+    case EE_SCREENS_GAME_PDCS_PAUSE:
+        gWorld.PauseGame();
+        break;
+    case EE_SCREENS_GAME_PDCS_CIVS:
+        sPdcsCivs.clear();
+        gCivilizationManager.GetCivilizations(sPdcsCivs);
+        return (uint32_t)sPdcsCivs.size();
+    case EE_SCREENS_OP_PDCS_CLEAR_STATS:
+        EEScreensPdcsControl(4)->DeleteAllEntries();
+        break;
+    case EE_SCREENS_OP_PDCS_SELECTION: {
+        unsigned long theSelection;
+        return EEScreensPdcsControl(3)->GetCurrentSelection(theSelection) != kErrorOK ? 0 : theSelection + 1;
+    }
+    case EE_SCREENS_OP_PDCS_CONTROLS:
+        return EEScreensPdcsControl(3) && EEScreensPdcsControl(4) && EEScreensPdcsControl(5);
+    case EE_SCREENS_OP_PDCS_SET_UPGRADES:
+        EEScreensPdcsControl(4)->SetCivilizationUpgrades(sPdcsUpgrades);
+        break;
+    case EE_SCREENS_OP_PDCS_HIDE_LABEL:
+        EEScreensPdcsControl(5)->SetDisplayMode(kDisplayModeHidden);
+        break;
+    case EE_SCREENS_OP_PDCS_RESET:
+        EEScreensPdcsControl(3)->ResetSelection();
+        break;
+    case EE_SCREENS_GAME_PDCS_REQUEST: {
+        NEMessage* theRequest = new EEMCivUpgradesRequested(gWorld.mCurrentPlayer, sPdcsUpgrades, sPdcsName, 0);
+        if (gCommunications->GetIsMultiplayerSession())
+            gCommunications->ProcessLocalUserInput(theRequest, kSlotServer);
+        else {
+            theRequest->Execute();
+            theRequest->Dereference();
+        }
+        break;
+    }
+    default:
+        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
 // ---- the debug sound panel's (debug_sound.rs): the first selected unit's sound of a kind
 static EESoundObject* sDebugSound;   // EE_SCREENS_GAME_DSU_SOUND's, for EE_SCREENS_GAME_DSU_VOLUME
 
@@ -1142,7 +1215,7 @@ static uint32_t EEScreensDebugSoundCall(UIForm* inForm, UIEntity* inEntity, uint
         sDebugSound->SetVolume(Float(inA));
         break;
     default:
-        return EEScreensCivBuilderCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+        return EEScreensCivChoiceCall(inForm, inEntity, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2015,6 +2088,20 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     UIForm* theForm = static_cast<UIForm*>(inForm);
     std::string theList;   // the lists' texts, each ended by a 0 byte
     switch (inWhich) {
+    // the civilization choice form's (civ_choice.rs)
+    case EE_SCREENS_TEXT_PDCS_LINE: {
+        unsigned long theSelection;
+        if (EEScreensPdcsControl(3)->GetCurrentSelection(theSelection) != kErrorOK)
+            return (size_t)-1;
+        theText = EEScreensPdcsControl(3)->GetData(theSelection);
+        break;
+    }
+    case EE_SCREENS_TEXT_PDCS_CIV_NAME:
+        gResource->GetString(sPdcsCivs[inArg].mNameID, theText);
+        break;
+    case EE_SCREENS_TEXT_PDCS_CIV_FILE:
+        theText = sPdcsCivs[inArg].GetFileName();
+        break;
     case EE_SCREENS_TEXT_MUSIC_FILE:
         theText = theForm->GetMusicFileName();
         break;
@@ -2588,6 +2675,14 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
     case EE_SCREENS_TEXT_DSU_LABEL:
         if (UITextLabel* theLabel = dynamic_cast<UITextLabel*>(gUIManager->GetFormByID(kFormDebugSound)->GetControlById(inArg)))
             theLabel->SetText(theText);
+        break;
+    // the civilization choice form's (civ_choice.rs)
+    case EE_SCREENS_TEXT_PDCS_LOAD:
+        sPdcsName = UWideString();
+        sPdcsUpgrades.clear();
+        return (uint32_t)EELoadCivilization(UString(theText), EEGetCivilizationDirectory(false), sPdcsName, sPdcsUpgrades);
+    case EE_SCREENS_TEXT_PDCS_LABEL:
+        static_cast<UITextLabel*>(static_cast<UIControl*>(EEScreensPdcsControl(5)))->SetText(theText);
         break;
     }
     return 0;

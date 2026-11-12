@@ -270,6 +270,78 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CB_LOAD = 129;
 /// `EE_SCREENS_GAME_CB_SELECTION`'s answer for no list.
 constexpr static const uint32_t EE_SCREENS_CB_NO_LIST = 4294967295;
 
+constexpr static const uint32_t EE_SCREENS_PDCS_OPEN = 8961;
+
+/// The form's close event (empty).
+constexpr static const uint32_t EE_SCREENS_PDCS_CLOSE = 8962;
+
+/// The civilization list's selection changed.
+constexpr static const uint32_t EE_SCREENS_PDCS_SELECT = 8963;
+
+/// Ok (its button, Enter, the keypad's Enter, a double click on the list).
+constexpr static const uint32_t EE_SCREENS_PDCS_OK = 8964;
+
+constexpr static const uint32_t EE_SCREENS_PDCS_CANCEL = 8965;
+
+/// A button pressed on the civilization list: the statistics cleared without a selection past the first line.
+constexpr static const uint32_t EE_SCREENS_PDCS_CLEAR = 8966;
+
+/// The posted load of the selected civilization: `EE_SCREENS_PDCS_LOAD | slot << 16`, the slot (1..=255) the file's
+/// in [`CivChoice`].
+constexpr static const uint32_t EE_SCREENS_PDCS_LOAD = 8967;
+
+/// (control, flags, red = green bits, blue bits) the event's form's list's style: no auto select, the selection
+/// colour; flags 1 its lines sorted, 2 the statistics' (no points, every line selectable).
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_STYLE = 701;
+
+/// `gCivilizationManager.FillCivilizationList` on the event's form's civilization list.
+constexpr static const uint32_t EE_SCREENS_GAME_PDCS_FILL = 702;
+
+/// (control) -> the event's form's list has a selection (`GetHasSelection`).
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_HAS_SELECTION = 703;
+
+/// `gWorld.PauseGame()`.
+constexpr static const uint32_t EE_SCREENS_GAME_PDCS_PAUSE = 704;
+
+/// -> the number of civilizations (`gCivilizationManager.GetCivilizations`, kept for the texts).
+constexpr static const uint32_t EE_SCREENS_GAME_PDCS_CIVS = 705;
+
+/// The form's statistics list's `DeleteAllEntries`.
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_CLEAR_STATS = 706;
+
+/// -> the form's civilization list's selection plus 1, 0 when it has none (`GetCurrentSelection`).
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_SELECTION = 707;
+
+/// -> 1 when the form has its civilization list, statistics list and label.
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_CONTROLS = 708;
+
+/// The kept load's upgrades into the form's statistics list (`SetCivilizationUpgrades`).
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_SET_UPGRADES = 709;
+
+/// The form's label hidden.
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_HIDE_LABEL = 710;
+
+/// The form's civilization list's `ResetSelection`.
+constexpr static const uint32_t EE_SCREENS_OP_PDCS_RESET = 711;
+
+/// The kept load's civilization requested for the current player (`EEMCivUpgradesRequested`: to the server in a
+/// multiplayer session, else executed at once).
+constexpr static const uint32_t EE_SCREENS_GAME_PDCS_REQUEST = 712;
+
+/// Texts in: the form's civilization list's selected line (missing without a selection); civilization `i`'s name (its
+/// string) and file.
+constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LINE = 131;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_CIV_NAME = 132;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_CIV_FILE = 133;
+
+/// Put: a civilization file loaded (`EELoadCivilization` from the civilizations' directory; its name and upgrades
+/// kept) -> the loader's result. Put: the form's label's text.
+constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LOAD = 134;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_PDCS_LABEL = 135;
+
 /// A command button that is always available.
 constexpr static const uint32_t EE_SCREENS_BUTTON_ALWAYS = 0;
 
