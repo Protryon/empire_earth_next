@@ -74,7 +74,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric
                 houses, early_trainers), Update (every 3 s, up to 4 producible and affordable requests tried, one
                 started), StartBuilding (FindSite, FindBuilder: the nearest available citizen on the site's land,
-                ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
+                for the site classes and towers by its shore, ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
                 centres nearest home, the rings from the drop-off distance + 5 inward), FindCenterSite, FindGranarySite,
                 FindTowerSite (the worked centres' gold, iron and active food, the tower spacing), FindShoreSite, the
                 farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
