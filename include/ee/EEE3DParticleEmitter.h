@@ -38,11 +38,12 @@ public:
 
     static const UString sData;             // "EEE3DParticleEmitter" (no -Data suffix; provisional name)
 
-    GEVector mVelocity;                     // +0x74 (saved)
-    unsigned long mTagPoint;                // +0x80 (the unit ctor's inArg4; saved)
+    // the record's (ee_gfx effect_state.rs `EeGfxEffectEmitter`); the move, burst, load and save are Rust's
+    GEVector& mVelocity = *reinterpret_cast<GEVector*>(&this->mRecord->emitter.velocity);   // +0x74 (saved)
+    uint32_t& mTagPoint = this->mRecord->emitter.tag_point;   // +0x80 (the unit ctor's inArg4; saved)
     SESMInstanceNode* mSound;               // +0x84
-    float mTime;                            // +0x88 (saved)
-    float mEmitTime;                        // +0x8c (saved)
+    float& mTime = this->mRecord->emitter.time;   // +0x88 (saved)
+    float& mEmitTime = this->mRecord->emitter.emit_time;   // +0x8c (saved)
     bool mIsFirstStep;                      // +0x90 (the ctors: true)
 };
 

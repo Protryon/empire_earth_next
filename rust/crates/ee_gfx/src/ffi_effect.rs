@@ -9,8 +9,8 @@ use ee_ge::types::Ge3DPoint;
 
 use crate::effect_state::{
     self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
-    EeGfxEffectRecord, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick, EeGfxSmokeSetUp, EeGfxSmokeTick,
-    EffectFile, EffectParts, ParticleGround, SmokeHost,
+    EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
+    EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -725,6 +725,97 @@ pub unsafe extern "C" fn ee_gfx_effect_save_damaged(
         let res = effect_state::save_damaged(finished, &lists, &mut File(&*file), has_linked2);
         put_lists(r, lists);
         res
+    }
+}
+
+/// The emitter's line effects (`context`: the effect).
+#[repr(C)]
+pub struct EeGfxEmitterHost {
+    pub context: *mut c_void,
+    pub line: extern "C" fn(context: *mut c_void, start: *const Ge3DPoint, direction: *const Ge3DPoint) -> i32,
+}
+
+struct Emitter<'a>(&'a EeGfxEmitterHost);
+
+impl EmitterHost for Emitter<'_> {
+    fn line(&mut self, s: Ge3DPoint, d: Ge3DPoint) -> i32 {
+        (self.0.line)(self.0.context, &s, &d)
+    }
+}
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms, added to the running time.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_begin(r: *mut EeGfxEffectRecord, tick_seconds: f32) -> f32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::emitter_begin(r, tick_seconds)) }
+}
+
+/// `EEE3DParticleEmitter::Move`: 7 off the map; `out` the next position.
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_move(
+    r: *mut EeGfxEffectRecord,
+    seconds: f32,
+    m: *const EeGfxEmitterMove,
+    ground: *const EeGfxParticleGround,
+    out: *mut Ge3DPoint,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let mv = *m;
+        let mut p = Ge3DPoint::default();
+        let res = on_copy(r, |r| effect_state::emitter_move(r, seconds, &mv, &mut Ground(&*ground), &mut p));
+        *out = p;
+        res
+    }
+}
+
+/// `EEE3DParticleEmitter::Step`'s burst; the last line's result (`result` without one).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_emitter_burst(
+    r: *mut EeGfxEffectRecord,
+    delta: f32,
+    location: *const Ge3DPoint,
+    transformation: *const ee_ge::types::GeTransformation,
+    burst: *const EeGfxEmitterBurst,
+    result: i32,
+    host: *const EeGfxEmitterHost,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let (l, t, b) = (*location, *transformation, *burst);
+        on_copy(r, |r| effect_state::emitter_burst(r, delta, l, &t, &b, result, &mut Emitter(&*host)))
+    }
+}
+
+/// `EEE3DParticleEmitter::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_load_emitter(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_state::load_emitter(r, &mut File(&*file))) }
+}
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_save_emitter(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let local = r.read();
+        effect_state::save_emitter(&local, &mut File(&*file))
     }
 }
 

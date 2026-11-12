@@ -481,6 +481,18 @@ struct EeGfxEffectDamaged {
   bool finished;
 };
 
+/// `EEE3DParticleEmitter`'s state.
+struct EeGfxEffectEmitter {
+  /// `mVelocity` (saved)
+  EeGe3DPoint velocity;
+  /// `mTagPoint`: the unit's tag point it follows (saved)
+  uint32_t tag_point;
+  /// `mTime`: ms running (saved)
+  float time;
+  /// `mEmitTime`: ms to the next burst (saved)
+  float emit_time;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -514,6 +526,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectAmbient ambient;
   /// the damage controller's
   EeGfxEffectDamaged damaged;
+  /// the particle emitter's
+  EeGfxEffectEmitter emitter;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -681,6 +695,41 @@ struct EeGfxDamagedHost {
   /// `CreateUnitEffect(unit, linked effect 1 (or 2: `secondary`), &handle, 0, index, 0)`: the handle
   uint32_t (*create)(void *context, bool secondary, uint32_t index);
   void (*destroy)(void *context, uint32_t handle);
+};
+
+/// What the emitter's move reads: the wind and the graphic effect's `GetParam4()`, `GetParam8()`, `GetParam9()`,
+/// `GetParam10()`, `mParam11`, `mFlag2`.
+struct EeGfxEmitterMove {
+  EeGe3DPoint wind;
+  float param4;
+  float param8;
+  float param9;
+  float param10;
+  float param11;
+  bool flag2;
+};
+
+/// What the emitter's burst reads: the graphic effect's `mIntParam3` (particles a burst), `mEmitPositionSpread`,
+/// `mIsEmitFlat`, `GetParam1()`..`GetParam6()` (pitch, yaw and speed: centre and spread), `mIntParam1`/`mIntParam2`
+/// (the countdown's centre and spread).
+struct EeGfxEmitterBurst {
+  uint32_t count;
+  float position_spread;
+  bool flat;
+  float param1;
+  float param2;
+  float param3;
+  float param4;
+  float param5;
+  float param6;
+  int32_t int_param1;
+  int32_t int_param2;
+};
+
+/// The emitter's line effects (`context`: the effect).
+struct EeGfxEmitterHost {
+  void *context;
+  int32_t (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1535,6 +1584,46 @@ int32_t ee_gfx_effect_load_damaged(EeGfxEffectRecord *r,
 int32_t ee_gfx_effect_save_damaged(EeGfxEffectRecord *r,
                                    const EeGfxEffectFile *file,
                                    bool has_linked2);
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms, added to the running time.
+///
+/// # Safety
+/// `r` is a live record.
+float ee_gfx_effect_emitter_begin(EeGfxEffectRecord *r, float tick_seconds);
+
+/// `EEE3DParticleEmitter::Move`: 7 off the map; `out` the next position.
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+int32_t ee_gfx_effect_emitter_move(EeGfxEffectRecord *r,
+                                   float seconds,
+                                   const EeGfxEmitterMove *m,
+                                   const EeGfxParticleGround *ground,
+                                   EeGe3DPoint *out);
+
+/// `EEE3DParticleEmitter::Step`'s burst; the last line's result (`result` without one).
+///
+/// # Safety
+/// `r` is a live record; the pointers are valid.
+int32_t ee_gfx_effect_emitter_burst(EeGfxEffectRecord *r,
+                                    float delta,
+                                    const EeGe3DPoint *location,
+                                    const EeGeTransformation *transformation,
+                                    const EeGfxEmitterBurst *burst,
+                                    int32_t result,
+                                    const EeGfxEmitterHost *host);
+
+/// `EEE3DParticleEmitter::Load`'s own reads.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_load_emitter(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_effect_save_emitter(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEEffect::GetRandom`.
 float ee_gfx_effect_random();

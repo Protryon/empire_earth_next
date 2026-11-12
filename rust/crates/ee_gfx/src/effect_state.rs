@@ -130,6 +130,20 @@ impl Default for EeGfxEffectDamaged {
     }
 }
 
+/// `EEE3DParticleEmitter`'s state.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEffectEmitter {
+    /// `mVelocity` (saved)
+    pub velocity: Ge3DPoint,
+    /// `mTagPoint`: the unit's tag point it follows (saved)
+    pub tag_point: u32,
+    /// `mTime`: ms running (saved)
+    pub time: f32,
+    /// `mEmitTime`: ms to the next burst (saved)
+    pub emit_time: f32,
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -165,6 +179,8 @@ pub struct EeGfxEffectRecord {
     pub ambient: EeGfxEffectAmbient,
     /// the damage controller's
     pub damaged: EeGfxEffectDamaged,
+    /// the particle emitter's
+    pub emitter: EeGfxEffectEmitter,
 }
 
 /// The identity (`GETransformation()`).
@@ -196,6 +212,7 @@ impl EeGfxEffectRecord {
             particle: EeGfxEffectParticle::default(),
             ambient: EeGfxEffectAmbient::default(),
             damaged: EeGfxEffectDamaged::default(),
+            emitter: EeGfxEffectEmitter::default(),
         }
     }
 
@@ -1500,6 +1517,176 @@ pub fn save_damaged<F: EffectFile>(finished: bool, lists: &EeGfxEffectLists, f: 
     res
 }
 
+// ---- the particle emitter (EEE3DParticleEmitter, kind 0x3a)
+
+/// What the emitter's move reads: the wind and the graphic effect's `GetParam4()`, `GetParam8()`, `GetParam9()`,
+/// `GetParam10()`, `mParam11`, `mFlag2`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEmitterMove {
+    pub wind: Ge3DPoint,
+    pub param4: f32,
+    pub param8: f32,
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    pub flag2: bool,
+}
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms (`GetTickSeconds() * 1000`) added to the running time;
+/// returns it (the move takes it in seconds, `/ 1000`).
+pub fn emitter_begin(r: &mut EeGfxEffectRecord, tick_seconds: f32) -> f32 {
+    let delta = tick_seconds * 1000.0;
+    r.emitter.time += delta;
+    delta
+}
+
+/// `EEE3DParticleEmitter::Move`: drag, gravity, wind and rise on the velocity, the next position from the
+/// transformation's; with flag 2 a bounce off the terrain, 7 off the map.
+pub fn emitter_move<G: ParticleGround>(
+    r: &mut EeGfxEffectRecord,
+    seconds: f32,
+    m: &EeGfxEmitterMove,
+    ground: &mut G,
+    out: &mut Ge3DPoint,
+) -> i32 {
+    let t = r.transformation;
+    let v = &mut r.emitter.velocity;
+    let mut gravity = -m.param8;
+    let drag = -m.param11;
+    let force = Ge3DPoint { x: v.x * drag, y: v.y * drag, z: v.z * drag };
+    gravity += force.z;
+    v.x = force.x * seconds + v.x;
+    v.y = force.y * seconds + v.y;
+    v.z = gravity * seconds + v.z;
+    out.x = m.param9 * m.wind.x * seconds + v.x * seconds + t.m[0][3];
+    out.y = m.param9 * m.wind.y * seconds + v.y * seconds + t.m[1][3];
+    out.z = m.param9 * m.wind.z * seconds + m.param4 * seconds + v.z * seconds + t.m[2][3];
+    let mut result = 0;
+    if m.flag2 {
+        let y = um::floor_unsigned(out.y);
+        let x = um::floor_unsigned(out.x);
+        if ground.is_valid_tile(x, y) {
+            let height = ground.mesh_z(out.x, out.y);
+            if out.z <= height {
+                let n = ground.mesh_normal(out.x, out.y);
+                if n.z * v.z + n.y * v.y + n.x * v.x < 0.0 {
+                    out.z = height;
+                    let bounce =
+                        (n.z * v.z + n.y * v.y + n.x * v.x) * (-1.0 - m.param10) / (n.z * n.z + n.y * n.y + n.x * n.x);
+                    v.x = n.x * bounce + v.x;
+                    v.y = n.y * bounce + v.y;
+                    v.z = n.z * bounce + v.z;
+                }
+            }
+        } else {
+            result = 7;
+        }
+    }
+    result
+}
+
+/// What the emitter's burst reads: the graphic effect's `mIntParam3` (particles a burst), `mEmitPositionSpread`,
+/// `mIsEmitFlat`, `GetParam1()`..`GetParam6()` (pitch, yaw and speed: centre and spread), `mIntParam1`/`mIntParam2`
+/// (the countdown's centre and spread).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEmitterBurst {
+    pub count: u32,
+    pub position_spread: f32,
+    pub flat: bool,
+    pub param1: f32,
+    pub param2: f32,
+    pub param3: f32,
+    pub param4: f32,
+    pub param5: f32,
+    pub param6: f32,
+    pub int_param1: i32,
+    pub int_param2: i32,
+}
+
+/// The emitter's line effects (`CreateLineEffect(line, mLinkedEffect1, NULL)`; its result).
+pub trait EmitterHost {
+    fn line(&mut self, start: Ge3DPoint, direction: Ge3DPoint) -> i32;
+}
+
+/// `EEE3DParticleEmitter::Step`'s burst (when the effect goes on): the countdown by the tick; when it runs out,
+/// `count` line particles from the location, each spread, turned by a random pitch and yaw from the transformation
+/// and thrown at a random speed, then a new random countdown. Returns the last line's result (`result` without a
+/// burst).
+pub fn emitter_burst<H: EmitterHost>(
+    r: &mut EeGfxEffectRecord,
+    delta: f32,
+    location: Ge3DPoint,
+    transformation: &GeTransformation,
+    b: &EeGfxEmitterBurst,
+    result: i32,
+    host: &mut H,
+) -> i32 {
+    let mut result = result;
+    r.emitter.emit_time -= delta;
+    if r.emitter.emit_time <= 0.0 {
+        let mut i = b.count;
+        while i > 0 {
+            let mut p = location;
+            p.x = (0.5 - random()) * b.position_spread + p.x;
+            p.y = (0.5 - random()) * b.position_spread + p.y;
+            if !b.flat {
+                p.z = (0.5 - random()) * b.position_spread + p.z;
+            }
+            let pitch = spread(b.param2, b.param1);
+            let yaw = spread(b.param4, b.param3);
+            let speed = spread(b.param6, b.param5);
+            let mut turn = *transformation;
+            turn.revolve(yaw, pitch, 0.0);
+            let d = turn.apply_vector(ee_ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            let direction = Ge3DPoint { x: speed * d.x, y: speed * d.y, z: speed * d.z };
+            result = host.line(p, direction);
+            i -= 1;
+        }
+        // `GetRandomSpread(long, long)`: the spread and centre as floats
+        r.emitter.emit_time = (0.5 - random()) * b.int_param2 as f32 + b.int_param1 as f32;
+    }
+    result
+}
+
+/// `EEE3DParticleEmitter::Load`'s own reads after `EEEffect3D::Load` (ignored): the velocity, running time,
+/// countdown and tag point; the first error.
+pub fn load_emitter<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let e = &mut r.emitter;
+    let mut res = load_point(f, &mut e.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut e.time);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut e.emit_time);
+    if res == OK {
+        res = f.read_u32(&mut e.tag_point);
+    }
+    res
+}
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+pub fn save_emitter<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let e = &r.emitter;
+    let mut res = save_point(f, &e.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(e.time);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(e.emit_time);
+    if res == OK {
+        res = f.write_u32(e.tag_point);
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2003,6 +2190,81 @@ mod tests {
         let mut g = Mem { items: f.items.clone(), ..Default::default() };
         assert_eq!(load_damaged(&mut fin2, &mut old, &mut g, 0, 0xf8), 0);
         assert!(!fin2);
+    }
+
+    struct Lines(Vec<(Ge3DPoint, Ge3DPoint)>);
+
+    impl EmitterHost for Lines {
+        fn line(&mut self, s: Ge3DPoint, d: Ge3DPoint) -> i32 {
+            self.0.push((s, d));
+            self.0.len() as i32
+        }
+    }
+
+    #[test]
+    fn the_emitter_moves_bursts_and_saves() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        let mut r = EeGfxEffectRecord::new(0x3a);
+        r.transformation.m[0][3] = 3.0;
+        r.emitter.velocity = Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 };
+        assert_eq!(emitter_begin(&mut r, 0.125), 125.0);
+        assert_eq!(r.emitter.time, 125.0);
+        let m = EeGfxEmitterMove {
+            wind: Ge3DPoint::default(),
+            param4: 0.0,
+            param8: 0.0,
+            param9: 0.0,
+            param10: 0.0,
+            param11: 1.0,
+            flag2: true,
+        };
+        let mut out = Ge3DPoint::default();
+        assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, true, false), &mut out), 0);
+        let vx = -1.0f32 * 0.125 + 1.0;
+        assert_eq!((r.emitter.velocity.x, out.x), (vx, vx * 0.125 + 3.0));
+        assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, false, false), &mut out), 7);
+        // the burst: three draws of place (two when flat), pitch, yaw and speed per particle, then the countdown
+        set_random_seed(4242);
+        let mut check = URandom { seed: 4242 };
+        let b = EeGfxEmitterBurst {
+            count: 2,
+            position_spread: 1.0,
+            flat: true,
+            param1: 0.5,
+            param2: 0.1,
+            param3: 0.0,
+            param4: 1.0,
+            param5: 2.0,
+            param6: 0.5,
+            int_param1: 300,
+            int_param2: 100,
+        };
+        let mut lines = Lines(Vec::new());
+        let t = identity();
+        assert_eq!(emitter_burst(&mut r, 10.0, Ge3DPoint { x: 1.0, y: 1.0, z: 1.0 }, &t, &b, 0, &mut lines), 2);
+        for (s, d) in &lines.0 {
+            let x = (0.5 - check.generate()) * 1.0 + 1.0;
+            let y = (0.5 - check.generate()) * 1.0 + 1.0;
+            let pitch = (0.5 - check.generate()) * 0.1 + 0.5;
+            let yaw = (0.5 - check.generate()) * 1.0 + 0.0;
+            let speed = (0.5 - check.generate()) * 0.5 + 2.0;
+            assert_eq!(*s, Ge3DPoint { x, y, z: 1.0 });
+            let mut turn = identity();
+            turn.revolve(yaw, pitch, 0.0);
+            let v = turn.apply_vector(ee_ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            assert_eq!(*d, Ge3DPoint { x: speed * v.x, y: speed * v.y, z: speed * v.z });
+        }
+        assert_eq!(r.emitter.emit_time, (0.5 - check.generate()) * 100.0 + 300.0);
+        // no burst while the countdown runs
+        assert_eq!(emitter_burst(&mut r, 10.0, Ge3DPoint::default(), &t, &b, 5, &mut lines), 5);
+        assert_eq!(random_seed(), check.seed);
+        // save and load
+        let mut f = Mem::default();
+        assert_eq!(save_emitter(&r, &mut f), 0);
+        let mut back = EeGfxEffectRecord::new(0x3a);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_emitter(&mut back, &mut g), 0);
+        assert_eq!(back.emitter, r.emitter);
     }
 
     #[test]
