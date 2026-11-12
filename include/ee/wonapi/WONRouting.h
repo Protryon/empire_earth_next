@@ -1744,6 +1744,7 @@ public:
     static RustServerOp* NewRequest(EeWonReqOp* inOp, ServerContext* inContext);
     static RustServerOp* NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr);
     IPAddr GetCurAddr() const; // a request's current server (EE_WON_REQHOST_CUR_ADDR)
+    IPAddr GetAddr() const; // a request's first server (an invalid address: none)
     void Set(int inWhich, RefCount* inObj); // an object setter (the op takes its own reference)
     void SetNum(int inWhich, long long inNum); // a number setter
     EeWonHostOp* GetRustOp() const { return this->mRustOp; }
@@ -1757,6 +1758,7 @@ protected:
     virtual ~RustServerOp();
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
+    IPAddr AddrOf(int inWhich) const;
     EeWonHostOp* mRustOp; // owned
     FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
 };
@@ -1791,50 +1793,23 @@ public:
     virtual WONStatus Recv(ByteBufferPtr& inMessage) { return this->mSession->Decrypt(inMessage); } //2ad8a0
 };
 
-class ServerRequestOp : public ServerOp {
+// ServerRequestOp (2acf60/2ad050): the request/reply exchange is a Rust op on the base (ee_won reqhost.rs: the
+// server list, sessions, peer authentication, the expired-session retry). This class is what the ops still derived
+// in C++ (the directory, account and routing request ops) build on: its virtuals make the request and read the
+// reply (RustServerOp::HostCall's EE_WON_HOST_REQ_*), mRequest and mResponse the exchange's bytes.
+class ServerRequestOp : public RustServerOp {
 public:
-    ServerRequestOp(const IPAddr&); //2ad050
-    void Init(); //2acf10
-    void SetServerContext(ServerContext*); //2ad2e0
-    void SetAddr(const IPAddr&); //2ad340
-    IPAddr GetAddr() const; //2ad410
-    void FinishSaveSession(WONStatus); //2ad5b0
+    explicit ServerRequestOp(ServerContext*); //2acf60
+    explicit ServerRequestOp(const IPAddr&); //2ad050
     void SetLastServerError(WONStatus); //2ad660
-    bool TryConnect(); //2ad6b0
-    bool TryPeerToPeerAuth(); //2ad950, out of line, the full PeerAuth op
-    bool TryNextServer(); //2add80
-    void QueueSocketOp(SocketOp*,DWORD); //2adae0, out of line
-    WONStatus Send(); //2ae050
-    WONStatus Recv(); //2ae2d0
-    bool CheckExpiredSession(); //2ae200
-    ServerRequestOp(ServerContext*); //2acf60
-    const IPAddr& GetCurAddr() const { return this->mCurAddr; } //borrowed b0 getter
-    virtual void RunHook();   //2ae390
-    virtual void CleanupHook(); //2ae4c0
-    virtual bool CallbackHook(AsyncOp*,int); //2adb10
-    virtual WONStatus GetNextRequest(); //2ad020
-    virtual WONStatus CheckResponse(); //2c7b10
-    virtual void Reset();     //326b60
+    virtual WONStatus GetNextRequest() { return (WONStatus)100059; } //2ad020, WS_ServerReq_Recv
+    virtual WONStatus CheckResponse() { return (WONStatus)0; } //2c7b10, WS_Success
+    virtual void Reset() {} //326b60
 protected:
-    WONStatus InvalidReplyHeader(); //2ad6a0, protected, 16 bytes; returns 100057
-    virtual ~ServerRequestOp(); //2ad110, explicit own-vptr store
+    WONStatus InvalidReplyHeader(); //2ad6a0: the server error, then the next server
 public:
-    typedef std::list<IPAddr> AddrList;
-    AddrList mAddrList; //94
-    AddrList::iterator mAddrItr; //a0
-    SmartPtr<AuthSession> mCurSession; //a4
-    SmartPtr<AuthSession> mUsedSession; //a8
-    bool mReusingSession; //ac
-    bool mSessionExpired; //ad, natural alignmentae/af
-    IPAddr mCurAddr; //b0..d8
-    bool mUseAuth2; //d8
-    bool mCloseConnection; //d9, natural alignmentda/db
-    WONStatus mGetCertStatus; //dc
-    bool mUseLastServerErrorForFinishStatus; //e0, natural alignmente1..e3
-    WONStatus mLastServerError; //e4
-    SmartPtr<ServerContext> mServerContext; //e8
-    ByteBufferPtr mRequest; //ec
-    ByteBufferPtr mResponse; //f0..f4
+    ByteBufferPtr mRequest;
+    ByteBufferPtr mResponse;
 };
 
 // 0xf8 bytes, RTTI/VT44d138, functions 2c5ff0/6150/6270.

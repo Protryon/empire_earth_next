@@ -169,6 +169,14 @@ pub const EE_WON_HOST_SOCKET_LISTEN: i32 = 94;
 pub const EE_WON_HOST_SOCKET_PORT: i32 = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 pub const EE_WON_HOST_RUN: i32 = 96;
+// The ops still derived in C++ (reqhost.rs's CppReq; `this` a C++ `ServerRequestOp`):
+/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
+pub const EE_WON_HOST_REQ_NEXT: i32 = 97;
+/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
+/// `ReadBufferException`
+pub const EE_WON_HOST_REQ_CHECK: i32 = 98;
+/// `Reset()`
+pub const EE_WON_HOST_REQ_RESET: i32 = 99;
 // GetCertOp's (certhost.rs: round 6's hooks; ctx an auth context, kind 1 `AuthCertificate`, 2 `Auth2Certificate`):
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 pub const EE_WON_HOST_CERT_VERIFIER_PUBLIC: i32 = 100;

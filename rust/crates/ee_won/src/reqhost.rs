@@ -22,6 +22,7 @@ use crate::hostop::{
     hex, EeWonHostOp, Host, Obj, Plan, SetValue, EE_WON_HOST_OP_CONNECT, EE_WON_HOST_OP_RECV_MSG,
     EE_WON_HOST_OP_SEND_BYTES_TO, EE_WON_HOST_OP_SEND_MSG, FOREVER,
 };
+use crate::hostop::{EE_WON_HOST_REQ_CHECK, EE_WON_HOST_REQ_NEXT, EE_WON_HOST_REQ_RESET};
 use crate::reqop::{Checked, EeWonReqOp, RequestOp};
 use crate::server::{self, st, EeWonServerReqDone, RequestEnv};
 
@@ -29,10 +30,14 @@ use crate::server::{self, st, EeWonServerReqDone, RequestEnv};
 pub const EE_WON_REQHOST_CUR_ADDR: i32 = -1;
 /// `SetServerContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
 pub const EE_WON_REQHOST_CONTEXT: i32 = -2;
-/// `SetAddr(addr)`: `ee_won_hostop_set`
+/// `SetAddr(addr)`: `ee_won_hostop_set`; `GetAddr()` (the first address, six bytes; none: invalid):
+/// `ee_won_hostop_bytes`
 pub const EE_WON_REQHOST_ADDR: i32 = -3;
 /// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
 pub const EE_WON_REQHOST_UDP_SOCKET: i32 = -4;
+/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
+/// `ee_won_hostop_set`
+pub const EE_WON_REQHOST_LAST_ERROR: i32 = -5;
 
 /// `AUTH_TYPE_SESSION`
 const AUTH_SESSION: i32 = 1;
@@ -134,6 +139,48 @@ impl HostRequest for Plain {
     }
     fn bytes(&self, which: i32, _index: i64) -> Option<Vec<u8>> {
         self.0.bytes(which)
+    }
+}
+
+/// An op still derived from `ServerRequestOp` in C++ (the directory, account and routing request ops): its
+/// `GetNextRequest`, `CheckResponse` and `Reset` are the C++ class's virtuals, one host call each; its members are
+/// the C++ object's.
+pub(crate) struct CppReq;
+
+impl HostRequest for CppReq {
+    fn length_field_size(&self) -> u8 {
+        4
+    }
+    fn use_auth2(&self) -> bool {
+        true
+    }
+    fn run_hook(&mut self, _c: &Calls) -> Option<i32> {
+        None
+    }
+    fn next_request(&mut self, c: &Calls, _datagram: bool) -> (i32, Option<Vec<u8>>) {
+        let r = c.h.call(EE_WON_HOST_REQ_NEXT, [Obj::none(); 3], [0, 0], &[], [0; 6]);
+        (r.num as i32, r.bytes)
+    }
+    fn check_response(&mut self, c: &Calls, response: &[u8]) -> Checked {
+        let has = c.h.st().ex.response.is_some();
+        let r = c.h.call(EE_WON_HOST_REQ_CHECK, [Obj::none(); 3], [i64::from(has), 0], response, [0; 6]);
+        if r.addr[0] == 1 {
+            Checked::Cut
+        } else {
+            Checked::Status(r.num as i32)
+        }
+    }
+    fn reset(&mut self, c: &Calls) {
+        c.h.call(EE_WON_HOST_REQ_RESET, [Obj::none(); 3], [0, 0], &[], [0; 6]);
+    }
+    fn describe(&self) -> String {
+        "c++".into()
+    }
+    fn num(&self, _which: i32, _index: i64) -> i64 {
+        0
+    }
+    fn bytes(&self, _which: i32, _index: i64) -> Option<Vec<u8>> {
+        None
     }
 }
 
@@ -619,6 +666,10 @@ impl Plan for ReqPlan {
         if which == EE_WON_REQHOST_CUR_ADDR {
             return Some(self.ex.cur_addr.to_vec());
         }
+        if which == EE_WON_REQHOST_ADDR {
+            // `GetAddr()`: the first address (none: an invalid one)
+            return self.ex.addrs.first().map(|a| a.to_vec());
+        }
         self.op().bytes(which, index)
     }
 
@@ -632,6 +683,8 @@ impl Plan for ReqPlan {
                 p.ex.addrs.push(value.addr);
             }
             EE_WON_REQHOST_UDP_SOCKET => assign(h, udp, value.obj),
+            // during the derived op's own step (its lock held): the members only
+            EE_WON_REQHOST_LAST_ERROR => set_last_server_error(h, value.num as i32),
             _ => with_op!(h, |o| o.set(&Calls { h }, which, value)),
         }
     }
@@ -698,6 +751,13 @@ pub unsafe extern "C" fn ee_won_hostop_request(op: *mut EeWonReqOp) -> *mut EeWo
     EeWonHostOp::boxed(ReqPlan::new(Box::new(Plain(b.op))))
 }
 
+/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
+/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
+#[no_mangle]
+pub extern "C" fn ee_won_hostop_cpp_request() -> *mut EeWonHostOp {
+    EeWonHostOp::boxed(ReqPlan::new(Box::new(CppReq)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -710,5 +770,100 @@ mod tests {
         assert!(p.ex.use_auth2 && p.ex.close_connection);
         assert_eq!((p.ex.last_error, p.ex.get_cert_status), (st::NONE, st::NONE));
         assert_eq!(p.bytes(EE_WON_REQHOST_CUR_ADDR, 0), Some(vec![0; 6]));
+    }
+
+    use crate::hostop::{
+        EeWonHostCall, EE_WON_HOST_FINISH, EE_WON_HOST_LFS, EE_WON_HOST_MODE, EE_WON_HOST_NEW_SOCKET,
+        EE_WON_HOST_RECV_MSG, EE_WON_HOST_SEND_MSG, EE_WON_HOST_STATUS, EE_WON_HOST_TIME_LEFT,
+    };
+    use std::cell::RefCell;
+    use std::ffi::c_void;
+
+    thread_local! {
+        /// the calls made, and how many replies the C++ op's CheckResponse threw on first
+        static LOG: RefCell<(Vec<String>, i32)> = const { RefCell::new((Vec::new(), 0)) };
+    }
+
+    /// A blocking exchange's C++ side: one server, a C++ derived op asking for one reply.
+    unsafe extern "C" fn cpp_host(_host: *mut c_void, call: *mut EeWonHostCall) {
+        // SAFETY: the op's call
+        let c = unsafe { &mut *call };
+        let data = unsafe { crate::ffi::bytes(c.data, c.len) }.to_vec();
+        let give = |c: &mut EeWonHostCall, b: &[u8]| unsafe { (c.out_sink)(c.out_context, b.as_ptr(), b.len()) };
+        LOG.with(|l| {
+            let mut l = l.borrow_mut();
+            match c.code {
+                EE_WON_HOST_STATUS => c.out_num = i64::from(st::PENDING),
+                EE_WON_HOST_MODE => c.out_num = 2,
+                EE_WON_HOST_LFS => c.out_num = 4,
+                EE_WON_HOST_TIME_LEFT => c.out_num = 5000,
+                EE_WON_HOST_NEW_SOCKET => c.out_obj = 7 as *mut c_void,
+                EE_WON_HOST_REQ_NEXT => {
+                    c.out_num = i64::from(st::RECV);
+                    give(c, &[1, 2]);
+                    l.0.push("next".into());
+                }
+                EE_WON_HOST_SEND_MSG => l.0.push(format!("send {}", hex(&data))),
+                EE_WON_HOST_RECV_MSG => give(c, &[9]),
+                EE_WON_HOST_REQ_CHECK => {
+                    l.0.push(format!("check {} {}", c.num[0], hex(&data)));
+                    if l.1 > 0 {
+                        l.1 -= 1;
+                        c.out_addr[0] = 1;
+                    }
+                }
+                EE_WON_HOST_REQ_RESET => l.0.push("reset".into()),
+                EE_WON_HOST_FINISH => l.0.push(format!("finish {}", c.num[0])),
+                _ => {}
+            }
+        });
+    }
+
+    fn run_cpp(throws: i32) -> Vec<String> {
+        LOG.with(|l| *l.borrow_mut() = (Vec::new(), throws));
+        let op = ee_won_hostop_cpp_request();
+        let a = [0u8, 80, 10, 0, 0, 1];
+        // SAFETY: the new op
+        unsafe {
+            crate::hostop::ee_won_hostop_bind(op, Some(cpp_host), std::ptr::null_mut());
+            crate::hostop::ee_won_hostop_set(
+                op,
+                EE_WON_REQHOST_ADDR,
+                0,
+                std::ptr::null(),
+                0,
+                a.as_ptr(),
+                std::ptr::null_mut(),
+            );
+            crate::hostop::ee_won_hostop_run(op);
+            crate::hostop::ee_won_hostop_free(op);
+        }
+        LOG.with(|l| l.borrow().0.clone())
+    }
+
+    #[test]
+    fn a_cpp_derived_op_builds_and_reads_through_its_virtuals() {
+        assert_eq!(run_cpp(0), ["reset", "next", "send 0102", "check 1 09", "finish 0"]);
+        // a reply its read threw on: an unpack failure, the only server failed alike
+        assert_eq!(run_cpp(1), ["reset", "next", "send 0102", "check 1 09", "reset", "finish 100064"]);
+    }
+
+    #[test]
+    fn a_cpp_derived_ops_server_error_is_the_exchanges() {
+        let h = Host::new(ReqPlan::new(Box::new(CppReq)));
+        let v = SetValue { num: 100063, data: &[], addr: [0; 6], obj: Obj::none() };
+        ReqPlan::set(&h, EE_WON_REQHOST_LAST_ERROR, &v);
+        let st_now = {
+            let p = h.st();
+            (p.ex.last_error, p.ex.use_last)
+        };
+        assert_eq!(st_now, (100063, true));
+        let v = SetValue { num: 100076, ..v };
+        ReqPlan::set(&h, EE_WON_REQHOST_LAST_ERROR, &v);
+        let st_now = {
+            let p = h.st();
+            (p.ex.last_error, p.ex.use_last)
+        };
+        assert_eq!(st_now, (100076, false));
     }
 }

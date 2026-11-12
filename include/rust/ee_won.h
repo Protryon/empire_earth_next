@@ -972,6 +972,16 @@ constexpr static const int32_t EE_WON_HOST_SOCKET_PORT = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 constexpr static const int32_t EE_WON_HOST_RUN = 96;
 
+/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
+constexpr static const int32_t EE_WON_HOST_REQ_NEXT = 97;
+
+/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
+/// `ReadBufferException`
+constexpr static const int32_t EE_WON_HOST_REQ_CHECK = 98;
+
+/// `Reset()`
+constexpr static const int32_t EE_WON_HOST_REQ_RESET = 99;
+
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 constexpr static const int32_t EE_WON_HOST_CERT_VERIFIER_PUBLIC = 100;
 
@@ -1187,11 +1197,16 @@ constexpr static const int32_t EE_WON_REQHOST_CUR_ADDR = -1;
 /// `SetServerContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_REQHOST_CONTEXT = -2;
 
-/// `SetAddr(addr)`: `ee_won_hostop_set`
+/// `SetAddr(addr)`: `ee_won_hostop_set`; `GetAddr()` (the first address, six bytes; none: invalid):
+/// `ee_won_hostop_bytes`
 constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
 
 /// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
 constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
+
+/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
+/// `ee_won_hostop_set`
+constexpr static const int32_t EE_WON_REQHOST_LAST_ERROR = -5;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -9102,6 +9117,10 @@ bool ee_won_regkey_root_valid(int32_t root);
 /// # Safety
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
+
+/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
+/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
+EeWonHostOp *ee_won_hostop_cpp_request();
 
 /// Frees an op.
 ///

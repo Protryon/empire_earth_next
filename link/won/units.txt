@@ -19,7 +19,6 @@
 2aab50 2b2177 WONSocket/BlockingSocket.cpp
 2ac390 2acc05 WONServer/ServerContext.cpp
 2acc10 2acf01 WONServer/ServerOp.cpp
-2acf10 2ae571 WONServer/ServerRequestOp.cpp
 2b0310 2b60cf WONSocket/SocketOperationDispatch.cpp
 2b0340 2b1bcc WONSocket/AsyncSocket.cpp
 2b09a0 2b0a27 WONSocket/AsyncSocketInternet.cpp

@@ -9,6 +9,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONPing.h" // the MultiPingOp helpers over RustServerOp
 #include "ee/wonapi/WONAuthPeerData.h"
+#include "ee/wonapi/WONStatus.h"
 #include "ee/wonapi/WONAuthCertificate.h"
 #include "ee/wonapi/WONAuthPubKeyBlock.h"
 #include "ee/wonapi/WONBlowfish.h"
@@ -174,6 +175,21 @@ RustServerOp* RustServerOp::NewRequest(EeWonReqOp* inOp, const IPAddr& inAddr)
                       NULL);
     return anOp;
 }
+ServerRequestOp::ServerRequestOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_cpp_request())
+{
+    this->Set(EE_WON_REQHOST_CONTEXT, inContext);
+}
+ServerRequestOp::ServerRequestOp(const IPAddr& inAddr) : RustServerOp(ee_won_hostop_cpp_request())
+{
+    ee_won_hostop_set(this->GetRustOp(), EE_WON_REQHOST_ADDR, 0, NULL, 0,
+                      reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), NULL);
+}
+void ServerRequestOp::SetLastServerError(WONStatus inError) { this->SetNum(EE_WON_REQHOST_LAST_ERROR, inError); }
+WONStatus ServerRequestOp::InvalidReplyHeader()
+{
+    this->SetLastServerError(WS_ServerReq_InvalidReplyHeader);
+    return WS_ServerReq_TryNextServer;
+}
 GetCertOp::GetCertOp(AuthContext* inContext) : RustServerOp(ee_won_hostop_getcert())
 {
     this->Set(EE_WON_REQHOST_CONTEXT, inContext->GetServerContext().get());
@@ -202,10 +218,12 @@ void RustServerOp::Set(int inWhich, RefCount* inObj)
 {
     ee_won_hostop_set(this->mRustOp, inWhich, 0, NULL, 0, NULL, inObj);
 }
-IPAddr RustServerOp::GetCurAddr() const
+IPAddr RustServerOp::GetCurAddr() const { return this->AddrOf(EE_WON_REQHOST_CUR_ADDR); }
+IPAddr RustServerOp::GetAddr() const { return this->AddrOf(EE_WON_REQHOST_ADDR); }
+IPAddr RustServerOp::AddrOf(int inWhich) const
 {
     std::string anAddr;
-    ee_won_hostop_bytes(this->mRustOp, EE_WON_REQHOST_CUR_ADDR, 0, StrSink, &anAddr);
+    ee_won_hostop_bytes(this->mRustOp, inWhich, 0, StrSink, &anAddr);
     IPAddr a;
     if (anAddr.size() == 6) a.SetSixByte(anAddr.data());
     return a;
@@ -389,6 +407,24 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
     case EE_WON_HOST_PEER_AUTH_CERT: c->out_num = static_cast<PeerAuthOp*>(Op(o0))->GetGetCertStatus(); break;
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = dynamic_cast<RecvMsgOp*>(Op(o0)) != NULL; break;
+    // an op derived in C++ (reqhost.rs's CppReq): its virtuals
+    case EE_WON_HOST_REQ_NEXT: {
+        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
+        c->out_num = r->GetNextRequest();
+        Give(c, r->mRequest.get());
+        break;
+    }
+    case EE_WON_HOST_REQ_CHECK: {
+        ServerRequestOp* r = static_cast<ServerRequestOp*>(o);
+        r->mResponse = n0 ? Buf(c) : ByteBufferPtr();
+        try {
+            c->out_num = r->CheckResponse();
+        } catch (ReadBufferException&) {
+            c->out_addr[0] = 1;
+        }
+        break;
+    }
+    case EE_WON_HOST_REQ_RESET: static_cast<ServerRequestOp*>(o)->Reset(); break;
     // DetectFirewallOp's (ee_won fwhost.rs)
     case EE_WON_HOST_SOCKET_LISTEN: c->out_num = Sock(o0)->Listen(1000); break;
     case EE_WON_HOST_SOCKET_PORT: c->out_num = Sock(o0)->GetLocalPort(); break;
