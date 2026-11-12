@@ -2,7 +2,7 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <stdint.h>
 #include <stddef.h>
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONCRC16.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006a0c70

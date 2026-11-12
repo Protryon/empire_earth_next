@@ -8,7 +8,7 @@
 #include <windows.h>
 #include <string.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
 #include "lle/Input System.h"

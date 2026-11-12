@@ -20,7 +20,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONCRC16.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 namespace WONAPI { std::wstring StringToWString(const std::string& inString); } // StringUtil.cpp
 

@@ -69,7 +69,8 @@
 #include "ee/EEMiniMap.h"
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_ge.h"
+#include "rust/ee_gfx.h"
 
 // The camera's math is Rust (rust/crates/ee_gfx camera.rs, docs/RUST_PLAN.md R4.4): the pitch, the interpolation, the
 // move's speed, the view, the height clamp, the clipping distances, the edge clip, the scroll direction and clamp,

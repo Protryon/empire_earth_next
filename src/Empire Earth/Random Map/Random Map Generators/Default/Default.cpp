@@ -9,7 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_rmap.h"
 #include "Unit10.h"
 #include "ee/EERandomMapIDs.h"
 

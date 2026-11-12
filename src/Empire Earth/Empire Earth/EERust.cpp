@@ -3,7 +3,7 @@
 #include <string>
 #include "ee/EEGameLog.h"
 #include "platform/PlatMessage.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_rust_common.h"
 
 // A Rust panic aborts the process and a GUI exe has no stderr: the line goes to the debugger's output (the harness
 // logs it), stderr, and the game log when a game is running.

@@ -22,7 +22,7 @@
 #include "lle/FSFileSpec.h"
 #include "lle/GESurface.h"
 #include "lle/Graphics Engine.h"
-#include "rust/ee_rust.h"   // ee_of_png_to_picture (LoadPNG)
+#include "rust/ee_openformats.h"   // ee_of_png_to_picture (LoadPNG)
 
 extern "C" {
 #include "jpeglib/jpeglib.h"

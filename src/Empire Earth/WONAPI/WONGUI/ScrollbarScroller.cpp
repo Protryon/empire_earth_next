@@ -8,7 +8,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // The scrollbar conditions and the bars' numbers are ee_won's guiscroll module (rust/crates/ee_won/src/guiscroll.rs).
 using namespace WONAPI;
 // FUNCTION: WON 0x00705760

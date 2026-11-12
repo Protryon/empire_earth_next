@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "rust/ee_rust.h"
+#include "rust/ee_ui.h"
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatWindow.h"
 #include "lle/GEColor.h"

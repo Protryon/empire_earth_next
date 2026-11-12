@@ -29,7 +29,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EESimCapture.h"
 #include "ee/EEUnitStore.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_units.h"
 
 // the holders' owners from their offsets: the unit classes derive singly (RTSUnit -> EEUnit -> EEComplexUnit), so an
 // offsetof is the member's place in every object of the class

@@ -17,7 +17,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONLobbyChatCommands.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 #include <vector>
 extern wchar_t gEmptyWideString[]; // 0x8e60bc, an empty wide string (zero .bss)
 using namespace WONAPI;

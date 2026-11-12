@@ -19,7 +19,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyModel.h"
 #include "ee/wonapi/WONLobbyParser.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_won.h"
 // LobbyGame's join rules, its listing summary's fields and the join request's and a player's heads are ee_won's
 // staging module (rust/crates/ee_won/src/staging.rs); the lists' decisions (the routing maps' merges, the
 // populations, what the flags say, the ping states, the stale rule, the status texts, the ready check, the

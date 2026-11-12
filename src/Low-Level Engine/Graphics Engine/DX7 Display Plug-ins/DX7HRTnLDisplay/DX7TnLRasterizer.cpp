@@ -13,7 +13,7 @@
 #include "dx7/DX7TnLRasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
-#include "rust/ee_rust.h"
+#include "rust/ee_dx7.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HRTNL 0x1000fd16
