@@ -168,7 +168,8 @@ void EECalamityCaptureContagion(EEContagionHelper* inHelper, float inElapsedTime
 // TNWK: one walk over an epoch's nodes or one tree decision (kind: 0 Unlock, 1 ResearchAll, 2 ResearchKind,
 // 3 the epoch's ObsoleteOutdatedNodes, 4 the epoch's MakeObsolete, 5 a node's SetObsolete, 6 an epoch's
 // GetBuildTime, 7 SetEpoch, 8 AdvanceEpoch, 9 SetNodeAvailable, 10 NeedsUnitMedia): the walk's arguments, per node
-// the step (id, action), the node (or the tree's epoch) after, the result. Walks nest (an event a step fires may
+// the step (id, action), the node (or the tree's epoch) after, the result. Kinds 6 and 10 (asked from the media
+// loader's thread too) are TNMT records: their order against the game thread's depends on timing. Walks nest (an event a step fires may
 // walk again): Begin opens one, the steps go to the innermost, Walk writes and closes it
 void EETechCaptureWalkBegin();
 void EETechCaptureWalkStep(long inID, long inAction);

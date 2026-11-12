@@ -564,7 +564,8 @@ long sStartCollecting = 0;
 std::vector<unsigned char> sContagionEvents;
 unsigned int sContagionEventCount = 0;
 long sContagionCollecting = 0;
-std::vector<std::vector<long> > sWalks;
+// per thread: NeedsUnitMedia also runs on the media loader's thread
+thread_local std::vector<std::vector<long> > sWalks;
 
 void Event(std::vector<unsigned char>& ioEvents, unsigned int& ioCount, long inOp, long inA, long inB, float inC,
            float inD)
@@ -755,7 +756,10 @@ void EETechCaptureWalk(long inKind, EETechTree* inTree, EETechTreeNode* inNode, 
 {
     if (!EESimCaptureRecord::Active())
         return;
-    EESimCaptureRecord theRecord(EECaptureTag("TNWK"));
+    // GetBuildTime and NeedsUnitMedia are asked from other threads too (the media loader's): their records' order
+    // against the game thread's is timing's, so they are TNMT, apart from the game thread's walks
+    bool theOtherThreads = inKind == 6 || inKind == 10;
+    EESimCaptureRecord theRecord(theOtherThreads ? EECaptureTag("TNMT") : EECaptureTag("TNWK"));
     theRecord.I32(inKind);
     theRecord.I32(inTree != NULL ? EETechCapturePlayerIndex(inTree) : -1);
     theRecord.I32(inA);
