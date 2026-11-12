@@ -3878,6 +3878,22 @@ home.
 
 Determinism: seeds 2 and 5, 60 minutes, --repeat 2. 0 script errors.
 
+### 8.60 The classic computer player in Lua: the remembered towers on hunt and mine sites (tried, not kept) (2026-11-12, EE-SIM)
+
+§8.59 proposed a second check on hunt and mine sites: an enemy tower the seat remembers (EECPNextSiteThreat's tower
+test, offered as `ai.enemy_near(x, y, {towers = true})`) after HasEnemyNear. The bench (balanced, 32 seeds) came out
+identical to §8.59's: 12-14, 6 close, citizens lost 61.8, and 145 citizens killed by towers against the C++'s 40.
+A traced game (seed 2, 60 minutes) shows why. The finders called the check about 350 times, and it never found a
+tower. The tower kills do not come from the sites the finders choose:
+- most hunters die well into their work (112 of 145 more than 2 s after their first hit);
+- they die far out (a median of 38 tiles), in bursts at one spot (seed 10: 57 kills, most of them in minutes 60-66
+  at one herd 46 tiles out);
+- the engine carries a hunter on to the next animal of its herd, under the tower, with no new order from the script.
+
+The check and its binding were reverted. Next: what the C++ does with a hunter shot by a tower. Its militia ignores
+towers (its raiders are soldiers), so the answer is likely its herds. A tower that kills hunters could make a danger
+zone in the port, or end its hunt at that herd: a deviation, to be weighed against the C++'s own losses there.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
