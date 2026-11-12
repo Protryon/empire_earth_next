@@ -598,6 +598,9 @@ constexpr static const int32_t EE_COMBAT_SHOT_SET_ANIMATION = 40;
 /// `SetRottingAwayTime(arg)`.
 constexpr static const int32_t EE_COMBAT_SHOT_SET_ROTTING = 41;
 
+/// `UpdateRottingAwayTime()`: the rotting time's count down by the tick, at 0.
+constexpr static const int32_t EE_COMBAT_SHOT_UPDATE_ROTTING = 74;
+
 /// the splash effect placed at the location's x, y and z 0.
 constexpr static const int32_t EE_COMBAT_SHOT_SPLASH = 42;
 

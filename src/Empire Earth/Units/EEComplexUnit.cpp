@@ -2006,7 +2006,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
         ioString += theString;
     }
     ioString += ":";
-    sprintf(theString, "vel %.4f:", this->mVelocity);
+    sprintf(theString, "vel %.4f:", this->mVelocity.Get());
     ioString += theString;
     if (!theGoal)
         return;
@@ -4137,43 +4137,35 @@ bool EEComplexUnit::CanReachTile(long inX, long inY)
 }
 
 
+// TEST ONLY (USST): AIStep's call as words: the inputs, the path, the results, the outputs
+static void NoteAIStep(EEComplexUnit* inUnit, uint32_t* ioWords)
+{
+    ioWords[7] = (uint32_t)(inUnit->mCommand ? inUnit->mCommand->mType : 0);
+    ioWords[8] = (uint32_t)inUnit->mNextTriggerTime.Get();
+    EEUnitStateNote(kUnitStateAIStep, inUnit->mUnitID, ioWords, 9);
+}
+
 // FUNCTION: EXE 0x5ff2e8
 // Evaluates the unit's current action and switches to the next one (dropping finished goals); an idle unit stops
 // evaluating 350 ticks after it went idle until its trigger time is reset
+// New (R5b.4 leaf 6): Rust over the unit store (ee_units ai.rs ai_step), the goal's activity, the actions' starts and
+// changes, the finished goals' drop, the camouflage and the command's write host calls (EEUnitAction.cpp)
 void EEComplexUnit::AIStep()
 {
-    unsigned long theAction;
-    EEUnitAction* theCommand;
-    if (this->mIsCitizen && this->mGoalState != NULL && this->mGoalState->mKind == kGoalGather && !this->mGoalState->IsActive(&theAction)) {
-        this->StartAction(theAction);
-        this->GetUnitClass()->ActionChanged(this);
-        return;
+    bool theNoting = EEUnitStepNoting();   // TEST ONLY (USST)
+    uint32_t theWords[9] = {(uint32_t)(this->mCommand ? this->mCommand->mType : 0), (uint32_t)this->mNextTriggerTime.Get(),
+                            (uint32_t)gPhysics->mGameTime, 0, 0, 0xffffffffu, 0xffffffffu, 0, 0};
+    EeUnitsAIHost theHost;
+    EEUnitAIHostFor(this, theHost);
+    EeUnitsAIStepOut theOut = ee_units_ai_step(&theHost, static_cast<uint32_t>(this->mUnitID), reinterpret_cast<uintptr_t>(this),
+                                               this->mIsCitizen ? 1 : 0, gPhysics->mGameTime);
+    if (theNoting) {
+        theWords[3] = theOut.path;
+        theWords[4] = theOut.action;
+        theWords[5] = theOut.first;
+        theWords[6] = theOut.second;
+        NoteAIStep(this, theWords);
     }
-    if (this->mCommand == NULL)
-        return;
-    if (this->mCommand->mType == kActionIdle && this->mNextTriggerTime < gPhysics->mGameTime)
-        return;
-    long theResult = this->mCommand->Evaluate(this, theCommand);
-    if (theResult != 0) {
-        if (theResult == 2) {
-            this->DropFinishedGoals(false);
-            if (this->mGoalState != NULL) {
-                theCommand = NULL;
-                theResult = this->mCommand->Evaluate(this, theCommand);
-            } else {
-                this->StartAction(kActionIdle);
-                this->GetUnitClass()->ActionChanged(this);
-                theResult = 0;
-            }
-        }
-        if (theResult == 1) {
-            this->UpdateCamouflage(theCommand->mType);
-            this->mCommand = theCommand;
-            this->GetUnitClass()->ActionChanged(this);
-        }
-    }
-    if ((this->mCommand ? this->mCommand->mType : 0) == kActionIdle)
-        this->mNextTriggerTime = gPhysics->mGameTime + 350;
 }
 
 // FUNCTION: EXE 0x5ff400

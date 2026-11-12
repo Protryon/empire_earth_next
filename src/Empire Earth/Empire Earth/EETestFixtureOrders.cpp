@@ -14,7 +14,12 @@
 //   1 repair         up to four citizens; one of the player's built land buildings in view is damaged first (its hit
 //                    points set to half its maximum under the world's write lock: TEST ONLY, there is no game message
 //                    for it); a right click on it -> EEMRepairUnit;
-//   2 repair-queued  as 1 with Shift held around the click -> EEMRepairUnit queued;
+//   2 repair-queued  as 1 with Shift held around the click -> EEMRepairUnit queued. With none of the player's
+//                    buildings in view (a gather that scouted moved the camera away from the town), the camera is
+//                    first centred on one of them (the town centre, else the capitol, else the first built one;
+//                    EEACenterCamera) and the view scanned again (note "home" meanwhile, "homed" through the
+//                    verdict; "home-no-pick" when the new view still shows none); "no-target" only for a player with
+//                    no built land building;
 //   3 patrol         up to six mobile units (other than citizens when the player has some); the Patrol button (the
 //                    status button of button object 18) clicked -> EEMPatrol(-1), the nearest town's patrol route;
 //   4 attack-ground  up to four units whose class can attack the ground; the Attack Ground button (button object 6),
@@ -719,7 +724,31 @@ struct OrderPlan {
     const char* mRefusal = NULL;
     long mScout = -1;                       // gather with nothing in view: the nearest resource the group can gather
     long mScoutX = 0, mScoutY = 0;          // its tile
+    long mHome = -1;                        // repair with none of the player's buildings in view: one of them
+    long mHomeX = 0, mHomeY = 0;            // its tile
 };
+
+// repair (the world's read lock held): a building the repair could target were it in view (built, living, a land
+// building with hit points to lose), into ioPlan.mHome (-1: none): the town centre first, else the capitol, else the
+// first one in the player's list
+void HomeBuilding(EEPlayer* inPlayer, OrderPlan& ioPlan)
+{
+    int theRank = 3;
+    for (RTSUnit* theNode = inPlayer->mFirstUnit; theNode != NULL; theNode = theNode->mNext) {
+        EEComplexUnit* theUnit = OwnComplex((long)theNode->mUnitID);
+        if (theUnit == NULL || !theUnit->mUnitClass->IsLandBuilding() || !theUnit->mIsBuilt || !IsLiving(theUnit)
+            || theUnit->GetTileX() == -10000 || theUnit->GetStats()->GetMaxHitPoints() < 2)
+            continue;
+        unsigned long theType = theUnit->mUnitClass->mUnitType;
+        int theUnitRank = theType == kUnitTypeTownCenter ? 0 : theType == kUnitTypeCapitol ? 1 : 2;
+        if (theUnitRank >= theRank)
+            continue;
+        theRank = theUnitRank;
+        ioPlan.mHome = (long)theUnit->mUnitID;
+        ioPlan.mHomeX = theUnit->GetTileX();
+        ioPlan.mHomeY = theUnit->GetTileY();
+    }
+}
 
 // gather (the world's read lock held): the world player's resource nearest inWorker that it could gather were its tile
 // in view and that it can reach, into ioPlan.mScout (-1: none). A random map's start often shows none: the human's
@@ -819,9 +848,10 @@ void Choose(int inKind, OrderPlan& outPlan)
             if (theUnit->mHitPoints < theUnit->GetStats()->GetMaxHitPoints())   // a damaged one first
                 break;
         }
-        if (outPlan.mTarget < 0)
+        if (outPlan.mTarget < 0) {
             outPlan.mRefusal = "no-target";
-        else
+            HomeBuilding(thePlayer, outPlan);
+        } else
             outPlan.mDamage = outPlan.mTarget;
     } else {   // attack ground, move: a point in view with no unit under it, on a tile the player sees
         EEComplexUnit* theFirst = OwnComplex(outPlan.mUnits[0]);
@@ -895,6 +925,32 @@ void Scout(int inKind, OrderPlan& ioPlan)
     ioPlan = thePlan;
     std::lock_guard<std::mutex> theLock(sOrderMutex);
     sOrder.mNote = "-";
+}
+
+// repair with none of the player's buildings in view (the lead's run 2026-11-12, orders_b10.log: right after a gather
+// that scouted, the camera was away from the town): the camera centred on the building HomeBuilding found
+// (EEACenterCamera, as the mini map's click does) and the plan chosen again from the new view (ioPlan: the new plan,
+// or "home-no-pick")
+void Home(int inKind, OrderPlan& ioPlan)
+{
+    {
+        std::lock_guard<std::mutex> theLock(sOrderMutex);
+        sOrder.mNote = "home";
+    }
+    EEACenterCamera* theAction = new EEACenterCamera;   // posted outside the world's lock, as Post does
+    theAction->SetLocation(ioPlan.mHomeX, ioPlan.mHomeY);
+    theAction->Dereference();
+    Wait(1500);   // frames drawn from the new view fill the picker
+    OrderPlan thePlan;
+    gWorld.mLock->ReadLock();
+    Choose(inKind, thePlan);
+    gWorld.mLock->ReadUnlock();
+    if (thePlan.mTarget < 0)
+        thePlan.mRefusal = "home-no-pick";     // not a skip: the driver fails the step with this note
+    thePlan.mHome = -1;
+    ioPlan = thePlan;
+    std::lock_guard<std::mutex> theLock(sOrderMutex);
+    sOrder.mNote = thePlan.mRefusal == NULL ? "homed" : "-";   // kept through the verdict: the driver logs it
 }
 
 // the group inUnits selected (EEMSelectTheseUnits unless it already is) -> whether the UI's selection matches
@@ -1001,6 +1057,8 @@ void OrderRun(unsigned long inSeq, int inKind)
     gWorld.mLock->ReadUnlock();
     if (inKind == kOrderGather && thePlan.mTarget < 0 && thePlan.mScout >= 0)
         Scout(inKind, thePlan);
+    if ((inKind == kOrderRepair || inKind == kOrderRepairQueued) && thePlan.mTarget < 0 && thePlan.mHome >= 0)
+        Home(inKind, thePlan);
     if (thePlan.mRefusal != NULL) {
         Refuse(thePlan.mRefusal);
         fprintf(stderr, "TEST UI order-refused order control %d value 0 on form 0 (seq %lu, top form 0)\n", inKind, inSeq);

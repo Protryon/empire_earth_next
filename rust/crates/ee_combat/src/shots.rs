@@ -79,6 +79,8 @@ pub const EE_COMBAT_SHOT_R_POSITION_Z: i32 = 31;
 pub const EE_COMBAT_SHOT_SET_ANIMATION: i32 = 40;
 /// `SetRottingAwayTime(arg)`.
 pub const EE_COMBAT_SHOT_SET_ROTTING: i32 = 41;
+/// `UpdateRottingAwayTime()`: the rotting time's count down by the tick, at 0.
+pub const EE_COMBAT_SHOT_UPDATE_ROTTING: i32 = 74;
 /// the splash effect placed at the location's x, y and z 0.
 pub const EE_COMBAT_SHOT_SPLASH: i32 = 42;
 /// the location set to the ground point under it (`GetGroundPoint`, `SetLocationXYZ`).
@@ -231,11 +233,11 @@ impl<H: ShotHost> Plan<'_, H> {
         self.act(EE_COMBAT_SHOT_SET_ROTTING, time);
     }
 
-    /// The rotting time's count down by the tick (at 0).
+    /// The rotting time's count down by the tick (at 0): the unit's own `UpdateRottingAwayTime` (the core lane's
+    /// shared count down, which its USTM capture records).
     fn rotting(&mut self) {
         if self.read(EE_COMBAT_SHOT_R_COMMAND) as u32 == A_UNIT_ROTTING {
-            let time = self.read(EE_COMBAT_SHOT_R_ROTTING).wrapping_sub(self.read(EE_COMBAT_SHOT_R_TICK)).max(0);
-            self.act(EE_COMBAT_SHOT_SET_ROTTING, time);
+            self.act(EE_COMBAT_SHOT_UPDATE_ROTTING, 0);
         }
     }
 
@@ -394,10 +396,7 @@ pub fn update(kind: i32, host: &mut impl ShotHost) {
             p.act(EE_COMBAT_SHOT_EFFECTS, 0);
             p.act(EE_COMBAT_SHOT_REFRESH_SOUND, 0);
             match p.read(EE_COMBAT_SHOT_R_COMMAND) as u32 {
-                A_UNIT_ROTTING => {
-                    let time = p.read(EE_COMBAT_SHOT_R_ROTTING).wrapping_sub(p.read(EE_COMBAT_SHOT_R_TICK)).max(0);
-                    p.act(EE_COMBAT_SHOT_SET_ROTTING, time);
-                }
+                A_UNIT_ROTTING => p.act(EE_COMBAT_SHOT_UPDATE_ROTTING, 0),
                 A_FADING_OUT_IN_SPACE => {
                     let z = p.real(EE_COMBAT_SHOT_R_POSITION_Z);
                     if z < 0.0 {

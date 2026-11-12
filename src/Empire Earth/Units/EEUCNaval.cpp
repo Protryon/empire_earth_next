@@ -147,23 +147,11 @@ void EEUCNaval::UpdateResourceUnit(EEComplexUnit* inUnit)
 {
     inUnit->UpdateOrbitals();
     switch (inUnit->mCommand ? inUnit->mCommand->mType : 0) {
-    case kActionResourcesRotting: {
-        long theTime = gPhysics->mTickTimeMs + inUnit->mRottingAwayTime;
-        if (theTime > 4000) {
-            long theValue = inUnit->mResourceAmount - theTime / 4000;
-            if (theValue < 0)
-                theValue = 0;
-            inUnit->SetResourceAmount(theValue);
-            theTime %= 4000;
-        }
-        inUnit->SetRottingAwayTime(theTime);
+    case kActionResourcesRotting:
+        inUnit->UpdateResourcesRotting();
         break;
-    }
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }
@@ -197,10 +185,7 @@ void EEUCNaval::Update(EEComplexUnit* inUnit)
         this->FireOnAttackFrame(inUnit, theAttack, theFrame);
         break;
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }

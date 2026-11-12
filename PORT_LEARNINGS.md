@@ -8410,3 +8410,40 @@ or EE-SIM run does.
   directly (`op->mPeerAuthServer.GetClientCertificate()`): an accessor there first (the lobby lane's file).
   FindPatchOp's state is VersionBaseOp's sets plus a list of PatchInfo maps of ByteBuffers: it follows VersionBaseOp.
   PeerAuthOp, FilePushOp, the routing and DB op families and ServerRequestOp's object remain.
+
+## R5b.4, eleventh round: the rotting and camouflage leaves, AIStep and the script's decision, the physics arithmetic and the unit loop in Rust (ee_units step.rs, ai.rs, motion.rs, tick.rs; branch rust-r5b4-core11, 2026-11-12)
+
+- **Golden first, once for the round.** One C++ commit noted every new piece from the original's statements: USTM
+  kinds 5-8 (the rotting countdown, the resources' rotting, the camouflage timers' events, the cloak fade) and a new
+  per-tick digest, USST (AIStep's inputs, path, results and outputs; each `EvaluateCondition` of the script's
+  triggers with its answer; `AfterStep`'s roll decay; `Move`'s push arithmetic). Its goldens (oracle, late, space,
+  calamity, seeds 2-7) were recorded from that build in one capture pass; each Rust commit after it was checked
+  against them (and the original's statements recheck each call while the capture runs). A new kind changes the
+  per-tick digest of every tick: record the goldens of all the round's kinds together, before any Rust body.
+- **The 19 rotting copies were one statement shape** (`long t = m - tick; if (t < 0) t = 0; Set(t);`), so a regex
+  replaced them, keeping the returned time where a linked-parts loop follows (the ambient's and the default class's).
+  The resources' rotting (`kActionResourcesRotting`: the animals, the fish, the default) is a second helper.
+- **The camouflage timers as a decision with events.** The original's two blocks interleave world calls
+  (`gMiniMap->MoveUnit`, the cloak chain setters) with the timers' writes, and its mini map tests
+  (`theCloaked && EEIsCloakedEnemyOf(...)`) read flags the setters just changed. The Rust returns the events in the
+  statement order; the C++ applies them and makes the mini map test where the event is applied (`theCloaked &&` is
+  implied: `EEIsCloakedEnemyOf` tests `mIsCloakable ? mIsCloaked : false` itself). The second timer (`mU32C`) is not
+  in the store (handed in). `long theTime = <unsigned long> - tick` is computed as the Windows build's 32-bit words.
+- **The store's lock and host calls.** `AIStep`'s host calls (`ActionChanged`, `StartAction`, `DropFinishedGoals`)
+  write holders, which take the store's lock: the Rust reads the record under the lock and releases it before every
+  host call, and reads it again after each call that can change the command or the goal.
+- **The script's conditions are `long`s** (32-bit on Windows): the host copies a trigger's ids into a 64-bit buffer
+  before the Rust reads them (no Rust reference to C++ data across a host call).
+- **`far` and `near` are `<windows.h>` macros**: a cbindgen struct field named `far` broke the C++ compile
+  ("expected unqualified-id"); the field is `past_move`.
+- **The object cache is capped** (`store 4096 MB, ... pruned`): switching the tree between two states (a stash for a
+  separate commit) rebuilds almost everything both ways (about 12 minutes each under load).
+- **The unit loop** (`EEPhysics::UpdateUnits`) is Rust over the stepped units' list: the collision period
+  (`UMCeilUnsigned` as `lrintf` and the compare), the players' updates and the steps from the last to the first as
+  host calls. The step indexes the deque by the list's index (the object is the deque's), and while the capture runs
+  it checks the list's id; a count that differs resets the list from the deque (never seen).
+- **A staging failure that is not the build's.** One capture run's six seeds all failed at once with "db table is
+  missing" (exit -1) right after a killed background start of another run; the same build passed on a rerun. Delete
+  the run's stage slots and rerun before suspecting the code.
+- **Only a tour or a played game runs** the fixture's repair "home" path (the camera on a town building before the
+  scan); the self test's stand-in covers the driver's side.

@@ -520,6 +520,8 @@ public:
     void UpdateReloadTimer();               // 0x20e0b2 (EEUCSpaceship::Update) (provisional name)
     void UpdateTargetSearchTimer();         // 0x20e0db (EEUCSpaceship::Update) (provisional name)
     void UpdateHealSearchTimer();           // 0x20e104 (EEUCBasicPriest::Update: mHealSearchTimer down by 0.001 per ms) (provisional name)
+    long UpdateRottingAwayTime();           // New (R5b.4 leaf 6): the classes' kActionUnitRotting countdown (returns the time)
+    void UpdateResourcesRotting();          // New (R5b.4 leaf 6): the classes' kActionResourcesRotting step
     float GetF220() const { return this->mF220; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; faddp) (provisional name)
     void SetF220(float inValue) { if (this->mF220 != inValue) this->mF220 = inValue; }
     // inline (EEPMNaval::PushMoving 0x55c1cb: fld; fadd; fcom; je; fstp) (provisional names)
@@ -867,9 +869,9 @@ public:
     float GetPushVelocityX() const { return this->mPushVelocityX; }  // inline value getters
     float GetPushVelocityY() const { return this->mPushVelocityY; }
     float GetCollisionResolutionCount() const { return this->mCollisionResolutionCount; }
-    float mPushVelocityX;                   // +0x230
-    float mPushVelocityY;                   // +0x234
-    float mVelocity;                        // +0x238 (SetVelocity; saved)
+    EEUnitStoreField<float, kUnitFieldPushVelocityX> mPushVelocityX;   // +0x230 (the unit store's)
+    EEUnitStoreField<float, kUnitFieldPushVelocityY> mPushVelocityY;   // +0x234 (the unit store's)
+    EEUnitStoreField<float, kUnitFieldVelocity> mVelocity;   // +0x238 (SetVelocity; saved; the unit store's)
     float mAnimationFraction;               // +0x23c
     float mGrowth;                          // +0x240 (saved)
     float GetCollisionRadius() const { return this->mCollisionRadius; }
@@ -976,7 +978,7 @@ public:
     unsigned short mPlanetID;               // +0x35c (saved)
     unsigned short mU35E;                   // +0x35e (untouched)
     float GetRoll() const { return this->mRoll; }
-    float mRoll;                            // +0x360
+    EEUnitStoreField<float, kUnitFieldRoll> mRoll;   // +0x360 (the unit store's)
     // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
     // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
     // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.

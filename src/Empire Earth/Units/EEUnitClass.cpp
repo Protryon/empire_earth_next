@@ -4358,10 +4358,7 @@ void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
     this->UpdateCamouflageTimer(inUnit);
     this->UpdateEffects(inUnit);
     if ((inUnit->mCommand != NULL ? inUnit->mCommand->mType : 0) == kActionUnitRotting) {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        long theTime = inUnit->UpdateRottingAwayTime();
         for (EEComplexUnit* theLinked = inUnit->mNextPart; theLinked != NULL; theLinked = theLinked->mNextPart)
             theLinked->SetRottingAwayTime(theTime);
     }
@@ -4388,104 +4385,217 @@ void EEUnitClass::UpdateAnimal(EEComplexUnit* inUnit)
     case kActionWaitForReload:
         this->FireOnAttackFrame(inUnit, theResult, theFrame);
         break;
-    case kActionResourcesRotting: {
-        long theTime = inUnit->mRottingAwayTime + gPhysics->mTickTimeMs;
-        if (theTime > 4000) {
-            long theAmount = inUnit->mResourceAmount - theTime / 4000;
-            if (theAmount < 0)
-                theAmount = 0;
-            inUnit->SetResourceAmount(theAmount);
-            theTime %= 4000;
-        }
-        inUnit->SetRottingAwayTime(theTime);
+    case kActionResourcesRotting:
+        inUnit->UpdateResourcesRotting();
         break;
-    }
     case kActionUnitRotting: {
-        long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-        if (theTime < 0)
-            theTime = 0;
-        inUnit->SetRottingAwayTime(theTime);
+        inUnit->UpdateRottingAwayTime();
         break;
     }
     }
     this->UpdateDone(inUnit);
 }
 
+// TEST ONLY (USTM): the camouflage timers' call as words (the inputs, each event in order, the outputs)
+struct EECamouflageNote {
+    uint32_t mWords[48];
+    unsigned int mCount;
+    void Add(uint32_t inWord)
+    {
+        if (this->mCount < 48)
+            this->mWords[this->mCount++] = inWord;
+    }
+};
+
+// TEST ONLY (USTM): a float's bits
+static uint32_t CloakBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
+// TEST ONLY (USTM): the original's timer statements (0x63978b) over the same values, as the decision's event codes
+// (a mini map move's code without its 0x100: the C++'s test is made where the event is applied)
+static void OriginalCamouflageEvents(unsigned long inTimer, unsigned long inSecond, bool inNoVital, long inTick,
+                                     EECamouflageNote& ioNote)
+{
+    unsigned long theSecond = inSecond;
+    unsigned long theRemaining = inTimer & 0x7fffffff;
+    if (theRemaining > 0) {
+        if (inNoVital) {
+            ioNote.Add(1u);
+            ioNote.Add(3u);
+            ioNote.Add(5u);
+            ioNote.Add(9u);
+            ioNote.Add(0u);
+            theSecond = 0;
+            ioNote.Add(10u);
+            ioNote.Add(0u);
+        } else {
+            long theTime = theRemaining - inTick;
+            if (theTime > 0) {
+                ioNote.Add(9u);
+                ioNote.Add((uint32_t)theTime);
+                ioNote.Add(7u);
+            } else {
+                ioNote.Add(9u);
+                ioNote.Add(0u);
+                ioNote.Add(8u);
+                ioNote.Add(4u);
+                ioNote.Add(6u);
+                theSecond = 0;
+                ioNote.Add(10u);
+                ioNote.Add(0u);
+                ioNote.Add(2u);
+            }
+        }
+    }
+    if (theSecond > 0) {
+        if (inNoVital) {
+            ioNote.Add(1u);
+            ioNote.Add(3u);
+            ioNote.Add(5u);
+            ioNote.Add(9u);
+            ioNote.Add(0u);
+            theSecond = 0;
+            ioNote.Add(10u);
+            ioNote.Add(0u);
+        } else {
+            long theTime = theSecond - inTick;
+            if (theTime > 0) {
+                theSecond = theTime;
+                ioNote.Add(10u);
+                ioNote.Add((uint32_t)theTime);
+            } else {
+                ioNote.Add(1u);
+                theSecond = 0;
+                ioNote.Add(10u);
+                ioNote.Add(0u);
+                ioNote.Add(3u);
+                ioNote.Add(5u);
+            }
+        }
+    }
+}
+
 // FUNCTION: EXE 0x63978b
 // Counts down a unit's camouflage timers (dropping them without vital buildings) and fades its cloak opacity
 void EEUnitClass::UpdateCamouflageTimer(EEComplexUnit* inUnit)
 {
-    unsigned long theRemaining = inUnit->mCamouflageTimer & 0x7fffffff;
-    if (theRemaining > 0) {
-        if (inUnit->mPlayer->mNumVitalBuildings < 1) {
-            bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-            if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
+    // TEST ONLY (USTM): the events, in the codes of ee_units step.rs (EE_UNITS_CAMO_*)
+    EECamouflageNote theNote;
+    theNote.mCount = 0;
+    bool theNoting = EESimCaptureRecord::Active()
+                     && ((inUnit->mCamouflageTimer & 0x7fffffff) > 0 || inUnit->mU32C > 0);
+    theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+    theNote.Add((uint32_t)inUnit->mU32C);
+    theNote.Add(inUnit->mPlayer->mNumVitalBuildings < 1 ? 1u : 0u);
+    theNote.Add((uint32_t)gPhysics->mTickTimeMs);
+    // New (R5b.4 leaf 6): the timers' decision is Rust over the unit store (ee_units step.rs camouflage); its events are
+    // applied here in order (a mini map move only when the unit is then a cloaked enemy of the local player, the
+    // original's test). TEST ONLY: while the capture runs, the original's statements check the events (USTM)
+    EeUnitsCamoEvent theEvents[EE_UNITS_CAMO_MAX_EVENTS];
+    bool theNoVital = inUnit->mPlayer->mNumVitalBuildings < 1;
+    unsigned long theTimerBefore = inUnit->mCamouflageTimer, theSecondBefore = inUnit->mU32C;
+    uint32_t theCount = ee_units_step_camouflage(static_cast<uint32_t>(inUnit->mUnitID), reinterpret_cast<uintptr_t>(inUnit),
+                                                 (uint32_t)theTimerBefore, (uint32_t)theSecondBefore, theNoVital ? 1 : 0,
+                                                 gPhysics->mTickTimeMs, theEvents);
+    EECamouflageNote theCodes;   // TEST ONLY (USTM): the Rust events' codes, for the check
+    theCodes.mCount = 0;
+    for (uint32_t i = 0; i < theCount; i++) {
+        const EeUnitsCamoEvent& theEvent = theEvents[i];
+        theCodes.Add(theEvent.code);
+        if (theEvent.code == EE_UNITS_CAMO_SET_TIMER || theEvent.code == EE_UNITS_CAMO_SET_SECOND)
+            theCodes.Add(theEvent.value);
+        switch (theEvent.code) {
+        case EE_UNITS_CAMO_SHOW:
+        case EE_UNITS_CAMO_HIDE: {
+            bool theMoved = EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer());
+            if (theMoved && theEvent.code == EE_UNITS_CAMO_SHOW)
                 gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-            inUnit->SetCloakableChain(false);
-            inUnit->SetCloakedChain(false);
-            inUnit->mCamouflageTimer = 0;
-            inUnit->mU32C = 0;
-        } else {
-            long theTime = theRemaining - gPhysics->mTickTimeMs;
-            if (theTime > 0) {
-                inUnit->mCamouflageTimer = theTime;
-                inUnit->SetCamouflaged(false);
-            } else {
-                inUnit->mCamouflageTimer = 0;
-                inUnit->SetCamouflaged(true);
-                inUnit->SetCloakableChain(true);
-                inUnit->SetCloakedChain(true);
-                inUnit->mU32C = 0;
-                if (EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                    gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
-            }
+            else if (theMoved)
+                gMiniMap->MoveUnit(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), -10000, -10000);
+            theNote.Add(theEvent.code | (theMoved ? 0x100u : 0u));
+            break;
+        }
+        case EE_UNITS_CAMO_CLOAKABLE_OFF:
+        case EE_UNITS_CAMO_CLOAKABLE_ON:
+            inUnit->SetCloakableChain(theEvent.code == EE_UNITS_CAMO_CLOAKABLE_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_CLOAKED_OFF:
+        case EE_UNITS_CAMO_CLOAKED_ON:
+            inUnit->SetCloakedChain(theEvent.code == EE_UNITS_CAMO_CLOAKED_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_CAMOUFLAGED_OFF:
+        case EE_UNITS_CAMO_CAMOUFLAGED_ON:
+            inUnit->SetCamouflaged(theEvent.code == EE_UNITS_CAMO_CAMOUFLAGED_ON);
+            theNote.Add(theEvent.code);
+            break;
+        case EE_UNITS_CAMO_SET_TIMER:
+            inUnit->mCamouflageTimer = theEvent.value;
+            theNote.Add(theEvent.code);
+            theNote.Add(theEvent.value);
+            break;
+        case EE_UNITS_CAMO_SET_SECOND:
+            inUnit->mU32C = theEvent.value;
+            theNote.Add(theEvent.code);
+            theNote.Add(theEvent.value);
+            break;
         }
     }
-    if (inUnit->mU32C > 0) {
-        if (inUnit->mPlayer->mNumVitalBuildings < 1) {
-            bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-            if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-            inUnit->SetCloakableChain(false);
-            inUnit->SetCloakedChain(false);
-            inUnit->mCamouflageTimer = 0;
-            inUnit->mU32C = 0;
-        } else {
-            long theTime = inUnit->mU32C - gPhysics->mTickTimeMs;
-            if (theTime > 0)
-                inUnit->mU32C = theTime;
-            else {
-                bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-                if (theCloaked && EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()))
-                    gMiniMap->MoveUnit(inUnit, -10000, -10000, inUnit->GetTileX(), inUnit->GetTileY());
-                inUnit->mU32C = 0;
-                inUnit->SetCloakableChain(false);
-                inUnit->SetCloakedChain(false);
-            }
-        }
+    if (theNoting) {   // TEST ONLY (USTM): the original's events over the same values
+        EECamouflageNote theOriginal;
+        theOriginal.mCount = 0;
+        OriginalCamouflageEvents(theTimerBefore, theSecondBefore, theNoVital, gPhysics->mTickTimeMs, theOriginal);
+        if (theOriginal.mCount != theCodes.mCount
+            || memcmp(theOriginal.mWords, theCodes.mWords, theCodes.mCount * sizeof(uint32_t)) != 0)
+            EEUnitStepDiffers("UpdateCamouflageTimer (the events)", inUnit->mUnitID, (long)theCodes.mCount,
+                              (long)theOriginal.mCount);
+    }
+    if (theNoting) {   // TEST ONLY (USTM)
+        theNote.Add((uint32_t)inUnit->mCamouflageTimer.Get());
+        theNote.Add((uint32_t)inUnit->mU32C);
+        EEUnitStepNote(kUnitStepCamouflage, inUnit->mUnitID, theNote.mWords, theNote.mCount);
     }
     if (!inUnit->mIsCloakable)
         return;
     this->UpdateCloakDetection(inUnit);
     float theOpacity = inUnit->mOpacity;
+    float theOpacityBefore = theOpacity;   // TEST ONLY (USTM)
     bool theCloaked = inUnit->mIsCloakable ? inUnit->mIsCloaked : false;
-    if (!theCloaked) {
-        if (theOpacity < kCloakFadeMaxOpacity)
-            theOpacity = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOpacity;
-        if (theOpacity > kCloakFadeMaxOpacity)
-            theOpacity = kCloakFadeMaxOpacity;
-    } else {
-        if (theOpacity > kCloakFadeMinOpacity)
-            theOpacity = theOpacity - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
-        if (theOpacity < kCloakFadeMinOpacity)
-            theOpacity = kCloakFadeMinOpacity;
-    }
-    if (inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitol && inUnit->mStats->mPower > 0 &&
-        !EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()) && inUnit->mCloaked != 0) {
-        long theTime = gPhysics->mGameTime % 2000;
-        if (theTime >= 1000)
-            theTime = 1999 - theTime;
-        theOpacity = theTime * 0.00033333333f + 0.2f;
+    bool thePulse = inUnit->mUnitClass->GetUnitType() == kUnitTypeCapitol && inUnit->mStats->mPower > 0 &&
+                    !EEIsCloakedEnemyOf(inUnit, ::gWorld.GetCurrentPlayer()) && inUnit->mCloaked != 0;
+    // New (R5b.4 leaf 6): the fade is Rust (ee_units step.rs cloak_fade: the same f32 operations in order)
+    theOpacity = ee_units_step_cloak_fade(theOpacityBefore, theCloaked ? 1 : 0, gPhysics->GetTickTime(), thePulse ? 1 : 0,
+                                          gPhysics->mGameTime);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM): the original's statements over the same values
+        float theOriginal = theOpacityBefore;
+        if (!theCloaked) {
+            if (theOriginal < kCloakFadeMaxOpacity)
+                theOriginal = gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate + theOriginal;
+            if (theOriginal > kCloakFadeMaxOpacity)
+                theOriginal = kCloakFadeMaxOpacity;
+        } else {
+            if (theOriginal > kCloakFadeMinOpacity)
+                theOriginal = theOriginal - gPhysics->GetTickTime() * sCloakFadeOpacityRange * sCloakFadeRate;
+            if (theOriginal < kCloakFadeMinOpacity)
+                theOriginal = kCloakFadeMinOpacity;
+        }
+        if (thePulse) {
+            long theTime = gPhysics->mGameTime % 2000;
+            if (theTime >= 1000)
+                theTime = 1999 - theTime;
+            theOriginal = theTime * 0.00033333333f + 0.2f;
+        }
+        if (CloakBits(theOriginal) != CloakBits(theOpacity))
+            EEUnitStepDiffers("UpdateCamouflageTimer (the cloak fade's bits)", inUnit->mUnitID, (long)CloakBits(theOpacity),
+                              (long)CloakBits(theOriginal));
+        uint32_t theWords[6] = {CloakBits(theOpacityBefore), theCloaked ? 1u : 0u, CloakBits(gPhysics->GetTickTime()),
+                                thePulse ? 1u : 0u, (uint32_t)gPhysics->mGameTime, CloakBits(theOpacity)};
+        EEUnitStepNote(kUnitStepCloakFade, inUnit->mUnitID, theWords, 6);
     }
     inUnit->SetOpacityChain(theOpacity);
 }

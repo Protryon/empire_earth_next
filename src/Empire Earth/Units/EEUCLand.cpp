@@ -142,10 +142,7 @@ void EEUCLand::Update(EEComplexUnit* inUnit)
             this->FireOnAttackFrame(inUnit, theAttack, theFrame);
             break;
         case kActionUnitRotting: {
-            long theTime = inUnit->mRottingAwayTime - gPhysics->mTickTimeMs;
-            if (theTime < 0)
-                theTime = 0;
-            inUnit->SetRottingAwayTime(theTime);
+            inUnit->UpdateRottingAwayTime();
             break;
         }
         }
