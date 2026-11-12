@@ -1732,6 +1732,28 @@ public:
     DWORD mMaxRecvTime; //90=60000
 };
 
+// An op of the Rust op base (rust/crates/ee_won/src/hostop.rs): its members and steps are the Rust op's
+// (MultiPingOp: ee_won_multiping_new, FilePushOp: ee_won_filepush_new); this class runs its hooks there and answers
+// its calls on the C++ objects (ServerOp.cpp's HostCall). Results and setters by number: ee_won_hostop_num,
+// ee_won_hostop_bytes, ee_won_hostop_set.
+class RustServerOp : public ServerOp {
+public:
+    explicit RustServerOp(EeWonHostOp* inRustOp); // takes the op; a 4-byte length field, no auth
+    EeWonHostOp* GetRustOp() const { return this->mRustOp; }
+    virtual void RunHook();
+    virtual void CleanupHook();
+    virtual bool CallbackHook(AsyncOp* inOp, int inParam);
+    // the Rust op's calls (EeWonHostCall), and a completion this op made, with its id
+    static void HostCall(void* inOp, EeWonHostCall* inCall);
+    void Completed(AsyncOp* inOp, int inId) { ee_won_hostop_callback(this->mRustOp, inId, inOp); }
+protected:
+    virtual ~RustServerOp();
+private:
+    EeWonHostOp* mRustOp; // owned
+    FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
+};
+typedef SmartPtr<RustServerOp> RustServerOpPtr;
+
 // AuthSession (0x10cc bytes in the original: type, length field size, id, sequence numbers, the by-value Blowfish
 // and the last use, constructor 2e27b0, dtor 2e2a80): a RefCount shim over ee_won's EeWonAuthSession
 // (rust/crates/ee_won/src/peerauth.rs), which owns all of it.

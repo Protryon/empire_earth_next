@@ -531,6 +531,10 @@ WON_TESTS = {
     # (requests, replies, Reset), the original's statements against the Rust ops (ee_won reqops.rs) through their C
     # ABI (golden: rust/crates/ee_won/src/golden_reqops.txt)
     "won_reqops_test": [],
+    # the Rust op base and the ops on it (MultiPingOp, FilePushOp): the original's statements against the Rust ops
+    # (ee_won hostop.rs, multiping.rs, filepush.rs) through the base's one call over a stand-in (golden:
+    # rust/crates/ee_won/src/golden_hostop.txt)
+    "won_hostop_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
     # WONInternal's TitleConfig and CommunityConfig (the instructions' children and errors, PostParse's rules, the
     # texts), the original's statements against include/ee/wonapi/WONTitleConfigMsg.h over ee_won's titlecfg module
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)

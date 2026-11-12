@@ -280,6 +280,29 @@ constexpr static const int32_t WON_FILE_SETPOS_FILE = 5;
 /// "fwrite failed (disk full)"
 constexpr static const int32_t WON_FILE_WRITE_FAILED = 6;
 
+/// `SetFile`, `SetRemoteFile`, `SetComment` (the bytes)
+constexpr static const int32_t EE_WON_FILEPUSH_FILE = 1;
+
+constexpr static const int32_t EE_WON_FILEPUSH_REMOTE_FILE = 2;
+
+constexpr static const int32_t EE_WON_FILEPUSH_COMMENT = 3;
+
+/// `SetCompress`, `SetBlockTransferSize` (the number)
+constexpr static const int32_t EE_WON_FILEPUSH_COMPRESS = 4;
+
+constexpr static const int32_t EE_WON_FILEPUSH_BLOCK_SIZE = 5;
+
+/// `SetModifyTime` (the number: high 32 bits `dwHighDateTime`, low `dwLowDateTime`)
+constexpr static const int32_t EE_WON_FILEPUSH_MODIFY_TIME = 6;
+
+/// `SetProgressCompletion` (the object)
+constexpr static const int32_t EE_WON_FILEPUSH_PROGRESS = 7;
+
+/// `GetTotalBytesSent`, `GetLastBytesSent`
+constexpr static const int32_t EE_WON_FILEPUSH_TOTAL_SENT = 10;
+
+constexpr static const int32_t EE_WON_FILEPUSH_LAST_SENT = 11;
+
 /// `WS_FTP_InvalidResponse`, `WS_FTP_StatusError`, `WS_FTP_InvalidPasvResponse`.
 constexpr static const int32_t EE_WON_FTP_INVALID_RESPONSE = 100089;
 
@@ -686,6 +709,154 @@ constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 /// height).
 constexpr static const int32_t EE_WON_DRAW_STRETCH_PIXELS = 21;
 
+/// `GetStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_STATUS = 1;
+
+/// `GetMode()` -> out_num
+constexpr static const int32_t EE_WON_HOST_MODE = 2;
+
+/// `TimeLeft()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIME_LEFT = 3;
+
+/// `WONTickCount()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TICK = 4;
+
+/// `rand()` -> out_num
+constexpr static const int32_t EE_WON_HOST_RAND = 5;
+
+/// `srand(time(NULL))`
+constexpr static const int32_t EE_WON_HOST_SRAND = 6;
+
+/// `ServerOp::mLengthFieldSize` -> out_num
+constexpr static const int32_t EE_WON_HOST_LFS = 7;
+
+/// `ServerOp::SendTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SEND_TIME = 8;
+
+/// `ServerOp::RecvTime()` -> out_num
+constexpr static const int32_t EE_WON_HOST_RECV_TIME = 9;
+
+/// `new BlockingSocket(num0)` (0 TCP, 1 UDP) -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_SOCKET = 10;
+
+/// a new socket op of kind num0 (`EE_WON_HOST_OP_*`) on socket obj0 (NULL: the queue's) with data, addr and
+/// length num1 -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_OP = 11;
+
+/// `new AsyncOp` whose completion calls the op back with id num0 (`ee_won_hostop_callback`) -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_TIMER = 12;
+
+/// `new PeerAuthOp(addr, mAuthContext, mAuthType, obj0, num0)` with `CopyMaxTimes(this)` -> out_obj
+constexpr static const int32_t EE_WON_HOST_NEW_PEER_AUTH = 13;
+
+/// `op->GetStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_OP_STATUS = 20;
+
+/// a receive op's bytes (`GetBytes` / `GetMsg`; none: NULL) -> the sink
+constexpr static const int32_t EE_WON_HOST_OP_BYTES = 21;
+
+/// a datagram receive's sender (`GetAddr`) -> out_addr
+constexpr static const int32_t EE_WON_HOST_OP_ADDR = 22;
+
+/// a socket op's socket (`GetSocket`) -> out_obj, borrowed
+constexpr static const int32_t EE_WON_HOST_OP_SOCKET = 23;
+
+/// a peer auth op's session key (`GetSession()->GetKey()`; no session: none) -> the sink
+constexpr static const int32_t EE_WON_HOST_PEER_AUTH_KEY = 24;
+
+/// `socket->Fn2B0D90(num0, num1)` (the bind) -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_BIND = 30;
+
+/// `socket->SetLengthFieldSize(num0)`
+constexpr static const int32_t EE_WON_HOST_SOCKET_SET_LFS = 31;
+
+/// `socket->SendBytesTo(data, addr, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_BYTES_TO = 40;
+
+/// `socket->RecvBytesFrom(bytes, num0, addr, num1)` -> the sink, out_addr
+constexpr static const int32_t EE_WON_HOST_RECV_BYTES_FROM = 41;
+
+/// `socket->SendBytes(data, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_BYTES = 42;
+
+/// `socket->SendMsg(data, num0)`
+constexpr static const int32_t EE_WON_HOST_SEND_MSG = 43;
+
+/// `socket->RecvBytes(bytes, num0, num1)` -> the sink
+constexpr static const int32_t EE_WON_HOST_RECV_BYTES = 44;
+
+/// `socket->RecvMsg(bytes, num0)` -> the sink
+constexpr static const int32_t EE_WON_HOST_RECV_MSG = 45;
+
+/// `op->RunBlock(num0)` -> out_num (0/1)
+constexpr static const int32_t EE_WON_HOST_RUN_BLOCK = 46;
+
+/// `mFile.Attach(PlatFOpen(data, "rb"))` -> out_num (0: none)
+constexpr static const int32_t EE_WON_HOST_FILE_OPEN = 50;
+
+/// `fread(buffer, 1, num0, file)` -> the sink
+constexpr static const int32_t EE_WON_HOST_FILE_READ = 51;
+
+/// `mFile.Detach()`
+constexpr static const int32_t EE_WON_HOST_FILE_CLOSE = 52;
+
+/// `Finish(num0)`
+constexpr static const int32_t EE_WON_HOST_FINISH = 60;
+
+/// `obj0->Kill(num0)`
+constexpr static const int32_t EE_WON_HOST_KILL = 61;
+
+/// `Track(obj0, num0)`
+constexpr static const int32_t EE_WON_HOST_TRACK = 62;
+
+/// `obj0->QueueOp(obj1, num0)` (the socket, the op)
+constexpr static const int32_t EE_WON_HOST_QUEUE = 63;
+
+/// `obj0->RunAsync(num0)`
+constexpr static const int32_t EE_WON_HOST_RUN_ASYNC = 64;
+
+/// `obj0->Close()` (a socket)
+constexpr static const int32_t EE_WON_HOST_CLOSE = 65;
+
+/// `obj0->SetRepeatCompletion(...)` calling the op back with id num0, then `obj0->SetRepeatOp(obj1)`
+constexpr static const int32_t EE_WON_HOST_SET_REPEAT = 66;
+
+/// `obj0->Complete(this)` (a completion)
+constexpr static const int32_t EE_WON_HOST_COMPLETE = 67;
+
+/// `AsyncOpWithTracker::CleanupHook()`
+constexpr static const int32_t EE_WON_HOST_BASE_CLEANUP = 68;
+
+/// `obj0->Release()`
+constexpr static const int32_t EE_WON_HOST_RELEASE = 69;
+
+/// `obj0->AddRef()`
+constexpr static const int32_t EE_WON_HOST_ADD_REF = 70;
+
+/// `ConnectOp(addr)`
+constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
+
+/// `SendBytesOp(data)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_BYTES = 1;
+
+/// `SendBytesToOp(data, addr)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_BYTES_TO = 2;
+
+/// `SendMsgOp(data)`
+constexpr static const int64_t EE_WON_HOST_OP_SEND_MSG = 3;
+
+/// `RecvBytesOp(num1)`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_BYTES = 4;
+
+/// `RecvMsgOp()`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_MSG = 5;
+
+/// `RecvCRMsgOp()`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_CR_MSG = 6;
+
+/// `RecvBytesFromOp(num1)`
+constexpr static const int64_t EE_WON_HOST_OP_RECV_BYTES_FROM = 7;
+
 /// `URL`'s types (`URLType`).
 constexpr static const int32_t EE_WON_URL_NONE = 0;
 
@@ -694,6 +865,39 @@ constexpr static const int32_t EE_WON_URL_FILE = 1;
 constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// the finished list's length
+constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
+
+/// an element's address (six bytes)
+constexpr static const int32_t EE_WON_MULTIPING_ADDR = 2;
+
+/// an element's ping time (-1: no reply)
+constexpr static const int32_t EE_WON_MULTIPING_TIME = 3;
+
+/// an element's failures
+constexpr static const int32_t EE_WON_MULTIPING_FAILURES = 4;
+
+/// an element's directory entity (`DirEntity*`, borrowed; NULL: none)
+constexpr static const int32_t EE_WON_MULTIPING_ENTITY = 5;
+
+/// whether `GetServerContext(true)` keeps the element (`GetServerContext(false)`: [`EE_WON_MULTIPING_KEEPS_ALL`])
+constexpr static const int32_t EE_WON_MULTIPING_KEEPS = 6;
+
+constexpr static const int32_t EE_WON_MULTIPING_KEEPS_ALL = 7;
+
+/// `SetBatchSize`, `SetMaxFailures`, `SetMaxPingTime` (the number)
+constexpr static const int32_t EE_WON_MULTIPING_BATCH_SIZE = 10;
+
+constexpr static const int32_t EE_WON_MULTIPING_MAX_FAILURES = 11;
+
+constexpr static const int32_t EE_WON_MULTIPING_MAX_PING_TIME = 12;
+
+/// `AddServer(addr)` / `AddServers`' element (the address, the entity or NULL)
+constexpr static const int32_t EE_WON_MULTIPING_ADD = 13;
+
+/// `ClearServers`
+constexpr static const int32_t EE_WON_MULTIPING_CLEAR = 14;
 
 /// The read failed here: the original threw `ReadBufferException` (`at`: the reader's position).
 constexpr static const uint8_t EE_WON_PATCH_CUT = 255;
@@ -1439,6 +1643,9 @@ struct EeWonFirewallOp;
 
 /// `GetCertOp`'s state: the members and the session key.
 struct EeWonGetCert;
+
+/// An op of the Rust op base, as the C++ `RustServerOp` holds it.
+struct EeWonHostOp;
 
 /// `HTTPConnection`.
 struct EeWonHttpConn;
@@ -2491,6 +2698,26 @@ struct EeWonBreak {
   int32_t next;
   int32_t width;
 };
+
+/// One call of the op on the C++ side: the code, its inputs, its outputs. Bytes come back through `out_sink`
+/// (not called: NULL).
+struct EeWonHostCall {
+  int32_t code;
+  void *obj[2];
+  int64_t num[2];
+  const uint8_t *data;
+  size_t len;
+  /// an address's six bytes (`IPAddr::GetSixByte`)
+  uint8_t addr[6];
+  void *out_obj;
+  int64_t out_num;
+  uint8_t out_addr[6];
+  EeWonByteSink out_sink;
+  void *out_context;
+};
+
+/// The C++ side's one function: `host` is the `RustServerOp` (or a driver's stand-in).
+using EeWonHostFn = void(*)(void *host, EeWonHostCall *call);
 
 /// One header line's reading.
 struct EeWonHttpHeader {
@@ -4996,6 +5223,12 @@ int32_t ee_won_file_writer_write_length(EeWonFileWriter *writer,
                                         unsigned long length,
                                         uint8_t field_size);
 
+/// `new FilePushOp(addr)` (the address's six bytes): the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `addr` points to six bytes.
+EeWonHostOp *ee_won_filepush_new(const uint8_t *addr);
+
 EeWonStageRoute ee_won_stage_send_to_captain(bool have_game, bool i_am_captain);
 
 EeWonStageRoute ee_won_stage_broadcast(bool have_game, bool i_am_captain);
@@ -7100,6 +7333,74 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// Binds the C++ side's function (`host` its first argument) before any other call.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
+
+/// `RunHook`.
+///
+/// # Safety
+/// `op` is a live, bound op.
+void ee_won_hostop_run(const EeWonHostOp *op);
+
+/// `CallbackHook(done, id)` for a tracked op, or a completion this op made (a timer's, a repeating receive's) with
+/// its id: whether the op knew the id.
+///
+/// # Safety
+/// `op` is a live, bound op; `done` the finished C++ op.
+bool ee_won_hostop_callback(const EeWonHostOp *op,
+                            int32_t id,
+                            void *done);
+
+/// `CleanupHook`.
+///
+/// # Safety
+/// `op` is a live, bound op.
+void ee_won_hostop_cleanup(const EeWonHostOp *op);
+
+/// A result by number (the op's `EE_WON_*` constants).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_hostop_num(const EeWonHostOp *op, int32_t which, int64_t index);
+
+/// A result's bytes by number, to `sink`: false (the sink not called) for none.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+bool ee_won_hostop_bytes(const EeWonHostOp *op,
+                         int32_t which,
+                         int64_t index,
+                         EeWonByteSink sink,
+                         void *context);
+
+/// A setter by number: the value as a number, bytes (`data`, `len`), an address's six bytes (`addr`, NULL: none) or
+/// an object (the op takes its own reference).
+///
+/// # Safety
+/// `op` is a live, bound op; `data` holds `len` bytes; `addr` is NULL or six bytes.
+void ee_won_hostop_set(const EeWonHostOp *op,
+                       int32_t which,
+                       int64_t num,
+                       const uint8_t *data,
+                       size_t len,
+                       const uint8_t *addr,
+                       void *obj);
+
+/// The members, one line (the drivers' form).
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+void ee_won_hostop_describe(const EeWonHostOp *op, EeWonByteSink sink, void *context);
+
+/// Frees the op, releasing every object it holds through the bound function first.
+///
+/// # Safety
+/// `op` is NULL or an op from one of the constructors, not used after.
+void ee_won_hostop_free(EeWonHostOp *op);
+
 /// `MakeInternetDateTime` into `sink`.
 ///
 /// # Safety
@@ -7731,6 +8032,9 @@ int32_t ee_won_model_dir_object(const uint8_t *kind,
                                 const uint8_t *data,
                                 size_t data_length,
                                 uint16_t *out_count);
+
+/// `new MultiPingOp`: the Rust op a `RustServerOp` runs.
+EeWonHostOp *ee_won_multiping_new();
 
 /// # Safety
 /// `hooks` lives for the program; `op` is the C++ op being constructed.
