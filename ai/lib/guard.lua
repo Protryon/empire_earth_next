@@ -144,7 +144,12 @@ end
 -- iron_free (AI_RESEARCH §8.50: the Bronze save sat unpaid 44 minutes on average, short of iron only, while the
 -- spearmen and macemen retrained against the waves spent every iron unit): the ranged units only (bowmen and
 -- slingers: wood and gold, which pile up), no new iron infantry
-function M.train(view, mem, n, order, per, iron_free)
+-- with no ranged producer (no archery range) the usual mix (AI_RESEARCH §8.50: else nothing
+-- trained at all, a town 70 minutes at 0-4 soldiers)
+-- spare (AI_RESEARCH §8.50, the waves after Copper: an order the reserve left unaffordable sat queued for 14 minutes
+-- and kept its class from being ordered again, the army 12 -> 1): the stock less the reserve; an order is cut to what
+-- it pays, and a class it cannot pay one of is not ordered (nil: no limit)
+function M.train(view, mem, n, order, per, iron_free, spare)
     local have = {pierce = 0, ranged = 0, shock = 0, cavalry = 0}
     local total = 0
     for _, s in ipairs(view.soldiers or {}) do
@@ -167,6 +172,9 @@ function M.train(view, mem, n, order, per, iron_free)
         return
     end
     local mix = M.mix(view, mem)
+    if iron_free and class_for(view, "ranged") == nil then
+        iron_free = false
+    end
     if iron_free then
         mix = {pierce = 0, ranged = 100, shock = 0}
     end
@@ -197,6 +205,13 @@ function M.train(view, mem, n, order, per, iron_free)
     local busy = {}
     for _, l in ipairs(lack) do
         local k = math.min(l.n, need, (per or 2) * math.max(l.c.producers, 1))   -- (on every producer of the class)
+        if spare ~= nil then
+            for r, v in pairs(l.c.cost) do
+                if v > 0 then
+                    k = math.min(k, math.max(spare[r] or 0, 0) // v)
+                end
+            end
+        end
         if k > 0 and l.c.requested == 0 and not busy[l.c.producer] then
             order("soldier_" .. l.c.producer, {verb = "train", type = l.c.type, n = k})
             busy[l.c.producer] = true
