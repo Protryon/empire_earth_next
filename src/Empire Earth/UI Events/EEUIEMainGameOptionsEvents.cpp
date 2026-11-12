@@ -67,8 +67,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIESLLoadScreen.h"
-#include "ee/EEUIESLSaveScreen.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // EE_SCREENS_GS_IN_GAME_OPEN (ee_screens settings_form.rs)
 #include "ee/EEUIEMainGameOptionsEvents.h"
@@ -153,9 +151,7 @@ static void OnReturnToEditor(UIForm* inForm)
 // Opens the load screen on the Saved Games folder
 long EEUIEMGOELoadSavedGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UString theDirectory;
-    theDirectory = UString("data\\") + UString("Saved Games\\");
-    UIEvent* theEvent = new EEUIESLLoadScreen(gSavedGameExtension, theDirectory);
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SL_LOAD_SCREEN_GAME);   // (ee_screens save_load.rs)
     gUserInterface->PostEvent(theEvent, NULL);
     theEvent->Dereference();
     return kErrorOK;
@@ -165,11 +161,8 @@ long EEUIEMGOELoadSavedGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Opens the save screen on the Scenarios folder in the scenario editor, else on the Saved Games folder
 long EEUIEMGOESaveGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UString theExtension;
-    UString theDirectory;
-    theExtension = gUIManager->mInScenarioEditor == true ? gScenarioExtension : gSavedGameExtension;
-    theDirectory = UString("data\\") + UString(gUIManager->mInScenarioEditor == true ? "Scenarios\\" : "Saved Games\\");
-    UIEvent* theEvent = new EEUIESLSaveScreen(theExtension, theDirectory);
+    UIEvent* theEvent = EECreateScreenEvent(gUIManager->mInScenarioEditor == true ? EE_SCREENS_SL_SAVE_SCREEN_SCENARIO
+                                                                                   : EE_SCREENS_SL_SAVE_SCREEN_GAME);
     gUserInterface->PostEvent(theEvent, NULL);
     theEvent->Dereference();
     return kErrorOK;

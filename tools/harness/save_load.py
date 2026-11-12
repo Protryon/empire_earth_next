@@ -32,7 +32,13 @@ SYM=dict(
 # the events whose classes the game screens replaced with EEScreenEvent codes (EE_SCREENS_*, rust/ee_screens.h)
 SCREEN_PE='?ProcessEvent@EEScreenEvent@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z'
 SCREEN_CODES={'EEUIESPELoadGame':0x0605,'EEUIESPECampaign':0x0602,'EEUIEPCECampaign1':0x0802,
-              'EEUIEPCECampaign2':0x0803,'EEUIEPCECampaign3':0x0804,'EEUIEPCELearningCampaign':0x0808}
+              'EEUIEPCECampaign2':0x0803,'EEUIEPCECampaign3':0x0804,'EEUIEPCELearningCampaign':0x0808,
+              # the load and save screens (ee_screens save_load.rs): a game's Save (not the editor's 0x0303), the
+              # single player Load, the save screen's Cancel
+              'EEUIESLESaveFile':0x0302,'EEUIESPLELoadFile':0x0d03,'EEUIESLECancelSave':0x0307,
+              # the campaign scenario select's Start and the scenario intro's Start (scenario_screens.rs;
+              # scenario_game.py)
+              'EEUIECSSEStartScenario':0x2106,'EEUIESIEStart':0x130a}
 SAVE_DIR=('Data','Saved Games')
 EXT='.ees'
 
@@ -182,13 +188,15 @@ CANCEL_SYMS=['?ProcessEvent@EEUIESLECancelSave@@UEAAJPEAVUIForm@@PEAVUIEntity@@@
 
 def cancel_rvas(options):
     """EECreateSaveLoadEvent: 0x10 EEUIESLECancelSave (its ProcessEvent is ICF-shared with EEUIECCCECancel /
-    EEUIECSSEBack in the original), 0xf EEUIECancel; every name the image has."""
+    EEUIECSSEBack in the original), 0xf EEUIECancel; every name the image has (a moved one as screen_event's
+    (rva, code))."""
     out=set()
     if options is not None and getattr(options,'fulllink',None):
         from fulllink_locator import LinkMap
         m=LinkMap(pathlib.Path(options.fulllink).resolve().with_suffix('.map'))
         for s in CANCEL_SYMS:
-            if s in m.by_name:out.add(m.by_name[s]-0x400000)
+            match=re.fullmatch(r'\?ProcessEvent@(\w+)@@UEAAJPEAVUIForm@@PEAVUIEntity@@@Z',s)
+            if s in m.by_name or (match and match.group(1) in SCREEN_CODES):out.add(screen_event(m,s))
         return out
     for line in (ROOT/'analysis/exe/names.txt').read_text(encoding='utf-8').splitlines():
         part=line.split()
@@ -204,7 +212,8 @@ def close_save_screen(ui,cur,raw,note,options,evidence,pid,addresses,sample,rec)
         st=cur()
         if st['form']==GAME:break
         if st['form']==SAVE_FORM:
-            hits=[i for i,v in sorted(st['controls'].items()) if int(v,16) in cancel]
+            hits=[i for i,v in sorted(st['controls'].items())
+                  if int(v,16) in cancel or (int(v,16),st.get('screens',{}).get(i)) in cancel]
             if not hits:raise RuntimeError(f'save screen: no cancel control ({st["controls"]}; cancel rvas {sorted(map(hex,cancel))})')
             seq=ui['command'](f'click {SAVE_FORM} {hits[0]}');tried.append(f'3:{hits[0]}')
         elif st['form']==OPTIONS:

@@ -126,7 +126,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EEUIECameraEvents.h"
 #include "ee/EEUIECampaignEditorEvents.h"
-#include "ee/EEUIECampaignSelectScreenEvents.h"
 #include "ee/EEUIEChatEvents.h"
 #include "ee/EEUIECivilizationBuilderEvents.h"
 #include "ee/EEUIEDiplomacyEvents.h"
@@ -143,12 +142,6 @@
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEUIEProcessTimerExpired.h"
-#include "ee/EEUIESLLoadScreen.h"
-#include "ee/EEUIESLSaveScreen.h"
-#include "ee/EEUIESaveLoadEvents.h"
-#include "ee/EEUIEScenarioIntroEvents.h"
-#include "ee/EEUIEScenarioLoadEvents.h"
-#include "ee/EEUIESinglePlayerLoadEvents.h"
 #include "ee/EEUIEWheelZoom.h"
 #include "ee/EEUIEWonNetArenaGameEvents.h"
 #include "ee/EEUIEWonNetArenaRoomEvents.h"
@@ -309,13 +302,10 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     this->mB13D = false;
     this->SetMusicVolume(!gGamePreferences.mSettings.mMusicEnabled ? 0.0f : gGamePreferences.mSettings.mMusicVolume);
     this->mU138 = 0;
-    EEUIESLEActivateForm* theEvent = new EEUIESLEActivateForm;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SL_ACTIVATE);   // (ee_screens save_load.rs)
     this->GetFormByID(kFormSaveGame)->SetFormActivateEvent(theEvent);
     theEvent->Dereference();
 }
-
-// SYNTHETIC: EXE 0x671527
-// (EEUIESLEActivateForm's scalar deleting destructor, after its first user)
 
 // SYNTHETIC: EXE 0x671552
 // (EEUIManager's scalar deleting destructor, after its first user)
@@ -362,16 +352,16 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = new EEUIEWNSOpen;
         break;
     case kFormEventScenarioIntroOpen:
-        theEvent = new EEUIESIEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SI_OPEN);
         break;
     case kFormEventScenarioIntroClose:
-        theEvent = new EEUIESIEClose;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SI_CLOSE);
         break;
     case kFormEventScenarioLoadOpen:
-        theEvent = new EEUIESCLEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SCL_OPEN);
         break;
     case kFormEventSinglePlayerLoadOpen:
-        theEvent = new EEUIESPLEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_SPL_OPEN);
         break;
     case kFormEventSSFormOpen:
         theEvent = new EEUIESSEOpen;
@@ -417,12 +407,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
 
-// SYNTHETIC: EXE 0x671dda
-// (EEUIESCLEOpen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x671e05
-// (EEUIESPLEOpen's scalar deleting destructor, after its first user)
-
 // SYNTHETIC: EXE 0x671e30
 // (EEUIEPGSEOpen's scalar deleting destructor, after its first user)
 
@@ -445,89 +429,17 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 // (EEUIECLEMousePressed's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x671f5d
-// Creates the save/load game form's event for a control id; NULL for other ids
+// Creates the save/load game form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
+// save_load.rs; made with the form, whose screen and editor decide the saved games' or the scenarios' kind). The
+// load form's Cancel opens the form it was made for.
 UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
     EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    switch (inID) {
-    case kControlEventLoadDelete:
-    case kControlEventSaveDelete:
-        theEvent = new EEUIESLEDeleteFile((UIFileListBox*)inForm->GetControl(4));
-        break;
-    case kControlEventLoadGame:
-    case kControlEventLoadGameByDbClick:
-        if (gGameScreenActive == true || !gUIManager->mInScenarioEditor)
-            theEvent = new EEUIESLELoadFile(gSavedGameExtension, "Saved Games\\",
-                                            theManager->mMainGameForm);
-        else
-            theEvent = new EEUIESLELoadFile(gScenarioExtension, "Scenarios\\",
-                                            theManager->mScenarioEditorForm);
-        break;
-    case kControlEventSaveGame:
-    case kControlEventSaveGameByEnter:
-    case kControlEventSaveGameByDblClick:
-        if (theManager->mInScenarioEditor == true) {
-            if (gGameScreenActive == true)
-                theEvent = new EEUIESLESaveFile(gScenarioExtension, UString("data\\") + UString("Scenarios\\"),
-                                                theManager->mMainGameForm);
-            else
-                theEvent = new EEUIESLESaveFile(gScenarioExtension, UString("data\\") + UString("Scenarios\\"),
-                                                theManager->mScenarioEditorForm);
-        } else {
-            if (gGameScreenActive == true)
-                theEvent = new EEUIESLESaveFile(gSavedGameExtension, UString(""), theManager->mMainGameForm);
-            else
-                theEvent = new EEUIESLESaveFile(gSavedGameExtension, UString(""),
-                                                theManager->mScenarioEditorForm);
-        }
-        break;
-    case kControlEventCancelSave:
-        theEvent = new EEUIESLECancelSave;
-        break;
-    case kControlEventCancelLoad:
-        if (!gGameScreenActive)
-            theEvent = new EEUIECancel(static_cast<UIForm*>(theManager->mScenarioEditorForm));
-        else
-            theEvent = new EEUIECancel(theManager->mMainGameForm);
-        break;
-    case kControlEventSaveGameChangeFocusedFile:
-        theEvent = new EEUIESLDisplayNewFile;
-        break;
-    }
-    return theEvent;
+    if (inID == kControlEventCancelLoad)
+        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->mScenarioEditorForm)
+                                                  : theManager->mMainGameForm);
+    return EECreateScreenEvent(ee_screens_save_load_event_for(inID, gGameScreenActive, theManager->mInScenarioEditor));
 }
-
-// SYNTHETIC: EXE 0x67230e
-// (EEUIESLEDeleteFile's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x672339
-// Creates the load-file event of the save/load form
-// (EEUIESLELoadFile's inline ctor, after its first user)
-
-// SYNTHETIC: EXE 0x672382
-// (EEUIESLELoadFile's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x67239e
-// Destroys the load-file event
-// (EEUIESLELoadFile's inline dtor)
-
-// FUNCTION: EXE 0x6723c9
-// Creates the save-file event of the save/load form
-// (EEUIESLESaveFile's inline ctor)
-
-// SYNTHETIC: EXE 0x672412
-// (EEUIESLESaveFile's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x67242e
-// Destroys the save-file event
-// (EEUIESLESaveFile's inline dtor)
-
-// SYNTHETIC: EXE 0x672459
-// (EEUIESLDisplayNewFile's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672484
-// (EEUIESLECancelSave's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x6724af
 // Opens the form the cancel event was made for (the save/load screens' cancel)
@@ -992,127 +904,25 @@ void EEUIManager::CreateScenarioEditor()
 }
 
 // FUNCTION: EXE 0x673eac
-// Creates the scenario intro form's event for a control id; NULL for other ids
+// Creates the scenario intro form's event for a control id; NULL for other ids (ee_screens scenario_screens.rs)
 UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventSIBack && inID <= kControlEventSIBackMouseOut) {
-        switch (inID) {
-        case kControlEventSIBack:
-            theEvent = new EEUIESIEBack;
-            break;
-        case kControlEventSIBriefing:
-            theEvent = new EEUIESIEBriefing;
-            break;
-        case kControlEventSIHints:
-            theEvent = new EEUIESIEHints;
-            break;
-        case kControlEventSIHistory:
-            theEvent = new EEUIESIEHistory;
-            break;
-        case kControlEventSIMap:
-            theEvent = new EEUIESIEMap;
-            break;
-        case kControlEventSIMovie:
-            theEvent = new EEUIESIEMovie;
-            break;
-        case kControlEventSIStart:
-            theEvent = new EEUIESIEStart;
-            break;
-        case kControlEventSIMapMouseOver:
-        case kControlEventSIBriefingMouseOver:
-        case kControlEventSIHistoryMouseOver:
-        case kControlEventSIHintsMouseOver:
-        case kControlEventSIMovieMouseOver:
-        case kControlEventSIStartMouseOver:
-        case kControlEventSIBackMouseOver:
-            theEvent = new EEUISIEMouseOverButton;
-            break;
-        case kControlEventSIMapMouseOut:
-        case kControlEventSIBriefingMouseOut:
-        case kControlEventSIHistoryMouseOut:
-        case kControlEventSIHintsMouseOut:
-        case kControlEventSIMovieMouseOut:
-        case kControlEventSIStartMouseOut:
-        case kControlEventSIBackMouseOut:
-            theEvent = new EEUISIEMouseOutButton;
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_scenario_intro_event_for(inID));
 }
 
 // FUNCTION: EXE 0x67406e
-// Creates the scenario load form's event for a control id; NULL for other ids
+// Creates the scenario load form's event for a control id; NULL for other ids (ee_screens save_load.rs)
 UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventSLLoadGame && inID <= kControlEventSLLoadDelete) {
-        switch (inID) {
-        case kControlEventSLLoadGame:
-        case kControlEventSLLoadLoadGameByDbClick:
-            theEvent = new EEUIESCLELoadFile(gScenarioExtension, "Scenarios\\", inForm);
-            break;
-        case kControlEventSLLoadCancel:
-            theEvent = new EEUIESCLECancel;
-            break;
-        case kControlEventSLLoadDelete:
-            theEvent = new EEUIESLEDeleteFile((UIFileListBox*)inForm->GetControl(kScenarioLoadLoadFileList));
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_scenario_load_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x674145
-// (EEUIESCLECancel's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x674170
-// Creates the load-file event of the scenario load form
-// (EEUIESCLELoadFile's inline ctor)
-
-// SYNTHETIC: EXE 0x6741b9
-// (EEUIESCLELoadFile's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x6741d5
-// Destroys that load-file event
-// (EEUIESCLELoadFile's inline dtor)
 
 // FUNCTION: EXE 0x6743d2
-// Creates the single player load form's event for a control id; NULL for other ids
+// Creates the single player load form's event for a control id; NULL for other ids (ee_screens save_load.rs)
 UIEvent* EECreateSinglePlayerLoadEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventSPLoadLoadGame && inID <= kControlEventSPLoadDelete) {
-        switch (inID) {
-        case kControlEventSPLoadDelete:
-            theEvent = new EEUIESLEDeleteFile((UIFileListBox*)inForm->GetControl(kSPLoadGameFileListBox));
-            break;
-        case kControlEventSPLoadCancel:
-            theEvent = new EEUIESPLECancel;
-            break;
-        case kControlEventSPLoadLoadGame:
-        case kControlEventSPLoadLoadGameByDbClick:
-            theEvent = new EEUIESPLELoadFile(gSavedGameExtension, "Saved Games\\", inForm);
-            break;
-        }
-    }
-    return theEvent;
+    return EECreateScreenEvent(ee_screens_sp_load_event_for(inID));
 }
-
-// SYNTHETIC: EXE 0x6744a9
-// (EEUIESPLECancel's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x6744d4
-// Creates the load-file event of the single player load form
-// (EEUIESPLELoadFile's inline ctor)
-
-// SYNTHETIC: EXE 0x67451d
-// (EEUIESPLELoadFile's scalar deleting destructor, after its first user)
-
-// FUNCTION: EXE 0x674539
-// Destroys that load-file event
-// (EEUIESPLELoadFile's inline dtor)
 
 // FUNCTION: EXE 0x674564
 // Creates the game's framed generic background for a background table entry (flags from its attributes)
@@ -1405,30 +1215,6 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     return UIManager::UpdateMouse(inMouseLocation);
 }
 
-// SYNTHETIC: EXE 0x675205
-// (EEUIESIEBack's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675230
-// (EEUIESIEClose's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67525b
-// (EEUIESIEHints's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675286
-// (EEUIESIEHistory's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6752b1
-// (EEUIESIEMap's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6752dc
-// (EEUISIEMouseOverButton's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675307
-// (EEUISIEMouseOutButton's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x675332
-// (EEUIESIEOpen's scalar deleting destructor, after its first user)
-
 // FUNCTION: EXE 0x67535d
 // Appends a callback to a callback vector (std::vector::push_back, ICF-shared)
 // (std::vector<long>::push_back (ICF: the callback vectors' push_back))
@@ -1457,25 +1243,3 @@ long EEUIECEClose::ProcessEvent(class UIForm *,class UIEntity *)
     return 0;
 }
 
-// ICF-FOLDED: EXE 0x5d6811
-// Returns to the main menu
-// (no address of its own: the same body as the editors' sub-menu's Main Menu, which ICF kept)
-long EEUIESPLECancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    inForm->GetManager()->Pop();
-    return kErrorOK;
-}
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUISIEMouseOutButton::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUISIEMouseOverButton::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}

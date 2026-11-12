@@ -66,8 +66,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIManager.h"
-#include "ee/EEUIESLLoadScreen.h"
-#include "ee/EEUIESLSaveScreen.h"
 #include "ee/EEUIEMainGameOptionsEvents.h"
 
 #include "ee/EEUIEMainGameOptionsEvents.h"

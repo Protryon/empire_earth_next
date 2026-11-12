@@ -266,10 +266,6 @@ constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA = 65540;
 
 constexpr static const uint32_t EE_SCREENS_CPP_DUMP_MEDIA_ALL = 65541;
 
-constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_OPEN = 65542;
-
-constexpr static const uint32_t EE_SCREENS_CPP_SCENARIOS_CLOSE = 65543;
-
 constexpr static const uint32_t EE_SCREENS_GAME_QUIT = 1;
 
 constexpr static const uint32_t EE_SCREENS_GAME_EXTERNAL_LOBBY = 2;
@@ -352,6 +348,262 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOAD = 14;
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
+
+/// The save form's activate event (clears the saved flag).
+constexpr static const uint32_t EE_SCREENS_SL_ACTIVATE = 769;
+
+/// The save form's Save (its button, Enter in the name box, a double click in the list): a saved game (the saved
+/// games' extension, no directory: the message names the file) or a scenario (the editor's: `data\Scenarios\`).
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_GAME = 770;
+
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCENARIO = 771;
+
+/// The save screen's opening (`EEUIESLSaveScreen`, posted by the in-game options and the editor): the saved games of
+/// `data\Saved Games\` or the scenarios of `data\Scenarios\`.
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCREEN_GAME = 772;
+
+constexpr static const uint32_t EE_SCREENS_SL_SAVE_SCREEN_SCENARIO = 773;
+
+/// The save list's focused file into the name box.
+constexpr static const uint32_t EE_SCREENS_SL_DISPLAY_NEW_FILE = 774;
+
+/// The save form's Cancel.
+constexpr static const uint32_t EE_SCREENS_SL_CANCEL_SAVE = 775;
+
+/// Delete on the save or load form (their list, control 4): the question, the selected file deleted on yes.
+constexpr static const uint32_t EE_SCREENS_SL_DELETE = 776;
+
+/// The save handed on (the overwrite question's yes and the direct path: the host's callbacks).
+constexpr static const uint32_t EE_SCREENS_SL_SAVED = 777;
+
+/// The load form's Load (its button, a double click): a saved game of `Saved Games\` or a scenario of `Scenarios\`.
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_GAME = 1025;
+
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCENARIO = 1026;
+
+/// The load screen's opening (`EEUIESLLoadScreen`): saved games or scenarios as the save screen's.
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCREEN_GAME = 1027;
+
+constexpr static const uint32_t EE_SCREENS_SL_LOAD_SCREEN_SCENARIO = 1028;
+
+/// The single player load screen: its open event (posts the fill), the fill, Load, Cancel, Delete.
+constexpr static const uint32_t EE_SCREENS_SPL_OPEN = 3329;
+
+constexpr static const uint32_t EE_SCREENS_SPL_LOAD_SCREEN = 3330;
+
+constexpr static const uint32_t EE_SCREENS_SPL_LOAD = 3331;
+
+constexpr static const uint32_t EE_SCREENS_SPL_CANCEL = 3332;
+
+constexpr static const uint32_t EE_SCREENS_SPL_DELETE = 3333;
+
+/// The scenario load screen: its open event, the fill, Load (into the scenario intro), Cancel, Delete.
+constexpr static const uint32_t EE_SCREENS_SCL_OPEN = 5121;
+
+constexpr static const uint32_t EE_SCREENS_SCL_LOAD_SCREEN = 5122;
+
+constexpr static const uint32_t EE_SCREENS_SCL_LOAD = 5123;
+
+constexpr static const uint32_t EE_SCREENS_SCL_CANCEL = 5124;
+
+constexpr static const uint32_t EE_SCREENS_SCL_DELETE = 5125;
+
+constexpr static const uint32_t EE_SCREENS_OP_SWAP_FORM = 368;
+
+constexpr static const uint32_t EE_SCREENS_OP_CURRENT_FORM_IS = 369;
+
+constexpr static const uint32_t EE_SCREENS_OP_POST_EVENT = 370;
+
+constexpr static const uint32_t EE_SCREENS_OP_FORM_LIST_SELECTED = 371;
+
+constexpr static const uint32_t EE_SCREENS_GAME_FREE_CAMERA = 372;
+
+constexpr static const uint32_t EE_SCREENS_GAME_MULTIPLAYER_SESSION = 373;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SCREEN_ACTIVE = 374;
+
+constexpr static const uint32_t EE_SCREENS_GAME_IN_EDITOR = 375;
+
+constexpr static const uint32_t EE_SCREENS_GAME_PAUSE_SERVER = 376;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CTS_PROCESSED = 377;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVE_SEND = 378;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVE_POST = 379;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SAVED_MAIN_FORM = 380;
+
+constexpr static const uint32_t EE_SCREENS_GAME_OPEN_SAVED_MAIN_FORM = 381;
+
+/// Texts (ee_screenscpp_text / _put_text); `a\0b` joins a put's two texts.
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVED_EXTENSION = 64;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_EXTENSION = 65;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SAVED_NAME = 66;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SCENARIO_NAME = 67;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FILE_LIST = 68;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_QUESTION_DELETE = 69;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_POST = 70;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_MESSAGE = 71;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_ACTION = 72;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FILE_EXISTS = 73;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SAVE_QUESTION = 74;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_LOAD_SAVED_GAME = 75;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_INTRO = 76;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_FORM_EDIT = 77;
+
+/// The campaign scenario select form: its open event (set by the play campaign and custom campaign screens and the
+/// post-game summary), its close event (nothing), the custom campaign list's and the scenario list's selection, the
+/// difficulty, Start, Back, and the open-error message's callback (no event object).
+constexpr static const uint32_t EE_SCREENS_CS_OPEN = 8449;
+
+constexpr static const uint32_t EE_SCREENS_CS_CLOSE = 8450;
+
+constexpr static const uint32_t EE_SCREENS_CS_SELECT_CAMPAIGN = 8451;
+
+constexpr static const uint32_t EE_SCREENS_CS_SELECT_SCENARIO = 8452;
+
+constexpr static const uint32_t EE_SCREENS_CS_DIFFICULTY = 8453;
+
+constexpr static const uint32_t EE_SCREENS_CS_START = 8454;
+
+constexpr static const uint32_t EE_SCREENS_CS_BACK = 8455;
+
+constexpr static const uint32_t EE_SCREENS_CS_CLOSE_CALLBACK = 8456;
+
+/// The scenario intro form: its open and close events, Back, the briefing, hints and history pages, the map, the movie
+/// (then the sound: the sound-over event, posted), Start, and the buttons' mouse over and out (nothing).
+constexpr static const uint32_t EE_SCREENS_SI_OPEN = 4865;
+
+constexpr static const uint32_t EE_SCREENS_SI_CLOSE = 4866;
+
+constexpr static const uint32_t EE_SCREENS_SI_BACK = 4867;
+
+constexpr static const uint32_t EE_SCREENS_SI_BRIEFING = 4868;
+
+constexpr static const uint32_t EE_SCREENS_SI_HINTS = 4869;
+
+constexpr static const uint32_t EE_SCREENS_SI_HISTORY = 4870;
+
+constexpr static const uint32_t EE_SCREENS_SI_MAP = 4871;
+
+constexpr static const uint32_t EE_SCREENS_SI_MOVIE = 4872;
+
+constexpr static const uint32_t EE_SCREENS_SI_SOUND_OVER = 4873;
+
+constexpr static const uint32_t EE_SCREENS_SI_START = 4874;
+
+constexpr static const uint32_t EE_SCREENS_SI_MOUSE = 4875;
+
+constexpr static const uint32_t EE_SCREENS_OP_REMOVE_BACKGROUND = 384;
+
+constexpr static const uint32_t EE_SCREENS_OP_TAB_STOP = 385;
+
+constexpr static const uint32_t EE_SCREENS_OP_LABEL_CLEAR = 386;
+
+constexpr static const uint32_t EE_SCREENS_OP_LABEL_LINE_COUNT = 387;
+
+constexpr static const uint32_t EE_SCREENS_OP_LABEL_START_LINE = 388;
+
+constexpr static const uint32_t EE_SCREENS_OP_ADD_TRIGGER = 389;
+
+constexpr static const uint32_t EE_SCREENS_OP_SLEEP = 390;
+
+constexpr static const uint32_t EE_SCREENS_OP_OPEN_MAIN_GAME_FORM = 391;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_FLAGS = 392;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_SET_FLAG = 393;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_BLINK_OFF = 394;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SOUND_STOP = 395;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SOUND_LATENCY = 396;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_MAP = 397;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_MOVIE = 398;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_OPEN_SOUND = 399;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_PLAY_MOVIE = 400;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_PLAY_SOUND = 401;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_MAP_BACKDROP = 402;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_GET_SCENARIO = 403;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_POST_LOAD = 404;
+
+constexpr static const uint32_t EE_SCREENS_GAME_SI_START_GAME = 405;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAMPAIGN_UPDATE_CHECKSUM = 406;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAMPAIGN_CHECKSUM = 407;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CS_MAP_BACKDROP = 408;
+
+constexpr static const uint32_t EE_SCREENS_GAME_DIFFICULTY = 409;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CS_SET_DIFFICULTY = 410;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CAMPAIGN_ALL_OPEN_GET = 411;
+
+/// The intro manager's flags.
+constexpr static const uint32_t EE_SCREENS_SI_FLAG_IN_GAME = 1;
+
+constexpr static const uint32_t EE_SCREENS_SI_FLAG_LOADING = 2;
+
+constexpr static const uint32_t EE_SCREENS_SI_FLAG_CAMPAIGN = 4;
+
+constexpr static const uint32_t EE_SCREENS_SI_FLAG_SCROLL = 8;
+
+/// Texts (ee_screenscpp_text / _put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_SI_BRIEFING = 80;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SI_HINTS = 81;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_SI_HISTORY = 82;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_CAMPAIGN_NAME = 83;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_SCENARIOS = 84;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_COMPLETED = 85;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_PROGRESS = 86;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_DESCRIPTION = 87;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_ARCHIVE = 88;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_SCENARIO_HEADER = 89;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_SCENARIO_NAME = 90;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CS_START = 91;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_MESSAGE_CLOSE_CAMPAIGN = 92;
+
+/// The form a host call names.
+constexpr static const uint32_t SC_FORM_INTRO = 19;
+
+constexpr static const uint32_t SC_FORM_SELECT = 33;
 
 /// `GetGraphicsQuality`'s answer when no preset matches: Custom.
 constexpr static const unsigned long EE_SCREENS_QUALITY_CUSTOM = 5;
@@ -1164,6 +1416,24 @@ long ee_screens_event(uint32_t event,
 
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
+
+/// The save/load form's event code for a control event id (the screen active and the editor on when the form is
+/// made); 0 for another form's (and for the load form's Cancel, C++'s `EEUIECancel`).
+uint32_t ee_screens_save_load_event_for(unsigned long id,
+                                        bool screen_active,
+                                        bool in_editor);
+
+/// The single player load form's event code for a control event id; 0 for another form's.
+uint32_t ee_screens_sp_load_event_for(unsigned long id);
+
+/// The scenario load form's event code for a control event id; 0 for another form's.
+uint32_t ee_screens_scenario_load_event_for(unsigned long id);
+
+/// The manager's form of an id (`gUIManager->GetFormByID`).
+extern void *ee_screenscpp_form(uint32_t id);
+
+/// The scenario intro form's event code for a control event id; 0 for another form's.
+uint32_t ee_screens_scenario_intro_event_for(unsigned long id);
 
 /// The settings form's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_settings_event_for(unsigned long id);
