@@ -356,6 +356,42 @@ void EEUnitOrderReset()
     ee_units_order_reset(theIDs.empty() ? NULL : &theIDs[0], theIDs.size());
 }
 
+static uint64_t sStepDigest = 0xcbf29ce484222325ull;
+static uint32_t sStepCalls = 0;
+
+static void StepFNV(uint32_t inWord)
+{
+    for (int i = 0; i < 4; i++) {
+        sStepDigest ^= (inWord >> (8 * i)) & 0xff;
+        sStepDigest *= 0x100000001b3ull;
+    }
+}
+
+void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    StepFNV(inKind);
+    StepFNV(static_cast<uint32_t>(inID));
+    for (unsigned int i = 0; i < inCount; i++)
+        StepFNV(inWords[i]);
+    sStepCalls++;
+}
+
+void EEUnitStepCommit()
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(0x4d545355u);   // "USTM"
+    theRecord.U32((unsigned int)gPhysics->mNumTicksDone);
+    theRecord.U32(sStepCalls);
+    theRecord.U32((unsigned int)(sStepDigest & 0xffffffffu));
+    theRecord.U32((unsigned int)(sStepDigest >> 32));
+    theRecord.Commit();
+    sStepDigest = 0xcbf29ce484222325ull;
+    sStepCalls = 0;
+}
+
 unsigned long EEUnitStoreCheck(unsigned long inWhere)
 {
     static std::vector<EeUnitRecord> sObjects;

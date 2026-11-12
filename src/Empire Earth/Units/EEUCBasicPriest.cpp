@@ -18,6 +18,8 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/SESoundManager.h"
 
+#include <string.h>
+#include "ee/EESimCapture.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
@@ -376,37 +378,68 @@ void EEComplexUnit::UpdateOrbitals()
 // Counts the reload timer down by the tick, not below 0
 void EEComplexUnit::UpdateReloadTimer()
 {
-    if (!(this->mReloadTimer > 0))
-        return;
-    long theTime = this->mReloadTimer - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
-    this->SetReloadTimer(theTime);
+    long theBefore = this->mReloadTimer;
+    bool theWritten = false;
+    if (this->mReloadTimer > 0) {
+        long theTime = this->mReloadTimer - gPhysics->mTickTimeMs;
+        if (theTime < 0)
+            theTime = 0;
+        this->SetReloadTimer(theTime);
+        theWritten = true;
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
+                                (uint32_t)this->mReloadTimer.Get()};
+        EEUnitStepNote(kUnitStepReload, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e0db
 // Counts the target search timer down by the tick, not below 0
 void EEComplexUnit::UpdateTargetSearchTimer()
 {
-    if (!(this->mTargetSearchTimer > 0))
-        return;
-    long theTime = this->mTargetSearchTimer - gPhysics->mTickTimeMs;
-    if (theTime < 0)
-        theTime = 0;
-    this->SetTargetSearchTimer(theTime);
+    long theBefore = this->mTargetSearchTimer;
+    bool theWritten = false;
+    if (this->mTargetSearchTimer > 0) {
+        long theTime = this->mTargetSearchTimer - gPhysics->mTickTimeMs;
+        if (theTime < 0)
+            theTime = 0;
+        this->SetTargetSearchTimer(theTime);
+        theWritten = true;
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        uint32_t theWords[4] = {(uint32_t)theBefore, (uint32_t)gPhysics->mTickTimeMs, theWritten ? 1u : 0u,
+                                (uint32_t)this->mTargetSearchTimer.Get()};
+        EEUnitStepNote(kUnitStepTargetSearch, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e104
 // Counts the heal search timer (seconds) down by the tick, not below 0
+static uint32_t HealBits(float inValue)
+{
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    return theBits;
+}
+
 void EEComplexUnit::UpdateHealSearchTimer()
 {
+    float theBefore = this->mHealSearchTimer;
     float theValue = this->mHealSearchTimer;
-    if (!(theValue > 0.0f))
-        return;
-    theValue -= gPhysics->mTickTime / 1000.0f;
-    if (theValue < 0.0f)
-        theValue = 0.0f;
-    this->SetHealSearchTimer(theValue);
+    bool theWritten = false;
+    if (theValue > 0.0f) {
+        theValue -= gPhysics->mTickTime / 1000.0f;
+        if (theValue < 0.0f)
+            theValue = 0.0f;
+        this->SetHealSearchTimer(theValue);
+        theWritten = true;
+    }
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        uint32_t theWords[4] = {HealBits(theBefore), HealBits(gPhysics->mTickTime), theWritten ? 1u : 0u,
+                                HealBits(this->mHealSearchTimer.Get())};
+        EEUnitStepNote(kUnitStepHealSearch, this->mUnitID, theWords, 4);
+    }
 }
 
 // FUNCTION: EXE 0x60e14c

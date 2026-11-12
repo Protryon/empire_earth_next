@@ -138,6 +138,21 @@ void EEFillCapture(unsigned long inCase, EEPlayer* inPlayer, EEComplexUnit* cons
 // TEST ONLY: the Fill test over every player's units for every slot (USFL records; EE-SIM, every five game minutes)
 void EEFillSweep();
 
+// TEST ONLY: the step leaves' record (USTM, R5b.4 leaf 6; ee_units step.rs): EEUnitStepNote adds one call of a leaf
+// (its kind, the unit's id, its inputs and outputs as 32-bit words) to the tick's digest; EEUnitStepCommit (the end of
+// EEPhysics::UpdateUnits) writes the tick's record: the tick, the calls, their FNV-1a. Words: reload / target search
+// [timer, tick ms, written, timer after]; heal search the same with float bits (the tick time, not ms); power
+// [regeneration, maximum, cinematic, land building, built, power, timer, tick ms, interval, written, power set, power
+// after, timer after]. Nothing is noted unless the capture runs.
+enum EEUnitStepKind {
+    kUnitStepReload = 1,        // EEComplexUnit::UpdateReloadTimer
+    kUnitStepTargetSearch = 2,  // EEComplexUnit::UpdateTargetSearchTimer
+    kUnitStepHealSearch = 3,    // EEComplexUnit::UpdateHealSearchTimer
+    kUnitStepPower = 4          // EEUnitClass::RegeneratePower
+};
+void EEUnitStepNote(unsigned int inKind, unsigned long inID, const uint32_t* inWords, unsigned int inCount);
+void EEUnitStepCommit();
+
 // TEST ONLY: every unit of every player's list against its record, the world's unit chain against the records'
 // on-the-map flags, the out-of-sync checksum's flags 1 and 2 over the chain against the store's, and the stepped units'
 // deque against the Rust list (EEUnitOrder*); the count compared.

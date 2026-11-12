@@ -1290,6 +1290,7 @@ unsigned long EEPhysics::UpdateUnits()
         gWorld.mUpdateUnits[j]->Step();
     }
     gPhysicsSteppingUnit = NULL;
+    EEUnitStepCommit();   // TEST ONLY: the step leaves' record (USTM, ee/EEUnitStore.h)
     return theCount;
 }
 

@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <stdio.h>
 #include <cstddef>
+#include <string.h>
+#include "ee/EESimCapture.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
@@ -4674,17 +4676,29 @@ void EEComplexUnit::SetCamouflaged(bool inValue)
 // Restores a unit's power by its regeneration rate every 5 seconds, up to its maximum (not during cinematics)
 void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 {
-    if (!(inUnit->mStats->mPowerRegeneration > 0) || ::gWorld.mInCinematic || (this->IsLandBuilding() && !inUnit->mIsBuilt))
-        return;
-    long theRemaining = inUnit->mPowerRegenTimer - gPhysics->mTickTimeMs;
-    if (theRemaining <= 0) {
-        long theValue = inUnit->mStats->mPowerRegeneration + inUnit->mPower;
-        if (theValue > inUnit->mStats->mPower)
-            theValue = inUnit->mStats->mPower;
-        inUnit->SetPower(theValue);
-        theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
+    uint32_t theWords[13] = {(uint32_t)inUnit->mStats->mPowerRegeneration, (uint32_t)inUnit->mStats->mPower,
+                             ::gWorld.mInCinematic ? 1u : 0u, this->IsLandBuilding() ? 1u : 0u, inUnit->mIsBuilt ? 1u : 0u,
+                             (uint32_t)inUnit->mPower.Get(), (uint32_t)inUnit->mPowerRegenTimer.Get(),
+                             (uint32_t)gPhysics->mTickTimeMs, (uint32_t)EEGetRules().mCombat.mPowerRegenerationInterval,
+                             0, 0, 0, 0};
+    if (inUnit->mStats->mPowerRegeneration > 0 && !::gWorld.mInCinematic && !(this->IsLandBuilding() && !inUnit->mIsBuilt)) {
+        theWords[9] = 1;
+        long theRemaining = inUnit->mPowerRegenTimer - gPhysics->mTickTimeMs;
+        if (theRemaining <= 0) {
+            long theValue = inUnit->mStats->mPowerRegeneration + inUnit->mPower;
+            if (theValue > inUnit->mStats->mPower)
+                theValue = inUnit->mStats->mPower;
+            inUnit->SetPower(theValue);
+            theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
+            theWords[10] = 1;
+        }
+        inUnit->SetPowerRegenTimer(theRemaining);
     }
-    inUnit->SetPowerRegenTimer(theRemaining);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (USTM)
+        theWords[11] = theWords[10] ? (uint32_t)inUnit->mPower.Get() : 0u;
+        theWords[12] = theWords[9] ? (uint32_t)inUnit->mPowerRegenTimer.Get() : 0u;
+        EEUnitStepNote(kUnitStepPower, inUnit->mUnitID, theWords, 13);
+    }
 }
 
 extern GEViewport gViewport;
