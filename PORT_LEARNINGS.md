@@ -7474,6 +7474,7 @@ lobby's LAN game now keeps all of its state in Rust objects.
   LobbyServerList, LobbyGameList; LobbyPersistentData 1039 + its accessor units, whose layouts and rules are
   persist.rs's since round 6: its members are read by about 60 `Lobby*` free functions, so the accessors-first pass
   comes before its move).
+
 ## R5b.4, tenth round: the stepped units' order, the step's timers in the store, the first step leaves in Rust (ee_units order.rs, step.rs; branch rust-r5b4-core10, 2026-11-11)
 
 - **The fixture's orders after a long scout.** The lead's run (orders_b6.log) failed `repair` with
