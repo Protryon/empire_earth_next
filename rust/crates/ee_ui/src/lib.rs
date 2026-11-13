@@ -38,6 +38,7 @@ pub mod scrolling;
 pub mod slider;
 pub mod sliderobj;
 pub mod status;
+pub mod statusobj;
 pub mod text;
 pub mod wrap;
 
@@ -99,8 +100,6 @@ mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrolling_ffi;
-// imports nothing: the status bar's arithmetic takes and returns values
-mod status_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;

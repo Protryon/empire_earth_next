@@ -322,6 +322,42 @@ enum class EeUiSliderCall : uint32_t {
   CurrentPoint = 25,
 };
 
+/// The inward calls (the C++ shim's methods).
+enum class EeUiStatusBarCall : uint32_t {
+  /// `ChangeFont(a)`.
+  ChangeFont = 1,
+  /// `CopyData()` -> the base's result.
+  CopyData = 2,
+  /// `DrawPolygons()`.
+  DrawPolygons = 3,
+  /// `DrawTextA()`.
+  DrawText = 4,
+  /// `GetCurrentRangeValue()`.
+  CurrentRangeValue = 5,
+  /// `GetGEText()`.
+  Text = 6,
+  /// `GetMaxRange()`.
+  MaxRange = 7,
+  /// `GetMinRange()`.
+  MinRange = 8,
+  /// `GetRange()`: max - min + 1.
+  Range = 9,
+  /// `SetCurrentRangeValue(a)`.
+  SetCurrentRangeValue = 10,
+  /// `SetFocusedTextColor(f[0..3])`.
+  SetFocusedTextColor = 11,
+  /// `SetLocation(f[0], f[1])`.
+  SetLocation = 12,
+  /// `SetRange(a, b)`.
+  SetRange = 13,
+  /// `SetStatusBarOpacity(f[0])`.
+  SetStatusBarOpacity = 14,
+  /// `SetStatusBarColor(f[0..3])`.
+  SetStatusBarColor = 15,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  SetText = 16,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -335,6 +371,9 @@ struct EeUiScrollBar;
 
 /// The Rust UISlider.
 struct EeUiSlider;
+
+/// The Rust UIStatusBar.
+struct EeUiStatusBar;
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
@@ -1065,6 +1104,25 @@ ptrdiff_t ee_ui_slider_call(const EeUiSlider *slider,
                             ptrdiff_t a,
                             ptrdiff_t b,
                             float *f);
+
+/// A new Rust status bar for the C++ `bar` (its `UIControl` part constructed with `border`).
+EeUiStatusBar *ee_ui_status_bar_new(void *bar, EeUiHostFn host, unsigned long border);
+
+/// The destructor: deletes the texts and frees the object.
+///
+/// # Safety
+/// `bar` came from `ee_ui_status_bar_new` (or is NULL) and is not used again.
+void ee_ui_status_bar_free(EeUiStatusBar *bar);
+
+/// One of UIStatusBar's methods ([`EeUiStatusBarCall`]).
+///
+/// # Safety
+/// `bar` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_status_bar_call(const EeUiStatusBar *bar,
+                                EeUiStatusBarCall call,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                float *f);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
@@ -1932,23 +1990,6 @@ EeUiPoint ee_ui_scrolling_line_at(float draw_left,
                                   unsigned long font_height,
                                   unsigned long i,
                                   unsigned long offset);
-
-/// `SetCurrentRangeValue`: the clamped value; `out` the fill rectangle.
-long ee_ui_status_fill(long value,
-                       long min,
-                       long max,
-                       unsigned long width,
-                       EeUiRect fill,
-                       EeUiRect *out);
-
-/// `SetLocation`'s fill and text rectangles from the moved control rectangle.
-void ee_ui_status_location(EeUiRect rect, unsigned long border, EeUiRect *fill, EeUiRect *text);
-
-/// `CopyData`'s fill: whether the border insets it (`out` then the inset rectangle).
-bool ee_ui_status_copy_fill(EeUiRect fill, unsigned long border, EeUiRect *out);
-
-/// `CopyData`'s text rectangle for a text of `width` x `height`.
-EeUiRect ee_ui_status_copy_text(EeUiRect text, float width, float height);
 
 /// `UIListBox::ChangeSelectionIndex`.
 void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
