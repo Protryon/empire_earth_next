@@ -29,7 +29,7 @@ bool MultiListAreaConfig::Virtual24(const std::string& instruction)
         int width=this->ReadInt();
         this->mMultiListArea->SetColumnWidth(column,width,false);
     } else if(aKeyIdx==2) this->mMultiListArea->SetNumColumns(this->ReadInt());
-    else if(aKeyIdx==3) this->mMultiListArea->mDynamicSizeColumn=this->ReadInt();
+    else if(aKeyIdx==3) this->mMultiListArea->SetDynamicSizeColumn(this->ReadInt());
     else if(aKeyIdx==4) {
         int column=this->ReadInt(); this->EnsureComma();
         GUIString name=this->ReadString(false);
@@ -38,7 +38,7 @@ bool MultiListAreaConfig::Virtual24(const std::string& instruction)
         if(aNameIdx_name==0) function=ListArea::NumberSortFunc;
         else throw ConfigObjectException("Unknown sort func: "+(std::string)name);
         this->mMultiListArea->SetSortColumnFunc(column,function);
-    } else if(aKeyIdx==5) this->mMultiListArea->mAutoGrowColumns=this->ReadBool();
+    } else if(aKeyIdx==5) this->mMultiListArea->SetAutoGrowColumns(this->ReadBool());
     else if(aKeyIdx==6) {
         int column=this->ReadInt(); this->EnsureComma();
         HorzAlign align=this->ReadHorzAlign();

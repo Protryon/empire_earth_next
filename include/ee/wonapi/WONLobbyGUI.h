@@ -2843,6 +2843,9 @@ public:
     // Implicit virtual destructor (0x303540)
     int GetColumnPaintContext() { return this->mColumnPaintContext; }
     int GetSortColumn() { return this->mSortColumn; }
+    int GetSortColumnPrev() { return this->mSortColumnPrev; }
+    void SetDynamicSizeColumn(int c) { this->mDynamicSizeColumn=c; }
+    void SetAutoGrowColumns(bool on) { this->mAutoGrowColumns=on; }
     struct ColumnInfo {
         SmartPtr<ScrollAreaViewport> mContainer;
         int mx, mWidth;
