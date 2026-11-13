@@ -2,12 +2,14 @@
 //! hands the kinds it does not own to [`rust_goal`] (registered by ee_rust at start-up), with the same operation
 //! numbers (`EE_UNITS_GOAL_*`) and the same C++ host (`EeUnitsGoalHost`, mirrored as `EeCombatGoalTable`; the combat
 //! goals' own operations are its cases from 1000, EEUGRustCombat.cpp). Here each operation of the attack on the ground
-//! (`kGoalAttackGround`) and on a unit (`kGoalAttackUnit`) runs its body (goal_objects.rs, goal_attack.rs) and the
-//! texts are formatted (the debug line and text, the out-of-synch dump, appended through the host).
+//! (`kGoalAttackGround`), on a unit (`kGoalAttackUnit`) and of the heal goal (`kGoalHealUnit`) runs its body
+//! (goal_objects.rs, goal_attack.rs, goal_heal.rs) and the texts are formatted (the debug line and text, the
+//! out-of-synch dump, appended through the host).
 
 use std::ffi::{c_void, CStr};
 
 use crate::goal_attack::{self as attack, attack_of};
+use crate::goal_heal::{self as heal, heal_of, ACTION_TURN_TO_FACE_HEALEE, GOAL_HEAL_UNIT};
 use crate::goal_objects::{
     goal_drop, ground_checksum, ground_create, ground_destination, ground_load, ground_save, ground_target_bits,
     with_goals, EeCombatGoalArgs, EeCombatGoalIo, EeCombatGoalTable, GoalHost, TableHost, ACTION_CHECK_RANGE,
@@ -35,6 +37,7 @@ pub(crate) const OP_REPLACE: i32 = 17;
 pub(crate) const OP_MAX_PATH_ATTEMPTS: i32 = 18;
 pub(crate) const OP_SUITS: i32 = 19;
 pub(crate) const OP_SET_PATH_ATTEMPTS: i32 = 22;
+pub(crate) const OP_WORK: i32 = 300;
 // and its host's: the new goal object, a text appended, the unit id, the unit's tile, its hit points
 pub(crate) const HOST_NEW_GOAL: i32 = 16;
 pub(crate) const HOST_APPEND: i32 = 20;
@@ -51,6 +54,8 @@ pub const EE_COMBAT_GOAL_NEW_ATTACK: i32 = 201;
 pub const EE_COMBAT_GOAL_SET_TARGET: i32 = 202;
 pub const EE_COMBAT_GOAL_RETARGET_GATE: i32 = 203;
 pub const EE_COMBAT_GOAL_UPDATE_TILE: i32 = 204;
+/// a new heal goal on the healee `a`; `io.i[0]` 2: the load's empty one
+pub const EE_COMBAT_GOAL_NEW_HEAL: i32 = 205;
 
 // the host operations of this module (goal_objects.rs's and goal_attack.rs's numbering goes on)
 /// `EECombatStep(io.i[0], a, b, io.i[1])`: the kind, the unit, the goal, the target
@@ -79,6 +84,7 @@ pub const GOAL_ATTACK_GROUND: u8 = 3;
 // ee/EECombatGoals.h's kinds and CBGO functions
 const COMBAT_GOAL_ATTACK_UNIT: i64 = crate::goals::EE_COMBAT_GOAL_ATTACK_UNIT as i64;
 const COMBAT_GOAL_ATTACK_GROUND: i64 = crate::goals::EE_COMBAT_GOAL_ATTACK_GROUND as i64;
+const COMBAT_GOAL_HEAL: i64 = crate::goals::EE_COMBAT_GOAL_HEAL as i64;
 const GO_DESTINATION: i64 = 1;
 const GO_SUITS: i64 = 2;
 
@@ -203,6 +209,140 @@ fn attack_text<H: GoalHost + ?Sized>(op: i32, goal: u64, h: &mut TextHost<'_, H>
     }
 }
 
+/// The heal goal's texts: the out-of-synch dump (the base goal's that followed is empty), the debug line (the
+/// location goal's: `EEUGLocation::GetDebugLine`, its auto-waypoint flag false) and text.
+fn heal_text<H: GoalHost + ?Sized>(op: i32, goal: u64, h: &mut TextHost<'_, H>) {
+    let x = heal_of(goal);
+    match op {
+        OP_DUMP => {
+            let id = if x.target != 0 { h.id(x.target) } else { 0xffff_ffff };
+            append(
+                h,
+                &format!(
+                    "OUT OF SYNCH DUMP:  EEUGHealUnit - Healee unit id is #{id:08x}
+"
+                ),
+            );
+            append(
+                h,
+                &format!(
+                    "OUT OF SYNCH DUMP:  EEUGHealUnit - Elasped Time in Milliseconds {}
+",
+                    x.elapsed as i32
+                ),
+            );
+        }
+        OP_DEBUG_LINE => {
+            let l = floats(x.location);
+            append(h, &format!("loc {:.2},{:.2},{:.2}: auto(0)", f64::from(l[0]), f64::from(l[1]), f64::from(l[2])));
+        }
+        _ => {
+            append(
+                h, "Heal
+",
+            );
+            if x.target == 0 {
+                return;
+            }
+            let (name, tile, hp) = (h.name(x.target), h.tile(x.target), h.hit_points(x.target));
+            let max = h.host.op(EE_COMBAT_G_MAX_HIT_POINTS, x.target, &mut [0; 8]) as i32;
+            append(
+                h,
+                &format!(
+                    "Target Unit: {} at ({},{})
+Target Health: {}/{} ({:.2}%)
+",
+                    name,
+                    tile.0,
+                    tile.1,
+                    hp,
+                    max,
+                    f64::from(100.0f32 * hp as f32 / max as f32)
+                ),
+            );
+        }
+    }
+}
+
+/// One operation of a heal goal (see [`body`]).
+#[allow(clippy::too_many_arguments)]
+fn heal_body<H: GoalHost>(
+    op: i32,
+    goal: u64,
+    a: u64,
+    b: u64,
+    ints: &mut [i64; 8],
+    point: &mut [f32; 3],
+    h: &mut H,
+    text: &mut dyn FnMut(&str),
+) -> i64 {
+    let target = heal_of(goal).target;
+    match op {
+        EE_COMBAT_GOAL_NEW_HEAL => {
+            if ints[0] == 2 {
+                heal::create_empty(goal);
+            } else {
+                heal::create(h, goal, a);
+            }
+            0
+        }
+        OP_DESTROY => {
+            heal::destroy(h, goal);
+            goal_drop(goal);
+            0
+        }
+        OP_CLONE => {
+            let copy = h.op_ab(HOST_NEW_GOAL, u64::from(GOAL_HEAL_UNIT), b, &mut [0; 8]) as u64;
+            heal::create(h, copy, target);
+            copy as i64
+        }
+        OP_DUMP | OP_DEBUG_LINE | OP_DEBUG_TEXT => {
+            heal_text(op, goal, &mut TextHost { host: h, append: text });
+            0
+        }
+        OP_CHECKSUM => i64::from(heal::checksum(h, goal)),
+        OP_LOCATION => {
+            *point = floats(heal::location(h, goal, bits_of(*point)));
+            0
+        }
+        OP_DESTINATION => {
+            *point = floats(heal::destination(h, goal, a, bits_of(*point)));
+            0
+        }
+        OP_START_ACTION => ACTION_TURN_TO_FACE_HEALEE,
+        OP_STEP => {
+            h.op(EE_COMBAT_G_STEP, a, &mut args(&[COMBAT_GOAL_HEAL, target as i64, goal as i64]));
+            0
+        }
+        OP_EVALUATE => {
+            h.op(EE_COMBAT_G_EVALUATE, a, &mut args(&[COMBAT_GOAL_HEAL, b as i64, target as i64, goal as i64]))
+        }
+        OP_LOAD => i64::from(heal::load(h, goal)),
+        OP_SAVE => i64::from(heal::save(h, goal)),
+        OP_REPAIR => i64::from(heal::repair(h, goal)),
+        OP_REPLACE => {
+            heal::replace_unit(h, goal, a, b);
+            0
+        }
+        OP_MAX_PATH_ATTEMPTS => 3,
+        OP_SUITS => {
+            let result = heal::suits(h, goal, a);
+            h.op(
+                EE_COMBAT_G_CAPTURE,
+                a,
+                &mut args(&[GO_SUITS, i64::from(GOAL_HEAL_UNIT), target as i64, i64::from(result)]),
+            );
+            i64::from(result)
+        }
+        OP_WORK => {
+            heal::work(h, goal, a);
+            0
+        }
+        // the start (empty), the owner, the path attempts, the base goal's empty slots
+        _ => 0,
+    }
+}
+
 /// One operation of a combat goal of `kind` over the goals' host `h` (the texts appended through `text`; the
 /// location and destination in `point`). The operation's result.
 #[allow(clippy::too_many_arguments)]
@@ -217,6 +357,9 @@ pub fn body<H: GoalHost>(
     h: &mut H,
     text: &mut dyn FnMut(&str),
 ) -> i64 {
+    if kind == GOAL_HEAL_UNIT {
+        return heal_body(op, goal, a, b, ints, point, h, text);
+    }
     let ground = kind == GOAL_ATTACK_GROUND;
     let combat_kind = if ground { COMBAT_GOAL_ATTACK_GROUND } else { COMBAT_GOAL_ATTACK_UNIT };
     match op {

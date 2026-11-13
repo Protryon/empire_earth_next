@@ -30,7 +30,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
 #include "ee/EEUnitBehavior.h"

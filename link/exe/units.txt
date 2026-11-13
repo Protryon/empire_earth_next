@@ -432,7 +432,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 21ab66 21b163 Empire Earth/Units/EEUCSubmergedNaval.cpp
 21b163 21b27a Empire Earth/Units/EEUCTorpedo.cpp
 21b27a 21ce6c Empire Earth/Units/EEUCTransport.cpp
-22528d 22585a Empire Earth/Units/EEUGHealUnit.cpp
 227621 227de8 Empire Earth/Units/EEUGLocation.cpp
 228c4c 22a509 Empire Earth/Units/EEUnit.cpp
 22a509 22d95f Empire Earth/Units/EEUnitAction.cpp

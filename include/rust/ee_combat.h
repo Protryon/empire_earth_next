@@ -234,6 +234,9 @@ constexpr static const int32_t EE_COMBAT_GOAL_RETARGET_GATE = 203;
 
 constexpr static const int32_t EE_COMBAT_GOAL_UPDATE_TILE = 204;
 
+/// a new heal goal on the healee `a`; `io.i[0]` 2: the load's empty one
+constexpr static const int32_t EE_COMBAT_GOAL_NEW_HEAL = 205;
+
 /// `EECombatStep(io.i[0], a, b, io.i[1])`: the kind, the unit, the goal, the target
 constexpr static const int32_t EE_COMBAT_G_STEP = 1050;
 
@@ -264,6 +267,27 @@ constexpr static const int32_t EE_COMBAT_G_HAS_GROUP = 1058;
 
 /// `kGoalAttackUnit`, `kGoalAttackGround`.
 constexpr static const uint8_t GOAL_ATTACK_UNIT = 2;
+
+/// `gWorld.mInCinematic` into `args[0]`, `gPhysics->mTickTimeMs` into `args[1]`.
+constexpr static const int32_t EE_COMBAT_G_HEAL_ENV = 1060;
+
+/// the healee's `SetHitPoints(args[0])` (`EEComplexUnit`'s).
+constexpr static const int32_t EE_COMBAT_G_SET_HIT_POINTS = 1061;
+
+/// the healee's `ReleaseHealEffect()`.
+constexpr static const int32_t EE_COMBAT_G_RELEASE_HEAL_EFFECT = 1062;
+
+/// `EECanHeal(unit, args[0])`.
+constexpr static const int32_t EE_COMBAT_G_CAN_HEAL = 1063;
+
+/// TEST ONLY: `EECombatCaptureHealWork(unit, args[0], args[1])` (CBSO).
+constexpr static const int32_t EE_COMBAT_G_CAPTURE_HEAL_WORK = 1064;
+
+/// `kGoalHealUnit`.
+constexpr static const uint8_t GOAL_HEAL_UNIT = 15;
+
+/// `kActionTurnToFaceHealee`: the heal goal's first action.
+constexpr static const int64_t ACTION_TURN_TO_FACE_HEALEE = 16002;
 
 /// `inUnit->CanReachTile(args[0], args[1])`.
 constexpr static const int32_t EE_COMBAT_G_CAN_REACH_TILE = 1001;
@@ -1616,6 +1640,16 @@ struct EeCombatAttackGoal {
   uint8_t convert;
 };
 
+/// A heal goal's own state (the original's members and the location goal's location).
+struct EeCombatHealGoal {
+  /// `EEUGLocation::mLocation` (float bits): where the healee was when the goal was made
+  uint32_t location[3];
+  /// `mTarget`, the healee (a handle, referenced; the saved id between Load and RepairPointers)
+  uint64_t target;
+  /// `mElapsedTime` (milliseconds since the last heal)
+  uint32_t elapsed;
+};
+
 /// A trigger test's outcome.
 struct EeCombatConditionOut {
   /// the test's value (`bool` 0/1; the shots' `long`)
@@ -2467,6 +2501,19 @@ void ee_combat_attack_get(uint64_t goal, EeCombatAttackGoal *out);
 /// `value` must point to a valid record.
 void ee_combat_attack_set(uint64_t goal,
                           const EeCombatAttackGoal *value);
+
+/// The record of the goal into `out` (zeroes for none).
+///
+/// # Safety
+/// `out` must point to a writable record.
+void ee_combat_heal_get(uint64_t goal, EeCombatHealGoal *out);
+
+/// The heal goal's location replaced by `location` (float bits; the location goal's `SetLocation`, which the carrier
+/// landing applies to any goal of the location class).
+void ee_combat_heal_set_location(uint64_t goal,
+                                 uint32_t x,
+                                 uint32_t y,
+                                 uint32_t z);
 
 /// The attack-ground goal's target into `out` (0, 0, 0 for a goal without a record).
 ///
