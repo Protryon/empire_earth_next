@@ -10545,3 +10545,56 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Not done this round** (RUST_PLAN's row): the campaign editor's events (934, with `EECampaignEditorBehavior`),
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
+
+## R6: WON's Internet code, round 14 (the certificate classes, AuthPeerData, the peer authentication and its ops as Rust objects)
+
+Branch `rust-won-net14`. Measured by net C++ deletion, as rounds 7 to 13. The set moved as one because the hooks
+cross: the handshake's environment was the certificates and the peer data, the ops held the handshake.
+
+- **What moved.** `peerobj.rs`: `Cert` (AuthBase with AuthCertificate, Auth2Certificate and AuthPubKeyBlock: the
+  bytes, the unpacked block, its keys), `PeerData` (AuthPeerData: the certificates, the key block, the private
+  key, the clock delta) and `PeerAuth` (PeerAuthClient / PeerAuthServer: the handshake's state, the peer data, both
+  secrets, the other side's certificate, the session it makes), the handshake's `PeerEnv` the original's `Pa*`
+  statements over them. `peerop.rs`: PeerAuthOp and PeerAuthServerOp on the op base, every step. The C++ left:
+  `AuthBase` / `AuthPeerData` RefCount shims (WONAuthPeerData.h; one reference each, read by number), and
+  PeerAuthOp / PeerAuthServerOp as RustServerOps (constructors in ServerOp.cpp, `GetSession`,
+  `GetGetCertStatus`, `ClientPermits`). Ten units and three headers deleted; WONPeerAuthMsg.h moved to
+  `tests/won/won_peerauth_msg.h`. src+include: +155 -944 (the objects), +52 -574 (the ops).
+- **Random draws are part of the behaviour.** Every `ElGamal()` the original constructed seeded a generator from
+  the system seed, including keys it threw away at once (a certificate's member key before the unpacking replaced
+  it, the one `Adopt(NULL)` made, a key block's `ElGamal key;` per key, an empty peer data's private key). With a
+  fixed seed (`ee_won_random_test_seed`) the secrets and encryptions only match when the Rust objects draw at the
+  same points, so they do (a dropped `ElGamal::new()` where the original discarded one).
+- **The system seed's counter is per thread in the crate's tests.** Parallel tests shared the global counter, so
+  a replay that fixes the seed could not be deterministic (round 12 avoided it by injecting generators). Under
+  `cfg(test)` the counter and the fixed base are thread-locals; the game and the drivers keep the globals.
+- **Small keys do not encrypt.** auth.rs's 30-bit test group signs and verifies, but its encryption gives NULL
+  (not investigated); the goldens use four keys over a 192-bit group, made once with
+  ee_won's bigint and kept as constants in both the driver and the replay.
+- **A golden whose answers are recorded replays an op without porting its stand-in.** `golden_peerop.txt` writes
+  every call with its answer (`recv(o1000,60003)=0:<bytes>`); the Rust replay answers from the line and checks
+  each call against it. Only the other end of the socket (a real handshake, whose draws interleave with the op's)
+  runs again in the replay. Member reads (mode, times, auth type) are answered but not logged, so the argument
+  order of `QueueOp(Track(new op), SendTime())` does not show.
+- **Stable times.** Certificates expire in 2037 or in 1970 and clock deltas cross that or not, so the goldens
+  hold for years; "expires within 120 seconds but not 30" (AsyncRun's refresh that still connects) needs times
+  relative to now and is not covered.
+- **Goldens first.** `won_peerobj_test` (600 scenarios in `golden_peerobj.txt`; 3,000 run, the game's classes
+  against won_auth_orig.h's copies, 0 failed; a mutation fails 461) and `won_peerop_test` (500 sequences in
+  `golden_peerop.txt`; 2,000 run, the Rust ops against the original's statements, 0 failed; a mutation fails 205).
+- **The original's undefined corners, defined.** A NULL second certificate (IsValid2, Certificate2Expired, the
+  server's own raw certificate, LanLogic's first community) is invalid, expired, empty, 0; a key block with no key
+  encrypts nothing; PeerAuthOp's refresh status the constructor left unset is 0; a NULL received message is
+  empty; a handshake step that succeeds with nothing to send sends an empty message; the server's `Success` with
+  no session finishes without encryption.
+- **Which LAN paths reach it.** The LAN lobby makes an AuthContext, so `new AuthPeerData` (the Rust empty peer
+  data) runs in every LAN session. The peer authentication runs only for a direct-connect game (type 3) with the
+  CD key check on: the host's `LanStartPeerAuth` (a PeerAuthServerOp on each accepted socket, then
+  `HandlePeerAuthDone`'s `ClientPermits`) and the joiner's `LanConnect` with peer auth (a PeerAuthOp,
+  AUTH_TYPE_PERSISTENT); both first need `LanRefreshCertificate`, a GetCertOp from the WON servers, which are
+  gone, so the gate's LAN game (a LAN-listed game) does not reach them. The Internet login reaches the rest
+  (ServerConnection's connect, a request's peer authentication, GetCertOp's certificates).
+- **Not moved, and why.** AuthContext's peer data stays a C++ `ConstSmartPtr<AuthPeerData>` (a shim now) and its
+  four flow hooks (`CertPeerData`, `LightSetPeerData`, `PeerValid`, `PeerExpireDelta`) stay: they are one call
+  each into the Rust object, and moving the member into authflow.rs means re-recording golden_authflow.txt's hook
+  vocabulary. LightGetCertOp stays a C++ AsyncOp (the auth context's refresh queue holds it).
