@@ -55,7 +55,7 @@ mod background_table_ffi;
 // test binary
 #[cfg(not(test))]
 mod button_ffi;
-// imports the C++ tri-state check box's host calls (UITriStateCheckBox.cpp), absent from a test binary
+// the blinking and scalable buttons' pure exports (UIBlinkingButton.cpp, UIScalableButton.cpp)
 #[cfg(not(test))]
 mod button_variants_ffi;
 // imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary

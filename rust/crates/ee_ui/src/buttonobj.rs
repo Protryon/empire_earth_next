@@ -176,6 +176,31 @@ pub enum EeUiButtonCall {
     RadioButtonUp = 74,
     /// `MouseLButtonDown()` -> OK.
     RadioMouseLButtonDown = 75,
+
+    // ---- UITriStateCheckBox (checkobj.rs)
+    /// The constructor's part after `UIButton`'s: the bitmap offset in a box of height `f[0]`, then
+    /// `SetText(*(const UWideString*)a, font b)`.
+    TriInit = 80,
+    /// `ChangeWidth(a)`.
+    TriChangeWidth = 81,
+    /// `CopyData()` -> its result.
+    TriCopyData = 82,
+    /// `DrawPolygons()` -> its result.
+    TriDrawPolygons = 83,
+    /// `DrawTextA()` -> its result.
+    TriDrawText = 84,
+    /// `GetCheckState()`.
+    TriCheckState = 85,
+    /// `SetCheckState(a)`.
+    TriSetCheckState = 86,
+    /// `SetLocation(f[0], f[1])`.
+    TriSetLocation = 87,
+    /// `SetText(*(const UWideString*)a, font b)`.
+    TriSetText = 88,
+    /// `CycleCheck()`.
+    TriCycle = 89,
+    /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
+    TriButtonUp = 90,
 }
 
 /// A subclass's own record (its constructor's init call sets it): what were the C++ subclass's members.
@@ -187,6 +212,8 @@ pub(crate) enum Sub {
     Check(button::CheckFields),
     /// `UIRadioButton` (`checkobj.rs`).
     Radio(button::RadioFields),
+    /// `UITriStateCheckBox` (`checkobj.rs`).
+    TriState(crate::button_variants::TriStateFields),
 }
 
 /// The Rust UIButton.

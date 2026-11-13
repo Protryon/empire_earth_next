@@ -1,4 +1,5 @@
-//! The check box's and radio button's goldens (`golden_checkobj.txt`, `golden_radioobj.txt`): the first sequences
+//! The check box's, radio button's and tri-state box's goldens (`golden_checkobj.txt`, `golden_radioobj.txt`,
+//! `golden_tristateobj.txt`): the first sequences
 //! the round-12 driver (`build/ui12`) printed over round 11's UICheckBox.cpp and UIRadioButton.cpp statements and
 //! record FFI (the label a part, the box bitmap scaled while drawn, the radio walk over the form's siblings, trigger
 //! events and subclass virtuals reading the button back), replayed op for op against the Rust button.
@@ -104,4 +105,24 @@ fn a_sibling_left_checked_fails() {
     let g = format!("{}\nset 120 {i} 0 {}", &GOLDEN_RADIO[..set], &GOLDEN_RADIO[set + key.len()..]);
     let r = Replay::new(&g, dispatch).with_pure_hook(sibling);
     replay_on(r);
+}
+
+// ---- the tri-state box (`golden_tristateobj.txt`)
+
+const GOLDEN_TRI: &str = include_str!("golden_tristateobj.txt");
+
+#[test]
+fn tri_state_golden_replays() {
+    assert!(replay(GOLDEN_TRI) > 1_000);
+}
+
+#[test]
+#[should_panic(expected = "golden line")]
+fn a_changed_check_state_fails() {
+    // the first check state read answers another state: its ret line no longer matches
+    let at = GOLDEN_TRI.find("\ncall 85 ").expect("a check state read");
+    let ret = at + 1 + GOLDEN_TRI[at + 1..].find("\nret ").unwrap() + 1;
+    let rest = &GOLDEN_TRI[ret + 4..];
+    let g = format!("{}ret 7{}", &GOLDEN_TRI[..ret], &rest[rest.find(' ').unwrap()..]);
+    replay(&g);
 }

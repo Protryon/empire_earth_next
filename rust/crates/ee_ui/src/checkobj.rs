@@ -10,6 +10,9 @@
 //! as the original read `mIsChecked`; the sibling's `UnCheck` is virtual (the editor's buttons override it) and goes
 //! through [`Op::RadioUnCheckAt`]. `ButtonUp` calls the virtual `Check` through [`Op::RadioCheck`].
 //!
+//! The tri-state box (`UITriStateCheckBox`, off/on/"not") is the third: its record ([`TriStateFields`]) is the
+//! button's `Sub` too, and round 6's logic (`button_variants.rs` `tri_state_*`) runs over [`Tri`], its host here.
+//!
 //! The label is a part (a C++ `UITextLabel` held by address, as the scroll bar holds its slider): made by
 //! [`Op::LabelCreate`], its text set by [`Op::LabelSetText`], moved, measured, copied, drawn and deleted through the
 //! part ops. The manager's check bitmaps are [`Op::ManagerBitmap`] reads; the box's bitmap scale is read and set
@@ -18,6 +21,7 @@
 use core::ffi::{c_long, c_ulong, c_void};
 
 use crate::button::{self, CheckFields, CheckHost, LabelHost, RadioFields, RadioHost, SCROLL_BAR_WIDTH};
+use crate::button_variants::{self as variants, TriStateFields, TriStateHost};
 use crate::buttonobj::{Btn, EeUiButton, EeUiButtonCall, Sub, Which};
 use crate::draw;
 use crate::obj::EeUiOp as Op;
@@ -28,6 +32,8 @@ const CHECK_BITMAP_OFF: isize = 8;
 const CHECK_BITMAP_ON: isize = 9;
 const CHECK_BITMAP_DOWN_OFF: isize = 10;
 const CHECK_BITMAP_DOWN_ON: isize = 11;
+const CHECK_BITMAP_NOT: isize = 12;
+const CHECK_BITMAP_DOWN_NOT: isize = 13;
 /// The manager's radio bitmaps of the checked state (the other state's at construction).
 const RADIO_BITMAP_ON: isize = 15;
 const RADIO_BITMAP_DOWN_ON: isize = 17;
@@ -67,6 +73,7 @@ impl EeUiButton {
         match *self.sub.borrow() {
             Sub::Check(c) => c.text_label,
             Sub::Radio(r) => r.text_label,
+            Sub::TriState(t) => t.text_label,
             Sub::Plain => core::ptr::null_mut(),
         }
     }
@@ -75,6 +82,7 @@ impl EeUiButton {
         match &mut *self.sub.borrow_mut() {
             Sub::Check(c) => c.text_label = label,
             Sub::Radio(r) => r.text_label = label,
+            Sub::TriState(t) => t.text_label = label,
             Sub::Plain => {}
         }
     }
@@ -367,6 +375,38 @@ impl EeUiButton {
                 button::button_up(&mut h);
             }
             C::RadioMouseLButtonDown => return button::radio_mouse_l_button_down(&mut h) as isize,
+            C::TriInit => {
+                *self.sub.borrow_mut() = Sub::TriState(TriStateFields {
+                    text_label: core::ptr::null_mut(),
+                    check_state: 0,
+                    has_text: false,
+                });
+                let border = self.op(Op::BorderThickness, 0, 0) as c_ulong;
+                if let Some(p) = variants::tri_state_bitmap_offset(buf[0], border) {
+                    self.f.borrow_mut().bitmap_draw_offset = p;
+                }
+                variants::tri_state_set_text(&mut Tri(self.btn_text(a, b)), text_bytes(self, a));
+            }
+            C::TriChangeWidth => variants::tri_state_change_width(&mut Tri(h), a as c_ulong),
+            C::TriCopyData => return variants::tri_state_copy_data(&mut Tri(h)) as isize,
+            C::TriDrawPolygons => {
+                let r = self.draw_polygons();
+                let label = self.label();
+                return if label.is_null() { r } else { self.op(Op::PartDrawPolygons, label as isize, 0) };
+            }
+            C::TriDrawText => {
+                let r = self.op(Op::BaseDrawText, 0, 0);
+                return self.label_draw_text(r);
+            }
+            C::TriCheckState => return Tri(h).load().check_state as isize,
+            C::TriSetCheckState => variants::tri_state_set_check_state(&mut Tri(h), a as c_ulong),
+            C::TriSetLocation => variants::tri_state_set_location(&mut Tri(h), at),
+            C::TriSetText => variants::tri_state_set_text(&mut Tri(self.btn_text(a, b)), text_bytes(self, a)),
+            C::TriCycle => variants::tri_state_cycle(&mut Tri(h)),
+            C::TriButtonUp => {
+                variants::tri_state_cycle(&mut Tri(Btn::new(self)));
+                button::button_up(&mut h);
+            }
             _ => {}
         }
         0
@@ -426,6 +466,82 @@ impl RadioHost for Btn<'_> {
     }
     fn uncheck_radio(&mut self, i: c_long) {
         self.o.op(Op::RadioUnCheckAt, i as isize, 0);
+    }
+}
+
+/// The tri-state box as round 6's logic (`button_variants.rs`) sees it.
+struct Tri<'a>(Btn<'a>);
+
+impl Tri<'_> {
+    fn label(&self) -> isize {
+        self.0.o.label() as isize
+    }
+}
+
+impl TriStateHost for Tri<'_> {
+    fn load(&self) -> TriStateFields {
+        match *self.0.o.sub.borrow() {
+            Sub::TriState(t) => t,
+            _ => TriStateFields { text_label: core::ptr::null_mut(), check_state: 0, has_text: false },
+        }
+    }
+    fn store(&mut self, f: &TriStateFields) {
+        if let Sub::TriState(t) = &mut *self.0.o.sub.borrow_mut() {
+            *t = *f;
+        }
+    }
+    fn rect(&self) -> UiRect {
+        self.0.o.host.rect()
+    }
+    fn border(&self) -> c_ulong {
+        self.0.o.op(Op::BorderThickness, 0, 0) as c_ulong
+    }
+    fn label_rect(&self) -> UiRect {
+        self.0.o.host.get_rect(Op::PartRect, self.label())
+    }
+    fn label_set_rect(&mut self, rect: UiRect) {
+        self.0.o.host.op_rect(Op::PartSetRectangle, self.label(), 0, rect);
+    }
+    fn label_set_location(&mut self, at: UiPoint) {
+        self.0.o.host.op_point(Op::PartSetLocation, self.label(), at);
+    }
+    fn label_set_text(&mut self) {
+        LabelHost::label_set_text(&mut self.0);
+    }
+    fn label_create(&mut self, rect: UiRect) {
+        LabelHost::label_create(&mut self.0, rect);
+    }
+    fn label_delete(&mut self) {
+        self.0.o.op(Op::DeletePart, self.label(), 0);
+    }
+    fn base_set_rectangle(&mut self, rect: UiRect) {
+        self.0.o.host.op_rect(Op::BaseSetRectangle, 0, 0, rect);
+    }
+    fn base_set_location(&mut self, at: UiPoint) {
+        self.0.o.host.op_point(Op::BaseSetLocation, 0, at);
+    }
+    fn set_dirty(&mut self) {
+        self.0.o.op(Op::SetDirty, 1, 0);
+    }
+    fn set_check_bitmaps(&mut self, state: c_ulong) {
+        let (normal, pressed) = match state {
+            0 => (CHECK_BITMAP_OFF, CHECK_BITMAP_DOWN_OFF),
+            1 => (CHECK_BITMAP_ON, CHECK_BITMAP_DOWN_ON),
+            _ => (CHECK_BITMAP_NOT, CHECK_BITMAP_DOWN_NOT),
+        };
+        let normal = self.0.o.op(Op::ManagerBitmap, normal, 0) as *mut c_void;
+        self.0.o.set_bitmap(Which::Normal, normal, true);
+        let pressed = self.0.o.op(Op::ManagerBitmap, pressed, 0) as *mut c_void;
+        self.0.o.set_bitmap(Which::Pressed, pressed, true);
+    }
+    fn fire(&mut self, event: c_ulong) {
+        self.0.o.op(Op::FireTrigger, event as isize, 0);
+    }
+    fn base_copy_data(&mut self) -> c_long {
+        button::copy_data(&mut self.0)
+    }
+    fn label_copy_data(&mut self) -> c_long {
+        self.0.o.op(Op::PartCopyData, self.label(), 0) as c_long
     }
 }
 

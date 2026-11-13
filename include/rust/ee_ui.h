@@ -434,6 +434,29 @@ enum class EeUiButtonCall : uint32_t {
   RadioButtonUp = 74,
   /// `MouseLButtonDown()` -> OK.
   RadioMouseLButtonDown = 75,
+  /// The constructor's part after `UIButton`'s: the bitmap offset in a box of height `f[0]`, then
+  /// `SetText(*(const UWideString*)a, font b)`.
+  TriInit = 80,
+  /// `ChangeWidth(a)`.
+  TriChangeWidth = 81,
+  /// `CopyData()` -> its result.
+  TriCopyData = 82,
+  /// `DrawPolygons()` -> its result.
+  TriDrawPolygons = 83,
+  /// `DrawTextA()` -> its result.
+  TriDrawText = 84,
+  /// `GetCheckState()`.
+  TriCheckState = 85,
+  /// `SetCheckState(a)`.
+  TriSetCheckState = 86,
+  /// `SetLocation(f[0], f[1])`.
+  TriSetLocation = 87,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  TriSetText = 88,
+  /// `CycleCheck()`.
+  TriCycle = 89,
+  /// `ButtonUp()`: the cycle, then `UIButton::ButtonUp()`.
+  TriButtonUp = 90,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -721,29 +744,6 @@ struct EeUiButtonRefs {
   void *button;
   const EeUiButton *obj;
   void *sub;
-  void *ctx;
-};
-
-/// `UITriStateCheckBox`'s members in their C++ order (from `mTextLabel` on).
-struct EeUiTriStateFields {
-  /// `UITextLabel*`, C++'s.
-  void *text_label;
-  /// 0 off, 1 on, 2 "not".
-  unsigned long check_state;
-  bool has_text;
-};
-
-/// Where a `UITriStateCheckBox` keeps what the Rust side reads and writes.
-struct EeUiTriStateRefs {
-  /// The `UITriStateCheckBox*`.
-  void *button;
-  /// Its record from `mTextLabel` on.
-  EeUiTriStateFields *fields;
-  /// `mRectangle`.
-  const EeUiRect *rect;
-  /// `mBorderThickness`.
-  const unsigned long *border;
-  /// A `SetText`'s text and font for the label host calls (`UIButtonRust::Label`), else NULL.
   void *ctx;
 };
 
@@ -1420,30 +1420,6 @@ void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
 
 /// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
 EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
-
-/// The constructor's `UIButton` rectangle.
-EeUiRect ee_ui_tristate_rect(const EeUiRect *rect);
-
-/// The constructor's bitmap offset: true and `out` written, or false to keep it.
-bool ee_ui_tristate_bitmap_offset(float height, unsigned long border, EeUiPoint *out);
-
-/// `UITriStateCheckBox::ChangeWidth`.
-void ee_ui_tristate_change_width(const EeUiTriStateRefs *refs, unsigned long width);
-
-/// `UITriStateCheckBox::CopyData`.
-long ee_ui_tristate_copy_data(const EeUiTriStateRefs *refs);
-
-/// `UITriStateCheckBox::SetCheckState`.
-void ee_ui_tristate_set_check_state(const EeUiTriStateRefs *refs, unsigned long state);
-
-/// `UITriStateCheckBox::SetLocation`.
-void ee_ui_tristate_set_location(const EeUiTriStateRefs *refs, EeUiPoint at);
-
-/// `UITriStateCheckBox::SetText` (`ctx` in `refs`: the C++ text and font for the label host calls).
-void ee_ui_tristate_set_text(const EeUiTriStateRefs *refs, const char *s);
-
-/// `UITriStateCheckBox::CycleCheck`.
-void ee_ui_tristate_cycle(const EeUiTriStateRefs *refs);
 
 /// `UIBlinkingButton`'s constructor: the record after `UIButton`'s (written whole).
 void ee_ui_blink_init(EeUiBlinkFields *fields, unsigned long rate, bool always_dirty);
