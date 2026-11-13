@@ -874,7 +874,12 @@ pub unsafe extern "C" fn ee_units_rust_goal(
 ) -> i64 {
     if !matches!(
         kind,
-        GOAL_PATROL | GOAL_CAST_CALAMITY | GOAL_EXPLORE | GOAL_UNLOAD_TRANSPORT | GOAL_LOAD_TRANSPORT | GOAL_LOAD_GARRISON
+        GOAL_PATROL
+            | GOAL_CAST_CALAMITY
+            | GOAL_EXPLORE
+            | GOAL_UNLOAD_TRANSPORT
+            | GOAL_LOAD_TRANSPORT
+            | GOAL_LOAD_GARRISON
     ) {
         // another crate's kinds (the combat lane's attack goals: ee_combat), through the same host
         let other = *OTHER_KINDS.lock().unwrap_or_else(|e| e.into_inner());
