@@ -1906,41 +1906,10 @@ bool EEMClearAirportCommands::IsResponse(NEMessage* inMessage)
 // them and emptying their air traffic queue) and the orders of selected aircraft
 void EEMClearAirportCommands::Execute()
 {
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs clear_airport_commands: each selected
+    // airport's, air base's and navy yard's queues cleared and opened, an aircraft's queue 1, the goals refreshed)
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    EEGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup != NULL) {
-        for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theGroup->GetUnit(i));
-            EEUnitClass* theClass = theUnit->GetUnitClass();
-            long theCategory = theClass->mCategory;
-            if (theClass->mUnitType == kUnitTypeAirport) {
-                theUnit->mGoalQueues[0].Clear();
-                theUnit->mGoalQueues[1].Clear();
-                theUnit->mGoalQueues[2].Clear();
-                theUnit->mGoalQueues[3].Clear();
-                theUnit->mGoalQueues[4].Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && theClass->mAirTrafficType != 0) {
-                (theUnit->mGoalQueues.begin() + 0)->Clear();
-                (theUnit->mGoalQueues.begin() + 1)->Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if (theClass->mUnitType == kUnitTypeNavyYard) {
-                theUnit->mGoalQueues[0].Clear();
-                theUnit->mGoalQueues[2].Clear();
-                theUnit->StartAction(kActionAirportOpen);
-                theClass->ActionChanged(theUnit);
-                theUnit->GetPlayer()->mAirTraffic[theClass->mAirTrafficType - 1]->ClearAirportQueue(theUnit, 0);
-            } else if (theClass->mCategory == kUnitCategoryAirplane || theClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                theUnit->mGoalQueues[1].Clear();
-            }
-            theUnit->RefreshGoals();
-            theUnit->RefreshActiveGoal();
-        }
-    }
+    ee_units_clear_airport_commands(static_cast<EEGroup*>(thePlayer->mActiveGroup));
 }
 
 // EEMDisband's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -6586,110 +6555,11 @@ bool EEMSetAirportCommand::IsResponse(NEMessage* inMessage)
 // the point, in the queue(s) the command picks (12-15 add a 60 s timer; 15 shares one attack goal)
 void EEMSetAirportCommand::Execute()
 {
-    EEComplexUnit* theFirstUnit = NULL;
-    EEUnitGoal* theGoal = NULL;
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    if (thePlayer->mActiveGroup != NULL)
-        theFirstUnit = thePlayer->mActiveGroup->GetFirstUnit();
-    long theDamageIndex;
-    switch (this->mCommand) {
-    case 8:
-    case 0xe:
-        theDamageIndex = 0xc;
-        break;
-    default:
-        theDamageIndex = 0;
-        break;
-    }
-    bool theAttack = false;
-    if (this->mTargetID != -1) {
-        EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-        if (theTarget == NULL)
-            goto issue;
-        if (thePlayer != theTarget->mPlayer && theTarget->mPlayer->mEnemies[thePlayer->mPlayerID] != 0
-            && EEIsSeenBy(theTarget, thePlayer, true)) {
-            unsigned long theClass = theTarget->mUnitClass->mFamily;
-            if ((theTarget->mUnitClass->CanBeAttacked() && EEDamageFactor(theClass, theDamageIndex) > 0.0f) || this->mCommand == 0xf) {
-                theGoal = EEUGRust::NewAttackUnit(theFirstUnit != NULL ? theFirstUnit : theTarget->mComplexUnit, theTarget,
-                                             true, false);
-                theAttack = true;
-            }
-        }
-    }
-    if (!theAttack)
-        theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-issue:
-    EESelectedGroup* theGroup = thePlayer->mActiveGroup;
-    if (theGroup != NULL) {
-        for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mUnitClass->mUnitType != kUnitTypeAirport || theGoal == NULL)
-                continue;
-            EEUnitGoal* theCopy = NULL;
-            if (EEAttackUnitCast(theGoal) != NULL)
-                theCopy = EEAttackUnitCast(theGoal->Clone());
-            switch (this->mCommand) {
-            case 10:
-            case 12:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(3);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 3);
-                if (this->mCommand == 12) {
-                    theUnit->mGoalQueues[3].ResetTimer();
-                    theUnit->mGoalQueues[3].AddTime(60000);
-                }
-                break;
-            case 9:
-            case 13:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(2);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 2);
-                if (this->mCommand == 13) {
-                    theUnit->mGoalQueues[2].ResetTimer();
-                    theUnit->mGoalQueues[2].AddTime(60000);
-                }
-                break;
-            case 8:
-            case 14:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(1);
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 1);
-                if (this->mCommand == 14) {
-                    theUnit->mGoalQueues[1].ResetTimer();
-                    theUnit->mGoalQueues[1].AddTime(60000);
-                }
-                break;
-            case 15:
-                if (!this->mIsQueued)
-                    theUnit->ClearAllGoalQueues();
-                // each queue owns its own goal: the attack copy goes to the first one only
-                theUnit->QueueGoal(theCopy != NULL ? theCopy : theGoal->Clone(), 3);
-                theCopy = NULL;
-                theUnit->QueueGoal(theGoal->Clone(), 2);
-                theUnit->QueueGoal(theGoal->Clone(), 1);
-                theUnit->QueueGoal(theGoal->Clone(), 4);
-                theUnit->mGoalQueues[4].ResetTimer();
-                theUnit->mGoalQueues[4].AddTime(60000);
-                theUnit->mGoalQueues[3].ResetTimer();
-                theUnit->mGoalQueues[3].AddTime(60000);
-                theUnit->mGoalQueues[2].ResetTimer();
-                theUnit->mGoalQueues[2].AddTime(60000);
-                theUnit->mGoalQueues[1].ResetTimer();
-                theUnit->mGoalQueues[1].AddTime(60000);
-                break;
-            case 20:
-                if (!this->mIsQueued)
-                    theUnit->ClearGoalQueue(4);
-                theUnit->QueueGoal(new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0), 4);
-                delete theCopy;
-                break;
-            default:
-                delete theCopy;
-                break;
-            }
-        }
-    }
-    delete theGoal;
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_airport_command: the attack or move
+    // goal, each selected airport's queues and timers by the command) over the store and EEUnitHost.cpp's calls
+    ee_units_set_airport_command(thePlayer, static_cast<EEGroup*>(thePlayer->mActiveGroup), this->mPoint.GetX(),
+                                 this->mPoint.GetY(), this->mCommand, this->mTargetID, this->mIsQueued);
 }
 
 // EEMSetDiplomaticStance's members as the codec's slots, in wire order (ee_netmsg classes.rs)
@@ -6809,170 +6679,17 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
 
-#include "ee/EEUGRust.h"
-#include "ee/EEDoppelganger.h"
 
 // FUNCTION: EXE 0x4c6dca
 // Sets the rally goal of the sender's selected buildings of this type: gather, attack, repair, patrol, garrison,
 // clear (target is the building) or move; airports, docks and aircraft fill their own queues
 void EEMSetRallyGoal::Execute()
 {
-    std::vector<EEComplexUnit*> theGarrisonUnits;
-    std::vector<EEUnitGoal*> theGoals;
-    EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    unsigned long thePlayerID = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mPlayerID;
-    EEUnitGoal* theGoal = NULL;
-    EEUnit* theCommandTarget = NULL;
-    long theCommand = 0;
-    bool theClear = false;
-    EEUnit* theBuildingUnit = gWorld.GetUnit(this->mBuildingID);
-    if (theBuildingUnit == NULL)
-        return;
-    EEComplexUnit* theBuilding = theBuildingUnit->mComplexUnit;
-    if (this->mTargetID != -1) {
-        EEUnit* theTarget = gWorld.GetUnit(this->mTargetID);
-        if (theTarget == NULL)
-            goto issue;
-        if (theTarget->mResourceAmount > 0
-            && !((theTarget->mUnitClass->mCategory == kUnitCategoryLandCitizen || theTarget->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-                 && theTarget->mHitPoints > 0)
-            && (theTarget->mUnitClass->mFamily == kUnitFamilyFish || theTarget->mTileNode == NULL
-                || (theTarget->mComplexUnit->mIsBuilt && theTarget->mPlayer == theBuilding->mPlayer))) {
-            theGoal = EEUGRust::NewGather(theTarget, NULL, true);
-            theGoals.push_back(theGoal);
-            theCommand = 0xba;
-            theCommandTarget = theTarget;
-            goto issue;
-        }
-        EEPlayer* theOwner = theBuilding->mPlayer;
-        if (theTarget->mPlayer != theOwner) {
-            if (theTarget->mPlayer->mEnemies[theOwner->mPlayerID] != 0) {
-                bool theVisible = EEIsSeenBy(theTarget, theOwner, true);
-                if (!theVisible) {
-                    EETile* theTile = static_cast<EETile*>(theTarget->mTile);
-                    for (unsigned long i = 0; i < theTile->GetNumDoppelgangers() && !theVisible; i++)
-                        theVisible = theTile->mDoppelgangers[i]->mUnit == theTarget;
-                }
-                if (theVisible && EEUUGetIsUnitClassTargetable(NULL, theTarget->mUnitClass)
-                    && ((theBuilding->mUnitClass->mCategory != kUnitCategoryAirplane && theBuilding->mUnitClass->mCategory != kUnitCategoryPlanetSpaceship)
-                        || theBuilding->CanAttackClass(theTarget->mUnitClass))) {
-                    theGoal = EEUGRust::NewAttackUnit(theBuilding, theTarget, true, false);
-                    theGoals.push_back(theGoal);
-                    theCommand = 0xb9;
-                    theCommandTarget = theTarget;
-                    goto issue;
-                }
-                theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-                theGoals.push_back(theGoal);
-                theCommand = 0xb8;
-                goto issue;
-            }
-        } else {
-            if (theTarget->mUnitClass->mUnitType == kUnitTypeFarm
-                || (theTarget->mUnitClass->IsLandBuilding() && theTarget->mHitPoints < theTarget->mStats->mMaxHitPoints)) {
-                theGoal = EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, true);
-            } else if (theTarget->mUnitClass->mUnitType == kUnitTypePathPoint) {
-                theGoal = EEUGRust::NewPatrol(theTarget->mComplexUnit->mPatrolGroup, theTarget->mComplexUnit, true);
-            } else if (theTarget->mUnitClass->mGarrisonCapacity > 0 && theTarget->mTileNode != NULL && theTarget->mHitPoints > 0) {
-                EEComplexUnit* theGarrison = theTarget->mComplexUnit;
-                if (theGarrison->mGoalState != NULL && theGarrison->mGoalState->mKind == kGoalLoadGarrison) {
-                    theGoal = theGarrison->mGoalState->Clone();
-                } else {
-                    theGarrisonUnits.clear();
-                    EEUGRust* theLoad = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theGarrisonUnits, true);
-                    if (theLoad->IsLoadGarrisonValid()) {
-                        theGarrison->SetGoal(theLoad, 0, 0);
-                        if (theGarrison->mStats->mMaxVelocity > 0.0f) theGarrison->StartAction(kActionPrepareToMove); else theGarrison->StartAction(kActionPickedUpLoadableUnits);
-                        theGarrison->mUnitClass->ActionChanged(theGarrison);
-                        theGoal = theLoad->Clone();
-                        theGoals.push_back(theGoal);
-                        theCommand = 0xba;
-                        theCommandTarget = theTarget;
-                    } else {
-                        delete theLoad;
-                        theGoal = NULL;
-                    }
-                    goto issue;
-                }
-            } else if (theTarget == theBuilding) {
-                theGoals.clear();
-                theClear = true;
-                theCommand = 0xba;
-                theCommandTarget = theTarget;
-                goto issue;
-            } else
-                goto location;
-            theGoals.push_back(theGoal);
-            theCommand = 0xba;
-            theCommandTarget = theTarget;
-            goto issue;
-        }
-    }
-location:
-    theGoal = new EEUGLocation(this->mPoint, true, true, false, 0.0f, false, 0);
-    theGoals.push_back(theGoal);
-    theCommand = 0xb8;
-issue:
-    if (theGoals.size() == 0 && !theClear)
-        return;
-    {
-        unsigned long theType = theBuilding->mUnitClass->mUnitType;
-        EESelectedGroup* theSelection = theBuilding->mPlayer->mActiveGroup;
-        if (theSelection != NULL) {
-            for (unsigned long i = 0; i < theSelection->GetNumUnits(); i++) {
-                EEComplexUnit* theUnit = theSelection->GetUnit(i);
-                if (theUnit->mUnitClass->mUnitType != theType && !theUnit->mUnitClass->SharesRallyPoint(theType))
-                    continue;
-                std::vector<EEUnitGoal*>::iterator theIterator;
-                if (theType == kUnitTypeAirport) {
-                    if (!this->mIsQueued)
-                        theUnit->ClearAllGoalQueues();
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        theUnit->QueueGoal((*theIterator)->Clone(), 3);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 2);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 4);
-                    }
-                } else if (theType == kUnitTypeNavyYard) {
-                    if (!this->mIsQueued)
-                        theUnit->ClearAllGoalQueues();
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 0);
-                        theUnit->QueueGoal((*theIterator)->Clone(), 2);
-                    }
-                } else if (theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                    if (!this->mIsQueued) {
-                        theUnit->ClearGoalQueue(0);
-                        theUnit->ClearGoalQueue(1);
-                    }
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
-                        EEUnitGoal* theRally = *theIterator;
-                        theUnit->QueueGoal(theRally->Clone(), 0);
-                        theUnit->QueueGoal(theRally->Clone(), 1);
-                    }
-                    if (theGoals.size() > 0) {
-                        if (theUnit->GetCommandType() == kActionIdle) theUnit->StartAction(kActionTakeoff); else theUnit->StartAction(kActionPrepareToMove);
-                        theUnit->mUnitClass->ActionChanged(theUnit);
-                    }
-                } else {
-                    // A unit with a single goal queue (a ship that can set a rally point, e.g. a carrier) has no
-                    // rally queue: queue 1 would be past the end of its queues
-                    if (theUnit->GetNumGoalQueues() < 2)
-                        continue;
-                    if (!this->mIsQueued || theClear)
-                        theUnit->ClearGoalQueue(1);
-                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++)
-                        theUnit->QueueGoal((*theIterator)->Clone(), 1);
-                }
-            }
-            if (theCommand != 0) {
-                EESendGroupCommand(theSelection, theCommandTarget, thePlayerID, theCommand, 1);
-                thePlayer->PlayAcknowledgement(theSelection->GetFirstUnit());
-            }
-        }
-    }
-    delete theGoal;
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs set_rally_goal: the goal the target gives,
+    // the building owner's selected units' rally queues by the building's type, the marker and the acknowledgement)
+    // over the store and EEUnitHost.cpp's calls
+    ee_units_set_rally_goal(gWorld.GetPlayerBySlot(this->GetOriginatingSlot()), (uint32_t)this->mBuildingID,
+                            this->mPoint.GetX(), this->mPoint.GetY(), this->mTargetID, this->mIsQueued);
 }
 
 // FUNCTION: EXE 0x4c74da
@@ -7338,57 +7055,9 @@ bool EEMStopActiveGroup::IsResponse(NEMessage* inMessage)
 // pattern or landing, hold at their tile; other units halt
 void EEMStopActiveGroup::Execute()
 {
-    EESelectedGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
-    if (theGroup->GetFirstUnit()) {
-        unsigned long theNumUnits = theGroup->GetNumUnits();
-        for (unsigned long i = 0; i < theNumUnits; i++) {
-            EEComplexUnit* theUnit = theGroup->GetUnit(i);
-            if (theUnit->mHitPoints > 0) {
-                if (theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
-                    theUnit->ClearBuildTargets();
-                    theUnit->ClearGoalQueue(0);
-                    theUnit->ClearGoals(0);
-                    unsigned long theCommand = theUnit->mCommand ? theUnit->mCommand->mType : 0;
-                    switch (theCommand) {
-                    case kActionTakeoff:
-                    case kActionTaxi:
-                    case kActionContinueToTaxi:
-                    case kActionClimb:
-                    case kActionContinueToClimb:
-                    case kActionContinueToFly:
-                    case kActionCircle:
-                    case kActionWaitForLandingClearance:
-                    case kActionHoldingPattern:
-                    case kActionLand:
-                    case kActionDescend:
-                    case kActionContinueToDescend:
-                    case kActionBrake:
-                    case kActionContinueToBrake:
-                    case kActionEmergencyTakeoff:
-                    case kActionSearchForSecondaryTarget:
-                    case kActionBoardTransport:
-                    case kActionRecalculateLanding:
-                    case kActionContinueToWaitForLandingClearance:
-                    case kActionRequestLanding:
-                    case kActionCircleAirtrafficController:
-                        break;
-                    case kActionFly:
-                        theUnit->SetGoal(new EEUGLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
-                                                          false, 0.0f, false, false), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        break;
-                    default:
-                        theUnit->SetGoal(new EEUGLocation((float)theUnit->GetTileX(), (float)theUnit->GetTileY(), 0.0f, false, true,
-                                                          false, 0.0f, false, false), 0, 0);
-                        theUnit->StartAction(kActionPrepareToMove);
-                        break;
-                    }
-                    theUnit->mUnitClass->ActionChanged(theUnit);
-                } else
-                    theUnit->Halt();
-            }
-        }
-    }
+    // New (game messages lane, round 1): the body is Rust (ee_units rally.rs stop_active_group: aircraft drop their
+    // orders and, unless airborne, move to their tile; the other living units halt)
+    ee_units_stop_active_group(static_cast<EEGroup*>(gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup));
 }
 
 // EEMToggleCollisionDetection's members as the codec's slots, in wire order (ee_netmsg classes.rs)

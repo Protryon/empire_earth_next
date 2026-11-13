@@ -763,6 +763,397 @@ void OriginalCastCalamity(EEPlayer* thePlayer, void* theSelection, int32_t inCas
         ee_units_host_pending_push(thePlayer, theGroup);
 }
 
+// a move to the point: new EEUGLocation(GE2DPoint(x, y), true, true, false, 0.0f, false, 0)
+void* LocationGoal(float inX, float inY)
+{
+    EeGoalSpec theSpec;
+    memset(&theSpec, 0, sizeof(theSpec));
+    theSpec.ctor = EE_GOAL_CTOR_LOCATION_2D;
+    theSpec.unit_a = kNone;
+    theSpec.unit_b = kNone;
+    theSpec.point[0] = inX;
+    theSpec.point[1] = inY;
+    return ee_units_host_goal_new(&theSpec);
+}
+
+// theUnit->QueueGoal(inGoal, inQueue) when there is a goal
+void QueueGoal(uint32_t inUnit, void* inGoal, long inQueue)
+{
+    if (inGoal != NULL)
+        ee_units_host_unit_queue_goal(inUnit, inGoal, inQueue);
+}
+
+// theUnit->mGoalQueues[inQueue].ResetTimer(), AddTime(60000)
+void QueueTimer(uint32_t inUnit, long inQueue)
+{
+    ee_units_host_unit_queue_timer(inUnit, inQueue, 60000);
+}
+
+// EEMSetAirportCommand::Execute (0x4c65d2) as it was, each world call through the host, the units read on the
+// objects (the goto to issue is the flag theFound)
+void OriginalSetAirportCommand(EEPlayer* thePlayer, void* theSelection, float inX, float inY, long inCommand,
+                               int32_t inTargetID, bool inQueued)
+{
+    uint32_t theFirstUnit = kNone;
+    void* theGoal = NULL;
+    if (theSelection != NULL)
+        theFirstUnit = Count(theSelection) > 0 ? UnitAt(theSelection, 0) : kNone;   // GetFirstUnit()
+    long theDamageIndex;
+    switch (inCommand) {
+    case 8:
+    case 0xe:
+        theDamageIndex = 0xc;
+        break;
+    default:
+        theDamageIndex = 0;
+        break;
+    }
+    bool theAttack = false;
+    bool theFound = true;
+    if (inTargetID != -1) {
+        EEUnit* theTarget = gWorld.GetUnit(inTargetID);
+        if (theTarget == NULL)
+            theFound = false;
+        else if (thePlayer != theTarget->mPlayer && theTarget->mPlayer->mEnemies[thePlayer->mPlayerID] != 0
+                 && ee_units_host_unit_seen_by(IDOf(theTarget), thePlayer)) {   // EEIsSeenBy(theTarget, thePlayer, true)
+            if (ee_units_host_unit_attackable(IDOf(theTarget), theDamageIndex) || inCommand == 0xf) {
+                EeGoalSpec theSpec;   // EEUGRust::NewAttackUnit(first ? first : theTarget->mComplexUnit, theTarget, true, false)
+                memset(&theSpec, 0, sizeof(theSpec));
+                theSpec.ctor = EE_GOAL_CTOR_ATTACK_UNIT;
+                theSpec.unit_a = theFirstUnit != kNone ? theFirstUnit : ee_units_host_unit_complex_id(IDOf(theTarget));
+                theSpec.unit_b = IDOf(theTarget);
+                theSpec.flag_a = 1;
+                theGoal = ee_units_host_goal_new(&theSpec);
+                theAttack = true;
+            }
+        }
+    }
+    if (theFound && !theAttack)
+        theGoal = LocationGoal(inX, inY);
+    if (theSelection != NULL) {
+        for (unsigned long i = 0; i < Count(theSelection); i++) {
+            uint32_t theUnit = UnitAt(theSelection, (long)i);
+            if (ObjectOf(theUnit)->mUnitClass->mUnitType != kUnitTypeAirport || theGoal == NULL)
+                continue;
+            void* theCopy = NULL;
+            if (ee_units_host_goal_kind(theGoal) == kGoalAttackUnit)   // EEAttackUnitCast(theGoal)
+                theCopy = ee_units_host_goal_clone(theGoal);
+            switch (inCommand) {
+            case 10:
+            case 12:
+                if (!inQueued)
+                    ee_units_host_unit_clear_goal_queue(theUnit, 3);
+                QueueGoal(theUnit, theCopy != NULL ? theCopy : ee_units_host_goal_clone(theGoal), 3);
+                if (inCommand == 12)
+                    QueueTimer(theUnit, 3);
+                break;
+            case 9:
+            case 13:
+                if (!inQueued)
+                    ee_units_host_unit_clear_goal_queue(theUnit, 2);
+                QueueGoal(theUnit, theCopy != NULL ? theCopy : ee_units_host_goal_clone(theGoal), 2);
+                if (inCommand == 13)
+                    QueueTimer(theUnit, 2);
+                break;
+            case 8:
+            case 14:
+                if (!inQueued)
+                    ee_units_host_unit_clear_goal_queue(theUnit, 1);
+                QueueGoal(theUnit, theCopy != NULL ? theCopy : ee_units_host_goal_clone(theGoal), 1);
+                if (inCommand == 14)
+                    QueueTimer(theUnit, 1);
+                break;
+            case 15:
+                if (!inQueued)
+                    ee_units_host_unit_clear_all_goal_queues(theUnit);
+                QueueGoal(theUnit, theCopy != NULL ? theCopy : ee_units_host_goal_clone(theGoal), 3);
+                theCopy = NULL;
+                QueueGoal(theUnit, ee_units_host_goal_clone(theGoal), 2);
+                QueueGoal(theUnit, ee_units_host_goal_clone(theGoal), 1);
+                QueueGoal(theUnit, ee_units_host_goal_clone(theGoal), 4);
+                QueueTimer(theUnit, 4);
+                QueueTimer(theUnit, 3);
+                QueueTimer(theUnit, 2);
+                QueueTimer(theUnit, 1);
+                break;
+            case 20:
+                if (!inQueued)
+                    ee_units_host_unit_clear_goal_queue(theUnit, 4);
+                QueueGoal(theUnit, LocationGoal(inX, inY), 4);
+                if (theCopy != NULL)
+                    ee_units_host_goal_release(theCopy);   // delete theCopy
+                break;
+            default:
+                if (theCopy != NULL)
+                    ee_units_host_goal_release(theCopy);
+                break;
+            }
+        }
+    }
+    if (theGoal != NULL)
+        ee_units_host_goal_release(theGoal);   // delete theGoal
+}
+
+// EEMSetRallyGoal::Execute (0x4c6dca) as it was, each world call through the host, the units read on the objects
+// (the gotos kept)
+void OriginalSetRallyGoal(EEPlayer* thePlayer, int32_t inBuildingID, float inX, float inY, int32_t inTargetID, bool inQueued)
+{
+    std::vector<void*> theGoals;
+    void* theGoal = NULL;
+    uint32_t theCommandTarget = kNone;
+    long theCommand = 0;
+    bool theClear = false;
+    EEUnit* theBuildingUnit = gWorld.GetUnit(inBuildingID);
+    EEComplexUnit* theBuilding;
+    EEUnit* theTarget;
+    EeGoalSpec theSpec;
+    memset(&theSpec, 0, sizeof(theSpec));
+    theSpec.unit_a = kNone;
+    theSpec.unit_b = kNone;
+    if (theBuildingUnit == NULL)
+        return;
+    theBuilding = static_cast<EEComplexUnit*>(ObjectOf(ee_units_host_unit_complex_id(IDOf(theBuildingUnit))));
+    if (inTargetID != -1) {
+        theTarget = gWorld.GetUnit(inTargetID);
+        if (theTarget == NULL)
+            goto issue;
+        if (theTarget->mResourceAmount > 0
+            && !((theTarget->mUnitClass->mCategory == kUnitCategoryLandCitizen || theTarget->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+                 && theTarget->mHitPoints > 0)
+            && (theTarget->mUnitClass->mFamily == kUnitFamilyFish || !ee_units_host_unit_has_tile_node(IDOf(theTarget))
+                || (static_cast<EEComplexUnit*>(ObjectOf(ee_units_host_unit_complex_id(IDOf(theTarget))))->mIsBuilt
+                    && theTarget->mPlayer == theBuilding->mPlayer))) {
+            theSpec.ctor = EE_GOAL_CTOR_GATHER;   // EEUGRust::NewGather(theTarget, NULL, true)
+            theSpec.unit_a = IDOf(theTarget);
+            theSpec.flag_a = 1;
+            theGoal = ee_units_host_goal_new(&theSpec);
+            theGoals.push_back(theGoal);
+            theCommand = 0xba;
+            theCommandTarget = IDOf(theTarget);
+            goto issue;
+        }
+        EEPlayer* theOwner = theBuilding->mPlayer;
+        if (theTarget->mPlayer != theOwner) {
+            if (theTarget->mPlayer->mEnemies[theOwner->mPlayerID] != 0) {
+                bool theVisible = ee_units_host_unit_seen_by(IDOf(theTarget), theOwner) != 0;   // EEIsSeenBy
+                if (!theVisible)
+                    theVisible = ee_units_host_unit_ghost_seen(IDOf(theTarget)) != 0;   // the tile's doppelgangers
+                if (theVisible && ee_units_host_unit_class_targetable(IDOf(theTarget))
+                    && ((theBuilding->mUnitClass->mCategory != kUnitCategoryAirplane && theBuilding->mUnitClass->mCategory != kUnitCategoryPlanetSpaceship)
+                        || ee_units_host_unit_can_attack_class(IDOf(theBuilding), IDOf(theTarget)))) {
+                    theSpec.ctor = EE_GOAL_CTOR_ATTACK_UNIT;   // EEUGRust::NewAttackUnit(theBuilding, theTarget, true, false)
+                    theSpec.unit_a = IDOf(theBuilding);
+                    theSpec.unit_b = IDOf(theTarget);
+                    theSpec.flag_a = 1;
+                    theGoal = ee_units_host_goal_new(&theSpec);
+                    theGoals.push_back(theGoal);
+                    theCommand = 0xb9;
+                    theCommandTarget = IDOf(theTarget);
+                    goto issue;
+                }
+                theGoal = LocationGoal(inX, inY);
+                theGoals.push_back(theGoal);
+                theCommand = 0xb8;
+                goto issue;
+            }
+        } else {
+            if (theTarget->mUnitClass->mUnitType == kUnitTypeFarm
+                || (theTarget->mUnitClass->IsLandBuilding() && theTarget->mHitPoints < ee_units_host_unit_max_hit_points(IDOf(theTarget)))) {
+                theSpec.ctor = EE_GOAL_CTOR_BUILD_REPAIR;   // EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, true)
+                theSpec.unit_a = IDOf(theTarget);
+                theSpec.flag_a = 1;
+                theGoal = ee_units_host_goal_new(&theSpec);
+            } else if (theTarget->mUnitClass->mUnitType == kUnitTypePathPoint) {
+                uint32_t theComplex = ee_units_host_unit_complex_id(IDOf(theTarget));
+                theSpec.ctor = EE_GOAL_CTOR_PATROL_ROUTE;   // EEUGRust::NewPatrol(complex->mPatrolGroup, complex, true)
+                theSpec.object = ee_units_host_unit_patrol_group(theComplex);
+                theSpec.unit_a = theComplex;
+                theSpec.flag_a = 1;
+                theGoal = ee_units_host_goal_new(&theSpec);
+            } else if (ee_units_host_unit_garrison_capacity(IDOf(theTarget)) > 0 && ee_units_host_unit_has_tile_node(IDOf(theTarget))
+                       && theTarget->mHitPoints > 0) {
+                uint32_t theGarrison = ee_units_host_unit_complex_id(IDOf(theTarget));
+                EEComplexUnit* theGarrisonObject = static_cast<EEComplexUnit*>(ObjectOf(theGarrison));
+                if (theGarrisonObject->mGoalState != NULL && theGarrisonObject->mGoalState->mKind == kGoalLoadGarrison) {
+                    theGoal = ee_units_host_unit_goal_clone(theGarrison);
+                } else {
+                    theGoal = ee_units_host_garrison_rally_load(theGarrison);
+                    if (theGoal != NULL) {
+                        theGoals.push_back(theGoal);
+                        theCommand = 0xba;
+                        theCommandTarget = IDOf(theTarget);
+                    }
+                    goto issue;
+                }
+            } else if (theTarget == static_cast<EEUnit*>(theBuilding)) {
+                theGoals.clear();
+                theClear = true;
+                theCommand = 0xba;
+                theCommandTarget = IDOf(theTarget);
+                goto issue;
+            } else
+                goto location;
+            theGoals.push_back(theGoal);
+            theCommand = 0xba;
+            theCommandTarget = IDOf(theTarget);
+            goto issue;
+        }
+    }
+location:
+    theGoal = LocationGoal(inX, inY);
+    theGoals.push_back(theGoal);
+    theCommand = 0xb8;
+issue:
+    if (theGoals.size() == 0 && !theClear)
+        return;
+    {
+        unsigned long theType = theBuilding->mUnitClass->mUnitType;
+        void* theSelection = ee_units_host_player_selection(theBuilding->mPlayer);   // theBuilding->mPlayer->mActiveGroup
+        if (theSelection != NULL) {
+            for (unsigned long i = 0; i < Count(theSelection); i++) {
+                uint32_t theUnit = UnitAt(theSelection, (long)i);
+                EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theUnit));
+                if (theObject->mUnitClass->mUnitType != theType && !ee_units_host_unit_shares_rally_point(theUnit, (int64_t)theType))
+                    continue;
+                std::vector<void*>::iterator theIterator;
+                if (theType == kUnitTypeAirport) {
+                    if (!inQueued)
+                        ee_units_host_unit_clear_all_goal_queues(theUnit);
+                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 3);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 2);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 1);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 4);
+                    }
+                } else if (theType == kUnitTypeNavyYard) {
+                    if (!inQueued)
+                        ee_units_host_unit_clear_all_goal_queues(theUnit);
+                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 1);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 0);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 2);
+                    }
+                } else if (theObject->mUnitClass->mCategory == kUnitCategoryAirplane || theObject->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
+                    if (!inQueued) {
+                        ee_units_host_unit_clear_goal_queue(theUnit, 0);
+                        ee_units_host_unit_clear_goal_queue(theUnit, 1);
+                    }
+                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++) {
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 0);
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 1);
+                    }
+                    if (theGoals.size() > 0)
+                        ee_units_host_unit_start_action(theUnit, theObject->GetCommandType() == kActionIdle ? kActionTakeoff : kActionPrepareToMove);
+                } else {
+                    if (ee_units_host_unit_num_goal_queues(theUnit) < 2)
+                        continue;
+                    if (!inQueued || theClear)
+                        ee_units_host_unit_clear_goal_queue(theUnit, 1);
+                    for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++)
+                        QueueGoal(theUnit, *theIterator != NULL ? ee_units_host_goal_clone(*theIterator) : NULL, 1);
+                }
+            }
+            if (theCommand != 0) {
+                ee_units_host_send_group_command(theSelection, theCommandTarget, thePlayer, (int32_t)theCommand, 1);
+                ee_units_host_acknowledge_unit(thePlayer, Count(theSelection) > 0 ? UnitAt(theSelection, 0) : kNone);
+            }
+        }
+    }
+    if (theGoal != NULL)
+        ee_units_host_goal_release(theGoal);   // delete theGoal
+}
+
+// EEMClearAirportCommands::Execute as it was, each world call through the host, the units read on the objects
+void OriginalClearAirportCommands(void* theGroup)
+{
+    if (theGroup != NULL) {
+        for (unsigned long i = 0; i < Count(theGroup); i++) {
+            uint32_t theUnit = UnitAt(theGroup, (long)i);
+            EEUnitClass* theClass = static_cast<EEComplexUnit*>(ObjectOf(theUnit))->GetUnitClass();
+            long theCategory = theClass->mCategory;
+            if (theClass->mUnitType == kUnitTypeAirport) {
+                for (long q = 0; q < 5; q++)
+                    ee_units_host_unit_queue_clear(theUnit, q);   // theUnit->mGoalQueues[q].Clear()
+                ee_units_host_unit_start_action(theUnit, kActionAirportOpen);   // StartAction, ActionChanged
+                ee_units_host_unit_clear_air_traffic(theUnit);
+            } else if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && theClass->mAirTrafficType != 0) {
+                ee_units_host_unit_queue_clear(theUnit, 0);
+                ee_units_host_unit_queue_clear(theUnit, 1);
+                ee_units_host_unit_start_action(theUnit, kActionAirportOpen);
+                ee_units_host_unit_clear_air_traffic(theUnit);
+            } else if (theClass->mUnitType == kUnitTypeNavyYard) {
+                ee_units_host_unit_queue_clear(theUnit, 0);
+                ee_units_host_unit_queue_clear(theUnit, 2);
+                ee_units_host_unit_start_action(theUnit, kActionAirportOpen);
+                ee_units_host_unit_clear_air_traffic(theUnit);
+            } else if (theClass->mCategory == kUnitCategoryAirplane || theClass->mCategory == kUnitCategoryPlanetSpaceship) {
+                ee_units_host_unit_queue_clear(theUnit, 1);
+            }
+            ee_units_host_unit_refresh_goals(theUnit);   // RefreshGoals, RefreshActiveGoal
+        }
+    }
+}
+
+// EEMStopActiveGroup::Execute as it was, each world call through the host, the units read on the objects
+void OriginalStopActiveGroup(void* theGroup)
+{
+    if (Count(theGroup) > 0 && UnitAt(theGroup, 0) != kNone) {   // theGroup->GetFirstUnit()
+        unsigned long theNumUnits = Count(theGroup);
+        for (unsigned long i = 0; i < theNumUnits; i++) {
+            uint32_t theUnit = UnitAt(theGroup, (long)i);
+            EEComplexUnit* theObject = static_cast<EEComplexUnit*>(ObjectOf(theUnit));
+            if (theObject->mHitPoints > 0) {
+                if (theObject->mUnitClass->mCategory == kUnitCategoryAirplane || theObject->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship) {
+                    ee_units_host_unit_clear_build_targets(theUnit);
+                    ee_units_host_unit_clear_goal_queue(theUnit, 0);
+                    ee_units_host_unit_clear_goals(theUnit);
+                    unsigned long theCommand = theObject->mCommand ? theObject->mCommand->mType : 0;
+                    switch (theCommand) {
+                    case kActionTakeoff:
+                    case kActionTaxi:
+                    case kActionContinueToTaxi:
+                    case kActionClimb:
+                    case kActionContinueToClimb:
+                    case kActionContinueToFly:
+                    case kActionCircle:
+                    case kActionWaitForLandingClearance:
+                    case kActionHoldingPattern:
+                    case kActionLand:
+                    case kActionDescend:
+                    case kActionContinueToDescend:
+                    case kActionBrake:
+                    case kActionContinueToBrake:
+                    case kActionEmergencyTakeoff:
+                    case kActionSearchForSecondaryTarget:
+                    case kActionBoardTransport:
+                    case kActionRecalculateLanding:
+                    case kActionContinueToWaitForLandingClearance:
+                    case kActionRequestLanding:
+                    case kActionCircleAirtrafficController:
+                        ee_units_host_unit_action_changed(theUnit);
+                        break;
+                    default: {   // kActionFly too: SetGoal(new EEUGLocation(tile x, tile y, ...)), StartAction(PrepareToMove)
+                        EeGoalSpec theSpec;
+                        memset(&theSpec, 0, sizeof(theSpec));
+                        theSpec.ctor = EE_GOAL_CTOR_LOCATION_XY;
+                        theSpec.unit_a = kNone;
+                        theSpec.unit_b = kNone;
+                        theSpec.point[0] = (float)theObject->GetTileX();
+                        theSpec.point[1] = (float)theObject->GetTileY();
+                        void* theGoal = ee_units_host_goal_new(&theSpec);
+                        if (theGoal != NULL)
+                            ee_units_host_unit_set_goal(theUnit, theGoal);
+                        ee_units_host_unit_start_action(theUnit, kActionPrepareToMove);   // and ActionChanged
+                        break;
+                    }
+                    }
+                } else
+                    ee_units_host_unit_halt(theUnit);
+            }
+        }
+    }
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -777,7 +1168,11 @@ enum SweepBody {
     kSweepUnloadTransport = 11,
     kSweepBuildUnit = 12,
     kSweepSmartFarmers = 13,
-    kSweepCastCalamity = 14
+    kSweepCastCalamity = 14,
+    kSweepSetAirportCommand = 15,
+    kSweepSetRallyGoal = 16,
+    kSweepClearAirportCommands = 17,
+    kSweepStopActiveGroup = 18
 };
 
 struct SweepCase {
@@ -791,7 +1186,8 @@ struct SweepCase {
     unsigned long mFlags;       // Path To's: 1 forced, 2 rotating, 4 queued, 8 group movement
     float mEndX, mEndY;         // Build Wall's end (mX, mY its start; mTarget its technology)
     int32_t mTechnology;        // Build Unit's and Cast Calamity's (mX, mY their tile; mTarget Cast Calamity's target)
-    int32_t mCaster;            // Cast Calamity's caster id
+    int32_t mCaster;            // Cast Calamity's caster id; Set Rally Goal's building id
+    int32_t mCommand;           // Set Airport Command's command
 };
 
 void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, bool inRust)
@@ -887,6 +1283,34 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalRepair(inPlayer, inSelection, inCase.mTarget, inCase.mQueued);
         break;
+    case kSweepSetAirportCommand:
+        if (inRust)
+            ee_units_set_airport_command(inPlayer, inSelection, inCase.mX, inCase.mY, inCase.mCommand, inCase.mTarget,
+                                         inCase.mQueued ? 1 : 0);
+        else
+            OriginalSetAirportCommand(inPlayer, inSelection, inCase.mX, inCase.mY, inCase.mCommand, inCase.mTarget,
+                                      inCase.mQueued);
+        break;
+    case kSweepSetRallyGoal:
+        // the building owner's selection is the sweep's (the dry host's player_selection)
+        if (inRust)
+            ee_units_set_rally_goal(inPlayer, (uint32_t)inCase.mCaster, inCase.mX, inCase.mY, inCase.mTarget,
+                                    inCase.mQueued ? 1 : 0);
+        else
+            OriginalSetRallyGoal(inPlayer, inCase.mCaster, inCase.mX, inCase.mY, inCase.mTarget, inCase.mQueued);
+        break;
+    case kSweepClearAirportCommands:
+        if (inRust)
+            ee_units_clear_airport_commands(inSelection);
+        else
+            OriginalClearAirportCommands(inSelection);
+        break;
+    case kSweepStopActiveGroup:
+        if (inRust)
+            ee_units_stop_active_group(inSelection);
+        else
+            OriginalStopActiveGroup(inSelection);
+        break;
     }
 }
 
@@ -923,6 +1347,12 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     if (inCase.mBody == kSweepCastCalamity) {
         theRecord.I32(inCase.mTechnology);
         theRecord.I32(inCase.mCaster);
+    }
+    if (inCase.mBody == kSweepSetAirportCommand)
+        theRecord.U32((unsigned int)inCase.mCommand | (inCase.mQueued ? 0x80000000u : 0u));
+    if (inCase.mBody == kSweepSetRallyGoal) {
+        theRecord.I32(inCase.mCaster);
+        theRecord.U32(inCase.mQueued ? 1u : 0u);
     }
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
@@ -1070,6 +1500,7 @@ void EEGroupCommandSweep()
             theCase.mEndY = 0.0f;
             theCase.mTechnology = 0;
             theCase.mCaster = 0;
+            theCase.mCommand = 0;
             // Attack Ground at the first unit's tile (else, or off the map: a unit inside another, the map's centre)
             // and at the map's centre (a point off the map's diamond has no terrain row: the UI never sends one)
             theCase.mBody = kSweepAttackGround;
@@ -1252,6 +1683,92 @@ void EEGroupCommandSweep()
                     }
             theCase.mCaster = 0;
             theCase.mTechnology = 0;
+            // Set Airport Command (game messages lane, round 1): the commands of each queue kind (8, 10, 13, 15, 20)
+            // and one with no queue (11), at the first unit's tile, toward no unit, the next player's first unit,
+            // its own first unit and an id no unit has, plain and queued
+            theCase.mBody = kSweepSetAirportCommand;
+            theCase.mX = theFirstX;
+            theCase.mY = theFirstY;
+            int32_t theAirportCommands[6] = {8, 10, 13, 15, 20, 11};
+            std::vector<int32_t> theOrderTargets;
+            theOrderTargets.push_back(-1);
+            if (theTargets.size() > 2)
+                theOrderTargets.push_back(theTargets[2]);
+            if (!theOwn.empty())
+                theOrderTargets.push_back((int32_t)IDOf(theOwn[0]));
+            theOrderTargets.push_back(0x7e000001);
+            for (int c = 0; c < 6; c++)
+                for (size_t t = 0; t < theOrderTargets.size(); t++)
+                    for (int q = 0; q < 2; q++) {
+                        theCase.mCommand = theAirportCommands[c];
+                        theCase.mTarget = theOrderTargets[t];
+                        theCase.mQueued = q != 0;
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+            theCase.mCommand = 0;
+            theCase.mQueued = false;
+            // Set Rally Goal: from its first unit, first airport, navy yard and building (a land building), toward no
+            // unit, the world's resource, the building itself, the next player's first unit, its path point, its
+            // first garrison, farm and damaged building, and an id no unit has; plain and queued
+            theCase.mBody = kSweepSetRallyGoal;
+            std::vector<int32_t> theBuildings;
+            if (!theOwn.empty())
+                theBuildings.push_back((int32_t)IDOf(theOwn[0]));
+            int32_t theFound[6] = {-1, -1, -1, -1, -1, -1};   // airport, navy yard, building, garrison, farm, damaged
+            for (size_t k = 0; k < theOwn.size(); k++) {
+                EEComplexUnit* theUnit = theOwn[k];
+                EEUnitClass* theClass = theUnit->mUnitClass.Get();
+                if (theClass == NULL)
+                    continue;
+                int32_t theID = (int32_t)IDOf(theUnit);
+                if (theFound[0] == -1 && theClass->mUnitType == kUnitTypeAirport)
+                    theFound[0] = theID;
+                if (theFound[1] == -1 && theClass->mUnitType == kUnitTypeNavyYard)
+                    theFound[1] = theID;
+                if (theFound[2] == -1 && theClass->IsLandBuilding())
+                    theFound[2] = theID;
+                if (theFound[3] == -1 && theClass->mGarrisonCapacity > 0)
+                    theFound[3] = theID;
+                if (theFound[4] == -1 && theClass->mUnitType == kUnitTypeFarm)
+                    theFound[4] = theID;
+                if (theFound[5] == -1 && theClass->IsLandBuilding() && theUnit->mHitPoints < theUnit->mStats->mMaxHitPoints)
+                    theFound[5] = theID;
+            }
+            for (int k = 0; k < 3; k++)
+                if (theFound[k] != -1)
+                    theBuildings.push_back(theFound[k]);
+            std::vector<int32_t> theRallyTargets;
+            theRallyTargets.push_back(-1);
+            if (theResource != NULL)
+                theRallyTargets.push_back((int32_t)IDOf(theResource));
+            if (theTargets.size() > 2)
+                theRallyTargets.push_back(theTargets[2]);
+            if (thePathPoint != NULL)
+                theRallyTargets.push_back((int32_t)IDOf(thePathPoint));
+            for (int k = 3; k < 6; k++)
+                if (theFound[k] != -1)
+                    theRallyTargets.push_back(theFound[k]);
+            theRallyTargets.push_back(0x7e000001);
+            for (size_t b = 0; b < theBuildings.size(); b++) {
+                theCase.mCaster = theBuildings[b];
+                for (size_t t = 0; t <= theRallyTargets.size(); t++)
+                    for (int q = 0; q < 2; q++) {
+                        // the extra target: the building itself (the rally point cleared)
+                        theCase.mTarget = t < theRallyTargets.size() ? theRallyTargets[t] : theBuildings[b];
+                        theCase.mQueued = q != 0;
+                        RunCase(theCase, p, thePlayer, theUnits);
+                    }
+            }
+            theCase.mCaster = 0;
+            theCase.mQueued = false;
+            // Clear Airport Commands and Stop Active Group over the selection
+            theCase.mTarget = 0;
+            theCase.mX = 0.0f;
+            theCase.mY = 0.0f;
+            theCase.mBody = kSweepClearAirportCommands;
+            RunCase(theCase, p, thePlayer, theUnits);
+            theCase.mBody = kSweepStopActiveGroup;
+            RunCase(theCase, p, thePlayer, theUnits);
         }
     }
 }

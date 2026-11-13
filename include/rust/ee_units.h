@@ -483,6 +483,9 @@ constexpr static const uint32_t EE_GOAL_CTOR_LOCATION_2D = 11;
 /// or none, the tile x and y, the technology)
 constexpr static const uint32_t EE_GOAL_CTOR_CAST_CALAMITY = 12;
 
+/// `EEUGRust::NewBuildRepair(unit_a->mPlayer, unit_a, flag_a)` (EEMSetRallyGoal's repair or farm work)
+constexpr static const uint32_t EE_GOAL_CTOR_BUILD_REPAIR = 13;
+
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
 
@@ -2364,6 +2367,31 @@ void ee_units_smart_farmers(void *player,
                             void *selection,
                             uint32_t target);
 
+/// `EEMSetAirportCommand::Execute`'s body (`rally::set_airport_command`) for the sender, its selection (null: none),
+/// the point, the command, the target id (-1: none) and the queued flag.
+void ee_units_set_airport_command(void *player,
+                                  void *selection,
+                                  float x,
+                                  float y,
+                                  int32_t command,
+                                  int32_t target,
+                                  uint8_t queued);
+
+/// `EEMSetRallyGoal::Execute`'s body (`rally::set_rally_goal`) for the sender, the building's id, the point, the
+/// target id (-1: none) and the queued flag.
+void ee_units_set_rally_goal(void *player,
+                             uint32_t building,
+                             float x,
+                             float y,
+                             int32_t target,
+                             uint8_t queued);
+
+/// `EEMClearAirportCommands::Execute`'s body (`rally::clear_airport_commands`) for the sender's selection (null: none).
+void ee_units_clear_airport_commands(void *selection);
+
+/// `EEMStopActiveGroup::Execute`'s body (`rally::stop_active_group`) for the sender's selection (null: none).
+void ee_units_stop_active_group(void *selection);
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 void ee_units_cast_calamity(void *player,
@@ -2622,6 +2650,56 @@ extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
 extern int64_t ee_units_host_object_hit_points(uint32_t unit);
+
+extern void *ee_units_host_player_selection(void *player);
+
+extern uint8_t ee_units_host_unit_seen_by(uint32_t unit, void *player);
+
+extern uint8_t ee_units_host_unit_ghost_seen(uint32_t unit);
+
+extern uint8_t ee_units_host_unit_attackable(uint32_t unit, int64_t damage_index);
+
+extern uint8_t ee_units_host_unit_class_targetable(uint32_t unit);
+
+extern uint8_t ee_units_host_unit_can_attack_class(uint32_t unit, uint32_t target);
+
+extern int64_t ee_units_host_unit_max_hit_points(uint32_t unit);
+
+extern int64_t ee_units_host_unit_garrison_capacity(uint32_t unit);
+
+extern uint8_t ee_units_host_unit_has_tile_node(uint32_t unit);
+
+extern uint8_t ee_units_host_unit_shares_rally_point(uint32_t unit, int64_t unit_type);
+
+extern int64_t ee_units_host_unit_num_goal_queues(uint32_t unit);
+
+extern void ee_units_host_unit_clear_goal_queue(uint32_t unit, int64_t queue);
+
+extern void ee_units_host_unit_clear_all_goal_queues(uint32_t unit);
+
+extern void ee_units_host_unit_queue_goal(uint32_t unit, void *goal, int64_t queue);
+
+extern void ee_units_host_unit_queue_timer(uint32_t unit, int64_t queue, int64_t ms);
+
+extern void *ee_units_host_unit_goal_clone(uint32_t unit);
+
+extern void *ee_units_host_garrison_rally_load(uint32_t garrison);
+
+extern uint8_t ee_units_host_object_record(uint32_t unit, EeUnitRecord *out);
+
+extern int64_t ee_units_host_unit_air_traffic_type(uint32_t unit);
+
+extern void ee_units_host_unit_queue_clear(uint32_t unit, int64_t queue);
+
+extern void ee_units_host_unit_clear_air_traffic(uint32_t unit);
+
+extern void ee_units_host_unit_refresh_goals(uint32_t unit);
+
+extern void ee_units_host_unit_clear_build_targets(uint32_t unit);
+
+extern void ee_units_host_unit_action_changed(uint32_t unit);
+
+extern void ee_units_host_unit_halt(uint32_t unit);
 
 /// `CanUpgrade`
 ///
