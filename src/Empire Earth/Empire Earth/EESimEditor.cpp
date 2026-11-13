@@ -26,7 +26,7 @@
 //   select|toggle|add UNIT, clear         EESEAMouseClick with the select, toggle, always-add, unselect-all message
 //   rotate YAW                            EESEARotateUnits (the selection)
 //   delete UNIT | delete PLAYER group|first   EESEADeleteUnit
-//   pickup UNIT, putdown X Y YAW          EESEAMoveUnit: PickUp, then the drop (PutDown's entries, no transport)
+//   pickup UNIT, putdown X Y YAW          EESEAMoveUnit: PickUp, then PutDown over its ghosts put on the tile, turned
 //   wall PLAYER TECHNOLOGY X0 Y0 X1 Y1    EESEAPlaceWall::Place
 //   gate PLAYER TECHNOLOGY X Y DIRECTION  EESEAPlaceGate::Place (no ghosts: placed)
 //   quicksave NAME, savefile NAME         EESEAQuickSaveScenario over EESEAQuickSaveLoad; the written file's chunks
@@ -677,22 +677,24 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                     sMove = new EESEAMoveUnit;
                 sMove->PickUp(UnitRef(w[1]));
             };
-        else if (c == "putdown")   // putdown X Y YAW: the picked-up unit's parts put down there (PutDown's entries)
+        else if (c == "putdown")   // putdown X Y YAW: the picked-up unit's ghosts on the tile, turned, then PutDown
             theCode = [=] {
-                if (sMove == NULL || sMove->mEntries.empty())
+                if (sMove == NULL)
                     return;
-                for (EESEAMoveUnitEntry& e : sMove->mEntries) {
-                    e.mContainer = NULL;
-                    e.mTransformation = GETransformation();
-                    e.mTransformation.SetOrientationYPR(F(3), 0.0f, 0.0f);
+                gWorld.mGhostUnitsLock->Enter();
+                for (unsigned long k = 0; k < gWorld.GetNumGhostUnits(); k++) {
+                    EEGhostUnit* theGhost = gWorld.mGhostUnits[k];
+                    theGhost->mTransformation = GETransformation();
+                    theGhost->mTransformation.SetOrientationYPR(F(3), 0.0f, 0.0f);
                     EEMapTile* theTile = gWorld.mMap->RTSMap::GetTile(L(1), L(2));
-                    e.mTransformation.SetPosition(L(1) + 0.5f, L(2) + 0.5f, theTile != NULL ? theTile->mHeight : 0.0f);
-                    e.mTileX = L(1);
-                    e.mTileY = L(2);
-                    e.mYaw = F(3);
+                    theGhost->mTransformation.SetPosition(L(1) + 0.5f, L(2) + 0.5f, theTile != NULL ? theTile->mHeight : 0.0f);
+                    theGhost->mTileX = L(1);
+                    theGhost->mTileY = L(2);
+                    theGhost->mCanPlace = true;
                 }
-                sMove->mIsMoving = false;
-                gUserInterface->PostAction(sMove);
+                gWorld.mGhostUnitsLock->Leave();
+                gUIManager->mScenarioEditorForm->GetUnitScreen()->mUnitUnderMouse = -1;
+                sMove->PutDown();
             };
         else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
             theCode = [=] {
