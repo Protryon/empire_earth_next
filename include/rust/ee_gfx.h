@@ -554,6 +554,32 @@ struct EeGfxEffectStorm {
   float rumble_delay;
 };
 
+/// `EEE3DIcon`'s state.
+struct EeGfxEffectIcon {
+  /// `mLocation`: where a fixed icon stands (saved when it does not follow its unit)
+  EeGe3DPoint location;
+  /// `mOpacity`: the draw's (Queue)
+  float opacity;
+  /// `mTime`: ms into the current frame
+  float time;
+  /// `mScale`
+  float scale;
+  /// `mAge`: ms (saved)
+  float age;
+  /// `mFraction`: the draw's fractional frame position (Queue)
+  float fraction;
+  /// `mFrame`, `mFrameCount`, `mFrameTime`: animation 13 of the graphic
+  uint32_t frame;
+  uint32_t frame_count;
+  uint32_t frame_time;
+  /// `mScroll`: the texture's u offset
+  float scroll;
+  /// `mFollowUnit` (saved)
+  bool follow_unit;
+  /// `mGrowing`: the scale grows towards the size
+  bool growing;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -593,6 +619,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectAged aged;
   /// the weather storms' (`effect_storm.rs`)
   EeGfxEffectStorm storm;
+  /// the 3D icons' (`effect_icon.rs`)
+  EeGfxEffectIcon icon;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -822,6 +850,19 @@ struct EeGfxStormDraw {
   EeGe3DPoint position;
   float angle;
   bool water;
+};
+
+/// What the icon's tick reads: the tick, the physics' speed and the graphic effect's duration, size, start size,
+/// `mParam7` (the scale's rate), `mIntParam2` (it scrolls when positive) and `mParam11` (the scroll's rate).
+struct EeGfxIconTick {
+  float tick_time;
+  float speed;
+  uint32_t duration;
+  float size;
+  float start_size;
+  float rate;
+  int32_t int_param2;
+  float param11;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1847,6 +1888,36 @@ int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DIcon::Clear`'s part of the record.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_icon_clear(EeGfxEffectRecord *r);
+
+/// `EEE3DIcon::Step`'s part: 7 once a set duration is up.
+///
+/// # Safety
+/// `r` is a live record; `tick` is valid.
+int32_t ee_gfx_icon_step(EeGfxEffectRecord *r, const EeGfxIconTick *tick);
+
+/// `EEE3DIcon::Queue`'s opacity and fractional frame.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_icon_queue(EeGfxEffectRecord *r, float param8, float param9, float param10);
+
+/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_icon_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DIcon::Save`'s own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_icon_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///

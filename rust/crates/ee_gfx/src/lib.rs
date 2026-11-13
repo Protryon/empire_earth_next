@@ -24,6 +24,7 @@
 
 pub mod beam;
 pub mod camera;
+pub mod effect_icon;
 pub mod effect_state;
 pub mod effect_store;
 pub mod effect_storm;

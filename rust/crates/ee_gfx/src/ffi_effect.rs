@@ -7,6 +7,7 @@ use std::ffi::c_void;
 
 use ee_ge::types::Ge3DPoint;
 
+use crate::effect_icon::{self, EeGfxIconTick};
 use crate::effect_state::{
     self, DamagedHost, EeGfxAmbientNew, EeGfxDamagedTick, EeGfxEffectLists, EeGfxEffectLoaded, EeGfxEffectPart,
     EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
@@ -1193,6 +1194,61 @@ pub unsafe extern "C" fn ee_gfx_storm_load(r: *mut EeGfxEffectRecord, file: *con
 pub unsafe extern "C" fn ee_gfx_storm_save(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
     // SAFETY: the function's contract
     unsafe { on_storm(r, |r, l| effect_storm::save_storm(r, l, &mut File(&*file))) }
+}
+
+// ---- the 3D icons (effect_icon.rs)
+
+/// `EEE3DIcon::Clear`'s part of the record.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_icon_clear(r: *mut EeGfxEffectRecord) {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, effect_icon::icon_clear) }
+}
+
+/// `EEE3DIcon::Step`'s part: 7 once a set duration is up.
+///
+/// # Safety
+/// `r` is a live record; `tick` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_icon_step(r: *mut EeGfxEffectRecord, tick: *const EeGfxIconTick) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let t = *tick;
+        on_copy(r, |r| effect_icon::icon_step(r, &t))
+    }
+}
+
+/// `EEE3DIcon::Queue`'s opacity and fractional frame.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_icon_queue(r: *mut EeGfxEffectRecord, param8: f32, param9: f32, param10: f32) {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_icon::icon_queue(r, param8, param9, param10)) }
+}
+
+/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_icon_load(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_icon::load_icon(r, &mut File(&*file))) }
+}
+
+/// `EEE3DIcon::Save`'s own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_icon_save(r: *const EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { effect_icon::save_icon(&*r, &mut File(&*file)) }
 }
 
 #[cfg(test)]

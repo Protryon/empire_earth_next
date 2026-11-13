@@ -18,6 +18,7 @@ use ee_ge::types::{Ge3DPoint, GeTransformation};
 use ee_ge::um;
 use ee_random::URandom;
 
+use crate::effect_icon::EeGfxEffectIcon;
 use crate::effect_storm::EeGfxEffectStorm;
 
 /// `kErrorOK`.
@@ -203,6 +204,8 @@ pub struct EeGfxEffectRecord {
     pub aged: EeGfxEffectAged,
     /// the weather storms' (`effect_storm.rs`)
     pub storm: EeGfxEffectStorm,
+    /// the 3D icons' (`effect_icon.rs`)
+    pub icon: EeGfxEffectIcon,
 }
 
 /// The identity (`GETransformation()`).
@@ -237,6 +240,7 @@ impl EeGfxEffectRecord {
             emitter: EeGfxEffectEmitter::default(),
             aged: EeGfxEffectAged::default(),
             storm: EeGfxEffectStorm::default(),
+            icon: EeGfxEffectIcon::default(),
         }
     }
 
