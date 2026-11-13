@@ -793,6 +793,7 @@ constexpr static const int32_t EE_UNITS_GOAL_STEP = 11;
 
 constexpr static const int32_t EE_UNITS_GOAL_LOAD = 12;
 
+/// `a`, `b`: the save's major and minor version
 constexpr static const int32_t EE_UNITS_GOAL_SAVE = 13;
 
 constexpr static const int32_t EE_UNITS_GOAL_REPAIR = 14;
