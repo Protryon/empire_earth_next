@@ -190,6 +190,7 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUCMissile.h"         // the missile sweep's impact tests
+void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -200,6 +201,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
+#include "rust/ee_combat.h"
 
 // TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
 // games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
@@ -465,6 +467,7 @@ struct Options {
     long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
+    bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -675,6 +678,15 @@ void FinishGame(const char* inOutcome)
     static bool sSwept = false;
     if (EESimCaptureRecord::Active() && !sSwept) {
         sSwept = true;
+        if (sOptions.mEffectSweep) {
+            // the 3D effects' sweep alone (the game's own records held since its start: EESimMain)
+            EESimCaptureRecord::Hold(false);
+            EEEffectCaptureSweep();
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+            Finish(inOutcome);
+            return;
+        }
         EECombatListSearchSweep();
         if (sOptions.mMissileSweep) {
             EECombatMissileSweep();
@@ -881,16 +893,15 @@ void DumpState(const std::string& inPath)
         }
     }
     // the units of each map region in order (RTSRegionTable: FindImpactUnit and the target searches walk them)
-    if (gWorld.mMap != NULL && gWorld.mMap->mUnitRegions != NULL) {
-        RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
-        for (unsigned long r = 0; r < theTable->mRegionsX * theTable->mRegionsY; r++) {
-            if (theTable->mRegions[r].size() < 2)
-                continue;
-            fprintf(f, "REGION %lu:", r);
-            for (size_t k = 0; k < theTable->mRegions[r].size(); k++)
-                fprintf(f, " %lu", theTable->mRegions[r][k] != NULL ? (unsigned long)theTable->mRegions[r][k]->mUnitID : 0UL);
-            fprintf(f, "\n");
-        }
+    // (ee_combat regions.rs's saved order: the count, then each region's index, size and ids, -1 for none)
+    std::vector<uint32_t> theOrder(gWorld.mMap != NULL ? ee_combat_regions_order(gWorld.mMap->mUnitRegions, NULL, 0) : 0);
+    if (!theOrder.empty())
+        ee_combat_regions_order(gWorld.mMap->mUnitRegions, theOrder.data(), theOrder.size());
+    for (size_t k = 1; k < theOrder.size(); k += 2 + theOrder[k + 1]) {
+        fprintf(f, "REGION %lu:", (unsigned long)theOrder[k]);
+        for (uint32_t n = 0; n < theOrder[k + 1]; n++)
+            fprintf(f, " %lu", theOrder[k + 2 + n] != 0xffffffffu ? (unsigned long)theOrder[k + 2 + n] : 0UL);
+        fprintf(f, "\n");
     }
     fclose(f);
 }
@@ -1876,6 +1887,8 @@ const char* kUsage =
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
+    "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
+    "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
     "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
     "                         Editor) and this script of its actions and digests (EESimEditor.cpp names the commands)\n"
     "  --editor-out FILE      the script's steps and digests (default stdout)\n"
@@ -2071,7 +2084,10 @@ int EESimMain(int argc, char** argv)
             sOptions.mCalamities = true;
         else if (a == "--missile-sweep")
             sOptions.mMissileSweep = true;
-        else if (a == "--port-offset")
+        else if (a == "--effect-sweep") {
+            sOptions.mEffectSweep = true;
+            EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
+        } else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")
             sOptions.mAutoSaveMs = atol(value().c_str());

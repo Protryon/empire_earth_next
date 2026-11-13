@@ -1,0 +1,2323 @@
+seq 1 1 1
+acq 0
+isacq 0 = 1
+btn 0 5 1
+ev 10 157 0 0 0 0
+ev 16 0 2 -2 7 c287f542
+data 1 18 1 = -1 0
+data 0 8 1 = 0 0
+ev 10 255 0 0 0 0
+mouse 1 = -1
+keys 1 = -1
+ev 11 0 7 0 3 bc4ccccd
+ev 13 0 5 -6 5 bf000000
+ev 14 0 0 -2 3 3eaaa64c
+data 0 16 0 = 0 0
+burst 1 335
+unacq 1
+ev 5 0 0 3 7 3fa00000
+acq 1
+ev 4 0 -7 3 6 3fc00000
+ev 14 0 2 0 4 4479e000
+ev 14 0 7 0 1 3eaaa64c
+data 0 12 0 = 0 0
+key 1 200 0
+btn 1 0 1
+data 1 13 1 = 0 2
+data 1 8 1 = 0 0
+keys 0 = 0
+acq 1
+ev 13 0 0 6 6 14c417b5
+ev 13 0 6 2 1 3fa00000
+ev 4 0 -7 -7 7 3fa00000
+ev 14 0 0 0 5 40200000
+seq 2 1 1
+ev 9 196 0 0 0 0
+btn 0 4 0
+data 1 2 0 = -1 0
+acq 0
+ev 9 29 0 0 0 0
+ev 10 258 0 0 0 0
+data 0 7 0 = 0 1 1d:80
+ev 9 29 0 0 0 0
+ev 15 0 1 0 4 1e71d9a2
+ev 14 0 0 -5 2 bf000000
+ev 5 0 5 7 2 3fc00000
+ev 13 0 4 -2 2 3b83126f
+ev 14 0 -6 7 4 bf000000
+keys 1 = -1
+ev 14 0 0 0 1 bc4ccccd
+data 0 19 0 = 0 2 1d:0 c4:0
+ev 4 0 0 -4 0 0
+data 0 9 0 = 0 0
+btn 0 5 0
+ev 10 51 0 0 0 0
+data 1 199 0 = -1 0
+ev 11 0 7 3 0 3eaaa64c
+move 1 4 0
+ev 5 0 6 -7 2 3f000000
+data 1 3 0 = -1 0
+acq 0
+ev 15 0 3 3 3 258e6eff
+wheel 1 55
+ev 9 29 0 0 0 0
+ev 5 0 1 -7 2 4479e000
+ev 5 0 0 7 1 3f800000
+unacq 1
+ev 9 259 0 0 0 0
+seq 3 1 1
+ev 14 0 -1 0 6 2fe28ab5
+isacq 0 = 0
+burst 0 256
+ev 14 0 -6 -5 5 bf800000
+ev 14 0 -2 4 5 3fa00000
+move 0 -3 4
+acq 0
+ev 4 0 -6 0 6 c479f000
+wheel 1 155
+data 1 17 0 = -1 0
+ev 16 0 0 5 7 3b83126f
+ev 14 0 0 1 6 3fa00000
+ev 14 0 0 4 3 0
+ev 14 0 -7 0 4 3f800000
+data 0 17 0 = 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+data 0 8 1 = 0 0
+burst 0 298
+ev 9 255 0 0 0 0
+ev 5 0 0 4 3 3f000000
+mouse 0 = 0 298 -298 0 0 0 0 0
+btn 1 3 0
+ev 10 61 0 0 0 0
+data 1 9 0 = -1 0
+key 1 204 1
+key 1 1 0
+unacq 1
+ev 13 0 0 -1 3 3fa00000
+wheel 1 -2
+ev 16 0 0 -7 4 1b49860f
+btn 0 0 0
+burst 0 342
+ev 9 56 0 0 0 0
+data 1 19 0 = -1 0
+isacq 0 = 1
+acq 0
+data 1 5 0 = -1 0
+ev 14 0 0 0 2 bf97d115
+ev 9 255 0 0 0 0
+unacq 0
+ev 11 0 -6 0 3 bf800000
+acq 1
+ev 14 0 -3 6 6 40200000
+unacq 0
+btn 1 2 0
+data 1 38 0 = 0 1 e:0
+key 1 1 0
+ev 10 200 0 0 0 0
+acq 1
+mouse 0 = -1
+key 1 42 0
+ev 10 255 0 0 0 0
+ev 13 0 0 -7 6 d841288
+ev 13 0 -1 0 5 3fa00000
+ev 14 0 0 0 6 c479f000
+unacq 0
+btn 1 4 0
+ev 9 1 0 0 0 0
+ev 10 1 0 0 0 0
+ev 14 0 0 0 0 3f000000
+ev 10 28 0 0 0 0
+data 0 193 0 = -1 0
+move 0 0 1
+seq 4 1 0
+data 1 93 0 = -1 0
+ev 9 200 0 0 0 0
+keys 1 = -1
+btn 1 0 0
+ev 9 0 0 0 0 0
+key 1 200 0
+acq 1
+ev 5 0 -5 5 1 0
+key 1 66 0
+ev 14 0 2 0 3 c479f000
+move 1 3 -3
+keys 1 = 0
+btn 1 3 0
+move 1 0 1
+move 0 6 -4
+btn 1 3 1
+acq 1
+mouse 1 = 0 3 -2 0 0 0 0 128
+data 0 49 1 = -1 0
+ev 10 1 0 0 0 0
+unacq 0
+acq 0
+acq 1
+key 0 255 0
+btn 1 0 1
+acq 1
+keys 0 = 0
+ev 5 0 0 0 2 3fc00000
+mouse 1 = 0 0 0 0 128 0 0 128
+data 1 165 0 = 0 5 0:3 4:fffffffd 4:1 f:80 c:80
+acq 1
+btn 0 4 1
+ev 10 65 0 0 0 0
+data 1 11 0 = 0 0
+data 1 3 0 = 0 0
+data 0 15 0 = 0 0
+ev 13 0 -4 0 4 bf000000
+ev 5 0 -6 2 1 bc4ccccd
+mouse 1 = 0 0 0 0 128 0 0 128
+burst 1 110
+data 1 6 0 = 0 6 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 13 0 0 0 4 4479e000
+key 1 1 1
+btn 1 3 1
+ev 16 0 6 -4 4 3f000000
+keys 0 = 0
+ev 10 157 0 0 0 0
+ev 14 0 0 0 0 0
+isacq 0 = 1
+unacq 0
+ev 5 0 0 -7 4 a2047dbd
+ev 9 56 0 0 0 0
+ev 9 255 0 0 0 0
+ev 13 0 -7 0 6 bf800000
+data 0 247 0 = -1 0
+seq 5 1 1
+ev 14 0 -6 0 5 3f000000
+ev 10 0 0 0 0 0
+acq 0
+acq 0
+data 0 12 0 = 0 0
+ev 15 0 0 -1 4 3f800000
+acq 1
+data 1 13 0 = 0 0
+unacq 1
+burst 0 210
+ev 9 256 0 0 0 0
+btn 0 4 0
+ev 15 0 7 7 4 4479e000
+data 1 16 0 = -1 0
+ev 10 255 0 0 0 0
+ev 14 0 -6 3 5 bc4ccccd
+burst 0 333
+ev 14 0 -3 5 5 3fa00000
+data 0 19 0 = 1 19 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 14 0 0 0 3 bf000000
+ev 14 0 3 0 2 3b83126f
+ev 16 0 0 0 1 bf800000
+keys 0 = 0
+ev 5 0 -5 -6 5 a4cfb3dc
+data 1 41 0 = -1 0
+ev 5 0 -5 5 0 bf000000
+move 1 -2 -5
+acq 0
+btn 1 4 1
+acq 0
+unacq 0
+ev 13 0 0 -5 6 3eaaa64c
+ev 5 0 4 -4 4 bd3fde86
+ev 16 0 0 0 3 40200000
+wheel 1 -179
+ev 13 0 0 0 1 bf800000
+data 0 62 0 = -1 0
+ev 15 0 0 2 2 bf000000
+ev 5 0 0 0 5 3fa00000
+keys 0 = -1
+wheel 0 172
+ev 10 28 0 0 0 0
+mouse 0 = -1
+ev 9 56 0 0 0 0
+acq 1
+ev 9 1 0 0 0 0
+key 1 259 1
+ev 9 256 0 0 0 0
+key 1 200 0
+ev 13 0 5 6 1 3eaaa64c
+data 1 7 0 = 0 2 0:5 4:6
+ev 9 200 0 0 0 0
+acq 1
+burst 1 245
+ev 9 200 0 0 0 0
+unacq 0
+ev 13 0 0 -3 3 3fa00000
+seq 6 1 0
+move 0 -6 0
+acq 1
+unacq 0
+ev 16 0 -5 -5 7 3f000000
+data 1 15 0 = 0 0
+ev 9 258 0 0 0 0
+key 1 42 0
+data 1 15 0 = 0 0
+ev 9 28 0 0 0 0
+ev 14 0 1 -6 0 3f000000
+ev 15 0 0 4 5 3fc00000
+burst 1 140
+ev 9 4 0 0 0 0
+ev 10 132 0 0 0 0
+data 0 18 0 = -1 0
+key 1 42 0
+ev 9 56 0 0 0 0
+ev 14 0 0 1 7 bc4ccccd
+ev 5 0 0 -2 4 9eff51ee
+ev 15 0 0 5 1 4479e000
+ev 13 0 0 -6 0 3f000000
+data 1 157 0 = 1 157 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+move 1 -5 2
+keys 1 = 0
+ev 16 0 1 6 2 4479e000
+key 1 255 0
+mouse 1 = 0 135 -138 0 0 0 0 0
+acq 1
+data 1 11 0 = 0 11 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 9 157 0 0 0 0
+ev 16 0 2 0 7 3f000000
+ev 9 257 0 0 0 0
+keys 0 = -1
+ev 10 180 0 0 0 0
+ev 14 0 0 -2 0 bf000000
+burst 0 311
+burst 1 188
+acq 0
+key 1 157 1
+ev 9 279 0 0 0 0
+ev 14 0 -6 0 0 bc4ccccd
+key 0 189 1
+key 0 1 0
+ev 14 0 0 0 7 312e9c96
+ev 16 0 -5 1 5 3fa00000
+ev 15 0 2 -2 7 3eaaa64c
+wheel 1 0
+data 0 7 0 = 0 1 bd:80
+key 0 264 1
+data 1 37 0 = 1 37 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 10 28 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+key 0 256 0
+data 0 186 0 = 0 0
+key 1 255 0
+ev 9 157 0 0 0 0
+ev 5 0 3 0 2 3fa00000
+data 1 18 0 = 0 18 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+mouse 0 = 0 0 0 0 0 0 0 0
+data 1 11 1 = 0 11
+ev 9 29 0 0 0 0
+ev 16 0 6 3 0 4479e000
+isacq 0 = 1
+ev 10 42 0 0 0 0
+ev 13 0 6 0 5 bf800000
+ev 5 0 1 -4 2 3f000000
+ev 9 157 0 0 0 0
+seq 7 1 1
+keys 0 = -1
+btn 1 1 0
+ev 10 0 0 0 0 0
+ev 9 275 0 0 0 0
+acq 0
+ev 16 0 3 7 6 0
+acq 1
+ev 10 29 0 0 0 0
+data 0 12 0 = 0 0
+data 1 4 0 = 0 0
+ev 13 0 0 0 2 40200000
+ev 9 157 0 0 0 0
+key 1 59 1
+ev 15 0 0 0 4 bf800000
+ev 14 0 -2 0 7 3f000000
+data 0 0 0 = 0 0
+ev 16 0 2 -7 3 0
+ev 15 0 -5 5 0 3fa00000
+data 1 10 0 = 0 1 3b:80
+acq 0
+data 0 18 0 = 0 1 9d:80
+ev 14 0 0 1 0 3f800000
+wheel 1 216
+btn 1 6 1
+move 1 0 0
+data 1 16 0 = 0 1 8:d8
+unacq 1
+ev 10 200 0 0 0 0
+ev 14 0 -4 4 3 a9227705
+ev 14 0 7 0 0 4479e000
+ev 16 0 0 7 2 bf800000
+key 1 0 1
+ev 9 292 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 10 0 0 0 0 0
+data 0 15 0 = 0 0
+ev 15 0 5 0 2 bf000000
+wheel 1 172
+seq 8 1 1
+acq 0
+acq 0
+ev 4 0 -4 -7 4 40200000
+ev 9 258 0 0 0 0
+ev 9 29 0 0 0 0
+data 1 16 0 = -1 0
+ev 10 257 0 0 0 0
+btn 0 1 0
+unacq 1
+data 1 14 0 = -1 0
+ev 9 200 0 0 0 0
+burst 0 324
+acq 1
+data 1 16 0 = 0 0
+ev 9 207 0 0 0 0
+keys 1 = 0
+data 0 6 0 = 1 6 1d:80 c8:80 0:1 4:ffffffff 0:1 4:ffffffff
+move 0 7 4
+ev 4 0 4 2 0 aa653987
+ev 5 0 -1 -5 7 4479e000
+data 0 7 0 = 0 7 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 10 10 0 0 0 0
+data 1 260 1 = 0 0
+key 0 42 0
+ev 14 0 2 0 1 bc4ccccd
+ev 14 0 3 -7 7 bff0597c
+data 1 157 0 = 0 1 c:80
+mouse 1 = 0 0 0 0 128 0 0 0
+ev 10 200 0 0 0 0
+ev 5 0 -5 0 0 3fc00000
+ev 5 0 0 -2 0 3eaaa64c
+ev 9 157 0 0 0 0
+data 0 6 0 = 0 6 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+burst 0 298
+unacq 1
+key 1 28 0
+ev 14 0 0 0 4 bf800000
+data 0 87 1 = 1 87
+keys 1 = -1
+acq 1
+acq 0
+ev 9 42 0 0 0 0
+acq 0
+data 1 68 0 = 0 0
+keys 1 = 0
+btn 1 3 1
+acq 1
+ev 15 0 5 0 5 bf000000
+ev 16 0 6 7 2 3f800000
+ev 16 0 -3 1 2 3fa00000
+key 1 29 0
+keys 1 = 0
+ev 14 0 -1 -1 1 0
+seq 9 1 1
+keys 1 = -1
+btn 0 1 0
+ev 14 0 0 0 4 3fc00000
+move 1 -5 0
+mouse 1 = -1
+ev 9 129 0 0 0 0
+mouse 0 = -1
+ev 5 0 0 0 3 3eaaa64c
+ev 14 0 4 0 6 0
+keys 0 = -1
+key 1 0 0
+keys 0 = -1
+acq 1
+burst 0 240
+ev 14 0 -6 0 7 4479e000
+ev 5 0 0 0 6 3fc00000
+ev 5 0 0 0 4 262e9a18
+data 0 17 0 = -1 0
+ev 5 0 0 2 6 15bc90d8
+data 1 226 0 = 0 0
+ev 14 0 6 3 7 bf800000
+ev 15 0 0 0 7 bc4ccccd
+key 0 1 0
+ev 4 0 0 0 7 3fc00000
+burst 1 218
+btn 0 4 0
+data 0 16 0 = -1 0
+keys 1 = 0
+ev 9 163 0 0 0 0
+keys 1 = 0
+data 0 15 0 = -1 0
+seq 10 1 1
+move 0 0 -7
+ev 14 0 2 0 5 bf000000
+ev 10 40 0 0 0 0
+ev 9 28 0 0 0 0
+acq 0
+acq 0
+ev 9 259 0 0 0 0
+mouse 1 = -1
+ev 9 257 0 0 0 0
+unacq 1
+ev 9 28 0 0 0 0
+ev 9 200 0 0 0 0
+isacq 0 = 1
+ev 9 56 0 0 0 0
+mouse 1 = -1
+ev 14 0 0 0 2 3eaaa64c
+ev 15 0 0 0 6 0
+ev 4 0 4 0 1 bc4ccccd
+ev 10 208 0 0 0 0
+mouse 1 = -1
+ev 16 0 3 0 5 3f800000
+unacq 0
+btn 1 2 0
+key 1 28 0
+ev 14 0 0 3 5 4479e000
+ev 15 0 -2 0 3 3b83126f
+keys 1 = -1
+ev 16 0 -3 0 4 3eaaa64c
+ev 5 0 -6 0 2 1a8cfdd7
+data 0 4 0 = -1 0
+ev 9 0 0 0 0 0
+ev 14 0 -3 0 2 3fc00000
+wheel 0 0
+ev 14 0 -2 0 3 4479e000
+ev 10 255 0 0 0 0
+mouse 1 = -1
+key 0 200 1
+key 0 255 0
+key 0 255 0
+ev 13 0 0 4 7 359dd4bd
+isacq 1 = 0
+ev 14 0 0 0 1 3f800000
+ev 14 0 0 0 5 0
+ev 15 0 0 5 6 3eaaa64c
+acq 0
+ev 14 0 -1 -5 5 11bfd370
+data 1 9 0 = -1 0
+ev 15 0 2 -2 1 3eaaa64c
+ev 10 259 0 0 0 0
+ev 9 1 0 0 0 0
+ev 9 226 0 0 0 0
+ev 10 28 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+acq 0
+burst 1 317
+seq 11 1 1
+mouse 0 = -1
+ev 9 29 0 0 0 0
+key 1 147 1
+ev 14 0 0 0 3 3eaaa64c
+burst 1 239
+ev 10 253 0 0 0 0
+btn 0 2 1
+ev 13 0 2 2 7 bf000000
+btn 1 2 0
+ev 10 84 0 0 0 0
+acq 1
+ev 9 157 0 0 0 0
+ev 5 0 0 0 4 3b83126f
+ev 14 0 0 1 3 bf800000
+acq 0
+ev 9 223 0 0 0 0
+ev 13 0 -3 0 4 bc4ccccd
+isacq 1 = 1
+ev 13 0 0 5 7 3eaaa64c
+ev 9 256 0 0 0 0
+data 0 2 0 = 0 1 df:80
+ev 10 28 0 0 0 0
+keys 1 = 0 147
+ev 11 0 0 -5 5 9d792b25
+mouse 0 = 0 0 0 0 0 0 128 0
+ev 5 0 0 5 2 3eaaa64c
+burst 1 270
+acq 0
+mouse 0 = 0 0 0 0 0 0 128 0
+unacq 1
+acq 0
+ev 9 200 0 0 0 0
+data 1 102 0 = -1 0
+btn 1 3 0
+ev 14 0 3 1 7 40200000
+acq 0
+ev 13 0 0 0 5 3b83126f
+btn 0 5 1
+ev 9 29 0 0 0 0
+ev 14 0 7 -6 7 3f000000
+ev 9 84 0 0 0 0
+btn 0 5 0
+move 1 6 7
+ev 5 0 1 0 4 3fa00000
+data 0 8 0 = 0 7 df:0 c8:80 1d:80 54:80 1d:0 54:0 c8:0
+ev 14 0 0 -1 7 3fc00000
+ev 10 42 0 0 0 0
+key 1 258 0
+ev 14 0 6 -1 7 38329d99
+ev 9 1 0 0 0 0
+data 0 205 0 = 0 1 1:80
+ev 5 0 -6 0 4 4479e000
+ev 5 0 0 0 1 3f000000
+data 0 1 0 = 0 1 1:0
+acq 1
+ev 16 0 -1 5 1 3f25069c
+ev 9 281 0 0 0 0
+ev 14 0 3 0 1 369b3a
+ev 10 257 0 0 0 0
+ev 15 0 1 -5 7 3eaaa64c
+ev 9 200 0 0 0 0
+mouse 1 = 0 0 0 77 128 0 0 0
+ev 16 0 0 -1 7 3b83126f
+unacq 0
+ev 15 0 0 6 4 3f800000
+burst 0 263
+data 0 8 0 = -1 0
+data 0 144 0 = -1 0
+data 0 1 0 = -1 0
+unacq 1
+ev 13 0 -2 2 3 3fa00000
+data 1 4 0 = -1 0
+btn 1 1 1
+ev 14 0 0 0 1 3fa00000
+ev 5 0 0 -1 4 4479e000
+unacq 1
+wheel 0 54
+ev 14 0 6 1 7 9f9db353
+mouse 1 = -1
+ev 16 0 0 3 7 191f3c0
+unacq 1
+data 1 3 0 = -1 0
+ev 5 0 -7 -3 1 0
+acq 0
+ev 9 28 0 0 0 0
+ev 9 42 0 0 0 0
+unacq 1
+seq 12 1 1
+ev 15 0 0 -7 1 3fc00000
+move 0 0 0
+key 1 28 1
+ev 14 0 0 0 3 b735e89e
+ev 5 0 5 2 0 3f800000
+btn 1 3 0
+key 1 28 1
+ev 9 29 0 0 0 0
+ev 5 0 -7 3 6 3fc00000
+btn 0 1 0
+ev 15 0 4 3 5 bc4ccccd
+btn 1 1 1
+data 0 9 0 = -1 0
+acq 0
+ev 16 0 -3 0 6 bf000000
+key 0 167 1
+ev 16 0 0 -5 5 b22abad3
+move 1 0 -3
+acq 1
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 14 0 0 -1 6 3eaaa64c
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 9 56 0 0 0 0
+mouse 1 = 0 0 0 0 0 128 0 0
+ev 16 0 7 0 4 bf000000
+ev 5 0 0 3 5 3fa00000
+ev 5 0 -3 -3 4 3f800000
+acq 0
+ev 5 0 2 -2 5 3fa00000
+ev 9 200 0 0 0 0
+ev 16 0 -2 -1 6 40200000
+data 1 180 0 = 0 3 8:ffffffc4 d:0 8:12c
+ev 14 0 0 0 0 3fc00000
+unacq 0
+ev 16 0 4 4 2 3fa00000
+ev 9 28 0 0 0 0
+ev 15 0 2 0 1 3fa00000
+ev 5 0 -6 0 6 3b83126f
+mouse 1 = 0 0 0 390 0 0 0 0
+ev 9 56 0 0 0 0
+data 1 0 0 = 0 0
+keys 0 = -1
+ev 15 0 7 0 0 3b83126f
+acq 1
+data 1 10 1 = 0 1
+wheel 0 0
+ev 9 0 0 0 0 0
+btn 1 1 1
+ev 15 0 6 4 1 bf000000
+ev 4 0 0 0 6 a3c70253
+ev 15 0 0 6 1 3c7e7420
+acq 1
+acq 1
+acq 0
+ev 14 0 0 -2 2 bc4ccccd
+burst 1 154
+unacq 0
+seq 13 1 1
+mouse 1 = -1
+data 1 0 0 = -1 0
+keys 1 = -1
+acq 1
+keys 1 = 0
+move 0 0 0
+btn 0 3 1
+ev 14 0 6 0 1 3fa00000
+wheel 1 0
+wheel 0 -36
+ev 13 0 -5 0 1 c479f000
+ev 10 56 0 0 0 0
+key 0 200 1
+ev 9 28 0 0 0 0
+data 1 81 0 = 0 2 c:80 0:fffffffb
+data 1 7 0 = 0 0
+keys 0 = -1
+keys 0 = -1
+key 1 157 1
+mouse 1 = 0 -5 0 0 128 0 0 0
+ev 16 0 0 5 4 3f800000
+unacq 0
+data 0 28 0 = -1 0
+ev 5 0 2 -1 2 3fa00000
+acq 0
+keys 1 = 0 157
+ev 10 29 0 0 0 0
+ev 14 0 0 0 7 aca1e032
+key 0 256 0
+acq 0
+acq 0
+unacq 1
+btn 1 2 1
+ev 10 42 0 0 0 0
+ev 15 0 7 -2 2 3f000000
+data 1 115 0 = -1 0
+unacq 0
+ev 14 0 1 -6 3 3f000000
+ev 9 235 0 0 0 0
+ev 16 0 0 0 7 3f39d166
+ev 16 0 4 0 3 3fa00000
+acq 1
+key 1 0 1
+acq 1
+ev 16 0 0 0 4 bf800000
+btn 0 2 1
+ev 15 0 2 -4 2 99c0e662
+mouse 0 = -1
+key 0 255 0
+data 0 164 0 = -1 0
+move 1 -1 0
+data 0 4 0 = -1 0
+btn 0 2 0
+unacq 1
+data 1 17 0 = -1 0
+burst 1 112
+ev 9 42 0 0 0 0
+ev 13 0 0 -3 0 3f800000
+move 0 1 0
+ev 13 0 -6 4 0 3eaaa64c
+ev 15 0 -1 0 0 9e4b20e7
+mouse 0 = -1
+ev 9 56 0 0 0 0
+ev 0 0 0 1 3 3f000000
+seq 14 1 1
+acq 0
+btn 1 1 1
+ev 5 0 0 0 3 3fc00000
+acq 0
+isacq 0 = 1
+ev 16 0 2 0 2 bf000000
+btn 1 2 0
+unacq 0
+move 0 -7 0
+ev 5 0 -6 -5 2 bf800000
+ev 15 0 5 -3 1 bf000000
+ev 9 120 0 0 0 0
+ev 16 0 0 4 5 3eaaa64c
+data 1 0 0 = -1 0
+ev 15 0 4 -7 0 bc4ccccd
+mouse 1 = -1
+burst 1 120
+ev 15 0 0 5 7 bf800000
+ev 9 1 0 0 0 0
+move 1 -4 0
+mouse 1 = -1
+ev 16 0 -5 -4 4 3fa00000
+unacq 1
+data 1 95 0 = -1 0
+mouse 0 = -1
+ev 10 200 0 0 0 0
+key 1 28 0
+keys 1 = -1
+unacq 1
+data 1 12 0 = -1 0
+ev 5 0 -5 -5 0 bc4ccccd
+move 1 7 -6
+btn 1 5 1
+burst 0 300
+ev 5 0 0 0 6 bf800000
+acq 1
+acq 1
+data 0 16 0 = -1 0
+ev 14 0 5 6 1 bc4ccccd
+ev 9 212 0 0 0 0
+mouse 1 = 0 0 0 0 128 0 0 0
+acq 1
+ev 5 0 0 -7 3 41487731
+ev 9 0 0 0 0 0
+burst 1 335
+move 0 0 -5
+ev 14 0 -6 -3 2 bf800000
+ev 9 29 0 0 0 0
+ev 15 0 -6 6 7 bf000000
+move 1 0 0
+ev 14 0 2 -4 7 3eaaa64c
+btn 1 1 1
+data 0 11 0 = -1 0
+ev 5 0 0 3 3 4479e000
+wheel 0 -122
+ev 9 28 0 0 0 0
+burst 0 195
+ev 14 0 -3 0 4 d7ff15d
+ev 9 1 0 0 0 0
+data 1 14 0 = 1 14 c:80 c:0 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 13 0 -7 -7 3 4479e000
+ev 13 0 -5 0 2 3b83126f
+data 1 5 0 = 0 5 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 5 0 7 -7 3 3fa00000
+mouse 0 = -1
+ev 9 0 0 0 0 0
+seq 15 1 1
+move 1 0 -1
+keys 0 = -1
+keys 1 = -1
+key 0 28 0
+data 1 224 0 = -1 0
+data 0 5 0 = -1 0
+ev 16 0 0 0 3 c479f000
+ev 10 200 0 0 0 0
+ev 5 0 4 0 2 4479e000
+data 0 4 0 = -1 0
+unacq 1
+key 1 1 0
+acq 1
+isacq 1 = 1
+key 1 29 0
+data 0 14 0 = -1 0
+acq 0
+ev 16 0 5 7 1 171c9446
+ev 14 0 0 -4 6 298c3ec5
+data 1 239 0 = 0 0
+key 1 37 1
+data 0 2 0 = 0 0
+ev 16 0 0 3 0 a26fa763
+ev 13 0 -3 1 1 3f800000
+unacq 0
+move 1 0 -1
+data 0 12 0 = -1 0
+ev 15 0 6 -5 1 bc4ccccd
+move 1 0 0
+ev 14 0 -1 5 0 bc4ccccd
+wheel 0 0
+keys 0 = -1
+ev 9 42 0 0 0 0
+ev 9 1 0 0 0 0
+ev 14 0 -6 0 5 3f000000
+data 0 6 0 = -1 0
+keys 0 = -1
+btn 0 2 0
+burst 0 168
+mouse 0 = -1
+data 1 14 0 = 0 4 25:80 0:fffffffd 4:1 4:ffffffff
+keys 0 = -1
+ev 14 0 6 0 2 bc4ccccd
+move 0 0 -2
+unacq 0
+unacq 0
+keys 0 = -1
+ev 9 157 0 0 0 0
+data 0 17 0 = -1 0
+acq 0
+ev 11 0 6 6 0 3f800000
+ev 9 29 0 0 0 0
+keys 1 = 0 37
+ev 9 255 0 0 0 0
+unacq 0
+keys 1 = 0 37
+mouse 0 = -1
+burst 1 182
+ev 14 0 0 -7 0 3b83126f
+isacq 0 = 0
+data 0 11 0 = -1 0
+burst 0 186
+unacq 0
+ev 14 0 0 5 2 4479e000
+data 1 12 0 = 1 12 e:80 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+acq 1
+keys 0 = -1
+unacq 0
+isacq 0 = 0
+ev 10 28 0 0 0 0
+ev 14 0 -7 1 6 bc4ccccd
+unacq 0
+seq 16 1 1
+ev 16 0 2 7 4 0
+keys 0 = -1
+ev 14 0 0 7 3 3fa00000
+acq 0
+acq 0
+burst 1 194
+ev 9 56 0 0 0 0
+mouse 1 = -1
+ev 15 0 0 0 0 3fc00000
+move 0 0 2
+ev 14 0 0 0 7 3eaaa64c
+key 0 258 1
+data 1 2 0 = -1 0
+ev 9 255 0 0 0 0
+ev 14 0 -7 -6 0 40200000
+mouse 0 = 0 0 2 0 0 0 0 0
+ev 13 0 -7 0 4 bc4ccccd
+acq 0
+ev 13 0 0 0 5 c479f000
+ev 15 0 0 1 1 32d037ea
+ev 9 76 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 13 0 0 0 6 941ff917
+ev 13 0 3 0 3 3eaaa64c
+data 1 0 0 = -1 0
+ev 16 0 0 0 4 0
+data 1 1 0 = -1 0
+key 0 256 1
+ev 14 0 4 -6 2 3eaaa64c
+ev 10 200 0 0 0 0
+data 0 239 0 = 0 4 38:80 4:2 ff:80 4c:80
+ev 9 157 0 0 0 0
+ev 16 0 0 0 6 40200000
+ev 0 0 0 2 5 3fa00000
+mouse 0 = 0 0 0 0 0 0 0 0
+mouse 1 = -1
+seq 17 1 1
+key 1 259 1
+ev 16 0 -3 2 4 3fa00000
+btn 1 2 0
+btn 1 6 1
+ev 9 157 0 0 0 0
+data 0 3 0 = -1 0
+move 0 0 3
+data 0 5 0 = -1 0
+burst 1 265
+wheel 1 0
+ev 13 0 0 0 2 0
+ev 10 157 0 0 0 0
+data 0 15 0 = -1 0
+unacq 1
+data 1 273 0 = -1 0
+data 0 12 0 = -1 0
+ev 13 0 -3 2 4 3fa00000
+isacq 1 = 0
+ev 14 0 2 -6 3 bc4ccccd
+ev 16 0 0 0 3 bf800000
+ev 16 0 0 -5 5 8b3a7735
+unacq 1
+acq 0
+unacq 1
+isacq 1 = 0
+keys 1 = -1
+key 0 56 0
+ev 5 0 7 -6 3 2b5a518c
+data 1 11 0 = -1 0
+ev 14 0 -4 -7 5 aa810455
+mouse 0 = 0 0 0 0 0 0 0 0
+unacq 0
+ev 16 0 5 0 7 3f000000
+btn 1 1 0
+btn 1 4 1
+ev 14 0 4 -5 4 3fc00000
+unacq 0
+key 0 28 0
+unacq 1
+ev 16 0 0 -7 5 3f000000
+mouse 1 = -1
+ev 10 42 0 0 0 0
+ev 14 0 4 6 5 3b83126f
+data 1 294 0 = -1 0
+ev 5 0 0 0 6 3fa00000
+acq 0
+ev 9 42 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+data 0 4 0 = 0 1 2a:80
+ev 10 85 0 0 0 0
+seq 18 1 0
+isacq 1 = 0
+isacq 0 = 0
+mouse 0 = -1
+ev 9 259 0 0 0 0
+mouse 0 = -1
+ev 9 258 0 0 0 0
+wheel 1 0
+keys 1 = -1
+btn 0 0 0
+ev 16 0 2 3 3 3fa00000
+mouse 1 = -1
+acq 0
+ev 10 200 0 0 0 0
+acq 0
+acq 0
+data 0 16 1 = 0 0
+acq 0
+keys 0 = 0
+ev 16 0 -6 2 3 3fa00000
+ev 15 0 -5 0 3 91855c2
+ev 5 0 -6 -6 4 3b83126f
+data 0 13 0 = 0 0
+key 1 255 0
+ev 14 0 7 0 5 bc4ccccd
+acq 0
+btn 1 0 1
+mouse 1 = -1
+btn 1 6 0
+ev 14 0 -3 -7 5 3f000000
+ev 16 0 0 -1 4 3f800000
+ev 10 1 0 0 0 0
+move 1 -6 0
+ev 5 0 -6 0 2 bf800000
+ev 10 56 0 0 0 0
+ev 10 52 0 0 0 0
+ev 9 258 0 0 0 0
+ev 10 269 0 0 0 0
+ev 16 0 0 3 2 bf000000
+acq 0
+wheel 0 0
+ev 9 256 0 0 0 0
+ev 16 0 -5 0 0 1f1e743f
+ev 10 255 0 0 0 0
+ev 15 0 0 -4 4 c479f000
+data 1 2 0 = -1 0
+acq 0
+keys 0 = 0
+ev 9 157 0 0 0 0
+data 1 10 0 = -1 0
+burst 1 244
+unacq 0
+acq 1
+data 1 12 0 = 0 0
+keys 0 = -1
+ev 5 0 0 0 7 909a2a5c
+ev 13 0 0 -5 2 b0c90137
+mouse 1 = 0 0 0 0 128 0 0 0
+ev 9 245 0 0 0 0
+data 1 21 0 = 0 0
+isacq 0 = 0
+burst 1 125
+ev 15 0 -3 -5 3 3f800000
+data 1 1 0 = 0 1 0:1
+seq 19 1 1
+ev 14 0 0 -5 2 bf000000
+mouse 1 = -1
+key 0 256 0
+wheel 1 34
+acq 1
+acq 1
+ev 14 0 -3 0 6 3fc00000
+ev 14 0 3 6 7 3eaaa64c
+data 1 11 0 = 0 0
+ev 16 0 -3 0 2 3fc00000
+acq 0
+move 0 0 0
+ev 10 29 0 0 0 0
+ev 14 0 3 0 4 82dae904
+mouse 1 = 0 0 0 180 0 0 128 128
+ev 13 0 0 0 6 bf000000
+ev 10 200 0 0 0 0
+data 1 108 1 = 0 2
+mouse 1 = 0 0 0 0 0 0 128 128
+move 0 6 -7
+mouse 0 = 0 6 -7 0 0 0 0 0
+ev 9 202 0 0 0 0
+data 1 1 0 = 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+keys 0 = 0 202
+mouse 1 = 0 0 0 0 0 0 128 128
+burst 1 289
+acq 1
+keys 1 = 0
+ev 14 0 2 7 3 3fa00000
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 14 0 -5 -3 3 bf800000
+ev 10 157 0 0 0 0
+ev 13 0 0 1 4 3fa00000
+key 0 200 0
+acq 1
+ev 16 0 5 0 2 3b83126f
+ev 9 200 0 0 0 0
+data 1 4 0 = 1 4 0:1 4:ffffffff 0:1 4:ffffffff
+ev 10 0 0 0 0 0
+ev 9 157 0 0 0 0
+data 1 6 0 = 0 6 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+burst 1 130
+mouse 0 = 0 0 0 0 0 0 0 0
+btn 1 2 1
+key 1 28 1
+mouse 1 = 0 419 -418 0 0 128 128 128
+keys 0 = 0 157 200 202
+unacq 1
+data 0 15 1 = 0 5
+ev 5 0 0 0 7 bc4ccccd
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 14 0 5 -6 1 40200000
+acq 1
+ev 0 0 -4 0 2 bf800000
+btn 0 0 1
+unacq 1
+acq 1
+ev 13 0 7 0 7 40200000
+acq 1
+data 0 273 0 = 0 4 9d:0 c8:0 ca:0 c:80
+key 1 200 1
+wheel 0 -240
+ev 15 0 0 -2 7 bc4ccccd
+key 1 199 1
+acq 0
+ev 5 0 3 -7 5 bc4ccccd
+ev 13 0 0 -7 4 3f000000
+key 1 85 0
+btn 1 2 1
+move 1 1 7
+move 0 0 -6
+ev 9 29 0 0 0 0
+mouse 1 = 0 8 0 0 0 0 128 0
+move 1 0 0
+keys 0 = 0 29
+wheel 0 0
+seq 20 1 1
+ev 14 0 -7 4 1 4479e000
+mouse 0 = -1
+ev 14 0 0 0 4 3b83126f
+ev 5 0 -2 4 6 1faa4bf8
+wheel 1 0
+isacq 1 = 0
+keys 0 = -1
+key 1 56 1
+ev 9 1 0 0 0 0
+wheel 0 119
+ev 5 0 -1 6 7 bc4ccccd
+unacq 0
+acq 1
+acq 1
+move 0 0 0
+ev 14 0 0 0 2 bc4ccccd
+btn 1 4 1
+key 0 28 1
+burst 1 141
+ev 13 0 1 0 5 1ae00b7
+wheel 1 0
+burst 1 146
+ev 10 0 0 0 0 0
+isacq 1 = 1
+ev 4 0 2 0 6 3fa00000
+ev 15 0 -3 0 5 0
+acq 1
+keys 1 = 0 56
+keys 1 = 0 56
+ev 0 0 -5 0 5 0
+btn 0 6 0
+isacq 1 = 1
+mouse 1 = 0 288 -287 0 0 0 128 0
+ev 16 0 0 0 2 3f000000
+data 1 0 0 = 1 0
+mouse 0 = -1
+ev 14 0 1 2 2 4479e000
+ev 16 0 2 7 4 c479f000
+ev 13 0 6 0 3 0
+ev 9 56 0 0 0 0
+data 0 5 0 = -1 0
+wheel 1 -47
+ev 9 56 0 0 0 0
+key 0 255 0
+acq 1
+isacq 1 = 1
+data 0 272 0 = -1 0
+ev 16 0 1 -1 4 a68eb5ac
+data 1 10 0 = 1 10 e:80 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 9 259 0 0 0 0
+ev 14 0 -7 5 3 3fa00000
+ev 14 0 -4 0 7 0
+ev 9 28 0 0 0 0
+data 0 278 0 = -1 0
+btn 1 3 0
+data 0 113 0 = -1 0
+data 0 12 0 = -1 0
+key 1 84 1
+ev 13 0 4 -1 4 3fc00000
+ev 9 189 0 0 0 0
+ev 5 0 0 0 2 85680b77
+data 0 14 0 = -1 0
+ev 9 0 0 0 0 0
+mouse 0 = -1
+btn 0 1 1
+ev 10 252 0 0 0 0
+data 0 0 0 = -1 0
+keys 0 = -1
+mouse 0 = -1
+ev 16 0 0 -7 0 a86386ff
+ev 10 200 0 0 0 0
+ev 10 257 0 0 0 0
+data 1 2 0 = 0 2 4:ffffffff 0:1
+ev 15 0 -5 4 3 3fa00000
+wheel 0 0
+mouse 1 = 0 10 -1 -119957 0 0 0 0
+ev 13 0 2 0 3 3f000000
+mouse 1 = 0 2 0 0 0 0 0 0
+ev 10 0 0 0 0 0
+ev 9 56 0 0 0 0
+acq 1
+acq 1
+acq 0
+ev 14 0 -3 0 7 3f800000
+ev 9 259 0 0 0 0
+keys 1 = 0 56 84
+ev 13 0 0 -5 6 3f000000
+seq 21 1 1
+keys 0 = -1
+data 1 0 1 = -1 0
+ev 15 0 3 -2 5 0
+ev 5 0 -5 0 4 bf800000
+data 1 2 0 = -1 0
+data 0 2 0 = -1 0
+move 0 7 7
+key 0 28 0
+ev 16 0 0 -1 1 3f800000
+data 1 132 0 = -1 0
+btn 1 2 0
+keys 0 = -1
+keys 0 = -1
+data 0 18 0 = -1 0
+ev 5 0 3 7 3 3f000000
+data 0 7 0 = -1 0
+keys 1 = -1
+btn 1 4 0
+wheel 1 172
+data 1 5 0 = -1 0
+ev 9 121 0 0 0 0
+key 1 56 0
+btn 1 1 1
+ev 14 0 4 0 4 4479e000
+isacq 0 = 0
+data 1 0 0 = -1 0
+acq 0
+ev 14 0 0 3 2 3fa00000
+ev 14 0 3 0 4 bf000000
+ev 16 0 0 -7 3 c479f000
+keys 0 = 0 121
+ev 14 0 2 2 7 40200000
+ev 10 56 0 0 0 0
+ev 15 0 3 4 0 c479f000
+ev 14 0 -1 -7 1 4479e000
+data 0 18 0 = 0 0
+ev 15 0 0 0 5 bc4ccccd
+wheel 1 -122
+ev 13 0 -4 0 7 4479e000
+keys 1 = -1
+ev 10 42 0 0 0 0
+ev 15 0 -2 -6 0 bf000000
+data 1 3 0 = -1 0
+burst 1 190
+ev 15 0 0 -2 0 3f800000
+keys 1 = -1
+ev 10 255 0 0 0 0
+mouse 1 = -1
+data 0 12 0 = 0 0
+ev 5 0 4 0 4 bf800000
+acq 1
+data 0 162 0 = 0 1 79:0
+ev 9 0 0 0 0 0
+data 0 1 0 = 0 0
+move 1 -2 -3
+btn 0 1 0
+ev 11 0 0 -4 2 3fc00000
+data 1 248 0 = 0 2 0:fffffffe 4:fffffffd
+ev 14 0 7 0 5 3eaaa64c
+acq 1
+data 0 0 0 = 0 0
+data 1 6 0 = 0 0
+ev 9 255 0 0 0 0
+keys 0 = 0 255
+isacq 0 = 1
+btn 0 2 0
+ev 5 0 5 1 1 80e7e5ad
+ev 9 200 0 0 0 0
+data 1 4 0 = 0 0
+ev 9 1 0 0 0 0
+seq 22 1 1
+ev 10 258 0 0 0 0
+move 1 0 0
+burst 1 117
+ev 15 0 6 -1 6 3eaaa64c
+data 0 18 0 = -1 0
+key 1 1 1
+data 0 2 0 = -1 0
+move 1 0 3
+key 0 159 0
+wheel 1 0
+ev 16 0 -4 0 5 1a832cdd
+data 1 282 0 = -1 0
+burst 0 300
+ev 9 157 0 0 0 0
+ev 9 56 0 0 0 0
+wheel 0 -168
+data 1 5 0 = -1 0
+wheel 0 0
+wheel 0 44
+data 1 225 0 = -1 0
+data 0 14 0 = -1 0
+data 0 16 0 = -1 0
+data 1 18 0 = -1 0
+acq 0
+ev 9 56 0 0 0 0
+ev 10 255 0 0 0 0
+burst 1 319
+data 0 1 0 = 0 0
+acq 0
+ev 14 0 -4 0 3 b601828e
+data 0 6 0 = 0 0
+key 0 204 0
+ev 9 200 0 0 0 0
+ev 9 36 0 0 0 0
+ev 16 0 -5 7 6 3b83126f
+burst 1 124
+ev 14 0 -7 1 3 bc4ccccd
+move 0 -2 -1
+ev 9 200 0 0 0 0
+mouse 0 = 0 -2 -1 0 0 0 0 0
+ev 13 0 0 3 1 c479f000
+acq 0
+acq 0
+acq 0
+data 1 97 0 = -1 0
+btn 1 6 1
+key 1 256 0
+ev 5 0 1 7 5 4479e000
+move 1 5 0
+data 1 3 1 = -1 0
+acq 1
+data 0 16 0 = 0 8 c8:80 24:80 0:fffffffe 4:ffffffff 24:0 38:0 9d:0 c8:0
+ev 9 200 0 0 0 0
+ev 16 0 0 0 3 2969b0bd
+seq 23 1 1
+ev 9 157 0 0 0 0
+data 0 2 0 = -1 0
+ev 13 0 -5 1 5 bf000000
+key 0 28 0
+mouse 1 = -1
+ev 14 0 0 0 5 bc4ccccd
+ev 4 0 -3 -6 4 3fa00000
+move 0 -3 0
+burst 1 267
+ev 9 28 0 0 0 0
+ev 16 0 2 4 0 3f000000
+acq 0
+ev 16 0 0 0 2 bf000000
+ev 16 0 7 0 2 4479e000
+ev 9 255 0 0 0 0
+data 1 10 0 = -1 0
+mouse 1 = -1
+ev 14 0 -4 -4 0 3fc00000
+key 1 261 0
+ev 13 0 2 0 4 c479f000
+key 1 238 1
+ev 9 255 0 0 0 0
+ev 5 0 -4 0 7 bf800000
+ev 5 0 -2 0 2 3eaaa64c
+ev 5 0 -2 0 4 4479e000
+ev 14 0 5 0 7 3eaaa64c
+mouse 1 = -1
+ev 14 0 0 7 7 c479f000
+ev 9 200 0 0 0 0
+ev 13 0 0 -5 5 2411dfc8
+isacq 0 = 1
+data 0 7 0 = 0 5 ff:80 1c:0 9d:0 ff:0 c8:80
+wheel 0 -193
+ev 13 0 2 0 3 bf800000
+ev 10 29 0 0 0 0
+data 1 14 0 = -1 0
+acq 0
+ev 14 0 0 -2 5 3fa00000
+data 1 6 0 = -1 0
+acq 1
+mouse 1 = 0 0 0 0 0 0 0 0
+ev 9 28 0 0 0 0
+ev 9 255 0 0 0 0
+data 0 6 0 = 0 3 8:ffffff3f 1c:80 ff:80
+seq 24 1 1
+ev 9 257 0 0 0 0
+key 1 29 0
+data 1 27 1 = -1 0
+btn 0 2 1
+key 0 257 0
+unacq 0
+ev 14 0 -2 -4 2 1165f485
+data 0 5 0 = -1 0
+ev 14 0 -5 -3 4 3eaaa64c
+acq 1
+ev 16 0 -6 -3 5 3fa00000
+ev 9 28 0 0 0 0
+wheel 1 0
+acq 0
+ev 16 0 0 6 5 3fa00000
+acq 1
+keys 0 = 0 28
+keys 1 = 0
+data 1 19 0 = 0 2 8:96 8:96
+ev 16 0 0 -4 5 3b83126f
+key 0 56 1
+data 0 11 0 = 0 1 38:80
+data 1 15 0 = 0 0
+ev 5 0 0 -1 4 3fc00000
+ev 9 56 0 0 0 0
+unacq 0
+acq 0
+acq 0
+mouse 0 = 0 0 0 0 0 0 128 0
+ev 13 0 -6 -6 0 3fa00000
+acq 0
+move 0 -5 6
+move 0 0 -5
+acq 1
+mouse 0 = 0 -5 1 0 0 0 128 0
+btn 0 6 1
+ev 15 0 0 0 5 40200000
+mouse 1 = 0 -6 -6 300 0 0 0 0
+seq 25 1 1
+ev 14 0 -3 4 0 3f000000
+move 1 0 1
+ev 9 0 0 0 0 0
+ev 9 28 0 0 0 0
+acq 0
+mouse 1 = -1
+btn 1 6 0
+ev 15 0 0 2 4 3fa00000
+data 1 7 0 = -1 0
+data 1 123 0 = -1 0
+ev 5 0 0 0 0 3f800000
+key 0 137 0
+ev 15 0 -6 0 4 3fc00000
+wheel 0 -178
+keys 0 = 0
+ev 10 29 0 0 0 0
+ev 14 0 0 0 6 3fc00000
+ev 5 0 0 -3 0 c451697
+data 0 5 0 = 0 2 1c:0 8:ffffff4e
+ev 16 0 0 7 0 3fa00000
+acq 0
+wheel 0 0
+data 1 12 0 = -1 0
+data 0 13 0 = 0 0
+ev 9 42 0 0 0 0
+data 0 4 0 = 0 1 2a:80
+ev 16 0 0 -1 7 0
+ev 9 255 0 0 0 0
+ev 9 200 0 0 0 0
+data 0 19 0 = 0 2 ff:80 c8:80
+acq 0
+ev 16 0 -4 1 2 3f800000
+ev 10 91 0 0 0 0
+seq 26 1 1
+isacq 1 = 0
+ev 13 0 0 4 2 c479f000
+data 0 62 0 = -1 0
+keys 1 = -1
+ev 15 0 3 3 3 3fc00000
+ev 14 0 0 0 1 3eaaa64c
+ev 16 0 5 2 5 40200000
+ev 5 0 0 0 2 16b76295
+data 0 17 0 = -1 0
+move 1 0 0
+ev 13 0 0 -6 1 0
+data 1 2 0 = -1 0
+mouse 1 = -1
+acq 0
+isacq 0 = 1
+ev 15 0 -2 0 7 bf800000
+acq 1
+acq 0
+acq 0
+acq 1
+ev 9 71 0 0 0 0
+mouse 1 = 0 0 0 0 0 0 0 0
+ev 4 0 -3 0 5 4479e000
+ev 14 0 -5 0 6 4479e000
+key 0 1 0
+acq 0
+key 0 219 1
+data 1 1 0 = 0 0
+move 0 5 0
+ev 5 0 0 1 0 0
+mouse 1 = 0 0 0 0 0 0 0 0
+move 0 3 -7
+ev 9 157 0 0 0 0
+btn 1 2 0
+ev 15 0 0 -4 2 a95afc37
+data 0 7 0 = 0 7 47:80 db:80 0:5 47:0 db:0 0:3 4:fffffff9
+ev 14 0 0 4 5 3fa00000
+data 1 8 0 = 0 0
+ev 15 0 0 0 1 3fc00000
+data 0 11 0 = 0 1 9d:80
+unacq 0
+ev 5 0 -7 6 2 3eaaa64c
+key 1 42 0
+ev 5 0 1 0 2 40200000
+ev 4 0 0 0 6 3fa00000
+ev 16 0 2 -1 5 3f000000
+ev 16 0 0 0 0 bc4ccccd
+ev 9 255 0 0 0 0
+seq 27 0 1
+ev 16 0 -5 0 3 3b83126f
+ev 14 0 -2 0 1 40200000
+ev 14 0 3 0 5 4479e000
+ev 9 255 0 0 0 0
+ev 13 0 -7 0 7 98d3b700
+ev 9 200 0 0 0 0
+ev 13 0 2 -1 2 3fc00000
+ev 11 0 0 -2 1 3f800000
+acq 1
+data 1 107 0 = 0 0
+btn 0 1 1
+key 0 42 1
+key 1 0 0
+ev 9 56 0 0 0 0
+burst 1 309
+acq 1
+acq 1
+ev 14 0 0 0 0 40200000
+btn 0 5 1
+acq 0
+ev 16 0 0 0 2 bc4ccccd
+keys 1 = 0
+data 1 138 0 = 1 138 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 15 0 1 4 3 3fc00000
+unacq 1
+ev 14 0 6 3 2 4479e000
+data 0 9 0 = 0 0
+ev 15 0 0 -1 6 40200000
+ev 9 1 0 0 0 0
+data 0 4 0 = 0 0
+key 1 201 1
+burst 0 148
+ev 5 0 2 -3 6 4479e000
+move 0 5 -3
+ev 13 0 -7 2 4 40200000
+mouse 0 = 0 153 -151 0 0 128 0 0
+unacq 0
+ev 16 0 -1 1 0 3f000000
+btn 1 5 0
+data 0 104 0 = -1 0
+ev 13 0 3 0 2 4479e000
+ev 10 182 0 0 0 0
+mouse 0 = -1
+ev 9 205 0 0 0 0
+ev 13 0 2 0 5 bf000000
+ev 9 29 0 0 0 0
+data 1 13 0 = -1 0
+wheel 1 -99
+ev 13 0 -1 3 5 3fa00000
+key 0 29 1
+ev 15 0 0 5 1 40200000
+seq 28 1 1
+move 1 0 0
+acq 0
+ev 13 0 -3 -1 6 c479f000
+isacq 0 = 1
+key 0 146 0
+key 1 157 0
+ev 9 255 0 0 0 0
+data 1 1 0 = -1 0
+data 1 5 0 = -1 0
+unacq 0
+mouse 1 = -1
+acq 0
+acq 1
+ev 9 200 0 0 0 0
+keys 1 = 0
+acq 0
+ev 14 0 0 -5 3 bf800000
+mouse 0 = 0 0 0 0 0 0 0 0
+isacq 1 = 1
+acq 0
+mouse 1 = 0 0 0 0 0 128 0 0
+acq 1
+btn 0 0 1
+ev 13 0 2 1 6 3f800000
+move 0 -6 5
+mouse 0 = 0 -6 5 0 128 0 0 0
+ev 9 56 0 0 0 0
+ev 5 0 -3 1 6 c479f000
+btn 1 3 1
+unacq 1
+ev 14 0 6 2 3 bc4ccccd
+ev 14 0 0 1 1 bf800000
+keys 1 = -1
+burst 0 306
+key 0 0 0
+data 0 0 0 = 1 0
+key 1 1 0
+data 1 11 0 = -1 0
+ev 15 0 2 -6 0 37fd6ab1
+mouse 1 = -1
+keys 1 = -1
+ev 15 0 3 0 1 3b83126f
+seq 29 1 1
+ev 9 1 0 0 0 0
+mouse 1 = -1
+key 1 200 0
+key 0 275 0
+data 1 14 0 = -1 0
+acq 1
+btn 1 3 1
+ev 14 0 -7 0 4 3eaaa64c
+ev 13 0 0 0 6 3fa00000
+acq 0
+keys 0 = 0 1
+ev 14 0 -4 4 2 3fc00000
+ev 13 0 -1 0 3 bc4ccccd
+ev 10 250 0 0 0 0
+ev 15 0 4 0 3 3f800000
+ev 9 56 0 0 0 0
+data 1 209 0 = 0 3 f:80 e:80 0:ffffffff
+keys 0 = 0 1 56
+data 0 11 0 = 0 1 38:80
+wheel 0 0
+ev 4 0 0 6 2 3f800000
+data 1 18 0 = 0 0
+btn 0 4 0
+ev 14 0 0 0 2 0
+acq 0
+ev 14 0 1 -3 1 4479e000
+ev 5 0 -3 6 6 3f000000
+ev 14 0 0 4 3 3eaaa64c
+keys 1 = 0
+data 0 225 0 = 0 2 1:0 38:0
+acq 0
+ev 9 56 0 0 0 0
+unacq 0
+ev 10 157 0 0 0 0
+ev 9 28 0 0 0 0
+data 1 11 0 = 0 5 c:80 c:0 e:0 f:0 d:80
+isacq 0 = 0
+ev 10 1 0 0 0 0
+key 1 259 0
+ev 0 0 0 -3 0 c479f000
+btn 1 0 0
+unacq 1
+ev 10 29 0 0 0 0
+key 1 256 0
+data 1 2 0 = -1 0
+ev 5 0 -1 0 3 3f000000
+acq 0
+data 1 13 0 = -1 0
+data 0 299 0 = 0 0
+ev 9 42 0 0 0 0
+ev 0 0 -3 1 6 40200000
+key 0 29 1
+ev 10 42 0 0 0 0
+unacq 0
+ev 10 42 0 0 0 0
+keys 0 = -1
+ev 10 200 0 0 0 0
+key 1 42 0
+key 0 0 0
+seq 30 1 1
+ev 10 291 0 0 0 0
+btn 0 6 0
+ev 13 0 5 7 0 bf000000
+data 1 71 0 = -1 0
+ev 14 0 0 -3 3 b71cc520
+ev 16 0 4 -1 7 3f000000
+wheel 0 -146
+move 0 -4 0
+acq 1
+ev 11 0 -1 -7 1 40200000
+ev 15 0 0 -1 3 3fa00000
+mouse 0 = -1
+data 1 11 0 = 0 1 d:0
+ev 15 0 1 6 4 3fc00000
+key 1 29 1
+ev 13 0 0 7 3 3f800000
+ev 15 0 -3 -1 6 c15286ba
+ev 11 0 1 6 4 4479e000
+ev 13 0 0 0 0 134b0c4e
+mouse 1 = 0 0 7 0 0 0 0 0
+acq 0
+keys 0 = 0
+acq 0
+mouse 1 = 0 0 0 0 0 0 0 0
+ev 10 28 0 0 0 0
+ev 14 0 6 3 4 3fa00000
+ev 16 0 2 -1 0 bf000000
+btn 0 3 0
+mouse 1 = 0 0 0 -60 0 0 0 128
+unacq 1
+ev 16 0 7 -1 1 3b83126f
+ev 16 0 0 0 1 0
+acq 1
+ev 13 0 0 5 4 bf800000
+unacq 1
+ev 10 56 0 0 0 0
+ev 14 0 0 0 5 3fc00000
+acq 1
+ev 14 0 4 7 7 3fa00000
+burst 1 217
+data 0 12 0 = 0 0
+ev 9 0 0 0 0 0
+ev 14 0 -3 0 2 c479f000
+ev 9 1 0 0 0 0
+btn 1 4 1
+ev 13 0 7 0 0 3fc00000
+acq 0
+data 0 33 0 = 0 1 1:80
+data 0 5 0 = 0 0
+data 1 7 0 = 1 7 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+acq 1
+burst 0 243
+acq 1
+ev 13 0 1 3 7 40200000
+mouse 0 = 0 243 -243 0 0 0 0 0
+burst 0 263
+unacq 1
+acq 1
+data 0 3 0 = 1 3 0:1 4:ffffffff 0:1
+ev 16 0 -7 7 0 3b83126f
+ev 10 258 0 0 0 0
+ev 9 200 0 0 0 0
+acq 1
+ev 14 0 -7 0 3 bc4ccccd
+mouse 0 = 0 263 -263 0 0 0 0 0
+ev 9 256 0 0 0 0
+ev 9 0 0 0 0 0
+data 1 17 0 = 0 1 d:80
+ev 9 0 0 0 0 0
+mouse 1 = 0 0 0 0 0 128 128 128
+wheel 1 -167
+unacq 0
+ev 10 0 0 0 0 0
+acq 0
+mouse 1 = 0 0 0 -167 0 128 128 128
+ev 13 0 0 0 0 bf800000
+unacq 1
+ev 9 205 0 0 0 0
+wheel 0 0
+data 0 11 0 = 0 1 cd:80
+ev 14 0 -4 0 4 3eaaa64c
+data 1 14 0 = -1 0
+ev 14 0 7 -2 3 3fc00000
+burst 1 333
+data 0 136 1 = 0 0
+unacq 1
+acq 0
+acq 0
+ev 10 200 0 0 0 0
+seq 31 1 1
+ev 11 0 -2 0 4 3b83126f
+keys 0 = -1
+acq 1
+ev 13 0 3 7 5 43f1a95f
+ev 14 0 4 3 2 3b83126f
+ev 16 0 5 0 4 40200000
+wheel 1 -41
+acq 0
+data 1 5 0 = 0 5 0:3 4:7 e:80 8:12c 8:ffffffd7
+unacq 1
+ev 9 225 0 0 0 0
+mouse 1 = -1
+burst 0 236
+keys 0 = 0 225
+ev 16 0 0 0 3 4479e000
+ev 5 0 -7 6 5 3f800000
+unacq 0
+ev 14 0 0 0 6 a2e537b7
+ev 13 0 2 0 6 bc4ccccd
+data 1 16 0 = -1 0
+ev 5 0 3 0 4 3eaaa64c
+ev 9 255 0 0 0 0
+ev 10 56 0 0 0 0
+move 0 -5 0
+ev 5 0 2 0 1 3f000000
+ev 9 255 0 0 0 0
+move 0 3 -2
+ev 14 0 3 4 6 3eaaa64c
+data 0 3 1 = -1 0
+ev 10 157 0 0 0 0
+ev 9 255 0 0 0 0
+ev 14 0 5 -6 2 0
+ev 13 0 0 6 5 1d811ed5
+ev 10 56 0 0 0 0
+acq 1
+acq 1
+btn 0 6 0
+data 1 0 0 = 0 0
+keys 0 = -1
+move 0 -2 6
+key 0 257 0
+acq 1
+data 1 17 0 = 0 0
+ev 10 56 0 0 0 0
+ev 9 29 0 0 0 0
+keys 1 = 0
+data 0 15 0 = -1 0
+acq 1
+keys 1 = 0
+ev 15 0 4 5 6 bc4ccccd
+ev 13 0 0 1 1 3eaaa64c
+ev 14 0 4 0 5 3eaaa64c
+ev 10 1 0 0 0 0
+ev 9 255 0 0 0 0
+move 1 0 0
+ev 15 0 3 7 4 3f800000
+mouse 0 = -1
+unacq 1
+key 1 176 1
+data 0 291 1 = -1 0
+ev 9 56 0 0 0 0
+wheel 1 0
+ev 0 0 -7 -3 7 40200000
+ev 5 0 -1 -6 0 3b83126f
+move 0 6 0
+acq 1
+ev 16 0 -5 -7 3 4479e000
+keys 0 = -1
+unacq 1
+ev 16 0 -6 3 1 3f000000
+ev 5 0 4 3 3 bf800000
+ev 13 0 -7 6 4 34d3669d
+keys 0 = -1
+data 1 120 0 = -1 0
+acq 1
+data 0 19 0 = -1 0
+move 0 0 0
+ev 5 0 7 7 1 3eaaa64c
+ev 14 0 3 1 2 40200000
+ev 15 0 0 0 6 3b83126f
+ev 9 1 0 0 0 0
+seq 32 1 1
+ev 5 0 -5 -5 1 bc4ccccd
+ev 9 28 0 0 0 0
+mouse 1 = -1
+ev 14 0 0 5 0 bf800000
+ev 5 0 4 0 4 0
+ev 15 0 -2 -6 3 2e4410dd
+ev 14 0 1 1 5 3b83126f
+ev 0 0 0 0 5 89bfcb24
+move 1 -5 -6
+data 0 299 0 = -1 0
+ev 13 0 2 7 1 bf800000
+ev 15 0 -2 -5 7 bf800000
+data 0 9 0 = -1 0
+ev 9 181 0 0 0 0
+key 1 272 0
+ev 9 0 0 0 0 0
+ev 14 0 -4 -7 3 3fa00000
+key 1 29 0
+data 0 18 0 = -1 0
+acq 1
+mouse 1 = 0 0 0 0 0 128 0 0
+acq 0
+keys 1 = 0
+ev 13 0 5 -6 1 bf800000
+key 0 1 1
+data 1 19 1 = 0 2
+ev 15 0 0 0 7 bf800000
+ev 15 0 -1 0 1 3fa00000
+unacq 0
+ev 9 200 0 0 0 0
+wheel 1 -147
+keys 1 = 0
+keys 0 = -1
+isacq 0 = 0
+data 1 128 0 = 0 1 8:ffffff6d
+burst 1 252
+acq 1
+keys 0 = -1
+ev 10 255 0 0 0 0
+acq 0
+ev 9 259 0 0 0 0
+ev 14 0 0 0 5 bf000000
+ev 10 258 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 14 0 -5 -3 5 3fa00000
+wheel 1 222
+unacq 0
+data 0 214 0 = -1 0
+acq 1
+wheel 1 23
+ev 14 0 -1 -1 6 8d7f08b8
+wheel 1 -83
+ev 13 0 -5 0 6 3fc00000
+ev 13 0 0 3 6 c479f000
+data 1 7 0 = 1 7 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 16 0 3 7 2 3f000000
+ev 16 0 -3 7 3 3f800000
+mouse 1 = 0 252 -255 195 0 128 0 0
+ev 15 0 0 2 1 3fa00000
+ev 9 0 0 0 0 0
+data 1 19 0 = 0 19 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 14 0 0 0 2 3f800000
+data 0 10 0 = -1 0
+ev 16 0 -1 0 4 3eaaa64c
+acq 0
+ev 9 1 0 0 0 0
+acq 1
+data 1 14 0 = 0 14 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 5 0 -2 0 6 198f0c87
+ev 11 0 0 5 0 4479e000
+ev 15 0 0 0 3 4479e000
+move 0 0 -3
+data 0 131 0 = 0 4 1:0 b5:0 c8:0 4:fffffffd
+mouse 1 = 0 0 0 40 0 0 0 0
+acq 0
+acq 0
+seq 33 1 1
+unacq 1
+ev 16 0 -6 -6 0 40200000
+data 1 19 0 = -1 0
+acq 0
+acq 1
+ev 9 5 0 0 0 0
+ev 15 0 -5 0 6 0
+move 1 -5 0
+btn 1 5 1
+data 0 249 0 = 0 1 5:80
+ev 10 29 0 0 0 0
+data 1 14 0 = 0 1 0:fffffffb
+ev 9 142 0 0 0 0
+key 0 216 1
+ev 15 0 3 0 3 bc4ccccd
+mouse 1 = 0 -5 0 0 0 0 0 0
+unacq 0
+ev 9 259 0 0 0 0
+isacq 0 = 0
+ev 13 0 0 -1 6 4479e000
+ev 9 1 0 0 0 0
+ev 13 0 0 3 1 c479f000
+data 0 13 1 = -1 0
+data 1 0 0 = 0 0
+btn 1 1 0
+ev 9 0 0 0 0 0
+ev 5 0 5 3 6 3fc00000
+ev 10 200 0 0 0 0
+btn 1 5 0
+unacq 0
+data 1 16 1 = 0 2
+ev 10 255 0 0 0 0
+unacq 0
+ev 10 28 0 0 0 0
+ev 10 42 0 0 0 0
+unacq 0
+btn 1 5 1
+ev 0 0 0 0 7 bf800000
+ev 14 0 4 1 0 c479f000
+unacq 0
+ev 9 28 0 0 0 0
+ev 10 114 0 0 0 0
+move 1 6 4
+acq 1
+ev 9 42 0 0 0 0
+data 1 19 0 = 0 2 0:6 4:4
+key 1 256 1
+seq 34 1 1
+unacq 1
+ev 14 0 1 3 3 3b83126f
+keys 0 = -1
+unacq 1
+mouse 0 = -1
+ev 14 0 -2 0 6 2a4811cd
+move 0 0 0
+data 1 0 0 = -1 0
+mouse 1 = -1
+acq 1
+wheel 0 225
+acq 1
+ev 9 28 0 0 0 0
+ev 5 0 0 0 6 3fa00000
+btn 1 6 1
+ev 14 0 7 0 5 bf000000
+ev 16 0 0 -1 0 a7b4d666
+ev 9 56 0 0 0 0
+data 1 13 1 = 0 1
+ev 13 0 4 -6 2 3fc00000
+ev 10 56 0 0 0 0
+ev 15 0 -3 -3 7 3b83126f
+ev 10 190 0 0 0 0
+ev 14 0 0 4 0 bc4ccccd
+ev 14 0 7 0 5 bd303abd
+data 1 13 0 = 0 2 0:4 4:fffffffa
+data 1 17 1 = 0 0
+ev 14 0 0 0 5 4479e000
+isacq 1 = 1
+data 0 279 0 = -1 0
+acq 1
+burst 1 339
+ev 5 0 -5 3 1 3fc00000
+keys 0 = -1
+data 1 25 0 = 1 25 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+seq 35 0 1
+ev 10 200 0 0 0 0
+data 1 9 0 = -1 0
+ev 9 29 0 0 0 0
+keys 0 = -1
+data 0 9 0 = -1 0
+acq 0
+ev 11 0 0 -7 5 881d2a3a
+acq 0
+ev 14 0 5 0 3 bf000000
+burst 1 279
+isacq 0 = 1
+acq 0
+ev 9 263 0 0 0 0
+ev 14 0 -3 -6 4 3b83126f
+ev 13 0 6 3 0 bc4ccccd
+ev 10 200 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+ev 9 96 0 0 0 0
+unacq 1
+ev 9 283 0 0 0 0
+key 1 271 0
+ev 10 200 0 0 0 0
+data 0 17 0 = 0 0
+ev 11 0 -3 -1 6 3eaaa64c
+ev 13 0 -5 -3 0 3f000000
+key 1 0 0
+ev 14 0 0 6 3 3fa00000
+data 0 17 0 = 0 0
+ev 16 0 0 0 7 bf000000
+ev 10 1 0 0 0 0
+mouse 0 = 0 0 0 0 0 0 0 0
+data 1 119 0 = -1 0
+acq 0
+ev 10 1 0 0 0 0
+burst 0 338
+ev 15 0 -5 4 6 20d7e9c2
+data 1 4 0 = -1 0
+mouse 0 = 0 338 -338 0 0 0 0 0
+ev 14 0 2 -2 3 40200000
+data 0 62 0 = 1 62 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 13 0 1 0 4 bc4ccccd
+ev 9 200 0 0 0 0
+ev 9 28 0 0 0 0
+ev 5 0 -5 0 7 c479f000
+data 1 4 1 = -1 0
+data 0 8 0 = 0 8 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 4 0 0 1 6 3b83126f
+data 1 7 0 = -1 0
+key 0 279 0
+seq 36 1 1
+ev 5 0 -1 0 4 bf800000
+acq 0
+ev 13 0 -7 -5 4 3fc00000
+burst 1 125
+ev 13 0 2 0 6 0
+acq 1
+ev 14 0 -2 0 3 bf800000
+key 1 255 0
+unacq 0
+mouse 1 = 0 0 0 0 0 128 0 0
+unacq 0
+ev 9 0 0 0 0 0
+wheel 1 115
+wheel 1 -30
+acq 0
+ev 15 0 0 6 1 0
+ev 16 0 6 4 1 3fc00000
+ev 14 0 -2 3 3 88c8d7b7
+ev 15 0 0 -3 4 c479f000
+ev 14 0 3 7 6 3fa00000
+burst 0 179
+unacq 1
+data 0 12 0 = 1 12 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+mouse 0 = 0 179 -179 0 0 0 0 0
+ev 15 0 -7 0 5 3fc00000
+wheel 1 0
+ev 9 29 0 0 0 0
+ev 10 157 0 0 0 0
+ev 15 0 0 -4 1 40200000
+btn 1 0 0
+ev 9 56 0 0 0 0
+unacq 1
+ev 16 0 7 -5 4 0
+data 1 2 0 = -1 0
+ev 10 255 0 0 0 0
+data 0 3 0 = 0 3 0:1 4:ffffffff 0:1
+unacq 0
+key 1 29 1
+data 0 10 0 = -1 0
+mouse 0 = -1
+ev 9 42 0 0 0 0
+burst 0 328
+ev 9 200 0 0 0 0
+ev 9 56 0 0 0 0
+key 1 1 0
+ev 9 28 0 0 0 0
+data 0 8 1 = -1 0
+acq 0
+keys 0 = 0 28 29 42 56 200
+ev 14 0 -1 0 1 3b83126f
+ev 16 0 7 2 6 3fc00000
+acq 1
+key 1 1 1
+ev 9 259 0 0 0 0
+key 1 131 1
+ev 16 0 6 -2 7 3f000000
+acq 1
+acq 1
+ev 16 0 2 0 0 4479e000
+mouse 0 = 0 0 0 0 0 0 0 0
+data 1 141 0 = 0 4 1:80 83:80 8:3c 8:1d484
+ev 16 0 4 7 3 bf000000
+keys 1 = 0 1 29 131
+burst 0 119
+data 0 7 0 = 0 7 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 13 0 6 7 0 3f000000
+wheel 1 39
+keys 1 = 0 1 29 131
+move 1 6 -2
+mouse 1 = 0 12 5 119979 128 128 0 0
+ev 9 200 0 0 0 0
+ev 10 255 0 0 0 0
+data 1 156 0 = 0 6 8:ffffffc4 0:6 4:7 8:27 0:6 4:fffffffe
+data 0 248 0 = 0 231 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+ev 5 0 1 1 1 3b83126f
+data 0 9 0 = 0 5 1c:0 1d:0 2a:0 38:0 c8:0
+ev 13 0 1 7 0 bf000000
+ev 5 0 0 -3 4 3eaaa64c
+burst 1 237
+btn 1 3 0
+acq 0
+ev 13 0 0 0 4 bc4ccccd
+seq 37 0 1
+ev 9 140 0 0 0 0
+key 0 56 1
+ev 14 0 -3 -4 2 bf000000
+ev 5 0 -5 -3 2 3b83126f
+acq 0
+ev 15 0 -7 6 0 3f000000
+ev 14 0 -5 0 4 3f800000
+key 1 29 0
+unacq 1
+data 0 8 0 = 0 0
+ev 16 0 -3 3 3 bc4ccccd
+data 0 135 0 = 0 0
+acq 0
+mouse 1 = -1
+unacq 0
+ev 14 0 -2 4 7 bf800000
+mouse 1 = -1
+mouse 0 = -1
+ev 14 0 6 -7 7 3fc00000
+ev 9 285 0 0 0 0
+key 0 200 0
+mouse 0 = -1
+move 0 0 0
+data 0 10 0 = -1 0
+acq 0
+move 1 0 7
+ev 11 0 -3 0 7 3fa00000
+data 1 12 0 = -1 0
+keys 1 = -1
+mouse 1 = -1
+burst 0 323
+ev 16 0 -2 2 6 bd36d3db
+ev 14 0 5 0 2 c479f000
+ev 15 0 0 6 7 3fa00000
+data 1 1 0 = -1 0
+move 0 0 7
+mouse 1 = -1
+mouse 0 = 0 323 -316 0 0 0 0 0
+ev 9 56 0 0 0 0
+data 1 0 1 = -1 0
+ev 13 0 4 4 4 bf800000
+keys 0 = 0 56
+mouse 1 = -1
+unacq 0
+data 0 1 0 = -1 0
+seq 38 0 1
+ev 13 0 -3 0 7 3f000000
+wheel 1 0
+ev 15 0 0 -4 7 3eaaa64c
+ev 13 0 0 0 3 8d3d2eae
+ev 9 0 0 0 0 0
+ev 16 0 0 2 1 c479f000
+ev 10 256 0 0 0 0
+ev 9 56 0 0 0 0
+key 1 28 1
+ev 5 0 0 0 7 3eaaa64c
+btn 0 1 0
+key 1 200 1
+acq 1
+ev 9 123 0 0 0 0
+move 0 0 -5
+acq 0
+btn 0 1 0
+keys 0 = 0
+ev 10 29 0 0 0 0
+mouse 1 = 0 0 0 0 0 0 0 0
+mouse 1 = 0 0 0 0 0 0 0 0
+key 1 217 0
+ev 16 0 2 7 0 0
+acq 0
+key 1 224 0
+ev 5 0 7 -5 4 bf800000
+data 0 10 0 = 0 0
+ev 14 0 4 0 2 24377537
+keys 1 = 0 28 200
+ev 14 0 0 -4 5 40200000
+ev 13 0 -7 0 0 3fc00000
+keys 1 = 0 28 200
+burst 0 232
+ev 10 28 0 0 0 0
+burst 1 287
+btn 1 5 0
+mouse 1 = 0 280 -287 0 0 0 128 0
+btn 1 5 0
+burst 0 336
+ev 14 0 -6 6 2 bc4ccccd
+ev 9 142 0 0 0 0
+ev 11 0 2 1 5 40200000
+data 1 2 0 = 1 2 e:80 0:fffffff9
+data 0 10 0 = 1 10 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff
+wheel 0 46
+ev 15 0 6 3 6 4479e000
+move 0 -5 0
+acq 1
+data 0 7 0 = 0 7 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+ev 15 0 -5 -2 4 3fc00000
+key 0 1 1
+burst 0 286
+unacq 1
+ev 5 0 -1 -7 4 3eaaa64c
+key 1 56 1
+data 1 8 0 = -1 0
+ev 9 217 0 0 0 0
+ev 0 0 -6 1 6 bf800000
+ev 16 0 -3 -7 4 c479f000
+keys 1 = -1
+acq 1
+ev 15 0 1 -3 5 c479f000
+burst 0 293
+ev 9 56 0 0 0 0
+key 1 1 0
+data 0 18 0 = 1 18 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1 4:ffffffff 0:1
+isacq 0 = 1
+acq 0
+acq 0
+ev 9 255 0 0 0 0
+ev 10 259 0 0 0 0
+acq 1
+key 1 157 0
+ev 5 0 0 -7 4 4479e000
+unacq 0
+keys 0 = -1
+ev 14 0 -4 0 1 3fc00000
+unacq 0
+ev 9 256 0 0 0 0
+ev 14 0 1 5 3 40200000
+acq 0
+key 0 200 1
+ev 13 0 7 -7 6 c479f000
+data 1 230 0 = 0 4 c:80 d:80 0:7 4:fffffff9
+acq 0
+ev 15 0 0 0 0 bf800000
+wheel 0 -226
+acq 1
+ev 10 56 0 0 0 0
+seq 39 1 1
+key 1 157 1
+ev 10 1 0 0 0 0
+unacq 1
+btn 1 0 1
+ev 14 0 0 0 0 a8f4fedf
+ev 9 157 0 0 0 0
+ev 9 14 0 0 0 0
+acq 1
+ev 10 1 0 0 0 0
+ev 9 56 0 0 0 0
+data 1 31 0 = 0 0
+acq 0
+unacq 1
+ev 10 1 0 0 0 0
+data 1 10 0 = -1 0
+data 1 33 0 = -1 0
+unacq 0
+btn 0 4 1
+btn 1 5 1
+burst 0 145
+mouse 0 = -1
+keys 1 = -1
+key 1 157 1
+wheel 1 64
+move 1 0 6
+ev 15 0 0 -2 1 40200000
+mouse 0 = -1
+acq 0
+ev 16 0 0 0 2 bc4ccccd
+ev 9 42 0 0 0 0
+ev 9 258 0 0 0 0
+acq 1
+ev 16 0 -7 -1 3 3fc00000
+keys 1 = 0 157
+ev 9 28 0 0 0 0
+ev 14 0 -4 4 7 14377a3f
+data 1 39 0 = 0 1 8:b4
+unacq 1
+mouse 1 = -1
+burst 1 126
+acq 1
+ev 9 42 0 0 0 0
+data 1 180 0 = 0 0
+key 0 157 0
+ev 10 1 0 0 0 0
+seq 40 1 1
+ev 5 0 2 0 2 bf800000
+keys 0 = -1
+key 1 246 0
+move 0 -2 0
+acq 1
+ev 9 200 0 0 0 0
+ev 14 0 1 5 4 3fa00000
+ev 16 0 0 -6 4 3b83126f
+ev 16 0 5 0 0 3fa00000
+data 0 2 1 = -1 0
+unacq 0
+isacq 0 = 0
+wheel 0 -91
+btn 0 3 1
+data 0 258 0 = -1 0
+keys 0 = -1
+wheel 1 0
+data 0 6 1 = -1 0
+ev 9 0 0 0 0 0
+burst 1 151
+key 1 259 0
+mouse 0 = -1
+unacq 0
+acq 1
+ev 13 0 6 4 5 3f800000
+ev 9 257 0 0 0 0
+key 1 157 1
+ev 9 56 0 0 0 0
+ev 16 0 4 0 1 3f800000
+ev 15 0 0 -2 1 40200000
+btn 0 3 0
+btn 0 5 1
+data 0 90 1 = -1 0
+ev 13 0 -3 -4 2 bc4ccccd
+burst 1 147
+btn 1 6 1
+ev 14 0 7 -2 3 4479e000
+ev 13 0 -4 0 6 0
+keys 1 = 0 157
+wheel 0 146
+unacq 0
+ev 9 255 0 0 0 0
+ev 9 237 0 0 0 0
+ev 16 0 1 1 6 3f800000
+ev 9 157 0 0 0 0
+data 0 170 0 = -1 0
+keys 0 = -1
+data 1 2 0 = 1 2 f:80 8:96
+ev 14 0 0 1 0 bf800000
+ev 14 0 -4 0 5 40200000
+burst 0 220
+ev 14 0 5 -7 1 c479f000
+burst 0 314
+acq 1
+ev 10 255 0 0 0 0
+ev 10 28 0 0 0 0
+acq 0
+mouse 1 = 0 297 -298 390 128 128 0 128
+ev 10 255 0 0 0 0
+wheel 1 0
+keys 0 = 0 56 157 200 237
+key 1 200 0
+keys 1 = 0 157

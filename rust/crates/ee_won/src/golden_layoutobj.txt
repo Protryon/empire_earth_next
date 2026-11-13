@@ -1,0 +1,5789 @@
+seq 0
+start 17 146 86 142 0 32 35 194 171 1 192 -1 1 7 1 263 242 218 143 1 85 121 70 169 1 18 235 250 139 1 21 88 237 20 1 25 227 105 63 1 65 197 70 100 1 341 -36 177 189 2 148 -12 271 152 1 280 189 141 73 1 55 80 76 13 1 206 101 80 62 1
+call new 1 0 1 1 4 1 1 5 1 0 0 0 525344 16 38 2 38 0 0 0
+hold 1
+hold 1
+release 1
+call run
+call new 7 0 0 1 8 0 1 9 0 0 0 0 37 -8 0 0 0 0 0 0 7
+hold 2
+atleast 9 274 12
+hold 2
+release 2
+set 3 16 2 214 127
+call new 4 2 256 1 9 0 0 2 0 0 0 0 18 0 0 0 0 0 0 0 8
+hold 3
+uses 0
+release 3
+delete 3
+set 7 47 18 266 173
+call remove 6
+call clear
+release 1
+delete 1
+release 2
+delete 2
+call new 6 0 0 1 9 1 1 6 8 0 0 0 3584 36 44 0 0 0 0 0 4 2 7
+hold 4
+pos 8 -51 418
+pos 4 187 433
+pos 2 -44 226
+pos 7 -29 209
+hold 4
+release 4
+call new 7 2 0 1 5 1 0 1 0 0 0 0 0 90 0 0 0 0 0 0 9 8 10 7
+hold 5
+uses 0
+release 5
+delete 5
+call center 9 3 3
+pos 3 30 -13
+call new 5 0 1 1 7 0 1 1 0 0 0 0 2 4 0 0 0 0 0 0 10 9
+hold 6
+hold 6
+release 6
+call new 1 0 0 10 5 0 0 3 2 0 0 0 65536 27 91 16 41 0 0 0
+hold 7
+possize 3 30 -13 136 127
+hold 7
+release 7
+call point 14
+phold 14
+call remove 9
+call run
+possize 3 30 -13 136 127
+call run
+possize 3 30 -13 136 127
+call enable 2 0
+call run
+possize 3 30 -13 136 127
+call clear
+release 4
+delete 4
+release 6
+delete 6
+release 7
+delete 7
+prelease 14
+set 7 45 45 142 191
+call new 1 1 0 1 8 0 0 5 6 0 0 0 263168 -1 28 12 46 0 0 0
+hold 8
+possize 5 267 121 70 160
+release 8
+delete 8
+call enable 1 1
+set 10 -1 2 126 0
+set 2 32 1 29 21
+call run
+call new 8 0 0 8 6 1 1 5 7 0 4 2 31 5 89 36 1 -1 -1 1
+hold 9
+possize 5 157 1 320 7
+hold 9
+release 9
+set 10 14 4 0 46
+call new 5 0 2 1 2 1 0 1 0 0 0 0 14 -37 0 0 0 0 0 0 7 5 5
+hold 10
+hold 10
+release 10
+call run
+possize 5 157 1 320 7
+call remove 7
+call new 3 0 0 1 9 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10 9
+hold 11
+size 10 0 100
+size 9 274 100
+hold 11
+release 11
+call run
+possize 5 157 1 320 7
+size 10 0 100
+size 9 274 100
+call new 5 0 2 1 8 0 1 9 0 0 0 0 38 33 0 0 0 0 0 0 9 5
+hold 12
+hold 12
+release 12
+call point 13
+phold 13
+call new 1 0 1 1 8 1 1 6 9 0 0 0 524417 35 39 26 -93 0 0 0
+hold 13
+hold 13
+release 13
+call new 6 0 256 1 3 1 0 1 10 0 0 0 1024 43 26 0 0 0 0 0 6 4
+hold 14
+hold 14
+release 14
+set 4 31 -1 8 42
+call new 1 1 0 1 5 1 0 10 5 0 0 0 524289 -1 46 39 34 0 0 0
+hold 15
+possize 10 14 4 359 38
+release 15
+delete 15
+set 5 30 -1 218 175
+free
+prelease 13
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+seq 1
+start 106 -6 126 42 0 307 144 113 48 1 285 31 209 154 1 92 111 198 4 1 317 -35 210 66 1 111 -38 267 2 1 -30 222 137 152 1 48 198 204 180 1 190 100 270 27 1 49 -16 233 159 2 209 -29 139 159 1 -34 15 190 47 1 260 149 275 159 1 81 46 275 179 1
+call run
+call enable 0 1
+call remove 6
+call new 3 0 1 1 10 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 4
+hold 1
+hold 1
+release 1
+call point 13
+phold 13
+call new 4 0 0 1 1 0 0 3 0 0 0 0 0 0 0 0 0 0 0 0 7 5 5
+hold 2
+pos 3 527 31
+hold 2
+release 2
+call point 14
+phold 14
+call new 1 0 0 1 4 1 1 6 9 0 0 0 3072 47 -15 71 -9 0 0 0
+hold 3
+possize 6 -30 -38 267 2
+hold 3
+release 3
+call new 4 2 1 1 10 1 1 8 0 0 0 0 -9 0 0 0 0 0 0 0 5
+hold 4
+uses 0
+release 4
+delete 4
+call new 2 0 0 1 2 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 7 8
+hold 5
+pos 7 -30 -45
+pos 7 -30 -312
+pos 8 48 -69
+hold 5
+release 5
+call remove 6
+release 3
+delete 3
+call point 11
+phold 11
+call new 2 0 0 1 10 1 0 6 0 0 0 0 0 0 0 0 0 0 0 0 7 6 8
+hold 6
+pos 7 -37 -312
+pos 6 -37 -38
+pos 8 41 -69
+hold 6
+release 6
+call run
+pos 3 527 31
+pos 7 -37 -190
+pos 7 -37 -68
+pos 8 41 53
+pos 7 -44 -68
+pos 6 -44 -38
+pos 8 34 53
+call point 11
+phold 11
+call new 2 0 0 1 9 0 0 4 0 0 0 0 0 0 0 0 0 0 0 0 8 10 3
+hold 7
+hold 7
+release 7
+call new 2 1 1 1 6 1 1 2 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 8
+pos 8 262 78
+release 8
+delete 8
+set 3 28 -6 160 5
+call run
+pos 3 527 -6
+pos 7 -44 -142
+pos 7 -44 -216
+pos 8 262 4
+pos 7 -165 -216
+pos 6 -165 -38
+pos 8 141 4
+call remove 5
+call remove 7
+call new 6 0 0 5 4 1 0 9 9 0 0 0 768 40 46 0 0 0 0 0
+hold 9
+hold 9
+release 9
+call run
+pos 3 527 -6
+pos 7 -165 -179
+pos 7 -165 -142
+pos 8 141 41
+pos 7 -286 -142
+pos 6 -286 -38
+pos 8 20 41
+call run
+pos 3 527 -6
+pos 7 -286 -160
+pos 7 -286 -178
+pos 8 20 23
+pos 7 -407 -178
+pos 6 -407 -38
+pos 8 -101 23
+call run
+pos 3 527 -6
+pos 7 -407 -169
+pos 7 -407 -160
+pos 8 -101 32
+pos 7 -528 -160
+pos 6 -528 -38
+pos 8 -222 32
+call remove 9
+call center 1 7 3
+pos 7 -5 -55
+call new 8 2 1 1 5 1 1 6 0 3 0 0 81 58 76 3 6 0 6 7
+hold 10
+uses 0
+release 10
+delete 10
+call new 8 0 2 1 2 0 0 7 0 9 3 0 -1 -1 -1 -1 4 11 -1 -1
+hold 11
+hold 11
+release 11
+call new 2 0 0 1 8 0 0 9 0 0 0 0 0 0 0 0 0 0 0 0 4 8 2
+hold 12
+hold 12
+release 12
+call new 2 0 1 6 7 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 13
+hold 13
+release 13
+set 1 35 27 4 142
+call run
+pos 3 527 -6
+pos 7 -5 -62
+pos 7 -5 -69
+pos 8 -222 25
+pos 7 -201 -69
+pos 6 -724 -38
+pos 8 -418 25
+call new 4 2 2 1 5 1 1 3 0 0 0 0 38 0 0 0 0 0 0 0 2 10 7 4
+hold 14
+uses 0
+release 14
+delete 14
+call new 3 2 1 1 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 10 2
+hold 15
+uses 0
+release 15
+delete 15
+set 7 37 -5 69 -1
+set 8 21 1 218 16
+call new 8 0 2 4 10 0 1 5 0 5 0 0 100 90 78 69 3 3 2 -1
+hold 16
+hold 16
+release 16
+call point 11
+phold 11
+call remove 9
+free
+prelease 13
+prelease 14
+prelease 11
+prelease 11
+prelease 11
+release 1
+delete 1
+release 2
+delete 2
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 9
+delete 9
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 16
+delete 16
+seq 2
+start 195 141 166 142 0 213 20 263 125 1 -23 62 117 132 1 321 213 177 34 1 180 41 119 195 1 204 220 216 65 1 286 57 36 51 1 103 101 3 96 1 283 71 170 185 1 189 236 289 130 2 269 185 7 135 1 53 209 239 54 1 66 150 174 72 1 -45 59 101 127 1
+set 3 -1 40 156 166
+call new 7 0 1 1 1 1 0 7 0 0 0 0 36 -72 0 0 0 0 0 0 2 10 9
+hold 1
+hold 1
+release 1
+call enable 1 0
+set 3 -3 15 223 121
+set 3 0 38 80 86
+call new 8 0 256 9 9 0 1 5 5 0 8 1 -1 37 86 47 -1 10 7 11
+hold 2
+hold 2
+release 2
+call run
+call new 4 0 0 1 10 1 1 9 0 0 0 0 4 0 0 0 0 0 0 0 2 3 4
+hold 3
+pos 9 502 71
+hold 3
+release 3
+call remove 4
+call run
+pos 9 502 71
+call new 5 0 0 1 4 0 0 5 0 0 0 0 18 30 0 0 0 0 0 0 7 2 2 7
+hold 4
+pos 7 286 59
+pos 2 213 110
+pos 2 213 235
+pos 7 286 360
+hold 4
+release 4
+set 1 -72 4 109 192
+call run
+pos 9 502 71
+pos 7 286 59
+pos 2 213 110
+pos 2 213 235
+pos 7 286 360
+set 1 15 1 17 74
+call enable 2 1
+call new 4 0 0 1 5 1 0 6 0 0 0 0 -1 0 0 0 0 0 0 0 3 8 10 5
+hold 5
+pos 6 477 220
+hold 5
+release 5
+call enable 0 1
+call enable 1 0
+call remove 1
+call new 2 0 256 3 2 0 1 8 0 0 0 0 0 0 0 0 0 0 0 0 8 9 4
+hold 6
+hold 6
+release 6
+call new 7 0 0 1 8 0 1 10 0 0 0 0 3 31 0 0 0 0 0 0 7 9 3
+hold 7
+atleast 10 173 216
+hold 7
+release 7
+call new 2 1 0 10 10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 4 2 9
+hold 8
+release 8
+delete 8
+call new 3 0 0 1 5 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 10 10 9
+hold 9
+size 7 36 216
+size 10 289 216
+size 10 289 216
+size 9 170 216
+hold 9
+release 9
+set 9 24 11 240 148
+call run
+possize 5 180 29 -68 24
+pos 9 502 11
+pos 7 286 47
+pos 2 213 263
+pos 2 213 388
+pos 7 286 513
+pos 6 477 220
+atleast 10 243 247
+size 7 36 247
+size 10 289 247
+size 10 289 247
+size 9 240 247
+set 2 -49 2 119 3
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 9
+delete 9
+call clear
+call run
+call enable 256 1
+call new 6 1 0 1 10 0 0 8 10 0 0 0 1536 15 2 0 0 0 0 0
+hold 10
+release 10
+delete 10
+call new 4 0 2 1 6 1 1 9 0 0 0 0 -8 0 0 0 0 0 0 0 9 4
+hold 11
+hold 11
+release 11
+set 3 95 42 216 0
+set 10 -31 47 256 162
+call enable 256 1
+call remove 3
+call enable 0 1
+call run
+call center 10 7 2
+pos 7 110 513
+call new 8 1 1 1 6 1 1 8 0 2 10 0 7 17 -1 81 4 7 -1 10
+hold 12
+possize 8 -10 7 3 -11
+release 12
+delete 12
+free
+release 11
+delete 11
+seq 3
+start 251 -12 206 10 0 120 129 114 2 1 70 93 25 79 1 118 83 156 64 1 12 117 27 124 1 266 247 233 128 1 234 191 168 182 1 126 4 102 12 1 8 -26 70 144 1 297 188 112 100 2 330 100 108 142 1 108 102 221 29 1 272 219 5 18 1 197 71 228 44 1
+call new 5 0 0 1 4 1 0 1 0 0 0 0 -1 45 0 0 0 0 0 0 7 7 2 7
+hold 1
+pos 7 -1 191
+pos 7 167 191
+pos 2 335 129
+pos 7 449 191
+hold 1
+release 1
+call new 1 0 2 1 6 1 1 7 8 0 0 0 8352 34 0 40 1 0 0 0
+hold 2
+hold 2
+release 2
+set 7 24 41 222 88
+set 1 -9 7 41 20
+call new 7 0 2 8 8 0 1 6 0 0 0 0 -1 -1 0 0 0 0 0 0
+hold 3
+hold 3
+release 3
+call new 6 1 0 1 1 0 0 8 2 0 0 0 512 -8 -1 0 0 0 0 0 10 3 3
+hold 4
+release 4
+delete 4
+set 3 31 30 284 -88
+call new 2 0 0 10 4 0 1 3 0 0 0 0 0 0 0 0 0 0 0 0 2 3
+hold 5
+pos 2 335 35
+pos 3 31 -64
+hold 5
+release 5
+call new 8 2 0 1 9 1 0 4 0 3 0 0 -1 98 -1 -1 2 3 -1 2
+hold 6
+uses 0
+release 6
+delete 6
+call new 2 0 0 1 10 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 7
+pos 6 -96 -54
+hold 7
+release 7
+call new 4 0 1 1 6 0 0 7 0 0 0 0 -9 0 0 0 0 0 0 0 2 6 3 2
+hold 8
+hold 8
+release 8
+call new 2 0 0 1 1 1 0 10 0 0 0 0 0 0 0 0 0 0 0 0 5 9 5 8
+hold 9
+pos 5 247 117
+pos 9 243 -26
+pos 5 482 117
+pos 8 361 4
+hold 9
+release 9
+call center 1 8 0
+call new 6 0 2 8 7 1 0 7 9 0 0 0 3328 49 29 0 0 0 0 0 10 2 7
+hold 10
+hold 10
+release 10
+call new 2 0 0 4 10 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 8 2 3 8
+hold 11
+pos 8 135 4
+pos 2 109 35
+pos 3 -195 -64
+pos 8 -91 4
+hold 11
+release 11
+call remove 5
+call new 7 0 256 1 9 0 1 2 0 0 0 0 29 36 0 0 0 0 0 0 10 6
+hold 12
+hold 12
+release 12
+set 10 37 18 299 123
+call new 7 0 2 1 9 0 1 6 0 0 0 0 24 41 0 0 0 0 0 0
+hold 13
+hold 13
+release 13
+call new 4 0 0 9 3 1 0 8 0 0 0 0 -2 0 0 0 0 0 0 0 7 4
+hold 14
+pos 8 272 4
+hold 14
+release 14
+call new 6 0 1 1 7 1 0 4 2 0 0 0 768 44 35 0 0 0 0 0
+hold 15
+hold 15
+release 15
+call new 5 2 256 10 7 0 1 2 0 0 0 0 -20 15 0 0 0 0 0 0 4
+hold 16
+uses 0
+release 16
+delete 16
+call new 1 0 256 4 2 0 0 10 7 0 0 0 4161 -81 14 1 78 0 0 0
+hold 17
+hold 17
+release 17
+call new 5 1 0 1 10 0 1 5 0 0 0 0 27 13 0 0 0 0 0 0 8 5
+hold 18
+pos 8 272 144
+pos 5 482 156
+release 18
+delete 18
+call new 5 0 1 1 1 1 0 5 0 0 0 0 -2 46 0 0 0 0 0 0 8 2
+hold 19
+hold 19
+release 19
+call run
+pos 7 -1 41
+pos 7 221 41
+pos 2 443 35
+pos 7 557 41
+pos 2 443 -59
+pos 3 -195 -158
+pos 5 292 156
+pos 9 53 -26
+pos 5 102 156
+pos 8 82 144
+pos 8 -78 144
+pos 2 283 -59
+pos 3 -355 -158
+pos 8 -238 144
+pos 8 777 144
+call enable 1 0
+call new 4 1 0 1 2 0 0 9 0 0 0 0 31 0 0 0 0 0 0 0 8 3 10
+hold 20
+pos 9 910 -26
+release 20
+delete 20
+call center 1 9 2
+pos 9 -14 -26
+call new 5 2 1 10 10 1 0 6 0 0 0 0 -1 3 0 0 0 0 0 0 3
+hold 21
+uses 0
+release 21
+delete 21
+call new 1 0 0 1 4 1 0 7 6 0 0 0 80 1 10 -15 -1 0 0 0
+hold 22
+possize 7 557 41 222 88
+hold 22
+release 22
+call point 12
+phold 12
+call new 8 0 1 1 7 0 1 6 3 0 0 0 4 99 15 95 4 2 -1 0
+hold 23
+hold 23
+release 23
+call run
+pos 7 -1 41
+pos 7 221 41
+pos 2 443 -59
+pos 7 557 41
+pos 2 443 -153
+pos 3 -355 -252
+pos 5 -144 156
+pos 9 -260 -26
+pos 5 -390 156
+pos 8 531 144
+pos 8 413 144
+pos 2 325 -153
+pos 3 -473 -252
+pos 8 295 144
+pos 8 777 144
+possize 7 557 41 222 88
+call run
+pos 7 -1 41
+pos 7 221 41
+pos 2 443 -153
+pos 7 557 41
+pos 2 443 -247
+pos 3 -473 -346
+pos 5 -448 156
+pos 9 -318 -26
+pos 5 -506 156
+pos 8 719 144
+pos 8 566 144
+pos 2 290 -247
+pos 3 -626 -346
+pos 8 413 144
+pos 8 777 144
+possize 7 557 41 222 88
+call run
+pos 7 -1 41
+pos 7 221 41
+pos 2 443 -247
+pos 7 557 41
+pos 2 443 -341
+pos 3 -626 -440
+pos 8 671 144
+pos 2 337 -341
+pos 3 -732 -440
+pos 8 565 144
+pos 8 777 144
+possize 7 557 41 222 88
+set 7 20 45 259 59
+call new 6 0 1 1 8 1 1 3 5 0 0 0 1792 1 42 0 0 0 0 0 3 8 5 4
+hold 24
+hold 24
+release 24
+call enable 256 1
+call new 8 1 256 1 2 1 0 4 1 0 0 0 18 12 50 5 -1 11 6 -1
+hold 25
+possize 4 5 12 18 0
+release 25
+delete 25
+free
+prelease 12
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 5
+delete 5
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+release 17
+delete 17
+release 19
+delete 19
+release 22
+delete 22
+release 23
+delete 23
+release 24
+delete 24
+seq 4
+start 340 136 246 110 0 -5 5 265 79 1 162 124 233 25 1 347 -47 135 126 1 276 193 235 53 1 -41 205 250 190 1 183 94 67 114 1 149 207 201 128 1 102 245 270 71 1 5 140 168 71 2 23 14 276 118 1 195 228 270 35 1 77 220 203 132 1 71 84 54 192 1
+call run
+call point 13
+phold 13
+set 4 9 -4 31 107
+call run
+set 10 23 20 47 9
+call remove 3
+call run
+call point 11
+phold 11
+call new 3 2 0 1 4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5
+hold 1
+uses 0
+release 1
+delete 1
+call enable 256 0
+set 2 0 28 168 145
+set 10 15 33 274 49
+call new 1 0 0 9 4 1 1 6 2 0 0 0 266248 8 1 0 24 0 0 0
+hold 2
+possize 6 8 205 250 -153
+hold 2
+release 2
+set 7 1 -1 238 24
+call run
+possize 6 8 205 250 -153
+call enable 2 1
+call run
+possize 6 8 205 250 -153
+call new 3 0 1 1 3 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 5 10
+hold 3
+hold 3
+release 3
+call enable 0 0
+call run
+call new 6 0 0 6 6 1 0 8 3 0 0 0 1536 1 28 0 0 0 0 0
+hold 4
+pos 3 351 363
+hold 4
+release 4
+call center 6 5 2
+pos 5 7 193
+call remove 6
+release 2
+delete 2
+call point 12
+phold 12
+call new 3 0 1 9 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 7
+hold 5
+hold 5
+release 5
+call enable 0 0
+set 6 35 21 1 156
+call new 3 0 0 1 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 6
+size 4 31 107
+hold 6
+release 6
+set 10 -8 33 0 117
+call enable 2 1
+call new 7 1 256 1 4 0 0 7 0 0 0 0 4 13 0 0 0 0 0 0 9 4 5
+hold 7
+atleast 7 274 120
+release 7
+delete 7
+call new 2 0 2 1 5 0 1 6 0 0 0 0 0 0 0 0 0 0 0 0
+hold 8
+hold 8
+release 8
+call enable 0 0
+call point 13
+phold 13
+call new 5 0 0 6 9 0 0 7 0 0 0 0 52 0 0 0 0 0 0 0 2
+hold 9
+pos 2 0 51
+hold 9
+release 9
+set 1 17 0 194 44
+call new 4 1 2 1 3 1 0 5 0 0 0 0 34 0 0 0 0 0 0 0 9
+hold 10
+pos 5 406 193
+release 10
+delete 10
+call remove 9
+call point 12
+phold 12
+call new 2 1 0 1 5 0 1 10 0 0 0 0 0 0 0 0 0 0 0 0 10
+hold 11
+release 11
+delete 11
+free
+prelease 13
+prelease 11
+prelease 12
+prelease 13
+prelease 12
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 8
+delete 8
+release 9
+delete 9
+seq 5
+start 29 51 286 9 0 302 182 116 124 1 255 87 141 4 1 175 54 114 156 1 139 -31 144 181 1 53 231 199 53 1 99 228 267 45 1 172 110 0 44 1 227 216 170 30 1 113 91 224 42 2 84 -3 144 125 1 250 121 19 10 1 283 -12 102 78 1 345 97 249 141 1
+set 7 38 23 212 65
+call new 7 1 0 5 2 0 0 4 0 0 0 0 1 0 0 0 0 0 0 0 6 6 2 8
+hold 1
+atleast 4 200 124
+release 1
+delete 1
+set 9 -3 34 145 61
+call run
+call remove 1
+call remove 3
+call remove 6
+call enable 256 1
+set 10 -1 40 69 147
+set 1 4 34 97 96
+set 10 -2 24 91 23
+call new 6 0 256 5 5 1 1 7 7 0 0 0 2816 27 7 0 0 0 0 0 8 4 9 9
+hold 2
+hold 2
+release 2
+set 8 -6 35 131 108
+call new 4 1 256 7 1 1 0 2 0 0 0 0 35 0 0 0 0 0 0 0 3 4 7
+hold 3
+pos 2 431 182
+release 3
+delete 3
+call new 3 2 0 10 10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 4 8
+hold 4
+uses 0
+release 4
+delete 4
+set 3 -49 30 100 39
+call run
+call new 6 0 0 1 4 1 0 4 6 0 0 0 1792 19 -84 0 0 0 0 0
+hold 5
+pos 6 394 -83
+hold 5
+release 5
+call remove 6
+call new 4 0 0 10 10 1 0 4 0 0 0 0 28 0 0 0 0 0 0 0 2
+hold 6
+pos 4 575 54
+hold 6
+release 6
+call new 2 0 2 1 10 0 1 5 0 0 0 0 0 0 0 0 0 0 0 0
+hold 7
+hold 7
+release 7
+call new 6 2 1 1 7 0 1 5 9 0 0 0 1024 43 11 0 0 0 0 0
+hold 8
+uses 0
+release 8
+delete 8
+call run
+pos 6 794 -83
+pos 4 575 54
+call new 3 0 1 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 6 3 8
+hold 9
+hold 9
+release 9
+call new 7 1 0 1 8 0 0 2 0 0 0 0 38 44 0 0 0 0 0 0 8 7 9 2
+hold 10
+atleast 2 250 168
+release 10
+delete 10
+call new 7 2 2 1 2 1 1 4 0 0 0 0 -9 0 0 0 0 0 0 0 4 10 9 6
+hold 11
+uses 0
+release 11
+delete 11
+set 6 -43 42 297 184
+call new 4 0 2 1 6 0 1 4 0 0 0 0 36 0 0 0 0 0 0 0
+hold 12
+hold 12
+release 12
+set 3 9 28 230 89
+call new 1 1 0 1 5 0 1 4 4 0 0 0 264448 15 45 58 9 0 0 0
+hold 13
+possize 4 390 -57 200 120
+release 13
+delete 13
+set 9 -10 1 249 71
+call center 1 2 1
+pos 2 431 -36
+call new 4 0 2 7 5 0 0 5 0 0 0 0 35 0 0 0 0 0 0 0 4 10 5 8
+hold 14
+hold 14
+release 14
+call run
+pos 6 609 -325
+pos 4 709 -57
+call run
+pos 6 928 -325
+pos 4 709 -57
+call enable 1 1
+call run
+pos 4 709 -57
+size 6 297 184
+size 3 230 184
+size 8 131 184
+call run
+pos 4 709 -57
+size 6 297 184
+size 3 230 184
+size 8 131 184
+call remove 5
+call new 1 0 0 1 6 0 1 4 5 0 0 0 598016 30 -87 32 29 0 0 0
+hold 15
+possize 4 113 -57 202 236
+hold 15
+release 15
+free
+release 2
+delete 2
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 9
+delete 9
+release 12
+delete 12
+release 14
+delete 14
+release 15
+delete 15
+seq 6
+start 86 199 26 109 0 177 -10 267 1 1 347 118 49 150 1 4 224 93 185 1 -29 45 52 78 1 146 190 216 116 1 47 63 166 177 1 195 81 99 160 1 320 119 70 189 1 253 111 47 12 2 145 211 245 101 1 336 247 1 184 1 89 -11 1 192 1 187 42 75 57 1
+call clear
+call remove 8
+set 10 37 -19 289 81
+call point 11
+phold 11
+call new 4 0 1 9 4 1 1 8 0 0 0 0 10 0 0 0 0 0 0 0 4 7
+hold 1
+hold 1
+release 1
+call run
+call enable 256 1
+set 1 12 -5 59 135
+call new 4 0 2 1 3 1 1 10 0 0 0 0 1 0 0 0 0 0 0 0 10 8
+hold 2
+hold 2
+release 2
+call new 4 2 0 1 5 1 0 9 0 0 0 0 0 0 0 0 0 0 0 0 9 7 7
+hold 3
+uses 0
+release 3
+delete 3
+call point 11
+phold 11
+call run
+call new 1 0 1 1 4 0 1 3 7 0 0 0 8192 27 29 1 39 0 0 0
+hold 4
+hold 4
+release 4
+call new 5 2 0 1 10 1 1 7 0 0 0 0 -1 -91 0 0 0 0 0 0 10 8
+hold 5
+uses 0
+release 5
+delete 5
+call new 2 2 256 1 3 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 5 7 10 2
+hold 6
+uses 0
+release 6
+delete 6
+call new 1 0 1 1 4 0 0 8 6 0 0 0 4096 -62 44 3 1 0 0 0
+hold 7
+hold 7
+release 7
+call new 3 1 0 1 4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 5
+hold 8
+size 7 166 177
+size 5 166 78
+release 8
+delete 8
+set 7 -99 -1 19 42
+call new 5 0 0 1 6 1 0 1 0 0 0 0 46 22 0 0 0 0 0 0 4 7
+hold 9
+pos 4 46 224
+pos 7 139 -1
+hold 9
+release 9
+set 6 -88 -1 8 53
+call run
+pos 4 46 224
+pos 7 139 -1
+call enable 2 0
+call new 6 0 1 10 10 1 0 6 9 0 0 0 2304 57 45 0 0 0 0 0
+hold 10
+hold 10
+release 10
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 4
+delete 4
+release 7
+delete 7
+release 9
+delete 9
+release 10
+delete 10
+prelease 11
+prelease 11
+call new 7 0 0 9 4 0 1 3 0 0 0 0 -1 -85 0 0 0 0 0 0 9 8 6 3
+hold 11
+atleast 3 98 104
+hold 11
+release 11
+set 10 -39 4 205 43
+set 7 22 8 180 185
+call run
+atleast 3 98 104
+call new 5 0 1 1 7 0 0 2 0 0 0 0 0 -1 0 0 0 0 0 0 10 6
+hold 12
+hold 12
+release 12
+call run
+atleast 3 98 104
+call new 3 0 2 1 4 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 8 2
+hold 13
+hold 13
+release 13
+call run
+atleast 3 98 104
+call new 7 0 1 1 1 0 0 1 0 0 0 0 -1 7 0 0 0 0 0 0 5
+hold 14
+hold 14
+release 14
+call run
+atleast 3 98 104
+call run
+atleast 3 98 104
+set 2 -1 72 71 42
+call new 6 0 0 1 6 1 0 5 3 0 0 0 1792 34 -1 0 0 0 0 0
+hold 15
+pos 3 347 -106
+hold 15
+release 15
+call remove 9
+call remove 10
+call new 2 0 0 2 10 1 0 5 0 0 0 0 0 0 0 0 0 0 0 0 10 5 3 8
+hold 16
+pos 10 -188 4
+pos 5 -178 45
+pos 3 198 -106
+pos 8 46 81
+hold 16
+release 16
+free
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+seq 7
+start 174 46 66 9 0 83 167 117 77 1 40 149 257 128 1 233 94 72 47 1 234 121 192 7 1 207 216 165 178 1 -5 197 66 108 1 250 -16 198 77 1 45 91 270 116 1 -39 63 103 183 2 205 125 113 108 1 23 141 50 191 1 294 58 200 138 1 61 55 202 6 1
+call new 5 0 256 9 5 0 0 2 0 0 0 0 -95 14 0 0 0 0 0 0 2 3 6
+hold 1
+hold 1
+release 1
+call point 12
+phold 12
+set 3 -1 4 232 21
+call new 5 0 1 1 9 1 0 7 0 0 0 0 1 39 0 0 0 0 0 0 7
+hold 2
+hold 2
+release 2
+set 1 32 66 190 162
+call clear
+release 1
+delete 1
+release 2
+delete 2
+prelease 12
+set 1 4 -88 105 50
+call run
+call enable 1 0
+call new 5 0 2 8 4 1 1 4 0 0 0 0 -84 40 0 0 0 0 0 0 4 5 2 6
+hold 3
+hold 3
+release 3
+call run
+call enable 0 0
+call new 8 0 256 1 10 0 1 10 8 9 0 0 81 24 12 -1 1 2 8 10
+hold 4
+hold 4
+release 4
+set 7 -70 20 190 44
+call run
+call new 4 0 0 1 1 0 1 9 0 0 0 0 15 0 0 0 0 0 0 0 4 6 7
+hold 5
+pos 9 387 91
+hold 5
+release 5
+call run
+pos 9 387 91
+call remove 4
+call new 2 0 0 1 8 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 4 7 5
+hold 6
+pos 7 -70 -35
+pos 4 233 39
+pos 7 -70 -90
+pos 5 234 66
+hold 6
+release 6
+call run
+pos 9 387 91
+pos 7 -70 -63
+pos 4 233 66
+pos 7 -70 -36
+pos 5 234 93
+call new 7 0 0 1 6 0 1 3 0 0 0 0 17 1 0 0 0 0 0 0 7
+hold 7
+atleast 3 207 45
+hold 7
+release 7
+call new 2 0 0 1 5 1 0 10 0 0 0 0 0 0 0 0 0 0 0 0 4 7
+hold 8
+pos 4 128 66
+pos 7 -175 -36
+hold 8
+release 8
+call enable 2 0
+set 2 5 78 27 20
+call remove 6
+call new 1 1 0 1 7 0 0 10 1 0 0 0 512 -1 -4 -10 40 0 0 0
+hold 9
+possize 10 -39 -42 103 183
+release 9
+delete 9
+call run
+pos 9 387 91
+pos 7 -175 -49
+pos 4 128 53
+pos 7 -175 -62
+pos 5 234 80
+atleast 3 207 45
+call center 1 7 3
+pos 7 -42 3
+call new 6 2 256 1 4 0 0 4 3 0 0 0 1536 81 -4 0 0 0 0 0 8
+hold 10
+uses 0
+release 10
+delete 10
+call enable 0 0
+call new 1 0 2 1 2 1 0 9 7 0 0 0 9344 1 1 26 -4 0 0 0
+hold 11
+hold 11
+release 11
+call new 3 1 0 10 5 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 12
+size 8 198 77
+release 12
+delete 12
+set 6 46 -4 90 149
+call center 1 3 2
+pos 3 -63 4
+call remove 5
+call new 3 0 256 1 10 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9 6 4 9
+hold 13
+hold 13
+release 13
+set 5 -100 30 10 165
+call new 4 0 0 1 6 1 1 6 0 0 0 0 22 0 0 0 0 0 0 0 9 3 8 6
+hold 14
+pos 6 679 -4
+hold 14
+release 14
+call run
+pos 6 791 -4
+call enable 0 1
+free
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 11
+delete 11
+release 13
+delete 13
+release 14
+delete 14
+seq 8
+start 263 193 106 109 0 -10 -25 268 154 1 132 180 165 75 1 62 196 51 77 1 98 -35 101 136 1 301 174 182 41 1 312 32 265 40 1 273 187 65 25 1 138 62 170 74 1 68 15 159 154 2 266 40 281 84 1 78 -34 99 166 1 100 59 31 52 1 336 67 29 123 1
+call center 1 7 3
+pos 7 -79 34
+call new 8 0 0 1 2 0 1 4 0 6 0 4 -1 -1 -1 -1 8 8 6 0
+hold 1
+possize 4 62 196 51 77
+hold 1
+release 1
+call point 13
+phold 13
+call new 5 0 1 1 1 0 0 3 0 0 0 0 67 24 0 0 0 0 0 0 5 5 6
+hold 2
+hold 2
+release 2
+call run
+possize 4 62 196 51 77
+call remove 8
+set 1 -6 -5 21 45
+call new 7 0 0 1 7 0 0 10 0 0 0 0 5 9 0 0 0 0 0 0 8 4
+hold 3
+atleast 10 70 86
+hold 3
+release 3
+call new 3 0 256 2 4 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9 8 5
+hold 4
+hold 4
+release 4
+set 1 -1 15 75 53
+call new 8 2 0 1 6 1 0 10 0 8 7 2 -1 6 58 97 -1 7 0 1
+hold 5
+uses 0
+release 5
+delete 5
+call point 11
+phold 11
+call new 8 0 0 1 7 1 1 7 0 0 0 2 -1 -1 40 24 9 4 8 -1
+hold 6
+possize 7 -79 34 100 36
+hold 6
+release 6
+call new 4 2 0 1 8 1 0 9 0 0 0 0 -55 0 0 0 0 0 0 0 7 5 10 4
+hold 7
+uses 0
+release 7
+delete 7
+call run
+possize 4 62 196 51 77
+atleast 10 70 86
+possize 7 -79 34 100 36
+call new 3 0 0 1 10 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 7 2
+hold 8
+hold 8
+release 8
+call run
+possize 4 62 196 51 77
+atleast 10 70 86
+possize 7 -79 34 100 36
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 6
+delete 6
+release 8
+delete 8
+prelease 13
+prelease 11
+call point 13
+phold 13
+call run
+call new 6 0 0 1 2 1 1 9 4 0 0 0 2048 22 64 0 0 0 0 0 9 3 7 6
+hold 9
+hold 9
+release 9
+call remove 9
+call run
+call run
+call run
+call remove 5
+call new 1 0 1 8 6 1 0 4 5 0 0 0 524288 -1 -71 -37 16 0 0 0
+hold 10
+hold 10
+release 10
+call remove 8
+set 4 39 37 -1 83
+call new 1 0 0 9 5 1 1 3 7 0 0 0 8272 37 1 0 1 0 0 0
+hold 11
+possize 3 -107 180 165 75
+hold 11
+release 11
+call new 2 0 2 2 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 6
+hold 12
+hold 12
+release 12
+call new 5 0 1 9 5 1 0 1 0 0 0 0 26 1 0 0 0 0 0 0 3 2
+hold 13
+hold 13
+release 13
+call center 4 2 0
+call run
+possize 3 -107 180 165 75
+call new 2 1 2 1 4 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2
+hold 14
+pos 2 -10 -50
+release 14
+delete 14
+set 9 5 1 194 64
+call remove 8
+set 10 8 27 58 109
+call clear
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+prelease 13
+set 4 49 3 249 90
+free
+seq 9
+start 320 41 146 9 0 265 152 187 31 1 225 211 73 53 1 259 65 31 107 1 329 41 9 65 1 -6 133 131 104 1 260 166 165 171 1 296 89 164 141 1 264 -35 70 1 1 208 -33 282 124 2 327 22 81 91 1 165 160 80 140 1 305 128 230 198 1 178 80 223 71 1
+set 5 -3 22 277 140
+set 2 27 42 289 128
+call new 5 0 0 6 9 0 0 6 0 0 0 0 -1 36 0 0 0 0 0 0 2
+hold 1
+pos 2 27 132
+hold 1
+release 1
+call new 1 0 0 1 3 1 0 4 3 0 0 0 12288 4 -50 20 46 0 0 0
+hold 2
+possize 4 271 65 31 107
+hold 2
+release 2
+call new 7 1 2 9 6 1 0 6 0 0 0 0 -3 -89 0 0 0 0 0 0 3 4 2
+hold 3
+atleast 6 286 39
+release 3
+delete 3
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+set 7 2 -23 54 43
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+call new 6 0 256 1 2 0 0 3 10 0 0 0 512 44 19 0 0 0 0 0 4 3
+hold 4
+hold 4
+release 4
+set 1 47 36 24 30
+call remove 6
+call enable 0 1
+call point 14
+phold 14
+call new 4 0 0 1 9 0 1 7 0 0 0 0 10 0 0 0 0 0 0 0
+hold 5
+pos 7 10 -23
+hold 5
+release 5
+call new 8 0 256 1 6 0 0 6 0 0 3 0 41 0 -1 28 3 -1 10 10
+hold 6
+hold 6
+release 6
+call center 9 8 3
+pos 8 -47 -70
+call run
+pos 2 27 132
+possize 4 271 65 31 107
+pos 10 208 283
+pos 4 271 381
+pos 3 225 527
+pos 7 10 -23
+call run
+pos 2 27 132
+possize 4 271 381 31 107
+pos 10 208 599
+pos 4 271 697
+pos 3 225 843
+pos 7 10 -23
+call run
+pos 2 27 132
+possize 4 271 697 31 107
+pos 10 208 915
+pos 4 271 1013
+pos 3 225 1159
+pos 7 10 -23
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+prelease 14
+set 10 15 1 32 86
+call enable 1 0
+call run
+call new 7 1 0 1 9 0 0 5 0 0 0 0 33 0 0 0 0 0 0 0 8 6 3 4
+hold 7
+atleast 5 319 141
+release 7
+delete 7
+call point 13
+phold 13
+call run
+call new 2 2 2 7 1 1 0 7 0 0 0 0 0 0 0 0 0 0 0 0 6 7 9
+hold 8
+uses 0
+release 8
+delete 8
+call center 1 5 2
+pos 5 -147 22
+set 2 0 44 60 19
+call new 8 2 1 1 3 1 0 8 0 6 9 9 20 66 91 -1 3 -1 -1 3
+hold 9
+uses 0
+release 9
+delete 9
+call enable 2 0
+call new 8 0 0 1 5 0 0 8 6 3 8 0 -1 -1 -1 -1 -1 1 4 1
+hold 10
+possize 8 -47 -70 164 141
+hold 10
+release 10
+call run
+possize 8 -47 -70 164 141
+call new 1 0 0 8 6 0 1 5 7 0 0 0 1280 44 17 42 16 0 0 0
+hold 11
+possize 5 108 -147 319 141
+hold 11
+release 11
+call center 6 8 1
+pos 8 -47 -18
+set 4 -9 0 27 12
+call run
+possize 8 -47 -18 164 141
+possize 5 108 -147 319 141
+free
+prelease 13
+release 10
+delete 10
+release 11
+delete 11
+seq 10
+start 9 -44 186 109 0 172 -40 38 76 1 318 175 281 0 1 88 235 10 168 1 193 117 217 194 1 88 159 148 167 1 208 69 64 103 1 319 -8 263 57 1 -43 236 270 160 1 316 218 38 95 2 20 237 250 67 1 219 -15 130 147 1 111 129 129 112 1 52 93 50 20 1
+call new 1 0 0 1 9 0 1 4 7 0 0 0 65536 20 24 1 19 0 0 0
+hold 1
+possize 4 88 235 185 168
+hold 1
+release 1
+call new 4 2 0 1 5 1 1 4 0 0 0 0 3 0 0 0 0 0 0 0 10 2
+hold 2
+uses 0
+release 2
+delete 2
+call new 2 0 2 1 6 1 0 7 0 0 0 0 0 0 0 0 0 0 0 0 3 3 10 6
+hold 3
+hold 3
+release 3
+call remove 3
+call clear
+release 1
+delete 1
+release 3
+delete 3
+call run
+call new 6 0 2 1 4 0 0 10 2 0 0 0 512 -4 55 0 0 0 0 0 9 9
+hold 4
+hold 4
+release 4
+call new 5 0 256 1 7 1 0 10 0 0 0 0 94 0 0 0 0 0 0 0 4 5
+hold 5
+hold 5
+release 5
+call new 3 0 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8 6
+hold 6
+hold 6
+release 6
+call new 7 0 2 1 9 1 0 8 0 0 0 0 -9 47 0 0 0 0 0 0 9 2 2
+hold 7
+hold 7
+release 7
+call remove 3
+call new 5 0 0 1 1 0 1 10 0 0 0 0 31 21 0 0 0 0 0 0 7 5 9 8
+hold 8
+pos 7 208 249
+pos 5 193 352
+pos 9 -43 546
+pos 8 319 706
+hold 8
+release 8
+call new 4 0 0 1 6 0 0 5 0 0 0 0 29 0 0 0 0 0 0 0
+hold 9
+pos 5 29 352
+hold 9
+release 9
+call run
+pos 7 208 249
+pos 5 29 352
+pos 9 -43 546
+pos 8 319 706
+pos 5 29 352
+call new 7 2 1 1 8 0 0 4 0 0 0 0 -1 21 0 0 0 0 0 0 3
+hold 10
+uses 0
+release 10
+delete 10
+call run
+pos 7 208 249
+pos 5 29 352
+pos 9 -43 546
+pos 8 319 706
+pos 5 29 352
+set 4 0 -85 292 90
+call enable 2 1
+call new 1 2 0 1 5 1 1 3 7 0 0 0 196672 24 16 -9 30 0 0 0
+hold 11
+uses 0
+release 11
+delete 11
+call remove 9
+call point 11
+phold 11
+call new 8 0 0 5 6 1 1 7 10 8 0 8 59 -1 100 10 2 3 -1 -1
+hold 12
+possize 7 339 249 37 5
+hold 12
+release 12
+call new 2 0 2 1 7 1 0 4 0 0 0 0 0 0 0 0 0 0 0 0 3 4 8 10
+hold 13
+hold 13
+release 13
+call remove 8
+call enable 0 1
+call center 3 9 1
+pos 9 -43 -80
+set 8 37 -65 94 128
+call new 5 0 0 1 5 0 0 3 0 0 0 0 6 45 0 0 0 0 0 0 6 9 5
+hold 14
+pos 6 88 181
+pos 9 -43 348
+pos 5 29 508
+hold 14
+release 14
+call new 6 2 256 1 10 0 1 1 5 0 0 0 1024 -10 26 0 0 0 0 0
+hold 15
+uses 0
+release 15
+delete 15
+set 1 74 1 271 15
+call new 1 0 0 1 9 0 1 4 6 0 0 0 16656 2 -23 0 -36 0 0 0
+hold 16
+possize 4 0 158 292 90
+hold 16
+release 16
+call new 5 0 0 1 6 1 1 7 0 0 0 0 1 17 0 0 0 0 0 0 9 8 7
+hold 17
+pos 9 340 348
+pos 8 610 -65
+pos 7 704 249
+hold 17
+release 17
+call new 5 1 256 1 2 0 0 7 0 0 0 0 -1 0 0 0 0 0 0 0 4 2 5 6
+hold 18
+pos 4 0 248
+pos 2 172 338
+pos 5 29 414
+pos 6 88 608
+release 18
+delete 18
+call new 4 2 0 10 3 1 1 4 0 0 0 0 13 0 0 0 0 0 0 0 10
+hold 19
+uses 0
+release 19
+delete 19
+call new 4 2 0 1 10 0 1 9 0 0 0 0 0 0 0 0 0 0 0 0 4 10 4 9
+hold 20
+uses 0
+release 20
+delete 20
+set 1 31 0 47 142
+call point 13
+phold 13
+call new 4 0 2 1 9 1 1 8 0 0 0 0 35 0 0 0 0 0 0 0 9
+hold 21
+hold 21
+release 21
+set 4 40 61 74 72
+set 6 22 4 229 13
+free
+prelease 11
+prelease 13
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 16
+delete 16
+release 17
+delete 17
+release 21
+delete 21
+seq 11
+start 97 104 226 177 0 78 137 188 153 1 10 206 189 146 1 317 105 289 198 1 56 193 126 90 1 149 118 97 29 1 124 203 196 2 1 -26 -37 62 173 1 82 139 102 119 1 24 170 93 65 2 81 151 118 74 1 306 179 111 121 1 317 198 28 58 1 326 38 176 136 1
+call run
+call center 1 3 1
+pos 3 10 15
+call center 1 10 0
+call run
+call run
+call remove 5
+set 6 -23 26 169 102
+call point 13
+phold 13
+set 7 10 1 11 90
+call point 13
+phold 13
+call new 7 0 0 1 3 1 1 1 0 0 0 0 28 3 0 0 0 0 0 0 4
+hold 1
+atleast 1 317 201
+relayout
+hold 1
+release 1
+call new 1 2 1 1 6 0 1 3 10 0 0 0 32770 0 16 1 0 0 0 0
+hold 2
+uses 0
+release 2
+delete 2
+call new 5 0 0 1 3 0 1 8 0 0 0 0 42 9 0 0 0 0 0 0 9 9 10 7
+hold 3
+pos 9 82 5
+pos 9 82 124
+pos 10 24 243
+pos 7 10 308
+hold 3
+release 3
+call run
+atleast 1 317 201
+pos 9 82 5
+pos 9 82 124
+pos 10 24 243
+pos 7 10 308
+call run
+atleast 1 317 201
+pos 9 82 5
+pos 9 82 124
+pos 10 24 243
+pos 7 10 308
+call run
+atleast 1 317 201
+pos 9 82 5
+pos 9 82 124
+pos 10 24 243
+pos 7 10 308
+call remove 3
+call new 7 2 0 1 4 0 0 2 0 0 0 0 -78 1 0 0 0 0 0 0 2 5 7 6
+hold 4
+uses 0
+release 4
+delete 4
+call new 3 2 256 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10 9 7
+hold 5
+uses 0
+release 5
+delete 5
+call remove 2
+call remove 7
+call remove 2
+call center 1 3 3
+pos 3 64 27
+call center 1 10 2
+pos 10 112 243
+call enable 0 1
+call remove 9
+call new 3 2 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 6
+uses 0
+release 6
+delete 6
+call clear
+release 1
+delete 1
+release 3
+delete 3
+prelease 13
+prelease 13
+call new 3 0 256 1 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 4 8
+hold 7
+hold 7
+release 7
+call new 2 0 2 1 8 0 1 7 0 0 0 0 0 0 0 0 0 0 0 0 6 4
+hold 8
+hold 8
+release 8
+call center 5 9 2
+pos 9 12 124
+call run
+call new 3 2 256 1 3 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 9
+uses 0
+release 9
+delete 9
+call enable 0 1
+set 5 45 0 72 102
+call center 1 4 0
+call remove 4
+call new 3 2 1 1 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 5
+hold 10
+uses 0
+release 10
+delete 10
+call run
+call new 6 0 256 1 9 1 0 2 2 0 0 0 1024 27 38 0 0 0 0 0 7 8 4
+hold 11
+hold 11
+release 11
+free
+release 7
+delete 7
+release 8
+delete 8
+release 11
+delete 11
+seq 12
+start 154 -49 266 77 0 -47 13 39 30 1 103 237 97 125 1 146 207 200 28 1 288 -31 34 19 1 243 144 114 92 1 73 38 95 134 1 -3 166 161 89 1 175 110 2 46 1 132 190 217 36 2 142 66 218 50 1 -39 5 160 128 1 122 198 227 172 1 168 51 3 85 1
+set 9 1 5 -56 182
+set 7 -9 1 59 123
+call new 1 0 2 1 9 0 1 8 8 0 0 0 524288 25 15 -6 5 0 0 0
+hold 1
+hold 1
+release 1
+call new 8 0 0 1 10 1 1 6 8 0 0 0 3 -1 37 -1 7 11 3 8
+hold 2
+possize 6 8 144 55 92
+hold 2
+release 2
+call point 11
+phold 11
+call point 13
+phold 13
+call run
+possize 6 8 144 55 92
+call new 3 0 0 1 10 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 6 6
+hold 3
+size 4 200 92
+size 6 55 92
+size 6 55 92
+hold 3
+release 3
+call enable 0 0
+call new 2 0 0 7 5 0 0 8 0 0 0 0 0 0 0 0 0 0 0 0 4 3
+hold 4
+hold 4
+release 4
+set 3 17 25 123 26
+set 6 1 24 21 12
+call center 1 9 0
+call enable 1 1
+call new 1 0 0 8 4 0 1 3 1 0 0 0 524292 45 1 49 38 0 0 0
+hold 5
+possize 3 17 25 123 90
+hold 5
+release 5
+call new 6 0 1 1 6 0 0 9 9 0 0 0 1536 -1 1 0 0 0 0 0 9 6 7 7
+hold 6
+hold 6
+release 6
+call enable 0 1
+call remove 1
+release 5
+delete 5
+call new 4 2 0 1 4 0 0 4 0 0 0 0 19 0 0 0 0 0 0 0 4
+hold 7
+uses 0
+release 7
+delete 7
+set 1 15 7 80 -1
+call new 3 2 0 1 10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5
+hold 8
+uses 0
+release 8
+delete 8
+set 4 43 33 158 -22
+call run
+possize 6 8 24 55 12
+size 4 158 12
+size 6 55 12
+size 6 55 12
+call new 6 0 0 1 3 0 1 3 5 0 0 0 1024 -19 19 0 0 0 0 0 10
+hold 9
+hold 9
+release 9
+call new 3 0 2 1 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 10
+hold 10
+release 10
+call new 3 2 0 8 10 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 11
+uses 0
+release 11
+delete 11
+set 4 -31 -63 240 84
+set 2 1 -1 245 185
+set 10 26 45 230 163
+call center 1 10 2
+pos 10 -75 45
+call enable 1 0
+call new 8 0 1 1 7 1 1 10 6 6 0 6 73 63 -1 -1 -1 -1 0 1
+hold 12
+hold 12
+release 12
+call run
+possize 6 8 24 55 12
+size 4 240 84
+size 6 55 84
+size 6 55 84
+call run
+possize 6 8 24 55 84
+size 4 240 84
+size 6 55 84
+size 6 55 84
+set 9 49 -1 73 146
+call new 6 0 2 1 1 1 0 2 4 0 0 0 2304 39 9 0 0 0 0 0 9 3 4
+hold 13
+hold 13
+release 13
+set 1 -48 -100 45 146
+call run
+possize 6 8 24 55 84
+size 4 240 84
+size 6 55 84
+size 6 55 84
+call run
+possize 6 8 24 55 84
+size 4 240 84
+size 6 55 84
+size 6 55 84
+call center 4 10 2
+pos 10 5 45
+free
+prelease 11
+prelease 13
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 6
+delete 6
+release 9
+delete 9
+release 10
+delete 10
+release 12
+delete 12
+release 13
+delete 13
+seq 13
+start 243 98 238 177 0 260 122 190 107 1 195 -32 5 71 1 -26 76 179 90 1 152 45 174 148 1 336 102 131 155 1 21 172 295 65 1 20 69 260 5 1 300 81 202 5 1 272 142 273 7 2 202 48 87 57 1 48 198 210 102 1 328 -33 58 118 1 42 63 129 33 1
+call new 5 0 0 9 1 1 0 9 0 0 0 0 0 -2 0 0 0 0 0 0 10 2 9 3
+hold 1
+pos 10 300 142
+pos 2 573 122
+pos 9 763 81
+pos 3 965 -32
+hold 1
+release 1
+call run
+pos 10 763 142
+pos 2 1036 122
+pos 9 1226 81
+pos 3 1428 -32
+call remove 10
+call clear
+release 1
+delete 1
+call new 1 0 0 9 4 1 0 2 10 0 0 0 524290 20 -67 25 12 0 0 0
+hold 2
+possize 2 1036 122 190 39
+hold 2
+release 2
+set 4 1 -1 131 115
+call enable 2 1
+call new 4 0 2 1 4 1 1 2 0 0 0 0 37 0 0 0 0 0 0 0
+hold 3
+hold 3
+release 3
+call new 7 2 0 1 7 0 0 10 0 0 0 0 1 -96 0 0 0 0 0 0 8
+hold 4
+uses 0
+release 4
+delete 4
+call remove 9
+set 10 1 50 252 198
+call new 1 0 256 2 1 1 0 7 7 0 0 0 2178 0 -1 0 1 0 0 0
+hold 5
+hold 5
+release 5
+call remove 10
+release 2
+delete 2
+set 6 35 41 102 19
+set 1 87 -1 -70 179
+call run
+call new 1 2 1 1 1 1 0 6 8 0 0 0 3072 -9 -69 1 -29 0 0 0
+hold 6
+uses 0
+release 6
+delete 6
+call enable 256 1
+set 7 35 1 207 143
+call remove 6
+call new 6 0 1 1 7 1 1 7 5 0 0 0 2816 30 34 0 0 0 0 0 5 7 10
+hold 7
+hold 7
+release 7
+call remove 9
+call new 4 1 0 1 4 0 0 6 0 0 0 0 21 0 0 0 0 0 0 0 8
+hold 8
+pos 6 301 41
+release 8
+delete 8
+set 10 1 -3 5 3
+call new 3 0 1 1 6 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8 4 9
+hold 9
+hold 9
+release 9
+call run
+call new 3 1 0 1 3 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 5 9 6
+hold 10
+size 7 207 148
+size 5 174 148
+size 9 202 148
+size 6 102 148
+release 10
+delete 10
+call run
+call center 1 8 1
+pos 8 20 87
+call point 11
+phold 11
+call point 11
+phold 11
+set 9 40 0 87 31
+set 10 3 33 4 92
+call run
+call new 6 2 1 1 2 0 1 9 3 0 0 0 512 -1 1 0 0 0 0 0
+hold 11
+uses 0
+release 11
+delete 11
+call center 1 6 1
+pos 6 301 15
+call point 12
+phold 12
+call point 13
+phold 13
+call new 3 2 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8 2
+hold 12
+uses 0
+release 12
+delete 12
+call enable 256 1
+free
+prelease 11
+prelease 11
+prelease 12
+prelease 13
+release 3
+delete 3
+release 5
+delete 5
+release 7
+delete 7
+release 9
+delete 9
+seq 14
+start 332 246 278 76 0 167 -2 41 152 1 288 -1 213 50 1 171 246 158 120 1 -17 121 83 77 1 29 129 80 17 1 337 7 194 196 1 42 -28 60 122 1 25 -16 101 132 1 -20 94 28 177 2 263 -38 255 33 1 135 24 191 77 1 134 -32 257 31 1 317 76 24 150 1
+call enable 0 1
+call new 3 1 1 1 5 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 7 7 8
+hold 1
+size 9 194 132
+size 7 194 196
+size 7 194 196
+size 8 194 122
+release 1
+delete 1
+call center 1 4 1
+pos 4 171 -22
+call remove 4
+call remove 7
+call new 7 0 1 1 7 0 0 6 0 0 0 0 35 -78 0 0 0 0 0 0 4
+hold 2
+hold 2
+release 2
+call new 1 0 0 1 3 0 1 2 2 0 0 0 32 1 1 17 7 0 0 0
+hold 3
+possize 2 167 -2 41 152
+hold 3
+release 3
+call enable 256 1
+call enable 2 0
+call run
+possize 2 167 -2 41 152
+call run
+possize 2 167 -2 41 152
+set 9 77 -1 225 185
+call clear
+release 2
+delete 2
+release 3
+delete 3
+call remove 3
+call new 8 0 1 8 7 0 0 4 0 1 0 0 60 59 -1 21 1 8 -1 0
+hold 4
+hold 4
+release 4
+call new 7 0 256 1 2 1 1 5 0 0 0 0 15 48 0 0 0 0 0 0 2 8 4 3
+hold 5
+hold 5
+release 5
+call new 8 2 0 1 6 0 1 9 5 7 5 0 -1 90 40 -1 4 9 1 -1
+hold 6
+uses 0
+release 6
+delete 6
+set 1 1 82 53 179
+call new 2 0 0 1 5 1 1 5 0 0 0 0 0 0 0 0 0 0 0 0 10 8 7 8
+hold 7
+pos 10 -251 132
+pos 8 -189 10
+pos 7 106 45
+pos 8 -420 48
+hold 7
+release 7
+call remove 9
+call remove 5
+call remove 8
+call new 3 1 0 1 9 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10 7
+hold 8
+size 10 28 196
+size 7 194 196
+release 8
+delete 8
+set 3 14 -1 -3 107
+call remove 8
+call run
+pos 10 -166 105
+pos 8 -335 21
+pos 7 191 18
+pos 8 -250 -6
+call run
+pos 10 -209 117
+pos 8 -293 6
+pos 7 148 30
+pos 8 -336 18
+call run
+pos 10 -187 111
+pos 8 -314 12
+pos 7 170 24
+pos 8 -292 6
+set 6 21 26 272 104
+call remove 9
+set 6 1 -7 203 188
+call run
+pos 10 -198 114
+pos 8 -303 9
+pos 7 159 27
+pos 8 -314 12
+call run
+pos 10 -193 113
+pos 8 -309 11
+pos 7 164 26
+pos 8 -304 10
+call new 7 2 1 1 3 1 0 1 0 0 0 0 0 -86 0 0 0 0 0 0 10 9 6
+hold 9
+uses 0
+release 9
+delete 9
+call run
+pos 10 -195 113
+pos 8 -306 10
+pos 7 162 26
+pos 8 -308 10
+call new 8 0 0 4 9 1 0 2 9 0 0 10 40 65 -1 44 3 -1 1 6
+hold 10
+possize 2 168 236 41 84
+hold 10
+release 10
+set 5 -7 29 61 6
+call run
+pos 10 -195 -14
+pos 8 -308 -117
+pos 7 162 -101
+pos 8 -308 -244
+possize 2 168 109 41 84
+call new 2 0 256 1 6 1 1 8 0 0 0 0 0 0 0 0 0 0 0 0 7
+hold 11
+hold 11
+release 11
+call new 1 1 0 9 2 0 1 6 1 0 0 0 640 -1 18 20 1 0 0 0
+hold 12
+possize 6 1 197 203 188
+release 12
+delete 12
+free
+release 4
+delete 4
+release 5
+delete 5
+release 7
+delete 7
+release 10
+delete 10
+release 11
+delete 11
+seq 15
+start -12 161 18 176 0 42 107 191 28 1 -20 -38 121 196 1 0 48 137 149 1 247 -35 291 6 1 91 87 97 80 1 286 141 94 128 1 65 243 159 38 1 119 -44 1 90 1 88 45 152 148 2 324 177 55 40 1 189 217 240 84 1 339 37 156 177 1 159 89 150 99 1
+call new 5 2 2 1 1 0 0 5 0 0 0 0 46 12 0 0 0 0 0 0 4 4
+hold 1
+uses 0
+release 1
+delete 1
+call run
+call center 1 7 2
+pos 7 -38 141
+call enable 1 0
+call new 4 0 256 10 1 0 0 8 0 0 0 0 -15 0 0 0 0 0 0 0 7 4
+hold 2
+hold 2
+release 2
+call new 6 0 256 1 10 0 0 8 9 0 0 0 3072 -1 0 0 0 0 0 0 5 2
+hold 3
+hold 3
+release 3
+call new 6 2 0 1 5 0 0 6 9 0 0 0 2304 0 30 0 0 0 0 0 3 3 5
+hold 4
+uses 0
+release 4
+delete 4
+call new 4 1 0 1 3 0 0 10 0 0 0 0 -4 0 0 0 0 0 0 0 3 10
+hold 5
+pos 10 236 45
+release 5
+delete 5
+call new 4 0 0 2 6 1 0 3 0 0 0 0 1 0 0 0 0 0 0 0 3 5 10 3
+hold 6
+pos 3 539 -38
+hold 6
+release 6
+call new 3 0 256 7 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 7
+hold 7
+release 7
+call new 2 2 1 8 7 0 0 8 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 8
+uses 0
+release 8
+delete 8
+call point 11
+phold 11
+call new 2 0 1 1 2 0 0 6 0 0 0 0 0 0 0 0 0 0 0 0 9 4 3
+hold 9
+hold 9
+release 9
+call new 1 0 256 1 6 1 1 10 1 0 0 0 131072 0 38 44 41 0 0 0
+hold 10
+hold 10
+release 10
+set 2 10 23 94 150
+call point 11
+phold 11
+set 2 -33 -42 194 112
+set 5 34 13 24 187
+call new 5 1 0 9 9 1 0 5 0 0 0 0 0 0 0 0 0 0 0 0 5
+hold 11
+pos 5 34 13
+release 11
+delete 11
+set 9 -93 16 123 41
+call clear
+release 2
+delete 2
+release 3
+delete 3
+release 6
+delete 6
+release 7
+delete 7
+release 9
+delete 9
+release 10
+delete 10
+prelease 11
+prelease 11
+set 4 37 0 24 140
+set 7 7 48 1 55
+call new 1 0 1 3 7 1 1 4 9 0 0 0 128 -1 33 24 0 0 0 0
+hold 12
+hold 12
+release 12
+call new 4 0 1 1 4 0 0 5 0 0 0 0 20 0 0 0 0 0 0 0 7
+hold 13
+hold 13
+release 13
+set 8 -89 22 205 73
+call remove 3
+call new 7 0 1 1 6 1 1 6 0 0 0 0 38 -57 0 0 0 0 0 0 10 9 8
+hold 14
+hold 14
+release 14
+call center 1 2 3
+pos 2 -88 32
+call point 12
+phold 12
+call run
+call new 1 1 2 1 8 0 1 10 5 0 0 0 64 -1 1 17 74 0 0 0
+hold 15
+possize 10 236 45 152 148
+release 15
+delete 15
+call run
+call remove 6
+call new 3 0 2 1 5 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 2
+hold 16
+hold 16
+release 16
+set 8 -1 19 293 103
+call new 4 2 1 1 5 1 0 7 0 0 0 0 -5 0 0 0 0 0 0 0 7 7 6
+hold 17
+uses 0
+release 17
+delete 17
+call new 2 0 0 1 10 1 0 6 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 18
+pos 8 -7 19
+hold 18
+release 18
+call enable 2 0
+set 9 -78 45 105 20
+free
+prelease 12
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 16
+delete 16
+release 18
+delete 18
+seq 16
+start 77 9 58 76 0 348 -16 42 105 1 73 -7 29 175 1 229 218 116 11 1 110 41 200 135 1 184 114 46 143 1 234 44 293 59 1 120 146 258 154 1 244 227 201 49 1 195 -3 208 118 2 -15 91 223 16 1 276 43 290 58 1 145 38 55 91 1 33 34 277 15 1
+call run
+call new 2 0 2 1 3 0 1 7 0 0 0 0 0 0 0 0 0 0 0 0
+hold 1
+hold 1
+release 1
+call new 6 0 256 10 6 1 1 8 5 0 0 0 1280 28 4 0 0 0 0 0 8 5 5
+hold 2
+hold 2
+release 2
+set 2 38 21 294 41
+call new 1 0 0 1 5 0 0 10 9 0 0 0 2048 1 22 1 41 0 0 0
+hold 3
+possize 10 37 -3 208 118
+hold 3
+release 3
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+call new 8 2 0 1 2 1 1 10 0 10 8 0 84 69 55 -1 6 4 -1 -1
+hold 4
+uses 0
+release 4
+delete 4
+call new 4 2 0 1 5 1 0 5 0 0 0 0 3 0 0 0 0 0 0 0
+hold 5
+uses 0
+release 5
+delete 5
+call new 2 2 0 1 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 8
+hold 6
+uses 0
+release 6
+delete 6
+call run
+set 2 44 -1 92 8
+call remove 10
+call enable 2 1
+call new 4 2 0 1 3 1 0 10 0 0 0 0 1 0 0 0 0 0 0 0
+hold 7
+uses 0
+release 7
+delete 7
+call new 4 0 1 1 2 0 0 9 0 0 0 0 11 0 0 0 0 0 0 0 3 5 9 8
+hold 8
+hold 8
+release 8
+call new 6 0 2 1 5 1 1 4 2 0 0 0 2048 0 46 0 0 0 0 0 5 10 2
+hold 9
+hold 9
+release 9
+call new 8 0 0 6 8 0 1 7 9 0 9 4 58 93 94 11 4 8 4 4
+hold 10
+possize 7 359 226 181 0
+hold 10
+release 10
+set 9 8 19 85 5
+call new 1 0 2 1 7 1 1 8 3 0 0 0 9 -8 -9 9 20 0 0 0
+hold 11
+hold 11
+release 11
+call enable 1 1
+call new 2 0 0 1 4 1 1 9 0 0 0 0 0 0 0 0 0 0 0 0 9 8 8
+hold 12
+pos 9 -134 -119
+pos 8 -22 8
+pos 8 -164 -130
+hold 12
+release 12
+call new 1 0 2 1 9 1 1 3 8 0 0 0 32 34 -1 -1 10 0 0 0
+hold 13
+hold 13
+release 13
+call new 5 0 0 1 3 0 0 6 0 0 0 0 17 0 0 0 0 0 0 0 9 6 8 9
+hold 14
+pos 9 -134 131
+pos 6 184 136
+pos 8 -164 279
+pos 9 -134 433
+hold 14
+release 14
+call new 5 0 2 1 4 1 0 1 0 0 0 0 34 -8 0 0 0 0 0 0 2 10
+hold 15
+hold 15
+release 15
+set 2 12 -89 153 155
+set 9 -76 -24 24 95
+call new 8 0 0 1 6 1 0 7 2 0 6 0 73 23 68 -1 -1 5 9 7
+hold 16
+possize 7 164 171 142 0
+hold 16
+release 16
+set 2 7 -9 299 25
+set 1 -4 41 230 67
+call remove 2
+call remove 6
+call run
+pos 9 321 -24
+possize 7 334 226 15 0
+pos 9 564 -205
+pos 8 79 98
+pos 8 322 -83
+pos 9 564 153
+pos 6 184 248
+pos 8 322 391
+pos 9 564 545
+possize 7 162 283 146 0
+call new 3 2 0 1 10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8 2 9
+hold 17
+uses 0
+release 17
+delete 17
+call run
+pos 9 599 545
+possize 7 612 226 15 0
+pos 9 738 622
+pos 8 461 468
+pos 8 600 545
+pos 9 738 265
+pos 6 184 360
+pos 8 600 503
+pos 9 738 657
+possize 7 162 395 146 0
+set 4 30 0 284 109
+call new 5 0 0 10 7 0 1 1 0 0 0 0 32 4 0 0 0 0 0 0 5
+hold 18
+pos 5 110 32
+hold 18
+release 18
+set 7 36 12 11 110
+call new 2 1 256 1 9 0 1 5 0 0 0 0 0 0 0 0 0 0 0 0
+hold 19
+release 19
+delete 19
+set 10 29 29 86 174
+call new 7 0 0 1 6 1 0 7 0 0 0 0 83 1 0 0 0 0 0 0 10 3 9
+hold 20
+atleast 7 169 176
+hold 20
+release 20
+free
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+release 18
+delete 18
+release 20
+delete 20
+seq 17
+start 166 156 98 176 0 223 160 261 182 1 165 24 237 121 1 58 87 95 41 1 342 117 108 31 1 278 72 63 5 1 150 178 193 191 1 143 49 57 70 1 337 130 101 176 1 335 17 31 89 2 78 74 92 23 1 331 237 271 65 1 -49 107 254 37 1 307 46 103 164 1
+set 2 1 1 271 91
+set 9 45 19 239 18
+set 1 34 -6 11 70
+call run
+call new 5 1 256 8 1 1 0 3 0 0 0 0 49 30 0 0 0 0 0 0 2
+hold 1
+pos 2 214 1
+release 1
+delete 1
+call new 4 0 0 1 3 1 0 7 0 0 0 0 -40 0 0 0 0 0 0 0 8 9 6
+hold 2
+pos 7 301 178
+hold 2
+release 2
+call remove 7
+call new 2 0 1 1 9 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0
+hold 3
+hold 3
+release 3
+call new 2 0 256 9 7 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 2 6 2
+hold 4
+hold 4
+release 4
+call enable 2 0
+call new 1 1 256 1 5 1 1 4 6 0 0 0 131072 -23 41 34 17 0 0 0
+hold 5
+possize 4 58 87 254 41
+release 5
+delete 5
+call new 8 0 2 1 9 0 0 10 3 0 2 10 -1 8 -1 50 0 0 7 -1
+hold 6
+hold 6
+release 6
+call new 3 2 1 1 10 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10 5 9
+hold 7
+uses 0
+release 7
+delete 7
+call point 14
+phold 14
+call run
+pos 7 301 178
+call new 4 2 2 1 6 1 0 7 0 0 0 0 7 0 0 0 0 0 0 0 7 2
+hold 8
+uses 0
+release 8
+delete 8
+call new 1 1 0 1 4 1 0 5 10 0 0 0 589828 1 -6 13 -1 0 0 0
+hold 9
+possize 5 342 117 37 -12
+release 9
+delete 9
+set 7 8 0 32 18
+set 6 27 12 241 144
+call new 8 0 2 1 2 0 0 9 3 10 0 10 92 -1 98 54 -1 -1 11 2
+hold 10
+hold 10
+release 10
+call run
+pos 7 244 0
+call new 3 2 0 1 8 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 10
+hold 11
+uses 0
+release 11
+delete 11
+call run
+pos 7 244 0
+call enable 256 1
+set 10 0 1 46 36
+call run
+pos 7 244 0
+call new 1 0 2 1 1 0 1 8 2 0 0 0 258 36 25 0 75 0 0 0
+hold 12
+hold 12
+release 12
+call new 1 0 1 9 4 1 1 5 8 0 0 0 524480 3 21 32 9 0 0 0
+hold 13
+hold 13
+release 13
+call new 5 1 2 1 6 1 1 7 0 0 0 0 -8 9 0 0 0 0 0 0 6
+hold 14
+pos 6 236 12
+release 14
+delete 14
+call run
+pos 7 437 0
+set 10 27 0 288 49
+call new 8 0 0 10 3 1 0 9 6 7 1 10 -1 48 38 40 2 -1 0 -1
+hold 15
+possize 9 45 23 -86 20
+hold 15
+release 15
+call new 7 0 0 1 7 1 0 3 0 0 0 0 32 25 0 0 0 0 0 0 9 6 6 9
+hold 16
+atleast 3 273 169
+hold 16
+release 16
+call new 5 0 0 9 4 0 1 4 0 0 0 0 -5 19 0 0 0 0 0 0 10
+hold 17
+pos 10 27 82
+hold 17
+release 17
+set 5 34 -1 16 -1
+set 6 31 20 48 49
+call remove 5
+release 13
+delete 13
+call point 11
+phold 11
+call new 3 2 1 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 3 4
+hold 18
+uses 0
+release 18
+delete 18
+call new 5 0 0 1 3 1 0 4 0 0 0 0 0 0 0 0 0 0 0 0 8 8 9 8
+hold 19
+pos 8 58 49
+pos 8 172 49
+pos 9 285 23
+pos 8 255 49
+hold 19
+release 19
+free
+prelease 14
+prelease 11
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 6
+delete 6
+release 10
+delete 10
+release 12
+delete 12
+release 15
+delete 15
+release 16
+delete 16
+release 17
+delete 17
+release 19
+delete 19
+seq 18
+start 223 3 138 44 0 130 -31 112 59 1 258 56 145 68 1 287 189 75 71 1 205 193 16 160 1 339 98 12 68 1 98 13 24 122 1 166 -49 156 186 1 62 101 1 135 1 43 -31 87 92 2 138 -12 192 199 1 18 62 20 39 1 156 108 153 151 1 149 59 298 112 1
+call new 8 0 2 1 2 0 1 5 0 5 4 0 36 79 18 45 2 11 -1 4
+hold 1
+hold 1
+release 1
+call new 4 0 2 1 9 1 0 2 0 0 0 0 36 0 0 0 0 0 0 0
+hold 2
+hold 2
+release 2
+call new 3 0 256 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 3
+hold 3
+release 3
+call new 1 2 0 1 3 1 1 10 6 0 0 0 41984 1 38 18 40 0 0 0
+hold 4
+uses 0
+release 4
+delete 4
+set 2 18 62 -1 193
+call new 1 0 2 8 2 0 1 9 2 0 0 0 131072 35 13 1 19 0 0 0
+hold 5
+hold 5
+release 5
+call new 6 1 256 1 2 0 1 6 5 0 0 0 1536 0 -40 0 0 0 0 0 7 6
+hold 6
+pos 5 351 193
+pos 7 244 13
+pos 6 485 98
+release 6
+delete 6
+call enable 256 1
+call run
+set 5 39 0 153 57
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 5
+delete 5
+set 1 49 -3 203 177
+call enable 2 0
+set 6 39 -1 12 20
+call run
+set 2 -1 28 0 12
+call new 3 0 2 3 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 6
+hold 7
+hold 7
+release 7
+set 5 49 11 154 184
+call run
+set 6 -42 -3 38 133
+call new 5 0 0 1 4 1 0 2 0 0 0 0 -1 46 0 0 0 0 0 0 3 9 7 4
+hold 8
+pos 3 -2 56
+pos 9 143 101
+pos 7 144 13
+pos 4 168 189
+hold 8
+release 8
+call run
+pos 3 -2 56
+pos 9 143 101
+pos 7 144 13
+pos 4 168 189
+call enable 0 1
+call new 1 0 2 1 4 1 0 2 3 0 0 0 65665 36 23 22 3 0 0 0
+hold 9
+hold 9
+release 9
+set 8 9 10 273 87
+call center 6 4 2
+pos 4 -18 189
+call new 2 0 1 4 2 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+hold 10
+hold 10
+release 10
+call new 2 0 256 1 10 1 1 4 0 0 0 0 0 0 0 0 0 0 0 0
+hold 11
+hold 11
+release 11
+call run
+pos 3 -2 56
+pos 9 143 101
+pos 7 144 13
+pos 4 168 189
+call run
+pos 3 -2 56
+pos 9 143 101
+pos 7 144 13
+pos 4 168 189
+call run
+pos 3 -2 56
+pos 9 143 101
+pos 7 144 13
+pos 4 168 189
+call remove 2
+release 9
+delete 9
+call new 6 1 1 1 7 1 1 8 7 0 0 0 768 43 13 0 0 0 0 0 5 6 4 3
+hold 12
+pos 7 144 -99
+pos 5 49 -101
+pos 6 -42 -115
+pos 4 168 77
+pos 3 -2 -56
+release 12
+delete 12
+call point 13
+phold 13
+call run
+pos 3 -2 -56
+pos 9 143 101
+pos 7 144 -99
+pos 4 168 77
+set 1 -27 15 -3 87
+call enable 0 1
+call new 1 0 256 1 3 1 0 2 7 0 0 0 16640 -1 1 0 32 0 0 0
+hold 13
+hold 13
+release 13
+call new 2 0 0 1 4 1 0 10 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 14
+pos 8 -50 10
+hold 14
+release 14
+call new 5 0 0 1 2 0 1 6 0 0 0 0 -9 40 0 0 0 0 0 0 6 2
+hold 15
+pos 6 -42 -124
+pos 2 -1 9
+hold 15
+release 15
+free
+prelease 13
+release 7
+delete 7
+release 8
+delete 8
+release 10
+delete 10
+release 11
+delete 11
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+seq 19
+start 311 151 178 144 0 37 145 262 104 1 -50 87 53 46 1 116 59 54 133 1 69 -31 157 89 1 33 57 29 131 1 47 147 224 54 1 189 154 255 102 1 155 4 201 94 1 151 221 142 62 2 199 203 60 6 1 105 -44 69 14 1 -38 176 284 65 1 23 72 124 29 1
+call remove 2
+call new 6 0 256 1 7 1 1 3 3 0 0 0 3328 31 0 0 0 0 0 0 5 10 8
+hold 1
+hold 1
+release 1
+set 6 31 14 96 4
+call run
+call new 7 0 0 1 1 0 0 7 0 0 0 0 18 0 0 0 0 0 0 0
+hold 2
+atleast 7 18 0
+hold 2
+release 2
+call enable 1 1
+set 8 1 0 1 151
+set 4 0 -42 65 19
+call run
+atleast 7 18 0
+call run
+atleast 7 18 0
+call run
+atleast 7 18 0
+call new 6 0 1 1 9 1 1 2 8 0 0 0 2560 18 26 0 0 0 0 0 2 8
+hold 3
+hold 3
+release 3
+call run
+atleast 7 18 0
+call remove 8
+set 10 1 72 1 15
+call run
+atleast 7 18 0
+call new 7 0 2 1 10 1 0 1 0 0 0 0 8 49 0 0 0 0 0 0 9 8 6
+hold 4
+hold 4
+release 4
+set 2 -1 -3 29 196
+set 3 39 17 12 97
+call new 2 0 0 1 6 1 0 4 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 5
+pos 6 -15 14
+hold 5
+release 5
+call new 3 0 0 2 4 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 10
+hold 6
+size 4 65 19
+size 10 1 19
+hold 6
+release 6
+call run
+atleast 7 18 0
+size 4 65 19
+size 10 1 19
+set 7 -1 -7 4 -1
+call new 5 0 256 1 10 0 0 5 0 0 0 0 -1 3 0 0 0 0 0 0 9
+hold 7
+hold 7
+release 7
+call new 6 0 2 9 10 1 0 4 9 0 0 0 3072 46 -2 0 0 0 0 0 4 9
+hold 8
+hold 8
+release 8
+call center 1 8 0
+call new 1 0 0 1 10 1 0 6 3 0 0 0 4368 -64 24 -72 -83 0 0 0
+hold 9
+possize 6 -25 37 96 4
+hold 9
+release 9
+call new 8 0 0 1 5 0 0 8 0 0 6 10 51 -1 -1 61 -1 6 6 0
+hold 10
+possize 8 20 0 1 7
+hold 10
+release 10
+call new 5 0 0 1 9 0 1 4 0 0 0 0 -3 9 0 0 0 0 0 0 6 8
+hold 11
+pos 6 -25 -45
+pos 8 20 -39
+hold 11
+release 11
+call new 7 0 1 8 6 0 1 8 0 0 0 0 20 18 0 0 0 0 0 0 8 5 9
+hold 12
+hold 12
+release 12
+call new 2 1 2 10 6 0 0 4 0 0 0 0 0 0 0 0 0 0 0 0 10
+hold 13
+release 13
+delete 13
+call new 5 0 2 10 9 0 0 6 0 0 0 0 -100 -53 0 0 0 0 0 0 6 8 8
+hold 14
+hold 14
+release 14
+call point 12
+phold 12
+call run
+atleast 7 18 0
+pos 6 -15 -45
+size 4 65 19
+size 10 1 19
+possize 6 -25 37 96 4
+possize 8 20 -39 1 7
+pos 6 -25 -45
+pos 8 20 -39
+call remove 6
+release 9
+delete 9
+call remove 3
+call new 2 0 0 1 8 0 1 2 0 0 0 0 0 0 0 0 0 0 0 0 8 5 10 6
+hold 15
+pos 8 20 33
+pos 5 69 41
+pos 10 1 144
+pos 6 -25 27
+hold 15
+release 15
+call new 4 0 256 1 2 0 0 4 0 0 0 0 43 0 0 0 0 0 0 0 3 5
+hold 16
+hold 16
+release 16
+call new 4 0 2 1 1 0 1 2 0 0 0 0 25 0 0 0 0 0 0 0
+hold 17
+hold 17
+release 17
+set 7 44 -4 13 187
+free
+prelease 12
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+release 17
+delete 17
+seq 20
+start 0 -2 218 44 0 311 -46 113 181 1 43 50 261 193 1 313 229 33 162 1 301 45 65 18 1 126 15 47 194 1 -37 -19 123 153 1 244 125 54 18 1 281 -25 101 21 1 291 172 266 33 2 260 117 229 182 1 159 81 51 20 1 167 177 182 11 1 265 85 251 177 1
+call new 8 0 0 1 10 0 1 3 3 0 8 0 -1 44 82 -1 6 -1 -1 -1
+hold 1
+possize 3 43 132 205 193
+hold 1
+release 1
+call enable 1 1
+call new 1 0 0 1 9 0 0 7 10 0 0 0 131072 -2 -44 29 -21 0 0 0
+hold 2
+possize 7 -37 -19 357 153
+hold 2
+release 2
+set 3 87 46 137 0
+set 1 -1 5 4 48
+call new 7 2 0 1 9 0 0 10 0 0 0 0 1 60 0 0 0 0 0 0 9 8
+hold 3
+uses 0
+release 3
+delete 3
+call enable 2 0
+call run
+possize 3 87 132 168 0
+possize 7 -37 -19 357 153
+call new 1 0 0 1 5 0 0 8 1 0 0 0 16 0 1 10 31 0 0 0
+hold 4
+possize 8 244 125 54 18
+hold 4
+release 4
+call new 3 0 1 1 7 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 6
+hold 5
+hold 5
+release 5
+call run
+possize 3 87 132 168 0
+possize 7 -37 -19 357 153
+possize 8 244 125 54 18
+set 4 24 39 286 121
+call new 5 2 0 1 10 1 0 2 0 0 0 0 46 18 0 0 0 0 0 0 10 10
+hold 6
+uses 0
+release 6
+delete 6
+call run
+possize 3 87 132 168 0
+possize 7 -37 -19 357 153
+possize 8 244 125 54 18
+call enable 0 0
+call new 4 2 1 1 2 0 0 5 0 0 0 0 40 0 0 0 0 0 0 0 9 7 4
+hold 7
+uses 0
+release 7
+delete 7
+call point 14
+phold 14
+call run
+set 6 -1 90 -1 108
+call run
+call enable 0 1
+set 3 49 36 135 94
+call new 4 0 256 1 7 1 0 2 0 0 0 0 -7 0 0 0 0 0 0 0 9 10 3 3
+hold 8
+hold 8
+release 8
+call new 2 0 0 1 6 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0
+hold 9
+hold 9
+release 9
+call remove 3
+set 3 44 -33 40 47
+call run
+possize 3 44 132 204 47
+possize 7 -37 -19 357 153
+possize 8 244 125 54 18
+call remove 8
+release 4
+delete 4
+call new 4 2 0 1 7 0 0 9 0 0 0 0 8 0 0 0 0 0 0 0 6 6 8 8
+hold 10
+uses 0
+release 10
+delete 10
+call point 11
+phold 11
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 5
+delete 5
+release 8
+delete 8
+release 9
+delete 9
+prelease 14
+prelease 11
+set 9 -1 1 284 32
+call new 8 1 1 1 9 0 1 4 4 0 9 10 27 -1 49 0 0 -1 10 4
+hold 11
+possize 4 91 39 122 0
+release 11
+delete 11
+call new 4 2 0 8 6 0 1 5 0 0 0 0 -79 0 0 0 0 0 0 0 7 6
+hold 12
+uses 0
+release 12
+delete 12
+call center 1 2 2
+pos 2 -54 -46
+call remove 10
+call run
+set 9 32 -4 1 190
+call new 7 2 0 5 8 0 1 9 0 0 0 0 0 40 0 0 0 0 0 0 2 3 3
+hold 13
+uses 0
+release 13
+delete 13
+call new 8 0 256 1 2 1 1 5 6 0 0 0 -1 53 -1 4 9 -1 6 2
+hold 14
+hold 14
+release 14
+free
+release 14
+delete 14
+seq 21
+start 57 213 258 144 0 218 130 264 58 1 136 81 169 171 1 141 30 12 192 1 164 121 273 147 1 219 41 296 56 1 311 116 23 85 1 267 28 153 135 1 -26 246 1 179 1 -1 124 22 3 2 321 99 29 189 1 246 -25 100 195 1 -27 246 81 125 1 140 30 78 94 1
+call new 4 0 256 3 1 0 1 6 0 0 0 0 10 0 0 0 0 0 0 0 5 8 3 3
+hold 1
+hold 1
+release 1
+call run
+call enable 256 1
+call enable 256 0
+call run
+set 8 0 1 43 34
+call enable 1 1
+call run
+set 4 41 20 193 188
+call center 1 9 2
+pos 9 128 246
+call new 6 0 2 9 6 0 0 6 4 0 0 0 3584 49 17 0 0 0 0 0 7
+hold 2
+hold 2
+release 2
+call run
+call enable 2 0
+set 3 30 43 66 92
+call new 4 0 1 1 10 0 1 4 0 0 0 0 -9 0 0 0 0 0 0 0 10 2 5
+hold 3
+hold 3
+release 3
+set 7 -3 9 170 0
+call run
+call new 6 2 256 1 5 0 0 10 10 0 0 0 2304 -30 -10 0 0 0 0 0
+hold 4
+uses 0
+release 4
+delete 4
+call run
+set 7 0 -33 104 21
+set 3 37 28 110 78
+set 8 33 19 191 1
+call new 5 0 0 1 5 0 1 7 0 0 0 0 28 42 0 0 0 0 0 0 4 4 2 9
+hold 5
+pos 4 41 -5
+pos 4 41 183
+pos 2 218 371
+pos 9 128 429
+hold 5
+release 5
+call center 1 10 3
+pos 10 118 70
+call run
+pos 4 41 -5
+pos 4 41 183
+pos 2 218 371
+pos 9 128 429
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 5
+delete 5
+call remove 9
+call run
+call new 7 0 2 4 3 0 1 2 0 0 0 0 -15 -20 0 0 0 0 0 0 2 9
+hold 6
+hold 6
+release 6
+call remove 3
+call clear
+release 6
+delete 6
+call new 4 0 0 6 5 0 1 10 0 0 0 0 80 0 0 0 0 0 0 0 2
+hold 7
+pos 10 562 70
+hold 7
+release 7
+call new 4 0 0 1 5 1 1 6 0 0 0 0 85 0 0 0 0 0 0 0 10 9 3
+hold 8
+pos 6 669 41
+hold 8
+release 8
+call center 6 7 0
+call new 1 0 0 1 7 1 1 2 9 0 0 0 524544 -2 -49 11 46 0 0 0
+hold 9
+possize 2 218 322 264 332
+hold 9
+release 9
+call center 1 9 1
+pos 9 128 -17
+call run
+pos 10 562 70
+pos 6 669 41
+possize 2 218 -398 264 606
+call run
+pos 10 562 70
+pos 6 669 41
+possize 2 218 -672 264 880
+set 1 -32 1 181 80
+call run
+pos 10 562 70
+pos 6 669 41
+possize 2 218 -946 264 1154
+free
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+seq 22
+start 146 61 298 44 0 125 239 115 134 1 228 112 77 118 1 -30 200 291 54 1 -4 197 182 44 1 281 0 13 119 1 259 -50 222 16 1 290 231 252 51 1 99 150 201 106 1 107 76 77 174 2 -18 14 197 165 1 301 169 149 2 1 179 247 280 71 1 14 42 272 43 1
+call point 14
+phold 14
+call new 3 0 0 1 6 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8 2 6
+hold 1
+size 8 252 134
+size 2 115 134
+size 6 13 134
+hold 1
+release 1
+call new 3 1 256 1 4 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9 4 3 8
+hold 2
+size 9 201 134
+size 4 291 134
+size 3 77 134
+size 8 252 134
+release 2
+delete 2
+call enable 256 1
+call run
+size 8 252 134
+size 2 115 134
+size 6 13 134
+call new 5 0 256 1 1 0 0 10 0 0 0 0 92 0 0 0 0 0 0 0 6 8 9 4
+hold 3
+hold 3
+release 3
+call enable 1 0
+call run
+size 8 252 134
+size 2 115 134
+size 6 13 134
+call center 1 3 1
+pos 3 228 -45
+call new 4 0 0 1 2 0 0 2 0 0 0 0 23 0 0 0 0 0 0 0 3 4
+hold 4
+pos 2 328 239
+hold 4
+release 4
+call remove 10
+set 2 16 -58 232 38
+call new 4 0 2 1 10 1 0 6 0 0 0 0 33 0 0 0 0 0 0 0 6 9 5
+hold 5
+hold 5
+release 5
+call new 2 0 1 9 4 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 10 6 3 8
+hold 6
+hold 6
+release 6
+set 10 47 -10 254 125
+call enable 1 0
+call run
+size 8 252 134
+size 2 232 134
+size 6 13 134
+pos 2 328 -58
+call new 6 0 1 1 5 1 0 5 2 0 0 0 256 37 31 0 0 0 0 0 8 4
+hold 7
+hold 7
+release 7
+call center 1 10 0
+call point 14
+phold 14
+set 7 -1 9 260 0
+call point 11
+phold 11
+call point 13
+phold 13
+call new 2 0 0 1 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 2 4
+hold 8
+pos 7 -117 9
+pos 2 212 -58
+pos 4 -146 200
+hold 8
+release 8
+call point 12
+phold 12
+call new 4 1 0 1 6 1 1 5 0 0 0 0 40 0 0 0 0 0 0 0 9 2 10 6
+hold 9
+pos 5 484 197
+release 9
+delete 9
+call new 7 0 2 1 10 0 1 3 0 0 0 0 22 49 0 0 0 0 0 0 8
+hold 10
+hold 10
+release 10
+call enable 1 0
+call enable 2 0
+call center 2 4 3
+pos 4 -29 0
+call new 8 2 0 1 5 1 0 3 4 9 0 0 84 36 -1 67 8 8 -1 9
+hold 11
+uses 0
+release 11
+delete 11
+call remove 4
+set 10 12 41 60 117
+call new 5 0 2 1 5 0 0 5 0 0 0 0 -1 17 0 0 0 0 0 0 7 9 6 2
+hold 12
+hold 12
+release 12
+call run
+size 8 252 134
+size 2 232 134
+size 6 13 134
+pos 2 328 -58
+pos 7 -233 9
+pos 2 212 -58
+pos 4 -145 0
+call new 2 1 2 1 8 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 13
+release 13
+delete 13
+call point 14
+phold 14
+call remove 10
+set 8 28 23 126 28
+call new 3 0 0 1 10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 6 7 9
+hold 14
+size 4 291 134
+size 6 291 134
+size 7 291 0
+size 9 291 134
+hold 14
+release 14
+free
+prelease 14
+prelease 14
+prelease 11
+prelease 13
+prelease 12
+prelease 14
+release 1
+delete 1
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 10
+delete 10
+release 12
+delete 12
+release 14
+delete 14
+seq 23
+start 234 208 38 143 0 0 115 266 11 1 321 143 285 64 1 199 70 270 84 1 259 41 90 172 1 -26 26 262 182 1 208 153 122 148 1 313 134 51 167 1 192 121 101 65 1 215 96 201 145 2 74 228 66 172 1 -12 -6 131 176 1 -16 16 179 185 1 256 55 99 191 1
+call new 4 0 1 1 5 0 0 4 0 0 0 0 38 0 0 0 0 0 0 0 7
+hold 1
+hold 1
+release 1
+call clear
+release 1
+delete 1
+call new 7 1 256 1 10 1 0 1 0 0 0 0 42 15 0 0 0 0 0 0 7 10
+hold 2
+atleast 1 243 163
+relayout
+release 2
+delete 2
+call remove 6
+call run
+call new 7 0 2 1 2 1 1 1 0 0 0 0 0 42 0 0 0 0 0 0 7 7
+hold 3
+hold 3
+release 3
+call new 7 0 256 1 4 0 0 6 0 0 0 0 9 41 0 0 0 0 0 0 5 3 4
+hold 4
+hold 4
+release 4
+call new 8 0 0 9 10 1 0 8 0 0 10 0 63 30 60 27 -1 6 11 -1
+hold 5
+possize 8 334 144 114 37
+hold 5
+release 5
+call remove 2
+call new 1 2 0 1 3 1 0 8 5 0 0 0 32 44 -1 29 49 0 0 0
+hold 6
+uses 0
+release 6
+delete 6
+call remove 8
+call remove 1
+call new 4 0 0 1 2 0 0 8 0 0 0 0 11 0 0 0 0 0 0 0 6 4 10
+hold 7
+pos 8 480 144
+hold 7
+release 7
+call clear
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 7
+delete 7
+call run
+call new 7 0 2 8 1 1 1 1 0 0 0 0 12 82 0 0 0 0 0 0 2 8 6 2
+hold 8
+hold 8
+release 8
+call new 6 0 256 1 9 1 1 10 7 0 0 0 2304 -8 0 0 0 0 0 0 9
+hold 9
+hold 9
+release 9
+call run
+set 8 -1 36 27 171
+call new 4 0 0 1 2 1 1 9 0 0 0 0 19 0 0 0 0 0 0 0
+hold 10
+pos 9 19 121
+hold 10
+release 10
+call new 2 0 256 4 3 1 0 8 0 0 0 0 0 0 0 0 0 0 0 0
+hold 11
+hold 11
+release 11
+call new 1 0 2 1 4 0 1 9 8 0 0 0 4352 12 49 -2 40 0 0 0
+hold 12
+hold 12
+release 12
+call enable 0 0
+set 10 10 0 231 57
+set 8 -1 19 55 159
+call center 1 10 3
+pos 10 6 53
+call enable 2 1
+call run
+atleast 1 278 264
+relayout
+atleast 1 278 264
+possize 9 11 3 101 65
+possize 9 11 3 101 65
+call point 13
+phold 13
+call new 6 0 0 8 4 0 0 9 7 0 0 0 2816 6 -10 0 0 0 0 0
+hold 13
+pos 7 -105 -155
+hold 13
+release 13
+call center 1 3 2
+pos 3 -3 143
+call new 8 0 0 2 3 0 1 6 7 0 0 0 97 -1 76 -1 8 3 0 8
+hold 14
+possize 6 13 26 86 182
+hold 14
+release 14
+call new 5 0 2 4 4 1 1 6 0 0 0 0 14 13 0 0 0 0 0 0 6 7
+hold 15
+hold 15
+release 15
+call clear
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+prelease 13
+call new 4 1 2 1 9 1 1 10 0 0 0 0 -1 0 0 0 0 0 0 0 3 8 2
+hold 16
+pos 10 281 53
+release 16
+delete 16
+set 5 41 1 289 -17
+set 2 21 15 189 166
+call remove 3
+call new 2 0 2 1 9 0 0 7 0 0 0 0 0 0 0 0 0 0 0 0 5 8
+hold 17
+hold 17
+release 17
+call enable 0 1
+free
+release 17
+delete 17
+seq 24
+start 291 56 78 43 0 307 -8 116 56 1 13 174 193 43 1 28 172 249 113 1 123 117 298 101 1 68 -15 279 44 1 124 -13 21 79 1 336 37 150 115 1 317 92 233 24 1 -45 48 257 115 2 135 143 166 148 1 43 188 180 151 1 190 17 10 131 1 130 68 225 108 1
+call run
+set 6 -10 98 203 167
+call center 1 2 2
+pos 2 -19 -8
+set 6 -57 9 98 166
+call new 2 0 1 1 8 0 1 2 0 0 0 0 0 0 0 0 0 0 0 0
+hold 1
+hold 1
+release 1
+call enable 256 0
+call run
+call new 6 0 2 1 1 0 0 8 4 0 0 0 512 4 47 0 0 0 0 0 7
+hold 2
+hold 2
+release 2
+call new 6 0 1 1 6 0 0 1 5 0 0 0 0 -29 -55 0 0 0 0 0 3 4 2 6
+hold 3
+hold 3
+release 3
+call point 14
+phold 14
+call new 7 0 256 1 2 1 0 8 0 0 0 0 6 2 0 0 0 0 0 0
+hold 4
+hold 4
+release 4
+call new 4 1 256 1 5 1 0 4 0 0 0 0 -6 0 0 0 0 0 0 0 5
+hold 5
+pos 4 415 172
+release 5
+delete 5
+set 8 0 -5 152 167
+call remove 8
+call new 4 1 0 1 9 0 1 6 0 0 0 0 -5 0 0 0 0 0 0 0 4 5 9
+hold 6
+pos 6 659 9
+release 6
+delete 6
+call point 13
+phold 13
+call new 1 0 0 5 2 1 0 5 1 0 0 0 32768 17 2 -6 -74 0 0 0
+hold 7
+possize 5 123 -56 298 101
+hold 7
+release 7
+call point 11
+phold 11
+call remove 4
+call enable 256 0
+call new 8 0 0 1 8 0 1 10 3 0 1 0 48 39 33 54 2 11 2 8
+hold 8
+possize 10 44 20 20 12
+hold 8
+release 8
+set 3 66 18 41 188
+call center 1 7 1
+pos 7 124 -18
+call new 7 0 0 1 4 0 0 5 0 0 0 0 28 -2 0 0 0 0 0 0 5 3
+hold 9
+atleast 5 326 186
+hold 9
+release 9
+call enable 0 0
+call run
+set 4 -3 32 296 101
+call center 3 4 2
+pos 4 -127 32
+call point 13
+phold 13
+call new 4 1 2 1 3 1 0 2 0 0 0 0 0 0 0 0 0 0 0 0
+hold 10
+pos 2 0 -8
+release 10
+delete 10
+call run
+call enable 256 0
+call new 8 0 0 1 3 1 1 5 9 5 0 0 51 19 59 57 -1 -1 2 6
+hold 11
+possize 5 434 -23 136 103
+hold 11
+release 11
+set 10 2 35 123 141
+call new 7 0 0 1 3 1 1 4 0 0 0 0 -6 2 0 0 0 0 0 0 2 7 5
+hold 12
+atleast 4 130 105
+hold 12
+release 12
+set 10 -1 16 -1 122
+call enable 256 0
+call new 5 2 1 1 7 1 1 7 0 0 0 0 41 24 0 0 0 0 0 0 8 3 8
+hold 13
+uses 0
+release 13
+delete 13
+call run
+possize 5 434 -6 136 55
+atleast 4 130 81
+call run
+possize 5 434 2 136 28
+atleast 4 130 81
+free
+prelease 14
+prelease 13
+prelease 11
+prelease 13
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 11
+delete 11
+release 12
+delete 12
+seq 25
+start -20 203 118 143 0 181 100 35 133 1 106 205 101 189 1 257 41 228 175 1 -46 193 139 30 1 161 11 228 107 1 72 122 221 11 1 -9 8 249 31 1 11 -5 133 151 1 62 -1 12 86 2 196 125 34 155 1 129 13 161 157 1 -4 86 209 45 1 4 81 52 56 1
+set 10 6 37 25 111
+set 5 -8 45 275 97
+call new 3 0 0 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 1
+size 6 228 107
+hold 1
+release 1
+call run
+size 6 228 107
+call new 8 2 0 1 10 0 1 7 0 7 0 9 42 -1 12 2 10 -1 7 10
+hold 2
+uses 0
+release 2
+delete 2
+set 6 -2 25 144 193
+call new 4 2 0 1 3 1 0 2 0 0 0 0 -1 0 0 0 0 0 0 0
+hold 3
+uses 0
+release 3
+delete 3
+call point 14
+phold 14
+call new 7 0 2 9 2 0 1 4 0 0 0 0 33 35 0 0 0 0 0 0 3 2 4 3
+hold 4
+hold 4
+release 4
+call new 4 0 0 1 5 1 1 5 0 0 0 0 1 0 0 0 0 0 0 0 8 9 3
+hold 5
+pos 5 241 45
+hold 5
+release 5
+call remove 7
+call point 12
+phold 12
+call center 1 8 1
+pos 8 -9 56
+call center 1 8 0
+call new 6 0 0 1 8 0 1 8 3 0 0 0 1280 28 13 0 0 0 0 0 7 3
+hold 6
+pos 3 268 -120
+pos 7 234 -203
+pos 3 430 -445
+hold 6
+release 6
+call new 2 1 0 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 6
+hold 7
+release 7
+delete 7
+set 4 -99 46 50 35
+call center 1 3 1
+pos 3 430 -23
+call run
+size 6 144 193
+pos 5 532 45
+pos 3 430 -120
+pos 7 234 -300
+pos 3 430 -217
+call new 3 0 2 6 4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 5
+hold 8
+hold 8
+release 8
+call enable 256 1
+set 2 39 -9 290 137
+set 1 -55 1 22 55
+call new 3 0 1 1 5 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 9
+hold 9
+release 9
+call new 5 0 2 6 7 0 1 5 0 0 0 0 2 -7 0 0 0 0 0 0 2 6 8 7
+hold 10
+hold 10
+release 10
+call center 2 5 2
+pos 5 7 45
+set 1 48 49 172 12
+call run
+size 6 144 193
+pos 5 532 45
+call new 1 2 1 1 6 0 0 6 4 0 0 0 32770 -1 -3 7 0 0 0 0
+hold 11
+uses 1
+release 11
+delete 11
+call new 3 1 2 8 9 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9 6 7
+hold 12
+size 9 133 193
+size 6 144 193
+size 7 221 193
+release 12
+delete 12
+call run
+size 6 144 193
+pos 5 532 45
+call new 4 0 0 6 10 1 1 8 0 0 0 0 -12 0 0 0 0 0 0 0
+hold 13
+pos 8 -12 56
+hold 13
+release 13
+call center 8 10 1
+pos 10 6 -40
+call new 5 2 0 6 3 0 0 4 0 0 0 0 -2 30 0 0 0 0 0 0 6 2
+hold 14
+uses 0
+release 14
+delete 14
+call new 3 0 0 1 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 8 10 5
+hold 15
+hold 15
+release 15
+call new 5 1 0 1 6 0 0 4 0 0 0 0 1 -4 0 0 0 0 0 0 3 3 2 6
+hold 16
+pos 3 430 47
+pos 3 430 236
+pos 2 39 425
+pos 6 -2 562
+release 16
+delete 16
+call new 3 1 256 3 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7
+hold 17
+release 17
+delete 17
+call center 1 9 0
+call new 5 0 0 1 8 1 0 9 0 0 0 0 30 49 0 0 0 0 0 0 3 2
+hold 18
+pos 3 41 236
+pos 2 142 425
+hold 18
+release 18
+set 10 -1 26 202 152
+free
+prelease 14
+prelease 12
+release 1
+delete 1
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 13
+delete 13
+release 15
+delete 15
+release 18
+delete 18
+seq 26
+start 69 118 158 11 0 88 -23 186 10 1 166 168 9 168 1 54 211 139 5 1 218 -32 47 159 1 223 -31 245 170 1 21 -44 52 142 1 14 211 48 147 1 136 -34 33 110 1 170 -49 136 56 2 257 40 202 131 1 216 207 210 132 1 201 86 108 190 1 246 26 246 173 1
+call new 8 0 0 1 9 0 0 5 6 8 0 0 58 58 63 -1 2 -1 -1 8
+hold 1
+possize 5 366 291 153 159
+hold 1
+release 1
+call new 6 0 0 3 4 0 1 5 4 0 0 0 3840 -1 23 0 0 0 0 0 3
+hold 2
+hold 2
+release 2
+set 2 3 -1 203 127
+call center 1 6 2
+pos 6 -43 -31
+call enable 1 1
+set 9 -43 -1 276 99
+call run
+possize 5 100 291 153 159
+pos 4 -40 211
+pos 3 72 168
+call new 4 0 0 1 5 1 0 9 0 0 0 0 24 0 0 0 0 0 0 0 2 4 3 4
+hold 3
+pos 9 230 -1
+hold 3
+release 3
+call new 2 0 0 1 6 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10
+hold 4
+pos 10 170 -22
+hold 4
+release 4
+call new 2 0 1 1 8 0 1 5 0 0 0 0 0 0 0 0 0 0 0 0 3 9 4
+hold 5
+hold 5
+release 5
+set 9 27 -6 144 180
+call run
+possize 5 100 291 153 159
+pos 9 230 -6
+call run
+possize 5 100 291 153 159
+pos 9 230 -6
+set 10 -10 28 272 172
+set 9 4 1 276 123
+set 2 0 1 -5 113
+call new 2 0 0 1 3 1 0 6 0 0 0 0 0 0 0 0 0 0 0 0 9
+hold 6
+pos 9 -58 1
+hold 6
+release 6
+set 8 1 49 124 -33
+call run
+possize 5 100 25 153 159
+pos 4 -40 43
+pos 3 72 0
+pos 9 123 1
+pos 10 -10 -80
+pos 9 -58 1
+call point 11
+phold 11
+call new 8 0 1 2 1 1 0 2 5 3 0 0 16 -1 47 53 3 -1 11 -1
+hold 7
+hold 7
+release 7
+set 8 29 -28 157 119
+call new 7 0 0 1 8 0 0 3 0 0 0 0 58 25 0 0 0 0 0 0 3 8
+hold 8
+atleast 3 215 193
+hold 8
+release 8
+set 8 57 20 -8 162
+set 9 24 7 108 91
+set 5 -18 0 52 180
+call new 1 0 0 1 9 0 1 10 4 0 0 0 128 77 -70 -61 8 0 0 0
+hold 9
+possize 10 -10 -80 272 172
+hold 9
+release 9
+call new 7 0 2 1 9 1 1 5 0 0 0 0 -42 40 0 0 0 0 0 0
+hold 10
+hold 10
+release 10
+call new 7 0 2 1 5 1 1 6 0 0 0 0 -10 -1 0 0 0 0 0 0 5 4 2
+hold 11
+hold 11
+release 11
+call new 2 0 0 1 8 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 5
+hold 12
+pos 5 -18 -84
+hold 12
+release 12
+call remove 4
+release 9
+delete 9
+call enable 0 1
+call new 1 1 0 5 6 0 1 3 4 0 0 0 8193 1 17 27 1 0 0 0
+hold 13
+possize 3 -66 0 166 193
+release 13
+delete 13
+set 10 0 72 107 119
+set 10 -3 49 4 130
+call new 2 0 0 1 4 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 6 9
+hold 14
+hold 14
+release 14
+set 1 28 -1 214 118
+call new 2 1 0 1 6 0 0 2 0 0 0 0 0 0 0 0 0 0 0 0
+hold 15
+release 15
+delete 15
+call remove 10
+set 7 -47 45 181 25
+free
+prelease 11
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 14
+delete 14
+seq 27
+start 125 -34 198 111 0 -5 85 37 87 1 259 200 217 114 1 283 13 119 35 1 81 44 255 88 1 316 -4 262 33 1 337 91 252 73 1 36 114 147 64 1 229 169 233 37 1 278 203 192 27 2 318 -46 3 138 1 271 32 260 107 1 7 155 7 104 1 121 38 73 121 1
+call new 4 0 0 1 3 1 1 9 0 0 0 0 33 0 0 0 0 0 0 0 3 4 10
+hold 1
+pos 9 509 169
+hold 1
+release 1
+call new 5 2 1 1 3 1 1 10 0 0 0 0 28 0 0 0 0 0 0 0 10 6 2 3
+hold 2
+uses 0
+release 2
+delete 2
+call run
+pos 9 509 169
+call center 9 10 0
+call new 3 0 0 1 9 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 3
+size 8 147 64
+hold 3
+release 3
+set 8 1 -3 60 37
+call center 9 9 1
+pos 9 509 0
+call center 1 5 1
+pos 5 81 11
+call remove 4
+call run
+pos 9 509 0
+size 8 60 37
+call new 3 2 0 1 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 8 10
+hold 4
+uses 0
+release 4
+delete 4
+call clear
+release 1
+delete 1
+release 3
+delete 3
+call run
+call run
+call enable 0 1
+call point 12
+phold 12
+set 7 46 -65 21 23
+call run
+call enable 0 1
+call center 1 5 1
+set 5 45 30 80 47
+call new 6 0 0 1 2 0 0 9 6 0 0 0 2304 -1 6 0 0 0 0 0 2 6 7 7
+hold 5
+pos 6 246 -27
+pos 2 -75 62
+pos 6 176 -50
+pos 7 -24 -88
+pos 7 -94 -111
+hold 5
+release 5
+set 2 26 -99 30 165
+call new 3 0 1 1 2 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 6
+hold 6
+release 6
+call new 4 2 0 1 8 1 1 6 0 0 0 0 -1 0 0 0 0 0 0 0
+hold 7
+uses 0
+release 7
+delete 7
+call clear
+release 5
+delete 5
+release 6
+delete 6
+prelease 12
+set 2 33 21 175 183
+call center 6 9 0
+call new 8 1 0 3 5 0 0 3 0 0 9 9 -1 -1 92 -1 4 8 -1 1
+hold 8
+possize 3 259 200 211 114
+release 8
+delete 8
+call new 7 0 256 1 6 0 0 1 0 0 0 0 0 -9 0 0 0 0 0 0 5
+hold 9
+hold 9
+release 9
+call clear
+release 9
+delete 9
+call new 7 0 0 1 9 0 0 6 0 0 0 0 21 -5 0 0 0 0 0 0 6 2
+hold 10
+atleast 6 283 178
+hold 10
+release 10
+call new 4 0 256 1 6 0 0 8 0 0 0 0 -6 0 0 0 0 0 0 0 6 7 10
+hold 11
+hold 11
+release 11
+call run
+atleast 6 304 178
+call remove 5
+call new 8 0 256 1 7 0 1 4 0 5 7 4 46 -1 74 76 -1 4 -1 3
+hold 12
+hold 12
+release 12
+set 1 44 -9 101 160
+call new 8 1 256 1 4 1 1 3 5 0 10 0 34 22 -1 99 1 5 2 7
+hold 13
+possize 3 189 211 211 14
+release 13
+delete 13
+call clear
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+call new 6 0 2 3 3 1 0 5 10 0 0 0 2304 11 42 0 0 0 0 0 5
+hold 14
+hold 14
+release 14
+free
+release 14
+delete 14
+seq 28
+start 214 113 238 11 0 270 -38 187 164 1 -49 231 125 93 1 112 183 98 97 1 313 120 164 185 1 9 -46 211 95 1 285 225 151 5 1 59 16 14 180 1 -46 140 133 195 1 18 223 247 198 2 -21 236 171 114 1 -42 226 241 113 1 213 156 206 50 1 -5 51 199 70 1
+call new 8 0 0 3 7 0 1 4 0 4 0 0 -1 66 70 10 2 10 0 4
+hold 1
+possize 4 112 247 67 8
+hold 1
+release 1
+call new 4 2 0 1 10 1 1 4 0 0 0 0 24 0 0 0 0 0 0 0
+hold 2
+uses 0
+release 2
+delete 2
+call run
+possize 4 112 254 45 0
+call new 8 0 0 1 10 0 1 2 0 7 2 8 94 -1 -1 44 -1 8 2 10
+hold 3
+possize 2 443 -38 187 -20
+hold 3
+release 3
+set 5 18 -74 120 140
+call point 12
+phold 12
+set 10 5 41 186 35
+call center 4 3 2
+pos 3 -40 231
+call new 7 1 2 1 4 1 1 5 0 0 0 0 -73 1 0 0 0 0 0 0
+hold 4
+atleast 5 -73 1
+release 4
+delete 4
+call run
+possize 4 112 255 30 -1
+possize 2 616 -38 187 -20
+call center 1 10 0
+set 9 24 19 69 59
+set 4 40 5 282 141
+call center 1 7 2
+pos 7 43 225
+set 5 35 0 54 185
+call run
+possize 4 40 98 196 12
+possize 2 789 -38 187 -20
+call clear
+release 1
+delete 1
+release 3
+delete 3
+prelease 12
+call new 5 0 2 1 5 0 1 4 0 0 0 0 29 7 0 0 0 0 0 0 7 10 5
+hold 5
+hold 5
+release 5
+call enable 256 1
+call new 7 2 0 1 4 1 1 8 0 0 0 0 2 -1 0 0 0 0 0 0 3 5 2
+hold 6
+uses 0
+release 6
+delete 6
+call new 1 0 2 1 10 0 0 6 1 0 0 0 64 0 47 23 32 0 0 0
+hold 7
+hold 7
+release 7
+call enable 1 1
+call new 3 0 1 1 5 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 10 5 10 10
+hold 8
+hold 8
+release 8
+call run
+call run
+call point 14
+phold 14
+call center 1 4 2
+pos 4 21 98
+call new 4 0 256 1 4 1 0 6 0 0 0 0 16 0 0 0 0 0 0 0 8
+hold 9
+hold 9
+release 9
+call point 13
+phold 13
+set 5 6 61 12 99
+set 4 75 12 235 26
+call enable 1 1
+call new 2 0 2 1 4 0 0 6 0 0 0 0 0 0 0 0 0 0 0 0 2 2 4
+hold 10
+hold 10
+release 10
+call new 2 0 0 1 8 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+hold 11
+hold 11
+release 11
+set 3 -70 26 -3 167
+call run
+size 10 186 35
+size 5 186 99
+size 10 186 35
+size 10 186 35
+call new 5 0 0 1 1 1 0 10 0 0 0 0 38 42 0 0 0 0 0 0 7 2
+hold 12
+pos 7 43 225
+pos 2 194 -38
+hold 12
+release 12
+call new 3 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 2 3 10
+hold 13
+hold 13
+release 13
+call new 3 1 0 1 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 5 4 4
+hold 14
+size 2 235 -20
+size 5 235 99
+size 4 235 26
+size 4 235 26
+release 14
+delete 14
+call new 5 2 0 1 1 0 0 2 0 0 0 0 5 28 0 0 0 0 0 0 7 6
+hold 15
+uses 0
+release 15
+delete 15
+free
+prelease 14
+prelease 13
+release 5
+delete 5
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+seq 29
+start 303 -39 278 111 0 176 138 38 9 1 44 -38 33 39 1 340 53 77 126 1 177 196 72 113 1 103 -20 228 158 1 233 128 51 104 1 114 -13 113 96 1 47 112 33 154 1 126 175 71 168 2 71 151 39 121 1 12 52 290 88 1 18 225 37 164 1 237 64 26 186 1
+call enable 256 0
+call run
+set 6 0 -1 201 121
+call new 8 0 0 1 4 1 1 3 0 0 0 1 -1 68 34 -1 6 1 4 -1
+hold 1
+possize 3 44 76 91 39
+hold 1
+release 1
+call new 2 0 2 1 10 0 1 5 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 2
+hold 2
+release 2
+set 2 0 49 169 26
+call run
+possize 3 44 76 91 39
+call new 6 0 2 1 10 0 1 1 6 0 0 0 2560 -1 1 0 0 0 0 0 3 8
+hold 3
+hold 3
+release 3
+call new 2 1 1 1 10 0 1 7 0 0 0 0 0 0 0 0 0 0 0 0 3 3 9 9
+hold 4
+pos 3 44 85
+pos 3 44 94
+pos 9 47 121
+pos 9 47 130
+release 4
+delete 4
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+set 6 -8 0 66 168
+call point 13
+phold 13
+call run
+call new 1 2 2 1 5 0 1 6 6 0 0 0 65536 13 -1 0 44 0 0 0
+hold 5
+uses 0
+release 5
+delete 5
+set 3 -62 1 1 17
+set 9 0 0 41 101
+call new 4 0 256 1 10 0 0 4 0 0 0 0 -20 0 0 0 0 0 0 0 9 7 8 4
+hold 6
+hold 6
+release 6
+call enable 1 0
+set 8 26 48 101 135
+call point 11
+phold 11
+call center 9 8 0
+call new 7 0 1 1 7 0 0 6 0 0 0 0 42 -4 0 0 0 0 0 0 3 10 2 3
+hold 7
+hold 7
+release 7
+set 1 -10 13 96 162
+call enable 0 1
+call run
+pos 4 397 53
+call new 7 0 2 2 4 0 1 6 0 0 0 0 7 -93 0 0 0 0 0 0 2
+hold 8
+hold 8
+release 8
+call remove 6
+call run
+pos 4 454 53
+call enable 1 1
+set 8 7 -4 69 19
+call enable 1 1
+call new 2 0 0 10 6 1 0 3 0 0 0 0 0 0 0 0 0 0 0 0 5 7 2 10
+hold 9
+pos 5 -26 196
+pos 7 30 128
+pos 2 -203 49
+pos 10 -77 175
+hold 9
+release 9
+call run
+pos 4 511 53
+atleast 6 211 164
+call enable 256 1
+call enable 2 0
+call center 1 5 2
+pos 5 12 196
+call new 8 1 2 1 9 0 0 3 2 0 0 9 4 49 -1 61 -1 2 -1 10
+hold 10
+possize 3 -198 45 1 54
+release 10
+delete 10
+call new 1 2 0 1 10 1 0 3 2 0 0 0 1 37 39 5 17 0 0 0
+hold 11
+uses 0
+release 11
+delete 11
+call new 8 2 0 1 8 1 1 10 8 3 0 0 28 45 -1 80 -1 1 0 -1
+hold 12
+uses 0
+release 12
+delete 12
+call point 13
+phold 13
+free
+prelease 13
+prelease 11
+prelease 13
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+seq 30
+start -41 108 18 11 0 83 247 189 85 1 137 -7 241 186 1 169 222 56 188 1 8 40 280 42 1 164 239 177 21 1 150 -38 250 36 1 137 190 212 12 1 173 15 233 81 1 234 126 126 139 2 132 65 208 97 1 99 245 40 94 1 224 226 236 110 1 111 77 152 135 1
+call new 8 2 1 1 6 1 1 2 2 0 0 0 27 -1 25 13 7 9 -1 -1
+hold 1
+uses 0
+release 1
+delete 1
+call enable 0 1
+set 5 13 41 282 120
+call clear
+call new 3 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 7
+hold 2
+size 9 250 81
+size 7 250 36
+hold 2
+release 2
+call remove 10
+call new 1 0 0 1 8 1 1 5 4 0 0 0 65536 1 -1 38 7 0 0 0
+hold 3
+possize 5 13 41 250 120
+hold 3
+release 3
+set 8 1 -3 49 -10
+call center 1 7 1
+pos 7 150 -12
+call enable 256 0
+set 9 -9 1 25 12
+call new 3 0 0 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 4
+hold 4
+release 4
+call new 5 0 2 6 6 1 1 3 0 0 0 0 23 16 0 0 0 0 0 0 7 9
+hold 5
+hold 5
+release 5
+call new 7 1 0 1 5 1 1 1 0 0 0 0 71 1 0 0 0 0 0 0 4 8
+hold 6
+atleast 1 127 189
+relayout
+size 9 250 12
+size 7 250 36
+possize 5 13 41 250 120
+release 6
+delete 6
+call new 6 0 0 1 2 0 0 1 7 0 0 0 1280 41 -9 0 0 0 0 0 4
+hold 7
+pos 7 -82 -9
+pos 4 -63 225
+hold 7
+release 7
+call new 1 1 256 9 3 0 0 8 6 0 0 0 88 0 48 44 37 0 0 0
+hold 8
+possize 8 1 -3 49 -10
+release 8
+delete 8
+call new 2 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 9
+pos 4 35 225
+hold 9
+release 9
+call enable 256 1
+set 3 4 0 16 45
+call new 3 0 2 3 8 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6 3
+hold 10
+hold 10
+release 10
+call new 4 1 256 1 1 1 0 8 0 0 0 0 -1 0 0 0 0 0 0 0 8 6
+hold 11
+pos 8 340 -3
+release 11
+delete 11
+call new 1 0 256 7 6 1 1 4 1 0 0 0 524432 1 28 38 36 0 0 0
+hold 12
+hold 12
+release 12
+set 8 45 -1 200 27
+call point 14
+phold 14
+call run
+size 9 250 12
+size 7 250 36
+possize 5 13 41 116 120
+call new 4 0 2 1 6 1 0 8 0 0 0 0 0 0 0 0 0 0 0 0
+hold 13
+hold 13
+release 13
+call point 12
+phold 12
+call new 1 0 1 1 10 1 1 8 2 0 0 0 2056 7 25 34 38 0 0 0
+hold 14
+hold 14
+release 14
+call run
+size 9 250 12
+size 7 250 36
+possize 5 13 41 116 120
+call enable 256 1
+set 6 32 18 67 7
+call run
+size 9 250 12
+size 7 250 36
+possize 5 13 41 116 120
+call new 8 2 256 1 2 1 1 8 0 2 0 2 -1 7 -1 -1 7 10 -1 -1
+hold 15
+uses 0
+release 15
+delete 15
+call new 7 1 0 10 4 1 1 7 0 0 0 0 -5 1 0 0 0 0 0 0 6 4 6 2
+hold 16
+atleast 7 184 189
+release 16
+delete 16
+call new 7 1 0 1 9 1 1 3 0 0 0 0 42 45 0 0 0 0 0 0
+hold 17
+atleast 3 42 45
+release 17
+delete 17
+call new 7 0 0 1 4 0 1 4 0 0 0 0 20 19 0 0 0 0 0 0 4 4 8
+hold 18
+atleast 4 220 207
+hold 18
+release 18
+call new 1 0 0 10 7 0 1 5 5 0 0 0 524289 30 12 38 29 0 0 0
+hold 19
+possize 5 13 41 154 149
+hold 19
+release 19
+set 10 -79 36 159 38
+set 7 -52 41 7 76
+call enable 256 1
+free
+prelease 14
+prelease 12
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 7
+delete 7
+release 9
+delete 9
+release 10
+delete 10
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 18
+delete 18
+release 19
+delete 19
+seq 31
+start 48 23 58 111 0 -42 123 40 162 1 229 -44 149 164 1 -34 24 35 18 1 272 116 121 171 1 258 -35 194 83 1 98 97 150 167 1 160 93 11 128 1 266 -14 133 40 1 -26 78 182 109 2 193 -20 8 104 1 186 71 21 69 1 29 -5 135 24 1 -15 21 47 84 1
+call run
+call run
+call enable 256 1
+set 2 8 0 148 174
+call new 6 2 2 1 9 0 0 9 7 0 0 0 2304 74 34 0 0 0 0 0 10 4 2
+hold 1
+uses 0
+release 1
+delete 1
+call run
+call run
+call run
+call new 5 0 1 2 2 1 0 6 0 0 0 0 21 11 0 0 0 0 0 0 5 7
+hold 2
+hold 2
+release 2
+set 8 1 -1 241 49
+set 6 39 14 103 44
+call center 10 7 2
+pos 7 16 97
+call new 5 2 256 4 6 0 1 4 0 0 0 0 -62 15 0 0 0 0 0 0 2
+hold 3
+uses 0
+release 3
+delete 3
+call center 7 8 3
+pos 8 -45 59
+call point 14
+phold 14
+call new 2 0 1 1 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 8
+hold 4
+hold 4
+release 4
+set 4 -26 -7 18 -35
+call center 1 4 1
+pos 4 -26 73
+call enable 1 1
+call remove 10
+call new 5 0 0 10 3 1 0 2 0 0 0 0 -1 14 0 0 0 0 0 0 3 8 7 4
+hold 5
+pos 3 7 -44
+pos 8 156 59
+pos 7 397 97
+pos 4 547 73
+hold 5
+release 5
+call new 6 0 0 5 6 1 1 2 7 0 0 0 3840 -5 -1 0 0 0 0 0 2 9
+hold 6
+pos 7 -147 -168
+pos 2 -536 -265
+pos 9 -278 -279
+hold 6
+release 6
+call run
+pos 5 60 116
+pos 7 181 -168
+pos 3 -537 -44
+pos 8 -388 59
+pos 7 -147 -168
+pos 4 3 73
+pos 7 -691 -433
+pos 2 -1080 -530
+pos 9 -822 -544
+call enable 1 1
+call new 7 0 0 1 9 1 0 10 0 0 0 0 9 1 0 0 0 0 0 0
+hold 7
+atleast 10 9 1
+hold 7
+release 7
+call new 1 0 1 1 3 0 0 10 2 0 0 0 1 25 21 -7 -5 0 0 0
+hold 8
+hold 8
+release 8
+call new 6 0 256 1 5 1 0 5 4 0 0 0 0 1 1 0 0 0 0 0 10 10 3 7
+hold 9
+hold 9
+release 9
+call new 7 2 256 1 2 0 1 9 0 0 0 0 -4 -1 0 0 0 0 0 0 5
+hold 10
+uses 0
+release 10
+delete 10
+set 6 29 32 150 70
+call enable 2 0
+set 10 -1 -10 39 185
+call enable 256 1
+call new 1 0 0 5 8 1 1 6 1 0 0 0 33280 9 15 -47 1 0 0 0
+hold 11
+possize 6 29 56 150 70
+hold 11
+release 11
+set 2 45 -90 6 192
+set 9 1 1 235 31
+call remove 4
+call run
+pos 5 50 116
+pos 7 171 -433
+pos 3 44 -44
+pos 8 193 59
+pos 7 434 -433
+pos 4 584 73
+pos 7 -110 -433
+pos 2 -499 -90
+pos 9 -543 1
+atleast 10 9 1
+possize 6 29 56 150 70
+call new 7 0 1 9 10 0 0 2 0 0 0 0 0 30 0 0 0 0 0 0 10
+hold 12
+hold 12
+release 12
+call remove 8
+call run
+pos 5 50 116
+pos 7 171 -433
+pos 3 -500 -44
+pos 8 -351 59
+pos 7 -110 -433
+pos 4 40 73
+pos 7 -654 -433
+pos 2 -1043 -90
+pos 9 -1087 1
+atleast 10 9 1
+possize 6 29 56 150 70
+free
+prelease 14
+release 2
+delete 2
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 11
+delete 11
+release 12
+delete 12
+seq 32
+start 137 171 98 10 0 265 232 190 39 1 322 -13 57 110 1 195 194 14 48 1 135 192 29 100 1 -49 224 143 146 1 46 231 49 99 1 183 -4 110 44 1 -9 -43 33 167 1 82 30 6 80 2 254 -38 176 80 1 241 -36 70 43 1 235 -4 34 170 1 227 34 173 0 1
+set 2 1 1 87 48
+call point 13
+phold 13
+call run
+set 10 22 58 4 4
+call enable 256 1
+call new 4 0 0 1 5 1 0 2 0 0 0 0 -6 0 0 0 0 0 0 0 4 10 6
+hold 1
+pos 2 203 1
+hold 1
+release 1
+call point 11
+phold 11
+call remove 2
+call run
+pos 2 203 1
+call new 4 0 256 1 10 0 1 8 0 0 0 0 17 0 0 0 0 0 0 0 10
+hold 2
+hold 2
+release 2
+call point 14
+phold 14
+call run
+pos 2 203 1
+call enable 2 0
+call new 4 0 0 1 2 0 1 8 0 0 0 0 -1 0 0 0 0 0 0 0 6 6 5 3
+hold 3
+pos 8 378 -4
+hold 3
+release 3
+set 5 -1 16 6 108
+call new 2 1 0 1 6 1 1 3 0 0 0 0 0 0 0 0 0 0 0 0 10 4
+hold 4
+pos 10 257 -50
+pos 4 430 86
+release 4
+delete 4
+call run
+pos 2 438 1
+pos 8 378 -4
+call new 2 2 0 1 3 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 5 9 5 8
+hold 5
+uses 0
+release 5
+delete 5
+call new 1 0 0 3 8 1 1 10 7 0 0 0 64 48 -5 70 -1 0 0 0
+hold 6
+possize 10 257 -50 4 4
+hold 6
+release 6
+call center 1 3 1
+pos 3 322 -50
+call new 7 0 0 1 9 0 1 5 0 0 0 0 11 0 0 0 0 0 0 0
+hold 7
+atleast 5 11 0
+hold 7
+release 7
+call new 1 0 0 1 5 1 0 5 3 0 0 0 3072 45 27 40 44 0 0 0
+hold 8
+possize 5 356 16 11 108
+hold 8
+release 8
+call new 6 0 0 1 8 0 1 5 2 0 0 0 3584 -1 17 0 0 0 0 0 6 4
+hold 9
+pos 2 268 141
+pos 6 -219 364
+pos 4 260 226
+hold 9
+release 9
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+prelease 13
+prelease 11
+prelease 14
+call run
+call enable 256 0
+call new 8 0 2 7 6 0 1 9 0 1 5 0 -1 60 30 0 10 3 1 4
+hold 10
+hold 10
+release 10
+call new 8 1 0 1 8 0 0 10 0 0 1 8 -1 -1 -1 2 8 -1 2 8
+hold 11
+possize 10 257 -50 4 0
+release 11
+delete 11
+call new 6 0 0 1 5 1 0 8 2 0 0 0 1536 46 -9 0 0 0 0 0 4 9 7
+hold 12
+pos 2 534 141
+pos 4 526 226
+pos 9 257 -43
+pos 7 312 231
+hold 12
+release 12
+set 1 32 1 76 -1
+set 8 27 34 102 98
+call run
+call new 2 0 0 1 6 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0 6 3 8 3
+hold 13
+pos 6 -219 384
+pos 3 322 -30
+pos 8 27 54
+pos 3 322 -10
+hold 13
+release 13
+call new 2 2 0 1 8 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 10 3
+hold 14
+uses 0
+release 14
+delete 14
+call new 1 0 0 1 10 0 0 3 4 0 0 0 48 52 28 -5 19 0 0 0
+hold 15
+possize 3 322 -10 57 110
+hold 15
+release 15
+call run
+pos 2 534 143
+pos 4 526 228
+pos 9 257 -41
+pos 7 312 233
+pos 6 -219 376
+pos 3 322 -18
+pos 8 27 46
+pos 3 322 -26
+possize 3 322 -26 57 110
+call new 6 2 256 1 4 0 1 9 5 0 0 0 1536 18 -2 0 0 0 0 0 2 6 7 9
+hold 16
+uses 0
+release 16
+delete 16
+call enable 256 1
+set 2 8 41 -45 59
+call run
+pos 2 175 135
+pos 4 693 322
+pos 9 424 53
+pos 7 479 327
+pos 6 -219 474
+pos 3 322 72
+pos 8 27 144
+pos 3 322 170
+possize 3 322 170 57 110
+free
+release 10
+delete 10
+release 12
+delete 12
+release 13
+delete 13
+release 15
+delete 15
+seq 33
+start 194 18 138 78 0 140 108 41 84 1 14 18 265 89 1 24 64 293 109 1 -33 -32 237 197 1 12 182 160 9 1 -37 66 249 30 1 206 199 209 160 1 116 160 233 126 1 189 -18 61 51 2 315 177 45 87 1 328 90 120 50 1 41 65 233 84 1 101 47 0 149 1
+call new 4 0 0 7 2 1 0 3 0 0 0 0 49 0 0 0 0 0 0 0 3 8 8
+hold 1
+pos 3 464 18
+hold 1
+release 1
+call new 3 0 0 10 4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 9 9 5
+hold 2
+size 2 237 84
+size 9 237 126
+size 9 237 126
+size 5 237 197
+hold 2
+release 2
+call new 2 2 0 1 9 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+hold 3
+uses 0
+release 3
+delete 3
+call enable 1 0
+call center 1 7 2
+pos 7 -55 66
+call center 1 10 2
+pos 10 38 -18
+call new 1 2 256 9 4 0 0 4 5 0 0 0 135168 0 9 41 26 0 0 0
+hold 4
+uses 1
+release 4
+delete 4
+call new 4 0 2 1 9 1 1 9 0 0 0 0 6 0 0 0 0 0 0 0 6 4
+hold 5
+hold 5
+release 5
+call new 5 2 0 8 10 1 0 1 0 0 0 0 12 33 0 0 0 0 0 0 9 8 9 7
+hold 6
+uses 0
+release 6
+delete 6
+call new 6 0 0 9 10 0 1 1 3 0 0 0 512 1 31 0 0 0 0 0 10 5 4 7
+hold 7
+hold 7
+release 7
+call new 1 2 256 1 1 1 1 5 6 0 0 0 131088 -10 11 28 -2 0 0 0
+hold 8
+uses 0
+release 8
+delete 8
+call run
+pos 3 778 18
+size 2 237 84
+size 9 237 126
+size 9 237 126
+size 5 237 197
+set 5 27 35 129 197
+call new 7 1 0 1 3 1 1 2 0 0 0 0 13 8 0 0 0 0 0 0 4
+hold 9
+atleast 2 306 117
+release 9
+delete 9
+call remove 5
+call new 7 0 256 1 10 1 0 3 0 0 0 0 19 0 0 0 0 0 0 0
+hold 10
+hold 10
+release 10
+call new 3 0 2 4 3 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2
+hold 11
+hold 11
+release 11
+set 7 42 84 38 100
+set 6 91 37 97 81
+call center 2 8 1
+pos 8 206 -21
+call new 2 0 1 1 6 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0
+hold 12
+hold 12
+release 12
+call run
+pos 3 1092 18
+size 2 306 117
+size 9 306 126
+size 9 306 126
+size 5 306 197
+call new 3 1 1 5 2 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 10
+hold 13
+size 10 61 51
+release 13
+delete 13
+call new 5 0 2 4 5 0 0 3 0 0 0 0 80 -1 0 0 0 0 0 0 6 6 7
+hold 14
+hold 14
+release 14
+call enable 1 1
+call run
+pos 3 1406 18
+size 2 306 117
+size 9 306 126
+size 9 306 126
+size 5 306 197
+call center 8 9 1
+pos 9 116 17
+call new 6 2 0 1 5 0 1 10 4 0 0 0 3840 1 20 0 0 0 0 0 2 4 8
+hold 15
+uses 0
+release 15
+delete 15
+call remove 8
+call center 1 3 1
+pos 3 1406 -5
+call new 5 0 256 6 7 1 1 3 0 0 0 0 -61 15 0 0 0 0 0 0 8 6 3 5
+hold 16
+hold 16
+release 16
+call new 1 0 256 1 7 0 0 6 9 0 0 0 65545 1 -41 -7 5 0 0 0
+hold 17
+hold 17
+release 17
+call enable 2 0
+call new 5 2 2 1 9 1 1 6 0 0 0 0 39 -1 0 0 0 0 0 0 8 6 8
+hold 18
+uses 0
+release 18
+delete 18
+call new 5 0 256 1 9 0 0 9 0 0 0 0 -3 9 0 0 0 0 0 0 2 9
+hold 19
+hold 19
+release 19
+call point 13
+phold 13
+call run
+pos 3 1720 -5
+size 2 306 117
+size 9 306 126
+size 9 306 126
+size 5 306 197
+call new 5 0 2 1 8 1 0 2 0 0 0 0 13 12 0 0 0 0 0 0 6 3 7 5
+hold 20
+hold 20
+release 20
+call enable 2 1
+call new 2 0 0 1 6 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 6 2 3
+hold 21
+pos 7 42 13
+pos 6 91 -34
+pos 2 140 37
+pos 3 1720 -76
+hold 21
+release 21
+free
+prelease 13
+release 1
+delete 1
+release 2
+delete 2
+release 5
+delete 5
+release 7
+delete 7
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 14
+delete 14
+release 16
+delete 16
+release 17
+delete 17
+release 19
+delete 19
+release 20
+delete 20
+release 21
+delete 21
+seq 34
+start 282 166 110 178 0 46 217 260 161 1 107 49 173 35 1 253 165 272 139 1 230 44 146 126 1 106 208 177 71 1 311 200 80 162 1 261 170 9 77 1 209 131 133 84 1 297 2 117 21 2 -25 91 145 63 1 -18 -16 101 25 1 246 65 132 30 1 -24 60 126 65 1
+call clear
+call run
+call enable 0 0
+call new 2 0 0 1 5 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 3
+hold 1
+pos 3 -31 49
+hold 1
+release 1
+call new 5 0 1 1 4 1 1 8 0 0 0 0 35 1 0 0 0 0 0 0 2 4 9
+hold 2
+hold 2
+release 2
+call new 3 0 1 1 5 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 5 2
+hold 3
+hold 3
+release 3
+call new 8 2 0 8 3 0 0 3 0 0 9 0 -1 -1 -1 -1 4 -1 -1 -1
+hold 4
+uses 0
+release 4
+delete 4
+call center 10 4 1
+pos 4 253 -59
+call new 3 1 0 6 2 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 9 8
+hold 5
+size 4 272 139
+size 9 272 139
+size 8 272 139
+release 5
+delete 5
+call new 3 1 0 1 8 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+hold 6
+size 9 272 139
+release 6
+delete 6
+set 2 43 5 73 115
+call run
+call remove 7
+call remove 7
+call enable 2 0
+set 1 -1 49 185 192
+set 9 90 40 133 0
+set 5 21 0 229 10
+call new 7 0 256 7 9 0 1 9 0 0 0 0 -1 -11 0 0 0 0 0 0 9 7
+hold 7
+hold 7
+release 7
+call new 5 0 2 1 8 0 0 9 0 0 0 0 29 -1 0 0 0 0 0 0 2 3 6
+hold 8
+hold 8
+release 8
+call new 7 0 1 1 9 1 1 7 0 0 0 0 -5 14 0 0 0 0 0 0 2
+hold 9
+hold 9
+release 9
+call run
+pos 3 6 49
+call remove 6
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+call new 7 0 1 1 2 0 1 6 0 0 0 0 -64 9 0 0 0 0 0 0 3 10
+hold 10
+hold 10
+release 10
+call run
+call new 7 0 2 1 10 1 0 1 0 0 0 0 -8 -1 0 0 0 0 0 0 3 9 6
+hold 11
+hold 11
+release 11
+call new 8 1 256 1 2 0 1 8 0 10 3 10 3 56 -1 86 3 8 -1 4
+hold 12
+possize 8 14 15 272 7
+release 12
+delete 12
+call new 2 0 2 9 4 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 8 5 3 5
+hold 13
+hold 13
+release 13
+call new 5 0 0 1 6 1 0 3 0 0 0 0 44 -13 0 0 0 0 0 0 2 2
+hold 14
+pos 2 50 5
+pos 2 123 5
+hold 14
+release 14
+call new 6 0 0 1 1 1 0 2 10 0 0 0 1280 -3 43 0 0 0 0 0
+hold 15
+hold 15
+release 15
+call new 2 0 0 1 1 0 1 8 0 0 0 0 0 0 0 0 0 0 0 0 6 9
+hold 16
+pos 6 106 67
+pos 9 90 -101
+hold 16
+release 16
+call new 2 0 256 10 1 0 1 4 0 0 0 0 0 0 0 0 0 0 0 0 4 2 10 6
+hold 17
+hold 17
+release 17
+set 9 -21 0 173 116
+call new 7 0 0 1 5 1 1 7 0 0 0 0 27 14 0 0 0 0 0 0 9 10
+hold 18
+atleast 7 200 130
+hold 18
+release 18
+call point 12
+phold 12
+call new 2 0 0 1 9 1 1 3 0 0 0 0 0 0 0 0 0 0 0 0
+hold 19
+hold 19
+release 19
+call new 6 1 0 1 4 0 1 8 10 0 0 0 256 49 34 0 0 0 0 0 8 2
+hold 20
+release 20
+delete 20
+call run
+pos 2 50 5
+pos 2 123 5
+pos 6 106 17
+pos 9 -21 -50
+atleast 7 200 130
+call enable 256 1
+free
+prelease 12
+release 10
+delete 10
+release 11
+delete 11
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+release 17
+delete 17
+release 18
+delete 18
+release 19
+delete 19
+seq 35
+start -29 13 150 78 0 -47 93 111 38 1 199 80 81 182 1 82 35 251 169 1 94 120 54 54 1 199 167 126 134 1 259 103 280 93 1 284 73 108 193 1 335 34 33 11 1 37 -47 241 192 2 68 5 13 70 1 69 109 150 31 1 52 134 263 144 1 218 73 21 14 1
+call new 4 2 2 4 7 1 0 10 0 0 0 0 87 0 0 0 0 0 0 0 5
+hold 1
+uses 0
+release 1
+delete 1
+set 2 0 -2 232 4
+call new 1 2 1 1 9 0 1 10 2 0 0 0 131080 73 -9 26 0 0 0 0
+hold 2
+uses 0
+release 2
+delete 2
+call point 13
+phold 13
+call run
+set 7 -31 40 260 126
+call remove 4
+call new 6 0 1 1 4 1 0 3 3 0 0 0 3072 67 -1 0 0 0 0 0
+hold 3
+hold 3
+release 3
+call new 8 0 256 1 8 1 1 6 0 3 10 8 56 -1 95 51 7 -1 2 0
+hold 4
+hold 4
+release 4
+call new 8 1 2 1 1 0 1 4 0 4 0 2 -1 35 -1 68 -1 5 -1 7
+hold 5
+possize 4 82 25 251 -30
+release 5
+delete 5
+call point 14
+phold 14
+call new 8 1 2 7 8 1 1 6 0 0 10 0 -1 54 -1 40 -1 3 8 0
+hold 6
+possize 6 199 58 126 75
+release 6
+delete 6
+call point 13
+phold 13
+call point 14
+phold 14
+call new 3 0 0 7 8 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 3 4 9
+hold 7
+size 4 251 182
+size 3 251 182
+size 4 251 182
+size 9 251 182
+hold 7
+release 7
+call run
+size 4 251 182
+size 3 251 182
+size 4 251 182
+size 9 251 182
+call new 8 0 0 1 3 1 1 5 0 0 5 7 33 41 -1 -1 9 5 -1 0
+hold 8
+possize 5 118 94 54 54
+hold 8
+release 8
+call center 2 9 3
+pos 9 -9 -89
+call new 5 0 0 1 4 0 0 4 0 0 0 0 -1 2 0 0 0 0 0 0 7 8
+hold 9
+pos 7 -31 24
+pos 8 284 150
+hold 9
+release 9
+call remove 3
+call center 1 3 1
+pos 3 199 -52
+call enable 256 1
+call new 6 0 0 1 1 1 1 4 9 0 0 0 3840 39 26 0 0 0 0 0 2 2 6
+hold 10
+pos 9 -130 -131
+pos 2 -121 -44
+pos 2 -242 -86
+pos 6 78 16
+hold 10
+release 10
+call new 6 1 256 7 4 1 1 2 5 0 0 0 1536 -66 48 0 0 0 0 0 8 8
+hold 11
+release 11
+delete 11
+call center 1 7 2
+pos 7 -55 24
+set 5 40 -16 103 89
+call new 5 0 1 3 1 0 1 2 0 0 0 0 -5 18 0 0 0 0 0 0 5 7 9 4
+hold 12
+hold 12
+release 12
+call new 6 0 1 1 3 0 1 1 7 0 0 0 3840 17 39 0 0 0 0 0 8 9
+hold 13
+hold 13
+release 13
+call new 6 0 0 1 3 0 0 8 6 0 0 0 1024 29 32 0 0 0 0 0
+hold 14
+pos 6 421 16
+hold 14
+release 14
+call new 1 0 0 1 9 1 0 2 2 0 0 0 131202 16 13 43 38 0 0 0
+hold 15
+possize 2 -242 -86 43 42
+hold 15
+release 15
+call center 1 3 1
+set 6 1 0 136 120
+call run
+size 4 251 182
+size 3 251 182
+size 4 251 182
+size 9 251 182
+possize 5 80 78 103 89
+pos 7 -55 24
+pos 8 284 150
+pos 6 421 0
+possize 2 -242 -86 43 80
+call new 6 0 256 1 9 1 0 3 5 0 0 0 512 -1 17 0 0 0 0 0 6 9 3
+hold 16
+hold 16
+release 16
+call new 4 2 256 1 10 1 0 4 0 0 0 0 5 0 0 0 0 0 0 0
+hold 17
+uses 0
+release 17
+delete 17
+call run
+size 4 251 182
+size 3 251 182
+size 4 251 182
+size 9 251 182
+possize 5 120 78 103 89
+pos 7 -55 24
+pos 8 284 150
+possize 2 -242 -86 43 118
+call new 2 1 2 1 8 0 0 7 0 0 0 0 0 0 0 0 0 0 0 0 6 3
+hold 18
+release 18
+delete 18
+call run
+size 4 251 182
+size 3 251 182
+size 4 251 182
+size 9 251 182
+possize 5 160 78 103 89
+pos 7 -55 24
+pos 8 284 150
+possize 2 -242 -86 43 156
+call clear
+release 3
+delete 3
+release 4
+delete 4
+release 7
+delete 7
+release 8
+delete 8
+release 9
+delete 9
+release 10
+delete 10
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+prelease 13
+prelease 14
+prelease 13
+prelease 14
+call center 1 4 1
+pos 4 82 -52
+free
+seq 36
+start 28 160 190 178 0 228 -30 261 115 1 292 44 289 160 1 311 205 231 31 1 325 196 195 183 1 293 193 143 197 1 175 237 179 25 1 307 -24 207 109 1 28 6 233 170 1 145 205 296 163 2 129 -12 181 46 1 156 3 131 6 1 258 135 161 90 1 92 17 148 162 1
+call center 1 9 1
+pos 9 28 4
+call new 1 0 1 2 8 0 1 7 3 0 0 0 146 34 4 4 -1 0 0 0
+hold 1
+hold 1
+release 1
+call new 6 0 1 1 5 1 1 1 10 0 0 0 3840 18 -1 0 0 0 0 0
+hold 2
+hold 2
+release 2
+call run
+call new 4 0 0 1 8 0 1 4 0 0 0 0 -3 0 0 0 0 0 0 0 10 4
+hold 3
+pos 4 539 205
+hold 3
+release 3
+call new 5 0 1 4 7 1 0 5 0 0 0 0 41 46 0 0 0 0 0 0 10 8 8
+hold 4
+hold 4
+release 4
+call remove 6
+set 5 17 45 245 21
+call run
+pos 4 767 205
+set 1 21 47 3 0
+call new 3 1 0 1 10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+hold 5
+size 6 143 197
+release 5
+delete 5
+set 7 -50 0 272 88
+call new 4 0 2 1 5 1 0 9 0 0 0 0 40 0 0 0 0 0 0 0 4 7 5
+hold 6
+hold 6
+release 6
+call run
+pos 4 995 205
+set 2 4 31 68 94
+call new 6 0 0 1 6 0 0 9 8 0 0 0 2304 0 1 0 0 0 0 0 8 8 2 7
+hold 7
+pos 8 -179 -104
+pos 8 -665 -184
+pos 8 -1151 -264
+pos 2 -482 -49
+pos 7 -536 -80
+hold 7
+release 7
+call new 5 0 2 1 7 0 1 6 0 0 0 0 48 22 0 0 0 0 0 0 3 2 8 9
+hold 8
+hold 8
+release 8
+call new 8 2 0 1 10 1 1 3 0 0 4 0 -1 47 79 79 0 1 -1 10
+hold 9
+uses 0
+release 9
+delete 9
+call new 6 0 0 1 4 1 0 5 4 0 0 0 1024 1 0 0 0 0 0 0 6 9 2
+hold 10
+hold 10
+release 10
+call new 1 1 2 1 2 0 0 7 2 0 0 0 81936 -1 89 0 0 0 0 0
+hold 11
+possize 7 -536 40 122 88
+release 11
+delete 11
+call new 4 2 2 4 8 1 1 5 0 0 0 0 19 0 0 0 0 0 0 0 5 6 2
+hold 12
+uses 0
+release 12
+delete 12
+call new 6 2 256 1 7 0 1 3 4 0 0 0 1792 2 10 0 0 0 0 0 7 6 8 6
+hold 13
+uses 0
+release 13
+delete 13
+call new 3 0 1 1 3 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4 7
+hold 14
+hold 14
+release 14
+set 4 18 -68 94 23
+call new 2 0 0 8 6 0 1 5 0 0 0 0 0 0 0 0 0 0 0 0 10
+hold 15
+pos 10 145 -26
+hold 15
+release 15
+call point 14
+phold 14
+call run
+pos 4 438 -68
+call run
+pos 4 529 -68
+call new 3 0 0 1 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 10
+hold 16
+hold 16
+release 16
+set 6 -76 29 73 190
+call enable 256 0
+set 6 -88 31 180 1
+call new 2 0 256 1 10 0 1 3 0 0 0 0 0 0 0 0 0 0 0 0 4 7 7
+hold 17
+hold 17
+release 17
+call enable 2 0
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 3
+delete 3
+release 4
+delete 4
+release 6
+delete 6
+release 7
+delete 7
+release 8
+delete 8
+release 10
+delete 10
+release 14
+delete 14
+release 15
+delete 15
+release 16
+delete 16
+release 17
+delete 17
+prelease 14
+call new 1 1 0 1 1 0 1 4 8 0 0 0 9 31 0 33 -1 0 0 0
+hold 18
+possize 4 529 -68 240 23
+release 18
+delete 18
+call enable 0 1
+call new 4 0 256 1 6 1 1 2 0 0 0 0 1 0 0 0 0 0 0 0 4
+hold 19
+hold 19
+release 19
+set 5 6 -1 113 132
+call new 3 2 1 1 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 4 9
+hold 20
+uses 0
+release 20
+delete 20
+free
+release 19
+delete 19
+seq 37
+start 117 76 230 78 0 135 78 112 192 1 -16 75 197 107 1 107 7 210 61 1 189 -28 103 112 1 -46 151 92 60 1 124 72 79 156 1 330 178 6 25 1 153 -23 65 129 1 253 157 52 133 2 190 202 282 53 1 211 128 181 180 1 63 204 60 4 1 -34 30 274 79 1
+call point 14
+phold 14
+set 6 2 15 200 130
+call new 8 0 1 1 2 0 1 8 0 9 8 0 34 95 85 -1 -1 2 5 -1
+hold 1
+hold 1
+release 1
+set 9 44 13 107 102
+call center 8 5 3
+pos 5 -48 -43
+call new 7 1 2 1 10 1 0 1 0 0 0 0 -1 7 0 0 0 0 0 0 8 9 7
+hold 2
+atleast 1 106 163
+relayout
+release 2
+delete 2
+call run
+set 2 1 0 126 14
+call new 7 0 0 1 1 1 1 7 0 0 0 0 23 -4 0 0 0 0 0 0 8 9 2 7
+hold 3
+atleast 7 149 152
+hold 3
+release 3
+call new 7 0 256 1 9 1 0 1 0 0 0 0 46 19 0 0 0 0 0 0 5
+hold 4
+hold 4
+release 4
+set 3 10 1 275 123
+call run
+atleast 7 172 152
+set 1 15 -9 58 29
+set 3 -9 24 60 194
+call run
+atleast 7 195 152
+call enable 256 1
+call new 5 0 0 1 3 1 0 3 0 0 0 0 -7 -2 0 0 0 0 0 0 4 6
+hold 5
+pos 4 -16 7
+pos 6 194 15
+hold 5
+release 5
+call new 6 0 0 1 9 0 0 8 10 0 0 0 3328 1 30 0 0 0 0 0
+hold 6
+pos 10 253 75
+hold 6
+release 6
+call new 1 1 0 1 4 1 0 2 5 0 0 0 8704 16 32 -75 12 0 0 0
+hold 7
+possize 2 -55 101 126 14
+release 7
+delete 7
+call enable 0 1
+set 1 1 -3 248 135
+call new 8 2 0 7 1 0 1 2 5 10 8 0 35 59 38 18 9 0 11 -1
+hold 8
+uses 0
+release 8
+delete 8
+call new 4 0 0 8 5 0 0 7 0 0 0 0 49 0 0 0 0 0 0 0 10 3 5 9
+hold 9
+pos 7 354 72
+hold 9
+release 9
+call new 5 0 2 1 1 0 0 4 0 0 0 0 -72 1 0 0 0 0 0 0 8 2
+hold 10
+hold 10
+release 10
+call new 7 0 0 1 5 0 0 6 0 0 0 0 46 47 0 0 0 0 0 0 7 7 9
+hold 11
+atleast 6 241 203
+hold 11
+release 11
+call new 6 0 256 1 9 0 0 1 7 0 0 0 512 14 13 0 0 0 0 0
+hold 12
+hold 12
+release 12
+call run
+atleast 7 218 152
+atleast 1 149 131
+pos 4 -16 7
+pos 6 194 15
+pos 7 354 72
+atleast 6 264 203
+call new 2 0 0 1 4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+hold 13
+hold 13
+release 13
+set 7 -9 3 107 106
+call new 2 0 0 1 7 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 7 8 6 5
+hold 14
+hold 14
+release 14
+set 3 19 -3 22 135
+call point 13
+phold 13
+call new 8 1 2 1 7 1 1 10 5 2 6 5 72 -1 -1 -1 -1 1 -1 -1
+hold 15
+possize 10 316 75 52 133
+release 15
+delete 15
+call enable 0 0
+set 7 -5 42 60 5
+call point 13
+phold 13
+set 8 -1 24 137 139
+call point 14
+phold 14
+call new 4 2 0 5 5 1 0 3 0 0 0 0 -1 0 0 0 0 0 0 0 4
+hold 16
+uses 0
+release 16
+delete 16
+set 9 -1 28 53 29
+free
+prelease 14
+prelease 13
+prelease 13
+prelease 14
+release 1
+delete 1
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 9
+delete 9
+release 10
+delete 10
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14
+seq 38
+start 205 223 270 178 0 41 -45 263 36 1 77 106 105 85 1 336 176 189 90 1 53 116 11 9 1 48 178 109 122 1 72 206 278 55 1 -47 81 105 141 1 246 180 265 56 1 -39 109 175 104 2 251 117 150 29 1 298 22 230 187 1 269 205 259 117 1 208 43 101 28 1
+call new 8 2 2 1 8 1 1 2 0 0 3 8 40 61 -1 59 9 11 0 11
+hold 1
+uses 0
+release 1
+delete 1
+call run
+call center 1 6 1
+pos 6 48 28
+call new 4 1 0 1 10 1 0 5 0 0 0 0 0 0 0 0 0 0 0 0 8 9 10
+hold 2
+pos 5 511 116
+release 2
+delete 2
+call new 3 0 256 1 10 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 3 7 2 9
+hold 3
+hold 3
+release 3
+call enable 0 1
+call new 8 0 0 1 10 1 1 5 1 0 0 0 84 24 -1 61 2 3 3 -1
+hold 4
+possize 5 224 45 11 107
+hold 4
+release 4
+call point 12
+phold 12
+call new 7 0 1 1 2 0 0 4 0 0 0 0 30 -1 0 0 0 0 0 0 6 7 8 4
+hold 5
+hold 5
+release 5
+call run
+size 3 278 85
+size 7 278 85
+size 2 278 85
+size 9 278 85
+possize 5 224 45 11 107
+call center 10 6 2
+pos 6 33 28
+call run
+size 3 278 85
+size 7 278 85
+size 2 278 85
+size 9 278 85
+possize 5 224 45 11 107
+call run
+size 3 278 85
+size 7 278 85
+size 2 278 85
+size 9 278 85
+possize 5 224 45 11 107
+set 3 -3 1 40 36
+call center 1 5 1
+pos 5 224 35
+call new 4 0 256 9 10 1 1 7 0 0 0 0 17 0 0 0 0 0 0 0 8 2 10 9
+hold 6
+hold 6
+release 6
+set 9 47 30 237 147
+call new 2 0 0 1 8 1 0 4 0 0 0 0 0 0 0 0 0 0 0 0 5 8 3 9
+hold 7
+pos 5 536 35
+pos 8 265 81
+pos 3 309 1
+pos 9 359 30
+hold 7
+release 7
+set 7 49 10 104 0
+call point 13
+phold 13
+call run
+size 3 278 147
+size 7 278 147
+size 2 278 147
+size 9 278 147
+possize 5 224 45 11 107
+set 6 27 0 162 68
+call new 5 1 0 1 10 1 1 3 0 0 0 0 -6 2 0 0 0 0 0 0 5 2
+hold 8
+pos 5 303 45
+pos 2 314 -45
+release 8
+delete 8
+call clear
+release 3
+delete 3
+release 4
+delete 4
+release 5
+delete 5
+release 6
+delete 6
+release 7
+delete 7
+prelease 12
+prelease 13
+set 3 -53 -1 99 39
+call enable 2 0
+call new 3 2 256 8 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 4
+hold 9
+uses 0
+release 9
+delete 9
+call remove 1
+call center 1 2 3
+pos 2 -4 15
+set 3 19 29 110 125
+call clear
+set 5 1 -7 38 148
+call enable 1 1
+call center 10 7 3
+pos 7 -51 -21
+call remove 4
+call run
+call run
+call run
+call new 4 0 0 1 5 0 0 6 0 0 0 0 -3 0 0 0 0 0 0 0 5 3
+hold 10
+pos 6 126 0
+hold 10
+release 10
+call clear
+release 10
+delete 10
+free
+seq 39
+start 262 70 10 78 0 316 63 114 113 1 169 137 13 32 1 165 46 100 152 1 284 192 220 138 1 141 136 58 185 1 -12 41 178 187 1 8 52 204 89 1 -29 151 165 15 1 101 129 231 74 2 311 31 18 36 1 -48 148 211 161 1 74 -26 158 63 1 82 56 295 144 1
+call run
+call new 5 0 2 7 1 1 0 2 0 0 0 0 8 32 0 0 0 0 0 0 9 7
+hold 1
+hold 1
+release 1
+call center 1 3 0
+call new 5 0 0 1 1 1 0 2 0 0 0 0 37 31 0 0 0 0 0 0 9 5 6
+hold 2
+pos 9 353 151
+pos 5 518 192
+pos 6 738 136
+hold 2
+release 2
+call new 7 2 1 1 8 0 0 3 0 0 0 0 0 25 0 0 0 0 0 0
+hold 3
+uses 0
+release 3
+delete 3
+call new 3 0 0 1 2 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 6 2 4
+hold 4
+size 6 58 185
+size 2 114 185
+size 4 100 185
+hold 4
+release 4
+call run
+pos 9 353 151
+pos 5 518 192
+pos 6 738 136
+size 6 58 185
+size 2 114 185
+size 4 100 185
+set 7 -1 30 10 10
+set 10 0 -1 132 149
+call run
+pos 9 353 151
+pos 5 518 192
+pos 6 738 136
+size 6 58 185
+size 2 114 185
+size 4 100 185
+call remove 2
+call point 11
+phold 11
+call new 3 2 0 1 3 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 3 9 9
+hold 5
+uses 0
+release 5
+delete 5
+call new 6 0 0 1 1 1 0 6 7 0 0 0 2304 8 -2 0 0 0 0 0 9
+hold 6
+hold 6
+release 6
+call run
+pos 9 353 151
+pos 5 518 192
+pos 6 738 136
+size 6 58 185
+size 2 114 185
+size 4 100 185
+call run
+pos 9 353 151
+pos 5 518 192
+pos 6 738 136
+size 6 58 185
+size 2 114 185
+size 4 100 185
+call clear
+release 1
+delete 1
+release 2
+delete 2
+release 4
+delete 4
+release 6
+delete 6
+prelease 11
+call new 3 0 256 8 9 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 7 10 7
+hold 7
+hold 7
+release 7
+call remove 9
+call new 1 2 0 4 7 0 0 10 3 0 0 0 16384 -1 7 1 0 0 0 0
+hold 8
+uses 0
+release 8
+delete 8
+call run
+call remove 6
+set 3 4 6 24 39
+call center 1 7 2
+pos 7 0 30
+call run
+call new 2 0 0 1 4 0 1 2 0 0 0 0 0 0 0 0 0 0 0 0
+hold 9
+hold 9
+release 9
+call run
+call run
+call run
+call new 1 2 2 9 1 0 0 3 4 0 0 0 526337 4 26 30 1 0 0 0
+hold 10
+uses 0
+release 10
+delete 10
+call run
+call new 3 0 0 1 8 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6 7 5 8
+hold 11
+size 6 220 185
+size 7 220 10
+size 5 220 138
+size 8 220 89
+hold 11
+release 11
+set 8 -10 85 35 3
+call new 8 0 2 7 10 1 0 6 0 10 0 0 17 63 -1 43 3 6 -1 -1
+hold 12
+hold 12
+release 12
+call run
+size 6 220 185
+size 7 220 10
+size 5 220 138
+size 8 220 3
+call new 6 0 0 1 3 0 1 3 9 0 0 0 768 13 -1 0 0 0 0 0 8 8 10 10
+hold 13
+pos 9 353 -10
+pos 8 -10 -76
+pos 8 -10 -237
+pos 10 0 -162
+pos 10 0 -323
+hold 13
+release 13
+call run
+size 6 220 185
+size 7 220 10
+size 5 220 138
+size 8 220 3
+set 2 23 23 224 -1
+call run
+size 6 220 185
+size 7 220 10
+size 5 220 138
+size 8 220 3
+call new 7 0 1 6 7 1 0 6 0 0 0 0 -96 35 0 0 0 0 0 0 3 5
+hold 14
+hold 14
+release 14
+free
+release 7
+delete 7
+release 9
+delete 9
+release 11
+delete 11
+release 12
+delete 12
+release 13
+delete 13
+release 14
+delete 14

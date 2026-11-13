@@ -35,6 +35,7 @@ pub mod host;
 pub mod improve;
 pub mod kinds;
 pub mod load;
+pub mod location;
 pub mod motion;
 pub mod order;
 pub mod patrol;

@@ -36,7 +36,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
@@ -955,7 +954,7 @@ void EECPDefenseCommander::Retaliate(EEPlayer* inEnemy)
             theUnit->QueueResearch(theTech->mData->mID, true);
         }
     }
-    EEUGLocation* theGoal = new EEUGLocation((float)theTarget->GetTileX() + 0.5f,
+    EEUGRust* theGoal = EEUGRust::NewLocation((float)theTarget->GetTileX() + 0.5f,
                                              (float)theTarget->GetTileY() + 0.5f, 0.0f, true, false, false,
                                              0.0f, false, false);
     for (i = theGatherer.mCitizens.size() - 1; i >= 0; i--) {
@@ -970,7 +969,7 @@ void EECPDefenseCommander::Retaliate(EEPlayer* inEnemy)
             theGatherer.mCitizens[i]->mUnitClass->ActionChanged(theUnit);
         } else {
             theGatherer.mCitizens[i]->SetGoal(
-                new EEUGLocation((float)theTarget->GetTileX() + 0.5f, (float)theTarget->GetTileY() + 0.5f,
+                EEUGRust::NewLocation((float)theTarget->GetTileX() + 0.5f, (float)theTarget->GetTileY() + 0.5f,
                                  0.0f, false, true, false, 0.0f, false, false), 0, 0);
             theGatherer.mCitizens[i]->StartAction(kActionPrepareToMove);
             EEComplexUnit* theUnit = theGatherer.mCitizens[i];

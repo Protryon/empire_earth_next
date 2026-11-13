@@ -14,6 +14,7 @@
 #include "ee_fs.h"
 #include "ee_ge.h"
 #include "ee_gfx.h"
+#include "ee_input.h"
 #include "ee_mixer.h"
 #include "ee_net_tcp.h"
 #include "ee_netmsg.h"

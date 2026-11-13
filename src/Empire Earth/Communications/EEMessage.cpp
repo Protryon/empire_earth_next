@@ -2669,7 +2669,6 @@ size_t EEMLoadGarrison::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
     return 8;
 }
 
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1722
@@ -2730,7 +2729,7 @@ void EEMLoadGarrison::Execute()
             }
             theGroup->KeepMobileUnits();
             if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(new EEUGLocation(GE2DPoint((float)theGarrison->mTileX, (float)theGarrison->mTileY),
+                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theGarrison->mTileX, (float)theGarrison->mTileY),
                                                    true, true, false, 0.0f, false, 0), false);
                 theGroup->mAction = kActionPrepareToMove;
                 thePlayer->mPendingGroups.push_back(theGroup);
@@ -2753,7 +2752,6 @@ size_t EEMLoadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClas
     return 8;
 }
 
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1b79
@@ -2823,7 +2821,7 @@ void EEMLoadTransport::Execute()
             }
             theGroup->KeepMobileUnits();
             if (theGroup->GetNumUnits() > 0) {
-                theGroup->SetGoal(new EEUGLocation(GE2DPoint((float)theTileX, (float)theTileY), true, true, false, 0.0f,
+                theGroup->SetGoal(EEUGRust::NewLocation(GE2DPoint((float)theTileX, (float)theTileY), true, true, false, 0.0f,
                                                    false, 0), false);
                 theGroup->mAction = kActionPrepareToMove;
                 thePlayer->mPendingGroups.push_back(theGroup);
@@ -3904,7 +3902,7 @@ void EEMScrambleAircraft::Execute()
     if (theUnit) {
         EEComplexUnit* theAircraft = theUnit->GetComplexUnit();
         if (theAircraft && (theAircraft->mUnitClass->mCategory == kUnitCategoryAirplane || theAircraft->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)) {
-            EEUGLocation* theGoal = new EEUGLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
+            EEUGRust* theGoal = EEUGRust::NewLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
             theAircraft->ClearAllGoalQueues();
             theAircraft->QueueGoal(theGoal, 0);
             theAircraft->QueueGoal(theGoal->Clone(), 1);
@@ -4600,7 +4598,6 @@ size_t EEMUnloadTransport::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outCl
     return 8;
 }
 
-#include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x4c8615
 // Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move
