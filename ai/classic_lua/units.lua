@@ -139,8 +139,8 @@ function M.producers(view, class, built_only)
     return out
 end
 
--- IsInProduction: a producer researches or has queued the class (the port reads the queue length and the item
--- being made; DEVIATION: a queued class beyond the first is not visible, the producer's queue counts)
+-- IsInProduction: a producer researches or has queued the class (the item being made, `producing`, and the queue
+-- behind it, `queued`)
 function M.in_production(view, class)
     local t = M.class_tech(view, class)
     if t == nil then
@@ -149,6 +149,12 @@ function M.in_production(view, class)
     for _, u in ipairs(M.producers(view, class, true)) do
         if u.producing == t.id then
             return true
+        end
+        -- (IsResearchQueued: the queue behind the item being made counts too; the record's `queued`)
+        for _, q in ipairs(u.queued or {}) do
+            if q == t.id then
+                return true
+            end
         end
     end
     return false

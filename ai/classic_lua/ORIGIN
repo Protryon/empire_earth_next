@@ -68,7 +68,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 island map; the requests started while the population has room, all at once when affordable, else one),
                 StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
                 GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
-                queue lengths; IsInProduction sees the item being made, not the queue behind it; the transports'
+                queue lengths; the transports'
                 priority (ChooseTransportClass) is not ported (the navy stage); BalanceProduction is not ported.
   EECPBuildManager.cpp
                 PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric

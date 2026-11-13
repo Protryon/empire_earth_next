@@ -951,6 +951,8 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- Own and allied building records have `queued`: the techs queued behind the one being made (`producing`), in order
+  (EEComplexUnit::IsResearchQueued, the classic's IsInProduction).
 - Resource records have `untapped`: the resource's hit points still stand at 1, i.e. nobody has gathered from it yet
   (the classic's GetGatherCapacity and its sites trace count a centre's units with mHitPoints > 0, so a tapped mine
   no longer adds room).
