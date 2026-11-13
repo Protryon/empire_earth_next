@@ -10995,3 +10995,73 @@ the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's 
   profile link 0/0, the Rust gate PASS (the same timer test rerun alone), oracle seeds 2-7 identical, captures at
   seeds 2-3 oracle, late, calamity and scenario PASS. ee_units tests 157 (13 new). No tour: nothing
   drawn changed (the debug texts appear only in the debug panels).
+
+## R6 WON round 25: Scrollbar, Scroller with ScrollbarScroller and ScrollArea whole in Rust, the items' measure and the menu item's paint; the event type out of the C++ (ee_won barobj.rs, scrollerobj.rs, paneobj.rs, guidraw.rs; branch rust-r6-won25, 2026-11-13)
+
+Measured as rounds 18-24 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 85,318 at
+the branch's start (round 24 merged into rust) -> 85,319 (the scrollers' accessors, +1) -> 85,110 (Scrollbar, -209)
+-> 84,995 (Scroller and ScrollbarScroller, -115) -> 84,957 (the items, -38) -> 84,962 (ScrollArea's accessors, +5)
+-> 84,750 (ScrollArea, -212). This round's own net: -568; the merge of rust changed no WON line.
+
+- **What listeners receive (round 24's lesson, applied).** `FireEvent`'s type is no longer a C++ switch:
+  GuiHost fires `ee_won_gui_event_type(event)`, a Rust map from `EeWonGuiEvent` to `WindowEventType`, so a new
+  event code needs no C++ case to be forgotten. The enum moved to its own header (`WONEventTypes.h`, which
+  `WONLobbyGUI.h` includes) so the goldens can include it without the GUI: `won_barobj_test` checks every code's
+  type against the original enum and traces each scroll event as the type the C++ delivers (`fire 16`), the
+  original side firing `ComponentEvent_Scroll` from the enum. Mapping Scroll to 21 fails 18,992 of its
+  sequences. The older goldens (input, list) still trace the op; their events go through the same map now.
+- **Untraced reads.** The goldens of this round trace only what changes something (and what the C++ virtuals the
+  ops call do); the pure reads (sizes, positions, the parent test, the disabled state, the event's type and
+  component, the casts, an area's numbers) are answered from the host's model and not traced. Their order in the
+  original is the compiler's argument evaluation (right to left for the Microsoft ABI), not the program's, so a
+  traced read order would pin a platform. The Rust replays keep the same model from the goldens' driver lines.
+- **Scrollbar** (`barobj.rs`): the four parts held by reference (the original's `SmartPtr` assignment: the old
+  part released, then the new one held; released thumb, track, down, up at the end), the orientation, the thumb
+  options (the minimum an `unsigned char`), range, steps, position and drag (its unset drag offsets are 0). The
+  C++ class keeps only its vtable and forwarders; the skins, configs and scrollers reach the parts through the
+  round 24 accessors, now forwarders. The splitter's and the bar's child ops share GuiHost's `ContainerOp`.
+- **Scroller and ScrollbarScroller** (`scrollerobj.rs`): one Rust object the `Scroller` constructor makes (a plain
+  Scroller never uses the bars), holding the scroll area and both bars by reference, the conditions (both Enable)
+  and the flag of their application. A bar's own methods are called on its Rust object (op `BarOf`, as round
+  24's `NodeOf`), its `SetEnabled` through the C++ virtual. The subclasses (MSScrollContainer, WONScrollContainer,
+  MSListCtrl, WONListCtrl) and the predefined components read the bars and the area through `GetScrollbar` /
+  `GetScrollArea` (an accessor commit first; MSScrollContainer's constructor sets them through `SetBar`, the
+  field only, as it did).
+- **ScrollArea** (`paneobj.rs`): offsets, content, the last adjusted numbers, the last view size, padding, the
+  user's scroll, the scroller (borrowed, as the original), view, extra height and the scroll amounts. The
+  viewport and the background stay C++ members. Every virtual the original called on itself (AdjustPosition,
+  Virtual08, ScrollSizeChanged, ScrollPaint) goes through the C++ object, so ListArea's and TextArea's overrides
+  run. The list's and text area's Rust objects keep their `Get` / `Set` field ops; GuiHost answers them from the
+  area's Rust object (`GetField` / `SetField`; `FieldOf` deleted). AdjustPosition reads the numbers it records
+  after the scroller's notification, as the original did: the notification can lay the area out again
+  (MSScrollContainer's Virtual08 sizes the area from inside it); the golden's scroller does so on the driver's
+  word, and recording before it fails 2,818 sequences.
+- **The items** (`guidraw.rs`): `text_item_size` is TextListItem::CalcDimensions' arithmetic (and MenuItem's
+  growth); the font and colour defaults taken from the list stay C++ data. `menu_item` is MenuItem::Paint as a
+  plan, with a new `EE_WON_DRAW_PIXEL` operation (the disabled arrow's last pixel).
+- **The goldens** (`tests/won/won_barobj_test.cpp`, `won_scrollerobj_test.cpp`, `won_paneobj_test.cpp`,
+  `won_itemobj_test.cpp`):
+
+  | Golden | Cases | Trace lines | Mutation | Fails |
+  |---|---|---|---|---|
+  | scroll bar | 20,000 sequences | 3,004,014 | the track's mouse axis | 1,191 sequences |
+  | scroller | 20,000 sequences over real Rust bars | 6,530,203 | the notification's thumb layout | 10,325 |
+  | scroll area | 20,000 sequences | 4,279,926 | numbers recorded before the notification | 2,818 |
+  | items | 200,000 items | 1,883,648 operations | the icon box's bottom edge | 48,594 checks |
+
+  The scroller's host runs what the C++ virtuals run (a bar's SetEnabled and AddedToParent, the area's
+  AdjustPosition calling the scroller back). The goldens' first sequences are replayed by cargo; the Rust
+  replays each fail on a mutation too (a part's add order, the bars' release order).
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction; seeds 2-3 identical
+  after each commit). Every lobby list and text area sits in a ScrollArea with a scroller and scroll bars, so the
+  LAN lobby and the game room build, lay out and notify all three: the lead's LAN game (`lan_game.py`: the LAN
+  lobby's game list, user list and chat, the game room's player list and chat) and the lobby captures (the bars'
+  thumbs and their conditional visibility, the views' padding and offsets, the lists' rows) are the check. The
+  event type map carries every event the Rust objects fire: the LAN game's Join Game (ListSelChanged) and the
+  chat's Enter (InputReturn) go through it. Dragging a thumb, the arrows and the track, the wheel and the
+  popup menus' items (MenuItem's measure and paint: a right click on a user) run only in the goldens unless a
+  person uses them.
+- **Left:** the containers. Container itself (Container.cpp and its six units, ~760 lines) is every lobby
+  screen's base and its members (`mChildList`, `mMouseChild`, `mFocusChild`, the timer set) are read across
+  WONGUI and the lobby: an accessor census and commits first. ScrollAreaViewport (the viewport's own methods),
+  TabCtrl / TabBar, ComboBox and Dialog are the next whole classes on the scroll classes.
