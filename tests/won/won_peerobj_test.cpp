@@ -332,7 +332,7 @@ template <class H> struct Half {
         t += " ss" + (ss ? Num(ss->GetAuthType()) + "." + Num(ss->GetSessionId()) + "." +
                                 Hex(ss->GetKey().GetKey(), ss->GetKey().GetKeyLen())
                           : string("N"));
-        t += " sc" + H::OtherCert(client.GetServerCertificate()) + " cc" + H::OtherCert(server.GetClientCertificate());
+        t += " sc" + H::OtherCert(client) + " cc" + H::OtherCert(server);
         return t;
     }
 };
@@ -359,6 +359,52 @@ struct OrigHalf {
     static string OtherCert(const CertBase* c)
     {
         return c ? B(c->IsValid()) + "." + Num(c->GetUserId()) : string("N");
+    }
+    static string OtherCert(Client& c) { return OtherCert(c.GetServerCertificate()); }
+    static string OtherCert(Server& s) { return OtherCert(s.GetClientCertificate()); }
+};
+
+// ---- the game's classes: AuthBase and AuthPeerData over ee_won's objects (peerobj.rs), read through their numbers
+// as the original's accessors
+
+struct NCert : AuthBase {
+    NCert(uint32_t inKind, const string& b) : AuthBase(inKind, b.data(), (unsigned long)b.size()) {}
+    bool IsExpired(time_t e) const { return this->Num(EE_WON_AUTHOBJ_EXPIRED, e) != 0; }
+    DWORD GetId() const { return (DWORD)this->Num(EE_WON_AUTHOBJ_BLOCK_ID); }
+    DWORD GetFirstCommunity() const { return (DWORD)this->Num(EE_WON_AUTHOBJ_FIRST_COMMUNITY); }
+    unsigned short GetFirstCommunityTrust() const { return (unsigned short)this->Num(EE_WON_AUTHOBJ_FIRST_TRUST); }
+    DWORD GetKeyId(DWORD c) const { return (DWORD)this->Num(EE_WON_AUTHOBJ_KEY_ID, c); }
+};
+struct NPeer : AuthPeerData {
+    explicit NPeer(const AuthBase* k) : AuthPeerData(k) {}
+    NPeer(const AuthBase* c, const AuthBase* k, const ElGamal& key, time_t d, const AuthBase* c2)
+        : AuthPeerData(c, k, key, d, c2) {}
+    bool IsValid2() const { return this->Num(EE_WON_AUTHOBJ_PEER_VALID2) != 0; }
+    const void* GetCertificate2() const { return this->Num(EE_WON_AUTHOBJ_PEER_HAS_CERT2) ? this : NULL; }
+};
+struct NewHalf {
+    typedef NCert CertBase;
+    typedef NCert Cert1;
+    typedef NCert Cert2;
+    typedef NCert Block;
+    typedef NPeer Peer;
+    typedef PeerAuthClient Client;
+    typedef PeerAuthServer Server;
+    static SmartPtr<Block> NewBlock(const string& b) { return new NCert(EE_WON_AUTH_PUB_KEY_BLOCK, b); }
+    static SmartPtr<Cert1> NewCert1(const string& b) { return new NCert(EE_WON_AUTH_CERTIFICATE, b); }
+    static SmartPtr<Cert2> NewCert2(const string& b) { return new NCert(EE_WON_AUTH_CERTIFICATE2, b); }
+    static Peer* NewPeer(const Block* k) { return new Peer(k); }
+    static Peer* NewPeer(const Cert1* c, const Block* k, const ElGamal& key, time_t d, const Cert2* c2)
+    {
+        return new Peer(c, k, key, d, c2);
+    }
+    static long long UserId(const CertBase* c) { return c->Num(EE_WON_AUTHOBJ_USER_ID); }
+    static bool HasKey(const Block* k) { return k->Num(EE_WON_AUTHOBJ_HAS_KEY) != 0; }
+    static bool Private(const Peer* p) { return p->Num(EE_WON_AUTHOBJ_PEER_PRIVATE) != 0; }
+    static string OtherCert(const PeerAuth& a)
+    {
+        long long k = a.Other(EE_WON_PEERAUTH_OTHER);
+        return k ? B(k == 2) + "." + Num(a.Other(EE_WON_PEERAUTH_OTHER_USER)) : string("N");
     }
 };
 
@@ -396,8 +442,10 @@ int main(int argc, char** argv)
     for (int i = 0; i < count; i++) {
         Scenario sc = Generate(i);
         string a = Half<OrigHalf>::Run(sc);
-        string b = Half<OrigHalf>::Run(sc);
-        CHECK(a == b); // the original half is deterministic under the test seed
+        string b = Half<NewHalf>::Run(sc);
+        CHECK(a == b);
+        if (a != b && sFailures < 4)
+            printf("scenario %d\n  original %s\n  game     %s\n", i, a.c_str(), b.c_str());
         size_t h = a.find("|cs");
         outcomes[a.substr(h, 5)]++;
     }

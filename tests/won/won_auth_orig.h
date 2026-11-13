@@ -11,7 +11,7 @@
 #include <string>
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONPeerAuthMsg.h"
+#include "won_peerauth_msg.h"
 
 namespace orig {
 using namespace WONAPI;

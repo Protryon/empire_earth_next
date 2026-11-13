@@ -19,7 +19,32 @@ pub struct Random {
     counter: i64,
 }
 
+/// The system seed's use counter and the drivers' fixed base (0: the clocks). In the crate's own tests both are per
+/// thread, so a replay that fixes the seed draws the same sequence whatever the other tests draw meanwhile.
+#[cfg(not(test))]
 static USAGE: AtomicI64 = AtomicI64::new(0);
+#[cfg(test)]
+thread_local! {
+    static USAGE: AtomicI64 = const { AtomicI64::new(0) };
+    static TEST_SEED: AtomicI64 = const { AtomicI64::new(0) };
+}
+
+#[cfg(not(test))]
+fn with_usage<R>(f: impl FnOnce(&AtomicI64) -> R) -> R {
+    f(&USAGE)
+}
+#[cfg(test)]
+fn with_usage<R>(f: impl FnOnce(&AtomicI64) -> R) -> R {
+    USAGE.with(f)
+}
+#[cfg(not(test))]
+fn with_test_seed<R>(f: impl FnOnce(&AtomicI64) -> R) -> R {
+    f(&TEST_SEED)
+}
+#[cfg(test)]
+fn with_test_seed<R>(f: impl FnOnce(&AtomicI64) -> R) -> R {
+    TEST_SEED.with(f)
+}
 
 impl Random {
     /// `Random()`: seeded from the system.
@@ -76,14 +101,15 @@ impl Random {
 }
 
 /// A fixed base for [`system_seed`] (0: the clocks), for the drivers' goldens of ops that make random keys.
+#[cfg(not(test))]
 static TEST_SEED: AtomicI64 = AtomicI64::new(0);
 
 /// From now on [`system_seed`] gives `seed` plus a use counter, the same sequence in every run (0: the clocks
 /// again). For the `tests/won` drivers only: nothing in the game calls it.
 #[no_mangle]
 pub extern "C" fn ee_won_random_test_seed(seed: i64) {
-    TEST_SEED.store(seed, Ordering::Relaxed);
-    USAGE.store(0, Ordering::Relaxed);
+    with_test_seed(|t| t.store(seed, Ordering::Relaxed));
+    with_usage(|u| u.store(0, Ordering::Relaxed));
 }
 
 /// The `n`th system seed (from 1) after `ee_won_random_test_seed(fixed)`.
@@ -93,8 +119,8 @@ pub fn test_seed(fixed: i64, n: u32) -> [u8; 8] {
 
 /// `getSeed`: 8 bytes that differ between calls and runs.
 pub fn system_seed() -> [u8; 8] {
-    let usage = USAGE.fetch_add(1, Ordering::Relaxed) + 1;
-    let fixed = TEST_SEED.load(Ordering::Relaxed);
+    let usage = with_usage(|u| u.fetch_add(1, Ordering::Relaxed)) + 1;
+    let fixed = with_test_seed(|t| t.load(Ordering::Relaxed));
     if fixed != 0 {
         return test_seed(fixed, usage as u32);
     }

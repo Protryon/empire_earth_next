@@ -10,8 +10,6 @@
 #include "ee/wonapi/WONPing.h" // the MultiPingOp helpers over RustServerOp
 #include "ee/wonapi/WONAuthPeerData.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONAuthCertificate.h"
-#include "ee/wonapi/WONAuthPubKeyBlock.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONElGamal.h"
 namespace WONAPI {
@@ -127,13 +125,7 @@ void Give(EeWonHostCall* c, const ByteBuffer* inBytes)
 void* V(const RefCount* inObj) { return const_cast<RefCount*>(inObj); }
 AuthContext* Ctx(void* p) { return static_cast<AuthContext*>(Obj(p)); }
 const AuthPeerData* Peer(void* p) { return static_cast<const AuthPeerData*>(Obj(p)); }
-const AuthPubKeyBlock* Block(void* p) { return static_cast<const AuthPubKeyBlock*>(Obj(p)); }
-const AuthCertificate* Cert1(void* p) { return static_cast<const AuthCertificate*>(Obj(p)); }
-const Auth2Certificate* Cert2(void* p) { return static_cast<const Auth2Certificate*>(Obj(p)); }
-const AuthCertificateBase* Cert(long long inKind, void* p)
-{
-    return inKind == 1 ? static_cast<const AuthCertificateBase*>(Cert1(p)) : static_cast<const AuthCertificateBase*>(Cert2(p));
-}
+const AuthBase* Auth(void* p) { return static_cast<const AuthBase*>(Obj(p)); } // a certificate or key block
 void GiveText(EeWonHostCall* c, const std::wstring& inText)
 {
     std::string b;
@@ -535,7 +527,7 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_CONNECT_TIME: c->out_num = o->ConnectTime(); break;
     case EE_WON_HOST_TIMEOUT: c->out_num = (DWORD)o->GetTimeout(); break;
     case EE_WON_HOST_CERT_USER_ID:
-        c->out_num = (uint32_t)o->mAuthContext->GetPeerData()->GetCertificate()->GetUserId(); // WONUserSeq
+        c->out_num = (uint32_t)o->mAuthContext->GetPeerData()->GetUserId(); // WONUserSeq
         break;
     case EE_WON_HOST_CTX_ADDRS: {
         ServerContext::AddrList aList;
@@ -657,10 +649,10 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_CERT_PEER_BLOCK: c->out_obj = V(Peer(o0)->GetPubKeyBlock()); break;
     case EE_WON_HOST_CERT_PEER_DELTA: c->out_num = Peer(o0)->GetAuthDelta(); break;
     case EE_WON_HOST_CERT_LOAD_SECRETS: Ctx(o0)->LoadSecretList(); break;
-    case EE_WON_HOST_CERT_BLOCK_VALID: c->out_num = Block(o0)->IsValid(); break;
-    case EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK: Ctx(o0)->SetPeerData(new AuthPeerData(Block(c->obj[1]))); break;
-    case EE_WON_HOST_CERT_BLOCK_ID: c->out_num = Block(o0)->GetId(); break;
-    case EE_WON_HOST_CERT_BLOCK_ENCRYPT: Give(c, Block(o0)->GetCurrentKey().Encrypt(c->data, (int)c->len).get()); break;
+    case EE_WON_HOST_CERT_BLOCK_VALID: c->out_num = Auth(o0)->IsValid(); break;
+    case EE_WON_HOST_CERT_SET_PEER_FROM_BLOCK: Ctx(o0)->SetPeerData(new AuthPeerData(Auth(c->obj[1]))); break;
+    case EE_WON_HOST_CERT_BLOCK_ID: c->out_num = Auth(o0)->Num(EE_WON_AUTHOBJ_BLOCK_ID); break;
+    case EE_WON_HOST_CERT_BLOCK_ENCRYPT: Give(c, Auth(o0)->Encrypt(c->data, (int)c->len).get()); break;
     case EE_WON_HOST_CERT_USER: GiveText(c, Ctx(o0)->GetUserName()); break;
     case EE_WON_HOST_CERT_PASSWORD: GiveText(c, Ctx(o0)->GetPassword()); break;
     case EE_WON_HOST_CERT_COMMUNITY: {
@@ -678,28 +670,27 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     case EE_WON_HOST_CERT_ADD_SECRET: Ctx(o0)->AddSecret(c->data); break;
     case EE_WON_HOST_CERT_REMOVE_SECRET: Ctx(o0)->RemoveSecret(c->data); break;
     case EE_WON_HOST_CERT_NEW:
-        c->out_obj = Out(n0 == 1 ? static_cast<RefCount*>(new AuthCertificate(c->data, (unsigned long)c->len))
-                                 : static_cast<RefCount*>(new Auth2Certificate(c->data, (unsigned long)c->len)));
+        c->out_obj = Out(new AuthBase(n0 == 1 ? EE_WON_AUTH_CERTIFICATE : EE_WON_AUTH_CERTIFICATE2, c->data, (unsigned long)c->len));
         break;
-    case EE_WON_HOST_CERT_VALID: c->out_num = Cert(n0, o0)->IsValid(); break;
+    case EE_WON_HOST_CERT_VALID: c->out_num = Auth(o0)->IsValid(); break;
     case EE_WON_HOST_CERT_BLOCK_VERIFY:
-        c->out_num = n0 == 1 ? Block(o0)->Verify(Cert1(c->obj[1])) : Block(o0)->Verify(Cert2(c->obj[1]));
+        c->out_num = Auth(o0)->Verify(Auth(c->obj[1]));
         break;
-    case EE_WON_HOST_CERT_DELTA: c->out_num = n0 == 1 ? Cert1(o0)->ComputeAuthDelta() : Cert2(o0)->ComputeAuthDelta(); break;
+    case EE_WON_HOST_CERT_DELTA: c->out_num = Auth(o0)->Num(EE_WON_AUTHOBJ_AUTH_DELTA); break;
     case EE_WON_HOST_CERT_TIMES: {
-        int64_t aTimes[2] = {(int64_t)Cert(n0, o0)->GetIssueTime(), (int64_t)Cert(n0, o0)->GetExpireTime()};
+        int64_t aTimes[2] = {(int64_t)Auth(o0)->GetIssueTime(), (int64_t)Auth(o0)->GetExpireTime()};
         Give(c, aTimes, sizeof(aTimes));
         break;
     }
-    case EE_WON_HOST_CERT_NEW_BLOCK: c->out_obj = Out(new AuthPubKeyBlock(c->data, (unsigned long)c->len)); break;
-    case EE_WON_HOST_CERT_BLOCK_VERIFIED: c->out_num = Block(o0)->IsValidAndVerified(AuthContext::GetVerifierKey()); break;
+    case EE_WON_HOST_CERT_NEW_BLOCK: c->out_obj = Out(new AuthBase(EE_WON_AUTH_PUB_KEY_BLOCK, c->data, (unsigned long)c->len)); break;
+    case EE_WON_HOST_CERT_BLOCK_VERIFIED: c->out_num = Auth(o0)->IsValidAndVerified(AuthContext::GetVerifierKey()); break;
     case EE_WON_HOST_CERT_COMMIT: Ctx(o0)->CommitSecrets((time_t)n0, (time_t)n1); break;
     case EE_WON_HOST_CERT_PRIV_NEW: c->out_obj = new ElGamal; break;
     case EE_WON_HOST_CERT_PRIV_SET: c->out_num = static_cast<ElGamal*>(o0)->SetPrivateKey(c->data, (int)c->len); break;
     case EE_WON_HOST_CERT_PRIV_FREE: delete static_cast<ElGamal*>(o0); break;
     case EE_WON_HOST_CERT_NEW_PEER:
-        c->out_obj = Out(new AuthPeerData(Cert1(o0), Block(c->obj[1]), *reinterpret_cast<ElGamal*>((intptr_t)n0), (time_t)n1,
-                                          Cert2(c->obj[2])));
+        c->out_obj = Out(new AuthPeerData(Auth(o0), Auth(c->obj[1]), *reinterpret_cast<ElGamal*>((intptr_t)n0), (time_t)n1,
+                                          Auth(c->obj[2])));
         break;
     case EE_WON_HOST_CERT_SET_PASSWORD: {
         std::wstring aPassword;

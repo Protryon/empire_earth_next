@@ -1808,6 +1808,7 @@ protected:
     virtual ~AuthSession(); //2e2a80
 public:
     AuthSession(AuthType, unsigned short, Blowfish, unsigned char); //2e27b0/RET10c0
+    explicit AuthSession(EeWonAuthSession* inImpl) : mImpl(inImpl) {} // adopts a session ee_won made
     WONStatus Encrypt(ByteBufferPtr&); //2e2b40
     WONStatus Decrypt(ByteBufferPtr&); //2e2d60
     time_t GetLastUseTime() const { return static_cast<time_t>(ee_won_auth_session_get(this->mImpl, 2)); }
@@ -1842,89 +1843,72 @@ public:
 // Producer ServerConnection::Connect2abc40 new2244 at2abc81, ctor2e6a10 at2abcb3.
 // Ctor calls ServerOp2acc10 at2e6a30; inherited pointer78 release/addref/write
 // shown 2e6b10..2e6b61, source argument BlockingSocket* (as in the SDK header).
-// PeerAuthClient: 0x2180 bytes, no vptr, two Blowfish (0x10b4) members.
-template <class P> struct PeerAuthMsg;
-class PeerAuthClient {
-    ConstSmartPtr<AuthPeerData> mPeerData; //00
-    AuthType mAuthType; //04, the constructor leaves it untouched
-    Blowfish mSecretA; //08..10bc
-    Blowfish mSecretB; //10bc..2170
-    unsigned char mLengthFieldSize; //2170, the constructor leaves it untouched
-    bool mUseClientSecret; //2171=false
-    unsigned char mClientKeySize; //2172=8
-    bool mUseAuth2; //2173=true
-    SmartPtr<AuthCertificateBase> mServerCertificate; //2174, mutable (WON SDK)
-    SmartPtr<AuthSession> mSession; //2178
+// PeerAuthClient (0x2180 bytes) and PeerAuthServer (0x2184): the handshake's two sides are ee_won objects
+// (rust/crates/ee_won/src/peerobj.rs: the state, the peer data, the two secrets, the other side's certificate);
+// the session a step makes becomes this class's AuthSession.
+class PeerAuth {
+    EeWonPeerAuth* mImpl;
+    SmartPtr<AuthSession> mSession;
+    PeerAuth(const PeerAuth&);
+    PeerAuth& operator=(const PeerAuth&);
+protected:
+    explicit PeerAuth(bool inServer) : mImpl(ee_won_peerauth_new(inServer)) {}
+    EeWonPeerAuth* Impl() const { return this->mImpl; }
+    void TakeSession()
+    {
+        if (EeWonAuthSession* aSession = ee_won_peerauth_take_session(this->mImpl))
+            this->mSession = new AuthSession(aSession);
+    }
 public:
-    enum PeerAuthClientState { STATE_NOT_STARTED=0, STATE_AWAITING_CHALLENGE=1, STATE_AWAITING_COMPLETE=2 } mState; //217c
-private:
-    // HandleChallenge1 2e5cc0, GetChallenge2 2e5fb0 and HandleComplete 2e61d0 are ee_won's (peerauth.rs)
-    // the hooks of the handshake in Rust (include/ee/wonapi/WONPeerAuthMsg.h)
-    template <class P> friend struct PeerAuthMsg;
-    bool PaPrivateDecrypt(const void*,unsigned long,std::string&);
-    bool PaMakeCert(bool,const void*,unsigned long);
-    bool PaVerifyCert();
-    bool PaCertExpired();
-    bool PaCertEncrypt(const void*,unsigned long,std::string&);
-    bool PaHasOwnCert2();
-    void PaOwnCertRaw(bool,std::string&);
-    void PaSecretCreate(int,int);
-    bool PaSecretSetKey(int,const void*,int);
-    void PaSecretKey(int,std::string&);
-    void PaNewSession(int,unsigned short,int,unsigned char);
-    void PaGetState(EeWonPeerState&);
-    void PaSetState(const EeWonPeerState&);
-public:
-    ByteBufferPtr Start(const AuthPeerData*,AuthType,unsigned char); //2e6730 owning sret RET10
-    WONStatus HandleRecvMsg(const void*,unsigned long,ByteBufferPtr&); //2e68d0 RET0c
-    PeerAuthClient(); //2e5c30, 125 bytes
-    void Reset(); //2e5cb0 resets the state
+    ~PeerAuth() { ee_won_peerauth_free(this->mImpl); }
+    WONStatus HandleRecvMsg(const void* inMsg, unsigned long inLength, ByteBufferPtr& outMsg)
+    {
+        outMsg = NULL;
+        bool aHasOut = false;
+        WONStatus aStatus = ee_won_peerauth_recv(this->mImpl, static_cast<const uint8_t*>(inMsg), inLength, WonByteBufferSink,
+                                                 &outMsg, &aHasOut);
+        this->TakeSession();
+        return aStatus;
+    }
     AuthSession* GetSession() { return this->mSession.get(); }
-    const AuthCertificateBase* GetServerCertificate() { return this->mServerCertificate.get(); }
-    PeerAuthClientState GetState() { return this->mState; }
-    void SetUseAuth2(bool value) { this->mUseAuth2=value; }
-    void SetClientKeySize(unsigned char size,bool useSecret=true) { this->mClientKeySize=size;this->mUseClientSecret=useSecret; }
+    int GetState() const { return (int)ee_won_peerauth_num(this->mImpl, EE_WON_PEERAUTH_STATE, 0, 0, 0); }
+    void SetUseAuth2(bool inValue) { ee_won_peerauth_set(this->mImpl, EE_WON_PEERAUTH_USE_AUTH2, inValue); }
+    // the other side's certificate (EE_WON_PEERAUTH_OTHER, _OTHER_USER, _OTHER_PERMITS of a, b, c)
+    long long Other(int inWhich, long long inA = 0, long long inB = 0, long long inC = 0) const
+    {
+        return ee_won_peerauth_num(this->mImpl, inWhich, inA, inB, inC);
+    }
+    bool OtherPermits(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
+    {
+        return this->Other(EE_WON_PEERAUTH_OTHER_PERMITS, inUser, inCommunity, inTrust) != 0;
+    }
 };
-// RTTI PeerAuthOp > ServerOp > AsyncOpWithTracker > AsyncOp > RefCount.
-// 0x2244 bytes; ctor/dtor/protocol are out of line.
-// PeerAuthServer: 0x2184 bytes, no vptr or opaque storage.
-class PeerAuthServer {
-    ConstSmartPtr<AuthPeerData> mPeerData; //00
-    AuthType mAuthType; //04, the constructor leaves it untouched
-    Blowfish mSecretA; //08..10bc
-    Blowfish mSecretB; //10bc..2170
-    unsigned char mLengthFieldSize; //2170, the constructor leaves it untouched; natural alignment2171..2173
-    SmartPtr<AuthCertificateBase> mClientCertificate; //2174, mutable SDK BasePtr
-    SmartPtr<AuthSession> mSession; //2178
-    bool mUseAuth2; //217c=true; natural alignment217d..217f
+class PeerAuthClient : public PeerAuth {
 public:
-    enum PeerAuthServerState { STATE_NOT_STARTED=0,STATE_AWAITING_REQUEST=1,STATE_AWAITING_CHALLENGE2=2 } mState; //2180=0
-private:
-    // GetChallenge1 2e7dd0, HandleRequest 2e80a0, GetComplete 2e8300 and HandleChallenge2 2e8630 are ee_won's
-    // (peerauth.rs)
-    // the hooks of the handshake in Rust (include/ee/wonapi/WONPeerAuthMsg.h)
-    template <class P> friend struct PeerAuthMsg;
-    bool PaPrivateDecrypt(const void*,unsigned long,std::string&);
-    bool PaMakeCert(bool,const void*,unsigned long);
-    bool PaVerifyCert();
-    bool PaCertExpired();
-    bool PaCertEncrypt(const void*,unsigned long,std::string&);
-    bool PaHasOwnCert2();
-    void PaOwnCertRaw(bool,std::string&);
-    void PaSecretCreate(int,int);
-    bool PaSecretSetKey(int,const void*,int);
-    void PaSecretKey(int,std::string&);
-    void PaNewSession(int,unsigned short,int,unsigned char);
-    void PaGetState(EeWonPeerState&);
-    void PaSetState(const EeWonPeerState&);
+    enum PeerAuthClientState { STATE_NOT_STARTED=0, STATE_AWAITING_CHALLENGE=1, STATE_AWAITING_COMPLETE=2 };
+    PeerAuthClient() : PeerAuth(false) {} //2e5c30
+    ByteBufferPtr Start(const AuthPeerData* inData, AuthType inType, unsigned char inLengthFieldSize) //2e6730
+    {
+        ByteBufferPtr aMsg;
+        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, inType, inLengthFieldSize,
+                              WonByteBufferSink, &aMsg);
+        return aMsg;
+    }
+    void Reset() { ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_RESET, 0); } //2e5cb0
+    void SetClientKeySize(unsigned char inSize, bool inUseSecret = true)
+    {
+        ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_CLIENT_KEY, inSize | (inUseSecret ? 0x100 : 0));
+    }
+};
+class PeerAuthServer : public PeerAuth {
 public:
-    void Start(const AuthPeerData*,unsigned char); //2e7d30 RET8 protocol initializer
-    WONStatus HandleRecvMsg(const void*,unsigned long,ByteBufferPtr&); //2e87c0 RET0c protocol dispatcher
-    PeerAuthServer(); //2e7cc0, 106 bytes
-    const AuthCertificateBase* GetClientCertificate() { return this->mClientCertificate.get(); }
-    AuthSession* GetSession() { return this->mSession.get(); }
-    PeerAuthServerState GetState() { return this->mState; }
-    void SetUseAuth2(bool value) { this->mUseAuth2=value; }
+    enum PeerAuthServerState { STATE_NOT_STARTED=0, STATE_AWAITING_REQUEST=1, STATE_AWAITING_CHALLENGE2=2 };
+    PeerAuthServer() : PeerAuth(true) {} //2e7cc0
+    void Start(const AuthPeerData* inData, unsigned char inLengthFieldSize) //2e7d30
+    {
+        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, 0, inLengthFieldSize, WonByteBufferSink,
+                              NULL);
+    }
 };
 // RTTI PeerAuthServerOp > ServerOp > AsyncOpWithTracker > AsyncOp > RefCount.
 // 0x2240 bytes; protocol/constructor/destructor are out of line.
@@ -1941,10 +1925,13 @@ public:
     PeerAuthServerOp(AuthContext*,BlockingSocket*); //2e8950, 230 bytes, RET8
     // Typed field view for the game's use; access and names inferred.
     IPAddr mConnectAddr; //94..bc, default IPAddr (0x28) constructed at 2b2350
-    // the client's certificate after the handshake (LanLogic's read); mPeerAuthServer goes private once
-    // LanLogic calls this (the lobby lane)
-    const AuthCertificateBase* GetClientCertificate() { return this->mPeerAuthServer.GetClientCertificate(); }
-    PeerAuthServer mPeerAuthServer; //bc..2240; clientCertificate2230/session2234/state223c
+    // the client's certificate's VerifyPermissions after the handshake (LanLogic's check)
+    bool ClientPermits(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
+    {
+        return this->mPeerAuthServer.OtherPermits(inUser, inCommunity, inTrust);
+    }
+private:
+    PeerAuthServer mPeerAuthServer; //bc..2240
 };
 
 class PeerAuthOp : public ServerOp {
@@ -1969,7 +1956,6 @@ public:
     PeerAuthOp(const IPAddr&,AuthContext*,AuthType,BlockingSocket*,bool=true); //2e6a10, 370 bytes, ret20
     AuthSession* GetSession() { return this->mPeerAuthClient.GetSession(); }
     BlockingSocket* GetSocket() { return this->mSocket.get(); }
-    Auth2Certificate* GetServerCertificate() { return (Auth2Certificate*)this->mPeerAuthClient.GetServerCertificate(); }
     WONStatus GetGetCertStatus() const { return this->mGetCertStatus; }
 };
 

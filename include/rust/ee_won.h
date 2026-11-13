@@ -1392,6 +1392,93 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
 
+/// `IsValid()` (peer data: its `IsValid()`)
+constexpr static const int32_t EE_WON_AUTHOBJ_VALID = 1;
+
+/// `GetIssueTime()`
+constexpr static const int32_t EE_WON_AUTHOBJ_ISSUE = 2;
+
+/// `GetExpireTime()`
+constexpr static const int32_t EE_WON_AUTHOBJ_EXPIRE = 3;
+
+/// a certificate's `GetUserId()` (peer data: its certificate's)
+constexpr static const int32_t EE_WON_AUTHOBJ_USER_ID = 4;
+
+/// `IsExpired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_EXPIRED = 5;
+
+/// `VerifyPermissions(a, b, c)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PERMITS = 6;
+
+/// `Auth2Certificate::GetFirstCommunity()` (peer data: its second certificate's)
+constexpr static const int32_t EE_WON_AUTHOBJ_FIRST_COMMUNITY = 7;
+
+/// `GetFirstCommunityTrust()`
+constexpr static const int32_t EE_WON_AUTHOBJ_FIRST_TRUST = 8;
+
+/// `GetKeyId(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_KEY_ID = 9;
+
+/// a key block's `GetId()`
+constexpr static const int32_t EE_WON_AUTHOBJ_BLOCK_ID = 10;
+
+/// whether it holds a key (a key block's current key)
+constexpr static const int32_t EE_WON_AUTHOBJ_HAS_KEY = 11;
+
+/// `ComputeAuthDelta()`: the issue time less the current time
+constexpr static const int32_t EE_WON_AUTHOBJ_AUTH_DELTA = 12;
+
+/// peer data: `IsValid2()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_VALID2 = 20;
+
+/// peer data: `CertificateExpired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRED = 21;
+
+/// peer data: `Certificate2Expired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRED2 = 22;
+
+/// peer data: `GetExpireDelta()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRE_DELTA = 23;
+
+/// peer data: `GetAuthDelta()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_DELTA = 24;
+
+/// peer data: its private key's `IsPrivate()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_PRIVATE = 25;
+
+/// peer data: `GetCertificate2() != NULL`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_HAS_CERT2 = 26;
+
+/// `GetCertificate()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_CERT = 1;
+
+/// `GetCertificate2()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_CERT2 = 2;
+
+/// `GetPubKeyBlock()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_BLOCK = 3;
+
+/// `SetUseAuth2(num)`
+constexpr static const int32_t EE_WON_PEERAUTH_USE_AUTH2 = 1;
+
+/// `SetClientKeySize(num & 0xff, num >> 8)`
+constexpr static const int32_t EE_WON_PEERAUTH_CLIENT_KEY = 2;
+
+/// `Reset()`
+constexpr static const int32_t EE_WON_PEERAUTH_RESET = 3;
+
+/// `GetState()`
+constexpr static const int32_t EE_WON_PEERAUTH_STATE = 4;
+
+/// the other side's certificate: 0 none, 1 invalid, 2 valid
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER = 5;
+
+/// the other side's certificate's user id
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER_USER = 6;
+
+/// the other side's certificate's `VerifyPermissions(a, b, c)`
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER_PERMITS = 7;
+
 /// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
 constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
 
@@ -3024,6 +3111,9 @@ struct EeWonAuthFlow;
 /// The login data (opaque): `AuthContext::mLogin`, its own lock.
 struct EeWonAuthLogin;
 
+/// A reference to a certificate, a key block or peer data, as the C++ shims (`AuthBase`, `AuthPeerData`) hold it.
+struct EeWonAuthObj;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -3084,6 +3174,9 @@ struct EeWonOpContainer;
 /// original's hinted multimap insert at the id's first entry); an op tracked once (every tracker was made with
 /// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
 struct EeWonOpTracker;
+
+/// `PeerAuthClient` (`server` false) or `PeerAuthServer`; free with [`ee_won_peerauth_free`].
+struct EeWonPeerAuth;
 
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
@@ -10081,6 +10174,125 @@ int32_t ee_won_auth_session_crypt(EeWonAuthSession *s,
                                   EeWonByteSink sink,
                                   void *context,
                                   bool *replaced);
+
+/// `new AuthCertificate(data, len)` (`EE_WON_AUTH_CERTIFICATE`), `Auth2Certificate` or `AuthPubKeyBlock`; another
+/// kind is the base block.
+///
+/// # Safety
+/// `data` holds `length` bytes (or is null with 0).
+EeWonAuthObj *ee_won_cert_new(uint32_t kind,
+                              const uint8_t *data,
+                              size_t length);
+
+/// `new AuthPeerData(keyBlock)` (null: a new empty block).
+///
+/// # Safety
+/// `block` is null or a live object.
+EeWonAuthObj *ee_won_peer_new_empty(const EeWonAuthObj *block);
+
+/// `new AuthPeerData(certificate, keyBlock, key, delta, certificate2)` (the key copied).
+///
+/// # Safety
+/// The objects are null or live; `key` is a live key.
+EeWonAuthObj *ee_won_peer_new(const EeWonAuthObj *cert,
+                              const EeWonAuthObj *block,
+                              const EeWonElGamal *key,
+                              int64_t delta,
+                              const EeWonAuthObj *cert2);
+
+/// Another reference to the same object.
+///
+/// # Safety
+/// `o` is a live object.
+EeWonAuthObj *ee_won_authobj_clone(const EeWonAuthObj *o);
+
+/// Drops a reference (null: nothing).
+///
+/// # Safety
+/// `o` came from this module and is not used afterwards.
+void ee_won_authobj_free(EeWonAuthObj *o);
+
+/// A number of the object (`EE_WON_AUTHOBJ_*`), at the current time.
+///
+/// # Safety
+/// `o` is a live object.
+int64_t ee_won_authobj_num(const EeWonAuthObj *o, int32_t which, int64_t a, int64_t b, int64_t c);
+
+/// Peer data's certificate, second certificate or key block (`EE_WON_AUTHOBJ_PEER_*`): a new reference, null for
+/// none.
+///
+/// # Safety
+/// `o` is a live object.
+EeWonAuthObj *ee_won_authobj_get(const EeWonAuthObj *o,
+                                 int32_t which);
+
+/// A key block's (or peer data's) `Verify(other)`.
+///
+/// # Safety
+/// The objects are null or live.
+bool ee_won_authobj_verify(const EeWonAuthObj *o, const EeWonAuthObj *other);
+
+/// `IsValidAndVerified(key)`.
+///
+/// # Safety
+/// `o` is live; `key` is a live key.
+bool ee_won_authobj_verified_by(const EeWonAuthObj *o, const EeWonElGamal *key);
+
+/// The first key's `Encrypt(data)` to the sink; false (no call) when it gives NULL.
+///
+/// # Safety
+/// `o` is live; `data` holds `length` bytes; the sink is valid with `context`.
+bool ee_won_authobj_encrypt(const EeWonAuthObj *o,
+                            const uint8_t *data,
+                            size_t length,
+                            EeWonByteSink sink,
+                            void *context);
+
+EeWonPeerAuth *ee_won_peerauth_new(bool server);
+
+/// # Safety
+/// `p` came from [`ee_won_peerauth_new`] and is not used afterwards.
+void ee_won_peerauth_free(EeWonPeerAuth *p);
+
+/// A setter (`EE_WON_PEERAUTH_*`).
+///
+/// # Safety
+/// `p` is live.
+void ee_won_peerauth_set(const EeWonPeerAuth *p, int32_t which, int64_t num);
+
+/// A read (`EE_WON_PEERAUTH_*`).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_peerauth_num(const EeWonPeerAuth *p, int32_t which, int64_t a, int64_t b, int64_t c);
+
+/// `Start(peer, type, lfs)`: the client's request to the sink.
+///
+/// # Safety
+/// `p` is live, `peer` null or a live object; the sink is valid with `context`.
+void ee_won_peerauth_start(const EeWonPeerAuth *p,
+                           const EeWonAuthObj *peer,
+                           int32_t auth_type,
+                           uint8_t lfs,
+                           EeWonByteSink sink,
+                           void *context);
+
+/// `HandleRecvMsg`: the status; the out message to the sink when there is one (`*has_out`).
+///
+/// # Safety
+/// `p` is live; `data` holds `length` bytes; the sink is valid with `context`.
+int32_t ee_won_peerauth_recv(const EeWonPeerAuth *p,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context,
+                             bool *has_out);
+
+/// The session the last step made (the caller owns it, an `AuthSession`'s), or null.
+///
+/// # Safety
+/// `p` is live.
+EeWonAuthSession *ee_won_peerauth_take_session(const EeWonPeerAuth *p);
 
 /// `write_global` into the sink.
 ///
