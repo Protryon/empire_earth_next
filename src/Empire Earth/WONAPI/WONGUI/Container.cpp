@@ -142,6 +142,7 @@ intptr_t ContainerHostCall(Container* t, EeWonGuiOp op, intptr_t a, intptr_t b, 
     case Op::CtDefaultCursor: return (intptr_t)t->GetDefaultCursor();
     case Op::CtWantFocus: return t->WantFocus() ? 1 : 0;
     case Op::CtNextSibling: return (intptr_t)Comp(a)->GetNextSibling(b != 0, c != 0);
+    case Op::VpAreaRectVisible: return static_cast<ScrollArea*>(Comp(a))->IsRectVisible(*(WONRectangle*)b) ? 1 : 0;
     case Op::CtContainerOf: {
         Container* aContainer = dynamic_cast<Container*>(Comp(a));
         return aContainer != NULL ? (intptr_t)aContainer->mCt : 0;

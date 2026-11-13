@@ -12,11 +12,15 @@
 //! `Component` base. A child's place in the list was its `mChildListItr`; the list is a linked list of nodes here
 //! (an erased node keeps its links, as the original's iteration around a removal), found by the child's address.
 //! `guievent` and `guifocus` keep the decisions they had before.
+//!
+//! A ScrollAreaViewport is a container with its scroll area (`SetViewportArea`): its ChildInvalidated repaints the
+//! area when the child's bounds, moved up through nested viewports, are in view (ScrollAreaViewport.cpp).
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::ffi::c_void;
 
+use crate::guictl::EeWonRect4;
 use crate::guidraw::{EeWonDrawOp, EE_WON_DRAW_POP_CLIP, EE_WON_DRAW_PUSH_CLIP, EE_WON_DRAW_TRANSLATE};
 use crate::guievent;
 use crate::guifocus;
@@ -102,14 +106,18 @@ pub enum EeWonCtCall {
     NextFocusId,
     /// `NextChild(a, b != 0, c != 0)` (Component::GetNextSibling's walk; the child or 0).
     NextChild,
-    /// ScrollAreaViewport::Reset's clear (the children are not told).
-    ResetChildren,
     /// `if (mFocusChild) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
     DropFocusChild,
     /// the field `a` (`EeWonCtField`).
     GetField,
     /// the field `a` = `b`.
     SetField,
+    /// a viewport's scroll area `a` (the ScrollAreaViewport constructor).
+    SetViewportArea,
+    /// ScrollAreaViewport::InvalidateIfRectVisible(*a) (`a` a `WONRectangle`, moved up as the original's).
+    VpInvalidateIfRectVisible,
+    /// ScrollAreaViewport::ChildInvalidated(a) (0).
+    VpChildInvalidated,
 }
 
 /// The container's fields its users read and set.
@@ -128,6 +136,8 @@ pub enum EeWonCtField {
     FrontChild,
     BackChild,
     NumChildren,
+    /// a viewport's scroll area (0 for a plain container).
+    ViewportArea,
 }
 
 const HEAD: u32 = 0;
@@ -236,6 +246,8 @@ struct State {
     only_child_input: bool,
     removing_all: bool,
     modal: i32,
+    /// a viewport's scroll area (borrowed), 0 for a plain container
+    viewport_area: isize,
 }
 
 /// The Rust Container.
@@ -265,6 +277,7 @@ impl EeWonContainer {
                 only_child_input: false,
                 removing_all: false,
                 modal: 0,
+                viewport_area: 0,
             }),
         }
     }
@@ -1165,24 +1178,39 @@ impl EeWonContainer {
         }
     }
 
-    /// ScrollAreaViewport::Reset's clear: no mouse or focus child, the timer children and the children released
-    /// (the timer set in address order, the list front to back), the children not told.
-    pub fn reset_children(&self) {
-        let (timers, children) = {
-            let mut s = self.st.borrow_mut();
-            s.mouse = 0;
-            s.focus = 0;
-            let t: Vec<usize> = std::mem::take(&mut s.timers).into_iter().collect();
-            let c = s.list.all();
-            s.list.clear();
-            (t, c)
+    // ---- ScrollAreaViewport.cpp
+
+    /// `InvalidateIfRectVisible`: the area repainted when the rectangle is in its view, else the rectangle moved by
+    /// this viewport's place and given to the parent viewport.
+    pub fn vp_invalidate_if_rect_visible(&self, r: &mut EeWonRect4) {
+        let me = self.me();
+        let area = self.st.borrow().viewport_area;
+        let parent = self.parent_of(me);
+        if parent == area {
+            if self.op(Op::VpAreaRectVisible, area, r as *mut EeWonRect4 as isize, 0, 0) != 0 {
+                self.op(Op::ChildInvalidate, area, 0, 0, 0);
+            }
+        } else if parent != 0 {
+            r.x = r.x.wrapping_add(self.left(me));
+            r.y = r.y.wrapping_add(self.top(me));
+            let ct = self.op(Op::CtContainerOf, parent, 0, 0, 0) as *const EeWonContainer;
+            if !ct.is_null() {
+                // SAFETY: the host answers a live container's Rust object (the parent viewport); no borrow is held
+                unsafe { (*ct).vp_invalidate_if_rect_visible(r) };
+            }
+        }
+    }
+
+    /// `ChildInvalidated`: the child's bounds through InvalidateIfRectVisible; false.
+    pub fn vp_child_invalidated(&self, c: isize) -> bool {
+        let mut r = EeWonRect4 {
+            x: self.left(c),
+            y: self.top(c),
+            w: self.op(Op::ChildWidth, c, 0, 0, 0) as i32,
+            h: self.op(Op::ChildHeight, c, 0, 0, 0) as i32,
         };
-        for t in timers {
-            self.release(t as isize);
-        }
-        for c in children {
-            self.release(c);
-        }
+        self.vp_invalidate_if_rect_visible(&mut r);
+        false
     }
 
     pub fn drop_focus_child(&self) {
@@ -1209,6 +1237,7 @@ impl EeWonContainer {
             x if x == F::FrontChild as i32 => s.list.front(),
             x if x == F::BackChild as i32 => s.list.back(),
             x if x == F::NumChildren as i32 => s.list.len as isize,
+            x if x == F::ViewportArea as i32 => s.viewport_area,
             _ => 0,
         }
     }
@@ -1307,10 +1336,16 @@ impl EeWonContainer {
             C::EnsureOnTopOf => self.ensure_on_top_of(a, b),
             C::NextFocusId => return self.next_focus_id() as isize,
             C::NextChild => return self.next_child(a, b != 0, c != 0),
-            C::ResetChildren => self.reset_children(),
             C::DropFocusChild => self.drop_focus_child(),
             C::GetField => return self.field(ai),
             C::SetField => self.set_field(ai, b),
+            C::SetViewportArea => self.st.borrow_mut().viewport_area = a,
+            C::VpInvalidateIfRectVisible => {
+                // SAFETY: the C++ passes a WONRectangle (x, y, width, height), written back
+                let r = unsafe { &mut *(a as *mut EeWonRect4) };
+                self.vp_invalidate_if_rect_visible(r);
+            }
+            C::VpChildInvalidated => return self.vp_child_invalidated(a) as isize,
         }
         0
     }

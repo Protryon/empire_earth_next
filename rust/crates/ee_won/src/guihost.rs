@@ -581,6 +581,8 @@ pub enum EeWonGuiOp {
     CtNextSibling,
     /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
     CtContainerOf,
+    /// `((ScrollArea*)a)->IsRectVisible(*(WONRectangle*)b)` (0 or 1).
+    VpAreaRectVisible,
     // ---- the dialog (`dialogobj`)
     /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
     DlgDefaultButton = 460,

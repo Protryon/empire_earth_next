@@ -433,7 +433,6 @@ public:
     // Component::GetNextSibling's walk (0x2f5230)
     Component* NextChild(Component* c,bool f,bool w) { return (Component*)this->CCall(EeWonCtCall::NextChild,(intptr_t)c,f,w); }
     void DropFocusChild() { this->CCall(EeWonCtCall::DropFocusChild); }
-    void ResetChildren() { this->CCall(EeWonCtCall::ResetChildren); } // ScrollAreaViewport::Reset's clear
     unsigned char GetNextFocusId() { return (unsigned char)this->CCall(EeWonCtCall::NextFocusId); } // 0x2f6010
     void SetFocusToLastFocusChild() { this->CCall(EeWonCtCall::SetFocusToLastFocusChild); } // 0x2f6030
     void EnsureOnTopOf(Component* b,Component* t) { this->CCall(EeWonCtCall::EnsureOnTopOf,(intptr_t)b,(intptr_t)t); } // 0x2f6f60
@@ -451,7 +450,6 @@ public:
     ChildLayoutManager* mChildLayout; // owned: destroyed between the cursor and the timer children, as the member was
 protected:
     static bool mMouseWheelGoesToFocusChildDef; // 0x566234 (declaration only)
-private:
     intptr_t CCall(EeWonCtCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_ct_call(this->mCt,c,a,b,cc); }
 };
 
@@ -2743,20 +2741,17 @@ private:
     intptr_t PCall(EeWonMenuCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_menu_call(this->mMenu,c,a,b,cc); }
 };
 
+// ScrollAreaViewport (R6 WON round 26): the scrolled content's container. Its scroll area and the repaint of a child
+// in view through nested viewports are the Rust container's viewport part (ctobj.rs); the class is 0x88 bytes in the
+// original (allocated at 0x304e49). Paint, TimerEvent, SetFocusChild and AddTimerChild were the container's; Reset
+// (0x305c70) had no caller.
 class ScrollAreaViewport : public Container {
 public:
-    ScrollAreaViewport(ScrollArea* area) : mScrollArea(area) {} // inline (0x304e70..0x304e83)
-    void Reset(); // 0x305c70: resets the contents and the popup
-    void InvalidateIfRectVisible(WONRectangle&); // 0x305c10
-    // Implicit virtual destructor (0x306a60)
-    ScrollArea* mScrollArea; // at +0x84, back link; the class is 0x88 bytes (allocated at 0x304e49)
-    virtual void Paint(Graphics&); // vtable +0x18, 0x305e00
-    virtual bool TimerEvent(int); // vtable +0x44, 0x305dd0
-    virtual void SetCursor(Cursor*); // vtable +0x78, 0x305de0
-    virtual void SetFocusChild(Component*); // vtable +0xb4, 0x305db0
-    virtual void AddTimerChild(Component*); // vtable +0xb8, 0x305dc0
-    virtual void ChildStateChanged(Component*); // vtable +0xbc, 0x2fa500
-    virtual bool ChildInvalidated(Component*); // vtable +0xc0, 0x305d70
+    ScrollAreaViewport(ScrollArea* area) { this->CCall(EeWonCtCall::SetViewportArea,(intptr_t)static_cast<Component*>(area)); } // inline (0x304e70..0x304e83)
+    Component* GetScrollArea() { return (Component*)this->CCall(EeWonCtCall::GetField,(intptr_t)EeWonCtField::ViewportArea); }
+    virtual void SetCursor(Cursor* c) { this->GetScrollArea()->SetCursor(c); } // vtable +0x78, 0x305de0: the area's
+    virtual void ChildStateChanged(Component*) {} // vtable +0xbc, 0x2fa500: ignored
+    virtual bool ChildInvalidated(Component* c) { return this->CCall(EeWonCtCall::VpChildInvalidated,(intptr_t)c)!=0; } // vtable +0xc0, 0x305d70
 };
 
 // MultiListArea, MultiListItem and MultiListHeader (R6 WON round 24): their columns, cells, header buttons, sort,

@@ -229,6 +229,13 @@ static intptr_t Host(void* inComp, Op inOp, intptr_t a, intptr_t b, intptr_t c, 
         return p == 0 ? 0 : SideCall((int)p, C::NextChild, a, b, c);
     }
     case Op::CtContainerOf: return IsCt(a) ? CtObjectOf(a) : 0;
+    case Op::VpAreaRectVisible: {
+        // a scroll area's view: its own size from its top left
+        if (a == 0) return 0;
+        const int* q = (const int*)b;
+        EeWonRect r1 = {q[0], q[1], q[2], q[3]}, r2 = {0, 0, sW[a].w, sW[a].h};
+        return ee_won_gui_rect_intersects(r1, r2);
+    }
     case Op::GetMousePos: *(int*)a = sMouseX; *(int*)b = sMouseY; return 0;
     case Op::KeyMod: return sKeyMod;
     default: {

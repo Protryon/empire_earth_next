@@ -2390,6 +2390,8 @@ enum class EeWonGuiOp : uint32_t {
   CtNextSibling,
   /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
   CtContainerOf,
+  /// `((ScrollArea*)a)->IsRectVisible(*(WONRectangle*)b)` (0 or 1).
+  VpAreaRectVisible,
   /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
   DlgDefaultButton = 460,
   /// `mParent->BringToTop(this)`.
@@ -2585,14 +2587,18 @@ enum class EeWonCtCall : uint32_t {
   NextFocusId,
   /// `NextChild(a, b != 0, c != 0)` (Component::GetNextSibling's walk; the child or 0).
   NextChild,
-  /// ScrollAreaViewport::Reset's clear (the children are not told).
-  ResetChildren,
   /// `if (mFocusChild) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
   DropFocusChild,
   /// the field `a` (`EeWonCtField`).
   GetField,
   /// the field `a` = `b`.
   SetField,
+  /// a viewport's scroll area `a` (the ScrollAreaViewport constructor).
+  SetViewportArea,
+  /// ScrollAreaViewport::InvalidateIfRectVisible(*a) (`a` a `WONRectangle`, moved up as the original's).
+  VpInvalidateIfRectVisible,
+  /// ScrollAreaViewport::ChildInvalidated(a) (0).
+  VpChildInvalidated,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3975,6 +3981,8 @@ enum class EeWonCtField : uint32_t {
   FrontChild,
   BackChild,
   NumChildren,
+  /// a viewport's scroll area (0 for a plain container).
+  ViewportArea,
 };
 
 /// The dialog's fields its configs and subclasses read and set.

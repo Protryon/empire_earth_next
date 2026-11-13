@@ -144,12 +144,10 @@ fn timer_children_go_when_they_stop_wanting_ticks() {
     MOCK.with(|m| m.borrow_mut().comps[3].timer = 0);
     assert!(!t.timer_event(5));
     assert!(t.st.borrow().timers.is_empty());
-    t.reset_children();
-    assert!(t.children().is_empty());
+    t.destroy();
     for i in 2..=4 {
         assert_eq!(refs(i), 0);
     }
-    t.destroy();
 }
 
 #[test]
@@ -301,11 +299,22 @@ fn dialog_override(c: EeWonCtCall) -> Option<D> {
     })
 }
 
-/// A container's call as the C++ test's `SideCall` makes it: container 1's overridden calls to the dialog.
+/// A container's call as the C++ test's `SideCall` makes it: container 1's overridden calls to the dialog, a
+/// viewport's overrides (ScrollAreaViewport's ChildInvalidated, its empty ChildStateChanged, its SetCursor on the
+/// scroll area).
 fn side_call(ct: isize, call: EeWonCtCall, a: isize, b: isize, c: isize) -> isize {
     if ct == 1 {
         if let (Some(d), Some(o)) = (dlg_of(), dialog_override(call)) {
             return d.call(o, a, b, c);
+        }
+    }
+    let area = ct_of(ct).map_or(0, |t| t.field(EeWonCtField::ViewportArea as i32));
+    if area != 0 {
+        match call {
+            EeWonCtCall::ChildInvalidated => return side_call(ct, EeWonCtCall::VpChildInvalidated, a, b, c),
+            EeWonCtCall::ChildStateChanged => return 0,
+            EeWonCtCall::SetCursor => return side_call(area, EeWonCtCall::SetCursor, a, b, c),
+            _ => {}
         }
     }
     match ct_of(ct) {
@@ -327,7 +336,7 @@ fn apply_env(n: &[i64]) {
 }
 
 fn call_of(n: i64) -> EeWonCtCall {
-    assert!((1..=EeWonCtCall::SetField as i64).contains(&n), "call {n}");
+    assert!((1..=EeWonCtCall::VpChildInvalidated as i64).contains(&n), "call {n}");
     // SAFETY: a value of the enum's range (repr(u32), consecutive from 1)
     unsafe { std::mem::transmute::<u32, EeWonCtCall>(n as u32) }
 }
@@ -406,6 +415,17 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
             return 0;
         }
         Op::KeyMod => return with(|r| r.env[5]) as isize,
+        Op::VpAreaRectVisible => {
+            if a == 0 {
+                return 0;
+            }
+            // SAFETY: the Rust passes its rectangle
+            let q = unsafe { &*(b as *const crate::guictl::EeWonRect4) };
+            let p = w(a);
+            let r1 = crate::guilayout::EeWonRect { x: q.x, y: q.y, width: q.w, height: q.h };
+            let r2 = crate::guilayout::EeWonRect { x: 0, y: 0, width: p.w, height: p.h };
+            return crate::guilayout::intersects(r1, r2) as isize;
+        }
         Op::DlgIsModal => return (with(|r| r.env[8]) as isize == me) as isize,
         Op::DlgIsDefault => return (with(|r| r.env[9]) as isize == a) as isize,
         Op::EventType => return with(|r| r.env[10]) as isize,

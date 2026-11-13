@@ -105,6 +105,7 @@ struct Container {
         this->mHasUsedDialogKeys = false;
         this->mModalCount = 0;
         this->mNextFocusId = 0;
+        this->mViewportArea = 0;
     }
     void SetCursorField(intptr_t c)
     {
@@ -630,15 +631,27 @@ struct Container {
         }
         return *i;
     }
-    // ScrollAreaViewport::Reset's clear
-    void ResetChildren()
+    // ScrollAreaViewport.cpp (a viewport: mViewportArea is its mScrollArea)
+    struct Rect { int x, y, width, height; };
+    intptr_t mViewportArea;
+    void InvalidateIfRectVisible(Rect& rect)
     {
-        this->mMouseChild = this->mFocusChild = 0;
-        for (std::set<uintptr_t>::iterator i = mChildTimerSet.begin(); i != mChildTimerSet.end(); ++i) Release((intptr_t)*i);
-        this->mChildTimerSet.clear();
-        for (std::list<intptr_t>::iterator i = mChildList.begin(); i != mChildList.end(); ++i) Release(*i);
-        this->mChildList.clear();
-        mItr.clear();
+        if (ParentOf(mSelf) == this->mViewportArea) {
+            if (H(Op::VpAreaRectVisible, this->mViewportArea, (intptr_t)&rect)) H(Op::ChildInvalidate, this->mViewportArea);
+        } else {
+            intptr_t parent = ParentOf(mSelf);
+            if (parent != 0) {
+                rect.x += Left(mSelf);
+                rect.y += Top(mSelf);
+                ((Container*)H(Op::CtContainerOf, parent))->InvalidateIfRectVisible(rect);
+            }
+        }
+    }
+    bool VpChildInvalidated(intptr_t child)
+    {
+        Rect bounds = {Left(child), Top(child), Width(child), Height(child)};
+        this->InvalidateIfRectVisible(bounds);
+        return false;
     }
     void DropFocusChild() { if (this->mFocusChild != 0) { Child(this->mFocusChild, V::LostFocus); this->mFocusChild = 0; } }
     intptr_t GetField(int f)
@@ -656,6 +669,7 @@ struct Container {
         case EeWonCtField::FrontChild: return mChildList.empty() ? 0 : mChildList.front();
         case EeWonCtField::BackChild: return mChildList.empty() ? 0 : mChildList.back();
         case EeWonCtField::NumChildren: return (intptr_t)mChildList.size();
+        case EeWonCtField::ViewportArea: return mViewportArea;
         }
         return 0;
     }
@@ -719,10 +733,12 @@ struct Container {
         case C::EnsureOnTopOf: EnsureOnTopOf(a, b); return 0;
         case C::NextFocusId: return GetNextFocusId();
         case C::NextChild: return NextChild(a, b != 0, c != 0);
-        case C::ResetChildren: ResetChildren(); return 0;
         case C::DropFocusChild: DropFocusChild(); return 0;
         case C::GetField: return GetField((int)a);
         case C::SetField: SetField((int)a, b); return 0;
+        case C::SetViewportArea: mViewportArea = a; return 0;
+        case C::VpInvalidateIfRectVisible: InvalidateIfRectVisible(*(Rect*)a); return 0;
+        case C::VpChildInvalidated: return VpChildInvalidated(a);
         }
         return 0;
     }
@@ -731,6 +747,14 @@ struct Container {
 
 static intptr_t SideCall(int ct, C call, intptr_t a, intptr_t b, intptr_t c)
 {
+    // a viewport's overrides: ChildInvalidated, the empty ChildStateChanged, SetCursor on the scroll area
+    intptr_t area = sRustSide ? ee_won_ct_call(sRust[ct], C::GetField, (intptr_t)EeWonCtField::ViewportArea, 0, 0)
+                              : sOrig[ct]->mViewportArea;
+    if (area != 0) {
+        if (call == C::ChildInvalidated) call = C::VpChildInvalidated;
+        else if (call == C::ChildStateChanged) return 0;
+        else if (call == C::SetCursor) return SideCall((int)area, C::SetCursor, a, b, c);
+    }
     if (sRustSide) return ee_won_ct_call(sRust[ct], call, a, b, c);
     return sOrig[ct]->Call(call, a, b, c);
 }
@@ -742,7 +766,7 @@ static const char* kCallNames[] = {"", "size", "desired", "prepaint", "paint", "
     "update-mouse", "mouse-at", "enter", "exit", "move", "drag", "up", "down", "wheel", "hover", "add", "add-ex",
     "broadcast", "find-id", "enter-modal", "leave-modal", "remove", "remove-all", "to-top", "set-focus", "state",
     "invalidated", "mark", "clear-bg", "tab", "key-down", "key-up", "key-char", "can-close", "got-focus", "lost-focus",
-    "added", "add-timer", "timer", "cursor", "last-focus", "on-top", "focus-id", "next-child", "reset", "drop-focus",
+    "added", "add-timer", "timer", "cursor", "last-focus", "on-top", "focus-id", "next-child", "drop-focus",
     "get", "set"};
 static const int kCallCount = (int)C::SetField;
 
@@ -752,7 +776,7 @@ static void RandomCall()
     static const int kWeights[kCallCount + 1] = {0,
         2, 1, 2, 3, 1, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 3, 2, 2, 6, 3,
         1, 2, 2, 2, 4, 1, 3, 4, 3, 3, 2, 1, 3, 3, 2, 2, 2, 2, 2, 2,
-        3, 4, 3, 2, 2, 1, 2, 1, 1, 2, 2};
+        3, 4, 3, 2, 2, 1, 2, 1, 2, 2};
     int total = 0;
     for (int i = 1; i <= kCallCount; i++) total += kWeights[i];
     int r0 = (int)DR(total), k = 1;
@@ -804,7 +828,7 @@ static void RandomCall()
     case C::NextChild: a = AnyComp(); b = DR(2); c = DR(2); break;
     case C::GetField: a = 1 + DR(12); break;
     case C::SetField: a = 4 + DR(4); b = DR(2); break;
-    case C::RemoveAllChildren: case C::ResetChildren: if (DR(3)) call = C::LeaveModal; break;
+    case C::RemoveAllChildren: if (DR(3)) call = C::LeaveModal; break;
     default: break;
     }
     TopCall(ct, call, a, b, c);
@@ -828,6 +852,21 @@ static std::vector<std::string> RunSide(bool inRust, unsigned inSeq, int inCalls
         if (DR(5) == 0) continue;
         int p = id <= kCt ? 1 + (int)DR(id - 1) : 1 + (int)DR(kCt);
         TopCall(p, C::AddChild, id, 0, 0);
+    }
+    // a third of the sequences: container 4 a viewport of the scroll area 3, under it; a third: 3 a viewport of the
+    // area 2 under it and 4 a viewport of the same area under 3 (a multi-column list's column viewports)
+    switch (DR(3)) {
+    case 1:
+        TopCall(4, C::SetViewportArea, 3, 0, 0);
+        TopCall(3, C::AddChild, 4, 0, 0);
+        break;
+    case 2:
+        TopCall(3, C::SetViewportArea, 2, 0, 0);
+        TopCall(2, C::AddChild, 3, 0, 0);
+        TopCall(4, C::SetViewportArea, 2, 0, 0);
+        TopCall(3, C::AddChild, 4, 0, 0);
+        break;
+    default: break;
     }
     for (int i = 0; i < inCalls; i++) {
         if (DR(3) == 0) RandomChange();
