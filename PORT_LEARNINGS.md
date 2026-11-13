@@ -10525,3 +10525,42 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
 - **Coverage by a temporary print.** The oracle and late games never patrol; the scenario profile's games create
   routed patrols and step them, so its captures gate the move. No saveload game holds a patrol goal: its record is
   unit tests only.
+
+## R4.4, eighth round: the marching icons, the particles, the battlefield decals, the damage controller, the particle emitter and the aged effects on the records (ee_gfx effect_state.rs; branch rust-gfx14, 2026-11-12)
+
+The effects' leaf families on the round-7 records, one family a commit, EFST the gate (seeds 2-3 of the oracle and
+late profiles per commit; calamity too at the end). Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`):
+25,403 lines before the round, 24,878 after it (2 units fewer).
+
+- **The marching icons, second try.** Round 7's divergence (the oracle parting at seed 2's tick 30062) did not
+  reproduce on the tree merged with rust: a per-effect EFST dump (tick, handle, kind, a hash of the saved bytes) of
+  the move and of its parent were identical, and so was the oracle. The difference was in neither the icons nor the
+  zeroing; most likely a read of the heap's garbage elsewhere that a later merge of rust removed. The move is in:
+  `EEE2DCircularMarchingIcons` and `EEE2DSquareMarchingIcons` deleted, kinds 0x10 and 0xf of `EEE2DMarchingIcons`, the
+  layouts in Rust without an allocation (`marching_offsets_into`), `IsIconShown` keeping them in order in C++.
+- **The pooled particles** (`EEE2DParticle`, `EEE3DParticle`: `EeGfxEffectParticle`): the set-up's draws (the 2D
+  rotation, the 3D yaw, pitch and roll; the brightness, the 3D particle's range spelled as the original), the move
+  (drag, gravity, wind and lift, the bounce off the ground; the 2D particle ends off the map and stops on game over,
+  the 3D one freezes off the map), the tick that applies the moved position, Load (the 0.218 clock) and Save. The
+  terrain through callbacks (`EeGfxParticleGround`, also the decals'). The move runs in the renderer's `Queue`: no
+  EE-SIM game reaches it.
+- **The battlefield decals** (`EEE2DBattlefieldAmbient`: `EeGfxEffectAmbient`): the constructor's size and turn
+  draws and the four corners on the terrain (hidden and expired off the map or not level), the tick, Load and Save.
+  The decal helpers the physics calls (`EEPlaceImpactDecal`, `EEPlaceTrackDecal`) stay C++.
+- **The damage controller** (`EEEDamagedEffect`): its children's handles are a Rust value the record owns
+  (`EeGfxEffectLists`, made on first use, freed with the record; each call takes them out of the record and puts
+  them back, so no Rust reference lives across the C++'s `CreateUnitEffect`/`DestroyEffect`); the tick's counts (the
+  ceiling of the lost health share times the tag points, the unsigned difference truncated as the original), Load
+  (0.249's flag) and Save.
+- **The particle emitter** (`EEE3DParticleEmitter`: `EeGfxEffectEmitter`): the move, the burst (the spread, pitch,
+  yaw and speed draws, `ee_ge`'s `Revolve` and `Apply`, the line effects through a callback, the new countdown), Load
+  and Save. The unit, its tag points and turrets, the end tests and the sound stay C++.
+- **The aged effects** (`EEE3DWaterSplash`, `EEE2DShockwave`, `EEE3DScreenFlash`, `EEE2DWaterRipple`:
+  `EeGfxEffectAged`): the age by the tick, the end (the screen flash at 1, the others past 1, the ripple while its
+  tile is blocked: the C++ asks the world), Load and Save.
+- **Tests and the generator.** The effects' random generator is one for the process: the Rust tests that draw from it
+  take turns through a test-only lock (cargo runs tests in parallel threads).
+- **Gates of the round:** the sim oracle identical on seeds 2-7; the captures at seeds 2-3 PASS with EFST: oracle 166 digests, late 166, calamity 179 (each commit: oracle and late at seeds 2-3; two of those late runs at 3.3-4.5 GB free, under the 6 GB rule, as other lanes filled the disk mid-run); the Rust gate PASS; `build.py --sim` and the test profile link 0/0. No tour run.
+- **Only a tour or a person reaches:** the particles' move (the renderer's `Queue`) and draws, the decals', splash's,
+  shock wave's, flash's and ripple's draws, the marching icons' draw; EE-SIM steps, saves (EFST) and loads (saveload)
+  the rest.

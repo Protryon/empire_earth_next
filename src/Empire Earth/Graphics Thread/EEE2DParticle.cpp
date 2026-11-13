@@ -215,17 +215,13 @@ void EEE2DParticle::PrepareQueue()
 // FUNCTION: EXE 0x4e4b47
 // Starts the particle at age 0 with a random rotation (mode 0) and a random brightness in parameter 2 +- 3,
 // clamped to 0..1, and loads its graphic; returns the load result
+// (the draws are ee_gfx effect_state.rs's)
 long EEE2DParticle::SetUp()
 {
-    long theMode = this->mGraphicEffect->mIntParam1;
-    this->mAge = 0.0f;
-    this->mRotation = theMode == 0 ? EEEffect::GetRandom() * 6.2831855f : 0.0f;
+    EeGfxParticleSetUp theSetUp = {(int32_t)this->mGraphicEffect->mIntParam1, this->mGraphicEffect->GetParam2(),
+                                   this->mGraphicEffect->GetParam3()};
     this->SetBoundingRadius(this->mGraphicEffect->GetSize());
-    float theMinimum = this->mGraphicEffect->GetParam2() - this->mGraphicEffect->GetParam3();
-    float theMaximum = this->mGraphicEffect->GetParam2() + this->mGraphicEffect->GetParam3();
-    this->mBrightness = EEEffect::GetRandom() * (theMaximum - theMinimum) + theMinimum;
-    this->mBrightness = max(this->mBrightness, 0.0f);
-    this->mBrightness = min(this->mBrightness, 1.0f);
+    ee_gfx_effect_particle_set_up(this->mRecord, &theSetUp);
     this->mGraphicObject = this->GetGraphicObject();
     return this->mGraphicObject->LoadMedia();
 }
@@ -234,83 +230,39 @@ long EEE2DParticle::SetUp()
 // Resets the particle's motion, age, look and timing to zero, with no graphic
 void EEE2DParticle::Clear()
 {
-    this->mVelocity.SetX(0.0f);
-    this->mVelocity.SetY(0.0f);
-    this->mVelocity.SetZ(0.0f);
-    this->mDrawPosition.SetX(0.0f);
-    this->mDrawPosition.SetY(0.0f);
-    this->mDrawPosition.SetZ(0.0f);
+    ee_gfx_effect_particle_clear(this->mRecord);
     this->mGraphicObject = NULL;
-    this->mDrawAge = 0.0f;
-    this->mAge = 0.0f;
-    this->mRotation = 0.0f;
-    this->mBrightness = 0.0f;
-    this->mLastTime = 0.0f;
-    this->mDuration = 0.0f;
-    this->mMoved = false;
 }
 
-// NEAR: x87 order of the drag/wind terms and two frame slots
+// The move's world reads (both particles) (provisional name)
+EeGfxParticleTick EEParticleTick(EEGraphicEffect* inEffect, const GE3DPoint& inPosition)
+{
+    EeGfxParticleTick theTick;
+    const GEVector& theWind = gWorld.mWindDirection;
+    theTick.now = gPhysics->mGameClock;
+    theTick.game_over = gPhysics->mGameOver;
+    theTick.wind.x = theWind.GetX();
+    theTick.wind.y = theWind.GetY();
+    theTick.wind.z = theWind.GetZ();
+    theTick.position = *reinterpret_cast<const EeGe3DPoint*>(&inPosition);
+    theTick.duration = (uint32_t)inEffect->mDuration;
+    theTick.param4 = inEffect->mParam4;
+    theTick.param8 = inEffect->mParam8;
+    theTick.param9 = inEffect->GetParam9();
+    theTick.param10 = inEffect->GetParam10();
+    theTick.param11 = inEffect->mParam11;
+    theTick.flag2 = inEffect->mFlag2;
+    return theTick;
+}
+
 // FUNCTION: EXE 0x4e4c31
 // Moves the particle by the game time passed: gravity, drag, wind and lift, bouncing off the ground when the
-// effect asks; returns 7 (remove) once it is past its duration or off the map
+// effect asks (ee_gfx effect_state.rs); returns 7 (remove) once it is past its duration or off the map
 long EEE2DParticle::Update()
 {
-    long theResult = 0;
-    float theNow = gPhysics->mGameClock;
-    float theElapsed = theNow - this->mLastTime;
-    if ((theElapsed < -0.0001f || theElapsed > 0.0001f) && !gPhysics->mGameOver) {
-        this->mLastTime = theNow;
-        this->mAge += theElapsed;
-        if (this->mAge <= this->mGraphicEffect->mDuration) {
-            float theFall = -this->mGraphicEffect->mParam8;
-            GEVector theWind = gWorld.mWindDirection;
-            GE3DPoint thePosition(this->mPosition);
-            GEVector theNormal;
-            float theStep = theElapsed / 1000.0f;
-            float theDrag = -this->mGraphicEffect->mParam11;
-            GEVector theForce(this->mVelocity.GetX() * theDrag, this->mVelocity.GetY() * theDrag, this->mVelocity.GetZ() * theDrag);
-            theFall += theForce.GetZ();
-            this->mVelocity.SetX(theForce.GetX() * theStep + this->mVelocity.GetX());
-            this->mVelocity.SetY(theForce.GetY() * theStep + this->mVelocity.GetY());
-            this->mVelocity.SetZ(theFall * theStep + this->mVelocity.GetZ());
-            thePosition.SetX(this->mGraphicEffect->GetParam9() * theWind.GetX() * theStep + this->mVelocity.GetX() * theStep
-                             + thePosition.GetX());
-            thePosition.SetY(this->mGraphicEffect->GetParam9() * theWind.GetY() * theStep + this->mVelocity.GetY() * theStep
-                             + thePosition.GetY());
-            thePosition.SetZ(this->mGraphicEffect->GetParam9() * theWind.GetZ() * theStep + this->mGraphicEffect->mParam4 * theStep
-                             + this->mVelocity.GetZ() * theStep + thePosition.GetZ());
-            if (this->mGraphicEffect->mFlag2) {
-                GETerrainMesh& theMesh = gWorld.GetMap()->mTerrainMesh;
-                unsigned long theX = UMFloorUnsigned(thePosition.GetX());
-                unsigned long theY = UMFloorUnsigned(thePosition.GetY());
-                if (!theMesh.GetIsValidTile(theX, theY)) {
-                    theResult = 7;
-                } else {
-                    float theHeight = theMesh.GetMeshZ(thePosition.GetX(), thePosition.GetY());
-                    if (thePosition.GetZ() <= theHeight && !theMesh.GetIsSpaceTile(theX, theY)) {
-                        theMesh.GetMeshNormal(thePosition.GetX(), thePosition.GetY(), theNormal);
-                        if (theNormal.DotProduct(this->mVelocity) < 0.0f) {
-                            thePosition.SetZ(theHeight);
-                            float theBounce = theNormal.DotProduct(this->mVelocity) * (-1.0f - this->mGraphicEffect->GetParam10())
-                                              / theNormal.DotProduct(theNormal);
-                            this->mVelocity.SetX(theNormal.mX * theBounce + this->mVelocity.GetX());
-                            this->mVelocity.SetY(theNormal.mY * theBounce + this->mVelocity.GetY());
-                            this->mVelocity.SetZ(theNormal.mZ * theBounce + this->mVelocity.GetZ());
-                        }
-                    }
-                }
-            }
-            if (theResult == 0) {
-                this->mDrawAge = this->mAge / this->mGraphicEffect->mDuration;
-                this->mDrawPosition = thePosition;
-                this->mMoved = true;
-            }
-        } else {
-            theResult = 7;
-        }
-    }
-    return theResult;
+    EeGfxParticleTick theTick = EEParticleTick(this->mGraphicEffect, this->mPosition);
+    EeGfxParticleGround theGround = EEParticleGround();
+    return ee_gfx_effect_particle_update(this->mRecord, &theTick, &theGround);
 }
 
 // FUNCTION: EXE 0x4e4f32
@@ -330,41 +282,13 @@ long EEE2DParticle::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    long theResult;
-    if (inMajorVersion <= 0 && inMinorVersion <= 0xd9) {
-        theResult = this->mVelocity.Load(inFile);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mAge);
-            if (theResult == 0) {
-                theResult = inFile.Read(this->mRotation);
-                if (theResult == 0) {
-                    theResult = inFile.Read(this->mBrightness);
-                    if (theResult == 0) {
-                        this->mLastTime = 0.0f;
-                        this->mDrawPosition = this->mPosition;
-                        this->mDuration = this->mGraphicEffect->mDuration;
-                        this->mMoved = false;
-                    }
-                }
-            }
-        }
-    } else {
-        theResult = this->mVelocity.Load(inFile);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mAge);
-            if (theResult == 0) {
-                theResult = inFile.Read(this->mRotation);
-                if (theResult == 0) {
-                    theResult = inFile.Read(this->mBrightness);
-                    if (theResult == 0) {
-                        theResult = inFile.Read(this->mLastTime);
-                        this->mDrawPosition = this->mPosition;
-                        this->mDuration = this->mGraphicEffect->mDuration;
-                        this->mMoved = false;
-                    }
-                }
-            }
-        }
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    bool theLoaded = false;
+    long theResult = ee_gfx_effect_load_particle(this->mRecord, &theFile, (uint32_t)inMajorVersion,
+                                                 (uint32_t)inMinorVersion, &theLoaded);
+    if (theLoaded) {
+        this->mDrawPosition = this->mPosition;
+        this->mDuration = this->mGraphicEffect->mDuration;
     }
     return theResult;
 }
@@ -404,33 +328,19 @@ long EEE2DParticle::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     if (this->mPosition != this->mDrawPosition)
         this->SetPosition(this->mDrawPosition);
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mVelocity.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mAge);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mRotation);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mBrightness);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mLastTime);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_particle(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e520d
 // Copies the drawn position back after a move; returns 7 (remove) once the particle's duration is over
 long EEE2DParticle::Step()
 {
-    if (gPhysics->mGameClock - this->mLastTime + this->mAge <= this->mDuration) {
-        if (this->mMoved) {
-            this->mMoved = false;
-            this->SetPosition(this->mDrawPosition);
-        }
-        return 0;
-    }
-    return 7;
+    bool theMove = false;
+    long theResult = ee_gfx_effect_particle_step(this->mRecord, gPhysics->mGameClock, &theMove);
+    if (theMove)
+        this->SetPosition(this->mDrawPosition);
+    return theResult;
 }
 
 // The pool's COMDATs (UMemoryPool<EEE2DParticle>, lle/UMemoryPool.h) and the particle's ??_E follow:

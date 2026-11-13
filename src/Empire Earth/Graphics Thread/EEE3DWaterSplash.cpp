@@ -58,7 +58,6 @@ EEE3DWaterSplash::EEE3DWaterSplash(GE3DPoint& inLocation, EEGraphicEffect* inGra
     GETransformation theTransformation;
     theTransformation.SetPosition(inLocation.GetX(), inLocation.GetY(), inLocation.GetZ());
     this->SetTransformation(theTransformation);
-    this->mAge = 0.0f;
 }
 
 // SYNTHETIC: EXE 0x501ce6
@@ -67,7 +66,7 @@ EEE3DWaterSplash::EEE3DWaterSplash(GE3DPoint& inLocation, EEGraphicEffect* inGra
 // FUNCTION: EXE 0x501d02
 // Creates an empty water splash effect (for loading)
 EEE3DWaterSplash::EEE3DWaterSplash()
-    : EEEffect3D(kEffect3DWaterSplash), mAge(0.0f)
+    : EEEffect3D(kEffect3DWaterSplash)
 {
 }
 
@@ -161,7 +160,8 @@ long EEE3DWaterSplash::Load(unsigned long inMajorVersion, unsigned long inMinorV
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    return inFile.Read(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x501f69
@@ -169,17 +169,14 @@ long EEE3DWaterSplash::Load(unsigned long inMajorVersion, unsigned long inMinorV
 long EEE3DWaterSplash::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    return outFile.Write(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x501f8f
 // Ages the splash by the tick over the effect's duration; returns 7 once past 1
 long EEE3DWaterSplash::Step()
 {
-    long theResult = 0;
-    float theElapsed = gPhysics->GetTickSeconds() * 1000.0f;
-    this->mAge += theElapsed / this->mGraphicEffect->mDuration;
-    if (this->mAge > 1.0f)
-        theResult = 7;
-    return theResult;
+    int32_t theTile[2];
+    return ee_gfx_effect_aged_step(this->mRecord, gPhysics->GetTickSeconds(), (uint32_t)this->mGraphicEffect->mDuration, theTile);
 }

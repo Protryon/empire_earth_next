@@ -41,16 +41,17 @@ public:
     void Clear();                           // 0xe4be3
     long Update();                          // 0xe4c31 (moves the particle by the time since mLastTime; 7: done)
 
-    GEVector mVelocity;                     // +0x54 (saved)
-    GE3DPoint mDrawPosition;                // +0x60 (Update's new position)
+    // the record's (ee_gfx effect_state.rs `EeGfxEffectParticle`); the set-up, move, tick, load and save are Rust's
+    GEVector& mVelocity = *reinterpret_cast<GEVector*>(&this->mRecord->particle.velocity);   // +0x54 (saved)
+    GE3DPoint& mDrawPosition = *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position);   // +0x60
     EEGraphicObject* mGraphicObject;        // +0x6c (Virtual28 unloads it)
-    float mDrawAge;                         // +0x70 0..1
-    float mAge;                             // +0x74 in ms (saved)
-    float mRotation;                        // +0x78 (saved)
-    float mBrightness;                      // +0x7c (random around the effect's mF2C by mF30, clamped to 0..1; saved)
-    float mLastTime;                        // +0x80 (gPhysics->mF94 at the last update; saved since minor 0xda)
-    float mDuration;                        // +0x84 (the effect's mDuration)
-    bool mMoved;                            // +0x88 (Update moved it; Virtual4C applies mDrawPosition)
+    float& mDrawAge = this->mRecord->particle.draw_age;   // +0x70 0..1
+    float& mAge = this->mRecord->particle.age;   // +0x74 in ms (saved)
+    float& mRotation = this->mRecord->particle.yaw;   // +0x78 (saved)
+    float& mBrightness = this->mRecord->particle.brightness;   // +0x7c (saved)
+    float& mLastTime = this->mRecord->particle.last_time;   // +0x80 (the game clock at the last move; saved)
+    float& mDuration = this->mRecord->particle.duration;   // +0x84 (the effect's mDuration)
+    bool& mMoved = this->mRecord->particle.moved;   // +0x88 (Update moved it; Step applies mDrawPosition)
 };
 
 #endif

@@ -29,7 +29,7 @@ public:
     virtual long Step();                    // +0x4c 0xe65e2
 
     EEGraphicObject* mGraphicObject;        // +0x54 (UnloadMedia in the dtor)
-    float mAge;                             // +0x58 0..1 (saved)
+    float& mAge = this->mRecord->aged.age;   // +0x58 0..1 (saved; the record's: ee_gfx effect_state.rs)
     float mDrawAge;                         // +0x5c (Virtual24's copy of mAge)
 };
 

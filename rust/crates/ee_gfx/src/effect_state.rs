@@ -50,6 +50,116 @@ pub struct EeGfxEffectPlume {
     pub velocity: Ge3DPoint,
 }
 
+/// `EEE2DParticle`'s and `EEE3DParticle`'s state.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEffectParticle {
+    /// `mVelocity` (saved)
+    pub velocity: Ge3DPoint,
+    /// the renderer's moved position (2D `mDrawPosition`, 3D `mPosition`)
+    pub draw_position: Ge3DPoint,
+    /// 0..1 (2D `mDrawAge`, 3D `mLifeFraction`)
+    pub draw_age: f32,
+    /// `mAge`: ms (saved)
+    pub age: f32,
+    /// 2D `mRotation`, 3D `mYaw` (saved), 3D `mPitch`, `mRoll` (saved)
+    pub yaw: f32,
+    pub pitch: f32,
+    pub roll: f32,
+    /// `mBrightness` (saved)
+    pub brightness: f32,
+    /// `mLastTime`: the game clock at the last move (saved)
+    pub last_time: f32,
+    /// `mDuration`
+    pub duration: f32,
+    /// `mMoved`: the renderer moved it (the tick applies the position)
+    pub moved: bool,
+}
+
+/// `EEE2DBattlefieldAmbient`'s state (a ground decal: shell holes, blood stains).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectAmbient {
+    /// `mType`: the graphic effect's int param 1 (saved)
+    pub kind: u32,
+    /// `mOnSlope`: 1 when the corners are not level (saved)
+    pub on_slope: u32,
+    /// `mCenter` (saved)
+    pub center: Ge3DPoint,
+    /// `mCorners`: on the terrain (saved)
+    pub corners: [Ge3DPoint; 4],
+    /// `mTransformation`: its position is the centre (saved)
+    pub transformation: GeTransformation,
+    /// `mAge`: 0..1 over the effect's duration (saved)
+    pub age: f32,
+    /// `mRotation`, `mSize` (saved)
+    pub rotation: f32,
+    pub size: f32,
+    /// `mHidden`: 1 off the map or on a slope
+    pub hidden: f32,
+}
+
+impl Default for EeGfxEffectAmbient {
+    fn default() -> EeGfxEffectAmbient {
+        EeGfxEffectAmbient {
+            kind: 0,
+            on_slope: 0,
+            center: Ge3DPoint::default(),
+            corners: [Ge3DPoint::default(); 4],
+            transformation: identity(),
+            age: 0.0,
+            rotation: 0.0,
+            size: 0.0,
+            hidden: 0.0,
+        }
+    }
+}
+
+/// `EEEDamagedEffect`'s state: its child effects' handles (owned: made on first use, freed with the record) and the
+/// finished flag (the fire functor sets it).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectDamaged {
+    pub lists: *mut EeGfxEffectLists,
+    pub finished: bool,
+}
+
+impl Default for EeGfxEffectDamaged {
+    fn default() -> EeGfxEffectDamaged {
+        EeGfxEffectDamaged { lists: std::ptr::null_mut(), finished: false }
+    }
+}
+
+/// `EEE3DParticleEmitter`'s state.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEffectEmitter {
+    /// `mVelocity` (saved)
+    pub velocity: Ge3DPoint,
+    /// `mTagPoint`: the unit's tag point it follows (saved)
+    pub tag_point: u32,
+    /// `mTime`: ms running (saved)
+    pub time: f32,
+    /// `mEmitTime`: ms to the next burst (saved)
+    pub emit_time: f32,
+}
+
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EeGfxEffectAged {
+    /// `mAge`: 0..1 over the duration (saved)
+    pub age: f32,
+    /// the water ripple's own `mTransformation`, at water level (saved)
+    pub transformation: GeTransformation,
+}
+
+impl Default for EeGfxEffectAged {
+    fn default() -> EeGfxEffectAged {
+        EeGfxEffectAged { age: 0.0, transformation: identity() }
+    }
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -79,6 +189,16 @@ pub struct EeGfxEffectRecord {
     pub smoke: EeGfxEffectSmoke,
     /// `EEE2DSmokePlume`'s
     pub plume: EeGfxEffectPlume,
+    /// the pooled particles'
+    pub particle: EeGfxEffectParticle,
+    /// the battlefield decals'
+    pub ambient: EeGfxEffectAmbient,
+    /// the damage controller's
+    pub damaged: EeGfxEffectDamaged,
+    /// the particle emitter's
+    pub emitter: EeGfxEffectEmitter,
+    /// the aged effects'
+    pub aged: EeGfxEffectAged,
 }
 
 /// The identity (`GETransformation()`).
@@ -107,6 +227,11 @@ impl EeGfxEffectRecord {
             position: Ge3DPoint::default(),
             smoke: EeGfxEffectSmoke::default(),
             plume: EeGfxEffectPlume::default(),
+            particle: EeGfxEffectParticle::default(),
+            ambient: EeGfxEffectAmbient::default(),
+            damaged: EeGfxEffectDamaged::default(),
+            emitter: EeGfxEffectEmitter::default(),
+            aged: EeGfxEffectAged::default(),
         }
     }
 
@@ -763,9 +888,904 @@ pub fn plume_step(r: &mut EeGfxEffectRecord, t: &EeGfxPlumeTick, moved: &mut boo
     }
 }
 
+// ---- the marching icons' layouts (EEE2DMarchingIcons; kinds 0x10 circle, 0xf square)
+
+/// The icons on a circle (the original's `EEE2DCircularMarchingIcons`).
+pub const EE_GFX_EFFECT_KIND_CIRCULAR_ICONS: i32 = 0x10;
+/// The icons on a square (the original's `EEE2DSquareMarchingIcons`).
+pub const EE_GFX_EFFECT_KIND_SQUARE_ICONS: i32 = 0xf;
+
+/// `ComputeOffsets`' candidates in order (the C++ keeps those `IsIconShown` takes): `count` icons spaced evenly from
+/// `angle`, on the circle of `radius` (the effect's bounding radius) or the square of half side `half_side` (the
+/// graphic effect's param 1).
+pub fn marching_offsets(kind: i32, count: i32, angle: f32, radius: f32, half_side: f32) -> Vec<Ge3DPoint> {
+    let mut out = vec![Ge3DPoint::default(); count.max(0) as usize];
+    let n = marching_offsets_into(kind, count, angle, radius, half_side, &mut out);
+    out.truncate(n);
+    out
+}
+
+/// `marching_offsets` into `out` (no allocation: the tick makes none the original did not); the count written.
+pub fn marching_offsets_into(
+    kind: i32,
+    count: i32,
+    angle: f32,
+    radius: f32,
+    half_side: f32,
+    out: &mut [Ge3DPoint],
+) -> usize {
+    if count <= 0 {
+        return 0;
+    }
+    let step = 6.2831855 / count as f32;
+    let mut n = 0;
+    for i in 0..count {
+        if n == out.len() {
+            break;
+        }
+        let a = angle + i as f32 * step;
+        out[n] =
+            if kind == EE_GFX_EFFECT_KIND_SQUARE_ICONS { square_icon(a, half_side) } else { circle_icon(a, radius) };
+        n += 1;
+    }
+    n
+}
+
+/// `EEE2DCircularMarchingIcons::AddIcon`'s point (the exe's pi/2, not `UMSin`'s).
+fn circle_icon(angle: f32, radius: f32) -> Ge3DPoint {
+    Ge3DPoint { x: um::um_cos(angle) * radius, y: um::um_cos(1.5707964 - angle) * radius, z: 0.0 }
+}
+
+/// `EEE2DSquareMarchingIcons::AddIcon`'s point: the angle mapped onto the square's perimeter, one side per quarter.
+fn square_icon(angle: f32, radius: f32) -> Ge3DPoint {
+    let mut angle = angle;
+    let sign: i32 = if angle >= 0.0 { 1 } else { -1 };
+    while sign as f32 * angle > 6.2831855 {
+        angle -= sign as f32 * 6.2831855;
+    }
+    let mut fraction = angle.abs() * 0.15915494;
+    let mut p = Ge3DPoint::default();
+    if fraction > 0.875 || fraction <= 0.125 {
+        p.x = radius;
+        fraction += 0.125;
+        if fraction > 1.0 {
+            fraction -= 1.0;
+        }
+        p.y = (fraction * 4.0 - 0.5) * radius * 2.0;
+    } else if fraction <= 0.375 {
+        p.y = radius;
+        p.x = -(((fraction - 0.125) * 4.0 - 0.5) * radius * 2.0);
+    } else if fraction <= 0.625 {
+        p.x = -radius;
+        p.y = -(((fraction - 0.375) * 4.0 - 0.5) * radius * 2.0);
+    } else {
+        p.y = -radius;
+        p.x = ((fraction - 0.625) * 4.0 - 0.5) * radius * 2.0;
+    }
+    p
+}
+
+/// The square's bounding radius: its half diagonal (`sqrt` through `double`).
+pub fn square_radius(half_side: f32) -> f32 {
+    um::sqrt(half_side * half_side + half_side * half_side)
+}
+
+// ---- the pooled particles (EEE2DParticle, kind 0x2e; EEE3DParticle, kind 0x39)
+
+/// The 2D particle (a billboard).
+pub const EE_GFX_EFFECT_KIND_PARTICLE_2D: i32 = 0x2e;
+/// The 3D particle (a model).
+pub const EE_GFX_EFFECT_KIND_PARTICLE_3D: i32 = 0x39;
+
+/// What a particle's set-up reads from its graphic effect: `mIntParam1` (0: random turn), `GetParam2()`,
+/// `GetParam3()` and (the 3D particle's other spelling of the same values) `mParam2`, `mParam3`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxParticleSetUp {
+    pub int_param1: i32,
+    pub param2: f32,
+    pub param3: f32,
+}
+
+/// `EEE2DParticle::SetUp`'s and `EEE3DParticle::SetUp`'s state (the C++ sets the radius and loads the graphic):
+/// age 0, the turn (2D: one draw for the rotation when int param 1 is 0; 3D: yaw, pitch and roll), then the
+/// brightness in param 2 +- param 3 clamped to 0..1 (the 3D particle spells the range differently: kept).
+pub fn particle_set_up(r: &mut EeGfxEffectRecord, s: &EeGfxParticleSetUp) {
+    let p = &mut r.particle;
+    let random_turn = s.int_param1 == 0;
+    p.age = 0.0;
+    if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D {
+        p.yaw = if random_turn { random() * 6.2831855 } else { 0.0 };
+        p.pitch = if random_turn { random() * 6.2831855 } else { 0.0 };
+        p.roll = if random_turn { random() * 6.2831855 } else { 0.0 };
+        let difference = s.param2 - s.param3;
+        let mut b = random() * (s.param3 + s.param2 - difference) + difference;
+        b = if b > 0.0 { b } else { 0.0 };
+        b = if b < 1.0 { b } else { 1.0 };
+        p.brightness = b;
+    } else {
+        p.yaw = if random_turn { random() * 6.2831855 } else { 0.0 };
+        let minimum = s.param2 - s.param3;
+        let maximum = s.param2 + s.param3;
+        let mut b = random() * (maximum - minimum) + minimum;
+        b = if b > 0.0 { b } else { 0.0 };
+        b = if b < 1.0 { b } else { 1.0 };
+        p.brightness = b;
+    }
+}
+
+/// What a particle's move reads (the C++ fills it per call).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxParticleTick {
+    /// `gPhysics->mGameClock`, `mGameOver`
+    pub now: f32,
+    pub game_over: bool,
+    /// `gWorld.mWindDirection`
+    pub wind: Ge3DPoint,
+    /// the effect's position (2D: `mPosition`; 3D: the transformation's)
+    pub position: Ge3DPoint,
+    /// the graphic effect's `mDuration`, `mParam4`, `mParam8`, `GetParam9()`, `GetParam10()`, `mParam11`, `mFlag2`
+    pub duration: u32,
+    pub param4: f32,
+    pub param8: f32,
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    pub flag2: bool,
+}
+
+/// The terrain a bouncing particle asks (`GETerrainMesh`).
+pub trait ParticleGround {
+    fn is_valid_tile(&mut self, x: u32, y: u32) -> bool;
+    fn is_space_tile(&mut self, x: u32, y: u32) -> bool;
+    fn mesh_z(&mut self, x: f32, y: f32) -> f32;
+    fn mesh_normal(&mut self, x: f32, y: f32) -> Ge3DPoint;
+}
+
+/// `GEVector::DotProduct` (`v.z * n.z + v.y * n.y + v.x * n.x`).
+fn dot(n: Ge3DPoint, v: Ge3DPoint) -> f32 {
+    v.z * n.z + v.y * n.y + v.x * n.x
+}
+
+/// `EEE2DParticle::Update` / `EEE3DParticle::Update` (run by the renderer's `Queue`): the move by the game time since
+/// the last one (drag, gravity, wind and lift, a bounce off the ground with flag 2); 7 once past the duration (the
+/// 2D particle also off the map).
+pub fn particle_update<G: ParticleGround>(r: &mut EeGfxEffectRecord, t: &EeGfxParticleTick, ground: &mut G) -> i32 {
+    let three_d = r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D;
+    let p = &mut r.particle;
+    let mut result = 0;
+    let elapsed = t.now - p.last_time;
+    if !(elapsed < -0.0001 || elapsed > 0.0001) || (!three_d && t.game_over) {
+        return 0;
+    }
+    p.last_time = t.now;
+    p.age += elapsed;
+    if !(p.age <= t.duration as f32) {
+        return 7;
+    }
+    let mut fall = -t.param8;
+    let mut pos = t.position;
+    let step = elapsed / 1000.0;
+    let drag = -t.param11;
+    let force = Ge3DPoint { x: p.velocity.x * drag, y: p.velocity.y * drag, z: p.velocity.z * drag };
+    fall += force.z;
+    p.velocity.x = force.x * step + p.velocity.x;
+    p.velocity.y = force.y * step + p.velocity.y;
+    p.velocity.z = fall * step + p.velocity.z;
+    pos.x = t.param9 * t.wind.x * step + p.velocity.x * step + pos.x;
+    pos.y = t.param9 * t.wind.y * step + p.velocity.y * step + pos.y;
+    pos.z = t.param9 * t.wind.z * step + t.param4 * step + p.velocity.z * step + pos.z;
+    if t.flag2 {
+        // the original's floor order: 2D y after x, 3D y first (both pure)
+        let x = um::floor_unsigned(pos.x);
+        let y = um::floor_unsigned(pos.y);
+        if !ground.is_valid_tile(x, y) {
+            if three_d {
+                // the 3D particle freezes over an invalid tile: nothing more this time
+                return 0;
+            }
+            result = 7;
+        } else {
+            let height = ground.mesh_z(pos.x, pos.y);
+            if pos.z <= height && (three_d || !ground.is_space_tile(x, y)) {
+                let n = ground.mesh_normal(pos.x, pos.y);
+                if dot(n, p.velocity) < 0.0 {
+                    pos.z = height;
+                    let bounce = dot(n, p.velocity) * (-1.0 - t.param10) / dot(n, n);
+                    p.velocity.x = n.x * bounce + p.velocity.x;
+                    p.velocity.y = n.y * bounce + p.velocity.y;
+                    p.velocity.z = n.z * bounce + p.velocity.z;
+                }
+            }
+        }
+    }
+    if result == 0 {
+        p.draw_age = p.age / t.duration as f32;
+        p.draw_position = pos;
+        p.moved = true;
+    }
+    result
+}
+
+/// `EEE2DParticle::Step` / `EEE3DParticle::Step`: 7 once past the duration (`now - last + age` against it: the 2D
+/// particle by `<=`, the 3D by `!(>)`); else `move_to` when the renderer's move left a position to apply (the C++
+/// then sets the effect there; the flag is cleared here).
+pub fn particle_step(r: &mut EeGfxEffectRecord, now: f32, move_to: &mut bool) -> i32 {
+    let p = &mut r.particle;
+    *move_to = false;
+    let t = now - p.last_time + p.age;
+    let alive = if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D { !(t > p.duration) } else { t <= p.duration };
+    if !alive {
+        return 7;
+    }
+    if p.moved {
+        p.moved = false;
+        *move_to = true;
+    }
+    0
+}
+
+/// `Clear`'s state (the C++ drops the graphic object).
+pub fn particle_clear(r: &mut EeGfxEffectRecord) {
+    r.particle = EeGfxEffectParticle::default();
+}
+
+/// The particles' Load after the base's (result ignored) and the C++'s media load: the velocity, age, the turn (2D
+/// rotation; 3D yaw, pitch, roll), brightness, and from 0.218 the last move's clock; the first error. On success
+/// the C++ sets the draw position from the effect's and the duration from the graphic effect (`loaded`).
+pub fn load_particle<F: EffectFile>(
+    r: &mut EeGfxEffectRecord,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+    loaded: &mut bool,
+) -> i32 {
+    let three_d = r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D;
+    let p = &mut r.particle;
+    *loaded = false;
+    let mut res = load_point(f, &mut p.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut p.age);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut p.yaw);
+    if res != OK {
+        return res;
+    }
+    if three_d {
+        res = f.read_f32(&mut p.pitch);
+        if res != OK {
+            return res;
+        }
+        res = f.read_f32(&mut p.roll);
+        if res != OK {
+            return res;
+        }
+    }
+    res = f.read_f32(&mut p.brightness);
+    if res != OK {
+        return res;
+    }
+    if major == 0 && minor <= 0xd9 {
+        p.last_time = 0.0;
+    } else {
+        res = f.read_f32(&mut p.last_time);
+    }
+    p.moved = false;
+    *loaded = true;
+    res
+}
+
+/// The particles' Save after the base's (result ignored).
+pub fn save_particle<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let p = &r.particle;
+    let mut res = save_point(f, &p.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(p.age);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(p.yaw);
+    if res != OK {
+        return res;
+    }
+    if r.kind == EE_GFX_EFFECT_KIND_PARTICLE_3D {
+        res = f.write_f32(p.pitch);
+        if res != OK {
+            return res;
+        }
+        res = f.write_f32(p.roll);
+        if res != OK {
+            return res;
+        }
+    }
+    res = f.write_f32(p.brightness);
+    if res == OK {
+        res = f.write_f32(p.last_time);
+    }
+    res
+}
+
+// ---- the battlefield decals (EEE2DBattlefieldAmbient, kind 0x32)
+
+/// What a decal's constructor reads from its graphic effect: `GetStartSize()`, `GetSize()`, `mIntParam1`, `mFlag1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxAmbientNew {
+    pub start_size: f32,
+    pub size: f32,
+    pub int_param1: i32,
+    pub flag1: bool,
+}
+
+/// `EEE2DBattlefieldAmbient(point, ...)`: a random size, the four corners on the terrain; off the map or not level
+/// (a rise over 0.03) it is hidden and expires at once (age 1), else a random turn when flag 1 asks and the
+/// transformation at the point. The original's on-slope branch cannot run (an uneven corner hides the decal first):
+/// kept.
+pub fn ambient_new<G: ParticleGround>(r: &mut EeGfxEffectRecord, at: Ge3DPoint, n: &EeGfxAmbientNew, ground: &mut G) {
+    let a = &mut r.ambient;
+    a.age = 0.0;
+    a.hidden = 0.0;
+    a.kind = n.int_param1 as u32;
+    a.size = n.start_size + random() * (n.size - n.start_size);
+    a.center = at;
+    let h = a.size * 0.5;
+    a.corners[0].x = at.x - h;
+    a.corners[0].y = at.y - h;
+    a.corners[1].x = at.x + h;
+    a.corners[1].y = at.y - h;
+    a.corners[2].x = at.x + h;
+    a.corners[2].y = at.y + h;
+    a.corners[3].x = at.x - h;
+    a.corners[3].y = at.y + h;
+    let mut level = true;
+    let mut first = 0.0f32;
+    for i in 0..4 {
+        let x = um::floor_unsigned(a.corners[i].x);
+        let y = um::floor_unsigned(a.corners[i].y);
+        if !ground.is_valid_tile(x, y) {
+            a.hidden = 1.0;
+            break;
+        }
+        a.corners[i].z = ground.mesh_z(a.corners[i].x, a.corners[i].y);
+        let z = a.corners[i].z;
+        if i == 0 {
+            first = a.corners[0].z;
+        } else if level {
+            let rise = z - first;
+            if rise > 0.03 || rise < -0.03 {
+                level = false;
+                a.hidden = 1.0;
+            }
+        }
+    }
+    if a.hidden != 0.0 {
+        a.age = 1.0;
+    } else {
+        if level {
+            a.on_slope = 0;
+            a.rotation = if n.flag1 { random() * 6.2831855 } else { 0.0 };
+        } else {
+            a.on_slope = 1;
+            a.rotation = 0.0;
+        }
+        a.transformation.m[0][3] = at.x;
+        a.transformation.m[1][3] = at.y;
+        a.transformation.m[2][3] = at.z;
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Step`: the age by the tick over the duration; 7 past 1.
+pub fn ambient_step(r: &mut EeGfxEffectRecord, tick_seconds: f32, duration: u32) -> i32 {
+    r.ambient.age += (tick_seconds * 1000.0) / duration as f32;
+    if r.ambient.age > 1.0 {
+        7
+    } else {
+        0
+    }
+}
+
+/// `EEE2DBattlefieldAmbient::Load`'s own reads after the base's (ignored) and the media load: the transformation,
+/// age, centre, type, rotation, size, slope flag and corners, each after the last succeeded; hidden by the slope
+/// flag whatever was read.
+pub fn load_ambient<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &mut r.ambient;
+    let mut res = load_transformation(f, &mut a.transformation);
+    if res == OK {
+        res = f.read_f32(&mut a.age);
+    }
+    if res == OK {
+        res = load_point(f, &mut a.center);
+    }
+    if res == OK {
+        let mut v = a.kind as i32;
+        res = f.read_i32(&mut v);
+        a.kind = v as u32;
+    }
+    if res == OK {
+        res = f.read_f32(&mut a.rotation);
+    }
+    if res == OK {
+        res = f.read_f32(&mut a.size);
+    }
+    if res == OK {
+        let mut v = a.on_slope as i32;
+        res = f.read_i32(&mut v);
+        a.on_slope = v as u32;
+    }
+    if res == OK {
+        for c in a.corners.iter_mut() {
+            res = load_point(f, c);
+            if res != OK {
+                break;
+            }
+        }
+    }
+    a.hidden = if a.on_slope != 0 { 1.0 } else { 0.0 };
+    res
+}
+
+/// `EEE2DBattlefieldAmbient::Save`'s own writes after the base's (ignored).
+pub fn save_ambient<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &r.ambient;
+    let mut res = save_transformation(f, &a.transformation);
+    if res == OK {
+        res = f.write_f32(a.age);
+    }
+    if res == OK {
+        res = save_point(f, &a.center);
+    }
+    if res == OK {
+        res = f.write_i32(a.kind as i32);
+    }
+    if res == OK {
+        res = f.write_f32(a.rotation);
+    }
+    if res == OK {
+        res = f.write_f32(a.size);
+    }
+    if res == OK {
+        res = f.write_i32(a.on_slope as i32);
+    }
+    if res != OK {
+        return res;
+    }
+    for c in a.corners.iter() {
+        res = save_point(f, c);
+        if res != OK {
+            break;
+        }
+    }
+    res
+}
+
+// ---- the damage controller (EEEDamagedEffect, kind 0x3e)
+
+/// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
+/// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EeGfxEffectLists {
+    pub primary: Vec<u32>,
+    pub secondary: Vec<u32>,
+}
+
+/// What the damage controller's tick reads (the C++ fills it from the unit, the head part of a multi-part one).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxDamagedTick {
+    /// the effect has a unit
+    pub has_unit: bool,
+    /// the damage tag points of linked effect 1's kind (1 without a list)
+    pub tag_count: u32,
+    /// the unit's hit points and its stats' maximum
+    pub hit_points: i32,
+    pub max_hit_points: i32,
+    /// the graphic effect's `GetParam2()` (the health share below which the damage shows) and linked effect 2
+    pub param2: f32,
+    pub has_linked2: bool,
+    /// the unit is on the map, cloaked, and the current player is not its ally: no child effects
+    pub hidden: bool,
+}
+
+/// The world the damage controller's tick calls into, in the original's order.
+pub trait DamagedHost {
+    /// `CreateUnitEffect(unit, linked effect 1 or 2, &handle, 0, index, 0)`: the handle
+    fn create(&mut self, secondary: bool, index: u32) -> u32;
+    /// `DestroyEffect(handle)`
+    fn destroy(&mut self, handle: u32);
+}
+
+/// `EEEDamagedEffect::Step`: one child effect (and its secondary) per damage tag point, more as the health drops;
+/// none on a hidden unit; once finished, destroys them all and returns 7.
+pub fn damaged_step<H: DamagedHost>(
+    finished: &mut bool,
+    lists: &mut EeGfxEffectLists,
+    t: &EeGfxDamagedTick,
+    host: &mut H,
+) -> i32 {
+    if *finished {
+        for _ in 0..lists.primary.len() {
+            host.destroy(lists.primary.pop().unwrap_or(0));
+            if t.has_linked2 {
+                host.destroy(lists.secondary.pop().unwrap_or(0));
+            }
+        }
+        return 7;
+    }
+    if !t.has_unit {
+        return 0;
+    }
+    let ratio = t.hit_points as f32 / t.max_hit_points as f32;
+    let wanted: u32 = if ratio <= t.param2 && t.hit_points > 0 {
+        let amount = (1.0 - ratio * (1.0 / t.param2)) * t.tag_count as f32;
+        let mut w = um::lrintf(amount) as u32;
+        if (w as f32) < amount {
+            w = w.wrapping_add(1);
+        }
+        w
+    } else {
+        0
+    };
+    if wanted == 0 && t.param2 < 1.0 {
+        *finished = true;
+    }
+    let mut delta = (wanted as i32).wrapping_sub(lists.primary.len() as i32);
+    if t.hidden {
+        delta = -(lists.primary.len() as i32);
+    }
+    if delta == 0 {
+        return 0;
+    }
+    if delta > 0 {
+        while delta > 0 {
+            let h = host.create(false, lists.primary.len() as u32);
+            lists.primary.push(h);
+            if t.has_linked2 {
+                let h2 = host.create(true, lists.secondary.len() as u32);
+                lists.secondary.push(h2);
+            }
+            delta -= 1;
+        }
+    } else {
+        while delta < 0 {
+            host.destroy(lists.primary.pop().unwrap_or(0));
+            if t.has_linked2 {
+                host.destroy(lists.secondary.pop().unwrap_or(0));
+            }
+            delta += 1;
+        }
+    }
+    0
+}
+
+/// `EEEDamagedEffect::Load`'s own reads after the base's (ignored): whether secondaries were saved, the handles,
+/// and from 0.249 the finished flag; the first error.
+pub fn load_damaged<F: EffectFile>(
+    finished: &mut bool,
+    lists: &mut EeGfxEffectLists,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+) -> i32 {
+    let mut has_second = false;
+    let mut res = f.read_bool(&mut has_second);
+    if res != OK {
+        return res;
+    }
+    let mut count = 0u32;
+    res = f.read_u32(&mut count);
+    if res != OK {
+        return res;
+    }
+    let mut handle = 0u32;
+    let mut i = 0;
+    while i < count && res == OK {
+        i += 1;
+        res = f.read_u32(&mut handle);
+        if res != OK {
+            continue;
+        }
+        lists.primary.push(handle);
+        if !has_second {
+            continue;
+        }
+        res = f.read_u32(&mut handle);
+        if res == OK {
+            lists.secondary.push(handle);
+        }
+    }
+    if res == OK && (major > 0 || minor >= 0xf9) {
+        res = f.read_bool(finished);
+    }
+    res
+}
+
+/// `EEEDamagedEffect::Save`'s own writes after the base's (ignored): whether linked effect 2 is set, the handles
+/// (each primary with its secondary), the finished flag; the first error.
+pub fn save_damaged<F: EffectFile>(finished: bool, lists: &EeGfxEffectLists, f: &mut F, has_linked2: bool) -> i32 {
+    let mut res = f.write_bool(has_linked2);
+    if res != OK {
+        return res;
+    }
+    res = f.write_u32(lists.primary.len() as u32);
+    if res != OK {
+        return res;
+    }
+    for i in 0..lists.primary.len() {
+        res = f.write_u32(lists.primary[i]);
+        if res != OK {
+            break;
+        }
+        if !has_linked2 {
+            continue;
+        }
+        res = f.write_u32(lists.secondary.get(i).copied().unwrap_or(0));
+        if res != OK {
+            break;
+        }
+    }
+    if res == OK {
+        res = f.write_bool(finished);
+    }
+    res
+}
+
+// ---- the particle emitter (EEE3DParticleEmitter, kind 0x3a)
+
+/// What the emitter's move reads: the wind and the graphic effect's `GetParam4()`, `GetParam8()`, `GetParam9()`,
+/// `GetParam10()`, `mParam11`, `mFlag2`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEmitterMove {
+    pub wind: Ge3DPoint,
+    pub param4: f32,
+    pub param8: f32,
+    pub param9: f32,
+    pub param10: f32,
+    pub param11: f32,
+    pub flag2: bool,
+}
+
+/// `EEE3DParticleEmitter::Step`'s start: the tick in ms (`GetTickSeconds() * 1000`) added to the running time;
+/// returns it (the move takes it in seconds, `/ 1000`).
+pub fn emitter_begin(r: &mut EeGfxEffectRecord, tick_seconds: f32) -> f32 {
+    let delta = tick_seconds * 1000.0;
+    r.emitter.time += delta;
+    delta
+}
+
+/// `EEE3DParticleEmitter::Move`: drag, gravity, wind and rise on the velocity, the next position from the
+/// transformation's; with flag 2 a bounce off the terrain, 7 off the map.
+pub fn emitter_move<G: ParticleGround>(
+    r: &mut EeGfxEffectRecord,
+    seconds: f32,
+    m: &EeGfxEmitterMove,
+    ground: &mut G,
+    out: &mut Ge3DPoint,
+) -> i32 {
+    let t = r.transformation;
+    let v = &mut r.emitter.velocity;
+    let mut gravity = -m.param8;
+    let drag = -m.param11;
+    let force = Ge3DPoint { x: v.x * drag, y: v.y * drag, z: v.z * drag };
+    gravity += force.z;
+    v.x = force.x * seconds + v.x;
+    v.y = force.y * seconds + v.y;
+    v.z = gravity * seconds + v.z;
+    out.x = m.param9 * m.wind.x * seconds + v.x * seconds + t.m[0][3];
+    out.y = m.param9 * m.wind.y * seconds + v.y * seconds + t.m[1][3];
+    out.z = m.param9 * m.wind.z * seconds + m.param4 * seconds + v.z * seconds + t.m[2][3];
+    let mut result = 0;
+    if m.flag2 {
+        let y = um::floor_unsigned(out.y);
+        let x = um::floor_unsigned(out.x);
+        if ground.is_valid_tile(x, y) {
+            let height = ground.mesh_z(out.x, out.y);
+            if out.z <= height {
+                let n = ground.mesh_normal(out.x, out.y);
+                if n.z * v.z + n.y * v.y + n.x * v.x < 0.0 {
+                    out.z = height;
+                    let bounce =
+                        (n.z * v.z + n.y * v.y + n.x * v.x) * (-1.0 - m.param10) / (n.z * n.z + n.y * n.y + n.x * n.x);
+                    v.x = n.x * bounce + v.x;
+                    v.y = n.y * bounce + v.y;
+                    v.z = n.z * bounce + v.z;
+                }
+            }
+        } else {
+            result = 7;
+        }
+    }
+    result
+}
+
+/// What the emitter's burst reads: the graphic effect's `mIntParam3` (particles a burst), `mEmitPositionSpread`,
+/// `mIsEmitFlat`, `GetParam1()`..`GetParam6()` (pitch, yaw and speed: centre and spread), `mIntParam1`/`mIntParam2`
+/// (the countdown's centre and spread).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEmitterBurst {
+    pub count: u32,
+    pub position_spread: f32,
+    pub flat: bool,
+    pub param1: f32,
+    pub param2: f32,
+    pub param3: f32,
+    pub param4: f32,
+    pub param5: f32,
+    pub param6: f32,
+    pub int_param1: i32,
+    pub int_param2: i32,
+}
+
+/// The emitter's line effects (`CreateLineEffect(line, mLinkedEffect1, NULL)`; its result).
+pub trait EmitterHost {
+    fn line(&mut self, start: Ge3DPoint, direction: Ge3DPoint) -> i32;
+}
+
+/// `EEE3DParticleEmitter::Step`'s burst (when the effect goes on): the countdown by the tick; when it runs out,
+/// `count` line particles from the location, each spread, turned by a random pitch and yaw from the transformation
+/// and thrown at a random speed, then a new random countdown. Returns the last line's result (`result` without a
+/// burst).
+pub fn emitter_burst<H: EmitterHost>(
+    r: &mut EeGfxEffectRecord,
+    delta: f32,
+    location: Ge3DPoint,
+    transformation: &GeTransformation,
+    b: &EeGfxEmitterBurst,
+    result: i32,
+    host: &mut H,
+) -> i32 {
+    let mut result = result;
+    r.emitter.emit_time -= delta;
+    if r.emitter.emit_time <= 0.0 {
+        let mut i = b.count;
+        while i > 0 {
+            let mut p = location;
+            p.x = (0.5 - random()) * b.position_spread + p.x;
+            p.y = (0.5 - random()) * b.position_spread + p.y;
+            if !b.flat {
+                p.z = (0.5 - random()) * b.position_spread + p.z;
+            }
+            let pitch = spread(b.param2, b.param1);
+            let yaw = spread(b.param4, b.param3);
+            let speed = spread(b.param6, b.param5);
+            let mut turn = *transformation;
+            turn.revolve(yaw, pitch, 0.0);
+            let d = turn.apply_vector(ee_ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            let direction = Ge3DPoint { x: speed * d.x, y: speed * d.y, z: speed * d.z };
+            result = host.line(p, direction);
+            i -= 1;
+        }
+        // `GetRandomSpread(long, long)`: the spread and centre as floats
+        r.emitter.emit_time = (0.5 - random()) * b.int_param2 as f32 + b.int_param1 as f32;
+    }
+    result
+}
+
+/// `EEE3DParticleEmitter::Load`'s own reads after `EEEffect3D::Load` (ignored): the velocity, running time,
+/// countdown and tag point; the first error.
+pub fn load_emitter<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let e = &mut r.emitter;
+    let mut res = load_point(f, &mut e.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut e.time);
+    if res != OK {
+        return res;
+    }
+    res = f.read_f32(&mut e.emit_time);
+    if res == OK {
+        res = f.read_u32(&mut e.tag_point);
+    }
+    res
+}
+
+/// `EEE3DParticleEmitter::Save`'s own writes.
+pub fn save_emitter<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let e = &r.emitter;
+    let mut res = save_point(f, &e.velocity);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(e.time);
+    if res != OK {
+        return res;
+    }
+    res = f.write_f32(e.emit_time);
+    if res == OK {
+        res = f.write_u32(e.tag_point);
+    }
+    res
+}
+
+// ---- the effects that only age (EEE3DWaterSplash 0x1b, EEE2DShockwave 0x12, EEE3DScreenFlash 0x46, EEE2DWaterRipple 0x22)
+
+/// The water splash.
+pub const EE_GFX_EFFECT_KIND_WATER_SPLASH: i32 = 0x1b;
+/// The shock wave.
+pub const EE_GFX_EFFECT_KIND_SHOCKWAVE: i32 = 0x12;
+/// The screen flash.
+pub const EE_GFX_EFFECT_KIND_SCREEN_FLASH: i32 = 0x46;
+/// The water ripple.
+pub const EE_GFX_EFFECT_KIND_WATER_RIPPLE: i32 = 0x22;
+
+/// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
+pub const EE_GFX_EFFECT_ASK_BLOCKED: i32 = 1;
+
+/// The aged effects' `Step`: the age by the tick in ms over the duration; 7 once past 1 (the screen flash at 1).
+/// The ripple, still young, sits at water level and returns `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`
+/// (the C++ ends it, 7, unless the tile is blocked).
+pub fn aged_step(r: &mut EeGfxEffectRecord, tick_seconds: f32, duration: u32, tile: &mut [i32; 2]) -> i32 {
+    let a = &mut r.aged;
+    a.age += (tick_seconds * 1000.0) / duration as f32;
+    match r.kind {
+        EE_GFX_EFFECT_KIND_SCREEN_FLASH => {
+            if a.age >= 1.0 {
+                7
+            } else {
+                0
+            }
+        }
+        EE_GFX_EFFECT_KIND_WATER_RIPPLE => {
+            if a.age <= 1.0 {
+                a.transformation.m[2][3] = 0.0;
+                tile[1] = um::floor(a.transformation.m[1][3]);
+                tile[0] = um::floor(a.transformation.m[0][3]);
+                EE_GFX_EFFECT_ASK_BLOCKED
+            } else {
+                7
+            }
+        }
+        _ => {
+            if a.age > 1.0 {
+                7
+            } else {
+                0
+            }
+        }
+    }
+}
+
+/// The aged effects' own Load after the base's (ignored) and the media load: the ripple's transformation, then the
+/// age; the first error.
+pub fn load_aged<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
+    let ripple = r.kind == EE_GFX_EFFECT_KIND_WATER_RIPPLE;
+    let a = &mut r.aged;
+    if ripple {
+        let res = load_transformation(f, &mut a.transformation);
+        if res != OK {
+            return res;
+        }
+    }
+    f.read_f32(&mut a.age)
+}
+
+/// The aged effects' own Save.
+pub fn save_aged<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
+    let a = &r.aged;
+    if r.kind == EE_GFX_EFFECT_KIND_WATER_RIPPLE {
+        let res = save_transformation(f, &a.transformation);
+        if res != OK {
+            return res;
+        }
+    }
+    f.write_f32(a.age)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The effects' generator is one for the process: the tests that draw from it take turns.
+    static RANDOM_TESTS: Mutex<()> = Mutex::new(());
 
     /// A file of typed values (the debug file's view: each write and its type).
     #[derive(Default)]
@@ -1029,6 +2049,347 @@ mod tests {
     }
 
     #[test]
+    fn the_marching_icons_lie_on_their_circle_and_square() {
+        assert!(marching_offsets(EE_GFX_EFFECT_KIND_SQUARE_ICONS, 0, 0.0, 1.0, 1.0).is_empty());
+        let c = marching_offsets(EE_GFX_EFFECT_KIND_CIRCULAR_ICONS, 4, 0.0, 2.0, 9.0);
+        assert_eq!(c.len(), 4);
+        assert_eq!(c[0], Ge3DPoint { x: um::um_cos(0.0) * 2.0, y: um::um_cos(1.5707964) * 2.0, z: 0.0 });
+        for p in &c {
+            assert!(((p.x * p.x + p.y * p.y).sqrt() - 2.0).abs() < 0.01);
+        }
+        // the square: the right side first (from -1/8 to 1/8 turn), then the top, left and bottom
+        let s = marching_offsets(EE_GFX_EFFECT_KIND_SQUARE_ICONS, 4, 0.0, 9.0, 1.0);
+        assert_eq!(s[0], Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 });
+        assert_eq!((s[1].y, s[2].x, s[3].y), (1.0, -1.0, -1.0));
+        for p in &s {
+            assert!(p.x.abs() <= 1.0 && p.y.abs() <= 1.0);
+        }
+        // angles past a turn wrap; negative ones by their size
+        // (the C++'s subtractions, one turn at a time)
+        assert_eq!(square_icon(6.2831855 * 2.0 + 0.1, 1.0), square_icon(6.2831855 * 2.0 + 0.1 - 6.2831855, 1.0));
+        assert!((square_icon(6.2831855 + 0.1, 1.0).y - square_icon(0.1, 1.0).y).abs() < 1e-5);
+        assert_eq!(square_icon(-0.3, 1.0), square_icon(0.3, 1.0));
+        assert_eq!(square_radius(1.0), (2.0f64).sqrt() as f32);
+    }
+
+    struct Flat(f32, bool, bool);
+
+    impl ParticleGround for Flat {
+        fn is_valid_tile(&mut self, _x: u32, _y: u32) -> bool {
+            self.1
+        }
+        fn is_space_tile(&mut self, _x: u32, _y: u32) -> bool {
+            self.2
+        }
+        fn mesh_z(&mut self, _x: f32, _y: f32) -> f32 {
+            self.0
+        }
+        fn mesh_normal(&mut self, _x: f32, _y: f32) -> Ge3DPoint {
+            Ge3DPoint { x: 0.0, y: 0.0, z: 1.0 }
+        }
+    }
+
+    #[test]
+    fn particles_move_bounce_age_and_save() {
+        let tick = EeGfxParticleTick {
+            now: 100.0,
+            game_over: false,
+            wind: Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 },
+            position: Ge3DPoint { x: 5.0, y: 5.0, z: 0.05 },
+            duration: 1000,
+            param4: 0.0,
+            param8: 10.0,
+            param9: 0.5,
+            param10: 0.5,
+            param11: 0.0,
+            flag2: true,
+        };
+        // falls onto the ground at 0 and bounces up at half speed
+        let mut r = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        r.particle.velocity = Ge3DPoint { x: 0.0, y: 0.0, z: -1.0 };
+        assert_eq!(particle_update(&mut r, &tick, &mut Flat(0.0, true, false)), 0);
+        let vz = -10.0f32 * 0.1 + -1.0;
+        let bounce = vz * (-1.0 - 0.5) / 1.0;
+        assert_eq!(r.particle.velocity.z, 1.0 * bounce + vz);
+        assert_eq!(r.particle.draw_position.z, 0.0);
+        assert_eq!(r.particle.draw_position.x, 0.5 * 1.0 * 0.1 + 0.0 * 0.1 + 5.0);
+        assert_eq!(
+            (r.particle.age, r.particle.last_time, r.particle.draw_age, r.particle.moved),
+            (100.0, 100.0, 0.1, true)
+        );
+        // no time passed: nothing
+        assert_eq!(particle_update(&mut r, &tick, &mut Flat(0.0, true, false)), 0);
+        assert_eq!(r.particle.age, 100.0);
+        // off the map: the 2D particle ends, the 3D one freezes
+        let t2 = EeGfxParticleTick { now: 200.0, ..tick };
+        let mut a = r;
+        assert_eq!(particle_update(&mut a, &t2, &mut Flat(0.0, false, false)), 7);
+        let mut b = r;
+        b.kind = EE_GFX_EFFECT_KIND_PARTICLE_3D;
+        b.particle.moved = false;
+        assert_eq!(particle_update(&mut b, &t2, &mut Flat(0.0, false, false)), 0);
+        assert!(!b.particle.moved);
+        // the game over stops the 2D particle only
+        let mut g2 = r;
+        assert_eq!(
+            particle_update(&mut g2, &EeGfxParticleTick { game_over: true, ..t2 }, &mut Flat(0.0, true, false)),
+            0
+        );
+        assert_eq!(g2.particle.age, 100.0);
+        // past the duration
+        let mut c = r;
+        assert_eq!(particle_update(&mut c, &EeGfxParticleTick { now: 2000.0, ..tick }, &mut Flat(0.0, true, false)), 7);
+        // the tick applies a moved position once and ends past the duration
+        let mut moved = false;
+        r.particle.duration = 1000.0;
+        assert_eq!(particle_step(&mut r, 100.0, &mut moved), 0);
+        assert!(moved && !r.particle.moved);
+        assert_eq!(particle_step(&mut r, 100.0, &mut moved), 0);
+        assert!(!moved);
+        assert_eq!(particle_step(&mut r, 1001.0, &mut moved), 7);
+        // save and load: the 3D particle's three angles, the clock from 0.218
+        let mut s = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        s.particle = EeGfxEffectParticle {
+            velocity: Ge3DPoint { x: 1.0, y: 2.0, z: 3.0 },
+            age: 4.0,
+            yaw: 5.0,
+            pitch: 6.0,
+            roll: 7.0,
+            brightness: 0.5,
+            last_time: 9.0,
+            ..Default::default()
+        };
+        let mut f = Mem::default();
+        assert_eq!(save_particle(&s, &mut f), 0);
+        assert_eq!(f.items.len(), 3 + 6);
+        let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        let mut loaded = false;
+        assert_eq!(load_particle(&mut back, &mut g, 0, 0x10c, &mut loaded), 0);
+        assert!(loaded);
+        assert_eq!(back.particle, s.particle);
+        let mut old = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_particle(&mut old, &mut g, 0, 0xd9, &mut loaded), 0);
+        assert_eq!((old.particle.last_time, g.at), (0.0, 8));
+        let mut two = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        two.particle = s.particle;
+        let mut f2 = Mem::default();
+        save_particle(&two, &mut f2);
+        assert_eq!(f2.items.len(), 3 + 4);
+        particle_clear(&mut two);
+        assert_eq!(two.particle, EeGfxEffectParticle::default());
+    }
+
+    #[test]
+    fn decals_lie_level_or_hide_and_save() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        set_random_seed(777);
+        let mut check = URandom { seed: 777 };
+        let n = EeGfxAmbientNew { start_size: 1.0, size: 3.0, int_param1: 2, flag1: true };
+        let at = Ge3DPoint { x: 10.0, y: 10.0, z: 0.5 };
+        let mut r = EeGfxEffectRecord::new(0x32);
+        ambient_new(&mut r, at, &n, &mut Flat(0.5, true, false));
+        let size = 1.0 + check.generate() * (3.0 - 1.0);
+        let rot = check.generate() * 6.2831855;
+        let a = r.ambient;
+        assert_eq!((a.size, a.rotation, a.hidden, a.age, a.kind, a.on_slope), (size, rot, 0.0, 0.0, 2, 0));
+        assert_eq!(a.corners[2], Ge3DPoint { x: 10.0 + size * 0.5, y: 10.0 + size * 0.5, z: 0.5 });
+        assert_eq!(a.transformation.m[0][3], 10.0);
+        // off the map: hidden, expired, no turn drawn
+        let mut h = EeGfxEffectRecord::new(0x32);
+        ambient_new(&mut h, at, &n, &mut Flat(0.5, false, false));
+        check.generate();
+        assert_eq!((h.ambient.hidden, h.ambient.age, h.ambient.transformation), (1.0, 1.0, identity()));
+        assert_eq!(random_seed(), check.seed);
+        // ages by the tick
+        assert_eq!(ambient_step(&mut r, 0.5, 1000), 0);
+        assert_eq!(ambient_step(&mut r, 0.6, 1000), 7);
+        // save and load
+        let mut f = Mem::default();
+        assert_eq!(save_ambient(&r, &mut f), 0);
+        assert_eq!(f.items.len(), 16 + 1 + 3 + 1 + 1 + 1 + 1 + 12);
+        let mut back = EeGfxEffectRecord::new(0x32);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_ambient(&mut back, &mut g), 0);
+        let mut want = r.ambient;
+        want.hidden = 0.0;
+        assert_eq!(back.ambient, want);
+    }
+
+    #[derive(Default)]
+    struct Children {
+        next: u32,
+        log: Vec<(char, u32)>,
+    }
+
+    impl DamagedHost for Children {
+        fn create(&mut self, secondary: bool, index: u32) -> u32 {
+            self.next += 1;
+            self.log.push((if secondary { 's' } else { 'p' }, index));
+            self.next
+        }
+        fn destroy(&mut self, handle: u32) {
+            self.log.push(('d', handle));
+        }
+    }
+
+    #[test]
+    fn the_damage_controller_keeps_a_child_per_lost_share_and_saves_them() {
+        let mut lists = EeGfxEffectLists::default();
+        let mut finished = false;
+        let mut h = Children::default();
+        let t = EeGfxDamagedTick {
+            has_unit: true,
+            tag_count: 4,
+            hit_points: 25,
+            max_hit_points: 100,
+            param2: 0.5,
+            has_linked2: true,
+            hidden: false,
+        };
+        // a quarter of the health with damage below half: ceil((1 - 0.25 / 0.5) * 4) = 2 children, each with its secondary
+        assert_eq!(damaged_step(&mut finished, &mut lists, &t, &mut h), 0);
+        assert_eq!(lists, EeGfxEffectLists { primary: vec![1, 3], secondary: vec![2, 4] });
+        assert_eq!(h.log, vec![('p', 0), ('s', 0), ('p', 1), ('s', 1)]);
+        // hidden: all go, last first
+        h.log.clear();
+        assert_eq!(damaged_step(&mut finished, &mut lists, &EeGfxDamagedTick { hidden: true, ..t }, &mut h), 0);
+        assert_eq!(h.log, vec![('d', 3), ('d', 4), ('d', 1), ('d', 2)]);
+        // healed past the share: finished (param 2 below 1), then everything goes and it ends
+        lists = EeGfxEffectLists { primary: vec![7], secondary: vec![8] };
+        h.log.clear();
+        assert_eq!(damaged_step(&mut finished, &mut lists, &EeGfxDamagedTick { hit_points: 80, ..t }, &mut h), 0);
+        assert!(finished);
+        assert_eq!(damaged_step(&mut finished, &mut lists, &t, &mut h), 7);
+        assert_eq!(h.log, vec![('d', 7), ('d', 8)]);
+        // without a unit nothing happens
+        let mut f2 = false;
+        assert_eq!(damaged_step(&mut f2, &mut lists, &EeGfxDamagedTick { has_unit: false, ..t }, &mut h), 0);
+        // save and load
+        let full = EeGfxEffectLists { primary: vec![5, 6], secondary: vec![9, 10] };
+        let mut f = Mem::default();
+        assert_eq!(save_damaged(true, &full, &mut f, true), 0);
+        let types: String = f.items.iter().map(|i| i.0).collect();
+        assert_eq!(types, "buuuuub");
+        let mut back = EeGfxEffectLists::default();
+        let mut fin = false;
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_damaged(&mut fin, &mut back, &mut g, 0, 0x10c), 0);
+        assert_eq!((back, fin), (full.clone(), true));
+        // before 0.249 the flag was not saved
+        let mut old = EeGfxEffectLists::default();
+        let mut fin2 = false;
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_damaged(&mut fin2, &mut old, &mut g, 0, 0xf8), 0);
+        assert!(!fin2);
+    }
+
+    struct Lines(Vec<(Ge3DPoint, Ge3DPoint)>);
+
+    impl EmitterHost for Lines {
+        fn line(&mut self, s: Ge3DPoint, d: Ge3DPoint) -> i32 {
+            self.0.push((s, d));
+            self.0.len() as i32
+        }
+    }
+
+    #[test]
+    fn the_emitter_moves_bursts_and_saves() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        let mut r = EeGfxEffectRecord::new(0x3a);
+        r.transformation.m[0][3] = 3.0;
+        r.emitter.velocity = Ge3DPoint { x: 1.0, y: 0.0, z: 0.0 };
+        assert_eq!(emitter_begin(&mut r, 0.125), 125.0);
+        assert_eq!(r.emitter.time, 125.0);
+        let m = EeGfxEmitterMove {
+            wind: Ge3DPoint::default(),
+            param4: 0.0,
+            param8: 0.0,
+            param9: 0.0,
+            param10: 0.0,
+            param11: 1.0,
+            flag2: true,
+        };
+        let mut out = Ge3DPoint::default();
+        assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, true, false), &mut out), 0);
+        let vx = -0.125f32 + 1.0;
+        assert_eq!((r.emitter.velocity.x, out.x), (vx, vx * 0.125 + 3.0));
+        assert_eq!(emitter_move(&mut r, 0.125, &m, &mut Flat(-5.0, false, false), &mut out), 7);
+        // the burst: three draws of place (two when flat), pitch, yaw and speed per particle, then the countdown
+        set_random_seed(4242);
+        let mut check = URandom { seed: 4242 };
+        let b = EeGfxEmitterBurst {
+            count: 2,
+            position_spread: 1.0,
+            flat: true,
+            param1: 0.5,
+            param2: 0.1,
+            param3: 0.0,
+            param4: 1.0,
+            param5: 2.0,
+            param6: 0.5,
+            int_param1: 300,
+            int_param2: 100,
+        };
+        let mut lines = Lines(Vec::new());
+        let t = identity();
+        assert_eq!(emitter_burst(&mut r, 10.0, Ge3DPoint { x: 1.0, y: 1.0, z: 1.0 }, &t, &b, 0, &mut lines), 2);
+        for (s, d) in &lines.0 {
+            let x = (0.5 - check.generate()) * 1.0 + 1.0;
+            let y = (0.5 - check.generate()) * 1.0 + 1.0;
+            let pitch = (0.5 - check.generate()) * 0.1 + 0.5;
+            let yaw = (0.5 - check.generate()) * 1.0 + 0.0;
+            let speed = (0.5 - check.generate()) * 0.5 + 2.0;
+            assert_eq!(*s, Ge3DPoint { x, y, z: 1.0 });
+            let mut turn = identity();
+            turn.revolve(yaw, pitch, 0.0);
+            let v = turn.apply_vector(ee_ge::types::GeVector { x: 0.0, y: 0.0, z: 1.0 });
+            assert_eq!(*d, Ge3DPoint { x: speed * v.x, y: speed * v.y, z: speed * v.z });
+        }
+        assert_eq!(r.emitter.emit_time, (0.5 - check.generate()) * 100.0 + 300.0);
+        // no burst while the countdown runs
+        assert_eq!(emitter_burst(&mut r, 10.0, Ge3DPoint::default(), &t, &b, 5, &mut lines), 5);
+        assert_eq!(random_seed(), check.seed);
+        // save and load
+        let mut f = Mem::default();
+        assert_eq!(save_emitter(&r, &mut f), 0);
+        let mut back = EeGfxEffectRecord::new(0x3a);
+        let mut g = Mem { items: f.items.clone(), ..Default::default() };
+        assert_eq!(load_emitter(&mut back, &mut g), 0);
+        assert_eq!(back.emitter, r.emitter);
+    }
+
+    #[test]
+    fn the_aged_effects_end_by_their_age() {
+        let mut tile = [0, 0];
+        let mut s = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_SPLASH);
+        assert_eq!(aged_step(&mut s, 0.5, 1000, &mut tile), 0);
+        assert_eq!(aged_step(&mut s, 0.5, 1000, &mut tile), 0);
+        assert_eq!(aged_step(&mut s, 0.001, 1000, &mut tile), 7);
+        let mut f = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_SCREEN_FLASH);
+        aged_step(&mut f, 0.5, 1000, &mut tile);
+        assert_eq!(aged_step(&mut f, 0.5, 1000, &mut tile), 7);
+        let mut w = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_RIPPLE);
+        w.aged.transformation.m[0][3] = 3.5;
+        w.aged.transformation.m[1][3] = -0.5;
+        w.aged.transformation.m[2][3] = 2.0;
+        assert_eq!(aged_step(&mut w, 0.5, 1000, &mut tile), EE_GFX_EFFECT_ASK_BLOCKED);
+        assert_eq!((tile, w.aged.transformation.m[2][3]), ([3, -1], 0.0));
+        assert_eq!(aged_step(&mut w, 0.6, 1000, &mut tile), 7);
+        let mut m = Mem::default();
+        assert_eq!(save_aged(&w, &mut m), 0);
+        assert_eq!(m.items.len(), 17);
+        let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_WATER_RIPPLE);
+        let mut g = Mem { items: m.items.clone(), ..Default::default() };
+        assert_eq!(load_aged(&mut back, &mut g), 0);
+        assert_eq!(back.aged, w.aged);
+        let mut m2 = Mem::default();
+        save_aged(&s, &mut m2);
+        assert_eq!(m2.items.len(), 1);
+    }
+
+    #[test]
     fn regions_floor_then_divide() {
         assert_eq!(EeGfxEffectRecord::region_of(17.9, 0.0, 8), (2, 0));
         assert_eq!(EeGfxEffectRecord::region_of(-0.5, 15.99, 8), (0, 1));
@@ -1068,6 +2429,7 @@ mod tests {
     // the generator is global: one test walks every smoke kind in turn
     #[test]
     fn the_smoke_generators_step_draw_and_place_in_the_original_s_order() {
+        let _turn = RANDOM_TESTS.lock().unwrap_or_else(|e| e.into_inner());
         set_random_seed(12345);
         let mut check = URandom { seed: 12345 };
         // a point generator: puffs once its interval passes, ends after its duration
@@ -1191,6 +2553,28 @@ mod tests {
         check.generate();
         check.generate();
         assert_eq!(p.plume.brightness, 0.0);
+        assert_eq!(random_seed(), check.seed);
+
+        // the particles' set-ups: the 2D rotation then brightness; the 3D yaw, pitch, roll then brightness
+        let mut q = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_2D);
+        particle_set_up(&mut q, &EeGfxParticleSetUp { int_param1: 0, param2: 0.5, param3: 0.25 });
+        let rot = check.generate() * 6.2831855;
+        let b = check.generate() * (0.75 - 0.25) + 0.25;
+        assert_eq!((q.particle.yaw, q.particle.brightness), (rot, b));
+        particle_set_up(&mut q, &EeGfxParticleSetUp { int_param1: 1, param2: 0.5, param3: 0.25 });
+        check.generate();
+        assert_eq!(q.particle.yaw, 0.0);
+        let mut d = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_PARTICLE_3D);
+        particle_set_up(&mut d, &EeGfxParticleSetUp { int_param1: 0, param2: 0.5, param3: 0.25 });
+        let y = check.generate() * 6.2831855;
+        let pi = check.generate() * 6.2831855;
+        let ro = check.generate() * 6.2831855;
+        let diff = 0.5f32 - 0.25;
+        let b3 = check.generate() * (0.25 + 0.5 - diff) + diff;
+        assert_eq!(
+            (d.particle.yaw, d.particle.pitch, d.particle.roll, d.particle.brightness),
+            (y, pi, ro, b3.min(1.0))
+        );
         assert_eq!(random_seed(), check.seed);
     }
 }
