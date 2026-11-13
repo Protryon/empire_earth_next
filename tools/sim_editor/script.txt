@@ -74,3 +74,106 @@ digest drop
 pickup @38,42                      # the house, then the move cancelled
 cancelmove
 digest cancel
+# the editor form's own events: the hide-UI box (EESEEHideUI posting EESEEChangeViewport), the quick save button
+check 0x12 0                       # UI shown: the framed view
+view
+check 0x12 1                       # UI hidden: the full view
+view
+click quicksave
+editorsave
+# the trigger tab (round 18): entering it sets the hide-UI box's two views; the condition and effect screens' events
+# with state (EESEECheckDisplay, EESEESliderChange, EESEEUseObjectArea) through their controls, then their digest
+tab 4
+view
+check 0x12 0
+view
+trigger 4                          # an area and an object: the effects' area/object lists
+newentry
+trigger 3
+newentry
+trigger 1                          # a game condition: its check boxes show their fields, the hour slider its label
+newentry
+ctype 6
+ui c
+ctl c check 0 1
+ctl c check 1 1
+ctl c check 2 1
+ctl c slide 0 13
+ui c
+ctl c check 1 0
+ctl c slide 0 23
+ui c
+trigger 2                          # game effects: the daylight hour's and the cinematic's sliders
+newentry
+etype 5 0
+ctl e slide 0 7
+ui e
+etype 5 4
+ctl e slide 0 17
+ui e
+etype 6 1                          # AI effects: a military group's area/object radios
+ctl e radio 1
+ui e
+ctl e radio 0
+ui e
+etype 6 0                          # a military target's
+ctl e radio 2
+ui e
+ctl e radio 3
+ui e
+ctl e radio 2                      # back to areas (the area control is this type's third radio)
+ui e
+# the effects' own events (round 18): the military group's object lists, the AI attribute combo, the dialogue's
+# camera scroll slider, the flare's and the camera script's area/object radios
+etype 6 1                          # create AI military group
+ctl e list 0 0                     # an object to the group
+ui e
+ctl e list 1 0                     # and back
+ui e
+etype 6 5                          # set AI attribute
+ctl e combo 1 2
+ui e
+ctl e combo 1 60
+ui e
+etype 4 2                          # send dialogue
+ctl e slide 0 5
+ui e
+etype 2 11                         # minimap flare
+ctl e radio 1
+ui e
+ctl e radio 0
+ui e
+etype 2 1                          # script camera: move to and face
+ctl e radio 1
+ctl e radio 3
+ui e
+ctl e radio 0
+ctl e radio 2
+ui e
+# round 19: the map tab's elevation file combo (EEUIFSEEMapType), the unit tab's sort (EEUIFSEESortUnitList), the
+# player tab's start epoch (EESEEChangeStartEpoch) and the game page's unit limit (EESEEGameUnitLimit)
+tab 0
+combo 0x75 1                       # an elevation file: its four boxes shown
+controls 0x7d 0x7c 0x79 0x78
+combo 0x75 0                       # none: hidden
+controls 0x7d 0x7c 0x79 0x78
+tab 3
+unitlist
+radio 0x3ef                        # by epoch
+unitlist
+radio 0x3ee                        # alphabetical
+unitlist
+radio 0x3ea                        # sea units
+unitlist
+radio 1000                         # world units
+unitlist
+tab 5
+epoch 1 0 14
+epoch 1 5 14
+epoch 1 5 3
+epoch 1 9 2
+epoch 0 3 14
+slider 0x160 300                   # the unit limit: per player
+controls 0x16a 0x162
+slider 0x160 1000
+controls 0x16a 0x162

@@ -334,7 +334,7 @@ void WONButton::DrawButtonText(Graphics &g, WrappedText *theText, int theColor)
 void WONButton::GetButtonState(Graphics &g, int *theColor, WrappedText **theText, Image **theImage)
 {
 	int aState = 0;
-	int aCheckedIndex = ee_won_gui_button_state(this->IsDisabled(),(uint32_t)mButtonFlags,this->IsDefaultButton(),
+	int aCheckedIndex = ee_won_gui_button_state(this->IsDisabled(),(uint32_t)this->GetButtonFlags(),this->IsDefaultButton(),
 		this->mHasCheck,&aState);
 
 	// the state's own cell, then the normal state's in the same column, then (checked) the normal unchecked one

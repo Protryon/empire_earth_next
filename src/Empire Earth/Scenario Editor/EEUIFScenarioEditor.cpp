@@ -74,7 +74,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -124,8 +123,8 @@
 #include "rust/ee_screens.h"   // EE_SCREENS_MG_*, EE_SCREENS_CAM_*: the main game form's events (main_game.rs, camera.rs)
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EESEEHideUI.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EESEARust.h"
 extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
@@ -409,7 +408,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
                            GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), this, theIndex, 0, false);
     this->mHideUICheckBox->SetStringTableID(IDS_HIDE_UI);
     this->mHideUICheckBox->SetChecked(true);
-    EESEEHideUI* theHideUI = new EESEEHideUI;
+    EESEERust* theHideUI = new EESEERust(kSEEHideUI);
     this->mHideUICheckBox->SetTriggerEvent(kControlTriggerChecked, theHideUI);
     this->mHideUICheckBox->SetTriggerEvent(kControlTriggerUnchecked, theHideUI);
     theHideUI->Dereference();
@@ -835,8 +834,6 @@ void EEUIFScenarioEditor::CreatePanels(unsigned long& ioIndex)
 #include "lle/UResourceFile.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EEUIFSERBBrush.h"
-#include "ee/EESEEQuickLoad.h"
-#include "ee/EESEEQuickSave.h"
 #include <algorithm>
 #include "lle/UITextLabel.h"
 #include "ee/EECivilization.h"
@@ -1073,10 +1070,10 @@ void EEUIFScenarioEditor::CreateToolbarButtons(unsigned long& ioIndex)
             break;
         case kToolbarButtonQuickLoad:
             this->mQuickLoadButton = theControl;
-            theEvent = new EESEEQuickLoad(theQuickSaveLoad);
+            theEvent = new EESEERust(kSEEQuickLoad, static_cast<EEAction*>(theQuickSaveLoad));
             break;
         case kToolbarButtonQuickSave:
-            theEvent = new EESEEQuickSave(theQuickSaveLoad);
+            theEvent = new EESEERust(kSEEQuickSave, static_cast<EEAction*>(theQuickSaveLoad));
             this->mQuickSaveButton = theControl;
             break;
         case kToolbarButtonTest:
@@ -1473,35 +1470,10 @@ long EEUIFScenarioEditor::UpdateMouse()
 // Destroys and frees the hide-UI check box event (scalar deleting destructor, emitted with its vtable)
 
 // FUNCTION: EXE 0x5a01c1
-// Creates the quick load button event, referencing the shared quick save/load action
-EESEEQuickLoad::EESEEQuickLoad(UReferenceCounter* inOwner) : mOwner(inOwner)
-{
-    inOwner->Reference();
-}
-
-// SYNTHETIC: EXE 0x5a01e1
-// (the scalar deleting destructor, emitted with the vtable; slot EESEEQuickLoad+0x0, stores EESEEQuickLoad vtable)
-// the dtor was inline (expanded into ??_G); out of line here: it is the class's key function, and the Itanium ABI
-// (Linux, macOS) emits the vtable with it
-EESEEQuickLoad::~EESEEQuickLoad()
-{
-    this->mOwner->Dereference();
-}
+// (the quick load button event's ctor and dtor: ee_screens editor_events.rs, an EESEERust)
 
 // FUNCTION: EXE 0x5a0215
-// Creates the quick save button event, referencing the shared quick save/load action
-EESEEQuickSave::EESEEQuickSave(EEAQuickSaveLoad* inOwner) : mOwner(inOwner)
-{
-    inOwner->Reference();
-}
-
-// SYNTHETIC: EXE 0x5a0235
-// (the scalar deleting destructor, emitted with the vtable; slot EESEEQuickSave+0x0, stores EESEEQuickSave vtable)
-// likewise inline (expanded into ??_G)
-EESEEQuickSave::~EESEEQuickSave()
-{
-    this->mOwner->Dereference();
-}
+// (the quick save button event's ctor and dtor: ee_screens editor_events.rs, an EESEERust)
 
 // FUNCTION: EXE 0x5a0269
 // Destroys and frees the load scenario button event

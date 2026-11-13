@@ -16,7 +16,7 @@ MSCheckbox::CheckboxPainterFunc MSCheckbox::CheckboxPainter=MSCheckbox::DefaultC
 // FUNCTION: WON 0x6ff430
 // Paints the default check box square, pressed and checked as the button's flags say
 void MSCheckbox::DefaultCheckboxPainterFunc(Graphics& g,MSCheckbox* button) {
-    MSGraphicsUtil::DrawCheck(g,0,0,MSCheckbox::mCheckboxWidth,MSCheckbox::mCheckboxHeight,(button->mButtonFlags&0x20)!=0,(button->mButtonFlags&4)!=0);
+    MSGraphicsUtil::DrawCheck(g,0,0,MSCheckbox::mCheckboxWidth,MSCheckbox::mCheckboxHeight,button->IsPressed(),button->IsChecked());
 }
 // FUNCTION: WON 0x6ff470
 // Paints the check box: face, the box aligned vertically by the painter function, then the text

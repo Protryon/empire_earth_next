@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -86,12 +85,10 @@
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEffectType.h"
 #include "ee/EESETSETAI.h"
-#include "ee/EESETSETCAMGModifyObject.h"
 #include "ee/EESETSEComboBox.h"
 #include "ee/EESETSConditionControls.h"
 #include "ee/EESETSETPlayer.h"
-#include "ee/EESETSETSAAAttributeChange.h"
-#include "ee/EESEEUseAreaObject.h"
+#include "ee/EESEARust.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -783,33 +780,11 @@ void FillAreaObjectComboBox(UITextLabel* inLabel, EESETSEScenarioComboBox* inCom
 
 // FUNCTION: EXE 0x58b2dc
 // Refills the location combo (0x99e) with areas or objects when the area (0x988) or object radio is checked
-long EESEEUseAreaObject::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(0x96d));
-    EESETSEScenarioComboBox* theComboBox = static_cast<EESETSEScenarioComboBox*>(inForm->GetControlById(0x99e));
-    FillAreaObjectComboBox(theLabel, theComboBox, static_cast<UIControl*>(inEntity)->GetId() == 0x988);
-    return kErrorOK;
-}
-
-// EESEEMoveAreaObject::ProcessEvent: refills the camera move-to combo the same way; ICF-folded into
-// EESEEUseAreaObject's 0x58b2dc (no address of its own)
-long EESEEMoveAreaObject::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(0x96d));
-    EESETSEScenarioComboBox* theComboBox = static_cast<EESETSEScenarioComboBox*>(inForm->GetControlById(0x99e));
-    FillAreaObjectComboBox(theLabel, theComboBox, static_cast<UIControl*>(inEntity)->GetId() == 0x988);
-    return kErrorOK;
-}
+// (EESEEUseAreaObject, and EESEEMoveAreaObject ICF-folded into it; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x58b31f
 // Refills the camera face-to combo (0x99f) with areas or objects when its area (0x98a) or object radio is checked
-long EESEEFaceAreaObject::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(0x96e));
-    EESETSEScenarioComboBox* theComboBox = static_cast<EESETSEScenarioComboBox*>(inForm->GetControlById(0x99f));
-    FillAreaObjectComboBox(theLabel, theComboBox, static_cast<UIControl*>(inEntity)->GetId() == 0x98a);
-    return kErrorOK;
-}
+// (EESEEFaceAreaObject; editor_events.rs)
 
 // FUNCTION: EXE 0x58b362
 // Stores the camera's move-to and face-to area or object, follow/track flags, scroll speed and zoom; drops radio events
@@ -943,11 +918,11 @@ void EESETSETPlayerView::Load(EESMEffect* inEffect, EESETSEffectControls* inCont
     if (inControls->mSliders[1]->GetCurrentRangeValue() != inEffect->mIntValue2)
         inControls->mSliders[1]->SetCurrentRangeValue(inEffect->mIntValue2);
     inControls->mSliders[1]->FireTriggerEvent(kControlTriggerRangeChanged);
-    UIEvent* theEvent = new EESEEMoveAreaObject;
+    UIEvent* theEvent = new EESEERust(kSEEUseAreaObject);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
-    theEvent = new EESEEFaceAreaObject;
+    theEvent = new EESEERust(kSEEFaceAreaObject);
     inControls->mRadioButtons[2]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     inControls->mRadioButtons[3]->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
@@ -1133,14 +1108,8 @@ void EESETSETPlayerView::Show(EESETSEffectControls* inControls)
 }
 
 // FUNCTION: EXE 0x58c4e3
-// Shows the value ranges of the AI attribute just picked in the attribute combo
-long EESETSETSAAAttributeChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    unsigned long theSelection;
-    static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theSelection);
-    this->mType->ShowAttributeRanges(theSelection, this->mControls);
-    return kErrorOK;
-}
+// Shows the value ranges of the AI attribute just picked in the attribute combo (EESETSETSAAAttributeChange;
+// ee_screens editor_events.rs)
 
 // NEAR: the original calls _Ptrit::operator+ for the first mAttributes[theSelection] (inline budget) and caches this/the selection in frame slots
 // FUNCTION: EXE 0x58c4fd

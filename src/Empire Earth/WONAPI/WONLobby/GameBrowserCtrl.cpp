@@ -68,7 +68,7 @@ void GameBrowserCtrl::DoFind(bool inNext)
     Button* check=this->mCaseSensitiveCheck.get();
     InputBox* input=this->mFindInput.get();
     BrowserComponent* browser=this->mBrowser.get();
-    browser->FindStr(input->GetText(),inNext,check->mChecked!=0);
+    browser->FindStr(input->GetText(),inNext,check->IsChecked());
 }
 // FUNCTION: WON 0x007bc2f0
 // Clears the browser so the home page loads again on the next paint

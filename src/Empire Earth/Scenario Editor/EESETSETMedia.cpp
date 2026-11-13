@@ -68,7 +68,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -80,7 +79,6 @@
 #include "ee/EESETSUICBPlayer.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSETMedia.h"
-#include "ee/EESETSETMSDCameraScrollChange.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 #include "ee/EEScreenEvent.h"
@@ -375,12 +373,8 @@ void EESETSETMediaPlayGraphic::Show(EESETSEffectControls* inControls)
 }
 
 // FUNCTION: EXE 0x586bb0
-// Refreshes the send-dialogue camera scroll speed label when its slider moves
-long EESETSETMSDCameraScrollChange::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    this->mType->ShowCameraScrollSpeed(this->mControls);
-    return kErrorOK;
-}
+// Refreshes the send-dialogue camera scroll speed label when its slider moves (EESETSETMSDCameraScrollChange;
+// ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x586bc0
 // Stores the dialogue's object, player, duration, message, sound file and camera scroll speed (slider - 1)

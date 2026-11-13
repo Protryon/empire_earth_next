@@ -188,7 +188,7 @@ void EELobbyPlayerOptionsCtrl::PlayerOptionChanged(int inSlot, int inWhat)
     unsigned char theValue = 0;
     switch (inWhat) {
     case 4:
-        theValue = this->mObserveCheck[inSlot]->mChecked;
+        theValue = this->mObserveCheck[inSlot]->IsChecked();
         break;
     case 3:
         theValue = this->mCitizenCombo[inSlot]->GetSelItem() + 1;

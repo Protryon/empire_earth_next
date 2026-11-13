@@ -69,15 +69,6 @@ public:
     static GEBitmap* sPressedBitmaps[2];    // 0x531fd0
 };
 
-// RTTI EESEEChangeStartEpoch > UIEvent; vtable from the 0x178a29 control builder; ??_G 0x179a00 (vptr first: a
-// user-declared empty dtor). ProcessEvent 0x178958: the start epoch combo box (inEntity) changed: refill the end
-// epoch combo box (+0x0c) with the epochs from the start on (strings 0x75c1.., 15 epochs), keeping its epoch.
-class EESEEChangeStartEpoch : public UIEvent {
-public:
-    virtual ~EESEEChangeStartEpoch() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x178958
-
-    UIComboBox* mEndEpochComboBox;          // +0x0c
-};
+// (EESEEChangeStartEpoch, the start epoch combo box's event, is an EESEERust: ee/EESEARust.h, editor_events.rs)
 
 #endif

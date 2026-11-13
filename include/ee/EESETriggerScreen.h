@@ -26,18 +26,8 @@ public:
     virtual ~EESETSShowIDsCheckBox() {}
 };
 
-// The trigger event of the editor's control 0x12 (provisional class name: RTTI not looked up): two rectangles after
-// UIEvent's members; EESETriggerScreen::Enter sets them (inline COMDAT 0x17ccba).
-class EESEEPanelEvent : public UIEvent {
-public:
-    void SetRectangles(const GERectangle& inFull, const GERectangle& inView)
-    {
-        this->mFull = inFull;
-        this->mView = inView;
-    }
-    GERectangle mFull;                      // +0x0c
-    GERectangle mView;                      // +0x1c
-};
+// (The trigger event of the editor's control 0x12, EESEEHideUI, is an EESEERust (ee/EESEARust.h): Enter sets its
+// two views through ee_screens_see_hide_ui_views, the original's inline SetRectangles 0x17ccba.)
 
 extern bool gB4C3220;                       // 0x4c3220 (= true; set while an entry is written back; provisional name)
 

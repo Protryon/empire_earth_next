@@ -41,6 +41,11 @@
 //                                         mouse, a transport to board)
 //   drop [UNIT]                           EESEAMoveUnit::PutDown over the ghosts (UNIT as placeghost's)
 //   cancelmove                            EESEAMoveUnit::Cancel (the picked-up unit deleted)
+//   check ID 0|1                          the editor's check box ID set (UICheckBox::SetChecked: its trigger events
+//                                         fire, e.g. the hide-UI box's EESEEHideUI)
+//   view                                  the game view's rectangle, the editor's UI hidden flag
+//   click quicksave                       the toolbar's quick save button released (its EESEEQuickSave), then the
+//                                         written file's chunks (data\Scenarios\EEQuickSave.scn's)
 //   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
 //                                         the game's save chunks (the header, which holds the date, left out;
 //                                         four chunks differ by run: ChunkByRun)
@@ -179,7 +184,18 @@
 #include "lle/FSPersistent.h"
 #include "ee/EEUIFileComboBox.h"
 #include "ee/EEUnitClassIDs.h"
+#include "lle/UICheckBox.h"
 #include "ee/EESimEditor.h"
+#include "ee/EEScenarioEditorIDs.h"
+#include "ee/EESETSBaseObject.h"
+#include "ee/EESETriggerScreen.h"
+#include "ee/EESETSCondition.h"
+#include "ee/EESETSConditionControls.h"
+#include "ee/EESETSEffect.h"
+#include "ee/EESETSEffectControls.h"
+#include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EESEPlayerScreen.h"
+#include "ee/EESEPlayerControls.h"
 
 // TEST ONLY: the time TMGetTime answers on this thread (-1: the clock; Time Manager.cpp)
 extern thread_local long long gTMPinnedTime;
@@ -196,9 +212,22 @@ std::condition_variable sStepDone;
 bool sStepFinished = false;
 long sStepClock = 1000;                     // the time TMGetTime answers on the UI thread for the next step
 
+// The step's end, after the events it posted to the UI thread's queue: lets the clock run and wakes the driver
+class EESimEditorDone : public UIEvent {
+public:
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        gTMPinnedTime = -1;
+        std::lock_guard<std::mutex> theGuard(sStepLock);
+        sStepFinished = true;
+        sStepDone.notify_all();
+        return 0;
+    }
+};
+
 // The last action of a step: posted after the step's own actions, it posts itself again inLeft times (an action run
-// by a step's action, e.g. the blank map's terrain paint, is queued after it), then lets the clock run and wakes the
-// driver.
+// by a step's action, e.g. the blank map's terrain paint, is queued after it), then posts the step's end
+// (EESimEditorDone) to the UI thread's message queue.
 class EESimEditorMarker : public EEAction {
 public:
     EESimEditorMarker(long inLeft) : EEAction(false), mLeft(inLeft) {}
@@ -208,10 +237,11 @@ public:
             gUserInterface->PostAction(this);
             return;
         }
-        gTMPinnedTime = -1;
-        std::lock_guard<std::mutex> theGuard(sStepLock);
-        sStepFinished = true;
-        sStepDone.notify_all();
+        // the end goes through the UI thread's message queue too: the events a step posted there (e.g. the hide-UI
+        // box's viewport change) are processed first (one queue, in order)
+        UIEvent* theDone = new EESimEditorDone;
+        gUserInterface->PostEvent(theDone, NULL);
+        theDone->Dereference();
     }
     virtual void Virtual8() {}
     long mLeft;
@@ -555,6 +585,91 @@ void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
     }
 }
 
+// an editor control by its id (decimal or 0x)
+UIControl* EditorControl(const std::string& inId)
+{
+    return gUIManager->mScenarioEditorForm->GetControlById(strtoul(inId.c_str(), NULL, 0));
+}
+
+// the trigger tab's condition and effect screens' shared controls
+EESETSConditionControls* ConditionControls()
+{
+    return static_cast<EESETSCondition*>(
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->mControls;
+}
+
+EESETSEffectControls* EffectControls()
+{
+    return static_cast<EESETSEffect*>(
+               gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->mControls;
+}
+
+// one control: its display mode, then a label's first line, a slider's value, a combo box's lines and selection
+std::string ControlText(const char* inName, size_t inIndex, UIControl* inControl)
+{
+    char theText[64];
+    snprintf(theText, sizeof(theText), "  %s%zu mode=%lu", inName, inIndex, inControl->GetDisplayMode());
+    return theText;
+}
+
+void ControlsDigest(bool inCondition, std::vector<std::string>& outLines)
+{
+    std::vector<UITextLabel*> theLabels;
+    std::vector<UISlider*> theSliders;
+    std::vector<UIControl*> theChecks, theRadios;
+    std::vector<UIComboBox*> theCombos;
+    std::vector<EESETSEScenarioComboBox*> theScenario;
+    std::vector<UILBString*> theLists;
+    if (inCondition) {
+        EESETSConditionControls* t = ConditionControls();
+        theLabels.assign(t->mLabels, t->mLabels + 5);
+        theSliders.push_back(t->mSlider);
+        theChecks.assign(t->mCheckBoxes, t->mCheckBoxes + 3);
+        theRadios.assign(t->mRadioButtons, t->mRadioButtons + 2);
+        for (int i = 0; i < 3; i++)
+            theCombos.push_back(reinterpret_cast<UIComboBox*>(t->mComboBoxes[i]));
+        theScenario.assign(t->mScenarioComboBoxes, t->mScenarioComboBoxes + 4);
+    } else {
+        EESETSEffectControls* t = EffectControls();
+        theLabels.assign(t->mLabels, t->mLabels + 13);
+        theSliders.assign(t->mSliders, t->mSliders + 4);
+        theChecks.assign(t->mCheckBoxes, t->mCheckBoxes + 2);
+        theRadios.assign(t->mRadioButtons, t->mRadioButtons + 6);
+        theCombos.assign(t->mComboBoxes, t->mComboBoxes + 4);
+        theScenario.assign(t->mScenarioComboBoxes, t->mScenarioComboBoxes + 4);
+        theLists.assign(t->mListBoxes, t->mListBoxes + 2);
+    }
+    outLines.push_back(inCondition ? "  condition controls" : "  effect controls");
+    for (size_t i = 0; i < theLabels.size(); i++)
+        outLines.push_back(ControlText("label", i, theLabels[i]) + " '" +
+                           (theLabels[i]->GetLineCount() > 0 ? std::string((const char*)theLabels[i]->GetText(0)) : "") +
+                           "'");
+    for (size_t i = 0; i < theSliders.size(); i++)
+        outLines.push_back(ControlText("slider", i, theSliders[i]) + " value=" +
+                           std::to_string(theSliders[i]->GetCurrentRangeValue()));
+    for (size_t i = 0; i < theChecks.size(); i++)
+        outLines.push_back(ControlText("check", i, theChecks[i]) + " checked=" +
+                           (static_cast<UICheckBox*>(theChecks[i])->GetIsChecked() ? "1" : "0"));
+    for (size_t i = 0; i < theRadios.size(); i++)
+        outLines.push_back(ControlText("radio", i, theRadios[i]));
+    for (size_t i = 0; i < theCombos.size(); i++)
+        outLines.push_back(ControlText("combo", i, theCombos[i]) + " lines=" +
+                           std::to_string(theCombos[i]->GetListBox()->GetLineCount()));
+    for (size_t i = 0; i < theScenario.size(); i++) {
+        unsigned long theSelection = 0;
+        bool theSelected = theScenario[i]->GetCurrentSelection(theSelection) == kErrorOK;
+        outLines.push_back(ControlText("scenario", i, theScenario[i]) + " kind=" + std::to_string(theScenario[i]->mMode) +
+                           " lines=" + std::to_string(theScenario[i]->GetListBox()->GetLineCount()) + " selection=" +
+                           (theSelected ? std::to_string(theSelection) : std::string("none")));
+    }
+    for (size_t i = 0; i < theLists.size(); i++) {
+        std::string theText = ControlText("list", i, theLists[i]) + " lines=" + std::to_string(theLists[i]->GetLineCount());
+        for (unsigned long k = 0; k < theLists[i]->GetLineCount(); k++)
+            theText += std::string(k == 0 ? " '" : ", '") + (const char*)theLists[i]->GetData(k) + "'";
+        outLines.push_back(theText);
+    }
+}
+
 }   // namespace
 
 int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outError)
@@ -771,6 +886,150 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gWorld.mGhostUnitsLock->Enter();
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();
+            };
+        else if (c == "check")   // check ID 0|1
+            theCode = [=] {
+                UIControl* theBox = gUIManager->mScenarioEditorForm->GetControlById(strtoul(w[1].c_str(), NULL, 0));
+                static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);
+            };
+        else if (c == "view")
+            theCode = [=, &theOutput] {
+                const GERectangle& r = gViewport.GetViewRectangle();
+                char theText[160];
+                snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
+                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->mIsUIHidden ? 1 : 0);
+                theOutput.push_back(theText);
+            };
+        else if (c == "click")   // click quicksave
+            theCode = [=] {
+                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                UIControl* theButton = theEditor->mQuickSaveButton;
+                theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
+            };
+        else if (c == "editorsave")   // the editor's own quick save file (EEQuickSave + the scenario extension)
+            theCode = [=, &theOutput] {
+                theOutput.push_back("editorsave");
+                FileDigest(GetSaveTextName(UString("EEQuickSave") + gScenarioExtension, true), theOutput);
+            };
+        else if (c == "trigger")   // trigger SCREEN: the trigger tab's sub-screen (0 trigger, 1 condition, 2 effect, 3 object, 4 area)
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetTriggerScreen()->ShowTab(kSETriggerTabTrigger + L(1)); };
+        else if (c == "newentry")   // the open sub-screen's New button
+            theCode = [=] { gUIManager->mScenarioEditorForm->GetTriggerScreen()->NewEntry(); };
+        else if (c == "ctype")   // ctype TYPE: the condition's type combo box (types from 2), as a person picks it
+            theCode = [=] {
+                EESETSCondition* theScreen = static_cast<EESETSCondition*>(
+                    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition));
+                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 2);
+                theScreen->ChangeConditionType();
+            };
+        else if (c == "etype")   // etype TYPE ACTION: the effect's type combo box (types from 1), then its action combo
+            theCode = [=] {
+                EESETSEffect* theScreen = static_cast<EESETSEffect*>(
+                    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect));
+                theScreen->mTypeComboBox->SetCurrentSelection(L(1) - 1);
+                theScreen->ChangeEffectType();
+                theScreen->mControls->mComboBoxes[0]->SetCurrentSelection(L(2));
+                theScreen->ChangeEffectAction();
+            };
+        else if (c == "ctl" && w.size() > 2 && (w[2] == "list" || w[2] == "combo"))
+            // ctl e list|combo INDEX LINE: an effect list box's line clicked (its selection, then its button-up
+            // event) or a combo box's line picked (its selection, then its selection-changed event)
+            theCode = [=] {
+                EESETSEffectControls* t = EffectControls();
+                UIControl* theControl;
+                unsigned long theTrigger;
+                if (w[2] == "list") {
+                    t->mListBoxes[L(3)]->ChangeSelectionIndex((unsigned long)L(4), false, false);
+                    theControl = t->mListBoxes[L(3)];
+                    theTrigger = kControlTriggerButtonUp;
+                } else {
+                    t->mComboBoxes[L(3)]->SetCurrentSelection((unsigned long)L(4));
+                    theControl = t->mComboBoxes[L(3)];
+                    theTrigger = kControlTriggerSelectionChanged;
+                }
+                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+            };
+        else if (c == "ctl")   // ctl c|e check|slide|radio INDEX [VALUE]: a condition (c) or effect (e) control
+            theCode = [=] {
+                UICheckBox* theBox = NULL;
+                UISlider* theSlider = NULL;
+                UIRadioButton* theRadio = NULL;
+                size_t i = (size_t)L(3);
+                if (w[1] == "c") {
+                    EESETSConditionControls* t = ConditionControls();
+                    if (w[2] == "check") theBox = t->mCheckBoxes[i];
+                    else if (w[2] == "slide") theSlider = t->mSlider;
+                    else theRadio = t->mRadioButtons[i];
+                } else {
+                    EESETSEffectControls* t = EffectControls();
+                    if (w[2] == "check") theBox = t->mCheckBoxes[i];
+                    else if (w[2] == "slide") theSlider = t->mSliders[i];
+                    else theRadio = t->mRadioButtons[i];
+                }
+                if (theBox != NULL)
+                    theBox->SetChecked(L(4) != 0);   // fires the box's checked or unchecked event
+                else if (theSlider != NULL) {
+                    // a person's drag: the value set, then the range-changed event the slider fires
+                    theSlider->SetCurrentRangeValue(L(4));
+                    if (UIEvent* theEvent = theSlider->GetTriggerEvent(kControlTriggerRangeChanged))
+                        theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theSlider);
+                } else if (theRadio != NULL)
+                    theRadio->Check();   // fires the checked event unless it was checked
+            };
+        else if (c == "ui")   // ui c|e: the condition's or effect's controls (display modes, labels, combos, sliders)
+            theCode = [=, &theOutput] { ControlsDigest(w[1] == "c", theOutput); };
+        else if (c == "combo" || c == "slider" || c == "radio")   // combo|slider ID VALUE | radio ID: an editor control
+            // by id: a combo box's line picked and its selection-changed event processed, a slider moved and its
+            // range-changed event processed, a radio checked (it fires unless it was checked)
+            theCode = [=] {
+                UIControl* theControl = EditorControl(w[1]);
+                if (c == "radio") {
+                    static_cast<UIRadioButton*>(theControl)->Check();
+                    return;
+                }
+                unsigned long theTrigger;
+                if (c == "combo") {
+                    static_cast<UIComboBox*>(theControl)->SetCurrentSelection((unsigned long)L(2));
+                    theTrigger = kControlTriggerSelectionChanged;
+                } else {
+                    static_cast<UISlider*>(theControl)->SetCurrentRangeValue(L(2));
+                    theTrigger = kControlTriggerRangeChanged;
+                }
+                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+            };
+        else if (c == "controls")   // controls ID...: editor controls' display modes (and a label's first line)
+            theCode = [=, &theOutput] {
+                for (size_t i = 1; i < w.size(); i++) {
+                    UIControl* theControl = EditorControl(w[i]);
+                    std::string theText = "  " + w[i] + " mode=" + std::to_string(theControl->GetDisplayMode());
+                    if (theControl->GetType() == kControlTypeTextLabel) {
+                        UITextLabel* theLabel = static_cast<UITextLabel*>(theControl);
+                        theText += std::string(" '") + (theLabel->GetLineCount() > 0 ? (const char*)theLabel->GetText(0) : "") + "'";
+                    }
+                    theOutput.push_back(theText);
+                }
+            };
+        else if (c == "unitlist")   // the unit tab's unit list (0x3f1): its line count and first lines
+            theCode = [=, &theOutput] {
+                UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
+                std::string theText = "  units " + std::to_string(theList->GetLineCount()) + ":";
+                for (unsigned long k = 0; k < theList->GetLineCount() && k < 6; k++)
+                    theText += std::string(" '") + (const char*)theList->GetData(k) + "'";
+                theOutput.push_back(theText);
+            };
+        else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
+            theCode = [=, &theOutput] {
+                EESEPlayerRow* theRow = gUIManager->mScenarioEditorForm->GetPlayerScreen()->mPlayers[L(1)];
+                theRow->mEndEpoch->SetCurrentSelection((unsigned long)L(3));
+                theRow->mStartEpoch->SetCurrentSelection((unsigned long)L(2));
+                if (UIEvent* theEvent = theRow->mStartEpoch->GetTriggerEvent(kControlTriggerSelectionChanged))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theRow->mStartEpoch);
+                unsigned long theEnd = 0;
+                bool theSelected = theRow->mEndEpoch->GetCurrentSelection(theEnd) == kErrorOK;
+                theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
+                                    " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
             };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {

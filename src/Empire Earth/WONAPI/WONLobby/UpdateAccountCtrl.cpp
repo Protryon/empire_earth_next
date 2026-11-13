@@ -100,7 +100,7 @@ void UpdateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
             return;
         }
         if(inEvent->mComponent==this->mUpdateButton.get()) {
-            this->DeliverEvent(new UpdateAccountEvent(this->mEmailInput->GetText(),this->mPasswordInput->GetText(),this->mNewsletterCheck->mChecked!=0),false);
+            this->DeliverEvent(new UpdateAccountEvent(this->mEmailInput->GetText(),this->mPasswordInput->GetText(),this->mNewsletterCheck->IsChecked()),false);
         }
         return;
     case 100014: this->HandleEnteredScreen(); return;

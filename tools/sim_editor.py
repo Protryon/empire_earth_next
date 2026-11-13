@@ -2,7 +2,8 @@
 
 EE-SIM opens the scenario editor from the main menu as a person does, runs tools/sim_editor/script.txt (one editor
 action per line: a blank and a random map, terrain, elevation and bulldozer paint, unit placement, selection,
-rotation, deletion, moves, walls, gates, the trigger area's rectangle, a quick save) and prints a digest of the world
+rotation, deletion, moves, walls, gates, the trigger area's rectangle, a quick save, the trigger tab's condition and
+effect controls) and prints a digest of the world
 after each group: the map's tiles and mesh, every unit, the selection, the paint area and the game's save chunks, and
 the quick saved file's chunks. The gate passes when the output equals tools/sim_editor/expected.txt line for line.
 The physics never runs and the UI thread's clock is pinned while a step runs, so the output is the same on every run.

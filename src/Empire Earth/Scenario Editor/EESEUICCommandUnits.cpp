@@ -61,7 +61,6 @@
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
-#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x597261
 // Creates the scenario editor's unit command control with its rotate-units action
 EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
