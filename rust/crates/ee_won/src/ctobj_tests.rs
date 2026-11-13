@@ -189,30 +189,33 @@ fn the_list_survives_removals_around_an_iteration() {
 use crate::dialogobj::{EeWonDialog, EeWonDlgCall as D};
 
 const GOLDEN: &str = include_str!("golden_ctobj.txt");
-const CTS: usize = 4;
+/// the most containers a golden's world has (the tab control's: six)
+const CTS: usize = 7;
+/// the most components a golden's world has (the tab control's: nineteen)
+const COMPS: usize = 24;
 
 #[derive(Default, Clone, Copy)]
-struct W {
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
-    bits: u32,
-    parent: isize,
-    timer: i32,
-    invalid: i32,
-    focus_id: i32,
-    control_id: i32,
+pub(crate) struct W {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+    pub(crate) w: i32,
+    pub(crate) h: i32,
+    pub(crate) bits: u32,
+    pub(crate) parent: isize,
+    pub(crate) timer: i32,
+    pub(crate) invalid: i32,
+    pub(crate) focus_id: i32,
+    pub(crate) control_id: i32,
 }
 
 #[derive(Default)]
 struct Replay {
     lines: Vec<&'static str>,
     at: usize,
-    w: [W; 13],
+    w: [W; COMPS],
     /// 0..6 the world's environment; 8 the window's modal component, 9 the dialog default button, 10..12 the
-    /// event's type, button flags and control id (the dialog golden)
-    env: [i64; 13],
+    /// event's type, button flags and control id (the dialog golden), 13 the event's component (the tab golden)
+    env: [i64; 20],
     scheme: isize,
     cts: [usize; CTS + 1],
     dlg: usize,
@@ -221,13 +224,41 @@ struct Replay {
 
 thread_local! {
     static REPLAY: RefCell<Option<Replay>> = const { RefCell::new(None) };
+    static EXT: std::cell::Cell<Option<Ext>> = const { std::cell::Cell::new(None) };
+}
+
+/// A golden's own parts of the replay (the tab control's): its objects' overrides of the containers' calls
+/// (`side`), its pure reads (`read`), the op lines it prints itself (`line`), its top-level lines (`word`: true when
+/// it took the line) and the freeing of what a failed replay left (`cleanup`).
+#[derive(Clone, Copy)]
+pub(crate) struct Ext {
+    pub side: fn(isize, EeWonCtCall, isize, isize, isize) -> Option<isize>,
+    pub read: fn(isize, Op, isize, isize, isize, isize) -> Option<isize>,
+    pub line: fn(isize, Op, isize, isize, isize, isize) -> Option<String>,
+    pub word: fn(&str, &[i64]) -> bool,
+    pub cleanup: fn(),
+}
+
+/// The world's component `i` (a golden's own reads).
+pub(crate) fn world_of(i: isize) -> W {
+    with(|r| r.w[i as usize])
+}
+
+/// The environment's value `k`.
+pub(crate) fn env_of(k: usize) -> i64 {
+    with(|r| r.env[k])
+}
+
+/// The replay's container `id`'s Rust object (0 when there is none).
+pub(crate) fn ct_ptr(id: usize) -> usize {
+    with(|r| r.cts[id])
 }
 
 fn with<R>(f: impl FnOnce(&mut Replay) -> R) -> R {
     REPLAY.with(|r| f(r.borrow_mut().as_mut().expect("a replay")))
 }
 
-fn fail(msg: String) {
+pub(crate) fn fail(msg: String) {
     with(|r| {
         if r.failure.is_none() {
             r.failure = Some(msg);
@@ -235,7 +266,7 @@ fn fail(msg: String) {
     });
 }
 
-fn next_line() -> &'static str {
+pub(crate) fn next_line() -> &'static str {
     with(|r| {
         let l = r.lines.get(r.at).copied().unwrap_or("<end>");
         r.at += 1;
@@ -243,7 +274,7 @@ fn next_line() -> &'static str {
     })
 }
 
-fn nums(l: &str) -> Vec<i64> {
+pub(crate) fn nums(l: &str) -> Vec<i64> {
     l.split_whitespace().skip(1).filter_map(|w| w.trim_start_matches('@').parse().ok()).collect()
 }
 
@@ -265,7 +296,8 @@ fn apply_set(n: &[i64]) {
             4 => w.y = v as i32,
             5 => w.w = v as i32,
             6 => w.h = v as i32,
-            _ => w.control_id = v as i32,
+            7 => w.control_id = v as i32,
+            _ => w.parent = v as isize,
         }
     });
 }
@@ -302,7 +334,10 @@ fn dialog_override(c: EeWonCtCall) -> Option<D> {
 /// A container's call as the C++ test's `SideCall` makes it: container 1's overridden calls to the dialog, a
 /// viewport's overrides (ScrollAreaViewport's ChildInvalidated, its empty ChildStateChanged, its SetCursor on the
 /// scroll area).
-fn side_call(ct: isize, call: EeWonCtCall, a: isize, b: isize, c: isize) -> isize {
+pub(crate) fn side_call(ct: isize, call: EeWonCtCall, a: isize, b: isize, c: isize) -> isize {
+    if let Some(r) = EXT.with(|e| e.get()).and_then(|e| (e.side)(ct, call, a, b, c)) {
+        return r;
+    }
     if ct == 1 {
         if let (Some(d), Some(o)) = (dlg_of(), dialog_override(call)) {
             return d.call(o, a, b, c);
@@ -335,7 +370,7 @@ fn apply_env(n: &[i64]) {
     });
 }
 
-fn call_of(n: i64) -> EeWonCtCall {
+pub(crate) fn call_of(n: i64) -> EeWonCtCall {
     assert!((1..=EeWonCtCall::VpChildInvalidated as i64).contains(&n), "call {n}");
     // SAFETY: a value of the enum's range (repr(u32), consecutive from 1)
     unsafe { std::mem::transmute::<u32, EeWonCtCall>(n as u32) }
@@ -367,9 +402,20 @@ fn replay_want_focus(c: isize) -> bool {
     guifocus::want_focus(w.bits, w.bits & 1 == 0, w.bits & 0x80 != 0, modal)
 }
 
-unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, c: isize, d: isize) -> isize {
+pub(crate) unsafe extern "C" fn replay_host(
+    comp: *mut c_void,
+    op: Op,
+    a: isize,
+    b: isize,
+    c: isize,
+    d: isize,
+) -> isize {
     let me = comp as isize;
     let w = |i: isize| with(|r| r.w[i as usize]);
+    let ext = EXT.with(|e| e.get());
+    if let Some(r) = ext.and_then(|e| (e.read)(me, op, a, b, c, d)) {
+        return r;
+    }
     match op {
         Op::CtBits => return w(a).bits as isize,
         Op::CtParentOf => return w(a).parent,
@@ -433,7 +479,9 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
         Op::EventCompControlId => return with(|r| r.env[12]) as isize,
         _ => {}
     }
-    let mine = if op == Op::DlgInvalidateRect {
+    let mine = if let Some(l) = ext.and_then(|e| (e.line)(me, op, a, b, c, d)) {
+        l
+    } else if op == Op::DlgInvalidateRect {
         // SAFETY: the Rust passes its rectangle
         let q = unsafe { &*(a as *const crate::guictl::EeWonRect4) };
         format!("op {} rect {} {} {} {} @{me}", op as u32, q.x, q.y, q.w, q.h)
@@ -475,6 +523,12 @@ unsafe extern "C" fn replay_host(comp: *mut c_void, op: Op, a: isize, b: isize, 
 }
 
 pub(crate) fn replay(seq: &[&'static str]) -> Option<String> {
+    replay_with(seq, None)
+}
+
+/// The replay of a golden with its own parts.
+pub(crate) fn replay_with(seq: &[&'static str], ext: Option<Ext>) -> Option<String> {
+    EXT.with(|e| e.set(ext));
     REPLAY.with(|r| {
         *r.borrow_mut() = Some(Replay { lines: seq.to_vec(), scheme: 0xB000, ..Replay::default() });
     });
@@ -552,8 +606,15 @@ pub(crate) fn replay(seq: &[&'static str]) -> Option<String> {
                     fail(format!("line {}: golden {got:?}, rust {want:?}", with(|r| r.at)));
                 }
             }
-            _ => fail(format!("line {}: unexpected {l:?}", with(|r| r.at))),
+            _ => {
+                if !ext.is_some_and(|e| (e.word)(word, &n)) {
+                    fail(format!("line {}: unexpected {l:?}", with(|r| r.at)));
+                }
+            }
         }
+    }
+    if let Some(e) = ext {
+        (e.cleanup)();
     }
     // a failure may leave containers behind: freed without their destructor's calls
     with(|r| {
