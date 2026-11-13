@@ -1,7 +1,8 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
-// effect_beam.rs, effect_aged.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_beam.rs, effect_aged.rs, effect_additive.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
-// EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp and EEE3DScreenFlash.cpp.
+// EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp and
+// EEE3DAdditivePass.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -176,6 +177,25 @@ struct Ask {
         E(inAsk)->mUnit->mComplexUnit->GetPosition(thePoint);
         return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
     }
+    // the additive pass's unit model (EEE3DAdditivePass::SetUp, 0xe8b78, and RepairPointers, 0xe8dcc)
+    static int32_t UnitModelMedia(void* inAsk)
+    {
+        E(inAsk)->mUnitModel = E(inAsk)->mUnit->GetModel();
+        return E(inAsk)->mUnitModel->LoadMedia();
+    }
+    static float UnitScale(void* inAsk) { return E(inAsk)->mUnit->mStats->GetScale(); }
+    static EeGeTransformation UnitLocation(void* inAsk)
+    {
+        const GETransformation& theLocation = E(inAsk)->mUnit->mComplexUnit->mPhysicalModel.GetLocation();
+        return *reinterpret_cast<const EeGeTransformation*>(&theLocation);
+    }
+    static float UnitModelRadius(void* inAsk) { return E(inAsk)->mUnitModel->mModels[0]->GetBoundingRadius(0); }
+    static EeGfxUnitFrame UnitFrame(void* inAsk)
+    {
+        EEComplexUnit* theUnit = E(inAsk)->mUnit->mComplexUnit;
+        return EeGfxUnitFrame{(uint32_t)theUnit->mPhysicalModel.GetFrame(), (uint32_t)theUnit->mAnimation};
+    }
+    static void* UnitModelAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mUnitModel->mModels[inIndex]; }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -244,12 +264,16 @@ EEE3DRust::EEE3DRust(long inKind)
 {
 }
 
-// unloads the graphic object's media
+// unloads the graphic object's media and the unit model's (the additive pass's)
 EEE3DRust::~EEE3DRust()
 {
     if (this->mGraphicObject) {
         this->mGraphicObject->UnloadMedia();
         this->mGraphicObject = NULL;
+    }
+    if (this->mUnitModel) {
+        this->mUnitModel->UnloadMedia();
+        this->mUnitModel = NULL;
     }
 }
 
@@ -260,7 +284,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
                                  Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
-                                 Ask::ComplexPosition};
+                                 Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
+                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);

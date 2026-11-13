@@ -1673,6 +1673,7 @@ const EeGfxRaster gEERustRaster = {
         theTransformation.Scale(inX, inY, inZ);
         static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(theTransformation);
     },
+    [](void* inModel, uint32_t inFrame) { static_cast<GEModel*>(inModel)->SetGraphicsCurrentFrame(inFrame); },
 };
 
 // FUNCTION: EXE 0x50f60f

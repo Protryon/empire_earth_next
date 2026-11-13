@@ -10,8 +10,9 @@
 
 use std::ffi::c_void;
 
-use ee_ge::types::{Ge3DPoint, GeVector};
+use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
 
+use crate::effect_additive::{additive, EeGfxUnitFrame, EE_GFX_EFFECT_KIND_ADDITIVE_PASS};
 use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
@@ -124,6 +125,18 @@ pub struct EeGfxEffect3DHost {
     pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
     /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
     pub complex_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
+    pub unit_model_media: extern "C" fn(context: *mut c_void) -> i32,
+    /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
+    pub unit_scale: extern "C" fn(context: *mut c_void) -> f32,
+    /// the unit's complex unit's physical model's location
+    pub unit_location: extern "C" fn(context: *mut c_void) -> GeTransformation,
+    /// the unit's model's first model's bounding radius at frame 0
+    pub unit_model_radius: extern "C" fn(context: *mut c_void) -> f32,
+    /// the unit's complex unit's physical model's frame and animation
+    pub unit_frame: extern "C" fn(context: *mut c_void) -> EeGfxUnitFrame,
+    /// the unit's model's model `index` (`mModels[index]`)
+    pub unit_model_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
 }
 
 /// The world as the effects ask it.
@@ -147,6 +160,25 @@ pub trait Effect3DHost {
     /// the tests' hosts answer the unit's position
     fn complex_position(&mut self) -> Ge3DPoint {
         self.unit_position()
+    }
+    /// the tests' hosts that do not draw the additive pass answer nothing
+    fn unit_model_media(&mut self) -> i32 {
+        0
+    }
+    fn unit_scale(&mut self) -> f32 {
+        0.0
+    }
+    fn unit_location(&mut self) -> GeTransformation {
+        identity()
+    }
+    fn unit_model_radius(&mut self) -> f32 {
+        0.0
+    }
+    fn unit_frame(&mut self) -> EeGfxUnitFrame {
+        EeGfxUnitFrame::default()
+    }
+    fn unit_model_at(&mut self, _index: u32) -> EeGfxModel {
+        std::ptr::null_mut()
     }
 }
 
@@ -202,6 +234,24 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn complex_position(&mut self) -> Ge3DPoint {
         (self.complex_position)(self.context)
     }
+    fn unit_model_media(&mut self) -> i32 {
+        (self.unit_model_media)(self.context)
+    }
+    fn unit_scale(&mut self) -> f32 {
+        (self.unit_scale)(self.context)
+    }
+    fn unit_location(&mut self) -> GeTransformation {
+        (self.unit_location)(self.context)
+    }
+    fn unit_model_radius(&mut self) -> f32 {
+        (self.unit_model_radius)(self.context)
+    }
+    fn unit_frame(&mut self) -> EeGfxUnitFrame {
+        (self.unit_frame)(self.context)
+    }
+    fn unit_model_at(&mut self, index: u32) -> EeGfxModel {
+        (self.unit_model_at)(self.context, index)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -224,6 +274,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         k if is_shot(k) => unsafe { shot(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_CITIZEN_BEAM => unsafe { beam(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_WATER_SPLASH | EE_GFX_EFFECT_KIND_SCREEN_FLASH => unsafe { aged(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_ADDITIVE_PASS => unsafe { additive(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -274,6 +325,14 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 load_aged(r, f)
             } else {
                 save_aged(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_ADDITIVE_PASS => {
+            // the base's error stops it; the load's result is the media's
+            if base != 0 || !load {
+                base
+            } else {
+                h.load_media()
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

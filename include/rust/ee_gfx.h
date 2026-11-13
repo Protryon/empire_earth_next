@@ -18,6 +18,9 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// `kEffect3DAdditivePass`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ADDITIVE_PASS = 39;
+
 /// The citizen beam.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 
@@ -796,6 +799,19 @@ struct EeGfxEffectShot {
   bool draw_active;
 };
 
+/// The additive pass's state (none of it saved).
+struct EeGfxEffectPass {
+  /// `mDrawTransformation`: `Queue` copies the effect's transformation
+  EeGeTransformation draw_transformation;
+  /// `mFrame`, `mModelIndex`: the unit's frame and animation (`Queue` takes them; the draw's model is the unit
+  /// model's model of that animation)
+  uint32_t frame;
+  uint32_t model_index;
+  /// `mScale`: the unit's stats' scale, and the draw's copy
+  float scale;
+  float draw_scale;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -845,6 +861,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectShield shield;
   /// the shots' (`effect_shot.rs`)
   EeGfxEffectShot shot;
+  /// the additive pass's (`effect_additive.rs`)
+  EeGfxEffectPass pass;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1166,6 +1184,12 @@ struct EeGfxBeamUnit {
   int32_t frame;
 };
 
+/// The unit's physical model's frame and its complex unit's animation (`mAnimation`).
+struct EeGfxUnitFrame {
+  uint32_t frame;
+  uint32_t animation;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1207,6 +1231,18 @@ struct EeGfxEffect3DHost {
   void (*place_linked)(void *context, const EeGe3DPoint *point);
   /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
   EeGe3DPoint (*complex_position)(void *context);
+  /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
+  int32_t (*unit_model_media)(void *context);
+  /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
+  float (*unit_scale)(void *context);
+  /// the unit's complex unit's physical model's location
+  EeGeTransformation (*unit_location)(void *context);
+  /// the unit's model's first model's bounding radius at frame 0
+  float (*unit_model_radius)(void *context);
+  /// the unit's complex unit's physical model's frame and animation
+  EeGfxUnitFrame (*unit_frame)(void *context);
+  /// the unit's model's model `index` (`mModels[index]`)
+  EeGfxModel (*unit_model_at)(void *context, uint32_t index);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1255,6 +1291,8 @@ struct EeGfxRaster {
                                  float x,
                                  float y,
                                  float z);
+  /// `SetGraphicsCurrentFrame(frame)`
+  void (*model_frame)(EeGfxModel model, uint32_t frame);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

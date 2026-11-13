@@ -2,7 +2,7 @@
 // (vtable 0x440334; ??_G 0xe8eb6, dtor 0x102600 = EEEffect's).
 // EEEffect3D.cpp is 0x1050fb..0x1054ec (key chain "EEEffect3D-Data", Virtual24 .. Save). The load-time ctor
 // EEEffect3D(long) 0xe8e76, the Virtual3C forwarder 0xe8eb1 and ??_G 0xe8eb6 are inline COMDATs emitted at the end of
-// the first user's range (EEE3DAdditivePass.cpp); the other ctor is inline too (EEE3DVolcano 0xfe596 expands it:
+// the first user's range (EEE3DAdditivePass.cpp, deleted: the ctor is in EEEffect3D.cpp); the other ctor is inline too (EEE3DVolcano 0xfe596 expands it:
 // EEEffect's ctor, the transformation, mF70 = 0 before this class's vptr). sizeof 0x74 (EEE3DVolcano's own members
 // start at +0x74). Names are provisional. Requires ee/EEEffect.h, ee/EEMap.h and lle/GETransformation.h.
 #ifndef EE_EEEFFECT3D_H

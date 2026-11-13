@@ -71,7 +71,6 @@
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EEE3DIcon.h"
 #include "ee/EEE3DNuclearExplosion.h"
-#include "ee/EEE3DAdditivePass.h"
 #include "ee/EEE3DHurricane.h"
 #include "ee/EEE3DDisease.h"
 #include "ee/EEE3DSmokeGenerator.h"
@@ -208,7 +207,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DRain: theEffect = new EEE3DRain(); break;
     case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
-    case kEffect3DAdditivePass: theEffect = new EEE3DAdditivePass(); break;
+    case kEffect3DAdditivePass: theEffect = new EEE3DRust(0x27); break;
     case kEffect3DNuclearExplosion: theEffect = new EEE3DNuclearExplosion(); break;
     case kEffect3DIcon: theEffect = new EEE3DIcon(2); break;
     case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(); break;
@@ -297,7 +296,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 2: theEffect = new EEE3DIcon(inUnit, inEffect, 0, 2); break;
     case 0x18: theEffect = new EEE3DRust(inUnit, inEffect, 0x18); break;
     case 0x28: theEffect = new EEE3DNuclearExplosion(inUnit, inEffect); break;
-    case 0x27: theEffect = new EEE3DAdditivePass(inUnit, inEffect); break;
+    case 0x27: theEffect = new EEE3DRust(inUnit, inEffect, 0x27); break;
     case 0x24: theEffect = new EEE3DHurricane(inUnit, inEffect); break;
     case 0x23: theEffect = new EEE3DDisease(inUnit, inEffect); break;
     case 0x1e: theEffect = EEE3DSmokeGenerator::CreateDestructionSmoke(inUnit, inEffect); break;
