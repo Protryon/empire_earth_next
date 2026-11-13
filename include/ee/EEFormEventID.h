@@ -20,8 +20,8 @@ enum EEFormEventID {
     kFormEventPGSOpen = 13,             // db dbuiformevents id 13 'PGS Open'; EECreateFormEvent: new EEUIEPGSEOpen
     kFormEventPGSClose = 14,            // db dbuiformevents id 14 'PGS Close'; EECreateFormEvent: new EEUIEPGSEClose
     kFormEventDSOpen = 15,              // db dbuiformevents id 15 'DS Open'; EECreateFormEvent: new EEUIEDSOpen
-    kFormEventCEOpen = 16,              // db dbuiformevents id 16 'CE Open'; EECreateFormEvent: new EEUIECEOpen
-    kFormEventCEClose = 0x11,           // db dbuiformevents id 17 'CE Close'; EECreateFormEvent: new EEUIECEClose
+    kFormEventCEOpen = 16,              // db dbuiformevents id 16 'CE Open'; EECreateFormEvent: EE_SCREENS_CE_OPEN
+    kFormEventCEClose = 0x11,           // db dbuiformevents id 17 'CE Close'; EECreateFormEvent: EE_SCREENS_CE_CLOSE
     kFormEventChatLogOpen = 0x12,       // db dbuiformevents id 18 'Chat Log Open'; EECreateFormEvent: EE_SCREENS_CL_OPEN
     kFormEventChatLogMLBPressed = 0x13,  // db dbuiformevents id 19 'Chat Log MLB Pressed'; EECreateFormEvent: EE_SCREENS_CL_MOUSE_PRESSED
     kFormEventChatLogMRBPressed = 0x14,  // db dbuiformevents id 20 'Chat Log MRB Pressed'; EECreateFormEvent: EE_SCREENS_CL_MOUSE_PRESSED
