@@ -50,7 +50,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPUnitTileDistanceLess.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPResourceManager.h"
@@ -239,10 +239,10 @@ static inline long EECPBMQueueIndex(long inTechTreeID)
 void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
 {
     EECPBuildManager* theThis = this;
-    EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(inUnit->GetLoadGoal());
+    EEUGRust* theGoal = EEBuildRepairGoalCast(inUnit->GetLoadGoal());
     if (UShutdownInProgress() || theGoal == NULL)
         return;
-    EEUnit* theTargetUnit = theGoal->mTarget;
+    EEUnit* theTargetUnit = theGoal->GetBuildTarget();
     EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
     if (theTarget == NULL || !theTarget->IsFoundation())
         return;
@@ -261,7 +261,7 @@ void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
         theWorker = theUnitManager->FindBuilderForTile(theTile, theUnitType);
     }
     if (theWorker != NULL) {
-        EEUGBuildRepair* theNew = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
+        EEUGRust* theNew = EEUGRust::NewBuildRepair(theWorker->GetPlayer(), theTarget, false);
         EEUnitGoal* theOld = theWorker->GetLoadGoal();
         if (theOld != NULL && theOld->mKind == kGoalGather && theTarget->mUnitClass->mUnitType != kUnitTypeFarm)
             theWorker->SetGoal(theNew, 1, 0);
@@ -272,7 +272,7 @@ void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
         theWorker->StartAction(kActionMoveToRepairSite);
         theWorker->mUnitClass->ActionChanged(theWorker);
     } else {
-        unsigned long theClass = theGoal->mTargetType;
+        unsigned long theClass = theGoal->GetBuildTargetType();
         long theID = gUnitClassTable[theClass] != NULL ? gUnitClassTable[theClass]->mTechnology : 100000;
         long theIndex = EECPBMQueueIndex(theID);
         EECPBuildRequest theRequest(theClass, U2DPoint<long>(theTarget->mTileX, theTarget->mTileY));
@@ -354,7 +354,7 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                 } else
                     theTarget = EEMakeBuilding(theThis->mPlayer, theClassID, theTile.mX, theTile.mY);
                 if (theTarget != NULL) {   // a requeued farm request orders no one (was a build goal on NULL)
-                    EEUGBuildRepair* theGoal = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
+                    EEUGRust* theGoal = EEUGRust::NewBuildRepair(theWorker->GetPlayer(), theTarget, false);
                     theWorker->ClearGoalQueue(0);
                     theWorker->SetGoal(theGoal, 0, 0);
                     theWorker->StartAction(kActionMoveToRepairSite);
@@ -392,8 +392,8 @@ struct EECPBMBuildsTarget {
 
 bool EECPBMBuildsTarget::operator()(EEComplexUnit* inWorker)
 {
-    EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(inWorker->GetLoadGoal());
-    return theGoal != NULL && theGoal->mTarget == this->mTarget;
+    EEUGRust* theGoal = EEBuildRepairGoalCast(inWorker->GetLoadGoal());
+    return theGoal != NULL && theGoal->GetBuildTarget() == this->mTarget;
 }
 
 struct EECPBMQueuedTarget {
@@ -460,7 +460,7 @@ void EECPBuildManager::AssignBuilders()
             continue;
         theFound = std::find_if(theWorkers.begin(), theWorkers.end(), EECPBMQueuedTarget(*it));
         if (theFound != theWorkers.end()) {
-            if (dynamic_cast<EEUGBuildRepair*>((*theFound)->GetLoadGoal()) == NULL) {
+            if (EEBuildRepairGoalCast((*theFound)->GetLoadGoal()) == NULL) {
                 (*theFound)->ClearGoalQueue(0);
                 (*theFound)->StartAction(kActionIdle);
                 (*theFound)->mUnitClass->ActionChanged(*theFound);
@@ -468,7 +468,7 @@ void EECPBuildManager::AssignBuilders()
         } else {
             EEComplexUnit* theWorker = theUnitManager->FindBuilderForTarget(*it, (*it)->mUnitClass->mUnitType);
             if (theWorker != NULL) {
-                EEUGBuildRepair* theGoal = new EEUGBuildRepair(theThis->mPlayer, *it, false);
+                EEUGRust* theGoal = EEUGRust::NewBuildRepair(theThis->mPlayer, *it, false);
                 theWorker->ClearGoalQueue(0);
                 theWorker->SetGoal(theGoal, 0, 0);
                 theWorker->StartAction(theGoal->GetStartAction());
@@ -486,8 +486,8 @@ void EECPBuildManager::CancelStalledBuilds()
 {
     EEComplexUnit* theUnit = this->mManager->mUnitManager->FindStalledBuilder();
     while (theUnit != NULL) {
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal());
-        long theClassID = theGoal->mTargetType;
+        EEUGRust* theGoal = EEBuildRepairGoalCast(theUnit->GetLoadGoal());
+        long theClassID = theGoal->GetBuildTargetType();
         long theID = gUnitClassTable[theClassID] != NULL ? gUnitClassTable[theClassID]->mTechnology
             : 100000;
         long theIndex = EECPBMQueueIndex(theID);
@@ -496,28 +496,28 @@ void EECPBuildManager::CancelStalledBuilds()
             std::vector<EEUnit*> theBlockers;
             long theBlocker = -1;
             long theOwner = -1;
-            EEGetFootprintTiles(theGoal->mTarget, theTiles);
+            EEGetFootprintTiles(theGoal->GetBuildTarget(), theTiles);
             for (unsigned long i = 0; i < theTiles.size() && theBlocker < 0; i++) {
                 theBlockers.clear();
                 EEGetBlockingUnits(this->mPlayer, theClassID, gWorld.mMap->GetTile(theTiles[i].GetX(), theTiles[i].GetY()), 0,
                     theBlockers);
                 for (unsigned long j = 0; j < theBlockers.size() && theBlocker < 0; j++)
-                    if (theBlockers[j] != theGoal->mTarget) {
+                    if (theBlockers[j] != theGoal->GetBuildTarget()) {
                         theBlocker = theBlockers[j]->mUnitClass->mUnitType;
                         theOwner = theBlockers[j]->mPlayer != NULL ? (long)theBlockers[j]->mPlayer->mPlayerID : -1;
                     }
             }
             EECPTraceOut(this->mPlayer, "build.stalled", "cls=%ld x=%ld y=%ld blocker=%ld owner=%ld", theClassID,
-                (long)theGoal->mTarget->mTileX, (long)theGoal->mTarget->mTileY, theBlocker, theOwner);
+                (long)theGoal->GetBuildTarget()->mTileX, (long)theGoal->GetBuildTarget()->mTileY, theBlocker, theOwner);
         }
         // Requeued without its site (the original kept the stalled foundation's tile): a blocker that stays (most
         // often the AI's own earlier foundation at that tile, still dying) stalled every new foundation there, and the
         // AI ordered the same building at the same tile every 3-4 s for the rest of the game (docs/AI_RESEARCH.md
         // §8.6: 1,426 of 1,466 stalls in six 60-minute games). FindSite now picks a free site.
         this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID, U2DPoint<long>(0, 0)));
-        theGoal->mTarget->Kill(0, 0, 0);
+        theGoal->GetBuildTarget()->Kill(0, 0, 0);
         for (unsigned long i = 2; i < 7; i++)
-            this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->mTargetNode->GetCost(i, 0x20, 1.0f)));
+            this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->GetBuildTechNode()->GetCost(i, 0x20, 1.0f)));
         if (this->mTownCenterTile.mX != -10000 && this->mTownCenterTile.mY != -10000) {
             theUnit->ClearGoalQueue(0);
             theUnit->SetGoal(new EEUGLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,

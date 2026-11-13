@@ -36,7 +36,7 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIAStarStorage.h"
@@ -346,12 +346,12 @@ EEComplexUnit* EECPUnitManager::FindStalledBuilder()
     this->GetCitizens(theUnits);
     for (unsigned long i = 0, theCount = theUnits.size(); i < theCount && theResult == NULL; i++) {
         EEComplexUnit* theUnit = theUnits[i];
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal());
+        EEUGRust* theGoal = EEBuildRepairGoalCast(theUnit->GetLoadGoal());
         if (!theGoal || theUnit->mIsDetachedFromAI)
             continue;
         if ((theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionWaitForBuildSiteToClear && !theUnit->mIsDisabled)
             continue;
-        EEUnit* theTargetUnit = theGoal->mTarget;
+        EEUnit* theTargetUnit = theGoal->GetBuildTarget();
         EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
         if (!theTarget->mIsBuilt && theGoal->IsBuildSiteTaken())
             theResult = theUnit;

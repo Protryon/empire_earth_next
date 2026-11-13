@@ -6812,7 +6812,7 @@ bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
            && EEDamageFactor(theAttacker, theTarget) > 0.0f;
 }
 
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEDoppelganger.h"
 
 // FUNCTION: EXE 0x4c6dca
@@ -6873,7 +6873,7 @@ void EEMSetRallyGoal::Execute()
         } else {
             if (theTarget->mUnitClass->mUnitType == kUnitTypeFarm
                 || (theTarget->mUnitClass->IsLandBuilding() && theTarget->mHitPoints < theTarget->mStats->mMaxHitPoints)) {
-                theGoal = new EEUGBuildRepair(theTarget->mPlayer, theTarget, true);
+                theGoal = EEUGRust::NewBuildRepair(theTarget->mPlayer, theTarget, true);
             } else if (theTarget->mUnitClass->mUnitType == kUnitTypePathPoint) {
                 theGoal = EEUGRust::NewPatrol(theTarget->mComplexUnit->mPatrolGroup, theTarget->mComplexUnit, true);
             } else if (theTarget->mUnitClass->mGarrisonCapacity > 0 && theTarget->mTileNode != NULL && theTarget->mHitPoints > 0) {

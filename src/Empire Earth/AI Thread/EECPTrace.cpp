@@ -52,7 +52,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPExperimentTimers.h"
@@ -572,7 +572,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             EEUnitGoal* theGoal = theUnit->mComplexUnit->mActiveGoal;
             theGoals[theGoal == NULL ? 0 : theGoal->mKind >= 0 && theGoal->mKind < 16 ? theGoal->mKind : 15]++;
             if (theGoal != NULL && theGoal->mKind == kGoalBuildRepair) {
-                EEUnit* theTarget = static_cast<EEUGBuildRepair*>(theGoal)->mTarget;
+                EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetBuildTarget();
                 EEComplexUnit* theComplex = theTarget != NULL ? theTarget->mComplexUnit : NULL;
                 bool theBuilt = theComplex != NULL && theComplex->mIsBuilt;
                 theBuilders[theBuilt ? 1 : 0]++;

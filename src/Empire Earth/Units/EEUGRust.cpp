@@ -57,10 +57,220 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EEEvent.h"
 #include "ee/EmpireEarth.h"
+#include "ee/EEUnitVectorItem.h"
+#include "ee/EEUCBuilding.h"
+#include "lle/GERhombus.h"
+#include "lle/UIControl.h"
+#include "lle/UIForm.h"
+#include "lle/GESurface.h"
+#include "lle/GEViewport.h"
+#include "lle/GEScreen.h"
+#include "lle/GETextureManager.h"
+#include "lle/GETexture.h"
+#include "lle/GERasterizer.h"
+#include "lle/UIManager.h"
+#include "ee/EEUGLocation.h"
+#include "ee/EEUGGather.h"
+#include "ee/EEUCGate.h"
+#include "ee/EEUCBasicCitizen.h"
+#include "ee/EEComputerPlayer.h"
+#include "ee/EECPCivilizationManager.h"
+#include "ee/EECPWallManager.h"
+#include "ee/EECPBuildManager.h"
+#include "ee/EEGameSound.h"
+#include "ee/EEUIManager.h"
+#include "ee/EEUIFMainGame.h"
+#include "ee/EEDataPreLoading.h"
+#include "ee/EEUserInterface.h"
+#include "ee/EEStringIDs.h"
+#include "lle/SESoundManager.h"
+#include "lle/UResourceFile.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_units.h"
 
 long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the teleporter's unload sound)
+
+// ---- the build/repair goal's world work (EEUGBuildRepair.cpp's helpers; the goal itself is build.rs)
+
+// FUNCTION: EXE 0x61e104
+// Orders units farthest from the reference tile first, so a sort leaves the nearest unit last
+inline long EETileDistanceLess::DistanceSquared(EEUnit* inUnit) const
+{
+    EETileCoordinate theTile;
+    theTile.mX = inUnit->mTileX;
+    theTile.mY = inUnit->mTileY;
+    return this->DistanceSquared(theTile);
+}
+
+bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
+{
+    long theLeft = this->DistanceSquared(inFirst);
+    long theRight = this->DistanceSquared(inSecond);
+    bool theResult = theLeft > theRight;
+    return theResult;
+}
+
+namespace {
+
+// the build/repair search radius (0x447404; provisional name)
+const float kBuildRepairRadius = 4.0f;
+
+// 0x61eb31: the unit helps build the first unbuilt, paid-for land building of its player within 4 tiles
+void EEHelpBuildNearby(EEComplexUnit* inUnit, EEUnit* inTarget)
+{
+    std::vector<EEUnit*> theUnits;
+    GE2DPoint theCenter;
+    U2DPoint<long> theTile(inTarget->mTileX, inTarget->mTileY);
+    theCenter = GE2DPoint((float)theTile.GetX(), (float)theTile.GetY());
+    if (EEGetUnitsInRadius(theCenter, kBuildRepairRadius, theUnits) > 0) {
+        std::vector<EEUnit*>::iterator i;
+        for (i = theUnits.begin(); i != theUnits.end(); ++i) {
+            EEComplexUnit* theUnit = (EEComplexUnit*)*i;
+            if (!theUnit->mIsBuilt && theUnit != inTarget && theUnit->mHitPoints > 0
+                && theUnit->mUnitClass->IsLandBuilding() && theUnit->mIsPaidFor && theUnit->GetPlayer() == inUnit->GetPlayer())
+                break;
+        }
+        if (i != theUnits.end()) {
+            inUnit->SetGoal(EEUGRust::NewBuildRepair((*i)->GetPlayer(), *i, false), 0, 0);
+            inUnit->StartAction(kActionMoveToRepairSite);
+            inUnit->mUnitClass->ActionChanged(inUnit);
+        }
+    }
+}
+
+// 0x61ec58: the unit works the nearest free farm around the farm's drop sites
+void EETendNextFarm(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
+{
+    std::vector<EEUnit*> theFreeUnits;
+    std::vector<EEUnit*> theUnits;
+    long theCount = 1;
+    if (EEGetFarmDropSites(inTarget, theUnits)) {
+        for (std::vector<EEUnit*>::iterator i = theUnits.begin(); i != theUnits.end(); ++i) {
+            while ((inTarget = EEFindFreeFarm((*i)->GetComplexUnit(), 1, &theCount)) != 0) {
+                EEUnit* theFree = inTarget;
+                theFreeUnits.push_back(theFree);
+            }
+        }
+        if (theFreeUnits.size() > 0) {
+            std::sort(theFreeUnits.begin(), theFreeUnits.end(), EETileDistanceLess(inUnit->GetTile()));
+            EEWorkFarm(theFreeUnits.back()->mComplexUnit, inUnit);
+        }
+    }
+}
+
+// 0x61ed5e: the unit gathers a resource near a drop site, passing over mines at the player's worker limit (else a
+// random one of those). The original repeats the identical first search when it returns null: both calls are kept.
+void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
+{
+    std::vector<EEUnit*> theRejected;
+    bool theResult = false;
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
+    if (theResource == NULL)
+        theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
+    while (!theResult && theResource != NULL) {
+        if (!theResource->mUnitClass->mIsTree && theResource->mUnitClass->mAnimalID == 1000
+            && ::gWorld.GetResourceUsers(theResource) >= inUnit->mPlayer->GetMiningLimit()) {
+            theRejected.push_back(theResource);
+            theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
+        } else {
+            inUnit->SetGoal(new EEUGGather(theResource, inTarget, false), 0, 0);
+            inUnit->StartAction(kActionMoveToWaitingArea);
+            inUnit->mUnitClass->ActionChanged(inUnit);
+            theResult = true;
+        }
+    }
+    if (!theResult && theRejected.size() > 0) {
+        EEAIRandomShuffle(theRejected.begin(), theRejected.end());
+        inUnit->SetGoal(new EEUGGather(theRejected[0], inTarget, false), 0, 0);
+        inUnit->StartAction(kActionMoveToWaitingArea);
+        inUnit->mUnitClass->ActionChanged(inUnit);
+    }
+}
+
+// 0x61f4f5: units other than the building block a tile of its footprint
+bool EEBuildSiteTaken(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    std::vector<EEUnit*> theUnits;
+    bool theResult = false;
+    EEGetFootprintTiles(inTarget, theTiles);
+    for (unsigned long i = 0; i < theTiles.size() && !theResult; ++i) {
+        EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
+        EEGetBlockingUnits(inPlayer, inType, theTile, 0, theUnits);
+        if (theUnits.size() > 1 || (theUnits.size() == 1 && theUnits[0] != inTarget))
+            theResult = true;
+    }
+    return theResult;
+}
+
+// a gate's own parts (the first part and every next one)
+void EEGateParts(EEUnit* inTarget, std::vector<EEUnit*>& outParts)
+{
+    if (inTarget->GetUnitClass()->GetCategory() != kUnitCategoryGate)
+        return;
+    EEComplexUnit* theUnit = inTarget->GetComplexUnit();
+    while (theUnit->mPreviousPart != NULL)
+        theUnit = theUnit->mPreviousPart;
+    for (; theUnit != NULL; theUnit = theUnit->mNextPart)
+        outParts.push_back(theUnit);
+}
+
+// 0x61f5fc: no blocking or movable units stand on the footprint (the building, a runway under type 0x42 and a gate's
+// own parts excepted); farms always pass
+bool EEBuildFootprintClear(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    std::vector<EEUnit*> theUnits;
+    std::vector<EEUnit*> theLinked;
+    bool theResult = true;
+    if (inType != 0x2a && inType != 0x33a) {
+        EEGateParts(inTarget, theLinked);
+        EEGetFootprintTiles(inTarget, theTiles);
+        for (unsigned long i = 0; i < theTiles.size() && theResult; ++i) {
+            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
+            if (theTile == NULL)   // port: a footprint tile off the map (Small Islands seed 11): nothing stands there
+                continue;
+            EEGetBlockingUnits(inPlayer, inType, theTile, 0, theUnits);
+            if (theUnits.empty() || (theUnits.size() == 1 && theUnits[0] == inTarget)
+                || (theUnits.size() == 1 && theUnits[0]->GetUnitClass()->GetUnitType() == kUnitTypeAirportRunway && inType == 0x42))
+                theResult = !EEGetMovableTileUnits(inPlayer, inType, theTile, 0, theUnits);
+            else
+                theResult = false;
+            if (!theResult && theLinked.size() > 0) {
+                for (unsigned long j = 0; j < theUnits.size() && !theResult; ++j)
+                    theResult = std::find(theLinked.begin(), theLinked.end(), theUnits[j]) != theLinked.end();
+            }
+        }
+    }
+    return theResult;
+}
+
+// 0x61f85e: no unit on the footprint stands in the way (standing 2) and no foundation above 1 hit point is there
+// (the building, the player's runway under type 0x42 and a gate's own parts excepted)
+bool EEBuildSiteFree(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    std::vector<EEUnit*> theUnits;
+    std::vector<EEUnit*> theLinked;
+    bool theResult = true;
+    EEGetFootprintTiles(inTarget, theTiles);
+    EEGetUnitsOn(theTiles, theUnits);
+    EEGateParts(inTarget, theLinked);
+    unsigned long theCount = theUnits.size();
+    for (unsigned long i = 0; i < theCount && theResult; ++i) {
+        if (theUnits[i] == inTarget
+            || (theUnits[i]->mUnitClass->GetUnitType() == kUnitTypeAirportRunway && inType == 0x42 && theUnits[i]->mPlayer == inPlayer)
+            || ((theLinked.size() > 0) && std::find(theLinked.begin(), theLinked.end(), theUnits[i]) != theLinked.end()))
+            continue;
+        theResult = EEGetTileUnitStanding(theUnits[i], inPlayer, inType, false) != 2;
+        if (theUnits[i]->IsFoundation() && theUnits[i]->mHitPoints > 1)
+            theResult = false;
+    }
+    return theResult;
+}
+
+}  // namespace
 
 namespace {
 
@@ -617,6 +827,257 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS:
         return theComplex->mStats->mCanFireOverWalls;
+    // the build/repair goal's
+    case EE_UNITS_GOAL_HOST_BUILD_UNIT: {
+            EeUnitsBuildUnit* theFields = static_cast<EeUnitsBuildUnit*>(ioArgs->sink);
+            EEUnitClass* theClass = theUnit->mUnitClass;
+            EEPlayer* thePlayer = theUnit->mPlayer;
+            EEComplexUnit* theOwn = EEUnitCast<EEComplexUnit>(theUnit);
+            EEComplexUnit* theFirst = theUnit->mComplexUnit;
+            if (theFirst != NULL)
+                while (theFirst->mPreviousPart != NULL)
+                    theFirst = theFirst->mPreviousPart;
+            theFields->complex = Handle(theUnit->mComplexUnit.Get());
+            theFields->unit_class = Handle(theClass);
+            theFields->player = Handle(thePlayer);
+            theFields->first = Handle(theFirst);
+            theFields->unit_type = theClass->mUnitType;
+            theFields->tile_size = theClass->mTileSize;
+            theFields->category = theClass->mCategory;
+            theFields->table_technology =
+                gUnitClassTable[theClass->mUnitType] ? gUnitClassTable[theClass->mUnitType]->mTechnology : 100000;
+            theFields->hit_points = theUnit->mHitPoints;
+            theFields->max_hit_points = theUnit->mStats->mMaxHitPoints;
+            theFields->tile_x = theUnit->mTileX;
+            theFields->tile_y = theUnit->mTileY;
+            theFields->repair_rate = theUnit->mStats->mRepairRate;
+            theFields->work_rate = theUnit->mStats->mWorkRate;
+            theFields->build_time_scale = theUnit->mStats->mBuildTimeScale;
+            theFields->tile_node = theUnit->mTileNode != NULL;
+            theFields->tile = theUnit->mTile != NULL;
+            theFields->valid = theUnit->mIsValid;
+            theFields->foundation = theUnit->IsFoundation();
+            theFields->wall = theClass->mIsWall;
+            theFields->tower = theClass->mIsTower;
+            theFields->drop_site = theClass->IsDropSite();
+            if (thePlayer != NULL) {
+                theFields->instant_build = thePlayer->mInstantBuild;
+                theFields->human = thePlayer->IsHuman();
+                theFields->computer = thePlayer->mComputerPlayer != NULL;
+            }
+            if (theOwn != NULL) {
+                theFields->next = Handle(theOwn->mNextPart);
+                theFields->builders = theOwn->mNumBuilders;
+                theFields->command = theOwn->mCommand ? (int32_t)theOwn->mCommand->mType : 0;
+                theFields->line_of_sight = theOwn->GetLineOfSight();
+                const GETransformation& theLocation = theOwn->mPhysicalModel.GetLocation();
+                theFields->location[0] = theLocation.GetX();
+                theFields->location[1] = theLocation.GetY();
+                theFields->location[2] = theLocation.GetZ();
+                theFields->built = theOwn->mIsBuilt;
+                theFields->paid_for = theOwn->mIsPaidFor;
+                theFields->shift_queued_build = theOwn->mHasShiftQueuedBuild;
+            }
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_TECH_NODE:
+        return Handle(ObjectOf<EEPlayer>(inA)->GetTechTree()->Get((long)ioArgs->i[0]));
+    case EE_UNITS_GOAL_HOST_NODE_INFO: {
+            EETechTreeNode* theNode = ObjectOf<EETechTreeNode>(inA);
+            if (theNode != NULL) {
+                ioArgs->i[0] = theNode->mData->mID;
+                ioArgs->i[1] = theNode->mData->mKind;
+                ioArgs->i[2] = theNode->GetBuildTime();
+            }
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_PLAYER_ID:
+        return inA != 0 ? (int64_t)ObjectOf<EEPlayer>(inA)->mPlayerID : 0;
+    case EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE:
+        return inA != 0 ? (int64_t)ObjectOf<EEUnitClass>(inA)->mUnitType : 0;
+    case EE_UNITS_GOAL_HOST_BUILDERS_ADD:
+        EEUnitCast<EEComplexUnit>(theUnit)->mNumBuilders += (long)ioArgs->i[0];
+        return 0;
+    case EE_UNITS_GOAL_HOST_ATTACK_PART:
+        return Handle(EEGetAttackPart(theComplex, ObjectOf<EEComplexUnit>(inB)));
+    case EE_UNITS_GOAL_HOST_IN_WORK_REACH:
+        return EEIsInWorkReach(theComplex, ObjectOf<EEComplexUnit>(inB));
+    case EE_UNITS_GOAL_HOST_SURROUNDING_TILES: {
+            std::vector<EETileCoordinate> theTiles;
+            theComplex->mUnitClass->GetSurroundingTiles(theComplex, theTiles, 1, 0);
+            for (size_t i = 0; i < theTiles.size(); i++)
+                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].GetX(), (int32_t)theTiles[i].GetY());
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_COMPLETE_BUILDING: {
+            // FinishBuilding's completion of an unbuilt building by the worker's player
+            EEPlayer* thePlayer = theComplex->mPlayer;
+            EEComplexUnit* theTarget = ObjectOf<EEComplexUnit>(inB);
+            if (thePlayer != NULL && thePlayer->mTechnologies != NULL)
+                thePlayer->mTechnologies->Research(theTarget->mUnitClass->GetTechnology(), NULL);
+            thePlayer->CheckButtonsPreloaded((long)ioArgs->i[0]);
+            theTarget->SetBuilt(1, 1, 1);
+            if (theTarget->mUnitClass->GetUnitType() == kUnitTypeWallSpace
+                && thePlayer->mTechnologies->Get(kTechWallSpace)->GetIsAvailable())
+                EECreateSpaceWallEnergyWall(theTarget);
+            if (thePlayer->mComputerPlayer != NULL)
+                thePlayer->mComputerPlayer->mCivilizationManager->mWallManager->AddGates(theTarget);
+            if (thePlayer == ::gWorld.GetCurrentPlayer()) {
+                EESoundObject* theSound = theTarget->mStats->mCreationSound;
+                if (theSound != NULL)
+                    gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
+            }
+            if (gUIManager->GetMainGameForm() != NULL)
+                gUIManager->GetMainGameForm()->mRefreshGroup = true;
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_PLAY_EFFECT:
+        theComplex->PlayEffect((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME:
+        theComplex->SetProductionTime((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_WORK_TIMER:
+        theComplex->SetWorkTimer((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_FACE_TARGET:
+        theComplex->FaceTarget(ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_FILL_PARTS:
+        for (EEComplexUnit* thePart = theComplex->mNextPart; thePart != NULL; thePart = thePart->mNextPart)
+            thePart->SetHitPoints(thePart->mStats->mMaxHitPoints);
+        return 0;
+    case EE_UNITS_GOAL_HOST_NEXT_FREE_TILE: {
+            bool theFound = EEFindNextFreeTile(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
+            PointOut(ioArgs, thePoint);
+            return theFound;
+        }
+    case EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION: {
+            // CancelFoundation: the foundation killed, its cost refunded to the worker's player
+            EEComplexUnit* theWorker = ObjectOf<EEComplexUnit>(inB);
+            EETechTreeNode* theNode = ObjectOf<EETechTreeNode>((uint64_t)ioArgs->i[0]);
+            theComplex->Kill(0, 0, 0);
+            for (unsigned long i = 2; i < 7; i++) {
+                long theValue = theWorker->GetPlayer()->ScaleCost(theNode->GetCost(i, 0x20, 1.0f));
+                theWorker->GetPlayer()->AddResource(i, theValue);
+            }
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
+        theComplex->SetGoal(new EEUGLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
+        return 0;
+    case EE_UNITS_GOAL_HOST_HELP_BUILD:
+        EEHelpBuildNearby(theComplex, ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_TEND_FARM:
+        EETendNextFarm(theComplex, ObjectOf<EEComplexUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_GATHER_NEAR:
+        EEGatherNearBuilding(theComplex, ObjectOf<EEComplexUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_GATE_SIDE_PART:
+        return EEUnitClassCast<EEUCGate>(theComplex->mUnitClass)->IsSidePart(theComplex);
+    case EE_UNITS_GOAL_HOST_BUILD_EVENT: {
+            EEPlayer* thePlayer = ObjectOf<EEPlayer>(inA);
+            EEUnit* theTarget = ObjectOf<EEUnit>(inB);
+            U2DPoint<long> theTile(theTarget->mTileX, theTarget->mTileY);
+            thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, ioArgs->i[0] != 0 ? 0x7c42 : 0x273a, false);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_ABANDON_BUILDING:
+        theComplex->mPlayer->mComputerPlayer->mCivilizationManager->mBuildManager->BuildingAbandoned(
+            ObjectOf<EEComplexUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_HALT:
+        theComplex->SetCurrentPhysicsAction((long)ioArgs->i[0]);
+        theComplex->SetVelocity(0.0f);
+        theComplex->mAngularVelocity = GEOrientation();
+        return 0;
+    case EE_UNITS_GOAL_HOST_SITE_TAKEN:
+        return EEBuildSiteTaken(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
+    case EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR:
+        return EEBuildFootprintClear(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
+    case EE_UNITS_GOAL_HOST_SITE_FREE:
+        return EEBuildSiteFree(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
+    case EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: {
+            // IsShiftQueueNext's queue: another goal than this one that is no automatic waypoint
+            const EEGoalDeque& theGoals = theComplex->GetQueueGoals(0);
+            for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
+                if (*i == ObjectOf<EEUnitGoal>(inB))
+                    continue;
+                EEUGLocation* theLocation = (*i)->mKind == kGoalLocation ? static_cast<EEUGLocation*>(*i) : NULL;
+                if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
+                    return 1;
+            }
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_RESOURCE_USERS:
+        return ::gWorld.GetResourceUsers(theUnit);
+    case EE_UNITS_GOAL_HOST_NEW_GATHER:
+        return Handle(new EEUGGather(theUnit, ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0));
+    case EE_UNITS_GOAL_HOST_SET_GOAL:
+        theComplex->SetGoal(ObjectOf<EEUnitGoal>(inB), (long)ioArgs->i[0], (long)ioArgs->i[1]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_NEAREST_SITE:
+        return Handle(theComplex->mPlayer->GetNearestConstructionSite(theComplex));
+    case EE_UNITS_GOAL_HOST_CLEAR_SITE: {
+            EETileCoordinate theTile(theUnit->mTileX, theUnit->mTileY);
+            EEStepAsideFromSite(theUnit, theUnit->mUnitClass, theUnit->GetPlayer(), theTile, 0);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_CAN_PRODUCE:
+        return theUnit->mPlayer->CanProduce(ObjectOf<EEUnit>(inB)->mUnitClass->GetTechnology(), 0x20, 1, true, 3, NULL);
+    case EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR:
+        return theComplex->mPlayer->CanAffordRepair(ObjectOf<EEUnit>(inB), theComplex, (unsigned long)ioArgs->i[0]);
+    case EE_UNITS_GOAL_HOST_FRIENDLY: {
+            EEPlayer* thePlayer = ObjectOf<EEPlayer>(inA);
+            EEComplexUnit* theNew = ObjectOf<EEComplexUnit>(inB);
+            return theNew->mPlayer == thePlayer || thePlayer->mEnemies[theNew->mPlayer->mPlayerID] == 0;
+        }
+    case EE_UNITS_GOAL_HOST_IN_CINEMATIC:
+        return ::gWorld.mInCinematic;
+    case EE_UNITS_GOAL_HOST_SET_PAID:
+        theComplex->mIsPaidFor = true;
+        return 0;
+    case EE_UNITS_GOAL_HOST_PAY:
+        ObjectOf<EEPlayer>(inA)->Pay(ObjectOf<EETechTreeNode>(inB), 0x20, ioArgs->f[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_HIT_POINTS:
+        theComplex->SetHitPoints((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_FOUNDATION_STARTED: {
+            // Work's foundation become a building site: the wonder's notice and clock, the media, the parts
+            EEUnit* theTarget = ObjectOf<EEUnit>(inB);
+            if (ioArgs->i[0] != 0) {
+                if (theComplex->mPlayer != ::gWorld.GetCurrentPlayer()) {
+                    UWideString theFormat;
+                    UWideString theName;
+                    UWideString theText;
+                    gResource->GetString(IDS_HAS_STARTED_CONSTRUCTING_WONDER, theFormat);
+                    gResource->GetString(theTarget->mUnitClass->mNameStringID, theName);
+                    sprintf(theText, (const char*)theFormat, (const char*)theComplex->mPlayer->mName,
+                            (const char*)theName);
+                    gUserInterface->AddChatLogEntry(theText, 1);
+                }
+                EESoundObject* theSound = EESoundObject::Get(kSoundWonderClock);
+                if (theSound != NULL)
+                    theSound->Play();
+            }
+            theComplex->mPlayer->LoadUnitClassMedia(theTarget->mUnitClass->GetUnitType());
+            theComplex->LoadMedia(false);
+            gDataPreLoading->PostUnloadUnitClass(theComplex->mPlayer->mPlayerID, theComplex->mUnitClass->GetUnitType());
+            for (EEComplexUnit* thePart = theComplex->mNextPart; thePart != NULL; thePart = thePart->mNextPart) {
+                thePart->SetHitPoints(2);
+                thePart->mPlayer->LoadUnitClassMedia(thePart->mUnitClass->GetUnitType());
+                thePart->LoadMedia(false);
+                gDataPreLoading->PostUnloadUnitClass(thePart->mPlayer->mPlayerID, thePart->mUnitClass->GetUnitType());
+                thePart->PartFinished();
+            }
+            theComplex->PartFinished();
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_GOAL_ARG:
+        return ObjectOf<EEUnitGoal>(inA)->GetB1C();
     }
     return 0;
 }
@@ -771,6 +1232,63 @@ void EEUGRust::SetUnloadDestination(long inX, long inY)
 {
     EeUnitsGoalIo theArgs = {{inX, inY}};
     Goal(EE_UNITS_GOAL_UNLOAD_SET_DESTINATION, this, 0, 0, &theArgs);
+}
+
+EEUGRust* EEUGRust::NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalBuildRepair, inArg);
+    Goal(EE_UNITS_GOAL_NEW_BUILD, theGoal, Handle(inPlayer), Handle(inTarget));
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewBuildRepair(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalBuildRepair, inArg);
+    Goal(EE_UNITS_GOAL_BUILD_NEW_EMPTY, theGoal);
+    return theGoal;
+}
+
+EEUnit* EEUGRust::GetBuildTarget()
+{
+    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_BUILD_FIELDS, this));
+}
+
+long EEUGRust::GetBuildTargetType()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
+    return (long)theArgs.i[0];
+}
+
+long EEUGRust::GetBuildTechTreeID()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
+    return (long)theArgs.i[1];
+}
+
+EETechTreeNode* EEUGRust::GetBuildTechNode()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
+    return ObjectOf<EETechTreeNode>((uint64_t)theArgs.i[2]);
+}
+
+EEUnitClass* EEUGRust::GetBuildTargetClass()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_BUILD_FIELDS, this, 0, 0, &theArgs);
+    return ObjectOf<EEUnitClass>((uint64_t)theArgs.i[3]);
+}
+
+bool EEUGRust::IsBuildSiteTaken()
+{
+    return Goal(EE_UNITS_GOAL_BUILD_SITE_TAKEN, this) != 0;
+}
+
+void EEUGRust::Work(EEComplexUnit* inUnit)
+{
+    Goal(EE_UNITS_GOAL_WORK, this, Handle(inUnit));
 }
 
 EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,

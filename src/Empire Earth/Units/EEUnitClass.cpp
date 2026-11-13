@@ -36,7 +36,7 @@
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAirTrafficControl.h"
@@ -1107,7 +1107,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                     EEUnitGoal* theGoal;
                     if ((*i)->Suits(theCreated)) {
                         if ((*i)->mKind == kGoalBuildRepair) {
-                            theCreated->AddBuildTarget(EEGoalCast<EEUGBuildRepair>(*i)->mTarget);
+                            theCreated->AddBuildTarget(EEBuildRepairGoalCast(*i)->GetBuildTarget());
                             continue;
                         } else if ((*i)->mKind == kGoalLoadGarrison) {
                             EEUGRust* theLoad = EELoadGarrisonGoalCast(*i);

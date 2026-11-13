@@ -28,7 +28,7 @@
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUCBasicCitizen.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEMedia.h"
@@ -679,7 +679,7 @@ void EEUGGather::BuildFarms(EEComplexUnit* inUnit)
             if ((theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter) || theUnit->GetPlayer() != inUnit->GetPlayer() || !(theUnit->GetHitPoints() > 0)
                 || static_cast<EEComplexUnit*>(theUnit)->GetIsBuilt())
                 continue;
-            EEUGBuildRepair* theGoal = new EEUGBuildRepair(inUnit->GetPlayer(), theUnit, false);
+            EEUGRust* theGoal = EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theUnit, false);
             if (theGoal == NULL)
                 continue;
             this->SetStorage(theUnit);

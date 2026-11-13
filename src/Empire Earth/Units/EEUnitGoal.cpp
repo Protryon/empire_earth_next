@@ -25,7 +25,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 
 const UString EEUnitGoal::sData("EEUnitGoal-Data");
 // SYNTHETIC: EXE 0x63c332   (wrapper)
@@ -70,7 +70,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = new EEUGAttackUnit(false);
         break;
     case kGoalBuildRepair:
-        theGoal = new EEUGBuildRepair(false);
+        theGoal = EEUGRust::NewBuildRepair(false);
         break;
     case kGoalCastCalamity:
         theGoal = EEUGRust::NewCastCalamity(false);

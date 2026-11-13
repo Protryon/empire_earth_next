@@ -41,7 +41,7 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include <math.h>
 #include <mutex>

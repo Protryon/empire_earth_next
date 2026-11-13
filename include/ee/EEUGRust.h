@@ -1,12 +1,12 @@
-// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust. The object is
+// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 19): the goals whose class moved whole into Rust. The object is
 // the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
 // bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
 // calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore, unload.rs for kGoalUnloadTransport, load.rs for
-// kGoalLoadTransport and kGoalLoadGarrison), every virtual one call. Replaces EEUGPatrol (0x227de8..0x2283bc;
-// EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd), EEUGExplore
-// (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c) and the load goals EEUGLoadContainer
-// (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport (0x2271c7..0x227621): their
-// classes and files are deleted.
+// kGoalLoadTransport and kGoalLoadGarrison, build.rs for kGoalBuildRepair), every virtual one call. Replaces
+// EEUGPatrol (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity
+// (0x220986..0x2213dd), EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals
+// EEUGLoadContainer (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport
+// (0x2271c7..0x227621), and EEUGBuildRepair (0x21e0c1..0x220986): their classes and files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -16,6 +16,9 @@
 #include "ee/EEUnitGoal.h"
 
 class EEComplexUnit;
+class EEPlayer;
+class EETechTreeNode;
+class EEUnitClass;
 class EEPPatrolGroup;
 class EEUnit;
 class FSFile;
@@ -84,6 +87,19 @@ public:
     void AddLoadUnit(EEComplexUnit* inUnit);
     void AddLoadUnits(const std::vector<EEComplexUnit*>& inUnits);
 
+    // a build/repair goal (kGoalBuildRepair): the player's goal on the building's first part, referenced
+    // (EEUGBuildRepair(inPlayer, inTarget, inArg)); or the load's empty goal (EEUGBuildRepair(inArg))
+    static EEUGRust* NewBuildRepair(EEPlayer* inPlayer, EEUnit* inTarget, bool inArg);
+    static EEUGRust* NewBuildRepair(bool inArg);
+    // the building (NULL once dropped), its class's type, technology, tech tree node and class as the goal took them; whether units other
+    // than the building block its footprint
+    EEUnit* GetBuildTarget();
+    long GetBuildTargetType();
+    long GetBuildTechTreeID();
+    EETechTreeNode* GetBuildTechNode();
+    EEUnitClass* GetBuildTargetClass();
+    bool IsBuildSiteTaken();
+
     virtual ~EEUGRust();
     virtual void AddCreatedUnit(EEComplexUnit* inUnit);
     virtual bool IsLoadGoal();
@@ -106,6 +122,7 @@ public:
     virtual bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);
     virtual bool Suits(EEUnit* inUnit);
+    virtual void Work(EEComplexUnit* inUnit);
 };
 
 // the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>,
@@ -129,6 +146,11 @@ inline EEUGRust* EEExploreGoalCast(EEUnitGoal* inGoal)
 inline EEUGRust* EEUnloadGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalUnloadTransport);
+}
+// the old EEGoalCast<EEUGBuildRepair>
+inline EEUGRust* EEBuildRepairGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalBuildRepair);
 }
 // the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
 inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)

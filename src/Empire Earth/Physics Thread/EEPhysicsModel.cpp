@@ -31,7 +31,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EECombatGoals.h"
@@ -710,8 +710,8 @@ void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
                         theCollide = static_cast<EEUGGather*>(inUnit->mGoalState)->mResource
                             == ((EEUGGather*) theNode->mData->mGoalState)->mResource;
                     else
-                        theCollide = static_cast<EEUGBuildRepair*>(inUnit->mGoalState)->mTarget
-                            == ((EEUGBuildRepair*) theNode->mData->mGoalState)->mTarget;
+                        theCollide = static_cast<EEUGRust*>(inUnit->GetGoalState())->GetBuildTarget()
+                            == static_cast<EEUGRust*>(theNode->mData->GetGoalState())->GetBuildTarget();
                 }
             }
         }

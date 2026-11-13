@@ -42,7 +42,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
 #include "ee/EEUCBasicCitizen.h"
@@ -422,8 +422,8 @@ static void EECPRMHelpBuildDrops(EECPResourceManager* inManager, std::deque<EECo
     for (unsigned long k = 0; k < theSites.size() && !ioIdle.empty(); k++) {
         long theBuilders = 0;
         for (unsigned long c = 0; c < theCitizens.size(); c++) {
-            EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theCitizens[c]->GetLoadGoal());
-            if (theGoal != NULL && theGoal->mTarget == theSites[k])
+            EEUGRust* theGoal = EEBuildRepairGoalCast(theCitizens[c]->GetLoadGoal());
+            if (theGoal != NULL && theGoal->GetBuildTarget() == theSites[k])
                 theBuilders++;
         }
         long theSent = 0;
@@ -434,7 +434,7 @@ static void EECPRMHelpBuildDrops(EECPResourceManager* inManager, std::deque<EECo
                     theNearest = it;
             EEComplexUnit* theWorker = *theNearest;
             ioIdle.erase(theNearest);
-            EEUGBuildRepair* theGoal = new EEUGBuildRepair(thePlayer, theSites[k], false);
+            EEUGRust* theGoal = EEUGRust::NewBuildRepair(thePlayer, theSites[k], false);
             theWorker->ClearGoalQueue(0);
             theWorker->SetGoal(theGoal, 0, 0);
             theWorker->StartAction(theGoal->GetStartAction());
@@ -650,7 +650,7 @@ void EECPResourceManager::AssignGatherers()
                                                 for (k = 0; k < theFound.size(); k++) {
                                                     theUnit = theIdle.front();
                                                     theIdle.pop_front();
-                                                    theUnit->SetGoal(new EEUGBuildRepair(thePlayer, theFound[k], true), 0, 0);
+                                                    theUnit->SetGoal(EEUGRust::NewBuildRepair(thePlayer, theFound[k], true), 0, 0);
                                                     theUnit->StartAction(kActionMoveToRepairSite);
                                                     theUnit->GetUnitClass()->ActionChanged(theUnit);
                                                     theWanted--;
@@ -912,7 +912,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
                                                                                (float)theRadius * 0.75f);
                                 if (theResult) {
                                     EEUnit* theTarget = EEMakeBuilding(thePlayer, 0x2b, theSite.mCenter.mX, theSite.mCenter.GetY());
-                                    inUnit->SetGoal(new EEUGBuildRepair(thePlayer, theTarget, false), 1, 0);
+                                    inUnit->SetGoal(EEUGRust::NewBuildRepair(thePlayer, theTarget, false), 1, 0);
                                     inUnit->StartAction(kActionMoveToRepairSite);
                                     EE_CP_TRACE(thePlayer, "settlement.order", "resource=%lu x=%ld y=%ld", (unsigned long)theResource->mResourceType, (long)theSite.mCenter.mX, (long)theSite.mCenter.GetY());
                                     inUnit->GetUnitClass()->ActionChanged(inUnit);
@@ -2768,11 +2768,11 @@ void EECPResourceManager::RebalanceGatherers()
     unsigned long theFreed = 0;
     for (unsigned long i = 0; i < theCitizens.size(); i++) {
         EEComplexUnit* theUnit = theCitizens[i];
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->mActiveGoal);
+        EEUGRust* theGoal = EEBuildRepairGoalCast(theUnit->mActiveGoal);
         if (theGoal == NULL || theUnit->mIsDetachedFromAI || theUnit->mIsDisabled || !(theUnit->mHitPoints > 0)
             || (theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionTaskSmartCitizen)
             continue;
-        EEComplexUnit* theTarget = theGoal->mTarget != NULL ? theGoal->mTarget->mComplexUnit : NULL;
+        EEComplexUnit* theTarget = theGoal->GetBuildTarget() != NULL ? theGoal->GetBuildTarget()->mComplexUnit : NULL;
         if (theTarget != NULL && !theTarget->mIsBuilt)
             continue;
         theUnit->ClearGoalQueue(0);

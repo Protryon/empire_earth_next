@@ -45,7 +45,7 @@
 #include "ee/EEUCLandable.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAEManager.h"
@@ -415,7 +415,7 @@ void EEComplexUnit::OrderRepair(EEUnit* inTarget)
 {
     EEUnit* theTarget;
     if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalBuildRepair) {
-        theTarget = EEGoalCast<EEUGBuildRepair>(this->GetGoal())->mTarget;
+        theTarget = EEBuildRepairGoalCast(this->GetGoal())->GetBuildTarget();
         theTarget->Reference();
         this->mCitizenBuildQueue.push_front(theTarget);
     }

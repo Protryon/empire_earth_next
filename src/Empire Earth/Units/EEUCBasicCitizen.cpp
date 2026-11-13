@@ -36,7 +36,7 @@
 #include "ee/EETileCoordinate.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEAIArea.h"
 #include "ee/EECivPowersManager.h"
@@ -331,7 +331,7 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
     std::vector<U2DPoint<long> > theTiles;
     EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
     EEUGGather* theGather = EEGoalCast<EEUGGather>(inUnit->GetGoal());
-    EEUGBuildRepair* theBuild = EEGoalCast<EEUGBuildRepair>(inUnit->GetGoal());
+    EEUGRust* theBuild = EEBuildRepairGoalCast(inUnit->GetGoal());
     long theUnitX = inUnit->mTileX;
     long theUnitY = inUnit->mTileY;
     EEUnit* theFarm;
@@ -368,14 +368,14 @@ void EEUCBasicCitizen::FindGatherPoint(EEComplexUnit* inUnit, unsigned long inX,
                 ++it;
         }
     }
-    if (theBuild != NULL && theBuild->mTargetClass->mIsWall) {
+    if (theBuild != NULL && theBuild->GetBuildTargetClass()->mIsWall) {
         it = theTiles.begin();
         while (it != theTiles.end()) {
             EEMapTile* theTile = gWorld.mMap->GetTile(it->GetX(), it->GetY());
             bool theErased = false;
             if (theTile != NULL) {
                 for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && !theErased; theNode = theNode->mNext) {
-                    if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theBuild->mTargetType) {
+                    if (theNode->mUnit != NULL && theNode->mUnit->mUnitClass->mUnitType == theBuild->GetBuildTargetType()) {
                         it = theTiles.erase(it);
                         theErased = true;
                     }
@@ -477,7 +477,7 @@ long EEUCBasicCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
         if ((long)inUnit->mCitizenBuildQueue.size() > 0) {
             EEUnit* theSite = inUnit->PopBuildTarget();
             if (theSite != NULL) {
-                inUnit->SetGoal(new EEUGBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
+                inUnit->SetGoal(EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theSite, true), 0, 0);
                 inUnit->StartAction(kActionMoveToRepairSite);
                 theTrue = true;
             }

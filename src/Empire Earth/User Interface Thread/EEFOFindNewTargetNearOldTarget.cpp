@@ -105,7 +105,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
@@ -566,7 +566,7 @@ void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
         inUnit->SetGoal(new EEUGGather(inTarget, NULL, false), 0, 0);
         inUnit->StartAction(kActionMoveToResource);
     } else {
-        inUnit->SetGoal(new EEUGBuildRepair(inTarget->GetPlayer(), inTarget, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewBuildRepair(inTarget->GetPlayer(), inTarget, false), 0, 0);
         inUnit->StartAction(kActionMoveToRepairSite);
     }
     inUnit->GetUnitClass()->ActionChanged(inUnit);

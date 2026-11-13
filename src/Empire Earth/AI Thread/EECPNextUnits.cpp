@@ -79,7 +79,7 @@
 #include "ee/EECPLua.h"
 #include "ee/EEEvent.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EERandomMapIDs.h"
@@ -1043,8 +1043,8 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
             // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
             if (theGather->mWaiting && c->mCurrentPhysicsAction != 0)
                 EECPUnitsSetBool(L, "waiting", true);
-        } else if (EEUGBuildRepair* theBuild = dynamic_cast<EEUGBuildRepair*>(g)) {
-            theTarget = theBuild->mTarget;
+        } else if (EEUGRust* theBuild = EEBuildRepairGoalCast(g)) {
+            theTarget = theBuild->GetBuildTarget();
             // a builder waiting for its foundation's site to clear while another unit holds it (the classic's
             // FindStalledBuilder: CancelStalledBuilds cancels these)
             if ((c->mCommand ? c->mCommand->mType : 0) == kActionWaitForBuildSiteToClear && theTarget != NULL
