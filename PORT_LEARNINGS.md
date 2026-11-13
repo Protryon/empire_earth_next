@@ -13110,5 +13110,9 @@ and the 15 goal-giving bodies (`ee_units` group.rs, commands.rs) had moved in th
   PASS (16 SM digests equal; the sweep ran in every scenario too), the test-profile build 0/0, `lan_game.py` RESULT PASS lan-game (host PT 2940, joiner 2944, under the
   harness lock), the saveload matrix `saveload expect: PASS` (matrix oracle 4/4, plains 2/4, islands 3/4, highlands 4/4, mediterranean 2/4, medium 1/4, late 0/4, space 1/4, calamity 4/4, next 2/4: the expected file's)). The merge of `rust` (core round 21's `EEUGLocation` whole in Rust, combat 15, gfx 20, LLE 1, WON 31) met
   EEMessage.cpp: its `new EEUGLocation` -> `EEUGRust::NewLocation` edits applied to the bodies still in C++ (the four
-  moved ones make their moves through the host's goal specs, which core round 21 already serves). Not
+  moved ones make their moves through the host's goal specs, which core round 21 already serves). On the merged
+  tree: build `--sim` 0/0, the oracle identical on seeds 2-7, the four capture profiles at seeds 2-3 PASS (USGC equal
+  to the new goldens), the Rust gate PASS (2,678 tests in 69 binaries; `periodic_callback_timers_tick_until_stopped`
+  failed once under load and passed alone and in the rerun), the test-profile build 0/0. The LAN game ran on the
+  pre-merge commit 04687a73. Not
   run: a tour or a played game (the four bodies' world calls), macOS or Linux builds.
