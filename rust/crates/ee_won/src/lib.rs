@@ -67,6 +67,7 @@ pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
+pub mod hostnative;
 pub mod hostop;
 pub mod http;
 pub mod httpdoc;
@@ -142,6 +143,7 @@ pub mod titlecfg;
 pub mod treeobj;
 pub mod udpmgr;
 pub mod udpops;
+pub mod userstatus;
 pub mod verop;
 pub mod wire;
 

@@ -108,7 +108,7 @@ ServerOp::ServerOp()
     this->mMaxSendTime = 60000;
     this->mMaxRecvTime = 60000;
 }
-RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp), mFile(NULL) {}
+RustServerOp::RustServerOp(EeWonHostOp* inRustOp) : mRustOp(inRustOp) {}
 RustServerOp::~RustServerOp()
 {
     PlatMutexLock(sLinesLock);

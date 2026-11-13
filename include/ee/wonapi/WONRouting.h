@@ -777,18 +777,22 @@ protected:
 typedef SmartPtr<RoutingOp> RoutingOpPtr;
 #define EE_WON_ROUTE_OPS_RUST 1 // the ops are Rust objects (won_routeops_test reads them so)
 
+// The friend status map (the original's +0x88), the request datagram and the reply's read are a Rust object since
+// net round 19 (rust/crates/ee_won/src/userstatus.rs EeWonUserStatus); the map is read and set through copies
 class RoutingGetUserStatusOp : public UDPManagerSendRecvOp {
 public:
     typedef std::map<unsigned long,unsigned char> FriendStatusMap;
     RoutingGetUserStatusOp(const IPAddr&,UDPManager*); //2c6630/ret8
+    virtual ~RoutingGetUserStatusOp(); // the Rust object (the original's was implicit, 2c6750)
     virtual void RunHook();   //RunHook2c6970
     virtual WONStatus CheckResponse(ReadBuffer&); //UnpackMsg2c6ab0
     void AddWONUserId(unsigned long); //2c68c0/ret4
-    const FriendStatusMap& GetFriendStatusMap() const { return this->mFriendStatusMap; }
-    FriendStatusMap mFriendStatusMap; //88 allocator/header8c/count90, full94
-    // No explicit destructor: ordinary2c6750 has NOown-vptr write and inlines
-    // the map destruction, then the base (0x88) member/base cleanup.
+    FriendStatusMap GetFriendStatusMap() const; // a copy
+    void SetFriendStatusMap(const FriendStatusMap& inMap);
+private:
+    EeWonUserStatus* mStatus; // owned
 };
+#define EE_WON_USER_STATUS_RUST 1 // the map is a Rust object (won_userstatus_test sets it so)
 
 
 inline const char* GetBufferData(const ByteBufferPtr& inBuffer)
@@ -963,8 +967,7 @@ protected:
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
     IPAddr AddrOf(int inWhich) const;
-    EeWonHostOp* mRustOp; // owned
-    FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
+    EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
 

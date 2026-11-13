@@ -13943,3 +13943,72 @@ branch's start (5d3ce6a9) -> 21,307 at 97c4d3e8 (-744; git over `src` and `inclu
 - **Left of the main game form**: the constructor (the mode tables), `CopyData`, `RefreshStatus`, `DisplayChatLine`,
   `ShowInformation`, the start modes (gate, wall, calamity, flare, patrol, build). Next by size: `EEUserInterface`'s
   `HandleMessage`, the status button's `Command` and `GetHelpString`, the status box.
+
+## R6: WON's Internet code, round 19 (RustServerOp's object-free host calls and RoutingGetUserStatusOp's map in Rust)
+
+Branch `rust-won-net19`. Measured by net C++ deletion, as rounds 7 to 18. The servers are gone: an Internet login
+reaches this round's code, no LAN step does; the drivers and the Rust tests exercise it.
+
+- **The RustServerOp host: what could move.** ServerOp.cpp's `HostCall` (~330 lines of cases) answers the Rust ops'
+  calls on C++ objects. Sorted by what each case touches: (1) nothing C++ at all: the clock (`WONTickCount`,
+  `time`), the CRT's `rand` / `srand(time(NULL))`, an address resolved (`IPAddr::SetWithDefaultPort`, a Rust object
+  already), the op's own file (`RustServerOp::mFile`: open, read, close), the files an op measures (`stat`'s size,
+  `WONFile`'s existence, size and modify time, a text-mode first character) and the web proxy host
+  (`HTTPGetOp::ReadProxyHostFile`'s statics); (2) the socket shims, the socket ops, `AsyncOp`, timers and
+  completions; (3) AuthContext, the certificate objects, the sessions and the peer authentication op; (4) the HTTP
+  cache and session. Group (1) moved: `hostnative.rs` answers those codes in Rust when the game binds the op
+  (`ee_won_hostop_bind_native`, which RustServerOp's constructor calls); the op owns its file (closed when the Rust
+  op goes, after its objects are released, as the destructor did) and the proxy host is a Rust static read once per
+  process when the first HTTP get op is made (`ee_won_http_proxy_read` from `NewHttpGet`, as the constructors ran
+  it). The drivers' stand-ins (`ee_won_hostop_bind`) still see every call, so golden_hostop, golden_getcert,
+  golden_fwop, golden_peerop and the other op goldens are unchanged.
+- **Why the rest stays (this round).** Group (2): the objects are Rust objects behind their shims already (the lobby
+  lane's rounds 14-16), but the Rust op holds the C++ `RefCount*` (references, `SmartPtr`s in the C++ containers,
+  virtual hooks such as QueueSocket's `CloseHook`, `CompletionBase::Complete`); answering on the Rust objects needs
+  the shim's object for each pointer, one more call per call, and BlockingSocket's blocking calls make C++ op classes.
+  The C++ completions (`ParamCompletion` with the op's id) are what the socket shims call back. Group (3):
+  AuthContext is a C++ class with its lock and login data (round 5 moved its flow only), `GetCertOp::GetPeerData`
+  hands a C++ `AuthPeerData*` to `AuthContext::GetCertCallback`; making the certificates, key blocks and private
+  keys Rust handles in the op would change that ownership across AuthContext and the peer ops in one go: the next
+  step, with AuthContext. Group (4): HTTPCache's entries are C++ objects the lobby's cache users share.
+- **The golden over the real host.** `won_serverop_test` (new, `xbuild wontest`) links ServerOp.cpp and what it
+  names (ServerContext, WONFile, the directory entity parser, HTTPEngine, HTTPCache, AuthSession, AuthContext,
+  Blowfish, ElGamal: it linked as is) and sends each call through the op's own call path (`ee_won_hostop_call`, a
+  forwarder added in the golden's commit), so the same 80 lines are the C++ side's answers before the move and the
+  Rust op's after: sizes, first characters and WONFile stats of a binary file, an empty one, a CR LF text, a NUL, a
+  directory, a missing path; the op's reads (binary, a reopen closing the first, no file, a directory, an empty
+  file); the tick and time against the platform's; `rand` after a fixed `srand`, and `srand`'s seed; addresses;
+  the proxy file read once (rewritten before a second HTTP get op: still the first line). Recorded over the
+  unmodified HostCall (five runs the same); 0 failures over hostnative.rs. Mutation: the proxy line not cut at its
+  newline fails lines 2-3.
+- **Machine-dependent answers left out of the golden.** An empty host resolves to the local host's address
+  (172.x here); a directory's `stat` size is the system's (0 on Windows, its entries on POSIX; UCRT's `stat` of a
+  directory path ending in a separator said 4096). hostnative.rs calls the CRT's `_stat64i32` on Windows (the
+  original's `stat`, a 32-bit `_off_t`) and `std::fs::metadata` elsewhere.
+- **RoutingGetUserStatusOp** (`userstatus.rs`, `EeWonUserStatus`): the friend status map (a `BTreeMap` keyed by the
+  C++ `unsigned long`, sent as its low 32 bits), `AddWONUserId` (insert, a duplicate kept as it was), the request
+  datagram and `CheckResponse`'s read (routemsg.rs's user status request and reply; each status in the map's order,
+  what a cut reply assigned kept, the reader's position handed back). The C++ class stays the
+  `UDPManagerSendRecvOp` subclass (the lobby lane's object: sending, waiting, retransmits untouched), with a
+  destructor, `GetFriendStatusMap()` (a copy) and `SetFriendStatusMap` (RoutingLogic's LocateFriends assigned the
+  member, GetUserStatusComplete iterated it). `WONRoutingMsg.h` (149 lines), used only by this op, is test glue now
+  (inlined into `tests/won/won_routemsg_glue.h`; won_routemsg_test and won_reqlast_test pass unchanged).
+- **Its golden over real loopback sockets.** `won_userstatus_test` (new): a UDPManager bound on 127.0.0.1 and a
+  datagram stand-in that logs each request and sends the scripted replies: ids one by one with a duplicate, a whole
+  map, a wrong header (the op still waits 200 ms later) then the right reply, a count mismatch
+  (`WS_InvalidMessage`), a reply cut short (`WS_MessageUnpackFailure`, the first status kept), no ids, ids at the
+  top of 32 bits, no reply (`WS_NoReply`). 35 lines over the unmodified class, six runs the same; the same over the
+  Rust object. Driver traps: `RunAsync` only queues, so the stand-in's blocking receive before a pump saw nothing
+  and every later case answered the previous op's retransmit; a retransmit needs the pump too, so all replies
+  answer the first request.
+- **Not moved, and why.** ServerConnectionConnectOp: two members and three statements over ServerConnection (a Rust
+  object) and a C++ `ParamCompletion` it hands the connection; a Rust op would keep the class for its virtuals and
+  add a hook for the completion: no deletion. TitleConfig: a ConfigObject subclass, and ConfigObject (WONConfig,
+  ~1,000 lines with its parser) is still C++, the base of WONGUI's configs (the GUI lane's).
+- **LAN reach: none of the lead's LAN gate.** RustServerOp's ops are made by an Internet login (the directory,
+  account, HTTP, patch and certificate ops) and by the peer authentication of a direct-connect game with the CD key
+  check; of this round's calls, the request exchange's tick (reqhost.rs) runs in every request op, GetCertOp
+  included, so a direct-connect game that refreshes its certificate reaches it. RoutingGetUserStatusOp is made by
+  RoutingLogic's friend search on Internet servers. EE-SIM makes neither.
+- **Net C++** (src+include, the generated headers left out): the host calls +10 -90 (ServerOp.cpp +9 -88); the user
+  status op +48 -164 (WONRoutingMsg.h -149); the round +58 -254.
