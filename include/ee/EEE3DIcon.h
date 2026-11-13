@@ -33,25 +33,27 @@ public:
     void Clear();                           // 0xf238a (provisional name)
     void UpdatePosition();                  // 0xf2c95 (the unit's or the point, plus the effect's offset)
 
-    GE3DPoint mLocation;                    // +0x74 (saved when it does not follow the unit)
+    // +0x74 .. +0x115 but the orbitals, the graphic, the draw copies and the orbital count: the record's (ee_gfx
+    // effect_icon.rs: the tick, the draw's opacity and fraction, load and save)
+    GE3DPoint& mLocation = *reinterpret_cast<GE3DPoint*>(&this->mRecord->icon.location);   // (saved when it does not follow the unit)
     std::vector<EEOrbital*> mOrbitals;      // +0x80 (copies of the graphic's; deleted by the dtor)
     std::vector<float> mAngles;             // +0x90 (the orbitals' angles the draw uses)
     EEGraphicObject* mGraphicObject;        // +0xa0
     GETransformation mDrawTransformation;   // +0xa4 (Virtual24 copies mTransformation)
-    float mOpacity;                         // +0xe4
-    float mTime;                            // +0xe8 the time into the current frame
-    float mScale;                           // +0xec
-    float mAge;                             // +0xf0 (saved)
-    float mFraction;                        // +0xf4 (the draw's fractional frame position)
-    unsigned long mFrame;                   // +0xf8
+    float& mOpacity = this->mRecord->icon.opacity;
+    float& mTime = this->mRecord->icon.time;                // the time into the current frame
+    float& mScale = this->mRecord->icon.scale;
+    float& mAge = this->mRecord->icon.age;                  // (saved)
+    float& mFraction = this->mRecord->icon.fraction;        // the draw's fractional frame position
+    uint32_t& mFrame = this->mRecord->icon.frame;
     unsigned long mDrawFrame;               // +0xfc
-    unsigned long mFrameCount;              // +0x100
-    unsigned long mFrameTime;               // +0x104
+    uint32_t& mFrameCount = this->mRecord->icon.frame_count;
+    uint32_t& mFrameTime = this->mRecord->icon.frame_time;
     long mOrbitalCount;                     // +0x108
-    float mScroll;                          // +0x10c (the texture's u offset)
+    float& mScroll = this->mRecord->icon.scroll;            // the texture's u offset
     float mDrawScroll;                      // +0x110
-    bool mFollowUnit;                       // +0x114 (saved)
-    bool mGrowing;                          // +0x115
+    bool& mFollowUnit = this->mRecord->icon.follow_unit;    // (saved)
+    bool& mGrowing = this->mRecord->icon.growing;
 };
 
 #endif

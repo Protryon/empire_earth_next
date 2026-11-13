@@ -63,6 +63,21 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_RIPPLE = 34;
 /// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
 constexpr static const int32_t EE_GFX_EFFECT_ASK_BLOCKED = 1;
 
+/// The rain (`EEE3DRain`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_RAIN = 42;
+
+/// The snow (`EEE3DSnow`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SNOW = 61;
+
+/// The tick's events: the impact effect is placed now.
+constexpr static const int32_t EE_GFX_TRACER_IMPACT = 1;
+
+/// The target is told it was hit now.
+constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
+
+/// The beam ends (7).
+constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -123,12 +138,35 @@ constexpr static const float BAR_FRACTION = 0.75;
 /// The image's side (`textures\Volcano.png`, 19 x 19).
 constexpr static const size_t EE_GFX_VOLCANO_IMAGE_SIDE = 19;
 
+/// The manager's creation entry points (the effects' constructors differ by entry; the C++ keeps them).
+enum class EeGfxEffectEntry {
+  /// `CreateUnitEffect`: on a unit
+  Unit = 0,
+  /// `CreateEffectBetweenUnits`: from a unit to a unit
+  BetweenUnits = 1,
+  /// `CreateEffect`: from a unit to a point
+  UnitToPoint = 2,
+  /// `CreatePlacedEffect`: at a point
+  Placed = 3,
+  /// `CreateTransformationEffect`: at a transformation
+  Transformation = 4,
+  /// `CreateLineEffect`: along a line
+  Line = 5,
+  /// `CreateEffectBetween`: between two points
+  Between = 6,
+  /// `CreateWeatherEffect`: over tiles
+  Weather = 7,
+};
+
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
 /// `mSecondaryEffects`), owned by the record (`EeGfxEffectDamaged::lists`, made on first use, freed with it).
 struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
+
+/// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
+struct EeGfxStormLists;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -516,6 +554,95 @@ struct EeGfxEffectAged {
   EeGeTransformation transformation;
 };
 
+/// A storm's state (`EEE3DStorm`'s, `EEE3DRain`'s and `EEE3DSnow`'s plain members).
+struct EeGfxEffectStorm {
+  /// the tiles and the drops (owned: made on first use, freed with the record)
+  EeGfxStormLists *lists;
+  /// `mCenter`: the tiles' mean (saved)
+  int32_t center_x;
+  int32_t center_y;
+  /// `mFallSpeed`, `mSpawnHeight`, `mDensity`: the graphic effect's params 1-3
+  float fall_speed;
+  float spawn_height;
+  float density;
+  /// `mIntensity` (1; saved; the weather event sets it)
+  float intensity;
+  /// `mDuration` (ms; 5000 until the graphic effect's is read)
+  uint32_t duration;
+  /// `mElapsedTime` (ms; saved)
+  float elapsed;
+  /// `mIsRestored`: loaded this tick (the rain's sound restarts)
+  bool restored;
+  /// `mIsSustained`: the weather event keeps it going (saved)
+  bool sustained;
+  /// `mDropCount` / `mFlakeCount`: drops spawned so far (saved)
+  uint32_t count;
+  /// `mLoadedDrops` / `mLoadedFlakes`: the saved number of drops, respawned by RepairPointers
+  uint32_t loaded;
+  /// the rain's `mRumbleDelay`: ms to the next thunder (saved)
+  float rumble_delay;
+};
+
+/// `EEE3DIcon`'s state.
+struct EeGfxEffectIcon {
+  /// `mLocation`: where a fixed icon stands (saved when it does not follow its unit)
+  EeGe3DPoint location;
+  /// `mOpacity`: the draw's (Queue)
+  float opacity;
+  /// `mTime`: ms into the current frame
+  float time;
+  /// `mScale`
+  float scale;
+  /// `mAge`: ms (saved)
+  float age;
+  /// `mFraction`: the draw's fractional frame position (Queue)
+  float fraction;
+  /// `mFrame`, `mFrameCount`, `mFrameTime`: animation 13 of the graphic
+  uint32_t frame;
+  uint32_t frame_count;
+  uint32_t frame_time;
+  /// `mScroll`: the texture's u offset
+  float scroll;
+  /// `mFollowUnit` (saved)
+  bool follow_unit;
+  /// `mGrowing`: the scale grows towards the size
+  bool growing;
+};
+
+/// `EEE3DEnergyWall`'s state.
+struct EeGfxEffectWall {
+  /// `mPoints`: [0] and [9] the posts, [1..4] and [5..8] the segment ends (saved)
+  EeGe3DPoint points[10];
+  /// `mSegments`: bit i, segment i is drawn (saved)
+  uint32_t segments;
+  /// `mTimer`: ms to the next search (saved)
+  int32_t timer;
+  /// `mPlaced` (saved)
+  bool placed;
+  /// `mGate`: two posts (saved)
+  bool gate;
+};
+
+/// `EEE3DTracerBeam`'s state.
+struct EeGfxEffectTracer {
+  /// `mTargetPoint`: on the target's model, or the fixed point (saved)
+  EeGe3DPoint target_point;
+  /// `mScroll`: the texture's offset (saved)
+  float scroll;
+  /// `mAge`: 0..1 over the duration for a timed beam (saved)
+  float age;
+  /// `mLength`: `Aim`'s (saved)
+  float length;
+  /// `mWidth` (saved)
+  float width;
+  /// `mIsTimed` (saved)
+  bool timed;
+  /// `mIsImpactCreated`
+  bool impact_created;
+  /// `mWeaponTagPoint`: the shooter's (saved from 0.250)
+  int32_t weapon_tag_point;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -553,6 +680,14 @@ struct EeGfxEffectRecord {
   EeGfxEffectEmitter emitter;
   /// the aged effects'
   EeGfxEffectAged aged;
+  /// the weather storms' (`effect_storm.rs`)
+  EeGfxEffectStorm storm;
+  /// the 3D icons' (`effect_icon.rs`)
+  EeGfxEffectIcon icon;
+  /// the energy walls' (`effect_wall.rs`)
+  EeGfxEffectWall wall;
+  /// the tracer beams' (`effect_tracer.rs`)
+  EeGfxEffectTracer tracer;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -757,6 +892,99 @@ struct EeGfxEmitterHost {
   int32_t (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
 };
 
+/// The world a storm reads and calls into (`context`: the effect).
+struct EeGfxStormHost {
+  void *context;
+  /// the map has the tile
+  bool (*on_map)(void *context, int32_t x, int32_t y);
+  /// the tile is deep or shallow water (false off the map)
+  bool (*is_water)(void *context, int32_t x, int32_t y);
+  /// the terrain mesh's `GetZ(x, y)`
+  float (*ground_z)(void *context, int32_t x, int32_t y);
+  /// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out` (x, y)
+  void (*step_toward)(void *context,
+                      int32_t from_x,
+                      int32_t from_y,
+                      int32_t to_x,
+                      int32_t to_y,
+                      int32_t *out);
+  /// the land ripple where a drop hit the water
+  void (*ripple)(void *context, float x, float y);
+};
+
+/// A drop to draw this frame (`EE3DRainDraw`, `EE3DSnowDraw`: `Queue` copies the drops).
+struct EeGfxStormDraw {
+  EeGe3DPoint position;
+  float angle;
+  bool water;
+};
+
+/// What the icon's tick reads: the tick, the physics' speed and the graphic effect's duration, size, start size,
+/// `mParam7` (the scale's rate), `mIntParam2` (it scrolls when positive) and `mParam11` (the scroll's rate).
+struct EeGfxIconTick {
+  float tick_time;
+  float speed;
+  uint32_t duration;
+  float size;
+  float start_size;
+  float rate;
+  int32_t int_param2;
+  float param11;
+};
+
+/// The friendly wall pieces a segment reaches (`context`: the effect).
+struct EeGfxWallHost {
+  void *context;
+  /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
+  bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
+};
+
+/// What the beam's tick reads: the tick, the graphic effect's params 1-5 and 7 (the scroll's rate, the width's rate,
+/// its restart and its top, the hit's age, the impact's age), its duration, whether it has a linked (impact) effect
+/// and whether the beam has a target unit.
+struct EeGfxTracerTick {
+  float tick_time;
+  float param1;
+  float param2;
+  float param3;
+  float param4;
+  float param5;
+  float param7;
+  uint32_t duration;
+  bool has_linked1;
+  bool has_target;
+};
+
+/// What an entry point does for a kind: create the effect (saved or not), or return `result`.
+struct EeGfxEffectPlan {
+  bool create;
+  bool saved;
+  int32_t result;
+};
+
+/// The effects and goal markers the manager calls (`context`: the C++'s; `effect`: an `EEEffect*`).
+struct EeGfxEffectManagerHost {
+  void *context;
+  /// the effect's record (its kind, handle and saved flag)
+  EeGfxEffectRecord *(*record)(void *context, void *effect);
+  void (*reference)(void *context, void *effect);
+  /// `EEEffect::Release` (may delete it)
+  void (*release)(void *context, void *effect);
+  int32_t (*set_up)(void *context, void *effect);
+  int32_t (*step)(void *context, void *effect);
+  int32_t (*repair)(void *context, void *effect);
+  /// its graphic effect is above the detail setting
+  bool (*above_detail)(void *context, void *effect);
+  /// a load-time effect of a saved kind (null: none)
+  void *(*new_loaded)(void *context, uint32_t kind);
+  /// the effect's Load and Save over the manager's file
+  int32_t (*load)(void *context, void *effect, const EeGfxEffectFile *file);
+  int32_t (*save)(void *context, void *effect, const EeGfxEffectFile *file);
+  void (*goals_update)(void *context);
+  int32_t (*goals_load)(void *context, const EeGfxEffectFile *file);
+  int32_t (*goals_repair)(void *context);
+};
+
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
 struct EeGfxFarmField {
   float left;
@@ -841,6 +1069,89 @@ struct EeGfxBeamAim {
 struct EeGfxBeamVertex {
   EeGe3DPoint point;
   EeGfxTexCoord coord;
+};
+
+/// The light fade's and the letterbox's state (the C++'s statics `sLightFade` 0x4be368, `sLightFadeStart`,
+/// `sL529070`, `sF529074`, `sF529078`, `sLetterboxDirection` 0x4be370, `sLetterboxStart`, `sF52907C`, `sF529080`,
+/// `sB529088`); the zoom itself is the C++'s `gF4BE374`, which the scenario manager reads.
+struct EeGfxSceneFade {
+  float light_fade;
+  float light_fade_start;
+  /// 1: fading down to black, 0: up to full
+  int32_t fade_down;
+  float fade_rate;
+  float fade_time;
+  /// 1: the bars opening towards the full view (zoom to 1), 0: closing (zoom to 0)
+  int32_t letterbox_direction;
+  float letterbox_start;
+  float letterbox_rate;
+  float letterbox_time;
+  /// the bars are to be cleared again on the next frame
+  bool bars_cleared;
+};
+
+/// The render environment's clocks.
+struct EeGfxSceneClocks {
+  /// `gU4E9330`: the grid's and the area rings' texture scroll, in [0, 1)
+  float grid_phase;
+  float water_phase;
+  float cloud_offset;
+};
+
+/// What a frame's fade and letterbox step asks the C++ to do.
+struct EeGfxSceneStep {
+  /// the light fade moved (the terrain is lit again)
+  bool fade_changed;
+  /// the new zoom (`gF4BE374`)
+  float zoom;
+  /// clear the bars (they were flagged, or the zoom is 0)
+  bool clear_bars;
+  /// the zoom changed: set the view band and clear the bars (one row more at the top)
+  bool set_view;
+  /// the full view again: show the UI's backgrounds
+  bool show_backgrounds;
+  /// the full view left: hide them
+  bool hide_backgrounds;
+};
+
+/// The letterboxed view band at a zoom, and the screen rows of the bars at a window height.
+struct EeGfxLetterbox {
+  float left;
+  float right;
+  float top;
+  float bottom;
+  /// the top bar's end row (`height / 1200 * top`)
+  float top_bar_end;
+  /// the bottom bar's first row
+  float bottom_bar_start;
+};
+
+/// The lights at a time of day.
+struct EeGfxDaylight {
+  /// the lit direction (`gU4E9210`): the moon's at night
+  EeGeVector direction;
+  /// the terrain's and units' light colour
+  EeGfxColor light;
+  float light_intensity;
+  float ambient_intensity;
+  float unit_ambient_intensity;
+  /// the prelit colour (and `mColor54`), clamped; its half
+  EeGfxColor prelit;
+  EeGfxColor dim_prelit;
+};
+
+/// The time-of-day light tables (`EEInitialiseScene`'s 17 key frames: `gU4E9348` the colours, `gU4E92EC` the light's
+/// intensity, `gU4E92A8` the terrain's ambient intensity, `gU4E9264` the units'; `gU4E9338` the ambient colour,
+/// `gU4E9240` the three fill lights) and the sun's and moon's directions.
+struct EeGfxDaylightTables {
+  EeGfxColor colors[17];
+  float light[17];
+  float ambient[17];
+  float unit_ambient[17];
+  EeGfxColor ambient_color;
+  EeGeVector fill[3];
+  EeGeVector sun;
+  EeGeVector moon;
 };
 
 /// The texture's u across the five vertices of a row.
@@ -1683,6 +1994,270 @@ int32_t ee_gfx_effect_random_long(int32_t min, int32_t max);
 /// The effects' random seed (TEST ONLY: the EFST capture).
 uint32_t ee_gfx_effect_random_seed();
 
+/// `EEE3DStorm`'s constructor: the storm over `count` tiles (`tiles`: x, y pairs).
+///
+/// # Safety
+/// `r` is a live record; `tiles` holds `2 * count` values (or is null with 0).
+void ee_gfx_storm_new(EeGfxEffectRecord *r, const int32_t *tiles, uint32_t count);
+
+/// `EEE3DRain`'s constructor: the first thunder's delay.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_rain_new(EeGfxEffectRecord *r);
+
+/// `EEE3DStorm::GetCenter`: whether it has tiles; `out` gets the point on the terrain at the new centre.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+bool ee_gfx_storm_center(EeGfxEffectRecord *r,
+                         const EeGfxStormHost *host,
+                         EeGe3DPoint *out);
+
+/// `EEE3DStorm::Move` towards (`to_x`, `to_y`): whether it has tiles; `bounds` (left, top, right, bottom) and `out`
+/// (the point on the terrain at the new centre) are set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values; `host` and `out` are valid.
+bool ee_gfx_storm_move(EeGfxEffectRecord *r,
+                       int32_t to_x,
+                       int32_t to_y,
+                       int32_t *bounds,
+                       const EeGfxStormHost *host,
+                       EeGe3DPoint *out);
+
+/// `EEE3DStorm::GetBounds`: whether it has tiles; `bounds` (left, top, right, bottom) is set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values.
+bool ee_gfx_storm_bounds(const EeGfxEffectRecord *r, int32_t *bounds);
+
+/// The storm's number of tiles (`mTiles.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+uint32_t ee_gfx_storm_tile_count(const EeGfxEffectRecord *r);
+
+/// The storm's number of drops or flakes (`mDrops.size()`, `mFlakes.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+uint32_t ee_gfx_storm_drop_count(const EeGfxEffectRecord *r);
+
+/// `Queue`'s copy of the drops into `out` (at most `count`).
+///
+/// # Safety
+/// `r` is a live record; `out` holds `count` draws.
+void ee_gfx_storm_draws(const EeGfxEffectRecord *r, EeGfxStormDraw *out, uint32_t count);
+
+/// The rain's and the snow's `SetUp` (after the C++ read the graphic effect): `out` gets the point on the terrain
+/// at the tiles' mean; the radius is set.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+void ee_gfx_storm_set_up(EeGfxEffectRecord *r,
+                         const EeGfxStormHost *host,
+                         EeGe3DPoint *out);
+
+/// The rain's thunder timer: 0, or the rumble sound (1 or 2) to play.
+///
+/// # Safety
+/// `r` is a live record.
+int32_t ee_gfx_rain_rumble(EeGfxEffectRecord *r, float tick_time);
+
+/// The storm's `Step` after the rain's sounds: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+int32_t ee_gfx_storm_step(EeGfxEffectRecord *r,
+                          float tick_time,
+                          float game_speed,
+                          const EeGfxStormHost *host);
+
+/// `RepairPointers`' respawn of the saved drops (after the C++ read the graphic effect again).
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+void ee_gfx_storm_repair(EeGfxEffectRecord *r, const EeGfxStormHost *host);
+
+/// The storm's and the leaf's own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The storm's and the leaf's own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DIcon::Clear`'s part of the record.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_icon_clear(EeGfxEffectRecord *r);
+
+/// `EEE3DIcon::Step`'s part: 7 once a set duration is up.
+///
+/// # Safety
+/// `r` is a live record; `tick` is valid.
+int32_t ee_gfx_icon_step(EeGfxEffectRecord *r, const EeGfxIconTick *tick);
+
+/// `EEE3DIcon::Queue`'s opacity and fractional frame.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_icon_queue(EeGfxEffectRecord *r, float param8, float param9, float param10);
+
+/// `EEE3DIcon::Load`'s own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_icon_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DIcon::Save`'s own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_icon_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DEnergyWall::Place`'s segment ends after the C++ set the posts.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_wall_place(EeGfxEffectRecord *r);
+
+/// `EEE3DEnergyWall::FindSegments` (`height`: the graphic effect's `GetParam6()`).
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+void ee_gfx_wall_find_segments(EeGfxEffectRecord *r, float height, const EeGfxWallHost *host);
+
+/// `EEE3DEnergyWall::Step`'s timer: whether the segments are due.
+///
+/// # Safety
+/// `r` is a live record.
+bool ee_gfx_wall_step(EeGfxEffectRecord *r, float tick_time);
+
+/// `EEE3DEnergyWall::Load`'s (or, `old`, `LoadOldVersion`'s) own reads after the media load (`media`: its result).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_wall_load(EeGfxEffectRecord *r,
+                         const EeGfxEffectFile *file,
+                         int32_t media,
+                         bool old);
+
+/// `EEE3DEnergyWall::Save`'s own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_wall_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DTracerBeam::Step`'s timing after the C++'s aim: its events (`EE_GFX_TRACER_*`).
+///
+/// # Safety
+/// `r` is a live record; `tick` is valid.
+int32_t ee_gfx_tracer_step(EeGfxEffectRecord *r, const EeGfxTracerTick *tick);
+
+/// `EEE3DTracerBeam::Load`'s own reads after the media load succeeded (`id`, `read`: the target's saved id).
+///
+/// # Safety
+/// `r` is a live record; `file`, `id` and `read` are valid.
+int32_t ee_gfx_tracer_load(EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           uint32_t major,
+                           uint32_t minor,
+                           uint32_t *id,
+                           bool *read);
+
+/// `EEE3DTracerBeam::Save`'s own writes after `EEEffect3D::Save`'s (`id`: the target's, -1 for none).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_tracer_save(const EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           uint32_t id);
+
+/// An entry point's choice for a graphic effect of `kind` (`detail_ok`: its detail level is within the setting;
+/// `from_alive`/`to_alive`: the units are there and living).
+EeGfxEffectPlan ee_gfx_effects_plan(EeGfxEffectEntry entry,
+                                    int32_t kind,
+                                    bool detail_ok,
+                                    bool from_alive,
+                                    bool to_alive);
+
+/// Registers an entry point's new effect (null: none): unsaved unless `saved`, set up, added under a new handle;
+/// writes the handle to `out_handle` (null: not asked) when there is an effect. Returns the set-up's result (0: none).
+///
+/// # Safety
+/// `s` is a store, `h` a host, `out_handle` null or writable.
+int32_t ee_gfx_effects_create(EeGfxEffectStore *s,
+                              const EeGfxEffectManagerHost *h,
+                              void *effect,
+                              bool saved,
+                              uint32_t *out_handle);
+
+/// `AddEffect`.
+///
+/// # Safety
+/// `s` is a store, `h` a host, `effect` an effect.
+void ee_gfx_effects_add_effect(EeGfxEffectStore *s,
+                               const EeGfxEffectManagerHost *h,
+                               void *effect,
+                               bool new_handle);
+
+/// `RemoveEffect`.
+///
+/// # Safety
+/// As `ee_gfx_effects_add_effect`.
+void ee_gfx_effects_remove_effect(EeGfxEffectStore *s,
+                                  const EeGfxEffectManagerHost *h,
+                                  void *effect);
+
+/// `DestroyQueued`.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+int32_t ee_gfx_effects_destroy_queued(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `ClearEffects`.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+void ee_gfx_effects_clear(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `RepairPointers` (the goal markers' through the host).
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+int32_t ee_gfx_effects_repair(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
+/// `Load` from `file` (the save's version `major`.`minor`).
+///
+/// # Safety
+/// `s` is a store, `h` a host, `file` a file.
+int32_t ee_gfx_effects_load(EeGfxEffectStore *s,
+                            const EeGfxEffectManagerHost *h,
+                            const EeGfxEffectFile *file,
+                            uint32_t major,
+                            uint32_t minor);
+
+/// `Save` to `file`.
+///
+/// # Safety
+/// `s` is a store, `h` a host, `file` a file.
+int32_t ee_gfx_effects_save(EeGfxEffectStore *s,
+                            const EeGfxEffectManagerHost *h,
+                            const EeGfxEffectFile *file);
+
+/// `Update`'s goal markers, destruction queue and step loop.
+///
+/// # Safety
+/// `s` is a store, `h` a host.
+void ee_gfx_effects_update(EeGfxEffectStore *s, const EeGfxEffectManagerHost *h);
+
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///
 /// # Safety
@@ -1831,6 +2406,70 @@ size_t ee_gfx_effects_destroyed_len(const EeGfxEffectStore *s);
 
 /// The destruction queue's `i`th handle.
 uint32_t ee_gfx_effects_destroyed_at(const EeGfxEffectStore *s, size_t i);
+
+/// `EEInitialiseScene`'s reset of the fade and letterbox.
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_reset(EeGfxSceneFade *s);
+
+/// `EEStartLightFadeOut` (`down`) / `EEStartLightFadeIn` over `frames` (0: at once).
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_start_fade(EeGfxSceneFade *s, bool down, uint32_t frames);
+
+/// `EEStartLetterboxOut` (`out`) / `EEStartLetterboxIn` over `frames`, from the zoom `zoom`.
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_start_letterbox(EeGfxSceneFade *s, bool out, uint32_t frames, float zoom);
+
+/// The grid, water and cloud clocks after `elapsed` milliseconds in a wind of `wind`.
+///
+/// # Safety
+/// `c` is writable.
+void ee_gfx_scene_step_clocks(EeGfxSceneClocks *c, float elapsed, float wind);
+
+/// A frame's fade and letterbox for `elapsed` milliseconds from the zoom `zoom`.
+///
+/// # Safety
+/// `s` is the C++'s state.
+EeGfxSceneStep ee_gfx_scene_step(EeGfxSceneFade *s, float elapsed, float zoom);
+
+/// The view band at `zoom` and the bars' rows at the window height `height`.
+EeGfxLetterbox ee_gfx_scene_letterbox(float zoom, float height);
+
+/// The lights at `time_of_day`.
+///
+/// # Safety
+/// `t` is readable.
+EeGfxDaylight ee_gfx_scene_daylight(const EeGfxDaylightTables *t, float time_of_day);
+
+/// A map object's place inside its tiles (`FillObject`, `FillDoppelgangerObject`).
+EeGe2DPoint ee_gfx_capture_object_place(int32_t id, int32_t size, int32_t tile_x, int32_t tile_y);
+
+/// A map object's size jitter by id.
+float ee_gfx_capture_object_scale(int32_t id);
+
+/// The sway clock after a frame at `now`.
+///
+/// # Safety
+/// `clock` and `last` are writable.
+void ee_gfx_capture_sway_tick(uint32_t *clock, uint32_t *last, uint32_t now);
+
+/// A swaying map object's blend fraction.
+float ee_gfx_capture_sway_fraction(uint32_t clock, int32_t id);
+
+/// `DrawGroundCircle`'s 51 points into `points` (the last the first again); returns the strip's width.
+///
+/// # Safety
+/// `ground` is readable; `points` has room for `EE_GFX_RING_POINTS`.
+float ee_gfx_capture_ground_circle(const EeGfxParticleGround *ground,
+                                   float x,
+                                   float y,
+                                   float radius,
+                                   EeGe3DPoint *points);
 
 }  // extern "C"
 

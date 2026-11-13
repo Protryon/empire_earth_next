@@ -11051,3 +11051,119 @@ the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's 
 - **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical, Rust gate PASS (the load commit). Captures at
   seeds 2-3: oracle, late, scenario PASS. Saveload: the full matrix on e82b9142 as the expect file (one row better);
   oracle, islands, late and space at seeds 2-3 on the load tree as the expect file.
+
+## R4.4, ninth round: the weather storms, the 3D icons, the energy walls and the tracer beams on the records (ee_gfx effect_storm.rs, effect_icon.rs, effect_wall.rs, effect_tracer.rs; branch rust-gfx15, 2026-11-12)
+
+More effect leaf families on the round-7 records, one family a commit, largest first, EFST the gate (seeds 2-3 of the
+oracle and late profiles per commit, calamity too for the storms, which a hurricane makes). Graphics Thread C++
+(`src/Empire Earth/Graphics Thread/*.cpp`): 24,878 lines before the round, 24,188 after it (storms -522, icons -56,
+energy walls -93, tracer beams -19).
+
+- **The weather storms** (`EEE3DStorm`, `EEE3DRain`, `EEE3DSnow`: `EeGfxEffectStorm`). The tiles and the drops (the
+  rain's drops and the snow's flakes, one Rust type) are a Rust value the record owns (`EeGfxStormLists`, made on
+  first use, freed with the record, taken out of it for each call like the damage controller's children). In Rust:
+  the constructor's tiles; `GetCenter` (the mean divided as unsigned); `Move` (each tile one step towards its place
+  around the new centre through `EEGetTileDirection`/`EEGetNextTile`, kept where that tile is off the map; the bounds
+  start at the old centre; the radius from the integer half sides); `GetBounds`; the one `SetUp` of both leaves (the
+  float mean, the radius to the farthest tile in x or y); the spawn (the tile, x and y draws, then the flake's two
+  drift draws); the update (the target count's ramp with the original's unsigned `target - count + extra` and its
+  sign flip, at most 65 new drops a tick and none above 1400; the rain's fall and its one-in-16 ripple draw on
+  landing, made before the water test; the snow's fall by the tick over the game speed, its spin and its 5% drift
+  turn); the age and the end (the snow waits for its last flake); the rain's thunder timer (`StartSounds`' two draws);
+  the respawn after a load; Load and Save by kind (the rain's thunder delay between the count and the discarded
+  position). The C++ keeps the sounds, the models, the draws and the world (tiles, terrain heights, the land ripple,
+  the next-tile helpers: `EeGfxStormHost`). `Queue` copies the drops into a C++ vector of `EeGfxStormDraw` for the
+  draw pass, which runs without the lock while the tick steps the drops, as the original's copy did: the draw never
+  reads the Rust list. `EEEMStorm` reads the centre and the tile count through `GetCenterPoint`/`GetTileCount`; the
+  leaves' `Queue`, `SetUp`, `Load`, `Save`, `RepairPointers` and the snow's `Step` became the storm's; `EE3DRainDrop`,
+  `EE3DRainDraw`, `EEE3DSnowFlake`, `EE3DSnowDraw`, `mL74` and `EEE3DStorm.cpp`'s unused file-static tile map are gone.
+  One order change: the thunder's two draws are both made before the rumble plays (the sound draws nothing).
+- **The 3D icons** (`EEE3DIcon`, also `EEE3DGoal`'s base: `EeGfxEffectIcon`): the age and its end, the scale pulsing
+  between the start size and the size, the texture's scroll, the frame (a frame count of 0 keeps the frame where the
+  original divided by zero), `Queue`'s opacity and fraction, `Clear`'s part, Load and Save. The orbitals, the graphic
+  and the position at the unit stay C++.
+- **The energy walls** (`EEE3DEnergyWall`: `EeGfxEffectWall`): the segment ends around the posts, the segment search
+  (bits and end heights; the owner's living, finished wall pieces and gate side parts on the tiles through
+  `EeGfxWallHost`, the last one's height as the original's loop left it), the 500 ms timer, Load (and the files before
+  0.250) and Save. The posts' places on the unit, the draw's alpha, colour and frame stay C++.
+- **The tracer beams** (`EEE3DTracerBeam`: `EeGfxEffectTracer`): the scroll, the width, the timed beam's age and its
+  events (`EE_GFX_TRACER_IMPACT`, `_HIT`, `_OVER`: the impact effect and the hit report stay C++), Load (the target's
+  saved id handed back) and Save. Both of the hit's tests take equality, as the original's: an age landing exactly on
+  param 5 reports the hit on that tick and the next (a unit test pins it). `Aim` and the stretch were `beam.rs`'s.
+- **A moved oracle reference is not a divergence.** Mid-round the tracer commit's oracle "differed" at seed 2 line
+  716 and seed 3 line 404, while its EFST and every capture digest matched: the main checkout's
+  `build/rust_oracle/ref` had been recorded again from a newer `rust` (21:39) underneath the branch. The branch's run
+  compared against its own run from the round's start was identical, and after merging `rust` the oracle matched the
+  new reference on seeds 2-7. Check the reference's time before chasing an oracle difference.
+- **Considered and left:** `EEEffect2D`'s parts as a record would unlock only four leaves (fire, explosion, exhaust
+  trail, damage vent use them); the light glow's `Step` hides it whenever the terrain has no visible rows, so EE-SIM
+  never ages it, and its set-up parses tag names with `sscanf` (it wants a strtof-compatible prefix parser first); the
+  marching line's region list and the command confirmations (never saved, never in EE-SIM) are next in size.
+- **Gates of the round** (on the result merged with rust): the sim oracle identical on seeds 2-7; the captures at
+  seeds 2-3 PASS with EFST: oracle 167 digests, late 168, calamity 181; the Rust gate PASS (2,383 tests); `build.py --sim` and the test
+  profile link 0/0 (`build.py --test-profile` fails at the link when `build/clang-test/exe` is missing, as after
+  deleting the folder to free disk: create it first). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the oracle and late captures at
+  seeds 2-3 PASS (calamity too for the storms). No tour run.
+- **Only a tour or a person reaches:** the storms' draws (the drop and flake models over the copied list) and the
+  rain's sounds; the icons' draw (the opacity and fraction now from Rust); the walls' and beams' draws. A storm exists
+  only where a hurricane is cast (`EECCHurricane::CreateStorm`; the environment manager's own start of a storm is
+  empty in the original), so its tick is checked by the unit tests and by the calamity profile when a seed's game
+  casts one; not measured which do. The saved games' loads of all four go through EE-SIM's saveload gate only when
+  such an effect is alive at the save (not run this round).
+
+## R4.4, tenth round: the effect manager's algorithms, the capture's fade, letterbox, clocks and daylight blend and its per-object arithmetic in Rust (ee_gfx effect_manager.rs, scene.rs, capture.rs; branch rust-gfx16, 2026-11-12)
+
+Round 9 found the effect leaves yielding under 0.5k lines a round, so this round took the larger structures. Graphics
+Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 24,188 lines before the round; 23,699 after the manager
+(`EEEffectManager.cpp` 1,162 -> 673); 23,573 after the capture's state and arithmetic (`EERenderObject.cpp`
+2,026 -> 1,900).
+
+- **The effect manager (`effect_manager.rs`, `ffi_manager.rs`).** Over the round-6 store: the creation plan of each
+  of the eight entry points (`CreateUnitEffect` ... `CreateWeatherEffect`: above the detail setting nothing and 0;
+  a kind the entry does not make 10, but 0 for `CreateEffectBetween` and `CreateWeatherEffect`; a kind without the
+  living (complex) unit or units it needs 10; the multi-effect unsaved), the registration (unsaved first, `SetUp`,
+  `AddEffect` under a new handle even when the set-up fails, the handle out; a pool that returns no effect gives 0),
+  `AddEffect`, `RemoveEffect`, `DestroyQueued` (its 3/9 result), `ClearEffects`, `RepairPointers`' walk (7 or above
+  the detail setting: dropped; another error stops it; then the goal markers'), `Load` (the counter, the effects by
+  kind, a save before 0.200 giving handles anew, an effect added even when its load fails, the goal markers, the
+  queue), `Save` (an effect's error can be overwritten by the next one's, as the original) and `Update`'s loop. The
+  effects stay C++ objects: the C++ constructs them per entry point (one switch each, without the unit tests) and
+  per saved kind, and answers `EeGfxEffectManagerHost` (record, reference, release, set-up, step, repair, the
+  detail test, the load-time constructor, load, save, the goal markers). Every call is the original's in its order:
+  an effect the update or the queue removes is released twice, as before. The store is borrowed for one operation
+  at a time (`StoreAccess::with`), never across a callback: a step, a set-up or a load creates and destroys effects
+  in between. `AddEffect`, `RemoveEffect` and `DestroyQueued` left the class (nothing else called them). One
+  difference: `Load`'s handle counter was an uninitialized local in the original (garbage in the store after a
+  failed first read); it starts at 0. Verified by the EFMU and EFST capture records (recorded from the C++ manager
+  in rounds 6 and 7) in the oracle, late and calamity profiles and by unit tests with a mock host (the call log of
+  update, queue, repair and clear; save and load round trips; old saves; errors). No golden driver over the original
+  manager: it would need every effect class; the capture records are the C++'s behaviour.
+- **The capture's fade, letterbox, clocks and daylight (`scene.rs`).** `EEStartLightFadeIn`/`Out`,
+  `EEStartLetterboxIn`/`Out`, `EEInitialiseScene`'s reset and `Fn10C036`'s grid, water and cloud clocks, light fade,
+  letterbox zoom (the cleared bars, the view band, the clear rectangles' rows, the UI backgrounds' show and hide),
+  and the time-of-day blend (the moon's hours, the 17 key frames, the fill lights, the clamped prelit colour). The
+  state is one `EeGfxSceneFade` the C++ owns (`sLightFade` a reference into it for the lighting set-ups;
+  `gF4BE374`, which the scenario manager reads, stays a C++ global). The progress stays `f64` (the x87 note of
+  `Fn10C036`). The camera, viewport and terrain lighting stay C++.
+- **The capture's per-object arithmetic (`capture.rs`).** A map object's place inside its tiles and its size jitter
+  by id (`FillObject`, `FillDoppelgangerObject`; the id's `long` arithmetic as `i32`/`u32`), the sway clock
+  (`FillRenderLists`) and the swaying blend fraction, and `DrawGroundCircle`'s 51 points and strip width over the
+  terrain (`EEParticleGround`'s callbacks).
+- **A golden driver that cuts the original's code out of the unit.** `EERenderObject.cpp` is too entangled to
+  #include whole (the world, the UI, the rasterizer, the picker), so the driver (`build/gx16/scene_driver`,
+  `make.py`) takes the functions and statement ranges verbatim from `git show BASE:file` by their first and last
+  lines and compiles them over stubs with the same member names (a rasterizer whose `Clear` logs, a UI whose
+  backgrounds log, a 64 x 48 slope for the terrain, `#define GETransformation Location`), with the real GE headers and
+  `UMCos` from `ee_rust.lib`. The same generator cut from the new unit (its new first and last lines) and linked
+  over the forwarders printed the same 2,866 lines. Cutting by text needs each range to compile alone: wrap it in
+  braces (two ranges declared `theBlend`) and give the stubs every member it names.
+- **Gates of the round:** Gates on the result merged with rust: the sim oracle identical on seeds 2-7 in every decision line (the trace's AI folder-hash header differs from `ref`: the open tree's `Data/ai` was rewritten at 23:45, after the reference; the unmodified rust tip shows the same), the captures at seeds 2-3 PASS with EFMU and EFST (oracle 167 digests, late 168, calamity 181), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` matches every row but `next` seeds 2-3 at 1000 s (647 -> 479, 1217 -> 828), which the unmodified rust tip's EE-SIM gives too on the same tree (the new `Data/ai`), the Rust gate PASS, `build.py --sim` and the test profile link 0/0. Per commit: the build 0/0, the oracle at seeds 2-3 identical, the oracle and late captures at seeds 2-3 PASS (calamity too for the manager), the Rust gate PASS. No tour run.
+- **Only a tour or a person reaches:** the capture's moves are drawn only (EE-SIM never runs `Fn10C036`,
+  `FillRenderLists` or `DrawGroundCircle`): the letterbox bars and their clears at a cinematic's start and end (the
+  scenario editor's and a scenario's cinematics; `EEStartLetterbox*`), the UI backgrounds shown and hidden around
+  them, the light fade (`EEStartLightFade*`: a cinematic and the game's end), the sky and terrain light colours at
+  every time-of-day change (the day cycle; the prelit, cloud and unit lighting), the water's phase and the clouds'
+  scroll, the grid's and area rings' texture scroll, the map objects' (trees') places, sizes and sway (and the
+  remembered ones under the fog), and the range ring of a selected, built priest tower (`DrawGroundCircle`, mode 2). The manager's moves
+  are simulation code and are covered by EFMU/EFST and the saveload gate; a windowed game's load of a saved game
+  goes through the same Rust `Load`.
