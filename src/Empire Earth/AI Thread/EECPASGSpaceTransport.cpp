@@ -49,7 +49,7 @@
 #include "ee/EEUnitUtilities.h"
 
 #include "ee/EEAIAStarStorage.h"
-#include "ee/EEUGLoadContainer.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EECPASGAir.h"
@@ -299,9 +299,9 @@ bool EECPASGSpaceTransport::IsLoadingBlocked()
         EEUnitGoal* theGoal = theUnit->mActiveGoal;
         if (theGoal == NULL || theGoal->mKind != kGoalLoadTransport)
             continue;
-        EEUGLoadContainer* theLoad = static_cast<EEUGLoadContainer*>(theGoal);
-        for (long j = theLoad->mUnits.mItems.size() - 1; j >= 0 && !theResult; j--) {
-            EEComplexUnit* theOther = *(theLoad->mUnits.mItems.begin() + j);
+        EEUGRust* theLoad = static_cast<EEUGRust*>(theGoal);
+        for (long j = theLoad->GetNumLoadUnits() - 1; j >= 0 && !theResult; j--) {
+            EEComplexUnit* theOther = theLoad->GetLoadUnitAt(j);
             if (theOther == NULL || theOther->mTileX == -10000 || theOther->mIsDisabled || theOther->mHitPoints <= 0)
                 continue;
             if (UMAbs(theUnit->mTileX - theOther->mTileX) > 1 || UMAbs(theUnit->mTileY - theOther->mTileY) > 1)

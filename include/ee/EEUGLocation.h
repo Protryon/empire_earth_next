@@ -41,19 +41,29 @@ public:
     // 0x22794d: turns inUnit to mF2C when it is within a degree of it (Virtual64's event 0x2337) (provisional name)
     bool FaceYaw(EEComplexUnit* inUnit);
     float GetYaw() const { return this->mYaw; }  // inline (FaceYaw 0x22794d: `fld; fsubp` after UMArcTan2) (provisional name)
+    // new (port, R5b.4 round 18): the members' accessors, so that the class can move to Rust (its callers read and
+    // write the goal only through these)
+    const GE3DPoint& GetLocation() const { return this->mLocation; }
+    void SetLocation(const GE3DPoint& inLocation) { this->mLocation = inLocation; }
+    bool GetIsForcedMove() const { return this->mIsForcedMove; }
+    bool GetShouldFace() const { return this->mShouldFace; }
+    bool GetIsAutoWaypoint() const { return this->mIsAutoWaypoint; }
+    bool GetUseGroupMovement() const { return this->mUseGroupMovement; }
+    void SetUseGroupMovement(bool inValue) { this->mUseGroupMovement = inValue; }
+    unsigned char GetGroupPathState() const { return this->mGroupPathState; }
+    void SetGroupPathState(unsigned char inValue) { this->mGroupPathState = inValue; }
 
+    static const UString sData;             // "EEUGLocation-Data" (init chain 0x227621)
+
+protected:
     // members (names from the out-of-synch dump 0x227842; provisional name)
     GE3DPoint mLocation;                    // +0x20 (saved)
     float mYaw;                             // +0x2c "Yaw" (saved from minor version 0x1a)
-    bool GetIsForcedMove() const { return this->mIsForcedMove; }
     bool mIsForcedMove;                     // +0x30 "Forced Move Flag" (saved from 0xf)
     bool mShouldFace;                       // +0x31 "Should Face Flag" (saved from 0x1a)
-    bool GetIsAutoWaypoint() const { return this->mIsAutoWaypoint; }
     bool mIsAutoWaypoint;                   // +0x32 "Is Auto Waypoint Flag" (saved from 0x87)
     bool mUseGroupMovement;                 // +0x33 "Use Group Movement Flag" (saved from 0xad)
     unsigned char mGroupPathState;                   // +0x34 "Group Path State"
-
-    static const UString sData;             // "EEUGLocation-Data" (init chain 0x227621)
 };
 
 #endif
