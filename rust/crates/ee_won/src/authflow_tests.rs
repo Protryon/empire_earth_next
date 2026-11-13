@@ -1,9 +1,69 @@
 //! The flow over Rust stand-ins that behave as `tests/won/won_authctx_test.cpp`'s (an op's run, kill, finish and
 //! completion; the "threads" holding running ops; the reference counts, creations and frees), replaying
-//! `golden_authflow.txt` (recorded over the original's statements) step by step.
+//! `golden_authflow.txt` (recorded over the original's statements) step by step. The peer data is real
+//! (peerobj.rs), made as the driver's Rust side makes it: a valid one expires the stand-in's delta after the
+//! certificates' clock `CERT_NOW`; a waiting op's member is an [`EeWonLightCert`].
 
 use super::*;
+use crate::auth::Kind;
+use crate::elgamal::ElGamal;
+use crate::peerobj::Cert;
 use std::cell::RefCell;
+
+/// The certificates' clock (the driver's kCertNow), passed for `now`.
+const CERT_NOW: i64 = 1_000_000_000;
+/// The test certificate's expiry (2037).
+const EXPIRE: i64 = 0x7f00_0000;
+/// The driver's test key (p, q, g, y, x).
+const PRIV: &str = "3065021900eb12ee7e116db19e460e1ce1a29dec70ee79c611454658dd020900f70c3664732d264b021855dfacffe4be2080b34dd52aab818a01ad613e700f0fe73a021900e90a2cffe3fabbe6ece0e935a39d1d5d424c542c077c261802080139dba7acd3581d";
+
+fn unhex(s: &str) -> Vec<u8> {
+    (0..s.len() / 2).map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).unwrap()).collect()
+}
+
+/// The driver's `RustPeer(valid, delta)`.
+fn real_peer(valid: bool, delta: i64) -> Arc<PeerData> {
+    if !valid {
+        return Arc::new(PeerData::empty(None));
+    }
+    let private = unhex(PRIV);
+    let mut public = private[..private.len() - 10].to_vec();
+    public[1] = (public.len() - 2) as u8;
+    let mut w = Vec::new();
+    let s = |w: &mut Vec<u8>, v: u16| w.extend_from_slice(&v.to_le_bytes());
+    let l = |w: &mut Vec<u8>, v: i64| w.extend_from_slice(&(v as u32).to_le_bytes());
+    s(&mut w, 1);
+    l(&mut w, 1000);
+    l(&mut w, EXPIRE);
+    l(&mut w, 5);
+    l(&mut w, 42);
+    s(&mut w, 1);
+    s(&mut w, public.len() as u16);
+    w.extend_from_slice(&public);
+    w.push(1);
+    let cert = Cert::new(Kind::Certificate, &w);
+    let mut b = Vec::new();
+    s(&mut b, 1);
+    l(&mut b, 1000);
+    l(&mut b, EXPIRE);
+    s(&mut b, 7);
+    s(&mut b, 1);
+    s(&mut b, public.len() as u16);
+    b.extend_from_slice(&public);
+    b.push(1);
+    let block = Cert::new(Kind::PubKeyBlock, &b);
+    let mut key = ElGamal::new();
+    assert!(key.set_private_key(&private));
+    let p = PeerData {
+        cert: Some(Arc::new(cert)),
+        cert2: None,
+        block: Some(Arc::new(block)),
+        private_key: key,
+        delta: EXPIRE - CERT_NOW - delta,
+    };
+    assert!(p.is_valid());
+    Arc::new(p)
+}
 
 const PENDING: c_long = 100001;
 const KILLED: c_long = 100002;
@@ -19,10 +79,8 @@ enum Done {
 struct Fake {
     kind: char,
     refs: i32,
-    // a session's last use; a peer's validity and expire delta
+    // a session's last use
     last_use: i64,
-    valid: bool,
-    delta: i64,
     // an op's run
     running: bool,
     finished: bool,
@@ -41,8 +99,11 @@ struct World {
     thread: Vec<usize>,
     cert_sync: bool,
     cert_status: c_long,
-    ctx_peer: usize,
     flow: usize,
+    /// every peer data made, by id
+    peers: Vec<(usize, Arc<PeerData>)>,
+    /// the waiting ops' members, by id
+    lights: BTreeMap<usize, Arc<EeWonLightCert>>,
 }
 
 thread_local! {
@@ -88,8 +149,6 @@ impl Fake {
             kind,
             refs: 0,
             last_use: 0,
-            valid: false,
-            delta: 0,
             running: false,
             finished: false,
             killed: false,
@@ -111,12 +170,14 @@ fn release(n: usize) {
         w.objs[n].refs <= 0
     });
     if gone {
-        // ~FOp's member (its peer data), then ~FObj's log
+        // ~FOp's member (its peer data), then ~FObj's log (none for peer data)
         let peer = with(|w| std::mem::take(&mut w.objs[n].peer));
         if peer != 0 {
             release(peer);
         }
-        log(format!("free:{}", name(n)));
+        if with(|w| w.objs[n].kind) != 'p' {
+            log(format!("free:{}", name(n)));
+        }
     }
 }
 // ConstSmartPtr's assignment
@@ -162,16 +223,20 @@ fn complete(n: usize, killed: bool, status: c_long) {
         Some(o.done)
     });
     let Some(done) = done else { return };
-    log(format!("done:{}:{}", name(n), status));
+    if with(|w| w.objs[n].kind) == 'l' {
+        log(format!("done:{}:{}:{}", name(n), status, light_peer_name(n)));
+    } else {
+        log(format!("done:{}:{}", name(n), status));
+    }
     add_ref(n);
     match done {
         Done::None => {}
         Done::Timer => flow().auto_refresh_callback(ptr(n)),
-        Done::Cert => flow().get_cert_callback(ptr(n)),
+        Done::Cert => flow().get_cert_callback(ptr(n), CERT_NOW),
         Done::Reenter => {
             let l = create('l');
             add_ref(l);
-            flow().refresh_async(ptr(l), 7);
+            flow().refresh_async(ptr(l), Some(light(l)), 7);
             release(l);
         }
     }
@@ -253,29 +318,33 @@ unsafe extern "C" fn h_new_cert(_: *mut c_void, completion: bool) -> *mut c_void
     }
     ptr(n)
 }
-unsafe extern "C" fn h_cert_peer(p: *mut c_void) -> *mut c_void {
+unsafe extern "C" fn h_cert_peer(p: *mut c_void) -> *mut EeWonAuthObj {
     let peer = with(|w| w.objs[id(p)].peer);
     if peer == 0 {
         return std::ptr::null_mut();
     }
-    add_ref(peer);
-    ptr(peer)
+    peerobj::peer_ref(real_of(peer))
 }
-unsafe extern "C" fn h_set_peer(l: *mut c_void, p: *mut c_void) {
-    let (l, p) = (id(l), id(p));
-    let pn = if p == 0 { "-".to_string() } else { name(p) };
-    log(format!("setpeer:{}:{}", name(l), pn));
-    assign(move |w| &mut w.objs[l].peer, p);
+
+/// The real peer data of a stand-in id.
+fn real_of(id: usize) -> Arc<PeerData> {
+    with(|w| w.peers.iter().find(|(i, _)| *i == id).map(|(_, p)| p.clone()).unwrap())
 }
-unsafe extern "C" fn h_peer_valid(_: *mut c_void) -> bool {
-    let p = with(|w| w.ctx_peer);
-    log(format!("valid:{}", name(p)));
-    with(|w| w.objs[p].valid)
+
+/// A waiting op's member (made with the op's first use).
+fn light(n: usize) -> Arc<EeWonLightCert> {
+    with(|w| w.lights.entry(n).or_insert_with(EeWonLightCert::new).clone())
 }
-unsafe extern "C" fn h_peer_delta(_: *mut c_void) -> i64 {
-    let p = with(|w| w.ctx_peer);
-    log(format!("delta:{}", name(p)));
-    with(|w| w.objs[p].delta)
+
+/// The name of a waiting op's peer data ("-" for none).
+fn light_peer_name(n: usize) -> String {
+    match light(n).peer() {
+        None => "-".to_string(),
+        Some(p) => {
+            let id = with(|w| w.peers.iter().find(|(_, q)| Arc::ptr_eq(q, &p)).map(|(i, _)| *i));
+            id.map_or("?".to_string(), name)
+        }
+    }
 }
 
 fn hooks() -> EeWonAuthFlowHooks {
@@ -293,23 +362,17 @@ fn hooks() -> EeWonAuthFlowHooks {
         new_timer: h_new_timer,
         new_cert_op: h_new_cert,
         cert_peer_data: h_cert_peer,
-        light_set_peer_data: h_set_peer,
-        peer_valid: h_peer_valid,
-        peer_expire_delta: h_peer_delta,
     }
 }
 
 fn new_peer(valid: bool, delta: i64) -> usize {
     let p = create('p');
-    with(|w| {
-        w.objs[p].valid = valid;
-        w.objs[p].delta = delta;
-    });
+    let real = real_peer(valid, delta);
+    with(|w| w.peers.push((p, real)));
     p
 }
 fn set_ctx_peer(p: usize) {
-    assign(|w| &mut w.ctx_peer, p);
-    flow().clear_sessions();
+    flow().set_peer_data(Some(real_of(p)));
 }
 
 // the driver's Addr(i): 10.0.0.(1 + i % 3), port 1000 + i / 3
@@ -363,8 +426,8 @@ fn step(cmd: char, a: [i64; 4], now: &mut i64) {
             let p = new_peer(a[0] != 0, a[1]);
             set_ctx_peer(p);
         }
-        'A' => f.set_do_auto_refresh(a[0] != 0),
-        'S' => f.start_auto_refresh(a[0] != 0),
+        'A' => f.set_do_auto_refresh(a[0] != 0, CERT_NOW),
+        'S' => f.start_auto_refresh(a[0] != 0, CERT_NOW),
         'X' => f.stop_auto_refresh(),
         'K' => f.kill(),
         'R' => {
@@ -380,19 +443,20 @@ fn step(cmd: char, a: [i64; 4], now: &mut i64) {
                     with(|w| w.objs[l].done = Done::Reenter);
                 }
             }
-            f.refresh_async(ptr(l), a[1] as u32);
+            let cert = if l != 0 { Some(light(l)) } else { None };
+            f.refresh_async(ptr(l), cert, a[1] as u32);
             if l != 0 {
                 release(l);
             }
         }
         'Q' => {
             if let Some(l) = held('l', a[0]) {
-                f.refresh_async(ptr(l), a[1] as u32);
+                f.refresh_async(ptr(l), Some(light(l)), a[1] as u32);
             }
         }
         'B' => {
             with(|w| w.cert_status = a[1] as c_long);
-            let st = f.refresh_block(a[0] as u32);
+            let st = f.refresh_block(a[0] as u32, CERT_NOW);
             log(format!("block:{st}"));
         }
         'F' => {
@@ -453,7 +517,6 @@ fn run_script(steps: &[(char, [i64; 4])]) -> Vec<String> {
     }
     // SAFETY: the box made above, not used after
     drop(unsafe { Box::from_raw(fl) });
-    assign(|w| &mut w.ctx_peer, 0);
     while let Some(n) = with(|w| w.thread.pop()) {
         release(n);
     }
@@ -519,7 +582,7 @@ fn refresh_runs_one_request_for_every_waiting_op() {
     let got = run_script(&steps);
     assert_eq!(got[0], "new:l2 runasync:l2:5000 new:c3 run:c3:1:60000");
     assert_eq!(got[1], "new:l4 runasync:l4:6000");
-    assert!(got[2].starts_with("new:p5 done:c3:0 setpeer:l2:p5 finish:l2:0 done:l2:0 setpeer:l4:p5 finish:l4:0"));
+    assert!(got[2].starts_with("new:p5 done:c3:0 finish:l2:0 done:l2:0:p5 finish:l4:0 done:l4:0:p5"));
     assert_eq!(flow_status_after(&steps), 0);
 }
 
@@ -536,9 +599,46 @@ fn flow_status_after(steps: &[(char, [i64; 4])]) -> c_long {
     let st = flow().refresh_status();
     // SAFETY: the box made above
     drop(unsafe { Box::from_raw(fl) });
-    assign(|w| &mut w.ctx_peer, 0);
     while let Some(n) = with(|w| w.thread.pop()) {
         release(n);
     }
     st
+}
+
+#[test]
+fn the_peer_data_is_the_flows_own() {
+    with(|w| *w = World::default());
+    let f = EeWonAuthFlow::new(hooks());
+    // the original's NULL before Init: none, expired
+    assert!(f.peer_data().is_none());
+    assert!(f.is_expired(0, CERT_NOW));
+    let p = real_peer(true, 500);
+    f.set_peer_data(Some(p.clone()));
+    assert!(Arc::ptr_eq(&f.peer_data().unwrap(), &p));
+    // IsExpired reads the second certificate (none here: expired); GetExpireDelta the first
+    assert!(f.is_expired(0, CERT_NOW));
+    assert_eq!(p.expire_delta(CERT_NOW), 500);
+    assert_eq!(real_peer(true, -5).expire_delta(CERT_NOW), 0);
+    // through the C ABI: a new reference each time, the same object
+    let a = unsafe { ee_won_auth_flow_peer_data(&f) };
+    let b = unsafe { ee_won_auth_flow_peer_data(&f) };
+    assert!(a != b && unsafe { peerobj::ee_won_authobj_same(a, b) });
+    unsafe {
+        peerobj::ee_won_authobj_free(a);
+        peerobj::ee_won_authobj_free(b);
+        ee_won_auth_flow_set_peer_data(&f, std::ptr::null());
+    }
+    assert!(f.peer_data().is_none());
+    // a light op's member
+    let l = ee_won_light_cert_new();
+    assert!(unsafe { ee_won_light_cert_peer(l) }.is_null());
+    let h = peerobj::peer_ref(p.clone());
+    unsafe {
+        ee_won_light_cert_set_peer(l, h);
+        let got = ee_won_light_cert_peer(l);
+        assert!(peerobj::ee_won_authobj_same(got, h));
+        peerobj::ee_won_authobj_free(got);
+        peerobj::ee_won_authobj_free(h);
+        ee_won_light_cert_free(l);
+    }
 }

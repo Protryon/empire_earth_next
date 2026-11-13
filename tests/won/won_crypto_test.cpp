@@ -1,6 +1,6 @@
 // WON's crypto, auth and digest classes as forwarders to ee_won (rust/crates/ee_won): the C++ API round trip on every
 // OS. CRC16 and MD5 against known values, Blowfish by value (copies keep the key), ElGamal keys copied deeply and
-// signing and verifying, an AuthPubKeyBlock signed by its own key. Links with the won module's forwarder units and
+// signing and verifying, a key block (AuthBase over ee_won's peerobj) signed by its own key. Links with the won module's forwarder units and
 // the Rust library. Prints one line per failed check; the exit code is the number of failed checks.
 #include <windows.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@
 #include "ee/wonapi/WONMD5Digest.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONElGamal.h"
-#include "ee/wonapi/WONAuthPubKeyBlock.h"
+#include "ee/wonapi/WONAuthPeerData.h"
 
 using namespace WONAPI;
 
@@ -119,19 +119,18 @@ int main()
     block.AppendBytes(pub.data(), static_cast<unsigned long>(pub.length()));
     ByteBufferPtr blockSig = signer.Sign(block.data(), block.length());
     block.AppendBytes(blockSig->data(), blockSig->length());
-    AuthPubKeyBlock* keyBlock = new AuthPubKeyBlock(block.data(), block.length());
+    AuthBase* keyBlock = new AuthBase(EE_WON_AUTH_PUB_KEY_BLOCK, block.data(), block.length());
     keyBlock->AddRef();
     CHECK(keyBlock->IsValid());
-    CHECK(keyBlock->GetId() == 17);
+    CHECK(keyBlock->Num(EE_WON_AUTHOBJ_BLOCK_ID) == 17);
     CHECK(keyBlock->GetIssueTime() == 1000 && keyBlock->GetExpireTime() == 2000000000);
-    CHECK(keyBlock->GetDataLen() == block.length() - blockSig->length());
     CHECK(keyBlock->IsValidAndVerified(signer));
-    CHECK(keyBlock->GetCurrentKey().IsPublic() && !keyBlock->GetCurrentKey().IsPrivate());
+    CHECK(keyBlock->Num(EE_WON_AUTHOBJ_HAS_KEY) == 1 && keyBlock->Encrypt("x", 1).get() != NULL);
     CHECK(keyBlock->Verify(keyBlock));
-    CHECK(!keyBlock->IsExpired(0));
-    AuthPubKeyBlock* truncated = new AuthPubKeyBlock(block.data(), 20);
+    CHECK(keyBlock->Num(EE_WON_AUTHOBJ_EXPIRED, 0) == 0);
+    AuthBase* truncated = new AuthBase(EE_WON_AUTH_PUB_KEY_BLOCK, block.data(), 20);
     truncated->AddRef();
-    CHECK(!truncated->IsValid() && truncated->IsExpired(0));
+    CHECK(!truncated->IsValid() && truncated->Num(EE_WON_AUTHOBJ_EXPIRED, 0) == 1);
     CHECK(!keyBlock->Verify(truncated));
     truncated->Release();
     keyBlock->Release();

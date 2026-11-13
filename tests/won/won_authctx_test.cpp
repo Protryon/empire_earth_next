@@ -1,7 +1,14 @@
-// AuthContext's peer sessions and certificate flow (PutSession, GetSession, SetPeerData's clear, the auto-refresh
-// timer, RefreshAsync, RefreshBlock, GetCertCallback, Kill): the original's statements (copied from AuthContext.cpp
-// before the port, over stand-ins) against the Rust object (ee_won authflow.rs, `EeWonAuthFlow`) over the same
-// stand-ins, on generated scripts.
+// AuthContext's peer sessions, certificate flow and peer data (PutSession, GetSession, SetPeerData, the
+// auto-refresh timer, RefreshAsync, RefreshBlock, GetCertCallback, Kill) and LightGetCertOp's member: the
+// original's statements (copied from AuthContext.cpp before the port, over stand-ins) against the Rust object (ee_won
+// authflow.rs, `EeWonAuthFlow`, `EeWonLightCert`) over the same stand-ins, on generated scripts.
+//
+// Round 15 moved the context's peer data and the waiting ops' peer data into the Rust object, so the vocabulary
+// changed: the original's reads of its peer data (IsValid, GetExpireDelta) and the waiting ops' SetPeerData are no
+// calls out any more and are not logged; a waiting op's peer data is logged when it completes
+// (`done:l3:0:p5`); peer data is never freed in the log (the Rust side's is an Arc). The Rust side's peer data is
+// real (peerobj.rs): a valid one is a certificate and key block of the test key with the private key, its clock
+// delta chosen so that its expire delta at the certificates' clock (kCertNow, passed for `now`) is the stand-in's.
 //
 // The stand-ins are the ops (the auto-refresh timer, the certificate request, the waiting LightGetCertOps), the
 // sessions and the peer data. Every call they get is logged into a trace, with their creations and frees; ops that
@@ -51,6 +58,53 @@ static string Num(long long n)
     return b;
 }
 
+// ---- the Rust side's real peer data
+static const char* const kPriv =
+    "3065021900eb12ee7e116db19e460e1ce1a29dec70ee79c611454658dd020900f70c3664732d264b021855dfacffe4be2080b34dd52aab818a"
+    "01ad613e700f0fe73a021900e90a2cffe3fabbe6ece0e935a39d1d5d424c542c077c261802080139dba7acd3581d";
+static const long long kCertNow = 1000000000; // the certificates' clock
+static const long long kExpire = 0x7f000000;  // 2037
+static string Unhex(const char* h)
+{
+    string r;
+    for (; h[0] && h[1]; h += 2) {
+        int v = 0;
+        for (int i = 0; i < 2; i++) v = v * 16 + (h[i] <= '9' ? h[i] - '0' : h[i] - 'a' + 10);
+        r += (char)v;
+    }
+    return r;
+}
+struct Wire {
+    string d;
+    void B(int v) { d += (char)(v & 0xff); }
+    void S(int v) { B(v); B(v >> 8); }
+    void L(long long v) { S((int)(v & 0xffff)); S((int)((v >> 16) & 0xffff)); }
+    void Str(const string& s) { S((int)s.size()); d += s; }
+};
+static EeWonAuthObj* sRustCert;
+static EeWonAuthObj* sRustBlock;
+static EeWonElGamal* sRustKey;
+static void MakeRustKeys()
+{
+    string priv = Unhex(kPriv);
+    string pub = priv.substr(0, priv.size() - 10); // the sequence without x (its ten bytes)
+    pub[1] = (char)(pub.size() - 2);
+    sRustKey = ee_won_elgamal_new();
+    ee_won_elgamal_set_key(sRustKey, reinterpret_cast<const uint8_t*>(priv.data()), priv.size(), true);
+    Wire c;
+    c.S(1); c.L(1000); c.L(kExpire); c.L(5); c.L(42); c.S(1); c.Str(pub); c.B(1); // + a signature byte
+    sRustCert = ee_won_cert_new(EE_WON_AUTH_CERTIFICATE, reinterpret_cast<const uint8_t*>(c.d.data()), c.d.size());
+    Wire b;
+    b.S(1); b.L(1000); b.L(kExpire); b.S(7); b.S(1); b.Str(pub); b.B(1);
+    sRustBlock = ee_won_cert_new(EE_WON_AUTH_PUB_KEY_BLOCK, reinterpret_cast<const uint8_t*>(b.d.data()), b.d.size());
+}
+// peer data that is valid or not and expires `delta` seconds after kCertNow (0 when expired)
+static EeWonAuthObj* RustPeer(bool inValid, long long inDelta)
+{
+    if (!inValid) return ee_won_peer_new_empty(NULL);
+    return ee_won_peer_new(sRustCert, sRustBlock, sRustKey, kExpire - kCertNow - inDelta, NULL);
+}
+
 static const long kPending = 100001;   // a running op's status
 static const long kKilled = 100002;    // a killed op's status
 
@@ -67,8 +121,11 @@ struct World {
     // returns it
     bool mCertSync;
     long mCertStatus;
+    std::vector<std::pair<EeWonAuthObj*, string> > mPeers; // every peer data's Rust object, by name
+    bool mIsRust;
 };
 static World* sWorld;
+static World sOrig, sRust;
 static void Log(const string& s)
 {
     if (!sWorld->mTrace.empty()) sWorld->mTrace += ' ';
@@ -79,7 +136,7 @@ struct FObj : public RefCount {
     char mKind;
     int mId;
     FObj(char k) : mKind(k), mId(sWorld->mNextId++) { Log("new:" + Name()); }
-    virtual ~FObj() { Log("free:" + Name()); }
+    virtual ~FObj() { if (mKind != 'p') Log("free:" + Name()); }
     string Name() const { return string(1, mKind) + Num(mId); }
     static void* operator new(size_t n)
     {
@@ -99,10 +156,22 @@ struct FSession : public FObj {
 struct FPeer : public FObj {
     bool mValid;
     long long mDelta;
-    FPeer(bool v, long long d) : FObj('p'), mValid(v), mDelta(d) {}
-    bool IsValid() const { Log("valid:" + Name()); return mValid; }
-    long long GetExpireDelta() const { Log("delta:" + Name()); return mDelta; }
+    EeWonAuthObj* mRust; // the Rust side's (the world's list owns it)
+    FPeer(bool v, long long d) : FObj('p'), mValid(v), mDelta(d), mRust(RustPeer(v, d))
+    {
+        sWorld->mPeers.push_back(std::make_pair(mRust, Name()));
+    }
+    bool IsValid() const { return mValid; }
+    long long GetExpireDelta() const { return mDelta; }
 };
+// the name of a Rust peer data object ("-" for none)
+static string RustPeerName(EeWonAuthObj* p)
+{
+    if (p == NULL) return "-";
+    for (size_t i = 0; i < sWorld->mPeers.size(); i++)
+        if (ee_won_authobj_same(sWorld->mPeers[i].first, p)) return sWorld->mPeers[i].second;
+    return "?";
+}
 
 // an op: the timer ('t'), a certificate request ('c') or a waiting LightGetCertOp ('l')
 typedef void (*FDone)(void* inCtx, FOp* inOp);
@@ -111,14 +180,28 @@ struct FOp : public FObj {
     long mStatus, mCertStatus;
     FDone mDone;
     void* mCtx;
-    ConstSmartPtr<FPeer> mPeer;   // a certificate request's result; a waiting op's peer data
+    ConstSmartPtr<FPeer> mPeer;   // a certificate request's result; a waiting op's peer data (the original's)
+    EeWonLightCert* mLight;       // the Rust side's waiting op's member
     FOp(char k) : FObj(k), mRunning(false), mFinished(false), mKilled(false), mCertSync(sWorld->mCertSync),
-                  mReenter(false), mStatus(kPending), mCertStatus(sWorld->mCertStatus), mDone(NULL), mCtx(NULL) {}
+                  mReenter(false), mStatus(kPending), mCertStatus(sWorld->mCertStatus), mDone(NULL), mCtx(NULL),
+                  mLight(k == 'l' ? ee_won_light_cert_new() : NULL) {}
+    ~FOp() { ee_won_light_cert_free(mLight); }
+    // a waiting op's peer data: the Rust member's in the Rust world, else the original's member
+    string PeerName() const
+    {
+        if (sWorld->mIsRust) {
+            EeWonAuthObj* p = ee_won_light_cert_peer(mLight);
+            string n = RustPeerName(p);
+            ee_won_authobj_free(p);
+            return n;
+        }
+        return mPeer.get() ? mPeer->Name() : string("-");
+    }
     void SetDone(FDone d, void* c) { mDone = d; mCtx = c; }
     bool IsKilled() const { return mKilled; }
     long GetStatus() const { return mStatus; }
     ConstSmartPtr<FPeer> GetPeerData() const { return mPeer; }
-    void SetPeerData(const FPeer* p) { Log("setpeer:" + Name() + ":" + (p ? p->Name() : string("-"))); mPeer = p; }
+    void SetPeerData(const FPeer* p) { mPeer = p; }
     void Hold()
     {
         this->AddRef();
@@ -139,7 +222,7 @@ struct FOp : public FObj {
         mFinished = true;
         mKilled = inKilled;
         mStatus = inStatus;
-        Log("done:" + Name() + ":" + Num(inStatus));
+        Log("done:" + Name() + ":" + Num(inStatus) + (mKind == 'l' ? ":" + PeerName() : string()));
         this->AddRef();
         if (mDone) mDone(mCtx, this);
         Unhold();
@@ -338,7 +421,6 @@ static void RustCertDone(void* c, FOp* op);
 
 struct RustCtx {
     EeWonAuthFlow* mFlow;
-    ConstSmartPtr<FPeer> mPeerData;
     static void HAddRef(void* p) { Obj(p)->AddRef(); }
     static void HRelease(void* p) { Obj(p)->Release(); }
     static int64_t HLastUse(void* p) { return (int64_t) static_cast<FSession*>(Obj(p))->GetLastUseTime(); }
@@ -362,16 +444,11 @@ struct RustCtx {
         if (completion) op->SetDone(RustCertDone, c);
         return static_cast<RefCount*>(op);
     }
-    static void* HCertPeer(void* p)
+    static EeWonAuthObj* HCertPeer(void* p)
     {
         const FPeer* peer = Op(p)->GetPeerData().get();
-        if (peer == NULL) return NULL;
-        const_cast<FPeer*>(peer)->AddRef();
-        return static_cast<RefCount*>(const_cast<FPeer*>(peer));
+        return peer != NULL ? ee_won_authobj_clone(peer->mRust) : NULL;
     }
-    static void HSetPeer(void* l, void* p) { Op(l)->SetPeerData(p ? static_cast<FPeer*>(Obj(p)) : NULL); }
-    static bool HPeerValid(void* c) { return static_cast<RustCtx*>(c)->mPeerData->IsValid(); }
-    static int64_t HPeerDelta(void* c) { return static_cast<RustCtx*>(c)->mPeerData->GetExpireDelta(); }
 
     RustCtx()
     {
@@ -389,9 +466,6 @@ struct RustCtx {
         h.new_timer = HNewTimer;
         h.new_cert_op = HNewCert;
         h.cert_peer_data = HCertPeer;
-        h.light_set_peer_data = HSetPeer;
-        h.peer_valid = HPeerValid;
-        h.peer_expire_delta = HPeerDelta;
         mFlow = ee_won_auth_flow_new(&h);
     }
     ~RustCtx() { ee_won_auth_flow_free(mFlow); }
@@ -408,15 +482,18 @@ struct RustCtx {
     }
     void SetPeerData(const FPeer* d)
     {
-        mPeerData = d;
-        ee_won_auth_flow_clear_sessions(mFlow);
+        SmartPtr<FPeer> keep(const_cast<FPeer*>(d)); // the stand-in is freed (unlogged); its Rust object lives on
+        ee_won_auth_flow_set_peer_data(mFlow, d ? d->mRust : NULL);
     }
     void StopAutoRefresh() { ee_won_auth_flow_stop_auto_refresh(mFlow); }
-    void SetDoAutoRefresh(bool b) { ee_won_auth_flow_set_do_auto_refresh(mFlow, b); }
+    void SetDoAutoRefresh(bool b) { ee_won_auth_flow_set_do_auto_refresh(mFlow, b, kCertNow); }
     void Kill() { ee_won_auth_flow_kill(mFlow); }
-    void StartAutoRefresh(bool f) { ee_won_auth_flow_start_auto_refresh(mFlow, f); }
-    void RefreshAsync(FOp* op, DWORD t) { ee_won_auth_flow_refresh_async(mFlow, op ? static_cast<RefCount*>(op) : NULL, t); }
-    long RefreshBlock(DWORD t) { return ee_won_auth_flow_refresh_block(mFlow, t); }
+    void StartAutoRefresh(bool f) { ee_won_auth_flow_start_auto_refresh(mFlow, f, kCertNow); }
+    void RefreshAsync(FOp* op, DWORD t)
+    {
+        ee_won_auth_flow_refresh_async(mFlow, op ? static_cast<RefCount*>(op) : NULL, op ? op->mLight : NULL, t);
+    }
+    long RefreshBlock(DWORD t) { return ee_won_auth_flow_refresh_block(mFlow, t, kCertNow); }
 };
 static void RustAutoDone(void* c, FOp* op)
 {
@@ -424,7 +501,7 @@ static void RustAutoDone(void* c, FOp* op)
 }
 static void RustCertDone(void* c, FOp* op)
 {
-    ee_won_auth_flow_get_cert_callback(static_cast<RustCtx*>(c)->mFlow, static_cast<RefCount*>(op));
+    ee_won_auth_flow_get_cert_callback(static_cast<RustCtx*>(c)->mFlow, static_cast<RefCount*>(op), kCertNow);
 }
 #endif
 
@@ -565,6 +642,7 @@ template <class Ctx> struct Runner {
     static std::vector<string> Run(World& w, const std::vector<Step>& steps)
     {
         sWorld = &w;
+        w.mIsRust = &w == &sRust;
         w.mTrace.clear();
         w.mNextId = 1;
         w.mUsed = 0;
@@ -590,6 +668,8 @@ template <class Ctx> struct Runner {
             op->Release();
         }
         out.push_back(w.mTrace);
+        for (size_t i = 0; i < w.mPeers.size(); i++) ee_won_authobj_free(w.mPeers[i].first);
+        w.mPeers.clear();
         return out;
     }
 };
@@ -617,7 +697,6 @@ static string Normal(const string& t)
     return r;
 }
 
-static World sOrig, sRust;
 
 static void Script(bool inPrint)
 {
@@ -656,6 +735,12 @@ int main(int argc, char** argv)
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--print") && i + 1 < argc) aPrint = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--seed") && i + 1 < argc) sSeed = (unsigned)atoi(argv[++i]);
+    }
+    MakeRustKeys();
+    {
+        EeWonAuthObj* p = RustPeer(true, 50);
+        CHECK(ee_won_authobj_num(p, EE_WON_AUTHOBJ_VALID, 0, 0, 0) == 1);
+        ee_won_authobj_free(p);
     }
     sOrig.mArena = (char*)malloc(1 << 22);
     sRust.mArena = (char*)malloc(1 << 22);
