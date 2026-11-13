@@ -143,6 +143,7 @@ pub mod treeobj;
 pub mod udpmgr;
 pub mod udpops;
 pub mod verop;
+pub mod winobj;
 pub mod wire;
 
 #[cfg(test)]
