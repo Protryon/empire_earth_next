@@ -16,12 +16,19 @@ class EESMEffect;
 class EEUnit;
 
 // what a read may ask beyond the world: the condition whose chat text EE_SCENARIO_READ_CHAT_CONTAINS reads, the unit
-// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks); the effect whose plan the writes carry out (NULL for none)
+// of EE_SCENARIO_READ_UNIT_* (NULL where no read asks); the effect whose plan the writes carry out (NULL for none);
+// the object an evaluation reads and changes (EE_SCENARIO_READ_OBJ_* / EE_SCENARIO_WRITE_OBJ_*) and its cursor in a
+// player's unit chain
 struct EESMHostContext {
     EESMCondition* mCondition;
     EEUnit* mUnit;
     EESMEffect* mEffect;
+    EESMObject* mObject;
+    EEUnit* mCursor;
 };
+// an object evaluation's reads and writes (objeval.rs; EESMObject.cpp): Read and Write hand them over
+int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC);
+void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB);
 
 // the host table over inContext (it must outlive the Rust call)
 EeScenarioHost EESMHost(EESMHostContext* inContext);

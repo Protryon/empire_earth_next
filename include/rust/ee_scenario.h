@@ -236,6 +236,65 @@ constexpr static const uint32_t EE_SCENARIO_MANAGER_EXPORT_NAME = 0;
 
 constexpr static const uint32_t EE_SCENARIO_MANAGER_LAST_CHAT = 1;
 
+/// The context object's `mUnits.size()`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_COUNT = 53;
+
+/// The context object's `mUnits[a]`.
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_UNIT_AT = 54;
+
+/// `GetScenarioObject(a)->Evaluate(b != 0)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_EVALUATE = 55;
+
+/// Unit `a` (`gWorld.GetUnit`): 0 for none, else bit 0 set, bit 1 `GetHitPoints() > 0`, bit 2 its class's
+/// `mIsTree`, bit 3 a complex unit, bit 4 the complex unit's `mPreviousPart`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_FLAGS = 56;
+
+/// Unit `a`'s `mUnitClass->mUnitType`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_CLASS_TYPE = 57;
+
+/// Unit `a`'s `mPlayer->GetPlayerID()`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_PLAYER = 58;
+
+/// Unit `a`'s complex unit's `GetCommandType()`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_COMMAND = 59;
+
+/// The context object's `GetUnitAttribute(b, c != 0, GetUnit(a), 0, 0)`.
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_ATTRIBUTE = 60;
+
+/// Player `a`'s `mActiveGroup->Contains(unit b's complex unit) || mViewedUnit == unit b` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SELECTED_BY = 61;
+
+/// `EEIsSeenBy(unit a, player b, false)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_UNIT_SEEN_BY = 62;
+
+/// `GetArea(a)`: -1 without the area, else its `ContainsUnit(unit b)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_AREA_CONTAINS_UNIT = 63;
+
+/// `GetScenarioObject(a)`: -1 without the object, else its `IsNearUnit(unit b, c, false)` (1/0).
+constexpr static const uint32_t EE_SCENARIO_READ_OBJ_NEAR_UNIT = 64;
+
+/// Player `a`'s first unit (`mFirstUnit`, the context's cursor set to it), the next (`mNext`) when `b` is 1: its id
+/// in the low 32 bits and its `mUnitClass->mUnitType` in the high, -1 at the end.
+constexpr static const uint32_t EE_SCENARIO_READ_PLAYER_UNIT = 65;
+
+/// The context object's `mUnits.clear()`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_CLEAR = 11;
+
+/// `GetScenarioObject(b)->GetUnits(mUnits)` (the context object's list replaced by the parent's).
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_COPY_PARENT = 12;
+
+/// `mUnits.erase(begin() + b)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_ERASE = 13;
+
+/// `mUnits.push_back(b)`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_PUSH = 14;
+
+/// `EEAIRandomShuffle(mUnits.begin(), mUnits.end())` (the physics stream's draws).
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_SHUFFLE = 15;
+
+/// `mUnits.erase(begin() + b, end())`.
+constexpr static const uint32_t EE_SCENARIO_WRITE_OBJ_TRUNCATE = 16;
+
 /// `SetPlayerAttribute(player, b, c, d)` again, through the C++ entry (the any/all resources' recursion).
 constexpr static const uint32_t EE_SCENARIO_WRITE_SET_ATTRIBUTE = 0;
 
@@ -1050,6 +1109,15 @@ void ee_scenario_set_player_attribute(const EeScenarioHost *host,
                                       unsigned long attribute,
                                       long mode,
                                       long amount);
+
+/// `EESMObject::Evaluate`'s body (objeval.rs): the object's units by the host's operations, its numbers through
+/// `fields`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` the live object's numbers.
+bool ee_scenario_object_evaluate(const EeScenarioHost *host,
+                                 EeScenarioObjectFields *fields,
+                                 bool include_dead);
 
 }  // extern "C"
 

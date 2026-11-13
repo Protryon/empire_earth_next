@@ -165,128 +165,92 @@ bool EESMObject::Evaluate(bool inIncludeDead)
     return theResult;
 }
 
-// Evaluate's body (Evaluate adds the simulation capture's SMOB record: ee/EEScenarioCapture.h)
+// Evaluate's body (Evaluate adds the simulation capture's SMOB record: ee/EEScenarioCapture.h): ee_scenario objeval.rs
+// over the object's list and the world (EESMObjectRead / EESMObjectWrite below)
 bool EESMObject::EvaluateUncaptured(bool inIncludeDead)
 {
-    std::vector<long> thePlayers;
-    EESMObject* theParent = gWorld.mScenarioManager->GetScenarioObject(this->mParent);
-    EESMObject* theTarget = gWorld.mScenarioManager->GetScenarioObject(this->mNearObject);
-    EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mArea);
-    bool theRebuilt = false;
-    bool theIncludeDead = inIncludeDead != 0 || this->mState == kActionResourcesRotting || this->mState == kActionUnitRotting || this->mState == kActionDead || this->mState == kActionResourcesDepleting;
-    if (!this->mIsSelectOnMap) {
-        if (this->mIsDynamic == true)
-            this->mUnits.clear();
-        if (this->mUnits.size() == 0) {
-            theRebuilt = true;
-            if (this->mParent != 0) {
-                theParent->Evaluate(theIncludeDead);
-                theParent->GetUnits(this->mUnits);
-                gWorld.mScenarioManager->ChoosePlayer(this->mOwner, &thePlayers, false);
-                for (long i = 0; i < (long)this->GetUnitCount(); i++) {
-                    EEUnit* theUnit = gWorld.GetUnit(this->mUnits[i]);
-                    bool theKeep = theUnit != NULL && this->AcceptsClass(theUnit->mUnitClass->mUnitType);
-                    if (theKeep) {
-                        long thePlayerID = theUnit->mPlayer->GetPlayerID();
-                        theKeep = std::find(thePlayers.begin(), thePlayers.end(), thePlayerID) != thePlayers.end();
-                    }
-                    if (!theKeep) {
-                        this->mUnits.erase(this->mUnits.begin() + i);
-                        i--;
-                    }
-                }
-            } else {
-                gWorld.mScenarioManager->ChoosePlayer(this->mOwner, &thePlayers, false);
-                for (unsigned long i = 0; i < thePlayers.size(); i++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[i]];
-                    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
-                         theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-                        if (this->AcceptsClass(theUnit->mUnitClass->mUnitType)) {
-                            unsigned long theID = theUnit->GetUnitID();
-                            this->mUnits.push_back(theID);
-                        }
-                    }
-                }
-            }
-            if (this->mUnits.size() < this->mMinCount)
-                this->mUnits.clear();
-        }
+    EESMHostContext theContext = {NULL, NULL, NULL, this, NULL};
+    EeScenarioHost theHost = EESMHost(&theContext);
+    return ee_scenario_object_evaluate(&theHost, this, inIncludeDead);
+}
+
+namespace {
+
+// a unit id handed over as 32 bits (ee_scenario objeval.rs), as the list holds it
+EEUnit* SMUnit(int32_t inID)
+{
+    return gWorld.GetUnit((unsigned long)(uint32_t)inID);
+}
+
+// a chain unit for objeval.rs: its id low, its class's type high; -1 at the end
+int64_t SMChainUnit(EEUnit* inUnit)
+{
+    return inUnit == NULL ? -1 : (int64_t)(uint32_t)inUnit->GetUnitID() | ((int64_t)(uint32_t)inUnit->mUnitClass->mUnitType << 32);
+}
+
+}   // namespace
+
+// Evaluate's reads, each the original's expression (objeval.rs EE_SCENARIO_READ_OBJ_* and the unit reads)
+int64_t EESMObjectRead(EESMHostContext* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t inC)
+{
+    EESMObject* theObject = inContext->mObject;
+    EEScenarioManager* theManager = gWorld.mScenarioManager;
+    switch (inOp) {
+    case EE_SCENARIO_READ_OBJ_UNIT_COUNT: return (int64_t)theObject->mUnits.size();
+    case EE_SCENARIO_READ_OBJ_UNIT_AT: return (int64_t)(uint32_t)theObject->GetUnitAt((unsigned long)inA);
+    case EE_SCENARIO_READ_OBJ_EVALUATE: return theManager->GetScenarioObject((unsigned long)inA)->Evaluate(inB != 0);
+    case EE_SCENARIO_READ_UNIT_FLAGS: {
+        EEUnit* theUnit = SMUnit(inA);
+        if (theUnit == NULL)
+            return 0;
+        return 1 | (theUnit->GetHitPoints() > 0 ? 2 : 0) | (theUnit->mUnitClass->mIsTree ? 4 : 0)
+               | (theUnit->mComplexUnit != NULL ? 8 : 0)
+               | (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mPreviousPart != NULL ? 16 : 0);
     }
-    bool theResult = false;
-    for (long i = 0; i < (long)this->mUnits.size(); i++) {
-        EEUnit* theUnit = gWorld.GetUnit(this->GetUnitAt(i));
-        bool theKeep = false;
-        if (theUnit != NULL && (theIncludeDead || theUnit->GetHitPoints() > 0 || theUnit->mUnitClass->mIsTree)
-            && (theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mPreviousPart == NULL)) {
-            EEComplexUnit* theComplex = theUnit->mComplexUnit;
-            if (this->mHasStateCheck == 0)
-                theKeep = true;
-            else if (theComplex != NULL) {
-                long theCommand = theComplex->GetCommandType();
-                theKeep = this->mHasStateCheck == 1 ? theCommand == this->mState : theCommand != this->mState;
-            }
-            if (theKeep && this->mHasAttributeCheck != 0) {
-                long theValue = this->GetUnitAttribute(this->mAttribute, this->mIsAttributePercent, theUnit, 0, 0);
-                if (this->mHasAttributeCheck == 1)
-                    theKeep = theValue >= (long)this->mAttributeMin && theValue <= (long)this->mAttributeMax;
-                else
-                    theKeep = theValue < (long)this->mAttributeMin || theValue > (long)this->mAttributeMax;
-            }
-            if (this->mSelectedByCheck != 0) {
-                gWorld.mScenarioManager->ChoosePlayer(this->mSelectedByPlayer, &thePlayers, false);
-                for (unsigned long j = 0; j < thePlayers.size(); j++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[j]];
-                    if (this->mSelectedByCheck == 1)
-                        theKeep = theKeep && (thePlayer->mActiveGroup->Contains(theComplex) || thePlayer->mViewedUnit == theUnit);
-                    else
-                        theKeep = theKeep && !thePlayer->mActiveGroup->Contains(theComplex) && thePlayer->mViewedUnit != theUnit;
-                }
-            }
-            if (theKeep && this->mVisibleByCheck != 0) {
-                gWorld.mScenarioManager->ChoosePlayer(this->mVisibleByPlayer, &thePlayers, false);
-                for (unsigned long j = 0; j < thePlayers.size(); j++) {
-                    EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[j]];
-                    if (this->mVisibleByCheck == 1)
-                        theKeep = theKeep && EEIsSeenBy(theUnit, thePlayer, false);
-                    else
-                        theKeep = theKeep && !EEIsSeenBy(theUnit, thePlayer, false);
-                }
-            }
-            if (theKeep && this->mInAreaCheck != 0) {
-                if (this->mInAreaCheck == 1)
-                    theKeep = theArea != NULL && theArea->ContainsUnit(theUnit);
-                else
-                    theKeep = theArea != NULL && !theArea->ContainsUnit(theUnit);
-            }
-            if (theKeep && this->mNearCheck != 0) {
-                if (this->mNearCheck == 1)
-                    theKeep = theTarget != NULL && theTarget->IsNearUnit(theUnit, this->mNearMode, false);
-                else
-                    theKeep = theTarget != NULL && !theTarget->IsNearUnit(theUnit, this->mNearMode, false);
-            }
-        }
-        if (!theKeep && theRebuilt == true) {
-            this->mUnits.erase(this->mUnits.begin() + i);
-            i--;
-        } else {
-            theResult = theResult || theKeep;
-            if (theResult && !theRebuilt)
-                break;
-        }
+    case EE_SCENARIO_READ_UNIT_CLASS_TYPE: return SMUnit(inA)->mUnitClass->mUnitType;
+    case EE_SCENARIO_READ_UNIT_PLAYER: return SMUnit(inA)->mPlayer->GetPlayerID();
+    case EE_SCENARIO_READ_UNIT_COMMAND: return SMUnit(inA)->mComplexUnit->GetCommandType();
+    case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
+        return theObject->GetUnitAttribute((unsigned long)inB, inC != 0, SMUnit(inA), 0, 0);
+    case EE_SCENARIO_READ_UNIT_SELECTED_BY: {
+        EEPlayer* thePlayer = gWorld.mPlayers[inA];
+        EEUnit* theUnit = SMUnit(inB);
+        return thePlayer->mActiveGroup->Contains(theUnit->mComplexUnit) || thePlayer->mViewedUnit == theUnit;
     }
-    if (theRebuilt == true) {
-        if (this->mUnits.size() < this->mMinCount)
-            this->mUnits.clear();
-        else {
-            EEAIRandomShuffle(this->mUnits.begin(), this->mUnits.end());
-            if (this->mUnits.size() > this->mMaxCount)
-                this->mUnits.erase(this->mUnits.begin() + this->mMaxCount, this->mUnits.end());
-        }
-        theResult = this->mUnits.size() > 0;
-        if (theResult && !this->mIsDynamic)
-            this->mIsSelectOnMap = true;
+    case EE_SCENARIO_READ_UNIT_SEEN_BY: return EEIsSeenBy(SMUnit(inA), gWorld.mPlayers[inB], false);
+    case EE_SCENARIO_READ_AREA_CONTAINS_UNIT: {
+        EESMArea* theArea = theManager->GetArea((unsigned long)inA);
+        return theArea == NULL ? -1 : theArea->ContainsUnit(SMUnit(inB));
     }
-    return theResult;
+    case EE_SCENARIO_READ_OBJ_NEAR_UNIT: {
+        EESMObject* theTarget = theManager->GetScenarioObject((unsigned long)inA);
+        return theTarget == NULL ? -1 : theTarget->IsNearUnit(SMUnit(inB), (long)inC, false);
+    }
+    case EE_SCENARIO_READ_PLAYER_UNIT:
+        if (inB == 0) {
+            EEPlayer* thePlayer = gWorld.mPlayers[inA];
+            inContext->mCursor = thePlayer != NULL ? thePlayer->mFirstUnit : NULL;
+        } else
+            inContext->mCursor = static_cast<EEUnit*>(inContext->mCursor->mNext);
+        return SMChainUnit(inContext->mCursor);
+    }
+    return 0;
+}
+
+// Evaluate's changes of the object's list (objeval.rs EE_SCENARIO_WRITE_OBJ_*)
+void EESMObjectWrite(EESMHostContext* inContext, uint32_t inOp, int64_t inB)
+{
+    std::vector<unsigned long>& theUnits = inContext->mObject->mUnits;
+    switch (inOp) {
+    case EE_SCENARIO_WRITE_OBJ_CLEAR: theUnits.clear(); break;
+    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
+        gWorld.mScenarioManager->GetScenarioObject((unsigned long)inB)->GetUnits(theUnits);
+        break;
+    case EE_SCENARIO_WRITE_OBJ_ERASE: theUnits.erase(theUnits.begin() + (size_t)inB); break;
+    case EE_SCENARIO_WRITE_OBJ_PUSH: theUnits.push_back((unsigned long)(uint32_t)inB); break;
+    case EE_SCENARIO_WRITE_OBJ_SHUFFLE: EEAIRandomShuffle(theUnits.begin(), theUnits.end()); break;
+    case EE_SCENARIO_WRITE_OBJ_TRUNCATE: theUnits.erase(theUnits.begin() + (size_t)inB, theUnits.end()); break;
+    }
 }
 
 

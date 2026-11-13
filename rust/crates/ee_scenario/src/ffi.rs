@@ -14,6 +14,7 @@ use crate::fields::{
 use crate::host::EeScenarioHost;
 use crate::manager::{self, EeScenarioManagerFields, EeScenarioTimedEntry, EeScenarioTimedQueue};
 use crate::object::{self, EeScenarioObjectFilter};
+use crate::objeval::{self, ObjectTable};
 use crate::player;
 use crate::round::{self, EeScenarioRoundHost};
 use crate::save;
@@ -725,4 +726,20 @@ pub unsafe extern "C" fn ee_scenario_set_player_attribute(
     // SAFETY: the caller's contract
     let mut h = unsafe { host_of(host) };
     player::set_player_attribute(&mut h, player, attribute, mode, amount);
+}
+
+/// `EESMObject::Evaluate`'s body (objeval.rs): the object's units by the host's operations, its numbers through
+/// `fields`.
+///
+/// # Safety
+/// `host` must be valid for the call, `fields` the live object's numbers.
+#[no_mangle]
+pub unsafe extern "C" fn ee_scenario_object_evaluate(
+    host: *const EeScenarioHost,
+    fields: *mut EeScenarioObjectFields,
+    include_dead: bool,
+) -> bool {
+    // SAFETY: the caller's contract
+    let mut t = ObjectTable { host: unsafe { host_of(host) }, fields };
+    objeval::evaluate(&mut t, include_dead)
 }

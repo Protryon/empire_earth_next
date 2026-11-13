@@ -157,6 +157,20 @@ int64_t Read(void* inContext, uint32_t inOp, int32_t inA, int32_t inB, int32_t i
     case EE_SCENARIO_READ_SHARE_BONUS: return thePlayer->mShareBonus;
     case EE_SCENARIO_READ_WORLD_POPULATION_LIMIT: return gWorld.mPlayerPopulationLimit;
     case EE_SCENARIO_READ_PLAYER_ID: return thePlayer->mPlayerID;
+    case EE_SCENARIO_READ_OBJ_UNIT_COUNT:
+    case EE_SCENARIO_READ_OBJ_UNIT_AT:
+    case EE_SCENARIO_READ_OBJ_EVALUATE:
+    case EE_SCENARIO_READ_UNIT_FLAGS:
+    case EE_SCENARIO_READ_UNIT_CLASS_TYPE:
+    case EE_SCENARIO_READ_UNIT_PLAYER:
+    case EE_SCENARIO_READ_UNIT_COMMAND:
+    case EE_SCENARIO_READ_UNIT_ATTRIBUTE:
+    case EE_SCENARIO_READ_UNIT_SELECTED_BY:
+    case EE_SCENARIO_READ_UNIT_SEEN_BY:
+    case EE_SCENARIO_READ_AREA_CONTAINS_UNIT:
+    case EE_SCENARIO_READ_OBJ_NEAR_UNIT:
+    case EE_SCENARIO_READ_PLAYER_UNIT:
+        return EESMObjectRead(theContext, inOp, inA, inB, inC);
     case EE_SCENARIO_READ_CONDITION: {
         EESMCondition* theOther = theManager->GetCondition((unsigned long)inA);
         return theOther == NULL ? -1 : theOther->Evaluate();
@@ -192,6 +206,14 @@ void Write(void* inContext, uint32_t inOp, long inPlayer, int64_t inB, int64_t i
     case EE_SCENARIO_WRITE_STATISTIC_ADD: thePlayer->mSavedGroups.Reset((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_STATISTIC_SET: thePlayer->mSavedGroups.Set((long)inB, (long)inC); break;
     case EE_SCENARIO_WRITE_MINING_LIMIT: thePlayer->mMiningLimit = (long)inB; break;
+    case EE_SCENARIO_WRITE_OBJ_CLEAR:
+    case EE_SCENARIO_WRITE_OBJ_COPY_PARENT:
+    case EE_SCENARIO_WRITE_OBJ_ERASE:
+    case EE_SCENARIO_WRITE_OBJ_PUSH:
+    case EE_SCENARIO_WRITE_OBJ_SHUFFLE:
+    case EE_SCENARIO_WRITE_OBJ_TRUNCATE:
+        EESMObjectWrite(theContext, inOp, inB);
+        break;
     }
 }
 
