@@ -14,6 +14,8 @@
 --   M.step(view, mem)            the jobs: the builders released once the drop site stands (or after JOB_MS)
 --   M.pending(mem)               the jobs under way (the settlements going up)
 local M = {}
+M.afford_retry = false     -- (set by boom with BO.OPT.settle_afford)
+M.blocked_skip = false     -- (set by boom with BO.OPT.blocked_skip)
 
 local JOB_MS = 180000       -- a job's builders are released after this, built or not
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
@@ -349,8 +351,10 @@ function M.request(view, mem, key, type, rids, x, y, spotf)
     local code, reason, _, id = ai.build(b, type, bx, by)
     if code ~= "ok" or id == nil then
         ai.release(b)
-        -- (a granary refused for its cost is tried again soon: the engine checks its cost against more than the stock)
-        P.bad[key] = view.time + (reason == "cannot_afford" and type == "b_granary" and AFFORD_MS or BAD_MS)
+        -- (a granary, or with M.afford_retry any building, refused for its cost is tried again soon: the engine checks
+        -- its cost against more than the stock)
+        P.bad[key] = view.time + (reason == "cannot_afford" and (type == "b_granary" or M.afford_retry) and AFFORD_MS
+            or BAD_MS)
         print(string.format("place refused key=%s type=%s at=%d,%d gap=%d reason=%s", key, type, bx, by, g,
             tostring(reason)))
         return "none"
@@ -401,6 +405,17 @@ function M.step(view, mem)
                 if not busy and view.time - j.t >= 15000 then
                     done = true
                     P.tiles[j.x .. "," .. j.y] = view.time + BAD_MS
+                    -- (M.blocked_skip: a unit standing in the footprint, a wild animal in §8.51, blocked the next tile
+                    -- over as well, placed again each minute: every anchor whose footprint overlaps this one is
+                    -- passed over, so the next touching spot on the list comes at once)
+                    if M.blocked_skip then
+                        local s = size_of(j.type)
+                        for dx = 1 - s, s - 1 do
+                            for dy = 1 - s, s - 1 do
+                                P.tiles[(j.x + dx) .. "," .. (j.y + dy)] = view.time + BAD_MS
+                            end
+                        end
+                    end
                 end
             end
             done = done or view.time - j.t >= JOB_MS

@@ -467,7 +467,8 @@ struct EECPNextState {
     long mFoodPrefer;                       // EECPNextFoodPrefer
     long mFoodLand;                         // the land food gatherers asked for (gather adds the boats)
     long mExact;                            // gather(exact = 1): no gatherer kept past the wanted count (the rebalance's
-                                            // one of slack off; docs/AI_RESEARCH.md §8.51; transient, the next order sets it)
+                                            // one of slack off); exact = 2 also sends no idle citizen to a resource that
+                                            // has its count (docs/AI_RESEARCH.md §8.51; transient, the next order sets it)
     long mGranaryFarms;                     // gather(resource = "food", granary_farms = n): the idle food gatherers
                                             // build a granary's unfinished fields only up to n built farms a standing
                                             // granary, 0 never (the script orders its farms); -1 (the default) always

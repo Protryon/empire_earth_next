@@ -30,6 +30,12 @@ M.OPT = {
     lua_farms = false,      -- (on in boom_order, §8.51) the Copper Age's 3 granaries sited by lib.place one after
                             -- another, and the engine builds no granary's fields (gather granary_farms = 0) until all
                             -- stand, then 8 each
+    soldiers_after_boats = false, -- (on in boom_order) stone_start trains no soldier before 10 boats, unless threatened
+    settle_afford = false,  -- (off until benched) a settlement is placed only with its whole cost in hand, and one refused
+                            -- for its cost tries again in 20 s, not 5 minutes
+    builder_pool = false,   -- (off until benched) the Stone Age's citizens: the fill's places plus those building (at most
+                            -- BUILDER_POOL), never past STONE_MOST; none for a resource past its most
+    blocked_skip = false,   -- (off until benched) a foundation lost on a blocked tile passes over every tile it covered
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -85,6 +91,9 @@ M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for eve
 M.FOOD_BANK = 0            -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
+M.BUILDER_POOL = 11        -- (OPT.builder_pool) the Stone Age's citizens building on top of the fill's places, at most
+M.STONE_MOST = 86          -- ... and the Stone Age's citizens at most (the owner's 35 -> 86)
+M.BUILDER_IDLE = 4         -- (OPT.builder_pool) no citizen trained while this many stand idle
 
 local V = require("lib.view")
 

@@ -4089,6 +4089,40 @@ lua_farms):
 Both are on in boom_order. The boats' remaining misses are the pace (a dock at +1 trains its tenth boat at +6 to +7),
 and the growth and the mines' income stay open.
 
+**The Stone Age's growth (2026-11-13).** The town centres wait on food, not on a cap: in stone_start and stone_grow
+they stood idle 26-57 s a minute with 21-47 food in stock, at the 76 cap 0-20% of the minutes (the population cap is
+400). The spending trace (6 seeds against the improved classic): stone_start took in 131 food a minute and spent 91
+on citizens, 38 on soldiers; stone_grow 162, 136 and 17. A boat brings 5.4-7.0 food a minute, a forager 6.9-7.5, a
+hunter 5.1-7.3 (least squares over the Stone minutes; hunters average 1.3-2.2, so the hunting reach has little to
+give). The 32-seed variants, against L7:
+- **B1** (20 boats and 2 docks from stone_grow): growth 1.9 -> 2.1 and 2.2 -> 2.5, citizens at 40 minutes +7/+9, but
+  Bronze later (86.9 in 19 against 82.9 in 22 against the classic), the second barracks and range short (the boats'
+  wood), one more defeat: dropped.
+- **S1** (`BO.OPT.soldiers_after_boats`: no new soldier in stone_start before 10 boats unless threatened or enemy
+  soldiers are in sight): kept, on in boom_order. Against the classic the threat is usually there at the advance, so
+  it acts mostly against Age of AI (stone_start's town centres idle 8 s a minute against 26).
+- **F1** (`settle_afford`: a settlement only with its whole cost in hand, a cost refusal retried in 20 s, not 5
+  minutes): Bronze against the classic in 16 games against 22: off.
+- **B5** (`builder_pool` with `gather(exact = 2)`, `blocked_skip`, F1 and S1): the owner's ranges hold (no spill
+  onto wood: the fill keeps its leftover out, the C++ idle runner sends no idle citizen to a resource that has its
+  count, the claim reaches out for a short mine; the Stone citizens are the claimed places plus lib.place's builders,
+  at most 86, none while 4 stand idle), but the town stops short: citizens at 40 minutes 61.7 against 70.1, Bronze
+  91.2 against 82.9, 7 defeats against 5 (against the classic). The citizens held back were the ones on wood or food
+  past the ranges, while a second mine waits for its settlement. Off; the end state once the mines can take them.
+- **Builders against the fill:** 76 counts every land citizen; in stone_grow and stone_developed 4-12 (with boats)
+  gathered nothing, 2-8 of them idle.
+
+64 seeds (2-65), L7 -> S1: against the improved classic won-lost-close 25-20-19 -> 29-21-14, defeated 9 -> 5, Copper
+51.6 (54) -> 51.3 (53), Bronze 78.3 (42) -> 77.5 (39), growth 1.9 -> 2.0; against Age of AI 32-7-25 -> 36-6-22,
+Bronze 64.4 (59) -> 65.6 (61), no defeats.
+
+**What delays the second and third mines** (3 games against Age of AI, the sites trace): the near-home gold and iron
+mines (12-16 tiles, explored) are claimed only from stone_grow (stone_start's fill wants 2 of each, so the claim for
+the phase target waits), about 5 minutes into the Stone Age, and their settlements stand 5-15 minutes after that:
+boat_wood holds every Stone settlement until 10 boats, the settlement's stone runs short (cannot_afford, then
+lib.place's 5-minute wait), and a wild animal on the tile had the same spot re-placed each minute (`blocked_skip`).
+Next: claim and settle them from the advance, near home only, then the pool and exact = 2 on top.
+
 ### 8.53 The classic computer player in Lua: early raids, hills and choke points, heroes (2026-11-11, EE-SIM)
 
 **Early raids are level.** Over seeds 2-17 (balanced, 25 minutes) the port lost 36 citizens and the C++ 41 (22 of the
