@@ -8,6 +8,8 @@
 #ifndef LLE_NESYNCHRONOUSSERVER_H
 #define LLE_NESYNCHRONOUSSERVER_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include <deque>
 #include <map>
 #include <vector>
@@ -15,7 +17,8 @@
 #include "lle/NEProtocol.h"
 
 class NEMessage;
-class NEMessageManager;
+struct EeNetMsgMgr;                         // the message manager, a Rust object (rust/ee_net.h)
+enum class EeNetMmOp : uint32_t;
 class NEMCommunicationsTickResponse;
 class NEMWorldDatabaseChecksumResponse;
 class NERecordPlayback;
@@ -60,7 +63,6 @@ struct NESendToAllAndWaitRequest {          // element of mSendToAllAndWaitReque
 };
 
 class LLE_API NESynchronousServer : public NESynchronousCommunications {   // proven sizeof 0x208 (??_E: imul 0x208)
-    friend class NEMessageManager;
 public:
     NESynchronousServer(unsigned char inMaxPlayers, unsigned long inDefaultSendInterval, unsigned char inPTsPerCT, unsigned long inMaxPhysicsTicksPerSecond,
                         unsigned long inMinPhysicsTicksPerSecond, float inPhysicsTickCostFactor, unsigned long inMaxSendInterval, unsigned long inSendIntervalIncrement, unsigned long inSendIntervalDecrement,
@@ -213,6 +215,8 @@ private:
     bool TuneForSlowNetwork();
     bool TuneServer();
     static unsigned long Xfer(void* inServerObject);
+    // the message manager's calls out (ee_net's EeNetMmOp): the messages, this server, its protocol, the files
+    static ptrdiff_t MessageManagerHost(void* inServer, EeNetMmOp inOp, size_t a, size_t b, size_t c, size_t d);
 
     NECDIServer mDebugInfo;                 // +0x30
     UWideString mName;                      // +0x70
@@ -222,7 +226,7 @@ private:
     std::map<unsigned long, std::multimap<unsigned long, unsigned char> > mChecksumResponses;   // +0xb4
     std::vector<unsigned char> mOOSSlots;   // +0xc0
     std::vector<unsigned char> mSlotsD0;    // +0xd0 (provisional name; TuneServer hands it to slot +0x68)
-    NEMessageManager* mMessageManager;      // +0xe0
+    EeNetMsgMgr* mMessageManager;           // +0xe0 NEMessageManager, whole in Rust (ee_net msgmgr.rs)
     NEProtocol* mProtocol;                  // +0xe4 protocol 0
     NEServer* mServer;                      // +0xe8
     TSThread* mMainThread;                  // +0xec

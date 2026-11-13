@@ -58,7 +58,6 @@
 3bb89 3bc2d Low-Level Engine.cpp
 3bc2d 3e05c Network Engine/NELagLossSimulator.cpp
 3e05c 40123 Network Engine/NEMessage.cpp
-40123 4440f Network Engine/NEMessageManager.cpp
 4440f 44c71 Network Engine/NEProtocol.cpp
 44c71 45535 Network Engine/NEProtocolConfiguration.cpp
 45535 45c00 Network Engine/NERecordPlayback.cpp
