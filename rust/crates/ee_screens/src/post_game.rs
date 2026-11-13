@@ -947,12 +947,50 @@ pub fn dispatch<H: PostGameHost + ?Sized>(h: &mut H, state: &Mutex<PostGame>, ev
     Some(0)
 }
 
+/// `EEUIPGSLineGraph::FormatYValues`: a y axis value rounded (`(long)(value + 0.5f)`, x64's `cvttss2si`).
+pub fn format_y(value: f32) -> Vec<u8> {
+    truncate(value + 0.5f32).to_string().into_bytes()
+}
+
+/// `EEUIPGSLineGraph::FormatXValues`: a game time in milliseconds as "minutes:seconds", at least 1 ms; the time's
+/// `(unsigned long)` conversion is x64's 64-bit `cvttss2si` kept to its low 32 bits (out of range or NaN: 0, which
+/// `EEPhysics::GetMinutesAndSeconds` replaces with the game's time).
+pub fn format_x(value: f32, game_time: u32) -> Vec<u8> {
+    let value = if value < 1.0f32 { 1.0f32 } else { value };
+    let mut time = if value.is_nan() || value >= 9.223372e18 { 0 } else { value as i64 as u32 };
+    if time == 0 {
+        time = game_time;
+    }
+    let minutes = time / 1000 / 60;
+    let seconds = time.wrapping_sub(minutes.wrapping_mul(60000)) / 1000;
+    format!("{}:{}", minutes as i32, two_digits(seconds as i32)).into_bytes()
+}
+
 #[cfg(test)]
 mod golden;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The line graph's axis texts against the real C++ (`build/sc11/lg_driver.cpp` over the unmodified
+    /// `EEUIPGSLineGraph.cpp`: 3,000 drawn floats, the conversions' edges, NaN and infinities, the physics' game time;
+    /// `golden_pgs_axes.txt`). The driver relinked over the new unit prints the same, and on seeds 2-4 at 30,000.
+    #[test]
+    fn golden_axes() {
+        let text = String::from_utf8(include_bytes!("golden_pgs_axes.txt").to_vec()).unwrap().replace("\r\n", "\n");
+        let mut n = 0;
+        for line in text.lines() {
+            let q: Vec<&str> = line.split('\'').collect();
+            let head: Vec<&str> = q[0].split_whitespace().collect();
+            let value = f32::from_bits(u32::from_str_radix(head[0], 16).unwrap());
+            let time: u32 = head[1].parse().unwrap();
+            assert_eq!(String::from_utf8(format_y(value)).unwrap(), q[1], "{line}");
+            assert_eq!(String::from_utf8(format_x(value, time)).unwrap(), q[3], "{line}");
+            n += 1;
+        }
+        assert_eq!(n, 3000);
+    }
 
     #[test]
     fn events_and_messages() {

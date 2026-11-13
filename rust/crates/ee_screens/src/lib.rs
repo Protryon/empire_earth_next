@@ -14,6 +14,7 @@
 //!   call, over the C++ host.
 //! - [`lobby_options`]: the lobby's game options (what is shown and editable), the option events' messages and
 //!   the start check.
+//! - [`splash`]: the loading screen whole (form 23: its open event over the C++ host).
 //! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
 //! - [`command_panel`]: the in-game command panel: its layout (which buttons show where), each button's
@@ -33,6 +34,7 @@
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
+//! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
@@ -52,6 +54,9 @@ mod camera_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;
+pub mod chat_log;
+#[cfg(not(test))]
+mod chat_log_ffi;
 pub mod civ_builder;
 #[cfg(not(test))]
 mod civ_builder_ffi;
@@ -102,3 +107,6 @@ pub mod settings_form;
 mod settings_form_ffi;
 pub mod single_player;
 mod single_player_ffi;
+pub mod splash;
+#[cfg(not(test))]
+mod splash_ffi;
