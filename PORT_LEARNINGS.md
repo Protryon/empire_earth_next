@@ -10419,6 +10419,59 @@ that cannot unwind; the first check on the release library: a script error under
   `saveload --settings next` as the expect file (647, 1217, END, END); the Rust gate PASS; captures at seeds 2-3:
   oracle, late, space, calamity and missile PASS. Only EE-SIM and the tests ran: no tour.
 
+## R6 WON round 22: InputBox, Label and Splitter whole in Rust over the component op table (ee_won inputobj.rs, labelobj.rs, splitobj.rs; branch rust-r6-won22, 2026-11-12)
+
+Measured as rounds 18-21 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 90,554 at
+the branch's start (round 21 and the other lanes merged into rust) -> 89,985 after InputBox (-569) -> 89,916 after
+Label (-69) -> 89,535 after Splitter (-381): -1,019 in all.
+
+- **The pattern, unchanged from round 21.** Each leaf keeps its C++ class (the type the lobby, the configs and the
+  subclasses hold; its vtable) with one-line inline forwarders to `ee_won_<leaf>_call`, and the Rust object makes
+  every call out through its own host function in `WONGUI/GuiHost.cpp` (`ee_won_guicpp_input_call`, `_label_call`,
+  `_split_call`), all over the one op enum `guihost.rs` `EeWonGuiOp`. The component services (`ComponentOp`) are
+  shared; this round added the base focus and paint calls, `SetSize` (which calls the component's `Virtual08` back
+  when the size changes: the goldens' hosts do the same), the default cursor (three more standard cursors),
+  `FireEvent` (`EeWonGuiEvent`), the clipboard, the input box's font measures and text copies, the label's wrapped
+  text and background, and a container's children, buttons and events.
+- **InputBox** (`inputobj.rs`): the shown and real (password) text, selection and drag, scroll, blink, padding and
+  text rectangle, history, limits and paint. `GetText()` returns a reference, so the C++ keeps two `GUIString`
+  copies (`mText` the shown one the font measures, `mRealText`), stored by the op `TextStore` at the end of each
+  text change (before the change event). The filter stays a C++ function pointer (`LanPortDialog` sets
+  `NumericFilter`, which now reads `GetSelStart()`); the op `Filter` answers 2 without one. The fields the configs
+  and `SkinnedContainers` wrote (`mMaxChars`, `mSelectOnFocus`, `mMaxInputHistory`, `mLeftPad`) are setters; the
+  colours, backgrounds, selection colours and font stay C++ fields. Inward texts are `wchar_t` units (2 bytes on
+  Windows; `inputobj::units_in`), outward ones u32 units; a typed or password character is stored as the platform's
+  `wchar_t` would (`wunit`). One departure, on both sides of the golden: a history limit of 0 stopped the trim at an
+  empty history (the original popped an empty deque).
+- **Label** (`labelobj.rs`): colour, alignments, padding, fit-to-text height, desired size and paint. The wrapped text
+  stays C++ (the test fixture reads its text for `ui-state.txt`); `SetText` sets it in the inline forwarder, then
+  the Rust steps run (`TextSet`). Small: most of the label is the wrapped text, which 46 outside references use.
+- **Splitter** (`splitobj.rs`): panes, bars and drag handles, maximise buttons, split, percentages (doubles), minimum
+  panes, drag and maximised quadrant. Children are borrowed `Component*`s; the drag handles and buttons are held
+  with `ChildHold` / `ChildRelease` (the original's `SmartPtr`s, given back in the original's member order). The two
+  components it makes are ops (`NewDragComponent` drops the creator's reference inside the op, as the original's
+  `SmartPtr` left its block; `NewSizedComponent` returns it held and Rust releases it after `AddSplitter`). A header
+  slip worth remembering: replacing a class by searching for the first `};` after `class X {` stops at an inner
+  enum's `};` (it did here: the compile caught it).
+- **The goldens** (`tests/won/won_inputobj_test.cpp`, `won_labelobj_test.cpp`, `won_splitobj_test.cpp`): each holds the
+  original's methods with every C++ call replaced by the op that makes it, and runs them and the Rust object over one
+  scripted host: 20,000 sequences each; InputBox 3,859,829 trace lines (events whose handler sets the text, clears
+  it into the history or selects all; the numeric filter reading the box back; a filter that changes the text; the
+  clipboard), Label 1,960,872, Splitter 5,335,120 (every reference given back); all identical. Mutations (Delete as
+  Backspace; the label's minimum wrap width; a bar's drag axis) fail 11,435 / 3,661 / 3,050 sequences. The
+  `golden_*obj.txt` files (40 to 44 sequences of 16 calls) are replayed op for op by `cargo test`. A `%llx` of a
+  negative argument is 16 hex digits: the replay parses it as u64 first.
+- **What runs it.** EE-SIM never builds the lobby: the oracle is unchanged by construction (seeds 2-3 identical after
+  each commit). Only the lobby reaches these classes, so only the lead's LAN game and lobby captures check them:
+  - InputBox: the LAN lobby's name box, the chat line on the LAN lobby and in the game room (typing, Enter: the
+    return event clears it into the history, as the golden's handler does), the port box of the LAN port dialog
+    (numeric filter), the combo boxes' edit lines (the user name combo, the options' combos); in the captures the
+    boxes' text, caret and selection and the disabled look.
+  - Label: every caption and status line of the lobby and the dialogs (the captures' text placement and colour).
+  - Splitter: the game room (`GameStagingCtrl.cfg` `TopChat`: the chat left, the player list right, minimum 300 /
+    150, 65 %) on the LAN game's staging screen; dragging its bar runs only in the golden.
+  The scroll bars, PopupMenu and the ListArea family stayed C++ this round.
+
 ## R6: the game screens, eleventh round: the loading screen, the chat log and the line graph's axis texts in Rust (ee_screens splash.rs, chat_log.rs, post_game.rs; branch rust-screens11, 2026-11-12)
 
 Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game UI's events; round 10's count.

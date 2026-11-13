@@ -24,7 +24,7 @@ bool InputBoxConfig::Virtual24(const std::string& inInstruction)
     if(aKeyIdx==0) this->mInputBox->SetText(this->ReadString(false),true);
     else if(aKeyIdx==1) this->mInputBox->SetPasswordChar(this->ReadChar());
     else if(aKeyIdx==2) this->mInputBox->SetAllowSelection(this->ReadBool());
-    else if(aKeyIdx==3) this->mInputBox->mMaxChars=this->ReadInt();
+    else if(aKeyIdx==3) this->mInputBox->SetMaxChars(this->ReadInt());
     else if(aKeyIdx==4) this->mInputBox->SetCharWidth(this->ReadInt());
     else if(aKeyIdx==5) this->mInputBox->SetBackground(this->ReadBackground());
     else if(aKeyIdx==6) this->mInputBox->SetDisabledBackground(this->ReadBackground());
@@ -32,8 +32,8 @@ bool InputBoxConfig::Virtual24(const std::string& inInstruction)
     else if(aKeyIdx==8) this->mInputBox->mTextColor=this->ReadColor();
     else if(aKeyIdx==9) this->mInputBox->mDisabledTextColor=this->ReadColor();
     else if(aKeyIdx==10) this->mInputBox->mSelColor=this->ReadSelectionColor();
-    else if(aKeyIdx==11) this->mInputBox->mSelectOnFocus=this->ReadBool();
-    else if(aKeyIdx==12) this->mInputBox->mMaxInputHistory=this->ReadInt();
+    else if(aKeyIdx==11) this->mInputBox->SetSelectOnFocus(this->ReadBool());
+    else if(aKeyIdx==12) this->mInputBox->SetMaxInputHistory(this->ReadInt());
     else if(aKeyIdx==13) this->mInputBox->mUseDisabledColors=this->ReadBool();
     else if(aKeyIdx==14)
     {
