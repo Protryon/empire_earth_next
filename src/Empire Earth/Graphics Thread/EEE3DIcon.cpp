@@ -102,7 +102,7 @@ long EEE3DIcon::DrawPass5()
 
 // FUNCTION: EXE 0x4f21e5
 // Queues the icon in render queue 4 with its transform, orbital angles, frame, opacity (faded in over the
-// effect's tenth parameter) and scroll; returns 10 for an unbuilt market
+// effect's tenth parameter: ee_gfx effect_icon.rs) and scroll; returns 10 for an unbuilt market
 long EEE3DIcon::Queue(EEEffectQueue* inQueues)
 {
     long i;
@@ -121,15 +121,8 @@ long EEE3DIcon::Queue(EEEffectQueue* inQueues)
         for (i = 0; i < this->mOrbitalCount; i++)
             this->mAngles[i] = this->mOrbitals[i]->GetAngle();
         this->mDrawFrame = this->mFrame;
-        float theOpacity = theEffect->GetParam8();
-        this->mOpacity = theOpacity;
-        if (theEffect->mParam10 > 0.0f && theEffect->mParam10 > this->mAge)
-            this->mOpacity = (theOpacity - theEffect->GetParam9()) * (this->mAge / theEffect->GetParam10()) + theEffect->GetParam9();
         this->mDrawScroll = this->mScroll;
-        if (this->mFrameCount > 0 && this->mFrameTime != 0)
-            this->mFraction = this->mTime / this->mFrameTime;
-        else
-            this->mFraction = 0.0f;
+        ee_gfx_icon_queue(this->mRecord, theEffect->GetParam8(), theEffect->GetParam9(), theEffect->GetParam10());
         GETexture* theTexture;
         if (theEffect->GetGraphicObject())
             theTexture = theEffect->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
@@ -149,20 +142,13 @@ void EEE3DIcon::PrepareQueue()
 // Resets the icon's age, scale, animation and orbitals (deleting its orbitals)
 void EEE3DIcon::Clear()
 {
-    this->mAge = 0.0f;
-    this->mScale = 0.0f;
+    ee_gfx_icon_clear(this->mRecord);
     this->mGraphicObject = NULL;
-    this->mGrowing = false;
     // The icon owns its orbital copies: delete them before emptying the list.
     for (std::vector<EEOrbital*>::iterator theOrbital = this->mOrbitals.begin(); theOrbital != this->mOrbitals.end(); theOrbital++)
         delete *theOrbital;
     this->mOrbitals.clear();
-    this->mTime = 0.0f;
     this->mOrbitalCount = 0;
-    this->mFrame = 0;
-    this->mFrameCount = 0;
-    this->mFraction = 0.0f;
-    this->mFrameTime = 0;
 }
 
 // FUNCTION: EXE 0x4f23e2
@@ -193,17 +179,14 @@ long EEE3DIcon::SetUp()
 }
 
 // FUNCTION: EXE 0x4f24e3
-// Reads the base 3D effect, the age, the follow-unit flag and, for a fixed icon, its location; returns the first error
+// Reads the base 3D effect, the age, the follow-unit flag and, for a fixed icon, its location (ee_gfx
+// effect_icon.rs); returns the first error
 long EEE3DIcon::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult == 0) {
-        theResult = inFile.Read(this->mAge);
-        if (theResult == 0) {
-            theResult = inFile.Read(this->mFollowUnit);
-            if (theResult == 0 && !this->mFollowUnit)
-                theResult = this->mLocation.Load(inFile);
-        }
+        EeGfxEffectFile theFile = EEEffectFile(inFile);
+        theResult = ee_gfx_icon_load(this->mRecord, &theFile);
     }
     return theResult;
 }
@@ -316,65 +299,26 @@ long EEE3DIcon::DrawPass6()
 }
 
 // FUNCTION: EXE 0x4f2a57
-// Writes the base 3D effect, age, follow flag and fixed location
+// Writes the base 3D effect, age, follow flag and fixed location (ee_gfx effect_icon.rs)
 long EEE3DIcon::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0) {
-        theResult = outFile.Write(this->mAge);
-        if (theResult == 0) {
-            theResult = outFile.Write(this->mFollowUnit);
-            if (theResult == 0 && !this->mFollowUnit)
-                theResult = this->mLocation.Save(outFile);
-        }
+        EeGfxEffectFile theFile = EEEffectFile(outFile);
+        theResult = ee_gfx_icon_save(this->mRecord, &theFile);
     }
     return theResult;
 }
 
 // FUNCTION: EXE 0x4f2aaa
 // Ages the icon (7 once a set duration is up), pulses its scale between the start and full size, scrolls and
-// animates it, updates the orbitals and its position
-// NEAR: the original keeps the rate in memory and reloads gPhysics; registers
+// animates it (ee_gfx effect_icon.rs), updates the orbitals and its position
 long EEE3DIcon::Step()
 {
-    long theResult = 0;
     EEGraphicEffect* theEffect = this->mGraphicEffect;
-    float theTime = this->mTime;
-    float theRate = theEffect->mParam7;
-    unsigned long theFrame = this->mFrame;
-    this->mAge += gPhysics->GetTickTime();
-    if (this->mAge >= theEffect->mDuration && theEffect->mDuration != 0)
-        theResult = 7;
-    if (this->mGrowing) {
-        if (theEffect->mSize > this->mScale)
-            this->mScale += theRate;
-        if (theEffect->mSize <= this->mScale) {
-            this->mGrowing = false;
-            this->mScale = theEffect->GetSize();
-        }
-    } else {
-        if (theEffect->mStartSize < this->mScale)
-            this->mScale -= theRate;
-        if (theEffect->mStartSize >= this->mScale) {
-            this->mGrowing = true;
-            this->mScale = theEffect->mStartSize;
-        }
-    }
-    theTime += gPhysics->mSpeed * 1000.0f;
-    if (theEffect->mIntParam2 > 0) {
-        float theScroll = this->mScroll += theEffect->mParam11 * gPhysics->GetTickTime() / 1000.0f;
-        if (theScroll > 1.0f)
-            this->mScroll = theScroll - 1.0f;
-        if (this->mScroll < 0.0f)
-            this->mScroll += 1.0f;
-    }
-    if (theTime >= (float)this->mFrameTime) {
-        long theCount = UMFloatToLong(theTime / (float)this->mFrameTime);
-        theTime -= (float)(theCount * this->mFrameTime);
-        theFrame = (theCount + this->mFrame) % this->mFrameCount;
-    }
-    this->mTime = theTime;
-    this->mFrame = theFrame;
+    EeGfxIconTick theTick = {gPhysics->GetTickTime(), gPhysics->mSpeed, (uint32_t)theEffect->mDuration, theEffect->mSize,
+                             theEffect->mStartSize, theEffect->mParam7, (int32_t)theEffect->mIntParam2, theEffect->mParam11};
+    long theResult = ee_gfx_icon_step(this->mRecord, &theTick);
     for (long i = 0; i < this->mOrbitalCount; i++)
         this->mOrbitals[i]->Update();
     this->SetBoundingRadius(this->mScale);

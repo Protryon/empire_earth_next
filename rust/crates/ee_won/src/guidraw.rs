@@ -68,15 +68,18 @@ pub const EE_WON_DRAW_CALL: i32 = 16;
 /// A dotted line from (a, b), `c` long, vertical when `d` is set: every other pixel in the current colour, starting
 /// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
 pub const EE_WON_DRAW_DOTTED_LINE: i32 = 17;
+/// `Graphics::SetPixel(a, b, c)` (x, y, colour).
+pub const EE_WON_DRAW_PIXEL: i32 = 18;
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 pub const EE_WON_DRAW_COPY_PIXELS: i32 = 20;
 /// The stretch filter's `RawStretch(src, dst, a, b, c, d, e, f, g, h)` (x1, x2, y1, y2, tile left, top, width,
 /// height).
 pub const EE_WON_DRAW_STRETCH_PIXELS: i32 = 21;
 
-/// `StandardColor_3DFace`, `_3DHilight`, `_GrayText` (WONLobbyGUI.h's enum).
+/// `StandardColor_3DFace`, `_3DHilight`, `_3DShadow`, `_GrayText` (WONLobbyGUI.h's enum).
 const SYS_3D_FACE: i32 = 1;
 const SYS_3D_HILIGHT: i32 = 2;
+const SYS_3D_SHADOW: i32 = 3;
 const SYS_GRAY_TEXT: i32 = 6;
 
 /// Text measures the C++ answers (the original's font calls at the points the plan reaches them):
@@ -175,6 +178,9 @@ impl Plan {
     }
     fn string_all(&mut self, slot: i32, x: i32, y: i32) {
         self.op(EE_WON_DRAW_STRING_ALL, &[slot, x, y]);
+    }
+    fn pixel(&mut self, x: i32, y: i32, c: u32) {
+        self.op(EE_WON_DRAW_PIXEL, &[x, y, c as i32]);
     }
     fn text(&mut self, slot: i32, x: i32, y: i32) {
         self.op(EE_WON_DRAW_TEXT, &[slot, x, y]);
@@ -1346,6 +1352,148 @@ pub unsafe extern "C" fn ee_won_gui_draw_text_row(
     cap: usize,
 ) -> usize {
     deliver(&text_row(&*r), out, cap)
+}
+
+// ---- TextListItem's and MenuItem's measure, MenuItem::Paint
+
+/// `TextListItem::CalcDimensions`' sizes (the font and colour taken from the list stay the C++'s): the text and 2,
+/// the icon and 2 beside it, the taller of the font and the icon; a menu item (`MenuItem::CalcDimensions`) is
+/// then grown for the icon box and the submenu arrow (`guiwin::menu_item_size`).
+pub fn text_item_size(
+    text_width: i32,
+    font_height: i32,
+    has_image: bool,
+    image_width: i32,
+    image_height: i32,
+    menu: bool,
+) -> (i32, i32) {
+    let mut w = text_width.wrapping_add(2);
+    let mut h = font_height;
+    if has_image {
+        w = w.wrapping_add(image_width.wrapping_add(2));
+        if image_height > h {
+            h = image_height;
+        }
+    }
+    if menu {
+        return crate::guiwin::menu_item_size(w, h);
+    }
+    (w, h)
+}
+
+/// `text_item_size` into `out_w`, `out_h`.
+///
+/// # Safety
+/// `out_w` and `out_h` are writable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_text_item_size(
+    text_width: i32,
+    font_height: i32,
+    has_image: bool,
+    image_width: i32,
+    image_height: i32,
+    menu: bool,
+    out_w: *mut i32,
+    out_h: *mut i32,
+) {
+    let (w, h) = text_item_size(text_width, font_height, has_image, image_width, image_height, menu);
+    // SAFETY: writable (the contract)
+    unsafe {
+        *out_w = w;
+        *out_h = h;
+    }
+}
+
+/// A menu item to paint (`MenuItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EeWonMenuItemPaint {
+    pub selected: bool,
+    pub full_row_select: bool,
+    pub has_image: bool,
+    pub disabled: bool,
+    pub has_submenu: bool,
+    pub sel: EeWonSelColor,
+    pub color: u32,
+    pub paint_width: i32,
+    pub width: i32,
+    pub height: i32,
+    pub image_height: i32,
+    pub font_height: i32,
+    /// the menu's view width (`mScrollArea.width`: the submenu arrow's place)
+    pub view_width: i32,
+}
+
+/// `MenuItem::Paint`: the icon centred, the selection right of the icon box (the box's bottom edge runs to x =
+/// height - 1, not to the box's width), the text (embossed grey when disabled) and the submenu arrow (embossed
+/// when disabled and not selected).
+pub fn menu_item(r: &EeWonMenuItemPaint) -> Vec<EeWonDrawOp> {
+    let mut p = Plan::default();
+    let mut color = r.color;
+    if r.has_image {
+        let mut y = r.height.wrapping_sub(r.image_height) / 2;
+        if y < 0 {
+            y = 0;
+        }
+        p.image(0, 2, y);
+    }
+    if r.selected {
+        p.color(r.sel.background);
+        let width = if r.full_row_select { r.paint_width } else { r.width };
+        let x = if r.has_image { 20 } else { 0 };
+        p.fill(x, 0, width, r.height);
+        if r.has_image {
+            let bottom = r.height.wrapping_sub(1);
+            p.sys_color(SYS_3D_HILIGHT);
+            p.op(EE_WON_DRAW_RECT, &[0, 0, 20, r.height]);
+            p.sys_color(SYS_3D_SHADOW);
+            p.line(19, 0, 19, bottom);
+            p.line(0, bottom, bottom, bottom);
+        }
+        color = sel_foreground(&r.sel, r.color);
+    }
+    p.color(color);
+    p.font(0);
+    let y = r.height.wrapping_sub(r.font_height) / 2;
+    if r.disabled {
+        p.color(0xffffff);
+        if !r.selected {
+            p.string_all(0, 23, y.wrapping_add(1));
+            p.color(0x848484);
+        } else {
+            p.color(0xd0d0d0);
+        }
+    }
+    p.string_all(0, 22, y);
+    if r.has_submenu {
+        let disabled = r.disabled && !r.selected;
+        let x = r.view_width.wrapping_sub(8);
+        let y = r.height / 2;
+        for i in 0..4i32 {
+            let lx = x.wrapping_add(3).wrapping_sub(i);
+            p.line(lx, y.wrapping_sub(i), lx, y.wrapping_add(i));
+            if disabled && i < 3 {
+                p.color(0xffffff);
+                p.line(lx, y.wrapping_add(i).wrapping_add(1), lx, y.wrapping_add(i).wrapping_add(2));
+                p.color(0x848484);
+            }
+        }
+        if disabled {
+            p.pixel(x.wrapping_add(4), y.wrapping_add(1), 0xffffff);
+        }
+    }
+    p.ops
+}
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_gui_draw_menu_item(
+    r: *const EeWonMenuItemPaint,
+    out: *mut EeWonDrawOp,
+    cap: usize,
+) -> usize {
+    deliver(&menu_item(&*r), out, cap)
 }
 
 // ---- InputBox::Paint

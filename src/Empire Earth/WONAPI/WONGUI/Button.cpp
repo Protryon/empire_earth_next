@@ -255,13 +255,13 @@ bool Button::KeyDown(int key)
         return true;
     case EeWonButtonKey::Press:
         this->mKeyDown=true;
-        if(this->mParent!=NULL) this->mParent->mHasUsedDialogKeys=true;
+        if(this->mParent!=NULL) this->mParent->SetHasUsedDialogKeys(true);
         this->ButtonDown();
         return true;
     case EeWonButtonKey::RadioBack:
     case EeWonButtonKey::RadioForward:
     {
-        if(this->mParent!=NULL) this->mParent->mHasUsedDialogKeys=true;
+        if(this->mParent!=NULL) this->mParent->SetHasUsedDialogKeys(true);
         Button* next=this->GetNextRadio(anAction==EeWonButtonKey::RadioForward);
         if(next!=NULL) { next->Fn2F3440(); next->RequestFocus(); }
         return true;

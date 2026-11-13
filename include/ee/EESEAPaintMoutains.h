@@ -5,6 +5,7 @@
 // Requires ee/EESEAPaint.h.
 #ifndef EE_EESEAPAINTMOUTAINS_H
 #define EE_EESEAPAINTMOUTAINS_H
+#include "rust/ee_screens.h"
 
 class EESEAPaintMoutains : public EESEAPaint {
 public:

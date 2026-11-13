@@ -591,14 +591,14 @@ void EEEMStorm::Step(unsigned long inTime)
     case 3:
         if (this->mNextMoveTime <= inTime) {
             if (this->mPath.size() != 0) {
-                if (this->mStorm->mCenter.DistanceToSquared(this->mPath.back()) <= 9)
+                if (this->mStorm->GetCenterPoint().DistanceToSquared(this->mPath.back()) <= 9)
                     this->mPath.pop_back();
                 if (this->mPath.size() != 0)
                     this->mStorm->Move(this->mPath.back(), this->mArea);
                 else
                     this->mStorm->Move(this->mGoal, this->mArea);
             }
-            if (this->mStorm->mCenter.DistanceToSquared(this->mGoal) <= 9) {
+            if (this->mStorm->GetCenterPoint().DistanceToSquared(this->mGoal) <= 9) {
                 this->mState = 7;
                 this->mNextMoveTime = UMFloatToLong(gWorld.GetGameSpeed() * gPhysics->GetRandom(15000.0f, kStormMaximumStay))
                           + inTime;
@@ -608,7 +608,7 @@ void EEEMStorm::Step(unsigned long inTime)
                 this->mNextMoveTime = UMFloatToLong(gWorld.GetGameSpeed() * 15000.0f) + inTime;
             }
         }
-        if (this->mStorm->mTiles.size() < 45)
+        if (this->mStorm->GetTileCount() < 45)
             this->mState = 5;
         break;
     case 4:

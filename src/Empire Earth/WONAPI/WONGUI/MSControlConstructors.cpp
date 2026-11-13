@@ -21,17 +21,6 @@ void Component::SetComponentFlags(int flags,bool on)
     if(on) this->mComponentBits|=flags;
     else this->mComponentBits&=~flags;
 }
-// FUNCTION: WON 0x006f7910
-// Creates a focusable, draggable dialog that grabs its background, stays inside the root window and ignores Escape
-Dialog::Dialog()
-{
-    this->mDragX=this->mDragY=0;
-    this->SetComponentFlags(0x118,true);
-    this->mAllowDrag=true;
-    this->mKeepInRoot=true;
-    this->mEndOnEscape=false;
-    this->mEscapeId=-1;
-}
 // Creates an arrow button pointing the given way that repeats while held (emitted at 0x006ff0c0)
 MSArrowButton::MSArrowButton(Direction direction)
 {
@@ -138,8 +127,8 @@ MSListCtrl::MSListCtrl(MultiListArea* area)
 void MSListCtrl::Virtual08()
 {
     MSScrollContainer::Virtual08();
-    this->mHeader->SetPosSize(this->mScrollArea->Left(),this->mScrollArea->Top()-this->mHeaderHeight,
-                     this->mScrollArea->Width(),this->mHeaderHeight);
+    this->mHeader->SetPosSize(this->GetScrollArea()->Left(),this->GetScrollArea()->Top()-this->mHeaderHeight,
+                     this->GetScrollArea()->Width(),this->mHeaderHeight);
 }
 }
 

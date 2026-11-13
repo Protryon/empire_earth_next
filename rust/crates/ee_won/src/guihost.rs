@@ -46,6 +46,22 @@ pub enum EeWonGuiField {
     Width,
     /// `Height()` (read only).
     Height,
+    /// `mScrollArea.x`.
+    ScrollX,
+    /// `mScrollArea.y`.
+    ScrollY,
+    /// `mLeftScrollAmount`.
+    LeftScrollAmount,
+    /// `mRightScrollAmount`.
+    RightScrollAmount,
+    /// `mLeftPad`.
+    LeftPad,
+    /// `mTopPad`.
+    TopPad,
+    /// `mRightPad`.
+    RightPad,
+    /// `mBottomPad`.
+    BottomPad,
 }
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -431,6 +447,210 @@ pub enum EeWonGuiOp {
     QueueMouseUp,
     /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
     MenuTryKeyDown,
+    // ---- the scroll bar (`barobj`; a part is a `Component*`)
+    /// `a->SetSize(b, c)`.
+    ChildSetSize = 320,
+    /// `a->Invalidate()`.
+    ChildInvalidate,
+    /// `a->mParent == this` (0 or 1).
+    ChildIsMine,
+    /// `IsDisabled()` (0 or 1).
+    IsDisabled,
+    /// `new Button` (no reference: the caller holds it with `ChildHold`).
+    NewButton,
+    /// `((Button*)a)->SetButtonFlags(b, c != 0)`.
+    ButtonSetFlags,
+    /// `Container::AddedToParent()`.
+    BaseAddedToParent,
+    /// `Component::SetEnabled(a != 0)`.
+    BaseSetEnabled,
+    // ---- the scroller (`scrollerobj`; `a` the scroll area, a `ScrollArea*`, or a bar, a `Scrollbar*`)
+    /// `((Scrollbar*)a)->mRust` (a bar's Rust object).
+    BarOf = 340,
+    /// `a->AddListener(new ComponentListenerComp(this))`.
+    ListenTo,
+    /// the area `a`'s field `b` (`EeWonGuiField`).
+    AreaGet,
+    /// the area `a`'s field `b` = `c`.
+    AreaSet,
+    /// `a->AdjustPosition(b != 0)` (virtual).
+    AreaAdjustPosition,
+    /// `a->RequestFocus()`.
+    AreaRequestFocus,
+    /// `a->MouseWheel(b)` (virtual; 0 or 1).
+    AreaMouseWheel,
+    /// `a->SetScroller(this)`.
+    AreaSetScroller,
+    /// `mFocusChild != NULL` (0 or 1).
+    HasFocusChild,
+    /// `Container::MouseWheel(a)` (0 or 1).
+    BaseMouseWheel,
+    /// `Component::HandleComponentEvent(a)`.
+    ComponentHandleEvent,
+    /// `Virtual08()` (virtual: a subclass's layout).
+    VirtSizeChanged,
+    /// `NotifyScrollChange(a != 0)` (virtual).
+    VirtNotifyScrollChange,
+    // ---- the scroll area (`paneobj`; `a` a `Scroller*` where it says)
+    /// `((Scroller*)a)->NotifyScrollChange(b != 0)` (virtual).
+    ScrollerNotify = 360,
+    /// `((Scroller*)a)->SetScrollArea(this)`.
+    ScrollerSetArea,
+    /// `dynamic_cast<ScrollbarScroller*>((Scroller*)a)` (NULL for NULL).
+    ScrollerAsBars,
+    /// `new ScrollbarScroller` (no reference: the original's scroll area borrowed it).
+    NewScrollbarScroller,
+    /// `((ScrollbarScroller*)a)->SetScrollbar((Scrollbar*)b)`.
+    ScrollerSetScrollbar,
+    /// `ScrollSizeChanged()` (virtual).
+    VirtScrollSizeChanged,
+    /// `ScrollPaint(*a)` (virtual; `a` the Graphics).
+    VirtScrollPaint,
+    /// `Container::Paint(*a)`.
+    ContainerPaint,
+    /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
+    PaneBackground,
+    // ---- the container (`ctobj`; `a` a `Component*` where it says, this container's own one included)
+    /// `Component::X(...)` on this container (`a` an `EeWonCtVirt`, `b`, `c` its arguments; 0 or 1 where it answers).
+    CtBase = 400,
+    /// `a->X(...)` (virtual: `b` an `EeWonCtVirt`, `c`, `d` its arguments; 0 or 1 where it answers).
+    CtChild,
+    /// `a->MouseDown(b, c, d)`.
+    CtChildMouseDown,
+    /// `a->MouseUp(b, c, d)`.
+    CtChildMouseUp,
+    /// `mParent->X(this)` (`a` an `EeWonCtVirt`: SetFocusChild, AddTimerChild, ChildInvalidated, or SetCursor of the
+    /// `Cursor*` `b`; 0 or 1 where it answers).
+    CtParentCall,
+    /// this container's own virtual (`a` an `EeWonCtVirt`: FindChildAt(b, c), SetCursor(b), TabFocus(b, c),
+    /// RemoveChild(b), MouseMove(b, c); the answer where it has one).
+    CtVirt,
+    /// `a->mParent->RemoveChild(a)`.
+    CtDetach,
+    /// `a->mParent = b != 0 ? this : NULL`.
+    CtSetParent,
+    /// `a->mFocusId = b`.
+    CtSetFocusId,
+    /// `a->mInvalidState = b`.
+    CtSetInvalidState,
+    /// `mTimerFlags = a`.
+    CtSetTimerFlags,
+    /// `GetRootContainer()->AddBG((BackgroundGrabber*)a)`.
+    CtAddBG,
+    /// the child layout: `a` 0 `ExecuteInstructions(this)`, 1 `RemoveComponent(b)`, 2 `Clear()`, 3 the manager
+    /// destroyed.
+    CtLayout,
+    /// `((Cursor*)a)->AddRef()` (the current cursor's `SmartPtr`).
+    CtCursorHold,
+    /// `((Cursor*)a)->Release()`.
+    CtCursorRelease,
+    /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
+    CtSetScheme,
+    // the container's pure reads
+    /// `a->mComponentBits`.
+    CtBits = 430,
+    /// `a->mParent`.
+    CtParentOf,
+    /// `a->mTimerFlags`.
+    CtTimerFlags,
+    /// `a->mInvalidState`.
+    CtInvalidState,
+    /// `a->mFocusId`.
+    CtFocusId,
+    /// `a->Contains(b, c)` (0 or 1).
+    CtContains,
+    /// `a->Intersects((Component*)b)` (0 or 1).
+    CtIntersects,
+    /// `a->GetGrabBG()`.
+    CtGrabBG,
+    /// `a->GetOwnColorScheme()`.
+    CtOwnScheme,
+    /// `((Graphics*)a)->mColorScheme`.
+    CtScheme,
+    /// `GetRootContainer()` (as a `Component*`).
+    CtRoot,
+    /// `GetRoot()->mManager->mFocusWindow == GetRoot()` (0 or 1).
+    CtRootFocused,
+    /// `GetRoot()->mMouseIsInClientArea` (0 or 1).
+    CtMouseInClient,
+    /// `GetDefaultCursor()`.
+    CtDefaultCursor,
+    /// `WantFocus()` (0 or 1).
+    CtWantFocus,
+    /// `a->GetNextSibling(b != 0, c != 0)`.
+    CtNextSibling,
+    /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
+    CtContainerOf,
+    /// `((ScrollArea*)a)->IsRectVisible(*(WONRectangle*)b)` (0 or 1).
+    VpAreaRectVisible,
+    // ---- the dialog (`dialogobj`)
+    /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
+    DlgDefaultButton = 460,
+    /// `mParent->BringToTop(this)`.
+    DlgBringToTop,
+    /// `InvalidateRect(*(WONRectangle*)a)` (virtual; it may move the rectangle).
+    DlgInvalidateRect,
+    /// `GetRoot()->EndDialog(a, (Component*)b)`.
+    DlgEndDialog,
+    /// `((Button*)a)->Fn2F3440()` (the click).
+    DlgClick,
+    /// `GetRoot()->mManager->mModalComponent == this` (0 or 1; a pure read).
+    DlgIsModal,
+    /// `((Button*)a)->IsDefaultButton()` (0 or 1; a pure read).
+    DlgIsDefault,
+    /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
+    DlgEventButtonFlags,
+}
+
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EeWonCtVirt {
+    NeedsPaint = 1,
+    /// `PrePaint(*(Graphics*)arg)`.
+    PrePaint,
+    /// `Paint(*(Graphics*)arg)`.
+    Paint,
+    /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+    EnableControlsById,
+    NotifyRootVisibility,
+    HitTest,
+    MouseEnter,
+    MouseExit,
+    MouseMove,
+    MouseDrag,
+    MouseWheel,
+    MouseHover,
+    /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+    HandleBroadcastEvent,
+    AddedToParent,
+    Invalidate,
+    MarkInvalid,
+    ClearGrabBG,
+    TabFocus,
+    KeyDown,
+    KeyChar,
+    KeyUp,
+    CanClose,
+    GotFocus,
+    LostFocus,
+    TimerEvent,
+    /// `RequestTimer(arg != 0)` (not virtual).
+    RequestTimer,
+    /// `RequestFocus()` (not virtual).
+    RequestFocus,
+    /// `Virtual08()` (SizeChanged).
+    SizeChanged,
+    SetFocusChild,
+    AddTimerChild,
+    ChildInvalidated,
+    /// `SetCursor((Cursor*)arg)`.
+    SetCursor,
+    FindChildAt,
+    RemoveChild,
+    /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+    SetHasFocus,
 }
 
 /// The events a component object fires (`FireEvent`).
@@ -443,6 +663,22 @@ pub enum EeWonGuiEvent {
     InputTextChanged = 2,
     /// `ComponentEvent_ListSelChanged`.
     ListSelChanged = 3,
+    /// `ComponentEvent_Scroll`.
+    Scroll = 4,
+}
+
+/// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
+/// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as
+/// InputTextChanged through such a switch). The goldens trace the type listeners receive through this function and
+/// compare it with the original's enum.
+#[no_mangle]
+pub extern "C" fn ee_won_gui_event_type(event: EeWonGuiEvent) -> i32 {
+    match event {
+        EeWonGuiEvent::Scroll => 16,
+        EeWonGuiEvent::InputReturn => 20,
+        EeWonGuiEvent::InputTextChanged => 21,
+        EeWonGuiEvent::ListSelChanged => 22,
+    }
 }
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
@@ -477,6 +713,16 @@ pub unsafe extern "C" fn ee_won_gui_sink_units(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn event_types_are_the_original_enum() {
+        // WindowEventType: 14 input events after None, then ButtonPressed (15), Scroll, TextLinkActivated,
+        // HyperLinkActivated, HyperLinkOver, InputReturn (20), InputTextChanged, ListSelChanged
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::Scroll), 16);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputReturn), 20);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::InputTextChanged), 21);
+        assert_eq!(ee_won_gui_event_type(EeWonGuiEvent::ListSelChanged), 22);
+    }
 
     #[test]
     fn sink_reads_both_unit_sizes() {

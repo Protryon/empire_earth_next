@@ -48,13 +48,13 @@ bool WONListCtrlConfig::Virtual24(const std::string& key)
     if(aKeyIdx==0) {
         int height=this->ReadInt(); this->mListCtrl->mHeaderHeight=height;
     } else if(aKeyIdx==1) {
-        MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get());
+        MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->GetScrollArea());
         int count=this->ReadInt(); area->SetNumColumns(count);
     } else if(aKeyIdx==2) {
-        MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get());
+        MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->GetScrollArea());
         int column=this->ReadInt(); area->SetDynamicSizeColumn(column);
     } else if(aKeyIdx==3) {
-        ListAreaConfig::ReadListFlags(this,static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get()));
+        ListAreaConfig::ReadListFlags(this,static_cast<MultiListArea*>(this->mListCtrl->GetScrollArea()));
     } else if(aKeyIdx==4) {
         int column=this->ReadInt(); this->EnsureComma();
         GUIString title=this->ReadString(false); this->EnsureComma();

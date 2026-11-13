@@ -11,9 +11,10 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "rust/ee_won.h"
+#include "ee/wonapi/WONGUIDraw.h"
 // The submenu delay, the swallowed first release, the keyboard mode's end, an item's size and the submenu's place
 // are ee_won's guiwin module (rust/crates/ee_won/src/guiwin.rs); the keys and the submenus' open, close and
-// selection rules are its guimenu module (guimenu.rs); this unit keeps the menus, submenus and the paint.
+// selection rules are its guimenu module (guimenu.rs); this unit keeps the menus and submenus; the item's paint is guidraw's menu_item.
 #include "ee/wonapi/WONLobbyPopupEvent.h"
 
 namespace WONAPI {
@@ -30,65 +31,28 @@ void MenuItem::CalcDimensions(ListArea* area)
 // and a submenu arrow; the box's bottom edge runs to x = height-1, not to the box width
 void MenuItem::Paint(Graphics& g,ListArea* area)
 {
-    int color=this->mColor;
-    if(this->mImage.get()!=NULL)
-    {
-        int y=(this->mHeight-this->mImage->mHeight)/2;
-        if(y<0) y=0;
-        g.DrawImage(this->mImage.get(),2,y);
-    }
-    if(this->mSelected)
-    {
-        g.SetColor(area->mSelColor.GetBackgroundColor(g));
-        int width=area->GetPaintWidth();
-        if(!area->ListFlagSet(0x10)) width=this->mWidth;
-        int x=0;
-        if(this->mImage.get()!=NULL) x=20;
-        g.FillRect(x,0,width,this->mHeight);
-        if(this->mImage.get()!=NULL)
-        {
-            g.SetSysColor(StandardColor_3DHilight);
-            int boxHeight=this->mHeight;
-            g.DrawRect(0,0,20,boxHeight);
-            g.SetSysColor(StandardColor_3DShadow);
-            g.DrawLine(19,0,19,boxHeight-1);
-            g.DrawLine(0,boxHeight-1,boxHeight-1,boxHeight-1);
-        }
-        color=area->mSelColor.GetForegroundColor(g,this->mColor);
-    }
-    g.SetColor(color);
-    g.SetFont(this->mFont.get());
-    int y=(this->mHeight-this->mFont->GetHeight())/2;
-    if(this->mDisabled)
-    {
-        g.SetColor(0xffffff);
-        if(!this->mSelected)
-        {
-            g.DrawString(this->mText,23,y+1);
-            g.SetColor(0x848484);
-        }
-        else g.SetColor(0xd0d0d0);
-        g.DrawString(this->mText,22,y);
-    }
-    else g.DrawString(this->mText,22,y);
-    if(this->mSubMenu.get()!=NULL)
-    {
-        int width=area->mScrollArea.width;
-        int height=this->mHeight;
-        bool disabled=this->mDisabled && !this->mSelected;
-        int x=width-8,y=height/2;
-        for(int i=0;i<4;++i)
-        {
-            g.DrawLine(x+3-i,y-i,x+3-i,y+i);
-            if(disabled && i<3)
-            {
-                g.SetColor(0xffffff);
-                g.DrawLine(x+3-i,y+i+1,x+3-i,y+i+2);
-                g.SetColor(0x848484);
-            }
-        }
-        if(disabled) g.SetPixel(x+4,y+1,0xffffff);
-    }
+    // guidraw.rs menu_item
+    Image* anImage=this->mImage.get();
+    EeWonMenuItemPaint r;
+    r.selected=this->mSelected;
+    r.full_row_select=area->ListFlagSet(0x10);
+    r.has_image=anImage!=NULL;
+    r.disabled=this->mDisabled;
+    r.has_submenu=this->mSubMenu.get()!=NULL;
+    r.sel=WONDrawSelOf(area->mSelColor);
+    r.color=(uint32_t)this->mColor;
+    r.paint_width=area->GetPaintWidth();
+    r.width=this->mWidth;
+    r.height=this->mHeight;
+    r.image_height=anImage ? anImage->mHeight : 0;
+    r.font_height=this->mFont->GetHeight();
+    r.view_width=area->GetViewWidth();
+    WONDrawSlots aSlots;
+    aSlots.mImages[0]=anImage;
+    aSlots.mFont=this->mFont.get();
+    aSlots.mString=&this->mText;
+    WONDrawOps anOps([&](EeWonDrawOp* o,size_t n) { return ee_won_gui_draw_menu_item(&r,o,n); });
+    WONDrawRun(g,anOps,aSlots);
 }
 
 }

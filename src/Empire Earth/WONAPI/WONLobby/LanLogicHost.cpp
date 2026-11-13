@@ -138,11 +138,10 @@ void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
         socket->QueueClose(1000);
         return;
     }
-    const AuthCertificateBase* certificate = op->mPeerAuthServer.GetClientCertificate();
     AuthContext* auth = GetLobbyAuthContext();
     if (!auth) return;
-    DWORD community = auth->GetPeerData()->GetCertificate2()->GetFirstCommunity();
-    if (!certificate->VerifyPermissions(0, community, 0)) {
+    DWORD community = auth->GetPeerData()->GetFirstCommunity();
+    if (!op->ClientPermits(community)) {
         socket->QueueClose(1000);
         return;
     }

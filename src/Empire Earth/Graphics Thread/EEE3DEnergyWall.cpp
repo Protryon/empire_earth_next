@@ -47,12 +47,7 @@
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEE3DEnergyWall.h"
 
-// 0x4bd7fc / 0x4bd820 (.data): the segment ends' offsets from their post ([1..4]: post 0, [5..8]: post 9)
-static float sEnergyWallOffsetX[9] = {0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f};
-static float sEnergyWallOffsetY[9] = {0.0f, 0.0f, -1.0f, -1.0f, -1.0f, 0.0f, -1.0f, -1.0f, -1.0f};
-// 0x4bd844 / 0x4bd868 (.data): the tile offsets searched for each segment's wall piece
-static long sEnergyWallTileX[9] = {0, -1, -1, 0, 1, -1, -1, 0, 1};
-static long sEnergyWallTileY[9] = {0, 0, -1, -1, -1, 0, -1, -1, -1};
+// 0x4bd7fc .. 0x4bd868 (.data): the segment ends' offsets and the tiles searched: ee_gfx effect_wall.rs
 
 // SYNTHETIC: EXE 0x4ed606
 // SYNTHETIC: EXE 0x4ed610
@@ -105,10 +100,9 @@ long EEE3DEnergyWall::DrawPass5()
 
 // FUNCTION: EXE 0x4ed784
 // Places the wall's posts (a gate's two end parts, else the unit) raised by the effect's height, and the four
-// segment ends around each post; clears the segments and marks the wall placed
+// segment ends around each post (ee_gfx effect_wall.rs); clears the segments and marks the wall placed
 void EEE3DEnergyWall::Place()
 {
-    long i;
     EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
     GE3DPoint thePosition;
     theUnit->GetPosition(thePosition);
@@ -132,25 +126,13 @@ void EEE3DEnergyWall::Place()
         this->mPoints[0].SetY(thePosition.GetY());
         this->mPoints[0].SetZ(theEffect->GetParam6() + thePosition.GetZ());
     }
-    for (i = 1; i < 5; i++) {
-        this->mPoints[i].SetX(this->mPoints[0].GetX() + sEnergyWallOffsetX[i]);
-        this->mPoints[i].SetY(this->mPoints[0].GetY() + sEnergyWallOffsetY[i]);
-    }
-    if (this->mGate) {
-        for (i = 5; i < 9; i++) {
-            this->mPoints[i].SetX(this->mPoints[9].GetX() + sEnergyWallOffsetX[i]);
-            this->mPoints[i].SetY(this->mPoints[9].GetY() + sEnergyWallOffsetY[i]);
-        }
-    }
-    this->mTimer = 0;
-    this->mSegments = 0;
+    ee_gfx_wall_place(this->mRecord);
     GETransformation theTransformation(theUnit->mPhysicalModel.GetLocation());
     GE3DPoint theLocation;
     theUnit->GetPosition(theLocation);
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     this->SetTransformation(theTransformation);
     this->mBoundingRadius = 2.828f;
-    this->mPlaced = true;
 }
 
 // FUNCTION: EXE 0x4ed98d
@@ -252,97 +234,40 @@ long EEE3DEnergyWall::DrawPass6()
 
 // FUNCTION: EXE 0x4edce0
 // Reads the wall (versions before 0.250 through LoadOldVersion): gate flag, ten points, segments, timer, placed flag
+// (ee_gfx effect_wall.rs)
 long EEE3DEnergyWall::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
-    if (inMajorVersion == 0 && inMinorVersion < 0xfa) {
+    if (inMajorVersion == 0 && inMinorVersion < 0xfa)
         return this->LoadOldVersion(inMajorVersion, inMinorVersion, inFile);
-    } else {
-        EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
-        this->mGraphicObject = this->GetGraphicObject();
-        theResult = this->mGraphicObject->LoadMedia();
-        if (theResult == 0)
-            theResult = inFile.Read(this->mGate);
-        if (theResult == 0) {
-            for (long i = 0; i < 10; i++) {
-                theResult = this->mPoints[i].Load(inFile);
-                if (theResult != 0)
-                    break;
-            }
-        }
-        if (theResult == 0)
-            theResult = inFile.Read(this->mSegments);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mTimer);
-        if (theResult == 0)
-            theResult = inFile.Read(this->mPlaced);
-    }
-    return theResult;
+    EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
+    this->mGraphicObject = this->GetGraphicObject();
+    long theResult = this->mGraphicObject->LoadMedia();
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_wall_load(this->mRecord, &theFile, (int32_t)theResult, false);
 }
 
 // FUNCTION: EXE 0x4edd9c
 // Reads and discards an old-format wall's points, keeps its gate flag, segments and timer, and leaves it to be
-// placed again
+// placed again (ee_gfx effect_wall.rs)
 long EEE3DEnergyWall::LoadOldVersion(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult;
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
-    theResult = this->mGraphicObject->LoadMedia();
-    if (theResult == 0) {
-        GE3DPoint thePoint;
-        theResult = thePoint.Load(inFile);
-        if (theResult == 0)
-            theResult = thePoint.Load(inFile);
-    }
-    if (theResult == 0) {
-        float theValue;
-        theResult = inFile.Read(theValue);
-    }
-    if (theResult == 0)
-        theResult = inFile.Read(this->mPlaced);
-    if (theResult == 0) {
-        theResult = inFile.Read(this->mGate);
-        if (theResult == 0) {
-            for (long i = 0; i < 18; i++) {
-                GE3DPoint theOld;
-                theResult = theOld.Load(inFile);
-                if (theResult != 0)
-                    break;
-            }
-            if (theResult == 0)
-                theResult = inFile.Read(this->mSegments);
-            if (theResult == 0)
-                theResult = inFile.Read(this->mTimer);
-        }
-    } else
-        this->mGate = false;
-    this->mPlaced = false;
-    return theResult;
+    long theResult = this->mGraphicObject->LoadMedia();
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_wall_load(this->mRecord, &theFile, (int32_t)theResult, true);
 }
 
 // FUNCTION: EXE 0x4ede8b
-// Writes the base 3D effect, gate flag, ten points, segments, timer and placed flag; returns the first error
+// Writes the base 3D effect, gate flag, ten points, segments, timer and placed flag (ee_gfx effect_wall.rs); returns
+// the first error
 long EEE3DEnergyWall::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    theResult = outFile.Write(this->mGate);
-    if (theResult != 0)
-        return theResult;
-    for (long i = 0; i < 10; i++) {
-        theResult = this->mPoints[i].Save(outFile);
-        if (theResult != 0)
-            return theResult;
-    }
-    theResult = outFile.Write(this->mSegments);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mTimer);
-    if (theResult != 0)
-        return theResult;
-    return outFile.Write(this->mPlaced);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_wall_save(this->mRecord, &theFile);
 }
 
 // RepairPointers (relinks the effect's pointers): ICF-folded into EEE3DBlastWave's 0xe93e0
@@ -352,66 +277,48 @@ long EEE3DEnergyWall::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4edf19
-// Places the wall if needed and re-finds its segments every 500 ms; always returns 0
+// Places the wall if needed and re-finds its segments every 500 ms (ee_gfx effect_wall.rs); always returns 0
 long EEE3DEnergyWall::Step()
 {
     if (!this->mPlaced)
         this->Place();
-    this->mTimer -= (long)gPhysics->mTickTime;
-    if (this->mTimer <= 0) {
-        this->mTimer = 500;
+    if (ee_gfx_wall_step(this->mRecord, gPhysics->mTickTime))
         this->FindSegments();
-    }
     return 0;
 }
 
-// FUNCTION: EXE 0x4edf5a
-// Re-finds the segments around the first post and, for a gate, the second post
-void EEE3DEnergyWall::FindSegments()
-{
-    this->mSegments = 0;
-    long theX = UMFloor(this->mPoints[0].GetX());
-    long theY = UMFloor(this->mPoints[0].GetY());
-    this->FindSegments(theX, theY, 1, 5);
-    if (!this->mGate)
-        return;
-    theX = UMFloor(this->mPoints[9].GetX());
-    theY = UMFloor(this->mPoints[9].GetY());
-    this->FindSegments(theX, theY, 5, 9);
-}
-
 // FUNCTION: EXE 0x4ee00c
-// Marks each segment whose tile holds a living wall piece or gate side part of the owner, raising its end to it
-void EEE3DEnergyWall::FindSegments(long inX, long inY, long inFrom, long inTo)
+// The height of the last living, finished wall piece or gate side part of the wall's owner on a tile (the segment
+// search's world; provisional name)
+static bool EEWallPiece(void* inContext, int32_t inX, int32_t inY, float* outZ)
 {
-    unsigned long theOwner = this->mUnit->mComplexUnit->mPlayer->mPlayerID;
-    for (long i = inFrom; i < inTo; i++) {
-        long theDX = sEnergyWallTileX[i];
-        long theDY = sEnergyWallTileY[i];
-        std::vector<EEUnit*> theUnits;
-        EEGetUnitsOnTile(inX + theDX, inY + theDY, theUnits);
-        for (unsigned long j = 0; j < theUnits.size(); j++) {
-            EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
-            if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
-                theOther->IsFoundation())
-                continue;
-            switch (theOther->GetClass()->mUnitType) {
-            case kUnitTypeWallSpace: {
-                this->mSegments |= 1 << i;
-                GE3DPoint thePosition;
-                theOther->GetPosition(thePosition);
-                this->mPoints[i].SetZ(this->mGraphicEffect->GetParam6() + thePosition.GetZ());
-                break;
-            }
-            case kUnitTypeGateSpace:
-                if (static_cast<EEUCGate*>(theOther->GetClass())->IsSidePart(theOther)) {
-                    this->mSegments |= 1 << i;
-                    GE3DPoint thePosition;
-                    theOther->GetPosition(thePosition);
-                    this->mPoints[i].SetZ(this->mGraphicEffect->GetParam6() + thePosition.GetZ());
-                }
-                break;
-            }
+    EEE3DEnergyWall* theWall = static_cast<EEE3DEnergyWall*>(inContext);
+    unsigned long theOwner = theWall->mUnit->mComplexUnit->mPlayer->mPlayerID;
+    bool theFound = false;
+    std::vector<EEUnit*> theUnits;
+    EEGetUnitsOnTile(inX, inY, theUnits);
+    for (unsigned long j = 0; j < theUnits.size(); j++) {
+        EEComplexUnit* theOther = dynamic_cast<EEComplexUnit*>(theUnits[j]);
+        if (!theOther || theOther->mPlayer->mPlayerID != theOwner || !(theOther->mHitPoints > 0) ||
+            theOther->IsFoundation())
+            continue;
+        long theType = theOther->GetClass()->mUnitType;
+        if (theType == kUnitTypeWallSpace
+            || (theType == kUnitTypeGateSpace && static_cast<EEUCGate*>(theOther->GetClass())->IsSidePart(theOther))) {
+            GE3DPoint thePosition;
+            theOther->GetPosition(thePosition);
+            *outZ = thePosition.GetZ();
+            theFound = true;
         }
     }
+    return theFound;
+}
+
+// FUNCTION: EXE 0x4edf5a
+// Re-finds the segments around the first post and, for a gate, the second post, each one reaching a friendly wall
+// piece (ee_gfx effect_wall.rs)
+void EEE3DEnergyWall::FindSegments()
+{
+    EeGfxWallHost theHost = {this, EEWallPiece};
+    ee_gfx_wall_find_segments(this->mRecord, this->mGraphicEffect->GetParam6(), &theHost);
 }

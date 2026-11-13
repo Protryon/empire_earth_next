@@ -360,9 +360,9 @@ void LobbyWalk(WONAPI::Component* inComponent, std::string& outText, std::vector
         outLists.push_back(theList);
     }
     if (Container* theContainer = dynamic_cast<Container*>(inComponent)) {
-        for (std::list<SmartPtr<Component> >::iterator it = theContainer->mChildList.begin();
-             it != theContainer->mChildList.end(); ++it)
-            LobbyWalk(it->get(), outText, outLists);
+        for (Component* theChild = theContainer->GetFrontChild(); theChild != NULL;
+             theChild = theChild->GetNextSibling(true))
+            LobbyWalk(theChild, outText, outLists);
     }
     if (theModalEntered)
         sLobbyInModal = false;
@@ -377,9 +377,9 @@ WONAPI::Component* LobbyFindById(WONAPI::Component* inComponent, long inId)
     if (inComponent->mControlId == inId && !inComponent->IsDisabled())
         return inComponent;
     if (Container* theContainer = dynamic_cast<Container*>(inComponent)) {
-        for (std::list<SmartPtr<Component> >::iterator it = theContainer->mChildList.begin();
-             it != theContainer->mChildList.end(); ++it)
-            if (Component* theFound = LobbyFindById(it->get(), inId))
+        for (Component* theChild = theContainer->GetFrontChild(); theChild != NULL;
+             theChild = theChild->GetNextSibling(true))
+            if (Component* theFound = LobbyFindById(theChild, inId))
                 return theFound;
     }
     return NULL;

@@ -24,7 +24,7 @@ void ListAreaToolTip::Paint(Graphics& g) {
     if(this->mItem.get()==NULL) return;
     ColorScheme* scheme=g.mColorScheme;
     if(this->GetOwnColorScheme()==NULL) g.mColorScheme=this->mListArea->GetColorScheme();
-    int x=this->mListArea->mLeftPad,y=-this->mItem->mTop+2;
+    int x=this->mListArea->GetLeftPad(),y=-this->mItem->mTop+2;
     g.SetSysColor(StandardColor_ToolTipBack);
     g.FillRect(0,0,this->Width(),this->Height());
     g.PushClipRect(0,2,this->Width(),this->Height()-4);
@@ -44,11 +44,11 @@ void ListAreaToolTip::DoTip(ListItem* item) {
     this->EndTip();
     this->mItem=item;
     if(this->mItem.get()==NULL) return;
-    int x=0,y=this->mListArea->mTopPad-this->mListArea->mVertOffset;
+    int x=0,y=this->mListArea->GetTopPad()-this->mListArea->GetVertOffset();
     this->mListArea->LocalToRoot(x,y);
     y+=this->mItem->mTop-2;
     PopupParams params(this,0x6247,this->mListArea,x,y);
-    int width=this->mItem->mWidth+this->mListArea->mLeftPad+this->mListArea->mRightPad;
+    int width=this->mItem->mWidth+this->mListArea->GetLeftPad()+this->mListArea->GetRightPad();
     if(width<this->mListArea->Width()) width=this->mListArea->Width();
     this->SetSize(width,this->mItem->mHeight+4);
     this->mListArea->GetRoot()->OpenPopup(params);

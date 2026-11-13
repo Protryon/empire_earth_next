@@ -375,8 +375,7 @@ WON_TESTS = {
     "won_buffer_test": [],
     # the forwarders to ee_won (rust/crates/ee_won)
     "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("CRC16.cpp", "MD5.cpp")],
-                        *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")],
-                        *[WON_SRC / "WONAuth" / f for f in ("AuthBase.cpp", "AuthPubKeyBlock.cpp")]],
+                        *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")]],
     "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
                                                             "AsyncSocketInternet.cpp", "IPAddr.cpp")],
     # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
@@ -436,6 +435,24 @@ WON_TESTS = {
     "won_treeobj_test": [],
     # PopupMenu as a whole Rust object (menuobj.rs), the same way (golden: rust/crates/ee_won/src/golden_menuobj.txt)
     "won_menuobj_test": [],
+    # Scrollbar as a whole Rust object (barobj.rs), the same way; the scroll event traced as the type the C++ fires
+    # (golden: rust/crates/ee_won/src/golden_barobj.txt)
+    "won_barobj_test": [],
+    # Scroller and ScrollbarScroller as one whole Rust object (scrollerobj.rs) over real Rust bars, the same way
+    # (golden: rust/crates/ee_won/src/golden_scrollerobj.txt)
+    "won_scrollerobj_test": [],
+    # TextListItem's and MenuItem's measure and MenuItem's paint, the original statements over a recording
+    # Graphics against ee_won's guidraw (golden: rust/crates/ee_won/src/golden_itemobj.txt)
+    "won_itemobj_test": [],
+    # ScrollArea as a whole Rust object (paneobj.rs), the same way as Scrollbar's (golden:
+    # rust/crates/ee_won/src/golden_paneobj.txt)
+    "won_paneobj_test": [],
+    # Container as a whole Rust object (ctobj.rs), over a scripted world of components (golden:
+    # rust/crates/ee_won/src/golden_ctobj.txt)
+    "won_ctobj_test": [],
+    # Dialog as a whole Rust object (dialogobj.rs) over the container goldens' world (golden:
+    # rust/crates/ee_won/src/golden_dialogobj.txt)
+    "won_dialogobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
@@ -586,9 +603,17 @@ WON_TESTS = {
     # (golden: rust/crates/ee_won/src/golden_titlecfg.txt)
     "won_titlecfg_test": [WON_SRC / "WONCommon" / "StringUtil.cpp"],
     # WONAuth's peer authentication (PeerAuthClient's and PeerAuthServer's handshake) and AuthSession, the original's
-    # statements against include/ee/wonapi/WONPeerAuthMsg.h over ee_won's peerauth module and its session object
+    # statements against tests/won/won_peerauth_msg.h over ee_won's peerauth module and its session object
     # (golden: rust/crates/ee_won/src/golden_peerauth.txt)
     "won_peerauth_test": [WON_SRC / "WONCrypt" / "Blowfish.cpp"],
+    # the certificate classes, the peer data and PeerAuthClient / PeerAuthServer: the original's statements
+    # (tests/won/won_auth_orig.h) against the game's classes over ee_won's peerobj module (golden:
+    # rust/crates/ee_won/src/golden_peerobj.txt)
+    "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]
+                        + [WON_SRC / "WONAuth" / "AuthSession.cpp"],
+    # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
+    # rust/crates/ee_won/src/golden_peerop.txt)
+    "won_peerop_test": "won_peerobj_test",
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
     # over the same stand-ins (golden: rust/crates/ee_won/src/golden_authflow.txt)
     "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],

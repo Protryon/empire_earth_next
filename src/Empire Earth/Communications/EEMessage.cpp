@@ -4089,7 +4089,7 @@ bool EEMLoadGarrison::IsResponse(NEMessage* inMessage)
 }
 
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1722
 // Sends the sender's selected units that can garrison into the target building (joining its load goal or starting
@@ -4114,19 +4114,19 @@ void EEMLoadGarrison::Execute()
             (theUnit->mUnitClass->mCanGarrison ? theUnits : theRejected).push_back(theUnit);
     }
     if (theUnits.size() > 0) {
-        EEUGLoadGarrison* theGoal;
+        EEUGRust* theGoal;
         if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadGarrison) {
-            theGoal = EEGoalCast<EEUGLoadGarrison>(theOldGoal);
-            theGoal->AddUnits(theUnits);
+            theGoal = EELoadGarrisonGoalCast(theOldGoal);
+            theGoal->AddLoadUnits(theUnits);
         } else {
-            theGoal = new EEUGLoadGarrison(theGarrison, theUnits, false);
-            if (theGoal->mIsValid) {
+            theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theUnits, false);
+            if (theGoal->IsLoadGarrisonValid()) {
                 theGarrison->SetGoal(theGoal, 0, 0);
                 if (theGarrison->mStats->mMaxVelocity > 0.0f) theGarrison->StartAction(kActionPrepareToMove); else theGarrison->StartAction(kActionPickedUpLoadableUnits);
                 theGarrison->mUnitClass->ActionChanged(theGarrison);
             }
         }
-        if (theGoal->mIsValid) {
+        if (theGoal->IsLoadGarrisonValid()) {
             for (std::vector<EEComplexUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
                  theIterator++) {
                 EEComplexUnit* theUnit = *theIterator;
@@ -4199,7 +4199,7 @@ bool EEMLoadTransport::IsResponse(NEMessage* inMessage)
 }
 
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGLoadTransport.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x4c1b79
 // Boards the selected units (or one passenger) onto the transport via its load goal; units it can't carry move to
@@ -4235,18 +4235,18 @@ void EEMLoadTransport::Execute()
     long theTileX;
     long theTileY;
     if (theUnits.size() != 0) {
-        EEUGLoadTransport* theGoal;
+        EEUGRust* theGoal;
         if (theOldGoal != NULL && theOldGoal->mKind == kGoalLoadTransport) {
-            theGoal = EEGoalCast<EEUGLoadTransport>(theOldGoal);
-            theGoal->AddUnits(theUnits);
+            theGoal = EELoadTransportGoalCast(theOldGoal);
+            theGoal->AddLoadUnits(theUnits);
         } else {
-            theGoal = new EEUGLoadTransport(theTransport, theUnits, true);
+            theGoal = EEUGRust::NewLoad(kGoalLoadTransport, theTransport, theUnits, true);
             theTransport->SetGoal(theGoal, 0, 0);
             theTransport->StartAction(theTransport->mStats->mMaxVelocity > 0.0f ? 8000 : 0x2ee3);
             theTransport->mUnitClass->ActionChanged(theTransport);
         }
-        theTileX = theGoal->mUnitTile.GetX();
-        theTileY = theGoal->mUnitTile.GetY();
+        theTileX = theGoal->GetLoadUnitTile().GetX();
+        theTileY = theGoal->GetLoadUnitTile().GetY();
         for (std::vector<EEComplexUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
              theIterator++) {
             EEComplexUnit* theUnit = *theIterator;
@@ -6882,8 +6882,8 @@ void EEMSetRallyGoal::Execute()
                     theGoal = theGarrison->mGoalState->Clone();
                 } else {
                     theGarrisonUnits.clear();
-                    EEUGLoadGarrison* theLoad = new EEUGLoadGarrison(theGarrison, theGarrisonUnits, true);
-                    if (theLoad->mIsValid) {
+                    EEUGRust* theLoad = EEUGRust::NewLoad(kGoalLoadGarrison, theGarrison, theGarrisonUnits, true);
+                    if (theLoad->IsLoadGarrisonValid()) {
                         theGarrison->SetGoal(theLoad, 0, 0);
                         if (theGarrison->mStats->mMaxVelocity > 0.0f) theGarrison->StartAction(kActionPrepareToMove); else theGarrison->StartAction(kActionPickedUpLoadableUnits);
                         theGarrison->mUnitClass->ActionChanged(theGarrison);

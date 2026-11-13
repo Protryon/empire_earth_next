@@ -19,10 +19,10 @@ bool WONScrollContainerConfig::GetPredefinedComponent(const std::string& name,Co
 {
     if(name=="HORZSCROLLBAR") {
         config=new WONScrollbarConfig;
-        component=this->mScrollContainer->mHorzScrollbar;
+        component=this->mScrollContainer->GetScrollbar(false);
     } else if(name=="VERTSCROLLBAR") {
         config=new WONScrollbarConfig;
-        component=this->mScrollContainer->mVertScrollbar;
+        component=this->mScrollContainer->GetScrollbar(true);
     } else return ScrollbarScrollerConfig::GetPredefinedComponent(name,config,component);
     return true;
 }

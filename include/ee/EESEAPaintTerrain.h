@@ -6,6 +6,7 @@
 // Requires ee/EESEAPaint.h.
 #ifndef EE_EESEAPAINTTERRAIN_H
 #define EE_EESEAPAINTTERRAIN_H
+#include "rust/ee_screens.h"
 
 class EESEAPaintTerrain : public EESEAPaint {
 public:

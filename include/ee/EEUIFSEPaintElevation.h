@@ -9,6 +9,7 @@
 #define EE_EEUIFSEPAINTELEVATION_H
 
 #include "ee/EESEAPaint.h"
+#include "rust/ee_screens.h"
 
 class EESEAPaintElevation : public EESEAPaint {   // RTTI 0x445604: > EESEAPaint > EEAction
 public:

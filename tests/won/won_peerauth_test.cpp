@@ -1,7 +1,7 @@
 // WONAuth's peer authentication and session (PeerAuthClient's and PeerAuthServer's Start, HandleRecvMsg and every
 // handler; AuthSession's Encrypt and Decrypt): the original's statements (copied from PeerAuthClient.cpp,
-// PeerAuthServer.cpp and AuthSession.cpp before the port) against include/ee/wonapi/WONPeerAuthMsg.h over ee_won's
-// peerauth module, and against the Rust AuthSession object.
+// PeerAuthServer.cpp and AuthSession.cpp before the port) against won_peerauth_msg.h (include/ee/wonapi/
+// WONPeerAuthMsg.h until round 14) over ee_won's peerauth module, and against the Rust AuthSession object.
 //
 // The handshake runs over stand-ins whose verdicts follow their bytes (a key's Decrypt, a certificate's validity,
 // expiry and verification, a secret's Create) and that log every call, so the original's statements and the template
@@ -25,7 +25,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
-#include "ee/wonapi/WONPeerAuthMsg.h"
+#include "won_peerauth_msg.h"
 #include "rust/ee_won.h"
 
 using namespace WONAPI;

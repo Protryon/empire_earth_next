@@ -3311,8 +3311,7 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGLoadGarrison.h"
-#include "ee/EEUGLoadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
@@ -3492,13 +3491,13 @@ void EESMEffect::TaskUnitsToObject()
                 if (theLoadUnits.size() <= 0)
                     continue;
                 bool theDelete = false;
-                EEUGLoadGarrison* theGoal;
+                EEUGRust* theGoal;
                 if (theCurrent != NULL && theCurrent->mKind == kGoalLoadGarrison) {
-                    theGoal = dynamic_cast<EEUGLoadGarrison*>(theCurrent);
-                    theGoal->AddUnits(theLoadUnits);
+                    theGoal = EELoadGarrisonGoalCast(theCurrent);
+                    theGoal->AddLoadUnits(theLoadUnits);
                 } else {
-                    theGoal = new EEUGLoadGarrison(theBuilding, theLoadUnits, true);
-                    if (theGoal->mIsValid) {
+                    theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theBuilding, theLoadUnits, true);
+                    if (theGoal->IsLoadGarrisonValid()) {
                         theBuilding->ClearGoals(0);
                         theBuilding->SetGoal(theGoal, 0, 0);
                         theBuilding->StartAction(kActionPrepareToMove);
@@ -3506,7 +3505,7 @@ void EESMEffect::TaskUnitsToObject()
                     } else
                         theDelete = true;
                 }
-                if (theGoal->mIsValid) {
+                if (theGoal->IsLoadGarrisonValid()) {
                     for (unsigned long n = 0; n < theLoadUnits.size(); n++) {
                         EEComplexUnit* theUnit = theLoadUnits[n];
                         theUnit->ClearGoals(0);
@@ -3536,18 +3535,18 @@ void EESMEffect::TaskUnitsToObject()
                 if (theLoadUnits.size() > 0) {
                     theDone = true;
                     EEUnitGoal* theCurrent = theTransport->GetGoal();
-                    EEUGLoadTransport* theGoal;
+                    EEUGRust* theGoal;
                     if (theCurrent != NULL && theCurrent->mKind == kGoalLoadTransport) {
-                        theGoal = dynamic_cast<EEUGLoadTransport*>(theCurrent);
-                        theGoal->AddUnits(theLoadUnits);
+                        theGoal = EELoadTransportGoalCast(theCurrent);
+                        theGoal->AddLoadUnits(theLoadUnits);
                     } else {
-                        theGoal = new EEUGLoadTransport(theTransport, theLoadUnits, true);
+                        theGoal = EEUGRust::NewLoad(kGoalLoadTransport, theTransport, theLoadUnits, true);
                         theTransport->ClearGoals(0);
                         theTransport->SetGoal(theGoal, 0, 0);
                         theTransport->StartAction(kActionPrepareToMove);
                         theTransport->GetUnitClass()->ActionChanged(theTransport);
                     }
-                    theDestination = theGoal->mUnitTile;
+                    theDestination = theGoal->GetLoadUnitTile();
                     for (unsigned long n = 0; n < theLoadUnits.size(); n++) {
                         EEComplexUnit* theUnit = theLoadUnits[n];
                         theUnit->ClearGoals(0);
