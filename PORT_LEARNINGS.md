@@ -11712,3 +11712,71 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
   `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS (after c26d5e8a); Rust gate PASS. ee_units tests
   174 (12 new). No tour: nothing drawn changed (the debug texts appear only in the debug panels). The round's C++
   (src, include): -1383 net before the merge.
+
+## R6: the game screens, sixteenth round: the editor gate extended; thirteen scenario editor actions whole in Rust behind one C++ action (ee_screens editor_whole.rs, editor_place.rs; branch rust-screens16, 2026-11-13)
+
+Round 15's item (b) rest, by C++ deleted. Count: `build/sc14/count.sh` (the round-10 UI set, the Scenario Editor
+folder, its actions' folder and their headers).
+
+- **The gate first** (`EESimEditor.cpp`, `tools/sim_editor/script.txt`; expected.txt 888 -> 1013 lines, recorded on
+  the unmodified actions, the first 888 unchanged, its own commit): `elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT`
+  writes an elevation file pair (a ridge of land, water at both ends) to `data\Scenarios\Elevation Maps`, refills the
+  map tab's list (`EEUIFileComboBox::CreateEntries`), picks it and sets the four boxes; `ghost` and `ghostat` put the
+  placement ghosts on a tile as `EEPreviewPlacement` does under the mouse (`FillSquare` decides placeable);
+  `placeghost PLAYER [UNIT]` is `EESEAPlaceUnit::Place` (UNIT: the unit tab's unit under the mouse, a transport to
+  board); `drop [UNIT]` is `EESEAMoveUnit::PutDown`; `cancelmove` is `Cancel`. Then `putdown` went through `PutDown`
+  too (its ghosts set on the tile, turned): the digest unchanged, so the move's entries are the ones `PutDown` makes.
+  - The map tab must be entered before `elevfile`: entering it resets the list's pick.
+  - `placeghost` flushes the world first (as the physics thread would have by a person's click): a unit placed in
+    the same breath is still pending.
+- **A port bug found by the gate:** placing a unit onto a transport loaded the new unit while it was still pending,
+  without an id; the transport's cargo holds units by id since R5a.4, so the entry resolved to nothing ("EE-HANDLE: a
+  handle to a unit without an id") and the next save crashed in `EEPWorldHelper::Save`. The unit's player inserts
+  its pending units first (`AddPendingUnits(0, 1)`, what the physics' flush does). A person reaches it: place a
+  unit with a transport under the mouse in the editor.
+- **One C++ action for the actions whole in Rust** (`ee/EESEARust.h`): `EESEARust : EEAction` holds a Rust
+  `EeScreensSewAction` made by `ee_screens_sew_new(this, kind, object, a, b, c, d)`, then `ee_screens_sew_begin`
+  (the kinds whose constructor posted themselves post there, after the C++ object holds the record: posting from
+  inside `new` could run before `mAction` was set); `Virtual4` runs it, the destructor frees it. The users call the
+  actions' methods through `ee_screens_sew_*` (rotate, the area's corner and rectangle, wall, gate, place unit, pick
+  up, put down, cancel, moving). The kinds' numbers are an enum in the header (so the users need no Rust header),
+  `static_assert`ed equal to the Rust constants in the host. The record is taken out of its box around each call
+  (no Rust reference across a host call).
+- **What moved** (13 classes, 13 units, 11 headers deleted; `link/exe/units.txt` lines removed):
+  - save, test, exit (`EESEASaveScenario`, `EESEATestScenario`, `EESEAExitScenario`), quick save
+    (`EESEAQuickSaveScenario`: its `EEAQuickSaveLoad` referenced while the action lives), tech list
+    (`EESEATechTree`), rotation (`EESEARotateUnits`), the trigger area (`EESEAPaintArea`: its rectangle read back by
+    `EESETSArea` through `ee_screens_sew_area`);
+  - the blank map (`EESEACreateBlankMap`): the elevation file's transform in Rust over `ee_ge`'s `GeTransformation`
+    (the C++ `Rotate`/`Scale` already forward there: the same bits), `lrintf` from `ee_ge::um`, Windows' `min`/`max`
+    macros (`a > b ? a : b`: on ties the second, which decides a `-0.0`), `(float)-depth` as the integer negated (no
+    `-0.0`), the neighbours' `x - 1` at 0 wrapping to an invalid point as the original's unsigned; the files are
+    read by the host (`ee_screenscpp_sew_elevation`, asked twice: once for the count, once with room);
+  - the random map (`EESEACreateRandomMap`): the active players (observers out), the local index, the lowest human
+    start epoch (at most 14); the generator call is one host op;
+  - the wall and gate placements (`EESEAPlaceWall`, `EESEAPlaceGate`): their queues, last queued first;
+  - the unit placement and move (`EESEAPlaceUnit`, `EESEAMoveUnit`, `editor_place.rs`): `Place`'s ghost walk (the
+    buildings snapped as `(unsigned long)(tile - (long)(size * 0.5f)) + 0.5f`, the low-edge guard, the transport
+    under the mouse, the blocked granary cancelling all, the airport ending the list), the run's pitch (kept for the
+    next units when a class does not pitch, as the original's one variable) and orientation; `PickUp`'s parts held by
+    id and referenced, `PutDown`'s entries from the ghosts (a flier's cruise altitude), the drop's levelling height
+    carried from part to part (the original's one `theZ`), `Cancel`. The script's `place` queues a raw entry through
+    `ee_screens_sew_place_push` (the original's public `mUnits.push_back`).
+  - The hosts (`ee_screenscpp_sew`, `ee_screenscpp_sep`) are in `EESEAPaintTerrain.cpp`, the folder's one host file.
+- **Count:** 67,621 -> 66,446 (the eleven) -> 65,985 (place and move): -1,636 this round.
+- **Tests:** 12 in `editor_whole.rs` (each kind's host calls in order, the quick save's reference, the tech list's
+  post when made, the area's corners, the queues' order, the blank map with and without a file: its aspect, the
+  heights' clamps, the shallow water flattened, the transform mapping the diamond's corner onto the file's, the
+  macros' ties; the random map's players), 5 in `editor_place.rs` (snapping, boarding, the granary and airport
+  rules, the low-edge guard, the move's pick-up, drop, flier altitude, levelling and cancel). No golden driver: the
+  editor gate ran on the unmodified code first and is unchanged by each group.
+- **Only a person reaches:** `EEPreviewPlacement`'s screen picking (the gate sets the ghosts' tiles itself), the
+  save screen and test/exit (`ExitEditor` ends the editor: the gate cannot go on after it), the tech lists' move
+  (`EESEUITechListBox::Fill`), the rotation's and the area's mouse drags (the gate calls their actions directly), a
+  gate placed over ghosts (the gate's `gate` has none), the random map from the map tab's seed box. No tour opens
+  the editor.
+- **Not done:** `EESEAChangeLoadText` (header-only, a string per post), the quick save/load pair (`EEAQuickSaveLoad`
+  157 lines, shared with the game's quick save), the click, lasso and delete classes and the paints' thin classes
+  (their algorithms moved in round 15; their classes hold the message, rectangle or record), and round 14's item (a)
+  (the stateful events: slider, check display, object area, quick save/load, hide UI/viewport, terrain colour/type,
+  map type, unit sort, start epoch, unit limit, the effect editors' events).

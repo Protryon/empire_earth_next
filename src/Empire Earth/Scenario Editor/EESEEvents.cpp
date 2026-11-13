@@ -93,9 +93,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EESEUnit.h"
 #include "ee/EESEPlayerScreen.h"
-#include "ee/EESEASaveScenario.h"
-#include "ee/EESEATestScenario.h"
-#include "ee/EESEAExitScenario.h"
+#include "ee/EESEARust.h"
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
 void FillPlaceComboBox(bool inAreas, UITextLabel* inLabel, UIComboBox* inComboBox);   // EESETSETGame.cpp
 
@@ -298,11 +296,11 @@ extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp
     }
     case EE_SCREENS_SE_OP_POST_ACTION:
         if (inA == EE_SCREENS_SE_ACTION_SAVE)
-            EESEPostAction(new EESEASaveScenario);
+            EESEPostAction(new EESEARust(kSEASave));
         else if (inA == EE_SCREENS_SE_ACTION_TEST)
-            EESEPostAction(new EESEATestScenario);
+            EESEPostAction(new EESEARust(kSEATest));
         else
-            EESEPostAction(new EESEAExitScenario);
+            EESEPostAction(new EESEARust(kSEAExit));
         break;
     case EE_SCREENS_SE_OP_ASK_EXIT: {
         UWideString theText;

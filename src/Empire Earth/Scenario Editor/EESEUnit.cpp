@@ -120,13 +120,12 @@
 #include "ee/EEUnitPicker.h"
 #include "ee/EEUICSelectUnits.h"
 #include "ee/EEUICCommandUnits.h"
-#include "ee/EESEARotateUnits.h"
+#include "ee/EESEARust.h"
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EESEUICCommandUnits.h"
 #include "ee/EESEAChangeLoadText.h"
 #include "ee/EESELoadThread.h"
 #include "ee/EEMiniMap.h"
-#include "ee/EESEAPlaceUnit.h"
 
 
 // cdecl helpers of other units (provisional names; types inferred)
@@ -146,18 +145,6 @@ extern unsigned long& gTexturePixelDepth;
 
 
 
-// The unit tab's move action (+0x128: new 0x20, ctor 0x1a75e0; EESEAMoveUnit.cpp) (provisional member names)
-class EESEAMoveUnit : public EEAction {
-public:
-    EESEAMoveUnit();                        // 0x1a75e0
-    void PickUp(unsigned long inUnitID);    // 0x1a797a (picks a unit up)
-    void PutDown();                         // 0x1a79fd (puts it down)
-    void Cancel();                          // 0x1a7bee (cancels)
-    virtual void Virtual4();                // +0x04 0x1a7646
-    virtual void Virtual8() {}              // +0x08
-    unsigned char _gap0C[0x10];
-    bool mIsMoving;                         // +0x1c a unit is being moved
-};
 
 // The unit tab's list of unit classes (RTTI EEUIFSELBUnitList > UILBString; vtable 0x444b30; sizeof 0x154):
 // mUnitTypes holds the class index of each line, sorted by mCompare (by name, by epoch, by layer)
@@ -916,10 +903,10 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
 
     this->mMouseClick = new EESEAMouseClick;
     this->mLasso = new EESEALasso;
-    this->mPlaceUnit = new EESEAPlaceUnit;
-    this->mPlaceGate = new EESEAPlaceGate;
-    this->mPlaceWall = new EESEAPlaceWall;
-    this->mMoveUnit = new EESEAMoveUnit;
+    this->mPlaceUnit = new EESEARust(kSEAPlaceUnit);
+    this->mPlaceGate = new EESEARust(kSEAPlaceGate);
+    this->mPlaceWall = new EESEARust(kSEAPlaceWall);
+    this->mMoveUnit = new EESEARust(kSEAMoveUnit);
     this->mSelectUnits = new EEUICSelectUnits(inForm, 0x3f6, ioIndex, this->mMouseClick, this->mLasso);
     inForm->AddControl(this->mSelectUnits, 0);
     ioIndex++;
@@ -954,19 +941,19 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
 }
 
 // FUNCTION: EXE 0x59b9b4
-// Creates the action that places the chosen unit (EESEAPlaceUnit ctor, inline; the tab's ctor calls it)
+// Creates the action that places the chosen unit (EESEAPlaceUnit ctor, inline; an EESEARust now)
 
 // SYNTHETIC: EXE 0x59b9e4
 // (EESEAPlaceUnit's scalar deleting destructor)
 
 // FUNCTION: EXE 0x59ba16
-// Creates the action that places a gate (EESEAPlaceGate ctor, inline; the tab's ctor calls it)
+// Creates the action that places a gate (EESEAPlaceGate ctor, inline; an EESEARust now)
 
 // SYNTHETIC: EXE 0x59ba46
 // (EESEAPlaceGate's scalar deleting destructor)
 
 // FUNCTION: EXE 0x59ba78
-// Creates the action that places a wall (EESEAPlaceWall ctor, inline; the tab's ctor calls it)
+// Creates the action that places a wall (EESEAPlaceWall ctor, inline; an EESEARust now)
 
 // SYNTHETIC: EXE 0x59baa8
 // (EESEAPlaceWall's scalar deleting destructor)
@@ -1031,7 +1018,8 @@ void EESEUnit::PlaceWall()
         this->mPlayerComboBox->GetCurrentSelection(theSelection);
         thePlayer = theSelection + 1;
     }
-    this->mPlaceWall->Place(theStart, theEnd, thePlayer, this->mBuildWall.mTechnology);
+    ee_screens_sew_wall(this->mPlaceWall->mAction, theStart.GetX(), theStart.GetY(), theEnd.GetX(), theEnd.GetY(),
+                        thePlayer, this->mBuildWall.mTechnology);
 }
 
 // FUNCTION: EXE 0x59bd2d
@@ -1114,10 +1102,8 @@ void EESEUnit::PlaceGate()
         this->mPlayerComboBox->GetCurrentSelection(theSelection);
         thePlayer = theSelection + 1;
     }
-    EETileCoordinate theTile;
-    theTile.mX = this->mBuildGate.mTileX;
-    theTile.mY = this->mBuildGate.mTileY;
-    this->mPlaceGate->Place(theTile, thePlayer, this->mBuildGate.mTechnology, this->mBuildGate.mDirection);
+    ee_screens_sew_gate(this->mPlaceGate->mAction, this->mBuildGate.mTileX, this->mBuildGate.mTileY, thePlayer,
+                        this->mBuildGate.mTechnology, this->mBuildGate.mDirection);
 }
 
 // FUNCTION: EXE 0x59c026
@@ -1155,8 +1141,8 @@ void EESEUnit::Leave()
     theEditor->GetManager()->RedrawAll();
     theEditor->ClearSelection();
     this->mUnitUnderMouse = -1;
-    if (this->mMoveUnit->mIsMoving)
-        this->mMoveUnit->Cancel();
+    if (ee_screens_sew_moving(this->mMoveUnit->mAction))
+        ee_screens_sew_cancel(this->mMoveUnit->mAction);
     this->mPlacing = false;
     gWorld.ClearGhostUnits();
 }
@@ -1393,7 +1379,7 @@ void EESEUnit::RefreshUnitList()
 // re-placing); while placing, previews and places units, walls and gates (right button cancels)
 void EESEUnit::MouseMove(const GE2DPoint& inLocation)
 {
-    if (!this->mPlacing && !this->mMoveUnit->mIsMoving) {
+    if (!this->mPlacing && !ee_screens_sew_moving(this->mMoveUnit->mAction)) {
         if (!gViewport.GetViewRectangle().Contains(inLocation))
             return;
         if (UIManager::GetLMouseButton()->JustDoublePressed()) {
@@ -1401,7 +1387,7 @@ void EESEUnit::MouseMove(const GE2DPoint& inLocation)
             if (theUnit == NULL)
                 return;
             if (theUnit->mUnitClass->mCategory != kUnitCategoryGate)
-                this->mMoveUnit->PickUp(theUnit->mUnitID);
+                ee_screens_sew_pick_up(this->mMoveUnit->mAction, theUnit->mUnitID);
             else {
                 this->mPlacingGate = true;
                 this->mPlacing = true;
@@ -1443,16 +1429,16 @@ void EESEUnit::MouseMove(const GE2DPoint& inLocation)
                     thePlayer = theSelection + 1;
                 }
                 if (this->mPlacing)
-                    this->mPlaceUnit->Place(thePlayer);
+                    ee_screens_sew_place_unit(this->mPlaceUnit->mAction, thePlayer);
                 else {
-                    this->mMoveUnit->PutDown();
+                    ee_screens_sew_put_down(this->mMoveUnit->mAction);
                     this->mUnitUnderMouse = -1;
                 }
             } else if (UIManager::GetRMouseButton()->JustUnpressed()) {
                 gWorld.ClearGhostUnits();
                 this->mUnitUnderMouse = -1;
                 this->mPlacing = false;
-                this->mMoveUnit->Cancel();
+                ee_screens_sew_cancel(this->mMoveUnit->mAction);
             }
         }
         gWorld.mGhostUnitsLock->Leave();

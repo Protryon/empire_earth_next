@@ -146,7 +146,6 @@ extern RTSRenderObject* gU56535C; // the terrain render object (an EEROTerrain n
 #include "ee/EEAmbientSoundManager.h"
 #include "ee/EEMusicManager.h"
 #include "ee/EEScenarioManager.h"
-#include "ee/EESEAExitScenario.h"
 #include "lle/GEText.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEAQuickSaveLoad.h"
