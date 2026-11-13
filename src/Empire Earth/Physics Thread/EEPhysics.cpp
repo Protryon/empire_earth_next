@@ -326,7 +326,6 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of CT Physics Ticks To Process: %ld *******\n",
                 gPhysics->mTicksToProcess);
         fclose(theFile);
-        ESEndRecording();
     }
     // New (R5b.4): the units' flags 1 (hit points + tile y + tile x of every complex unit on the map) and 2 (the times
     // updated, the active group, the command's type, the location and the height) are the unit store's sums over its

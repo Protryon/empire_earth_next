@@ -1657,14 +1657,13 @@ void EEPlayIntroMovies(bool inSkipMovies)
 }
 
 // FUNCTION: EXE 0x543cf0
-// Closes the single-instance mutex, ends the debug recording and saves the preferences
+// Closes the single-instance mutex and saves the preferences
 // (no direct caller: registered as a shutdown routine)
 void EEReleaseInstanceMutex(bool inShutdown)
 {
 #ifdef _WIN32
     CloseHandle(sInstanceMutex);
 #endif
-    ESEndRecording();
     gGamePreferences.Save();
 }
 
@@ -2098,7 +2097,6 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
     bool theInitialized;
     EEStartScreen theSplashScreen(inInstance);
     bool theShowMovies;
-    FSFileSpec theLogFile;
     if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
         // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
         // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
@@ -2126,9 +2124,6 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             // directory)
             PlatPathEnterDataRoot();
             FSInitialize("");
-            theLogFile.SetVolume(gStartupVolume);
-            theLogFile.SetDirectory(gStartupDirectory);
-            ESBeginRecording(theLogFile);
             gResource = new UResourceFile(inInstance);   // the language resources are linked into the exe
 
             ESVERIFY_AT(gResource, 3632);
