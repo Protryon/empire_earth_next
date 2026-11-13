@@ -10995,3 +10995,53 @@ the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's 
   profile link 0/0, the Rust gate PASS (the same timer test rerun alone), oracle seeds 2-7 identical, captures at
   seeds 2-3 oracle, late, calamity and scenario PASS. ee_units tests 157 (13 new). No tour: nothing
   drawn changed (the debug texts appear only in the debug panels).
+
+## R5b.2, twelfth round: the attack-ground and attack-unit goals whole in Rust on EEUGRust (ee_combat goal_objects.rs, goal_attack.rs, goal_dispatch.rs; branch rust-combat12, 2026-11-13)
+
+| Commit | C++ |
+|---|---|
+| CBGO: GetDestination and Suits recorded from the C++ bodies (TEST ONLY) | +43 -1 |
+| the attack-ground goal on EEUGRust (round 16's class, a parallel per-kind dispatch) | +414 -275 |
+| the attack-unit goal on EEUGRust; 60 caller files | +608 -808 |
+| the merge of rust (core round 17): both goals onto its kind dispatch | against rust +760 -1062, net -302 |
+| EEUGRust's Save hands the version to the body | +1 -1 |
+
+- **On the generic class.** Core round 17 made `EEUGRust` one class whose virtuals all go through
+  `ee_units_rust_goal(op, kind, ...)` and one C++ host callback. The combat bodies are ee_combat's, and ee_units cannot
+  depend on ee_combat (its bridges to the store are ee_rust's, unresolved in ee_units' test binaries), so ee_units
+  hands the kinds it does not own to one function ee_rust registers in `ee_rust_init`
+  (`register_other_goal_kinds`); ee_combat mirrors `EeUnitsGoalIo` and `EeUnitsGoalHost` and ee_rust asserts the
+  layouts and the copied operation numbers at compile time. The combat host operations (from 1000) are the C++
+  host's `default:` case (`EECombatGoalHostOp`). The generic part gained one virtual (`SetPathAttempts`: the attack
+  goal's 0 clears its sidestep count) and one public wrapper of its `Goal` call for accessors outside EEUGRust.cpp.
+- **A golden must be recorded on the base it gates.** CBGO was recorded from the original classes before rust's
+  declared AI rebaseline (main's Lua AI); after the merge the oracle, missile, space 3 and calamity 7 games differ,
+  so those CBGO lines were dropped and the oracle's seeds 2-3 recorded again from the merged build (declared: the
+  move was shown equal to the original C++ before the merge, with every CBGO, CBXA, CBQR and CBSO record compared one
+  by one in a capture of oracle seed 2 and an oracle-mode run of seed 3).
+- **Compare against your own parent, not ref.** Midway the lead regenerated `ref` for rust's rebaseline; the
+  oracle then failed for the unmodified parent build too. A baseline run of the parent exe (kept as a copy before
+  relinking) is the gate between two merges of rust.
+- **Constants copied by hand.** `kUnitFamilyAnimal` is 0x11, not 2: the attack's player counts (`mNumAttacks`,
+  `mCombatState`) then counted hunts, and the AI's combat state changed the game at 59 s. Read the enum, not memory
+  (ee_units has a test that checks its copies against the headers; ee_combat's goal constants have none yet).
+- **A caller's out point can be partly written.** `EEGetFiringPosition` leaves parts of its out point as they were
+  on some paths, so the attack's GetDestination takes the caller's point in and out (`io.f`), as the original's
+  reference did.
+- **Saves are not byte-deterministic** between two runs of one exe (two saveload runs of the same build differ from
+  the first byte): compare saves by their continuation (saveload), not by bytes.
+- **An air animal's physics order changed with the ground goal's move** (before the merge: plains-medium-3ai seed 2,
+  saveload's continued game at 1236.7 s; every random draw and AI hash equal): at kActionContinueToFly the bird's
+  `mCurrentPhysicsOrder` became 5 with the move and stayed 0 before, although ee_units' decision for that command
+  sets 5; the bird holds a location goal, outside the moved code. On the merged tree saveload's plains rows are as
+  tools/saveload_expect.txt (rebaselined by rust); not traced further.
+- **The generic Save passed no version.** Round 17's `EEUGRust::Save` handed the body 0, 0; ee_units' kinds write the
+  same at any version, but the attack goal writes its live state only for a version that has it, while Load reads by
+  the file's version: every load of a game with an attack goal read past the record (EE-SIM fault in
+  `QueueLoadGoal`). Save now hands the body the version, as Load and RepairPointers do. The oracle and the captures
+  never load: saveload is the gate for any goal's save.
+- **Heal not moved.** `EEUGHealUnit` derives from `EEUGLocation`, and the kind table makes a heal goal a location goal
+  for `EEGoalCast<EEUGLocation>`, whose callers read `mLocation`, `mYaw` and the flags; the heal's condition test
+  falls back to `EEUGLocation::EvaluateCondition` (`FaceYaw`). It moves after the location goal or with those callers on
+  accessors.
+- **Only a tour shows:** the debug panels' goal texts (now Rust's `format!`). The LAN game sends no goal.
