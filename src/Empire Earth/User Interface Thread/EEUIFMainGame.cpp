@@ -279,14 +279,30 @@ void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
 
 // FUNCTION: EXE 0x662c6f
 // Fills the hack's object combo box with the unit class names
+// port: the first line is selected without the box's change event. The original's event sent EEMLoadUnitData from the
+// UI thread as the main game form opened, racing the game's start: in the loading's last communications ticks the
+// client ran it as lobby input, a tick later the physics ran it as a game input (one more input counted: the
+// out-of-synch checksum, EE-SIM's AI trace "inputs=" and its capture's NMEX/NMIM/NMDC/USCK differed by run under
+// load). Its only effect was the sender's hack class and that class's media preloaded for every player; the hack's
+// own placing sends the listed class, and a later change of the box still sends the message.
 void EEUIFMGUnitHack::FillComboBox()
 {
     unsigned long i;
 
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->DeleteAllEntries();
+    UIComboBox* theCombo = static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList));
+    theCombo->DeleteAllEntries();
     for (i = 0; i < this->mClassIDs.size(); i++)
-        (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList)))->AppendLine(this->mNames[i]);
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->SetCurrentSelection(0);
+        theCombo->AppendLine(this->mNames[i]);
+    UIEvent* theEvent = theCombo->GetTriggerEvent(kControlTriggerSelectionChanged);
+    if (theEvent != NULL) {
+        theEvent->Reference();
+        theCombo->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+    }
+    theCombo->SetCurrentSelection(0);
+    if (theEvent != NULL) {
+        theCombo->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+        theEvent->Dereference();
+    }
 }
 
 // FUNCTION: EXE 0x662cdc
