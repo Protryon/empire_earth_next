@@ -837,7 +837,7 @@ void DumpState(const std::string& inPath)
             for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
                 const EEGoalDeque& theGoals = x->GetQueueGoals(q);
                 for (size_t g = 0; g < theGoals.size(); g++)
-                    fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
+                    fprintf(f, " g%ld:k%u:%08lx", q, (unsigned)theGoals[g]->mKind,
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
             // what the raw bytes hold only as pointers: the contacts, the last attacker, the area effects

@@ -51,5 +51,6 @@ pub mod store;
 pub mod tick;
 pub mod unload;
 pub mod update;
+pub mod world;
 
 pub use registry::Registry;
