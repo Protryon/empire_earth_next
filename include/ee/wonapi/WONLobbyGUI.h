@@ -955,6 +955,13 @@ public:
     void EnableTab(int,bool);
     void AddTab(Button*,Container*);
     void RemoveTab(int); // removes the tab and reselects
+    // the selected tab's id and the configs' writes (TabCtrlConfig, RootScreen)
+    int GetCurTabId() { return this->mBottomTabBar->GetCurTabId(); }
+    void SetTabBarHeight(int v) { this->mTabBarHeight=v; }
+    void SetTabOverlap(int v) { this->mBottomTabBar->mOverlap=v; }
+    void SetTabBarOverlap(int v) { this->mTabBarOverlap=v; }
+    void SetBottomTabTopOffset(int v) { this->mBottomTabTopOffset=v; }
+    void SetBottomTabLeftOffset(int v) { this->mBottomTabLeftOffset=v; }
     SmartPtr<TabBar> mBottomTabBar; //84
     SmartPtr<Container> mTopTabBar; //88
     SmartPtr<Container> mBottomTabBarContainer; //8c
