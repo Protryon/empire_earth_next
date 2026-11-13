@@ -442,6 +442,9 @@ WON_TESTS = {
     # Scroller and ScrollbarScroller as one whole Rust object (scrollerobj.rs) over real Rust bars, the same way
     # (golden: rust/crates/ee_won/src/golden_scrollerobj.txt)
     "won_scrollerobj_test": [],
+    # TextListItem's and MenuItem's measure and MenuItem's paint, the original statements over a recording
+    # Graphics against ee_won's guidraw (golden: rust/crates/ee_won/src/golden_itemobj.txt)
+    "won_itemobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

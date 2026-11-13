@@ -824,6 +824,9 @@ constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 /// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
 constexpr static const int32_t EE_WON_DRAW_DOTTED_LINE = 17;
 
+/// `Graphics::SetPixel(a, b, c)` (x, y, colour).
+constexpr static const int32_t EE_WON_DRAW_PIXEL = 18;
+
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
@@ -4551,6 +4554,24 @@ struct EeWonTextRowPaint {
   int32_t font_height;
 };
 
+/// A menu item to paint (`MenuItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+struct EeWonMenuItemPaint {
+  bool selected;
+  bool full_row_select;
+  bool has_image;
+  bool disabled;
+  bool has_submenu;
+  EeWonSelColor sel;
+  uint32_t color;
+  int32_t paint_width;
+  int32_t width;
+  int32_t height;
+  int32_t image_height;
+  int32_t font_height;
+  /// the menu's view width (`mScrollArea.width`: the submenu arrow's place)
+  int32_t view_width;
+};
+
 /// An input box to paint (its members; icon slot 0, font slot 0, string slot 0 the shown text).
 struct EeWonInputPaint {
   bool disabled_look;
@@ -8259,6 +8280,23 @@ size_t ee_won_gui_draw_multi_row(const EeWonMultiRowPaint *r, EeWonDrawOp *out, 
 /// # Safety
 /// `r` is valid; `out` has room for `cap` operations (or is NULL).
 size_t ee_won_gui_draw_text_row(const EeWonTextRowPaint *r, EeWonDrawOp *out, size_t cap);
+
+/// `text_item_size` into `out_w`, `out_h`.
+///
+/// # Safety
+/// `out_w` and `out_h` are writable.
+void ee_won_gui_text_item_size(int32_t text_width,
+                               int32_t font_height,
+                               bool has_image,
+                               int32_t image_width,
+                               int32_t image_height,
+                               bool menu,
+                               int32_t *out_w,
+                               int32_t *out_h);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_menu_item(const EeWonMenuItemPaint *r, EeWonDrawOp *out, size_t cap);
 
 /// # Safety
 /// `b` and `m` are valid; `out` has room for `cap` operations (or is NULL).
