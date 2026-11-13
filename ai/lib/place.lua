@@ -16,6 +16,7 @@
 local M = {}
 M.afford_retry = false     -- (set by boom with BO.OPT.settle_afford)
 M.blocked_skip = false     -- (set by boom with BO.OPT.blocked_skip)
+M.no_food_builders = false -- (set by boom with BO.OPT.owner_mines or pre_mines: no food gatherer builds)
 
 local JOB_MS = 180000       -- a job's builders are released after this, built or not
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
@@ -229,7 +230,7 @@ local function builders(x, y, reach)
     end)
     local picked = {}
     for _, c in ipairs(cands) do
-        if #picked < BUILDERS and (c.r < 5 or #picked == 0) then
+        if #picked < BUILDERS and (c.r < 5 or #picked == 0) and not (M.no_food_builders and c.r == 6) then
             picked[#picked + 1] = c.id
         end
     end

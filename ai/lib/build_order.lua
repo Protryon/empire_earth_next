@@ -41,6 +41,14 @@ M.OPT = {
                             -- cost refusal in 20 s
     boats_then_mines = false, -- (off until benched) past 10 boats, no more in the Stone Age while a kept mine waits for
                             -- its settlement
+    owner_mines = false,    -- (off until benched) the owner's mines (his answers, 2026-11-13): the second gold and iron
+                            -- mines claimed and settled in the Prehistoric (touching, no food gatherers building); a
+                            -- third mine of a resource only past 12 on it; wood 7 until Stone +12; the bank 575
+    pre_mines = false,      -- (off until benched) the Prehistoric part of owner_mines alone
+    pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
+                            -- stand, one settlement a site (any kind touched), none for wood
+    mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
+    owner_barracks = false, -- (off until benched) the Prehistoric barracks at OWNER_BARRACKS_AT citizens (his: 2.4 min)
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
@@ -58,12 +66,21 @@ M.FILL = {
               {"food", 40}, {"wood", 30}},
 }
 M.FILL.stone_developed = M.FILL.stone_grow
+-- (OPT.owner_mines: the citizens the early Stone wood leaves go to the Prehistoric's two settled mines, 6 each)
+M.FILL_OWNER = {
+    stone_start = {{"food", 18}, {"wood", 12}, {"stone", 2}, {"gold", 2}, {"iron", 2}, {"iron", 6}, {"gold", 6}},
+}
 
 -- the acceptance ranges of each phase (tools: the trace check, econ\order_check.py): gatherers [lo, hi]
 M.RANGES = {
     pre = {food = {15, 21}, wood = {5, 8}, stone = {2, 2}, gold = {2, 2}, iron = {2, 2}},
     stone_developed = {food = {15, 21}, wood = {10, 15}, stone = {6, 6}, gold = {12, 18}, iron = {12, 18}},
 }
+
+-- the phase's fill (OPT.owner_mines: its own where it has one)
+local function fill_of(phase)
+    return (M.OPT.owner_mines and M.FILL_OWNER[phase]) or M.FILL[phase] or {}
+end
 
 -- the plan overlays (the economy's keys; the army adds its soldier fields here)
 M.PHASE = {
@@ -96,6 +113,11 @@ M.RAID_WAIT_MIN = 15       -- minutes developed: the Copper Age is saved for eve
 M.FOOD_BANK = 0            -- food kept past the Stone Age's cost at the advance: the 5-10 soldiers trained at once (8 x 30)
 M.WOOD_BANK = 500          -- wood kept in the Prehistoric reserve while the Stone Age is saved for (the dock 175, ten
                            -- boats 500)
+M.WOOD_BANK_OWNER = 575    -- (OPT.owner_mines) the owner's bank at the advance (his playtest logs: 575 wood)
+M.STONE_WOOD = 7           -- (OPT.owner_mines) wood gatherers at most until STONE_WOOD_MIN into the Stone Age
+M.STONE_WOOD_MIN = 12
+M.wood_cap = nil           -- (set by boom each step)
+M.OWNER_BARRACKS_AT = 6    -- (OPT.owner_barracks) citizens
 M.BUILDER_POOL = 11        -- (OPT.builder_pool) the Stone Age's citizens building on top of the fill's places, at most
 M.STONE_MOST = 86          -- ... and the Stone Age's citizens at most (the owner's 35 -> 86)
 M.BUILDER_IDLE = 4         -- (OPT.builder_pool) no citizen trained while this many stand idle
@@ -165,7 +187,7 @@ function M.plan(plan, phase)
     for _, r in ipairs(RESOURCES) do
         cap[r] = 0
     end
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         cap[s[1]] = math.max(cap[s[1]], s[2])
     end
     cap.food = nil
@@ -184,11 +206,14 @@ function M.fill(phase, land, room, keep_left)
     local left = land
     local function give(r, upto)
         local most = math.min(upto, room[r] or upto)
+        if r == "wood" and M.wood_cap ~= nil then   -- (OPT.owner_mines: the early Stone wood, set by boom each step)
+            most = math.min(most, M.wood_cap)
+        end
         local n = math.max(math.min(most - want[r], left), 0)
         want[r] = want[r] + n
         left = left - n
     end
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         give(s[1], s[2])
     end
     if keep_left then
@@ -210,7 +235,7 @@ end
 -- the most the fill puts on a resource
 function M.most(phase, resource)
     local n = 0
-    for _, s in ipairs(M.FILL[phase] or {}) do
+    for _, s in ipairs(fill_of(phase)) do
         if s[1] == resource then
             n = math.max(n, s[2])
         end
