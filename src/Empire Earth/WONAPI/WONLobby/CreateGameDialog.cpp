@@ -86,8 +86,8 @@ void CreateGameDialog::CheckInput()
 // Shows the password field only while the password radio is checked
 void CreateGameDialog::UpdatePasswordVisibility()
 {
-    this->mPasswordInput->SetVisible(this->mPasswordRadio->mChecked);
-    this->mPasswordLabel->SetVisible(this->mPasswordRadio->mChecked);
+    this->mPasswordInput->SetVisible(this->mPasswordRadio->IsChecked());
+    this->mPasswordLabel->SetVisible(this->mPasswordRadio->IsChecked());
     this->CheckInput();
 }
 // FUNCTION: WON 0x7f69d0

@@ -605,6 +605,105 @@ pub enum EeWonGuiOp {
     TabTextIs = 480,
     /// `AddLayoutPoint((LayoutPoint*)a)`.
     TabAddLayoutPoint,
+    // ---- the combo box (`comboobj`; the parts are its C++ members: `mEdit`, `mButton`, `mListBox`, `mListArea`)
+    /// the part `a` (0 the input box, 1 the button, 2 the list box, 3 the list area) as a `Component*` (a pure read).
+    ComboPart = 490,
+    /// `mListArea->InsertString(*(const GUIString*)a, b)` (the item).
+    ComboInsertString,
+    /// `mListArea->InsertItem((TextListItem*)a, b)`.
+    ComboInsertItem,
+    /// `SmartPtr<TextListItem> held = (TextListItem*)a;` (taken and released).
+    ComboDropItem,
+    /// `mListArea->DeleteItem(a)`.
+    ComboDeleteItem,
+    /// `mListArea->RefreshItem((TextListItem*)a)`.
+    ComboRefreshItem,
+    /// `mListArea->Clear(true)`.
+    ComboListClear,
+    /// `mListArea->GetSelItem()`.
+    ComboSelItem,
+    /// `mListArea->GetItemPos((ListItem*)a)`.
+    ComboItemPos,
+    /// `mListArea->SetSelItem(a, b != 0)`.
+    ComboSetSel,
+    /// `mListBox = (Scroller*)a`.
+    ComboSetListBox,
+    /// `((Scroller*)a)->GetScrollArea()` as a `Component*`.
+    ComboBoxArea,
+    /// `mListArea->SetScroller(mListBox)`.
+    ComboSetScroller,
+    /// `mListArea->SetListFlags(a, b != 0)`.
+    ComboSetListFlags,
+    /// the list area's `a`: 0 `GetRightPad()`, 1 `GetLeftPad()`, 2 `GetTotalWidth()`, 3 `GetTotalHeight()`.
+    ComboListMetric,
+    /// `mEdit->SetText(GUIString(""), a != 0)`.
+    ComboEditClear,
+    /// `mEdit->SetText(((TextListItem*)a)->mText, true)`.
+    ComboEditItemText,
+    /// `mEdit->SetText(*(const GUIString*)a, b != 0)`.
+    ComboEditSetText,
+    /// `mEdit->SetText(mUndoStr, true)`.
+    ComboEditUndo,
+    /// `mUndoStr = mEdit->GetText()`.
+    ComboUndoSave,
+    /// `mEdit->SelectRange(a, b)`.
+    ComboEditSelect,
+    /// `mEdit->SetAllowSelection(a != 0)`.
+    ComboEditAllowSelection,
+    /// `((TextListItem*)a)->mWidth`.
+    ComboItemWidth,
+    /// `((TextListItem*)a)->mText.length()`.
+    ComboItemTextLength,
+    /// `DeliverEvent(new ComboSelChangedEvent(this, (TextListItem*)a, b != 0), false)`.
+    ComboDeliverSel,
+    /// `mListArea->GetNumItems()`.
+    ComboItemCount,
+    /// `mListArea->GetItem(a)`.
+    ComboItemAt,
+    /// `((TextListItem*)a)->mText == *(const GUIString*)b`, or the input box's text when `b` is 0 (0 or 1).
+    ComboItemTextIs,
+    /// the list box opened as a popup below the combo box (`GetRoot()->OpenPopup(PopupParams(...))`).
+    ComboOpenPopup,
+    /// `mListArea->EnsureVisible((ListItem*)a)`.
+    ComboEnsureVisible,
+    /// `((ListItemClickedEvent*)a)->mButton`.
+    ComboEventButton,
+    /// `Relayout()`.
+    ComboRelayout,
+    /// `mListBox->AddListener(NULL)`.
+    ComboUnlisten,
+    // ---- the root container (`rootobj`; its window is the C++ member `mWindow`)
+    /// `((Cursor*)a)->GetComponent(*(int*)b, *(int*)c)` (the cursor's component and hot spot; a pure read).
+    RootCursorComponent = 530,
+    /// `mWindow->mIsOneComponentWindow` (0 or 1; a pure read).
+    RootOneComponentWindow,
+    /// `mWindow->mMouseX`, `mMouseY` into `*(int*)a`, `*(int*)b` (a pure read).
+    RootWindowMouse,
+    /// `mWindow->GetRect(*(WONRectangle*)a, false)` (a pure read).
+    RootWindowRect,
+    /// `mWindow->SetPosSize(a, b, -1, -1)`.
+    RootWindowSetPos,
+    /// `a->GetMouseChild()` (virtual; a pure read).
+    RootMouseChildOf,
+    /// `GetColorScheme()` (a pure read).
+    RootScheme,
+    /// the grabber `a`'s drawing state into `*(EeWonRootGrab*)b` (a pure read).
+    RootGrabberRead,
+    /// `((BackgroundGrabber*)a)->Clear()`.
+    RootGrabberClear,
+    /// `((BackgroundGrabber*)a)->Clear(); a->mBGImage = NULL;`.
+    RootGrabberDrop,
+    /// `((NativeImage*)a)->AddRef()` (an image the background map holds).
+    RootImageHold,
+    /// `((NativeImage*)a)->Release()`.
+    RootImageRelease,
+    /// `((NativeImage*)a)->mWidth`, `mHeight` into `*(int*)b`, `*(int*)c` (a pure read).
+    RootImageSize,
+    /// `((Graphics*)a)->DrawImage((NativeImage*)b, q[0], .., q[5])` with `q` the six ints at `c` (x, y, source x,
+    /// source y, width, height).
+    RootDrawImage,
+    /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
+    RootEnsureOnTop,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

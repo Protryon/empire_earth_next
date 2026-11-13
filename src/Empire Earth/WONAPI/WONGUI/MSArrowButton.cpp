@@ -13,7 +13,7 @@ using namespace WONAPI;
 // Draws the arrow button: face, frame and arrow, shifted one pixel while pressed and greyed when disabled
 void MSArrowButton::Paint(Graphics& g) {
     Component::Paint(g);
-    bool down=(mButtonFlags&0x20)!=0;
+    bool down=this->IsPressed();
     g.SetSysColor(StandardColor_3DFace);
     g.FillRect(0,0,this->Width(),this->Height());
     LobbyDrawFrame(g,0,0,this->Width(),this->Height(),down);

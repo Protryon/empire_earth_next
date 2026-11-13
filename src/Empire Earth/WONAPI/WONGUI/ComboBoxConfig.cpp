@@ -50,7 +50,7 @@ bool ComboBoxConfig::Virtual24(const std::string& key)
         InputBox* input=this->mComboBox->mEdit.get();
         input->SetMaxChars(this->ReadInt());
     } else if(aKeyIdx==8) {
-        bool show=this->ReadBool(); this->mComboBox->mShowButtonWhenDisabled=show;
+        bool show=this->ReadBool(); this->mComboBox->SetShowButtonWhenDisabled(show);
     } else return ContainerConfig::Virtual24(key);
     return true;
 }

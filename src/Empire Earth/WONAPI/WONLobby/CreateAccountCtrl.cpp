@@ -107,7 +107,7 @@ void CreateAccountCtrl::HandleComponentEvent(ComponentEvent* inEvent)
         event->mDay=this->mDayInput->GetText().mData->ToInt(0);
         event->mMonth=this->mMonthInput->GetText().mData->ToInt(0);
         event->mYear=this->mYearInput->GetText().mData->ToInt(0);
-        event->mNewsletter=this->mNewsletterCheck->mChecked;
+        event->mNewsletter=this->mNewsletterCheck->IsChecked();
         this->DeliverEvent(event.get(),false);
     } else Component::HandleComponentEvent(inEvent);
 }

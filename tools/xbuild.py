@@ -456,6 +456,12 @@ WON_TESTS = {
     # TabBar and TabCtrl as whole Rust objects (tabobj.rs) over the container goldens' world (golden:
     # rust/crates/ee_won/src/golden_tabobj.txt)
     "won_tabobj_test": [],
+    # ComboBox as a whole Rust object (comboobj.rs) over the container goldens' world and a model of its parts (golden:
+    # rust/crates/ee_won/src/golden_comboobj.txt)
+    "won_comboobj_test": [],
+    # RootContainer as a whole Rust object (rootobj.rs) over the container goldens' world, the grabbers, the images and
+    # the window (golden: rust/crates/ee_won/src/golden_rootobj.txt)
+    "won_rootobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
