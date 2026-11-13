@@ -11001,7 +11001,7 @@ the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's 
 | Commit | What | C++ |
 |---|---|---|
 | e82b9142 | a loaded herd keeps its saved continent | +5 -2 |
-| dbf8c62a | saveload_expect: oracle seed 2 at 1000 s END | (tool) |
+| 530ab345 | saveload_expect: oracle seed 2 at 1000 s END | (tool) |
 | fff5f63f | cherry-pick of combat's 2e5e35a1: EEUGRust::Save hands the version | +1 -1 |
 | e5abdb28 | the load goals whole in Rust (EEUGLoadContainer, EEUGLoadGarrison, EEUGLoadTransport deleted) | +350 -1484, net -1134 |
 | 5e1f9035 | EEUGLocation's accessors, its members protected | +70 -60 |
