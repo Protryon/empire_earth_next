@@ -147,7 +147,7 @@ void MultiListItem::MouseExit(ListArea* inList)
     MultiListArea* anArea=static_cast<MultiListArea*>(inList);
     if(anArea->mMouseColItem!=NULL) {
         anArea->mMouseColItem->MouseExit(inList);
-        inList->mMouseItem=NULL;
+        inList->ClearMouseItem();
     }
 }
 // FUNCTION: WON 0x007029a0

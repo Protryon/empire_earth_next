@@ -2669,6 +2669,10 @@ public:
     bool ListFlagSet(int flags) { return this->mListFlags & flags ? true : false; }
     ListItem* GetSelItem() { return this->mSelItem; } // inline
     int GetPaintWidth() const { return this->mPaintWidth; } // the layout width the items paint to
+    void SetPaintWidth(int w) { this->mPaintWidth=w; } // a subclass's own paint
+    ListSortType GetSortType() const { return static_cast<ListSortType>(this->mSortType); }
+    void SetSortTypeOnly(ListSortType t) { this->mSortType=t; } // without sorting (MultiListArea::SetSortColumn)
+    void ClearMouseItem() { this->mMouseItem=NULL; } // the field only (not the virtual NotifyMouseItemGone)
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
     std::vector<SmartPtr<ListItem> > mItems;          // +0x110
