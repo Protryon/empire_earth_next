@@ -1011,3 +1011,24 @@ digest cancel
   chunk 7 result=0 bytes=15815 1f61b99cacebce48
   chunk 8 result=0 (differs by run)
   chunk 11 result=0 bytes=28 c68d714d6c92ada7
+step 78 check 0x12 0                       # UI shown: the framed view
+step 79 view
+  view 225,0,1024,606 hidden=0
+step 80 check 0x12 1                       # UI hidden: the full view
+step 81 view
+  view 0,0,0,0 hidden=1
+step 82 click quicksave
+step 83 editorsave
+editorsave
+  chunk 1 result=0 (differs by run)
+  chunk 2 result=0 bytes=20 c623ea254ef4a196
+  chunk 4 result=0 bytes=9166 d29570b652ea669e
+  chunk 3 result=0 bytes=28 fa99627bff0ee4e6
+  chunk 6 result=0 bytes=42 0eaa32a17da4eb22
+  chunk 10 result=0 bytes=28 e460b56b445b34d6
+  chunk 12 result=0 (differs by run)
+  chunk 5 result=0 (differs by run)
+  chunk 7 result=0 bytes=15815 1f61b99cacebce48
+  chunk 8 result=0 (differs by run)
+  chunk 11 result=0 bytes=28 c68d714d6c92ada7
+  rest 0

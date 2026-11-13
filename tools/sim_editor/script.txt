@@ -74,3 +74,10 @@ digest drop
 pickup @38,42                      # the house, then the move cancelled
 cancelmove
 digest cancel
+# the editor form's own events: the hide-UI box (EESEEHideUI posting EESEEChangeViewport), the quick save button
+check 0x12 0                       # UI shown: the framed view
+view
+check 0x12 1                       # UI hidden: the full view
+view
+click quicksave
+editorsave

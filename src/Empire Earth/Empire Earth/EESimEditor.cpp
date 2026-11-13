@@ -41,6 +41,11 @@
 //                                         mouse, a transport to board)
 //   drop [UNIT]                           EESEAMoveUnit::PutDown over the ghosts (UNIT as placeghost's)
 //   cancelmove                            EESEAMoveUnit::Cancel (the picked-up unit deleted)
+//   check ID 0|1                          the editor's check box ID set (UICheckBox::SetChecked: its trigger events
+//                                         fire, e.g. the hide-UI box's EESEEHideUI)
+//   view                                  the game view's rectangle, the editor's UI hidden flag
+//   click quicksave                       the toolbar's quick save button released (its EESEEQuickSave), then the
+//                                         written file's chunks (data\Scenarios\EEQuickSave.scn's)
 //   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
 //                                         the game's save chunks (the header, which holds the date, left out;
 //                                         four chunks differ by run: ChunkByRun)
@@ -179,6 +184,7 @@
 #include "lle/FSPersistent.h"
 #include "ee/EEUIFileComboBox.h"
 #include "ee/EEUnitClassIDs.h"
+#include "lle/UICheckBox.h"
 #include "ee/EESimEditor.h"
 
 // TEST ONLY: the time TMGetTime answers on this thread (-1: the clock; Time Manager.cpp)
@@ -771,6 +777,30 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 gWorld.mGhostUnitsLock->Enter();
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();
+            };
+        else if (c == "check")   // check ID 0|1
+            theCode = [=] {
+                UIControl* theBox = gUIManager->mScenarioEditorForm->GetControlById(strtoul(w[1].c_str(), NULL, 0));
+                static_cast<UICheckBox*>(theBox)->SetChecked(L(2) != 0);
+            };
+        else if (c == "view")
+            theCode = [=, &theOutput] {
+                const GERectangle& r = gViewport.GetViewRectangle();
+                char theText[160];
+                snprintf(theText, sizeof(theText), "  view %g,%g,%g,%g hidden=%d", (double)r.GetLeft(), (double)r.GetTop(),
+                         (double)r.GetRight(), (double)r.GetBottom(), gUIManager->mScenarioEditorForm->mIsUIHidden ? 1 : 0);
+                theOutput.push_back(theText);
+            };
+        else if (c == "click")   // click quicksave
+            theCode = [=] {
+                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                UIControl* theButton = theEditor->mQuickSaveButton;
+                theButton->GetTriggerEvent(kControlTriggerButtonUp)->ProcessEvent(theEditor, theButton);
+            };
+        else if (c == "editorsave")   // the editor's own quick save file (EEQuickSave + the scenario extension)
+            theCode = [=, &theOutput] {
+                theOutput.push_back("editorsave");
+                FileDigest(GetSaveTextName(UString("EEQuickSave") + gScenarioExtension, true), theOutput);
             };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
