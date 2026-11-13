@@ -198,6 +198,11 @@ class Cache:
             if all(self.file_hash(self.detokenize(p)) == h for p, h in entry["deps"]):
                 src, tmp = self._opath(entry["obj"]), None
                 try:
+                    if src.stat().st_size == 0:   # a truncated store write (a full disk): a miss, compiled again
+                        continue
+                except OSError:
+                    continue
+                try:
                     pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
                     tmp = pathlib.Path(f"{obj}.{uuid.uuid4().hex}.tmp")
                     shutil.copyfile(src, tmp)
