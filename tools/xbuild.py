@@ -398,6 +398,10 @@ WON_TESTS = {
     # and reply dispatch; its units (won_ops_test's, WONServer's ServerConnection, WONRouting's but the smart
     # connection) are set below the table
     "won_servconn_test": [],
+    # SmartRoutingConnection (the client, group and member model, the ignore list, the chat commands, the snapshots)
+    # over 127.0.0.1 with a routing server stand-in (golden: rust/crates/ee_won/src/golden_smartroute.txt, recorded
+    # over the C++ class); its units (won_servconn_test's, the smart connection's, StringUtil) are set below the table
+    "won_smartroute_test": [],
     # the LAN lobby's messages, the original's WriteBuffer statements against ee_won's lan module
     "won_lan_test": [],
     # the lobby's game room (StagingLogic, LobbyGame's rules and summary), the original's statements against ee_won's
@@ -660,6 +664,9 @@ WON_TESTS["won_servconn_test"] = [*WON_TESTS["won_ops_test"],
                                   *[WON_SRC / "WONServer" / f for f in ("ServerConnection.cpp",
                                                                        "ServerConnectionDefaults.cpp")],
                                   *[f for f in sorted((WON_SRC / "WONRouting").glob("Routing*.cpp"))]]
+WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
+                                    *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
+                                    WON_SRC / "WONCommon" / "StringUtil.cpp"]
 
 
 def build_won_test(t, name, units):
