@@ -4967,6 +4967,55 @@ took space tasks. The C++ won 3, 1 close (4-0 before).
 0 script errors. Determinism is identical at the WW2 start and on Planets Earth (seeds 2 and 5, --repeat 2).
 
 2d is done. Next is 2e: the allies (AttackPlayer / DefendPlayer, AidAllies).
+### 8.76 Porting everything, 2e: the allies (2026-11-13, EE-SIM)
+
+The C++ classic's ally code is small:
+- AidAllies;
+- AttackPlayer / DefendPlayer, which answer the attack-players order (EEAttackPlayers, a player's hot-key call);
+- the allies' towns in two sub-group checks (MoveToNearestTown, IsAwayFromTowns). These stand on lib.groups'
+  movement and are not ported.
+
+EECPDiplomacyManager is empty in the original, and the interaction manager is chat only.
+
+- **AidAllies** (army.lua `aid_allies`, every defence update):
+  - The allies are taken in a shuffled order.
+  - The first one with a threatened town, or else with a town of more than 2 buildings and no package, gets an aid
+    package, while the unit allowance holds. One package per update.
+  - The C++'s threat test passes for every ally, since an ally is no enemy. A human ally's package is sent at once.
+  - The allies' towns are their buildings (allied units are always seen), clustered as the own. The packages run on
+    the own towns' machinery: `town_by_id` finds allied towns too.
+- **AttackPlayer / DefendPlayer.** For a script seat, the order is now an event (`attack_player` / `defend_player`,
+  AI_LUA_UNITS) instead of a call into the seat's C++ combat manager, which is not run for it. classic_lua answers:
+  - the caller's most valuable building, seen or remembered, is attacked or defended by every group, plus a new
+    group;
+  - the aid timers are halved.
+
+  This is untested: EE-SIM has no human to give the order.
+- **A fix on the way.** WonderStarted ran the C++ RespondToUnit for script seats too. It made C++ groups that were
+  never updated. A script seat now answers only from `ai.wonders` (§8.75).
+
+**Bench:** 4 players in two teams, each a port and a C++ (seats 1+2 against 3+4), Small, balanced, 8 seeds, 90
+minutes, against the same scripts before 2e:
+
+| | aid packages for allies | the port's C++ ally alive | the other team's C++ alive | the ports alive |
+|---|---|---|---|---|
+| before | 0 | 7/8 | 8/8 | 7/8, 8/8 |
+| after | 50 | 6/8 | 8/8 | 7/8, 8/8 |
+
+End citizens and armies are within a few units of each other: the port's ally has 60.6 citizens against 58.1, and
+an army of 0.6 against 1.2. Within noise.
+
+0 script errors. Determinism in the team game (seeds 2 and 5, --repeat 2, aid packages in both) is identical.
+
+2e is done. 2f (the rest) is next:
+- CheckRaids / Retaliate;
+- BuildUp (deathmatch);
+- EpochReached's WW1 groups;
+- Attack's flares and covered landings;
+- the capitols' cloaking;
+- the ChooseUnitsToKill rooms;
+- GiveImprovements;
+- the scenario tasks.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
