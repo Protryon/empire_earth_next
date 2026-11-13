@@ -957,6 +957,15 @@ from data, so that a script can make its decisions with the same numbers:
 - The class record has `flight_time` (an aircraft's fuel in ms; 0: no limit) and an own unit's record `base` (the
   airport or carrier an aircraft returns to): the classic air sub-group's reach (EECPASGAir::CanReach, flight seconds
   x speed x 0.9 from the base).
+- `ai.wonders()` -> `{victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built, x,
+  y}}}`: the wonders as the game announces them and the wonder countdown shows them; a wonder's tile only where the
+  player has explored it (or with `sees_all`). The classic's wonder race (EECPCombatManager::RespondToUnit,
+  UpdateWonderRace).
+- The class record has `planet_spaceship` (category 0x22: the classic's space fighter sub-group; the other space
+  units take its spaceship sub-group). `ai.attack` takes a missile base holding its ICBM (the ICBM's family): the
+  base launches it, as a human's attack order does (the classic's ICBM).
+- `lib.groups`: a group with `can_hurt = true` gives its units only targets their weapons hurt (the classic's
+  submarines).
 - `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
   (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
   (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.
