@@ -12724,3 +12724,107 @@ members class by class, so the readers moved with them.
   171, calamity 183, scenario 16 equal to their goldens (scenario seeds 2-7 also PASS, 44 digests, on the coverage
   build); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS, no load
   fault (every save and load of a location goal goes through the new `Save`/`Load`/`RepairPointers`).
+
+## LLE Network Engine, round 1: the census, NEMessageManager whole in Rust (ee_net msgmgr.rs; branch rust-ne1, 2026-11-13)
+
+The lane's goal is the whole Low-Level Engine in Rust as whole classes; this round's part is the Network Engine
+(`src/Low-Level Engine/Network Engine`, `include/lle/NE*.h`). Already Rust before it: the TCP transport
+(`ee_net_tcp`, R3.3) and the 28 engine messages' wire codec (`ee_netmsg` engine.rs).
+
+**The census** (at e551a6d7; code lines = neither blank nor comment; callers = files outside the Network Engine and
+its headers that name the class):
+
+| Class (unit) | .cpp code | header code | Not a one-line forwarder | Callers | Subclasses | Notes |
+|---|---|---|---|---|---|---|
+| NEMessage + 27 engine messages (NEMessage.cpp) | 897 | 548 | ~600 (ctors, IsResponse, Execute, the factory; the codec is Rust) | 156 | EEMessage's 104 game classes | the hub type of both lockstep sides; next to last |
+| NESynchronousServer | 1,184 | 292 | ~1,100 (ctor, three threads, tuning, OOS, booting) | 36 | EEServer | 19 pure virtuals the game implements |
+| NESynchronousClient | 544 | 130 | ~500 (two threads, connect, tick dispatch) | 29 | EEClient | 14 pure virtuals |
+| NEMessageManager | 590 | 79 | all | 0 (NESynchronousServer only, as friend) | none | **moved this round** |
+| NEProtocol + NEConnection + NEServer | 196 | 154 | ~120 (ctor's GetEntry table, byte counters, Accept/Close wrappers); NEConnection/NEServer all inline forwarders | 8 | none | the plug-in's entry table over ee_net_tcp |
+| NEProtocolConfiguration | 282 | 44 | all | 0 in the game (the TCP shim's gConfiguration and tcp_test only; no caller of Get/SetConfiguration) | none | a 0-parameter table nobody reads |
+| NERecordPlayback | 235 | 48 | all | 3 (EEMessage's slow/normal playback, the mode tests) | none | always in pass mode in a normal game |
+| NELagLossSimulator | 189 | 61 | all | 0 outside the client | none | off unless enabled (no caller enables it) |
+| NETimestampedMessage | 43 | 19 | 3 functions | 0 outside NELagLossSimulator / NERecordPlayback | none | goes with those two |
+| NESynchronousCommunications | 51 | 62 | 2 (the byte-rate meters) | 138 (gCommunications) | the server, the client | abstract base; stays the type callers hold |
+| NEPlayer | 0 | 23 | (all inline) | 0 (included, never used) | none | dead |
+| Network Engine.cpp (NEInitialize/NEShutdown) | 30 | - | 2 | 2 | - | |
+| TCP Protocol.cpp | 261 | - | the NPIM shim (UString/TSEvent conversion) | - | - | ee_net_tcp behind it |
+
+Order, best deletion-to-risk first, bottom-up: NEMessageManager (done); NEPlayer (dead); NEProtocolConfiguration
+(no game reader: the plug-in's table can become a Rust value with Get/SetConfiguration's two entries); NETimestampedMessage
+with NELagLossSimulator and NERecordPlayback (client-side queues and a thread each, three callers); NEProtocol's table
+(the plug-in is Rust: the entry table can call ee_net_tcp directly); then the client and the server state machines
+(threads, lockstep tuning: RUST_PLAN 2.1), and NEMessage last (156 callers, the game's base class).
+
+**The move** (`rust/crates/ee_net`, a new crate: `msgmgr.rs`, `rlock.rs`, `ffi.rs`): the ring of the last 50 sent
+messages (each message held by reference, the slots that still owe it an answer, its time, its count of answers
+owed), the clients (ten response times and their average, the CPU load and its 240-entry history, the lowest tick),
+the per-slot transfer queues (each transfer's own copy of the file spec, its state, bytes, retries, abort flag) and
+the counters, with every method of NEMessageManager.cpp and the server's `GetSlowestClientCPU` (which read the
+clients). NEMessageManager.cpp and lle/NEMessageManager.h are deleted; NESynchronousServer holds an `EeNetMsgMgr*`
+and calls `ee_net_mm_*`; its static `MessageManagerHost` answers the 28 ops (`EeNetMmOp`: the messages' Reference,
+Dereference, type, IsResponse, slot, export-and-send; the server's three responses; the server members the manager
+read and wrote; its two events; TMGetTime; HandleXferStatus; an NEMXferMessage sent by XferSendTo; the file spec's
+copy, free, open, close, length, read and name).
+
+- **Locks.** The original's two critical sections (Win32's, re-entrant) are two re-entrant locks (`rlock.rs`), held
+  where the original held them: `LogResponse` and `StoreSentMessage` across their message calls, the transfer pass
+  across its sends and status reports. The re-entrance is real: a transfer's status reaches the game
+  (`EEServer::HandleXferStatus` -> `ProcessLocalUserInput` -> ... `ProcessSystemMessage`), which may queue another
+  transfer on the same thread. The state the original touched without a lock (the clients, the ring's slot maps in
+  Send/Resend/RegisterSlot) is touched under its lock here, never across a call out: no Rust reference lives across a
+  host call (each borrow is a closure over the state that makes no call).
+- **Iteration across calls out.** Send, Resend and the transfer pass walked `std::map`s while calling out; the Rust
+  walks by key (the next key after the last one visited, read again after each call), which is what the original's
+  iterator did for every change a call could make (values changed, keys added) and is defined where the original's
+  was not (a key erased under it).
+- **Behaviour changes, on undefined or crashing paths only:** `WhoHasNotRespondedNext` from a slot that is not
+  registered answers none (the original stepped past `end()`); a transfer whose status report removed its queue or
+  itself stops that slot's step (the original used the freed objects); a transfer's start block holds any file name
+  (the original copied it into a 1 KB stack buffer); a resend of a ring entry that never held a message (after
+  `SetMessageManagerCurrentMessageNumber` moved the number past the stored ones) sends nothing (the original sent
+  NULL); transfers still queued when the server is freed release their file specs (the original leaked them). The
+  32-bit `unsigned long` arithmetic (times, ticks, numbers) is `u32` wrapping as on Windows.
+- **The golden** (`tests/net/ne_msgmgr_test.cpp`, `python -I tools/xbuild.py nettest`, new): the original
+  NEMessageManager.cpp, unmodified (`tests/net/orig/NEMessageManager.cpp`, with its header), compiled over stand-in
+  headers in `tests/net/orig/lle/` (a quoted include finds the includer's directory first): a world of messages (a
+  type, a key, a slot, references; a response answers the type before it with the same key), files (name, length,
+  position), events, the protocol server and the server members, each effect a trace line and each answer (a send's
+  result, a file's open and read) from the side's random stream. The Rust side's host answers with the same world
+  objects, statement for statement as NESynchronousServer's host. 20,000 sequences of 80 random steps (sends,
+  sends to one slot, send-to-all-and-wait, responses, response times, queries, resends, the lag walk, transfers
+  queued, aborted and advanced, slots registered and removed, the clock and server members changed) and a teardown
+  (every slot removed, the manager freed, every message given back): 8,236,415 trace lines, all equal. Mutations of
+  the Rust:
+
+  | Mutation | Sequences differing |
+  |---|---|
+  | LogResponse marks every matching entry (no break) | 276 |
+  | a broadcast owes one answer fewer | 8,327 |
+  | the response-time average over nine | 1 |
+  | the transfer status every second instead of two | 444 |
+  | the lag walk's next from the previous slot itself | 11,787 |
+  | an unregistered slot's answered entry counted out too | 346 |
+
+  The retry limit (1,000 failed starts before an abort) is out of the golden's reach. The first driver hung on the
+  "next" mutation (the walk never advanced and the trace grew to 10 GB): the walk is now capped at six steps.
+- **Cargo:** the Rust side's host also records each op with its arguments and answer (messages and files by world
+  id); the first 100 sequences are `golden_msgmgr.txt` (0.9 MB), which `tests.rs` replays against the Rust alone
+  (each op must be the next recorded one). The replay fails on the broadcast and status-interval mutations; a unit
+  test covers the ring's 50-entry window, the lag walk from an unknown slot and the release of queued transfers.
+- **What runs it.** Every game runs the server's manager: the single-player game's local server sends each
+  communications tick through `Send` (the server's own slot registered, the tick handled as its own message, its
+  response logged), so the oracle exercises the ring, the response times and the tick responses: seeds 2-7 identical
+  to `ref`. The clients' slots, resends, the lag report, booting, send-to-all-and-wait (pause, save) and file
+  transfers (a saved game sent to joining players) run only in a LAN game: `lan_game.py` (see the gates table) and,
+  for transfers and pausing, only the golden unless a person loads a saved multiplayer game.
+- **NEPlayer deleted** (its own commit): the header-only class had no user; four units included it.
+- **NEProtocolConfiguration deleted** (its own commit): the game never called `NEProtocol::GetConfiguration` /
+  `SetConfiguration`; the class's only instance was the TCP shim's `gConfiguration(0, 1)`, a table of no parameters
+  handed out as copies to nobody. The class, the two NPIM entries (`NPIMGetConfiguration`, `NPIMSetConfiguration`),
+  NEProtocol's two members and lookups, and six includes went; `tcp_test` links without the unit.
+- **Commits, net C++ over src + include (without include/rust):** NEMessageManager -804 (+180, -984); NEPlayer -33;
+  NEProtocolConfiguration -429 (+4, -433). Round: -1,266.
+- **Lessons:** the Bash tool turns a two-character `\n` inside a heredoc into a newline: Python edit scripts with
+  escapes go through the Write tool as a file. A golden driver that loops until a value changes must cap the loop: a
+  mutation that stops the change otherwise eats the machine's memory.
