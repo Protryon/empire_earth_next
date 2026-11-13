@@ -60,40 +60,16 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEAMouseClick.h"
 #include "ee/EESEAMouseClick.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a747d
 // Applies the queued click message: selects only the unit, toggles it, clears the selection or adds the unit;
-// refreshes the unit tab and drops the message
+// refreshes the unit tab and drops the message (ee_screens editor_actions.rs)
 void EESEAMouseClick::Virtual4()
 {
     if (this->mMessage == NULL)
         return;
-    EEUnit* theUnit;
-    switch (this->mMessage->GetType()) {
-    case kMessageSelectUnit:
-        gUIManager->mScenarioEditorForm->ClearSelection();
-        theUnit = gWorld.GetUnit(static_cast<EEMAddUnitToSelectedGroup*>(this->mMessage)->mUnitID);
-        if (theUnit != NULL)
-            gUIManager->mScenarioEditorForm->SelectUnit(theUnit);
-        break;
-    case kMessageAddUnitToSelectedGroup:
-        theUnit = gWorld.GetUnit(static_cast<EEMAddUnitToSelectedGroup*>(this->mMessage)->mUnitID);
-        if (theUnit != NULL && !theUnit->mIsEditorSelected)
-            gUIManager->mScenarioEditorForm->SelectUnit(theUnit);
-        else
-            gUIManager->mScenarioEditorForm->DeselectUnit(theUnit);
-        break;
-    case kMessageUnselectAllUnits:
-        gUIManager->mScenarioEditorForm->ClearSelection();
-        break;
-    case kMessageAlwaysAddUnitToSelectedGroup:
-        theUnit = gWorld.GetUnit(static_cast<EEMAddUnitToSelectedGroup*>(this->mMessage)->mUnitID);
-        if (theUnit != NULL && !theUnit->mIsEditorSelected)
-            gUIManager->mScenarioEditorForm->SelectUnit(theUnit);
-        break;
-    }
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->UpdateSelection();
-    this->mMessage->Dereference();
+    ee_screens_seu_click(this->mMessage);
     this->mMessage = NULL;
 }
 

@@ -312,6 +312,286 @@ pub fn area_rectangle(start_x: i32, start_y: i32, end_x: i32, end_y: i32) -> (i3
     (left, top, right, bottom)
 }
 
+// ---- group 2: the selection's actions (the click, the lasso, the rotation, the deletion)
+
+/// The selection host's ops (`ee_screenscpp_seu(op, unit, a, f)`; a unit is an `EEUnit*`, 0 for none).
+/// -> the editor's selection count.
+pub const EE_SCREENS_SEU_SELECTED_COUNT: u32 = 1;
+/// -> the selection's unit a (`GetSelectedUnit`).
+pub const EE_SCREENS_SEU_SELECTED: u32 = 2;
+/// -> the selection's first unit (`GetFirstSelectedUnit`, 0 when none).
+pub const EE_SCREENS_SEU_FIRST_SELECTED: u32 = 3;
+/// `ClearSelection`.
+pub const EE_SCREENS_SEU_CLEAR: u32 = 4;
+/// `DeselectFirstUnit`.
+pub const EE_SCREENS_SEU_DESELECT_FIRST: u32 = 5;
+/// `SelectUnit(unit)`.
+pub const EE_SCREENS_SEU_SELECT: u32 = 6;
+/// `DeselectUnit(unit)` (the unit may be NULL, as the click's toggle passes it).
+pub const EE_SCREENS_SEU_DESELECT: u32 = 7;
+/// The unit tab's `UpdateSelection`.
+pub const EE_SCREENS_SEU_UPDATE_SELECTION: u32 = 8;
+/// -> the world's unit of id a (`gWorld.GetUnit`).
+pub const EE_SCREENS_SEU_UNIT: u32 = 9;
+/// -> the unit of id a of the player whose index is `unit` (`gWorld.GetPlayer(index)->GetUnit(id)`).
+pub const EE_SCREENS_SEU_PLAYER_UNIT: u32 = 10;
+/// -> the unit's editor selection flag.
+pub const EE_SCREENS_SEU_IS_SELECTED: u32 = 11;
+/// -> whether the unit has a complex unit.
+pub const EE_SCREENS_SEU_HAS_COMPLEX: u32 = 12;
+/// -> whether the unit's class turns (angular acceleration above 0).
+pub const EE_SCREENS_SEU_TURNS: u32 = 13;
+/// The complex unit turned to the yaw f (its location's orientation, pitch and roll 0).
+pub const EE_SCREENS_SEU_ROTATE: u32 = 14;
+/// -> whether the unit is a path point.
+pub const EE_SCREENS_SEU_PATH_POINT: u32 = 15;
+/// -> whether the unit is off the map (its tile -10000, -10000).
+pub const EE_SCREENS_SEU_OFF_MAP: u32 = 16;
+/// -> whether the unit is on a tile's list (`mTileNode`: a complex unit's).
+pub const EE_SCREENS_SEU_ON_TILE: u32 = 17;
+/// A simple unit removed: a resource emptied, killed, taken from its player.
+pub const EE_SCREENS_SEU_REMOVE_SIMPLE: u32 = 18;
+/// -> the complex unit's player (`mPlayer`, an `EEPlayer*`).
+pub const EE_SCREENS_SEU_PLAYER: u32 = 19;
+/// An airport building leaves its player's air traffic list (when the unit is a land building with air traffic).
+pub const EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC: u32 = 20;
+/// -> the complex unit's cargo count.
+pub const EE_SCREENS_SEU_CARGO_COUNT: u32 = 21;
+/// The complex unit's cargo killed (`KillCargo`).
+pub const EE_SCREENS_SEU_KILL_CARGO: u32 = 22;
+/// The complex unit killed and taken from the player a (an `EEPlayer*`: the first part's).
+pub const EE_SCREENS_SEU_KILL_PART: u32 = 23;
+/// -> the part after the complex unit (`mNextPart`).
+pub const EE_SCREENS_SEU_NEXT_PART: u32 = 24;
+/// -> the transport or building carrying the unit (`mContainer`).
+pub const EE_SCREENS_SEU_CONTAINER: u32 = 25;
+/// -> the container's cargo a.
+pub const EE_SCREENS_SEU_CARGO: u32 = 26;
+/// The container's cargo a unloaded at the container's location.
+pub const EE_SCREENS_SEU_UNLOAD: u32 = 27;
+/// -> the message's type (`unit`: an `EEMessage*`).
+pub const EE_SCREENS_SEU_MESSAGE_TYPE: u32 = 28;
+/// -> the message's unit id (an `EEMAddUnitToSelectedGroup`'s or `EEMSelectUnit`'s).
+pub const EE_SCREENS_SEU_MESSAGE_UNIT: u32 = 29;
+/// The message's reference released.
+pub const EE_SCREENS_SEU_MESSAGE_RELEASE: u32 = 30;
+/// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
+pub const EE_SCREENS_SEU_MESSAGE_UNIT_TYPE: u32 = 31;
+
+/// The message types the click and the lasso apply (`EEMessageID.h`).
+pub const EE_SCREENS_SEU_MSG_SELECT_UNIT: usize = 0x48;
+pub const EE_SCREENS_SEU_MSG_ADD_UNIT: usize = 0x49;
+pub const EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT: usize = 0x76;
+pub const EE_SCREENS_SEU_MSG_UNSELECT_ALL: usize = 0x4b;
+pub const EE_SCREENS_SEU_MSG_SELECT_UNITS: usize = 0x4e;
+pub const EE_SCREENS_SEU_MSG_ADD_UNITS: usize = 0x4f;
+pub const EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS: usize = 0x50;
+
+/// The selection host.
+pub trait SeuHost {
+    fn op(&mut self, op: u32, unit: usize, a: isize, f: f32) -> usize;
+    /// The ids of the units of `unit_type` picked in the screen rectangle (`gUnitPicker.PickUnitsInRectangle`; the
+    /// rectangle a `GERectangle*`).
+    fn pick(&mut self, rectangle: usize, unit_type: i32) -> Vec<u32>;
+}
+
+fn seu<H: SeuHost + ?Sized>(h: &mut H, op: u32, unit: usize) -> usize {
+    h.op(op, unit, 0, 0.0)
+}
+
+/// `EESEAMouseClick::Virtual4`: the click's message applied (select only the unit, toggle it, clear, always add),
+/// the unit tab refreshed, the message released (the caller forgets it).
+pub fn apply_click<H: SeuHost + ?Sized>(h: &mut H, message: usize) {
+    if message == 0 {
+        return;
+    }
+    let unit_of = |h: &mut H| {
+        let id = seu(h, EE_SCREENS_SEU_MESSAGE_UNIT, message);
+        h.op(EE_SCREENS_SEU_UNIT, 0, id as isize, 0.0)
+    };
+    match seu(h, EE_SCREENS_SEU_MESSAGE_TYPE, message) {
+        EE_SCREENS_SEU_MSG_SELECT_UNIT => {
+            seu(h, EE_SCREENS_SEU_CLEAR, 0);
+            let unit = unit_of(h);
+            if unit != 0 {
+                seu(h, EE_SCREENS_SEU_SELECT, unit);
+            }
+        }
+        EE_SCREENS_SEU_MSG_ADD_UNIT => {
+            let unit = unit_of(h);
+            if unit != 0 && seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) == 0 {
+                seu(h, EE_SCREENS_SEU_SELECT, unit);
+            } else {
+                seu(h, EE_SCREENS_SEU_DESELECT, unit);
+            }
+        }
+        EE_SCREENS_SEU_MSG_UNSELECT_ALL => {
+            seu(h, EE_SCREENS_SEU_CLEAR, 0);
+        }
+        EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT => {
+            let unit = unit_of(h);
+            if unit != 0 && seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) == 0 {
+                seu(h, EE_SCREENS_SEU_SELECT, unit);
+            }
+        }
+        _ => {}
+    }
+    seu(h, EE_SCREENS_SEU_UPDATE_SELECTION, 0);
+    seu(h, EE_SCREENS_SEU_MESSAGE_RELEASE, message);
+}
+
+/// `EESEALasso::SelectUnits`: the units of the type picked in the rectangle selected when not yet (unless only
+/// deselecting), else deselected when asked.
+pub fn lasso_select<H: SeuHost + ?Sized>(
+    h: &mut H,
+    rectangle: usize,
+    unit_type: i32,
+    deselect: bool,
+    deselect_only: bool,
+) {
+    for id in h.pick(rectangle, unit_type) {
+        let unit = h.op(EE_SCREENS_SEU_UNIT, 0, id as isize, 0.0);
+        if unit == 0 {
+            continue;
+        }
+        if seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) == 0 && !deselect_only {
+            seu(h, EE_SCREENS_SEU_SELECT, unit);
+        } else if deselect {
+            seu(h, EE_SCREENS_SEU_DESELECT, unit);
+        }
+    }
+}
+
+/// `EESEALasso::Virtual4`: the lasso's message applied (replace the selection, add, or toggle the units in its
+/// rectangle; `rectangle` is the message's), the unit tab refreshed, the message released.
+pub fn apply_lasso<H: SeuHost + ?Sized>(h: &mut H, message: usize, rectangle: usize) {
+    if message == 0 {
+        return;
+    }
+    let unit_type = seu(h, EE_SCREENS_SEU_MESSAGE_UNIT_TYPE, message) as i32;
+    match seu(h, EE_SCREENS_SEU_MESSAGE_TYPE, message) {
+        EE_SCREENS_SEU_MSG_SELECT_UNITS => {
+            seu(h, EE_SCREENS_SEU_CLEAR, 0);
+            lasso_select(h, rectangle, unit_type, false, false);
+        }
+        EE_SCREENS_SEU_MSG_ADD_UNITS => lasso_select(h, rectangle, unit_type, false, false),
+        EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS => lasso_select(h, rectangle, unit_type, true, false),
+        _ => {}
+    }
+    seu(h, EE_SCREENS_SEU_UPDATE_SELECTION, 0);
+    seu(h, EE_SCREENS_SEU_MESSAGE_RELEASE, message);
+}
+
+/// `EESEARotateUnits::Virtual4`: every selected unit that can turn turned to the yaw.
+pub fn rotate_selection<H: SeuHost + ?Sized>(h: &mut H, yaw: f32) {
+    let count = seu(h, EE_SCREENS_SEU_SELECTED_COUNT, 0);
+    for k in 0..count {
+        let unit = h.op(EE_SCREENS_SEU_SELECTED, 0, k as isize, 0.0);
+        if seu(h, EE_SCREENS_SEU_HAS_COMPLEX, unit) == 0 || seu(h, EE_SCREENS_SEU_TURNS, unit) == 0 {
+            continue;
+        }
+        h.op(EE_SCREENS_SEU_ROTATE, unit, 0, yaw);
+    }
+}
+
+/// What a delete action removes: one unit of a player (`EESEADeleteUnit(id)`) or the selection, whole or its first
+/// unit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SeuDelete {
+    Unit { player: i32, id: u32 },
+    Selection { group: bool },
+}
+
+/// `EESEADeleteUnit::Virtual4`: the units gathered (the one unit, deselected; or the selection, cleared, or its
+/// first unit, deselected), path points first; off-map units skipped, units on a tile removed part by part
+/// (`DeleteComplexUnit`), the others emptied of resources and killed; the unit tab refreshed when a selected
+/// transport changed.
+pub fn delete_units<H: SeuHost + ?Sized>(h: &mut H, what: SeuDelete) {
+    let mut update = false;
+    let count = seu(h, EE_SCREENS_SEU_SELECTED_COUNT, 0);
+    let mut units = Vec::new();
+    match what {
+        SeuDelete::Unit { player, id } => {
+            let unit = h.op(EE_SCREENS_SEU_PLAYER_UNIT, player as usize, id as isize, 0.0);
+            units.push(unit);
+            if seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) != 0 {
+                seu(h, EE_SCREENS_SEU_DESELECT, unit);
+            }
+        }
+        SeuDelete::Selection { group: true } if count > 0 => {
+            for k in 0..count {
+                let unit = h.op(EE_SCREENS_SEU_SELECTED, 0, k as isize, 0.0);
+                if unit != 0 {
+                    units.push(unit);
+                }
+            }
+            seu(h, EE_SCREENS_SEU_CLEAR, 0);
+        }
+        SeuDelete::Selection { group: false } if count > 0 => {
+            let unit = seu(h, EE_SCREENS_SEU_FIRST_SELECTED, 0);
+            if unit != 0 {
+                units.push(unit);
+            }
+            seu(h, EE_SCREENS_SEU_DESELECT_FIRST, 0);
+        }
+        SeuDelete::Selection { .. } => {}
+    }
+    // path points first (the original's std::sort with that order; ties in their gathered order)
+    let mut keyed: Vec<(usize, bool)> =
+        units.into_iter().map(|u| (u, seu(h, EE_SCREENS_SEU_PATH_POINT, u) != 0)).collect();
+    keyed.sort_by_key(|&(_, path_point)| !path_point);
+    for (unit, _) in keyed {
+        if seu(h, EE_SCREENS_SEU_OFF_MAP, unit) != 0 {
+            continue;
+        }
+        if seu(h, EE_SCREENS_SEU_ON_TILE, unit) != 0 {
+            delete_complex_unit(h, unit, &mut update);
+        } else {
+            seu(h, EE_SCREENS_SEU_REMOVE_SIMPLE, unit);
+        }
+    }
+    if update {
+        seu(h, EE_SCREENS_SEU_UPDATE_SELECTION, 0);
+    }
+}
+
+/// `DeleteComplexUnit`: an airport leaves the air traffic, then each part (the first part's player for all): its
+/// cargo killed, out of its container, killed.
+fn delete_complex_unit<H: SeuHost + ?Sized>(h: &mut H, first: usize, update: &mut bool) {
+    let player = seu(h, EE_SCREENS_SEU_PLAYER, first);
+    seu(h, EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC, first);
+    let mut unit = first;
+    while unit != 0 {
+        if seu(h, EE_SCREENS_SEU_CARGO_COUNT, unit) > 0 {
+            seu(h, EE_SCREENS_SEU_KILL_CARGO, unit);
+            if seu(h, EE_SCREENS_SEU_IS_SELECTED, unit) != 0 {
+                *update = true;
+            }
+        }
+        remove_from_container(h, unit, update);
+        h.op(EE_SCREENS_SEU_KILL_PART, unit, player as isize, 0.0);
+        unit = seu(h, EE_SCREENS_SEU_NEXT_PART, unit);
+    }
+}
+
+/// `RemoveFromContainer`: the unit unloaded from the transport carrying it (the cargo count read again each turn).
+fn remove_from_container<H: SeuHost + ?Sized>(h: &mut H, unit: usize, update: &mut bool) {
+    let container = seu(h, EE_SCREENS_SEU_CONTAINER, unit);
+    if container == 0 {
+        return;
+    }
+    let mut k = 0;
+    while k < seu(h, EE_SCREENS_SEU_CARGO_COUNT, container) {
+        if h.op(EE_SCREENS_SEU_CARGO, container, k as isize, 0.0) == unit {
+            h.op(EE_SCREENS_SEU_UNLOAD, container, k as isize, 0.0);
+            if seu(h, EE_SCREENS_SEU_IS_SELECTED, container) != 0 {
+                *update = true;
+            }
+        }
+        k += 1;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -503,5 +783,209 @@ mod tests {
         assert_eq!(area_rectangle(3, 4, 9, 12), (3, 4, 9, 12));
         assert_eq!(area_rectangle(9, 12, 3, 4), (3, 4, 9, 12));
         assert_eq!(area_rectangle(9, 4, 3, 12), (3, 4, 9, 12));
+    }
+
+    // ---- group 2
+
+    #[derive(Clone, Default)]
+    struct U {
+        selected: bool,
+        complex: bool,
+        turns: bool,
+        path: bool,
+        off_map: bool,
+        on_tile: bool,
+        player: usize,
+        cargo: Vec<usize>,
+        container: usize,
+        next: usize,
+    }
+
+    /// Units 1.. by handle; a message is 1000 + type with the unit id in `msg_unit`.
+    #[derive(Default)]
+    struct Sel {
+        units: Vec<U>,
+        selection: Vec<usize>,
+        msg_unit: usize,
+        picked: Vec<u32>,
+        log: Vec<String>,
+    }
+
+    impl Sel {
+        fn with(n: usize) -> Self {
+            Sel { units: vec![U::default(); n + 1], ..Sel::default() }
+        }
+    }
+
+    impl SeuHost for Sel {
+        fn op(&mut self, op: u32, unit: usize, a: isize, f: f32) -> usize {
+            let u = |s: &Sel| s.units[unit].clone();
+            match op {
+                EE_SCREENS_SEU_SELECTED_COUNT => self.selection.len(),
+                EE_SCREENS_SEU_SELECTED => self.selection[a as usize],
+                EE_SCREENS_SEU_FIRST_SELECTED => self.selection.first().copied().unwrap_or(0),
+                EE_SCREENS_SEU_UNIT => {
+                    if (a as usize) < self.units.len() {
+                        a as usize
+                    } else {
+                        0
+                    }
+                }
+                EE_SCREENS_SEU_PLAYER_UNIT => a as usize,
+                EE_SCREENS_SEU_IS_SELECTED => usize::from(u(self).selected),
+                EE_SCREENS_SEU_HAS_COMPLEX => usize::from(u(self).complex),
+                EE_SCREENS_SEU_TURNS => usize::from(u(self).turns),
+                EE_SCREENS_SEU_PATH_POINT => usize::from(u(self).path),
+                EE_SCREENS_SEU_OFF_MAP => usize::from(u(self).off_map),
+                EE_SCREENS_SEU_ON_TILE => usize::from(u(self).on_tile),
+                EE_SCREENS_SEU_PLAYER => u(self).player,
+                EE_SCREENS_SEU_CARGO_COUNT => u(self).cargo.len(),
+                EE_SCREENS_SEU_CARGO => u(self).cargo[a as usize],
+                EE_SCREENS_SEU_CONTAINER => u(self).container,
+                EE_SCREENS_SEU_NEXT_PART => u(self).next,
+                EE_SCREENS_SEU_MESSAGE_TYPE => unit - 1000,
+                EE_SCREENS_SEU_MESSAGE_UNIT => self.msg_unit,
+                EE_SCREENS_SEU_MESSAGE_UNIT_TYPE => 7,
+                EE_SCREENS_SEU_SELECT => {
+                    self.units[unit].selected = true;
+                    self.selection.push(unit);
+                    self.log.push(format!("select {unit}"));
+                    0
+                }
+                EE_SCREENS_SEU_DESELECT => {
+                    if unit != 0 {
+                        self.units[unit].selected = false;
+                    }
+                    self.selection.retain(|&x| x != unit);
+                    self.log.push(format!("deselect {unit}"));
+                    0
+                }
+                EE_SCREENS_SEU_CLEAR => {
+                    for &x in &self.selection {
+                        self.units[x].selected = false;
+                    }
+                    self.selection.clear();
+                    self.log.push("clear".into());
+                    0
+                }
+                EE_SCREENS_SEU_DESELECT_FIRST => {
+                    let x = self.selection.remove(0);
+                    self.units[x].selected = false;
+                    self.log.push("deselect first".into());
+                    0
+                }
+                EE_SCREENS_SEU_UNLOAD => {
+                    let x = self.units[unit].cargo.remove(a as usize);
+                    self.units[x].container = 0;
+                    self.log.push(format!("unload {unit}.{a}"));
+                    0
+                }
+                EE_SCREENS_SEU_ROTATE => {
+                    self.log.push(format!("rotate {unit} {f}"));
+                    0
+                }
+                _ => {
+                    self.log.push(format!("op {op} {unit} {a}"));
+                    0
+                }
+            }
+        }
+        fn pick(&mut self, rectangle: usize, unit_type: i32) -> Vec<u32> {
+            self.log.push(format!("pick {rectangle} {unit_type}"));
+            self.picked.clone()
+        }
+    }
+
+    #[test]
+    fn click_messages() {
+        let mut h = Sel::with(4);
+        h.msg_unit = 2;
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_SELECT_UNIT);
+        assert_eq!(h.selection, [2]);
+        h.msg_unit = 3;
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT);
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT);
+        assert_eq!(h.selection, [2, 3]);
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_ADD_UNIT); // the toggle: off
+        assert_eq!(h.selection, [2]);
+        h.msg_unit = 99; // no such unit: the toggle deselects NULL, as the original
+        h.log.clear();
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_ADD_UNIT);
+        assert_eq!(h.log, ["deselect 0", "op 8 0 0", "op 30 1073 0"]);
+        apply_click(&mut h, 1000 + EE_SCREENS_SEU_MSG_UNSELECT_ALL);
+        assert!(h.selection.is_empty());
+        h.log.clear();
+        apply_click(&mut h, 0);
+        assert!(h.log.is_empty());
+    }
+
+    #[test]
+    fn lasso_messages() {
+        let mut h = Sel::with(4);
+        h.picked = vec![1, 2, 9];
+        apply_lasso(&mut h, 1000 + EE_SCREENS_SEU_MSG_SELECT_UNITS, 55);
+        assert_eq!(h.selection, [1, 2]);
+        assert_eq!(h.log[0], "clear");
+        assert_eq!(h.log[1], "pick 55 7");
+        h.picked = vec![2, 3];
+        apply_lasso(&mut h, 1000 + EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS, 55);
+        assert_eq!(h.selection, [1, 3]);
+        // SelectInRectangle: only the selected ones in the rectangle deselected
+        h.picked = vec![1, 4];
+        lasso_select(&mut h, 55, 0, true, true);
+        assert_eq!(h.selection, [3]);
+    }
+
+    #[test]
+    fn rotation_skips_units_that_cannot_turn() {
+        let mut h = Sel::with(3);
+        h.units[1] = U { complex: true, turns: true, ..U::default() };
+        h.units[2] = U { complex: true, ..U::default() };
+        h.units[3] = U { turns: true, ..U::default() };
+        h.selection = vec![1, 2, 3];
+        rotate_selection(&mut h, 0.75);
+        assert_eq!(h.log, ["rotate 1 0.75"]);
+    }
+
+    #[test]
+    fn delete_one_unit_and_the_selection() {
+        let mut h = Sel::with(5);
+        h.units[1] = U { on_tile: true, selected: true, player: 77, ..U::default() };
+        h.selection = vec![1];
+        delete_units(&mut h, SeuDelete::Unit { player: 2, id: 1 });
+        assert_eq!(h.log, ["deselect 1", "op 20 1 0", "op 23 1 77"]);
+        // the group: path points first, the off-map unit skipped, a simple unit removed whole
+        let mut h = Sel::with(5);
+        h.units[2] = U { off_map: true, ..U::default() };
+        h.units[3] = U { ..U::default() };
+        h.units[4] = U { path: true, ..U::default() };
+        h.selection = vec![2, 3, 4];
+        delete_units(&mut h, SeuDelete::Selection { group: true });
+        assert_eq!(h.log, ["clear", "op 18 4 0", "op 18 3 0"]);
+        // the first only
+        let mut h = Sel::with(5);
+        h.selection = vec![3, 4];
+        delete_units(&mut h, SeuDelete::Selection { group: false });
+        assert_eq!(h.log, ["deselect first", "op 18 3 0"]);
+        assert_eq!(h.selection, [4]);
+        // nothing selected: nothing
+        let mut h = Sel::with(2);
+        delete_units(&mut h, SeuDelete::Selection { group: true });
+        assert!(h.log.is_empty());
+    }
+
+    #[test]
+    fn delete_a_multi_part_transport_with_cargo() {
+        let mut h = Sel::with(6);
+        // 1 -> 2 parts; 1 carries 5 and is selected; 2 is in transport 6 (selected)
+        h.units[1] = U { on_tile: true, player: 9, cargo: vec![5], next: 2, selected: true, ..U::default() };
+        h.units[2] = U { container: 6, ..U::default() };
+        h.units[6] = U { cargo: vec![3, 2], selected: true, ..U::default() };
+        h.selection = vec![1];
+        delete_units(&mut h, SeuDelete::Selection { group: false });
+        assert_eq!(
+            h.log,
+            ["deselect first", "op 20 1 0", "op 22 1 0", "op 23 1 9", "unload 6.1", "op 23 2 9", "op 8 0 0",]
+        );
     }
 }

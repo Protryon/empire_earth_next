@@ -791,6 +791,115 @@ constexpr static const uint32_t EE_SCREENS_SEA_PAINT_ELEVATION = 1;
 
 constexpr static const uint32_t EE_SCREENS_SEA_PAINT_BULLDOZER = 2;
 
+/// The selection host's ops (`ee_screenscpp_seu(op, unit, a, f)`; a unit is an `EEUnit*`, 0 for none).
+/// -> the editor's selection count.
+constexpr static const uint32_t EE_SCREENS_SEU_SELECTED_COUNT = 1;
+
+/// -> the selection's unit a (`GetSelectedUnit`).
+constexpr static const uint32_t EE_SCREENS_SEU_SELECTED = 2;
+
+/// -> the selection's first unit (`GetFirstSelectedUnit`, 0 when none).
+constexpr static const uint32_t EE_SCREENS_SEU_FIRST_SELECTED = 3;
+
+/// `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SEU_CLEAR = 4;
+
+/// `DeselectFirstUnit`.
+constexpr static const uint32_t EE_SCREENS_SEU_DESELECT_FIRST = 5;
+
+/// `SelectUnit(unit)`.
+constexpr static const uint32_t EE_SCREENS_SEU_SELECT = 6;
+
+/// `DeselectUnit(unit)` (the unit may be NULL, as the click's toggle passes it).
+constexpr static const uint32_t EE_SCREENS_SEU_DESELECT = 7;
+
+/// The unit tab's `UpdateSelection`.
+constexpr static const uint32_t EE_SCREENS_SEU_UPDATE_SELECTION = 8;
+
+/// -> the world's unit of id a (`gWorld.GetUnit`).
+constexpr static const uint32_t EE_SCREENS_SEU_UNIT = 9;
+
+/// -> the unit of id a of the player whose index is `unit` (`gWorld.GetPlayer(index)->GetUnit(id)`).
+constexpr static const uint32_t EE_SCREENS_SEU_PLAYER_UNIT = 10;
+
+/// -> the unit's editor selection flag.
+constexpr static const uint32_t EE_SCREENS_SEU_IS_SELECTED = 11;
+
+/// -> whether the unit has a complex unit.
+constexpr static const uint32_t EE_SCREENS_SEU_HAS_COMPLEX = 12;
+
+/// -> whether the unit's class turns (angular acceleration above 0).
+constexpr static const uint32_t EE_SCREENS_SEU_TURNS = 13;
+
+/// The complex unit turned to the yaw f (its location's orientation, pitch and roll 0).
+constexpr static const uint32_t EE_SCREENS_SEU_ROTATE = 14;
+
+/// -> whether the unit is a path point.
+constexpr static const uint32_t EE_SCREENS_SEU_PATH_POINT = 15;
+
+/// -> whether the unit is off the map (its tile -10000, -10000).
+constexpr static const uint32_t EE_SCREENS_SEU_OFF_MAP = 16;
+
+/// -> whether the unit is on a tile's list (`mTileNode`: a complex unit's).
+constexpr static const uint32_t EE_SCREENS_SEU_ON_TILE = 17;
+
+/// A simple unit removed: a resource emptied, killed, taken from its player.
+constexpr static const uint32_t EE_SCREENS_SEU_REMOVE_SIMPLE = 18;
+
+/// -> the complex unit's player (`mPlayer`, an `EEPlayer*`).
+constexpr static const uint32_t EE_SCREENS_SEU_PLAYER = 19;
+
+/// An airport building leaves its player's air traffic list (when the unit is a land building with air traffic).
+constexpr static const uint32_t EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC = 20;
+
+/// -> the complex unit's cargo count.
+constexpr static const uint32_t EE_SCREENS_SEU_CARGO_COUNT = 21;
+
+/// The complex unit's cargo killed (`KillCargo`).
+constexpr static const uint32_t EE_SCREENS_SEU_KILL_CARGO = 22;
+
+/// The complex unit killed and taken from the player a (an `EEPlayer*`: the first part's).
+constexpr static const uint32_t EE_SCREENS_SEU_KILL_PART = 23;
+
+/// -> the part after the complex unit (`mNextPart`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEXT_PART = 24;
+
+/// -> the transport or building carrying the unit (`mContainer`).
+constexpr static const uint32_t EE_SCREENS_SEU_CONTAINER = 25;
+
+/// -> the container's cargo a.
+constexpr static const uint32_t EE_SCREENS_SEU_CARGO = 26;
+
+/// The container's cargo a unloaded at the container's location.
+constexpr static const uint32_t EE_SCREENS_SEU_UNLOAD = 27;
+
+/// -> the message's type (`unit`: an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_TYPE = 28;
+
+/// -> the message's unit id (an `EEMAddUnitToSelectedGroup`'s or `EEMSelectUnit`'s).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT = 29;
+
+/// The message's reference released.
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RELEASE = 30;
+
+/// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT_TYPE = 31;
+
+/// The message types the click and the lasso apply (`EEMessageID.h`).
+constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNIT = 72;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNIT = 73;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT = 118;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_UNSELECT_ALL = 75;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNITS = 78;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
+
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
 
@@ -3145,6 +3254,28 @@ void ee_screens_sea_area_rectangle(int32_t start_x,
                                    int32_t end_x,
                                    int32_t end_y,
                                    int32_t *out);
+
+/// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
+void ee_screens_seu_click(void *message);
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
+/// `GERectangle*`) and released.
+void ee_screens_seu_lasso(void *message, const void *rectangle);
+
+/// `EESEALasso::SelectUnits`.
+void ee_screens_seu_lasso_select(const void *rectangle,
+                                 int32_t unit_type,
+                                 uint8_t deselect,
+                                 uint8_t deselect_only);
+
+/// `EESEARotateUnits::Virtual4`.
+void ee_screens_seu_rotate(float yaw);
+
+/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
+/// (`group`) or its first unit.
+void ee_screens_seu_delete(uint32_t id,
+                           int32_t player,
+                           uint8_t group);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

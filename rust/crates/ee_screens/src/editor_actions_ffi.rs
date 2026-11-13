@@ -5,7 +5,10 @@
 
 use core::ffi::c_void;
 
-use crate::editor_actions::{area_rectangle, SePaint, SePaintKind, SeaHost};
+use crate::editor_actions::{
+    apply_click, apply_lasso, area_rectangle, delete_units, lasso_select, rotate_selection, SePaint, SePaintKind,
+    SeaHost, SeuDelete, SeuHost,
+};
 
 /// cbindgen:ignore
 mod sys {
@@ -21,6 +24,13 @@ mod sys {
             capacity: usize,
         ) -> usize;
         pub fn ee_screenscpp_sea_remove(unit: *mut c_void);
+        pub fn ee_screenscpp_seu(op: u32, unit: *mut c_void, a: isize, f: f32) -> usize;
+        pub fn ee_screenscpp_seu_pick(
+            rectangle: *const c_void,
+            unit_type: i32,
+            ids: *mut u32,
+            capacity: usize,
+        ) -> usize;
     }
 }
 
@@ -119,4 +129,67 @@ pub unsafe extern "C" fn ee_screens_sea_area_rectangle(
 ) {
     let (l, t, r, b) = area_rectangle(start_x, start_y, end_x, end_y);
     unsafe { core::slice::from_raw_parts_mut(out, 4).copy_from_slice(&[l, t, r, b]) };
+}
+
+// ---- group 2: the selection's actions (`EESEAMouseClick`, `EESEALasso`, `EESEARotateUnits`, `EESEADeleteUnit`;
+// the host `ee_screenscpp_seu`, `ee_screenscpp_seu_pick` in `EESEADeleteUnit.cpp`)
+
+struct Selection;
+
+impl SeuHost for Selection {
+    fn op(&mut self, op: u32, unit: usize, a: isize, f: f32) -> usize {
+        unsafe { sys::ee_screenscpp_seu(op, unit as *mut c_void, a, f) }
+    }
+    fn pick(&mut self, rectangle: usize, unit_type: i32) -> Vec<u32> {
+        let mut capacity = 64;
+        loop {
+            let mut ids = vec![0u32; capacity];
+            let n = unsafe {
+                sys::ee_screenscpp_seu_pick(rectangle as *const c_void, unit_type, ids.as_mut_ptr(), capacity)
+            };
+            if n <= capacity {
+                ids.truncate(n);
+                return ids;
+            }
+            capacity = n;
+        }
+    }
+}
+
+/// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_click(message: *mut c_void) {
+    apply_click(&mut Selection, message as usize);
+}
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
+/// `GERectangle*`) and released.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_lasso(message: *mut c_void, rectangle: *const c_void) {
+    apply_lasso(&mut Selection, message as usize, rectangle as usize);
+}
+
+/// `EESEALasso::SelectUnits`.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_lasso_select(
+    rectangle: *const c_void,
+    unit_type: i32,
+    deselect: u8,
+    deselect_only: u8,
+) {
+    lasso_select(&mut Selection, rectangle as usize, unit_type, deselect != 0, deselect_only != 0);
+}
+
+/// `EESEARotateUnits::Virtual4`.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_rotate(yaw: f32) {
+    rotate_selection(&mut Selection, yaw);
+}
+
+/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
+/// (`group`) or its first unit.
+#[no_mangle]
+pub extern "C" fn ee_screens_seu_delete(id: u32, player: i32, group: u8) {
+    let what = if id != u32::MAX { SeuDelete::Unit { player, id } } else { SeuDelete::Selection { group: group != 0 } };
+    delete_units(&mut Selection, what);
 }
