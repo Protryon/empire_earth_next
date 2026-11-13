@@ -12744,3 +12744,92 @@ layouts, -179). This round's own net: -175.
   resources) are the check. A window resize relayouts everything; only a person resizes the lobby window.
 - **Left:** Window/WindowManager (platform ops; audit every `GetRoot()->` caller first), the skins' Button
   subclasses (draw ops), the remaining WONGUI controls' C++ paint.
+
+## R6 WON round 32: Window whole in Rust; the NULL-window audit (ee_won winobj.rs; branch rust-r6-won32, 2026-11-13)
+
+Measured as rounds 18-31 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+76,502 at the branch's start (round 31's head merged with rust) -> 76,517 (the census's accessors, +15) -> 76,142
+(Window, -375). This round's own net: -360.
+
+- **The audit first.** Every `GetRoot()->` / `GetWindow()->` caller (and every `Window* w = x->GetRoot();` use) across
+  `src`, no limit: the lobby's three options popups, the colour button and the file dialog (ClosePopup, OpenPopup,
+  EndDialog from their own events), BackgroundGrabber (CreateImage, GetRect, GetOffscreenImage while painting),
+  Container's host (CtRootFocused, CtMouseInClient), ComboBox's popup, Component's tooltip (MouseExit, MouseHover),
+  ComponentResourceAdapters (broadcast subscription, the mouse place, GetKeyMod, the colour scheme, the fonts),
+  ComponentTraversal (GetFont, the parent window's bubble, which tests NULL), DialogBehavior (EndDialog, IsModal),
+  ListAreaToolTip, GuiHost (the link font, RootKeyMod, the mouse place, which tests NULL, ClosePopup, DoPopupEvent,
+  the queued mouse-up), ComponentApiCompletion (CheckDoubleClick) and RootScreen (GetRect).
+  - The round-30 hazard is a method whose original body, on some path, read nothing of a NULL `this`. None of
+    Window's does: every method read a member (`mRoot`, `mManager`, a flag) or made a virtual call (a vtable read) on
+    every path, and the inline accessors read `this->mX`. So every caller above crashed on a NULL window before the
+    move exactly as it does after; the original survived none of them, and no guard was added (a guard would change
+    behaviour, not keep it). Window's statics (`GetDefaultWindow`, `SetSkipDecodeImages`) and `DecodeImage` /
+    `DecodeImageRaw` (whose skip paths read nothing of `this`) stay C++, unchanged.
+  - The callers that may run outside a window already test NULL (GuiHost's RootMouse, ComponentTraversal's bubble,
+    Component::DeliverEvent).
+- **The census** (its own commit): outside Window.cpp the window state (Component, PlatGUIWindow, PlatWindowManager,
+  WindowManager), the mouse place (ComponentResourceAdapters, ComponentTraversal, GuiHost, RootContainer,
+  WindowManager), `mMouseIsInClientArea` (Container, PlatGUIWindow, WindowManager), `mIsShowing` (PlatGUIWindow
+  writes it), `mIsPopup` and `mIsOneComponentWindow` (WindowManager, DialogLogic, PlatGUIWindow, PlatWindowManager,
+  RootContainer), `mStyle` (EELobbyInterface, DialogLogic, BackgroundGrabber, MSMessageBox, WindowManager,
+  PlatGUIWindow), `mMinimizeOnResolutionRestore` and `mMouseIsDown[0]` (WindowManager), `mKeyMod`
+  (ComponentResourceAdapters) and the parent (ComponentTraversal, PlatGUIWindow, PlatWindowManager, WindowManager)
+  became Get/Set accessors. The move's build (the fields removed) found nothing else.
+- **The move** (`winobj.rs`): the window state, the mouse place, key modifiers and buttons, the client-area flag, the
+  current cursor (borrowed), the system cursor's flag, the double-click ticks, flags and place, the last move and
+  cursor-check ticks, the minimum and maximum sizes, the pending resize (flag, size, delay, last tick, suspension),
+  the style, the popup / one-component / restore flags, the parent, the showing flag and the child window set (a
+  `BTreeSet` of addresses: the original's `std::set<Window*>`), with every method of Window.cpp but the fonts and
+  images: CanClose, Close, CheckResize, SetTitle's and SetIcon's platform half, Center, SetClientSize, Show, the four
+  input handlers, IdleUpdate, TimerEvent, Create after the icon, the base PlatformClose, ShowNativeCursor,
+  CheckSetCursor, InvalidateRoot, Minimize, SuspendRootResize, Add/RemoveComponent, SetModal, IsMouseDown,
+  CheckDoubleClick and SetParent.
+  - Fifteen window ops (570-584): the tick, the root's methods (`WinRoot` with an `EeWonWinRoot`), the window's
+    platform virtuals (`WinPlat` with an `EeWonWinPlat`), SetPosSize, GetRect (any window), PlatformIsVisible (the
+    parent), the manager's screen rectangle and AddWindow, CheckResize's new offscreen image, the close event, a
+    child's CanClose, the allow-close function, the parent's child set, the standard arrow and a cursor's native form.
+    Platform calls stay C++ virtuals (PlatGUIWindow overrides them), reached through these ops.
+  - The C++ Window keeps the members that are C++ objects (root, manager, offscreen image, display context, icon,
+    title, font map, default font, close event, allow-close function). The Rust object is held by `mWinObj`, the
+    first member, so it is freed after them: the root's destruction may still call the window.
+  - The input handlers take an `EeWonWinEvent` (kind, place, modifiers, button or amount, key, size) the C++
+    forwarder fills from its KeyEvent / MouseEvent / SizeEvent.
+- **Behaviour changes, on undefined paths only:** the double-click ticks, flags and place start at 0 (the
+  constructor left them unset); a mouse button outside 0..2 (the original wrote past `mMouseIsDown`) is ignored for
+  the arrays; IsMouseDown / CheckDoubleClick of such a button answer false (the original read past the array).
+- **The golden** (`tests/won/won_winobj_test.cpp`): the original statements over a world that models the platform
+  window as logged host ops: four windows (a parent's id is always smaller, so the child sets have no cycle), each
+  with a root (bounds, cursor, timer flags, CanClose), a platform rectangle (SetPosSize writes it, GetRect reads it,
+  the client rectangle inset), a visible flag, an allow-close answer; the screen; a clock. Every op is traced with its
+  answer; the nested ops (a child's CanClose, the parent's child set) run on the side's own windows; every window's
+  fields are traced after each call. The original windows sit in an array, so their addresses are in id order as the
+  Rust set's keys are.
+  - 20,000 sequences of 40 calls, all identical on the first run (6,905,286 trace lines; after the set-up below,
+    8,187,173).
+  - Seven mutations; six failed it at once: Show(false) ignoring a held button (472 sequences), SuspendRootResize
+    not clamped to 0 (6,123), the double-click place not kept (8,890), Center not asking the parent's visibility
+    (864), the resize's tick taken before the new image (5,245), a release outside not clearing the press (156).
+    The seventh, CanClose stopping at the first refusing child, passed (0): a window had two children only when
+    random SetParent and Create calls met. The driver now starts each sequence with a set-up (windows 2..4 often
+    under a smaller one, most windows opened), and that mutation fails 1,274 sequences. The restored source: 0. The
+    six numbers are from the first driver.
+  - `golden_winobj.txt` (38 sequences) is replayed by cargo: each op the Rust makes must be the next op line, answered
+    by its `=` line (rectangles written back); the nested ops run on the replay's own windows; the return and state
+    lines are compared. It fails on a mouse place changed by one.
+- **Lessons:**
+  - A cbindgen `pub const` defined from an enum (`EeWonWinField::ChildCount as i32`) is emitted before the enum and
+    does not compile in C++: write the number and assert it in a unit test.
+  - The set-up's first version kept its calls in an `int[6][2]` for up to seven calls: the overflow wrote the
+    next call's window id on both sides alike, so the C++ golden stayed identical and only the cargo replay (a
+    window id of 0x6C6C6163, ASCII "call") found it. A golden equal on both sides can still be wrong: the replay
+    reading it back is a second check.
+  - A mutation script that restores with `git checkout` must run after the file is committed (an untracked file
+    is not restored), and must stop when a mutation does not apply (`\n` passed through bash and a heredoc did not
+    reach Python as an escape: use a marker).
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction. Every lobby window is
+  this object: the lead's LAN game (`lan_game.py`: the window's mouse and key dispatch to the root, the cursor
+  refresh, the timers, the popups' windows created and shown, the dialogs' Center and close) and the lobby captures
+  (the resize to the surface, the offscreen image swap) are the check. Only a person resizes the lobby window,
+  double-clicks with timing, or hovers for a tooltip; those run only in the golden.
+- **Left:** WindowManager (its popup and modal stack, the event loop, the caches; its census is mostly done by this
+  round's accessors), the skins' Button subclasses (draw ops).
