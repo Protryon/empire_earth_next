@@ -1018,7 +1018,12 @@ function M.step(view, memory)
         -- (BO.OPT.pre_lean, the owner: 12 on the patches, 6 each, and 3-6 hunting; the third, far patch only when a home
         -- patch is missing) two patches in the Prehistoric while two home patches stand
         local patches = plan.patches
-        if ECON.order and BO.OPT.pre_lean and phase == "pre" and #(memory.start_patches or {}) >= 2 then
+        -- (BO.OPT.pre_hunt_patch: the third patch stands in for the hunting when the game near the town holds fewer
+        -- than BO.PRE_HUNT_MIN hunters; R2c's classic defeats were Prehistoric stalls, 11-12 on food with no game, the
+        -- Stone Age at 35 minutes or never)
+        local short_game = ECON.order and BO.OPT.pre_hunt_patch and hunt_places < BO.PRE_HUNT_MIN
+        if ECON.order and BO.OPT.pre_lean and phase == "pre" and #(memory.start_patches or {}) >= 2
+                and not short_game then
             patches = math.min(patches, 2)
         end
         local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, patches, range,
