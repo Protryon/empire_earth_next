@@ -13124,3 +13124,94 @@ branch's start (5d3ce6a9) -> 21,307 at 97c4d3e8 (-744; git over `src` and `inclu
 - **Left of the main game form**: the constructor (the mode tables), `CopyData`, `RefreshStatus`, `DisplayChatLine`,
   `ShowInformation`, the start modes (gate, wall, calamity, flare, patrol, build). Next by size: `EEUserInterface`'s
   `HandleMessage`, the status button's `Command` and `GetHelpString`, the status box.
+
+## R6: the game screens, twenty-second round: the UI thread's message switch, the window events and the command buttons' presses in Rust (ee_screens ui_thread.rs, status_button.rs; branch rust-screens22, 2026-11-13)
+
+The next two of round 21's measure (`build/sc21/measure.py`, copied to `build/sc22`). Count (`build/sc22/count.sh`:
+User Interface Thread without the unit utilities, UI Events, `include/ee/EEUI*.h`): 21,303 at the branch's start
+(abd21b43) -> 20,936 at 1670add4 (-367).
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 67f3f33a | `EEUserInterface::HandleMessage` and `HandleEvent` in Rust (`ui_thread.rs`) | +198 -458, net -260 |
+| 1670add4 | `EEUIFMGStatusButton::ButtonUp`, `Command`, `MouseRButtonUp` in Rust (`status_button.rs`) | +155 -259, net -104 |
+
+- **The UI thread's messages (commit 1)**: the 0x401..0x443 switch (48 messages; the 0x442 -> 0x443 -> 0x431
+  fall-through kept) is `handle_message` over `ee_screenscpp_ui_message` (77 ops, `EE_SCREENS_UI_OP_*`). The ops are
+  the calls, not the cases: the locks (UI copy, world read, world write: one op each way with a kind), the UI
+  manager's form stack (current form, form by id, swap, push, pop, pop to, on stack, visible; the forms travel as
+  pointers in `i64`), the graphics thread's pause handshake (post, the paused flag, `PlatSleep(1)`, resume; the wait
+  loops are Rust's), the thread object's handlers (`ShowEpochName`, `LoadSavedGame`, ...), and one op per compound
+  the original only ever did whole (the screen capture's event, post, wait and release; the host-gone client
+  restart; the quick load's action fields). The two empty `FnE123D` calls (the UI manager's in 0x407, the main game
+  form's in 0x426) are dropped; 0x426 is now a lock/unlock pair. The lobby's four updates are host ops that call the
+  Rust lobby back (`ee_screens_lobby_*`): a round trip, kept so the golden driver can fake them.
+- **The window events (commit 1)**: `HandleEvent` is `handle_event` over `ee_screenscpp_ui_event` (25 ops,
+  `EE_SCREENS_UI_EV_*`; the globals' NULL tests are one op with an index). The original's statics (minimised, the
+  saved volumes, Control and AltGr, the open composition, and the volumes' first-call initialisation) are
+  `EventState`'s atomics, read and written where the original did, with no lock held across a host call (a minimise
+  could come back in). The typed text is cut into characters by `ee_plat_core`'s `PlatUtf8Decode` (the function the
+  original called); each character goes to the host as a pointer to its eight zero-padded bytes. The file statics
+  `sMinimized`, `sControlDown`, `sAltDown` left `EEUserInterface.cpp`.
+- **Its golden** (`build/sc22/ui`: `fake.h`, `driver.cpp`, `cut.py`, `drv.py`, `cmut.py`, `mutate.py`): the original
+  `HandleMessage` and `HandleEvent` cut verbatim from abd21b43 (as `OrigUI`) and the new forwarders and hosts cut from
+  the work tree, compiled against one fake world (every call with an effect appends a token: the UI manager, the
+  forms and their controls, the locks, the graphics thread whose paused and movie flags flip after a case's number of
+  sleeps, the parameter objects whose deletes are traced) and linked with `ee_rust.lib`. Per message case a random
+  world (manager, main form, editor form, the current form among the four the code tests, on stack, visible,
+  `PostPause`'s result, the flags) and random parameters (fresh objects, or 64-bit numbers with high bits set: the
+  `(unsigned long)` and `(unsigned short)` truncations are exercised); the window events are one sequence (the statics
+  carry over) of random events with the globals NULL or set, the lobby shown or open, texts with tab, escape,
+  backspace, CR, multi-byte and broken UTF-8. Both sides' traces and the thread object's flags must match. 3,000
+  messages + 3,000 events per seed: 0 differences. Mutations of the C++ hosts caught (5,000 cases): the read lock as
+  a write lock (666 differing), `mIsUpdating` as a bool (61), pause/resume information swapped (61), the icon bar
+  flag not cleared (64), the capture's surface test (39), the translated key's repeat (69 events), the window
+  global's index (19 events), the transfer progress's arguments swapped (73), the civilization builder's raw byte
+  (37). `golden_ui_thread.txt` (seed 1: 3,000 messages and 3,000 events with the host's ops and answers) is replayed
+  by `ui_thread::tests::golden_ui_thread` (the key ops compared by their bytes, the event's text by a sentinel); 12
+  of 13 Rust mutations fail it (the capture's cursor test, the information flag's truncation, the saved group's
+  control offset, the scenario intro form dropped, the host-gone test, the chat type, the movie's sleep, the
+  transfer's truncation, AltGr's key, CR typed, the minimised flag, the lobby's shutdown test); the 13th (RESIZED
+  dropped from the lobby's pass-through list) is equivalent: RESIZED has no case.
+- **The command buttons' presses (commit 2)**: `ButtonUp` (a command, or a tech node: build, wall, gate, Shift's
+  five, research, a calamity a selected unit can pay), `Command` (unload with its teleporter power test and its
+  fortress shortcut, stop, disband, self-destruct, patrol, flare, the airport, explore, lock, pack, fanatic,
+  just-in-time manufacturing with the deathmatch delay, the market's trades, the targeting modes through
+  `command_panel.rs`' `command_mode`) and `MouseRButtonUp` (cancel one, or Shift's five of a unit) are
+  `status_button.rs` over `ee_screenscpp_status_button` (50 ops, `EE_SCREENS_SB_OP_*`; the messages are one op with a
+  kind, `EE_SCREENS_SB_SEND_*`). The host's record of one press holds the button, the unload's transport and
+  `CanProduce`'s reason (a `UWideString`). The refusal's chat line keeps both `TMGetTime()` calls. The constants the
+  Rust shares with the original (sound ids, world keys, string ids, the teleporter, the fortress) are exported and
+  `static_assert`ed by the host against the game's names. `Command` left the class; `BaseButtonUp` and
+  `IsMouseInside` were added to it (the host, a free function, cannot reach the protected `UIButton::ButtonUp` and
+  `GetMouseLocation`). The right press's command case calls the virtual `ButtonUp`, which comes back into Rust.
+- **Its golden** (`build/sc22/sb`): `ButtonUp`, `Command`, `MouseRButtonUp` cut from abd21b43 against the new host,
+  over a fake player, selected group (absent, or 0-5 units present or not, teleporters, powers around the costs),
+  tech node (kinds 0-10, makes unit, contains), class table (unset, land, naval, gate), first selected unit, trade
+  answers, the JIT clock against the delay, the refusal clock (wrapping), Shift and the mouse. 5,000 cases: 0
+  differences. C++ host mutations caught: `mPower` read as `GetPower()` (2 differing), the trade's Shift dropped
+  (79), the naval exception dropped (103), the panels' disable dropped (4,306), no reason (222), the unload's tile y
+  as x (28), the sell flag dropped (100). `golden_status_button.txt` (seed 1: 2,843 left and 1,157 right presses) is
+  replayed by `status_button::tests::golden_status_button` (the right press's virtual `ButtonUp` replays the left
+  press's ops first, as the host records them); 11 of 11 Rust mutations fail it (the teleporter's `<`, the fortress
+  shortcut's teleporter test, the JIT `<`, the refusal's `>`, the calamity's `>=`, the gate test, Shift's five, the
+  patrol kind in the right press, the right press's Shift test, the targeting mode's tail, the unlock's flag).
+- **Tests**: 5 UI thread (the golden, every message reached, the lag fall-through and its truncations, unknown
+  messages, Control without Alt), 4 status button (the golden, every message kind sent, JIT's delay, the refusal's
+  interval).
+- **Lessons**: (1) the status button's host first called `UIButton::ButtonUp()` and `GetMouseLocation()` from a free
+  function; both are protected. The golden passed (the fake had them public) and the game's compile failed: a fake
+  cannot catch access errors, so build the real unit before trusting a driver. (2) A script that edits the sources
+  in place must not double as the one that writes a scratch copy: `apply_sb.py OUT` wrote the real file during a
+  test build (its copy branch did not match); it was reverted within seconds and that build linked the committed
+  unit. Write copies with a separate script.
+- **Behaviour**: none intended. The message host reads the main game form NULL-checked against a NULL `gUIManager`
+  (0x416 and 0x432 read `gUIManager->mMainGameForm` unchecked: they no longer crash without a manager); the status
+  button's host reads the selected group only with a current player; a calamity class missing from its manager costs
+  0 instead of crashing once a unit is selected.
+- **What runs it**: every UI thread message the game posts goes through `handle_message` (the tour's loads, the
+  splash progress, the form switches; the lag and load-percent messages in multiplayer), every window event through
+  `handle_event` (focus, typing in the edit boxes). EE-SIM has no UI thread: the oracle and the editor gate are
+  unchanged by construction. The presses run when a command or tech button is clicked: the tour clicks none.
+  **Only a person reaches**: the screen capture, movies (0x41c), the host-gone message (LAN), the IME composition,
+  the market trades, the calamities, the right-click cancels, JIT in a deathmatch, the refusal chat line's interval.
