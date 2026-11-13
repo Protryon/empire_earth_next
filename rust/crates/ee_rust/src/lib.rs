@@ -321,6 +321,7 @@ mod goal_op_tables {
     const DISPATCH: &str = include_str!("../../ee_combat/src/goal_dispatch.rs");
     const OBJECTS: &str = include_str!("../../ee_combat/src/goal_objects.rs");
     const ATTACK: &str = include_str!("../../ee_combat/src/goal_attack.rs");
+    const HEAL: &str = include_str!("../../ee_combat/src/goal_heal.rs");
 
     #[test]
     fn the_crates_goal_operations_do_not_overlap() {
@@ -341,6 +342,7 @@ mod goal_op_tables {
         combat.extend(consts(DISPATCH, "EE_COMBAT_G_"));
         combat.extend(consts(OBJECTS, "EE_COMBAT_G_"));
         combat.extend(consts(ATTACK, "EE_COMBAT_G_"));
+        combat.extend(consts(HEAL, "EE_COMBAT_G_"));
         assert!(combat.len() > 10, "the combat tables were not read: {}", combat.len());
         for (name, value) in &combat {
             for (other, v) in bodies.iter().chain(host.iter()) {

@@ -783,7 +783,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             theDone = true;
             continue;
         }
-        if (inCommand == 0xb8 && EEGoalCast<EEUGLocation>(theGoal) != NULL) {
+        if (inCommand == 0xb8 && EEGoalHasLocation(theGoal)) {
             theGoal->GetGoalLocation(theLocation);
             EEMap* theMap = gWorld.mMap;
             if (theMap->GetTile((long)theLocation.GetX(), (long)theLocation.GetY()) != NULL) {
@@ -857,8 +857,8 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         EEUnitGoal* theGoal = theUnit->mGoalQueues[theIndex].mGoals.size() > 0 ? theUnit->mGoalQueues[theIndex].mGoals.back()
                                                                           : NULL;
         if (theGoal == NULL || inCommand == 0xb8 ||
-            ((inCommand != 0xb9 || EEGoalCast<EEUGLocation>(theGoal) == NULL) &&
-             (inCommand != 0xba || EEGoalCast<EEUGLocation>(theGoal) == NULL)))
+            ((inCommand != 0xb9 || !EEGoalHasLocation(theGoal)) &&
+             (inCommand != 0xba || !EEGoalHasLocation(theGoal))))
             continue;
         theGoal->GetGoalLocation(theLocation);
         gWorld.mMap->GetGroundPoint(theLocation, theGround);
