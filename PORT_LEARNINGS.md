@@ -11644,3 +11644,50 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
 - **Left:** TabCtrl / TabBar, ComboBox (its edit box and button over the container: GetFocusChild and
   GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
   event type.
+
+## R4.4, eleventh round: the lighting set-ups, IsUnitDrawn's decisions and the timed effects in Rust (ee_gfx lighting.rs, walk.rs, effect_state.rs; branch rust-gfx17, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 23,573 lines before the round, 23,388 after it
+(lighting -75, walk -79, timed effects -31).
+
+- **The lighting set-ups as call lists (`lighting.rs`).** `SetSceneFog`, `SetFogOff`, `SetLightingOff`,
+  `SetPrelitLighting`, `SetCloudLighting`, `SetWhiteLighting`, `SetTerrainLighting`, `SetMapObjectLighting`,
+  `SetUnitLighting`, `RestoreUnitLighting` and `DimUnitLighting` are one Rust function that returns the rasterizer
+  calls in their order (`EeGfxRasterOps`: fog state, colour, range and type, ambient colour and intensity, remove the
+  lights, lighting on or off, the shared light's colour, intensity and direction, `AddLight`/`UpdateLight`); one
+  C++ applier (`ApplyLighting`) fills the inputs (the light fade, the fog colour, the environment's colours and
+  intensities, the sun, the view's rear distance, the zoom lock, the orthographic view, unit lighting) and runs them.
+  The eleven names stay one-line C++ functions (their callers are all over the render objects and effects). The
+  map objects' flattened sun is normalized in Rust (`GeVector::normalize`); `GELight::SetColor`/`SetDirection`'s
+  clamp and negation stay the C++ header's.
+- **The world walk's decisions (`walk.rs`).** `IsUnitDrawn` gathers the unit's facts (`EeGfxUnitFacts`: the
+  resource, owner, seen tile, free camera, scale, tree, type, pool fills, the complex part's dead command, gate,
+  path point, flare and foundation, owner = current player, `Fn27C0B4`, `IsPathMarker`, id and tile) and answers
+  three questions (`EeGfxDrawnHost`: the footprint set's insert, the complex unit's view test, a model placed at a
+  point on the ground facing the camera; the last shared by units and map objects). Rust decides, in the original's
+  order of questions, and computes the map object's jittered point and a unit's tile centre. The owned-food test
+  (`FillUnit`'s `theFogged`), the waypoint marker's tint by its carrier's id and `FillRenderLists`' music intensity
+  are Rust. The facts are read eagerly: every read is a pure member or `IsSeenBy`/`IsFoundation`/`IsPathMarker`/
+  `GetScale` (the original asked some only on some paths). `FillUnit`'s and `FillRenderLists`' remaining code is
+  record filling and the tile walk over C++ containers: moving it would add host code, not delete C++.
+- **Golden drivers cut from the original unit, as round 10's** (`build/gx17/light`, `build/gx17/walk`): the
+  set-ups whole over a rasterizer that logs every call and the shared `GELight` at `AddLight`/`UpdateLight` (600
+  cases replayed in `golden_lighting.rs`, which models `GELight`'s clamp, computed colour and direction); 
+  `IsUnitDrawn` whole, the fog expression, the tint switch and the music switch over a stub world whose view tests
+  answer from the driver's LCG (2,000 units, 600 tints, 800 music cases in `golden_walk.rs`, which replays the
+  same LCG). Each driver cut from the new unit over the forwarders printed the same bytes, and at ten times the size
+  on seed 2. Argument evaluation order is unspecified in C++ (clang-cl evaluates right to left): a driver that calls
+  its random generator inside one call's arguments cannot be replayed; draw into locals first.
+- **The timed effects on the records.** The blast wave's, teleport's and time warp's ages (and the blast wave's
+  aging flag) are the aged record's (`EeGfxEffectAged::aging` added); `timed_step` ages them (the blast wave by
+  `GetTickTime` over the duration while aging, 7 past 1; the others by the tick in ms, rising or sinking by the
+  speed within the duration, `EE_GFX_EFFECT_MOVED` so the C++ moves the effect to its region, 7 past it), and
+  `load_aged`/`save_aged` read and write them by kind (format unchanged). The blast wave's unit following and every
+  draw stay C++.
+- **Gates.** On the result merged with rust (c0df6600): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,516 tests), the sim oracle identical on seeds 2-7 including the folder-hash line (the reference re-recorded), the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183). Per commit: the build 0/0 and the oracle at seeds 2-3 identical in every decision line; the Rust gate PASS from the merge on (the lighting commit's own run hit clippy on a half-written next file and the goldens' lints, fixed in the clippy commit); the timed-effects commit the oracle and calamity captures at seeds 2-3 PASS (167 and 181 digests before the merge). No tour run.
+- **Only a tour or a person reaches:** every lighting set-up (each draw pass calls them: the terrain, map objects,
+  units, fogged and restored units, sky, clouds, effects; the scene fog), `IsUnitDrawn` (which units and trees are
+  drawn and picked each frame: fog of war, the free camera's editor view, foundations, path points and flares, the
+  pools' limits), a waypoint marker's tint (a selected unit's queued waypoints), the battle music's intensity
+  changes (`gMusicFollowsBattle`) and the darkened food under the fog. EE-SIM draws nothing. The timed effects' ticks
+  are EFST's only when a profile's game makes one (not measured which do); their draws are unchanged.
