@@ -66,7 +66,7 @@
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EECPCombatManager.h"
-#include "ee/EEUGLoadContainer.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEAIPathSubSector.h"
@@ -298,9 +298,9 @@ bool EECPASGSeaTransport::IsLoadingBlocked()
         EEUnitGoal* theGoal = theUnit->GetLoadGoal();
         if (theGoal == NULL || theGoal->mKind != kGoalLoadTransport)
             continue;
-        EEUGLoadContainer* theLoad = static_cast<EEUGLoadContainer*>(theGoal);
-        for (long j = theLoad->mUnits.mItems.size() - 1; j >= 0 && !theResult; j--) {
-            EEComplexUnit* theOther = theLoad->mUnits.mItems[j];
+        EEUGRust* theLoad = static_cast<EEUGRust*>(theGoal);
+        for (long j = theLoad->GetNumLoadUnits() - 1; j >= 0 && !theResult; j--) {
+            EEComplexUnit* theOther = theLoad->GetLoadUnitAt(j);
             if (theOther == NULL || theOther->GetTileX() == -10000 || theOther->GetIsDisabled() || theOther->GetHitPoints() <= 0)
                 continue;
             if (UMAbs(theUnit->GetTileX() - theOther->GetTileX()) > 1 || UMAbs(theUnit->GetTileY() - theOther->GetTileY()) > 1)

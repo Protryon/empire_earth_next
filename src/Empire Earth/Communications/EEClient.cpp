@@ -93,7 +93,7 @@ EEClient::EEClient()
 #include "ee/EEUGRust.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EEEffect.h"
@@ -836,7 +836,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         }
         if (inTarget != NULL) {
             if (EEGoalCast<EEUGBuildRepair>(theGoal) != NULL || EEGoalCast<EEUGGather>(theGoal) != NULL ||
-                EEGoalCast<EEUGLoadGarrison>(theGoal) != NULL)
+                EELoadGarrisonGoalCast(theGoal) != NULL)
                 break;
             gWorld.GetEffectManager()->CreateUnitEffect(inTarget, theTargetEffect, &theHandle, 0, 0, theIndex);
         } else {

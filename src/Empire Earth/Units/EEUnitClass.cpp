@@ -35,7 +35,7 @@
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEAEManager.h"
 #include "ee/EEAreaEffect.h"
@@ -1110,17 +1110,17 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                             theCreated->AddBuildTarget(EEGoalCast<EEUGBuildRepair>(*i)->mTarget);
                             continue;
                         } else if ((*i)->mKind == kGoalLoadGarrison) {
-                            EEUGLoadGarrison* theLoad = EEGoalCast<EEUGLoadGarrison>(*i);
+                            EEUGRust* theLoad = EELoadGarrisonGoalCast(*i);
                             if (theCreated->GetUnitClass()->mCanGarrison) {
                                 theGoal = theLoad->Clone();
                                 if (theGoal->IsLoadGoal())
                                     theGoal->AddCreatedUnit(theCreated);
-                                if (theLoad->mContainer->mActiveGoal != NULL)
-                                    EEGoalCast<EEUGLoadGarrison>(theLoad->mContainer->mActiveGoal)->AddUnit(theCreated);
+                                if (theLoad->GetLoadContainer()->mActiveGoal != NULL)
+                                    EELoadGarrisonGoalCast(theLoad->GetLoadContainer()->mActiveGoal)->AddLoadUnit(theCreated);
                             } else {
-                                if (theLoad->mContainer == NULL)
+                                if (theLoad->GetLoadContainer() == NULL)
                                     continue;
-                                theLoad->mContainer->GetPosition(theGoalPosition);
+                                theLoad->GetLoadContainer()->GetPosition(theGoalPosition);
                                 theGoal = new EEUGLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
                             }
                         } else {

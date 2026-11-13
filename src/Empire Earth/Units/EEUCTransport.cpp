@@ -34,7 +34,7 @@
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUCTransport.h"
-#include "ee/EEUGLoadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
@@ -161,7 +161,7 @@ bool EEUCTransport::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
     U2DPoint<long> theUnitTile;
     U2DPoint<long> theCargoTile;
     U2DPoint<long> theTransportTile;
-    EEUGLoadTransport* theGoal = EEGoalCast<EEUGLoadTransport>(inTransport->GetGoal());
+    EEUGRust* theGoal = EELoadTransportGoalCast(inTransport->GetGoal());
     float theRange = this->mLoadRange;
     unsigned short theFrom = gContinentManager.GetContinentID(inTransport->GetTileX(), inTransport->GetTileY());
     unsigned short theTo = gContinentManager.GetContinentID(inUnit->GetTileX(), inUnit->GetTileY());
@@ -185,7 +185,7 @@ bool EEUCTransport::CanLoad(EEComplexUnit* inTransport, EEComplexUnit* inUnit)
         if (theGoal == NULL)
             this->FindBestShoreTile(inTransport, theTransportTile, theCargoTile, theTransportTile, false, &theUnitTile);
         else
-            theUnitTile = theGoal->mUnitTile;
+            theUnitTile = theGoal->GetLoadUnitTile();
         if (theUnitTile.GetX() != -10000) {
             float theDistance = inUnit->DistanceSquaredToTile(theUnitTile);
             if (theDistance < theRange) {

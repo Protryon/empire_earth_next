@@ -641,7 +641,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_NEW_GOAL = 16;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FILE_OPEN = 17;
 
-/// `i[0]`: the type (0 `unsigned long`, 1 `long`, 2 `bool`), `i[1]` the value
+/// `i[0]`: the type (0 `unsigned long`, 1 `long`, 2 `bool`, 3 `float`: its bits), `i[1]` the value
 constexpr static const int32_t EE_UNITS_GOAL_HOST_WRITE = 18;
 
 /// `i[0]`: the type, `i[1]` the value in and out
@@ -766,6 +766,58 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_UNLOAD_AT = 100;
 /// `i[0]`: the space sound
 constexpr static const int32_t EE_UNITS_GOAL_HOST_UNLOAD_SOUND = 101;
 
+/// `i`: the garrison and transport capacities, weight, garrison technology, type, can garrison, tile size; `f`: the
+/// load range, the inner collision sphere (zeros for no unit)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LOAD_CLASS = 110;
+
+/// `i`: the garrison count, cargo room, hit points, disabled, no waypoints, animation (zeros for no unit)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LOAD_UNIT = 111;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_LOCATION = 112;
+
+/// `i[0..4]`: the two tiles
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_BLOCKED = 113;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_LOAD = 114;
+
+/// `f[0..3]`: the location, `f[3..6]` the result in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BOARDING = 115;
+
+/// `f[0..3]`: the result in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PICK_TILE_NEAR = 116;
+
+/// `list`: the units, `i[4]` the base class's rule; `i[0..4]` the tiles in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RENDEZVOUS = 117;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CENTER_OFFSET = 118;
+
+/// `i[0]`: the technology; out: the node, the class, available
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GARRISON_UPGRADE = 119;
+
+/// `b` 1: `GetGoal()`, 0: `GetLoadGoal()`; `i[0]` its kind
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_GOAL = 120;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND = 121;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CLEAR_GOALS = 122;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DEPOSIT = 123;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GARRISON_UNIT = 124;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LOAD_CARGO = 125;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HAS_CARGO = 126;
+
+/// `i[0]`: the sound
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PLAY_SOUND = 127;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_REPLACE_CLASS = 128;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GENERATE = 129;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS = 130;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -803,7 +855,7 @@ constexpr static const int32_t EE_UNITS_GOAL_START = 15;
 /// `a`: the unit, `b`: the event; 0 or 1
 constexpr static const int32_t EE_UNITS_GOAL_EVALUATE = 16;
 
-/// `a`: the old complex unit, `b`: the new one
+/// `a`: the old complex unit, `b`: the new one, `io.i[0]` the unit whose goal it is
 constexpr static const int32_t EE_UNITS_GOAL_REPLACE_UNIT = 17;
 
 /// `GetMaxPathAttempts` (the base goal's 3 but for the unload's 9)
@@ -811,6 +863,11 @@ constexpr static const int32_t EE_UNITS_GOAL_MAX_PATH_ATTEMPTS = 18;
 
 /// `a`: the unit; `Suits` (true but for the unload)
 constexpr static const int32_t EE_UNITS_GOAL_SUITS = 19;
+
+/// `a`: the unit; `AddCreatedUnit` and `Abandon` (the base goal's do nothing)
+constexpr static const int32_t EE_UNITS_GOAL_ADD_CREATED_UNIT = 20;
+
+constexpr static const int32_t EE_UNITS_GOAL_ABANDON = 21;
 
 /// a patrol: `a` the group (0: a new empty one), `b` the point
 constexpr static const int32_t EE_UNITS_GOAL_NEW_PATROL = 30;
@@ -859,6 +916,25 @@ constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_SET_DESTINATION = 65;
 
 /// the transport dropped without its release
 constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT = 66;
+
+/// a load goal of the kind: `a` the container, `io.list` the units (already sorted by id, no duplicates)
+constexpr static const int32_t EE_UNITS_GOAL_NEW_LOAD = 70;
+
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_NEW_EMPTY = 71;
+
+/// `a`: a unit to load (referenced, unless listed)
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_ADD_UNIT = 72;
+
+/// `a`: whether the unit is listed
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_HAS_UNIT = 73;
+
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_UNIT_COUNT = 74;
+
+/// `a`: the index; the unit
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_UNIT_AT = 75;
+
+/// the container (the result), `io.i`: the container and unit tiles, the garrison's valid flag, the unit count
+constexpr static const int32_t EE_UNITS_GOAL_LOAD_FIELDS = 76;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
@@ -1625,14 +1701,17 @@ struct EeUnitsPitchIn {
   uint8_t naval;
 };
 
-/// The argument block of one operation (ints, floats, text, a list sink).
+/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 struct EeUnitsGoalIo {
   int64_t i[8];
-  float f[4];
+  float f[8];
   const uint8_t *text;
   size_t len;
   /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
   void *sink;
+  /// handles (units) handed with the operation: the load goals' units
+  const uint64_t *list;
+  size_t list_len;
 };
 
 /// The host: `op(context, operation, a, b, io)` (`EE_UNITS_GOAL_HOST_*`).
