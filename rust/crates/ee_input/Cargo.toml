@@ -1,0 +1,9 @@
+[package]
+name = "ee_input"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The Input System's device buffers (ISDeviceInput, ISHandleEvent) whole in Rust (LLE lane round 1).
+[lib]
+crate-type = ["rlib"]

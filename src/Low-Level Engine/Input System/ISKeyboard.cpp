@@ -128,7 +128,7 @@ void ISKeyboard::Refresh()
             }
     }
     this->mOverflowed = false;
-    long theResult = this->mDevice->GetData(theData, theCount);
+    long theResult = ee_input_get_data(this->mDevice, theData, &theCount);
     if (theResult == kISInputNotAcquired)
         return;
     if (theResult == kISInputOverflow) {
@@ -169,9 +169,9 @@ void ISKeyboard::RecomputeCurrentKeyState()
     memset(this->mStatus, 0, 256);
     memset(this->mLast, 0, 256);
     this->mModifierState = 0;
-    if (this->mDevice->GetKeyState(theState) != kISInputOK)
+    if (ee_input_get_key_state(this->mDevice, theState) != kISInputOK)
         return;
-    this->mDevice->GetData(NULL, theCount);
+    ee_input_get_data(this->mDevice, NULL, &theCount);
     this->mNumberOfKeysDown = 0;
     for (int i = 0; i < this->mKeyCount; i++) {
         if ((theState[i] & 0x80) == 0x80) {
@@ -192,7 +192,7 @@ void ISKeyboard::RecomputeCurrentKeyState()
 // Reacquires the keyboard and rereads its state
 void ISKeyboard::Resume()
 {
-    this->mDevice->Acquire();
+    ee_input_acquire(this->mDevice);
     this->mSuspended = false;
     this->RecomputeCurrentKeyState();
 }
@@ -201,6 +201,6 @@ void ISKeyboard::Resume()
 // Releases the keyboard (its events are no longer buffered) and marks it suspended
 void ISKeyboard::Suspend()
 {
-    this->mDevice->Unacquire();
+    ee_input_unacquire(this->mDevice);
     this->mSuspended = true;
 }

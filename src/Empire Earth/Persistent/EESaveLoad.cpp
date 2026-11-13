@@ -131,7 +131,6 @@ UString GetSaveTextName(const UString& inName, bool inKeep)
 #include "ee/EEGameSound.h"
 #include "ee/EEUIFMainGame.h"
 #include "lle/FSMemoryFile.h"
-#include "lle/FSDebugFile.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "lle/FSChunk.h"
@@ -458,16 +457,19 @@ long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
 long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
 {
     FSMemoryFile theMemory(0x400, true, 1000);
-    FSDebugFile theDebugFile(&theMemory);
     UString theTextName;
     UString theName;
     UString theFile = inFile.GetFile();
     theTextName = GetSaveTextName(theFile, true);
     theName = GetSaveTextName(theFile, false);
-    theDebugFile.SetVolume(inFile.GetVolume());
-    theDebugFile.SetDirectory(inFile.GetDirectory());
-    theDebugFile.SetFile(theName);
-    theDebugFile.Delete();
+    // The old text twin (".txt") is deleted, as the original's unused debug file's Delete did (FSBasicFile::Delete:
+    // a path longer than PLAT_MAX_PATH is left alone, a failure records the native error)
+    if (inFile.GetVolume().GetLength() + inFile.GetDirectory().GetLength() + theName.GetLength() <= PLAT_MAX_PATH) {
+        UString theTextPath(PLAT_MAX_PATH);
+        theTextPath = inFile.GetVolume() + inFile.GetDirectory() + theName;
+        if (!PlatDeleteFile(theTextPath))
+            ESRecordNativeError(PlatGetLastError());
+    }
     long theResult = WriteSaveGame(theTextName, inTime, theMemory, theMemory);
     if (theResult == kErrorOK) {
         theResult = theMemory.Save(inFile);

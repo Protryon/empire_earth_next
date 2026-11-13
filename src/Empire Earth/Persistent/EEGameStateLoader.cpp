@@ -77,7 +77,6 @@
 #include "ee/EEPCalamityHelper.h"
 #include "ee/EEEffectManager.h"
 #include "lle/FSChunk.h"
-#include "lle/FSDebugFile.h"
 #include "lle/FSArchive.h"
 #include "lle/FSPath.h"
 #include "ee/EEUserInterface.h"
@@ -267,7 +266,6 @@ long EEGameStateLoader::RestorePersistents(std::vector<long>& inTags, FSFile& in
 bool EEGameStateLoader::Load(FSFile& inFile)
 {
     FSMemoryFile theMemory(1000, true, 1);
-    FSDebugFile theDebugFile(&theMemory);
     UString theName;
     bool theResult = false;
     theName = GetSaveTextName(inFile.GetFile(), false);

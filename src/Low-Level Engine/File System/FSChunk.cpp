@@ -1,7 +1,6 @@
 // C:\EEX\Low-Level Engine\File System\FSChunk.cpp (file name inferred: no __FILE__; RTTI .?AVFSChunk@@)
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-// The class forwards to Rust (rust/crates/ee_fs/src/chunk.rs); what stays here is the persistent's virtual Load/Save
-// and the debug file around them.
+// The class forwards to Rust (rust/crates/ee_fs/src/chunk.rs); what stays here is the persistent's virtual Load/Save.
 #include <windows.h>
 
 #include "lle/LowLevelEngineCore.h"
@@ -10,7 +9,6 @@
 #include "lle/FSMemoryFile.h"
 #include "lle/TSScheduler.h"
 #include "lle/TSReadWriteLock.h"
-#include "lle/FSDebugFile.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
 #include "TSLockable.h"
@@ -19,12 +17,6 @@
 #include "FSRustOps.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-FSDebugFile* FSChunk::sDebugFile;
-const UString FSChunk::sChunkSizeStringID("FSChunk-ChunkSize");
-const UString FSChunk::sMajorVersionStringID("FSChunk-MajorVersion");
-const UString FSChunk::sMinorVersionStringID("FSChunk-MinorVersion");
-const UString FSChunk::sTagStringID("FSChunk-TagID");
 
 // FUNCTION: LLE 0x10007db9
 // Creates an empty chunk with no header or data loaded
@@ -38,28 +30,6 @@ FSChunk::FSChunk()
 FSChunk::~FSChunk()
 {
     ee_fs_chunk_free(&this->mState);
-}
-
-// FUNCTION: LLE 0x10007df8
-// Returns the file to read or write the chunk through: the debug file wrapping the given payload view when one is set
-FSFile* FSChunk::BuildFileToUse(FSFile* inFile)
-{
-    FSFile* theFile = inFile;
-    if (FSChunk::sDebugFile) {
-        FSChunk::sDebugFile->SetDelegate(inFile);
-        theFile = FSChunk::sDebugFile;
-    }
-    return theFile;
-}
-
-// FUNCTION: LLE 0x10007e11
-// Detaches and clears the debug file used for chunk I/O
-void FSChunk::ClearDebugFile()
-{
-    if (FSChunk::sDebugFile) {
-        FSChunk::sDebugFile->SetDelegate(NULL);
-        FSChunk::sDebugFile = NULL;
-    }
 }
 
 // FUNCTION: LLE 0x10007e2a
@@ -92,8 +62,7 @@ long FSChunk::LoadPersistentFromChunk(FSPersistent*& outPersistent)
     if (outPersistent == NULL)
         return kErrorNotFound;
     FSMemoryFile theData(this->mState.data, false);
-    FSFile* theFile = this->BuildFileToUse(&theData);
-    return outPersistent->Load(this->mState.major, this->mState.minor, *theFile);
+    return outPersistent->Load(this->mState.major, this->mState.minor, theData);
 }
 
 // FUNCTION: LLE 0x10007efd
@@ -123,20 +92,12 @@ long FSChunk::SavePersistentToChunk(unsigned long inMajorVersion, unsigned long 
     if (theData == NULL)
         return kErrorOK;   // a payload exists already
     FSMemoryFile theFile(theData, false);
-    FSFile* theTarget = this->BuildFileToUse(&theFile);
-    long theResult = inPersistent->Save(inMajorVersion, inMinorVersion, *theTarget);
+    long theResult = inPersistent->Save(inMajorVersion, inMinorVersion, theFile);
     if (theResult != kErrorOK)
         return theResult;   // Fixed: a failed save used to be reported as success
     ee_fs_chunk_finish_save(&this->mState, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion,
                             (int32_t)inPersistent->GetTagID());
     return kErrorOK;
-}
-
-// FUNCTION: LLE 0x10008054
-// Sets the debug file used for chunk I/O
-void FSChunk::SetDebugFile(FSDebugFile* inFile)
-{
-    FSChunk::sDebugFile = inFile;
 }
 
 // FUNCTION: LLE 0x1000805e

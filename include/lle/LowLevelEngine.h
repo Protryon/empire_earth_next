@@ -63,7 +63,7 @@ LLE_API void FSInitialize(const UString& inPath);     // proven ?FSInitialize@@Y
 #include "lle/SESample.h"
 #endif
 class GEWindow;
-LLE_API long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow, bool inUseCD);   // Sound Engine.cpp
+LLE_API long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow);   // Sound Engine.cpp
 
 // ---- Network engine (NE)
 #include "lle/NEProtocolConfiguration.h"
