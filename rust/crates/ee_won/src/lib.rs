@@ -107,6 +107,7 @@ pub mod reqops;
 pub mod resource;
 pub mod routemsg;
 pub mod routing;
+pub mod scrollerobj;
 pub mod servctx;
 pub mod server;
 pub mod socket;

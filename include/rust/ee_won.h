@@ -2274,6 +2274,32 @@ enum class EeWonGuiOp : uint32_t {
   BaseAddedToParent,
   /// `Component::SetEnabled(a != 0)`.
   BaseSetEnabled,
+  /// `((Scrollbar*)a)->mRust` (a bar's Rust object).
+  BarOf = 340,
+  /// `a->AddListener(new ComponentListenerComp(this))`.
+  ListenTo,
+  /// the area `a`'s field `b` (`EeWonGuiField`).
+  AreaGet,
+  /// the area `a`'s field `b` = `c`.
+  AreaSet,
+  /// `a->AdjustPosition(b != 0)` (virtual).
+  AreaAdjustPosition,
+  /// `a->RequestFocus()`.
+  AreaRequestFocus,
+  /// `a->MouseWheel(b)` (virtual; 0 or 1).
+  AreaMouseWheel,
+  /// `a->SetScroller(this)`.
+  AreaSetScroller,
+  /// `mFocusChild != NULL` (0 or 1).
+  HasFocusChild,
+  /// `Container::MouseWheel(a)` (0 or 1).
+  BaseMouseWheel,
+  /// `Component::HandleComponentEvent(a)`.
+  ComponentHandleEvent,
+  /// `Virtual08()` (virtual: a subclass's layout).
+  VirtSizeChanged,
+  /// `NotifyScrollChange(a != 0)` (virtual).
+  VirtNotifyScrollChange,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3257,6 +3283,39 @@ enum class EeWonResKind {
   Sound = 2,
 };
 
+/// The inward calls (the C++ shells' virtuals and methods).
+enum class EeWonScrollerCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  GetScrollArea,
+  /// `SetScrollArea(a)` (the original's `SmartPtr` assignment).
+  SetScrollArea,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetHorzOffset(a)`.
+  SetHorzOffset,
+  AddedToParent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `NotifyScrollChange(a != 0)`.
+  NotifyScrollChange,
+  /// `SetScrollbar(a)`.
+  SetScrollbar,
+  AddControls,
+  /// `GetScrollbar(a != 0)`.
+  GetScrollbar,
+  /// `SetBar(a != 0, b)` (the field only).
+  SetBar,
+  /// `EnableScrollbar(a, b)` (0 or 1).
+  EnableScrollbar,
+  /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
+  SetScrollbarConditions,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods).
 enum class EeWonSplitCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -3561,6 +3620,10 @@ enum class EeWonGuiField : uint32_t {
   Width,
   /// `Height()` (read only).
   Height,
+  /// `mScrollArea.x`.
+  ScrollX,
+  /// `mScrollArea.y`.
+  ScrollY,
 };
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -3681,6 +3744,9 @@ struct EeWonReqOp;
 
 /// The Rust Scrollbar.
 struct EeWonScrollbar;
+
+/// The Rust Scroller (and ScrollbarScroller).
+struct EeWonScroller;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -11416,6 +11482,23 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new Rust Scroller for the C++ `component`, its calls out through `host`.
+EeWonScroller *ee_won_scroller_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `scroller` came from `ee_won_scroller_new` (or is NULL) and is not used again.
+void ee_won_scroller_free(EeWonScroller *scroller);
+
+/// One of Scroller's or ScrollbarScroller's methods (`EeWonScrollerCall`).
+///
+/// # Safety
+/// `scroller` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
+                               EeWonScrollerCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
 
 /// A new, empty list (shuffling on).
 EeWonServerList *ee_won_ctx_new();

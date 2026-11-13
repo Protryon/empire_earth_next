@@ -46,6 +46,10 @@ pub enum EeWonGuiField {
     Width,
     /// `Height()` (read only).
     Height,
+    /// `mScrollArea.x`.
+    ScrollX,
+    /// `mScrollArea.y`.
+    ScrollY,
 }
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -448,6 +452,33 @@ pub enum EeWonGuiOp {
     BaseAddedToParent,
     /// `Component::SetEnabled(a != 0)`.
     BaseSetEnabled,
+    // ---- the scroller (`scrollerobj`; `a` the scroll area, a `ScrollArea*`, or a bar, a `Scrollbar*`)
+    /// `((Scrollbar*)a)->mRust` (a bar's Rust object).
+    BarOf = 340,
+    /// `a->AddListener(new ComponentListenerComp(this))`.
+    ListenTo,
+    /// the area `a`'s field `b` (`EeWonGuiField`).
+    AreaGet,
+    /// the area `a`'s field `b` = `c`.
+    AreaSet,
+    /// `a->AdjustPosition(b != 0)` (virtual).
+    AreaAdjustPosition,
+    /// `a->RequestFocus()`.
+    AreaRequestFocus,
+    /// `a->MouseWheel(b)` (virtual; 0 or 1).
+    AreaMouseWheel,
+    /// `a->SetScroller(this)`.
+    AreaSetScroller,
+    /// `mFocusChild != NULL` (0 or 1).
+    HasFocusChild,
+    /// `Container::MouseWheel(a)` (0 or 1).
+    BaseMouseWheel,
+    /// `Component::HandleComponentEvent(a)`.
+    ComponentHandleEvent,
+    /// `Virtual08()` (virtual: a subclass's layout).
+    VirtSizeChanged,
+    /// `NotifyScrollChange(a != 0)` (virtual).
+    VirtNotifyScrollChange,
 }
 
 /// The events a component object fires (`FireEvent`).

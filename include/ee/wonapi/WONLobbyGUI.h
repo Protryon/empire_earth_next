@@ -1005,39 +1005,39 @@ private:
     intptr_t Call(EeWonBarCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_bar_call(this->mRust,c,a,b,cc); }
 };
 
-// Scroller (0x88 bytes): owns the scroll area at +0x84
+// Scroller and ScrollbarScroller (R6 WON round 25): the scroll area, the bars and their conditions are one Rust
+// Scroller (rust/crates/ee_won/src/scrollerobj.rs) the Scroller constructor makes; these are the types the configs,
+// the combo box, the scroll areas and the scroll containers (MSScrollContainer, WONScrollContainer) hold.
 class Scroller : public Container {
 public:
     Scroller(); // 0x305540
-    // Implicit virtual destructor (0x3001e0)
-    virtual void MouseDown(int,int,int); //305670
-    virtual bool MouseWheel(int); //3056c0
+    virtual ~Scroller(); // the implicit destructors (0x3001e0, ScrollbarScroller's 0x300060)
+    virtual void MouseDown(int x,int y,int b) { this->SCall(EeWonScrollerCall::MouseDown,x,y,b); } //305670
+    virtual bool MouseWheel(int n) { return this->SCall(EeWonScrollerCall::MouseWheel,n)!=0; } //3056c0
     virtual void NotifyScrollChange(bool) {} // empty inline (shared body at 0x30a800)
-    ScrollArea* GetScrollArea() { return this->mScrollArea.get(); }
-    void SetScrollArea(ScrollArea*); // 0x305580: sets the scroll area and its back link
-    void SetOffsets(int,int); //3055e0 horizontal thenvertical
-    void SetVertOffset(int); //305630
-    void SetHorzOffset(int); //305650
-    SmartPtr<ScrollArea> mScrollArea; // at +0x84; released by the implicit destructor 0x3001e0
+    ScrollArea* GetScrollArea() { return (ScrollArea*)this->SCall(EeWonScrollerCall::GetScrollArea); }
+    // (a ScrollArea's Component is at its own address: single inheritance)
+    void SetScrollArea(ScrollArea* a) { this->SCall(EeWonScrollerCall::SetScrollArea,(intptr_t)a); } // 0x305580
+    void SetOffsets(int h,int v) { this->SCall(EeWonScrollerCall::SetOffsets,h,v); } //3055e0 horizontal then vertical
+    void SetVertOffset(int v) { this->SCall(EeWonScrollerCall::SetVertOffset,v); } //305630
+    void SetHorzOffset(int h) { this->SCall(EeWonScrollerCall::SetHorzOffset,h); } //305650
+    EeWonScroller* mRust;
+protected:
+    intptr_t SCall(EeWonScrollerCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_scroller_call(this->mRust,c,a,b,cc); }
 };
 enum ScrollbarCondition { ScrollbarCondition_Disable=0,ScrollbarCondition_Enable=1,ScrollbarCondition_Conditional=2 };
-// ScrollbarScroller (0x9c bytes)
+// ScrollbarScroller (0x305700: both conditions Enable, in the Rust scroller)
 class ScrollbarScroller : public Scroller {
 public:
-    ScrollbarScroller(); // 0x305700
-    // Implicit virtual destructor (0x300060)
-    virtual void AddedToParent(); //305840 AddedToParent
-    virtual void HandleComponentEvent(ComponentEvent*); //305a00
-    virtual void NotifyScrollChange(bool); // 0x305a50, vtable +0xcc
-    void SetScrollbar(Scrollbar*); //305760
-    void AddControls(); //305860
-    Scrollbar* GetScrollbar(bool vertical) { return vertical?this->mVertScrollbar.get():this->mHorzScrollbar.get(); } // inline; +0x88/+0x8c
-    void SetBar(bool vertical,Scrollbar* s) { if(vertical) this->mVertScrollbar=s; else this->mHorzScrollbar=s; } // the field only (MSScrollContainer's constructor)
-    bool EnableScrollbar(Scrollbar*,ScrollbarCondition); //3058d0
-    void SetScrollbarConditions(ScrollbarCondition,ScrollbarCondition); // 0x305990
-    SmartPtr<Scrollbar> mHorzScrollbar,mVertScrollbar; // at +0x88/+0x8c
-    ScrollbarCondition mVertCondition,mHorzCondition; //90/94
-    bool mSettingScrollbarConditions; // at +0x98; +0x99..0x9b padding
+    virtual void AddedToParent() { this->SCall(EeWonScrollerCall::AddedToParent); } //305840
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->SCall(EeWonScrollerCall::HandleEvent,(intptr_t)e); } //305a00
+    virtual void NotifyScrollChange(bool b) { this->SCall(EeWonScrollerCall::NotifyScrollChange,b); } // 0x305a50, vtable +0xcc
+    void SetScrollbar(Scrollbar* s) { this->SCall(EeWonScrollerCall::SetScrollbar,(intptr_t)static_cast<Component*>(s)); } //305760
+    void AddControls() { this->SCall(EeWonScrollerCall::AddControls); } //305860
+    Scrollbar* GetScrollbar(bool vertical) { return (Scrollbar*)this->SCall(EeWonScrollerCall::GetScrollbar,vertical); }
+    void SetBar(bool vertical,Scrollbar* s) { this->SCall(EeWonScrollerCall::SetBar,vertical,(intptr_t)static_cast<Component*>(s)); } // the field only (MSScrollContainer's constructor)
+    bool EnableScrollbar(Scrollbar* s,ScrollbarCondition c) { return this->SCall(EeWonScrollerCall::EnableScrollbar,(intptr_t)static_cast<Component*>(s),c)!=0; } //3058d0
+    void SetScrollbarConditions(ScrollbarCondition h,ScrollbarCondition v) { this->SCall(EeWonScrollerCall::SetScrollbarConditions,h,v); } // 0x305990
 };
 enum ScrollButtonCondition {
     ScrollButtonCondition_Disable=0, ScrollButtonCondition_Enable=1,

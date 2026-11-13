@@ -2,7 +2,7 @@
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
-// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the ListArea's and its items'
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the Scrollbar's (barobj.rs); the Scroller's (scrollerobj.rs); the ListArea's and its items'
 // defaults (listobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
@@ -34,6 +34,8 @@ typedef EeWonGuiField Fd;
 static int* FieldOf(ScrollArea* t, intptr_t inField)
 {
     switch ((Fd)inField) {
+    case Fd::ScrollX: return &t->mScrollArea.x;
+    case Fd::ScrollY: return &t->mScrollArea.y;
     case Fd::ScrollWidth: return &t->mScrollArea.width;
     case Fd::ScrollHeight: return &t->mScrollArea.height;
     case Fd::VertOffset: return &t->mVertOffset;
@@ -504,6 +506,47 @@ Scrollbar::Scrollbar(bool vertical) { this->mRust=ee_won_bar_new(this,ee_won_gui
 // FUNCTION: WON 0x00705eb0
 // Destroys the scrollbar: the Rust bar gives the thumb, the track and the arrows back
 Scrollbar::~Scrollbar() { ee_won_bar_free(this->mRust); }
+}
+
+// ---- the scroller (`a` the scroll area or a bar)
+
+extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Scroller* t = (Scroller*)inComp;
+    ScrollArea* area = static_cast<ScrollArea*>(Comp(a));
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseWheel: return t->Container::MouseWheel((int)a) ? 1 : 0;
+    case Op::BaseAddedToParent: t->Container::AddedToParent(); return 0;
+    case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::VirtSizeChanged: t->Virtual08(); return 0;
+    case Op::VirtNotifyScrollChange: t->NotifyScrollChange(a != 0); return 0;
+    case Op::HasFocusChild: return t->mFocusChild != NULL ? 1 : 0;
+    case Op::BarOf: return (intptr_t)static_cast<Scrollbar*>(Comp(a))->mRust;
+    case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
+    case Op::AreaGet: return FieldOf(area, b) ? *FieldOf(area, b) : 0;
+    case Op::AreaSet: if (FieldOf(area, b)) *FieldOf(area, b) = (int)c; return 0;
+    case Op::AreaAdjustPosition: area->AdjustPosition(b != 0); return 0;
+    case Op::AreaRequestFocus: area->RequestFocus(); return 0;
+    case Op::AreaMouseWheel: return area->MouseWheel((int)b) ? 1 : 0;
+    case Op::AreaSetScroller: area->SetScroller(t); return 0;
+    default: return ContainerOp(t, op, a, b, c);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x00705540
+// Creates a scroller with no scroll area (the Rust scroller; a ScrollbarScroller's bars start without, both
+// conditions Enable)
+Scroller::Scroller() { this->mRust=ee_won_scroller_new(this,ee_won_guicpp_scroller_call); }
+// Destroys the scroller: the Rust scroller gives the bars and the scroll area back (the implicit destructors
+// 0x003001e0 and 0x00300060)
+Scroller::~Scroller() { ee_won_scroller_free(this->mRust); }
 }
 
 // ---- the list

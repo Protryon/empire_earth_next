@@ -439,6 +439,9 @@ WON_TESTS = {
     # Scrollbar as a whole Rust object (barobj.rs), the same way; the scroll event traced as the type the C++ fires
     # (golden: rust/crates/ee_won/src/golden_barobj.txt)
     "won_barobj_test": [],
+    # Scroller and ScrollbarScroller as one whole Rust object (scrollerobj.rs) over real Rust bars, the same way
+    # (golden: rust/crates/ee_won/src/golden_scrollerobj.txt)
+    "won_scrollerobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],
