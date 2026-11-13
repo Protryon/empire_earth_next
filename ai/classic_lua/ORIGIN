@@ -155,8 +155,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 hit points of 1500 or more, the missile base given the attack). DEVIATIONS: a wonder's tile is known
                 only where explored (else its owner's known town; "sees_all" reads them all), CollectAll's
                 near-water and map-edge filter is not applied; the unit limit's 95% in a wonder race is not ported.
-                NOT STARTED: Attack's flares and covered landings, EpochReached's WW1 groups, AttackPlayer /
-                DefendPlayer (allies), the scenario's attack and defend tasks.
+                AttackPlayer / DefendPlayer: PORTED (the attack_player / defend_player events: the caller's most
+                valuable building seen or remembered - DEVIATION: ChooseTargetUnit reads every unit - attacked or
+                defended by every group and a new group; the aid timers halved).
+                NOT STARTED: Attack's flares and covered landings, EpochReached's WW1 groups, the scenario's attack
+                and defend tasks.
   EECPCombatStrategy.cpp        PARTLY -> army.lua: ComputeDomainShares' sea share (GetDomainShare: the water tiles'
                 share, the own sea strength against the target's, the air unit weight's pull) and Calculate (the
                 sea's count, the rest land), RedistributeDomainCounts (no sea or air class: to land); the air share from WW1 (the target's town
@@ -240,8 +243,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 town by guard_town_percentage, a random point of the group's land). DEVIATIONS: the towns are
                 EEPlayer::AddUnitToTown's clusters of the own land buildings (16 tiles' reach), the hull their
                 bounding box (EETown's convex hull); a defence task reaches 12 tiles round its place (18 at a threat point). NOT STARTED:
-                the adjacent continents' step of the ladder, AidAllies, CheckRaids / Retaliate, BuildUp
-                (deathmatch). CheckSpecials: PORTED (army.lua check_specials, every ship_maintenance_timer / 2
+                the adjacent continents' step of the ladder, CheckRaids / Retaliate, BuildUp
+                (deathmatch). AidAllies: PORTED (army.lua aid_allies, every defence update: the allies shuffled,
+                the first with a threatened town - else a town of more than 2 buildings without a package - gets an
+                aid package while the unit allowance holds; a human ally's is sent at once; the allies' towns are
+                their buildings clustered as the own). CheckSpecials: PORTED (army.lua check_specials, every ship_maintenance_timer / 2
                 minutes: the anti-missile batteries, one and one more per town centre, settlement or capitol up to
                 10; one ICBM kept once the missile base can make it). NOT STARTED: its ChooseUnitsToKill past 10
                 batteries, the capitols' cloaking. CheckSpace: PORTED (every ship_maintenance_timer minutes on a space map:

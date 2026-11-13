@@ -307,55 +307,93 @@ end
 
 local TOWN_REACH2 = 256
 
-local function towns()
-    return R.memo("army_towns", function()
-        local ids = ai.units{category = "building"}
-        local out = {}
-        if #ids == 0 then
-            return out
-        end
-        local cols = ai.get(ids, {"x", "y", "type"})
-        for k = 1, #ids do
-            local x, y = cols.x[k], cols.y[k]
-            local ty = cols.type[k]
-            if x ~= nil and not ty:find("wall") and not ty:find("gate") then
-                local joined = nil
-                for _, tw in ipairs(out) do
-                    if not tw.dead then
-                        local px = math.max(tw.l, math.min(tw.r, x))
-                        local py = math.max(tw.t, math.min(tw.b, y))
-                        if d2(px, py, x, y) <= TOWN_REACH2 then
-                            if joined == nil then
-                                joined = tw
-                            else
-                                joined.l, joined.r = math.min(joined.l, tw.l), math.max(joined.r, tw.r)
-                                joined.t, joined.b = math.min(joined.t, tw.t), math.max(joined.b, tw.b)
-                                joined.value = joined.value + tw.value
-                                joined.id = math.min(joined.id, tw.id)
-                                tw.dead = true
-                            end
+-- the clustering of a list of buildings (ids, and cols with x, y, type)
+local function cluster_towns(ids, cols)
+    local out = {}
+    for k = 1, #ids do
+        local x, y = cols.x[k], cols.y[k]
+        local ty = cols.type[k]
+        if x ~= nil and not ty:find("wall") and not ty:find("gate") then
+            local joined = nil
+            for _, tw in ipairs(out) do
+                if not tw.dead then
+                    local px = math.max(tw.l, math.min(tw.r, x))
+                    local py = math.max(tw.t, math.min(tw.b, y))
+                    if d2(px, py, x, y) <= TOWN_REACH2 then
+                        if joined == nil then
+                            joined = tw
+                        else
+                            joined.l, joined.r = math.min(joined.l, tw.l), math.max(joined.r, tw.r)
+                            joined.t, joined.b = math.min(joined.t, tw.t), math.max(joined.b, tw.b)
+                            joined.value = joined.value + tw.value
+                            joined.id = math.min(joined.id, tw.id)
+                            tw.dead = true
                         end
                     end
                 end
-                if joined == nil then
-                    out[#out + 1] = {id = ids[k], l = x, r = x, t = y, b = y, value = 1}
-                else
-                    joined.l, joined.r = math.min(joined.l, x), math.max(joined.r, x)
-                    joined.t, joined.b = math.min(joined.t, y), math.max(joined.b, y)
-                    joined.value = joined.value + 1
-                    joined.id = math.min(joined.id, ids[k])
-                end
+            end
+            if joined == nil then
+                out[#out + 1] = {id = ids[k], l = x, r = x, t = y, b = y, value = 1}
+            else
+                joined.l, joined.r = math.min(joined.l, x), math.max(joined.r, x)
+                joined.t, joined.b = math.min(joined.t, y), math.max(joined.b, y)
+                joined.value = joined.value + 1
+                joined.id = math.min(joined.id, ids[k])
             end
         end
-        local keep = {}
+    end
+    local keep = {}
+    for _, tw in ipairs(out) do
+        if not tw.dead then
+            tw.cx, tw.cy = (tw.l + tw.r) // 2, (tw.t + tw.b) // 2
+            keep[#keep + 1] = tw
+        end
+    end
+    table.sort(keep, function(p, q) return p.id < q.id end)
+    return keep
+end
+
+local function towns()
+    return R.memo("army_towns", function()
+        local ids = ai.units{category = "building"}
+        if #ids == 0 then
+            return {}
+        end
+        return cluster_towns(ids, ai.get(ids, {"x", "y", "type"}))
+    end)
+end
+
+-- the allies (ai.players: allied, alive, not the player itself), by id
+local function allies()
+    return R.memo("army_allies", function()
+        local me = ai.me()
+        local out = {}
+        for _, p in ipairs(ai.players()) do
+            if p.ally and p.alive and p.id ~= me then
+                out[#out + 1] = p.id
+            end
+        end
+        table.sort(out)
+        return out
+    end)
+end
+
+-- an ally's towns: its buildings (allied units are always seen) clustered as the own (the ally's EETowns)
+local function ally_towns(player)
+    return R.memo("army_ally_towns_" .. player, function()
+        local ids = ai.seen{player = player, category = "building"}
+        local cols = {x = {}, y = {}, type = {}}
+        for k, id in ipairs(ids) do
+            local u = ai.unit(id)
+            if u ~= nil then
+                cols.x[k], cols.y[k], cols.type[k] = u.x, u.y, u.type
+            end
+        end
+        local out = cluster_towns(ids, cols)
         for _, tw in ipairs(out) do
-            if not tw.dead then
-                tw.cx, tw.cy = (tw.l + tw.r) // 2, (tw.t + tw.b) // 2
-                keep[#keep + 1] = tw
-            end
+            tw.ally = player
         end
-        table.sort(keep, function(p, q) return p.id < q.id end)
-        return keep
+        return out
     end)
 end
 
@@ -363,6 +401,14 @@ local function town_by_id(id)
     for _, tw in ipairs(towns()) do
         if tw.id == id then
             return tw
+        end
+    end
+    -- (an allied town an aid package defends: AidAllies)
+    for _, p in ipairs(allies()) do
+        for _, tw in ipairs(ally_towns(p)) do
+            if tw.id == id then
+                return tw
+            end
         end
     end
     return nil
@@ -3036,6 +3082,108 @@ local function plan_aid(view, memory)
 end
 
 -- EECPDefenseCommander::Update (every 8 s, or the packages' next update): packages, own towns' aid, PlanAid
+-- AidAllies (every defence update): the allies in a shuffled order; the first with a threatened town (FindThreatenedTown:
+-- the most threatened), else a town of more than 2 buildings without a package, gets a new aid package (AssignSubGroups)
+-- while the unit allowance holds; one package an update. (The C++'s threat test passes for every ally: an ally is no
+-- enemy.) A human ally's package is sent at once
+local function aid_allies(view, memory)
+    local a = army(memory)
+    local list = {}
+    for _, p in ipairs(allies()) do
+        list[#list + 1] = p
+    end
+    shuffle(list)
+    for _, p in ipairs(list) do
+        local tws = ally_towns(p)
+        local pick, pt = nil, 0
+        for _, tw in ipairs(tws) do
+            local t = town_threat(memory, tw, false)
+            if t > pt then
+                pick, pt = tw, t
+            end
+        end
+        if pick == nil then
+            for k = #tws, 1, -1 do
+                if tws[k].value > 2 and a.packages[tws[k].id] == nil then
+                    pick = tws[k]
+                    break
+                end
+            end
+        end
+        if pick ~= nil then
+            if a.packages[pick.id] == nil and unit_allowance(view, memory) > 0 and send_aid(view, memory, pick, false) then
+                local pk = a.packages[pick.id]
+                pk.ally = p
+                for _, pl in ipairs(ai.players()) do
+                    if pl.id == p and pl.human then
+                        pk.next_send = 0
+                    end
+                end
+                print(string.format("classic_lua army.aid_ally player=%d town=%d threat=%d groups=%d", p, pick.id, pt,
+                    #pk.groups))
+            end
+            break
+        end
+    end
+end
+
+-- AttackPlayer / DefendPlayer (the attack-players order: a player's call): the player's most valuable unit
+-- (ChooseTargetUnit: influence, fixed buildings first; DEVIATION: of its buildings seen or remembered) attacked with
+-- every group and a new attack group (AttackUnit on a unit that is no wonder), or defended by every group and a new
+-- defence group (DefendUnit); the aid timers halved
+local function choose_target_unit(player)
+    local best, bv = nil, nil
+    local recs = {}
+    for _, id in ipairs(ai.seen{player = player, category = "building"}) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            recs[#recs + 1] = u
+        end
+    end
+    for _, m in ipairs(ai.memory{player = player}) do
+        if m.building then
+            recs[#recs + 1] = m
+        end
+    end
+    for _, u in ipairs(recs) do
+        local v = cls(u.type).influence or 0
+        if string.sub(u.type, 1, 2) ~= "w_" and (bv == nil or v > bv or (v == bv and u.id < best.id)) then
+            best, bv = u, v
+        end
+    end
+    return best
+end
+
+local function answer_call(view, memory, player, defend)
+    local a = army(memory)
+    local u = choose_target_unit(player)
+    if u == nil then
+        return
+    end
+    local groups = wonder_groups(memory)
+    for _, g in ipairs(groups) do
+        g.wonder_id, g.wonder_defend = nil, nil
+        if defend then
+            g.mission = 1
+            set_place(g, "defend", u.x, u.y, GUARD_RADIUS, 0)
+        else
+            g.mission, g.enemy = 2, player
+            set_place(g, "attack", u.x, u.y, 0, player)
+        end
+    end
+    if defend then
+        create_group(view, memory, 1, 1, random_enemy(), "call")
+    else
+        create_group(view, memory, 0, 2, player, "call")
+    end
+    for _, pk in pairs(a.packages) do
+        pk.next_send = (pk.next_send or 0) // 2
+    end
+    memory.cp.next_aid = (memory.cp.next_aid or 0) // 2
+    print(string.format("classic_lua army.call %s player=%d at=%d,%d groups=%d", defend and "defend" or "attack",
+        player, u.x, u.y, #groups))
+end
+
 local function defense(view, memory)
     local cp = memory.cp
     local a = army(memory)
@@ -3056,6 +3204,7 @@ local function defense(view, memory)
             send_aid(view, memory, list[k], false)
         end
     end
+    aid_allies(view, memory)
     if view.time >= cp.next_aid then
         plan_aid(view, memory)
     end
@@ -3192,6 +3341,13 @@ end
 
 function M.on_events(view, memory, events)
     note_deaths(view, memory, events)
+    for _, e in ipairs(events) do
+        if e.kind == "attack_player" then
+            answer_call(view, memory, e.player, false)
+        elseif e.kind == "defend_player" then
+            answer_call(view, memory, e.player, true)
+        end
+    end
 end
 
 -- every step (EECPCombatManager::Tick)
