@@ -66,22 +66,22 @@ void MSComboBox::Virtual08()
 void MSScrollContainer::Virtual08()
 {
     Container::Virtual08();
-    if(this->mScrollArea.get()==NULL) return;
-    bool horzOn=this->mHorzScrollbar->IsVisible();
-    bool vertOn=this->mVertScrollbar->IsVisible();
+    if(this->GetScrollArea()==NULL) return;
+    bool horzOn=this->GetScrollbar(false)->IsVisible();
+    bool vertOn=this->GetScrollbar(true)->IsVisible();
     int xoff=0,yoff=0;
     if(this->mDrawFrame && this->mDraw3DFrame) xoff=yoff=2;
-    int scrollbarWidth=this->mVertScrollbar->Width();
-    int scrollbarHeight=this->mHorzScrollbar->Height();
+    int scrollbarWidth=this->GetScrollbar(true)->Width();
+    int scrollbarHeight=this->GetScrollbar(false)->Height();
     int scrollWidth=this->Width()-xoff*2;
     if(vertOn) scrollWidth-=scrollbarWidth;
     int scrollHeight=this->Height()-yoff*2;
     if(horzOn) scrollHeight-=scrollbarHeight;
     if(vertOn)
-        this->mVertScrollbar->SetPosSize(this->Width()-scrollbarWidth-xoff,yoff,scrollbarWidth,scrollHeight);
+        this->GetScrollbar(true)->SetPosSize(this->Width()-scrollbarWidth-xoff,yoff,scrollbarWidth,scrollHeight);
     if(horzOn)
-        this->mHorzScrollbar->SetPosSize(xoff,this->Height()-scrollbarHeight-yoff,scrollWidth,scrollbarHeight);
-    this->mScrollArea->SetPosSize(xoff,this->mHeaderHeight+yoff,scrollWidth,scrollHeight-this->mHeaderHeight);
+        this->GetScrollbar(false)->SetPosSize(xoff,this->Height()-scrollbarHeight-yoff,scrollWidth,scrollbarHeight);
+    this->GetScrollArea()->SetPosSize(xoff,this->mHeaderHeight+yoff,scrollWidth,scrollHeight-this->mHeaderHeight);
 }
 
 // FUNCTION: WON 0x00700390
@@ -90,11 +90,11 @@ void MSScrollContainer::Virtual08()
 void MSScrollContainer::Paint(Graphics& g)
 {
     Container::Paint(g);
-    if(this->mVertScrollbar->IsVisible() && this->mHorzScrollbar->IsVisible() && !this->mTransparent)
+    if(this->GetScrollbar(true)->IsVisible() && this->GetScrollbar(false)->IsVisible() && !this->mTransparent)
     {
         g.SetSysColor(StandardColor_Scrollbar);
-        g.FillRect(this->mVertScrollbar->Left(),this->mVertScrollbar->Top()+this->mVertScrollbar->Height(),
-                   this->mVertScrollbar->Width(),this->mHorzScrollbar->Height());
+        g.FillRect(this->GetScrollbar(true)->Left(),this->GetScrollbar(true)->Top()+this->GetScrollbar(true)->Height(),
+                   this->GetScrollbar(true)->Width(),this->GetScrollbar(false)->Height());
     }
     if(!this->mDrawFrame)
         return;

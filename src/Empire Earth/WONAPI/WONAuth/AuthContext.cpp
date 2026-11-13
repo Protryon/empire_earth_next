@@ -97,19 +97,11 @@ struct AuthContextFlow {
             op->SetCompletion(new ParamCompletion<SmartPtr<AsyncOp>,SmartPtr<RefCount> >(AuthContext::StaticGetCertCallback,static_cast<AuthContext*>(c)));
         return static_cast<RefCount*>(static_cast<AsyncOp*>(op));
     }
-    static void* CertPeerData(void* p)
+    static EeWonAuthObj* CertPeerData(void* p)
     {
         const AuthPeerData* peer = static_cast<GetCertOp*>(Op(p))->GetPeerData();
-        if(peer==NULL) return NULL;
-        peer->CreateRef();
-        return const_cast<RefCount*>(static_cast<const RefCount*>(peer));
+        return peer!=NULL ? ee_won_authobj_clone(peer->Impl()) : NULL;
     }
-    static void LightSetPeerData(void* l, void* p)
-    {
-        static_cast<LightGetCertOp*>(Op(l))->SetPeerData(p!=NULL?static_cast<const AuthPeerData*>(Obj(p)):NULL);
-    }
-    static bool PeerValid(void* c) { return static_cast<AuthContext*>(c)->mPeerData->IsValid(); }
-    static int64_t PeerExpireDelta(void* c) { return (int64_t)static_cast<AuthContext*>(c)->mPeerData->GetExpireDelta(); }
     static EeWonAuthFlow* New(AuthContext* c)
     {
         EeWonAuthFlowHooks h;
@@ -126,9 +118,6 @@ struct AuthContextFlow {
         h.new_timer = NewTimer;
         h.new_cert_op = NewCertOp;
         h.cert_peer_data = CertPeerData;
-        h.light_set_peer_data = LightSetPeerData;
-        h.peer_valid = PeerValid;
-        h.peer_expire_delta = PeerExpireDelta;
         return ee_won_auth_flow_new(&h);
     }
 };
@@ -144,7 +133,9 @@ void AuthContext::Init()
     this->mFlow=AuthContextFlow::New(this);
     std::string aSecretFile=WONAPICore::GetDefaultFileDirectory()+"_wonlogin.ks";
     this->mLogin=ee_won_auth_login_new(reinterpret_cast<const uint8_t*>(aSecretFile.data()),aSecretFile.size());
-    this->mPeerData=new AuthPeerData;
+    EeWonAuthObj* aPeer=ee_won_peer_new_empty(NULL); // new AuthPeerData
+    ee_won_auth_flow_set_peer_data(this->mFlow,aPeer);
+    ee_won_authobj_free(aPeer);
     this->mServerContext=new ServerContext;
     AutoCrit lock(GetVerifierCrit());
     if(AuthContext::mCheckedVerifierFile) return;
@@ -165,7 +156,8 @@ AuthContext::~AuthContext()
 }
 
 // The peer sessions and the certificate flow are ee_won's (authflow.rs): the session map and its clean-up cursor,
-// the waiting ops, the GetCertOp, the auto-refresh timer and the refresh status and flag; the lock stays here.
+// the waiting ops (their members too), the GetCertOp, the auto-refresh timer, the refresh status and flag and the
+// peer data; the lock stays here. The peer data's expire delta is read at time(NULL), as the original's.
 
 // FUNCTION: WON 0x006deeb0
 // Caches a peer session for an address and drops up to five map entries unused for over 300 seconds
@@ -205,7 +197,7 @@ void AuthContext::StopAutoRefresh()
 void AuthContext::SetDoAutoRefresh(bool enabled)
 {
     AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_set_do_auto_refresh(this->mFlow,enabled);
+    ee_won_auth_flow_set_do_auto_refresh(this->mFlow,enabled,(int64_t)time(NULL));
 }
 // FUNCTION: WON 0x006df260
 // Kills the running certificate request and the auto-refresh timer
@@ -226,7 +218,7 @@ void AuthContext::StaticAutoRefreshCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCou
 void AuthContext::StartAutoRefresh(bool force)
 {
     AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_start_auto_refresh(this->mFlow,force);
+    ee_won_auth_flow_start_auto_refresh(this->mFlow,force,(int64_t)time(NULL));
 }
 
 
@@ -297,26 +289,25 @@ void AuthContext::CommitSecrets(time_t authTime,time_t duration)
     ee_won_auth_login_secrets(this->mLogin,4,NULL,(int64_t)authTime,(int64_t)duration);
 }
 // FUNCTION: WON 0x006e19e0
-// Returns the current peer data (certificate and keys) under the lock
+// Returns the current peer data (certificate and keys) under the lock: a shim over the Rust object
 ConstSmartPtr<AuthPeerData> AuthContext::GetPeerData()
 {
     AutoCrit lock(this->mDataCrit);
-    return this->mPeerData;
+    return AuthPeerData::Adopt(ee_won_auth_flow_peer_data(this->mFlow));
 }
 // FUNCTION: WON 0x006e1a30
 // Returns whether the auth2 certificate expires within the given number of seconds
 bool AuthContext::IsExpired(time_t extra)
 {
     AutoCrit lock(this->mDataCrit);
-    return this->mPeerData->Certificate2Expired(extra);
+    return ee_won_auth_flow_is_expired(this->mFlow,(int64_t)extra,(int64_t)time(NULL));
 }
 // FUNCTION: WON 0x006e1aa0
 // Replaces the peer data and clears the peer-session cache
 void AuthContext::SetPeerData(const AuthPeerData* data)
 {
     AutoCrit lock(this->mDataCrit);
-    this->mPeerData=data;
-    ee_won_auth_flow_clear_sessions(this->mFlow);
+    ee_won_auth_flow_set_peer_data(this->mFlow,data!=NULL?data->Impl():NULL);
 }
 
 
@@ -341,21 +332,21 @@ void AuthContext::StaticGetCertCallback(SmartPtr<AsyncOp> op,SmartPtr<RefCount> 
 void AuthContext::GetCertCallback(GetCertOp* op)
 {
     AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_get_cert_callback(this->mFlow,static_cast<RefCount*>(static_cast<AsyncOp*>(op)));
+    ee_won_auth_flow_get_cert_callback(this->mFlow,static_cast<RefCount*>(static_cast<AsyncOp*>(op)),(int64_t)time(NULL));
 }
 // FUNCTION: WON 0x006deba0
-// Queues a refresh op and starts a certificate request when none is running
-void AuthContext::RefreshAsync(LightGetCertOp* op,DWORD timeout)
+// Queues a refresh op (its run and its member) and starts a certificate request when none is running
+void AuthContext::RefreshAsync(AsyncOp* op,EeWonLightCert* cert,DWORD timeout)
 {
     AutoCrit lock(this->mDataCrit);
-    ee_won_auth_flow_refresh_async(this->mFlow,op!=NULL?static_cast<RefCount*>(op):NULL,timeout);
+    ee_won_auth_flow_refresh_async(this->mFlow,op!=NULL?static_cast<RefCount*>(op):NULL,cert,timeout);
 }
 // FUNCTION: WON 0x006dedf0
 // Fetches a new certificate synchronously; restarts auto-refresh on success and returns the status (no lock, as
 // the original)
 WONStatus AuthContext::RefreshBlock(DWORD timeout)
 {
-    return ee_won_auth_flow_refresh_block(this->mFlow,timeout);
+    return ee_won_auth_flow_refresh_block(this->mFlow,timeout,(int64_t)time(NULL));
 }
 
 

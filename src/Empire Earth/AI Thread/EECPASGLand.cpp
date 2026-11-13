@@ -55,7 +55,7 @@
 #include "ee/EECPASGLand.h"
 #include "ee/EECPASGAirTransport.h"
 #include "ee/EEUCTransport.h"
-#include "ee/EEUGLoadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EEPathManager.h"
@@ -701,10 +701,8 @@ bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
                 if (!this->mUnits[i]->IsDone()) {
                     EEComplexUnit* theUnit = this->mUnits[i]->GetUnit();
                     if (theUnit->GetContainer() == NULL &&
-                        (theUnit->GetGoal() == NULL || dynamic_cast<EEUGLoadTransport*>(theUnit->GetLoadGoal()) == NULL)) {
+                        (theUnit->GetGoal() == NULL || EELoadTransportGoalCast(theUnit->GetLoadGoal()) == NULL)) {
                         theCandidates.push_back(this->mUnits[i]->GetUnit());
-                    } else {
-                        dynamic_cast<EEUGLoadTransport*>(theUnit->GetLoadGoal());
                     }
                 }
             }
@@ -944,7 +942,7 @@ bool EECPASGLand::HasIdleUnitToLoad()
                             break;
                         if (theCurrent.mTransport->mWaypoints.size() == 0 && theCurrent.mTransport->mIsPathDone &&
                             theAvailable.back()->GetNumWaypoints() == 0 && theAvailable.back()->mIsPathDone &&
-                            dynamic_cast<EEUGLoadTransport*>(theAvailable.back()->GetLoadGoal()) == NULL) {
+                            EELoadTransportGoalCast(theAvailable.back()->GetLoadGoal()) == NULL) {
                             theResult = true;
                             i = -1;
                             break;
@@ -1907,10 +1905,10 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
         EECPAILoadGroup& theCurrent = theGroups[i];
         if (!theCurrent.mUnits.empty()) {
             theResult = true;
-            EEUGLoadTransport* theGoal = new EEUGLoadTransport(theCurrent.mTransport, theCurrent.mUnits, true);
+            EEUGRust* theGoal = EEUGRust::NewLoad(kGoalLoadTransport, theCurrent.mTransport, theCurrent.mUnits, true);
             // a refused goal is deleted only after its tile and the units' copies are taken from it
             bool theRefused = !this->GiveGoal(theCurrent.mTransport, theGoal, 0, kActionPrepareToMove);
-            theRendezvous = theGoal->mUnitTile;
+            theRendezvous = theGoal->GetLoadUnitTile();
             for (std::vector<EEComplexUnit*>::iterator theUnit = theCurrent.mUnits.begin(); theUnit != theCurrent.mUnits.end(); ++theUnit) {
                 EEUnitGoal* theCopy = theGoal->Clone();
                 if (!this->GiveGoal(*theUnit, theCopy, 0, kActionPrepareToMove) && theCopy != NULL)

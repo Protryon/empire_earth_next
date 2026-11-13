@@ -19,21 +19,7 @@ namespace WONAPI {
 Component* Component::GetNextSibling(bool forward,bool wrap)
 {
     if(this->mParent==NULL) return NULL;
-    std::list<SmartPtr<Component> >::iterator i=this->mChildListItr;
-    if(forward) {
-        ++i;
-        if(i==this->mParent->mChildList.end()) {
-            if(!wrap) return NULL;
-            return this->mParent->mChildList.front().get();
-        }
-    } else {
-        if(i==this->mParent->mChildList.begin()) {
-            if(!wrap) return NULL;
-            return this->mParent->mChildList.back().get();
-        }
-        --i;
-    }
-    return i->get();
+    return this->mParent->NextChild(this,forward,wrap);
 }
 
 // FUNCTION: WON 0x006f5160
@@ -65,7 +51,7 @@ void Component::RootToChild(int& x,int& y)
 bool Component::WantFocus()
 {
     return ee_won_gui_want_focus((uint32_t)this->mComponentBits,this->IsVisible(),this->IsDisabled(),
-                                 this->mParent!=NULL && this->mParent->mModalCount>0);
+                                 this->mParent!=NULL && this->mParent->IsModal());
 }
 }
 

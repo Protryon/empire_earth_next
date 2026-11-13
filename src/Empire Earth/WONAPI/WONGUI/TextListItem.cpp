@@ -16,12 +16,9 @@ void TextListItem::CalcDimensions(ListArea* inList)
 {
     if(this->mFont.get()==NULL) this->mFont=inList->mFont;
     if(this->mColor==-1) this->mColor=inList->GetTextColor();
-    this->mWidth=this->mFont->GetStringWidth(this->mText)+2;
-    this->mHeight=this->mFont->GetHeight();
-    if(this->mImage.get()!=NULL) {
-        this->mWidth+=this->mImage->mWidth+2;
-        if(this->mImage->mHeight>this->mHeight) this->mHeight=this->mImage->mHeight;
-    }
+    Image* i=this->mImage.get(); // the sizes are guidraw.rs text_item_size
+    ee_won_gui_text_item_size(this->mFont->GetStringWidth(this->mText),this->mFont->GetHeight(),i!=NULL,i?i->mWidth:0,
+                              i?i->mHeight:0,false,&this->mWidth,&this->mHeight);
 }
 // FUNCTION: WON 0x006fa360
 // Orders two text items by their text, ignoring case

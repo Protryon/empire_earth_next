@@ -36,8 +36,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLoadContainer.h"
-#include "ee/EEUGLoadGarrison.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
@@ -354,16 +353,16 @@ void EECPCivilizationManager::FillGarrison(EEComplexUnit* inUnit)
                     gContinentManager.mContinents[theContinent], theFlags)
                 || theUnit->mContainer != NULL)
                 continue;
-            EEUGLoadGarrison* theGoal = dynamic_cast<EEUGLoadGarrison*>(inUnit->GetLoadGoal());
+            EEUGRust* theGoal = EELoadGarrisonGoalCast(inUnit->GetLoadGoal());
             if (theGoal == NULL) {
                 theGarrison.clear();
                 theGarrison.push_back(theUnit);
-                theGoal = new EEUGLoadGarrison(inUnit, theGarrison, true);
+                theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, inUnit, theGarrison, true);
                 inUnit->SetGoal(theGoal, 0, 0);
                 inUnit->StartAction(kActionWaitForGarrisonCost);
                 inUnit->GetUnitClass()->ActionChanged(inUnit);
             } else
-                theGoal->AddUnit(theUnit);
+                theGoal->AddLoadUnit(theUnit);
             theUnit->ClearGoalQueue(0);
             theUnit->SetGoal(theGoal->Clone(), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
@@ -1179,8 +1178,8 @@ void EECPCivilizationManager::ReleaseGarrison()
     unsigned long theCount = theUnits.size();
     for (; i < theCount; i++) {
         EEComplexUnit* theUnit = theUnits[i];
-        EEUGLoadGarrison* theGoal = dynamic_cast<EEUGLoadGarrison*>(theUnit->GetLoadGoal());
-        if (theGoal == NULL || theGoal->mContainer != this->mGarrison)
+        EEUGRust* theGoal = EELoadGarrisonGoalCast(theUnit->GetLoadGoal());
+        if (theGoal == NULL || theGoal->GetLoadContainer() != this->mGarrison)
             continue;
         theUnit->ClearGoalQueue(0);
         theUnit->StartAction(kActionIdle);
@@ -1200,8 +1199,8 @@ void EECPCivilizationManager::ReleaseFortress()
     unsigned long theCount = theUnits.size();
     for (; i < theCount; i++) {
         EEComplexUnit* theUnit = theUnits[i];
-        EEUGLoadGarrison* theGoal = dynamic_cast<EEUGLoadGarrison*>(theUnit->GetLoadGoal());
-        if (theGoal == NULL || theGoal->mContainer != this->mFortress)
+        EEUGRust* theGoal = EELoadGarrisonGoalCast(theUnit->GetLoadGoal());
+        if (theGoal == NULL || theGoal->GetLoadContainer() != this->mFortress)
             continue;
         theUnit->ClearGoalQueue(0);
         theUnit->StartAction(kActionIdle);
@@ -1228,15 +1227,15 @@ void EECPCivilizationManager::UnitAdded(EEComplexUnit* inUnit)
             theContainer = gPhysics->mRandom.Generate() > 0.5f ? this->mFortress : this->mGarrison;
         else
             theContainer = this->mGarrison != NULL ? this->mGarrison : this->mFortress;
-        EEUGLoadGarrison* theGoal = dynamic_cast<EEUGLoadGarrison*>(theContainer->GetLoadGoal());
+        EEUGRust* theGoal = EELoadGarrisonGoalCast(theContainer->GetLoadGoal());
         if (theGoal == NULL) {
             theGarrison.push_back(theUnit);
-            theGoal = new EEUGLoadGarrison(theContainer, theGarrison, true);
+            theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, theContainer, theGarrison, true);
             theContainer->SetGoal(theGoal, 0, 0);
             theContainer->StartAction(kActionWaitForGarrisonCost);
             theContainer->mUnitClass->ActionChanged(theContainer);
         } else
-            theGoal->AddUnit(theUnit);
+            theGoal->AddLoadUnit(theUnit);
         theUnit->ClearGoalQueue(0);
         theUnit->SetGoal(theGoal->Clone(), 0, 0);
         theUnit->StartAction(kActionPrepareToMove);

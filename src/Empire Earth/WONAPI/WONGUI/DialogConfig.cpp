@@ -23,10 +23,10 @@ bool DialogConfig::Virtual24(const std::string& instruction)
     const int aKeyIdx=ee_won_gui_cfg_key(EE_WON_CFG_KEYS_DIALOGCONFIG_VIRTUAL24_INSTRUCTION,instruction.data(),instruction.size());
     if(aKeyIdx==0) {
         bool value=this->ReadBool();
-        this->mDialog->mAllowDrag=value;
+        this->mDialog->SetAllowDrag(value);
     } else if(aKeyIdx==1) {
         bool value=this->ReadBool();
-        this->mDialog->mKeepInRoot=value;
+        this->mDialog->SetKeepInRoot(value);
     } else if(aKeyIdx==2) {
         int id=this->ReadInt();
         this->mDialog->SetEndOnEscape(id);

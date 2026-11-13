@@ -14,11 +14,15 @@ int64_t gCounterFrequency;                  // 0x12ded8 counter ticks per millis
 float gMicrosecondFrequency;                // 0x12dee0 counter ticks per microsecond
 bool gTimeManagerInitialized;               // 0x12dee4
 bool gHasPerformanceCounter;                // 0x12dee5
+thread_local long long gTMPinnedTime = -1;  // TEST ONLY (port): EE-SIM's scripted editor (EESimEditor.cpp)
 
 // FUNCTION: LLE 0x10053701
-// Returns the current time in milliseconds (performance counter if present, else the millisecond clock)
+// Returns the current time in milliseconds (performance counter if present, else the millisecond clock); a time
+// pinned on this thread (EE-SIM's scripted editor) instead of either
 unsigned long TMGetTime()
 {
+    if (gTMPinnedTime >= 0)
+        return (unsigned long)gTMPinnedTime;
     if (gHasPerformanceCounter)
         // 32-bit milliseconds on every data model: the times go into 32-bit message fields and are subtracted from
         // them (LP64 kept the full count, which passes 2^32 after 49.7 days of uptime; macOS counts sleep too)

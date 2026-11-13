@@ -31,6 +31,7 @@ pub mod group;
 mod header_consts;
 pub mod host;
 pub mod kinds;
+pub mod load;
 pub mod motion;
 pub mod order;
 pub mod patrol;

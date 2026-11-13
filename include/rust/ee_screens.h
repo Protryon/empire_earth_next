@@ -732,6 +732,174 @@ constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
 
+/// The camera's follow flags cleared (`gB529066`, `gCameraFollowing`, `gB529068`), as every paint does first.
+constexpr static const uint32_t EE_SCREENS_SEA_STOP_FOLLOW = 1;
+
+/// -> whether the tile (i0, i1) is on the map (`EEMap::GetTile` not NULL).
+constexpr static const uint32_t EE_SCREENS_SEA_TILE = 2;
+
+/// -> whether the mesh point (i0, i1) is valid (unsigned coordinates, as `GetIsValidPoint`); f0 its height.
+constexpr static const uint32_t EE_SCREENS_SEA_POINT = 3;
+
+/// `EEMap::PaintTerrainRect(left i0, right i1, top i2, bottom i3, terrain i4, texture i5)`.
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_RECT = 4;
+
+/// `EEMap::UpdateCliffs(left i0, right i1, bottom i2, top i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_UPDATE_CLIFFS = 5;
+
+/// `gMiniMap->RedrawRect(i0, i1, i2, i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_MINIMAP_RECT = 6;
+
+/// `gMiniMap->Refresh()`.
+constexpr static const uint32_t EE_SCREENS_SEA_MINIMAP_REFRESH = 7;
+
+/// The terrain i0's table entry: -> its ambient unit chance; i1 = ambients only, i2 = its unit class count.
+constexpr static const uint32_t EE_SCREENS_SEA_TERRAIN = 8;
+
+/// -> the terrain i0's ambient unit class i1 (`EETerrainTable::GetUnitClass`).
+constexpr static const uint32_t EE_SCREENS_SEA_TERRAIN_CLASS = 9;
+
+/// `TMGetTime()` (the ambient units' seed).
+constexpr static const uint32_t EE_SCREENS_SEA_TIME = 10;
+
+/// An ambient unit of class i0 on the tile (i1, i2) for the world player, when `EECanPlaceOnTile` allows it.
+constexpr static const uint32_t EE_SCREENS_SEA_PLANT = 11;
+
+/// -> the elevation tab's checked radio: 0 raise (a plateau), 1 hills, 2 level ground.
+constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_MODE = 12;
+
+/// `EEMap::Raise(&i0, &i1, &i2, &i3, f0, f1, f2, f3, i4 != 0)` (left, right, top, bottom; the area comes back as
+/// Raise left it).
+constexpr static const uint32_t EE_SCREENS_SEA_RAISE = 13;
+
+/// `EEMap::RemoveFlatCliffs(left i0, right i1, bottom i2, top i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS = 14;
+
+/// The elevation tab's paint control stores its mouse tile (`EEUIFSEPaint::StoreMouseTile`).
+constexpr static const uint32_t EE_SCREENS_SEA_STORE_MOUSE_TILE = 15;
+
+/// `gEffectManager->ElevationChanged(left i0, top i1, right i2, bottom i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_CHANGED = 16;
+
+/// -> the height of one elevation level (`kSEPELevelHeight`) in f0.
+constexpr static const uint32_t EE_SCREENS_SEA_LEVEL_HEIGHT = 17;
+
+/// The paint kinds of `ee_screens_sea_paint_new` (`kSEAPaint*` in `ee/EESEAPaint.h`).
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_TERRAIN = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_ELEVATION = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_BULLDOZER = 2;
+
+/// The selection host's ops (`ee_screenscpp_seu(op, unit, a, f)`; a unit is an `EEUnit*`, 0 for none).
+/// -> the editor's selection count.
+constexpr static const uint32_t EE_SCREENS_SEU_SELECTED_COUNT = 1;
+
+/// -> the selection's unit a (`GetSelectedUnit`).
+constexpr static const uint32_t EE_SCREENS_SEU_SELECTED = 2;
+
+/// -> the selection's first unit (`GetFirstSelectedUnit`, 0 when none).
+constexpr static const uint32_t EE_SCREENS_SEU_FIRST_SELECTED = 3;
+
+/// `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SEU_CLEAR = 4;
+
+/// `DeselectFirstUnit`.
+constexpr static const uint32_t EE_SCREENS_SEU_DESELECT_FIRST = 5;
+
+/// `SelectUnit(unit)`.
+constexpr static const uint32_t EE_SCREENS_SEU_SELECT = 6;
+
+/// `DeselectUnit(unit)` (the unit may be NULL, as the click's toggle passes it).
+constexpr static const uint32_t EE_SCREENS_SEU_DESELECT = 7;
+
+/// The unit tab's `UpdateSelection`.
+constexpr static const uint32_t EE_SCREENS_SEU_UPDATE_SELECTION = 8;
+
+/// -> the world's unit of id a (`gWorld.GetUnit`).
+constexpr static const uint32_t EE_SCREENS_SEU_UNIT = 9;
+
+/// -> the unit of id a of the player whose index is `unit` (`gWorld.GetPlayer(index)->GetUnit(id)`).
+constexpr static const uint32_t EE_SCREENS_SEU_PLAYER_UNIT = 10;
+
+/// -> the unit's editor selection flag.
+constexpr static const uint32_t EE_SCREENS_SEU_IS_SELECTED = 11;
+
+/// -> whether the unit has a complex unit.
+constexpr static const uint32_t EE_SCREENS_SEU_HAS_COMPLEX = 12;
+
+/// -> whether the unit's class turns (angular acceleration above 0).
+constexpr static const uint32_t EE_SCREENS_SEU_TURNS = 13;
+
+/// The complex unit turned to the yaw f (its location's orientation, pitch and roll 0).
+constexpr static const uint32_t EE_SCREENS_SEU_ROTATE = 14;
+
+/// -> whether the unit is a path point.
+constexpr static const uint32_t EE_SCREENS_SEU_PATH_POINT = 15;
+
+/// -> whether the unit is off the map (its tile -10000, -10000).
+constexpr static const uint32_t EE_SCREENS_SEU_OFF_MAP = 16;
+
+/// -> whether the unit is on a tile's list (`mTileNode`: a complex unit's).
+constexpr static const uint32_t EE_SCREENS_SEU_ON_TILE = 17;
+
+/// A simple unit removed: a resource emptied, killed, taken from its player.
+constexpr static const uint32_t EE_SCREENS_SEU_REMOVE_SIMPLE = 18;
+
+/// -> the complex unit's player (`mPlayer`, an `EEPlayer*`).
+constexpr static const uint32_t EE_SCREENS_SEU_PLAYER = 19;
+
+/// An airport building leaves its player's air traffic list (when the unit is a land building with air traffic).
+constexpr static const uint32_t EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC = 20;
+
+/// -> the complex unit's cargo count.
+constexpr static const uint32_t EE_SCREENS_SEU_CARGO_COUNT = 21;
+
+/// The complex unit's cargo killed (`KillCargo`).
+constexpr static const uint32_t EE_SCREENS_SEU_KILL_CARGO = 22;
+
+/// The complex unit killed and taken from the player a (an `EEPlayer*`: the first part's).
+constexpr static const uint32_t EE_SCREENS_SEU_KILL_PART = 23;
+
+/// -> the part after the complex unit (`mNextPart`).
+constexpr static const uint32_t EE_SCREENS_SEU_NEXT_PART = 24;
+
+/// -> the transport or building carrying the unit (`mContainer`).
+constexpr static const uint32_t EE_SCREENS_SEU_CONTAINER = 25;
+
+/// -> the container's cargo a.
+constexpr static const uint32_t EE_SCREENS_SEU_CARGO = 26;
+
+/// The container's cargo a unloaded at the container's location.
+constexpr static const uint32_t EE_SCREENS_SEU_UNLOAD = 27;
+
+/// -> the message's type (`unit`: an `EEMessage*`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_TYPE = 28;
+
+/// -> the message's unit id (an `EEMAddUnitToSelectedGroup`'s or `EEMSelectUnit`'s).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT = 29;
+
+/// The message's reference released.
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_RELEASE = 30;
+
+/// -> the lasso message's unit type (`EEMSelectUnits::mL30`).
+constexpr static const uint32_t EE_SCREENS_SEU_MESSAGE_UNIT_TYPE = 31;
+
+/// The message types the click and the lasso apply (`EEMessageID.h`).
+constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNIT = 72;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNIT = 73;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ALWAYS_ADD_UNIT = 118;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_UNSELECT_ALL = 75;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_SELECT_UNITS = 78;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
+
+constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
+
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
 
@@ -1884,6 +2052,251 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_INTRO = 76;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_FORM_EDIT = 77;
 
+/// The trigger tab's events (`EESEEvents.cpp`'s classes). The tab's buttons (`EESETriggerScreen`): the clicked tab,
+/// the list's pick, new, duplicate, delete, up, down, sort, the debug ids, a name or text box's Enter.
+constexpr static const uint32_t EE_SCREENS_SE_SHOW_TAB = 9217;
+
+constexpr static const uint32_t EE_SCREENS_SE_SELECT_ENTRY = 9218;
+
+constexpr static const uint32_t EE_SCREENS_SE_NEW_ENTRY = 9219;
+
+constexpr static const uint32_t EE_SCREENS_SE_DUPLICATE_ENTRY = 9220;
+
+constexpr static const uint32_t EE_SCREENS_SE_DELETE_ENTRY = 9221;
+
+constexpr static const uint32_t EE_SCREENS_SE_INC_PRIORITY = 9222;
+
+constexpr static const uint32_t EE_SCREENS_SE_DEC_PRIORITY = 9223;
+
+constexpr static const uint32_t EE_SCREENS_SE_ALPHA_SORT = 9224;
+
+constexpr static const uint32_t EE_SCREENS_SE_SHOW_DEBUG_IDS = 9225;
+
+constexpr static const uint32_t EE_SCREENS_SE_SELECT_NAME = 9226;
+
+/// The object screen (`EESETSObject`): its mode radios, its check boxes, its unit list's pick.
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_DETAIL = 9227;
+
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_CHECK = 9228;
+
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_UNIT_SELECT = 9229;
+
+/// The area screen (`EESETSArea`): its mode combo box, its centre button.
+constexpr static const uint32_t EE_SCREENS_SE_AREA_CHECK = 9230;
+
+constexpr static const uint32_t EE_SCREENS_SE_CENTER_CAMERA_ON_AREA = 9231;
+
+/// The condition and effect screens' type and action combo boxes.
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_CONDITION_TYPE = 9232;
+
+/// The player-attribute condition's radios (`EESETSCTPlayerResource`'s event; its `Load` also runs it).
+constexpr static const uint32_t EE_SCREENS_SE_CONDITION_PLAYER_RESOURCE = 9239;
+
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_EFFECT_TYPE = 9233;
+
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_EFFECT_ACTION = 9234;
+
+/// The trigger screen (`EESETSTrigger`): an and/or combo box, the condition timer's check box, the pairs' back and
+/// forward buttons, a remove button.
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_OPERATOR = 9235;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_CONDITION_TIMER = 9236;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_CHANGE_INDEX = 9237;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_REMOVE = 9238;
+
+/// The editor form's own events and its tabs' (group 2): the player combo box's change, the camera's home rotation,
+/// the civilization builder's button, the triggers-only load (Ctrl+L), the elevation tab's raise, lower and level
+/// buttons, the player tab's epoch box, the change-text effect's and the place effects' radios, the main buttons'
+/// load, save, test and exit, the exit question's answers, the instructions' "///" expansion.
+constexpr static const uint32_t EE_SCREENS_SE_NEW_PLAYER = 9248;
+
+constexpr static const uint32_t EE_SCREENS_SE_HOME_ROTATION = 9249;
+
+constexpr static const uint32_t EE_SCREENS_SE_OPEN_CIV_BUILDER = 9250;
+
+constexpr static const uint32_t EE_SCREENS_SE_LOAD_TRIGGERS_ONLY = 9251;
+
+constexpr static const uint32_t EE_SCREENS_SE_ELEVATION_TOOL = 9252;
+
+constexpr static const uint32_t EE_SCREENS_SE_DISPLAY_EPOCH = 9253;
+
+constexpr static const uint32_t EE_SCREENS_SE_CLEAR_ADD_LINE = 9254;
+
+constexpr static const uint32_t EE_SCREENS_SE_PLACE = 9255;
+
+constexpr static const uint32_t EE_SCREENS_SE_LOAD_SCENARIO = 9256;
+
+constexpr static const uint32_t EE_SCREENS_SE_SAVE_SCENARIO = 9257;
+
+constexpr static const uint32_t EE_SCREENS_SE_TEST_SCENARIO = 9258;
+
+constexpr static const uint32_t EE_SCREENS_SE_EXIT_SCENARIO = 9259;
+
+constexpr static const uint32_t EE_SCREENS_SE_SAVE_BEFORE_EXIT = 9260;
+
+constexpr static const uint32_t EE_SCREENS_SE_EXIT_WITHOUT_SAVING = 9261;
+
+constexpr static const uint32_t EE_SCREENS_SE_FIND_TEXT = 9262;
+
+/// -> the entity's control id.
+constexpr static const uint32_t EE_SCREENS_SE_OP_ENTITY_ID = 1;
+
+/// (method, arg) a call of the trigger tab (`EE_SCREENS_SE_TAB_*`).
+constexpr static const uint32_t EE_SCREENS_SE_OP_TAB = 2;
+
+/// The scenario manager's debug ids flag toggled.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TOGGLE_DEBUG_IDS = 3;
+
+/// (flag) the object screen's select-on-map flag.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_SET_MAP = 4;
+
+/// The object screen's `Refresh`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_REFRESH = 5;
+
+/// -> the object screen's `GetIsSelectOnMap`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_IS_MAP = 6;
+
+/// The UI manager's scenario editor form's `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION = 7;
+
+/// The object screen's `ClearUnitList`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST = 8;
+
+/// The event's form's `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_FORM_CLEAR_SELECTION = 9;
+
+/// The object screen's unit ids cleared.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CLEAR_IDS = 10;
+
+/// The object screen's `UpdateSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_UPDATE_SELECTION = 11;
+
+/// The object screen's `CheckChanged(entity)`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CHECK_CHANGED = 12;
+
+/// -> the entity's (a string list's) current selection, `u32::MAX` when it has none.
+constexpr static const uint32_t EE_SCREENS_SE_OP_LIST_SELECTION = 13;
+
+/// -> the editor's selected unit count.
+constexpr static const uint32_t EE_SCREENS_SE_OP_SELECTED_UNIT_COUNT = 14;
+
+/// (index) a centre-camera action on the editor's selected unit.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CENTER_ON_UNIT = 15;
+
+/// -> the entity's (a combo box's) current selection, `u32::MAX` when it has none.
+constexpr static const uint32_t EE_SCREENS_SE_OP_COMBO_SELECTION = 16;
+
+/// (flag) the area screen's rectangle mode.
+constexpr static const uint32_t EE_SCREENS_SE_OP_AREA_MODE = 17;
+
+/// -> the area screen has a centre (kept for the next op).
+constexpr static const uint32_t EE_SCREENS_SE_OP_AREA_CENTER = 18;
+
+/// A centre-camera action on the kept centre (each coordinate truncated to an integer).
+constexpr static const uint32_t EE_SCREENS_SE_OP_CENTER_ON_AREA = 19;
+
+/// The condition screen's `ChangeConditionType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CONDITION_TYPE = 20;
+
+/// The effect screen's `ChangeEffectType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EFFECT_TYPE = 21;
+
+/// The effect screen's `ChangeEffectAction`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EFFECT_ACTION = 22;
+
+/// (control id) the trigger screen's `ChangeOperator`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_OPERATOR = 23;
+
+/// (step: 0 conditions back, 1 forward, 2 effects back, 3 forward) the trigger screen's pair index.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_STEP = 24;
+
+/// (control id) the trigger screen's `RemoveEntry`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_REMOVE = 25;
+
+/// -> the entity (a check box) checked.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CHECKED = 26;
+
+/// (control id, mode) the form's control of the id (`GetControlById`) shown or hidden.
+constexpr static const uint32_t EE_SCREENS_SE_OP_SHOW = 27;
+
+/// The unit tab's `ReselectUnitType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_UNIT_RESELECT = 28;
+
+/// The player tab's `FillTechLists`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLAYER_FILL_TECH = 29;
+
+/// The camera's view turn the identity, its offset turn yaw 45 degrees, pitch -35.
+constexpr static const uint32_t EE_SCREENS_SE_OP_HOME_ROTATION = 30;
+
+/// -> `OpenCivilizationBuilder` on the editor's civilization (its result).
+constexpr static const uint32_t EE_SCREENS_SE_OP_OPEN_CIV_BUILDER = 31;
+
+/// The scenario manager loaded from "ScenarioTriggers.scn" (when it opens).
+constexpr static const uint32_t EE_SCREENS_SE_OP_LOAD_TRIGGERS = 32;
+
+/// (control id) -> the form's slider's range value.
+constexpr static const uint32_t EE_SCREENS_SE_OP_RANGE = 33;
+
+/// (control id, value) the form's text label's number.
+constexpr static const uint32_t EE_SCREENS_SE_OP_LABEL_NUMBER = 34;
+
+/// The player tab's `RebuildTechLists`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLAYER_REBUILD_TECH = 35;
+
+/// (flag) the place label (0x96d) and combo box (0x999) filled with area (flag) or object names, its first picked.
+constexpr static const uint32_t EE_SCREENS_SE_OP_PLACE_FILL = 36;
+
+/// -> the UI manager in the scenario editor.
+constexpr static const uint32_t EE_SCREENS_SE_OP_IN_EDITOR = 37;
+
+/// (screen event code) the editor's `PostLoadEvent` of that screen event.
+constexpr static const uint32_t EE_SCREENS_SE_OP_POST_LOAD_EVENT = 38;
+
+/// (kind: `EE_SCREENS_SE_ACTION_*`) the editor's action posted.
+constexpr static const uint32_t EE_SCREENS_SE_OP_POST_ACTION = 39;
+
+/// The save question (Yes saves then exits, No exits, Cancel stays).
+constexpr static const uint32_t EE_SCREENS_SE_OP_ASK_EXIT = 40;
+
+/// The editor exits once the save is done.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EXIT_AFTER_SAVE = 41;
+
+/// -> the entity's (an edit box's) line count.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EDIT_LINES = 42;
+
+/// The host's texts (`ee_screenscpp_se_text`): the entity's (an edit box's) line, a string of the game.
+constexpr static const uint32_t EE_SCREENS_SE_TEXT_EDIT_LINE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_TEXT_STRING = 1;
+
+/// The editor's actions (`EE_SCREENS_SE_OP_POST_ACTION`).
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_SAVE = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_TEST = 1;
+
+constexpr static const uint32_t EE_SCREENS_SE_ACTION_EXIT = 2;
+
+/// The trigger tab's calls (`EE_SCREENS_SE_OP_TAB`'s method): `ShowTab(arg)`, then the argless ones.
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SHOW = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SELECT_ENTRY = 1;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_NEW_ENTRY = 2;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DUPLICATE_ENTRY = 3;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DELETE_ENTRY = 4;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_INC_PRIORITY = 5;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DEC_PRIORITY = 6;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_ALPHA_SORT = 7;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SELECT_NAME = 8;
+
 /// The campaign scenario select form: its open event (set by the play campaign and custom campaign screens and the
 /// post-game summary), its close event (nothing), the custom campaign list's and the scenario list's selection, the
 /// difficulty, Start, Back, and the open-error message's callback (no event object).
@@ -2264,6 +2677,9 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_COPYRIGHT = 147;
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
+
+/// A paint action's record (opaque to C++).
+struct EeScreensSeaPaint;
 
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
@@ -2802,6 +3218,64 @@ void ee_screens_dialog_show(void *dialog,
 
 /// `EEUIFError::Open`: lays the box's controls out for its mode.
 void ee_screens_dialog_open(void *dialog, uint32_t mode);
+
+/// A paint action's record: the terrain paint (a terrain, b texture), the elevation paint (a the level) or the
+/// bulldozer. Freed by `ee_screens_sea_paint_free` (the action's destructor).
+EeScreensSeaPaint *ee_screens_sea_paint_new(uint32_t kind,
+                                            int32_t a,
+                                            int32_t b);
+
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new` (or is NULL) and is not used after.
+void ee_screens_sea_paint_free(EeScreensSeaPaint *paint);
+
+/// The action's `SetArea`: queues the area when the paint changes anything there; 1 when it queued.
+///
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new`.
+uint8_t ee_screens_sea_paint_set_area(EeScreensSeaPaint *paint,
+                                      int32_t left,
+                                      int32_t top,
+                                      int32_t right,
+                                      int32_t bottom);
+
+/// The action's `Virtual4`: every queued area painted (under the UI copy lock and the world's write lock).
+///
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new`.
+void ee_screens_sea_paint_run(EeScreensSeaPaint *paint);
+
+/// `EESEAPaintArea::SetCorner`'s rectangle -> out[0..4] = left, top, right, bottom.
+///
+/// # Safety
+/// `out` points at four integers.
+void ee_screens_sea_area_rectangle(int32_t start_x,
+                                   int32_t start_y,
+                                   int32_t end_x,
+                                   int32_t end_y,
+                                   int32_t *out);
+
+/// `EESEAMouseClick::Virtual4`: the click's message (an `EEMessage*`, not NULL) applied and released.
+void ee_screens_seu_click(void *message);
+
+/// `EESEALasso::Virtual4`: the lasso's message (an `EEMSelectUnits*`) applied over its rectangle (a
+/// `GERectangle*`) and released.
+void ee_screens_seu_lasso(void *message, const void *rectangle);
+
+/// `EESEALasso::SelectUnits`.
+void ee_screens_seu_lasso_select(const void *rectangle,
+                                 int32_t unit_type,
+                                 uint8_t deselect,
+                                 uint8_t deselect_only);
+
+/// `EESEARotateUnits::Virtual4`.
+void ee_screens_seu_rotate(float yaw);
+
+/// `EESEADeleteUnit::Virtual4`: the unit `id` of the player `player`, or (id 0xffffffff) the selection, whole
+/// (`group`) or its first unit.
+void ee_screens_seu_delete(uint32_t id,
+                           int32_t player,
+                           uint8_t group);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

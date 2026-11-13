@@ -3,11 +3,14 @@
 //! five entries a call), the waiting `LightGetCertOp`s (a set in address order), the running `GetCertOp`, the
 //! auto-refresh timer, the refresh status and the auto-refresh flag, and every step that touches them:
 //! `PutSession`, `GetSession`, `SetPeerData`'s clear, `AutoRefreshCallback`, `StopAutoRefresh`,
-//! `SetDoAutoRefresh`, `Kill`, `StartAutoRefresh`, `GetCertCallback`, `RefreshAsync` and `RefreshBlock`.
+//! `SetDoAutoRefresh`, `Kill`, `StartAutoRefresh`, `GetCertCallback`, `RefreshAsync` and `RefreshBlock`; and,
+//! from round 15, the context's peer data (`mPeerData`: `GetPeerData`, `SetPeerData`, `IsExpired`, and the
+//! auto-refresh's reads of its validity and expire delta) and `LightGetCertOp`'s own member, the peer data a
+//! refresh hands it ([`EeWonLightCert`]; the op's run is a plain C++ `AsyncOp`).
 //!
-//! The C++ `AuthContext` keeps its lock (taken around each call where the original took it), the peer data and the
-//! login data; the objects this flow holds (sessions, ops, peer data) are C++ `RefCount`s reached through
-//! [`EeWonAuthFlowHooks`]. No borrow of the state lives across a hook: an op's `Kill`, `Run` or `Finish` can
+//! The C++ `AuthContext` keeps its lock (taken around each call where the original took it) and the login data;
+//! the objects this flow holds (sessions, ops) are C++ `RefCount`s reached through [`EeWonAuthFlowHooks`], the
+//! peer data is peerobj.rs's `PeerData`. No borrow of the state lives across a hook: an op's `Kill`, `Run` or `Finish` can
 //! complete it inside the call, and its completion comes back into this object (the timer's into
 //! `auto_refresh_callback`, the request's into `get_cert_callback`, a waiting op's into a new `refresh_async`).
 //! References are dropped where the original's `SmartPtr` assignments dropped them, after the state's lock is let
@@ -17,10 +20,11 @@
 
 use std::collections::{BTreeMap, VecDeque};
 use std::ffi::{c_long, c_ulong, c_void};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::authctx;
 use crate::ipobj::EeWonIpAddr;
+use crate::peerobj::{self, EeWonAuthObj, PeerData};
 
 /// The C++ side: `context` is the `AuthContext`; every object is a `RefCount*`.
 #[repr(C)]
@@ -49,14 +53,33 @@ pub struct EeWonAuthFlowHooks {
     pub new_timer: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
     /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
     pub new_cert_op: unsafe extern "C" fn(*mut c_void, bool) -> *mut c_void,
-    /// `GetCertOp::GetPeerData`: a reference, or NULL
-    pub cert_peer_data: unsafe extern "C" fn(*mut c_void) -> *mut c_void,
-    /// `LightGetCertOp::SetPeerData` (the peer data may be NULL)
-    pub light_set_peer_data: unsafe extern "C" fn(*mut c_void, *mut c_void),
-    /// the context's `mPeerData->IsValid()`
-    pub peer_valid: unsafe extern "C" fn(*mut c_void) -> bool,
-    /// the context's `mPeerData->GetExpireDelta()`
-    pub peer_expire_delta: unsafe extern "C" fn(*mut c_void) -> i64,
+    /// `GetCertOp::GetPeerData`: a new reference to its peer data, or NULL
+    pub cert_peer_data: unsafe extern "C" fn(*mut c_void) -> *mut EeWonAuthObj,
+}
+
+/// `LightGetCertOp`'s member: the peer data `GetCertCallback` hands the waiting op (`SetPeerData`), read by its
+/// owner when the op completes (`GetPeerData`). Shared (an `Arc`) by the owner and the context's refresh set; the
+/// op's run (its `AsyncOp` base) is a C++ object beside it.
+#[derive(Default)]
+pub struct EeWonLightCert {
+    peer: Mutex<Option<Arc<PeerData>>>,
+}
+
+impl EeWonLightCert {
+    pub(crate) fn new() -> Arc<EeWonLightCert> {
+        Arc::new(EeWonLightCert::default())
+    }
+
+    /// `GetPeerData()`.
+    pub(crate) fn peer(&self) -> Option<Arc<PeerData>> {
+        self.peer.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// `SetPeerData(data)`.
+    pub(crate) fn set_peer(&self, peer: Option<Arc<PeerData>>) {
+        let old = std::mem::replace(&mut *self.peer.lock().unwrap_or_else(|e| e.into_inner()), peer);
+        drop(old);
+    }
 }
 
 /// A `RefCount*` this object holds one reference to.
@@ -71,8 +94,8 @@ struct Record {
 
 #[derive(Default)]
 struct State {
-    /// `mRefreshSet`: by address (`SmartPtr::Comp`)
-    refresh: BTreeMap<usize, Obj>,
+    /// `mRefreshSet`: by the op's address (`SmartPtr::Comp`), the op and its member
+    refresh: BTreeMap<usize, (Obj, Arc<EeWonLightCert>)>,
     /// `mGetCertOp`
     get_cert: Option<Obj>,
     /// `mAutoRefreshOp`
@@ -85,6 +108,8 @@ struct State {
     sessions: BTreeMap<[u8; 6], Record>,
     /// `mSessionCleanItr`: the entry's key, `None` for `end()`
     clean: Option<[u8; 6]>,
+    /// `mPeerData` (None: the original's NULL, which it never held after `Init`)
+    peer: Option<Arc<PeerData>>,
 }
 
 /// `AuthContext`'s sessions and certificate flow.
@@ -195,13 +220,25 @@ impl EeWonAuthFlow {
         }
     }
 
-    /// `SetPeerData`'s clear: every cached session dropped, the cursor at the end.
-    pub(crate) fn clear_sessions(&self) {
-        let map = {
+    /// `GetPeerData`.
+    pub(crate) fn peer_data(&self) -> Option<Arc<PeerData>> {
+        self.lock().peer.clone()
+    }
+
+    /// `IsExpired(extra)` at `now`: the second certificate's (no peer data: expired).
+    pub(crate) fn is_expired(&self, extra: i64, now: i64) -> bool {
+        self.lock().peer.as_ref().is_none_or(|p| p.cert2_expired(now, extra))
+    }
+
+    /// `SetPeerData`: the peer data replaced, then every cached session dropped, the cursor at the end.
+    pub(crate) fn set_peer_data(&self, peer: Option<Arc<PeerData>>) {
+        let (old, map) = {
             let mut s = self.lock();
+            let old = std::mem::replace(&mut s.peer, peer);
             s.clean = None;
-            std::mem::take(&mut s.sessions)
+            (old, std::mem::take(&mut s.sessions))
         };
+        drop(old);
         for (_, r) in map {
             self.release_all(r.sessions);
         }
@@ -222,7 +259,7 @@ impl EeWonAuthFlow {
         if unsafe { (self.hooks.op_killed)(op) } {
             return;
         }
-        self.refresh_async(std::ptr::null_mut(), INFINITE);
+        self.refresh_async(std::ptr::null_mut(), None, INFINITE);
     }
 
     /// `StopAutoRefresh`: the timer killed (its completion may come back inside), then dropped.
@@ -236,10 +273,10 @@ impl EeWonAuthFlow {
         self.release(old);
     }
 
-    /// `SetDoAutoRefresh`.
-    pub(crate) fn set_do_auto_refresh(&self, enabled: bool) {
+    /// `SetDoAutoRefresh` (`now` the time the peer data's expire delta is read at).
+    pub(crate) fn set_do_auto_refresh(&self, enabled: bool, now: i64) {
         self.lock().do_auto = enabled;
-        self.start_auto_refresh(false);
+        self.start_auto_refresh(false, now);
     }
 
     /// `Kill`: the running request killed, then the timer stopped.
@@ -253,13 +290,17 @@ impl EeWonAuthFlow {
     }
 
     /// `StartAutoRefresh`: the timer stopped, then a new one started for `auto_refresh_wait`'s seconds (the
-    /// original's `(long)((unsigned long)wait*1000)`).
-    pub(crate) fn start_auto_refresh(&self, force: bool) {
+    /// original's `(long)((unsigned long)wait*1000)`); the peer data's validity and expire delta (at `now`) are
+    /// read only when auto-refresh is on, the delta only when valid, as the original's.
+    pub(crate) fn start_auto_refresh(&self, force: bool, now: i64) {
         self.stop_auto_refresh();
-        let enabled = self.lock().do_auto;
-        // SAFETY: the context's peer data (the hooks read it)
-        let valid = enabled && unsafe { (self.hooks.peer_valid)(self.ctx()) };
-        let delta = if valid { unsafe { (self.hooks.peer_expire_delta)(self.ctx()) } } else { 0 };
+        let (enabled, peer) = {
+            let s = self.lock();
+            (s.do_auto, s.peer.clone())
+        };
+        let valid = enabled && peer.as_ref().is_some_and(|p| p.is_valid());
+        let delta = if valid { peer.as_ref().map_or(0, |p| p.expire_delta(now)) } else { 0 };
+        drop(peer);
         let Some(wait) = authctx::auto_refresh_wait(enabled, force, valid, delta) else {
             return;
         };
@@ -275,46 +316,49 @@ impl EeWonAuthFlow {
     /// `GetCertCallback`: only the current request counts; each waiting op (in address order, including those a
     /// completion adds during the walk past the current one) gets the request's peer data and is finished with its
     /// status; then the set is cleared, the request dropped, its status kept and the timer restarted (forced).
-    pub(crate) fn get_cert_callback(&self, op: Obj) {
+    pub(crate) fn get_cert_callback(&self, op: Obj, now: i64) {
         if self.lock().get_cert != Some(op) {
             return;
         }
-        // SAFETY: the completing request
-        let peer = unsafe { (self.hooks.cert_peer_data)(op) };
-        let mut at = self.lock().refresh.iter().next().map(|(k, v)| (*k, *v));
-        while let Some((key, waiting)) = at {
+        // SAFETY: the completing request; its answer a new reference (or NULL) taken here
+        let peer = unsafe { peerobj::take_peer((self.hooks.cert_peer_data)(op)) };
+        let entry = |s: &State, k: usize| (k, s.refresh[&k].0, s.refresh[&k].1.clone());
+        let mut at = {
+            let s = self.lock();
+            s.refresh.keys().next().map(|&k| entry(&s, k))
+        };
+        while let Some((key, waiting, cert)) = at {
+            cert.set_peer(peer.clone());
             // SAFETY: a waiting op the set holds
             unsafe {
-                (self.hooks.light_set_peer_data)(waiting, peer);
                 let status = (self.hooks.op_status)(op);
                 (self.hooks.op_finish)(waiting, status);
             }
             let s = self.lock();
-            at = next_key(&s.refresh, key).map(|k| (k, s.refresh[&k]));
+            at = next_key(&s.refresh, key).map(|k| entry(&s, k));
         }
         let set = std::mem::take(&mut self.lock().refresh);
-        self.release_all(set.into_values());
+        self.release_all(set.into_values().map(|(o, _)| o));
         let old = self.lock().get_cert.take();
         self.release(old);
         // SAFETY: the completing request
         let status = unsafe { (self.hooks.op_status)(op) };
         self.lock().refresh_status = status;
-        self.start_auto_refresh(true);
-        if !peer.is_null() {
-            self.release(Some(peer));
-        }
+        self.start_auto_refresh(true, now);
+        drop(peer);
     }
 
-    /// `RefreshAsync`: the timer stopped; the waiting op (if any) added to the set and run; a request started when
-    /// none runs (`Run(1, 60000)`: it may complete inside), its status the refresh status.
-    pub(crate) fn refresh_async(&self, light: Obj, timeout: u32) {
+    /// `RefreshAsync`: the timer stopped; the waiting op (if any: its run `light`, its member `cert`) added to the
+    /// set and run; a request started when none runs (`Run(1, 60000)`: it may complete inside), its status the
+    /// refresh status.
+    pub(crate) fn refresh_async(&self, light: Obj, cert: Option<Arc<EeWonLightCert>>, timeout: u32) {
         self.stop_auto_refresh();
         if !light.is_null() {
             let new = {
                 let mut s = self.lock();
                 let fresh = !s.refresh.contains_key(&(light as usize));
                 if fresh {
-                    s.refresh.insert(light as usize, light);
+                    s.refresh.insert(light as usize, (light, cert.unwrap_or_default()));
                 }
                 fresh
             };
@@ -340,14 +384,14 @@ impl EeWonAuthFlow {
 
     /// `RefreshBlock`: a request of its own run blocking; on success the timer restarts. Returns the refresh
     /// status, read again after the restart as the original did.
-    pub(crate) fn refresh_block(&self, timeout: u32) -> c_long {
+    pub(crate) fn refresh_block(&self, timeout: u32, now: i64) -> c_long {
         // SAFETY: the context
         let op = unsafe { (self.hooks.new_cert_op)(self.ctx(), false) };
         // SAFETY: the request just made, held here
         let status = unsafe { (self.hooks.op_run)(op, 2, c_ulong::from(timeout)) };
         self.lock().refresh_status = status;
         if self.lock().refresh_status == 0 {
-            self.start_auto_refresh(false);
+            self.start_auto_refresh(false, now);
         }
         let status = self.lock().refresh_status;
         self.release(Some(op));
@@ -364,7 +408,7 @@ impl Drop for EeWonAuthFlow {
         }
         self.release(s.auto_op);
         self.release(s.get_cert);
-        self.release_all(s.refresh.into_values());
+        self.release_all(s.refresh.into_values().map(|(o, _)| o));
     }
 }
 
@@ -427,11 +471,32 @@ pub unsafe extern "C" fn ee_won_auth_flow_get_session(
     flow!(f).get_session(addr_key(a), now)
 }
 
+/// `SetPeerData(data)`: a reference of its own to `peer` (NULL: none), then the sessions cleared.
+///
+/// # Safety
+/// `f` a flow, `peer` a live peer data object or NULL.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_auth_flow_set_peer_data(f: *const EeWonAuthFlow, peer: *const EeWonAuthObj) {
+    // SAFETY: the caller's object
+    flow!(f).set_peer_data(unsafe { peerobj::peer_of(peer) })
+}
+
+/// `GetPeerData()`: a new reference the caller frees (`ee_won_authobj_free`), NULL for none.
+///
 /// # Safety
 /// `f` a flow.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_clear_sessions(f: *const EeWonAuthFlow) {
-    flow!(f).clear_sessions()
+pub unsafe extern "C" fn ee_won_auth_flow_peer_data(f: *const EeWonAuthFlow) -> *mut EeWonAuthObj {
+    flow!(f).peer_data().map_or(std::ptr::null_mut(), peerobj::peer_ref)
+}
+
+/// `IsExpired(extra)` at `now`.
+///
+/// # Safety
+/// `f` a flow.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_auth_flow_is_expired(f: *const EeWonAuthFlow, extra: i64, now: i64) -> bool {
+    flow!(f).is_expired(extra, now)
 }
 
 /// # Safety
@@ -451,8 +516,8 @@ pub unsafe extern "C" fn ee_won_auth_flow_stop_auto_refresh(f: *const EeWonAuthF
 /// # Safety
 /// `f` a flow.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_set_do_auto_refresh(f: *const EeWonAuthFlow, enabled: bool) {
-    flow!(f).set_do_auto_refresh(enabled)
+pub unsafe extern "C" fn ee_won_auth_flow_set_do_auto_refresh(f: *const EeWonAuthFlow, enabled: bool, now: i64) {
+    flow!(f).set_do_auto_refresh(enabled, now)
 }
 
 /// # Safety
@@ -465,29 +530,91 @@ pub unsafe extern "C" fn ee_won_auth_flow_kill(f: *const EeWonAuthFlow) {
 /// # Safety
 /// `f` a flow.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_start_auto_refresh(f: *const EeWonAuthFlow, force: bool) {
-    flow!(f).start_auto_refresh(force)
+pub unsafe extern "C" fn ee_won_auth_flow_start_auto_refresh(f: *const EeWonAuthFlow, force: bool, now: i64) {
+    flow!(f).start_auto_refresh(force, now)
 }
 
 /// # Safety
 /// `f` a flow, `op` the completing request's `RefCount*`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_get_cert_callback(f: *const EeWonAuthFlow, op: *mut c_void) {
-    flow!(f).get_cert_callback(op)
+pub unsafe extern "C" fn ee_won_auth_flow_get_cert_callback(f: *const EeWonAuthFlow, op: *mut c_void, now: i64) {
+    flow!(f).get_cert_callback(op, now)
 }
 
+/// `RefreshAsync(op, timeout)`: `light` the waiting op's run (an `AsyncOp`'s `RefCount*`, or NULL for none),
+/// `cert` its member (borrowed: the set takes a reference of its own).
+///
 /// # Safety
-/// `f` a flow, `light` a `LightGetCertOp`'s `RefCount*` or NULL.
+/// `f` a flow; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_refresh_async(f: *const EeWonAuthFlow, light: *mut c_void, timeout: u32) {
-    flow!(f).refresh_async(light, timeout)
+pub unsafe extern "C" fn ee_won_auth_flow_refresh_async(
+    f: *const EeWonAuthFlow,
+    light: *mut c_void,
+    cert: *const EeWonLightCert,
+    timeout: u32,
+) {
+    // SAFETY: the caller's object
+    flow!(f).refresh_async(light, unsafe { light_ref(cert) }, timeout)
 }
 
 /// # Safety
 /// `f` a flow.
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_auth_flow_refresh_block(f: *const EeWonAuthFlow, timeout: u32) -> c_long {
-    flow!(f).refresh_block(timeout)
+pub unsafe extern "C" fn ee_won_auth_flow_refresh_block(f: *const EeWonAuthFlow, timeout: u32, now: i64) -> c_long {
+    flow!(f).refresh_block(timeout, now)
+}
+
+/// A new reference of the caller's to a borrowed light op member.
+///
+/// # Safety
+/// `cert` NULL or from `ee_won_light_cert_new` (alive).
+pub(crate) unsafe fn light_ref(cert: *const EeWonLightCert) -> Option<Arc<EeWonLightCert>> {
+    if cert.is_null() {
+        return None;
+    }
+    // SAFETY: a live Arc's pointer (contract): one more count, then an Arc for it
+    unsafe {
+        Arc::increment_strong_count(cert);
+        Some(Arc::from_raw(cert))
+    }
+}
+
+/// `new LightGetCertOp`'s member (no peer data): a reference, freed with `ee_won_light_cert_free`.
+#[no_mangle]
+pub extern "C" fn ee_won_light_cert_new() -> *mut EeWonLightCert {
+    Arc::into_raw(EeWonLightCert::new()).cast_mut()
+}
+
+/// Drops a reference (NULL: nothing).
+///
+/// # Safety
+/// `cert` from `ee_won_light_cert_new`, not used afterwards.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_light_cert_free(cert: *mut EeWonLightCert) {
+    if !cert.is_null() {
+        // SAFETY: the caller's reference
+        drop(unsafe { Arc::from_raw(cert.cast_const()) });
+    }
+}
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `cert` a live light op member.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_light_cert_peer(cert: *const EeWonLightCert) -> *mut EeWonAuthObj {
+    // SAFETY: the caller's object
+    unsafe { &*cert }.peer().map_or(std::ptr::null_mut(), peerobj::peer_ref)
+}
+
+/// `SetPeerData(data)` (NULL: none; a reference of its own).
+///
+/// # Safety
+/// `cert` a live light op member, `peer` NULL or a live peer data object.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_light_cert_set_peer(cert: *const EeWonLightCert, peer: *const EeWonAuthObj) {
+    // SAFETY: the caller's objects
+    unsafe { &*cert }.set_peer(unsafe { peerobj::peer_of(peer) })
 }
 
 #[cfg(test)]

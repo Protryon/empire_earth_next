@@ -37,6 +37,8 @@
 //!   over the C++ host; the statistics as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
+//! - [`scenario_editor`]: the scenario editor's events (its trigger tab's buttons, the object, area, condition,
+//!   effect and trigger screens' events), over the editor's C++ objects.
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
 //! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
@@ -55,6 +57,8 @@
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
+//! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
+//!   paints' queued areas and runs, the trigger area's rectangle.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -91,6 +95,9 @@ mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
+pub mod editor_actions;
+#[cfg(not(test))]
+mod editor_actions_ffi;
 pub mod factories;
 pub mod frame;
 #[cfg(not(test))]
@@ -121,6 +128,9 @@ mod post_game_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;
+pub mod scenario_editor;
+#[cfg(not(test))]
+mod scenario_editor_ffi;
 pub mod scenario_screens;
 #[cfg(not(test))]
 mod scenario_screens_ffi;

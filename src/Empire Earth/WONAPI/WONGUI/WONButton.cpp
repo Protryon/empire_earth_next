@@ -294,7 +294,7 @@ static EeWonButtonPaint WONButtonPaintOf(WONButton* b, Image* theImage, WrappedT
 	p.pressed = b->IsPressed();
 	p.disabled = b->IsDisabled();
 	p.draw_gray_text = b->mDrawGrayText;
-	p.focus_shown = b->mFocusStyle && b->HasFocus() && b->mParent->mHasUsedDialogKeys;
+	p.focus_shown = b->mFocusStyle && b->HasFocus() && b->mParent->HasUsedDialogKeys();
 	p.h_align = b->mHAlign;
 	p.v_align = b->mVAlign;
 	p.image_width = theImage ? theImage->mWidth : 0;

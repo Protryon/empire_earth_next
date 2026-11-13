@@ -72,9 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -116,7 +113,6 @@
 #include "ee/EESETSOUnitList.h"
 #include "ee/EESETSAComboBox.h"
 #include "ee/EESETSAEditBox.h"
-#include "ee/EESEEDisplayEpoch.h"
 #include "ee/EESERBUnitTypes.h"
 #include "ee/EESEEGameUnitLimit.h"
 #include "ee/EEDatabaseTables.h"
@@ -142,6 +138,8 @@ GEBitmap* EESEUIBDiplomacy::sPressedBitmaps[2];
 #include "ee/EEAResetAllPlayerInfo.h"
 #include "ee/EEGlobalConstants.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 extern FSPath* gCivilizationDataPath;
 extern UString gSECivilizationExtension;
 
@@ -709,7 +707,7 @@ void EESEPlayerScreen::CreateTechControls(unsigned long& ioIndex, UIForm* inForm
     this->mDisplayEpoch = new UICheckBox(kSERBUnitTypesDisplayEpoch, theText, gU531938,
         GERectangle(theLocation, 150.0f, (float)(gU531938->GetHeight() + 1.0f)), inForm, ioIndex, 0, false);
     this->mDisplayEpoch->SetBgOpacity(0.4f);
-    UIEvent* theEvent = new EESEEDisplayEpoch;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_DISPLAY_EPOCH);
     this->mDisplayEpoch->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mDisplayEpoch->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -719,9 +717,6 @@ void EESEPlayerScreen::CreateTechControls(unsigned long& ioIndex, UIForm* inForm
     inForm->AddControl(this->mDisplayEpoch, 5);
     ++ioIndex;
 }
-
-// SYNTHETIC: EXE 0x5759f4
-// (EESEEDisplayEpoch's scalar deleting destructor)
 
 // FUNCTION: EXE 0x575a1f
 // Returns the player count chosen in the max-players combo (selection + 2), despite the name

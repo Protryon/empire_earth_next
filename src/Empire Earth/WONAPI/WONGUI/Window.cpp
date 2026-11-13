@@ -504,10 +504,10 @@ void Window::SetModal(bool modal) {
 // FUNCTION: WON 0x0072afd0
 // Applies the root's cursor (arrow when none) when it changed or when forced; hides the system cursor for custom ones
 void Window::CheckSetCursor(bool force) {
-    if(!ee_won_gui_win_cursor_refresh(force, this->mRoot->mCurrentCursor.get()==this->mCurrentCursor))
+    if(!ee_won_gui_win_cursor_refresh(force, this->mRoot->GetCurrentCursor()==this->mCurrentCursor))
         return;
-    this->mCurrentCursor=this->mRoot->mCurrentCursor.get();
-    Cursor* cursor=this->mRoot->mCurrentCursor.get();
+    this->mCurrentCursor=this->mRoot->GetCurrentCursor();
+    Cursor* cursor=this->mRoot->GetCurrentCursor();
     if(cursor==NULL)
         cursor=Cursor::GetStandardCursor(StandardCursor_Arrow);
     cursor=cursor->GetNative();

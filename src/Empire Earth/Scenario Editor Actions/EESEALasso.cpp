@@ -59,46 +59,24 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEALasso.h"
 #include "ee/EESEALasso.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a7358
 // Selects the units of a type inside a screen rectangle that are not selected yet (unless deselect-only) and
-// deselects the others when asked
+// deselects the others when asked (ee_screens editor_actions.rs)
 void EESEALasso::SelectUnits(const GERectangle& inRectangle, long inUnitType, bool inDeselect, bool inDeselectOnly)
 {
-    std::vector<unsigned long> theUnitIDs;
-    gUnitPicker.PickUnitsInRectangle(inRectangle, inUnitType, theUnitIDs);
-    for (unsigned long i = 0; i < theUnitIDs.size(); i++) {
-        EEUnit* theUnit = gWorld.GetUnit(theUnitIDs[i]);
-        if (theUnit == NULL)
-            continue;
-        if (!theUnit->mIsEditorSelected && !inDeselectOnly)
-            gUIManager->mScenarioEditorForm->SelectUnit(theUnit);
-        else if (inDeselect)
-            gUIManager->mScenarioEditorForm->DeselectUnit(theUnit);
-    }
+    ee_screens_seu_lasso_select(&inRectangle, inUnitType, inDeselect ? 1 : 0, inDeselectOnly ? 1 : 0);
 }
 
 // FUNCTION: EXE 0x5a73ef
 // Applies the queued lasso message: replaces the selection with, adds, or toggles the units in its rectangle;
-// refreshes the unit tab and drops the message
+// refreshes the unit tab and drops the message (ee_screens editor_actions.rs)
 void EESEALasso::Virtual4()
 {
     if (this->mMessage == NULL)
         return;
-    switch (this->mMessage->GetType()) {
-    case kMessageSelectUnits:
-        gUIManager->mScenarioEditorForm->ClearSelection();
-        this->SelectUnits(this->mMessage->mRectangle, this->mMessage->mL30, false, false);
-        break;
-    case kMessageAddUnitsToSelectedGroup:
-        this->SelectUnits(this->mMessage->mRectangle, this->mMessage->mL30, false, false);
-        break;
-    case kMessageAddAndRemoveUnitsFromSelectedGroup:
-        this->SelectUnits(this->mMessage->mRectangle, this->mMessage->mL30, true, false);
-        break;
-    }
-    static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits])->UpdateSelection();
-    this->mMessage->Dereference();
+    ee_screens_seu_lasso(this->mMessage, &this->mMessage->mRectangle);
     this->mMessage = NULL;
 }
 

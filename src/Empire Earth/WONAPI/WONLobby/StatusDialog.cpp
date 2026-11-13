@@ -42,7 +42,7 @@ void StatusDialog::SetStatus(const GUIString& inStatus, bool inCancel)
 // Sets title, message and Cancel/OK button and resizes the dialog to fit; within 50 ms of creation it never shrinks
 void StatusDialog::SetText(const GUIString& inTitle, const GUIString& inStatus, bool inCancel)
 {
-    bool anOldB8C = this->mDragging;
+    bool anOldB8C = this->IsDragging();
     int anInitialWidth = this->Width();
     int anInitialHeight = this->Height();
     int anInitialStatusWidth = this->mStatusLabel->Width();
@@ -98,7 +98,7 @@ void StatusDialog::SetText(const GUIString& inTitle, const GUIString& inStatus, 
             this->mCancelButton->SetPos(this->mCancelButton->Left(), anInitialButtonY);
     }
     this->Invalidate();
-    this->mDragging = anOldB8C;
+    this->SetDragging(anOldB8C);
 }
 }
 

@@ -97,16 +97,16 @@ void WONComboBox::Paint(Graphics& g)
 void WONScrollContainer::Virtual08()
 {
 	Container::Virtual08();
-	if(this->mScrollArea.get()==NULL)
+	if(this->GetScrollArea()==NULL)
 		return;
 
-	bool horzOn = this->mHorzScrollbar->IsVisible();
-	bool vertOn = this->mVertScrollbar->IsVisible();
+	bool horzOn = this->GetScrollbar(false)->IsVisible();
+	bool vertOn = this->GetScrollbar(true)->IsVisible();
 
 	int left = this->mFrame.mLeft, right = this->mFrame.mRight, top = this->mFrame.mTop, bottom = this->mFrame.mBottom;
 
-	int aScrollbarWidth = this->mVertScrollbar->Width();
-	int aScrollbarHeight = this->mHorzScrollbar->Height();
+	int aScrollbarWidth = this->GetScrollbar(true)->Width();
+	int aScrollbarHeight = this->GetScrollbar(false)->Height();
 
 	int aScrollWidth = this->Width() - left - right;
 	if(vertOn)
@@ -117,12 +117,12 @@ void WONScrollContainer::Virtual08()
 		aScrollHeight -= aScrollbarHeight;
 
 	if(vertOn)
-		this->mVertScrollbar->SetPosSize(this->Width()-aScrollbarWidth-right,top,aScrollbarWidth,aScrollHeight);
+		this->GetScrollbar(true)->SetPosSize(this->Width()-aScrollbarWidth-right,top,aScrollbarWidth,aScrollHeight);
 
 	if(horzOn)
-		this->mHorzScrollbar->SetPosSize(left,this->Height()-aScrollbarHeight-bottom,aScrollWidth,aScrollbarHeight);
+		this->GetScrollbar(false)->SetPosSize(left,this->Height()-aScrollbarHeight-bottom,aScrollWidth,aScrollbarHeight);
 
-	this->mScrollArea->SetPosSize(left,this->mHeaderHeight+top,aScrollWidth,aScrollHeight-this->mHeaderHeight);
+	this->GetScrollArea()->SetPosSize(left,this->mHeaderHeight+top,aScrollWidth,aScrollHeight-this->mHeaderHeight);
 }
 
 // FUNCTION: WON 0x00719FF0
@@ -133,14 +133,14 @@ void WONScrollContainer::Paint(Graphics &g)
 
 	// the corner image between two visible scrollbars, then the frame (guidraw.rs scroll_container)
 	EeWonFrame aFrame = WONDrawFrameOf(this->mFrame,this,0,0,0,0);
-	bool aVert = this->mVertScrollbar->IsVisible();
-	bool aHorz = aVert && this->mHorzScrollbar->IsVisible();
+	bool aVert = this->GetScrollbar(true)->IsVisible();
+	bool aHorz = aVert && this->GetScrollbar(false)->IsVisible();
 	WONDrawSlots aSlots;
 	aSlots.mImages[0] = this->mFrame.mImage.get();
 	aSlots.mImages[1] = this->mCorner.get();
 	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
 		return ee_won_gui_draw_scroll_container(aVert,aHorz,this->mTransparent,this->mCorner.get()!=NULL,
-			this->mVertScrollbar->Left(),this->mVertScrollbar->Top()+this->mVertScrollbar->Height(),&aFrame,o,n); });
+			this->GetScrollbar(true)->Left(),this->GetScrollbar(true)->Top()+this->GetScrollbar(true)->Height(),&aFrame,o,n); });
 	WONDrawRun(g,anOps,aSlots);
 }
 }

@@ -824,6 +824,9 @@ constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 /// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
 constexpr static const int32_t EE_WON_DRAW_DOTTED_LINE = 17;
 
+/// `Graphics::SetPixel(a, b, c)` (x, y, colour).
+constexpr static const int32_t EE_WON_DRAW_PIXEL = 18;
+
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
@@ -1182,6 +1185,31 @@ constexpr static const int32_t EE_WON_HOST_SESSION_ADD = 150;
 /// the op's `mTracker.IsEmpty()` -> out_num
 constexpr static const int32_t EE_WON_HOST_TRACKER_EMPTY = 151;
 
+/// `ServerOp::mSocket` -> out_obj, borrowed
+constexpr static const int32_t EE_WON_HOST_OWN_SOCKET = 152;
+
+/// a socket obj0's `GetLengthFieldSize()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_LFS = 153;
+
+/// `mClientKeySize | mUseClientKey << 8` -> out_num
+constexpr static const int32_t EE_WON_HOST_CLIENT_KEY = 154;
+
+/// `mAuthContext->GetPeerData()` -> out_num: a new `EeWonAuthObj*` reference the op takes (0: none)
+constexpr static const int32_t EE_WON_HOST_PEER_CTX_DATA = 155;
+
+/// `mAuthContext->RefreshBlock(num0)` -> out_num (the status)
+constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_BLOCK = 156;
+
+/// `new LightGetCertOp`'s run (a plain `AsyncOp`; its member is the op's `EeWonLightCert`) -> out_obj
+constexpr static const int32_t EE_WON_HOST_PEER_NEW_LIGHT = 157;
+
+/// `mAuthContext->RefreshAsync(obj0, num0)`: the light op's run and its member (an `EeWonLightCert*`, borrowed);
+/// may call back
+constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
+
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -1395,6 +1423,102 @@ constexpr static const uint8_t EE_WON_PATCH_VERSION_TO = 20;
 constexpr static const uint8_t EE_WON_PATCH_VERSION_URL = 21;
 
 constexpr static const uint8_t EE_WON_PATCH_RECORD = 22;
+
+/// `IsValid()` (peer data: its `IsValid()`)
+constexpr static const int32_t EE_WON_AUTHOBJ_VALID = 1;
+
+/// `GetIssueTime()`
+constexpr static const int32_t EE_WON_AUTHOBJ_ISSUE = 2;
+
+/// `GetExpireTime()`
+constexpr static const int32_t EE_WON_AUTHOBJ_EXPIRE = 3;
+
+/// a certificate's `GetUserId()` (peer data: its certificate's)
+constexpr static const int32_t EE_WON_AUTHOBJ_USER_ID = 4;
+
+/// `IsExpired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_EXPIRED = 5;
+
+/// `VerifyPermissions(a, b, c)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PERMITS = 6;
+
+/// `Auth2Certificate::GetFirstCommunity()` (peer data: its second certificate's)
+constexpr static const int32_t EE_WON_AUTHOBJ_FIRST_COMMUNITY = 7;
+
+/// `GetFirstCommunityTrust()`
+constexpr static const int32_t EE_WON_AUTHOBJ_FIRST_TRUST = 8;
+
+/// `GetKeyId(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_KEY_ID = 9;
+
+/// a key block's `GetId()`
+constexpr static const int32_t EE_WON_AUTHOBJ_BLOCK_ID = 10;
+
+/// whether it holds a key (a key block's current key)
+constexpr static const int32_t EE_WON_AUTHOBJ_HAS_KEY = 11;
+
+/// `ComputeAuthDelta()`: the issue time less the current time
+constexpr static const int32_t EE_WON_AUTHOBJ_AUTH_DELTA = 12;
+
+/// peer data: `IsValid2()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_VALID2 = 20;
+
+/// peer data: `CertificateExpired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRED = 21;
+
+/// peer data: `Certificate2Expired(a)`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRED2 = 22;
+
+/// peer data: `GetExpireDelta()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_EXPIRE_DELTA = 23;
+
+/// peer data: `GetAuthDelta()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_DELTA = 24;
+
+/// peer data: its private key's `IsPrivate()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_PRIVATE = 25;
+
+/// peer data: `GetCertificate2() != NULL`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_HAS_CERT2 = 26;
+
+/// `GetCertificate()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_CERT = 1;
+
+/// `GetCertificate2()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_CERT2 = 2;
+
+/// `GetPubKeyBlock()`
+constexpr static const int32_t EE_WON_AUTHOBJ_PEER_BLOCK = 3;
+
+/// `SetUseAuth2(num)`
+constexpr static const int32_t EE_WON_PEERAUTH_USE_AUTH2 = 1;
+
+/// `SetClientKeySize(num & 0xff, num >> 8)`
+constexpr static const int32_t EE_WON_PEERAUTH_CLIENT_KEY = 2;
+
+/// `Reset()`
+constexpr static const int32_t EE_WON_PEERAUTH_RESET = 3;
+
+/// `GetState()`
+constexpr static const int32_t EE_WON_PEERAUTH_STATE = 4;
+
+/// the other side's certificate: 0 none, 1 invalid, 2 valid
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER = 5;
+
+/// the other side's certificate's user id
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER_USER = 6;
+
+/// the other side's certificate's `VerifyPermissions(a, b, c)`
+constexpr static const int32_t EE_WON_PEERAUTH_OTHER_PERMITS = 7;
+
+/// `GetSession()` (an `AuthSession*`, borrowed; NULL: none)
+constexpr static const int32_t EE_WON_PEEROP_SESSION = 1;
+
+/// `GetGetCertStatus()`
+constexpr static const int32_t EE_WON_PEEROP_GET_CERT_STATUS = 2;
+
+/// the server's: the client's certificate's `VerifyPermissions(0, index, 0)`
+constexpr static const int32_t EE_WON_PEEROP_CLIENT_PERMITS = 3;
 
 /// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
 constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
@@ -1907,147 +2031,6 @@ constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
 /// element: the position; -1 past the end)
 constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
 
-/// A number of the parser.
-enum class EeWonChatParserNumber {
-  Error = 0,
-  Command = 1,
-  Prefix = 2,
-  RoomFlags = 3,
-  Duration = 4,
-  Invitation = 5,
-  MatchThreshold = 6,
-  AllowColonEmote = 7,
-};
-
-/// A text of the parser.
-enum class EeWonChatParserText {
-  /// `mInput`: the reply target's name
-  Input = 0,
-  TargetName = 1,
-  Text = 2,
-};
-
-/// What an upper-cased token is in a group.
-enum class EeWonCfgToken {
-  /// `}`: the group's end.
-  Close,
-  /// `name:`: a key's value follows (the key is the token without its last character).
-  Key,
-  /// Anything else: a child group or an instruction.
-  Group,
-};
-
-/// `ReadGroupStart`'s next step after a token.
-enum class EeWonCfgStart {
-  /// The token is the group's name (read through a StringParser); read the next token.
-  Name,
-  /// `:` read: the next token is the base name.
-  Colon,
-  /// The token is the base name; read the next token.
-  Base,
-  /// `{`: the header is complete.
-  Open,
-  /// Not `{` where it was expected: "Expecting '{' but got <token>".
-  Error,
-};
-
-/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
-enum class EeWonCfgInstruction {
-  /// A registered child group, or unknown.
-  Other,
-  GroupDefine,
-  IfDefined,
-  IfNotDefined,
-  Define,
-  Redefine,
-  IncludeGroup,
-  IncludeFile,
-};
-
-/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
-enum class EeWonCfgOptional {
-  /// No suffix, or a bad one (see the warnings): required.
-  Required,
-  /// `, optional`.
-  Optional,
-  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
-  WarnNoString,
-  /// A comma and another word: "Expecting string: optional after include ..., include is required."
-  WarnOtherWord,
-};
-
-/// What an ElGamal call computes into a sink.
-enum class EeWonElGamalOp : uint32_t {
-  Encrypt = 0,
-  Decrypt = 1,
-  Sign = 2,
-  RawPrivateKey = 3,
-  RawPublicKey = 4,
-};
-
-/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
-enum class EeWonCert2Query : uint32_t {
-  /// the community's key id
-  KeyId = 0,
-  /// the first community (0 if none)
-  FirstCommunity = 1,
-  /// the first community's trust
-  FirstCommunityTrust = 2,
-};
-
-/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
-enum class EeWonStageRoute {
-  Drop = 0,
-  Local = 1,
-  Net = 2,
-  /// Handled locally and handed to the network logic too (the host's broadcast).
-  LocalAndNet = 3,
-};
-
-/// What `ButtonUp` does.
-enum class EeWonButtonUp {
-  /// Still held (or not pressed): nothing.
-  Ignore = 0,
-  /// Released: a repeating button stops its timer.
-  StopRepeat = 1,
-  /// Released without activating.
-  Release = 2,
-  /// Released and activated.
-  Activate = 3,
-};
-
-/// What `Button::KeyDown` does.
-enum class EeWonButtonKey {
-  /// Not handled (false).
-  None = 0,
-  /// Enter on the default button: activate (true).
-  Activate = 1,
-  /// Space: held down and pressed (true).
-  Press = 2,
-  /// An arrow in a radio group: the previous radio activated and focused (true).
-  RadioBack = 3,
-  /// The next radio.
-  RadioForward = 4,
-};
-
-/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
-enum class EeWonScrollPress {
-  LineUp = 0,
-  LineDown = 1,
-  /// The track, with the mouse along the axis.
-  Track = 2,
-};
-
-/// The search or compare `ee_won_guistring_op` runs.
-enum class EeWonGuiStringOp {
-  Compare,
-  CompareNoCase,
-  Find,
-  FindNoCase,
-  FindOneOf,
-  RFind,
-};
-
 /// The op codes. `a`..`d` are integers or pointers as each says.
 enum class EeWonGuiOp : uint32_t {
   /// the field `a` (`EeWonGuiField`).
@@ -2399,6 +2382,460 @@ enum class EeWonGuiOp : uint32_t {
   QueueMouseUp,
   /// `a->TryKeyDown(b)` (a submenu; 0 or 1).
   MenuTryKeyDown,
+  /// `a->SetSize(b, c)`.
+  ChildSetSize = 320,
+  /// `a->Invalidate()`.
+  ChildInvalidate,
+  /// `a->mParent == this` (0 or 1).
+  ChildIsMine,
+  /// `IsDisabled()` (0 or 1).
+  IsDisabled,
+  /// `new Button` (no reference: the caller holds it with `ChildHold`).
+  NewButton,
+  /// `((Button*)a)->SetButtonFlags(b, c != 0)`.
+  ButtonSetFlags,
+  /// `Container::AddedToParent()`.
+  BaseAddedToParent,
+  /// `Component::SetEnabled(a != 0)`.
+  BaseSetEnabled,
+  /// `((Scrollbar*)a)->mRust` (a bar's Rust object).
+  BarOf = 340,
+  /// `a->AddListener(new ComponentListenerComp(this))`.
+  ListenTo,
+  /// the area `a`'s field `b` (`EeWonGuiField`).
+  AreaGet,
+  /// the area `a`'s field `b` = `c`.
+  AreaSet,
+  /// `a->AdjustPosition(b != 0)` (virtual).
+  AreaAdjustPosition,
+  /// `a->RequestFocus()`.
+  AreaRequestFocus,
+  /// `a->MouseWheel(b)` (virtual; 0 or 1).
+  AreaMouseWheel,
+  /// `a->SetScroller(this)`.
+  AreaSetScroller,
+  /// `mFocusChild != NULL` (0 or 1).
+  HasFocusChild,
+  /// `Container::MouseWheel(a)` (0 or 1).
+  BaseMouseWheel,
+  /// `Component::HandleComponentEvent(a)`.
+  ComponentHandleEvent,
+  /// `Virtual08()` (virtual: a subclass's layout).
+  VirtSizeChanged,
+  /// `NotifyScrollChange(a != 0)` (virtual).
+  VirtNotifyScrollChange,
+  /// `((Scroller*)a)->NotifyScrollChange(b != 0)` (virtual).
+  ScrollerNotify = 360,
+  /// `((Scroller*)a)->SetScrollArea(this)`.
+  ScrollerSetArea,
+  /// `dynamic_cast<ScrollbarScroller*>((Scroller*)a)` (NULL for NULL).
+  ScrollerAsBars,
+  /// `new ScrollbarScroller` (no reference: the original's scroll area borrowed it).
+  NewScrollbarScroller,
+  /// `((ScrollbarScroller*)a)->SetScrollbar((Scrollbar*)b)`.
+  ScrollerSetScrollbar,
+  /// `ScrollSizeChanged()` (virtual).
+  VirtScrollSizeChanged,
+  /// `ScrollPaint(*a)` (virtual; `a` the Graphics).
+  VirtScrollPaint,
+  /// `Container::Paint(*a)`.
+  ContainerPaint,
+  /// `mBackground.Paint(*a, 0, 0, Width(), Height(), b, c)`.
+  PaneBackground,
+  /// `Component::X(...)` on this container (`a` an `EeWonCtVirt`, `b`, `c` its arguments; 0 or 1 where it answers).
+  CtBase = 400,
+  /// `a->X(...)` (virtual: `b` an `EeWonCtVirt`, `c`, `d` its arguments; 0 or 1 where it answers).
+  CtChild,
+  /// `a->MouseDown(b, c, d)`.
+  CtChildMouseDown,
+  /// `a->MouseUp(b, c, d)`.
+  CtChildMouseUp,
+  /// `mParent->X(this)` (`a` an `EeWonCtVirt`: SetFocusChild, AddTimerChild, ChildInvalidated, or SetCursor of the
+  /// `Cursor*` `b`; 0 or 1 where it answers).
+  CtParentCall,
+  /// this container's own virtual (`a` an `EeWonCtVirt`: FindChildAt(b, c), SetCursor(b), TabFocus(b, c),
+  /// RemoveChild(b), MouseMove(b, c); the answer where it has one).
+  CtVirt,
+  /// `a->mParent->RemoveChild(a)`.
+  CtDetach,
+  /// `a->mParent = b != 0 ? this : NULL`.
+  CtSetParent,
+  /// `a->mFocusId = b`.
+  CtSetFocusId,
+  /// `a->mInvalidState = b`.
+  CtSetInvalidState,
+  /// `mTimerFlags = a`.
+  CtSetTimerFlags,
+  /// `GetRootContainer()->AddBG((BackgroundGrabber*)a)`.
+  CtAddBG,
+  /// the child layout: `a` 0 `ExecuteInstructions(this)`, 1 `RemoveComponent(b)`, 2 `Clear()`, 3 the manager
+  /// destroyed.
+  CtLayout,
+  /// `((Cursor*)a)->AddRef()` (the current cursor's `SmartPtr`).
+  CtCursorHold,
+  /// `((Cursor*)a)->Release()`.
+  CtCursorRelease,
+  /// `((Graphics*)a)->mColorScheme = (ColorScheme*)b`.
+  CtSetScheme,
+  /// `a->mComponentBits`.
+  CtBits = 430,
+  /// `a->mParent`.
+  CtParentOf,
+  /// `a->mTimerFlags`.
+  CtTimerFlags,
+  /// `a->mInvalidState`.
+  CtInvalidState,
+  /// `a->mFocusId`.
+  CtFocusId,
+  /// `a->Contains(b, c)` (0 or 1).
+  CtContains,
+  /// `a->Intersects((Component*)b)` (0 or 1).
+  CtIntersects,
+  /// `a->GetGrabBG()`.
+  CtGrabBG,
+  /// `a->GetOwnColorScheme()`.
+  CtOwnScheme,
+  /// `((Graphics*)a)->mColorScheme`.
+  CtScheme,
+  /// `GetRootContainer()` (as a `Component*`).
+  CtRoot,
+  /// `GetRoot()->mManager->mFocusWindow == GetRoot()` (0 or 1).
+  CtRootFocused,
+  /// `GetRoot()->mMouseIsInClientArea` (0 or 1).
+  CtMouseInClient,
+  /// `GetDefaultCursor()`.
+  CtDefaultCursor,
+  /// `WantFocus()` (0 or 1).
+  CtWantFocus,
+  /// `a->GetNextSibling(b != 0, c != 0)`.
+  CtNextSibling,
+  /// `dynamic_cast<Container*>(a)`'s Rust container (`EeWonContainer*`; 0 when `a` is no container).
+  CtContainerOf,
+  /// `((ScrollArea*)a)->IsRectVisible(*(WONRectangle*)b)` (0 or 1).
+  VpAreaRectVisible,
+  /// `Button::SetDialogDefaultButton((Button*)b)` when `a`, else `Button::UnSetDialogDefaultButton((Button*)b)`.
+  DlgDefaultButton = 460,
+  /// `mParent->BringToTop(this)`.
+  DlgBringToTop,
+  /// `InvalidateRect(*(WONRectangle*)a)` (virtual; it may move the rectangle).
+  DlgInvalidateRect,
+  /// `GetRoot()->EndDialog(a, (Component*)b)`.
+  DlgEndDialog,
+  /// `((Button*)a)->Fn2F3440()` (the click).
+  DlgClick,
+  /// `GetRoot()->mManager->mModalComponent == this` (0 or 1; a pure read).
+  DlgIsModal,
+  /// `((Button*)a)->IsDefaultButton()` (0 or 1; a pure read).
+  DlgIsDefault,
+  /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
+  DlgEventButtonFlags,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonBarCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  AddedToParent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `SetEnabled(a != 0)`.
+  SetEnabled,
+  /// `CopyAttributes(a)` (`a` the other bar's Rust object).
+  CopyAttributes,
+  AddControls,
+  /// `LayoutThumb(a != 0)`.
+  LayoutThumb,
+  /// the part `a` (0 the up arrow, 1 the down arrow, 2 the track, 3 the thumb).
+  GetPart,
+  /// the part `a` = `b` (the original's `SmartPtr` assignment).
+  SetPart,
+  /// `IsVertical()` (0 or 1).
+  IsVertical,
+  /// `SetVertical(a != 0)`.
+  SetVertical,
+  /// `SetResizeThumb(a != 0)`.
+  SetResizeThumb,
+  /// `SetMinThumbSize(a)` (an unsigned char).
+  SetMinThumbSize,
+  GetPosition,
+  /// `SetPosition(a)` (the field only).
+  SetPosition,
+  /// `SetRange(a, b)` (total, page; the page step is the page).
+  SetRange,
+  /// `SetLineScrollSizes(a, b)` (up, down).
+  SetLineScrollSizes,
+};
+
+/// A number of the parser.
+enum class EeWonChatParserNumber {
+  Error = 0,
+  Command = 1,
+  Prefix = 2,
+  RoomFlags = 3,
+  Duration = 4,
+  Invitation = 5,
+  MatchThreshold = 6,
+  AllowColonEmote = 7,
+};
+
+/// A text of the parser.
+enum class EeWonChatParserText {
+  /// `mInput`: the reply target's name
+  Input = 0,
+  TargetName = 1,
+  Text = 2,
+};
+
+/// What an upper-cased token is in a group.
+enum class EeWonCfgToken {
+  /// `}`: the group's end.
+  Close,
+  /// `name:`: a key's value follows (the key is the token without its last character).
+  Key,
+  /// Anything else: a child group or an instruction.
+  Group,
+};
+
+/// `ReadGroupStart`'s next step after a token.
+enum class EeWonCfgStart {
+  /// The token is the group's name (read through a StringParser); read the next token.
+  Name,
+  /// `:` read: the next token is the base name.
+  Colon,
+  /// The token is the base name; read the next token.
+  Base,
+  /// `{`: the header is complete.
+  Open,
+  /// Not `{` where it was expected: "Expecting '{' but got <token>".
+  Error,
+};
+
+/// `HandleInstruction`'s and `HandleValueInstruction`'s instructions (upper-cased tokens).
+enum class EeWonCfgInstruction {
+  /// A registered child group, or unknown.
+  Other,
+  GroupDefine,
+  IfDefined,
+  IfNotDefined,
+  Define,
+  Redefine,
+  IncludeGroup,
+  IncludeFile,
+};
+
+/// The `, optional` suffix of `INCLUDEGROUP` / `INCLUDEFILE`.
+enum class EeWonCfgOptional {
+  /// No suffix, or a bad one (see the warnings): required.
+  Required,
+  /// `, optional`.
+  Optional,
+  /// A comma and no string: "Expecting string: 'optional' after include ..., include is required."
+  WarnNoString,
+  /// A comma and another word: "Expecting string: optional after include ..., include is required."
+  WarnOtherWord,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods; `a`, `b`, `c` as each says).
+enum class EeWonCtCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `PrePaint(*a)` (`a` the Graphics).
+  PrePaint,
+  /// `Paint(*a)`.
+  Paint,
+  /// `EnableControlsById(*a, b != 0)` (`a` the `ControlIdSet`).
+  EnableControlsById,
+  NotifyRootVisibility,
+  /// `HitTest(a, b)` (0 or 1).
+  HitTest,
+  /// `FindChildAt(a, b)` (the child or 0).
+  FindChildAt,
+  UpdateMouseChild,
+  MouseAt,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  MouseHover,
+  /// `AddChild(a)`.
+  AddChild,
+  /// `AddChildEx(a, b)`.
+  AddChildEx,
+  HandleBroadcastEvent,
+  /// `FindChildById(a)` (the component or 0).
+  FindChildById,
+  EnterModal,
+  LeaveModal,
+  RemoveChild,
+  RemoveAllChildren,
+  BringToTop,
+  SetFocusChild,
+  ChildStateChanged,
+  /// `ChildInvalidated(a)` (0 or 1).
+  ChildInvalidated,
+  MarkInvalid,
+  ClearGrabBG,
+  /// `TabFocus(a != 0, b != 0)` (0 or 1).
+  TabFocus,
+  KeyDown,
+  KeyUp,
+  KeyChar,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  AddedToParent,
+  AddTimerChild,
+  /// `TimerEvent(a)` (0 or 1).
+  TimerEvent,
+  /// `SetCursor(a)` (a `Cursor*`).
+  SetCursor,
+  SetFocusToLastFocusChild,
+  /// `EnsureOnTopOf(a, b)` (bottom, top).
+  EnsureOnTopOf,
+  /// `GetNextFocusId()`.
+  NextFocusId,
+  /// `NextChild(a, b != 0, c != 0)` (Component::GetNextSibling's walk; the child or 0).
+  NextChild,
+  /// `if (mFocusChild) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
+  DropFocusChild,
+  /// the field `a` (`EeWonCtField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+  /// a viewport's scroll area `a` (the ScrollAreaViewport constructor).
+  SetViewportArea,
+  /// ScrollAreaViewport::InvalidateIfRectVisible(*a) (`a` a `WONRectangle`, moved up as the original's).
+  VpInvalidateIfRectVisible,
+  /// ScrollAreaViewport::ChildInvalidated(a) (0).
+  VpChildInvalidated,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonDlgCall : uint32_t {
+  /// `SetEndOnEscape(a)`.
+  SetEndOnEscape = 1,
+  SetDontEndOnEscape,
+  /// `SetDefaultButton(a)` (a `Button*` as a `Component*`).
+  SetDefaultButton,
+  GotFocus,
+  LostFocus,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `CanClose()` (0 or 1).
+  CanClose,
+  /// `ActivateDefaultButton()` (0 or 1).
+  ActivateDefaultButton,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// the field `a` (`EeWonDlgField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// What an ElGamal call computes into a sink.
+enum class EeWonElGamalOp : uint32_t {
+  Encrypt = 0,
+  Decrypt = 1,
+  Sign = 2,
+  RawPrivateKey = 3,
+  RawPublicKey = 4,
+};
+
+/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
+enum class EeWonCert2Query : uint32_t {
+  /// the community's key id
+  KeyId = 0,
+  /// the first community (0 if none)
+  FirstCommunity = 1,
+  /// the first community's trust
+  FirstCommunityTrust = 2,
+};
+
+/// Where StagingLogic sends a room message: nowhere, handled by itself (the host), or handed to the network logic.
+enum class EeWonStageRoute {
+  Drop = 0,
+  Local = 1,
+  Net = 2,
+  /// Handled locally and handed to the network logic too (the host's broadcast).
+  LocalAndNet = 3,
+};
+
+/// What `ButtonUp` does.
+enum class EeWonButtonUp {
+  /// Still held (or not pressed): nothing.
+  Ignore = 0,
+  /// Released: a repeating button stops its timer.
+  StopRepeat = 1,
+  /// Released without activating.
+  Release = 2,
+  /// Released and activated.
+  Activate = 3,
+};
+
+/// What `Button::KeyDown` does.
+enum class EeWonButtonKey {
+  /// Not handled (false).
+  None = 0,
+  /// Enter on the default button: activate (true).
+  Activate = 1,
+  /// Space: held down and pressed (true).
+  Press = 2,
+  /// An arrow in a radio group: the previous radio activated and focused (true).
+  RadioBack = 3,
+  /// The next radio.
+  RadioForward = 4,
+};
+
+/// The events a component object fires (`FireEvent`).
+enum class EeWonGuiEvent : uint32_t {
+  /// `ComponentEvent_InputReturn`.
+  InputReturn = 1,
+  /// `ComponentEvent_InputTextChanged`.
+  InputTextChanged = 2,
+  /// `ComponentEvent_ListSelChanged`.
+  ListSelChanged = 3,
+  /// `ComponentEvent_Scroll`.
+  Scroll = 4,
+};
+
+/// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
+enum class EeWonScrollPress {
+  LineUp = 0,
+  LineDown = 1,
+  /// The track, with the mouse along the axis.
+  Track = 2,
+};
+
+/// The search or compare `ee_won_guistring_op` runs.
+enum class EeWonGuiStringOp {
+  Compare,
+  CompareNoCase,
+  Find,
+  FindNoCase,
+  FindOneOf,
+  RFind,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -3112,6 +3549,47 @@ enum class EeWonMHeadCall : uint32_t {
   DragColumn,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonPaneCall : uint32_t {
+  /// `AdjustPosition(a != 0)`.
+  AdjustPosition = 1,
+  /// `Virtual08` (SizeChanged).
+  SizeChanged,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  /// `Paint(*a)` (`a` the Graphics).
+  Paint,
+  SetDelegatePos,
+  /// `OnBottom()` (0 or 1).
+  OnBottom,
+  /// `SetBorderPadding(a[0], a[1], a[2], a[3])` (`a` points at the left, top, right and bottom padding).
+  SetBorderPadding,
+  /// `ScrollTranslate(*a, *b)` (`a`, `b` point at i32s).
+  ScrollTranslate,
+  /// `ScrollUntranslate(*a, *b)`.
+  ScrollUntranslate,
+  /// `SetSizeEqualToTotal(a, b)`.
+  SetSizeEqualToTotal,
+  /// `IsRectVisible(*a)` (`a` a `WONRectangle`; 0 or 1).
+  IsRectVisible,
+  /// `SetScrollDimension(a, b)`.
+  SetScrollDimension,
+  /// `SetScrollbar(a)` (a `Scrollbar*`).
+  SetScrollbar,
+  /// `SetScroller(a)` (a `Scroller*`, borrowed).
+  SetScroller,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// the field `a` (`EeWonGuiField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
 /// How a read ended: the whole file read, another version (or tag: nothing given), or cut (the events before the
 /// cut given).
 enum class EeWonPrefsRead {
@@ -3188,6 +3666,39 @@ enum class EeWonResKind {
   String = 0,
   Image = 1,
   Sound = 2,
+};
+
+/// The inward calls (the C++ shells' virtuals and methods).
+enum class EeWonScrollerCall : uint32_t {
+  /// `MouseDown(a, b, c)`.
+  MouseDown = 1,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  GetScrollArea,
+  /// `SetScrollArea(a)` (the original's `SmartPtr` assignment).
+  SetScrollArea,
+  /// `SetOffsets(a, b)` (horizontal, vertical).
+  SetOffsets,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `SetHorzOffset(a)`.
+  SetHorzOffset,
+  AddedToParent,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  /// `NotifyScrollChange(a != 0)`.
+  NotifyScrollChange,
+  /// `SetScrollbar(a)`.
+  SetScrollbar,
+  AddControls,
+  /// `GetScrollbar(a != 0)`.
+  GetScrollbar,
+  /// `SetBar(a != 0, b)` (the field only).
+  SetBar,
+  /// `EnableScrollbar(a, b)` (0 or 1).
+  EnableScrollbar,
+  /// `SetScrollbarConditions(a, b)` (horizontal, vertical).
+  SetScrollbarConditions,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3494,6 +4005,22 @@ enum class EeWonGuiField : uint32_t {
   Width,
   /// `Height()` (read only).
   Height,
+  /// `mScrollArea.x`.
+  ScrollX,
+  /// `mScrollArea.y`.
+  ScrollY,
+  /// `mLeftScrollAmount`.
+  LeftScrollAmount,
+  /// `mRightScrollAmount`.
+  RightScrollAmount,
+  /// `mLeftPad`.
+  LeftPad,
+  /// `mTopPad`.
+  TopPad,
+  /// `mRightPad`.
+  RightPad,
+  /// `mBottomPad`.
+  BottomPad,
 };
 
 /// The cursor `SetParentCursor` sets on the parent.
@@ -3512,14 +4039,83 @@ enum class EeWonGuiCursor : uint32_t {
   NorthSouth = 5,
 };
 
-/// The events a component object fires (`FireEvent`).
-enum class EeWonGuiEvent : uint32_t {
-  /// `ComponentEvent_InputReturn`.
-  InputReturn = 1,
-  /// `ComponentEvent_InputTextChanged`.
-  InputTextChanged = 2,
-  /// `ComponentEvent_ListSelChanged`.
-  ListSelChanged = 3,
+/// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,
+/// `CtChild`, `CtParentCall`, `CtVirt`).
+enum class EeWonCtVirt : uint32_t {
+  NeedsPaint = 1,
+  /// `PrePaint(*(Graphics*)arg)`.
+  PrePaint,
+  /// `Paint(*(Graphics*)arg)`.
+  Paint,
+  /// `EnableControlsById(*(const ControlIdSet*)arg1, arg2 != 0)`.
+  EnableControlsById,
+  NotifyRootVisibility,
+  HitTest,
+  MouseEnter,
+  MouseExit,
+  MouseMove,
+  MouseDrag,
+  MouseWheel,
+  MouseHover,
+  /// `HandleBroadcastEvent((ComponentEvent*)arg)`.
+  HandleBroadcastEvent,
+  AddedToParent,
+  Invalidate,
+  MarkInvalid,
+  ClearGrabBG,
+  TabFocus,
+  KeyDown,
+  KeyChar,
+  KeyUp,
+  CanClose,
+  GotFocus,
+  LostFocus,
+  TimerEvent,
+  /// `RequestTimer(arg != 0)` (not virtual).
+  RequestTimer,
+  /// `RequestFocus()` (not virtual).
+  RequestFocus,
+  /// `Virtual08()` (SizeChanged).
+  SizeChanged,
+  SetFocusChild,
+  AddTimerChild,
+  ChildInvalidated,
+  /// `SetCursor((Cursor*)arg)`.
+  SetCursor,
+  FindChildAt,
+  RemoveChild,
+  /// `SetComponentFlags(ComponentFlag_HasFocus, true)` (not virtual).
+  SetHasFocus,
+};
+
+/// The container's fields its users read and set.
+enum class EeWonCtField : uint32_t {
+  MouseChild = 1,
+  FocusChild,
+  CurrentCursor,
+  MouseWheelGoesToFocusChild,
+  IsolateTabFocus,
+  HasUsedDialogKeys,
+  OnlyChildInput,
+  ModalCount,
+  NextFocusId,
+  FrontChild,
+  BackChild,
+  NumChildren,
+  /// a viewport's scroll area (0 for a plain container).
+  ViewportArea,
+};
+
+/// The dialog's fields its configs and subclasses read and set.
+enum class EeWonDlgField : uint32_t {
+  AllowDrag = 1,
+  KeepInRoot,
+  EndOnEscape,
+  EscapeId,
+  Dragging,
+  DragX,
+  DragY,
+  DefaultButton,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -3537,6 +4133,9 @@ struct EeWonAuthFlow;
 /// The login data (opaque): `AuthContext::mLogin`, its own lock.
 struct EeWonAuthLogin;
 
+/// A reference to a certificate, a key block or peer data, as the C++ shims (`AuthBase`, `AuthPeerData`) hold it.
+struct EeWonAuthObj;
+
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
 
@@ -3551,6 +4150,12 @@ struct EeWonChatParser;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
+
+/// The Rust Container.
+struct EeWonContainer;
+
+/// The Rust Dialog.
+struct EeWonDialog;
 
 /// `DetectFirewallOp`'s state.
 struct EeWonFirewallOp;
@@ -3584,6 +4189,11 @@ struct EeWonLan;
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
 
+/// `LightGetCertOp`'s member: the peer data `GetCertCallback` hands the waiting op (`SetPeerData`), read by its
+/// owner when the op completes (`GetPeerData`). Shared (an `Arc`) by the owner and the context's refresh set; the
+/// op's run (its `AsyncOp` base) is a C++ object beside it.
+struct EeWonLightCert;
+
 /// The Rust ListArea.
 struct EeWonList;
 
@@ -3613,6 +4223,9 @@ struct EeWonOpContainer;
 /// duplicate ids allowed, duplicate ops not). The lock is the platform's recursive mutex.
 struct EeWonOpTracker;
 
+/// `PeerAuthClient` (`server` false) or `PeerAuthServer`; free with [`ee_won_peerauth_free`].
+struct EeWonPeerAuth;
+
 /// An account's profile: newsletter subscriptions, a custom action and a birth date.
 struct EeWonProfile;
 
@@ -3621,6 +4234,15 @@ struct EeWonQueueSocket;
 
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
+
+/// The Rust ScrollArea.
+struct EeWonScrollPane;
+
+/// The Rust Scrollbar.
+struct EeWonScrollbar;
+
+/// The Rust Scroller (and ScrollbarScroller).
+struct EeWonScroller;
 
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
@@ -3732,15 +4354,17 @@ struct EeWonAuthFlowHooks {
   void *(*new_timer)(void*);
   /// a new `GetCertOp` on the context (one reference), its completion `StaticGetCertCallback` when asked
   void *(*new_cert_op)(void*, bool);
-  /// `GetCertOp::GetPeerData`: a reference, or NULL
-  void *(*cert_peer_data)(void*);
-  /// `LightGetCertOp::SetPeerData` (the peer data may be NULL)
-  void (*light_set_peer_data)(void*, void*);
-  /// the context's `mPeerData->IsValid()`
-  bool (*peer_valid)(void*);
-  /// the context's `mPeerData->GetExpireDelta()`
-  int64_t (*peer_expire_delta)(void*);
+  /// `GetCertOp::GetPeerData`: a new reference to its peer data, or NULL
+  EeWonAuthObj *(*cert_peer_data)(void*);
 };
+
+/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
+using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
+                                    EeWonGuiOp op,
+                                    ptrdiff_t a,
+                                    ptrdiff_t b,
+                                    ptrdiff_t c,
+                                    ptrdiff_t d);
 
 /// `ReadBuffer`'s state, embedded by value in the C++ object (a reader over bytes someone else owns).
 struct EeWonReadBuffer {
@@ -4417,6 +5041,24 @@ struct EeWonTextRowPaint {
   int32_t font_height;
 };
 
+/// A menu item to paint (`MenuItem::Paint`'s inputs; image slot 0, font slot 0, string slot 0).
+struct EeWonMenuItemPaint {
+  bool selected;
+  bool full_row_select;
+  bool has_image;
+  bool disabled;
+  bool has_submenu;
+  EeWonSelColor sel;
+  uint32_t color;
+  int32_t paint_width;
+  int32_t width;
+  int32_t height;
+  int32_t image_height;
+  int32_t font_height;
+  /// the menu's view width (`mScrollArea.width`: the submenu arrow's place)
+  int32_t view_width;
+};
+
 /// An input box to paint (its members; icon slot 0, font slot 0, string slot 0 the shown text).
 struct EeWonInputPaint {
   bool disabled_look;
@@ -4782,14 +5424,6 @@ struct EeWonHttpSessionHooks {
   /// the connection's `GetNumOps`
   int (*conn_num_ops)(void*);
 };
-
-/// The host: `(component, op, a, b, c, d) -> result`. `component` is the C++ object the Rust one belongs to.
-using EeWonGuiHostFn = ptrdiff_t(*)(void *component,
-                                    EeWonGuiOp op,
-                                    ptrdiff_t a,
-                                    ptrdiff_t b,
-                                    ptrdiff_t c,
-                                    ptrdiff_t d);
 
 /// An address crossing to and from the C++ (`host` points into the C++'s or Rust's string for the call).
 struct EeWonAddr {
@@ -5709,9 +6343,23 @@ void ee_won_auth_flow_put_session(const EeWonAuthFlow *f,
 /// `f` a flow, `a` a live IPAddr value.
 void *ee_won_auth_flow_get_session(const EeWonAuthFlow *f, const EeWonIpAddr *a, int64_t now);
 
+/// `SetPeerData(data)`: a reference of its own to `peer` (NULL: none), then the sessions cleared.
+///
+/// # Safety
+/// `f` a flow, `peer` a live peer data object or NULL.
+void ee_won_auth_flow_set_peer_data(const EeWonAuthFlow *f, const EeWonAuthObj *peer);
+
+/// `GetPeerData()`: a new reference the caller frees (`ee_won_authobj_free`), NULL for none.
+///
 /// # Safety
 /// `f` a flow.
-void ee_won_auth_flow_clear_sessions(const EeWonAuthFlow *f);
+EeWonAuthObj *ee_won_auth_flow_peer_data(const EeWonAuthFlow *f);
+
+/// `IsExpired(extra)` at `now`.
+///
+/// # Safety
+/// `f` a flow.
+bool ee_won_auth_flow_is_expired(const EeWonAuthFlow *f, int64_t extra, int64_t now);
 
 /// # Safety
 /// `f` a flow, `op` the completing timer's `RefCount*`.
@@ -5723,7 +6371,7 @@ void ee_won_auth_flow_stop_auto_refresh(const EeWonAuthFlow *f);
 
 /// # Safety
 /// `f` a flow.
-void ee_won_auth_flow_set_do_auto_refresh(const EeWonAuthFlow *f, bool enabled);
+void ee_won_auth_flow_set_do_auto_refresh(const EeWonAuthFlow *f, bool enabled, int64_t now);
 
 /// # Safety
 /// `f` a flow.
@@ -5731,19 +6379,46 @@ void ee_won_auth_flow_kill(const EeWonAuthFlow *f);
 
 /// # Safety
 /// `f` a flow.
-void ee_won_auth_flow_start_auto_refresh(const EeWonAuthFlow *f, bool force);
+void ee_won_auth_flow_start_auto_refresh(const EeWonAuthFlow *f, bool force, int64_t now);
 
 /// # Safety
 /// `f` a flow, `op` the completing request's `RefCount*`.
-void ee_won_auth_flow_get_cert_callback(const EeWonAuthFlow *f, void *op);
+void ee_won_auth_flow_get_cert_callback(const EeWonAuthFlow *f, void *op, int64_t now);
 
+/// `RefreshAsync(op, timeout)`: `light` the waiting op's run (an `AsyncOp`'s `RefCount*`, or NULL for none),
+/// `cert` its member (borrowed: the set takes a reference of its own).
+///
 /// # Safety
-/// `f` a flow, `light` a `LightGetCertOp`'s `RefCount*` or NULL.
-void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f, void *light, uint32_t timeout);
+/// `f` a flow; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
+void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f,
+                                    void *light,
+                                    const EeWonLightCert *cert,
+                                    uint32_t timeout);
 
 /// # Safety
 /// `f` a flow.
-long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout);
+long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout, int64_t now);
+
+/// `new LightGetCertOp`'s member (no peer data): a reference, freed with `ee_won_light_cert_free`.
+EeWonLightCert *ee_won_light_cert_new();
+
+/// Drops a reference (NULL: nothing).
+///
+/// # Safety
+/// `cert` from `ee_won_light_cert_new`, not used afterwards.
+void ee_won_light_cert_free(EeWonLightCert *cert);
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `cert` a live light op member.
+EeWonAuthObj *ee_won_light_cert_peer(const EeWonLightCert *cert);
+
+/// `SetPeerData(data)` (NULL: none; a reference of its own).
+///
+/// # Safety
+/// `cert` a live light op member, `peer` NULL or a live peer data object.
+void ee_won_light_cert_set_peer(const EeWonLightCert *cert, const EeWonAuthObj *peer);
 
 /// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
 ///
@@ -5814,6 +6489,23 @@ bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
                                const uint8_t *key,
                                int64_t t0,
                                int64_t t1);
+
+/// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
+EeWonScrollbar *ee_won_bar_new(void *component, EeWonGuiHostFn host, bool vertical);
+
+/// # Safety
+/// `bar` came from `ee_won_bar_new` (or is NULL) and is not used again.
+void ee_won_bar_free(EeWonScrollbar *bar);
+
+/// One of Scrollbar's methods (`EeWonBarCall`).
+///
+/// # Safety
+/// `bar` is live; the call's arguments as documented.
+ptrdiff_t ee_won_bar_call(const EeWonScrollbar *bar,
+                          EeWonBarCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
@@ -6314,6 +7006,29 @@ void ee_won_cfg_include_path(const uint8_t *path,
                              EeWonByteSink sink,
                              void *context);
 
+/// A new Rust Container for the C++ `component`, its calls out through `host`; the wheel goes to the focus child
+/// when `wheel_to_focus` (the class default).
+EeWonContainer *ee_won_ct_new(void *component,
+                              EeWonGuiHostFn host,
+                              bool wheel_to_focus);
+
+/// The destructor's statements (children told, cursor, layout, timer children and children released), then the
+/// object freed.
+///
+/// # Safety
+/// `ct` came from `ee_won_ct_new` (or is NULL) and is not used again.
+void ee_won_ct_free(EeWonContainer *ct);
+
+/// One of Container's methods (`EeWonCtCall`).
+///
+/// # Safety
+/// `ct` is live; the call's arguments as documented.
+ptrdiff_t ee_won_ct_call(const EeWonContainer *ct,
+                         EeWonCtCall call,
+                         ptrdiff_t a,
+                         ptrdiff_t b,
+                         ptrdiff_t c);
+
 /// `new ProfileData`.
 EeWonProfile *ee_won_profile_new();
 
@@ -6402,6 +7117,30 @@ bool ee_won_db_user_id(const uint8_t *data, size_t length, int32_t *out);
 
 /// Whether a DBProxy reply's sub-message answers the request's `sub` (the email requests).
 bool ee_won_db_answers(int16_t reply_sub, uint16_t sub);
+
+/// A new Rust Dialog for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the dialog's.
+EeWonDialog *ee_won_dlg_new(void *component,
+                            EeWonGuiHostFn host,
+                            const EeWonContainer *ct);
+
+/// The destructor's statement (the default button released), then the object freed.
+///
+/// # Safety
+/// `dlg` came from `ee_won_dlg_new` (or is NULL) and is not used again.
+void ee_won_dlg_free(EeWonDialog *dlg);
+
+/// One of Dialog's methods (`EeWonDlgCall`).
+///
+/// # Safety
+/// `dlg` is live; the call's arguments as documented.
+ptrdiff_t ee_won_dlg_call(const EeWonDialog *dlg,
+                          EeWonDlgCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
 
 bool ee_won_dlg_create_enabled(uint32_t name_len, bool password_shown, uint32_t password_len);
 
@@ -8117,6 +8856,23 @@ size_t ee_won_gui_draw_multi_row(const EeWonMultiRowPaint *r, EeWonDrawOp *out, 
 /// `r` is valid; `out` has room for `cap` operations (or is NULL).
 size_t ee_won_gui_draw_text_row(const EeWonTextRowPaint *r, EeWonDrawOp *out, size_t cap);
 
+/// `text_item_size` into `out_w`, `out_h`.
+///
+/// # Safety
+/// `out_w` and `out_h` are writable.
+void ee_won_gui_text_item_size(int32_t text_width,
+                               int32_t font_height,
+                               bool has_image,
+                               int32_t image_width,
+                               int32_t image_height,
+                               bool menu,
+                               int32_t *out_w,
+                               int32_t *out_h);
+
+/// # Safety
+/// `r` is valid; `out` has room for `cap` operations (or is NULL).
+size_t ee_won_gui_draw_menu_item(const EeWonMenuItemPaint *r, EeWonDrawOp *out, size_t cap);
+
 /// # Safety
 /// `b` and `m` are valid; `out` has room for `cap` operations (or is NULL).
 size_t ee_won_gui_draw_input_box(const EeWonInputPaint *b,
@@ -8465,6 +9221,12 @@ bool ee_won_gui_button_state_cell(int32_t state,
                                   int32_t index,
                                   int32_t *out_state,
                                   int32_t *out_checked);
+
+/// The `WindowEventType` a `FireEvent` op delivers (`ee/wonapi/WONEventTypes.h`): the host fires exactly this, so
+/// no event code needs a case of its own in the C++ (round 23's lists fired every event but InputReturn as
+/// InputTextChanged through such a switch). The goldens trace the type listeners receive through this function and
+/// compare it with the original's enum.
+int32_t ee_won_gui_event_type(EeWonGuiEvent event);
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.
 ///
@@ -10500,6 +11262,23 @@ size_t ee_won_op_tracker_len(const EeWonOpTracker *t);
 /// `t` is valid.
 void *ee_won_op_tracker_at(const EeWonOpTracker *t, size_t index);
 
+/// A new Rust ScrollArea for the C++ `component`, its calls out through `host`.
+EeWonScrollPane *ee_won_pane_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `pane` came from `ee_won_pane_new` (or is NULL) and is not used again.
+void ee_won_pane_free(EeWonScrollPane *pane);
+
+/// One of ScrollArea's methods (`EeWonPaneCall`).
+///
+/// # Safety
+/// `pane` is live; the call's arguments as documented.
+ptrdiff_t ee_won_pane_call(const EeWonScrollPane *pane,
+                           EeWonPaneCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
 /// A record's or reply's read into `sink`: `kind` 0 a `VersionData`, 1 a `PatchData`, 2 a `PatchData` of a patch
 /// list, 3 the version check's reply data, 4 the patch list's.
 ///
@@ -10714,6 +11493,142 @@ int32_t ee_won_auth_session_crypt(EeWonAuthSession *s,
                                   EeWonByteSink sink,
                                   void *context,
                                   bool *replaced);
+
+/// `new AuthCertificate(data, len)` (`EE_WON_AUTH_CERTIFICATE`), `Auth2Certificate` or `AuthPubKeyBlock`; another
+/// kind is the base block.
+///
+/// # Safety
+/// `data` holds `length` bytes (or is null with 0).
+EeWonAuthObj *ee_won_cert_new(uint32_t kind,
+                              const uint8_t *data,
+                              size_t length);
+
+/// `new AuthPeerData(keyBlock)` (null: a new empty block).
+///
+/// # Safety
+/// `block` is null or a live object.
+EeWonAuthObj *ee_won_peer_new_empty(const EeWonAuthObj *block);
+
+/// `new AuthPeerData(certificate, keyBlock, key, delta, certificate2)` (the key copied).
+///
+/// # Safety
+/// The objects are null or live; `key` is a live key.
+EeWonAuthObj *ee_won_peer_new(const EeWonAuthObj *cert,
+                              const EeWonAuthObj *block,
+                              const EeWonElGamal *key,
+                              int64_t delta,
+                              const EeWonAuthObj *cert2);
+
+/// Another reference to the same object.
+///
+/// # Safety
+/// `o` is a live object.
+EeWonAuthObj *ee_won_authobj_clone(const EeWonAuthObj *o);
+
+/// Drops a reference (null: nothing).
+///
+/// # Safety
+/// `o` came from this module and is not used afterwards.
+void ee_won_authobj_free(EeWonAuthObj *o);
+
+/// Whether two references name the same object (null: only another null).
+///
+/// # Safety
+/// The objects are null or live.
+bool ee_won_authobj_same(const EeWonAuthObj *a, const EeWonAuthObj *b);
+
+/// A number of the object (`EE_WON_AUTHOBJ_*`), at the current time.
+///
+/// # Safety
+/// `o` is a live object.
+int64_t ee_won_authobj_num(const EeWonAuthObj *o, int32_t which, int64_t a, int64_t b, int64_t c);
+
+/// Peer data's certificate, second certificate or key block (`EE_WON_AUTHOBJ_PEER_*`): a new reference, null for
+/// none.
+///
+/// # Safety
+/// `o` is a live object.
+EeWonAuthObj *ee_won_authobj_get(const EeWonAuthObj *o,
+                                 int32_t which);
+
+/// A key block's (or peer data's) `Verify(other)`.
+///
+/// # Safety
+/// The objects are null or live.
+bool ee_won_authobj_verify(const EeWonAuthObj *o, const EeWonAuthObj *other);
+
+/// `IsValidAndVerified(key)`.
+///
+/// # Safety
+/// `o` is live; `key` is a live key.
+bool ee_won_authobj_verified_by(const EeWonAuthObj *o, const EeWonElGamal *key);
+
+/// The first key's `Encrypt(data)` to the sink; false (no call) when it gives NULL.
+///
+/// # Safety
+/// `o` is live; `data` holds `length` bytes; the sink is valid with `context`.
+bool ee_won_authobj_encrypt(const EeWonAuthObj *o,
+                            const uint8_t *data,
+                            size_t length,
+                            EeWonByteSink sink,
+                            void *context);
+
+EeWonPeerAuth *ee_won_peerauth_new(bool server);
+
+/// # Safety
+/// `p` came from [`ee_won_peerauth_new`] and is not used afterwards.
+void ee_won_peerauth_free(EeWonPeerAuth *p);
+
+/// A setter (`EE_WON_PEERAUTH_*`).
+///
+/// # Safety
+/// `p` is live.
+void ee_won_peerauth_set(const EeWonPeerAuth *p, int32_t which, int64_t num);
+
+/// A read (`EE_WON_PEERAUTH_*`).
+///
+/// # Safety
+/// `p` is live.
+int64_t ee_won_peerauth_num(const EeWonPeerAuth *p, int32_t which, int64_t a, int64_t b, int64_t c);
+
+/// `Start(peer, type, lfs)`: the client's request to the sink.
+///
+/// # Safety
+/// `p` is live, `peer` null or a live object; the sink is valid with `context`.
+void ee_won_peerauth_start(const EeWonPeerAuth *p,
+                           const EeWonAuthObj *peer,
+                           int32_t auth_type,
+                           uint8_t lfs,
+                           EeWonByteSink sink,
+                           void *context);
+
+/// `HandleRecvMsg`: the status; the out message to the sink when there is one (`*has_out`).
+///
+/// # Safety
+/// `p` is live; `data` holds `length` bytes; the sink is valid with `context`.
+int32_t ee_won_peerauth_recv(const EeWonPeerAuth *p,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context,
+                             bool *has_out);
+
+/// The session the last step made (the caller owns it, an `AuthSession`'s), or null.
+///
+/// # Safety
+/// `p` is live.
+EeWonAuthSession *ee_won_peerauth_take_session(const EeWonPeerAuth *p);
+
+/// `new PeerAuthOp(addr, context, type, socket, useAuth2)`'s Rust op (the C++ class sets the context, type and
+/// socket).
+///
+/// # Safety
+/// `addr` holds six bytes.
+EeWonHostOp *ee_won_hostop_peerauth(const uint8_t *addr,
+                                    bool use_auth2);
+
+/// `new PeerAuthServerOp(context, socket)`'s Rust op.
+EeWonHostOp *ee_won_hostop_peerauth_server();
 
 /// `write_global` into the sink.
 ///
@@ -11333,6 +12248,23 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new Rust Scroller for the C++ `component`, its calls out through `host`.
+EeWonScroller *ee_won_scroller_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `scroller` came from `ee_won_scroller_new` (or is NULL) and is not used again.
+void ee_won_scroller_free(EeWonScroller *scroller);
+
+/// One of Scroller's or ScrollbarScroller's methods (`EeWonScrollerCall`).
+///
+/// # Safety
+/// `scroller` is live; the call's arguments as documented.
+ptrdiff_t ee_won_scroller_call(const EeWonScroller *scroller,
+                               EeWonScrollerCall call,
+                               ptrdiff_t a,
+                               ptrdiff_t b,
+                               ptrdiff_t c);
 
 /// A new, empty list (shuffling on).
 EeWonServerList *ee_won_ctx_new();

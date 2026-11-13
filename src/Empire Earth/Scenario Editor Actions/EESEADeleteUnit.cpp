@@ -79,13 +79,10 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EESEADeleteUnit.h"
-
-// the unit order of a delete: path points (unit type 0xdf) first (unit-local predicate; provisional name)
-struct EESEADeleteUnitOrder {
-    bool operator()(EEUnit* inA, EEUnit* inB) const
-        { return inA->GetUnitClass()->GetUnitType() == kUnitTypePathPoint && inB->GetUnitClass()->GetUnitType() != kUnitTypePathPoint; }
-
-};
+#include "ee/EEMessage.h"
+#include "ee/EEUnitPicker.h"
+#include "lle/GERectangle.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a6b45
 // Creates and posts a delete action for a player's selected units: all of them (group) or the first only
@@ -111,78 +108,14 @@ EESEADeleteUnit::EESEADeleteUnit(unsigned long inUnitId)
 }
 
 // FUNCTION: EXE 0x5a6bcf
-// Deletes a unit part by part: drops an airport from its air traffic list, kills its cargo, unloads it from its
-// transport and kills it (reads the unit's player before its NULL test)
-void EESEADeleteUnit::DeleteComplexUnit(EEComplexUnit* inUnit)
-{
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    if (inUnit == NULL)
-        return;
-    if (inUnit->mUnitClass->IsLandBuilding() && inUnit->mUnitClass->mAirTrafficType != 0)
-        thePlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1]->RemoveAirport(inUnit);
-    do {
-        if (inUnit->GetNumCargoUnits() > 0) {
-            inUnit->KillCargo();
-            if (inUnit->mIsEditorSelected)
-                this->mUpdateSelection = true;
-        }
-        this->RemoveFromContainer(inUnit);
-        inUnit->Kill(false, false, false);
-        thePlayer->KillUnit(inUnit, false);
-        inUnit = inUnit->mNextPart;
-    } while (inUnit != NULL);
-}
+// (DeleteComplexUnit: each part's cargo killed, out of its container, killed; ee_screens editor_actions.rs)
 
 // FUNCTION: EXE 0x5a6c4c
 // Deletes the action's unit or the selected units (all or the first), path points first: off-map units are
-// skipped, resources emptied; refreshes the unit tab if a selected transport changed
+// skipped, resources emptied; refreshes the unit tab if a selected transport changed (ee_screens editor_actions.rs)
 void EESEADeleteUnit::Virtual4()
 {
-    std::vector<EEUnit*> theUnits;
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-    EEPlayer* thePlayer = gWorld.GetPlayer(this->mPlayer);
-    unsigned long theCount = theEditor->GetSelectedUnitCount();
-    EEUnit* theUnit;
-    unsigned long i;
-
-    this->mUpdateSelection = false;
-    if (!UIsNone32(this->mUnitId)) {
-        theUnit = static_cast<EEUnit*>(thePlayer->GetUnit(this->mUnitId));
-        theUnits.push_back(theUnit);
-        if (theUnit->mIsEditorSelected)
-            theEditor->DeselectUnit(theUnit);
-    } else if (theCount > 0) {
-        if (this->mIsGroup) {
-            for (i = 0; i < theCount; i++) {
-                theUnit = theEditor->GetSelectedUnit(i);
-                if (theUnit != NULL)
-                    theUnits.push_back(theUnit);
-            }
-            theEditor->ClearSelection();
-        } else {
-            theUnit = theEditor->GetFirstSelectedUnit();
-            if (theUnit != NULL)
-                theUnits.push_back(theUnit);
-            theEditor->DeselectFirstUnit();
-        }
-    }
-    std::sort(theUnits.begin(), theUnits.end(), EESEADeleteUnitOrder());
-    for (i = 0; i < theUnits.size(); i++) {
-        theUnit = theUnits[i];
-        if (theUnit->GetTileX() == -10000 && theUnit->GetTileY() == -10000)
-            continue;
-        if (theUnit->mTileNode != NULL)
-            this->DeleteComplexUnit(static_cast<EEComplexUnit*>(theUnit));
-        else {
-            if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource)
-                theUnit->SetResourceAmount(0);
-            theUnit->Kill(false, false, false);
-            theUnit->GetPlayer()->KillUnit(theUnit, false);
-        }
-    }
-    if (this->mUpdateSelection)
-        (static_cast<EESEUnit*>(gUIManager->mScenarioEditorForm->mTabGroups[kEditorTabUnits]))->UpdateSelection();
-
+    ee_screens_sea_delete_run(this);
 }
 
 // FUNCTION: EXE 0x5a6e0d
@@ -190,22 +123,7 @@ void EESEADeleteUnit::Virtual4()
 // (inline COMDAT, emitted by its first user Virtual4)
 
 // FUNCTION: EXE 0x5a6e33
-// Unloads the unit from the transport carrying it, at the transport's location
-void EESEADeleteUnit::RemoveFromContainer(EEComplexUnit* inUnit)
-{
-    GETransformation theTransformation;
-    EEComplexUnit* theContainer = inUnit->mContainer;
-    if (theContainer == NULL)
-        return;
-    for (unsigned long i = 0; i < theContainer->GetNumCargoUnits(); i++) {
-        if (theContainer->GetCargo(i) != inUnit)
-            continue;
-        theTransformation = theContainer->mPhysicalModel.GetLocation();
-        theContainer->UnloadCargoAt(i, theTransformation);
-        if (theContainer->mIsEditorSelected)
-            this->mUpdateSelection = true;
-    }
-}
+// (RemoveFromContainer: the unit unloaded from the transport carrying it; ee_screens editor_actions.rs)
 
 // FUNCTION: EXE 0x5a6ea9
 // Sorts the units to delete (path points first) (std::sort with EESEADeleteUnitOrder)
@@ -233,3 +151,126 @@ void EESEADeleteUnit::RemoveFromContainer(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x5a72fd
 // Moves the heap top of the units to delete (path points first) to the end (std::_Pop_heap)
+
+// ------------------------------------------------------------------------------------------------ the host
+// The selection's actions' host (ee_screens editor_actions.rs, EE_SCREENS_SEU_*: the click, the lasso, the rotation
+// and the deletion call it under the UI copy lock and the world's write lock). A unit is an EEUnit*.
+
+static_assert(kMessageSelectUnit == 0x48 && kMessageAddUnitToSelectedGroup == 0x49 &&
+                  kMessageAlwaysAddUnitToSelectedGroup == 0x76 && kMessageUnselectAllUnits == 0x4b &&
+                  kMessageSelectUnits == 0x4e && kMessageAddUnitsToSelectedGroup == 0x4f &&
+                  kMessageAddAndRemoveUnitsFromSelectedGroup == 0x50,
+              "editor_actions.rs's EE_SCREENS_SEU_MSG_*");
+
+// the delete action's run (its unit id and player, or the selection; ee_screens_seu_delete)
+void ee_screens_sea_delete_run(EESEADeleteUnit* inAction)
+{
+    ee_screens_seu_delete((uint32_t)inAction->mUnitId, (int32_t)inAction->mPlayer, inAction->mIsGroup ? 1 : 0);
+}
+
+extern "C" uintptr_t ee_screenscpp_seu(uint32_t inOp, void* inUnit, intptr_t inA, float inF)
+{
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    EEUnit* theUnit = static_cast<EEUnit*>(inUnit);
+    EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(inUnit);   // the ops on a complex unit's part
+    switch (inOp) {
+    case EE_SCREENS_SEU_SELECTED_COUNT:
+        return theEditor->GetSelectedUnitCount();
+    case EE_SCREENS_SEU_SELECTED:
+        return (uintptr_t)(EEUnit*)theEditor->mSelectedUnits[(unsigned long)inA];
+    case EE_SCREENS_SEU_FIRST_SELECTED:
+        return (uintptr_t)theEditor->GetFirstSelectedUnit();
+    case EE_SCREENS_SEU_CLEAR:
+        theEditor->ClearSelection();
+        return 0;
+    case EE_SCREENS_SEU_DESELECT_FIRST:
+        theEditor->DeselectFirstUnit();
+        return 0;
+    case EE_SCREENS_SEU_SELECT:
+        theEditor->SelectUnit(theUnit);
+        return 0;
+    case EE_SCREENS_SEU_DESELECT:
+        theEditor->DeselectUnit(theUnit);
+        return 0;
+    case EE_SCREENS_SEU_UPDATE_SELECTION:
+        static_cast<EESEUnit*>(theEditor->mTabGroups[kEditorTabUnits])->UpdateSelection();
+        return 0;
+    case EE_SCREENS_SEU_UNIT:
+        return (uintptr_t)gWorld.GetUnit((unsigned long)inA);
+    case EE_SCREENS_SEU_PLAYER_UNIT:
+        return (uintptr_t)static_cast<EEUnit*>(gWorld.GetPlayer((long)(intptr_t)inUnit)->GetUnit((unsigned long)inA));
+    case EE_SCREENS_SEU_IS_SELECTED:
+        return theUnit->mIsEditorSelected ? 1 : 0;
+    case EE_SCREENS_SEU_HAS_COMPLEX:
+        return theUnit->mComplexUnit != NULL ? 1 : 0;
+    case EE_SCREENS_SEU_TURNS:
+        return theUnit->mUnitClass->mAngularAcceleration > 0.0f ? 1 : 0;
+    case EE_SCREENS_SEU_ROTATE: {
+        GETransformation theTransformation = theUnit->mComplexUnit->mPhysicalModel.GetLocation();
+        theTransformation.SetOrientationYPR(inF, 0.0f, 0.0f);
+        theUnit->mComplexUnit->SetTransformation(theTransformation, true);
+        return 0;
+    }
+    case EE_SCREENS_SEU_PATH_POINT:
+        return theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint ? 1 : 0;
+    case EE_SCREENS_SEU_OFF_MAP:
+        return theUnit->GetTileX() == -10000 && theUnit->GetTileY() == -10000 ? 1 : 0;
+    case EE_SCREENS_SEU_ON_TILE:
+        return theUnit->mTileNode != NULL ? 1 : 0;
+    case EE_SCREENS_SEU_REMOVE_SIMPLE:
+        if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryResource)
+            theUnit->SetResourceAmount(0);
+        theUnit->Kill(false, false, false);
+        theUnit->GetPlayer()->KillUnit(theUnit, false);
+        return 0;
+    case EE_SCREENS_SEU_PLAYER:
+        return (uintptr_t)theComplex->mPlayer;
+    case EE_SCREENS_SEU_LEAVE_AIR_TRAFFIC:
+        if (theComplex->mUnitClass->IsLandBuilding() && theComplex->mUnitClass->mAirTrafficType != 0)
+            theComplex->mPlayer->mAirTraffic[theComplex->mUnitClass->mAirTrafficType - 1]->RemoveAirport(theComplex);
+        return 0;
+    case EE_SCREENS_SEU_CARGO_COUNT:
+        return theComplex->GetNumCargoUnits();
+    case EE_SCREENS_SEU_KILL_CARGO:
+        theComplex->KillCargo();
+        return 0;
+    case EE_SCREENS_SEU_KILL_PART:
+        theComplex->Kill(false, false, false);
+        reinterpret_cast<EEPlayer*>(inA)->KillUnit(theComplex, false);
+        return 0;
+    case EE_SCREENS_SEU_NEXT_PART:
+        return (uintptr_t)theComplex->mNextPart;
+    case EE_SCREENS_SEU_CONTAINER:
+        return (uintptr_t)(EEComplexUnit*)theComplex->mContainer;
+    case EE_SCREENS_SEU_CARGO:
+        return (uintptr_t)(EEUnit*)theComplex->GetCargo((unsigned long)inA);
+    case EE_SCREENS_SEU_UNLOAD: {
+        GETransformation theTransformation;
+        theTransformation = theComplex->mPhysicalModel.GetLocation();
+        theComplex->UnloadCargoAt((unsigned long)inA, theTransformation);
+        return 0;
+    }
+    case EE_SCREENS_SEU_MESSAGE_TYPE:
+        return static_cast<EEMessage*>(inUnit)->GetType();
+    case EE_SCREENS_SEU_MESSAGE_UNIT:
+        return static_cast<EEMAddUnitToSelectedGroup*>(inUnit)->mUnitID;
+    case EE_SCREENS_SEU_MESSAGE_RELEASE:
+        static_cast<EEMessage*>(inUnit)->Dereference();
+        return 0;
+    case EE_SCREENS_SEU_MESSAGE_UNIT_TYPE:
+        return (uintptr_t)(intptr_t)static_cast<EEMSelectUnits*>(inUnit)->mL30;
+    }
+    return 0;
+}
+
+// the ids of the units of a type picked in a screen rectangle (the lasso's); the count alone when they do not fit
+extern "C" size_t ee_screenscpp_seu_pick(const void* inRectangle, int32_t inUnitType, uint32_t* outIDs, size_t inCapacity)
+{
+    std::vector<unsigned long> theUnitIDs;
+    gUnitPicker.PickUnitsInRectangle(*static_cast<const GERectangle*>(inRectangle), inUnitType, theUnitIDs);
+    if (theUnitIDs.size() > inCapacity)
+        return theUnitIDs.size();
+    for (size_t i = 0; i < theUnitIDs.size(); i++)
+        outIDs[i] = (uint32_t)theUnitIDs[i];
+    return theUnitIDs.size();
+}

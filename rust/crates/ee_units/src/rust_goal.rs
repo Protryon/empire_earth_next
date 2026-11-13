@@ -1,7 +1,7 @@
 //! The goals whose class moved whole into Rust (RUST_PLAN R5b.4, rounds 16 and 17): one C++ class, `EEUGRust`
 //! (ee/EEUGRust.h), keeps the base goal's fields and vtable; every virtual is one call of
 //! [`ee_units_rust_goal`], which dispatches by the goal's kind to the class's bodies (`patrol`, `calamity`,
-//! `explore`, `unload`), their state a Rust table by the goal's object. The C++ answers through one operation callback
+//! `explore`, `unload`, `load`), their state a Rust table by the goal's object. The C++ answers through one operation callback
 //! ([`EeUnitsGoalHost`]): every read and world call the bodies make is one numbered operation
 //! (`EE_UNITS_GOAL_HOST_*`) with two handles and an argument block ([`EeUnitsGoalIo`]).
 //!
@@ -12,6 +12,7 @@ use std::ffi::c_void;
 
 use crate::calamity::CalamityHost;
 use crate::explore::ExploreHost;
+use crate::load::{LoadClass, LoadHost, LoadUnit, GOAL_LOAD_GARRISON, GOAL_LOAD_TRANSPORT};
 use crate::patrol::PatrolHost;
 use crate::unload::UnloadHost;
 
@@ -102,20 +103,31 @@ pub fn base_condition(event: i64) -> bool {
 }
 
 // ---- the C++ host: one operation callback
-/// The argument block of one operation (ints, floats, text, a list sink).
+/// The argument block of one operation (ints, floats, text, a list sink, a list of handles).
 #[repr(C)]
 pub struct EeUnitsGoalIo {
     pub i: [i64; 8],
-    pub f: [f32; 4],
+    pub f: [f32; 8],
     pub text: *const u8,
     pub len: usize,
     /// a `Vec<(i32, i32)>` the host pushes tiles onto (`ee_units_goal_push_tile`)
     pub sink: *mut c_void,
+    /// handles (units) handed with the operation: the load goals' units
+    pub list: *const u64,
+    pub list_len: usize,
 }
 
 impl Default for EeUnitsGoalIo {
     fn default() -> Self {
-        EeUnitsGoalIo { i: [0; 8], f: [0.0; 4], text: std::ptr::null(), len: 0, sink: std::ptr::null_mut() }
+        EeUnitsGoalIo {
+            i: [0; 8],
+            f: [0.0; 8],
+            text: std::ptr::null(),
+            len: 0,
+            sink: std::ptr::null_mut(),
+            list: std::ptr::null(),
+            list_len: 0,
+        }
     }
 }
 
@@ -145,7 +157,7 @@ pub const EE_UNITS_GOAL_HOST_SET_ANIMATION: i32 = 14;
 pub const EE_UNITS_GOAL_HOST_DROP_PATH: i32 = 15;
 pub const EE_UNITS_GOAL_HOST_NEW_GOAL: i32 = 16;
 pub const EE_UNITS_GOAL_HOST_FILE_OPEN: i32 = 17;
-/// `i[0]`: the type (0 `unsigned long`, 1 `long`, 2 `bool`), `i[1]` the value
+/// `i[0]`: the type (0 `unsigned long`, 1 `long`, 2 `bool`, 3 `float`: its bits), `i[1]` the value
 pub const EE_UNITS_GOAL_HOST_WRITE: i32 = 18;
 /// `i[0]`: the type, `i[1]` the value in and out
 pub const EE_UNITS_GOAL_HOST_READ: i32 = 19;
@@ -214,6 +226,38 @@ pub const EE_UNITS_GOAL_HOST_FIRE_CARGO: i32 = 99;
 pub const EE_UNITS_GOAL_HOST_UNLOAD_AT: i32 = 100;
 /// `i[0]`: the space sound
 pub const EE_UNITS_GOAL_HOST_UNLOAD_SOUND: i32 = 101;
+// the load goals'
+/// `i`: the garrison and transport capacities, weight, garrison technology, type, can garrison, tile size; `f`: the
+/// load range, the inner collision sphere (zeros for no unit)
+pub const EE_UNITS_GOAL_HOST_LOAD_CLASS: i32 = 110;
+/// `i`: the garrison count, cargo room, hit points, disabled, no waypoints, animation (zeros for no unit)
+pub const EE_UNITS_GOAL_HOST_LOAD_UNIT: i32 = 111;
+pub const EE_UNITS_GOAL_HOST_UNIT_LOCATION: i32 = 112;
+/// `i[0..4]`: the two tiles
+pub const EE_UNITS_GOAL_HOST_LINE_BLOCKED: i32 = 113;
+pub const EE_UNITS_GOAL_HOST_CAN_LOAD: i32 = 114;
+/// `f[0..3]`: the location, `f[3..6]` the result in and out
+pub const EE_UNITS_GOAL_HOST_BOARDING: i32 = 115;
+/// `f[0..3]`: the result in and out
+pub const EE_UNITS_GOAL_HOST_PICK_TILE_NEAR: i32 = 116;
+/// `list`: the units, `i[4]` the base class's rule; `i[0..4]` the tiles in and out
+pub const EE_UNITS_GOAL_HOST_RENDEZVOUS: i32 = 117;
+pub const EE_UNITS_GOAL_HOST_CENTER_OFFSET: i32 = 118;
+/// `i[0]`: the technology; out: the node, the class, available
+pub const EE_UNITS_GOAL_HOST_GARRISON_UPGRADE: i32 = 119;
+/// `b` 1: `GetGoal()`, 0: `GetLoadGoal()`; `i[0]` its kind
+pub const EE_UNITS_GOAL_HOST_UNIT_GOAL: i32 = 120;
+pub const EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND: i32 = 121;
+pub const EE_UNITS_GOAL_HOST_CLEAR_GOALS: i32 = 122;
+pub const EE_UNITS_GOAL_HOST_DEPOSIT: i32 = 123;
+pub const EE_UNITS_GOAL_HOST_GARRISON_UNIT: i32 = 124;
+pub const EE_UNITS_GOAL_HOST_LOAD_CARGO: i32 = 125;
+pub const EE_UNITS_GOAL_HOST_HAS_CARGO: i32 = 126;
+/// `i[0]`: the sound
+pub const EE_UNITS_GOAL_HOST_PLAY_SOUND: i32 = 127;
+pub const EE_UNITS_GOAL_HOST_REPLACE_CLASS: i32 = 128;
+pub const EE_UNITS_GOAL_HOST_GENERATE: i32 = 129;
+pub const EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS: i32 = 130;
 
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
@@ -600,6 +644,137 @@ impl UnloadHost for OpHost<'_> {
     }
 }
 
+impl LoadHost for OpHost<'_> {
+    fn load_class(&mut self, unit: u64) -> LoadClass {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_LOAD_CLASS, unit, 0, &mut io);
+        LoadClass {
+            garrison_capacity: io.i[0] as i32,
+            transport_capacity: io.i[1] as i32,
+            weight: io.i[2] as i32,
+            garrison_technology: io.i[3] as i32,
+            unit_type: io.i[4],
+            can_garrison: io.i[5] != 0,
+            tile_size: io.i[6] as i32,
+            load_range: io.f[0],
+            inner_sphere: io.f[1],
+        }
+    }
+    fn load_unit(&mut self, unit: u64) -> LoadUnit {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_LOAD_UNIT, unit, 0, &mut io);
+        LoadUnit {
+            garrison_count: io.i[0] as i32,
+            cargo_room: io.i[1] as i32,
+            hit_points: io.i[2] as i32,
+            disabled: io.i[3] != 0,
+            no_waypoints: io.i[4] != 0,
+            animation: io.i[5],
+        }
+    }
+    fn unit_location(&mut self, unit: u64) -> [f32; 3] {
+        self.op_point(EE_UNITS_GOAL_HOST_UNIT_LOCATION, unit, 0, &[])
+    }
+    fn line_blocked(&mut self, from: (i32, i32), to: (i32, i32)) -> bool {
+        let ints = [i64::from(from.0), i64::from(from.1), i64::from(to.0), i64::from(to.1)];
+        self.op_ints(EE_UNITS_GOAL_HOST_LINE_BLOCKED, 0, 0, &ints) != 0
+    }
+    fn transport_kind(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+    }
+    fn can_load(&mut self, container: u64, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_CAN_LOAD, container, unit) != 0
+    }
+    fn boarding_location(&mut self, unit: u64, container: u64, location: [f32; 3], out: &mut [f32; 3]) {
+        let mut io = EeUnitsGoalIo::default();
+        io.f[..3].copy_from_slice(&location);
+        io.f[3..6].copy_from_slice(out);
+        self.call(EE_UNITS_GOAL_HOST_BOARDING, unit, container, &mut io);
+        out.copy_from_slice(&io.f[3..6]);
+    }
+    fn pick_tile_near(&mut self, unit: u64, container: u64, out: &mut [f32; 3]) -> bool {
+        let mut io = EeUnitsGoalIo::default();
+        io.f[..3].copy_from_slice(out);
+        let found = self.call(EE_UNITS_GOAL_HOST_PICK_TILE_NEAR, unit, container, &mut io) != 0;
+        out.copy_from_slice(&io.f[..3]);
+        found
+    }
+    fn rendezvous_tiles(&mut self, container: u64, units: &[u64], base: bool, tiles: &mut [(i32, i32); 2]) {
+        let mut io = EeUnitsGoalIo { list: units.as_ptr(), list_len: units.len(), ..Default::default() };
+        tiles_in(&mut io, tiles);
+        io.i[4] = i64::from(base);
+        self.call(EE_UNITS_GOAL_HOST_RENDEZVOUS, container, 0, &mut io);
+        tiles_out(&io, tiles);
+    }
+    fn center_offset(&mut self, container: u64, point: &mut [f32; 2]) {
+        let mut io = EeUnitsGoalIo::default();
+        io.f[..2].copy_from_slice(point);
+        self.call(EE_UNITS_GOAL_HOST_CENTER_OFFSET, container, 0, &mut io);
+        point.copy_from_slice(&io.f[..2]);
+    }
+    fn garrison_upgrade(&mut self, container: u64, technology: i32) -> (bool, i32, bool) {
+        let mut io = EeUnitsGoalIo::default();
+        io.i[0] = i64::from(technology);
+        self.call(EE_UNITS_GOAL_HOST_GARRISON_UPGRADE, container, 0, &mut io);
+        (io.i[0] != 0, io.i[1] as i32, io.i[2] != 0)
+    }
+    fn unit_goal(&mut self, unit: u64, goal_state: bool) -> (u64, i64) {
+        let mut io = EeUnitsGoalIo::default();
+        let goal = self.call(EE_UNITS_GOAL_HOST_UNIT_GOAL, unit, u64::from(goal_state), &mut io) as u64;
+        (goal, io.i[0])
+    }
+    fn queued_goal_kind(&mut self, unit: u64, index: i64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_QUEUED_GOAL_KIND, unit, index as u64)
+    }
+    fn clear_goals(&mut self, unit: u64, index: i64) {
+        self.op(EE_UNITS_GOAL_HOST_CLEAR_GOALS, unit, index as u64);
+    }
+    fn holder(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_CONTAINER, unit, 0) as u64
+    }
+    fn deposit(&mut self, unit: u64, container: u64) {
+        self.op(EE_UNITS_GOAL_HOST_DEPOSIT, unit, container);
+    }
+    fn garrison_unit(&mut self, container: u64, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_GARRISON_UNIT, container, unit) != 0
+    }
+    fn load_cargo(&mut self, container: u64, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_LOAD_CARGO, container, unit)
+    }
+    fn has_cargo(&mut self, container: u64, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_HAS_CARGO, container, unit) != 0
+    }
+    fn play_sound(&mut self, unit: u64, sound: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_PLAY_SOUND, unit, 0, &[sound]);
+    }
+    fn replace_class(&mut self, container: u64, class: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_REPLACE_CLASS, container, 0, &[i64::from(class)]);
+    }
+    fn generate(&mut self) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
+    }
+    fn fires_over_walls(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS, unit, 0) != 0
+    }
+    fn same_player(&mut self, unit: u64, other: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
+    }
+    fn hit_points(&mut self, unit: u64) -> i32 {
+        self.op(EE_UNITS_GOAL_HOST_HIT_POINTS, unit, 0) as i32
+    }
+    fn complex_unit(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_COMPLEX_UNIT, unit, 0) as u64
+    }
+    fn write_f32(&mut self, value: f32) -> i32 {
+        self.write(3, i64::from(value.to_bits()))
+    }
+    fn read_f32(&mut self, value: &mut f32) -> i32 {
+        let (result, v) = self.read(3, i64::from(value.to_bits()));
+        *value = f32::from_bits(v as u32);
+        result
+    }
+}
+
 // ---- the goal's bodies, by operation (`EEUGRust`'s virtuals and accessors)
 pub const EE_UNITS_GOAL_DESTROY: i32 = 1;
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -616,17 +791,21 @@ pub const EE_UNITS_GOAL_START_ACTION: i32 = 9;
 pub const EE_UNITS_GOAL_SET_OWNER: i32 = 10;
 pub const EE_UNITS_GOAL_STEP: i32 = 11;
 pub const EE_UNITS_GOAL_LOAD: i32 = 12;
+/// `a`, `b`: the save's major and minor version
 pub const EE_UNITS_GOAL_SAVE: i32 = 13;
 pub const EE_UNITS_GOAL_REPAIR: i32 = 14;
 pub const EE_UNITS_GOAL_START: i32 = 15;
 /// `a`: the unit, `b`: the event; 0 or 1
 pub const EE_UNITS_GOAL_EVALUATE: i32 = 16;
-/// `a`: the old complex unit, `b`: the new one
+/// `a`: the old complex unit, `b`: the new one, `io.i[0]` the unit whose goal it is
 pub const EE_UNITS_GOAL_REPLACE_UNIT: i32 = 17;
 /// `GetMaxPathAttempts` (the base goal's 3 but for the unload's 9)
 pub const EE_UNITS_GOAL_MAX_PATH_ATTEMPTS: i32 = 18;
 /// `a`: the unit; `Suits` (true but for the unload)
 pub const EE_UNITS_GOAL_SUITS: i32 = 19;
+/// `a`: the unit; `AddCreatedUnit` and `Abandon` (the base goal's do nothing)
+pub const EE_UNITS_GOAL_ADD_CREATED_UNIT: i32 = 20;
+pub const EE_UNITS_GOAL_ABANDON: i32 = 21;
 // the classes' own: creation (the goal made by `new EEUGRust(kind, arg)`) and accessors
 /// a patrol: `a` the group (0: a new empty one), `b` the point
 pub const EE_UNITS_GOAL_NEW_PATROL: i32 = 30;
@@ -657,6 +836,18 @@ pub const EE_UNITS_GOAL_UNLOAD_FIELDS: i32 = 64;
 pub const EE_UNITS_GOAL_UNLOAD_SET_DESTINATION: i32 = 65;
 /// the transport dropped without its release
 pub const EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT: i32 = 66;
+/// a load goal of the kind: `a` the container, `io.list` the units (already sorted by id, no duplicates)
+pub const EE_UNITS_GOAL_NEW_LOAD: i32 = 70;
+pub const EE_UNITS_GOAL_LOAD_NEW_EMPTY: i32 = 71;
+/// `a`: a unit to load (referenced, unless listed)
+pub const EE_UNITS_GOAL_LOAD_ADD_UNIT: i32 = 72;
+/// `a`: whether the unit is listed
+pub const EE_UNITS_GOAL_LOAD_HAS_UNIT: i32 = 73;
+pub const EE_UNITS_GOAL_LOAD_UNIT_COUNT: i32 = 74;
+/// `a`: the index; the unit
+pub const EE_UNITS_GOAL_LOAD_UNIT_AT: i32 = 75;
+/// the container (the result), `io.i`: the container and unit tiles, the garrison's valid flag, the unit count
+pub const EE_UNITS_GOAL_LOAD_FIELDS: i32 = 76;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 pub const GOAL_UNLOAD_TRANSPORT: u8 = 8;
@@ -683,7 +874,7 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     let (io, table) = unsafe { (&mut *io, &*host) };
     let mut h = OpHost(table);
     // the base goal's answers for the classes that keep them
-    if kind != GOAL_UNLOAD_TRANSPORT {
+    if kind != GOAL_UNLOAD_TRANSPORT && kind != GOAL_LOAD_TRANSPORT && kind != GOAL_LOAD_GARRISON {
         match op {
             EE_UNITS_GOAL_MAX_PATH_ATTEMPTS => return 3,
             EE_UNITS_GOAL_SUITS => return 1,
@@ -695,6 +886,7 @@ pub unsafe extern "C" fn ee_units_rust_goal(
         GOAL_CAST_CALAMITY => crate::calamity::body(op, goal, a, b, io, &mut h),
         GOAL_EXPLORE => crate::explore::body(op, goal, a, b, io, &mut h),
         GOAL_UNLOAD_TRANSPORT => crate::unload::body(op, goal, a, b, io, &mut h),
+        GOAL_LOAD_TRANSPORT | GOAL_LOAD_GARRISON => crate::load::body(op, kind, goal, a, b, io, &mut h),
         _ => 0,
     }
 }

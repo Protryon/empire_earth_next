@@ -38,9 +38,9 @@ MSScrollbar::MSScrollbar(bool vertical) : Scrollbar(vertical)
 // frames on
 MSScrollContainer::MSScrollContainer(ScrollArea* scrollArea)
 {
-    this->mVertScrollbar=new MSScrollbar(true);
-    this->mHorzScrollbar=new MSScrollbar(false);
-    this->mScrollArea=scrollArea;
+    this->SetBar(true,new MSScrollbar(true));
+    this->SetBar(false,new MSScrollbar(false));
+    this->SetScrollArea(scrollArea);
     this->mHeaderHeight=0;
     this->mDraw3DFrame=true;
     this->mDrawFrame=true;

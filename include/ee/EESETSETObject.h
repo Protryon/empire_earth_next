@@ -9,7 +9,6 @@
 #include "ee/EESETSEffectType.h"
 #include <vector>
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 
@@ -40,7 +39,7 @@ public:
     //   [10] EESETSETSetObjectName
     //   [11] EESETSETLogObject
     //   [12] EESETSETSetObjectClassAttribute
-    EESEEChangeEffectAction* mAction;                                                               // +0x38 (new 0xc: the action combo's trigger event)
+    UIEvent* mAction;                                                                               // +0x38 (new 0xc: the action combo's trigger event)
     unsigned long mCurrentType;                                                                     // +0x3c (0 in the ctor; unsigned: Virtual18's switch compares with jbe)
 };
 
