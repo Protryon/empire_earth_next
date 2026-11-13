@@ -84,14 +84,12 @@
 #include "ee/EEE3DRust.h"
 #include "ee/EEE3DCommandConfirmation.h"
 #include "ee/EEE3DVirus.h"
-#include "ee/EEE3DScreenFlash.h"
 #include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DLinearProjectile.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEE3DVolcano.h"
-#include "ee/EEE3DWaterSplash.h"
 #include "ee/EEE3DGoal.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
@@ -178,7 +176,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DParticle: theEffect = EEE2DParticle::Create(); break;
     case kEffect3DDestructionSmoke: theEffect = new EEE3DSmokeGenerator(0x1e); break;
     case kEffect2DVelocityParticle: theEffect = new EEE2DSmokePlume(EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE); break;
-    case kEffect3DWaterSplash: theEffect = new EEE3DWaterSplash(); break;
+    case kEffect3DWaterSplash: theEffect = new EEE3DRust(0x1b); break;
     case kEffect3DDamageSmoke: theEffect = new EEE3DSmokeGenerator(0x2c); break;
     case kEffect3DSmokeGenerator: theEffect = new EEE3DSmokeGenerator(0x2b); break;
     case kEffect2DExplosion: theEffect = new EEE2DExplosion(); break;
@@ -227,7 +225,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(0x33); break;
     case kEffect3DEnergyWall: theEffect = new EEE3DEnergyWall(0x34); break;
     case kEffect3DDamageVent: theEffect = new EEE3DDamageVent(); break;
-    case kEffect3DScreenFlash: theEffect = new EEE3DScreenFlash(); break;
+    case kEffect3DScreenFlash: theEffect = new EEE3DRust(0x46); break;
     case kEffect3DEnergyWave: theEffect = new EEE3DEnergyWave(); break;
     default: break;
     }
@@ -317,7 +315,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
     case 0x42: theEffect = new EEE3DVirus(inUnit, inEffect); break;
     case 0x47: theEffect = new EEE3DEnergyWave(inUnit, inEffect); break;
-    case 0x46: theEffect = new EEE3DScreenFlash(inUnit, inEffect); break;
+    case 0x46: theEffect = new EEE3DRust(inUnit, inEffect, 0x46); break;
     case 0x45: theEffect = new EEE3DRust(inUnit, inEffect, kEffect3DShield); break;
     case 0x44: theEffect = new EEE3DRust(inUnit, inEffect, 0x44); break;
     }
@@ -390,7 +388,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
     case 0x12: theEffect = new EEE2DShockwave(inLocation, inEffect); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
-    case 0x1b: theEffect = new EEE3DWaterSplash(inLocation, inEffect); break;
+    case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
     case 0x20: theEffect = new EEE3DVolcano(inLocation, inEffect); break;
     case 0x22: theEffect = new EEE2DWaterRipple(inLocation, inEffect); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;

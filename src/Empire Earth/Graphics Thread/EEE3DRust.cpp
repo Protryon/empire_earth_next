@@ -1,7 +1,7 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
-// effect_beam.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_beam.rs, effect_aged.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
-// EEE3DTracers.cpp, EEE3DShells.cpp and EEE3DCitizenBeam.cpp.
+// EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp and EEE3DScreenFlash.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -169,6 +169,13 @@ struct Ask {
             gEffectManager->CreatePlacedEffect(thePoint, theLinked, NULL);
         }
     }
+    // the screen flash's place: its unit's complex unit's position (EEE3DScreenFlash::SetUp, ICF-folded into 0xee3a4)
+    static EeGe3DPoint ComplexPosition(void* inAsk)
+    {
+        GE3DPoint thePoint;
+        E(inAsk)->mUnit->mComplexUnit->GetPosition(thePoint);
+        return EeGe3DPoint{thePoint.mX, thePoint.mY, thePoint.mZ};
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -252,7 +259,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     Ask theAsk = {this, inQueues};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked};
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
+                                 Ask::ComplexPosition};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
@@ -261,6 +269,7 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     EeGfxGraphicFacts theFacts = {};
     if (theEffect != NULL) {
         theFacts.size = theEffect->mSize;
+        theFacts.start_size = theEffect->mStartSize;
         theFacts.param1 = theEffect->mParam1;
         theFacts.param2 = theEffect->mParam2;
         theFacts.param3 = theEffect->mParam3;

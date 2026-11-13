@@ -12,12 +12,14 @@ use std::ffi::c_void;
 
 use ee_ge::types::{Ge3DPoint, GeVector};
 
+use crate::effect_aged::aged;
 use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
-    EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_TELEPORT, EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_MOVED,
+    EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_SCREEN_FLASH, EE_GFX_EFFECT_KIND_TELEPORT,
+    EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_KIND_WATER_SPLASH, EE_GFX_EFFECT_MOVED,
 };
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
@@ -78,6 +80,8 @@ pub struct EeGfxGraphicFacts {
     pub int_param3: i32,
     /// `(unsigned long)gPhysics->mGameTime`
     pub game_time_bits: u32,
+    /// `mStartSize`
+    pub start_size: f32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -118,6 +122,8 @@ pub struct EeGfxEffect3DHost {
     pub beam_hidden: extern "C" fn(context: *mut c_void) -> bool,
     /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
     pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
+    /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
+    pub complex_position: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
 }
 
 /// The world as the effects ask it.
@@ -138,6 +144,10 @@ pub trait Effect3DHost {
     fn beam_unit(&mut self) -> EeGfxBeamUnit;
     fn beam_hidden(&mut self) -> bool;
     fn place_linked(&mut self, point: &Ge3DPoint);
+    /// the tests' hosts answer the unit's position
+    fn complex_position(&mut self) -> Ge3DPoint {
+        self.unit_position()
+    }
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -189,6 +199,9 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn place_linked(&mut self, point: &Ge3DPoint) {
         (self.place_linked)(self.context, point)
     }
+    fn complex_position(&mut self) -> Ge3DPoint {
+        (self.complex_position)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -210,6 +223,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
         EE_GFX_EFFECT_KIND_BLAST_WAVE | EE_GFX_EFFECT_KIND_SHIELD => unsafe { follow(op, r, g, h, x) },
         k if is_shot(k) => unsafe { shot(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_CITIZEN_BEAM => unsafe { beam(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_WATER_SPLASH | EE_GFX_EFFECT_KIND_SCREEN_FLASH => unsafe { aged(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -251,6 +265,15 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 load_beam(r, f, media)
             } else {
                 save_beam(r, f, base)
+            }
+        }
+        EE_GFX_EFFECT_KIND_WATER_SPLASH | EE_GFX_EFFECT_KIND_SCREEN_FLASH => {
+            // the base's and the media's results are ignored
+            if load {
+                h.load_media();
+                load_aged(r, f)
+            } else {
+                save_aged(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {

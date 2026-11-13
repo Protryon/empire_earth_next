@@ -54,6 +54,8 @@
 #include "ee/EERenderLists.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEEffect.h"
+#include "ee/EEEffect2D.h"          // gEffect2DModel (the Rust draws' standing plane)
+#include "ee/EERenderSnapshot.h"     // gRenderSnapshot (the Rust draws' camera)
 #include "ee/EEUnitPicker.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDoppelganger.h"
@@ -1658,6 +1660,19 @@ const EeGfxRaster gEERustRaster = {
         static_cast<GEModel*>(inModel)->GetMaterial(0)->SetColor(GEColor(inColor.red, inColor.green, inColor.blue));
     },
     [](void* inModel, void* inTexture) { static_cast<GEModel*>(inModel)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex); },
+    []() { return *reinterpret_cast<const EeGeTransformation*>(&gRenderSnapshot.mCamera); },
+    []() -> void* { return gEffect2DModel; },
+    [](float inNear, float inFar) {
+        gU4E8F08.SetDepthRange(inNear, inFar);
+        gRasterizer->SetViewport(gU4E8F08, gScreenIndex);
+    },
+    [](uint32_t inMode) { gRasterizer->SetZCompare(inMode, gScreenIndex); },
+    [](void* inModel, float inOpacity) { static_cast<GEModel*>(inModel)->GetMaterial(0)->SetOpacity(inOpacity); },
+    [](void* inModel, const EeGeTransformation* inTransformation, float inX, float inY, float inZ) {
+        GETransformation theTransformation(*reinterpret_cast<const GETransformation*>(inTransformation));
+        theTransformation.Scale(inX, inY, inZ);
+        static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(theTransformation);
+    },
 };
 
 // FUNCTION: EXE 0x50f60f
