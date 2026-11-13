@@ -315,6 +315,18 @@ long EESMObject::PickUnitType()
 // 'not in/near' filters, then one retry without them); returns whether one was found
 bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
 {
+    if (!EESimCaptureRecord::Active())
+        return this->FindPlacementUncaptured(inUnitType, outLocation, inTryRandom);
+    unsigned int theSeed = EESMCaptureSeed();
+    bool theResult = this->FindPlacementUncaptured(inUnitType, outLocation, inTryRandom);
+    EESMCapturePlacement(this, inUnitType, inTryRandom, theResult, theResult ? outLocation.mX : 0.0f,
+                         theResult ? outLocation.mY : 0.0f, theSeed);
+    return theResult;
+}
+
+// FindPlacement's body (FindPlacement adds the simulation capture's SMFP record: ee/EEScenarioCapture.h)
+bool EESMObject::FindPlacementUncaptured(unsigned long inUnitType, GE2DPoint& outLocation, bool inTryRandom)
+{
     std::vector<U2DPoint<long> > theCandidates;
     std::vector<U2DPoint<long> > theAreaTiles;
     std::vector<U2DPoint<long> > theObjectTiles;

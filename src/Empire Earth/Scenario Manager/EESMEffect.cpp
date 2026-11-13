@@ -494,6 +494,18 @@ void EESMEffect::SetClassName()
 // a scenario variable, a tribute or other statistic or the mining limit; any/all resources recurse per resource
 void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
 {
+    if (!EESimCaptureRecord::Active()) {
+        this->SetPlayerAttributeUncaptured(inPlayer, inAttribute, inMode, inAmount);
+        return;
+    }
+    unsigned int theSeed = EESMCaptureSeed();
+    this->SetPlayerAttributeUncaptured(inPlayer, inAttribute, inMode, inAmount);
+    EESMCapturePlayerAttribute(inPlayer, inAttribute, inMode, inAmount, theSeed);
+}
+
+// SetPlayerAttribute's body (SetPlayerAttribute adds the simulation capture's SMPA record: ee/EEScenarioCapture.h)
+void EESMEffect::SetPlayerAttributeUncaptured(long inPlayer, unsigned long inAttribute, long inMode, long inAmount)
+{
     EESMEffect theEffect;
     long theAmount = inAmount;
     if (inMode == kSMValueModeToDecreaseBy)
@@ -1333,6 +1345,19 @@ void EESMEffect::MaintainObject()
 // Copies a message text, replacing each /#OA, /#PA or /#OC tag and its 4-digit id with an object's attribute value,
 // a player condition's current value or an object's unit count
 void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
+{
+    if (!EESimCaptureRecord::Active()) {
+        this->ExpandTokensUncaptured(inText, outText);
+        return;
+    }
+    unsigned int theSeed = EESMCaptureSeed();
+    UWideString theText(inText);
+    this->ExpandTokensUncaptured(inText, outText);
+    EESMCaptureTokens(theText, outText, theSeed);
+}
+
+// ExpandTokens' body (ExpandTokens adds the simulation capture's SMTK record: ee/EEScenarioCapture.h)
+void EESMEffect::ExpandTokensUncaptured(const UWideString& inText, UWideString& outText)
 {
     std::vector<UWideString> theMarkers;
     std::vector<long> thePlayers;
