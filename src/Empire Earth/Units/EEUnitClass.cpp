@@ -60,7 +60,6 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEAIContinentManager.h"
 #include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
@@ -1120,7 +1119,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                                 if (theLoad->GetLoadContainer() == NULL)
                                     continue;
                                 theLoad->GetLoadContainer()->GetPosition(theGoalPosition);
-                                theGoal = new EEUGLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
+                                theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
                             }
                         } else {
                             theGoal = (*i)->Clone();
@@ -1129,7 +1128,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                         }
                     } else {
                         (*i)->GetGoalLocation(theGoalPosition);
-                        theGoal = new EEUGLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
+                        theGoal = EEUGRust::NewLocation(&theGoalPosition, false, true, false, 0.0f, false, 0);
                     }
                     if (theGoal == NULL)
                         continue;
@@ -1148,7 +1147,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
     //
                             if (EEFindPlacement(&theOrigin, theCreated, NULL, theLineTiles[theIndex].mX,
                                 theLineTiles[theIndex].GetY(), 1, theRings, true, true, true, false, &theAdjusted, NULL))
-                                static_cast<EEUGLocation*>(theGoal)->SetLocation(theAdjusted.GetPosition());
+                                static_cast<EEUGRust*>(theGoal)->SetLocation(theAdjusted.GetPosition());
                         }
                     }
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
@@ -1712,7 +1711,7 @@ void EEUnitClass::FindSafeLocation(EEComplexUnit* inUnit)
     if (inUnit->mPlayer->mComputerPlayer == NULL || !EEGetEscapePoint(inUnit, theLocation))
         return;
     inUnit->DropPath();
-    inUnit->SetGoal(new EEUGLocation(theLocation, false, true, false, 0.0f, false, false), 0, 0);
+    inUnit->SetGoal(EEUGRust::NewLocation(theLocation, false, true, false, 0.0f, false, false), 0, 0);
     inUnit->StartAction(kActionPrepareToMove);
     inUnit->mUnitClass->ActionChanged(inUnit);
 }
@@ -1840,7 +1839,7 @@ void EEUnitClass::Flee(EEComplexUnit* inUnit)
                 break;
         } while (true);
         if (theCount <= 7) {
-            EEUnitGoal* theGoal = new EEUGLocation(theDestination, true, true, false, 0.0f, false, 0);
+            EEUnitGoal* theGoal = EEUGRust::NewLocation(theDestination, true, true, false, 0.0f, false, 0);
             inUnit->SetGoal(theGoal, theOldGoal != NULL && theOldGoal->mKind == kGoalExplore, 0);
             inUnit->StartAction(kActionPrepareToMove);
             this->ActionChanged(inUnit);
@@ -2199,14 +2198,12 @@ void EEUnitClass::AddToRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
-    RTSRegionTable<EEComplexUnit*>* theTable = theMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = theMap->mUnitRegions;
     if (inUnit->mTileNode == NULL || inUnit->IsPathMarker())
         return;
-    theRegion = U2DPoint<long>(inUnit->GetTileX() / theTable->mRegionSize, inUnit->GetTileY() / theTable->mRegionSize);
-    EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-    std::vector<EEComplexUnit*>* theList = theTable->GetRegion(theRegion);
-    if (theList != NULL)
-        theList->push_back(theUnit);
+    long theSize = ee_combat_regions_size(theTable);
+    theRegion = U2DPoint<long>(inUnit->GetTileX() / theSize, inUnit->GetTileY() / theSize);
+    ee_combat_regions_add(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
 // FUNCTION: EXE 0x63523c
@@ -2842,7 +2839,7 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
         theLocation.SetX(inUnit->mTileX + 0.5f);
         theLocation.SetY(inUnit->GetTileY() + 0.5f);
         theLocation.SetZ(inUnit->mUnitClass->mCanFly == true ? inUnit->mHeight : inUnit->mTile->mHeight);
-        inUnit->SetGoal(new EEUGLocation(&theLocation, false, true, false, 0.0f, false, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewLocation(&theLocation, false, true, false, 0.0f, false, false), 0, 0);
     } else {
         GE3DPoint theTarget(inUnit->mTileX + 0.5f, inUnit->GetTileY() + 0.5f,
                             inUnit->mPhysicalModel.GetLocation().GetZ());
@@ -2912,7 +2909,7 @@ void EEUnitClass::PathToGoal(EEComplexUnit* inUnit)
                     inUnit->mInitialContactHeading = theHeading;
             }
             long theRevs = -1;
-            EEUGLocation* theLocationGoal = theGoal->mKind == kGoalLocation ? static_cast<EEUGLocation*>(theGoal) : 0;
+            EEUGRust* theLocationGoal = theGoal->mKind == kGoalLocation ? static_cast<EEUGRust*>(theGoal) : 0;
             if (theLocationGoal != NULL) {
                 theUseGraph = !theLocationGoal->GetIsAutoWaypoint() && !theGoal->mB1D;
                 if (theLocationGoal->GetGroupPathState() == 1) {
@@ -2984,14 +2981,12 @@ void EEUnitClass::RemoveFromRegion(EEUnit* inUnit)
 {
     EEMap* theMap = ::gWorld.mMap;
     U2DPoint<long> theRegion(0, 0);
-    RTSRegionTable<EEComplexUnit*>* theTable = theMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = theMap->mUnitRegions;
     if (inUnit->mTileNode == NULL || inUnit->IsPathMarker())
         return;
-    theRegion = U2DPoint<long>(inUnit->GetTileX() / theTable->mRegionSize, inUnit->GetTileY() / theTable->mRegionSize);
-    EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-    RTSRegion<EEComplexUnit*>* theList = theTable->GetRegion(theRegion);
-    if (theList != NULL)
-        theList->Remove(theUnit);
+    long theSize = ee_combat_regions_size(theTable);
+    theRegion = U2DPoint<long>(inUnit->GetTileX() / theSize, inUnit->GetTileY() / theSize);
+    ee_combat_regions_remove(theTable, (uint32_t)theRegion.mX, (uint32_t)theRegion.mY, (uint64_t)(uintptr_t)inUnit->GetComplexUnit());
 }
 
 // FUNCTION: EXE 0x636b33
@@ -3357,7 +3352,7 @@ void EEUnitClass::FleeAttacker(EEComplexUnit* inUnit)
                 break;
         } while (true);
         if (theCount <= 7) {
-            EEUnitGoal* theGoal = new EEUGLocation(theDestination, true, true, false, 0.0f, false, 0);
+            EEUnitGoal* theGoal = EEUGRust::NewLocation(theDestination, true, true, false, 0.0f, false, 0);
             inUnit->SetGoal(theGoal, theOldGoal != NULL && theOldGoal->mKind == kGoalExplore, 0);
             inUnit->StartAction(kActionPrepareToMove);
             this->ActionChanged(inUnit);

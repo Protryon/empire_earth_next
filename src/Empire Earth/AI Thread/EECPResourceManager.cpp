@@ -41,7 +41,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
@@ -2997,7 +2996,7 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
             theUnit->Reference();
             inManager->AddIdleGatherer(theUnit);
             theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
+            theUnit->SetGoal(EEUGRust::NewLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
             theUnit->GetUnitClass()->ActionChanged(theUnit);
             theUnit->Dereference();
@@ -3070,7 +3069,7 @@ void EECPRMNavalFlee(EECPResourceManager* inManager, EEUnit* inVictim, EEComplex
         if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
             inManager->AddIdleGatherer(theComplex);
         theComplex->ClearGoalQueue(0);
-        theComplex->SetGoal(new EEUGLocation(theRefuge, true, true, false, 0.0f, false, false), 0, 0);
+        theComplex->SetGoal(EEUGRust::NewLocation(theRefuge, true, true, false, 0.0f, false, false), 0, 0);
         theComplex->StartAction(kActionPrepareToMove);
         theComplex->GetUnitClass()->ActionChanged(theComplex);
         theComplex->Dereference();
@@ -3197,7 +3196,7 @@ static void EECPRMFleeRaids(EECPResourceManager* inManager)
             theUnit->Reference();
             inManager->AddIdleGatherer(theUnit);   // off this resource's list, onto the idle list
             theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
+            theUnit->SetGoal(EEUGRust::NewLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
             theUnit->GetUnitClass()->ActionChanged(theUnit);
             theUnit->Dereference();

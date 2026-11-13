@@ -56,7 +56,6 @@
 #include "ee/EECPASGAirTransport.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEAIPathGoalModifierBase.h"
@@ -1922,7 +1921,7 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
         }
     }
     for (std::vector<EEComplexUnit*>::iterator theUnit = theRejected.begin(); theUnit != theRejected.end(); ++theUnit) {
-        EEUnitGoal* theGoal = new EEUGLocation(GE2DPoint(theRendezvous.GetX(), theRendezvous.GetY()), true, true, false, 0.0f, false, false);
+        EEUnitGoal* theGoal = EEUGRust::NewLocation(GE2DPoint(theRendezvous.GetX(), theRendezvous.GetY()), true, true, false, 0.0f, false, false);
         if (!this->GiveGoal(*theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
             delete theGoal;
     }

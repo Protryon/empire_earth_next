@@ -45,7 +45,6 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
@@ -465,7 +464,7 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
                     EEComplexUnit* theUnit = theCitizens[c];
                     if (!(theUnit->GetHitPoints() > 0) || theUnit->GetTileX() == -10000 || theUnit->mIsDetachedFromAI
                         || EEBuildRepairGoalCast(theUnit->GetLoadGoal()) != NULL
-                        || dynamic_cast<EEUGLocation*>(theUnit->GetLoadGoal()) != NULL)
+                        || EELocationGoalCast(theUnit->GetLoadGoal()) != NULL)
                         continue;
                     long long theDX = theUnit->GetTileX() - theX, theDY = theUnit->GetTileY() - theY;
                     if (theWalker == NULL || theDX * theDX + theDY * theDY < theBest) {
@@ -475,7 +474,7 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
                 }
                 if (theNew && theWalker != NULL) {
                     theWalker->ClearGoalQueue(0);
-                    theWalker->SetGoal(new EEUGLocation((float)theX, (float)theY, 0.0f, false, true, false, 0.0f, false, false), 0, 0);
+                    theWalker->SetGoal(EEUGRust::NewLocation((float)theX, (float)theY, 0.0f, false, true, false, 0.0f, false, false), 0, 0);
                     theWalker->StartAction(kActionPrepareToMove);
                     theWalker->mUnitClass->ActionChanged(theWalker);
                     EECPNextSpot theSpot = { (long)inPlayer->mPlayerID, theX, theY, theNow, (long)theWalker->mUnitID };
