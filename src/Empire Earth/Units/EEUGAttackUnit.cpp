@@ -141,6 +141,9 @@ void EEUGAttackUnit::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocatio
     this->UpdateTargetTile();
     if (inUnit->mActiveGroup != NULL)
         inUnit->mActiveGroup->TellGroup(inUnit, outLocation);
+    float thePoint[3] = {outLocation.GetX(), outLocation.GetY(), outLocation.GetZ()};
+    EECombatCaptureGoal(EE_COMBAT_GO_DESTINATION, kGoalAttackUnit, inUnit, this->mTarget, inUnit->mActiveGroup != NULL,
+                        thePoint, (uint32_t)this->mTargetTileX, (uint32_t)this->mTargetTileY);
 }
 
 // FUNCTION: EXE 0x61d5a3
@@ -434,6 +437,7 @@ bool EEUGAttackUnit::Suits(EEUnit* inUnit)
         } else
             theResult = true;
     }
+    EECombatCaptureGoal(EE_COMBAT_GO_SUITS, kGoalAttackUnit, inUnit, this->mTarget, theResult);
     return theResult;
 }
 

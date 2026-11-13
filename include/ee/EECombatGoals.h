@@ -118,6 +118,16 @@ enum {
     EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
 };
 void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore);
+// CBGO (TEST ONLY): the attack, attack-ground and heal goals' GetDestination and Suits, at each call's end: the
+// function, the goal's kind, the unit's and target's ids (0 without one), the result, a point's x, y, z bits
+// (GetDestination's out location) and two extras (per function below); folded like CBQR (EE_SIM_CAPTURE_CBGO_FULL=1).
+// Recorded from the original C++ bodies before the goals moved to EEUGRust (R5b.2, twelfth round).
+enum {
+    EE_COMBAT_GO_DESTINATION = 1,       // extra 0, 1: the attack goal's last target tile after
+    EE_COMBAT_GO_SUITS = 2,             // attack ground: the target point's bits
+};
+void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                         const float* inPoint = NULL, uint32_t inExtra0 = 0, uint32_t inExtra1 = 0);
 // A body of ee_combat world.rs (EE_COMBAT_WORLD_*: IsTargetIgnored, IgnoreTarget, CanReachUnit,
 // IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host
 // (EECombatGoals.cpp); inClass the class of Attacked or FireShot (`this`), ioX, ioY EEIsAttackReachable's tile (written

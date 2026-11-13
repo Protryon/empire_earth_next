@@ -34,7 +34,7 @@ public:
     virtual bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);  // +0x64 0x21d222
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);  // +0x6c (ICF-folded 0x2907a3: empty)
     // +0x70 (inline 0xb2aa7): inUnit's class has +0xf8 set
-    virtual bool Suits(EEUnit* inUnit) { return inUnit->mUnitClass->mProjectileClass != NULL; }
+    virtual bool Suits(EEUnit* inUnit);
 
     GE3DPoint mTarget;                      // +0x20
 

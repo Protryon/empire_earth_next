@@ -49,6 +49,18 @@ void EEUGAttackGround::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocat
         outLocation = this->mTarget;
     if (inUnit->mActiveGroup != NULL)
         inUnit->mActiveGroup->TellGroup(inUnit, outLocation);
+    float thePoint[3] = {outLocation.GetX(), outLocation.GetY(), outLocation.GetZ()};
+    EECombatCaptureGoal(EE_COMBAT_GO_DESTINATION, kGoalAttackGround, inUnit, NULL, inUnit->mActiveGroup != NULL, thePoint);
+}
+
+// FUNCTION: EXE 0xb2aa7 (inline in the header until the twelfth round's golden)
+// Returns whether the unit's class has a projectile class
+bool EEUGAttackGround::Suits(EEUnit* inUnit)
+{
+    bool theResult = inUnit->mUnitClass->mProjectileClass != NULL;
+    float thePoint[3] = {this->mTarget.GetX(), this->mTarget.GetY(), this->mTarget.GetZ()};
+    EECombatCaptureGoal(EE_COMBAT_GO_SUITS, kGoalAttackGround, inUnit, NULL, theResult, thePoint);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x61cf93

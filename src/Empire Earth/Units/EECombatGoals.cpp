@@ -179,6 +179,7 @@ EECombatFolder sHostReads(EE_COMBAT_TAG('C', 'B', 'Q', 'R'), "EE_SIM_CAPTURE_CBQ
 EECombatFolder sShots(EE_COMBAT_TAG('C', 'B', 'S', 'O'), "EE_SIM_CAPTURE_CBSO_FULL");
 EECombatFolder sXReads(EE_COMBAT_TAG('C', 'B', 'X', 'R'), "EE_SIM_CAPTURE_CBXR_FULL");
 EECombatFolder sXActions(EE_COMBAT_TAG('C', 'B', 'X', 'A'), "EE_SIM_CAPTURE_CBXA_FULL");
+EECombatFolder sGoalObjects(EE_COMBAT_TAG('C', 'B', 'G', 'O'), "EE_SIM_CAPTURE_CBGO_FULL");
 thread_local int sHostReadDepth[4] = {0, 0, 0, 0};
 
 uint32_t EEShotBits(float inValue)
@@ -317,6 +318,19 @@ void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTa
     sXActions.Add(theRecord, sizeof(theRecord));
 }
 
+void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                         const float* inPoint, uint32_t inExtra0, uint32_t inExtra1)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    uint32_t theRecord[10] = {inFunc, inKind, inUnit != NULL ? (uint32_t)inUnit->mUnitID : 0,
+                              inTarget != NULL ? (uint32_t)inTarget->mUnitID : 0, (uint32_t)inResult, 0, 0, 0,
+                              inExtra0, inExtra1};
+    if (inPoint != NULL)
+        memcpy(&theRecord[5], inPoint, 12);
+    sGoalObjects.Add(theRecord, sizeof(theRecord));
+}
+
 void EECombatCaptureFlush()
 {
     if (!EESimCaptureRecord::Active())
@@ -330,6 +344,7 @@ void EECombatCaptureFlush()
     sShots.Flush();
     sXReads.Flush();
     sXActions.Flush();
+    sGoalObjects.Flush();
 }
 
 void EECombatCaptureStep(const EeCombatStepIn& in)
