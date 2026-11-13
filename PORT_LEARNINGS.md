@@ -12787,3 +12787,66 @@ Measured by net C++ deletion (src and include/ee, git numstat).
   docs conflicted, a criss-cross after `rust` took round 14: rust's text kept, this section and the R5b.2 row
   added): build `--sim` and the test profile 0/0, oracle seeds 2-7 identical to `ref`, the Rust gate PASS.
   `rust_includes.py` re-adds `rust/ee_screens.h` to two scenario editor files after each merge: not committed.
+
+## R4.4, fourteenth round: an effects sweep against the original C++, two bugs it found, the water splash and screen flash whole in Rust (ee_gfx effect_aged.rs; branch rust-gfx20, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 21,867 lines before the round; 22,008 after the
+sweep (+140 TEST ONLY, +1 the load fix); 21,643 after the water splash and screen flash (-365).
+`EEE3DWaterSplash.{h,cpp}` and `EEE3DScreenFlash.{h,cpp}` deleted.
+
+- **Coverage first: the effects sweep.** Round 13 measured that no gate game makes most of the moved 3D kinds. EE-SIM
+  `--effect-sweep` (sim_capture `--profile effects`: the oracle's game cut at 600 game seconds) holds every capture
+  record from the start (`EESimCaptureRecord::Hold`, new) and, when the game ends, runs `EEEffectCaptureSweep`
+  (`EEEffectManager.cpp`): each of 14 kinds (0x18 blast wave, 0x1b water splash, 0x21 tracers, 0x23 disease, 0x25
+  3D projectile, 0x26 shells, 0x27 additive pass, 0x33 citizen beam, 0x3f teleport, 0x42 virus, 0x43 pulse cannon
+  ball, 0x44 time warp, 0x45 shield, 0x46 screen flash) is made through each entry point that makes it (on a unit,
+  at a point, between units, unit to point, between points) from the first two graphic effects of its kind, on the
+  newest unit on the map of the first two players with one; the effect detail raised to every level for it. 0x43
+  and 0x44 have no row in the data: they borrow the first blast wave's and teleport's rows (the row's kind set for
+  the creation only). Each case: three manager updates, the effect saved, a load-time effect of its kind loaded from
+  the bytes, repaired and saved again (the copy kept out of the manager: `ReleaseResources`, then leaked; the game is
+  over), forty updates, the effect destroyed. EFSW is one record per case (the creation's result, made, lived, the
+  load's and repair's results, both saves' lengths and FNV-1a, the first save's bytes); EFST and EFMU after every
+  update. 26 cases, 1,144 updates a seed.
+- **Its golden is the original C++'s.** The sweep's patch applied to f839d277 (the commit before round 11: all 14
+  kinds C++, the timed effects' steps too) in a temporary worktree under `build/` (its own staging root), built and run
+  at seeds 2-3: `tools/sim_capture/golden_cpp_effects.txt`. The game itself is the same there (EFMU equal at once), so
+  every difference was an effect's. The worktree was removed after.
+- **Two bugs the sweep found, each its own commit before the golden:**
+  - `EEE3DRust::Call` gathered the graphic facts, the unit's hit points among them, before every op. A load runs
+    before `RepairPointers`, when `mUnit` is still the saved unit id: loading a saved game holding any moved kind on a
+    unit (blast wave, teleport, time warp, shield, citizen beam, shots) read through the id and crashed (the sweep's
+    first run: an access violation in `Call` from `Load`). Load and Save now build only the host and call the file op.
+    No gate game saves one of these kinds, so the saveload matrix never met it.
+  - The citizen beam's line: the original's `mLine` was a default `GE3DLine` (direction (1, 0, 0)) until `Aim`; the
+    record started it at zero, so an unaimed beam saved direction 0 (EFSW's first-save bytes showed the four bytes).
+    Round 13's driver missed it: its stub `GE3DLine` had no default direction. Lesson: a stub world's default
+    constructors must be the engine's; the sweep against the real C++ catches what a driver's stubs hide.
+  With both fixed the current tree gives the golden's 6 digests (and every EFSW record) at seeds 2-3: the eight kinds
+  moved in rounds 12-13 now match their original C++ in a real game world, made, stepped, saved and loaded.
+- **The water splash (0x1b) and the screen flash (0x46) whole on `EEE3DRust` (`effect_aged.rs`).** The splash is
+  made at a point (`CreateAt`), loads its media in `SetUp`, queues in 4 with its age, draws in pass 6 (eased growth
+  from the start size, the eased age written back, flattened by `1 - age^2`, faded over the last tenth); the flash
+  zeroes its age when made, takes its complex unit's position in `SetUp` (a new host call: `mComplexUnit->GetPosition`,
+  not the unit's virtual), draws in pass 6 the standing plane at the camera's orientation, additively, dimmed by the
+  fog factor and `1 - age^2`, in front of everything through the main viewport's depth range 0..0 (restored to 0..1,
+  z writes and less-equal after). Both age by `aged_step`; Load and Save ignore the base's and media's results. The
+  facts gain `start_size`; the rasterizer table the camera (`gRenderSnapshot.mCamera`), the standing plane
+  (`gEffect2DModel`), the depth range with `SetViewport`, `SetZCompare`, the material's opacity and a post-model
+  transform scaled by `GETransformation::Scale` (the engine's, in the C++ lambda). The water splash's draw age is the
+  aged record's `draw_age` now (it was a C++ member).
+- **Golden driver** (`build/gx20/aged`: both classes cut verbatim from HEAD against `EEE3DRust`'s host,
+  constructors and `Call` and the rasterizer table cut from the worktree over the Rust; the world is round 13's beam
+  driver's generated stub world plus the viewport, z compare, camera, plane and material opacity): 300 effects
+  (6,639 lines) and 3,000 on seed 2 (67,608 lines), identical. Rust tests: 4 (`effect_aged_tests.rs`), and the beam's
+  line default in `effect_beam_tests.rs`.
+- **Behaviour:** two fixes (the load crash; the unaimed beam's saved line direction, back to the original's). The
+  moves change nothing (the effects golden, recorded from the C++, passes after them).
+- **Gates.** On the result merged with rust (93edfb38): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,642 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169 digests, late 170, calamity 183, effects 6; TNMT without a golden as always), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected). Per commit: the load fix the build 0/0 and the oracle at seeds 2-3 identical; the aged move the build 0/0, the oracle at seeds 2-3 identical, the effects capture PASS, the Rust gate PASS. The aged driver was run on the move's commit, not rebuilt after the merge (the merge touched no file it cuts). No tour run.
+- **Only a tour or a person reaches:** the two draws through the new table entries (the splash's eased, flattened,
+  fading model in pass 6; the flash's in-front quad, its depth range and z compare restored after: a wrong restore
+  would show as the scene drawn over the UI or z fighting after a flash), and loading a saved game that holds a moved
+  kind on a unit (the fixed crash: the sweep loads copies, not a whole saved game).
+- **Next:** the additive pass (a redraw of its unit's model: host calls for the unit's model, stats scale, frame and
+  animation), the linear projectile, the disease and virus with their orbitals; the sweep already records all four
+  from the C++, so each move is checked against the original in a game world; a 2D twin for the sprite effects.

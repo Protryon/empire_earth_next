@@ -84,14 +84,12 @@
 #include "ee/EEE3DRust.h"
 #include "ee/EEE3DCommandConfirmation.h"
 #include "ee/EEE3DVirus.h"
-#include "ee/EEE3DScreenFlash.h"
 #include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
 #include "ee/EEE3DLinearProjectile.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEE3DVolcano.h"
-#include "ee/EEE3DWaterSplash.h"
 #include "ee/EEE3DGoal.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DSnow.h"
@@ -178,7 +176,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect2DParticle: theEffect = EEE2DParticle::Create(); break;
     case kEffect3DDestructionSmoke: theEffect = new EEE3DSmokeGenerator(0x1e); break;
     case kEffect2DVelocityParticle: theEffect = new EEE2DSmokePlume(EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE); break;
-    case kEffect3DWaterSplash: theEffect = new EEE3DWaterSplash(); break;
+    case kEffect3DWaterSplash: theEffect = new EEE3DRust(0x1b); break;
     case kEffect3DDamageSmoke: theEffect = new EEE3DSmokeGenerator(0x2c); break;
     case kEffect3DSmokeGenerator: theEffect = new EEE3DSmokeGenerator(0x2b); break;
     case kEffect2DExplosion: theEffect = new EEE2DExplosion(); break;
@@ -227,7 +225,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DCitizenBeam: theEffect = new EEE3DRust(0x33); break;
     case kEffect3DEnergyWall: theEffect = new EEE3DEnergyWall(0x34); break;
     case kEffect3DDamageVent: theEffect = new EEE3DDamageVent(); break;
-    case kEffect3DScreenFlash: theEffect = new EEE3DScreenFlash(); break;
+    case kEffect3DScreenFlash: theEffect = new EEE3DRust(0x46); break;
     case kEffect3DEnergyWave: theEffect = new EEE3DEnergyWave(); break;
     default: break;
     }
@@ -317,7 +315,7 @@ long EEEffectManager::CreateUnitEffect(EEUnit* inUnit, EEGraphicEffect* inEffect
     case 0x3a: theEffect = new EEE3DParticleEmitter(inUnit, inEffect, 0x3a, inTagPoint); break;
     case 0x42: theEffect = new EEE3DVirus(inUnit, inEffect); break;
     case 0x47: theEffect = new EEE3DEnergyWave(inUnit, inEffect); break;
-    case 0x46: theEffect = new EEE3DScreenFlash(inUnit, inEffect); break;
+    case 0x46: theEffect = new EEE3DRust(inUnit, inEffect, 0x46); break;
     case 0x45: theEffect = new EEE3DRust(inUnit, inEffect, kEffect3DShield); break;
     case 0x44: theEffect = new EEE3DRust(inUnit, inEffect, 0x44); break;
     }
@@ -390,7 +388,7 @@ long EEEffectManager::CreatePlacedEffect(GE3DPoint& inLocation, EEGraphicEffect*
     case 0xb: theEffect = new EEE2DSmokePlume(inLocation, inEffect, 0xb); break;
     case 0x12: theEffect = new EEE2DShockwave(inLocation, inEffect); break;
     case 0x18: theEffect = new EEE3DRust(inLocation, inEffect, 0x18); break;
-    case 0x1b: theEffect = new EEE3DWaterSplash(inLocation, inEffect); break;
+    case 0x1b: theEffect = new EEE3DRust(inLocation, inEffect, 0x1b); break;
     case 0x20: theEffect = new EEE3DVolcano(inLocation, inEffect); break;
     case 0x22: theEffect = new EEE2DWaterRipple(inLocation, inEffect); break;
     case 0x2b: theEffect = new EEE3DSmokeGenerator(inLocation, inEffect, 0x2b); break;
@@ -625,6 +623,146 @@ static void EECaptureEffectStates(EEEffectManager* inManager)
     theRecord.U32((unsigned int)theHash);
     theRecord.U32((unsigned int)(theHash >> 32));
     theRecord.Commit();
+}
+
+// TEST ONLY (EE-SIM --effect-sweep; tools/sim_capture.py --profile effects): the 3D effects' sweep (R4.4, fourteenth
+// round). No gate game makes most 3D effect kinds, so when the game ends this makes each kind of kSweep in the game's
+// world, through each entry point that makes it, from the first two graphic effects of the kind (0x43 and 0x44 have
+// none in the data: they borrow the first blast wave's and teleport's, their kind set for the creation only), on the
+// newest unit on the map of the first player with one (A) and of the next (B; A's own when none): on A, at A's
+// position, from A to B, from A to B's position, or between the two positions. Then three manager updates, the
+// effect saved, a load-time effect of its kind loaded from those bytes, its pointers repaired and saved again (the
+// copy is left out of the manager: its resources released, the object kept), forty updates more and the effect
+// destroyed. EFSW holds one record per case: the kind, the graphic effect's row, the entry, the creation's result,
+// whether it made an effect, whether the effect lived to its save, the load's and repair's results and the length and
+// FNV-1a 64 of both saves, then the first save's bytes. Only EFSW, EFST and EFMU are written, and no other
+// thread's records while it runs (the updates' EFST and EFMU cover every step); the game is over and nothing
+// records after it.
+void EEEffectCaptureSweep()
+{
+    static const unsigned int kTags[] = {
+        (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'W' << 24),
+        (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'S' << 16) | ((unsigned int)'T' << 24),
+        (unsigned int)'E' | ((unsigned int)'F' << 8) | ((unsigned int)'M' << 16) | ((unsigned int)'U' << 24)};
+    enum { kOnUnit, kAtPoint, kBetweenUnits, kUnitToPoint, kBetweenPoints };
+    struct Case {
+        long mKind;
+        int mEntry;
+        long mBorrowed;   // the kind whose graphic effects it borrows (0: its own)
+    };
+    static const Case kSweep[] = {
+        {0x18, kOnUnit, 0},        {0x18, kAtPoint, 0},       {0x1b, kAtPoint, 0},       {0x21, kBetweenUnits, 0},
+        {0x23, kOnUnit, 0},        {0x25, kBetweenPoints, 0}, {0x26, kBetweenUnits, 0},  {0x27, kOnUnit, 0},
+        {0x33, kUnitToPoint, 0},   {0x3f, kOnUnit, 0},        {0x42, kOnUnit, 0},        {0x43, kUnitToPoint, 0x18},
+        {0x44, kOnUnit, 0x3f},     {0x45, kOnUnit, 0},        {0x46, kOnUnit, 0},
+    };
+    EEEffectManager* theManager = gEffectManager;
+    if (theManager == NULL)
+        return;
+    EESimCaptureRecord::Only(kTags, 3);
+    EESimCaptureRecord::Exclusive(true);
+    EEUnit* theUnits[2] = {NULL, NULL};
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers() && theUnits[1] == NULL; p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        EEUnit* theNewest = NULL;
+        for (EEUnit* theUnit = thePlayer != NULL ? thePlayer->mFirstUnit : NULL; theUnit != NULL;
+             theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            EEComplexUnit* theComplex = theUnit->mComplexUnit;
+            if (theComplex != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL && theComplex->mTileNode != NULL
+                && theComplex->GetTileX() != -10000)
+                theNewest = theUnit;
+        }
+        if (theNewest != NULL)
+            theUnits[theUnits[0] == NULL ? 0 : 1] = theNewest;
+    }
+    if (theUnits[0] != NULL) {
+        EEUnit* a = theUnits[0];
+        EEUnit* b = theUnits[1] != NULL ? theUnits[1] : a;
+        unsigned long theDetail = gEffectDetail;
+        gEffectDetail = 0xff;   // every detail level
+        for (const Case& theCase : kSweep) {
+            long theSource = theCase.mBorrowed != 0 ? theCase.mBorrowed : theCase.mKind;
+            unsigned long theRows = 0;
+            for (unsigned long theRow = 0; theRow < EEGraphicEffect::GetCount() && theRows < 2; theRow++) {
+                EEGraphicEffect* theEffect = EEGraphicEffect::Get(theRow);
+                if (theEffect == NULL || theEffect->mKind != theSource)
+                    continue;
+                theRows++;
+                GE3DPoint theAt, theTo;
+                a->GetPosition(theAt);
+                b->GetPosition(theTo);
+                EEEffectHandle theHandle = kNoEffectHandle;
+                long theOwnKind = theEffect->mKind;
+                theEffect->mKind = theCase.mKind;
+                long theResult = 0;
+                switch (theCase.mEntry) {
+                case kOnUnit: theResult = theManager->CreateUnitEffect(a, theEffect, &theHandle, false, 0, 0); break;
+                case kAtPoint: theResult = theManager->CreatePlacedEffect(theAt, theEffect, &theHandle); break;
+                case kBetweenUnits: theResult = theManager->CreateEffectBetweenUnits(a, b, theEffect, &theHandle); break;
+                case kUnitToPoint: theResult = theManager->CreateEffect(a, theTo, theEffect, &theHandle, 0); break;
+                default: theResult = theManager->CreateEffectBetween(theAt, theTo, theEffect, &theHandle); break;
+                }
+                theEffect->mKind = theOwnKind;
+                for (int t = 0; t < 3; t++)
+                    theManager->Update();
+                EEEffect* theMade = theManager->GetEffect(theHandle);
+                long theLoad = -1, theRepair = -1;
+                unsigned long theLengths[2] = {0, 0};
+                unsigned long long theHashes[2] = {0xcbf29ce484222325ull, 0xcbf29ce484222325ull};
+                std::vector<unsigned char> theBytes;   // the first save's bytes
+                if (theMade != NULL) {
+                    FSMemoryFile theFirst;
+                    theMade->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFirst);
+                    EEEffectManagerOps theOps = {theManager, kSaveGameMajorVersion, kSaveGameMinorVersion, 0, 0};
+                    EEEffect* theCopy = EEStoreEffect(theOps.NewLoaded(NULL, (uint32_t)theCase.mKind));
+                    FSMemoryFile theSecond;
+                    if (theCopy != NULL) {
+                        theFirst.SetPosition(0, kFileOriginBegin, false);
+                        theLoad = theCopy->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theFirst);
+                        theRepair = theCopy->RepairPointers();
+                        theCopy->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theSecond);
+                        theCopy->ReleaseResources();
+                    }
+                    FSMemoryFile* theFiles[2] = {&theFirst, &theSecond};
+                    for (int f = 0; f < 2; f++) {
+                        theFiles[f]->GetLength(theLengths[f]);
+                        const unsigned char* theData = theFiles[f]->GetData();
+                        if (f == 0)
+                            theBytes.assign(theData, theData + theLengths[f]);
+                        for (unsigned long i = 0; i < theLengths[f]; i++) {
+                            theHashes[f] ^= theData[i];
+                            theHashes[f] *= 0x100000001b3ull;
+                        }
+                    }
+                }
+                for (int t = 0; t < 40; t++)
+                    theManager->Update();
+                if (theHandle != kNoEffectHandle)
+                    theManager->DestroyEffect(theHandle);
+                theManager->Update();
+                EESimCaptureRecord theRecord(kTags[0]);
+                theRecord.I32((int)theCase.mKind);
+                theRecord.U32((unsigned int)theRow);
+                theRecord.I32(theCase.mEntry);
+                theRecord.I32((int)theResult);
+                theRecord.U32(theHandle != kNoEffectHandle ? 1u : 0u);
+                theRecord.U32(theMade != NULL ? 1u : 0u);
+                theRecord.I32((int)theLoad);
+                theRecord.I32((int)theRepair);
+                for (int f = 0; f < 2; f++) {
+                    theRecord.U32((unsigned int)theLengths[f]);
+                    theRecord.U32((unsigned int)theHashes[f]);
+                    theRecord.U32((unsigned int)(theHashes[f] >> 32));
+                }
+                if (!theBytes.empty())
+                    theRecord.Bytes(theBytes.data(), (unsigned int)theBytes.size());
+                theRecord.Commit();
+            }
+        }
+        gEffectDetail = theDetail;
+    }
+    EESimCaptureRecord::Exclusive(false);
+    EESimCaptureRecord::Only(0);
 }
 
 // FUNCTION: EXE 0x507450

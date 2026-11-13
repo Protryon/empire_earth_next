@@ -95,6 +95,8 @@ fn made_it_is_off_with_its_end_raised() {
     let mut h = Host::default();
     let mut r = made(&mut h);
     assert_eq!((r.shot.end, r.shot.active), (Ge3DPoint { x: 1.0, y: 5.0, z: 1.0 }, false));
+    // unaimed, its line is GE3DLine()'s: from the origin along +x (saved so)
+    assert_eq!((r.shot.path.start, r.shot.path.direction.x), (Ge3DPoint::default(), 1.0));
     assert_eq!(run(EeGfxEffect3DOp::SetUp, &mut r, &facts(), &mut h).0, 0);
     assert_eq!((r.bounding_radius, h.calls.as_slice()), (2.0, &["media".to_string()][..]));
 }

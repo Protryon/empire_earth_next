@@ -4,7 +4,8 @@
 // 0xfb9f6..0xfc382), 0x18 the blast wave (EEE3DBlastWave, 0xe8ed8..0xe9474), 0x45 the shield (EEE3DShield,
 // 0xf923f..), 0x43 the pulse cannon ball (EEE3DPulseCannonBall, 0xf69e3..0xf7394), 0x21 the tracers and 0x26 the
 // shells (EEE3DTracers 0xfd330..0xfdbab, EEE3DShells 0xf90e9..0xf923f), 0x33 the citizen beam (EEE3DCitizenBeam,
-// 0xe9474..0xe9bee), all deleted. Requires ee/EEEffect3D.h and
+// 0xe9474..0xe9bee), 0x1b the water splash (EEE3DWaterSplash, 0x101c34..0x101fce) and 0x46 the screen flash
+// (EEE3DScreenFlash, 0xf8ceb..0xf90e9), all deleted. Requires ee/EEEffect3D.h and
 // rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H

@@ -1,0 +1,6 @@
+seed 2 EFMU 1144 ceab524e872e7bf8
+seed 2 EFST 1144 cc3b556a4c11ae83
+seed 2 EFSW 26 254db05ebcc05383
+seed 3 EFMU 1144 5c0fdc3a02a48ae1
+seed 3 EFST 1144 56c5f6bfc946b769
+seed 3 EFSW 26 4d76ddd94a7b09b0

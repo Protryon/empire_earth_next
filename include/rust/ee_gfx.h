@@ -1150,6 +1150,8 @@ struct EeGfxGraphicFacts {
   int32_t int_param3;
   /// `(unsigned long)gPhysics->mGameTime`
   uint32_t game_time_bits;
+  /// `mStartSize`
+  float start_size;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1203,6 +1205,8 @@ struct EeGfxEffect3DHost {
   bool (*beam_hidden)(void *context);
   /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
   void (*place_linked)(void *context, const EeGe3DPoint *point);
+  /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
+  EeGe3DPoint (*complex_position)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1236,6 +1240,21 @@ struct EeGfxRaster {
   void (*model_color)(EeGfxModel model, EeGfxColor color);
   /// the model's own `SetTexture(texture, screen)` (not its material's)
   void (*model_own_texture)(EeGfxModel model, EeGfxModel texture);
+  /// the render snapshot's camera transformation (`gRenderSnapshot.mCamera`)
+  EeGeTransformation (*camera)();
+  /// the shared standing plane model (`gEffect2DModel`)
+  EeGfxModel (*standing_plane)();
+  /// the main viewport's depth range, then the viewport set on the rasterizer (`gU4E8F08`)
+  void (*depth_range)(float near, float far);
+  void (*set_zcompare)(uint32_t mode);
+  /// `GetMaterial(0)->SetOpacity(opacity)`
+  void (*model_material_opacity)(EeGfxModel model, float opacity);
+  /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
+  void (*model_transform_scaled)(EeGfxModel model,
+                                 const EeGeTransformation *transformation,
+                                 float x,
+                                 float y,
+                                 float z);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
