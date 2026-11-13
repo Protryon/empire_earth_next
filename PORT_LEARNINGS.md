@@ -11644,3 +11644,71 @@ the branch's start (round 25's head) -> 84,768 (Container's accessors, +18) -> 8
 - **Left:** TabCtrl / TabBar, ComboBox (its edit box and button over the container: GetFocusChild and
   GetMouseChild are accessors already), and the older input and list goldens' re-recording to trace the delivered
   event type.
+
+## R5b.4, nineteenth round: the build/repair and gather goals whole in Rust (ee_units build.rs, gather.rs; branch rust-r5b4-core19, 2026-11-13)
+
+| Commit | What | C++ |
+|---|---|---|
+| 1a965c0c | the build/repair goal whole in Rust (EEUGBuildRepair deleted) | +608 -1290, net -682 |
+| a53eed21 | the gather goal whole in Rust (EEUGGather deleted) | +801 -1511, net -710 |
+| 4506e07c | merge of rust (combat rounds 12-13: the attack goals on EEUGRust) | |
+| c26d5e8a | the build goal's RepairPointers reads only what the original read | +9 -7 |
+
+- **Operation numbers by lane.** Combat's goal bodies are 200-299 and its host operations 1000 up (its
+  `SetPathAttempts` body is 22); this round's bodies start at 300 (`Work` 300, `PathTaken` 301, the build goal's
+  310-313, the gather goal's 320-325) and its host operations at 400 (the build goal's 400-442, the gather goal's
+  450-479). ee_rust's `goal_op_tables` test reads both crates' tables and fails on an overlap. The build and gather
+  kinds must also be listed among the kinds ee_units dispatches itself (`ee_units_rust_goal`'s `matches!`): every
+  other kind goes to combat's dispatch, which answers 0 to an unknown kind, so a missing entry is silent.
+- **One unit record instead of many reads.** The two goals read some 40 fields of a unit, its class, its player and
+  its stats. Rather than one host operation per field, `EE_UNITS_GOAL_HOST_BUILD_UNIT` fills a `#[repr(C)]` record
+  (`EeUnitsBuildUnit`, through `io.sink`; listed in cbindgen.toml's `[export] include`, as no function names it) in
+  one case. The complex unit's own fields are filled only for a complex unit; a field named `class` would be a C++
+  keyword in the generated header (`unit_class`).
+- **What stayed C++, verbatim, as host cases.** World searches and effects with no goal state: the footprint and
+  blocking-unit tests, the completion's research and sounds, a foundation's wonder notice and media, the cancelled
+  foundation's refund, the static next-job helpers (help build, tend a farm, gather near a drop site), the gather
+  spot with its tile order, the gather room, the beginning of gathering, the next tree of a forest, the settlements
+  to build, the gathering tick (`Work`), the naval search, the accessible trigger. They moved from the class files
+  into EEUGRust.cpp's helpers, which is why each commit's C++ is about half of the class's lines, not all of them.
+- **Reentrancy.** The gather goal's settlement search (C++) sets the goal's storage through its accessor, which is a
+  Rust body: the gather bodies read and write the record around each host call (`change`) instead of holding a copy
+  across one. The build goal's copies are taken after the calls that can reenter (`SetGoal`, `ActionChanged`).
+- **Shared test mocks across modules.** gather.rs's tests implement `GatherHost` on build.rs's test `World`
+  (`pub(crate) mod tests`), and both modules' tests take goal handles from one atomic counter: the tests run at once
+  over the same static tables, and two tests using the same handle made a checksum test fail now and then.
+- **A gate run picked up a file mid-edit.** The header-constants test (`header_consts`) scans every source file of
+  the crate, so gather.rs, written while the build commit's gate ran, failed it (two action constants with no C++
+  name: they are `kActionMoveToStorage` and `kActionFindNewResource`). Keep work for the next commit out of the
+  tree while a gate runs.
+- **The merge with combat 12-13** met in the callers (one condition reading an attack goal's and a gather goal's
+  target), in EEUGRust.h/.cpp (both lanes' virtuals and casts kept, the core lane's host cases before combat's
+  default case) and in the deleted files' includes; the gather goal's hunt now makes combat's
+  `EEUGRust::NewAttackUnit`.
+- **EEUGLocation not moved.** `EEUGHealUnit` still derives from it on the merged tree (combat round 13 did not move
+  the heal goal): its layout stays until the heal goal moves.
+- **Behaviour:** none on the games' paths (a goal without a building answers its not-paid-for trigger false; a gather
+  goal holding no storage ignores a replacement; the originals read NULL there).
+- **The load fault the saveload gate found.** The first matrix run on the merged tree had 19 loads exit with an
+  access violation in `RepairPointers` (resolved through EE-SIM.map: `EEUGRust::RepairPointers` -> build.rs `repair`
+  -> the unit record's host case). The record walked the building's parts and read its stats and command, which are
+  still saved ids while a game loads; the original's `RepairPointers` read only the class, player, tile and complex
+  unit. The record now has that basic form (`b` 1) for the repair. No gate before the saveload matrix loads a game:
+  run it on any change to a goal's `RepairPointers`.
+- **Coverage by temporary prints (removed): the first sight of each body, step command and trigger, to a file.**
+  Oracle seeds 2-3: the build goal's creation, destination, Step (work cycle, wait for the site, the move), Work,
+  every build trigger (destroyed, repaired with the completion, in range, clear, visible, valid, not paid for, goal is
+  build, repair unaffordable, special unit), ReplaceUnit, Abandon, the AI's site test; the gather goal's creation,
+  destination, Work, PathTaken, the accessors, and every Step handler but the next farm (find storage and new
+  storage, find resource, drop off, gather, arrive, finish, the naval search, next tree, build settlements) and every
+  trigger but farm-not-found and cannot-path. The saveload games (oracle, islands, late, space at 1000 s) add Save,
+  Load and RepairPointers of both goals, the empty goals of the load, the build goal's insufficient-resources event.
+  The calamity profile reaches the same bodies. No game reaches: the copies (Clone), the texts and dumps, the build
+  goal's cancelled foundation, smart-citizen next job (a human's), gate retarget; the gather goal's next farm and
+  `FindGatherSpot` accessor; the scenario profile reaches neither goal. Those are unit tests only.
+- **Gates of the round.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the main checkout's `ref`,
+  Rust gate PASS. On the result merged with rust (c0df6600): build `--sim` and the test profile link 0/0; oracle
+  seeds 2-7 identical; captures at seeds 2-3 oracle (169 digests), late (170), scenario (16) and calamity (183) PASS;
+  `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS (after c26d5e8a); Rust gate PASS. ee_units tests
+  174 (12 new). No tour: nothing drawn changed (the debug texts appear only in the debug panels). The round's C++
+  (src, include): -1383 net before the merge.
