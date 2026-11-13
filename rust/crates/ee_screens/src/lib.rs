@@ -57,6 +57,8 @@
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
 //! - [`menus`]: the out-of-game menus whole (the main menu, the editors' sub-menu, the single player screen): their
 //!   events' codes, the control-event table and one dispatcher over the host's toolkit and game calls.
+//! - [`editor_actions`]: the scenario editor's actions over a world-edit host: the terrain, elevation and bulldozer
+//!   paints' queued areas and runs, the trigger area's rectangle.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -93,6 +95,9 @@ mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
+pub mod editor_actions;
+#[cfg(not(test))]
+mod editor_actions_ffi;
 pub mod factories;
 pub mod frame;
 #[cfg(not(test))]

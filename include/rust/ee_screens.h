@@ -732,6 +732,65 @@ constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
 
+/// The camera's follow flags cleared (`gB529066`, `gCameraFollowing`, `gB529068`), as every paint does first.
+constexpr static const uint32_t EE_SCREENS_SEA_STOP_FOLLOW = 1;
+
+/// -> whether the tile (i0, i1) is on the map (`EEMap::GetTile` not NULL).
+constexpr static const uint32_t EE_SCREENS_SEA_TILE = 2;
+
+/// -> whether the mesh point (i0, i1) is valid (unsigned coordinates, as `GetIsValidPoint`); f0 its height.
+constexpr static const uint32_t EE_SCREENS_SEA_POINT = 3;
+
+/// `EEMap::PaintTerrainRect(left i0, right i1, top i2, bottom i3, terrain i4, texture i5)`.
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_RECT = 4;
+
+/// `EEMap::UpdateCliffs(left i0, right i1, bottom i2, top i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_UPDATE_CLIFFS = 5;
+
+/// `gMiniMap->RedrawRect(i0, i1, i2, i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_MINIMAP_RECT = 6;
+
+/// `gMiniMap->Refresh()`.
+constexpr static const uint32_t EE_SCREENS_SEA_MINIMAP_REFRESH = 7;
+
+/// The terrain i0's table entry: -> its ambient unit chance; i1 = ambients only, i2 = its unit class count.
+constexpr static const uint32_t EE_SCREENS_SEA_TERRAIN = 8;
+
+/// -> the terrain i0's ambient unit class i1 (`EETerrainTable::GetUnitClass`).
+constexpr static const uint32_t EE_SCREENS_SEA_TERRAIN_CLASS = 9;
+
+/// `TMGetTime()` (the ambient units' seed).
+constexpr static const uint32_t EE_SCREENS_SEA_TIME = 10;
+
+/// An ambient unit of class i0 on the tile (i1, i2) for the world player, when `EECanPlaceOnTile` allows it.
+constexpr static const uint32_t EE_SCREENS_SEA_PLANT = 11;
+
+/// -> the elevation tab's checked radio: 0 raise (a plateau), 1 hills, 2 level ground.
+constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_MODE = 12;
+
+/// `EEMap::Raise(&i0, &i1, &i2, &i3, f0, f1, f2, f3, i4 != 0)` (left, right, top, bottom; the area comes back as
+/// Raise left it).
+constexpr static const uint32_t EE_SCREENS_SEA_RAISE = 13;
+
+/// `EEMap::RemoveFlatCliffs(left i0, right i1, bottom i2, top i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_REMOVE_FLAT_CLIFFS = 14;
+
+/// The elevation tab's paint control stores its mouse tile (`EEUIFSEPaint::StoreMouseTile`).
+constexpr static const uint32_t EE_SCREENS_SEA_STORE_MOUSE_TILE = 15;
+
+/// `gEffectManager->ElevationChanged(left i0, top i1, right i2, bottom i3)`.
+constexpr static const uint32_t EE_SCREENS_SEA_ELEVATION_CHANGED = 16;
+
+/// -> the height of one elevation level (`kSEPELevelHeight`) in f0.
+constexpr static const uint32_t EE_SCREENS_SEA_LEVEL_HEIGHT = 17;
+
+/// The paint kinds of `ee_screens_sea_paint_new` (`kSEAPaint*` in `ee/EESEAPaint.h`).
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_TERRAIN = 0;
+
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_ELEVATION = 1;
+
+constexpr static const uint32_t EE_SCREENS_SEA_PAINT_BULLDOZER = 2;
+
 /// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
 constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
 
@@ -2510,6 +2569,9 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// A paint action's record (opaque to C++).
+struct EeScreensSeaPaint;
+
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
   float colour[3];
@@ -3047,6 +3109,42 @@ void ee_screens_dialog_show(void *dialog,
 
 /// `EEUIFError::Open`: lays the box's controls out for its mode.
 void ee_screens_dialog_open(void *dialog, uint32_t mode);
+
+/// A paint action's record: the terrain paint (a terrain, b texture), the elevation paint (a the level) or the
+/// bulldozer. Freed by `ee_screens_sea_paint_free` (the action's destructor).
+EeScreensSeaPaint *ee_screens_sea_paint_new(uint32_t kind,
+                                            int32_t a,
+                                            int32_t b);
+
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new` (or is NULL) and is not used after.
+void ee_screens_sea_paint_free(EeScreensSeaPaint *paint);
+
+/// The action's `SetArea`: queues the area when the paint changes anything there; 1 when it queued.
+///
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new`.
+uint8_t ee_screens_sea_paint_set_area(EeScreensSeaPaint *paint,
+                                      int32_t left,
+                                      int32_t top,
+                                      int32_t right,
+                                      int32_t bottom);
+
+/// The action's `Virtual4`: every queued area painted (under the UI copy lock and the world's write lock).
+///
+/// # Safety
+/// `paint` comes from `ee_screens_sea_paint_new`.
+void ee_screens_sea_paint_run(EeScreensSeaPaint *paint);
+
+/// `EESEAPaintArea::SetCorner`'s rectangle -> out[0..4] = left, top, right, bottom.
+///
+/// # Safety
+/// `out` points at four integers.
+void ee_screens_sea_area_rectangle(int32_t start_x,
+                                   int32_t start_y,
+                                   int32_t end_x,
+                                   int32_t end_y,
+                                   int32_t *out);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

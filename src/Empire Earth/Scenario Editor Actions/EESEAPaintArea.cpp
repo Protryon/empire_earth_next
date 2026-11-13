@@ -50,6 +50,7 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEAPaintArea.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5a8284
 // Highlights the dragged rectangle as the editor's paint area
@@ -67,20 +68,12 @@ void EESEAPaintArea::SetCorner(long inX, long inY)
         return;
     this->mEndY = inY;
     this->mEndX = inX;
-    if (this->mStartX > this->mEndX) {
-        this->mR0C.SetLeft(this->mEndX);
-        this->mR0C.SetRight(this->mStartX);
-    } else {
-        this->mR0C.SetLeft(this->mStartX);
-        this->mR0C.SetRight(this->mEndX);
-    }
-    if (this->mStartY > this->mEndY) {
-        this->mR0C.SetTop(this->mEndY);
-        this->mR0C.SetBottom(this->mStartY);
-    } else {
-        this->mR0C.SetTop(this->mStartY);
-        this->mR0C.SetBottom(this->mEndY);
-    }
+    int32_t theRectangle[4];   // left, top, right, bottom (ee_screens editor_actions.rs)
+    ee_screens_sea_area_rectangle(this->mStartX, this->mStartY, this->mEndX, this->mEndY, theRectangle);
+    this->mR0C.SetLeft((long)theRectangle[0]);
+    this->mR0C.SetRight((long)theRectangle[2]);
+    this->mR0C.SetTop((long)theRectangle[1]);
+    this->mR0C.SetBottom((long)theRectangle[3]);
     gUserInterface->PostAction(this);
 }
 
