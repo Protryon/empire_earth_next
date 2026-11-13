@@ -56,11 +56,10 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 recounted from the own units every check; the units-per shares, the maxima, the difficulty's first
                 military count, coast_fishing's two docks, no airport before the attacks, the granary for the farms),
                 RepairBuildings (idle citizens to buildings under 80%), ChooseGarrison / ChooseFortress /
-                FillGarrison (early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
+                FillGarrison (on island and planets maps a town centre hires its garrison and any available citizen fills it; early_town_centers; the idle and waiting citizens sent, the rest of the garrison filled with
                 none through the manifest's "fills_garrison" - the classic's garrison cheat; new citizens routed there
                 every 2 s, DEVIATION from UnitAdded's at once), QueueMoraleBuilding. DEVIATIONS: the morale effect's fill is not
-                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); the island map's
-                hired garrison citizens are not ported; GetFarmType's robotic farm (Nano) is not ported; the gate
+                readable (the town centre wants 2 houses in its 10-tile square, the capitol 4: the data's morale effects; a settlement none); GetFarmType's robotic farm (Nano) is not ported; the gate
                 chains' repair end is not ported.
   EECPUnitManager.cpp
                 PORTED -> units.lua: the per-epoch request FIFOs, RequestUnits (a producer first: the cheapest
@@ -68,7 +67,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 island map; the requests started while the population has room, all at once when affordable, else one),
                 StartProduction (round robin at the least busy producers: ai.train), DropObsoleteRequests,
                 GetWantedCitizens (with max_citizen_share). DEVIATIONS: the units in production are the producers'
-                queue lengths; IsInProduction sees the item being made, not the queue behind it; the transports'
+                queue lengths; the transports'
                 priority (ChooseTransportClass) is not ported (the navy stage); BalanceProduction is not ported.
   EECPBuildManager.cpp
                 PARTLY -> build.lua: the per-epoch queues, QueueBuilding (the personality's vetoes: no Prehistoric
@@ -76,7 +75,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 started), StartBuilding (FindSite, FindBuilder: the nearest available citizen on the site's land,
                 for the site classes and towers by its shore, ai.build), AssignBuilders every 2 minutes (ai.repair), the finders: FindProductionSite (the active
                 centres nearest home, the rings from the drop-off distance + 5 inward), FindCenterSite, FindGranarySite,
-                FindTowerSite (the worked centres' gold, iron and active food, the tower spacing), FindShoreSite, the
+                FindTowerSite (an island map's coasts first; the worked centres' gold, iron and active food, the tower spacing; then the gates; then the choke points by the towns. DEVIATION: a coast is the largest water's shore by a town, ai.water_sites; the gate's and choke point's site is the first placeable tile), FindShoreSite, the
                 farm foundations. DEVIATIONS: placement through ai.find_site (EECanPlaceOnTile with the classic's
                 one-tile margin: `margin = true`, added for this port) - CanBuildAt's other rules (choke points, hills,
                 runway ends, gates and town centres near, walkable ground round the site) are not applied; the
@@ -85,7 +84,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 foundation deleted, the request back at the front without a site, the builder to the town centre). NOT
                 STARTED: BuildingAbandoned, BuilderLost's
                 replacement (AssignBuilders covers them every 2 minutes), the airport, anti-air, space and wonder
-                sites, the island coasts', gates' and choke points' towers.
+                sites.
   EECPResearchManager.cpp
                 PORTED -> research.lua: the per-epoch lists (an epoch first), Research (IsWanted; the producer
                 ordered), TryResearch (an idle producer, CanAfford, ai.research), BuildCandidates, ChooseResearch every
@@ -122,7 +121,16 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 (centre_drop: AdoptDropSite). DEVIATION (fog): the original groups every resource of the map at the
                 start (nature's unit list); the port groups what is explored, again every 15 s (with the reveal cheat
                 the same as the original). GetCenter's free-tile search is not ported (the box's middle).
-  EECPWallManager.cpp           NOT STARTED (the defence stage; ai.wall, ai.gate)
+  EECPWallManager.cpp
+                PORTED -> walls.lua: from the Copper Age a wall across the way from each enemy's centre to each own town
+                centre and capitol (AddWalls, the nearest enemy first), one every 30 s once the last one's gate stands;
+                PlanWall over the size table (ai.wall_stretches across each step; the shortest open level stretch clear
+                of the centres and gates), the next size on failure, the 9th the stretch nearest a gate
+                (ChooseRunNearGates); BuildWall (a builder every 10 tiles, ai.wall); the gate at the wall's middle
+                (AddGates, FindGate: ai.gate). DEVIATIONS: the way is ai.route's, straight between its cells (the
+                wall planner path); the enemy's centre is the town the view knows (its capitol); IsPathUsable is not
+                tested; a stretch with units on it is not left out; a wall piece lost is not queued again (UnitLost).
+                The C++ built no wall in 40 bench games (why is not traced yet); the port builds about one a game.
   EECPCombatManager.cpp         PARTLY -> army.lua: Update on the attack timer (IsAttackDue; SetNextAttackTime in
                 main.lua: the initial delay per epoch span and the frequency, the difficulty's modifiers, the bounds),
                 the target player (computers by the aggression's chance when humans are there too; theLargest, else
@@ -217,6 +225,11 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 PORTED -> militia.lua (the micro step answers the hits; the zones' flight every step). The raiders'
                 strength: every one through the manifest's sees_all (ai.enemy_force), as the C++; the fighters go for
                 the raiders seen.
+
+KNOWN DEVIATION (islands, AI_RESEARCH 8.66): on island maps the port grows faster than the C++ in its first 20
+minutes (Small Islands: 27.9 citizens at 20 minutes against 24.1; Copper 12 of 16 against 3) and loses fewer
+citizens early (1.9 against 4.7). The training, the reserve, the queues and the garrisons now follow the C++; the
+rest is left as it is: the aim is to replace the C++, not to copy its weaknesses.
 
 The army's movement, fighting and retreat run on lib.groups (ai/lib/groups.lua: forming, legs, per-unit targets,
 the raid flight, the retreat), standing in for EECPAttackGroup / EECPAttackSubGroup / the ASG* state machines.

@@ -13034,6 +13034,34 @@ layouts, -179). This round's own net: -175.
 - **Left:** Window/WindowManager (platform ops; audit every `GetRoot()->` caller first), the skins' Button
   subclasses (draw ops), the remaining WONGUI controls' C++ paint.
 
+## The merge of main daf9dadb into the rust branch (the Lua AI's tower sites, walls and production queues; 2026-11-13)
+
+49 commits of main (since a2c4347e; 21 files: `ai/classic_lua/walls.lua` and `build.lua`, `boom.lua`, `lib/place.lua`,
+`lib/build_order.lua`, `ais.json`, AI_RESEARCH, the CI release workflow) merged into `rust` as `git merge origin/main`
+(branch rust-mainmerge3). The C++ classic AI stays as it is: main's `EECPResourceManager.cpp` change (gather
+`exact = 2` and `granary_farms`) acts for next-engine seats only.
+
+- **Both lines took the next state's version 4.** The one conflict was `EECPNextLua.cpp`'s state block, which is Rust
+  here (ee_ai `next_save.rs`): rust's version 4 is the site walkers (save 0.274), main's version 4 the
+  `granary_farms` setting (§8.51). Main's field went into the Rust block as version 5 (version 4 plus the field; below
+  5 it reads -1, the engine's rule). The EENS golden still checks the driver's version 4 bytes: the test drops the
+  newer fields before comparing (`golden.rs as_v4`). As at the earlier merges: read both sides' version gates, not
+  only the conflict.
+- **Main's `gather(exact)` was not saved.** `EECPNextState::mExact` ("transient, the next order sets it") reset to 0
+  on a load, and until the script's next gather order the rebalance kept one gatherer of slack. Main's `ais.json`
+  makes the random Boom play `boom_order` (exact = 1 every step), so the saveload test's next games parted 10 ticks
+  after the 1900 s loads. Saved since (version 6, its own commit): next seed 2 1000 s 114 -> 887 equal ticks, 1900 s
+  10 -> 51, seed 3 1000 s 102, 1900 s 10 -> 888. The rest is a gap in main's new Lua state, not measured further.
+- **The oracle.** Line 0 changes on every seed (the manifest: `4 AIs (boom, ...) folder hash df82b2b8`, was
+  `5 AIs (boom, boom_order(not random), ...) 1494ba43`); every other decision line and every checksum line equals
+  `ref` (seeds 2-7). With the previous tree's Data/ai (1494ba43) the merged exe is identical to `ref`, line 0
+  included: the C++ and Rust side changed nothing for the classic seats.
+- **saveload_expect.** Every row but the four next rows is as before (no row better or worse). The next rows are
+  re-read with the tree's Data/ai main's; with the previous Data/ai the merged exe (before the exact fix) gives the
+  old 479/END/828/END.
+- A fresh worktree's first `build.py` failed at the link (`build/clang/exe/link.rsp`: `link_exe` does not create
+  `exe/`); creating the folder by hand was enough.
+
 ## R6: the game screens, twenty-first round: the main game form's cursor decisions, its five panel groups and its unit hack in Rust (ee_screens cursor.rs, panel_groups.rs, unit_hack.rs; branch rust-screens21, 2026-11-13)
 
 Back to the game screens after the editor (rounds 14-20). Count: the screens' C++ (`User Interface Thread` without
@@ -13215,4 +13243,4 @@ User Interface Thread without the unit utilities, UI Events, `include/ee/EEUI*.h
   unchanged by construction. The presses run when a command or tech button is clicked: the tour clicks none.
   **Only a person reaches**: the screen capture, movies (0x41c), the host-gone message (LAN), the IME composition,
   the market trades, the calamities, the right-click cancels, JIT in a deathmatch, the refusal chat line's interval.
-- **Gates** (rust 57ae2ad1 is already in the branch: no merge needed): per commit the build `--sim` 0/0 (EE-AOC and EE-SIM), the Rust gate PASS, `tools/sim_editor.py` PASS (1820 lines), the oracle identical on seeds 2-3; at the end the oracle identical on seeds 2-7, the test profile 0/0. Tours (`fixture_game.py`, the harness lock held, on 1670add4): `--exercise tour --play-seconds 60` `RESULT PASS tour`; `--exercise random-game --play-seconds 60 --orders --box-select` `RESULT PASS random-game` (box selections match; orders gather, repair, repair-queued, move passed; patrol skipped, no button). The fixture's orders are right-clicks in the view: no command button is pressed, so `status_button.rs` runs only for a person.
+- **Gates** (on the merge with rust 9f289129, which needed only PORT_LEARNINGS' end resolved and `rust_includes.py`'s two editor includes reverted): per commit the build `--sim` 0/0 (EE-AOC and EE-SIM), the Rust gate PASS, `tools/sim_editor.py` PASS (1820 lines), the oracle identical on seeds 2-3; at the end the oracle identical on seeds 2-7, the test profile 0/0. Tours (`fixture_game.py`, the harness lock held, on 1670add4): `--exercise tour --play-seconds 60` `RESULT PASS tour`; `--exercise random-game --play-seconds 60 --orders --box-select` `RESULT PASS random-game` (box selections match; orders gather, repair, repair-queued, move passed; patrol skipped, no button). The fixture's orders are right-clicks in the view: no command button is pressed, so `status_button.rs` runs only for a person.
