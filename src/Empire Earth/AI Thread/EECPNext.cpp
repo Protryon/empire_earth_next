@@ -83,7 +83,7 @@ const char* EECPNextReasonName(long inReason)
 }
 
 EECPNextState::EECPNextState()
-    : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mExact(0), mEpoch(-1), mEpochStart(0),
+    : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mExact(0), mGranaryFarms(-1), mEpoch(-1), mEpochStart(0),
       mNextRepairTime(0), mIncomeSteps(0), mNextGroup(1), mThreatsTime(-1), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0),
       mShadow(NULL)
 {

@@ -443,7 +443,7 @@ name or verb is refused `bad_argument` with a `next.order verb=... (why) result=
 
 | Order | Verb |
 |---|---|
-| `{verb="gather", resource="food", n=12, prefer="patch"}` (prefer `patch` or `hunt`) | `EECPNextGather` (§8.36: the finders send gatherers only to a patch, mine or tree with a finished drop site at hand; `queued`/`no_dropoff` when the ready places are fewer than n; the rest help build the settlements and granaries going up, then go where there is room) |
+| `{verb="gather", resource="food", n=12, prefer="patch"}` (prefer `patch` or `hunt`) | `EECPNextGather` (§8.36: the finders send gatherers only to a patch, mine or tree with a finished drop site at hand; `queued`/`no_dropoff` when the ready places are fewer than n; the rest help build the settlements and granaries going up, then go where there is room; `exact = 1` and, on food, `granary_farms = n`: docs/AI_LUA_UNITS.md) |
 | `{verb="claim", site=3}`, `{verb="release", site=3}` (a `sites[].index`) | `EECPNextClaim` / `Release` |
 | `{verb="claim_range", range=30}` | `EECPNextClaimRange` |
 | `{verb="build", type="b_barracks", near="town"}`; `near="site", site=3`; `near="tile", x=, y=` | `EECPNextBuild` |

@@ -94,6 +94,7 @@ struct EECPRMUnitDistanceLess {
 static bool EECPRMFishes(EECPResourceManager* inManager);        // economy.coast_fishing (below GetGatherCapacity)
 static void EECPRMRequestBoats(EECPResourceManager* inManager);
 static unsigned long EECPRMHunters(EECPResourceManager* inManager);
+static bool EECPRMBuildsFields(EECPResourceManager* inManager);
 static EEUnit* EECPRMNextWoodTarget(EECPResourceManager* inManager, long inCount, EEComplexUnit* inUnit);
 static const unsigned long kHuntFirst = 6;   // the experiment "hunt6": hunters before the patches
 
@@ -646,7 +647,8 @@ void EECPResourceManager::AssignGatherers()
                                             }
                                         }
                                         if (theWanted > 0) {
-                                            if (!thePlayer->mUsesFishing && thePlayer->CanProduceUnitType(kUnitTypeFarm, 0x20, NULL)) {
+                                            if (!thePlayer->mUsesFishing && thePlayer->CanProduceUnitType(kUnitTypeFarm, 0x20, NULL)
+                                                && EECPRMBuildsFields(this)) {
                                                 this->GetUnfinishedFarms(theWanted < theIdle.size() ? theWanted : theIdle.size(), theFound);
                                                 for (k = 0; k < theFound.size(); k++) {
                                                     theUnit = theIdle.front();
@@ -1988,6 +1990,35 @@ static const unsigned long kPatchesWanted = 3;   // the forage patches kept in t
 static const unsigned long kPatchesWantedLater = 5;   // ... and from the Stone Age (more gatherers later)
 
 // the food gatherers whose goal is an animal
+// whether the idle food gatherers go on to build the granaries' unfinished fields (the free foundations a granary
+// lays when it stands; building one pays its cost): always, unless a next-engine script asked otherwise with
+// gather(granary_farms = n): 0 none (the script orders its farms), n at most n built farms a standing granary (§8.51)
+static bool EECPRMBuildsFields(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    if (!EECPNextEngine(thePlayer))
+        return true;
+    long thePer = EECPNextGetState(thePlayer)->mGranaryFarms;
+    if (thePer < 0)
+        return true;
+    if (thePer == 0)
+        return false;
+    EECPUnitManager* theUnits = inManager->mManager->mUnitManager;
+    long theGranaries = 0, theFarms = 0;
+    const long theTypes[2] = {kUnitTypeGranary, kUnitTypeGranaryImproved};
+    for (long t = 0; t < 2; t++) {
+        std::deque<EEComplexUnit*>* theList = theUnits->GetUnits(theTypes[t]);
+        if (theList != NULL)
+            for (unsigned long k = 0; k < theList->size(); k++)
+                theGranaries += (*theList)[k]->mComplexUnit->mIsBuilt ? 1 : 0;
+    }
+    std::deque<EEComplexUnit*>* theList = theUnits->GetUnits(EEGetFarmType(thePlayer));
+    if (theList != NULL)
+        for (unsigned long k = 0; k < theList->size(); k++)
+            theFarms += (*theList)[k]->mComplexUnit->mIsBuilt ? 1 : 0;
+    return theFarms < thePer * theGranaries;
+}
+
 static unsigned long EECPRMHunters(EECPResourceManager* inManager)
 {
     unsigned long theCount = 0;
