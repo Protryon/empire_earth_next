@@ -4765,6 +4765,32 @@ The port's way is ai.route's: straight lines between 8-tile cells, through towns
 path manager's tile path, refined with the wall pather, which keeps clear of buildings, so its lines across the way
 are seldom blocked. Next in 2b: a generic helper for that tile path (the path manager's FindPath with the wall
 pather, between two tiles), so that the port's planner looks across the same way as the C++'s.
+### 8.70 Porting everything, 2b: the wall planner's path (2026-11-13, EE-SIM)
+
+**`ai.wall_path(unit, x1, y1, x2, y2)`**, a new generic helper (AI_LUA_UNITS §11), returns the tile path an own unit
+would take between two tiles inside their box. It is the path manager's FindPath with the wall pather, the C++
+wall planner's own refinement of each step of its way. walls.lua now refines each step between ai.route's waypoints
+with it, as the C++ does. The enemy's centre is the known town, else a building of that player the seat
+remembers (its capitol, then a town centre, then any). A unit seen on the way no longer counts: a scout by the own
+town had given a way of 37 tiles.
+
+**The result:** no better. Over 4 balanced games the planner still finds about 9 in 10 of its lines across the way
+blocked (a land building within 2 tiles of the line), and seldom an open, level stretch clear of the resource
+centres.
+
+| | the port | the C++ (§8.69's temporary trace) |
+|---|---|---|
+| land, 8 games, 90 min: wall orders (games) | 3 (2) | 62 (5) |
+| Copper start, 8 games, 45 min: wall orders (games) | 9 (4) | 21 in 4 games |
+
+**Open.** The port plans far fewer walls than the C++. Two differences are left between their lines across the way.
+- **The coarse way.** The C++'s comes from the path manager's own request with the wall planner modifier, which
+  favours open ground; the port's from ai.route.
+- **What blocks a line.** Not traced yet: which building blocks it.
+
+The next step is a trace of the blocker in a debug build, then the request path itself as a helper if it is the way.
+Results stay within noise (8 balanced seeds: 2-5, 1 close). Determinism (seeds 3 and 12, 90 minutes, --repeat 2,
+4 walls in seed 12) identical. 0 script errors. Both builds 0/0, eedata check PASS.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
