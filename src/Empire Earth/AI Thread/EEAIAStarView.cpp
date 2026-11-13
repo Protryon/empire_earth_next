@@ -50,6 +50,7 @@
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarView.h"
 #include "ee/EEAIAStarCapture.h"
+#include "rust/ee_combat.h"
 
 // EEAIContinentManager.cpp's (out of line at 0x29ced): non-zero when a resource unit stands on inTile
 long EEAIHasResourceUnit(EETile* inTile);
@@ -427,11 +428,9 @@ bool EEAIAStarView::HasStepBlocker(EEComplexUnit* inWalker, bool inSea, long inX
 
 long EEAIAStarView::GetUnitRegionState(long inX, long inY)
 {
-    std::vector<EEComplexUnit*>* theRegion = this->mMap->mUnitRegions->GetRegion(
-        U2DPoint<long>(inX / this->mMap->mUnitRegions->mRegionSize, inY / this->mMap->mUnitRegions->mRegionSize));
-    if (theRegion == NULL)
-        return -1;
-    return theRegion->size() == 0 ? 0 : 1;
+    long theSize = ee_combat_regions_size(this->mMap->mUnitRegions);
+    int32_t theCount = ee_combat_regions_len(this->mMap->mUnitRegions, (uint32_t)(inX / theSize), (uint32_t)(inY / theSize));
+    return theCount < 0 ? -1 : theCount == 0 ? 0 : 1;
 }
 
 long EEAIAStarView::GetEpoch(EEComplexUnit* inWalker)

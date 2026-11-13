@@ -58,7 +58,6 @@
 // Genuine cdecl factory also declared in EECPAttackSubGroup.cpp.
 EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit*, EECPAttackSubGroup*, bool);
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 
 #include "ee/EECPAAirTargetFilters.h"
 #include "ee/EECPAreaTargetCollector.h"
@@ -160,7 +159,7 @@ void EECPASGAir::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTar
         if (theKind == kAIKindFighter || theKind == 23) {
             thePoint.SetX(theTarget->mTileX);
             thePoint.SetY(theTarget->mTileY);
-            theGoal = new EEUGLocation(thePoint, true, false, false, 0.0f, false, false);
+            theGoal = EEUGRust::NewLocation(thePoint, true, false, false, 0.0f, false, false);
         } else
             theGoal = EEUGRust::NewAttackUnit(inUnit->GetUnit(), theTarget, true, false);
         theAction = theAircraft && theCanAct ? 1000 : 8000;
@@ -546,7 +545,7 @@ void EECPASGAir::SetDestination(const EECPILocation& inLocation)
         if (theAircraft && !theOnMap) {
             // (started twice in a row before; the second start changed nothing)
             theUnit->GetUnit()->StartAction(kActionPrepareToMove);
-            theGoal = new EEUGLocation(thePoint, true, theForced, false, 0.0f, false, false);
+            theGoal = EEUGRust::NewLocation(thePoint, true, theForced, false, 0.0f, false, false);
             theAction = theUnit->GetUnit()->GetCommandType();
             if (!this->GiveGoal(theUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
                 delete theGoal;
@@ -556,7 +555,7 @@ void EECPASGAir::SetDestination(const EECPILocation& inLocation)
                 theUnit->GetUnit()->GetCommandType() == kActionContinueToDescend || theUnit->GetUnit()->GetCommandType() == kActionBrake ||
                 theUnit->GetUnit()->GetCommandType() == kActionContinueToBrake)
                 continue;
-            theGoal = new EEUGLocation(thePoint, true, theForced, false, 0.0f, false, false);
+            theGoal = EEUGRust::NewLocation(thePoint, true, theForced, false, 0.0f, false, false);
             theAction = theAircraft && theCanAct ? 1000 : 8000;
             if (!this->GiveGoal(theUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
                 delete theGoal;
@@ -585,7 +584,7 @@ void EECPASGAir::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation&
     if (theAircraft && !theOnMap) {
         // (started twice in a row before; the second start changed nothing)
         inUnit->GetUnit()->StartAction(kActionPrepareToMove);
-        theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+        theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
         theAction = inUnit->GetUnit()->GetCommandType();
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;
@@ -595,7 +594,7 @@ void EECPASGAir::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation&
             inUnit->GetUnit()->GetCommandType() == kActionContinueToDescend || inUnit->GetUnit()->GetCommandType() == kActionBrake ||
             inUnit->GetUnit()->GetCommandType() == kActionContinueToBrake)
             return;
-        theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+        theGoal = EEUGRust::NewLocation(thePoint, true, inFlag, false, 0.0f, false, false);
         theAction = theAircraft && theCanAct ? 1000 : 8000;
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;

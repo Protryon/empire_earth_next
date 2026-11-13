@@ -15,6 +15,7 @@ use crate::calamity::CalamityHost;
 use crate::explore::ExploreHost;
 use crate::gather::{GatherHost, GOAL_GATHER};
 use crate::load::{LoadClass, LoadHost, LoadUnit, GOAL_LOAD_GARRISON, GOAL_LOAD_TRANSPORT};
+use crate::location::GOAL_LOCATION;
 use crate::patrol::PatrolHost;
 use crate::unload::UnloadHost;
 
@@ -337,6 +338,17 @@ pub const EE_UNITS_GOAL_HOST_PATH_LENGTH: i32 = 476;
 pub const EE_UNITS_GOAL_HOST_GATHER_WORK: i32 = 477;
 pub const EE_UNITS_GOAL_HOST_NAVAL_SEARCH: i32 = 478;
 pub const EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH: i32 = 479;
+// the location goal's (from 490)
+/// `a`: the unit; its class's `mCategory`
+pub const EE_UNITS_GOAL_HOST_UNIT_CATEGORY: i32 = 490;
+/// `a`: the unit, `sink`: a `GETransformation` it fills (`mPhysicalModel.GetLocation()`)
+pub const EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION: i32 = 491;
+/// `a`: the unit, `sink`: the `GETransformation` it is given (`SetTransformation(t, true)`)
+pub const EE_UNITS_GOAL_HOST_SET_TRANSFORMATION: i32 = 492;
+/// `a`: the unit, `i[0]`: `SetTargetSearchTimer`'s value
+pub const EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER: i32 = 493;
+/// `a`: the unit; `mGoalQueues[0].mGoals.size()`
+pub const EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN: i32 = 494;
 
 /// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
 /// a complex unit).
@@ -1082,6 +1094,39 @@ impl BuildHost for OpHost<'_> {
     }
 }
 
+impl crate::location::LocationHost for OpHost<'_> {
+    fn unit_category(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_UNIT_CATEGORY, unit, 0)
+    }
+    fn unit_transformation(&mut self, unit: u64) -> ee_ge::types::GeTransformation {
+        let mut t = ee_ge::types::GeTransformation::default();
+        let mut io =
+            EeUnitsGoalIo { sink: (&mut t as *mut ee_ge::types::GeTransformation).cast(), ..Default::default() };
+        self.call(EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION, unit, 0, &mut io);
+        t
+    }
+    fn set_transformation(&mut self, unit: u64, t: &ee_ge::types::GeTransformation) {
+        let mut copy = *t;
+        let mut io =
+            EeUnitsGoalIo { sink: (&mut copy as *mut ee_ge::types::GeTransformation).cast(), ..Default::default() };
+        self.call(EE_UNITS_GOAL_HOST_SET_TRANSFORMATION, unit, 0, &mut io);
+    }
+    fn set_target_search_timer(&mut self, unit: u64, value: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER, unit, 0, &[value]);
+    }
+    fn goal_queue_len(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN, unit, 0)
+    }
+    fn write_f32(&mut self, value: f32) -> i32 {
+        self.write(3, i64::from(value.to_bits()))
+    }
+    fn read_f32(&mut self, value: &mut f32) -> i32 {
+        let (result, v) = self.read(3, i64::from(value.to_bits()));
+        *value = f32::from_bits(v as u32);
+        result
+    }
+}
+
 impl OpHost<'_> {
     fn op_point_io(&mut self, op: i32, a: u64, b: u64, out: &mut [f32; 3]) -> bool {
         let mut io = EeUnitsGoalIo::default();
@@ -1295,6 +1340,12 @@ pub const EE_UNITS_GOAL_GATHER_SET_RESOURCE: i32 = 323;
 pub const EE_UNITS_GOAL_GATHER_SET_STORAGE: i32 = 324;
 /// `a`: the unit; `FindGatherSpot`
 pub const EE_UNITS_GOAL_GATHER_FIND_SPOT: i32 = 325;
+// the round-21 operations (from 480)
+/// a location goal: `io.f` the location and yaw, `io.i` the forced-move, facing, auto-waypoint flags and the group
+/// path state (no group movement)
+pub const EE_UNITS_GOAL_NEW_LOCATION: i32 = 480;
+/// `a`: the unit; `FaceYaw` (0 or 1)
+pub const EE_UNITS_GOAL_FACE_YAW: i32 = 481;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 pub const GOAL_UNLOAD_TRANSPORT: u8 = 8;
@@ -1319,7 +1370,8 @@ pub unsafe extern "C" fn ee_units_rust_goal(
 ) -> i64 {
     if !matches!(
         kind,
-        GOAL_PATROL
+        GOAL_LOCATION
+            | GOAL_PATROL
             | GOAL_CAST_CALAMITY
             | GOAL_EXPLORE
             | GOAL_UNLOAD_TRANSPORT
@@ -1350,6 +1402,7 @@ pub unsafe extern "C" fn ee_units_rust_goal(
         }
     }
     match kind {
+        GOAL_LOCATION => crate::location::body(op, goal, a, b, io, &mut h),
         GOAL_PATROL => crate::patrol::body(op, goal, a, b, io, &mut h),
         GOAL_CAST_CALAMITY => crate::calamity::body(op, goal, a, b, io, &mut h),
         GOAL_EXPLORE => crate::explore::body(op, goal, a, b, io, &mut h),

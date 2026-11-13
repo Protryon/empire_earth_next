@@ -53,7 +53,6 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEGraphicObject.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUCFortress.h"
 
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
@@ -525,13 +524,13 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                     theCopy = theAttack->Clone();
                 else {
                     GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
-                    theCopy = new EEUGLocation(theTarget, false, true, false, 0.0f, false, false);
+                    theCopy = EEUGRust::NewLocation(theTarget, false, true, false, 0.0f, false, false);
                 }
             } else if ((*theIterator)->Suits(theCargo))
                 theCopy = (*theIterator)->Clone();
             else {
                 (*theIterator)->GetGoalLocation(thePosition);
-                theCopy = new EEUGLocation(&thePosition, false, true, false, 0.0f, false, false);
+                theCopy = EEUGRust::NewLocation(&thePosition, false, true, false, 0.0f, false, false);
             }
             theCargo->QueueGoal(theCopy, 0);
         }
@@ -577,7 +576,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                                                   UMFloorUnsigned(theTarget.GetY())))
                             theGoal = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
                         else
-                            theGoal = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
+                            theGoal = EEUGRust::NewLocation(&theTarget, false, true, false, 0.0f, false, false);
                     }
                 } else {
                     EEUGRust* theAttack = EEAttackUnitCast(*theIterator);
@@ -586,13 +585,13 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                             theGoal = theAttack->Clone();
                         else {
                             GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
-                            theGoal = new EEUGLocation(theTarget, false, true, false, 0.0f, false, false);
+                            theGoal = EEUGRust::NewLocation(theTarget, false, true, false, 0.0f, false, false);
                         }
                     } else if ((*theIterator)->Suits(theCargo))
                         theGoal = (*theIterator)->Clone();
                     else {
                         (*theIterator)->GetGoalLocation(thePosition);
-                        theGoal = new EEUGLocation(&thePosition, false, true, false, 0.0f, false, false);
+                        theGoal = EEUGRust::NewLocation(&thePosition, false, true, false, 0.0f, false, false);
                     }
                 }
                 theCargo->QueueGoal(theGoal, 0);
@@ -607,7 +606,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
             if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY())))
                 theCopy = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
             else
-                theCopy = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
+                theCopy = EEUGRust::NewLocation(&theTarget, false, true, false, 0.0f, false, false);
             theCargo->QueueGoal(theCopy, 0);
         }
     }

@@ -13,16 +13,10 @@
 namespace WONAPI {
 // FUNCTION: WON 0x006f61d0
 // Adds a child layout instruction to a group; group 0 is enabled and applied at once, other groups start disabled
+// (the statements are the Rust layout manager's, R6 WON round 31)
 void Container::AddChildLayout(ChildLayoutInstructionBase* theInstr, int theId)
 {
-    theInstr->mGroupId = theId;
-    if(theId == 0) {
-        theInstr->mEnabled = true;
-        theInstr->Execute(this);
-    }
-    else
-        theInstr->mEnabled = false;
-    this->mChildLayout->AddInstruction(theInstr);
+    this->mChildLayout->AddChildLayout(theInstr, theId, this);
 }
 }
 
@@ -35,14 +29,6 @@ namespace WONAPI {
 void Container::Fn2F6140(Component* child,int flags,Component* reference,
     int x,int y,int width,int height,int groupId)
 {
-    ChildLayoutInstruction* instruction=new ChildLayoutInstruction;
-    instruction->mFlags=flags;
-    instruction->mChild=child;
-    instruction->mReference=reference;
-    instruction->mX=x;
-    instruction->mY=y;
-    instruction->mWidth=width;
-    instruction->mHeight=height;
-    this->AddChildLayout(instruction,groupId);
+    this->AddChildLayout(new ChildLayoutInstruction(flags,child,reference,x,y,width,height),groupId);
 }
 }
