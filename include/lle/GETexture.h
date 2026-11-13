@@ -89,6 +89,21 @@ private:
     long Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
               bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat);
     void SetIsPromoted(bool inIsPromoted) { this->mIsPromoted = inIsPromoted; }
+    // port: the members the friends read and write (the manager's host, the store gate's digest), this texture's own
+    // (GetData, GetIsCompressed and GetIsPromoted read the current frame's)
+    bool GetIsManaged() const { return this->mIsManaged; }
+    void SetIsManaged(bool inIsManaged) { this->mIsManaged = inIsManaged; }
+    GETexture* GetCurrentFrameTexture() const { return this->mFrameTexture; }
+    GETexture* const* GetFrames() const { return this->mFrames; }
+    unsigned long GetFramesPerRow() const { return this->mFramesPerRow; }
+    void* GetOwnData() const { return this->mData; }
+    bool GetOwnIsCompressed() const { return this->mIsCompressed; }
+    bool GetOwnIsPromoted() const { return this->mIsPromoted; }
+    void SetNumMipLevelsToDrop(unsigned long inCount) { this->mNumMipLevelsToDrop = inCount; }
+    bool GetIsFromTexturePack() const { return this->mIsFromTexturePack; }
+    void SetIsFromTexturePack(bool inIsFromTexturePack) { this->mIsFromTexturePack = inIsFromTexturePack; }
+    long GetTexturePackMipLevels() const { return this->mTexturePackMipLevels; }
+    void SetTexturePackMipLevels(long inLevels) { this->mTexturePackMipLevels = inLevels; }
     // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
     void SetLogicalShift(unsigned long inShift);
 
