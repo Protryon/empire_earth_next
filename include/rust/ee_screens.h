@@ -3302,6 +3302,222 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// The button's `mIsCommand`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_IS_COMMAND = 1;
+
+/// The button's `mButton` (its `EEButtonObject` index).
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUTTON = 2;
+
+/// The main game form's entity group a enabled (c != 0) or disabled, then its background b made visible or hidden.
+constexpr static const uint32_t EE_SCREENS_SB_OP_PANEL = 3;
+
+/// `gUIManager->Fn26FA6A()` (a = 0) or `Fn26FA55()` (a = 1).
+constexpr static const uint32_t EE_SCREENS_SB_OP_MAIN_GROUP = 4;
+
+/// The local player's selected group's unit count; -1 without a group.
+constexpr static const uint32_t EE_SCREENS_SB_OP_GROUP_COUNT = 5;
+
+/// Whether the selected group's unit a is set.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT = 6;
+
+/// The selected unit a's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_TYPE = 7;
+
+/// The selected unit a's `mPower` (b = 0) or `GetPower()` (b = 1).
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNIT_POWER = 8;
+
+/// `gFortressUnloadCost`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UNLOAD_COST = 9;
+
+/// `EEGetFirstSelectedUnit`: 1 when it found one (the host keeps it as the transport).
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_SELECTED = 10;
+
+/// The transport's class's `mCategory`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_CATEGORY = 11;
+
+/// The transport's class's `mUnitType`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_FIRST_TYPE = 12;
+
+/// A message sent (`gCommunications->ProcessLocalUserInput`): a = `EE_SCREENS_SB_SEND_*`, b and c its arguments.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SEND = 13;
+
+/// The form's `mIsCursorLocked = true`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_LOCK_CURSOR = 14;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_POINTER = 15;
+
+/// The form's `SetUIState(a)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_UI_STATE = 16;
+
+/// The form's cancel button shown (`kMainGameCancelUIMode`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_SHOW_CANCEL = 17;
+
+/// The main game form's `mRefreshGroup = true` when there is one.
+constexpr static const uint32_t EE_SCREENS_SB_OP_REFRESH_GROUP = 18;
+
+/// The form's `StartPatrol()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_PATROL = 19;
+
+/// The form's `StartFlare()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_FLARE = 20;
+
+/// `gGameResources`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_GAME_RESOURCES = 21;
+
+/// `gPhysics->GetGameClock()` (f32 bits).
+constexpr static const uint32_t EE_SCREENS_SB_OP_GAME_CLOCK = 22;
+
+/// A world table long value (a: the key).
+constexpr static const uint32_t EE_SCREENS_SB_OP_WORLD_LONG = 23;
+
+/// The string a into the chat log (`gResource->GetString`, `gUserInterface->AddChatLogEntry(..., 0)`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_STRING = 24;
+
+/// `EECanAffordTrade(a)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_AFFORD_TRADE = 25;
+
+/// `EEDecodeTradeButton(a, ...)`: -1 when it fails, else the resource * 2 + the sell flag.
+constexpr static const uint32_t EE_SCREENS_SB_OP_DECODE_TRADE = 26;
+
+/// `UIControl::ShiftKeyPressed()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SHIFT = 27;
+
+/// `EESoundObject::Get(a)`'s sample played (`gSoundManager->Play`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_SOUND = 28;
+
+/// The button's technology's node's data `mKind`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_KIND = 29;
+
+/// The node's data `mUnitClass`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CLASS = 30;
+
+/// Whether `gUnitClassTable[a]` is set.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_PRESENT = 31;
+
+/// The class a is a land building (`IsLandBuilding()` and not a naval building).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_LAND_BUILDING = 32;
+
+/// The class a's `mCategory` is the gate's.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CLASS_GATE = 33;
+
+/// The node's data `mMakesUnit`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_MAKES_UNIT = 34;
+
+/// The form's `BuildUnit(mUnitID, mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUILD_UNIT = 35;
+
+/// The form's `StartWall(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_WALL = 36;
+
+/// The form's `StartGate(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_GATE = 37;
+
+/// The current player's `CanProduce(mTechnology, mUnitType, a, true, 3, &reason)` (the host keeps the reason).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CAN_PRODUCE = 38;
+
+/// `TMGetTime()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_TIME = 39;
+
+/// The button's `mLastErrorTime`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_LAST_ERROR = 40;
+
+/// The button's `mLastErrorTime = a`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_SET_LAST_ERROR = 41;
+
+/// The kept reason into the chat log (`gUserInterface->AddChatLogEntry(reason, 0)`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_CHAT_REASON = 42;
+
+/// The string a as the kept reason (`gResource->GetString`).
+constexpr static const uint32_t EE_SCREENS_SB_OP_REASON_STRING = 43;
+
+/// The node's calamity's class's `GetCost()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_CALAMITY_COST = 44;
+
+/// The node's `Contains(a)` (a unit type).
+constexpr static const uint32_t EE_SCREENS_SB_OP_NODE_CONTAINS = 45;
+
+/// The form's `StartCalamity(mTechnology)`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_START_CALAMITY = 46;
+
+/// `UIButton::ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BASE_BUTTON_UP = 47;
+
+/// `ReleaseCapturedMouse()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_RELEASE_MOUSE = 48;
+
+/// The button's (virtual) `ButtonUp()`.
+constexpr static const uint32_t EE_SCREENS_SB_OP_BUTTON_UP = 49;
+
+/// The mouse is in the button's rectangle.
+constexpr static const uint32_t EE_SCREENS_SB_OP_MOUSE_INSIDE = 50;
+
+/// `EEMUnloadTransport(the transport's id, tile x, tile y)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_UNLOAD = 1;
+
+/// `EEMStopActiveGroup`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_STOP = 2;
+
+/// `EEMDisband`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_DISBAND = 3;
+
+/// `EEMSelfDestruct`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_SELF_DESTRUCT = 4;
+
+/// `EEMPatrol(-1)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_PATROL = 5;
+
+/// `EEMReplantFarms(-1)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_REPLANT = 6;
+
+/// `EEMClearAirportCommands`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_CLEAR_AIRPORT = 7;
+
+/// `EEMExplore`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_EXPLORE = 8;
+
+/// `EEMLockUnlock(b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_LOCK = 9;
+
+/// `EEMPackUnpack(b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_PACK = 10;
+
+/// `EEMGoFanatic`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_FANATIC = 11;
+
+/// `EEMJITManufacturing`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_JIT = 12;
+
+/// `EEMExchangeResources(sell, resource, shift)`: b = resource * 2 + sell, c = shift.
+constexpr static const int64_t EE_SCREENS_SB_SEND_EXCHANGE = 13;
+
+/// `EEMResearchTechnology(mUnitID, mTechnology, b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_RESEARCH = 14;
+
+/// `EEMRemoveTechnology(mUnitID, mTechnology, false, b != 0)`.
+constexpr static const int64_t EE_SCREENS_SB_SEND_REMOVE = 15;
+
+/// `kUnitTypeTeleporter`.
+constexpr static const int64_t EE_SCREENS_SB_TYPE_TELEPORTER = 787;
+
+/// `kUnitCategoryFortress`.
+constexpr static const int64_t EE_SCREENS_SB_CATEGORY_FORTRESS = 29;
+
+/// `kSoundButton1`, `kSoundButton2`.
+constexpr static const int64_t EE_SCREENS_SB_SOUND_BUTTON1 = 519;
+
+constexpr static const int64_t EE_SCREENS_SB_SOUND_BUTTON2 = 520;
+
+/// `kWorldDeathmatchJitManufacturingDelay`, `kWorldRefusalMessageInterval`.
+constexpr static const int64_t EE_SCREENS_SB_WORLD_JIT_DELAY = 94;
+
+constexpr static const int64_t EE_SCREENS_SB_WORLD_REFUSAL_INTERVAL = 75;
+
+/// `IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT`, `IDS_INSUFFICIENT_POWER`.
+constexpr static const int64_t EE_SCREENS_SB_IDS_JIT_NOT_YET = 31892;
+
+constexpr static const int64_t EE_SCREENS_SB_IDS_INSUFFICIENT_POWER = 10062;
+
 /// `this->PauseGraphics()`.
 constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
 
@@ -4627,6 +4843,12 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// `EEUIFMGStatusButton::ButtonUp` over the host's press record.
+void ee_screens_status_button_up(void *press);
+
+/// `EEUIFMGStatusButton::MouseRButtonUp` over the host's press record.
+void ee_screens_status_button_right_up(void *press);
 
 /// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
 void ee_screens_ui_message(void *ui,
