@@ -4693,6 +4693,42 @@ The close-out bench was Small Islands, balanced, 90 minutes, 32 seeds:
 The port plays islands better than the C++. That is accepted, and recorded in ORIGIN as a known deviation: the aim
 is to replace the C++, not to copy its weaknesses. 2a is done: the ferries, the attack crossings, the queues, the
 island garrisons. The coast towers move to 2b with the walls and the other tower sites.
+### 8.68 Porting everything, 2b: the tower sites and the walls (2026-11-13, EE-SIM)
+
+**The tower sites** (EECPBuildManager::FindTowerSite). Before, the port placed its towers only at the resource
+centres. It now follows the C++'s order:
+1. an island map's coasts: the largest water's shore by each town (ai.water_sites), a site in the rings 1-2 round a
+   shore tile with no tower within 1.5 x the tower's range;
+2. the worked resource centres, as before;
+3. the gates: within 5 tiles of a gate, off the gate and the wall;
+4. the choke points within 7 tiles of a town, none of the class within twice its range.
+
+DEVIATION: the gate's and the choke point's site is the first placeable tile (ai.find_site), not a random one.
+Towers built: on Small Islands (16 seeds, 90 minutes) 168 for the port against the C++'s 158. On land the port
+builds more of them, as before this change (364 against 193 in 32 games). Balanced 32 seeds: 12-15, 5 close.
+
+**The walls** (EECPWallManager): `ai/classic_lua/walls.lua`, on two new generic helpers:
+- `ai.wall_line`: a wall line's tiles;
+- `ai.wall_stretches`: the planner's look at one line, whether a building blocks it and its open stretches between
+  forests, cliffs and water, with their levelness. Both are in AI_LUA_UNITS §11.
+
+How the port plans a wall:
+- **When.** From the Copper Age, a wall across the way from each enemy's known town to each own town centre and
+  capitol, the nearest enemy first. One wall every 30 s, once the last one's gate stands.
+- **The way.** It is cut at the size table's fraction of its length. Each step is looked at across, and the
+  shortest open level stretch clear of the resource centres and the gates is taken. With none, the next size is
+  tried; the 9th size takes the stretch nearest a gate.
+- **Building.** A builder for every 10 tiles; ai.wall lays the wall, and ai.gate puts the gate at its middle.
+- **DEVIATIONS** (ORIGIN): the way is ai.route's, straight between its 8-tile cells; the enemy's centre is its known
+  town; IsPathUsable is not tested; a lost wall piece is not queued again.
+
+In 40 bench games (32 Small Islands, 8 land) the C++ built no wall; why is not traced yet. The port builds about
+one a game on land: 30 walls and 15 gates in 31 balanced games. Balanced 32 seeds (1 lobby fault): 12-14, 5 close
+(12-15 before), within noise.
+
+Determinism: seeds 2 and 5, and seed 12 (4 walls), 90 minutes, --repeat 2: identical. 0 script errors.
+Both builds 0/0, eedata check PASS. Next: the late-epoch start benches (sim_bench `--start-epoch`), where walls and
+towers come up sooner and can be compared with the C++'s.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
