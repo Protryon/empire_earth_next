@@ -30,9 +30,7 @@ void ScrollAreaViewport::InvalidateIfRectVisible(WONRectangle& rect)
 // Drops every child, timer child and mouse/focus child and ends any popup it owns
 void ScrollAreaViewport::Reset()
 {
-    this->mMouseChild=this->mFocusChild=NULL;
-    this->mChildTimerSet.clear();
-    this->mChildList.clear();
+    this->ResetChildren();
     WindowManager* manager=WONAPI::WindowManager::GetDefaultWindowManager();
     if(manager!=NULL) manager->CheckEndPopup(this);
 }

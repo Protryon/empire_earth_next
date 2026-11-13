@@ -60,7 +60,7 @@ void Dialog::MouseDown(int x,int y,int button)
     Container::MouseDown(x,y,button);
     if(button!=0) return;
     this->RequestFocus();
-    if(!this->mAllowDrag || this->mMouseChild==NULL || !this->mMouseChild->ComponentFlagSet(ComponentFlag_ParentDrag))
+    if(!this->mAllowDrag || this->GetMouseChild()==NULL || !this->GetMouseChild()->ComponentFlagSet(ComponentFlag_ParentDrag))
         return;
     if(this->GetNextSibling(true,false)!=NULL) this->mParent->BringToTop(this);
     this->mDragging=true;

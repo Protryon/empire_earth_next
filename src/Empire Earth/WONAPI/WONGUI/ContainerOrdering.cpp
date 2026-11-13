@@ -47,6 +47,32 @@ void Container::EnsureOnTopOf(Component* bottom,Component* top)
     this->mChildList.erase(bottom->mChildListItr);
     bottom->mChildListItr=this->mChildList.insert(top->mChildListItr,bottom);
 }
+// The sibling walk of Component::GetNextSibling (0x006f5230): the child after or before inChild, wrapping when asked
+Component* Container::NextChild(Component* inChild,bool forward,bool wrap)
+{
+    std::list<SmartPtr<Component> >::iterator i=inChild->mChildListItr;
+    if(forward) {
+        ++i;
+        if(i==this->mChildList.end()) {
+            if(!wrap) return NULL;
+            return this->mChildList.front().get();
+        }
+    } else {
+        if(i==this->mChildList.begin()) {
+            if(!wrap) return NULL;
+            return this->mChildList.back().get();
+        }
+        --i;
+    }
+    return i->get();
+}
+// ScrollAreaViewport::Reset's statements (0x00705c70): the children are not told
+void Container::ResetChildren()
+{
+    this->mMouseChild=this->mFocusChild=NULL;
+    this->mChildTimerSet.clear();
+    this->mChildList.clear();
+}
 // FUNCTION: WON 0x006f6010
 // Returns the next focus id for a child, skipping 0 when the byte wraps
 unsigned char Container::GetNextFocusId()

@@ -420,6 +420,16 @@ public:
     void AddChildEx(Component*,int); // 0x2f6b50
     void BringToTop(Component*); // 0x2f6dd0
     void SetHasUsedDialogKeys(bool v) { this->mHasUsedDialogKeys=v; } // inline, at +0x7b
+    // the readers outside the container's units (R6 WON round 26, before the Rust container)
+    bool HasUsedDialogKeys() { return this->mHasUsedDialogKeys; }
+    Component* GetFocusChild() { return this->mFocusChild; }
+    Cursor* GetCurrentCursor() { return this->mCurrentCursor.get(); }
+    bool IsModal() { return this->mModalCount>0; }
+    Component* GetFrontChild() { return this->mChildList.empty() ? NULL : this->mChildList.front().get(); }
+    Component* GetBackChild() { return this->mChildList.empty() ? NULL : this->mChildList.back().get(); }
+    Component* NextChild(Component* inChild,bool inForward,bool inWrap); // Component::GetNextSibling's walk
+    void DropFocusChild() { if(this->mFocusChild!=NULL) { this->mFocusChild->LostFocus(); this->mFocusChild=NULL; } }
+    void ResetChildren(); // ScrollAreaViewport::Reset's clear: no mouse or focus child, no timer child, no child
     unsigned char GetNextFocusId(); // 0x2f6010
     void SetFocusToLastFocusChild(); // 0x2f6030
     void EnsureOnTopOf(Component*,Component*); // 0x2f6f60

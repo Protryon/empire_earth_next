@@ -390,7 +390,7 @@ static intptr_t ContainerOp(Container* t, Op op, intptr_t a, intptr_t b, intptr_
     case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
     case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
     case Op::AddChild: t->AddChild(Comp(a)); return 0;
-    case Op::MouseChild: return (intptr_t)t->mMouseChild;
+    case Op::MouseChild: return (intptr_t)t->GetMouseChild();
     case Op::IsDisabled: return t->IsDisabled() ? 1 : 0;
     case Op::EventType: return ((ComponentEvent*)a)->mType;
     case Op::EventComponent: return (intptr_t)((ComponentEvent*)a)->mComponent;
@@ -504,7 +504,7 @@ extern "C" intptr_t ee_won_guicpp_scroller_call(void* inComp, EeWonGuiOp op, int
     case Op::ComponentHandleEvent: t->Component::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::VirtSizeChanged: t->Virtual08(); return 0;
     case Op::VirtNotifyScrollChange: t->NotifyScrollChange(a != 0); return 0;
-    case Op::HasFocusChild: return t->mFocusChild != NULL ? 1 : 0;
+    case Op::HasFocusChild: return t->GetFocusChild() != NULL ? 1 : 0;
     case Op::BarOf: return (intptr_t)static_cast<Scrollbar*>(Comp(a))->mRust;
     case Op::ListenTo: Comp(a)->AddListener(new ComponentListenerComp(t)); return 0;
     case Op::AreaGet: return area->GetField((Fd)b);
@@ -608,9 +608,7 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::VirtListSelChangedHook: t->ListSelChangedHook(); return 0;
     case Op::SetVertOffset: t->SetVertOffset((int)a); return 0;
     case Op::OnBottom: return t->OnBottom() ? 1 : 0;
-    case Op::FocusChildLost:
-        if (t->mFocusChild != NULL) { t->mFocusChild->LostFocus(); t->mFocusChild = NULL; }
-        return 0;
+    case Op::FocusChildLost: t->DropFocusChild(); return 0;
     case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
     case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
     case Op::GetViewport: return (intptr_t)t->GetViewport();
@@ -855,7 +853,7 @@ extern "C" intptr_t ee_won_guicpp_mhead_call(void* inComp, EeWonGuiOp op, intptr
         return parent == NULL ? 0 : (intptr_t)child;
     }
     case Op::SetCursor: t->SetCursor(CursorOf(a)); return 0;
-    case Op::CursorIs: return t->mCurrentCursor.get() == CursorOf(a) ? 1 : 0;
+    case Op::CursorIs: return t->GetCurrentCursor() == CursorOf(a) ? 1 : 0;
     default: return ComponentOp(t, op, a, b);
     }
 }
