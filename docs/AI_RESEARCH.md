@@ -4807,6 +4807,33 @@ the time box allowed.
 
 The gap is recorded as open in ORIGIN: the port orders 3-9 walls where the C++ orders 21-62. The walls come back in
 stage 3. 2b is closed (the tower sites, the walls, the late-start benches), and 2c (air, space, submarines) is next.
+### 8.72 Porting everything, 2c: the air share (2026-11-13, EE-SIM)
+
+The benches start in the Atomic Age - WW2 (`--start-epoch`; 8 seeds, 45 minutes). Before this change the C++ asked
+for aircraft and the port never did:
+- the C++: 70 requests (37 carrier fighters, 33 Typhoon fighter-bombers), 8 airports and 13-22 anti-air guns;
+- the port: none, and so no airport, since CheckBuildingCounts counts an airport for the air units asked for.
+
+The port now has ComputeDomainShares' air share from WW1:
+- **The weight.** 0.1-0.3 when the target's known town lies across water; 0.05-0.2 more when the target has more
+  anti-air units than the player; 0.2-0.35 when neither holds (planets 0-0.1).
+- **The share.** A random 0.9-1.35 of the weight, pulled toward the target's air share of its strength by the
+  naval unit weight, as the original does.
+- **The count.** The air count is filled by the counters (3-5 classes), then by a favourite air type; with no air
+  class it goes to land.
+- **DEVIATIONS** (ORIGIN): the town values' rule (a target town worth 1.5 x the player's) is not ported; the
+  favourite air type is a random trainable air class (the original's screen is not readable).
+
+The attack line now prints `air=` (the share) and `airslots=`.
+
+At the WW2 start: 27 air slots in 128 groups (a mean air share of 0.18) against the C++'s 33 fighter-bomber
+requests; airports 7 against 8; anti-air guns 8 against 22. Results 1-2, 5 close (2-1 before), within noise.
+Determinism at the WW2 start (seeds 2 and 5, --repeat 2, air slots in both) is identical. 0 script errors. No C++
+changed.
+
+Next in 2c: the carriers and their fighters (CheckNaval's carrier, the 37 Corsairs), the anti-air count (the C++ asks
+for nearly three times as many guns), the air and space explorers, the favourite space type and CheckSpace, then the
+air sub-groups' own behaviour (bombers, fighters, helicopters) beyond lib.groups.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
