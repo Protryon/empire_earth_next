@@ -12433,3 +12433,66 @@ Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `includ
     root 0 (env 0) as a harmless op. A method moved behind a forwarder that reads `this->mX` first is no longer
     safe on a NULL `this` that the original's early return tolerated: before moving a class, grep its callers for
     calls through a pointer that may be NULL (`GetRootContainer()->`, `GetRoot()->`).
+
+## R5b.2, fourteenth round: the heal goal whole in Rust on EEUGRust, no longer an EEUGLocation (ee_combat goal_heal.rs; branch rust-combat14, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 52de27f9 | the heal goal on EEUGRust; `EEUGHealUnit`'s class and files deleted; the location casts a heal goal reached on four helpers | +227 -463, net -236 |
+| 4761be64 | merge of rust (screens round 16, WON round 27) | |
+| 46a1fa2f | `rust_includes.py` narrowed two ee_screens umbrella includes after the merge | |
+
+- **Why now: core's EEUGLocation move was blocked by the inheritance.** `EEUGHealUnit` derived from `EEUGLocation`
+  and the kind table made kind 15 a location goal for `EEGoalCast<EEUGLocation>`. The heal goal is now an `EEUGRust`
+  (`EEUGRust::NewHealUnit`, `EEHealGoalCast`, `GetHealTarget`, `GetHealLocation`/`SetHealLocation`) and kind 15 is
+  `EE_GOAL_KIND_HEAL_UNIT` only (ee_units kinds.rs: the "twelve classes" test now counts the location bit once).
+  `EEUGLocation` itself is unchanged.
+- **What the heal goal took from the location goal, restated bit for bit.** Its state: `mLocation` (the healee's
+  position when made; 0, 0, 0 for the load's empty goal: its `Load` reads no location) is the record's `location`.
+  Constants: the yaw 0 and the forced-move, facing and auto-waypoint flags false (no constructor or caller sets them
+  on a heal goal). Its group path state and group movement flag were written by callers but read only for
+  `kGoalLocation` and never saved or summed for a heal goal (its dump and checksum are `EEUnitGoal`'s plus its own):
+  dropped. Inherited bodies: the debug line (`EEUGLocation::GetDebugLine`: `loc x,y,z: auto(0)`), the destination
+  (`EEUnitGoal::GetDestination`: the goal location told to the group), and the trigger test's fallback
+  (`EEUGLocation::EvaluateCondition`, the C++ host's base read: facing done is `FaceYaw` at yaw 0, copied into
+  EECombatGoals.cpp's `EEHealLocationCondition`; facing not required true; the rest false).
+- **Save and Load write no base goal data** for this kind (EEUGHealUnit's did not call `EEUnitGoal::Save/Load`):
+  `EEUGRust::Save/Load` skip the base goal's for `kGoalHealUnit`. A generic class whose base part every kind shares
+  needs a per-kind exception when one original class skipped it; check each moved class's `Save` for its base call.
+- **The location casts a heal goal reached** (26 sites read before the move): those that only tested the class use
+  `EEGoalHasLocation` (location or heal: the client's two commands, the carrier landing's trigger, the naval and space
+  buildings' ready test); those that read members use `EELocationGoalPoint`, `EESetLocationGoalPoint`,
+  `EELocationGoalYaw` (EEUGRustCombat.cpp: the location goal's member or the heal record's; the five physics models'
+  `Step5`, the path replacement's two reads, `FlyToGoal`, the deck landing, `IsAwayFromGoal`); the path replacement
+  sets the group path state only on a real location goal. Sites that tested `kGoalLocation` or the auto-waypoint flag
+  (false for a heal goal, the same answer as no location goal) are unchanged. ee_units' `FACE_YAW` is issued only for
+  `kGoalLocation`, so `EEUnitUpdate`'s cast is unchanged. Core's EEUGLocation round can replace the four helpers'
+  location branches by its accessors.
+- **Operations.** Body 205 (`EE_COMBAT_GOAL_NEW_HEAL`), host operations 1060-1064 (the cinematic flag and tick,
+  `SetHitPoints`, `ReleaseHealEffect`, `EECanHeal`, the CBSO record); goal_heal.rs joins ee_rust's `goal_op_tables`
+  test; `Work` mirrors ee_units' 300 (`OP_WORK`). Kind 15 was already outside ee_units' own list, so it reached
+  ee_combat's dispatch, which had sent every non-ground kind to the attack bodies: the heal branch is first.
+- **Work** reads the store directly in Rust (`store::fill_heal_work`, as the C++ did through its FFI) and the world's
+  cinematic flag and tick through one host operation; the C++ `EECombatHostReadScope(3)` around it (nothing nested in
+  slot 3) is gone.
+- **Coverage (temporary prints, removed).** The oracle seeds 2-7 and saveload's late, space, calamity, next and
+  medium-difficulty games at 1000 s never make a heal goal (the AI does not heal; EE-SIM's sweep calls only
+  `EECanHeal`). The **scenario profile** does (seeds 3-7): creation (`NewHealUnit` from the unit update's heal search),
+  `Step`, `EvaluateCondition` (with the location fallback for events 2022 and 2052, both false), `Work` healing,
+  `SetOwner`, `Abandon`, the destructor. Its 483 capture digests (CBSO heal work, CBTC, CBGS, the unit store's
+  states) equal the parent build's (9c40257f) run, all six seeds; its golden lists only SM** and CBGO, so this run
+  against the parent exe is the heal goal's golden. Only unit tests reach: `Clone`, the texts and dump, the checksum,
+  `GetGoalLocation`/`GetDestination`, `Suits`, `ReplaceUnit`, `Save`/`Load`/`RepairPointers`, the facing fallback
+  (9015), and the location helpers' heal branches (no heal goal on a unit in `Step5`, the carrier or the path
+  replacement). ee_combat tests: 7 new (goal_heal_tests.rs).
+- **Behaviour.** None on the games' paths. `EEUnitClass::Heal` casts by kind (the original cast any goal); a heal goal
+  without a healee answers its goal location as given (the original faulted); `EELocationGoalPoint` of another kind is
+  0, 0, 0 (its one caller is guarded).
+- **Only a tour shows:** the debug panels' heal texts; the client's location commands with a heal goal selected (the
+  LAN game sends none of them).
+- **Gates.** Before the merge: build `--sim` 0/0; oracle seeds 2-3 identical to ref; Rust gate PASS;
+  `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS; scenario capture seeds 2-7 PASS and equal to
+  the parent build. After the merge of rust (eb2f738e): build `--sim` and the test profile 0/0; oracle seeds 2-7
+  identical to ref; Rust gate PASS; captures at seeds 2-3 of oracle, late, space and calamity: every seed 2-3 digest
+  equal to its golden (the `check` was run without `--seeds 2-3` and failed only on the seed 4-7 digests the run did
+  not make: pass `--seeds` to `check` too); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS.

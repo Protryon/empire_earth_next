@@ -21,6 +21,7 @@ pub mod flight;
 pub mod geometry;
 pub mod goal_attack;
 pub mod goal_dispatch;
+pub mod goal_heal;
 pub mod goal_objects;
 pub mod goals;
 pub mod impact;

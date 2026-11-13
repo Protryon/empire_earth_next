@@ -58,7 +58,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "lle/U2DSparseArray.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitVectorItem.h"
 #include "lle/U2DRectangle.h"
@@ -1068,8 +1067,8 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionHealUnit: {
-        EEUGHealUnit* theGoal = EEGoalCast<EEUGHealUnit>(this->mGoal);
-        theGoal->GetTarget()->mPhysicalModel.GetLocation().GetPosition(theLocation);
+        EEUGRust* theGoal = EEHealGoalCast(this->mGoal);
+        theGoal->GetHealTarget()->mPhysicalModel.GetLocation().GetPosition(theLocation);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if ((theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)
@@ -1093,9 +1092,9 @@ void EEActiveGroup::Plan()
 //
         }
         if (theFlag)
-            EESendGroupCommand(this, theGoal->GetTarget(), this->mPlayer->mPlayerID, 0xba, 0);
+            EESendGroupCommand(this, theGoal->GetHealTarget(), this->mPlayer->mPlayerID, 0xba, 0);
         else
-            EESendGroupCommand(this, theGoal->GetTarget(), this->mPlayer->GetPlayerID(), 0xb8, 0);
+            EESendGroupCommand(this, theGoal->GetHealTarget(), this->mPlayer->GetPlayerID(), 0xb8, 0);
         break;
     }
     case kActionUnloadTransport:

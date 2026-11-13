@@ -2,11 +2,14 @@
 // whole into Rust. The object is the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields,
 // its vtable); its own state and bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind:
 // patrol.rs, calamity.rs, explore.rs, unload.rs, load.rs for both load kinds, build.rs for kGoalBuildRepair, gather.rs
-// for kGoalGather; the other kinds go to ee_combat's goal dispatch), every virtual one call. Replaces EEUGPatrol
+// for kGoalGather; the other kinds go to ee_combat's goal dispatch: goal_objects.rs, goal_attack.rs, goal_heal.rs),
+// every virtual one call. Replaces EEUGPatrol
 // (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd),
 // EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals EEUGLoadContainer
 // (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport (0x2271c7..0x227621),
-// EEUGBuildRepair (0x21e0c1..0x220986) and EEUGGather (0x221d98..0x22528d): their classes and files are deleted.
+// EEUGBuildRepair (0x21e0c1..0x220986), EEUGGather (0x221d98..0x22528d) and the combat lane's EEUGAttackGround
+// (0x21ce6c..0x21d2f4), EEUGAttackUnit (0x21d2f4..0x21e0c1) and EEUGHealUnit (0x22528d..0x22585a): their classes and
+// files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -92,6 +95,14 @@ public:
     void SetAttackLocation(const GE3DPoint& inLocation);
     unsigned long GetSidestepCount() const;
     void SetSidestepCount(unsigned long inCount);
+    // a heal (kGoalHealUnit; EEUGHealUnit(inTarget, inArg): the location goal at the healee's position, the healee
+    // referenced; the load's EEUGHealUnit(inArg): no healee, at 0, 0, 0), its healee, and the location it was made at
+    // (the heal goal derived from EEUGLocation until it moved: EELocationGoalPoint below reads it)
+    static EEUGRust* NewHealUnit(EEComplexUnit* inTarget, bool inArg);
+    static EEUGRust* NewHealUnit(bool inArg);
+    EEComplexUnit* GetHealTarget() const;
+    GE3DPoint GetHealLocation() const;
+    void SetHealLocation(const GE3DPoint& inLocation);
     // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
     // sorted by id and loses its duplicates, as the original constructors did to the caller's list
     // (EEUGLoadTransport/EEUGLoadGarrison(inContainer, inUnits, inArg)); or the load's empty goal
@@ -219,6 +230,22 @@ inline EEUGRust* EEAttackUnitCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalAttackUnit);
 }
+// the heal goal (the old EEGoalCast<EEUGHealUnit>)
+inline EEUGRust* EEHealGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalHealUnit);
+}
+// the location goal's class as its callers saw it (the old EEGoalCast<EEUGLocation> != NULL): a location goal or a
+// heal goal, which derived from it until it moved to Rust (R5b.2, the fourteenth round)
+inline bool EEGoalHasLocation(const EEUnitGoal* inGoal)
+{
+    return inGoal != NULL && (inGoal->mKind == kGoalLocation || inGoal->mKind == kGoalHealUnit);
+}
+// such a goal's location goal members (EEUGRustCombat.cpp): its location (GetLocation, SetLocation) and yaw (GetYaw;
+// a heal goal's is 0); 0, 0, 0 and 0 for another goal
+GE3DPoint EELocationGoalPoint(EEUnitGoal* inGoal);
+void EESetLocationGoalPoint(EEUnitGoal* inGoal, const GE3DPoint& inLocation);
+float EELocationGoalYaw(EEUnitGoal* inGoal);
 // the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
 inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)
 {

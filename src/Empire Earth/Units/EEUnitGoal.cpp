@@ -22,7 +22,6 @@
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 
 const UString EEUnitGoal::sData("EEUnitGoal-Data");
@@ -95,7 +94,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = EEUGRust::NewUnloadTransport(false);
         break;
     case kGoalHealUnit:
-        theGoal = new EEUGHealUnit(false);
+        theGoal = EEUGRust::NewHealUnit(false);
         break;
     }
     if (theGoal != NULL)
