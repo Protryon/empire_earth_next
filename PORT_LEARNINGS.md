@@ -12664,3 +12664,77 @@ members class by class, so the readers moved with them.
 - **Not moved, and why.** RoutingGetUserStatusOp (UDPManagerSendRecvOp's subclass: the lobby lane's object). The
   RustServerOp host (ServerOp.cpp's HostCall): still answers on C++ objects. ServerConnectionConnectOp (four short
   members over the connection).
+
+## R5b.5, second round: the scenario elements' numbers as Rust records, their saves, and Set AI Variable as data (ee_scenario fields.rs, stream.rs, save.rs, aivar.rs; branch rust-triggers2, 2026-11-13)
+
+| Function | Was (C++) | Now (Rust) |
+|---|---|---|
+| `EESMEffect`, `EESMCondition`, `EESMObject`, `EESMTrigger`'s numbers | members of each class | `EeScenario{Effect,Condition,Object,Trigger}Fields` (fields.rs), the classes' base: same names, same C++ types |
+| `EESMEffect::Reset`, the condition's and object's constructors' numbers | 60 + 25 + 25 assignments | `effect_defaults`, `condition_defaults`, `object_defaults` |
+| the three classes' `Copy` (numbers) | field by field | one assignment of the base record (strings and lists stay C++) |
+| `Load` / `Save` of the effect, condition, object, trigger, area, media strings | 6 x 2 bodies, ~760 lines | save.rs over one I/O callback (`EeScenarioStream`, stream.rs) |
+| the effect's, condition's, object's `Renumber*`, the entries' `Virtual4` | 13 bodies | `renumber` and the per-class lists (fields.rs) |
+| `EESMEffect::SetAIVariable` and the 34 inline setters | a 480-line switch, 240 lines of setters | aivar.rs: the behaviours' stores as a table; the C++ applies them by field number (ee/EESMAIFields.h) |
+| `EESMConditionRecord`, `EESMObjectFilter` (host) | C++ copies into Rust records | `From` the base records |
+
+- **Records the C++ derives from.** `class EESMEffect : public EeScenarioEffectFields`: the cbindgen struct carries
+  the members' own names (`mPlayer`, `mB193`, ...) and types (`c_ulong` is `unsigned long`, `c_long` `long`), so no
+  reader changed: the editor screens, the capture, the effects' bodies all compile as before. A member's Rust type
+  must be the C++ one exactly: `u32` would have broken every `unsigned long&` taker (`GetCurrentSelection(&...)`) and
+  the LP64 width. Rust names in `mCamelCase` need `#![allow(non_snake_case)]` (fields.rs). The area keeps its
+  members (a `U2DPoint`, a `GERectangle`); its save goes through a copy (`EeScenarioAreaSave`) filled and stored
+  back by `EESMArea::SaveIO`.
+- **The saves through one callback.** `EeScenarioStream::io(ctx, op, slot, index, value)`: each value is read or
+  written by the C++ with the `FSFile` overload the original called (the 4-byte `long` adapters with their
+  read-into-the-old-value semantics, `float`, `bool`), the strings by slot (`UWideString::Load/Save`), the id lists
+  (`mObjects`, `mUnits`) and the trigger's entries (`SetCondition` + `SetConditionOperator`, which append an entry
+  after a non-end operator on the last one) by operation. The Rust copies the record in, works on the copy, and
+  stores it back after the last callback: no Rust reference lives across a call into C++. The `Seq` helper is the
+  originals' `if (theResult == kErrorOK)` chains; the quirks are kept: a player action past the table moves down 2
+  then to Victory whatever the read gave, the condition's chat text result is ignored, the diplomacy clamp runs even
+  after a failed read, the object appends its units (no clear), the effect replaces its list, the trigger's entry
+  locals carry from one entry to the next and an id of -1 becomes 0, the effects' count is written only after no
+  error, the area's anchor is stored (cut toward zero) only when both floats read and its rectangle only when all four.
+- **SMSV, the golden for the saves** (ee/EEScenarioCapture.h, recorded from the unmodified C++ first): after
+  `EEScenarioManager::Load` and every 120th trigger round, each list's count, first error and FNV of its elements'
+  `Save` into an `FSMemoryFile` (the built-ins included, which the manager's own Save skips), then the whole
+  manager's `Save`. Six scenarios, 25-29 records each. A load and a save both wrong in a matching way would still
+  differ from the C++'s bytes.
+- **Set AI Variable's golden driver.** `build/trig_draft/gen_aivar_driver.py` (TEST ONLY scratch, not committed)
+  takes the original switch and the 34 setters from git, puts them over a stand-in computer player whose 173 touched
+  fields start at a sentinel, and prints for behaviours 0..129 x 6 integer pairs x 11 floats (NaN, infinities,
+  2^30..2^31, -2.5e9, 1e10 included) the calls, the deferred flag, every stored field and the civilization manager's
+  counts: `golden_aivar.txt` (8,580 lines), replayed by `aivar::tests::golden_matches_the_original_switch`. Relinked
+  over the new path (the Rust plan from `ee_rust.lib` and `EESMEffect.cpp`'s store table text between the
+  `EE_SM_STORE` markers, over the same stand-in) it prints the same file byte for byte.
+- **`UMFloatToLong` beyond 2^30 is the UCRT's `lrintf`, which answers 0** out of the `long` range and for NaN (the
+  golden: `1e10`, `-2.5e9`, NaN, infinity give 0; `1.5e9` gives 1,500,000,000). ee_ge um.rs `lrintf` answers
+  `i32::MIN` there; aivar.rs has its own (0). For the lead: any other Rust user of ee_ge's `lrintf` with values
+  beyond 2^31 differs from the game's `UMRint` (no game value reaches it as far as the goldens show).
+- **The field numbers are positions** in ee/EESMAIFields.h's X-macro lists (the C++ table and the driver's stand-in
+  expand them; the Rust test's name tables follow the same order). The Rust field constants are `pub(crate)`: a
+  hundred bare names would have gone into the shared header; only the kinds and the four calls are exported.
+- **A bool read through a pointer into a Rust record.** A byte other than 0/1 read into a C++ `bool` was kept as it
+  was (and written back as read); a Rust `bool` must be 0 or 1, so the C++ read normalizes it to true. Only a
+  hand-edited file has such a byte.
+- **cbindgen**: a record only the C++ fills or reads through a `void*` (`EeScenarioEntry`) must be listed in
+  cbindgen.toml's `[export] include`, or the header lacks it.
+- **C++ lines** (src and include, the capture unit included): 2,179 deleted, 324 added, plus ee/EESMAIFields.h (82):
+  net -1,773. EESMEffect.cpp 3,875 -> 2,680 lines.
+- **What reaches it.** Every scenario load (the six capture scenarios load triggers, conditions, effects, objects,
+  areas and media strings) and every saved game (the saveload matrix: random maps save and load the built-ins and
+  the pending effects). Set AI Variable: see the coverage line of the final report. The `Renumber*` and `Copy` of the
+  condition, object and trigger are the editor's (and `Copy` of an effect the pending effects'): only the unit tests
+  and the editor reach the renumbers.
+- **Coverage (from the capture's SMEX and SMCE records, no temporary prints needed: every effect run and condition
+  test is one record with its kind).** The six scenarios run object actions 0, 1, 3-10 and 12 (`kSMObjectAction*`),
+  player actions 1-4 and 7-11, the trigger state, media actions 0-3, game actions 0, 1 and 3-6, AI Modify Military
+  Target (seed 6, 462 runs) and Set Favorite Units; conditions Always True, Object, Player Attribute, Player Technology, Trigger Attribute (no Player
+  Diplomacy, Game Attribute or Chat). **No game runs Set AI Variable**: only the golden driver and the unit tests
+  reach aivar.rs and the C++ store table. Every scenario load reaches every element's Load (SMSV kind 0), every
+  120th round every Save (kind 1); the saveload matrix the built-ins' and pending effects' saves.
+- **Not moved, and why.** The effects' object and unit bodies (`CreateUnits`, `TaskUnitsTo*`, `FreezeUnits`, the
+  calamity and graphic effects, `ScriptCamera`): world glue, one host operation per statement. The manager's own
+  `Load`/`Save` (they create the elements; next with the manager's numbers as a record), `Update`'s trigger round
+  and the timed effects' queue (the queue is read by the editor, the capture and `EndCinematic`: move it with the
+  manager), `SetPlayerAttribute` (a plan over player writes, next), `ExpandTokens`.
