@@ -105,6 +105,183 @@ constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 /// `kControlTriggerScrollingFinished`.
 constexpr static const unsigned long TRIGGER_SCROLLING_FINISHED = 1012;
 
+/// The calls out of a whole object (numbered in ranges per class; the numbers appear in the goldens).
+enum class EeUiOp : uint32_t {
+  /// `UIControl::CopyData()` -> its result.
+  BaseCopyData = 1,
+  /// `UIControl::DrawPolygons()` -> its result.
+  BaseDrawPolygons = 2,
+  /// `UIControl::DrawTextA()` -> its result.
+  BaseDrawText = 3,
+  /// `UIControl::SetLocation(f[0], f[1])` (non-virtual).
+  BaseSetLocation = 4,
+  /// The virtual `SetDirty(a != 0)`.
+  SetDirty = 5,
+  /// *Pure*: `mRectangle` -> `f`.
+  Rect = 6,
+  /// *Pure*: `GetMouseLocation()` -> `f[0]`, `f[1]`.
+  MouseLocation = 7,
+  /// `CaptureMouse()`.
+  CaptureMouse = 8,
+  /// The virtual `ReleaseCapturedMouse()`.
+  ReleaseMouse = 9,
+  /// `FireTriggerEvent(a)`.
+  FireTrigger = 10,
+  /// *Pure*: `mBorderThickness`.
+  BorderThickness = 11,
+  /// *Pure*: `GetWidth()`.
+  Width = 12,
+  /// The virtual `ChangeRange(a)` (`EEUIFSEESElevation` overrides it).
+  SliderChangeRange = 20,
+  /// The virtual `ButtonDown()`.
+  SliderButtonDown = 21,
+  /// The virtual `ButtonUp()`.
+  SliderButtonUp = 22,
+  /// The manager's `CreateBitmapForScaledControl(drag bar, f)` -> the thumb bitmap.
+  ThumbCreate = 23,
+  /// The thumb bitmap `a`'s `Dereference()`.
+  ThumbRelease = 24,
+  /// The thumb bitmap `a`'s `SetLocation(f[0], f[1])`.
+  ThumbSetLocation = 25,
+  /// The rasterizer's `Draw(bitmap a, GetScreenIndex())` -> its result.
+  ThumbDraw = 26,
+  /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
+  DragBarScale = 27,
+  /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
+  ThumbSetScale = 28,
+  /// *Pure*: the manager's scroll bar bitmap `a` (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
+  /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed).
+  ManagerBitmap = 40,
+  /// `new UISlider(GetId(), f, style a, form, GetIndex(), border b)` -> the slider.
+  CreateSlider = 41,
+  /// `new UIScrollButton(GetId(), normal a, pressed b, (f[0], f[1]), form, slider c, decrement d, GetIndex())`.
+  CreateButton = 42,
+  /// `delete` part `a`.
+  DeletePart = 43,
+  /// Part `a`'s virtual `CopyData()` -> its result.
+  PartCopyData = 44,
+  /// Part `a`'s virtual `DrawPolygons()` -> its result.
+  PartDrawPolygons = 45,
+  /// Part `a`'s virtual `DrawTextA()` -> its result.
+  PartDrawText = 46,
+  /// *Pure*: part `a`'s `GetRectangle()` -> `f`.
+  PartRect = 47,
+  /// Part `a`'s virtual `MouseLButtonDown()` -> its result.
+  PartMouseDown = 48,
+  /// Part `a`'s virtual `MouseLButtonUp()` -> its result.
+  PartMouseUp = 49,
+  /// The slider `a`'s virtual `MouseMove(f[0], f[1])` -> its result.
+  PartMouseMove = 50,
+  /// The arrow button `a`'s virtual `ButtonDown()`.
+  PartButtonDown = 51,
+  /// Part `a`'s virtual `SetLocation(f[0], f[1])`.
+  PartSetLocation = 52,
+  /// Part `a`'s virtual `SetRectangle(f)`.
+  PartSetRectangle = 53,
+  /// *Pure*: the slider `a`'s `GetSliderStyle()`.
+  SliderStyle = 54,
+  /// *Pure*: the slider `a`'s `GetCurrentRangeValue()`.
+  SliderValue = 55,
+  /// The slider `a`'s `SetCurrentRangeValue(b)`.
+  SliderSetValue = 56,
+  /// The slider `a`'s `DecrementByPageSize()`.
+  SliderDecrementPage = 57,
+  /// The slider `a`'s `IncrementByPageSize()`.
+  SliderIncrementPage = 58,
+  /// The slider `a`'s `SetPageSize(b)`.
+  SliderSetPageSize = 59,
+  /// The slider `a`'s `SetRange(b, c)`.
+  SliderSetRange = 60,
+  /// Part `a`'s virtual `SetBgColor(f[0..3])`.
+  PartSetBgColor = 61,
+  /// Part `a`'s virtual `SetBgOpacity(f[0])`.
+  PartSetBgOpacity = 62,
+  /// *Pure*: rhombus `a`'s `GetRectangle()` -> `f`.
+  RhombusRect = 70,
+  /// Rhombus `a`'s `SetRectangle(f)`.
+  RhombusSetRect = 71,
+  /// The copy rhombus `= ` the bar's.
+  RhombusCopy = 72,
+  /// Rhombus `a`'s `SetOpacity(f[0])`.
+  RhombusSetOpacity = 73,
+  /// Rhombus `a`'s `SetColor(f[0..3])`.
+  RhombusSetColor = 74,
+  /// The rasterizer's `Draw(rhombus a, GetScreenIndex())` -> its result.
+  RhombusDraw = 75,
+  /// `new GEText(font a)` -> the text.
+  TextCreate = 76,
+  /// `delete` text `a`.
+  TextDelete = 77,
+  /// Text `a`'s `SetFont(font b)`.
+  TextSetFont = 78,
+  /// *Pure*: text `a`'s `GetText().GetLength()`.
+  TextLength = 79,
+  /// *Pure*: text `a`'s `GetTextExtent()` width and height -> `f[0]`, `f[1]`.
+  TextExtent = 80,
+  /// `*text a = *text b`.
+  TextCopy = 81,
+  /// Text `a`'s `SetText(*(const UWideString*)b)`.
+  TextSetText = 82,
+  /// Text `a`'s `SetLocation(f[0], f[1])`.
+  TextSetLocation = 83,
+  /// The form's `DrawClippedText(f, text a, this)` -> its result.
+  DrawClippedText = 84,
+};
+
+/// The inward calls (the C++ shim's methods).
+enum class EeUiSliderCall : uint32_t {
+  /// `CopyData()` -> its result.
+  CopyData = 1,
+  /// `DrawPolygons()` -> its result.
+  DrawPolygons = 2,
+  /// `GetLocFromRange(a, f)`: `f[0]`, `f[1]` the location in and out.
+  LocFromRange = 3,
+  /// `GetRangeFromLoc(f[0], f[1])`.
+  RangeFromLoc = 4,
+  /// `GetCurrentRangeValue()`.
+  CurrentRangeValue = 5,
+  /// `GetIsDragging()`.
+  IsDragging = 6,
+  /// `GetMaxRange()`.
+  MaxRange = 7,
+  /// `GetMinRange()`.
+  MinRange = 8,
+  /// `GetPageSize()`.
+  PageSize = 9,
+  /// `GetRange()`.
+  Range = 10,
+  /// `GetSliderStyle()`.
+  Style = 11,
+  /// `GetThumbRectangle()` -> `f`.
+  ThumbRectangle = 12,
+  /// `SetCurrentRangeValue(a)`.
+  SetCurrentRangeValue = 13,
+  /// `SetLocation(f[0], f[1])`.
+  SetLocation = 14,
+  /// `SetPageSize(a)`.
+  SetPageSize = 15,
+  /// `SetRange(a, b)`.
+  SetRange = 16,
+  /// `UISlider::ButtonUp()`.
+  ButtonUp = 17,
+  /// `UISlider::ChangeRange(a)`.
+  ChangeRange = 18,
+  /// `DecrementByPageSize()`.
+  DecrementByPageSize = 19,
+  /// `IncrementByPageSize()`.
+  IncrementByPageSize = 20,
+  /// `MouseLButtonDown()` -> OK.
+  MouseLButtonDown = 21,
+  /// `MouseLButtonUp()` -> OK.
+  MouseLButtonUp = 22,
+  /// `MouseMove(f[0], f[1])` -> OK.
+  MouseMove = 23,
+  /// `SetIsDragging(a != 0)`.
+  SetIsDragging = 24,
+  /// `GetCurrentPoint(f[0], f[1])`.
+  CurrentPoint = 25,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -112,6 +289,18 @@ enum class EeUiEdge {
   Top = 2,
   Bottom = 3,
 };
+
+/// The Rust UISlider.
+struct EeUiSlider;
+
+/// A whole object's host: `(the C++ object, op, a, b, c, d, f)` -> the op's result.
+using EeUiHostFn = ptrdiff_t(*)(void *obj,
+                                EeUiOp op,
+                                ptrdiff_t a,
+                                ptrdiff_t b,
+                                ptrdiff_t c,
+                                ptrdiff_t d,
+                                float *f);
 
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
@@ -747,27 +936,6 @@ struct EeUiScrollBarFields {
   bool slider_pressed;
 };
 
-/// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
-struct EeUiSliderFields {
-  EeUiRect thumb;
-  EeUiRect copied_thumb;
-  /// `GEBitmap*`, C++'s (never touched here).
-  void *thumb_bitmap;
-  unsigned long style;
-  float pixels_per_unit;
-  float units_per_pixel;
-  long current;
-  unsigned long page_size;
-  long range;
-  long min_range;
-  long max_range;
-  long min_pixel;
-  long max_pixel;
-  long max_thumb_pixel;
-  long drag_offset;
-  bool is_dragging;
-};
-
 /// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
 struct EeUiCheckFields {
   /// `UITextLabel*`, C++'s.
@@ -811,6 +979,27 @@ struct EeUiDirtyRect {
 };
 
 extern "C" {
+
+/// A new Rust slider for the C++ `slider` (its `UIControl` part constructed), its calls out through `host`.
+EeUiSlider *ee_ui_slider_new(void *slider,
+                             EeUiHostFn host,
+                             unsigned long style);
+
+/// The destructor: releases the thumb bitmap and frees the object.
+///
+/// # Safety
+/// `slider` came from `ee_ui_slider_new` (or is NULL) and is not used again.
+void ee_ui_slider_free(EeUiSlider *slider);
+
+/// One of UISlider's methods ([`EeUiSliderCall`]).
+///
+/// # Safety
+/// `slider` is live; `f` is NULL or four live floats.
+ptrdiff_t ee_ui_slider_call(const EeUiSlider *slider,
+                            EeUiSliderCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            float *f);
 
 /// `UIBitmapBackground::DrawBackground(redraw)` (`rect`: the background's) -> the draw's result.
 long ee_ui_background_bitmap_draw(void *background, EeUiRect rect, EeUiRect redraw);
@@ -1855,62 +2044,6 @@ void ee_ui_scroll_bar_increment_by(void *bar,
                                    EeUiScrollBarFields *fields,
                                    const EeUiRect *rect,
                                    long amount);
-
-/// The constructor's track and thumb ([`slider::init`]).
-void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);
-
-/// `UISlider::ButtonUp`.
-void ee_ui_slider_button_up(void *slider,
-                            EeUiSliderFields *fields,
-                            const EeUiRect *rectangle,
-                            EeUiPoint mouse);
-
-/// `UISlider::DecrementByPageSize`.
-void ee_ui_slider_decrement_by_page_size(void *slider,
-                                         EeUiSliderFields *fields,
-                                         const EeUiRect *rectangle);
-
-/// `UISlider::IncrementByPageSize`.
-void ee_ui_slider_increment_by_page_size(void *slider,
-                                         EeUiSliderFields *fields,
-                                         const EeUiRect *rectangle);
-
-/// `UISlider::GetLocFromRange` (`out` keeps nothing: both coordinates are written).
-void ee_ui_slider_loc_from_range(const EeUiSliderFields *fields,
-                                 const EeUiRect *rectangle,
-                                 long value,
-                                 EeUiPoint *out);
-
-/// `UISlider::GetRangeFromLoc`.
-unsigned long ee_ui_slider_range_from_loc(const EeUiSliderFields *fields, EeUiPoint at);
-
-/// The middle of `UISlider::MouseLButtonDown`: a drag starts on the thumb.
-void ee_ui_slider_press(EeUiSliderFields *fields, EeUiPoint mouse);
-
-/// `UISlider::MouseMove`.
-void ee_ui_slider_mouse_move(void *slider,
-                             EeUiSliderFields *fields,
-                             const EeUiRect *rectangle,
-                             EeUiPoint at);
-
-/// `UISlider::SetCurrentRangeValue`.
-void ee_ui_slider_set_current_range_value(void *slider,
-                                          EeUiSliderFields *fields,
-                                          const EeUiRect *rectangle,
-                                          long value);
-
-/// `UISlider::SetLocation` -> the thumb's thickness (the C++ rescales the thumb bitmap with it).
-float ee_ui_slider_set_location(void *slider,
-                                EeUiSliderFields *fields,
-                                const EeUiRect *rectangle,
-                                EeUiPoint at);
-
-/// `UISlider::SetRange`.
-void ee_ui_slider_set_range(void *slider,
-                            EeUiSliderFields *fields,
-                            const EeUiRect *rectangle,
-                            unsigned long min,
-                            unsigned long max);
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);

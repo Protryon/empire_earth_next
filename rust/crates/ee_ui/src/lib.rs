@@ -30,10 +30,12 @@ pub mod list;
 pub mod manager;
 pub mod manager_media;
 pub mod mouse;
+pub mod obj;
 pub mod rect;
 pub mod scrollbar;
 pub mod scrolling;
 pub mod slider;
+pub mod sliderobj;
 pub mod status;
 pub mod text;
 pub mod wrap;
@@ -110,9 +112,6 @@ mod manager_media_ffi;
 // imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrollbar_ffi;
-// imports the C++ host functions (UISlider.cpp), absent from a test binary
-#[cfg(not(test))]
-mod slider_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
 #[cfg(not(test))]
 mod wrap_ffi;

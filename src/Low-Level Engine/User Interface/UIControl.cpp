@@ -31,6 +31,7 @@
 #include "lle/UIEntityGroup.h"
 #include "lle/UIForm.h"
 #include "lle/UIManager.h"
+#include "UIObjHost.h"
 
 GEColor UIControl::sDarkBorder(0.0f, 0.0f, 0.0f);
 GEColor UIControl::sLightBorder;
@@ -451,6 +452,52 @@ bool UIControl::ShiftKeyPressed()
     if (UIForm::sShiftKey->JustPressed() || UIForm::sShiftKey->GetValue())
         return true;
     return false;
+}
+
+// The ops every whole object's host shares (ee_ui obj.rs): UIControl's members on the object
+bool UIObjHost::Base(UIControl* c, EeUiOp inOp, intptr_t a, float* f, intptr_t* outResult)
+{
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeUiOp::BaseCopyData: r = c->UIControl::CopyData(); break;
+    case EeUiOp::BaseDrawPolygons: r = c->UIControl::DrawPolygons(); break;
+    case EeUiOp::BaseDrawText: r = c->UIControl::DrawTextA(); break;
+    case EeUiOp::BaseSetLocation: c->UIControl::SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::SetDirty: c->SetDirty(a != 0); break;
+    case EeUiOp::Rect: UIObjHost::PutRect(f, c->mRectangle); break;
+    case EeUiOp::MouseLocation: f[0] = c->GetMouseLocation().GetX(); f[1] = c->GetMouseLocation().GetY(); break;
+    case EeUiOp::CaptureMouse: c->CaptureMouse(); break;
+    case EeUiOp::ReleaseMouse: c->ReleaseCapturedMouse(); break;
+    case EeUiOp::FireTrigger: c->FireTriggerEvent((unsigned long)a); break;
+    case EeUiOp::BorderThickness: r = c->mBorderThickness; break;
+    case EeUiOp::Width: r = c->GetWidth(); break;
+    default: return false;
+    }
+    *outResult = r;
+    return true;
+}
+
+// The ops on a part a whole object owns (ee_ui obj.rs): another control's virtuals, by address
+bool UIObjHost::Part(UIControl* p, EeUiOp inOp, float* f, intptr_t* outResult)
+{
+    intptr_t r = 0;
+    switch (inOp) {
+    case EeUiOp::DeletePart: delete p; break;
+    case EeUiOp::PartCopyData: r = p->CopyData(); break;
+    case EeUiOp::PartDrawPolygons: r = p->DrawPolygons(); break;
+    case EeUiOp::PartDrawText: r = p->DrawTextA(); break;
+    case EeUiOp::PartRect: UIObjHost::PutRect(f, p->mRectangle); break;
+    case EeUiOp::PartMouseDown: r = p->MouseLButtonDown(); break;
+    case EeUiOp::PartMouseUp: r = p->MouseLButtonUp(); break;
+    case EeUiOp::PartMouseMove: r = p->MouseMove(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::PartSetLocation: p->SetLocation(GE2DPoint(f[0], f[1])); break;
+    case EeUiOp::PartSetRectangle: p->SetRectangle(UIObjHost::Rect(f)); break;
+    case EeUiOp::PartSetBgColor: p->SetBgColor(GEColor(f[0], f[1], f[2])); break;
+    case EeUiOp::PartSetBgOpacity: p->SetBgOpacity(f[0]); break;
+    default: return false;
+    }
+    *outResult = r;
+    return true;
 }
 
 // The Rust mouse dispatch's view of a control (ee_ui mouse.rs): the buttons' entities, the button-down members and
