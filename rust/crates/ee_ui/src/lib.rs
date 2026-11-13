@@ -10,6 +10,7 @@ pub mod background_table;
 pub mod button;
 pub mod button_variants;
 pub mod buttonobj;
+pub mod checkobj;
 pub mod combo;
 pub mod controls_table;
 pub mod draw;

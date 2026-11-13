@@ -79,12 +79,13 @@ pub enum EeUiOp {
     BitmapDraw = 26,
     /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
     DragBarScale = 27,
-    /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
-    ThumbSetScale = 28,
+    /// Bitmap `a`'s `SetXYScale(f[0], f[1])` (the slider's thumb, the check box's and radio button's box).
+    BitmapSetScale = 28,
 
     // ---- UIScrollBar (its parts: the slider and the two arrow buttons, by address)
-    /// *Pure*: the manager's scroll bar bitmap `a` (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
-    /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed).
+    /// *Pure*: the manager's bitmap `a`: the scroll bar's (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
+    /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed), the check box's (8 off, 9 on, 10 down off,
+    /// 11 down on, 12 not, 13 down not) and the radio button's (14 off, 15 on, 16 down off, 17 down on).
     ManagerBitmap = 40,
     /// `new UISlider(GetId(), f, style a, form, GetIndex(), border b)` -> the slider.
     CreateSlider = 41,
@@ -188,6 +189,28 @@ pub enum EeUiOp {
     SoundPlay = 100,
     /// Text `a`'s `SetFgColor(f[0..3])`.
     TextSetFgColor = 101,
+
+    // ---- the button subclasses (R6 ui round 12): the check box's, radio button's and tri-state box's label (a part)
+    /// `new UITextLabel(*(const UWideString*)a, font b, GetId(), f, GetForm(), 0, GetIndex(), 0)` -> the label.
+    LabelCreate = 110,
+    /// The label `a`'s `SetText(*(const UWideString*)b)` (the public one: it dirties the label).
+    LabelSetText = 111,
+    /// *Pure*: `((const UWideString*)a)->GetLength()`.
+    StringLength = 112,
+    /// *Pure*: bitmap `a`'s `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
+    BitmapScale = 113,
+    /// *Pure*: `GetCopiedDrawRectangle()` -> `f`.
+    CopiedDrawRect = 114,
+    /// `UIControl::SetRectangle(f)` (non-virtual).
+    BaseSetRectangle = 115,
+    /// The virtual `Check()` (the radio button's; the editor's tabs and tool buttons override it).
+    RadioCheck = 116,
+    /// The form's control `a`'s virtual `UnCheck()` (a radio button: `RadioOf(a)` answered it).
+    RadioUnCheckAt = 117,
+    /// *Pure*: the Rust button of the form's control `a`, if it exists and is a radio button (`GetType()`), else 0.
+    RadioOf = 118,
+    /// *Pure*: the form's `GetControlCount()`.
+    ControlCount = 119,
 }
 
 impl EeUiOp {
@@ -209,6 +232,11 @@ impl EeUiOp {
                 | Key
                 | DragBarScale
                 | ManagerBitmap
+                | StringLength
+                | BitmapScale
+                | CopiedDrawRect
+                | RadioOf
+                | ControlCount
                 | PartRect
                 | SliderStyle
                 | SliderValue

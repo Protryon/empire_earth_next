@@ -7,7 +7,7 @@
 
 use core::ffi::{c_char, c_long, c_ulong, c_void, CStr};
 
-use crate::button::{self, CheckFields, CheckHost, LabelHost, RadioFields, RadioHost, ScrollButtonHost};
+use crate::button::{self, RadioFields, RadioHost, ScrollButtonHost};
 use crate::buttonobj::{Btn, EeUiButton};
 use crate::rect::{UiPoint, UiRect};
 
@@ -42,8 +42,6 @@ mod sys {
         pub fn ee_uicpp_label_set_text(b: *mut c_void, ctx: *mut c_void);
         pub fn ee_uicpp_label_create(b: *mut c_void, ctx: *mut c_void, rect: *const UiRect);
         pub fn ee_uicpp_label_set_location(b: *mut c_void, ctx: *mut c_void, x: f32, y: f32);
-
-        pub fn ee_uicpp_check_set_bitmaps(b: *mut c_void, on: bool);
 
         pub fn ee_uicpp_radio_swap_bitmaps(b: *mut c_void);
         pub fn ee_uicpp_radio_control_count(b: *mut c_void) -> c_long;
@@ -91,28 +89,15 @@ impl ScrollButtonHost for Btn<'_> {
     }
 }
 
-impl LabelHost for Btn<'_> {
-    fn label_set_text(&mut self) {
-        unsafe { sys::ee_uicpp_label_set_text(cpp(self), self.ctx) }
-    }
-    fn label_create(&mut self, rect: UiRect) {
-        unsafe { sys::ee_uicpp_label_create(cpp(self), self.ctx, &rect) }
-    }
-    fn label_set_location(&mut self, at: UiPoint) {
-        unsafe { sys::ee_uicpp_label_set_location(cpp(self), self.ctx, at.x, at.y) }
-    }
+/// The radio button's label (its C++ record's, `ctx` naming it): `checkobj.rs`'s `LabelHost` for a C++ record.
+pub(crate) fn cpp_label_set_text(b: &mut Btn) {
+    unsafe { sys::ee_uicpp_label_set_text(cpp(b), b.ctx) }
 }
-
-impl CheckHost for Btn<'_> {
-    fn load_check(&self) -> CheckFields {
-        unsafe { (self.sub as *const CheckFields).read() }
-    }
-    fn store_check(&mut self, c: &CheckFields) {
-        unsafe { (self.sub as *mut CheckFields).write(*c) }
-    }
-    fn set_check_bitmaps(&mut self, on: bool) {
-        unsafe { sys::ee_uicpp_check_set_bitmaps(cpp(self), on) }
-    }
+pub(crate) fn cpp_label_create(b: &mut Btn, rect: UiRect) {
+    unsafe { sys::ee_uicpp_label_create(cpp(b), b.ctx, &rect) }
+}
+pub(crate) fn cpp_label_set_location(b: &mut Btn, at: UiPoint) {
+    unsafe { sys::ee_uicpp_label_set_location(cpp(b), b.ctx, at.x, at.y) }
 }
 
 impl RadioHost for Btn<'_> {
@@ -141,7 +126,7 @@ impl RadioHost for Btn<'_> {
 
 unsafe fn raw<'a>(refs: *const ButtonRefs) -> Btn<'a> {
     let r = &*refs;
-    Btn { o: &*r.obj, sub: r.sub, ctx: r.ctx }
+    Btn { o: &*r.obj, sub: r.sub, ctx: r.ctx, text: 0, font: 0 }
 }
 
 unsafe fn text<'a>(s: *const c_char) -> &'a [u8] {
@@ -177,42 +162,6 @@ pub unsafe extern "C" fn ee_ui_button_label_bitmap_offset(
         }
         None => false,
     }
-}
-
-/// `UICheckBox::SetChecked` (`sub`: the check box's record).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_set_checked(refs: *const ButtonRefs, checked: bool) {
-    button::check_set_checked(&mut raw(refs), checked);
-}
-
-/// `UICheckBox::ToggleCheck`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_toggle(refs: *const ButtonRefs) {
-    button::check_toggle(&mut raw(refs));
-}
-
-/// `UICheckBox::SetDisabled`.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_set_disabled(refs: *const ButtonRefs, disabled: bool) {
-    button::check_set_disabled(&mut raw(refs), disabled);
-}
-
-/// `UICheckBox::SetLocation` (`ctx`: the label, as for `SetText`).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_set_location(refs: *const ButtonRefs, at: UiPoint) {
-    button::check_set_location(&mut raw(refs), at);
-}
-
-/// `UICheckBox::SetText` (`ctx`: the C++ text and font for the label host calls).
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_set_text(refs: *const ButtonRefs, s: *const c_char) {
-    button::check_set_text(&mut raw(refs), text(s));
-}
-
-/// `UICheckBox::ButtonDown` and the mouse handlers: whether the enabled box goes on to `UIButton`'s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_ui_check_enabled(refs: *const ButtonRefs) -> bool {
-    button::check_enabled(&raw(refs))
 }
 
 /// `UIRadioButton::Check`.

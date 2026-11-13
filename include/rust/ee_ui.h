@@ -161,10 +161,11 @@ enum class EeUiOp : uint32_t {
   BitmapDraw = 26,
   /// *Pure*: the manager's drag bar bitmap's `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
   DragBarScale = 27,
-  /// The thumb bitmap `a`'s `SetXYScale(f[0], f[1])`.
-  ThumbSetScale = 28,
-  /// *Pure*: the manager's scroll bar bitmap `a` (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
-  /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed).
+  /// Bitmap `a`'s `SetXYScale(f[0], f[1])` (the slider's thumb, the check box's and radio button's box).
+  BitmapSetScale = 28,
+  /// *Pure*: the manager's bitmap `a`: the scroll bar's (0 down normal, 1 up normal, 2 down pressed, 3 up pressed,
+  /// 4 right normal, 5 left normal, 6 right pressed, 7 left pressed), the check box's (8 off, 9 on, 10 down off,
+  /// 11 down on, 12 not, 13 down not) and the radio button's (14 off, 15 on, 16 down off, 17 down on).
   ManagerBitmap = 40,
   /// `new UISlider(GetId(), f, style a, form, GetIndex(), border b)` -> the slider.
   CreateSlider = 41,
@@ -264,6 +265,26 @@ enum class EeUiOp : uint32_t {
   SoundPlay = 100,
   /// Text `a`'s `SetFgColor(f[0..3])`.
   TextSetFgColor = 101,
+  /// `new UITextLabel(*(const UWideString*)a, font b, GetId(), f, GetForm(), 0, GetIndex(), 0)` -> the label.
+  LabelCreate = 110,
+  /// The label `a`'s `SetText(*(const UWideString*)b)` (the public one: it dirties the label).
+  LabelSetText = 111,
+  /// *Pure*: `((const UWideString*)a)->GetLength()`.
+  StringLength = 112,
+  /// *Pure*: bitmap `a`'s `GetXScale()`, `GetYScale()` -> `f[0]`, `f[1]`.
+  BitmapScale = 113,
+  /// *Pure*: `GetCopiedDrawRectangle()` -> `f`.
+  CopiedDrawRect = 114,
+  /// `UIControl::SetRectangle(f)` (non-virtual).
+  BaseSetRectangle = 115,
+  /// The virtual `Check()` (the radio button's; the editor's tabs and tool buttons override it).
+  RadioCheck = 116,
+  /// The form's control `a`'s virtual `UnCheck()` (a radio button: `RadioOf(a)` answered it).
+  RadioUnCheckAt = 117,
+  /// *Pure*: the Rust button of the form's control `a`, if it exists and is a radio button (`GetType()`), else 0.
+  RadioOf = 118,
+  /// *Pure*: the form's `GetControlCount()`.
+  ControlCount = 119,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -344,6 +365,41 @@ enum class EeUiButtonCall : uint32_t {
   DualMouseRButtonDown = 37,
   /// `UIDualButton::MouseRButtonUp()` -> OK.
   DualMouseRButtonUp = 38,
+  /// The constructor's part after `UIButton`'s: `SetText(*(const UWideString*)a, font b)` beside a box of height
+  /// `f[0]` (the constructor's rectangle's), the bitmap scaled when `f[1]` is nonzero.
+  CheckInit = 40,
+  /// `ChangeWidth(a)`.
+  CheckChangeWidth = 41,
+  /// `CopyData()` -> its result.
+  CheckCopyData = 42,
+  /// `DrawPolygons()` -> its result.
+  CheckDrawPolygons = 43,
+  /// `DrawTextA()` -> its result.
+  CheckDrawText = 44,
+  /// `SetChecked(a != 0)`.
+  CheckSetChecked = 45,
+  /// `SetDisabled(a != 0)`.
+  CheckSetDisabled = 46,
+  /// `SetLocation(f[0], f[1])`.
+  CheckSetLocation = 47,
+  /// `SetText(*(const UWideString*)a, font b)`.
+  CheckSetText = 48,
+  /// `ToggleCheck()`.
+  CheckToggle = 49,
+  /// `ButtonUp()`: the toggle, then `UIButton::ButtonUp()`.
+  CheckButtonUp = 50,
+  /// `ButtonDown()`.
+  CheckButtonDown = 51,
+  /// `MouseLButtonDown()` -> OK.
+  CheckMouseLButtonDown = 52,
+  /// `MouseLButtonUp()` -> OK.
+  CheckMouseLButtonUp = 53,
+  /// `MouseMove(f[0], f[1])` -> OK.
+  CheckMouseMove = 54,
+  /// `GetIsChecked()`.
+  CheckIsChecked = 55,
+  /// `GetTextLabel()` (the check box's, radio button's or tri-state box's).
+  TextLabel = 56,
 };
 
 /// The inward calls (the C++ shim's methods).
@@ -1338,24 +1394,6 @@ bool ee_ui_button_label_bitmap_offset(float height,
                                       bool scale_bitmap,
                                       bool float_border,
                                       EeUiPoint *out);
-
-/// `UICheckBox::SetChecked` (`sub`: the check box's record).
-void ee_ui_check_set_checked(const EeUiButtonRefs *refs, bool checked);
-
-/// `UICheckBox::ToggleCheck`.
-void ee_ui_check_toggle(const EeUiButtonRefs *refs);
-
-/// `UICheckBox::SetDisabled`.
-void ee_ui_check_set_disabled(const EeUiButtonRefs *refs, bool disabled);
-
-/// `UICheckBox::SetLocation` (`ctx`: the label, as for `SetText`).
-void ee_ui_check_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
-
-/// `UICheckBox::SetText` (`ctx`: the C++ text and font for the label host calls).
-void ee_ui_check_set_text(const EeUiButtonRefs *refs, const char *s);
-
-/// `UICheckBox::ButtonDown` and the mouse handlers: whether the enabled box goes on to `UIButton`'s.
-bool ee_ui_check_enabled(const EeUiButtonRefs *refs);
 
 /// `UIRadioButton::Check`.
 void ee_ui_radio_check(const EeUiButtonRefs *refs);

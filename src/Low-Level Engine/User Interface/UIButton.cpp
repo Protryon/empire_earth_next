@@ -42,7 +42,8 @@ struct UIButtonHost {
     {
         UIButton* s = static_cast<UIButton*>(inButton);
         intptr_t r = 0;
-        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r))
+        if (UIObjHost::Base(s, inOp, a, f, &r) || UIObjHost::Media(s, inOp, a, b, f, &r) ||
+            UIObjHost::Part(reinterpret_cast<UIControl*>(a), inOp, f, &r))
             return r;
         switch (inOp) {
         case EeUiOp::ButtonDown: s->ButtonDown(); break;
@@ -52,6 +53,12 @@ struct UIButtonHost {
         case EeUiOp::SoundLoad: return (intptr_t)s->GetSoundManager()->Load(*reinterpret_cast<const UString*>(a), 0, 1);
         case EeUiOp::SoundUnload: s->GetSoundManager()->Unload((unsigned long)a); break;
         case EeUiOp::SoundPlay: s->GetSoundManager()->Play((unsigned long)a, 1.0f, 0.0f, 1.0f, false, NULL); break;
+        case EeUiOp::LabelCreate:
+            return (intptr_t) new UITextLabel(*reinterpret_cast<const UWideString*>(a), reinterpret_cast<GEFont*>(b),
+                                              s->GetId(), UIObjHost::Rect(f), s->GetForm(), 0, s->GetIndex(), 0);
+        case EeUiOp::LabelSetText:
+            reinterpret_cast<UITextLabel*>(a)->SetText(*reinterpret_cast<const UWideString*>(b));   // SetText(text, true)
+            break;
         default: break;
         }
         return 0;
@@ -162,7 +169,7 @@ void UIButton::SetTextRectangle(const GERectangle& inRectangle)
 void UIButton::ReplaceNormalBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplaceNormalBitmap, (intptr_t)inBitmap); }
 void UIButton::ReplacePressedBitmap(GEBitmap* inBitmap) { EE_UI_BUTTON(ReplacePressedBitmap, (intptr_t)inBitmap); }
 
-// The check box's and radio button's label (UICheckBox.cpp, UIRadioButton.cpp): the context names it
+// The radio button's label (UIRadioButton.cpp): the context names it
 extern "C" void ee_uicpp_label_set_text(void* inButton, void* inLabel)
 {
     UIButtonRust::Label* theLabel = static_cast<UIButtonRust::Label*>(inLabel);
