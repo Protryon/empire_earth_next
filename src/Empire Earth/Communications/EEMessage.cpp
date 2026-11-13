@@ -1984,65 +1984,10 @@ size_t EEMHackANewUnit::GetCodecSlots(EeNetMsgSlot* outSlots, uint32_t& outClass
 // (ambient/resource units go to player 0); buildings must fit on the map and start fully built
 void EEMHackANewUnit::Execute()
 {
-    GETransformation theTransformation;
-    GE3DPoint thePoint;
-    GE3DPoint theGround;
-    GE2DPoint theTile = this->mPoint;
-    EEPlayer* theSender = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
-    long thePlayerID = this->mPlayerID;
-    gWorld.GetMap()->GetTile((long)this->mPoint.GetX(), (long)this->mPoint.GetY());
-    EEPlayer* thePlayer = gWorld.mPlayers[thePlayerID];
-    if ((unsigned long)this->mUnitType == kNoUnitClass)
-        this->mUnitType = (int32_t)theSender->mHackUnitClass;
-    if ((unsigned long)this->mUnitType >= EEUnitClassCount())
-        return;
-    EEUnitClass* theClass = gUnitClassTable[this->mUnitType];
-    // a unit type without a class creates nothing (its category used to be read through NULL first)
-    if (theClass == NULL)
-        return;
-    if (theClass->mCategory == kUnitCategoryAmbient || theClass->mCategory == kUnitCategoryResource) {
-        thePlayer = gWorld.mPlayers[0];
-        thePlayerID = 0;
-    }
-    if (!theClass->IsLandBuilding()) {
-        thePoint.SetX(theTile.GetX());
-        thePoint.SetY(theTile.GetY());
-        gWorld.GetMap()->GetGroundPoint(thePoint, theGround);
-        theTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
-        theTransformation.SetPosition(theGround.GetX(), theGround.GetY(), theGround.GetZ());
-        EEUnit* theUnit = theClass->CreateUnitAt(theTransformation, thePlayerID, false, NULL);
-        if (theUnit->mTileNode != NULL) {
-            theUnit->mComplexUnit->SetReloadTimer(0);
-            theUnit->mComplexUnit->SetPower(theUnit->mComplexUnit->mStats->mPower);
-        }
-        if (thePlayerID == gWorld.GetCurrentPlayer()->mPlayerID && thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound != NULL) {
-            EESoundObject* theSound = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound;
-            gSoundManager->Play(theSound->mSampleID, thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound->mVolume, 0.0f,
-                                1.0f, false, NULL);
-        }
-    } else {
-        float theHalf = (float)((long)thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mScale / 2);
-        float theRight = theTile.GetX() + theHalf;
-        float theTop = theTile.GetY() + theHalf;
-        if (gWorld.GetMap()->GetTile((long)theRight, (long)theTop) == NULL)
-            return;
-        float theLeft = theTile.GetX() - theHalf;
-        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theTop) == NULL)
-            return;
-        float theBottom = theTile.GetY() - theHalf;
-        if (gWorld.GetMap()->GetTile((long)theRight, (long)theBottom) == NULL)
-            return;
-        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theBottom) == NULL)
-            return;
-        EEUnit* theUnit = theClass->CreateUnit((long)theLeft, (long)theBottom, thePlayerID, false, NULL);
-        if (theUnit->mTileNode != NULL)
-            theUnit->mComplexUnit->SetBuilt(1, 0, 1);
-        if (thePlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
-            EESoundObject* theSound = theUnit->mStats->mCreationSound;
-            if (theSound != NULL)
-                gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
-        }
-    }
+    // New (game messages lane, round 2): the body is Rust (ee_units hack.rs hack_new_unit: the class, the owner, a
+    // building's footprint on the map) over EEUnitHost.cpp's reads and creations; the message keeps the class
+    this->mUnitType = ee_units_hack_new_unit(gWorld.GetPlayerBySlot(this->GetOriginatingSlot()), this->mUnitType,
+                                             this->mPoint.GetX(), this->mPoint.GetY(), (int64_t)this->mPlayerID);
 }
 
 // FUNCTION: EXE 0x4bf8c8

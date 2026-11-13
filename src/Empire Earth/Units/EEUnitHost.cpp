@@ -58,6 +58,10 @@
 #include "ee/EEUCTransport.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EETechTreeTechID.h"
+#include "lle/SESoundManager.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
+#include "ee/EEGameSound.h"
 #include "rust/ee_units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -173,7 +177,9 @@ enum DryEvent {
     kDryEvent,            // player id, x, y, code
     kDryAddUnit,          // tag, unit
     kDryFilter,           // transport, the count kept, the ids, the count rejected, the ids
-    kDryQueueResearch     // unit, technology, front
+    kDryQueueResearch,    // unit, technology, front
+    kDryHackUnit,         // unit type, x, y (bits), player id
+    kDryHackBuilding      // unit type, x, y, player id
 };
 
 // the dry goals the host makes without a goal spec: a unit's active goal's clone, the garrison's load goal's clone
@@ -1813,4 +1819,84 @@ extern "C" void ee_units_host_unit_queue_research(uint32_t inUnit, int32_t inTec
         return;
     }
     ComplexOf(inUnit)->QueueResearch(inTechnology, inFront != 0);
+}
+
+// ---- EEMHackANewUnit's calls (hack.rs) ----
+
+// the reads below are made on the objects (the dry host does not log them)
+extern "C" int32_t ee_units_host_player_hack_class(void* inPlayer)
+{
+    return (int32_t)static_cast<EEPlayer*>(inPlayer)->mHackUnitClass;
+}
+
+extern "C" int64_t ee_units_host_unit_class_count()
+{
+    return (int64_t)EEUnitClassCount();
+}
+
+// a class of the table: its category and IsLandBuilding (0: none)
+extern "C" uint8_t ee_units_host_unit_class_info(int32_t inUnitType, int64_t* outCategory, uint8_t* outLandBuilding)
+{
+    EEUnitClass* theClass = gUnitClassTable[inUnitType];
+    if (theClass == NULL)
+        return 0;
+    *outCategory = (int64_t)theClass->mCategory;
+    *outLandBuilding = theClass->IsLandBuilding() ? 1 : 0;
+    return 1;
+}
+
+extern "C" float ee_units_host_player_class_scale(int64_t inPlayerID, int32_t inUnitType)
+{
+    return gWorld.mPlayers[inPlayerID]->mUnitClassUpgrades[gUnitClassTable[inUnitType]->mUnitType]->mScale;
+}
+
+extern "C" uint8_t ee_units_host_map_has_tile(int64_t inX, int64_t inY)
+{
+    return gWorld.GetMap()->GetTile((long)inX, (long)inY) != NULL ? 1 : 0;
+}
+
+// the cheat's unit (EEMessage.cpp's statements, unchanged): at the point's ground facing pi, its reload cleared and
+// its power full; the creation sound for the current player
+extern "C" void ee_units_host_hack_create_unit(int32_t inUnitType, float inX, float inY, int64_t inPlayerID)
+{
+    if (sDry != NULL) {
+        Log({kDryHackUnit, (uint32_t)inUnitType, Bits(inX), Bits(inY), (uint32_t)inPlayerID});
+        return;
+    }
+    GETransformation theTransformation;
+    GE3DPoint thePoint;
+    GE3DPoint theGround;
+    EEUnitClass* theClass = gUnitClassTable[inUnitType];
+    EEPlayer* thePlayer = gWorld.mPlayers[inPlayerID];
+    thePoint.SetX(inX);
+    thePoint.SetY(inY);
+    gWorld.GetMap()->GetGroundPoint(thePoint, theGround);
+    theTransformation.SetOrientationYPR(3.1415927f, 0.0f, 0.0f);
+    theTransformation.SetPosition(theGround.GetX(), theGround.GetY(), theGround.GetZ());
+    EEUnit* theUnit = theClass->CreateUnitAt(theTransformation, (long)inPlayerID, false, NULL);
+    if (theUnit->mTileNode != NULL) {
+        theUnit->mComplexUnit->SetReloadTimer(0);
+        theUnit->mComplexUnit->SetPower(theUnit->mComplexUnit->mStats->mPower);
+    }
+    EESoundObject* theSound = thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mCreationSound;
+    if (inPlayerID == gWorld.GetCurrentPlayer()->mPlayerID && theSound != NULL)
+        gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
+}
+
+// the cheat's building (EEMessage.cpp's statements, unchanged): at its lower left corner, built; its creation sound
+// for the current player
+extern "C" void ee_units_host_hack_create_building(int32_t inUnitType, int64_t inX, int64_t inY, int64_t inPlayerID)
+{
+    if (sDry != NULL) {
+        Log({kDryHackBuilding, (uint32_t)inUnitType, (uint32_t)inX, (uint32_t)inY, (uint32_t)inPlayerID});
+        return;
+    }
+    EEUnit* theUnit = gUnitClassTable[inUnitType]->CreateUnit((long)inX, (long)inY, (long)inPlayerID, false, NULL);
+    if (theUnit->mTileNode != NULL)
+        theUnit->mComplexUnit->SetBuilt(1, 0, 1);
+    if (inPlayerID == gWorld.GetCurrentPlayer()->mPlayerID) {
+        EESoundObject* theSound = theUnit->mStats->mCreationSound;
+        if (theSound != NULL)
+            gSoundManager->Play(theSound->mSampleID, theSound->mVolume, 0.0f, 1.0f, false, NULL);
+    }
 }

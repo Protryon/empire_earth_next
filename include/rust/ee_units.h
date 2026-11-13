@@ -2487,6 +2487,14 @@ void ee_units_research_technology(void *player,
                                   int32_t technology,
                                   uint8_t five);
 
+/// `EEMHackANewUnit::Execute`'s body (`hack::hack_new_unit`) for the sender, the message's class (-1: the sender's
+/// cheat class), point and player id; returns the class the message keeps.
+int32_t ee_units_hack_new_unit(void *sender,
+                               int32_t unit_type,
+                               float x,
+                               float y,
+                               int64_t player_id);
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 void ee_units_cast_calamity(void *player,
@@ -2825,6 +2833,25 @@ extern int64_t ee_units_host_unit_research_state(uint32_t unit,
                                                  uint8_t *disabled);
 
 extern void ee_units_host_unit_queue_research(uint32_t unit, int32_t technology, uint8_t front);
+
+extern int32_t ee_units_host_player_hack_class(void *player);
+
+extern int64_t ee_units_host_unit_class_count();
+
+extern uint8_t ee_units_host_unit_class_info(int32_t unit_type,
+                                             int64_t *category,
+                                             uint8_t *land_building);
+
+extern float ee_units_host_player_class_scale(int64_t player_id, int32_t unit_type);
+
+extern uint8_t ee_units_host_map_has_tile(int64_t x, int64_t y);
+
+extern void ee_units_host_hack_create_unit(int32_t unit_type, float x, float y, int64_t player_id);
+
+extern void ee_units_host_hack_create_building(int32_t unit_type,
+                                               int64_t x,
+                                               int64_t y,
+                                               int64_t player_id);
 
 extern size_t ee_units_host_transport_filter(uint32_t transport,
                                              uint32_t *units,

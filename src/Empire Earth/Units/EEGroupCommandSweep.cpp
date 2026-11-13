@@ -1400,6 +1400,46 @@ void OriginalResearchTechnology(EEPlayer* thePlayer, void* theGroup, int32_t inB
     }
 }
 
+// EEMHackANewUnit::Execute (0x4bf1a0) as it was, the creations through the host (the unit's and the building's
+// statements are host calls), the class and the map read on the objects; returns the class the message keeps
+int32_t OriginalHackANewUnit(EEPlayer* theSender, int32_t inUnitType, float inX, float inY, long inPlayerID)
+{
+    GE2DPoint theTile(inX, inY);
+    long thePlayerID = inPlayerID;
+    int32_t theUnitType = inUnitType;
+    EEPlayer* thePlayer = gWorld.mPlayers[thePlayerID];
+    if ((unsigned long)theUnitType == kNoUnitClass)
+        theUnitType = (int32_t)theSender->mHackUnitClass;
+    if ((unsigned long)theUnitType >= EEUnitClassCount())
+        return theUnitType;
+    EEUnitClass* theClass = gUnitClassTable[theUnitType];
+    if (theClass == NULL)
+        return theUnitType;
+    if (theClass->mCategory == kUnitCategoryAmbient || theClass->mCategory == kUnitCategoryResource) {
+        thePlayer = gWorld.mPlayers[0];
+        thePlayerID = 0;
+    }
+    if (!theClass->IsLandBuilding()) {
+        ee_units_host_hack_create_unit(theUnitType, theTile.GetX(), theTile.GetY(), thePlayerID);
+    } else {
+        float theHalf = (float)((long)thePlayer->mUnitClassUpgrades[theClass->mUnitType]->mScale / 2);
+        float theRight = theTile.GetX() + theHalf;
+        float theTop = theTile.GetY() + theHalf;
+        if (gWorld.GetMap()->GetTile((long)theRight, (long)theTop) == NULL)
+            return theUnitType;
+        float theLeft = theTile.GetX() - theHalf;
+        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theTop) == NULL)
+            return theUnitType;
+        float theBottom = theTile.GetY() - theHalf;
+        if (gWorld.GetMap()->GetTile((long)theRight, (long)theBottom) == NULL)
+            return theUnitType;
+        if (gWorld.GetMap()->GetTile((long)theLeft, (long)theBottom) == NULL)
+            return theUnitType;
+        ee_units_host_hack_create_building(theUnitType, (long)theLeft, (long)theBottom, thePlayerID);
+    }
+    return theUnitType;
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -1421,7 +1461,8 @@ enum SweepBody {
     kSweepStopActiveGroup = 18,
     kSweepLoadGarrison = 19,
     kSweepLoadTransport = 20,
-    kSweepResearchTechnology = 21
+    kSweepResearchTechnology = 21,
+    kSweepHackANewUnit = 22
 };
 
 struct SweepCase {
@@ -1579,6 +1620,12 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalResearchTechnology(inPlayer, inSelection, inCase.mTarget, inCase.mTechnology, inCase.mQueued);
         break;
+    case kSweepHackANewUnit:   // mTechnology: the class; mTarget: the player id
+        if (inRust)
+            ee_units_hack_new_unit(inPlayer, inCase.mTechnology, inCase.mX, inCase.mY, (int64_t)inCase.mTarget);
+        else
+            OriginalHackANewUnit(inPlayer, inCase.mTechnology, inCase.mX, inCase.mY, (long)inCase.mTarget);
+        break;
     }
 }
 
@@ -1624,6 +1671,8 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
     }
     if (inCase.mBody == kSweepLoadTransport)
         theRecord.I32(inCase.mCaster);
+    if (inCase.mBody == kSweepHackANewUnit)
+        theRecord.I32(inCase.mTechnology);
     if (inCase.mBody == kSweepResearchTechnology)
         theRecord.U32((unsigned int)inCase.mTechnology | (inCase.mQueued ? 0x80000000u : 0u));
     theRecord.U32((unsigned int)inUnits.size());
@@ -2121,6 +2170,30 @@ void EEGroupCommandSweep()
                     }
             theCase.mTechnology = 0;
             theCase.mQueued = false;
+            // Hack A New Unit (game messages lane, round 2): no class (the cheat class), its first unit's class, its
+            // first building's, the world's resource's and a class past the table; for itself at the first unit's
+            // tile, the map's centre, its corner and its far edge
+            std::vector<int32_t> theHackClasses;
+            theHackClasses.push_back(-1);
+            if (!theOwn.empty() && theOwn[0]->mUnitClass.Get() != NULL)
+                theHackClasses.push_back((int32_t)theOwn[0]->mUnitClass->mUnitType);
+            if (theFound[2] != -1)
+                theHackClasses.push_back((int32_t)ObjectOf((uint32_t)theFound[2])->mUnitClass->mUnitType);
+            if (theResource != NULL && static_cast<EEUnit*>(theResource)->mUnitClass.Get() != NULL)
+                theHackClasses.push_back((int32_t)static_cast<EEUnit*>(theResource)->mUnitClass->mUnitType);
+            theHackClasses.push_back(0x7fff);
+            float theEdge = (float)gWorld.GetMap()->GetSize() - 0.5f;
+            float theHackPoints[4][2] = {{theFirstX, theFirstY}, {theCenter, theCenter}, {0.5f, 0.5f}, {theEdge, theEdge}};
+            theCase.mBody = kSweepHackANewUnit;
+            theCase.mTarget = (int32_t)thePlayer->mPlayerID;
+            for (size_t k = 0; k < theHackClasses.size(); k++)
+                for (int t = 0; t < 4; t++) {
+                    theCase.mTechnology = theHackClasses[k];
+                    theCase.mX = theHackPoints[t][0];
+                    theCase.mY = theHackPoints[t][1];
+                    RunCase(theCase, p, thePlayer, theUnits);
+                }
+            theCase.mTechnology = 0;
         }
     }
 }

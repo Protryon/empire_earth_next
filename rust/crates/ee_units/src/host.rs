@@ -387,6 +387,22 @@ pub trait Host {
     fn unit_research_state(&mut self, unit: u32) -> (i64, i64, bool);
     /// `unit->QueueResearch(technology, front)`
     fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool);
+    /// `player->mHackUnitClass`
+    fn player_hack_class(&mut self, player: HostRef) -> i32;
+    /// `EEUnitClassCount()`
+    fn unit_class_count(&mut self) -> i64;
+    /// `gUnitClassTable[unit_type]`'s `mCategory` and `IsLandBuilding()`, None for no class
+    fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)>;
+    /// `gWorld.mPlayers[player_id]->mUnitClassUpgrades[the class's type]->mScale`
+    fn player_class_scale(&mut self, player_id: i64, unit_type: i32) -> f32;
+    /// `gWorld.GetMap()->GetTile(x, y) != NULL`
+    fn map_has_tile(&mut self, x: i64, y: i64) -> bool;
+    /// The cheat's unit of the class for the player at the point's ground, facing pi (its reload cleared, its power
+    /// full; the creation sound for the current player)
+    fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64);
+    /// The cheat's building of the class for the player at its lower left corner, built (the creation sound for the
+    /// current player)
+    fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64);
 }
 
 /// `Host::unit_load_traits`' bits
@@ -550,6 +566,13 @@ pub mod game {
         fn ee_units_host_unit_shares_research(unit: u32, unit_type: i64) -> u8;
         fn ee_units_host_unit_research_state(unit: u32, current: *mut i64, disabled: *mut u8) -> i64;
         fn ee_units_host_unit_queue_research(unit: u32, technology: i32, front: u8);
+        fn ee_units_host_player_hack_class(player: *mut c_void) -> i32;
+        fn ee_units_host_unit_class_count() -> i64;
+        fn ee_units_host_unit_class_info(unit_type: i32, category: *mut i64, land_building: *mut u8) -> u8;
+        fn ee_units_host_player_class_scale(player_id: i64, unit_type: i32) -> f32;
+        fn ee_units_host_map_has_tile(x: i64, y: i64) -> u8;
+        fn ee_units_host_hack_create_unit(unit_type: i32, x: f32, y: f32, player_id: i64);
+        fn ee_units_host_hack_create_building(unit_type: i32, x: i64, y: i64, player_id: i64);
         fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
     }
 
@@ -1001,6 +1024,30 @@ pub mod game {
         fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
             unsafe { ee_units_host_unit_queue_research(unit, technology, front as u8) }
         }
+        fn player_hack_class(&mut self, player: HostRef) -> i32 {
+            unsafe { ee_units_host_player_hack_class(player.0) }
+        }
+        fn unit_class_count(&mut self) -> i64 {
+            unsafe { ee_units_host_unit_class_count() }
+        }
+        fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)> {
+            let (mut category, mut land) = (0i64, 0u8);
+            // SAFETY: the two values are written for the call
+            let found = unsafe { ee_units_host_unit_class_info(unit_type, &mut category, &mut land) };
+            (found != 0).then_some((category, land != 0))
+        }
+        fn player_class_scale(&mut self, player_id: i64, unit_type: i32) -> f32 {
+            unsafe { ee_units_host_player_class_scale(player_id, unit_type) }
+        }
+        fn map_has_tile(&mut self, x: i64, y: i64) -> bool {
+            unsafe { ee_units_host_map_has_tile(x, y) != 0 }
+        }
+        fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
+            unsafe { ee_units_host_hack_create_unit(unit_type, x, y, player_id) }
+        }
+        fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64) {
+            unsafe { ee_units_host_hack_create_building(unit_type, x, y, player_id) }
+        }
     }
 }
 
@@ -1126,6 +1173,9 @@ pub(crate) mod tests {
         AddUnit(HostRef, u32),
         Filter(u32, Vec<u32>),
         QueueResearch(u32, i32, bool),
+        /// the cheat's unit (type, the point's bits, player id) and building (type, corner, player id)
+        HackUnit(i32, u32, u32, i64),
+        HackBuilding(i32, i64, i64, i64),
     }
 
     /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
@@ -1216,6 +1266,13 @@ pub(crate) mod tests {
         pub research_states: BTreeMap<u32, (i64, i64, bool)>,
         pub shares_research: Vec<u32>,
         pub scenario: bool,
+        /// the cheat: the class table's size, its classes (category, land building), the sender's cheat class, the
+        /// classes' scale, the map's size (tiles 0..size on both axes)
+        pub class_count: i64,
+        pub classes: BTreeMap<i32, (i64, bool)>,
+        pub hack_class: i32,
+        pub scale: f32,
+        pub map_size: i64,
     }
 
     impl Host for MockHost {
@@ -1742,6 +1799,27 @@ pub(crate) mod tests {
         }
         fn unit_queue_research(&mut self, unit: u32, technology: i32, front: bool) {
             self.calls.push(Call::QueueResearch(unit, technology, front));
+        }
+        fn player_hack_class(&mut self, _player: HostRef) -> i32 {
+            self.hack_class
+        }
+        fn unit_class_count(&mut self) -> i64 {
+            self.class_count
+        }
+        fn unit_class_info(&mut self, unit_type: i32) -> Option<(i64, bool)> {
+            self.classes.get(&unit_type).copied()
+        }
+        fn player_class_scale(&mut self, _player_id: i64, _unit_type: i32) -> f32 {
+            self.scale
+        }
+        fn map_has_tile(&mut self, x: i64, y: i64) -> bool {
+            (0..self.map_size).contains(&x) && (0..self.map_size).contains(&y)
+        }
+        fn hack_create_unit(&mut self, unit_type: i32, x: f32, y: f32, player_id: i64) {
+            self.calls.push(Call::HackUnit(unit_type, x.to_bits(), y.to_bits(), player_id));
+        }
+        fn hack_create_building(&mut self, unit_type: i32, x: i64, y: i64, player_id: i64) {
+            self.calls.push(Call::HackBuilding(unit_type, x, y, player_id));
         }
     }
 

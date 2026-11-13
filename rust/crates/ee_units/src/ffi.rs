@@ -569,6 +569,15 @@ pub extern "C" fn ee_units_research_technology(
     );
 }
 
+/// `EEMHackANewUnit::Execute`'s body (`hack::hack_new_unit`) for the sender, the message's class (-1: the sender's
+/// cheat class), point and player id; returns the class the message keeps.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_hack_new_unit(sender: *mut c_void, unit_type: i32, x: f32, y: f32, player_id: i64) -> i32 {
+    let mut host = crate::host::game::GameHost;
+    crate::hack::hack_new_unit(&mut host, crate::host::HostRef(sender), unit_type, x, y, player_id)
+}
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 #[cfg(not(test))]
