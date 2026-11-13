@@ -12,6 +12,7 @@ use crate::effect_state::{
     EeGfxEffectRecord, EeGfxEmitterBurst, EeGfxEmitterMove, EeGfxParticleSetUp, EeGfxParticleTick, EeGfxPlumeTick,
     EeGfxSmokeSetUp, EeGfxSmokeTick, EffectFile, EffectParts, EmitterHost, ParticleGround, SmokeHost,
 };
+use crate::effect_storm::{self, EeGfxStormDraw, EeGfxStormLists, StormHost};
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
 /// type; `context` is the file).
@@ -143,6 +144,10 @@ pub unsafe extern "C" fn ee_gfx_effect_record_free(r: *mut EeGfxEffectRecord) {
         if !record.damaged.lists.is_null() {
             // SAFETY: the lists came from `take_lists`'s Box and are owned by the record
             drop(unsafe { Box::from_raw(record.damaged.lists) });
+        }
+        if !record.storm.lists.is_null() {
+            // SAFETY: the lists came from `put_storm`'s Box and are owned by the record
+            drop(unsafe { Box::from_raw(record.storm.lists) });
         }
     }
 }
@@ -887,9 +892,356 @@ pub extern "C" fn ee_gfx_effect_random_seed() -> u32 {
     effect_state::random_seed()
 }
 
+// ---- the weather storms (effect_storm.rs)
+
+/// The world a storm reads and calls into (`context`: the effect).
+#[repr(C)]
+pub struct EeGfxStormHost {
+    pub context: *mut c_void,
+    /// the map has the tile
+    pub on_map: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> bool,
+    /// the tile is deep or shallow water (false off the map)
+    pub is_water: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> bool,
+    /// the terrain mesh's `GetZ(x, y)`
+    pub ground_z: extern "C" fn(context: *mut c_void, x: i32, y: i32) -> f32,
+    /// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out` (x, y)
+    pub step_toward: extern "C" fn(context: *mut c_void, from_x: i32, from_y: i32, to_x: i32, to_y: i32, out: *mut i32),
+    /// the land ripple where a drop hit the water
+    pub ripple: extern "C" fn(context: *mut c_void, x: f32, y: f32),
+}
+
+struct Storm<'a>(&'a EeGfxStormHost);
+
+impl StormHost for Storm<'_> {
+    fn on_map(&mut self, x: i32, y: i32) -> bool {
+        (self.0.on_map)(self.0.context, x, y)
+    }
+    fn is_water(&mut self, x: i32, y: i32) -> bool {
+        (self.0.is_water)(self.0.context, x, y)
+    }
+    fn ground_z(&mut self, x: i32, y: i32) -> f32 {
+        (self.0.ground_z)(self.0.context, x, y)
+    }
+    fn step_toward(&mut self, from: [i32; 2], to: [i32; 2]) -> [i32; 2] {
+        let mut out = from;
+        (self.0.step_toward)(self.0.context, from[0], from[1], to[0], to[1], out.as_mut_ptr());
+        out
+    }
+    fn ripple(&mut self, x: f32, y: f32) {
+        (self.0.ripple)(self.0.context, x, y)
+    }
+}
+
+/// The storm's lists taken out of the record for a call (empty when it has none yet).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn take_storm(r: *mut EeGfxEffectRecord) -> EeGfxStormLists {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).storm.lists;
+        if p.is_null() {
+            EeGfxStormLists::default()
+        } else {
+            std::mem::take(&mut *p)
+        }
+    }
+}
+
+/// Puts the lists back into the record (made on first use).
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn put_storm(r: *mut EeGfxEffectRecord, lists: EeGfxStormLists) {
+    // SAFETY: the function's contract
+    unsafe {
+        let p = (*r).storm.lists;
+        if p.is_null() {
+            (*r).storm.lists = Box::into_raw(Box::new(lists));
+        } else {
+            *p = lists;
+        }
+    }
+}
+
+/// Runs `f` on a copy of the record and the storm's lists taken out of it, then puts both back.
+///
+/// # Safety
+/// `r` is a live record.
+unsafe fn on_storm<T>(
+    r: *mut EeGfxEffectRecord,
+    f: impl FnOnce(&mut EeGfxEffectRecord, &mut EeGfxStormLists) -> T,
+) -> T {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut lists = take_storm(r);
+        let res = on_copy(r, |r| f(r, &mut lists));
+        put_storm(r, lists);
+        res
+    }
+}
+
+/// The lists of a record, read only (none when it has none).
+///
+/// # Safety
+/// `r` is a live record whose lists no call has out.
+unsafe fn storm_lists<'a>(r: *const EeGfxEffectRecord) -> Option<&'a EeGfxStormLists> {
+    // SAFETY: the function's contract
+    unsafe { (*r).storm.lists.as_ref() }
+}
+
+/// `EEE3DStorm`'s constructor: the storm over `count` tiles (`tiles`: x, y pairs).
+///
+/// # Safety
+/// `r` is a live record; `tiles` holds `2 * count` values (or is null with 0).
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_new(r: *mut EeGfxEffectRecord, tiles: *const i32, count: u32) {
+    let mut v = Vec::with_capacity(count as usize);
+    for i in 0..count as usize {
+        // SAFETY: the function's contract
+        unsafe { v.push([*tiles.add(2 * i), *tiles.add(2 * i + 1)]) };
+    }
+    // SAFETY: the function's contract
+    unsafe { on_storm(r, |_, l| effect_storm::storm_new(l, &v)) }
+}
+
+/// `EEE3DRain`'s constructor: the first thunder's delay.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_rain_new(r: *mut EeGfxEffectRecord) {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, effect_storm::rain_new) }
+}
+
+/// `EEE3DStorm::GetCenter`: whether it has tiles; `out` gets the point on the terrain at the new centre.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_center(
+    r: *mut EeGfxEffectRecord,
+    host: *const EeGfxStormHost,
+    out: *mut Ge3DPoint,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        match on_storm(r, |r, l| effect_storm::storm_center(r, l, &mut Storm(&*host))) {
+            Some(p) => {
+                *out = p;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// `EEE3DStorm::Move` towards (`to_x`, `to_y`): whether it has tiles; `bounds` (left, top, right, bottom) and `out`
+/// (the point on the terrain at the new centre) are set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values; `host` and `out` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_move(
+    r: *mut EeGfxEffectRecord,
+    to_x: i32,
+    to_y: i32,
+    bounds: *mut i32,
+    host: *const EeGfxStormHost,
+    out: *mut Ge3DPoint,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let mut b = [*bounds, *bounds.add(1), *bounds.add(2), *bounds.add(3)];
+        match on_storm(r, |r, l| effect_storm::storm_move(r, l, [to_x, to_y], &mut b, &mut Storm(&*host))) {
+            Some(p) => {
+                for (i, v) in b.iter().enumerate() {
+                    *bounds.add(i) = *v;
+                }
+                *out = p;
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+/// `EEE3DStorm::GetBounds`: whether it has tiles; `bounds` (left, top, right, bottom) is set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_bounds(r: *const EeGfxEffectRecord, bounds: *mut i32) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let Some(l) = storm_lists(r) else {
+            return false;
+        };
+        let mut b = [0i32; 4];
+        if !effect_storm::storm_bounds(l, &mut b) {
+            return false;
+        }
+        for (i, v) in b.iter().enumerate() {
+            *bounds.add(i) = *v;
+        }
+        true
+    }
+}
+
+/// The storm's number of tiles (`mTiles.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_tile_count(r: *const EeGfxEffectRecord) -> u32 {
+    // SAFETY: the function's contract
+    unsafe { storm_lists(r).map_or(0, |l| l.tiles.len() as u32) }
+}
+
+/// The storm's number of drops or flakes (`mDrops.size()`, `mFlakes.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_drop_count(r: *const EeGfxEffectRecord) -> u32 {
+    // SAFETY: the function's contract
+    unsafe { storm_lists(r).map_or(0, |l| l.drops.len() as u32) }
+}
+
+/// `Queue`'s copy of the drops into `out` (at most `count`).
+///
+/// # Safety
+/// `r` is a live record; `out` holds `count` draws.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_draws(r: *const EeGfxEffectRecord, out: *mut EeGfxStormDraw, count: u32) {
+    // SAFETY: the function's contract
+    unsafe {
+        if let Some(l) = storm_lists(r) {
+            if count > 0 {
+                effect_storm::storm_draws(l, std::slice::from_raw_parts_mut(out, count as usize));
+            }
+        }
+    }
+}
+
+/// The rain's and the snow's `SetUp` (after the C++ read the graphic effect): `out` gets the point on the terrain
+/// at the tiles' mean; the radius is set.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_set_up(
+    r: *mut EeGfxEffectRecord,
+    host: *const EeGfxStormHost,
+    out: *mut Ge3DPoint,
+) {
+    // SAFETY: the function's contract
+    unsafe { *out = on_storm(r, |r, l| effect_storm::storm_set_up(r, l, &mut Storm(&*host))) }
+}
+
+/// The rain's thunder timer: 0, or the rumble sound (1 or 2) to play.
+///
+/// # Safety
+/// `r` is a live record.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_rain_rumble(r: *mut EeGfxEffectRecord, tick_time: f32) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_copy(r, |r| effect_storm::rain_rumble(r, tick_time)) }
+}
+
+/// The storm's `Step` after the rain's sounds: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_step(
+    r: *mut EeGfxEffectRecord,
+    tick_time: f32,
+    game_speed: f32,
+    host: *const EeGfxStormHost,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_storm(r, |r, l| effect_storm::storm_step(r, l, tick_time, game_speed, &mut Storm(&*host))) }
+}
+
+/// `RepairPointers`' respawn of the saved drops (after the C++ read the graphic effect again).
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_repair(r: *mut EeGfxEffectRecord, host: *const EeGfxStormHost) {
+    // SAFETY: the function's contract
+    unsafe { on_storm(r, |r, l| effect_storm::storm_repair(r, l, &mut Storm(&*host))) }
+}
+
+/// The storm's and the leaf's own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_load(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_storm(r, |r, l| effect_storm::load_storm(r, l, &mut File(&*file))) }
+}
+
+/// The storm's and the leaf's own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_storm_save(r: *mut EeGfxEffectRecord, file: *const EeGfxEffectFile) -> i32 {
+    // SAFETY: the function's contract
+    unsafe { on_storm(r, |r, l| effect_storm::save_storm(r, l, &mut File(&*file))) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    extern "C" fn on_map(_: *mut c_void, x: i32, _: i32) -> bool {
+        x >= 0
+    }
+    extern "C" fn is_water(_: *mut c_void, _: i32, _: i32) -> bool {
+        false
+    }
+    extern "C" fn ground_z(_: *mut c_void, x: i32, y: i32) -> f32 {
+        (x * 10 + y) as f32
+    }
+    extern "C" fn step_toward(_: *mut c_void, fx: i32, fy: i32, tx: i32, ty: i32, out: *mut i32) {
+        // SAFETY: two values
+        unsafe {
+            *out = fx + (tx - fx).signum();
+            *out.add(1) = fy + (ty - fy).signum();
+        }
+    }
+    extern "C" fn ripple(_: *mut c_void, _: f32, _: f32) {}
+
+    #[test]
+    fn storms_own_their_tiles_through_the_interface() {
+        let host = EeGfxStormHost { context: std::ptr::null_mut(), on_map, is_water, ground_z, step_toward, ripple };
+        let r = ee_gfx_effect_record_new(effect_storm::EE_GFX_EFFECT_KIND_SNOW);
+        // SAFETY: a live record
+        unsafe {
+            assert_eq!(ee_gfx_storm_tile_count(r), 0);
+            let mut b = [7i32; 4];
+            assert!(!ee_gfx_storm_bounds(r, b.as_mut_ptr()));
+            let tiles = [1, 2, 3, 4];
+            ee_gfx_storm_new(r, tiles.as_ptr(), 2);
+            assert_eq!(ee_gfx_storm_tile_count(r), 2);
+            let mut p = Ge3DPoint::default();
+            assert!(ee_gfx_storm_center(r, &host, &mut p));
+            assert_eq!(((*r).storm.center_x, (*r).storm.center_y), (2, 3));
+            assert_eq!(p, Ge3DPoint { x: 2.0, y: 3.0, z: 23.0 });
+            assert!(ee_gfx_storm_bounds(r, b.as_mut_ptr()));
+            assert_eq!(b, [1, 2, 3, 4]);
+            assert!(ee_gfx_storm_move(r, 5, 3, b.as_mut_ptr(), &host, &mut p));
+            assert_eq!(((*r).storm.center_x, (*r).storm.center_y), (3, 3));
+            assert_eq!(ee_gfx_storm_drop_count(r), 0);
+            ee_gfx_storm_draws(r, std::ptr::null_mut(), 0);
+            ee_gfx_effect_record_free(r);
+        }
+    }
 
     #[test]
     fn records_are_made_changed_and_freed_through_the_interface() {

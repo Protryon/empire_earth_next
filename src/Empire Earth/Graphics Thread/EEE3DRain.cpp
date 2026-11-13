@@ -56,13 +56,12 @@
 #include "ee/EEE3DRain.h"
 #include "ee/EERenderSnapshot.h"
 
-// the unit's named float constants (.rdata 0x440be8..0x440bfc, in this order; reloaded at each use) (provisional names)
+// the unit's named float constants (.rdata 0x440be8..0x440bfc, in this order; reloaded at each use; the spawn's
+// and the thunder's are ee_gfx effect_storm.rs's) (provisional names)
 static const float kRainFadeTime = 6500.0f;     // 0x440be8 (ms to full strength)
 static const float kRainDensity = 0.4f;         // 0x440bec
 static const float kRainDropWidth = 0.04f;      // 0x440bf0
 static const float kRainDropLength = 0.6f;      // 0x440bf4
-static const float kRainUnused = 0.2f;          // 0x440bf8 (no user found)
-static const float kRainRumbleDelay = 9000.0f;  // 0x440bfc
 
 // FUNCTION: EXE 0x4f7394
 // Creates a rain storm over the given tiles for a graphic effect, with no sounds yet and first thunder within 2.25 s
@@ -74,9 +73,7 @@ EEE3DRain::EEE3DRain(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffe
     this->mRumbleID2 = 0;
     this->mSound = NULL;
     this->mRumble = NULL;
-    this->mDropCount = 0;
-    float theDelay = GetEffectRandomFloat(0.0f, 0.25f) * kRainRumbleDelay;
-    this->mRumbleDelay = theDelay;
+    ee_gfx_rain_new(this->mRecord);
 }
 
 // SYNTHETIC: EXE 0x4f7421
@@ -92,7 +89,6 @@ EEE3DRain::EEE3DRain()
     this->mRumbleID2 = 0;
     this->mSound = NULL;
     this->mRumble = NULL;
-    this->mDropCount = 0;
 }
 
 // FUNCTION: EXE 0x4f74a0
@@ -150,41 +146,6 @@ void EEE3DRain::ReleaseRumble()
     this->mRumble = NULL;
 }
 
-// FUNCTION: EXE 0x4f75b7
-// Adds a raindrop at a random point of a random storm tile at spawn height, falling to the ground (0 over water, where
-// it may splash)
-long EEE3DRain::AddDrop()
-{
-    EETileCoordinate& theTile = this->mTiles[GetEffectRandomLong(0, this->mTiles.size() - 1)];
-    float theRandom = GetEffectRandomFloat(0.0f, 1.0f);
-    float theX = theTile.mX + theRandom;
-    theRandom = GetEffectRandomFloat(0.0f, 1.0f);
-    float theY = theTile.mY + theRandom;
-    GE3DPoint thePosition(theX, theY, this->mSpawnHeight);
-    EEMapTile* theMapTile = gWorld.GetMap()->GetTile(theTile.mX, theTile.mY);
-    // Test the tile pointer before reading its terrain.
-    bool theWater = theMapTile && (theMapTile->mTerrainType == kTerrainDeepWater || theMapTile->mTerrainType == kTerrainShallowWater);
-    float theGround = theWater ? 0.0f : gWorld.GetMap()->mTerrainMesh.GetZ(theTile.mX, theTile.mY);
-    this->mDrops.push_back(EE3DRainDrop(thePosition, theGround, theRandom * 6.2831855f, theWater));
-    return 0;
-}
-
-// FUNCTION: EXE 0x4f76da
-// Copies the drops into the draw list and queues the rain in render queue 4 under its texture
-long EEE3DRain::Queue(EEEffectQueue* inQueues)
-{
-    long theResult = EEEffect3D::Queue(inQueues);
-    if (theResult == 0) {
-        this->mDraws.clear();
-        for (std::vector<EE3DRainDrop>::iterator theDrop = this->mDrops.begin(); theDrop != this->mDrops.end(); theDrop++)
-            this->mDraws.push_back(EE3DRainDraw(theDrop->mPosition, theDrop->mAngle, theDrop->mWater));
-        GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
-        inQueues[4][theTexture].push_back(this);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x4f7792
 // Reads fall speed, spawn height, density, sound ids and duration from the effect and loads the sounds; on first use
 // builds the shared raindrop triangle model with textures\raindrop
@@ -205,13 +166,9 @@ void EEE3DRain::Virtual64()
     theDescription.mCreateMIPMaps = true;
     EEGraphicEffect* theEffect = this->mGraphicEffect;
     EEE3DStorm::Virtual64();
-    this->mFallSpeed = theEffect->GetParam1();
-    this->mSpawnHeight = theEffect->GetParam2();
-    this->mDensity = theEffect->GetParam3();
     this->mSoundID = theEffect->mIntParam1;
     this->mRumbleID1 = theEffect->mIntParam2;
     this->mRumbleID2 = theEffect->mIntParam3;
-    this->mDuration = theEffect->mDuration;
     EESoundObject* theSound = EESoundObject::Get(this->mSoundID);
     if (theSound)
         theSound->LoadMedia();
@@ -262,20 +219,12 @@ long EEE3DRain::DrawPass6()
     GETransformation theTransformation;
     long theResult = 0;
     unsigned long theScreen = gScreenIndex;
-    if (this->mGraphicEffect->mGraphicObject)
-        gRasterizer->SetAlphaTestingRefValue(this->mGraphicEffect->mGraphicObject->mAlphaReference, theScreen);
-    else
-        gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
-    gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    gRasterizer->SetShadingColorSource(0, theScreen);
-    SetCloudLighting();
-    SetSceneFog();
-    for (std::vector<EE3DRainDraw>::iterator theDraw = this->mDraws.begin(); theDraw != this->mDraws.end() && theResult == 0;
-         theDraw++) {
-        theTransformation.SetX(theDraw->mPosition.GetX());
-        theTransformation.SetY(theDraw->mPosition.GetY());
-        theTransformation.SetZ(theDraw->mPosition.GetZ());
+    this->BeginDraw();
+    for (size_t i = 0; i < this->mDraws.size() && theResult == 0; i++) {
+        const EeGe3DPoint& thePosition = this->mDraws[i].position;
+        theTransformation.SetX(thePosition.x);
+        theTransformation.SetY(thePosition.y);
+        theTransformation.SetZ(thePosition.z);
         theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
         this->mModel->SetGraphicsPostModelTransform(theTransformation);
         this->mModel->PrepareTransforms();
@@ -285,129 +234,13 @@ long EEE3DRain::DrawPass6()
     return theResult;
 }
 
-// FUNCTION: EXE 0x4f7c83
-// Reads the storm, drop count, thunder delay, a position (discarded), the bounding radius and the number of drops
-// to recreate; returns the first read error
-long EEE3DRain::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
-{
-    GE3DPoint thePosition;
-    float theRadius = 0.0f;
-    long theResult = EEE3DStorm::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mDropCount);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mRumbleDelay);
-    if (theResult == 0)
-        theResult = thePosition.Load(inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(theRadius);
-    if (theResult == 0) {
-        this->SetBoundingRadius(theRadius);
-        theResult = inFile.Read(this->mLoadedDrops);
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x4f7d0f
-// After loading, reloads the settings, recreates the saved number of drops at random heights and marks the storm
-// restored so its sounds restart
-long EEE3DRain::RepairPointers()
-{
-    long theResult = EEE3DStorm::RepairPointers();
-    if (theResult == 0) {
-        this->Virtual64();
-        for (unsigned long i = 0; i < this->mLoadedDrops && theResult == 0; i++)
-            theResult = this->AddDrop();
-        for (std::vector<EE3DRainDrop>::iterator theDrop = this->mDrops.begin(); theDrop != this->mDrops.end(); theDrop++)
-            theDrop->mPosition.SetZ(EEEffect::GetRandom() * this->mSpawnHeight);
-        this->mLoadedDrops = 0;
-        this->mIsRestored = true;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x4f7d7f
-// Writes the storm, drop count, thunder delay, position,
-// radius and live drop count; returns the first write error
-long EEE3DRain::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
-{
-    GE3DPoint thePosition;
-    long theResult = EEE3DStorm::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mDropCount);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mRumbleDelay);
-    if (theResult == 0) {
-        this->mTransformation.GetPosition(thePosition);
-        theResult = thePosition.Save(outFile);
-    }
-    if (theResult == 0) {
-        float theRadius = this->GetBoundingRadius();
-        theResult = outFile.Write(theRadius);
-    }
-    if (theResult == 0) {
-        unsigned long theCount = this->mDrops.size();
-        theResult = outFile.Write(theCount);
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x4f7e3f
-// Updates the sounds and drops and ages the storm; returns 7 once its duration has passed unless it is sustained
+// Updates the sounds, then the storm's drops and age (ee_gfx effect_storm.rs); returns 7 once its duration has
+// passed unless it is sustained
 long EEE3DRain::Step()
 {
-    long theResult = 0;
     this->StartSounds();
-    this->UpdateDrops();
-    this->mElapsedTime += gPhysics->GetTickTime();
-    if (this->mElapsedTime >= this->mDuration && !this->mIsSustained)
-        theResult = 7;
-    this->mIsRestored = false;
-    return theResult;
-}
-
-// FUNCTION: EXE 0x4f7e9f
-// Adds drops towards a count that ramps up over 6.5 s, then keeps growing (at most 65 a tick, none above 1400 drops),
-// lets them fall and removes those that reach the ground, sometimes rippling on water
-long EEE3DRain::UpdateDrops()
-{
-    float theElapsed = gPhysics->GetTickTime() * 0.001f;
-    long theResult = 0;
-    unsigned long theExtra = 0;
-    long theTarget = UMFloatToLong(this->mTiles.size() * min(this->mElapsedTime, kRainFadeTime) * kRainDensity * this->mDensity * 0.001f);
-    if (this->mElapsedTime > kRainFadeTime) {
-        theExtra = UMFloatToLong(max(this->mTiles.size() * (this->mDensity * ((this->mElapsedTime - kRainFadeTime) * 0.001f)), 0.0f));
-    }
-    unsigned long theMissing;
-    if (this->mDuration > this->mElapsedTime || this->mIsSustained) {
-        theMissing = theTarget - this->mDropCount + theExtra;
-        if ((long)theMissing < 0)
-            theMissing = -(long)theMissing;
-    } else
-        theMissing = 0;
-    unsigned long theCount = UMFloatToLong(theMissing * this->mIntensity);
-    if (theCount >= 0x41)
-        theCount = 0x41;
-    if (this->mDrops.size() > 0x578)
-        theCount = 0;
-    for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-        theResult = this->AddDrop();
-        if (theResult == 0)
-            this->mDropCount++;
-    }
-    for (std::vector<EE3DRainDrop>::iterator theDrop = this->mDrops.begin(); theDrop != this->mDrops.end();) {
-        double theZ = theDrop->mPosition.GetZ() + theElapsed * this->mFallSpeed;
-        theDrop->mPosition.SetZ(theZ);
-        if (theZ < theDrop->mGroundZ) {
-            if (GetEffectRandomLong(0, 15) == 0 && theDrop->mWater) {
-                GE3DPoint theSplash(theDrop->mPosition.GetX(), theDrop->mPosition.GetY(), 0.0f);
-                gWorld.GetEffectManager()->CreatePlacedEffect(theSplash, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
-            }
-            theDrop = this->mDrops.erase(theDrop);
-        } else
-            theDrop++;
-    }
-    return theResult;
+    return EEE3DStorm::Step();
 }
 
 // FUNCTION: EXE 0x4f80e8
@@ -431,7 +264,7 @@ void EEE3DRain::SetSoundLevel(SESMInstanceNode* inSound, float inVolume)
 
 // FUNCTION: EXE 0x4f8195
 // Starts the rain sound when the storm begins or is restored, plays one of the two thunder sounds whenever the delay
-// runs out (next in 5 to 14 s), and updates both sound levels
+// runs out (the timer and its draws: ee_gfx effect_storm.rs), and updates both sound levels
 long EEE3DRain::StartSounds()
 {
     if (this->mElapsedTime == 0.0f || this->mIsRestored) {
@@ -443,16 +276,15 @@ long EEE3DRain::StartSounds()
                 this->mSound->Dereference();
         }
     }
-    this->mRumbleDelay -= gPhysics->GetTickTime();
-    if (this->mRumbleDelay <= 0.0f) {
-        EESoundObject* theSound = EESoundObject::Get(GetEffectRandomLong(0, 10) > 4 ? this->mRumbleID1 : this->mRumbleID2);
+    long theRumble = ee_gfx_rain_rumble(this->mRecord, gPhysics->GetTickTime());
+    if (theRumble != 0) {
+        EESoundObject* theSound = EESoundObject::Get(theRumble == 1 ? this->mRumbleID1 : this->mRumbleID2);
         if (theSound) {
             this->SetRumble(gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), theSound->GetVolume(), 0.0f,
                                                                  1.0f, theSound->GetLooping(), "3D Rain Rumble"));
             if (this->mRumble)
                 this->mRumble->Dereference();
         }
-        this->mRumbleDelay = (float)(UMFloor(GetEffectRandomFloat(0.0f, 1.0f) * kRainRumbleDelay) + 5000);
     }
     this->SetSoundLevel(this->mSound, 0.5f);
     this->SetSoundLevel(this->mRumble, 1.0f);
@@ -487,64 +319,3 @@ void EEE3DRain::SetRumble(SESMInstanceNode* inSound)
 void EEE3DRain::PrepareQueue()
 {
 }
-
-// ICF-folded into EEE3DSnow's 0xfa291 (the same body)
-long EEE3DRain::SetUp()
-{
-    GETransformation theTransformation;
-    float theRadius = 0.0f;
-    long theSumX = 0;
-    long theSumY = 0;
-    this->Virtual64();
-    for (std::vector<EETileCoordinate>::iterator theTile = this->mTiles.begin(); theTile != this->mTiles.end(); theTile++) {
-        theSumX += theTile->mX;
-        theSumY += theTile->mY;
-    }
-    float theCenterX = (float)theSumX / this->mTiles.size();
-    float theCenterY = (float)theSumY / this->mTiles.size();
-    theTransformation.SetPosition(theCenterX, theCenterY,
-                                  gWorld.mMap->mTerrainMesh.GetZ(UMFloor(theCenterX), UMFloor(theCenterY)));
-    this->SetTransformation(theTransformation);
-    for (std::vector<EETileCoordinate>::iterator theOther = this->mTiles.begin(); theOther != this->mTiles.end(); theOther++) {
-        long theCoordinate = theOther->mX;
-        float theDistance = (float)fabs(theCoordinate - theCenterX);
-        if (theDistance > theRadius)
-            theRadius = theDistance;
-        theCoordinate = theOther->mY;
-        theDistance = fabs(theCoordinate - theCenterY);
-        if (theDistance > theRadius)
-            theRadius = theDistance;
-    }
-    this->mBoundingRadius = theRadius;
-    return 0;
-}
-
-// ICF-folded into 0xfca98
-long EEE3DRain::Virtual70()
-{
-    return 0;
-}
-
-// FUNCTION: EXE 0x4f8385
-// FUNCTION: EXE 0x4f83b1
-// FUNCTION: EXE 0x4f83ec
-// FUNCTION: EXE 0x4f8418
-// FUNCTION: EXE 0x4f847c
-// FUNCTION: EXE 0x4f84d6
-// FUNCTION: EXE 0x4f8520
-// FUNCTION: EXE 0x4f857a
-// FUNCTION: EXE 0x4f8831
-// FUNCTION: EXE 0x4f8ae8
-// FUNCTION: EXE 0x4f8b15
-// FUNCTION: EXE 0x4f8b42
-// FUNCTION: EXE 0x4f8b6b
-// FUNCTION: EXE 0x4f8b8f
-// FUNCTION: EXE 0x4f8bc1
-// FUNCTION: EXE 0x4f8bde
-// FUNCTION: EXE 0x4f8c0a
-// FUNCTION: EXE 0x4f8c3c
-// FUNCTION: EXE 0x4f8c59
-// FUNCTION: EXE 0x4f8c85
-// FUNCTION: EXE 0x4f8c9b
-// FUNCTION: EXE 0x4f8cc6
-// The drop and draw vectors' std::vector members (template COMDATs from <vector>)

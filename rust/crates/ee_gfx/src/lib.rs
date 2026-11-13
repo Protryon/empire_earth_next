@@ -26,6 +26,7 @@ pub mod beam;
 pub mod camera;
 pub mod effect_state;
 pub mod effect_store;
+pub mod effect_storm;
 pub mod effects;
 pub mod farm;
 pub mod ffi;

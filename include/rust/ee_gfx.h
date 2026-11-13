@@ -63,6 +63,12 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_RIPPLE = 34;
 /// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
 constexpr static const int32_t EE_GFX_EFFECT_ASK_BLOCKED = 1;
 
+/// The rain (`EEE3DRain`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_RAIN = 42;
+
+/// The snow (`EEE3DSnow`).
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SNOW = 61;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -129,6 +135,9 @@ struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
+
+/// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
+struct EeGfxStormLists;
 
 /// What `GoTo` sets after the new key is taken: the move's rate, and whether the start offset and focus jump to the
 /// end (a move shorter than 0.001).
@@ -516,6 +525,35 @@ struct EeGfxEffectAged {
   EeGeTransformation transformation;
 };
 
+/// A storm's state (`EEE3DStorm`'s, `EEE3DRain`'s and `EEE3DSnow`'s plain members).
+struct EeGfxEffectStorm {
+  /// the tiles and the drops (owned: made on first use, freed with the record)
+  EeGfxStormLists *lists;
+  /// `mCenter`: the tiles' mean (saved)
+  int32_t center_x;
+  int32_t center_y;
+  /// `mFallSpeed`, `mSpawnHeight`, `mDensity`: the graphic effect's params 1-3
+  float fall_speed;
+  float spawn_height;
+  float density;
+  /// `mIntensity` (1; saved; the weather event sets it)
+  float intensity;
+  /// `mDuration` (ms; 5000 until the graphic effect's is read)
+  uint32_t duration;
+  /// `mElapsedTime` (ms; saved)
+  float elapsed;
+  /// `mIsRestored`: loaded this tick (the rain's sound restarts)
+  bool restored;
+  /// `mIsSustained`: the weather event keeps it going (saved)
+  bool sustained;
+  /// `mDropCount` / `mFlakeCount`: drops spawned so far (saved)
+  uint32_t count;
+  /// `mLoadedDrops` / `mLoadedFlakes`: the saved number of drops, respawned by RepairPointers
+  uint32_t loaded;
+  /// the rain's `mRumbleDelay`: ms to the next thunder (saved)
+  float rumble_delay;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -553,6 +591,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectEmitter emitter;
   /// the aged effects'
   EeGfxEffectAged aged;
+  /// the weather storms' (`effect_storm.rs`)
+  EeGfxEffectStorm storm;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -755,6 +795,33 @@ struct EeGfxEmitterBurst {
 struct EeGfxEmitterHost {
   void *context;
   int32_t (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
+};
+
+/// The world a storm reads and calls into (`context`: the effect).
+struct EeGfxStormHost {
+  void *context;
+  /// the map has the tile
+  bool (*on_map)(void *context, int32_t x, int32_t y);
+  /// the tile is deep or shallow water (false off the map)
+  bool (*is_water)(void *context, int32_t x, int32_t y);
+  /// the terrain mesh's `GetZ(x, y)`
+  float (*ground_z)(void *context, int32_t x, int32_t y);
+  /// `EEGetNextTile(from, EEGetTileDirection(from, to), 1)` into `out` (x, y)
+  void (*step_toward)(void *context,
+                      int32_t from_x,
+                      int32_t from_y,
+                      int32_t to_x,
+                      int32_t to_y,
+                      int32_t *out);
+  /// the land ripple where a drop hit the water
+  void (*ripple)(void *context, float x, float y);
+};
+
+/// A drop to draw this frame (`EE3DRainDraw`, `EE3DSnowDraw`: `Queue` copies the drops).
+struct EeGfxStormDraw {
+  EeGe3DPoint position;
+  float angle;
+  bool water;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1682,6 +1749,104 @@ int32_t ee_gfx_effect_random_long(int32_t min, int32_t max);
 
 /// The effects' random seed (TEST ONLY: the EFST capture).
 uint32_t ee_gfx_effect_random_seed();
+
+/// `EEE3DStorm`'s constructor: the storm over `count` tiles (`tiles`: x, y pairs).
+///
+/// # Safety
+/// `r` is a live record; `tiles` holds `2 * count` values (or is null with 0).
+void ee_gfx_storm_new(EeGfxEffectRecord *r, const int32_t *tiles, uint32_t count);
+
+/// `EEE3DRain`'s constructor: the first thunder's delay.
+///
+/// # Safety
+/// `r` is a live record.
+void ee_gfx_rain_new(EeGfxEffectRecord *r);
+
+/// `EEE3DStorm::GetCenter`: whether it has tiles; `out` gets the point on the terrain at the new centre.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+bool ee_gfx_storm_center(EeGfxEffectRecord *r,
+                         const EeGfxStormHost *host,
+                         EeGe3DPoint *out);
+
+/// `EEE3DStorm::Move` towards (`to_x`, `to_y`): whether it has tiles; `bounds` (left, top, right, bottom) and `out`
+/// (the point on the terrain at the new centre) are set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values; `host` and `out` are valid.
+bool ee_gfx_storm_move(EeGfxEffectRecord *r,
+                       int32_t to_x,
+                       int32_t to_y,
+                       int32_t *bounds,
+                       const EeGfxStormHost *host,
+                       EeGe3DPoint *out);
+
+/// `EEE3DStorm::GetBounds`: whether it has tiles; `bounds` (left, top, right, bottom) is set then.
+///
+/// # Safety
+/// `r` is a live record; `bounds` holds 4 values.
+bool ee_gfx_storm_bounds(const EeGfxEffectRecord *r, int32_t *bounds);
+
+/// The storm's number of tiles (`mTiles.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+uint32_t ee_gfx_storm_tile_count(const EeGfxEffectRecord *r);
+
+/// The storm's number of drops or flakes (`mDrops.size()`, `mFlakes.size()`).
+///
+/// # Safety
+/// `r` is a live record.
+uint32_t ee_gfx_storm_drop_count(const EeGfxEffectRecord *r);
+
+/// `Queue`'s copy of the drops into `out` (at most `count`).
+///
+/// # Safety
+/// `r` is a live record; `out` holds `count` draws.
+void ee_gfx_storm_draws(const EeGfxEffectRecord *r, EeGfxStormDraw *out, uint32_t count);
+
+/// The rain's and the snow's `SetUp` (after the C++ read the graphic effect): `out` gets the point on the terrain
+/// at the tiles' mean; the radius is set.
+///
+/// # Safety
+/// `r` is a live record; `host` and `out` are valid.
+void ee_gfx_storm_set_up(EeGfxEffectRecord *r,
+                         const EeGfxStormHost *host,
+                         EeGe3DPoint *out);
+
+/// The rain's thunder timer: 0, or the rumble sound (1 or 2) to play.
+///
+/// # Safety
+/// `r` is a live record.
+int32_t ee_gfx_rain_rumble(EeGfxEffectRecord *r, float tick_time);
+
+/// The storm's `Step` after the rain's sounds: 7 when it ends.
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+int32_t ee_gfx_storm_step(EeGfxEffectRecord *r,
+                          float tick_time,
+                          float game_speed,
+                          const EeGfxStormHost *host);
+
+/// `RepairPointers`' respawn of the saved drops (after the C++ read the graphic effect again).
+///
+/// # Safety
+/// `r` is a live record; `host` is valid.
+void ee_gfx_storm_repair(EeGfxEffectRecord *r, const EeGfxStormHost *host);
+
+/// The storm's and the leaf's own reads after `EEEffect3D::Load`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_storm_load(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The storm's and the leaf's own writes after `EEEffect3D::Save`'s.
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_storm_save(EeGfxEffectRecord *r, const EeGfxEffectFile *file);
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///
