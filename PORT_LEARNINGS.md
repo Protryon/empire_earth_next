@@ -12361,3 +12361,58 @@ class kept a hook table while its ops stayed C++; this round took a class whose 
   so it would not let the routing op classes lose their bodies. The routing request helpers and the notification /
   request op classes (RoutingConnection.cpp, RoutingRequestOps.cpp, RoutingNotifications.cpp): RoutingLogic reads
   their members by class; a move needs the lobby's readers changed with them.
+
+## R4.4, thirteenth round: the shots and the citizen beam whole in Rust on EEE3DRust (ee_gfx effect_shot.rs, effect_beam.rs; branch rust-gfx19, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 22,651 lines before the round; 22,085 after the shots
+(-566: `EEE3DPulseCannonBall.cpp`, `EEE3DTracers.cpp`, `EEE3DShells.cpp` deleted, net of the host and constructors
+added to `EEE3DRust.cpp`); 21,867 after the citizen beam (-218). Headers `EEE3DPulseCannonBall.h`, `EEE3DTracers.h`
+(with `EEE3DShells`) and `EEE3DCitizenBeam.h` deleted.
+
+- **The shots (`effect_shot.rs`): the pulse cannon ball (0x43), the tracers (0x21) and the shells (0x26).** The
+  constructors stay C++ where they read the world: the shooter's weapon point (`EECombatEffectWeaponPoint`, mode 6 or
+  7, in `ShotStart`), the target's model point through its scaled location (`PickPoint`, `Apply`) and the shooter's
+  player colour go into the record's new shot part; Rust makes the line, faces the model along it (`um_arctan2`,
+  `um_arccos` and `set_orientation(Ypr)` of `ee_ge`, the same functions the C++ forwarders call, so the bits are the
+  engine's), sets the speed (duration x 0.00001 over the line's length), moves the shot (`GE3DLine::GetPointAt`'s
+  `point_at`), pulses the ball's scale every tenth and explodes it past the end (7 at 1.5), ends a tracer with its
+  impact effect and `UnitDamaged` (one host call, `shot_hit`), and draws: the ball and its glow (model 1, the host's
+  `model_at`) additively in pass 6, a tracer in colour (flag 1, the rasterizer table's new material colour) or
+  textured, dimming past half way, and a shell's alpha-blended pass 5 (a shell is a tracer with that pass: it draws
+  in both). Load and Save by kind (`load_line`/`save_line` are `GE3DLine`'s; format unchanged).
+- **The citizen beam (`effect_beam.rs`, 0x33).** On while its unit plays the effect's animation within frames
+  [int param 2, int param 3) (the facts gain int params 1-3 and the game time), unless the unit is a cloaked enemy's
+  (the host's `beam_hidden`, asked only in the window as the original); aimed from the unit's first tag point (the
+  host's `beam_start`) when it turns on, its linked effect placed half way (`place_linked`); its scale flickers with
+  `mGameTime & 7`; drawn additively in pass 6 through the model's own `SetTexture` (not its material's: a new table
+  entry). Its record is the shot part's (line, draw location, scale) plus its end, middle, unused float and flags.
+  The pulse cannon ball and the beam share the constructor (unit, point), told apart by kind.
+- **Golden drivers over the logging rasterizer** (`build/gx19/shot`, `build/gx19/beam`; round 12's stub world
+  extended: the engine's vector magnitude, arc tangent, arc cosine and orientation through `ee_ge`'s exports, as the
+  game links them; per-model ids on every model and material call; a complex unit derived from the unit for the beam's
+  `dynamic_cast`; players and the world's current player). The original classes cut verbatim (shots from e92bcb6b,
+  the beam from 319325f5) against `EEE3DRust`'s constructors, host and `Call` and the rasterizer table cut from the
+  worktree over the Rust printed the same bytes: shots 300 (6,883 lines) and 3,000 on seed 2 (68,019; 646 hits,
+  4,565 shell draws, the zero-length line among them), beams 300 (6,671) and 3,000 on seed 2 (67,393; 713 linked
+  effects placed). The Rust tests pin each op against `LogRaster` (8 shot tests, 4 beam tests).
+- **Round 12's rising driver rerun on the final shared host:** its stub world needed the follow driver's stubs
+  (the host now holds the shield's and the follow's calls); with them it printed round 12's original bytes (5,443
+  lines, and 52,163 on seed 2).
+- **Which effects the gate games make** (a temporary count in `EERegisterEffect`, removed; kinds in hex): the sim
+  oracle's games and the oracle profile 7, 0x1b, 0x2e, 0x32, 0x39, 0x3a, 0x3b, 0xd (and a few 0); late 6, 7, 0xd,
+  0x22, 0x29, 0x2e, 0x32, 0x3a, 0x3e; calamity 6, 7, 8, 0xb, 0xd, 0x12, 0x1a, 0x1b, 0x1e, 0x20, 0x22-0x25, 0x27, 0x2b, 0x2e,
+  0x2f, 0x30, 0x32, 0x39-0x3b, 0x3e, 0x3f, 0x40, 0x45, 0x47. None of this round's kinds (0x21, 0x26, 0x33, 0x43)
+  is made by any of them: the oracle, EFST and saveload pass without reaching the moved code; only the goldens and
+  the unit tests run it. Of round 12's, the calamity profile makes the teleport (0x3f, 12) and the shield (0x45, 2),
+  so its EFST covers their tick, Load and Save; the blast wave and time warp are made by none.
+- **Behaviour:** none intended.
+- **Gates.** Gates on the result merged with rust (16a131cd): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,611 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected); the shot, beam and rising drivers rebuilt on the merged tree printed the same bytes (the rising one with the model-id tokens of the final stub world stripped). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the oracle capture at seeds 2-3 PASS (169), the Rust gate PASS (2,562, then 2,566 tests). No tour run.
+- **Only a tour or a person reaches:** every path of the four moved kinds: a tracer or shell fired between units
+  (their shot effect: `CreateEffectBetweenUnits`, scenario effects), its impact effect and the target's
+  `UnitDamaged`, the shell's fade in pass 5; the pulse cannon ball (`EEAEExtraDamageFunctor`'s pulse cannon effect)
+  with its glow and explosion; the citizen beam (a unit's work animation window: aim, linked effect, flicker, the
+  cloak test); Load and Save of each in a saved game holding one. Every draw goes through the new table entries
+  (material colour, model texture).
+- **Next:** the 2D twin (`EEE2DRust` over `EEEffect2D`) for the sprite effects; more 3D leaves on `EEE3DRust`
+  (water splash and screen flash on the aged record, the additive pass, the linear projectile, the disease and virus
+  with their orbitals). A gate profile that makes the moved kinds would let EFST cover them.
