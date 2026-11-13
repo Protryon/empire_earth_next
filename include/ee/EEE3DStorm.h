@@ -10,6 +10,7 @@
 #define EE_EEE3DSTORM_H
 
 #include <vector>
+#include "rust/ee_gfx.h"
 
 class GEModel;
 template <class T> class U2DRectangle;
