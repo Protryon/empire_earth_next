@@ -22,10 +22,12 @@
 
 pub mod actions;
 pub mod ai;
+pub mod build;
 pub mod calamity;
 pub mod commands;
 pub mod explore;
 pub mod ffi;
+pub mod gather;
 pub mod goals;
 pub mod group;
 mod header_consts;

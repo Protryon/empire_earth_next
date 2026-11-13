@@ -10,8 +10,10 @@
 
 use std::ffi::c_void;
 
+use crate::build::{BuildHost, GOAL_BUILD_REPAIR};
 use crate::calamity::CalamityHost;
 use crate::explore::ExploreHost;
+use crate::gather::{GatherHost, GOAL_GATHER};
 use crate::load::{LoadClass, LoadHost, LoadUnit, GOAL_LOAD_GARRISON, GOAL_LOAD_TRANSPORT};
 use crate::patrol::PatrolHost;
 use crate::unload::UnloadHost;
@@ -258,6 +260,141 @@ pub const EE_UNITS_GOAL_HOST_PLAY_SOUND: i32 = 127;
 pub const EE_UNITS_GOAL_HOST_REPLACE_CLASS: i32 = 128;
 pub const EE_UNITS_GOAL_HOST_GENERATE: i32 = 129;
 pub const EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS: i32 = 130;
+// the build/repair goal's (from 400: see the body operations below)
+/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit; `b` 1: only the class, player, tile and
+/// complex unit)
+pub const EE_UNITS_GOAL_HOST_BUILD_UNIT: i32 = 400;
+pub const EE_UNITS_GOAL_HOST_TECH_NODE: i32 = 401;
+pub const EE_UNITS_GOAL_HOST_NODE_INFO: i32 = 402;
+pub const EE_UNITS_GOAL_HOST_PLAYER_ID: i32 = 403;
+pub const EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE: i32 = 404;
+pub const EE_UNITS_GOAL_HOST_BUILDERS_ADD: i32 = 405;
+pub const EE_UNITS_GOAL_HOST_ATTACK_PART: i32 = 406;
+pub const EE_UNITS_GOAL_HOST_IN_WORK_REACH: i32 = 407;
+pub const EE_UNITS_GOAL_HOST_SURROUNDING_TILES: i32 = 408;
+pub const EE_UNITS_GOAL_HOST_COMPLETE_BUILDING: i32 = 409;
+pub const EE_UNITS_GOAL_HOST_PLAY_EFFECT: i32 = 410;
+pub const EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME: i32 = 411;
+pub const EE_UNITS_GOAL_HOST_FILL_PARTS: i32 = 412;
+pub const EE_UNITS_GOAL_HOST_NEXT_FREE_TILE: i32 = 413;
+pub const EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION: i32 = 414;
+pub const EE_UNITS_GOAL_HOST_LOCATION_GOAL: i32 = 415;
+pub const EE_UNITS_GOAL_HOST_HELP_BUILD: i32 = 416;
+pub const EE_UNITS_GOAL_HOST_TEND_FARM: i32 = 417;
+pub const EE_UNITS_GOAL_HOST_GATHER_NEAR: i32 = 418;
+pub const EE_UNITS_GOAL_HOST_GATE_SIDE_PART: i32 = 419;
+pub const EE_UNITS_GOAL_HOST_BUILD_EVENT: i32 = 420;
+pub const EE_UNITS_GOAL_HOST_ABANDON_BUILDING: i32 = 421;
+pub const EE_UNITS_GOAL_HOST_FACE_TARGET: i32 = 422;
+pub const EE_UNITS_GOAL_HOST_SET_WORK_TIMER: i32 = 423;
+pub const EE_UNITS_GOAL_HOST_HALT: i32 = 424;
+pub const EE_UNITS_GOAL_HOST_SITE_TAKEN: i32 = 425;
+pub const EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR: i32 = 426;
+pub const EE_UNITS_GOAL_HOST_SITE_FREE: i32 = 427;
+pub const EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: i32 = 428;
+pub const EE_UNITS_GOAL_HOST_RESOURCE_USERS: i32 = 429;
+pub const EE_UNITS_GOAL_HOST_NEW_GATHER: i32 = 430;
+pub const EE_UNITS_GOAL_HOST_SET_GOAL: i32 = 431;
+pub const EE_UNITS_GOAL_HOST_NEAREST_SITE: i32 = 432;
+pub const EE_UNITS_GOAL_HOST_CLEAR_SITE: i32 = 433;
+pub const EE_UNITS_GOAL_HOST_CAN_PRODUCE: i32 = 434;
+pub const EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR: i32 = 435;
+pub const EE_UNITS_GOAL_HOST_FRIENDLY: i32 = 436;
+pub const EE_UNITS_GOAL_HOST_IN_CINEMATIC: i32 = 437;
+pub const EE_UNITS_GOAL_HOST_SET_PAID: i32 = 438;
+pub const EE_UNITS_GOAL_HOST_PAY: i32 = 439;
+pub const EE_UNITS_GOAL_HOST_SET_HIT_POINTS: i32 = 440;
+pub const EE_UNITS_GOAL_HOST_FOUNDATION_STARTED: i32 = 441;
+pub const EE_UNITS_GOAL_HOST_GOAL_ARG: i32 = 442;
+// the gather goal's
+pub const EE_UNITS_GOAL_HOST_FARM_TILE: i32 = 450;
+pub const EE_UNITS_GOAL_HOST_RESOURCE_SPOT: i32 = 451;
+pub const EE_UNITS_GOAL_HOST_NEXT_RESOURCE: i32 = 452;
+pub const EE_UNITS_GOAL_HOST_FIND_STORAGE: i32 = 453;
+pub const EE_UNITS_GOAL_HOST_FREE_TILE: i32 = 454;
+pub const EE_UNITS_GOAL_HOST_TILE_HEIGHT: i32 = 455;
+pub const EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT: i32 = 456;
+pub const EE_UNITS_GOAL_HOST_NEXT_FARM: i32 = 457;
+pub const EE_UNITS_GOAL_HOST_STORAGE_SEARCH: i32 = 458;
+pub const EE_UNITS_GOAL_HOST_GATHER_SPOT: i32 = 459;
+pub const EE_UNITS_GOAL_HOST_BEGIN_GATHERING: i32 = 460;
+pub const EE_UNITS_GOAL_HOST_DEPOSIT_LOAD: i32 = 461;
+pub const EE_UNITS_GOAL_HOST_NEXT_TREE: i32 = 462;
+pub const EE_UNITS_GOAL_HOST_BUILD_FARMS: i32 = 463;
+pub const EE_UNITS_GOAL_HOST_HUNT: i32 = 464;
+pub const EE_UNITS_GOAL_HOST_SET_GATHERED: i32 = 465;
+pub const EE_UNITS_GOAL_HOST_GATHER_ROOM: i32 = 466;
+pub const EE_UNITS_GOAL_HOST_LAST_WAYPOINT: i32 = 467;
+pub const EE_UNITS_GOAL_HOST_RESOURCE_REACH: i32 = 468;
+pub const EE_UNITS_GOAL_HOST_STORAGE_REACH: i32 = 469;
+pub const EE_UNITS_GOAL_HOST_SET_ACTIVE: i32 = 470;
+pub const EE_UNITS_GOAL_HOST_FIND_GHOST: i32 = 471;
+pub const EE_UNITS_GOAL_HOST_AT_RESOURCE: i32 = 472;
+pub const EE_UNITS_GOAL_HOST_AT_STORAGE: i32 = 473;
+pub const EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: i32 = 474;
+pub const EE_UNITS_GOAL_HOST_ACCESSIBLE: i32 = 475;
+pub const EE_UNITS_GOAL_HOST_PATH_LENGTH: i32 = 476;
+pub const EE_UNITS_GOAL_HOST_GATHER_WORK: i32 = 477;
+pub const EE_UNITS_GOAL_HOST_NAVAL_SEARCH: i32 = 478;
+pub const EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH: i32 = 479;
+
+/// A unit's fields the build/repair goal reads (`EE_UNITS_GOAL_HOST_BUILD_UNIT`; the complex unit's own only for
+/// a complex unit).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeUnitsBuildUnit {
+    /// `mComplexUnit`, `mUnitClass`, `mPlayer`; the first of the complex unit's linked parts (`mPreviousPart`
+    /// walked), its `mNextPart`
+    pub complex: u64,
+    pub unit_class: u64,
+    pub player: u64,
+    pub first: u64,
+    pub next: u64,
+    /// the class's type, tile size, category; `gUnitClassTable[type]`'s technology (`kTechNone` without one)
+    pub unit_type: i32,
+    pub tile_size: i32,
+    pub category: i32,
+    pub table_technology: i32,
+    /// `mHitPoints`, `mStats->mMaxHitPoints`, `mNumBuilders`, the tile, the command's type (0: none)
+    pub hit_points: i32,
+    pub max_hit_points: i32,
+    pub builders: i32,
+    pub tile_x: i32,
+    pub tile_y: i32,
+    pub command: i32,
+    /// `mStats->mRepairRate`, `mStats->mWorkRate`, `mStats->mBuildTimeScale`, `GetLineOfSight()`, the physical
+    /// model's location
+    pub repair_rate: i32,
+    pub work_rate: i32,
+    pub build_time_scale: f32,
+    pub line_of_sight: f32,
+    pub location: [f32; 3],
+    /// `mIsBuilt`, `mTileNode`, `mTile`, `mIsValid`, `mIsPaidFor`, `IsFoundation()`
+    pub built: bool,
+    pub tile_node: bool,
+    pub tile: bool,
+    pub valid: bool,
+    pub paid_for: bool,
+    pub foundation: bool,
+    /// the class's `mIsWall`, `mIsTower`, `IsDropSite()`
+    pub wall: bool,
+    pub tower: bool,
+    pub drop_site: bool,
+    /// the player's `mInstantBuild`, `IsHuman()`, `mComputerPlayer != NULL`; the unit's `mHasShiftQueuedBuild`
+    pub instant_build: bool,
+    pub human: bool,
+    pub computer: bool,
+    pub shift_queued_build: bool,
+    /// the gather goal's: `mResourceType`, `mResourceAmount`, `mStats->mCarryAmount`, the class's `mFamily` and
+    /// `mIsTree`, the complex unit's `mStats->mMaxVelocity > 0`, `mIsDisabled`
+    pub resource_type: i32,
+    pub resource_amount: i32,
+    pub carry_amount: i32,
+    pub family: i32,
+    pub is_tree: bool,
+    pub moving: bool,
+    pub disabled: bool,
+}
 
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
@@ -775,6 +912,291 @@ impl LoadHost for OpHost<'_> {
     }
 }
 
+impl BuildHost for OpHost<'_> {
+    fn build_unit(&mut self, unit: u64) -> EeUnitsBuildUnit {
+        let mut fields = EeUnitsBuildUnit::default();
+        if unit != 0 {
+            let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
+            self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 0, &mut io);
+        }
+        fields
+    }
+    fn build_unit_basic(&mut self, unit: u64) -> EeUnitsBuildUnit {
+        let mut fields = EeUnitsBuildUnit::default();
+        if unit != 0 {
+            let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
+            self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 1, &mut io);
+        }
+        fields
+    }
+    fn tech_node(&mut self, player: u64, technology: i32) -> u64 {
+        self.op_ints(EE_UNITS_GOAL_HOST_TECH_NODE, player, 0, &[i64::from(technology)]) as u64
+    }
+    fn node_info(&mut self, node: u64) -> (i32, i32, i32) {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_NODE_INFO, node, 0, &mut io);
+        (io.i[0] as i32, io.i[1] as i32, io.i[2] as i32)
+    }
+    fn player_id(&mut self, player: u64) -> i32 {
+        self.op(EE_UNITS_GOAL_HOST_PLAYER_ID, player, 0) as i32
+    }
+    fn class_type(&mut self, class: u64) -> i32 {
+        self.op(EE_UNITS_GOAL_HOST_CLASS_UNIT_TYPE, class, 0) as i32
+    }
+    fn builders_add(&mut self, unit: u64, delta: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_BUILDERS_ADD, unit, 0, &[i64::from(delta)]);
+    }
+    fn attack_part(&mut self, unit: u64, target: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_ATTACK_PART, unit, target) as u64
+    }
+    fn in_work_reach(&mut self, unit: u64, target: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_IN_WORK_REACH, unit, target) != 0
+    }
+    fn surrounding_tiles(&mut self, target: u64) -> Vec<(i32, i32)> {
+        let mut tiles: Vec<(i32, i32)> = Vec::new();
+        let mut io = EeUnitsGoalIo { sink: (&mut tiles as *mut Vec<(i32, i32)>).cast(), ..Default::default() };
+        self.call(EE_UNITS_GOAL_HOST_SURROUNDING_TILES, target, 0, &mut io);
+        tiles
+    }
+    fn complete_building(&mut self, worker: u64, outer: u64, target_type: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_COMPLETE_BUILDING, worker, outer, &[i64::from(target_type)]);
+    }
+    fn play_effect(&mut self, unit: u64, effect: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_PLAY_EFFECT, unit, 0, &[i64::from(effect)]);
+    }
+    fn set_production_time(&mut self, unit: u64, time: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_PRODUCTION_TIME, unit, 0, &[i64::from(time)]);
+    }
+    fn set_work_timer(&mut self, unit: u64, time: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_WORK_TIMER, unit, 0, &[i64::from(time)]);
+    }
+    fn face_target(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_FACE_TARGET, unit, target);
+    }
+    fn fill_parts(&mut self, outer: u64) {
+        self.op(EE_UNITS_GOAL_HOST_FILL_PARTS, outer, 0);
+    }
+    fn next_free_tile(&mut self, unit: u64, target: u64) -> Option<[f32; 3]> {
+        let mut io = EeUnitsGoalIo::default();
+        if self.call(EE_UNITS_GOAL_HOST_NEXT_FREE_TILE, unit, target, &mut io) == 0 {
+            return None;
+        }
+        Some([io.f[0], io.f[1], io.f[2]])
+    }
+    fn cancel_foundation(&mut self, outer: u64, worker: u64, node: u64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_CANCEL_FOUNDATION, outer, worker, &[node as i64]);
+    }
+    fn location_goal(&mut self, unit: u64, point: [f32; 3]) {
+        self.op_with_point(EE_UNITS_GOAL_HOST_LOCATION_GOAL, unit, 0, point);
+    }
+    fn help_build_nearby(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_HELP_BUILD, unit, target);
+    }
+    fn tend_next_farm(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_TEND_FARM, unit, target);
+    }
+    fn gather_near(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_GATHER_NEAR, unit, target);
+    }
+    fn gate_side_part(&mut self, target: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_GATE_SIDE_PART, target, 0) != 0
+    }
+    fn build_event(&mut self, player: u64, target: u64, repair: bool) {
+        self.op_ints(EE_UNITS_GOAL_HOST_BUILD_EVENT, player, target, &[i64::from(repair)]);
+    }
+    fn abandon_building(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_ABANDON_BUILDING, unit, target);
+    }
+    fn halt(&mut self, unit: u64, action: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_HALT, unit, 0, &[action]);
+    }
+    fn site_taken(&mut self, target: u64, player: u64, target_type: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_SITE_TAKEN, target, player, &[i64::from(target_type)]) != 0
+    }
+    fn footprint_clear(&mut self, target: u64, player: u64, target_type: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR, target, player, &[i64::from(target_type)]) != 0
+    }
+    fn site_free(&mut self, target: u64, player: u64, target_type: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_SITE_FREE, target, player, &[i64::from(target_type)]) != 0
+    }
+    fn other_goal_queued(&mut self, unit: u64, goal: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED, unit, goal) != 0
+    }
+    fn resource_users(&mut self, unit: u64) -> i32 {
+        self.op(EE_UNITS_GOAL_HOST_RESOURCE_USERS, unit, 0) as i32
+    }
+    fn new_gather(&mut self, resource: u64, storage: u64, arg: bool) -> u64 {
+        self.op_ints(EE_UNITS_GOAL_HOST_NEW_GATHER, resource, storage, &[i64::from(arg)]) as u64
+    }
+    fn set_goal(&mut self, unit: u64, goal: u64, queue: i32, flag: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_GOAL, unit, goal, &[i64::from(queue), i64::from(flag)]);
+    }
+    fn nearest_site(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_NEAREST_SITE, unit, 0) as u64
+    }
+    fn clear_site(&mut self, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_CLEAR_SITE, target, 0);
+    }
+    fn can_produce(&mut self, target: u64, outer: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_CAN_PRODUCE, target, outer) != 0
+    }
+    fn can_afford_repair(&mut self, unit: u64, outer: u64, amount: i32) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_CAN_AFFORD_REPAIR, unit, outer, &[i64::from(amount)]) != 0
+    }
+    fn friendly(&mut self, player: u64, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_FRIENDLY, player, unit) != 0
+    }
+    fn in_cinematic(&mut self) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_IN_CINEMATIC, 0, 0) != 0
+    }
+    fn set_paid(&mut self, outer: u64) {
+        self.op(EE_UNITS_GOAL_HOST_SET_PAID, outer, 0);
+    }
+    fn pay(&mut self, player: u64, node: u64, fraction: f32) {
+        let mut io = EeUnitsGoalIo::default();
+        io.f[0] = fraction;
+        self.call(EE_UNITS_GOAL_HOST_PAY, player, node, &mut io);
+    }
+    fn set_hit_points(&mut self, unit: u64, hit_points: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_HIT_POINTS, unit, 0, &[i64::from(hit_points)]);
+    }
+    fn foundation_started(&mut self, outer: u64, target: u64, wonder: bool) {
+        self.op_ints(EE_UNITS_GOAL_HOST_FOUNDATION_STARTED, outer, target, &[i64::from(wonder)]);
+    }
+    fn goal_arg(&mut self, goal: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_GOAL_ARG, goal, 0) != 0
+    }
+    fn deposit(&mut self, unit: u64, target: u64) {
+        self.op(EE_UNITS_GOAL_HOST_DEPOSIT, unit, target);
+    }
+    fn goal_state(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_UNIT_GOAL, unit, 1) as u64
+    }
+    fn write_f32(&mut self, value: f32) -> i32 {
+        self.write(3, i64::from(value.to_bits()))
+    }
+    fn read_f32(&mut self, value: &mut f32) -> i32 {
+        let (result, v) = self.read(3, i64::from(value.to_bits()));
+        *value = f32::from_bits(v as u32);
+        result
+    }
+}
+
+impl OpHost<'_> {
+    fn op_point_io(&mut self, op: i32, a: u64, b: u64, out: &mut [f32; 3]) -> bool {
+        let mut io = EeUnitsGoalIo::default();
+        io.f[..3].copy_from_slice(out);
+        let found = self.call(op, a, b, &mut io) != 0;
+        out.copy_from_slice(&io.f[..3]);
+        found
+    }
+}
+
+impl GatherHost for OpHost<'_> {
+    fn farm_tile(&mut self, farm: u64, near: u64) -> (i32, i32) {
+        let mut io = EeUnitsGoalIo::default();
+        self.call(EE_UNITS_GOAL_HOST_FARM_TILE, farm, near, &mut io);
+        (io.i[0] as i32, io.i[1] as i32)
+    }
+    fn resource_spot(&mut self, unit: u64, resource: u64, out: &mut [f32; 3]) -> bool {
+        self.op_point_io(EE_UNITS_GOAL_HOST_RESOURCE_SPOT, unit, resource, out)
+    }
+    fn next_resource(&mut self, unit: u64, resource: u64, kind: i32, passed: &[u64]) -> u64 {
+        let mut io = EeUnitsGoalIo { list: passed.as_ptr(), list_len: passed.len(), ..Default::default() };
+        io.i[0] = i64::from(kind);
+        self.call(EE_UNITS_GOAL_HOST_NEXT_RESOURCE, unit, resource, &mut io) as u64
+    }
+    fn find_storage(&mut self, unit: u64, new: bool) -> u64 {
+        self.op_ints(EE_UNITS_GOAL_HOST_FIND_STORAGE, unit, 0, &[i64::from(new)]) as u64
+    }
+    fn free_tile(&mut self, unit: u64, storage: u64, out: &mut [f32; 3]) -> bool {
+        self.op_point_io(EE_UNITS_GOAL_HOST_FREE_TILE, unit, storage, out)
+    }
+    fn tile_height(&mut self, unit: u64) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_TILE_HEIGHT, unit, 0, &[])[0]
+    }
+    fn at_resource_spot(&mut self, unit: u64, resource: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT, unit, resource) != 0
+    }
+    fn next_farm(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_NEXT_FARM, unit, resource);
+    }
+    fn storage_search(&mut self, unit: u64) -> Option<u64> {
+        let found = self.op(EE_UNITS_GOAL_HOST_STORAGE_SEARCH, unit, 0);
+        if found == -1 {
+            None
+        } else {
+            Some(found as u64)
+        }
+    }
+    fn gather_spot(&mut self, unit: u64, resource: u64) -> Option<[f32; 3]> {
+        let mut out = [0.0f32; 3];
+        self.op_point_io(EE_UNITS_GOAL_HOST_GATHER_SPOT, unit, resource, &mut out).then_some(out)
+    }
+    fn begin_gathering(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_BEGIN_GATHERING, unit, resource);
+    }
+    fn deposit_load(&mut self, unit: u64, storage: u64) {
+        self.op(EE_UNITS_GOAL_HOST_DEPOSIT_LOAD, unit, storage);
+    }
+    fn next_tree(&mut self, unit: u64, resource: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_NEXT_TREE, unit, resource) as u64
+    }
+    fn build_farms(&mut self, unit: u64, goal: u64) {
+        self.op(EE_UNITS_GOAL_HOST_BUILD_FARMS, unit, goal);
+    }
+    fn hunt(&mut self, unit: u64, resource: u64, arg: bool) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_HUNT, unit, resource, &[i64::from(arg)]) != 0
+    }
+    fn set_gathered(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_SET_GATHERED, unit, resource);
+    }
+    fn gather_room(&mut self, unit: u64, resource: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_GATHER_ROOM, unit, resource) != 0
+    }
+    fn last_waypoint(&mut self, unit: u64) -> [f32; 3] {
+        self.op_point(EE_UNITS_GOAL_HOST_LAST_WAYPOINT, unit, 0, &[])
+    }
+    fn resource_reach(&mut self, unit: u64, resource: u64, point: [f32; 3]) -> bool {
+        self.op_with_point(EE_UNITS_GOAL_HOST_RESOURCE_REACH, unit, resource, point) != 0
+    }
+    fn storage_reach(&mut self, storage: u64, point: [f32; 3]) -> bool {
+        self.op_with_point(EE_UNITS_GOAL_HOST_STORAGE_REACH, storage, 0, point) != 0
+    }
+    fn set_active(&mut self, goal: u64, active: bool) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_ACTIVE, goal, 0, &[i64::from(active)]);
+    }
+    fn find_ghost(&mut self, id: u32, complex: bool) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_FIND_GHOST, u64::from(id), u64::from(complex)) as u64
+    }
+    fn at_resource(&mut self, unit: u64, resource: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_AT_RESOURCE, unit, resource) != 0
+    }
+    fn at_storage(&mut self, unit: u64, storage: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_AT_STORAGE, unit, storage) != 0
+    }
+    fn line_to_unit_blocked(&mut self, unit: u64, target: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED, unit, target) != 0
+    }
+    fn accessible(&mut self, unit: u64, resource: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_ACCESSIBLE, unit, resource) != 0
+    }
+    fn path_length(&mut self, unit: u64, tile: (i32, i32)) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_PATH_LENGTH, unit, 0, &[i64::from(tile.0), i64::from(tile.1)])[0]
+    }
+    fn gather_work(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_GATHER_WORK, unit, resource);
+    }
+    fn naval_search(&mut self, unit: u64, resource: u64) -> (i64, u64) {
+        let mut io = EeUnitsGoalIo::default();
+        let found = self.call(EE_UNITS_GOAL_HOST_NAVAL_SEARCH, unit, resource, &mut io) as u64;
+        (io.i[0], found)
+    }
+    fn reset_active_path(&mut self, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH, unit, 0);
+    }
+}
+
 // ---- the goal's bodies, by operation (`EEUGRust`'s virtuals and accessors)
 pub const EE_UNITS_GOAL_DESTROY: i32 = 1;
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -851,6 +1273,29 @@ pub const EE_UNITS_GOAL_LOAD_UNIT_AT: i32 = 75;
 /// the container (the result), `io.i`: the container and unit tiles, the garrison's valid flag, the unit count
 pub const EE_UNITS_GOAL_LOAD_FIELDS: i32 = 76;
 
+// the round-19 operations (from 300: the combat goals' own take 200-299, their host's from 1000)
+/// `a`: the unit; `Work` (the base goal's does nothing)
+pub const EE_UNITS_GOAL_WORK: i32 = 300;
+/// `a`: the unit; `PathTaken` (the base goal's does nothing)
+pub const EE_UNITS_GOAL_PATH_TAKEN: i32 = 301;
+/// a build/repair goal: `a` the player, `b` the building
+pub const EE_UNITS_GOAL_NEW_BUILD: i32 = 310;
+pub const EE_UNITS_GOAL_BUILD_NEW_EMPTY: i32 = 311;
+/// the building (the result), `io.i`: its type, technology, tech tree node and class
+pub const EE_UNITS_GOAL_BUILD_FIELDS: i32 = 312;
+/// `IsBuildSiteTaken`
+pub const EE_UNITS_GOAL_BUILD_SITE_TAKEN: i32 = 313;
+/// a gather goal: `a` the resource, `b` the storage
+pub const EE_UNITS_GOAL_NEW_GATHER: i32 = 320;
+pub const EE_UNITS_GOAL_GATHER_NEW_EMPTY: i32 = 321;
+/// the resource (the result), `io.i`: the storage, the gathering and waiting flags; `io.f` the destination
+pub const EE_UNITS_GOAL_GATHER_FIELDS: i32 = 322;
+/// `a`: the new resource, storage (`SetResource`, `SetStorage`)
+pub const EE_UNITS_GOAL_GATHER_SET_RESOURCE: i32 = 323;
+pub const EE_UNITS_GOAL_GATHER_SET_STORAGE: i32 = 324;
+/// `a`: the unit; `FindGatherSpot`
+pub const EE_UNITS_GOAL_GATHER_FIND_SPOT: i32 = 325;
+
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 pub const GOAL_UNLOAD_TRANSPORT: u8 = 8;
 pub const GOAL_PATROL: u8 = 9;
@@ -880,6 +1325,8 @@ pub unsafe extern "C" fn ee_units_rust_goal(
             | GOAL_UNLOAD_TRANSPORT
             | GOAL_LOAD_TRANSPORT
             | GOAL_LOAD_GARRISON
+            | GOAL_BUILD_REPAIR
+            | GOAL_GATHER
     ) {
         // another crate's kinds (the combat lane's attack goals: ee_combat), through the same host
         let other = *OTHER_KINDS.lock().unwrap_or_else(|e| e.into_inner());
@@ -890,7 +1337,12 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     let (io, table) = unsafe { (&mut *io, &*host) };
     let mut h = OpHost(table);
     // the base goal's answers for the classes that keep them
-    if kind != GOAL_UNLOAD_TRANSPORT && kind != GOAL_LOAD_TRANSPORT && kind != GOAL_LOAD_GARRISON {
+    if kind != GOAL_UNLOAD_TRANSPORT
+        && kind != GOAL_LOAD_TRANSPORT
+        && kind != GOAL_LOAD_GARRISON
+        && kind != GOAL_BUILD_REPAIR
+        && kind != GOAL_GATHER
+    {
         match op {
             EE_UNITS_GOAL_MAX_PATH_ATTEMPTS => return 3,
             EE_UNITS_GOAL_SUITS => return 1,
@@ -903,6 +1355,8 @@ pub unsafe extern "C" fn ee_units_rust_goal(
         GOAL_EXPLORE => crate::explore::body(op, goal, a, b, io, &mut h),
         GOAL_UNLOAD_TRANSPORT => crate::unload::body(op, goal, a, b, io, &mut h),
         GOAL_LOAD_TRANSPORT | GOAL_LOAD_GARRISON => crate::load::body(op, kind, goal, a, b, io, &mut h),
+        GOAL_BUILD_REPAIR => crate::build::body(op, goal, a, b, io, &mut h),
+        GOAL_GATHER => crate::gather::body(op, goal, a, b, io, &mut h),
         _ => 0,
     }
 }

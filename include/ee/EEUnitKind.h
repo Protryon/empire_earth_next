@@ -1,6 +1,6 @@
 // New (port): unit kinds as data (docs/RUST_PLAN.md R5b.4). The class tests the code made with dynamic_cast, as
 // reads of the kind tables ee_units owns (rust/crates/ee_units/src/kinds.rs):
-//   EEGoalCast<EEUGGather>(theGoal)              == dynamic_cast<EEUGGather*>(theGoal)
+//   EEGoalCast<EEUGHealUnit>(theGoal)            == dynamic_cast<EEUGHealUnit*>(theGoal)
 //   EEUnitClassCast<EEUCGate>(theClass)          == dynamic_cast<EEUCGate*>(theClass)
 //   EEUnitCast<EEComplexUnit>(theUnit)           == dynamic_cast<EEComplexUnit*>(theUnit)   (from any RTSUnit)
 // A goal's class follows from EEUnitGoal::mKind, a unit class's from EEUnitClass::mCategory and a unit object's from
@@ -24,15 +24,11 @@ extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of 
 
 class EEUnitGoal;
 class EEUGLocation;
-class EEUGBuildRepair;
-class EEUGGather;
 class EEUGHealUnit;
 
 // each goal class's bit
 template <class T> struct EEGoalKindBit;
 template <> struct EEGoalKindBit<EEUGLocation> { static const uint32_t kBit = EE_GOAL_KIND_LOCATION; };
-template <> struct EEGoalKindBit<EEUGBuildRepair> { static const uint32_t kBit = EE_GOAL_KIND_BUILD_REPAIR; };
-template <> struct EEGoalKindBit<EEUGGather> { static const uint32_t kBit = EE_GOAL_KIND_GATHER; };
 template <> struct EEGoalKindBit<EEUGHealUnit> { static const uint32_t kBit = EE_GOAL_KIND_HEAL_UNIT; };
 
 // whether inGoal (not NULL) is a T
