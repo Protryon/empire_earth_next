@@ -111,6 +111,14 @@ static long GEFindCachedTextureFile(FSPath* inPath, const UString& inName, bool 
     return GEFindTextureFile(inPath, inName, outTexture);
 }
 
+// port: the cache's texture at an index, in the cache's (name) order: the store gate digests every cached texture
+GETexture* GETextureManager::GetTextureAt(unsigned long inIndex)
+{
+    std::map<UString, GETexture*>::iterator theIter = this->mTextures.begin();
+    std::advance(theIter, inIndex);
+    return theIter->second;
+}
+
 //
 // FUNCTION: LLE 0x10033bef
 // Creates a texture manager on a search path (referenced), with no textures and its own lock

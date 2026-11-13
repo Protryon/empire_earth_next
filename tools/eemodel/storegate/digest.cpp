@@ -1,6 +1,6 @@
 // storegate's digests of what a GEModel and a GETexture store, read through their members (GEStoreDigest is a
-// friend of GEModel, GEMaterial, GETexture and GETextureManager). FNV-1a over every value, floats by their bits; an
-// array shared with an earlier frame is hashed as that frame's number.
+// friend of GEModel, GEMaterial and GETexture; the texture manager's cache through its accessors). FNV-1a over
+// every value, floats by their bits; an array shared with an earlier frame is hashed as that frame's number.
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -280,12 +280,12 @@ unsigned long long GEStoreDigest::HashManager(GETextureManager* inManager)
 {
     // the cache's names are not compared (they lost their extension under D9): the textures' digests, sorted
     std::vector<unsigned long long> theDigests;
-    for (const auto& theEntry : inManager->mTextures)
-        theDigests.push_back(StoreDigestTexture(theEntry.second));
+    for (unsigned long i = 0; i < inManager->GetTextureCount(); i++)
+        theDigests.push_back(StoreDigestTexture(inManager->GetTextureAt(i)));
     std::sort(theDigests.begin(), theDigests.end());
     Hash theHash;
     for (unsigned long long d : theDigests)
         theHash.U(d);
-    theHash.U(inManager->mMemoryFootprint);
+    theHash.U(inManager->GetMemoryFootprint());
     return theHash.mValue;
 }

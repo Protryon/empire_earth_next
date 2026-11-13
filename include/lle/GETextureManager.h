@@ -39,6 +39,7 @@ public:
     unsigned long GetMemoryFootprint() { return this->mMemoryFootprint; }
     GEScreen* GetScreen() const { return this->mScreen; }
     unsigned long GetTextureCount() { return this->mTextures.size(); }
+    GETexture* GetTextureAt(unsigned long inIndex);   // port: the cache's textures in name order (the store gate)
     FSPath* GetTexturePath() { return this->mTexturePath; }
     GETexture* LoadTexture(const UString& inName, const GETextureDescription& inDescription);
     GETexture* MakeTexture(GESurface* inSurface);
@@ -64,7 +65,6 @@ public:
     static long GetTexturePackMipLevelsToDrop();
 private:
     friend class GETexture;
-    friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     long PromoteTexture(GETexture* inTexture);
     void SetTexturePackSizes(GETexture* inTexture, long inMipLevels);   // port
 
