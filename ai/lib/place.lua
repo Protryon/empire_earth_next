@@ -80,13 +80,24 @@ function M.spot(type, rids, hx, hy, bad)
                         end
                         if clear and best == want then
                             local dx, dy = x - hx, y - hy
-                            cands[#cands + 1] = {x = x, y = y, d = dx * dx + dy * dy}
+                            -- (the owner: "settlements not on the damn patch": one touching a patch's edge bush is far
+                            -- from the rest; the spot touching the most units within 2 tiles first)
+                            local near = 0
+                            for _, v in ipairs(units) do
+                                if gap(x, y, s, v.x, v.y, v.s) <= 2 then
+                                    near = near + 1
+                                end
+                            end
+                            cands[#cands + 1] = {x = x, y = y, d = dx * dx + dy * dy, near = near}
                         end
                     end
                 end
             end
         end
         table.sort(cands, function(a, b)
+            if a.near ~= b.near then
+                return a.near > b.near
+            end
             if a.d ~= b.d then
                 return a.d < b.d
             end

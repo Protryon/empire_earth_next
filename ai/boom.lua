@@ -581,6 +581,13 @@ function M.step(view, memory)
     if soldiers_wanted > plan.soldiers_max then
         soldiers_wanted = plan.soldiers_max
     end
+    -- (plan.soldier_pace, off; the owner's Stone Age: 3 soldiers at +2 min, 6 at +5.5, 9 at +8.5 - boom-econ found the 8
+    -- trained at once took a third of the Stone food) in the Stone Age, one soldier per soldier_pace ms after the advance,
+    -- all at once while enemy soldiers are in sight or under a threat
+    if plan.soldier_pace ~= nil and view.epoch == 1 and not threatened and #D.clusters() == 0 then
+        local paced = 1 + (view.time - view.epoch_start) // plan.soldier_pace
+        soldiers_wanted = math.min(soldiers_wanted, math.max(paced, view.army_count))
+    end
     -- (plan.emergency, off; AI_RESEARCH §8.41 D6, balanced's prehistoric_army "unless a stronger enemy is near"): while
     -- a wave of lib.defence's wave size is seen in the claim range, up to this many soldiers (and a barracks), the
     -- reserve giving way; none once it has been gone 60 s
@@ -748,7 +755,9 @@ function M.step(view, memory)
     -- (ECON.order) the Prehistoric bank: wood is kept while the Stone Age is saved for (the dock and the boats come first)
     -- (only while saving: banked from 26 citizens the settlements waited, the patches had no drop site, the food places
     -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
-    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK then
+    -- (and only once the Prehistoric barracks stands: banked before it, 12 of 16 towns came to the advance without one)
+    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK
+            and ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1 then   -- (stands: a queued one waits on wood)
         reserve.wood = BO.WOOD_BANK
         differs = differs or reserve.wood ~= view.reserve.wood
     end
@@ -1166,7 +1175,10 @@ function M.step(view, memory)
                     -- (ECON.order, §8.51: a home mine or patch the town centre serves from 7 tiles off has a drop
                     -- site, but the gatherers walk: it gets its own touching settlement)
                     -- (from the start too: the owner's rule, every patch and mine has its own touching settlement)
-                    if ECON.order and BO.OPT.place and rank == nil and s.home and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
+                    -- (in the Prehistoric after the barracks: with the settlements raised to 10 these took its wood and
+                    -- 15 of 16 towns came to the advance without it)
+                    if ECON.order and BO.OPT.place and rank == nil and s.home
+                            and (age >= 2 or ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1) and (s.patch or s.holds.gold > 0 or s.holds.iron > 0
                             or s.holds.stone > 0) then
                         local kinds = {}
                         for _, r in ipairs({"food", "iron", "gold", "stone"}) do
@@ -1425,7 +1437,10 @@ function M.step(view, memory)
             elseif V.total(granaries) < 1 and V.cost(view, "b_granary") ~= nil then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})
             elseif (farms == nil or farms.queued < 2) and V.total(farms) < plan.farms
-                    and patch_room < food_wanted - view.gatherers.food + 4 then
+                    and (patch_room < food_wanted - view.gatherers.food + 4
+                         -- (ECON.order, the owner's playtest: "granary built but not farms?"; the owner's 3 granaries are
+                         -- farmed at once: 8 farms a finished granary)
+                         or (ECON.order and V.total(farms) < 8 * ((granaries or {}).finished or 0))) then
                 order("farm", {verb = "build", type = "b_farm", near = "town"})
             elseif V.total(farms) >= 8 and V.total(granaries) < plan.granaries then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})

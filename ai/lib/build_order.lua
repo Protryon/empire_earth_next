@@ -22,7 +22,8 @@ M.OPT = {
     techs = true,           -- the town centre's gathering techs
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
-    food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+    food_reach = false,     -- the Stone claim reaches claim_dry while the food places are short (off: the owner's playtest,
+                            -- "unpopulated food settlement near my base"; the bisect: no gain)
     boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
                             -- bank's wood pays the dock and the boats first
     shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
@@ -38,7 +39,9 @@ M.FILL = {
     stone_start = {{"food", 18}, {"wood", 12}, {"stone", 2}, {"gold", 2}, {"iron", 2}},
     stone_grow = {{"food", 18}, {"wood", 10}, {"stone", 2}, {"gold", 2}, {"iron", 2}, {"iron", 12}, {"gold", 12},
                   {"stone", 6}, {"iron", 15}, {"gold", 15}, {"wood", 12}, {"iron", 18}, {"gold", 18}, {"wood", 15}},
-    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20}},
+    -- (the owner's Copper town: 120-133 citizens, food 25-44 with 13 boats, wood 16-42; "not enough cits" at 80 min)
+    copper = {{"food", 18}, {"wood", 15}, {"stone", 6}, {"gold", 18}, {"iron", 18}, {"food", 28}, {"wood", 20},
+              {"food", 40}, {"wood", 30}},
 }
 M.FILL.stone_developed = M.FILL.stone_grow
 
@@ -50,24 +53,25 @@ M.RANGES = {
 
 -- the plan overlays (the economy's keys; the army adds its soldier fields here)
 M.PHASE = {
-    -- (patches 3: the start's 12 on two, the food past the game near home on a third; settlements 7: the patches,
-    -- the forest edge and the three mines)
+    -- (patches 3: the start's 12 on two, the food past the game near home on a third; settlements 10: the patches,
+    -- the forest edge, the three mines, and the touching ones by the home patches and mines the town centre served:
+    -- at 7 the third patch stood claimed with no settlement in every game, food 15.9 on 18 wanted)
     pre = {citizens = 32, citizens_max = 32, patches = 3, hunt = 6, towers = 3, barracks = 1, ranges = 0,
-           barracks_at = 24, settlements = 7},
+           barracks_at = 24, settlements = 10},
     -- (from the Stone Age a second town centre: one trains about 2 citizens a minute, the owner's town grew by 3.4 a
     -- minute, 35 to 86 in 15 minutes)
     -- (one town centre until the boats and the soldiers: the second's 5 citizens garrisoned at the advance left the town
     -- at its weakest, boom-defence's seeds 4 and 24)
     stone_start = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45,
+                   army_first = false, towers = 4, town_centers = 1, tc_at = 30, claim_dry = 45, settlements = 14,
                    soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},   -- (the army's: rs0, boom-defence)
     stone_grow = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                  army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
+                  army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45, settlements = 14,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
     stone_developed = {citizens = 76, citizens_max = 76, boats = 13, docks = 1, barracks = 2, ranges = 1,
-                       army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45,
+                       army_first = false, towers = 7, town_centers = 2, tc_at = 30, claim_dry = 45, settlements = 14,
                   soldiers = 8, soldiers_max = 50, army_per = 0, army_floor = 8},
-    copper = {citizens = 90, citizens_max = 100, boats = 13, docks = 1, granaries = 3, save_at = 75,
+    copper = {citizens = 120, citizens_max = 130, boats = 13, docks = 1, granaries = 3, settlements = 16, save_at = 75,
               save_after = 12},
 }
 
