@@ -696,6 +696,10 @@ WON_TESTS["won_serverop_test"] = [*WON_TESTS["won_ops_test"],
                                                                      "HTTPCacheDefaults.cpp")],
                                   *[WON_SRC / "WONAuth" / f for f in ("AuthSession.cpp", "AuthContext.cpp")],
                                   *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]]
+# RustServerOp's certificate and auth context calls and the AuthContext class, through the op's own call path with
+# real certificates (golden: rust/crates/ee_won/src/golden_authhost.txt, recorded over ServerOp.cpp's HostCall and
+# AuthContext.cpp); the same units as won_serverop_test
+WON_TESTS["won_authhost_test"] = WON_TESTS["won_serverop_test"]
 WON_TESTS["won_smartroute_test"] = [*WON_TESTS["won_servconn_test"],
                                     *sorted((WON_SRC / "WONRouting").glob("SmartRouting*.cpp")),
                                     WON_SRC / "WONCommon" / "StringUtil.cpp"]
