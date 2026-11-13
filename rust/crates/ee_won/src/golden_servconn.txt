@@ -1,0 +1,202 @@
+== ServerConnection, blocking
+listener bind WS_Success
+listener listen WS_Success
+fresh valid 0 open 0 connected 0 type 0 lengthfield 4
+conn CloseHook
+peerauth new auth2 1
+peerauth run listener type 3 context null mode 2 timeout 5000 socket set
+conn OpenHook
+peerauth connect WS_Success
+connect completed PeerAuthOp WS_Success killed 0
+connect block WS_Success completions 1
+listener accept WS_Success
+connected valid 1 open 1 connected 1 type 0 lengthfield 4
+peer send hello WS_Success
+conn message 5:68656c6c6f
+peer send again WS_Success
+conn message 5:616761696e
+no keepalive completed RecvMsgOp WS_TimedOut killed 0
+conn CloseHook
+peer closed valid 0 open 0 connected 0 type 0 lengthfield 4 messages 2
+conn CloseHook
+closed valid 0 open 0 connected 0 type 0 lengthfield 4
+conn CloseHook
+peerauth new auth2 1
+peerauth run listener type 3 context null mode 2 timeout 5000 socket set
+conn OpenHook
+peerauth connect WS_Success
+connect completed PeerAuthOp WS_Success killed 0
+connect block again WS_Success completions 2
+listener accept WS_Success
+peer send third WS_Success
+conn message 5:7468697264
+conn CloseHook
+conn KillHook
+killed valid 0 open 0 connected 0 type 0 lengthfield 4
+conn CloseHook
+peerauth new auth2 1
+peerauth run listener type 3 context null mode 2 timeout 5000 socket set
+conn OpenHook
+peerauth connect WS_Success
+connect after kill WS_Success completions 2
+listener accept WS_Success
+conn CloseHook
+blocking done
+== ServerConnection, async and keep-alive
+listener bind WS_Success
+listener listen WS_Success
+aconn CloseHook
+peerauth new auth2 1
+connect async op set status WS_Pending
+conn destroyed
+peerauth run listener type 0 context null mode 1 timeout 4000 socket set
+aconn OpenHook
+peerauth connect WS_Success
+aconnect completed PeerAuthOp WS_Success killed 0
+listener accept WS_Success
+keepalive 1 completed RecvMsgOp WS_Success killed 0
+keepalive 1 message 3:030107
+keepalive 2 completed RecvMsgOp WS_Success killed 0
+keepalive 2 message 3:030107
+peer send data WS_Success
+aconn message 4:64617461
+keepalive 3 completed RecvMsgOp WS_Success killed 0
+keepalive 3 message 3:030107
+keepalive none completed RecvMsgOp WS_TimedOut killed 0
+aconn CloseHook
+aclosed valid 0 open 0 connected 0 type 0 lengthfield 4
+aconn CloseHook
+peerauth new auth2 1
+pending op status WS_Pending
+peerauth run pending type 0 context null mode 1 timeout 4000 socket set
+pending completions 1
+aconn CloseHook
+aconnect completed PeerAuthOp WS_Killed killed 1
+aconn CloseHook
+peerauth new auth2 1
+peerauth run pending type 0 context null mode 1 timeout 4000 socket set
+aconn CloseHook
+peerauth new auth2 1
+aconnect completed PeerAuthOp WS_Killed killed 1
+peerauth run listener type 0 context null mode 1 timeout 4000 socket set
+aconn OpenHook
+peerauth connect WS_Success
+aconnect completed PeerAuthOp WS_Success killed 0
+listener accept WS_Success
+keepalive 4 completed RecvMsgOp WS_Success killed 0
+keepalive 4 message 3:030107
+aconn CloseHook
+after close completed RecvMsgOp WS_AsyncSocket_Shutdown killed 0
+aconn destroyed
+async done
+== ServerConnectionConnectOp
+listener bind WS_Success
+listener listen WS_Success
+connect op queued WS_Pending
+opconn CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 1 timeout 4000 socket set
+opconn OpenHook
+peerauth connect WS_Success
+connect op status WS_Success previous 0
+listener accept WS_Success
+peer send op WS_Success
+opconn message 2:6f70
+opconn CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 4000 socket set
+opconn OpenHook
+peerauth connect WS_Success
+connect block after op WS_Success previous 0
+listener accept WS_Success
+opconn CloseHook
+opconn CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 1 timeout 4000 socket set
+opconn OpenHook
+peerauth connect WS_Success
+connect op completed ServerConnectionConnectOp WS_Success killed 0
+listener accept WS_Success
+opconn CloseHook
+peerauth new auth2 1
+peerauth run pending type 0 context null mode 1 timeout 4000 socket set
+killed op completed ServerConnectionConnectOp WS_Killed killed 1
+opconn CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 4000 socket set
+peerauth connect WS_Success
+plain connect WS_Success
+listener accept WS_Success
+peer send ignored WS_Success
+ops done
+opconn destroyed
+== RoutingConnection
+listener bind WS_Success
+listener listen WS_Success
+route fresh valid 0 open 0 connected 0 type 0 lengthfield 2
+route CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 5000 socket set
+peerauth connect WS_Success
+route connect WS_Success
+listener accept WS_Success
+server client left server WS_Success
+plain destroyed
+route complete hook RoutingClientLeftServerOp WS_Success
+left server completed RoutingClientLeftServerOp type 10 WS_Success killed 0 mode 2
+server shutdown aborted WS_Success
+route complete hook RoutingServerShutdownAbortedOp WS_Success
+default completed RoutingServerShutdownAbortedOp type 49 WS_Success killed 0 mode 2
+server short header WS_Success
+server unknown type WS_Success
+route after unknown left 1 default 1
+server got leave completed RecvMsgOp WS_Success killed 0
+server got leave message 5:03072b0700
+server status 0 WS_Success
+route complete hook RoutingLeaveGroupOp WS_Success
+leave completed RoutingLeaveGroupOp type 35 WS_Success killed 0 mode 1
+server got leave 1 completed RecvMsgOp WS_Success killed 0
+server got leave 1 message 5:03072b0100
+server got cancel completed RecvMsgOp WS_Success killed 0
+server got cancel message 6:030705020000
+server status -1 WS_Success
+route complete hook RoutingLeaveGroupOp WS_CommServ_Failure
+default completed RoutingLeaveGroupOp type 35 WS_CommServ_Failure killed 0 mode 1
+server status 0 WS_Success
+route complete hook RoutingCancelJoinGroupOp WS_Success
+cancel join completed RoutingCancelJoinGroupOp type 5 WS_Success killed 0 mode 1
+server got client list completed RecvMsgOp WS_Success killed 0
+server got client list message 3:030718
+server got leave 3 completed RecvMsgOp WS_Success killed 0
+server got leave 3 message 5:03072b0300
+server client left server WS_Success
+route complete hook RoutingClientLeftServerOp WS_Success
+left server completed RoutingClientLeftServerOp type 10 WS_Success killed 0 mode 2
+server status cut WS_Success
+leave 3 completed RoutingLeaveGroupOp type 35 WS_RoutingOp_DontWantReply killed 0 mode 1
+server derived WS_Success
+route complete hook RoutingDerivedServerOp WS_Success
+default completed RoutingDerivedServerOp type 60 WS_Success killed 0 mode 2
+route CloseHook
+client list completed RoutingGetClientListOp type 20 WS_Killed killed 1 mode 1
+route CloseHook
+route KillHook
+route CloseHook
+peerauth new auth2 1
+peerauth run listener type 0 context null mode 2 timeout 5000 socket set
+peerauth connect WS_Success
+route reconnect WS_Success
+listener accept WS_Success
+server client left server WS_Success
+server derived WS_Success
+route complete hook RoutingClientLeftServerOp WS_Success
+route after kill left 2 default 3
+server got leave 4 completed RecvMsgOp WS_Success killed 0
+server got leave 4 message 5:03072b0400
+server status 0 WS_Success
+route complete hook RoutingLeaveGroupOp WS_Success
+leave 4 completed RoutingLeaveGroupOp type 35 WS_Success killed 0 mode 1
+route CloseHook
+route destroyed
+routing done
+core shut down peerauth made 14 freed 14

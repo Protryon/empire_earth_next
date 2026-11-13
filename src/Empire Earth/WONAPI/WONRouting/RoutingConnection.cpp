@@ -8,62 +8,128 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-// The plain RoutingConnection; SmartRoutingConnection is in SmartRoutingConnection.cpp
+// The plain RoutingConnection; SmartRoutingConnection is in SmartRoutingConnection.cpp. The op list, the completions
+// and the reply dispatch are a Rust object (rust/crates/ee_won/src/routeconn.rs EeWonRouteConn); what it calls back is
+// below
+#include "rust/ee_won.h"
 namespace WONAPI {
+// Every op and completion crosses as its RefCount*
+static RefCount* Ref(void* inObject) { return static_cast<RefCount*>(inObject); }
+static RoutingOp* Rop(void* inOp) { return static_cast<RoutingOp*>(static_cast<AsyncOp*>(Ref(inOp))); }
+static RoutingConnection* Route(void* inConn) { return static_cast<RoutingConnection*>(inConn); }
+static void* Out(RoutingOp* inOp) { return static_cast<RefCount*>(static_cast<AsyncOp*>(inOp)); }
+
+static void HookAddRef(void* inObject) { Ref(inObject)->AddRef(); }
+static void HookRelease(void* inObject) { Ref(inObject)->Release(); }
+static void HookOpKill(void* inOp) { Rop(inOp)->Kill(true); }
+static void* HookOpCompletion(void* inOp) { return static_cast<RefCount*>(Rop(inOp)->GetCompletion()); }
+static void HookOpSetCompletion(void* inOp, void* inCompletion)
+{
+    Rop(inOp)->SetCompletion(static_cast<CompletionBase<AsyncOpPtr>*>(Ref(inCompletion)));
+}
+static long HookOpType(void* inOp) { return Rop(inOp)->GetType(); }
+static bool HookOpDerived(void* inOp) { return Rop(inOp)->mIsDerivedServerOp; }
+// the op's HandleReply over the message from the header's end; a read past the end is a flag
+static int32_t HookHandleReply(void* inOp, uint8_t inType, const uint8_t* inData, size_t inLength, size_t inPos,
+                            bool* outThrew)
+{
+    ReadBuffer msg(inData, (unsigned long)inLength);
+    msg.SetPos((int)inPos);
+    try {
+        return (int32_t)Rop(inOp)->HandleReply(inType, msg);
+    } catch (ReadBufferException&) {
+        *outThrew = true;
+        return 0;
+    }
+}
+static void HookOpEnd(void* inOp, bool inUnsolicited, long inStatus)
+{
+    RoutingOp* op = Rop(inOp);
+    op->SetMode(OP_MODE_BLOCK);
+    if (inUnsolicited) op->ForceFinish(inStatus);
+    else op->Finish(inStatus);
+}
+static void HookOpComplete(void* inOp) { Rop(inOp)->Complete(); }
+static void HookCompleteHook(void* inConn, void* inOp) { Route(inConn)->RoutingOpCompleteHook(Rop(inOp)); }
+// GetUnsolicitedOp's new op: the notification of a kind (ee_won routemsg.rs's table), or the derived server's;
+// one reference for the caller
+static void* HookNewUnsolicited(void* inConn, int32_t inKind, uint8_t inType)
+{
+    RoutingConnection* c = Route(inConn);
+    SmartPtr<RoutingOp> op;
+    switch (inKind) {
+    case -1: op = c->GetUnsolicitedDerivedOp(inType); break;
+    case EE_WON_RT_N_CLIENT_FLAGS: op = new RoutingClientFlagsChangedOp(c); break;
+    case EE_WON_RT_N_CLIENT_JOINED_GROUP: op = new RoutingClientJoinedGroupOp(c); break;
+    case EE_WON_RT_N_CLIENT_JOINED_SERVER: op = new RoutingClientJoinedServerOp(c); break;
+    case EE_WON_RT_N_CLIENT_LEFT_GROUP: op = new RoutingClientLeftGroupOp(c); break;
+    case EE_WON_RT_N_CLIENT_LEFT_SERVER: op = new RoutingClientLeftServerOp(c); break;
+    case EE_WON_RT_N_DATA_CREATED: op = new RoutingDataObjectCreatedOp(c); break;
+    case EE_WON_RT_N_DATA_DELETED: op = new RoutingDataObjectDeletedOp(c); break;
+    case EE_WON_RT_N_DATA_MODIFIED: op = new RoutingDataObjectModifiedOp(c); break;
+    case EE_WON_RT_N_CAPTAIN_CHANGED: op = new RoutingGroupCaptainChangedOp(c); break;
+    case EE_WON_RT_N_GROUP_CREATED: op = new RoutingGroupCreatedOp(c); break;
+    case EE_WON_RT_N_GROUP_DELETED: op = new RoutingGroupDeletedOp(c); break;
+    case EE_WON_RT_N_GROUP_FLAGS: op = new RoutingGroupFlagsChangedOp(c); break;
+    case EE_WON_RT_N_INVITATION: op = new RoutingGroupInvitationOp(c); break;
+    case EE_WON_RT_N_JOIN_ATTEMPT: op = new RoutingGroupJoinAttemptOp(c); break;
+    case EE_WON_RT_N_MAX_PLAYERS: op = new RoutingGroupMaxPlayersChangedOp(c); break;
+    case EE_WON_RT_N_MEMBER_COUNT: op = new RoutingGroupMemberCountOp(c); break;
+    case EE_WON_RT_N_GROUP_NAME: op = new RoutingGroupNameChangedOp(c); break;
+    case EE_WON_RT_N_OBSERVER_COUNT: op = new RoutingGroupObserverCountOp(c); break;
+    case EE_WON_RT_N_MEMBER_FLAGS: op = new RoutingMemberFlagsChangedOp(c); break;
+    case EE_WON_RT_N_PEER_CHAT: op = new RoutingPeerChatOp(c); break;
+    case EE_WON_RT_N_PEER_DATA: op = new RoutingPeerDataOp(c); break;
+    case EE_WON_RT_N_SERVER_ALERT: op = new RoutingServerAlertOp(c); break;
+    case EE_WON_RT_N_SHUTDOWN_ABORTED: op = new RoutingServerShutdownAbortedOp(c); break;
+    case EE_WON_RT_N_SHUTDOWN_STARTED: op = new RoutingServerShutdownStartedOp(c); break;
+    case EE_WON_RT_N_BANNED: op = new RoutingYouWereBannedOp(c); break;
+    case EE_WON_RT_N_MUTED: op = new RoutingYouWereMutedOp(c); break;
+    }
+    if (op.get() == NULL) return NULL;
+    op->AddRef();
+    return Out(op.get());
+}
+static void HookServerCloseHook(void* inConn) { Route(inConn)->ServerConnection::CloseHook(); }
+static void HookServerKillHook(void* inConn) { Route(inConn)->ServerConnection::KillHook(); }
+static const EeWonRouteConnHooks kHooks = {HookAddRef, HookRelease, HookOpKill, HookOpCompletion, HookOpSetCompletion,
+    HookOpType, HookOpDerived, HookHandleReply, HookOpEnd, HookOpComplete, HookCompleteHook, HookNewUnsolicited,
+    HookServerCloseHook, HookServerKillHook};
+
 // FUNCTION: WON 0x006ba050
 // Creates a routing connection with 2-byte length fields that treats every derived-server message as unsolicited
 RoutingConnection::RoutingConnection()
 {
     this->SetLengthFieldSize(2);
     this->mAllDerivedOpsAreUnsolicited = true;
+    this->mRoute = ee_won_routeconn_new(static_cast<void*>(this), &kHooks, static_cast<void*>(this->GetDataLock()));
 }
-
 
 // FUNCTION: WON 0x006ba4b0
 // Destroys the routing connection, releasing its pending ops and completions
-RoutingConnection::~RoutingConnection() {}
+RoutingConnection::~RoutingConnection() { ee_won_routeconn_free(this->mRoute); }
 
 // FUNCTION: WON 0x006bcb20
 // Kills every pending routing op and empties the list, then closes the server connection
-void RoutingConnection::CloseHook()
-{
-    for (RoutingOpList::iterator itr=this->mOpList.begin(); itr!=this->mOpList.end(); ++itr)
-        (*itr)->Kill(true);
-    this->mOpList.clear();
-    ServerConnection::CloseHook();
-}
+void RoutingConnection::CloseHook() { ee_won_routeconn_close_hook(this->mRoute); }
 
 // FUNCTION: WON 0x006bcbb0
 // Drops the default and per-op-type completions, then kills the server connection
-void RoutingConnection::KillHook()
-{
-    this->mDefaultCompletion = NULL;
-    for (int i=0; i<61; ++i)
-        this->mCompletions[i] = NULL;
-    ServerConnection::KillHook();
-}
+void RoutingConnection::KillHook() { ee_won_routeconn_kill_hook(this->mRoute); }
 
-// FUNCTION: WON 0x006ba740
-// Gives an op without its own completion the one registered for its op type, else the default completion
-void RoutingConnection::CalcCompletion(RoutingOp* inOp)
+// Sets the completion of an op type (mCompletions[type]), or the default one
+void RoutingConnection::SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion)
 {
-    OpCompletionBasePtr completion = inOp->GetCompletion();
-    if (completion.get() == NULL) {
-        completion = this->mCompletions[inOp->GetType()];
-        if (completion.get() == NULL)
-            completion = this->mDefaultCompletion;
-    }
-    inOp->SetCompletion(completion);
+    ee_won_routeconn_set_completion(this->mRoute, inType, static_cast<RefCount*>(inCompletion));
+}
+void RoutingConnection::SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion)
+{
+    ee_won_routeconn_set_completion(this->mRoute, -1, static_cast<RefCount*>(inCompletion));
 }
 
 // FUNCTION: WON 0x006ba630
-// Adds an op (with its completion resolved) to the list waiting for replies
-void RoutingConnection::AddOp(RoutingOp* inOp)
-{
-    AutoCrit crit(this->GetDataLock());
-    this->CalcCompletion(inOp);
-    this->mOpList.push_back(inOp);
-}
+// Adds an op (with its completion resolved: its own, its type's, else the default one) to the list waiting for replies
+void RoutingConnection::AddOp(RoutingOp* inOp) { ee_won_routeconn_add_op(this->mRoute, Out(inOp)); }
 
 // FUNCTION: WON 0x006bd430
 // Starts an async request to create a group with the given name, password, size and flags
@@ -352,56 +418,7 @@ namespace WONAPI {
 // Dispatches an incoming routing message to the first pending or unsolicited op that accepts it and completes that op
 void RoutingConnection::MsgCallback(const ByteBuffer* inData)
 {
-    AutoCrit crit(this->GetDataLock());
-    SmartPtr<RoutingOp> op;
-    RoutingOpList::iterator itr;
-    bool unsolicited = false;
-    WONStatus status;
-    try {
-        ReadBuffer msg(inData->data(), inData->length());
-        // the header and the dispatch rule are Rust's (ee_won routemsg.rs)
-        unsigned char msgType = 0;
-        bool derived = false;
-        uint32_t aHeaderEnd = 0;
-        if (!ee_won_route_header(reinterpret_cast<const uint8_t*>(inData->data()), inData->length(), &msgType,
-                                 &derived, &aHeaderEnd))
-            throw ReadBufferException("Attempt to read past end of buffer.");
-        msg.SetPos((int)aHeaderEnd);
-        int savedPos = msg.pos();
-        op = this->GetUnsolicitedOp(msgType, derived);
-        if (op.get() != NULL) {
-            this->mOpList.push_front(op);
-            unsolicited = true;
-        }
-        for (itr=this->mOpList.begin(); itr!=this->mOpList.end(); ++itr) {
-            op = *itr;
-            if (derived == op->mIsDerivedServerOp) {
-            status = op->HandleReply(msgType, msg);
-            int aStep = ee_won_route_dispatch((int32_t)status);
-            if (aStep == 1) break;
-            if (aStep == 2) {
-                this->mOpList.erase(itr);
-                crit.Leave();
-                op->SetMode(OP_MODE_BLOCK);
-                if (unsolicited) op->ForceFinish(status);
-                else op->Finish(status);
-                this->RoutingOpCompleteHook(op.get());
-                op->Complete();
-                break;
-            }
-            msg.SetPos(savedPos);
-            }
-        }
-    } catch (ReadBufferException&) {
-        if (op.get() != NULL) {
-            this->mOpList.erase(itr);
-            crit.Leave();
-            op->SetMode(OP_MODE_BLOCK);
-            if (unsolicited) op->ForceFinish(status);
-            else op->Finish(status);
-            op->Complete();
-        }
-    }
+    ee_won_routeconn_msg_callback(this->mRoute, reinterpret_cast<const uint8_t*>(inData->data()), inData->length());
 }
 }
 
@@ -483,50 +500,6 @@ void RoutingConnection::UnsubscribeDataObject(unsigned short link,const std::str
     op->mFlags=(unsigned char)flags;
     op->SetCompletion(completion);
     op->RunAsync(-1);
-}
-}
-
-namespace WONAPI {
-// FUNCTION: WON 0x006ba830
-// Returns a new notification op for an unsolicited message type (with its completion), or NULL
-SmartPtr<RoutingOp> RoutingConnection::GetUnsolicitedOp(unsigned char messageType,bool derived)
-{
-    SmartPtr<RoutingOp> op;
-    if(!derived) {
-        // which notification a message type is: Rust's table (ee_won routemsg.rs)
-        switch(ee_won_route_unsolicited(messageType)) {
-        case EE_WON_RT_N_CLIENT_FLAGS: op=new RoutingClientFlagsChangedOp(this); break;
-        case EE_WON_RT_N_CLIENT_JOINED_GROUP: op=new RoutingClientJoinedGroupOp(this); break;
-        case EE_WON_RT_N_CLIENT_JOINED_SERVER: op=new RoutingClientJoinedServerOp(this); break;
-        case EE_WON_RT_N_CLIENT_LEFT_GROUP: op=new RoutingClientLeftGroupOp(this); break;
-        case EE_WON_RT_N_CLIENT_LEFT_SERVER: op=new RoutingClientLeftServerOp(this); break;
-        case EE_WON_RT_N_DATA_CREATED: op=new RoutingDataObjectCreatedOp(this); break;
-        case EE_WON_RT_N_DATA_DELETED: op=new RoutingDataObjectDeletedOp(this); break;
-        case EE_WON_RT_N_DATA_MODIFIED: op=new RoutingDataObjectModifiedOp(this); break;
-        case EE_WON_RT_N_CAPTAIN_CHANGED: op=new RoutingGroupCaptainChangedOp(this); break;
-        case EE_WON_RT_N_GROUP_CREATED: op=new RoutingGroupCreatedOp(this); break;
-        case EE_WON_RT_N_GROUP_DELETED: op=new RoutingGroupDeletedOp(this); break;
-        case EE_WON_RT_N_GROUP_FLAGS: op=new RoutingGroupFlagsChangedOp(this); break;
-        case EE_WON_RT_N_INVITATION: op=new RoutingGroupInvitationOp(this); break;
-        case EE_WON_RT_N_JOIN_ATTEMPT: op=new RoutingGroupJoinAttemptOp(this); break;
-        case EE_WON_RT_N_MAX_PLAYERS: op=new RoutingGroupMaxPlayersChangedOp(this); break;
-        case EE_WON_RT_N_MEMBER_COUNT: op=new RoutingGroupMemberCountOp(this); break;
-        case EE_WON_RT_N_GROUP_NAME: op=new RoutingGroupNameChangedOp(this); break;
-        case EE_WON_RT_N_OBSERVER_COUNT: op=new RoutingGroupObserverCountOp(this); break;
-        case EE_WON_RT_N_MEMBER_FLAGS: op=new RoutingMemberFlagsChangedOp(this); break;
-        case EE_WON_RT_N_PEER_CHAT: op=new RoutingPeerChatOp(this); break;
-        case EE_WON_RT_N_PEER_DATA: op=new RoutingPeerDataOp(this); break;
-        case EE_WON_RT_N_SERVER_ALERT: op=new RoutingServerAlertOp(this); break;
-        case EE_WON_RT_N_SHUTDOWN_ABORTED: op=new RoutingServerShutdownAbortedOp(this); break;
-        case EE_WON_RT_N_SHUTDOWN_STARTED: op=new RoutingServerShutdownStartedOp(this); break;
-        case EE_WON_RT_N_BANNED: op=new RoutingYouWereBannedOp(this); break;
-        case EE_WON_RT_N_MUTED: op=new RoutingYouWereMutedOp(this); break;
-        }
-    } else
-        op=this->GetUnsolicitedDerivedOp(messageType);
-    if(op.get()!=NULL)
-        this->CalcCompletion(op.get());
-    return op;
 }
 }
 
