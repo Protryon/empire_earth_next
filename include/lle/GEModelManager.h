@@ -6,13 +6,12 @@
 
 #include <map>
 #include <stdint.h>
+#include "rust/ee_ge.h"   // the manager (ee_ge manobj.rs), its host's EeGeManOp
 
 class FSFileSpec;
 class FSPath;
 class GEModel;
 class UString;
-struct EeGeModelManager;
-enum class EeGeManOp : uint32_t;
 
 class LLE_API GEModelManager {              // sizeof 0x18 in the original (mModels, mPath, mCriticalSection,
                                             // mMemoryFootprint: now the Rust object's)

@@ -5,6 +5,7 @@
 
 #include <map>   // (the original's cache; kept for the units that rely on it)
 #include <stdint.h>
+#include "rust/ee_ge.h"   // the manager (ee_ge texobj.rs), its host's EeGeManOp
 
 class FSFileSpec;
 class FSPath;
@@ -12,8 +13,6 @@ class GEScreen;
 class GESurface;
 class GETexture;
 class UString;
-struct EeGeTextureManager;
-enum class EeGeManOp : uint32_t;
 
 // How a texture file is loaded (the original's sizeof 0x14, copied with `rep movsd` x5 by the User Interface
 // backgrounds, UITextureBackground 0x1005c84e; 0x18 with the port's mUseTexturePack). Fields from
