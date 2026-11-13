@@ -48,6 +48,13 @@ public:
 
 class AuthPeerData : public AuthBase {
     ConstSmartPtr<AuthBase> mKeyBlock; // the key block's shim (GetPubKeyBlock is borrowed)
+    AuthPeerData(EeWonAuthObj* inImpl, int)
+        : AuthBase(inImpl), mKeyBlock(KeyBlockOf(inImpl)) {}
+    static AuthBase* KeyBlockOf(const EeWonAuthObj* inImpl)
+    {
+        EeWonAuthObj* aBlock = ee_won_authobj_get(inImpl, EE_WON_AUTHOBJ_PEER_BLOCK);
+        return aBlock != NULL ? new AuthBase(aBlock) : NULL;
+    }
 protected:
     virtual ~AuthPeerData() {}
 public:
@@ -60,6 +67,11 @@ public:
         : AuthBase(ee_won_peer_new(inCert != NULL ? inCert->Impl() : NULL, inKeyBlock != NULL ? inKeyBlock->Impl() : NULL,
                                    inKey.Raw(), (int64_t)inDelta, inCert2 != NULL ? inCert2->Impl() : NULL)),
           mKeyBlock(inKeyBlock) {}
+    // a shim adopting a reference to Rust peer data (NULL: none), as AuthContext::GetPeerData hands it out
+    static AuthPeerData* Adopt(EeWonAuthObj* inImpl)
+    {
+        return inImpl != NULL ? new AuthPeerData(inImpl, 0) : NULL;
+    }
     const AuthBase* GetPubKeyBlock() const { return this->mKeyBlock.get(); }
     time_t GetAuthDelta() const { return (time_t)this->Num(EE_WON_AUTHOBJ_PEER_DELTA); }
     bool CertificateExpired(time_t inExtra = 0) const { return this->Num(EE_WON_AUTHOBJ_PEER_EXPIRED, inExtra) != 0; }

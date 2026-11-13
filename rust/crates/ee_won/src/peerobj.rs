@@ -373,6 +373,11 @@ pub(crate) fn peer_handle(peer: Arc<PeerData>) -> *mut EeWonAuthObj {
     obj(Held::Peer(peer))
 }
 
+/// A new reference to peer data for the C++ side (`ee_won_authobj_free`).
+pub(crate) fn peer_ref(peer: Arc<PeerData>) -> *mut EeWonAuthObj {
+    obj(Held::Peer(peer))
+}
+
 /// Takes a reference the C++ side handed over (null: none).
 ///
 /// # Safety
@@ -450,6 +455,20 @@ pub unsafe extern "C" fn ee_won_authobj_clone(o: *const EeWonAuthObj) -> *mut Ee
 pub unsafe extern "C" fn ee_won_authobj_free(o: *mut EeWonAuthObj) {
     if !o.is_null() {
         drop(unsafe { Box::from_raw(o) });
+    }
+}
+
+/// Whether two references name the same object (null: only another null).
+///
+/// # Safety
+/// The objects are null or live.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_authobj_same(a: *const EeWonAuthObj, b: *const EeWonAuthObj) -> bool {
+    match unsafe { (held(a), held(b)) } {
+        (None, None) => true,
+        (Some(Held::Cert(x)), Some(Held::Cert(y))) => Arc::ptr_eq(x, y),
+        (Some(Held::Peer(x)), Some(Held::Peer(y))) => Arc::ptr_eq(x, y),
+        _ => false,
     }
 }
 

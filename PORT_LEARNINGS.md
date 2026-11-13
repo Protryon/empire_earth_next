@@ -10993,3 +10993,50 @@ cross: the handshake's environment was the certificates and the peer data, the o
   four flow hooks (`CertPeerData`, `LightSetPeerData`, `PeerValid`, `PeerExpireDelta`) stay: they are one call
   each into the Rust object, and moving the member into authflow.rs means re-recording golden_authflow.txt's hook
   vocabulary. LightGetCertOp stays a C++ AsyncOp (the auth context's refresh queue holds it).
+
+## R6: WON's Internet code, round 15 (AuthContext's peer data and LightGetCertOp's member in authflow.rs)
+
+Branch `rust-won-net15`. Measured by net C++ deletion, as rounds 7 to 14. The servers are gone: an Internet login
+and a direct-connect LAN game with the CD key check reach this code; the drivers and the Rust replays exercise it.
+
+- **What moved.** `authflow.rs`'s `EeWonAuthFlow` owns the context's peer data now (`mPeerData`, peerobj.rs's
+  `PeerData` in an `Arc`): `GetPeerData` (a fresh `AuthPeerData` shim over a new reference,
+  `AuthPeerData::Adopt`), `SetPeerData` (the replacement and the session clear in one call), `IsExpired` and the
+  auto-refresh's reads of the validity and expire delta. `LightGetCertOp`'s member (the peer data
+  `GetCertCallback` hands each waiting op) is `EeWonLightCert`, shared by the refresh set and the PeerAuthOp that
+  made it; the op's run is a plain C++ `AsyncOp` (`new AsyncOp` for `EE_WON_HOST_PEER_NEW_LIGHT`), the C++ class
+  `LightGetCertOp` is deleted. Three of the four flow hooks are gone (`LightSetPeerData`, `PeerValid`,
+  `PeerExpireDelta`); `CertPeerData` stays (the GetCertOp's peer data is still a C++ shim the op's host calls
+  make) and answers with a Rust reference. The host call `EE_WON_HOST_PEER_LIGHT_DATA` is gone: PeerAuthOp reads
+  its light op's member. src+include +42 -49.
+- **Time is a parameter.** The original's `GetExpireDelta` read `time(NULL)` inside; the flow's calls that can
+  start the timer (`SetDoAutoRefresh`, `StartAutoRefresh`, `GetCertCallback`, `RefreshBlock`) take `now`, and
+  `AuthContext` passes `time(NULL)`. The drivers pass a fixed certificates' clock, so a golden made of real
+  certificates never ages.
+- **Real peer data in the goldens, stand-ins beside them.** The original's half keeps its stand-in peer data
+  (valid or not, a fixed expire delta). The Rust half gets real peer data: a valid one is a certificate and key
+  block over the test key (signature checks are not part of `IsValid`: a block is valid when it parses and has
+  bytes left for a signature) with the private key, its clock delta chosen so that its expire delta at the fixed
+  clock is the stand-in's. An expired one answers 0 where the stand-in answered its negative delta: the auto-refresh
+  wait is `max(delta - 120, 120)`, the same for both.
+- **The vocabulary changed, the scripts did not.** golden_authflow.txt re-recorded with the same seed: the reads
+  of the context's peer data (`valid:`, `delta:`) and the waiting ops' `setpeer:` are no calls out any more and
+  are gone; a waiting op's peer data is logged when it completes (`done:l3:0:p5`); peer data frees are not
+  logged (an `Arc` on the Rust side). Normalized the same way, the old and new goldens differ only in the order of
+  runs of frees that a dropped token used to split. golden_peerop.txt: `lightdata(o1)=p2` after the completion's
+  callback became `lightpeer(o1)=p2` right after `done(o1)`, where the context's `GetCertCallback` sets it;
+  identical otherwise.
+- **Identity across the C ABI.** Peer data handed out is a new box per reference; `ee_won_authobj_same` compares
+  the objects (the drivers name a light op's peer data with it).
+- **Checks.** won_authctx_test 100,000 scripts, 2,644,851 checks, 0 failed (mutations: the expire delta off by
+  one fails 23,994; the light ops' peer data dropped fails 16,366); won_peerop_test 2,000 sequences, 0 failed (the
+  light peer data dropped fails 205). Cargo: authflow's golden, its unit tests and a new one for the peer data
+  and the light member; peerop's golden.
+- **LAN reach.** Every LAN session makes an AuthContext, so `Init`'s empty peer data now goes into the flow
+  (`ee_won_peer_new_empty`, the same draws as `new AuthPeerData`). `GetPeerData` (LanLogic::HandlePeerAuthDone)
+  and `IsExpired` (LanLogic::RefreshCertificate) run only for a direct-connect game with the CD key check on, as
+  the light op (PeerAuthOp's certificate refresh); the gate's LAN game does not reach them.
+- **Not moved, and why.** The rest of the "Left" list waits on the socket objects (the lobby lane's round 15):
+  ServerRequestOp's object is the RustServerOp host answering the ops' socket calls; ServerConnection is a
+  BlockingSocket; the routing ops run on a RoutingConnection (a ServerConnection); UDPManager is the lobby lane's;
+  TitleConfig is a ConfigObject, still C++ (WONGUI's configs derive from it).

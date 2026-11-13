@@ -205,6 +205,7 @@ struct Standin {
     int mLightPeer;                      // the peer data a refresh gives (1 the context's, 2 the refreshed)
     int mCtxPeer;                        // the auth context's current peer data
     int mCalls;
+    std::map<int, EeWonLightCert*> mLights; // the Rust half's light ops' members (borrowed from the op)
 };
 static Standin S;
 
@@ -303,7 +304,15 @@ static int HNewLight()
     Log("light=" + O(o));
     return o;
 }
-static void HRefreshAsync(int o) { Log("refreshasync(" + O(o) + ")"); S.mPending.push_back(o); }
+static void HRefreshAsync(int o, EeWonLightCert* inCert = NULL)
+{
+    Log("refreshasync(" + O(o) + ")");
+    S.mPending.push_back(o);
+    S.mLights[o] = inCert;
+}
+// the Rust half's: the auth context hands a light op's member its peer data (round 15: LightGetCertOp's member is
+// the Rust op's own, set by the context, not read through a host call)
+static void (*sOnLightPeer)(EeWonLightCert* inCert, int inPeer);
 static int HOpStatus(int o) { int st = S.mDone[o]; Log("opstatus(" + O(o) + ")=" + Num(st)); return st; }
 static bool HIsRecv(int o) { bool r = S.mKinds[o] == 2; Log("isrecv(" + O(o) + ")=" + Num(r)); return r; }
 static string HOpBytes(int o, bool& outNull)
@@ -313,7 +322,7 @@ static string HOpBytes(int o, bool& outNull)
     Log("opbytes(" + O(o) + ")=" + BytesText(b, outNull));
     return b;
 }
-static int HLightData(int o) { Log("lightdata(" + O(o) + ")=p" + Num(S.mLightPeer)); return S.mLightPeer; }
+static int HLightData(int) { return S.mLightPeer; } // the op's own member: no call out
 static int HNewSession(int type)
 {
     int o = ++S.mSerial;
@@ -344,6 +353,11 @@ static void Complete(int o)
     }
     S.mDone[o] = st;
     Log("done(" + O(o) + ")=" + Num(st));
+    if (kind == 3) {
+        // the context's GetCertCallback: SetPeerData, then Finish
+        Log("lightpeer(" + O(o) + ")=p" + Num(S.mLightPeer));
+        if (sOnLightPeer && S.mLights[o]) sOnLightPeer(S.mLights[o], S.mLightPeer);
+    }
 }
 
 static const int kSocket = 1000;
@@ -765,6 +779,11 @@ struct RustObjs {
     const AuthPeerData* Peer(int i) const { return i >= 1 && i <= 2 ? peers[i - 1].get() : NULL; }
 };
 static RustObjs* sRust;
+static void RustLightPeer(EeWonLightCert* inCert, int inPeer)
+{
+    const AuthPeerData* p = sRust->Peer(inPeer);
+    ee_won_light_cert_set_peer(inCert, p ? p->Impl() : NULL);
+}
 static void* P(int o) { return reinterpret_cast<void*>((intptr_t)o); }
 static int I(void* p) { return (int)(intptr_t)p; }
 static void RustHost(void*, EeWonHostCall* c)
@@ -808,12 +827,7 @@ static void RustHost(void*, EeWonHostCall* c)
     }
     case EE_WON_HOST_PEER_REFRESH_BLOCK: c->out_num = HRefreshBlock((unsigned long)n0); break;
     case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = P(HNewLight()); break;
-    case EE_WON_HOST_PEER_REFRESH_ASYNC: HRefreshAsync(o0); break;
-    case EE_WON_HOST_PEER_LIGHT_DATA: {
-        const AuthPeerData* p = sRust->Peer(HLightData(o0));
-        c->out_num = p ? (long long)(intptr_t)ee_won_authobj_clone(p->Impl()) : 0;
-        break;
-    }
+    case EE_WON_HOST_PEER_REFRESH_ASYNC: HRefreshAsync(o0, reinterpret_cast<EeWonLightCert*>((intptr_t)n0)); break;
     case EE_WON_HOST_OP_STATUS: c->out_num = HOpStatus(o0); break;
     case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = HIsRecv(o0); break;
     case EE_WON_HOST_OP_BYTES: {
@@ -842,6 +856,7 @@ static string RunRust(const Scenario& sc)
     Begin(sc);
     RustObjs objs;
     sRust = &objs;
+    sOnLightPeer = RustLightPeer;
     SmartPtr<AuthBase> block = new AuthBase(EE_WON_AUTH_PUB_KEY_BLOCK, sc.block.data(), (unsigned long)sc.block.size());
     objs.peers[0] = NewPeer(sc.ctx, block.get());
     objs.peers[1] = NewPeer(sc.refreshed, block.get());
@@ -862,6 +877,7 @@ static string RunRust(const Scenario& sc)
     string t = S.mTrace + "|status " + Num(S.mStatus) + result;
     End();
     sRust = NULL;
+    sOnLightPeer = NULL;
     return t;
 }
 

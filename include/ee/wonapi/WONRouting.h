@@ -8,7 +8,7 @@
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONElGamal.h"
 #include "ee/wonapi/WONBlowfish.h"
-#include "ee/wonapi/WONAuthPeerData.h" //complete type needed by LightGetCertOp's inline setter
+#include "ee/wonapi/WONAuthPeerData.h" //complete type needed by GetCertOp's users
 #include "ee/wonapi/WONStringCompare.h"
 #include <stdio.h> //FILE* member (RecvBytesOp::mFile)
 #include <set> //SmartRoutingConnection IgnoreSet
@@ -366,16 +366,8 @@ template <class T> class CompletionBase : public RefCount {
 public:
     virtual void Complete(T theParam) = 0;  // +0x04
 };
-// LightGetCertOp: 0x48 bytes, AsyncOp (0x44) plus the peer data pointer at 0x44
-// PeerAuthOp::AsyncRefreshCert 2e74a0 allocates 0x48 bytes and calls the AsyncOp constructor
-// Implicit ctor/dtor (2e74e0..2e74f2, 2e7580: owned pointer, then base cleanup)
-
-class LightGetCertOp : public AsyncOp {
-    ConstSmartPtr<AuthPeerData> mPeerData; //44..48, set by GetCertCallback 2de677
-public:
-    void SetPeerData(const AuthPeerData* data) { this->mPeerData=data; }
-    const AuthPeerData* GetPeerData() const { return this->mPeerData; }
-};
+// LightGetCertOp (0x48 bytes: AsyncOp plus the peer data at 0x44; PeerAuthOp::AsyncRefreshCert 2e74a0) is a plain
+// AsyncOp for its run and ee_won's EeWonLightCert for its member (authflow.rs: the peer data GetCertCallback sets)
 
 // ParamCompletion<AsyncOpPtr,SmartPtr<RefCount>>: 0x10 bytes,
 // callback 8, owned param c, vtable 44ca3c -> deleting dtor 2aeab0, Complete 2ae840.

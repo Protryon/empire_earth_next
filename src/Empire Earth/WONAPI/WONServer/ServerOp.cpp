@@ -728,13 +728,10 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
         break;
     }
     case EE_WON_HOST_PEER_REFRESH_BLOCK: c->out_num = o->mAuthContext->RefreshBlock((DWORD)n0); break;
-    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new LightGetCertOp); break;
-    case EE_WON_HOST_PEER_REFRESH_ASYNC: o->mAuthContext->RefreshAsync(static_cast<LightGetCertOp*>(Op(o0))); break;
-    case EE_WON_HOST_PEER_LIGHT_DATA: {
-        const AuthPeerData* aPeer = static_cast<LightGetCertOp*>(Op(o0))->GetPeerData();
-        c->out_num = aPeer != NULL ? (long long)(intptr_t)ee_won_authobj_clone(aPeer->Impl()) : 0;
+    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new AsyncOp); break;
+    case EE_WON_HOST_PEER_REFRESH_ASYNC:
+        o->mAuthContext->RefreshAsync(Op(o0), reinterpret_cast<EeWonLightCert*>((intptr_t)n0));
         break;
-    }
     case EE_WON_HOST_PEER_NEW_SESSION:
         c->out_obj = Out(new AuthSession(reinterpret_cast<EeWonAuthSession*>((intptr_t)n0)));
         break;

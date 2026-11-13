@@ -24,6 +24,7 @@
 
 use std::sync::Arc;
 
+use crate::authflow::EeWonLightCert;
 use crate::hostop::{
     EeWonHostOp, Host, Obj, Plan, EE_WON_HOST_OP_CONNECT, EE_WON_HOST_OP_RECV_MSG, EE_WON_HOST_OP_SEND_MSG, ST_PENDING,
     ST_SUCCESS,
@@ -67,6 +68,8 @@ pub(crate) struct PeerOp {
     lfs: u8,
     /// the `AuthSession` of the handshake's session
     session: Obj,
+    /// the certificate refresh's `LightGetCertOp`: its run (named, not held: the tracker holds it) and its member
+    light: Option<(Obj, Arc<EeWonLightCert>)>,
 }
 
 impl PeerOp {
@@ -75,7 +78,16 @@ impl PeerOp {
         if !server {
             auth.set_use_auth2(use_auth2);
         }
-        PeerOp { server, addr, get_cert_status: ST_SUCCESS, peer: None, auth, lfs: 0, session: Obj::none() }
+        PeerOp {
+            server,
+            addr,
+            get_cert_status: ST_SUCCESS,
+            peer: None,
+            auth,
+            lfs: 0,
+            session: Obj::none(),
+            light: None,
+        }
     }
 }
 
@@ -149,8 +161,10 @@ fn async_connect(h: &Host<PeerOp>, socket: Obj) {
 fn async_refresh_cert(h: &Host<PeerOp>) {
     h.st().get_cert_status = ST_PENDING;
     let light = h.new_light_get_cert();
+    let cert = EeWonLightCert::new();
+    h.st().light = Some((light, cert.clone()));
     h.track(light, TRACK_GET_CERT);
-    h.refresh_async(light);
+    h.refresh_async(light, &cert);
     h.release(light);
 }
 
@@ -320,7 +334,8 @@ fn client_callback(h: &Host<PeerOp>, id: i32, op: Obj) -> bool {
         }
         TRACK_GET_CERT => {
             let s = h.op_status(op);
-            let peer = h.light_peer_data(op);
+            // the completing op's `GetPeerData()`
+            let peer = h.st().light.as_ref().filter(|(o, _)| *o == op).and_then(|(_, c)| c.peer());
             let not_started = {
                 let mut p = h.st();
                 p.get_cert_status = s;

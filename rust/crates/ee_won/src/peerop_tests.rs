@@ -71,6 +71,8 @@ struct Replay {
     other: PeerAuth,
     sessions: Vec<Box<EeWonAuthSession>>,
     line: usize,
+    /// the light ops' members by object
+    lights: Vec<(String, *const EeWonLightCert)>,
 }
 
 impl Replay {
@@ -169,10 +171,8 @@ unsafe extern "C" fn host(ctx: *mut c_void, c: *mut EeWonHostCall) {
         EE_WON_HOST_PEER_NEW_LIGHT => c.out_obj = obj(&r.expect("light")),
         EE_WON_HOST_PEER_REFRESH_ASYNC => {
             r.expect(&format!("refreshasync({})", o(c.obj[0])));
-        }
-        EE_WON_HOST_PEER_LIGHT_DATA => {
-            let a = r.expect(&format!("lightdata({})", o(c.obj[0])));
-            c.out_num = r.peer(&a);
+            // the light op's member, borrowed (the op holds it)
+            r.lights.push((o(c.obj[0]), n0 as usize as *const EeWonLightCert));
         }
         EE_WON_HOST_OP_STATUS => c.out_num = r.expect(&format!("opstatus({})", o(c.obj[0]))).parse().unwrap(),
         EE_WON_HOST_OP_IS_RECV_MSG => c.out_num = r.expect(&format!("isrecv({})", o(c.obj[0]))).parse().unwrap(),
@@ -240,6 +240,7 @@ fn replay(n: usize, line: &str) -> bool {
         other: other_auth,
         sessions: Vec::new(),
         line: n,
+        lights: Vec::new(),
     };
     let addr = [1u8, 2, 3, 4, 5, 6];
     let op = if server {
@@ -260,7 +261,21 @@ fn replay(n: usize, line: &str) -> bool {
             if !r.tokens.get(r.at).is_some_and(|t| t.starts_with("done(")) {
                 break;
             }
-            r.at += 2;
+            r.at += 1;
+            // a light op's completion: the context hands its member the peer data first
+            if let Some(t) = r.tokens.get(r.at).filter(|t| t.starts_with("lightpeer(")).cloned() {
+                let (call, p) = t.split_once('=').unwrap();
+                let name = call.trim_start_matches("lightpeer(").trim_end_matches(')');
+                let cert = r.lights.iter().find(|(n, _)| n == name).map(|l| l.1).unwrap();
+                let h = r.peer(p) as usize as *mut crate::peerobj::EeWonAuthObj;
+                // SAFETY: the op's live member; the handle (or NULL) made here, freed after
+                unsafe {
+                    crate::authflow::ee_won_light_cert_set_peer(cert, h);
+                    crate::peerobj::ee_won_authobj_free(h);
+                }
+                r.at += 1;
+            }
+            r.at += 1;
             r.tokens[r.at - 1].clone()
         };
         let (id, o) = cb.trim_start_matches("cb(").trim_end_matches(')').split_once(',').unwrap();

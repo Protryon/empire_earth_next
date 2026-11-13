@@ -289,12 +289,11 @@ pub const EE_WON_HOST_CLIENT_KEY: i32 = 154;
 pub const EE_WON_HOST_PEER_CTX_DATA: i32 = 155;
 /// `mAuthContext->RefreshBlock(num0)` -> out_num (the status)
 pub const EE_WON_HOST_PEER_REFRESH_BLOCK: i32 = 156;
-/// `new LightGetCertOp` -> out_obj
+/// `new LightGetCertOp`'s run (a plain `AsyncOp`; its member is the op's `EeWonLightCert`) -> out_obj
 pub const EE_WON_HOST_PEER_NEW_LIGHT: i32 = 157;
-/// `mAuthContext->RefreshAsync(obj0)` (a LightGetCertOp; may call back)
+/// `mAuthContext->RefreshAsync(obj0, num0)`: the light op's run and its member (an `EeWonLightCert*`, borrowed);
+/// may call back
 pub const EE_WON_HOST_PEER_REFRESH_ASYNC: i32 = 158;
-/// a LightGetCertOp obj0's `GetPeerData()` -> out_num as `EE_WON_HOST_PEER_CTX_DATA`
-pub const EE_WON_HOST_PEER_LIGHT_DATA: i32 = 159;
 /// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
 pub const EE_WON_HOST_PEER_NEW_SESSION: i32 = 160;
 
@@ -714,13 +713,9 @@ impl<P: Plan> Host<P> {
     pub(crate) fn new_light_get_cert(&self) -> Obj {
         self.invoke(EE_WON_HOST_PEER_NEW_LIGHT, [Obj::none(); 2], [0, 0], &[], [0; 6]).obj
     }
-    pub(crate) fn refresh_async(&self, light: Obj) {
-        self.num_of(EE_WON_HOST_PEER_REFRESH_ASYNC, light, [0, 0]);
-    }
-    pub(crate) fn light_peer_data(&self, light: Obj) -> Option<std::sync::Arc<crate::peerobj::PeerData>> {
-        let h = self.num_of(EE_WON_HOST_PEER_LIGHT_DATA, light, [0, 0]);
-        // SAFETY: as ctx_peer_data's
-        unsafe { crate::peerobj::take_peer(h as usize as *mut crate::peerobj::EeWonAuthObj) }
+    pub(crate) fn refresh_async(&self, light: Obj, cert: &std::sync::Arc<crate::authflow::EeWonLightCert>) {
+        let c = std::sync::Arc::as_ptr(cert) as usize as i64;
+        self.num_of(EE_WON_HOST_PEER_REFRESH_ASYNC, light, [c, 0]);
     }
     pub(crate) fn new_auth_session(&self, session: *mut crate::peerauth::EeWonAuthSession) -> Obj {
         self.invoke(EE_WON_HOST_PEER_NEW_SESSION, [Obj::none(); 2], [session as usize as i64, 0], &[], [0; 6]).obj
