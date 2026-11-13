@@ -827,6 +827,23 @@ pub unsafe extern "C" fn ee_gfx_effect_save_emitter(r: *const EeGfxEffectRecord,
     }
 }
 
+/// The blast wave's, teleport's and time warp's `Step`: 7 when it ends, `EE_GFX_EFFECT_MOVED` when the C++ moves
+/// the effect to its new transformation.
+///
+/// # Safety
+/// `r` is a live record; `t` is readable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_effect_timed_step(
+    r: *mut EeGfxEffectRecord,
+    t: *const effect_state::EeGfxTimedTick,
+) -> i32 {
+    // SAFETY: the function's contract
+    unsafe {
+        let tick = *t;
+        on_copy(r, |r| effect_state::timed_step(r, &tick))
+    }
+}
+
 /// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
 ///
 /// # Safety

@@ -149,19 +149,22 @@ pub struct EeGfxEffectEmitter {
     pub emit_time: f32,
 }
 
-/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple, blast wave; the teleport's and the
+/// time warp's age in milliseconds).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EeGfxEffectAged {
-    /// `mAge`: 0..1 over the duration (saved)
+    /// `mAge`: 0..1 over the duration, the teleport's and time warp's in ms (saved)
     pub age: f32,
     /// the water ripple's own `mTransformation`, at water level (saved)
     pub transformation: GeTransformation,
+    /// the blast wave's `mIsAging` (saved)
+    pub aging: bool,
 }
 
 impl Default for EeGfxEffectAged {
     fn default() -> EeGfxEffectAged {
-        EeGfxEffectAged { age: 0.0, transformation: identity() }
+        EeGfxEffectAged { age: 0.0, transformation: identity(), aging: false }
     }
 }
 
@@ -1775,10 +1778,62 @@ pub fn aged_step(r: &mut EeGfxEffectRecord, tick_seconds: f32, duration: u32, ti
     }
 }
 
-/// The aged effects' own Load after the base's (ignored) and the media load: the ripple's transformation, then the
-/// age; the first error.
+/// The blast wave.
+pub const EE_GFX_EFFECT_KIND_BLAST_WAVE: i32 = 0x18;
+/// The teleport.
+pub const EE_GFX_EFFECT_KIND_TELEPORT: i32 = 0x3f;
+/// The time warp.
+pub const EE_GFX_EFFECT_KIND_TIME_WARP: i32 = 0x44;
+
+/// The effect moved: the C++ moves it to its (new) transformation's region.
+pub const EE_GFX_EFFECT_MOVED: i32 = 1;
+
+/// What the timed effects' `Step` reads: the tick in seconds and in ms (`GetTickSeconds`, `GetTickTime`), the
+/// graphic effect's duration (ms), the speed (the time warp's param 1, the teleport's param 2) and flag 1 (sinking).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxTimedTick {
+    pub tick_seconds: f32,
+    pub tick_time: f32,
+    pub duration: u32,
+    pub speed: f32,
+    pub sinking: bool,
+}
+
+/// The blast wave's, teleport's and time warp's `Step` (the blast wave follows its unit first, in the C++):
+/// - the blast wave, while aging, ages by the tick over the duration; 7 once past 1;
+/// - the teleport and the time warp age by the tick in ms and, within the duration, move down (flag 1) or up by the
+///   speed times the tick in seconds (`EE_GFX_EFFECT_MOVED`); 7 past the duration.
+pub fn timed_step(r: &mut EeGfxEffectRecord, t: &EeGfxTimedTick) -> i32 {
+    if r.kind == EE_GFX_EFFECT_KIND_BLAST_WAVE {
+        let a = &mut r.aged;
+        if a.aging {
+            a.age += t.tick_time / t.duration as f32;
+            if a.age > 1.0 {
+                return 7;
+            }
+        }
+        return 0;
+    }
+    r.aged.age += t.tick_seconds * 1000.0;
+    if r.aged.age <= t.duration as f32 {
+        let z = &mut r.transformation.m[2][3];
+        if t.sinking {
+            *z = *z - t.speed * t.tick_seconds;
+        } else {
+            *z = *z + t.speed * t.tick_seconds;
+        }
+        EE_GFX_EFFECT_MOVED
+    } else {
+        7
+    }
+}
+
+/// The aged effects' own Load after the base's and the media load: the ripple's transformation, then the age, then
+/// the blast wave's aging flag; the first error.
 pub fn load_aged<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
     let ripple = r.kind == EE_GFX_EFFECT_KIND_WATER_RIPPLE;
+    let blast = r.kind == EE_GFX_EFFECT_KIND_BLAST_WAVE;
     let a = &mut r.aged;
     if ripple {
         let res = load_transformation(f, &mut a.transformation);
@@ -1786,7 +1841,11 @@ pub fn load_aged<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
             return res;
         }
     }
-    f.read_f32(&mut a.age)
+    let res = f.read_f32(&mut a.age);
+    if res != OK || !blast {
+        return res;
+    }
+    f.read_bool(&mut a.aging)
 }
 
 /// The aged effects' own Save.
@@ -1798,7 +1857,11 @@ pub fn save_aged<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
             return res;
         }
     }
-    f.write_f32(a.age)
+    let res = f.write_f32(a.age);
+    if res != OK || r.kind != EE_GFX_EFFECT_KIND_BLAST_WAVE {
+        return res;
+    }
+    f.write_bool(a.aging)
 }
 
 #[cfg(test)]
@@ -2405,6 +2468,40 @@ mod tests {
         let mut m2 = Mem::default();
         save_aged(&s, &mut m2);
         assert_eq!(m2.items.len(), 1);
+    }
+
+    #[test]
+    fn the_timed_effects_age_and_rise_or_sink() {
+        let t = EeGfxTimedTick { tick_seconds: 0.25, tick_time: 250.0, duration: 500, speed: 2.0, sinking: false };
+        // the blast wave ages only while aging, by the tick over the duration
+        let mut b = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_BLAST_WAVE);
+        assert_eq!(timed_step(&mut b, &t), 0);
+        assert_eq!(b.aged.age, 0.0);
+        b.aged.aging = true;
+        assert_eq!((timed_step(&mut b, &t), timed_step(&mut b, &t)), (0, 0));
+        assert_eq!(b.aged.age, 1.0);
+        assert_eq!(timed_step(&mut b, &t), 7);
+        let mut m = Mem::default();
+        assert_eq!(save_aged(&b, &mut m), 0);
+        assert_eq!(m.items.len(), 2);
+        let mut back = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_BLAST_WAVE);
+        let mut g = Mem { items: m.items.clone(), ..Default::default() };
+        assert_eq!(load_aged(&mut back, &mut g), 0);
+        assert_eq!(back.aged, b.aged);
+        // the teleport rises (the time warp sinks with flag 1) within the duration in ms, then ends
+        let mut p = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_TELEPORT);
+        p.transformation.m[2][3] = 1.0;
+        assert_eq!(timed_step(&mut p, &t), EE_GFX_EFFECT_MOVED);
+        assert_eq!((p.aged.age, p.transformation.m[2][3]), (250.0, 1.5));
+        assert_eq!(timed_step(&mut p, &t), EE_GFX_EFFECT_MOVED);
+        assert_eq!(timed_step(&mut p, &t), 7);
+        assert_eq!(p.transformation.m[2][3], 2.0);
+        let mut w = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_TIME_WARP);
+        assert_eq!(timed_step(&mut w, &EeGfxTimedTick { sinking: true, ..t }), EE_GFX_EFFECT_MOVED);
+        assert_eq!(w.transformation.m[2][3], -0.5);
+        let mut m = Mem::default();
+        save_aged(&w, &mut m);
+        assert_eq!(m.items.len(), 1);
     }
 
     #[test]

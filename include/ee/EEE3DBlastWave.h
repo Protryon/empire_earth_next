@@ -31,9 +31,9 @@ public:
     static const UString sData;             // "EEE3DBlastWave-Data" (0x4e8a68; provisional name)
 
     EEGraphicObject* mGraphicObject;        // +0x74
-    float mAge;                             // +0x78 the age, 0..1 (saved)
+    float& mAge = this->mRecord->aged.age;   // +0x78 the age, 0..1 (saved; the record's: ee_gfx effect_state.rs)
     float mDrawAge;                         // +0x7c the age the draw uses (Virtual24 copies mF78)
-    bool mIsAging;                          // +0x80 (true: ages; saved)
+    bool& mIsAging = this->mRecord->aged.aging;   // +0x80 (true: ages; saved; the record's)
 };
 
 #endif

@@ -49,8 +49,9 @@
 // Creates a time warp effect on a unit, starting just below the unit (flag 1) or one model height below it, and
 // launches the effect's two linked line effects from the far end of that span; its age is left unset
 EEE3DTimeWarp::EEE3DTimeWarp(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inUnit, inGraphicEffect, inKind), mAge(0.0f)
+    : EEEffect3D(inUnit, inGraphicEffect, inKind)
 {
+    this->mAge = 0.0f;
     // The warp's age starts at zero (it was left unset, so its lifetime depended on reused memory).
     GETransformation theTransformation;
     GE3DLine theLine;
@@ -146,9 +147,8 @@ long EEE3DTimeWarp::SetUp()
 long EEE3DTimeWarp::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return theResult == 0 ? ee_gfx_effect_load_aged(this->mRecord, &theFile) : theResult;
 }
 
 // FUNCTION: EXE 0x4fc0e8
@@ -206,31 +206,21 @@ long EEE3DTimeWarp::DrawPass4()
 long EEE3DTimeWarp::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return theResult == 0 ? ee_gfx_effect_save_aged(this->mRecord, &theFile) : theResult;
 }
 
 // FUNCTION: EXE 0x4fc2c4
 // Moves the effect down (flag 1) or up at param 1 per second; returns 7 once it is older than the effect's duration
 long EEE3DTimeWarp::Step()
 {
-    GETransformation theTransformation(this->mTransformation);
-    float theElapsed = gPhysics->GetTickSeconds();
-    float theSpeed = this->mGraphicEffect->mParam1;
-    bool theRising = this->mGraphicEffect->mFlag1;
-    long theResult = 0;
-    this->mAge += theElapsed * 1000.0f;
-    if (this->mAge <= this->mGraphicEffect->mDuration) {
-        GE3DPoint thePosition(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-        if (theRising)
-            thePosition.SetZ(thePosition.GetZ() - theSpeed * theElapsed);
-        else
-            thePosition.SetZ(thePosition.GetZ() + theSpeed * theElapsed);
-        theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
+    EeGfxTimedTick theTick = {gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)this->mGraphicEffect->mDuration,
+                              this->mGraphicEffect->mParam1, this->mGraphicEffect->mFlag1};
+    long theResult = ee_gfx_effect_timed_step(this->mRecord, &theTick);   // ee_gfx effect_state.rs
+    if (theResult == EE_GFX_EFFECT_MOVED) {
+        GETransformation theTransformation(this->mTransformation);
         this->SetTransformation(theTransformation);
-    } else {
-        theResult = 7;
+        theResult = 0;
     }
     return theResult;
 }

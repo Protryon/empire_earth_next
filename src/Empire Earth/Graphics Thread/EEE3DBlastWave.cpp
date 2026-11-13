@@ -51,8 +51,9 @@ const UString EEE3DBlastWave::sData("EEE3DBlastWave-Data");
 // FUNCTION: EXE 0x4e8f1b
 // Creates a blast wave attached to a unit, aging from 0, sized by the effect
 EEE3DBlastWave::EEE3DBlastWave(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inUnit, inGraphicEffect, inKind), mGraphicObject(NULL), mAge(0.0f)
+    : EEEffect3D(inUnit, inGraphicEffect, inKind), mGraphicObject(NULL)
 {
+    this->mAge = 0.0f;
     this->mIsAging = true;
     this->mDrawAge = 0.0f;
     this->mBoundingRadius = this->mGraphicEffect->GetSize();
@@ -224,11 +225,8 @@ long EEE3DBlastWave::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
-    if (theResult == 0)
-        theResult = inFile.Read(this->mAge);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mIsAging);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return theResult == 0 ? ee_gfx_effect_load_aged(this->mRecord, &theFile) : theResult;
 }
 
 // FUNCTION: EXE 0x4e93e0
@@ -243,24 +241,17 @@ long EEE3DBlastWave::RepairPointers()
 long EEE3DBlastWave::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAge);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsAging);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return theResult == 0 ? ee_gfx_effect_save_aged(this->mRecord, &theFile) : theResult;
 }
 
 // FUNCTION: EXE 0x4e9421
 // Follows the unit and, while aging, ages the wave by the tick over its duration; returns 7 (remove) past age 1
 long EEE3DBlastWave::Step()
 {
-    long theResult = 0;
     if (this->mUnit != NULL)
         this->FollowUnit();
-    if (this->mIsAging) {
-        this->mAge += gPhysics->GetTickTime() / this->mGraphicEffect->mDuration;
-        if (this->mAge > 1.0f)
-            theResult = 7;
-    }
-    return theResult;
+    EeGfxTimedTick theTick = {gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)this->mGraphicEffect->mDuration,
+                              0.0f, false};
+    return ee_gfx_effect_timed_step(this->mRecord, &theTick);   // ee_gfx effect_state.rs
 }

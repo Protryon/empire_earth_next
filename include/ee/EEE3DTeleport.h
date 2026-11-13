@@ -26,7 +26,7 @@ public:
 
     GE3DPoint mLocation;                    // +0x74 (the position the draw uses)
     EEGraphicObject* mGraphicObject;        // +0x80
-    float mAge;                             // +0x84 milliseconds (saved)
+    float& mAge = this->mRecord->aged.age;   // +0x84 milliseconds (saved; the record's: ee_gfx effect_state.rs)
     float mDrawAge;                         // +0x88 (Virtual24 copies mAge)
 };
 

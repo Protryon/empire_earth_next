@@ -63,6 +63,18 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_WATER_RIPPLE = 34;
 /// An aged effect's tick asks the C++ whether the tile under the ripple is blocked (the ripple lives on while it is).
 constexpr static const int32_t EE_GFX_EFFECT_ASK_BLOCKED = 1;
 
+/// The blast wave.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_BLAST_WAVE = 24;
+
+/// The teleport.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_TELEPORT = 63;
+
+/// The time warp.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_TIME_WARP = 68;
+
+/// The effect moved: the C++ moves it to its (new) transformation's region.
+constexpr static const int32_t EE_GFX_EFFECT_MOVED = 1;
+
 /// The rain (`EEE3DRain`).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_RAIN = 42;
 
@@ -605,12 +617,15 @@ struct EeGfxEffectEmitter {
   float emit_time;
 };
 
-/// The aged effects' state (water splash, shock wave, screen flash, water ripple).
+/// The aged effects' state (water splash, shock wave, screen flash, water ripple, blast wave; the teleport's and the
+/// time warp's age in milliseconds).
 struct EeGfxEffectAged {
-  /// `mAge`: 0..1 over the duration (saved)
+  /// `mAge`: 0..1 over the duration, the teleport's and time warp's in ms (saved)
   float age;
   /// the water ripple's own `mTransformation`, at water level (saved)
   EeGeTransformation transformation;
+  /// the blast wave's `mIsAging` (saved)
+  bool aging;
 };
 
 /// A storm's state (`EEE3DStorm`'s, `EEE3DRain`'s and `EEE3DSnow`'s plain members).
@@ -949,6 +964,16 @@ struct EeGfxEmitterBurst {
 struct EeGfxEmitterHost {
   void *context;
   int32_t (*line)(void *context, const EeGe3DPoint *start, const EeGe3DPoint *direction);
+};
+
+/// What the timed effects' `Step` reads: the tick in seconds and in ms (`GetTickSeconds`, `GetTickTime`), the
+/// graphic effect's duration (ms), the speed (the time warp's param 1, the teleport's param 2) and flag 1 (sinking).
+struct EeGfxTimedTick {
+  float tick_seconds;
+  float tick_time;
+  uint32_t duration;
+  float speed;
+  bool sinking;
 };
 
 /// The world a storm reads and calls into (`context`: the effect).
@@ -2104,6 +2129,14 @@ int32_t ee_gfx_effect_load_emitter(EeGfxEffectRecord *r, const EeGfxEffectFile *
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_effect_save_emitter(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// The blast wave's, teleport's and time warp's `Step`: 7 when it ends, `EE_GFX_EFFECT_MOVED` when the C++ moves
+/// the effect to its new transformation.
+///
+/// # Safety
+/// `r` is a live record; `t` is readable.
+int32_t ee_gfx_effect_timed_step(EeGfxEffectRecord *r,
+                                 const EeGfxTimedTick *t);
 
 /// The aged effects' `Step`: 7 when it ends; the ripple's `EE_GFX_EFFECT_ASK_BLOCKED` with its tile in `tile`.
 ///

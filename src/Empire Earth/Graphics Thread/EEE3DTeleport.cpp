@@ -145,9 +145,8 @@ long EEE3DTeleport::SetUp()
 long EEE3DTeleport::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return theResult == 0 ? ee_gfx_effect_load_aged(this->mRecord, &theFile) : theResult;
 }
 
 // ICF-folded into EEE3DTimeWarp's 0xfc0e8
@@ -202,31 +201,21 @@ long EEE3DTeleport::DrawPass4()
 long EEE3DTeleport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return theResult == 0 ? ee_gfx_effect_save_aged(this->mRecord, &theFile) : theResult;
 }
 
 // FUNCTION: EXE 0x4fbe08
 // Moves the effect down (flag 1) or up at param 2 per second; returns 7 once it is older than the effect's duration
 long EEE3DTeleport::Step()
 {
-    GETransformation theTransformation(this->mTransformation);
-    float theElapsed = gPhysics->GetTickSeconds();
-    float theSpeed = this->mGraphicEffect->mParam2;
-    bool theRising = this->mGraphicEffect->mFlag1;
-    long theResult = 0;
-    this->mAge += theElapsed * 1000.0f;
-    if (this->mAge <= this->mGraphicEffect->mDuration) {
-        GE3DPoint thePosition(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-        if (theRising)
-            thePosition.SetZ(thePosition.GetZ() - theSpeed * theElapsed);
-        else
-            thePosition.SetZ(thePosition.GetZ() + theSpeed * theElapsed);
-        theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
+    EeGfxTimedTick theTick = {gPhysics->GetTickSeconds(), gPhysics->GetTickTime(), (uint32_t)this->mGraphicEffect->mDuration,
+                              this->mGraphicEffect->mParam2, this->mGraphicEffect->mFlag1};
+    long theResult = ee_gfx_effect_timed_step(this->mRecord, &theTick);   // ee_gfx effect_state.rs
+    if (theResult == EE_GFX_EFFECT_MOVED) {
+        GETransformation theTransformation(this->mTransformation);
         this->SetTransformation(theTransformation);
-    } else {
-        theResult = 7;
+        theResult = 0;
     }
     return theResult;
 }
