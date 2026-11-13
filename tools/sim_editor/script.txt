@@ -81,3 +81,45 @@ check 0x12 1                       # UI hidden: the full view
 view
 click quicksave
 editorsave
+# the trigger tab (round 18): entering it sets the hide-UI box's two views; the condition and effect screens' events
+# with state (EESEECheckDisplay, EESEESliderChange, EESEEUseObjectArea) through their controls, then their digest
+tab 4
+view
+check 0x12 0
+view
+trigger 4                          # an area and an object: the effects' area/object lists
+newentry
+trigger 3
+newentry
+trigger 1                          # a game condition: its check boxes show their fields, the hour slider its label
+newentry
+ctype 6
+ui c
+ctl c check 0 1
+ctl c check 1 1
+ctl c check 2 1
+ctl c slide 0 13
+ui c
+ctl c check 1 0
+ctl c slide 0 23
+ui c
+trigger 2                          # game effects: the daylight hour's and the cinematic's sliders
+newentry
+etype 5 0
+ctl e slide 0 7
+ui e
+etype 5 4
+ctl e slide 0 17
+ui e
+etype 6 1                          # AI effects: a military group's area/object radios
+ctl e radio 1
+ui e
+ctl e radio 0
+ui e
+etype 6 0                          # a military target's
+ctl e radio 2
+ui e
+ctl e radio 3
+ui e
+ctl e radio 2                      # back to areas (the area control is this type's third radio)
+ui e

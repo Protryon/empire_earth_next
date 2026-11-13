@@ -1032,3 +1032,340 @@ editorsave
   chunk 8 result=0 (differs by run)
   chunk 11 result=0 bytes=28 c68d714d6c92ada7
   rest 0
+step 86 tab 4
+step 87 view
+  view 0,0,1024,447 hidden=0
+step 88 check 0x12 0
+step 89 view
+  view 0,0,1024,447 hidden=0
+step 90 trigger 4                          # an area and an object: the effects' area/object lists
+step 91 newentry
+step 92 trigger 3
+step 93 newentry
+step 94 trigger 1                          # a game condition: its check boxes show their fields, the hour slider its label
+step 95 newentry
+step 96 ctype 6
+step 97 ui c
+  condition controls
+  label0 mode=1 'Game Condition Details'
+  label1 mode=0 'Min'
+  label2 mode=0 'Max'
+  label3 mode=0 '0'
+  label4 mode=0 ''
+  slider0 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  check2 mode=1 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=0 lines=3
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 98 ctl c check 0 1
+step 99 ctl c check 1 1
+step 100 ctl c check 2 1
+step 101 ctl c slide 0 13
+step 102 ui c
+  condition controls
+  label0 mode=1 'Game Condition Details'
+  label1 mode=1 'Min'
+  label2 mode=1 'Max'
+  label3 mode=1 '13'
+  label4 mode=0 ''
+  slider0 mode=1 value=13
+  check0 mode=1 checked=1
+  check1 mode=1 checked=1
+  check2 mode=1 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=3
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 103 ctl c check 1 0
+step 104 ctl c slide 0 23
+step 105 ui c
+  condition controls
+  label0 mode=1 'Game Condition Details'
+  label1 mode=0 'Min'
+  label2 mode=0 'Max'
+  label3 mode=1 '23'
+  label4 mode=0 ''
+  slider0 mode=1 value=23
+  check0 mode=1 checked=1
+  check1 mode=1 checked=0
+  check2 mode=1 checked=1
+  radio0 mode=0
+  radio1 mode=0
+  combo0 mode=1 lines=3
+  combo1 mode=0 lines=5
+  combo2 mode=0 lines=67
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=0 lines=0 selection=none
+  scenario2 mode=0 kind=0 lines=0 selection=none
+  scenario3 mode=0 kind=0 lines=0 selection=none
+step 106 trigger 2                          # game effects: the daylight hour's and the cinematic's sliders
+step 107 newentry
+step 108 etype 5 0
+step 109 ctl e slide 0 7
+step 110 ui e
+  effect controls
+  label0 mode=1 'Game Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 '24 Hour Time'
+  label3 mode=1 ' 7'
+  label4 mode=0 ''
+  label5 mode=0 ''
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=1 value=7
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 111 etype 5 4
+step 112 ctl e slide 0 17
+step 113 ui e
+  effect controls
+  label0 mode=1 'Game Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Game Speed'
+  label3 mode=1 '1.8'
+  label4 mode=0 ''
+  label5 mode=0 ''
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=1 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=0
+  radio1 mode=0
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=0 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 114 etype 6 1                          # AI effects: a military group's area/object radios
+step 115 ctl e radio 1
+step 116 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=1 'Objects To Add'
+  label5 mode=1 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 117 ctl e radio 0
+step 118 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Area'
+  label4 mode=1 'Objects To Add'
+  label5 mode=1 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=1 checked=0
+  check1 mode=1 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=0
+  radio3 mode=0
+  radio4 mode=0
+  radio5 mode=0
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=4 lines=3 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 119 etype 6 0                          # a military target's
+step 120 ctl e radio 2
+step 121 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Area'
+  label4 mode=0 'Objects To Add'
+  label5 mode=0 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=1
+  radio3 mode=1
+  radio4 mode=1
+  radio5 mode=1
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=4 lines=3 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 122 ctl e radio 3
+step 123 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Object'
+  label4 mode=0 'Objects To Add'
+  label5 mode=0 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=1
+  radio3 mode=1
+  radio4 mode=1
+  radio5 mode=1
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=3 lines=2 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
+step 124 ctl e radio 2                      # back to areas (the area control is this type's third radio)
+step 125 ui e
+  effect controls
+  label0 mode=1 'AI Effect'
+  label1 mode=1 'Action'
+  label2 mode=1 'Player'
+  label3 mode=1 'Area'
+  label4 mode=0 'Objects To Add'
+  label5 mode=0 'ObjectsAdded'
+  label6 mode=0 ''
+  label7 mode=0 ''
+  label8 mode=0 ''
+  label9 mode=0 ''
+  label10 mode=0 ''
+  label11 mode=0 ''
+  label12 mode=0 ''
+  slider0 mode=0 value=17
+  slider1 mode=0 value=0
+  slider2 mode=0 value=0
+  slider3 mode=0 value=0
+  check0 mode=0 checked=0
+  check1 mode=0 checked=0
+  radio0 mode=1
+  radio1 mode=1
+  radio2 mode=1
+  radio3 mode=1
+  radio4 mode=1
+  radio5 mode=1
+  combo0 mode=1 lines=7
+  combo1 mode=0 lines=0
+  combo2 mode=0 lines=0
+  combo3 mode=0 lines=0
+  scenario0 mode=0 kind=0 lines=0 selection=none
+  scenario1 mode=1 kind=4 lines=3 selection=0
+  scenario2 mode=0 kind=3 lines=0 selection=none
+  scenario3 mode=0 kind=4 lines=0 selection=none
