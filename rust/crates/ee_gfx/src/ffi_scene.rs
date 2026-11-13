@@ -137,3 +137,18 @@ pub unsafe extern "C" fn ee_gfx_capture_ground_circle(
     unsafe { std::ptr::copy_nonoverlapping(p.as_ptr(), points, EE_GFX_RING_POINTS) };
     width
 }
+
+// ---- the lighting set-ups (lighting.rs)
+
+/// The rasterizer calls of the set-up `kind` over the values `i`.
+///
+/// # Safety
+/// `i` is readable.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_lighting(
+    kind: crate::lighting::EeGfxLighting,
+    i: *const crate::lighting::EeGfxLightingInputs,
+) -> crate::lighting::EeGfxRasterOps {
+    // SAFETY: the function's contract
+    crate::lighting::lighting(kind, unsafe { &*i })
+}

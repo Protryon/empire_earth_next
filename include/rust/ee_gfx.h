@@ -78,6 +78,9 @@ constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
 /// The beam ends (7).
 constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
 
+/// The calls of one set-up, in order.
+constexpr static const size_t EE_GFX_RASTER_OPS = 8;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -156,6 +159,62 @@ enum class EeGfxEffectEntry {
   Between = 6,
   /// `CreateWeatherEffect`: over tiles
   Weather = 7,
+};
+
+/// One rasterizer call (or a change of the shared light) and its arguments.
+enum class EeGfxRasterOpKind : uint32_t {
+  /// `SetFog(value)`
+  Fog = 0,
+  /// `SetFogColor(color)`
+  FogColor = 1,
+  /// `SetFogRange(f[0], f[1])`
+  FogRange = 2,
+  /// `SetFogType(value)`
+  FogType = 3,
+  /// `SetAmbientColor(color)`
+  AmbientColor = 4,
+  /// `SetAmbientIntensity(f[0])`
+  AmbientIntensity = 5,
+  /// `RemoveAllLights()`
+  RemoveLights = 6,
+  /// `SetLighting(value)`
+  Lighting = 7,
+  /// the shared light's `SetColor(color)`
+  LightColor = 8,
+  /// the shared light's `SetIntensity(f[0])`
+  LightIntensity = 9,
+  /// the shared light's `SetDirection(f[0..3])`
+  LightDirection = 10,
+  /// `AddLight(light, screen, slot)`
+  AddLight = 11,
+  /// `UpdateLight(slot, light, screen)`
+  UpdateLight = 12,
+};
+
+/// The set-ups, one per C++ function.
+enum class EeGfxLighting : uint32_t {
+  /// `SetSceneFog`
+  SceneFog = 0,
+  /// `SetFogOff`
+  FogOff = 1,
+  /// `SetLightingOff`
+  Off = 2,
+  /// `SetPrelitLighting`
+  Prelit = 3,
+  /// `SetCloudLighting`
+  Cloud = 4,
+  /// `SetWhiteLighting`
+  White = 5,
+  /// `SetTerrainLighting`
+  Terrain = 6,
+  /// `SetMapObjectLighting`
+  MapObject = 7,
+  /// `SetUnitLighting`
+  Unit = 8,
+  /// `RestoreUnitLighting`
+  RestoreUnit = 9,
+  /// `DimUnitLighting`
+  DimUnit = 10,
 };
 
 /// The damage controller's child effects: the handles of the graphic's linked effect 1 and 2 (`mPrimaryEffects`,
@@ -1152,6 +1211,42 @@ struct EeGfxDaylightTables {
   EeGeVector fill[3];
   EeGeVector sun;
   EeGeVector moon;
+};
+
+/// A call: `value` for the integer argument, `f` for the floats (a colour's red, green, blue; a direction's x, y, z;
+/// a range's near and far).
+struct EeGfxRasterOp {
+  EeGfxRasterOpKind kind;
+  uint32_t value;
+  float f[3];
+};
+
+struct EeGfxRasterOps {
+  uint32_t count;
+  EeGfxRasterOp ops[EE_GFX_RASTER_OPS];
+};
+
+/// What the set-ups read: the light fade, the fog colour (`gU4E9220`), the view, the environment
+/// (`gRenderEnvironment`), the sun (`gU4E9210`) and whether units are lit (`gUnitLighting`).
+struct EeGfxLightingInputs {
+  float light_fade;
+  EeGfxColor fog_color;
+  bool orthographic;
+  bool unit_lighting;
+  float rear_clipping;
+  float zoom_lock;
+  EeGfxColor prelit;
+  EeGfxColor dim_prelit;
+  EeGfxColor cloud;
+  EeGfxColor terrain_ambient;
+  EeGfxColor terrain_light;
+  EeGfxColor unit_ambient;
+  EeGfxColor unit_light;
+  float terrain_ambient_intensity;
+  float terrain_light_intensity;
+  float unit_ambient_intensity;
+  float unit_light_intensity;
+  EeGeVector sun;
 };
 
 /// The texture's u across the five vertices of a row.
@@ -2470,6 +2565,12 @@ float ee_gfx_capture_ground_circle(const EeGfxParticleGround *ground,
                                    float y,
                                    float radius,
                                    EeGe3DPoint *points);
+
+/// The rasterizer calls of the set-up `kind` over the values `i`.
+///
+/// # Safety
+/// `i` is readable.
+EeGfxRasterOps ee_gfx_lighting(EeGfxLighting kind, const EeGfxLightingInputs *i);
 
 }  // extern "C"
 

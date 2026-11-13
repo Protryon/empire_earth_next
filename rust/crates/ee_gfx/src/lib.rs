@@ -49,6 +49,8 @@ mod golden_center;
 #[cfg(test)]
 mod golden_farm;
 #[cfg(test)]
+mod golden_lighting;
+#[cfg(test)]
 mod golden_media;
 #[cfg(test)]
 mod golden_minimap;
@@ -78,6 +80,7 @@ mod golden_sky;
 mod golden_view;
 #[cfg(test)]
 mod golden_volcano;
+pub mod lighting;
 pub mod mesh;
 pub mod minimap;
 pub mod models;

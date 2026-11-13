@@ -137,10 +137,6 @@ static unsigned long sL52908C;              // 0x52908c (the frame counter; prov
 EERenderUnit* gU529044;                     // 0x529044 (the picked enemy's render unit: FillUnit; EEROUnits.cpp reads it; provisional name)
 static const float kEERenderObject_F441350 = 0.35f;   // 0x441350 (the see-through opacity)
 // 0x44136c (0.5, the near fade's depth): ee_gfx view.rs NEAR_FADE_DEPTH
-static const float kEERenderObject_F441358 = 0.6f;    // 0x441358 (the second light set's ambient scale)
-static const float kEERenderObject_F44135C = 10.0f;   // 0x44135c (its light's z scale)
-static const float kEERenderObject_F441364 = 4.0f;    // 0x441364 (the fog band)
-static const float kEERenderObject_F441368 = 4.0f;    // 0x441368
 // SYNTHETIC: EXE 0x50ace6   (wrapper)
 
 // SYNTHETIC: EXE 0x50acf0   (ctor)
@@ -1638,167 +1634,96 @@ bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
     return theResult;
 }
 
-// FUNCTION: EXE 0x50f60f
-// Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
-// (off in the orthographic view)
-void SetSceneFog()
+// The lighting set-ups below: their rasterizer calls are ee_gfx lighting.rs's (RUST_PLAN R4.4), applied in order
+static void ApplyLighting(EeGfxLighting inKind)
 {
-    GEColor theColor;
-    theColor.SetRed(gU4E9220.GetRed() * sLightFade);
-    theColor.SetGreen(gU4E9220.GetGreen() * sLightFade);
-    theColor.SetBlue(gU4E9220.GetBlue() * sLightFade);
+    EeGfxLightingInputs theIn;
+    EeGfxColor* theColors[] = {&theIn.fog_color, &theIn.prelit, &theIn.dim_prelit, &theIn.cloud, &theIn.terrain_ambient,
+                                     &theIn.terrain_light, &theIn.unit_ambient, &theIn.unit_light};
+    const GEColor* theSources[] = {&gU4E9220, &gRenderEnvironment.mPrelitColor, &gRenderEnvironment.mDimPrelitColor,
+                                   &gRenderEnvironment.mColor54, &gRenderEnvironment.mTerrainAmbientColor,
+                                   &gRenderEnvironment.mTerrainLightColor, &gRenderEnvironment.mUnitAmbientColor,
+                                   &gRenderEnvironment.mUnitLightColor};
+    for (int i = 0; i < 8; i++)
+        *theColors[i] = EeGfxColor{theSources[i]->mRed, theSources[i]->mGreen, theSources[i]->mBlue};
+    theIn.light_fade = sLightFade;
+    theIn.orthographic = gOrthographicView;
+    theIn.unit_lighting = gUnitLighting;
+    theIn.rear_clipping = gViewport.GetRearClippingDistance();
+    theIn.zoom_lock = gZoomLock;
+    theIn.terrain_ambient_intensity = gRenderEnvironment.mTerrainAmbientIntensity;
+    theIn.terrain_light_intensity = gRenderEnvironment.mTerrainLightIntensity;
+    theIn.unit_ambient_intensity = gRenderEnvironment.mUnitAmbientIntensity;
+    theIn.unit_light_intensity = gRenderEnvironment.mUnitLightIntensity;
+    theIn.sun = EeGeVector{gU4E9210.mX, gU4E9210.mY, gU4E9210.mZ};
+    EeGfxRasterOps theOps = ee_gfx_lighting(inKind, &theIn);
     unsigned long theScreen = gScreenIndex;
-    if (!gOrthographicView) {
-        gRasterizer->SetFog(1, theScreen);
-        gRasterizer->SetFogColor(theColor, theScreen);
-        gRasterizer->SetFogRange(gViewport.GetRearClippingDistance()
-                                 - (kEERenderObject_F441364 * gZoomLock + kEERenderObject_F441368),
-                                 gViewport.GetRearClippingDistance(), theScreen);
-        gRasterizer->SetFogType(1, theScreen);
-    } else {
-        gRasterizer->SetFog(0, theScreen);
+    for (uint32_t i = 0; i < theOps.count; i++) {
+        const EeGfxRasterOp& theOp = theOps.ops[i];
+        GEColor theColor(theOp.f[0], theOp.f[1], theOp.f[2]);
+        switch (theOp.kind) {
+        case EeGfxRasterOpKind::Fog: gRasterizer->SetFog(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::FogColor: gRasterizer->SetFogColor(theColor, theScreen); break;
+        case EeGfxRasterOpKind::FogRange: gRasterizer->SetFogRange(theOp.f[0], theOp.f[1], theScreen); break;
+        case EeGfxRasterOpKind::FogType: gRasterizer->SetFogType(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::AmbientColor: gRasterizer->SetAmbientColor(theColor, theScreen); break;
+        case EeGfxRasterOpKind::AmbientIntensity: gRasterizer->SetAmbientIntensity(theOp.f[0], theScreen); break;
+        case EeGfxRasterOpKind::RemoveLights: gRasterizer->RemoveAllLights(theScreen); break;
+        case EeGfxRasterOpKind::Lighting: gRasterizer->SetLighting(theOp.value, theScreen); break;
+        case EeGfxRasterOpKind::LightColor: gU4E9198.SetColor(theColor); break;
+        case EeGfxRasterOpKind::LightIntensity: gU4E9198.SetIntensity(theOp.f[0]); break;
+        case EeGfxRasterOpKind::LightDirection: gU4E9198.SetDirection(GEVector(theOp.f[0], theOp.f[1], theOp.f[2])); break;
+        case EeGfxRasterOpKind::AddLight: gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190); break;
+        case EeGfxRasterOpKind::UpdateLight: gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen); break;
+        }
     }
 }
 
+// FUNCTION: EXE 0x50f60f
+// Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
+// (off in the orthographic view)
+void SetSceneFog() { ApplyLighting(EeGfxLighting::SceneFog); }
+
 // FUNCTION: EXE 0x50f6c7
 // Turns the fog off
-void SetFogOff()
-{
-    gRasterizer->SetFog(0, gScreenIndex);
-}
+void SetFogOff() { ApplyLighting(EeGfxLighting::FogOff); }
 
 // FUNCTION: EXE 0x50f6de
 // Turns lighting off (no ambient light, no lights)
-void SetLightingOff()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientIntensity(0.0f, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(0, theScreen);
-}
+void SetLightingOff() { ApplyLighting(EeGfxLighting::Off); }
 
 // FUNCTION: EXE 0x50f71c
 // Lights with the environment's prelit colour as ambient, dimmed by the light fade, and no lights
-void SetPrelitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetPrelitLighting() { ApplyLighting(EeGfxLighting::Prelit); }
 
 // FUNCTION: EXE 0x50f772
 // Lights with the environment's second ambient colour (the clouds'), dimmed by the light fade, and no lights
-void SetCloudLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mColor54, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetCloudLighting() { ApplyLighting(EeGfxLighting::Cloud); }
 
 // FUNCTION: EXE 0x50f7c8
 // Lights with white ambient light dimmed by the light fade, and no lights
-void SetWhiteLighting()
-{
-    GEColor theWhite(1.0f, 1.0f, 1.0f);
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->SetAmbientColor(theWhite, theScreen);
-    gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-}
+void SetWhiteLighting() { ApplyLighting(EeGfxLighting::White); }
 
 // FUNCTION: EXE 0x50f833
 // Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
-void SetTerrainLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    gRasterizer->SetAmbientColor(gRenderEnvironment.mTerrainAmbientColor, theScreen);
-    gRasterizer->SetAmbientIntensity(gRenderEnvironment.mTerrainAmbientIntensity * sLightFade, theScreen);
-    gU4E9198.SetColor(gRenderEnvironment.mTerrainLightColor);
-    gU4E9198.SetIntensity(gRenderEnvironment.mTerrainLightIntensity * sLightFade);
-    gU4E9198.SetDirection(gU4E9210);
-    gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-}
+void SetTerrainLighting() { ApplyLighting(EeGfxLighting::Terrain); }
 
 // FUNCTION: EXE 0x50f8de
 // Sets the map objects' lighting: unit ambient and a flattened sun light when unit lighting is on, else the
 // prelit colour at a fixed intensity
-void SetMapObjectLighting()
-{
-    GEVector theDirection = gU4E9210;
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    if (gUnitLighting) {
-        theDirection.SetZ(gU4E9210.GetZ() * kEERenderObject_F44135C);
-        theDirection.Normalize();
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mUnitAmbientColor, theScreen);
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * (sLightFade * kEERenderObject_F441358), theScreen);
-        gU4E9198.SetColor(gRenderEnvironment.mUnitLightColor);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gU4E9198.SetDirection(theDirection);
-        gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(kEERenderObject_F441358, theScreen);
-    }
-}
+void SetMapObjectLighting() { ApplyLighting(EeGfxLighting::MapObject); }
 
 // FUNCTION: EXE 0x50fa01
 // Sets the units' lighting: unit ambient and the sun light when unit lighting is on, else the prelit colour
-void SetUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    gRasterizer->RemoveAllLights(theScreen);
-    gRasterizer->SetLighting(1, theScreen);
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mUnitAmbientColor, theScreen);
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade, theScreen);
-        gU4E9198.SetColor(gRenderEnvironment.mUnitLightColor);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gU4E9198.SetDirection(gU4E9210);
-        gRasterizer->AddLight(gU4E9198, theScreen, gU4E9190);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void SetUnitLighting() { ApplyLighting(EeGfxLighting::Unit); }
 
 // FUNCTION: EXE 0x50fae8
 // Restores the units' lighting at full strength for a unit in view (not fogged)
-void RestoreUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade, theScreen);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade);
-        gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void RestoreUnitLighting() { ApplyLighting(EeGfxLighting::RestoreUnit); }
 
 // FUNCTION: EXE 0x50fb74
 // Halves the units' lighting for a fogged unit (the dim prelit colour without unit lighting)
-void DimUnitLighting()
-{
-    unsigned long theScreen = gScreenIndex;
-    if (gUnitLighting) {
-        gRasterizer->SetAmbientIntensity(gRenderEnvironment.mUnitAmbientIntensity * sLightFade * 0.5f, theScreen);
-        gU4E9198.SetIntensity(gRenderEnvironment.mUnitLightIntensity * sLightFade * 0.5f);
-        gRasterizer->UpdateLight(gU4E9190, gU4E9198, theScreen);
-    } else {
-        gRasterizer->SetAmbientColor(gRenderEnvironment.mDimPrelitColor, theScreen);
-        gRasterizer->SetAmbientIntensity(sLightFade, theScreen);
-    }
-}
+void DimUnitLighting() { ApplyLighting(EeGfxLighting::DimUnit); }
 
 // FUNCTION: EXE 0x50fc0c
 // Posts the game's render objects, the user interface's last, to the graphics thread
