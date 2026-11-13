@@ -11899,3 +11899,106 @@ Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `includ
   row as the expect file). At the end (`rust` unchanged since the round's base, eb2f738e): oracle seeds 2-7
   identical; captures at seeds 2-3 oracle (169 digests), late (170), scenario (16), calamity (183) PASS; the test
   profile links 0/0. ee_units tests 183 (9 new). No tour: nothing drawn changed but the scenario editor's action combo.
+
+## R4.4, eleventh round: the lighting set-ups, IsUnitDrawn's decisions and the timed effects in Rust (ee_gfx lighting.rs, walk.rs, effect_state.rs; branch rust-gfx17, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 23,573 lines before the round, 23,388 after it
+(lighting -75, walk -79, timed effects -31).
+
+- **The lighting set-ups as call lists (`lighting.rs`).** `SetSceneFog`, `SetFogOff`, `SetLightingOff`,
+  `SetPrelitLighting`, `SetCloudLighting`, `SetWhiteLighting`, `SetTerrainLighting`, `SetMapObjectLighting`,
+  `SetUnitLighting`, `RestoreUnitLighting` and `DimUnitLighting` are one Rust function that returns the rasterizer
+  calls in their order (`EeGfxRasterOps`: fog state, colour, range and type, ambient colour and intensity, remove the
+  lights, lighting on or off, the shared light's colour, intensity and direction, `AddLight`/`UpdateLight`); one
+  C++ applier (`ApplyLighting`) fills the inputs (the light fade, the fog colour, the environment's colours and
+  intensities, the sun, the view's rear distance, the zoom lock, the orthographic view, unit lighting) and runs them.
+  The eleven names stay one-line C++ functions (their callers are all over the render objects and effects). The
+  map objects' flattened sun is normalized in Rust (`GeVector::normalize`); `GELight::SetColor`/`SetDirection`'s
+  clamp and negation stay the C++ header's.
+- **The world walk's decisions (`walk.rs`).** `IsUnitDrawn` gathers the unit's facts (`EeGfxUnitFacts`: the
+  resource, owner, seen tile, free camera, scale, tree, type, pool fills, the complex part's dead command, gate,
+  path point, flare and foundation, owner = current player, `Fn27C0B4`, `IsPathMarker`, id and tile) and answers
+  three questions (`EeGfxDrawnHost`: the footprint set's insert, the complex unit's view test, a model placed at a
+  point on the ground facing the camera; the last shared by units and map objects). Rust decides, in the original's
+  order of questions, and computes the map object's jittered point and a unit's tile centre. The owned-food test
+  (`FillUnit`'s `theFogged`), the waypoint marker's tint by its carrier's id and `FillRenderLists`' music intensity
+  are Rust. The facts are read eagerly: every read is a pure member or `IsSeenBy`/`IsFoundation`/`IsPathMarker`/
+  `GetScale` (the original asked some only on some paths). `FillUnit`'s and `FillRenderLists`' remaining code is
+  record filling and the tile walk over C++ containers: moving it would add host code, not delete C++.
+- **Golden drivers cut from the original unit, as round 10's** (`build/gx17/light`, `build/gx17/walk`): the
+  set-ups whole over a rasterizer that logs every call and the shared `GELight` at `AddLight`/`UpdateLight` (600
+  cases replayed in `golden_lighting.rs`, which models `GELight`'s clamp, computed colour and direction); 
+  `IsUnitDrawn` whole, the fog expression, the tint switch and the music switch over a stub world whose view tests
+  answer from the driver's LCG (2,000 units, 600 tints, 800 music cases in `golden_walk.rs`, which replays the
+  same LCG). Each driver cut from the new unit over the forwarders printed the same bytes, and at ten times the size
+  on seed 2. Argument evaluation order is unspecified in C++ (clang-cl evaluates right to left): a driver that calls
+  its random generator inside one call's arguments cannot be replayed; draw into locals first.
+- **The timed effects on the records.** The blast wave's, teleport's and time warp's ages (and the blast wave's
+  aging flag) are the aged record's (`EeGfxEffectAged::aging` added); `timed_step` ages them (the blast wave by
+  `GetTickTime` over the duration while aging, 7 past 1; the others by the tick in ms, rising or sinking by the
+  speed within the duration, `EE_GFX_EFFECT_MOVED` so the C++ moves the effect to its region, 7 past it), and
+  `load_aged`/`save_aged` read and write them by kind (format unchanged). The blast wave's unit following and every
+  draw stay C++.
+- **Gates.** On the result merged with rust (c0df6600): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,516 tests), the sim oracle identical on seeds 2-7 including the folder-hash line (the reference re-recorded), the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183). Per commit: the build 0/0 and the oracle at seeds 2-3 identical in every decision line; the Rust gate PASS from the merge on (the lighting commit's own run hit clippy on a half-written next file and the goldens' lints, fixed in the clippy commit); the timed-effects commit the oracle and calamity captures at seeds 2-3 PASS (167 and 181 digests before the merge). No tour run.
+- **Only a tour or a person reaches:** every lighting set-up (each draw pass calls them: the terrain, map objects,
+  units, fogged and restored units, sky, clouds, effects; the scene fog), `IsUnitDrawn` (which units and trees are
+  drawn and picked each frame: fog of war, the free camera's editor view, foundations, path points and flares, the
+  pools' limits), a waypoint marker's tint (a selected unit's queued waypoints), the battle music's intensity
+  changes (`gMusicFollowsBattle`) and the darkened food under the fog. EE-SIM draws nothing. The timed effects' ticks
+  are EFST's only when a profile's game makes one (not measured which do); their draws are unchanged.
+
+## R4.4, twelfth round: a rasterizer table for Rust draws, and whole effect classes in Rust with their draws (ee_gfx raster.rs, effect_rising.rs, effect_follow.rs; branch rust-gfx18, 2026-11-13)
+
+Round 11 showed the leaf moves returning 10-40 lines a class while the draws stayed C++. This round gives Rust a
+way to draw and moves whole effect classes with their draws. Graphics Thread C++ (`src/Empire Earth/Graphics
+Thread/*.cpp`): 23,388 lines before the round; 23,127 after the teleport and time warp (-261, net of the new
+`EEE3DRust.cpp` and the rasterizer table); 22,651 after the blast wave and shield (-476). Headers: `EEE3DTeleport.h`,
+`EEE3DTimeWarp.h`, `EEE3DBlastWave.h`, `EEE3DShield.h` deleted, `EEE3DRust.h` added.
+
+- **The rasterizer as Rust calls it (`raster.rs`).** One C++ table, `gEERustRaster` in `EERenderObject.cpp`, of
+  captureless lambdas over `gRasterizer` on the current screen (`gScreenIndex`): alpha reference, fog get and set,
+  ambient colour get and set, z buffer, blending, shading colour source, alpha testing, a lighting set-up by kind
+  (`ApplyLighting`, round 11's call lists), `GetFogFactor` (which reads the fog's attributes and turns the fog off),
+  and a model by handle (`GEModel*`): opacity, post-model transformation, scale, `PrepareTransforms`, `Draw` with
+  `gOrthographicView`, material 0's texture, and the texture-coordinate v scroll with its restore (the shield's). Rust
+  draws through the `Raster` trait: the table in the game, `LogRaster` in the unit tests. A table of function
+  pointers rather than `extern "C"` imports keeps `ee_gfx` free of link-time C++ symbols, so the scratch drivers
+  still link `ee_rust.lib` alone. Adding a call is one lambda and one trait method; textures are opaque handles
+  from the host.
+- **One C++ class for the 3D effects that moved (`EEE3DRust`).** Each virtual (`DrawPass2..6`, `Queue`, `SetUp`,
+  `Step`, the constructors on a unit and at a point, `RepairPointers` after `EEEffect`'s, `Load`/`Save` after
+  `EEEffect3D`'s) calls `ee_gfx_effect3d` (or `ee_gfx_effect3d_file`) with the op, the record, the graphic effect's
+  facts (`EeGfxGraphicFacts`: size, params 1-6, flag 1, duration, alpha reference, the tick, the unit's hit points)
+  and the host (`EeGfxEffect3DHost`: the unit's position, the model's height, the region move, the line effects,
+  `EEEffect3D::Queue`, the render queue push, the media load, the model, the texture, `FollowUnit`). Rust dispatches
+  by the record's kind. The manager makes `EEE3DRust(kind)` where it made the leaf. The record is reached through its
+  raw pointer field by field: the host's region move and `FollowUnit` read and write it through the C++ members, so
+  no Rust reference to it lives across a host call (rule: no Rust reference across a call back into C++).
+- **Moved whole:** the teleport (0x3f) and the time warp (0x44) (`effect_rising.rs`: construction with the two line
+  effects, set-up, queue, the depth-mask draw of pass 4, the rise or sink, the media on repair, Load/Save of the
+  age), the blast wave (0x18, on a unit or at a point: the additive draw of pass 6 growing or shrinking and dimming,
+  the age while aging) and the shield (0x45: the texture scroll between params 2 and 3, the flash on a hit, the fade,
+  the draw of pass 5 with its v scroll, Load from before 0.180 and after, Save) (`effect_follow.rs`). New record
+  parts: `aged.draw_age`, `aged.location`, `EeGfxEffectShield`. `FollowUnit` (the tag-point geometry) stays the
+  host's.
+- **Golden drivers over a logging rasterizer** (`build/gx18/rising`, `build/gx18/follow`): the original classes'
+  constructors, `SetUp`, `Queue`, draw, `Step` and `FollowUnit` cut verbatim from f839d277 (before rounds 11-12) over
+  a stub world (a unit with a complex unit, physical model, tag list or none, a vertex array of 0 to 6 v's, a
+  material) and a rasterizer, model and effect manager that print every call; against the new side cut from the
+  worktree (`EEE3DRust.cpp`'s host, constructors and `Call`, the rasterizer table) over the Rust. Both printed the
+  same bytes: rising 300 effects (5,443 lines) and 3,000 on seed 2 (52,163), follow 300 (6,688) and 3,000 on seed 2
+  (67,160). The goldens are not replayed in Rust (the driver's per-call order of LCG draws inside `GEColor(...)`
+  arguments is the compiler's); the Rust unit tests pin each op against `LogRaster`.
+- **Behaviour:** none intended. The blast wave's, time warp's and teleport's media now come from
+  `GetGraphicObject()` everywhere (the time warp and teleport read `mGraphicEffect->mGraphicObject` directly; the
+  same object).
+- **Gates.** On the result merged with rust (eb2f738e): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,554 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183); the follow driver rebuilt on the merged tree printed the same bytes. Per commit: the build 0/0; the teleport/time warp commit the oracle at seeds 2-3 identical (its captures were stopped by the disk floor and ran with the next commit's); the blast wave/shield commit the oracle at seeds 2-3 identical, the oracle, calamity and late captures at seeds 2-3 PASS (169, 183, 170 digests), the Rust gate PASS after moving `ffi_effect.rs`'s test module back to the end (clippy). The rising driver was rerun on its own commit, not after the follow commit changed the shared host (its media load now `GetGraphicObject()`, the same object); the follow driver exercises that host. No tour run; saveload not run.
+- **Only a tour or a person reaches:** every draw of the four effects through the new table (the teleport's and
+  time warp's depth mask in pass 4, the blast wave's additive model in pass 6 at its scale and light, the shield's
+  pass 5 with its scrolled texture and opacity), their queueing and the rasterizer state they leave behind. Where they
+  appear: the teleport and time warp from those calamities (a prophet's), the shield from the shield power, the blast
+  wave from the effects that make it (explosions on units, placed blasts). EFST covers their tick, Load and Save only
+  when a profile's game makes one (not measured which do).
+- **Next:** the same class takes the other 3D leaves one kind at a time (each a Rust module and host ops); a 2D twin
+  (`EEE2DRust` over `EEEffect2D`) for the sprite effects; the render objects' passes once the table has the vertex
+  array, polygon and text draws they use.
