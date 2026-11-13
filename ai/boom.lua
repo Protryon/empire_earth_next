@@ -548,10 +548,19 @@ function M.step(view, memory)
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false
+    if memory.barracks_at == nil and ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1 then
+        memory.barracks_at = view.time   -- (the first barracks standing: BO.OPT.mines_after_barracks)
+    end
     -- (BO.OPT.owner_mines / pre_mines: the owner's mines; lib.place takes no food gatherer to build)
     local pre_mines = ECON.order and (BO.OPT.owner_mines or BO.OPT.pre_mines)
     PL.no_food_builders = pre_mines or false
     BO.wood_cap = nil
+    -- (BO.OPT.pre_wood_cap, the owner's 5-8 wood in the Prehistoric: with the food short the fill's leftover went to wood,
+    -- 13-21 of it; the leftover stays idle (gather exact = 2) for the patches' and mines' settlements and the hunting)
+    local pre_cap = ECON.order and BO.OPT.pre_wood_cap and phase == "pre"
+    if pre_cap then
+        BO.wood_cap = BO.PRE_WOOD_MOST
+    end
     -- (the dock and 10 boats first, the owner's from his 575 bank: with no bank the cap waits for the boats)
     if ECON.order and BO.OPT.owner_mines and (phase == "stone_start" or phase == "stone_grow")
             and (view.time - view.epoch_start) < BO.STONE_WOOD_MIN * 60000 and view.boats >= 10 then
@@ -1227,7 +1236,7 @@ function M.step(view, memory)
         for _, r in ipairs(V.resources) do
             if want[r] ~= view.wanted[r] or (r == "food" and (boats_changed or gfarms_new)) then
                 order("gather_" .. r, {verb = "gather", resource = r, n = want[r],
-                                       exact = ECON.order and (BO.OPT.builder_pool and 2 or 1) or nil,
+                                       exact = ECON.order and ((BO.OPT.builder_pool or pre_cap) and 2 or 1) or nil,
                                        granary_farms = r == "food" and gfarms or nil})
             end
         end
@@ -1329,8 +1338,11 @@ function M.step(view, memory)
                     -- (BO.OPT.mines_after_barracks, the owner's Prehistoric order in his log: the patches' centres, a
                     -- tower, the barracks, then the iron and gold centres, then the second tower) a mine's settlement
                     -- in the Prehistoric waits for the barracks to stand and the first tower
+                    -- (and for the tower only for BO.MINES_TOWER_MS after the barracks: in seed 5 the raids killed the
+                    -- tower's builders, no tower stood and the mines held 0 gold and iron for 30 minutes)
                     if rank ~= nil and ECON.order and BO.OPT.mines_after_barracks and phase == "pre" and not s.patch
-                            and (((V.buildings(view, "b_barracks") or {}).finished or 0) < 1 or towers_built < 1) then
+                            and (memory.barracks_at == nil or (towers_built < 1
+                                 and view.time - memory.barracks_at < BO.MINES_TOWER_MS)) then
                         rank = nil
                     end
                     if rank ~= nil then
