@@ -951,6 +951,9 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
+  (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
+  (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.
 - `ai.wall_line(x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tiles a wall from (x1, y1) to (x2, y2) lays, in order
   (EEGetWallLine).
 - `ai.wall_stretches(x1, y1, x2, y2)` -> blocked, `{{ax, ay, bx, by, len, level}, ...}`: the classic wall planner's

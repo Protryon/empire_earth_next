@@ -56,6 +56,9 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAreaUtilities.h"
+#include "ee/EEAIPathGoalModifierBase.h"
+#include "ee/EEAIBoundedPathGoalModifierBase.h"
+#include "ee/EEPathManager.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinentManager.h"
@@ -3017,6 +3020,41 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
 long EEGetUnitsOn(std::vector<U2DPoint<long> >& inTiles, std::vector<EEUnit*>& outUnits);
 bool EEAreTilesLevel(std::vector<U2DPoint<long> >& inTiles);
 
+// ai.wall_path(unit, x1, y1, x2, y2) -> {{x, y}, ...}: the tile path an own unit would take from (x1, y1) to
+// (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
+// (EECPWallManager::PlanWall: EEPathManager::FindPath with the wall pather, EEAIGPGModifierComputerPlayerWallPather)
+static int LuaWallPath(lua_State* L)
+{
+    EEComputerPlayer* me = EECPUnitsMe(L);
+    lua_newtable(L);
+    for (int i = 2; i <= 5; i++)
+        if (!lua_isinteger(L, i) || gWorld.mMap == NULL)
+            return 1;
+    EEComplexUnit* theUnit = lua_isinteger(L, 1) ? EECPUnitsOwn(me, (long)lua_tointeger(L, 1)) : NULL;
+    if (theUnit == NULL)
+        return 1;
+    U2DPoint<long> theFrom((long)lua_tointeger(L, 2), (long)lua_tointeger(L, 3));
+    U2DPoint<long> theTo((long)lua_tointeger(L, 4), (long)lua_tointeger(L, 5));
+    EEAIAStarBounds theBounds;
+    theBounds.Set(theFrom);
+    theBounds.Extend(theTo);
+    std::vector<U2DPoint<long> > theSegment;
+    EEAIGPGModifierComputerPlayerWallPather* thePather = new EEAIGPGModifierComputerPlayerWallPather;
+    gPathManager.FindPath(theUnit, gWorld.mMap, theFrom, theTo, theBounds, theSegment, 1, 0x32, thePather, NULL);
+    thePather->Dereference();
+    long theArea = ((theTo.mX > theFrom.mX ? theTo.mX - theFrom.mX : theFrom.mX - theTo.mX) + 1) * ((theTo.mY > theFrom.mY ? theTo.mY - theFrom.mY : theFrom.mY - theTo.mY) + 1);
+    EECPUnitsCharge(L, kCostCall + theArea * kCostScan + (int64_t)theSegment.size() * kCostField * 2);
+    for (size_t k = 0; k < theSegment.size(); k++) {
+        lua_createtable(L, 2, 0);
+        lua_pushinteger(L, (lua_Integer)theSegment[k].mX);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, (lua_Integer)theSegment[k].mY);
+        lua_rawseti(L, -2, 2);
+        lua_rawseti(L, -2, (lua_Integer)k + 1);
+    }
+    return 1;
+}
+
 // ai.wall_line(x1, y1, x2, y2) -> {{x, y}, ...}: the tiles a wall from (x1, y1) to (x2, y2) lays (EEGetWallLine), in order
 static int LuaWallLine(lua_State* L)
 {
@@ -4275,7 +4313,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
         {"find_site", LuaFindSite}, {"heal", LuaHeal}, {"rally", LuaRally}, {"cancel", LuaCancel},
         {"improve", LuaImprove}, {"improve_cost", LuaImproveCost}, {"formation", LuaFormation}, {"pack", LuaPack}, {"dropoff", LuaDropoff},
         {"farm", LuaFarm}, {"cast", LuaCast}, {"replant", LuaReplant},
-        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
+        {"path_len", LuaPathLen}, {"drop_site", LuaDropSite}, {"shore", LuaShore}, {"water_sites", LuaWaterSites}, {"area", LuaArea}, {"garrison_fill", LuaGarrisonFill}, {"enemy_force", LuaEnemyForce}, {"player_file", LuaPlayerFile}, {"area_point", LuaAreaPoint}, {"forest_point", LuaForestPoint}, {"hill_point", LuaHillPoint}, {"choke_point", LuaChokePoint}, {"wall_path", LuaWallPath}, {"wall_line", LuaWallLine}, {"wall_stretches", LuaWallStretches}, {"enemy_near", LuaEnemyNear}, {"unexplored", LuaUnexplored},
         {"config", LuaConfig}, {"used", LuaUsed},
         {"wall", LuaWall}, {"gate", LuaGate}, {"lock", LuaLock}, {"tribute", LuaTribute}, {"trade", LuaTrade},
         {"diplomacy", LuaDiplomacy}, {"patrol", LuaPatrol},
