@@ -40,6 +40,8 @@
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
 //! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
+//! - [`factories`]: the UI manager's control-event factories (one table in their registration order) and its
+//!   form-event factory.
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
@@ -82,6 +84,7 @@ mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
+pub mod factories;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;

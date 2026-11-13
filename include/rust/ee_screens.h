@@ -713,6 +713,15 @@ constexpr static const uint32_t EE_SCREENS_TEXT_DS_CIVILIZATION = 124;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_DS_BUTTON = 125;
 
+/// The save and load forms' Cancel (`EEUIECancel`: opens the main game form, or the scenario editor's out of a game).
+constexpr static const uint32_t EE_SCREENS_CPP_CANCEL_LOAD = 65537;
+
+/// The main game form's debug unit reload (`EEUIELoadUnit`).
+constexpr static const uint32_t EE_SCREENS_CPP_LOAD_UNIT = 65538;
+
+/// WON's server select form's open event (`EEUIEWNSOpen`).
+constexpr static const uint32_t EE_SCREENS_CPP_WNS_OPEN = 65539;
+
 /// `EEUIEHKSelectGroup(group, false)` / `(group, true)`: the number keys (with Alt: the true one).
 constexpr static const uint32_t EE_SCREENS_HK_SELECT_GROUP = 3584;
 
@@ -2733,6 +2742,16 @@ void ee_screens_dialog_show(void *dialog,
 
 /// `EEUIFError::Open`: lays the box's controls out for its mode.
 void ee_screens_dialog_open(void *dialog, uint32_t mode);
+
+/// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
+/// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the
+/// manager's scenario editor flag (the save and load forms' kind).
+uint32_t ee_screens_control_event_for(unsigned long id,
+                                      bool screen_active,
+                                      bool in_editor);
+
+/// `EEUIManager`'s form-event factory: the event code for a form event id, 0 for none.
+uint32_t ee_screens_form_event_for(unsigned long id);
 
 /// The unit selection hot key's code for its constructor's arguments (the unit type a 16-bit type id).
 uint32_t ee_screens_hot_key_unit_selection(int32_t unit_type,
