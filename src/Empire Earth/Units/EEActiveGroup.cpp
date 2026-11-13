@@ -64,6 +64,7 @@
 #include "ee/EEFormation.h"
 #include "ee/EEUnitUtilities.h"
 #include "rust/ee_units.h"   // ee_units_keeps_ground_attacker
+#include "rust/ee_combat.h"   // ee_combat_regions_size
 
 // The order Fill sorts a slot's units in (RTTI EEAGIncreasingVelocityUnitSorter; vtable 0x446d50: only its
 // user-declared empty virtual dtor, whose ??_G 0x1edaa8 follows Fill, its first user): slower first, the same
@@ -1595,10 +1596,8 @@ bool EEActiveGroup::IsCellTaken(const GE3DPoint& inLocation)
         long theY = (long)it->second.GetY();
         long theInX = (long)inLocation.GetX();
         long theInY = (long)inLocation.GetY();
-        if (std::pair<long, int>(theX / gWorld.mMap->mUnitRegions->mRegionSize,
-                                 theY / gWorld.mMap->mUnitRegions->mRegionSize)
-            == std::pair<long, int>(theInX / gWorld.GetMap()->mUnitRegions->mRegionSize,
-                                    theInY / gWorld.mMap->mUnitRegions->mRegionSize))
+        long theSize = ee_combat_regions_size(gWorld.mMap->mUnitRegions);
+        if (std::pair<long, int>(theX / theSize, theY / theSize) == std::pair<long, int>(theInX / theSize, theInY / theSize))
             theResult = true;
     }
     return theResult;
@@ -1849,6 +1848,7 @@ void EEActiveGroup::Validate()
 #include <stddef.h>
 #include "lle/FSFile.h"
 #include "ee/EESaveGameFiles.h"
+#include "rust/ee_combat.h"
 
 namespace {
 struct EESavedGroupRequest {

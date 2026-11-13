@@ -40,7 +40,6 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
-#include "ee/RTSRegionTable.h"
 #include "ee/RTSDummyHeader.h"
 #include "lle/U2DRectangle.h"
 #include "lle/U2DSparseArray.h"
@@ -603,7 +602,7 @@ namespace {
 struct EEQueryContext {
     EEComplexUnit* mUnit;                   // the call's unit
     EEUGRust* mGoal;                  // IsStillReachable's, IsGateClosed's attack goal
-    std::vector<EEComplexUnit*>* mRegion;   // FindImpactUnit's region, found by its count read
+    const uint64_t* mRegion;                // FindImpactUnit's region (ee_combat regions.rs), found by its count read
     EEUnitClass* mClass = NULL;             // world.rs: the class of Attacked or FireShot
     EEUnitGoal* mAttackedGoal = NULL;       // Attacked's goal (the helpers' clones)
     std::vector<EEUnit*> mNear;             // Attacked's units near the attacked unit
@@ -695,11 +694,12 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_ATTACK_GOAL:
         return EEAttackUnitCast(EEQueryComplex(inObject)->mGoalState) != NULL;
     case EE_COMBAT_Q_REGION_COUNT: {
-        RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
-        long theRegionX = theObject->GetTileX() / theTable->mRegionSize;
-        long theRegionY = theObject->GetTileY() / theTable->mRegionSize;
-        theContext->mRegion = theTable->GetRegion(theRegionX, theRegionY);
-        return theContext->mRegion != NULL ? (uint32_t)theContext->mRegion->size() : EE_COMBAT_Q_NONE;
+        EeCombatUnitRegions* theTable = ::gWorld.mMap->mUnitRegions;
+        long theSize = ee_combat_regions_size(theTable);
+        int32_t theCount;
+        theContext->mRegion = ee_combat_regions_units(theTable, (uint32_t)(theObject->GetTileX() / theSize),
+                                                      (uint32_t)(theObject->GetTileY() / theSize), &theCount);
+        return theContext->mRegion != NULL ? (uint32_t)theCount : EE_COMBAT_Q_NONE;
     }
     case EE_COMBAT_Q_CONTACT_X:
         return EEConditionBits(EEQueryComplex(inObject)->mInitialContactLocation.GetX());
@@ -760,7 +760,7 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
         return theGoal != NULL ? EEQueryHandleOf(theGoal->GetAttackTarget()) : 0;
     }
     case EE_COMBAT_H_REGION_UNIT:
-        return EEQueryHandleOf((*theContext->mRegion)[inArg]);
+        return theContext->mRegion[inArg];
     case EE_COMBAT_H_TILE_PREV:
         return EEQueryHandleOf(static_cast<EEUnit*>(theObject->mTileNode->mPrev));
     case EE_COMBAT_H_TILE_NEXT:

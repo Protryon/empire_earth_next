@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include "ee/EEUnitRegions.h"            // the map's unit regions (ee_combat regions.rs)
 
 class EEUnit;
 
@@ -44,8 +45,8 @@ void EESortUnique(V& ioValues, L inLess, E inEqual)
 template <class Pred, class V>
 long EEGetUnitsInRectangle(const U2DRectangle<long>& inRectangle, V& outUnits, const Pred& inPredicate, bool inUnique)
 {
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(inRectangle);
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap->mUnitRegions;
+    EeCombatUnitRegions* theTable = gWorld.mMap->mUnitRegions;
+    U2DRectangle<long> theRegions = EEUnitRegionRect(theTable, inRectangle);
     U2DPoint<long> theEndX = theRegions.GetBottomRight();
     U2DPoint<long> theEndY = theRegions.GetBottomRight();
     bool theMultiple = false;
@@ -53,10 +54,10 @@ long EEGetUnitsInRectangle(const U2DRectangle<long>& inRectangle, V& outUnits, c
     for (long x = theStart.mX; x <= theEndX.mX; x++) {
         U2DPoint<long> theRowStart = theRegions.GetTopLeft();
         for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-            if (theRegion) {
-                for (long i = theRegion->GetCount() - 1; i >= 0; i--) {
-                    EEComplexUnit* theUnit = theRegion->GetAt(i);
+            EEUnitRegion theRegion(theTable, x, y);
+            if (theRegion.Exists()) {
+                for (long i = theRegion.size() - 1; i >= 0; i--) {
+                    EEComplexUnit* theUnit = theRegion[i];
                     if (inRectangle.Contains(theUnit->GetTileX(), theUnit->GetTileY()) &&
                         inPredicate(theUnit)) {
                         if (theUnit->GetUnitClass()->GetTileSize() > 1)

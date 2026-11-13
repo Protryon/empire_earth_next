@@ -73,6 +73,7 @@
 #include "ee/EECPPlayerInteractionManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPNext.h"
+#include "ee/EEUnitRegions.h"
 void SetAttackTargetPoolSize(long inChunkSize, long inMaxChunks);  // 0x45b397 (cdecl; 0x200, 0x19 from the ctor) (provisional name)
 float GetEffectRandomFloat(float inMinimum, float inMaximum);  // 0x502f3d (cdecl; a value in [inMinimum, inMaximum]) (provisional name)
 extern long& gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; EpochReached: >= 250) (provisional name)
@@ -442,8 +443,7 @@ void EECPCombatManager::Update(unsigned long inTime)
                 if (!theOwn->mBounds.Intersect(theBounds, theOverlap))
                     continue;
                 theUnits.clear();
-                std::less<EEComplexUnit*> theLess;
-                gWorld.mMap->mUnitRegions->CollectValues(theOverlap, theUnits, theLess);
+                EECollectRegionUnits(gWorld.mMap->mUnitRegions, theOverlap, theUnits);
                 unsigned long theOurs = 0;
                 unsigned long theTheirs = 0;
                 for (unsigned long n = 0; n < theUnits.size(); n++) {

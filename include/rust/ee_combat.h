@@ -1261,6 +1261,9 @@ constexpr static const int32_t EE_COMBAT_WORLD_CONTACT_RANGE = 10;
 
 constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED_BY = 11;
 
+/// The unit regions of a map.
+struct EeCombatUnitRegions;
+
 /// One hit's damage arguments (`ComputeDamage`'s after the units).
 struct EeCombatDamageCall {
   /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
@@ -1955,15 +1958,8 @@ struct EeCombatSearchTarget {
 /// function of the right type.
 struct EeCombatSearchHost {
   void *ctx;
-  /// The regions' rectangle into `out` (left, top, right, bottom).
-  void (*regions)(void *ctx,
-                  int32_t left,
-                  int32_t top,
-                  int32_t right,
-                  int32_t bottom,
-                  int32_t (*out)[4]);
-  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+  const EeCombatUnitRegions *unit_regions;
   void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
   uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
   int32_t (*dummy_head)(void *ctx, uint64_t unit);
@@ -2005,6 +2001,9 @@ struct EeCombatTurret {
   float transformation[16];
   float angle;
 };
+
+/// An opaque C++ object (a unit, a tile node); 0 is none.
+using EeCombatHandle = uint64_t;
 
 /// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
 /// and the answer.
@@ -2241,15 +2240,8 @@ struct EeCombatFindTargetIn {
 /// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
 struct EeCombatTargetHost {
   void *ctx;
-  /// The regions' rectangle into `out` (left, top, right, bottom).
-  void (*regions)(void *ctx,
-                  int32_t left,
-                  int32_t top,
-                  int32_t right,
-                  int32_t bottom,
-                  int32_t (*out)[4]);
-  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+  const EeCombatUnitRegions *unit_regions;
   int32_t (*screen)(void *ctx, uint64_t unit);
   int32_t (*multiple)(void *ctx, uint64_t unit);
   int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
@@ -2631,6 +2623,92 @@ int32_t ee_combat_enemy_in_range(uint64_t unit, const EeCombatQueryHost *host);
 int32_t ee_combat_faces_point(const EeCombatFacingIn *input,
                               void *ctx,
                               void (*turret)(void *ctx, int32_t index, EeCombatTurret *out));
+
+/// A new table of `side * side` regions of `size` tiles (`EEMap`'s; freed by `ee_combat_regions_free`).
+EeCombatUnitRegions *ee_combat_regions_new(uint32_t side,
+                                           int32_t size);
+
+/// Frees a table (none for null).
+///
+/// # Safety
+/// `table` is null or a live table, not used after.
+void ee_combat_regions_free(EeCombatUnitRegions *table);
+
+/// The tiles per region side.
+///
+/// # Safety
+/// `table` is a live table.
+int32_t ee_combat_regions_size(const EeCombatUnitRegions *table);
+
+/// Region (x, y)'s units, its count in `len` (null and -1 off the grid); valid until the table next changes.
+///
+/// # Safety
+/// `table` is a live table, `len` a valid pointer.
+const EeCombatHandle *ee_combat_regions_units(const EeCombatUnitRegions *table,
+                                              uint32_t x,
+                                              uint32_t y,
+                                              int32_t *len);
+
+/// Region (x, y)'s number of units (-1 off the grid).
+///
+/// # Safety
+/// `table` is a live table.
+int32_t ee_combat_regions_len(const EeCombatUnitRegions *table, uint32_t x, uint32_t y);
+
+/// Appends `unit` to region (x, y) when there is one.
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_add(EeCombatUnitRegions *table, uint32_t x, uint32_t y, uint64_t unit);
+
+/// Erases the first copy of `unit` from region (x, y).
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_remove(EeCombatUnitRegions *table, uint32_t x, uint32_t y, uint64_t unit);
+
+/// `unit` added to (`add`) or removed from every region under the `size` by `size` tiles at (x, y).
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_footprint(EeCombatUnitRegions *table,
+                                 int32_t x,
+                                 int32_t y,
+                                 int32_t size,
+                                 uint64_t unit,
+                                 bool add);
+
+/// `CollectValues`: the units of the regions under the tiles (left, top) to (right, bottom), sorted, no duplicates,
+/// into `out` (up to `cap`); answers their number.
+///
+/// # Safety
+/// `table` is a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_collect(const EeCombatUnitRegions *table,
+                                 int32_t left,
+                                 int32_t top,
+                                 int32_t right,
+                                 int32_t bottom,
+                                 uint64_t *out,
+                                 size_t cap);
+
+/// The saved order (see [`EeCombatUnitRegions::order`]; a null table: no region) into `out` (up to `cap`); answers
+/// its length.
+///
+/// # Safety
+/// `table` is null or a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_order(const EeCombatUnitRegions *table,
+                               uint32_t *out,
+                               size_t cap);
+
+/// Puts back saved region `index`'s order from `ids` (`count` of them): 1 put back, 0 the region holds other
+/// units, -1 no table or no such region (the load stops putting back).
+///
+/// # Safety
+/// `table` is null or a live table; `ids` holds `count` values.
+int32_t ee_combat_regions_restore(EeCombatUnitRegions *table,
+                                  uint32_t index,
+                                  const uint32_t *ids,
+                                  size_t count);
 
 /// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
 ///

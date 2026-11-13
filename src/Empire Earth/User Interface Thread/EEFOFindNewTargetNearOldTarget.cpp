@@ -66,6 +66,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EECombatFormulas.h"
 #include "ee/EECombatGoals.h"
+#include "ee/EEUnitRegions.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -328,7 +329,8 @@ void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bo
     if (inSmooth) {
         theNewPath.reserve(ioPath.size());
         if (theCount > 0) {
-            RTSRegionTable<EEComplexUnit*>* theRegions = ::gWorld.mMap->mUnitRegions;
+            EeCombatUnitRegions* theRegions = ::gWorld.mMap->mUnitRegions;
+            long theSize = ee_combat_regions_size(theRegions);
             theNewPath.push_back(*ioPath.begin());
             long theStartY = UMFloor(ioPath.begin()->mY);
             long theStartX = UMFloor(ioPath.begin()->mX);
@@ -344,26 +346,14 @@ void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bo
                     long theX = UMFloor(ioPath[i].mX);
                     thePoint.mX = theX;
                     thePoint.mY = theY;
-                    theRegionPoint.mX = theX / theRegions->mRegionSize;
-                    theRegionPoint.mY = theY / theRegions->mRegionSize;
-                    std::vector<EEComplexUnit*>* theRegion = theRegions->GetRegion(theRegionPoint);
-                    if (theRegion != NULL && theRegion->size() != 0)
-                        goto keep;
-                    theRegion = theRegions->GetRegion(U2DPoint<long>((theX - 2) / theRegions->mRegionSize,
-                                                                     (theY - 2) / theRegions->mRegionSize));
-                    if (theRegion == NULL || theRegion->size() != 0)
-                        goto keep;
-                    theRegion = theRegions->GetRegion(U2DPoint<long>((theX + 2) / theRegions->mRegionSize,
-                                                                     (theY - 2) / theRegions->mRegionSize));
-                    if (theRegion == NULL || theRegion->size() != 0)
-                        goto keep;
-                    theRegion = theRegions->GetRegion(U2DPoint<long>((theX + 2) / theRegions->mRegionSize,
-                                                                     (theY + 2) / theRegions->mRegionSize));
-                    if (theRegion == NULL || theRegion->size() != 0)
-                        goto keep;
-                    theRegion = theRegions->GetRegion(U2DPoint<long>((theX - 2) / theRegions->mRegionSize,
-                                                                     (theY + 2) / theRegions->mRegionSize));
-                    if (theRegion == NULL || theRegion->size() != 0)
+                    theRegionPoint.mX = theX / theSize;
+                    theRegionPoint.mY = theY / theSize;
+                    // kept by a unit in its own region, or by a unit in (or no region at) a corner two tiles off
+                    if (ee_combat_regions_len(theRegions, (uint32_t)theRegionPoint.mX, (uint32_t)theRegionPoint.mY) > 0
+                        || ee_combat_regions_len(theRegions, (uint32_t)((theX - 2) / theSize), (uint32_t)((theY - 2) / theSize)) != 0
+                        || ee_combat_regions_len(theRegions, (uint32_t)((theX + 2) / theSize), (uint32_t)((theY - 2) / theSize)) != 0
+                        || ee_combat_regions_len(theRegions, (uint32_t)((theX + 2) / theSize), (uint32_t)((theY + 2) / theSize)) != 0
+                        || ee_combat_regions_len(theRegions, (uint32_t)((theX - 2) / theSize), (uint32_t)((theY + 2) / theSize)) != 0)
                         goto keep;
                     bool theBlocked = false;
                     if (!theSkipping && (theX == theStartX || theY == theStartY))
@@ -2168,33 +2158,6 @@ static EEComplexUnit* EESearchComplex(EESearchContext* inContext, uint64_t inHan
     return EESearchUnit(inHandle)->mComplexUnit;
 }
 
-static void EESearchRegions(void* inContext, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom,
-                            int32_t (*outRegions)[4])
-{
-    U2DRectangle<long> theArea;
-    theArea.mLeft = inLeft;
-    theArea.mTop = inTop;
-    theArea.mRight = inRight;
-    theArea.mBottom = inBottom;
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(theArea);
-    (*outRegions)[0] = (int32_t)theRegions.GetTopLeft().mX;
-    (*outRegions)[1] = (int32_t)theRegions.GetTopLeft().mY;
-    (*outRegions)[2] = (int32_t)theRegions.GetBottomRight().mX;
-    (*outRegions)[3] = (int32_t)theRegions.GetBottomRight().mY;
-}
-
-static int32_t EESearchRegionLength(void* inContext, int32_t inX, int32_t inY)
-{
-    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
-    return theRegion != NULL ? (int32_t)theRegion->size() : -1;
-}
-
-static uint64_t EESearchRegionUnit(void* inContext, int32_t inX, int32_t inY, int32_t inIndex)
-{
-    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
-    return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
-}
-
 static void EESearchUnitPosition(void* inContext, uint64_t inUnit, float (*outPosition)[2])
 {
     EEComplexUnit* theUnit = EESearchComplex((EESearchContext*)inContext, inUnit);
@@ -2403,7 +2366,7 @@ static void EESearchTrace(void* inContext, uint64_t inUnit, int32_t inCode, int3
 
 static EeCombatSearchHost EESearchHost(EESearchContext* inContext)
 {
-    EeCombatSearchHost theHost = {inContext, EESearchRegions, EESearchRegionLength, EESearchRegionUnit,
+    EeCombatSearchHost theHost = {inContext, gWorld.mMap->mUnitRegions,
                                   EESearchUnitPosition, EESearchListNext, EESearchDummyHead, EESearchTest,
                                   EESearchTargetValues, EESearchHitDistance, EESearchAttackFactor, EESearchLineBlocked,
                                   EESearchReachable, EESearchIgnore, EESearchFootprintTile, EESearchTrace};
@@ -2465,7 +2428,7 @@ EEUnit* EESearchTarget(EEComplexUnit* inUnit, U2DRectangle<long>* inArea, long i
     in.top = (int32_t)inArea->mTop;
     in.right = (int32_t)inArea->mRight;
     in.bottom = (int32_t)inArea->mBottom;
-    in.region_size = (int32_t)gWorld.mMap->mUnitRegions->mRegionSize;
+    in.region_size = ee_combat_regions_size(gWorld.mMap->mUnitRegions);
     in.tick_random = (int32_t)gPhysics->mTickRandom;
     in.position_x = inUnit->mPhysicalModel.GetLocation().GetX();
     in.position_y = inUnit->mPhysicalModel.GetLocation().GetY();
@@ -3039,33 +3002,6 @@ static EEComplexUnit* EENewTargetUnit(uint64_t inHandle)
     return (EEComplexUnit*)(uintptr_t)inHandle;
 }
 
-static void EENewTargetRegions(void* inContext, int32_t inLeft, int32_t inTop, int32_t inRight, int32_t inBottom,
-                               int32_t (*outRegions)[4])
-{
-    U2DRectangle<long> theArea;
-    theArea.mLeft = inLeft;
-    theArea.mTop = inTop;
-    theArea.mRight = inRight;
-    theArea.mBottom = inBottom;
-    U2DRectangle<long> theRegions = gWorld.mMap->mUnitRegions->GetRegions(theArea);
-    (*outRegions)[0] = (int32_t)theRegions.GetTopLeft().mX;
-    (*outRegions)[1] = (int32_t)theRegions.GetTopLeft().mY;
-    (*outRegions)[2] = (int32_t)theRegions.GetBottomRight().mX;
-    (*outRegions)[3] = (int32_t)theRegions.GetBottomRight().mY;
-}
-
-static int32_t EENewTargetRegionLength(void* inContext, int32_t inX, int32_t inY)
-{
-    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
-    return theRegion != NULL ? (int32_t)theRegion->size() : -1;
-}
-
-static uint64_t EENewTargetRegionUnit(void* inContext, int32_t inX, int32_t inY, int32_t inIndex)
-{
-    std::vector<EEComplexUnit*>* theRegion = gWorld.mMap->mUnitRegions->GetRegion((long)inX, (long)inY);
-    return (uint64_t)(uintptr_t)(*theRegion)[inIndex];
-}
-
 static int32_t EENewTargetScreen(void* inContext, uint64_t inUnit)
 {
     return ((EENewTargetHost*)inContext)->mScreen->Virtual08(EENewTargetUnit(inUnit));
@@ -3125,8 +3061,8 @@ bool EEFindNewTarget(EEFOFindNewTargetScreenBase* inScreen, EEUnitGoal* inGoal, 
 {
     EENewTargetHost theContext = {inScreen, inUnit, inArg7, std::vector<EEComplexUnit*>()};
     // (the units' tiles and ids: ee_combat's reads of the unit store)
-    EeCombatTargetHost theHost = {&theContext, EENewTargetRegions, EENewTargetRegionLength, EENewTargetRegionUnit,
-                                  EENewTargetScreen, EENewTargetMultiple, EENewTargetTest, EENewTargetPush};
+    EeCombatTargetHost theHost = {&theContext, gWorld.mMap->mUnitRegions, EENewTargetScreen, EENewTargetMultiple,
+                                  EENewTargetTest, EENewTargetPush};
     EeCombatFindTargetIn in = {};
     in.left = (int32_t)(inTile->GetX() - inRadius);
     in.top = (int32_t)(inTile->GetY() - inRadius);
@@ -5061,31 +4997,11 @@ void EEGetResourceSpots(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles)
 // tiles (and its carriers') are cleared (inferred)
 void EEAddBuildingRegion(EEUnit* inUnit)
 {
-    U2DRectangle<long> theTiles;
-    U2DRectangle<long> theRegions;
-    RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
     long theSize = inUnit->GetUnitClass()->mTileSize;
     if (inUnit->mTileNode == NULL)
         return;
-    long theX = inUnit->GetTileX();
-    long theY = inUnit->GetTileY();
-    theTiles.mLeft = theX;
-    theTiles.mTop = theY;
-    theTiles.mBottom = theY + theSize - 1;
-    theTiles.mRight = theX + theSize - 1;
-    theRegions = theTable->GetRegions(theTiles);
-    if (theRegions.GetTopLeft() == theRegions.GetBottomRight()) {
-        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-        std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(theRegions.GetTopLeft());
-        if (theRegion != NULL)
-            theRegion->push_back(theUnit);
-    } else {
-        for (long x = theRegions.GetTopLeft().mX; x <= theRegions.GetBottomRight().mX; x++) {
-            for (long y = theRegions.GetTopLeft().mY; y <= theRegions.GetBottomRight().mY; y++) {
-                theTable->Add(x, y, inUnit->GetComplexUnit());
-            }
-        }
-    }
+    ee_combat_regions_footprint(::gWorld.mMap->mUnitRegions, (int32_t)inUnit->GetTileX(), (int32_t)inUnit->GetTileY(),
+                                (int32_t)theSize, (uint64_t)(uintptr_t)inUnit->GetComplexUnit(), true);
     if (gLoadingSavedGame)
         return;
     if ((inUnit->GetUnitClass()->mCategory == kUnitCategoryNavalBuilding || inUnit->GetUnitClass()->mCategory == kUnitCategorySpaceBuilding) && inUnit->GetUnitClass()->mAirTrafficType != 0)
@@ -5360,34 +5276,11 @@ void EEPickWallPieces(std::vector<EETileCoordinate>& inTiles, std::vector<long>&
 // inUnit (a fortress) taken out of the unit regions under its footprint (inferred)
 void EERemoveBuildingRegion(EEUnit* inUnit)
 {
-    RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
-    U2DRectangle<long> theTiles;
-    U2DRectangle<long> theRegions;
     long theSize = inUnit->GetUnitClass()->mTileSize;
     if (inUnit->mTileNode == NULL)
         return;
-    theTiles.mLeft = inUnit->GetTileX();
-    theTiles.mRight = inUnit->GetTileX() + theSize - 1;
-    theTiles.mTop = inUnit->GetTileY();
-    theTiles.mBottom = inUnit->GetTileY() + theSize - 1;
-    theRegions = theTable->GetRegions(theTiles);
-    if (theRegions.GetTopLeft() == theRegions.GetBottomRight()) {
-        EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-        RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(theRegions.GetTopLeft());
-        if (theRegion != NULL)
-            theRegion->Remove(theUnit);
-    } else {
-        for (long x = theRegions.GetTopLeft().mX;; x++) {
-            if (!(x <= theRegions.GetBottomRight().mX))
-                break;
-            for (long y = theRegions.GetTopLeft().mY; y <= theRegions.GetBottomRight().mY; y++) {
-                EEComplexUnit* theUnit = inUnit->GetComplexUnit();
-                RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-                if (theRegion != NULL)
-                    theRegion->Remove(theUnit);
-            }
-        }
-    }
+    ee_combat_regions_footprint(::gWorld.mMap->mUnitRegions, (int32_t)inUnit->GetTileX(), (int32_t)inUnit->GetTileY(),
+                                (int32_t)theSize, (uint64_t)(uintptr_t)inUnit->GetComplexUnit(), false);
 }
 
 // FUNCTION: EXE 0x64d946
@@ -6274,19 +6167,17 @@ bool EEIsEditorSpacingClear(EEUnitClass* inClass, GE3DPoint* inLocation, long in
 {
     GE3DPoint thePosition;
     bool theResult = true;
-    RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
-    long theRegionX = inX / theTable->mRegionSize;
-    long theRegionY = inY / theTable->mRegionSize;
+    EeCombatUnitRegions* theTable = ::gWorld.mMap->mUnitRegions;
+    long theRegionX = inX / ee_combat_regions_size(theTable);
+    long theRegionY = inY / ee_combat_regions_size(theTable);
     long y;
     long x;
     unsigned long i;
     for (y = theRegionY - 1; theResult == true && y <= theRegionY + 1; y++) {
         for (x = theRegionX - 1; theResult == true && x <= theRegionX + 1; x++) {
-            std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
-            if (theRegion == NULL)
-                continue;
-            for (i = 0; theResult == true && i < theRegion->size(); i++) {
-                EEComplexUnit* theUnit = (*theRegion)[i];
+            EEUnitRegion theRegion(theTable, x, y);
+            for (i = 0; theResult == true && i < (unsigned long)theRegion.size(); i++) {
+                EEComplexUnit* theUnit = theRegion[i];
                 if (theUnit == NULL)
                     continue;
                 theUnit->GetPosition(thePosition);
