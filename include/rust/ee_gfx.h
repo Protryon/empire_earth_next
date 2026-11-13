@@ -27,6 +27,9 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
 
+/// `kEffect3DLinearProjectile`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE = 37;
+
 /// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
 
@@ -272,6 +275,9 @@ struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
+
+/// The effect's orbitals (`mOrbitals`, copies of the graphic's) and the angles the draw uses (`mAngles`).
+struct EeGfxOrbitals;
 
 /// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
 struct EeGfxStormLists;
@@ -812,6 +818,14 @@ struct EeGfxEffectPass {
   float draw_scale;
 };
 
+/// The orbiting effects' state beyond the shot's and the aged record's.
+struct EeGfxEffectOrbit {
+  /// owned: made on first use, freed with the record
+  EeGfxOrbitals *orbitals;
+  /// `mOrbitalCount`: the graphic's orbital count when they were copied
+  int32_t count;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -863,6 +877,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectShot shot;
   /// the additive pass's (`effect_additive.rs`)
   EeGfxEffectPass pass;
+  /// the orbiting effects' (`effect_orbit.rs`)
+  EeGfxEffectOrbit orbit;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1190,6 +1206,13 @@ struct EeGfxUnitFrame {
   uint32_t animation;
 };
 
+/// One orbiting part (`EEOrbital`): its model, its speed (radians a second) and its angle.
+struct EeGfxOrbital {
+  EeGfxModel model;
+  float speed;
+  float angle;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1243,6 +1266,10 @@ struct EeGfxEffect3DHost {
   EeGfxUnitFrame (*unit_frame)(void *context);
   /// the unit's model's model `index` (`mModels[index]`)
   EeGfxModel (*unit_model_at)(void *context, uint32_t index);
+  /// the graphic object's orbital count (`GetOrbitalCount`)
+  uint32_t (*orbital_count)(void *context);
+  /// a copy of the graphic object's orbital `index` (`*GetOrbital(index)`)
+  EeGfxOrbital (*orbital)(void *context, uint32_t index);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1293,6 +1320,8 @@ struct EeGfxRaster {
                                  float z);
   /// `SetGraphicsCurrentFrame(frame)`
   void (*model_frame)(EeGfxModel model, uint32_t frame);
+  /// `SetGraphicsPreModelTransform(transformation)`
+  void (*model_pre_transform)(EeGfxModel model, const EeGeTransformation *transformation);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

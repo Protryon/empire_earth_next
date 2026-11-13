@@ -248,6 +248,8 @@ pub struct EeGfxEffectRecord {
     pub shot: EeGfxEffectShot,
     /// the additive pass's (`effect_additive.rs`)
     pub pass: crate::effect_additive::EeGfxEffectPass,
+    /// the orbiting effects' (`effect_orbit.rs`)
+    pub orbit: crate::effect_orbit::EeGfxEffectOrbit,
 }
 
 /// The identity (`GETransformation()`).
@@ -288,6 +290,7 @@ impl EeGfxEffectRecord {
             shield: EeGfxEffectShield::default(),
             shot: EeGfxEffectShot::default(),
             pass: crate::effect_additive::EeGfxEffectPass::default(),
+            orbit: crate::effect_orbit::EeGfxEffectOrbit::default(),
         }
     }
 

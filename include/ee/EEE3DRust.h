@@ -5,7 +5,8 @@
 // 0xf923f..), 0x43 the pulse cannon ball (EEE3DPulseCannonBall, 0xf69e3..0xf7394), 0x21 the tracers and 0x26 the
 // shells (EEE3DTracers 0xfd330..0xfdbab, EEE3DShells 0xf90e9..0xf923f), 0x33 the citizen beam (EEE3DCitizenBeam,
 // 0xe9474..0xe9bee), 0x1b the water splash (EEE3DWaterSplash, 0x101c34..0x101fce), 0x46 the screen flash
-// (EEE3DScreenFlash, 0xf8ceb..0xf90e9) and 0x27 the additive pass (EEE3DAdditivePass, 0xe89c6..0xe8ed8), all deleted.
+// (EEE3DScreenFlash, 0xf8ceb..0xf90e9), 0x27 the additive pass (EEE3DAdditivePass, 0xe89c6..0xe8ed8) and 0x25 the
+// linear projectile (EEE3DLinearProjectile, 0xf2d93..0xf3580), all deleted.
 // Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -21,6 +22,8 @@ public:
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     // a shot on inTo from inFrom's weapon point (the tracers, the shells)
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);
+    // from one point to another (the linear projectile)
+    EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE3DRust(long inKind);                 // for loading
     virtual ~EEE3DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }

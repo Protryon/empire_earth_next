@@ -201,7 +201,6 @@ ee5c0 f1327 Empire Earth/Graphics Thread/EEE3DFarm.cpp
 f1327 f1600 Empire Earth/Graphics Thread/EEE3DGoal.cpp
 f1600 f2046 Empire Earth/Graphics Thread/EEE3DHurricane.cpp
 f2046 f2d93 Empire Earth/Graphics Thread/EEE3DIcon.cpp
-f2d93 f3580 Empire Earth/Graphics Thread/EEE3DLinearProjectile.cpp
 f3580 f4247 Empire Earth/Graphics Thread/EEE3DMarchingLine.cpp
 f4247 f43c7 Empire Earth/Graphics Thread/EEE3DMultiEffect.cpp
 f43c7 f4bf3 Empire Earth/Graphics Thread/EEE3DNuclearExplosion.cpp

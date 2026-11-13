@@ -85,7 +85,6 @@
 #include "ee/EEE3DVirus.h"
 #include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
-#include "ee/EEE3DLinearProjectile.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
 #include "ee/EEE3DVolcano.h"
@@ -203,7 +202,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DDisease: theEffect = new EEE3DDisease(); break;
     case kEffect3DFarm: theEffect = new EEE3DFarm(); break;
     case kEffect3DHurricane: theEffect = new EEE3DHurricane(); break;
-    case kEffect3DLinearProjectile: theEffect = new EEE3DLinearProjectile(); break;
+    case kEffect3DLinearProjectile: theEffect = new EEE3DRust(0x25); break;
     case kEffect3DRain: theEffect = new EEE3DRain(); break;
     case kEffect3DSnow: theEffect = new EEE3DSnow(); break;
     case kEffect3DShells: theEffect = new EEE3DRust(0x26); break;
@@ -450,7 +449,7 @@ long EEEffectManager::CreateEffectBetween(GE3DPoint& inFrom, GE3DPoint& inTo, EE
     EEEffect* theEffect = NULL;
     switch (inEffect->mKind) {
     case kEffect3DEarthquake: theEffect = new EEE3DEarthquake(inFrom, inTo, inEffect); break;
-    case kEffect3DLinearProjectile: theEffect = new EEE3DLinearProjectile(inFrom, inTo, inEffect); break;
+    case kEffect3DLinearProjectile: theEffect = new EEE3DRust(inFrom, inTo, inEffect, 0x25); break;
     case kEffect3DMarchingLine: theEffect = new EEE3DMarchingLine(inFrom, inTo, inEffect); break;
     }
     return EERegisterEffect(this, theEffect, thePlan, outHandle);

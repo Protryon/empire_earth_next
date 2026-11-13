@@ -1,8 +1,9 @@
 // The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
-// effect_beam.rs, effect_aged.rs, effect_additive.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// effect_beam.rs, effect_aged.rs, effect_additive.rs,
+// effect_orbit.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
 // Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
-// EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp and
-// EEE3DAdditivePass.cpp.
+// EEE3DTracers.cpp, EEE3DShells.cpp, EEE3DCitizenBeam.cpp, EEE3DWaterSplash.cpp, EEE3DScreenFlash.cpp,
+// EEE3DAdditivePass.cpp and EEE3DLinearProjectile.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -196,6 +197,13 @@ struct Ask {
         return EeGfxUnitFrame{(uint32_t)theUnit->mPhysicalModel.GetFrame(), (uint32_t)theUnit->mAnimation};
     }
     static void* UnitModelAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mUnitModel->mModels[inIndex]; }
+    // the graphic object's orbitals (EEE3DLinearProjectile::SetUp, 0xf30ba, copies them)
+    static uint32_t OrbitalCount(void* inAsk) { return (uint32_t)E(inAsk)->mGraphicObject->GetOrbitalCount(); }
+    static EeGfxOrbital Orbital(void* inAsk, uint32_t inIndex)
+    {
+        EEOrbital* theOrbital = E(inAsk)->mGraphicObject->GetOrbital(inIndex);
+        return EeGfxOrbital{theOrbital->mModel, theOrbital->mSpeed, theOrbital->mAngle};
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -259,6 +267,15 @@ EEE3DRust::EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEff
     this->Call(EeGfxEffect3DOp::Create);
 }
 
+// the linear projectile (0x25): from inFrom to inTo (EEE3DLinearProjectile, 0xf2dd6)
+EEE3DRust::EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(0, inGraphicEffect, inKind)
+{
+    this->mRecord->shot.path.start = EeGe3DPoint{inFrom.mX, inFrom.mY, inFrom.mZ};
+    this->mRecord->shot.location = EeGe3DPoint{inTo.mX, inTo.mY, inTo.mZ};
+    this->Call(EeGfxEffect3DOp::Create);
+}
+
 EEE3DRust::EEE3DRust(long inKind)
     : EEEffect3D(inKind)
 {
@@ -285,7 +302,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
                                  Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked,
                                  Ask::ComplexPosition, Ask::UnitModelMedia, Ask::UnitScale, Ask::UnitLocation,
-                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt};
+                                 Ask::UnitModelRadius, Ask::UnitFrame, Ask::UnitModelAt, Ask::OrbitalCount,
+                                 Ask::Orbital};
     // Load and Save read no facts: during a load the unit is still its saved id (RepairPointers resolves it)
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);

@@ -1674,6 +1674,9 @@ const EeGfxRaster gEERustRaster = {
         static_cast<GEModel*>(inModel)->SetGraphicsPostModelTransform(theTransformation);
     },
     [](void* inModel, uint32_t inFrame) { static_cast<GEModel*>(inModel)->SetGraphicsCurrentFrame(inFrame); },
+    [](void* inModel, const EeGeTransformation* inTransformation) {
+        static_cast<GEModel*>(inModel)->SetGraphicsPreModelTransform(*reinterpret_cast<const GETransformation*>(inTransformation));
+    },
 };
 
 // FUNCTION: EXE 0x50f60f

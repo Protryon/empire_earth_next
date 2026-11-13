@@ -72,6 +72,8 @@ pub struct EeGfxRaster {
         extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation, x: f32, y: f32, z: f32),
     /// `SetGraphicsCurrentFrame(frame)`
     pub model_frame: extern "C" fn(model: EeGfxModel, frame: u32),
+    /// `SetGraphicsPreModelTransform(transformation)`
+    pub model_pre_transform: extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation),
 }
 
 /// The rasterizer as the draws call it.
@@ -104,6 +106,7 @@ pub trait Raster {
     fn model_material_opacity(&mut self, model: EeGfxModel, opacity: f32);
     fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32);
     fn model_frame(&mut self, model: EeGfxModel, frame: u32);
+    fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation);
 }
 
 impl Raster for &EeGfxRaster {
@@ -190,6 +193,9 @@ impl Raster for &EeGfxRaster {
     }
     fn model_frame(&mut self, model: EeGfxModel, frame: u32) {
         (self.model_frame)(model, frame)
+    }
+    fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation) {
+        (self.model_pre_transform)(model, transformation)
     }
 }
 
@@ -291,5 +297,8 @@ impl Raster for LogRaster {
     }
     fn model_frame(&mut self, _model: EeGfxModel, frame: u32) {
         self.calls.push(format!("frame {frame}"));
+    }
+    fn model_pre_transform(&mut self, _model: EeGfxModel, t: &GeTransformation) {
+        self.calls.push(format!("pre {}", t.m[0][0]));
     }
 }
