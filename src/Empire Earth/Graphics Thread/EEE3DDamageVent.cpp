@@ -210,6 +210,12 @@ long EEE3DDamageVent::Step()
     EEComplexUnit* theComplex = theUnit->mComplexUnit;
     EETagPointList* theFromList = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 5);
     EETagPointList* theToList = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0x38);
+    // New: a model without the vent's tag points (kinds 5 and 0x38), or with fewer target points than source points,
+    // has no vents (the original read through the missing list: EE-SIM faulted here in Space Age games on Planets
+    // Earth, 2026-11-13)
+    if (theFromList == NULL || theToList == NULL || theFromList->GetNumTagPoints() == 0
+        || theToList->GetNumTagPoints() < theFromList->GetNumTagPoints())
+        return 0;
     float theHealth = (float)this->mUnit->mHitPoints;
     theHealth /= this->mUnit->mStats->mMaxHitPoints;
     EEGraphicEffect* theEffect = this->mGraphicEffect;
