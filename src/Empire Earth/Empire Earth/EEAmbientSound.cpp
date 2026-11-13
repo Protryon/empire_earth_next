@@ -70,7 +70,6 @@
 #include "ee/EEAmbientSound.h"
 #include "ee/EEAmbientSoundManager.h"
 
-#include "lle/ESCallerLog.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
@@ -83,22 +82,8 @@
 
 extern EEAIContinentManager gContinentManager;
 
-// chain at 0x524a88 (wrapper)
-//   object 0x529928  ctor 0x124a92, registrar 0x124ac7, atexit dtor 0x124ad3
-// the EE-level trigonometry's caller logs (one report per 500000 calls; nothing in the unit calls them)
-static ESCallerLog sCosCallerLog("UMCos EE-Level", true, 500000);
-// SYNTHETIC: EXE 0x524a88   (wrapper)
-// SYNTHETIC: EXE 0x524a92   (ctor)
-// SYNTHETIC: EXE 0x524ac7   (registrar)
-// SYNTHETIC: EXE 0x524ad3   (atexit dtor)
-
-// chain at 0x524ade (wrapper)
-//   object 0x5298f8  ctor 0x124ae8, registrar 0x124b1d, atexit dtor 0x124b29
-static ESCallerLog sSinCallerLog("UMSin EE-Level", true, 500000);
-// SYNTHETIC: EXE 0x524ade   (wrapper)
-// SYNTHETIC: EXE 0x524ae8   (ctor)
-// SYNTHETIC: EXE 0x524b1d   (registrar)
-// SYNTHETIC: EXE 0x524b29   (atexit dtor)
+// 0x524a88..0x524b34: the original's two EE-level trigonometry caller logs ("UMCos EE-Level", "UMSin EE-Level",
+// ESCallerLog, never called), deleted with the class (LLE lane round 1)
 
 // FUNCTION: EXE 0x524b34
 // Creates a silent ambient sound with no sound object, full probability and normal pitch

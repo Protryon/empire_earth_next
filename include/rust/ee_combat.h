@@ -537,6 +537,24 @@ constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_TILE = 67;
 /// tile never; `IsSeenBy(player)` when `a[2]` (explored), else `GetVisibility(id) > 1`.
 constexpr static const int32_t EE_COMBAT_W_TILE_SEEN = 68;
 
+/// a complex unit's `mActiveGoal->mKind` ([`EE_COMBAT_Q_NONE`] without one).
+constexpr static const int32_t EE_COMBAT_Q_ACTIVE_GOAL_KIND = 88;
+
+/// a complex unit's active goal's attack target (`static_cast<EEUGRust*>(mActiveGoal)->GetAttackTarget()`).
+constexpr static const int32_t EE_COMBAT_H_ACTIVE_GOAL_TARGET = 10;
+
+/// `object->mActiveGoal->GetGoalLocation(point)`: the point's bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_GOAL_LOCATION = 70;
+
+/// `object->GetModel()->mModel != NULL`; the model's `mDefaultPoint` bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_DROP_MODEL = 71;
+
+/// `object->mTile != NULL`; the tile's `GetHeight()` bits out in `a[0]`.
+constexpr static const int32_t EE_COMBAT_W_TILE_HEIGHT = 72;
+
+/// `object->GetPosition(point)` (the virtual: a simple unit's tile centre): the point's bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_POSITION = 73;
+
 /// `GetTileX()`, `GetTileY()`.
 constexpr static const int32_t EE_COMBAT_Q_TILE_X = 1;
 
@@ -1243,6 +1261,9 @@ constexpr static const int32_t EE_COMBAT_WORLD_CONTACT_RANGE = 10;
 
 constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED_BY = 11;
 
+/// The unit regions of a map.
+struct EeCombatUnitRegions;
+
 /// One hit's damage arguments (`ComputeDamage`'s after the units).
 struct EeCombatDamageCall {
   /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
@@ -1937,15 +1958,8 @@ struct EeCombatSearchTarget {
 /// function of the right type.
 struct EeCombatSearchHost {
   void *ctx;
-  /// The regions' rectangle into `out` (left, top, right, bottom).
-  void (*regions)(void *ctx,
-                  int32_t left,
-                  int32_t top,
-                  int32_t right,
-                  int32_t bottom,
-                  int32_t (*out)[4]);
-  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+  const EeCombatUnitRegions *unit_regions;
   void (*unit_position)(void *ctx, uint64_t unit, float (*out)[2]);
   uint64_t (*list_next)(void *ctx, uint64_t unit, int32_t prev);
   int32_t (*dummy_head)(void *ctx, uint64_t unit);
@@ -1988,6 +2002,9 @@ struct EeCombatTurret {
   float angle;
 };
 
+/// An opaque C++ object (a unit, a tile node); 0 is none.
+using EeCombatHandle = uint64_t;
+
 /// A screen's test (the capture's CBFS layout). `read` and `distance` are the screen's: whether it asked the host,
 /// and the answer.
 struct EeCombatScreenIn {
@@ -2003,17 +2020,6 @@ struct EeCombatScreenIn {
 
 /// The host's distance of a screen's candidate (asked only for a living one).
 using EeCombatScreenDistance = float(*)(void *context);
-
-/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
-struct EeCombatHitDistanceIn {
-  /// the unit's position
-  float from[3];
-  /// the target's point (its drop point, a melee unit's: its position)
-  float to[3];
-  /// the point to measure from instead of the unit's (x -10000: none)
-  float x;
-  float y;
-};
 
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
 struct EeCombatSearchOut {
@@ -2169,31 +2175,6 @@ struct EeCombatCanHealIn {
   int32_t in_set;
 };
 
-/// The drop point.
-struct EeCombatDropOut {
-  float x;
-  float y;
-  float z;
-};
-
-/// `EEFindDropLocation`'s inputs: the kind, then the model's (`DROP_KIND_MODEL`) or the tile's (`DROP_KIND_TILE`) values.
-struct EeCombatDropIn {
-  int32_t kind;
-  /// the target model's `mDefaultPoint`
-  float offset[3];
-  /// the target's physical model's scale
-  float scale;
-  int32_t built;
-  int32_t hit_points;
-  int32_t max_hit_points;
-  /// the target's physical model's location (`GETransformation::mMatrix`)
-  float transformation[4][4];
-  int32_t tile_x;
-  int32_t tile_y;
-  /// the target tile's height
-  float tile_height;
-};
-
 /// The result: blocked, and the last tile reached.
 struct EeCombatLineOut {
   int32_t blocked;
@@ -2259,15 +2240,8 @@ struct EeCombatFindTargetIn {
 /// `EEFindNewTarget`'s world (see `TargetHost`), plus `push` for the candidates' list the C++ keeps.
 struct EeCombatTargetHost {
   void *ctx;
-  /// The regions' rectangle into `out` (left, top, right, bottom).
-  void (*regions)(void *ctx,
-                  int32_t left,
-                  int32_t top,
-                  int32_t right,
-                  int32_t bottom,
-                  int32_t (*out)[4]);
-  int32_t (*region_len)(void *ctx, int32_t x, int32_t y);
-  uint64_t (*region_unit)(void *ctx, int32_t x, int32_t y, int32_t index);
+  /// The map's unit regions (`gWorld.mMap->mUnitRegions`, regions.rs), live for the call.
+  const EeCombatUnitRegions *unit_regions;
   int32_t (*screen)(void *ctx, uint64_t unit);
   int32_t (*multiple)(void *ctx, uint64_t unit);
   int32_t (*test)(void *ctx, uint32_t test, uint64_t unit);
@@ -2575,6 +2549,25 @@ bool ee_combat_is_seen_by(uint64_t unit,
                           int32_t explored,
                           const EeCombatWorldHost *host);
 
+/// `EEFindDropLocation` of `unit` on `target` (0: its goal's) over `host`: the target out, the point in `point`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context, `point` to three floats.
+uint64_t ee_combat_find_drop_location(uint64_t unit,
+                                      uint64_t target,
+                                      const EeCombatWorldHost *host,
+                                      float (*point)[3]);
+
+/// `EEGetHitDistanceSquared(unit, target, x, y)` over `host`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context.
+float ee_combat_hit_distance_squared(uint64_t unit,
+                                     uint64_t target,
+                                     float x,
+                                     float y,
+                                     const EeCombatWorldHost *host);
+
 /// `EEUUGetIsUnitClassTargetable` (`can_target` 0) or `EECanTargetClass` (1) of the record.
 ///
 /// # Safety
@@ -2631,6 +2624,92 @@ int32_t ee_combat_faces_point(const EeCombatFacingIn *input,
                               void *ctx,
                               void (*turret)(void *ctx, int32_t index, EeCombatTurret *out));
 
+/// A new table of `side * side` regions of `size` tiles (`EEMap`'s; freed by `ee_combat_regions_free`).
+EeCombatUnitRegions *ee_combat_regions_new(uint32_t side,
+                                           int32_t size);
+
+/// Frees a table (none for null).
+///
+/// # Safety
+/// `table` is null or a live table, not used after.
+void ee_combat_regions_free(EeCombatUnitRegions *table);
+
+/// The tiles per region side.
+///
+/// # Safety
+/// `table` is a live table.
+int32_t ee_combat_regions_size(const EeCombatUnitRegions *table);
+
+/// Region (x, y)'s units, its count in `len` (null and -1 off the grid); valid until the table next changes.
+///
+/// # Safety
+/// `table` is a live table, `len` a valid pointer.
+const EeCombatHandle *ee_combat_regions_units(const EeCombatUnitRegions *table,
+                                              uint32_t x,
+                                              uint32_t y,
+                                              int32_t *len);
+
+/// Region (x, y)'s number of units (-1 off the grid).
+///
+/// # Safety
+/// `table` is a live table.
+int32_t ee_combat_regions_len(const EeCombatUnitRegions *table, uint32_t x, uint32_t y);
+
+/// Appends `unit` to region (x, y) when there is one.
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_add(EeCombatUnitRegions *table, uint32_t x, uint32_t y, uint64_t unit);
+
+/// Erases the first copy of `unit` from region (x, y).
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_remove(EeCombatUnitRegions *table, uint32_t x, uint32_t y, uint64_t unit);
+
+/// `unit` added to (`add`) or removed from every region under the `size` by `size` tiles at (x, y).
+///
+/// # Safety
+/// `table` is a live table.
+void ee_combat_regions_footprint(EeCombatUnitRegions *table,
+                                 int32_t x,
+                                 int32_t y,
+                                 int32_t size,
+                                 uint64_t unit,
+                                 bool add);
+
+/// `CollectValues`: the units of the regions under the tiles (left, top) to (right, bottom), sorted, no duplicates,
+/// into `out` (up to `cap`); answers their number.
+///
+/// # Safety
+/// `table` is a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_collect(const EeCombatUnitRegions *table,
+                                 int32_t left,
+                                 int32_t top,
+                                 int32_t right,
+                                 int32_t bottom,
+                                 uint64_t *out,
+                                 size_t cap);
+
+/// The saved order (see [`EeCombatUnitRegions::order`]; a null table: no region) into `out` (up to `cap`); answers
+/// its length.
+///
+/// # Safety
+/// `table` is null or a live table; `out` is null or holds `cap` values.
+size_t ee_combat_regions_order(const EeCombatUnitRegions *table,
+                               uint32_t *out,
+                               size_t cap);
+
+/// Puts back saved region `index`'s order from `ids` (`count` of them): 1 put back, 0 the region holds other
+/// units, -1 no table or no such region (the load stops putting back).
+///
+/// # Safety
+/// `table` is null or a live table; `ids` holds `count` values.
+int32_t ee_combat_regions_restore(EeCombatUnitRegions *table,
+                                  uint32_t index,
+                                  const uint32_t *ids,
+                                  size_t count);
+
 /// A screen's test: `input.kind`, `hit_points` and `range` in; `read` and `distance` written for the capture.
 ///
 /// # Safety
@@ -2638,12 +2717,6 @@ int32_t ee_combat_faces_point(const EeCombatFacingIn *input,
 int32_t ee_combat_screen(EeCombatScreenIn *input,
                          void *context,
                          EeCombatScreenDistance distance);
-
-/// `EEGetHitDistanceSquared`'s arithmetic.
-///
-/// # Safety
-/// `input` must point to a valid record.
-float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///
@@ -2712,12 +2785,6 @@ EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
 /// # Safety
 /// `input` must point to a valid record.
 int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
-
-/// `EEFindDropLocation`'s drop point.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
 
 /// `EEIsLineToUnitBlocked`.
 ///

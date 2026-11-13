@@ -1,6 +1,6 @@
 // C:\EEX\RTS Engine\Map\RTSVisibleMap.cpp (no __FILE__). Only the class's six save-key chains are in the exe
-// (0x1248f6..0x124a88); the unit's functions were not linked. EEAmbientSound.cpp's header-scope ESCallerLog chains
-// ("UMCos EE-Level", "UMSin EE-Level") open the next unit at 0x124a88. Unit flags: the exe's module set.
+// (0x1248f6..0x124a88); the unit's functions were not linked. EEAmbientSound.cpp's header-scope caller-log chains
+// (deleted) opened the next unit at 0x124a88. Unit flags: the exe's module set.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"

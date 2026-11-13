@@ -51,7 +51,6 @@
 #include "ee/EECPUnitTileDistanceLess.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPWallManager.h"
@@ -62,6 +61,7 @@
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
+#include "ee/EEUnitRegions.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
@@ -520,7 +520,7 @@ void EECPBuildManager::CancelStalledBuilds()
             this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->GetBuildTechNode()->GetCost(i, 0x20, 1.0f)));
         if (this->mTownCenterTile.mX != -10000 && this->mTownCenterTile.mY != -10000) {
             theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,
+            theUnit->SetGoal(EEUGRust::NewLocation((float)this->mTownCenterTile.GetX(), (float)this->mTownCenterTile.GetY(), 0.0f, false, true,
                 false, 0.0f, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
         } else
@@ -607,7 +607,7 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
         }
         theCount = theTable->SumEnemyValue(thePlayerID, theTable->GetRegions(theRect), true);
         if (theCount > 0) {
-            gWorld.mMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+            EECollectRegionUnits(gWorld.mMap->mUnitRegions, theRect, theUnits);
             std::vector<EEComplexUnit*>::iterator it;
             for (it = theUnits.begin(); it != theUnits.end();) {
                 if ((*it)->mPlayer == this->mPlayer)

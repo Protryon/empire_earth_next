@@ -23,6 +23,7 @@ ee_combat = { path = "../ee_combat" }
 ee_tech = { path = "../ee_tech" }
 ee_codec = { path = "../ee_codec" }
 ee_fs = { path = "../ee_fs" }
+ee_input = { path = "../ee_input" }
 ee_ge = { path = "../ee_ge" }
 ee_gfx = { path = "../ee_gfx" }
 ee_gx = { path = "../ee_gx" }

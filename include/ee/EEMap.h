@@ -290,6 +290,7 @@ extern float gMapTileSize;
 // The game map: RTTI EEMap > RTSMap, with an FSPersistent base at +0x195624 (secondary vtable 0x441c9c, tag 4).
 // Ctors 0x11b844 / 0x11b8d9 (both out of line), sizeof 0x195664 (new sites).
 template <class T> class RTSRegionTable;   // ee/RTSRegionTable.h
+struct EeCombatUnitRegions;               // rust/ee_combat.h (ee/EEUnitRegions.h)
 class EEComplexUnit;
 class EEEffect;
 class EEMap : public RTSMap, public FSPersistent {
@@ -386,7 +387,9 @@ public:
 
     URandom mRandom;                        // +0x19562c (seed 1; provisional name)
     RTSRegionTable<EEEffect*>* mEffectRegions;   // +0x19563c (the effects per region: EEEffect 0x102e61 etc.; +0x19563c..+0x195660 zeroed by 0x11c9a3) (provisional name)
-    RTSRegionTable<EEComplexUnit*>* mUnitRegions;   // +0x195640 (ctor 0x11e05e; the units per region; EEAIArea 0xdcbe/0xde7f) (provisional name)
+    // +0x195640 (ctor 0x11e05e; the units per region; EEAIArea 0xdcbe/0xde7f; was RTSRegionTable<EEComplexUnit*>: now
+    // ee_combat regions.rs's table, ee/EEUnitRegions.h) (provisional name)
+    EeCombatUnitRegions* mUnitRegions;
     EETile* mTileArray;                     // +0x195644 (new EETile[n]: Virtual1C; Virtual18/24 hand them out) (provisional name)
     uint32_t* mVisibilityWords;             // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
     unsigned long GetMapCharacteristics() const { return this->mMapCharacteristics; }

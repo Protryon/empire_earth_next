@@ -75,6 +75,7 @@
 #include "ee/EEUGRust.h"
 #include <algorithm>
 #include <vector>
+#include "rust/ee_combat.h"
 
 const UString EEPWorldHelper::sTheScenarioManager("EEWorldHelper-The Scenario Manager");
 const UString EEPWorldHelper::sTheTeams("EEPWorldHelper-The Teams");
@@ -428,51 +429,26 @@ static long LoadTileOrder(FSFile& inFile)
 // EEUnitClass::FindImpactUnit and the target searches walk a region's units in this order, taking the first match
 // (seed 3's 600 s save: a projectile hit another unit in the loaded game). Saved: every region with two units or more,
 // by index, with its units' ids; put back at the first tick when the region holds the same units.
+// (ee_combat regions.rs order and restore; the values written as the unsigned longs they were)
 static void SaveRegionOrder(FSFile& outFile)
 {
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
-    unsigned long theRegions = theTable != NULL ? theTable->mRegionsX * theTable->mRegionsY : 0;
-    unsigned long theCount = 0;
-    for (unsigned long r = 0; r < theRegions; r++)
-        theCount += theTable->mRegions[r].size() >= 2 ? 1 : 0;
-    outFile.Write(theCount);
-    for (unsigned long r = 0; r < theRegions; r++) {
-        RTSRegion<EEComplexUnit*>& theRegion = theTable->mRegions[r];
-        if (theRegion.size() < 2)
-            continue;
-        outFile.Write(r);
-        outFile.Write((unsigned long)theRegion.size());
-        for (size_t k = 0; k < theRegion.size(); k++)
-            outFile.Write(theRegion[k] != NULL ? (unsigned long)theRegion[k]->mUnitID : (unsigned long)-1);
-    }
+    EeCombatUnitRegions* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
+    std::vector<uint32_t> theOrder(ee_combat_regions_order(theTable, NULL, 0));
+    ee_combat_regions_order(theTable, theOrder.data(), theOrder.size());
+    for (size_t k = 0; k < theOrder.size(); k++)
+        outFile.Write(theOrder[k] != 0xffffffffu ? (unsigned long)theOrder[k] : (unsigned long)-1);
 }
 
 static void RestoreRegionOrder(const std::vector<std::pair<unsigned long, std::vector<unsigned long> > >& inRegions)
 {
-    RTSRegionTable<EEComplexUnit*>* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
+    EeCombatUnitRegions* theTable = gWorld.mMap != NULL ? gWorld.mMap->mUnitRegions : NULL;
     unsigned long theOther = 0;
     for (size_t t = 0; t < inRegions.size(); t++) {
-        if (theTable == NULL || inRegions[t].first >= theTable->mRegionsX * theTable->mRegionsY)
+        std::vector<uint32_t> theIDs(inRegions[t].second.begin(), inRegions[t].second.end());
+        int32_t theRestored = ee_combat_regions_restore(theTable, (uint32_t)inRegions[t].first, theIDs.data(), theIDs.size());
+        if (theRestored < 0)
             break;
-        RTSRegion<EEComplexUnit*>& theRegion = theTable->mRegions[inRegions[t].first];
-        const std::vector<unsigned long>& theIDs = inRegions[t].second;
-        std::vector<EEComplexUnit*> theUnits;
-        std::vector<bool> theTaken(theRegion.size(), false);
-        for (size_t k = 0; k < theIDs.size() && theRegion.size() == theIDs.size(); k++) {
-            size_t n = 0;
-            while (n < theRegion.size() && (theTaken[n] || theRegion[n] == NULL || (unsigned long)theRegion[n]->mUnitID != theIDs[k]))
-                n++;
-            if (n == theRegion.size())
-                break;
-            theTaken[n] = true;
-            theUnits.push_back(theRegion[n]);
-        }
-        if (theUnits.size() != theRegion.size() || theUnits.size() != theIDs.size()) {
-            theOther++;
-            continue;
-        }
-        for (size_t n = 0; n < theUnits.size(); n++)
-            theRegion[n] = theUnits[n];
+        theOther += theRestored == 0;
     }
     if (theOther != 0)
         ESDebugOut("EEPWorldHelper: %lu map regions hold other units than the saved ones: their order is the load's\n", theOther);

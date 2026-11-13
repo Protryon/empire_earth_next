@@ -1,9 +1,8 @@
 // New (port): unit kinds as data (docs/RUST_PLAN.md R5b.4). The class tests the code made with dynamic_cast, as
 // reads of the kind tables ee_units owns (rust/crates/ee_units/src/kinds.rs):
-//   EEGoalCast<EEUGLocation>(theGoal)            == dynamic_cast<EEUGLocation*>(theGoal)
 //   EEUnitClassCast<EEUCGate>(theClass)          == dynamic_cast<EEUCGate*>(theClass)
 //   EEUnitCast<EEComplexUnit>(theUnit)           == dynamic_cast<EEComplexUnit*>(theUnit)   (from any RTSUnit)
-// A goal's class follows from EEUnitGoal::mKind, a unit class's from EEUnitClass::mCategory and a unit object's from
+// A unit class's from EEUnitClass::mCategory and a unit object's from
 // RTSUnit::mObjectKind (kinds.rs says why);
 // NULL stays NULL. Include it after the goal and class headers of the classes a file tests.
 #ifndef EE_EEUNITKIND_H
@@ -22,33 +21,8 @@ extern const uint64_t EE_UNIT_CLASS_KINDS[256];   // the unit classes of each EE
 extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of each RTSUnit::mObjectKind
 }
 
-class EEUnitGoal;
-class EEUGLocation;
-
-// each goal class's bit
-template <class T> struct EEGoalKindBit;
-template <> struct EEGoalKindBit<EEUGLocation> { static const uint32_t kBit = EE_GOAL_KIND_LOCATION; };
-
-// whether inGoal (not NULL) is a T
-template <class T, class G> inline bool EEGoalIs(const G* inGoal)
-{
-    return (EE_UNIT_GOAL_KINDS[inGoal->mKind] & EEGoalKindBit<T>::kBit) != 0;
-}
-
-// dynamic_cast<T*>(inGoal) for the goal classes
-template <class T, class G> inline T* EEGoalCast(G* inGoal)
-{
-    return inGoal != NULL && EEGoalIs<T>(inGoal) ? static_cast<T*>(inGoal) : NULL;
-}
-template <class T, class G> inline const T* EEGoalCast(const G* inGoal)
-{
-    return inGoal != NULL && EEGoalIs<T>(inGoal) ? static_cast<const T*>(inGoal) : NULL;
-}
-// a unit store holder's goal (EEComplexUnit::mGoalState)
-template <class T, class G, unsigned int F> inline T* EEGoalCast(const EEUnitStoreField<G*, F>& inGoal)
-{
-    return EEGoalCast<T>(inGoal.Get());
-}
+// The goal classes' test (EEGoalCast<EEUGLocation>) went with the last goal class that was a C++ class of its own:
+// every goal is an EEUGRust tested by its mKind (ee/EEUGRust.h: EELocationGoalCast and the others, R5b.4 round 21).
 
 class EEUnitClass;
 class EEUCAmbient;
