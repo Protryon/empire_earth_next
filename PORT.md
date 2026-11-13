@@ -403,7 +403,7 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 | PlatThread.h | recursive mutex, events (wait, wait-any), atomics, thread id, last native error, threads (create, priority, suspend/resume, exit code) | TSCriticalSection, TSEvent (+WaitAny), TSReadWriteLock, TSScheduler, TSThread (not its message queue), Thread System.cpp, the mixer lock, the NE/music/sound/TCP wait loops |
 | PlatString.h | _stricmp/_strnicmp/_itoa/_strdup and the 19 _mbs*/_ismb* multibyte functions | UString, UWideString, the UI text controls, the game (292 sites) |
 | PlatConfig.h | the settings file config.yaml (nested blocks of strings, integers and booleans; one implementation in src/Platform/Common) | UConfig (was URegistry; the registry is gone) |
-| PlatFile.h | files, directory search, attributes, temp files, read-only file mapping | FSFileSpec, FSBasicFile, FSDebugFile, FSMemoryFile, FSArchive, File System.cpp |
+| PlatFile.h | files, directory search, attributes, temp files, read-only file mapping | FSFileSpec, FSBasicFile, FSMemoryFile, FSArchive, File System.cpp |
 | PlatPath.h | game paths on the native file system (volumes, separators, case-insensitive lookup), the data root | (POSIX PlatFile; the POSIX game's start-up) |
 | PlatSocket.h | IPv4 sockets, readiness events (WSAEventSelect), name lookups, adapters; Winsock error numbers | not yet: TCP Protocol.cpp (step 4.2) |
 | PlatMessage.h | message box, debugger output | the three MessageBoxA, UMemoryPool::DumpStats |

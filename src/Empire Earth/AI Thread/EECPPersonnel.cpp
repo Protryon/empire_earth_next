@@ -54,7 +54,6 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitUtilities.h"
@@ -1151,14 +1150,14 @@ void EECPPersonnel::AddNewUnit(EEComplexUnit* inUnit)
         theTile.mY = 0;
         if (!this->mPlayer->mCivilizationManager->GetBuildManager()->FindSpotNearDock(inUnit, theTile))
             return;
-        theGoal = new EEUGLocation((float)theTile.mX, (float)theTile.mY, 0.0f, false, true, false, 0.0f, false, 0);
+        theGoal = EEUGRust::NewLocation((float)theTile.mX, (float)theTile.mY, 0.0f, false, true, false, 0.0f, false, 0);
     } else if (inUnit->mUnitClass->mUnitType == kUnitType14AntiMissileBattery) {
         EETileCoordinate theTile;
         theTile.mX = 0;
         theTile.mY = 0;
         if (!this->mPlayer->mCivilizationManager->GetBuildManager()->FindSpotNearTownCenter(inUnit, theTile))
             return;
-        theGoal = new EEUGLocation((float)theTile.mX, (float)theTile.mY, 0.0f, false, true, false, 0.0f, false, 0);
+        theGoal = EEUGRust::NewLocation((float)theTile.mX, (float)theTile.mY, 0.0f, false, true, false, 0.0f, false, 0);
     } else
         return;
     inUnit->SetGoal(theGoal, 0, 0);

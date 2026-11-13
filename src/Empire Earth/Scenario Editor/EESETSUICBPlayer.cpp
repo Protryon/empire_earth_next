@@ -3,9 +3,7 @@
 // module set.
 #include <windows.h>
 #include "lle/LowLevelEngine.h"
-#include "lle/ESCallerLog.h"
 #include "lle/ESChecksum.h"
-#include "lle/ESProfile.h"
 #include "lle/FSFile.h"
 #include "lle/FSBasicFile.h"
 #include "lle/FSFileSpec.h"
@@ -13,7 +11,6 @@
 #include "lle/UDataCompression.h"
 #include "lle/FSArchive.h"
 #include "lle/FSChunk.h"
-#include "lle/FSDebugFile.h"
 #include "lle/FSPath.h"
 #include "lle/FSRestorable.h"
 #include "lle/FSPersistent.h"
@@ -87,7 +84,6 @@
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NESynchronousClient.h"
 #include "lle/NESynchronousServer.h"
-#include "lle/SECD.h"
 #include "lle/SEConductor.h"
 #include "lle/SEMixer.h"
 #include "lle/SESMInstanceNode.h"

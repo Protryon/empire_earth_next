@@ -69,7 +69,6 @@
 #include "lle/GETexture.h"
 #include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
-#include "ee/EEUGLocation.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUCBasicCitizen.h"
 #include "ee/EEUCNavalCitizen.h"
@@ -95,6 +94,9 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_units.h"
+
+// the location goal's host hands the unit's transformation to ee_ge's GeTransformation (the same 4x4 floats)
+static_assert(sizeof(GETransformation) == 64, "GETransformation is ee_ge's GeTransformation");
 
 long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the teleporter's unload sound)
 
@@ -1373,7 +1375,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             return 0;
         }
     case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
-        theComplex->SetGoal(new EEUGLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
+        theComplex->SetGoal(EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
         return 0;
     case EE_UNITS_GOAL_HOST_HELP_BUILD:
         EEHelpBuildNearby(theComplex, ObjectOf<EEUnit>(inB));
@@ -1414,7 +1416,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             for (EEGoalDeque::const_iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
                 if (*i == ObjectOf<EEUnitGoal>(inB))
                     continue;
-                EEUGLocation* theLocation = (*i)->mKind == kGoalLocation ? static_cast<EEUGLocation*>(*i) : NULL;
+                EEUGRust* theLocation = EELocationGoalCast(*i);
                 if (theLocation == NULL || !theLocation->GetIsAutoWaypoint())
                     return 1;
             }
@@ -1628,6 +1630,23 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->i[0] = EEGatherNavalSearch(theComplex, ObjectOf<EEUnit>(inB), &theFound);
             return Handle(theFound);
         }
+    // the location goal's
+    case EE_UNITS_GOAL_HOST_UNIT_CATEGORY:
+        return theComplex->mUnitClass->mCategory;
+    case EE_UNITS_GOAL_HOST_UNIT_TRANSFORMATION:
+        memcpy(ioArgs->sink, &theComplex->mPhysicalModel.GetLocation(), sizeof(GETransformation));
+        return 0;
+    case EE_UNITS_GOAL_HOST_SET_TRANSFORMATION: {
+            GETransformation theTransformation;
+            memcpy(&theTransformation, ioArgs->sink, sizeof(GETransformation));
+            theComplex->SetTransformation(theTransformation, true);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_SET_TARGET_SEARCH_TIMER:
+        theComplex->SetTargetSearchTimer((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_GOAL_QUEUE_LEN:
+        return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
     case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
         theComplex->mActiveGoal->SetPathAttempts(0);
         return 0;
@@ -1659,6 +1678,124 @@ int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint
 EEUGRust::EEUGRust(unsigned char inKind, bool inArg)
     : EEUnitGoal(inKind, inArg)
 {
+}
+
+// the location goal (location.rs); its accessors read and write the record directly
+namespace {
+
+EEUGRust* NewLocationGoal(const GE3DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace, float inYaw,
+                          bool inIsAutoWaypoint, unsigned char inGroupPathState)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalLocation, inArg);
+    EeUnitsGoalIo theArgs = {{inIsForcedMove, inShouldFace, inIsAutoWaypoint, inGroupPathState}};
+    PointOut(&theArgs, inLocation);
+    theArgs.f[3] = inYaw;
+    Goal(EE_UNITS_GOAL_NEW_LOCATION, theGoal, 0, 0, &theArgs);
+    return theGoal;
+}
+
+EeUnitsLocationGoal LocationOf(const EEUGRust* inGoal)
+{
+    EeUnitsLocationGoal theRecord;
+    ee_units_location_goal_get(Handle(inGoal), &theRecord);
+    return theRecord;
+}
+
+void LocationSet(EEUGRust* inGoal, const EeUnitsLocationGoal& inRecord)
+{
+    ee_units_location_goal_set(Handle(inGoal), &inRecord);
+}
+
+}  // namespace
+
+EEUGRust* EEUGRust::NewLocation(float inX, float inY, float inZ, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+{
+    return NewLocationGoal(GE3DPoint(inX, inY, inZ), inArg, inIsForcedMove, inShouldFace, inYaw, inIsAutoWaypoint,
+                           inGroupPathState);
+}
+
+EEUGRust* EEUGRust::NewLocation(const GE2DPoint& inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+{
+    return NewLocationGoal(GE3DPoint(inLocation.GetX(), inLocation.GetY(), 0.0f), inArg, inIsForcedMove, inShouldFace,
+                           inYaw, inIsAutoWaypoint, inGroupPathState);
+}
+
+EEUGRust* EEUGRust::NewLocation(const GE3DPoint* inLocation, bool inArg, bool inIsForcedMove, bool inShouldFace,
+                                float inYaw, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+{
+    return NewLocationGoal(*inLocation, inArg, inIsForcedMove, inShouldFace, inYaw, inIsAutoWaypoint,
+                           inGroupPathState);
+}
+
+EEUGRust* EEUGRust::NewLocation(bool inArg, bool inIsForcedMove, bool inIsAutoWaypoint, unsigned char inGroupPathState)
+{
+    return NewLocationGoal(GE3DPoint(), inArg, inIsForcedMove, false, 0.0f, inIsAutoWaypoint, inGroupPathState);
+}
+
+GE3DPoint EEUGRust::GetLocation() const
+{
+    EeUnitsLocationGoal theRecord = LocationOf(this);
+    return GE3DPoint(theRecord.location[0], theRecord.location[1], theRecord.location[2]);
+}
+
+void EEUGRust::SetLocation(const GE3DPoint& inLocation)
+{
+    EeUnitsLocationGoal theRecord = LocationOf(this);
+    theRecord.location[0] = inLocation.GetX();
+    theRecord.location[1] = inLocation.GetY();
+    theRecord.location[2] = inLocation.GetZ();
+    LocationSet(this, theRecord);
+}
+
+float EEUGRust::GetYaw() const
+{
+    return LocationOf(this).yaw;
+}
+
+bool EEUGRust::GetIsForcedMove() const
+{
+    return LocationOf(this).forced_move;
+}
+
+bool EEUGRust::GetShouldFace() const
+{
+    return LocationOf(this).should_face;
+}
+
+bool EEUGRust::GetIsAutoWaypoint() const
+{
+    return LocationOf(this).auto_waypoint;
+}
+
+bool EEUGRust::GetUseGroupMovement() const
+{
+    return LocationOf(this).group_movement;
+}
+
+void EEUGRust::SetUseGroupMovement(bool inValue)
+{
+    EeUnitsLocationGoal theRecord = LocationOf(this);
+    theRecord.group_movement = inValue;
+    LocationSet(this, theRecord);
+}
+
+unsigned char EEUGRust::GetGroupPathState() const
+{
+    return LocationOf(this).group_path_state;
+}
+
+void EEUGRust::SetGroupPathState(unsigned char inValue)
+{
+    EeUnitsLocationGoal theRecord = LocationOf(this);
+    theRecord.group_path_state = inValue;
+    LocationSet(this, theRecord);
+}
+
+bool EEUGRust::FaceYaw(EEComplexUnit* inUnit)
+{
+    return Goal(EE_UNITS_GOAL_FACE_YAW, this, Handle(inUnit)) != 0;
 }
 
 EEUGRust* EEUGRust::NewPatrol(bool inArg)
