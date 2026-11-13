@@ -11702,3 +11702,63 @@ so no LAN step reaches this round's code; the golden driver and the Rust tests e
 - **Not moved, and why.** TitleConfig: ConfigObject is still C++ (WONGUI's configs derive from it). The RustServerOp
   host (ServerOp.cpp's HostCall, ServerOp's members): not started this round. SmartRoutingConnection's model,
   commands and snapshots (~1,600 lines) sit on RoutingConnection's request helpers and its own maps: next.
+
+## R6: WON's Internet code, round 17 (SmartRoutingConnection's model, commands and snapshots as one Rust object)
+
+Branch `rust-won-net17`. Measured by net C++ deletion, as rounds 7 to 16. Round 16's net was small because each moved
+class kept a hook table while its ops stayed C++; this round took a class whose state and logic are self-contained.
+
+- **What moved.** `smartroute.rs` (`EeWonSmartRoute`): SmartRoutingConnection's client, group and member maps (shared
+  records in `Rc<RefCell>`: a member's client is the client map's record, as the original's `SmartPtr`s were, and a
+  record dropped from the map lives on in the members and handled slots that hold it), the client, group and member
+  iterators and the erase rules that step them, the handled records (`mHandlerClient` / `Group` / `Member`), this
+  client's id, record and async flags, the default group, the ignore set (`WStringCompareNoCase` order) and its file
+  (read and written through `PlatFOpen` in Rust, `authlogin.rs`'s `read_file` / new `write_file`), the command table
+  and settings, the last chat input's error, command, target member and client and matched name. Every step:
+  `RoutingOpCompleteHook`'s 25 op types (the merges of client, group and member lists, the joins and leaves, the
+  field notifications, the CD key ids from `_KeyId` data objects, the ignored senders whose completion is dropped),
+  `HandleInput` / `HandleCommand` (chat.rs's `get_token` / `rest_of_line` / `compare_names` over the CRT's
+  `towupper` / `iswspace` / `isalpha` / `atoi`, as the lobby's parser), `FindClient`, `IgnoreClient`, the copies and
+  iterators. The C++ class is a shim: it hands each finished op's fields in (`ee_won_smart_put_*` for its lists, then
+  `ee_won_smart_op`), and sends the request a chat input returns (`EeWonSmartAction`: chat, flags, invite, moderator,
+  mute, ban, ban by CD key) through RoutingConnection's request helpers. No hook table: the Rust object never calls
+  back into C++. `SmartRoutingClientInfo` and the `GetNewClientInfo` override are gone (the ops' records are plain
+  `RoutingClientInfo`s; nothing outside the model read the smart fields). SmartRoutingConnectionCommands.cpp,
+  ...Snapshots.cpp and the three empty units (Events, Models, Sync) are deleted.
+- **The API that changed.** Raw records no longer leave the model: `GetGroupMap`, `GetClient(id)` returning a
+  `RoutingClientInfoPtr`, `GetMemberRef`, the `Handle*` methods and the public members are gone. EEWonNet (the only
+  user) reads copies: `RoutingGroups()` (StartGroupItr / GetNextGroup under the data lock) for the room list, the
+  game and room joins and ConnectToLobby's walk; `GetClient(id, ClientInfo&)` in OnChat; `FindClient(name,
+  ClientInfo&, bool& found)` and `IgnoreClient(id, on)` for the /ignore and /tell commands; `GetMyClientId()` for
+  `mRouting->mClientId`. `GroupInfo` gained `mMemberCount` (the record's +0x2a `mMaxPlayers`, the group list's member
+  count), which ListRoomCallback read as the room's maximum players; `GroupInfo::mMaxPlayers` stays the client limit.
+  JoinGroupCallback's unused `GetGroup` read is dropped.
+- **The golden over real loopback sockets.** `won_smartroute_test` (new, `xbuild wontest`): a SmartRoutingConnection
+  connected to a routing server stand-in on 127.0.0.1 that sends the notifications and replies the ops read (built
+  from routemsg.rs's formats), recorded over the unmodified C++ class (five runs the same, 668 lines,
+  `golden_smartroute.txt`): register with and without the client list (the ignore file read), group and client
+  lists merged, joins and leaves, every field notification, chats / invitations / join attempts from an ignored
+  client (no completion), the iterators stepped past erased records, a group list removing the member iterator's
+  group, the CD key ids, 50 chat inputs with the requests the server receives, the ignore file's bytes, the close.
+  The model is dumped after each step: the original's members read directly, the Rust object through
+  `ee_won_smart_dump` (the same text; `EE_WON_SMART_ROUTE_RUST` picks the path). Relinked over the shim: 668 lines,
+  0 failures, three runs. Mutation: no client-iterator step on an erase fails line 202.
+- **Driver traps.** The handled records are reset by every op's hook, so a "sync" notification after each step
+  cleared them: they are logged from the default completion, which runs right after the hook for the same op. The
+  operands of `+` are unordered: `Log(... + N(c->GetNextMember(m)) + Show(m))` printed the copy before the call.
+- **The original's undefined corners, defined.** An iterator a whole-map assignment (register) or clear invalidated
+  is at the end; a member without a client is skipped where the original dereferenced it (a leave, a list merge); a
+  command whose target is missing names client 0; a non-ASCII duration unit is no letter; `mLastInputCommand` (never
+  set by the constructor) starts at 0; `IgnoreClient` by id ignores the record `GetClient(id)` finds (EEWonNet called
+  it right after `FindClient` on the same record).
+- **Net C++** (src+include, the generated headers left out): +353 -1732 (WONRouting.h +52 -132,
+  SmartRoutingConnection.cpp +227 -906, the five deleted units -635, EEWonNet.cpp +74 -59).
+- **LAN reach: none.** SmartRoutingConnection is made only by EEWonNet's Internet server select (the WON servers are
+  gone); the lobby's RoutingLogic uses a plain RoutingConnection and every LAN game runs on the lobby lane's sockets.
+  EE-SIM never makes one. The driver and the Rust tests exercise it.
+- **Not moved, and why.** The RustServerOp host (ServerOp.cpp's HostCall, ~600 lines): it answers the Rust ops'
+  calls on C++ objects (the socket shims, AuthContext, the GetCertOp objects, files, completions); moving it makes
+  every one of those a host call the other way, and the routing ops do not run on it (RoutingConnection drives them),
+  so it would not let the routing op classes lose their bodies. The routing request helpers and the notification /
+  request op classes (RoutingConnection.cpp, RoutingRequestOps.cpp, RoutingNotifications.cpp): RoutingLogic reads
+  their members by class; a move needs the lobby's readers changed with them.
