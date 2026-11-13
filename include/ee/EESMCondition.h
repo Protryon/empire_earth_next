@@ -10,8 +10,10 @@
 #define EE_EESMCONDITION_H
 
 #include "ee/EESMIDMap.h"
+#include "rust/ee_scenario.h"
 
-class EESMCondition {
+// the numbers (mType .. mUsesPlayerAttribute) are EeScenarioConditionFields (ee_scenario fields.rs)
+class EESMCondition : public EeScenarioConditionFields {
 public:
     EESMCondition();                        // 0x1ba89f
     ~EESMCondition();                       // 0x1ba976
@@ -41,28 +43,6 @@ public:
     UWideString mName;                      // +0x04 (the condition screen's name edit box)
     UWideString mText;                      // +0x18 (the condition screen's text edit box)
     UWideString mChatText;                  // +0x2c (EESETSCTChatMessage: the chat text)
-    unsigned long mType;                    // +0x40 (EESETSCondition::mTypes index; 0 in the ctor)
-    unsigned long mOperator;                // +0x44
-    unsigned long mDifficulty;              // +0x48 (= 1)
-    unsigned long mDiplomacy;               // +0x4c
-    unsigned long mAttribute;               // +0x50
-    unsigned long mOtherAttribute;          // +0x54
-    long mTechnology;                       // +0x58 (Load/Save: long)
-    unsigned long mAmount;                  // +0x5c
-    unsigned long mObjectIndex;             // +0x60
-    unsigned long mPlayer;                  // +0x64 (= 7)
-    unsigned long mOtherPlayer;             // +0x68 (= 8)
-    unsigned long mMinTime;                 // +0x6c
-    unsigned long mMaxTime;                 // +0x70
-    unsigned long mHour;                    // +0x74
-    unsigned long mTrigger;                 // +0x78
-    unsigned long mID;                      // +0x7c
-    bool mIsTriggerOn;                      // +0x80
-    bool mHasTriggerFired;                  // +0x81
-    bool mUsesDifficulty;                   // +0x82
-    bool mUsesElapsedTime;                  // +0x83
-    bool mUsesHour;                         // +0x84
-    bool mUsesPlayerAttribute;              // +0x85
 };
 
 #endif

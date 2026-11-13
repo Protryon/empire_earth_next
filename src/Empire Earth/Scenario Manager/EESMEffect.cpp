@@ -73,6 +73,7 @@
 #include "ee/EECPBehavior.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 
 // FUNCTION: EXE 0x5bb5a5
 // Creates a scenario effect with the default settings (see Reset)
@@ -89,77 +90,19 @@ EESMEffect::~EESMEffect()
 
 // FUNCTION: EXE 0x5bb65a
 // Resets every effect setting to its default: an object Create effect, 20 s duration, empty texts and object list
+// (the numbers: ee_scenario fields.rs effect_defaults)
 void EESMEffect::Reset()
 {
     this->mName = "";
     this->mText = "";
-    this->mDuration = 0x14;
     this->mMessage = "";
     this->mS64 = "";
     this->mS78 = "";
     this->mNewName = "";
     this->mFileName = "";
     this->mDescription = "";
-    this->mPlayerAttribute = 0;
-    this->mDiplomacy = 0;
-    this->mMessagePlayer = 7;
-    this->mNewOwner = 7;
-    this->mPlayer = 7;
-    this->mDiplomacyPlayer = 8;
-    this->mMediaAction = kSMMediaActionPlaySound;
-    this->mULF4 = 0;
-    this->mPlayerAction = kSMPlayerActionVictory;
-    this->mTriggerState = kSMTriggerStateOn;
-    this->mType = kSMEffectObject;
-    this->mObjectAction = kSMObjectActionCreate;
-    this->mTechnology = kTechEpochPrehistoric;
-    this->mPlacedEffect = 0;
-    this->mPlaceArea = 0;
-    this->mPlaceObject = 0;
-    this->mDaylightHour = 0xf;
-    this->mCycleTime = 0;
-    this->mGameAction = kSMGameActionDaylightHour;
-    this->mTextObject = kSMMediaTextHints;
-    this->mAttribute = kSMUnitAttributeHitPoints;
-    this->mAttributePlayer = -1;
-    this->mAttributeUnitType = 0;
-    this->mAttributeUnit = -1;
-    this->mAttributeMode = 0;
-    this->mAttributeAmount = 0;
-    this->mObject = 0;
-    this->mStance = kSMStanceExplore;
-    this->mTaskAction = kSMTaskActionNormal;
-    this->mTaskArea = 0;
-    this->mTaskObject = 0;
-    this->mCivPoints = 1;
-    this->mPlayerAttributeMode = 0;
-    this->mPlayerAttributeAmount = 0;
-    this->mLocationArea = 0;
-    this->mLocationObject = 0;
-    this->mTrigger = 0;
-    this->mB18D = false;
-    this->mIsClearText = true;
-    this->mUsesLocationArea = true;
-    this->mUsesPercent = false;
-    this->mIsAddTechnology = true;
-    this->mUsesPlaceArea = true;
-    this->mFloatValue = 0.0f;
-    this->mB193 = false;
-    this->mAIAction = kSMAIActionModifyAIMilitaryTarget;
-    this->mTargetArea = 0;
-    this->mAIAttribute = kCPBehaviorNone;
-    this->mIsOn = false;
-    this->mIntValue1 = 0;
-    this->mIntValue2 = 0;
+    *static_cast<EeScenarioEffectFields*>(this) = ee_scenario_effect_defaults();
     this->mObjects.clear();
-    this->mULD0 = 8;
-    this->mTargetObject = 0;
-    this->mAIToggle = kSMAIToggleActive;
-    this->mUsesTargetArea = false;
-    this->mIsAttack = false;
-    this->mUsesFavorites = false;
-    this->mID = 0;
-    this->mIsAddTarget = true;
 }
 
 #include "lle/U2DSparseArray.h"
@@ -492,67 +435,8 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     this->mNewName = inEffect.mNewName;
     this->mFileName = inEffect.mFileName;
     this->mDescription = inEffect.mDescription;
-    this->mPlayerAttribute = inEffect.mPlayerAttribute;
-    this->mDiplomacy = inEffect.mDiplomacy;
-    this->mDuration = inEffect.mDuration;
-    this->mMessagePlayer = inEffect.mMessagePlayer;
-    this->mNewOwner = inEffect.mNewOwner;
-    this->mPlayer = inEffect.mPlayer;
-    this->mDiplomacyPlayer = inEffect.mDiplomacyPlayer;
-    this->mMediaAction = inEffect.mMediaAction;
-    this->mULF4 = inEffect.mULF4;
-    this->mPlayerAction = inEffect.mPlayerAction;
-    this->mTriggerState = inEffect.mTriggerState;
-    this->mType = inEffect.mType;
-    this->mObjectAction = inEffect.mObjectAction;
-    this->mTechnology = inEffect.mTechnology;
-    this->mPlacedEffect = inEffect.mPlacedEffect;
-    this->mPlaceArea = inEffect.mPlaceArea;
-    this->mPlaceObject = inEffect.mPlaceObject;
-    this->mDaylightHour = inEffect.mDaylightHour;
-    this->mCycleTime = inEffect.mCycleTime;
-    this->mGameAction = inEffect.mGameAction;
-    this->mTextObject = inEffect.mTextObject;
-    this->mAttribute = inEffect.mAttribute;
-    this->mAttributeUnitType = inEffect.mAttributeUnitType;
-    this->mAttributeUnit = inEffect.mAttributeUnit;
-    this->mAttributePlayer = inEffect.mAttributePlayer;
-    this->mAttributeMode = inEffect.mAttributeMode;
-    this->mAttributeAmount = inEffect.mAttributeAmount;
-    this->mObject = inEffect.mObject;
-    this->mStance = inEffect.mStance;
-    this->mTaskAction = inEffect.mTaskAction;
-    this->mTaskArea = inEffect.mTaskArea;
-    this->mTaskObject = inEffect.mTaskObject;
-    this->mCivPoints = inEffect.mCivPoints;
-    this->mPlayerAttributeMode = inEffect.mPlayerAttributeMode;
-    this->mPlayerAttributeAmount = inEffect.mPlayerAttributeAmount;
-    this->mLocationArea = inEffect.mLocationArea;
-    this->mLocationObject = inEffect.mLocationObject;
-    this->mTrigger = inEffect.mTrigger;
-    this->mB18D = inEffect.mB18D;
-    this->mIsClearText = inEffect.mIsClearText;
-    this->mUsesLocationArea = inEffect.mUsesLocationArea;
-    this->mUsesPercent = inEffect.mUsesPercent;
-    this->mIsAddTechnology = inEffect.mIsAddTechnology;
-    this->mUsesPlaceArea = inEffect.mUsesPlaceArea;
-    this->mB193 = inEffect.mB193;
-    this->mAIAction = inEffect.mAIAction;
-    this->mTargetArea = inEffect.mTargetArea;
-    this->mAIAttribute = inEffect.mAIAttribute;
-    this->mIsOn = inEffect.mIsOn;
-    this->mFloatValue = inEffect.GetFloatValue();
-    this->mIntValue1 = inEffect.mIntValue1;
-    this->mIntValue2 = inEffect.mIntValue2;
+    *static_cast<EeScenarioEffectFields*>(this) = inEffect;   // every number
     this->mObjects = inEffect.mObjects;
-    this->mULD0 = inEffect.mULD0;
-    this->mTargetObject = inEffect.mTargetObject;
-    this->mAIToggle = inEffect.mAIToggle;
-    this->mUsesTargetArea = inEffect.mUsesTargetArea;
-    this->mIsAddTarget = inEffect.mIsAddTarget;
-    this->mIsAttack = inEffect.mIsAttack;
-    this->mUsesFavorites = inEffect.mUsesFavorites;
-    this->mID = inEffect.mID;
 }
 
 // FUNCTION: EXE 0x5bc942
@@ -1513,114 +1397,25 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 
 // FUNCTION: EXE 0x5bf2b3
 // Follows an area move in the effect's area references (old and new index swap); on a delete (new index -1) references
-// to it become 0 and later ones shift down
+// to it become 0 and later ones shift down (ee_scenario fields.rs)
 void EESMEffect::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex;
-    theIndex = this->mTaskArea;
-    if (theIndex == inOldIndex) {
-        this->mTaskArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTaskArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTaskArea = theIndex - 1;
-    }
-    theIndex = this->mTargetArea;
-    if (theIndex == inOldIndex) {
-        this->mTargetArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTargetArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTargetArea = theIndex - 1;
-    }
-    theIndex = this->mPlaceArea;
-    if (theIndex == inOldIndex) {
-        this->mPlaceArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mPlaceArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mPlaceArea = theIndex - 1;
-    }
-    theIndex = this->mLocationArea;
-    if (theIndex == inOldIndex) {
-        this->mLocationArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mLocationArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mLocationArea = theIndex - 1;
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf384
 // Follows an object move or delete in the effect's object references and object list, like RenumberAreas
 void EESMEffect::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex;
-    theIndex = this->mObject;
-    if (theIndex == inOldIndex) {
-        this->mObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mObject = theIndex - 1;
-    }
-    theIndex = this->mLocationObject;
-    if (theIndex == inOldIndex) {
-        this->mLocationObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mLocationObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mLocationObject = theIndex - 1;
-    }
-    theIndex = this->mTaskObject;
-    if (theIndex == inOldIndex) {
-        this->mTaskObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTaskObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTaskObject = theIndex - 1;
-    }
-    theIndex = this->mPlaceObject;
-    if (theIndex == inOldIndex) {
-        this->mPlaceObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mPlaceObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mPlaceObject = theIndex - 1;
-    }
-    theIndex = this->mTargetObject;
-    if (theIndex == inOldIndex) {
-        this->mTargetObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTargetObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTargetObject = theIndex - 1;
-    }
-    for (unsigned long i = 0; i < this->mObjects.size(); i++) {
-        unsigned long& theID = this->mObjects[i];
-        theIndex = theID;
-        if (theIndex == inOldIndex) {
-            theID = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-        } else if (theIndex == inNewIndex) {
-            theID = inOldIndex;
-        } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-            theID = theIndex - 1;
-        }
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
+    ee_scenario_renumber_ids(this->mObjects.data(), this->mObjects.size(), inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf4c9
 // Follows a trigger move or delete in the effect's trigger reference, like RenumberAreas
 void EESMEffect::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mTrigger;
-    if (theIndex == inOldIndex) {
-        this->mTrigger = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTrigger = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTrigger = theIndex - 1;
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_TRIGGERS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf508
@@ -1753,321 +1548,26 @@ void EESMEffect::KillUnits(bool inFlag)
 
 // FUNCTION: EXE 0x5bfa67
 // Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
-// first read error
+// first read error (ee_scenario save.rs effect_load)
 long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString theString;
-    unsigned long theCount;
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDuration);
-    if (theResult == kErrorOK)
-        theResult = this->mMessage.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS64.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS78.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mNewName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mFileName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mDescription.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDiplomacy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMessagePlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNewOwner);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDiplomacyPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMediaAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mULF4);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAction);
-    if (this->mPlayerAction >= kSMPlayerActionTotal)
-        this->mPlayerAction -= 2;
-    if (this->mPlayerAction >= kSMPlayerActionTotal)
-        this->mPlayerAction = kSMPlayerActionVictory;
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTriggerState);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mObjectAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlacedEffect);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlaceObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDaylightHour);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCycleTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGameAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTextObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttribute);
-    if (theResult == kErrorOK && inMajorVersion <= 0 && inMinorVersion < 0xcd && this->mAttribute > kSMUnitAttributeConstructionComplete)
-        this->mAttribute += 3;
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributePlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeUnitType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeUnit);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mStance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCivPoints);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLocationArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLocationObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mB18D);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsClearText);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesLocationArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesPercent);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAddTechnology);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mB193);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTargetArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsOn);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFloatValue);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIntValue1);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIntValue2);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            this->mObjects.clear();
-            for (unsigned long i = 0; i < theCount; i++) {
-                unsigned long theValue;
-                theResult = inFile.Read(theValue);
-                if (theResult != kErrorOK)
-                    break;
-                this->mObjects.push_back(theValue);
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mULD0);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTargetObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIToggle);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesTargetArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAddTarget);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAttack);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesFavorites);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
+                                 &this->mNewName, &this->mFileName, &this->mDescription};
+    EESMStream theStream = {&inFile, theStrings, &this->mObjects};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_effect_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5c0134
 // Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
-// error
+// error (ee_scenario save.rs effect_save)
 long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount;
-    long theResult = this->mName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDuration);
-    if (theResult == kErrorOK)
-        theResult = this->mMessage.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS64.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS78.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mNewName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mFileName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mDescription.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDiplomacy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMessagePlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNewOwner);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDiplomacyPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMediaAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mULF4);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTriggerState);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mObjectAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlacedEffect);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlaceObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDaylightHour);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCycleTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGameAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTextObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributePlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeUnitType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeUnit);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mStance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskObject);
-    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 0x2a))
-        theResult = outFile.Write(this->mCivPoints);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLocationArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLocationObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mB18D);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsClearText);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesLocationArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesPercent);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAddTechnology);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesPlaceArea);
-    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 0x14))
-        theResult = outFile.Write(this->mB193);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTargetArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsOn);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFloatValue);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIntValue1);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIntValue2);
-    if (theResult == kErrorOK) {
-        theCount = this->mObjects.size();
-        theResult = outFile.Write(theCount);
-        if (theResult == kErrorOK) {
-            for (unsigned long i = 0; i < theCount; i++) {
-                theResult = outFile.Write(this->mObjects[i]);
-                if (theResult != kErrorOK)
-                    break;
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mULD0);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTargetObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIToggle);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesTargetArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAddTarget);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mID);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAttack);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesFavorites);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
+                                 &this->mNewName, &this->mFileName, &this->mDescription};
+    EESMStream theStream = {&outFile, theStrings, &this->mObjects};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5c07c4
