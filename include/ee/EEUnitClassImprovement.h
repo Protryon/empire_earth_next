@@ -24,14 +24,10 @@ public:
     // selected unit; ret 8, tested `== 1`) (provisional name)
     bool CanUpgrade(EEUnitClass* inUnitClass, long inImprovement);
     long GetCost(long inImprovement);       // 0x23aee3 (ret 4; EEPlayer 0x163cf2 adds mL44 to it; provisional name)
-    // EEUnitClassImprovement.cpp's other members (provisional names)
+    // EEUnitClassImprovement.cpp's other members (provisional names; the arithmetic is ee_units improve.rs)
     void CopyLevelsTo(EEUnitClassUpgrade* inUpgrade, EEUnitClassImprovement* inTarget);  // 0x23a737
-    float GetBaseValue(EEUnitClass* inUnitClass, long inImprovement);  // 0x23a77d (the class's base value)
     void GetGainText(EEUnitClassUpgrade* inUpgrade, long inLevel, long inImprovement, UWideString& outText);  // 0x23a8a8
     void GetName(EEUnitClass* inUnitClass, long inImprovement, UWideString& outName);    // 0x23adbd
-    float GetStep(EEUnitClass* inUnitClass, long inImprovement);    // 0x23aef9 (one level's step)
-    long AddIntSteps(EEUnitClass* inUnitClass, long inImprovement, long inValue, long inMinimum, long inCount, bool inNegative);  // 0x23af3c
-    float AddFloatSteps(EEUnitClass* inUnitClass, long inImprovement, float inValue, float inMinimum, long inCount, bool inNegative);  // 0x23af79
     void ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, long inImprovement, long inDelta);  // 0x23afc1
     void Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade);    // 0x23b35b (every level back to 1)
     long Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x23b39b

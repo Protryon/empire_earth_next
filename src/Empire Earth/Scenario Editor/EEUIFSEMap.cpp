@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EECalamityManager.h"
@@ -206,16 +205,7 @@ void UIRBMap::HideControls()
 
 // FUNCTION: EXE 0x5a1bc6
 // Shows the elevation controls when an elevation file is selected (selection above 0), else hides them
-long EEUIFSEEMapType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    unsigned long theSelection;
-    static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theSelection);
-    if (theSelection > 0)
-        this->mMap->ShowElevationControls(true);
-    else
-        this->mMap->ShowElevationControls(false);
-    return kErrorOK;
-}
+// (EEUIFSEEMapType; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5a1be6
 // Builds the map tab: the editor terrains, the size, terrain, style and seed controls, the mode radio buttons,
@@ -513,7 +503,7 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     theGEText->SetIsTransparent(true);
     this->mElevationFile->SetListBoxSelectedBgColor(GEColor(0.0f, 0.0f, 1.0f));
     this->mElevationFile->SetTextBoxBgOpacity(0.4f);
-    UIEvent* theEvent = new EEUIFSEEMapType(this);
+    UIEvent* theEvent = new EESEERust(kSEEMapType, this);
     this->mElevationFile->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     this->mElevationFile->SetStringTableID(IDS_ELEVATION_FILE_TO_USE_WITH_BLANK);

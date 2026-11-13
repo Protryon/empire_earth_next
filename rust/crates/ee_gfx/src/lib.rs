@@ -26,8 +26,10 @@
 pub mod beam;
 pub mod camera;
 pub mod capture;
+pub mod effect_follow;
 pub mod effect_icon;
 pub mod effect_manager;
+pub mod effect_rising;
 pub mod effect_state;
 pub mod effect_store;
 pub mod effect_storm;
@@ -48,6 +50,8 @@ mod golden_camera;
 mod golden_center;
 #[cfg(test)]
 mod golden_farm;
+#[cfg(test)]
+mod golden_lighting;
 #[cfg(test)]
 mod golden_media;
 #[cfg(test)]
@@ -78,15 +82,20 @@ mod golden_sky;
 mod golden_view;
 #[cfg(test)]
 mod golden_volcano;
+#[cfg(test)]
+mod golden_walk;
+pub mod lighting;
 pub mod mesh;
 pub mod minimap;
 pub mod models;
 pub mod mouse;
 pub mod pick;
 pub mod quake;
+pub mod raster;
 pub mod scene;
 pub mod select;
 pub mod terrain;
 pub mod units;
 pub mod view;
 pub mod volcano;
+pub mod walk;

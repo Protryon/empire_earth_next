@@ -101,6 +101,7 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_events;
 pub mod editor_place;
 pub mod editor_whole;
 #[cfg(not(test))]

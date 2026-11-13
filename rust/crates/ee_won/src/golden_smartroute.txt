@@ -1,0 +1,668 @@
+commands "AFK"=5 "AWAY"=5 "BAN"=10 "EMOTE"=3 "I"=4 "IGNORE"=4 "ME"=3 "MOD"=6 "MUTE"=9 "SBAN"=8 "SMUTE"=7 "SUNMUTE"=12 "UNMUTE"=11 "W"=2 "WHISPER"=2
+-- dump fresh
+model me=- id=0 default=0 tol=2 wide=0 colon=1
+handler c=- g=- m=-
+ignore
+connect WS_Success
+server accept WS_Success
+input before login -> 0 input err=5 target m=- c=- name=""
+server got register 31:03073402006d00650002007000770000000000020000000400000010000000
+register completed type 42 WS_Success
+-- dump registered
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=0 ign=0
+client 11 id=11 "Alice" f=0 cd=0 g=0 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=0 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+note group created 100
+default completed type 24 WS_Success
+handler c=- g=100s m=-
+note group created 101
+default completed type 24 WS_Success
+handler c=- g=101s m=-
+-- dump groups created
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=0 ign=0
+client 11 id=11 "Alice" f=0 cd=0 g=0 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=0 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+group 100 id=100 "Lobby" cap=65535 maxc=50 f=800 af=0 obs=0 mp=0
+group 101 id=101 "Game" cap=65535 maxc=8 f=0 af=1 obs=0 mp=0
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+server got group list 7:03071aff00ffff
+group list completed type 21 WS_Success
+-- dump group list
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 11 id=11 "Alice" f=0 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=1 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+client 14 id=14 "" f=0 cd=0 g=1 ign=0
+group 100 id=100 "Lobby" cap=65535 maxc=50 f=800 af=10 obs=3 mp=0
+ member 10 id=10 f=1 c=10s
+ member 11 id=11 f=0 c=11s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=0 mp=2
+ member 12 id=12 f=0 c=12s
+ member 14 id=14 f=2 c=14s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+note client joined server 15
+default completed type 8 WS_Success
+handler c=15s g=- m=-
+note client 15 joined group 100
+default completed type 7 WS_Success
+handler c=15s g=100s m=15
+note client 15 joined unknown group 999
+default completed type 7 WS_Success
+handler c=- g=- m=-
+note unknown client 16 joined group 100
+default completed type 7 WS_Success
+handler c=16s g=100s m=16
+note client 11 joined group 102 as CAROL
+default completed type 7 WS_Success
+handler c=11s g=102s m=11
+note client 11 joined group 102 again
+default completed type 7 WS_Success
+handler c=11s g=102s m=11
+-- dump joins
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 11 id=11 "CAROL" f=77 cd=0 g=2 ign=1
+client 12 id=12 "bob" f=4 cd=0 g=1 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+client 14 id=14 "" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave2" f=9 cd=4660 g=1 ign=0
+client 16 id=16 "" f=0 cd=0 g=1 ign=0
+group 100 id=100 "Lobby" cap=65535 maxc=50 f=800 af=10 obs=3 mp=0
+ member 10 id=10 f=1 c=10s
+ member 11 id=11 f=0 c=11s
+ member 15 id=15 f=1 c=15s
+ member 16 id=16 f=0 c=16s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=0 mp=2
+ member 11 id=11 f=4 c=11s
+ member 12 id=12 f=0 c=12s
+ member 14 id=14 f=2 c=14s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+note client flags 11
+default completed type 6 WS_Success
+handler c=11s g=- m=-
+note client flags unknown 98
+default completed type 6 WS_Success
+handler c=- g=- m=-
+note captain 100
+default completed type 23 WS_Success
+handler c=- g=100s m=-
+note max players 100
+default completed type 29 WS_Success
+handler c=- g=100s m=-
+note group flags 100
+default completed type 26 WS_Success
+handler c=- g=100s m=-
+note group name 100
+default completed type 31 WS_Success
+handler c=- g=100s m=-
+note observers 100
+default completed type 32 WS_Success
+handler c=- g=100s m=-
+note member flags 100 11
+default completed type 36 WS_Success
+handler c=11s g=100s m=11
+note member flags 100 55 (no member)
+default completed type 36 WS_Success
+handler c=- g=- m=-
+note group created 555
+default completed type 24 WS_Success
+handler c=- g=555s m=-
+note group deleted 555
+default completed type 25 WS_Success
+handler c=- g=555o m=-
+note group deleted 556 (none)
+default completed type 25 WS_Success
+handler c=- g=- m=-
+-- dump fields
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 11 id=11 "CAROL" f=20 cd=0 g=2 ign=1
+client 12 id=12 "bob" f=4 cd=0 g=1 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+client 14 id=14 "" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave2" f=9 cd=4660 g=1 ign=0
+client 16 id=16 "" f=0 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 11 id=11 f=3 c=11s
+ member 15 id=15 f=1 c=15s
+ member 16 id=16 f=0 c=16s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=0 mp=2
+ member 11 id=11 f=4 c=11s
+ member 12 id=12 f=0 c=12s
+ member 14 id=14 f=2 c=14s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+note chat from ignored bob
+note chat from alice
+note chat from unknown 97
+default completed type 39 WS_Success
+handler c=- g=- m=-
+note invitation from bob
+note invitation from Bobby
+default completed type 27 WS_Success
+handler c=13s g=- m=-
+note join attempt from bob
+note join attempt from alice
+default completions 22
+-- snapshots after notifications
+GetClient 11 1 client 11 "CAROL" f=20 cd=0
+GetClient 99 0 client 0 "" f=0 cd=0
+GetGroup 100 1 group 100 "Lobby2" cap=10 mp=64 f=801 af=10 obs=7
+GetGroup 555 0 group 0 "" cap=0 mp=0 f=0 af=0 obs=0
+GetMember 100 11 1 member 11 "CAROL" cf=20 mf=3
+GetMember 100 77 0 member 0 "" cf=0 mf=0
+next client 10 "me" f=1 cd=0
+next client 11 "CAROL" f=20 cd=0
+next client 12 "bob" f=4 cd=0
+next client 13 "Bobby" f=0 cd=0
+next client 14 "" f=0 cd=0
+next client 15 "Dave2" f=9 cd=4660
+next client 16 "" f=0 cd=0
+next group 100 "Lobby2" cap=10 mp=64 f=801 af=10 obs=7
+ next member 10 "me" cf=1 mf=1
+ next member 11 "CAROL" cf=20 mf=3
+ next member 15 "Dave2" cf=9 mf=1
+ next member 16 "" cf=0 mf=0
+next group 102 "Other" cap=12 mp=4 f=0 af=0 obs=0
+ next member 11 "CAROL" cf=20 mf=4
+ next member 12 "bob" cf=4 mf=0
+ next member 14 "" cf=0 mf=2
+StartMemberItr 555 0
+GetNextMember after 0
+member itr first 1 member 10 "me" cf=1 mf=1
+note client 11 left group 100
+default completed type 9 WS_Success
+handler c=11s g=100s m=11
+member itr next 1 member 15 "Dave2" cf=9 mf=1
+note client 16 left group 100
+default completed type 9 WS_Success
+handler c=16o g=100s m=16
+note client 88 left group 100 (no member)
+default completed type 9 WS_Success
+handler c=- g=- m=-
+note client 10 left unknown group 444
+default completed type 9 WS_Success
+handler c=- g=- m=-
+member itr rest 0 member 15 "Dave2" cf=9 mf=1
+client itr first 1 client 10 "me" f=1 cd=0
+note client 11 left server
+default completed type 10 WS_Success
+handler c=11o g=- m=-
+client itr next 1 client 12 "bob" f=4 cd=0
+note client 96 left server (none)
+default completed type 10 WS_Success
+handler c=- g=- m=-
+-- dump leaves
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=1 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+client 14 id=14 "" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave2" f=9 cd=4660 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 15 id=15 f=1 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=0 mp=2
+ member 11 id=11 f=4 c=11o
+ member 12 id=12 f=0 c=12s
+ member 14 id=14 f=2 c=14s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+server got members 102 5:03071e6600
+members completed type 22 WS_Success
+-- dump members 102
+model me=10s id=10 async=2 default=0 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=1 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=0 ign=0
+client 15 id=15 "Dave2" f=9 cd=4660 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 15 id=15 f=1 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+server got join 100 15:03072a640000000200680069000100
+join completed type 34 WS_Success
+-- dump joined 100
+model me=10s id=10 async=2 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=2 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave3" f=9 cd=4660 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=100s m=-
+ignore "bob" "CAROL"
+server got join 102 11:03072a6600000000000000
+join bad completed type 34 WS_CommServ_NotAvailable
+-- dump join 102 failed
+model me=10s id=10 async=2 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=2 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave3" f=9 cd=4660 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+server got set flags 19:03073c06000000040000000000000000000000
+set flags completed type 51 WS_Success
+server got set flags bad 19:03073cff000000ff0000000000000000000000
+set flags bad completed type 51 WS_CommServ_Failure
+-- dump async flags
+model me=10s id=10 async=4 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=0 g=2 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave3" f=9 cd=4660 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+server got read _KeyId 13:030732ffff065f4b6579496400
+read completed type 41 WS_Success
+server got read Other 12:030732ffff054f7468657200
+read other completed type 41 WS_Success
+note data created _KeyId 15
+default completed type 13 WS_Success
+handler c=- g=- m=-
+note data created Room 13
+default completed type 13 WS_Success
+handler c=- g=- m=-
+note data modified _KeyId 12
+default completed type 15 WS_Success
+handler c=- g=- m=-
+note data deleted _KeyId 12
+default completed type 14 WS_Success
+handler c=- g=- m=-
+-- dump cd keys
+model me=10s id=10 async=4 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=31337 g=2 ign=1
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=0
+client 15 id=15 "Dave3" f=9 cd=4242 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "bob" "CAROL"
+-- snapshots after cd keys
+GetClient 11 0 client 0 "" f=0 cd=0
+GetClient 99 0 client 0 "" f=0 cd=0
+GetGroup 100 1 group 100 "Lobby2" cap=10 mp=64 f=801 af=10 obs=7
+GetGroup 555 0 group 0 "" cap=0 mp=0 f=0 af=0 obs=0
+GetMember 100 11 0 member 0 "" cf=0 mf=0
+GetMember 100 77 0 member 0 "" cf=0 mf=0
+next client 10 "me" f=1 cd=0
+next client 12 "bob" f=4 cd=31337
+next client 13 "Bobby" f=0 cd=0
+next client 15 "Dave3" f=9 cd=4242
+next client 17 "Eve" f=40 cd=0
+next group 100 "Lobby2" cap=10 mp=64 f=801 af=10 obs=7
+ next member 10 "me" cf=1 mf=1
+ next member 12 "bob" cf=4 mf=0
+ next member 13 "Bobby" cf=0 mf=0
+ next member 15 "Dave3" cf=9 mf=2
+next group 102 "Other" cap=12 mp=4 f=0 af=0 obs=1
+ next member 12 "bob" cf=4 mf=1
+ next member 17 "Eve" cf=40 mf=0
+StartMemberItr 555 0
+GetNextMember after 0
+input "hello" group -1 -> 1
+input err=0 cmd=1 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got hello 21:03073600000500680065006c006c006f0001006400
+input "   " group -1 -> 0
+input err=4 cmd=1 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input ":waves" group -1 -> 1
+input err=0 cmd=3 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got :waves 21:030736020005007700610076006500730001006400
+input ":  " group -1 -> 0
+input err=4 cmd=3 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/w Bobby hi there" group -1 -> 1
+input err=0 cmd=2 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /w Bobby hi there 27:030736040008006800690020007400680065007200650001000d00
+input "/W bobby  spaced" group -1 -> 1
+input err=0 cmd=2 target m=13 c=13s name="bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /W bobby  spaced 23:0307360400060073007000610063006500640001000d00
+input "/w Bob x" group -1 -> 1
+input err=0 cmd=2 target m=12 c=12s name="Bob"
+last target 1 member 12 "bob" cf=4 mf=0 / 1 client 12 "bob" f=4 cd=31337
+server got /w Bob x 13:03073604000100780001000c00
+input "/w Dave3" group -1 -> 0
+input err=4 cmd=2 target m=15 c=15s name="Dave3"
+last target 1 member 15 "Dave3" cf=9 mf=2 / 1 client 15 "Dave3" f=9 cd=4242
+input "/w nobody hi" group -1 -> 0
+input err=2 cmd=2 target m=- c=- name="nobody"
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/w" group -1 -> 0
+input err=2 cmd=2 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/w "Dave3" quoted" group -1 -> 1
+input err=0 cmd=2 target m=15 c=15s name="Dave3"
+last target 1 member 15 "Dave3" cf=9 mf=2 / 1 client 15 "Dave3" f=9 cd=4242
+server got /w "Dave3" quoted 23:03073604000600710075006f0074006500640001000f00
+input "/me dances" group -1 -> 1
+input err=0 cmd=3 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got /me dances 25:030736020007002000640061006e0063006500730001006400
+input "/emote" group -1 -> 0
+input err=4 cmd=3 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/bogus" group -1 -> 0
+input err=1 cmd=0 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/" group -1 -> 0
+input err=1 cmd=0 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/away" group -1 -> 1
+input err=0 cmd=5 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got /away 19:03073c00000000000000000800000008000000
+input "/afk" group -1 -> 1
+input err=0 cmd=5 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got /afk 19:03073c00000000000000000800000008000000
+input "/mod" group -1 -> 1
+input err=0 cmd=6 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got /mod 4:03070400
+input "/mute Bobby 10m spam" group -1 -> 1
+input err=0 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /mute Bobby 10m spam 23:03072e6400015802000004007300700061006d00010d00
+input "/mute Bobby 2h" group -1 -> 1
+input err=0 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /mute Bobby 2h 15:03072e640001201c00000000010d00
+input "/mute Bobby 1d "too much"" group -1 -> 1
+input err=0 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /mute Bobby 1d "too much" 31:03072e64000180510100080074006f006f0020006d00750063006800010d00
+input "/mute Bobby 30" group -1 -> 0
+input err=6 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+input "/mute Bobby 30s" group -1 -> 1
+input err=0 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /mute Bobby 30s 15:03072e6400011e0000000000010d00
+input "/mute Bobby 5x" group -1 -> 0
+input err=6 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+input "/mute Bobby 0s" group -1 -> 0
+input err=6 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+input "/mute Bobby INFINITE" group -1 -> 0
+input err=6 cmd=9 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+input "/smute Bobby INFINITE" group -1 -> 1
+input err=0 cmd=7 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /smute Bobby INFINITE 15:03072effff01000000000000010d00
+input "/ban Bobby" group -1 -> 1
+input err=0 cmd=10 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /ban Bobby 15:030703640001100e00000000010d00
+input "/sban Bobby 3m" group -1 -> 1
+input err=0 cmd=8 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /sban Bobby 3m 15:030703ffff01b40000000000010d00
+input "/sban %12345 2h why" group -1 -> 1
+input err=0 cmd=8 target m=- c=- name="12345"
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got /sban %12345 2h why 23:030703ffff01201c000003007700680079000339300000
+input "/unmute Bobby" group -1 -> 1
+input err=0 cmd=11 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /unmute Bobby 15:03072e640000000000000000010d00
+input "/sunmute "Bobby"" group -1 -> 1
+input err=0 cmd=12 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /sunmute "Bobby" 15:03072effff00000000000000010d00
+input "/unmute" group -1 -> 0
+input err=2 cmd=11 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "hello 102" group 102 -> 1
+input err=0 cmd=1 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got hello 102 29:03073600000900680065006c006c006f00200031003000320001006600
+input "/w bob hi" group 102 -> 1
+input err=0 cmd=2 target m=12 c=12s name="bob"
+last target 1 member 12 "bob" cf=4 mf=1 / 1 client 12 "bob" f=4 cd=31337
+server got /w bob hi 15:030736040002006800690001000c00
+input "/w Eve hi" group -1 -> 1
+input err=0 cmd=2 target m=- c=17s name="Eve"
+last target 0 member 0 "" cf=0 mf=0 / 1 client 17 "Eve" f=40 cd=0
+server got /w Eve hi 15:030736040002006800690001001100
+input "/w B hi" group -1 -> 0
+input err=3 cmd=2 target m=- c=12s name="B"
+last target 0 member 0 "" cf=0 mf=0 / 1 client 12 "bob" f=4 cd=31337
+input "/w Bobb hi" group -1 -> 0
+input err=2 cmd=2 target m=- c=13s name="Bobb"
+last target 0 member 0 "" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+input "/w BOBBY hi" group -1 -> 1
+input err=0 cmd=2 target m=- c=13s name="BOBBY"
+last target 0 member 0 "" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /w BOBBY hi 15:030736040002006800690001000d00
+input ":plain" group -1 -> 1
+input err=0 cmd=1 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+server got :plain 23:030736000006003a0070006c00610069006e0001006400
+input "/TELL Bobby x" group -1 -> 1
+input err=0 cmd=2 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /TELL Bobby x 13:03073604000100780001000d00
+input "/inv Bobby welcome" group -1 -> 1
+input err=0 cmd=13 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /inv Bobby welcome 24:03072864000d00010700770065006c0063006f006d006500
+input "/uninv Bobby" group -1 -> 1
+input err=0 cmd=14 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+server got /uninv Bobby 10:03072864000d00000000
+commands "AFK"=5 "AWAY"=5 "BAN"=10 "EMOTE"=3 "I"=4 "IGNORE"=4 "INV"=13 "ME"=3 "MOD"=6 "MUTE"=9 "SBAN"=8 "SMUTE"=7 "SUNMUTE"=12 "TELL"=2 "UNINV"=14 "UNMUTE"=11 "W"=2 "WHISPER"=2
+ignore file before 20:62006f00620000004300410052004f004c000000
+input "/i Bobby" group -1 -> 1
+input err=0 cmd=4 target m=13 c=13s name="Bobby"
+last target 1 member 13 "Bobby" cf=0 mf=0 / 1 client 13 "Bobby" f=0 cd=0
+ignore file ignored Bobby 32:62006f006200000042006f0062006200790000004300410052004f004c000000
+input "/ignore bob" group -1 -> 1
+input err=0 cmd=4 target m=12 c=12s name="bob"
+last target 1 member 12 "bob" cf=4 mf=0 / 1 client 12 "bob" f=4 cd=31337
+ignore file unignored bob 24:42006f0062006200790000004300410052004f004c000000
+input "/i   "Dave3"  " group -1 -> 1
+input err=0 cmd=4 target m=15 c=15s name="Dave3"
+last target 1 member 15 "Dave3" cf=9 mf=2 / 1 client 15 "Dave3" f=9 cd=4242
+input "/i Dave3 x" group -1 -> 0
+input err=2 cmd=4 target m=- c=- name="Dave3 x"
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+input "/i Dave3 " group -1 -> 1
+input err=0 cmd=4 target m=15 c=15s name="Dave3"
+last target 1 member 15 "Dave3" cf=9 mf=2 / 1 client 15 "Dave3" f=9 cd=4242
+ignore file ignored Dave3 24:42006f0062006200790000004300410052004f004c000000
+-- dump ignores
+model me=10s id=10 async=4 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=31337 g=2 ign=0
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=1
+client 15 id=15 "Dave3" f=9 cd=4242 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=0
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "Bobby" "CAROL"
+FindClient "bobby" 3 13 "Bobby"
+FindClient "bo" 1 12 "bob"
+FindClient "B" 1 12 "bob"
+FindClient "zed" 0 -
+FindClient "Eve" 3 17 "Eve"
+ignore file ignored Eve 32:42006f0062006200790000004300410052004f004c0000004500760065000000
+my client id 10
+default completed type 51 WS_Killed
+handler c=- g=- m=-
+default completed type 51 WS_Killed
+handler c=- g=- m=-
+default completed type 4 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 3 WS_Killed
+handler c=- g=- m=-
+default completed type 3 WS_Killed
+handler c=- g=- m=-
+default completed type 3 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 38 WS_Killed
+handler c=- g=- m=-
+default completed type 33 WS_Killed
+handler c=- g=- m=-
+default completed type 33 WS_Killed
+handler c=- g=- m=-
+-- dump closed
+model me=- id=0 async=4 default=100 tol=2 wide=0 colon=1
+client 10 id=10 "me" f=1 cd=0 g=1 ign=0
+client 12 id=12 "bob" f=4 cd=31337 g=2 ign=0
+client 13 id=13 "Bobby" f=0 cd=0 g=1 ign=1
+client 15 id=15 "Dave3" f=9 cd=4242 g=1 ign=0
+client 17 id=17 "Eve" f=40 cd=0 g=1 ign=1
+group 100 id=100 "Lobby2" cap=10 maxc=64 f=801 af=10 obs=7 mp=0
+ member 10 id=10 f=1 c=10s
+ member 12 id=12 f=0 c=12s
+ member 13 id=13 f=0 c=13s
+ member 15 id=15 f=2 c=15s
+group 102 id=102 "Other" cap=12 maxc=4 f=0 af=0 obs=1 mp=2
+ member 12 id=12 f=1 c=12s
+ member 17 id=17 f=0 c=17s
+handler c=- g=- m=-
+ignore "Bobby" "CAROL" "Eve"
+input after close -> 0 input err=5 target m=- c=- name=""
+reconnect WS_Success
+server accept WS_Success
+server got register 2 29:03073403006d0065003200000000000000000000000000000030000000
+register 2 completed type 42 WS_Success
+-- dump registered 2
+model me=20s id=20 async=0 default=100 tol=2 wide=0 colon=1
+client 20 id=20 "me2" f=30 cd=0 g=0 ign=0
+handler c=- g=- m=-
+ignore "Bobby" "CAROL" "Eve"
+note group created 200
+default completed type 24 WS_Success
+handler c=- g=200s m=-
+note me joined 200
+default completed type 7 WS_Success
+handler c=20s g=200s m=20
+note 21 joined 200
+default completed type 7 WS_Success
+handler c=21s g=200s m=21
+server got client list 3:030718
+client list completed type 20 WS_Success
+-- dump client list
+model me=20s id=20 async=0 default=100 tol=2 wide=0 colon=1
+client 5 id=5 "Five" f=3 cd=0 g=0 ign=0
+client 20 id=20 "me2renamed" f=30 cd=0 g=1 ign=0
+client 30 id=30 "bob" f=0 cd=0 g=0 ign=0
+group 200 id=200 "R" cap=65535 maxc=4 f=0 af=0 obs=0 mp=0
+ member 20 id=20 f=0 c=20s
+ member 21 id=21 f=0 c=21o
+handler c=- g=- m=-
+ignore "Bobby" "CAROL" "Eve"
+server got client list ex 4:03071801
+client list ex completed type 20 WS_Success
+-- dump client list ex
+model me=20s id=20 async=0 default=100 tol=2 wide=0 colon=1
+client 20 id=20 "me2" f=30 cd=0 g=1 ign=0
+client 40 id=40 "Forty" f=0 cd=0 g=0 ign=0
+group 200 id=200 "R" cap=65535 maxc=4 f=0 af=0 obs=0 mp=0
+ member 20 id=20 f=0 c=20s
+ member 21 id=21 f=0 c=21o
+handler c=- g=- m=-
+ignore "Bobby" "CAROL" "Eve"
+server got group list 2 7:03071a0100ffff
+group list 2 completed type 21 WS_Success
+member itr after its group went 0
+-- dump group list 2
+model me=20s id=20 async=0 default=100 tol=2 wide=0 colon=1
+client 20 id=20 "me2" f=30 cd=0 g=0 ign=0
+client 40 id=40 "Forty" f=0 cd=0 g=0 ign=0
+group 201 id=201 "New" cap=0 maxc=0 f=0 af=0 obs=0 mp=0
+handler c=- g=- m=-
+ignore "Bobby" "CAROL" "Eve"
+-- snapshots end
+GetClient 11 0 client 0 "" f=0 cd=0
+GetClient 99 0 client 0 "" f=0 cd=0
+GetGroup 100 0 group 0 "" cap=0 mp=0 f=0 af=0 obs=0
+GetGroup 555 0 group 0 "" cap=0 mp=0 f=0 af=0 obs=0
+GetMember 100 11 0 member 0 "" cf=0 mf=0
+GetMember 100 77 0 member 0 "" cf=0 mf=0
+next client 20 "me2" f=30 cd=0
+next client 40 "Forty" f=0 cd=0
+next group 201 "New" cap=0 mp=0 f=0 af=0 obs=0
+StartMemberItr 555 0
+GetNextMember after 0
+input "/w Five x" group -1 -> 0
+input err=1 cmd=0 target m=- c=- name=""
+last target 0 member 0 "" cf=0 mf=0 / 0 client 0 "" f=0 cd=0
+smart routing done

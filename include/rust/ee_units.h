@@ -486,6 +486,26 @@ constexpr static const uint32_t EE_GOAL_CTOR_CAST_CALAMITY = 12;
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
 
+/// The improvement kinds (ee/EEImprovementIDs.h): 0 area effect, 1 attack, 2..7 the armours, 8 flight time or power,
+/// 9 hit points, 10 leadership, 11 range, 12 repair, 14 speed, 15 transport; 13 unused.
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_AREA_EFFECT = 0;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_ATTACK = 1;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_FLIGHT_TIME_OR_POWER = 8;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_HIT_POINTS = 9;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_LEADERSHIP = 10;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_RANGE = 11;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_REPAIR = 12;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_SPEED = 14;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_TRANSPORT = 15;
+
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
 
@@ -1603,19 +1623,6 @@ struct EeUnitsAIState {
   int32_t goal_kind;
 };
 
-/// A trigger of an action, read by the host: `conditions` points to `count` trigger ids (the C++ vector's data,
-/// copied before any other host call).
-struct EeUnitsTrigger {
-  const int64_t *conditions;
-  uint32_t count;
-  uint8_t all_of;
-  uint8_t any_of;
-  int64_t true_id;
-  int64_t false_id;
-  uint64_t true_action;
-  uint64_t false_action;
-};
-
 /// The C++ calls of `AIStep` and the script's decision. `ctx` is the host's (the unit).
 struct EeUnitsAIHost {
   void *ctx;
@@ -1625,8 +1632,6 @@ struct EeUnitsAIHost {
   uint64_t (*command)(void *ctx);
   /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
   bool (*gather_inactive)(void *ctx, uint32_t *out_action);
-  /// the trigger `index` of `action` into `out`; false past the last
-  bool (*trigger)(void *ctx, uint64_t action, uint32_t index, EeUnitsTrigger *out);
   /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
   int64_t (*condition)(void *ctx, int64_t trigger);
   /// an action's `mType`
@@ -1803,6 +1808,48 @@ struct EeGoalSpec {
   int64_t ints[3];
 };
 
+/// A unit class's fields the improvements read.
+struct EeUnitsImproveClass {
+  float area_effect;
+  int32_t attack;
+  int32_t armor[6];
+  int32_t flight_time;
+  int32_t power;
+  int32_t hit_points;
+  int32_t leadership;
+  float range;
+  int32_t repair_rate;
+  float max_velocity;
+  int32_t carry_amount;
+  int32_t transport_capacity;
+  /// the class's `mUpgradesAreaEffect`, `mUpgradesArrowArmor` .. `mUpgradesShockArmor` (by improvement 2..7),
+  /// `mUpgradesRepair`
+  bool upgrades_area_effect;
+  bool upgrades_armor[6];
+  bool upgrades_repair;
+  /// the class has an improvement table (`mImprovements`), and its entries' step factors
+  bool has_table;
+  float step_factors[16];
+};
+
+/// An upgrade's stats a level change moves.
+struct EeUnitsImproveStats {
+  float area_effect;
+  float attack;
+  float armor[6];
+  int32_t flight_time;
+  int32_t power;
+  int32_t max_hit_points;
+  float leadership;
+  float range;
+  float line_of_sight;
+  int32_t repair_rate;
+  float max_velocity;
+  int32_t carry_amount;
+  /// the upgrade's own class has a flight time (a flight-time-or-power change moves the flight time)
+  bool upgrade_has_flight_time;
+};
+
 /// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
 /// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
 struct EeUnitsPush {
@@ -1908,6 +1955,13 @@ struct EeUnitsGoalIo {
 struct EeUnitsGoalHost {
   void *context;
   int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
+};
+
+/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
+/// answers whether the file was found and opened.
+struct EeUnitsScriptReader {
+  void *ctx;
+  bool (*read)(void*, const uint8_t*, size_t, void*);
 };
 
 /// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
@@ -2066,24 +2120,6 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
                                   uint64_t object,
                                   uint8_t is_citizen,
                                   int64_t game_time);
-
-/// `EEUnitAction::Evaluate` (`action`) over the host's calls (only the trigger, condition and table are used): the
-/// result, and the picked action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` points to a valid table, `out_action` to a writable u64.
-int64_t ee_units_action_evaluate(const EeUnitsAIHost *host,
-                                 uint64_t action,
-                                 uint64_t *out_action);
-
-/// `EEUnitTrigger::Evaluate` (`trigger`: the trigger's view) over the host's conditions: the result, and the picked
-/// action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` and `trigger` point to valid values (the trigger's `count` ids readable), `out_action` to a writable u64.
-int64_t ee_units_trigger_evaluate(const EeUnitsAIHost *host,
-                                  const EeUnitsTrigger *trigger,
-                                  uint64_t *out_action);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -2587,6 +2623,42 @@ extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
 extern int64_t ee_units_host_object_hit_points(uint32_t unit);
 
+/// `CanUpgrade`
+///
+/// # Safety
+/// `c` points to a valid record.
+bool ee_units_improve_can_upgrade(const EeUnitsImproveClass *c, int32_t improvement);
+
+/// `GetBaseValue`
+///
+/// # Safety
+/// `c` points to a valid record.
+float ee_units_improve_base_value(const EeUnitsImproveClass *c, int32_t improvement);
+
+/// `GetCost`
+int32_t ee_units_improve_cost(int32_t improvement);
+
+/// `ChangeLevel` on the records: `levels` the 16 words, `total_cost` the points spent; true when the stats moved.
+///
+/// # Safety
+/// The pointers are valid; `levels` points to 16 words.
+bool ee_units_improve_change_level(const EeUnitsImproveClass *c,
+                                   EeUnitsImproveStats *s,
+                                   int32_t *levels,
+                                   int32_t *total_cost,
+                                   int32_t improvement,
+                                   int32_t delta);
+
+/// `GetGainText`'s number
+///
+/// # Safety
+/// The pointers are valid; `levels` points to 16 words.
+int32_t ee_units_improve_gain(const EeUnitsImproveClass *c,
+                              const EeUnitsImproveStats *s,
+                              const int32_t *levels,
+                              int32_t level,
+                              int32_t improvement);
+
 /// `AfterStep`'s roll decay over the store: the new roll.
 float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_seconds);
 
@@ -2699,6 +2771,33 @@ int64_t ee_units_rust_goal(int32_t op,
                            uint64_t b,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
+
+/// The reader appends a file's bytes to the sink it was handed.
+///
+/// # Safety
+/// `sink` is the sink of the read in progress; `data` points to `len` bytes.
+void ee_units_script_push(void *sink, const uint8_t *data, size_t len);
+
+/// `EEUnitAction::GetScript(name)`: the script's handle.
+///
+/// # Safety
+/// `name` points to `len` bytes; `reader` to a valid reader.
+uint64_t ee_units_script_get(const uint8_t *name, size_t len, const EeUnitsScriptReader *reader);
+
+/// The script's action of an id (0: none).
+uint64_t ee_units_script_find(uint64_t script, int32_t id);
+
+/// Every script freed (the game's end).
+void ee_units_script_delete_all();
+
+/// The action id of a NUL-terminated name (0: unknown).
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+int32_t ee_units_script_action_id(const char *name);
+
+/// The NUL-terminated name of an action id ("" unknown), static.
+const char *ee_units_script_action_name(uint32_t id);
 
 /// A stats object's report (its fields may have changed). Returns its version.
 ///

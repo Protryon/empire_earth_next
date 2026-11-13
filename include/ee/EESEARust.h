@@ -48,6 +48,42 @@ enum {
     kSEAMoveUnit = 13,
 };
 
+// The editor's events whole in Rust (ee_screens editor_events.rs): the hide-UI box, the viewport change, the
+// toolbar's quick load and quick save, the trigger screens' slider label, check box display and area/object refill
+// and the effect editors' own events (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
+// EESEEQuickSave, EESEESliderChange, EESEECheckDisplay, EESEEUseObjectArea, EESETSETCAMGModifyObject,
+// EESETSETMSDCameraScrollChange, EESETSETSAAAttributeChange, EESEEUseAreaObject, EESEEMoveAreaObject,
+// EESEEFaceAreaObject), and the editor tabs' (EEUIFSEEMapType, EEUIFSEESortUnitList, EESEEChangeStartEpoch,
+// EESEEGameUnitLimit). Requires lle/UIEvent.h for EESEERust.
+struct EeScreensSeeEvent;
+extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
+extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* form, void* entity);
+extern "C" void ee_screens_see_viewport(EeScreensSeeEvent* event, const float* rectangle, uint8_t hidden);
+extern "C" void ee_screens_see_free(EeScreensSeeEvent* event);
+extern "C" void ee_screens_see_hide_ui_views(EeScreensSeeEvent* event, const float* unchecked, const float* checked);
+extern "C" void ee_screens_see_slider(EeScreensSeeEvent* event, void* label, const char* format, float scale, float offset);
+extern "C" void ee_screens_see_push_control(EeScreensSeeEvent* event, void* control);
+extern "C" void ee_screens_see_object_area(EeScreensSeeEvent* event, void* label, void* combo, void* area);
+extern "C" void ee_screens_see_objects(EeScreensSeeEvent* event, void* a, void* b, void* c);
+enum {
+    kSEEHideUI = 1,
+    kSEEChangeViewport = 2,
+    kSEEQuickLoad = 3,          // object: the quick save/load action
+    kSEEQuickSave = 4,          // object: the quick save/load action
+    kSEESliderChange = 5,       // EESEENewSliderChange
+    kSEECheckDisplay = 6,       // its controls: EESEEPushControl
+    kSEEUseObjectArea = 7,      // EESEENewUseObjectArea
+    kSEECAMGModifyObject = 8,   // EESEENewObjects(kind, the military group type, its two lists)
+    kSEEMSDCameraScroll = 9,    // EESEENewObjects(kind, the send-dialogue type, the effect's controls)
+    kSEESAAAttribute = 10,      // EESEENewObjects(kind, the set-AI-attribute type, the effect's controls)
+    kSEEUseAreaObject = 11,     // EESEEUseAreaObject and EESEEMoveAreaObject (one body)
+    kSEEFaceAreaObject = 12,
+    kSEEMapType = 13,           // object: the map tab (EEUIFSEMap)
+    kSEESortUnitList = 14,
+    kSEEStartEpoch = 15,        // object: the row's end epoch combo box
+    kSEEUnitLimit = 16,         // EESEENewUnitLimit
+};
+
 class EESEARust : public EEAction {
 public:
     EESEARust(uint32_t inKind, void* inObject = 0, int32_t inA = 0, int32_t inB = 0, int32_t inC = 0, int32_t inD = 0)
@@ -61,5 +97,64 @@ public:
     virtual void Virtual8() {}
     EeScreensSewAction* mAction;
 };
+
+class EESEERust : public UIEvent {
+public:
+    EESEERust(uint32_t inKind, void* inObject = 0) : mEvent(ee_screens_see_new(inKind, inObject)) {}
+    virtual ~EESEERust() { ee_screens_see_free(this->mEvent); }
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        return ee_screens_see_process(this->mEvent, inForm, inEntity);
+    }
+    EeScreensSeeEvent* mEvent;
+};
+
+class UIControl;
+class UIEntity;
+class UITextLabel;
+class EESETSEScenarioComboBox;
+
+// EESEESliderChange(label, format, scale, offset): the slider's value * scale + offset printed by the format into the
+// label (the format is copied)
+inline EESEERust* EESEENewSliderChange(UITextLabel* inLabel, const char* inFormat, float inScale, float inOffset)
+{
+    EESEERust* theEvent = new EESEERust(kSEESliderChange);
+    ee_screens_see_slider(theEvent->mEvent, inLabel, inFormat, inScale, inOffset);
+    return theEvent;
+}
+
+// EESEECheckDisplay's mControls.push_back: a control shown while the check box is checked, else hidden
+inline void EESEEPushControl(EESEERust* inEvent, UIControl* inControl)
+{
+    ee_screens_see_push_control(inEvent->mEvent, inControl);
+}
+
+// EESEEUseObjectArea(label, combo box, area control): the combo box refilled with the areas when the area control
+// is the one checked, else with the objects (FillScenarioComboBox), its first line picked
+inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, EESETSEScenarioComboBox* inComboBox, UIEntity* inAreaControl)
+{
+    EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
+    ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);
+    return theEvent;
+}
+
+// EESEEGameUnitLimit(label, modifier, offset): the unit limit per player into the game page's label 0x162, then
+// UIESliderChange's "%g" of the slider's value * modifier + offset into the label (no value maps to a string)
+inline EESEERust* EESEENewUnitLimit(UITextLabel* inLabel, float inModifier, long inOffset)
+{
+    EESEERust* theEvent = new EESEERust(kSEEUnitLimit);
+    ee_screens_see_slider(theEvent->mEvent, inLabel, "%g", inModifier, (float)inOffset);
+    return theEvent;
+}
+
+// the effect editors' events: kSEECAMGModifyObject (the EESETSETCreateAIMilitaryGroup, its "to add" and "added"
+// lists), kSEEMSDCameraScroll (the EESETSETMediaSendDialog, the EESETSEffectControls), kSEESAAAttribute (the
+// EESETSETSetAIAttribute, the EESETSEffectControls); each pointer passed as its own class's
+inline EESEERust* EESEENewObjects(uint32_t inKind, void* inA, void* inB, void* inC = 0)
+{
+    EESEERust* theEvent = new EESEERust(inKind);
+    ee_screens_see_objects(theEvent->mEvent, inA, inB, inC);
+    return theEvent;
+}
 
 #endif

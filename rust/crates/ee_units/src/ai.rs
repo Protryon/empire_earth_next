@@ -2,14 +2,14 @@
 //! AI script's decision (`EEUnitAction::Evaluate` 0x62cd8b, `EEUnitTrigger::Evaluate` 0x62b9a0) over the unit store
 //! and a host table of the C++ calls they make (EEUnitHost.cpp).
 //!
-//! The script (`Unit AI Scripts\*.tai`) stays C++ data: an action is an opaque handle, its triggers are read one at a
-//! time as plain views (`EeUnitsTrigger`: the conditions, all of or any of, the true and false actions). The
-//! conditions' answers are the classes' `EvaluateCondition` (virtual, C++; the attack goals' tests are the combat
-//! lane's), the gather goal's activity (`IsActive`, virtual), `StartAction`, `ActionChanged`, `DropFinishedGoals`,
-//! `UpdateCamouflage` and the command's write stay host calls. The command's type, the next trigger time and the
-//! goal's kind are read from the unit's record, again after every host call that can change them (the store's lock
-//! is never held across a host call: the holders write the store from inside them); the next trigger time is written
-//! through its C++ holder.
+//! The script (`Unit AI Scripts\*.tai`) is script.rs's (the twentieth round): an action is a handle, its triggers
+//! are read one at a time as plain views (`EeUnitsTrigger`: the conditions, all of or any of, the true and false
+//! actions). The conditions' answers are the classes' `EvaluateCondition` (virtual, C++; the attack goals' tests are
+//! the combat lane's), the gather goal's activity (`IsActive`, virtual), `StartAction`, `ActionChanged`,
+//! `DropFinishedGoals`, `UpdateCamouflage` and the command's write stay host calls. The command's type, the next
+//! trigger time and the goal's kind are read from the unit's record, again after every host call that can change
+//! them (the store's lock is never held across a host call: the holders write the store from inside them); the next
+//! trigger time is written through its C++ holder.
 //!
 //! Determinism (RUST_PLAN 2.1): no float, no random draw; the next trigger time is compared as the Windows build's
 //! 32-bit unsigned longs (`jb`).
@@ -82,8 +82,6 @@ pub struct EeUnitsAIHost {
     pub command: extern "C" fn(ctx: *mut c_void) -> u64,
     /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
     pub gather_inactive: extern "C" fn(ctx: *mut c_void, out_action: *mut u32) -> bool,
-    /// the trigger `index` of `action` into `out`; false past the last
-    pub trigger: extern "C" fn(ctx: *mut c_void, action: u64, index: u32, out: *mut EeUnitsTrigger) -> bool,
     /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
     pub condition: extern "C" fn(ctx: *mut c_void, trigger: i64) -> i64,
     /// an action's `mType`
@@ -264,7 +262,7 @@ impl AIHost for StoreHost<'_> {
         (self.host.gather_inactive)(self.host.ctx, &mut a).then_some(a)
     }
     fn trigger(&mut self, action: u64, index: u32) -> Option<(EeUnitsTrigger, Vec<i64>)> {
-        trigger_of(self.host, action, index)
+        crate::script::trigger_view(action, index)
     }
     fn condition(&mut self, trigger: i64) -> i64 {
         (self.host.condition)(self.host.ctx, trigger)
@@ -286,21 +284,6 @@ impl AIHost for StoreHost<'_> {
     }
 }
 
-fn trigger_of(host: &EeUnitsAIHost, action: u64, index: u32) -> Option<(EeUnitsTrigger, Vec<i64>)> {
-    let mut t = EeUnitsTrigger::default();
-    if !(host.trigger)(host.ctx, action, index, &mut t) {
-        return None;
-    }
-    let ids = if t.count == 0 || t.conditions.is_null() {
-        Vec::new()
-    } else {
-        // SAFETY: the host's contract: `count` ids, valid until the next host call (copied here)
-        unsafe { std::slice::from_raw_parts(t.conditions, t.count as usize) }.to_vec()
-    };
-    t.conditions = std::ptr::null();
-    Some((t, ids))
-}
-
 /// `EEComplexUnit::AIStep` over the store and the host's calls.
 ///
 /// # Safety
@@ -316,54 +299,6 @@ pub unsafe extern "C" fn ee_units_ai_step(
     // SAFETY: the caller's contract
     let host = unsafe { &*host };
     ai_step(&mut StoreHost { host, id, object }, is_citizen != 0, game_time)
-}
-
-/// `EEUnitAction::Evaluate` (`action`) over the host's calls (only the trigger, condition and table are used): the
-/// result, and the picked action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` points to a valid table, `out_action` to a writable u64.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_action_evaluate(
-    host: *const EeUnitsAIHost,
-    action: u64,
-    out_action: *mut u64,
-) -> i64 {
-    // SAFETY: the caller's contract
-    let host = unsafe { &*host };
-    let (r, a) = evaluate_action(&mut StoreHost { host, id: u32::MAX, object: 0 }, action);
-    if let Some(a) = a {
-        // SAFETY: the caller's contract
-        unsafe { *out_action = a };
-    }
-    r
-}
-
-/// `EEUnitTrigger::Evaluate` (`trigger`: the trigger's view) over the host's conditions: the result, and the picked
-/// action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` and `trigger` point to valid values (the trigger's `count` ids readable), `out_action` to a writable u64.
-#[no_mangle]
-pub unsafe extern "C" fn ee_units_trigger_evaluate(
-    host: *const EeUnitsAIHost,
-    trigger: *const EeUnitsTrigger,
-    out_action: *mut u64,
-) -> i64 {
-    // SAFETY: the caller's contract
-    let (host, t) = unsafe { (&*host, *trigger) };
-    let ids = if t.count == 0 || t.conditions.is_null() {
-        Vec::new()
-    } else {
-        // SAFETY: the caller's contract
-        unsafe { std::slice::from_raw_parts(t.conditions, t.count as usize) }.to_vec()
-    };
-    let (r, a) = evaluate_trigger(&mut StoreHost { host, id: u32::MAX, object: 0 }, &t, &ids);
-    if let Some(a) = a {
-        // SAFETY: the caller's contract
-        unsafe { *out_action = a };
-    }
-    r
 }
 
 #[cfg(test)]
