@@ -11900,3 +11900,70 @@ net: -233.
     drag. Window.cpp and WindowManager.cpp are larger and reach the platform window.
   - The remaining controls (Button and its skins) and the layout managers.
   - Re-recording the input and list goldens so they trace the delivered event type.
+
+## R6 WON round 29: RootContainer whole in Rust; Button's census (ee_won rootobj.rs; branch rust-r6-won29, 2026-11-13)
+
+Measured as rounds 18-28 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+81,969 at the branch's start (round 28's head) -> 81,971 (the root's `UnionInvalidRect`, +2) -> 81,698 (RootContainer,
+-273) -> 81,700 (Button's accessors, +2). This round's own net: -269.
+
+- **The census first** (its own commit). Outside RootContainer.cpp only `Window::InvalidateRoot` wrote a root field
+  (`mInvalidRect.DoUnion(bounds)`), now `UnionInvalidRect`. The window (`mWindow`) stays a member:
+  `Component::GetRoot` reads it. The full grep (every root field across `src`, `include` and `tests`, no limit) found
+  nothing else.
+- **The move** (`rootobj.rs`): the invalid rectangle, the queued backgrounds (a `BTreeMap` from the grabber's image
+  order, as the original's `std::map<int,BGStruct>`, each image held), the cursor's component (borrowed, as the
+  original's raw pointer) and the window drag (its place, whether it runs, whether it may), with every method.
+  - Dropped as dead: the keyboard listener (`mKeyboardListener` and `KeyboardListenerBase`: nothing set it, so its
+    three `KeyEvent` calls never ran), the popup set and the root's modal component (never read). The overrides
+    that only called the container's (FindChildAt, ChildInvalidated, MouseEnter) are gone: the container's run.
+  - 15 root ops (530-544): the cursor's component and hot spot, the window's one-component flag, mouse, rectangle and
+    place, a child's mouse child, the colour scheme, the grabber's state, its clear and drop, the images' hold,
+    release, size and draw, and `EnsureOnTopOf`. The pure reads are not traced, except the grabber's (below).
+  - The map assignment is traced as the original runs it: the temporary `BGStruct` holds the image, the entry's
+    `SmartPtr` assignment releases the old image and holds the new one (nothing when they are the same), the
+    temporary releases. The map's clear and the destructor release in key order (the original's tree went in its
+    own order).
+  - Its own `RemoveChild` (called as a virtual by MouseExit and SetCursor) goes through the C++ object (`CtVirt`);
+    its own `InvalidateRect` is called directly (no class derives from RootContainer).
+- **Behaviour on the original's undefined paths only:** while a cursor's component is shown, MouseMove and MouseDrag
+  read the hot spot of the container's current cursor. When that cursor is NULL (the original read through NULL) the
+  host answers no component and a zero hot spot; when it is a plain cursor (`Cursor::GetComponent` writes nothing)
+  the hot spot is 0, where the original used two uninitialised ints. Both happen only when the root's mouse child
+  keeps the parent's cursor (the container's NoParentCursor path) after a cursor with a component was set.
+- **The golden** (`tests/won/won_rootobj_test.cpp`) uses round 26's world: the root (component 1) and three
+  containers are real Rust containers, the rest leaves. The cursors 0x5002..0x5004 have components (11, 12) and hot
+  spots; the grabbers are 0x9000 + a component id with a drawing state the driver changes; the images have sizes
+  from their id; the window's numbers are env 14..18. The world runs Component's SetPos and SetVisible as the tab
+  golden does, and counts the images' references (all given back).
+  - The grabber's read is traced with its answer (`grab-read`), so the cargo replay keeps no model of the grabbers;
+    `Ext::read` takes that line itself and fills the Rust's struct.
+  - It runs 20,000 sequences of 40 calls with 15,822,318 trace lines, all identical.
+  - Four mutations fail it: the backgrounds drawn lowest order first fails 2,065 sequences; `EnsureOnTopOf`'s
+    arguments swapped fails 9,137; the one-component window ignored fails 989; the cursor component's rectangle
+    from its old place fails 10,387.
+  - `golden_rootobj.txt` holds 43 sequences, replayed by cargo through round 27's `Ext` hooks; the replay fails on a
+    window place moved by one.
+- **Lesson:** a mutation script stopped with TaskStop kept running (the bash and its build went on), and the rerun
+  copied the source while the first run had a mutation applied: the "clean" baseline then failed 10,387 sequences.
+  Before trusting mutation numbers, check that no earlier run is alive (`ps -ef | grep`), restore the source from git
+  rather than from a copy, and finish with an unmutated run (here: 0 differing).
+- **Button's census** (its own commit; the move is next). Outside Button.cpp the skins (MSButton, MSArrowButton,
+  MSCheckbox, MSRadioButton, the header and close buttons, WONButton, WONSimpleButton, the cross promotion and colour
+  buttons, the list header), the dialog host and nine lobby controls read `mButtonFlags`, its bitfields `mChecked`
+  and `mButtonFlag5`, and `mMouseDownState`. They now read `IsPressed()`, `IsChecked()`, `GetButtonFlags()` and
+  `GetMouseDownState()`.
+- **Why Button next and not Window.** Window.cpp (624 lines) and WindowManager.cpp (1,501) are the platform
+  window's: their methods are mostly platform calls, popups and the modal stack, whose behaviour only a live window
+  shows (no golden world models it yet). Button is a leaf with no platform call: its census is done, and the move
+  needs the radio group's walk over the other buttons' Rust objects (a `BtnOf` read as the container's
+  `CtContainerOf`), the default buttons (the original's two static `SmartPtr`s), the click sound (a C++ member) and
+  the ButtonPressed event through `ee_won_gui_event_type`.
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction. Every lobby window's
+  root is this object: the lead's LAN game (`lan_game.py`: the root's mouse and key routing to every lobby control,
+  its Paint's clip to the invalid rectangle, the repaints after every change) and the lobby captures (the whole
+  window repainted through the invalid rectangle, the dialogs' backgrounds drawn under them from the grabbers) are
+  the check. Only a person drags the lobby window (a press on a ParentDrag child) or sees a cursor drawn by a
+  component (the skin's `ComponentCursor`, if the lobby's resources make one); those run only in the golden.
+- **Left:** Button's move (census done), then Window/WindowManager (platform ops), the layout managers, and the
+  input and list goldens' re-recording to trace the delivered event type.
