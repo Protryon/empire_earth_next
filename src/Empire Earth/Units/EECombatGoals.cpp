@@ -68,37 +68,6 @@
 
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
 
-// the store's part in Rust (ee_combat store.rs: the unit's and target's plain fields, the players' tables); here the
-// unit's player's IsHuman (a virtual) and the stats (which upgrades change in place)
-void EECombatFillCondition(EeCombatConditionIn& in, int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent,
-                           EEUnit* inTarget)
-{
-    ee_combat_fill_condition(&in, inKind, (uint64_t)(uintptr_t)inUnit, (uint32_t)inEvent, (uint64_t)(uintptr_t)inTarget,
-                             inTarget != NULL ? (uint64_t)(uintptr_t)static_cast<EEUnit*>(inTarget->mComplexUnit) : 0);
-    EEPlayer* thePlayer = inUnit->mPlayer;
-    in.human = thePlayer != NULL && thePlayer->IsHuman();
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    if (theStats != NULL) {
-        in.range = theStats->mRange;
-        in.reload_time = (int32_t)theStats->mReloadTime;
-        in.fire_over_walls = theStats->mCanFireOverWalls;
-        in.flight_time_max = (int32_t)theStats->mFlightTime;
-    }
-    if (inTarget != NULL && inTarget->mStats != NULL) {
-        in.target_attack = inTarget->mStats->mAttack;
-        in.target_max_hp = (int32_t)inTarget->mStats->mMaxHitPoints;
-    }
-}
-
-void EECombatFillStep(EeCombatStepIn& in, int32_t inKind, EEComplexUnit* inUnit, EEUnit* inTarget)
-{
-    ee_combat_fill_step(&in, inKind, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget);
-    if (inUnit->mStats != NULL) {
-        in.reload_time = (int32_t)inUnit->mStats->mReloadTime;
-        in.fire_over_walls = inUnit->mStats->mCanFireOverWalls;
-    }
-}
-
 namespace {
 
 const unsigned int kConditionTag = EE_COMBAT_TAG('C', 'B', 'T', 'C');
@@ -435,9 +404,9 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         return EEIsLineToUnitBlocked(theUnit, EEConditionTarget(theContext), &theArg3, &theArg4, &theArg5);
     }
     case EE_COMBAT_READ_GATE_CLOSED:
-        return static_cast<EEUGAttackUnit*>(theContext->mGoal)->IsGateClosed(theUnit);
+        return EECombatIsGateClosed(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal));
     case EE_COMBAT_READ_STILL_REACHABLE:
-        return static_cast<EEUGAttackUnit*>(theContext->mGoal)->IsStillReachable(theUnit);
+        return EECombatIsStillReachable(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal));
     case EE_COMBAT_READ_ENEMY_IN_RANGE:
         return EEIsEnemyWithinRange(theUnit);
     case EE_COMBAT_READ_BASE:
@@ -455,10 +424,8 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
     }
     case EE_COMBAT_READ_FACES_POINT:
         return theUnit->GetUnitClass()->FacesPoint(theUnit, static_cast<EEUGAttackGround*>(theContext->mGoal)->mTarget, true);
-    case EE_COMBAT_READ_HEAL_IN_RANGE: {
-        EEUGHealUnit* theGoal = static_cast<EEUGHealUnit*>(theContext->mGoal);
-        return theGoal->IsInRange(theUnit, theGoal->mTarget);
-    }
+    case EE_COMBAT_READ_HEAL_IN_RANGE:
+        return EECombatHealInRange(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget);
     case EE_COMBAT_READ_REPAIRABLE:
         return static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget->IsRepairable();
     case EE_COMBAT_READ_IMPACT_UNIT:
@@ -540,8 +507,21 @@ EEUnit* EECombatShotTarget(EEComplexUnit* inUnit)
     return theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGAttackUnit*>(theGoal)->mTarget : NULL;
 }
 
-long EECombatCondition(EeCombatConditionIn& in, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnitClass* inClass)
+long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget,
+                       EEUnitGoal* inGoal, EEUnitClass* inClass)
 {
+    // the record: the store's part in Rust (ee_combat store.rs: the plain fields, the stats table's, the players'
+    // tables); here the unit's player's IsHuman (a virtual) and the attack goal's own fields
+    EeCombatConditionIn in;
+    ee_combat_fill_condition(&in, inKind, (uint64_t)(uintptr_t)inUnit, (uint32_t)inEvent, (uint64_t)(uintptr_t)inTarget,
+                             inTarget != NULL ? (uint64_t)(uintptr_t)static_cast<EEUnit*>(inTarget->mComplexUnit) : 0);
+    in.human = inUnit->mPlayer != NULL && inUnit->mPlayer->IsHuman();
+    if (inKind == EE_COMBAT_GOAL_ATTACK_UNIT) {
+        EEUGAttackUnit* theGoal = static_cast<EEUGAttackUnit*>(inGoal);
+        in.goal_tile[0] = (int32_t)theGoal->mTargetTileX;
+        in.goal_tile[1] = (int32_t)theGoal->mTargetTileY;
+        in.convert = theGoal->mIsConvert;
+    }
     EEConditionContext theContext = {in.kind, in.event, inUnit, inGoal, inClass, NULL};
     EeCombatConditionHost theHost = {&theContext, EEConditionRead};
     EeCombatConditionOut theOut = ee_combat_condition(&in, &theHost);
@@ -555,7 +535,7 @@ long EECombatCondition(EeCombatConditionIn& in, EEComplexUnit* inUnit, EEUnitGoa
 void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEUnit* inTarget)
 {
     EeCombatStepIn in;
-    EECombatFillStep(in, inKind, inUnit, inTarget);
+    ee_combat_fill_step(&in, inKind, (uint64_t)(uintptr_t)inUnit, (uint64_t)(uintptr_t)inTarget);
     EEStepContext theContext = {inKind, inUnit, inGoal};
     EeCombatStepHost theHost = {&theContext, EEStepOp};
     ee_combat_goal_step(&in, &theHost);
@@ -564,8 +544,8 @@ void EECombatStep(int32_t inKind, EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEU
 
 // ---- the host of ee_combat's reads (reads.rs): FindImpactUnit, FacesPoint, IsInReach, IsStillReachable,
 // IsGateClosed, EEIsEnemyWithinRange. Every handle an EEUnit* (a player's an EEPlayer*), 0 for none; each read the
-// original's expression on it. The unit's plain fields and the players' tables are ee_combat store.rs's reads (the
-// unit store's records), never asked here.
+// original's expression on it. The unit's plain fields, its stats and the players' tables are ee_combat store.rs's
+// reads (the unit store's records, the stats table), never asked here.
 
 namespace {
 
@@ -602,18 +582,12 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     EEComplexUnit* theUnit = theContext->mUnit;
     EEUnit* theObject = EEQueryUnit(inObject);
     switch (inCode) {
-    case EE_COMBAT_Q_MAX_HIT_POINTS:
-        return (uint32_t)theObject->GetStats()->mMaxHitPoints;
-    case EE_COMBAT_Q_STATS_SCALE:
-        return EEConditionBits(theObject->GetStats()->GetScale());
     case EE_COMBAT_Q_MODEL:
         return EEQueryComplex(inObject)->mPhysicalModel.GetModel() != NULL;
     case EE_COMBAT_Q_TARGETABLE:
         return EEUUGetIsUnitClassTargetable(inArg ? theUnit : NULL, theObject->mUnitClass);
     case EE_COMBAT_Q_FIRING_HIGH:
         return EEQueryComplex(inObject)->mIsFiringHigh;
-    case EE_COMBAT_Q_FIRE_OVER_WALLS:
-        return theObject->GetStats()->mCanFireOverWalls;
     case EE_COMBAT_Q_PASSABLE:
         return EEQueryComplex(inObject)->IsPassableBy(theUnit);
     case EE_COMBAT_Q_UNIT_SET:
@@ -640,8 +614,6 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return theObject == NULL || RTSDummyHead(theObject) != NULL;
     case EE_COMBAT_Q_SPECIAL_ATTACK:
         return EEQueryComplex(inObject)->mIsSpecialAttack;
-    case EE_COMBAT_Q_RANGE:
-        return EEConditionBits(theObject->GetStats()->GetRange());
     case EE_COMBAT_Q_HEAL_RANGE:
         return EEConditionBits(theObject->GetUnitClass()->mHealRange);
     case EE_COMBAT_Q_PROJECTILE_CATEGORY: {
@@ -689,12 +661,9 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
     case EE_COMBAT_Q_CLASS_MAX_VELOCITY: return EEConditionBits(theObject->mUnitClass->mMaxVelocity);
     case EE_COMBAT_Q_MAP_SIZE: return (uint32_t)::gWorld.mMap->mSize;
     case EE_COMBAT_Q_DISTANCE_SQUARED: return EEConditionBits(theUnit->DistanceSquaredTo(EEQueryComplex(inObject)));
-    case EE_COMBAT_Q_STATS_MAX_VELOCITY: return EEConditionBits(theObject->GetStats()->mMaxVelocity);
     case EE_COMBAT_Q_TARGETS_ENEMIES: return EEQueryComplex(inObject)->mBehavior->mCanTargetEnemies;
     case EE_COMBAT_Q_MOVES_FREELY: return EEQueryComplex(inObject)->mBehavior->CanMoveFreely(EEQueryComplex(inObject));
     case EE_COMBAT_Q_GOAL_B1C: return EEQueryComplex(inObject)->mGoalState->GetB1C();
-    case EE_COMBAT_Q_ATTACK: return EEConditionBits(theObject->GetStats()->mAttack);
-    case EE_COMBAT_Q_RELOAD_TIME: return (uint32_t)EEQueryComplex(inObject)->mStats->mReloadTime;
     case EE_COMBAT_Q_AMMUNITION: return (uint32_t)EEQueryComplex(inObject)->mAmmunition;
     case EE_COMBAT_Q_SHOT_CLASS: {
         EEUnitClass* theClass = theContext->mClass;
@@ -956,7 +925,6 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
                                                            theObject->mPlayer->GetPlayerID(), theTarget->mPlayer->GetPlayerID());
             in.weapon_factor = gWeaponToHitFactors[theTarget->mUnitClass->mWeapon][a[2]];
         }
-        in.armor = theTarget->mStats->mArmor[a[2]];
         const EECombatRules& theRules = EEGetRules().mCombat;
         in.minimum_damage = theRules.mMinimumDamage;
         in.fanatic_factor = EERuleFloat(theRules.mFanaticFactor);
@@ -1111,18 +1079,37 @@ bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)
     return ee_combat_in_reach(EEQueryHandleOf(inUnit), EEQueryHandleOf(inTarget), &theHost) != 0;
 }
 
+// EEUGAttackUnit::IsStillReachable (CBQR: the path attempts and the ignored targets' count after)
 bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal)
 {
+    EECombatHostReadScope theScope;
+    EEUnit* theTarget = inGoal->mTarget;
     EEQueryContext theContext = {inUnit, inGoal, NULL};
     EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return ee_combat_still_reachable(EEQueryHandleOf(inUnit), &theHost) != 0;
+    bool theReachable = ee_combat_still_reachable(EEQueryHandleOf(inUnit), &theHost) != 0;
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_STILL_REACHABLE, inUnit, theTarget, theReachable, (uint32_t)inGoal->mPathAttempts,
+                                (uint32_t)inUnit->mIgnoredTargets.size());
+    return theReachable;
 }
 
+// EEUGAttackUnit::IsGateClosed (CBQR)
 bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal)
 {
+    EECombatHostReadScope theScope;
     EEQueryContext theContext = {inUnit, inGoal, NULL};
     EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
-    return ee_combat_gate_closed(EEQueryHandleOf(inUnit), &theHost) != 0;
+    bool theClosed = ee_combat_gate_closed(EEQueryHandleOf(inUnit), &theHost) != 0;
+    if (theScope.mOuter)
+        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, inGoal->mTarget, theClosed);
+    return theClosed;
+}
+
+bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget)
+{
+    EEQueryContext theContext = {inHealer, NULL, NULL};
+    EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
+    return ee_combat_heal_in_range(EEQueryHandleOf(inHealer), EEQueryHandleOf(inTarget), &theHost) != 0;
 }
 
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit)

@@ -259,9 +259,7 @@ bool EEUCMissile::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLoc
 long EEUCMissile::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     // ee_combat goals.rs condition (CBTC): the target is the attack-unit goal's; a hit unit's attack goal is set here
-    EeCombatConditionIn in;
-    EECombatFillCondition(in, EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit));
-    return EECombatCondition(in, inUnit, NULL, this);
+    return EECombatCondition(EE_COMBAT_GOAL_MISSILE, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
 
 // FUNCTION: EXE 0x617b77

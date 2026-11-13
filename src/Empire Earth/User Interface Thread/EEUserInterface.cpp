@@ -163,7 +163,8 @@ static bool sMinimized;                     // 0x565374 (WM_SIZE: the volumes ar
 static bool sControlDown;                   // 0x565375
 static bool sAltDown;                       // 0x565376
 // FUNCTION: EXE 0x676631
-// Creates the UI thread object: its thread, the action, undo and redo queue locks and the message-done event
+// Creates the UI thread object: its thread and the message-done event (the action, undo and redo queues and their
+// locks are Rust's: ee_screens actions.rs)
 EEUserInterface::EEUserInterface()
 {
     this->mThread = TSScheduler::GetCurrentThread();
@@ -172,9 +173,6 @@ EEUserInterface::EEUserInterface()
     this->mIsQuitting = false;
     this->mRandomSeed = TMGetTime();
     this->mIconBarUpdatePosted = false;
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mActionLock) == keseOK, 174);
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mRedoLock) == keseOK, 175);
-    ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mUndoLock) == keseOK, 176);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mMessageQueueDone) == keseOK, 177);
 }
 
@@ -182,18 +180,12 @@ EEUserInterface::EEUserInterface()
 // (the scalar deleting destructor, emitted with the vtable; slot EEUserInterface+0x0)
 
 // FUNCTION: EXE 0x676740
-// Destroys the UI thread object, releasing every queued, undoable and redoable action and its locks
+// Destroys the UI thread object, releasing every queued, undoable and redoable action
 EEUserInterface::~EEUserInterface()
 {
-    while (this->GetQueueSize(this->mActionQueue, this->mActionLock) > 0)
-        this->PopFront(this->mActionQueue, this->mActionLock)->Dereference();
-    while (this->GetQueueSize(this->mUndoQueue, this->mUndoLock) > 0)
-        this->PopFront(this->mUndoQueue, this->mUndoLock)->Dereference();
-    while (this->GetQueueSize(this->mRedoQueue, this->mRedoLock) > 0)
-        this->PopFront(this->mRedoQueue, this->mRedoLock)->Dereference();
-    TSScheduler::DestroyCriticalSection(this->mActionLock);
-    TSScheduler::DestroyCriticalSection(this->mRedoLock);
-    TSScheduler::DestroyCriticalSection(this->mUndoLock);
+    ee_screens_actions_clear(0);
+    ee_screens_actions_clear(1);
+    ee_screens_actions_clear(2);
     TSScheduler::DestroyEvent(this->mMessageQueueDone);
 }
 
@@ -419,16 +411,6 @@ void EEUserInterface::SaveAndTestScenario()
     gMusicManager->Start();
 }
 
-// FUNCTION: EXE 0x676fe0
-// Releases every action of a queue
-void EEUserInterface::ClearQueue(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock)
-{
-    inLock->Enter();
-    while (this->GetQueueSize(inQueue, inLock) > 0)
-        this->PopFront(inQueue, inLock)->Dereference();
-    inLock->Leave();
-}
-
 // FUNCTION: EXE 0x677023
 // Leaves the current map: clears the action queues, the world and the game state, optionally resizes to
 // 1024x768, then pops back to a form (the post-game summary, or the previous form)
@@ -436,9 +418,9 @@ void EEUserInterface::LeaveMap(UIForm* inForm, bool inFlag)
 {
     gGraphics->PostReleaseScene();
     gGraphics->PostMessage50AAndWait();
-    this->ClearQueue(this->mActionQueue, this->mActionLock);
-    this->ClearQueue(this->mUndoQueue, this->mUndoLock);
-    this->ClearQueue(this->mRedoQueue, this->mRedoLock);
+    ee_screens_actions_clear(0);
+    ee_screens_actions_clear(1);
+    ee_screens_actions_clear(2);
     gWorld.mLock->WriteLock();
     gDataPreLoading->WaitForMessageQueue();
     gWorld.Clear();
@@ -551,16 +533,6 @@ void EEUserInterface::EnterScenarioEditor(bool inLoad)
     EEUIECLEFormManager::Clear();
     if (gGraphics->mIsPaused)
         this->ResumeGraphics();
-}
-
-// FUNCTION: EXE 0x677529
-// Returns the number of actions in a queue
-unsigned long EEUserInterface::GetQueueSize(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock)
-{
-    inLock->Enter();
-    unsigned long theSize = inQueue.size();
-    inLock->Leave();
-    return theSize;
 }
 
 // FUNCTION: EXE 0x67754b
@@ -772,70 +744,49 @@ void EEUserInterface::PauseGraphics()
         PlatSleep(1);
 }
 
+// FUNCTION: EXE 0x676fe0
+// FUNCTION: EXE 0x677529
 // FUNCTION: EXE 0x677e8e
-// Returns the last action of a queue
-EEAction* EEUserInterface::PeekBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock)
-{
-    inLock->Enter();
-    EEAction* theAction = inQueue.back();
-    inLock->Leave();
-    return theAction;
-}
-
 // FUNCTION: EXE 0x677eb4
-// Removes and returns the first action of a queue
-EEAction* EEUserInterface::PopFront(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock)
-{
-    inLock->Enter();
-    EEAction* theAction = inQueue.front();
-    inQueue.pop_front();
-    inLock->Leave();
-    return theAction;
-}
-
 // FUNCTION: EXE 0x677ef2
-// Removes and returns the last action of a queue
-EEAction* EEUserInterface::PopBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock)
-{
-    inLock->Enter();
-    EEAction* theAction = inQueue.back();
-    inQueue.pop_back();
-    inLock->Leave();
-    return theAction;
-}
-
 // FUNCTION: EXE 0x677f21
-// Runs the queued actions; undoable ones go on the undo list (at most 100) and clear the redo list
+// Runs the queued actions under the UI copy lock and the world's write lock; undoable ones go on the undo list (at
+// most 100) and clear the redo list (the original's queue helpers ClearQueue, GetQueueSize, PeekBack, PopFront,
+// PopBack and PushBack with it: ee_screens actions.rs)
 void EEUserInterface::ProcessActions()
 {
-    EEAction* theLast;
-    if (!(this->GetQueueSize(this->mActionQueue, this->mActionLock) > 0))
-        return;
-    gUIManager->LockUIForCopyData();
-    gWorld.mLock->WriteLock();
-    if (this->GetQueueSize(this->mUndoQueue, this->mUndoLock) == 0)
-        theLast = NULL;
-    else
-        theLast = this->PeekBack(this->mUndoQueue, this->mUndoLock);
-    while (this->GetQueueSize(this->mActionQueue, this->GetActionLock()) > 0) {
-        EEAction* theAction = this->PopFront(this->mActionQueue, this->mActionLock);
+    ee_screens_actions_process();
+}
+
+// The action queues' host (actions.rs): an action's reference, release, run, undo and undoable flag; the locks
+extern "C" uint32_t ee_screenscpp_action(uint32_t inOp, void* inAction)
+{
+    EEAction* theAction = static_cast<EEAction*>(inAction);
+    switch (inOp) {
+    case EE_SCREENS_ACTION_REFERENCE:
+        theAction->Reference();
+        break;
+    case EE_SCREENS_ACTION_DEREFERENCE:
+        theAction->Dereference();
+        break;
+    case EE_SCREENS_ACTION_RUN:
         theAction->Virtual4();
-        if (!theAction->mIsUndoable)
-            theAction->Dereference();
-        else {
-            while (this->GetQueueSize(this->mRedoQueue, this->mRedoLock) != 0)
-                this->PopFront(this->mRedoQueue, this->mRedoLock)->Dereference();
-            if (theAction == theLast)
-                theAction->Dereference();
-            else {
-                this->PushBack(this->mUndoQueue, this->mUndoLock, theAction);
-                if (this->GetQueueSize(this->mUndoQueue, this->mUndoLock) > 100)
-                    this->PopFront(this->mUndoQueue, this->mUndoLock)->Dereference();
-            }
-        }
+        break;
+    case EE_SCREENS_ACTION_UNDO:
+        theAction->Virtual8();
+        break;
+    case EE_SCREENS_ACTION_UNDOABLE:
+        return theAction->mIsUndoable;
+    case EE_SCREENS_ACTION_LOCK:
+        gUIManager->LockUIForCopyData();
+        gWorld.mLock->WriteLock();
+        break;
+    case EE_SCREENS_ACTION_UNLOCK:
+        gWorld.mLock->WriteUnlock();
+        gUIManager->UnlockUIForCopyData();
+        break;
     }
-    gWorld.mLock->WriteUnlock();
-    gUIManager->UnlockUIForCopyData();
+    return 0;
 }
 
 // FUNCTION: EXE 0x6780d3
@@ -1249,20 +1200,11 @@ void EEUserInterface::UpdateInterface()
 }
 
 // FUNCTION: EXE 0x678f54
-// Appends an action to a queue
-void EEUserInterface::PushBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock, EEAction* inAction)
-{
-    inLock->Enter();
-    inQueue.push_back(inAction);
-    inLock->Leave();
-}
-
 // FUNCTION: EXE 0x678f79
-// Queues an action for the UI thread (taking a reference)
+// Queues an action for the UI thread (taking a reference; ee_screens actions.rs)
 void EEUserInterface::PostAction(EEAction* inAction)
 {
-    inAction->Reference();
-    this->PushBack(this->mActionQueue, this->mActionLock, inAction);
+    ee_screens_actions_post(inAction);
 }
 
 // FUNCTION: EXE 0x678fc0
@@ -1273,18 +1215,10 @@ void EEUserInterface::OpenIMECompositionString()
 }
 
 // FUNCTION: EXE 0x678fce
-// Redoes the last undone action; returns 7 when there is none
+// Redoes the last undone action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Redo()
 {
-    long theResult = kErrorOK;
-    if (this->GetQueueSize(this->mRedoQueue, this->mRedoLock) != 0) {
-        EEAction* theAction = this->PopBack(this->mRedoQueue, this->mRedoLock);
-        theAction->Virtual4();
-        this->PushBack(this->mUndoQueue, this->mUndoLock, theAction);
-    } else {
-        theResult = 7;
-    }
-    return theResult;
+    return ee_screens_actions_redo();
 }
 
 // FUNCTION: EXE 0x679013
@@ -1674,18 +1608,10 @@ void EEUserInterface::ShowLagStatus(unsigned long inPlayer, bool inLagging)
 }
 
 // FUNCTION: EXE 0x67985e
-// Undoes the last action; returns 7 when there is none
+// Undoes the last action; returns 7 when there is none (ee_screens actions.rs)
 long EEUserInterface::Undo()
 {
-    long theResult = kErrorOK;
-    if (this->GetQueueSize(this->mUndoQueue, this->mUndoLock) > 0) {
-        EEAction* theAction = this->PopBack(this->mUndoQueue, this->mUndoLock);
-        theAction->Virtual8();
-        this->PushBack(this->mRedoQueue, this->mRedoLock, theAction);
-    } else {
-        theResult = 7;
-    }
-    return theResult;
+    return ee_screens_actions_undo();
 }
 
 // FUNCTION: EXE 0x6798a3

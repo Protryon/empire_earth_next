@@ -79,8 +79,10 @@ pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
+pub mod menuobj;
 pub mod miscops;
 pub mod model;
+pub mod multiobj;
 pub mod multiping;
 /// cbindgen:ignore
 pub mod netstats;
@@ -123,6 +125,7 @@ pub mod text;
 pub mod textobj;
 pub mod thread;
 pub mod titlecfg;
+pub mod treeobj;
 pub mod udpmgr;
 pub mod udpops;
 pub mod verop;

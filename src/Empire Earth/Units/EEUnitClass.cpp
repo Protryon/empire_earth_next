@@ -2127,7 +2127,7 @@ void EEUnitClass::Heal(EEComplexUnit* inUnit)
     theHandle.mValue = 0;
     EEUGHealUnit* theGoal = static_cast<EEUGHealUnit*>(inUnit->GetGoal());
     inUnit->DropPath();
-    if (theGoal == NULL || !theGoal->IsInRange(inUnit, theGoal->GetTarget()))
+    if (theGoal == NULL || !EECombatHealInRange(inUnit, theGoal->GetTarget()))
         return;
     inUnit->SetAnimation(3, -1, 0);
     EEGraphicEffect* theEffect = inUnit->mUnitClass->mHealEffect;
