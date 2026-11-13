@@ -1,12 +1,9 @@
 01000 01b8d Error System/Error System.cpp
-01b8d 028ca Error System/ESCallerLog.cpp
 028ca 036c5 Error System/ESChecksum.cpp
-036c5 04020 Error System/ESProfile.cpp
 04020 04e29 File System/File System.cpp
 04e29 07af6 File System/FSArchive.cpp
 07af6 07cb5 File System/FSBasicFile.cpp
 07cb5 080b9 File System/FSChunk.cpp
-080b9 08d15 File System/FSDebugFile.cpp
 08d15 09ec5 File System/FSFileSpec.cpp
 09ec5 0a843 File System/FSMemoryFile.cpp
 0a843 0bdb4 File System/FSPath.cpp
@@ -55,7 +52,6 @@
 3b2ce 3bab2 Input System/ISMouse.cpp
 3bab2 3bafc Input System/ISMouseAxis.cpp
 3bafc 3bb89 Input System/ISMouseButton.cpp
-3bb89 3bc2d Low-Level Engine.cpp
 3bc2d 3e05c Network Engine/NELagLossSimulator.cpp
 3e05c 40123 Network Engine/NEMessage.cpp
 40123 4440f Network Engine/NEMessageManager.cpp
@@ -68,7 +64,6 @@
 4b04f 4b190 Network Engine/NETimestampedMessage.cpp
 4b190 4b275 Network Engine/Network Engine.cpp
 4b275 4b4b7 PIMModule.cpp
-4b4b7 4bbce Sound Engine/SECD.cpp
 4bbce 4e8aa Sound Engine/SEConductor.cpp
 4e8aa 4eef6 Sound Engine/SEMixer.cpp
 4eef6 4f08e Sound Engine/SEScore.cpp
