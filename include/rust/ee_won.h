@@ -2826,6 +2826,14 @@ enum class EeWonGuiOp : uint32_t {
   BtnHasClickSound,
   /// `mClickSound->Play()`.
   BtnPlayClick,
+  /// `a->mParent` (a `Component*`; a pure read).
+  LayParentOf = 560,
+  /// `a->SetSizeAtLeast(b, c)`.
+  LaySetSizeAtLeast,
+  /// `a->AddRef()` (an instruction: the manager's `SmartPtr`).
+  LayHold,
+  /// `a->Release()` (an instruction; the last one deletes it, and its Rust object with it).
+  LayRelease,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -3713,6 +3721,63 @@ enum class EeWonLanCall : uint32_t {
   DiscoveryTimer,
   DiscoveryRecv,
   Accept,
+};
+
+/// The instruction classes.
+enum class EeWonLayoutKind : uint32_t {
+  /// `ChildLayoutInstructionBase` itself: Execute does nothing, UsesComponent is false.
+  Base = 0,
+  /// `ChildLayoutInstruction`: refs child, reference; ints flags, x, y, width, height.
+  Child,
+  /// `CenterLayout`: ref the centre box (may be NULL); horz, vert; the list.
+  Center,
+  /// `SameSizeLayout`: horz, vert; the list.
+  SameSize,
+  /// `ClearRightLayout`: ref the component; int the pad; the list.
+  ClearRight,
+  /// `SpaceEvenlyLayout`: ref the space box; ints the left and right pads; horz (`mIsHorz`); the list.
+  SpaceEvenly,
+  /// `NoOverlapLayout`: refs the reference, the target; ints the type, the horizontal and vertical pads; the list.
+  NoOverlap,
+  /// `SizeAtLeastLayout`: ref the target; ints the horizontal and vertical pads; the list.
+  SizeAtLeast,
+  /// `PercentLayout`: refs the target and the param's left, top, right, bottom anchors; ints px, py, pw, ph, lp,
+  /// tp, rp, bp.
+  Percent,
+};
+
+/// An instruction's inward calls.
+enum class EeWonLayoutCall : uint32_t {
+  /// `Execute((Component*)a)` (the parent).
+  Execute = 1,
+  /// `UsesComponent((Component*)a)` (0 or 1).
+  UsesComponent,
+  /// `Add((Component*)a)`: appended to the list (the C++ returns its own `this`).
+  Add,
+  /// `mGroupId`.
+  GroupId,
+  /// `mEnabled` (0 or 1).
+  Enabled,
+};
+
+/// The manager's inward calls.
+enum class EeWonLayoutMgrCall : uint32_t {
+  /// `ExecuteInstructions((Component*)a)` (the container).
+  Execute = 1,
+  /// `AddInstruction(a)` (`a` the `ChildLayoutInstructionBase*`, `b` its `EeWonLayout*`).
+  AddInstruction,
+  /// `AddLayoutPoint((LayoutPoint*)a)` (as a `Component*`).
+  AddLayoutPoint,
+  /// `RemoveComponent((Component*)a)`.
+  RemoveComponent,
+  Clear,
+  /// `EnableInstructions(a, b != 0)`.
+  EnableInstructions,
+  /// `Container::AddChildLayout(a, c)` on the container `d` (`a` the instruction, `b` its `EeWonLayout*`, `c` the
+  /// group id).
+  AddChildLayout,
+  /// The number of instructions (a test read).
+  Count,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
@@ -4772,6 +4837,13 @@ struct EeWonLan;
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
+
+/// A child layout instruction.
+struct EeWonLayout;
+
+/// A container's child layout manager: the instructions (held, each with its Rust object) and the layout points
+/// (held), in the order they were added.
+struct EeWonLayoutMgr;
 
 /// `LightGetCertOp`'s member: the peer data `GetCertCallback` hands the waiting op (`SetPeerData`), read by its
 /// owner when the op completes (`GetPeerData`). Shared (an `Arc`) by the owner and the context's refresh set; the
@@ -6079,6 +6151,15 @@ using EeWonLobbyHostFn = ptrdiff_t(*)(void *logic,
                                       void *b,
                                       ptrdiff_t c,
                                       ptrdiff_t d);
+
+/// A new instruction's numbers, as its C++ constructor received them (see `EeWonLayoutKind` for each class's).
+struct EeWonLayoutInit {
+  EeWonLayoutKind kind;
+  ptrdiff_t refs[5];
+  int32_t ints[8];
+  bool horz;
+  bool vert;
+};
 
 /// What a map does with its entries' objects: `copy` makes the copy's object (a reference added, or a new record),
 /// `drop` lets one go (a reference released, or the record deleted). Either may be absent (the entries hold none).
@@ -11554,6 +11635,57 @@ ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
                           void *b,
                           ptrdiff_t c,
                           ptrdiff_t d);
+
+/// A new Rust instruction for the C++ shell `comp` (its calls out through `host`), from its constructor's numbers.
+///
+/// # Safety
+/// `init` points at a live `EeWonLayoutInit`.
+EeWonLayout *ee_won_layout_new(void *comp,
+                               EeWonGuiHostFn host,
+                               const EeWonLayoutInit *init);
+
+/// Frees a Rust instruction (its list held no references).
+///
+/// # Safety
+/// `lay` came from `ee_won_layout_new` (or is NULL) and is not used again.
+void ee_won_layout_free(EeWonLayout *lay);
+
+/// One of an instruction's methods (`EeWonLayoutCall`).
+///
+/// # Safety
+/// `lay` is live.
+ptrdiff_t ee_won_layout_call(const EeWonLayout *lay,
+                             EeWonLayoutCall call,
+                             ptrdiff_t a,
+                             ptrdiff_t b);
+
+/// `CenterLayout::Center(parent, child, horz, vert)`: a temporary centre layout (centre box the parent, the child
+/// listed) run on the parent.
+void ee_won_layout_center(EeWonGuiHostFn host,
+                          ptrdiff_t parent,
+                          ptrdiff_t child,
+                          bool horz,
+                          bool vert);
+
+/// A new Rust layout manager for the C++ shell `comp`, its calls out through `host`.
+EeWonLayoutMgr *ee_won_lmgr_new(void *comp, EeWonGuiHostFn host);
+
+/// Frees a Rust layout manager: the layout points, then the instructions, released (the original's members).
+///
+/// # Safety
+/// `mgr` came from `ee_won_lmgr_new` (or is NULL) and is not used again.
+void ee_won_lmgr_free(EeWonLayoutMgr *mgr);
+
+/// One of the manager's methods (`EeWonLayoutMgrCall`).
+///
+/// # Safety
+/// `mgr` is live; an instruction passed with its live Rust object.
+ptrdiff_t ee_won_lmgr_call(const EeWonLayoutMgr *mgr,
+                           EeWonLayoutMgrCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c,
+                           ptrdiff_t d);
 
 /// A new Rust ListArea for the C++ `component`, its calls out through `host`.
 EeWonList *ee_won_list_new(void *component, EeWonGuiHostFn host);

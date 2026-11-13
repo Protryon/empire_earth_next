@@ -5,10 +5,9 @@
 namespace WONAPI {
 class PercentLayout : public ChildLayoutInstructionBase {
 public:
-    PercentLayout(Component* target,const PercentLayoutParam& param) : mTarget(target),mParam(param) {} // inline (as at 0x007886ea..0x0078870f: copies all 16 DWORDs)
-    virtual void Execute(Component*); // at 0x00737580: forwards to Param::DoCalc
-    Component* mTarget; //0c borrowed
-    PercentLayoutParam mParam; // offsets 0x10..0x4f: 16 DWORDs, no owned pointers
+    // the target and the param's anchors, percentages and padding handed to the Rust instruction, whose Execute is the
+    // param's DoCalc (0x00737430 / 0x00737580)
+    PercentLayout(Component* target,const PercentLayoutParam& param); // inline in the original (0x007886ea..0x0078870f)
 };
 }
 #endif
