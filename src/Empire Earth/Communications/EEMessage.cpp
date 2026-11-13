@@ -88,7 +88,6 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
@@ -1378,7 +1377,6 @@ bool EEMCameraLocationInfo::IsResponse(NEMessage* inMessage)
 }
 
 #include "lle/USingleton.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEStringIDs.h"
@@ -7527,7 +7525,6 @@ bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
 }
 
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 
 // FUNCTION: EXE 0x4c8615
 // Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move

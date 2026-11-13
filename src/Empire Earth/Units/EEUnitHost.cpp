@@ -26,17 +26,14 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGExplore.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "lle/USingleton.h"
-#include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEAreaUtilities.h"
@@ -428,7 +425,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     bool theFlagB = inSpec->flag_b != 0;
     switch (inSpec->ctor) {
     case EE_GOAL_CTOR_EXPLORE:
-        return static_cast<EEUnitGoal*>(new EEUGExplore(theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewExplore(theFlagA));
     case EE_GOAL_CTOR_ATTACK_GROUND:
         return static_cast<EEUnitGoal*>(new EEUGAttackGround(GE3DPoint(inSpec->point[0], inSpec->point[1], inSpec->point[2]), theFlagA));
     case EE_GOAL_CTOR_ATTACK_UNIT: {
@@ -459,7 +456,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
         if (theUnit == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
+        return static_cast<EEUnitGoal*>(EEUGRust::NewUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
                                                                 (long)inSpec->point[1], theFlagA));
     }
     case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
@@ -472,8 +469,9 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
         if (theUnit == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
-                                                             (long)inSpec->ints[1], (long)inSpec->ints[2], theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewCastCalamity(theUnit, UnitOf(inSpec->unit_b), (long)inSpec->ints[0],
+                                                                  (long)inSpec->ints[1], (long)inSpec->ints[2],
+                                                                  theFlagA));
     }
     default:
         return NULL;
@@ -961,7 +959,7 @@ extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
         Log({kDrySetTransport, static_cast<DryGoal*>(inGoal)->mCtor, inUnit});
         return;
     }
-    static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->SetTransport(ComplexOf(inUnit)->mComplexUnit);
+    static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->SetUnloadTransport(ComplexOf(inUnit)->mComplexUnit);
 }
 
 // the dry goal is a record: it answers yes (logged)
@@ -971,7 +969,7 @@ extern "C" uint8_t ee_units_host_goal_can_unload(void* inGoal)
         Log({kDryCanUnloadThere, static_cast<DryGoal*>(inGoal)->mCtor});
         return 1;
     }
-    return static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
+    return static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
 }
 
 extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)

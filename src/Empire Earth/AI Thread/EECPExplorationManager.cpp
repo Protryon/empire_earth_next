@@ -35,7 +35,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGExplore.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPILocation.h"
 #include "ee/EECPAGTask.h"
@@ -474,7 +474,7 @@ void EECPExplorationManager::Update(unsigned long inTime)
                 else if (this->GetPlayer()->GetDifficulty() == kDifficultyHard)
                     theUnit->SetBehavior(EEUnitBehavior::sTable[3]);
                 theUnit->ClearGoals(0);
-                theUnit->SetGoal(new EEUGExplore(false), 0, 0);
+                theUnit->SetGoal(EEUGRust::NewExplore(false), 0, 0);
                 theUnit->StartAction(kActionFindUnexploredArea);
                 theUnit->GetUnitClass()->ActionChanged(theUnit);
             }

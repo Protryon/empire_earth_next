@@ -46,7 +46,7 @@
 #include "ee/EEUGLoadContainer.h"
 #include "ee/EEUGLoadGarrison.h"
 #include "ee/EEUGLoadTransport.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/UReferenceContainer.h"
 #include "ee/EEUCBasicCitizen.h"
 #include "ee/EECPCivilizationManager.h"
@@ -1869,7 +1869,7 @@ bool EECPResourceManager::FerryGatherers(std::vector<EEComplexUnit*>& inUnits, E
     std::vector<EETileCoordinate> theTiles;
     long theX = inResource->GetTileX();
     long theY = inResource->GetTileY();
-    EEUGUnloadTransport* theUnload = new EEUGUnloadTransport(inTransport, theX, theY, true);
+    EEUGRust* theUnload = EEUGRust::NewUnloadTransport(inTransport, theX, theY, true);
     if (theUnload != NULL) {
         if (theUnload->CanUnloadAtDestination()) {
             inTransport->ClearGoalQueue(0);
@@ -1909,12 +1909,12 @@ void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
     std::vector<EEComplexUnit*> theUnits;
     EEUnitGoal* theGoal = inUnit->mActiveGoal;
     EEUGLoadTransport* theLoad = dynamic_cast<EEUGLoadTransport*>(theGoal);
-    EEUGUnloadTransport* theUnload = dynamic_cast<EEUGUnloadTransport*>(theGoal);
+    EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
     bool theChanged = false;
     if (theLoad == NULL && theUnload == NULL) {
         theGoal = inUnit->mActiveGoal;
         theLoad = dynamic_cast<EEUGLoadTransport*>(theGoal);
-        theUnload = dynamic_cast<EEUGUnloadTransport*>(theGoal);
+        theUnload = EEUnloadGoalCast(theGoal);
     }
     if (theLoad != NULL) {
         UReferenceContainer<EEComplexUnit*>& theCargo = theLoad->mUnits;
@@ -1941,8 +1941,10 @@ void EECPResourceManager::TransportIdle(EEComplexUnit* inUnit)
         }
     } else if (theUnload != NULL) {
         if (inUnit->GetNumCargoUnits() > 0 && inUnit->mIsDetachedFromAI) {
-            EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(inUnit, theUnload->mDestination.GetX(),
-                                                                   theUnload->mDestination.GetY(), true);
+            long theX;
+            long theY;
+            theUnload->GetUnloadTransport(&theX, &theY);
+            EEUGRust* theGoal = EEUGRust::NewUnloadTransport(inUnit, theX, theY, true);
             if (theGoal->CanUnloadAtDestination())
                 inUnit->QueueGoal(theGoal, 0);
         }
