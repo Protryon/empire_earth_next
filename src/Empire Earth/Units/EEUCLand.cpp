@@ -35,7 +35,7 @@
 #include "ee/EEHerd.h"
 #include "ee/EEWheel.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCLand.h"
 #include "ee/EEUnitUpdate.h"
 #include "rust/ee_units.h"
@@ -87,7 +87,7 @@ void EEUCLand::CallParatroopPlane(EEComplexUnit* inUnit)
     thePlane->mOrientation = GEOrientation(3.1415927f, 0.0f, 0.0f);
     GE3DPoint theTarget;
     inUnit->mGoalState->GetGoalLocation(theTarget);
-    thePlane->QueueGoal(new EEUGUnloadTransport(thePlane, (long)theTarget.GetX(), (long)theTarget.GetY(), false), 0);
+    thePlane->QueueGoal(EEUGRust::NewUnloadTransport(thePlane, (long)theTarget.GetX(), (long)theTarget.GetY(), false), 0);
     thePlane->SetFlightTime(1000000);
     GE3DPoint theStart(theTransformation);
     thePlane->mUnitClass->PathToward(thePlane, theStart, theTarget, true);
