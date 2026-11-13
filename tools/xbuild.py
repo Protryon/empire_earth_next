@@ -425,6 +425,8 @@ WON_TESTS = {
     "won_labelobj_test": [],
     # Splitter as a whole Rust object (splitobj.rs), the same way (golden: rust/crates/ee_won/src/golden_splitobj.txt)
     "won_splitobj_test": [],
+    # ListArea as a whole Rust object (listobj.rs), the same way (golden: rust/crates/ee_won/src/golden_listobj.txt)
+    "won_listobj_test": [],
     # StagingLogic's and InitLogic's flows (hosting, joining, leaving, readying, kicks, game actions; the start-up
     # checks and the advert's lines), the original's statements against ee_won's flow module
     "won_flow_test": [],

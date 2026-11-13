@@ -34,7 +34,7 @@ void ComponentListItem::Paint(Graphics& g,ListArea* area)
     if(this->mComponent.get()==NULL)
         return;
     if(this->mIsSizable)
-        this->mComponent->SetSize(area->mPaintWidth,this->mComponent->Height());
+        this->mComponent->SetSize(area->GetPaintWidth(),this->mComponent->Height());
     this->mComponent->MarkInvalid();
     this->mComponent->Paint(g);
 }

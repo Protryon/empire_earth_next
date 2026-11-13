@@ -325,20 +325,26 @@ static bool OnMap(RTSUnit* inUnit)
 
 void EEGoalQueueReport(EEUnitVectorItem* inQueue)
 {
-    uint32_t theIDs[16];
-    std::vector<uint32_t> theMore;
+    EeGoalQueueEntry theEntries[16];
+    std::vector<EeGoalQueueEntry> theMore;
     size_t theCount = inQueue->mGoals.size();
-    uint32_t* theWords = theIDs;
+    EeGoalQueueEntry* theList = theEntries;
     if (theCount > 16) {
         theMore.resize(theCount);
-        theWords = &theMore[0];
+        theList = &theMore[0];
     }
     for (size_t i = 0; i < theCount; i++) {
         EEUnitGoal* theGoal = inQueue->mGoals[i];
-        theWords[i] = theGoal != NULL ? (uint32_t)theGoal->mID : 0;
+        theList[i].id = theGoal != NULL ? (uint32_t)theGoal->mID : 0;
+        theList[i].kind = theGoal != NULL ? (uint8_t)theGoal->mKind : 0;
+        theList[i].goal = reinterpret_cast<uintptr_t>(theGoal);
     }
-    ee_units_goal_queue_set(reinterpret_cast<uintptr_t>(inQueue), reinterpret_cast<uintptr_t>(inQueue->mUnit), theWords,
-                            theCount);
+    EeGoalQueueTimer theTimer;
+    theTimer.start = (uint32_t)inQueue->mStartTime;
+    theTimer.time = (uint32_t)inQueue->mTime;
+    theTimer.started = inQueue->mStarted ? 1 : 0;
+    ee_units_goal_queue_report(reinterpret_cast<uintptr_t>(inQueue), reinterpret_cast<uintptr_t>(inQueue->mUnit), theList,
+                               theCount, theTimer);
 }
 
 void EEGoalQueueDropped(EEUnitVectorItem* inQueue)
@@ -775,6 +781,7 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
     {
         static std::vector<uint64_t> sContainers;
         static std::vector<uint32_t> sLens;
+        static std::vector<EeGoalQueueTimer> sTimers;
         static std::vector<uint32_t> sIDs;
         uint32_t theBad = 0;
         for (unsigned long p = 0; p < 17; p++) {
@@ -787,11 +794,17 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                 EEComplexUnit* theComplex = static_cast<EEComplexUnit*>(theUnit);
                 sContainers.clear();
                 sLens.clear();
+                sTimers.clear();
                 sIDs.clear();
                 for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
                     EEUnitVectorItem& theQueue = theComplex->mGoalQueues[q];
                     sContainers.push_back(reinterpret_cast<uintptr_t>(&theQueue));
                     sLens.push_back((uint32_t)theQueue.mGoals.size());
+                    EeGoalQueueTimer theTimer;
+                    theTimer.start = (uint32_t)theQueue.mStartTime;
+                    theTimer.time = (uint32_t)theQueue.mTime;
+                    theTimer.started = theQueue.mStarted ? 1 : 0;
+                    sTimers.push_back(theTimer);
                     for (size_t i = 0; i < theQueue.mGoals.size(); i++)
                         sIDs.push_back(theQueue.mGoals[i] != NULL ? (uint32_t)theQueue.mGoals[i]->mID : 0);
                 }
@@ -799,7 +812,8 @@ unsigned long EEUnitStoreCheck(unsigned long inWhere)
                 uint64_t theOwner = theComplex->mGoalQueues.empty() ? reinterpret_cast<uintptr_t>(theComplex)
                                                                     : reinterpret_cast<uintptr_t>(theComplex->mGoalQueues[0].mUnit);
                 theBad += ee_units_goal_queue_check_unit(theOwner, sContainers.empty() ? NULL : &sContainers[0],
-                                                         sLens.empty() ? NULL : &sLens[0], sContainers.size(),
+                                                         sLens.empty() ? NULL : &sLens[0],
+                                                         sTimers.empty() ? NULL : &sTimers[0], sContainers.size(),
                                                          sIDs.empty() ? NULL : &sIDs[0], sIDs.size());
             }
         }

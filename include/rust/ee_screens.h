@@ -76,6 +76,167 @@ constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_BEGIN = 656;
 
 constexpr static const uint32_t EE_SCREENS_OP_CAM_GRAB_END = 657;
 
+constexpr static const uint32_t EE_SCREENS_CE_OPEN = 6145;
+
+/// The form's close event and the name box's change: nothing (the original's shared `return 0`).
+constexpr static const uint32_t EE_SCREENS_CE_CLOSE = 6146;
+
+constexpr static const uint32_t EE_SCREENS_CE_ADD_SCENARIO = 6147;
+
+constexpr static const uint32_t EE_SCREENS_CE_REMOVE_SCENARIO = 6148;
+
+constexpr static const uint32_t EE_SCREENS_CE_MOVE_UP = 6149;
+
+constexpr static const uint32_t EE_SCREENS_CE_MOVE_DOWN = 6150;
+
+constexpr static const uint32_t EE_SCREENS_CE_SAVE = 6151;
+
+/// The save posted by [`EE_SCREENS_CE_SAVE`] (it runs on form 24: the original's event held the form).
+constexpr static const uint32_t EE_SCREENS_CE_SAVE_CONTINUED = 6152;
+
+constexpr static const uint32_t EE_SCREENS_CE_SELECTED = 6153;
+
+/// The password box's Enter and the password page's OK.
+constexpr static const uint32_t EE_SCREENS_CE_PASSWORD = 6154;
+
+constexpr static const uint32_t EE_SCREENS_CE_DELETE = 6155;
+
+constexpr static const uint32_t EE_SCREENS_CE_NEW = 6156;
+
+constexpr static const uint32_t EE_SCREENS_CE_MAIN_SCREEN = 6157;
+
+constexpr static const uint32_t EE_SCREENS_CE_EDITOR = 6158;
+
+constexpr static const uint32_t EE_SCREENS_CE_NAME_CHANGED = 6159;
+
+/// The questions' answers (the host's callbacks, on the question's form).
+constexpr static const uint32_t EE_SCREENS_CE_SAVE_BEFORE_OPEN = 6160;
+
+constexpr static const uint32_t EE_SCREENS_CE_DISCARD_BEFORE_OPEN = 6161;
+
+constexpr static const uint32_t EE_SCREENS_CE_SAVE_BEFORE_NEW = 6162;
+
+constexpr static const uint32_t EE_SCREENS_CE_DISCARD_BEFORE_NEW = 6163;
+
+constexpr static const uint32_t EE_SCREENS_CE_SAVE_BEFORE_MAIN = 6164;
+
+constexpr static const uint32_t EE_SCREENS_CE_SHOW_MAIN = 6165;
+
+constexpr static const uint32_t EE_SCREENS_CE_SAVE_BEFORE_EDITOR = 6166;
+
+constexpr static const uint32_t EE_SCREENS_CE_SHOW_EDITOR = 6167;
+
+constexpr static const uint32_t EE_SCREENS_CE_DELETE_YES = 6168;
+
+/// (control, kind: [`EE_SCREENS_CE_IS_EDIT`], [`EE_SCREENS_CE_IS_LABEL`], [`EE_SCREENS_CE_IS_LIST`], [`EE_SCREENS_CE_IS_COMBO`]) -> the control is of that class
+constexpr static const uint32_t EE_SCREENS_OP_CE_IS = 800;
+
+/// The background combo box's set-up (the scenarios' `.jpg`/`.JPG` files, a "none" line selected)
+constexpr static const uint32_t EE_SCREENS_GAME_CE_OPEN = 801;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_RESET = 802;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_NEW = 803;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_UNLOCKED = 804;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_PASSWORD_ENTERED = 805;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_SAVE = 806;
+
+/// (control, line, scroll) a list box's ChangeSelectionIndex(line, false, scroll)
+constexpr static const uint32_t EE_SCREENS_OP_CE_LIST_SELECT = 807;
+
+constexpr static const uint32_t EE_SCREENS_OP_CE_CLEAR_SELECTION = 808;
+
+/// (control) -> a combo box's selection, `u32::MAX` for none
+constexpr static const uint32_t EE_SCREENS_OP_CE_COMBO_SELECTION = 809;
+
+constexpr static const uint32_t EE_SCREENS_OP_CE_COMBO_COUNT = 810;
+
+/// (control) the combo box's "none" line: the string, CreateEntries(1), InsertLine at 0, selected
+constexpr static const uint32_t EE_SCREENS_OP_CE_BG_NONE = 811;
+
+constexpr static const uint32_t EE_SCREENS_GAME_CE_LIST_OK = 812;
+
+/// (control, field) -> the edit box's first line differs from the model's field (`UWideString` `!=`)
+constexpr static const uint32_t EE_SCREENS_GAME_CE_CHANGED = 813;
+
+/// Texts in (ee_screenscpp_text) and out (ee_screenscpp_put_text).
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_FIELD = 768;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_LIST = 769;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_ERROR = 770;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_ALL_TEXT = 771;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_SET_FIELD = 772;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_ADD = 773;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_REMOVE = 774;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_MOVE = 775;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_DELETE = 776;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_LOAD = 777;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_QUESTION = 778;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_APPEND = 779;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_BG_EQUALS = 780;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_TRANSLATE = 781;
+
+constexpr static const uint32_t EE_SCREENS_TEXT_CE_TRANSLATED = 782;
+
+/// [`EE_SCREENS_OP_CE_IS`]'s classes.
+constexpr static const uint32_t EE_SCREENS_CE_IS_EDIT = 0;
+
+constexpr static const uint32_t EE_SCREENS_CE_IS_LABEL = 1;
+
+constexpr static const uint32_t EE_SCREENS_CE_IS_LIST = 2;
+
+constexpr static const uint32_t EE_SCREENS_CE_IS_COMBO = 3;
+
+/// The model's fields ([`EE_SCREENS_TEXT_CE_FIELD`], [`EE_SCREENS_TEXT_CE_SET_FIELD`]).
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_NAME = 0;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_AUTHOR = 1;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_EMAIL = 2;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_BACKGROUND = 3;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_CIVILIZATION = 4;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_DESCRIPTION = 5;
+
+constexpr static const uint32_t EE_SCREENS_CE_FIELD_PASSWORD = 6;
+
+/// The model's lists ([`EE_SCREENS_TEXT_CE_LIST`]).
+constexpr static const uint32_t EE_SCREENS_CE_LIST_CAMPAIGNS = 0;
+
+constexpr static const uint32_t EE_SCREENS_CE_LIST_AVAILABLE = 1;
+
+constexpr static const uint32_t EE_SCREENS_CE_LIST_SCENARIOS = 2;
+
+constexpr static const uint32_t EE_SCREENS_CE_LIST_SCENARIO_LIST = 3;
+
+/// The questions ([`EE_SCREENS_TEXT_CE_QUESTION`]): before opening, creating, the main screen, the editor; delete.
+constexpr static const uint32_t EE_SCREENS_CE_ASK_OPEN = 0;
+
+constexpr static const uint32_t EE_SCREENS_CE_ASK_NEW = 1;
+
+constexpr static const uint32_t EE_SCREENS_CE_ASK_MAIN = 2;
+
+constexpr static const uint32_t EE_SCREENS_CE_ASK_EDITOR = 3;
+
+constexpr static const uint32_t EE_SCREENS_CE_ASK_DELETE = 4;
+
 /// The chat form's open and close events and its mouse press outside (`EECreateFormEvent`).
 constexpr static const uint32_t EE_SCREENS_CH_OPEN = 4609;
 
@@ -2412,6 +2573,9 @@ extern "C" {
 /// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
 /// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
 void ee_screens_camera_grab_reset(uint32_t form);
+
+/// The campaign editor's event code for a control event id, 0 for another form's.
+uint32_t ee_screens_campaign_editor_event_for(unsigned long id);
 
 /// `EEUIECLEFormManager::AddEntry`.
 void ee_screens_chat_log_add(const EeScreensChatLogHead *head,

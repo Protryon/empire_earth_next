@@ -77,6 +77,29 @@ struct EEEffectFileOps {
     static int32_t WriteBool(void* inContext, bool inValue) { return (int32_t)File(inContext).Write(inValue); }
 };
 
+// The terrain mesh as the particles' move asks it
+struct EEParticleGroundOps {
+    static GETerrainMesh& Mesh() { return gWorld.mMap->mTerrainMesh; }
+    static bool IsValidTile(void*, uint32_t inX, uint32_t inY) { return Mesh().GetIsValidTile(inX, inY); }
+    static bool IsSpaceTile(void*, uint32_t inX, uint32_t inY) { return Mesh().GetIsSpaceTile(inX, inY); }
+    static float MeshZ(void*, float inX, float inY) { return Mesh().GetMeshZ(inX, inY); }
+    static void MeshNormal(void*, float inX, float inY, EeGe3DPoint* outNormal)
+    {
+        GEVector theNormal;
+        Mesh().GetMeshNormal(inX, inY, theNormal);
+        outNormal->x = theNormal.mX;
+        outNormal->y = theNormal.mY;
+        outNormal->z = theNormal.mZ;
+    }
+};
+
+EeGfxParticleGround EEParticleGround()
+{
+    EeGfxParticleGround theGround = {NULL, EEParticleGroundOps::IsValidTile, EEParticleGroundOps::IsSpaceTile,
+                                     EEParticleGroundOps::MeshZ, EEParticleGroundOps::MeshNormal};
+    return theGround;
+}
+
 EeGfxEffectFile EEEffectFile(FSFile& inFile)
 {
     EeGfxEffectFile theFile = {&inFile, EEEffectFileOps::IsOpen, EEEffectFileOps::ReadU32, EEEffectFileOps::ReadI32,

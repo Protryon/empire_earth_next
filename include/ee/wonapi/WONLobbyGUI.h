@@ -2602,11 +2602,14 @@ public:
     SmartPtr<ListItem> mItem; // at +0x34
 };
 // ListArea (0x164 bytes): ScrollArea (0x110) base plus vectors and SmartPtr members.
+// ListArea (R6 WON round 23): its items, top line, flags, batch, paint width, sort type, selection, keyboard and mouse
+// items and selection walk are the Rust ListArea (rust/crates/ee_won/src/listobj.rs); this is the type the lobby
+// holds and the base of MultiListArea, TreeArea and PopupMenu, with what the configs and paints read (the font, the
+// colours, the selection colours, the sort function, the item tool tip). The items stay C++ data.
 class ListArea : public ScrollArea {
 public:
-    ListArea(); // 0x2fa570: search, font and focus setup
-    virtual ~ListArea(); // 0x2fa860: ends the tooltip, then releases the members
-    void SetSortType(ListSortType); // 0x2facd0
+    ListArea(); // at 0x006fa570 in the original
+    virtual ~ListArea();
     typedef int (*SortFunc)(ListArea*, const ListItem*, const ListItem*);
     static int NumberSortFunc(ListArea*,const ListItem*,const ListItem*); // 0x2faaf0
     struct LineSortPred {
@@ -2615,77 +2618,66 @@ public:
         bool operator()(const ListItem* a,const ListItem* b) { if(this->mAscending) return this->mSortFunc(this->mListArea,a,b)<0; else return this->mSortFunc(this->mListArea,a,b)>0; }
     };
     static int DefaultSortFunc(ListArea* area,const ListItem* a,const ListItem* b) { return a->Compare(b,area); }
-    SortFunc GetSortFunc(); // 0x2fab20
-    int FindInsertPos(ListItem*,int); //2fabe0
-    void DeleteItemPrv(int); //2fca50
-    void CheckMouseSel(ListItem*,int,int,bool=false); //2fb060
-    void ItemMouseAt(int&,int&); //2fb6a0
-    ListItem* FindSelectableItem(int,bool,bool=true); //2fc0a0
-    virtual void AdjustPosition(bool); //2fadf0 AdjustPosition
-    virtual void Virtual08(); //2faef0 SizeChanged
-    virtual void ScrollPaint(Graphics&); //2fafb0 ScrollPaint
-    virtual void MouseEnter(int,int); //2fc010 MouseEnter
-    virtual void MouseExit(); //2fc040 MouseExit
-    virtual void MouseDown(int,int,int); //2fbd00 MouseDown
-    virtual void MouseUp(int,int,int);   //2fbef0 MouseUp
-    virtual void MouseMove(int,int); //2fbad0 MouseMove
-    virtual void MouseDrag(int,int); //2fbc70 MouseDrag
-    virtual bool KeyDown(int);   //2fc160 KeyDown
-    // Added slots +0xd8/+0xdc/+0xe0: ListArea has 57 slots, TreeArea overrides +0xd8 and +0xe0.
-    virtual void NotifyMouseItemGone();     // 0x2fcad0, no args
-    virtual void ListSelChangedHook();      // 0x4142a0, no args
-    virtual bool Sort();                   // 0x2fab50, no args, AL result
-    void BeginUpdate();                     // 0x2faa00 (before the list is refilled)
-    void EndUpdate();                       // 0x2faa10 (after it)
-    void Clear(bool inFlag);                // 0x2faa50 (clears it?)
-    ListItem* GetItem(int inIndex);         // 0x2fc4e0
-    ListItem* InsertItem(ListItem* inItem, int inPos = -1);         // 0x2fc510
-    void RefreshItem(ListItem* inItem);     // 0x2fc730 (an item changed)
-    void DeleteItem(int); //2fcae0 index deletion
-    void SetListFlags(unsigned long,bool); // 0x2fb600: sets or clears list flags
-    void RemoveItem(ListItem* inItem);      // 0x2fcb00
-    ListItem* InsertString(const GUIString& inText, int inPos = -1);    // 0x2fcc30
-    int GetNumItems() const { return this->mItems.size(); }   // 0x290d70 (EELobbyConnectDialog.cpp's COMDAT)
-
-    int GetItemPos(ListItem* inItem);        // 0x2fc450
-    void SetSelItem(int inIndex, bool inFireEvent = true); // 0x2fb410, ret8
-    void EnsureVisible(ListItem* inItem);    // 0x2faf60, ret4
-    void FindNextSelection(); // 0x2fb4d0: scans for the next selected item
-    int ClearSelectionPrv(bool); // 0x2fb560: returns the number of items deselected
-    void ClearSelection(bool = true); // 0x2fb5f0 (forwarder)
-    bool SetSelItem(ListItem*,bool,bool); // 0x2fb200
-    void SelectRange(int,int); //2fb2e0
-    std::vector<SmartPtr<ListItem> >::iterator FindLineAt(int); //2facf0
-    ListItem* FindItemAt(int); //2fad80
-    void FindTopLine(); //2fadc0
-    bool IsItemVisible(ListItem*); //2faf10
-    void EnforceInvariants(); //2fc3c0
-    void DeleteRange(int,int); //2fcb20
-    void RewindSelections();               // 0x2fb480
-    bool HasMoreSelections();              // 0x2fb490
-    ListItem* GetNextSelection();           // 0x2fb530
+    SortFunc GetSortFunc() { return this->mSortFunc==NULL ? ListArea::DefaultSortFunc : this->mSortFunc; }
+    virtual void AdjustPosition(bool b) { this->Call(EeWonListCall::AdjustPosition,b); }
+    virtual void Virtual08() { this->Call(EeWonListCall::SizeChanged); } // SizeChanged
+    virtual void ScrollPaint(Graphics& g) { this->Call(EeWonListCall::ScrollPaint,(intptr_t)&g); }
+    virtual void MouseEnter(int x,int y) { this->Call(EeWonListCall::MouseEnter,x,y); }
+    virtual void MouseExit() { this->Call(EeWonListCall::MouseExit); }
+    virtual void MouseDown(int x,int y,int b) { this->Call(EeWonListCall::MouseDown,x,y,b); }
+    virtual void MouseUp(int x,int y,int b) { this->Call(EeWonListCall::MouseUp,x,y,b); }
+    virtual void MouseMove(int x,int y) { this->Call(EeWonListCall::MouseMove,x,y); }
+    virtual void MouseDrag(int x,int y) { this->Call(EeWonListCall::MouseDrag,x,y); }
+    virtual bool KeyDown(int k) { return this->Call(EeWonListCall::KeyDown,k)!=0; }
+    virtual void NotifyMouseItemGone() { this->Call(EeWonListCall::NotifyMouseItemGone); }
+    virtual void ListSelChangedHook() {}
+    virtual bool Sort() { return this->Call(EeWonListCall::Sort)!=0; }
+    void SetSortType(ListSortType t) { this->Call(EeWonListCall::SetSortType,t); }
+    void BeginUpdate() { this->Call(EeWonListCall::BeginUpdate); }
+    void EndUpdate() { this->Call(EeWonListCall::EndUpdate); }
+    void Clear(bool fire) { this->Call(EeWonListCall::Clear,fire); }
+    ListItem* GetItem(int i) { return (ListItem*)this->Call(EeWonListCall::GetItem,i); }
+    ListItem* InsertItem(ListItem* item,int pos=-1) { return (ListItem*)this->Call(EeWonListCall::InsertItem,(intptr_t)item,pos); }
+    void RefreshItem(ListItem* item) { this->Call(EeWonListCall::RefreshItem,(intptr_t)item); }
+    void DeleteItem(int pos) { this->Call(EeWonListCall::DeleteItem,pos); }
+    void SetListFlags(unsigned long flags,bool on) { this->Call(EeWonListCall::SetListFlags,(intptr_t)(int)flags,on); }
+    void RemoveItem(ListItem* item) { this->Call(EeWonListCall::RemoveItem,(intptr_t)item); }
+    ListItem* InsertString(const GUIString& text,int pos=-1) { return this->InsertItem(new TextListItem(text),pos); }
+    int GetNumItems() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::NumItems); }
+    int GetItemPos(ListItem* item) { return (int)this->Call(EeWonListCall::GetItemPos,(intptr_t)item); }
+    void SetSelItem(int index,bool fire=true) { this->Call(EeWonListCall::SetSelItemAt,index,fire); }
+    void EnsureVisible(ListItem* item) { this->Call(EeWonListCall::EnsureVisible,(intptr_t)item); }
+    void ClearSelection(bool fire=true) { this->Call(EeWonListCall::ClearSelection,fire); }
+    bool SetSelItem(ListItem* item,bool add,bool fire) { return this->Call(EeWonListCall::SetSelItem,(intptr_t)item,add,fire)!=0; }
+    void SelectRange(int start,int end) { this->Call(EeWonListCall::SelectRange,start,end); }
+    ListItem* FindItemAt(int y) { return (ListItem*)this->Call(EeWonListCall::FindItemAt,y); }
+    bool IsItemVisible(ListItem* item) { return this->Call(EeWonListCall::IsItemVisible,(intptr_t)item)!=0; }
+    void EnforceInvariants() { this->Call(EeWonListCall::EnforceInvariants); }
+    void DeleteRange(int start,int end) { this->Call(EeWonListCall::DeleteRange,start,end); }
+    void RewindSelections() { this->Call(EeWonListCall::RewindSelections); }
+    bool HasMoreSelections() { return this->Call(EeWonListCall::HasMoreSelections)!=0; }
+    ListItem* GetNextSelection() { return (ListItem*)this->Call(EeWonListCall::GetNextSelection); }
     int GetTextColor(); //2fb520
-    int GetItemPosAtYPos(int); //2fc4b0
-    bool ListFlagSet(int flags) { return this->mListFlags & flags ? true : false; }
-    ListItem* GetSelItem() { return this->mSelItem; } // inline
+    int GetItemPosAtYPos(int y) { return (int)this->Call(EeWonListCall::GetItemPosAtYPos,y); }
+    ListItem* FindSelectableItem(int start,bool up,bool opposite=true) { return (ListItem*)this->Call(EeWonListCall::FindSelectableItem,start,up,opposite); }
+    bool ListFlagSet(int flags) { return (this->Call(EeWonListCall::ListFlags)&flags)!=0; }
+    ListItem* GetSelItem() { return (ListItem*)this->Call(EeWonListCall::SelItem); }
+    ListItem* GetMouseItem() { return (ListItem*)this->Call(EeWonListCall::MouseItem); }
     const SelectionColor& GetSelColor() { return this->mSelColor; } // inline
     void SetFont(Font* theFont) { this->mFont=theFont; }
-    std::vector<SmartPtr<ListItem> > mItems;          // +0x110
-    int mTopLineVectorPos; // at +0x120 (0x2fadc0)
-    int mListFlags; //124
-    int mDoingMultiChange; // at +0x128 (0x2faa00/0x2faa10)
-    int mPaintWidth;                        // layout width
-    int mSortType; // at +0x130, a ListSortType value
-    SmartPtr<ListAreaToolTip> mItemToolTip; // at +0x134, owned
-    SmartPtr<Font> mFont;                            // +0x138
-    int mTextColor; //13c
-    SelectionColor mSelColor; //140
-    ListItem* mSelItem;                     // +0x14c (a combo box's list: ComboBox::GetSelItem 0x2f3d40)
-    ListItem* mKeyItem; //150, borrowed
-    ListItem* mMouseItem; //154, borrowed
-    int mSelItemItr; //158
-    SmartPtr<ListItem> mSearchLine; //15c
-    SortFunc mSortFunc; // at +0x160; the class is 0x164 bytes
+    int GetPaintWidth() const { return (int)const_cast<ListArea*>(this)->Call(EeWonListCall::PaintWidth); } // the layout width the items paint to
+    void SetPaintWidth(int w) { this->Call(EeWonListCall::SetPaintWidth,w); } // a subclass's own paint
+    ListSortType GetSortType() const { return static_cast<ListSortType>(const_cast<ListArea*>(this)->Call(EeWonListCall::SortType)); }
+    void SetSortTypeOnly(ListSortType t) { this->Call(EeWonListCall::SetSortTypeOnly,t); } // without sorting (MultiListArea::SetSortColumn)
+    void ClearMouseItem() { this->Call(EeWonListCall::ClearMouseItem); } // the field only (not the virtual NotifyMouseItemGone)
+    SmartPtr<ListAreaToolTip> mItemToolTip; // made on the first item tip
+    SmartPtr<Font> mFont;
+    int mTextColor;
+    SelectionColor mSelColor;
+    SortFunc mSortFunc;
+    EeWonList* mRust;
+private:
+    intptr_t Call(EeWonListCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_list_call(this->mRust,c,a,b,cc); }
 };
 
 

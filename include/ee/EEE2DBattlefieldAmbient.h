@@ -38,18 +38,20 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x40 0xded67
     virtual long Step();                    // +0x4c 0xdee2b (ages; 7 when done)
 
-    unsigned long mType;                    // +0x54 (the effect's mL64; saved through a long temporary)
-    unsigned long mOnSlope;                 // +0x58 (1: the corners are not level; saved through a long temporary)
-    GE3DPoint mCenter;                      // +0x5c (saved)
-    GE3DPoint mCorners[4];                  // +0x68 (on the terrain; saved)
-    GETransformation mTransformation;       // +0x98 (its position is the centre; saved)
+    // the record's (ee_gfx effect_state.rs `EeGfxEffectAmbient`); the constructor's draws and corners, the tick,
+    // load and save are Rust's
+    uint32_t& mType = this->mRecord->ambient.kind;   // +0x54 (the effect's int param 1; saved)
+    uint32_t& mOnSlope = this->mRecord->ambient.on_slope;   // +0x58 (1: the corners are not level; saved)
+    GE3DPoint& mCenter = *reinterpret_cast<GE3DPoint*>(&this->mRecord->ambient.center);   // +0x5c (saved)
+    GE3DPoint (&mCorners)[4] = *reinterpret_cast<GE3DPoint(*)[4]>(&this->mRecord->ambient.corners);   // +0x68
+    GETransformation& mTransformation = *reinterpret_cast<GETransformation*>(&this->mRecord->ambient.transformation);
     EEGraphicObject* mGraphicObject;        // +0xd8 (UnloadMedia in the dtor)
-    float mAge;                             // +0xdc (0..1 over the effect's duration; saved)
+    float& mAge = this->mRecord->ambient.age;   // +0xdc (0..1 over the effect's duration; saved)
     float mDrawAge;                         // +0xe0 (Virtual24's copy of mAge)
-    float mRotation;                        // +0xe4 (saved)
-    float mSize;                            // +0xe8 (saved)
+    float& mRotation = this->mRecord->ambient.rotation;   // +0xe4 (saved)
+    float& mSize = this->mRecord->ambient.size;   // +0xe8 (saved)
     float mDrawSize;                        // +0xec (Virtual24: grows during the first tenth of the age)
-    float mHidden;                          // +0xf0 (1.0: off the map or on a slope; Load: mOnSlope != 0)
+    float& mHidden = this->mRecord->ambient.hidden;   // +0xf0 (1.0: off the map or on a slope)
 };
 
 #endif

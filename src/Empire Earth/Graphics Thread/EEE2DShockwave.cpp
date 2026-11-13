@@ -52,7 +52,7 @@ const UString EEE2DShockwave::sData("EEE2DShockwave-Data");
 // FUNCTION: EXE 0x4e6192
 // Creates a shockwave on a unit at age 0, with no graphic yet
 EEE2DShockwave::EEE2DShockwave(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
-    : EEEffect2D(inUnit, inGraphicEffect, gU4E8DF4, kEffect2DShockwave, false), mGraphicObject(NULL), mAge(0.0f)
+    : EEEffect2D(inUnit, inGraphicEffect, gU4E8DF4, kEffect2DShockwave, false), mGraphicObject(NULL)
 {
     this->mDrawAge = 0.0f;
 }
@@ -63,7 +63,7 @@ EEE2DShockwave::EEE2DShockwave(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
 // FUNCTION: EXE 0x4e61e2
 // Creates a shockwave at a point at age 0, with no unit or graphic yet
 EEE2DShockwave::EEE2DShockwave(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect)
-    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DShockwave, false), mGraphicObject(NULL), mAge(0.0f), mDrawAge(0.0f)
+    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DShockwave, false), mGraphicObject(NULL), mDrawAge(0.0f)
 {
     this->SetPosition(inPosition);
 }
@@ -201,7 +201,8 @@ long EEE2DShockwave::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    return inFile.Read(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e65bc
@@ -209,16 +210,14 @@ long EEE2DShockwave::Load(unsigned long inMajorVersion, unsigned long inMinorVer
 long EEE2DShockwave::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    return outFile.Write(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e65e2
 // Ages the shockwave by the tick over the effect's duration; returns 7 (remove) once its life is over
 long EEE2DShockwave::Step()
 {
-    long theResult = 0;
-    this->mAge += (gPhysics->GetTickSeconds() * 1000.0f) / this->mGraphicEffect->mDuration;
-    if (this->mAge > 1.0f)
-        theResult = 7;
-    return theResult;
+    int32_t theTile[2];
+    return ee_gfx_effect_aged_step(this->mRecord, gPhysics->GetTickSeconds(), (uint32_t)this->mGraphicEffect->mDuration, theTile);
 }

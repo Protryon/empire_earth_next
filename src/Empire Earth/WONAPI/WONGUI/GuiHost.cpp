@@ -2,7 +2,8 @@
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
 // constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
 // constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
-// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs). Each op is a run of the
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs); the ListArea's and its items'
+// defaults (listobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
 #include <ctype.h>
@@ -17,6 +18,9 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
 #include "ee/wonapi/WONLobbySplitterConfig.h"
+#include "ee/wonapi/WONLobbyComponentListItem.h"
+#include "ee/wonapi/WONLobbyMSConfig.h"
+#include <algorithm>
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
@@ -25,7 +29,7 @@ using namespace WONAPI;
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
 
-static int* FieldOf(TextArea* t, intptr_t inField)
+static int* FieldOf(ScrollArea* t, intptr_t inField)
 {
     switch ((Fd)inField) {
     case Fd::ScrollWidth: return &t->mScrollArea.width;
@@ -449,4 +453,164 @@ extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr
 {
     (void)d;
     return SplitterHostCall((Splitter*)inComp, op, a, b, c);
+}
+
+// ---- the list
+
+static ListItem* Item(intptr_t a) { return (ListItem*)a; }
+
+namespace WONAPI {
+intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::UserHasScrolled) return t->mUserHasScrolled ? 1 : 0;
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return FieldOf(t, a) ? *FieldOf(t, a) : 0;
+    case Op::Set:
+        if ((Fd)a == Fd::UserHasScrolled) t->mUserHasScrolled = b != 0;
+        else if (FieldOf(t, a)) *FieldOf(t, a) = (int)b;
+        return 0;
+    case Op::BaseSizeChanged: t->ScrollArea::Virtual08(); return 0;
+    case Op::BaseAdjustPosition: t->ScrollArea::AdjustPosition(a != 0); return 0;
+    case Op::BaseMouseDown: t->ScrollArea::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseUp: t->ScrollArea::MouseUp((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseExit: t->ScrollArea::MouseExit(); return 0;
+    case Op::BaseMouseMove: t->ScrollArea::MouseMove((int)a, (int)b); return 0;
+    case Op::BaseMouseEnter: t->ScrollArea::MouseEnter((int)a, (int)b); return 0;
+    case Op::BaseMouseDrag: t->ScrollArea::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseKeyDown: return t->ScrollArea::KeyDown((int)a) ? 1 : 0;
+    case Op::ScrollTranslate: t->ScrollTranslate(*(int*)a, *(int*)b); return 0;
+    case Op::VirtAdjustPosition: t->AdjustPosition(a != 0); return 0;
+    case Op::VirtSort: return t->Sort() ? 1 : 0;
+    case Op::VirtNotifyMouseItemGone: t->NotifyMouseItemGone(); return 0;
+    case Op::VirtListSelChangedHook: t->ListSelChangedHook(); return 0;
+    case Op::SetVertOffset: t->SetVertOffset((int)a); return 0;
+    case Op::OnBottom: return t->OnBottom() ? 1 : 0;
+    case Op::FocusChildLost:
+        if (t->mFocusChild != NULL) { t->mFocusChild->LostFocus(); t->mFocusChild = NULL; }
+        return 0;
+    case Op::RootKeyMod: return t->GetRoot()->GetKeyMod();
+    case Op::SetCursorDefault: t->SetCursor(t->GetDefaultCursor()); return 0;
+    case Op::GetViewport: return (intptr_t)t->GetViewport();
+    case Op::PointerOutside: {
+        Window* window = t->GetRoot();
+        if (window == NULL) return 0;
+        int x = window->mMouseX, y = window->mMouseY;
+        Container* parent = t->mParent;
+        if (parent == NULL) return 0;
+        parent->RootToChild(x, y);
+        return t->Contains(x, y) ? 0 : 1;
+    }
+    case Op::DeliverItemClicked: {
+        const EeWonItemClick* k = (const EeWonItemClick*)b;
+        t->DeliverEvent(new ListItemClickedEvent(t, Item(a), static_cast<MouseButton>(k->button),
+                                                 t->CheckDoubleClick(k->button), k->up, k->x, k->y), false);
+        return 0;
+    }
+    case Op::TipShow:
+        if (t->mItemToolTip.get() == NULL) t->mItemToolTip = new ListAreaToolTip(t);
+        t->mItemToolTip->DoTip(Item(a));
+        return 0;
+    case Op::TipHide: if (t->mItemToolTip.get() != NULL) t->mItemToolTip->DoTip(NULL); return 0;
+    case Op::TipEnd: if (t->mItemToolTip.get() != NULL) t->mItemToolTip->EndTip(); return 0;
+    case Op::SortItems: {
+        ListItem** v = (ListItem**)a;
+        std::sort(v, v + b, ListArea::LineSortPred(t, t->GetSortFunc(), (int)c));
+        return 0;
+    }
+    case Op::LowerBound: {
+        ListItem** v = (ListItem**)a;
+        return std::lower_bound(v, v + b, Item(c), ListArea::LineSortPred(t, t->GetSortFunc(), (int)d)) - v;
+    }
+    case Op::Less: return ListArea::LineSortPred(t, t->GetSortFunc(), (int)c)(Item(a), Item(b)) ? 1 : 0;
+    case Op::ItemTop: return Item(a)->mTop;
+    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
+    case Op::ItemHeight: return Item(a)->mHeight;
+    case Op::ItemSetHeight: Item(a)->mHeight = (int)b; return 0;
+    case Op::ItemWidth: return Item(a)->mWidth;
+    case Op::ItemSelected: return Item(a)->mSelected ? 1 : 0;
+    case Op::ItemSetSelected: Item(a)->mSelected = b != 0; return 0;
+    case Op::ItemSelectable: return Item(a)->mSelectable ? 1 : 0;
+    case Op::ItemSetPos: Item(a)->SetPos(0, (int)b); return 0;
+    case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
+    case Op::ItemCanSelect: return Item(a)->CanSelect(t, (int)b, (int)c) ? 1 : 0;
+    case Op::ItemCalcDimensions: Item(a)->CalcDimensions(t); return 0;
+    case Op::ItemSetViewport: Item(a)->SetViewport(t, (Container*)b); return 0;
+    case Op::ItemPaint: Item(a)->Paint(*(Graphics*)b, t); return 0;
+    case Op::ItemMouseEnter: Item(a)->MouseEnter(t, (int)b, (int)c); return 0;
+    case Op::ItemMouseExit: Item(a)->MouseExit(t); return 0;
+    case Op::ItemMouseMove: Item(a)->MouseMove(t, (int)b, (int)c); return 0;
+    case Op::ItemMouseDrag: Item(a)->MouseDrag(t, (int)b, (int)c); return 0;
+    case Op::ItemMouseDown: Item(a)->MouseDown(t, (int)b, (int)c, (int)d); return 0;
+    case Op::ItemMouseUp: Item(a)->MouseUp(t, (int)b, (int)c, (int)d); return 0;
+    case Op::ItemHold: Item(a)->AddRef(); return 0;
+    case Op::ItemRelease: Item(a)->Release(); return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+}
+
+extern "C" intptr_t ee_won_guicpp_list_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    return ListAreaHostCall((ListArea*)inComp, op, a, b, c, d);
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x006fa280
+// Creates an unselected, selectable list item with zero position and size
+ListItem::ListItem()
+{
+    this->mTop=this->mWidth=this->mHeight=0;
+    this->mSelected=false;
+    this->mSelectable=true;
+}
+// FUNCTION: WON 0x006fa2a0
+// Draws nothing
+void ListItem::Paint(Graphics&,ListArea*) {}
+// FUNCTION: WON 0x006fa2b0
+// Orders two items by their addresses (true when this one comes first in memory)
+int ListItem::Compare(const ListItem* other,ListArea*) const { return this<other; }
+
+// FUNCTION: WON 0x006fa570
+// Creates an empty, unsorted list box with the ListArea font, 2-pixel padding and focus (the Rust list holds the
+// default flags: highlighted icons, full-row select, partial lines shown)
+ListArea::ListArea()
+{
+    this->mRust=ee_won_list_new(this,ee_won_guicpp_list_call);
+    this->mTextColor=(int)0x8000000e;
+    this->mFont=this->GetNamedFont("ListArea");
+    this->SetComponentFlags(ComponentFlag_WantFocus,true);
+    this->mTopPad=this->mLeftPad=this->mRightPad=this->mBottomPad=2;
+    this->mSortFunc=NULL;
+}
+// FUNCTION: WON 0x006fa860
+// Destroys the list box, closing an open item tooltip first; the Rust list gives its items back
+ListArea::~ListArea()
+{
+    ListAreaHostCall(this, Op::TipEnd, 0, 0, 0, 0);
+    ee_won_list_free(this->mRust);
+}
+
+// FUNCTION: WON 0x006fa550
+// Returns whether the clicked item is the list box's current selection
+bool ListItemClickedEvent::IsSelectedItem()
+{
+    return this->mItem.get()==static_cast<ListArea*>(this->mComponent)->GetSelItem();
+}
+
+// FUNCTION: WON 0x006fd8b0
+// Adds a separator line to the popup menu and resizes the menu to fit (at least 100 pixels wide)
+void PopupMenu::AddSeperator()
+{
+    this->InsertItem(new ComponentListItem(new MSSeperator(6),true,false));
+    this->SetSizeEqualToTotal(100,-1);
+}
 }

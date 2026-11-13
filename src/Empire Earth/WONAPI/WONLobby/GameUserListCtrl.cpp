@@ -68,7 +68,7 @@ void GameUserListItem::Paint(Graphics& inGraphics,ListArea* inArea)
     case -1:
         if(this->mSelected) {
             inGraphics.SetColor(area->GetSelColor().GetBackgroundColor(inGraphics));
-            inGraphics.FillRect(0,0,area->mPaintWidth,this->mHeight);
+            inGraphics.FillRect(0,0,area->GetPaintWidth(),this->mHeight);
         }
         return;
     case 0:
@@ -95,14 +95,14 @@ GameUserListCtrl::GameUserListCtrl() : mInGame(false) { this->mRoomSpecFlags = 2
 // Returns the client of the selected entry, or NULL
 LobbyClient* GameUserListCtrl::GetSelectedClient()
 {
-    GameUserListItem* item=static_cast<GameUserListItem*>(this->mUserList->mSelItem);
+    GameUserListItem* item=static_cast<GameUserListItem*>(this->mUserList->GetSelItem());
     return item==NULL?NULL:item->mClient.get();
 }
 // FUNCTION: WON 0x007bd300
 // Returns the entry of the client with the same client id, or NULL
 GameUserListItem* GameUserListCtrl::GetListItem(LobbyClient* inClient)
 {
-    for(int i=0;i<int(this->mUserList->mItems.size());++i) {
+    for(int i=0;i<this->mUserList->GetNumItems();++i) {
         GameUserListItem* item=static_cast<GameUserListItem*>(this->mUserList->GetItem(i));
         LobbyClient* client=item->mClient.get();
         if(client!=NULL && client->GetClientId()==inClient->GetClientId()) return item;

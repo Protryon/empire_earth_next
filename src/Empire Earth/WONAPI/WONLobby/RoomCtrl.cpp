@@ -88,7 +88,7 @@ void RoomListItem::Paint(WONAPI::Graphics& g,WONAPI::ListArea* inList)
     if(this->mSelected)
     {
         g.SetColor(inList->GetSelColor().GetBackgroundColor(g));
-        int aWidth=inList->mPaintWidth;
+        int aWidth=inList->GetPaintWidth();
         if(!inList->ListFlagSet(0x10)) aWidth=this->mWidth;
         g.FillRect(0,0,aWidth,this->mHeight);
         aColor=inList->GetSelColor().GetForegroundColor(g,this->mColor);
@@ -123,7 +123,7 @@ void RoomCtrl::InitComponent(ComponentInit& inInit)
 // Enables Join only while a room tree entry is selected
 void RoomCtrl::EnableControls()
 {
-    this->mJoinButton->SetEnabled(this->mRoomList->mSelItem!=NULL);
+    this->mJoinButton->SetEnabled(this->mRoomList->GetSelItem()!=NULL);
 }
 // FUNCTION: WON 0x007c2350
 // Adds a chat room entry under a server entry
@@ -202,7 +202,7 @@ TreeItem* RoomCtrl::GetGroupItem(LobbyServer* inServer,LobbyGroup* inGroup)
 // Asks the lobby to join the selected room (or server)
 void RoomCtrl::DoJoinRoom()
 {
-    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->mSelItem);
+    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
     if(aSelected!=NULL)
     {
         RoomListItem* aItem=static_cast<RoomListItem*>(aSelected->mItem.get());
@@ -214,7 +214,7 @@ void RoomCtrl::DoJoinRoom()
 void RoomCtrl::DoCreateRoom()
 {
     IPAddr aAddress;
-    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->mSelItem);
+    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
     if(aSelected!=NULL) aAddress=static_cast<RoomListItem*>(aSelected->mItem.get())->mAddress;
     this->DeliverEvent(new CreateRoomEvent(aAddress),false);
 }
@@ -308,7 +308,7 @@ void RoomCtrl::HandleServerChanged(ServerChangedEvent* inEvent)
     TreeItem* aServerItem=this->GetServerItem(inEvent->mServer.get());
     if(aServerItem==NULL) return;
     bool aOpen=aServerItem->mOpen;
-    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->mSelItem);
+    TreeItem* aSelected=static_cast<TreeItem*>(this->mRoomList->GetSelItem());
     unsigned long aGroupId=0xffff;
     IPAddr aAddress;
     if(aSelected!=NULL && aSelected->mParent==aServerItem)

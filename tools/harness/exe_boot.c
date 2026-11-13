@@ -1543,6 +1543,9 @@ int main(int argc, char **argv)
                     int ro = !(arg2 & WRITEISH) && disp == 1 && !(opts & 0x1000 /* DELETE_ON_CLOSE */);
                     allow = ro || in_sandbox(s);
                     if(live_session && disp==1 && !(opts&0x1000) && local_uia_pipe(s))allow=1;
+                    /* the kernel's CNG device, opened read/write by bcrypt.dll for its random numbers (seen from
+                       gdi32's gamma ramp path after a Windows update): an ioctl device, nothing persistent is written */
+                    if(disp==1 && !(opts&0x1000) && !_stricmp(s,"\\Device\\KsecDD"))allow=1;
                     if(loopback_test && !_stricmp(s,"\\Device\\Afd\\Endpoint")) {
                         int thread=net_thread(ev.dwThreadId);allow=thread>=0 && net_creating[thread].depth>0;
                         printf("%s AFD endpoint within guarded socket creation\n",allow?"loopback":"STOP");
@@ -1727,7 +1730,8 @@ int main(int argc, char **argv)
             if (!ev.u.DebugString.fUnicode) {
                 rd((TADDR)ev.u.DebugString.lpDebugStringData, t, n < sizeof t - 1 ? n : sizeof t - 1);
                 printf("debugstring %s", t);
-                if (!strchr(t, '\n')) printf("\n");
+                /* a long message is cut at the buffer: end the line whenever the kept text does not */
+                if (!*t || t[strlen(t) - 1] != '\n') printf("\n");
             }
             break;
         }
