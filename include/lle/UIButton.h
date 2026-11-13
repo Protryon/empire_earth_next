@@ -40,6 +40,9 @@ public:
         }
         return theBitmap;
     }
+    GEBitmap* GetCopiedBitmap() const { return this->mCopiedBitmap; }
+    GE2DPoint GetBitmapLocation() const { return this->mBitmapLocation; }
+    unsigned long GetState() const { return this->mState; }
     GEBitmap* GetFocusedBitmap() const { return this->mFocusedBitmap; }
     GEText* GetGEText() { return this->mText; }
     bool GetIsButtonDown() const { return this->mMouseDown || this->mKeyDown; }
@@ -78,6 +81,7 @@ public:
         this->SetDirty(true);
     }
     void SetText(const UWideString& inText, GEFont* inFont);
+    void SetTextRectangle(const GERectangle& inRectangle) { this->mTextRectangle = inRectangle; }
     virtual long UpdateKeyboard();
 protected:
     virtual void ButtonDown();              // slot 0x88
@@ -90,6 +94,23 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo();
     virtual void TabbedFrom();
+    // the radio button's bitmap swaps: the bitmap replaced (references moved) without SetDirty
+    void ReplaceNormalBitmap(GEBitmap* inBitmap)
+    {
+        if (this->mNormalBitmap)
+            this->mNormalBitmap->Dereference();
+        this->mNormalBitmap = inBitmap;
+        if (this->mNormalBitmap)
+            this->mNormalBitmap->Reference();
+    }
+    void ReplacePressedBitmap(GEBitmap* inBitmap)
+    {
+        if (this->mPressedBitmap)
+            this->mPressedBitmap->Dereference();
+        this->mPressedBitmap = inBitmap;
+        if (this->mPressedBitmap)
+            this->mPressedBitmap->Reference();
+    }
 
     GERectangle mTextRectangle;             // +0xa0 mRectangle inset by the border thickness
     GE2DPoint mBitmapLocation;              // +0xb0
