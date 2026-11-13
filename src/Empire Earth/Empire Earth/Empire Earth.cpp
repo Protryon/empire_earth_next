@@ -1244,17 +1244,17 @@ void EEInitializeNetwork()
 void EERegisterPersistents()
 {
     std::vector<EETeam> theUnused;
-    FSPersistentList::Instance()->RegisterPersistent(new EEPChecksum(true));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTGeneric<unsigned long>(2));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTPRestorable<EEMap>(4));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTRestorable<GE3DPoint>(GE3DPoint(), 3));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPPlayerHelper);
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTPRestorable<EEScenarioManager>(6));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPWorldHelper);
-    FSPersistentList::Instance()->RegisterPersistent(new EEPMultiplayerHelper);
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTPRestorable<EEEffectManager>(0xa));
-    FSPersistentList::Instance()->RegisterPersistent(new EEPCalamityHelper);
-    FSPersistentList::Instance()->RegisterPersistent(new EEPTPRestorable<EEEnvironmentManager>(0xc));
+    FSPersistentList::RegisterPersistent(new EEPChecksum(true));
+    FSPersistentList::RegisterPersistent(new EEPTGeneric<unsigned long>(2));
+    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEMap>(4));
+    FSPersistentList::RegisterPersistent(new EEPTRestorable<GE3DPoint>(GE3DPoint(), 3));
+    FSPersistentList::RegisterPersistent(new EEPPlayerHelper);
+    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEScenarioManager>(6));
+    FSPersistentList::RegisterPersistent(new EEPWorldHelper);
+    FSPersistentList::RegisterPersistent(new EEPMultiplayerHelper);
+    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEffectManager>(0xa));
+    FSPersistentList::RegisterPersistent(new EEPCalamityHelper);
+    FSPersistentList::RegisterPersistent(new EEPTPRestorable<EEEnvironmentManager>(0xc));
     long theResult = URegisterShutdown(FSPersistentList::Shutdown);
     ESVERIFY_AT(theResult == keseOK, 1863);
 }

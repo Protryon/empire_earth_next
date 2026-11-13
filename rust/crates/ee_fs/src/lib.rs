@@ -13,6 +13,7 @@ mod chunk;
 pub mod ffi;
 mod file;
 mod memfile;
+pub mod persistent_list;
 
 pub use archive::{tokenize_star, Archive, FatEntry, ARCHIVE_IDENTIFIER, ARCHIVE_RESERVED, ARCHIVE_VERSION};
 pub use chunk::EeFsChunk;
