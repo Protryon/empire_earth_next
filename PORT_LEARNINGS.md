@@ -11849,3 +11849,53 @@ Measured as rounds 18-26 (every file under `src/Empire Earth/WONAPI` and `includ
   - The move needs about 30 ops: list area, edit box, popup and the undo text (a GUIString member).
   - Then Window/RootContainer, the remaining controls and layout managers, and the input and list goldens'
     re-recording to trace the delivered event type.
+
+## R5b.4, twentieth round: the unit AI scripts and the class improvements in Rust (ee_units script.rs, improve.rs; branch rust-r5b4-core20, 2026-11-13)
+
+| Commit | What | C++ |
+|---|---|---|
+| e80747d1 | the unit AI scripts whole in Rust (`EEUnitTrigger` deleted; `EEUnitAction` an id view) | +61 -1059, net -998 |
+| 67b91082 | objcache: a 0-byte stored object is a miss | (tool) |
+| 6cfc2039 | the class improvements' arithmetic in Rust | +120 -443, net -323 |
+
+- **EEUGLocation stays blocked**: combat round 14 is moving `EEUGHealUnit` off it. This round took the next
+  biggest self-contained pieces that do not touch the goals: the unit AI scripts and the improvement levels.
+- **The scripts: the parser, the model and the name tables.** `Unit AI Scripts\*.tai` are parsed in Rust byte for
+  byte as the original (the comment strip, the quote-aware tokens, the `anyof(`/`allof(` lists re-read with `", "`
+  after the cursor's rewind, the `true(`/`false(` and `#include("X.tai")` names cut as `UString::Copy` cut them,
+  `remove()` skipped, `AddTrigger`'s single-event replacement and removal, the links making empty actions, the idle
+  action). Quirks kept: a space after a list's comma ends the whole parse (the empty token stops the loop; no shipped
+  script has one), a trigger left open at the file's end is dropped.
+- **An action is a Rust object C++ points at.** `EEComplexUnit::mCommand` and `EEUnitClass::FindAction` hand out
+  `EEUnitAction*`, and every C++ reader reads only its id: the action is a `#[repr(C)]` Rust struct with the id first,
+  and `EEUnitAction` is a view of that one field (`uint32_t mType`). Actions live at stable addresses (`Box`) until
+  `DeleteScripts`. The AI step reads the triggers straight from Rust (the host's trigger callback is gone).
+- **The name tables were generated, then checked against the headers.** 167 actions and 250 triggers, in the
+  registration order, from the deleted `RegisterAll` bodies; a test checks every pair against the enumerators'
+  `Register("Name", id)` comments. `std::map::insert` keeps the first registration: two triggers share 12007
+  (GarrisonUpgrade first), and the Rust lookup takes the first match.
+- **A golden before the C++ went (the golden-driver pattern, in game).** With both parsers in, `GetScript` dumped
+  each script both ways (actions, triggers, events, any/all, true/false ids and the linked actions' ids) and compared
+  them: identical for all 51 scripts the oracle games load (seeds 2-3). Then the C++ parser was deleted.
+- **The improvements: the arithmetic in Rust over two records.** `CanUpgrade`, the base value and the step, the
+  integer and float step sums (one f32 addition per step, the truncating casts), a level change and the button's gain
+  are Rust (improve.rs) over the class's fields and the upgrade's stats as `#[repr(C)]` records; the C++ writes back
+  only the stat a change moved (range with line of sight, through `SetRange`; speed through `SetMaxVelocity`), keeps
+  the names (now a table), `Save`, and `Load` with its five version branches folded into one (the same reads in the
+  same order). A golden in game compared the original arithmetic (copied, temporarily) with the Rust over every
+  class with an improvement table, every improvement, six level changes and their gains: 145,600 checks, 0 different.
+  No gate game changes a level (no AI buys an improvement in the oracle games: a temporary print saw none); the
+  saveload games load the levels (all at 1).
+- **A shared object cache can hand out an empty object.** A link failed on `EEE3DRain.obj` ("unknown file type"):
+  the store held a 0-byte object (a truncated write), and every build that hit its key copied it. The lookup now
+  treats an empty object as a miss. Two builds of one worktree at once (a background build still writing its layout
+  when the next started) interleaved their logs here: wait for a build's notification before the next.
+- **Coverage.** Every game parses the scripts its classes name (51 per oracle game) and steps their actions: the
+  oracle and the captures gate the scripts. The improvements' arithmetic runs in no gate game (golden and unit tests
+  only); its `Load` runs in every saveload game. The scenario editor's action combo box (its names from the Rust
+  table) is UI only: a tour or the editor would show it.
+- **Gates of the round.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to `ref`, Rust gate PASS; the
+  improvements' commit also the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900 --expect`: PASS, every
+  row as the expect file). At the end (`rust` unchanged since the round's base, eb2f738e): oracle seeds 2-7
+  identical; captures at seeds 2-3 oracle (169 digests), late (170), scenario (16), calamity (183) PASS; the test
+  profile links 0/0. ee_units tests 183 (9 new). No tour: nothing drawn changed but the scenario editor's action combo.
