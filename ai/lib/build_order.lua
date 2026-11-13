@@ -27,6 +27,8 @@ M.OPT = {
     boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
                             -- bank's wood pays the dock and the boats first
     shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
+    lua_farms = false,      -- (off until benched) the Copper Age's 3 granaries placed one after another, and the engine
+                            -- builds no granary's fields (gather granary_farms = 0) until all stand, then 8 each
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

@@ -5,7 +5,10 @@
 -- placement stays as it is for the scripts still on it.
 --
 --   M.spot(type, rids, hx, hy)   the anchor tile of the touching spot nearest home (gap 0), else gap 1; nil: none
---   M.request(view, mem, key, type, rids, x, y)
+--   M.granary_spot(type, hx, hy, bad, mem)
+--                                a granary's anchor nearest home with room for its 8 fields, clear of the other
+--                                granaries' field rings (standing or planned); nil: none
+--   M.request(view, mem, key, type, rids, x, y[, spotf])
 --                                one job per key: builders sent to the spot (a citizen walks first where the site is
 --                                not explored); "building", "walking", "busy", "none"
 --   M.step(view, mem)            the jobs: the builders released once the drop site stands (or after JOB_MS)
@@ -15,6 +18,7 @@ local M = {}
 local JOB_MS = 180000       -- a job's builders are released after this, built or not
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
 local BAD_MS = 300000       -- a key whose spot failed waits this long
+local AFFORD_MS = 20000      -- a key refused for its cost waits this long
 local TESTS = 24            -- ai.can_place calls per spot at most (300 instructions each)
 local BUILDERS = 3          -- (C3 against the C++ verb: 4 settlements at minute 8 against 6, 6 at 12 against 7)
 local NEAR = 20             -- builders from this near first (a wood gatherer 40 tiles off walked while the patch waited)
@@ -116,6 +120,91 @@ function M.spot(type, rids, hx, hy, bad)
         end
     end
     return nil
+end
+
+-- a granary's field ring (the game's ReplantFarm: a 3x3 grid of farm-sized plots, the granary the middle one, its
+-- anchor the middle plot's): the tiles x0..x0+3f-1, y0..y0+3f-1
+local function ring(x, y, f)
+    return x - f, y - f, 3 * f
+end
+
+local GRANARY_TESTS = 6     -- candidates tested in full (9 ai.can_place calls each)
+
+-- (the owner: room for all 8 farms; §8.51: a third granary placed on the second's laid field stalled and was lost)
+function M.granary_spot(type, hx, hy, bad, mem)
+    local f = size_of("b_farm")
+    local rings = {}
+    for _, id in ipairs(ai.units{type = type, near = {hx, hy, 40}, limit = 16}) do
+        local u = ai.unit(id)
+        if u ~= nil and u.x ~= nil then
+            local rx, ry, rs = ring(u.x, u.y, f)
+            rings[#rings + 1] = {x = rx, y = ry, s = rs}
+        end
+    end
+    for _, k in ipairs(ai.keys(((mem or {}).place or {}).jobs or {})) do
+        local j = mem.place.jobs[k]
+        if j.type == type and j.x ~= nil then
+            local rx, ry, rs = ring(j.x, j.y, f)
+            rings[#rings + 1] = {x = rx, y = ry, s = rs}
+        end
+    end
+    local cands = {}
+    for r = 4, 16, 2 do
+        for x = hx - r, hx + r, f do
+            for y = hy - r, hy + r, f do
+                if (math.abs(x - hx) >= r - 1 or math.abs(y - hy) >= r - 1) and x - f >= 0 and y - f >= 0 then
+                    local rx, ry, rs = ring(x, y, f)
+                    local clear = true
+                    for _, g in ipairs(rings) do
+                        if overlaps(rx, ry, rs, g.x, g.y, g.s) then
+                            clear = false
+                            break
+                        end
+                    end
+                    if clear and not (bad ~= nil and bad[x .. "," .. y]) then
+                        local dx, dy = x - hx, y - hy
+                        cands[#cands + 1] = {x = x, y = y, d = dx * dx + dy * dy}
+                    end
+                end
+            end
+        end
+        if #cands >= 4 * GRANARY_TESTS then
+            break
+        end
+    end
+    table.sort(cands, function(a, b)
+        if a.d ~= b.d then
+            return a.d < b.d
+        end
+        if a.x ~= b.x then
+            return a.x < b.x
+        end
+        return a.y < b.y
+    end)
+    local best, best_n, tested = nil, -1, 0
+    for _, c in ipairs(cands) do
+        if tested >= GRANARY_TESTS or best_n == 8 then
+            break
+        end
+        if ai.can_place(type, c.x, c.y) then
+            tested = tested + 1
+            local n = 0
+            for i = -1, 1 do
+                for j = -1, 1 do
+                    if (i ~= 0 or j ~= 0) and ai.can_place("b_farm", c.x + i * f, c.y + j * f) then
+                        n = n + 1
+                    end
+                end
+            end
+            if n > best_n then
+                best, best_n = c, n
+            end
+        end
+    end
+    if best == nil then
+        return nil
+    end
+    return best.x, best.y, 8 - best_n
 end
 
 -- the builders for a spot: citizens near it the engine holds, the wood gatherers first, then the idle and the others
@@ -222,7 +311,7 @@ function M.walk(view, mem, key, x, y)
     return "walking"
 end
 
-function M.request(view, mem, key, type, rids, x, y)
+function M.request(view, mem, key, type, rids, x, y, spotf)
     mem.place = mem.place or {jobs = {}, bad = {}}
     local P = mem.place
     if P.jobs[key] ~= nil then
@@ -233,7 +322,12 @@ function M.request(view, mem, key, type, rids, x, y)
     end
     local t = ai.tile(x, y)
     P.tiles = P.tiles or {}
-    local bx, by, g = M.spot(type, rids, view.town_x, view.town_y, P.tiles)
+    local bx, by, g
+    if spotf ~= nil then
+        bx, by, g = spotf(type, view.town_x, view.town_y, P.tiles, mem)
+    else
+        bx, by, g = M.spot(type, rids, view.town_x, view.town_y, P.tiles)
+    end
     if bx == nil then
         if t ~= nil and not t.explored then
             -- (the game places a building only on tiles in sight: a citizen walks there first)
@@ -255,7 +349,8 @@ function M.request(view, mem, key, type, rids, x, y)
     local code, reason, _, id = ai.build(b, type, bx, by)
     if code ~= "ok" or id == nil then
         ai.release(b)
-        P.bad[key] = view.time + BAD_MS
+        -- (a granary refused for its cost is tried again soon: the engine checks its cost against more than the stock)
+        P.bad[key] = view.time + (reason == "cannot_afford" and type == "b_granary" and AFFORD_MS or BAD_MS)
         print(string.format("place refused key=%s type=%s at=%d,%d gap=%d reason=%s", key, type, bx, by, g,
             tostring(reason)))
         return "none"
