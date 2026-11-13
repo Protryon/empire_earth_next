@@ -951,6 +951,12 @@ from data, so that a script can make its decisions with the same numbers:
   builder waiting for its foundation's site to clear while another unit holds it: the classic's FindStalledBuilder), and
   `crosses_forest` / `crosses_cliff` (the terrain a mobile unit can cross: EEUnitClass::GetTerrainFlags, the classic
   sub-group's common move flags).
+- `ai.can_hurt(attacker_type, target_type)` -> whether the attacker's weapon hurts the target's family (the damage
+  table, combat.yaml, which a human reads too; EECPAttackSubGroupUnit::CanAttack without the ignored targets): the
+  classic air sub-group's targets and prejudices.
+- The class record has `flight_time` (an aircraft's fuel in ms; 0: no limit) and an own unit's record `base` (the
+  airport or carrier an aircraft returns to): the classic air sub-group's reach (EECPASGAir::CanReach, flight seconds
+  x speed x 0.9 from the base).
 - `ai.wall_path(unit, x1, y1, x2, y2)` -> `{{x, y}, ...}`: the tile path an own unit would take from (x1, y1) to
   (x2, y2) inside the box of the two tiles, as the classic wall planner refines each step of its way
   (EEPathManager::FindPath with EEAIGPGModifierComputerPlayerWallPather); empty when there is none.

@@ -4873,6 +4873,52 @@ On land (balanced, 32 seeds, 90 minutes) the C++ won 16, the port 10, with 6 clo
 
 Next in 2c: the air sub-groups (EECPASGAir and its bomber, fighter and helicopter units), and the space fighters'
 sub-group.
+### 8.74 Porting everything, 2c: the air and space sub-groups (2026-11-13, EE-SIM)
+
+- **A gap first.** The port had asked for aircraft since §8.72, but its free pool held only soldiers and ships. The
+  aircraft it trained were never taken into a group: the slots waited until their deadline and the planes stood in
+  their airports. The free pool now holds the own aircraft too, parked ones included, and so does the own file's
+  air strength.
+- **The air sub-group.** EECPASGAir with EECPASGUAirBomber and EECPASGUAirFighter is ported (army.lua
+  `air_update`):
+  - a manual group of the planes with no rally point: they take off from their bases once the slots are filled;
+  - the task as AssignLandTask's, but only places within the fuel reach (CanReach: flight seconds x speed x 0.9 from
+    the plane's base);
+  - the planes' own defence ladder: guard_chokepoint_air_percentage, the threatened town, the land;
+  - IsLocationTaskValid every 15-180 s: an attack holds while the target is known within 2 regions; a defence lapses
+    35% of the time;
+  - AssignPrejudices: bombers prefer citizens (10%) or anti-air (15-40%), fighters prefer bombers (35-70%), each
+    only where the weapon hurts that kind;
+  - targets round the task's place (no walls, runways or animals). A bomber keeps a live target within 10 tiles.
+    Fighters fly to the target's tile and the engine dogfights; the others attack it;
+  - an idle or parked plane is sent to the task's place again, at most every 10 s; the engine brings it home when
+    its fuel runs out.
+- **Helpers (AI_LUA_UNITS §11).** `ai.can_hurt(attacker, target)` (the damage table: CanAttack without the ignored
+  targets), the class field `flight_time` and the own unit field `base` (the airport or carrier).
+- **Helicopters** fly over and stay with the land sub-group, as EECPASGHelicopter is a kind of land sub-group.
+- **Space.** The space units get the same life (EECPASGSpaceFighter), every unit flying to its target. DEVIATION:
+  the planet spaceships go with them.
+- **DEVIATIONS.**
+  - The target score is the port's (prejudice, armed, distance), not ScoreTarget's.
+  - The route is the engine's.
+  - The town defence is no aid package, and the air sub-groups stay out of the aid packages and SendBestSubGroup.
+
+**Results.** WW2 start, 8 seeds, 90 minutes:
+- No cheats: 22 air groups, 15 air tasks (choke, town, return). The economy at the late start fills few slots.
+- With the cheats on: 172 air and space group lines, 112 air tasks (5 territory attacks), with this change and
+  before it:
+  - wins: C++ 3, port 0, 5 close (C++ 5, 3 close before);
+  - the port's army at 30 minutes: 20.5 (13.8 before).
+
+  The port starts these late games with fewer citizens than the C++ (22 against 33 at 10 minutes), an economy gap for
+  stage 3.
+
+**An engine crash on the way.** EEE3DDamageVent::Step faulted in 2 of 4 Space Age games on Planets Earth: a model
+without the vent's tag points (PORT_LEARNINGS). It did so with the old scripts too. Fixed: such a model gets no vents.
+
+0 script errors. Determinism (WW2 start with cheats, seeds 2 and 5, --repeat 2, air groups in both) is identical.
+
+2c is complete apart from the submarines' kind (EECPASGSubmarine) and the planet spaceships' own sub-group.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

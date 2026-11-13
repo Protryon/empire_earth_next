@@ -90,6 +90,25 @@ local function own_military()
     end)
 end
 
+-- the own aircraft and helicopters (category "air"), records with their base (the airport or carrier they return to)
+local function own_air()
+    return R.memo("army_air", function()
+        local ids = ai.units{category = "air"}
+        local out = {}
+        if #ids == 0 then
+            return out
+        end
+        local cols = ai.get(ids, {"x", "y", "type", "held", "inside", "base"})
+        for k = 1, #ids do
+            if cols.x[k] ~= nil then
+                out[#out + 1] = {id = ids[k], x = cols.x[k], y = cols.y[k], type = cols.type[k], held = cols.held[k],
+                                 inside = cols.inside[k], base = cols.base[k]}
+            end
+        end
+        return out
+    end)
+end
+
 -- the own land strength (the file's land strength: the classes' influence)
 local function own_strength()
     return R.memo("army_strength", function()
@@ -123,9 +142,10 @@ end
 -- the free soldiers and warships (Personnel's pool: the engine holds them), {id -> record}, and a list in id order
 local function free_pool()
     local pool, list = {}, {}
-    for _, src in ipairs({own_military(), own_ships()}) do
+    for _, src in ipairs({own_military(), own_ships(), own_air()}) do
         for _, u in ipairs(src) do
-            if u.held == "engine" and u.inside == nil and (cls(u.type).speed or 0) > 0 then
+            -- (an aircraft parked in its airport or carrier is free too)
+            if u.held == "engine" and (u.inside == nil or src == own_air()) and (cls(u.type).speed or 0) > 0 then
                 pool[u.id] = u
                 list[#list + 1] = u
             end
@@ -154,7 +174,7 @@ end
 local function own_domains()
     return R.memo("army_domains", function()
         local out = {land = 0, sea = 0, air = 0, space = 0, n_land = 0, n_sea = 0, n_air = 0, n_space = 0}
-        for _, src in ipairs({own_military(), own_ships()}) do
+        for _, src in ipairs({own_military(), own_ships(), own_air()}) do
             for _, u in ipairs(src) do
                 local c = cls(u.type)
                 if file_military(c) then
@@ -1342,23 +1362,40 @@ local function create_group(view, memory, kind, mission, target, why, naval, dom
     if rx == nil or rx < 0 then
         return nil
     end
-    -- MakeSubGroups: one sub-group per kind (GetSubGroupKind): land, and sea (the warships)
-    local parts = {land = {slots = {}, ids = {}}, sea = {slots = {}, ids = {}}}
+    -- MakeSubGroups: one sub-group per kind (GetSubGroupKind): land (with the helicopters, which fly over: a kind
+    -- of land sub-group), sea (the warships), air (the planes: EECPASGAir, a manual group run by air_update) and
+    -- space (EECPASGSpaceFighter: the air sub-group's life, every unit flying to its target as a fighter does;
+    -- DEVIATION: the planet spaceships too, which the C++ gives a sub-group of their own)
+    local parts = {land = {slots = {}, ids = {}}, sea = {slots = {}, ids = {}}, air = {slots = {}, ids = {}},
+                   space = {slots = {}, ids = {}}}
+    local function part_of(c)
+        local d = domain_of(c)
+        if d == "space" and c.is_transport then
+            return "land"
+        end
+        return d
+    end
     for _, name in ipairs(sel.slots) do
-        local part = parts[domain_of(cls(name)) == "sea" and "sea" or "land"]
+        local part = parts[part_of(cls(name))]
         part.slots[#part.slots + 1] = {c = name, asked = false}
     end
     for _, c in ipairs(sel.held) do
-        local part = parts[domain_of(cls(c.type)) == "sea" and "sea" or "land"]
+        local part = parts[part_of(cls(c.type))]
         part.ids[#part.ids + 1] = c.id
     end
     local first = nil
-    for _, d in ipairs({"land", "sea"}) do
+    for _, d in ipairs({"land", "sea", "air", "space"}) do
         local part = parts[d]
         if #part.slots > 0 or #part.ids > 0 then
-            local g = G.create(mem, {task = "defend", role = "army", x = rx, y = ry, radius = GUARD_RADIUS, target = 0})
+            local g = G.create(mem, {task = "defend", role = "army", x = rx, y = ry, radius = GUARD_RADIUS, target = 0,
+                                     manual = d == "air" or d == "space"})
             g.kind, g.mission, g.enemy = kind, mission, target or 0
             g.sea = d == "sea"
+            if d == "air" or d == "space" then
+                g.air = true
+                g.space = d == "space"
+                g.state = "air"     -- (no forming walk: the planes take off from their bases)
+            end
             g.phase, g.phase_t = "wait", view.time
             g.deadline = view.time + REQUEST_MS
             g.slots = part.slots
@@ -1377,7 +1414,7 @@ local function create_group(view, memory, kind, mission, target, why, naval, dom
             end
             print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d carriers=%d%s",
                 why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
-                sel.air_k or 0, nair, ncarrier, g.sea and " navy" or ""))
+                sel.air_k or 0, nair, ncarrier, g.sea and " navy" or (g.space and " space" or (g.air and " air" or ""))))
             first = first or g
         end
     end
@@ -1852,6 +1889,288 @@ end
 
 -- the sub-groups' life: wait for the slots (at the rally point), gather (30 s at most), the task; a task done is
 -- given again
+-- ---------------------------------------------------------------------------------------------------------------
+-- The air sub-groups (EECPASGAir with its units EECPASGUAirBomber and EECPASGUAirFighter): the planes of a group.
+-- A manual lib.groups group: no rally point (they take off from their airports and carriers when the slots are
+-- filled: the Launch state), a task as a land sub-group's but within the planes' fuel reach (CanReach), the
+-- targets round the task's place (the air target filter: no walls, runways or animals), each plane's own target
+-- (ChooseTarget: one it can hurt, the armed first, its prejudices first: AssignPrejudices), fighters flying to
+-- the target's tile (the engine's dogfight), the others attacking it; a plane with nothing to do flies to the task's
+-- place again (from its base too: the engine brings it home when its fuel runs out). DEVIATIONS: the target score
+-- is the port's (armed, prejudice, distance; not ScoreTarget's), the route is the engine's (no air route request)
+
+local KIND_FIGHTER, KIND_FIGHTER2, KIND_BOMBER = 0xc, 0x17, 0xe
+local AIR_SCAN = 15              -- the targets' reach round the task's place (tiles)
+local AIR_RESEND_MS = 10000      -- a plane given nothing is sent to the task's place again after this
+local AIR_KEEP2 = 100            -- EECPASGUAirBomber::Retarget: the current target kept while within 10 tiles
+
+-- a plane's fuel reach in tiles from its base (CountUnitsInRange: flight seconds x speed x 0.9); nil: no limit
+local function air_range(c)
+    local ft = c.flight_time or 0
+    if ft <= 0 or (c.speed or 0) <= 0 then
+        return nil
+    end
+    return (ft // 1000) * c.speed * 9 // 1000
+end
+
+-- CanReach: an empty group, or a plane without a fuel limit, or one whose base lies within its reach of the place
+local function air_reach(g, x, y)
+    if #g.units == 0 then
+        return true
+    end
+    local cols = ai.get(g.units, {"type", "x", "y", "inside", "base"})
+    for k = 1, #g.units do
+        local ty = cols.type[k]
+        if ty ~= nil then
+            local r = air_range(cls(ty))
+            if r == nil then
+                return true
+            end
+            local b = R.unit(cols.inside[k] or cols.base[k] or 0)
+            if b ~= nil and d2(b.x, b.y, x, y) <= r * r then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- AssignPrejudices (on every new task): a bomber may prefer citizens (10%) or anti-air units (a chance of 15-40%
+-- for the group), a fighter bombers (35-70%); each only when its weapon hurts that kind. Bits: 1 citizens, 2
+-- anti-air, 4 bombers
+local function air_prejudices(g)
+    g.prej = {}
+    local aa_k, bomber_k = ai.random(150, 400), ai.random(350, 700)
+    for _, id in ipairs(g.units) do
+        local u = R.unit(id)
+        if u ~= nil then
+            local k = cls(u.type)
+            local bits = 0
+            if not k.is_transport then
+                local ak = k.ai_kind or 0
+                if ak == KIND_FIGHTER or ak == KIND_FIGHTER2 then
+                    if ai.can_hurt(u.type, "a_bomber_11_b_17") and T.random_k() <= bomber_k then
+                        bits = bits | 4
+                    end
+                else
+                    if ai.can_hurt(u.type, C.citizen) and T.random_k() <= 100 then
+                        bits = bits | 1
+                    end
+                    if T.random_k() <= aa_k then
+                        bits = bits | 2
+                    end
+                end
+            end
+            g.prej[tostring(id)] = bits
+        end
+    end
+end
+
+-- the air task: an attack (mission 0 or 2) the target's weakest territory within reach; else the defence ladder of
+-- the planes (GetGuardChokepointPercentage: guard_chokepoint_air_percentage; the town: guard_town_percentage, at the
+-- town as a defence task - DEVIATION: not in the town's aid package; the continent: always); else the rally point
+local function assign_air_task(view, memory, g)
+    local b = memory.t.behavior
+    local why = nil
+    if g.mission == 2 or g.mission == 0 then
+        local regions = target_regions(memory, g.enemy)
+        for i = #regions, 1, -1 do
+            local pick = regions[i]
+            if air_reach(g, pick.x, pick.y) and not (g.last_x == pick.x and g.last_y == pick.y) then
+                g.mission = 2
+                g.last_x, g.last_y = pick.x, pick.y
+                set_place(g, "attack", pick.x, pick.y, 0, g.enemy)
+                why = "territory"
+                break
+            end
+        end
+        if why == nil then
+            g.mission = 0
+        end
+    end
+    local x, y = g.cx or g.x, g.cy or g.y
+    if x == nil or x < 0 then
+        x, y = rally_point(view)
+    end
+    if why == nil and ai.choke_point ~= nil and T.random_k() < (b.guard_chokepoint_air_percentage_k or 0) then
+        local cx, cy = ai.choke_point(x, y, 0, ai.random(0, 1 << 30), ai.random(1, 0x7fffffff))
+        if cx ~= nil and air_reach(g, cx, cy) then
+            g.mission = 1
+            set_place(g, "defend", cx, cy, GUARD_RADIUS, 0)
+            why = "choke"
+        end
+    end
+    if why == nil and T.random_k() < b.guard_town_percentage_k then
+        local tw = threatened_town(memory)
+        if tw ~= nil then
+            g.mission = 1
+            set_place(g, "defend", ai.random(tw.l, tw.r), ai.random(tw.t, tw.b), GUARD_RADIUS, 0)
+            why = "town"
+        end
+    end
+    if why == nil then
+        local px, py = continent_point(view, x, y)
+        if px ~= nil and air_reach(g, px, py) then
+            g.mission = 1
+            set_place(g, "defend", px, py, GUARD_RADIUS, 0)
+            why = "land"
+        end
+    end
+    if why == nil then
+        local rx, ry = rally_point(view)
+        set_place(g, "defend", rx, ry, GUARD_RADIUS, 0)
+        why = "return"
+    end
+    g.task_t = view.time
+    g.task_check = view.time + ai.random(15, 180) * 1000
+    g.sent = {}
+    air_prejudices(g)
+    print(string.format("classic_lua army.task id=%d mission=%d %s at=%d,%d units=%d air", g.id, g.mission, why, g.x,
+        g.y, #g.units))
+end
+
+-- IsLocationTaskValid (every 15-180 s): an attack while the target's known units or buildings stand within 2
+-- regions of the place; a defence lapses 35% of the time
+local function air_task_valid(view, memory, g)
+    if view.time < (g.task_check or 0) then
+        return true
+    end
+    local ok
+    if g.task == "attack" then
+        ok = #ai.memory{player = g.enemy, near = {g.x, g.y, REGION * 2}, limit = 1} > 0
+            or #ai.seen{enemy = true, player = g.enemy, near = {g.x, g.y, REGION * 2}} > 0
+    else
+        ok = T.random_k() <= 650
+    end
+    if ok then
+        g.task_check = view.time + ai.random(15, 180) * 1000
+    end
+    return ok
+end
+
+-- the air target filter round the place: enemies seen, no walls (towers are), runways, resources or animals
+local function air_targets(g)
+    local f = {enemy = true, near = {g.x, g.y, AIR_SCAN}}
+    if g.task == "attack" and g.enemy ~= 0 then
+        f.player = g.enemy
+    end
+    local out = {}
+    for _, id in ipairs(ai.seen(f)) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            local cat = u.category
+            local t = u.type or ""
+            if cat ~= "resource" and cat ~= "animal" and cat ~= "ambient" and cat ~= "projectile"
+                    and string.sub(t, 1, 7) ~= "b_wall_" and string.find(t, "runway", 1, true) == nil then
+                out[#out + 1] = u
+            end
+        end
+    end
+    table.sort(out, function(a, b2) return a.id < b2.id end)
+    return out
+end
+
+-- ChooseTarget for one plane: a target its weapon hurts; its prejudices first, then the armed, then the nearest
+local function air_choose(u, k, bits, targets, hurts)
+    local best, bs = nil, nil
+    for _, t in ipairs(targets) do
+        local key = u.type .. ">" .. t.type
+        local h = hurts[key]
+        if h == nil then
+            h = ai.can_hurt(u.type, t.type)
+            hurts[key] = h
+        end
+        if h then
+            local tk = cls(t.type)
+            local pref = ((bits & 1) ~= 0 and t.category == "citizen")
+                or ((bits & 2) ~= 0 and (tk.ai_kind or 0) == KIND_ANTI_AIR)
+                or ((bits & 4) ~= 0 and (tk.ai_kind or 0) == KIND_BOMBER)
+            local s = (pref and 0 or 2000000) + (t.armed and 0 or 1000000) + d2(u.x, u.y, t.x, t.y)
+            if bs == nil or s < bs then
+                best, bs = t, s
+            end
+        end
+    end
+    return best
+end
+
+-- the planes' orders (EECPASGUAirBomber / EECPASGUAirFighter::Update, AttackWith, SendUnitTo)
+local function air_step(view, memory, g)
+    local targets = air_targets(g)
+    local hurts = {}
+    local fighting = 0
+    local attacks, moves, sends = {}, {}, {}
+    g.sent = g.sent or {}
+    g.prej = g.prej or {}
+    for _, id in ipairs(g.units) do
+        local u = ai.unit(id)
+        if u ~= nil then
+            local k = cls(u.type)
+            local ak = k.ai_kind or 0
+            local fighter = g.space or ak == KIND_FIGHTER or ak == KIND_FIGHTER2
+            local key = tostring(id)
+            local aim = g.aims[id]
+            local cur = aim ~= nil and ai.unit(aim) or nil
+            local pick = nil
+            -- a bomber keeps a live target within 10 tiles
+            if cur ~= nil and not fighter and u.inside == nil and d2(u.x, u.y, cur.x, cur.y) <= AIR_KEEP2 then
+                pick = cur
+            elseif #targets > 0 then
+                pick = air_choose(u, k, g.prej[key] or 0, targets, hurts)
+            end
+            if pick ~= nil then
+                fighting = fighting + 1
+                if aim ~= pick.id or u.action == "idle" or u.action == "inside" then
+                    g.aims[id] = pick.id
+                    if fighter then
+                        local mk = pick.x * 10000 + pick.y
+                        moves[mk] = moves[mk] or {}
+                        table.insert(moves[mk], id)
+                    else
+                        attacks[pick.id] = attacks[pick.id] or {}
+                        table.insert(attacks[pick.id], id)
+                    end
+                end
+            else
+                g.aims[id] = nil
+                if (u.action == "idle" or u.action == "inside") and view.time >= (g.sent[key] or 0) then
+                    g.sent[key] = view.time + AIR_RESEND_MS
+                    sends[#sends + 1] = id
+                end
+            end
+        end
+    end
+    for _, tid in ipairs(ai.keys(attacks)) do
+        ai.attack(attacks[tid], tid)
+    end
+    for _, mk in ipairs(ai.keys(moves)) do
+        ai.move(moves[mk], mk // 10000, mk % 10000, {forced = true})
+    end
+    if #sends > 0 and g.x >= 0 then
+        ai.move(sends, g.x, g.y, {forced = g.mission ~= 1})
+    end
+    g.state = fighting > 0 and "fighting" or "air"
+end
+
+-- the air sub-group's life: wait for the slots (the deadline cancels the rest), launch with a task, then the orders,
+-- a new task when the old one lapses
+local function air_update(view, memory, g)
+    if g.phase == "wait" then
+        if #g.slots == 0 and #g.units > 0 then
+            g.phase, g.phase_t = "task", view.time
+            assign_air_task(view, memory, g)
+        end
+        return
+    end
+    if g.phase ~= "task" or #g.units == 0 then
+        return
+    end
+    if g.state ~= "fighting" and not air_task_valid(view, memory, g) then
+        assign_air_task(view, memory, g)
+    end
+    air_step(view, memory, g)
+end
+
 local function update_groups(view, memory)
     local mem = army(memory)
     -- (the transports the crossings hold, for the ferries)
@@ -1864,7 +2183,9 @@ local function update_groups(view, memory)
         end
     end
     for _, g in ipairs(G.all(mem)) do
-        if g.role == "army" then
+        if g.role == "army" and g.air then
+            air_update(view, memory, g)
+        elseif g.role == "army" then
             if g.phase == "wait" then
                 if #g.slots == 0 then
                     g.phase, g.phase_t = "gather", view.time
@@ -2076,7 +2397,7 @@ local function send_best(view, memory, pk)
     end
     local best, bd = nil, nil
     for _, g in ipairs(G.all(a)) do
-        if g.role == "army" and not g.sea and g.mission ~= 2 and not inpkg[g.id] and #g.units > 0 and g.phase == "task" then
+        if g.role == "army" and not g.sea and not g.air and g.mission ~= 2 and not inpkg[g.id] and #g.units > 0 and g.phase == "task" then
             local d
             if net > 0 then
                 local s = 0
@@ -2155,7 +2476,7 @@ local function deploy(view, memory, pk, tw, threats)
     local sent = 0
     for k = #pk.groups, 1, -1 do
         local g = a.groups[pk.groups[k]]
-        if g ~= nil and not g.sea and #g.units > 0 and g.phase ~= "wait" then
+        if g ~= nil and not g.sea and not g.air and #g.units > 0 and g.phase ~= "wait" then
             local gx, gy = g.cx or g.x, g.cy or g.y
             local cx, cy = hull_closest(tw, gx, gy)
             local dist = d2(cx, cy, gx, gy)
@@ -2467,7 +2788,7 @@ local function note_deaths(view, memory, events)
                     a.deaths[key] = nil
                     local best, bd = nil, nil
                     for _, g in ipairs(G.all(a)) do
-                        if g.role == "army" and not g.sea and g.mission ~= 2 and #g.units > 0 and g.phase == "task" then
+                        if g.role == "army" and not g.sea and not g.air and g.mission ~= 2 and #g.units > 0 and g.phase == "task" then
                             local d = d2(g.cx or g.x, g.cy or g.y, h.x, h.y)
                             if bd == nil or d < bd then
                                 best, bd = g, d
