@@ -124,7 +124,7 @@ long EEUIBSavedGroup::CopyData()
 long EEUIBSavedGroup::DrawPolygons()
 {
     if (this->mDrawPortrait) {
-        this->mPortrait->SetLocation(this->mBitmapLocation);
+        this->mPortrait->SetLocation(this->GetBitmapLocation());
         this->GetRasterizer()->Draw(this->mPortrait, this->GetScreenIndex());
     }
     return UIButton::DrawPolygons();

@@ -70,6 +70,14 @@ pub struct EeGfxRaster {
     /// a copy of `transformation` scaled by `GETransformation::Scale(x, y, z)`, then the model's post-model transform
     pub model_transform_scaled:
         extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation, x: f32, y: f32, z: f32),
+    /// `SetGraphicsCurrentFrame(frame)`
+    pub model_frame: extern "C" fn(model: EeGfxModel, frame: u32),
+    /// `SetGraphicsPreModelTransform(transformation)`
+    pub model_pre_transform: extern "C" fn(model: EeGfxModel, transformation: *const GeTransformation),
+    /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
+    pub model_scroll_u: extern "C" fn(model: EeGfxModel, delta: f32),
+    /// puts back the texture coordinates `model_scroll_u` kept
+    pub model_restore_u: extern "C" fn(model: EeGfxModel),
 }
 
 /// The rasterizer as the draws call it.
@@ -101,6 +109,10 @@ pub trait Raster {
     fn set_zcompare(&mut self, mode: u32);
     fn model_material_opacity(&mut self, model: EeGfxModel, opacity: f32);
     fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32);
+    fn model_frame(&mut self, model: EeGfxModel, frame: u32);
+    fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation);
+    fn model_scroll_u(&mut self, model: EeGfxModel, delta: f32);
+    fn model_restore_u(&mut self, model: EeGfxModel);
 }
 
 impl Raster for &EeGfxRaster {
@@ -184,6 +196,18 @@ impl Raster for &EeGfxRaster {
     }
     fn model_transform_scaled(&mut self, model: EeGfxModel, transformation: &GeTransformation, x: f32, y: f32, z: f32) {
         (self.model_transform_scaled)(model, transformation, x, y, z)
+    }
+    fn model_frame(&mut self, model: EeGfxModel, frame: u32) {
+        (self.model_frame)(model, frame)
+    }
+    fn model_pre_transform(&mut self, model: EeGfxModel, transformation: &GeTransformation) {
+        (self.model_pre_transform)(model, transformation)
+    }
+    fn model_scroll_u(&mut self, model: EeGfxModel, delta: f32) {
+        (self.model_scroll_u)(model, delta)
+    }
+    fn model_restore_u(&mut self, model: EeGfxModel) {
+        (self.model_restore_u)(model)
     }
 }
 
@@ -282,5 +306,17 @@ impl Raster for LogRaster {
     }
     fn model_transform_scaled(&mut self, _model: EeGfxModel, t: &GeTransformation, x: f32, y: f32, z: f32) {
         self.calls.push(format!("transform {} {} {} scaled {x} {y} {z}", t.m[0][3], t.m[1][3], t.m[2][3]));
+    }
+    fn model_frame(&mut self, _model: EeGfxModel, frame: u32) {
+        self.calls.push(format!("frame {frame}"));
+    }
+    fn model_pre_transform(&mut self, _model: EeGfxModel, t: &GeTransformation) {
+        self.calls.push(format!("pre {}", t.m[0][0]));
+    }
+    fn model_scroll_u(&mut self, _model: EeGfxModel, delta: f32) {
+        self.calls.push(format!("scroll u {delta}"));
+    }
+    fn model_restore_u(&mut self, _model: EeGfxModel) {
+        self.calls.push("restore u".into());
     }
 }

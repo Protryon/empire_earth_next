@@ -84,7 +84,7 @@ void Component::BubbleEvent(ComponentEvent* event)
     else {
         Window* window=this->GetRoot();
         if(window!=NULL) {
-            window=window->mParent;
+            window=window->GetParent();
             if(window!=NULL && window->mRoot.get()!=NULL)
                 window->mRoot->BubbleEvent(event);
         }
@@ -118,7 +118,7 @@ void Component::MouseHover(unsigned long elapsed)
     if(this->mExtraStuff==NULL || this->mExtraStuff->mToolTip.get()==NULL) return;
     if(elapsed>=gComponentToolTipStartTime && !this->mExtraStuff->mDontDoTip) {
         Window* window=this->GetRoot();
-        int x=window->mMouseX+15; int y=window->mMouseY+15;
+        int x=window->GetMouseX()+15; int y=window->GetMouseY()+15;
         PopupParams params(this->mExtraStuff->mToolTip.get(),PopupFlag_StandardTip,this,x,y);
         window->OpenPopup(params);
         this->mExtraStuff->mDontDoTip=true;

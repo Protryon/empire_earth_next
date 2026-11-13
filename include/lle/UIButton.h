@@ -2,7 +2,11 @@
 // text label. UIButton.cpp (0x1005e47c..0x1005ef4b) holds the ctor and the out-of-line members; the inline members
 // are emitted first by UIBlinkingButton.cpp (0x1005db0f..0x1005df23). Vtable 0x10098cac (37 slots: UIControl's
 // 34, then ButtonDown, ButtonUp, MouseOver). sizeof 0x104 (padded from the last bool at +0x102).
-// Requires lle/UIControl.h, lle/GEBitmap.h.
+//
+// The class is whole in Rust (rust/crates/ee_ui/src/buttonobj.rs, R6 ui round 11): its state (the text rectangle,
+// the bitmaps, the state, the texts, the sounds, the presses) and every method are the Rust object mRust; UIButton.cpp
+// holds the forwarders, the ctor and dtor and the host (the op switch). The virtuals stay virtual: the toolkit's and
+// the game's subclasses override them. Requires lle/UIControl.h, lle/GEBitmap.h.
 #ifndef LLE_UIBUTTON_H
 #define LLE_UIBUTTON_H
 
@@ -11,73 +15,42 @@
 
 class GEBitmap;
 class GEText;
+struct EeUiButton;
 
 class LLE_API UIButton : public UIControl {
-    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
+    friend struct UIButtonRust;             // the Rust subclasses' logic (User Interface/UIButtonRust.h)
+    friend struct UIButtonHost;             // UIButton.cpp: the Rust object's calls out
 public:
     UIButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inFocusedBitmap, GEBitmap* inPressedBitmap,
              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness);
+    UIButton(const UIButton&) = delete;
+    UIButton& operator=(const UIButton&) = delete;
     virtual ~UIButton();
     virtual void ChangeFont(GEFont* inFont);
     virtual long CopyData();
     virtual long DrawPolygons();
     virtual long DrawTextA();
-    unsigned long GetButtonDownSound() const { return this->mButtonDownSound; }
-    unsigned long GetButtonUpSound() const { return this->mButtonUpSound; }
-    GEBitmap* GetCurrentBitmap() const
-    {
-        GEBitmap* theBitmap = NULL;
-        switch (this->mState) {
-        case kButtonStateNormal:
-            theBitmap = this->mNormalBitmap;
-            break;
-        case kButtonStateFocused:
-            theBitmap = this->mFocusedBitmap;
-            break;
-        case kButtonStatePressed:
-            theBitmap = this->mPressedBitmap;
-            break;
-        }
-        return theBitmap;
-    }
-    GEBitmap* GetFocusedBitmap() const { return this->mFocusedBitmap; }
-    GEText* GetGEText() { return this->mText; }
-    bool GetIsButtonDown() const { return this->mMouseDown || this->mKeyDown; }
-    GEBitmap* GetNormalBitmap() const { return this->mNormalBitmap; }
-    GEBitmap* GetPressedBitmap() const { return this->mPressedBitmap; }
-    void SetBitmapDrawOffset(const GE2DPoint& inOffset) { this->mBitmapDrawOffset = inOffset; }
+    unsigned long GetButtonDownSound() const;
+    unsigned long GetButtonUpSound() const;
+    GEBitmap* GetCurrentBitmap() const;     // the state's bitmap (NULL for an unknown state)
+    GEBitmap* GetCopiedBitmap() const;
+    GE2DPoint GetBitmapLocation() const;
+    unsigned long GetState() const;         // UIButtonState
+    GEBitmap* GetFocusedBitmap() const;
+    GEText* GetGEText();
+    bool GetIsButtonDown() const;
+    GEBitmap* GetNormalBitmap() const;
+    GEBitmap* GetPressedBitmap() const;
+    void SetBitmapDrawOffset(const GE2DPoint& inOffset);
     void SetButtonDownSound(const UString& inName);
     void SetButtonUpSound(const UString& inName);
-    void SetFocusedBitmap(GEBitmap* inBitmap)
-    {
-        if (this->mFocusedBitmap)
-            this->mFocusedBitmap->Dereference();
-        this->mFocusedBitmap = inBitmap;
-        if (this->mFocusedBitmap)
-            this->mFocusedBitmap->Reference();
-        this->SetDirty(true);
-    }
-    void SetFocusedTextColor(const GEColor& inColor) { this->mFocusedTextColor = inColor; }
+    void SetFocusedBitmap(GEBitmap* inBitmap);
+    void SetFocusedTextColor(const GEColor& inColor);
     virtual void SetLocation(const GE2DPoint& inLocation);
-    void SetNormalBitmap(GEBitmap* inBitmap)
-    {
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Dereference();
-        this->mNormalBitmap = inBitmap;
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Reference();
-        this->SetDirty(true);
-    }
-    void SetPressedBitmap(GEBitmap* inBitmap)
-    {
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Dereference();
-        this->mPressedBitmap = inBitmap;
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Reference();
-        this->SetDirty(true);
-    }
+    void SetNormalBitmap(GEBitmap* inBitmap);
+    void SetPressedBitmap(GEBitmap* inBitmap);
     void SetText(const UWideString& inText, GEFont* inFont);
+    void SetTextRectangle(const GERectangle& inRectangle);
     virtual long UpdateKeyboard();
 protected:
     virtual void ButtonDown();              // slot 0x88
@@ -90,24 +63,11 @@ protected:
     virtual long MouseRButtonUp() { return kErrorOK; }
     virtual void TabbedTo();
     virtual void TabbedFrom();
+    // the radio button's bitmap swaps: the bitmap replaced (references moved) without SetDirty
+    void ReplaceNormalBitmap(GEBitmap* inBitmap);
+    void ReplacePressedBitmap(GEBitmap* inBitmap);
 
-    GERectangle mTextRectangle;             // +0xa0 mRectangle inset by the border thickness
-    GE2DPoint mBitmapLocation;              // +0xb0
-    GEBitmap* mPressedBitmap;               // +0xb8 (referenced)
-    GEBitmap* mNormalBitmap;                // +0xbc
-    GEBitmap* mFocusedBitmap;               // +0xc0
-    GEBitmap* mCopiedBitmap;                // +0xc4 the current bitmap as of the last CopyData
-    unsigned long mState;                   // +0xc8 0 normal, 1 focused, 2 pressed
-    GERectangle mCopiedTextRectangle;       // +0xcc
-    GE2DPoint mBitmapDrawOffset;            // +0xdc
-    GEColor mFocusedTextColor;              // +0xe4
-    unsigned long mButtonDownSound;         // +0xf0 sound manager sample id, -1 for none
-    unsigned long mButtonUpSound;           // +0xf4
-    GEText* mText;                          // +0xf8
-    GEText* mCopiedText;                    // +0xfc
-    bool mKeyDown;                          // +0x100
-    bool mMouseDown;                        // +0x101
-    bool mHasCopiedText;                    // +0x102
+    EeUiButton* mRust;                      // the state (buttonobj.rs)
 };
 
 #endif

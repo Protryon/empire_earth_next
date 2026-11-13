@@ -15,6 +15,7 @@
 #include <vector>
 #include "lle/NESynchronousCommunications.h"
 #include "lle/NEProtocol.h"
+#include "rust/ee_net.h"
 
 class NEMessage;
 struct EeNetMsgMgr;                         // the message manager, a Rust object (rust/ee_net.h)

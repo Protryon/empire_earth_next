@@ -49,6 +49,30 @@ void ee_units_host_group_spread_around_tile(void* inGroup, int64_t inX, int64_t 
 void ee_units_host_unit_add_build_target(uint32_t inUnit, uint32_t inTarget);
 void ee_units_host_unit_order_repair(uint32_t inUnit, uint32_t inTarget);
 void ee_units_host_group_add_member(void* inGroup, uint32_t inUnit);
+void* ee_units_host_player_selection(void* inPlayer);
+uint8_t ee_units_host_unit_seen_by(uint32_t inUnit, void* inPlayer);
+uint8_t ee_units_host_unit_ghost_seen(uint32_t inUnit);
+uint8_t ee_units_host_unit_attackable(uint32_t inUnit, int64_t inDamageIndex);
+uint8_t ee_units_host_unit_class_targetable(uint32_t inUnit);
+uint8_t ee_units_host_unit_can_attack_class(uint32_t inUnit, uint32_t inTarget);
+int64_t ee_units_host_unit_max_hit_points(uint32_t inUnit);
+int64_t ee_units_host_unit_garrison_capacity(uint32_t inUnit);
+uint8_t ee_units_host_unit_has_tile_node(uint32_t inUnit);
+uint8_t ee_units_host_unit_shares_rally_point(uint32_t inUnit, int64_t inUnitType);
+int64_t ee_units_host_unit_num_goal_queues(uint32_t inUnit);
+void ee_units_host_unit_clear_goal_queue(uint32_t inUnit, int64_t inQueue);
+void ee_units_host_unit_clear_all_goal_queues(uint32_t inUnit);
+void ee_units_host_unit_queue_goal(uint32_t inUnit, void* inGoal, int64_t inQueue);
+void ee_units_host_unit_queue_timer(uint32_t inUnit, int64_t inQueue, int64_t inMs);
+void* ee_units_host_unit_goal_clone(uint32_t inUnit);
+void* ee_units_host_garrison_rally_load(uint32_t inGarrison);
+void ee_units_host_unit_queue_clear(uint32_t inUnit, int64_t inQueue);
+void ee_units_host_unit_clear_air_traffic(uint32_t inUnit);
+void ee_units_host_unit_refresh_goals(uint32_t inUnit);
+void ee_units_host_unit_clear_build_targets(uint32_t inUnit);
+void ee_units_host_unit_action_changed(uint32_t inUnit);
+void ee_units_host_unit_halt(uint32_t inUnit);
+int64_t ee_units_host_unit_air_traffic_type(uint32_t inUnit);
 }
 
 // the farm sorts of EEMBuildUnit (EETileDistanceLess) and EEMSmartFarmers (EEFarmDistanceGreater: inGreater) around

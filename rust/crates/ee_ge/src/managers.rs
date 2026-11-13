@@ -1,8 +1,8 @@
 //! The management logic of `GETextureManager` and `GEModelManager` (`GETextureManager.cpp`, `GEModelManager.cpp`):
 //! a texture's cache name, the texture pack (its settings, a texture's name in it, the sizes of a texture loaded from
 //! it), the surface description a texture description asks for, a load's MIP decisions, the reference-count decision
-//! of a removal, and the names of made textures and created models. The maps, the lock, the textures and models and
-//! their lifetimes stay C++.
+//! of a removal, and the names of made textures and created models. The managers themselves (their caches, locks and
+//! methods) are whole Rust objects since R4.3's seventh part: `manobj.rs` and `texobj.rs`.
 //!
 //! Not simulation code: the graphics thread and the UI load media.
 
@@ -174,6 +174,24 @@ pub fn next_created_model_name(name: &[u8]) -> Vec<u8> {
     out
 }
 
+/// The tests that read or set the process-wide counters and texture pack hold this (cargo runs tests at once).
+#[cfg(test)]
+pub(crate) fn test_globals() -> std::sync::MutexGuard<'static, ()> {
+    static GLOBALS: Mutex<()> = Mutex::new(());
+    GLOBALS.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// A golden replay's counters at its sequence's start.
+#[cfg(test)]
+pub(crate) fn set_numbers_for_test(texture: Option<u32>, model: Option<u32>) {
+    if let Some(n) = texture {
+        TEXTURE_NUMBER.store(n, Ordering::Relaxed);
+    }
+    if let Some(n) = model {
+        MODEL_NUMBER.store(n, Ordering::Relaxed);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,6 +289,7 @@ mod tests {
 
     #[test]
     fn the_names_count_up() {
+        let _globals = test_globals();
         let a = next_made_texture_name();
         let b = next_made_texture_name();
         assert!(a.starts_with(b"GETextureManager::MakeTexture(") && a.ends_with(b")"));
@@ -281,6 +300,7 @@ mod tests {
 
     #[test]
     fn the_global_pack_is_shared() {
+        let _globals = test_globals();
         with_pack(|p| p.set(b"packdir", 3, 1));
         assert_eq!(with_pack(|p| p.logical_shift()), 2);
         with_pack(|p| p.set(b"", 0, 0));

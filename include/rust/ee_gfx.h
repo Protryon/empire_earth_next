@@ -18,11 +18,22 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// `kEffect3DAdditivePass`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_ADDITIVE_PASS = 39;
+
 /// The citizen beam.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_CITIZEN_BEAM = 51;
 
 /// The shield.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
+
+/// `kEffect3DLinearProjectile`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_LINEAR_PROJECTILE = 37;
+
+/// `kEffect3DDisease`, `kEffect3DVirus`.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_DISEASE = 35;
+
+constexpr static const int32_t EE_GFX_EFFECT_KIND_VIRUS = 66;
 
 /// The tracers, the shells (a tracer with a pass-5 draw) and the pulse cannon ball.
 constexpr static const int32_t EE_GFX_EFFECT_KIND_TRACERS = 33;
@@ -269,6 +280,9 @@ struct EeGfxEffectLists;
 
 /// The effect manager's containers (opaque to the C++).
 struct EeGfxEffectStore;
+
+/// The effect's orbitals (`mOrbitals`, copies of the graphic's) and the angles the draw uses (`mAngles`).
+struct EeGfxOrbitals;
 
 /// A storm's tiles (`mTiles`) and its drops or flakes (`mDrops`, `mFlakes`).
 struct EeGfxStormLists;
@@ -796,6 +810,34 @@ struct EeGfxEffectShot {
   bool draw_active;
 };
 
+/// The additive pass's state (none of it saved).
+struct EeGfxEffectPass {
+  /// `mDrawTransformation`: `Queue` copies the effect's transformation
+  EeGeTransformation draw_transformation;
+  /// `mFrame`, `mModelIndex`: the unit's frame and animation (`Queue` takes them; the draw's model is the unit
+  /// model's model of that animation)
+  uint32_t frame;
+  uint32_t model_index;
+  /// `mScale`: the unit's stats' scale, and the draw's copy
+  float scale;
+  float draw_scale;
+};
+
+/// The orbiting effects' state beyond the shot's and the aged record's.
+struct EeGfxEffectOrbit {
+  /// owned: made on first use, freed with the record
+  EeGfxOrbitals *orbitals;
+  /// `mOrbitalCount`: the graphic's orbital count when they were copied
+  int32_t count;
+  /// the disease's and virus's `mTime` (ms into the frame) and `mFrame` (both saved), the draw's frame
+  float time;
+  uint32_t frame;
+  uint32_t draw_frame;
+  /// the virus's `mScroll` (the texture's u offset, saved) and the draw's copy
+  float scroll;
+  float draw_scroll;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -845,6 +887,10 @@ struct EeGfxEffectRecord {
   EeGfxEffectShield shield;
   /// the shots' (`effect_shot.rs`)
   EeGfxEffectShot shot;
+  /// the additive pass's (`effect_additive.rs`)
+  EeGfxEffectPass pass;
+  /// the orbiting effects' (`effect_orbit.rs`)
+  EeGfxEffectOrbit orbit;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1166,6 +1212,26 @@ struct EeGfxBeamUnit {
   int32_t frame;
 };
 
+/// The unit's physical model's frame and its complex unit's animation (`mAnimation`).
+struct EeGfxUnitFrame {
+  uint32_t frame;
+  uint32_t animation;
+};
+
+/// One orbiting part (`EEOrbital`): its model, its speed (radians a second) and its angle.
+struct EeGfxOrbital {
+  EeGfxModel model;
+  float speed;
+  float angle;
+};
+
+/// The graphic object's animation 13 (`mStartFrames[13]`, `mFrameTimes[13]` in ms, `mFrameCounts[13]`).
+struct EeGfxAnimation {
+  uint32_t start;
+  uint32_t frame_time;
+  uint32_t frame_count;
+};
+
 /// The C++'s answers for an `EEE3DRust`.
 struct EeGfxEffect3DHost {
   void *context;
@@ -1207,6 +1273,27 @@ struct EeGfxEffect3DHost {
   void (*place_linked)(void *context, const EeGe3DPoint *point);
   /// the unit's complex unit's position (`mComplexUnit->GetPosition`)
   EeGe3DPoint (*complex_position)(void *context);
+  /// the unit's model is the effect's second model (`mUnit->GetModel()`); its `LoadMedia`
+  int32_t (*unit_model_media)(void *context);
+  /// the unit's stats' scale (`mUnit->mStats->GetScale()`)
+  float (*unit_scale)(void *context);
+  /// the unit's complex unit's physical model's location
+  EeGeTransformation (*unit_location)(void *context);
+  /// the unit's model's first model's bounding radius at frame 0
+  float (*unit_model_radius)(void *context);
+  /// the unit's complex unit's physical model's frame and animation
+  EeGfxUnitFrame (*unit_frame)(void *context);
+  /// the unit's model's model `index` (`mModels[index]`)
+  EeGfxModel (*unit_model_at)(void *context, uint32_t index);
+  /// the graphic object's orbital count (`GetOrbitalCount`)
+  uint32_t (*orbital_count)(void *context);
+  /// a copy of the graphic object's orbital `index` (`*GetOrbital(index)`)
+  EeGfxOrbital (*orbital)(void *context, uint32_t index);
+  /// the graphic object's animation 13: its start frame, frame time and frame count
+  EeGfxAnimation (*animation)(void *context);
+  /// the animation's sound at `frame` (`changed`: a new frame) at the unit's location (`PlayAnimationSound`), kept
+  /// as the effect's sound (`SetSound`, then its reference dropped, as the original)
+  void (*animation_sound)(void *context, uint32_t frame, bool changed);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1255,6 +1342,14 @@ struct EeGfxRaster {
                                  float x,
                                  float y,
                                  float z);
+  /// `SetGraphicsCurrentFrame(frame)`
+  void (*model_frame)(EeGfxModel model, uint32_t frame);
+  /// `SetGraphicsPreModelTransform(transformation)`
+  void (*model_pre_transform)(EeGfxModel model, const EeGeTransformation *transformation);
+  /// adds `delta` to the u of every texture coordinate of vertex array 0, keeping the old ones
+  void (*model_scroll_u)(EeGfxModel model, float delta);
+  /// puts back the texture coordinates `model_scroll_u` kept
+  void (*model_restore_u)(EeGfxModel model);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.

@@ -561,6 +561,133 @@ constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
 /// [`EeScreensPanelButton`]: the stop command on the first action button.
 constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
 
+/// Whether the mouse is over no control, or over the command units control.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
+
+/// The selection's first unit: 0 none, 1 alive (hit points > 0), 2 not alive.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FIRST = 2;
+
+/// The selected group's kind flags.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FLAGS = 3;
+
+/// Whether the mouse is in the viewport's view rectangle.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_IN_VIEW = 4;
+
+/// `gUnitPicker.PickUnit(mouse, a)`: 1 when a unit was picked (the host holds it as the target).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_PICK = 5;
+
+/// The target's `Dereference`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_RELEASE = 6;
+
+/// `EEIsSeenBy(target, player, true)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEEN = 7;
+
+/// The target class's kind flags (the "command").
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_KIND = 8;
+
+/// The target is on the map, disabled and not protected (`mTileNode`, `mIsDisabled`, `!IsProtected()`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_DISABLED = 9;
+
+/// The selection's first unit's class is a medic.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FIRST_MEDIC = 10;
+
+/// `EEUUGetIsUnitClassTargetable(NULL, target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TARGETABLE = 11;
+
+/// The target's owner: 0 the local player, 1 an enemy of it, 2 another player.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_OWNER = 12;
+
+/// The target's `mHitPoints`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_HP = 13;
+
+/// The target's stats' `mMaxHitPoints`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_MAX_HP = 14;
+
+/// The target's stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_ATTACK = 15;
+
+/// The target class's unit type.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TYPE = 16;
+
+/// The target class is a tower.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TOWER = 17;
+
+/// The target class's category.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_CATEGORY = 18;
+
+/// The target is on the map and built (`mTileNode`, `mComplexUnit->mIsBuilt`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_ENTERABLE = 19;
+
+/// The target has a complex unit.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_COMPLEX = 20;
+
+/// The target's aim point (`EEGetAttackRangeKind`'s), written to the three floats.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_AIM = 21;
+
+/// `theGroup->FindUnitWithFlags(a)->CanGather(target, its tile, false, false)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CAN_GATHER = 22;
+
+/// `EECanHeal(the selection's first unit, the target's complex unit)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CAN_HEAL = 23;
+
+/// The selected group's unit count.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_COUNT = 24;
+
+/// Selected unit a's class kind flags.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_KIND = 25;
+
+/// Selected unit a's stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_ATTACK = 26;
+
+/// Selected unit a's complex unit is built.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_BUILT = 27;
+
+/// Selected unit a is on the map (`mTileNode`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_ON_MAP = 28;
+
+/// Selected unit a's complex unit's cargo count.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CARGO = 29;
+
+/// Selected unit a's class's unit type.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_TYPE = 30;
+
+/// Selected unit a's class `IsAirBase()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_AIR_BASE = 31;
+
+/// Selected unit a's class `IsCrusader()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CRUSADER = 32;
+
+/// Selected unit a's class `IsPriest()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_PRIEST = 33;
+
+/// Selected unit a has a complex unit.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_COMPLEX = 34;
+
+/// Selected unit a's complex unit's position (three floats).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_POSITION = 35;
+
+/// Selected unit a's class's minimum range (the first float).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_MIN_RANGE = 36;
+
+/// Selected unit a's complex unit `CanAttackClass(target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CAN_ATTACK = 37;
+
+/// `EECanConvert(selected unit a, the target's complex unit, shielded)` with shielded in b: bit 0 the answer, bit 1
+/// shielded after the call.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CONVERT = 38;
+
+/// Cargo b of selected unit a: `CanAttackClass(target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK = 39;
+
+/// Cargo b of selected unit a: its stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_ATTACK = 40;
+
+/// Cargo b of selected unit a: its position (three floats).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_POSITION = 41;
+
+/// Cargo b of selected unit a: its class's minimum range (the first float).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_MIN_RANGE = 42;
+
 /// The form's open event (set by the play campaign screen), its close event (nothing), the campaign list's
 /// selection, OK, Cancel, and the no-campaigns message's callback (no event object).
 constexpr static const uint32_t EE_SCREENS_CC_OPEN = 8705;
@@ -2224,6 +2351,42 @@ constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_LOADED = 15;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_CAMPAIGN_CIV = 16;
 
+/// The statistics group (`mGroups[1]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_STATISTICS = 1;
+
+/// The chat group (`mGroups[2]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_CHAT = 2;
+
+/// The diplomacy group (`mGroups[3]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_DIPLOMACY = 3;
+
+/// The options group (`mGroups[4]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_OPTIONS = 4;
+
+/// The civilization builder group (`mGroups[5]`).
+constexpr static const uint32_t EE_SCREENS_GROUP_CIV_BUILDER = 5;
+
+/// `Refresh` (slot +0x04).
+constexpr static const uint32_t EE_SCREENS_GROUP_REFRESH = 1;
+
+/// `Select` (slot +0x0c).
+constexpr static const uint32_t EE_SCREENS_GROUP_SELECT = 2;
+
+/// The local player's conversions (`mSavedGroups.GetLastValue(5)`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_CONVERSIONS = 1;
+
+/// The world table's conversions limit (`kWorldConversionsStatisticMax`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_CONVERSIONS_MAX = 2;
+
+/// `gWorld.mNumberOfWondersToWin`.
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_WONDERS_TO_WIN = 3;
+
+/// The title string of the epoch the local player's tech tree shows (`EEEpochTitleID(GetShownEpoch())`).
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_EPOCH_TITLE = 4;
+
+/// Whether the world has a current player.
+constexpr static const uint32_t EE_SCREENS_GROUP_VALUE_HAS_PLAYER = 5;
+
 /// A tab: `EE_SCREENS_PGS_TAB + page - 1`, pages 1..7 (summary, time line, military, economy, epoch, society, misc).
 constexpr static const uint32_t EE_SCREENS_PGS_TAB = 6401;
 
@@ -3139,6 +3302,76 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// `FillComboBox`.
+constexpr static const uint32_t EE_SCREENS_UH_FILL_COMBO_BOX = 1;
+
+/// `LoadUnitData`.
+constexpr static const uint32_t EE_SCREENS_UH_LOAD_UNIT_DATA = 2;
+
+/// `PlaceUnit(x, y)`.
+constexpr static const uint32_t EE_SCREENS_UH_PLACE_UNIT = 3;
+
+/// `Update(x, y)`.
+constexpr static const uint32_t EE_SCREENS_UH_UPDATE = 4;
+
+/// The game's unit class count (`EEUnitClassCount()`).
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_COUNT = 1;
+
+/// Class a: 0 no class, else 1 | enabled << 1 | placeable << 2.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS = 2;
+
+/// Class a's category.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_CATEGORY = 3;
+
+/// Class a's unit type.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_TYPE = 4;
+
+/// Class a's name: its byte length, the bytes written into the buffer when it has room.
+constexpr static const uint32_t EE_SCREENS_UH_OP_CLASS_NAME = 5;
+
+/// The object combo box: `DeleteAllEntries`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_CLEAR = 6;
+
+/// The object combo box: `AppendLine` of the buffer's bytes.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_APPEND = 7;
+
+/// The object combo box: `SetCurrentSelection(0)`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_SELECT_FIRST = 8;
+
+/// The object combo box's `GetCurrentSelection` (the selection; none is all ones).
+constexpr static const uint32_t EE_SCREENS_UH_OP_COMBO_SELECTION = 9;
+
+/// A list's `GetListBox()->GetCurrentSelection(f)`: a 1 the object list, 2 the player list. Returns the call's error
+/// code; the selection goes to `out`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LIST_SELECTION = 10;
+
+/// Whether the map has the tile at (`(long)f[0]`, `(long)f[1]`).
+constexpr static const uint32_t EE_SCREENS_UH_OP_TILE = 11;
+
+/// The Shift (a 0) or Ctrl (a 1) key's value.
+constexpr static const uint32_t EE_SCREENS_UH_OP_KEY = 12;
+
+/// Whether player slot a is empty or the local player.
+constexpr static const uint32_t EE_SCREENS_UH_OP_PLAYER_SKIPPED = 13;
+
+/// The local player's id.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LOCAL_PLAYER = 14;
+
+/// `EEMHackANewUnit(a, the tile f, (unsigned char)b)` sent as local input.
+constexpr static const uint32_t EE_SCREENS_UH_OP_SEND_PLACE = 15;
+
+/// `EEMLoadUnitData(a, true)` sent as local input.
+constexpr static const uint32_t EE_SCREENS_UH_OP_SEND_LOAD = 16;
+
+/// Whether the view rectangle contains the point f.
+constexpr static const uint32_t EE_SCREENS_UH_OP_IN_VIEW = 17;
+
+/// The left mouse button: a 0 `JustPressed`, 1 `JustUnpressed`.
+constexpr static const uint32_t EE_SCREENS_UH_OP_LEFT_BUTTON = 18;
+
+/// `EEPointUnitOrTile(f, ..., true)`: whether a point was found; its x and y into f.
+constexpr static const uint32_t EE_SCREENS_UH_OP_POINT = 19;
+
 /// A paint action's record (opaque to C++).
 struct EeScreensSeaPaint;
 
@@ -3147,6 +3380,9 @@ struct EeScreensSeeEvent;
 
 /// An `EESEARust`'s action (opaque to C++).
 struct EeScreensSewAction;
+
+/// The unit hack's record (opaque to C++).
+struct EeScreensUnitHack;
 
 /// A chat log entry's fixed fields (its name and text go as bytes beside it).
 struct EeScreensChatLogHead {
@@ -3673,6 +3909,9 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
 
+/// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
+int32_t ee_screens_cursor_kind(void *ctx);
+
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);
 
@@ -4013,6 +4252,9 @@ long ee_screens_event(uint32_t event,
 /// The menus' event code for a control event id, 0 for another form's.
 uint32_t ee_screens_menus_event_for(unsigned long id);
 
+/// A panel group's `Refresh` or `Select` (`EE_SCREENS_GROUP_REFRESH` / `_SELECT`) for its kind.
+void ee_screens_group_call(void *group, uint32_t kind, uint32_t call);
+
 /// The post-game summary's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_post_game_event_for(unsigned long id);
 
@@ -4048,6 +4290,24 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// The hack made for the form (the class list read through the host). Freed by `ee_screens_unit_hack_free`.
+EeScreensUnitHack *ee_screens_unit_hack_new(void *form);
+
+/// # Safety
+/// `hack` comes from `ee_screens_unit_hack_new` (or is NULL).
+void ee_screens_unit_hack_free(EeScreensUnitHack *hack);
+
+/// One of the hack's methods (`EE_SCREENS_UH_*`); `x`, `y` the point of the place and update calls. The record is
+/// taken out of its box around the call: no Rust reference into the box lives across the host's calls.
+///
+/// # Safety
+/// `hack` comes from `ee_screens_unit_hack_new`.
+void ee_screens_unit_hack_call(EeScreensUnitHack *hack,
+                               void *form,
+                               uint32_t call,
+                               float x,
+                               float y);
 
 }  // extern "C"
 

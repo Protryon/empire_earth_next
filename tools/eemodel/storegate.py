@@ -141,12 +141,15 @@ def build(game_out, out):
     import build as game_build
     inputs = [*drivers, out / "engine.lib", *game_build.SDK_LIBS, *game_build.static_libs(), *RUNTIME_LIBS]
     (out / "link.rsp").write_text("".join(f'"{x}"\n' for x in inputs))
+    # the mixer's objects pull in ee_sound's music, whose C++ side (ee_musiccpp_*) is the game's: the driver never
+    # plays music, so those (and only those) may stay unresolved
     code, log = run([str(LLD_LINK), "/nologo", "/INCREMENTAL:NO", "/MACHINE:X64", "/SUBSYSTEM:CONSOLE",
-                     "/NODEFAULTLIB", "/DEBUG", f"/OUT:{exe}", *lib_paths(), "@link.rsp"], out)
+                     "/NODEFAULTLIB", "/DEBUG", "/FORCE:UNRESOLVED", f"/OUT:{exe}", *lib_paths(), "@link.rsp"], out)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S" not in l)
     (out / "link.log").write_text(log)
-    if code:
-        sys.exit(f"link failed ({out / 'link.log'}):\n{log[-4000:]}")
+    unexpected = sorted(set(s for s in re.findall(r"undefined symbol: (\S+)", log) if not s.startswith("ee_musiccpp_")))
+    if code or unexpected:
+        sys.exit(f"link failed ({out / 'link.log'}): unresolved {unexpected}\n{log[-4000:]}")
     return exe
 
 

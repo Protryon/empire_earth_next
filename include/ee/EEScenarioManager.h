@@ -49,6 +49,7 @@ public:
     // FSPersistent's slots (vtable 0x445fd8; EEPTPRestorable<EEScenarioManager> in Empire Earth.cpp needs the class
     // concrete)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x04 0x1b404a
+    long LoadUncaptured(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);  // (+ SMSV)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x0c 0x1b4d1a
     virtual ~EEScenarioManager();           // +0x10 (??_G 0x1afb95)
     virtual FSPersistent* CreateDefault() const;   // +0x14 0x1b0982

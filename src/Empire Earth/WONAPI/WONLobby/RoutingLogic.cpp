@@ -1748,8 +1748,9 @@ void RoutingLogic::GetUserStatusComplete(AsyncOp* inBaseOp)
     unsigned long now=(unsigned long)time(NULL);
     SmartPtr<LobbyFriend> lastChanged;
     int changed=0;
-    for(RoutingGetUserStatusOp::FriendStatusMap::iterator it=op->mFriendStatusMap.begin();
-        it!=op->mFriendStatusMap.end();++it) {
+    RoutingGetUserStatusOp::FriendStatusMap statuses=op->GetFriendStatusMap();
+    for(RoutingGetUserStatusOp::FriendStatusMap::iterator it=statuses.begin();
+        it!=statuses.end();++it) {
         LobbyFriend* friendInfo=LobbyFindFriend(it->first);
         if(friendInfo==NULL || !(friendInfo->GetFlags()&4)) continue;
         bool found=false;
@@ -1805,7 +1806,7 @@ void RoutingLogic::LocateFriends()
         if (this->mCurrentServer.get() != NULL && this->mCurrentServer->GetAddress() == anAddress)
             continue;
         SmartPtr<RoutingGetUserStatusOp> op = new RoutingGetUserStatusOp(anAddress,manager);
-        op->mFriendStatusMap = requested;
+        op->SetFriendStatusMap(requested);
         this->RunOp(op.get(),new LogicCompletion<RoutingLogic>(&RoutingLogic::GetUserStatusComplete,this),10000);
     }
     LobbyBroadcastLobbyEvent(100056,true);

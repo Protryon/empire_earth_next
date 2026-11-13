@@ -103,6 +103,8 @@ struct EeAiNextSave {
   int32_t threats_time;
   const EeAiNextSpot *explore;
   size_t explore_count;
+  int32_t granary_farms;
+  int32_t exact;
 };
 
 /// A pending event.

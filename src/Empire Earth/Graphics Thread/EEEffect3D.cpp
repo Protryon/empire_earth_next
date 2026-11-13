@@ -1,7 +1,8 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEEffect3D.cpp (no __FILE__; name from the RTTI class and its key
 // "EEEffect3D-Data"). The base of the 3D effects (vtable 0x440334): 0x1050fb..0x1054ec (the key chain, Virtual24 ..
 // Save). The load-time ctor EEEffect3D(long), the Virtual3C forwarder and ??_G are inline COMDATs emitted by the
-// first user, EEE3DAdditivePass.cpp (0xe8e76..0xe8ed8). Unit flags: the exe's module set.
+// first user, EEE3DAdditivePass.cpp (0xe8e76..0xe8ed8; that unit is deleted: the ctor's body is here now). Unit flags:
+// the exe's module set.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -114,4 +115,11 @@ long EEEffect3D::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     EEEffect::Save(inMajorVersion, inMinorVersion, outFile);
     EeGfxEffectFile theFile = EEEffectFile(outFile);
     return ee_gfx_effect_save_3d(this->mRecord, &theFile);
+}
+
+// FUNCTION: EXE 0x4e8e76
+// Creates an empty 3D effect of a kind for loading from a saved game (emitted by EEE3DAdditivePass.cpp, deleted)
+EEEffect3D::EEEffect3D(long inKind)
+    : EEEffect(inKind)
+{
 }

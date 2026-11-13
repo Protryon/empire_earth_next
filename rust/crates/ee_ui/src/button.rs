@@ -44,7 +44,7 @@ const NO_SOUND: c_ulong = c_ulong::MAX;
 
 /// `UIsNone32`: the low 32 bits all set (a -1 in memory has 64 on LP64).
 #[allow(clippy::unnecessary_cast)] // c_ulong is u64 on LP64
-fn is_none32(v: c_ulong) -> bool {
+pub(crate) fn is_none32(v: c_ulong) -> bool {
     v as u32 == u32::MAX
 }
 
