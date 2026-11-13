@@ -20,6 +20,7 @@ use ee_random::URandom;
 
 use crate::effect_icon::EeGfxEffectIcon;
 use crate::effect_storm::EeGfxEffectStorm;
+use crate::effect_tracer::EeGfxEffectTracer;
 use crate::effect_wall::EeGfxEffectWall;
 
 /// `kErrorOK`.
@@ -209,6 +210,8 @@ pub struct EeGfxEffectRecord {
     pub icon: EeGfxEffectIcon,
     /// the energy walls' (`effect_wall.rs`)
     pub wall: EeGfxEffectWall,
+    /// the tracer beams' (`effect_tracer.rs`)
+    pub tracer: EeGfxEffectTracer,
 }
 
 /// The identity (`GETransformation()`).
@@ -245,6 +248,7 @@ impl EeGfxEffectRecord {
             storm: EeGfxEffectStorm::default(),
             icon: EeGfxEffectIcon::default(),
             wall: EeGfxEffectWall::default(),
+            tracer: EeGfxEffectTracer::default(),
         }
     }
 

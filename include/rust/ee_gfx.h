@@ -69,6 +69,15 @@ constexpr static const int32_t EE_GFX_EFFECT_KIND_RAIN = 42;
 /// The snow (`EEE3DSnow`).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SNOW = 61;
 
+/// The tick's events: the impact effect is placed now.
+constexpr static const int32_t EE_GFX_TRACER_IMPACT = 1;
+
+/// The target is told it was hit now.
+constexpr static const int32_t EE_GFX_TRACER_HIT = 2;
+
+/// The beam ends (7).
+constexpr static const int32_t EE_GFX_TRACER_OVER = 4;
+
 /// `EeGfxMeshVertex::set`: the point was set.
 constexpr static const uint32_t EE_GFX_MESH_POINT = 1;
 
@@ -594,6 +603,26 @@ struct EeGfxEffectWall {
   bool gate;
 };
 
+/// `EEE3DTracerBeam`'s state.
+struct EeGfxEffectTracer {
+  /// `mTargetPoint`: on the target's model, or the fixed point (saved)
+  EeGe3DPoint target_point;
+  /// `mScroll`: the texture's offset (saved)
+  float scroll;
+  /// `mAge`: 0..1 over the duration for a timed beam (saved)
+  float age;
+  /// `mLength`: `Aim`'s (saved)
+  float length;
+  /// `mWidth` (saved)
+  float width;
+  /// `mIsTimed` (saved)
+  bool timed;
+  /// `mIsImpactCreated`
+  bool impact_created;
+  /// `mWeaponTagPoint`: the shooter's (saved from 0.250)
+  int32_t weapon_tag_point;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -637,6 +666,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectIcon icon;
   /// the energy walls' (`effect_wall.rs`)
   EeGfxEffectWall wall;
+  /// the tracer beams' (`effect_tracer.rs`)
+  EeGfxEffectTracer tracer;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -886,6 +917,22 @@ struct EeGfxWallHost {
   void *context;
   /// the height of the last living, finished wall piece or gate side part of the owner on the tile into `z`
   bool (*wall_piece)(void *context, int32_t x, int32_t y, float *z);
+};
+
+/// What the beam's tick reads: the tick, the graphic effect's params 1-5 and 7 (the scroll's rate, the width's rate,
+/// its restart and its top, the hit's age, the impact's age), its duration, whether it has a linked (impact) effect
+/// and whether the beam has a target unit.
+struct EeGfxTracerTick {
+  float tick_time;
+  float param1;
+  float param2;
+  float param3;
+  float param4;
+  float param5;
+  float param7;
+  uint32_t duration;
+  bool has_linked1;
+  bool has_target;
 };
 
 /// A field: its tile area (`mArea`), vertex row length (`mRowLength`) and the farm's tile size (as a float).
@@ -1974,6 +2021,31 @@ int32_t ee_gfx_wall_load(EeGfxEffectRecord *r,
 /// # Safety
 /// `r` is a live record; `file` is valid.
 int32_t ee_gfx_wall_save(const EeGfxEffectRecord *r, const EeGfxEffectFile *file);
+
+/// `EEE3DTracerBeam::Step`'s timing after the C++'s aim: its events (`EE_GFX_TRACER_*`).
+///
+/// # Safety
+/// `r` is a live record; `tick` is valid.
+int32_t ee_gfx_tracer_step(EeGfxEffectRecord *r, const EeGfxTracerTick *tick);
+
+/// `EEE3DTracerBeam::Load`'s own reads after the media load succeeded (`id`, `read`: the target's saved id).
+///
+/// # Safety
+/// `r` is a live record; `file`, `id` and `read` are valid.
+int32_t ee_gfx_tracer_load(EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           uint32_t major,
+                           uint32_t minor,
+                           uint32_t *id,
+                           bool *read);
+
+/// `EEE3DTracerBeam::Save`'s own writes after `EEEffect3D::Save`'s (`id`: the target's, -1 for none).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid.
+int32_t ee_gfx_tracer_save(const EeGfxEffectRecord *r,
+                           const EeGfxEffectFile *file,
+                           uint32_t id);
 
 /// `EEE3DFarm::BuildGroundModel`'s mesh into `vertices` and `triangles`; returns the models' place.
 ///
