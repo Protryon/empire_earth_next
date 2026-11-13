@@ -225,7 +225,8 @@ constexpr static const uint8_t EE_WON_CERT_COMMUNITY = 9;
 /// The clear part's end: the rest (`at`, `len`) is the encrypted part.
 constexpr static const uint8_t EE_WON_CERT_REST = 10;
 
-/// `GetPeerData()` (a borrowed `RefCount*`, NULL before a login): `ee_won_hostop_num`
+/// the op's peer data object as the op holds it (a hostauth.rs handle in the game, a stand-in's number in the drivers;
+/// 0 before a login): `ee_won_hostop_num`
 constexpr static const int32_t EE_WON_GETCERT_PEER = 1;
 
 /// `GetSessionKey()` (the `Blowfish`, as round 6's `ee_won_getcert_session_key`): `ee_won_hostop_num`
@@ -251,6 +252,10 @@ constexpr static const int32_t EE_WON_GETCERT_NEW_PASSWORD = 8;
 
 /// `SetAuthContext(obj)` (the op takes its own reference): `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_GETCERT_AUTH_CONTEXT = 9;
+
+/// `GetPeerData()`: a new `EeWonAuthObj*` reference (`ee_won_authobj_free`), 0 before a login or for a driver's
+/// stand-in: `ee_won_hostop_num`
+constexpr static const int32_t EE_WON_GETCERT_PEER_DATA = 10;
 
 /// The sink's `which`: the target name.
 constexpr static const int32_t EE_WON_CHAT_TARGET_NAME = 0;
@@ -1209,6 +1214,10 @@ constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
 
 /// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
 constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
+
+/// a C++ `AuthContext*` obj0 (NULL: the op's `mAuthContext`) -> out_obj: its Rust object (`AuthContext::Core()`,
+/// borrowed; NULL for none). The certificate and auth context calls are answered in Rust over it (hostauth.rs).
+constexpr static const int32_t EE_WON_HOST_AUTH_CORE = 161;
 
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
@@ -4705,6 +4714,9 @@ struct EeWonAsyncOp;
 /// `AsyncSocket`'s state and steps.
 struct EeWonAsyncSocket;
 
+/// `AuthContext`: the members in the original's destruction order (the flow, the login data, the server list).
+struct EeWonAuthCtx;
+
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
 
@@ -7271,6 +7283,135 @@ bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
                                const uint8_t *key,
                                int64_t t0,
                                int64_t t1);
+
+/// A new auth context (one reference, `ee_won_authctx_free`): `Init()`'s flow over `hooks` (whose context is the C++
+/// `AuthContext`), its login data with the secret file `secret_file` and its empty peer data.
+///
+/// # Safety
+/// `hooks` points to a hook table whose context outlives the context; `secret_file` holds `len` bytes.
+const EeWonAuthCtx *ee_won_authctx_new(const EeWonAuthFlowHooks *hooks,
+                                       const uint8_t *secret_file,
+                                       size_t len);
+
+/// Drops a reference (NULL: nothing); the last one releases the members.
+///
+/// # Safety
+/// `c` is NULL or a reference from `ee_won_authctx_new`, not used afterwards.
+void ee_won_authctx_free(const EeWonAuthCtx *c);
+
+/// The login data (borrowed, for `ee_won_auth_login_*`).
+///
+/// # Safety
+/// `c` is a live context.
+const EeWonAuthLogin *ee_won_authctx_login(const EeWonAuthCtx *c);
+
+/// `PutSession(address, session)` (a session's `RefCount*`; NULL: nothing).
+///
+/// # Safety
+/// `c` a live context, `a` a live IPAddr value, `session` NULL or a live session.
+void ee_won_authctx_put_session(const EeWonAuthCtx *c, const EeWonIpAddr *a, void *session);
+
+/// `GetSession(address)`: a reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `c` a live context, `a` a live IPAddr value.
+void *ee_won_authctx_get_session(const EeWonAuthCtx *c, const EeWonIpAddr *a);
+
+/// `GetPeerData()`: a new reference (`ee_won_authobj_free`), NULL for none.
+///
+/// # Safety
+/// `c` a live context.
+EeWonAuthObj *ee_won_authctx_peer_data(const EeWonAuthCtx *c);
+
+/// `SetPeerData(data)` (NULL, or anything but peer data: none).
+///
+/// # Safety
+/// `c` a live context, `peer` NULL or a live object.
+void ee_won_authctx_set_peer_data(const EeWonAuthCtx *c, const EeWonAuthObj *peer);
+
+/// `IsExpired(extra)`.
+///
+/// # Safety
+/// `c` a live context.
+bool ee_won_authctx_is_expired(const EeWonAuthCtx *c, int64_t extra);
+
+/// `AutoRefreshCallback(op)` (the completing timer's `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_auto_refresh_callback(const EeWonAuthCtx *c, void *op);
+
+/// `StopAutoRefresh()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_stop_auto_refresh(const EeWonAuthCtx *c);
+
+/// `SetDoAutoRefresh(enabled)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_set_do_auto_refresh(const EeWonAuthCtx *c, bool enabled);
+
+/// `Kill()`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_kill(const EeWonAuthCtx *c);
+
+/// `StartAutoRefresh(force)`.
+///
+/// # Safety
+/// `c` a live context.
+void ee_won_authctx_start_auto_refresh(const EeWonAuthCtx *c, bool force);
+
+/// `GetCertCallback(op)` (the completing `GetCertOp`'s `RefCount*`).
+///
+/// # Safety
+/// `c` a live context, `op` a live op.
+void ee_won_authctx_get_cert_callback(const EeWonAuthCtx *c, void *op);
+
+/// `RefreshAsync(op, cert, timeout)`: `light` NULL or a waiting op's run, `cert` its member (borrowed).
+///
+/// # Safety
+/// `c` a live context; `light` NULL or a live op; `cert` NULL or from `ee_won_light_cert_new`.
+void ee_won_authctx_refresh_async(const EeWonAuthCtx *c,
+                                  void *light,
+                                  const EeWonLightCert *cert,
+                                  uint32_t timeout);
+
+/// `RefreshBlock(timeout)`: the status.
+///
+/// # Safety
+/// `c` a live context.
+long ee_won_authctx_refresh_block(const EeWonAuthCtx *c, uint32_t timeout);
+
+/// `SetServerContext(context)` (a `ServerContext`'s `RefCount*`, NULL: none; a reference of its own).
+///
+/// # Safety
+/// `c` a live context, `servers` NULL or a live object.
+void ee_won_authctx_set_server_context(const EeWonAuthCtx *c,
+                                       void *servers);
+
+/// `GetServerContext()`: a new reference the caller adopts, or NULL.
+///
+/// # Safety
+/// `c` a live context.
+void *ee_won_authctx_server_context(const EeWonAuthCtx *c);
+
+/// `Init()`'s verifier file: unless a file was checked already (in this process), `LoadVerifierKey(dir +
+/// "_wonkver.pub")`.
+///
+/// # Safety
+/// `dir` holds `len` bytes.
+void ee_won_auth_verifier_init(const uint8_t *dir,
+                               size_t len);
+
+/// `AuthContext::LoadVerifierKey(filename)`.
+///
+/// # Safety
+/// `path` holds `len` bytes.
+bool ee_won_auth_verifier_load(const uint8_t *path, size_t len);
 
 /// A new Rust Scrollbar for the C++ `component`, its calls out through `host`.
 EeWonScrollbar *ee_won_bar_new(void *component, EeWonGuiHostFn host, bool vertical);
