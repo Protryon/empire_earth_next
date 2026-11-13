@@ -3,13 +3,15 @@
 // player and play campaign screens; settings_form.rs: the game settings; docs/RUST_PLAN.md "R6 game screens", step
 // 2; lobby_form.rs: the lobby and its load screens; main_game_options.rs: the in-game options menu; main_game.rs:
 // the main game form's events; chat.rs: the chat forms' events; hot_keys.rs: the hot keys; diplomacy.rs; camera.rs:
-// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events): EEScreenEvent's
+// the camera, scroll and zoom events; civ_builder.rs: the civilization builder's events; campaign_editor.rs: the
+// campaign editor's events): EEScreenEvent's
 // ProcessEvent, the C++ events the screens still hang on other forms, and the toolkit's and the game's calls the Rust
 // dispatchers make (ee_screenscpp_*). It replaces EEUIEMainScreenEvents.cpp, EEUIEMultiplayerScreenEvents.cpp,
 // EEUIEEmpireEarthEditorsEvents.cpp, EEUIESinglePlayerEvents.cpp, EEUIEPlayCampaignEvents.cpp,
 // EEUIEGameSettingsEvents.cpp, EEUIELobbyEvents.cpp, EEUIEMainGameOptionsEvents.cpp, EEUIEMainGameEvents.cpp,
 // EEUIEChatEvents.cpp, EEUIEHotKeyEvents.cpp, EEUIEDiplomacyEvents.cpp, EEUIECameraEvents.cpp,
-// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp and EECBUIEvents.cpp.
+// EEUIEScrollZoomEvents.cpp, EEUIEWheelZoom.cpp, EEUIEFormationChange.cpp, EECBUIEvents.cpp and
+// EEUIECampaignEditorEvents.cpp.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -80,6 +82,7 @@
 #include "lle/UIBFull.h"
 #include "lle/UIBitmap.h"
 #include "lle/UIBlinkingButton.h"
+#include "lle/UIFileComboBox.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
@@ -95,6 +98,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EECampaignFormManager.h"
+#include "ee/EECampaignEditorBehavior.h"
 #include "ee/EEScreenEvent.h"
 #include "ee/EEMouse.h"
 #include "ee/EEGameSound.h"
@@ -1652,6 +1656,123 @@ static uint32_t EEScreensDebugSoundCall(UIForm* inForm, UIEntity* inEntity, uint
     return 0;
 }
 
+// ---- the campaign editor's (campaign_editor.rs): inForm is the editor's form (24); its model stays C++
+EECampaignEditorBehavior gCampaignEditor;      // 0x562df0 (the editor's model)
+static UWideString sCampaignEditorError;       // the last Save, Load, Delete or scenario list's error
+static bool sCampaignEditorListOk;             // the last scenario list's result
+static UWideString sCampaignEditorTranslated;  // the last EE_SCREENS_TEXT_CE_TRANSLATE's
+
+// the questions' answers, on the question's form
+#define EE_SCREENS_CE_CALLBACK(Name, Code) \
+    static void Name(UIForm* inForm) { ee_screens_event(Code, inForm, NULL); }
+EE_SCREENS_CE_CALLBACK(EEScreensCESaveBeforeOpen, EE_SCREENS_CE_SAVE_BEFORE_OPEN)
+EE_SCREENS_CE_CALLBACK(EEScreensCEDiscardBeforeOpen, EE_SCREENS_CE_DISCARD_BEFORE_OPEN)
+EE_SCREENS_CE_CALLBACK(EEScreensCESaveBeforeNew, EE_SCREENS_CE_SAVE_BEFORE_NEW)
+EE_SCREENS_CE_CALLBACK(EEScreensCEDiscardBeforeNew, EE_SCREENS_CE_DISCARD_BEFORE_NEW)
+EE_SCREENS_CE_CALLBACK(EEScreensCESaveBeforeMain, EE_SCREENS_CE_SAVE_BEFORE_MAIN)
+EE_SCREENS_CE_CALLBACK(EEScreensCEShowMain, EE_SCREENS_CE_SHOW_MAIN)
+EE_SCREENS_CE_CALLBACK(EEScreensCESaveBeforeEditor, EE_SCREENS_CE_SAVE_BEFORE_EDITOR)
+EE_SCREENS_CE_CALLBACK(EEScreensCEShowEditor, EE_SCREENS_CE_SHOW_EDITOR)
+EE_SCREENS_CE_CALLBACK(EEScreensCEDeleteYes, EE_SCREENS_CE_DELETE_YES)
+#undef EE_SCREENS_CE_CALLBACK
+
+// a field of the model (EE_SCREENS_CE_FIELD_*)
+static UWideString EEScreensCampaignField(uint32_t inField)
+{
+    switch (inField) {
+    case EE_SCREENS_CE_FIELD_NAME: return gCampaignEditor.GetName();
+    case EE_SCREENS_CE_FIELD_AUTHOR: return gCampaignEditor.GetAuthorName();
+    case EE_SCREENS_CE_FIELD_EMAIL: return gCampaignEditor.GetAuthorEmail();
+    case EE_SCREENS_CE_FIELD_BACKGROUND: return gCampaignEditor.GetBackgroundImage();
+    case EE_SCREENS_CE_FIELD_CIVILIZATION: return gCampaignEditor.GetRequiredCiv();
+    case EE_SCREENS_CE_FIELD_DESCRIPTION: return gCampaignEditor.GetDescription();
+    default: return gCampaignEditor.GetPassword();
+    }
+}
+
+// the background combo box's "none" line (the open's and an unknown background's), selected
+static void EEScreensCampaignNoBackground(UIFileComboBox* inList)
+{
+    UWideString theText;
+    gResource->GetString(IDS_SE_MAP_NONE, theText);
+    inList->CreateEntries(1);
+    inList->InsertLine(theText, 0);
+    inList->SetCurrentSelection(0);
+}
+
+static uint32_t EEScreensCampaignEditorCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA,
+                                            uint32_t inB, uint32_t inC, uint32_t inD)
+{
+    // the control op's control (read only by the ops that take one)
+    auto Ctl = [&]() { return inForm->GetControl(inA); };
+    auto List = [&]() { return static_cast<UIListBox<UWideString>*>(Ctl()); };
+    auto Combo = [&]() { return static_cast<UIFileComboBox*>(Ctl()); };
+    switch (inOp) {
+    case EE_SCREENS_OP_CE_IS:
+        switch (inB) {
+        case EE_SCREENS_CE_IS_EDIT: return dynamic_cast<UIEditBox*>(Ctl()) != NULL;
+        case EE_SCREENS_CE_IS_LABEL: return dynamic_cast<UITextLabel*>(Ctl()) != NULL;
+        case EE_SCREENS_CE_IS_LIST: return dynamic_cast<UIListBox<UWideString>*>(Ctl()) != NULL;
+        default: return dynamic_cast<UIFileComboBox*>(Ctl()) != NULL;
+        }
+    case EE_SCREENS_GAME_CE_OPEN: {
+        // the scenarios' .jpg files (in either case) after the "none" line
+        UWideString theText;
+        UString theExtension(".jpg");
+        FSFileSpec theDirectory;
+        FSPath* thePath = new FSPath;
+        UIFileComboBox* theCombo = Combo();
+        theDirectory.SetVolume(gStartupVolume);
+        theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
+        thePath->AddDirectory(theDirectory, true);
+        gResource->GetString(IDS_SE_MAP_NONE, theText);
+        theCombo->AddValidExtension(theExtension);
+        theExtension.ToUpper();
+        theCombo->AddValidExtension(theExtension);
+        theCombo->SetSearchPaths(thePath);
+        theCombo->CreateEntries(1);
+        theCombo->InsertLine(theText, 0);
+        theCombo->SetCurrentSelection(0);
+        thePath->Dereference();
+        break;
+    }
+    case EE_SCREENS_GAME_CE_RESET:
+        gCampaignEditor.Reset();
+        break;
+    case EE_SCREENS_GAME_CE_NEW:
+        return (uint32_t)gCampaignEditor.New();
+    case EE_SCREENS_GAME_CE_UNLOCKED:
+        return gCampaignEditor.GetIsUnlocked();
+    case EE_SCREENS_GAME_CE_PASSWORD_ENTERED:
+        return gCampaignEditor.GetPasswordEntered();
+    case EE_SCREENS_GAME_CE_SAVE:
+        sCampaignEditorError = UWideString();
+        return gCampaignEditor.Save(sCampaignEditorError);
+    case EE_SCREENS_OP_CE_LIST_SELECT:
+        List()->ChangeSelectionIndex(inB, false, inC != 0);
+        break;
+    case EE_SCREENS_OP_CE_CLEAR_SELECTION:
+        List()->ClearSelection();
+        break;
+    case EE_SCREENS_OP_CE_COMBO_SELECTION: {
+        unsigned long theSelection;
+        return Combo()->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection : 0xffffffffu;
+    }
+    case EE_SCREENS_OP_CE_COMBO_COUNT:
+        return Combo()->GetListBox()->GetLineCount();
+    case EE_SCREENS_OP_CE_BG_NONE:
+        EEScreensCampaignNoBackground(Combo());
+        break;
+    case EE_SCREENS_GAME_CE_LIST_OK:
+        return sCampaignEditorListOk;
+    case EE_SCREENS_GAME_CE_CHANGED:
+        return UWideString(static_cast<UIEditBox*>(Ctl())->GetText(0)) != EEScreensCampaignField(inB);
+    default:
+        return EEScreensDebugSoundCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
 // the toolkit's calls (EE_SCREENS_OP_*) and the game's (EE_SCREENS_GAME_*) on the event's form and entity
 extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
                                        uint32_t inC, uint32_t inD)
@@ -2502,7 +2623,7 @@ extern "C" uint32_t ee_screenscpp_call(void* inForm, void* inEntity, uint32_t in
     case EE_SCREENS_GAME_GO_HIDE_RESIGN:
         return gWorld.GetCurrentPlayer()->GetObserverMode() == true || gWorld.GetGameOptions().GetIsScenarioGame() == true;
     default:
-        return EEScreensDebugSoundCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
+        return EEScreensCampaignEditorCall(theForm, static_cast<UIEntity*>(inEntity), inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2791,6 +2912,36 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         theText = theBox->GetTextLabel()->GetText(0);
         break;
     }
+    // the campaign editor's (campaign_editor.rs)
+    case EE_SCREENS_TEXT_CE_FIELD:
+        theText = EEScreensCampaignField(inArg);
+        break;
+    case EE_SCREENS_TEXT_CE_LIST: {
+        // a list of the model's, each line ended by a 0 byte
+        std::vector<UWideString> theLines;
+        if (inArg == EE_SCREENS_CE_LIST_CAMPAIGNS)
+            gCampaignEditor.GetScenarios(theLines);
+        else if (inArg == EE_SCREENS_CE_LIST_AVAILABLE)
+            gCampaignEditor.GetAvailableScenarios(theLines);
+        else if (inArg == EE_SCREENS_CE_LIST_SCENARIOS)
+            gCampaignEditor.GetCampaignScenarios(theLines);
+        else {
+            sCampaignEditorError = UWideString();
+            sCampaignEditorListOk = gCampaignEditor.GetScenarioList(theLines, sCampaignEditorError);
+        }
+        for (size_t i = 0; i < theLines.size(); i++)
+            theList.append((const char*)theLines[i], theLines[i].GetTCHARLength()).push_back(' ');
+        break;
+    }
+    case EE_SCREENS_TEXT_CE_ERROR:
+        theText = sCampaignEditorError;
+        break;
+    case EE_SCREENS_TEXT_CE_ALL_TEXT:
+        static_cast<UIEditBox*>(theForm->GetControl(inArg))->GetAllText(theText);
+        break;
+    case EE_SCREENS_TEXT_CE_TRANSLATED:
+        theText = sCampaignEditorTranslated;
+        break;
     }
     if (!theList.empty()) {
         memcpy(outText, theList.data(), theList.size() < inCapacity ? theList.size() : inCapacity);
@@ -3196,6 +3347,60 @@ extern "C" uint32_t ee_screenscpp_put_text(void* inForm, uint32_t inWhich, uint3
         return (uint32_t)EELoadCivilization(UString(theText), EEGetCivilizationDirectory(false), sPdcsName, sPdcsUpgrades);
     case EE_SCREENS_TEXT_PDCS_LABEL:
         static_cast<UITextLabel*>(static_cast<UIControl*>(EEScreensPdcsControl(5)))->SetText(theText);
+        break;
+    // the campaign editor's (campaign_editor.rs)
+    case EE_SCREENS_TEXT_CE_SET_FIELD:
+        switch (inArg) {
+        case EE_SCREENS_CE_FIELD_NAME: gCampaignEditor.SetName(theText); break;
+        case EE_SCREENS_CE_FIELD_AUTHOR: gCampaignEditor.SetAuthorName(theText); break;
+        case EE_SCREENS_CE_FIELD_EMAIL: gCampaignEditor.SetAuthorEmail(theText); break;
+        case EE_SCREENS_CE_FIELD_BACKGROUND: gCampaignEditor.SetBackgroundImage(theText); break;
+        case EE_SCREENS_CE_FIELD_CIVILIZATION: gCampaignEditor.SetRequiredCiv(theText); break;
+        case EE_SCREENS_CE_FIELD_DESCRIPTION: gCampaignEditor.SetDescription(theText); break;
+        default: gCampaignEditor.SetPassword(theText); break;
+        }
+        break;
+    case EE_SCREENS_TEXT_CE_ADD:
+        return gCampaignEditor.AddScenario(theText);
+    case EE_SCREENS_TEXT_CE_REMOVE:
+        return gCampaignEditor.RemoveScenario(theText);
+    case EE_SCREENS_TEXT_CE_MOVE:
+        return gCampaignEditor.MoveScenario(theText, (long)(int32_t)inArg);
+    case EE_SCREENS_TEXT_CE_DELETE:
+        sCampaignEditorError = UWideString();
+        return gCampaignEditor.Delete(theText, sCampaignEditorError);
+    case EE_SCREENS_TEXT_CE_LOAD:
+        sCampaignEditorError = UWideString();
+        return gCampaignEditor.Load(theText, sCampaignEditorError);
+    case EE_SCREENS_TEXT_CE_QUESTION: {
+        // (the main screen's and the editor's questions on the form's manager, as the original's)
+        static const EEUIFErrorCallback kYes[] = {EEScreensCESaveBeforeOpen, EEScreensCESaveBeforeNew,
+                                                  EEScreensCESaveBeforeMain, EEScreensCESaveBeforeEditor,
+                                                  EEScreensCEDeleteYes};
+        static const EEUIFErrorCallback kNo[] = {EEScreensCEDiscardBeforeOpen, EEScreensCEDiscardBeforeNew,
+                                                 EEScreensCEShowMain, EEScreensCEShowEditor, NULL};
+        EEUIManager* theManager = inArg == EE_SCREENS_CE_ASK_MAIN || inArg == EE_SCREENS_CE_ASK_EDITOR
+                                      ? static_cast<EEUIManager*>(theForm->GetManager())
+                                      : gUIManager;
+        theManager->DisplayQuestion(theText, true, theForm, kYes[inArg % 5], kNo[inArg % 5]);
+        break;
+    }
+    case EE_SCREENS_TEXT_CE_APPEND: {
+        // the texts, each ended by a 0 byte
+        std::vector<UWideString> theLines;
+        for (size_t i = 0, theStart = 0; i < inLength; i++)
+            if (inText[i] == 0) {
+                theLines.push_back(Text(inText + theStart, i - theStart));
+                theStart = i + 1;
+            }
+        static_cast<UIListBox<UWideString>*>(theForm->GetControl(inArg))->AppendStringArray(theLines);
+        break;
+    }
+    case EE_SCREENS_TEXT_CE_BG_EQUALS:
+        return static_cast<UIFileComboBox*>(theForm->GetControl(kCampaignEditorBackgroundImageComboBox))
+            ->GetListBox()->GetData(inArg).EqualsIgnoreCase(theText);
+    case EE_SCREENS_TEXT_CE_TRANSLATE:
+        EETranslateString(theText, sCampaignEditorTranslated);
         break;
     }
     return 0;
