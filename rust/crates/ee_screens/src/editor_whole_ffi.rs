@@ -1,7 +1,7 @@
 //! `extern "C"` for the scenario editor's actions whole in Rust (`editor_whole.rs`): the record an `EESEARust`
 //! (`ee/EESEARust.h`) holds, made, begun, run and freed by it, and the calls of the actions' users (the rotation,
 //! the trigger area's corner, the wall and gate placements). The host is `ee_screenscpp_sew` and
-//! `ee_screenscpp_sew_elevation` (`Scenario Editor Actions/EESEAPaintTerrain.cpp`).
+//! `ee_screenscpp_sew_elevation` (`Scenario Editor Actions/EESEARust.cpp`).
 
 use core::ffi::c_void;
 
@@ -36,6 +36,9 @@ impl SepHost for Host {
 impl SewHost for Host {
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
         unsafe { sys::ee_screenscpp_sew(op, p as *mut c_void, i.as_mut_ptr(), f.as_mut_ptr()) }
+    }
+    fn delete(&mut self, what: crate::editor_actions::SeuDelete) {
+        crate::editor_actions::delete_units(&mut crate::editor_actions_ffi::Selection, what);
     }
     fn elevation(&mut self) -> Option<SewElevation> {
         // the host reads the picked file pair; a second call with room for all its heights (none written when

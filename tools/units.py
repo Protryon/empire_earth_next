@@ -69,6 +69,11 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESim.cpp",
                        # TEST ONLY: its scripted scenario editor (EE-SIM.exe --editor-script; ee/EESimEditor.h)
                        "Empire Earth/Empire Earth/EESimEditor.cpp",
+                       # the host of the scenario editor's actions whole in Rust: the paints' ranges
+                       # 0x1a830a..0x1a9112 (ee/EESEAPaint.h's EESEAPaintRust; ee_screens editor_actions.rs), the
+                       # deletion's 0x1a6b45..0x1a7331 (an EESEARust kind), the lasso's and the click's
+                       # 0x1a7358..0x1a75e0 (their bodies inline over Rust: ee/EESEALasso.h, ee/EESEAMouseClick.h)
+                       "Empire Earth/Scenario Editor Actions/EESEARust.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
                        # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
@@ -95,7 +100,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # (ee/EEUGRust.h; ee_units rust_goal.rs)
                        "Empire Earth/Units/EEUGRust.cpp",
                        # the combat lane's goals on EEUGRust: EEUGAttackGround's and EEUGAttackUnit's ranges
-                       # 0x21ce6c..0x21e0c1 (ee_combat goal_objects.rs, goal_attack.rs)
+                       # 0x21ce6c..0x21e0c1, EEUGHealUnit's 0x22528d..0x22585a (ee_combat goal_objects.rs,
+                       # goal_attack.rs, goal_heal.rs)
                        "Empire Earth/Units/EEUGRustCombat.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)

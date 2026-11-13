@@ -12434,6 +12434,236 @@ Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `includ
     safe on a NULL `this` that the original's early return tolerated: before moving a class, grep its callers for
     calls through a pointer that may be NULL (`GetRootContainer()->`, `GetRoot()->`).
 
+## R5b.2, fourteenth round: the heal goal whole in Rust on EEUGRust, no longer an EEUGLocation (ee_combat goal_heal.rs; branch rust-combat14, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 52de27f9 | the heal goal on EEUGRust; `EEUGHealUnit`'s class and files deleted; the location casts a heal goal reached on four helpers | +227 -463, net -236 |
+| 4761be64 | merge of rust (screens round 16, WON round 27) | |
+| 46a1fa2f | `rust_includes.py` narrowed two ee_screens umbrella includes after the merge | |
+
+- **Why now: core's EEUGLocation move was blocked by the inheritance.** `EEUGHealUnit` derived from `EEUGLocation`
+  and the kind table made kind 15 a location goal for `EEGoalCast<EEUGLocation>`. The heal goal is now an `EEUGRust`
+  (`EEUGRust::NewHealUnit`, `EEHealGoalCast`, `GetHealTarget`, `GetHealLocation`/`SetHealLocation`) and kind 15 is
+  `EE_GOAL_KIND_HEAL_UNIT` only (ee_units kinds.rs: the "twelve classes" test now counts the location bit once).
+  `EEUGLocation` itself is unchanged.
+- **What the heal goal took from the location goal, restated bit for bit.** Its state: `mLocation` (the healee's
+  position when made; 0, 0, 0 for the load's empty goal: its `Load` reads no location) is the record's `location`.
+  Constants: the yaw 0 and the forced-move, facing and auto-waypoint flags false (no constructor or caller sets them
+  on a heal goal). Its group path state and group movement flag were written by callers but read only for
+  `kGoalLocation` and never saved or summed for a heal goal (its dump and checksum are `EEUnitGoal`'s plus its own):
+  dropped. Inherited bodies: the debug line (`EEUGLocation::GetDebugLine`: `loc x,y,z: auto(0)`), the destination
+  (`EEUnitGoal::GetDestination`: the goal location told to the group), and the trigger test's fallback
+  (`EEUGLocation::EvaluateCondition`, the C++ host's base read: facing done is `FaceYaw` at yaw 0, copied into
+  EECombatGoals.cpp's `EEHealLocationCondition`; facing not required true; the rest false).
+- **Save and Load write no base goal data** for this kind (EEUGHealUnit's did not call `EEUnitGoal::Save/Load`):
+  `EEUGRust::Save/Load` skip the base goal's for `kGoalHealUnit`. A generic class whose base part every kind shares
+  needs a per-kind exception when one original class skipped it; check each moved class's `Save` for its base call.
+- **The location casts a heal goal reached** (26 sites read before the move): those that only tested the class use
+  `EEGoalHasLocation` (location or heal: the client's two commands, the carrier landing's trigger, the naval and space
+  buildings' ready test); those that read members use `EELocationGoalPoint`, `EESetLocationGoalPoint`,
+  `EELocationGoalYaw` (EEUGRustCombat.cpp: the location goal's member or the heal record's; the five physics models'
+  `Step5`, the path replacement's two reads, `FlyToGoal`, the deck landing, `IsAwayFromGoal`); the path replacement
+  sets the group path state only on a real location goal. Sites that tested `kGoalLocation` or the auto-waypoint flag
+  (false for a heal goal, the same answer as no location goal) are unchanged. ee_units' `FACE_YAW` is issued only for
+  `kGoalLocation`, so `EEUnitUpdate`'s cast is unchanged. Core's EEUGLocation round can replace the four helpers'
+  location branches by its accessors.
+- **Operations.** Body 205 (`EE_COMBAT_GOAL_NEW_HEAL`), host operations 1060-1064 (the cinematic flag and tick,
+  `SetHitPoints`, `ReleaseHealEffect`, `EECanHeal`, the CBSO record); goal_heal.rs joins ee_rust's `goal_op_tables`
+  test; `Work` mirrors ee_units' 300 (`OP_WORK`). Kind 15 was already outside ee_units' own list, so it reached
+  ee_combat's dispatch, which had sent every non-ground kind to the attack bodies: the heal branch is first.
+- **Work** reads the store directly in Rust (`store::fill_heal_work`, as the C++ did through its FFI) and the world's
+  cinematic flag and tick through one host operation; the C++ `EECombatHostReadScope(3)` around it (nothing nested in
+  slot 3) is gone.
+- **Coverage (temporary prints, removed).** The oracle seeds 2-7 and saveload's late, space, calamity, next and
+  medium-difficulty games at 1000 s never make a heal goal (the AI does not heal; EE-SIM's sweep calls only
+  `EECanHeal`). The **scenario profile** does (seeds 3-7): creation (`NewHealUnit` from the unit update's heal search),
+  `Step`, `EvaluateCondition` (with the location fallback for events 2022 and 2052, both false), `Work` healing,
+  `SetOwner`, `Abandon`, the destructor. Its 483 capture digests (CBSO heal work, CBTC, CBGS, the unit store's
+  states) equal the parent build's (9c40257f) run, all six seeds; its golden lists only SM** and CBGO, so this run
+  against the parent exe is the heal goal's golden. Only unit tests reach: `Clone`, the texts and dump, the checksum,
+  `GetGoalLocation`/`GetDestination`, `Suits`, `ReplaceUnit`, `Save`/`Load`/`RepairPointers`, the facing fallback
+  (9015), and the location helpers' heal branches (no heal goal on a unit in `Step5`, the carrier or the path
+  replacement). ee_combat tests: 7 new (goal_heal_tests.rs).
+- **Behaviour.** None on the games' paths. `EEUnitClass::Heal` casts by kind (the original cast any goal); a heal goal
+  without a healee answers its goal location as given (the original faulted); `EELocationGoalPoint` of another kind is
+  0, 0, 0 (its one caller is guarded).
+- **Only a tour shows:** the debug panels' heal texts; the client's location commands with a heal goal selected (the
+  LAN game sends none of them).
+- **Gates.** Before the merge: build `--sim` 0/0; oracle seeds 2-3 identical to ref; Rust gate PASS;
+  `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS; scenario capture seeds 2-7 PASS and equal to
+  the parent build. After the merge of rust (eb2f738e): build `--sim` and the test profile 0/0; oracle seeds 2-7
+  identical to ref; Rust gate PASS; captures at seeds 2-3 of oracle, late, space and calamity: every seed 2-3 digest
+  equal to its golden (the `check` was run without `--seeds 2-3` and failed only on the seed 4-7 digests the run did
+  not make: pass `--seeds` to `check` too); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS.
+
+## R6: the game screens, twentieth round: the editor's thin action classes whole in Rust or inline over it; their host unit (ee_screens editor_actions.rs, editor_whole.rs; Scenario Editor Actions/EESEARust.cpp; branch rust-screens20, 2026-11-13)
+
+Round 16's leftovers of the scenario editor's actions (b): the classes whose algorithms round 15 had moved. Count:
+`git diff -M --numstat` over `include/ee` and `src` without the gate's own file.
+
+- **The gate first** (expected.txt 1781 -> 1820 lines, recorded on the unmodified actions in its own commit, twice
+  identical, the first 1781 lines unchanged): `mouseclick X Y [ROTATING]` (`EESEAMouseClick::Execute` with the mouse
+  at a screen point), `lasso select|add|addremove L T R B [TYPE]` (an `EESEALasso` with that `EEMSelectUnits`),
+  `lassorect L T R B` (`SelectInRectangle`), `selection`, and `units` (ids, types, players, tiles). The script makes
+  a new blank map with three units, then clicks, lassoes and deletes (a missing unit's id: nothing posted; a
+  player's first selected unit).
+  - EE-SIM draws nothing, so `EEUnitPicker` has no entries (`mCount` 0): the click finds no unit (the selection
+    cleared), every lasso picks nothing (its replace clears, its add and toggle leave the selection). The picking
+    itself stays a person's; the gate checks the paths around it.
+  - The full digest's hit points differ by run at the script's end: the round-19 lines set the players' start
+    epochs, and the placed units' hit points follow them on a clock of their own. Hence `units` (no hit points).
+- **The paints** (`EESEAPaintTerrain`, `EESEAPaintElevation`, `EESEAPaintMoutains`): one class,
+  `EESEAPaintRust : EESEAPaint` (`ee/EESEAPaint.h`), made with the paint kind and its two arguments; `Virtual4`,
+  `SetArea` and the destructor forward to the record round 15 made. Their users (the terrain tab's and the
+  elevation tab's `CreatePaintAction`, the elevation tab's right-button drag, the blank map's ambient paint) make
+  it. Two units and two headers deleted; `EESEAPaintTerrain.cpp`, which held the editor actions' hosts, is now
+  `Scenario Editor Actions/EESEARust.cpp` (`units.EXTRA_UNITS`, a port addition naming the original ranges).
+  The elevation action's `mLevel` member and the terrain action's `mTerrain`/`mTexture` were never read: gone.
+  +46 -333 (net -287).
+- **The deletion** (`EESEADeleteUnit`): `EESEARust` kind 14 (`a` the unit's id, or -1 for the player `b`'s
+  selection, `c` all of it). `begin` reads the unit's player through a new host op (`EE_SCREENS_SEW_OP_UNIT_PLAYER`)
+  and posts only when the unit exists, as the original's constructor; the run is `delete_units` through the
+  selection's host (`SewHost::delete`). `ee_screens_seu_delete` is gone (its one caller went with the class); the
+  selection's host (`ee_screenscpp_seu`, `_seu_pick`) moved into `EESEARust.cpp`. +137 -316 (net -179).
+- **The click and the lasso** cannot be `EESEARust` kinds: they are `EEAMouseClick` and `EEALasso` (the mouse and
+  the unit tab call `Execute` and `SelectInRectangle` through their vtables), and the trigger tab's object screen
+  subclasses both (`EESETSAMouseClick`, `EESETSALasso`). They stay the types, with their bodies inline over Rust:
+  `Execute` is `click_execute` (the unit under the mouse picked and released by the host; a selected unit with a
+  complex unit toggled off, empty ground clears; the message given to the action and the action posted, as the
+  original), `SelectInRectangle` is `lasso_in_rectangle`, `Virtual4` reads the message's rectangle through a host
+  op. The action is passed as its `EEAction*` and cast back by the host. Two units deleted. +73 -195 (net -122).
+- **Count:** net -588 this round (six original units and three headers gone, one port unit added; the gate's
+  own file +55 -8).
+- **Behaviour:** none intended. `SelectInRectangle` "deselects" picked units that were not selected (the original's
+  `DeselectUnit` on them does nothing): kept.
+- **Tests:** 4 new (2 in `editor_whole.rs`: the deletion of one unit posted only when it exists, with its player,
+  and of a selection; 2 in `editor_actions.rs`: the click's Execute paths, the lasso's rectangle). No golden driver:
+  the editor gate ran on the unmodified code first and is unchanged by each move.
+- **Only a person reaches:** the picking under the mouse (`PickUnit` for the click's Execute and the command
+  panel's delete, `PickUnitsInRectangle` for the lasso), so a click on a unit and a lasso that catches units; the
+  delete key and the cargo list's remove (they build the same kind 14 as the gate); the elevation tab's right-button
+  drag (the same `EESEAPaintRust` as the gate's elevation paint); the trigger tab's object screen's click and lasso
+  (`EESETSA*`: the same bodies, then its `UpdateSelection`). No tour opens the editor.
+- **Item 2 (the next game screen) not started:** the row's biggest remaining game-screen C++ is `EEUIFMainGame`
+  (1,915 lines). Its next movable part is the cursor's command decisions (`GetAttackStance`, `GetCommandOnUnit`,
+  `Fn265D7A`, `GetTransportCommand`, `UpdateCursorKind`: ~180 lines); every branch there is a world query
+  (`CanGather`, `CanAttackClass`, `EECanEnterUnit`, the selected group), so a move adds a host op per line, and no
+  gate reaches them (only a person's mouse): they need a golden driver over the original unit first.
+- **Not done:** `EESEAChangeLoadText` (posted only by the editor's load thread), the quick save/load pair
+  (`EEAQuickSaveLoad`, shared with the game), terrain colour/type (bitmap work EE-SIM cannot check).
+
+## R4.4, thirteenth round: the shots and the citizen beam whole in Rust on EEE3DRust (ee_gfx effect_shot.rs, effect_beam.rs; branch rust-gfx19, 2026-11-13)
+
+Graphics Thread C++ (`src/Empire Earth/Graphics Thread/*.cpp`): 22,651 lines before the round; 22,085 after the shots
+(-566: `EEE3DPulseCannonBall.cpp`, `EEE3DTracers.cpp`, `EEE3DShells.cpp` deleted, net of the host and constructors
+added to `EEE3DRust.cpp`); 21,867 after the citizen beam (-218). Headers `EEE3DPulseCannonBall.h`, `EEE3DTracers.h`
+(with `EEE3DShells`) and `EEE3DCitizenBeam.h` deleted.
+
+- **The shots (`effect_shot.rs`): the pulse cannon ball (0x43), the tracers (0x21) and the shells (0x26).** The
+  constructors stay C++ where they read the world: the shooter's weapon point (`EECombatEffectWeaponPoint`, mode 6 or
+  7, in `ShotStart`), the target's model point through its scaled location (`PickPoint`, `Apply`) and the shooter's
+  player colour go into the record's new shot part; Rust makes the line, faces the model along it (`um_arctan2`,
+  `um_arccos` and `set_orientation(Ypr)` of `ee_ge`, the same functions the C++ forwarders call, so the bits are the
+  engine's), sets the speed (duration x 0.00001 over the line's length), moves the shot (`GE3DLine::GetPointAt`'s
+  `point_at`), pulses the ball's scale every tenth and explodes it past the end (7 at 1.5), ends a tracer with its
+  impact effect and `UnitDamaged` (one host call, `shot_hit`), and draws: the ball and its glow (model 1, the host's
+  `model_at`) additively in pass 6, a tracer in colour (flag 1, the rasterizer table's new material colour) or
+  textured, dimming past half way, and a shell's alpha-blended pass 5 (a shell is a tracer with that pass: it draws
+  in both). Load and Save by kind (`load_line`/`save_line` are `GE3DLine`'s; format unchanged).
+- **The citizen beam (`effect_beam.rs`, 0x33).** On while its unit plays the effect's animation within frames
+  [int param 2, int param 3) (the facts gain int params 1-3 and the game time), unless the unit is a cloaked enemy's
+  (the host's `beam_hidden`, asked only in the window as the original); aimed from the unit's first tag point (the
+  host's `beam_start`) when it turns on, its linked effect placed half way (`place_linked`); its scale flickers with
+  `mGameTime & 7`; drawn additively in pass 6 through the model's own `SetTexture` (not its material's: a new table
+  entry). Its record is the shot part's (line, draw location, scale) plus its end, middle, unused float and flags.
+  The pulse cannon ball and the beam share the constructor (unit, point), told apart by kind.
+- **Golden drivers over the logging rasterizer** (`build/gx19/shot`, `build/gx19/beam`; round 12's stub world
+  extended: the engine's vector magnitude, arc tangent, arc cosine and orientation through `ee_ge`'s exports, as the
+  game links them; per-model ids on every model and material call; a complex unit derived from the unit for the beam's
+  `dynamic_cast`; players and the world's current player). The original classes cut verbatim (shots from e92bcb6b,
+  the beam from 319325f5) against `EEE3DRust`'s constructors, host and `Call` and the rasterizer table cut from the
+  worktree over the Rust printed the same bytes: shots 300 (6,883 lines) and 3,000 on seed 2 (68,019; 646 hits,
+  4,565 shell draws, the zero-length line among them), beams 300 (6,671) and 3,000 on seed 2 (67,393; 713 linked
+  effects placed). The Rust tests pin each op against `LogRaster` (8 shot tests, 4 beam tests).
+- **Round 12's rising driver rerun on the final shared host:** its stub world needed the follow driver's stubs
+  (the host now holds the shield's and the follow's calls); with them it printed round 12's original bytes (5,443
+  lines, and 52,163 on seed 2).
+- **Which effects the gate games make** (a temporary count in `EERegisterEffect`, removed; kinds in hex): the sim
+  oracle's games and the oracle profile 7, 0x1b, 0x2e, 0x32, 0x39, 0x3a, 0x3b, 0xd (and a few 0); late 6, 7, 0xd,
+  0x22, 0x29, 0x2e, 0x32, 0x3a, 0x3e; calamity 6, 7, 8, 0xb, 0xd, 0x12, 0x1a, 0x1b, 0x1e, 0x20, 0x22-0x25, 0x27, 0x2b, 0x2e,
+  0x2f, 0x30, 0x32, 0x39-0x3b, 0x3e, 0x3f, 0x40, 0x45, 0x47. None of this round's kinds (0x21, 0x26, 0x33, 0x43)
+  is made by any of them: the oracle, EFST and saveload pass without reaching the moved code; only the goldens and
+  the unit tests run it. Of round 12's, the calamity profile makes the teleport (0x3f, 12) and the shield (0x45, 2),
+  so its EFST covers their tick, Load and Save; the blast wave and time warp are made by none.
+- **Behaviour:** none intended.
+- **Gates.** Gates on the result merged with rust (16a131cd): `build.py --sim` and the test profile link 0/0, the Rust gate PASS (2,611 tests), the sim oracle identical on seeds 2-7, the captures at seeds 2-3 PASS with EFMU and EFST (oracle 169 digests, late 170, calamity 183), `saveload --settings all --seeds 2-3 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (the matrix as expected); the shot, beam and rising drivers rebuilt on the merged tree printed the same bytes (the rising one with the model-id tokens of the final stub world stripped). Per commit: the build 0/0, the oracle at seeds 2-3 identical, the oracle capture at seeds 2-3 PASS (169), the Rust gate PASS (2,562, then 2,566 tests). No tour run.
+- **Only a tour or a person reaches:** every path of the four moved kinds: a tracer or shell fired between units
+  (their shot effect: `CreateEffectBetweenUnits`, scenario effects), its impact effect and the target's
+  `UnitDamaged`, the shell's fade in pass 5; the pulse cannon ball (`EEAEExtraDamageFunctor`'s pulse cannon effect)
+  with its glow and explosion; the citizen beam (a unit's work animation window: aim, linked effect, flicker, the
+  cloak test); Load and Save of each in a saved game holding one. Every draw goes through the new table entries
+  (material colour, model texture).
+- **Next:** the 2D twin (`EEE2DRust` over `EEEffect2D`) for the sprite effects; more 3D leaves on `EEE3DRust`
+  (water splash and screen flash on the aged record, the additive pass, the linear projectile, the disease and virus
+  with their orbitals). A gate profile that makes the moved kinds would let EFST cover them.
+
+## R6: WON's Internet code, round 18 (every routing op, request and notification, as one Rust object)
+
+Branch `rust-won-net18`. Measured by net C++ deletion, as rounds 7 to 17. Round 17 left WONRouting's request helpers
+and its 55 op classes (the requests, the notifications, the derived server's op): RoutingLogic and EEWonNet read their
+members class by class, so the readers moved with them.
+
+- **What moved.** `routeop.rs` (`EeWonRouteOp`): one Rust object per op of any type (`RoutingOpType`), with every
+  member the op classes had as a numeric field by number (`EE_WON_RTF_*`, each with its member's width: an assignment
+  is cut as the original's was), four texts (`EE_WON_RTT_TEXT` / `NAME` / `PASSWORD` / `COMMENT`, UTF-16 units), the
+  data type, the data buffer (none for a null `ByteBufferPtr`), the recipients, and the records its replies build
+  (clients, members, groups with their members, data objects, bad users, the joined client: shared records as the
+  original's `SmartPtr`s, so a member's client made after the member went in its map is that member's). Every step:
+  the constructors' defaults, `SendRequest` (the members it resets, the message from routemsg.rs's `request`,
+  whether the op waits in the connection's list: not a chat or data send without flag 1, never a disconnect), and
+  `HandleReply` (routemsg.rs's `reply`, its assignments applied as `WONRoutingMsg.h`'s templates applied them, a cut
+  short read, `RoutingCreateGroupOp::CheckLeaveGroup`'s leave), `ParseGroupListObj`, and the group list request op's
+  replies read again (`RouteGroupListOf`, now `ee_won_routeop_read_group_list_of` straight from the Rust host op).
+- **The C++ left.** `RoutingOp` is the one class: the `AsyncOp` the connection's list and the completions hold, its
+  type a constructor argument; `RunHook` (blocking mode refused), `SendMsg` (the length field) and `AddOp` stay, and a
+  leave op is run where the Rust read asks for one. Accessors: `Num` / `SetNum`, `Text` / `SetText`, `DataType`,
+  `GetData`, `Recipients`, and copies of the records into new C++ maps (`GetClients`, `GetMembers`, `GetGroups`,
+  `GetDataObjects`, `GetBadUsers`, `GetClientInfo`, `GetGroupInfo`) through one record sink. `RoutingDetectFirewallOp`
+  keeps its listening socket as a subclass. `RoutingGetUserStatusOp` (a UDP op on the lobby lane's manager) stays,
+  with the slim `WONRoutingMsg.h` it uses; the rest of that header is test glue now (`tests/won/won_routemsg_glue.h`
+  for won_routemsg_test and won_reqlast_test, which still check routemsg.rs's C ABI against the original
+  statements). The record factories `GetNewClientInfo` / `GetNewMemberInfo` / `GetNewGroupInfo` are gone.
+- **The readers.** RoutingLogic's 20 notification handlers, its create, join, ban, mute, bad user, register and group
+  list ops, and EEWonNet's callbacks read the accessors and copies (`LobbyServer::SyncClients` / `SyncGroups` take the
+  copied maps unchanged). The smart connection's `RoutingOpCompleteHook` is one call (`ee_won_smart_routeop`: the
+  model reads the Rust op's fields and records itself), and its `ee_won_smart_put_*` / `ee_won_smart_op` are gone.
+- **The golden over real loopback sockets.** `won_routeops_test` (new, `xbuild wontest`): a plain RoutingConnection to
+  a routing server stand-in on 127.0.0.1; every request helper and the ops RoutingLogic builds itself, the bytes the
+  server receives, the replies (statuses, lists, records, a members reply for another group, a join that waits, a
+  password retry on the same op, a create with its join status), every notification type and a derived message,
+  each finished op dumped through every member its readers use; a group list body read by a connection-less op.
+  Recorded over the unmodified classes (534 lines, six runs the same, `golden_routeops.txt`, its own commit), then
+  replayed over the Rust ops through the accessors (`EE_WON_ROUTE_OPS_RUST` picks the path): 534 lines, 0 failures.
+  won_servconn_test (202), won_smartroute_test (668), won_routemsg_test (4,256,706 checks) and won_reqlast_test
+  (90,093 checks) pass unchanged; servconn's golden names op classes, so the driver maps the types it meets to them.
+  Mutations: a chat without flag 1 added to the list fails line 523; a group list's members dropped fails line 58.
+- **Driver trap.** An op run again after it finished (RoutingLogic's join password retry) sent its request twice in
+  one run of six when rerun at once: the driver pumps 50 ms before the rerun. Not a port difference (the original
+  classes did it).
+- **Behaviour.** The original's uninitialized members (a notification's fields before its read, the register op's
+  client id from its long constructor, the members op's observer count before a reply) are 0. A record's text
+  crosses as UTF-16 (identical on Windows; on Linux and macOS a lone surrogate stays one unit, as `WideAssignUtf16LE`
+  keeps it). A data object's or op's buffer read back is a copy, not the same `ByteBuffer`.
+- **Net C++** (src+include, the generated headers left out): +808 -4355; of the deletion about 680 lines are
+  `WONRoutingMsg.h`'s templates moved to the test glue. 17 units and 3 headers deleted; WONRouting.h -866 +49,
+  RoutingConnection.cpp -662 +313, RoutingOp.cpp +241 -43, SmartRoutingConnection.cpp -119 +3.
+- **LAN reach: none.** RoutingConnection and its ops are made only by an Internet login (the lobby's RoutingLogic
+  `ConnectToServer`, EEWonNet's server select); the WON servers are gone. Every LAN lobby and game runs on the lobby
+  lane's sockets and LanLogic, and EE-SIM never makes a routing op. The driver and the Rust tests exercise it.
+- **Not moved, and why.** RoutingGetUserStatusOp (UDPManagerSendRecvOp's subclass: the lobby lane's object). The
+  RustServerOp host (ServerOp.cpp's HostCall): still answers on C++ objects. ServerConnectionConnectOp (four short
+  members over the connection).
 ## R6 WON round 31: a NULL-receiver audit of the moved classes; the child layouts whole in Rust (ee_won layoutobj.rs; branch rust-r6-won31, 2026-11-13)
 
 Measured as rounds 18-30 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):

@@ -327,7 +327,7 @@ void OriginalHealUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID)
             if (Count(theActiveGroup) > 0) {
                 ee_units_host_pending_push(thePlayer, theActiveGroup);
                 ee_units_host_group_clear_goal(theActiveGroup);
-                EeGoalSpec theSpec;   // new EEUGHealUnit(theComplexUnit, true)
+                EeGoalSpec theSpec;   // EEUGRust::NewHealUnit(theComplexUnit, true)
                 memset(&theSpec, 0, sizeof(theSpec));
                 theSpec.ctor = EE_GOAL_CTOR_HEAL_UNIT;
                 theSpec.unit_a = theComplexUnit;

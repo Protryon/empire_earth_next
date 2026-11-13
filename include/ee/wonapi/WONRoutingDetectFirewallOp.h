@@ -1,4 +1,6 @@
-// No original address identified: WON SDK derived op
+// No original address identified: WON SDK derived op. Its listen port, longest wait, listen flag and status wait are
+// the Rust op's members (routeop.rs, EE_WON_RTF_LISTEN_PORT / MAX_WAIT / DO_LISTEN / WAITING); the class keeps the
+// listening socket
 #ifndef EE_WONAPI_WONROUTINGDETECTFIREWALLOP_H
 #define EE_WONAPI_WONROUTINGDETECTFIREWALLOP_H
 #include "ee/wonapi/WONRouting.h"
@@ -7,34 +9,24 @@
 namespace WONAPI
 {
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 class RoutingDetectFirewallOp : public RoutingOp
 {
 private:
-	unsigned short mListenPort;
-	unsigned long mMaxConnectWaitTime;
 	SmartPtr<BlockingSocket> mListenSocket;
-	bool mDoListen;
-	bool mWaitingForStatusReply;
 
 	virtual void SendRequest();
-	virtual WONStatus HandleReply(unsigned char theMsgType, ReadBuffer &theMsg);
 	virtual void CleanupHook();
 
 public:
-	RoutingDetectFirewallOp(RoutingConnection *theConnection);
+	RoutingDetectFirewallOp(RoutingConnection *theConnection) : RoutingOp(theConnection, RoutingOp_DetectFirewall) {}
 
-	void SetListenPort(unsigned short thePort) { this->mListenPort = thePort; }
-	void SetMaxConnectWaitTime(unsigned long theNumSeconds) { this->mMaxConnectWaitTime = theNumSeconds; }
-	void SetDoListen(bool doListen) { this->mDoListen = doListen; }
+	void SetListenPort(unsigned short thePort) { this->SetNum(EE_WON_RTF_LISTEN_PORT, thePort); }
+	void SetMaxConnectWaitTime(unsigned long theNumSeconds) { this->SetNum(EE_WON_RTF_MAX_WAIT, theNumSeconds); }
+	void SetDoListen(bool doListen) { this->SetNum(EE_WON_RTF_DO_LISTEN, doListen); }
 
-	unsigned short GetListenPort() const { return this->mListenPort; }
-	unsigned long GetMaxConnectWaitTime() const { return this->mMaxConnectWaitTime; }
-	bool GetDoListen() { return this->mDoListen; }
-
-	virtual RoutingOpType GetType() const { return (RoutingOpType)RoutingOp_DetectFirewall; // SDK RoutingOp_DetectFirewall
- }
+	unsigned short GetListenPort() const { return (unsigned short)this->Num(EE_WON_RTF_LISTEN_PORT); }
+	unsigned long GetMaxConnectWaitTime() const { return (unsigned long)this->Num(EE_WON_RTF_MAX_WAIT); }
+	bool GetDoListen() { return this->Num(EE_WON_RTF_DO_LISTEN) != 0; }
 };
 
 

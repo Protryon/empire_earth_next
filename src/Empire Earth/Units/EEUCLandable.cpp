@@ -223,15 +223,16 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     EEUnit* theUnit;
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
+    bool theHasLocation = EEGoalHasLocation(theGoal);   // a location goal or a heal goal
     EEUGRust* theAttack = EEAttackUnitCast(theGoal);
     EEUGRust* theExplore = EEExploreGoalCast(theGoal);
     EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
     EEUGRust* theGround = EEAttackGroundCast(theGoal);
     EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
-    if (theLocation != NULL) {
-        theTarget.SetX(theLocation->GetLocation().GetX());
-        theTarget.SetY(theLocation->GetLocation().GetY());
+    if (theHasLocation) {
+        GE3DPoint theLocation = EELocationGoalPoint(theGoal);
+        theTarget.SetX(theLocation.GetX());
+        theTarget.SetY(theLocation.GetY());
     } else if (thePatrol != NULL) {
         theTarget.SetX((float)thePatrol->GetPatrolTarget()->GetTileX() + 0.5f);
         theTarget.SetY((float)thePatrol->GetPatrolTarget()->GetTileY() + 0.5f);
@@ -644,15 +645,15 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
         theCarrier->mPhysicalModel.GetLocation().ConvertToOrientation(theOrientation);
         inUnit->mOrientation = theOrientation;
     }
-    EEUGLocation* theLocation = NULL;
-    if (inUnit->mGoalState != NULL)
-        theLocation = EEGoalCast<EEUGLocation>(inUnit->GetGoal());
+    EEUnitGoal* theLocation = NULL;   // a location goal or a heal goal
+    if (inUnit->mGoalState != NULL && EEGoalHasLocation(inUnit->GetGoal()))
+        theLocation = inUnit->GetGoal();
     if (theLocation == NULL) {
         EEUGLocation* theMove = new EEUGLocation(&theDeck, false, true, false, 0.0f, false, false);
         inUnit->ClearGoalQueue(0);
         inUnit->SetGoal(theMove, 0, 0);
     } else
-        theLocation->SetLocation(theDeck);
+        EESetLocationGoalPoint(theLocation, theDeck);
 }
 
 // FUNCTION: EXE 0x615a4d
@@ -978,7 +979,7 @@ bool EEUCLandable::IsAwayFromGoal(EEComplexUnit* inUnit)
         theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
     }
     bool theResult;
-    if (!(theDeck.DistanceToSquared(static_cast<EEUGLocation*>(inUnit->GetGoal())->GetLocation()) <= 1.0f))
+    if (!(theDeck.DistanceToSquared(EELocationGoalPoint(inUnit->GetGoal())) <= 1.0f))
         theResult = true;
     else
         theResult = false;
@@ -1079,7 +1080,7 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         if (inUnit->mHomeBase != NULL) {
             long theCategory = inUnit->mHomeBase->GetUnitClass()->mCategory;
             if ((theCategory == kUnitCategoryNavalBuilding || theCategory == kUnitCategorySpaceBuilding) && inUnit->mHomeBase->GetUnitClass()->mAirTrafficType != 0
-                && EEGoalCast<EEUGLocation>(theGoal) != 0)
+                && EEGoalHasLocation(theGoal))
                 theFlag = this->IsAwayFromGoal(inUnit);
         }
         break;
