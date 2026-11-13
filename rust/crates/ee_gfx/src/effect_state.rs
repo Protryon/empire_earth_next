@@ -2654,10 +2654,17 @@ mod tests {
         // healed past param 2's share, or dead: it ends
         assert_eq!(smoke_step(&mut s, &EeGfxSmokeTick { hit_points: 60, ..ts }, &mut h), 7);
         assert_eq!(smoke_step(&mut s, &EeGfxSmokeTick { unit_command: EE_GFX_EFFECT_ACTION_DEAD, ..ts }, &mut h), 7);
-        // time2 below time1: the unsigned difference
+        // time2 below time1: the unsigned difference. The interval rounds to 2^31 + 256, past the `long` range,
+        // where the UCRT's lrintf answers 0 (ee_ge um.rs): it puffs at the unit at once
         let mut w = EeGfxEffectRecord::new(EE_GFX_EFFECT_KIND_DAMAGE_SMOKE);
         let tw = EeGfxSmokeTick { time1: 500, time2: 100, has_tag_points: false, ..ts };
+        let before = h.placed.len();
         assert_eq!(smoke_step(&mut w, &tw, &mut h), 0);
+        assert_eq!(h.placed.len(), before + 1);
+        // three draws for the place and the mock host's own (as each tag point's above)
+        for _ in 0..4 {
+            check.generate();
+        }
         assert_eq!(w.smoke.since_emit, 100.0);
         assert_eq!(random_seed(), check.seed);
 
