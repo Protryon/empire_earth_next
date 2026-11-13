@@ -13,6 +13,7 @@ use std::ffi::c_void;
 use ee_ge::types::{Ge3DPoint, GeVector};
 
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
+use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_TELEPORT, EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_MOVED,
@@ -97,6 +98,11 @@ pub struct EeGfxEffect3DHost {
     pub texture: extern "C" fn(context: *mut c_void) -> EeGfxModel,
     /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
     pub follow_unit: extern "C" fn(context: *mut c_void),
+    /// the graphic object's model `index` (`mModels[index]`)
+    pub model_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
+    /// a tracer's end: its graphic effect's linked effect 1 placed at the effect's position, then the unit's
+    /// `UnitDamaged` (each when there is one)
+    pub shot_hit: extern "C" fn(context: *mut c_void),
 }
 
 /// The world as the effects ask it.
@@ -111,6 +117,8 @@ pub trait Effect3DHost {
     fn model(&mut self) -> EeGfxModel;
     fn texture(&mut self) -> EeGfxModel;
     fn follow_unit(&mut self);
+    fn model_at(&mut self, index: u32) -> EeGfxModel;
+    fn shot_hit(&mut self);
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -144,6 +152,12 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn follow_unit(&mut self) {
         (self.follow_unit)(self.context)
     }
+    fn model_at(&mut self, index: u32) -> EeGfxModel {
+        (self.model_at)(self.context, index)
+    }
+    fn shot_hit(&mut self) {
+        (self.shot_hit)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -163,6 +177,7 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
     match kind {
         EE_GFX_EFFECT_KIND_TELEPORT | EE_GFX_EFFECT_KIND_TIME_WARP => unsafe { rising(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_BLAST_WAVE | EE_GFX_EFFECT_KIND_SHIELD => unsafe { follow(op, r, g, h, x) },
+        k if is_shot(k) => unsafe { shot(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -186,6 +201,15 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 load_shield(r, f, major, minor)
             } else {
                 save_shield(r, f)
+            }
+        }
+        k if is_shot(k) => {
+            // the base's and the media's results are ignored
+            if load {
+                h.load_media();
+                load_shot(r, f)
+            } else {
+                save_shot(r, f)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
@@ -352,6 +376,12 @@ mod tests {
         }
         fn follow_unit(&mut self) {
             self.calls.push("follow".into());
+        }
+        fn model_at(&mut self, _index: u32) -> EeGfxModel {
+            std::ptr::null_mut()
+        }
+        fn shot_hit(&mut self) {
+            self.calls.push("hit".into());
         }
     }
 

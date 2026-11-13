@@ -1,6 +1,7 @@
-// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs): EEE3DRust's
-// virtuals call Rust by the record's kind and answer its questions about the world here. Replaces EEE3DTeleport.cpp,
-// EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp and EEE3DShield.cpp.
+// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs):
+// EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here. Replaces
+// EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp, EEE3DTracers.cpp
+// and EEE3DShells.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -44,6 +45,7 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DRust.h"
+#include "ee/EECombatFormulas.h"
 
 namespace {
 // the world's answers for one call
@@ -110,7 +112,34 @@ struct Ask {
             theEffect->SetTransformation(theLocation);
         }
     }
+    static void* ModelAt(void* inAsk, uint32_t inIndex) { return E(inAsk)->mGraphicObject->mModels[inIndex]; }
+    // a tracer's end: its impact effect at its position, then the target's hit (EEE3DTracers::Step, 0xfdad4)
+    static void ShotHit(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEGraphicEffect* theImpact = theEffect->mGraphicEffect->mLinkedEffect1;
+        if (theImpact) {
+            GE3DPoint theLocation(theEffect->mTransformation);
+            gEffectManager->CreatePlacedEffect(theLocation, theImpact, NULL);
+        }
+        if (theEffect->mUnit)
+            theEffect->mUnit->mUnitClass->UnitDamaged(theEffect->mUnit->mComplexUnit, NULL, 0);
+    }
 };
+
+// a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
+// whether the unit's model has tag points at its animation
+bool ShotStart(long inMode, EEUnit* inUnit, EeGe3DPoint& outStart)
+{
+    GE3DPoint theStart;
+    EEModel* theModel = inUnit->GetModel();
+    EEComplexUnit* theUnit = inUnit->mComplexUnit;
+    EETagPointList* theList = inUnit->GetModel()->mTagPoints[theUnit->GetAnimation()];
+    bool theTagged = theList != NULL && theList->GetNumTagPoints() != 0;
+    EECombatEffectWeaponPoint(inMode, theUnit, theModel, theList, theTagged, theStart);
+    outStart = EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
+    return theTagged;
+}
 }
 
 EEE3DRust::EEE3DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
@@ -124,6 +153,33 @@ EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffe
 {
     this->mRecord->aged.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
     this->Call(EeGfxEffect3DOp::CreateAt);
+}
+
+// the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26)
+EEE3DRust::EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(inUnit, inGraphicEffect, inKind)
+{
+    ShotStart(6, inUnit, this->mRecord->shot.path.start);
+    this->mRecord->shot.location = EeGe3DPoint{inTarget.mX, inTarget.mY, inTarget.mZ};
+    this->Call(EeGfxEffect3DOp::Create);
+}
+
+// the tracers (0x21) and shells (0x26) on inTo: from inFrom's weapon point to a point of inTo's model, in inFrom's
+// player colour (EEE3DTracers, 0xfd373)
+EEE3DRust::EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(inTo, inGraphicEffect, inKind)
+{
+    GE3DPoint theEnd;
+    GETransformation theToTransformation(inTo->mComplexUnit->mPhysicalModel.GetLocation());
+    float theToScale = inTo->mComplexUnit->mPhysicalModel.GetScale();
+    if (ShotStart(7, inFrom, this->mRecord->shot.path.start))
+        EETagPointList::Scale(theToTransformation, theToScale);
+    GE3DPoint theOffset = inTo->GetModel()->PickPoint();
+    theToTransformation.Apply(theOffset, theEnd);
+    const GEColor& theColor = inFrom->mPlayer->mColor;
+    this->mRecord->shot.location = EeGe3DPoint{theEnd.mX, theEnd.mY, theEnd.mZ};
+    this->mRecord->shot.color = EeGfxColor{theColor.mRed, theColor.mGreen, theColor.mBlue};
+    this->Call(EeGfxEffect3DOp::Create);
 }
 
 EEE3DRust::EEE3DRust(long inKind)
@@ -165,7 +221,8 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     theFacts.unit_hit_points = this->mUnit != NULL ? (int32_t)this->mUnit->mHitPoints : 0;
     Ask theAsk = {this, inQueues};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow};
+                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
+                                 Ask::ShotHit};
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);

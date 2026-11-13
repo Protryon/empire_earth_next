@@ -41,6 +41,10 @@ impl Effect3DHost for Host {
     fn follow_unit(&mut self) {
         self.calls.push("follow".into());
     }
+    fn model_at(&mut self, _index: u32) -> EeGfxModel {
+        std::ptr::null_mut()
+    }
+    fn shot_hit(&mut self) {}
 }
 
 fn facts() -> EeGfxGraphicFacts {
