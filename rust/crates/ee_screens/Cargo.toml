@@ -14,3 +14,5 @@ crate-type = ["rlib"]
 [dependencies]
 # a name's characters as UWideString reads them (the UTF-8 steps of PlatMbsNInc)
 ee_plat_core = { path = "../ee_plat_core" }
+# GERectangle and its And (the framed background's clips: frame.rs)
+ee_ge = { path = "../ee_ge" }

@@ -10808,6 +10808,140 @@ Measured by net C++ deletion (src and include/ee, git numstat).
 - **What only a person or a tour reaches:** nothing drawn changed. The heal range test also gates `EEUnitClass::Heal`'s
   animation and effect.
 
+## R6: the game screens, thirteenth round: the message box, the UI manager's factories, the framed background and the UI thread's action queues in Rust (ee_screens dialog.rs, factories.rs, frame.rs, actions.rs; branch rust-screens13, 2026-11-12)
+
+The dialogs, the UI manager and the UI thread (RUST_PLAN's row: ~4.2k); round 10's count (`build/sc10/count.sh`).
+
+- **The message box** (`dialog.rs`): `EEUIFError`'s five `Display*` and `Open`'s five `Layout*` are one Rust plan per
+  kind over `ee_screenscpp_dialog` (in `EEUIFError.cpp`: the host of a C++ class lives with it, not in
+  `EEScreens.cpp`, so a driver over the unit alone relinks). The box's statics hold `Display`'s inputs (message,
+  data, callbacks, close form) for the length of the call; callbacks never cross into Rust (a slot number says
+  which). The layouts' fractions travel as integers (`451 | 573 << 16`): the host's `451 / 1024.0f` is the same float
+  as the original's constant. `LayoutMessage`'s centring is Rust's (`UMFloor` to a 32-bit `long`, the lines an
+  unsigned 32-bit count as on Windows). The form, its controls and their construction, the buttons' drawing and
+  `Close`'s posted callback stay C++. 38,083 -> 37,891 (-192; git over the C++ +139 -331).
+- **The factories** (`factories.rs`): the twelve control-event factories `EEUIManager` registered one per form are
+  one Rust table in their registration order (the toolkit takes the first answer that is not NULL, so the chain's
+  order is the original's) behind one registered `EECreateGameEvent`; WON's server select factory stays C++ and is
+  registered after it (the debug sound panel's, registered after WON's in the original, answers no id WON's does).
+  The form-event factory is a Rust table. Events still C++ classes (the save/load Cancel, the unit reload, WON's
+  server select open) are `EE_SCREENS_CPP_*` codes the C++ factory turns into its `new`s. 37,891 -> 37,588 (-303;
+  git over the C++ +38 -341). The driver relinked prints the same for every id below 70,000.
+- **The framed background** (`frame.rs`): `EEUIBGenericBackground`'s draw (the panel, edges, corners, side
+  ornaments) is Rust's geometry over two host calls, the panel and one piece; a piece carries its texture and
+  destination rectangles, location, cell and up to three reorders of the texture coordinates (each the new corners'
+  indices into the current ones, two bits each), the scales swapped after a quarter turn. ee_screens now takes ee_ge
+  for `GERectangle`'s `And` (a `GERectangle*` crosses as `void*`: ee_ge's `GeRectangle` is its layout, bottom first).
+  Found by its unit test, the original's: a redraw rectangle that misses the background leaves the background's
+  visible part whole (`And` in place does not touch it), so every piece is still drawn, clipped to the whole
+  background. 37,588 -> 37,385 (-203; git over the C++ +42 -245). Only a tour draws it (39 generic backgrounds in
+  `dbuiback`: the main game form's seven, the settings', the splash's, the lobby's; flags 1, 3 and 0, one form 5).
+- **The action queues** (`actions.rs`): `EEUserInterface`'s action, undo and redo deques and their three critical
+  sections are a Rust record of three `Mutex<VecDeque>`s of handles; the actions stay C++ (`EEAction`, reference
+  counted) behind `ee_screenscpp_action` (reference, release, run, undo, undoable, the two locks). A pop releases the
+  queue's mutex before the action is released or run (the original's `ClearQueue` released under its recursive
+  critical section; an action's dtor that posts would deadlock a Rust mutex). 37,385 -> 37,311 (-74; git over the
+  C++ +58 -145, `EEUserInterface.h` outside the count). The tour's orders, the gates' games and EE-SIM run every
+  action through it (the oracle identical); the editor's Undo and Redo are a person's.
+- **Round total:** game UI C++ lines 38,083 -> 37,311 (-772).
+- **Golden drivers** (scratch, `build/sc13`: `dlg_driver.cpp`, `fac_driver.cpp`, `frm_driver.cpp`, `act_driver.cpp`;
+  `drv.py` as round 12's): each runs the unmodified unit, then the new unit with the host renamed by a macro
+  (`#define ee_screenscpp_dialog ee_screenscpp_dialog_real` before the `#include`) so the driver's own
+  `ee_screenscpp_dialog` logs every host call and answer before forwarding. That log is the committed golden; the
+  Rust replay checks each call against it and gives its answer (no toolkit model in Rust).
+- **Lessons:**
+  - A driver that names pointers must keep every named buffer alive: a callback's data pointer from an earlier case
+    named a freed edit box line whose address the next case's line reused in one build and not the other (22 lines
+    of a 62,000-line diff); the old and new units were the same.
+  - A virtual member called on the driver's calloc'ed object goes through the fake vtable to a stub: call
+    `p->Class::Open()` qualified (the first old run printed no layout at all).
+  - Private `const`s of a module are exported by cbindgen too: `HIDDEN`/`SHOWN` landed in `ee_rust_common.h` and took
+    `ee_ui`'s `SHOWN`. Prefix even private consts.
+  - An env var holding `/DNAME` is rewritten by MSYS into a path when bash starts a Windows program: pass `-DNAME`.
+  - ee_plat_core's timer tests fail under the machine's load in the workspace run (three different tests over three
+    runs) and pass alone; the gate's `cargo test --workspace` stops at that crate, so `build/sc13/gate.sh` runs the
+    gate's four steps with `--no-fail-fast` to see every other crate.
+  - The main checkout's oracle ref can change under a running round: the lead re-recorded it (`rust` merged main's
+    AI changes, a declared rebaseline) while this round's last commit ran, and the commit "diverged" at CT 744. Before
+    chasing a divergence, check the ref's time against the branch's base; this branch matched `ref_pre_mm2`, the ref
+    of its base, identically (trace and ticks), and the merged branch matches the new ref.
+- **Not moved:** the UI thread's message loop and handlers (`EEUserInterface::HandleMessage` and the game-state
+  transitions it calls: one world, server or graphics call per line; a Rust move adds a host op per line and deletes
+  nothing until the simulation interface of step (3)), `EEUIManager::CreateUserDefinedControl` (the HUD's controls by
+  kind) and `StartScenarioEditor`, `EEUIFileComboBox` (a toolkit control subclass). The scenario editor's map is in
+  RUST_PLAN's row.
+
+## R6 WON round 24: MultiListArea with its rows and header, TreeArea and TreeItem, PopupMenu whole in Rust; the lists' selection event fixed (ee_won multiobj.rs, treeobj.rs, menuobj.rs; branch rust-r6-won24, 2026-11-13)
+
+Measured as rounds 18-23 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 87,629 at
+the branch's start -> 87,632 (MultiListArea accessors, +3) -> 86,904 (the multi-column list, -728) -> 86,908 (TreeItem
+accessors, +4) -> 86,252 (the tree, -656) -> 86,100 (PopupMenu, -152); the merge of rust (other lanes) -> 85,300;
+the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's own net: -1,511.
+
+- **The regression (found by the lead's LAN gate, fixed here in its own commit):** round 23's Rust ListArea fires its
+  selection change through the component op `FireEvent(EeWonGuiEvent::ListSelChanged)`, and GuiHost's `ComponentOp`
+  turned every event but InputReturn into `ComponentEvent_InputTextChanged`. No list's selection reached a listener,
+  so the LAN lobby never enabled Join Game. The golden could not see it: its host traced the op, not the event the
+  C++ made of it. Lesson: when an op's C++ side maps codes, check each code reaches its own case (a new code added to
+  a shared op table needs its host case too).
+- **Accessors first, in their own commits.** MultiListArea: the configs' and ServerListCtrl's writes of
+  `mDynamicSizeColumn` / `mAutoGrowColumns` and read of `mSortColumnPrev`. TreeItem: RoomCtrl's reads of `mItem`,
+  `mChildren.size()`, `mParent`, `mIndex`, `mOpen` (`GetWrappedItem`, `GetNumChildren`, `GetParentItem`, `GetIndex`,
+  `IsOpen`). Scrollbar: the skins, MSScrollbar, the configs and ScrollbarScroller (arrows, thumb, track, orientation,
+  thumb options, `SetRange`, `SetLineScrollSizes`, `Get/SetPosition`); the move itself is next round. PopupMenu had no
+  reader outside its units.
+- **Subclasses over a Rust base.** MultiListArea, TreeArea and PopupMenu derive from ListArea, which is Rust since
+  round 23. Their Rust objects hold the list's Rust object (`ee_won_*_new(this, host, this->mRust)`: the base's
+  constructor ran first and its destructor runs after) and call it directly for every `ListArea::X` the original
+  made. The list's own virtuals (AdjustPosition, Sort, NotifyMouseItemGone, ListSelChangedHook) still go back through
+  the C++ object, so the overrides run. The goldens run BOTH sides over a real Rust ListArea with one scripted host,
+  so the traces carry the base's ops too.
+- **Rows as Rust objects.** MultiListItem and TreeItem stay C++ `ListItem`s (the list's items; NetworkAdapterListItem
+  derives from MultiListItem), each holding a Rust row (`EeWonMRow`, `EeWonTNode`) with its cells or its children
+  and wrapped item held by reference. A row's virtuals get the list, and the forwarder passes along the list's Rust
+  object. The calls with no list (`SetPos`, `GetItem`, the walks) go through the row's own small host (references,
+  `NodeOf`, the item SetPos). A row reaches another row's Rust state through the op `NodeOf` (the C++ row's `mNode`),
+  and the header reaches its list's through `MultiOf`.
+- **Undefined states the goldens avoid (the Rust keeps away from them):**
+  - a negative column to `SetItem` / `SetColumnItem` (the original compared it with the vector's size as unsigned);
+  - a row's cell past the columns at paint (the original read past the vector);
+  - a header without a list at a drag (a null read).
+  - In the tree, `CloseAll` alone, or a changing call on a hidden row left open, can leave rows of a closed or
+    detached subtree in the list. Their parent's removal then makes the original read a freed row (the first tree
+    golden crashed there). The tree golden's changing calls take shown rows, as the room control does.
+- **Unset fields given a value:** TreeArea's `mTreeSortType` (none; the config sets it) and PopupMenu's
+  `mLastX`/`mLastY` (0; only keyboard mode reads them, after a move set them). One dropped override:
+  `TreeArea::MouseDown` only called `ListArea::MouseDown`.
+- **The tree's paint** is guidraw's operations. The dotted lines' pixel loops are a new `EE_WON_DRAW_DOTTED_LINE`
+  (17), executed by `WONDrawOne`.
+- **The sorts:** a row's Compare is called from `std::sort` / `std::lower_bound` inside the list's ops. The goldens'
+  hosts sort through the side's rows. The Rust replays take a sort's order from the golden and run `lower_bound`'s
+  binary search themselves (the same comparisons).
+- **The goldens** (`tests/won/won_multiobj_test.cpp`, `won_treeobj_test.cpp`, `won_menuobj_test.cpp`; 20,000
+  sequences each, every reference given back):
+
+  | Golden | Trace lines | Mutation | Sequences it fails | Replayed |
+  |---|---|---|---|---|
+  | multi-column list | 11,327,345 | an empty cell's order | 4,342 | 46 sequences |
+  | tree | 13,409,107 | an ancestor's dotted line's x | 3,014 | 42 sequences |
+  | popup menu | 6,174,909 | the cleared submenu selection's index | 2,337 | 40 sequences |
+
+  `WON_TRACE_SEQ` / `WON_ECHO` / `WON_FIRST_SEQ` in the tree test print the sequence and its live trace (how its
+  crash was found).
+- **Shell lesson:** the Bash tool turned `\n` inside a heredoc into a real newline, even with a quoted delimiter. It
+  broke a C string literal twice: write such files with the file tool.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction). The lead's LAN game
+  checks:
+  - the LAN game list (a plain ListArea) and its selection event (`lan_game.py` PASS here, after the fix);
+  - the game room's player list (MultiListArea: GameUserListCtrl's rows over MultiListItem);
+  - the right-click menus (PopupMenu) if a person opens one.
+
+  The tree is the Internet room list only. The lobby captures check the multi-column paint (rows, columns, header
+  buttons, sort arrows). Column drags, header sorts, submenus, keyboard menus and the tree's mouse run only in the
+  goldens.
+- **Left:** Scrollbar (accessors done) with ScrollbarScroller; TextListItem and MenuItem's paints (data classes the
+  lobby fills; their decisions are guidraw's); then the containers.
+
 ## R4.4, ninth round: the weather storms, the 3D icons, the energy walls and the tracer beams on the records (ee_gfx effect_storm.rs, effect_icon.rs, effect_wall.rs, effect_tracer.rs; branch rust-gfx15, 2026-11-12)
 
 More effect leaf families on the round-7 records, one family a commit, largest first, EFST the gate (seeds 2-3 of the

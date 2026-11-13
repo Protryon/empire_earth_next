@@ -17,10 +17,10 @@ namespace WONAPI {
 // Fills the scrollbar track when it needs repainting (unless transparent), then paints the buttons and thumb
 void MSScrollbar::Paint(Graphics& g)
 {
-    if(this->mScrollRect->mInvalidState!=0 && !this->mIsTransparent)
+    if(this->GetScrollRect()->mInvalidState!=0 && !this->mIsTransparent)
     {
         g.SetSysColor(StandardColor_Scrollbar);
-        g.FillRect(this->mScrollRect->Left(),this->mScrollRect->Top(),this->mScrollRect->Width(),this->mScrollRect->Height());
+        g.FillRect(this->GetScrollRect()->Left(),this->GetScrollRect()->Top(),this->GetScrollRect()->Width(),this->GetScrollRect()->Height());
     }
     Container::Paint(g);
 }

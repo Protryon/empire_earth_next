@@ -3,7 +3,7 @@
 // EEUserInterface.cpp (0x276631..0x2798ce, assert file "C:\EEX\Empire Earth\User Interface
 // Thread\EEUserInterface.cpp") defines every member below; most are one-line posts of a thread message to mThread.
 // Layout gap-free: ctor stores, dtor, the queue helpers, and the asserts' member names
-// (mActionLock/mRedoLock/mUndoLock/mMessageQueueDone). Other names are provisional (by behaviour or by message number).
+// (mMessageQueueDone; the queues and their locks are Rust's now). Other names are provisional (by behaviour or by message number).
 #ifndef EE_EEUSERINTERFACE_H
 #define EE_EEUSERINTERFACE_H
 
@@ -29,13 +29,13 @@ class UWideString;
 
 class EEUserInterface {
 public:
-    // 0x276631: the three queues in the init list (before the vptr); body: mThread = TSScheduler::GetCurrentThread(),
-    // mB05C = false, mIsUpdating = true, mIsQuitting = false, mRandomSeed = TMGetTime(), mIconBarUpdatePosted = false, then the three
-    // CreateCriticalSection asserts (lines 0xae..0xb0: mActionLock, mRedoLock, mUndoLock) and CreateEvent
-    // (mMessageQueueDone, 0xb1). mLocalPlayer (+0x58) is not set here.
+    // 0x276631: mThread = TSScheduler::GetCurrentThread(), mB05C = false, mIsUpdating = true, mIsQuitting = false,
+    // mRandomSeed = TMGetTime(), mIconBarUpdatePosted = false, then CreateEvent (mMessageQueueDone, 0xb1; the
+    // original's three queues and their locks are Rust's: ee_screens actions.rs). mLocalPlayer (+0x58) is not set
+    // here.
     EEUserInterface();
-    // 0x276740 (??_G 0x276724): drains the queues (while (GetQueueSize(q, lock) > 0) PopFront(q, lock)->Dereference(),
-    // action, undo, redo), destroys mActionLock, mRedoLock, mUndoLock, mMessageQueueDone
+    // 0x276740 (??_G 0x276724): drains the queues (action, undo, redo; each action released), destroys
+    // mMessageQueueDone
     virtual ~EEUserInterface();
 
     // 0x278f79: references inAction and pushes it on the action queue
@@ -107,12 +107,6 @@ public:
 
     // in-unit helpers and the thread's handlers (all thiscall, called on this or gUserInterface; signatures
     // from the bodies, provisional names unless said)
-    unsigned long GetQueueSize(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);    // 0x277529
-    EEAction* PeekBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);           // 0x277e8e
-    EEAction* PopFront(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);           // 0x277eb4
-    EEAction* PopBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);            // 0x277ef2
-    void PushBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock, EEAction* inAction);  // 0x278f54
-    void ClearQueue(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);  // 0x276fe0 (Dereference each)
     long Run(void* inParameter);            // 0x2779b8 (the UI thread's loop; called from 0x140d73)
     // the parameters are the thread message's void* (pointers for most messages): LONG_PTR keeps them whole on x64
     // (and is long on x86, the original's type)
@@ -131,7 +125,7 @@ public:
     void TestScenario();                    // 0x276ab0 (message 0x415: starts the tested scenario)
     void CloseIMECompositionString();       // 0x276cb1 (WM_IME_ENDCOMPOSITION)
     void SaveAndTestScenario();             // 0x276cbc (message 0x40f: saves ScenDefault and starts it)
-    void LeaveMap(UIForm* inForm, bool inResize);      // 0x277023 (ClearQueue on all three, then the form)
+    void LeaveMap(UIForm* inForm, bool inResize);      // 0x277023 (clears the three queues, then the form)
     void CancelGame();                      // 0x277170 (message 0x412)
     void CloseScenarioEditor();             // 0x277290 (message 0x410)
     void EnterScenarioEditor(bool inLoad);  // 0x277315 (message 0x411: into the scenario editor)
@@ -141,7 +135,7 @@ public:
     void OpenSelectServer();                // 0x27783c (message 0x441)
     void ShowCivilizationBuilder(long inX, bool inFlag1, bool inFlag2);  // 0x277c1f (messages 0x41f/0x420)
     void PauseGraphics();                   // 0x277e63 (waits for the graphics thread's +0x56 flag)
-    void ProcessActions();                  // 0x277f21 (runs the queued actions)
+    void ProcessActions();                  // 0x277f21 (runs the queued actions: ee_screens actions.rs)
     // the input method's composition (PLAT_EVENT_TEXT_EDITING) and result (PLAT_EVENT_TEXT while composing)
     void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);  // 0x2780d3
     void AddIMEResultString(const char* inText);  // 0x2781da
@@ -152,14 +146,7 @@ public:
     void ResumeGraphics();                  // 0x2798a3
     void ShowLoadingText(long inStringID);  // 0x279fbc (message 0x40b)
 
-    std::deque<EEAction*> mActionQueue;     // +0x04 (lock mActionLock; PostAction)
-    std::deque<EEAction*> mUndoQueue;       // +0x18 (lock mUndoLock; Undo pops, Redo pushes)
-    std::deque<EEAction*> mRedoQueue;       // +0x2c (lock mRedoLock)
     TSThread* mThread;                      // +0x40 the constructing thread; every Post* goes to it
-    TSCriticalSection* GetActionLock() const { return this->mActionLock; }
-    TSCriticalSection* mActionLock;         // +0x44
-    TSCriticalSection* mUndoLock;           // +0x48
-    TSCriticalSection* mRedoLock;           // +0x4c
     TSEvent* mMessageQueueDone;             // +0x50
     unsigned long mRandomSeed;              // +0x54 TMGetTime(); EEMStartGame-style handler 0xc7cdc sets it with
                                             // gPhysics->mRandom's seed (provisional name)

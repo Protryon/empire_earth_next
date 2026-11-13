@@ -21,7 +21,7 @@ bool WONScrollbarConfig::Virtual24(const std::string& key)
     if(aKeyIdx==0) {
         if(this->ReadBool()) {
             Button* rect=new Button;
-            this->mScrollbar->mScrollRect=rect;
+            this->mScrollbar->SetScrollRect(rect);
         }
     } else return ScrollbarConfig::Virtual24(key);
     return true;
@@ -52,7 +52,7 @@ bool WONListCtrlConfig::Virtual24(const std::string& key)
         int count=this->ReadInt(); area->SetNumColumns(count);
     } else if(aKeyIdx==2) {
         MultiListArea* area=static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get());
-        int column=this->ReadInt(); area->mDynamicSizeColumn=column;
+        int column=this->ReadInt(); area->SetDynamicSizeColumn(column);
     } else if(aKeyIdx==3) {
         ListAreaConfig::ReadListFlags(this,static_cast<MultiListArea*>(this->mListCtrl->mScrollArea.get()));
     } else if(aKeyIdx==4) {

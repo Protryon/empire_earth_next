@@ -60,6 +60,8 @@
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIFError.h"
 #include "ee/EEStringIDs.h"
+#include "lle/UILayoutUtility.h"
+#include "rust/ee_screens.h"   // ee_screens_dialog_show, _open (ee_screens dialog.rs)
 static const float kMessageScrollBarOpacity = 0.3f;             // 0x44a634
 static const float kMessageButtonOpacity = 0.4f;                // 0x44a638
 static const GEColor kMessageScrollBarColor(1.0f, 1.0f, 1.0f);  // 0x5645f8
@@ -102,6 +104,7 @@ protected:
 // The No and Cancel buttons (RTTI EEUIFEBCancel > UIButton; vtable 0x44a6d8; sizeof 0x114).
 class EEUIFEBCancel : public UIButton {
     friend class EEUIFError;
+    friend uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB);
 public:
     EEUIFEBCancel(UIForm* inForm, unsigned long inId);
     virtual long DrawPolygons()
@@ -259,145 +262,122 @@ EEUIFError::~EEUIFError()
     delete this->mEditBox;
 }
 
+// the box's Display inputs while Rust shows it, and the layout's registers (the UI thread's)
+static const UWideString* sDialogMessage;
+static void* sDialogData;
+static EEUIFErrorCallback sDialogCallbacks[2];
+static UIForm* sDialogCloseForm;
+static GERectangle sDialogRectangle;
+static GEFont* sDialogFont;
+
 // FUNCTION: EXE 0x66151a
-// Shows the message box asking for a text or password, which OK passes to a callback
-void EEUIFError::DisplayPassword(const UWideString& inMessage, unsigned long inAlignment,
-                                 EEUIFPasswordCallback inCallback, bool inPassword)
-{
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_LOBBY_OK, theText);
-    this->mOk->SetText(theText, gFontTahoma12);
-    this->mOk->SetCallback((EEUIFErrorCallback)inCallback, (void*)this->mEditBox->GetText(0));
-    this->mOk->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mOk->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    this->mError->SetAlignment(inAlignment);
-    this->mError->SetText(inMessage);
-    this->mError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), 280.0f, 50.0f));
-    this->mNo->SetDisplayMode(kDisplayModeHidden);
-    this->mCancel->SetDisplayMode(kDisplayModeHidden);
-    this->mEditBox->SetDisplayMode(kDisplayModeShown);
-    this->SetTabbing(true);
-    this->SetTabStop(this->mEditBox->GetIndex());
-    this->mEditBox->SetIsPasswordBox(inPassword);
-    this->mMode = 3;
-    gUserInterface->SwitchToForm(this);
-}
-
 // FUNCTION: EXE 0x66167f
-// Shows a message with only a Cancel button, with its callback and the form Cancel closes
-void EEUIFError::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, void* inData,
-                               EEUIFErrorCallback inCallback, UIForm* inForm)
-{
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_LOBBY_CANCEL, theText);
-    this->mCancel->SetText(theText, gFontTahoma12);
-    this->mCancel->SetCallback(inCallback, inData);
-    this->mCancel->SetDisplayMode(kDisplayModeShown);
-    this->mCancel->mCloseForm = inForm;
-    theGEText = this->mCancel->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    this->mError->SetAlignment(inAlignment);
-    this->mError->SetText(inMessage);
-    this->mNo->SetDisplayMode(kDisplayModeHidden);
-    this->mOk->SetDisplayMode(kDisplayModeHidden);
-    this->mEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mMode = 4;
-    gUserInterface->SwitchToForm(this);
-}
-
 // FUNCTION: EXE 0x661788
-// Shows a message with an optional OK button and its callback
-void EEUIFError::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, void* inData,
-                                EEUIFErrorCallback inCallback, bool inShowOk)
-{
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_LOBBY_OK, theText);
-    this->mOk->SetText(theText, gFontTahoma12);
-    this->mOk->SetCallback(inCallback, inData);
-    this->mOk->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mOk->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    this->mError->SetAlignment(inAlignment);
-    this->mError->SetText(inMessage);
-    if (inShowOk)
-        this->mOk->SetDisplayMode(kDisplayModeShown);
-    else
-        this->mOk->SetDisplayMode(kDisplayModeHidden);
-    this->mNo->SetDisplayMode(kDisplayModeHidden);
-    this->mCancel->SetDisplayMode(kDisplayModeHidden);
-    this->mEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mMode = 0;
-    gUserInterface->SwitchToForm(this);
-}
-
 // FUNCTION: EXE 0x661894
-// Shows a Yes/No question with a callback for each answer
-void EEUIFError::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, void* inData,
-                                 EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
+// FUNCTION: EXE 0x6619f9
+// Shows the box as a message, question, Yes/No/Cancel, text prompt or Cancel box (the original's DisplayMessage,
+// DisplayQuestion, DisplayYesNoCancel, DisplayPassword and DisplayCancel: ee_screens dialog.rs)
+void EEUIFError::Display(unsigned long inKind, const UWideString& inMessage, unsigned long inAlignment, void* inData,
+                         EEUIFErrorCallback inFirst, EEUIFErrorCallback inSecond, UIForm* inCloseForm, bool inFlag)
 {
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_YES, theText);
-    this->mOk->SetText(theText, gFontTahoma12);
-    this->mOk->SetCallback(inYes, inData);
-    this->mOk->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mOk->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    gResource->GetString(IDS_NO, theText);
-    this->mNo->SetText(theText, gFontTahoma12);
-    this->mNo->SetCallback(inNo, inData);
-    this->mNo->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mNo->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    this->mError->SetAlignment(inAlignment);
-    this->mError->SetText(inMessage);
-    this->mCancel->SetDisplayMode(kDisplayModeHidden);
-    this->mEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mMode = 1;
-    gUserInterface->SwitchToForm(this);
+    sDialogMessage = &inMessage;
+    sDialogData = inData;
+    sDialogCallbacks[0] = inFirst;
+    sDialogCallbacks[1] = inSecond;
+    sDialogCloseForm = inCloseForm;
+    ee_screens_dialog_show(this, inKind, inAlignment, inFlag);
 }
 
-// FUNCTION: EXE 0x6619f9
-// Shows a Yes/No/Cancel question with Yes and No callbacks (Cancel has none)
-void EEUIFError::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, void* inData,
-                                    EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
+// The box's host (dialog.rs: EE_SCREENS_DLG_*): each op one toolkit call on its controls (0 the message, 1 OK/Yes,
+// 2 No, 3 Cancel, 4 the edit box)
+extern "C" uint32_t ee_screenscpp_dialog(void* inDialog, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
-    UWideString theText;
-    GEText* theGEText;
-    gResource->GetString(IDS_YES, theText);
-    this->mOk->SetText(theText, gFontTahoma12);
-    this->mOk->SetCallback(inYes, inData);
-    this->mOk->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mOk->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    gResource->GetString(IDS_NO, theText);
-    this->mNo->SetText(theText, gFontTahoma12);
-    this->mNo->SetCallback(inNo, inData);
-    this->mNo->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mNo->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    gResource->GetString(IDS_LOBBY_CANCEL, theText);
-    this->mCancel->SetText(theText, gFontTahoma12);
-    this->mCancel->SetDisplayMode(kDisplayModeShown);
-    theGEText = this->mCancel->GetGEText();
-    theGEText->SetFgColor(kMessageTextColor);
-    theGEText->SetIsTransparent(true);
-    this->mEditBox->SetDisplayMode(kDisplayModeHidden);
-    this->mError->SetAlignment(inAlignment);
-    this->mError->SetText(inMessage);
-    this->mMode = 2;
-    gUserInterface->SwitchToForm(this);
+    EEUIFError* theBox = static_cast<EEUIFError*>(inDialog);
+    UIControl* theControls[5] = {theBox->mError, theBox->mOk, theBox->mNo, theBox->mCancel, theBox->mEditBox};
+    UIButton* theButton = inA >= 1 && inA <= 3 ? static_cast<UIButton*>(theControls[inA]) : NULL;
+    float* theSides[4] = {&sDialogRectangle.mLeft, &sDialogRectangle.mTop, &sDialogRectangle.mRight,
+                          &sDialogRectangle.mBottom};
+    switch (inOp) {
+    case EE_SCREENS_DLG_BUTTON: {
+        UWideString theText;
+        gResource->GetString(inB >> 2, theText);
+        theButton->SetText(theText, gFontTahoma12);
+        if ((inB & 3) != 0) {
+            EEUIFErrorCallback theCallback = sDialogCallbacks[(inB & 3) == 2 ? 1 : 0];
+            void* theData = (inB & 3) == 3 ? (void*)theBox->mEditBox->GetText(0) : sDialogData;
+            if (inA == 1)
+                theBox->mOk->SetCallback(theCallback, theData);
+            else
+                static_cast<EEUIFEBCancel*>(theButton)->SetCallback(theCallback, theData);
+        }
+        theButton->SetDisplayMode(kDisplayModeShown);
+        if (inA == 3 && (inB & 3) != 0)
+            theBox->mCancel->mCloseForm = sDialogCloseForm;
+        theButton->GetGEText()->SetFgColor(kMessageTextColor);
+        theButton->GetGEText()->SetIsTransparent(true);
+        break;
+    }
+    case EE_SCREENS_DLG_SHOW:
+        theControls[inA]->SetDisplayMode(inB);
+        break;
+    case EE_SCREENS_DLG_MESSAGE:
+        theBox->mError->SetAlignment(inA);
+        theBox->mError->SetText(*sDialogMessage);
+        break;
+    case EE_SCREENS_DLG_MESSAGE_SIZE:
+        theBox->mError->SetRectangle(GERectangle(GE2DPoint(0.0f, 0.0f), (float)inA, (float)inB));
+        break;
+    case EE_SCREENS_DLG_TABBING:
+        theBox->SetTabbing(true);
+        theBox->SetTabStop(theBox->mEditBox->GetIndex());
+        break;
+    case EE_SCREENS_DLG_PASSWORD:
+        theBox->mEditBox->SetIsPasswordBox(inA != 0);
+        break;
+    case EE_SCREENS_DLG_MODE:
+        theBox->mMode = inA;
+        break;
+    case EE_SCREENS_DLG_SWITCH:
+        gUserInterface->SwitchToForm(theBox);
+        break;
+    case EE_SCREENS_DLG_CALC: {
+        UILayoutUtility theLayout;
+        GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
+        theLayout.SetLeft(4, (float)(inA & 0xffff) / 1024.0f);
+        theLayout.SetRight(4, (float)(inA >> 16) / 1024.0f);
+        theLayout.SetTop(4, (float)(inB & 0xffff) / 768.0f);
+        theLayout.SetBottom(4, (float)(inB >> 16) / 768.0f);
+        theLayout.CalculateRectangle(theScreen, sDialogRectangle, true);
+        break;
+    }
+    case EE_SCREENS_DLG_PLACE:
+        theControls[inA]->SetRectangle(sDialogRectangle);
+        break;
+    case EE_SCREENS_DLG_FONT:
+        if (inA == 0) {
+            GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
+            sDialogFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
+                                                                             theScreen.GetHeight()));
+        } else if (inA == 4)
+            sDialogFont->Dereference();
+        else
+            theButton->GetGEText()->SetFont(sDialogFont);
+        break;
+    case EE_SCREENS_DLG_RECT: {
+        float theSide = *theSides[inA];
+        uint32_t theBits;
+        memcpy(&theBits, &theSide, 4);
+        return theBits;
+    }
+    case EE_SCREENS_DLG_SET_RECT:
+        memcpy(theSides[inA], &inB, 4);
+        break;
+    case EE_SCREENS_DLG_LINE_HEIGHT:
+        return (uint32_t)gFontTahoma12->GetHeight();
+    case EE_SCREENS_DLG_LINES:
+        return (uint32_t)theBox->mError->GetLineCount();
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x661baf
@@ -408,29 +388,19 @@ long EEUIFError::DrawBackground(const GERectangle& inRectangle)
 }
 
 // FUNCTION: EXE 0x661bbc
-// Opens the message box, scales its background to the window and lays out the buttons for its mode
+// FUNCTION: EXE 0x661cda
+// FUNCTION: EXE 0x661e18
+// FUNCTION: EXE 0x661f9c
+// FUNCTION: EXE 0x662121
+// FUNCTION: EXE 0x6622ed
+// Opens the message box, scales its background to the window and lays out the buttons for its mode (the original's
+// LayoutCancel, LayoutPassword, LayoutQuestion, LayoutYesNoCancel and LayoutMessage: ee_screens dialog.rs)
 void EEUIFError::Open()
 {
     UIForm::Open();
     this->mBackground->SetScale((float)gGameWindow->GetWidth() * (1.0f / 1024.0f),
                           (float)gGameWindow->GetHeight() * (1.0f / 768.0f));
-    switch (this->mMode) {
-    case 4:
-        this->LayoutCancel();
-        break;
-    case 3:
-        this->LayoutPassword();
-        break;
-    case 2:
-        this->LayoutYesNoCancel();
-        break;
-    case 1:
-        this->LayoutQuestion();
-        break;
-    case 0:
-        this->LayoutMessage();
-        break;
-    }
+    ee_screens_dialog_open(this, this->mMode);
 }
 
 // FUNCTION: EXE 0x661c4c
@@ -452,160 +422,6 @@ void EEUIFError::Close()
     }
     gUserInterface->PostErrorClosed(this, theData);
     UIForm::Close();
-}
-
-// FUNCTION: EXE 0x661cda
-// Lays out the Cancel-only box: the button and the message area
-void EEUIFError::LayoutCancel()
-{
-    UILayoutUtility theLayout;
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    GERectangle theRectangle;
-    theLayout.SetLeft(4, 451.0f / 1024.0f);
-    theLayout.SetRight(4, 573.0f / 1024.0f);
-    theLayout.SetTop(4, 465.0f / 768.0f);
-    theLayout.SetBottom(4, 491.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mCancel->SetRectangle(theRectangle);
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mCancel->GetGEText()->SetFont(theFont);
-    theFont->Dereference();
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 300.0f / 768.0f);
-    theLayout.SetBottom(4, 460.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mError->SetRectangle(theRectangle);
-}
-
-// FUNCTION: EXE 0x661e18
-// Lays out the text-entry box: OK, the message and the edit box
-void EEUIFError::LayoutPassword()
-{
-    UILayoutUtility theLayout;
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    GERectangle theRectangle;
-    theLayout.SetLeft(4, 451.0f / 1024.0f);
-    theLayout.SetRight(4, 573.0f / 1024.0f);
-    theLayout.SetTop(4, 465.0f / 768.0f);
-    theLayout.SetBottom(4, 491.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mOk->SetRectangle(theRectangle);
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mOk->GetGEText()->SetFont(theFont);
-    theFont->Dereference();
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 300.0f / 768.0f);
-    theLayout.SetBottom(4, 420.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mError->SetRectangle(theRectangle);
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 430.0f / 768.0f);
-    theLayout.SetBottom(4, 460.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mEditBox->SetRectangle(theRectangle);
-}
-
-// FUNCTION: EXE 0x661f9c
-// Lays out the question box: Yes, No and the message area
-void EEUIFError::LayoutQuestion()
-{
-    UILayoutUtility theLayout;
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    GERectangle theRectangle;
-    theLayout.SetLeft(4, 388.0f / 1024.0f);
-    theLayout.SetRight(4, 510.0f / 1024.0f);
-    theLayout.SetTop(4, 465.0f / 768.0f);
-    theLayout.SetBottom(4, 491.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mOk->SetRectangle(theRectangle);
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mOk->GetGEText()->SetFont(theFont);
-    theLayout.SetLeft(4, 514.0f / 1024.0f);
-    theLayout.SetRight(4, 636.0f / 1024.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mNo->SetRectangle(theRectangle);
-    this->mNo->GetGEText()->SetFont(theFont);
-    theFont->Dereference();
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 300.0f / 768.0f);
-    theLayout.SetBottom(4, 460.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mError->SetRectangle(theRectangle);
-}
-
-// FUNCTION: EXE 0x662121
-// Lays out the Yes/No/Cancel box: the three buttons and the message area
-void EEUIFError::LayoutYesNoCancel()
-{
-    UILayoutUtility theLayout;
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    GERectangle theRectangle;
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 447.0f / 1024.0f);
-    theLayout.SetTop(4, 465.0f / 768.0f);
-    theLayout.SetBottom(4, 491.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mOk->SetRectangle(theRectangle);
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mOk->GetGEText()->SetFont(theFont);
-    theLayout.SetLeft(4, 451.0f / 1024.0f);
-    theLayout.SetRight(4, 573.0f / 1024.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mNo->SetRectangle(theRectangle);
-    this->mNo->GetGEText()->SetFont(theFont);
-    theLayout.SetLeft(4, 577.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mCancel->SetRectangle(theRectangle);
-    this->mCancel->GetGEText()->SetFont(theFont);
-    theFont->Dereference();
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 300.0f / 768.0f);
-    theLayout.SetBottom(4, 460.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mError->SetRectangle(theRectangle);
-}
-
-// FUNCTION: EXE 0x6622ed
-// Lays out the message box: OK, and the message area centred vertically for short messages
-void EEUIFError::LayoutMessage()
-{
-    UILayoutUtility theLayout;
-    GERectangle theScreen(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight());
-    GERectangle theRectangle;
-    theLayout.SetLeft(4, 451.0f / 1024.0f);
-    theLayout.SetRight(4, 573.0f / 1024.0f);
-    theLayout.SetTop(4, 465.0f / 768.0f);
-    theLayout.SetBottom(4, 491.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    this->mOk->SetRectangle(theRectangle);
-    GEFont* theFont = UIFontTable::CreateClosestFont(0x1c, UMFloatToLong((gFontTahoma16->GetHeight() * (1.0f / 768.0f)) *
-                                                                         theScreen.GetHeight()));
-    this->mOk->GetGEText()->SetFont(theFont);
-    theFont->Dereference();
-    theLayout.SetLeft(4, 325.0f / 1024.0f);
-    theLayout.SetRight(4, 699.0f / 1024.0f);
-    theLayout.SetTop(4, 300.0f / 768.0f);
-    theLayout.SetBottom(4, 460.0f / 768.0f);
-    theLayout.CalculateRectangle(theScreen, theRectangle, true);
-    unsigned long theLines = UMFloor(theRectangle.GetHeight() / gFontTahoma12->GetHeight()) - 2;
-    float theOffset;
-    if (theLines > this->mError->GetLineCount())
-        theOffset = (float)(theLines - this->mError->GetLineCount()) * gFontTahoma12->GetHeight() * 0.5f;
-    else
-        theOffset = 0.0f;
-    theRectangle.SetTop(theRectangle.GetTop() + theOffset);
-    theRectangle.SetBottom(theRectangle.GetBottom() - theOffset);
-    this->mError->SetRectangle(theRectangle);
 }
 
 // SYNTHETIC: EXE 0x660c27
