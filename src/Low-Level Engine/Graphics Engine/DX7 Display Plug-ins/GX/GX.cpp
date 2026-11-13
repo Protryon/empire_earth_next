@@ -1509,6 +1509,27 @@ GXRESULT GXSurface::Blt(RECT* inDestination, GXSurface* inSource, RECT* inSource
     GXSurfaceData* theSource = inSource->mData;
     if (theTarget->mIsPrimary)   // windowed presentation
         return PrimaryBlt(theTarget, inDestination, inSource, inSourceRect, (inFlags & GXBLT_KEYSRC) && theSource->mHasKey);
+    if (theSource->mIsPrimary) {
+        // a copy from the primary reads what the window shows, as DirectDraw read the screen (the mouse-pointer
+        // thread saves the screen under the pointer so): the window image while it holds partial blits, else the
+        // last whole frame, in that frame's coordinates. With nothing shown here (none yet, or full screen, whose
+        // Flip presents without PrimaryBlt) the target is left as it was. The primary has no texture: sampling it
+        // drew white.
+        GXSurfaceData* theShown = theSource->mWindowImageCurrent && theSource->mWindowImage ?
+            theSource->mWindowImage->mData : theSource->mLastFrame ? theSource->mLastFrame->mData : NULL;
+        if (!theShown || theShown == theTarget)
+            return GX_OK;
+        RECT theShownRect = inSourceRect ? *inSourceRect : Whole(theShown);
+        if (inSourceRect) {   // screen coordinates -> the frame's
+            theShownRect.left -= theSource->mOriginX;
+            theShownRect.right -= theSource->mOriginX;
+            theShownRect.top -= theSource->mOriginY;
+            theShownRect.bottom -= theSource->mOriginY;
+        }
+        GXBlit(theTarget, inDestination ? *inDestination : Whole(theTarget), theShown, &theShownRect, kGXBlitCopy, NULL,
+               0.0f, false);
+        return GX_OK;
+    }
     RECT theSourceRect = inSourceRect ? *inSourceRect : Whole(theSource);
     RECT theDestination = inDestination ? *inDestination : Whole(theTarget);
     bool theKeyed = (inFlags & GXBLT_KEYSRC) && theSource->mHasKey;
