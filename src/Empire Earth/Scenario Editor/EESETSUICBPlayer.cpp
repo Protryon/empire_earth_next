@@ -78,7 +78,6 @@
 #include "lle/NEMessage.h"
 #include "lle/NETimestampedMessage.h"
 #include "lle/NELagLossSimulator.h"
-#include "lle/NEProtocolConfiguration.h"
 #include "lle/NERecordPlayback.h"
 #include "lle/NEServer.h"
 #include "lle/TSCriticalSection.h"

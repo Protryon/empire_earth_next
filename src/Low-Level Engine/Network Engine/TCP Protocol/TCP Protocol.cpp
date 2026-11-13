@@ -1,7 +1,8 @@
 // C:\EEX\Low-Level Engine\Network Engine\TCP Protocol\TCP Protocol.cpp
 // The TCP/IP network plug-in's shim: the plug-in itself is Rust (rust/crates/ee_net_tcp). This file keeps the NPIM*
 // entry points the engine looks up by name (their table is PIMPlugin below), converts UStrings and TSEvents, and
-// holds what is engine data: the protocol's configuration object and PIMGetName's string.
+// holds what is engine data: PIMGetName's string. (The protocol's configuration, a table of no parameters that
+// nothing read, went with NEProtocolConfiguration: LLE Network Engine round 1.)
 #include <string.h>
 #include <string>
 #include <vector>
@@ -15,7 +16,6 @@
 #include "lle/PIMModule.h"
 #include "rust/ee_net_tcp.h"
 
-NEProtocolConfiguration gConfiguration(0, 1);    // 0x72d8
 UString gProtocolName("TCP/IP Protocol");        // 0x72a8
 unsigned long gProtocolKind = 1;                 // 0x7020 (NPIMGetProtocolType)
 unsigned long gProtocolType = 'ntwk';            // 0x7024
@@ -122,11 +122,6 @@ extern "C" long NPIMGetClientAddress(void** inHandle, unsigned long inIndex, UWi
 {
     return ee_tcp_get_client_address(inHandle, (uint32_t)inIndex, ToUWide, &outAddress);
 }
-extern "C" long NPIMGetConfiguration(NEProtocolConfiguration** outConfiguration)
-{
-    *outConfiguration = new NEProtocolConfiguration(gConfiguration);
-    return *outConfiguration != NULL ? 0 : 8;
-}
 extern "C" long NPIMGetDetectedGame(unsigned long inIndex, UString& outName, UString& outHost,
                                     UWideString& outAddress)
 {
@@ -205,12 +200,6 @@ extern "C" long NPIMSendTo(void** inHandle, unsigned long inIndex, char* ioData,
 {
     return ee_tcp_send_to(inHandle, (uint32_t)inIndex, reinterpret_cast<uint8_t*>(ioData), (uint32_t)inLength);
 }
-extern "C" long NPIMSetConfiguration(const NEProtocolConfiguration* inConfiguration)
-{
-    if (inConfiguration->GetProtocolType() == gConfiguration.GetProtocolType())
-        return inConfiguration->GetParameterCount() == gConfiguration.GetParameterCount() ? 0 : 9;
-    return 9;
-}
 extern "C" long NPIMXferReceive(unsigned long inSize, char* outBuffer, unsigned long* outReceived)
 {
     uint32_t theReceived = (uint32_t)*outReceived;
@@ -252,7 +241,6 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(NPIMDeactivate),
     PIM_ENTRY(NPIMEnumerateNetworkAdapters),
     PIM_ENTRY(NPIMGetClientAddress),
-    PIM_ENTRY(NPIMGetConfiguration),
     PIM_ENTRY(NPIMGetDetectedGame),
     PIM_ENTRY(NPIMGetDetectedGameCount),
     PIM_ENTRY(NPIMGetLocalAddress),
@@ -268,7 +256,6 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(NPIMSend),
     PIM_ENTRY(NPIMSendSingle),
     PIM_ENTRY(NPIMSendTo),
-    PIM_ENTRY(NPIMSetConfiguration),
     PIM_ENTRY(NPIMXferReceive),
     PIM_ENTRY(NPIMXferSendTo),
     { NULL, NULL },

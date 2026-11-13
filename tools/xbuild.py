@@ -311,7 +311,7 @@ def cmd_fonttest(a):
 TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
 # the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
 TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
-    "Utilities/UString.cpp", "Utilities/UWideString.cpp", "Network Engine/NEProtocolConfiguration.cpp",
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp",
     "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
 
 
