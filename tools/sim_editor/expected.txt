@@ -1732,3 +1732,50 @@ step 152 ui e
   scenario3 mode=0 kind=4 lines=0 selection=none
   list0 mode=0 lines=1 '<<NONE>>'
   list1 mode=0 lines=0
+step 155 tab 0
+step 156 combo 0x75 1                       # an elevation file: its four boxes shown
+step 157 controls 0x7d 0x7c 0x79 0x78
+  0x7d mode=1
+  0x7c mode=1
+  0x79 mode=1
+  0x78 mode=1
+step 158 combo 0x75 0                       # none: hidden
+step 159 controls 0x7d 0x7c 0x79 0x78
+  0x7d mode=0
+  0x7c mode=0
+  0x79 mode=0
+  0x78 mode=0
+step 160 tab 3
+step 161 unitlist
+  units 169: '120mm AT Gun' '57mm AT Gun' 'A7V Tank (AP)' 'Advanced Mining Unit' 'Anti Missile Battery' 'Arquebus'
+step 162 radio 0x3ef                        # by epoch
+step 163 unitlist
+  units 169: '1: Artifact' '1: Canine Scout' '1: Chicken' '1: Child' '1: Citizen' '1: Clubman'
+step 164 radio 0x3ee                        # alphabetical
+step 165 unitlist
+  units 169: '120mm AT Gun' '57mm AT Gun' 'A7V Tank (AP)' 'Advanced Mining Unit' 'Anti Missile Battery' 'Arquebus'
+step 166 radio 0x3ea                        # sea units
+step 167 unitlist
+  units 169: '120mm AT Gun' '57mm AT Gun' 'A7V Tank (AP)' 'Advanced Mining Unit' 'Anti Missile Battery' 'Arquebus'
+step 168 radio 1000                         # world units
+step 169 unitlist
+  units 15: 'Artifact' 'Canine Scout' 'Chicken' 'Deer' 'Elephant' 'Flies'
+step 170 tab 5
+step 171 epoch 1 0 14
+  end epochs 15 selection 14
+step 172 epoch 1 5 14
+  end epochs 10 selection 9
+step 173 epoch 1 5 3
+  end epochs 10 selection 3
+step 174 epoch 1 9 2
+  end epochs 6 selection 0
+step 175 epoch 0 3 14
+  end epochs 12 selection 11
+step 176 slider 0x160 300                   # the unit limit: per player
+step 177 controls 0x16a 0x162
+  0x16a mode=1 '300'
+  0x162 mode=1 '150'
+step 178 slider 0x160 1000
+step 179 controls 0x16a 0x162
+  0x16a mode=1 '1000'
+  0x162 mode=1 '500'

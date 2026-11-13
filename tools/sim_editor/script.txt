@@ -150,3 +150,30 @@ ui e
 ctl e radio 0
 ctl e radio 2
 ui e
+# round 19: the map tab's elevation file combo (EEUIFSEEMapType), the unit tab's sort (EEUIFSEESortUnitList), the
+# player tab's start epoch (EESEEChangeStartEpoch) and the game page's unit limit (EESEEGameUnitLimit)
+tab 0
+combo 0x75 1                       # an elevation file: its four boxes shown
+controls 0x7d 0x7c 0x79 0x78
+combo 0x75 0                       # none: hidden
+controls 0x7d 0x7c 0x79 0x78
+tab 3
+unitlist
+radio 0x3ef                        # by epoch
+unitlist
+radio 0x3ee                        # alphabetical
+unitlist
+radio 0x3ea                        # sea units
+unitlist
+radio 1000                         # world units
+unitlist
+tab 5
+epoch 1 0 14
+epoch 1 5 14
+epoch 1 5 3
+epoch 1 9 2
+epoch 0 3 14
+slider 0x160 300                   # the unit limit: per player
+controls 0x16a 0x162
+slider 0x160 1000
+controls 0x16a 0x162

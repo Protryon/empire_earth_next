@@ -194,6 +194,8 @@
 #include "ee/EESETSEffect.h"
 #include "ee/EESETSEffectControls.h"
 #include "ee/EESETSEScenarioComboBox.h"
+#include "ee/EESEPlayerScreen.h"
+#include "ee/EESEPlayerControls.h"
 
 // TEST ONLY: the time TMGetTime answers on this thread (-1: the clock; Time Manager.cpp)
 extern thread_local long long gTMPinnedTime;
@@ -581,6 +583,12 @@ void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
             theFile.Close();
         }
     }
+}
+
+// an editor control by its id (decimal or 0x)
+UIControl* EditorControl(const std::string& inId)
+{
+    return gUIManager->mScenarioEditorForm->GetControlById(strtoul(inId.c_str(), NULL, 0));
 }
 
 // the trigger tab's condition and effect screens' shared controls
@@ -971,6 +979,58 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "ui")   // ui c|e: the condition's or effect's controls (display modes, labels, combos, sliders)
             theCode = [=, &theOutput] { ControlsDigest(w[1] == "c", theOutput); };
+        else if (c == "combo" || c == "slider" || c == "radio")   // combo|slider ID VALUE | radio ID: an editor control
+            // by id: a combo box's line picked and its selection-changed event processed, a slider moved and its
+            // range-changed event processed, a radio checked (it fires unless it was checked)
+            theCode = [=] {
+                UIControl* theControl = EditorControl(w[1]);
+                if (c == "radio") {
+                    static_cast<UIRadioButton*>(theControl)->Check();
+                    return;
+                }
+                unsigned long theTrigger;
+                if (c == "combo") {
+                    static_cast<UIComboBox*>(theControl)->SetCurrentSelection((unsigned long)L(2));
+                    theTrigger = kControlTriggerSelectionChanged;
+                } else {
+                    static_cast<UISlider*>(theControl)->SetCurrentRangeValue(L(2));
+                    theTrigger = kControlTriggerRangeChanged;
+                }
+                if (UIEvent* theEvent = theControl->GetTriggerEvent(theTrigger))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theControl);
+            };
+        else if (c == "controls")   // controls ID...: editor controls' display modes (and a label's first line)
+            theCode = [=, &theOutput] {
+                for (size_t i = 1; i < w.size(); i++) {
+                    UIControl* theControl = EditorControl(w[i]);
+                    std::string theText = "  " + w[i] + " mode=" + std::to_string(theControl->GetDisplayMode());
+                    if (theControl->GetType() == kControlTypeTextLabel) {
+                        UITextLabel* theLabel = static_cast<UITextLabel*>(theControl);
+                        theText += std::string(" '") + (theLabel->GetLineCount() > 0 ? (const char*)theLabel->GetText(0) : "") + "'";
+                    }
+                    theOutput.push_back(theText);
+                }
+            };
+        else if (c == "unitlist")   // the unit tab's unit list (0x3f1): its line count and first lines
+            theCode = [=, &theOutput] {
+                UILBString* theList = static_cast<UILBString*>(EditorControl("0x3f1"));
+                std::string theText = "  units " + std::to_string(theList->GetLineCount()) + ":";
+                for (unsigned long k = 0; k < theList->GetLineCount() && k < 6; k++)
+                    theText += std::string(" '") + (const char*)theList->GetData(k) + "'";
+                theOutput.push_back(theText);
+            };
+        else if (c == "epoch")   // epoch ROW START END: a player row's end epoch set, then its start epoch picked
+            theCode = [=, &theOutput] {
+                EESEPlayerRow* theRow = gUIManager->mScenarioEditorForm->GetPlayerScreen()->mPlayers[L(1)];
+                theRow->mEndEpoch->SetCurrentSelection((unsigned long)L(3));
+                theRow->mStartEpoch->SetCurrentSelection((unsigned long)L(2));
+                if (UIEvent* theEvent = theRow->mStartEpoch->GetTriggerEvent(kControlTriggerSelectionChanged))
+                    theEvent->ProcessEvent(gUIManager->mScenarioEditorForm, theRow->mStartEpoch);
+                unsigned long theEnd = 0;
+                bool theSelected = theRow->mEndEpoch->GetCurrentSelection(theEnd) == kErrorOK;
+                theOutput.push_back("  end epochs " + std::to_string(theRow->mEndEpoch->GetListBox()->GetLineCount()) +
+                                    " selection " + (theSelected ? std::to_string(theEnd) : std::string("none")));
+            };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
                 gPhysics->FlushWorld();
