@@ -1657,6 +1657,7 @@ const EeGfxRaster gEERustRaster = {
     [](void* inModel, EeGfxColor inColor) {
         static_cast<GEModel*>(inModel)->GetMaterial(0)->SetColor(GEColor(inColor.red, inColor.green, inColor.blue));
     },
+    [](void* inModel, void* inTexture) { static_cast<GEModel*>(inModel)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex); },
 };
 
 // FUNCTION: EXE 0x50f60f

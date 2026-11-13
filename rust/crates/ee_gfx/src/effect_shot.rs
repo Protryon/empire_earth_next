@@ -43,6 +43,13 @@ pub struct EeGfxEffectShot {
     pub draw_position: f32,
     /// `mSpeed`: path per millisecond (saved)
     pub speed: f32,
+    /// the citizen beam's (`effect_beam.rs`): `mEnd` (saved), `mMiddle` (saved), `mF9C` (saved, never set),
+    /// `mActive` (saved) and the draw's copy
+    pub end: Ge3DPoint,
+    pub middle: Ge3DPoint,
+    pub unused: f32,
+    pub active: bool,
+    pub draw_active: bool,
 }
 
 /// Whether `kind` is a shot.
@@ -264,6 +271,28 @@ fn explode(s: &mut EeGfxEffectShot) {
     }
 }
 
+/// `GE3DLine::Load`: the start, then the direction (`GEVector::Load`, the same reads).
+pub(crate) fn load_line<F: EffectFile>(f: &mut F, line: &mut Ge3DLine) -> i32 {
+    let mut res = load_point(f, &mut line.start);
+    if res == OK {
+        let d = line.direction;
+        let mut p = Ge3DPoint { x: d.x, y: d.y, z: d.z };
+        res = load_point(f, &mut p);
+        line.direction = GeVector { x: p.x, y: p.y, z: p.z };
+    }
+    res
+}
+
+/// `GE3DLine::Save`.
+pub(crate) fn save_line<F: EffectFile>(f: &mut F, line: &Ge3DLine) -> i32 {
+    let mut res = save_point(f, &line.start);
+    if res == OK {
+        let d = line.direction;
+        res = save_point(f, &Ge3DPoint { x: d.x, y: d.y, z: d.z });
+    }
+    res
+}
+
 /// A shot's own Load after the base's and the media load (both ignored): the position, speed, path and, the ball's,
 /// both scales; the first error.
 pub fn load_shot<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
@@ -274,12 +303,7 @@ pub fn load_shot<F: EffectFile>(r: &mut EeGfxEffectRecord, f: &mut F) -> i32 {
         res = f.read_f32(&mut s.speed);
     }
     if res == OK {
-        res = load_point(f, &mut s.path.start);
-        if res == OK {
-            let mut d = Ge3DPoint { x: s.path.direction.x, y: s.path.direction.y, z: s.path.direction.z };
-            res = load_point(f, &mut d);
-            s.path.direction = GeVector { x: d.x, y: d.y, z: d.z };
-        }
+        res = load_line(f, &mut s.path);
     }
     if ball {
         if res == OK {
@@ -300,11 +324,7 @@ pub fn save_shot<F: EffectFile>(r: &EeGfxEffectRecord, f: &mut F) -> i32 {
         res = f.write_f32(s.speed);
     }
     if res == OK {
-        res = save_point(f, &s.path.start);
-        if res == OK {
-            let d = s.path.direction;
-            res = save_point(f, &Ge3DPoint { x: d.x, y: d.y, z: d.z });
-        }
+        res = save_line(f, &s.path);
     }
     if r.kind == EE_GFX_EFFECT_KIND_PULSE_CANNON_BALL {
         if res == OK {

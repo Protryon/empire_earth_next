@@ -3,7 +3,8 @@
 // rasterizer table gEERustRaster. Kinds: 0x3f the teleport and 0x44 the time warp (EEE3DTeleport, EEE3DTimeWarp,
 // 0xfb9f6..0xfc382), 0x18 the blast wave (EEE3DBlastWave, 0xe8ed8..0xe9474), 0x45 the shield (EEE3DShield,
 // 0xf923f..), 0x43 the pulse cannon ball (EEE3DPulseCannonBall, 0xf69e3..0xf7394), 0x21 the tracers and 0x26 the
-// shells (EEE3DTracers 0xfd330..0xfdbab, EEE3DShells 0xf90e9..0xf923f), all deleted. Requires ee/EEEffect3D.h and
+// shells (EEE3DTracers 0xfd330..0xfdbab, EEE3DShells 0xf90e9..0xf923f), 0x33 the citizen beam (EEE3DCitizenBeam,
+// 0xe9474..0xe9bee), all deleted. Requires ee/EEEffect3D.h and
 // rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
@@ -15,7 +16,7 @@ class EEE3DRust : public EEEffect3D {
 public:
     EEE3DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind);   // at a point
-    // a shot from the unit's weapon point to a point (the pulse cannon ball)
+    // a shot from the unit's weapon point to a point (the pulse cannon ball), the citizen beam towards it
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     // a shot on inTo from inFrom's weapon point (the tracers, the shells)
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);

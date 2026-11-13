@@ -1,7 +1,7 @@
-// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs):
-// EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here. Replaces
-// EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp, EEE3DTracers.cpp
-// and EEE3DShells.cpp.
+// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs, effect_shot.rs,
+// effect_beam.rs): EEE3DRust's virtuals call Rust by the record's kind and answer its questions about the world here.
+// Replaces EEE3DTeleport.cpp, EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp, EEE3DShield.cpp, EEE3DPulseCannonBall.cpp,
+// EEE3DTracers.cpp, EEE3DShells.cpp and EEE3DCitizenBeam.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -125,6 +125,50 @@ struct Ask {
         if (theEffect->mUnit)
             theEffect->mUnit->mUnitClass->UnitDamaged(theEffect->mUnit->mComplexUnit, NULL, 0);
     }
+    // the citizen beam's start: the unit's first tag point (EEE3DCitizenBeam::Aim, 0xe9606)
+    static EeGe3DPoint BeamStart(void* inAsk)
+    {
+        GE3DPoint theStart;
+        EEUnit* theOwner = E(inAsk)->mUnit;
+        EEModel* theModel = theOwner->GetModel();
+        EEComplexUnit* theUnit = theOwner->mComplexUnit;
+        GETransformation theUnitTransformation(theUnit->mPhysicalModel.GetLocation());
+        float theScale = theUnit->mPhysicalModel.GetScale();
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
+        EETagPointList::Scale(theUnitTransformation, theScale);
+        theList->GetTagPoint(0)->GetPoint(theFrame, theUnitTransformation, theStart);
+        return EeGe3DPoint{theStart.mX, theStart.mY, theStart.mZ};
+    }
+    // the beam's unit as a complex unit (EEE3DCitizenBeam::Step, 0xe9aec)
+    static EeGfxBeamUnit BeamUnit(void* inAsk)
+    {
+        EeGfxBeamUnit theFacts = {};
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(E(inAsk)->mUnit);
+        if (theUnit) {
+            theFacts.complex = true;
+            theFacts.animation = (int32_t)theUnit->mAnimation;
+            theFacts.frame = (int32_t)(long)theUnit->mPhysicalModel.GetFrame();
+        }
+        return theFacts;
+    }
+    static bool BeamHidden(void* inAsk)
+    {
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(E(inAsk)->mUnit);
+        bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
+        EEPlayer* thePlayer;
+        EEPlayer* theCurrent;
+        return theCloaked && (thePlayer = theUnit->mPlayer) != (theCurrent = gWorld.GetCurrentPlayer())
+            && theCurrent->mEnemies[thePlayer->mPlayerID] != 0;
+    }
+    static void PlaceLinked(void* inAsk, const EeGe3DPoint* inPoint)
+    {
+        EEGraphicEffect* theLinked = E(inAsk)->mGraphicEffect->mLinkedEffect1;
+        if (theLinked) {
+            GE3DPoint thePoint(inPoint->x, inPoint->y, inPoint->z);
+            gEffectManager->CreatePlacedEffect(thePoint, theLinked, NULL);
+        }
+    }
 };
 
 // a shot's start: the unit's weapon point (ee_combat's weapon_point; inMode 6 the pulse cannon's, 7 the tracers');
@@ -155,12 +199,18 @@ EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffe
     this->Call(EeGfxEffect3DOp::CreateAt);
 }
 
-// the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26)
+// the pulse cannon ball (0x43): from the unit's weapon point to the target (EEE3DPulseCannonBall, 0xf6a26); the
+// citizen beam (0x33): towards the target (EEE3DCitizenBeam, 0xe94b7)
 EEE3DRust::EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect3D(inUnit, inGraphicEffect, inKind)
 {
-    ShotStart(6, inUnit, this->mRecord->shot.path.start);
-    this->mRecord->shot.location = EeGe3DPoint{inTarget.mX, inTarget.mY, inTarget.mZ};
+    EeGe3DPoint theTarget = {inTarget.mX, inTarget.mY, inTarget.mZ};
+    if (inKind == 0x33) {   // the citizen beam
+        this->mRecord->shot.end = theTarget;
+    } else {
+        ShotStart(6, inUnit, this->mRecord->shot.path.start);
+        this->mRecord->shot.location = theTarget;
+    }
     this->Call(EeGfxEffect3DOp::Create);
 }
 
@@ -219,10 +269,16 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxE
     theFacts.tick_time = gPhysics->GetTickTime();
     theFacts.has_unit = this->mUnit != NULL;
     theFacts.unit_hit_points = this->mUnit != NULL ? (int32_t)this->mUnit->mHitPoints : 0;
+    if (theEffect != NULL) {
+        theFacts.int_param1 = (int32_t)theEffect->mIntParam1;
+        theFacts.int_param2 = (int32_t)theEffect->mIntParam2;
+        theFacts.int_param3 = (int32_t)theEffect->mIntParam3;
+    }
+    theFacts.game_time_bits = (uint32_t)(unsigned long)gPhysics->mGameTime;
     Ask theAsk = {this, inQueues};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
                                  Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow, Ask::ModelAt,
-                                 Ask::ShotHit};
+                                 Ask::ShotHit, Ask::BeamStart, Ask::BeamUnit, Ask::BeamHidden, Ask::PlaceLinked};
     if (inFile != NULL)
         return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);

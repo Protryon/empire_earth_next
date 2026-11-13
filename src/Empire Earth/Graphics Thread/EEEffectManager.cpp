@@ -87,7 +87,6 @@
 #include "ee/EEE3DScreenFlash.h"
 #include "ee/EEE3DEnergyWave.h"
 #include "ee/EEE3DTracerBeam.h"
-#include "ee/EEE3DCitizenBeam.h"
 #include "ee/EEE3DLinearProjectile.h"
 #include "ee/EEE3DEarthquake.h"
 #include "ee/EEE3DMarchingLine.h"
@@ -225,7 +224,7 @@ void* EEEffectManagerOps::NewLoaded(void*, uint32_t inKind)
     case kEffect3DBlastWave: theEffect = new EEE3DRust(0x18); break;
     case kEffect3DVirus: theEffect = new EEE3DVirus(); break;
     case kEffect2DBattlefieldAmbient: theEffect = new EEE2DBattlefieldAmbient(); break;
-    case kEffect3DCitizenBeam: theEffect = new EEE3DCitizenBeam(0x33); break;
+    case kEffect3DCitizenBeam: theEffect = new EEE3DRust(0x33); break;
     case kEffect3DEnergyWall: theEffect = new EEE3DEnergyWall(0x34); break;
     case kEffect3DDamageVent: theEffect = new EEE3DDamageVent(); break;
     case kEffect3DScreenFlash: theEffect = new EEE3DScreenFlash(); break;
@@ -365,7 +364,7 @@ long EEEffectManager::CreateEffect(EEUnit* inUnit, GE3DPoint& inLocation, EEGrap
     switch (inEffect->mKind) {
     case kEffect2DSmokeMuzzleBlast: theEffect = new EEE2DSmokeMuzzleBlast(inUnit, inLocation, inEffect); break;
     case kEffect2DLinearProjectile: theEffect = new EEE2DLinearProjectile(inUnit, inLocation, inEffect); break;
-    case kEffect3DCitizenBeam: theEffect = new EEE3DCitizenBeam(inUnit, inLocation, inEffect, 0x33); break;
+    case kEffect3DCitizenBeam: theEffect = new EEE3DRust(inUnit, inLocation, inEffect, 0x33); break;
     case kEffect3DTracerBeam: theEffect = new EEE3DTracerBeam(inUnit, inLocation, inEffect, 0x40); break;
     case kEffect3DCommandConfirmation:
         theEffect = new EEE3DCommandConfirmation(inUnit, inLocation, inEffect, inUnknown, 0x41);

@@ -46,6 +46,16 @@ impl Effect3DHost for Host {
     fn shot_hit(&mut self) {
         self.calls.push("hit".into());
     }
+    fn beam_start(&mut self) -> Ge3DPoint {
+        Ge3DPoint::default()
+    }
+    fn beam_unit(&mut self) -> crate::effect_beam::EeGfxBeamUnit {
+        crate::effect_beam::EeGfxBeamUnit::default()
+    }
+    fn beam_hidden(&mut self) -> bool {
+        false
+    }
+    fn place_linked(&mut self, _point: &Ge3DPoint) {}
 }
 
 fn facts() -> EeGfxGraphicFacts {
