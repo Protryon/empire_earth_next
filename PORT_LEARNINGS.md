@@ -11045,3 +11045,48 @@ the selection event fix +5, the Scrollbar accessors +13 -> 85,318. This round's 
   falls back to `EEUGLocation::EvaluateCondition` (`FaceYaw`). It moves after the location goal or with those callers on
   accessors.
 - **Only a tour shows:** the debug panels' goal texts (now Rust's `format!`). The LAN game sends no goal.
+
+## R5b.2, thirteenth round: the unit utilities' combat leaves in Rust (ee_combat leaves.rs; branch rust-combat13, 2026-11-13)
+
+Measured by net C++ deletion (src and include/ee, git numstat).
+
+| Commit | What | C++ |
+|---|---|---|
+| the combat leaves | `EEIsInRangeToHit`, `EEIsInContactRange`, `EEIsAttackedBy`, `EEGetLeadPosition`, `EEGetFiringPosition` over the world host; `EEUUGetIsUnitClassTargetable` and `EECanTargetClass` over a class record; `EECanReach` (no caller left) and the dead `EEFindDropLocationOriginal` deleted | +95 -217, net -122 |
+| the seen test | `EEIsSeenBy` over the world host | +26 -43, net -17 |
+
+- **Bodies over the world host, forwarders keep the names.** Each function keeps its C++ name (the AI, the UI, the
+  messages and the scenario manager call them) as a one-call forwarder into `ee_combat_world` (new function codes 9
+  to 11), `ee_combat_attack_position` (the lead and firing positions: the caller's point in and out, as the attack
+  goal's `GetDestination` hands it) or `ee_combat_is_seen_by`. The plain reads are the unit store's (crusader,
+  cloakable and cloaked are new store-served codes with no C++ case); the class's inner sphere, shoots-high and tower
+  flags, a complex unit's waypoint count and `GetMaxVelocity()` are new host reads; the path start, the tile test, the
+  wall spot, a new target near the old one, the firing ring (the two sorted rings, the sort and `EEPickTileNear`
+  stay C++ in one operation), the footprint tiles and a tile's visibility are operations.
+- **A formula's capture from Rust.** The C++ wrappers wrote CBRH (range to hit) and CBRC (contact reach) where the
+  body called them; the Rust bodies call the formulas directly and hand the record to one generic operation,
+  `EE_COMBAT_W_CAPTURE` (tag, the input's and the output's address and size), at the same place: every golden is
+  unchanged.
+- **A player is not a unit for the store's reads.** `Stored` answers any unknown read code from the unit store by the
+  handle, whose bridge fills a record from an object outside every list: a player handle there would be read as a
+  unit. The seen test's player-level read (`gWorld.mMap != NULL && mSaveVisMap`) is therefore an operation
+  (`EE_COMBAT_W_SEES_MAP`), not a read; the player's id and enemy table stay the store's player reads.
+- **The targetable test** reads `CanBeAttacked()` (a pure inline virtual, `!mIsFlare`) and the attacker's class and
+  computer flag always, where the original read them only on the branch that needed them; a NULL attacker player no
+  longer faults (`EECanTargetClass` dereferenced it). Nothing else changed.
+- **Not moved, by measure:** `IsHuman` (one line of the trigger record's fill; a player-table field needs a report
+  from `EEHumanPlayer`'s constructors, more C++ than it deletes: for the round that moves the players); the unit
+  regions (`EEMap::mUnitRegions` is the map's table, read by the AI, the collectors, the save's region order and the
+  unit classes' `AddToRegion`/`RemoveFromRegion`: a whole-table move for the map or units lane, after which combat's
+  four region host functions go); `EEFindDropLocation` and `EEGetHitDistanceSquared` (about ten new reads and
+  operations each for a 45- and a 17-line body: under -20 net); the heal goal (waits for `EEUGLocation`'s accessors
+  from the core lane: `EEGoalCast<EEUGLocation>` callers read a heal goal's location members, and its condition falls
+  back to `EEUGLocation::EvaluateCondition`).
+- **The plains bird (round 12)**: on a quick look not ours. The air animal holds a location goal; its physics order
+  is written by `EEComplexUnit`'s reset (5) and copy and by ee_units' command decision (`EEUnitUpdate.cpp`), none
+  of which combat touches; the merged tree's saveload rows match `tools/saveload_expect.txt`. Not traced further.
+- **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the parent build (`ref` in the main checkout
+  was recorded after another AI folder change and differs for the unmodified parent too: compare against a baseline
+  run of the parent exe), the Rust gate PASS; captures at seeds 2-3: oracle, calamity, late, missile (the leaves),
+  oracle and calamity (the seen test). ee_combat tests: 14 new (leaves_tests.rs). Nothing drawn changed; the seen
+  test is also the UI's (the mouse click, the main game form's status, the minimap), which only a tour exercises.
