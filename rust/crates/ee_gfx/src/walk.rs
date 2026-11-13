@@ -207,7 +207,15 @@ mod tests {
     }
 
     fn unit() -> EeGfxUnitFacts {
-        EeGfxUnitFacts { seen: true, scale: 1.0, tile_size: 1, owner_id: 2, tile_x: 10, tile_y: 20, ..Default::default() }
+        EeGfxUnitFacts {
+            seen: true,
+            scale: 1.0,
+            tile_size: 1,
+            owner_id: 2,
+            tile_x: 10,
+            tile_y: 20,
+            ..Default::default()
+        }
     }
 
     #[test]

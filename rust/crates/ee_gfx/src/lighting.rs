@@ -158,11 +158,7 @@ pub fn lighting(kind: EeGfxLighting, i: &EeGfxLightingInputs) -> EeGfxRasterOps 
             if !i.orthographic {
                 o.int(K::Fog, 1);
                 o.color(K::FogColor, c);
-                o.push(
-                    K::FogRange,
-                    0,
-                    [i.rear_clipping - (FOG_BAND * i.zoom_lock + FOG_BASE), i.rear_clipping, 0.0],
-                );
+                o.push(K::FogRange, 0, [i.rear_clipping - (FOG_BAND * i.zoom_lock + FOG_BASE), i.rear_clipping, 0.0]);
                 o.int(K::FogType, 1);
             } else {
                 o.int(K::Fog, 0);

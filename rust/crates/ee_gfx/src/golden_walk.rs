@@ -9,6 +9,8 @@
 //! LCG seeded 1: 2,000 units (the drawn set emptied about every 50th), 600 waypoint carriers (negative and large ids)
 //! and 800 music cases. This test draws the same values and replays them through `walk.rs`; the driver rebuilt from
 //! the new unit over the forwarders printed the same bytes (and 20,000 units on seed 2).
+// the driver's arithmetic as written
+#![allow(clippy::manual_is_multiple_of, clippy::manual_clamp, clippy::field_reassign_with_default)]
 
 use std::collections::BTreeSet;
 

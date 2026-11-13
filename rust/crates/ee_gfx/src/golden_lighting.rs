@@ -8,6 +8,8 @@
 //! runs `lighting`, applies the calls to a model of `GELight` (the colour clamped, the computed colour the unclamped
 //! one times the intensity, the direction negated and normalized) and prints the driver's line; the driver rebuilt
 //! from the new unit over the forwarders printed the same bytes.
+// the driver's arithmetic as written
+#![allow(clippy::manual_is_multiple_of, clippy::manual_clamp, clippy::field_reassign_with_default)]
 
 use ee_ge::types::GeVector;
 
@@ -96,8 +98,7 @@ fn the_lighting_set_ups_match_the_cpp() {
         EeGfxLighting::DimUnit,
     ];
     let mut r = Lcg(1);
-    let mut light =
-        Light { color: [1.0; 3], computed: [1.0; 3], intensity: 1.0, direction: GeVector::default() };
+    let mut light = Light { color: [1.0; 3], computed: [1.0; 3], intensity: 1.0, direction: GeVector::default() };
     let mut lines = GOLDEN.lines();
     for case in 0..600 {
         let mut i = EeGfxLightingInputs::default();
@@ -128,12 +129,8 @@ fn the_lighting_set_ups_match_the_cpp() {
         let screen = r.next() % 2;
         let mut slot = r.next() % 4;
         let kind = r.next() % 11;
-        let mut text = format!(
-            "{case} {kind} {} {} {} |",
-            i.orthographic as i32,
-            i.unit_lighting as i32,
-            b(i.light_fade)
-        );
+        let mut text =
+            format!("{case} {kind} {} {} {} |", i.orthographic as i32, i.unit_lighting as i32, b(i.light_fade));
         let ops = lighting(KINDS[kind as usize], &i);
         for op in ops.as_slice() {
             let f3 = [op.f[0], op.f[1], op.f[2]];
