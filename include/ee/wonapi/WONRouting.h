@@ -2171,6 +2171,9 @@ private:
     EeWonSocketThread* mOps; //owned
 };
 
+// A Rust object since net round 16 (rust/crates/ee_won/src/servconn.rs EeWonServerConn: the auth context +0xa0 and
+// type +0xa4, the peer authentication op +0xa8, the connect completion +0xac, the keep-alive timer +0xb0 and period
+// +0xb4, and every step of ServerConnection.cpp); this class is the shim RoutingConnection and the lobby derive from
 class ServerConnection : public BlockingSocket {
 public:
     void StartKeepAlive(); //2aaf10
@@ -2179,22 +2182,21 @@ public:
     static void StaticKeepAliveCallback(AsyncOpPtr,SmartPtr<RefCount>); //2ab7b0
     void KeepAliveCallback(AsyncOp*); //2ab840
     void SendNoOp(); //2ab910
-    ServerConnection(); //2aab10; implicit ordinary dtor2aabe0, no explicit body
+    ServerConnection(); //2aab10
+    virtual ~ServerConnection(); // the Rust object (the original's was implicit, 2aabe0)
     virtual void CloseHook(); //CloseHook2abe70
     virtual void KillHook();  //KillHook2abf50
-    virtual void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0, ret4
+    void ConnectCallback(PeerAuthOp*); //ConnectCallback2ab1f0 (virtual in the SDK; nothing overrides it)
     virtual void MsgCallback(const ByteBuffer*); //MsgCallback2fa500,ret4
     void SetAuth(AuthContext*, AuthType);  //SetAuth
     PeerAuthOp* ConnectAsync(const IPAddr&, unsigned long); //2abc40; raw borrowed member result
     WONStatus ConnectBlock(const IPAddr&,DWORD inTimeout=0xffffffff);
     void SetKeepAlivePeriod(DWORD);
     void SetConnectCompletion(CompletionBase<AsyncOpPtr>*); //2abdc0
-    SmartPtr<AuthContext> mAuthContext; //a0; ctor2aab35zero, dtor owned
-    AuthType mAuthType; //a4; scalar32, never decref
-    SmartPtr<PeerAuthOp> mPeerAuthOp; //a8, owned
-    OpCompletionBasePtr mConnectCompletion; //ac, owned
-    AsyncOpPtr mKeepAliveOp; //b0, owned plainAsyncOp44
-    unsigned long mKeepAlivePeriod; //b4=300, sizeb8
+private:
+    ServerConnection(const ServerConnection&);
+    ServerConnection& operator=(const ServerConnection&);
+    EeWonServerConn* mConn;
 };
 
 class ServerConnectionConnectOp : public AsyncOp {

@@ -3754,6 +3754,9 @@ struct EeWonQueueSocket;
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
 
+/// `ServerConnection`'s state and steps.
+struct EeWonServerConn;
+
 /// `SocketOp`'s state (and `RecvCRMsgOp`'s line).
 struct EeWonSocketOp;
 
@@ -5338,6 +5341,40 @@ struct EeWonServerPick {
   int32_t clients;
   /// It lists the lobby's language.
   bool language;
+};
+
+/// What the connection object calls back in the C++. One static table serves every connection. Every object is
+/// passed as its `RefCount*`.
+struct EeWonServerConnHooks {
+  /// `object->AddRef()`, `->Release()` (an auth context, an op or a completion)
+  void (*add_ref)(void *object);
+  void (*release)(void *object);
+  /// an op's `GetStatus()`, `IsKilled()`, `Kill(true)`, `SetCompletion(c)`, `RunAsync(t)`, `RunBlock(t)`
+  long (*op_status)(void *op);
+  bool (*op_killed)(void *op);
+  void (*op_kill)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  void (*op_run_async)(void *op, long timeout);
+  void (*op_run_block)(void *op, uint32_t timeout);
+  /// `completion->Complete(AsyncOpPtr(op))`
+  void (*complete)(void *completion, void *op);
+  /// `new PeerAuthOp(*address, context, type, conn, true)` (the op's reference not yet taken)
+  void *(*new_peer_auth)(void *conn, const void *address, void *context, int32_t auth);
+  /// `op->SetCompletion(new ParamCompletion(StaticConnectCallback, conn))`
+  void (*route_connect)(void *conn, void *op);
+  /// `new AsyncOp` with its completion `ParamCompletion(StaticKeepAliveCallback, conn)` (reference not taken)
+  void *(*new_keep_alive)(void *conn);
+  /// `SetRepeatCompletion(new ParamCompletion(StaticMsgCallback, conn))`, then `SetRepeatOp(new RecvMsgOp)`
+  void (*start_messages)(void *conn);
+  /// `SetRepeatCompletion(NULL)`
+  void (*stop_messages)(void *conn);
+  /// `QueueOp(new SendMsgOp(new ByteBuffer(bytes)), -1)`
+  void (*queue_message)(void *conn, const uint8_t *bytes, size_t length);
+  /// the socket's `Close()`, `GetLengthFieldSize()`, and `QueueSocket::CloseHook()`, `QueueSocket::KillHook()`
+  void (*close)(void *conn);
+  uint8_t (*length_field_size)(void *conn);
+  void (*queue_close_hook)(void *conn);
+  void (*queue_kill_hook)(void *conn);
 };
 
 /// `srand(time(NULL))` (`seed` true, the result unused) or `rand()`.
@@ -11636,6 +11673,88 @@ int64_t ee_won_routing_default_server(const EeWonServerPick *servers, size_t cou
 void ee_won_routing_client_flags(int32_t which, bool on, uint32_t *out_mask, uint32_t *out_flags);
 
 bool ee_won_routing_can_add_friend(size_t count);
+
+/// A new connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `conn` and `lock` outlive the object.
+EeWonServerConn *ee_won_servconn_new(void *conn, const EeWonServerConnHooks *hooks, void *lock);
+
+/// Frees the connection object (its references go).
+///
+/// # Safety
+/// `c` came from `ee_won_servconn_new` and is freed once.
+void ee_won_servconn_free(EeWonServerConn *c);
+
+/// `StartKeepAlive`.
+///
+/// # Safety
+/// `c` is a live connection object (so for every `ee_won_servconn_` call); the objects passed are live C++ objects
+/// of the kinds named, or null where the C++ allowed it.
+void ee_won_servconn_start_keep_alive(const EeWonServerConn *c);
+
+/// `SetAuth(context, type)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_auth(const EeWonServerConn *c, void *context, int32_t auth_type);
+
+/// `ConnectCallback(op)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_connect_callback(const EeWonServerConn *c, void *op);
+
+/// `KeepAliveCallback(op)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_keep_alive_callback(const EeWonServerConn *c, void *op);
+
+/// `SendNoOp`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_send_no_op(const EeWonServerConn *c);
+
+/// `SetConnectCompletion(c)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_connect_completion(const EeWonServerConn *c, void *completion);
+
+/// `SetKeepAlivePeriod(seconds)`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_set_keep_alive_period(const EeWonServerConn *c, uint32_t seconds);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_close_hook(const EeWonServerConn *c);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void ee_won_servconn_kill_hook(const EeWonServerConn *c);
+
+/// `ConnectAsync(address, timeout)`: the peer authentication op (borrowed). `address` is the C++ `IPAddr*`, handed
+/// to `new_peer_auth` unread.
+///
+/// # Safety
+/// As `ee_won_servconn_start_keep_alive`.
+void *ee_won_servconn_connect_async(const EeWonServerConn *c,
+                                    const void *address,
+                                    long timeout);
+
+/// `ConnectBlock(address, timeout)`: the status.
+///
+/// # Safety
+/// As `ee_won_servconn_connect_async`.
+long ee_won_servconn_connect_block(const EeWonServerConn *c, const void *address, uint32_t timeout);
 
 /// A new, empty list (shuffling on).
 EeWonServerList *ee_won_ctx_new();
