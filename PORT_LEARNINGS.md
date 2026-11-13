@@ -11712,3 +11712,33 @@ folder, its actions' folder and their headers).
   (their algorithms moved in round 15; their classes hold the message, rectangle or record), and round 14's item (a)
   (the stateful events: slider, check display, object area, quick save/load, hide UI/viewport, terrain colour/type,
   map type, unit sort, start epoch, unit limit, the effect editors' events).
+
+## R6: the game screens, seventeenth round: the editor form's own stateful events whole in Rust (ee_screens editor_events.rs; branch rust-screens17, 2026-11-13)
+
+Round 14's item (a), first part. Count: `build/sc14/count.sh` (its round-10 part moved with other lanes' merges:
+compare by git over the counted paths).
+
+- **The gate first** (expected.txt 1013 -> 1034 lines, recorded on the unmodified events, its own commit):
+  `check ID 0|1` sets an editor check box (`UICheckBox::SetChecked` fires its trigger events), `view` prints the
+  game view's rectangle and the editor's UI hidden flag, `click quicksave` releases the toolbar's quick save button
+  (its trigger event), `editorsave` digests the editor's own quick save file (`EEQuickSave.scn`). The script hides
+  and shows the UI (the hide-UI box 0x12) and quick saves through the button.
+  - The hide-UI event's two rectangles are default `GERectangle`s (all zero) and nothing sets them: hiding the UI
+    sets a zero game view (`view 0,0,0,0 hidden=1`), as the original.
+- **One C++ event, `EESEERust` (`ee/EESEARust.h`)**, the events' counterpart of round 16's `EESEARust`: a `UIEvent`
+  holding a Rust `EeScreensSeeEvent`, `ProcessEvent` forwarding the entity. Moved whole (4 classes, 3 headers
+  deleted): `EESEEHideUI` (the box's state read twice, as the original's two `GetIsChecked`, posts a viewport
+  change), `EESEEChangeViewport` (its rectangle and flag set by `ee_screens_see_viewport` after it is made),
+  `EESEEQuickLoad` and `EESEEQuickSave` (the shared `EESEAQuickSaveLoad` referenced while the event lives). The
+  host `ee_screenscpp_see` is in `EEUIFSETRBPaintType.cpp`. The quick load shows the object on the editor form
+  (`gUIManager->mScenarioEditorForm`) rather than the event's form argument: the event only hangs on the editor's
+  own button, so they are the same form.
+- **Count:** -68 (git over the counted paths: +74 -142).
+- **Tests:** 3 in `editor_events.rs` (the views posted by the check state, the viewport change only with an editor,
+  the quick load and save holding and releasing their action).
+- **Only a person reaches:** the quick load (`PostShowLoadedObject` goes through the editor's load thread; the gate
+  does not load), the hide-UI box itself (hidden on the form: the gate sets it directly).
+- **Not done:** the trigger screens' events (`EESEESliderChange`, `EESEECheckDisplay`, `EESEEUseObjectArea`: the
+  gate would have to open the condition and effect editors first), terrain colour/type, map type, unit sort, start
+  epoch, unit limit, the effect editors' events, `EESEAChangeLoadText`, and the thin click, lasso, delete and paint
+  classes.
