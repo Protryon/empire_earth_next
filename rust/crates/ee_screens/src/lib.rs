@@ -68,6 +68,8 @@
 //!   groups (one C++ class `EEUIFMGGRust` by kind): the statistics' texts.
 //! - [`unit_hack`]: the main game form's developer unit hack whole in Rust (the placeable classes' sorted list,
 //!   the object combo box, the class reload, the Shift/Ctrl placement).
+//! - [`ui_thread`]: the UI thread's message switch (`EEUserInterface::HandleMessage`) and the game window's event
+//!   handler (`HandleEvent`, with its statics) over the C++ host.
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -163,6 +165,9 @@ mod single_player_ffi;
 pub mod splash;
 #[cfg(not(test))]
 mod splash_ffi;
+pub mod ui_thread;
+#[cfg(not(test))]
+mod ui_thread_ffi;
 pub mod unit_hack;
 #[cfg(not(test))]
 mod unit_hack_ffi;

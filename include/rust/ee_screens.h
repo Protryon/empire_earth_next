@@ -3302,6 +3302,343 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SS_SUFFIX = 148;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_SS_NAME = 149;
 
+/// `this->PauseGraphics()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PAUSE = 1;
+
+/// `this->ResumeGraphics()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESUME = 2;
+
+/// A lock: a = 0 `gUIManager->LockUIForCopyData()`, 1 the world's read lock, 2 its write lock.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOCK = 3;
+
+/// The matching unlock (a as for `LOCK`).
+constexpr static const uint32_t EE_SCREENS_UI_OP_UNLOCK = 4;
+
+/// `gUIManager != NULL`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HAS_MANAGER = 5;
+
+/// `gUIManager->mMainGameForm` (a pointer, 0 when none).
+constexpr static const uint32_t EE_SCREENS_UI_OP_MAIN_FORM = 6;
+
+/// `gUIManager->mScenarioEditorForm` (a pointer, 0 when none).
+constexpr static const uint32_t EE_SCREENS_UI_OP_EDITOR_FORM = 7;
+
+/// `gUIManager->GetCurrentForm()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CURRENT_FORM = 8;
+
+/// `gUIManager->GetFormByID(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_FORM_BY_ID = 9;
+
+/// `gUIManager->SwapForm(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SWAP = 10;
+
+/// `gUIManager->Push(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PUSH = 11;
+
+/// `gUIManager->Pop()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POP = 12;
+
+/// `gUIManager->PopTo(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POP_TO = 13;
+
+/// `gUIManager->IsFormOnStack(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ON_STACK = 14;
+
+/// `gUIManager->IsFormVisible(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_VISIBLE = 15;
+
+/// `gUIManager->RedrawAll()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REDRAW = 16;
+
+/// Form a's control b (a `UIStatusBar`): `SetCurrentRangeValue(c)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_STATUS_VALUE = 17;
+
+/// `this->ResizeGameScreen(gGameWindowWidth, gGameWindowHeight, true, true)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESIZE_GAME = 18;
+
+/// `this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESIZE_MENU = 19;
+
+/// `gGameScreenActive = true` (under the write lock).
+constexpr static const uint32_t EE_SCREENS_UI_OP_SCREEN_ACTIVE = 20;
+
+/// `gDataPreLoading->PostLoadGame(false, false)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_LOAD_GAME = 21;
+
+/// `this->ShowEpochName()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SHOW_EPOCH_NAME = 22;
+
+/// The main game form's `UpdateBackgroundMedia(true)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_BACKGROUND_MEDIA = 23;
+
+/// `this->mIsUpdating = a`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_UPDATING = 24;
+
+/// `this->mIsQuitting = true`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_QUITTING = 25;
+
+/// `this->LoadSavedGame(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOAD_SAVED_GAME = 26;
+
+/// The posted event a: `ProcessEvent(NULL, b)`, then its `Dereference`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PROCESS_EVENT = 27;
+
+/// `gGraphics->PostPause() == kErrorOK`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_POST_PAUSE = 28;
+
+/// `gGraphics->mIsPaused`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_PAUSED = 29;
+
+/// `PlatSleep(1)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SLEEP = 30;
+
+/// `gGraphics->PostResume()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_GFX_POST_RESUME = 31;
+
+/// The quick load action a: `mIsLoad = true`, `mGameState = &gGameState`, `gUserInterface->PostAction`, its
+/// `Dereference`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_QUICK_LOAD = 32;
+
+/// `this->ShowLoadingText(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOADING_TEXT = 33;
+
+/// `this->SaveAndTestScenario()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SAVE_AND_TEST = 34;
+
+/// `EEResetGraphicsValues()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESET_GFX_VALUES = 35;
+
+/// The screen capture a: its event made, `gGraphics->PostScreenShot`, the wait, the event destroyed, its surface
+/// released when it has a width, the capture deleted.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SCREEN_CAPTURE = 36;
+
+/// `EEPostGraphicsAll()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_GFX_ALL = 37;
+
+/// `this->CloseScenarioEditor()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CLOSE_EDITOR = 38;
+
+/// `this->EnterScenarioEditor(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ENTER_EDITOR = 39;
+
+/// `this->CancelGame()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CANCEL_GAME = 40;
+
+/// `this->StartLoadingFromEditor()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOAD_FROM_EDITOR = 41;
+
+/// `this->TestScenario()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_TEST_SCENARIO = 42;
+
+/// The main game form's `mRefreshGroup = true`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REFRESH_GROUP = 43;
+
+/// The error dialog's callback data a: whether its `mCallback` is set.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ERROR_HAS_CALLBACK = 44;
+
+/// The error dialog's callback data a: `mCallback(mData)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_ERROR_CALLBACK = 45;
+
+/// `delete` the form a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_FORM = 46;
+
+/// `delete` the error dialog's callback data a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_ERROR_DATA = 47;
+
+/// The chat log entry a shown on the main game form (`DisplayChat`).
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_SHOW = 48;
+
+/// The chat log entry a's `mType`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_TYPE = 49;
+
+/// `EEUIECLEFormManager::AddEntry` of the chat log entry a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHAT_LOG = 50;
+
+/// `delete` the chat log entry a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_CHAT = 51;
+
+/// `gGraphics->mIsMoviePlaying`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_MOVIE_PLAYING = 52;
+
+/// `gGraphics->PlayMovie(*a, b) == kErrorOK`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_PLAY_MOVIE = 53;
+
+/// `gMouse->mPointer = a`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SET_POINTER = 54;
+
+/// `gGraphics->PostStopMovie()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_STOP_MOVIE = 55;
+
+/// `gUserInterface->PostPlayMovie(*a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_REPOST_MOVIE = 56;
+
+/// The reference counter a's `Dereference()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DEREFERENCE = 57;
+
+/// `delete` the file spec a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_SPEC = 58;
+
+/// The main game form's `ShowInformation` of the dialog message a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SHOW_INFORMATION = 59;
+
+/// The dialog message a's text into the chat log (a new entry of type 1, `AddEntry`, deleted).
+constexpr static const uint32_t EE_SCREENS_UI_OP_DIALOG_LOG = 60;
+
+/// `delete` the dialog message a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_DIALOG = 61;
+
+/// The host has gone: `EESetQuitFlag`, the boot action posted, the client disconnected, deleted and made anew.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HOST_GONE = 62;
+
+/// The main game form's `UpdateIconBar()`, then `this->mIconBarUpdatePosted = false`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_UPDATE_ICON_BAR = 63;
+
+/// `this->ChangeRasterizer(a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_CHANGE_RASTERIZER = 64;
+
+/// The main game form's `PauseInformation()` (a != 0) or `ResumeInformation()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_INFORMATION = 65;
+
+/// `this->ShowCivilizationBuilder(a, the low byte of b as a bool, false)` (message 0x420), or with c != 0
+/// `ShowCivilizationBuilder(0, false, true)` (0x41f).
+constexpr static const uint32_t EE_SCREENS_UI_OP_CIV_BUILDER = 66;
+
+/// `gUserInterface->PostEvent(a, NULL)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_POST_EVENT = 67;
+
+/// The main game form's `HideMessages()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_HIDE_MESSAGES = 68;
+
+/// The scenario editor form's `SelectTab((unsigned char)a, b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SELECT_TAB = 69;
+
+/// `this->RestartGame()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_RESTART = 70;
+
+/// The main game form's control a (an `EEUIBSavedGroup`): `Refresh()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SAVED_GROUP = 71;
+
+/// `this->OpenSelectServer()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_SELECT_SERVER = 72;
+
+/// `this->ShowMessageOfTheDay(*a, *b)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_MOTD = 73;
+
+/// `delete` the wide string a.
+constexpr static const uint32_t EE_SCREENS_UI_OP_DELETE_WSTRING = 74;
+
+/// The lobby's updates: a = 0 `ee_screens_lobby_update_player(b, c)`, 1 `..._update_game_options()`,
+/// 2 `..._show_transfer_progress(b, c)`, 3 `..._update_form()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LOBBY = 75;
+
+/// `this->ShowLagStatus(a, b != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_LAG = 76;
+
+/// `this->mMessageQueueDone->Set()`.
+constexpr static const uint32_t EE_SCREENS_UI_OP_QUEUE_DONE = 77;
+
+/// Whether a global is set: a = one of `EE_SCREENS_UI_GLOBAL_*`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_HAS = 1;
+
+/// `EELobbyIsShown()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_SHOWN = 2;
+
+/// `EEIsLobbyOpen()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_OPEN = 3;
+
+/// `EELobbyShutdown()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_LOBBY_SHUTDOWN = 4;
+
+/// `gUserInterface->mThread->Post(0x12, NULL, NULL, false)` (WM_QUIT).
+constexpr static const uint32_t EE_SCREENS_UI_EV_POST_QUIT = 5;
+
+/// The conductor's volume (f32 bits; 0.0 without a conductor).
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUSIC_VOLUME = 6;
+
+/// The conductor's `SetVolume` (a: f32 bits).
+constexpr static const uint32_t EE_SCREENS_UI_EV_SET_MUSIC_VOLUME = 7;
+
+/// The sound manager's master volume (f32 bits; 0.0 without a sound manager).
+constexpr static const uint32_t EE_SCREENS_UI_EV_MASTER_VOLUME = 8;
+
+/// The sound manager's `SetMasterVolume` (a: f32 bits).
+constexpr static const uint32_t EE_SCREENS_UI_EV_SET_MASTER_VOLUME = 9;
+
+/// `SPIMSetMuted(a != 0)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUTE = 10;
+
+/// `gISKeyboard->Resume()` (a != 0) or `Suspend()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_KEYBOARD = 11;
+
+/// `gISMouse->Resume()` (a != 0) or `Suspend()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MOUSE = 12;
+
+/// `gMouse->SetPosition` at the game window's centre.
+constexpr static const uint32_t EE_SCREENS_UI_EV_CENTER_MOUSE = 13;
+
+/// `gMousePointer->mThread->Post(a, NULL, NULL, true)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_POINTER_POST = 14;
+
+/// `gMousePointer->mIsShown`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_POINTER_SHOWN = 15;
+
+/// `PlatSleep(1)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_SLEEP = 16;
+
+/// The "Mute in Background" setting.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MUTE_IN_BACKGROUND = 17;
+
+/// `gUserInterface->mIsQuitting`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_QUITTING = 18;
+
+/// The full screen setting.
+constexpr static const uint32_t EE_SCREENS_UI_EV_FULL_SCREEN = 19;
+
+/// `PlatWindowMinimize` of the game window.
+constexpr static const uint32_t EE_SCREENS_UI_EV_MINIMIZE = 20;
+
+/// `gUserInterface->OpenIMECompositionString()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_OPEN = 21;
+
+/// `gUserInterface->UpdateIMECompositionString(a, b, c)` (a: the text).
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_UPDATE = 22;
+
+/// `gUserInterface->AddIMEResultString(a)`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_RESULT = 23;
+
+/// `gUserInterface->CloseIMECompositionString()`.
+constexpr static const uint32_t EE_SCREENS_UI_EV_IME_CLOSE = 24;
+
+/// `gUIManager->UpdateTranslatedKey(a, 1)` (a: one character's bytes, zero-padded to 8).
+constexpr static const uint32_t EE_SCREENS_UI_EV_TRANSLATED_KEY = 25;
+
+/// `gUserInterface` (for `EE_SCREENS_UI_EV_HAS`).
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_USER_INTERFACE = 0;
+
+/// `gUIManager`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_MANAGER = 1;
+
+/// `gConductor`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_CONDUCTOR = 2;
+
+/// `gSoundManager`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_SOUND = 3;
+
+/// `gISKeyboard`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_KEYBOARD = 4;
+
+/// `gISMouse`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_MOUSE = 5;
+
+/// `gGameWindow != NULL && gMouse != NULL`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_WINDOW_AND_MOUSE = 6;
+
+/// `gMousePointer`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_POINTER = 7;
+
+/// `gGameWindow`.
+constexpr static const int64_t EE_SCREENS_UI_GLOBAL_WINDOW = 8;
+
 /// `FillComboBox`.
 constexpr static const uint32_t EE_SCREENS_UH_FILL_COMBO_BOX = 1;
 
@@ -4290,6 +4627,23 @@ uint32_t ee_screens_settings_event_for(unsigned long id);
 
 /// `EEIsValidName` over the name's `count` characters (each one's first byte).
 bool ee_screens_valid_name(const uint8_t *chars, size_t count);
+
+/// `EEUserInterface::HandleMessage`: the thread message `message` with its two parameters, on the UI object `ui`.
+void ee_screens_ui_message(void *ui,
+                           uint32_t message,
+                           int64_t p1,
+                           int64_t p2);
+
+/// `EEUserInterface::HandleEvent`: the window event of type `kind` (its key's `virtual_key`, its zero-terminated
+/// `text`, the composition's `cursor` and `length`).
+///
+/// # Safety
+/// `text` is NULL or zero-terminated.
+void ee_screens_ui_event(uint32_t kind,
+                         uint32_t virtual_key,
+                         const char *text,
+                         int32_t cursor,
+                         int32_t length);
 
 /// The hack made for the form (the class list read through the host). Freed by `ee_screens_unit_hack_free`.
 EeScreensUnitHack *ee_screens_unit_hack_new(void *form);
