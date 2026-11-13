@@ -832,6 +832,23 @@ function M.step(view, memory)
             and cap > memory.useful then
         cap = memory.useful
     end
+    -- (BO.OPT.builder_pool, §8.51, the owner's ranges: no resource past its most, and the citizens over the fill are
+    -- builders) in the Stone Age the citizens are the fill's places plus those building, at most BO.STONE_MOST; at 76
+    -- with 5-12 building or idle the gatherers stood under the fill, and with a mine's places short the rest went to
+    -- wood, 20-24 against its 15
+    -- (the builders are lib.place's, its jobs' citizens; a claimed mine with no settlement touching it yet takes no
+    -- gatherer, and the citizens trained for it stood idle, 10-17 of them: none more while BUILDER_IDLE stand idle,
+    -- the engine sends them to help build the settlements going up)
+    if ECON.order and BO.OPT.builder_pool and age == 2 and memory.useful ~= nil then
+        local builders = 0
+        for _, k in ipairs(ai.keys((memory.place or {}).jobs or {})) do
+            builders = builders + #(memory.place.jobs[k].builders or {})
+        end
+        cap = math.min(memory.useful + math.min(builders, BO.BUILDER_POOL), BO.STONE_MOST)
+        if view.idle >= BO.BUILDER_IDLE then
+            cap = math.min(cap, view.citizens)
+        end
+    end
     -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
     -- soldiers-first window, while the light army is short and the food gatherers fill the food places, a citizen is
     -- trained only from the food above what two soldiers cost, when the soldiers' other resource is in stock (the
@@ -1002,9 +1019,11 @@ function M.step(view, memory)
                 and patch_places + hunt_places + farm_places < (plan.food or 0) // 2 then
             claim_max = math.max(claim_max, plan.claim_dry)
         end
+        local grew = false
         if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
                 and range < math.min(claim_max, view.claim_range_max) then
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
+            grew = true
         end
         memory.grow_claim = nil
         -- no_site (the reserve keeps such a resource from the army): wanted, and no open site the gatherers can reach
@@ -1012,6 +1031,7 @@ function M.step(view, memory)
         memory.no_site = {}
         local contest = nil
         local mineral_places = {}
+        local mineral_short = false
         for _, r in ipairs(MINERALS) do
             local unsettled_r = {}   -- (§8.36, as the patches)
             for _, s in ipairs(view.sites) do
@@ -1041,9 +1061,18 @@ function M.step(view, memory)
                 contest = c
             end
             if want[r] > places then
-                want.food = want.food + want[r] - places
+                if not (BO.OPT.builder_pool and age == 2) then   -- (builder_pool: a mine short of places spills nowhere)
+                    want.food = want.food + want[r] - places
+                end
                 want[r] = places
             end
+            mineral_short = mineral_short or places < claim_want
+        end
+        -- (BO.OPT.builder_pool, the owner: the citizens a short mine leaves over go to the next mine near home, not to
+        -- a capped resource) the claim reaches out while a mine's claimed places are short of the phase's target
+        if ECON.order and BO.OPT.builder_pool and age == 2 and mineral_short and not grew
+                and range < math.min(plan.claim_max, view.claim_range_max) then
+            order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         -- (ECON.order, §8.51: no gatherers on a mine until its touching settlement stands, they would walk to the
         -- town centre) the mines' places counted only where a drop site touches the mine; memory.settle_short: a kept
@@ -1109,7 +1138,12 @@ function M.step(view, memory)
             for _, r in ipairs(V.resources) do
                 memory.plan_want[r] = math.max(want[r] or 0, target[r] or 0)
             end
-            want = BO.fill(phase, land, room)
+            if BO.OPT.builder_pool and age == 2 then
+                -- (builder_pool: the citizens past the fill's places stay out of it, builders, not food or wood)
+                want = BO.fill(phase, land, room, true)
+            else
+                want = BO.fill(phase, land, room)
+            end
             -- (the army's priority spends, memory.priority_spend: up to 4 from food to wood while the stock lacks the wood)
             local ps = memory.priority_spend
             if ps ~= nil and (ps.wood or 0) > view.stock.wood then
@@ -1151,7 +1185,8 @@ function M.step(view, memory)
         local gfarms_new = gfarms ~= nil and memory.gfarms ~= gfarms
         for _, r in ipairs(V.resources) do
             if want[r] ~= view.wanted[r] or (r == "food" and (boats_changed or gfarms_new)) then
-                order("gather_" .. r, {verb = "gather", resource = r, n = want[r], exact = ECON.order and 1 or nil,
+                order("gather_" .. r, {verb = "gather", resource = r, n = want[r],
+                                       exact = ECON.order and (BO.OPT.builder_pool and 2 or 1) or nil,
                                        granary_farms = r == "food" and gfarms or nil})
             end
         end
