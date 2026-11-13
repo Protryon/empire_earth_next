@@ -134,6 +134,9 @@ void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit,
 // when the body sets it). Returns the body's answer (0/1).
 int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
                       long* ioX = NULL, long* ioY = NULL);
+// EEGetFiringPosition (inFiring) or EEGetLeadPosition (ee_combat leaves.rs firing_position, lead_position) over the
+// world host: ioLocation in and out.
+void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation);
 // The damage of one hit (ee_combat damage.rs compute_damage; ee/EERules.h EEDamageForm, combat.yaml's constants):
 // inUnit hits inTarget with inAttack, attack kind inAmmo (dbfamily column) and weapon inWeapon (dbweapontohit row);
 // the elevation rule is inUnit's class's. inFriendlyFactor: splash on the own player's units. False when the hit does

@@ -375,6 +375,13 @@ uint32_t EEConditionBits(float inValue)
     return theBits;
 }
 
+float EEBitsFloat(int32_t inBits)
+{
+    float theValue;
+    memcpy(&theValue, &inBits, 4);
+    return theValue;
+}
+
 // the attack goal's target (attack unit), the heal goal's (heal)
 EEUnit* EEConditionTarget(EEConditionContext* inContext)
 {
@@ -691,6 +698,12 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEGetRules().Epoch(theObject->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;   // epochs.yaml
     case EE_COMBAT_Q_SPARKS_EFFECT: return theObject->mUnitClass->mImpactSparksEffect != NULL;
     case EE_COMBAT_Q_RESOURCE_TYPE: return (uint32_t)theObject->mResourceType;
+    // leaves.rs (R5b.2, thirteenth round)
+    case EE_COMBAT_Q_INNER_SPHERE: return EEConditionBits(theObject->mUnitClass->GetInnerCollisionSphere());
+    case EE_COMBAT_Q_SHOOTS_HIGH: return theObject->mUnitClass->mShootsHigh;
+    case EE_COMBAT_Q_TOWER: return theObject->mUnitClass->mIsTower;
+    case EE_COMBAT_Q_WAYPOINTS: return (uint32_t)EEQueryComplex(inObject)->mWaypoints.size();
+    case EE_COMBAT_Q_MAX_VELOCITY: return EEConditionBits(EEQueryComplex(inObject)->GetMaxVelocity());
     }
     return 0;
 }
@@ -1025,6 +1038,51 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
         EECombatCaptureXAction(EE_COMBAT_XA_AREA_DAMAGE, theObject, theTarget, theHash);
         return 0;
     }
+    case EE_COMBAT_W_CAPTURE:   // TEST ONLY: a formula's record (EECombatCapture's)
+        if (EESimCaptureRecord::Active()) {
+            EESimCaptureRecord theRecord((unsigned int)a[0]);
+            theRecord.Bytes((const void*)(uintptr_t)a[1], (unsigned int)a[2]);
+            theRecord.Bytes((const void*)(uintptr_t)a[3], (unsigned int)a[4]);
+            theRecord.Commit();
+        }
+        return 0;
+    case EE_COMBAT_W_PATH_START: {
+        GE3DPoint theNext;
+        float theIndex;
+        theObject->GetPathStart(theNext, theIndex);
+        a[0] = EEConditionBits(theNext.GetX());
+        a[1] = EEConditionBits(theNext.GetY());
+        a[2] = EEConditionBits(theNext.GetZ());
+        return 0;
+    }
+    case EE_COMBAT_W_TILE_AT: return ::gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>((long)a[0], (long)a[1])) != NULL;
+    case EE_COMBAT_W_WALL_SPOT: {
+        GE3DPoint thePoint(EEBitsFloat((int32_t)a[0]), EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]));
+        bool theFound = EEGetWallSpot(theObject, EEQueryUnit(inOther), thePoint);
+        a[0] = EEConditionBits(thePoint.GetX());
+        a[1] = EEConditionBits(thePoint.GetY());
+        a[2] = EEConditionBits(thePoint.GetZ());
+        return theFound;
+    }
+    case EE_COMBAT_W_NEW_TARGET_NEAR_OLD: EEFindNewTargetNearOld(theObject, theOther); return 0;
+    case EE_COMBAT_W_FIRING_RING: {
+        std::vector<U2DPoint<long> > theTiles;
+        std::vector<U2DPoint<long> > theOuterTiles;
+        const GETransformation& theLocation = theObject->mPhysicalModel.GetLocation();
+        GE3DPoint thePosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
+        EEUnit* theTarget = EEQueryUnit(inOther);
+        long theSize = theTarget->GetUnitClass()->GetTileSize();
+        EEGetSortedRingTiles(thePosition, theTarget->GetTileX(), theTarget->GetTileY(), theSize, (long)a[0], 0, theOuterTiles);
+        EEGetSortedRingTiles(thePosition, theTarget->GetTileX(), theTarget->GetTileY(), theSize, (long)a[0] + 1, 0, theTiles);
+        theTiles.insert(theTiles.end(), theOuterTiles.begin(), theOuterTiles.end());
+        std::sort(theTiles.begin(), theTiles.end(), EEUUTileNearerToUnit(theObject));
+        GE3DPoint thePoint(EEBitsFloat((int32_t)a[1]), EEBitsFloat((int32_t)a[2]), EEBitsFloat((int32_t)a[3]));
+        bool theFound = EEPickTileNear(theTiles, theObject, theOther, 0, thePoint);
+        a[1] = EEConditionBits(thePoint.GetX());
+        a[2] = EEConditionBits(thePoint.GetY());
+        a[3] = EEConditionBits(thePoint.GetZ());
+        return theFound;
+    }
     case EE_COMBAT_W_HIT_CAPTURE:   // TEST ONLY: CBXA
         EECombatCaptureXAction(EE_COMBAT_XA_APPLY_HIT, theObject, EEQueryUnit(inOther), 0);
         return 0;
@@ -1084,6 +1142,15 @@ bool EECombatComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, 
         return false;
     outAmount = theCall.amount;
     return true;
+}
+
+void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation)
+{
+    EEQueryContext theContext = {inAttacker, NULL, NULL};
+    EeCombatWorldHost theHost = {EEQueryHostOf(&theContext), EEWorldOp};
+    float thePoint[3] = {ioLocation.GetX(), ioLocation.GetY(), ioLocation.GetZ()};
+    ee_combat_attack_position(inFiring, EEQueryHandleOf(inAttacker), EEQueryHandleOf(inTarget), &theHost, &thePoint);
+    ioLocation = GE3DPoint(thePoint[0], thePoint[1], thePoint[2]);
 }
 
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)

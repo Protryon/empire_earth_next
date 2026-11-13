@@ -683,6 +683,7 @@ fn stored_field(r: &EeCombatStoredUnit, code: i32) -> Option<u32> {
         damage::EE_COMBAT_Q_RESOURCE_AMOUNT => r.resource_amount as u32,
         damage::EE_COMBAT_Q_HERD => u32::from(r.herd),
         damage::EE_COMBAT_Q_CLOAK_TIMER => r.cloak_timer as u32,
+        crate::leaves::EE_COMBAT_Q_CRUSADER => u32::from(r.crusader),
         _ => return None,
     })
 }

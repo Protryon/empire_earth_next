@@ -456,6 +456,44 @@ constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_TURRET = 1;
 /// `EEApproachAttachPoint`: the world point of the current tag point (or half a tile up).
 constexpr static const int32_t EE_COMBAT_LAUNCH_KIND_ATTACH = 2;
 
+/// the class's `GetInnerCollisionSphere()` (float bits).
+constexpr static const int32_t EE_COMBAT_Q_INNER_SPHERE = 80;
+
+/// the class's `mShootsHigh`.
+constexpr static const int32_t EE_COMBAT_Q_SHOOTS_HIGH = 81;
+
+/// the class's `IsCrusader()` (the unit store's).
+constexpr static const int32_t EE_COMBAT_Q_CRUSADER = 82;
+
+/// the class's `mIsTower`.
+constexpr static const int32_t EE_COMBAT_Q_TOWER = 83;
+
+/// a complex unit's `mWaypoints.size()`.
+constexpr static const int32_t EE_COMBAT_Q_WAYPOINTS = 84;
+
+/// a complex unit's `GetMaxVelocity()` (float bits).
+constexpr static const int32_t EE_COMBAT_Q_MAX_VELOCITY = 85;
+
+/// a formula's capture record (TEST ONLY): `a[0]` the tag, `a[1]`/`a[2]` the input's address and size, `a[3]`/`a[4]`
+/// the output's.
+constexpr static const int32_t EE_COMBAT_W_CAPTURE = 60;
+
+/// a complex unit's `GetPathStart(point, index)` from a default point: the point's bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_PATH_START = 61;
+
+/// `gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>(a[0], a[1])) != NULL`.
+constexpr static const int32_t EE_COMBAT_W_TILE_AT = 62;
+
+/// `EEGetWallSpot(object, other, point)`: the point's bits in and out in `a[0..3]`, the answer.
+constexpr static const int32_t EE_COMBAT_W_WALL_SPOT = 63;
+
+/// `EEFindNewTargetNearOld(object, other)`.
+constexpr static const int32_t EE_COMBAT_W_NEW_TARGET_NEAR_OLD = 64;
+
+/// `EEGetFiringPosition`'s ring: the sorted ring tiles at `a[0]` and `a[0] + 1` around `other` from `object`'s
+/// position, nearest to `object` first, and `EEPickTileNear` of them (the point's bits in and out in `a[1..4]`).
+constexpr static const int32_t EE_COMBAT_W_FIRING_RING = 65;
+
 /// `GetTileX()`, `GetTileY()`.
 constexpr static const int32_t EE_COMBAT_Q_TILE_X = 1;
 
@@ -1155,6 +1193,13 @@ constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED = 7;
 
 constexpr static const int32_t EE_COMBAT_WORLD_FIRE_SHOT = 8;
 
+/// leaves.rs: `EEIsInRangeToHit`, `EEIsInContactRange` (the distance's bits in `tile[0]`), `EEIsAttackedBy`.
+constexpr static const int32_t EE_COMBAT_WORLD_IN_RANGE_TO_HIT = 9;
+
+constexpr static const int32_t EE_COMBAT_WORLD_CONTACT_RANGE = 10;
+
+constexpr static const int32_t EE_COMBAT_WORLD_ATTACKED_BY = 11;
+
 /// One hit's damage arguments (`ComputeDamage`'s after the units).
 struct EeCombatDamageCall {
   /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
@@ -1809,6 +1854,21 @@ struct EeCombatLaunchOut {
   int32_t tile[2];
 };
 
+/// A class's fields the targetable tests read (`EEUUGetIsUnitClassTargetable`, `EECanTargetClass`), filled by the
+/// C++ from the attacker and the class.
+struct EeCombatTargetableIn {
+  /// an attacker is given; its class's `mAmmoType`, `IsLandBuilding()`, its player's `mComputerPlayer != NULL`
+  int32_t attacker;
+  int32_t ammo_type;
+  int32_t land_building;
+  int32_t computer;
+  /// the class's `mCategory`, `mUnitType`, `mFamily`, `CanBeAttacked()`
+  int32_t category;
+  uint32_t unit_type;
+  uint32_t family;
+  int32_t can_be_attacked;
+};
+
 /// A candidate's own values as a search reads them (`SearchHost::target`; pure reads).
 struct EeCombatSearchTarget {
   /// its class's `mTileSize > 1`
@@ -2428,6 +2488,23 @@ int32_t ee_combat_launch_index(const EeCombatLaunchIn *input);
 /// `input` must point to a valid record and `chain` to `input.chain` matrices (or be NULL when it is 0).
 EeCombatLaunchOut ee_combat_launch(const EeCombatLaunchIn *input,
                                    const float (*chain)[16]);
+
+/// `EEGetFiringPosition` (`firing` 1) or `EEGetLeadPosition` (0) of `attacker` on `target` over `host` (the point in
+/// and out).
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context, `point` to three floats.
+void ee_combat_attack_position(int32_t firing,
+                               uint64_t attacker,
+                               uint64_t target,
+                               const EeCombatWorldHost *host,
+                               float (*point)[3]);
+
+/// `EEUUGetIsUnitClassTargetable` (`can_target` 0) or `EECanTargetClass` (1) of the record.
+///
+/// # Safety
+/// `input` must point to a valid record.
+bool ee_combat_targetable(const EeCombatTargetableIn *input, int32_t can_target);
 
 /// `EEGetPursuerOf`: the pursuer's list handle, 0 for none.
 ///
