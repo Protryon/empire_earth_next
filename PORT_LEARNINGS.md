@@ -10564,3 +10564,50 @@ late profiles per commit; calamity too at the end). Graphics Thread C++ (`src/Em
 - **Only a tour or a person reaches:** the particles' move (the renderer's `Queue`) and draws, the decals', splash's,
   shock wave's, flash's and ripple's draws, the marching icons' draw; EE-SIM steps, saves (EFST) and loads (saveload)
   the rest.
+
+## R6 WON round 23: ListArea whole in Rust, its readers on accessors (ee_won listobj.rs; branch rust-r6-won23, 2026-11-12)
+
+Measured as rounds 18-22 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 88,296 at
+the branch's start (round 22 merged with rust) -> 87,629 after the ListArea commit (-667, the two accessor commits
+included).
+
+- **Accessors first, in their own commits.** The lobby read ListArea's members in 12 units: `mSelItem` (combo
+  boxes, menus, the friend, user, game user, room, server, adapter and file lists, the game options) became
+  `GetSelItem()`, `mPaintWidth` (the items' paints) a new `GetPaintWidth()`, the game user list's `mItems.size()`
+  `GetNumItems()`. Then the family's own writes: `MultiListArea::SetSortColumn` sets the sort type through
+  `SetSortTypeOnly` (no sort, as the original's field write), its paint the paint width through `SetPaintWidth`,
+  `MultiListHeader` reads `GetSortType`, and MultiListItem's and TreeItem's MouseExit clear the list's mouse item
+  through `ClearMouseItem` (the field only, not the virtual `NotifyMouseItemGone`, as before).
+- **The move** (`listobj.rs`): the items (a reference held on each, as the original's `SmartPtr` vector), the top
+  line, the list flags, the batch depth, the paint width, the sort type, the current, keyboard and mouse items and
+  the selection walk; every method of ListArea.cpp and SetSortType. The C++ `ListArea` keeps the font, the colours,
+  the selection colours, the sort function and the item tool tip; its virtuals are forwarders, and the Rust calls
+  the list's own virtuals back through the C++ object (`VirtAdjustPosition`, `VirtSort`,
+  `VirtNotifyMouseItemGone`, `VirtListSelChangedHook`), so MultiListArea's, TreeArea's and PopupMenu's overrides run
+  and call the base back into Rust. The items stay C++ data (the lobby's item classes), read and set through ops.
+- **The sort stays C++'s `std::sort`.** It is not stable: a Rust sort would order equal items differently. The op
+  `SortItems` sorts the Rust object's item array (raw pointers) with the original `LineSortPred`, `LowerBound` is
+  `std::lower_bound` for the sorted insert, `Less` the predicate RefreshItem tests its neighbours with. The
+  original sorted `SmartPtr`s; the same algorithm over raw pointers makes the same comparisons and the same order.
+- **RefreshItem's move** permutes the item vector by `SmartPtr` assignments; their AddRef / Release pairs never take
+  an item to zero, so the Rust permutes plain pointers and keeps the one reference per item.
+- **A dropped statement:** MultiListArea's constructor reserved 11,000 entries of the vector (capacity only).
+- **The golden** (`tests/won/won_listobj_test.cpp`): the original's methods with every C++ call replaced by its op,
+  against the Rust object over one scripted host (the scroll area's fields and clamp, items with sizes, keys and
+  selectable flags, the base size change and the list's virtuals calling the side's ListArea back): 20,000
+  sequences of 40 calls (sorted and placed inserts, batches, refreshes that move an item, deletes, ranges, clears,
+  every flag, every selection path, the walk, sorting, scrolls, paints, the mouse with every flag, keys),
+  12,464,203 trace lines identical, every reference given back. A mutation (the toggle flag's test) fails 6,552
+  sequences. `golden_listobj.txt` (45 sequences) is replayed by cargo.
+- **Shell lesson:** a Bash tool command whose heredoc holds an odd number of single quotes (a Python `r'''`
+  string) fails before running ("unexpected EOF while looking for matching"): the tool wraps the command in single
+  quotes. Write such scripts to a file and run the file.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction). Only the lobby reaches
+  ListArea: the LAN game list and the user list of the LAN lobby, the game room's player list (MultiListArea), the
+  combo boxes' drop-downs (the user name, the options), popup menus (right click on a user), the room tree
+  (Internet only). The LAN game (joining by the game list's selection and double click) and the lobby captures
+  (the lists' rows, selection colours, scroll) are the check. Item tool tips, keyboard navigation and the sort's
+  column clicks run only in the golden unless a person uses them.
+- **Left:** MultiListArea, MultiListHeader, MultiListItem, TreeArea and TreeItem (now C++ subclasses and items over
+  the Rust base), PopupMenu with MenuBehavior, and the scroll bars (Scrollbar has ~50 member reads in 9 units:
+  an accessor commit first).

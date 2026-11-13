@@ -81,7 +81,7 @@ void BadUserItem::Paint(Graphics& inGraphics,ListArea* inList)
     if(!aSimple) aColumn=static_cast<MultiListArea*>(inList)->GetColumnPaintContext();
     if((aSimple || aColumn==-1) && aSelected) {
         inGraphics.SetColor(inList->GetSelColor().GetBackgroundColor(inGraphics));
-        int aWidth=inList->mPaintWidth;
+        int aWidth=inList->GetPaintWidth();
         int aHeight=this->mFont->GetHeight();
         inGraphics.FillRect(0,0,aWidth,aHeight);
         if(!this->mIsSimple) return;

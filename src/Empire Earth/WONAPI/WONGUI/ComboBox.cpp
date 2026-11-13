@@ -89,7 +89,7 @@ void ComboBox::Clear(bool inClearInput)
 // Returns the position of the selected list item, or -1 when none is selected
 int ComboBox::GetSelItem()
 {
-    ListItem* item=this->mListArea->mSelItem;
+    ListItem* item=this->mListArea->GetSelItem();
     return item==NULL ? -1 : this->mListArea->GetItemPos(item);
 }
 // FUNCTION: WON 0x006f3d60
@@ -99,7 +99,7 @@ void ComboBox::SetSelItem(int inPos,bool inNotify)
 {
     if(this->mListArea.get()==NULL) return;
     this->mListArea->SetSelItem(inPos,true);
-    if(this->mListArea->mSelItem==NULL)
+    if(this->mListArea->GetSelItem()==NULL)
         this->mEdit->SetText(GUIString(new GUIStringData("")),inNotify);
     else this->SetInputBoxToListSelection(false,inNotify);
 }
@@ -171,7 +171,7 @@ void ComboBox::LostFocus() { Container::LostFocus(); }
 // optionally firing a selection-changed event
 void ComboBox::SetInputBoxToListSelection(bool inActive,bool inFireEvent)
 {
-    TextListItem* item=static_cast<TextListItem*>(this->mListArea->mSelItem);
+    TextListItem* item=static_cast<TextListItem*>(this->mListArea->GetSelItem());
     if(item==NULL) return;
     this->mEdit->SetText(item->mText,true);
     if(ee_won_gui_combo_select_to_end(item->mWidth,this->mEdit->Width())) this->mEdit->SelectRange(item->mText.length(),0);
@@ -213,7 +213,7 @@ void ComboBox::ShowList()
     params.mInputComponent=this; // input component (+0x08)
     params.mAvoidRect.y=y-this->Height();
     params.mAvoidRect.height=this->Height();
-    ListItem* selected=this->mListArea->mSelItem;
+    ListItem* selected=this->mListArea->GetSelItem();
     if(selected!=NULL) {
         TextListItem* textItem=static_cast<TextListItem*>(selected);
         if(textItem->mText!=this->mEdit->GetText()) {

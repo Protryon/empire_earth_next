@@ -74,6 +74,7 @@ pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
+pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
