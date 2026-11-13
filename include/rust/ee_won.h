@@ -10888,6 +10888,15 @@ bool ee_won_gui_max_width(int32_t new_width,
 /// `op` is a live op.
 void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
 
+/// One call made as the op makes its own (`Host::call`): `call`'s inputs in, its `out_obj`, `out_num` and `out_addr`
+/// written, its bytes (if any) to `call`'s `out_sink`. For the drivers (won_serverop_test): the C++ side's answers
+/// and the op's own, code for code.
+///
+/// # Safety
+/// `op` is a live, bound op; `call` a valid call whose `data` holds `len` bytes and whose sink takes its context.
+void ee_won_hostop_call(const EeWonHostOp *op,
+                        EeWonHostCall *call);
+
 /// `RunHook`.
 ///
 /// # Safety

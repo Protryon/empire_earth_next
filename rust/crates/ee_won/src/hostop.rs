@@ -732,6 +732,7 @@ impl<P: Plan> Host<P> {
 /// The type-erased op the C++ holds.
 trait HostDyn: Send + Sync {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void);
+    fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply;
     fn run(&self);
     fn callback(&self, id: i32, op: Obj) -> bool;
     fn cleanup(&self);
@@ -747,6 +748,9 @@ trait HostDyn: Send + Sync {
 impl<P: Plan> HostDyn for Host<P> {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void) {
         *self.bind.lock().unwrap_or_else(|e| e.into_inner()) = (f, host as usize);
+    }
+    fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
+        Host::call(self, code, obj, num, data, addr)
     }
     fn run(&self) {
         P::run(self)
@@ -810,6 +814,30 @@ impl EeWonHostOp {
 pub unsafe extern "C" fn ee_won_hostop_bind(op: *const EeWonHostOp, f: EeWonHostFn, host: *mut c_void) {
     // SAFETY: the caller's live op
     unsafe { (*op).op.bind(f, host) }
+}
+
+/// One call made as the op makes its own (`Host::call`): `call`'s inputs in, its `out_obj`, `out_num` and `out_addr`
+/// written, its bytes (if any) to `call`'s `out_sink`. For the drivers (won_serverop_test): the C++ side's answers
+/// and the op's own, code for code.
+///
+/// # Safety
+/// `op` is a live, bound op; `call` a valid call whose `data` holds `len` bytes and whose sink takes its context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_call(op: *const EeWonHostOp, call: *mut EeWonHostCall) {
+    // SAFETY: the caller's call
+    let c = unsafe { &mut *call };
+    // SAFETY: as above
+    let data = unsafe { ffi::bytes(c.data, c.len) }.to_vec();
+    let obj = [Obj::of(c.obj[0]), Obj::of(c.obj[1]), Obj::of(c.obj[2])];
+    // SAFETY: the caller's live op
+    let r = unsafe { (*op).op.call(c.code, obj, c.num, &data, c.addr) };
+    c.out_obj = r.obj.ptr();
+    c.out_num = r.num;
+    c.out_addr = r.addr;
+    if let Some(b) = r.bytes {
+        // SAFETY: the sink's contract
+        unsafe { ffi::give(c.out_sink, c.out_context, &b) };
+    }
 }
 
 /// `RunHook`.
