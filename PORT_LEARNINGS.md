@@ -10545,3 +10545,66 @@ Round 4's pattern (RUST_PLAN's row) applied to the campaign editor (form 24); ro
   deletes nothing (the only saving there is a C++ refactor of the three `Open*`). The civilization builder's helpers
   (`EECivilizationBuilder.cpp` 617, `EECBUIListBox` 835) are thin toolkit calls with C++ callers across the builder's
   units; they wait for the builder's files to move.
+
+## R6: the game screens, thirteenth round: the message box, the UI manager's factories, the framed background and the UI thread's action queues in Rust (ee_screens dialog.rs, factories.rs, frame.rs, actions.rs; branch rust-screens13, 2026-11-12)
+
+The dialogs, the UI manager and the UI thread (RUST_PLAN's row: ~4.2k); round 10's count (`build/sc10/count.sh`).
+
+- **The message box** (`dialog.rs`): `EEUIFError`'s five `Display*` and `Open`'s five `Layout*` are one Rust plan per
+  kind over `ee_screenscpp_dialog` (in `EEUIFError.cpp`: the host of a C++ class lives with it, not in
+  `EEScreens.cpp`, so a driver over the unit alone relinks). The box's statics hold `Display`'s inputs (message,
+  data, callbacks, close form) for the length of the call; callbacks never cross into Rust (a slot number says
+  which). The layouts' fractions travel as integers (`451 | 573 << 16`): the host's `451 / 1024.0f` is the same float
+  as the original's constant. `LayoutMessage`'s centring is Rust's (`UMFloor` to a 32-bit `long`, the lines an
+  unsigned 32-bit count as on Windows). The form, its controls and their construction, the buttons' drawing and
+  `Close`'s posted callback stay C++. 38,083 -> 37,891 (-192; git over the C++ +139 -331).
+- **The factories** (`factories.rs`): the twelve control-event factories `EEUIManager` registered one per form are
+  one Rust table in their registration order (the toolkit takes the first answer that is not NULL, so the chain's
+  order is the original's) behind one registered `EECreateGameEvent`; WON's server select factory stays C++ and is
+  registered after it (the debug sound panel's, registered after WON's in the original, answers no id WON's does).
+  The form-event factory is a Rust table. Events still C++ classes (the save/load Cancel, the unit reload, WON's
+  server select open) are `EE_SCREENS_CPP_*` codes the C++ factory turns into its `new`s. 37,891 -> 37,588 (-303;
+  git over the C++ +38 -341). The driver relinked prints the same for every id below 70,000.
+- **The framed background** (`frame.rs`): `EEUIBGenericBackground`'s draw (the panel, edges, corners, side
+  ornaments) is Rust's geometry over two host calls, the panel and one piece; a piece carries its texture and
+  destination rectangles, location, cell and up to three reorders of the texture coordinates (each the new corners'
+  indices into the current ones, two bits each), the scales swapped after a quarter turn. ee_screens now takes ee_ge
+  for `GERectangle`'s `And` (a `GERectangle*` crosses as `void*`: ee_ge's `GeRectangle` is its layout, bottom first).
+  Found by its unit test, the original's: a redraw rectangle that misses the background leaves the background's
+  visible part whole (`And` in place does not touch it), so every piece is still drawn, clipped to the whole
+  background. 37,588 -> 37,385 (-203; git over the C++ +42 -245). Only a tour draws it (39 generic backgrounds in
+  `dbuiback`: the main game form's seven, the settings', the splash's, the lobby's; flags 1, 3 and 0, one form 5).
+- **The action queues** (`actions.rs`): `EEUserInterface`'s action, undo and redo deques and their three critical
+  sections are a Rust record of three `Mutex<VecDeque>`s of handles; the actions stay C++ (`EEAction`, reference
+  counted) behind `ee_screenscpp_action` (reference, release, run, undo, undoable, the two locks). A pop releases the
+  queue's mutex before the action is released or run (the original's `ClearQueue` released under its recursive
+  critical section; an action's dtor that posts would deadlock a Rust mutex). 37,385 -> 37,311 (-74; git over the
+  C++ +58 -145, `EEUserInterface.h` outside the count). The tour's orders, the gates' games and EE-SIM run every
+  action through it (the oracle identical); the editor's Undo and Redo are a person's.
+- **Round total:** game UI C++ lines 38,083 -> 37,311 (-772).
+- **Golden drivers** (scratch, `build/sc13`: `dlg_driver.cpp`, `fac_driver.cpp`, `frm_driver.cpp`, `act_driver.cpp`;
+  `drv.py` as round 12's): each runs the unmodified unit, then the new unit with the host renamed by a macro
+  (`#define ee_screenscpp_dialog ee_screenscpp_dialog_real` before the `#include`) so the driver's own
+  `ee_screenscpp_dialog` logs every host call and answer before forwarding. That log is the committed golden; the
+  Rust replay checks each call against it and gives its answer (no toolkit model in Rust).
+- **Lessons:**
+  - A driver that names pointers must keep every named buffer alive: a callback's data pointer from an earlier case
+    named a freed edit box line whose address the next case's line reused in one build and not the other (22 lines
+    of a 62,000-line diff); the old and new units were the same.
+  - A virtual member called on the driver's calloc'ed object goes through the fake vtable to a stub: call
+    `p->Class::Open()` qualified (the first old run printed no layout at all).
+  - Private `const`s of a module are exported by cbindgen too: `HIDDEN`/`SHOWN` landed in `ee_rust_common.h` and took
+    `ee_ui`'s `SHOWN`. Prefix even private consts.
+  - An env var holding `/DNAME` is rewritten by MSYS into a path when bash starts a Windows program: pass `-DNAME`.
+  - ee_plat_core's timer tests fail under the machine's load in the workspace run (three different tests over three
+    runs) and pass alone; the gate's `cargo test --workspace` stops at that crate, so `build/sc13/gate.sh` runs the
+    gate's four steps with `--no-fail-fast` to see every other crate.
+  - The main checkout's oracle ref can change under a running round: the lead re-recorded it (`rust` merged main's
+    AI changes, a declared rebaseline) while this round's last commit ran, and the commit "diverged" at CT 744. Before
+    chasing a divergence, check the ref's time against the branch's base; this branch matched `ref_pre_mm2`, the ref
+    of its base, identically (trace and ticks), and the merged branch matches the new ref.
+- **Not moved:** the UI thread's message loop and handlers (`EEUserInterface::HandleMessage` and the game-state
+  transitions it calls: one world, server or graphics call per line; a Rust move adds a host op per line and deletes
+  nothing until the simulation interface of step (3)), `EEUIManager::CreateUserDefinedControl` (the HUD's controls by
+  kind) and `StartScenarioEditor`, `EEUIFileComboBox` (a toolkit control subclass). The scenario editor's map is in
+  RUST_PLAN's row.
