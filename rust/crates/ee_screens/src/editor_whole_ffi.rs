@@ -334,6 +334,23 @@ pub unsafe extern "C" fn ee_screens_see_viewport(event: *mut EeScreensSeeEvent, 
     }
 }
 
+/// The hide-UI event's views (four floats each: left, top, right, bottom), posted while the box is unchecked and
+/// checked (`EESETriggerScreen::Enter`; the original's inline `SetRectangles` on the event's two rectangles).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `unchecked` and `checked` point at four floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_see_hide_ui_views(
+    event: *mut EeScreensSeeEvent,
+    unchecked: *const f32,
+    checked: *const f32,
+) {
+    if !event.is_null() {
+        let (u, c) = unsafe { (core::slice::from_raw_parts(unchecked, 4), core::slice::from_raw_parts(checked, 4)) };
+        unsafe { (*event).0.set_hide_ui_views([u[0], u[1], u[2], u[3]], [c[0], c[1], c[2], c[3]]) };
+    }
+}
+
 /// The `EESEERust`'s destructor.
 ///
 /// # Safety

@@ -3730,6 +3730,15 @@ void ee_screens_see_viewport(EeScreensSeeEvent *event,
                              const float *rectangle,
                              uint8_t hidden);
 
+/// The hide-UI event's views (four floats each: left, top, right, bottom), posted while the box is unchecked and
+/// checked (`EESETriggerScreen::Enter`; the original's inline `SetRectangles` on the event's two rectangles).
+///
+/// # Safety
+/// `event` comes from `ee_screens_see_new` (or is NULL); `unchecked` and `checked` point at four floats.
+void ee_screens_see_hide_ui_views(EeScreensSeeEvent *event,
+                                  const float *unchecked,
+                                  const float *checked);
+
 /// The `EESEERust`'s destructor.
 ///
 /// # Safety

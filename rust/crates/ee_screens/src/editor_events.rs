@@ -49,10 +49,11 @@ fn call<H: SeeHost + ?Sized>(h: &mut H, op: u32, p: usize, ints: [i32; 2], float
 /// What an event does.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SeeKind {
-    /// the framed view (unchecked) and the full view (checked): the original's two default rectangles, all zero
+    /// the views posted unchecked and checked (the original's +0x0c and +0x1c rectangles): all zero when made,
+    /// set by the trigger tab's `Enter` (`ee_screens_see_hide_ui_views`)
     HideUi {
-        framed: [f32; 4],
-        full: [f32; 4],
+        unchecked: [f32; 4],
+        checked: [f32; 4],
     },
     ChangeViewport {
         rectangle: [f32; 4],
@@ -70,7 +71,7 @@ impl SeeKind {
     /// The event of `kind` (`object`: the quick save/load action, referenced); None for an unknown kind.
     pub fn new<H: SeeHost + ?Sized>(h: &mut H, kind: u32, object: usize) -> Option<SeeKind> {
         Some(match kind {
-            EE_SCREENS_SEE_HIDE_UI => SeeKind::HideUi { framed: [0.0; 4], full: [0.0; 4] },
+            EE_SCREENS_SEE_HIDE_UI => SeeKind::HideUi { unchecked: [0.0; 4], checked: [0.0; 4] },
             EE_SCREENS_SEE_CHANGE_VIEWPORT => SeeKind::ChangeViewport { rectangle: [0.0; 4], hidden: false },
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
@@ -92,12 +93,20 @@ impl SeeKind {
         }
     }
 
+    /// The hide-UI event's two views (`EESETriggerScreen::Enter`: the original's inline `SetRectangles`).
+    pub fn set_hide_ui_views(&mut self, to_unchecked: [f32; 4], to_checked: [f32; 4]) {
+        if let SeeKind::HideUi { unchecked, checked } = self {
+            *unchecked = to_unchecked;
+            *checked = to_checked;
+        }
+    }
+
     /// `ProcessEvent(form, entity)` (the form is the editor's: unused).
     pub fn process<H: SeeHost + ?Sized>(&self, h: &mut H, entity: usize) -> i32 {
         match self {
-            SeeKind::HideUi { framed, full } => {
-                let checked = call(h, EE_SCREENS_SEE_OP_CHECKED, entity, [0; 2], [0.0; 4]) != 0;
-                let rectangle = if checked { *full } else { *framed };
+            SeeKind::HideUi { unchecked, checked } => {
+                let is_checked = call(h, EE_SCREENS_SEE_OP_CHECKED, entity, [0; 2], [0.0; 4]) != 0;
+                let rectangle = if is_checked { *checked } else { *unchecked };
                 // the check box read again for the flag, as the original's second GetIsChecked
                 let hidden = call(h, EE_SCREENS_SEE_OP_CHECKED, entity, [0; 2], [0.0; 4]);
                 call(h, EE_SCREENS_SEE_OP_POST_VIEWPORT, 0, [hidden, 0], rectangle)
@@ -166,6 +175,14 @@ mod tests {
         h.checked = true;
         e.process(&mut h, 2);
         assert_eq!(h.log, ["post [0.0, 0.0, 0.0, 0.0] 0", "post [0.0, 0.0, 0.0, 0.0] 1"]);
+        // the trigger tab's views: unchecked the first, checked the second
+        let mut e = e;
+        e.set_hide_ui_views([0.0, 0.0, 1024.0, 606.0], [0.0, 0.0, 1024.0, 447.0]);
+        h.log.clear();
+        e.process(&mut h, 2);
+        h.checked = false;
+        e.process(&mut h, 2);
+        assert_eq!(h.log, ["post [0.0, 0.0, 1024.0, 447.0] 1", "post [0.0, 0.0, 1024.0, 606.0] 0"]);
     }
 
     #[test]

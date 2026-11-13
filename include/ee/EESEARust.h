@@ -56,6 +56,7 @@ extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
 extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* entity);
 extern "C" void ee_screens_see_viewport(EeScreensSeeEvent* event, const float* rectangle, uint8_t hidden);
 extern "C" void ee_screens_see_free(EeScreensSeeEvent* event);
+extern "C" void ee_screens_see_hide_ui_views(EeScreensSeeEvent* event, const float* unchecked, const float* checked);
 enum {
     kSEEHideUI = 1,
     kSEEChangeViewport = 2,
