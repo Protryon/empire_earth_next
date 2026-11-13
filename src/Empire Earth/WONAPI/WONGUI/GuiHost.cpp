@@ -80,8 +80,13 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
     case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
     case Op::FireEvent:
-        c->Fn2F5380((EeWonGuiEvent)a == EeWonGuiEvent::InputReturn ? ComponentEvent_InputReturn
-                                                                  : ComponentEvent_InputTextChanged, 0);
+        // (round 23's lists fired ListSelChanged through here as InputTextChanged: nothing heard a list's
+        // selection, so the LAN lobby's Join Game stayed disabled)
+        switch ((EeWonGuiEvent)a) {
+        case EeWonGuiEvent::InputReturn: c->Fn2F5380(ComponentEvent_InputReturn, 0); break;
+        case EeWonGuiEvent::InputTextChanged: c->Fn2F5380(ComponentEvent_InputTextChanged, 0); break;
+        case EeWonGuiEvent::ListSelChanged: c->Fn2F5380(ComponentEvent_ListSelChanged, 0); break;
+        }
         return 0;
     case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
     case Op::ClipboardTake: {
