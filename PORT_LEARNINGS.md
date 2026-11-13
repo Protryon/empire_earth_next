@@ -13033,6 +13033,116 @@ layouts, -179). This round's own net: -175.
   resources) are the check. A window resize relayouts everything; only a person resizes the lobby window.
 - **Left:** Window/WindowManager (platform ops; audit every `GetRoot()->` caller first), the skins' Button
   subclasses (draw ops), the remaining WONGUI controls' C++ paint.
+
+## The merge of main daf9dadb into the rust branch (the Lua AI's tower sites, walls and production queues; 2026-11-13)
+
+49 commits of main (since a2c4347e; 21 files: `ai/classic_lua/walls.lua` and `build.lua`, `boom.lua`, `lib/place.lua`,
+`lib/build_order.lua`, `ais.json`, AI_RESEARCH, the CI release workflow) merged into `rust` as `git merge origin/main`
+(branch rust-mainmerge3). The C++ classic AI stays as it is: main's `EECPResourceManager.cpp` change (gather
+`exact = 2` and `granary_farms`) acts for next-engine seats only.
+
+- **Both lines took the next state's version 4.** The one conflict was `EECPNextLua.cpp`'s state block, which is Rust
+  here (ee_ai `next_save.rs`): rust's version 4 is the site walkers (save 0.274), main's version 4 the
+  `granary_farms` setting (§8.51). Main's field went into the Rust block as version 5 (version 4 plus the field; below
+  5 it reads -1, the engine's rule). The EENS golden still checks the driver's version 4 bytes: the test drops the
+  newer fields before comparing (`golden.rs as_v4`). As at the earlier merges: read both sides' version gates, not
+  only the conflict.
+- **Main's `gather(exact)` was not saved.** `EECPNextState::mExact` ("transient, the next order sets it") reset to 0
+  on a load, and until the script's next gather order the rebalance kept one gatherer of slack. Main's `ais.json`
+  makes the random Boom play `boom_order` (exact = 1 every step), so the saveload test's next games parted 10 ticks
+  after the 1900 s loads. Saved since (version 6, its own commit): next seed 2 1000 s 114 -> 887 equal ticks, 1900 s
+  10 -> 51, seed 3 1000 s 102, 1900 s 10 -> 888. The rest is a gap in main's new Lua state, not measured further.
+- **The oracle.** Line 0 changes on every seed (the manifest: `4 AIs (boom, ...) folder hash df82b2b8`, was
+  `5 AIs (boom, boom_order(not random), ...) 1494ba43`); every other decision line and every checksum line equals
+  `ref` (seeds 2-7). With the previous tree's Data/ai (1494ba43) the merged exe is identical to `ref`, line 0
+  included: the C++ and Rust side changed nothing for the classic seats.
+- **saveload_expect.** Every row but the four next rows is as before (no row better or worse). The next rows are
+  re-read with the tree's Data/ai main's; with the previous Data/ai the merged exe (before the exact fix) gives the
+  old 479/END/828/END.
+- A fresh worktree's first `build.py` failed at the link (`build/clang/exe/link.rsp`: `link_exe` does not create
+  `exe/`); creating the folder by hand was enough.
+
+## R5b.4, twenty-second round: EEUnitGoal the one goal class with no vtable; the goals' world searches and the gathering in Rust (ee_units world.rs; branch rust-r5b4-core22, 2026-11-13)
+
+| Commit | What | C++ (src, include/ee) |
+|---|---|---|
+| 2768ba64 | `EEUGRust` merged into `EEUnitGoal` (no vtable, `EEUnitGoal.cpp` deleted); the base record's Save and Load in Rust | +280 -537, net -257 |
+| 39d29081 | the radius searches and the footprint tests in Rust (world.rs) | +45 -159, net -114 |
+| 8749c5d5 | the gathering: `BeginGathering`, the work tick, the naval search in Rust (world.rs) | +41 -119, net -78 |
+| 340c84e9 | merge of `rust` (combat 15, renderer 14, LLE 1, WON 31): no conflict | |
+
+The round's C++: net -449 (the +280 of the first commit is mostly the class declaration moved from
+`ee/EEUGRust.h` into `ee/EEUnitGoal.h`).
+
+- **One goal class.** Since round 21 every goal kind was an `EEUGRust`, the only subclass of `EEUnitGoal`. The two
+  are now one class, `EEUnitGoal` (ee/EEUnitGoal.h), with no virtual function: each of the original's 30 slots is a
+  plain member that makes one call of the kind's Rust body (or, for the trivial ones, reads a field). `EEUGRust`
+  stays as a typedef so its 95 caller files (`EEUGRust::NewLocation`, `EERustGoalCast`, the combat lane's
+  EEUGRustCombat.cpp) compile unchanged; the three headers that forward-declared `class EEUGRust` now declare
+  `class EEUnitGoal; typedef EEUnitGoal EEUGRust;`. The constructor (the id from `sGoalCounter`, the game time) and
+  `CreateGoal` moved into EEUGRust.cpp; `RemovedFromQueue` (empty in every class) is an inline no-op;
+  `link/exe/units.txt` lost EEUnitGoal.cpp's line.
+- **A non-polymorphic delete is now well defined**: with a single class, `delete` of an `EEUnitGoal*` runs the one
+  destructor (the Rust `DESTROY` body). Before the merge a derived class without a vtable would have been undefined
+  behaviour, which is why the two names became one class and not a base plus an empty subclass.
+- **The base record's Save and Load are Rust** (`rust_goal.rs` `base_save`, `base_load`): the action, the two flags,
+  the id and both times, with the original's version gates (nothing after the action up to minor 14; before minor
+  100, or after a failed read, the id is 0; a later major still reads the id only from minor 100; the second flag
+  and the times from minor 135, 157 and 164). The dispatch runs it before every kind's own record but the heal goal's
+  (which writes none), for ee_units' kinds and combat's alike, so ee_combat needed no change. The six fields cross by
+  one host operation (495: read with `b` 0, write with `b` 1).
+- **The world searches** (world.rs, over a `WorldHost` that `OpHost` implements; the `BuildHost`/`GatherHost` methods
+  the bodies call keep their names and now run the Rust): `EEHelpBuildNearby`, `BuildFarms`' search,
+  `FindUnfinishedFarm` (a kind-independent body, 482, since the AI's resource manager calls it on any goal), and the
+  three footprint tests. A unit's fields come from the round-19 unit record (`EeUnitsBuildUnit`, which gained
+  `land_building` and `animation`); the C++ answers seven queries (496-502: the units in a radius, the footprint's
+  tiles, the units on it, a tile's blocking and movable units, the tile standing, `ActionChanged`). A new build
+  goal and the gather goal's storage are the bodies' own calls from Rust (`new_goal` + the build body's constructor;
+  the gather body's `SET_STORAGE`), as the C++ helper's `NewBuildRepair` and `SetGatherStorage` were.
+  - `IsFootprintClear`'s off-map tile (`continue`) needs no test of its own: the blocking and movable queries of a
+    NULL tile are empty, which leaves the result true, as the `continue` did.
+  - `IsFootprintClear`'s gate-part test reads the movable units when the movable query ran, else the blocking ones:
+    the original reused one vector for both calls.
+- **The gathering** (world.rs, `GatheringHost`): `BeginGathering` (the animation by category and resource, the
+  high-tech tools' fire release and mining beam, the resource type, facing, the work timer, the stop),
+  `Work` (hit a living non-farm resource and re-read its life for the animation, else take one unit; a tree
+  regrows; the timer) and `SearchNavalResource`'s world part (idle, another fish, nothing, or wait facing it with
+  animation 7 or 8 by the physics draw). Nine effect operations (503-511) keep the C++ statements: `TakeHit` with
+  `UMFloatToLong` of the attack, the deplete/add/last-resource triple, the regrowth, the work timer's
+  variant-scaled float product, the tools test, the fire release, the mining beam effect, the resource type, the
+  naval class's fish search with its range. Every record field the original read after a world call is read again
+  after it (the resource's life after the hit, its tree flag at the end).
+- **Constants copied by hand were wrong again in the draft** (resources 0..4 for 2..6, the categories 1, 2, 9 for
+  5, 6, 0x16, the fish type 0): `header_consts` would have failed them; read the enums.
+- **Coverage by temporary prints (removed): the first sight of each function and branch, one file.** Oracle seeds
+  2-7 and the late and space captures (seeds 2-3) reach: `BuildFarms`' search and its build goals,
+  `FindUnfinishedFarm` (found and not), the three footprint tests (site taken true and false, the standing test),
+  `BeginGathering`, `Work` (hit, take, regrow), the naval search's wait. No game reaches: `EEHelpBuildNearby`
+  (a human's smart citizen), the gate-part exception, the mining beam (high-tech ore mining), the naval fish
+  search: unit tests only (world.rs, 6 tests). Every save and load of the matrix runs the base record (all kinds).
+- **Behaviour:** none. EE-SIM's `--dump-at` goal column prints the kind (`g0:k6:...`) instead of the RTTI name
+  (`class EEUGRust` for every goal since round 21). `tools/harness/differential/compare.py` compared a goal's bytes
+  4..0x20 as the base fields; without the vtable they start at 0 (the legacy differential harness only).
+- **Tour only:** nothing drawn changed; no goal is encoded on the wire. The goals' debug texts are unchanged (Rust
+  since round 17).
+- **Gates.** Per commit: build `--sim` 0/0, oracle seeds 2-3 identical to the main checkout's `ref`, Rust gate PASS
+  (the first commit's gate failed once on rustfmt of the new test and on the test's own version expectation; both
+  fixed in the commit); after the first commit the saveload matrix (`--settings all --seeds 2-3 --at 1000,1900
+  --expect tools/saveload_expect.txt`) PASS, no load fault; on the coverage build of the third commit oracle seeds
+  2-7 identical and the late and space captures PASS. On the result merged with rust (340c84e9): build `--sim` and the test profile 0/0;
+  oracle seeds 2-7 identical to `ref`; the Rust gate PASS (ee_units 196 tests, 7 new); captures at seeds 2-3 oracle
+  (169 digests), late (170), calamity (183), scenario (16) PASS; space failed once on seed 2 (one more executed
+  message: NMDC, NMEX, NMIM, USCK counts +1) and passed on a rerun of seed 2 alone (86 digests), as it had on the
+  coverage build before the merge (171 digests): a timing flake, not traced; one rerun before it exited 2 with a
+  short capture and no log kept. The saveload matrix PASS as the expect file.
+- **What is left in EEUGRust.cpp's helpers:** `EETendNextFarm`, `EEGatherNearBuilding`, `EEGatherNextFarm` (the farm
+  utilities and `FindResourceOfKind` with its rejected list and shuffle), `EEGatherAtResourceSpot`,
+  `EEGatherFindSpot` (its `std::sort` of the spots by float distance: equal distances are common, so a Rust sort must
+  reproduce the STL's order or the host must keep the sort), `EEGatherNextTree` (the line tiles and the forest ids),
+  `EEGatherHasRoom` and `EEGatherAccessible` (thin over C++ tile and continent queries: under -20 net each). The
+  queue container (`EEUnitVectorItem`) keeps its deque; moving its storage to the Rust mirror would put an FFI call
+  under every read of a queue (`mGoals.size()` is read many times a tick).
+
 ## R5b.5, second round: the scenario elements' numbers as Rust records, their saves, and Set AI Variable as data (ee_scenario fields.rs, stream.rs, save.rs, aivar.rs; branch rust-triggers2, 2026-11-13)
 
 | Function | Was (C++) | Now (Rust) |
