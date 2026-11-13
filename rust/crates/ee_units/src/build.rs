@@ -133,6 +133,9 @@ fn forget(goal: u64) {
 pub trait BuildHost: GoalHost {
     /// a unit's fields the goals read (zeros for 0)
     fn build_unit(&mut self, unit: u64) -> EeUnitsBuildUnit;
+    /// only its class's, player's, tile's and complex unit's (`RepairPointers`: the unit's other pointers are
+    /// still saved ids)
+    fn build_unit_basic(&mut self, unit: u64) -> EeUnitsBuildUnit;
     /// the player's tech tree node of a technology (`GetTechTree()->Get(tech)`)
     fn tech_node(&mut self, player: u64, technology: i32) -> u64;
     /// a node's data id, data kind and `GetBuildTime()` (zeros for none)
@@ -232,7 +235,7 @@ fn outermost(target: u64, host: &mut dyn BuildHost) -> u64 {
 
 /// A unit's position: its complex unit's, else its tile's centre.
 fn position(target: u64, host: &mut dyn BuildHost) -> [f32; 3] {
-    let u = host.build_unit(target);
+    let u = host.build_unit_basic(target);
     if u.complex != 0 {
         host.unit_position(u.complex)
     } else {
@@ -242,7 +245,7 @@ fn position(target: u64, host: &mut dyn BuildHost) -> [f32; 3] {
 
 /// The building's class, type, technology, node and size taken (the constructor and `RepairPointers`).
 fn take_target(b: &mut Build, target: u64, host: &mut dyn BuildHost) {
-    let u = host.build_unit(target);
+    let u = host.build_unit_basic(target);
     b.class = u.unit_class;
     b.target_type = u.unit_type;
     b.technology = u.table_technology;
@@ -895,7 +898,7 @@ pub fn repair(goal: u64, major: u32, minor: u32, host: &mut dyn BuildHost) -> i3
         b.target = Held::of(t);
         if t != 0 {
             host.reference(t, false);
-            b.player = host.build_unit(t).player;
+            b.player = host.build_unit_basic(t).player;
             take_target(&mut b, t, host);
             result = if b.technology != TECH_NONE { 0 } else { 3 };
             let p = position(t, host);
@@ -1109,6 +1112,9 @@ pub(crate) mod tests {
                 return EeUnitsBuildUnit::default();
             }
             *self.unit(u)
+        }
+        fn build_unit_basic(&mut self, u: u64) -> EeUnitsBuildUnit {
+            self.build_unit(u)
         }
         fn tech_node(&mut self, _p: u64, t: i32) -> u64 {
             if t == TECH_NONE {

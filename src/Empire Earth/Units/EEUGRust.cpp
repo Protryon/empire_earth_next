@@ -1233,23 +1233,25 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEUnitClass* theClass = theUnit->mUnitClass;
             EEPlayer* thePlayer = theUnit->mPlayer;
             EEComplexUnit* theOwn = EEUnitCast<EEComplexUnit>(theUnit);
-            EEComplexUnit* theFirst = theUnit->mComplexUnit;
-            if (theFirst != NULL)
-                while (theFirst->mPreviousPart != NULL)
-                    theFirst = theFirst->mPreviousPart;
             theFields->complex = Handle(theUnit->mComplexUnit.Get());
             theFields->unit_class = Handle(theClass);
             theFields->player = Handle(thePlayer);
-            theFields->first = Handle(theFirst);
             theFields->unit_type = theClass->mUnitType;
             theFields->tile_size = theClass->mTileSize;
             theFields->category = theClass->mCategory;
             theFields->table_technology =
                 gUnitClassTable[theClass->mUnitType] ? gUnitClassTable[theClass->mUnitType]->mTechnology : 100000;
-            theFields->hit_points = theUnit->mHitPoints;
-            theFields->max_hit_points = theUnit->mStats->mMaxHitPoints;
             theFields->tile_x = theUnit->mTileX;
             theFields->tile_y = theUnit->mTileY;
+            if (inB != 0)   // RepairPointers: the unit's other pointers are still saved ids
+                return 0;
+            EEComplexUnit* theFirst = theUnit->mComplexUnit;
+            if (theFirst != NULL)
+                while (theFirst->mPreviousPart != NULL)
+                    theFirst = theFirst->mPreviousPart;
+            theFields->first = Handle(theFirst);
+            theFields->hit_points = theUnit->mHitPoints;
+            theFields->max_hit_points = theUnit->mStats->mMaxHitPoints;
             theFields->repair_rate = theUnit->mStats->mRepairRate;
             theFields->work_rate = theUnit->mStats->mWorkRate;
             theFields->build_time_scale = theUnit->mStats->mBuildTimeScale;

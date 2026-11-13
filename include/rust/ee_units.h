@@ -824,7 +824,8 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_GENERATE = 129;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS = 130;
 
-/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit)
+/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit; `b` 1: only the class, player, tile and
+/// complex unit)
 constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_UNIT = 400;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_TECH_NODE = 401;

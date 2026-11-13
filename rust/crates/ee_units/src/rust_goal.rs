@@ -261,7 +261,8 @@ pub const EE_UNITS_GOAL_HOST_REPLACE_CLASS: i32 = 128;
 pub const EE_UNITS_GOAL_HOST_GENERATE: i32 = 129;
 pub const EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS: i32 = 130;
 // the build/repair goal's (from 400: see the body operations below)
-/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit)
+/// `a`: the unit, `sink`: an `EeUnitsBuildUnit` it fills (zeros for no unit; `b` 1: only the class, player, tile and
+/// complex unit)
 pub const EE_UNITS_GOAL_HOST_BUILD_UNIT: i32 = 400;
 pub const EE_UNITS_GOAL_HOST_TECH_NODE: i32 = 401;
 pub const EE_UNITS_GOAL_HOST_NODE_INFO: i32 = 402;
@@ -917,6 +918,14 @@ impl BuildHost for OpHost<'_> {
         if unit != 0 {
             let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
             self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 0, &mut io);
+        }
+        fields
+    }
+    fn build_unit_basic(&mut self, unit: u64) -> EeUnitsBuildUnit {
+        let mut fields = EeUnitsBuildUnit::default();
+        if unit != 0 {
+            let mut io = EeUnitsGoalIo { sink: (&mut fields as *mut EeUnitsBuildUnit).cast(), ..Default::default() };
+            self.call(EE_UNITS_GOAL_HOST_BUILD_UNIT, unit, 1, &mut io);
         }
         fields
     }
