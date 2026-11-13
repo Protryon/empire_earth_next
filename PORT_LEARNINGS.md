@@ -11967,3 +11967,60 @@ class kept a hook table while its ops stayed C++; this round took a class whose 
   so it would not let the routing op classes lose their bodies. The routing request helpers and the notification /
   request op classes (RoutingConnection.cpp, RoutingRequestOps.cpp, RoutingNotifications.cpp): RoutingLogic reads
   their members by class; a move needs the lobby's readers changed with them.
+
+## R6: WON's Internet code, round 18 (every routing op, request and notification, as one Rust object)
+
+Branch `rust-won-net18`. Measured by net C++ deletion, as rounds 7 to 17. Round 17 left WONRouting's request helpers
+and its 55 op classes (the requests, the notifications, the derived server's op): RoutingLogic and EEWonNet read their
+members class by class, so the readers moved with them.
+
+- **What moved.** `routeop.rs` (`EeWonRouteOp`): one Rust object per op of any type (`RoutingOpType`), with every
+  member the op classes had as a numeric field by number (`EE_WON_RTF_*`, each with its member's width: an assignment
+  is cut as the original's was), four texts (`EE_WON_RTT_TEXT` / `NAME` / `PASSWORD` / `COMMENT`, UTF-16 units), the
+  data type, the data buffer (none for a null `ByteBufferPtr`), the recipients, and the records its replies build
+  (clients, members, groups with their members, data objects, bad users, the joined client: shared records as the
+  original's `SmartPtr`s, so a member's client made after the member went in its map is that member's). Every step:
+  the constructors' defaults, `SendRequest` (the members it resets, the message from routemsg.rs's `request`,
+  whether the op waits in the connection's list: not a chat or data send without flag 1, never a disconnect), and
+  `HandleReply` (routemsg.rs's `reply`, its assignments applied as `WONRoutingMsg.h`'s templates applied them, a cut
+  short read, `RoutingCreateGroupOp::CheckLeaveGroup`'s leave), `ParseGroupListObj`, and the group list request op's
+  replies read again (`RouteGroupListOf`, now `ee_won_routeop_read_group_list_of` straight from the Rust host op).
+- **The C++ left.** `RoutingOp` is the one class: the `AsyncOp` the connection's list and the completions hold, its
+  type a constructor argument; `RunHook` (blocking mode refused), `SendMsg` (the length field) and `AddOp` stay, and a
+  leave op is run where the Rust read asks for one. Accessors: `Num` / `SetNum`, `Text` / `SetText`, `DataType`,
+  `GetData`, `Recipients`, and copies of the records into new C++ maps (`GetClients`, `GetMembers`, `GetGroups`,
+  `GetDataObjects`, `GetBadUsers`, `GetClientInfo`, `GetGroupInfo`) through one record sink. `RoutingDetectFirewallOp`
+  keeps its listening socket as a subclass. `RoutingGetUserStatusOp` (a UDP op on the lobby lane's manager) stays,
+  with the slim `WONRoutingMsg.h` it uses; the rest of that header is test glue now (`tests/won/won_routemsg_glue.h`
+  for won_routemsg_test and won_reqlast_test, which still check routemsg.rs's C ABI against the original
+  statements). The record factories `GetNewClientInfo` / `GetNewMemberInfo` / `GetNewGroupInfo` are gone.
+- **The readers.** RoutingLogic's 20 notification handlers, its create, join, ban, mute, bad user, register and group
+  list ops, and EEWonNet's callbacks read the accessors and copies (`LobbyServer::SyncClients` / `SyncGroups` take the
+  copied maps unchanged). The smart connection's `RoutingOpCompleteHook` is one call (`ee_won_smart_routeop`: the
+  model reads the Rust op's fields and records itself), and its `ee_won_smart_put_*` / `ee_won_smart_op` are gone.
+- **The golden over real loopback sockets.** `won_routeops_test` (new, `xbuild wontest`): a plain RoutingConnection to
+  a routing server stand-in on 127.0.0.1; every request helper and the ops RoutingLogic builds itself, the bytes the
+  server receives, the replies (statuses, lists, records, a members reply for another group, a join that waits, a
+  password retry on the same op, a create with its join status), every notification type and a derived message,
+  each finished op dumped through every member its readers use; a group list body read by a connection-less op.
+  Recorded over the unmodified classes (534 lines, six runs the same, `golden_routeops.txt`, its own commit), then
+  replayed over the Rust ops through the accessors (`EE_WON_ROUTE_OPS_RUST` picks the path): 534 lines, 0 failures.
+  won_servconn_test (202), won_smartroute_test (668), won_routemsg_test (4,256,706 checks) and won_reqlast_test
+  (90,093 checks) pass unchanged; servconn's golden names op classes, so the driver maps the types it meets to them.
+  Mutations: a chat without flag 1 added to the list fails line 523; a group list's members dropped fails line 58.
+- **Driver trap.** An op run again after it finished (RoutingLogic's join password retry) sent its request twice in
+  one run of six when rerun at once: the driver pumps 50 ms before the rerun. Not a port difference (the original
+  classes did it).
+- **Behaviour.** The original's uninitialized members (a notification's fields before its read, the register op's
+  client id from its long constructor, the members op's observer count before a reply) are 0. A record's text
+  crosses as UTF-16 (identical on Windows; on Linux and macOS a lone surrogate stays one unit, as `WideAssignUtf16LE`
+  keeps it). A data object's or op's buffer read back is a copy, not the same `ByteBuffer`.
+- **Net C++** (src+include, the generated headers left out): +808 -4355; of the deletion about 680 lines are
+  `WONRoutingMsg.h`'s templates moved to the test glue. 17 units and 3 headers deleted; WONRouting.h -866 +49,
+  RoutingConnection.cpp -662 +313, RoutingOp.cpp +241 -43, SmartRoutingConnection.cpp -119 +3.
+- **LAN reach: none.** RoutingConnection and its ops are made only by an Internet login (the lobby's RoutingLogic
+  `ConnectToServer`, EEWonNet's server select); the WON servers are gone. Every LAN lobby and game runs on the lobby
+  lane's sockets and LanLogic, and EE-SIM never makes a routing op. The driver and the Rust tests exercise it.
+- **Not moved, and why.** RoutingGetUserStatusOp (UDPManagerSendRecvOp's subclass: the lobby lane's object). The
+  RustServerOp host (ServerOp.cpp's HostCall): still answers on C++ objects. ServerConnectionConnectOp (four short
+  members over the connection).
