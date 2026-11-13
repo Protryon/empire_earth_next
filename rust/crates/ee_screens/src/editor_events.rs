@@ -10,7 +10,10 @@
 //! (`EESETSETCAMGModifyObject`: an object moved into or out of a military group by the list clicked;
 //! `EESETSETMSDCameraScrollChange`: the dialogue's camera scroll speed shown; `EESETSETSAAAttributeChange`: the AI
 //! attribute's ranges shown; `EESEEUseAreaObject`, `EESEEMoveAreaObject`, `EESEEFaceAreaObject`: the form's location
-//! combo box refilled with the areas or the objects by the radio checked).
+//! combo box refilled with the areas or the objects by the radio checked); and the editor tabs' own (`EEUIFSEEMapType`:
+//! the elevation boxes shown while an elevation file is picked; `EEUIFSEESortUnitList`: the unit tab's list rebuilt;
+//! `EESEEChangeStartEpoch`: a player row's end epochs refilled from the start epoch on, keeping the end epoch;
+//! `EESEEGameUnitLimit`: the unit limit per player and the slider's own label).
 
 // ---- the kinds (`EESEERust`'s constructor)
 
@@ -39,6 +42,17 @@ pub const EE_SCREENS_SEE_SAA_ATTRIBUTE: u32 = 10;
 pub const EE_SCREENS_SEE_USE_AREA_OBJECT: u32 = 11;
 /// `EESEEFaceAreaObject`: the label 0x96e, the combo box 0x99f, the area radio 0x98a.
 pub const EE_SCREENS_SEE_FACE_AREA_OBJECT: u32 = 12;
+/// `EEUIFSEEMapType` (object: the map tab, `EEUIFSEMap`).
+pub const EE_SCREENS_SEE_MAP_TYPE: u32 = 13;
+/// `EEUIFSEESortUnitList`.
+pub const EE_SCREENS_SEE_SORT_UNIT_LIST: u32 = 14;
+/// `EESEEChangeStartEpoch` (object: the row's end epoch combo box).
+pub const EE_SCREENS_SEE_START_EPOCH: u32 = 15;
+/// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
+pub const EE_SCREENS_SEE_UNIT_LIMIT: u32 = 16;
+
+/// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
+pub const EE_SCREENS_SEE_PER_PLAYER_LABEL_ID: i32 = 0x162;
 
 /// The military group's "to add" list: a click there adds (`EESETSETCAMGModifyObject`).
 pub const EE_SCREENS_SEE_TO_ADD_LIST_ID: u32 = 0x9bf;
@@ -91,6 +105,20 @@ pub const EE_SCREENS_SEE_OP_SAA_SHOW: u32 = 21;
 /// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
 /// (`FillAreaObjectComboBox`).
 pub const EE_SCREENS_SEE_OP_FILL_AREA_OBJECT: u32 = 22;
+/// The map tab p's elevation boxes shown (i0 != 0) or hidden (`ShowElevationControls`).
+pub const EE_SCREENS_SEE_OP_MAP_ELEVATION: u32 = 23;
+/// The editor form p's unit tab's list rebuilt (`EESEUnit::RefreshUnitList`).
+pub const EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST: u32 = 24;
+/// -> the epoch count (`EEEpochCount`).
+pub const EE_SCREENS_SEE_OP_EPOCH_COUNT: u32 = 25;
+/// -> the combo box p's line count.
+pub const EE_SCREENS_SEE_OP_LINE_COUNT: u32 = 26;
+/// The combo box p emptied and given the epochs' titles from i0 on (one `AppendStringArray`).
+pub const EE_SCREENS_SEE_OP_FILL_EPOCHS: u32 = 27;
+/// -> `gWorld.mMaxPlayers`.
+pub const EE_SCREENS_SEE_OP_MAX_PLAYERS: u32 = 28;
+/// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
+pub const EE_SCREENS_SEE_OP_LABEL_NUMBER: u32 = 29;
 
 /// The form, the controls and the actions.
 pub trait SeeHost {
@@ -161,6 +189,21 @@ pub enum SeeKind {
         ty: usize,
         controls: usize,
     },
+    MapType {
+        map: usize,
+    },
+    SortUnitList,
+    StartEpoch {
+        end_combo: usize,
+    },
+    /// the `UIESliderChange` part: `label`, `format` ("%g": no value is mapped to a string), `scale` (its modifier),
+    /// `offset` (its `long` offset as a float, as the original's sum converts it)
+    UnitLimit {
+        label: usize,
+        format: Vec<u8>,
+        scale: f32,
+        offset: f32,
+    },
     /// the form's label and combo box ids and the id of the radio that means areas
     AreaObject {
         label_id: i32,
@@ -185,6 +228,10 @@ impl SeeKind {
             EE_SCREENS_SEE_SAA_ATTRIBUTE => SeeKind::SaaAttribute { ty: 0, controls: 0 },
             EE_SCREENS_SEE_USE_AREA_OBJECT => SeeKind::AreaObject { label_id: 0x96d, combo_id: 0x99e, area_id: 0x988 },
             EE_SCREENS_SEE_FACE_AREA_OBJECT => SeeKind::AreaObject { label_id: 0x96e, combo_id: 0x99f, area_id: 0x98a },
+            EE_SCREENS_SEE_MAP_TYPE => SeeKind::MapType { map: object },
+            EE_SCREENS_SEE_SORT_UNIT_LIST => SeeKind::SortUnitList,
+            EE_SCREENS_SEE_START_EPOCH => SeeKind::StartEpoch { end_combo: object },
+            EE_SCREENS_SEE_UNIT_LIMIT => SeeKind::UnitLimit { label: 0, format: vec![0], scale: 0.0, offset: 0.0 },
             EE_SCREENS_SEE_QUICK_LOAD | EE_SCREENS_SEE_QUICK_SAVE => {
                 call(h, EE_SCREENS_SEE_OP_REFERENCE, object, [0; 2], [0.0; 4]);
                 if kind == EE_SCREENS_SEE_QUICK_LOAD {
@@ -207,7 +254,9 @@ impl SeeKind {
 
     /// The slider event's label, format (up to a NUL), scale and offset (the original's constructor).
     pub fn set_slider(&mut self, to_label: usize, to_format: &[u8], to_scale: f32, to_offset: f32) {
-        if let SeeKind::SliderChange { label, format, scale, offset } = self {
+        if let SeeKind::SliderChange { label, format, scale, offset }
+        | SeeKind::UnitLimit { label, format, scale, offset } = self
+        {
             *label = to_label;
             *format = to_format.iter().copied().take_while(|&b| b != 0).chain(core::iter::once(0)).collect();
             *scale = to_scale;
@@ -331,6 +380,49 @@ impl SeeKind {
                 call2(h, EE_SCREENS_SEE_OP_SAA_SHOW, *ty, *controls, [selection, 0], [0.0; 4]);
                 0
             }
+            SeeKind::MapType { map } => {
+                // the original's unsigned `selection > 0` (none reads as -1: shown)
+                let selection = call(h, EE_SCREENS_SEE_OP_COMBO_SELECTION, entity, [0; 2], [0.0; 4]) as u32;
+                call(h, EE_SCREENS_SEE_OP_MAP_ELEVATION, *map, [i32::from(selection > 0), 0], [0.0; 4]);
+                0
+            }
+            SeeKind::SortUnitList => {
+                call(h, EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST, form, [0; 2], [0.0; 4]);
+                0
+            }
+            SeeKind::StartEpoch { end_combo } => {
+                let start = call(h, EE_SCREENS_SEE_OP_COMBO_SELECTION, entity, [0; 2], [0.0; 4]);
+                if start == -1 {
+                    return 0;
+                }
+                let end = call(h, EE_SCREENS_SEE_OP_COMBO_SELECTION, *end_combo, [0; 2], [0.0; 4]);
+                if end == -1 {
+                    return 0;
+                }
+                // the end epoch's index in all the epochs (the list starts at the old start epoch); unsigned
+                let count = call(h, EE_SCREENS_SEE_OP_EPOCH_COUNT, 0, [0; 2], [0.0; 4]) as u32;
+                let lines = call(h, EE_SCREENS_SEE_OP_LINE_COUNT, *end_combo, [0; 2], [0.0; 4]) as u32;
+                let (start, end) = (start as u32, (end as u32).wrapping_add(count.wrapping_sub(lines)));
+                call(h, EE_SCREENS_SEE_OP_FILL_EPOCHS, *end_combo, [start as i32, 0], [0.0; 4]);
+                // the original: `start <= end ? end - start : 0`
+                let pick = end.saturating_sub(start);
+                call(h, EE_SCREENS_SEE_OP_SET_SELECTION, *end_combo, [pick as i32, 0], [0.0; 4]);
+                0
+            }
+            SeeKind::UnitLimit { label, format, scale, offset } => {
+                let range = call(h, EE_SCREENS_SEE_OP_RANGE, entity, [0; 2], [0.0; 4]);
+                // the original's unsigned division by the non-gaia players (none: the original divided by zero)
+                let players = (call(h, EE_SCREENS_SEE_OP_MAX_PLAYERS, 0, [0; 2], [0.0; 4]) as u32).wrapping_sub(1);
+                if let Some(per_player) = (range as u32).checked_div(players) {
+                    let ints = [EE_SCREENS_SEE_PER_PLAYER_LABEL_ID, per_player as i32];
+                    call(h, EE_SCREENS_SEE_OP_LABEL_NUMBER, form, ints, [0.0; 4]);
+                }
+                // then UIESliderChange's: the value printed "%g" (no value maps to a string)
+                let value = range as f32 * *scale + *offset;
+                let text = format.as_ptr() as usize;
+                call2(h, EE_SCREENS_SEE_OP_SLIDER_TEXT, *label, text, [0; 2], [value, 0.0, 0.0, 0.0]);
+                0
+            }
             SeeKind::AreaObject { label_id, combo_id, area_id } => {
                 let areas = call(h, EE_SCREENS_SEE_OP_ENTITY_ID, entity, [0; 2], [0.0; 4]) as u32 == *area_id;
                 call3(
@@ -364,6 +456,9 @@ mod tests {
         range: i32,
         id: i32,
         selection: i32,
+        end: i32,
+        lines: i32,
+        players: i32,
     }
 
     impl SeeHost for Rec {
@@ -371,7 +466,12 @@ mod tests {
             let [p, q, r] = ptrs;
             match op {
                 EE_SCREENS_SEE_OP_ENTITY_ID => return self.id,
-                EE_SCREENS_SEE_OP_LIST_SELECTION | EE_SCREENS_SEE_OP_COMBO_SELECTION => return self.selection,
+                EE_SCREENS_SEE_OP_LIST_SELECTION | EE_SCREENS_SEE_OP_COMBO_SELECTION => {
+                    return if p == 0xe0 { self.end } else { self.selection };
+                }
+                EE_SCREENS_SEE_OP_EPOCH_COUNT => return 15,
+                EE_SCREENS_SEE_OP_LINE_COUNT => return self.lines,
+                EE_SCREENS_SEE_OP_MAX_PLAYERS => return self.players,
                 EE_SCREENS_SEE_OP_CAMG_ADD | EE_SCREENS_SEE_OP_CAMG_REMOVE | EE_SCREENS_SEE_OP_FILL_AREA_OBJECT => {
                     self.log.push(format!("{op} p{p} q{q} r{r} {i:?}"));
                     return 0;
@@ -401,7 +501,17 @@ mod tests {
     }
 
     fn rec() -> Rec {
-        Rec { log: Vec::new(), checked: false, editor: true, range: 0, id: 0, selection: 0 }
+        Rec {
+            log: Vec::new(),
+            checked: false,
+            editor: true,
+            range: 0,
+            id: 0,
+            selection: 0,
+            end: 0,
+            lines: 15,
+            players: 3,
+        }
     }
 
     #[test]
@@ -553,5 +663,62 @@ mod tests {
             h.log,
             ["22 p80 q0 r0 [2413, 2462, 1, 0]", "22 p80 q0 r0 [2414, 2463, 0, 0]", "22 p80 q0 r0 [2414, 2463, 1, 0]"]
         );
+    }
+
+    #[test]
+    fn map_type_shows_the_elevation_boxes_for_a_file() {
+        let mut h = rec();
+        let e = SeeKind::new(&mut h, EE_SCREENS_SEE_MAP_TYPE, 0x40).unwrap();
+        for selection in [0, 2, -1] {
+            h.selection = selection;
+            e.process(&mut h, 1);
+        }
+        let shows: Vec<&str> = h.log.iter().map(|x| &x[..9]).collect();
+        assert_eq!(shows, ["23 p64 [0", "23 p64 [1", "23 p64 [1"]);
+        let s = SeeKind::new(&mut h, EE_SCREENS_SEE_SORT_UNIT_LIST, 0).unwrap();
+        h.log.clear();
+        s.process_in(&mut h, 0x50, 1);
+        assert_eq!(h.log, ["24 p80 [0, 0] [0.0, 0.0, 0.0, 0.0]"]);
+    }
+
+    #[test]
+    fn start_epoch_refills_the_end_epochs_keeping_the_end() {
+        let mut h = rec();
+        let e = SeeKind::new(&mut h, EE_SCREENS_SEE_START_EPOCH, 0xe0).unwrap();
+        // all 15 listed, end 14; start 5: 10 lines, end at 9
+        (h.selection, h.end, h.lines) = (5, 14, 15);
+        e.process(&mut h, 1);
+        // 10 listed from 5, end line 3 (epoch 8); start 9: 6 lines, epoch 8 before it: the first
+        (h.selection, h.end, h.lines) = (9, 3, 10);
+        e.process(&mut h, 1);
+        // no start or no end: nothing
+        h.selection = -1;
+        e.process(&mut h, 1);
+        (h.selection, h.end) = (2, -1);
+        e.process(&mut h, 1);
+        assert_eq!(
+            h.log,
+            [
+                "27 p224 [5, 0] [0.0, 0.0, 0.0, 0.0]",
+                "14 p224 [9, 0] [0.0, 0.0, 0.0, 0.0]",
+                "27 p224 [9, 0] [0.0, 0.0, 0.0, 0.0]",
+                "14 p224 [0, 0] [0.0, 0.0, 0.0, 0.0]"
+            ]
+        );
+    }
+
+    #[test]
+    fn unit_limit_shows_per_player_then_the_value() {
+        let mut h = rec();
+        let mut e = SeeKind::new(&mut h, EE_SCREENS_SEE_UNIT_LIMIT, 0).unwrap();
+        e.set_slider(0x30, b"%g", 1.0, 0.0);
+        h.range = 301;
+        e.process_in(&mut h, 0x50, 2);
+        assert_eq!(h.log, ["29 p80 [354, 150] [0.0, 0.0, 0.0, 0.0]", "text p48 \"%g\" 301"]);
+        // one player: no per-player count (the original divided by zero)
+        h.players = 1;
+        h.log.clear();
+        e.process_in(&mut h, 0x50, 2);
+        assert_eq!(h.log, ["text p48 \"%g\" 301"]);
     }
 }

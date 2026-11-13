@@ -53,7 +53,8 @@ enum {
 // and the effect editors' own events (the original's EESEEHideUI, EESEEChangeViewport, EESEEQuickLoad,
 // EESEEQuickSave, EESEESliderChange, EESEECheckDisplay, EESEEUseObjectArea, EESETSETCAMGModifyObject,
 // EESETSETMSDCameraScrollChange, EESETSETSAAAttributeChange, EESEEUseAreaObject, EESEEMoveAreaObject,
-// EESEEFaceAreaObject). Requires lle/UIEvent.h for EESEERust.
+// EESEEFaceAreaObject), and the editor tabs' (EEUIFSEEMapType, EEUIFSEESortUnitList, EESEEChangeStartEpoch,
+// EESEEGameUnitLimit). Requires lle/UIEvent.h for EESEERust.
 struct EeScreensSeeEvent;
 extern "C" EeScreensSeeEvent* ee_screens_see_new(uint32_t kind, void* object);
 extern "C" int32_t ee_screens_see_process(const EeScreensSeeEvent* event, void* form, void* entity);
@@ -77,6 +78,10 @@ enum {
     kSEESAAAttribute = 10,      // EESEENewObjects(kind, the set-AI-attribute type, the effect's controls)
     kSEEUseAreaObject = 11,     // EESEEUseAreaObject and EESEEMoveAreaObject (one body)
     kSEEFaceAreaObject = 12,
+    kSEEMapType = 13,           // object: the map tab (EEUIFSEMap)
+    kSEESortUnitList = 14,
+    kSEEStartEpoch = 15,        // object: the row's end epoch combo box
+    kSEEUnitLimit = 16,         // EESEENewUnitLimit
 };
 
 class EESEARust : public EEAction {
@@ -130,6 +135,15 @@ inline EESEERust* EESEENewUseObjectArea(UITextLabel* inLabel, EESETSEScenarioCom
 {
     EESEERust* theEvent = new EESEERust(kSEEUseObjectArea);
     ee_screens_see_object_area(theEvent->mEvent, inLabel, inComboBox, inAreaControl);
+    return theEvent;
+}
+
+// EESEEGameUnitLimit(label, modifier, offset): the unit limit per player into the game page's label 0x162, then
+// UIESliderChange's "%g" of the slider's value * modifier + offset into the label (no value maps to a string)
+inline EESEERust* EESEENewUnitLimit(UITextLabel* inLabel, float inModifier, long inOffset)
+{
+    EESEERust* theEvent = new EESEERust(kSEEUnitLimit);
+    ee_screens_see_slider(theEvent->mEvent, inLabel, "%g", inModifier, (float)inOffset);
     return theEvent;
 }
 

@@ -114,7 +114,9 @@
 #include "ee/EEMouse.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "lle/UISlider.h"
-#include "ee/EESEEGameUnitLimit.h"
+#include "ee/EEUIFSEMap.h"
+#include "ee/EESEUnit.h"
+#include "ee/EETechTreeTechID.h"
 #include "lle/UIEditBox.h"
 #include <string.h>
 
@@ -139,14 +141,7 @@
 
 // FUNCTION: EXE 0x5af47b
 // Shows the unit limit per player (slider value / non-gaia players) and updates the slider's own label
-long EESEEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UITextLabel* theLabel = static_cast<UITextLabel*>(inForm->GetControlById(kSERBUnitTypesPerPlayerCountLabel));
-    UISlider* theSlider = static_cast<UISlider*>(inEntity);
-    unsigned long thePlayerCount = gWorld.mMaxPlayers - 1;
-    theLabel->SetText((unsigned long)theSlider->GetCurrentRangeValue() / thePlayerCount);
-    return UIESliderChange::ProcessEvent(inForm, inEntity);
-}
+// (EESEEGameUnitLimit; ee_screens editor_events.rs)
 
 // FUNCTION: EXE 0x5af4c1
 // (EESEEHideUI::ProcessEvent: ee_screens editor_events.rs)
@@ -170,7 +165,10 @@ static_assert(kSEEHideUI == EE_SCREENS_SEE_HIDE_UI && kSEEChangeViewport == EE_S
                   kSEEUseObjectArea == EE_SCREENS_SEE_USE_OBJECT_AREA &&
                   kSEECAMGModifyObject == EE_SCREENS_SEE_CAMG_MODIFY_OBJECT &&
                   kSEEMSDCameraScroll == EE_SCREENS_SEE_MSD_CAMERA_SCROLL && kSEESAAAttribute == EE_SCREENS_SEE_SAA_ATTRIBUTE &&
-                  kSEEUseAreaObject == EE_SCREENS_SEE_USE_AREA_OBJECT && kSEEFaceAreaObject == EE_SCREENS_SEE_FACE_AREA_OBJECT,
+                  kSEEUseAreaObject == EE_SCREENS_SEE_USE_AREA_OBJECT && kSEEFaceAreaObject == EE_SCREENS_SEE_FACE_AREA_OBJECT &&
+                  kSEEMapType == EE_SCREENS_SEE_MAP_TYPE && kSEESortUnitList == EE_SCREENS_SEE_SORT_UNIT_LIST &&
+                  kSEEStartEpoch == EE_SCREENS_SEE_START_EPOCH && kSEEUnitLimit == EE_SCREENS_SEE_UNIT_LIMIT &&
+                  EE_SCREENS_SEE_PER_PLAYER_LABEL_ID == kSERBUnitTypesPerPlayerCountLabel,
               "ee/EESEARust.h's event kinds");
 
 // p: three pointers, i: four integers, f: four floats (EE_SCREENS_SEE_OP_*)
@@ -265,6 +263,33 @@ extern "C" int32_t ee_screenscpp_see(uint32_t inOp, void* const* inPointers, int
                                static_cast<EESETSEScenarioComboBox*>(theForm->GetControlById(i[1])), i[2] != 0);
         break;
     }
+    case EE_SCREENS_SEE_OP_MAP_ELEVATION:
+        static_cast<EEUIFSEMap*>(p)->ShowElevationControls(i[0] != 0);
+        break;
+    case EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST:
+        ((EESEUnit*)(static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(p)))->mTabGroups[kEditorTabUnits])
+            ->RefreshUnitList();
+        break;
+    case EE_SCREENS_SEE_OP_EPOCH_COUNT:
+        return (int32_t)EEEpochCount();
+    case EE_SCREENS_SEE_OP_LINE_COUNT:
+        return (int32_t)static_cast<UIComboBox*>(p)->GetListBox()->GetLineCount();
+    case EE_SCREENS_SEE_OP_FILL_EPOCHS: {
+        UWideString theText;
+        std::vector<UWideString> theNames;
+        for (unsigned long k = (unsigned long)i[0]; k < (unsigned long)EEEpochCount(); k++) {
+            gResource->GetString(EEEpochTitleID(k), theText);
+            theNames.push_back(theText);
+        }
+        static_cast<UIComboBox*>(p)->DeleteAllEntries();
+        static_cast<UIComboBox*>(p)->AppendStringArray(theNames);
+        break;
+    }
+    case EE_SCREENS_SEE_OP_MAX_PLAYERS:
+        return (int32_t)gWorld.mMaxPlayers;
+    case EE_SCREENS_SEE_OP_LABEL_NUMBER:
+        static_cast<UITextLabel*>(static_cast<UIForm*>(p)->GetControlById(i[0]))->SetText((unsigned long)(uint32_t)i[1]);
+        break;
     }
     return 0;
 }

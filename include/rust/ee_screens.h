@@ -937,6 +937,21 @@ constexpr static const uint32_t EE_SCREENS_SEE_USE_AREA_OBJECT = 11;
 /// `EESEEFaceAreaObject`: the label 0x96e, the combo box 0x99f, the area radio 0x98a.
 constexpr static const uint32_t EE_SCREENS_SEE_FACE_AREA_OBJECT = 12;
 
+/// `EEUIFSEEMapType` (object: the map tab, `EEUIFSEMap`).
+constexpr static const uint32_t EE_SCREENS_SEE_MAP_TYPE = 13;
+
+/// `EEUIFSEESortUnitList`.
+constexpr static const uint32_t EE_SCREENS_SEE_SORT_UNIT_LIST = 14;
+
+/// `EESEEChangeStartEpoch` (object: the row's end epoch combo box).
+constexpr static const uint32_t EE_SCREENS_SEE_START_EPOCH = 15;
+
+/// `EESEEGameUnitLimit` (its label, modifier and offset: `ee_screens_see_slider` with the format "%g").
+constexpr static const uint32_t EE_SCREENS_SEE_UNIT_LIMIT = 16;
+
+/// The game page's per-player count label (`kSERBUnitTypesPerPlayerCountLabel`).
+constexpr static const int32_t EE_SCREENS_SEE_PER_PLAYER_LABEL_ID = 354;
+
 /// The military group's "to add" list: a click there adds (`EESETSETCAMGModifyObject`).
 constexpr static const uint32_t EE_SCREENS_SEE_TO_ADD_LIST_ID = 2495;
 
@@ -1007,6 +1022,27 @@ constexpr static const uint32_t EE_SCREENS_SEE_OP_SAA_SHOW = 21;
 /// The form p's label i0 and scenario combo box i1 refilled with the areas (i2 != 0) or the objects
 /// (`FillAreaObjectComboBox`).
 constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_AREA_OBJECT = 22;
+
+/// The map tab p's elevation boxes shown (i0 != 0) or hidden (`ShowElevationControls`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MAP_ELEVATION = 23;
+
+/// The editor form p's unit tab's list rebuilt (`EESEUnit::RefreshUnitList`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_REFRESH_UNIT_LIST = 24;
+
+/// -> the epoch count (`EEEpochCount`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_EPOCH_COUNT = 25;
+
+/// -> the combo box p's line count.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LINE_COUNT = 26;
+
+/// The combo box p emptied and given the epochs' titles from i0 on (one `AppendStringArray`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_FILL_EPOCHS = 27;
+
+/// -> `gWorld.mMaxPlayers`.
+constexpr static const uint32_t EE_SCREENS_SEE_OP_MAX_PLAYERS = 28;
+
+/// The form p's label i0 set to the number i1 (`SetText(unsigned long)`).
+constexpr static const uint32_t EE_SCREENS_SEE_OP_LABEL_NUMBER = 29;
 
 /// The ghosts' lock taken (i0 != 0) or let go.
 constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
