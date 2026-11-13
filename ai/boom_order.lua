@@ -6,7 +6,7 @@
 -- entry is unchanged.
 return require("boom").configure{
     econ = {order = true},
-    order = {shore_scout = true},
+    order = {shore_scout = true, boat_wood = true, lua_farms = true},
     plan = {tower_up_ships = true, boat_guard = 2, iron_lean = 50},
     defence = {boats = true},
 }
