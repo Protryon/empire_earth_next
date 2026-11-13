@@ -47,7 +47,6 @@
 #include "ee/EECCVolcano.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEGhostUnit.h"
@@ -521,13 +520,13 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
     if (!theCargo->mGoalQueues[1].mGoals.empty()) {
         theIterator = theCargo->GetQueueGoals(1).begin();
         for (; theIterator != theCargo->GetQueueGoals(1).end(); ++theIterator) {
-            EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(*theIterator);
+            EEUGRust* theAttack = EEAttackUnitCast(*theIterator);
             EEUnitGoal* theCopy;
             if (theAttack != NULL) {
-                if (theAttack->Suits(theCargo) && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0)
+                if (theAttack->Suits(theCargo) && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0)
                     theCopy = theAttack->Clone();
                 else {
-                    GE2DPoint theTarget((float)theAttack->mTarget->GetTileX(), (float)theAttack->mTarget->GetTileY());
+                    GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
                     theCopy = new EEUGLocation(theTarget, false, true, false, 0.0f, false, false);
                 }
             } else if ((*theIterator)->Suits(theCargo))
@@ -583,12 +582,12 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                             theGoal = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
                     }
                 } else {
-                    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(*theIterator);
+                    EEUGRust* theAttack = EEAttackUnitCast(*theIterator);
                     if (theAttack != NULL) {
-                        if (theAttack->Suits(theCargo) && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0)
+                        if (theAttack->Suits(theCargo) && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0)
                             theGoal = theAttack->Clone();
                         else {
-                            GE2DPoint theTarget((float)theAttack->mTarget->GetTileX(), (float)theAttack->mTarget->GetTileY());
+                            GE2DPoint theTarget((float)theAttack->GetAttackTarget()->GetTileX(), (float)theAttack->GetAttackTarget()->GetTileY());
                             theGoal = new EEUGLocation(theTarget, false, true, false, 0.0f, false, false);
                         }
                     } else if ((*theIterator)->Suits(theCargo))
@@ -660,8 +659,8 @@ long EEUCBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         theFlag = this->EruptVolcano(inUnit);
         break;
     case kTriggerSecondaryTargetFound: {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        theFlag = theGoal != NULL && theGoal->mTarget->mHitPoints > 0;
+        EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetGoal());
+        theFlag = theGoal != NULL && theGoal->GetAttackTarget()->mHitPoints > 0;
         break;
     }
     default:

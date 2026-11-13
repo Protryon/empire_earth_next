@@ -88,7 +88,6 @@ EEClient::EEClient()
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGBuildRepair.h"
@@ -803,7 +802,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
             continue;
         }
         if (inCommand == 0xb9) {
-            if (EEGoalCast<EEUGAttackUnit>(theGoal) != NULL)
+            if (EEAttackUnitCast(theGoal) != NULL)
                 break;
             if (EEAttackGroundCast(theGoal) != NULL) {
                 theGoal->GetGoalLocation(theGround);

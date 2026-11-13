@@ -96,7 +96,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
 #include "ee/EEUGExplore.h"

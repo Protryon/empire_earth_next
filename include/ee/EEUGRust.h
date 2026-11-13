@@ -30,6 +30,24 @@ public:
     // target point
     static EEUGRust* NewAttackGround(const GE3DPoint& inTarget, bool inArg);
     GE3DPoint GetGroundTarget();
+    // an attack on a unit (kGoalAttackUnit; EEUGAttackUnit(inAttacker, inTarget, inArg3, inIsConvert): a multi-part
+    // target's attack part, the target referenced, the attack counts; the load's EEUGAttackUnit(inArg) empty), its
+    // target, attacker, last known target tile, convert flag, destination and sidestep count
+    static EEUGRust* NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert);
+    static EEUGRust* NewAttackUnitEmpty(bool inArg);
+    EEUnit* GetAttackTarget() const;
+    EEComplexUnit* GetAttacker() const;
+    void SetAttacker(EEComplexUnit* inAttacker);
+    void SetAttackTarget(EEUnit* inTarget);           // the old SetTarget (the reference moved, the tile)
+    void RetargetGatePart(EEComplexUnit* inUnit);     // a gate target becomes the part EEGetAttackPart gives
+    void UpdateTargetTile();
+    long GetAttackTileX() const;
+    long GetAttackTileY() const;
+    bool IsConvertAttack() const;
+    GE3DPoint GetAttackLocation() const;
+    void SetAttackLocation(const GE3DPoint& inLocation);
+    unsigned long GetSidestepCount() const;
+    void SetSidestepCount(unsigned long inCount);
 
     virtual ~EEUGRust();
     virtual EEUnitGoal* Clone();
@@ -87,6 +105,12 @@ bool EEUGRustIsCombat(unsigned char inKind);
 inline EEUGRust* EEPatrolGoalCast(EEUnitGoal* inGoal)
 {
     return inGoal != NULL && inGoal->mKind == kGoalPatrol ? static_cast<EEUGRust*>(inGoal) : NULL;
+}
+
+// the attack-unit goal of inGoal (the old EEGoalCast<EEUGAttackUnit>), NULL when it is another goal or none
+inline EEUGRust* EEAttackUnitCast(EEUnitGoal* inGoal)
+{
+    return inGoal != NULL && inGoal->mKind == kGoalAttackUnit ? static_cast<EEUGRust*>(inGoal) : NULL;
 }
 
 // the attack-ground goal of inGoal (the old EEGoalCast<EEUGAttackGround>), NULL when it is another goal or none

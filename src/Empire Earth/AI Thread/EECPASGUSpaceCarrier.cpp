@@ -16,7 +16,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EECPILocation.h"
@@ -61,14 +61,14 @@ bool EECPASGUSpaceCarrier::Retarget()
         return false;
     bool theNewTarget = this->mTarget != theTarget->GetUnit();
     if (!theNewTarget) {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->GetLoadGoal());
+        EEUGRust* theGoal = EEAttackUnitCast(this->GetUnit()->GetLoadGoal());
         if (theGoal == NULL && this->GetUnit()->mGoalQueues[1].mGoals.size() > 0)
-            theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->mGoalQueues[1].mGoals.back());
-        if (theGoal != NULL && theGoal->GetTarget() == theTarget->GetUnit())
+            theGoal = EEAttackUnitCast(this->GetUnit()->mGoalQueues[1].mGoals.back());
+        if (theGoal != NULL && theGoal->GetAttackTarget() == theTarget->GetUnit())
             return false;
     }
     this->SetTarget(theTarget->GetUnit());
-    EEUGAttackUnit* theAttack = new EEUGAttackUnit(this->GetUnit(), theTarget->GetUnit(), true, false);
+    EEUGRust* theAttack = EEUGRust::NewAttackUnit(this->GetUnit(), theTarget->GetUnit(), true, false);
     this->GetUnit()->ClearGoalQueue(1);
     this->GetUnit()->SetGoal(theAttack->Clone(), 0, 1);
     unsigned long theCount = this->GetUnit()->GetNumCargoUnits();

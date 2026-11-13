@@ -60,12 +60,12 @@ void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
-class EEUGAttackUnit;
+class EEUGRust;
 class GE3DPoint;
 EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
-bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
-bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal);
+bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal);
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
 bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget);
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);

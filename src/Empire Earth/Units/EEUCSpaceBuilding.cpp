@@ -28,7 +28,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUCSpaceBuilding.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEUGLocation.h"
 
@@ -165,7 +165,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
         if (theCargo->mPlayer->IsHuman()) {
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
-                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
                     EEGoalCast<EEUGExplore>(theGoal) == 0)
                     theGoal = NULL;
@@ -174,7 +174,7 @@ bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             }
             if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
-                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
                     EEGoalCast<EEUGExplore>(theGoal) == 0)
                     theGoal = NULL;

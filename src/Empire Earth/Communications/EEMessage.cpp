@@ -84,7 +84,6 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
 #include "ee/EEUGExplore.h"
@@ -6614,7 +6613,7 @@ void EEMSetAirportCommand::Execute()
             && EEIsSeenBy(theTarget, thePlayer, true)) {
             unsigned long theClass = theTarget->mUnitClass->mFamily;
             if ((theTarget->mUnitClass->CanBeAttacked() && EEDamageFactor(theClass, theDamageIndex) > 0.0f) || this->mCommand == 0xf) {
-                theGoal = new EEUGAttackUnit(theFirstUnit != NULL ? theFirstUnit : theTarget->mComplexUnit, theTarget,
+                theGoal = EEUGRust::NewAttackUnit(theFirstUnit != NULL ? theFirstUnit : theTarget->mComplexUnit, theTarget,
                                              true, false);
                 theAttack = true;
             }
@@ -6630,8 +6629,8 @@ issue:
             if (theUnit->mUnitClass->mUnitType != kUnitTypeAirport || theGoal == NULL)
                 continue;
             EEUnitGoal* theCopy = NULL;
-            if (EEGoalCast<EEUGAttackUnit>(theGoal) != NULL)
-                theCopy = EEGoalCast<EEUGAttackUnit>(theGoal->Clone());
+            if (EEAttackUnitCast(theGoal) != NULL)
+                theCopy = EEAttackUnitCast(theGoal->Clone());
             switch (this->mCommand) {
             case 10:
             case 12:
@@ -6860,7 +6859,7 @@ void EEMSetRallyGoal::Execute()
                 if (theVisible && EEUUGetIsUnitClassTargetable(NULL, theTarget->mUnitClass)
                     && ((theBuilding->mUnitClass->mCategory != kUnitCategoryAirplane && theBuilding->mUnitClass->mCategory != kUnitCategoryPlanetSpaceship)
                         || theBuilding->CanAttackClass(theTarget->mUnitClass))) {
-                    theGoal = new EEUGAttackUnit(theBuilding, theTarget, true, false);
+                    theGoal = EEUGRust::NewAttackUnit(theBuilding, theTarget, true, false);
                     theGoals.push_back(theGoal);
                     theCommand = 0xb9;
                     theCommandTarget = theTarget;

@@ -292,7 +292,7 @@ void OriginalAttackUnit(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID,
                     theUnit = kNone;
                 if (theUnit != kNone) {
                     ee_units_host_group_clear_goal(theActiveGroup);
-                    EeGoalSpec theSpec;   // new EEUGAttackUnit(theGroup->GetFirstUnit(), theTarget, 1, this->mIsConvert)
+                    EeGoalSpec theSpec;   // EEUGRust::NewAttackUnit(theGroup->GetFirstUnit(), theTarget, 1, this->mIsConvert)
                     memset(&theSpec, 0, sizeof(theSpec));
                     theSpec.ctor = EE_GOAL_CTOR_ATTACK_UNIT;
                     theSpec.unit_a = Count(theGroup) > 0 ? UnitAt(theGroup, 0) : kNone;

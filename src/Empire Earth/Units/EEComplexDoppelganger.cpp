@@ -47,7 +47,7 @@
 #include "ee/EEHerd.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEPathManager.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGBuildRepair.h"
 
@@ -888,9 +888,9 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
                 EEUnitGoal* theGoal = this->mGoalQueues[item].mGoals[goal];
                 theResult = theGoal->RepairPointers(inMajorVersion, inMinorVersion);
                 if (theResult == 0 && theGoal->mKind == kGoalAttackUnit && inMajorVersion == 0 && inMinorVersion < 0xe0) {
-                    EEUGAttackUnit* theAttack = static_cast<EEUGAttackUnit*>(theGoal);
-                    if (theAttack->mAttacker != this)
-                        theAttack->mAttacker = this;
+                    EEUGRust* theAttack = static_cast<EEUGRust*>(theGoal);
+                    if (theAttack->GetAttacker() != this)
+                        theAttack->SetAttacker(this);
                 }
                 if (!theFailed)
                     theFailed = theResult != 0;
@@ -922,9 +922,9 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
             theResult = theGoal->RepairPointers(inMajorVersion, inMinorVersion);
             if (theResult == 0) {
                 if (theGoal->mKind == kGoalAttackUnit && inMajorVersion == 0 && inMinorVersion < 0xe0) {
-                    EEUGAttackUnit* theAttack = static_cast<EEUGAttackUnit*>(theGoal);
-                    if (theAttack->mAttacker != this)
-                        theAttack->mAttacker = this;
+                    EEUGRust* theAttack = static_cast<EEUGRust*>(theGoal);
+                    if (theAttack->GetAttacker() != this)
+                        theAttack->SetAttacker(this);
                 }
             } else if (theGoal->mKind == kGoalPatrol)
                 this->GetPlayer()->AddUnitToRepatrol(this);

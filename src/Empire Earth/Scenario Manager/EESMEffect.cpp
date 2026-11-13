@@ -3313,7 +3313,6 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEUCTransport.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGLoadGarrison.h"
 #include "ee/EEUGLoadTransport.h"
 #include "ee/EEUnitVectorItem.h"
@@ -3462,7 +3461,7 @@ void EESMEffect::TaskUnitsToObject()
                     goto move;
                 theGroup->SpreadAroundUnit(theTarget, theTarget->GetTileX(), theTarget->GetTileY());
                 theGroup->ClearGoal();
-                theGroup->SetGoal(new EEUGAttackUnit(theGroup->GetFirstUnit(), theTarget, true, false), false);
+                theGroup->SetGoal(EEUGRust::NewAttackUnit(theGroup->GetFirstUnit(), theTarget, true, false), false);
                 theGroup->mAction = kActionAttackEnemyUnit;
                 theGroup->Plan();
                 continue;

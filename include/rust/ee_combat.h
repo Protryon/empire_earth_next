@@ -131,6 +131,125 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 /// model's default point (in `top`) under the unscaled location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
 
+/// `inUnit->mTileNode != NULL`.
+constexpr static const int32_t EE_COMBAT_G_ON_TILE = 20;
+
+/// `inUnit->mComplexUnit` (a handle).
+constexpr static const int32_t EE_COMBAT_G_COMPLEX = 21;
+
+/// the attacker's flags: `EE_COMBAT_G_HUMAN` (`mPlayer->IsHuman()`), `EE_COMBAT_G_PROJECTILE` (its class's
+/// `mIsProjectile`), `EE_COMBAT_G_PRIEST` (its class's `IsPriest()`).
+constexpr static const int32_t EE_COMBAT_G_ATTACKER_FLAGS = 22;
+
+constexpr static const int64_t EE_COMBAT_G_HUMAN = 1;
+
+constexpr static const int64_t EE_COMBAT_G_PROJECTILE = 2;
+
+constexpr static const int64_t EE_COMBAT_G_PRIEST = 4;
+
+/// the complex unit's `mNumAttackers`; with `args[0]` non-zero, adds it first.
+constexpr static const int32_t EE_COMBAT_G_NUM_ATTACKERS = 23;
+
+/// the complex unit's parts: 1 `mNextPart != NULL`, 2 `mPreviousPart != NULL`.
+constexpr static const int32_t EE_COMBAT_G_PARTS = 24;
+
+/// `EEGetAttackPart(unit, args[0])` (a handle).
+constexpr static const int32_t EE_COMBAT_G_ATTACK_PART = 25;
+
+/// `unit->Reference()`, `unit->Dereference()`.
+constexpr static const int32_t EE_COMBAT_G_REFERENCE = 26;
+
+constexpr static const int32_t EE_COMBAT_G_DEREFERENCE = 27;
+
+/// `mTileX`, `mTileY` into `args[0]`, `args[1]`; `GetTileX()`, `GetTileY()` (the location's tile) into `args[2]`, `args[3]`.
+constexpr static const int32_t EE_COMBAT_G_TILE = 28;
+
+/// the unit's class's `mFamily`.
+constexpr static const int32_t EE_COMBAT_G_FAMILY = 29;
+
+/// the attacker's player's attacks: `args[0]` 1 begins one (the first sets the combat state 2), -1 ends one (the last
+/// sets it 1), 2 a loaded one (`args[1]`: the save has the live state; see `repair`).
+constexpr static const int32_t EE_COMBAT_G_PLAYER_ATTACK = 30;
+
+/// SetTarget's checks (`ESVERIFY`: the target class targetable by the attacker, its weapon in the table).
+constexpr static const int32_t EE_COMBAT_G_VERIFY_TARGET = 31;
+
+/// `::gWorld.GetUnit(args[0])` (a handle); with `args[1]` non-zero, `EEUnitCast<EEComplexUnit>` of it.
+constexpr static const int32_t EE_COMBAT_G_FIND_UNIT = 32;
+
+/// `EEFindLoadedGhostUnit(args[0])`.
+constexpr static const int32_t EE_COMBAT_G_FIND_GHOST = 33;
+
+/// `mUnitID` (`GetUnitID()`).
+constexpr static const int32_t EE_COMBAT_G_ID = 34;
+
+/// `mHitPoints`.
+constexpr static const int32_t EE_COMBAT_G_HIT_POINTS = 35;
+
+/// the class's `mCategory`.
+constexpr static const int32_t EE_COMBAT_G_CATEGORY = 36;
+
+/// the complex unit's `mVelocity` (float bits).
+constexpr static const int32_t EE_COMBAT_G_VELOCITY = 37;
+
+/// `EEGetLeadPosition(unit, args[0], p)` (args[1] 0) or `EEGetFiringPosition(unit, args[0], p)` (args[1] 1) on the
+/// caller's point `p` (its bits in `args[2..5]`: both may leave parts of it as they were): the point's bits into
+/// `args[0..3]`.
+constexpr static const int32_t EE_COMBAT_G_POSITION = 38;
+
+/// Suits' reads: `mPlayer` of the unit (a handle), the class's `mAmmoType`, the class's `CanBeAttacked()`.
+constexpr static const int32_t EE_COMBAT_G_PLAYER = 39;
+
+constexpr static const int32_t EE_COMBAT_G_AMMO_TYPE = 40;
+
+constexpr static const int32_t EE_COMBAT_G_CAN_BE_ATTACKED = 41;
+
+/// a player's `mPlayerID`; with `args[0]` set to 1, `mEnemies[args[1]]` instead.
+constexpr static const int32_t EE_COMBAT_G_PLAYER_READ = 42;
+
+/// the file's typed calls (the result answered; a read's value in and out of `args[0]`): `unsigned long`, `long`,
+/// `bool`.
+constexpr static const int32_t EE_COMBAT_G_WRITE_U32 = 12;
+
+constexpr static const int32_t EE_COMBAT_G_READ_U32 = 13;
+
+constexpr static const int32_t EE_COMBAT_G_WRITE_I32 = 14;
+
+constexpr static const int32_t EE_COMBAT_G_READ_I32 = 15;
+
+constexpr static const int32_t EE_COMBAT_G_WRITE_BOOL = 16;
+
+constexpr static const int32_t EE_COMBAT_G_READ_BOOL = 17;
+
+/// `ee_combat_attack_goal`'s functions.
+constexpr static const int32_t EE_COMBAT_ATTACK_CREATE = 1;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_CREATE_CONVERT = 2;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_CREATE_EMPTY = 3;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_DESTROY = 4;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_SET_TARGET = 5;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_RETARGET_GATE = 6;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_UPDATE_TILE = 7;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_REPLACE = 8;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_DESTINATION = 9;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_SUITS = 10;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_CHECKSUM = 11;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_SAVE = 12;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_LOAD = 13;
+
+constexpr static const int32_t EE_COMBAT_ATTACK_REPAIR = 14;
+
 /// `inUnit->CanReachTile(args[0], args[1])`.
 constexpr static const int32_t EE_COMBAT_G_CAN_REACH_TILE = 1;
 
@@ -1403,6 +1522,21 @@ struct EeCombatWeaponIn {
   int32_t chain;
 };
 
+/// An attack-unit goal's own state (the original's members).
+struct EeCombatAttackGoal {
+  /// `mLocation`: the goal's destination (float bits)
+  uint32_t location[3];
+  /// `mAttacker`, `mTarget` (handles; the saved ids between Load and RepairPointers)
+  uint64_t attacker;
+  uint64_t target;
+  /// `mTargetTileX`, `mTargetTileY`: the target's last known tile
+  int32_t tile[2];
+  /// `mSidestepCount`
+  uint32_t sidestep;
+  /// `mIsConvert`
+  uint8_t convert;
+};
+
 /// The arguments and answers of one host operation.
 using EeCombatGoalArgs = int64_t[8];
 
@@ -2234,6 +2368,31 @@ float ee_combat_weapon_height(const EeCombatWeaponIn *input,
 void ee_combat_weapon_point(const EeCombatWeaponIn *input,
                             const float (*chain)[16],
                             float *out);
+
+/// The record of the goal into `out` (zeroes for none).
+///
+/// # Safety
+/// `out` must point to a writable record.
+void ee_combat_attack_get(uint64_t goal, EeCombatAttackGoal *out);
+
+/// The record of the goal replaced by `*value` (the C++'s writes of single fields: the attacker, the location, the
+/// sidestep count).
+///
+/// # Safety
+/// `value` must point to a valid record.
+void ee_combat_attack_set(uint64_t goal,
+                          const EeCombatAttackGoal *value);
+
+/// One body of the attack-unit goal (`EE_COMBAT_ATTACK_*`) on `goal`; `a`, `b` its arguments (see each).
+///
+/// # Safety
+/// `host` must be a valid host; `out` three writable floats for the destination (else unused, may be null).
+int32_t ee_combat_attack_goal(int32_t function,
+                              uint64_t goal,
+                              uint64_t a,
+                              uint64_t b,
+                              const EeCombatGoalHost *host,
+                              float (*out)[3]);
 
 /// A new attack-ground goal's record (its target point).
 void ee_combat_ground_create(uint64_t goal, float x, float y, float z);

@@ -103,7 +103,7 @@
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGCastCalamity.h"
@@ -1551,7 +1551,7 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // its attack action (0x7dd) over
 void EERetargetAttack(EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEComplexUnit* inTarget)
 {
-    EEComplexUnit* theOld = static_cast<EEUGAttackUnit*>(inGoal)->mTarget->mComplexUnit;
+    EEComplexUnit* theOld = static_cast<EEUGRust*>(inGoal)->GetAttackTarget()->mComplexUnit;
     if (inTarget != theOld)
         inGoal->ReplaceUnit(theOld, inTarget, NULL);
     inUnit->mCollisionResolutionCount = 0.0f;
@@ -1584,7 +1584,7 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             if (!(theLink->mNextPart != NULL))
                 break;
             if (!theLink->mUnitClass->IsPartLeftOut(theLink) && !inUnit->IsTargetIgnored(theLink, false)) {
-                EERetargetAttack(inUnit, dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal()), theLink);
+                EERetargetAttack(inUnit, EEAttackUnitCast(inUnit->GetLoadGoal()), theLink);
                 return;
             }
             theLink = theLink->mNextPart;
@@ -1824,9 +1824,9 @@ bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget)
     EEComplexUnit* theTarget = inTarget->mComplexUnit;
     bool theResult = false;
     if (!inUnit->mUnitClass->mIsTower && theTarget != NULL && theTarget->mGoalState != NULL) {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->mGoalState.Get());
+        EEUGRust* theGoal = EEAttackUnitCast(theTarget->mGoalState.Get());
         if (theGoal != NULL)
-            theResult = theGoal->mTarget == inUnit;
+            theResult = theGoal->GetAttackTarget() == inUnit;
     }
     return theResult;
 }
@@ -2373,8 +2373,8 @@ static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, E
     case EE_COMBAT_SEARCH_TEST_IGNORED:
         return theUnit->mIgnoredTargets.size() != 0 && theUnit->IsTargetIgnored(inTarget, true);
     case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inTarget->GetGoal());
-        return theGoal != NULL && theGoal->mTarget->mComplexUnit == theUnit;
+        EEUGRust* theGoal = EEAttackUnitCast(inTarget->GetGoal());
+        return theGoal != NULL && theGoal->GetAttackTarget()->mComplexUnit == theUnit;
     }
     }
     return 0;
@@ -2417,17 +2417,17 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
     case EE_COMBAT_SEARCH_TEST_IGNORED:
         return theUnit->mIgnoredTargets.size() != 0 && theTarget != NULL && theUnit->IsTargetIgnored(theTarget, true);
     case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
-        EEUGAttackUnit* theGoal;
-        return theTarget != NULL && (theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->GetGoal())) != NULL
-            && theGoal->mTarget->mComplexUnit == theUnit;
+        EEUGRust* theGoal;
+        return theTarget != NULL && (theGoal = EEAttackUnitCast(theTarget->GetGoal())) != NULL
+            && theGoal->GetAttackTarget()->mComplexUnit == theUnit;
     }
     case EE_COMBAT_SEARCH_TEST_PURSUES: {
         if (theTarget == NULL || theTarget->mLauncherClass != NULL || theTarget->mGoalState == NULL)
             return 0;
         EEUnitGoal* theGoal = theTarget->mGoalState;
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+        EEUGRust* theAttack = EEAttackUnitCast(theGoal);
         EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
-        return (theAttack != NULL && theAttack->mTarget->mComplexUnit == theUnit)
+        return (theAttack != NULL && theAttack->GetAttackTarget()->mComplexUnit == theUnit)
             || (theGather != NULL && theGather->mResource == theUnit);
     }
     }
@@ -4544,7 +4544,7 @@ void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* ou
         theGoal->GetGoalLocation(theLocation);
     } else {
         if (inTarget == NULL)
-            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            inTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
             in.kind = EE_COMBAT_DROP_KIND_MODEL;
             in.offset[0] = inTarget->GetModel()->mDefaultPoint.GetX();
@@ -4589,7 +4589,7 @@ static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget
         theGoal->GetGoalLocation(theLocation);
     } else {
         if (inTarget == NULL)
-            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            inTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
             theOffset = inTarget->GetModel()->mDefaultPoint;
             float theScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();

@@ -53,7 +53,6 @@
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGRust.h"
@@ -980,8 +979,8 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionAttackEnemyUnit: {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(this->mGoal);
-        EEUnit* theTarget = theGoal->mTarget;
+        EEUGRust* theGoal = EEAttackUnitCast(this->mGoal);
+        EEUnit* theTarget = theGoal->GetAttackTarget();
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if (!theUnit->mIsCommandable)
@@ -1047,7 +1046,7 @@ void EEActiveGroup::Plan()
                     theUnit->mIsSpecialAttack = this->mIsSpecialAttack;
                 }
             } else if (theTarget->mComplexUnit == NULL || !EECanConvert(theUnit, theTarget->mComplexUnit, theFlag)
-                       || (theUnit->mUnitClass->IsCrusader() && !theGoal->mIsConvert)) {
+                       || (theUnit->mUnitClass->IsCrusader() && !theGoal->IsConvertAttack())) {
                 if (theUnit->CanAttackClass(theTarget->mUnitClass)) {
                     if (this->mIsQueued && theUnit->mGoalState)
                         theUnit->QueueGoal(theGoal->Clone(), 0);
@@ -1067,7 +1066,7 @@ void EEActiveGroup::Plan()
                 theUnit->mUnitClass->ActionChanged(theUnit);
             }
         }
-        theGoal->mAttacker = NULL;
+        theGoal->SetAttacker(NULL);
         break;
     }
     case kActionHealUnit: {
@@ -1360,7 +1359,7 @@ void EEActiveGroup::SpreadAroundResource(EEUnit* inTarget)
     }
     if (!theAttackers)
         return;
-    theAttackers->SetGoal(new EEUGAttackUnit(theAttackers->GetFirstUnit(), inTarget, true, false), this->mIsQueued);
+    theAttackers->SetGoal(EEUGRust::NewAttackUnit(theAttackers->GetFirstUnit(), inTarget, true, false), this->mIsQueued);
     theAttackers->mAction = kActionAttackEnemyUnit;
     this->mPlayer->mPendingGroups.push_back(theAttackers);
     theAttackers->Plan();
@@ -1518,7 +1517,7 @@ void EEActiveGroup::SplitCalamityCasters(EECalamityClass* inCalamity, EETechTree
     if (!theGroup)
         return;
     theGroup->SetFormation(this->mFormation);
-    theGroup->SetGoal(new EEUGAttackUnit(theGroup->GetFirstUnit(), inTarget, true, false), this->mIsQueued);
+    theGroup->SetGoal(EEUGRust::NewAttackUnit(theGroup->GetFirstUnit(), inTarget, true, false), this->mIsQueued);
     theGroup->mAction = kActionAttackEnemyUnit;
     this->mPlayer->mPendingGroups.push_back(theGroup);
     theGroup->Plan();

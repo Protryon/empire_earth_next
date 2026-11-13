@@ -68,11 +68,12 @@ pub struct GroundGoal {
 #[derive(Default)]
 pub struct CombatGoals {
     pub ground: BTreeMap<u64, GroundGoal>,
+    pub attack: BTreeMap<u64, crate::goal_attack::EeCombatAttackGoal>,
 }
 
 impl CombatGoals {
     pub const fn new() -> Self {
-        CombatGoals { ground: BTreeMap::new() }
+        CombatGoals { ground: BTreeMap::new(), attack: BTreeMap::new() }
     }
 }
 
@@ -171,6 +172,7 @@ pub extern "C" fn ee_combat_ground_create(goal: u64, x: f32, y: f32, z: f32) {
 pub extern "C" fn ee_combat_goal_drop(goal: u64) {
     with_goals(|g| {
         g.ground.remove(&goal);
+        g.attack.remove(&goal);
     });
 }
 

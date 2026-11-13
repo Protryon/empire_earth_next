@@ -34,7 +34,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGCastCalamity.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -698,10 +698,10 @@ bool EECPAttackSubGroupUnit::Retarget()
     if (theTarget != NULL && this->GetUnit()->GetUnitClass()->FindAction(kActionInitialAttackState) != NULL) {
         bool theNew = this->GetTarget() != theTarget->GetUnit();
         if (!theNew) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->GetLoadGoal());
+            EEUGRust* theGoal = EEAttackUnitCast(this->GetUnit()->GetLoadGoal());
             if (theGoal == NULL && this->GetUnit()->mGoalQueues[0].mGoals.size() > 0)
-                theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->mGoalQueues[0].mGoals.back());
-            theNew = theGoal == NULL || theGoal->GetTarget() != theTarget->GetUnit();
+                theGoal = EEAttackUnitCast(this->GetUnit()->mGoalQueues[0].mGoals.back());
+            theNew = theGoal == NULL || theGoal->GetAttackTarget() != theTarget->GetUnit();
         }
         if (theNew) {
             this->SetTarget(theTarget->GetUnit());
@@ -872,8 +872,8 @@ long EECPAttackSubGroupUnit::GetTargetWeight(EECPASTargetUnit* inTarget)
         theKind = 0;
     else if (theStats->mLineOfSight + 0.5f >= theRange)
         theKind = 1;
-    EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->GetGoal());
-    if (theGoal != NULL && theGoal->mTarget->mComplexUnit == this->mUnit)
+    EEUGRust* theGoal = EEAttackUnitCast(theTarget->GetGoal());
+    if (theGoal != NULL && theGoal->GetAttackTarget()->mComplexUnit == this->mUnit)
         theResult = EEAIUnitTargetingTable::sTable[theKind][0] + 5;
     if (!(theDistance > theRangeSquared))
         theResult += EEAIUnitTargetingTable::sTable[theKind][2];
@@ -1175,7 +1175,7 @@ bool EECPAttackSubGroupUnit::IsInDanger()
             for (long i = theSubGroup->mTargets.size() - 1; i >= 0 && !theResult; i--) {
                 EEUnitGoal* theGoal = theSubGroup->mTargets[i]->mUnit->mGoalState;
                 if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit)
-                    theResult = static_cast<EEUGAttackUnit*>(theGoal)->mTarget == theUnit;
+                    theResult = static_cast<EEUGRust*>(theGoal)->GetAttackTarget() == theUnit;
             }
         }
     }

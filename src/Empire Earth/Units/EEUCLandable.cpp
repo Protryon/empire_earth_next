@@ -46,7 +46,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGUnloadTransport.h"
@@ -227,7 +226,7 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUnit* theUnit;
     EEUnitGoal* theGoal = inUnit->mGoalState;
     EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
+    EEUGRust* theAttack = EEAttackUnitCast(theGoal);
     EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
     EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
     EEUGRust* theGround = EEAttackGroundCast(theGoal);
@@ -256,7 +255,7 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     } else if (theUnload != NULL)
         theUnload->GetGoalLocation(theTarget);
     else {
-        theUnit = theAttack->mTarget;
+        theUnit = theAttack->GetAttackTarget();
         EEComplexUnit* theComplex = theUnit->mComplexUnit;
         if (inUnit->mUnitClass->mProjectileClass != NULL)
             EEFindDropLocation(inUnit, &theUnit, &theTarget, NULL);
@@ -374,10 +373,10 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
             theClass->ApproachCarrier(inUnit, inA != 0);
         break;
     case EE_UNITS_ACT_SECONDARY_TARGET: {
-        EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
+        EEUGRust* theAttack = EEAttackUnitCast(theGoal);
         if (theAttack == NULL)
             break;
-        EEUnit* theTargetUnit = theAttack->mTarget;
+        EEUnit* theTargetUnit = theAttack->GetAttackTarget();
         if (theTargetUnit != NULL) {
             long theX = theTargetUnit->GetTileX();
             long theY;
@@ -388,16 +387,16 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
                 theY = theTargetUnit->GetTileY();
             theEnemy = EEFindTargetNear(inUnit, theX, theY, 3.0f);
             if (theEnemy != NULL && inUnit->mBehavior->mCanTargetEnemies) {
-                theAttack->SetTarget(theEnemy);
+                theAttack->SetAttackTarget(theEnemy);
                 break;
             }
         } else {
             inUnit->ClearGoals(0);
             break;
         }
-        if (theAttack->mTarget->GetTileX() != -10000) {
-            EEUGLocation* theMove = new EEUGLocation((float)theAttack->mTarget->GetTileX() + 0.5f,
-                                                     (float)theAttack->mTarget->GetTileY() + 0.5f, theClass->GetCruiseAltitude(),
+        if (theAttack->GetAttackTarget()->GetTileX() != -10000) {
+            EEUGLocation* theMove = new EEUGLocation((float)theAttack->GetAttackTarget()->GetTileX() + 0.5f,
+                                                     (float)theAttack->GetAttackTarget()->GetTileY() + 0.5f, theClass->GetCruiseAltitude(),
                                                      theAttack->GetB1C(), true, false, 0.0f, false, false);
             inUnit->SetGoal(theMove, 0, 0);
             inUnit->StartAction(theMove->GetStartAction());
@@ -533,7 +532,7 @@ bool EEUCLandable::IsBombOnTarget(EEComplexUnit* inUnit)
     GEVector theVelocity;
     GEVector theHeading;
     EETagPointList* theTags = inUnit->GetModel()->mTagPoints[inUnit->mAnimation];
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
+    EEUGRust* theAttack = EEAttackUnitCast(inUnit->mGoalState);
     float theGravity = this->mProjectileClass->mAcceleration;
     float theSpeed = theStats->mLaunchSpeed;
     if (theAttack == NULL)
@@ -740,7 +739,7 @@ unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
             theTarget = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
             break;
         case kGoalAttackUnit: {
-            EEUnit* theUnit = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            EEUnit* theUnit = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
             if (theUnit == NULL)
                 return 5;
             EEComplexUnit* theComplex = theUnit->mComplexUnit;
@@ -1073,8 +1072,8 @@ long EEUCLandable::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEven
         theFlag = inUnit->mHomeBase == NULL || inUnit->mHomeBase->mHitPoints == 0;
         break;
     case kTriggerSecondaryTargetFound: {
-        EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
-        theFlag = theAttack != NULL && theAttack->mTarget != NULL && theAttack->mTarget->mHitPoints > 0;
+        EEUGRust* theAttack = EEAttackUnitCast(inUnit->GetGoal());
+        theFlag = theAttack != NULL && theAttack->GetAttackTarget() != NULL && theAttack->GetAttackTarget()->mHitPoints > 0;
         break;
     }
     case kTriggerAirtrafficControllerMoved: {

@@ -24,7 +24,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUCMissile.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
@@ -156,7 +155,7 @@ float EEImpactTileHeight(void* inContext)
 void EEImpactTarget(void* inContext, EeCombatImpactTarget* outTarget)
 {
     EEComplexUnit* theUnit = ((EEImpactContext*)inContext)->mUnit;
-    EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theUnit->mGoalState)->mTarget;
+    EEUnit* theTarget = static_cast<EEUGRust*>(theUnit->mGoalState)->GetAttackTarget();
     EEUnitClass* theClass = theTarget->GetUnitClass();
     outTarget->building = theClass->IsLandBuilding() || theClass->mIsWall;
     outTarget->tile[0] = (int32_t)theTarget->GetTileX();
@@ -178,7 +177,7 @@ void EEImpactGoalLocation(void* inContext, float* outPoint)
 int32_t EEImpactOnTargetTiles(void* inContext)
 {
     EEComplexUnit* theUnit = ((EEImpactContext*)inContext)->mUnit;
-    return EEIsOnTargetTiles(theUnit, static_cast<EEUGAttackUnit*>(theUnit->GetGoal())->mTarget);
+    return EEIsOnTargetTiles(theUnit, static_cast<EEUGRust*>(theUnit->GetGoal())->GetAttackTarget());
 }
 
 int32_t EEImpactSameTile(void* inContext, float inX, float inY)

@@ -13,7 +13,7 @@ class EEUnitClass;
 class EEPlayer;
 class EEUnitGoal;
 class EEUUUnitFunctor;
-class EEUGAttackUnit;
+class EEUGRust;
 class EEFOFindNewTargetScreenBase;
 class EEUnitClassUpgrade;
 class GE2DPoint;

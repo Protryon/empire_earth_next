@@ -57,7 +57,7 @@
 
 // Genuine cdecl factory also declared in EECPAttackSubGroup.cpp.
 EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit*, EECPAttackSubGroup*, bool);
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 
 #include "ee/EECPAAirTargetFilters.h"
@@ -144,7 +144,7 @@ void EECPASGAir::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTar
     if (theAircraft && !theOnMap) {
         inUnit->mNeedsOrders = true;
         inUnit->GetUnit()->StartAction(kActionInitialAttackState);
-        theGoal = new EEUGAttackUnit(inUnit->GetUnit(), theTarget, true, false);
+        theGoal = EEUGRust::NewAttackUnit(inUnit->GetUnit(), theTarget, true, false);
         theAction = inUnit->GetUnit()->GetCommandType();
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;
@@ -162,7 +162,7 @@ void EECPASGAir::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUnit* inTar
             thePoint.SetY(theTarget->mTileY);
             theGoal = new EEUGLocation(thePoint, true, false, false, 0.0f, false, false);
         } else
-            theGoal = new EEUGAttackUnit(inUnit->GetUnit(), theTarget, true, false);
+            theGoal = EEUGRust::NewAttackUnit(inUnit->GetUnit(), theTarget, true, false);
         theAction = theAircraft && theCanAct ? 1000 : 8000;
         if (!this->GiveGoal(inUnit->GetUnit(), theGoal, 0, theAction) && theGoal != NULL)
             delete theGoal;

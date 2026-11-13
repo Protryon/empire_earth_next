@@ -26,7 +26,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEMedia.h"
@@ -233,9 +232,9 @@ GE3DPoint EEShotLocation(EEComplexUnit* inUnit)
     return GE3DPoint(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
 }
 
-EEUGAttackUnit* EEShotAttack(EEComplexUnit* inUnit)
+EEUGRust* EEShotAttack(EEComplexUnit* inUnit)
 {
-    return static_cast<EEUGAttackUnit*>(inUnit->mGoalState);
+    return static_cast<EEUGRust*>(inUnit->mGoalState);
 }
 
 int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
@@ -265,7 +264,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_FLAMING_SET: {
         EECalamityClass* theCalamity = NULL;
         USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x17, theCalamity);
-        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theUnit->mComplexUnit->mGoalState)->mTarget;
+        EEUnit* theTarget = static_cast<EEUGRust*>(theUnit->mComplexUnit->mGoalState)->GetAttackTarget();
         return gUnitSetManager.GetSet(theCalamity->GetUnitSet())->Contains(theTarget->mUnitClass->mUnitType);
     }
     case EE_COMBAT_SHOT_R_RANDOM:
@@ -281,7 +280,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
     case EE_COMBAT_SHOT_R_FREE_CAMERA:
         return gFreeCamera;
     case EE_COMBAT_SHOT_R_TARGET_HIT_POINTS:
-        return (int32_t)EEShotAttack(theUnit)->mTarget->mHitPoints;
+        return (int32_t)EEShotAttack(theUnit)->GetAttackTarget()->mHitPoints;
     case EE_COMBAT_SHOT_R_POPULATION_COST:
         return (int32_t)theUnit->mUnitClass->GetPopulationCost();
     case EE_COMBAT_SHOT_R_PHYSICS_MODEL:
@@ -354,7 +353,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
             static_cast<EEUCProjectile*>(theClass)->FireShot(theUnit);
         break;
     case EE_COMBAT_SHOT_UNTINT_TARGET: {
-        EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(EEShotAttack(theUnit)->mTarget);
+        EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(EEShotAttack(theUnit)->GetAttackTarget());
         if (theTarget != NULL)
             theTarget->SetIsTinted(false);
         break;
@@ -370,7 +369,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         break;
     case EE_COMBAT_SHOT_CREATE_CALAMITY:
         USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(
-            0x18, -1, static_cast<EEUGAttackUnit*>(theUnit->mComplexUnit->mGoalState)->mTarget->GetUnitID(),
+            0x18, -1, static_cast<EEUGRust*>(theUnit->mComplexUnit->mGoalState)->GetAttackTarget()->GetUnitID(),
             theUnit->mPlayer->GetPlayerID());
         break;
     case EE_COMBAT_SHOT_START_ACTION:
@@ -383,19 +382,19 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         theClass->CreateRemainsUnit(theUnit);
         break;
     case EE_COMBAT_SHOT_ATTACK_TARGET_TILE: {
-        EEUGAttackUnit* theGoal = EEShotAttack(theUnit);
+        EEUGRust* theGoal = EEShotAttack(theUnit);
         GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
-        thePosition.SetX((float)theGoal->mTarget->mTileX);
-        thePosition.SetY((float)theGoal->mTarget->mTileY);
-        EEMapTile* theTile = ::gWorld.mMap->GetTile(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY);
+        thePosition.SetX((float)theGoal->GetAttackTarget()->mTileX);
+        thePosition.SetY((float)theGoal->GetAttackTarget()->mTileY);
+        EEMapTile* theTile = ::gWorld.mMap->GetTile(theGoal->GetAttackTarget()->mTileX, theGoal->GetAttackTarget()->mTileY);
         if (theTile != NULL)
             thePosition.SetZ(theTile->GetHeight());
         theUnit->SetGoal(EEUGRust::NewAttackGround(thePosition, false), 0, 0);
         break;
     }
     case EE_COMBAT_SHOT_RETARGET_CONTAINER: {
-        EEUGAttackUnit* theGoal = EEShotAttack(theUnit);
-        theGoal->SetTarget(theGoal->mTarget->mComplexUnit->mContainer);
+        EEUGRust* theGoal = EEShotAttack(theUnit);
+        theGoal->SetAttackTarget(theGoal->GetAttackTarget()->mComplexUnit->mContainer);
         break;
     }
     case EE_COMBAT_SHOT_HANDLE_ACTION_CHANGED:

@@ -19,7 +19,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -89,7 +89,7 @@ bool EECCSpecialAttack::UpdateStep(EECalamityUpdateHost& ioHost, const EeCalamit
         EEComplexUnit* theUnit = theCalamity->mCasterUnit->mComplexUnit;
         EECalamityCaptureEvent(kCalamityOpSpecialAttack, theTargetUnit->mUnitID);   // CALW (TEST ONLY)
         theUnit->ClearGoals(0);
-        theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
+        theUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit, theTargetUnit, 1, 0), 0, 0);
         theUnit->mIsSpecialAttack = true;
         theUnit->StartAction(kActionAttackEnemyUnit);
         theUnit->mUnitClass->ActionChanged(theUnit);

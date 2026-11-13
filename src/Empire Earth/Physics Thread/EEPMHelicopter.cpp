@@ -24,7 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGCastCalamity.h"
@@ -128,7 +128,7 @@ void EEPMHelicopter::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
+    EEUGRust* theAttack = EEAttackUnitCast(theGoal);
     EEUGCastCalamity* theCast = EEGoalCast<EEUGCastCalamity>(theGoal);
     EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(theGoal);
     float theSpeed = inUnit->mVelocity;
@@ -137,12 +137,12 @@ void EEPMHelicopter::Step1(EEComplexUnit* inUnit)
     float theHeight = inUnit->mHeight;
     theTransformation.SetOrientationYPR(inUnit->mOrientation.GetYaw(), inUnit->mOrientation.GetPitch(), inUnit->mOrientation.GetRoll());
     if (theAttack) {
-        if (theAttack->mTarget->mComplexUnit) {
-            theTarget.SetX(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX());
-            theTarget.SetY(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY());
+        if (theAttack->GetAttackTarget()->mComplexUnit) {
+            theTarget.SetX(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetX());
+            theTarget.SetY(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetY());
         } else {
-            theTarget.SetX((float) theAttack->mTarget->GetTileX() + 0.5f);
-            theTarget.SetY((float) theAttack->mTarget->GetTileY() + 0.5f);
+            theTarget.SetX((float) theAttack->GetAttackTarget()->GetTileX() + 0.5f);
+            theTarget.SetY((float) theAttack->GetAttackTarget()->GetTileY() + 0.5f);
         }
     } else if (theCast) {
         theCast->GetTargetLocation(theTarget);

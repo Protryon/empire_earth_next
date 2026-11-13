@@ -88,8 +88,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # the goals whose class moved whole to Rust: EEUGPatrol's range 0x227de8..0x2283bc (ee/EEUGRust.h;
                        # ee_units patrol.rs)
                        "Empire Earth/Units/EEUGRust.cpp",
-                       # the combat lane's goals on EEUGRust: EEUGAttackGround's range 0x21ce6c..0x21d2f4 (ee_combat
-                       # goal_objects.rs)
+                       # the combat lane's goals on EEUGRust: EEUGAttackGround's and EEUGAttackUnit's ranges
+                       # 0x21ce6c..0x21e0c1 (ee_combat goal_objects.rs, goal_attack.rs)
                        "Empire Earth/Units/EEUGRustCombat.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)

@@ -46,7 +46,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIAStarFastStorage.h"
@@ -1304,7 +1304,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
             inUnit->GetGoal()->mB1D = true;
         bool theForced = theLocation == NULL || theLocation->GetIsForcedMove();
         if (theLocation == NULL) {
-            EEUGAttackUnit* theAttackGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
+            EEUGRust* theAttackGoal = EEAttackUnitCast(inUnit->GetGoal());
             if (theAttackGoal && !theAttackGoal->GetB1C()) {
                 theAttack = true;
                 if (theGoals.size() <= 1)

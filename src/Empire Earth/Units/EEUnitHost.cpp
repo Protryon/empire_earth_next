@@ -27,7 +27,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGExplore.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
@@ -434,7 +433,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         EEUnit* theTarget = UnitOf(inSpec->unit_b);
         if (theTarget == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
     }
     case EE_GOAL_CTOR_GATHER:
         return static_cast<EEUnitGoal*>(new EEUGGather(UnitOf(inSpec->unit_a), UnitOf(inSpec->unit_b), theFlagA));

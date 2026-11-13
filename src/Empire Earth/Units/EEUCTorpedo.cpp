@@ -21,7 +21,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
 #include "ee/EECombatFormulas.h"

@@ -24,7 +24,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUCProjectile.h"
@@ -215,7 +214,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
     EEUnitGoal* theGoal = inUnit->mGoalState;
     theRecord[7] = theGoal != NULL ? (uint32_t)theGoal->mKind : 0xffffffffu;
     if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit) {
-        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         theRecord[8] = theTarget != NULL ? (uint32_t)theTarget->mUnitID : 0;
     } else if (theGoal != NULL && theGoal->mKind == kGoalAttackGround) {
         const GE3DPoint& thePoint = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
@@ -381,7 +380,7 @@ EEUnit* EEConditionTarget(EEConditionContext* inContext)
 {
     if (inContext->mKind == EE_COMBAT_GOAL_HEAL)
         return static_cast<EEUGHealUnit*>(inContext->mGoal)->mTarget;
-    return static_cast<EEUGAttackUnit*>(inContext->mGoal)->mTarget;
+    return static_cast<EEUGRust*>(inContext->mGoal)->GetAttackTarget();
 }
 
 // The lazy reads, each the original's call at the place the test makes it (ee_combat goals.rs EE_COMBAT_READ_*)
@@ -419,9 +418,9 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
         return EEIsLineToUnitBlocked(theUnit, EEConditionTarget(theContext), &theArg3, &theArg4, &theArg5);
     }
     case EE_COMBAT_READ_GATE_CLOSED:
-        return EECombatIsGateClosed(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal));
+        return EECombatIsGateClosed(theUnit, static_cast<EEUGRust*>(theContext->mGoal));
     case EE_COMBAT_READ_STILL_REACHABLE:
-        return EECombatIsStillReachable(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal));
+        return EECombatIsStillReachable(theUnit, static_cast<EEUGRust*>(theContext->mGoal));
     case EE_COMBAT_READ_ENEMY_IN_RANGE:
         return EEIsEnemyWithinRange(theUnit);
     case EE_COMBAT_READ_BASE:
@@ -478,7 +477,7 @@ int32_t EEStepOp(void* inContext, int32_t inOp, int32_t inArg)
     case EE_COMBAT_STEP_FACES:
         if (theContext->mKind == EE_COMBAT_GOAL_HEAL)
             return theUnit->GetUnitClass()->FacesTarget(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget, false);
-        return theUnit->mUnitClass->FacesTarget(theUnit, static_cast<EEUGAttackUnit*>(theContext->mGoal)->mTarget, false);
+        return theUnit->mUnitClass->FacesTarget(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetAttackTarget(), false);
     case EE_COMBAT_STEP_ANIMATION:
         return (int32_t)theUnit->mAnimation;
     case EE_COMBAT_STEP_SET_ANIMATION:
@@ -488,7 +487,7 @@ int32_t EEStepOp(void* inContext, int32_t inOp, int32_t inArg)
         theUnit->DropPath();
         break;
     case EE_COMBAT_STEP_RETARGET_GATE:
-        static_cast<EEUGAttackUnit*>(theContext->mGoal)->RetargetGatePart(theUnit);
+        static_cast<EEUGRust*>(theContext->mGoal)->RetargetGatePart(theUnit);
         break;
     case EE_COMBAT_STEP_ATTACK_FRAME_SET:
         return (int32_t)EEGetAttackFrameSet(theUnit);
@@ -519,7 +518,7 @@ int32_t EEStepOp(void* inContext, int32_t inOp, int32_t inArg)
 EEUnit* EECombatShotTarget(EEComplexUnit* inUnit)
 {
     EEUnitGoal* theGoal = inUnit->mGoalState;
-    return theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGAttackUnit*>(theGoal)->mTarget : NULL;
+    return theGoal != NULL && theGoal->mKind == kGoalAttackUnit ? static_cast<EEUGRust*>(theGoal)->GetAttackTarget() : NULL;
 }
 
 long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEvent, EEUnit* inTarget,
@@ -532,17 +531,17 @@ long EECombatCondition(int32_t inKind, EEComplexUnit* inUnit, unsigned long inEv
                              inTarget != NULL ? (uint64_t)(uintptr_t)static_cast<EEUnit*>(inTarget->mComplexUnit) : 0);
     in.human = inUnit->mPlayer != NULL && inUnit->mPlayer->IsHuman();
     if (inKind == EE_COMBAT_GOAL_ATTACK_UNIT) {
-        EEUGAttackUnit* theGoal = static_cast<EEUGAttackUnit*>(inGoal);
-        in.goal_tile[0] = (int32_t)theGoal->mTargetTileX;
-        in.goal_tile[1] = (int32_t)theGoal->mTargetTileY;
-        in.convert = theGoal->mIsConvert;
+        EEUGRust* theGoal = static_cast<EEUGRust*>(inGoal);
+        in.goal_tile[0] = (int32_t)theGoal->GetAttackTileX();
+        in.goal_tile[1] = (int32_t)theGoal->GetAttackTileY();
+        in.convert = theGoal->IsConvertAttack();
     }
     EEConditionContext theContext = {in.kind, in.event, inUnit, inGoal, inClass, NULL};
     EeCombatConditionHost theHost = {&theContext, EEConditionRead};
     EeCombatConditionOut theOut = ee_combat_condition(&in, &theHost);
     // the action before the record, as the original's body set the goal before its end
     if (theOut.action == EE_COMBAT_CONDITION_ATTACK_IMPACT_UNIT)
-        inUnit->SetGoal(new EEUGAttackUnit(inUnit, theContext.mImpact, false, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewAttackUnit(inUnit, theContext.mImpact, false, false), 0, 0);
     EECombatCaptureCondition(in, theOut);
     return theOut.result;
 }
@@ -566,7 +565,7 @@ namespace {
 
 struct EEQueryContext {
     EEComplexUnit* mUnit;                   // the call's unit
-    EEUGAttackUnit* mGoal;                  // IsStillReachable's, IsGateClosed's attack goal
+    EEUGRust* mGoal;                  // IsStillReachable's, IsGateClosed's attack goal
     std::vector<EEComplexUnit*>* mRegion;   // FindImpactUnit's region, found by its count read
     EEUnitClass* mClass = NULL;             // world.rs: the class of Attacked or FireShot
     EEUnitGoal* mAttackedGoal = NULL;       // Attacked's goal (the helpers' clones)
@@ -656,7 +655,7 @@ uint32_t EEQueryRead(void* inContext, int32_t inCode, uint64_t inObject, int32_t
         return EEIsInContactRange(theUnit, theObject, theDistance);
     }
     case EE_COMBAT_Q_ATTACK_GOAL:
-        return EEGoalCast<EEUGAttackUnit>(EEQueryComplex(inObject)->mGoalState) != NULL;
+        return EEAttackUnitCast(EEQueryComplex(inObject)->mGoalState) != NULL;
     case EE_COMBAT_Q_REGION_COUNT: {
         RTSRegionTable<EEComplexUnit*>* theTable = ::gWorld.mMap->mUnitRegions;
         long theRegionX = theObject->GetTileX() / theTable->mRegionSize;
@@ -708,8 +707,8 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
     case EE_COMBAT_H_OWNER:
         return EEQueryHandleOf(EEQueryComplex(inObject)->mOwner);
     case EE_COMBAT_H_GOAL_TARGET: {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(EEQueryComplex(inObject)->mGoalState);
-        return theGoal != NULL ? EEQueryHandleOf(theGoal->mTarget) : 0;
+        EEUGRust* theGoal = EEAttackUnitCast(EEQueryComplex(inObject)->mGoalState);
+        return theGoal != NULL ? EEQueryHandleOf(theGoal->GetAttackTarget()) : 0;
     }
     case EE_COMBAT_H_REGION_UNIT:
         return EEQueryHandleOf((*theContext->mRegion)[inArg]);
@@ -718,7 +717,7 @@ uint64_t EEQueryHandle(void* inContext, int32_t inCode, uint64_t inObject, int32
     case EE_COMBAT_H_TILE_NEXT:
         return EEQueryHandleOf(static_cast<EEUnit*>(theObject->mTileNode->mNext));
     case EE_COMBAT_H_TARGET:
-        return EEQueryHandleOf(theContext->mGoal->mTarget);
+        return EEQueryHandleOf(theContext->mGoal->GetAttackTarget());
     }
     return 0;
 }
@@ -850,7 +849,7 @@ uint64_t EEWorldOp(void* inContext, int32_t inCode, uint64_t inObject, uint64_t 
             theContext->mAttackedGoal = new EEUGLocation(theOther->mPhysicalModel.GetLocation().GetX(),
                 theOther->mPhysicalModel.GetLocation().GetY(), 0.0f, false, false, false, 0.0f, false, 0);
         else
-            theContext->mAttackedGoal = new EEUGAttackUnit(theObject, theOther, false, false);
+            theContext->mAttackedGoal = EEUGRust::NewAttackUnit(theObject, theOther, false, false);
         theObject->SetGoal(theContext->mAttackedGoal, 1, 0);
         return 0;
     }
@@ -1095,10 +1094,10 @@ bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget)
 }
 
 // EEUGAttackUnit::IsStillReachable (CBQR: the path attempts and the ignored targets' count after)
-bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal)
+bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal)
 {
     EECombatHostReadScope theScope;
-    EEUnit* theTarget = inGoal->mTarget;
+    EEUnit* theTarget = inGoal->GetAttackTarget();
     EEQueryContext theContext = {inUnit, inGoal, NULL};
     EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
     bool theReachable = ee_combat_still_reachable(EEQueryHandleOf(inUnit), &theHost) != 0;
@@ -1109,14 +1108,14 @@ bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal)
 }
 
 // EEUGAttackUnit::IsGateClosed (CBQR)
-bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal)
+bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal)
 {
     EECombatHostReadScope theScope;
     EEQueryContext theContext = {inUnit, inGoal, NULL};
     EeCombatQueryHost theHost = EEQueryHostOf(&theContext);
     bool theClosed = ee_combat_gate_closed(EEQueryHandleOf(inUnit), &theHost) != 0;
     if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, inGoal->mTarget, theClosed);
+        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, inGoal->GetAttackTarget(), theClosed);
     return theClosed;
 }
 

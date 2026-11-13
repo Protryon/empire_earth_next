@@ -135,7 +135,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
@@ -266,7 +265,7 @@ std::string GoalText(EEUnitGoal* inGoal)
         return "location:" + Point(static_cast<EEUGLocation*>(inGoal)->mLocation.GetX(),
                                    static_cast<EEUGLocation*>(inGoal)->mLocation.GetY());
     case kGoalAttackUnit:
-        return "attack:" + Number(IDOf(static_cast<EEUGAttackUnit*>(inGoal)->mTarget));
+        return "attack:" + Number(IDOf(static_cast<EEUGRust*>(inGoal)->GetAttackTarget()));
     case kGoalAttackGround:
         return "ground:" + Point(static_cast<EEUGRust*>(inGoal)->GetGroundTarget().GetX(),
                                  static_cast<EEUGRust*>(inGoal)->GetGroundTarget().GetY());
