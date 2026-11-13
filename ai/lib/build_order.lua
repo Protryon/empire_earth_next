@@ -33,6 +33,7 @@ M.OPT = {
     soldiers_after_boats = false, -- (off until benched) stone_start trains no soldier before 10 boats, unless threatened
     settle_afford = false,  -- (off until benched) a settlement is placed only with its whole cost in hand, and one refused
                             -- for its cost tries again in 20 s, not 5 minutes
+    blocked_skip = false,   -- (off until benched) a foundation lost on a blocked tile passes over every tile it covered
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

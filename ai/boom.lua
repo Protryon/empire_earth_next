@@ -542,6 +542,7 @@ function M.step(view, memory)
         plan = BO.plan(plan, phase)
     end
     PL.afford_retry = ECON.order and BO.OPT.settle_afford or false
+    PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false
     if plan.army_per ~= nil then
         plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
     end

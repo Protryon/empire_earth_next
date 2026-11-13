@@ -15,6 +15,7 @@
 --   M.pending(mem)               the jobs under way (the settlements going up)
 local M = {}
 M.afford_retry = false     -- (set by boom with BO.OPT.settle_afford)
+M.blocked_skip = false     -- (set by boom with BO.OPT.blocked_skip)
 
 local JOB_MS = 180000       -- a job's builders are released after this, built or not
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
@@ -404,6 +405,17 @@ function M.step(view, mem)
                 if not busy and view.time - j.t >= 15000 then
                     done = true
                     P.tiles[j.x .. "," .. j.y] = view.time + BAD_MS
+                    -- (M.blocked_skip: a unit standing in the footprint, a wild animal in §8.51, blocked the next tile
+                    -- over as well, placed again each minute: every anchor whose footprint overlaps this one is
+                    -- passed over, so the next touching spot on the list comes at once)
+                    if M.blocked_skip then
+                        local s = size_of(j.type)
+                        for dx = 1 - s, s - 1 do
+                            for dy = 1 - s, s - 1 do
+                                P.tiles[(j.x + dx) .. "," .. (j.y + dy)] = view.time + BAD_MS
+                            end
+                        end
+                    end
                 end
             end
             done = done or view.time - j.t >= JOB_MS
