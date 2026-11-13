@@ -1249,6 +1249,55 @@ struct EeGfxLightingInputs {
   EeGeVector sun;
 };
 
+/// What `IsUnitDrawn` reads of a unit, its complex unit, its tile and the frame.
+struct EeGfxUnitFacts {
+  /// a food resource with some left
+  bool food;
+  bool has_complex;
+  /// the unit class's category
+  int32_t category;
+  /// the owner's player id
+  int32_t owner_id;
+  /// the tile is seen by the current player
+  bool seen;
+  bool free_camera;
+  /// the stats' scale
+  float scale;
+  bool is_tree;
+  /// the unit class's type
+  int32_t unit_type;
+  /// the render pools' fill (units, map objects)
+  uint32_t unit_count;
+  uint32_t object_count;
+  /// the complex unit's command is the dead action
+  bool dead;
+  int32_t tile_size;
+  /// the complex unit's class: a gate, a path point, a flare; the complex unit is a foundation
+  bool complex_gate;
+  bool complex_path_point;
+  bool complex_flare;
+  bool foundation;
+  /// the unit's owner is the current player
+  bool mine;
+  /// `EEUnit::Fn27C0B4` (the original's `return false`)
+  bool marker_shown;
+  /// `IsPathMarker`
+  bool path_marker;
+  int32_t id;
+  int32_t tile_x;
+  int32_t tile_y;
+};
+
+/// The C++'s answers: `first_drawn` inserts the unit into the frame's set and says whether it was new;
+/// `complex_in_view` tests the complex unit's physical model against the view; `model_in_view` places the unit's
+/// first model at (`x`, `y`) on the ground, facing the camera, and tests it.
+struct EeGfxDrawnHost {
+  void *context;
+  bool (*first_drawn)(void *context);
+  bool (*complex_in_view)(void *context);
+  bool (*model_in_view)(void *context, float x, float y);
+};
+
 /// The texture's u across the five vertices of a row.
 constexpr static const float EE_GFX_QUAKE_ROW_U[5] = { 0.0, 0.25, 0.5, 0.75, 1.0, };
 
@@ -2571,6 +2620,21 @@ float ee_gfx_capture_ground_circle(const EeGfxParticleGround *ground,
 /// # Safety
 /// `i` is readable.
 EeGfxRasterOps ee_gfx_lighting(EeGfxLighting kind, const EeGfxLightingInputs *i);
+
+/// `IsUnitDrawn` over the unit's facts `f`, asking `host` the set and view questions.
+///
+/// # Safety
+/// `f` is readable and `host`'s functions take its context.
+bool ee_gfx_capture_unit_drawn(const EeGfxUnitFacts *f, EeGfxDrawnHost *host);
+
+/// The world's food a unit stands for (drawn unseen, fogged by `FillUnit`).
+bool ee_gfx_capture_owned_food(bool food, bool has_complex, int32_t category, int32_t owner_id);
+
+/// A waypoint marker's tint by its carrier's id.
+EeGfxColor ee_gfx_capture_waypoint_tint(int32_t carrier_id);
+
+/// `FillRenderLists`' music intensity.
+uint32_t ee_gfx_capture_music_intensity(uint32_t current, float fighting, float count);
 
 }  // extern "C"
 

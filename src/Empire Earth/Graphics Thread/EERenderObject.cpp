@@ -383,102 +383,64 @@ void EEStartLetterboxIn(unsigned long inFrames)
 // view; a unit whose footprint spans several tiles counts once (ioDrawn)
 bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn)
 {
-    GEPhysicalModel theModel;
-    GETransformation theTransformation(false);
-    GETerrainMesh* theMesh = &gWorld.mMap->mTerrainMesh;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
-    EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    float theX;
-    float theY;
-    float theZ;
-    bool theResult = true;
-    bool theOwnedTarget;
-    if (inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0 && theComplexUnit != NULL && inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen
-        && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen && inUnit->mPlayer->GetPlayerID() == 0)
-        theOwnedTarget = true;
-    else
-        theOwnedTarget = false;
-    if ((inTile->IsSeenBy(thePlayer) || theOwnedTarget || gFreeCamera) && theStats->GetScale() != 0.0f) {
-        EEUnitClass* theClass = inUnit->mUnitClass;
-        if (!theClass->mIsTree && theClass->GetUnitType() != kUnitTypePathPoint) {
-            if (EERenderLists::sInstance.mRenderUnitCount < 0x200
-                && (theComplexUnit == NULL
-                    || (theComplexUnit->mCommand == NULL ? 0 : theComplexUnit->mCommand->mType) != kActionDead)) {
-                if (theClass->GetTileSize() > 1) {
-                    theResult = false;
-                    if (ioDrawn.find(inUnit) != ioDrawn.end())
-                        return theResult;
-                    ioDrawn.insert(inUnit);
-                    theResult = true;
-                }
-                if (theComplexUnit != NULL) {
-                    if (theComplexUnit->mUnitClass->mCategory != kUnitCategoryGate) {
-                        theResult = theComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
-                        if (!theResult)
-                            return theResult;
-                    }
-                    if (!gFreeCamera) {
-                        if (theComplexUnit->mUnitClass->GetUnitType() == kUnitTypePathPoint) {
-                            if (inUnit->mPlayer == thePlayer && inUnit->Fn27C0B4())
-                                theResult = true;
-                            else
-                                theResult = false;
-                        } else if (theComplexUnit->IsFoundation()) {
-                            theResult = inUnit->mPlayer == thePlayer;
-                        } else if (theComplexUnit->mUnitClass->mIsFlare) {
-                            theResult = false;
-                        }
-                    }
-                } else {
-                    float theHalf = theClass->GetTileSize() * 0.5f;
-                    theX = inUnit->mTileX + theHalf;
-                    theY = inUnit->mTileY + theHalf;
-                    theZ = theMesh->GetMeshZ(theX, theY);
-                    theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-                    theTransformation.SetPosition(theX, theY, theZ);
-                    theTransformation.SetElement(3, 0, 0.0f);
-                    theTransformation.SetElement(3, 1, 0.0f);
-                    theTransformation.SetElement(3, 2, 0.0f);
-                    theTransformation.SetElement(3, 3, 1.0f);
-                    theModel.SetModel(inUnit->GetModel()->mModels[0]);
-                    theModel.SetFrame(0);
-                    theModel.SetLocationAndScale(theTransformation, theStats->GetScale());
-                    theResult = theModel.Intersects(gViewport, gOrthographicView);
-                    if (theResult) {
-                        if (inUnit->IsPathMarker() && inUnit->mPlayer != thePlayer)
-                            theResult = false;
-                        else
-                            theResult = true;
-                    }
-                }
-            } else {
-                theResult = false;
-            }
-        } else if (theClass->mIsTree && EERenderLists::sInstance.mRenderShadowCount < 0x600) {
-            long theID = inUnit->GetUnitID();
-            long theSize = theClass->GetTileSize();
-            float theHalf = theSize * 0.5f;
-            theX = ((theID % 3 - 1) * theSize) * 0.125f + inUnit->mTileX + theHalf;
-            theY = ((theID / 3 % 3 - 1) * theSize) * 0.125f + inUnit->mTileY + theHalf;
-            theZ = theMesh->GetMeshZ(theX, theY);
+    // the decisions are ee_gfx walk.rs's (RUST_PLAN R4.4); the drawn set and the view tests are answered here
+    struct Ask {
+        EEUnit* mUnit;
+        std::set<EEUnit*>* mDrawn;
+        static bool First(void* inAsk) { return static_cast<Ask*>(inAsk)->mDrawn->insert(static_cast<Ask*>(inAsk)->mUnit).second; }
+        static bool Complex(void* inAsk)
+        {
+            return static_cast<Ask*>(inAsk)->mUnit->mComplexUnit->mPhysicalModel.Intersects(gViewport, gOrthographicView);
+        }
+        static bool Model(void* inAsk, float inX, float inY)
+        {
+            EEUnit* theUnit = static_cast<Ask*>(inAsk)->mUnit;
+            GEPhysicalModel theModel;
+            GETransformation theTransformation(false);
+            float theZ = gWorld.mMap->mTerrainMesh.GetMeshZ(inX, inY);
             theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
-            theTransformation.SetPosition(theX, theY, theZ);
+            theTransformation.SetPosition(inX, inY, theZ);
             theTransformation.SetElement(3, 0, 0.0f);
             theTransformation.SetElement(3, 1, 0.0f);
             theTransformation.SetElement(3, 2, 0.0f);
             theTransformation.SetElement(3, 3, 1.0f);
-            theModel.SetModel(inUnit->GetModel()->mModels[0]);
+            theModel.SetModel(theUnit->GetModel()->mModels[0]);
             theModel.SetFrame(0);
-            theModel.SetLocationAndScale(theTransformation, theStats->GetScale());
-            theResult = theModel.Intersects(gViewport, gOrthographicView);
-        } else {
-            theResult = false;
+            theModel.SetLocationAndScale(theTransformation, theUnit->mStats->GetScale());
+            return theModel.Intersects(gViewport, gOrthographicView);
         }
-    } else {
-        theResult = false;
+    } theAsk = {inUnit, &ioDrawn};
+    EEComplexUnit* theComplex = inUnit->mComplexUnit;
+    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
+    EEUnitClass* theClass = inUnit->mUnitClass;
+    EeGfxUnitFacts theFacts = {};
+    theFacts.food = inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0;
+    theFacts.has_complex = theComplex != NULL;
+    theFacts.category = theClass->mCategory;
+    theFacts.owner_id = inUnit->mPlayer->GetPlayerID();
+    theFacts.seen = inTile->IsSeenBy(thePlayer);
+    theFacts.free_camera = gFreeCamera;
+    theFacts.scale = inUnit->mStats->GetScale();
+    theFacts.is_tree = theClass->mIsTree;
+    theFacts.unit_type = theClass->GetUnitType();
+    theFacts.unit_count = EERenderLists::sInstance.mRenderUnitCount;
+    theFacts.object_count = EERenderLists::sInstance.mRenderShadowCount;
+    theFacts.tile_size = theClass->GetTileSize();
+    theFacts.mine = inUnit->mPlayer == thePlayer;
+    theFacts.marker_shown = inUnit->Fn27C0B4();
+    theFacts.path_marker = inUnit->IsPathMarker();
+    theFacts.id = inUnit->GetUnitID();
+    theFacts.tile_x = inUnit->mTileX;
+    theFacts.tile_y = inUnit->mTileY;
+    if (theComplex != NULL) {
+        theFacts.dead = theComplex->mCommand != NULL && theComplex->mCommand->mType == kActionDead;
+        theFacts.complex_gate = theComplex->mUnitClass->mCategory == kUnitCategoryGate;
+        theFacts.complex_path_point = theComplex->mUnitClass->GetUnitType() == kUnitTypePathPoint;
+        theFacts.complex_flare = theComplex->mUnitClass->mIsFlare;
+        theFacts.foundation = theComplex->IsFoundation();
     }
-    return theResult;
+    EeGfxDrawnHost theHost = {&theAsk, Ask::First, Ask::Complex, Ask::Model};
+    return ee_gfx_capture_unit_drawn(&theFacts, &theHost);
 }
 
 // FUNCTION: EXE 0x50b7e1
@@ -1057,9 +1019,9 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
     long theTileY = inUnit->mTileY;
     GEVector theUp(0.0f, 1.0f, 0.0f);
     GEVector theForward;
-    bool theFogged = inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0 && theComplex != NULL
-                     && inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen
-                     && inUnit->GetPlayer()->GetPlayerID() == 0;
+    bool theFogged = ee_gfx_capture_owned_food(inUnit->mResourceType == kResourceFood && inUnit->mResourceAmount > 0,
+                                               theComplex != NULL, inUnit->mUnitClass->mCategory,
+                                               inUnit->GetPlayer()->GetPlayerID());
     if (theComplex != NULL) {
         if (ioInfo.mAmbient)
             gAmbientSoundManager.mAnalyzer.CountUnit(theComplex);
@@ -1239,24 +1201,8 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
                 thePoint = theWaypoint->mLocation;
                 if (theMesh->GetIsValidTile(UMFloor(thePoint.GetX()), UMFloor(thePoint.GetY())))
                     thePoint.SetZ(theMesh->GetMeshZ(thePoint.GetX(), thePoint.GetY()));
-                unsigned long theID = theCarrier->GetUnitID() & 0xffffff;
-                switch (theID % 3) {
-                case 0:
-                    outUnit->mTintColor.mRed = theID % 6 / 5.0f;
-                    outUnit->mTintColor.mGreen = ((theCarrier->GetUnitID() & 0xffffff) + 1) / 5.0f;
-                    outUnit->mTintColor.mBlue = ((theCarrier->GetUnitID() & 0xffffff) + 2) / 5.0f;
-                    break;
-                case 1:
-                    outUnit->mTintColor.mRed = (theID + 1) / 5.0f;
-                    outUnit->mTintColor.mGreen = (theCarrier->GetUnitID() & 0xffffff) % 6 / 5.0f;
-                    outUnit->mTintColor.mBlue = ((theCarrier->GetUnitID() & 0xffffff) + 2) / 5.0f;
-                    break;
-                case 2:
-                    outUnit->mTintColor.mRed = (theID + 2) / 5.0f;
-                    outUnit->mTintColor.mGreen = ((theCarrier->GetUnitID() & 0xffffff) + 1) / 5.0f;
-                    outUnit->mTintColor.mBlue = (theCarrier->GetUnitID() & 0xffffff) % 6 / 5.0f;
-                    break;
-                }
+                EeGfxColor theTint = ee_gfx_capture_waypoint_tint((int32_t)theCarrier->GetUnitID());
+                outUnit->mTintColor = GEColor(theTint.red, theTint.green, theTint.blue);
             }
         }
         inUnit->mUnitClass->GroundLocation(thePoint);
@@ -1500,33 +1446,8 @@ void EERenderObject::FillRenderLists()
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {
             sU529090 = theTime;
-            float theAverage = theCount != 0.0f ? theInfo.mNumFightingUnits / theCount : 0.0f;
-            unsigned long theIntensity;
-            switch (gMusicManager->mIntensity) {
-            case 3:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = 3;
-                else
-                    theIntensity = 1;
-                break;
-            case 2:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = theAverage >= 0.65f ? 3 : 2;
-                else
-                    theIntensity = 1;
-                break;
-            case 0:
-            case 1:
-                if (theAverage < -0.0001f || theAverage > 0.0001f)
-                    theIntensity = theAverage < 0.5f ? 2 : 3;
-                else
-                    theIntensity = 1;
-                break;
-            default:
-                theIntensity = 1;
-                break;
-            }
-            gMusicManager->SetIntensity(theIntensity);
+            gMusicManager->SetIntensity(ee_gfx_capture_music_intensity((uint32_t)gMusicManager->mIntensity,
+                                                                       theInfo.mNumFightingUnits, theCount));
         }
         if (theInfo.mAmbient)
             gAmbientSoundManager.Update();

@@ -5,6 +5,7 @@
 use ee_ge::types::{Ge2DPoint, Ge3DPoint};
 
 use crate::capture::{self, GroundHeights, EE_GFX_RING_POINTS};
+use crate::effects::EeGfxColor;
 use crate::ffi_effect::EeGfxParticleGround;
 use crate::scene::{
     self, EeGfxDaylight, EeGfxDaylightTables, EeGfxLetterbox, EeGfxSceneClocks, EeGfxSceneFade, EeGfxSceneStep,
@@ -151,4 +152,37 @@ pub unsafe extern "C" fn ee_gfx_lighting(
 ) -> crate::lighting::EeGfxRasterOps {
     // SAFETY: the function's contract
     crate::lighting::lighting(kind, unsafe { &*i })
+}
+
+// ---- the capture's world walk (walk.rs)
+
+/// `IsUnitDrawn` over the unit's facts `f`, asking `host` the set and view questions.
+///
+/// # Safety
+/// `f` is readable and `host`'s functions take its context.
+#[no_mangle]
+pub unsafe extern "C" fn ee_gfx_capture_unit_drawn(
+    f: *const crate::walk::EeGfxUnitFacts,
+    host: *mut crate::walk::EeGfxDrawnHost,
+) -> bool {
+    // SAFETY: the function's contract
+    crate::walk::unit_drawn(unsafe { &*f }, unsafe { &mut *host })
+}
+
+/// The world's food a unit stands for (drawn unseen, fogged by `FillUnit`).
+#[no_mangle]
+pub extern "C" fn ee_gfx_capture_owned_food(food: bool, has_complex: bool, category: i32, owner_id: i32) -> bool {
+    crate::walk::owned_food(food, has_complex, category, owner_id)
+}
+
+/// A waypoint marker's tint by its carrier's id.
+#[no_mangle]
+pub extern "C" fn ee_gfx_capture_waypoint_tint(carrier_id: i32) -> EeGfxColor {
+    crate::walk::waypoint_tint(carrier_id)
+}
+
+/// `FillRenderLists`' music intensity.
+#[no_mangle]
+pub extern "C" fn ee_gfx_capture_music_intensity(current: u32, fighting: f32, count: f32) -> u32 {
+    crate::walk::music_intensity(current, fighting, count)
 }

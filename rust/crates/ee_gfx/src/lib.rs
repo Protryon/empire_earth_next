@@ -79,6 +79,8 @@ mod golden_sky;
 #[cfg(test)]
 mod golden_view;
 #[cfg(test)]
+mod golden_walk;
+#[cfg(test)]
 mod golden_volcano;
 pub mod lighting;
 pub mod mesh;
@@ -93,3 +95,4 @@ pub mod terrain;
 pub mod units;
 pub mod view;
 pub mod volcano;
+pub mod walk;
