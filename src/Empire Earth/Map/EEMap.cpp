@@ -40,6 +40,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EETerrainColorTable.h"
 #include "ee/EEPersistentTag.h"
+#include "ee/EEUnitRegions.h"
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
@@ -80,7 +81,7 @@ EEMap::EEMap(long inWidth, long inHeight, unsigned long inPlayerCount, long inTe
 // Destroys the map: frees its region tables, tiles and visibility words and unloads its terrain textures
 EEMap::~EEMap()
 {
-    delete this->mUnitRegions;
+    ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
     delete[] this->mTileArray;
     if (this->mVisibilityWords)
@@ -213,9 +214,9 @@ void EEMap::CreateMap(long inWidth, long inHeight, unsigned long inPlayerCount)
 {
     GETerrainMesh& theMesh = this->mTerrainMesh;
     this->Create(inWidth, inHeight, inPlayerCount, true);
-    delete this->mUnitRegions;
+    ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
-    this->mUnitRegions = new RTSRegionTable<EEComplexUnit*>(this, 3);
+    this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
     this->mEffectRegions = new EEEffectsTable(this, 10);
     theMesh = theMesh;
     unsigned long theCount = this->mSize + 1;
@@ -520,9 +521,9 @@ long EEMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSF
         if (this->mU19565C >= EETerrainTable::GetNumCliffTerrains() || EETerrainTable::sCliffTable[this->mU19565C] == NULL)
             this->mU19565C = gFirstCliffTerrain;
     }
-    delete this->mUnitRegions;
+    ee_combat_regions_free(this->mUnitRegions);
     delete this->mEffectRegions;
-    this->mUnitRegions = new RTSRegionTable<EEComplexUnit*>(this, 3);
+    this->mUnitRegions = ee_combat_regions_new((uint32_t)UMCeilUnsigned((float)this->mSize / 3L), 3);
     this->mEffectRegions = new EEEffectsTable(this, 10);
     this->UpdateCliffs(0, this->mSize, 0, this->mSize);
     return theResult;
