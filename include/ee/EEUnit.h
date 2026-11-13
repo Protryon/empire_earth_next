@@ -1307,7 +1307,7 @@ public:
     long mAirTrafficType;                   // +0x028 the ctor stores it
     std::vector<long> mResearchTechnologies;  // +0x02c 4-byte elements: the ctor's `_Buy(0)`
     unsigned long mCommands[9];             // +0x03c the command buttons (30: formation); 9 separate ctor stores
-    std::map<long, EEUnitAction*>* mAIScript;  // +0x060 the class's AI script (EEUnitAction::GetScript of its name; FindAction finds an action in it)
+    void* mAIScript;                        // +0x060 the class's AI script (EEUnitAction::GetScript of its name: a Rust script's handle; FindAction finds an action in it)
     EEGraphicEffect* mAttachedEffect;   // +0x064 (dereferenced by the dtor 0x2305ee: an effect)
     EEGraphicEffect* mDeathEffect;          // +0x068 provisional name (VirtualC4: played on the dying unit)
     EEGraphicEffect* mDamageEffect;     // +0x06c (dereferenced by the dtor 0x2305ee: an effect)

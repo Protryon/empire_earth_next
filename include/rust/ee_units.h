@@ -1603,19 +1603,6 @@ struct EeUnitsAIState {
   int32_t goal_kind;
 };
 
-/// A trigger of an action, read by the host: `conditions` points to `count` trigger ids (the C++ vector's data,
-/// copied before any other host call).
-struct EeUnitsTrigger {
-  const int64_t *conditions;
-  uint32_t count;
-  uint8_t all_of;
-  uint8_t any_of;
-  int64_t true_id;
-  int64_t false_id;
-  uint64_t true_action;
-  uint64_t false_action;
-};
-
 /// The C++ calls of `AIStep` and the script's decision. `ctx` is the host's (the unit).
 struct EeUnitsAIHost {
   void *ctx;
@@ -1625,8 +1612,6 @@ struct EeUnitsAIHost {
   uint64_t (*command)(void *ctx);
   /// `!mGoalState->IsActive(&action)`: true and the action when the gather goal is not active
   bool (*gather_inactive)(void *ctx, uint32_t *out_action);
-  /// the trigger `index` of `action` into `out`; false past the last
-  bool (*trigger)(void *ctx, uint64_t action, uint32_t index, EeUnitsTrigger *out);
   /// the unit class's `EvaluateCondition(unit, trigger)` (the host notes it: USST)
   int64_t (*condition)(void *ctx, int64_t trigger);
   /// an action's `mType`
@@ -1910,6 +1895,13 @@ struct EeUnitsGoalHost {
   int64_t (*op)(void*, int32_t, uint64_t, uint64_t, EeUnitsGoalIo*);
 };
 
+/// The C++ reader of a script's file: `read(ctx, name, len, sink)` pushes the bytes (`ee_units_script_push`) and
+/// answers whether the file was found and opened.
+struct EeUnitsScriptReader {
+  void *ctx;
+  bool (*read)(void*, const uint8_t*, size_t, void*);
+};
+
 /// One stats object's fields (floats as their bits), as the C++ fills them (`EEUnitStatsFill`).
 struct EeUnitStatsRecord {
   /// the `EEUnitClassUpgrade*`'s address (the key)
@@ -2066,24 +2058,6 @@ EeUnitsAIStepOut ee_units_ai_step(const EeUnitsAIHost *host,
                                   uint64_t object,
                                   uint8_t is_citizen,
                                   int64_t game_time);
-
-/// `EEUnitAction::Evaluate` (`action`) over the host's calls (only the trigger, condition and table are used): the
-/// result, and the picked action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` points to a valid table, `out_action` to a writable u64.
-int64_t ee_units_action_evaluate(const EeUnitsAIHost *host,
-                                 uint64_t action,
-                                 uint64_t *out_action);
-
-/// `EEUnitTrigger::Evaluate` (`trigger`: the trigger's view) over the host's conditions: the result, and the picked
-/// action in `out_action` when it is not 0.
-///
-/// # Safety
-/// `host` and `trigger` point to valid values (the trigger's `count` ids readable), `out_action` to a writable u64.
-int64_t ee_units_trigger_evaluate(const EeUnitsAIHost *host,
-                                  const EeUnitsTrigger *trigger,
-                                  uint64_t *out_action);
 
 /// Makes `id` resolve to `unit` (`RTSPlayer::InsertUnit`).
 void ee_units_register(uint32_t id, void *unit);
@@ -2699,6 +2673,33 @@ int64_t ee_units_rust_goal(int32_t op,
                            uint64_t b,
                            EeUnitsGoalIo *io,
                            const EeUnitsGoalHost *host);
+
+/// The reader appends a file's bytes to the sink it was handed.
+///
+/// # Safety
+/// `sink` is the sink of the read in progress; `data` points to `len` bytes.
+void ee_units_script_push(void *sink, const uint8_t *data, size_t len);
+
+/// `EEUnitAction::GetScript(name)`: the script's handle.
+///
+/// # Safety
+/// `name` points to `len` bytes; `reader` to a valid reader.
+uint64_t ee_units_script_get(const uint8_t *name, size_t len, const EeUnitsScriptReader *reader);
+
+/// The script's action of an id (0: none).
+uint64_t ee_units_script_find(uint64_t script, int32_t id);
+
+/// Every script freed (the game's end).
+void ee_units_script_delete_all();
+
+/// The action id of a NUL-terminated name (0: unknown).
+///
+/// # Safety
+/// `name` is a NUL-terminated string.
+int32_t ee_units_script_action_id(const char *name);
+
+/// The NUL-terminated name of an action id ("" unknown), static.
+const char *ee_units_script_action_name(uint32_t id);
 
 /// A stats object's report (its fields may have changed). Returns its version.
 ///
