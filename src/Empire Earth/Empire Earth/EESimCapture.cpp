@@ -15,6 +15,7 @@ thread_local unsigned int sOnlyTags[4] = {};
 thread_local unsigned int sOnlyCount = 0;
 std::atomic<bool> sExclusive{false};
 std::atomic<bool> sClosed{false};
+std::atomic<bool> sHeld{false};
 thread_local bool sExclusiveOwner = false;
 
 FILE* CaptureFile()
@@ -60,9 +61,14 @@ void EESimCaptureRecord::Close()
     sClosed.store(true);
 }
 
+void EESimCaptureRecord::Hold(bool inOn)
+{
+    sHeld.store(inOn);
+}
+
 bool EESimCaptureRecord::Keeps(unsigned int inTag)
 {
-    if (CaptureFile() == NULL || sClosed.load() || (sExclusive.load() && !sExclusiveOwner))
+    if (CaptureFile() == NULL || sClosed.load() || sHeld.load() || (sExclusive.load() && !sExclusiveOwner))
         return false;
     if (sOnlyCount == 0)
         return true;
@@ -75,7 +81,7 @@ bool EESimCaptureRecord::Keeps(unsigned int inTag)
 void EESimCaptureRecord::Commit()
 {
     FILE* theFile = CaptureFile();
-    if (theFile == NULL || sClosed.load() || (sExclusive.load() && !sExclusiveOwner))
+    if (theFile == NULL || sClosed.load() || sHeld.load() || (sExclusive.load() && !sExclusiveOwner))
         return;
     if (sOnlyCount != 0) {
         bool theKept = false;

@@ -190,6 +190,7 @@
 #include "lle/GEQuaternion.h"
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUCMissile.h"         // the missile sweep's impact tests
+void EEEffectCaptureSweep();               // the 3D effects' sweep (ee/EEEffectManager.h)
 #include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
@@ -465,6 +466,7 @@ struct Options {
     long mPortOffset = -1;                               // -1: no fixed ports (kPlatSimAnyPort)
     bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     bool mMissileSweep = false;                          // --missile-sweep (TEST ONLY; the capture's missile game)
+    bool mEffectSweep = false;                           // --effect-sweep (TEST ONLY; the capture's effects game)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -675,6 +677,15 @@ void FinishGame(const char* inOutcome)
     static bool sSwept = false;
     if (EESimCaptureRecord::Active() && !sSwept) {
         sSwept = true;
+        if (sOptions.mEffectSweep) {
+            // the 3D effects' sweep alone (the game's own records held since its start: EESimMain)
+            EESimCaptureRecord::Hold(false);
+            EEEffectCaptureSweep();
+            EECombatCaptureFlush();
+            EESimCaptureRecord::Close();
+            Finish(inOutcome);
+            return;
+        }
         EECombatListSearchSweep();
         if (sOptions.mMissileSweep) {
             EECombatMissileSweep();
@@ -1876,6 +1887,8 @@ const char* kUsage =
     "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --missile-sweep        TEST ONLY: with EE_SIM_CAPTURE, when the game ends the players' units fire every\n"
     "                         missile class (the capture's missile game: CBMA, CBMH and the impact tests)\n"
+    "  --effect-sweep         TEST ONLY: with EE_SIM_CAPTURE, only the end of the game records: every swept 3D effect\n"
+    "                         kind made, stepped, saved and loaded (the capture's effects game: EFSW, EFST, EFMU)\n"
     "  --editor-script FILE   TEST ONLY: instead of a game, the scenario editor (main menu -> Editors -> Scenario\n"
     "                         Editor) and this script of its actions and digests (EESimEditor.cpp names the commands)\n"
     "  --editor-out FILE      the script's steps and digests (default stdout)\n"
@@ -2071,7 +2084,10 @@ int EESimMain(int argc, char** argv)
             sOptions.mCalamities = true;
         else if (a == "--missile-sweep")
             sOptions.mMissileSweep = true;
-        else if (a == "--port-offset")
+        else if (a == "--effect-sweep") {
+            sOptions.mEffectSweep = true;
+            EESimCaptureRecord::Hold(true);   // only the end sweep records (FinishGame)
+        } else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")
             sOptions.mAutoSaveMs = atol(value().c_str());

@@ -62,6 +62,12 @@ calamity class cast in turn (EE-SIM --calamities); their digests are golden_cpp_
 --profile missile is the oracle's game with EE-SIM --missile-sweep: when it ends, the players' units fire every missile
 and torpedo class (CBMA/CBMH, the missile's flight steps, and its impact tests' CBGI/CBWI); its golden file lists only
 those tags (and CBTC, CBGS), every other tag of it is the oracle profile's (reported as without a golden).
+--profile effects is the oracle's game cut at ten game minutes with EE-SIM --effect-sweep: nothing records during the
+game; when it ends, every swept 3D effect kind (EEEffectManager.cpp's EEEffectCaptureSweep: the blast wave, water
+splash, tracers, disease, 3D projectile, shells, additive pass, citizen beam, teleport, virus, pulse cannon ball,
+time warp, shield, screen flash) is made in its world through each entry point that makes it, stepped, saved and
+loaded: EFSW one record per case (the creation, the save, the load and repair, the second save), EFST and EFMU after
+every update of the sweep. Its golden came from the C++ effects before each kind moved (R4.4, fourteenth round).
 CALW (every calamity update with its state before and after and its world calls), CCAS (CanCastAt: the game's
 calls and a sweep over every class, the computer players' first units and real points and targets), TRTE
 (ResearchToEpoch's steps) and EVUN (the units an effect walks, with what applies and the values) were recorded from
@@ -134,6 +140,9 @@ PROFILES = {
     # the oracle's game, then every missile class fired at its end (EE-SIM --missile-sweep: no game of the other
     # profiles flies a missile); its golden lists only the sweep's tags (CBMA, CBMH, CBGI, CBWI)
     "missile": ["--difficulty", "Hard", "--game-seconds", "2700", "--cheats", "none", "--missile-sweep"],
+    # the oracle's game cut at ten minutes, then every swept 3D effect kind made, stepped, saved and loaded (EE-SIM
+    # --effect-sweep: no other profile makes most of them); only the sweep records (EFSW, EFST, EFMU)
+    "effects": ["--difficulty", "Hard", "--game-seconds", "600", "--cheats", "none", "--effect-sweep"],
     # a retail campaign scenario per seed (SCENARIOS; EE-SIM --scenario: the lobby's Play Scenario screen), the
     # scenario manager's triggers, conditions, objects, areas and effects (SM** records; no random map runs one)
     "scenario": ["--game-seconds", "1800", "--scenario", "{scenario}"],
