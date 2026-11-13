@@ -128,9 +128,6 @@
 309880 3098cd WONGUI/PaletteLifetime.cpp
 30a800 30a803 WONGUI/ListItemDefaults.cpp
 311560 311677 WONGUI/TextLinkState.cpp
-3140f0 314209 WONGUI/TreeItemLifetime.cpp
-314210 314e91 WONGUI/TreeItem.cpp
-314ea0 3152cf WONGUI/TreeArea.cpp
 3152d0 315898 WONGUI/WONSkinDefaultGetters.cpp
 315530 315697 WONGUI/SkinSelectionAdapters.cpp
 3156a0 315c82 WONGUI/WONSkinComposition.cpp

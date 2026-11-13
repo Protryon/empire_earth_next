@@ -772,6 +772,10 @@ constexpr static const int32_t EE_WON_DRAW_TEXT = 15;
 /// A call the plan's caller makes (`a`: which, per plan; `b`..: its arguments).
 constexpr static const int32_t EE_WON_DRAW_CALL = 16;
 
+/// A dotted line from (a, b), `c` long, vertical when `d` is set: every other pixel in the current colour, starting
+/// on the first even coordinate (TreeItem.cpp's `DrawHorzDottedLine` / `DrawVertDottedLine`).
+constexpr static const int32_t EE_WON_DRAW_DOTTED_LINE = 17;
+
 /// The stretch filter's `CopyRawImage(a ? dst : src, dst, b, c, d, e, f, g)` (dest x, y, source x, y, width, height).
 constexpr static const int32_t EE_WON_DRAW_COPY_PIXELS = 20;
 
@@ -2256,6 +2260,24 @@ enum class EeWonGuiOp : uint32_t {
   /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
   /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
   EventChildUnder,
+  /// `((TreeItem*)a)->mNode` (a row's Rust object).
+  NodeOf = 280,
+  /// a new `TreeItem` with the creator's reference (`AddRef`; given back with `ItemRelease`).
+  NewTreeItem,
+  /// `a->mSelectable = b != 0`.
+  ItemSetSelectable,
+  /// `a->SetPos(b, c)`.
+  ItemSetPosXY,
+  /// `a->mType` (a `ComponentEvent*`).
+  EventType,
+  /// `a->mComponent->mControlId`.
+  EventCompControlId,
+  /// `a->mComponent->Top()`.
+  EventComponentTop,
+  /// `CheckDoubleClick(a)` (0 or 1).
+  CheckDoubleClick,
+  /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
+  DeliverTreeOpened,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -3162,6 +3184,109 @@ enum class EeWonTitleInstr {
   ErrorNestCommunity,
 };
 
+/// The inward calls of the tree (`TreeArea`'s virtuals and methods; rows are `TreeItem*`s).
+enum class EeWonTreeCall : uint32_t {
+  /// the constructor's steps (the root row made and opened, the list flags, the tree flags).
+  Init = 1,
+  /// `HandleComponentEvent(a)`.
+  HandleEvent,
+  NotifyMouseItemGone,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `Sort(a, b != 0)` (`a` a row or NULL: the root).
+  SortItem,
+  /// `SetTreeFlags(a, b != 0)`.
+  SetTreeFlags,
+  /// `mTreeFlags`.
+  TreeFlags,
+  /// `InsertTreeItem(a, b, c)`: the new row.
+  InsertTreeItem,
+  /// `RemoveTreeItem(a)`.
+  RemoveTreeItem,
+  /// `RemoveAllItems(a)` (`ClearTree` with NULL).
+  RemoveAllItems,
+  /// `OpenItem(a, b != 0)`.
+  OpenItem,
+  /// `CloseItem(a, b != 0, c != 0)`.
+  CloseItem,
+  /// `ToggleItem(a, b != 0, c != 0)`.
+  ToggleItem,
+  /// `mRoot`.
+  Root,
+  /// `mTreeSortType`.
+  SortType,
+  /// `mMouseColItem`.
+  MouseColItem,
+};
+
+/// The inward calls of a row (`TreeItem`'s virtuals and methods; `tree` is given for the ones that have one).
+enum class EeWonTNodeCall : uint32_t {
+  /// `Paint(*a, tree)`.
+  Paint = 1,
+  /// `CalcDimensions(tree)`.
+  CalcDimensions,
+  /// `SetViewport(tree, a)`.
+  SetViewport,
+  /// `Compare(a, tree)`.
+  Compare,
+  /// `CanSelect(tree, a, b)` (0 or 1).
+  CanSelect,
+  /// `SetPos(a, b)` (no tree).
+  SetPos,
+  /// `MouseEnter(tree, a, b)`.
+  MouseEnter,
+  /// `MouseExit(tree)`.
+  MouseExit,
+  /// `MouseMove(tree, a, b)`.
+  MouseMove,
+  /// `MouseDrag(tree, a, b)`.
+  MouseDrag,
+  /// `MouseDown(tree, a, b, c)`.
+  MouseDown,
+  /// `MouseUp(tree, a, b, c)`.
+  MouseUp,
+  /// `GetChild(a)` (no tree).
+  GetChild,
+  /// `GetNextNonChild()` (no tree).
+  GetNextNonChild,
+  /// `GetNextNonChildPos(tree)`.
+  GetNextNonChildPos,
+  /// `InsertChild(tree, a, b)`.
+  InsertChild,
+  /// `RemoveAllChildren(tree)`.
+  RemoveAllChildren,
+  /// `RemoveChild(tree, a)`.
+  RemoveChild,
+  /// `RemoveFromParent(tree)`.
+  RemoveFromParent,
+  /// `CloseAll()` (no tree).
+  CloseAll,
+  /// `InsertChildren(tree, a)`.
+  InsertChildren,
+  /// `SetOpen(tree, a != 0, b != 0, c != 0)`.
+  SetOpen,
+  /// `ToggleOpen(tree, a != 0, b != 0)`.
+  ToggleOpen,
+  /// `IsLastChild()` (no tree; 0 or 1).
+  IsLastChild,
+  /// `ContainsPoint(a, b)` (no tree; 0 or 1).
+  ContainsPoint,
+  /// `Sort(tree, a != 0)`.
+  Sort,
+  /// `mItem` (no tree).
+  Item,
+  /// `mChildren.size()` (no tree).
+  NumChildren,
+  /// `mParent` (no tree).
+  Parent,
+  /// `mOpen` (no tree; 0 or 1).
+  IsOpen,
+  /// `mX` (no tree).
+  Indent,
+  /// `mIndex` (no tree).
+  Index,
+};
+
 /// What an op that reads a message returns when the read threw `ReadBufferException` (the original's handler
 /// caught it in `HandleMessage` and did nothing more); outside every `short` status.
 enum class EeWonLobbyResult {
@@ -3354,6 +3479,9 @@ struct EeWonSplitter;
 /// StagingLogic's state (the original's members 0x4c..0x54).
 struct EeWonStaging;
 
+/// The Rust TreeItem.
+struct EeWonTNode;
+
 /// The Rust TextArea.
 struct EeWonText;
 
@@ -3363,6 +3491,9 @@ struct EeWonThread;
 /// `TimerThread`: the deadline queue (holding a reference per op, taken by the C++ before `add`), its lock, the
 /// signal and the thread that pumps it.
 struct EeWonTimerThread;
+
+/// The Rust TreeArea.
+struct EeWonTree;
 
 /// `UDPManager`'s state and steps.
 struct EeWonUdpManager;
@@ -11992,6 +12123,46 @@ void ee_won_titlecfg_community_text(const uint8_t *header,
                                     size_t pair_count,
                                     EeWonByteSink sink,
                                     void *context);
+
+/// A new Rust TreeArea for the C++ `component`, its calls out through `host`, its base the Rust list `list`.
+EeWonTree *ee_won_tree_new(void *component,
+                           EeWonGuiHostFn host,
+                           const EeWonList *list);
+
+/// # Safety
+/// `tree` came from `ee_won_tree_new` (or is NULL) and is not used again.
+void ee_won_tree_free(EeWonTree *tree);
+
+/// One of TreeArea's methods (`EeWonTreeCall`).
+///
+/// # Safety
+/// `tree` is live; the call's arguments as documented.
+ptrdiff_t ee_won_tree_call(const EeWonTree *tree,
+                           EeWonTreeCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
+
+/// A new Rust TreeItem for the C++ row `component`; `host` answers `NodeOf`, `ItemSetTop`, `ItemSetPosXY`,
+/// `ItemTop`, `ItemContains` and the references.
+EeWonTNode *ee_won_tnode_new(void *component,
+                             EeWonGuiHostFn host);
+
+/// # Safety
+/// `node` came from `ee_won_tnode_new` (or is NULL) and is not used again.
+void ee_won_tnode_free(EeWonTNode *node);
+
+/// One of TreeItem's methods (`EeWonTNodeCall`); `tree` is the row's tree's Rust object (NULL for the calls that
+/// need none).
+///
+/// # Safety
+/// `node` is live; `tree` is live or NULL; the call's arguments as documented.
+ptrdiff_t ee_won_tnode_call(const EeWonTNode *node,
+                            const EeWonTree *tree,
+                            EeWonTNodeCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 /// A new manager object for the C++ `manager`.
 ///

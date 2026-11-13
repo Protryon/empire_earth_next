@@ -121,6 +121,7 @@ pub mod text;
 pub mod textobj;
 pub mod thread;
 pub mod titlecfg;
+pub mod treeobj;
 pub mod udpmgr;
 pub mod udpops;
 pub mod wire;

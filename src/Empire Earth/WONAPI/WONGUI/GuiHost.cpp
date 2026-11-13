@@ -565,6 +565,21 @@ intptr_t ListAreaHostCall(ListArea* t, EeWonGuiOp op, intptr_t a, intptr_t b, in
     case Op::HeaderSetSortColumn: ((MultiListHeader*)a)->SetSortColumn((int)b, (ListSortType)c); return 0;
     case Op::RowCell: return (intptr_t)((MultiListItem*)a)->GetItem((int)b);
     case Op::RowSetCell: ((MultiListItem*)a)->SetItem(Item(b), (int)c); return 0;
+    // the tree list and its rows (treeobj.rs)
+    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
+    case Op::NewTreeItem: {
+        TreeItem* n = new TreeItem;
+        n->AddRef(); // the creator's SmartPtr, given back with ItemRelease
+        return (intptr_t)n;
+    }
+    case Op::ItemSetSelectable: Item(a)->mSelectable = b != 0; return 0;
+    case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
+    case Op::EventType: return ((ComponentEvent*)a)->mType;
+    case Op::EventCompControlId: return ((ComponentEvent*)a)->mComponent->mControlId;
+    case Op::EventComponentTop: return ((ComponentEvent*)a)->mComponent->Top();
+    case Op::CheckDoubleClick: return t->CheckDoubleClick((int)a) ? 1 : 0;
+    case Op::DeliverTreeOpened: t->DeliverEvent(new TreeItemOpenedEvent(t, (TreeItem*)a), false); return 0;
+    case Op::BaseHandleEvent: t->ScrollArea::HandleComponentEvent((ComponentEvent*)a); return 0;
     case Op::Draw: {
         WONDrawSlots aSlots;
         WONDrawNoCall aNoCall;
@@ -756,5 +771,54 @@ ListSortType MultiListHeader::GetSortTypeForButton(Component* button)
         if(header->DrawSortArrow()) return header->GetSortType(header->GetColumnIndex(button));
         return ListSortType_None;
     }
+}
+}
+
+// ---- the tree list and its rows (treeobj.rs)
+
+// a row's own calls out (its SetPos, its walks' other rows, its references)
+extern "C" intptr_t ee_won_guicpp_tnode_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)inComp; (void)d;
+    switch (op) {
+    case Op::NodeOf: return (intptr_t)((TreeItem*)a)->mNode;
+    case Op::ItemTop: return Item(a)->mTop;
+    case Op::ItemSetTop: Item(a)->mTop = (int)b; return 0;
+    case Op::ItemSetPosXY: Item(a)->SetPos((int)b, (int)c); return 0;
+    case Op::ItemContains: return Item(a)->Contains((int)b, (int)c) ? 1 : 0;
+    case Op::ItemHold: Item(a)->AddRef(); return 0;
+    case Op::ItemRelease: Item(a)->Release(); return 0;
+    default: return 0;
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x007140f0
+// Creates a closed row at indent 0 with no parent and no index (the Rust row)
+TreeItem::TreeItem() { this->mNode=ee_won_tnode_new(this,ee_won_guicpp_tnode_call); }
+// FUNCTION: WON 0x00714170
+// Destroys the row: the Rust row gives its children and its wrapped item back
+TreeItem::~TreeItem() { ee_won_tnode_free(this->mNode); }
+
+// FUNCTION: WON 0x00714ea0
+// Creates an empty tree with an open root row, list flags 0x30 off and 0x200 on, and tree flags 3 (the Rust tree)
+TreeArea::TreeArea()
+{
+    this->mTree=ee_won_tree_new(this,ee_won_guicpp_list_call,this->mRust);
+    this->TCall(EeWonTreeCall::Init);
+}
+// FUNCTION: WON 0x00714fc0
+// Destroys the tree: the Rust tree gives its root back (and so every row's)
+TreeArea::~TreeArea() { ee_won_tree_free(this->mTree); }
+// Wraps a text item (the tree's colour and font, an optional icon) in a new row under a parent (not identified in
+// the original exe)
+TreeItem* TreeArea::InsertString(TreeItem* theParent,const GUIString& theStr,Image* theIcon,int thePos)
+{
+    SmartPtr<TextListItem> anItem=new TextListItem;
+    anItem->mText=theStr;
+    anItem->mColor=this->mTextColor;
+    anItem->mFont=this->mFont;
+    anItem->mImage=theIcon;
+    return this->InsertTreeItem(theParent,anItem.get(),thePos);
 }
 }

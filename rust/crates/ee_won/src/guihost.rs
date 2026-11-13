@@ -384,6 +384,25 @@ pub enum EeWonGuiOp {
     /// the event `a`'s component's ancestor whose parent is this container (`child = a->mComponent`, climbed while
     /// its parent is neither this nor NULL); 0 when the climb ends at NULL.
     EventChildUnder,
+    // ---- the tree list and its rows (`treeobj`)
+    /// `((TreeItem*)a)->mNode` (a row's Rust object).
+    NodeOf = 280,
+    /// a new `TreeItem` with the creator's reference (`AddRef`; given back with `ItemRelease`).
+    NewTreeItem,
+    /// `a->mSelectable = b != 0`.
+    ItemSetSelectable,
+    /// `a->SetPos(b, c)`.
+    ItemSetPosXY,
+    /// `a->mType` (a `ComponentEvent*`).
+    EventType,
+    /// `a->mComponent->mControlId`.
+    EventCompControlId,
+    /// `a->mComponent->Top()`.
+    EventComponentTop,
+    /// `CheckDoubleClick(a)` (0 or 1).
+    CheckDoubleClick,
+    /// `DeliverEvent(new TreeItemOpenedEvent(this, a), false)`.
+    DeliverTreeOpened,
 }
 
 /// The events a component object fires (`FireEvent`).

@@ -2681,51 +2681,40 @@ private:
 };
 
 
-// TreeItem (0x3c bytes): allocated at 0x3150b2, constructor 0x3140f0, destructor 0x314170.
-// Constructor and destructor are out of line; nothing here allocates a TreeArea.
+// TreeArea and TreeItem (R6 WON round 24): the rows' parents, indents, indices, open states, wrapped items and
+// children, the tree's root, flags, sort type and hovered item, and every method are the Rust objects of
+// rust/crates/ee_won/src/treeobj.rs; these are the types the room control and the config hold, with one-line
+// forwarders.
 class TreeArea;
 class TreeItem : public ListItem {
 public:
-    TreeItem(); // 0x3140f0
-    // Implicit virtual destructor (0x314170)
-    virtual void Paint(Graphics&,ListArea*);     //314b60
-    virtual void CalcDimensions(ListArea*); //314df0
-    virtual void SetViewport(ListArea*,Container*); //314dd0
-    virtual int Compare(const ListItem*,ListArea*) const;   //314e20
-    virtual bool CanSelect(ListArea*,int,int); //314e40
-    virtual void SetPos(int,int);    //314b40
-    virtual void MouseEnter(ListArea*,int,int); //3142c0
-    virtual void MouseExit(ListArea*); //3142e0
-    virtual void MouseMove(ListArea*,int,int); //314310
-    virtual void MouseDrag(ListArea*,int,int); //314340
-    virtual void MouseDown(ListArea*,int,int,int); //3143b0
-    virtual void MouseUp(ListArea*,int,int,int);   //314370
-    TreeItem* GetChild(int); //314440
-    TreeItem* GetNextNonChild(); //314470
-    int GetNextNonChildPos(TreeArea*); // 0x3144b0
-    int GetInsertPos(TreeArea*,TreeItem*,int); //3144d0
-    void InsertChild(TreeArea*,TreeItem*,int=-1); //314570
-    void RemoveAllChildren(TreeArea*); //314710
-    void RemoveChild(TreeArea*,TreeItem*); //314770
-    void RemoveFromParent(TreeArea*); //314830
-    void Sort(TreeArea*,bool); // sorts the children recursively (not identified in the original exe)
-    void CloseAll(); //314850
-    void InsertChildren(TreeArea*,int); //314880
-    void SetOpen(TreeArea*,bool,bool=false,bool=true); //3148e0
-    void ToggleOpen(TreeArea*,bool=false,bool=true); // 0x314af0
-    bool IsLastChild(); //314b10
-    ListItem* GetMouseItem(ListArea*,int&,int&); //314210
-    bool ContainsPoint(int,int); //314e60
-    TreeItem* mParent; // at +0x18, the parent item
-    bool IsOpen() { return this->mOpen; } // inline
-    ListItem* GetWrappedItem() { return this->mItem.get(); } // mItem
-    int GetNumChildren() { return (int)this->mChildren.size(); }
-    TreeItem* GetParentItem() { return this->mParent; } // mParent
-    int GetIndex() { return this->mIndex; } // mIndex
-    int mX,mIndex; //1c/20
-    bool mOpen; //24
-    SmartPtr<ListItem> mItem; // at +0x28, the wrapped item
-    std::vector<SmartPtr<TreeItem> > mChildren; // at +0x2c..0x3b, Dinkum vector (16 bytes)
+    TreeItem(); // 0x3140f0: a closed row at indent 0 with no parent and no index (the Rust row, GuiHost.cpp)
+    virtual ~TreeItem(); // 0x314170
+    virtual void Paint(Graphics& g,ListArea* l) { this->NCall(l,EeWonTNodeCall::Paint,(intptr_t)&g); } // 0x314b60
+    virtual void CalcDimensions(ListArea* l) { this->NCall(l,EeWonTNodeCall::CalcDimensions); } // 0x314df0
+    virtual void SetViewport(ListArea* l,Container* v) { this->NCall(l,EeWonTNodeCall::SetViewport,(intptr_t)v); } // 0x314dd0
+    virtual int Compare(const ListItem* o,ListArea* l) const { return (int)const_cast<TreeItem*>(this)->NCall(l,EeWonTNodeCall::Compare,(intptr_t)o); } // 0x314e20
+    virtual bool CanSelect(ListArea* l,int x,int y) { return this->NCall(l,EeWonTNodeCall::CanSelect,x,y)!=0; } // 0x314e40
+    virtual void SetPos(int x,int y) { this->NCall(NULL,EeWonTNodeCall::SetPos,x,y); } // 0x314b40
+    virtual void MouseEnter(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseEnter,x,y); } // 0x3142c0
+    virtual void MouseExit(ListArea* l) { this->NCall(l,EeWonTNodeCall::MouseExit); } // 0x3142e0
+    virtual void MouseMove(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseMove,x,y); } // 0x314310
+    virtual void MouseDrag(ListArea* l,int x,int y) { this->NCall(l,EeWonTNodeCall::MouseDrag,x,y); } // 0x314340
+    virtual void MouseDown(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseDown,x,y,b); } // 0x3143b0
+    virtual void MouseUp(ListArea* l,int x,int y,int b) { this->NCall(l,EeWonTNodeCall::MouseUp,x,y,b); } // 0x314370
+    TreeItem* GetChild(int i) { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetChild,i); } // 0x314440
+    TreeItem* GetNextNonChild() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::GetNextNonChild); } // 0x314470
+    void CloseAll() { this->NCall(NULL,EeWonTNodeCall::CloseAll); } // 0x314850
+    bool IsLastChild() { return this->NCall(NULL,EeWonTNodeCall::IsLastChild)!=0; } // 0x314b10
+    bool ContainsPoint(int x,int y) { return this->NCall(NULL,EeWonTNodeCall::ContainsPoint,x,y)!=0; } // 0x314e60
+    bool IsOpen() { return this->NCall(NULL,EeWonTNodeCall::IsOpen)!=0; }
+    ListItem* GetWrappedItem() { return (ListItem*)this->NCall(NULL,EeWonTNodeCall::Item); } // mItem
+    int GetNumChildren() { return (int)this->NCall(NULL,EeWonTNodeCall::NumChildren); }
+    TreeItem* GetParentItem() { return (TreeItem*)this->NCall(NULL,EeWonTNodeCall::Parent); } // mParent
+    int GetIndex() { return (int)this->NCall(NULL,EeWonTNodeCall::Index); } // mIndex
+    EeWonTNode* mNode;
+private:
+    intptr_t NCall(ListArea* l,EeWonTNodeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0);
 };
 class TreeItemOpenedEvent : public ComponentEvent {
 public:
@@ -2734,32 +2723,34 @@ public:
     // Implicit destructor (0x314a60): no own vptr write.
     SmartPtr<TreeItem> mItem; // at +0x20; the event is 0x24 bytes
 };
-// TreeArea (0x174 bytes); constructor 0x314ea0.
+// TreeArea (0x174 bytes in the original); constructor 0x314ea0.
 class TreeArea : public ListArea {
 public:
-    TreeArea(); // 0x314ea0: sets up the root item, open state and list flags
-    // Implicit virtual destructor (0x314fc0)
-    virtual void MouseDown(int,int,int); // 0x315260 (forwarder)
-    virtual void HandleComponentEvent(ComponentEvent*); //315280
-    virtual void NotifyMouseItemGone(); //315060
-    virtual bool Sort(); // 0x315050 (returns false)
-    void SetSortType(ListSortType); //315030
-    void Sort(TreeItem*,bool=false); // sorts the visible subtree (not identified in the original exe)
+    TreeArea(); // 0x314ea0: the root row, open; list flags 0x30 off and 0x200 on; tree flags 3
+    virtual ~TreeArea(); // 0x314fc0
+    virtual void HandleComponentEvent(ComponentEvent* e) { this->TCall(EeWonTreeCall::HandleEvent,(intptr_t)e); } // 0x315280
+    virtual void NotifyMouseItemGone() { this->TCall(EeWonTreeCall::NotifyMouseItemGone); } // 0x315060
+    virtual bool Sort() { return false; } // 0x315050
+    void SetSortType(ListSortType t) { this->TCall(EeWonTreeCall::SetSortType,t); } // 0x315030
+    void Sort(TreeItem* i,bool recursive=false) { this->TCall(EeWonTreeCall::SortItem,(intptr_t)i,recursive); } // sorts the visible subtree
     TreeItem* InsertString(TreeItem*,const GUIString&,Image* =NULL,int=-1);
-    void CloseItem(TreeItem*,bool=false,bool=true);
-    void SetTreeFlags(int,bool);
-    TreeItem* InsertTreeItem(TreeItem*,ListItem*,int=-1); //315080
-    void RemoveTreeItem(TreeItem*); //315190
-    void ClearTree(bool=true); //3151a0
-    void RemoveAllItems(TreeItem*); //3151b0
-    void OpenItem(TreeItem*,bool=true); //315220
-    void ToggleItem(TreeItem*,bool=false,bool=true); //315240
-    bool TreeFlagSet(int flags) { return (this->mTreeFlags&flags)!=0; }
-    SmartPtr<TreeItem> mRoot; //164
-    int mTreeFlags; //168
-    ListItem* mMouseColItem; // at +0x16c, the item under the mouse
-    int mTreeSortType; //170
+    void CloseItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::CloseItem,(intptr_t)i,all,send); }
+    void SetTreeFlags(int f,bool on) { this->TCall(EeWonTreeCall::SetTreeFlags,f,on); }
+    TreeItem* InsertTreeItem(TreeItem* p,ListItem* i,int pos=-1) { return (TreeItem*)this->TCall(EeWonTreeCall::InsertTreeItem,(intptr_t)p,(intptr_t)i,pos); } // 0x315080
+    void RemoveTreeItem(TreeItem* i) { this->TCall(EeWonTreeCall::RemoveTreeItem,(intptr_t)i); } // 0x315190
+    void ClearTree(bool=true) { this->TCall(EeWonTreeCall::RemoveAllItems,0); } // 0x3151a0 (the flag unused)
+    void RemoveAllItems(TreeItem* p) { this->TCall(EeWonTreeCall::RemoveAllItems,(intptr_t)p); } // 0x3151b0
+    void OpenItem(TreeItem* i,bool send=true) { this->TCall(EeWonTreeCall::OpenItem,(intptr_t)i,send); } // 0x315220
+    void ToggleItem(TreeItem* i,bool all=false,bool send=true) { this->TCall(EeWonTreeCall::ToggleItem,(intptr_t)i,all,send); } // 0x315240
+    bool TreeFlagSet(int flags) { return (this->TCall(EeWonTreeCall::TreeFlags)&flags)!=0; }
+    EeWonTree* mTree;
+private:
+    intptr_t TCall(EeWonTreeCall c,intptr_t a=0,intptr_t b=0,intptr_t cc=0) { return ee_won_tree_call(this->mTree,c,a,b,cc); }
 };
+inline intptr_t TreeItem::NCall(ListArea* l,EeWonTNodeCall c,intptr_t a,intptr_t b,intptr_t cc)
+{
+    return ee_won_tnode_call(this->mNode,l ? static_cast<TreeArea*>(l)->mTree : NULL,c,a,b,cc);
+}
 
 // PopupMenu (0x180 bytes): ListArea (0x164) plus two SmartPtrs, four ints and a bool.
 // Constructor 0x2fd150 (57 vtable slots).
