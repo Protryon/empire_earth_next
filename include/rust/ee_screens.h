@@ -561,6 +561,133 @@ constexpr static const uint32_t EE_SCREENS_PANEL_TECH = 1;
 /// [`EeScreensPanelButton`]: the stop command on the first action button.
 constexpr static const uint32_t EE_SCREENS_PANEL_STOP = 2;
 
+/// Whether the mouse is over no control, or over the command units control.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_MOUSE_OK = 1;
+
+/// The selection's first unit: 0 none, 1 alive (hit points > 0), 2 not alive.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FIRST = 2;
+
+/// The selected group's kind flags.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FLAGS = 3;
+
+/// Whether the mouse is in the viewport's view rectangle.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_IN_VIEW = 4;
+
+/// `gUnitPicker.PickUnit(mouse, a)`: 1 when a unit was picked (the host holds it as the target).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_PICK = 5;
+
+/// The target's `Dereference`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_RELEASE = 6;
+
+/// `EEIsSeenBy(target, player, true)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEEN = 7;
+
+/// The target class's kind flags (the "command").
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_KIND = 8;
+
+/// The target is on the map, disabled and not protected (`mTileNode`, `mIsDisabled`, `!IsProtected()`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_DISABLED = 9;
+
+/// The selection's first unit's class is a medic.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_FIRST_MEDIC = 10;
+
+/// `EEUUGetIsUnitClassTargetable(NULL, target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TARGETABLE = 11;
+
+/// The target's owner: 0 the local player, 1 an enemy of it, 2 another player.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_OWNER = 12;
+
+/// The target's `mHitPoints`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_HP = 13;
+
+/// The target's stats' `mMaxHitPoints`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_MAX_HP = 14;
+
+/// The target's stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_ATTACK = 15;
+
+/// The target class's unit type.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TYPE = 16;
+
+/// The target class is a tower.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_TOWER = 17;
+
+/// The target class's category.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_CATEGORY = 18;
+
+/// The target is on the map and built (`mTileNode`, `mComplexUnit->mIsBuilt`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_ENTERABLE = 19;
+
+/// The target has a complex unit.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_T_COMPLEX = 20;
+
+/// The target's aim point (`EEGetAttackRangeKind`'s), written to the three floats.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_AIM = 21;
+
+/// `theGroup->FindUnitWithFlags(a)->CanGather(target, its tile, false, false)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CAN_GATHER = 22;
+
+/// `EECanHeal(the selection's first unit, the target's complex unit)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CAN_HEAL = 23;
+
+/// The selected group's unit count.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_COUNT = 24;
+
+/// Selected unit a's class kind flags.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_KIND = 25;
+
+/// Selected unit a's stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_ATTACK = 26;
+
+/// Selected unit a's complex unit is built.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_BUILT = 27;
+
+/// Selected unit a is on the map (`mTileNode`).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_ON_MAP = 28;
+
+/// Selected unit a's complex unit's cargo count.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CARGO = 29;
+
+/// Selected unit a's class's unit type.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_TYPE = 30;
+
+/// Selected unit a's class `IsAirBase()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_AIR_BASE = 31;
+
+/// Selected unit a's class `IsCrusader()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CRUSADER = 32;
+
+/// Selected unit a's class `IsPriest()`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_PRIEST = 33;
+
+/// Selected unit a has a complex unit.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_COMPLEX = 34;
+
+/// Selected unit a's complex unit's position (three floats).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_POSITION = 35;
+
+/// Selected unit a's class's minimum range (the first float).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_MIN_RANGE = 36;
+
+/// Selected unit a's complex unit `CanAttackClass(target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CAN_ATTACK = 37;
+
+/// `EECanConvert(selected unit a, the target's complex unit, shielded)` with shielded in b: bit 0 the answer, bit 1
+/// shielded after the call.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_SEL_CONVERT = 38;
+
+/// Cargo b of selected unit a: `CanAttackClass(target class)`.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK = 39;
+
+/// Cargo b of selected unit a: its stats' attack > 0.
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_ATTACK = 40;
+
+/// Cargo b of selected unit a: its position (three floats).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_POSITION = 41;
+
+/// Cargo b of selected unit a: its class's minimum range (the first float).
+constexpr static const uint32_t EE_SCREENS_CURSOR_OP_CARGO_MIN_RANGE = 42;
+
 /// The form's open event (set by the play campaign screen), its close event (nothing), the campaign list's
 /// selection, OK, Cancel, and the no-campaigns message's callback (no event object).
 constexpr static const uint32_t EE_SCREENS_CC_OPEN = 8705;
@@ -3672,6 +3799,9 @@ size_t ee_screens_panel_buttons(const EeScreensPanelView *view,
                                 size_t count,
                                 EeScreensPanelButton *out,
                                 size_t capacity);
+
+/// `EEUIFMainGame::UpdateCursorKind`'s cursor kind, read through the host with `ctx`.
+int32_t ee_screens_cursor_kind(void *ctx);
 
 /// The debug sound panel's event code for a control event id, 0 for another form's.
 uint32_t ee_screens_debug_sound_event_for(unsigned long id);

@@ -17,6 +17,8 @@
 //! - [`splash`]: the loading screen whole (form 23: its open event over the C++ host).
 //! - [`single_player`]: the single player screen (form 6): the random map's slot table; the player name check
 //!   (`EEIsValidName`) it shares with the multiplayer screens.
+//! - [`cursor`]: the main game form's mouse cursor over a unit (`UpdateCursorKind` and its five decisions) over
+//!   one host op per world read.
 //! - [`command_panel`]: the in-game command panel: its layout (which buttons show where), each button's
 //!   availability and icon, its tooltip's plan and the targeting modes of its commands.
 //! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
@@ -88,6 +90,9 @@ pub mod civ_choice;
 mod civ_choice_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
+pub mod cursor;
+#[cfg(not(test))]
+mod cursor_ffi;
 pub mod custom_campaign;
 pub mod debug_sound;
 #[cfg(not(test))]
