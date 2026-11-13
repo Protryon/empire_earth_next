@@ -58,10 +58,8 @@
 #include "ee/EEUIFSEMainGroup.h"
 #include "lle/GE3DPoint.h"
 #include "ee/EESEARust.h"
-#include "ee/EESEADeleteUnit.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
-#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x597261
 // Creates the scenario editor's unit command control with its rotate-units action
 EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, unsigned long inIndex,
@@ -100,7 +98,7 @@ long EESEUICCommandUnits::MouseRButtonUp()
         EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
         if (theUnit)
         {
-            EESEADeleteUnit* theAction = new EESEADeleteUnit(theUnit->mUnitID);
+            EESEARust* theAction = new EESEARust(kSEADeleteUnit, NULL, theUnit->mUnitID);
             theAction->Dereference();
             theUnit->Dereference();
         }

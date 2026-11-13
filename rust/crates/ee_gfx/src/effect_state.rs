@@ -19,6 +19,7 @@ use ee_ge::um;
 use ee_random::URandom;
 
 use crate::effect_icon::EeGfxEffectIcon;
+use crate::effect_shot::EeGfxEffectShot;
 use crate::effect_storm::EeGfxEffectStorm;
 use crate::effect_tracer::EeGfxEffectTracer;
 use crate::effect_wall::EeGfxEffectWall;
@@ -243,6 +244,8 @@ pub struct EeGfxEffectRecord {
     pub tracer: EeGfxEffectTracer,
     /// the shield's (`effect_follow.rs`)
     pub shield: EeGfxEffectShield,
+    /// the shots' (`effect_shot.rs`)
+    pub shot: EeGfxEffectShot,
 }
 
 /// The identity (`GETransformation()`).
@@ -281,6 +284,7 @@ impl EeGfxEffectRecord {
             wall: EeGfxEffectWall::default(),
             tracer: EeGfxEffectTracer::default(),
             shield: EeGfxEffectShield::default(),
+            shot: EeGfxEffectShot::default(),
         }
     }
 

@@ -1988,6 +1988,165 @@ constexpr static const uint8_t EE_WON_RT_ACT_USER_STATUS = 7;
 /// `InvalidReplyHeader()` (a group list request's reply of another kind)
 constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 
+/// `mGroupId` (u16)
+constexpr static const int32_t EE_WON_RTF_GROUP_ID = 0;
+
+/// `mClientId`; the relinquish op's new captain (u16)
+constexpr static const int32_t EE_WON_RTF_CLIENT_ID = 1;
+
+/// `mParentGroupId` (u16)
+constexpr static const int32_t EE_WON_RTF_PARENT_ID = 2;
+
+/// `mMaxPlayers` (u16)
+constexpr static const int32_t EE_WON_RTF_MAX_PLAYERS = 3;
+
+/// the group created notice's `mMaxClients` (u16)
+constexpr static const int32_t EE_WON_RTF_MAX_CLIENTS = 4;
+
+/// `mLinkId` (u16)
+constexpr static const int32_t EE_WON_RTF_LINK_ID = 5;
+
+/// `mOffset` (u16)
+constexpr static const int32_t EE_WON_RTF_OFFSET = 6;
+
+/// `mCaptainId` (u16)
+constexpr static const int32_t EE_WON_RTF_CAPTAIN_ID = 7;
+
+/// `mObserverCount` (u16)
+constexpr static const int32_t EE_WON_RTF_OBSERVERS = 8;
+
+/// `mMemberCount` (u16)
+constexpr static const int32_t EE_WON_RTF_MEMBER_COUNT = 9;
+
+/// a 16-bit `mFlags`: chat, peer chat, the group list (u16)
+constexpr static const int32_t EE_WON_RTF_FLAGS16 = 10;
+
+/// the firewall op's listen port (u16)
+constexpr static const int32_t EE_WON_RTF_LISTEN_PORT = 11;
+
+/// an 8-bit `mFlags` / `mFlag`: data, read, unsubscribe, create data, bad users, join attempt (u8)
+constexpr static const int32_t EE_WON_RTF_FLAGS8 = 12;
+
+/// `mJoinFlags` (u8)
+constexpr static const int32_t EE_WON_RTF_JOIN_FLAGS = 13;
+
+/// `mMemberFlags` (u8)
+constexpr static const int32_t EE_WON_RTF_MEMBER_FLAGS = 14;
+
+/// the derived op's `mMsgType` (u8)
+constexpr static const int32_t EE_WON_RTF_MSG_TYPE = 15;
+
+/// `mGroupFlags`, the group created notice's `mFlags` (u32)
+constexpr static const int32_t EE_WON_RTF_GROUP_FLAGS = 16;
+
+/// `mAsyncFlags` (u32)
+constexpr static const int32_t EE_WON_RTF_ASYNC_FLAGS = 17;
+
+/// `mGroupFlagMask` (u32)
+constexpr static const int32_t EE_WON_RTF_GROUP_MASK = 18;
+
+/// `mAsyncFlagMask` (u32)
+constexpr static const int32_t EE_WON_RTF_ASYNC_MASK = 19;
+
+/// `mClientFlags` (u32)
+constexpr static const int32_t EE_WON_RTF_CLIENT_FLAGS = 20;
+
+/// `mClientFlagMask` (u32)
+constexpr static const int32_t EE_WON_RTF_CLIENT_MASK = 21;
+
+/// `mAsyncMessageFlags` (u32)
+constexpr static const int32_t EE_WON_RTF_ASYNC_MSG_FLAGS = 22;
+
+/// `mAsyncMessageFlagMask` (u32)
+constexpr static const int32_t EE_WON_RTF_ASYNC_MSG_MASK = 23;
+
+/// `mRegisterFlags` (u32)
+constexpr static const int32_t EE_WON_RTF_REGISTER_FLAGS = 24;
+
+/// `mReconnectId` (u32)
+constexpr static const int32_t EE_WON_RTF_RECONNECT_ID = 25;
+
+/// `mWONId` (u32)
+constexpr static const int32_t EE_WON_RTF_WON_ID = 26;
+
+/// a duration: `mBanTime`, `mMuteTime`, `mSecondsUntilShutdown`, `mSeconds`, `mDuration` (u32)
+constexpr static const int32_t EE_WON_RTF_TIME = 27;
+
+/// the firewall op's longest connect wait (u32)
+constexpr static const int32_t EE_WON_RTF_MAX_WAIT = 28;
+
+/// the op's on/off member: banned, muted, accepted, invited, moderator, insert, subscribe, leave if joined (bool)
+constexpr static const int32_t EE_WON_RTF_ON = 29;
+
+/// `mBanByWONId` / `mMuteByWONId` (bool)
+constexpr static const int32_t EE_WON_RTF_BY_WON_ID = 30;
+
+/// `mWONIdIsCDKeyId` (bool)
+constexpr static const int32_t EE_WON_RTF_IS_CDKEY = 31;
+
+/// `mIsEx` (bool)
+constexpr static const int32_t EE_WON_RTF_IS_EX = 32;
+
+/// `mLeaveGroupOnCancel` (bool)
+constexpr static const int32_t EE_WON_RTF_LEAVE_ON_CANCEL = 33;
+
+/// `mHasClientNames` (bool)
+constexpr static const int32_t EE_WON_RTF_HAS_NAMES = 34;
+
+/// `mHasClientFlags` (bool)
+constexpr static const int32_t EE_WON_RTF_HAS_CLIENT_FLAGS = 35;
+
+/// the firewall op's `mWaitingForStatusReply` (bool)
+constexpr static const int32_t EE_WON_RTF_WAITING = 36;
+
+/// the firewall op's `mDoListen` (bool)
+constexpr static const int32_t EE_WON_RTF_DO_LISTEN = 37;
+
+/// `mListType` (a signed 32-bit enum)
+constexpr static const int32_t EE_WON_RTF_LIST_TYPE = 38;
+
+/// `mReplyCount` (i32)
+constexpr static const int32_t EE_WON_RTF_REPLY_COUNT = 39;
+
+/// `mNumRepliesNeeded` (i32)
+constexpr static const int32_t EE_WON_RTF_REPLIES_NEEDED = 40;
+
+/// a message text: chat, alerts, shutdown notices
+constexpr static const int32_t EE_WON_RTT_TEXT = 0;
+
+/// a name: the client's, the group's, a data object's
+constexpr static const int32_t EE_WON_RTT_NAME = 1;
+
+/// a password: the server's, the group's
+constexpr static const int32_t EE_WON_RTT_PASSWORD = 2;
+
+/// a comment: ban, mute, accept, invite, join, invitation, join attempt, banned, muted
+constexpr static const int32_t EE_WON_RTT_COMMENT = 3;
+
+/// A client of `mClientMap`
+constexpr static const int32_t EE_WON_RTR_CLIENT = 0;
+
+/// a member of `mMembers` / `mMemberMap`
+constexpr static const int32_t EE_WON_RTR_MEMBER = 1;
+
+/// the last member's client (`mClientInfo`)
+constexpr static const int32_t EE_WON_RTR_MEMBER_CLIENT = 2;
+
+/// a group of `mGroupMap`
+constexpr static const int32_t EE_WON_RTR_GROUP = 3;
+
+/// a member of the last group
+constexpr static const int32_t EE_WON_RTR_GROUP_MEMBER = 4;
+
+/// a data object of `mDataObjects`
+constexpr static const int32_t EE_WON_RTR_OBJECT = 5;
+
+/// a bad user of `mBadUserList`
+constexpr static const int32_t EE_WON_RTR_BAD_USER = 6;
+
+/// the client joined server notice's client
+constexpr static const int32_t EE_WON_RTR_OP_CLIENT = 7;
+
 /// No request.
 constexpr static const int32_t EE_WON_SMART_ACT_NONE = 0;
 
@@ -2657,6 +2816,16 @@ enum class EeWonGuiOp : uint32_t {
   RootDrawImage,
   /// `a->EnsureOnTopOf((Component*)b)` (the parent's `EnsureOnTopOf(b, a)`).
   RootEnsureOnTop,
+  /// `dynamic_cast<Button*>(a)`'s Rust button (`EeWonButton*`; 0 when `a` is no button or NULL; a pure read).
+  BtnOf = 550,
+  /// `HandleActivate()` (virtual; 0 or 1).
+  BtnHandleActivate,
+  /// `SetTextHook(*(const GUIString*)a)` (virtual).
+  BtnSetTextHook,
+  /// `mClickSound.get() != NULL` (0 or 1; a pure read).
+  BtnHasClickSound,
+  /// `mClickSound->Play()`.
+  BtnPlayClick,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2696,6 +2865,71 @@ enum class EeWonBarCall : uint32_t {
   SetRange,
   /// `SetLineScrollSizes(a, b)` (up, down).
   SetLineScrollSizes,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonBtnCall : uint32_t {
+  /// `Fn2F3440()` (the activation).
+  Click = 1,
+  /// `SetText(*a, b != 0)` (`a` a `const GUIString*`).
+  SetText,
+  /// `SetCheck(a != 0, b != 0)`.
+  SetCheck,
+  /// `SetButtonFlags(a, b != 0)`.
+  SetButtonFlags,
+  /// `CopyAttributes`'s flags (`a` the other button's `EeWonButton*`; the click sound is C++'s statement).
+  CopyAttributes,
+  /// `IsMouseOver()` (0 or 1).
+  IsMouseOver,
+  /// `IsDefaultButton()` (0 or 1).
+  IsDefaultButton,
+  AddedToParent,
+  /// `MouseEnter(a, b)`.
+  MouseEnter,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseUp(a, b, c)`.
+  MouseUp,
+  MouseExit,
+  ButtonDown,
+  /// `ButtonUp(a != 0)`.
+  ButtonUp,
+  /// `MouseDrag(a, b)`.
+  MouseDrag,
+  GotFocus,
+  LostFocus,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `KeyUp(a)` (0 or 1).
+  KeyUp,
+  /// `TimerEvent(a)` (1).
+  TimerEvent,
+  /// `MouseHover(a)`.
+  MouseHover,
+  /// `GetNextRadio(a != 0)`: the radio's `Component*`, or 0.
+  GetNextRadio,
+  /// `GetEndRadio(a != 0)`: the radio's `Component*`.
+  GetEndRadio,
+  /// the field `a` (`EeWonBtnField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
+/// Button's static functions and the two default buttons (`ee_won_btn_static`).
+enum class EeWonBtnStatic : uint32_t {
+  /// `SetDialogDefaultButton(a)`.
+  SetDialogDefault = 1,
+  /// `UnSetDialogDefaultButton(a)`.
+  UnSetDialogDefault,
+  /// `SetDefaultButton(a)`.
+  SetDefault,
+  /// `UnSetDefaultButton(a)`.
+  UnSetDefault,
+  /// `mDefaultButton.get()`.
+  Default,
+  /// `mDialogDefaultButton.get()`.
+  DialogDefault,
 };
 
 /// A number of the parser.
@@ -3004,6 +3238,8 @@ enum class EeWonGuiEvent : uint32_t {
   Scroll = 4,
   /// `ComponentEvent_TabCtrlTabSelected`.
   TabCtrlTabSelected = 5,
+  /// `ComponentEvent_ButtonPressed`.
+  ButtonPressed = 6,
 };
 
 /// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
@@ -4448,6 +4684,18 @@ enum class EeWonRootField : uint32_t {
   BgCount,
 };
 
+/// The button's fields (the skins and the tests read them).
+enum class EeWonBtnField : uint32_t {
+  /// `mButtonFlags`.
+  Flags = 1,
+  /// `mKeyDown` (0 or 1).
+  KeyDown,
+  /// `mDelayAcc`.
+  DelayAcc,
+  /// `mMouseDownState` (0 up, 1 down outside, 2 down over).
+  MouseDownState,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4471,6 +4719,9 @@ struct EeWonAuthSecrets;
 
 /// `AuthSession` (0x10cc bytes in the original): the session's type, id, key, sequence numbers and last use.
 struct EeWonAuthSession;
+
+/// The Rust Button.
+struct EeWonButton;
 
 /// `ByteBuffer`'s bytes: owned, possibly a view into a writer's former allocation, or none (`ByteBuffer(NULL)`).
 struct EeWonByteBuffer;
@@ -4573,6 +4824,9 @@ struct EeWonRoot;
 
 /// `RoutingConnection`'s op list, completions and steps.
 struct EeWonRouteConn;
+
+/// A routing op, as the C++ `RoutingOp` holds it.
+struct EeWonRouteOp;
 
 /// The Rust ScrollArea.
 struct EeWonScrollPane;
@@ -6217,6 +6471,54 @@ struct EeWonRouteResult {
   uint32_t pos;
 };
 
+/// How `ee_won_routeop_reply` ended.
+struct EeWonRouteOpRead {
+  /// the status `HandleReply` returns (when not cut)
+  int32_t status;
+  /// the original threw `ReadBufferException` after its assignments
+  bool cut;
+  /// `CheckLeaveGroup` leaves `leave_group` (a `RoutingLeaveGroupOp` run async)
+  bool leave;
+  uint16_t leave_group;
+};
+
+/// A record copied out (`ee_won_routeop_records`): the fields of its kind are set; texts are UTF-16 units and the
+/// pointers are valid only during the sink's call.
+struct EeWonRouteRecord {
+  /// `EE_WON_RTR_*`
+  int32_t kind;
+  /// its map's key
+  uint16_t key;
+  uint16_t id;
+  uint32_t flags;
+  uint32_t user_id;
+  uint32_t address;
+  uint16_t trust;
+  uint16_t parent;
+  uint16_t captain;
+  uint16_t max_clients;
+  uint32_t async_flags;
+  uint16_t observers;
+  uint16_t max_players;
+  uint8_t member_flags;
+  const uint16_t *name;
+  size_t name_len;
+  const uint8_t *data_type;
+  size_t data_type_len;
+  const uint8_t *data;
+  size_t data_len;
+  bool has_data;
+  uint32_t expiration;
+  uint32_t moderator_id;
+  const uint16_t *moderator_name;
+  size_t moderator_name_len;
+  const uint16_t *comment;
+  size_t comment_len;
+};
+
+/// Receives one record; valid only during the call.
+using EeWonRouteRecordSink = void(*)(void *context, const EeWonRouteRecord *record);
+
 /// `SelectGame` over one game: skipped (password, ask to join, not joinable); ranked (`Some(rank)`: the skill
 /// band, 0 the wanted skill, 10000 no skill, 20000 one below, 30000 one above, plus the ping, when the ping is
 /// under the ceiling and the limit); or, with an unknown ping (0xfffe) at or over the ceiling, pinged.
@@ -6351,25 +6653,6 @@ struct EeWonPingReply {
 
 /// `rand()` for [`ee_won_server_shuffle`].
 using EeWonDraw = int32_t(*)();
-
-/// A finished op's fields: `kind` the op type, then by type (SmartRoutingConnection.cpp's switch).
-struct EeWonSmartOp {
-  int32_t kind;
-  int32_t status;
-  uint16_t group;
-  uint16_t client;
-  uint32_t a;
-  uint32_t b;
-  uint32_t c;
-  bool has;
-  /// `text_len` `wchar_t`s
-  const void *text;
-  size_t text_len;
-  const uint8_t *data_type;
-  size_t data_type_len;
-  const uint8_t *data;
-  size_t data_len;
-};
 
 /// A record's copy for `ClientInfo` / `GroupInfo` / `MemberInfo` (`name` points into the object until its next
 /// call).
@@ -6999,6 +7282,31 @@ ptrdiff_t ee_won_bar_call(const EeWonScrollbar *bar,
                           ptrdiff_t a,
                           ptrdiff_t b,
                           ptrdiff_t c);
+
+/// A new Rust Button for the C++ `component`, its calls out through `host`.
+EeWonButton *ee_won_btn_new(void *component, EeWonGuiHostFn host);
+
+/// Frees a Rust Button (the original's destructor had no statement).
+///
+/// # Safety
+/// `btn` came from `ee_won_btn_new` (or is NULL) and is not used again.
+void ee_won_btn_free(EeWonButton *btn);
+
+/// One of Button's methods (`EeWonBtnCall`).
+///
+/// # Safety
+/// `btn` is live; the call's arguments as documented.
+ptrdiff_t ee_won_btn_call(const EeWonButton *btn,
+                          EeWonBtnCall call,
+                          ptrdiff_t a,
+                          ptrdiff_t b,
+                          ptrdiff_t c);
+
+/// One of Button's static functions (`EeWonBtnStatic`; `a` a `Button*` as a `Component*`), its calls out through
+/// `host` with a NULL component.
+ptrdiff_t ee_won_btn_static(EeWonGuiHostFn host,
+                            EeWonBtnStatic call,
+                            ptrdiff_t a);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
@@ -12807,6 +13115,135 @@ int32_t ee_won_route_dispatch(int32_t status);
 /// `GetUnsolicitedOp`'s notification for a routing message type, or -1.
 int32_t ee_won_route_unsolicited(uint8_t message);
 
+/// A new op of a type (`RoutingOpType`) with its constructor's members.
+EeWonRouteOp *ee_won_routeop_new(int32_t ty);
+
+/// Frees an op.
+///
+/// # Safety
+/// `op` is from `ee_won_routeop_new` (or null), not used again.
+void ee_won_routeop_free(EeWonRouteOp *op);
+
+/// The op's type (`GetType`).
+///
+/// # Safety
+/// `op` is a live op.
+int32_t ee_won_routeop_type(const EeWonRouteOp *op);
+
+/// The op type a notification kind (routemsg's `EE_WON_RT_N_*`) makes (0 for none).
+int32_t ee_won_routeop_notice_type(int32_t kind);
+
+/// A numeric member (`EE_WON_RTF_*`).
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_routeop_num(const EeWonRouteOp *op, int32_t field);
+
+/// Assigns a numeric member (cut to its width).
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_routeop_set_num(EeWonRouteOp *op, int32_t field, int64_t value);
+
+/// A text member (`EE_WON_RTT_*`) as UTF-16 units into `sink`.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+void ee_won_routeop_text(const EeWonRouteOp *op, int32_t which, EeWonUnitSink sink, void *context);
+
+/// Assigns a text member from `count` UTF-16 units.
+///
+/// # Safety
+/// `op` is a live op; `units` holds `count` units.
+void ee_won_routeop_set_text(EeWonRouteOp *op, int32_t which, const uint16_t *units, size_t count);
+
+/// `mDataType` into `sink`.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+void ee_won_routeop_data_type(const EeWonRouteOp *op, EeWonByteSink sink, void *context);
+
+/// Assigns `mDataType`.
+///
+/// # Safety
+/// `op` is a live op; `data` holds `length` bytes.
+void ee_won_routeop_set_data_type(EeWonRouteOp *op, const uint8_t *data, size_t length);
+
+/// `mData` into `sink`; false (the sink not called) for a null buffer.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+bool ee_won_routeop_data(const EeWonRouteOp *op, EeWonByteSink sink, void *context);
+
+/// Assigns `mData` (`present` false: a null buffer).
+///
+/// # Safety
+/// `op` is a live op; `data` holds `length` bytes.
+void ee_won_routeop_set_data(EeWonRouteOp *op, bool present, const uint8_t *data, size_t length);
+
+/// The recipients: copies up to `capacity` into `out`, returns how many there are.
+///
+/// # Safety
+/// `op` is a live op; `out` holds `capacity` entries (or is null with 0).
+size_t ee_won_routeop_ids(const EeWonRouteOp *op, uint16_t *out, size_t capacity);
+
+/// Assigns the recipients.
+///
+/// # Safety
+/// `op` is a live op; `ids` holds `count` entries.
+void ee_won_routeop_set_ids(EeWonRouteOp *op, const uint16_t *ids, size_t count);
+
+/// `SendRequest`: the message into `sink` (not called when the op sends nothing); returns 0 for nothing sent, 1
+/// sent, 3 sent and the op waits for its reply (`AddOp`).
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+int32_t ee_won_routeop_request(EeWonRouteOp *op,
+                               EeWonByteSink sink,
+                               void *context);
+
+/// `HandleReply(message, msg)`, the reader at `pos` of `data` (`length` bytes); `pending`: the op's status is
+/// pending.
+///
+/// # Safety
+/// `op` is a live op; `data` holds `length` bytes; `out` is valid.
+void ee_won_routeop_reply(EeWonRouteOp *op,
+                          uint8_t message,
+                          const uint8_t *data,
+                          size_t length,
+                          size_t pos,
+                          bool pending,
+                          EeWonRouteOpRead *out);
+
+/// `ParseGroupListObj`: a group list body (`length` bytes) into the op's group map; false when it ran short.
+///
+/// # Safety
+/// `op` is a live op; `data` holds `length` bytes.
+bool ee_won_routeop_parse_group_list(EeWonRouteOp *op,
+                                     const uint8_t *data,
+                                     size_t length);
+
+/// A group list request op's (`RustServerOp::NewGroupListReq`, reqlast.rs) checked replies read again into this
+/// connection-less group list op (`RouteGroupListOf`).
+///
+/// # Safety
+/// `op` is a live op; `host` is a live host op.
+void ee_won_routeop_read_group_list_of(EeWonRouteOp *op,
+                                       const EeWonHostOp *host);
+
+/// The op's records of one container, each into `sink` in the container's order: `EE_WON_RTR_CLIENT` (the client
+/// map), `EE_WON_RTR_MEMBER` (the member map; each member with a client is followed by its
+/// `EE_WON_RTR_MEMBER_CLIENT`), `EE_WON_RTR_GROUP` (the group map; each group followed by its
+/// `EE_WON_RTR_GROUP_MEMBER`s), `EE_WON_RTR_OBJECT`, `EE_WON_RTR_BAD_USER`, `EE_WON_RTR_OP_CLIENT` (none when
+/// the op has no client). The sink must not call back into the op.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+void ee_won_routeop_records(const EeWonRouteOp *op,
+                            int32_t which,
+                            EeWonRouteRecordSink sink,
+                            void *context);
+
 /// `room_spec`; a negative group is none.
 int32_t ee_won_routing_room_spec(uint16_t id, int32_t chat_group, int32_t game_group);
 
@@ -13144,58 +13581,14 @@ EeWonSmartRoute *ee_won_smart_new(uint32_t wchar_size, const uint8_t *path, size
 /// `r` is from `ee_won_smart_new` (or NULL), not used afterwards.
 void ee_won_smart_free(EeWonSmartRoute *r);
 
-/// A client record of the next op (its list, or its own client).
+/// `RoutingOpCompleteHook` over a Rust routing op: the model updated from the op (`status`: its status); true when
+/// its completion is to be dropped.
 ///
 /// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-void ee_won_smart_put_client(EeWonSmartRoute *r,
-                             uint16_t id,
-                             const void *name,
-                             size_t name_len,
-                             uint32_t flags,
-                             uint32_t address);
-
-/// A group record of the next op (a group list's); its members follow with `to_group`.
-///
-/// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-void ee_won_smart_put_group(EeWonSmartRoute *r,
-                            uint16_t id,
-                            const void *name,
-                            size_t name_len,
-                            uint16_t captain,
-                            uint16_t max_clients,
-                            uint32_t flags,
-                            uint32_t async_flags,
-                            uint16_t observers,
-                            uint16_t max_players);
-
-/// A member record of the next op: into the last group put (`to_group`), else the op's member list; its client
-/// record's name and flags when it has one.
-///
-/// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-void ee_won_smart_put_member(EeWonSmartRoute *r,
-                             bool to_group,
-                             uint16_t id,
-                             uint8_t flags,
-                             bool has_client,
-                             const void *name,
-                             size_t name_len,
-                             uint32_t client_flags);
-
-/// A data object of the next op (its link id and data).
-///
-/// # Safety
-/// `r` is a model; `data` holds `len` bytes.
-void ee_won_smart_put_object(EeWonSmartRoute *r, uint16_t link, const uint8_t *data, size_t len);
-
-/// `RoutingOpCompleteHook`: the model updated from the op; true when its completion is to be dropped.
-///
-/// # Safety
-/// `r` is a model; `op` points to the op's fields, whose pointers hold their lengths.
-bool ee_won_smart_op(EeWonSmartRoute *r,
-                     const EeWonSmartOp *op);
+/// `r` is a model; `op` a live routing op (`ee_won_routeop_new`).
+bool ee_won_smart_routeop(EeWonSmartRoute *r,
+                          const EeWonRouteOp *op,
+                          int32_t status);
 
 /// A copy (`which`, with the ids `a` and `b`): false when there is none (`out` untouched).
 ///

@@ -7,9 +7,9 @@
 //! what), the chat input's parse (`HandleInput` / `HandleCommand`: the request it makes is returned as an
 //! [`EeWonSmartAction`] for the C++ to send through its request helpers) and the snapshots are here.
 //!
-//! The C++ class keeps the connection (its socket, op list and requests) and hands each finished op's fields in:
-//! its lists first (`ee_won_smart_put_*`), then the op itself (`ee_won_smart_op`). The C++ holds the connection's
-//! data lock around every call. Text is `wchar_t` units (`u32` here, any width); the case maps and character
+//! The C++ class keeps the connection (its socket, op list and requests) and hands each finished op in (a Rust
+//! routing op since net round 18, routeop.rs: `ee_won_smart_routeop` puts its records and fields, then `op`). The
+//! C++ holds the connection's data lock around every call. Text is `wchar_t` units (`u32` here, any width); the case maps and character
 //! classes are the C runtime's (chat.rs's `CrtChat`), as the original called them. The behaviour is
 //! `golden_smartroute.txt` (won_smartroute_test over 127.0.0.1, recorded over the C++ class before the move).
 //!
@@ -25,7 +25,7 @@ use std::rc::Rc;
 
 use crate::chat::{self, ChatCtype, CrtChat};
 use crate::ffi::EeWonByteSink;
-use crate::{strcase, text};
+use crate::{routeop, strcase, text};
 
 // ---- the records
 
@@ -1530,27 +1530,6 @@ pub enum EeWonSmartGet {
     LastClient = 7,
 }
 
-/// A finished op's fields: `kind` the op type, then by type (SmartRoutingConnection.cpp's switch).
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct EeWonSmartOp {
-    pub kind: i32,
-    pub status: i32,
-    pub group: u16,
-    pub client: u16,
-    pub a: u32,
-    pub b: u32,
-    pub c: u32,
-    pub has: bool,
-    /// `text_len` `wchar_t`s
-    pub text: *const c_void,
-    pub text_len: usize,
-    pub data_type: *const u8,
-    pub data_type_len: usize,
-    pub data: *const u8,
-    pub data_len: usize,
-}
-
 unsafe fn model<'a>(r: *mut EeWonSmartRoute) -> &'a mut Model {
     // SAFETY: a model from ee_won_smart_new, under the connection's data lock (contract)
     unsafe { &mut (*r).0 }
@@ -1599,117 +1578,191 @@ pub unsafe extern "C" fn ee_won_smart_free(r: *mut EeWonSmartRoute) {
     }
 }
 
-/// A client record of the next op (its list, or its own client).
-///
-/// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_smart_put_client(
-    r: *mut EeWonSmartRoute,
-    id: u16,
-    name: *const c_void,
-    name_len: usize,
-    flags: u32,
-    address: u32,
-) {
-    let m = unsafe { model(r) };
-    let name = unsafe { wide(m, name, name_len) };
-    m.put_clients.push(NewClient { id, name, flags, address });
-}
-
-/// A group record of the next op (a group list's); its members follow with `to_group`.
-///
-/// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_smart_put_group(
-    r: *mut EeWonSmartRoute,
-    id: u16,
-    name: *const c_void,
-    name_len: usize,
-    captain: u16,
-    max_clients: u16,
-    flags: u32,
-    async_flags: u32,
-    observers: u16,
-    max_players: u16,
-) {
-    let m = unsafe { model(r) };
-    let name = unsafe { wide(m, name, name_len) };
-    m.put_groups.push(NewGroup {
-        id,
-        name,
-        captain,
-        max_clients,
-        flags,
-        async_flags,
-        observers,
-        max_players,
-        members: Vec::new(),
-    });
-}
-
-/// A member record of the next op: into the last group put (`to_group`), else the op's member list; its client
-/// record's name and flags when it has one.
-///
-/// # Safety
-/// `r` is a model; `name` holds `name_len` `wchar_t`s.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_smart_put_member(
-    r: *mut EeWonSmartRoute,
-    to_group: bool,
-    id: u16,
-    flags: u8,
-    has_client: bool,
-    name: *const c_void,
-    name_len: usize,
-    client_flags: u32,
-) {
-    let m = unsafe { model(r) };
-    let client = has_client.then(|| (unsafe { wide(m, name, name_len) }, client_flags));
-    let member = NewMember { id, flags, client };
-    if to_group {
-        if let Some(g) = m.put_groups.last_mut() {
-            g.members.push(member);
+impl Model {
+    /// UTF-16 units as this model's `wchar_t` text (`WideAssignUtf16LE`'s rule).
+    fn wide16(&self, units: &[u16]) -> Vec<u32> {
+        if self.wchar_size == 2 {
+            units.iter().map(|&u| u32::from(u)).collect()
+        } else {
+            text::utf32_from_utf16(units)
         }
-    } else {
-        m.put_members.push(member);
+    }
+
+    fn put_route_member(&mut self, to_group: bool, m: &routeop::Member) {
+        let client = m.client.as_ref().map(|c| {
+            let c = c.borrow();
+            (self.wide16(&c.name), c.flags)
+        });
+        let member = NewMember { id: m.id, flags: m.flags, client };
+        if to_group {
+            if let Some(g) = self.put_groups.last_mut() {
+                g.members.push(member);
+            }
+        } else {
+            self.put_members.push(member);
+        }
+    }
+
+    fn put_route_client(&mut self, c: &routeop::Client) {
+        let name = self.wide16(&c.name);
+        self.put_clients.push(NewClient { id: c.id, name, flags: c.flags, address: c.address });
+    }
+
+    /// `RoutingOpCompleteHook` over a finished routing op (routeop.rs): its records put and its fields handed in as
+    /// the C++ shim handed a C++ op's, by op type; true when its completion is to be dropped.
+    pub fn route_op(&mut self, o: &routeop::RouteOp, status: i32) -> bool {
+        use routeop::*;
+        let n16 = |f: i32| o.num(f) as u16;
+        let n32 = |f: i32| o.num(f) as u32;
+        let mut op = Op {
+            kind: o.ty,
+            status,
+            group: 0,
+            client: 0,
+            a: 0,
+            b: 0,
+            c: 0,
+            has: false,
+            text: Vec::new(),
+            data_type: Vec::new(),
+            data: Vec::new(),
+        };
+        match o.ty {
+            T_CLIENT_FLAGS_CHANGED => {
+                op.client = n16(EE_WON_RTF_CLIENT_ID);
+                op.a = n32(EE_WON_RTF_CLIENT_FLAGS);
+            }
+            T_CLIENT_JOINED_GROUP => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.client = n16(EE_WON_RTF_CLIENT_ID);
+                op.a = n32(EE_WON_RTF_MEMBER_FLAGS);
+                op.text = self.wide16(o.text(EE_WON_RTT_NAME));
+                op.has = o.num(EE_WON_RTF_HAS_CLIENT_FLAGS) != 0;
+                op.b = n32(EE_WON_RTF_CLIENT_FLAGS);
+            }
+            T_CLIENT_JOINED_SERVER => {
+                if let Some(c) = &o.op_client {
+                    let c = c.borrow();
+                    self.put_route_client(&c);
+                    op.text = self.wide16(&c.name);
+                }
+            }
+            T_CLIENT_LEFT_GROUP => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.client = n16(EE_WON_RTF_CLIENT_ID);
+            }
+            T_CLIENT_LEFT_SERVER | T_INVITATION | T_JOIN_ATTEMPT | T_PEER_CHAT => op.client = n16(EE_WON_RTF_CLIENT_ID),
+            T_CLIENT_LIST => {
+                for c in o.clients.values() {
+                    self.put_route_client(&c.borrow());
+                }
+            }
+            T_GROUP_LIST => {
+                for (&id, g) in &o.groups {
+                    let g = g.borrow();
+                    let name = self.wide16(&g.name);
+                    self.put_groups.push(NewGroup {
+                        id,
+                        name,
+                        captain: g.captain,
+                        max_clients: g.max_clients,
+                        flags: g.flags,
+                        async_flags: g.async_flags,
+                        observers: g.observers,
+                        max_players: g.max_players,
+                        members: Vec::new(),
+                    });
+                    for m in g.members.values() {
+                        self.put_route_member(true, &m.borrow());
+                    }
+                }
+                op.has = n16(EE_WON_RTF_FLAGS16) & 0x80 != 0;
+            }
+            T_MEMBERS | T_JOIN_GROUP => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                if o.ty == T_MEMBERS {
+                    op.a = n32(EE_WON_RTF_OBSERVERS);
+                } else {
+                    op.has = n32(EE_WON_RTF_JOIN_FLAGS) & 1 != 0;
+                }
+                for m in o.members.values() {
+                    self.put_route_member(false, &m.borrow());
+                }
+            }
+            T_CAPTAIN_CHANGED => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.a = n32(EE_WON_RTF_CAPTAIN_ID);
+            }
+            T_GROUP_CREATED => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.text = self.wide16(o.text(EE_WON_RTT_NAME));
+                op.a = n32(EE_WON_RTF_GROUP_FLAGS);
+                op.b = n32(EE_WON_RTF_ASYNC_FLAGS);
+                op.c = n32(EE_WON_RTF_MAX_CLIENTS);
+            }
+            T_GROUP_DELETED => op.group = n16(EE_WON_RTF_GROUP_ID),
+            T_GROUP_FLAGS_CHANGED | T_MAX_PLAYERS_CHANGED | T_OBSERVER_COUNT => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.a = n32(match o.ty {
+                    T_GROUP_FLAGS_CHANGED => EE_WON_RTF_GROUP_FLAGS,
+                    T_MAX_PLAYERS_CHANGED => EE_WON_RTF_MAX_PLAYERS,
+                    _ => EE_WON_RTF_OBSERVERS,
+                });
+            }
+            T_GROUP_NAME_CHANGED => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.text = self.wide16(o.text(EE_WON_RTT_NAME));
+            }
+            T_MEMBER_FLAGS_CHANGED => {
+                op.group = n16(EE_WON_RTF_GROUP_ID);
+                op.client = n16(EE_WON_RTF_CLIENT_ID);
+                op.a = n32(EE_WON_RTF_MEMBER_FLAGS);
+            }
+            T_REGISTER => {
+                op.client = n16(EE_WON_RTF_CLIENT_ID);
+                op.text = self.wide16(o.text(EE_WON_RTT_NAME));
+                op.a = n32(EE_WON_RTF_CLIENT_FLAGS);
+                op.b = n32(EE_WON_RTF_ASYNC_MSG_FLAGS);
+                for c in o.clients.values() {
+                    self.put_route_client(&c.borrow());
+                }
+            }
+            T_SET_CLIENT_FLAGS => {
+                op.a = n32(EE_WON_RTF_ASYNC_MSG_MASK);
+                op.b = n32(EE_WON_RTF_ASYNC_MSG_FLAGS);
+            }
+            T_READ_DATA => {
+                op.data_type = o.data_type.clone();
+                for ob in &o.objects {
+                    let ob = ob.borrow();
+                    self.put_objects.push((ob.link, ob.data.clone().unwrap_or_default()));
+                }
+            }
+            T_DATA_CREATED | T_DATA_MODIFIED => {
+                op.client = n16(EE_WON_RTF_LINK_ID);
+                op.data_type = o.data_type.clone();
+                op.data = o.data.clone().unwrap_or_default();
+            }
+            _ => {}
+        }
+        self.op(&op)
     }
 }
 
-/// A data object of the next op (its link id and data).
+/// `RoutingOpCompleteHook` over a Rust routing op: the model updated from the op (`status`: its status); true when
+/// its completion is to be dropped.
 ///
 /// # Safety
-/// `r` is a model; `data` holds `len` bytes.
+/// `r` is a model; `op` a live routing op (`ee_won_routeop_new`).
 #[no_mangle]
-pub unsafe extern "C" fn ee_won_smart_put_object(r: *mut EeWonSmartRoute, link: u16, data: *const u8, len: usize) {
+pub unsafe extern "C" fn ee_won_smart_routeop(
+    r: *mut EeWonSmartRoute,
+    op: *const routeop::EeWonRouteOp,
+    status: i32,
+) -> bool {
     let m = unsafe { model(r) };
-    let d = unsafe { crate::ffi::bytes(data, len) }.to_vec();
-    m.put_objects.push((link, d));
-}
-
-/// `RoutingOpCompleteHook`: the model updated from the op; true when its completion is to be dropped.
-///
-/// # Safety
-/// `r` is a model; `op` points to the op's fields, whose pointers hold their lengths.
-#[no_mangle]
-pub unsafe extern "C" fn ee_won_smart_op(r: *mut EeWonSmartRoute, op: *const EeWonSmartOp) -> bool {
-    let m = unsafe { model(r) };
-    let o = unsafe { &*op };
-    let op = Op {
-        kind: o.kind,
-        status: o.status,
-        group: o.group,
-        client: o.client,
-        a: o.a,
-        b: o.b,
-        c: o.c,
-        has: o.has,
-        text: unsafe { wide(m, o.text, o.text_len) },
-        data_type: unsafe { crate::ffi::bytes(o.data_type, o.data_type_len) }.to_vec(),
-        data: unsafe { crate::ffi::bytes(o.data, o.data_len) }.to_vec(),
-    };
-    m.op(&op)
+    let o = unsafe { &(*op).0 };
+    m.route_op(o, status)
 }
 
 /// A copy (`which`, with the ids `a` and `b`): false when there is none (`out` untouched).

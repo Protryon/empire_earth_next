@@ -145,12 +145,15 @@ unsafe extern "C" fn replay_host(_comp: *mut c_void, op: Op, a: isize, b: isize,
             0
         }
         Op::FireEvent => {
-            let w = expect(&format!("{n} fire {a} -> "));
+            // SAFETY: the object fires an event code of the enum
+            let e = unsafe { std::mem::transmute::<u32, crate::guihost::EeWonGuiEvent>(a as u32) };
+            let ty = crate::guihost::ee_won_gui_event_type(e);
+            let w = expect(&format!("{n} fire {ty} -> "));
             let action: i32 = w.first().and_then(|x| x.parse().ok()).unwrap_or(0);
             let t = input();
             if action == 1 {
                 t.set_text(&['o' as u32, 'k' as u32], false);
-            } else if action == 2 && a == 1 {
+            } else if action == 2 && ty == 20 {
                 let real = with(|r| r.real.clone());
                 t.add_input_history(&real, true);
                 t.set_text(&[], false);

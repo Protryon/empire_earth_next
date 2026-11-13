@@ -12,7 +12,9 @@ use std::ffi::c_void;
 
 use ee_ge::types::{Ge3DPoint, GeVector};
 
+use crate::effect_beam::{beam, load_beam, save_beam, EeGfxBeamUnit, EE_GFX_EFFECT_KIND_CITIZEN_BEAM};
 use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
+use crate::effect_shot::{is_shot, load_shot, save_shot, shot};
 use crate::effect_state::{
     identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
     EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_TELEPORT, EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_MOVED,
@@ -70,6 +72,12 @@ pub struct EeGfxGraphicFacts {
     /// the effect has a unit, and its hit points
     pub has_unit: bool,
     pub unit_hit_points: i32,
+    /// `mIntParam1` .. `mIntParam3`
+    pub int_param1: i32,
+    pub int_param2: i32,
+    pub int_param3: i32,
+    /// `(unsigned long)gPhysics->mGameTime`
+    pub game_time_bits: u32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -97,6 +105,19 @@ pub struct EeGfxEffect3DHost {
     pub texture: extern "C" fn(context: *mut c_void) -> EeGfxModel,
     /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
     pub follow_unit: extern "C" fn(context: *mut c_void),
+    /// the graphic object's model `index` (`mModels[index]`)
+    pub model_at: extern "C" fn(context: *mut c_void, index: u32) -> EeGfxModel,
+    /// a tracer's end: its graphic effect's linked effect 1 placed at the effect's position, then the unit's
+    /// `UnitDamaged` (each when there is one)
+    pub shot_hit: extern "C" fn(context: *mut c_void),
+    /// the citizen beam's start: the unit's first tag point at its animation and frame
+    pub beam_start: extern "C" fn(context: *mut c_void) -> Ge3DPoint,
+    /// the citizen beam's unit: a complex unit, its animation and frame
+    pub beam_unit: extern "C" fn(context: *mut c_void) -> EeGfxBeamUnit,
+    /// the beam's unit is cloaked, another player's and the current player's enemy
+    pub beam_hidden: extern "C" fn(context: *mut c_void) -> bool,
+    /// the graphic effect's linked effect 1 placed at `point` (`CreatePlacedEffect`), when there is one
+    pub place_linked: extern "C" fn(context: *mut c_void, point: *const Ge3DPoint),
 }
 
 /// The world as the effects ask it.
@@ -111,6 +132,12 @@ pub trait Effect3DHost {
     fn model(&mut self) -> EeGfxModel;
     fn texture(&mut self) -> EeGfxModel;
     fn follow_unit(&mut self);
+    fn model_at(&mut self, index: u32) -> EeGfxModel;
+    fn shot_hit(&mut self);
+    fn beam_start(&mut self) -> Ge3DPoint;
+    fn beam_unit(&mut self) -> EeGfxBeamUnit;
+    fn beam_hidden(&mut self) -> bool;
+    fn place_linked(&mut self, point: &Ge3DPoint);
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -144,6 +171,24 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn follow_unit(&mut self) {
         (self.follow_unit)(self.context)
     }
+    fn model_at(&mut self, index: u32) -> EeGfxModel {
+        (self.model_at)(self.context, index)
+    }
+    fn shot_hit(&mut self) {
+        (self.shot_hit)(self.context)
+    }
+    fn beam_start(&mut self) -> Ge3DPoint {
+        (self.beam_start)(self.context)
+    }
+    fn beam_unit(&mut self) -> EeGfxBeamUnit {
+        (self.beam_unit)(self.context)
+    }
+    fn beam_hidden(&mut self) -> bool {
+        (self.beam_hidden)(self.context)
+    }
+    fn place_linked(&mut self, point: &Ge3DPoint) {
+        (self.place_linked)(self.context, point)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -163,6 +208,8 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
     match kind {
         EE_GFX_EFFECT_KIND_TELEPORT | EE_GFX_EFFECT_KIND_TIME_WARP => unsafe { rising(op, r, g, h, x) },
         EE_GFX_EFFECT_KIND_BLAST_WAVE | EE_GFX_EFFECT_KIND_SHIELD => unsafe { follow(op, r, g, h, x) },
+        k if is_shot(k) => unsafe { shot(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_CITIZEN_BEAM => unsafe { beam(op, r, g, h, x) },
         _ => 0,
     }
 }
@@ -186,6 +233,24 @@ pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
                 load_shield(r, f, major, minor)
             } else {
                 save_shield(r, f)
+            }
+        }
+        k if is_shot(k) => {
+            // the base's and the media's results are ignored
+            if load {
+                h.load_media();
+                load_shot(r, f)
+            } else {
+                save_shot(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_CITIZEN_BEAM => {
+            // the base's result is ignored on loading; the media's stops it
+            if load {
+                let media = h.load_media();
+                load_beam(r, f, media)
+            } else {
+                save_beam(r, f, base)
             }
         }
         EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
@@ -353,6 +418,22 @@ mod tests {
         fn follow_unit(&mut self) {
             self.calls.push("follow".into());
         }
+        fn model_at(&mut self, _index: u32) -> EeGfxModel {
+            std::ptr::null_mut()
+        }
+        fn shot_hit(&mut self) {
+            self.calls.push("hit".into());
+        }
+        fn beam_start(&mut self) -> Ge3DPoint {
+            Ge3DPoint::default()
+        }
+        fn beam_unit(&mut self) -> EeGfxBeamUnit {
+            EeGfxBeamUnit::default()
+        }
+        fn beam_hidden(&mut self) -> bool {
+            false
+        }
+        fn place_linked(&mut self, _point: &Ge3DPoint) {}
     }
 
     fn facts() -> EeGfxGraphicFacts {

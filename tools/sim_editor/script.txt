@@ -177,3 +177,34 @@ slider 0x160 300                   # the unit limit: per player
 controls 0x16a 0x162
 slider 0x160 1000
 controls 0x16a 0x162
+# round 20: the click's and the lasso's own code (EE-SIM draws nothing, so the picker finds no unit), a deletion
+# of a unit that does not exist
+tab 0
+blank 40 40 3
+tab 3
+place 1 32 40.5 40.5 0             # citizen
+place 1 32 41.5 40.5 1.5
+place 2 20 44.5 38.5 3.14          # clubman
+select @40,40
+add @41,40
+selection
+mouseclick 300 200 1               # while rotating: nothing
+selection
+mouseclick 300 200                 # nothing under the mouse: the selection cleared
+selection
+add @40,40
+add @41,40
+lasso add 0 0 1024 600
+selection
+lasso addremove 0 0 1024 600 32
+selection
+lassorect 0 0 1024 600
+selection
+lasso select 0 0 1024 600
+selection
+add @44,38
+add @40,40
+delete 99999
+selection
+delete 2 first
+units
