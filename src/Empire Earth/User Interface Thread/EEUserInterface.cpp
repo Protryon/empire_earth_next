@@ -88,7 +88,6 @@ unsigned long EEMenuHeight();
 #include "lle/UICheckBox.h"
 #include "lle/UIStatusBar.h"
 #include "lle/UIBlinkingButton.h"
-#include "lle/SECD.h"
 #include "lle/SEMixer.h"
 #include "lle/NESynchronousClient.h"
 #include "ee/EEClient.h"
@@ -1780,14 +1779,12 @@ bool EEPumpWindowEvent()
 }
 
 #ifdef _WIN32
-// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): CD audio's MCI notifications and
-// the WON lobby's two messages, handled as the window procedure did; nonzero drops the message
+// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): the WON lobby's two messages,
+// handled as the window procedure did; nonzero drops the message. (CD audio's MCI notifications went to SECD, which
+// is gone: the port never opened a CD drive.)
 int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
 {
     switch (inMessage) {
-    case MM_MCINOTIFY:
-        SECD::Notify((unsigned int)inWParam, (long)inLParam);
-        return 1;
     case 0x433:
         PostMessageA((HWND)inWindow, 0x434, 0, 0);
         if (gWonNet != NULL)

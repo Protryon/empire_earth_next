@@ -29,6 +29,7 @@ pub mod launch;
 pub mod leaves;
 pub mod pursuer;
 pub mod reads;
+pub mod regions;
 pub mod screen;
 pub mod search;
 pub mod search_ffi;

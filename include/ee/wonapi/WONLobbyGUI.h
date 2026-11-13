@@ -353,18 +353,24 @@ public:
 };
 
 // a component holding others (0x84 bytes: EELobbyGameOptionsCtrl's members start at +0x84; vtable 0x84d7cc, 51 slots)
-// Two owning lists (0x20 bytes); constructor and destructor out of line.
+// ChildLayoutManager (R6 WON round 31): its instructions (held, in order) and layout points (held) are the Rust layout
+// manager (rust/crates/ee_won/src/layoutobj.rs); a container owns it by pointer. The methods are forwarders
+// (ChildLayouts.cpp is the host).
 class ChildLayoutManager : public RefCount {
 public:
-    typedef std::list<SmartPtr<ChildLayoutInstructionBase> > InstructionList;
-    void ExecuteInstructions(Component*);
-    void AddInstruction(ChildLayoutInstructionBase*);
-    void AddLayoutPoint(LayoutPoint*);
-    void RemoveComponent(Component*);
-    void Clear();
-    void EnableInstructions(int, bool);
-    InstructionList mInstructions; //08
-    std::list<SmartPtr<LayoutPoint> > mLayoutPoints; //14
+    ChildLayoutManager();
+    virtual ~ChildLayoutManager(); // the layout points, then the instructions, released (the original's members)
+    void ExecuteInstructions(Component* c) { this->MCall(EeWonLayoutMgrCall::Execute,(intptr_t)c); } // 0x736d20
+    void AddInstruction(ChildLayoutInstructionBase*); // 0x736d60
+    void AddLayoutPoint(LayoutPoint* p) { this->MCall(EeWonLayoutMgrCall::AddLayoutPoint,(intptr_t)static_cast<Component*>(p)); } // 0x736e90
+    void RemoveComponent(Component* c) { this->MCall(EeWonLayoutMgrCall::RemoveComponent,(intptr_t)c); } // 0x736fc0
+    void Clear() { this->MCall(EeWonLayoutMgrCall::Clear); } // 0x737030
+    void EnableInstructions(int g, bool e) { this->MCall(EeWonLayoutMgrCall::EnableInstructions,g,e); } // 0x7370c0
+    // Container::AddChildLayout's statements (the group, the first run, the hold)
+    void AddChildLayout(ChildLayoutInstructionBase* instr, int id, Component* container);
+    EeWonLayoutMgr* mMgr;
+private:
+    intptr_t MCall(EeWonLayoutMgrCall c,intptr_t a=0,intptr_t b=0) { return ee_won_lmgr_call(this->mMgr,c,a,b,0,0); }
 };
 // Container (R6 WON round 26): its children (held), mouse and focus children, timer children, focus ids, current
 // cursor, flags and modal count are the Rust Container (rust/crates/ee_won/src/ctobj.rs); this is the type every
@@ -465,25 +471,29 @@ public:
 
 
 // Child layout instructions (six concrete classes below)
+// The child layout instructions (R6 WON round 31): each class's numbers, its component list, its group and its enabled
+// flag are one Rust instruction (rust/crates/ee_won/src/layoutobj.rs, `EeWonLayoutKind` the class); the C++ classes
+// are the reference-counted shells the lobby makes, their constructors handing the numbers over. Only the classes
+// below derive from the base, and none overrides Execute or UsesComponent: the Rust runs each class's statements.
 class ChildLayoutInstructionBase : public RefCount {
 public:
-    ChildLayoutInstructionBase() : mGroupId(0),mEnabled(true) {} // inline in all six subclass constructors
-    virtual void Execute(Component*) {} // empty inline (shared body at 0x30a800)
-    virtual bool UsesComponent(Component*) { return false; } // returns false (shared body at 0x3a90d0)
-    unsigned char mGroupId;                 // +08
-    bool mEnabled;                         // +09
+    ChildLayoutInstructionBase() : mLay(NULL) {} // a subclass makes its Rust instruction (Make)
+    virtual ~ChildLayoutInstructionBase();
+    virtual void Execute(Component* p) { if (this->mLay) ee_won_layout_call(this->mLay,EeWonLayoutCall::Execute,(intptr_t)p,0); } // 0x30a800 (empty in the base)
+    virtual bool UsesComponent(Component* c) { return this->mLay && ee_won_layout_call(this->mLay,EeWonLayoutCall::UsesComponent,(intptr_t)c,0)!=0; } // 0x3a90d0 (false in the base)
+    EeWonLayout* mLay;
+protected:
+    // a new instruction of the class: two references (components), three ints and the two flags
+    void Make(EeWonLayoutKind k,Component* r0,Component* r1=NULL,int i0=0,int i1=0,int i2=0,bool h=false,bool v=false);
+    void Make(const EeWonLayoutInit& init);
+    void AddComponent(Component* c) { ee_won_layout_call(this->mLay,EeWonLayoutCall::Add,(intptr_t)c,0); }
 };
 class CenterLayout : public ChildLayoutInstructionBase {
 public:
-    CenterLayout(Component* box,bool horz,bool vert) : mHorz(horz),mVert(vert),mCenterBox(box) {} // inline (0x388f6d..0x388fb3); the class is 0x20 bytes
-    CenterLayout(Component* box,Component* first,bool horz,bool vert) : mHorz(horz),mVert(vert),mCenterBox(box) { this->Add(first); } // inline (0x3624e8..0x362530); its cleanup covers the first insertion
-    CenterLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
+    CenterLayout(Component* box,bool horz,bool vert) { this->Make(EeWonLayoutKind::Center,box,NULL,0,0,0,horz,vert); } // inline (0x388f6d..0x388fb3); the class is 0x20 bytes
+    CenterLayout(Component* box,Component* first,bool horz,bool vert) { this->Make(EeWonLayoutKind::Center,box,NULL,0,0,0,horz,vert); this->Add(first); } // inline (0x3624e8..0x362530)
+    CenterLayout* Add(Component* component) { this->AddComponent(component); return this; }
     static void Center(Component* inParent, Component* inChild, bool inHorz, bool inVert); // 337690
-    virtual void Execute(Component*);
-    bool mHorz;                            // +0c
-    bool mVert;                            // +0d
-    Component* mCenterBox;                  // +10, borrowed
-    std::list<Component*> mComponentList;   // +14, owns nodes, borrows components
 };
 
 // a modal or popup dialog (0x98 bytes in the original: EELobbyConnectDialog's members start at +0x98).

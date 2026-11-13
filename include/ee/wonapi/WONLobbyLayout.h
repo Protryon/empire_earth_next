@@ -11,66 +11,43 @@ public:
     void SetPercentages(int,int,int,int); // at 0x007373f0
     void SetPadding(int,int,int,int); // at 0x00737410
     void SetBorders(Component*, Component*, Component*, Component*);
-    void DoCalc(Component*, Component*);
     Component *left, *top, *right, *bottom;
     int px, py, pw, ph;
     int lp, tp, rp, bp;
     int dx, dy, dw, dh; // offsets 0x30..0x3c, copied by the factory; DoCalc does not read them
 };
+// The instruction classes' shells (R6 WON round 31: their numbers and lists are the Rust instruction, see
+// ChildLayoutInstructionBase); the constructors and Add as the original's inline ones.
 class SameSizeLayout : public ChildLayoutInstructionBase {
 public:
-    SameSizeLayout(bool horz=true,bool vert=true) : mHorz(horz),mVert(vert) {} // inline (as at 0x00788e56)
-    SameSizeLayout(Component* first,bool horz=true,bool vert=true) : mHorz(horz),mVert(vert) { this->Add(first); } // inline (as at 0x00701964): the first insertion is part of construction
-    SameSizeLayout* Add(Component*); // at 0x007377a0
-    virtual void Execute(Component*);
-    std::list<Component*> mComponentList; //0c
-    bool mHorz, mVert; // offsets 0x18, 0x19; class size 0x1c
+    SameSizeLayout(bool horz=true,bool vert=true) { this->Make(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,horz,vert); } // inline (as at 0x00788e56)
+    SameSizeLayout(Component* first,bool horz=true,bool vert=true) { this->Make(EeWonLayoutKind::SameSize,NULL,NULL,0,0,0,horz,vert); this->Add(first); } // inline (as at 0x00701964)
+    SameSizeLayout* Add(Component* c) { this->AddComponent(c); return this; } // at 0x007377a0
 };
 class ClearRightLayout : public ChildLayoutInstructionBase {
 public:
-    ClearRightLayout(Component* component,int pad=0) : mComponent(component),mPad(pad) {} //3890d8..116
-    ClearRightLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
-    virtual void Execute(Component*);
-    Component* mComponent; //0c borrowed
-    int mPad; //10
-    std::list<Component*> mComponentList; // offset 0x14; class size 0x20
+    ClearRightLayout(Component* component,int pad=0) { this->Make(EeWonLayoutKind::ClearRight,component,NULL,pad); } //3890d8..116
+    ClearRightLayout* Add(Component* component) { this->AddComponent(component); return this; }
 };
 class SpaceEvenlyLayout : public ChildLayoutInstructionBase {
 public:
-    SpaceEvenlyLayout(Component* box,int left=0,int right=0,bool horz=true) : mSpaceBox(box),mLeftPad(left),mRightPad(right),mIsHorz(horz) {} //3892ea..337
-    SpaceEvenlyLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
-    virtual void Execute(Component*);
-    Component* mSpaceBox; //0c borrowed
-    int mLeftPad, mRightPad; //10,14
-    bool mIsHorz; //18
-    std::list<Component*> mComponentList; // offset 0x1c; class size 0x28
+    SpaceEvenlyLayout(Component* box,int left=0,int right=0,bool horz=true) { this->Make(EeWonLayoutKind::SpaceEvenly,box,NULL,left,right,0,horz); } //3892ea..337
+    SpaceEvenlyLayout* Add(Component* component) { this->AddComponent(component); return this; }
 };
 class NoOverlapLayout : public ChildLayoutInstructionBase {
 public:
-    NoOverlapLayout(Component* target,int type,Component* ref,int horz=0,int vert=0) : mRef(ref),mTarget(target),mType(type),mHorzPad(horz),mVertPad(vert) {} //389608..64d
-    NoOverlapLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
-    virtual void Execute(Component*);
-    Component *mRef, *mTarget; //0c,10 borrowed
-    int mType, mHorzPad, mVertPad; //14,18,1c
-    std::list<Component*> mComponentList; // offset 0x20; class size 0x2c
+    NoOverlapLayout(Component* target,int type,Component* ref,int horz=0,int vert=0) { this->Make(EeWonLayoutKind::NoOverlap,ref,target,type,horz,vert); } //389608..64d
+    NoOverlapLayout* Add(Component* component) { this->AddComponent(component); return this; }
 };
 class SizeAtLeastLayout : public ChildLayoutInstructionBase {
 public:
-    SizeAtLeastLayout(Component* target,int horz=0,int vert=0) : mTarget(target),mHorzPad(horz),mVertPad(vert) {} //3898c3..909
-    SizeAtLeastLayout* Add(Component* component) { this->mComponentList.push_back(component); return this; }
-    virtual void Execute(Component*);
-    Component* mTarget; //0c borrowed
-    int mHorzPad, mVertPad; //10,14
-    std::list<Component*> mComponentList; // offset 0x18; class size 0x24
+    SizeAtLeastLayout(Component* target,int horz=0,int vert=0) { this->Make(EeWonLayoutKind::SizeAtLeast,target,NULL,horz,vert); } //3898c3..909
+    SizeAtLeastLayout* Add(Component* component) { this->AddComponent(component); return this; }
 };
+// Container::Fn2F6140's instruction: the child placed against its reference by the flags and the four offsets
 class ChildLayoutInstruction : public ChildLayoutInstructionBase {
 public:
-    virtual void Execute(Component*);
-    virtual bool UsesComponent(Component*);
-    int mFlags;
-    Component* mChild;
-    Component* mReference;
-    int mX, mY, mWidth, mHeight;
+    ChildLayoutInstruction(int flags,Component* child,Component* reference,int x,int y,int width,int height);
 };
 // Complete ChildLayoutManager20 declaration is in WONLobbyGUI.h before Container.
 }
