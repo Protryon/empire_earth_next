@@ -19,7 +19,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUnitVectorItem.h"
 

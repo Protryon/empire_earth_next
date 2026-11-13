@@ -13,7 +13,7 @@ class EEUnitClass;
 class EEPlayer;
 class EEUnitGoal;
 class EEUUUnitFunctor;
-class EEUGAttackUnit;
+class EEUGRust;
 class EEFOFindNewTargetScreenBase;
 class EEUnitClassUpgrade;
 class GE2DPoint;
@@ -152,7 +152,6 @@ template <class Container> void PermuteValues(Container& ioValues, long inStart)
     }
 }
 void EEGetRingCorners(long inCorners, long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles);
-bool EECanReach(float inDistanceSquared, float inRadius, float inOtherRadius, float inScale);
 bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* inTarget);
 bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, const GE3DPoint* inFrom, const GE3DPoint* inTo, float* outAngle);  // 0x241a6a (before the range)
 bool EEIsFootprintVisibleTo(EEUnit* inUnit, EEPlayer* inPlayer);

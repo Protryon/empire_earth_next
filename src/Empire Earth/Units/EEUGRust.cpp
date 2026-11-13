@@ -617,6 +617,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS:
         return theComplex->mStats->mCanFireOverWalls;
+    default:   // the combat goals' operations (EEUGRustCombat.cpp)
+        return EECombatGoalHostOp(theContext->mFile, inOp, inA, inB, ioArgs);
     }
     return 0;
 }
@@ -633,6 +635,12 @@ int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t
 }
 
 }  // namespace
+
+int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs,
+                     FSFile* inFile)
+{
+    return Goal(inOperation, inGoal, inA, inB, ioArgs, inFile);
+}
 
 EEUGRust::EEUGRust(unsigned char inKind, bool inArg)
     : EEUnitGoal(inKind, inArg)
@@ -970,4 +978,10 @@ void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplex
 bool EEUGRust::Suits(EEUnit* inUnit)
 {
     return Goal(EE_UNITS_GOAL_SUITS, this, Handle(inUnit)) != 0;
+}
+
+void EEUGRust::SetPathAttempts(long inValue)
+{
+    EEUnitGoal::SetPathAttempts(inValue);
+    Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
 }

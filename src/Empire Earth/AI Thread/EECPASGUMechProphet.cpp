@@ -25,7 +25,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -720,9 +720,9 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreTarget(EEComplexUnit* i
             theScore = theCount * 0.05f;
             if (inUnit->GetGoalState() == NULL)
                 return theScore;
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
-            if (theGoal != NULL && theGoal->GetTarget() != NULL) {
-                EEComplexUnit* theTarget = theGoal->GetTarget()->GetComplexUnit();
+            EEUGRust* theGoal = EEAttackUnitCast(inUnit->GetLoadGoal());
+            if (theGoal != NULL && theGoal->GetAttackTarget() != NULL) {
+                EEComplexUnit* theTarget = theGoal->GetAttackTarget()->GetComplexUnit();
                 if (theTarget != NULL && theTarget->GetPlayer() == this->GetProphet()->GetUnit()->GetPlayer()) {
                     EECPAttackSubGroupUnit* theAttacker = this->GetProphet()->GetSubGroup()->FindUnit(theTarget);
                     if (theAttacker != NULL) {
@@ -751,8 +751,8 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreAlly(EECPAttackSubGroup
         if (theClass->mFamily == kUnitFamilyMechZeus)
             theScore += 0.15f;
         if (this->mUnit != NULL) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->mUnit->GetLoadGoal());
-            if (theGoal != NULL && theGoal->mTarget == inUnit->mUnit)
+            EEUGRust* theGoal = EEAttackUnitCast(this->mUnit->GetLoadGoal());
+            if (theGoal != NULL && theGoal->GetAttackTarget() == inUnit->mUnit)
                 theScore += 0.5f;
         }
     }
@@ -1080,10 +1080,10 @@ bool EECPASGUPriest::Retarget()
     if (theTarget && this->mUnit->mUnitClass->FindAction(kActionConvertEnemyUnit)) {
         bool theChange = this->mTarget != theTarget->mUnit;
         if (!theChange) {
-            EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->mUnit->GetLoadGoal());
+            EEUGRust* theGoal = EEAttackUnitCast(this->mUnit->GetLoadGoal());
             if (!theGoal)
                 theChange = true;
-            else if (theGoal->mTarget != theTarget->mUnit)
+            else if (theGoal->GetAttackTarget() != theTarget->mUnit)
                 theChange = true;
         }
         if (theChange) {

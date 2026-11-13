@@ -42,7 +42,6 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackUnit.h"
 
 // the icons' spacing across the queues (0x441294) and the markers' height (0x441298) (provisional names)
 const float kGoalSpacing = 0.4f;
@@ -235,9 +234,9 @@ void EEGraphicalGoalManager::Rebuild(long inPlayer)
                     if (theGarrison != NULL)
                         theTarget = theGarrison->GetLoadContainer();
                 } else if (theGoal->mKind == kGoalAttackUnit) {
-                    EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+                    EEUGRust* theAttack = EEAttackUnitCast(theGoal);
                     if (theAttack != NULL)
-                        theTarget = theAttack->mTarget;
+                        theTarget = theAttack->GetAttackTarget();
                 } else {
                     theTarget = NULL;
                 }

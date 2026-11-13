@@ -71,7 +71,6 @@ struct EECPAITargetNearest {
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EmpireEarth.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 // 0x40c6cd (cdecl; only EECPASGUProphet::ReleaseAnalyzers calls it) (provisional name)
@@ -1366,7 +1365,7 @@ CheckHealth:
                     long theAttack = theClass->mFamily;
                     if (theClass->CanBeAttacked() && EEDamageFactor(theAttack, theDefense) != 0.0f &&
                         theUnit->GetGoal() != NULL && theUnit->GetGoal()->mKind == kGoalAttackUnit &&
-                        static_cast<EEUGAttackUnit*>(theUnit->GetGoal())->mTarget == this->GetUnit()) {
+                        static_cast<EEUGRust*>(theUnit->GetGoal())->GetAttackTarget() == this->GetUnit()) {
                         if (this->GetUnit()->GetUnitClass()->IsCounteredBy(theUnit->GetUnitClass()->GetUnitType()) ||
                             theDamage < theUnit->GetStats()->GetAttack() ||
                             (theUnit->GetStats()->GetAttack() == theDamage && this->GetUnit()->mHitPoints < theUnit->mHitPoints))

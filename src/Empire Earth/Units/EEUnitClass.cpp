@@ -59,8 +59,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEAIContinentManager.h"
 #include "lle/U2DRectangle.h"
@@ -1049,7 +1048,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                         // The original does not set the flag on this branch.
                         theGoal->GetGoalLocation(theGoalPoint);
                     } else {
-                        EEUnit* theTarget = EEGoalCast<EEUGAttackUnit>(theGoal)->mTarget;
+                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
                         if (theTarget == NULL) {
                             theHaveGoalPoint = false;
                         } else {
@@ -1153,7 +1152,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                         }
                     }
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
-                        EEUnit* theTarget = EEGoalCast<EEUGAttackUnit>(theGoal)->mTarget;
+                        EEUnit* theTarget = EEAttackUnitCast(theGoal)->GetAttackTarget();
                         if (theCreated->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, true)) {
                             EEUnitGoal* theGather = new EEUGGather(theTarget, 0, true);
                             delete theGoal;
@@ -1627,8 +1626,8 @@ EEUnit* EEUnitClass::FindImpactUnit(EEComplexUnit* inUnit)
     // ee_combat reads.rs impact_unit over the C++ host (EECombatGoals.cpp); CBQR records the outcome
     EEUnit* theFound = EECombatFindImpactUnit(inUnit);
     if (theScope.mOuter) {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(inUnit->mGoalState);
-        EECombatCaptureHostRead(EE_COMBAT_HR_IMPACT_UNIT, inUnit, theGoal != NULL ? theGoal->mTarget : NULL, theFound != NULL,
+        EEUGRust* theGoal = EEAttackUnitCast(inUnit->mGoalState);
+        EECombatCaptureHostRead(EE_COMBAT_HR_IMPACT_UNIT, inUnit, theGoal != NULL ? theGoal->GetAttackTarget() : NULL, theFound != NULL,
                                 theFound != NULL ? (uint32_t)theFound->mUnitID : 0,
                                 inUnit->mOwner != NULL ? (uint32_t)inUnit->mOwner->mIsFiringHigh : 0xffffffffu);
     }
@@ -1797,8 +1796,8 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     theCreated->GetComplexUnit()->SetLauncherClass(this);
     theCreated->GetComplexUnit()->SetOwner(inUnit);
     EEUnitGoal* theGoal;
-    if (inTarget != NULL) theGoal = new EEUGAttackUnit(theCreated->GetComplexUnit(), inTarget, false, false);
-    else theGoal = new EEUGAttackGround(inLocation, false);
+    if (inTarget != NULL) theGoal = EEUGRust::NewAttackUnit(theCreated->GetComplexUnit(), inTarget, false, false);
+    else theGoal = EEUGRust::NewAttackGround(inLocation, false);
     theCreated->GetComplexUnit()->SetGoal(theGoal, false, false);
     theCreated->GetComplexUnit()->SetVelocity(inUnit->GetVelocity());
     theCreated->GetComplexUnit()->SetHeight(inUnit->mPhysicalModel.GetLocation().GetZ());
@@ -3045,20 +3044,20 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
             float theRange = inUnit->mUnitClass->mInnerCollisionSphere + inUnit->mUnitClass->mInnerCollisionSphere + 5.0f;
             bool theFirst;
             if (theGoalPoint.GetX() > 0.1f && thePosition.DistanceToSquared(theGoalPoint) < theRange * theRange) {
-                theFirst = static_cast<EEUGAttackUnit*>(theAttack)->mSidestepCount < 1;
+                theFirst = static_cast<EEUGRust*>(theAttack)->GetSidestepCount() < 1;
                 inUnit->DropPath();
             } else {
                 theFirst = false;
             }
             if (theFirst) {
-                EEComplexUnit* theTarget = static_cast<EEUGAttackUnit*>(theAttack)->mTarget->GetComplexUnit();
+                EEComplexUnit* theTarget = static_cast<EEUGRust*>(theAttack)->GetAttackTarget()->GetComplexUnit();
                 if (theTarget->mUnitClass->mIsWall || !theGoal->mB1C) {
                     inUnit->IgnoreTarget(theTarget);
                     EETileCoordinate theUnitTile = inUnit->GetTile();
                     EEFOFindNewTargetInMeleeRange theScreen(inUnit, theTarget);
                     if (EEFindNewTarget(&theScreen, theAttack, inUnit, &theUnitTile, 1,
                                    theTarget != NULL ? theTarget->mUnitClass->mIsWall : false, 1)) {
-                        static_cast<EEUGAttackUnit*>(theAttack)->mSidestepCount = 0;
+                        static_cast<EEUGRust*>(theAttack)->SetSidestepCount(0);
                         return;
                     }
                 }
@@ -3148,20 +3147,20 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
                         theGoalPoint.mY += theSide.GetY() + theSide.GetY();
                         theGoalPoint.mX += theSide.GetX() + theSide.GetX();
                     } else {
-                        static_cast<EEUGAttackUnit*>(theAttack)->mSidestepCount = 1;
+                        static_cast<EEUGRust*>(theAttack)->SetSidestepCount(1);
                         this->FindPath(inUnit);
                         return;
                     }
                 }
                 inUnit->AddWaypoint(theGoalPoint, false);
                 theGoal->mPathAttempts += 8;
-                static_cast<EEUGAttackUnit*>(theAttack)->mSidestepCount++;
+                static_cast<EEUGRust*>(theAttack)->SetSidestepCount(static_cast<EEUGRust*>(theAttack)->GetSidestepCount() + 1);
                 return;
             }
         }
     }
     if (theAttack != NULL && theAttack->mKind == kGoalAttackUnit)
-        static_cast<EEUGAttackUnit*>(theAttack)->mSidestepCount = 0;
+        static_cast<EEUGRust*>(theAttack)->SetSidestepCount(0);
     if (inUnit->mWaypoints.size() != 0 && (!(inUnit->mUnitClass->mDomains & kMovementSea) || (long)inUnit->mWaypoints.size() >= 3)) {
         theGoalPoint = inUnit->mWaypoints[0].mLocation;
     } else {
@@ -3419,7 +3418,7 @@ void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
         theTransformation.SetZ(0.3f);
     EEUnit* theCreated = theClass->CreateUnit(theX, theY, inUnit->mPlayer->GetPlayerID(), false, NULL);
     EEComplexUnit* theComplex = theCreated->GetComplexUnit();
-    EEUnitGoal* theGoal = new EEUGAttackGround(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
+    EEUnitGoal* theGoal = EEUGRust::NewAttackGround(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
                                                          theTransformation.GetZ()), false);
     theComplex->SetVelocity(0.0f);
     theComplex->SetLauncherClass(theCreated->GetUnitClass());
@@ -3469,9 +3468,9 @@ void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3D
         theShot->GetComplexUnit()->SetOwner(inUnit);
         EEUnitGoal* theGoal;
         if (inTarget != NULL)
-            theGoal = new EEUGAttackUnit(theShot->GetComplexUnit(), inTarget, false, false);
+            theGoal = EEUGRust::NewAttackUnit(theShot->GetComplexUnit(), inTarget, false, false);
         else
-            theGoal = new EEUGAttackGround(inLocation, false);
+            theGoal = EEUGRust::NewAttackGround(inLocation, false);
         theShot->GetComplexUnit()->SetGoal(theGoal, 0, 0);
         theShot->GetComplexUnit()->SetVelocity(inUnit->mVelocity);
         theShot->GetComplexUnit()->SetHeight(inUnit->mPhysicalModel.GetLocation().GetZ());
@@ -3697,7 +3696,7 @@ void EEUnitClass::TurnTurrets(EEComplexUnit* inUnit)
         return;
     }
     if (theGoal->mKind == kGoalAttackUnit) {
-        EEUnit* theUnit = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        EEUnit* theUnit = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         if (theUnit->GetComplexUnit() != NULL) {
             theTarget.SetX(theUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetX());
             theTarget.SetY(theUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetY());

@@ -41,7 +41,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
@@ -841,11 +841,11 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
                 continue;
             EEUnitGoal* theGoal = theUnit->GetLoadGoal();
             EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
-            EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+            EEUGRust* theAttack = EEAttackUnitCast(theGoal);
             if ((theGather != NULL && theGather->mResource != NULL
                     && theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal)
-                || (theAttack != NULL && theAttack->mTarget != NULL
-                    && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
+                || (theAttack != NULL && theAttack->GetAttackTarget() != NULL
+                    && theAttack->GetAttackTarget()->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
                 outView.hunters++;
         }
         outView.wood_ready = EECPNextWoodTarget(inPlayer, 0, NULL) != NULL ? 1 : 0;
