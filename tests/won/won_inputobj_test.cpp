@@ -26,6 +26,7 @@
 #include <map>
 #include <set>
 #include "rust/ee_won.h"
+#include "ee/wonapi/WONEventTypes.h"
 
 typedef EeWonGuiOp Op;
 typedef EeWonGuiField Fd;
@@ -175,12 +176,15 @@ static intptr_t ScriptedHost(void* inComp, Op inOp, intptr_t a, intptr_t b, intp
         Line(std::to_string(n) + " clip-take " + Hex(sClipboard));
         return 0;
     case Op::FireEvent: {
+        // the type listeners receive: the original's enum (a negative code here), the Rust's through
+        // ee_won_gui_event_type, the call GuiHost.cpp's host makes (round 30: traced as the type)
+        long long aType = a < 0 ? -(long long)a : ee_won_gui_event_type((EeWonGuiEvent)a);
         int anAction = (int)R(6);
-        snprintf(aLine, sizeof(aLine), "%d fire %lld -> %d", n, (long long)a, anAction);
+        snprintf(aLine, sizeof(aLine), "%d fire %lld -> %d", n, aType, anAction);
         Line(aLine);
         sFired++;
         if (anAction == 1) { Units u; u.push_back('o'); u.push_back('k'); sSide.mSetText(u, false); }
-        else if (anAction == 2 && a == (intptr_t)EeWonGuiEvent::InputReturn) { Units u = sReal; sSide.mAddHistory(u, true); sSide.mSetText(Units(), false); }
+        else if (anAction == 2 && aType == WONAPI::ComponentEvent_InputReturn) { Units u = sReal; sSide.mAddHistory(u, true); sSide.mSetText(Units(), false); }
         else if (anAction == 3) sSide.mSelectRange(0, -1);
         return 0;
     }
@@ -224,7 +228,8 @@ static intptr_t H(Op inOp, intptr_t a = 0, intptr_t b = 0, intptr_t c = 0)
 namespace orig {
 
 static const intptr_t kG = 0x6; // the Graphics
-enum { ComponentEvent_InputReturn = (int)EeWonGuiEvent::InputReturn, ComponentEvent_InputTextChanged = (int)EeWonGuiEvent::InputTextChanged };
+using WONAPI::ComponentEvent_InputReturn;
+using WONAPI::ComponentEvent_InputTextChanged;
 
 static int SmallerOf(int a, int b) { return a > b ? b : a; }
 
@@ -267,7 +272,7 @@ struct InputBox {
     int Height() { return sHeight; }
     void Invalidate() { H(Op::Invalidate); }
     int GetKeyMod() { return (int)H(Op::KeyMod); }
-    void Fn2F5380(int e, int) { H(Op::FireEvent, e); }
+    void Fn2F5380(int e, int) { H(Op::FireEvent, -e); } // the original's enum: see the host's FireEvent
     const Units& GetText() const { return this->mPassword == 0 ? this->mText : this->mPasswordText; }
     int TextWidth(int o, int l) { return (int)H(Op::TextWidth, o, l); }
 

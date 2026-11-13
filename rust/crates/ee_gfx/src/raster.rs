@@ -51,6 +51,10 @@ pub struct EeGfxRaster {
     pub model_scroll_v: extern "C" fn(model: EeGfxModel, delta: f32),
     /// puts back the texture coordinates `model_scroll_v` kept
     pub model_restore_v: extern "C" fn(model: EeGfxModel),
+    /// `GetMaterial(0)->SetColor(color)`
+    pub model_color: extern "C" fn(model: EeGfxModel, color: EeGfxColor),
+    /// the model's own `SetTexture(texture, screen)` (not its material's)
+    pub model_own_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
 }
 
 /// The rasterizer as the draws call it.
@@ -74,6 +78,8 @@ pub trait Raster {
     fn model_texture(&mut self, model: EeGfxModel, texture: EeGfxModel);
     fn model_scroll_v(&mut self, model: EeGfxModel, delta: f32);
     fn model_restore_v(&mut self, model: EeGfxModel);
+    fn model_color(&mut self, model: EeGfxModel, color: EeGfxColor);
+    fn model_own_texture(&mut self, model: EeGfxModel, texture: EeGfxModel);
 }
 
 impl Raster for &EeGfxRaster {
@@ -133,6 +139,12 @@ impl Raster for &EeGfxRaster {
     }
     fn model_restore_v(&mut self, model: EeGfxModel) {
         (self.model_restore_v)(model)
+    }
+    fn model_color(&mut self, model: EeGfxModel, color: EeGfxColor) {
+        (self.model_color)(model, color)
+    }
+    fn model_own_texture(&mut self, model: EeGfxModel, texture: EeGfxModel) {
+        (self.model_own_texture)(model, texture)
     }
 }
 
@@ -206,5 +218,11 @@ impl Raster for LogRaster {
     }
     fn model_restore_v(&mut self, _model: EeGfxModel) {
         self.calls.push("restore".into());
+    }
+    fn model_color(&mut self, _model: EeGfxModel, c: EeGfxColor) {
+        self.calls.push(format!("color {} {} {}", c.red, c.green, c.blue));
+    }
+    fn model_own_texture(&mut self, _model: EeGfxModel, _texture: EeGfxModel) {
+        self.calls.push("own texture".into());
     }
 }
