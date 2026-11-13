@@ -17,6 +17,8 @@
 #include "ee/EESMArea.h"
 #include "ee/EESMEffect.h"
 #include "ee/EETechCapture.h"
+#include "lle/FSMemoryFile.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEScenarioCapture.h"
 
 namespace {
@@ -273,8 +275,55 @@ void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int in
     r.Commit();
 }
 
+namespace {
+
+// the FNV-1a of a memory file's bytes
+unsigned long long FileHash(FSMemoryFile& inFile)
+{
+    unsigned long theLength = 0;
+    inFile.GetLength(theLength);
+    return Fnv(kFnvStart, inFile.GetData(), theLength);
+}
+
+// a list's count, the first error and the hash of its elements' Saves
+template<class T> void SavedList(EESimCaptureRecord& ioRecord, const std::vector<T*>& inList, unsigned long inMajor,
+                                 unsigned long inMinor)
+{
+    FSMemoryFile theFile;
+    long theResult = kErrorOK;
+    for (T* theElement : inList)
+        if (theElement != NULL && theResult == kErrorOK)
+            theResult = theElement->Save(inMajor, inMinor, theFile);
+    ioRecord.U32((unsigned int)inList.size());
+    ioRecord.I32((int)theResult);
+    U64(ioRecord, FileHash(theFile));
+}
+
+}   // namespace
+
+void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
+                      unsigned long inMinorVersion)
+{
+    EESimCaptureRecord r(EECaptureTag("SMSV"));
+    r.I32((int)inKind);
+    r.I32((int)inResult);
+    SavedList(r, inManager->mTriggers, inMajorVersion, inMinorVersion);
+    SavedList(r, inManager->mConditions, inMajorVersion, inMinorVersion);
+    SavedList(r, inManager->mEffects, inMajorVersion, inMinorVersion);
+    SavedList(r, inManager->mObjects, inMajorVersion, inMinorVersion);
+    SavedList(r, inManager->mAreas, inMajorVersion, inMinorVersion);
+    SavedList(r, inManager->mPendingEffects, inMajorVersion, inMinorVersion);
+    FSMemoryFile theFile;
+    r.I32((int)inManager->Save(inMajorVersion, inMinorVersion, theFile));
+    U64(r, FileHash(theFile));
+    r.Commit();
+}
+
 void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying)
 {
+    static unsigned long sRounds = 0;
+    if (++sRounds % 120 == 0)
+        EESMCaptureSaved(inManager, 1, 0, kSaveGameMajorVersion, kSaveGameMinorVersion);
     EESimCaptureRecord r(EECaptureTag("SMUP"));
     r.F32(inManager->mTime);
     r.F32(inManager->mTriggerTimer);

@@ -9,6 +9,7 @@ pub mod background;
 pub mod background_table;
 pub mod button;
 pub mod button_variants;
+pub mod buttonobj;
 pub mod combo;
 pub mod controls_table;
 pub mod draw;
@@ -30,11 +31,15 @@ pub mod list;
 pub mod manager;
 pub mod manager_media;
 pub mod mouse;
+pub mod obj;
 pub mod rect;
 pub mod scrollbar;
+pub mod scrollbarobj;
 pub mod scrolling;
 pub mod slider;
+pub mod sliderobj;
 pub mod status;
+pub mod statusobj;
 pub mod text;
 pub mod wrap;
 
@@ -45,7 +50,8 @@ mod background_ffi;
 // absent from a test binary
 #[cfg(not(test))]
 mod background_table_ffi;
-// imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
+// imports the C++ button subclasses' host calls (UICheckBox.cpp, UIRadioButton.cpp, UIScrollButton.cpp), absent from a
+// test binary
 #[cfg(not(test))]
 mod button_ffi;
 // imports the C++ tri-state check box's host calls (UITriStateCheckBox.cpp), absent from a test binary
@@ -96,8 +102,6 @@ mod mouse_ffi;
 // imports the C++ scrolling label's members, timers and lines (UITLScrolling.cpp), absent from a test binary
 #[cfg(not(test))]
 mod scrolling_ffi;
-// imports nothing: the status bar's arithmetic takes and returns values
-mod status_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
@@ -107,12 +111,6 @@ mod manager_ffi;
 // imports the C++ manager's music and IME members, the sound manager's calls (UIManager.cpp), absent from a test binary
 #[cfg(not(test))]
 mod manager_media_ffi;
-// imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
-#[cfg(not(test))]
-mod scrollbar_ffi;
-// imports the C++ host functions (UISlider.cpp), absent from a test binary
-#[cfg(not(test))]
-mod slider_ffi;
 // imports the C++ text measuring (UITextLabel.cpp)
 #[cfg(not(test))]
 mod wrap_ffi;

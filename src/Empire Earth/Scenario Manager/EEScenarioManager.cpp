@@ -1569,6 +1569,15 @@ void EEScenarioManager::MoveTriggerUp(unsigned long inIndex)
 // a scenario), ID counters, clocks, media strings, start camera and dialog messages; returns the first error
 long EEScenarioManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
+    long theResult = this->LoadUncaptured(inMajorVersion, inMinorVersion, inFile);
+    if (EESimCaptureRecord::Active())
+        EESMCaptureSaved(this, 0, theResult, inMajorVersion, inMinorVersion);
+    return theResult;
+}
+
+// Load's body (Load adds the simulation capture's SMSV record: ee/EEScenarioCapture.h)
+long EEScenarioManager::LoadUncaptured(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
     std::vector<long> theUnused1;
     std::vector<long> theUnused2;
     unsigned long theCount;

@@ -96,11 +96,6 @@
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EEUICUnitIconBar.h"
 #include "ee/EEUIFMGErrorLog.h"
-#include "ee/EEUIFMGGChat.h"
-#include "ee/EEUIFMGGCivBuilder.h"
-#include "ee/EEUIFMGGDiplomacy.h"
-#include "ee/EEUIFMGGOptions.h"
-#include "ee/EEUIFMGGStatistics.h"
 #include "ee/EEUIFMGUnitHack.h"
 #include "lle/UIFormManager.h"
 #include "ee/EESMMediaStrings.h"
@@ -193,160 +188,149 @@ UWideString gDefaultPlayerNames[32] = {
 // SYNTHETIC: EXE 0x6628be   (registrar)
 // SYNTHETIC: EXE 0x6628ca   (dtor)
 
-// FUNCTION: EXE 0x6628e5
-// Creates the developer unit-placing hack with the alphabetical list of player-placeable unit classes
+// The unit hack whole in Rust (ee_screens unit_hack.rs): the original's members 0x2628e5 (ctor: the sorted
+// class names), 0x262a91 (dtor), 0x262aa5 PlaceUnit, 0x262c6f FillComboBox, 0x262cdc LoadUnitData, 0x262d66
+// Update, 0x262e29 GetSelection, and the two message ctors' COMDATs 0x262c24 (EEMHackANewUnit) and 0x262d32
+// (EEMLoadUnitData). The host answers its ops (EE_SCREENS_UH_OP_*): the class table, the object and player lists,
+// the keys, the mouse, the messages.
+extern "C" int32_t ee_screenscpp_unit_hack(void* inForm, uint32_t inOp, int32_t inA, int32_t inB, float* ioPoint,
+                                           uint32_t* ioSelection, uint8_t* ioText, size_t inLength)
+{
+    EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
+    // the object list only for its ops: the class table's are asked from the form's constructor, before its
+    // controls exist
+    UIComboBox* theObjects = inOp >= EE_SCREENS_UH_OP_COMBO_CLEAR && inOp <= EE_SCREENS_UH_OP_COMBO_SELECTION
+                                 ? static_cast<UIComboBox*>(theForm->GetControl(kMainGameTempObjectList))
+                                 : NULL;
+
+    switch (inOp) {
+    case EE_SCREENS_UH_OP_CLASS_COUNT:
+        return (int32_t)EEUnitClassCount();
+    case EE_SCREENS_UH_OP_CLASS: {
+        EEUnitClass* theClass = gUnitClassTable[inA];
+        if (theClass == NULL)
+            return 0;
+        return 1 | (theClass->mIsEnabled ? 2 : 0) | (theClass->mIsPlayerPlaceable ? 4 : 0);
+    }
+    case EE_SCREENS_UH_OP_CLASS_CATEGORY:
+        return gUnitClassTable[inA]->mCategory;
+    case EE_SCREENS_UH_OP_CLASS_TYPE:
+        return gUnitClassTable[inA]->mUnitType;
+    case EE_SCREENS_UH_OP_CLASS_NAME: {
+        UWideString theName((const char*)gUnitClassTable[inA]->mName);
+        size_t theLength = theName.GetTCHARLength();
+        if (theLength <= inLength)
+            memcpy(ioText, (const char*)theName, theLength);
+        return (int32_t)theLength;
+    }
+    case EE_SCREENS_UH_OP_COMBO_CLEAR:
+        theObjects->DeleteAllEntries();
+        return 0;
+    case EE_SCREENS_UH_OP_COMBO_APPEND: {
+        char* theBytes = new char[inLength + 1];
+        memcpy(theBytes, ioText, inLength);
+        theBytes[inLength] = 0;
+        theObjects->AppendLine(UWideString(theBytes));
+        delete[] theBytes;
+        return 0;
+    }
+    case EE_SCREENS_UH_OP_COMBO_SELECT_FIRST: {
+        // port: the first line is selected without the box's change event. The original's event sent EEMLoadUnitData
+        // from the UI thread as the main game form opened, racing the game's start: in the loading's last communications
+        // ticks the client ran it as lobby input, a tick later the physics ran it as a game input (one more input
+        // counted: the out-of-synch checksum, EE-SIM's AI trace "inputs=" and its capture's NMEX/NMIM/NMDC/USCK
+        // differed by run under load). Its only effect was the sender's hack class and that class's media preloaded
+        // for every player; the hack's own placing sends the listed class, and a later change still sends the message.
+        UIEvent* theEvent = theObjects->GetTriggerEvent(kControlTriggerSelectionChanged);
+        if (theEvent != NULL) {
+            theEvent->Reference();
+            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+        }
+        theObjects->SetCurrentSelection(0);
+        if (theEvent != NULL) {
+            theObjects->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+            theEvent->Dereference();
+        }
+        return 0;
+    }
+    case EE_SCREENS_UH_OP_COMBO_SELECTION: {
+        unsigned long theSelection;
+        theObjects->GetCurrentSelection(theSelection);
+        return (int32_t)theSelection;
+    }
+    case EE_SCREENS_UH_OP_LIST_SELECTION: {
+        unsigned long theSelection = *ioSelection;
+        long theResult = static_cast<UIComboBox*>(theForm->GetControl(inA == 1 ? kMainGameTempObjectList
+                                                                                 : kMainGameTempPlayerList))
+                             ->GetListBox()->GetCurrentSelection(theSelection);
+        *ioSelection = (uint32_t)theSelection;
+        return (int32_t)theResult;
+    }
+    case EE_SCREENS_UH_OP_TILE:
+        return gWorld.mMap->GetTile((long)ioPoint[0], (long)ioPoint[1]) != NULL;
+    case EE_SCREENS_UH_OP_KEY: {
+        ISEntity* theKey;
+        gISKeyboard->GetEntity(inA == 0 ? kKeyShift : kKeyControl, theKey);
+        return (int32_t)theKey->GetValue();
+    }
+    case EE_SCREENS_UH_OP_PLAYER_SKIPPED:
+        return gWorld.mPlayers[inA] == NULL || gWorld.mPlayers[inA] == gWorld.GetCurrentPlayer();
+    case EE_SCREENS_UH_OP_LOCAL_PLAYER:
+        return (int32_t)gWorld.GetCurrentPlayer()->mPlayerID;
+    case EE_SCREENS_UH_OP_SEND_PLACE: {
+        long theType = inA;
+        gCommunications->ProcessLocalUserInput(
+            new EEMHackANewUnit(theType, GE2DPoint(ioPoint[0], ioPoint[1]), (unsigned char)inB), kSlotNone);
+        return 0;
+    }
+    case EE_SCREENS_UH_OP_SEND_LOAD:
+        gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(inA, true), kSlotNone);
+        return 0;
+    case EE_SCREENS_UH_OP_IN_VIEW:
+        return gViewport.GetViewRectangle().Contains(GE2DPoint(ioPoint[0], ioPoint[1]));
+    case EE_SCREENS_UH_OP_LEFT_BUTTON:
+        return inA == 0 ? UIManager::GetLMouseButton()->JustPressed() : UIManager::GetLMouseButton()->JustUnpressed();
+    case EE_SCREENS_UH_OP_POINT: {
+        GE3DPoint thePoint;
+        EETile* theLocation;
+        bool theFound = EEPointUnitOrTile(GE2DPoint(ioPoint[0], ioPoint[1]), theLocation, thePoint, true);
+        ioPoint[0] = thePoint.GetX();
+        ioPoint[1] = thePoint.GetY();
+        return theFound;
+    }
+    }
+    return 0;
+}
+
 EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
 {
-    UWideString theName;
-    unsigned long theCount;
-    unsigned long i;
-    unsigned long j;
-
-    this->mL28 = -1;
-    theCount = 0;
-    this->mMode = 0;
     this->mForm = inForm;
-    for (i = 0; i < EEUnitClassCount(); i++) {
-        EEUnitClass* theClass = gUnitClassTable[i];
-        if (theClass == NULL || !theClass->mIsEnabled)
-            continue;
-        if (theClass->mCategory == kUnitCategoryProjectile || theClass->mCategory == kUnitCategoryBomb || theClass->mCategory == kUnitCategoryMissile ||
-            theClass->mCategory == kUnitCategoryTorpedo)
-            continue;
-        if (!theClass->mIsPlayerPlaceable)
-            continue;
-        if (theClass->mUnitType == kUnitTypeWaypoint || theClass->mUnitType == kUnitTypePathPoint || theClass->mUnitType == kUnitTypeFoundation1x1 ||
-            theClass->mUnitType == kUnitTypeFoundation2x2 || theClass->mUnitType == kUnitTypeFoundation3x3 || theClass->mUnitType == kUnitTypeFoundation6x6)
-            continue;
-        theName = theClass->mName;
-        for (j = 0; j < theCount; j++) {
-            if (theName < this->mNames[j])
-                break;
-        }
-        this->mNames.insert(this->mNames.begin() + j, theName);
-        this->mClassIDs.insert(this->mClassIDs.begin() + j, i);
-        theCount++;
-    }
+    this->mRecord = ee_screens_unit_hack_new(inForm);
 }
 
-// FUNCTION: EXE 0x662a91
-// Destroys the unit-placing hack
 EEUIFMGUnitHack::~EEUIFMGUnitHack()
 {
+    ee_screens_unit_hack_free(this->mRecord);
 }
 
-// FUNCTION: EXE 0x662aa5
-// Places a unit of the listed class at a tile on a Shift or Ctrl click (for the listed player, or the local
-// one with Shift)
 void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
 {
-    ISEntity* theShift;
-    ISEntity* theControl;
-    unsigned long thePlayer;
-
-    if (gWorld.mMap->GetTile((long)inTile.GetX(), (long)inTile.GetY()) == NULL)
-        return;
-    gISKeyboard->GetEntity(kKeyShift, theShift);
-    gISKeyboard->GetEntity(kKeyControl, theControl);
-    if (!(this->mMode > 0) || (theShift->GetValue() == 0 && theControl->GetValue() == 0))
-        return;
-    switch (this->mMode) {
-    case 1: {
-        long theType = this->mClassIDs[this->GetSelection()];   // the class picked in the list
-        if (theShift->GetValue() == 0 &&
-            (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == kErrorOK ||
-             static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == 0xd)) {
-            unsigned long theIndex = 0;
-            unsigned long theLeft = thePlayer + 1;
-            do {
-                theIndex++;
-                while (gWorld.mPlayers[theIndex] == NULL || gWorld.mPlayers[theIndex] == gWorld.GetCurrentPlayer())
-                    theIndex++;
-            } while (--theLeft);
-            thePlayer = theIndex;
-        } else {
-            thePlayer = gWorld.GetCurrentPlayer()->mPlayerID;
-        }
-        gCommunications->ProcessLocalUserInput(new EEMHackANewUnit(theType, inTile, (unsigned char)thePlayer), kSlotNone);
-        break;
-    }
-    }
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_PLACE_UNIT, inTile.GetX(), inTile.GetY());
 }
 
-// FUNCTION: EXE 0x662c24
-// Creates a place-new-unit message
-// (an out-of-line inline COMDAT after its first user)
-
-// FUNCTION: EXE 0x662c6f
-// Fills the hack's object combo box with the unit class names
 void EEUIFMGUnitHack::FillComboBox()
 {
-    unsigned long i;
-
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->DeleteAllEntries();
-    for (i = 0; i < this->mClassIDs.size(); i++)
-        (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList)))->AppendLine(this->mNames[i]);
-    static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->SetCurrentSelection(0);
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_FILL_COMBO_BOX, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x662cdc
-// Sends a reload of the unit data of the class selected in the hack's list
 void EEUIFMGUnitHack::LoadUnitData()
 {
-    unsigned long theSelection;
-
-    this->FnE123D();
-    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), !UIsNone32(theSelection))
-        gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(this->mClassIDs[theSelection], true), kSlotNone);
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_LOAD_UNIT_DATA, 0.0f, 0.0f);
 }
 
-// FUNCTION: EXE 0x662d32
-// Creates a load-unit-data message
-// (an out-of-line inline COMDAT after its first user)
-
-// FUNCTION: EXE 0x662d66
-// Handles the hack's mouse clicks in the game view: a release places a unit at the clicked tile
 void EEUIFMGUnitHack::Update(const GE2DPoint& inLocation)
 {
-    GE3DPoint thePoint;
-    GE2DPoint theTile;
-    EETile* theLocation;
-    bool theInside = gViewport.GetViewRectangle().Contains(inLocation);
-
-    if (UIManager::GetLMouseButton()->JustPressed()) {
-        if (theInside) {
-            bool theFound = EEPointUnitOrTile(inLocation, theLocation, thePoint, true);
-            theTile.SetX(thePoint.GetX());
-            theTile.SetY(thePoint.GetY());
-            if (theFound)
-                this->Fn157269(theTile);
-        }
-    } else if (UIManager::GetLMouseButton()->JustUnpressed()) {
-        if (theInside) {
-            bool theFound = EEPointUnitOrTile(inLocation, theLocation, thePoint, true);
-            theTile.SetX(thePoint.GetX());
-            theTile.SetY(thePoint.GetY());
-            if (theFound)
-                this->PlaceUnit(theTile);
-        }
-    }
-}
-
-// FUNCTION: EXE 0x662e29
-// Returns the selection of the hack's object or player list, by mode
-unsigned long EEUIFMGUnitHack::GetSelection()
-{
-    unsigned long theSelection = 0;
-
-    switch (this->mMode) {
-    case 1:
-        static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetListBox()->GetCurrentSelection(theSelection);
-        break;
-    case 2:
-        static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(theSelection);
-        break;
-    }
-    return theSelection;
+    ee_screens_unit_hack_call(this->mRecord, this->mForm, EE_SCREENS_UH_UPDATE, inLocation.GetX(), inLocation.GetY());
 }
 
 // FUNCTION: EXE 0x662e73
@@ -900,20 +884,12 @@ void EEUIFMainGame::CreateGroup(unsigned long inIndex)
     case 0:
         this->mGroups[0] = new EEUIFMGMainGroup(this);
         break;
-    case 1:
-        this->mGroups[1] = new EEUIFMGGStatistics(this);
-        break;
-    case 2:
-        this->mGroups[2] = new EEUIFMGGChat(this);
-        break;
-    case 3:
-        this->mGroups[3] = new EEUIFMGGDiplomacy(this);
-        break;
-    case 4:
-        this->mGroups[4] = new EEUIFMGGOptions(this);
-        break;
-    case 5:
-        this->mGroups[5] = new EEUIFMGGCivBuilder(this);
+    case EE_SCREENS_GROUP_STATISTICS:
+    case EE_SCREENS_GROUP_CHAT:
+    case EE_SCREENS_GROUP_DIPLOMACY:
+    case EE_SCREENS_GROUP_OPTIONS:
+    case EE_SCREENS_GROUP_CIV_BUILDER:
+        this->mGroups[inIndex] = new EEUIFMGGRust(this, inIndex);
         break;
     }
 }
@@ -1033,83 +1009,6 @@ void EEUIFMainGame::SetPauseText(bool inPaused)
     theLabel->SetDisplayMode(kDisplayModeShown);
 }
 
-// FUNCTION: EXE 0x665791
-// Returns the attack cursor for a target when the selection holds armed buildings and the target is an enemy
-long EEUIFMainGame::GetAttackStance(EEUnit* inUnit, long inCommand, long inAllowDead)
-{
-    long theResult = 0;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEPlayer* theOwner = inUnit->mPlayer;
-    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-    unsigned long theCount = theGroup->GetNumUnits();
-    bool theAny = false;
-    bool theFirst = false;
-    bool theHealthy = false;
-    unsigned long i;
-
-    for (i = 0; i < theCount; i++) {
-        EEUnit* theUnit = theGroup->GetUnit(i);
-        if ((!(theUnit->mUnitClass->mKindFlags & kUnitKindBuilding)) || !(theUnit->mStats->mAttack > 0.0f))
-            continue;
-        if (inUnit->mStats->mAttack > 0.0f)
-            theHealthy = true;
-        theAny = true;
-        if (!theFirst)
-            theFirst = theUnit->mComplexUnit->mIsBuilt;
-    }
-    if (theAny && theOwner != thePlayer && thePlayer->mEnemies[theOwner->mPlayerID] != 0 && inCommand != 0 &&
-        inCommand != 8) {
-        if (theFirst)
-            theResult = 1;
-        else
-            theResult = theHealthy ? 2 : 0;
-    }
-    return theResult;
-}
-
-// Original caller cleanup proves the range helper is cdecl; the three cursor dispatches are members.
-long EEGetAttackRangeKind(EEUnit* inUnit, unsigned long inCommand, bool inAllowDead);
-bool EECanEnterUnit(unsigned long inArg1, unsigned long inArg2);
-
-// FUNCTION: EXE 0x66588c
-// Returns the cursor for a citizen selection over a unit: gather, repair, enter (garrison) or attack
-long EEUIFMainGame::GetCommandOnUnit(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEPlayer* theOwner = inUnit->mPlayer;
-    long theResult = 0;
-    EESelectedGroup* theGroup = thePlayer->mSelectedGroup;
-    unsigned long theCount = theGroup->GetNumUnits();
-    if (EEUUGetIsUnitClassTargetable(NULL, inUnit->mUnitClass)) {
-        EEComplexUnit* theRepairer = theGroup->FindUnitWithFlags(kUnitKindCitizen);
-        if (theRepairer->CanGather(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), false, false)) {
-            theResult = 4;
-        } else if (theOwner == thePlayer) {
-            if (((inCommand & kUnitKindBuilding) != 0 || inUnit->mUnitClass->mUnitType == kUnitTypeMissileBase ||
-                 inUnit->mUnitClass->mUnitType == kUnitTypeCpMissileBase || inUnit->mUnitClass->mUnitType == kUnitTypeAirport ||
-                 inUnit->mUnitClass->mUnitType == kUnitTypeTeleporter || inUnit->mUnitClass->mIsTower) &&
-                (inAllowDead || inUnit->mHitPoints > 0 && inUnit->mHitPoints < inUnit->mStats->mMaxHitPoints)) {
-                theResult = 5;
-            } else if (EECanEnterUnit(inFlags, inCommand) && inUnit->mTileNode != NULL && inUnit->mComplexUnit->mIsBuilt) {
-                if (inUnit->mUnitClass->mCategory == kUnitCategoryFortress && inUnit->mHitPoints != inUnit->mStats->mMaxHitPoints)
-                    theResult = 5;
-                else
-                    theResult = 0xb;
-            }
-        } else if (thePlayer->mEnemies[theOwner->mPlayerID] != 0 && inUnit->mHitPoints > 0) {
-            for (unsigned long i = 0; i < theCount; i++) {
-                EEComplexUnit* theUnit = theGroup->GetUnit(i);
-                if ((theUnit->mUnitClass->mKindFlags & kUnitKindCitizen) == 0)
-                    continue;
-                if (theUnit->GetComplexUnit()->CanAttackClass(inUnit->GetUnitClass()))
-                    theResult = 1;
-                break;
-            }
-        }
-    }
-    return theResult;
-}
-
 // FUNCTION: EXE 0x665a06
 // Tells whether a screen point is in the game view and not under the unit information panel
 bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
@@ -1121,166 +1020,6 @@ bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
     if (gViewport.GetViewRectangle().Contains(inLocation) && theOutside)
         return true;
     return false;
-}
-
-// FUNCTION: EXE 0x665a4f
-// Returns whether the selection (or an airbase's aircraft) can attack a target and is beyond its minimum
-// range: 1 in range, 3 too close, 2 only armed, 0 cannot
-// The original is a cdecl helper: both callers push three arguments and adjust esp by12;
-// 0x265d79 is plain ret. It does not consume a form receiver.
-long EEGetAttackRangeKind(EEUnit* inTarget, unsigned long inCommand, bool inAllowDead)
-{
-    GE3DPoint theTargetPoint;
-    GE3DPoint theAimPoint;
-    GE3DPoint theAttackerPoint;
-    long theResult = 0;
-    EEUnitClassUpgrade* theStats = inTarget->mStats;
-    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-    unsigned long theCount = theGroup->GetNumUnits();
-    bool theCanAttack = false;
-    bool theInRange = false;
-    bool theHasHealth = false;
-
-    if (inCommand == 8 || (!inAllowDead && inTarget->GetHitPoints() < 1))
-        return theResult;
-    if (inTarget->GetComplexUnit() != NULL && inTarget->GetModel()->mModel != NULL) {
-        theTargetPoint = inTarget->GetModel()->mDefaultPoint;
-        theTargetPoint.SetX(theTargetPoint.GetX() * theStats->GetScale());
-        theTargetPoint.SetY(theTargetPoint.GetY() * theStats->GetScale());
-        theTargetPoint.SetZ(theTargetPoint.GetZ() * theStats->GetScale());
-        inTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(theTargetPoint, theAimPoint);
-    } else {
-        theAimPoint.SetX((float)inTarget->GetTileX() + 0.5f);
-        theAimPoint.SetY((float)inTarget->GetTileY() + 0.5f);
-        theAimPoint.SetZ(inTarget->mTile->GetHeight());
-    }
-    for (unsigned long i = 0; i < theCount; i++) {
-        if (theCanAttack && theInRange)
-            break;
-        EEUnit* theUnit = theGroup->GetUnit(i);
-        if (theUnit->mTileNode != NULL &&
-            (theUnit->GetComplexUnit()->GetNumCargoUnits() == 0 || theUnit->GetUnitClass()->mUnitType == kUnitTypeCpMissileBase)) {
-            if (theUnit->GetComplexUnit()->CanAttackClass(inTarget->GetUnitClass()) || theUnit->GetUnitClass()->mUnitType == kUnitTypeCpMissileBase) {
-                theCanAttack = true;
-                if (theUnit->mStats->GetAttack() > 0.0f)
-                    theHasHealth = true;
-                if (theUnit->GetComplexUnit() != NULL) {
-                    theAttackerPoint = theUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetPosition();
-                    if (theAttackerPoint.DistanceToSquared(theAimPoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange))
-                        theInRange = true;
-                }
-            }
-        } else if (theUnit->GetUnitClass()->IsAirBase()) {
-            unsigned long theCargoCount = theUnit->GetComplexUnit()->GetNumCargoUnits();
-            for (unsigned long j = 0; j < theCargoCount; j++) {
-                EEComplexUnit* theCargo = theUnit->GetComplexUnit()->mCargo[j];
-                if (!theCargo->CanAttackClass(inTarget->GetUnitClass()))
-                    continue;
-                theCanAttack = true;
-                if (theCargo->mStats->GetAttack() > 0.0f)
-                    theHasHealth = true;
-                theAttackerPoint = theCargo->mPhysicalModel.GetLocation().GetPosition();
-                if (theAttackerPoint.DistanceToSquared(theAimPoint) >= UMSquare(theCargo->GetUnitClass()->mMinRange))
-                    theInRange = true;
-            }
-        }
-    }
-    if (theCanAttack)
-        return theInRange ? 1 : 3;
-    if (theHasHealth == true)
-        return 2;
-    return 0;
-}
-
-// FUNCTION: EXE 0x665d7a
-// Returns the cursor for a military selection over a unit: enter, patrol point, or the attack range kind
-long EEUIFMainGame::Fn265D7A(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEPlayer* theOwner = inUnit->mPlayer;
-    long theResult = 0;
-
-    if (EEUUGetIsUnitClassTargetable(NULL, inUnit->mUnitClass)) {
-        if (theOwner == thePlayer) {
-            if (EECanEnterUnit(inFlags, inCommand) && inUnit->mTileNode != NULL && inUnit->mComplexUnit->mIsBuilt)
-                theResult = 0xb;
-            else if (inCommand == 0x20)
-                theResult = 0x14;
-        } else if (thePlayer->mEnemies[theOwner->mPlayerID] != 0) {
-            theResult = EEGetAttackRangeKind(inUnit, inCommand, inAllowDead);
-            if (theResult == 1 && inAllowDead && (inFlags & kUnitKindLongRange) == kUnitKindLongRange)
-                theResult = 7;
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x665e35
-// Returns the gather cursor for a fishing boat selection over a unit
-long EEUIFMainGame::GetRepairCommand(EEUnit* inUnit, long inCommand, long inAllowDead)
-{
-    EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
-    long theResult = 0;
-
-    if (EEUUGetIsUnitClassTargetable(NULL, inUnit->mUnitClass)) {
-        EEComplexUnit* theRepairer = theGroup->FindUnitWithFlags(kUnitKindNavalCitizen);
-        if (theRepairer->CanGather(inUnit, inUnit->GetTileX(), inUnit->GetTileY(), false, false))
-            theResult = 4;
-    }
-    return theResult;
-}
-
-// FUNCTION: EXE 0x665e89
-// Returns the cursor for a priest or medic selection over a unit: heal, enter, convert, shielded, or attack
-long EEUIFMainGame::GetTransportCommand(EEUnit* inUnit, unsigned long inCommand, unsigned long inFlags, bool inAllowDead)
-{
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEComplexUnit* theTarget = inUnit->mComplexUnit;
-    EEComplexUnit* theFirst = thePlayer->mSelectedGroup->GetFirstUnit();
-    long theResult = 0;
-    bool theShielded = false;
-    bool theCanConvert = false;
-
-    if (EEUUGetIsUnitClassTargetable(NULL, inUnit->mUnitClass)) {
-        EEPlayer* theOwner = inUnit->mPlayer;
-        bool theAllied = theOwner == thePlayer || thePlayer->mEnemies[theOwner->mPlayerID] == 0;
-        if (theAllied) {
-            if (EECanHeal(theFirst, theTarget))
-                theResult = 0x12;
-            if (theOwner == thePlayer && EECanEnterUnit(inFlags, inCommand) && inUnit->mTileNode != NULL &&
-                inUnit->mComplexUnit->mIsBuilt)
-                theResult = 0xb;
-        } else if (theTarget != NULL) {
-            unsigned long i = 0;
-            while (true) {
-                if (!(i < thePlayer->mSelectedGroup->GetNumUnits()))
-                    break;
-                if (theCanConvert) {
-                    theResult = 10;
-                    break;
-                }
-                if (theShielded) {
-                    theResult = 0x10;
-                    break;
-                }
-                EEComplexUnit* theUnit = thePlayer->mSelectedGroup->GetUnit(i);
-                if (!theUnit->mUnitClass->IsCrusader()) {
-                    if (theUnit->mUnitClass->IsPriest() && EECanConvert(theUnit, theTarget, theShielded))
-                        theCanConvert = true;
-                    else
-                        theCanConvert = false;
-                }
-                i++;
-            }
-            if (theCanConvert)
-                theResult = 10;
-            else if (theShielded)
-                theResult = 0x10;
-            else
-                theResult = EEGetAttackRangeKind(inUnit, inCommand, inAllowDead);
-        }
-    }
-    return theResult;
 }
 
 // FUNCTION: EXE 0x665ff6
@@ -1734,57 +1473,165 @@ void EEUIFMainGame::RefreshStatus()
         this->UpdateCursorKind();
 }
 
+// The cursor's reads for one UpdateCursorKind (ee_screens cursor.rs asks them through ee_screenscpp_cursor)
+struct EEUIFMGCursorRead {
+    EEUIFMainGame* mForm;
+    EEPlayer* mPlayer;
+    EESelectedGroup* mGroup;
+    EEComplexUnit* mFirst;
+    EEUnit* mTarget;
+};
+
+// The world's answers to the cursor's ops (EE_SCREENS_CURSOR_OP_*): the target, the selection by index, an air
+// base's cargo by index; the positions' floats into outF
+extern "C" int32_t ee_screenscpp_cursor(void* inContext, uint32_t inOp, uint32_t inA, uint32_t inB, float* outF)
+{
+    EEUIFMGCursorRead& theRead = *static_cast<EEUIFMGCursorRead*>(inContext);
+    EEUnit* theTarget = theRead.mTarget;
+    EEComplexUnit* theUnit = inOp >= EE_SCREENS_CURSOR_OP_SEL_KIND && inOp <= EE_SCREENS_CURSOR_OP_SEL_CONVERT ? theRead.mGroup->GetUnit(inA) : NULL;
+    EEComplexUnit* theCargo = inOp >= EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK ? theRead.mGroup->GetUnit(inA)->GetComplexUnit()->mCargo[inB] : NULL;
+
+    switch (inOp) {
+    case EE_SCREENS_CURSOR_OP_MOUSE_OK:
+        return theRead.mForm->GetMouseOverControl() == NULL ||
+               theRead.mForm->GetMouseOverControl() == theRead.mForm->GetControl(kMainGameCommandUnits);
+    case EE_SCREENS_CURSOR_OP_FIRST:
+        return theRead.mFirst == NULL ? 0 : theRead.mFirst->mHitPoints > 0 ? 1 : 2;
+    case EE_SCREENS_CURSOR_OP_FLAGS:
+        return (int32_t)theRead.mGroup->mKindFlags;
+    case EE_SCREENS_CURSOR_OP_IN_VIEW:
+        return gRasterizer->GetViewport(gScreenIndex).GetViewRectangle().Contains(gMouse->mPosition);
+    case EE_SCREENS_CURSOR_OP_PICK:
+        theRead.mTarget = gUnitPicker.PickUnit(gMouse->mPosition, inA);
+        return theRead.mTarget != NULL;
+    case EE_SCREENS_CURSOR_OP_RELEASE:
+        theTarget->Dereference();
+        return 0;
+    case EE_SCREENS_CURSOR_OP_SEEN:
+        return EEIsSeenBy(theTarget, theRead.mPlayer, true);
+    case EE_SCREENS_CURSOR_OP_T_KIND:
+        return (int32_t)theTarget->mUnitClass->mKindFlags;
+    case EE_SCREENS_CURSOR_OP_T_DISABLED:
+        return theTarget->mTileNode != NULL && theTarget->mComplexUnit->mIsDisabled &&
+               !theTarget->mComplexUnit->IsProtected();
+    case EE_SCREENS_CURSOR_OP_FIRST_MEDIC:
+        return theRead.mFirst->mUnitClass->mIsMedic;
+    case EE_SCREENS_CURSOR_OP_T_TARGETABLE:
+        return EEUUGetIsUnitClassTargetable(NULL, theTarget->mUnitClass);
+    case EE_SCREENS_CURSOR_OP_T_OWNER:
+        if (theTarget->mPlayer == theRead.mPlayer)
+            return 0;
+        return theRead.mPlayer->mEnemies[theTarget->mPlayer->mPlayerID] != 0 ? 1 : 2;
+    case EE_SCREENS_CURSOR_OP_T_HP:
+        return theTarget->mHitPoints;
+    case EE_SCREENS_CURSOR_OP_T_MAX_HP:
+        return theTarget->mStats->mMaxHitPoints;
+    case EE_SCREENS_CURSOR_OP_T_ATTACK:
+        return theTarget->mStats->mAttack > 0.0f;
+    case EE_SCREENS_CURSOR_OP_T_TYPE:
+        return theTarget->mUnitClass->mUnitType;
+    case EE_SCREENS_CURSOR_OP_T_TOWER:
+        return theTarget->mUnitClass->mIsTower;
+    case EE_SCREENS_CURSOR_OP_T_CATEGORY:
+        return theTarget->mUnitClass->mCategory;
+    case EE_SCREENS_CURSOR_OP_T_ENTERABLE:
+        return theTarget->mTileNode != NULL && theTarget->mComplexUnit->mIsBuilt;
+    case EE_SCREENS_CURSOR_OP_T_COMPLEX:
+        return theTarget->mComplexUnit != NULL;
+    case EE_SCREENS_CURSOR_OP_AIM: {
+        // EEGetAttackRangeKind's aim: the model's default point scaled and placed, else the tile's centre
+        GE3DPoint thePoint, theAim;
+        if (theTarget->GetComplexUnit() != NULL && theTarget->GetModel()->mModel != NULL) {
+            float theScale = theTarget->mStats->GetScale();
+            thePoint = theTarget->GetModel()->mDefaultPoint;
+            thePoint.SetX(thePoint.GetX() * theScale);
+            thePoint.SetY(thePoint.GetY() * theScale);
+            thePoint.SetZ(thePoint.GetZ() * theScale);
+            theTarget->GetComplexUnit()->mPhysicalModel.GetLocation().Apply(thePoint, theAim);
+        } else {
+            theAim.SetX((float)theTarget->GetTileX() + 0.5f);
+            theAim.SetY((float)theTarget->GetTileY() + 0.5f);
+            theAim.SetZ(theTarget->mTile->GetHeight());
+        }
+        outF[0] = theAim.GetX();
+        outF[1] = theAim.GetY();
+        outF[2] = theAim.GetZ();
+        return 0;
+    }
+    case EE_SCREENS_CURSOR_OP_CAN_GATHER:
+        return theRead.mGroup->FindUnitWithFlags(inA)->CanGather(theTarget, theTarget->GetTileX(),
+                                                                  theTarget->GetTileY(), false, false);
+    case EE_SCREENS_CURSOR_OP_CAN_HEAL:
+        return EECanHeal(theRead.mFirst, theTarget->mComplexUnit);
+    case EE_SCREENS_CURSOR_OP_SEL_COUNT:
+        return (int32_t)theRead.mGroup->GetNumUnits();
+    case EE_SCREENS_CURSOR_OP_SEL_KIND:
+        return (int32_t)theUnit->mUnitClass->mKindFlags;
+    case EE_SCREENS_CURSOR_OP_SEL_ATTACK:
+        return theUnit->mStats->GetAttack() > 0.0f;
+    case EE_SCREENS_CURSOR_OP_SEL_BUILT:
+        return theUnit->mComplexUnit->mIsBuilt;
+    case EE_SCREENS_CURSOR_OP_SEL_ON_MAP:
+        return theUnit->mTileNode != NULL;
+    case EE_SCREENS_CURSOR_OP_SEL_CARGO:
+        return (int32_t)theUnit->GetComplexUnit()->GetNumCargoUnits();
+    case EE_SCREENS_CURSOR_OP_SEL_TYPE:
+        return theUnit->GetUnitClass()->mUnitType;
+    case EE_SCREENS_CURSOR_OP_SEL_AIR_BASE:
+        return theUnit->GetUnitClass()->IsAirBase();
+    case EE_SCREENS_CURSOR_OP_SEL_CRUSADER:
+        return theUnit->mUnitClass->IsCrusader();
+    case EE_SCREENS_CURSOR_OP_SEL_PRIEST:
+        return theUnit->mUnitClass->IsPriest();
+    case EE_SCREENS_CURSOR_OP_SEL_COMPLEX:
+        return theUnit->GetComplexUnit() != NULL;
+    case EE_SCREENS_CURSOR_OP_SEL_POSITION: {
+        const GE3DPoint& thePosition = theUnit->GetComplexUnit()->mPhysicalModel.GetLocation().GetPosition();
+        outF[0] = thePosition.GetX();
+        outF[1] = thePosition.GetY();
+        outF[2] = thePosition.GetZ();
+        return 0;
+    }
+    case EE_SCREENS_CURSOR_OP_SEL_MIN_RANGE:
+        outF[0] = theUnit->GetUnitClass()->mMinRange;
+        return 0;
+    case EE_SCREENS_CURSOR_OP_SEL_CAN_ATTACK:
+        return theUnit->GetComplexUnit()->CanAttackClass(theTarget->GetUnitClass());
+    case EE_SCREENS_CURSOR_OP_SEL_CONVERT: {
+        bool theShielded = inB != 0;
+        bool theResult = EECanConvert(theUnit, theTarget->mComplexUnit, theShielded);
+        return (theResult ? 1 : 0) | (theShielded ? 2 : 0);
+    }
+    case EE_SCREENS_CURSOR_OP_CARGO_CAN_ATTACK:
+        return theCargo->CanAttackClass(theTarget->GetUnitClass());
+    case EE_SCREENS_CURSOR_OP_CARGO_ATTACK:
+        return theCargo->mStats->GetAttack() > 0.0f;
+    case EE_SCREENS_CURSOR_OP_CARGO_POSITION: {
+        const GE3DPoint& thePosition = theCargo->mPhysicalModel.GetLocation().GetPosition();
+        outF[0] = thePosition.GetX();
+        outF[1] = thePosition.GetY();
+        outF[2] = thePosition.GetZ();
+        return 0;
+    }
+    case EE_SCREENS_CURSOR_OP_CARGO_MIN_RANGE:
+        outF[0] = theCargo->GetUnitClass()->mMinRange;
+        return 0;
+    }
+    return 0;
+}
+
 // FUNCTION: EXE 0x666f8b
-// Picks the mouse cursor for the unit under it from what the selection can do to it
+// Picks the mouse cursor for the unit under it from what the selection can do to it (ee_screens cursor.rs, with
+// GetAttackStance, GetTransportCommand, GetRepairCommand, GetCommandOnUnit, Fn265D7A and EEGetAttackRangeKind)
 void EEUIFMainGame::UpdateCursorKind()
 {
-    const GEViewport& theViewport = gRasterizer->GetViewport(gScreenIndex);
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    EEComplexUnit* theFirst = thePlayer->mSelectedGroup->GetFirstUnit();
-    long theResult = 0;
-    unsigned long theFlags = thePlayer->mSelectedGroup->mKindFlags;
-
-    if ((this->GetMouseOverControl() == NULL || this->GetMouseOverControl() == this->GetControl(kMainGameCommandUnits)) &&
-        theFirst != NULL && theFirst->mHitPoints > 0 && theFlags != 0 &&
-        theViewport.GetViewRectangle().Contains(gMouse->mPosition)) {
-        EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, theFlags & kUnitKindCitizen);
-        if (theUnit != NULL) {
-            bool theAllowDead = !EEIsSeenBy(theUnit, thePlayer, true);
-            unsigned long theCommand = theUnit->mUnitClass->mKindFlags;
-            if (theUnit->mTileNode != NULL && theUnit->mComplexUnit->mIsDisabled && !theUnit->mComplexUnit->IsProtected()) {
-                theResult = 2;
-            } else if (theCommand != 0) {
-                long theNext;
-                if ((theFlags & kUnitKindBuilding) != 0) {
-                    theNext = this->GetAttackStance(theUnit, theCommand, theAllowDead);
-                    if (theNext != 0)
-                        theResult = theNext;
-                }
-                if ((theFlags & kUnitKindPriest) != 0 || theFirst->mUnitClass->mIsMedic) {
-                    theNext = this->GetTransportCommand(theUnit, theCommand, theFlags, theAllowDead);
-                    if (theNext != 0)
-                        theResult = theNext;
-                }
-                if ((theFlags & kUnitKindNavalCitizen) == kUnitKindNavalCitizen) {
-                    theNext = this->GetRepairCommand(theUnit, theCommand, theAllowDead);
-                    if (theNext != 0)
-                        theResult = theNext;
-                }
-                if ((theFlags & kUnitKindCitizen) == kUnitKindCitizen) {
-                    theNext = this->GetCommandOnUnit(theUnit, theCommand, theFlags, theAllowDead);
-                    if (theNext != 0)
-                        theResult = theNext;
-                }
-                if ((theFlags & kUnitKindMilitary) == kUnitKindMilitary) {
-                    theNext = this->Fn265D7A(theUnit, theCommand, theFlags, theAllowDead);
-                    if (theNext != 0)
-                        theResult = theNext;
-                }
-            }
-            theUnit->Dereference();
-        }
-    }
-    gMouse->mPointer = theResult;
+    EEUIFMGCursorRead theRead;
+    theRead.mForm = this;
+    theRead.mPlayer = gWorld.GetCurrentPlayer();
+    theRead.mGroup = theRead.mPlayer->mSelectedGroup;
+    theRead.mFirst = theRead.mGroup->GetFirstUnit();
+    theRead.mTarget = NULL;
+    gMouse->mPointer = ee_screens_cursor_kind(&theRead);
 }
 
 // FUNCTION: EXE 0x66716e
@@ -1881,14 +1728,6 @@ void EEUIFMainGame::UpdateIconBar()
 // (vector<UWideString>::operator[]: a template COMDAT; CopyData calls it out of line)
 
 // ICF-folded empty members (no address of their own: 0x157269 / 0xe123d are their twins)
-void EEUIFMGUnitHack::Fn157269(const GE2DPoint& inTile)
-{
-}
-
-void EEUIFMGUnitHack::FnE123D()
-{
-}
-
 void EEUIFMainGame::FnE123D()
 {
 }

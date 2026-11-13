@@ -36,35 +36,12 @@ float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* ou
 
 // FUNCTION: EXE 0x5c5f73
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
+// (the numbers: ee_scenario fields.rs object_defaults)
 EESMObject::EESMObject()
 {
     gResource->GetString(IDS_NONE, this->mName);
     this->mUnits.clear();
-    this->mIsSelectOnMap = true;
-    this->mOwner = 7;
-    this->mSelectedByPlayer = 7;
-    this->mFamily = 0;
-    this->mClass = 0;
-    this->mInAreaCheck = 0;
-    this->mNearCheck = 0;
-    this->mHasAttributeCheck = 0;
-    this->mVisibleByCheck = 0;
-    this->mHasStateCheck = 0;
-    this->mSelectedByCheck = 0;
-    this->mArea = 0;
-    this->mNearMode = 0;
-    this->mParent = 0;
-    this->mNearObject = 0;
-    this->mAttribute = kSMUnitAttributeHitPoints;
-    this->mAttributeMin = 0;
-    this->mAttributeMax = 0;
-    this->mVisibleByPlayer = 0;
-    this->mState = kActionInvalid;
-    this->mIsAttributePercent = false;
-    this->mL64 = 0;
-    this->mMinCount = 1;
-    this->mMaxCount = 1;
-    this->mIsDynamic = true;
+    *static_cast<EeScenarioObjectFields*>(this) = ee_scenario_object_defaults();
 }
 
 // SYNTHETIC: EXE 0x5c6019
@@ -84,8 +61,7 @@ bool EESMObject::AcceptsClass(unsigned long inClass)
 {
     EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs accepts_class
     EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
-    return ee_scenario_object_accepts_class(&theHost, &theFilter, (uint32_t)inClass);
+    return ee_scenario_object_accepts_class(&theHost, this, (uint32_t)inClass);
 }
 
 // FUNCTION: EXE 0x5c6148
@@ -171,33 +147,9 @@ bool EESMObject::IsNearTile(long inX, long inY, long inMode, bool inEvaluate)
 void EESMObject::Copy(const EESMObject& inObject)
 {
     this->mName = inObject.mName;
-    this->mIsSelectOnMap = inObject.mIsSelectOnMap;
+    *static_cast<EeScenarioObjectFields*>(this) = inObject;   // every number
     if (this->mIsSelectOnMap)
         this->mUnits = inObject.mUnits;
-    this->mOwner = inObject.mOwner;
-    this->mFamily = inObject.mFamily;
-    this->mClass = inObject.mClass;
-    this->mMinCount = inObject.mMinCount;
-    this->mMaxCount = inObject.mMaxCount;
-    this->mIsDynamic = inObject.mIsDynamic;
-    this->mInAreaCheck = inObject.mInAreaCheck;
-    this->mNearCheck = inObject.mNearCheck;
-    this->mHasAttributeCheck = inObject.mHasAttributeCheck;
-    this->mVisibleByCheck = inObject.mVisibleByCheck;
-    this->mHasStateCheck = inObject.mHasStateCheck;
-    this->mSelectedByCheck = inObject.mSelectedByCheck;
-    this->mArea = inObject.mArea;
-    this->mNearMode = inObject.mNearMode;
-    this->mNearObject = inObject.mNearObject;
-    this->mParent = inObject.mParent;
-    this->mAttribute = inObject.mAttribute;
-    this->mAttributeMin = inObject.mAttributeMin;
-    this->mAttributeMax = inObject.mAttributeMax;
-    this->mVisibleByPlayer = inObject.mVisibleByPlayer;
-    this->mState = inObject.mState;
-    this->mSelectedByPlayer = inObject.mSelectedByPlayer;
-    this->mL64 = inObject.mL64;
-    this->mIsAttributePercent = inObject.mIsAttributePercent;
 }
 
 // FUNCTION: EXE 0x5c6458
@@ -345,8 +297,7 @@ long EESMObject::PickUnitType()
 {
     EESMHostContext theContext = {NULL, NULL};   // ee_scenario object.rs pick_unit_type
     EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioObjectFilter theFilter = EESMObjectFilter(*this);
-    return ee_scenario_object_pick_unit_type(&theHost, &theFilter);
+    return ee_scenario_object_pick_unit_type(&theHost, this);
 }
 
 #include "lle/GE3DPoint.h"
@@ -1020,114 +971,28 @@ void EESMObject::GetUnits(std::vector<unsigned long>& outUnits) const
 }
 
 // FUNCTION: EXE 0x5c8284
-// Reads the object's units and filter settings (files before 0.0xcd: attribute ids above Construction Complete
-// move up by 3); returns the first error
+// Reads the object's units (appended) and filter settings (files before 0.0xcd: attribute ids above Construction
+// Complete move up by 3); returns the first error (ee_scenario save.rs object_load)
 long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    unsigned long theCount = 0;
-    unsigned long theUnit = 0;
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            theResult = inFile.Read(theUnit);
-            if (theResult != kErrorOK)
-                break;
-            this->mUnits.push_back(theUnit);
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsSelectOnMap);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mOwner);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFamily);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mClass);
-    if (theResult == kErrorOK && inMinorVersion >= 0x2a)   // written only from minor version 0x2a on (Save)
-        theResult = inFile.Read(this->mParent);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinCount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMaxCount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsDynamic);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mInAreaCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNearCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHasAttributeCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mVisibleByCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHasStateCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSelectedByCheck);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNearMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNearObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttribute);
-    if (theResult == kErrorOK) {
-        if (inMajorVersion <= 0 && inMinorVersion < 0xcd && this->mAttribute > kSMUnitAttributeConstructionComplete)
-            this->mAttribute += 3;
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeMin);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeMax);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mVisibleByPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mState);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mSelectedByPlayer);
-    if (theResult == kErrorOK && inMinorVersion >= 0x15)
-        theResult = inFile.Read(this->mIsAttributePercent);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mL64);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName};
+    EESMStream theStream = {&inFile, theStrings, &this->mUnits};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_object_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5c84db
 // Updates the object's area index after areas inOld/inNew swap, or after inOld is deleted (inNew -1)
 void EESMObject::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mArea;
-    if (theIndex == inOldIndex) {
-        this->mArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mArea = theIndex - 1;
-    }
+    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5c8511
 // Updates the parent and near-object indices after objects inOld/inNew swap, or after inOld is deleted
 void EESMObject::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mParent;
-    if (theIndex == inOldIndex) {
-        this->mParent = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mParent = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mParent = theIndex - 1;
-    }
-    theIndex = this->mNearObject;
-    if (theIndex == inOldIndex) {
-        this->mNearObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mNearObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mNearObject = theIndex - 1;
-    }
+    ee_scenario_object_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5c856e
@@ -1159,71 +1024,13 @@ void EESMObject::ReplaceUnit(long inOldUnit, long inNewUnit)
 
 // FUNCTION: EXE 0x5c85de
 // Writes the object's units and filter settings (the parent only for minor version >= 0x2a); returns the first error
+// (ee_scenario save.rs object_save)
 long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    unsigned long theCount = this->mUnits.size();
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(theCount);
-    if (theResult == kErrorOK) {
-        for (unsigned long i = 0; i < theCount; i++) {
-            unsigned long theUnit = this->GetUnitAt(i);
-            theResult = outFile.Write(theUnit);
-            if (theResult != kErrorOK)
-                break;
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsSelectOnMap);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mOwner);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFamily);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mClass);
-    if (theResult == kErrorOK && inMinorVersion >= 0x2a)
-        theResult = outFile.Write(this->mParent);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinCount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMaxCount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsDynamic);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mInAreaCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNearCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHasAttributeCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mVisibleByCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHasStateCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSelectedByCheck);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNearMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNearObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeMin);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeMax);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mVisibleByPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mState);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mSelectedByPlayer);
-    if (theResult == kErrorOK && inMinorVersion >= 0x15)
-        theResult = outFile.Write(this->mIsAttributePercent);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mL64);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName};
+    EESMStream theStream = {&outFile, theStrings, &this->mUnits};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_object_save(&theTable, this, inMinorVersion);
 }
 
 #include "ee/EESMEffect.h"
@@ -1847,69 +1654,20 @@ EESMTEffectWrapper* EESMTrigger::GetEffect(unsigned long inIndex)
 
 // FUNCTION: EXE 0x5c9d56
 // Reads the trigger's settings, condition entries and effect entries (id -1 becomes 0); returns the first error
+// (ee_scenario save.rs trigger_load)
 long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    bool theNot = false;
-    unsigned long theCount = 0;
-    unsigned long theOperator = 0;
-    unsigned long theValue = 0;
-    unsigned long theDelay = 0;
-    long theResult = this->mName.Load(inFile);
-    if (theResult != 0 || (theResult = this->mText.Load(inFile)) != 0 || (theResult = inFile.Read(this->mIsOn)) != 0
-        || (theResult = inFile.Read(this->mIsLooping)) != 0 || (theResult = inFile.Read(this->mHasFired)) != 0
-        || (theResult = inFile.Read(this->mIsInCinematic)) != 0 || (theResult = inFile.Read(this->mConditionDuration)) != 0
-        || (theResult = inFile.Read(this->mConditionStartTime)) != 0 || (theResult = inFile.Read(this->mID)) != 0
-        || (theResult = inFile.Read(theCount)) != 0)
-        return theResult;
-    unsigned long i;
-    for (i = 0; i < theCount; i++) {
-        if ((theResult = inFile.Read(theNot)) == 0 && (theResult = inFile.Read(theOperator)) == 0)
-            theResult = inFile.Read(theValue);
-        if (UIsNone32(theValue))
-            theValue = 0;
-        if (theResult != 0)
-            return theResult;
-        this->SetCondition(i, theNot, theValue);
-        this->SetConditionOperator(i, theOperator);
-    }
-    theResult = inFile.Read(theCount);
-    if (theResult == 0) {
-        for (i = 0; i < theCount; i++) {
-            if ((theResult = inFile.Read(theDelay)) == 0 && (theResult = inFile.Read(theOperator)) == 0)
-                theResult = inFile.Read(theValue);
-            if (UIsNone32(theValue))
-                theValue = 0;
-            if (theResult != 0)
-                return theResult;
-            this->SetEffect(i, theDelay, theValue);
-            this->SetEffectOperator(i, theOperator);
-            theResult = 0;
-        }
-    }
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText};
+    EESMStream theStream = {&inFile, theStrings, NULL, this};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_trigger_load(&theTable, this);
 }
 
 // FUNCTION: EXE 0x5c9f3d
 // Updates the entry's condition index after conditions inOld/inNew swap, or after inOld is deleted
 void EESMTConditionWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
 {
-    unsigned long theValue = this->mValue;
-    if (theValue == inOld) {
-        inNew = (!UIsNone32(inNew)) ? inNew : 0;
-    } else {
-        if (theValue == inNew) {
-            this->mValue = inOld;
-            return;
-        }
-        if (!UIsNone32(inNew)) {
-            return;
-        }
-        if (theValue <= inOld) {
-            return;
-        }
-        inNew = theValue - 1;
-    }
-    this->mValue = inNew;
+    ee_scenario_renumber_ids(&this->mValue, 1, inOld, inNew);   // ee_scenario fields.rs renumber
 }
 
 // FUNCTION: EXE 0x5c9f73
@@ -1923,21 +1681,7 @@ void EESMTConditionWrapper::Virtual0(EESMIDMap& inMap)
 // Updates the entry's effect index after effects inOld/inNew swap, or after inOld is deleted
 void EESMTEffectWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
 {
-    unsigned long theCurrent = this->mEffectIndex;
-    if (theCurrent == inOld) {
-        this->mEffectIndex = (!UIsNone32(inNew)) ? inNew : 0;
-        return;
-    }
-    if (theCurrent == inNew) {
-        this->mEffectIndex = inOld;
-        return;
-    }
-    if (!UIsNone32(inNew)) {
-        return;
-    }
-    if (theCurrent > inOld) {
-        this->mEffectIndex = theCurrent - 1;
-    }
+    ee_scenario_renumber_ids(&this->mEffectIndex, 1, inOld, inNew);   // ee_scenario fields.rs renumber
 }
 
 // FUNCTION: EXE 0x5c9fbb
@@ -1985,47 +1729,13 @@ void EESMTrigger::RemapEffects(EESMIDMap& inMap)
 
 // FUNCTION: EXE 0x5ca0b3
 // Writes the trigger's settings, condition entries and effect entries; returns the first error
+// (ee_scenario save.rs trigger_save)
 long EESMTrigger::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    if (theResult == 0 && (theResult = this->mText.Save(outFile)) == 0 && (theResult = outFile.Write(this->mIsOn)) == 0
-        && (theResult = outFile.Write(this->mIsLooping)) == 0 && (theResult = outFile.Write(this->mHasFired)) == 0
-        && (theResult = outFile.Write(this->mIsInCinematic)) == 0 && (theResult = outFile.Write(this->mConditionDuration)) == 0
-        && (theResult = outFile.Write(this->mConditionStartTime)) == 0)
-        theResult = outFile.Write(this->mID);
-    unsigned long theCount = this->mConditions.size();
-    unsigned long i;
-    unsigned long theDelay;
-    unsigned long theValue;
-    if (theResult == 0 && (theResult = outFile.Write(theCount)) == 0) {
-        for (i = 0; i < this->mConditions.size(); i++) {
-            bool theNot = this->GetConditionAt(i)->mIsNot;
-            theResult = outFile.Write(theNot);
-            theValue = this->GetConditionAt(i)->mOperator;
-            if (theResult == 0)
-                theResult = outFile.Write(theValue);
-            theCount = this->GetConditionAt(i)->mValue;
-            if (theResult != 0 || (theResult = outFile.Write(theCount)) != 0)
-                break;
-        }
-    }
-    theCount = this->mEffects.size();
-    if (theResult != 0 || (theResult = outFile.Write(theCount)) != 0)
-        return theResult;
-    for (i = 0; i < this->mEffects.size(); i++) {
-        theDelay = this->GetEffectAt(i)->mDelay;
-        theResult = outFile.Write(theDelay);
-        theValue = this->GetEffectAt(i)->mOperator;
-        if (theResult == 0)
-            theResult = outFile.Write(theValue);
-        theCount = this->GetEffectAt(i)->mEffectIndex;
-        if (theResult != 0)
-            return theResult;
-        theResult = outFile.Write(theCount);
-        if (theResult != 0)
-            return theResult;
-    }
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText};
+    EESMStream theStream = {&outFile, theStrings, NULL, this};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_trigger_save(&theTable, this);
 }
 
 // FUNCTION: EXE 0x5ca29d

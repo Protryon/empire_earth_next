@@ -21,15 +21,18 @@ const ONE_SEVENTH: f32 = 0.14285715;
 const ARCCOS_TABLE_LIMIT: f32 = 0.9995;
 const QUARTER_PI: f32 = 0.78539819;
 
-/// `UMFloatToLong` (`lrintf`) as the x86-64 build computes it: round half to even, and the conversion's "indefinite"
-/// value for NaN or a value out of range (which `as i32` would saturate instead).
+/// `UMFloatToLong` (`UMRint`) as the Windows x86-64 build computes it: round half to even (`cvtss2si` inside 2^30,
+/// the UCRT's `lrintf` beyond). The UCRT's answers outside the `long` range, measured over the real CRT (PORT_LEARNINGS
+/// "R4.3, eighth part"): exactly 2^31 wraps to `i32::MIN`; anything further out, an infinity or NaN gives 0 (`as i32`
+/// would saturate instead). POSIX builds call their libc's `lrintf` into a 64-bit `long` there, which this does not
+/// follow: those values differ between the C++ builds already.
 #[inline]
 pub fn lrintf(value: f32) -> i32 {
     let rounded = value.round_ties_even();
-    if (-2_147_483_648.0..2_147_483_648.0).contains(&rounded) {
-        rounded as i32
+    if (-2_147_483_648.0..=2_147_483_648.0).contains(&rounded) {
+        rounded as i64 as i32
     } else {
-        i32::MIN
+        0
     }
 }
 
@@ -246,14 +249,45 @@ mod tests {
     const TABLES_DIGEST: u64 = 0xbca1_7df0_a7ca_d6c2;
 
     #[test]
-    fn lrintf_rounds_half_to_even_and_flags_out_of_range() {
+    fn lrintf_rounds_half_to_even_and_answers_as_the_ucrt_out_of_range() {
         assert_eq!(lrintf(0.5), 0);
         assert_eq!(lrintf(1.5), 2);
         assert_eq!(lrintf(2.5), 2);
         assert_eq!(lrintf(-1.5), -2);
-        assert_eq!(lrintf(f32::NAN), i32::MIN);
-        assert_eq!(lrintf(3e9), i32::MIN);
-        assert_eq!(lrintf(-3e9), i32::MIN);
+        // the UCRT's lrintf over these bits (a scratch driver linked with libucrt.lib), bit for bit
+        let ucrt: [(u32, i32); 28] = [
+            (0x4f00_0000, i32::MIN),       // 2^31
+            (0xcf00_0000, i32::MIN),       // -2^31
+            (0x5380_0000, 0),              // 2^40
+            (0xd380_0000, 0),              // -2^40
+            (0x7f80_0000, 0),              // inf
+            (0xff80_0000, 0),              // -inf
+            (0x7fc0_0000, 0),              // NaN
+            (0xffc0_0000, 0),              // -NaN
+            (0x4e80_0000, 1_073_741_824),  // 2^30
+            (0x4e80_0001, 1_073_741_952),  // 2^30 + 128
+            (0x4e7f_ffff, 1_073_741_760),  // 2^30 - 64
+            (0xce80_0000, -1_073_741_824), // -2^30
+            (0xce80_0001, -1_073_741_952),
+            (0x4eff_ffff, 2_147_483_520), // 2^31 - 128
+            (0xceff_ffff, -2_147_483_520),
+            (0x7f7f_ffff, 0), // f32::MAX
+            (0x4f00_0001, 0), // 2^31 + 256
+            (0x4f32_d05e, 0), // 3e9
+            (0xcf32_d05e, 0),
+            (0x4f80_0000, 0), // 2^32
+            (0x5f00_0000, 0), // 2^63
+            (0xdf00_0000, 0),
+            (0xcf00_0001, 0), // -2^31 - 256
+            (0x3f80_0001, 1),
+            (0x4b00_0001, 8_388_609),
+            (0x4b40_0001, 12_582_913),
+            (0x4f40_0000, 0), // 1.5 * 2^31
+            (0xcf40_0000, 0),
+        ];
+        for (bits, want) in ucrt {
+            assert_eq!(lrintf(f32::from_bits(bits)), want, "{bits:08x}");
+        }
     }
 
     #[test]

@@ -22,6 +22,8 @@ use ee_gx as _;
 use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
+// the Network Engine's whole classes (ee_net/src/ffi.rs), called by NESynchronousServer.cpp
+use ee_net as _;
 use ee_random as _;
 #[cfg(not(test))]
 // the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)

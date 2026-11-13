@@ -105,7 +105,7 @@ void BackgroundGrabber::Paint(Component *theComponent, Graphics &g)
 		{
 			this->mDebugWindow = CreateNativeWindow();
 			this->mDebugWindow->SetParent(theComponent->GetRoot());
-			this->mDebugWindow->mStyle=0x40;
+			this->mDebugWindow->SetStyle(0x40);
 			WONRectangle aRect(0,0,this->mBGImage->GetWidth(),this->mBGImage->GetHeight());
 			this->mDebugWindow->Create(aRect);
 		}

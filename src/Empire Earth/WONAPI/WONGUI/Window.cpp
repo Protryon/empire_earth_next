@@ -1,4 +1,6 @@
-// Top-level GUI window: root container, input dispatch, cursor, resizing and closing
+// Window (R6 WON round 32): the Rust Window's calls out (rust/crates/ee_won/src/winobj.rs, EeWonGuiOp's Win* ops), its
+// constructor and destructor, and the methods over the members that stay C++ (the fonts, the images). The original's
+// Window.cpp (the input dispatch, the cursor, the resize, closing, centring, the child windows) is the Rust object.
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,12 +13,98 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONRouting.h" // WONTickCount
 #include "rust/ee_won.h"
-// Which call an input event makes (enter, drag or move, the double click, the exit after a drag, the resize's delay,
-// the hover, the cursor's refresh, centring, closing) is ee_won's guievent module (rust/crates/ee_won/src/guievent.rs);
-// this unit keeps the window, its root container and the calls.
 using namespace WONAPI;
+
+typedef EeWonGuiOp Op;
+
+static intptr_t RootCall(RootContainer* r, intptr_t call, intptr_t b, intptr_t c, intptr_t d)
+{
+    switch ((EeWonWinRoot)call) {
+    case EeWonWinRoot::SetSize: r->SetSize((int)b, (int)c); return 0;
+    case EeWonWinRoot::Invalidate: r->Invalidate(); return 0;
+    case EeWonWinRoot::MouseExit: r->MouseExit(); return 0;
+    case EeWonWinRoot::KeyDown: r->KeyDown((int)b); return 0;
+    case EeWonWinRoot::KeyUp: r->KeyUp((int)b); return 0;
+    case EeWonWinRoot::KeyChar: r->KeyChar((int)b); return 0;
+    case EeWonWinRoot::MouseDown: r->MouseDown((int)b, (int)c, (int)d); return 0;
+    case EeWonWinRoot::MouseEnter: r->MouseEnter((int)b, (int)c); return 0;
+    case EeWonWinRoot::MouseDrag: r->MouseDrag((int)b, (int)c); return 0;
+    case EeWonWinRoot::MouseMove: r->MouseMove((int)b, (int)c); return 0;
+    case EeWonWinRoot::MouseUp: r->MouseUp((int)b, (int)c, (int)d); return 0;
+    case EeWonWinRoot::MouseWheel: r->MouseWheel((int)b); return 0;
+    case EeWonWinRoot::GotFocus: r->GotFocus(); return 0;
+    case EeWonWinRoot::LostFocus: r->LostFocus(); return 0;
+    case EeWonWinRoot::MouseHover: r->MouseHover((DWORD)b); return 0;
+    case EeWonWinRoot::TimerEvent: r->TimerEvent((DWORD)b); return 0;
+    case EeWonWinRoot::CanClose: return r->CanClose() ? 1 : 0;
+    case EeWonWinRoot::AddChild: r->AddChild((Component*)b); return 0;
+    case EeWonWinRoot::RemoveChild: r->RemoveChild((Component*)b); return 0;
+    case EeWonWinRoot::EnterModal: r->EnterModal(); return 0;
+    case EeWonWinRoot::LeaveModal: r->LeaveModal(); return 0;
+    case EeWonWinRoot::UnionBounds: r->UnionInvalidRect(r->GetBounds()); return 0;
+    case EeWonWinRoot::CurrentCursor: return (intptr_t)r->GetCurrentCursor();
+    case EeWonWinRoot::Left: return r->Left();
+    case EeWonWinRoot::Top: return r->Top();
+    case EeWonWinRoot::Width: return r->Width();
+    case EeWonWinRoot::Height: return r->Height();
+    case EeWonWinRoot::TimerFlags: return (intptr_t)r->mTimerFlags;
+    }
+    return 0;
+}
+
+extern "C" intptr_t ee_won_guicpp_win_call(void* inWin, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    Window* t = (Window*)inWin;
+    switch (op) {
+    case Op::WinTick: return (intptr_t)(uint32_t)WONTickCount();
+    case Op::WinRoot: return RootCall(t->mRoot.get(), a, b, c, d);
+    case Op::WinPlat:
+        switch ((EeWonWinPlat)a) {
+        case EeWonWinPlat::SetTitle: t->PlatformSetTitle(); return 0;
+        case EeWonWinPlat::SetIcon: t->PlatformSetIcon(); return 0;
+        case EeWonWinPlat::SetCursor: t->PlatformSetCursor((Cursor*)b); return 0;
+        case EeWonWinPlat::ShowNativeCursor: t->PlatformShowNativeCursor(b != 0); return 0;
+        case EeWonWinPlat::Show: t->PlatformShow(b != 0); return 0;
+        case EeWonWinPlat::Minimize: t->PlatformMinimize(b != 0); return 0;
+        case EeWonWinPlat::SetFocus: t->PlatformSetFocus(); return 0;
+        }
+        return 0;
+    case Op::WinSetPosSize: t->SetPosSize((int)a, (int)b, (int)c, (int)d); return 0;
+    case Op::WinGetRect: ((Window*)a)->GetRect(*(WONRectangle*)b, c != 0); return 0;
+    case Op::WinIsVisible: return ((Window*)a)->PlatformIsVisible() ? 1 : 0;
+    case Op::WinScreenRect: t->mManager->GetScreenRect(*(WONRectangle*)a); return 0;
+    case Op::WinAddToManager: t->mManager->AddWindow(t); return 0;
+    case Op::WinNewOffscreen: {
+        SmartPtr<NativeImage> anImage = t->CreateImage((int)a, (int)b);
+        Graphics &g = anImage->GetGraphics();
+        g.DrawImage(t->mOffscreenImage.get(), 0, 0);
+        t->mOffscreenImage = anImage;
+        return 0;
+    }
+    case Op::WinQueueClose: t->QueueEvent(new InputEvent(InputEvent_WindowClose)); return 0;
+    case Op::WinCanClose: return ((Window*)a)->CanClose() ? 1 : 0;
+    case Op::WinAllowClose: return (t->mAllowCloseFunc != NULL && !t->mAllowCloseFunc(t)) ? 0 : 1;
+    case Op::WinChildSet: ((Window*)a)->WCall(EeWonWinCall::ChildSet, (intptr_t)t, b); return 0;
+    case Op::WinStdArrow: return (intptr_t)Cursor::GetStandardCursor(StandardCursor_Arrow);
+    case Op::WinCursorNative: return (intptr_t)((Cursor*)a)->GetNative();
+    default: return 0;
+    }
+}
+
+// FUNCTION: WON 0x00729c30
+// Creates a closed window on the default window manager with a new root container and the title "Sierra App" (the
+// Rust window: closed, hidden, no parent, the mouse outside, sizes 0..64000)
+Window::Window()
+{
+	this->mWinObj.p = ee_won_win_new(this, ee_won_guicpp_win_call);
+	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
+	this->mRoot = new RootContainer(this);
+	this->mAllowCloseFunc = NULL;
+	this->mTitle = "Sierra App";
+}
+
 // FUNCTION: WON 0x0072a020
-// Destroys the window (members only)
+// Destroys the window: the members, then the Rust window (its child set; mWinObj is the first member)
 Window::~Window()
 {
 }
@@ -36,70 +124,12 @@ SmartPtr<Font> Window::GetFont(const FontDescriptor &theDescriptor)
 	return aFont;
 }
 
-// FUNCTION: WON 0x0072ab80
-// Returns whether every child window, the root container and the allow-close callback agree to close
-bool Window::CanClose()
-{
-	bool childrenCanClose = true;
-	for(std::set<Window*>::iterator anItr = this->mChildWindowSet.begin(); anItr!=this->mChildWindowSet.end(); ++anItr)
-	{
-		Window *aChild = *anItr;
-		if(!aChild->CanClose())
-			childrenCanClose = false;
-	}
-
-
-	if(!childrenCanClose)
-		return false;
-
-	if(!this->mRoot->CanClose())
-		return false;
-
-	if(this->mAllowCloseFunc!=NULL && !this->mAllowCloseFunc(this))
-		return false;
-
-	return true;
-}
-
-// FUNCTION: WON 0x0072ac30
-// Starts closing an open window by queueing a window-close event; false when something refuses to close
-bool Window::Close()
-{
-	if(ee_won_gui_win_close_step(this->mWindowState)==0)
-		return true;
-
-	if(!this->CanClose())
-		return false;
-
-	this->mWindowState = WindowState_Closing;
-	this->QueueEvent(new InputEvent(InputEvent_WindowClose));
-	return true;
-}
-
-// FUNCTION: WON 0x0072ac90
-// Applies a pending resize once the delay passed and resizing is not suspended: new offscreen image and root size
-void Window::CheckResize(DWORD theTick)
-{
-	if(!ee_won_gui_win_resize_due(this->mNeedResize, theTick, this->mLastResizeTick, this->mResizeDelay,
-	                              this->mSuspendRootResize))
-		return;
-	SmartPtr<NativeImage> anImage = this->CreateImage(this->mNewWidth,this->mNewHeight);
-	Graphics &g = anImage->GetGraphics();
-	g.DrawImage(this->mOffscreenImage.get(),0,0);
-	this->mOffscreenImage = anImage;
-	this->mRoot->SetSize(this->mNewWidth, this->mNewHeight);
-	this->mRoot->Invalidate();
-	this->mNeedResize = false;
-	this->mLastResizeTick = WONTickCount();
-}
-
 // FUNCTION: WON 0x0072adc0
 // Sets the window title, updating the platform window when open
 void Window::SetTitle(const GUIString &theTitle)
 {
 	this->mTitle = theTitle;
-	if(this->mWindowState==WindowState_Open)
-		this->PlatformSetTitle();
+	this->WCall(EeWonWinCall::TitleChanged);
 }
 
 // FUNCTION: WON 0x0072ae20
@@ -107,300 +137,17 @@ void Window::SetTitle(const GUIString &theTitle)
 void Window::SetIcon(NativeIcon *theIcon)
 {
 	this->mIcon = theIcon;
-	if(this->mWindowState==WindowState_Open)
-		this->PlatformSetIcon();
+	this->WCall(EeWonWinCall::IconChanged);
 }
 
-// FUNCTION: WON 0x0072ae80
-// Centres the window on the screen or on its visible parent, clamped to the top left
-void Window::Center(bool inParent)
+// FUNCTION: WON 0x0072a900
+// Opens the window: default icon, registration with the parent, root sized to the rectangle, added to the manager
+void Window::Create(const WONRectangle& theWindowRectR)
 {
-	WONRectangle aScreenRect, aWindowRect;
-	if(!ee_won_gui_win_center_on_parent(inParent, this->mParent!=NULL,
-	                                    inParent && this->mParent!=NULL && this->mParent->PlatformIsVisible()))
-		this->mManager->GetScreenRect(aScreenRect);
-	else
-		this->mParent->GetRect(aScreenRect,false);
+	if(this->mIcon.get()==NULL)
+		this->mIcon = this->mManager->mDefaultWindowIcon.get();
 
-	this->GetRect(aWindowRect,false);
-
-	int top;
-	int left = ee_won_gui_win_center(aScreenRect.Left(), aScreenRect.Top(), aScreenRect.Width(), aScreenRect.Height(),
-	                                 aWindowRect.Width(), aWindowRect.Height(), &top);
-
-	this->SetPosSize(left,top,aWindowRect.Width(), aWindowRect.Height());
-}
-
-// FUNCTION: WON 0x0072af30
-// Resizes the window, keeping its position
-void Window::SetClientSize(int width, int height)
-{
-	WONRectangle aRect;
-	this->GetRect(aRect,false);
-	this->SetPosSize(aRect.x,aRect.y,width,height);
-}
-
-// FUNCTION: WON 0x0072af70
-// Shows or hides the window; hiding ends any mouse-over or drag first
-void Window::Show(bool show)
-{
-	this->mIsShowing = show;
-	if(!show)
-	{
-		if(this->mMouseIsInClientArea || this->mMouseIsDown[0])
-			this->HandleMouseExit();
-	}
-
-	this->PlatformShow(show);
-}
-
-// FUNCTION: WON 0x0072b120
-// Handles the mouse leaving: shows the system cursor, releases all buttons and sends mouse-exit to the root
-void Window::HandleMouseExit()
-{
-	this->ShowNativeCursor(true); // show cursor when it leaves the window
-
-	this->mMouseIsInClientArea = false;
-	this->mMouseX = ee_won_gui_win_exit_point(this->mRoot->Left(), this->mRoot->Top(), this->mRoot->Width(),
-	                                          this->mRoot->Height(), &this->mMouseY);
-	this->mMouseIsDown[0] = this->mMouseIsDown[1] = this->mMouseIsDown[2] = false;
-	this->mRoot->MouseExit();
-	this->mCurrentCursor = NULL;
-}
-
-// FUNCTION: WON 0x0072b170
-// Passes a key down, up or character to the root container
-void Window::HandleKeyEvent(KeyEvent *theEvent)
-{
-	this->mKeyMod = theEvent->mKeyMod;
-	switch(theEvent->mEventType)
-	{
-		case InputEvent_KeyDown:
-			this->mRoot->KeyDown(theEvent->mKey);
-			break;
-
-		case InputEvent_KeyUp:
-			this->mRoot->KeyUp(theEvent->mKey);
-			break;
-
-		case InputEvent_KeyChar:
-			this->mRoot->KeyChar(theEvent->mKey);
-			break;
-	}
-}
-
-// FUNCTION: WON 0x0072b1c0
-// Records a button press, detects a double click (same button within 250 ms) and passes the press to the root
-void Window::HandleMouseDown(MouseEvent *theEvent)
-{
-	int aButton = theEvent->mButtonOrAmount;
-	this->mMouseIsDown[aButton] = true;
-
-	// Check for DoubleClick (the tick is read only when the press asks for the check)
-	DWORD aTick = theEvent->mEventType==InputEvent_MouseDownCheckDoubleClick ? WONTickCount() : 0;
-	bool aStart, aSet;
-	uint32_t aNewTick; // DWORD is unsigned long on Windows: the ABI's uint32_t
-	bool isDoubleClick = ee_won_gui_win_double_click(theEvent->mEventType, this->mDetectDoubleClick,
-	                                                 this->mButtonDownTick[aButton], aTick, &aStart, &aSet, &aNewTick);
-	if(aStart)
-	{
-		for(int i=0; i<3; i++)
-			this->mButtonDownTick[i] = 0;
-
-		this->mDetectDoubleClick = true;
-		this->mDoubleClickX = theEvent->mx;
-		this->mDoubleClickY = theEvent->my;
-	}
-	if(aSet)
-		this->mButtonDownTick[aButton] = aNewTick;
-
-	this->mButtonDoubleClick[aButton] = isDoubleClick;
-	this->mRoot->MouseDown(this->mMouseX, this->mMouseY, aButton);
-}
-
-// FUNCTION: WON 0x0072b260
-// Dispatches a mouse move, press, release or wheel to the root, entering the window first; a move cancels
-// double-click detection on any Y change (the && / || test binds that way)
-void Window::HandleMouseEvent(MouseEvent *theEvent)
-{
-	this->mMouseX = theEvent->mx;
-	this->mMouseY = theEvent->my;
-	this->mKeyMod = theEvent->mKeyMod;
-
-	if(ee_won_gui_win_mouse_enters(this->mMouseIsInClientArea, this->mMouseIsDown[0]))
-	{
-		this->mMouseIsInClientArea = true;
-		this->mRoot->MouseEnter(this->mMouseX, this->mMouseY);
-		this->CheckSetCursor(true);
-	}
-
-	switch(theEvent->mEventType)
-	{		
-		case InputEvent_MouseMove:
-			this->mLastMoveTick = WONTickCount();
-			if(ee_won_gui_win_move_ends_double(this->mDetectDoubleClick, this->mMouseX, this->mMouseY,
-			                                   this->mDoubleClickX, this->mDoubleClickY))
-				this->mDetectDoubleClick = false;
-
-			if(this->mMouseIsDown[0])
-				this->mRoot->MouseDrag(this->mMouseX, this->mMouseY); 
-			else
-				this->mRoot->MouseMove(this->mMouseX, this->mMouseY);
-			break;
-
-		case InputEvent_MouseDown:
-		case InputEvent_MouseDoubleClick:
-		case InputEvent_MouseDownCheckDoubleClick:
-			this->HandleMouseDown(theEvent);
-			break;
-
-		case InputEvent_MouseUp:
-		{
-			this->mLastMoveTick = 0;
-
-			int aButton = theEvent->mButtonOrAmount;
-			this->mMouseIsDown[aButton] = false;
-
-			if(ee_won_gui_win_release_exits(aButton, this->mMouseIsInClientArea))
-			{
-				this->HandleMouseExit(); // Call MouseExit when dragging is done
-				break;
-			}
-			this->mRoot->MouseUp(this->mMouseX, this->mMouseY, aButton);			
-		}
-		break;
-
-		case InputEvent_MouseWheel:
-			this->mRoot->MouseWheel(theEvent->mButtonOrAmount);
-			break;
-	}
-
-}
-
-// FUNCTION: WON 0x0072b390
-// Handles size change (pending resize), focus gain/loss and mouse exit (deferred while dragging)
-void Window::HandleInputEvent(InputEvent *theEvent)
-{
-	switch(theEvent->mEventType)
-	{
-		case InputEvent_SizeChange: 
-		{
-			SizeEvent *anEvent = static_cast<SizeEvent*>(theEvent);
-			if(ee_won_gui_win_size_resizes(anEvent->mWidth, anEvent->mHeight, this->mRoot->Width(), this->mRoot->Height()))
-			{
-				this->mNeedResize = true;
-				this->mNewWidth = anEvent->mWidth;
-				this->mNewHeight = anEvent->mHeight;
-				this->CheckResize(WONTickCount());
-			}
-		}
-		break;
-		
-		case InputEvent_GotFocus:
-			this->mRoot->GotFocus();
-			break;
-
-		case InputEvent_LostFocus:
-			this->mRoot->LostFocus();				
-			break;
-
-		case InputEvent_MouseExit:
-			this->mMouseIsInClientArea = false;
-			if(!this->mMouseIsDown[0])
-				this->HandleMouseExit();
-			break;
-	}
-}
-
-// FUNCTION: WON 0x0072b460
-// Refreshes the cursor (forced once a second while the mouse is inside); returns whether the window is open
-bool Window::IdleUpdate()
-{
-	if(this->mWindowState==WindowState_Open)
-	{
-		bool force = false;
-		if(this->mMouseIsInClientArea)
-		{
-			DWORD aTick = WONTickCount();
-			if(ee_won_gui_win_cursor_forced(true, aTick, this->mLastCheckCursorTick))
-			{
-				force = true;
-				this->mLastCheckCursorTick = aTick;
-			}
-		}
-		
-		this->CheckSetCursor(force);
-		return true;
-	}
-	else
-		return false;
-}
-
-// FUNCTION: WON 0x0072b4b0
-// Sends mouse hover after 100 ms without motion, applies pending resizes and runs the root's timers
-void Window::TimerEvent(DWORD theElapsed)
-{
-	if(this->mMouseIsInClientArea && this->mLastMoveTick!=0 && !this->mMouseIsDown[0] && !this->mMouseIsDown[1] &&
-	   !this->mMouseIsDown[2])
-	{
-		uint32_t anElapsed;
-		if(ee_won_gui_win_hover(true, this->mLastMoveTick, false, false, false, WONTickCount(), &anElapsed))
-			this->mRoot->MouseHover(anElapsed);
-	}
-
-	this->CheckResize(WONTickCount());
-
-	if(this->mRoot->mTimerFlags!=0)
-		this->mRoot->TimerEvent(theElapsed);
-
-}
-
-// FUNCTION: WON 0x00729c30
-// Creates a closed window on the default window manager with a new root container and the title "Sierra App"
-Window::Window()
-{
-	this->mManager = WONAPI::WindowManager::GetDefaultWindowManager();
-	this->mParent = NULL;
-
-	this->mRoot = new RootContainer(this);
-	this->mCurrentCursor = NULL;
-	this->mMouseIsDown[0] = this->mMouseIsDown[1] = this->mMouseIsDown[2] = false;
-	this->mMouseIsInClientArea = false;
-	this->mNativeCursorShowing = true;
-	this->mDetectDoubleClick = false;
-
-	this->mMouseX = this->mMouseY = this->mKeyMod = 0;
-	this->mLastMoveTick = 0;
-	this->mLastCheckCursorTick = 0;
-
-	this->mMinWidth = 0;
-	this->mMinHeight = 0;
-	this->mMaxWidth = 64000;
-	this->mMaxHeight = 64000;
-
-	this->mNeedResize = false;
-	this->mNewWidth = this->mNewHeight = 0;
-	this->mResizeDelay = 0;
-	this->mLastResizeTick = 0;
-
-	this->mStyle = 0;
-	this->mWindowState = WindowState_Closed;
-	this->mIsShowing = false;
-
-	this->mIsPopup = false;
-	this->mIsOneComponentWindow = false;
-	this->mSuspendRootResize = 0;
-	this->mAllowCloseFunc = NULL;
-	this->mMinimizeOnResolutionRestore = false;
-
-	this->mTitle = "Sierra App";
-}
-
-// FUNCTION: WON 0x0072a210
-// Sets the parent window
-void Window::SetParent(Window *theParent)
-{
-	this->mParent = theParent;
+	this->WCall(EeWonWinCall::Create, theWindowRectR.Width(), theWindowRectR.Height());
 }
 
 // FUNCTION: WON 0x0072a220
@@ -416,47 +163,6 @@ SmartPtr<NativeImage> Window::CreateImage(int theWidth, int theHeight)
 {
 	return this->mDisplayContext->CreateImage(theWidth,theHeight);
 }
-
-// FUNCTION: WON 0x0072a900
-// Opens the window: default icon, registration with the parent, root sized to the rectangle, added to the manager
-void Window::Create(const WONRectangle& theWindowRectR)
-{
-	if(this->mIcon.get()==NULL)
-		this->mIcon = this->mManager->mDefaultWindowIcon.get();
-
-	this->mWindowState = WindowState_Open;
-
-	if(this->mParent!=NULL)
-		this->mParent->mChildWindowSet.insert(this);
-	
-	this->mRoot->SetSize(theWindowRectR.Width(), theWindowRectR.Height());
-
-	this->mManager->AddWindow(this);
-}
-
-// FUNCTION: WON 0x0072aa60
-// Marks the window closed and hidden and removes it from its parent's children
-void Window::PlatformClose()
-{
-	this->ShowNativeCursor(true); 
-	this->mWindowState = WindowState_Closed;
-	this->mIsShowing = false;
-
-	if(this->mParent!=NULL)
-		this->mParent->mChildWindowSet.erase(this);
-}
-
-// FUNCTION: WON 0x0072afc0
-// Shows or hides the system cursor
-void Window::ShowNativeCursor(bool show)
-{
-
-
-
-	this->mNativeCursorShowing = show;
-	this->PlatformShowNativeCursor(show);
-}
-
 
 static bool gWindowSkipDecodeImages = false;
 
@@ -489,57 +195,7 @@ SmartPtr<RawImage> Window::DecodeImageRaw(const char* path) {
     return this->mManager->DecodeImageRaw(path);
 }
 
-// FUNCTION: WON 0x0072b040
-// Adds a component to the root container
-void Window::AddComponent(Component* component) {
-    this->mRoot->AddChild(component);
-}
-
-// FUNCTION: WON 0x0072b060
-// Makes the root container modal or ends its modal state
-void Window::SetModal(bool modal) {
-    if(modal) this->mRoot->EnterModal(); else this->mRoot->LeaveModal();
-}
-
-// FUNCTION: WON 0x0072afd0
-// Applies the root's cursor (arrow when none) when it changed or when forced; hides the system cursor for custom ones
-void Window::CheckSetCursor(bool force) {
-    if(!ee_won_gui_win_cursor_refresh(force, this->mRoot->GetCurrentCursor()==this->mCurrentCursor))
-        return;
-    this->mCurrentCursor=this->mRoot->GetCurrentCursor();
-    Cursor* cursor=this->mRoot->GetCurrentCursor();
-    if(cursor==NULL)
-        cursor=Cursor::GetStandardCursor(StandardCursor_Arrow);
-    cursor=cursor->GetNative();
-    if(cursor!=NULL) {
-        this->ShowNativeCursor(true);
-        this->PlatformSetCursor(cursor);
-    } else {
-        this->ShowNativeCursor(false);
-    }
-}
-
-namespace WONAPI {
-// FUNCTION: WON 0x0072a1e0
-// Marks the whole root container for repainting
-void Window::InvalidateRoot()
-{
-    this->mRoot->Invalidate();
-    RootContainer* root=this->mRoot.get();
-    root->UnionInvalidRect(root->GetBounds());
-}
-}
-
-namespace WONAPI {
-// FUNCTION: WON 0x0072afb0
-// Minimizes or restores the window
-void Window::Minimize(bool minimize)
-{
-    this->PlatformMinimize(minimize);
-}
-}
-
-// The four functions after this one are not identified in the original exe
+// The two functions after this one are not identified in the original exe
 // FUNCTION: WON 0x0072a8f0
 // Returns the window's offscreen image
 NativeImage* Window::GetOffscreenImage()
@@ -552,73 +208,67 @@ Graphics& Window::GetGraphics()
     return this->mOffscreenImage->GetGraphics();
 }
 
-void Window::SuspendRootResize(bool suspend)
+// The forwarders (the header's one-line methods are the rest)
+bool Window::CanClose() { return this->WCall(EeWonWinCall::CanClose) != 0; }                       // 0x0072ab80
+bool Window::Close() { return this->WCall(EeWonWinCall::Close) != 0; }                             // 0x0072ac30
+void Window::CheckResize(DWORD theTick) { this->WCall(EeWonWinCall::CheckResize, (intptr_t)(uint32_t)theTick); } // 0x0072ac90
+void Window::Center(bool inParent) { this->WCall(EeWonWinCall::Center, inParent ? 1 : 0); }        // 0x0072ae80
+void Window::SetClientSize(int w, int h) { this->WCall(EeWonWinCall::SetClientSize, w, h); }       // 0x0072af30
+void Window::Show(bool show) { this->WCall(EeWonWinCall::Show, show ? 1 : 0); }                    // 0x0072af70
+void Window::HandleMouseExit() { this->WCall(EeWonWinCall::HandleMouseExit); }                     // 0x0072b120
+static EeWonWinEvent WinEvent(InputEvent* e)
 {
-    if(suspend)
-        this->mSuspendRootResize++;
-    else
-    {
-        this->mSuspendRootResize--;
-        if(this->mSuspendRootResize <= 0)
-        {
-            this->mSuspendRootResize = 0;
-            this->CheckResize(WONTickCount());
-        }
+    EeWonWinEvent r = {};
+    r.kind = (int32_t)e->mEventType;
+    return r;
+}
+void Window::HandleKeyEvent(KeyEvent *e)                                                           // 0x0072b170
+{
+    EeWonWinEvent r = WinEvent(e);
+    r.key_mod = e->mKeyMod;
+    r.key = e->mKey;
+    this->WCall(EeWonWinCall::HandleKeyEvent, (intptr_t)&r);
+}
+static EeWonWinEvent MouseWinEvent(MouseEvent* e)
+{
+    EeWonWinEvent r = WinEvent(e);
+    r.x = e->mx;
+    r.y = e->my;
+    r.key_mod = e->mKeyMod;
+    r.button = e->mButtonOrAmount;
+    return r;
+}
+void Window::HandleMouseDown(MouseEvent *e)                                                        // 0x0072b1c0
+{
+    EeWonWinEvent r = MouseWinEvent(e);
+    this->WCall(EeWonWinCall::HandleMouseDown, (intptr_t)&r);
+}
+void Window::HandleMouseEvent(MouseEvent *e)                                                       // 0x0072b260
+{
+    EeWonWinEvent r = MouseWinEvent(e);
+    this->WCall(EeWonWinCall::HandleMouseEvent, (intptr_t)&r);
+}
+void Window::HandleInputEvent(InputEvent *e)                                                       // 0x0072b390
+{
+    EeWonWinEvent r = WinEvent(e);
+    if (e->mEventType == InputEvent_SizeChange) {
+        r.width = static_cast<SizeEvent*>(e)->mWidth;
+        r.height = static_cast<SizeEvent*>(e)->mHeight;
     }
+    this->WCall(EeWonWinCall::HandleInputEvent, (intptr_t)&r);
 }
-
-void Window::RemoveComponent(Component* theComponent)
-{
-    this->mRoot->RemoveChild(theComponent);
+bool Window::IdleUpdate() { return this->WCall(EeWonWinCall::IdleUpdate) != 0; }                   // 0x0072b460
+void Window::TimerEvent(DWORD e) { this->WCall(EeWonWinCall::TimerEvent, (intptr_t)(uint32_t)e); } // 0x0072b4b0
+void Window::SetParent(Window *p) { this->WCall(EeWonWinCall::SetParent, (intptr_t)p); }           // 0x0072a210
+void Window::PlatformClose() { this->WCall(EeWonWinCall::PlatformClose); }                         // 0x0072aa60
+void Window::ShowNativeCursor(bool show) { this->WCall(EeWonWinCall::ShowNativeCursor, show ? 1 : 0); } // 0x0072afc0
+void Window::AddComponent(Component* c) { this->WCall(EeWonWinCall::AddComponent, (intptr_t)c); }  // 0x0072b040
+void Window::SetModal(bool modal) { this->WCall(EeWonWinCall::SetModal, modal ? 1 : 0); }          // 0x0072b060
+void Window::CheckSetCursor(bool force) { this->WCall(EeWonWinCall::CheckSetCursor, force ? 1 : 0); } // 0x0072afd0
+namespace WONAPI {
+void Window::InvalidateRoot() { this->WCall(EeWonWinCall::InvalidateRoot); }                       // 0x0072a1e0
+void Window::Minimize(bool minimize) { this->WCall(EeWonWinCall::Minimize, minimize ? 1 : 0); }    // 0x0072afb0
 }
-
-bool Window::IsMouseDown(MouseButton theButton)
-{
-    return this->mMouseIsDown[theButton];
-}
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x0071de90
-// (public: class std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::set<class WONAPI::Window *,struct std::less<class WONAPI::Window *>)
-// TEMPLATE: WON 0x00729e90
-// (public: virtual void * __thiscall WONAPI::Window::`scalar deleting destructor'(unsigned int)    [??_GWindow@WONAPI@@UAEPAXI@Z])
-// TEMPLATE: WON 0x00729eb0
-// (public: __thiscall std::set<class WONAPI::Window *,struct std::less<class WONAPI::Window *>,class std::allocator<class WONAPI::Window *> >::~set<class)
-// TEMPLATE: WON 0x0072a5b0
-// (public: __thiscall std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::Font> >::~pair<struct WONAPI::FontDescriptor co)
-
-// Compiler-generated and header-inline functions this unit emits:
-// TEMPLATE: WON 0x00729f60
-// (public: __thiscall std::map<struct WONAPI::FontDescriptor,class WONAPI::SmartPtr<class WONAPI::Font>,struct std::less<struct WONAPI::FontDescriptor>,c)
-// TEMPLATE: WON 0x0072a470
-// (public: __thiscall WONAPI::FontDescriptor::FontDescriptor(struct WONAPI::FontDescriptor const &))
-// TEMPLATE: WON 0x00731190
-// (public: class std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONAPI::Window )
-// TEMPLATE: WON 0x00731240
-// (protected: class std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONAPI::Wind)
-// TEMPLATE: WON 0x00731540
-// (public: class std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::Font)
-// TEMPLATE: WON 0x007315f0
-// (protected: class std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::F)
-// TEMPLATE: WON 0x00734460
-// (public: class std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONAPI::Window )
-// TEMPLATE: WON 0x00734910
-// (protected: void __thiscall std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WO)
-// TEMPLATE: WON 0x00734950
-// (protected: static struct std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONA)
-// TEMPLATE: WON 0x00734970
-// (public: class std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::Font)
-// TEMPLATE: WON 0x00734e90
-// (protected: void __thiscall std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class)
-// TEMPLATE: WON 0x00734ed0
-// (protected: void __thiscall std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class)
-// TEMPLATE: WON 0x00734f10
-// (protected: struct std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONAPI::Win)
-// TEMPLATE: WON 0x00734f40
-// (protected: struct std::_Tree<class WONAPI::Window *,class WONAPI::Window *,struct std::_Setk<class WONAPI::Window *,struct std::less<class WONAPI::Win)
-// TEMPLATE: WON 0x00734fc0
-// (public: void __thiscall std::_Tree<struct WONAPI::FontDescriptor,struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WO)
-// TEMPLATE: WON 0x00735190
-// (void __cdecl std::_Construct(struct std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::Font> > *,struct std::pair<str)
-// TEMPLATE: WON 0x00735320
-// (public: void * __thiscall std::pair<struct WONAPI::FontDescriptor const ,class WONAPI::SmartPtr<class WONAPI::Font> >::`scalar deleting destructor'(un)
+void Window::SuspendRootResize(bool suspend) { this->WCall(EeWonWinCall::SuspendRootResize, suspend ? 1 : 0); }
+void Window::RemoveComponent(Component* c) { this->WCall(EeWonWinCall::RemoveComponent, (intptr_t)c); }
+bool Window::IsMouseDown(MouseButton b) { return this->WCall(EeWonWinCall::IsMouseDown, (intptr_t)b) != 0; }

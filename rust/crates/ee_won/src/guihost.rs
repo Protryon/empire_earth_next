@@ -726,6 +726,38 @@ pub enum EeWonGuiOp {
     LayHold,
     /// `a->Release()` (an instruction; the last one deletes it, and its Rust object with it).
     LayRelease,
+    // ---- the window (`winobj`; the receiver is the `Window*`, a window argument a `Window*`, a rectangle a
+    // `WONRectangle*` the C++ fills)
+    /// `WONTickCount()`.
+    WinTick = 570,
+    /// a root container method (`a` an `EeWonWinRoot`; `b`, `c`, `d` its arguments).
+    WinRoot,
+    /// one of the window's platform virtuals (`a` an `EeWonWinPlat`, `b` its argument).
+    WinPlat,
+    /// `SetPosSize(a, b, c, d)` (virtual).
+    WinSetPosSize,
+    /// `((Window*)a)->GetRect(*(WONRectangle*)b, c != 0)` (virtual).
+    WinGetRect,
+    /// `((Window*)a)->PlatformIsVisible()` (virtual; 0 or 1).
+    WinIsVisible,
+    /// `mManager->GetScreenRect(*(WONRectangle*)a)`.
+    WinScreenRect,
+    /// `mManager->AddWindow(this)`.
+    WinAddToManager,
+    /// CheckResize's image: a new offscreen image `a` x `b` with the old one drawn into it.
+    WinNewOffscreen,
+    /// `QueueEvent(new InputEvent(InputEvent_WindowClose))`.
+    WinQueueClose,
+    /// `((Window*)a)->CanClose()` (a child window; 0 or 1).
+    WinCanClose,
+    /// the allow-close function's answer (1 when there is none).
+    WinAllowClose,
+    /// the parent `a`'s child set: this window inserted (`b != 0`) or erased.
+    WinChildSet,
+    /// `Cursor::GetStandardCursor(StandardCursor_Arrow)`.
+    WinStdArrow,
+    /// `((Cursor*)a)->GetNative()`.
+    WinCursorNative,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

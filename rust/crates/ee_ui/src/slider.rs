@@ -2,10 +2,9 @@
 //! track, its value range mapped onto the track's pixels. The scroll bar's middle part, and the game's volume and
 //! speed sliders.
 //!
-//! The C++ object keeps its members; [`SliderFields`] is the pinned record of `UISlider`'s own members (from
-//! `mThumbRectangle` on). The C++ keeps what touches other objects: the base `UIControl` members, the thumb bitmap,
-//! the mouse capture and the virtual `ChangeRange`/`SetDirty`/`ButtonDown`, reached through [`SliderHost`]. The
-//! algorithms re-read the record after every host call, because a `ChangeRange` override reads the C++ object
+//! [`SliderFields`] is the slider's state; since round 10 it lives in the whole Rust object (`sliderobj.rs`), which
+//! implements [`SliderHost`] over its host ops (the base `UIControl`, the virtual `ChangeRange`/`SetDirty`). The
+//! algorithms re-read the record after every host call, because a `ChangeRange` override reads the slider back
 //! (`EEUIFSEESElevation::ChangeRange`).
 //!
 //! Integer arithmetic follows the C++'s mixed `long`/`unsigned long` conversions (`-fwrapv`), floats the same `f32`

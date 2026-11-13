@@ -164,8 +164,8 @@ public:
     void SetMinimizeOnAltTab(bool inMinimize) { this->mMinimizeOnAltTab = inMinimize; }
     void SetForwardKeyMsgToParent(bool inForward) { this->mForwardKeyMsgToParent = inForward; }
     // the window fills the surface (no parent): no frame, the surface's size, never moved
-    bool FillsSurface() const { return this->mParent == NULL; }
-    bool HasFrame() const { return this->mParent != NULL && !(this->mStyle & 0x20); }
+    bool FillsSurface() const { return this->GetParent() == NULL; }
+    bool HasFrame() const { return this->GetParent() != NULL && !(this->GetStyle() & 0x20); }
     void GetClientRect(WONRectangle& outRect);
     void FollowSurface();                       // a window that fills the surface takes its new size
     void FollowPixelScale();                    // a new offscreen image at the manager's pixel scale, repainted

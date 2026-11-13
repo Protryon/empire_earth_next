@@ -471,6 +471,58 @@ pub extern "C" fn ee_units_smart_farmers(player: *mut c_void, selection: *mut c_
     crate::commands::smart_farmers(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), target);
 }
 
+/// `EEMSetAirportCommand::Execute`'s body (`rally::set_airport_command`) for the sender, its selection (null: none),
+/// the point, the command, the target id (-1: none) and the queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn ee_units_set_airport_command(
+    player: *mut c_void,
+    selection: *mut c_void,
+    x: f32,
+    y: f32,
+    command: i32,
+    target: i32,
+    queued: u8,
+) {
+    let mut host = crate::host::game::GameHost;
+    crate::rally::set_airport_command(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        x,
+        y,
+        command,
+        target,
+        queued != 0,
+    );
+}
+
+/// `EEMSetRallyGoal::Execute`'s body (`rally::set_rally_goal`) for the sender, the building's id, the point, the
+/// target id (-1: none) and the queued flag.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_set_rally_goal(player: *mut c_void, building: u32, x: f32, y: f32, target: i32, queued: u8) {
+    let mut host = crate::host::game::GameHost;
+    crate::rally::set_rally_goal(&mut host, crate::host::HostRef(player), building, x, y, target, queued != 0);
+}
+
+/// `EEMClearAirportCommands::Execute`'s body (`rally::clear_airport_commands`) for the sender's selection (null: none).
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_clear_airport_commands(selection: *mut c_void) {
+    let mut host = crate::host::game::GameHost;
+    crate::rally::clear_airport_commands(&mut host, crate::host::HostRef(selection));
+}
+
+/// `EEMStopActiveGroup::Execute`'s body (`rally::stop_active_group`) for the sender's selection (null: none).
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_stop_active_group(selection: *mut c_void) {
+    let mut host = crate::host::game::GameHost;
+    crate::rally::stop_active_group(&mut host, crate::host::HostRef(selection));
+}
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 #[cfg(not(test))]

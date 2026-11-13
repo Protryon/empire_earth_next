@@ -21,32 +21,12 @@
 
 // FUNCTION: EXE 0x5ba89f
 // Creates a player-attribute condition with default players, attribute and operator, and no trigger or time tests
+// (the numbers: ee_scenario fields.rs condition_defaults)
 EESMCondition::EESMCondition()
 {
     this->SetName("");
     this->SetText("");
-    this->mType = kSMConditionPlayerAttribute;
-    this->mObjectIndex = 0;
-    this->mPlayer = 7;
-    this->mAttribute = 2;
-    this->mOperator = 2;
-    this->mAmount = 0;
-    this->mOtherPlayer = 8;
-    this->mOtherAttribute = 2;
-    this->mTechnology = kTechEpochPrehistoric;
-    this->mTrigger = 0;
-    this->mIsTriggerOn = false;
-    this->mHasTriggerFired = false;
-    this->mUsesPlayerAttribute = false;
-    this->mMaxTime = 0;
-    this->mMinTime = 0;
-    this->mHour = 0;
-    this->mUsesDifficulty = false;
-    this->mUsesElapsedTime = false;
-    this->mUsesHour = false;
-    this->mDifficulty = 1;
-    this->mDiplomacy = 0;
-    this->mID = 0;
+    *static_cast<EeScenarioConditionFields*>(this) = ee_scenario_condition_defaults();
 }
 
 // FUNCTION: EXE 0x5ba976
@@ -69,28 +49,7 @@ void EESMCondition::Copy(const EESMCondition& inCondition)
     this->mName = inCondition.mName;
     this->mText = inCondition.mText;
     this->mChatText = inCondition.mChatText;
-    this->mType = inCondition.mType;
-    this->mObjectIndex = inCondition.mObjectIndex;
-    this->mPlayer = inCondition.mPlayer;
-    this->mAttribute = inCondition.mAttribute;
-    this->mOperator = inCondition.mOperator;
-    this->mAmount = inCondition.mAmount;
-    this->mOtherPlayer = inCondition.mOtherPlayer;
-    this->mOtherAttribute = inCondition.mOtherAttribute;
-    this->mTechnology = inCondition.mTechnology;
-    this->mTrigger = inCondition.mTrigger;
-    this->mIsTriggerOn = inCondition.mIsTriggerOn;
-    this->mHasTriggerFired = inCondition.mHasTriggerFired;
-    this->mUsesPlayerAttribute = inCondition.mUsesPlayerAttribute;
-    this->mMaxTime = inCondition.mMaxTime;
-    this->mMinTime = inCondition.mMinTime;
-    this->mHour = inCondition.mHour;
-    this->mUsesDifficulty = inCondition.mUsesDifficulty;
-    this->mUsesElapsedTime = inCondition.mUsesElapsedTime;
-    this->mUsesHour = inCondition.mUsesHour;
-    this->mDifficulty = inCondition.mDifficulty;
-    this->mDiplomacy = inCondition.mDiplomacy;
-    this->mID = inCondition.mID;
+    *static_cast<EeScenarioConditionFields*>(this) = inCondition;   // every number
 }
 
 // FUNCTION: EXE 0x5baabf
@@ -112,8 +71,7 @@ bool EESMCondition::EvaluateUncaptured()
     // the test is Rust's (ee_scenario condition.rs evaluate) over the host's reads (EEScenarioHost.cpp)
     EESMHostContext theContext = {this, NULL};
     EeScenarioHost theHost = EESMHost(&theContext);
-    EeScenarioCondition theRecord = EESMConditionRecord(*this);
-    return ee_scenario_condition_evaluate(&theHost, &theRecord);
+    return ee_scenario_condition_evaluate(&theHost, this);
 }
 
 // FUNCTION: EXE 0x5baf78
@@ -128,89 +86,27 @@ unsigned long EESMCondition::GetPlayerValue(long inPlayer, unsigned long inType)
 
 // FUNCTION: EXE 0x5bb154
 // Reads the condition (diplomacy above 1 becomes 1); returns the first error, ignoring the chat text's
+// (ee_scenario save.rs condition_load)
 long EESMCondition::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Load(inFile);
-    if (theResult == kErrorOK) {
-        this->mChatText.Load(inFile);
-        theResult = inFile.Read(this->mType);
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mObjectIndex);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mOperator);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAmount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mOtherPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mOtherAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsTriggerOn);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHasTriggerFired);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMaxTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMinTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mHour);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesDifficulty);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesElapsedTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesHour);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDifficulty);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(this->mDiplomacy);
-        if (this->mDiplomacy >= 2)
-            this->mDiplomacy = 1;
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mID);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mChatText};
+    EESMStream theStream = {&inFile, theStrings, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_condition_load(&theTable, this);
 }
 
 // FUNCTION: EXE 0x5bb326
 // Updates the condition's object index after objects inOld/inNew swap, or after inOld is deleted (inNew -1)
 void EESMCondition::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mObjectIndex;
-    if (theIndex == inOldIndex) {
-        this->mObjectIndex = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mObjectIndex = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mObjectIndex = theIndex - 1;
-    }
+    ee_scenario_condition_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bb35c
 // Updates the condition's trigger index after triggers inOld/inNew swap, or after inOld is deleted (inNew -1)
 void EESMCondition::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mTrigger;
-    if (theIndex == inOldIndex) {
-        this->mTrigger = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTrigger = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTrigger = theIndex - 1;
-    }
+    ee_scenario_condition_renumber(this, EE_SCENARIO_RENUMBER_TRIGGERS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bb392
@@ -228,59 +124,11 @@ void EESMCondition::RemapTriggers(EESMIDMap& inMap)
 }
 
 // FUNCTION: EXE 0x5bb3b6
-// Writes the condition; returns the first error
+// Writes the condition; returns the first error (ee_scenario save.rs condition_save)
 long EESMCondition::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = this->mName.Save(outFile);
-    if (theResult == kErrorOK) {
-        // The text and chat text results are checked like every other field (they were ignored).
-        theResult = this->mText.Save(outFile);
-        if (theResult == kErrorOK)
-            theResult = this->mChatText.Save(outFile);
-        if (theResult == kErrorOK)
-            theResult = outFile.Write(this->mType);
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mObjectIndex);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mOperator);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAmount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mOtherPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mOtherAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsTriggerOn);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHasTriggerFired);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMaxTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMinTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mHour);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesDifficulty);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesElapsedTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesHour);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDifficulty);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDiplomacy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mID);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mChatText};
+    EESMStream theStream = {&outFile, theStrings, NULL};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_condition_save(&theTable, this);
 }

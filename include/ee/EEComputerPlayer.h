@@ -164,42 +164,6 @@ public:
     void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, const EEAIFOUnitSelectionScreener& inScreener)
         { GetScreenedTypesByLine(ioMap, const_cast<EEAIFOUnitSelectionScreener&>(inScreener)); }
 #endif
-    // The scenario effect's AI tuning setters: inline, defined in EESMEffect.cpp (their only user, SetAIVariable, calls
-    // them out of line: COMDATs 0x1c1ca9..0x1c24c8, 63 B each). Names are provisional (by field).
-    void SetAntiAirMax(long inValue);  // 0x1c1ca9
-    void SetAirportMax(long inValue);  // 0x1c1ce8
-    void SetArcheryRangeMax(long inValue);  // 0x1c1d27
-    void SetBarracksMax(long inValue);  // 0x1c1d66
-    void SetDockMax(long inValue);  // 0x1c1da5
-    void SetGranaryMax(long inValue);  // 0x1c1de4
-    void SetHospitalMax(long inValue);  // 0x1c1e23
-    void SetCyberFactoryMax(long inValue);  // 0x1c1e62
-    void SetCyberLabMax(long inValue);  // 0x1c1ea1
-    void SetNavalYardMax(long inValue);  // 0x1c1ee0
-    void SetSiegeFactoryMax(long inValue);  // 0x1c1f1f
-    void SetSpaceDockMax(long inValue);  // 0x1c1f5e
-    void SetStableMax(long inValue);  // 0x1c1f9d
-    void SetTankFactoryMax(long inValue);  // 0x1c1fdc
-    void SetTempleMax(long inValue);  // 0x1c201b
-    void SetTowerMax(long inValue);  // 0x1c205a
-    void SetUniversityMax(long inValue);  // 0x1c2099
-    void SetUnitsPerAntiAirBuilding(long inValue);  // 0x1c20d8
-    void SetUnitsPerAirport(long inValue);  // 0x1c2117
-    void SetUnitsPerArcheryRange(long inValue);  // 0x1c2156
-    void SetUnitsPerBarracks(long inValue);  // 0x1c2195
-    void SetUnitsPerDock(long inValue);  // 0x1c21d4
-    void SetUnitsPerGranary(long inValue);  // 0x1c2213
-    void SetUnitsPerHospital(long inValue);  // 0x1c2252
-    void SetUnitsPerCyberFactory(long inValue);  // 0x1c2291
-    void SetUnitsPerCyberLab(long inValue);  // 0x1c22d0
-    void SetUnitsPerNavalYard(long inValue);  // 0x1c230f
-    void SetUnitsPerSiegeFactory(long inValue);  // 0x1c234e
-    void SetUnitsPerSpaceDock(long inValue);  // 0x1c238d
-    void SetUnitsPerStable(long inValue);  // 0x1c23cc
-    void SetUnitsPerTankFactory(long inValue);  // 0x1c240b
-    void SetUnitsPerTemple(long inValue);  // 0x1c244a
-    void SetUnitsPerTower(long inValue);  // 0x1c2489
-    void SetUnitsPerUniversity(long inValue);  // 0x1c24c8
 
     // +0xb80 (0x68849 = its size(), 0x2ef5e = operator[]: EECPCivilizationManager 0x6fb5e/0x711ac)
     std::vector<EECPResourceCenter*> mResourceCenters;

@@ -1,0 +1,80 @@
+proxy before num 0 obj null addr 000000000000 bytes 0:
+proxy after num 0 obj null addr 000000000000 bytes 18:70726f78792e6578616d706c653a38303830
+proxy once num 0 obj null addr 000000000000 bytes 18:70726f78792e6578616d706c653a38303830
+size a.bin num 200 obj null addr 000000000000 bytes none
+first a.bin num 10 obj null addr 000000000000 bytes none
+stat 0 a.bin num 1 obj null addr 000000000000 bytes none
+stat 1 a.bin num 200 obj null addr 000000000000 bytes none
+stat 2 a.bin recent bytes none
+size empty.txt num 0 obj null addr 000000000000 bytes none
+first empty.txt num -1 obj null addr 000000000000 bytes none
+stat 0 empty.txt num 1 obj null addr 000000000000 bytes none
+stat 1 empty.txt num 0 obj null addr 000000000000 bytes none
+stat 2 empty.txt recent bytes none
+size text.txt num 13 obj null addr 000000000000 bytes none
+first text.txt num 72 obj null addr 000000000000 bytes none
+stat 0 text.txt num 1 obj null addr 000000000000 bytes none
+stat 1 text.txt num 13 obj null addr 000000000000 bytes none
+stat 2 text.txt recent bytes none
+size crlf.txt num 3 obj null addr 000000000000 bytes none
+first crlf.txt num 10 obj null addr 000000000000 bytes none
+stat 0 crlf.txt num 1 obj null addr 000000000000 bytes none
+stat 1 crlf.txt num 3 obj null addr 000000000000 bytes none
+stat 2 crlf.txt recent bytes none
+size zero.bin num 4 obj null addr 000000000000 bytes none
+first zero.bin num 0 obj null addr 000000000000 bytes none
+stat 0 zero.bin num 1 obj null addr 000000000000 bytes none
+stat 1 zero.bin num 4 obj null addr 000000000000 bytes none
+stat 2 zero.bin recent bytes none
+size sub dir
+first sub num -2 obj null addr 000000000000 bytes none
+stat 0 sub num 1 obj null addr 000000000000 bytes none
+stat 1 sub num 0 obj null addr 000000000000 bytes none
+stat 2 sub 0 bytes none
+size missing.txt num -1 obj null addr 000000000000 bytes none
+first missing.txt num -2 obj null addr 000000000000 bytes none
+stat 0 missing.txt num 0 obj null addr 000000000000 bytes none
+stat 1 missing.txt num 0 obj null addr 000000000000 bytes none
+stat 2 missing.txt 0 bytes none
+size  dir
+first  num -2 obj null addr 000000000000 bytes none
+stat 0  num 1 obj null addr 000000000000 bytes none
+stat 1  num 0 obj null addr 000000000000 bytes none
+stat 2  0 bytes none
+read none num 0 obj null addr 000000000000 bytes 0:
+open a.bin num 1 obj null addr 000000000000 bytes none
+read 7 num 0 obj null addr 000000000000 bytes 7:0d0a020d0a050d
+read 0 num 0 obj null addr 000000000000 bytes 0:
+read 500 num 0 obj null addr 000000000000 bytes 193:0a080d0a0b0d0a0e0d0a110d0a140d0a170d0a1a0d0a1d0d0a200d0a230d0a260d0a290d0a2c0d0a
+read 10 num 0 obj null addr 000000000000 bytes 0:
+open text.txt num 1 obj null addr 000000000000 bytes none
+read 100 num 0 obj null addr 000000000000 bytes 13:48656c6c6f0d0a576f726c640a
+close num 0 obj null addr 000000000000 bytes none
+read 4 num 0 obj null addr 000000000000 bytes 0:
+close again num 0 obj null addr 000000000000 bytes none
+open missing num 0 obj null addr 000000000000 bytes none
+read 4 num 0 obj null addr 000000000000 bytes 0:
+open dir num 0 obj null addr 000000000000 bytes none
+open zero.bin num 1 obj null addr 000000000000 bytes none
+read 2 num 0 obj null addr 000000000000 bytes 2:0061
+open empty num 1 obj null addr 000000000000 bytes none
+read 3 num 0 obj null addr 000000000000 bytes 0:
+open a.bin num 1 obj null addr 000000000000 bytes none
+read 3 num 0 obj null addr 000000000000 bytes 3:0d0a02
+tick now bytes none
+time now bytes none
+rand num 13891 obj null addr 000000000000 bytes none
+rand num 22171 obj null addr 000000000000 bytes none
+rand num 8669 obj null addr 000000000000 bytes none
+rand num 6693 obj null addr 000000000000 bytes none
+rand again num 13891 obj null addr 000000000000 bytes none
+srand num 0 bytes none
+rand after srand seeded in range
+resolve '127.0.0.1:15101' 80 num 1 obj null addr 3afd7f000001 bytes none
+resolve '10.1.2.3' 4660 num 1 obj null addr 12340a010203 bytes none
+resolve '1.2.3.4:' 7 num 1 obj null addr 000001020304 bytes none
+resolve '1.2.3.4:abc' 8 num 1 obj null addr 000001020304 bytes none
+resolve '255.255.255.255:65535' 1 num 1 obj null addr ffffffffffff bytes none
+resolve 'localhost:99' 2 num 1 obj null addr 00637f000001 bytes none
+resolve '0.0.0.0' 0 num 1 obj null addr 000000000000 bytes none
+done

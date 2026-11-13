@@ -169,19 +169,76 @@ void Players(void*, int32_t inKind, bool inSingle, int32_t inResult, bool inList
     EESMCapturePlayers(inKind, inSingle, inResult, inListed ? &thePlayers : NULL, inSeed);
 }
 
+// an element's save (ee_scenario stream.rs): each operation the original's FSFile call on the value the Rust hands
+// over (the 4-byte long adapters, float, bool), or the element's string or id list by slot
+int32_t StreamIO(void* inContext, uint32_t inOp, uint32_t inSlot, unsigned long inIndex, void* ioValue)
+{
+    EESMStream* theStream = static_cast<EESMStream*>(inContext);
+    FSFile& theFile = *theStream->mFile;
+    switch (inOp) {
+    case EE_SCENARIO_IO_READ_ULONG: return (int32_t)theFile.Read(*static_cast<unsigned long*>(ioValue));
+    case EE_SCENARIO_IO_READ_LONG: return (int32_t)theFile.Read(*static_cast<long*>(ioValue));
+    case EE_SCENARIO_IO_READ_FLOAT: return (int32_t)theFile.Read(*static_cast<float*>(ioValue));
+    case EE_SCENARIO_IO_READ_BOOL: {
+        // a byte other than 0 or 1 is read as true (the Rust field is a bool)
+        bool theValue = *static_cast<bool*>(ioValue);
+        long theResult = theFile.Read(theValue);
+        *static_cast<bool*>(ioValue) = *reinterpret_cast<unsigned char*>(&theValue) != 0;
+        return (int32_t)theResult;
+    }
+    case EE_SCENARIO_IO_WRITE_ULONG: return (int32_t)theFile.Write(*static_cast<const unsigned long*>(ioValue));
+    case EE_SCENARIO_IO_WRITE_LONG: return (int32_t)theFile.Write(*static_cast<const long*>(ioValue));
+    case EE_SCENARIO_IO_WRITE_FLOAT: return (int32_t)theFile.Write(*static_cast<const float*>(ioValue));
+    case EE_SCENARIO_IO_WRITE_BOOL: return (int32_t)theFile.Write(*static_cast<const bool*>(ioValue));
+    case EE_SCENARIO_IO_LOAD_STRING: return (int32_t)theStream->mStrings[inSlot]->Load(theFile);
+    case EE_SCENARIO_IO_SAVE_STRING: return (int32_t)theStream->mStrings[inSlot]->Save(theFile);
+    case EE_SCENARIO_IO_LIST_CLEAR: theStream->mList->clear(); return 0;
+    case EE_SCENARIO_IO_LIST_PUSH: theStream->mList->push_back(*static_cast<unsigned long*>(ioValue)); return 0;
+    case EE_SCENARIO_IO_LIST_COUNT: *static_cast<unsigned long*>(ioValue) = theStream->mList->size(); return 0;
+    case EE_SCENARIO_IO_LIST_AT: *static_cast<unsigned long*>(ioValue) = (*theStream->mList)[inIndex]; return 0;
+    case EE_SCENARIO_IO_ENTRY_COUNT:
+        *static_cast<unsigned long*>(ioValue) = inSlot == EE_SCENARIO_ENTRIES_CONDITIONS
+                                                    ? theStream->mTrigger->GetConditionCount()
+                                                    : theStream->mTrigger->GetEffectCount();
+        return 0;
+    case EE_SCENARIO_IO_ENTRY_AT: {
+        EeScenarioEntry& theEntry = *static_cast<EeScenarioEntry*>(ioValue);
+        if (inSlot == EE_SCENARIO_ENTRIES_CONDITIONS) {
+            EESMTConditionWrapper* theWrapper = theStream->mTrigger->GetConditionAt(inIndex);
+            theEntry = {(unsigned long)theWrapper->mIsNot, theWrapper->mOperator, theWrapper->mValue};
+        } else {
+            EESMTEffectWrapper* theWrapper = theStream->mTrigger->GetEffectAt(inIndex);
+            theEntry = {theWrapper->mDelay, theWrapper->mOperator, theWrapper->mEffectIndex};
+        }
+        return 0;
+    }
+    case EE_SCENARIO_IO_ENTRY_SET: {
+        const EeScenarioEntry& theEntry = *static_cast<const EeScenarioEntry*>(ioValue);
+        if (inSlot == EE_SCENARIO_ENTRIES_CONDITIONS) {
+            theStream->mTrigger->SetCondition(inIndex, theEntry.first != 0, theEntry.value);
+            theStream->mTrigger->SetConditionOperator(inIndex, theEntry.op);
+        } else {
+            theStream->mTrigger->SetEffect(inIndex, (long)theEntry.first, theEntry.value);
+            theStream->mTrigger->SetEffectOperator(inIndex, theEntry.op);
+        }
+        return 0;
+    }
+    }
+    return 0;
+}
+
 }   // namespace
+
+EeScenarioStream EESMStreamTable(EESMStream* inStream)
+{
+    EeScenarioStream theTable = {inStream, StreamIO};
+    return theTable;
+}
 
 EeScenarioHost EESMHost(EESMHostContext* inContext)
 {
     EeScenarioHost theHost = {inContext, Read, Players};
     return theHost;
-}
-
-// EESMObject's filter as the Rust record
-EeScenarioObjectFilter EESMObjectFilter(const EESMObject& inObject)
-{
-    EeScenarioObjectFilter theFilter = {(uint32_t)inObject.mClass, (uint32_t)inObject.mFamily, (uint32_t)inObject.mParent};
-    return theFilter;
 }
 
 // EESMArea's members as the Rust record
@@ -190,33 +247,5 @@ EeScenarioAreaRecord EESMAreaRecord(const EESMArea& inArea)
     EeScenarioAreaRecord theRecord = {(uint32_t)inArea.mSelectMode, (int32_t)inArea.mAnchor.mX, (int32_t)inArea.mAnchor.mY,
                                 inArea.mRect.GetLeft(), inArea.mRect.GetTop(), inArea.mRect.GetRight(),
                                 inArea.mRect.GetBottom(), (int32_t)inArea.mCenterTile.mX, (int32_t)inArea.mCenterTile.mY};
-    return theRecord;
-}
-
-// EESMCondition's members as the Rust record
-EeScenarioCondition EESMConditionRecord(const EESMCondition& inCondition)
-{
-    EeScenarioCondition theRecord;
-    theRecord.kind = (uint32_t)inCondition.mType;
-    theRecord.op = (uint32_t)inCondition.mOperator;
-    theRecord.difficulty = (uint32_t)inCondition.mDifficulty;
-    theRecord.diplomacy = (uint32_t)inCondition.mDiplomacy;
-    theRecord.attribute = (uint32_t)inCondition.mAttribute;
-    theRecord.other_attribute = (uint32_t)inCondition.mOtherAttribute;
-    theRecord.technology = (int32_t)inCondition.mTechnology;
-    theRecord.amount = (uint32_t)inCondition.mAmount;
-    theRecord.object_index = (uint32_t)inCondition.mObjectIndex;
-    theRecord.player = (uint32_t)inCondition.mPlayer;
-    theRecord.other_player = (uint32_t)inCondition.mOtherPlayer;
-    theRecord.min_time = (uint32_t)inCondition.mMinTime;
-    theRecord.max_time = (uint32_t)inCondition.mMaxTime;
-    theRecord.hour = (uint32_t)inCondition.mHour;
-    theRecord.trigger = (uint32_t)inCondition.mTrigger;
-    theRecord.is_trigger_on = inCondition.mIsTriggerOn;
-    theRecord.has_trigger_fired = inCondition.mHasTriggerFired;
-    theRecord.uses_difficulty = inCondition.mUsesDifficulty;
-    theRecord.uses_elapsed_time = inCondition.mUsesElapsedTime;
-    theRecord.uses_hour = inCondition.mUsesHour;
-    theRecord.uses_player_attribute = inCondition.mUsesPlayerAttribute;
     return theRecord;
 }

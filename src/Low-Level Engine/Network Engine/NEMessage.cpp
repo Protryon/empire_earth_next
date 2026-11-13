@@ -8,7 +8,6 @@
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UWideString.h"
 #include "lle/UReferenceCounter.h"
-#include "lle/NEPlayer.h"
 #include "lle/NEMessage.h"
 #include "rust/ee_netmsg.h"   // ee_netmsg: the engine messages' wire layout
 

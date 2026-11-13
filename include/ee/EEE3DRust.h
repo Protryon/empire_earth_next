@@ -4,14 +4,17 @@
 // 0xfb9f6..0xfc382), 0x18 the blast wave (EEE3DBlastWave, 0xe8ed8..0xe9474), 0x45 the shield (EEE3DShield,
 // 0xf923f..), 0x43 the pulse cannon ball (EEE3DPulseCannonBall, 0xf69e3..0xf7394), 0x21 the tracers and 0x26 the
 // shells (EEE3DTracers 0xfd330..0xfdbab, EEE3DShells 0xf90e9..0xf923f), 0x33 the citizen beam (EEE3DCitizenBeam,
-// 0xe9474..0xe9bee), 0x1b the water splash (EEE3DWaterSplash, 0x101c34..0x101fce) and 0x46 the screen flash
-// (EEE3DScreenFlash, 0xf8ceb..0xf90e9), all deleted. Requires ee/EEEffect3D.h and
-// rust/ee_gfx.h.
+// 0xe9474..0xe9bee), 0x1b the water splash (EEE3DWaterSplash, 0x101c34..0x101fce), 0x46 the screen flash
+// (EEE3DScreenFlash, 0xf8ceb..0xf90e9), 0x27 the additive pass (EEE3DAdditivePass, 0xe89c6..0xe8ed8) and 0x25 the
+// linear projectile (EEE3DLinearProjectile, 0xf2d93..0xf3580), 0x23 the disease (EEE3DDisease, 0xebde9..0xec6e4) and
+// 0x42 the virus (EEE3DVirus, 0xfdbab..0xfe553), all deleted.
+// Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
 #include "rust/ee_gfx.h"
 
 class EEGraphicObject;
+class SESMInstanceNode;
 
 class EEE3DRust : public EEEffect3D {
 public:
@@ -21,6 +24,8 @@ public:
     EEE3DRust(EEUnit* inUnit, const GE3DPoint& inTarget, EEGraphicEffect* inGraphicEffect, long inKind);
     // a shot on inTo from inFrom's weapon point (the tracers, the shells)
     EEE3DRust(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGraphicEffect, long inKind);
+    // from one point to another (the linear projectile)
+    EEE3DRust(const GE3DPoint& inFrom, const GE3DPoint& inTo, EEGraphicEffect* inGraphicEffect, long inKind);
     EEE3DRust(long inKind);                 // for loading
     virtual ~EEE3DRust();
     virtual long DrawPass2() { return this->Call(EeGfxEffect3DOp::DrawPass2); }
@@ -40,6 +45,8 @@ public:
               unsigned long inMajorVersion = 0, unsigned long inMinorVersion = 0);
 
     EEGraphicObject* mGraphicObject = NULL;
+    EEGraphicObject* mUnitModel = NULL;     // the additive pass's: its unit's model (EEModel), loaded while it lives
+    SESMInstanceNode* mSound = NULL;        // the disease's and virus's animation sound
 };
 
 // the rasterizer as the Rust draws call it (EERenderObject.cpp)

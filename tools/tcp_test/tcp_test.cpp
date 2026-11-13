@@ -14,7 +14,7 @@
 // Every payload is checked byte for byte after the plug-in's RC4 enciphering round trip.
 //
 // Build and run: python -I tools/xbuild.py tcptest [--target windows-x86_64|linux-x86_64] [--no-run]. It links the
-// plug-in with the real UString, UWideString, NEProtocolConfiguration, TSCriticalSection and TSEvent units and the
+// plug-in with the real UString, UWideString, TSCriticalSection and TSEvent units and the
 // platform layer; the rest of the engine the plug-in calls is stood in below (the error system, TMGetTime, the
 // floating-point mode, URandom, TSScheduler's create/destroy). One process holds both roles, so the plug-in's
 // process-wide globals are shared (its xfer listen socket gSocket7280, which every NPIMCloseConnection also
