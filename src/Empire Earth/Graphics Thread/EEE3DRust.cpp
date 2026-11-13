@@ -1,5 +1,6 @@
-// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs): EEE3DRust's virtuals call Rust by
-// the record's kind and answer its questions about the world here. Replaces EEE3DTeleport.cpp and EEE3DTimeWarp.cpp.
+// The 3D effects whole in Rust (docs/RUST_PLAN.md R4.4; ee_gfx effect_rising.rs, effect_follow.rs): EEE3DRust's
+// virtuals call Rust by the record's kind and answer its questions about the world here. Replaces EEE3DTeleport.cpp,
+// EEE3DTimeWarp.cpp, EEE3DBlastWave.cpp and EEE3DShield.cpp.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -82,10 +83,33 @@ struct Ask {
     }
     static int32_t Media(void* inAsk)
     {
-        E(inAsk)->mGraphicObject = E(inAsk)->mGraphicEffect->mGraphicObject;
+        E(inAsk)->mGraphicObject = E(inAsk)->GetGraphicObject();
         return E(inAsk)->mGraphicObject->LoadMedia();
     }
     static void* Model(void* inAsk) { return E(inAsk)->mGraphicObject->mModel; }
+    static void* Texture(void* inAsk) { return E(inAsk)->mGraphicObject->mTextures[0]; }
+    // to the unit's first tag point of type 0x12 (keeping the unit's orientation), else to the unit (EEE3DBlastWave's
+    // and EEE3DShield's FollowUnit, 0xe904a)
+    static void Follow(void* inAsk)
+    {
+        EEE3DRust* theEffect = E(inAsk);
+        EEComplexUnit* theUnit = theEffect->mUnit->mComplexUnit;
+        GE3DPoint thePoint;
+        GETransformation theLocation(theUnit->mPhysicalModel.GetLocation());
+        float theScale = theUnit->mPhysicalModel.GetScale();
+        unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
+        EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 0x12);
+        if (theList != NULL && !theList->mPoints.empty()) {
+            EETagPointList::Scale(theLocation, theScale);
+            theList->mPoints.front()->GetPoint(theFrame, theLocation, thePoint);
+            GETransformation theTransformation(false);
+            theTransformation = theLocation;
+            theTransformation.SetPosition(thePoint.GetX(), thePoint.GetY(), thePoint.GetZ());
+            theEffect->SetTransformation(theTransformation);
+        } else {
+            theEffect->SetTransformation(theLocation);
+        }
+    }
 };
 }
 
@@ -93,6 +117,13 @@ EEE3DRust::EEE3DRust(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKi
     : EEEffect3D(inUnit, inGraphicEffect, inKind)
 {
     this->Call(EeGfxEffect3DOp::Create);
+}
+
+EEE3DRust::EEE3DRust(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
+    : EEEffect3D(0, inGraphicEffect, inKind)
+{
+    this->mRecord->aged.location = EeGe3DPoint{inLocation.mX, inLocation.mY, inLocation.mZ};
+    this->Call(EeGfxEffect3DOp::CreateAt);
 }
 
 EEE3DRust::EEE3DRust(long inKind)
@@ -109,7 +140,8 @@ EEE3DRust::~EEE3DRust()
     }
 }
 
-long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues)
+long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues, const EeGfxEffectFile* inFile, long inBase,
+                     unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     EEGraphicEffect* theEffect = this->mGraphicEffect;
     EEGraphicObject* theObject = theEffect ? theEffect->mGraphicObject : NULL;
@@ -118,6 +150,10 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues)
         theFacts.size = theEffect->mSize;
         theFacts.param1 = theEffect->mParam1;
         theFacts.param2 = theEffect->mParam2;
+        theFacts.param3 = theEffect->mParam3;
+        theFacts.param4 = theEffect->mParam4;
+        theFacts.param5 = theEffect->mParam5;
+        theFacts.param6 = theEffect->mParam6;
         theFacts.flag1 = theEffect->mFlag1;
         theFacts.duration = (uint32_t)theEffect->mDuration;
         theFacts.has_object = theObject != NULL;
@@ -125,34 +161,34 @@ long EEE3DRust::Call(EeGfxEffect3DOp inOp, EEEffectQueue* inQueues)
     }
     theFacts.tick_seconds = gPhysics->GetTickSeconds();
     theFacts.tick_time = gPhysics->GetTickTime();
+    theFacts.has_unit = this->mUnit != NULL;
+    theFacts.unit_hit_points = this->mUnit != NULL ? (int32_t)this->mUnit->mHitPoints : 0;
     Ask theAsk = {this, inQueues};
     EeGfxEffect3DHost theHost = {&theAsk, Ask::UnitPosition, Ask::ModelHeight, Ask::MoveTo, Ask::Line, Ask::BaseQueue,
-                                 Ask::Push, Ask::Media, Ask::Model};
+                                 Ask::Push, Ask::Media, Ask::Model, Ask::Texture, Ask::Follow};
+    if (inFile != NULL)
+        return ee_gfx_effect3d_file(inOp, inBase, this->mRecord, inFile, inMajorVersion, inMinorVersion, &theHost);
     return ee_gfx_effect3d(inOp, this->mRecord, &theFacts, &theHost, &gEERustRaster);
 }
 
-// the base 3D effect, then the age (ee_gfx effect_state.rs); the first error
+// the base 3D effect, then the kind's own (ee_gfx); the first error, as each original
 long EEE3DRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    long theResult = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
+    long theBase = EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     EeGfxEffectFile theFile = EEEffectFile(inFile);
-    return theResult == 0 ? ee_gfx_effect_load_aged(this->mRecord, &theFile) : theResult;
+    return this->Call(EeGfxEffect3DOp::Load, NULL, &theFile, theBase, inMajorVersion, inMinorVersion);
 }
 
-// after loading: the base effect's pointers, then the graphic object's media
+// after loading: the base effect's pointers, then the kind's own (the media of the teleport and time warp)
 long EEE3DRust::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
-    if (theResult == 0) {
-        this->mGraphicObject = this->GetGraphicObject();
-        theResult = this->mGraphicObject->LoadMedia();
-    }
-    return theResult;
+    return theResult != 0 ? theResult : this->Call(EeGfxEffect3DOp::Repair);
 }
 
 long EEE3DRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
+    long theBase = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     EeGfxEffectFile theFile = EEEffectFile(outFile);
-    return theResult == 0 ? ee_gfx_effect_save_aged(this->mRecord, &theFile) : theResult;
+    return this->Call(EeGfxEffect3DOp::Save, NULL, &theFile, theBase, inMajorVersion, inMinorVersion);
 }

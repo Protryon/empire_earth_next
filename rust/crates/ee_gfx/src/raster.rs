@@ -12,9 +12,11 @@ use ee_ge::types::{Ge3DPoint, GeTransformation};
 use crate::effects::EeGfxColor;
 use crate::lighting::EeGfxLighting;
 
-/// `kZBufferTestAndWrite` (GERenderState.h).
+/// `kZBufferTestOnly`, `kZBufferTestAndWrite` (GERenderState.h).
+pub(crate) const ZBUFFER_TEST_ONLY: u32 = 2;
 pub(crate) const ZBUFFER_TEST_AND_WRITE: u32 = 3;
-/// `kBlendSrcAlpha`, `kBlendInvSrcAlpha`.
+/// `kBlendOne`, `kBlendSrcAlpha`, `kBlendInvSrcAlpha`.
+pub(crate) const BLEND_ONE: u32 = 1;
 pub(crate) const BLEND_SRC_ALPHA: u32 = 4;
 pub(crate) const BLEND_INV_SRC_ALPHA: u32 = 5;
 
@@ -43,6 +45,12 @@ pub struct EeGfxRaster {
     pub model_prepare: extern "C" fn(model: EeGfxModel),
     /// `Draw(model, screen, opacity, gOrthographicView)`
     pub model_draw: extern "C" fn(model: EeGfxModel, opacity: f32) -> i32,
+    /// `GetMaterial(0)->SetTexture(texture, screen)`
+    pub model_texture: extern "C" fn(model: EeGfxModel, texture: EeGfxModel),
+    /// adds `delta` to the v of every texture coordinate of vertex array 0, keeping the old ones
+    pub model_scroll_v: extern "C" fn(model: EeGfxModel, delta: f32),
+    /// puts back the texture coordinates `model_scroll_v` kept
+    pub model_restore_v: extern "C" fn(model: EeGfxModel),
 }
 
 /// The rasterizer as the draws call it.
@@ -63,6 +71,9 @@ pub trait Raster {
     fn model_scale(&mut self, model: EeGfxModel, scale: f32);
     fn model_prepare(&mut self, model: EeGfxModel);
     fn model_draw(&mut self, model: EeGfxModel, opacity: f32) -> i32;
+    fn model_texture(&mut self, model: EeGfxModel, texture: EeGfxModel);
+    fn model_scroll_v(&mut self, model: EeGfxModel, delta: f32);
+    fn model_restore_v(&mut self, model: EeGfxModel);
 }
 
 impl Raster for &EeGfxRaster {
@@ -113,6 +124,15 @@ impl Raster for &EeGfxRaster {
     }
     fn model_draw(&mut self, model: EeGfxModel, opacity: f32) -> i32 {
         (self.model_draw)(model, opacity)
+    }
+    fn model_texture(&mut self, model: EeGfxModel, texture: EeGfxModel) {
+        (self.model_texture)(model, texture)
+    }
+    fn model_scroll_v(&mut self, model: EeGfxModel, delta: f32) {
+        (self.model_scroll_v)(model, delta)
+    }
+    fn model_restore_v(&mut self, model: EeGfxModel) {
+        (self.model_restore_v)(model)
     }
 }
 
@@ -177,5 +197,14 @@ impl Raster for LogRaster {
     fn model_draw(&mut self, _model: EeGfxModel, opacity: f32) -> i32 {
         self.calls.push(format!("draw {opacity}"));
         0
+    }
+    fn model_texture(&mut self, _model: EeGfxModel, _texture: EeGfxModel) {
+        self.calls.push("texture".into());
+    }
+    fn model_scroll_v(&mut self, _model: EeGfxModel, delta: f32) {
+        self.calls.push(format!("scroll {delta}"));
+    }
+    fn model_restore_v(&mut self, _model: EeGfxModel) {
+        self.calls.push("restore".into());
     }
 }

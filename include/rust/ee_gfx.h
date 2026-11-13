@@ -18,6 +18,9 @@ constexpr static const int32_t CAMERA_STEP_NEXT_KEY = 1;
 
 constexpr static const int32_t CAMERA_STEP_VIEW = 2;
 
+/// The shield.
+constexpr static const int32_t EE_GFX_EFFECT_KIND_SHIELD = 69;
+
 /// The plain smoke generator (on a unit or at a point).
 constexpr static const int32_t EE_GFX_EFFECT_KIND_SMOKE_GENERATOR = 43;
 
@@ -165,6 +168,13 @@ enum class EeGfxEffect3DOp : uint32_t {
   DrawPass5 = 6,
   DrawPass6 = 7,
   Step = 8,
+  /// the constructor at a point (the point in the record's `aged.location`)
+  CreateAt = 9,
+  /// `RepairPointers` after `EEEffect`'s
+  Repair = 10,
+  /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
+  Load = 11,
+  Save = 12,
 };
 
 /// The set-ups, one per C++ function.
@@ -734,6 +744,21 @@ struct EeGfxEffectTracer {
   int32_t weapon_tag_point;
 };
 
+/// The shield's state (`effect_follow.rs`): its texture scroll and direction, its opacity, its unit's hit points at
+/// the last tick, and the draw's copies.
+struct EeGfxEffectShield {
+  /// saved
+  float scroll;
+  float draw_scroll;
+  /// saved
+  float opacity;
+  float draw_opacity;
+  /// saved
+  int32_t hit_points;
+  /// saved from version 0.180
+  bool scrolling_down;
+};
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 struct EeGfxEffectRecord {
   /// `mKind`
@@ -779,6 +804,8 @@ struct EeGfxEffectRecord {
   EeGfxEffectWall wall;
   /// the tracer beams' (`effect_tracer.rs`)
   EeGfxEffectTracer tracer;
+  /// the shield's (`effect_follow.rs`)
+  EeGfxEffectShield shield;
 };
 
 /// The C++ glue's view of an `FSFile&` for the effects (the typed reads and writes, each the `FSFile` call of that
@@ -1062,6 +1089,10 @@ struct EeGfxGraphicFacts {
   float size;
   float param1;
   float param2;
+  float param3;
+  float param4;
+  float param5;
+  float param6;
   bool flag1;
   /// ms
   uint32_t duration;
@@ -1071,6 +1102,9 @@ struct EeGfxGraphicFacts {
   /// `GetTickSeconds`, `GetTickTime`
   float tick_seconds;
   float tick_time;
+  /// the effect has a unit, and its hit points
+  bool has_unit;
+  int32_t unit_hit_points;
 };
 
 /// A model to draw (`GEModel*`), opaque to Rust.
@@ -1098,6 +1132,10 @@ struct EeGfxEffect3DHost {
   int32_t (*load_media)(void *context);
   /// the graphic object's model
   EeGfxModel (*model)(void *context);
+  /// the graphic object's first texture
+  EeGfxModel (*texture)(void *context);
+  /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
+  void (*follow_unit)(void *context);
 };
 
 /// The C++'s rasterizer calls, each on the current screen.
@@ -1121,6 +1159,12 @@ struct EeGfxRaster {
   void (*model_prepare)(EeGfxModel model);
   /// `Draw(model, screen, opacity, gOrthographicView)`
   int32_t (*model_draw)(EeGfxModel model, float opacity);
+  /// `GetMaterial(0)->SetTexture(texture, screen)`
+  void (*model_texture)(EeGfxModel model, EeGfxModel texture);
+  /// adds `delta` to the v of every texture coordinate of vertex array 0, keeping the old ones
+  void (*model_scroll_v)(EeGfxModel model, float delta);
+  /// puts back the texture coordinates `model_scroll_v` kept
+  void (*model_restore_v)(EeGfxModel model);
 };
 
 /// What an entry point does for a kind: create the effect (saved or not), or return `result`.
@@ -2450,6 +2494,18 @@ int32_t ee_gfx_effect3d(EeGfxEffect3DOp op,
                         const EeGfxGraphicFacts *g,
                         const EeGfxEffect3DHost *host,
                         const EeGfxRaster *raster);
+
+/// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s (its result `base`).
+///
+/// # Safety
+/// `r` is a live record; `file` is valid; `host` is readable and its functions valid.
+int32_t ee_gfx_effect3d_file(EeGfxEffect3DOp op,
+                             int32_t base,
+                             EeGfxEffectRecord *r,
+                             const EeGfxEffectFile *file,
+                             uint32_t major,
+                             uint32_t minor,
+                             const EeGfxEffect3DHost *host);
 
 /// An entry point's choice for a graphic effect of `kind` (`detail_ok`: its detail level is within the setting;
 /// `from_alive`/`to_alive`: the units are there and living).

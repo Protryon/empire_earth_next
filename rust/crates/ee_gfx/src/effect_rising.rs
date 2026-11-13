@@ -12,9 +12,10 @@ use std::ffi::c_void;
 
 use ee_ge::types::{Ge3DPoint, GeVector};
 
+use crate::effect_follow::{follow, load_shield, save_shield, EE_GFX_EFFECT_KIND_SHIELD};
 use crate::effect_state::{
-    identity, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EE_GFX_EFFECT_KIND_TELEPORT, EE_GFX_EFFECT_KIND_TIME_WARP,
-    EE_GFX_EFFECT_MOVED,
+    identity, load_aged, save_aged, timed_step, EeGfxEffectRecord, EeGfxTimedTick, EffectFile,
+    EE_GFX_EFFECT_KIND_BLAST_WAVE, EE_GFX_EFFECT_KIND_TELEPORT, EE_GFX_EFFECT_KIND_TIME_WARP, EE_GFX_EFFECT_MOVED,
 };
 use crate::lighting::EeGfxLighting;
 use crate::raster::{EeGfxModel, Raster, BLEND_INV_SRC_ALPHA, BLEND_SRC_ALPHA, ZBUFFER_TEST_AND_WRITE};
@@ -36,6 +37,13 @@ pub enum EeGfxEffect3DOp {
     DrawPass5 = 6,
     DrawPass6 = 7,
     Step = 8,
+    /// the constructor at a point (the point in the record's `aged.location`)
+    CreateAt = 9,
+    /// `RepairPointers` after `EEEffect`'s
+    Repair = 10,
+    /// `Load` and `Save` after `EEEffect3D`'s (`ee_gfx_effect3d_file`)
+    Load = 11,
+    Save = 12,
 }
 
 /// What the effects read of their graphic effect and the tick, gathered by the C++ for each call.
@@ -46,6 +54,10 @@ pub struct EeGfxGraphicFacts {
     pub size: f32,
     pub param1: f32,
     pub param2: f32,
+    pub param3: f32,
+    pub param4: f32,
+    pub param5: f32,
+    pub param6: f32,
     pub flag1: bool,
     /// ms
     pub duration: u32,
@@ -55,6 +67,9 @@ pub struct EeGfxGraphicFacts {
     /// `GetTickSeconds`, `GetTickTime`
     pub tick_seconds: f32,
     pub tick_time: f32,
+    /// the effect has a unit, and its hit points
+    pub has_unit: bool,
+    pub unit_hit_points: i32,
 }
 
 /// The C++'s answers for an `EEE3DRust`.
@@ -78,6 +93,10 @@ pub struct EeGfxEffect3DHost {
     pub load_media: extern "C" fn(context: *mut c_void) -> i32,
     /// the graphic object's model
     pub model: extern "C" fn(context: *mut c_void) -> EeGfxModel,
+    /// the graphic object's first texture
+    pub texture: extern "C" fn(context: *mut c_void) -> EeGfxModel,
+    /// `FollowUnit`: to the unit's first tag point of type 0x12 (`SetTransformation`)
+    pub follow_unit: extern "C" fn(context: *mut c_void),
 }
 
 /// The world as the effects ask it.
@@ -90,6 +109,8 @@ pub trait Effect3DHost {
     fn queue(&mut self, index: u32);
     fn load_media(&mut self) -> i32;
     fn model(&mut self) -> EeGfxModel;
+    fn texture(&mut self) -> EeGfxModel;
+    fn follow_unit(&mut self);
 }
 
 impl Effect3DHost for &EeGfxEffect3DHost {
@@ -117,6 +138,12 @@ impl Effect3DHost for &EeGfxEffect3DHost {
     fn model(&mut self) -> EeGfxModel {
         (self.model)(self.context)
     }
+    fn texture(&mut self) -> EeGfxModel {
+        (self.texture)(self.context)
+    }
+    fn follow_unit(&mut self) {
+        (self.follow_unit)(self.context)
+    }
 }
 
 /// One virtual of an `EEE3DRust` of the record's kind.
@@ -135,7 +162,44 @@ pub unsafe fn effect3d<H: Effect3DHost, R: Raster>(
     let kind = unsafe { (*r).kind };
     match kind {
         EE_GFX_EFFECT_KIND_TELEPORT | EE_GFX_EFFECT_KIND_TIME_WARP => unsafe { rising(op, r, g, h, x) },
+        EE_GFX_EFFECT_KIND_BLAST_WAVE | EE_GFX_EFFECT_KIND_SHIELD => unsafe { follow(op, r, g, h, x) },
         _ => 0,
+    }
+}
+
+/// `Load` (`op` Load) or `Save` of an `EEE3DRust` after `EEEffect3D`'s, whose result is `base`; the file versions.
+pub fn effect3d_file<H: Effect3DHost, F: EffectFile>(
+    op: EeGfxEffect3DOp,
+    base: i32,
+    r: &mut EeGfxEffectRecord,
+    f: &mut F,
+    major: u32,
+    minor: u32,
+    h: &mut H,
+) -> i32 {
+    let load = op == EeGfxEffect3DOp::Load;
+    match r.kind {
+        EE_GFX_EFFECT_KIND_SHIELD => {
+            // the base's and the media's results are ignored
+            if load {
+                h.load_media();
+                load_shield(r, f, major, minor)
+            } else {
+                save_shield(r, f)
+            }
+        }
+        EE_GFX_EFFECT_KIND_BLAST_WAVE if load => {
+            // the base's result is ignored; the media's stops the load
+            let res = h.load_media();
+            if res != 0 {
+                res
+            } else {
+                load_aged(r, f)
+            }
+        }
+        _ if base != 0 => base,
+        _ if load => load_aged(r, f),
+        _ => save_aged(r, f),
     }
 }
 
@@ -178,6 +242,7 @@ unsafe fn rising<H: Effect3DHost, R: Raster>(
             h.create_line(&point, &direction, 2);
             0
         }
+        EeGfxEffect3DOp::Repair => h.load_media(),
         EeGfxEffect3DOp::SetUp => {
             h.load_media();
             if !warp {
@@ -282,6 +347,12 @@ mod tests {
         fn model(&mut self) -> EeGfxModel {
             std::ptr::null_mut()
         }
+        fn texture(&mut self) -> EeGfxModel {
+            std::ptr::null_mut()
+        }
+        fn follow_unit(&mut self) {
+            self.calls.push("follow".into());
+        }
     }
 
     fn facts() -> EeGfxGraphicFacts {
@@ -295,6 +366,7 @@ mod tests {
             alpha_ref: 0.25,
             tick_seconds: 0.125,
             tick_time: 125.0,
+            ..Default::default()
         }
     }
 

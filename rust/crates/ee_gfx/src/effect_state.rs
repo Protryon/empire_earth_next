@@ -177,6 +177,23 @@ impl Default for EeGfxEffectAged {
     }
 }
 
+/// The shield's state (`effect_follow.rs`): its texture scroll and direction, its opacity, its unit's hit points at
+/// the last tick, and the draw's copies.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EeGfxEffectShield {
+    /// saved
+    pub scroll: f32,
+    pub draw_scroll: f32,
+    /// saved
+    pub opacity: f32,
+    pub draw_opacity: f32,
+    /// saved
+    pub hit_points: i32,
+    /// saved from version 0.180
+    pub scrolling_down: bool,
+}
+
 /// An effect's plain state: `EEEffect`'s, `EEEffect3D`'s, `EEEffect2D`'s and the leaves' that moved.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -224,6 +241,8 @@ pub struct EeGfxEffectRecord {
     pub wall: EeGfxEffectWall,
     /// the tracer beams' (`effect_tracer.rs`)
     pub tracer: EeGfxEffectTracer,
+    /// the shield's (`effect_follow.rs`)
+    pub shield: EeGfxEffectShield,
 }
 
 /// The identity (`GETransformation()`).
@@ -261,6 +280,7 @@ impl EeGfxEffectRecord {
             icon: EeGfxEffectIcon::default(),
             wall: EeGfxEffectWall::default(),
             tracer: EeGfxEffectTracer::default(),
+            shield: EeGfxEffectShield::default(),
         }
     }
 

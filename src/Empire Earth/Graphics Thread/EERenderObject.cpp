@@ -1602,6 +1602,7 @@ static void ApplyLighting(EeGfxLighting inKind)
 
 // the rasterizer as the Rust draws call it (ee_gfx raster.rs), on the current screen
 extern const EeGfxRaster gEERustRaster;
+static std::vector<float> sKeptV;      // the texture coordinates' v that model_scroll_v changed
 const EeGfxRaster gEERustRaster = {
     [](float inValue) { gRasterizer->SetAlphaTestingRefValue(inValue, gScreenIndex); },
     []() -> uint32_t { return gRasterizer->GetFog(gScreenIndex); },
@@ -1627,6 +1628,31 @@ const EeGfxRaster gEERustRaster = {
     [](void* inModel, float inOpacity) -> int32_t {
         bool theSorted = gOrthographicView;
         return gRasterizer->Draw(static_cast<GEModel*>(inModel), gScreenIndex, inOpacity, theSorted);
+    },
+    [](void* inModel, void* inTexture) {
+        static_cast<GEModel*>(inModel)->GetMaterial(0)->SetTexture(static_cast<GETexture*>(inTexture), gScreenIndex);
+    },
+    [](void* inModel, float inDelta) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        sKeptV.clear();
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            float theV = theCoordinate.GetV();
+            sKeptV.push_back(theV);
+            theV += inDelta;
+            theCoordinate.SetV(theV);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
+    },
+    [](void* inModel) {
+        GEVertexArray* theArray = static_cast<GEModel*>(inModel)->GetVertexArray(0);
+        GETextureCoordinate theCoordinate;
+        for (unsigned long i = 0; i < theArray->GetSize(); i++) {
+            theArray->GetTextureCoordinate(theCoordinate, i);
+            theCoordinate.SetV(sKeptV[i]);
+            theArray->SetTextureCoordinate(theCoordinate, i);
+        }
     },
 };
 
