@@ -651,6 +651,15 @@ void EEEffectCaptureSweep()
         {0x23, kOnUnit, 0},        {0x25, kBetweenPoints, 0}, {0x26, kBetweenUnits, 0},  {0x27, kOnUnit, 0},
         {0x33, kUnitToPoint, 0},   {0x3f, kOnUnit, 0},        {0x42, kOnUnit, 0},        {0x43, kUnitToPoint, 0x18},
         {0x44, kOnUnit, 0x3f},     {0x45, kOnUnit, 0},        {0x46, kOnUnit, 0},
+        // R4.4, sixteenth round: the other 3D kinds an entry point makes (after the first fifteen, so their records
+        // are unchanged). Not 0x39 (the 3D particle at a point): its first row (6) faults in EEGraphicEffect::GetMedia
+        // from its SetUp (not tried on the original); the game makes 0x39 through the emitters only
+        {0x24, kOnUnit, 0},        {0x28, kOnUnit, 0},        {0x47, kOnUnit, 0},        {0x3c, kAtPoint, 0},
+        {0x02, kOnUnit, 0},        {0x02, kAtPoint, 0},       {0x40, kBetweenUnits, 0},  {0x40, kUnitToPoint, 0},
+        {0x41, kOnUnit, 0},        {0x41, kUnitToPoint, 0},   {0x34, kOnUnit, 0},        {0x35, kOnUnit, 0},
+        {0x29, kOnUnit, 0},        {0x2b, kOnUnit, 0},        {0x2b, kAtPoint, 0},       {0x2c, kOnUnit, 0},
+        {0x1e, kOnUnit, 0},        {0x3a, kOnUnit, 0},        {0x3a, kAtPoint, 0},       {0x3b, kOnUnit, 0},
+        {0x3b, kAtPoint, 0},       {0x20, kAtPoint, 0},
     };
     EEEffectManager* theManager = gEffectManager;
     if (theManager == NULL)
