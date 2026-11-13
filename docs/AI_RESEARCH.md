@@ -4559,7 +4559,9 @@ The owner's direction: port all of the C++ classic into Lua, so that its decisio
    wonder race and the ICBM (2d), allies (2e), the rest (2f);
 3. benches beyond Small land maps. First on the list (coordinator, 2026-11-13): the late-start economy. At the WW2
    start the port has 22 citizens at 10 minutes against the C++'s 33 (§8.74). An economy that trails the C++'s
-   blocks the deletion, so this cannot stay a known deviation. After it: the wall count (§8.70) and the rest;
+   blocks the deletion, so this cannot stay a known deviation. After it: the ICBM, never yet seen fired (§8.75; a late
+   start at the Nano or Digital Age with cheats, with a scratch script, would show it); the wall count (§8.70); and the
+   rest;
 4. classic_lua as the lobby's classic for a soak;
 5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
 
