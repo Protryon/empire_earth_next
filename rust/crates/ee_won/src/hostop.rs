@@ -419,11 +419,21 @@ pub(crate) struct SetValue<'a> {
 pub(crate) struct Host<P> {
     st: Mutex<P>,
     bind: Mutex<(EeWonHostFn, usize)>,
+    /// bound by the game (`ee_won_hostop_bind_native`): the calls that need no C++ object are answered here
+    /// (hostnative.rs), not sent
+    native: std::sync::atomic::AtomicBool,
+    /// the op's file (the C++ `RustServerOp::mFile` was), for its native file calls
+    file: crate::hostnative::OpFile,
 }
 
 impl<P: Plan> Host<P> {
     pub(crate) fn new(plan: P) -> Host<P> {
-        Host { st: Mutex::new(plan), bind: Mutex::new((None, 0)) }
+        Host {
+            st: Mutex::new(plan),
+            bind: Mutex::new((None, 0)),
+            native: std::sync::atomic::AtomicBool::new(false),
+            file: crate::hostnative::OpFile::default(),
+        }
     }
 
     /// Binds the C++ side's function (`host` its first argument): the tests' stand-ins.
@@ -446,6 +456,11 @@ impl<P: Plan> Host<P> {
         // a call may re-enter the op: never under its lock
         #[cfg(test)]
         assert!(self.st.try_lock().is_ok(), "a call under the op's lock (code {code})");
+        if self.native.load(std::sync::atomic::Ordering::Relaxed) {
+            if let Some(r) = crate::hostnative::answer(&self.file, code, num, data) {
+                return r;
+            }
+        }
         let (f, host) = *self.bind.lock().unwrap_or_else(|e| e.into_inner());
         let mut out: Option<Vec<u8>> = None;
         let mut c = EeWonHostCall {
@@ -732,6 +747,7 @@ impl<P: Plan> Host<P> {
 /// The type-erased op the C++ holds.
 trait HostDyn: Send + Sync {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void);
+    fn set_native(&self);
     fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply;
     fn run(&self);
     fn callback(&self, id: i32, op: Obj) -> bool;
@@ -748,6 +764,9 @@ trait HostDyn: Send + Sync {
 impl<P: Plan> HostDyn for Host<P> {
     fn bind(&self, f: EeWonHostFn, host: *mut c_void) {
         *self.bind.lock().unwrap_or_else(|e| e.into_inner()) = (f, host as usize);
+    }
+    fn set_native(&self) {
+        self.native.store(true, std::sync::atomic::Ordering::Relaxed);
     }
     fn call(&self, code: i32, obj: [Obj; 3], num: [i64; 2], data: &[u8], addr: [u8; 6]) -> Reply {
         Host::call(self, code, obj, num, data, addr)
@@ -814,6 +833,21 @@ impl EeWonHostOp {
 pub unsafe extern "C" fn ee_won_hostop_bind(op: *const EeWonHostOp, f: EeWonHostFn, host: *mut c_void) {
     // SAFETY: the caller's live op
     unsafe { (*op).op.bind(f, host) }
+}
+
+/// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
+/// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
+/// answered in Rust (hostnative.rs) instead of sent.
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_hostop_bind_native(op: *const EeWonHostOp, f: EeWonHostFn, host: *mut c_void) {
+    // SAFETY: the caller's live op
+    unsafe {
+        (*op).op.bind(f, host);
+        (*op).op.set_native();
+    }
 }
 
 /// One call made as the op makes its own (`Host::call`): `call`'s inputs in, its `out_obj`, `out_num` and `out_addr`

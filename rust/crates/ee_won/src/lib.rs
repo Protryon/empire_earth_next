@@ -66,6 +66,7 @@ pub mod guitext;
 pub mod guitree;
 pub mod guiwin;
 pub mod guiwrap;
+pub mod hostnative;
 pub mod hostop;
 pub mod http;
 pub mod httpdoc;

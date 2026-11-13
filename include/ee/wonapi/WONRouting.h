@@ -963,8 +963,7 @@ protected:
 private:
     static void StrSink(void* inContext, const uint8_t* inData, size_t inLength);
     IPAddr AddrOf(int inWhich) const;
-    EeWonHostOp* mRustOp; // owned
-    FILE* mFile;          // the op's file (EE_WON_HOST_FILE_*)
+    EeWonHostOp* mRustOp; // owned (with the op's file: ee_won hostnative.rs)
 };
 typedef SmartPtr<RustServerOp> RustServerOpPtr;
 

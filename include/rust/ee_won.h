@@ -10882,11 +10882,28 @@ bool ee_won_gui_max_width(int32_t new_width,
                           int32_t *out_width,
                           bool *out_rewrap);
 
+/// `HTTPGetOp`'s constructors' proxy file read (`dir`: `WONAPICore::GetDefaultFileDirectory()`, `len` bytes).
+///
+/// # Safety
+/// `dir` holds `len` bytes.
+void ee_won_http_proxy_read(const uint8_t *dir,
+                            size_t len);
+
 /// Binds the C++ side's function (`host` its first argument) before any other call.
 ///
 /// # Safety
 /// `op` is a live op.
 void ee_won_hostop_bind(const EeWonHostOp *op, EeWonHostFn f, void *host);
+
+/// Binds the game's C++ side (`RustServerOp::HostCall`): as [`ee_won_hostop_bind`], and the calls that need no
+/// C++ object (the clock, `rand`, an address resolved, the op's file, the files it measures, the web proxy host) are
+/// answered in Rust (hostnative.rs) instead of sent.
+///
+/// # Safety
+/// `op` is a live op.
+void ee_won_hostop_bind_native(const EeWonHostOp *op,
+                               EeWonHostFn f,
+                               void *host);
 
 /// One call made as the op makes its own (`Host::call`): `call`'s inputs in, its `out_obj`, `out_num` and `out_addr`
 /// written, its bytes (if any) to `call`'s `out_sink`. For the drivers (won_serverop_test): the C++ side's answers
