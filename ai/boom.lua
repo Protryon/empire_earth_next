@@ -1010,7 +1010,13 @@ function M.step(view, memory)
                 unsettled[s.index] = true
             end
         end
-        local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, plan.patches, range,
+        -- (BO.OPT.pre_lean, the owner: 12 on the patches, 6 each, and 3-6 hunting; the third, far patch only when a home
+        -- patch is missing) two patches in the Prehistoric while two home patches stand
+        local patches = plan.patches
+        if ECON.order and BO.OPT.pre_lean and phase == "pre" and #(memory.start_patches or {}) >= 2 then
+            patches = math.min(patches, 2)
+        end
+        local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, patches, range,
                                                unsettled)
         -- (§8.36, the owner: "~18 food citizens: fill beyond the patches with nearby hunting, 3 an animal"): with the
         -- patches short of the plan's food, the game near the town takes the rest
@@ -1253,6 +1259,21 @@ function M.step(view, memory)
                 if keep[s.index] and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil
                         and memory.settle_at[spot_of(s)] == nil then
                     local rank = nil
+                    -- (BO.OPT.pre_lean, the owner's one centre a site, his iron centre serving the stone 2 tiles off: a
+                    -- site whose units a drop site touches, any of its kinds, is served; 44,75's gold and iron got 4)
+                    local served = false
+                    if ECON.order and BO.OPT.pre_lean then
+                        local all = {}
+                        for _, r in ipairs({"food", "iron", "gold", "stone"}) do
+                            if s.holds[r] > 0 and (r ~= "food" or s.patch) then
+                                for _, id in ipairs(ai.resources{kind = r, source = r == "food" and "bush" or "mine",
+                                                                near = {s.x, s.y, 6}, limit = 8}) do
+                                    all[#all + 1] = id
+                                end
+                            end
+                        end
+                        served = #all > 0 and PL.touched(all)
+                    end
                     -- (by resource: a centre's iron may lie 6 tiles from the settlement by its gold)
                     for _, r in ipairs({"food", "iron", "gold", "stone"}) do
                         if swant[r] > 0 and s.holds[r] > 0 and s.drop[r] == 0 and (r ~= "food" or s.patch)
@@ -1290,6 +1311,9 @@ function M.step(view, memory)
                         end
                     end
                     if mines_only and not (s.holds.gold > 0 or s.holds.iron > 0) then
+                        rank = nil
+                    end
+                    if served then
                         rank = nil
                     end
                     if rank ~= nil then
@@ -1357,7 +1381,8 @@ function M.step(view, memory)
                             -- Copper Age's second iron mine stood claimed and unexplored for 30 minutes)
                             PL.walk(view, memory, spot_of(s), s.x, s.y)
                         end
-                    elseif ECON.order and BO.OPT.place then
+                    elseif ECON.order and BO.OPT.place and not (BO.OPT.pre_lean and phase == "pre") then
+                        -- (BO.OPT.pre_lean: no wood settlement in the Prehistoric, the owner builds none)
                         local spot = "w" .. c.x .. "," .. c.y
                         local rids = ai.resources{kind = "wood", source = "tree", near = {c.x, c.y, 3}, limit = 10}
                         if payable and #rids > 0 then

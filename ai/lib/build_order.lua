@@ -45,6 +45,8 @@ M.OPT = {
                             -- mines claimed and settled in the Prehistoric (touching, no food gatherers building); a
                             -- third mine of a resource only past 12 on it; wood 7 until Stone +12; the bank 575
     pre_mines = false,      -- (off until benched) the Prehistoric part of owner_mines alone
+    pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
+                            -- stand, one settlement a site (any kind touched), none for wood
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
