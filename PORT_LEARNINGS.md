@@ -13527,3 +13527,136 @@ no sweep extension was needed: each move is checked against the original C++'s g
 - **Next:** the hurricane (0x24: orbitals and a sound like the virus, the same host calls) after extending the sweep
   to it (golden from f839d277 in a temporary worktree, as round 14), the energy wave, nuclear explosion and goal;
   the 2D twin (`EEE2DRust` over `EEEffect2D`) for the sprite effects.
+
+## R4.3, seventh part: the census, GEModelManager and GETextureManager whole in Rust (ee_ge manobj.rs, texobj.rs; branch rust-ge-next, 2026-11-13)
+
+The Graphics Engine's first whole-class round. Parts one to six moved its math, geometry, plans and text to Rust and
+left every class a C++ shell around them; this round measures what C++ is left per class and moves the first two
+classes whole, in the WON lane's pattern (PORT_LEARNINGS "R6 WON round 26"-"30").
+
+| Commit | What | C++ (`git diff --numstat` over src, include/lle, include/ee) |
+|---|---|---|
+| 02b6e78b | the census tool; the store gate reads the texture cache through accessors and links again | +9 -1, net +8 |
+| 6f6f53df | GEModelManager whole in Rust (`manobj.rs`) | +121 -125, net -4 |
+| 8b6106fa | GETextureManager whole in Rust (`texobj.rs`) | +254 -291, net -37 |
+
+- **The census** (`tools/ge_census.py`): per unit, its code lines and the lines of its bodies that are not one-line
+  forwarders (more than two statements, or two without a call into Rust). At the round's start (logic lines of 3,666;
+  5,982 code lines in 37 units): GESurface 663, GETexture 418, GETerrainMesh 394, GEModel 372 (+120 in
+  'GEModel Load.cpp'), GERasterizer 260, GETextureManager 232, GEBitmap 188, GETransformation 137 (its constructors'
+  member copies), GEFontBitmap 129, GEModelManager 99, GEOpenFormatsFile 83; every other unit under 81. After it:
+  GETextureManager 182 and GEModelManager 66, nearly all of it the hosts' call tables (one switch each, which the
+  census counts as one logic body).
+- **Why the managers, and in this order.** The candidates named for the round were GECamera (no such class: the
+  camera is the game's EECamera), GELight (a header-only record the renderer reads field by field: nothing to move),
+  GEFont and GEText (no logic left after part six), GETexture/GETextureManager and GEModel/GEModelManager. What blocks
+  a whole move is subclasses and members read outside the class (`build/ge7/fields.py`, scratch: a header's members
+  named with `->`/`.` in files that also name the class, an upper bound): GESurface has a subclass (DX7Surface) and
+  its logic is the BMP and JPEG codecs of screenshots; GETexture's members are named in 91 outside files, GEModel's in
+  21 (the renderer, the effects and the graphic objects read their frames, stages, arrays and tag points),
+  GETerrainMesh's in 141, GERasterizer is DX7Rasterizer's base. The two managers have no subclass and private members
+  only (outside readers: their friends, GETexture's `RemoveTexture`/`PromoteTexture` calls and the store gate's
+  digest), and they own the models and textures (a model or texture object lives in its manager's cache): the leaves
+  of the ownership graph, so bottom-up they come first. GEModelManager first (smaller: the pattern), then its twin.
+- **The pattern.** One Rust object per manager (`EeGeModelManager`, `EeGeTextureManager`): the cache (a `BTreeMap` of
+  the name's bytes: `strcmp` order, as the original's `std::map<UString, ...>` with `UString::operator<`), the path
+  (held), the lock, the footprint (`c_ulong`, wrapping like the original's `unsigned long`) and the screen. The C++
+  class's only member is `mRust`; its methods are one-line forwarders; its copy is deleted. Every call the original
+  made on another object is one host operation (`EeGeManOp`; `GEModelManager::Host`, `GETextureManager::Host`,
+  private static members so they keep the classes' friend access to GEModel's and GETexture's privates), in the
+  original's order: the lock (the engine's `TSCriticalSection`, kept: it is recursive, and a load may come back into
+  its manager on the same thread), the path's references, the constructors, `SetSubModel`, `StoreLoaded`, `Load`,
+  `SizeOf`, `GetAllocatedSize`, the stage setters, the base `Dereference`, the reference count, the file lookups and
+  frees and the dump's `fprintf`s. A texture's fields the original read or wrote directly (`mIsFromTexturePack`,
+  `mTexturePackMipLevels`, `mNumMipLevelsToDrop`, `mIsManaged`, its stage) are host operations too (`EeGeTexField`,
+  `EeGeTexStage`, both and `EeGeTexLoad` in cbindgen.toml's `include`: no exported function names them).
+- **Calls back in.** No Rust reference to an object lives across a host call (each access is one statement through
+  the raw pointer), and every walk of a cache goes by key, to the entry after the current name: an insertion or
+  another entry's removal by a callee leaves the walk where the original's `std::map` iterator would be.
+- **The surface description** is a `#[repr(C)]` mirror (`EeGeSurfaceDescription`; GETextureManager.cpp
+  `static_assert`s its size and offsets against `GESurfaceDescription`, and the texture description's mirror
+  against `GETextureDescription`). `GETexture::Load` writes into it, and `RefreshAllTextures` keeps one for every
+  texture as the original's local did: a `mNoAlpha` a load wrote reaches the next texture's load (a mutation that
+  starts each texture with a fresh description changes 5,938 golden sequences).
+- **The goldens** (scratch, `build/ge7/golden`: `build.py mod|tex orig|cur`, `mutate.py`): the manager's unit of the
+  census commit 02b6e78b (unmodified, by `git show`) or the worktree's, its engine includes replaced by traced fakes
+  (`fake_ge.h`, `fake_tex.h`: models, textures with frames, stages and surfaces, paths, the lock, the file lookups,
+  a `UString` in `strcmp` order) and linked with a scratch staticlib of `ee_ge`. Random sequences of every method and
+  of the callers' own actions (references taken and given back; `GETexture::Dereference` from a holder, which calls
+  `RemoveTexture`; `Promote`; the texture pack's settings), with calls back into the manager from inside a load; the
+  texture driver traces every live texture's fields after each call. GEModelManager: 20,000 sequences, 3,668,661
+  trace lines; GETextureManager: 20,000 sequences, 7,397,266 lines. Relinked over the shells and the Rust objects,
+  both print the same per-sequence digests. The first 40 sequences are `golden_modman.txt` and `golden_texman.txt`,
+  which cargo replays through a mock host keeping a world of the objects (reference counts, texture fields,
+  surfaces) from the trace's lines (`manobj_tests.rs`, `texobj_tests.rs`); the replays fail on a Rust mutation (four
+  checked: the footprint's subtraction, RemoveAll's result, the pack shift, the pack name's stem).
+
+  | Golden | Mutation of the Rust | Sequences of 20,000 that change |
+  |---|---|---|
+  | models | RemoveModel answers 3 for a model in use | 11,081 |
+  | | a removal adds its size to the footprint | 10,724 |
+  | | RemoveAllModels answers the last decision | 5,866 |
+  | | SetModelPath holds the new path before releasing the old | 10,847 |
+  | | LoadModel misses cached models | 19,559 |
+  | | a load adds nothing to the footprint | 12,714 |
+  | | a failed store keeps the model | 19,595 |
+  | textures | a reload keeps the old size in the footprint | 636 |
+  | | the refresh holds no frames | 19,885 |
+  | | the refresh copies the min filter before the mag filter | 9,400 |
+  | | the pack is asked for the name, not its stem | 3,348 |
+  | | a cached texture's reload ignores its pack | 19,600 |
+  | | a made texture is not managed | 19,992 |
+  | | the refresh starts each texture with a fresh description | 5,938 |
+  | | UpdateMIPFilterMode sets every texture | 9,165 |
+  | | a pack texture's logical shift is not set | 5,460 |
+
+  The restored source changes 0 in both. A panic in the mock host cannot unwind through the object's `extern "C"`
+  host call (the test process aborted): the hosts catch it and the replay reports it after the call returns.
+- **Two undefined paths of the original the fakes avoid**, both in `RefreshAllTextures`: the frame list is one
+  `std::vector` for all textures, read after the load with the load's frame count (a load that adds frames reads
+  stale or missing entries: the fakes' reloads never add frames; the Rust reads a missing entry as NULL instead of
+  past the vector); and a frame-format-1 texture's `GetFrameTexture` is its `mFrames[0]`, which `Load` does not set
+  for that format. When it is the texture itself, its `Dereference` at the last outside reference removes it from the
+  cache under the walk: the original then stepped from a freed node (the first fakes did this and the two sides
+  parted at sequence 43), the Rust goes on with the next name. The fakes give a grid texture a frame of its own.
+- **Behaviour changes:** none on the original's defined paths. LoadModel's two `TSScheduler::GetCurrentThreadIndex`
+  calls (results unused) are gone; `GetTextureAt` past the end is NULL; the two undefined refresh paths above.
+- **The counters** of made textures and created models stay process-wide (`managers.rs`). The replays set them from
+  the trace (the driver's `ext made N`, a created model's name) under `managers::test_globals`, a lock the counters'
+  and the texture pack's own tests now take too.
+- **The store gate links again** (census commit): the mixer's objects pull in ee_sound's music, whose C++ side
+  (`ee_musiccpp_*`) is the game's; the gate links with `/FORCE:UNRESOLVED` and fails on any other unresolved
+  symbol. It passes after each move: every model and texture of the open tree through LoadModel, LoadTexture,
+  ReloadTexture and RefreshAllTextures, 25,140 lines equal to the recorded digests.
+- **What runs it.** EE-SIM does: a temporary count of host operations in an oracle run (removed) showed both
+  managers creating, loading, sizing, removing, refreshing (`TexSurfaceDescription`) and setting stages; the oracle
+  stayed identical. The store gate runs every real file through them. Only the game runs the paths that need a
+  device or a person: textures made from the screen's surfaces (`MakeTexture` for the UI's surfaces), the device
+  loss refresh, `UpdateMIPFilterMode` from the settings, `DumpAllLoadedMedia`, and the texture pack's log
+  (`EE_TEXTURE_PACK_LOG`, posix_game.py's evidence). The lead's tour and menu pixel comparison check the textures
+  and models drawn.
+- **Lessons:**
+  - Python's `write_text` on Windows writes CRLF (round 26's lesson): a scripted edit turned two Rust files and
+    `rust/cbindgen.toml` into CRLF before the commit (caught by `file`); use `read_bytes`/`write_bytes`.
+  - The Bash tool's heredocs lose backslashes (`\n` inside a Python string became a newline, a regex lost its
+    escapes): edit text with backslashes through the editor tool, not a heredoc.
+  - A class whose methods are mostly calls on other objects keeps about as many C++ lines as a host as it had as
+    methods: the gain is the decisions, walks and state in Rust (and the goldens), not the line count.
+- **Gates.** Each move: build `--sim` 0/0 (EE-AOC and EE-SIM), `rust_build.py gate` PASS, the oracle identical on
+  seeds 2-3, the store gate PASS (25,140 lines). At the round's end (`rust` had not moved since 5d3ce6a9, which the
+  branch's base already holds: nothing to merge): the oracle identical on seeds 2-7, the captures at seeds 2-3 PASS
+  (oracle 169, late 170, calamity 183 digests; TNMT has no golden in any of them, as before this round), the test
+  profile 0/0, the Rust gate PASS. Nothing saved moved (the managers are not in a save): no saveload matrix. Not run:
+  any harness session (the tour, the menu pixel comparison, the LAN game), macOS or Linux builds.
+- **The merge of `rust`** (57ae2ad1: WON round 31, the LLE lane's round 1, the renderer's round 14, combat 15, core 21;
+  it moved during the round): only the docs and cbindgen.toml's `include` list conflicted (both sides appended).
+  `rust_includes.py` gave the two manager headers `rust/ee_ge.h` in place of their forward declarations of the Rust
+  object and `EeGeManOp` (kept, its own commit: the tool's convention, as `GETextureSet.h`'s, so the next run leaves
+  them alone; every unit including a manager header now sees ee_ge's header) and re-added `rust/ee_screens.h` to the
+  two scenario editor files (not committed). On the merged tree: build `--sim` 0/0, the Rust gate PASS, the store
+  gate PASS, the oracle identical on seeds 2-7, the captures at seeds 2-3 PASS (oracle 169, calamity 183; late failed
+  once on seed 3's message counts, NMEX/NMIM 5 -> 6 with NMDC and USCK one more, the load flake PORT_LEARNINGS
+  records for calamity seed 3, and passed with 170 on a rerun), the test profile 0/0.
+- **Left** (by the census): GESurface (codecs; a subclass), GETexture and GEModel (accessors for their outside
+  readers first, as WON's census rounds did), GETerrainMesh, GERasterizer, GEBitmap, GEFontBitmap,
+  GETransformation's member copies.
