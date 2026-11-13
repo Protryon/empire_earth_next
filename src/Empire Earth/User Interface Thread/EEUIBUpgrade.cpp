@@ -129,7 +129,7 @@ void EEUIBUpgrade::ButtonUp()
         }
     }
     this->GetForm()->UpdateHelpString();
-    if (this->mState == kButtonStatePressed)
+    if (this->GetState() == kButtonStatePressed)
         UIButton::ButtonUp();
 }
 

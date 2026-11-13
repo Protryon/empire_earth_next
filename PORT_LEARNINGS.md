@@ -13660,3 +13660,195 @@ classes whole, in the WON lane's pattern (PORT_LEARNINGS "R6 WON round 26"-"30")
 - **Left** (by the census): GESurface (codecs; a subclass), GETexture and GEModel (accessors for their outside
   readers first, as WON's census rounds did), GETerrainMesh, GERasterizer, GEBitmap, GEFontBitmap,
   GETransformation's member copies.
+
+## R6: the toolkit's first whole classes: UISlider, UIScrollBar and UIStatusBar in Rust (ee_ui obj.rs, sliderobj.rs, scrollbarobj.rs, statusobj.rs; branch rust-r6-ui10, 2026-11-13)
+
+Round 9's audit left the toolkit's logic all in Rust and its C++ as object lifetime, factories, call sequences and
+container plumbing; this round starts moving the classes themselves, WON's pattern (rounds 22-29): a Rust object
+holds a class's state and every method, the C++ class is one-line forwarders, a constructor and destructor that make
+and free the object, and one host function (the op switch).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 74a7c8a5 | UISlider whole; the shared host ops (`obj.rs`, `UIObjHost` in UIControl.cpp) | -108 |
+| 04ebe914 | UIScrollBar whole | -164 |
+| e78a4d00 | UIStatusBar whole | -90 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 17,729 at the branch's start ->
+17,367. The three record FFI modules (`slider_ffi.rs`, `scrollbar_ffi.rs`, `status_ffi.rs`) are deleted; the
+arithmetic modules of rounds 1-7 (`slider.rs`, `scrollbar.rs`, `status.rs`) stay, with their goldens, as the objects'
+algorithms (the objects implement their `SliderHost`/`ScrollBarHost` traits over host ops).
+
+- **Why these and in this order.** Bottom-up and by outside coupling. The census (every member of the three classes
+  grepped across `src`, `include` and `tests`, no limit) found no reader of their fields outside their own units:
+  the scroll bar reached the slider only through methods (it was a friend for the protected ones), and the members
+  of the same names in EEUICChatLine and EEUICWonNetGamesBox are those classes' own. So no census commit was needed.
+  The slider is a leaf (one subclass, EEUIFSEESElevation, overriding the virtual `ChangeRange`); the scroll bar
+  owns a slider and two arrow buttons; the status bar is a leaf with no subclass. The next candidates have more C++
+  and more coupling: UICheckBox/UIRadioButton (eight game subclasses of the radio button, the form's radio walk),
+  UITextLabel (UITLScrolling derives from it; many outside `SetText` callers), UIEditBox (its lines stay a
+  `std::vector<UWideString>` the Rust text model edits through host calls) and the `UIListBox<T>` template.
+- **The host.** `obj.rs`: one `EeUiOp` enum for every whole object (numbered per class: 1-12 UIControl's, 20-28 the
+  slider's, 40-62 the scroll bar's parts, 70-84 the status bar's rhombi and texts), one host signature
+  `(object, op, a, b, c, d, float[4])`; a rectangle travels in `GERectangle`'s member order. `UIObjHost` (a friend of
+  UIControl, in UIControl.cpp) answers the base-class ops and the ops on an owned part (another control's protected
+  virtuals by address, its `delete`), so each class's host switch is only its own ops. Virtuals that subclasses
+  override (`ChangeRange`, `ButtonDown`, `ButtonUp`, `SetDirty`, the parts' handlers) go through the C++ object; no
+  Rust borrow lives across an op (the elevation slider's `ChangeRange` reads the slider back, a trigger event may
+  too).
+- **What stays C++.** The constructors' `UIControl` part (the scroll bar's needs its rectangle first: the layout
+  export stays), the parts' `new` (the scroll button's constructor is private to its friends), the status bar's two
+  `GERhombus` members (the rasterizer draws them by address; the Rust reaches them by rhombus ops, as WON's combo
+  box reaches its parts). The C++ methods nothing calls were dropped from the classes (the slider's
+  `GetCurrentPoint`, `SetCurrentPoint`, `GetLocFromRange`, `GetRangeFromLoc`, `GetThumbRectangle`, drag accessors,
+  `GetMinRange`, `GetPageSize`, `GetRange`; the scroll bar's `Get{De,In}crementButton` and page steps); the Rust
+  objects keep every method (the goldens call them). The copy constructors are `= delete` (an object holding a Rust
+  pointer must not be copied; nothing copied one).
+- **Behaviour.** No change on any path the original defined. The slider's constructor called `SetRange(0, 0)` on
+  members it had not set; whichever way that compare went the state ends the same (range 0, scales 0, value 0), and
+  the Rust object starts there. The slider's copied thumb starts zeroed (the original's was unset until the first
+  `CopyData`; a draw before it read garbage).
+- **The goldens** (scratch drivers in `build/ui10`, as rounds 1-9's: `build.py PIECE orig|cur [SEED COUNT]`,
+  `world.h`, `cmpseq.py`, `mutate.sh`). A driver is a world (the base control's rectangle, the mouse, the drag bar's
+  scales, the manager's bitmaps, the parts as leaves with rectangles, a slider style and value that their handlers
+  step, the rhombi, texts whose length and extent follow the string and the font) and 20,000 random sequences of 40
+  calls. `orig` runs a reference class, the statements of the unmodified unit (c7231f0d) over the record FFI they
+  called; `cur` runs the Rust object. Both print one trace: every impure call out with its arguments and answer, the
+  world's `set` lines for the pure reads, the world's re-entrant calls (`do`: the elevation override reading the
+  value and calling the base, a trigger reading the value, the virtual `ButtonUp`) with their results.
+
+  | Golden | Trace lines | orig = cur | Mutation | Sequences failing |
+  |---|---|---|---|---|
+  | slider | 3,899,085 | yes | the thumb drawn at the live rectangle, not the copy | 13,716 |
+  | | | | the thumb's y scale from the x scale | 13,842 |
+  | | | | the range trigger fired before the value is set | 17,184 |
+  | scroll bar | 5,170,684 | yes | the slider drawn after the increment button | 16,406 |
+  | | | | the decrement button made as an increment one | 20,000 |
+  | | | | the parts deleted in another order | 20,000 |
+  | | | | `SetCurrentRangeValue`'s `unsigned long` -> `long` dropped | 4,212 (see below) |
+  | status bar | 4,298,663 | yes | an empty copied fill drawn | 20,000 |
+  | | | | `GetRange` without the + 1 | 18,515 |
+  | | | | the fill set after `SetCurrentRangeValue` in `SetLocation` | 19,999 |
+  | | | | a one-character text not copied | 19,554 |
+
+  The first scroll bar driver passed the value as a negative `intptr_t`, which the cast leaves alone, so that
+  mutation passed (0 sequences); the C++ shim passes an `unsigned long` zero-extended. The driver now passes it that
+  way (its base is the trace with the new inputs over the unmutated object, after orig = cur was shown). The first
+  25 sequences of each orig trace are `golden_{slider,scrollbar,status}obj.txt`, replayed by cargo
+  (`obj/replay.rs`: an interpreter of the trace, the pure reads answered from the `set` lines); each replay also has
+  a test that a changed line fails.
+- **Lessons.**
+  - A panic inside the replay's `extern "C"` host aborts the test binary (`panic in a function that cannot unwind`,
+    STATUS_STACK_BUFFER_OVERRUN): the replay catches it, keeps the first, and raises it after the inward call
+    returns.
+  - A header that loses an include breaks units far away: UISlider.h had pulled in `lle/GEBitmap.h` for its inline
+    destructor, and units including it relied on that for UIButton.h. The include stays.
+  - Measure mutations with the inputs the shim really passes (the cast above).
+- **What runs it.** EE-SIM's games never build a slider or a status bar (the oracle, seeds 2-3, identical after each
+  commit). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the editor's sliders (the
+  elevation tab's EEUIFSEESElevation, the player and trigger tabs' sliders) and sets and reads their values through
+  the shim, and the editor's list and edit boxes make scroll bars: the constructors, ranges, values and the virtual
+  `ChangeRange` with its override run there.
+  **Only the lead's tour shows:** every draw (the slider's thumb location, scale and draw; the scroll bars' parts
+  copied and drawn in their order in every list, edit box and scrolling label of the menus; the status bar's fill
+  and text: the loading screen's progress bar `kSplashLoadStatus` and the in-game EEUIFMGStatusBar), the mouse on a
+  slider or a scroll bar (a drag, a page click, the arrow buttons' repeat) and the settings screen's volume and speed
+  sliders. The menu pixel comparison covers the static draws; drags and clicks run only in the goldens.
+- **Left:** UICheckBox, UIRadioButton, UITriStateCheckBox and the other buttons (the radio walk over sibling
+  objects), UITextLabel with UITLScrolling, UIEditBox, the list boxes, the combo box, the form and the manager; then
+  `UIControl` itself (the base ops would become the objects' own).
+
+## R6: UIButton whole in Rust; the subclasses' census (ee_ui buttonobj.rs; branch rust-r6-ui11, 2026-11-13)
+
+Round 10's pattern applied to the toolkit's most-subclassed control: `UIButton` has seven toolkit subclasses
+(`UIDualButton`, `UIScrollButton`, `UIBlinkingButton`, `UIScalableButton`, `UICheckBox`, `UIRadioButton`,
+`UITriStateCheckBox`) and sixteen in the game (the scenario editor's tabs and tool buttons, the in-game status,
+upgrade, colour and saved-group buttons, the error dialog's OK/Cancel).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| fd53b109 | Census: the subclasses' reads of UIButton's members behind methods | +3 |
+| 7745725f | UIButton whole (`buttonobj.rs`); UIDualButton's handlers on it; `UIObjHost::Media` | -217 |
+
+- **The census.** Grepping every member of UIButton across `src`, `include` and `tests` found these outside readers:
+  the game's `EEUIBUpgrade` and `EEUIFMGStatusButton` (`mState`), `EEUIBSavedGroup` (`mBitmapLocation`), the
+  editor's unit tab and main buttons (`mBitmapDrawOffset`), and the toolkit's blinking, scalable, check and radio
+  buttons (`mState`, the bitmaps, `mCopiedBitmap`, `mBitmapLocation`, `mTextRectangle`). They now call `GetState`,
+  `GetBitmapLocation`, `GetCopiedBitmap`, `SetTextRectangle`, `SetBitmapDrawOffset`, and (the radio button's swaps,
+  which never dirtied the button) `ReplaceNormalBitmap`/`ReplacePressedBitmap`. `EESEUIBDiplomacy::mState` is that
+  class's own member (it shadows UIButton's) and stays. `UIBlinkingButton::DrawPolygons` calls UIButton's: the
+  original ICF-folded the two identical bodies.
+- **The move.** `EeUiButton` holds `ButtonFields` (round 3's record, now Rust memory) and implements round 3's
+  `ButtonHost` over ops, so the state machine (`button.rs`) and its goldens are unchanged. `UIButton.cpp` is the
+  forwarders (the header's inline getters and setters became out-of-line forwarders), the constructor (its
+  `mBorderType = 1` stays C++) and destructor, `UIButtonHost::Op` (the virtuals `ButtonDown`, `ButtonUp`,
+  `MouseOver`, `MouseMove`; the sound manager's `Load`, `Unload`, `Play`) and the label host calls the check and radio
+  buttons use. The copy constructor is `= delete` (nothing copied a button).
+  - UIControl's ops grew (13-19, 90-94: index, border type, tab stop, tabbing, tabable, mouse capture, right button,
+    key states, keyboard capture). `mBorderType` is written by an op only when it changes: the original wrote it on
+    every record store, which is not observable.
+  - The bitmap and text ops every whole object uses moved into `UIObjHost::Media` (reference, release, location,
+    draw; create, delete, font, length, extent, copy, text, location, colour, clipped draw); the slider's and status
+    bar's hosts lost their copies, and the slider-named ops became `BitmapRelease`/`BitmapSetLocation`/`BitmapDraw`
+    and `ButtonDown`/`ButtonUp` (the same numbers, so round 10's goldens are unchanged).
+  - The subclasses' records (the check box's, the radio button's, the scroll arrow's `mDecrement`) are still C++
+    members: `ButtonRefs` now names the C++ object, its `EeUiButton`, the record and the forwarder's context, and
+    `Btn` (the button's host) also implements the subclasses' host traits over their `ee_uicpp_*` calls. The
+    record FFI of UIButton itself (`ee_ui_button_init`, the eleven `ee_ui_button_*` handlers, the two dual ones) and
+    its 25 `ee_uicpp_button_*` host calls are gone.
+- **Behaviour.** No change. The emptiness test of the button text reads `GetLength()` (an op) instead of the text's
+  bytes; the two agree.
+- **The golden** (`build/ui11/button_driver.cpp`, the round-10 tooling in `build/ui11`). The world: the control's
+  rectangle, border, index and border type, the form's tab stop and tabbing, the mouse and its capture, the right
+  button, the four key states, texts (length and extent follow the text and the font), bitmaps and sound ids as
+  handles; the virtuals run UIButton's own or a subclass's that reads the state (or `GetIsButtonDown`) before the
+  base; trigger events read the button back. 20,000 sequences of 40 calls over all 38 inward calls. `orig` is the
+  census commit's UIButton.cpp/UIDualButton.cpp statements over that commit's record FFI, linked against a saved copy
+  of that commit's Rust library and header (`lib_orig.lib`, `orig_include`): the border type it stores goes to the
+  world at its next op, as the Rust object's change-only op does.
+
+  6,719,589 trace lines, orig = cur byte for byte (same sha256). Mutations:
+
+  | Mutation | Sequences failing |
+  |---|---|
+  | the copied bitmap's new reference taken before the old one released | 8,938 |
+  | the old sound unloaded after the new one loaded | 4,264 |
+  | the destructor releasing the copied bitmap first | 12,421 |
+  | the pressed bitmap defaulting to the focused one | 19,523 |
+  | `ReplaceNormalBitmap` dirtying the button | 9,415 |
+  | the copied text drawn at its rectangle's bottom-left | 1,709 |
+  | the focused text colour's green and blue swapped | 2,662 |
+  | `GetCurrentBitmap` of an unknown state answering the normal bitmap | 0 (no state outside 0..2 is reachable) |
+
+  The first 25 sequences are `golden_buttonobj.txt` (8,343 lines), replayed by cargo, with a changed-answer test and
+  a re-entrant `ButtonUp` override test.
+- **Lessons.**
+  - Python's `write_text` on Windows writes CRLF: four LF sources became CRLF in the working tree (a 650-line diff
+    of `UIControl.cpp`); edit with `read_bytes`/`write_bytes`. Check `git diff --numstat` before committing.
+  - A mutation whose site did not match printed the unmutated trace's sha: always treat "same sha as the base" as
+    "not applied". Multi-line mutation text did not survive the shell's argument passing; `mutate.sh` now takes `\n`
+    and prints `MUTATION NOT APPLIED`. Stopping a mutation run mid-way left the driver exe running and a mutated
+    source behind (the restore is the script's last step): after stopping one, compare the source with the saved
+    copy and kill the driver.
+- **NULL-receiver audit** (round 30's lesson). Every original UIButton method, the header's inline ones included,
+  read a member of `this` before anything else (the getters, `ChangeFont`'s `mText`, the setters' old bitmap, the
+  state machine's record), so no original method tolerated a NULL receiver that a forwarder reading `mRust` would
+  not; the virtual ones dispatched through the vtable first. No early-out needed keeping.
+- **What runs it.** EE-SIM never builds a button: the oracle is unchanged by construction (seeds 2-3 after the
+  commit, 2-7 at the end, identical). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the
+  editor's tab radio buttons, tool buttons, check boxes and the unit tab's buttons, so the constructors, the
+  bitmap setters, `SetText`, sounds and the destructor run there through the shim. **Only the tour shows:** every
+  button draw (the copied bitmap and centred text, the focused colour), the mouse on a button (press, drag off,
+  release, the trigger events the menus listen for), Space/Enter on a tabbed button, the right button on dual
+  buttons, the scroll arrows' repeat, the check and radio buttons' clicks through the button object, the blinking
+  and scalable buttons' draws (the menus' scalable buttons, the in-game blinking ones).
+- **The tour** (authorized for this round; harness lock held): `fixture_game.py --exercise tour --play-seconds 60`
+  on the test-profile build: `RESULT PASS tour` (main menu, the three settings tabs, single player, random-map setup,
+  play; no GX errors). A first attempt timed out before any form (`form None`): it was the worktree's first run, which
+  built the open data tree for eleven minutes while a stray copy of the wait script (a stopped background task whose
+  inner loop survived TaskStop) started a second fixture_game on the same tree. A menu run with the main checkout's exe
+  and then with this branch's both reached the main menu; the rerun passed. Lesson: stopping a background shell does
+  not stop its children; check for leftover processes before starting a harness session.
+- **Left:** `UICheckBox`, `UIRadioButton`, `UITriStateCheckBox` (their records into the button object; the label as
+  a part; the radio walk over sibling objects), `UIScrollButton`'s polls, `UIBlinkingButton` and
+  `UIScalableButton` (small records), then `UITextLabel` with `UITLScrolling`.

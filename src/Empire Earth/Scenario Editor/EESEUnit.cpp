@@ -442,7 +442,7 @@ EEUIFSEBUnitType::EEUIFSEBUnitType(unsigned long inID, GEBitmap* inUp, GEBitmap*
     this->SetDownUncheckedBitmap(inDown);
     this->SetUpUncheckedBitmap(inUp);
     this->SetFocusedBitmap(inFocused);
-    this->mBitmapDrawOffset.SetXY(0.0f, 0.0f);
+    this->SetBitmapDrawOffset(GE2DPoint(0.0f, 0.0f));
 }
 
 // SYNTHETIC: EXE 0x59a18b
