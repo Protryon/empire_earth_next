@@ -10696,3 +10696,80 @@ Round 4's pattern (RUST_PLAN's row) applied to the campaign editor (form 24); ro
   deletes nothing (the only saving there is a C++ refactor of the three `Open*`). The civilization builder's helpers
   (`EECivilizationBuilder.cpp` 617, `EECBUIListBox` 835) are thin toolkit calls with C++ callers across the builder's
   units; they wait for the builder's files to move.
+
+## A citizen waiting for a gather spot whose goal is no gather (EE-SIM, 2026-11-12)
+
+- **Crash:** `EEUGGather::FindGatherSpot` read `this->mResource` through a NULL `this` (c0000005, every time at
+  105 minutes in one seed of boom_order against the improved classic). `EEUGBuildRepair::BeginRepair` asks the units on
+  the site to step aside (`EEStepAsideFromSite`), and `EEComplexUnit::StepAside` takes a unit in
+  `kActionWaitForOpenPosition` to have an `EEUGGather` goal: `dynamic_cast<EEUGGather*>(GetGoal())->FindGatherSpot`.
+  This unit's goal was something else (probably a new order from a script, given while the action had not changed
+  yet). Frames resolved from `EE-SIM.map` by address (the image loads at its preferred base).
+- **Fix:** a NULL cast skips the gather-spot search; the unit stays where it is.
+
+## The mouse pointer's save-under under GX (full screen, 2026-11-12)
+
+- **Symptom**: in full screen (not windowed), moving the mouse left white squares and pieces of the pointer along its
+  path, over the menus (Game Setup) and the game's top and bottom bars: everywhere the UI is redrawn only where it
+  is dirty. The 3D view, redrawn every frame, hid them. The harness never saw it: its build is windowed.
+- **Two save-unders, a DirectDraw flip chain behind them.** RTSMouse keeps two save-under records and swaps them every
+  pointer frame. The graphics thread saves under the pointer, draws it, shows the frame and restores: windowed the
+  record it just saved (the back buffer keeps its pixels after the blit to the window), in full screen the previous
+  one, because a flip hands back the frame before last with the previous pointer in it. GX's Flip presents a copy of
+  the back buffer and keeps it, so that full-screen restore put back a stale rectangle: the pointer drawn this frame
+  stayed until the next one, and the next save took pieces of it in (the fragments).
+- **The mouse-pointer thread draws on the primary.** Every 25 ms, when the pointer moved, RTSMousePointer restores,
+  saves under and draws the pointer straight onto the screen (the original's pointer between frames), with the same
+  records. GX's primary has no texture and sampling it gives white, so its save-under was white; the graphics
+  thread's full-screen restore of "the previous record" then wrote that white rectangle into the back buffer.
+- **Fix**: RTSGraphics::Render restores the frame's own record in full screen too (the windowed restore), and a GX
+  blit from the primary reads what the window shows (the window image with the pointer's partial blits, else the last
+  whole frame, in its coordinates) instead of white; in full screen, where Flip leaves no such frame, it leaves the
+  target alone. Evidence, from a throwaway build that dumped the presented GPU copy and moved the pointer a little
+  every frame (full-screen Game Setup, WARP): before, 2,517 graphics-thread restores of a pointer-thread record and
+  3,125 white 8x8 blocks after 17,600 frames; after, none in full screen or windowed.
+- **Not a regression of a recent commit**: both halves date from the GX renderer (2026-11-04). The harness and
+  windowed play never show it, and how often the pointer thread runs between two frames depends on timing.
+- Dumping a frame by setting the surface's CPU copy valid changes which path later blits take (CPU blits instead of
+  GPU ones), and that hid the bug: dump frames without changing a surface's CPU/GPU state, or the evidence lies.
+- The harness cannot see this class of bug: the test profile is windowed and the gates check milestones. A
+  full-screen check needs a display. A disconnected session (this machine's RDP) still renders (WARP), but a BitBlt
+  of the screen captures white.
+
+## The merge of main a2c4347e into the rust branch (the Lua AI's ferry and guard work, the classic's gather capacity; 2026-11-12)
+
+50 commits of main (since 79be8619; almost all Lua AI work: `ai/classic_lua/ferry.lua` and `army.lua`, `lib/guard.lua`,
+`lib/build_order.lua`, `boom.lua`, AI_RESEARCH to §8.63) merged into `rust` as `git merge origin/main` (branch
+rust-mainmerge2). Main changed none of `EECPLua.cpp`, `EECPLua.h` or `EECPNextUnits.cpp`: nothing to port into ee_ai.
+
+- **Conflicts.** `EEComplexUnit::StepAside`: rust's `EEGoalCast<EEUGGather>` with main's NULL check (a waiting unit
+  whose goal is no gather; `EEGoalCast` answers NULL as `dynamic_cast` did). `GX.cpp` is Rust here (ee_gx): main's
+  blit from the primary (a copy from the window reads what it shows: the window image while it holds partial blits,
+  else the last whole frame, in that frame's coordinates; nothing shown leaves the target alone) went into `gx.rs`'s
+  `blt`, with a test. `RTSGraphics.cpp` (the full-screen pointer restore) merged as it is. PORT_LEARNINGS.md: both
+  sides' sections (`git merge-file --union` on LF copies, written back CRLF). Only a full-screen session shows the
+  pointer fix: the lead's tour is windowed.
+- **Equivalence with main, measured on main's own exe.** origin/main built in a temporary worktree. Main's EE-SIM has
+  no `--checksum-trace` or `--save-at`, and reads `dbrandommap.dat` (plus the other db files without a text form),
+  which this branch's open tree no longer has: its tree was the shared tree hard-linked with main's own `Data/db`
+  (main's eedata from the installs; scratch `build/mm2/tools/maindb.py`). On EE-SIM traces (decision and sim-hash
+  lines): boom, classic_lua and ageofai seeds 2-3 (2700 s, `--ai-scripts ai`) identical, six of six; the oracle seeds
+  2-7 identical; the space profile's seeds 2-7 identical. The late profile parts on seeds 2, 4-7 (seed 3 identical),
+  and that is older than this merge: main at 79be8619 parts from this branch's late seeds 2 and 7 at the same lines
+  (a gatherer list holding a dead fishing boat on main; rust's `UnitLost` fix cd6233db alone is not it: a control
+  without it plays as the merge). Calamity, missile and scenario have no main counterpart (main's EE-SIM lacks them).
+- **The rebaseline** (declared, its own commits). Main's `GetGatherCapacity` change (8ad91423) changes every oracle
+  seed: the new reference `build/rust_oracle/mm2-ref` (with the checksum lines) in this worktree, recorded twice,
+  identical. Capture goldens re-recorded from the merged build for exactly the changed games: oracle 2-7, late 4-6,
+  space 3, 6, 7, missile 2-7 (its sweep follows the oracle game), calamity 7; late 2, 3, 7, space 2, 4, 5,
+  calamity 2-6 and scenario 2-7 give their old digests. Two one-run flakes under load, both equal to the golden on a
+  rerun: calamity seed 3's message counts (NMEX/NMIM 3 -> 4, NMDC and USCK one more) and scenario seed 4's lobby
+  timeout. Reading the check's output by eye misleads: after a dropped tag it pairs golden and got lines one apart
+  (late seed 7 looked changed and was not); compare the digest with the golden by tag instead.
+- **saveload_expect.** The next rows are unchanged; 12 rows do better and 5 worse. The oracle seed 2 save at 1000 s
+  no longer continues identically (parts 14 ticks after the load): at the save's tick the loaded resource manager's
+  mine list (`mMines`) holds 27 units where the continued game's holds 8 (`--dump-at` against `--dump-load`), and
+  main's capacity count now reads it; a control build with main's change reverted gives the old rows. A save gap to
+  fix in its own round, not a merge error.
+- Disk: main's build in a worktree took about 40 minutes under the machine's load (SDL3 and every unit compiled
+  again under its own staging root); a second staging root (`C:/EEX-mm2main`) is left for the lead to delete.
