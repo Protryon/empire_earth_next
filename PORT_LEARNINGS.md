@@ -11090,6 +11090,30 @@ Measured by net C++ deletion (src and include/ee, git numstat).
   run of the parent exe), the Rust gate PASS; captures at seeds 2-3: oracle, calamity, late, missile (the leaves),
   oracle and calamity (the seen test). ee_combat tests: 14 new (leaves_tests.rs). Nothing drawn changed; the seen
   test is also the UI's (the mouse click, the main game form's status, the minimap), which only a tour exercises.
+- **The merge with core round 18 (and `rust` 5cfc3c6b).** Three silent clashes a textual merge leaves:
+  - the goal operation 20: round 12's `SetPathAttempts` and core's `AddCreatedUnit` (combat's is now 22, in ee_units,
+    ee_combat's mirror and ee_rust's assertion); ee_rust gains `goal_op_tables`, a test that reads both crates'
+    sources and fails when combat's mirrors differ from ee_units' numbers or combat's own bodies (200 up) and host
+    operations (1000 up) reuse a number of ee_units' bodies or host operations;
+  - ee_units' kind dispatch hands the kinds it does not list to ee_combat: core's two load kinds were missing from
+    that list after the merge (their goals would have reached the combat bodies: every load goal a no-op);
+  - core grew `EeUnitsGoalIo` (8 floats, a handle list): ee_combat's mirror `EeCombatGoalIo` follows (ee_rust's
+    layout assertion stopped the build). The combat host operations stay the host switch's `default:`, now after
+    the load goals' cases. A union resolution of a header also lost a closing brace (`EEAttackUnitCast`): the first
+    error was 30 lines up the log, every later one in an AI unit.
+- **The heal goal is still not moved.** `EEUGLocation`'s accessors are inline reads of its members: a heal goal on
+  `EEUGRust` is no `EEUGLocation`, so `EEGoalCast<EEUGLocation>` (26 sites: the physics models, the active group,
+  the client, the doppelganger) would have to stop treating heal goals as location goals (the kind table's bit) and
+  each site answer them from the heal goal's own location state, and its condition test's fallback
+  (`EEUGLocation::EvaluateCondition`: `FaceYaw`, the facing flag) be restated; no capture profile heals, so only unit
+  tests would cover it. It moves with `EEUGLocation` itself (core's next step: once the location goal is a Rust kind,
+  the accessors dispatch by kind and the heal goal is one more kind).
+- **The merged tree's gates:** build `--sim` and the test profile 0/0; the oracle seeds 2-7 identical to the main
+  checkout's re-recorded `ref`; the Rust gate PASS; `saveload --settings oracle,calamity,late,space,next,plains-medium-3ai
+  --seeds 2 --at 1000,1900 --expect tools/saveload_expect.txt` PASS (before the merge the `next` row 647 -> 479 was
+  the expect file's, not this branch's: the parent exe gave the same); captures at seeds 2-3 oracle, calamity, late,
+  missile PASS (late and missile after freeing this worktree's cargo debug target: the disk was at 4 GB).
+
 ## R5b.4, eighteenth round: the herd's continent after a load; the load goals whole in Rust; EEUGLocation's accessors (ee_units load.rs; branch rust-r5b4-core18, 2026-11-13)
 
 | Commit | What | C++ |
