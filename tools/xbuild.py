@@ -583,6 +583,9 @@ WON_TESTS = {
     # rust/crates/ee_won/src/golden_peerobj.txt)
     "won_peerobj_test": [WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]
                         + [WON_SRC / "WONAuth" / "AuthSession.cpp"],
+    # PeerAuthOp and PeerAuthServerOp: the original's statements against the Rust ops on the op base (golden:
+    # rust/crates/ee_won/src/golden_peerop.txt)
+    "won_peerop_test": "won_peerobj_test",
     # AuthContext's peer sessions and certificate flow, the original's statements against ee_won's authflow object
     # over the same stand-ins (golden: rust/crates/ee_won/src/golden_authflow.txt)
     "won_authctx_test": [WON_SRC / "WONSocket" / "IPAddr.cpp"],
