@@ -10870,3 +10870,41 @@ The dialogs, the UI manager and the UI thread (RUST_PLAN's row: ~4.2k); round 10
   nothing until the simulation interface of step (3)), `EEUIManager::CreateUserDefinedControl` (the HUD's controls by
   kind) and `StartScenarioEditor`, `EEUIFileComboBox` (a toolkit control subclass). The scenario editor's map is in
   RUST_PLAN's row.
+
+## R6: the game screens, fourteenth round: the scenario editor's stateless events in Rust (ee_screens scenario_editor.rs; branch rust-screens14, 2026-11-12)
+
+Round 13's map, item (a). The count is round 10's (`build/sc10/count.sh`) plus the scenario editor's two folders and
+their headers (`EESE*.h`, `EEUIFSE*.h`, `EEUIFScenarioEditor*.h`, `EEAQuickSaveLoad.h`): `build/sc14/count.sh`.
+
+- **Group 1, the trigger tab** (`EESEEvents.cpp`): 23 events (the tab's buttons, the object, area, condition, effect
+  and trigger screens' events, and `EESETSCTPlayerResource`'s radios, which looked dead: its `new` is in the header's
+  inline ctor, now out of line in `EESETSConditionType.cpp`) are codes 0x2401..0x2417. The host `ee_screenscpp_se` lives
+  in `EESEEvents.cpp` (round 13's rule: with the unit, so a driver relinks over it alone). Members that held those
+  events are `UIEvent*`. 68,468 -> 68,069 (-399; git over the C++ +196 -595).
+- **Group 2, the form and its tabs**: the player box, the home rotation key, the civilization builder's button, the
+  triggers-only load, the toolbar's load, save, test and exit with the question's answers (host statics calling
+  `ee_screens_event`, round 7's pattern), the elevation tool, the epoch box, the change-text and place radios and the
+  instructions' "///" expansion are 0x2420..0x242e. The expansion is Rust's over the edit box's lines and the game's
+  strings (`ee_screenscpp_se_text`, `_set_text`): `atoi` past `i32::MAX` answers `i32::MAX` as the CRT's.
+  68,069 -> 67,677 (-392; git over the C++ +141 -491). Round total -791.
+- **Golden drivers** (scratch, `build/sc14`): `se_driver.cpp` includes the unit; fake objects get a probe vtable (80
+  template stubs, each printing its slot), so every virtual call out of the unit (screens' `Store`/`Load`,
+  `GetIsSelectOnMap`, the controls' `SetDisplayMode`) is printed without knowing its slot. Group 2's old bodies were
+  spread over six large units: `make_g2_old.py` extracts them verbatim into one scratch unit. Both: old and new print
+  the same on seeds 1-4 (3,000 cases each); the host logs of seed 1 are the committed goldens, replayed by the tests.
+- **Lessons:** a probe stub must not print an argument register of an argless call (garbage that differs between
+  builds); `std::min` in a unit that includes `windows.h` is the macro (`(std::min)` or a conditional); a class's
+  virtual `Load` on a calloc'ed fake crashes through a null vptr: give every fake a probe vtable.
+- **Behaviour:** none intended. A missing control in a show/hide is skipped (the original crashed), and an area mode
+  combo box without a selection reads as none (the original read an uninitialised local). Only a person reaches the
+  scenario editor (no gate opens it; the gates' tour does not).
+- **Not done:** the events with per-instance state (`EESEESliderChange`, `EESEECheckDisplay`, `EESEEUseObjectArea`,
+  the quick save and load, hide-UI and viewport, terrain and map type, unit list sort, start epoch, game unit limit,
+  the effect editors' own events), the triggers-only save's report (~150 lines over the scenario manager's records),
+  and item (b), the EE-SIM scripted-editor gate: stopped with C: under 5 GB. What (b) needs: EE-SIM posts
+  `EE_SCREENS_EDITORS_SCENARIO_EDITOR` (menus.rs: `StartScenarioEditor` loads like a game, load type 3), waits for the
+  editor form and a map, posts each scripted action (`EESEACreateBlankMap`, `EESEAPaintTerrain` + `SetArea`,
+  `EESEAPaintArea`, `EESEAPlaceUnit::Place`, ...) followed by a marker action, and prints a digest of the tiles and
+  units. Risks seen: `EESEACreateBlankMap` waits on `gGraphics->mIsPaused` (EE-SIM's graphics thread must answer), and
+  `EESEAPaintTerrain::PlantTerrainUnits` seeds its random from `TMGetTime()` (a script must use terrains without
+  ambient units, or the clock must be pinned).
