@@ -29,13 +29,15 @@ pub const EE_COMBAT_Q_HERD: i32 = 69;
 pub const EE_COMBAT_Q_CLOAK_TIMER: i32 = 70;
 /// `EEUnit::mResourceType`.
 pub const EE_COMBAT_Q_RESOURCE_TYPE: i32 = 71;
+/// `mStats->mArmor[arg]` (the stats table's; arg: the weapon column).
+pub const EE_COMBAT_Q_ARMOR: i32 = 72;
 
 // ---- the operations (world.rs's numbering goes on)
 
 /// `ComputeDamage`'s C++ part into the record at `args[0]` (an `EeCombatDamageIn*`; `form` and `attack` set) for
 /// `object` hitting `other` with ammunition `args[1]` and weapon column `args[2]`: the attack factor
-/// (`gToHitTable.GetAttackFactor`) and `gWeaponToHitFactors` unless a direct hit without attack, the target's
-/// armour of the weapon, combat.yaml's constants.
+/// (`gToHitTable.GetAttackFactor`) and `gWeaponToHitFactors` unless a direct hit without attack, combat.yaml's
+/// constants (the target's armour of the weapon is `EE_COMBAT_Q_ARMOR`'s).
 pub const EE_COMBAT_W_DAMAGE_IN: i32 = 40;
 /// The class's `GetElevationFactor(object, other)` (other: the target's complex unit), as float bits.
 pub const EE_COMBAT_W_ELEVATION: i32 = 41;
@@ -114,6 +116,7 @@ pub fn compute_damage<H: WorldHost>(
     args[1] = i64::from(call.ammo);
     args[2] = i64::from(call.weapon);
     h.op(EE_COMBAT_W_DAMAGE_IN, unit, target, &mut args);
+    i.armor = f32::from_bits(h.read(EE_COMBAT_Q_ARMOR, target, call.weapon));
     i.elevation = 1.0;
     let (player, other) = (h.handle(EE_COMBAT_H_PLAYER, unit, 0), h.handle(EE_COMBAT_H_PLAYER, target, 0));
     i.same_player = i32::from(other == player);

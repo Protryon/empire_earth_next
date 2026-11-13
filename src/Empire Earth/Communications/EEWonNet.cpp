@@ -494,7 +494,7 @@ void EEWonNet::JoinGameDataCallback(AsyncOp* inOp)
         delete theData;
         this->mGameInfo = this->mGames[static_cast<RoutingCreateDataObjectOp*>(inOp)->GetLinkId()];
         this->mGamesChanged = true;
-        EEAction* theAction = new EEAJoinOrHostAGame(4, UWideString(this->ToString(this->mUser->mName).c_str()), UWideString(this->ToString(this->mGameName).c_str()));
+        EEAction* theAction = new EEAJoinOrHostAGame(4, UWideString(this->ToString(this->mUser->GetName()).c_str()), UWideString(this->ToString(this->mGameName).c_str()));
         gUserInterface->PostAction(theAction);
         theAction->Dereference();
     }
@@ -763,7 +763,7 @@ void EEWonNet::JoinGameObjectsCallback(AsyncOp* inOp)
             memcpy(theData, (*theObject)->GetData(), (*theObject)->GetDataLength());
             this->ImportGameInfo(theData, theInfo);
             delete theData;
-            EEAction* theAction = new EEAJoinOrHostAGame(3, UWideString(this->ToString(this->mUser->mName).c_str()), theInfo.mAddress);
+            EEAction* theAction = new EEAJoinOrHostAGame(3, UWideString(this->ToString(this->mUser->GetName()).c_str()), theInfo.mAddress);
             gUserInterface->PostAction(theAction);
             theAction->Dereference();
             theFound = true;
@@ -1448,7 +1448,7 @@ void EEWonNet::SendChat(const UWideString& inText)
                 }
                 theMessage += theName;
                 theAction = new EEAWonNet(6, static_cast<UITextLabel*>(gUIManager->GetCurrentForm()->GetControl(15)),
-                                          UWideString(this->ToString(this->mUser->mName).c_str()), theMessage, true);
+                                          UWideString(this->ToString(this->mUser->GetName()).c_str()), theMessage, true);
                 gUserInterface->PostAction(theAction);
                 theAction->Dereference();
             }

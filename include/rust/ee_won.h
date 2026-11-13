@@ -134,6 +134,54 @@ constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
 /// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
 constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
 
+/// `SetUserName(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
+
+/// `SetPassword(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_PASSWORD = 2;
+
+/// `SetLoginSecretFile(bytes)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SECRET_FILE = 3;
+
+/// `AddCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_COMMUNITY = 4;
+
+/// `SetCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_COMMUNITY = 5;
+
+/// `RemoveCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY = 6;
+
+/// `RemoveAllCommunity()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY = 7;
+
+/// `SetCDKey(key, CDKey)`: the key's bytes, `num` bit 0 its `mKey` present, bit 1 `mValid`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CDKEY = 8;
+
+/// `AddCDKeyCommunityJoin(key, CDKey)`: the key's bytes, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_JOIN = 9;
+
+/// `ClearCDKeyCommunityJoins()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_JOINS = 10;
+
+/// `AddUserData(key, data)`: the data, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_USER_DATA = 11;
+
+/// `ClearUserData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_USER_DATA = 12;
+
+/// `ClearOneTimeData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME = 13;
+
+/// `AddNickname(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_NICKNAME = 14;
+
+/// `SetNickname(key, text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
+
+/// `ClearNicknames()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -1198,6 +1246,9 @@ constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
 /// `GetDocumentPath(owner)` (bytes)
 constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
 
+/// `GetDocument(owner)`: the cache file's bytes as of now, NUL-ended (a MOTD without its flag character)
+constexpr static const int32_t EE_WON_HTTPDOC_DOCUMENT = 9;
+
 /// `SetLocalPath` / `GetLocalPath()` (bytes)
 constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
 
@@ -1812,6 +1863,49 @@ constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
+
+/// `GetVersionOp`: the product, the extra config, the filter string
+constexpr static const int32_t EE_WON_REQOPS_GET_VERSION = 16;
+
+/// `FindPatchOp`: as `GetVersionOp`'s, then (`FindPatchOp(GetVersionOp*)`) the valid version count and each
+/// version and its description, the filtered version count and each version
+constexpr static const int32_t EE_WON_REQOPS_FIND_PATCH = 17;
+
+/// `GetHighestValidVersion()` (bytes)
+constexpr static const int32_t EE_WON_REQOP_VERSION_HIGHEST = 60;
+
+/// the valid versions (number: the count; bytes: the element), the filtered ones
+constexpr static const int32_t EE_WON_REQOP_VERSION_VALID = 61;
+
+constexpr static const int32_t EE_WON_REQOP_VERSION_FILTERED = 62;
+
+/// the valid version's description (bytes; the element: the valid version's index)
+constexpr static const int32_t EE_WON_REQOP_VERSION_DESCRIPTION = 63;
+
+/// a setter: `CheckVersion(bytes)`, its result (`Version_Invalid` 0, `_Valid_NotLatest` 1, `_Valid_Latest` 2)
+/// read as this number
+constexpr static const int32_t EE_WON_REQOP_VERSION_CHECK = 64;
+
+/// the patches: the count (number); each one's from and to versions, name (UTF-16 LE) and location (bytes, none:
+/// NULL), checksum and size (number); the element: the patch's index
+constexpr static const int32_t EE_WON_REQOP_PATCH_COUNT = 65;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_FROM = 66;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_TO = 67;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_NAME = 68;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_LOCATION = 69;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_CHECKSUM = 70;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
+
+/// a setter: `GetPatchList` (num 0), `GetValidPatchList` (1), `GetHighestPatchList(from, to)` (2) and
+/// `GetHighestPatchList(from)` (3), the bytes "from\0to"; the chosen patches' indexes read as this number (the
+/// element: the position; -1 past the end)
+constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
 
 /// A number of the parser.
 enum class EeWonChatParserNumber {
@@ -3439,6 +3533,9 @@ struct EeWonAsyncSocket;
 
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
+
+/// The login data (opaque): `AuthContext::mLogin`, its own lock.
+struct EeWonAuthLogin;
 
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
@@ -5647,6 +5744,76 @@ void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f, void *light, uint32_
 /// # Safety
 /// `f` a flow.
 long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout);
+
+/// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
+///
+/// # Safety
+/// `secret_file` holds `len` bytes.
+EeWonAuthLogin *ee_won_auth_login_new(const uint8_t *secret_file, size_t len);
+
+/// # Safety
+/// `l` is from `ee_won_auth_login_new` (or NULL), not used afterwards.
+void ee_won_auth_login_free(EeWonAuthLogin *l);
+
+/// A setter (`EE_WON_AUTH_LOGIN_*`): `key` a map's key and `value` a text (UTF-16 LE bytes) or bytes.
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+void ee_won_auth_login_set(const EeWonAuthLogin *l,
+                           int32_t which,
+                           const uint8_t *key,
+                           size_t key_len,
+                           const uint8_t *value,
+                           size_t value_len,
+                           int64_t num);
+
+/// `EE_WON_AUTH_LOGIN_NAME` / `_PASSWORD`: the text (UTF-16 LE bytes); `_SECRET_FILE`: its bytes.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_text(const EeWonAuthLogin *l,
+                            int32_t which,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
+                                  const uint8_t *community,
+                                  size_t community_len,
+                                  const uint8_t *files,
+                                  size_t files_len);
+
+/// The members, one line (`Login::describe`, the drivers' form).
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_describe(const EeWonAuthLogin *l, EeWonByteSink sink, void *context);
+
+/// The login request's blocks: 0 `AppendCommunityData`, 1 `AppendHashes(challenge)` (`data`), 2
+/// `AppendLoginSecrets`.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `sink` takes `context`.
+void ee_won_auth_login_block(const EeWonAuthLogin *l,
+                             int32_t which,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The secrets: 0 `LoadSecretList`, 1 `SaveSecretList` (false: the file did not open), 2 `AddSecret(key)` and save,
+/// 3 `RemoveSecret(key)` and save when removed, 4 `CommitSecrets(t0, t1)` and save when it changed anything.
+///
+/// # Safety
+/// `l` is a login; `key` 8 bytes for 2 and 3.
+bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
+                               int32_t which,
+                               const uint8_t *key,
+                               int64_t t0,
+                               int64_t t1);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
@@ -9440,18 +9607,16 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
-/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
-/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.
 EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
-                                const uint8_t *product_lower,
+                                const uint8_t *product,
                                 size_t product_len,
-                                const uint8_t *sys_doc,
-                                size_t sys_len,
-                                const uint8_t *game_doc,
-                                size_t game_len);
+                                const uint8_t *dir,
+                                size_t dir_len);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.
@@ -11003,6 +11168,28 @@ bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
                            int64_t index,
                            EeWonByteSink sink,
                            void *context);
+
+/// A result's number by number and element.
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_reqop_num_at(const EeWonReqOp *op, int32_t which, int64_t index);
+
+/// A setter by number (a number and bytes).
+///
+/// # Safety
+/// `op` is a live op; `data` holds `len` bytes.
+void ee_won_reqop_set(EeWonReqOp *op, int32_t which, int64_t num, const uint8_t *data, size_t len);
+
+/// A result list of directory entities, each to `sink`; the count.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+size_t ee_won_reqop_entities(const EeWonReqOp *op,
+                             int32_t which,
+                             int64_t index,
+                             EeWonDirEntitySink sink,
+                             void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///

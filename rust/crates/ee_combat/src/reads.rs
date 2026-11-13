@@ -16,7 +16,7 @@ use ee_ge::um::um_arccos;
 
 use crate::geometry::matrix;
 use crate::store::{
-    self, EeCombatStoredUnit, EE_COMBAT_STORED_COMPLEX_NONE, EE_COMBAT_STORED_COMPLEX_SELF,
+    self, EeCombatStoredStats, EeCombatStoredUnit, EE_COMBAT_STORED_COMPLEX_NONE, EE_COMBAT_STORED_COMPLEX_SELF,
     EE_COMBAT_STORED_COMPLEX_UNIT,
 };
 use crate::walks::EeCombatHandle;
@@ -441,6 +441,15 @@ pub fn gate_closed<H: QueryHost>(h: &mut H, unit: EeCombatHandle) -> bool {
     h.read(EE_COMBAT_Q_COMMAND, carrier, 0) != ACTION_CLOSED
 }
 
+/// `EEUGHealUnit::IsInRange(healer, target)`: the target's position within the healer class's heal range of the
+/// healer's (`EECombatWithinRange` of the squared distance; the range read first, as the original).
+pub fn heal_in_range<H: QueryHost>(h: &mut H, healer: EeCombatHandle, target: EeCombatHandle) -> bool {
+    let range = real(h, EE_COMBAT_Q_HEAL_RANGE, healer);
+    let from = h.position(healer);
+    let to = h.position(target);
+    crate::within_range(from.distance_to_squared(to), range) != 0
+}
+
 /// One side of `EEIsEnemyWithinRange`'s walk: whether `candidate` is no enemy in reach (`seen` is the side's first
 /// unit's complex unit: the original tests that one's visibility for every candidate).
 fn passed_over<H: QueryHost>(
@@ -678,6 +687,21 @@ fn stored_field(r: &EeCombatStoredUnit, code: i32) -> Option<u32> {
     })
 }
 
+/// A stats read of a unit's stats object: the C++'s value as the host answered it.
+fn stats_field(s: &EeCombatStoredStats, code: i32, arg: i32) -> u32 {
+    match code {
+        damage::EE_COMBAT_Q_ARMOR => usize::try_from(arg).ok().and_then(|a| s.armor.get(a)).copied().unwrap_or(0),
+        EE_COMBAT_Q_MAX_HIT_POINTS => s.max_hit_points as u32,
+        EE_COMBAT_Q_STATS_SCALE => s.scale,
+        EE_COMBAT_Q_FIRE_OVER_WALLS => u32::from(s.can_fire_over_walls),
+        EE_COMBAT_Q_RANGE => s.range,
+        world::EE_COMBAT_Q_STATS_MAX_VELOCITY => s.max_velocity,
+        world::EE_COMBAT_Q_ATTACK => s.attack,
+        world::EE_COMBAT_Q_RELOAD_TIME => s.reload_time as u32,
+        _ => 0,
+    }
+}
+
 impl<H: QueryHost> QueryHost for Stored<'_, H> {
     fn read(&mut self, code: i32, object: EeCombatHandle, arg: i32) -> u32 {
         let value = match code {
@@ -685,6 +709,17 @@ impl<H: QueryHost> QueryHost for Stored<'_, H> {
             EE_COMBAT_Q_PLAYER_ID => store::player_of(object).map(|p| p.id),
             EE_COMBAT_Q_ENEMY => {
                 store::player_of(object).and_then(|p| p.enemies.get(arg as usize).map(|&e| u32::from(e != 0)))
+            }
+            // a unit's stats object's (`GetStats()`: the stats table's record; 0 without one)
+            EE_COMBAT_Q_MAX_HIT_POINTS
+            | EE_COMBAT_Q_STATS_SCALE
+            | EE_COMBAT_Q_FIRE_OVER_WALLS
+            | EE_COMBAT_Q_RANGE
+            | world::EE_COMBAT_Q_STATS_MAX_VELOCITY
+            | world::EE_COMBAT_Q_ATTACK
+            | world::EE_COMBAT_Q_RELOAD_TIME
+            | damage::EE_COMBAT_Q_ARMOR => {
+                store::unit_of(object).map(|r| store::stats_of(r.stats).map_or(0, |s| stats_field(&s, code, arg)))
             }
             _ => store::unit_of(object).and_then(|r| stored_field(&r, code)),
         };
@@ -823,6 +858,16 @@ pub unsafe extern "C" fn ee_combat_still_reachable(unit: u64, host: *const EeCom
 pub unsafe extern "C" fn ee_combat_gate_closed(unit: u64, host: *const EeCombatQueryHost) -> i32 {
     let mut h = unsafe { *host };
     i32::from(gate_closed(&mut Stored::new(&mut h), unit))
+}
+
+/// `EEUGHealUnit::IsInRange` of `healer` on `target`.
+///
+/// # Safety
+/// As [`ee_combat_impact_unit`].
+#[no_mangle]
+pub unsafe extern "C" fn ee_combat_heal_in_range(healer: u64, target: u64, host: *const EeCombatQueryHost) -> i32 {
+    let mut h = unsafe { *host };
+    i32::from(heal_in_range(&mut Stored::new(&mut h), healer, target))
 }
 
 /// `EEIsEnemyWithinRange` of `unit`.

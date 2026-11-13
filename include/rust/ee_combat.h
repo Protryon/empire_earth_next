@@ -39,10 +39,13 @@ constexpr static const int32_t EE_COMBAT_Q_CLOAK_TIMER = 70;
 /// `EEUnit::mResourceType`.
 constexpr static const int32_t EE_COMBAT_Q_RESOURCE_TYPE = 71;
 
+/// `mStats->mArmor[arg]` (the stats table's; arg: the weapon column).
+constexpr static const int32_t EE_COMBAT_Q_ARMOR = 72;
+
 /// `ComputeDamage`'s C++ part into the record at `args[0]` (an `EeCombatDamageIn*`; `form` and `attack` set) for
 /// `object` hitting `other` with ammunition `args[1]` and weapon column `args[2]`: the attack factor
-/// (`gToHitTable.GetAttackFactor`) and `gWeaponToHitFactors` unless a direct hit without attack, the target's
-/// armour of the weapon, combat.yaml's constants.
+/// (`gToHitTable.GetAttackFactor`) and `gWeaponToHitFactors` unless a direct hit without attack, combat.yaml's
+/// constants (the target's armour of the weapon is `EE_COMBAT_Q_ARMOR`'s).
 constexpr static const int32_t EE_COMBAT_W_DAMAGE_IN = 40;
 
 /// The class's `GetElevationFactor(object, other)` (other: the target's complex unit), as float bits.
@@ -2261,6 +2264,12 @@ int32_t ee_combat_still_reachable(uint64_t unit, const EeCombatQueryHost *host);
 /// # Safety
 /// As [`ee_combat_impact_unit`].
 int32_t ee_combat_gate_closed(uint64_t unit, const EeCombatQueryHost *host);
+
+/// `EEUGHealUnit::IsInRange` of `healer` on `target`.
+///
+/// # Safety
+/// As [`ee_combat_impact_unit`].
+int32_t ee_combat_heal_in_range(uint64_t healer, uint64_t target, const EeCombatQueryHost *host);
 
 /// `EEIsEnemyWithinRange` of `unit`.
 ///

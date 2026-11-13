@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 #include <string>
 #include <list>
 #include <map>
@@ -16,6 +17,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONMD5Digest.h"
+#include "ee/wonapi/WONMD5.h"
 #include "platform/PlatFile.h"
 #include "rust/ee_won.h"
 
@@ -588,11 +590,286 @@ static void RunAutoRefresh()
                          std::to_string(OrigContext::AutoRefreshWait(e != 0, f != 0, v != 0, aDeltas[d])));
 }
 
-int main()
+// ---- the login data as one object: sequences of AuthContext's setters, file hashes and secrets over the original's
+// statements (AuthContext.cpp before round 13, without its lock: OrigLogin below, the maps and MD5 loop as they
+// were) against ee_won's login object (authlogin.rs) through its C ABI. After each step the members, the
+// community data block, the hashes block and the secrets' block must be the same. `--print N` prints N sequences
+// with what the original did (rust/crates/ee_won/src/golden_authlogin.txt; `authlogin::tests::golden` replays it).
+
+static unsigned int sSeed = 5151;
+static unsigned int Next()
 {
+    sSeed = sSeed * 1103515245u + 12345u;
+    return (sSeed >> 8) & 0xffffff;
+}
+static int Pick(int n) { return (int)(Next() % (unsigned)n); }
+
+struct OrigLogin : public OrigContext {
+    std::wstring mName;
+    std::wstring mPassword;
+    void SetUserName(const std::wstring& name) { this->mName=name; }
+    void SetPassword(const std::wstring& password) { this->mPassword=password; }
+    void AddCommunity(const std::wstring& community)
+    {
+        this->mCommunityMap.insert(std::map<std::wstring,OrigCommunityData>::value_type(community,OrigCommunityData()));
+    }
+    void SetCommunity(const std::wstring& community)
+    {
+        std::map<std::wstring,OrigCommunityData>::iterator found=this->mCommunityMap.find(community);
+        if(found!=this->mCommunityMap.end()) {
+            OrigCommunityData data=found->second;
+            this->mCommunityMap.clear();
+            this->mCommunityMap[community]=data;
+        }
+        else {
+            this->mCommunityMap.clear();
+            this->AddCommunity(community);
+        }
+    }
+    void RemoveCommunity(const std::wstring& community) { this->mCommunityMap.erase(community); }
+    void RemoveAllCommunity() { this->mCommunityMap.clear(); }
+    void SetCDKey(const std::wstring& community,const OrigCDKey& key) { this->mCommunityMap[community].mCDKey=key; }
+    void AddCDKeyCommunityJoin(const std::wstring& theCommunity,const OrigCDKey& theKey) { this->mCDKeyCommunityJoinMap[theCommunity]=theKey; }
+    void ClearCDKeyCommunityJoins() { this->mCDKeyCommunityJoinMap.clear(); }
+    void AddUserData(const std::wstring& theCommunity,const ByteBuffer* theData) { this->mSetCommunityUserDataMap[theCommunity]=theData; }
+    void ClearUserData() { this->mSetCommunityUserDataMap.clear(); }
+    void ClearOneTimeData() { this->ClearUserData(); this->ClearCDKeyCommunityJoins(); }
+    void AddNickname(const std::wstring& theKey) { this->mNicknameMap[theKey]=L""; }
+    void SetNickname(const std::wstring& theKey,const std::wstring& theName) { this->mNicknameMap[theKey]=theName; }
+    void ClearNicknames() { this->mNicknameMap.clear(); }
+    bool SetHashFileList(const std::wstring& community,const std::list<std::string>& files)
+    {
+        OrigCommunityData& data=this->mCommunityMap[community];
+        data.mSimpleHash.erase();
+        data.mKeyedHashData.erase();
+        MD5 simpleHash;
+        MD5 hashSection;
+        int sectionPosition=0;
+        std::list<std::string>::const_iterator next=files.begin();
+        while(next!=files.end()) {
+            FILE* file=PlatFOpen(next->c_str(),"rb");
+            if(file==NULL) return false;
+            ++next;
+            char buffer[16384];
+            while(!feof(file)) {
+                int count=fread(buffer,1,16384-sectionPosition,file);
+                if(count<=0)
+                    continue;
+                sectionPosition+=count;
+                simpleHash.Update(buffer,count);
+                hashSection.Update(buffer,count);
+                unsigned char digest[16];
+                if(sectionPosition!=16384 && (!feof(file) || next!=files.end()))
+                    continue;
+                sectionPosition=0;
+                hashSection.Digest(digest);
+                data.mKeyedHashData.append(digest,16);
+                hashSection.Reset();
+            }
+            fclose(file);
+        }
+        unsigned char digest[16];
+        simpleHash.Digest(digest);
+        data.mSimpleHash.assign(digest,16);
+        return true;
+    }
+};
+
+static std::string RawHex(const RawBuffer& inBuffer)
+{
+    return Hex(std::string(reinterpret_cast<const char*>(inBuffer.data()), inBuffer.size()));
+}
+static std::string KeyHex(const ConstSmartPtr<ByteBuffer>& inKey)
+{
+    return inKey.get() == NULL ? std::string("n") : Hex(std::string(inKey->data(), inKey->length()));
+}
+// the members as authlogin.rs's describe prints them (empty bytes: "-")
+static std::string Dash(const std::string& inHex) { return inHex.empty() ? std::string("-") : inHex; }
+static std::string Describe(OrigLogin& o)
+{
+    std::string s = "name " + Dash(Hex(Utf16(o.mName))) + " pass " + Dash(Hex(Utf16(o.mPassword))) + " c";
+    for (std::map<std::wstring, OrigCommunityData>::iterator i = o.mCommunityMap.begin(); i != o.mCommunityMap.end(); ++i)
+        s += " " + Dash(Hex(Utf16(i->first))) + ":" + Dash(KeyHex(i->second.mCDKey.mKey)) + "/" +
+             (i->second.mCDKey.mValid ? "1" : "0") + "/" + Dash(RawHex(i->second.mSimpleHash)) + "/" +
+             Dash(RawHex(i->second.mKeyedHashData));
+    s += " j";
+    for (std::map<std::wstring, OrigCDKey>::iterator i = o.mCDKeyCommunityJoinMap.begin(); i != o.mCDKeyCommunityJoinMap.end(); ++i)
+        s += " " + Dash(Hex(Utf16(i->first))) + ":" + Dash(KeyHex(i->second.mKey));
+    s += " d";
+    for (std::map<std::wstring, ConstSmartPtr<ByteBuffer> >::iterator i = o.mSetCommunityUserDataMap.begin();
+         i != o.mSetCommunityUserDataMap.end(); ++i)
+        s += " " + Dash(Hex(Utf16(i->first))) + ":" + Dash(KeyHex(i->second));
+    s += " n";
+    for (std::map<std::wstring, std::wstring>::iterator i = o.mNicknameMap.begin(); i != o.mNicknameMap.end(); ++i)
+        s += " " + Dash(Hex(Utf16(i->first))) + ":" + Dash(Hex(Utf16(i->second)));
+    return s;
+}
+static std::string Blocks(OrigLogin& o)
+{
+    WriteBuffer c(4, false);
+    o.AppendCommunityData(c);
+    WriteBuffer h(4, false);
+    o.AppendHashes(h, RawBuffer(reinterpret_cast<const unsigned char*>("ch"), 2));
+    WriteBuffer l(4, false);
+    o.AppendLoginSecrets(l);
+    return " | " + Dash(Hex(std::string(c.data(), c.length()))) + " " + Dash(Hex(std::string(h.data(), h.length()))) +
+           " " + Dash(Hex(std::string(l.data(), l.length())));
+}
+static void Sink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<std::string*>(inContext)->assign(reinterpret_cast<const char*>(inBytes), inLength);
+}
+static std::string Blocks(EeWonAuthLogin* r)
+{
+    std::string c, h, l;
+    ee_won_auth_login_block(r, 0, NULL, 0, Sink, &c);
+    ee_won_auth_login_block(r, 1, reinterpret_cast<const uint8_t*>("ch"), 2, Sink, &h);
+    ee_won_auth_login_block(r, 2, NULL, 0, Sink, &l);
+    return " | " + Dash(Hex(c)) + " " + Dash(Hex(h)) + " " + Dash(Hex(l));
+}
+
+static const wchar_t* const kNames[] = { L"EmpireEarth", L"Admin", L"", L"\x00e9t\x00e9", L"Z", L"\x263a" };
+static const char* const kBytes[] = { "KEY-0001", "", "xy", "user data 123" };
+// a hashed file's content: byte i of file `seed` (the replay makes the same bytes)
+static std::string FileContent(int inSeed, int inSize)
+{
+    std::string s(inSize, '\0');
+    for (int i = 0; i < inSize; i++) s[i] = (char)((inSeed * 7 + i * 13 + (i >> 9)) & 0xff);
+    return s;
+}
+static const int kSizes[] = { 0, 1, 100, 16383, 16384, 16385, 40000, -1 };
+
+// one sequence: `inSteps` steps on both halves; printed (the original's) or compared
+static void LoginSequence(int inSteps, bool inPrint)
+{
+    OrigLogin o;
+    o.mLoginSecretFile = "won_auth_login_orig.ks";
+    remove("won_auth_login_orig.ks");
+    remove("won_auth_login_port.ks");
+    const char* aPortFile = "won_auth_login_port.ks";
+    EeWonAuthLogin* r = ee_won_auth_login_new(reinterpret_cast<const uint8_t*>(aPortFile), strlen(aPortFile));
+    if (inPrint) printf("S\n");
+    for (int k = 0; k < inSteps; k++) {
+        int op = Pick(20);
+        std::wstring key = kNames[Pick(6)];
+        std::string value = Pick(5) ? kBytes[Pick(4)] : std::string();
+        std::wstring text = kNames[Pick(6)];
+        int flags = Pick(4);
+        std::string line = "L " + std::to_string(op) + " " + Dash(Hex(Utf16(key))) + " ";
+        std::string args;
+        std::string utf = Utf16(text);
+        switch (op) {
+        case 1: o.SetUserName(text); args = Dash(Hex(utf)); ee_won_auth_login_set(r, op, NULL, 0, reinterpret_cast<const uint8_t*>(utf.data()), utf.size(), 0); break;
+        case 2: o.SetPassword(text); args = Dash(Hex(utf)); ee_won_auth_login_set(r, op, NULL, 0, reinterpret_cast<const uint8_t*>(utf.data()), utf.size(), 0); break;
+        case 15: o.SetNickname(key, text); args = Dash(Hex(utf)); break;
+        case 8: case 9: case 11: {
+            args = Dash(Hex(value)) + " " + std::to_string(flags);
+            ConstSmartPtr<ByteBuffer> b = (flags & 1) ? new ByteBuffer(value.data(), (unsigned long)value.size(), false) : NULL;
+            OrigCDKey c;
+            c.mKey = b;
+            c.mValid = (flags & 2) != 0;
+            if (op == 8) o.SetCDKey(key, c);
+            else if (op == 9) o.AddCDKeyCommunityJoin(key, c);
+            else o.AddUserData(key, b.get());
+            break;
+        }
+        case 4: o.AddCommunity(key); break;
+        case 5: o.SetCommunity(key); break;
+        case 6: o.RemoveCommunity(key); break;
+        case 7: o.RemoveAllCommunity(); break;
+        case 10: o.ClearCDKeyCommunityJoins(); break;
+        case 12: o.ClearUserData(); break;
+        case 13: o.ClearOneTimeData(); break;
+        case 14: o.AddNickname(key); break;
+        case 16: o.ClearNicknames(); break;
+        case 0: case 17: { // SetHashFileList: up to 3 files of the sizes (-1: missing)
+            int n = 1 + Pick(3);
+            std::list<std::string> files;
+            std::string paths;
+            args = std::to_string(n);
+            for (int f = 0; f < n; f++) {
+                int size = kSizes[Pick(8)];
+                int seed = Pick(50);
+                char path[64];
+                snprintf(path, sizeof(path), "won_auth_h%d_%d.bin", k, f);
+                remove(path);
+                if (size >= 0) {
+                    std::string c = FileContent(seed, size);
+                    FILE* fp = fopen(path, "wb");
+                    if (!c.empty()) fwrite(c.data(), 1, c.size(), fp);
+                    fclose(fp);
+                }
+                files.push_back(path);
+                paths += path;
+                paths += '\0';
+                args += " " + std::to_string(size) + ":" + std::to_string(seed);
+            }
+            bool a = o.SetHashFileList(key, files);
+            std::string ku = Utf16(key);
+            bool b = ee_won_auth_login_hash_files(r, reinterpret_cast<const uint8_t*>(ku.data()), ku.size(),
+                                                  reinterpret_cast<const uint8_t*>(paths.data()), paths.size());
+            args += std::string(" =") + (a ? "1" : "0");
+            if (!inPrint) Same("hash files", b ? "1" : "0", a ? "1" : "0");
+            for (std::list<std::string>::iterator i = files.begin(); i != files.end(); ++i) remove(i->c_str());
+            break;
+        }
+        case 18: case 19: { // a secret added and removed again at times, or the secrets committed
+            unsigned char aKey[8];
+            Key(aKey, Pick(4));
+            args = Hex(std::string(reinterpret_cast<const char*>(aKey), 8)) + " " + std::to_string(flags);
+            if (op == 18) {
+                if (flags & 1) {
+                    o.RemoveSecret(aKey);
+                    ee_won_auth_login_secrets(r, 3, aKey, 0, 0);
+                } else {
+                    o.AddSecret(aKey);
+                    ee_won_auth_login_secrets(r, 2, aKey, 0, 0);
+                }
+            } else {
+                time_t t = 1000 + flags * 400;
+                o.CommitSecrets(t, 300);
+                ee_won_auth_login_secrets(r, 4, NULL, (int64_t)t, 300);
+            }
+            break;
+        }
+        default: break;
+        }
+        // the setters' Rust half (the hash files and secrets ran above)
+        if (op >= 4 && op <= 16) {
+            std::string ku = Utf16(key);
+            std::string v = op == 15 ? utf : value;
+            ee_won_auth_login_set(r, op, reinterpret_cast<const uint8_t*>(ku.data()), ku.size(),
+                                  reinterpret_cast<const uint8_t*>(v.data()), v.size(), flags);
+        }
+        std::string want = Describe(o) + Blocks(o);
+        if (inPrint) {
+            printf("%s%s => %s\n", line.c_str(), Dash(args).c_str(), want.c_str());
+            continue;
+        }
+        std::string d;
+        ee_won_auth_login_describe(r, Sink, &d);
+        Same("login step", d + Blocks(r), want);
+        if (sFailures > 0 && sFailures < 4 && d + Blocks(r) != want) printf("  at %s%s\n", line.c_str(), args.c_str());
+        Same("secret file", FileBytes(aPortFile), FileBytes("won_auth_login_orig.ks"));
+    }
+    ee_won_auth_login_free(r);
+    remove("won_auth_login_orig.ks");
+    remove("won_auth_login_port.ks");
+}
+
+int main(int argc, char** argv)
+{
+    int aPrint = 0;
+    for (int i = 1; i + 1 < argc; i += 2)
+        if (strcmp(argv[i], "--print") == 0) aPrint = atoi(argv[i + 1]);
+    if (aPrint > 0) {
+        for (int q = 0; q < aPrint; q++) LoginSequence(4 + Pick(30), true);
+        return 0;
+    }
     RunSecrets();
     RunCommunityData();
     RunAutoRefresh();
+    for (int q = 0; q < 3000; q++) LoginSequence(4 + Pick(30), false);
     printf("won_auth_test: %d checks, %d failures\n", sChecks, sFailures);
     return sFailures;
 }

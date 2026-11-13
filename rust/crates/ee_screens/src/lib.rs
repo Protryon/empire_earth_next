@@ -21,6 +21,8 @@
 //!   availability and icon, its tooltip's plan and the targeting modes of its commands.
 //! - [`settings_form`]: the game settings form whole (its events, state and every toolkit and engine call, over the
 //!   C++ host).
+//! - [`campaign_editor`]: the campaign editor's events whole (form 24: its events and its questions' answers over
+//!   the C++ host and the editor's C++ model).
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
 //!   open and close events, over the C++ builder helpers).
@@ -51,6 +53,9 @@
 pub mod camera;
 #[cfg(not(test))]
 mod camera_ffi;
+pub mod campaign_editor;
+#[cfg(not(test))]
+mod campaign_editor_ffi;
 pub mod chat;
 #[cfg(not(test))]
 mod chat_ffi;

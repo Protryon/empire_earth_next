@@ -23,6 +23,11 @@ M.OPT = {
     stone_uncap = true,     -- no citizen cap at the places' work in the Stone Age
     claim_target = true,    -- the mines claimed for the phase's whole target
     food_reach = true,      -- the Stone claim reaches claim_dry while the food places are short
+    boat_wood = false,      -- (off until benched) in stone_start, until the boats are out, the settlements wait too: the
+                            -- bank's wood pays the dock and the boats first
+    shore_scout = false,    -- (off until benched) one wood gatherer walks the shore round home before the advance
+    pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
+                            -- dock, not_in_epoch)
 }
 
 -- the gatherers, filled in this order as the citizens come (each step: a resource up to a count); food counts the
@@ -270,6 +275,54 @@ function M.next_tech(view, memory)
         end
     end
     return nil
+end
+
+-- (BO.OPT.shore_scout) the shore by home seen before the advance: a building goes only on tiles in sight, and the
+-- dock finder found 9-18 fish within 30 tiles but no shore tile for them on the seeds whose dock came 10-62 minutes
+-- into Stone. While the Stone Age is saved for, one wood gatherer walks a ring of 8 points 16 tiles round the town
+M.SCOUT_RING = 16
+function M.shore_scout(view, memory, saving)
+    local S = memory.shore_scout
+    if S == nil then
+        if not saving or view.epoch ~= 0 then
+            return
+        end
+        local pick = nil
+        for _, id in ipairs(ai.units{category = "citizen", held = "engine", near = {view.town_x, view.town_y, 30}, limit = 16}) do
+            local u = ai.unit(id)
+            if pick == nil and u ~= nil and u.gathers == "wood" then
+                pick = id
+            end
+        end
+        if pick == nil then
+            return
+        end
+        ai.take({pick})
+        memory.shore_scout = {id = pick, i = 0, t = 0}
+        S = memory.shore_scout
+    end
+    if S.done then
+        return
+    end
+    local u = ai.unit(S.id)
+    if u == nil then
+        S.done = true
+        return
+    end
+    if view.time - S.t >= 20000 or (u.action ~= "move" and view.time - S.t >= 3000) then
+        S.i = S.i + 1
+        if S.i > 8 then
+            ai.release({S.id})
+            S.done = true
+            return
+        end
+        -- (the 8 directions in tenths: no trigonometry in the sandbox)
+        local d = ({{10, 0}, {7, 7}, {0, 10}, {-7, 7}, {-10, 0}, {-7, -7}, {0, -10}, {7, -7}})[S.i]
+        local x = math.max(view.town_x + M.SCOUT_RING * d[1] // 10, 0)
+        local y = math.max(view.town_y + M.SCOUT_RING * d[2] // 10, 0)
+        ai.move({S.id}, x, y)
+        S.t = view.time
+    end
 end
 
 local TOWERS = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle"}

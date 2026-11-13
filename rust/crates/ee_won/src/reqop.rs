@@ -310,6 +310,45 @@ pub unsafe extern "C" fn ee_won_reqop_bytes_at(
     }
 }
 
+/// A result's number by number and element.
+///
+/// # Safety
+/// `op` is a live op.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_num_at(op: *const EeWonReqOp, which: i32, index: i64) -> i64 {
+    unsafe { (*op).op.num_at(which, index) }
+}
+
+/// A setter by number (a number and bytes).
+///
+/// # Safety
+/// `op` is a live op; `data` holds `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_set(op: *mut EeWonReqOp, which: i32, num: i64, data: *const u8, len: usize) {
+    let d = unsafe { crate::ffi::bytes(data, len) };
+    unsafe { (*op).op.set(which, num, d) }
+}
+
+/// A result list of directory entities, each to `sink`; the count.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+#[no_mangle]
+pub unsafe extern "C" fn ee_won_reqop_entities(
+    op: *const EeWonReqOp,
+    which: i32,
+    index: i64,
+    sink: crate::dir::EeWonDirEntitySink,
+    context: *mut c_void,
+) -> usize {
+    let list = unsafe { (*op).op.entities(which, index) };
+    for e in &list {
+        // SAFETY: the sink's contract
+        unsafe { crate::dir::give(e, sink, context) };
+    }
+    list.len()
+}
+
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///
 /// # Safety

@@ -55,7 +55,6 @@ const UString EEEDamagedEffect::sData("EEEDamagedEffect-Data");
 EEEDamagedEffect::EEEDamagedEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
     : EEEffect2D(inUnit, inGraphicEffect, gEffect2DModel, kEffectDamaged, false)
 {
-    this->mIsFinished = false;
 }
 
 // SYNTHETIC: EXE 0x50205b
@@ -66,7 +65,6 @@ EEEDamagedEffect::EEEDamagedEffect(EEUnit* inUnit, EEGraphicEffect* inGraphicEff
 EEEDamagedEffect::EEEDamagedEffect()
     : EEEffect2D(gEffect2DModel, kEffectDamaged, false)
 {
-    this->mIsFinished = false;
 }
 
 // FUNCTION: EXE 0x5020ba
@@ -114,143 +112,76 @@ long EEEDamagedEffect::SetUp()
 
 // FUNCTION: EXE 0x5020e2
 // Reads the handles of the child damage effects (and their secondary partners when saved) and, from save
-// version 0.249 on, the finished flag; returns the first read error (the base class result is ignored)
+// version 0.249 on, the finished flag (ee_gfx effect_state.rs); returns the first read error (the base class result
+// is ignored)
 long EEEDamagedEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    bool theHasSecond;
-    unsigned long theCount;
-    unsigned long i;
-    EEEffectHandle theHandle;
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
-    long theResult = inFile.Read(theHasSecond);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            for (i = 0; i < theCount && theResult == kErrorOK; i++) {
-                theResult = inFile.Read(theHandle.mValue);
-                if (theResult != kErrorOK)
-                    continue;
-                this->mPrimaryEffects.push_back(theHandle);
-                if (!theHasSecond)
-                    continue;
-                theResult = inFile.Read(theHandle.mValue);
-                if (theResult == kErrorOK)
-                    this->mSecondaryEffects.push_back(theHandle);
-            }
-            if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 0xf9))
-                theResult = inFile.Read(this->mIsFinished);
-        }
-    }
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_damaged(this->mRecord, &theFile, (uint32_t)inMajorVersion, (uint32_t)inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5021a2
 // Writes whether a secondary effect is linked, the child effect handles (paired with their secondaries) and
-// the finished flag; returns the first write error (the base class result is ignored)
+// the finished flag (ee_gfx effect_state.rs); returns the first write error (the base class result is ignored)
 long EEEDamagedEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = outFile.Write(this->mGraphicEffect->mLinkedEffect2 != NULL);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write((unsigned long)this->mPrimaryEffects.size());
-    if (theResult != 0)
-        return theResult;
-    for (unsigned long i = 0; i < this->mPrimaryEffects.size(); i++) {
-        theResult = outFile.Write(this->mPrimaryEffects[i].mValue);
-        if (theResult != 0)
-            break;
-        if (!this->mGraphicEffect->mLinkedEffect2)
-            continue;
-        theResult = outFile.Write(this->mSecondaryEffects[i].mValue);
-        if (theResult != 0)
-            break;
-    }
-    if (theResult == 0)
-        theResult = outFile.Write(this->mIsFinished);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_damaged(this->mRecord, &theFile, this->mGraphicEffect->mLinkedEffect2 != NULL);
 }
+
+// The world the controller's Rust tick calls into: its children made and destroyed (provisional name)
+struct EEDamagedHost {
+    static EEEDamagedEffect& Self(void* inContext) { return *static_cast<EEEDamagedEffect*>(inContext); }
+    static uint32_t Create(void* inContext, bool inSecondary, uint32_t inIndex)
+    {
+        EEEDamagedEffect& theEffect = Self(inContext);
+        EEEffectHandle theHandle;
+        EEGraphicEffect* theLinked = inSecondary ? theEffect.GetGraphicEffect()->GetLinkedEffect2()
+                                                 : theEffect.GetGraphicEffect()->GetLinkedEffect1();
+        gWorld.GetEffectManager()->CreateUnitEffect(theEffect.GetUnit(), theLinked, &theHandle, 0, inIndex, 0);
+        return theHandle.mValue;
+    }
+    static void Destroy(void*, uint32_t inHandle)
+    {
+        EEEffectHandle theHandle = {inHandle};
+        gWorld.GetEffectManager()->DestroyEffect(theHandle);
+    }
+};
 
 // FUNCTION: EXE 0x50225c
 // Keeps one child damage effect (plus its secondary) per damage tag point, more as the unit's health drops;
-// hides them all on a cloaked enemy unit, and once finished destroys them and returns 7 (remove)
+// hides them all on a cloaked enemy unit, and once finished destroys them and returns 7 (remove) (the counts and
+// the children's handles are ee_gfx effect_state.rs's)
 long EEEDamagedEffect::Step()
 {
+    EeGfxDamagedTick theTick = {};
+    EEGraphicEffect* theEffect = this->GetGraphicEffect();
+    theTick.has_linked2 = theEffect->GetLinkedEffect2() != NULL;
+    theTick.param2 = theEffect->GetParam2();
     EEUnit* theUnit = this->mUnit;
-    EETagPointList* theList;
-    unsigned long theCount;
-    unsigned long theWanted;
-    long theDelta;
-    long i;
-    EEEffectHandle theHandle;
-    if (this->mIsFinished) {
-        for (i = this->mPrimaryEffects.size(); i > 0; i--) {
-            gWorld.GetEffectManager()->DestroyEffect(this->mPrimaryEffects.back());
-            this->mPrimaryEffects.pop_back();
-            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
-                gWorld.GetEffectManager()->DestroyEffect(this->mSecondaryEffects.back());
-                this->mSecondaryEffects.pop_back();
-            }
+    if (theUnit && !this->mIsFinished) {
+        theTick.has_unit = true;
+        if (theUnit->mTileNode) {
+            while (theUnit->mComplexUnit->mPreviousPart)
+                theUnit = theUnit->mComplexUnit->mPreviousPart;
         }
-        return 7;
-    }
-    if (!theUnit)
-        return 0;
-    if (theUnit->mTileNode) {
-        while (theUnit->mComplexUnit->mPreviousPart)
-            theUnit = theUnit->mComplexUnit->mPreviousPart;
-    }
-    if (theUnit->mTileNode) {
-        long theTag = this->GetGraphicEffect()->GetLinkedEffect1()->mTagPointKind;
-        theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(), theTag);
-    } else
-        theList = theUnit->GetModel()->GetTagPoints(0, this->GetGraphicEffect()->GetLinkedEffect1()->mTagPointKind);
-    if (theList)
-        theCount = theList->GetNumTagPoints();
-    else
-        theCount = 1;
-    float theRatio = (float)theUnit->GetHitPoints() / theUnit->GetStats()->GetMaxHitPoints();
-    if (theRatio <= this->GetGraphicEffect()->GetParam2() && theUnit->GetHitPoints() > 0) {
-        float theAmount = (1.0f - theRatio * (1.0f / this->GetGraphicEffect()->GetParam2())) * theCount;
-        theWanted = UMFloatToLong(theAmount);
-        if (theWanted < theAmount)
-            theWanted++;
-    } else
-        theWanted = 0;
-    if (theWanted == 0 && this->GetGraphicEffect()->GetParam2() < 1.0f)
-        this->mIsFinished = true;
-    theDelta = theWanted - this->mPrimaryEffects.size();
-    if (theUnit->GetTileNode()) {
-        EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-        bool theHidden = theComplexUnit->GetIsCloaked();
-        if (theHidden) {
-            EEPlayer* thePlayer = theComplexUnit->GetPlayer();
-            if (!gWorld.GetCurrentPlayer()->IsAlly(thePlayer))
-                theDelta = -(long)this->mPrimaryEffects.size();
+        EETagPointList* theList;
+        if (theUnit->mTileNode)
+            theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(),
+                                                        theEffect->GetLinkedEffect1()->mTagPointKind);
+        else
+            theList = theUnit->GetModel()->GetTagPoints(0, theEffect->GetLinkedEffect1()->mTagPointKind);
+        theTick.tag_count = theList ? (uint32_t)theList->GetNumTagPoints() : 1;
+        theTick.hit_points = (int32_t)theUnit->GetHitPoints();
+        theTick.max_hit_points = (int32_t)theUnit->GetStats()->GetMaxHitPoints();
+        if (theUnit->GetTileNode()) {
+            EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
+            if (theComplexUnit->GetIsCloaked() && !gWorld.GetCurrentPlayer()->IsAlly(theComplexUnit->GetPlayer()))
+                theTick.hidden = true;
         }
     }
-    if (theDelta == 0)
-        return 0;
-    if (theDelta > 0) {
-        do {
-            gWorld.GetEffectManager()->CreateUnitEffect(this->GetUnit(), this->GetGraphicEffect()->GetLinkedEffect1(), &theHandle, 0, this->mPrimaryEffects.size(), 0);
-            this->mPrimaryEffects.push_back(theHandle);
-            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
-                gWorld.GetEffectManager()->CreateUnitEffect(this->GetUnit(), this->GetGraphicEffect()->GetLinkedEffect2(), &theHandle, 0, this->mSecondaryEffects.size(), 0);
-                this->mSecondaryEffects.push_back(theHandle);
-            }
-            theDelta--;
-        } while (theDelta > 0);
-    } else {
-        do {
-            gWorld.GetEffectManager()->DestroyEffect(this->mPrimaryEffects.back());
-            this->mPrimaryEffects.pop_back();
-            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
-                gWorld.GetEffectManager()->DestroyEffect(this->mSecondaryEffects.back());
-                this->mSecondaryEffects.pop_back();
-            }
-            theDelta++;
-        } while (theDelta < 0);
-    }
-    return 0;
+    EeGfxDamagedHost theHost = {this, EEDamagedHost::Create, EEDamagedHost::Destroy};
+    return ee_gfx_effect_damaged_step(this->mRecord, &theTick, &theHost);
 }

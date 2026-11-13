@@ -593,6 +593,34 @@ constexpr static const uint8_t EE_OBJECT_UNIT = 1;
 
 constexpr static const uint8_t EE_OBJECT_COMPLEX_UNIT = 2;
 
+constexpr static const int32_t EE_UNITS_PATROL_CREATE_EMPTY = 1;
+
+constexpr static const int32_t EE_UNITS_PATROL_CREATE = 2;
+
+constexpr static const int32_t EE_UNITS_PATROL_DESTROY = 3;
+
+constexpr static const int32_t EE_UNITS_PATROL_SET_GROUP = 4;
+
+constexpr static const int32_t EE_UNITS_PATROL_CLONE_TARGET = 5;
+
+constexpr static const int32_t EE_UNITS_PATROL_CHECKSUM = 6;
+
+constexpr static const int32_t EE_UNITS_PATROL_STEP = 7;
+
+constexpr static const int32_t EE_UNITS_PATROL_START = 8;
+
+constexpr static const int32_t EE_UNITS_PATROL_SAVE = 9;
+
+constexpr static const int32_t EE_UNITS_PATROL_LOAD = 10;
+
+constexpr static const int32_t EE_UNITS_PATROL_REPAIR = 11;
+
+constexpr static const int32_t EE_UNITS_PATROL_TARGET = 12;
+
+constexpr static const int32_t EE_UNITS_PATROL_GROUP = 13;
+
+constexpr static const int32_t EE_UNITS_PATROL_FORWARD = 14;
+
 /// The modes (`SpeedMode`, `PitchMode`, `YawMode`): hold, accelerate, brake.
 constexpr static const int32_t EE_UNITS_MODE_HOLD = 2;
 
@@ -1218,6 +1246,36 @@ struct EeUnitStoreCheck {
   uint32_t first_field;
 };
 
+/// One goal of a queue's report: its id, kind and object.
+struct EeGoalQueueEntry {
+  uint32_t id;
+  uint8_t kind;
+  uint64_t goal;
+};
+
+/// A queue's timer (`mStartTime`, `mTime`, `mStarted`).
+struct EeGoalQueueTimer {
+  uint32_t start;
+  uint32_t time;
+  uint8_t started;
+};
+
+/// The C++ host of the codec and the update (`EEGoalQueueContainer.cpp`'s table).
+struct EeGoalQueueHost {
+  void *context;
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_u8)(void *context, uint8_t value);
+  int32_t (*write_bool)(void *context, bool value);
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_u8)(void *context, uint8_t *value);
+  int32_t (*save_goal)(void *context, uint64_t goal);
+  int32_t (*load_goal)(void *context, uint8_t kind);
+  void (*clear)(void *context);
+  int32_t (*read_timer)(void *context, uint32_t field);
+  void (*expire)(void *context, uint32_t index);
+  void (*refresh)(void *context);
+};
+
 /// A goal to create: the constructor and its arguments, units by id (resolved by the host through the registry).
 struct EeGoalSpec {
   uint32_t ctor;
@@ -1258,6 +1316,31 @@ struct EeUnitsPushIn {
   /// the unit's `GetMaxVelocity()`
   float max_velocity;
   float tick_seconds;
+};
+
+/// The C++ host table.
+struct EePatrolHost {
+  void *context;
+  uint64_t (*new_group)(void*);
+  void (*reference)(void*, uint64_t, bool);
+  void (*dereference)(void*, uint64_t, bool);
+  uint64_t (*group_next)(void*, uint64_t, uint64_t);
+  uint64_t (*group_previous)(void*, uint64_t, uint64_t);
+  uint32_t (*group_count)(void*, uint64_t);
+  uint32_t (*group_id)(void*, uint64_t);
+  uint64_t (*group_nearest)(void*, uint64_t, int64_t, int64_t);
+  void (*unit_tile)(void*, uint64_t, int64_t*, int64_t*);
+  uint32_t (*unit_id)(void*, uint64_t);
+  bool (*unit_valid)(void*, uint64_t);
+  int64_t (*unit_command)(void*, uint64_t);
+  void (*reset_path_attempts)(void*, uint64_t);
+  void (*start_action)(void*, uint64_t, int64_t);
+  uint64_t (*find_unit)(void*, uint32_t);
+  uint64_t (*player_group)(void*, uint64_t, uint32_t);
+  int32_t (*write_u32)(void*, uint32_t);
+  int32_t (*write_bool)(void*, bool);
+  int32_t (*read_u32)(void*, uint32_t*);
+  int32_t (*read_bool)(void*, bool*);
 };
 
 /// A turn's result: the angle left, the new rate, the new heading (`outA`, `outB`, `outC`).
@@ -1702,6 +1785,37 @@ void ee_units_cast_calamity(void *player,
 /// `ids` points to `count` words (or is null with `count` 0).
 void ee_units_goal_queue_set(uint64_t container, uint64_t unit, const uint32_t *ids, size_t count);
 
+/// A container's report: `count` goals at `entries` (id, kind, object) and its timer.
+///
+/// # Safety
+/// `entries` points to `count` entries (or is null with `count` 0).
+void ee_units_goal_queue_report(uint64_t container,
+                                uint64_t unit,
+                                const EeGoalQueueEntry *entries,
+                                size_t count,
+                                EeGoalQueueTimer timer);
+
+/// The container's save from its mirror (`save`): the status; -1 when there is no mirror.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int32_t ee_units_goal_queue_save(uint64_t container, const EeGoalQueueHost *host);
+
+/// The container's load (`load`): the status.
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int32_t ee_units_goal_queue_load(const EeGoalQueueHost *host);
+
+/// The unit's goal queues' per-tick update (`update_unit`).
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+void ee_units_goal_queues_update(uint64_t unit,
+                                 uint32_t count,
+                                 uint32_t now,
+                                 const EeGoalQueueHost *host);
+
 /// A container's destructor.
 void ee_units_goal_queue_drop(uint64_t container);
 
@@ -1709,13 +1823,14 @@ void ee_units_goal_queue_drop(uint64_t container);
 int64_t ee_units_goal_queue_len(uint64_t unit, uint32_t index);
 
 /// TEST ONLY: a unit's `count` containers (their addresses, each with `lens[i]` goal ids, all of them in order at
-/// `ids`) against the mirror: the mismatches (`GoalQueues::check_unit`).
+/// `ids`, and its timer) against the mirror: the mismatches (`GoalQueues::check_unit_timers`).
 ///
 /// # Safety
-/// `containers` and `lens` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
+/// `containers`, `lens` and `timers` point to `count` elements, `ids` to the sum of `lens` (each null when empty).
 uint32_t ee_units_goal_queue_check_unit(uint64_t unit,
                                         const uint64_t *containers,
                                         const uint32_t *lens,
+                                        const EeGoalQueueTimer *timers,
                                         size_t count,
                                         const uint32_t *ids,
                                         size_t ids_count);
@@ -1921,6 +2036,17 @@ float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_
 /// # Safety
 /// `member` points to a valid input.
 EeUnitsPush ee_units_step_push(uint32_t id, uint64_t object, const EeUnitsPushIn *member);
+
+/// A patrol goal's body `op` on the goal `goal` (`a`, `b`: the unit, the group or the target as the body takes
+/// them); its result (a handle, a status, a checksum or a flag; 0 otherwise).
+///
+/// # Safety
+/// `host` points to a valid table for the call.
+int64_t ee_units_patrol_goal(int32_t op,
+                             uint64_t goal,
+                             uint64_t a,
+                             uint64_t b,
+                             const EePatrolHost *host);
 
 /// `TurnTowardAngle` over the C++'s values.
 ///

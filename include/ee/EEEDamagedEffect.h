@@ -24,9 +24,9 @@ public:
 
     static const UString sData;             // "EEEDamagedEffect-Data" (0x4e8d88; provisional name)
 
-    std::vector<EEEffectHandle> mPrimaryEffects;  // +0x54 the graphic's mLinkedEffect1 sub-effects (push_back/pop_back)
-    std::vector<EEEffectHandle> mSecondaryEffects;  // +0x64 the graphic's mLinkedEffect2 sub-effects
-    bool mIsFinished;                       // +0x74 (the fire functor sets it instead of destroying the effect)
+    // +0x54 / +0x64: the handles of the graphic's mLinkedEffect1 and mLinkedEffect2 sub-effects are the record's (ee_gfx
+    // effect_state.rs `EeGfxEffectLists`); the tick, load and save are Rust's
+    bool& mIsFinished = this->mRecord->damaged.finished;   // +0x74 (the fire functor sets it instead of destroying the effect)
 };
 
 #endif

@@ -5,18 +5,6 @@
 #ifndef EE_EEUIMANAGEREVENTS_H
 #define EE_EEUIMANAGEREVENTS_H
 
-class EEUIECEClose : public UIEvent {
-public:
-    virtual ~EEUIECEClose() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
-class EEUIECECampaignNameChanged : public UIEvent {
-public:
-    virtual ~EEUIECECampaignNameChanged() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
-};
-
 // ProcessEvent 0x273345 inline (emitted after the main game factory): the unit hack panel loads the unit data
 class EEUIELoadUnit : public UIEvent {
 public:

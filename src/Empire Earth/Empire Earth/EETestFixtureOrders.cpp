@@ -138,7 +138,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEUnitVectorItem.h"
@@ -272,7 +272,7 @@ std::string GoalText(EEUnitGoal* inGoal)
         return "ground:" + Point(static_cast<EEUGAttackGround*>(inGoal)->mTarget.GetX(),
                                  static_cast<EEUGAttackGround*>(inGoal)->mTarget.GetY());
     case kGoalPatrol:
-        return "patrol:" + Number(IDOf(static_cast<EEUGPatrol*>(inGoal)->mTarget));
+        return "patrol:" + Number(IDOf(static_cast<EEUGRust*>(inGoal)->GetPatrolTarget()));
     case kGoalBuildRepair:
         return "build";
     case kGoalExplore:
@@ -431,7 +431,7 @@ void JudgePatrol(OrderState& ioState)
             Judge(theRow, theOK, "location:" + Point(theX, theY), theFound);
         } else {
             bool theOK = theGoal != NULL && theGoal->mKind == kGoalPatrol
-                && static_cast<EEUGPatrol*>(theGoal)->mPatrolGroup == ioState.mRoute;
+                && static_cast<EEUGRust*>(theGoal)->GetPatrolGroup() == ioState.mRoute;
             Judge(theRow, theOK, "patrol-route-of:" + Number(ioState.mRoutePoint), theFound);
         }
     }

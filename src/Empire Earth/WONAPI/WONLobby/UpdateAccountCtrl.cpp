@@ -73,13 +73,13 @@ void UpdateAccountCtrl::HandleEnteredScreen()
 {
     AuthContext* context=GetLobbyAuthContext();
     if(context==NULL) return;
-    this->mUserNameInput->SetText(GUIString(new GUIStringData(context->mName)),true);
+    this->mUserNameInput->SetText(GUIString(new GUIStringData(context->GetName())),true);
     this->mOldPasswordInput->Clear(true);
     this->mPasswordInput->Clear(true);
     this->mConfirmPasswordInput->Clear(true);
     this->mEmailInput->Clear(true);
     this->mNewsletterCheck->SetCheck(false,false);
-    this->mActualOldPassword=GUIString(new GUIStringData(context->mPassword));
+    this->mActualOldPassword=GUIString(new GUIStringData(context->GetPassword()));
 }
 // FUNCTION: WON 0x007ca3e0
 // Shows the e-mail address and newsletter choice returned by the account query

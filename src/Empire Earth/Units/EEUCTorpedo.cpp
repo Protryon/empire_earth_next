@@ -55,9 +55,7 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
 long EEUCTorpedo::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     // ee_combat goals.rs condition (CBTC); the missile's test is the host's base read
-    EeCombatConditionIn in;
-    EECombatFillCondition(in, EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit));
-    return EECombatCondition(in, inUnit, NULL, this);
+    return EECombatCondition(EE_COMBAT_GOAL_TORPEDO, inUnit, inEvent, EECombatShotTarget(inUnit), NULL, this);
 }
 
 // FUNCTION: EXE 0x61b232

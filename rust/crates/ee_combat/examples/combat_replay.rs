@@ -14,6 +14,11 @@ pub extern "C" fn ee_combat_store_player_of(_object: u64, _out: *mut ee_combat::
     false
 }
 
+#[no_mangle]
+pub extern "C" fn ee_combat_store_stats_of(_object: u64, _out: *mut ee_combat::store::EeCombatStoredStats) -> bool {
+    false
+}
+
 fn main() {
     let mut bad = 0u64;
     for path in std::env::args().skip(1) {

@@ -23,6 +23,7 @@
 #include "ee/wonapi/WONHttpMsg.h"
 #include "won_ftp_msg.h"
 #include "ee/wonapi/WONPatchMsg.h"
+#include "won_version_msg.h"
 #include "rust/ee_rust.h"
 
 using namespace WONAPI;

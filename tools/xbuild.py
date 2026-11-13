@@ -517,8 +517,9 @@ WON_TESTS = {
     "won_config_test": [*[WON_SRC / "WONConfig" / f for f in ("ConfigParser.cpp", "ConfigToken.cpp")],
                         *[WON_SRC / "WONCommon" / f for f in ("FileReader.cpp", "FileReaderWideStrings.cpp",
                                                              "StringUtil.cpp")]],
-    # AuthContext's secrets, community data and hashes: the original's statements against ee_won's authctx module
-    "won_auth_test": [WON_SRC / "WONCrypt" / "MD5Digest.cpp"],
+    # AuthContext's secrets, community data and hashes, and its login data as one object: the original's statements
+    # against ee_won's authctx and authlogin modules (golden: rust/crates/ee_won/src/golden_authlogin.txt)
+    "won_auth_test": [WON_SRC / "WONCrypt" / "MD5Digest.cpp", WON_SRC / "WONCommon" / "MD5.cpp"],
     # the directory server's entity replies (golden: rust/crates/ee_won/src/golden_dir.txt)
     "won_dir_test": [*[WON_SRC / "WONDir" / f for f in ("DirEntityReplyParser.cpp", "DirEntity.cpp")],
                      WON_SRC / "WONSocket" / "IPAddr.cpp"],
@@ -571,6 +572,11 @@ WON_TESTS = {
     # their C ABI (golden: rust/crates/ee_won/src/golden_reqlast.txt)
     "won_reqlast_test": [ROOT / "tests" / "won" / "won_profiledata.cpp",
                          *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp")]],
+    # WONMisc's GetVersionOp and FindPatchOp as whole ops (the directory request, the versions and patches read from
+    # its listing, the version checks and patch lists), the original's statements against the Rust ops (ee_won
+    # verop.rs) through their C ABI (golden: rust/crates/ee_won/src/golden_verop.txt)
+    "won_verop_test": [WON_SRC / "WONDir" / "DirEntity.cpp", WON_SRC / "WONCommon" / "StringUtil.cpp",
+                       WON_SRC / "WONSocket" / "IPAddr.cpp"],
     # the Rust op base and the ops on it (MultiPingOp, FilePushOp, FTPGetOp): the original's statements against the
     # Rust ops (ee_won hostop.rs, multiping.rs, filepush.rs, ftpop.rs) through the base's one call over a stand-in
     # (golden: rust/crates/ee_won/src/golden_hostop.txt)

@@ -30,17 +30,18 @@ public:
     virtual long Step();                      // f588d: duration and pending transform
     void Clear();                            // f503c
     long Update();                           // f50b2
-    GEVector mVelocity;                      // +74
-    GE3DPoint mPosition;                      // +80
+    // the record's (ee_gfx effect_state.rs `EeGfxEffectParticle`); the set-up, move, tick, load and save are Rust's
+    GEVector& mVelocity = *reinterpret_cast<GEVector*>(&this->mRecord->particle.velocity);   // +74 (saved)
+    GE3DPoint& mPosition = *reinterpret_cast<GE3DPoint*>(&this->mRecord->particle.draw_position);   // +80
     EEGraphicObject* mGraphicObject;          // +8c
-    float mLifeFraction;                     // +90, x87 clear/read/write
-    float mAge;                              // +94, elapsed time
-    float mYaw;                              // +98, angular state
-    float mPitch;                            // +9c
-    float mRoll;                             // +a0
-    float mBrightness;                       // +a4, initialized/clamped 0..1
-    float mLastTime;                         // +a8, Physics+94 timestamp
-    float mDuration;                         // +ac, GraphicEffect+78 duration
-    bool mMoved;                             // +b0
+    float& mLifeFraction = this->mRecord->particle.draw_age;   // +90
+    float& mAge = this->mRecord->particle.age;   // +94, elapsed time (saved)
+    float& mYaw = this->mRecord->particle.yaw;   // +98 (saved)
+    float& mPitch = this->mRecord->particle.pitch;   // +9c (saved)
+    float& mRoll = this->mRecord->particle.roll;   // +a0 (saved)
+    float& mBrightness = this->mRecord->particle.brightness;   // +a4 (saved)
+    float& mLastTime = this->mRecord->particle.last_time;   // +a8 (the game clock at the last move; saved)
+    float& mDuration = this->mRecord->particle.duration;   // +ac, the graphic effect's duration
+    bool& mMoved = this->mRecord->particle.moved;   // +b0
 };                                          // pool chunk stride0xb4 includes alignment padding
 #endif
