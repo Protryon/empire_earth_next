@@ -1,6 +1,7 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEE2DSmokePlume.cpp (no __FILE__; name from the RTTI class and its key
 // "EEE2DSmokePlume-Data"). 0xe6ef2..0xe72fa: the key chain, both ctors .. Step; EEE2DSquareMarchingIcons.cpp
-// follows.
+// follows. New (port, RUST_PLAN R4.4): also the original's EEE2DVelocityParticle.cpp (0xe753d..0xe773c) as kind 0xc;
+// the saved state, the constructor's draws, the tick, load and save are ee_gfx effect_state.rs's.
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
@@ -53,16 +54,26 @@ const UString EEE2DSmokePlume::sData("EEE2DSmokePlume-Data");
 EEE2DSmokePlume::EEE2DSmokePlume(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind)
     : EEEffect2D(0, inGraphicEffect, gEffect2DModel, inKind, false)
 {
-    float theMinimum = this->mGraphicEffect->GetParam1() - this->mGraphicEffect->GetParam2();
-    float theMaximum = this->mGraphicEffect->GetParam1() + this->mGraphicEffect->GetParam2();
-    this->mStart = inPosition;
-    this->mAge = 0.0f;
+    static const EeGe3DPoint kNoVelocity = {0.0f, 0.0f, 0.0f};
     this->mGraphicObject = NULL;
     this->mDrawAge = 0.0f;
-    this->mRotation = EEEffect::GetRandom() * 6.2831855f;
-    this->mBrightness = EEEffect::GetRandom() * (theMaximum - theMinimum) + theMinimum;
-    this->mBrightness = max(this->mBrightness, 0.0f);
-    this->mBrightness = min(this->mBrightness, 1.0f);
+    ee_gfx_effect_plume_new(this->mRecord, reinterpret_cast<const EeGe3DPoint*>(&inPosition),
+                            this->mGraphicEffect->GetParam1(), this->mGraphicEffect->GetParam2(), &kNoVelocity);
+}
+
+// FUNCTION: EXE 0x4e7580
+// Creates a moving smoke puff (kind 12) at the line's start with the line's direction as its velocity (the
+// original's EEE2DVelocityParticle)
+EEE2DSmokePlume::EEE2DSmokePlume(const GE3DLine& inLine, EEGraphicEffect* inGraphicEffect)
+    : EEEffect2D(0, inGraphicEffect, gEffect2DModel, EE_GFX_EFFECT_KIND_VELOCITY_PARTICLE, false)
+{
+    GE3DPoint theStart = inLine.GetStart();
+    GEVector theDirection = inLine.GetDirection();
+    EeGe3DPoint theVelocity = {theDirection.GetX(), theDirection.GetY(), theDirection.GetZ()};
+    this->mGraphicObject = NULL;
+    this->mDrawAge = 0.0f;
+    ee_gfx_effect_plume_new(this->mRecord, reinterpret_cast<const EeGe3DPoint*>(&theStart),
+                            this->mGraphicEffect->GetParam1(), this->mGraphicEffect->GetParam2(), &theVelocity);
 }
 
 // SYNTHETIC: EXE 0x4e7004
@@ -71,7 +82,7 @@ EEE2DSmokePlume::EEE2DSmokePlume(const GE3DPoint& inPosition, EEGraphicEffect* i
 // FUNCTION: EXE 0x4e7020
 // Creates an empty smoke puff of the given kind for loading from a saved game
 EEE2DSmokePlume::EEE2DSmokePlume(long inKind)
-    : EEEffect2D(gEffect2DModel, inKind, false)
+    : EEEffect2D(gEffect2DModel, inKind, false), mGraphicObject(NULL)
 {
 }
 
@@ -143,59 +154,48 @@ long EEE2DSmokePlume::DrawPass6()
 // FUNCTION: EXE 0x4e718e
 // Reloads the puff's graphic and reads its point, age, rotation and brightness; returns the first read error
 // (the base class result is ignored)
+// (ee_gfx effect_state.rs; the velocity particle then its velocity, whose result it returns)
 long EEE2DSmokePlume::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    long theResult = this->mStart.Load(inFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = inFile.Read(this->mAge);
-    if (theResult != 0)
-        return theResult;
-    theResult = inFile.Read(this->mRotation);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mBrightness);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_plume(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e71f1
 // Writes the puff's point, age, rotation and brightness; returns the first write error (base result ignored)
+// (ee_gfx effect_state.rs)
 long EEE2DSmokePlume::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mStart.Save(outFile);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mAge);
-    if (theResult != 0)
-        return theResult;
-    theResult = outFile.Write(this->mRotation);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mBrightness);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_plume(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e7243
 // Ages the puff and, unless flag 1 is set, drifts its drawn point with the wind and rises (the effect position
 // itself is not moved); returns 7 (remove) once its life is over
+// (ee_gfx effect_state.rs; the velocity particle 0xe7646: moved by its damped velocity, the wind and a fading rise,
+// the effect's position following the puff)
 long EEE2DSmokePlume::Step()
 {
-    long theResult = 0;
-    float theAge = 0.0f;
-    float theElapsed = gPhysics->GetTickSeconds() * 1000.0f;
-    theAge = this->mAge += theElapsed / this->mGraphicEffect->mDuration;
-    if (this->mAge <= 1.0f) {
-        if (!this->mGraphicEffect->mFlag1) {
-            GEVector theWind = gWorld.mWindDirection;
-            float theStep = theElapsed * 0.25f;
-            this->mStart.SetX(this->mStart.GetX() + theAge * theWind.GetX() * theStep);
-            this->mStart.SetY(this->mStart.GetY() + theWind.GetY() * this->mAge * theStep);
-            this->mStart.SetZ(this->mStart.GetZ() + ((1.0f - this->mAge) * this->mGraphicEffect->GetParam3() * theElapsed
-                                         + theWind.GetZ() * this->mAge * theStep));
-        }
-    } else
-        theResult = 7;
+    EEGraphicEffect* theEffect = this->mGraphicEffect;
+    const GEVector& theWind = gWorld.mWindDirection;
+    EeGfxPlumeTick theTick;
+    theTick.tick_seconds = gPhysics->GetTickSeconds();
+    theTick.tick_time = gPhysics->GetTickTime();
+    theTick.wind.x = theWind.GetX();
+    theTick.wind.y = theWind.GetY();
+    theTick.wind.z = theWind.GetZ();
+    theTick.duration = (uint32_t)theEffect->mDuration;
+    theTick.int_param1 = (int32_t)theEffect->mIntParam1;
+    theTick.param3 = theEffect->GetParam3();
+    theTick.flag1 = theEffect->mFlag1;
+    bool theMoved = false;
+    long theResult = ee_gfx_effect_plume_step(this->mRecord, &theTick, &theMoved);
+    if (theMoved)
+        this->SetPosition(this->mStart);
     return theResult;
 }

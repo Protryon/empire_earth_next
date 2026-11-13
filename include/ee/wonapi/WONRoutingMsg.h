@@ -799,6 +799,22 @@ template <class Op> WONStatus RouteGroupListReqReply(Op* inInner, const ByteBuff
     }
     return r.End();
 }
+// RoutingGetGroupListReqOp's group map (a Rust op, ee_won reqlast.rs): the replies it checked, read again in order
+// into a connection-less inner op as its CheckResponse read each one (a reply cut short keeps what it read).
+// Source: GetNum / GetBytes by EE_WON_REQOP_* number (RustServerOp's)
+template <class Op, class Source> void RouteGroupListOf(Op* inInner, const Source& inOp)
+{
+    long long n = inOp.GetNum(EE_WON_REQOP_GROUP_REPLIES);
+    for (long long k = 0; k < n; ++k) {
+        std::string aReply = inOp.GetBytes(EE_WON_REQOP_GROUP_REPLY, k);
+        ByteBufferPtr aBuffer = new ByteBuffer(aReply.data(), (unsigned long)aReply.size(), false);
+        bool anInvalidHeader = false;
+        try {
+            RouteGroupListReqReply(inInner, aBuffer.get(), &anInvalidHeader);
+        } catch (ReadBufferException&) {
+        }
+    }
+}
 template <class Op> WONStatus RouteReadData(Op* op, unsigned char inType, ReadBuffer& inMsg)
 {
     RouteReply r(EE_WON_RT_READ_DATA, inType, inMsg);

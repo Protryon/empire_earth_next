@@ -65,7 +65,8 @@
 #include "ee/EECBUIListBox.h"
 
 #include "ee/EECivilizationManager.h"
-#include "ee/EEUIEPDCSEvents.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"   // EE_SCREENS_PDCS_*: the civilization choice form's events (ee_screens civ_choice.rs)
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
 #include "lle/UIBlinkingButton.h"
@@ -490,10 +491,10 @@ long EEProcessTimerExpired()
                 EESetCivBuilderButtonBlinking(false);
                 ::gWorld.GetCurrentPlayer()->mCivilizationChosen = true;
                 ::gWorld.GetCurrentPlayer()->mCivilizationLocked = true;
-                UIEvent* theEvent = new EEUIEPDCSFormOpen;
+                UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_OPEN);
                 theForm->SetFormOpenEvent(theEvent);
                 theEvent->Dereference();
-                theEvent = new EEUIEPDCSFormClose;
+                theEvent = EECreateScreenEvent(EE_SCREENS_PDCS_CLOSE);
                 theForm->SetFormCloseEvent(theEvent);
                 theEvent->Dereference();
                 gUIManager->Push(theForm);

@@ -1,7 +1,7 @@
 // WONDB's ContestCallOp, EventReportOp and GetUserIdFromNameOp, WONMisc's ReportPatchStatusOp and
 // CheckValidVersionOp and WONServer's PingOp as whole ops: the
 // original's RunHook, GetNextRequest, CheckResponse and Reset (copied from the C++ op classes before the port, over
-// stand-ins with the ops' members; the wire statements through include/ee/wonapi/WONDBMsg.h and WONPatchMsg.h and
+// stand-ins with the ops' members; the wire statements through tests/won/won_db_msg.h and WONPatchMsg.h and
 // ee_won's ping functions, which won_db_test, won_misc_test and won_server_test check against the pre-port
 // statements) against the Rust ops (ee_won reqops.rs) through their C ABI. Each sequence: generated members, the
 // RunHook verdict and the request, then up to five generated replies (headers right and wrong, cut and mutated),
@@ -21,7 +21,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
-#include "ee/wonapi/WONDBMsg.h"
+#include "won_db_msg.h"
 #include "ee/wonapi/WONPatchMsg.h"
 #include "rust/ee_won.h"
 

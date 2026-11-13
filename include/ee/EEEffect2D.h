@@ -84,9 +84,10 @@ public:
     void SetBoundingRadius(float inValue) { this->mBoundingRadius = inValue; }
 
     std::vector<EEEffect2DPart> mParts;     // +0x30
-    GE3DPoint mPosition;                    // +0x40 (Load: GE3DPoint::Load)
+    // +0x40 and +0x50: the record's (ee_gfx effect_state.rs; a new record holds 0)
+    GE3DPoint& mPosition = *reinterpret_cast<GE3DPoint*>(&this->mRecord->position);
     GEModel* mModel;                        // +0x4c (referenced; GEModel::Dereference in the dtor)
-    float mBoundingRadius;                  // +0x50
+    float& mBoundingRadius = this->mRecord->bounding_radius;
 };
 
 #endif

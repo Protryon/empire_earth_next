@@ -20,7 +20,7 @@ namespace WONAPI {
 // RefCounts.
 struct HTTPEngineHooks {
     static RefCount* Obj(void* p) { return static_cast<RefCount*>(p); }
-    static HTTPGetOp* Op(void* p) { return static_cast<HTTPGetOp*>(static_cast<AsyncOp*>(Obj(p))); }
+    static RustServerOp* Op(void* p) { return static_cast<RustServerOp*>(static_cast<AsyncOp*>(Obj(p))); }
     static void* Ref(RefCount* p) { return p; }
     static void ConnLock(void* c) { static_cast<HTTPConnection*>(c)->mDataCrit.Enter(); }
     static void ConnUnlock(void* c) { static_cast<HTTPConnection*>(c)->mDataCrit.Leave(); }
@@ -49,24 +49,22 @@ struct HTTPEngineHooks {
     }
     static void Prepare(void* p, void* s)
     {
-        HTTPGetOp* op = Op(p);
-        op->SetCloseConnection(false);
-        op->SetDoRangeResume(false);
-        op->SetSocket(s != NULL ? static_cast<BlockingSocket*>(Obj(s)) : NULL);
+        RustServerOp* op = Op(p);
+        op->SetNum(EE_WON_HTTPGET_CLOSE, 0);
+        op->SetNum(EE_WON_HTTPGET_RANGE_RESUME, 0);
+        op->Set(EE_WON_HTTPGET_SOCKET, s != NULL ? Obj(s) : NULL);
     }
     static void RunAsync(void* p) { Op(p)->RunAsync(Op(p)->GetTimeout()); }
     static void* Socket(void* p)
     {
-        BlockingSocket* s = Op(p)->GetSocket();
+        BlockingSocket* s = Op(p)->GetHttpSocket();
         if (s == NULL) return NULL;
         s->AddRef();
         return Ref(s);
     }
     static void SetMode(void* p, int m)
     {
-        if (m == 2) Op(p)->SetOnlyRecv();
-        else if (m == 0) Op(p)->SetOnlySend();
-        else Op(p)->SetSendAndRecv();
+        Op(p)->SetNum(EE_WON_HTTPGET_MODE, m == 2 ? 2 : m == 0 ? 0 : 1); // only receive, only send, both
     }
     static void Complete(void* c, void* p)
     {
@@ -76,7 +74,7 @@ struct HTTPEngineHooks {
     static int64_t Now(void*) { return (int64_t)time(NULL); }
     static void Host(void* p, EeWonByteSink sink, void* sc)
     {
-        const std::string& h = Op(p)->GetHost();
+        std::string h = Op(p)->GetBytes(EE_WON_HTTPGET_HOST);
         sink(sc, reinterpret_cast<const uint8_t*>(h.data()), h.size());
     }
     static void* NewConn(void*)
@@ -131,7 +129,7 @@ struct HTTPEngineHooks {
 
 // FUNCTION: WON 0x006d28f0
 // Queues an HTTP get on the connection for its host, creating the connection on first use
-void HTTPSession::AddOp(HTTPGetOp* inOp)
+void HTTPSession::AddOp(RustServerOp* inOp)
 {
     ee_won_http_session_add_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
@@ -166,13 +164,13 @@ void HTTPConnection::Kill()
 
 // FUNCTION: WON 0x006d33a0
 // Queues a request as send-only on the pipeline queue, or as a full request when pipelining is off
-void HTTPConnection::QueueOp(HTTPGetOp* inOp)
+void HTTPConnection::QueueOp(RustServerOp* inOp)
 {
     ee_won_http_conn_queue_op(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }
 // FUNCTION: WON 0x006d3290
 // Appends a request to the send (0) or receive (1) queue and starts it when the queue was empty
-void HTTPConnection::QueueOp(HTTPGetOp* inOp,int inId)
+void HTTPConnection::QueueOp(RustServerOp* inOp,int inId)
 {
     ee_won_http_conn_queue_op_id(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)), inId);
 }
@@ -201,12 +199,12 @@ void HTTPConnection::RunOp(int inId)
 void HTTPConnection::StaticOpCallback(AsyncOpPtr inOp,SmartPtr<RefCount> inConnection)
 {
     static_cast<HTTPConnection*>(inConnection.get())->OpCallback(
-        static_cast<HTTPGetOp*>(inOp.get()));
+        static_cast<RustServerOp*>(inOp.get()));
 }
 
 // FUNCTION: WON 0x006d2e80
 // Handles a finished request: queues a sent one for its reply or completes it; requeues all when the pipeline drops
-void HTTPConnection::OpCallback(HTTPGetOp* inOp)
+void HTTPConnection::OpCallback(RustServerOp* inOp)
 {
     ee_won_http_conn_op_callback(this->mImpl, HTTPEngineHooks::Ref(static_cast<AsyncOp*>(inOp)));
 }

@@ -131,8 +131,8 @@ public:
 class GotHTTPDocumentEvent : public LobbyEvent {
 public:
     virtual ~GotHTTPDocumentEvent(); // explicit: writes its own vtable pointer
-    GotHTTPDocumentEvent(GetHTTPDocumentOp* inOp); // 0x75a2a0; used by InitLogic::HTTPDocumentCompletion (0x7de280)
-    SmartPtr<GetHTTPDocumentOp> mOp; // 0x20; 0x24 bytes
+    GotHTTPDocumentEvent(RustServerOp* inOp); // 0x75a2a0; used by InitLogic::HTTPDocumentCompletion (0x7de280)
+    SmartPtr<RustServerOp> mOp; // 0x20; 0x24 bytes (a GetHTTPDocumentOp, httpdoc.rs)
 };
 class ChangeDirectConnectEvent : public LobbyChangeEvent {
 public:

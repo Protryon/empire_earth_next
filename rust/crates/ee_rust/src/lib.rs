@@ -196,7 +196,9 @@ use ee_netmsg as _;
 #[cfg(not(test))]
 use ee_screens as _;
 // the computer player's leaves (ee_ai/src/ffi.rs): the next engine's save blocks, the AI manifest and the seat choice,
-// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp
+// the name tables, called by EECPNextLua.cpp, EECPNextUnits.cpp, EECPEngine.cpp and EECPNext.cpp; the Lua runtime
+// (lua_ffi.rs), called by EECPLua.cpp (it imports the vendored Lua the C++ build compiles, absent from a test binary)
+#[cfg(not(test))]
 use ee_ai as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.

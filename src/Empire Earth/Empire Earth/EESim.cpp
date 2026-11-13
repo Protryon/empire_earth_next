@@ -134,7 +134,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEUICPing.h"
-#include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEStartingResources.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"

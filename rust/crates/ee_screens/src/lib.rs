@@ -23,8 +23,13 @@
 //! - [`custom_campaign`]: the custom campaign form whole (its events over the C++ host).
 //! - [`civ_builder`]: the civilization builder's events whole (its form's and dialogs' control events, the form's
 //!   open and close events, over the C++ builder helpers).
+//! - [`civ_choice`]: the in-game civilization choice form whole (form 35: the predefined civilizations, over the C++
+//!   host; the posted loads' files by slot).
+//! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
 //! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
 //!   as records).
+//! - [`post_game`]: the post-game summary whole (form 25: its graphs, bars and stars, the stats server's reports,
+//!   over the C++ host; the statistics as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
@@ -50,9 +55,15 @@ mod chat_ffi;
 pub mod civ_builder;
 #[cfg(not(test))]
 mod civ_builder_ffi;
+pub mod civ_choice;
+#[cfg(not(test))]
+mod civ_choice_ffi;
 pub mod command_panel;
 mod command_panel_ffi;
 pub mod custom_campaign;
+pub mod debug_sound;
+#[cfg(not(test))]
+mod debug_sound_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
@@ -76,6 +87,9 @@ pub mod menus;
 // imports the C++ host's toolkit and game calls (UI Events/EEScreens.cpp), absent from a test binary
 #[cfg(not(test))]
 mod menus_ffi;
+pub mod post_game;
+#[cfg(not(test))]
+mod post_game_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;

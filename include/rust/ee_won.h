@@ -972,16 +972,6 @@ constexpr static const int32_t EE_WON_HOST_SOCKET_PORT = 95;
 /// an op obj0's `Run(num0, num1)` (mode, timeout) -> out_num (the status)
 constexpr static const int32_t EE_WON_HOST_RUN = 96;
 
-/// `GetNextRequest()` -> out_num, `mRequest` -> the sink
-constexpr static const int32_t EE_WON_HOST_REQ_NEXT = 97;
-
-/// `mResponse = data` (num0 0: NULL), `CheckResponse()` -> out_num; out_addr[0] 1 where it threw
-/// `ReadBufferException`
-constexpr static const int32_t EE_WON_HOST_REQ_CHECK = 98;
-
-/// `Reset()`
-constexpr static const int32_t EE_WON_HOST_REQ_RESET = 99;
-
 /// `AuthContext::GetVerifierKey().IsPublic()` -> out_num
 constexpr static const int32_t EE_WON_HOST_CERT_VERIFIER_PUBLIC = 100;
 
@@ -1073,6 +1063,73 @@ constexpr static const int32_t EE_WON_HOST_CERT_SET_PEER = 128;
 /// ctx obj0's `ClearOneTimeData()`
 constexpr static const int32_t EE_WON_HOST_CERT_CLEAR_ONE_TIME = 129;
 
+/// a socket obj0's `IsConnected()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_CONNECTED = 130;
+
+/// a socket obj0's `Kill()`
+constexpr static const int32_t EE_WON_HOST_SOCKET_KILL = 131;
+
+/// a socket obj0's `GetSocketStatus()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_STATUS = 132;
+
+/// a socket obj0's `RecvCRMsg(line, num0)` -> out_num (the status), the line (none: NULL)
+constexpr static const int32_t EE_WON_HOST_RECV_CR = 133;
+
+/// `WONFile(data)`'s `Exists()` (num0 0), `GetSize()` (1), `GetModifyTime()` (2) -> out_num
+constexpr static const int32_t EE_WON_HOST_FILE_STAT = 134;
+
+/// `time(NULL)` -> out_num
+constexpr static const int32_t EE_WON_HOST_TIME = 135;
+
+/// a cache obj0's `GetEntry(data)` -> out_obj (a reference taken; none: NULL)
+constexpr static const int32_t EE_WON_HOST_CACHE_ENTRY = 136;
+
+/// a cache entry obj0's `IsValid()` (num0 0), `GetExpirationTime()` (1) -> out_num; `GetLocalPath()` (2),
+/// `GetEntityTag()` (3) -> the bytes
+constexpr static const int32_t EE_WON_HOST_ENTRY_GET = 137;
+
+/// a cache entry obj0's `SetValid(num1)` (num0 0), `SetExpirationTime(num1)` (1), `SetEntityTag(data)` (3)
+constexpr static const int32_t EE_WON_HOST_ENTRY_SET = 138;
+
+/// a cache obj0's `UpdateEntry(obj1)`
+constexpr static const int32_t EE_WON_HOST_CACHE_UPDATE = 139;
+
+/// a receive op obj0's `SetSkipBytes(true)`
+constexpr static const int32_t EE_WON_HOST_RECV_SKIP = 140;
+
+/// a receive op obj0's `SetBinaryFile(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_BINARY = 141;
+
+/// a receive op obj0's `SetFileModifyTime(num0)`
+constexpr static const int32_t EE_WON_HOST_RECV_MODIFY_TIME = 142;
+
+/// the web proxy file's host (`HTTPGetOp::mStaticProxyHost`) -> the bytes
+constexpr static const int32_t EE_WON_HOST_HTTP_PROXY = 143;
+
+/// `new HTTPGetOp(host, path)` (data: the host's num0 bytes, then the path) -> out_obj (a `RustServerOp`)
+constexpr static const int32_t EE_WON_HOST_NEW_HTTP_GET = 144;
+
+/// a `RustServerOp` obj0's result num0 (element num1) -> out_num
+constexpr static const int32_t EE_WON_HOST_HOSTOP_NUM = 145;
+
+/// a `RustServerOp` obj0's result bytes num0 (element num1) -> the bytes (none: NULL)
+constexpr static const int32_t EE_WON_HOST_HOSTOP_BYTES = 146;
+
+/// a `RustServerOp` obj0's setter num0 (the number num1, data, the object obj1)
+constexpr static const int32_t EE_WON_HOST_HOSTOP_SET = 147;
+
+/// an HTTP get obj0's `GetLastModifiedTime()` (the C++ side's, over its local file) -> out_num
+constexpr static const int32_t EE_WON_HOST_HTTP_MODIFIED = 148;
+
+/// `PlatFOpen(data, "r")` and its `fgetc` -> out_num (-2: no file, -1: EOF)
+constexpr static const int32_t EE_WON_HOST_FILE_FIRST_CHAR = 149;
+
+/// an HTTP session obj0's `AddOp(obj1)`
+constexpr static const int32_t EE_WON_HOST_SESSION_ADD = 150;
+
+/// the op's `mTracker.IsEmpty()` -> out_num
+constexpr static const int32_t EE_WON_HOST_TRACKER_EMPTY = 151;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -1105,6 +1162,99 @@ constexpr static const int32_t EE_WON_URL_FILE = 1;
 constexpr static const int32_t EE_WON_URL_HTTP = 2;
 
 constexpr static const int32_t EE_WON_URL_FTP = 3;
+
+/// `HTTPDocType_MOTD`, `_TOU`, `_ADV`
+constexpr static const int32_t EE_WON_HTTPDOC_MOTD = 0;
+
+constexpr static const int32_t EE_WON_HTTPDOC_TOU = 1;
+
+constexpr static const int32_t EE_WON_HTTPDOC_ADV = 2;
+
+/// `GetDocType()` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_TYPE = 1;
+
+/// `SetExtraConfig` (bytes: the language, lower case as `TryHTTPOp` read it)
+constexpr static const int32_t EE_WON_HTTPDOC_CONFIG = 2;
+
+/// `SetHTTPSession(session)` (the object)
+constexpr static const int32_t EE_WON_HTTPDOC_SESSION = 3;
+
+/// `mIsNew[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_IS_NEW = 4;
+
+/// `GetDocumentStatus(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_STATUS = 5;
+
+/// `mHTTPStatus[owner]` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_HTTP_STATUS = 6;
+
+/// `GetModifiedTime(owner)` (number)
+constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
+
+/// `GetDocumentPath(owner)` (bytes)
+constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
+
+/// `SetLocalPath` / `GetLocalPath()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
+
+/// `SetHTTPCache(cache)` (the object)
+constexpr static const int32_t EE_WON_HTTPGET_CACHE = 2;
+
+/// `SetBinaryFile` (number)
+constexpr static const int32_t EE_WON_HTTPGET_BINARY = 3;
+
+/// `SetOnlySend()` (0), `SetSendAndRecv()` (1), `SetOnlyRecv()` (2) (number)
+constexpr static const int32_t EE_WON_HTTPGET_MODE = 4;
+
+/// `SetDoRangeResume` (number)
+constexpr static const int32_t EE_WON_HTTPGET_RANGE_RESUME = 5;
+
+/// `SetCloseConnection` (number)
+constexpr static const int32_t EE_WON_HTTPGET_CLOSE = 6;
+
+/// `SetSocket(socket)` (the object; none: NULL) / the socket (`ee_won_hostop_num`: the object, 0 for none; the
+/// C++ `GetSocket()` adds the connected test)
+constexpr static const int32_t EE_WON_HTTPGET_SOCKET = 7;
+
+/// `SetRecvChunkCompletion(completion, size)` (the object, the number)
+constexpr static const int32_t EE_WON_HTTPGET_CHUNK = 8;
+
+/// `mNumRedirects` (number)
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECTS = 9;
+
+/// `mLastModified` (number; `GetLastModifiedTime()` is the C++ side's, over the local file's time)
+constexpr static const int32_t EE_WON_HTTPGET_LAST_MODIFIED = 10;
+
+/// `GetHost()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_HOST = 11;
+
+/// `GetHTTPStatus()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_STATUS = 12;
+
+/// `ContentIsNew()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_IS_NEW = 13;
+
+/// `mContentType` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT_TYPE = 14;
+
+/// `mContentLength` (number)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT_LENGTH = 15;
+
+/// `mContent` (bytes; none: NULL)
+constexpr static const int32_t EE_WON_HTTPGET_CONTENT = 16;
+
+/// `mRedirectHost`, `mRedirectPath` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECT_HOST = 17;
+
+constexpr static const int32_t EE_WON_HTTPGET_REDIRECT_PATH = 18;
+
+/// `GetRemotePath()` (bytes)
+constexpr static const int32_t EE_WON_HTTPGET_REMOTE_PATH = 19;
+
+/// `GetOnlySend()`, `GetOnlyRecv()` (number)
+constexpr static const int32_t EE_WON_HTTPGET_ONLY_SEND = 20;
+
+constexpr static const int32_t EE_WON_HTTPGET_ONLY_RECV = 21;
 
 /// the finished list's length
 constexpr static const int32_t EE_WON_MULTIPING_COUNT = 1;
@@ -1253,9 +1403,25 @@ constexpr static const int32_t EE_WON_REQHOST_ADDR = -3;
 /// `SetUDPSocket(obj)`: the request sent as one datagram on that socket instead (`ee_won_hostop_set`)
 constexpr static const int32_t EE_WON_REQHOST_UDP_SOCKET = -4;
 
-/// `SetLastServerError(num)` (an op derived in C++: its `CheckResponse`'s own, and `InvalidReplyHeader`'s):
-/// `ee_won_hostop_set`
+/// `SetLastServerError(num)`: `ee_won_hostop_set`
 constexpr static const int32_t EE_WON_REQHOST_LAST_ERROR = -5;
+
+/// `CreateAccountOp`: the user name and password (UTF-16 LE), the email, the profile (as the account ops':
+/// the newsletter count and each id and subscription; the birth month, day and year; the custom action id,
+/// has-data and data)
+constexpr static const int32_t EE_WON_REQOPS_CREATE_ACCOUNT = 14;
+
+/// `RoutingGetGroupListReqOp`: the group list flags (its inner op's `mFlags`)
+constexpr static const int32_t EE_WON_REQOPS_GROUP_LIST = 15;
+
+/// the create account's `mErrorString` (bytes)
+constexpr static const int32_t EE_WON_REQOP_CREATE_ERROR = 48;
+
+/// the group list's replies checked (number)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLIES = 49;
+
+/// a reply the group list checked (bytes; the element: its index, in order)
+constexpr static const int32_t EE_WON_REQOP_GROUP_REPLY = 50;
 
 /// [`Checked`] for the C++: the status is the call's result
 constexpr static const int32_t EE_WON_REQOP_STATUS = 0;
@@ -1265,6 +1431,9 @@ constexpr static const int32_t EE_WON_REQOP_INVALID_HEADER = 1;
 
 /// throw `ReadBufferException`
 constexpr static const int32_t EE_WON_REQOP_CUT = 2;
+
+/// `SetLastServerError(status)`, then the next server
+constexpr static const int32_t EE_WON_REQOP_SERVER_ERROR = 3;
 
 /// `ContestCallOp`: the procedure number, whether there is request data, the data
 constexpr static const int32_t EE_WON_REQOPS_CONTEST = 1;
@@ -8478,6 +8647,19 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
+/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
+                                const uint8_t *product_lower,
+                                size_t product_len,
+                                const uint8_t *sys_doc,
+                                size_t sys_len,
+                                const uint8_t *game_doc,
+                                size_t game_len);
+
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.
 EeWonHttpConn *ee_won_http_conn_new(const EeWonHttpConnHooks *hooks);
@@ -8529,6 +8711,21 @@ void ee_won_http_session_kill_all(const EeWonHttpSession *s);
 /// # Safety
 /// `s` a session.
 int ee_won_http_session_num_ops(const EeWonHttpSession *s);
+
+/// `new HTTPGetOp(host, path)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// The texts hold their lengths' bytes.
+EeWonHostOp *ee_won_httpget_new(const uint8_t *host,
+                                size_t host_len,
+                                const uint8_t *path,
+                                size_t path_len);
+
+/// `new HTTPGetOp(url)`: the Rust op a `RustServerOp` runs.
+///
+/// # Safety
+/// `url` holds `len` bytes.
+EeWonHostOp *ee_won_httpget_new_url(const uint8_t *url, size_t len);
 
 /// `IPAddr()`: zero, invalid, no remembered host.
 EeWonIpAddr *ee_won_ipaddr_new();
@@ -9780,6 +9977,10 @@ int64_t ee_won_lansocket_last_message_time(const EeWonLanSocket *l);
 /// As `ee_won_lansocket_client`.
 void ee_won_lansocket_set_last_message_time(const EeWonLanSocket *l, int64_t t);
 
+/// From now on [`system_seed`] gives `seed` plus a use counter, the same sequence in every run (0: the clocks
+/// again). For the `tests/won` drivers only: nothing in the game calls it.
+void ee_won_random_test_seed(int64_t seed);
+
 /// `config_name`.
 ///
 /// # Safety
@@ -9824,10 +10025,6 @@ bool ee_won_regkey_root_valid(int32_t root);
 /// # Safety
 /// `op` came from a Rust op constructor and is not used after.
 EeWonHostOp *ee_won_hostop_request(EeWonReqOp *op);
-
-/// An op derived from `ServerRequestOp` in C++ (`ServerRequestOp`'s constructors): its virtuals answer
-/// `EE_WON_HOST_REQ_*`. Its server context or address are set after the bind.
-EeWonHostOp *ee_won_hostop_cpp_request();
 
 /// Frees an op.
 ///
@@ -9878,6 +10075,16 @@ bool ee_won_reqop_bytes(const EeWonReqOp *op,
                         int32_t which,
                         EeWonByteSink sink,
                         void *context);
+
+/// A result's bytes by number and element (a list's index) into `sink`: false (and no call) when it has none.
+///
+/// # Safety
+/// `op` is a live op; `sink` accepts `context`.
+bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
+                           int32_t which,
+                           int64_t index,
+                           EeWonByteSink sink,
+                           void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///
