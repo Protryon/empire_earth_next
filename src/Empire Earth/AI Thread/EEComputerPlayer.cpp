@@ -6172,6 +6172,10 @@ bool EEComputerPlayer::AvoidsEnemies(EEComplexUnit* inUnit)
 // Has the combat manager respond to an enemy wonder being started
 void EEComputerPlayer::WonderStarted(EEComplexUnit* inUnit)
 {
+    // port: a script seat (the next engine) answers from ai.wonders (classic_lua's update_wonders); its C++ combat
+    // manager is not run, and the groups RespondToUnit made there were never updated
+    if (EECPEngine(this) == kEECPEngineNext)
+        return;
     this->mCombatManager->RespondToUnit(inUnit);
 }
 

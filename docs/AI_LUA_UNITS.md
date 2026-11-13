@@ -535,6 +535,8 @@ open question: is rebuilding enough?
 - `swapped` `{old, new}` (UnitsSwapped :5016);
 - `converted` `{unit, to}` (a unit lost to a priest; a unit gained is `trained` with `at = 0`);
 - `enemy_seen` `{player, x, y, count}` (the first sight of a player's units in a 20 s window);
+- `attack_player` / `defend_player` `{player}` (the attack-players order, EEAttackPlayers: a player's call that the
+  computers at war with it attack it, its allies defend it; the classic's AttackPlayer / DefendPlayer);
 - `research_done` `{tech}`;
 - `epoch` `{epoch}`;
 - today's `unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`, until their verbs go.
@@ -957,6 +959,9 @@ from data, so that a script can make its decisions with the same numbers:
 - The class record has `flight_time` (an aircraft's fuel in ms; 0: no limit) and an own unit's record `base` (the
   airport or carrier an aircraft returns to): the classic air sub-group's reach (EECPASGAir::CanReach, flight seconds
   x speed x 0.9 from the base).
+- The `attack_player` / `defend_player` events (§ events above) reach a script seat in place of the C++ combat
+  manager's AttackPlayer / DefendPlayer, and another player's wonder no longer runs the C++ RespondToUnit for a script
+  seat (its C++ combat manager is not run; classic_lua answers from `ai.wonders`).
 - `ai.wonders()` -> `{victory, to_win, players = {{player, team, count}}, list = {{id, player, team, type, built, x,
   y}}}`: the wonders as the game announces them and the wonder countdown shows them; a wonder's tile only where the
   player has explored it (or with `sees_all`). The classic's wonder race (EECPCombatManager::RespondToUnit,
