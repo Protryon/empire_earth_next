@@ -301,65 +301,6 @@ bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outW
     return theFound;
 }
 
-// the gather time of the resource (variant-scaled except stone) as the work timer
-void EEGatherWorkTimer(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    long theRate = inUnit->mStats->mGatherTimes[EEGetResourceIndex(inResource)];
-    if (inResource->mResourceType != kResourceStone)
-        inUnit->SetWorkTimer(UMFloatToLong(
-            EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor * theRate));
-    else
-        inUnit->SetWorkTimer(theRate);
-}
-
-// 0x622ae2 BeginGathering: the animation for the resource (hunt, farm, chop, mine; a mining beam from the nano age),
-// facing it, the work timer, the gatherer stopped
-void EEGatherBegin(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    if (inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-        inUnit->SetAnimation(0xb, -1, 0);
-    else {
-        long theCategory = inResource->mUnitClass->mCategory;
-        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand)
-            inUnit->SetAnimation(inResource->mHitPoints > 0 ? 0xb : 0xa, -1, 0);
-        else
-            switch (inResource->mResourceType) {
-            case kResourceFood:
-                inUnit->SetAnimation(inResource->mUnitClass->mUnitType == kUnitTypeFarm ? 6 : 0xa, -1, 0);
-                break;
-            case kResourceWood:
-                inUnit->SetAnimation(3, -1, 0);
-                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)
-                    inUnit->ReleaseFireEffect();
-                break;
-            case kResourceStone:
-            case kResourceGold:
-            case kResourceIron:
-                inUnit->SetAnimation(9, -1, 0);
-                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools) {
-                    inUnit->ReleaseFireEffect();
-                    GE3DPoint thePosition;
-                    inResource->GetPosition(thePosition);
-                    EEEffectHandle theHandle;
-                    ::gWorld.GetEffectManager()->CreateEffect(inUnit, thePosition, EEGraphicEffect::Get(kGraphicEffectSpaceCitizenMiningBeam), &theHandle, 0);
-                    inUnit->mFireEffect = theHandle;
-                }
-                break;
-            }
-    }
-    inUnit->SetResourceType(inResource->mResourceType);
-    if (inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
-        inUnit->FaceTarget(inResource);
-    EEGatherWorkTimer(inUnit, inResource);
-    inUnit->DropPath();
-    inUnit->mActiveGoal->SetPathAttempts(0);
-    inUnit->SetCurrentPhysicsAction(6);
-    inUnit->SetVelocity(0.0f);
-    inUnit->mAngularVelocity.mYaw = 0.0f;
-    inUnit->mAngularVelocity.mPitch = 0.0f;
-    inUnit->mAngularVelocity.mRoll = 0.0f;
-}
-
 // 0x622ff0 GatherNextTree's world part: a carried load of another type dropped; a tree with no free spot gives way to
 // the first gatherable tree of its forest on the line from a nearby drop site (or the gatherer) to it (the result,
 // NULL for none); another resource but an animal becomes the gathered one
@@ -472,57 +413,6 @@ bool EEGatherAccessible(EEComplexUnit* inUnit, EEUnit* inResource)
             return theClass->HasGatherPoint(inUnit, inResource);
     }
     return false;
-}
-
-// 0x62410b Work: hits a living non-farm resource with the gatherer's attack, else takes one unit of it; regrows
-// trees and restarts the work timer
-void EEGatherWork(EEComplexUnit* inUnit, EEUnit* inResource)
-{
-    unsigned long theState = inUnit->mAnimation;
-    if (inResource->mHitPoints != 0 && inResource->mUnitClass->mUnitType != kUnitTypeFarm) {
-        inResource->TakeHit(inUnit, UMFloatToLong(inUnit->mStats->mAttack), 0, 1);
-        long theCategory = inResource->mUnitClass->mCategory;
-        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand) {
-            unsigned long theNewState = (inResource->mHitPoints > 0) + 10;
-            if (theNewState != theState)
-                inUnit->SetAnimation(theNewState, -1, 0);
-        }
-    } else {
-        long theCategory = inResource->mUnitClass->mCategory;
-        if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand) && theState != 10)
-            inUnit->SetAnimation(10, -1, 0);
-        inResource->DepleteResource(1);
-        inUnit->AddResourceAmount(1);
-        inUnit->SetLastResource(inResource);
-    }
-    if (inResource->mUnitClass->mIsTree)
-        inResource->RegrowForest(inUnit);
-    EEGatherWorkTimer(inUnit, inResource);
-}
-
-// 0x624250 SearchNavalResource's world part: 0 idle (no resource, or an AI's farm), 1 another fish (outFound), 2
-// nothing, 3 waits facing the resource (animation 7 or 8 by the physics draw)
-long EEGatherNavalSearch(EEComplexUnit* inUnit, EEUnit* inResource, EEUnit** outFound)
-{
-    std::vector<EEUnit*> theUnits;
-    long theRange = UMFloatToLong(inUnit->GetLineOfSight() * 5.0f);
-    EEUCNavalCitizen* theClass = EEUnitClassCast<EEUCNavalCitizen>(inUnit->GetUnitClass());
-    if (inResource == NULL || inUnit->mPlayer->mComputerPlayer != NULL && inResource->mUnitClass->mUnitType == kUnitTypeFarm)
-        return 0;
-    if (inResource->mUnitClass->mUnitType == kUnitTypeResFish) {
-        EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inResource, inResource, theRange, inResource->GetResourceType(), &theUnits, true);
-        if (theResource == NULL || theResource == inResource)
-            return 2;
-        *outFound = theResource;
-        return 1;
-    }
-    inUnit->SetCurrentPhysicsAction(4);
-    inUnit->FaceTarget(inResource);
-    if (::gPhysics->mRandom.Generate() < 0.5f || inUnit->mStats->mCanFireOverWalls)
-        inUnit->SetAnimation(7, -1, 0);
-    else
-        inUnit->SetAnimation(8, -1, 0);
-    return 3;
 }
 
 }  // namespace
@@ -1118,6 +1008,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theFields->tower = theClass->mIsTower;
             theFields->drop_site = theClass->IsDropSite();
             theFields->land_building = theClass->IsLandBuilding();
+            theFields->animation = theOwn != NULL ? (int32_t)theOwn->mAnimation : 0;
             if (thePlayer != NULL) {
                 theFields->instant_build = thePlayer->mInstantBuild;
                 theFields->human = thePlayer->IsHuman();
@@ -1388,9 +1279,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             PointOut(ioArgs, thePoint);
             return theFound;
         }
-    case EE_UNITS_GOAL_HOST_BEGIN_GATHERING:
-        EEGatherBegin(theComplex, ObjectOf<EEUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_DEPOSIT_LOAD:
         EEDepositLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
         return 0;
@@ -1464,13 +1352,47 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             ioArgs->f[0] = EEGetPathLengthTo(theComplex, theTile, 0x10, false);
             return 0;
         }
-    case EE_UNITS_GOAL_HOST_GATHER_WORK:
-        EEGatherWork(theComplex, ObjectOf<EEUnit>(inB));
+    // the gathering's (world.rs: BeginGathering, Work, SearchNavalResource)
+    case EE_UNITS_GOAL_HOST_TAKE_HIT:
+        theUnit->TakeHit(ObjectOf<EEComplexUnit>(inB), UMFloatToLong(ObjectOf<EEComplexUnit>(inB)->mStats->mAttack), 0, 1);
         return 0;
-    case EE_UNITS_GOAL_HOST_NAVAL_SEARCH: {
-            EEUnit* theFound = NULL;
-            ioArgs->i[0] = EEGatherNavalSearch(theComplex, ObjectOf<EEUnit>(inB), &theFound);
-            return Handle(theFound);
+    case EE_UNITS_GOAL_HOST_TAKE_ONE:
+        theUnit->DepleteResource(1);
+        ObjectOf<EEComplexUnit>(inB)->AddResourceAmount(1);
+        ObjectOf<EEComplexUnit>(inB)->SetLastResource(theUnit);
+        return 0;
+    case EE_UNITS_GOAL_HOST_REGROW:
+        theUnit->RegrowForest(ObjectOf<EEComplexUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_WORK_TIMER: {   // the gather time of the resource (variant-scaled except stone)
+            EEUnit* theResource = ObjectOf<EEUnit>(inB);
+            long theRate = theComplex->mStats->mGatherTimes[EEGetResourceIndex(theResource)];
+            if (theResource->mResourceType != kResourceStone)
+                theRate = UMFloatToLong(EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor * theRate);
+            theComplex->SetWorkTimer(theRate);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS:
+        return EEGetRules().Epoch(theComplex->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools;
+    case EE_UNITS_GOAL_HOST_RELEASE_FIRE:
+        theComplex->ReleaseFireEffect();
+        return 0;
+    case EE_UNITS_GOAL_HOST_MINING_BEAM: {
+            GE3DPoint thePosition;
+            ObjectOf<EEUnit>(inB)->GetPosition(thePosition);
+            EEEffectHandle theHandle;
+            ::gWorld.GetEffectManager()->CreateEffect(theComplex, thePosition, EEGraphicEffect::Get(kGraphicEffectSpaceCitizenMiningBeam), &theHandle, 0);
+            theComplex->mFireEffect = theHandle;
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE:
+        theComplex->SetResourceType((long)ioArgs->i[0]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_FIND_FISH: {
+            std::vector<EEUnit*> theRejected;
+            EEUnit* theFish = ObjectOf<EEUnit>(inB);
+            return Handle(EEUnitClassCast<EEUCNavalCitizen>(theComplex->GetUnitClass())->FindResourceOfKind(theComplex, theFish, theFish,
+                UMFloatToLong(theComplex->GetLineOfSight() * 5.0f), theFish->GetResourceType(), &theRejected, true));
         }
     // the location goal's
     case EE_UNITS_GOAL_HOST_UNIT_CATEGORY:

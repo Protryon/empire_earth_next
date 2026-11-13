@@ -958,8 +958,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_SPOT = 459;
 
-constexpr static const int32_t EE_UNITS_GOAL_HOST_BEGIN_GATHERING = 460;
-
 constexpr static const int32_t EE_UNITS_GOAL_HOST_DEPOSIT_LOAD = 461;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_TREE = 462;
@@ -989,10 +987,6 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED = 474;
 constexpr static const int32_t EE_UNITS_GOAL_HOST_ACCESSIBLE = 475;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_LENGTH = 476;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_WORK = 477;
-
-constexpr static const int32_t EE_UNITS_GOAL_HOST_NAVAL_SEARCH = 478;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
 
@@ -1033,6 +1027,32 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_STANDING = 501;
 
 /// `a`: the unit; its class's `ActionChanged(unit)`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_ACTION_CHANGED = 502;
+
+/// `a`: the resource, `b`: the gatherer: `TakeHit(gatherer, UMFloatToLong(its attack), 0, 1)`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TAKE_HIT = 503;
+
+/// `a`: the resource, `b`: the gatherer: `DepleteResource(1)`, `AddResourceAmount(1)`, `SetLastResource`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TAKE_ONE = 504;
+
+/// `a`: the tree, `b`: the gatherer: `RegrowForest`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_REGROW = 505;
+
+/// `a`: the gatherer, `b`: the resource: the gathering's work timer
+constexpr static const int32_t EE_UNITS_GOAL_HOST_WORK_TIMER = 506;
+
+/// `a`: the gatherer: its epoch's high-tech tools; `ReleaseFireEffect()`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS = 507;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RELEASE_FIRE = 508;
+
+/// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
+constexpr static const int32_t EE_UNITS_GOAL_HOST_MINING_BEAM = 509;
+
+/// `a`: the gatherer, `i[0]`: `SetResourceType`
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE = 510;
+
+/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_FISH = 511;
 
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
@@ -2167,6 +2187,8 @@ struct EeUnitsBuildUnit {
   bool disabled;
   /// the class's `IsLandBuilding()` (round 22: the world searches)
   bool land_building;
+  /// the complex unit's `mAnimation` (the gathering)
+  int32_t animation;
 };
 
 extern "C" {

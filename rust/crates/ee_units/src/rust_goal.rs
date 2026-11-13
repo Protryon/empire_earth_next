@@ -314,7 +314,6 @@ pub const EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT: i32 = 456;
 pub const EE_UNITS_GOAL_HOST_NEXT_FARM: i32 = 457;
 pub const EE_UNITS_GOAL_HOST_STORAGE_SEARCH: i32 = 458;
 pub const EE_UNITS_GOAL_HOST_GATHER_SPOT: i32 = 459;
-pub const EE_UNITS_GOAL_HOST_BEGIN_GATHERING: i32 = 460;
 pub const EE_UNITS_GOAL_HOST_DEPOSIT_LOAD: i32 = 461;
 pub const EE_UNITS_GOAL_HOST_NEXT_TREE: i32 = 462;
 pub const EE_UNITS_GOAL_HOST_HUNT: i32 = 464;
@@ -330,8 +329,6 @@ pub const EE_UNITS_GOAL_HOST_AT_STORAGE: i32 = 473;
 pub const EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: i32 = 474;
 pub const EE_UNITS_GOAL_HOST_ACCESSIBLE: i32 = 475;
 pub const EE_UNITS_GOAL_HOST_PATH_LENGTH: i32 = 476;
-pub const EE_UNITS_GOAL_HOST_GATHER_WORK: i32 = 477;
-pub const EE_UNITS_GOAL_HOST_NAVAL_SEARCH: i32 = 478;
 pub const EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH: i32 = 479;
 // the location goal's (from 490)
 /// `a`: the unit; its class's `mCategory`
@@ -361,6 +358,25 @@ pub const EE_UNITS_GOAL_HOST_MOVABLE_UNITS: i32 = 500;
 pub const EE_UNITS_GOAL_HOST_TILE_STANDING: i32 = 501;
 /// `a`: the unit; its class's `ActionChanged(unit)`
 pub const EE_UNITS_GOAL_HOST_ACTION_CHANGED: i32 = 502;
+// the gathering's (world.rs; round 22): `a` the resource and `b` the gatherer, or `a` the gatherer and `b` the
+// resource as named
+/// `a`: the resource, `b`: the gatherer: `TakeHit(gatherer, UMFloatToLong(its attack), 0, 1)`
+pub const EE_UNITS_GOAL_HOST_TAKE_HIT: i32 = 503;
+/// `a`: the resource, `b`: the gatherer: `DepleteResource(1)`, `AddResourceAmount(1)`, `SetLastResource`
+pub const EE_UNITS_GOAL_HOST_TAKE_ONE: i32 = 504;
+/// `a`: the tree, `b`: the gatherer: `RegrowForest`
+pub const EE_UNITS_GOAL_HOST_REGROW: i32 = 505;
+/// `a`: the gatherer, `b`: the resource: the gathering's work timer
+pub const EE_UNITS_GOAL_HOST_WORK_TIMER: i32 = 506;
+/// `a`: the gatherer: its epoch's high-tech tools; `ReleaseFireEffect()`
+pub const EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS: i32 = 507;
+pub const EE_UNITS_GOAL_HOST_RELEASE_FIRE: i32 = 508;
+/// `a`: the gatherer, `b`: the resource: the mining beam (the gatherer's fire effect)
+pub const EE_UNITS_GOAL_HOST_MINING_BEAM: i32 = 509;
+/// `a`: the gatherer, `i[0]`: `SetResourceType`
+pub const EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE: i32 = 510;
+/// `a`: the naval gatherer, `b`: the fish: its class's `FindResourceOfKind` around the fish
+pub const EE_UNITS_GOAL_HOST_FIND_FISH: i32 = 511;
 
 /// The base goal's saved fields (`EEUnitGoal`'s `mAction`, `mB1C`, `mID`, `mB1D`, `mStartTime`, `mCreationTime`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -523,6 +539,8 @@ pub struct EeUnitsBuildUnit {
     pub disabled: bool,
     /// the class's `IsLandBuilding()` (round 22: the world searches)
     pub land_building: bool,
+    /// the complex unit's `mAnimation` (the gathering)
+    pub animation: i32,
 }
 
 /// The FFI adapter over the callback.
@@ -898,6 +916,45 @@ impl crate::world::WorldHost for OpHost<'_> {
     fn set_gather_storage(&mut self, goal: u64, storage: u64) {
         let mut io = EeUnitsGoalIo::default();
         crate::gather::body(EE_UNITS_GOAL_GATHER_SET_STORAGE, goal, storage, 0, &mut io, self);
+    }
+}
+
+impl crate::world::GatheringHost for OpHost<'_> {
+    fn animation(&mut self, unit: u64) -> i64 {
+        i64::from(self.build_unit(unit).animation)
+    }
+    fn take_hit(&mut self, resource: u64, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_TAKE_HIT, resource, unit);
+    }
+    fn take_one(&mut self, resource: u64, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_TAKE_ONE, resource, unit);
+    }
+    fn regrow(&mut self, resource: u64, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_REGROW, resource, unit);
+    }
+    fn work_timer(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_WORK_TIMER, unit, resource);
+    }
+    fn high_tech_tools(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_HIGH_TECH_TOOLS, unit, 0) != 0
+    }
+    fn release_fire(&mut self, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_RELEASE_FIRE, unit, 0);
+    }
+    fn mining_beam(&mut self, unit: u64, resource: u64) {
+        self.op(EE_UNITS_GOAL_HOST_MINING_BEAM, unit, resource);
+    }
+    fn set_resource_type(&mut self, unit: u64, resource_type: i32) {
+        self.op_ints(EE_UNITS_GOAL_HOST_SET_RESOURCE_TYPE, unit, 0, &[i64::from(resource_type)]);
+    }
+    fn find_fish(&mut self, unit: u64, fish: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_FIND_FISH, unit, fish) as u64
+    }
+    fn random_draw(&mut self) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_GENERATE, 0, 0, &[])[0]
+    }
+    fn can_fire_over_walls(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_FIRES_OVER_WALLS, unit, 0) != 0
     }
 }
 
@@ -1358,7 +1415,7 @@ impl GatherHost for OpHost<'_> {
         self.op_point_io(EE_UNITS_GOAL_HOST_GATHER_SPOT, unit, resource, &mut out).then_some(out)
     }
     fn begin_gathering(&mut self, unit: u64, resource: u64) {
-        self.op(EE_UNITS_GOAL_HOST_BEGIN_GATHERING, unit, resource);
+        crate::world::begin_gathering(self, unit, resource);
     }
     fn deposit_load(&mut self, unit: u64, storage: u64) {
         self.op(EE_UNITS_GOAL_HOST_DEPOSIT_LOAD, unit, storage);
@@ -1409,12 +1466,10 @@ impl GatherHost for OpHost<'_> {
         self.op_point(EE_UNITS_GOAL_HOST_PATH_LENGTH, unit, 0, &[i64::from(tile.0), i64::from(tile.1)])[0]
     }
     fn gather_work(&mut self, unit: u64, resource: u64) {
-        self.op(EE_UNITS_GOAL_HOST_GATHER_WORK, unit, resource);
+        crate::world::gather_work(self, unit, resource);
     }
     fn naval_search(&mut self, unit: u64, resource: u64) -> (i64, u64) {
-        let mut io = EeUnitsGoalIo::default();
-        let found = self.call(EE_UNITS_GOAL_HOST_NAVAL_SEARCH, unit, resource, &mut io) as u64;
-        (io.i[0], found)
+        crate::world::naval_search(self, unit, resource)
     }
     fn reset_active_path(&mut self, unit: u64) {
         self.op(EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH, unit, 0);
