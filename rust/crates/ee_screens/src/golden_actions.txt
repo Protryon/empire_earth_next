@@ -1,0 +1,7473 @@
+case 0 process
+case 1 post 1
+ 0 1 0
+case 2 process
+ 5 0 0
+ 2 1 0
+ 4 1 1
+ 6 0 0
+case 3 process
+case 4 redo
+result 7
+case 5 process
+case 6 redo
+result 7
+case 7 post 2
+ 0 2 0
+case 8 process
+ 5 0 0
+ 2 2 0
+ 4 2 0
+ 1 2 0
+ 6 0 0
+case 9 post 3
+ 0 3 0
+case 10 post 4
+ 0 4 0
+case 11 process
+ 5 0 0
+ 2 3 0
+ 4 3 1
+ 2 4 0
+ 4 4 1
+ 6 0 0
+case 12 undo
+ 3 4 0
+result 0
+case 13 process
+case 14 process
+case 15 post 5
+ 0 5 0
+case 16 redo
+ 2 4 0
+result 0
+case 17 post 4
+ 0 4 0
+case 18 post 6
+ 0 6 0
+case 19 post 7
+ 0 7 0
+case 20 redo
+result 7
+case 21 process
+ 5 0 0
+ 2 5 0
+ 4 5 1
+ 2 4 0
+ 4 4 1
+ 1 4 0
+ 2 6 0
+ 4 6 1
+ 2 7 0
+ 4 7 1
+ 6 0 0
+case 22 process
+case 23 post 8
+ 0 8 0
+case 24 process
+ 5 0 0
+ 2 8 0
+ 4 8 1
+ 6 0 0
+case 25 post 9
+ 0 9 0
+case 26 post 10
+ 0 10 0
+case 27 post 11
+ 0 11 0
+case 28 post 11
+ 0 11 0
+case 29 post 12
+ 0 12 0
+case 30 post 13
+ 0 13 0
+case 31 process
+ 5 0 0
+ 2 9 0
+ 4 9 1
+ 2 10 0
+ 4 10 1
+ 2 11 0
+ 4 11 1
+ 2 11 0
+ 4 11 1
+ 2 12 0
+ 4 12 1
+ 2 13 0
+ 4 13 1
+ 6 0 0
+case 32 post 14
+ 0 14 0
+case 33 post 15
+ 0 15 0
+case 34 post 16
+ 0 16 0
+case 35 post 17
+ 0 17 0
+case 36 redo
+result 7
+case 37 process
+ 5 0 0
+ 2 14 0
+ 4 14 1
+ 2 15 0
+ 4 15 1
+ 2 16 0
+ 4 16 1
+ 2 17 0
+ 4 17 1
+ 6 0 0
+case 38 post 18
+ 0 18 0
+case 39 post 19
+ 0 19 0
+case 40 undo
+ 3 17 0
+result 0
+case 41 post 19
+ 0 19 0
+case 42 post 20
+ 0 20 0
+case 43 post 21
+ 0 21 0
+case 44 process
+ 5 0 0
+ 2 18 0
+ 4 18 1
+ 1 17 0
+ 2 19 0
+ 4 19 1
+ 2 19 0
+ 4 19 1
+ 2 20 0
+ 4 20 0
+ 1 20 0
+ 2 21 0
+ 4 21 1
+ 6 0 0
+case 45 post 22
+ 0 22 0
+case 46 process
+ 5 0 0
+ 2 22 0
+ 4 22 1
+ 6 0 0
+case 47 post 23
+ 0 23 0
+case 48 post 24
+ 0 24 0
+case 49 redo
+result 7
+case 50 post 25
+ 0 25 0
+case 51 post 26
+ 0 26 0
+case 52 post 25
+ 0 25 0
+case 53 process
+ 5 0 0
+ 2 23 0
+ 4 23 0
+ 1 23 0
+ 2 24 0
+ 4 24 1
+ 2 25 0
+ 4 25 1
+ 2 26 0
+ 4 26 1
+ 2 25 0
+ 4 25 1
+ 6 0 0
+case 54 post 27
+ 0 27 0
+case 55 redo
+result 7
+case 56 post 28
+ 0 28 0
+case 57 redo
+result 7
+case 58 undo
+ 3 25 0
+result 0
+case 59 post 29
+ 0 29 0
+case 60 redo
+ 2 25 0
+result 0
+case 61 post 30
+ 0 30 0
+case 62 post 31
+ 0 31 0
+case 63 post 32
+ 0 32 0
+case 64 process
+ 5 0 0
+ 2 27 0
+ 4 27 0
+ 1 27 0
+ 2 28 0
+ 4 28 1
+ 2 29 0
+ 4 29 1
+ 2 30 0
+ 4 30 0
+ 1 30 0
+ 2 31 0
+ 4 31 0
+ 1 31 0
+ 2 32 0
+ 4 32 1
+ 6 0 0
+case 65 post 33
+ 0 33 0
+case 66 post 34
+ 0 34 0
+case 67 post 35
+ 0 35 0
+case 68 process
+ 5 0 0
+ 2 33 0
+ 4 33 1
+ 2 34 0
+ 4 34 1
+ 2 35 0
+ 4 35 1
+ 6 0 0
+case 69 post 36
+ 0 36 0
+case 70 process
+ 5 0 0
+ 2 36 0
+ 4 36 1
+ 6 0 0
+case 71 post 37
+ 0 37 0
+case 72 post 38
+ 0 38 0
+case 73 redo
+result 7
+case 74 post 39
+ 0 39 0
+case 75 process
+ 5 0 0
+ 2 37 0
+ 4 37 0
+ 1 37 0
+ 2 38 0
+ 4 38 1
+ 2 39 0
+ 4 39 1
+ 6 0 0
+case 76 post 40
+ 0 40 0
+case 77 undo
+ 3 39 0
+result 0
+case 78 redo
+ 2 39 0
+result 0
+case 79 post 41
+ 0 41 0
+case 80 post 42
+ 0 42 0
+case 81 process
+ 5 0 0
+ 2 40 0
+ 4 40 1
+ 2 41 0
+ 4 41 1
+ 2 42 0
+ 4 42 1
+ 6 0 0
+case 82 post 43
+ 0 43 0
+case 83 process
+ 5 0 0
+ 2 43 0
+ 4 43 1
+ 6 0 0
+case 84 post 42
+ 0 42 0
+case 85 process
+ 5 0 0
+ 2 42 0
+ 4 42 1
+ 6 0 0
+case 86 process
+case 87 post 44
+ 0 44 0
+case 88 post 45
+ 0 45 0
+case 89 post 46
+ 0 46 0
+case 90 redo
+result 7
+case 91 post 47
+ 0 47 0
+case 92 undo
+ 3 42 0
+result 0
+case 93 process
+ 5 0 0
+ 2 44 0
+ 4 44 1
+ 1 42 0
+ 2 45 0
+ 4 45 1
+ 2 46 0
+ 4 46 1
+ 2 47 0
+ 4 47 1
+ 6 0 0
+case 94 post 48
+ 0 48 0
+case 95 post 49
+ 0 49 0
+case 96 post 50
+ 0 50 0
+case 97 post 51
+ 0 51 0
+case 98 undo
+ 3 47 0
+result 0
+case 99 post 52
+ 0 52 0
+case 100 post 53
+ 0 53 0
+case 101 clear 0
+ 1 48 0
+ 1 49 0
+ 1 50 0
+ 1 51 0
+ 1 52 0
+ 1 53 0
+case 102 process
+case 103 process
+case 104 post 47
+ 0 47 0
+case 105 redo
+ 2 47 0
+result 0
+case 106 process
+ 5 0 0
+ 2 47 0
+ 4 47 1
+ 1 47 0
+ 6 0 0
+case 107 post 54
+ 0 54 0
+case 108 post 55
+ 0 55 0
+case 109 post 56
+ 0 56 0
+case 110 undo
+ 3 47 0
+result 0
+case 111 post 57
+ 0 57 0
+case 112 post 58
+ 0 58 0
+case 113 process
+ 5 0 0
+ 2 54 0
+ 4 54 1
+ 1 47 0
+ 2 55 0
+ 4 55 1
+ 2 56 0
+ 4 56 1
+ 2 57 0
+ 4 57 1
+ 2 58 0
+ 4 58 0
+ 1 58 0
+ 6 0 0
+case 114 post 55
+ 0 55 0
+case 115 post 59
+ 0 59 0
+case 116 post 60
+ 0 60 0
+case 117 redo
+result 7
+case 118 process
+ 5 0 0
+ 2 55 0
+ 4 55 1
+ 2 59 0
+ 4 59 1
+ 2 60 0
+ 4 60 1
+ 6 0 0
+case 119 process
+case 120 redo
+result 7
+case 121 clear 2
+case 122 post 61
+ 0 61 0
+case 123 undo
+ 3 60 0
+result 0
+case 124 post 62
+ 0 62 0
+case 125 post 63
+ 0 63 0
+case 126 post 64
+ 0 64 0
+case 127 undo
+ 3 59 0
+result 0
+case 128 post 65
+ 0 65 0
+case 129 process
+ 5 0 0
+ 2 61 0
+ 4 61 1
+ 1 60 0
+ 1 59 0
+ 2 62 0
+ 4 62 1
+ 2 63 0
+ 4 63 1
+ 2 64 0
+ 4 64 0
+ 1 64 0
+ 2 65 0
+ 4 65 1
+ 6 0 0
+case 130 post 66
+ 0 66 0
+case 131 clear 1
+ 1 1 0
+ 1 3 0
+ 1 4 0
+ 1 5 0
+ 1 6 0
+ 1 7 0
+ 1 8 0
+ 1 9 0
+ 1 10 0
+ 1 11 0
+ 1 11 0
+ 1 12 0
+ 1 13 0
+ 1 14 0
+ 1 15 0
+ 1 16 0
+ 1 18 0
+ 1 19 0
+ 1 19 0
+ 1 21 0
+ 1 22 0
+ 1 24 0
+ 1 25 0
+ 1 26 0
+ 1 25 0
+ 1 28 0
+ 1 29 0
+ 1 32 0
+ 1 33 0
+ 1 34 0
+ 1 35 0
+ 1 36 0
+ 1 38 0
+ 1 39 0
+ 1 40 0
+ 1 41 0
+ 1 42 0
+ 1 43 0
+ 1 44 0
+ 1 45 0
+ 1 46 0
+ 1 54 0
+ 1 55 0
+ 1 56 0
+ 1 57 0
+ 1 55 0
+ 1 61 0
+ 1 62 0
+ 1 63 0
+ 1 65 0
+case 132 process
+ 5 0 0
+ 2 66 0
+ 4 66 1
+ 6 0 0
+case 133 process
+case 134 post 67
+ 0 67 0
+case 135 process
+ 5 0 0
+ 2 67 0
+ 4 67 1
+ 6 0 0
+case 136 post 68
+ 0 68 0
+case 137 process
+ 5 0 0
+ 2 68 0
+ 4 68 1
+ 6 0 0
+case 138 post 68
+ 0 68 0
+case 139 post 69
+ 0 69 0
+case 140 process
+ 5 0 0
+ 2 68 0
+ 4 68 1
+ 1 68 0
+ 2 69 0
+ 4 69 1
+ 6 0 0
+case 141 process
+case 142 post 70
+ 0 70 0
+case 143 post 71
+ 0 71 0
+case 144 process
+ 5 0 0
+ 2 70 0
+ 4 70 1
+ 2 71 0
+ 4 71 0
+ 1 71 0
+ 6 0 0
+case 145 redo
+result 7
+case 146 post 72
+ 0 72 0
+case 147 post 73
+ 0 73 0
+case 148 post 74
+ 0 74 0
+case 149 post 75
+ 0 75 0
+case 150 process
+ 5 0 0
+ 2 72 0
+ 4 72 1
+ 2 73 0
+ 4 73 1
+ 2 74 0
+ 4 74 1
+ 2 75 0
+ 4 75 1
+ 6 0 0
+case 151 post 76
+ 0 76 0
+case 152 post 77
+ 0 77 0
+case 153 undo
+ 3 75 0
+result 0
+case 154 process
+ 5 0 0
+ 2 76 0
+ 4 76 1
+ 1 75 0
+ 2 77 0
+ 4 77 1
+ 6 0 0
+case 155 post 77
+ 0 77 0
+case 156 undo
+ 3 77 0
+result 0
+case 157 post 78
+ 0 78 0
+case 158 post 79
+ 0 79 0
+case 159 post 80
+ 0 80 0
+case 160 process
+ 5 0 0
+ 2 77 0
+ 4 77 1
+ 1 77 0
+ 2 78 0
+ 4 78 1
+ 2 79 0
+ 4 79 1
+ 2 80 0
+ 4 80 1
+ 6 0 0
+case 161 process
+case 162 clear 0
+case 163 redo
+result 7
+case 164 post 81
+ 0 81 0
+case 165 undo
+ 3 80 0
+result 0
+case 166 post 82
+ 0 82 0
+case 167 redo
+ 2 80 0
+result 0
+case 168 post 83
+ 0 83 0
+case 169 post 84
+ 0 84 0
+case 170 process
+ 5 0 0
+ 2 81 0
+ 4 81 0
+ 1 81 0
+ 2 82 0
+ 4 82 1
+ 2 83 0
+ 4 83 1
+ 2 84 0
+ 4 84 1
+ 6 0 0
+case 171 post 85
+ 0 85 0
+case 172 post 86
+ 0 86 0
+case 173 process
+ 5 0 0
+ 2 85 0
+ 4 85 1
+ 2 86 0
+ 4 86 1
+ 6 0 0
+case 174 post 87
+ 0 87 0
+case 175 post 88
+ 0 88 0
+case 176 post 89
+ 0 89 0
+case 177 process
+ 5 0 0
+ 2 87 0
+ 4 87 1
+ 2 88 0
+ 4 88 1
+ 2 89 0
+ 4 89 1
+ 6 0 0
+case 178 post 90
+ 0 90 0
+case 179 post 91
+ 0 91 0
+case 180 process
+ 5 0 0
+ 2 90 0
+ 4 90 1
+ 2 91 0
+ 4 91 1
+ 6 0 0
+case 181 post 92
+ 0 92 0
+case 182 post 93
+ 0 93 0
+case 183 post 94
+ 0 94 0
+case 184 post 95
+ 0 95 0
+case 185 post 96
+ 0 96 0
+case 186 post 97
+ 0 97 0
+case 187 post 98
+ 0 98 0
+case 188 redo
+result 7
+case 189 process
+ 5 0 0
+ 2 92 0
+ 4 92 1
+ 2 93 0
+ 4 93 1
+ 2 94 0
+ 4 94 1
+ 2 95 0
+ 4 95 0
+ 1 95 0
+ 2 96 0
+ 4 96 1
+ 2 97 0
+ 4 97 1
+ 2 98 0
+ 4 98 1
+ 6 0 0
+case 190 post 99
+ 0 99 0
+case 191 process
+ 5 0 0
+ 2 99 0
+ 4 99 0
+ 1 99 0
+ 6 0 0
+case 192 post 100
+ 0 100 0
+case 193 post 101
+ 0 101 0
+case 194 post 102
+ 0 102 0
+case 195 process
+ 5 0 0
+ 2 100 0
+ 4 100 1
+ 2 101 0
+ 4 101 1
+ 2 102 0
+ 4 102 1
+ 6 0 0
+case 196 process
+case 197 post 103
+ 0 103 0
+case 198 post 103
+ 0 103 0
+case 199 undo
+ 3 102 0
+result 0
+case 200 process
+ 5 0 0
+ 2 103 0
+ 4 103 0
+ 1 103 0
+ 2 103 0
+ 4 103 0
+ 1 103 0
+ 6 0 0
+case 201 process
+case 202 process
+case 203 process
+case 204 post 104
+ 0 104 0
+case 205 redo
+ 2 102 0
+result 0
+case 206 post 105
+ 0 105 0
+case 207 post 106
+ 0 106 0
+case 208 post 107
+ 0 107 0
+case 209 post 108
+ 0 108 0
+case 210 post 109
+ 0 109 0
+case 211 redo
+result 7
+case 212 process
+ 5 0 0
+ 2 104 0
+ 4 104 1
+ 2 105 0
+ 4 105 1
+ 2 106 0
+ 4 106 1
+ 2 107 0
+ 4 107 1
+ 2 108 0
+ 4 108 1
+ 2 109 0
+ 4 109 1
+ 6 0 0
+case 213 redo
+result 7
+case 214 post 110
+ 0 110 0
+case 215 post 111
+ 0 111 0
+case 216 post 112
+ 0 112 0
+case 217 post 113
+ 0 113 0
+case 218 process
+ 5 0 0
+ 2 110 0
+ 4 110 1
+ 2 111 0
+ 4 111 1
+ 2 112 0
+ 4 112 1
+ 2 113 0
+ 4 113 0
+ 1 113 0
+ 6 0 0
+case 219 process
+case 220 process
+case 221 process
+case 222 post 114
+ 0 114 0
+case 223 process
+ 5 0 0
+ 2 114 0
+ 4 114 1
+ 6 0 0
+case 224 post 115
+ 0 115 0
+case 225 post 116
+ 0 116 0
+case 226 post 117
+ 0 117 0
+case 227 post 118
+ 0 118 0
+case 228 post 119
+ 0 119 0
+case 229 post 120
+ 0 120 0
+case 230 redo
+result 7
+case 231 post 121
+ 0 121 0
+case 232 post 122
+ 0 122 0
+case 233 redo
+result 7
+case 234 process
+ 5 0 0
+ 2 115 0
+ 4 115 1
+ 2 116 0
+ 4 116 1
+ 2 117 0
+ 4 117 0
+ 1 117 0
+ 2 118 0
+ 4 118 1
+ 2 119 0
+ 4 119 1
+ 2 120 0
+ 4 120 1
+ 2 121 0
+ 4 121 1
+ 2 122 0
+ 4 122 1
+ 6 0 0
+case 235 redo
+result 7
+case 236 post 123
+ 0 123 0
+case 237 post 124
+ 0 124 0
+case 238 post 125
+ 0 125 0
+case 239 process
+ 5 0 0
+ 2 123 0
+ 4 123 1
+ 2 124 0
+ 4 124 1
+ 2 125 0
+ 4 125 0
+ 1 125 0
+ 6 0 0
+case 240 post 126
+ 0 126 0
+case 241 post 127
+ 0 127 0
+case 242 post 128
+ 0 128 0
+case 243 post 129
+ 0 129 0
+case 244 undo
+ 3 124 0
+result 0
+case 245 post 130
+ 0 130 0
+case 246 post 131
+ 0 131 0
+case 247 process
+ 5 0 0
+ 2 126 0
+ 4 126 1
+ 1 124 0
+ 2 127 0
+ 4 127 0
+ 1 127 0
+ 2 128 0
+ 4 128 1
+ 2 129 0
+ 4 129 1
+ 2 130 0
+ 4 130 0
+ 1 130 0
+ 2 131 0
+ 4 131 0
+ 1 131 0
+ 6 0 0
+case 248 process
+case 249 process
+case 250 process
+case 251 process
+case 252 post 132
+ 0 132 0
+case 253 process
+ 5 0 0
+ 2 132 0
+ 4 132 1
+ 6 0 0
+case 254 post 128
+ 0 128 0
+case 255 process
+ 5 0 0
+ 2 128 0
+ 4 128 1
+ 6 0 0
+case 256 post 133
+ 0 133 0
+case 257 post 134
+ 0 134 0
+case 258 redo
+result 7
+case 259 post 135
+ 0 135 0
+case 260 post 136
+ 0 136 0
+case 261 process
+ 5 0 0
+ 2 133 0
+ 4 133 0
+ 1 133 0
+ 2 134 0
+ 4 134 0
+ 1 134 0
+ 2 135 0
+ 4 135 1
+ 2 136 0
+ 4 136 0
+ 1 136 0
+ 6 0 0
+case 262 redo
+result 7
+case 263 process
+case 264 process
+case 265 process
+case 266 process
+case 267 process
+case 268 post 137
+ 0 137 0
+case 269 process
+ 5 0 0
+ 2 137 0
+ 4 137 1
+ 6 0 0
+case 270 post 138
+ 0 138 0
+case 271 post 139
+ 0 139 0
+case 272 process
+ 5 0 0
+ 2 138 0
+ 4 138 0
+ 1 138 0
+ 2 139 0
+ 4 139 1
+ 6 0 0
+case 273 post 140
+ 0 140 0
+case 274 post 141
+ 0 141 0
+case 275 process
+ 5 0 0
+ 2 140 0
+ 4 140 0
+ 1 140 0
+ 2 141 0
+ 4 141 1
+ 6 0 0
+case 276 post 142
+ 0 142 0
+case 277 process
+ 5 0 0
+ 2 142 0
+ 4 142 1
+ 6 0 0
+case 278 post 143
+ 0 143 0
+case 279 post 144
+ 0 144 0
+case 280 post 145
+ 0 145 0
+case 281 process
+ 5 0 0
+ 2 143 0
+ 4 143 1
+ 2 144 0
+ 4 144 0
+ 1 144 0
+ 2 145 0
+ 4 145 1
+ 6 0 0
+case 282 post 146
+ 0 146 0
+case 283 post 147
+ 0 147 0
+case 284 process
+ 5 0 0
+ 2 146 0
+ 4 146 0
+ 1 146 0
+ 2 147 0
+ 4 147 1
+ 6 0 0
+case 285 process
+case 286 post 148
+ 0 148 0
+case 287 undo
+ 3 147 0
+result 0
+case 288 process
+ 5 0 0
+ 2 148 0
+ 4 148 1
+ 1 147 0
+ 6 0 0
+case 289 post 149
+ 0 149 0
+case 290 process
+ 5 0 0
+ 2 149 0
+ 4 149 1
+ 6 0 0
+case 291 process
+case 292 post 150
+ 0 150 0
+case 293 undo
+ 3 149 0
+result 0
+case 294 post 151
+ 0 151 0
+case 295 process
+ 5 0 0
+ 2 150 0
+ 4 150 1
+ 1 149 0
+ 2 151 0
+ 4 151 0
+ 1 151 0
+ 6 0 0
+case 296 post 152
+ 0 152 0
+case 297 undo
+ 3 150 0
+result 0
+case 298 process
+ 5 0 0
+ 2 152 0
+ 4 152 1
+ 1 150 0
+ 6 0 0
+case 299 post 153
+ 0 153 0
+case 300 post 153
+ 0 153 0
+case 301 post 154
+ 0 154 0
+case 302 post 155
+ 0 155 0
+case 303 post 156
+ 0 156 0
+case 304 post 157
+ 0 157 0
+case 305 undo
+ 3 152 0
+result 0
+case 306 process
+ 5 0 0
+ 2 153 0
+ 4 153 1
+ 1 152 0
+ 2 153 0
+ 4 153 1
+ 2 154 0
+ 4 154 1
+ 2 155 0
+ 4 155 0
+ 1 155 0
+ 2 156 0
+ 4 156 1
+ 2 157 0
+ 4 157 1
+ 6 0 0
+case 307 post 158
+ 0 158 0
+case 308 post 158
+ 0 158 0
+case 309 process
+ 5 0 0
+ 2 158 0
+ 4 158 1
+ 2 158 0
+ 4 158 1
+ 6 0 0
+case 310 post 159
+ 0 159 0
+case 311 post 160
+ 0 160 0
+case 312 process
+ 5 0 0
+ 2 159 0
+ 4 159 1
+ 2 160 0
+ 4 160 1
+ 6 0 0
+case 313 post 161
+ 0 161 0
+case 314 post 162
+ 0 162 0
+case 315 redo
+result 7
+case 316 redo
+result 7
+case 317 process
+ 5 0 0
+ 2 161 0
+ 4 161 1
+ 2 162 0
+ 4 162 1
+ 6 0 0
+case 318 post 163
+ 0 163 0
+case 319 post 164
+ 0 164 0
+case 320 post 165
+ 0 165 0
+case 321 post 166
+ 0 166 0
+case 322 redo
+result 7
+case 323 post 167
+ 0 167 0
+case 324 redo
+result 7
+case 325 post 168
+ 0 168 0
+case 326 post 169
+ 0 169 0
+case 327 process
+ 5 0 0
+ 2 163 0
+ 4 163 1
+ 2 164 0
+ 4 164 1
+ 2 165 0
+ 4 165 0
+ 1 165 0
+ 2 166 0
+ 4 166 1
+ 2 167 0
+ 4 167 1
+ 2 168 0
+ 4 168 1
+ 2 169 0
+ 4 169 1
+ 6 0 0
+case 328 process
+case 329 process
+case 330 undo
+ 3 169 0
+result 0
+case 331 undo
+ 3 168 0
+result 0
+case 332 process
+case 333 process
+case 334 post 170
+ 0 170 0
+case 335 post 171
+ 0 171 0
+case 336 post 172
+ 0 172 0
+case 337 process
+ 5 0 0
+ 2 170 0
+ 4 170 1
+ 1 169 0
+ 1 168 0
+ 2 171 0
+ 4 171 1
+ 2 172 0
+ 4 172 1
+ 6 0 0
+case 338 post 173
+ 0 173 0
+case 339 redo
+result 7
+case 340 process
+ 5 0 0
+ 2 173 0
+ 4 173 0
+ 1 173 0
+ 6 0 0
+case 341 post 174
+ 0 174 0
+case 342 post 174
+ 0 174 0
+case 343 post 175
+ 0 175 0
+case 344 post 176
+ 0 176 0
+case 345 undo
+ 3 172 0
+result 0
+case 346 post 177
+ 0 177 0
+case 347 undo
+ 3 171 0
+result 0
+case 348 post 178
+ 0 178 0
+case 349 process
+ 5 0 0
+ 2 174 0
+ 4 174 0
+ 1 174 0
+ 2 174 0
+ 4 174 0
+ 1 174 0
+ 2 175 0
+ 4 175 1
+ 1 172 0
+ 1 171 0
+ 2 176 0
+ 4 176 1
+ 2 177 0
+ 4 177 0
+ 1 177 0
+ 2 178 0
+ 4 178 1
+ 6 0 0
+case 350 process
+case 351 redo
+result 7
+case 352 post 179
+ 0 179 0
+case 353 process
+ 5 0 0
+ 2 179 0
+ 4 179 1
+ 6 0 0
+case 354 post 180
+ 0 180 0
+case 355 redo
+result 7
+case 356 undo
+ 3 179 0
+result 0
+case 357 redo
+ 2 179 0
+result 0
+case 358 post 181
+ 0 181 0
+case 359 process
+ 5 0 0
+ 2 180 0
+ 4 180 1
+ 2 181 0
+ 4 181 0
+ 1 181 0
+ 6 0 0
+case 360 undo
+ 3 180 0
+result 0
+case 361 process
+case 362 process
+case 363 post 182
+ 0 182 0
+case 364 clear 0
+ 1 182 0
+case 365 post 183
+ 0 183 0
+case 366 post 184
+ 0 184 0
+case 367 process
+ 5 0 0
+ 2 183 0
+ 4 183 1
+ 1 180 0
+ 2 184 0
+ 4 184 0
+ 1 184 0
+ 6 0 0
+case 368 post 185
+ 0 185 0
+case 369 process
+ 5 0 0
+ 2 185 0
+ 4 185 1
+ 6 0 0
+case 370 post 186
+ 0 186 0
+case 371 post 187
+ 0 187 0
+case 372 process
+ 5 0 0
+ 2 186 0
+ 4 186 1
+ 2 187 0
+ 4 187 1
+ 6 0 0
+case 373 undo
+ 3 187 0
+result 0
+case 374 process
+case 375 post 188
+ 0 188 0
+case 376 post 189
+ 0 189 0
+case 377 post 190
+ 0 190 0
+case 378 process
+ 5 0 0
+ 2 188 0
+ 4 188 1
+ 1 187 0
+ 2 189 0
+ 4 189 0
+ 1 189 0
+ 2 190 0
+ 4 190 1
+ 6 0 0
+case 379 post 191
+ 0 191 0
+case 380 process
+ 5 0 0
+ 2 191 0
+ 4 191 0
+ 1 191 0
+ 6 0 0
+case 381 post 190
+ 0 190 0
+case 382 post 192
+ 0 192 0
+case 383 post 193
+ 0 193 0
+case 384 post 194
+ 0 194 0
+case 385 post 195
+ 0 195 0
+case 386 post 196
+ 0 196 0
+case 387 post 197
+ 0 197 0
+case 388 redo
+result 7
+case 389 process
+ 5 0 0
+ 2 190 0
+ 4 190 1
+ 1 190 0
+ 2 192 0
+ 4 192 0
+ 1 192 0
+ 2 193 0
+ 4 193 1
+ 2 194 0
+ 4 194 1
+ 2 195 0
+ 4 195 1
+ 2 196 0
+ 4 196 1
+ 2 197 0
+ 4 197 1
+ 6 0 0
+case 390 process
+case 391 process
+case 392 post 198
+ 0 198 0
+case 393 post 199
+ 0 199 0
+case 394 post 200
+ 0 200 0
+case 395 undo
+ 3 197 0
+result 0
+case 396 process
+ 5 0 0
+ 2 198 0
+ 4 198 1
+ 1 197 0
+ 2 199 0
+ 4 199 1
+ 2 200 0
+ 4 200 1
+ 6 0 0
+case 397 process
+case 398 post 201
+ 0 201 0
+case 399 process
+ 5 0 0
+ 2 201 0
+ 4 201 1
+ 6 0 0
+case 400 post 202
+ 0 202 0
+case 401 post 203
+ 0 203 0
+case 402 process
+ 5 0 0
+ 2 202 0
+ 4 202 1
+ 2 203 0
+ 4 203 1
+ 6 0 0
+case 403 post 204
+ 0 204 0
+case 404 post 205
+ 0 205 0
+case 405 post 206
+ 0 206 0
+case 406 process
+ 5 0 0
+ 2 204 0
+ 4 204 1
+ 2 205 0
+ 4 205 1
+ 2 206 0
+ 4 206 1
+ 1 66 0
+ 6 0 0
+case 407 process
+case 408 process
+case 409 undo
+ 3 206 0
+result 0
+case 410 post 207
+ 0 207 0
+case 411 post 208
+ 0 208 0
+case 412 process
+ 5 0 0
+ 2 207 0
+ 4 207 1
+ 1 206 0
+ 2 208 0
+ 4 208 1
+ 1 67 0
+ 6 0 0
+case 413 post 208
+ 0 208 0
+case 414 redo
+result 7
+case 415 post 209
+ 0 209 0
+case 416 post 210
+ 0 210 0
+case 417 post 211
+ 0 211 0
+case 418 post 212
+ 0 212 0
+case 419 post 213
+ 0 213 0
+case 420 process
+ 5 0 0
+ 2 208 0
+ 4 208 1
+ 1 208 0
+ 2 209 0
+ 4 209 1
+ 1 68 0
+ 2 210 0
+ 4 210 1
+ 1 69 0
+ 2 211 0
+ 4 211 1
+ 1 70 0
+ 2 212 0
+ 4 212 1
+ 1 72 0
+ 2 213 0
+ 4 213 1
+ 1 73 0
+ 6 0 0
+case 421 redo
+result 7
+case 422 redo
+result 7
+case 423 post 213
+ 0 213 0
+case 424 post 214
+ 0 214 0
+case 425 process
+ 5 0 0
+ 2 213 0
+ 4 213 1
+ 1 213 0
+ 2 214 0
+ 4 214 1
+ 1 74 0
+ 6 0 0
+case 426 post 215
+ 0 215 0
+case 427 post 216
+ 0 216 0
+case 428 process
+ 5 0 0
+ 2 215 0
+ 4 215 1
+ 1 76 0
+ 2 216 0
+ 4 216 0
+ 1 216 0
+ 6 0 0
+case 429 post 217
+ 0 217 0
+case 430 undo
+ 3 215 0
+result 0
+case 431 process
+ 5 0 0
+ 2 217 0
+ 4 217 0
+ 1 217 0
+ 6 0 0
+case 432 process
+case 433 post 218
+ 0 218 0
+case 434 process
+ 5 0 0
+ 2 218 0
+ 4 218 1
+ 1 215 0
+ 6 0 0
+case 435 redo
+result 7
+case 436 process
+case 437 post 219
+ 0 219 0
+case 438 redo
+result 7
+case 439 post 220
+ 0 220 0
+case 440 redo
+result 7
+case 441 process
+ 5 0 0
+ 2 219 0
+ 4 219 1
+ 1 77 0
+ 2 220 0
+ 4 220 1
+ 1 78 0
+ 6 0 0
+case 442 redo
+result 7
+case 443 redo
+result 7
+case 444 post 221
+ 0 221 0
+case 445 post 222
+ 0 222 0
+case 446 post 223
+ 0 223 0
+case 447 post 224
+ 0 224 0
+case 448 post 225
+ 0 225 0
+case 449 process
+ 5 0 0
+ 2 221 0
+ 4 221 0
+ 1 221 0
+ 2 222 0
+ 4 222 1
+ 1 79 0
+ 2 223 0
+ 4 223 1
+ 1 80 0
+ 2 224 0
+ 4 224 0
+ 1 224 0
+ 2 225 0
+ 4 225 0
+ 1 225 0
+ 6 0 0
+case 450 post 226
+ 0 226 0
+case 451 process
+ 5 0 0
+ 2 226 0
+ 4 226 0
+ 1 226 0
+ 6 0 0
+case 452 post 227
+ 0 227 0
+case 453 post 228
+ 0 228 0
+case 454 undo
+ 3 223 0
+result 0
+case 455 post 229
+ 0 229 0
+case 456 post 228
+ 0 228 0
+case 457 post 230
+ 0 230 0
+case 458 undo
+ 3 222 0
+result 0
+case 459 post 231
+ 0 231 0
+case 460 undo
+ 3 220 0
+result 0
+case 461 post 232
+ 0 232 0
+case 462 process
+ 5 0 0
+ 2 227 0
+ 4 227 1
+ 1 223 0
+ 1 222 0
+ 1 220 0
+ 2 228 0
+ 4 228 1
+ 2 229 0
+ 4 229 1
+ 2 228 0
+ 4 228 1
+ 1 82 0
+ 2 230 0
+ 4 230 1
+ 1 83 0
+ 2 231 0
+ 4 231 1
+ 1 84 0
+ 2 232 0
+ 4 232 1
+ 1 85 0
+ 6 0 0
+case 463 undo
+ 3 232 0
+result 0
+case 464 post 233
+ 0 233 0
+case 465 post 234
+ 0 234 0
+case 466 post 235
+ 0 235 0
+case 467 process
+ 5 0 0
+ 2 233 0
+ 4 233 1
+ 1 232 0
+ 2 234 0
+ 4 234 1
+ 1 86 0
+ 2 235 0
+ 4 235 1
+ 1 87 0
+ 6 0 0
+case 468 process
+case 469 post 236
+ 0 236 0
+case 470 post 237
+ 0 237 0
+case 471 post 238
+ 0 238 0
+case 472 post 239
+ 0 239 0
+case 473 post 240
+ 0 240 0
+case 474 post 241
+ 0 241 0
+case 475 post 242
+ 0 242 0
+case 476 process
+ 5 0 0
+ 2 236 0
+ 4 236 1
+ 1 88 0
+ 2 237 0
+ 4 237 0
+ 1 237 0
+ 2 238 0
+ 4 238 1
+ 1 89 0
+ 2 239 0
+ 4 239 1
+ 1 90 0
+ 2 240 0
+ 4 240 1
+ 1 91 0
+ 2 241 0
+ 4 241 0
+ 1 241 0
+ 2 242 0
+ 4 242 1
+ 1 92 0
+ 6 0 0
+case 477 post 243
+ 0 243 0
+case 478 post 244
+ 0 244 0
+case 479 post 245
+ 0 245 0
+case 480 process
+ 5 0 0
+ 2 243 0
+ 4 243 1
+ 1 93 0
+ 2 244 0
+ 4 244 1
+ 1 94 0
+ 2 245 0
+ 4 245 0
+ 1 245 0
+ 6 0 0
+case 481 undo
+ 3 244 0
+result 0
+case 482 post 246
+ 0 246 0
+case 483 post 247
+ 0 247 0
+case 484 post 248
+ 0 248 0
+case 485 post 247
+ 0 247 0
+case 486 post 249
+ 0 249 0
+case 487 redo
+ 2 244 0
+result 0
+case 488 post 250
+ 0 250 0
+case 489 process
+ 5 0 0
+ 2 246 0
+ 4 246 0
+ 1 246 0
+ 2 247 0
+ 4 247 1
+ 1 96 0
+ 2 248 0
+ 4 248 1
+ 1 97 0
+ 2 247 0
+ 4 247 1
+ 1 98 0
+ 2 249 0
+ 4 249 0
+ 1 249 0
+ 2 250 0
+ 4 250 1
+ 1 100 0
+ 6 0 0
+case 490 post 251
+ 0 251 0
+case 491 undo
+ 3 250 0
+result 0
+case 492 post 252
+ 0 252 0
+case 493 redo
+ 2 250 0
+result 0
+case 494 process
+ 5 0 0
+ 2 251 0
+ 4 251 0
+ 1 251 0
+ 2 252 0
+ 4 252 1
+ 1 101 0
+ 6 0 0
+case 495 post 253
+ 0 253 0
+case 496 undo
+ 3 252 0
+result 0
+case 497 post 254
+ 0 254 0
+case 498 process
+ 5 0 0
+ 2 253 0
+ 4 253 1
+ 1 252 0
+ 2 254 0
+ 4 254 1
+ 1 102 0
+ 6 0 0
+case 499 process
+case 500 process
+case 501 post 255
+ 0 255 0
+case 502 post 254
+ 0 254 0
+case 503 post 256
+ 0 256 0
+case 504 post 257
+ 0 257 0
+case 505 process
+ 5 0 0
+ 2 255 0
+ 4 255 0
+ 1 255 0
+ 2 254 0
+ 4 254 1
+ 1 254 0
+ 2 256 0
+ 4 256 1
+ 1 104 0
+ 2 257 0
+ 4 257 1
+ 1 105 0
+ 6 0 0
+case 506 post 258
+ 0 258 0
+case 507 process
+ 5 0 0
+ 2 258 0
+ 4 258 0
+ 1 258 0
+ 6 0 0
+case 508 redo
+result 7
+case 509 undo
+ 3 257 0
+result 0
+case 510 post 259
+ 0 259 0
+case 511 process
+ 5 0 0
+ 2 259 0
+ 4 259 1
+ 1 257 0
+ 6 0 0
+case 512 post 259
+ 0 259 0
+case 513 redo
+result 7
+case 514 process
+ 5 0 0
+ 2 259 0
+ 4 259 1
+ 1 259 0
+ 6 0 0
+case 515 post 260
+ 0 260 0
+case 516 post 261
+ 0 261 0
+case 517 post 261
+ 0 261 0
+case 518 post 262
+ 0 262 0
+case 519 redo
+result 7
+case 520 process
+ 5 0 0
+ 2 260 0
+ 4 260 1
+ 1 106 0
+ 2 261 0
+ 4 261 1
+ 1 107 0
+ 2 261 0
+ 4 261 1
+ 1 108 0
+ 2 262 0
+ 4 262 1
+ 1 109 0
+ 6 0 0
+case 521 post 263
+ 0 263 0
+case 522 post 263
+ 0 263 0
+case 523 redo
+result 7
+case 524 redo
+result 7
+case 525 process
+ 5 0 0
+ 2 263 0
+ 4 263 0
+ 1 263 0
+ 2 263 0
+ 4 263 0
+ 1 263 0
+ 6 0 0
+case 526 post 264
+ 0 264 0
+case 527 post 265
+ 0 265 0
+case 528 post 266
+ 0 266 0
+case 529 post 267
+ 0 267 0
+case 530 post 267
+ 0 267 0
+case 531 post 268
+ 0 268 0
+case 532 post 269
+ 0 269 0
+case 533 post 270
+ 0 270 0
+case 534 post 271
+ 0 271 0
+case 535 post 272
+ 0 272 0
+case 536 post 273
+ 0 273 0
+case 537 post 274
+ 0 274 0
+case 538 post 275
+ 0 275 0
+case 539 process
+ 5 0 0
+ 2 264 0
+ 4 264 1
+ 1 110 0
+ 2 265 0
+ 4 265 1
+ 1 111 0
+ 2 266 0
+ 4 266 1
+ 1 112 0
+ 2 267 0
+ 4 267 1
+ 1 114 0
+ 2 267 0
+ 4 267 1
+ 1 115 0
+ 2 268 0
+ 4 268 1
+ 1 116 0
+ 2 269 0
+ 4 269 1
+ 1 118 0
+ 2 270 0
+ 4 270 1
+ 1 119 0
+ 2 271 0
+ 4 271 1
+ 1 120 0
+ 2 272 0
+ 4 272 1
+ 1 121 0
+ 2 273 0
+ 4 273 0
+ 1 273 0
+ 2 274 0
+ 4 274 1
+ 1 122 0
+ 2 275 0
+ 4 275 1
+ 1 123 0
+ 6 0 0
+case 540 process
+case 541 undo
+ 3 275 0
+result 0
+case 542 post 276
+ 0 276 0
+case 543 post 277
+ 0 277 0
+case 544 post 278
+ 0 278 0
+case 545 process
+ 5 0 0
+ 2 276 0
+ 4 276 1
+ 1 275 0
+ 2 277 0
+ 4 277 1
+ 1 126 0
+ 2 278 0
+ 4 278 1
+ 1 128 0
+ 6 0 0
+case 546 post 279
+ 0 279 0
+case 547 post 280
+ 0 280 0
+case 548 process
+ 5 0 0
+ 2 279 0
+ 4 279 0
+ 1 279 0
+ 2 280 0
+ 4 280 1
+ 1 129 0
+ 6 0 0
+case 549 process
+case 550 post 281
+ 0 281 0
+case 551 post 282
+ 0 282 0
+case 552 post 283
+ 0 283 0
+case 553 post 284
+ 0 284 0
+case 554 process
+ 5 0 0
+ 2 281 0
+ 4 281 1
+ 1 132 0
+ 2 282 0
+ 4 282 1
+ 1 128 0
+ 2 283 0
+ 4 283 1
+ 1 135 0
+ 2 284 0
+ 4 284 1
+ 1 137 0
+ 6 0 0
+case 555 post 285
+ 0 285 0
+case 556 post 286
+ 0 286 0
+case 557 undo
+ 3 284 0
+result 0
+case 558 process
+ 5 0 0
+ 2 285 0
+ 4 285 1
+ 1 284 0
+ 2 286 0
+ 4 286 1
+ 1 139 0
+ 6 0 0
+case 559 post 287
+ 0 287 0
+case 560 post 288
+ 0 288 0
+case 561 redo
+result 7
+case 562 process
+ 5 0 0
+ 2 287 0
+ 4 287 0
+ 1 287 0
+ 2 288 0
+ 4 288 0
+ 1 288 0
+ 6 0 0
+case 563 post 289
+ 0 289 0
+case 564 process
+ 5 0 0
+ 2 289 0
+ 4 289 1
+ 1 141 0
+ 6 0 0
+case 565 post 290
+ 0 290 0
+case 566 post 291
+ 0 291 0
+case 567 post 292
+ 0 292 0
+case 568 process
+ 5 0 0
+ 2 290 0
+ 4 290 1
+ 1 142 0
+ 2 291 0
+ 4 291 1
+ 1 143 0
+ 2 292 0
+ 4 292 1
+ 1 145 0
+ 6 0 0
+case 569 undo
+ 3 292 0
+result 0
+case 570 process
+case 571 process
+case 572 clear 0
+case 573 post 292
+ 0 292 0
+case 574 redo
+ 2 292 0
+result 0
+case 575 undo
+ 3 292 0
+result 0
+case 576 redo
+ 2 292 0
+result 0
+case 577 process
+ 5 0 0
+ 2 292 0
+ 4 292 1
+ 1 292 0
+ 6 0 0
+case 578 post 293
+ 0 293 0
+case 579 post 294
+ 0 294 0
+case 580 post 295
+ 0 295 0
+case 581 post 296
+ 0 296 0
+case 582 redo
+result 7
+case 583 post 297
+ 0 297 0
+case 584 post 298
+ 0 298 0
+case 585 process
+ 5 0 0
+ 2 293 0
+ 4 293 1
+ 1 148 0
+ 2 294 0
+ 4 294 1
+ 1 153 0
+ 2 295 0
+ 4 295 1
+ 1 153 0
+ 2 296 0
+ 4 296 1
+ 1 154 0
+ 2 297 0
+ 4 297 1
+ 1 156 0
+ 2 298 0
+ 4 298 1
+ 1 157 0
+ 6 0 0
+case 586 post 299
+ 0 299 0
+case 587 redo
+result 7
+case 588 post 300
+ 0 300 0
+case 589 post 301
+ 0 301 0
+case 590 process
+ 5 0 0
+ 2 299 0
+ 4 299 1
+ 1 158 0
+ 2 300 0
+ 4 300 1
+ 1 158 0
+ 2 301 0
+ 4 301 1
+ 1 159 0
+ 6 0 0
+case 591 undo
+ 3 301 0
+result 0
+case 592 post 302
+ 0 302 0
+case 593 process
+ 5 0 0
+ 2 302 0
+ 4 302 0
+ 1 302 0
+ 6 0 0
+case 594 process
+case 595 post 301
+ 0 301 0
+case 596 redo
+ 2 301 0
+result 0
+case 597 post 303
+ 0 303 0
+case 598 redo
+result 7
+case 599 post 304
+ 0 304 0
+case 600 process
+ 5 0 0
+ 2 301 0
+ 4 301 1
+ 1 301 0
+ 2 303 0
+ 4 303 1
+ 1 160 0
+ 2 304 0
+ 4 304 1
+ 1 161 0
+ 6 0 0
+case 601 undo
+ 3 304 0
+result 0
+case 602 process
+case 603 redo
+ 2 304 0
+result 0
+case 604 process
+case 605 undo
+ 3 304 0
+result 0
+case 606 post 305
+ 0 305 0
+case 607 redo
+ 2 304 0
+result 0
+case 608 post 306
+ 0 306 0
+case 609 post 306
+ 0 306 0
+case 610 post 307
+ 0 307 0
+case 611 post 308
+ 0 308 0
+case 612 post 309
+ 0 309 0
+case 613 post 310
+ 0 310 0
+case 614 post 311
+ 0 311 0
+case 615 process
+ 5 0 0
+ 2 305 0
+ 4 305 1
+ 1 162 0
+ 2 306 0
+ 4 306 1
+ 1 163 0
+ 2 306 0
+ 4 306 1
+ 1 164 0
+ 2 307 0
+ 4 307 0
+ 1 307 0
+ 2 308 0
+ 4 308 1
+ 1 166 0
+ 2 309 0
+ 4 309 0
+ 1 309 0
+ 2 310 0
+ 4 310 1
+ 1 167 0
+ 2 311 0
+ 4 311 1
+ 1 170 0
+ 6 0 0
+case 616 post 312
+ 0 312 0
+case 617 process
+ 5 0 0
+ 2 312 0
+ 4 312 0
+ 1 312 0
+ 6 0 0
+case 618 process
+case 619 process
+case 620 process
+case 621 post 313
+ 0 313 0
+case 622 redo
+result 7
+case 623 post 314
+ 0 314 0
+case 624 process
+ 5 0 0
+ 2 313 0
+ 4 313 0
+ 1 313 0
+ 2 314 0
+ 4 314 0
+ 1 314 0
+ 6 0 0
+case 625 process
+case 626 redo
+result 7
+case 627 undo
+ 3 311 0
+result 0
+case 628 post 315
+ 0 315 0
+case 629 post 315
+ 0 315 0
+case 630 redo
+ 2 311 0
+result 0
+case 631 post 316
+ 0 316 0
+case 632 redo
+result 7
+case 633 post 317
+ 0 317 0
+case 634 process
+ 5 0 0
+ 2 315 0
+ 4 315 1
+ 1 175 0
+ 2 315 0
+ 4 315 1
+ 1 176 0
+ 2 316 0
+ 4 316 1
+ 1 178 0
+ 2 317 0
+ 4 317 1
+ 1 179 0
+ 6 0 0
+case 635 undo
+ 3 317 0
+result 0
+case 636 post 318
+ 0 318 0
+case 637 redo
+ 2 317 0
+result 0
+case 638 post 319
+ 0 319 0
+case 639 process
+ 5 0 0
+ 2 318 0
+ 4 318 1
+ 1 183 0
+ 2 319 0
+ 4 319 1
+ 1 185 0
+ 6 0 0
+case 640 post 320
+ 0 320 0
+case 641 post 321
+ 0 321 0
+case 642 post 320
+ 0 320 0
+case 643 post 322
+ 0 322 0
+case 644 post 323
+ 0 323 0
+case 645 post 324
+ 0 324 0
+case 646 process
+ 5 0 0
+ 2 320 0
+ 4 320 0
+ 1 320 0
+ 2 321 0
+ 4 321 1
+ 1 186 0
+ 2 320 0
+ 4 320 0
+ 1 320 0
+ 2 322 0
+ 4 322 1
+ 1 188 0
+ 2 323 0
+ 4 323 1
+ 1 190 0
+ 2 324 0
+ 4 324 1
+ 1 193 0
+ 6 0 0
+case 647 post 325
+ 0 325 0
+case 648 post 326
+ 0 326 0
+case 649 post 327
+ 0 327 0
+case 650 post 328
+ 0 328 0
+case 651 post 329
+ 0 329 0
+case 652 post 330
+ 0 330 0
+case 653 post 331
+ 0 331 0
+case 654 post 332
+ 0 332 0
+case 655 process
+ 5 0 0
+ 2 325 0
+ 4 325 1
+ 1 194 0
+ 2 326 0
+ 4 326 1
+ 1 195 0
+ 2 327 0
+ 4 327 0
+ 1 327 0
+ 2 328 0
+ 4 328 1
+ 1 196 0
+ 2 329 0
+ 4 329 1
+ 1 198 0
+ 2 330 0
+ 4 330 1
+ 1 199 0
+ 2 331 0
+ 4 331 1
+ 1 200 0
+ 2 332 0
+ 4 332 1
+ 1 201 0
+ 6 0 0
+case 656 process
+case 657 post 333
+ 0 333 0
+case 658 post 334
+ 0 334 0
+case 659 post 334
+ 0 334 0
+case 660 post 334
+ 0 334 0
+case 661 process
+ 5 0 0
+ 2 333 0
+ 4 333 1
+ 1 202 0
+ 2 334 0
+ 4 334 1
+ 1 203 0
+ 2 334 0
+ 4 334 1
+ 1 204 0
+ 2 334 0
+ 4 334 1
+ 1 205 0
+ 6 0 0
+case 662 process
+case 663 post 334
+ 0 334 0
+case 664 post 335
+ 0 335 0
+case 665 process
+ 5 0 0
+ 2 334 0
+ 4 334 1
+ 1 334 0
+ 2 335 0
+ 4 335 1
+ 1 207 0
+ 6 0 0
+case 666 post 336
+ 0 336 0
+case 667 post 336
+ 0 336 0
+case 668 redo
+result 7
+case 669 post 337
+ 0 337 0
+case 670 post 337
+ 0 337 0
+case 671 post 338
+ 0 338 0
+case 672 redo
+result 7
+case 673 post 339
+ 0 339 0
+case 674 post 340
+ 0 340 0
+case 675 process
+ 5 0 0
+ 2 336 0
+ 4 336 1
+ 1 208 0
+ 2 336 0
+ 4 336 1
+ 1 209 0
+ 2 337 0
+ 4 337 0
+ 1 337 0
+ 2 337 0
+ 4 337 0
+ 1 337 0
+ 2 338 0
+ 4 338 1
+ 1 210 0
+ 2 339 0
+ 4 339 0
+ 1 339 0
+ 2 340 0
+ 4 340 1
+ 1 211 0
+ 6 0 0
+case 676 process
+case 677 process
+case 678 process
+case 679 post 341
+ 0 341 0
+case 680 post 340
+ 0 340 0
+case 681 process
+ 5 0 0
+ 2 341 0
+ 4 341 1
+ 1 212 0
+ 2 340 0
+ 4 340 1
+ 1 340 0
+ 6 0 0
+case 682 post 342
+ 0 342 0
+case 683 process
+ 5 0 0
+ 2 342 0
+ 4 342 1
+ 1 213 0
+ 6 0 0
+case 684 redo
+result 7
+case 685 redo
+result 7
+case 686 post 343
+ 0 343 0
+case 687 process
+ 5 0 0
+ 2 343 0
+ 4 343 1
+ 1 214 0
+ 6 0 0
+case 688 post 344
+ 0 344 0
+case 689 process
+ 5 0 0
+ 2 344 0
+ 4 344 1
+ 1 218 0
+ 6 0 0
+case 690 post 345
+ 0 345 0
+case 691 post 346
+ 0 346 0
+case 692 post 347
+ 0 347 0
+case 693 process
+ 5 0 0
+ 2 345 0
+ 4 345 1
+ 1 219 0
+ 2 346 0
+ 4 346 0
+ 1 346 0
+ 2 347 0
+ 4 347 1
+ 1 227 0
+ 6 0 0
+case 694 post 348
+ 0 348 0
+case 695 undo
+ 3 347 0
+result 0
+case 696 post 349
+ 0 349 0
+case 697 post 350
+ 0 350 0
+case 698 undo
+ 3 345 0
+result 0
+case 699 undo
+ 3 344 0
+result 0
+case 700 undo
+ 3 343 0
+result 0
+case 701 post 351
+ 0 351 0
+case 702 process
+ 5 0 0
+ 2 348 0
+ 4 348 1
+ 1 347 0
+ 1 345 0
+ 1 344 0
+ 1 343 0
+ 2 349 0
+ 4 349 0
+ 1 349 0
+ 2 350 0
+ 4 350 1
+ 2 351 0
+ 4 351 1
+ 6 0 0
+case 703 post 352
+ 0 352 0
+case 704 undo
+ 3 351 0
+result 0
+case 705 undo
+ 3 350 0
+result 0
+case 706 post 353
+ 0 353 0
+case 707 post 354
+ 0 354 0
+case 708 post 355
+ 0 355 0
+case 709 process
+ 5 0 0
+ 2 352 0
+ 4 352 1
+ 1 351 0
+ 1 350 0
+ 2 353 0
+ 4 353 1
+ 2 354 0
+ 4 354 1
+ 2 355 0
+ 4 355 0
+ 1 355 0
+ 6 0 0
+case 710 process
+case 711 post 356
+ 0 356 0
+case 712 process
+ 5 0 0
+ 2 356 0
+ 4 356 1
+ 1 228 0
+ 6 0 0
+case 713 post 357
+ 0 357 0
+case 714 process
+ 5 0 0
+ 2 357 0
+ 4 357 0
+ 1 357 0
+ 6 0 0
+case 715 post 358
+ 0 358 0
+case 716 process
+ 5 0 0
+ 2 358 0
+ 4 358 1
+ 1 229 0
+ 6 0 0
+case 717 post 359
+ 0 359 0
+case 718 post 360
+ 0 360 0
+case 719 redo
+result 7
+case 720 process
+ 5 0 0
+ 2 359 0
+ 4 359 1
+ 1 228 0
+ 2 360 0
+ 4 360 0
+ 1 360 0
+ 6 0 0
+case 721 post 361
+ 0 361 0
+case 722 post 362
+ 0 362 0
+case 723 post 361
+ 0 361 0
+case 724 post 363
+ 0 363 0
+case 725 post 364
+ 0 364 0
+case 726 post 365
+ 0 365 0
+case 727 process
+ 5 0 0
+ 2 361 0
+ 4 361 1
+ 1 230 0
+ 2 362 0
+ 4 362 1
+ 1 231 0
+ 2 361 0
+ 4 361 1
+ 1 233 0
+ 2 363 0
+ 4 363 1
+ 1 234 0
+ 2 364 0
+ 4 364 1
+ 1 235 0
+ 2 365 0
+ 4 365 1
+ 1 236 0
+ 6 0 0
+case 728 post 366
+ 0 366 0
+case 729 process
+ 5 0 0
+ 2 366 0
+ 4 366 1
+ 1 238 0
+ 6 0 0
+case 730 post 367
+ 0 367 0
+case 731 process
+ 5 0 0
+ 2 367 0
+ 4 367 1
+ 1 239 0
+ 6 0 0
+case 732 process
+case 733 process
+case 734 process
+case 735 process
+case 736 process
+case 737 post 368
+ 0 368 0
+case 738 post 369
+ 0 369 0
+case 739 post 370
+ 0 370 0
+case 740 post 371
+ 0 371 0
+case 741 post 372
+ 0 372 0
+case 742 post 373
+ 0 373 0
+case 743 post 373
+ 0 373 0
+case 744 process
+ 5 0 0
+ 2 368 0
+ 4 368 1
+ 1 240 0
+ 2 369 0
+ 4 369 1
+ 1 242 0
+ 2 370 0
+ 4 370 1
+ 1 243 0
+ 2 371 0
+ 4 371 1
+ 1 244 0
+ 2 372 0
+ 4 372 1
+ 1 247 0
+ 2 373 0
+ 4 373 1
+ 1 248 0
+ 2 373 0
+ 4 373 1
+ 1 247 0
+ 6 0 0
+case 745 redo
+result 7
+case 746 post 374
+ 0 374 0
+case 747 post 375
+ 0 375 0
+case 748 post 376
+ 0 376 0
+case 749 post 377
+ 0 377 0
+case 750 post 378
+ 0 378 0
+case 751 post 379
+ 0 379 0
+case 752 process
+ 5 0 0
+ 2 374 0
+ 4 374 1
+ 1 250 0
+ 2 375 0
+ 4 375 1
+ 1 253 0
+ 2 376 0
+ 4 376 1
+ 1 254 0
+ 2 377 0
+ 4 377 0
+ 1 377 0
+ 2 378 0
+ 4 378 1
+ 1 256 0
+ 2 379 0
+ 4 379 1
+ 1 259 0
+ 6 0 0
+case 753 post 378
+ 0 378 0
+case 754 process
+ 5 0 0
+ 2 378 0
+ 4 378 1
+ 1 260 0
+ 6 0 0
+case 755 clear 2
+case 756 process
+case 757 process
+case 758 redo
+result 7
+case 759 process
+case 760 process
+case 761 post 380
+ 0 380 0
+case 762 process
+ 5 0 0
+ 2 380 0
+ 4 380 1
+ 1 261 0
+ 6 0 0
+case 763 post 381
+ 0 381 0
+case 764 post 382
+ 0 382 0
+case 765 post 383
+ 0 383 0
+case 766 redo
+result 7
+case 767 post 382
+ 0 382 0
+case 768 post 384
+ 0 384 0
+case 769 post 385
+ 0 385 0
+case 770 process
+ 5 0 0
+ 2 381 0
+ 4 381 1
+ 1 261 0
+ 2 382 0
+ 4 382 1
+ 1 262 0
+ 2 383 0
+ 4 383 1
+ 1 264 0
+ 2 382 0
+ 4 382 1
+ 1 265 0
+ 2 384 0
+ 4 384 1
+ 1 266 0
+ 2 385 0
+ 4 385 1
+ 1 267 0
+ 6 0 0
+case 771 post 385
+ 0 385 0
+case 772 post 386
+ 0 386 0
+case 773 post 387
+ 0 387 0
+case 774 process
+ 5 0 0
+ 2 385 0
+ 4 385 1
+ 1 385 0
+ 2 386 0
+ 4 386 1
+ 1 267 0
+ 2 387 0
+ 4 387 1
+ 1 268 0
+ 6 0 0
+case 775 post 388
+ 0 388 0
+case 776 process
+ 5 0 0
+ 2 388 0
+ 4 388 1
+ 1 269 0
+ 6 0 0
+case 777 post 389
+ 0 389 0
+case 778 process
+ 5 0 0
+ 2 389 0
+ 4 389 0
+ 1 389 0
+ 6 0 0
+case 779 post 384
+ 0 384 0
+case 780 process
+ 5 0 0
+ 2 384 0
+ 4 384 1
+ 1 270 0
+ 6 0 0
+case 781 post 390
+ 0 390 0
+case 782 process
+ 5 0 0
+ 2 390 0
+ 4 390 0
+ 1 390 0
+ 6 0 0
+case 783 post 391
+ 0 391 0
+case 784 undo
+ 3 384 0
+result 0
+case 785 post 392
+ 0 392 0
+case 786 process
+ 5 0 0
+ 2 391 0
+ 4 391 1
+ 1 384 0
+ 2 392 0
+ 4 392 1
+ 1 271 0
+ 6 0 0
+case 787 undo
+ 3 392 0
+result 0
+case 788 post 393
+ 0 393 0
+case 789 post 394
+ 0 394 0
+case 790 undo
+ 3 391 0
+result 0
+case 791 process
+ 5 0 0
+ 2 393 0
+ 4 393 1
+ 1 392 0
+ 1 391 0
+ 2 394 0
+ 4 394 1
+ 6 0 0
+case 792 process
+case 793 process
+case 794 post 395
+ 0 395 0
+case 795 process
+ 5 0 0
+ 2 395 0
+ 4 395 0
+ 1 395 0
+ 6 0 0
+case 796 post 396
+ 0 396 0
+case 797 post 397
+ 0 397 0
+case 798 redo
+result 7
+case 799 post 398
+ 0 398 0
+case 800 post 399
+ 0 399 0
+case 801 post 398
+ 0 398 0
+case 802 redo
+result 7
+case 803 post 400
+ 0 400 0
+case 804 redo
+result 7
+case 805 undo
+ 3 394 0
+result 0
+case 806 post 401
+ 0 401 0
+case 807 post 402
+ 0 402 0
+case 808 post 403
+ 0 403 0
+case 809 process
+ 5 0 0
+ 2 396 0
+ 4 396 0
+ 1 396 0
+ 2 397 0
+ 4 397 1
+ 1 394 0
+ 2 398 0
+ 4 398 1
+ 1 272 0
+ 2 399 0
+ 4 399 1
+ 1 274 0
+ 2 398 0
+ 4 398 1
+ 1 276 0
+ 2 400 0
+ 4 400 1
+ 1 277 0
+ 2 401 0
+ 4 401 1
+ 1 278 0
+ 2 402 0
+ 4 402 1
+ 1 280 0
+ 2 403 0
+ 4 403 1
+ 1 281 0
+ 6 0 0
+case 810 post 404
+ 0 404 0
+case 811 post 405
+ 0 405 0
+case 812 post 406
+ 0 406 0
+case 813 post 407
+ 0 407 0
+case 814 process
+ 5 0 0
+ 2 404 0
+ 4 404 1
+ 1 282 0
+ 2 405 0
+ 4 405 1
+ 1 283 0
+ 2 406 0
+ 4 406 0
+ 1 406 0
+ 2 407 0
+ 4 407 1
+ 1 285 0
+ 6 0 0
+case 815 post 408
+ 0 408 0
+case 816 post 409
+ 0 409 0
+case 817 post 409
+ 0 409 0
+case 818 process
+ 5 0 0
+ 2 408 0
+ 4 408 1
+ 1 286 0
+ 2 409 0
+ 4 409 0
+ 1 409 0
+ 2 409 0
+ 4 409 0
+ 1 409 0
+ 6 0 0
+case 819 post 410
+ 0 410 0
+case 820 process
+ 5 0 0
+ 2 410 0
+ 4 410 1
+ 1 289 0
+ 6 0 0
+case 821 post 411
+ 0 411 0
+case 822 post 412
+ 0 412 0
+case 823 post 413
+ 0 413 0
+case 824 undo
+ 3 410 0
+result 0
+case 825 post 414
+ 0 414 0
+case 826 undo
+ 3 408 0
+result 0
+case 827 post 415
+ 0 415 0
+case 828 post 416
+ 0 416 0
+case 829 process
+ 5 0 0
+ 2 411 0
+ 4 411 1
+ 1 410 0
+ 1 408 0
+ 2 412 0
+ 4 412 0
+ 1 412 0
+ 2 413 0
+ 4 413 1
+ 2 414 0
+ 4 414 1
+ 1 290 0
+ 2 415 0
+ 4 415 1
+ 1 291 0
+ 2 416 0
+ 4 416 1
+ 1 292 0
+ 6 0 0
+case 830 redo
+result 7
+case 831 post 416
+ 0 416 0
+case 832 process
+ 5 0 0
+ 2 416 0
+ 4 416 1
+ 1 416 0
+ 6 0 0
+case 833 process
+case 834 post 417
+ 0 417 0
+case 835 post 418
+ 0 418 0
+case 836 redo
+result 7
+case 837 post 419
+ 0 419 0
+case 838 post 419
+ 0 419 0
+case 839 post 420
+ 0 420 0
+case 840 process
+ 5 0 0
+ 2 417 0
+ 4 417 1
+ 1 293 0
+ 2 418 0
+ 4 418 1
+ 1 294 0
+ 2 419 0
+ 4 419 1
+ 1 295 0
+ 2 419 0
+ 4 419 1
+ 1 296 0
+ 2 420 0
+ 4 420 0
+ 1 420 0
+ 6 0 0
+case 841 redo
+result 7
+case 842 post 421
+ 0 421 0
+case 843 process
+ 5 0 0
+ 2 421 0
+ 4 421 0
+ 1 421 0
+ 6 0 0
+case 844 post 422
+ 0 422 0
+case 845 process
+ 5 0 0
+ 2 422 0
+ 4 422 1
+ 1 297 0
+ 6 0 0
+case 846 post 419
+ 0 419 0
+case 847 post 422
+ 0 422 0
+case 848 post 423
+ 0 423 0
+case 849 post 424
+ 0 424 0
+case 850 process
+ 5 0 0
+ 2 419 0
+ 4 419 1
+ 1 298 0
+ 2 422 0
+ 4 422 1
+ 1 422 0
+ 2 423 0
+ 4 423 1
+ 1 299 0
+ 2 424 0
+ 4 424 1
+ 1 300 0
+ 6 0 0
+case 851 post 425
+ 0 425 0
+case 852 post 426
+ 0 426 0
+case 853 post 427
+ 0 427 0
+case 854 post 428
+ 0 428 0
+case 855 post 429
+ 0 429 0
+case 856 redo
+result 7
+case 857 post 430
+ 0 430 0
+case 858 clear 1
+ 1 301 0
+ 1 303 0
+ 1 304 0
+ 1 305 0
+ 1 306 0
+ 1 306 0
+ 1 308 0
+ 1 310 0
+ 1 311 0
+ 1 315 0
+ 1 315 0
+ 1 316 0
+ 1 317 0
+ 1 318 0
+ 1 319 0
+ 1 321 0
+ 1 322 0
+ 1 323 0
+ 1 324 0
+ 1 325 0
+ 1 326 0
+ 1 328 0
+ 1 329 0
+ 1 330 0
+ 1 331 0
+ 1 332 0
+ 1 333 0
+ 1 334 0
+ 1 334 0
+ 1 334 0
+ 1 335 0
+ 1 336 0
+ 1 336 0
+ 1 338 0
+ 1 340 0
+ 1 341 0
+ 1 342 0
+ 1 348 0
+ 1 352 0
+ 1 353 0
+ 1 354 0
+ 1 356 0
+ 1 358 0
+ 1 359 0
+ 1 361 0
+ 1 362 0
+ 1 361 0
+ 1 363 0
+ 1 364 0
+ 1 365 0
+ 1 366 0
+ 1 367 0
+ 1 368 0
+ 1 369 0
+ 1 370 0
+ 1 371 0
+ 1 372 0
+ 1 373 0
+ 1 373 0
+ 1 374 0
+ 1 375 0
+ 1 376 0
+ 1 378 0
+ 1 379 0
+ 1 378 0
+ 1 380 0
+ 1 381 0
+ 1 382 0
+ 1 383 0
+ 1 382 0
+ 1 384 0
+ 1 385 0
+ 1 386 0
+ 1 387 0
+ 1 388 0
+ 1 393 0
+ 1 397 0
+ 1 398 0
+ 1 399 0
+ 1 398 0
+ 1 400 0
+ 1 401 0
+ 1 402 0
+ 1 403 0
+ 1 404 0
+ 1 405 0
+ 1 407 0
+ 1 411 0
+ 1 413 0
+ 1 414 0
+ 1 415 0
+ 1 416 0
+ 1 417 0
+ 1 418 0
+ 1 419 0
+ 1 419 0
+ 1 422 0
+ 1 419 0
+ 1 423 0
+ 1 424 0
+case 859 process
+ 5 0 0
+ 2 425 0
+ 4 425 1
+ 2 426 0
+ 4 426 1
+ 2 427 0
+ 4 427 1
+ 2 428 0
+ 4 428 1
+ 2 429 0
+ 4 429 1
+ 2 430 0
+ 4 430 1
+ 6 0 0
+case 860 process
+case 861 post 431
+ 0 431 0
+case 862 post 432
+ 0 432 0
+case 863 process
+ 5 0 0
+ 2 431 0
+ 4 431 1
+ 2 432 0
+ 4 432 1
+ 6 0 0
+case 864 post 433
+ 0 433 0
+case 865 process
+ 5 0 0
+ 2 433 0
+ 4 433 0
+ 1 433 0
+ 6 0 0
+case 866 post 434
+ 0 434 0
+case 867 post 435
+ 0 435 0
+case 868 post 436
+ 0 436 0
+case 869 post 437
+ 0 437 0
+case 870 post 438
+ 0 438 0
+case 871 post 439
+ 0 439 0
+case 872 post 440
+ 0 440 0
+case 873 process
+ 5 0 0
+ 2 434 0
+ 4 434 1
+ 2 435 0
+ 4 435 1
+ 2 436 0
+ 4 436 0
+ 1 436 0
+ 2 437 0
+ 4 437 1
+ 2 438 0
+ 4 438 1
+ 2 439 0
+ 4 439 0
+ 1 439 0
+ 2 440 0
+ 4 440 1
+ 6 0 0
+case 874 post 441
+ 0 441 0
+case 875 redo
+result 7
+case 876 process
+ 5 0 0
+ 2 441 0
+ 4 441 0
+ 1 441 0
+ 6 0 0
+case 877 post 442
+ 0 442 0
+case 878 undo
+ 3 440 0
+result 0
+case 879 post 443
+ 0 443 0
+case 880 process
+ 5 0 0
+ 2 442 0
+ 4 442 1
+ 1 440 0
+ 2 443 0
+ 4 443 0
+ 1 443 0
+ 6 0 0
+case 881 undo
+ 3 442 0
+result 0
+case 882 post 444
+ 0 444 0
+case 883 redo
+ 2 442 0
+result 0
+case 884 process
+ 5 0 0
+ 2 444 0
+ 4 444 1
+ 6 0 0
+case 885 process
+case 886 post 445
+ 0 445 0
+case 887 undo
+ 3 444 0
+result 0
+case 888 post 446
+ 0 446 0
+case 889 post 447
+ 0 447 0
+case 890 post 448
+ 0 448 0
+case 891 post 449
+ 0 449 0
+case 892 post 450
+ 0 450 0
+case 893 process
+ 5 0 0
+ 2 445 0
+ 4 445 1
+ 1 444 0
+ 2 446 0
+ 4 446 0
+ 1 446 0
+ 2 447 0
+ 4 447 0
+ 1 447 0
+ 2 448 0
+ 4 448 1
+ 2 449 0
+ 4 449 1
+ 2 450 0
+ 4 450 0
+ 1 450 0
+ 6 0 0
+case 894 post 449
+ 0 449 0
+case 895 post 451
+ 0 451 0
+case 896 redo
+result 7
+case 897 undo
+ 3 449 0
+result 0
+case 898 post 452
+ 0 452 0
+case 899 process
+ 5 0 0
+ 2 449 0
+ 4 449 1
+ 1 449 0
+ 2 451 0
+ 4 451 1
+ 2 452 0
+ 4 452 1
+ 6 0 0
+case 900 post 453
+ 0 453 0
+case 901 redo
+result 7
+case 902 clear 1
+ 1 425 0
+ 1 426 0
+ 1 427 0
+ 1 428 0
+ 1 429 0
+ 1 430 0
+ 1 431 0
+ 1 432 0
+ 1 434 0
+ 1 435 0
+ 1 437 0
+ 1 438 0
+ 1 442 0
+ 1 445 0
+ 1 448 0
+ 1 449 0
+ 1 451 0
+ 1 452 0
+case 903 process
+ 5 0 0
+ 2 453 0
+ 4 453 1
+ 6 0 0
+case 904 post 453
+ 0 453 0
+case 905 process
+ 5 0 0
+ 2 453 0
+ 4 453 1
+ 1 453 0
+ 6 0 0
+case 906 post 453
+ 0 453 0
+case 907 post 453
+ 0 453 0
+case 908 process
+ 5 0 0
+ 2 453 0
+ 4 453 1
+ 1 453 0
+ 2 453 0
+ 4 453 1
+ 1 453 0
+ 6 0 0
+case 909 clear 1
+ 1 453 0
+case 910 post 454
+ 0 454 0
+case 911 post 455
+ 0 455 0
+case 912 post 456
+ 0 456 0
+case 913 process
+ 5 0 0
+ 2 454 0
+ 4 454 1
+ 2 455 0
+ 4 455 0
+ 1 455 0
+ 2 456 0
+ 4 456 0
+ 1 456 0
+ 6 0 0
+case 914 process
+case 915 redo
+result 7
+case 916 process
+case 917 redo
+result 7
+case 918 none
+case 919 process
+case 920 post 457
+ 0 457 0
+case 921 post 457
+ 0 457 0
+case 922 post 454
+ 0 454 0
+case 923 redo
+result 7
+case 924 post 457
+ 0 457 0
+case 925 post 458
+ 0 458 0
+case 926 post 459
+ 0 459 0
+case 927 post 460
+ 0 460 0
+case 928 redo
+result 7
+case 929 redo
+result 7
+case 930 post 461
+ 0 461 0
+case 931 process
+ 5 0 0
+ 2 457 0
+ 4 457 1
+ 2 457 0
+ 4 457 1
+ 2 454 0
+ 4 454 1
+ 1 454 0
+ 2 457 0
+ 4 457 1
+ 2 458 0
+ 4 458 1
+ 2 459 0
+ 4 459 1
+ 2 460 0
+ 4 460 0
+ 1 460 0
+ 2 461 0
+ 4 461 0
+ 1 461 0
+ 6 0 0
+case 932 undo
+ 3 459 0
+result 0
+case 933 post 462
+ 0 462 0
+case 934 redo
+ 2 459 0
+result 0
+case 935 process
+ 5 0 0
+ 2 462 0
+ 4 462 1
+ 6 0 0
+case 936 post 463
+ 0 463 0
+case 937 process
+ 5 0 0
+ 2 463 0
+ 4 463 1
+ 6 0 0
+case 938 post 464
+ 0 464 0
+case 939 post 465
+ 0 465 0
+case 940 post 466
+ 0 466 0
+case 941 process
+ 5 0 0
+ 2 464 0
+ 4 464 1
+ 2 465 0
+ 4 465 0
+ 1 465 0
+ 2 466 0
+ 4 466 1
+ 6 0 0
+case 942 post 467
+ 0 467 0
+case 943 post 468
+ 0 468 0
+case 944 post 468
+ 0 468 0
+case 945 process
+ 5 0 0
+ 2 467 0
+ 4 467 0
+ 1 467 0
+ 2 468 0
+ 4 468 1
+ 2 468 0
+ 4 468 1
+ 6 0 0
+case 946 process
+case 947 post 469
+ 0 469 0
+case 948 process
+ 5 0 0
+ 2 469 0
+ 4 469 0
+ 1 469 0
+ 6 0 0
+case 949 post 470
+ 0 470 0
+case 950 redo
+result 7
+case 951 post 471
+ 0 471 0
+case 952 process
+ 5 0 0
+ 2 470 0
+ 4 470 1
+ 2 471 0
+ 4 471 1
+ 6 0 0
+case 953 process
+case 954 process
+case 955 post 472
+ 0 472 0
+case 956 post 473
+ 0 473 0
+case 957 clear 1
+ 1 454 0
+ 1 457 0
+ 1 457 0
+ 1 457 0
+ 1 458 0
+ 1 459 0
+ 1 462 0
+ 1 463 0
+ 1 464 0
+ 1 466 0
+ 1 468 0
+ 1 468 0
+ 1 470 0
+ 1 471 0
+case 958 redo
+result 7
+case 959 process
+ 5 0 0
+ 2 472 0
+ 4 472 1
+ 2 473 0
+ 4 473 1
+ 6 0 0
+case 960 post 474
+ 0 474 0
+case 961 post 475
+ 0 475 0
+case 962 redo
+result 7
+case 963 process
+ 5 0 0
+ 2 474 0
+ 4 474 1
+ 2 475 0
+ 4 475 1
+ 6 0 0
+case 964 process
+case 965 redo
+result 7
+case 966 redo
+result 7
+case 967 process
+case 968 post 476
+ 0 476 0
+case 969 post 477
+ 0 477 0
+case 970 post 478
+ 0 478 0
+case 971 clear 2
+case 972 process
+ 5 0 0
+ 2 476 0
+ 4 476 0
+ 1 476 0
+ 2 477 0
+ 4 477 1
+ 2 478 0
+ 4 478 1
+ 6 0 0
+case 973 post 479
+ 0 479 0
+case 974 redo
+result 7
+case 975 post 480
+ 0 480 0
+case 976 process
+ 5 0 0
+ 2 479 0
+ 4 479 1
+ 2 480 0
+ 4 480 1
+ 6 0 0
+case 977 post 481
+ 0 481 0
+case 978 redo
+result 7
+case 979 process
+ 5 0 0
+ 2 481 0
+ 4 481 1
+ 6 0 0
+case 980 post 482
+ 0 482 0
+case 981 undo
+ 3 481 0
+result 0
+case 982 undo
+ 3 480 0
+result 0
+case 983 post 483
+ 0 483 0
+case 984 process
+ 5 0 0
+ 2 482 0
+ 4 482 1
+ 1 481 0
+ 1 480 0
+ 2 483 0
+ 4 483 1
+ 6 0 0
+case 985 post 484
+ 0 484 0
+case 986 post 485
+ 0 485 0
+case 987 process
+ 5 0 0
+ 2 484 0
+ 4 484 0
+ 1 484 0
+ 2 485 0
+ 4 485 1
+ 6 0 0
+case 988 post 486
+ 0 486 0
+case 989 post 487
+ 0 487 0
+case 990 undo
+ 3 485 0
+result 0
+case 991 redo
+ 2 485 0
+result 0
+case 992 post 488
+ 0 488 0
+case 993 process
+ 5 0 0
+ 2 486 0
+ 4 486 1
+ 2 487 0
+ 4 487 0
+ 1 487 0
+ 2 488 0
+ 4 488 1
+ 6 0 0
+case 994 undo
+ 3 488 0
+result 0
+case 995 undo
+ 3 486 0
+result 0
+case 996 undo
+ 3 485 0
+result 0
+case 997 process
+case 998 undo
+ 3 483 0
+result 0
+case 999 post 489
+ 0 489 0
+case 1000 post 490
+ 0 490 0
+case 1001 post 491
+ 0 491 0
+case 1002 process
+ 5 0 0
+ 2 489 0
+ 4 489 1
+ 1 488 0
+ 1 486 0
+ 1 485 0
+ 1 483 0
+ 2 490 0
+ 4 490 1
+ 2 491 0
+ 4 491 1
+ 6 0 0
+case 1003 undo
+ 3 491 0
+result 0
+case 1004 redo
+ 2 491 0
+result 0
+case 1005 process
+case 1006 post 492
+ 0 492 0
+case 1007 post 493
+ 0 493 0
+case 1008 undo
+ 3 491 0
+result 0
+case 1009 process
+ 5 0 0
+ 2 492 0
+ 4 492 0
+ 1 492 0
+ 2 493 0
+ 4 493 1
+ 1 491 0
+ 6 0 0
+case 1010 post 494
+ 0 494 0
+case 1011 redo
+result 7
+case 1012 post 495
+ 0 495 0
+case 1013 redo
+result 7
+case 1014 undo
+ 3 493 0
+result 0
+case 1015 process
+ 5 0 0
+ 2 494 0
+ 4 494 0
+ 1 494 0
+ 2 495 0
+ 4 495 0
+ 1 495 0
+ 6 0 0
+case 1016 process
+case 1017 process
+case 1018 redo
+ 2 493 0
+result 0
+case 1019 post 496
+ 0 496 0
+case 1020 process
+ 5 0 0
+ 2 496 0
+ 4 496 1
+ 6 0 0
+case 1021 redo
+result 7
+case 1022 process
+case 1023 post 496
+ 0 496 0
+case 1024 post 497
+ 0 497 0
+case 1025 process
+ 5 0 0
+ 2 496 0
+ 4 496 1
+ 1 496 0
+ 2 497 0
+ 4 497 0
+ 1 497 0
+ 6 0 0
+case 1026 post 498
+ 0 498 0
+case 1027 undo
+ 3 496 0
+result 0
+case 1028 post 499
+ 0 499 0
+case 1029 redo
+ 2 496 0
+result 0
+case 1030 process
+ 5 0 0
+ 2 498 0
+ 4 498 0
+ 1 498 0
+ 2 499 0
+ 4 499 1
+ 6 0 0
+case 1031 post 500
+ 0 500 0
+case 1032 redo
+result 7
+case 1033 post 501
+ 0 501 0
+case 1034 process
+ 5 0 0
+ 2 500 0
+ 4 500 1
+ 2 501 0
+ 4 501 0
+ 1 501 0
+ 6 0 0
+case 1035 post 502
+ 0 502 0
+case 1036 undo
+ 3 500 0
+result 0
+case 1037 post 503
+ 0 503 0
+case 1038 post 504
+ 0 504 0
+case 1039 post 505
+ 0 505 0
+case 1040 post 506
+ 0 506 0
+case 1041 process
+ 5 0 0
+ 2 502 0
+ 4 502 1
+ 1 500 0
+ 2 503 0
+ 4 503 1
+ 2 504 0
+ 4 504 1
+ 2 505 0
+ 4 505 1
+ 2 506 0
+ 4 506 1
+ 6 0 0
+case 1042 post 507
+ 0 507 0
+case 1043 undo
+ 3 506 0
+result 0
+case 1044 redo
+ 2 506 0
+result 0
+case 1045 undo
+ 3 506 0
+result 0
+case 1046 process
+ 5 0 0
+ 2 507 0
+ 4 507 0
+ 1 507 0
+ 6 0 0
+case 1047 redo
+ 2 506 0
+result 0
+case 1048 redo
+result 7
+case 1049 post 508
+ 0 508 0
+case 1050 redo
+result 7
+case 1051 post 509
+ 0 509 0
+case 1052 post 510
+ 0 510 0
+case 1053 process
+ 5 0 0
+ 2 508 0
+ 4 508 1
+ 2 509 0
+ 4 509 1
+ 2 510 0
+ 4 510 1
+ 6 0 0
+case 1054 post 511
+ 0 511 0
+case 1055 post 511
+ 0 511 0
+case 1056 post 512
+ 0 512 0
+case 1057 process
+ 5 0 0
+ 2 511 0
+ 4 511 1
+ 2 511 0
+ 4 511 1
+ 2 512 0
+ 4 512 1
+ 6 0 0
+case 1058 post 513
+ 0 513 0
+case 1059 post 514
+ 0 514 0
+case 1060 undo
+ 3 512 0
+result 0
+case 1061 redo
+ 2 512 0
+result 0
+case 1062 post 515
+ 0 515 0
+case 1063 post 516
+ 0 516 0
+case 1064 process
+ 5 0 0
+ 2 513 0
+ 4 513 1
+ 2 514 0
+ 4 514 0
+ 1 514 0
+ 2 515 0
+ 4 515 1
+ 2 516 0
+ 4 516 1
+ 6 0 0
+case 1065 redo
+result 7
+case 1066 process
+case 1067 post 517
+ 0 517 0
+case 1068 process
+ 5 0 0
+ 2 517 0
+ 4 517 1
+ 6 0 0
+case 1069 redo
+result 7
+case 1070 post 518
+ 0 518 0
+case 1071 redo
+result 7
+case 1072 post 519
+ 0 519 0
+case 1073 post 520
+ 0 520 0
+case 1074 post 521
+ 0 521 0
+case 1075 post 522
+ 0 522 0
+case 1076 post 523
+ 0 523 0
+case 1077 process
+ 5 0 0
+ 2 518 0
+ 4 518 1
+ 2 519 0
+ 4 519 1
+ 2 520 0
+ 4 520 1
+ 2 521 0
+ 4 521 0
+ 1 521 0
+ 2 522 0
+ 4 522 0
+ 1 522 0
+ 2 523 0
+ 4 523 1
+ 6 0 0
+case 1078 process
+case 1079 post 524
+ 0 524 0
+case 1080 redo
+result 7
+case 1081 process
+ 5 0 0
+ 2 524 0
+ 4 524 1
+ 6 0 0
+case 1082 post 525
+ 0 525 0
+case 1083 process
+ 5 0 0
+ 2 525 0
+ 4 525 0
+ 1 525 0
+ 6 0 0
+case 1084 redo
+result 7
+case 1085 redo
+result 7
+case 1086 process
+case 1087 post 526
+ 0 526 0
+case 1088 post 527
+ 0 527 0
+case 1089 post 528
+ 0 528 0
+case 1090 undo
+ 3 524 0
+result 0
+case 1091 process
+ 5 0 0
+ 2 526 0
+ 4 526 1
+ 1 524 0
+ 2 527 0
+ 4 527 0
+ 1 527 0
+ 2 528 0
+ 4 528 1
+ 6 0 0
+case 1092 undo
+ 3 528 0
+result 0
+case 1093 process
+case 1094 post 529
+ 0 529 0
+case 1095 post 530
+ 0 530 0
+case 1096 process
+ 5 0 0
+ 2 529 0
+ 4 529 1
+ 1 528 0
+ 2 530 0
+ 4 530 1
+ 6 0 0
+case 1097 post 531
+ 0 531 0
+case 1098 post 532
+ 0 532 0
+case 1099 process
+ 5 0 0
+ 2 531 0
+ 4 531 1
+ 2 532 0
+ 4 532 1
+ 6 0 0
+case 1100 post 532
+ 0 532 0
+case 1101 post 533
+ 0 533 0
+case 1102 post 532
+ 0 532 0
+case 1103 post 534
+ 0 534 0
+case 1104 post 535
+ 0 535 0
+case 1105 process
+ 5 0 0
+ 2 532 0
+ 4 532 1
+ 1 532 0
+ 2 533 0
+ 4 533 0
+ 1 533 0
+ 2 532 0
+ 4 532 1
+ 1 532 0
+ 2 534 0
+ 4 534 1
+ 2 535 0
+ 4 535 1
+ 6 0 0
+case 1106 redo
+result 7
+case 1107 undo
+ 3 535 0
+result 0
+case 1108 undo
+ 3 534 0
+result 0
+case 1109 post 536
+ 0 536 0
+case 1110 post 537
+ 0 537 0
+case 1111 post 538
+ 0 538 0
+case 1112 process
+ 5 0 0
+ 2 536 0
+ 4 536 1
+ 1 535 0
+ 1 534 0
+ 2 537 0
+ 4 537 1
+ 2 538 0
+ 4 538 1
+ 6 0 0
+case 1113 process
+case 1114 post 539
+ 0 539 0
+case 1115 post 540
+ 0 540 0
+case 1116 post 541
+ 0 541 0
+case 1117 post 542
+ 0 542 0
+case 1118 post 543
+ 0 543 0
+case 1119 post 544
+ 0 544 0
+case 1120 redo
+result 7
+case 1121 post 545
+ 0 545 0
+case 1122 redo
+result 7
+case 1123 process
+ 5 0 0
+ 2 539 0
+ 4 539 1
+ 2 540 0
+ 4 540 1
+ 2 541 0
+ 4 541 1
+ 2 542 0
+ 4 542 1
+ 2 543 0
+ 4 543 1
+ 2 544 0
+ 4 544 1
+ 2 545 0
+ 4 545 1
+ 6 0 0
+case 1124 post 546
+ 0 546 0
+case 1125 redo
+result 7
+case 1126 redo
+result 7
+case 1127 post 547
+ 0 547 0
+case 1128 post 548
+ 0 548 0
+case 1129 process
+ 5 0 0
+ 2 546 0
+ 4 546 0
+ 1 546 0
+ 2 547 0
+ 4 547 1
+ 2 548 0
+ 4 548 1
+ 6 0 0
+case 1130 post 549
+ 0 549 0
+case 1131 post 550
+ 0 550 0
+case 1132 post 551
+ 0 551 0
+case 1133 post 552
+ 0 552 0
+case 1134 post 553
+ 0 553 0
+case 1135 post 554
+ 0 554 0
+case 1136 post 555
+ 0 555 0
+case 1137 redo
+result 7
+case 1138 process
+ 5 0 0
+ 2 549 0
+ 4 549 0
+ 1 549 0
+ 2 550 0
+ 4 550 1
+ 2 551 0
+ 4 551 0
+ 1 551 0
+ 2 552 0
+ 4 552 0
+ 1 552 0
+ 2 553 0
+ 4 553 1
+ 2 554 0
+ 4 554 0
+ 1 554 0
+ 2 555 0
+ 4 555 1
+ 6 0 0
+case 1139 post 556
+ 0 556 0
+case 1140 post 557
+ 0 557 0
+case 1141 post 557
+ 0 557 0
+case 1142 post 558
+ 0 558 0
+case 1143 redo
+result 7
+case 1144 post 555
+ 0 555 0
+case 1145 redo
+result 7
+case 1146 undo
+ 3 555 0
+result 0
+case 1147 post 559
+ 0 559 0
+case 1148 undo
+ 3 553 0
+result 0
+case 1149 undo
+ 3 550 0
+result 0
+case 1150 process
+ 5 0 0
+ 2 556 0
+ 4 556 1
+ 1 555 0
+ 1 553 0
+ 1 550 0
+ 2 557 0
+ 4 557 0
+ 1 557 0
+ 2 557 0
+ 4 557 0
+ 1 557 0
+ 2 558 0
+ 4 558 0
+ 1 558 0
+ 2 555 0
+ 4 555 1
+ 2 559 0
+ 4 559 1
+ 6 0 0
+case 1151 process
+case 1152 post 560
+ 0 560 0
+case 1153 post 561
+ 0 561 0
+case 1154 post 562
+ 0 562 0
+case 1155 undo
+ 3 559 0
+result 0
+case 1156 process
+ 5 0 0
+ 2 560 0
+ 4 560 0
+ 1 560 0
+ 2 561 0
+ 4 561 1
+ 1 559 0
+ 2 562 0
+ 4 562 1
+ 6 0 0
+case 1157 redo
+result 7
+case 1158 post 563
+ 0 563 0
+case 1159 process
+ 5 0 0
+ 2 563 0
+ 4 563 1
+ 6 0 0
+case 1160 process
+case 1161 process
+case 1162 post 564
+ 0 564 0
+case 1163 post 565
+ 0 565 0
+case 1164 post 566
+ 0 566 0
+case 1165 post 567
+ 0 567 0
+case 1166 process
+ 5 0 0
+ 2 564 0
+ 4 564 0
+ 1 564 0
+ 2 565 0
+ 4 565 1
+ 2 566 0
+ 4 566 1
+ 2 567 0
+ 4 567 0
+ 1 567 0
+ 6 0 0
+case 1167 undo
+ 3 566 0
+result 0
+case 1168 post 568
+ 0 568 0
+case 1169 clear 0
+ 1 568 0
+case 1170 post 569
+ 0 569 0
+case 1171 post 570
+ 0 570 0
+case 1172 post 571
+ 0 571 0
+case 1173 post 572
+ 0 572 0
+case 1174 redo
+ 2 566 0
+result 0
+case 1175 redo
+result 7
+case 1176 clear 1
+ 1 472 0
+ 1 473 0
+ 1 474 0
+ 1 475 0
+ 1 477 0
+ 1 478 0
+ 1 479 0
+ 1 482 0
+ 1 489 0
+ 1 490 0
+ 1 493 0
+ 1 496 0
+ 1 499 0
+ 1 502 0
+ 1 503 0
+ 1 504 0
+ 1 505 0
+ 1 506 0
+ 1 508 0
+ 1 509 0
+ 1 510 0
+ 1 511 0
+ 1 511 0
+ 1 512 0
+ 1 513 0
+ 1 515 0
+ 1 516 0
+ 1 517 0
+ 1 518 0
+ 1 519 0
+ 1 520 0
+ 1 523 0
+ 1 526 0
+ 1 529 0
+ 1 530 0
+ 1 531 0
+ 1 532 0
+ 1 536 0
+ 1 537 0
+ 1 538 0
+ 1 539 0
+ 1 540 0
+ 1 541 0
+ 1 542 0
+ 1 543 0
+ 1 544 0
+ 1 545 0
+ 1 547 0
+ 1 548 0
+ 1 556 0
+ 1 555 0
+ 1 561 0
+ 1 562 0
+ 1 563 0
+ 1 565 0
+ 1 566 0
+case 1177 undo
+result 7
+case 1178 post 572
+ 0 572 0
+case 1179 process
+ 5 0 0
+ 2 569 0
+ 4 569 1
+ 2 570 0
+ 4 570 1
+ 2 571 0
+ 4 571 1
+ 2 572 0
+ 4 572 1
+ 2 572 0
+ 4 572 1
+ 6 0 0
+case 1180 process
+case 1181 process
+case 1182 post 573
+ 0 573 0
+case 1183 post 574
+ 0 574 0
+case 1184 undo
+ 3 572 0
+result 0
+case 1185 post 575
+ 0 575 0
+case 1186 post 572
+ 0 572 0
+case 1187 post 576
+ 0 576 0
+case 1188 redo
+ 2 572 0
+result 0
+case 1189 post 577
+ 0 577 0
+case 1190 redo
+result 7
+case 1191 redo
+result 7
+case 1192 post 578
+ 0 578 0
+case 1193 undo
+ 3 572 0
+result 0
+case 1194 post 579
+ 0 579 0
+case 1195 undo
+ 3 572 0
+result 0
+case 1196 post 580
+ 0 580 0
+case 1197 post 581
+ 0 581 0
+case 1198 post 582
+ 0 582 0
+case 1199 undo
+ 3 571 0
+result 0
+case 1200 process
+ 5 0 0
+ 2 573 0
+ 4 573 1
+ 1 572 0
+ 1 572 0
+ 1 571 0
+ 2 574 0
+ 4 574 1
+ 2 575 0
+ 4 575 1
+ 2 572 0
+ 4 572 1
+ 2 576 0
+ 4 576 1
+ 2 577 0
+ 4 577 0
+ 1 577 0
+ 2 578 0
+ 4 578 0
+ 1 578 0
+ 2 579 0
+ 4 579 0
+ 1 579 0
+ 2 580 0
+ 4 580 1
+ 2 581 0
+ 4 581 1
+ 2 582 0
+ 4 582 1
+ 6 0 0
+case 1201 post 583
+ 0 583 0
+case 1202 post 584
+ 0 584 0
+case 1203 post 585
+ 0 585 0
+case 1204 post 586
+ 0 586 0
+case 1205 process
+ 5 0 0
+ 2 583 0
+ 4 583 1
+ 2 584 0
+ 4 584 0
+ 1 584 0
+ 2 585 0
+ 4 585 1
+ 2 586 0
+ 4 586 1
+ 6 0 0
+case 1206 post 587
+ 0 587 0
+case 1207 post 588
+ 0 588 0
+case 1208 post 588
+ 0 588 0
+case 1209 process
+ 5 0 0
+ 2 587 0
+ 4 587 1
+ 2 588 0
+ 4 588 1
+ 2 588 0
+ 4 588 1
+ 6 0 0
+case 1210 process
+case 1211 process
+case 1212 redo
+result 7
+case 1213 process
+case 1214 process
+case 1215 post 589
+ 0 589 0
+case 1216 undo
+ 3 588 0
+result 0
+case 1217 post 590
+ 0 590 0
+case 1218 redo
+ 2 588 0
+result 0
+case 1219 post 591
+ 0 591 0
+case 1220 post 592
+ 0 592 0
+case 1221 post 593
+ 0 593 0
+case 1222 undo
+ 3 588 0
+result 0
+case 1223 undo
+ 3 588 0
+result 0
+case 1224 process
+ 5 0 0
+ 2 589 0
+ 4 589 1
+ 1 588 0
+ 1 588 0
+ 2 590 0
+ 4 590 1
+ 2 591 0
+ 4 591 1
+ 2 592 0
+ 4 592 1
+ 2 593 0
+ 4 593 1
+ 6 0 0
+case 1225 redo
+result 7
+case 1226 process
+case 1227 process
+case 1228 post 594
+ 0 594 0
+case 1229 post 595
+ 0 595 0
+case 1230 post 596
+ 0 596 0
+case 1231 post 597
+ 0 597 0
+case 1232 undo
+ 3 593 0
+result 0
+case 1233 process
+ 5 0 0
+ 2 594 0
+ 4 594 1
+ 1 593 0
+ 2 595 0
+ 4 595 1
+ 2 596 0
+ 4 596 0
+ 1 596 0
+ 2 597 0
+ 4 597 1
+ 6 0 0
+case 1234 post 598
+ 0 598 0
+case 1235 post 599
+ 0 599 0
+case 1236 post 600
+ 0 600 0
+case 1237 process
+ 5 0 0
+ 2 598 0
+ 4 598 1
+ 2 599 0
+ 4 599 1
+ 2 600 0
+ 4 600 1
+ 6 0 0
+case 1238 post 601
+ 0 601 0
+case 1239 process
+ 5 0 0
+ 2 601 0
+ 4 601 1
+ 6 0 0
+case 1240 redo
+result 7
+case 1241 process
+case 1242 post 602
+ 0 602 0
+case 1243 redo
+result 7
+case 1244 post 601
+ 0 601 0
+case 1245 post 603
+ 0 603 0
+case 1246 process
+ 5 0 0
+ 2 602 0
+ 4 602 1
+ 2 601 0
+ 4 601 1
+ 1 601 0
+ 2 603 0
+ 4 603 0
+ 1 603 0
+ 6 0 0
+case 1247 process
+case 1248 post 604
+ 0 604 0
+case 1249 post 605
+ 0 605 0
+case 1250 post 606
+ 0 606 0
+case 1251 post 607
+ 0 607 0
+case 1252 post 607
+ 0 607 0
+case 1253 redo
+result 7
+case 1254 post 608
+ 0 608 0
+case 1255 post 609
+ 0 609 0
+case 1256 redo
+result 7
+case 1257 post 610
+ 0 610 0
+case 1258 post 608
+ 0 608 0
+case 1259 undo
+ 3 602 0
+result 0
+case 1260 post 611
+ 0 611 0
+case 1261 redo
+ 2 602 0
+result 0
+case 1262 redo
+result 7
+case 1263 redo
+result 7
+case 1264 undo
+ 3 602 0
+result 0
+case 1265 redo
+ 2 602 0
+result 0
+case 1266 redo
+result 7
+case 1267 process
+ 5 0 0
+ 2 604 0
+ 4 604 1
+ 2 605 0
+ 4 605 1
+ 2 606 0
+ 4 606 1
+ 2 607 0
+ 4 607 0
+ 1 607 0
+ 2 607 0
+ 4 607 0
+ 1 607 0
+ 2 608 0
+ 4 608 0
+ 1 608 0
+ 2 609 0
+ 4 609 1
+ 2 610 0
+ 4 610 1
+ 2 608 0
+ 4 608 0
+ 1 608 0
+ 2 611 0
+ 4 611 1
+ 6 0 0
+case 1268 process
+case 1269 post 612
+ 0 612 0
+case 1270 clear 0
+ 1 612 0
+case 1271 process
+case 1272 process
+case 1273 post 613
+ 0 613 0
+case 1274 redo
+result 7
+case 1275 post 614
+ 0 614 0
+case 1276 post 615
+ 0 615 0
+case 1277 process
+ 5 0 0
+ 2 613 0
+ 4 613 0
+ 1 613 0
+ 2 614 0
+ 4 614 0
+ 1 614 0
+ 2 615 0
+ 4 615 1
+ 6 0 0
+case 1278 post 616
+ 0 616 0
+case 1279 post 617
+ 0 617 0
+case 1280 post 618
+ 0 618 0
+case 1281 post 619
+ 0 619 0
+case 1282 post 620
+ 0 620 0
+case 1283 undo
+ 3 615 0
+result 0
+case 1284 post 620
+ 0 620 0
+case 1285 process
+ 5 0 0
+ 2 616 0
+ 4 616 1
+ 1 615 0
+ 2 617 0
+ 4 617 0
+ 1 617 0
+ 2 618 0
+ 4 618 1
+ 2 619 0
+ 4 619 1
+ 2 620 0
+ 4 620 1
+ 2 620 0
+ 4 620 1
+ 6 0 0
+case 1286 post 621
+ 0 621 0
+case 1287 process
+ 5 0 0
+ 2 621 0
+ 4 621 1
+ 6 0 0
+case 1288 post 622
+ 0 622 0
+case 1289 post 623
+ 0 623 0
+case 1290 post 624
+ 0 624 0
+case 1291 post 625
+ 0 625 0
+case 1292 process
+ 5 0 0
+ 2 622 0
+ 4 622 1
+ 2 623 0
+ 4 623 0
+ 1 623 0
+ 2 624 0
+ 4 624 1
+ 2 625 0
+ 4 625 1
+ 6 0 0
+case 1293 process
+case 1294 post 624
+ 0 624 0
+case 1295 process
+ 5 0 0
+ 2 624 0
+ 4 624 1
+ 6 0 0
+case 1296 post 626
+ 0 626 0
+case 1297 post 627
+ 0 627 0
+case 1298 redo
+result 7
+case 1299 process
+ 5 0 0
+ 2 626 0
+ 4 626 1
+ 2 627 0
+ 4 627 1
+ 6 0 0
+case 1300 post 627
+ 0 627 0
+case 1301 post 628
+ 0 628 0
+case 1302 process
+ 5 0 0
+ 2 627 0
+ 4 627 1
+ 1 627 0
+ 2 628 0
+ 4 628 1
+ 6 0 0
+case 1303 post 629
+ 0 629 0
+case 1304 post 630
+ 0 630 0
+case 1305 post 631
+ 0 631 0
+case 1306 process
+ 5 0 0
+ 2 629 0
+ 4 629 1
+ 2 630 0
+ 4 630 1
+ 2 631 0
+ 4 631 1
+ 6 0 0
+case 1307 post 632
+ 0 632 0
+case 1308 process
+ 5 0 0
+ 2 632 0
+ 4 632 0
+ 1 632 0
+ 6 0 0
+case 1309 post 633
+ 0 633 0
+case 1310 post 634
+ 0 634 0
+case 1311 post 635
+ 0 635 0
+case 1312 redo
+result 7
+case 1313 post 636
+ 0 636 0
+case 1314 post 637
+ 0 637 0
+case 1315 redo
+result 7
+case 1316 post 638
+ 0 638 0
+case 1317 process
+ 5 0 0
+ 2 633 0
+ 4 633 0
+ 1 633 0
+ 2 634 0
+ 4 634 0
+ 1 634 0
+ 2 635 0
+ 4 635 0
+ 1 635 0
+ 2 636 0
+ 4 636 1
+ 2 637 0
+ 4 637 1
+ 2 638 0
+ 4 638 1
+ 6 0 0
+case 1318 redo
+result 7
+case 1319 undo
+ 3 638 0
+result 0
+case 1320 post 639
+ 0 639 0
+case 1321 post 640
+ 0 640 0
+case 1322 post 641
+ 0 641 0
+case 1323 post 642
+ 0 642 0
+case 1324 process
+ 5 0 0
+ 2 639 0
+ 4 639 1
+ 1 638 0
+ 2 640 0
+ 4 640 0
+ 1 640 0
+ 2 641 0
+ 4 641 1
+ 2 642 0
+ 4 642 1
+ 6 0 0
+case 1325 post 642
+ 0 642 0
+case 1326 process
+ 5 0 0
+ 2 642 0
+ 4 642 1
+ 1 642 0
+ 6 0 0
+case 1327 process
+case 1328 post 643
+ 0 643 0
+case 1329 process
+ 5 0 0
+ 2 643 0
+ 4 643 1
+ 6 0 0
+case 1330 post 644
+ 0 644 0
+case 1331 process
+ 5 0 0
+ 2 644 0
+ 4 644 1
+ 6 0 0
+case 1332 post 645
+ 0 645 0
+case 1333 process
+ 5 0 0
+ 2 645 0
+ 4 645 1
+ 6 0 0
+case 1334 post 646
+ 0 646 0
+case 1335 post 647
+ 0 647 0
+case 1336 process
+ 5 0 0
+ 2 646 0
+ 4 646 1
+ 2 647 0
+ 4 647 0
+ 1 647 0
+ 6 0 0
+case 1337 process
+case 1338 post 648
+ 0 648 0
+case 1339 post 649
+ 0 649 0
+case 1340 post 650
+ 0 650 0
+case 1341 post 651
+ 0 651 0
+case 1342 post 652
+ 0 652 0
+case 1343 post 653
+ 0 653 0
+case 1344 post 654
+ 0 654 0
+case 1345 post 655
+ 0 655 0
+case 1346 process
+ 5 0 0
+ 2 648 0
+ 4 648 1
+ 2 649 0
+ 4 649 1
+ 2 650 0
+ 4 650 1
+ 2 651 0
+ 4 651 1
+ 2 652 0
+ 4 652 0
+ 1 652 0
+ 2 653 0
+ 4 653 1
+ 2 654 0
+ 4 654 0
+ 1 654 0
+ 2 655 0
+ 4 655 1
+ 6 0 0
+case 1347 post 655
+ 0 655 0
+case 1348 process
+ 5 0 0
+ 2 655 0
+ 4 655 1
+ 1 655 0
+ 6 0 0
+case 1349 post 656
+ 0 656 0
+case 1350 process
+ 5 0 0
+ 2 656 0
+ 4 656 1
+ 6 0 0
+case 1351 process
+case 1352 post 657
+ 0 657 0
+case 1353 process
+ 5 0 0
+ 2 657 0
+ 4 657 0
+ 1 657 0
+ 6 0 0
+case 1354 redo
+result 7
+case 1355 post 658
+ 0 658 0
+case 1356 process
+ 5 0 0
+ 2 658 0
+ 4 658 1
+ 6 0 0
+case 1357 redo
+result 7
+case 1358 process
+case 1359 post 659
+ 0 659 0
+case 1360 post 660
+ 0 660 0
+case 1361 post 661
+ 0 661 0
+case 1362 post 662
+ 0 662 0
+case 1363 process
+ 5 0 0
+ 2 659 0
+ 4 659 0
+ 1 659 0
+ 2 660 0
+ 4 660 1
+ 2 661 0
+ 4 661 1
+ 2 662 0
+ 4 662 0
+ 1 662 0
+ 6 0 0
+case 1364 post 663
+ 0 663 0
+case 1365 post 664
+ 0 664 0
+case 1366 process
+ 5 0 0
+ 2 663 0
+ 4 663 1
+ 2 664 0
+ 4 664 1
+ 6 0 0
+case 1367 post 665
+ 0 665 0
+case 1368 post 666
+ 0 666 0
+case 1369 process
+ 5 0 0
+ 2 665 0
+ 4 665 1
+ 2 666 0
+ 4 666 0
+ 1 666 0
+ 6 0 0
+case 1370 process
+case 1371 post 667
+ 0 667 0
+case 1372 post 668
+ 0 668 0
+case 1373 post 669
+ 0 669 0
+case 1374 process
+ 5 0 0
+ 2 667 0
+ 4 667 1
+ 2 668 0
+ 4 668 1
+ 2 669 0
+ 4 669 1
+ 6 0 0
+case 1375 process
+case 1376 post 670
+ 0 670 0
+case 1377 post 671
+ 0 671 0
+case 1378 process
+ 5 0 0
+ 2 670 0
+ 4 670 1
+ 2 671 0
+ 4 671 0
+ 1 671 0
+ 6 0 0
+case 1379 post 672
+ 0 672 0
+case 1380 post 673
+ 0 673 0
+case 1381 post 674
+ 0 674 0
+case 1382 post 675
+ 0 675 0
+case 1383 undo
+ 3 670 0
+result 0
+case 1384 post 676
+ 0 676 0
+case 1385 process
+ 5 0 0
+ 2 672 0
+ 4 672 1
+ 1 670 0
+ 2 673 0
+ 4 673 1
+ 2 674 0
+ 4 674 1
+ 2 675 0
+ 4 675 1
+ 2 676 0
+ 4 676 1
+ 6 0 0
+case 1386 post 677
+ 0 677 0
+case 1387 post 678
+ 0 678 0
+case 1388 post 679
+ 0 679 0
+case 1389 process
+ 5 0 0
+ 2 677 0
+ 4 677 1
+ 2 678 0
+ 4 678 1
+ 2 679 0
+ 4 679 1
+ 6 0 0
+case 1390 post 680
+ 0 680 0
+case 1391 post 681
+ 0 681 0
+case 1392 undo
+ 3 679 0
+result 0
+case 1393 process
+ 5 0 0
+ 2 680 0
+ 4 680 1
+ 1 679 0
+ 2 681 0
+ 4 681 1
+ 6 0 0
+case 1394 post 682
+ 0 682 0
+case 1395 post 683
+ 0 683 0
+case 1396 post 684
+ 0 684 0
+case 1397 process
+ 5 0 0
+ 2 682 0
+ 4 682 1
+ 2 683 0
+ 4 683 1
+ 2 684 0
+ 4 684 1
+ 6 0 0
+case 1398 process
+case 1399 post 685
+ 0 685 0
+case 1400 post 686
+ 0 686 0
+case 1401 post 687
+ 0 687 0
+case 1402 post 688
+ 0 688 0
+case 1403 process
+ 5 0 0
+ 2 685 0
+ 4 685 1
+ 2 686 0
+ 4 686 1
+ 2 687 0
+ 4 687 0
+ 1 687 0
+ 2 688 0
+ 4 688 1
+ 6 0 0
+case 1404 post 688
+ 0 688 0
+case 1405 post 689
+ 0 689 0
+case 1406 process
+ 5 0 0
+ 2 688 0
+ 4 688 1
+ 1 688 0
+ 2 689 0
+ 4 689 1
+ 6 0 0
+case 1407 process
+case 1408 post 690
+ 0 690 0
+case 1409 post 691
+ 0 691 0
+case 1410 post 692
+ 0 692 0
+case 1411 redo
+result 7
+case 1412 post 693
+ 0 693 0
+case 1413 post 694
+ 0 694 0
+case 1414 redo
+result 7
+case 1415 process
+ 5 0 0
+ 2 690 0
+ 4 690 0
+ 1 690 0
+ 2 691 0
+ 4 691 1
+ 2 692 0
+ 4 692 1
+ 2 693 0
+ 4 693 1
+ 2 694 0
+ 4 694 1
+ 6 0 0
+case 1416 post 695
+ 0 695 0
+case 1417 post 696
+ 0 696 0
+case 1418 process
+ 5 0 0
+ 2 695 0
+ 4 695 0
+ 1 695 0
+ 2 696 0
+ 4 696 1
+ 6 0 0
+case 1419 process
+case 1420 process
+case 1421 redo
+result 7
+case 1422 post 697
+ 0 697 0
+case 1423 post 698
+ 0 698 0
+case 1424 redo
+result 7
+case 1425 post 698
+ 0 698 0
+case 1426 post 699
+ 0 699 0
+case 1427 post 699
+ 0 699 0
+case 1428 post 700
+ 0 700 0
+case 1429 process
+ 5 0 0
+ 2 697 0
+ 4 697 1
+ 2 698 0
+ 4 698 1
+ 2 698 0
+ 4 698 1
+ 2 699 0
+ 4 699 1
+ 2 699 0
+ 4 699 1
+ 2 700 0
+ 4 700 0
+ 1 700 0
+ 6 0 0
+case 1430 post 701
+ 0 701 0
+case 1431 post 702
+ 0 702 0
+case 1432 undo
+ 3 699 0
+result 0
+case 1433 process
+ 5 0 0
+ 2 701 0
+ 4 701 1
+ 1 699 0
+ 2 702 0
+ 4 702 1
+ 6 0 0
+case 1434 post 703
+ 0 703 0
+case 1435 post 704
+ 0 704 0
+case 1436 process
+ 5 0 0
+ 2 703 0
+ 4 703 1
+ 1 569 0
+ 2 704 0
+ 4 704 1
+ 1 570 0
+ 6 0 0
+case 1437 redo
+result 7
+case 1438 post 705
+ 0 705 0
+case 1439 post 706
+ 0 706 0
+case 1440 post 707
+ 0 707 0
+case 1441 process
+ 5 0 0
+ 2 705 0
+ 4 705 1
+ 1 573 0
+ 2 706 0
+ 4 706 1
+ 1 574 0
+ 2 707 0
+ 4 707 1
+ 1 575 0
+ 6 0 0
+case 1442 post 707
+ 0 707 0
+case 1443 process
+ 5 0 0
+ 2 707 0
+ 4 707 1
+ 1 707 0
+ 6 0 0
+case 1444 post 708
+ 0 708 0
+case 1445 undo
+ 3 707 0
+result 0
+case 1446 process
+ 5 0 0
+ 2 708 0
+ 4 708 1
+ 1 707 0
+ 6 0 0
+case 1447 post 709
+ 0 709 0
+case 1448 post 710
+ 0 710 0
+case 1449 undo
+ 3 708 0
+result 0
+case 1450 post 710
+ 0 710 0
+case 1451 process
+ 5 0 0
+ 2 709 0
+ 4 709 1
+ 1 708 0
+ 2 710 0
+ 4 710 0
+ 1 710 0
+ 2 710 0
+ 4 710 0
+ 1 710 0
+ 6 0 0
+case 1452 post 709
+ 0 709 0
+case 1453 redo
+result 7
+case 1454 post 711
+ 0 711 0
+case 1455 post 712
+ 0 712 0
+case 1456 post 713
+ 0 713 0
+case 1457 process
+ 5 0 0
+ 2 709 0
+ 4 709 1
+ 1 709 0
+ 2 711 0
+ 4 711 1
+ 1 572 0
+ 2 712 0
+ 4 712 1
+ 1 576 0
+ 2 713 0
+ 4 713 1
+ 1 580 0
+ 6 0 0
+case 1458 post 714
+ 0 714 0
+case 1459 process
+ 5 0 0
+ 2 714 0
+ 4 714 0
+ 1 714 0
+ 6 0 0
+case 1460 process
+case 1461 process
+case 1462 post 715
+ 0 715 0
+case 1463 undo
+ 3 713 0
+result 0
+case 1464 process
+ 5 0 0
+ 2 715 0
+ 4 715 1
+ 1 713 0
+ 6 0 0
+case 1465 post 716
+ 0 716 0
+case 1466 post 717
+ 0 717 0
+case 1467 post 718
+ 0 718 0
+case 1468 post 719
+ 0 719 0
+case 1469 process
+ 5 0 0
+ 2 716 0
+ 4 716 1
+ 1 581 0
+ 2 717 0
+ 4 717 1
+ 1 582 0
+ 2 718 0
+ 4 718 1
+ 1 583 0
+ 2 719 0
+ 4 719 1
+ 1 585 0
+ 6 0 0
+case 1470 redo
+result 7
+case 1471 process
+case 1472 post 720
+ 0 720 0
+case 1473 process
+ 5 0 0
+ 2 720 0
+ 4 720 1
+ 1 586 0
+ 6 0 0
+case 1474 post 721
+ 0 721 0
+case 1475 post 722
+ 0 722 0
+case 1476 redo
+result 7
+case 1477 post 723
+ 0 723 0
+case 1478 redo
+result 7
+case 1479 redo
+result 7
+case 1480 post 724
+ 0 724 0
+case 1481 post 725
+ 0 725 0
+case 1482 post 726
+ 0 726 0
+case 1483 post 727
+ 0 727 0
+case 1484 process
+ 5 0 0
+ 2 721 0
+ 4 721 1
+ 1 587 0
+ 2 722 0
+ 4 722 1
+ 1 589 0
+ 2 723 0
+ 4 723 1
+ 1 590 0
+ 2 724 0
+ 4 724 1
+ 1 591 0
+ 2 725 0
+ 4 725 1
+ 1 592 0
+ 2 726 0
+ 4 726 1
+ 1 594 0
+ 2 727 0
+ 4 727 0
+ 1 727 0
+ 6 0 0
+case 1485 process
+case 1486 process
+case 1487 post 728
+ 0 728 0
+case 1488 post 729
+ 0 729 0
+case 1489 post 730
+ 0 730 0
+case 1490 post 729
+ 0 729 0
+case 1491 post 731
+ 0 731 0
+case 1492 post 730
+ 0 730 0
+case 1493 post 732
+ 0 732 0
+case 1494 post 731
+ 0 731 0
+case 1495 post 733
+ 0 733 0
+case 1496 process
+ 5 0 0
+ 2 728 0
+ 4 728 0
+ 1 728 0
+ 2 729 0
+ 4 729 1
+ 1 595 0
+ 2 730 0
+ 4 730 1
+ 1 597 0
+ 2 729 0
+ 4 729 1
+ 1 598 0
+ 2 731 0
+ 4 731 1
+ 1 599 0
+ 2 730 0
+ 4 730 1
+ 1 600 0
+ 2 732 0
+ 4 732 1
+ 1 601 0
+ 2 731 0
+ 4 731 1
+ 1 602 0
+ 2 733 0
+ 4 733 1
+ 1 604 0
+ 6 0 0
+case 1497 post 734
+ 0 734 0
+case 1498 process
+ 5 0 0
+ 2 734 0
+ 4 734 0
+ 1 734 0
+ 6 0 0
+case 1499 process
+case 1500 process
+case 1501 post 735
+ 0 735 0
+case 1502 post 735
+ 0 735 0
+case 1503 post 736
+ 0 736 0
+case 1504 post 737
+ 0 737 0
+case 1505 process
+ 5 0 0
+ 2 735 0
+ 4 735 1
+ 1 605 0
+ 2 735 0
+ 4 735 1
+ 1 606 0
+ 2 736 0
+ 4 736 1
+ 1 609 0
+ 2 737 0
+ 4 737 1
+ 1 610 0
+ 6 0 0
+case 1506 process
+case 1507 redo
+result 7
+case 1508 post 738
+ 0 738 0
+case 1509 post 739
+ 0 739 0
+case 1510 post 740
+ 0 740 0
+case 1511 process
+ 5 0 0
+ 2 738 0
+ 4 738 1
+ 1 611 0
+ 2 739 0
+ 4 739 1
+ 1 616 0
+ 2 740 0
+ 4 740 1
+ 1 618 0
+ 6 0 0
+case 1512 process
+case 1513 process
+case 1514 post 741
+ 0 741 0
+case 1515 post 741
+ 0 741 0
+case 1516 undo
+ 3 740 0
+result 0
+case 1517 process
+ 5 0 0
+ 2 741 0
+ 4 741 1
+ 1 740 0
+ 2 741 0
+ 4 741 1
+ 1 619 0
+ 6 0 0
+case 1518 process
+case 1519 redo
+result 7
+case 1520 process
+case 1521 post 742
+ 0 742 0
+case 1522 post 743
+ 0 743 0
+case 1523 redo
+result 7
+case 1524 post 744
+ 0 744 0
+case 1525 post 745
+ 0 745 0
+case 1526 post 746
+ 0 746 0
+case 1527 redo
+result 7
+case 1528 post 747
+ 0 747 0
+case 1529 undo
+ 3 741 0
+result 0
+case 1530 post 748
+ 0 748 0
+case 1531 post 749
+ 0 749 0
+case 1532 post 750
+ 0 750 0
+case 1533 process
+ 5 0 0
+ 2 742 0
+ 4 742 1
+ 1 741 0
+ 2 743 0
+ 4 743 1
+ 1 620 0
+ 2 744 0
+ 4 744 1
+ 1 620 0
+ 2 745 0
+ 4 745 1
+ 1 621 0
+ 2 746 0
+ 4 746 0
+ 1 746 0
+ 2 747 0
+ 4 747 0
+ 1 747 0
+ 2 748 0
+ 4 748 1
+ 1 622 0
+ 2 749 0
+ 4 749 0
+ 1 749 0
+ 2 750 0
+ 4 750 0
+ 1 750 0
+ 6 0 0
+case 1534 post 751
+ 0 751 0
+case 1535 redo
+result 7
+case 1536 post 752
+ 0 752 0
+case 1537 process
+ 5 0 0
+ 2 751 0
+ 4 751 0
+ 1 751 0
+ 2 752 0
+ 4 752 1
+ 1 624 0
+ 6 0 0
+case 1538 process
+case 1539 process
+case 1540 post 753
+ 0 753 0
+case 1541 redo
+result 7
+case 1542 post 754
+ 0 754 0
+case 1543 post 755
+ 0 755 0
+case 1544 process
+ 5 0 0
+ 2 753 0
+ 4 753 1
+ 1 625 0
+ 2 754 0
+ 4 754 1
+ 1 624 0
+ 2 755 0
+ 4 755 1
+ 1 626 0
+ 6 0 0
+case 1545 redo
+result 7
+case 1546 post 756
+ 0 756 0
+case 1547 process
+ 5 0 0
+ 2 756 0
+ 4 756 1
+ 1 627 0
+ 6 0 0
+case 1548 redo
+result 7
+case 1549 process
+case 1550 post 757
+ 0 757 0
+case 1551 post 758
+ 0 758 0
+case 1552 post 759
+ 0 759 0
+case 1553 post 760
+ 0 760 0
+case 1554 post 761
+ 0 761 0
+case 1555 process
+ 5 0 0
+ 2 757 0
+ 4 757 0
+ 1 757 0
+ 2 758 0
+ 4 758 0
+ 1 758 0
+ 2 759 0
+ 4 759 1
+ 1 628 0
+ 2 760 0
+ 4 760 0
+ 1 760 0
+ 2 761 0
+ 4 761 0
+ 1 761 0
+ 6 0 0
+case 1556 post 762
+ 0 762 0
+case 1557 process
+ 5 0 0
+ 2 762 0
+ 4 762 1
+ 1 629 0
+ 6 0 0
+case 1558 post 762
+ 0 762 0
+case 1559 post 763
+ 0 763 0
+case 1560 post 764
+ 0 764 0
+case 1561 post 765
+ 0 765 0
+case 1562 post 766
+ 0 766 0
+case 1563 process
+ 5 0 0
+ 2 762 0
+ 4 762 1
+ 1 762 0
+ 2 763 0
+ 4 763 1
+ 1 630 0
+ 2 764 0
+ 4 764 1
+ 1 631 0
+ 2 765 0
+ 4 765 1
+ 1 636 0
+ 2 766 0
+ 4 766 1
+ 1 637 0
+ 6 0 0
+case 1564 post 767
+ 0 767 0
+case 1565 post 768
+ 0 768 0
+case 1566 post 769
+ 0 769 0
+case 1567 undo
+ 3 766 0
+result 0
+case 1568 post 770
+ 0 770 0
+case 1569 redo
+ 2 766 0
+result 0
+case 1570 post 771
+ 0 771 0
+case 1571 post 772
+ 0 772 0
+case 1572 process
+ 5 0 0
+ 2 767 0
+ 4 767 1
+ 1 639 0
+ 2 768 0
+ 4 768 1
+ 1 641 0
+ 2 769 0
+ 4 769 1
+ 1 642 0
+ 2 770 0
+ 4 770 0
+ 1 770 0
+ 2 771 0
+ 4 771 1
+ 1 643 0
+ 2 772 0
+ 4 772 1
+ 1 644 0
+ 6 0 0
+case 1573 post 771
+ 0 771 0
+case 1574 post 773
+ 0 773 0
+case 1575 post 774
+ 0 774 0
+case 1576 post 775
+ 0 775 0
+case 1577 post 775
+ 0 775 0
+case 1578 process
+ 5 0 0
+ 2 771 0
+ 4 771 1
+ 1 645 0
+ 2 773 0
+ 4 773 1
+ 1 646 0
+ 2 774 0
+ 4 774 0
+ 1 774 0
+ 2 775 0
+ 4 775 1
+ 1 648 0
+ 2 775 0
+ 4 775 1
+ 1 649 0
+ 6 0 0
+case 1579 process
+case 1580 undo
+ 3 775 0
+result 0
+case 1581 post 776
+ 0 776 0
+case 1582 post 777
+ 0 777 0
+case 1583 post 778
+ 0 778 0
+case 1584 post 779
+ 0 779 0
+case 1585 process
+ 5 0 0
+ 2 776 0
+ 4 776 1
+ 1 775 0
+ 2 777 0
+ 4 777 0
+ 1 777 0
+ 2 778 0
+ 4 778 1
+ 1 650 0
+ 2 779 0
+ 4 779 0
+ 1 779 0
+ 6 0 0
+case 1586 process
+case 1587 redo
+result 7
+case 1588 process
+case 1589 post 780
+ 0 780 0
+case 1590 post 781
+ 0 781 0
+case 1591 post 782
+ 0 782 0
+case 1592 post 783
+ 0 783 0
+case 1593 post 784
+ 0 784 0
+case 1594 post 783
+ 0 783 0
+case 1595 process
+ 5 0 0
+ 2 780 0
+ 4 780 1
+ 1 651 0
+ 2 781 0
+ 4 781 1
+ 1 653 0
+ 2 782 0
+ 4 782 1
+ 1 655 0
+ 2 783 0
+ 4 783 0
+ 1 783 0
+ 2 784 0
+ 4 784 1
+ 1 656 0
+ 2 783 0
+ 4 783 0
+ 1 783 0
+ 6 0 0
+case 1596 post 785
+ 0 785 0
+case 1597 process
+ 5 0 0
+ 2 785 0
+ 4 785 1
+ 1 658 0
+ 6 0 0
+case 1598 process
+case 1599 post 786
+ 0 786 0
+case 1600 post 787
+ 0 787 0
+case 1601 post 788
+ 0 788 0
+case 1602 process
+ 5 0 0
+ 2 786 0
+ 4 786 1
+ 1 660 0
+ 2 787 0
+ 4 787 0
+ 1 787 0
+ 2 788 0
+ 4 788 1
+ 1 661 0
+ 6 0 0
+case 1603 post 789
+ 0 789 0
+case 1604 process
+ 5 0 0
+ 2 789 0
+ 4 789 1
+ 1 663 0
+ 6 0 0
+case 1605 process
+case 1606 post 790
+ 0 790 0
+case 1607 post 791
+ 0 791 0
+case 1608 process
+ 5 0 0
+ 2 790 0
+ 4 790 0
+ 1 790 0
+ 2 791 0
+ 4 791 1
+ 1 664 0
+ 6 0 0
+case 1609 post 792
+ 0 792 0
+case 1610 post 793
+ 0 793 0
+case 1611 post 794
+ 0 794 0
+case 1612 post 795
+ 0 795 0
+case 1613 post 796
+ 0 796 0
+case 1614 post 797
+ 0 797 0
+case 1615 redo
+result 7
+case 1616 post 798
+ 0 798 0
+case 1617 process
+ 5 0 0
+ 2 792 0
+ 4 792 1
+ 1 665 0
+ 2 793 0
+ 4 793 0
+ 1 793 0
+ 2 794 0
+ 4 794 1
+ 1 667 0
+ 2 795 0
+ 4 795 1
+ 1 668 0
+ 2 796 0
+ 4 796 1
+ 1 669 0
+ 2 797 0
+ 4 797 1
+ 1 672 0
+ 2 798 0
+ 4 798 1
+ 1 673 0
+ 6 0 0
+case 1618 process
+case 1619 post 799
+ 0 799 0
+case 1620 post 800
+ 0 800 0
+case 1621 post 801
+ 0 801 0
+case 1622 clear 1
+ 1 674 0
+ 1 675 0
+ 1 676 0
+ 1 677 0
+ 1 678 0
+ 1 680 0
+ 1 681 0
+ 1 682 0
+ 1 683 0
+ 1 684 0
+ 1 685 0
+ 1 686 0
+ 1 688 0
+ 1 689 0
+ 1 691 0
+ 1 692 0
+ 1 693 0
+ 1 694 0
+ 1 696 0
+ 1 697 0
+ 1 698 0
+ 1 698 0
+ 1 699 0
+ 1 701 0
+ 1 702 0
+ 1 703 0
+ 1 704 0
+ 1 705 0
+ 1 706 0
+ 1 709 0
+ 1 711 0
+ 1 712 0
+ 1 715 0
+ 1 716 0
+ 1 717 0
+ 1 718 0
+ 1 719 0
+ 1 720 0
+ 1 721 0
+ 1 722 0
+ 1 723 0
+ 1 724 0
+ 1 725 0
+ 1 726 0
+ 1 729 0
+ 1 730 0
+ 1 729 0
+ 1 731 0
+ 1 730 0
+ 1 732 0
+ 1 731 0
+ 1 733 0
+ 1 735 0
+ 1 735 0
+ 1 736 0
+ 1 737 0
+ 1 738 0
+ 1 739 0
+ 1 741 0
+ 1 742 0
+ 1 743 0
+ 1 744 0
+ 1 745 0
+ 1 748 0
+ 1 752 0
+ 1 753 0
+ 1 754 0
+ 1 755 0
+ 1 756 0
+ 1 759 0
+ 1 762 0
+ 1 763 0
+ 1 764 0
+ 1 765 0
+ 1 766 0
+ 1 767 0
+ 1 768 0
+ 1 769 0
+ 1 771 0
+ 1 772 0
+ 1 771 0
+ 1 773 0
+ 1 775 0
+ 1 776 0
+ 1 778 0
+ 1 780 0
+ 1 781 0
+ 1 782 0
+ 1 784 0
+ 1 785 0
+ 1 786 0
+ 1 788 0
+ 1 789 0
+ 1 791 0
+ 1 792 0
+ 1 794 0
+ 1 795 0
+ 1 796 0
+ 1 797 0
+ 1 798 0
+case 1623 redo
+result 7
+case 1624 post 802
+ 0 802 0
+case 1625 redo
+result 7
+case 1626 process
+ 5 0 0
+ 2 799 0
+ 4 799 1
+ 2 800 0
+ 4 800 1
+ 2 801 0
+ 4 801 0
+ 1 801 0
+ 2 802 0
+ 4 802 0
+ 1 802 0
+ 6 0 0
+case 1627 process
+case 1628 post 803
+ 0 803 0
+case 1629 post 804
+ 0 804 0
+case 1630 process
+ 5 0 0
+ 2 803 0
+ 4 803 1
+ 2 804 0
+ 4 804 1
+ 6 0 0
+case 1631 process
+case 1632 post 804
+ 0 804 0
+case 1633 post 805
+ 0 805 0
+case 1634 process
+ 5 0 0
+ 2 804 0
+ 4 804 1
+ 1 804 0
+ 2 805 0
+ 4 805 1
+ 6 0 0
+case 1635 process
+case 1636 post 806
+ 0 806 0
+case 1637 process
+ 5 0 0
+ 2 806 0
+ 4 806 1
+ 6 0 0
+case 1638 post 807
+ 0 807 0
+case 1639 process
+ 5 0 0
+ 2 807 0
+ 4 807 1
+ 6 0 0
+case 1640 undo
+ 3 807 0
+result 0
+case 1641 process
+case 1642 post 808
+ 0 808 0
+case 1643 post 809
+ 0 809 0
+case 1644 post 810
+ 0 810 0
+case 1645 process
+ 5 0 0
+ 2 808 0
+ 4 808 1
+ 1 807 0
+ 2 809 0
+ 4 809 1
+ 2 810 0
+ 4 810 1
+ 6 0 0
+case 1646 post 810
+ 0 810 0
+case 1647 undo
+ 3 810 0
+result 0
+case 1648 redo
+ 2 810 0
+result 0
+case 1649 post 811
+ 0 811 0
+case 1650 process
+ 5 0 0
+ 2 810 0
+ 4 810 1
+ 1 810 0
+ 2 811 0
+ 4 811 1
+ 6 0 0
+case 1651 process
+case 1652 process
+case 1653 post 812
+ 0 812 0
+case 1654 post 813
+ 0 813 0
+case 1655 post 814
+ 0 814 0
+case 1656 process
+ 5 0 0
+ 2 812 0
+ 4 812 1
+ 2 813 0
+ 4 813 1
+ 2 814 0
+ 4 814 1
+ 6 0 0
+case 1657 post 815
+ 0 815 0
+case 1658 post 816
+ 0 816 0
+case 1659 process
+ 5 0 0
+ 2 815 0
+ 4 815 0
+ 1 815 0
+ 2 816 0
+ 4 816 0
+ 1 816 0
+ 6 0 0
+case 1660 post 817
+ 0 817 0
+case 1661 redo
+result 7
+case 1662 post 818
+ 0 818 0
+case 1663 post 819
+ 0 819 0
+case 1664 process
+ 5 0 0
+ 2 817 0
+ 4 817 0
+ 1 817 0
+ 2 818 0
+ 4 818 0
+ 1 818 0
+ 2 819 0
+ 4 819 1
+ 6 0 0
+case 1665 post 820
+ 0 820 0
+case 1666 post 821
+ 0 821 0
+case 1667 process
+ 5 0 0
+ 2 820 0
+ 4 820 1
+ 2 821 0
+ 4 821 0
+ 1 821 0
+ 6 0 0
+case 1668 process
+case 1669 redo
+result 7
+case 1670 post 822
+ 0 822 0
+case 1671 process
+ 5 0 0
+ 2 822 0
+ 4 822 0
+ 1 822 0
+ 6 0 0
+case 1672 post 823
+ 0 823 0
+case 1673 process
+ 5 0 0
+ 2 823 0
+ 4 823 0
+ 1 823 0
+ 6 0 0
+case 1674 post 819
+ 0 819 0
+case 1675 post 824
+ 0 824 0
+case 1676 process
+ 5 0 0
+ 2 819 0
+ 4 819 1
+ 2 824 0
+ 4 824 1
+ 6 0 0
+case 1677 post 825
+ 0 825 0
+case 1678 process
+ 5 0 0
+ 2 825 0
+ 4 825 1
+ 6 0 0
+case 1679 process
+case 1680 post 826
+ 0 826 0
+case 1681 post 827
+ 0 827 0
+case 1682 post 828
+ 0 828 0
+case 1683 post 829
+ 0 829 0
+case 1684 undo
+ 3 825 0
+result 0
+case 1685 post 830
+ 0 830 0
+case 1686 redo
+ 2 825 0
+result 0
+case 1687 process
+ 5 0 0
+ 2 826 0
+ 4 826 1
+ 2 827 0
+ 4 827 1
+ 2 828 0
+ 4 828 1
+ 2 829 0
+ 4 829 1
+ 2 830 0
+ 4 830 1
+ 6 0 0
+case 1688 post 831
+ 0 831 0
+case 1689 post 832
+ 0 832 0
+case 1690 post 833
+ 0 833 0
+case 1691 process
+ 5 0 0
+ 2 831 0
+ 4 831 1
+ 2 832 0
+ 4 832 1
+ 2 833 0
+ 4 833 1
+ 6 0 0
+case 1692 post 834
+ 0 834 0
+case 1693 post 833
+ 0 833 0
+case 1694 redo
+result 7
+case 1695 post 833
+ 0 833 0
+case 1696 process
+ 5 0 0
+ 2 834 0
+ 4 834 1
+ 2 833 0
+ 4 833 1
+ 1 833 0
+ 2 833 0
+ 4 833 1
+ 1 833 0
+ 6 0 0
+case 1697 process
+case 1698 post 835
+ 0 835 0
+case 1699 post 836
+ 0 836 0
+case 1700 process
+ 5 0 0
+ 2 835 0
+ 4 835 1
+ 2 836 0
+ 4 836 1
+ 6 0 0
+case 1701 undo
+ 3 836 0
+result 0
+case 1702 post 837
+ 0 837 0
+case 1703 post 838
+ 0 838 0
+case 1704 process
+ 5 0 0
+ 2 837 0
+ 4 837 0
+ 1 837 0
+ 2 838 0
+ 4 838 1
+ 1 836 0
+ 6 0 0
+case 1705 clear 0
+case 1706 post 839
+ 0 839 0
+case 1707 post 840
+ 0 840 0
+case 1708 process
+ 5 0 0
+ 2 839 0
+ 4 839 1
+ 2 840 0
+ 4 840 1
+ 6 0 0
+case 1709 process
+case 1710 post 841
+ 0 841 0
+case 1711 process
+ 5 0 0
+ 2 841 0
+ 4 841 1
+ 6 0 0
+case 1712 process
+case 1713 post 842
+ 0 842 0
+case 1714 process
+ 5 0 0
+ 2 842 0
+ 4 842 1
+ 6 0 0
+case 1715 redo
+result 7
+case 1716 post 843
+ 0 843 0
+case 1717 post 844
+ 0 844 0
+case 1718 post 845
+ 0 845 0
+case 1719 post 846
+ 0 846 0
+case 1720 post 847
+ 0 847 0
+case 1721 post 847
+ 0 847 0
+case 1722 undo
+ 3 842 0
+result 0
+case 1723 process
+ 5 0 0
+ 2 843 0
+ 4 843 1
+ 1 842 0
+ 2 844 0
+ 4 844 0
+ 1 844 0
+ 2 845 0
+ 4 845 1
+ 2 846 0
+ 4 846 1
+ 2 847 0
+ 4 847 1
+ 2 847 0
+ 4 847 1
+ 6 0 0
+case 1724 post 848
+ 0 848 0
+case 1725 post 849
+ 0 849 0
+case 1726 process
+ 5 0 0
+ 2 848 0
+ 4 848 1
+ 2 849 0
+ 4 849 1
+ 6 0 0
+case 1727 post 850
+ 0 850 0
+case 1728 post 851
+ 0 851 0
+case 1729 post 852
+ 0 852 0
+case 1730 post 853
+ 0 853 0
+case 1731 post 854
+ 0 854 0
+case 1732 redo
+result 7
+case 1733 post 855
+ 0 855 0
+case 1734 post 856
+ 0 856 0
+case 1735 post 857
+ 0 857 0
+case 1736 post 858
+ 0 858 0
+case 1737 undo
+ 3 849 0
+result 0
+case 1738 undo
+ 3 848 0
+result 0
+case 1739 redo
+ 2 848 0
+result 0
+case 1740 post 857
+ 0 857 0
+case 1741 post 859
+ 0 859 0
+case 1742 process
+ 5 0 0
+ 2 850 0
+ 4 850 1
+ 1 849 0
+ 2 851 0
+ 4 851 0
+ 1 851 0
+ 2 852 0
+ 4 852 1
+ 2 853 0
+ 4 853 0
+ 1 853 0
+ 2 854 0
+ 4 854 1
+ 2 855 0
+ 4 855 1
+ 2 856 0
+ 4 856 0
+ 1 856 0
+ 2 857 0
+ 4 857 1
+ 2 858 0
+ 4 858 1
+ 2 857 0
+ 4 857 1
+ 2 859 0
+ 4 859 1
+ 6 0 0
+case 1743 post 860
+ 0 860 0
+case 1744 post 861
+ 0 861 0
+case 1745 post 862
+ 0 862 0
+case 1746 post 863
+ 0 863 0
+case 1747 post 864
+ 0 864 0
+case 1748 post 865
+ 0 865 0
+case 1749 redo
+result 7
+case 1750 post 866
+ 0 866 0
+case 1751 post 867
+ 0 867 0
+case 1752 post 868
+ 0 868 0
+case 1753 post 869
+ 0 869 0
+case 1754 process
+ 5 0 0
+ 2 860 0
+ 4 860 1
+ 2 861 0
+ 4 861 0
+ 1 861 0
+ 2 862 0
+ 4 862 1
+ 2 863 0
+ 4 863 1
+ 2 864 0
+ 4 864 1
+ 2 865 0
+ 4 865 1
+ 2 866 0
+ 4 866 1
+ 2 867 0
+ 4 867 1
+ 2 868 0
+ 4 868 1
+ 2 869 0
+ 4 869 1
+ 6 0 0
+case 1755 post 870
+ 0 870 0
+case 1756 post 871
+ 0 871 0
+case 1757 post 871
+ 0 871 0
+case 1758 post 872
+ 0 872 0
+case 1759 post 873
+ 0 873 0
+case 1760 post 874
+ 0 874 0
+case 1761 post 875
+ 0 875 0
+case 1762 post 876
+ 0 876 0
+case 1763 post 877
+ 0 877 0
+case 1764 post 878
+ 0 878 0
+case 1765 post 878
+ 0 878 0
+case 1766 process
+ 5 0 0
+ 2 870 0
+ 4 870 1
+ 2 871 0
+ 4 871 1
+ 2 871 0
+ 4 871 1
+ 2 872 0
+ 4 872 1
+ 2 873 0
+ 4 873 1
+ 2 874 0
+ 4 874 0
+ 1 874 0
+ 2 875 0
+ 4 875 1
+ 2 876 0
+ 4 876 1
+ 2 877 0
+ 4 877 1
+ 2 878 0
+ 4 878 1
+ 2 878 0
+ 4 878 1
+ 6 0 0
+case 1767 post 879
+ 0 879 0
+case 1768 process
+ 5 0 0
+ 2 879 0
+ 4 879 0
+ 1 879 0
+ 6 0 0
+case 1769 post 880
+ 0 880 0
+case 1770 process
+ 5 0 0
+ 2 880 0
+ 4 880 0
+ 1 880 0
+ 6 0 0
+case 1771 post 881
+ 0 881 0
+case 1772 post 882
+ 0 882 0
+case 1773 post 878
+ 0 878 0
+case 1774 process
+ 5 0 0
+ 2 881 0
+ 4 881 0
+ 1 881 0
+ 2 882 0
+ 4 882 1
+ 2 878 0
+ 4 878 1
+ 1 878 0
+ 6 0 0
+case 1775 post 883
+ 0 883 0
+case 1776 process
+ 5 0 0
+ 2 883 0
+ 4 883 0
+ 1 883 0
+ 6 0 0
+case 1777 process
+case 1778 post 884
+ 0 884 0
+case 1779 post 885
+ 0 885 0
+case 1780 post 886
+ 0 886 0
+case 1781 undo
+ 3 882 0
+result 0
+case 1782 process
+ 5 0 0
+ 2 884 0
+ 4 884 0
+ 1 884 0
+ 2 885 0
+ 4 885 1
+ 1 882 0
+ 2 886 0
+ 4 886 1
+ 6 0 0
+case 1783 redo
+result 7
+case 1784 redo
+result 7
+case 1785 undo
+ 3 886 0
+result 0
+case 1786 post 887
+ 0 887 0
+case 1787 redo
+ 2 886 0
+result 0
+case 1788 post 888
+ 0 888 0
+case 1789 undo
+ 3 886 0
+result 0
+case 1790 process
+ 5 0 0
+ 2 887 0
+ 4 887 1
+ 1 886 0
+ 2 888 0
+ 4 888 1
+ 6 0 0
+case 1791 process
+case 1792 post 889
+ 0 889 0
+case 1793 process
+ 5 0 0
+ 2 889 0
+ 4 889 1
+ 6 0 0
+case 1794 process
+case 1795 process
+case 1796 redo
+result 7
+case 1797 post 890
+ 0 890 0
+case 1798 post 891
+ 0 891 0
+case 1799 post 889
+ 0 889 0
+case 1800 post 892
+ 0 892 0
+case 1801 process
+ 5 0 0
+ 2 890 0
+ 4 890 1
+ 2 891 0
+ 4 891 1
+ 2 889 0
+ 4 889 1
+ 1 889 0
+ 2 892 0
+ 4 892 1
+ 6 0 0
+case 1802 post 893
+ 0 893 0
+case 1803 post 894
+ 0 894 0
+case 1804 process
+ 5 0 0
+ 2 893 0
+ 4 893 1
+ 2 894 0
+ 4 894 1
+ 6 0 0
+case 1805 undo
+ 3 894 0
+result 0
+case 1806 process
+case 1807 process
+case 1808 post 895
+ 0 895 0
+case 1809 process
+ 5 0 0
+ 2 895 0
+ 4 895 1
+ 1 894 0
+ 6 0 0
+case 1810 redo
+result 7
+case 1811 process
+case 1812 post 896
+ 0 896 0
+case 1813 process
+ 5 0 0
+ 2 896 0
+ 4 896 1
+ 6 0 0
+case 1814 post 897
+ 0 897 0
+case 1815 post 898
+ 0 898 0
+case 1816 process
+ 5 0 0
+ 2 897 0
+ 4 897 1
+ 2 898 0
+ 4 898 0
+ 1 898 0
+ 6 0 0
+case 1817 process
+case 1818 redo
+result 7
+case 1819 process
+case 1820 redo
+result 7
+case 1821 post 899
+ 0 899 0
+case 1822 post 900
+ 0 900 0
+case 1823 undo
+ 3 897 0
+result 0
+case 1824 process
+ 5 0 0
+ 2 899 0
+ 4 899 1
+ 1 897 0
+ 2 900 0
+ 4 900 1
+ 6 0 0
+case 1825 post 901
+ 0 901 0
+case 1826 post 902
+ 0 902 0
+case 1827 post 903
+ 0 903 0
+case 1828 process
+ 5 0 0
+ 2 901 0
+ 4 901 1
+ 2 902 0
+ 4 902 1
+ 2 903 0
+ 4 903 1
+ 6 0 0
+case 1829 redo
+result 7
+case 1830 process
+case 1831 process
+case 1832 process
+case 1833 post 904
+ 0 904 0
+case 1834 redo
+result 7
+case 1835 process
+ 5 0 0
+ 2 904 0
+ 4 904 1
+ 6 0 0
+case 1836 process
+case 1837 post 904
+ 0 904 0
+case 1838 process
+ 5 0 0
+ 2 904 0
+ 4 904 1
+ 1 904 0
+ 6 0 0
+case 1839 post 905
+ 0 905 0
+case 1840 redo
+result 7
+case 1841 post 906
+ 0 906 0
+case 1842 post 907
+ 0 907 0
+case 1843 post 908
+ 0 908 0
+case 1844 post 909
+ 0 909 0
+case 1845 post 910
+ 0 910 0
+case 1846 process
+ 5 0 0
+ 2 905 0
+ 4 905 1
+ 2 906 0
+ 4 906 0
+ 1 906 0
+ 2 907 0
+ 4 907 0
+ 1 907 0
+ 2 908 0
+ 4 908 1
+ 2 909 0
+ 4 909 1
+ 2 910 0
+ 4 910 1
+ 6 0 0
+case 1847 process
+case 1848 post 911
+ 0 911 0
+case 1849 process
+ 5 0 0
+ 2 911 0
+ 4 911 1
+ 6 0 0
+case 1850 process
+case 1851 redo
+result 7
+case 1852 post 912
+ 0 912 0
+case 1853 post 913
+ 0 913 0
+case 1854 post 914
+ 0 914 0
+case 1855 redo
+result 7
+case 1856 post 915
+ 0 915 0
+case 1857 undo
+ 3 911 0
+result 0
+case 1858 post 916
+ 0 916 0
+case 1859 post 917
+ 0 917 0
+case 1860 process
+ 5 0 0
+ 2 912 0
+ 4 912 1
+ 1 911 0
+ 2 913 0
+ 4 913 1
+ 2 914 0
+ 4 914 0
+ 1 914 0
+ 2 915 0
+ 4 915 1
+ 2 916 0
+ 4 916 1
+ 2 917 0
+ 4 917 1
+ 6 0 0
+case 1861 redo
+result 7
+case 1862 post 918
+ 0 918 0
+case 1863 redo
+result 7
+case 1864 redo
+result 7
+case 1865 redo
+result 7
+case 1866 process
+ 5 0 0
+ 2 918 0
+ 4 918 1
+ 6 0 0
+case 1867 undo
+ 3 918 0
+result 0
+case 1868 post 919
+ 0 919 0
+case 1869 process
+ 5 0 0
+ 2 919 0
+ 4 919 1
+ 1 918 0
+ 6 0 0
+case 1870 post 920
+ 0 920 0
+case 1871 process
+ 5 0 0
+ 2 920 0
+ 4 920 0
+ 1 920 0
+ 6 0 0
+case 1872 process
+case 1873 post 921
+ 0 921 0
+case 1874 post 922
+ 0 922 0
+case 1875 process
+ 5 0 0
+ 2 921 0
+ 4 921 0
+ 1 921 0
+ 2 922 0
+ 4 922 0
+ 1 922 0
+ 6 0 0
+case 1876 redo
+result 7
+case 1877 post 917
+ 0 917 0
+case 1878 undo
+ 3 919 0
+result 0
+case 1879 undo
+ 3 917 0
+result 0
+case 1880 redo
+ 2 917 0
+result 0
+case 1881 post 923
+ 0 923 0
+case 1882 process
+ 5 0 0
+ 2 917 0
+ 4 917 1
+ 1 919 0
+ 1 917 0
+ 2 923 0
+ 4 923 1
+ 6 0 0
+case 1883 post 924
+ 0 924 0
+case 1884 redo
+result 7
+case 1885 post 925
+ 0 925 0
+case 1886 redo
+result 7
+case 1887 post 926
+ 0 926 0
+case 1888 process
+ 5 0 0
+ 2 924 0
+ 4 924 0
+ 1 924 0
+ 2 925 0
+ 4 925 0
+ 1 925 0
+ 2 926 0
+ 4 926 1
+ 6 0 0
+case 1889 post 927
+ 0 927 0
+case 1890 post 928
+ 0 928 0
+case 1891 process
+ 5 0 0
+ 2 927 0
+ 4 927 0
+ 1 927 0
+ 2 928 0
+ 4 928 0
+ 1 928 0
+ 6 0 0
+case 1892 post 926
+ 0 926 0
+case 1893 post 923
+ 0 923 0
+case 1894 post 929
+ 0 929 0
+case 1895 post 930
+ 0 930 0
+case 1896 post 931
+ 0 931 0
+case 1897 undo
+ 3 926 0
+result 0
+case 1898 post 932
+ 0 932 0
+case 1899 process
+ 5 0 0
+ 2 926 0
+ 4 926 1
+ 1 926 0
+ 2 923 0
+ 4 923 1
+ 1 923 0
+ 2 929 0
+ 4 929 1
+ 2 930 0
+ 4 930 1
+ 2 931 0
+ 4 931 1
+ 2 932 0
+ 4 932 1
+ 6 0 0
+case 1900 redo
+result 7
+case 1901 post 930
+ 0 930 0
+case 1902 post 933
+ 0 933 0
+case 1903 process
+ 5 0 0
+ 2 930 0
+ 4 930 1
+ 2 933 0
+ 4 933 1
+ 6 0 0
+case 1904 undo
+ 3 933 0
+result 0
+case 1905 post 934
+ 0 934 0
+case 1906 post 935
+ 0 935 0
+case 1907 post 936
+ 0 936 0
+case 1908 process
+ 5 0 0
+ 2 934 0
+ 4 934 1
+ 1 933 0
+ 2 935 0
+ 4 935 0
+ 1 935 0
+ 2 936 0
+ 4 936 1
+ 6 0 0
+case 1909 process
+case 1910 post 937
+ 0 937 0
+case 1911 process
+ 5 0 0
+ 2 937 0
+ 4 937 1
+ 6 0 0
+case 1912 post 934
+ 0 934 0
+case 1913 post 938
+ 0 938 0
+case 1914 post 939
+ 0 939 0
+case 1915 process
+ 5 0 0
+ 2 934 0
+ 4 934 1
+ 1 799 0
+ 2 938 0
+ 4 938 0
+ 1 938 0
+ 2 939 0
+ 4 939 1
+ 1 800 0
+ 6 0 0
+case 1916 post 940
+ 0 940 0
+case 1917 post 941
+ 0 941 0
+case 1918 process
+ 5 0 0
+ 2 940 0
+ 4 940 1
+ 1 803 0
+ 2 941 0
+ 4 941 1
+ 1 804 0
+ 6 0 0
+case 1919 post 942
+ 0 942 0
+case 1920 process
+ 5 0 0
+ 2 942 0
+ 4 942 0
+ 1 942 0
+ 6 0 0
+case 1921 post 943
+ 0 943 0
+case 1922 post 944
+ 0 944 0
+case 1923 post 945
+ 0 945 0
+case 1924 redo
+result 7
+case 1925 post 946
+ 0 946 0
+case 1926 post 946
+ 0 946 0
+case 1927 process
+ 5 0 0
+ 2 943 0
+ 4 943 1
+ 1 805 0
+ 2 944 0
+ 4 944 1
+ 1 806 0
+ 2 945 0
+ 4 945 1
+ 1 808 0
+ 2 946 0
+ 4 946 1
+ 1 809 0
+ 2 946 0
+ 4 946 1
+ 1 810 0
+ 6 0 0
+case 1928 redo
+result 7
+case 1929 undo
+ 3 946 0
+result 0
+case 1930 process
+case 1931 post 947
+ 0 947 0
+case 1932 post 948
+ 0 948 0
+case 1933 process
+ 5 0 0
+ 2 947 0
+ 4 947 0
+ 1 947 0
+ 2 948 0
+ 4 948 1
+ 1 946 0
+ 6 0 0
+case 1934 post 949
+ 0 949 0
+case 1935 process
+ 5 0 0
+ 2 949 0
+ 4 949 1
+ 1 811 0
+ 6 0 0
+case 1936 process
+case 1937 process
+case 1938 post 950
+ 0 950 0
+case 1939 post 951
+ 0 951 0
+case 1940 post 952
+ 0 952 0
+case 1941 post 953
+ 0 953 0
+case 1942 undo
+ 3 949 0
+result 0
+case 1943 post 954
+ 0 954 0
+case 1944 process
+ 5 0 0
+ 2 950 0
+ 4 950 1
+ 1 949 0
+ 2 951 0
+ 4 951 1
+ 1 812 0
+ 2 952 0
+ 4 952 1
+ 1 813 0
+ 2 953 0
+ 4 953 1
+ 1 814 0
+ 2 954 0
+ 4 954 1
+ 1 819 0
+ 6 0 0
+case 1945 post 955
+ 0 955 0
+case 1946 undo
+ 3 954 0
+result 0
+case 1947 undo
+ 3 953 0
+result 0
+case 1948 post 956
+ 0 956 0
+case 1949 process
+ 5 0 0
+ 2 955 0
+ 4 955 1
+ 1 954 0
+ 1 953 0
+ 2 956 0
+ 4 956 1
+ 6 0 0
+case 1950 post 956
+ 0 956 0
+case 1951 post 956
+ 0 956 0
+case 1952 process
+ 5 0 0
+ 2 956 0
+ 4 956 1
+ 1 956 0
+ 2 956 0
+ 4 956 1
+ 1 956 0
+ 6 0 0
+case 1953 post 957
+ 0 957 0
+case 1954 redo
+result 7
+case 1955 post 956
+ 0 956 0
+case 1956 post 958
+ 0 958 0
+case 1957 post 959
+ 0 959 0
+case 1958 post 960
+ 0 960 0
+case 1959 post 961
+ 0 961 0
+case 1960 clear 0
+ 1 957 0
+ 1 956 0
+ 1 958 0
+ 1 959 0
+ 1 960 0
+ 1 961 0
+case 1961 process
+case 1962 post 962
+ 0 962 0
+case 1963 process
+ 5 0 0
+ 2 962 0
+ 4 962 0
+ 1 962 0
+ 6 0 0
+case 1964 process
+case 1965 undo
+ 3 956 0
+result 0
+case 1966 post 963
+ 0 963 0
+case 1967 post 964
+ 0 964 0
+case 1968 process
+ 5 0 0
+ 2 963 0
+ 4 963 1
+ 1 956 0
+ 2 964 0
+ 4 964 0
+ 1 964 0
+ 6 0 0
+case 1969 post 965
+ 0 965 0
+case 1970 undo
+ 3 963 0
+result 0
+case 1971 post 966
+ 0 966 0
+case 1972 post 967
+ 0 967 0
+case 1973 post 968
+ 0 968 0
+case 1974 process
+ 5 0 0
+ 2 965 0
+ 4 965 0
+ 1 965 0
+ 2 966 0
+ 4 966 0
+ 1 966 0
+ 2 967 0
+ 4 967 1
+ 1 963 0
+ 2 968 0
+ 4 968 1
+ 1 820 0
+ 6 0 0
+case 1975 post 969
+ 0 969 0
+case 1976 post 970
+ 0 970 0
+case 1977 undo
+ 3 968 0
+result 0
+case 1978 post 971
+ 0 971 0
+case 1979 post 972
+ 0 972 0
+case 1980 post 972
+ 0 972 0
+case 1981 process
+ 5 0 0
+ 2 969 0
+ 4 969 1
+ 1 968 0
+ 2 970 0
+ 4 970 0
+ 1 970 0
+ 2 971 0
+ 4 971 0
+ 1 971 0
+ 2 972 0
+ 4 972 1
+ 1 819 0
+ 2 972 0
+ 4 972 1
+ 1 824 0
+ 6 0 0
+case 1982 post 973
+ 0 973 0
+case 1983 post 974
+ 0 974 0
+case 1984 redo
+result 7
+case 1985 post 974
+ 0 974 0
+case 1986 process
+ 5 0 0
+ 2 973 0
+ 4 973 1
+ 1 825 0
+ 2 974 0
+ 4 974 0
+ 1 974 0
+ 2 974 0
+ 4 974 0
+ 1 974 0
+ 6 0 0
+case 1987 process
+case 1988 post 975
+ 0 975 0
+case 1989 post 976
+ 0 976 0
+case 1990 post 977
+ 0 977 0
+case 1991 post 978
+ 0 978 0
+case 1992 redo
+result 7
+case 1993 process
+ 5 0 0
+ 2 975 0
+ 4 975 1
+ 1 826 0
+ 2 976 0
+ 4 976 1
+ 1 827 0
+ 2 977 0
+ 4 977 1
+ 1 828 0
+ 2 978 0
+ 4 978 1
+ 1 829 0
+ 6 0 0
+case 1994 post 979
+ 0 979 0
+case 1995 process
+ 5 0 0
+ 2 979 0
+ 4 979 1
+ 1 830 0
+ 6 0 0
+case 1996 redo
+result 7
+case 1997 process
+case 1998 post 980
+ 0 980 0
+case 1999 post 981
+ 0 981 0

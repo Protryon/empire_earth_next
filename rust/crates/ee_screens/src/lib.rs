@@ -48,6 +48,8 @@
 //!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
 //!   change, over the C++ host).
+//! - [`actions`]: the UI thread's action, undo and redo queues (`EEUserInterface`: post, run, undo, redo; the actions
+//!   C++ objects held as handles).
 //! - [`camera`]: the camera, scroll and zoom events whole (the main game form's and the scenario editor's: the free
 //!   camera's turns, the arrow keys, the zoom keys, the wheel, the grab scroll with its per-form record).
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
@@ -56,6 +58,9 @@
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
+pub mod actions;
+#[cfg(not(test))]
+mod actions_ffi;
 pub mod camera;
 #[cfg(not(test))]
 mod camera_ffi;

@@ -7,6 +7,25 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// The host's ops (`ee_screenscpp_action`): an action's reference taken, released, run (`Virtual4`), undone
+/// (`Virtual8`), asked whether it is undoable; the UI copy lock and the world's write lock taken and released.
+constexpr static const uint32_t EE_SCREENS_ACTION_REFERENCE = 0;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_DEREFERENCE = 1;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_RUN = 2;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNDO = 3;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNDOABLE = 4;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_LOCK = 5;
+
+constexpr static const uint32_t EE_SCREENS_ACTION_UNLOCK = 6;
+
+/// Undo and Redo's answer when there is nothing to undo or redo.
+constexpr static const int32_t EE_SCREENS_ACTION_NONE = 7;
+
 /// The grave key's press and release around the free camera's rotation (`EEUIEDisableMouseMove`,
 /// `EEUIEEnableMouseMove`).
 constexpr static const uint32_t EE_SCREENS_CAM_DISABLE_MOUSE_MOVE = 2880;
@@ -2664,6 +2683,22 @@ struct EeScreensFramePiece {
 constexpr static const uint32_t ARMOR_KINDS[6] = { 0, 2, 1, 3, 5, 4, };
 
 extern "C" {
+
+/// `EEUserInterface::PostAction`: queues the action (`EEAction*`) with a reference of its own.
+void ee_screens_actions_post(void *action);
+
+/// `EEUserInterface::ProcessActions`: runs the queued actions under the UI copy lock and the world's write lock.
+void ee_screens_actions_process();
+
+/// `EEUserInterface::Undo`: 0, or 7 when there is nothing to undo.
+long ee_screens_actions_undo();
+
+/// `EEUserInterface::Redo`: 0, or 7 when there is nothing to redo.
+long ee_screens_actions_redo();
+
+/// `EEUserInterface::ClearQueue`: releases every action of a queue (0 the action queue, 1 the undo list, 2 the redo
+/// list).
+void ee_screens_actions_clear(uint32_t queue);
 
 /// A form's grab scroll (0 the main game form's, 1 the scenario editor's) made anew or released with its form: not
 /// grabbing (`EECreateGrabScroll`, `EEReleaseGrabScroll`).
