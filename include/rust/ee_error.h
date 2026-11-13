@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/// A checksum set (`ESChecksum`).
+struct EeErrorChecksum;
+
+/// Error texts from `ee_error_checksum_compare`, read with `ee_error_texts_count` / `_get`, freed with `_free`.
+struct EeErrorTexts;
+
 extern "C" {
 
 /// Whether `Filter.txt` was read (C++ reads it on the first debug message that has a startup path).
@@ -43,6 +49,112 @@ unsigned long ee_error_native();
 void ee_error_verify(const char *file,
                      unsigned long line,
                      const char *expression);
+
+/// A new checksum set (`ESChecksum(verbose)`).
+EeErrorChecksum *ee_error_checksum_new(bool verbose);
+
+/// A copy of a set (`ESChecksum`'s copy constructor).
+///
+/// # Safety
+/// `c` is a live set.
+EeErrorChecksum *ee_error_checksum_clone(const EeErrorChecksum *c);
+
+/// `to = from` (`ESChecksum`'s assignment).
+///
+/// # Safety
+/// Both are live sets.
+void ee_error_checksum_assign(EeErrorChecksum *to, const EeErrorChecksum *from);
+
+/// Frees a set (NULL: nothing).
+///
+/// # Safety
+/// `c` is NULL or a set from `ee_error_checksum_new` / `_clone`, not used afterwards.
+void ee_error_checksum_free(EeErrorChecksum *c);
+
+/// `AddChecksum(description, value)`.
+///
+/// # Safety
+/// `c` is a live set; `description` a NUL-terminated string.
+void ee_error_checksum_add(EeErrorChecksum *c, const char *description, unsigned long value);
+
+/// The protected `AddChecksum(value)`.
+///
+/// # Safety
+/// `c` is a live set.
+void ee_error_checksum_add_value(EeErrorChecksum *c, unsigned long value);
+
+/// `GetTotalChecksum`.
+///
+/// # Safety
+/// `c` is a live set.
+uint32_t ee_error_checksum_total(const EeErrorChecksum *c);
+
+/// `GetIsVerboseMode`.
+///
+/// # Safety
+/// `c` is a live set.
+bool ee_error_checksum_verbose(const EeErrorChecksum *c);
+
+/// The verbose flag a loaded game sets (`EEPChecksum::Load`).
+///
+/// # Safety
+/// `c` is a live set.
+void ee_error_checksum_set_verbose(EeErrorChecksum *c, bool verbose);
+
+/// The number of entries (`EEPChecksum::Save`).
+///
+/// # Safety
+/// `c` is a live set.
+size_t ee_error_checksum_count(const EeErrorChecksum *c);
+
+/// Entry `i`'s description into `out` (NUL-terminated, cut to `capacity - 1` bytes) -> its full length; its checksum
+/// into `*out_value`. An index past the end: length 0, value 0.
+///
+/// # Safety
+/// `c` is a live set; `out` holds `capacity` bytes (or is NULL with 0); `out_value` is valid.
+size_t ee_error_checksum_entry(const EeErrorChecksum *c,
+                               size_t i,
+                               char *out,
+                               size_t capacity,
+                               uint32_t *out_value);
+
+/// Empties a set (`EEPChecksum::Load` before reading).
+///
+/// # Safety
+/// `c` is a live set.
+void ee_error_checksum_clear(EeErrorChecksum *c);
+
+/// Appends a described entry whatever the mode (`EEPChecksum::Load`'s entries).
+///
+/// # Safety
+/// `c` is a live set; `description` a NUL-terminated string.
+void ee_error_checksum_push(EeErrorChecksum *c, const char *description, uint32_t value);
+
+/// `Compare(other)`: whether they match; the error texts into `*out_texts` (free with `ee_error_texts_free`).
+///
+/// # Safety
+/// Both are live sets; `out_texts` is valid.
+bool ee_error_checksum_compare(const EeErrorChecksum *c,
+                               const EeErrorChecksum *other,
+                               EeErrorTexts **out_texts);
+
+/// The number of texts.
+///
+/// # Safety
+/// `t` is from `ee_error_checksum_compare`.
+size_t ee_error_texts_count(const EeErrorTexts *t);
+
+/// Text `i` (valid until `ee_error_texts_free`).
+///
+/// # Safety
+/// `t` is from `ee_error_checksum_compare`; `i` is below the count.
+const char *ee_error_texts_get(const EeErrorTexts *t, size_t i);
+
+/// Frees the texts.
+///
+/// # Safety
+/// `t` is from `ee_error_checksum_compare` or NULL, not used afterwards.
+void ee_error_texts_free(EeErrorTexts *t);
 
 }  // extern "C"
 

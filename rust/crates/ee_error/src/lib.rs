@@ -1,7 +1,8 @@
 //! The Low-Level Engine's Error System (`src/Low-Level Engine/Error System/Error System.cpp` before; LLE lane round
-//! 2): the debug-output filter read from `Filter.txt`, the verification failure (`ESVerify`) and the last native
-//! error. C++ keeps `ESDebugOut`'s `printf` formatting and the platform's debug output, `ESVerify`'s and the native
-//! error's exported names as one-line forwarders, and reading `Filter.txt` through the File System (text mode).
+//! 2): the debug-output filter read from `Filter.txt`, the verification failure (`ESVerify`), the last native
+//! error and the checksum sets (`checksum.rs`). C++ keeps `ESDebugOut`'s `printf` formatting and the platform's
+//! debug output, `ESVerify`'s and the native error's exported names as one-line forwarders, and reading
+//! `Filter.txt` through the File System (text mode).
 //!
 //! `Filter.txt` (in the startup directory, read on the first debug message): one filter per line, read as `fgets`
 //! with a 1024-byte buffer read it (a longer line is several filters; a line ends at its first NUL). The first
@@ -13,8 +14,11 @@
 //! `golden_filter.txt` is the trace of the original function (`tests/error/es_filter_golden.cpp`); `golden.rs`
 //! replays it.
 
+pub mod checksum;
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_checksum;
 
 use std::ffi::{c_char, c_ulong, CStr};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};

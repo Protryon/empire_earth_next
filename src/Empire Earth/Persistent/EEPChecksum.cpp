@@ -9,6 +9,7 @@
 
 #include "ee/EEPChecksum.h"
 #include "ee/EEPersistentTag.h"
+#include "rust/ee_error.h"
 
 const UString EEPChecksum::sNumChecksums("EEPChecksum-NumChecksums");
 const UString EEPChecksum::sChecksum("EEPChecksum-Checksum");
@@ -42,12 +43,13 @@ long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
 {
     long theCount = 0;
     UString theDescription;
-    ESChecksumEntry theEntry;
     unsigned long theValue;
-    this->mEntries.clear();
-    long theResult = inFile.Read(this->mVerbose);
+    bool theVerbose;
+    ee_error_checksum_clear(this->mRust);
+    long theResult = inFile.Read(theVerbose);
     if (theResult != kErrorOK)
         return theResult;
+    ee_error_checksum_set_verbose(this->mRust, theVerbose);
     theResult = inFile.Read(theCount);
     if (theResult != kErrorOK)
         return theResult;
@@ -55,12 +57,9 @@ long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
         theResult = theDescription.Load(inFile);
         if (theResult != kErrorOK)
             continue;
-        theEntry.SetDescription(theDescription);
         theResult = inFile.Read(theValue);
-        if (theResult == kErrorOK) {
-            theEntry.SetChecksum(theValue);
-            this->mEntries.push_back(theEntry);
-        }
+        if (theResult == kErrorOK)
+            ee_error_checksum_push(this->mRust, theDescription, (uint32_t)theValue);
     }
     return theResult;
 }
@@ -69,40 +68,23 @@ long EEPChecksum::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
 // Writes the verbose flag and the described checksum entries to a save; returns the first write error
 long EEPChecksum::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    std::vector<ESChecksumEntry>::const_iterator it = this->mEntries.begin();
-    long theResult = outFile.Write(this->mVerbose);
+    size_t theCount = ee_error_checksum_count(this->mRust);
+    long theResult = outFile.Write(ee_error_checksum_verbose(this->mRust));
     if (theResult != kErrorOK)
         return theResult;
-    theResult = outFile.Write((long)this->mEntries.size());
+    theResult = outFile.Write((long)theCount);
     if (theResult != kErrorOK)
         return theResult;
-    for (; it != this->mEntries.end() && theResult == kErrorOK; ++it) {
-        theResult = it->GetDescription().Save(outFile);
+    for (size_t i = 0; i < theCount && theResult == kErrorOK; i++) {
+        uint32_t theValue;
+        std::vector<char> theText(ee_error_checksum_entry(this->mRust, i, NULL, 0, &theValue) + 1);
+        ee_error_checksum_entry(this->mRust, i, theText.data(), theText.size(), &theValue);
+        theResult = UString(theText.data()).Save(outFile);
         if (theResult == kErrorOK)
-            theResult = outFile.Write(it->GetChecksum());
+            theResult = outFile.Write((unsigned long)theValue);
     }
     return theResult;
 }
-
-// TEMPLATE: EXE 0x549edb
-// std::vector<ESChecksumEntry>::push_back (first used by Load)
-
-// TEMPLATE: EXE 0x549f07
-// std::vector<ESChecksumEntry>::clear
-
-// TEMPLATE: EXE 0x549f42
-// ??H?$_Ptrit@VESChecksumEntry@@HPAV1@AAV1@PAV1@AAV1@@std@@QBE?AV01@H@Z
-// TEMPLATE: EXE 0x549f57
-// std::copy for ESChecksumEntry (vector erase)
-
-// TEMPLATE: EXE 0x549f85
-// std::copy_backward for ESChecksumEntry (vector insert)
-
-// SYNTHETIC: EXE 0x549fb8
-// (the FSPersistent vtable's adjustor thunk for the deleting destructor: this -= 0x18)
-
-// SYNTHETIC: EXE 0x549fc0
-// (the scalar deleting destructor)
 
 // FUNCTION: EXE 0x549fdc
 // Destroys the saved checksum chunk

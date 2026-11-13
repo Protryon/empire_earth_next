@@ -7,7 +7,7 @@ use ee_codec as _;
 use ee_fs as _;
 // the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse
 use ee_input as _;
-// the Error System (ee_error): Filter.txt, ESVerify, the native error
+// the Error System (ee_error): Filter.txt, ESVerify, the native error, the checksum sets
 use ee_error as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
