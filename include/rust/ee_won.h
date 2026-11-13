@@ -2533,6 +2533,72 @@ enum class EeWonGuiOp : uint32_t {
   TabTextIs = 480,
   /// `AddLayoutPoint((LayoutPoint*)a)`.
   TabAddLayoutPoint,
+  /// the part `a` (0 the input box, 1 the button, 2 the list box, 3 the list area) as a `Component*` (a pure read).
+  ComboPart = 490,
+  /// `mListArea->InsertString(*(const GUIString*)a, b)` (the item).
+  ComboInsertString,
+  /// `mListArea->InsertItem((TextListItem*)a, b)`.
+  ComboInsertItem,
+  /// `SmartPtr<TextListItem> held = (TextListItem*)a;` (taken and released).
+  ComboDropItem,
+  /// `mListArea->DeleteItem(a)`.
+  ComboDeleteItem,
+  /// `mListArea->RefreshItem((TextListItem*)a)`.
+  ComboRefreshItem,
+  /// `mListArea->Clear(true)`.
+  ComboListClear,
+  /// `mListArea->GetSelItem()`.
+  ComboSelItem,
+  /// `mListArea->GetItemPos((ListItem*)a)`.
+  ComboItemPos,
+  /// `mListArea->SetSelItem(a, b != 0)`.
+  ComboSetSel,
+  /// `mListBox = (Scroller*)a`.
+  ComboSetListBox,
+  /// `((Scroller*)a)->GetScrollArea()` as a `Component*`.
+  ComboBoxArea,
+  /// `mListArea->SetScroller(mListBox)`.
+  ComboSetScroller,
+  /// `mListArea->SetListFlags(a, b != 0)`.
+  ComboSetListFlags,
+  /// the list area's `a`: 0 `GetRightPad()`, 1 `GetLeftPad()`, 2 `GetTotalWidth()`, 3 `GetTotalHeight()`.
+  ComboListMetric,
+  /// `mEdit->SetText(GUIString(""), a != 0)`.
+  ComboEditClear,
+  /// `mEdit->SetText(((TextListItem*)a)->mText, true)`.
+  ComboEditItemText,
+  /// `mEdit->SetText(*(const GUIString*)a, b != 0)`.
+  ComboEditSetText,
+  /// `mEdit->SetText(mUndoStr, true)`.
+  ComboEditUndo,
+  /// `mUndoStr = mEdit->GetText()`.
+  ComboUndoSave,
+  /// `mEdit->SelectRange(a, b)`.
+  ComboEditSelect,
+  /// `mEdit->SetAllowSelection(a != 0)`.
+  ComboEditAllowSelection,
+  /// `((TextListItem*)a)->mWidth`.
+  ComboItemWidth,
+  /// `((TextListItem*)a)->mText.length()`.
+  ComboItemTextLength,
+  /// `DeliverEvent(new ComboSelChangedEvent(this, (TextListItem*)a, b != 0), false)`.
+  ComboDeliverSel,
+  /// `mListArea->GetNumItems()`.
+  ComboItemCount,
+  /// `mListArea->GetItem(a)`.
+  ComboItemAt,
+  /// `((TextListItem*)a)->mText == *(const GUIString*)b`, or the input box's text when `b` is 0 (0 or 1).
+  ComboItemTextIs,
+  /// the list box opened as a popup below the combo box (`GetRoot()->OpenPopup(PopupParams(...))`).
+  ComboOpenPopup,
+  /// `mListArea->EnsureVisible((ListItem*)a)`.
+  ComboEnsureVisible,
+  /// `((ListItemClickedEvent*)a)->mButton`.
+  ComboEventButton,
+  /// `Relayout()`.
+  ComboRelayout,
+  /// `mListBox->AddListener(NULL)`.
+  ComboUnlisten,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2592,6 +2658,62 @@ enum class EeWonChatParserText {
   Input = 0,
   TargetName = 1,
   Text = 2,
+};
+
+/// The inward calls (the C++ shell's virtuals and methods).
+enum class EeWonComboCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `MouseDown(a, b, c)`.
+  MouseDown,
+  /// `MouseWheel(a)` (0 or 1).
+  MouseWheel,
+  GotFocus,
+  LostFocus,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  AddedToParent,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// `SetEnabled(a != 0)`.
+  SetEnabled,
+  /// `AddString(*a, b)` (`a` a `const GUIString*`): the item, or 0.
+  AddString,
+  /// `InsertItem(a, b)` (a `TextListItem*`).
+  InsertItem,
+  /// `DeleteItem(a)`.
+  DeleteItem,
+  /// `UpdateItem(a)` (a `TextListItem*`).
+  UpdateItem,
+  /// `Clear(a != 0)`.
+  Clear,
+  /// `GetSelItem()`.
+  GetSelItem,
+  /// `SetSelItem(a, b != 0)`.
+  SetSelItem,
+  /// `SetListBox(a)` (a `Scroller*` as a `Component*`).
+  SetListBox,
+  AddControls,
+  CalcListBoxSize,
+  /// `SetListBoxDimensions(a, b)`.
+  SetListBoxDimensions,
+  /// `SetListBoxWidth(a)`.
+  SetListBoxWidth,
+  /// `SetListBoxHeight(a)`.
+  SetListBoxHeight,
+  /// `SetInputBoxToListSelection(a != 0, b != 0)`.
+  SetInputBoxToListSelection,
+  /// `SetText(*a, b != 0)` (`a` a `const GUIString*`).
+  SetText,
+  /// `SetTextAndSel(*a, b != 0)`.
+  SetTextAndSel,
+  ShowList,
+  /// `SetNoType(a != 0)`.
+  SetNoType,
+  /// the field `a` (`EeWonComboField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
 };
 
 /// What an upper-cased token is in a group.
@@ -4182,6 +4304,15 @@ enum class EeWonTabField : uint32_t {
   UserHasInteracted,
 };
 
+/// The fields a config sets and the tests read.
+enum class EeWonComboField : uint32_t {
+  ListBoxVisible = 1,
+  NoType,
+  ShowButtonWhenDisabled,
+  ListBoxWidth,
+  ListBoxHeight,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4211,6 +4342,9 @@ struct EeWonByteBuffer;
 
 /// `ChatCommandParser`'s state (see the module).
 struct EeWonChatParser;
+
+/// The Rust ComboBox.
+struct EeWonComboBox;
 
 /// The parser's Rust state (opaque): the pushback and the define scopes.
 struct EeWonConfigLexer;
@@ -6897,6 +7031,30 @@ bool ee_won_chatparser_handle_input(EeWonChatParser *p,
                                     bool has_clients,
                                     uint32_t wchar_size,
                                     int32_t *target);
+
+/// A new Rust ComboBox for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the combo box's.
+EeWonComboBox *ee_won_combo_new(void *component,
+                                EeWonGuiHostFn host,
+                                const EeWonContainer *ct);
+
+/// The destructor's statement (the list box's listener dropped), then the object freed.
+///
+/// # Safety
+/// `combo` came from `ee_won_combo_new` (or is NULL) and is not used again.
+void ee_won_combo_free(EeWonComboBox *combo);
+
+/// One of ComboBox's methods (`EeWonComboCall`).
+///
+/// # Safety
+/// `combo` is live; the call's arguments as documented.
+ptrdiff_t ee_won_combo_call(const EeWonComboBox *combo,
+                            EeWonComboCall call,
+                            ptrdiff_t a,
+                            ptrdiff_t b,
+                            ptrdiff_t c);
 
 EeWonConfigLexer *ee_won_config_new();
 

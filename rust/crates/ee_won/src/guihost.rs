@@ -605,6 +605,73 @@ pub enum EeWonGuiOp {
     TabTextIs = 480,
     /// `AddLayoutPoint((LayoutPoint*)a)`.
     TabAddLayoutPoint,
+    // ---- the combo box (`comboobj`; the parts are its C++ members: `mEdit`, `mButton`, `mListBox`, `mListArea`)
+    /// the part `a` (0 the input box, 1 the button, 2 the list box, 3 the list area) as a `Component*` (a pure read).
+    ComboPart = 490,
+    /// `mListArea->InsertString(*(const GUIString*)a, b)` (the item).
+    ComboInsertString,
+    /// `mListArea->InsertItem((TextListItem*)a, b)`.
+    ComboInsertItem,
+    /// `SmartPtr<TextListItem> held = (TextListItem*)a;` (taken and released).
+    ComboDropItem,
+    /// `mListArea->DeleteItem(a)`.
+    ComboDeleteItem,
+    /// `mListArea->RefreshItem((TextListItem*)a)`.
+    ComboRefreshItem,
+    /// `mListArea->Clear(true)`.
+    ComboListClear,
+    /// `mListArea->GetSelItem()`.
+    ComboSelItem,
+    /// `mListArea->GetItemPos((ListItem*)a)`.
+    ComboItemPos,
+    /// `mListArea->SetSelItem(a, b != 0)`.
+    ComboSetSel,
+    /// `mListBox = (Scroller*)a`.
+    ComboSetListBox,
+    /// `((Scroller*)a)->GetScrollArea()` as a `Component*`.
+    ComboBoxArea,
+    /// `mListArea->SetScroller(mListBox)`.
+    ComboSetScroller,
+    /// `mListArea->SetListFlags(a, b != 0)`.
+    ComboSetListFlags,
+    /// the list area's `a`: 0 `GetRightPad()`, 1 `GetLeftPad()`, 2 `GetTotalWidth()`, 3 `GetTotalHeight()`.
+    ComboListMetric,
+    /// `mEdit->SetText(GUIString(""), a != 0)`.
+    ComboEditClear,
+    /// `mEdit->SetText(((TextListItem*)a)->mText, true)`.
+    ComboEditItemText,
+    /// `mEdit->SetText(*(const GUIString*)a, b != 0)`.
+    ComboEditSetText,
+    /// `mEdit->SetText(mUndoStr, true)`.
+    ComboEditUndo,
+    /// `mUndoStr = mEdit->GetText()`.
+    ComboUndoSave,
+    /// `mEdit->SelectRange(a, b)`.
+    ComboEditSelect,
+    /// `mEdit->SetAllowSelection(a != 0)`.
+    ComboEditAllowSelection,
+    /// `((TextListItem*)a)->mWidth`.
+    ComboItemWidth,
+    /// `((TextListItem*)a)->mText.length()`.
+    ComboItemTextLength,
+    /// `DeliverEvent(new ComboSelChangedEvent(this, (TextListItem*)a, b != 0), false)`.
+    ComboDeliverSel,
+    /// `mListArea->GetNumItems()`.
+    ComboItemCount,
+    /// `mListArea->GetItem(a)`.
+    ComboItemAt,
+    /// `((TextListItem*)a)->mText == *(const GUIString*)b`, or the input box's text when `b` is 0 (0 or 1).
+    ComboItemTextIs,
+    /// the list box opened as a popup below the combo box (`GetRoot()->OpenPopup(PopupParams(...))`).
+    ComboOpenPopup,
+    /// `mListArea->EnsureVisible((ListItem*)a)`.
+    ComboEnsureVisible,
+    /// `((ListItemClickedEvent*)a)->mButton`.
+    ComboEventButton,
+    /// `Relayout()`.
+    ComboRelayout,
+    /// `mListBox->AddListener(NULL)`.
+    ComboUnlisten,
 }
 
 /// The virtuals a container calls on its children, on its parent, on itself and as `Component::X` (`CtBase`,

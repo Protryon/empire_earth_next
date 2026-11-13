@@ -22,6 +22,7 @@ pub mod cert;
 pub mod certhost;
 pub mod chat;
 pub mod chatobj;
+pub mod comboobj;
 pub mod config;
 pub mod configobj;
 pub mod crc16;
