@@ -171,7 +171,22 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 The transport sub-group (EECPASGSeaTransport): PORTED -> army.lua cross_step: an attack sub-group whose
                 target lies across water is carried there. DEVIATION: the crossing is lib.navy's landing with the free
                 transports (one more ordered at a time while too few hold the group; given up after 5 minutes).
-                NOT STARTED: air and space sub-groups, submarines' kind; GiveImprovements.
+                The air sub-group (EECPASGAir, EECPASGUAirBomber, EECPASGUAirFighter): PORTED -> army.lua
+                air_update: the planes (aircraft parked in their bases are free units too) in a manual group with no
+                rally point; the task as AssignLandTask's but within the fuel reach (CanReach: flight seconds x
+                speed x 0.9 from the plane's base, the new unit field `base` and class field `flight_time`); the
+                planes' defence ladder (guard_chokepoint_air_percentage, the town, the land); IsLocationTaskValid
+                (15-180 s: an attack while the target is known within 2 regions, a defence lapses 35%);
+                AssignPrejudices (bombers: citizens 10%, anti-air 15-40%; fighters: bombers 35-70%, where the weapon
+                hurts: ai.can_hurt); the targets round the task's place (no walls, runways, animals); a bomber keeps a
+                live target within 10 tiles; fighters fly to the target's tile, the others attack it; an idle or
+                parked plane is sent to the task's place again (every 10 s at most). DEVIATIONS: the target score is
+                the port's (prejudice, armed, distance), the route the engine's; the town defence is no aid package;
+                the air sub-groups are kept out of the aid packages and SendBestSubGroup.
+                The helicopters (EECPASGHelicopter, a kind of land sub-group): with the land sub-group (they fly over).
+                The space fighters' sub-group (EECPASGSpaceFighter): the air sub-group's life with every unit flying
+                to its target; DEVIATION: the planet spaceships too (EECPASGSpaceship: NOT STARTED).
+                NOT STARTED: submarines' kind; GiveImprovements.
   EECPUnitSelector.cpp          PARTLY -> army.lua: Select: GatherCandidates (the free soldiers, an attack also the
                 defence groups' at rest: GatherDefendingUnits; the classes the player trains by AI kind,
                 KeepBestClasses, FilterByStrategy), ComputeGroupSize (the attack/defence share of the target file's

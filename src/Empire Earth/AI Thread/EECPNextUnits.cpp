@@ -1131,6 +1131,9 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
     }
     if (c->mContainer != NULL)
         EECPUnitsSetInt(L, "inside", (long)c->mContainer->mUnitID);
+    // an own aircraft's home base (the airport or carrier it returns to; the classic air sub-group's reach)
+    if (theOwn && c->mHomeBase != NULL && c->mHomeBase->mIsValid)
+        EECPUnitsSetInt(L, "base", (long)c->mHomeBase->mUnitID);
     if (!c->mUnitClass->IsBuilding() && c->mUnitClass->GetMaxVelocity() > 0.0f) {
         // the terrain the unit can cross (EEUnitClass::GetTerrainFlags: the classic's sub-group common move flags)
         EECPASGFlags theFlags;
@@ -1328,6 +1331,27 @@ static int LuaTile(lua_State* L)
     return 1;
 }
 
+// ai.can_hurt(attacker_type, target_type) -> whether the attacker's weapon hurts the target's family (the damage
+// table, combat.yaml: a human reads it too; EECPAttackSubGroupUnit::CanAttack's test without the ignored targets)
+static int LuaCanHurt(lua_State* L)
+{
+    EECPUnitsCharge(L, kCostCall);
+    long theAttacker = EECPUnitsClassArg(L, 1);
+    long theTarget = EECPUnitsClassArg(L, 2);
+    bool theResult = false;
+    if (theAttacker >= 0 && theTarget >= 0 && (unsigned long)theAttacker < EEUnitClassCount()
+        && (unsigned long)theTarget < EEUnitClassCount() && gUnitClassTable[theAttacker] != NULL
+        && gUnitClassTable[theTarget] != NULL && gU4E8708 != NULL) {
+        EEUnitClass* theA = gUnitClassTable[theAttacker];
+        EEUnitClass* theT = gUnitClassTable[theTarget];
+        long theAmmo = theA->mAmmoType;
+        long theFamily = theT->mFamily;
+        theResult = theAmmo >= 0 && theFamily >= 0 && theT->CanBeAttacked() && gU4E8708[theFamily][theAmmo] != 0.0f;
+    }
+    lua_pushboolean(L, theResult);
+    return 1;
+}
+
 // ai.class(type) -> static data from the class and the player's improvements (what the unit's panel shows)
 static int LuaClass(lua_State* L)
 {
@@ -1401,6 +1425,8 @@ static int LuaClass(lua_State* L)
         EECPUnitsSetInt(L, "sight", EECPUnitsCenti(u->mLineOfSight));
         EECPUnitsSetInt(L, "speed", EECPUnitsCenti(u->mMaxVelocity));
         EECPUnitsSetInt(L, "reload", u->mReloadTime);
+        // an aircraft's fuel (ms in the air; 0: no limit): the classic air sub-group's reach, flight x speed x 0.9
+        EECPUnitsSetInt(L, "flight_time", u->mFlightTime);
     }
     return 1;
 }
@@ -4309,7 +4335,7 @@ void EECPUnitsOpen(lua_State* L, void* inPlayer)
     static const luaL_Reg kFunctions[] = {
         {"me", LuaMe}, {"time", LuaTime}, {"players", LuaPlayers}, {"map", LuaMap},
         {"units", LuaUnits}, {"unit", LuaUnit}, {"get", LuaGet}, {"seen", LuaSeen}, {"memory", LuaMemory},
-        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"events", LuaEvents},
+        {"resources", LuaResources}, {"tile", LuaTile}, {"class", LuaClass}, {"can_hurt", LuaCanHurt}, {"events", LuaEvents},
         {"can_place", LuaCanPlace}, {"reach", LuaReach}, {"strength", LuaStrength},
         {"move", LuaMove}, {"attack", LuaAttack}, {"attack_ground", LuaAttackGround}, {"gather", LuaGather},
         {"build", LuaBuild}, {"repair", LuaRepair}, {"garrison", LuaGarrison}, {"load", LuaLoad}, {"unload", LuaUnload},
