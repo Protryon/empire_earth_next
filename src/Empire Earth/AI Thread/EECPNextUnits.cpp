@@ -98,9 +98,9 @@
 namespace {
 
 enum EventKind { kEvAttacked = 1, kEvDied, kEvCreated, kEvBuilt, kEvIdle, kEvSwapped, kEvConverted, kEvAttackPlayer,
-                 kEvDefendPlayer };
+                 kEvDefendPlayer, kEvFlare };
 const char* const kEventNames[] = {"", "attacked", "died", "created", "built", "idle", "swapped", "converted",
-                                   "attack_player", "defend_player"};
+                                   "attack_player", "defend_player", "flare"};
 
 struct UnitsEvent {
     long mKind, mUnit, mOther, mType, mAmount, mTime;
@@ -536,6 +536,15 @@ void EECPUnitsOnAttackPlayer(EEComputerPlayer* inPlayer, long inPlayerID, bool i
     EECPUnitsState* s = inPlayer->mUnitsState;
     if (s != NULL)
         EECPUnitsEventAdd(s, inDefend ? kEvDefendPlayer : kEvAttackPlayer, 0, inPlayerID, -1, 0);
+}
+
+// an ally's flare (EEComputerPlayer::FlareReceived): the classic's CombatManager::Attack at the tile, an event for a
+// script seat ("flare", `player` who flared, `x`, `y`)
+void EECPUnitsOnFlare(EEComputerPlayer* inPlayer, long inPlayerID, long inX, long inY)
+{
+    EECPUnitsState* s = inPlayer->mUnitsState;
+    if (s != NULL)
+        EECPUnitsEventAdd(s, kEvFlare, 0, inPlayerID, inX, inY);
 }
 
 void EECPUnitsOnCompleted(EEComputerPlayer* inPlayer, EEComplexUnit* inUnit)
@@ -1528,6 +1537,11 @@ static int LuaEvents(lua_State* L)
             break;
         case kEvAttackPlayer: case kEvDefendPlayer:
             EECPUnitsSetInt(L, "player", e.mOther);
+            break;
+        case kEvFlare:
+            EECPUnitsSetInt(L, "player", e.mOther);
+            EECPUnitsSetInt(L, "x", e.mType);
+            EECPUnitsSetInt(L, "y", e.mAmount);
             break;
         case kEvSwapped:
             EECPUnitsSetInt(L, "new", e.mOther);
@@ -4616,7 +4630,7 @@ static bool EECPUnitsLoadState(EECPUnitsState* s, const std::string& inBytes)
         e.mType = g.Get();
         e.mAmount = g.Get();
         e.mTime = g.Get();
-        if (e.mKind < kEvAttacked || e.mKind > kEvDefendPlayer)
+        if (e.mKind < kEvAttacked || e.mKind > kEvFlare)
             g.mOK = false;
         else
             s->mEvents.push_back(e);

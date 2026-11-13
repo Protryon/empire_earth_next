@@ -535,6 +535,8 @@ open question: is rebuilding enough?
 - `swapped` `{old, new}` (UnitsSwapped :5016);
 - `converted` `{unit, to}` (a unit lost to a priest; a unit gained is `trained` with `at = 0`);
 - `enemy_seen` `{player, x, y, count}` (the first sight of a player's units in a 20 s window);
+- `flare` `{player, x, y}` (an ally's flare, EEComputerPlayer::FlareReceived; the classic's CombatManager::Attack at the
+  tile);
 - `attack_player` / `defend_player` `{player}` (the attack-players order, EEAttackPlayers: a player's call that the
   computers at war with it attack it, its allies defend it; the classic's AttackPlayer / DefendPlayer);
 - `research_done` `{tech}`;

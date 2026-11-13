@@ -4992,6 +4992,11 @@ void EEComputerPlayer::ChooseCivilization()
 // Answers an ally's flare by sending the combat manager to attack at the flared tile (not in observer mode)
 void EEComputerPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 {
+    // port: a script seat (the next engine) gets the flare as an event; its C++ combat manager is not run
+    if (!this->mObserverMode && EECPEngine(this) == kEECPEngineNext) {
+        EECPUnitsOnFlare(this, inFrom != NULL ? (long)inFrom->mPlayerID : 0, inTile.mX, inTile.GetY());
+        return;
+    }
     if (!this->mObserverMode)
         this->mCombatManager->Attack(inFrom, inTile, true, true, true, true, true, true);
 }
