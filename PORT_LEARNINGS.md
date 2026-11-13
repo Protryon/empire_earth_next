@@ -12417,3 +12417,100 @@ Round 16's leftovers of the scenario editor's actions (b): the classes whose alg
   gate reaches them (only a person's mouse): they need a golden driver over the original unit first.
 - **Not done:** `EESEAChangeLoadText` (posted only by the editor's load thread), the quick save/load pair
   (`EEAQuickSaveLoad`, shared with the game), terrain colour/type (bitmap work EE-SIM cannot check).
+
+## R6: the toolkit's first whole classes: UISlider, UIScrollBar and UIStatusBar in Rust (ee_ui obj.rs, sliderobj.rs, scrollbarobj.rs, statusobj.rs; branch rust-r6-ui10, 2026-11-13)
+
+Round 9's audit left the toolkit's logic all in Rust and its C++ as object lifetime, factories, call sequences and
+container plumbing; this round starts moving the classes themselves, WON's pattern (rounds 22-29): a Rust object
+holds a class's state and every method, the C++ class is one-line forwarders, a constructor and destructor that make
+and free the object, and one host function (the op switch).
+
+| Commit | What | Net C++ (src + include/lle + include/ee) |
+|---|---|---|
+| 74a7c8a5 | UISlider whole; the shared host ops (`obj.rs`, `UIObjHost` in UIControl.cpp) | -108 |
+| 04ebe914 | UIScrollBar whole | -164 |
+| e78a4d00 | UIStatusBar whole | -90 |
+
+The toolkit (`src/Low-Level Engine/User Interface` + `include/lle/UI*.h`, `wc -l`): 17,729 at the branch's start ->
+17,367. The three record FFI modules (`slider_ffi.rs`, `scrollbar_ffi.rs`, `status_ffi.rs`) are deleted; the
+arithmetic modules of rounds 1-7 (`slider.rs`, `scrollbar.rs`, `status.rs`) stay, with their goldens, as the objects'
+algorithms (the objects implement their `SliderHost`/`ScrollBarHost` traits over host ops).
+
+- **Why these and in this order.** Bottom-up and by outside coupling. The census (every member of the three classes
+  grepped across `src`, `include` and `tests`, no limit) found no reader of their fields outside their own units:
+  the scroll bar reached the slider only through methods (it was a friend for the protected ones), and the members
+  of the same names in EEUICChatLine and EEUICWonNetGamesBox are those classes' own. So no census commit was needed.
+  The slider is a leaf (one subclass, EEUIFSEESElevation, overriding the virtual `ChangeRange`); the scroll bar
+  owns a slider and two arrow buttons; the status bar is a leaf with no subclass. The next candidates have more C++
+  and more coupling: UICheckBox/UIRadioButton (eight game subclasses of the radio button, the form's radio walk),
+  UITextLabel (UITLScrolling derives from it; many outside `SetText` callers), UIEditBox (its lines stay a
+  `std::vector<UWideString>` the Rust text model edits through host calls) and the `UIListBox<T>` template.
+- **The host.** `obj.rs`: one `EeUiOp` enum for every whole object (numbered per class: 1-12 UIControl's, 20-28 the
+  slider's, 40-62 the scroll bar's parts, 70-84 the status bar's rhombi and texts), one host signature
+  `(object, op, a, b, c, d, float[4])`; a rectangle travels in `GERectangle`'s member order. `UIObjHost` (a friend of
+  UIControl, in UIControl.cpp) answers the base-class ops and the ops on an owned part (another control's protected
+  virtuals by address, its `delete`), so each class's host switch is only its own ops. Virtuals that subclasses
+  override (`ChangeRange`, `ButtonDown`, `ButtonUp`, `SetDirty`, the parts' handlers) go through the C++ object; no
+  Rust borrow lives across an op (the elevation slider's `ChangeRange` reads the slider back, a trigger event may
+  too).
+- **What stays C++.** The constructors' `UIControl` part (the scroll bar's needs its rectangle first: the layout
+  export stays), the parts' `new` (the scroll button's constructor is private to its friends), the status bar's two
+  `GERhombus` members (the rasterizer draws them by address; the Rust reaches them by rhombus ops, as WON's combo
+  box reaches its parts). The C++ methods nothing calls were dropped from the classes (the slider's
+  `GetCurrentPoint`, `SetCurrentPoint`, `GetLocFromRange`, `GetRangeFromLoc`, `GetThumbRectangle`, drag accessors,
+  `GetMinRange`, `GetPageSize`, `GetRange`; the scroll bar's `Get{De,In}crementButton` and page steps); the Rust
+  objects keep every method (the goldens call them). The copy constructors are `= delete` (an object holding a Rust
+  pointer must not be copied; nothing copied one).
+- **Behaviour.** No change on any path the original defined. The slider's constructor called `SetRange(0, 0)` on
+  members it had not set; whichever way that compare went the state ends the same (range 0, scales 0, value 0), and
+  the Rust object starts there. The slider's copied thumb starts zeroed (the original's was unset until the first
+  `CopyData`; a draw before it read garbage).
+- **The goldens** (scratch drivers in `build/ui10`, as rounds 1-9's: `build.py PIECE orig|cur [SEED COUNT]`,
+  `world.h`, `cmpseq.py`, `mutate.sh`). A driver is a world (the base control's rectangle, the mouse, the drag bar's
+  scales, the manager's bitmaps, the parts as leaves with rectangles, a slider style and value that their handlers
+  step, the rhombi, texts whose length and extent follow the string and the font) and 20,000 random sequences of 40
+  calls. `orig` runs a reference class, the statements of the unmodified unit (c7231f0d) over the record FFI they
+  called; `cur` runs the Rust object. Both print one trace: every impure call out with its arguments and answer, the
+  world's `set` lines for the pure reads, the world's re-entrant calls (`do`: the elevation override reading the
+  value and calling the base, a trigger reading the value, the virtual `ButtonUp`) with their results.
+
+  | Golden | Trace lines | orig = cur | Mutation | Sequences failing |
+  |---|---|---|---|---|
+  | slider | 3,899,085 | yes | the thumb drawn at the live rectangle, not the copy | 13,716 |
+  | | | | the thumb's y scale from the x scale | 13,842 |
+  | | | | the range trigger fired before the value is set | 17,184 |
+  | scroll bar | 5,170,684 | yes | the slider drawn after the increment button | 16,406 |
+  | | | | the decrement button made as an increment one | 20,000 |
+  | | | | the parts deleted in another order | 20,000 |
+  | | | | `SetCurrentRangeValue`'s `unsigned long` -> `long` dropped | 4,212 (see below) |
+  | status bar | 4,298,663 | yes | an empty copied fill drawn | 20,000 |
+  | | | | `GetRange` without the + 1 | 18,515 |
+  | | | | the fill set after `SetCurrentRangeValue` in `SetLocation` | 19,999 |
+  | | | | a one-character text not copied | 19,554 |
+
+  The first scroll bar driver passed the value as a negative `intptr_t`, which the cast leaves alone, so that
+  mutation passed (0 sequences); the C++ shim passes an `unsigned long` zero-extended. The driver now passes it that
+  way (its base is the trace with the new inputs over the unmutated object, after orig = cur was shown). The first
+  25 sequences of each orig trace are `golden_{slider,scrollbar,status}obj.txt`, replayed by cargo
+  (`obj/replay.rs`: an interpreter of the trace, the pure reads answered from the `set` lines); each replay also has
+  a test that a changed line fails.
+- **Lessons.**
+  - A panic inside the replay's `extern "C"` host aborts the test binary (`panic in a function that cannot unwind`,
+    STATUS_STACK_BUFFER_OVERRUN): the replay catches it, keeps the first, and raises it after the inward call
+    returns.
+  - A header that loses an include breaks units far away: UISlider.h had pulled in `lle/GEBitmap.h` for its inline
+    destructor, and units including it relied on that for UIButton.h. The include stays.
+  - Measure mutations with the inputs the shim really passes (the cast above).
+- **What runs it.** EE-SIM's games never build a slider or a status bar (the oracle, seeds 2-3, identical after each
+  commit). The scenario editor gate (`sim_editor.py`, 1,820 lines unchanged) builds the editor's sliders (the
+  elevation tab's EEUIFSEESElevation, the player and trigger tabs' sliders) and sets and reads their values through
+  the shim, and the editor's list and edit boxes make scroll bars: the constructors, ranges, values and the virtual
+  `ChangeRange` with its override run there.
+  **Only the lead's tour shows:** every draw (the slider's thumb location, scale and draw; the scroll bars' parts
+  copied and drawn in their order in every list, edit box and scrolling label of the menus; the status bar's fill
+  and text: the loading screen's progress bar `kSplashLoadStatus` and the in-game EEUIFMGStatusBar), the mouse on a
+  slider or a scroll bar (a drag, a page click, the arrow buttons' repeat) and the settings screen's volume and speed
+  sliders. The menu pixel comparison covers the static draws; drags and clicks run only in the goldens.
+- **Left:** UICheckBox, UIRadioButton, UITriStateCheckBox and the other buttons (the radio walk over sibling
+  objects), UITextLabel with UITLScrolling, UIEditBox, the list boxes, the combo box, the form and the manager; then
+  `UIControl` itself (the base ops would become the objects' own).
