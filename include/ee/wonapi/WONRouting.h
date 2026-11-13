@@ -2211,15 +2211,17 @@ public:
     IPAddr mAddr; //48..6f, sizeof70, IPAddr 0x28
 };
 
+// The op list, the completions and the reply dispatch are a Rust object since net round 16
+// (rust/crates/ee_won/src/routeconn.rs EeWonRouteConn: the list +0xb8, the completions +0xc8 and the default one
+// +0x1bc, and AddOp 2ba630, CalcCompletion 2ba740, GetUnsolicitedOp 2ba830, MsgCallback 2bc850, CloseHook 2bcb20,
+// KillHook 2bcbb0); the request helpers below stay C++ (each makes its C++ op)
 class RoutingConnection : public ServerConnection {
 public:
     void AddOp(RoutingOp*); //2ba630, AutoCrit/list ownership
-    void CalcCompletion(RoutingOp*); //2ba740, type-index/default completion
-    SmartPtr<RoutingOp> GetUnsolicitedOp(unsigned char,bool); //2ba830, sret/ret0c; call-only
     RoutingConnection(); //2ba050; allocation1c0 at3eddd4
     // the completion an op of a type (RoutingOpType, below 61) gets when it has none, and the default one
-    void SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion) { this->mCompletions[inType] = inCompletion; }
-    void SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion) { this->mDefaultCompletion = inCompletion; }
+    void SetOpCompletion(int inType, CompletionBase<AsyncOpPtr>* inCompletion);
+    void SetDefaultOpCompletion(CompletionBase<AsyncOpPtr>* inCompletion);
     // 0x2bf1d0: subscribes to the data objects of a type (EEWonNet's room and game objects)
     void SubscribeDataObject(unsigned short inLinkId, const std::string& inDataType, unsigned long inFlag,
                         CompletionBase<AsyncOpPtr>* inCompletion);
@@ -2330,13 +2332,13 @@ void AbortServerShutdown(CompletionBase<AsyncOpPtr>* completion); //2be200 ret4
     virtual SmartPtr<RoutingOp> GetUnsolicitedDerivedOp(unsigned char); //GetUnsolicitedDerivedOp2bc6c0, sret+arg ret8
     virtual void RoutingOpCompleteHook(RoutingOp*) {} //inline RoutingOpCompleteHook (WON SDK), shared 30a800 ret4
     // 04/10/14 are inherited unchanged; no generic vtable padding or aliases.
-    typedef std::list<SmartPtr<RoutingOp> > RoutingOpList;
-    RoutingOpList mOpList; //b8 allocator/headbc/countc0; owns elements
-    bool mAllDerivedOpsAreUnsolicited; //c4
-    OpCompletionBasePtr mCompletions[61]; //c8..1b8, 61-element vector built by the ctor
-    OpCompletionBasePtr mDefaultCompletion; //1bc; extent1c0
+    bool mAllDerivedOpsAreUnsolicited; //c4 (GetUnsolicitedDerivedOp reads it)
 protected:
     virtual ~RoutingConnection(); //ordinary2ba4b0; explicit own-vptr store
+private:
+    RoutingConnection(const RoutingConnection&);
+    RoutingConnection& operator=(const RoutingConnection&);
+    EeWonRouteConn* mRoute; // owned
 };
 
 // IgnoreClient 2c3848/2c38a5 both call 2a6b60; a negative compare orders the tree.

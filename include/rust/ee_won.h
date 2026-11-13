@@ -1661,6 +1661,9 @@ constexpr static const int32_t EE_WON_REQOP_VERSION_TO = 31;
 
 constexpr static const int32_t EE_WON_REQOP_VERSION_URL = 32;
 
+/// How many op types have a completion slot (`mCompletions[61]`).
+constexpr static const size_t EE_WON_ROUTE_COMPLETIONS = 61;
+
 constexpr static const int32_t EE_WON_RT_SUCCESS = 0;
 
 /// `WS_None`
@@ -3754,6 +3757,9 @@ struct EeWonQueueSocket;
 /// A Rust op held by a C++ `ServerRequestOp`.
 struct EeWonReqOp;
 
+/// `RoutingConnection`'s op list, completions and steps.
+struct EeWonRouteConn;
+
 /// `ServerConnection`'s state and steps.
 struct EeWonServerConn;
 
@@ -5254,6 +5260,42 @@ struct EeWonResource {
   const char *name;
   EeWonResKind kind;
   bool new_section;
+};
+
+/// What the routing connection object calls back in the C++. One static table serves every connection. Every
+/// object is passed as its `RefCount*`.
+struct EeWonRouteConnHooks {
+  /// `object->AddRef()`, `->Release()` (an op or a completion)
+  void (*add_ref)(void *object);
+  void (*release)(void *object);
+  /// an op's `Kill(true)`, `GetCompletion()` (borrowed), `SetCompletion(c)`, the virtual `GetType()`,
+  /// `mIsDerivedServerOp`
+  void (*op_kill)(void *op);
+  void *(*op_completion)(void *op);
+  void (*op_set_completion)(void *op, void *completion);
+  long (*op_type)(void *op);
+  bool (*op_derived)(void *op);
+  /// `op->HandleReply(type, msg)` over a `ReadBuffer` of the message at `pos`; a `ReadBufferException` sets
+  /// `threw` (the status is then not read)
+  int32_t (*handle_reply)(void *op,
+                          uint8_t message_type,
+                          const uint8_t *data,
+                          size_t length,
+                          size_t pos,
+                          bool *threw);
+  /// the end of a dispatched op: `SetMode(OP_MODE_BLOCK)`, then `ForceFinish(status)` (unsolicited) or
+  /// `Finish(status)`
+  void (*op_end)(void *op, bool unsolicited, long status);
+  /// `op->Complete()`
+  void (*op_complete)(void *op);
+  /// the virtual `RoutingOpCompleteHook(op)`
+  void (*complete_hook)(void *conn, void *op);
+  /// a new notification op of the kind (`EE_WON_RT_N_*`) on the connection, or for a derived server's message the
+  /// virtual `GetUnsolicitedDerivedOp(type)` (`kind` -1): one reference held for the caller, or null
+  void *(*new_unsolicited)(void *conn, int32_t kind, uint8_t message_type);
+  /// `ServerConnection::CloseHook()`, `ServerConnection::KillHook()`
+  void (*server_close_hook)(void *conn);
+  void (*server_kill_hook)(void *conn);
 };
 
 /// A request's fields from the C++ (strings as UTF-16 LE bytes).
@@ -11600,6 +11642,59 @@ size_t ee_won_resource_count();
 /// # Safety
 /// `out` is writable.
 bool ee_won_resource_row(size_t index, EeWonResource *out);
+
+/// A new routing connection object for the C++ `conn` (the hooks get it), on the socket's lock `lock`.
+///
+/// # Safety
+/// `hooks` is a static table; `conn` and `lock` outlive the object.
+EeWonRouteConn *ee_won_routeconn_new(void *conn,
+                                     const EeWonRouteConnHooks *hooks,
+                                     void *lock);
+
+/// Frees the routing connection object (its references go).
+///
+/// # Safety
+/// `r` came from `ee_won_routeconn_new` and is freed once.
+void ee_won_routeconn_free(EeWonRouteConn *r);
+
+/// `mCompletions[op_type] = completion` (`op_type` -1: `mDefaultCompletion`).
+///
+/// # Safety
+/// `r` is a live routing connection object (so for every `ee_won_routeconn_` call); the objects passed are live
+/// C++ objects of the kinds named, or null where the C++ allowed it.
+void ee_won_routeconn_set_completion(const EeWonRouteConn *r,
+                                     int32_t op_type,
+                                     void *completion);
+
+/// `CalcCompletion(op)`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_calc_completion(const EeWonRouteConn *r, void *op);
+
+/// `AddOp(op)`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_add_op(const EeWonRouteConn *r, void *op);
+
+/// `MsgCallback(message)`: the message's bytes.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`; `data` holds `length` bytes (or is null with 0).
+void ee_won_routeconn_msg_callback(const EeWonRouteConn *r, const uint8_t *data, size_t length);
+
+/// `CloseHook`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_close_hook(const EeWonRouteConn *r);
+
+/// `KillHook`.
+///
+/// # Safety
+/// As `ee_won_routeconn_set_completion`.
+void ee_won_routeconn_kill_hook(const EeWonRouteConn *r);
 
 /// A request's message into `sink`.
 ///
