@@ -270,6 +270,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_input"
+version = "0.1.0"
+
+[[package]]
 name = "ee_mixer"
 version = "0.1.0"
 
@@ -362,6 +366,7 @@ dependencies = [
  "ee_ge",
  "ee_gfx",
  "ee_gx",
+ "ee_input",
  "ee_mixer",
  "ee_net_tcp",
  "ee_netmsg",

@@ -5,6 +5,8 @@ use std::ffi::c_char;
 
 use ee_codec as _;
 use ee_fs as _;
+// the Input System's devices (ee_input/src/ffi.rs), called by Input System.cpp, ISKeyboard and ISMouse
+use ee_input as _;
 // the Graphics Engine's math and the table trigonometry (ee_ge/src/ffi.rs), called by the C++ GE classes and UMath.cpp
 use ee_ge as _;
 // the Graphics Thread's and the camera's math (ee_gfx/src/ffi.rs), called by EECameraControl.cpp

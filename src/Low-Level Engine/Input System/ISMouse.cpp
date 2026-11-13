@@ -82,9 +82,9 @@ void ISMouse::RecomputeCurrentButtonState()
     memset(&this->mLastState, 0, sizeof(this->mLastState));
     memset(this->mButtons, 0, sizeof(this->mButtons));
     memset(this->mLastButtons, 0, sizeof(this->mLastButtons));
-    if (this->mDevice->GetMouseState(*this->mCurrentStatus) != kISInputOK)
+    if (ee_input_get_mouse_state(this->mDevice, this->mCurrentStatus) != kISInputOK)
         return;
-    this->mDevice->GetData(NULL, theCount);
+    ee_input_get_data(this->mDevice, NULL, &theCount);
     this->mButtons[0] = (this->mCurrentStatus->rgbButtons[0] & 0x80) == 0x80;
     this->mButtons[1] = (this->mCurrentStatus->rgbButtons[1] & 0x80) == 0x80;
     this->mButtons[2] = (this->mCurrentStatus->rgbButtons[2] & 0x80) == 0x80;
@@ -106,7 +106,7 @@ void ISMouse::Refresh()
     unsigned long theCount = 256;
     memcpy(this->mLastStatus, this->mCurrentStatus, sizeof(ISMouseState));
     memcpy(this->mLastButtons, this->mButtons, sizeof(this->mButtons));
-    long theResult = this->mDevice->GetData(theData, theCount);
+    long theResult = ee_input_get_data(this->mDevice, theData, &theCount);
     this->mCurrentStatus->lX = 0;
     this->mCurrentStatus->lY = 0;
     this->mCurrentStatus->lZ = 0;
@@ -117,7 +117,7 @@ void ISMouse::Refresh()
             this->RecomputeCurrentButtonState();
         else {
             ISMouseState theState;
-            if (this->mDevice->GetMouseState(theState) == kISInputOK) {
+            if (ee_input_get_mouse_state(this->mDevice, &theState) == kISInputOK) {
                 this->mCurrentStatus->lX = theState.lX;
                 this->mCurrentStatus->lY = theState.lY;
             }
@@ -166,7 +166,7 @@ void ISMouse::Refresh()
 void ISMouse::RefreshXY()
 {
     ISMouseState theState;
-    if (this->mDevice->GetMouseState(theState) == kISInputOK) {
+    if (ee_input_get_mouse_state(this->mDevice, &theState) == kISInputOK) {
         this->mCurrentStatus->lX = theState.lX;
         this->mCurrentStatus->lY = theState.lY;
     }
@@ -183,7 +183,7 @@ void ISMouse::Resume()
 {
     if (this->mWindow != NULL)
         PlatMouseSetRelative(this->mWindow, 1);
-    this->mDevice->Acquire();
+    ee_input_acquire(this->mDevice);
     this->mSuspended = false;
     this->RecomputeCurrentButtonState();
 }
@@ -203,7 +203,7 @@ long ISMouse::SetMode(unsigned long inMode)
 // Releases the mouse (its events are no longer buffered; the pointer leaves relative mode) and marks it suspended
 void ISMouse::Suspend()
 {
-    this->mDevice->Unacquire();
+    ee_input_unacquire(this->mDevice);
     this->mSuspended = true;
     if (this->mWindow != NULL)
         PlatMouseSetRelative(this->mWindow, 0);
