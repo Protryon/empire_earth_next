@@ -52,8 +52,6 @@
 2ddb70 2e1b5f WONAuth/AuthContext.cpp
 2e27b0 2e305f WONAuth/AuthSession.cpp
 2e3090 2e3c2d WONAuth/CDKey.cpp
-2e6a10 2e8fb8 WONAuth/PeerAuthOp.cpp
-2e8950 2e93dc WONAuth/PeerAuthServerOp.cpp
 2f0190 2f04ec WONDir/DirEntity.cpp
 2f04f0 2f0d9a WONDir/DirEntityReplyParser.cpp
 2f2750 2f2f3f WONAPI.cpp

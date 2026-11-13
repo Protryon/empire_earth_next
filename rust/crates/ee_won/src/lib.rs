@@ -90,6 +90,7 @@ pub mod patch;
 pub mod path;
 pub mod peerauth;
 pub mod peerobj;
+pub mod peerop;
 pub mod persist;
 pub mod plaintext;
 pub mod prefsobj;

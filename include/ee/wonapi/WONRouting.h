@@ -1838,125 +1838,24 @@ public:
     static void TakeEntity(void* inList, const EeWonDirEntity* inEntity); // appends to the DirEntityList
 };
 
-// The direct RTTI parent is ServerOp, not AsyncOpWithTracker or RoutingOp.
-// The game uses no own fields; PeerAuthOp's own IPAddr begins at 94.
-// Producer ServerConnection::Connect2abc40 new2244 at2abc81, ctor2e6a10 at2abcb3.
-// Ctor calls ServerOp2acc10 at2e6a30; inherited pointer78 release/addref/write
-// shown 2e6b10..2e6b61, source argument BlockingSocket* (as in the SDK header).
-// PeerAuthClient (0x2180 bytes) and PeerAuthServer (0x2184): the handshake's two sides are ee_won objects
-// (rust/crates/ee_won/src/peerobj.rs: the state, the peer data, the two secrets, the other side's certificate);
-// the session a step makes becomes this class's AuthSession.
-class PeerAuth {
-    EeWonPeerAuth* mImpl;
-    SmartPtr<AuthSession> mSession;
-    PeerAuth(const PeerAuth&);
-    PeerAuth& operator=(const PeerAuth&);
-protected:
-    explicit PeerAuth(bool inServer) : mImpl(ee_won_peerauth_new(inServer)) {}
-    EeWonPeerAuth* Impl() const { return this->mImpl; }
-    void TakeSession()
-    {
-        if (EeWonAuthSession* aSession = ee_won_peerauth_take_session(this->mImpl))
-            this->mSession = new AuthSession(aSession);
-    }
+// PeerAuthOp (0x2244 bytes, ctor 2e6a10) and PeerAuthServerOp (0x2240, ctor 2e8950): Rust ops on the base (ee_won
+// peerop.rs over peerobj.rs: the address, the certificate refresh status, the peer data, the handshake of
+// PeerAuthClient / PeerAuthServer, the session and every step); these classes are their constructors (the auth
+// context, the auth type and the socket are ServerOp's members) and the accessors the game reads.
+class PeerAuthServerOp : public RustServerOp {
 public:
-    ~PeerAuth() { ee_won_peerauth_free(this->mImpl); }
-    WONStatus HandleRecvMsg(const void* inMsg, unsigned long inLength, ByteBufferPtr& outMsg)
-    {
-        outMsg = NULL;
-        bool aHasOut = false;
-        WONStatus aStatus = ee_won_peerauth_recv(this->mImpl, static_cast<const uint8_t*>(inMsg), inLength, WonByteBufferSink,
-                                                 &outMsg, &aHasOut);
-        this->TakeSession();
-        return aStatus;
-    }
-    AuthSession* GetSession() { return this->mSession.get(); }
-    int GetState() const { return (int)ee_won_peerauth_num(this->mImpl, EE_WON_PEERAUTH_STATE, 0, 0, 0); }
-    void SetUseAuth2(bool inValue) { ee_won_peerauth_set(this->mImpl, EE_WON_PEERAUTH_USE_AUTH2, inValue); }
-    // the other side's certificate (EE_WON_PEERAUTH_OTHER, _OTHER_USER, _OTHER_PERMITS of a, b, c)
-    long long Other(int inWhich, long long inA = 0, long long inB = 0, long long inC = 0) const
-    {
-        return ee_won_peerauth_num(this->mImpl, inWhich, inA, inB, inC);
-    }
-    bool OtherPermits(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
-    {
-        return this->Other(EE_WON_PEERAUTH_OTHER_PERMITS, inUser, inCommunity, inTrust) != 0;
-    }
+    PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket);
+    // the client's certificate's VerifyPermissions(0, community, 0) after the handshake (LanLogic's check)
+    bool ClientPermits(DWORD inCommunity) const { return this->GetNum(EE_WON_PEEROP_CLIENT_PERMITS, inCommunity) != 0; }
 };
-class PeerAuthClient : public PeerAuth {
+class PeerAuthOp : public RustServerOp {
 public:
-    enum PeerAuthClientState { STATE_NOT_STARTED=0, STATE_AWAITING_CHALLENGE=1, STATE_AWAITING_COMPLETE=2 };
-    PeerAuthClient() : PeerAuth(false) {} //2e5c30
-    ByteBufferPtr Start(const AuthPeerData* inData, AuthType inType, unsigned char inLengthFieldSize) //2e6730
+    PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket, bool inUseAuth2 = true);
+    AuthSession* GetSession() const
     {
-        ByteBufferPtr aMsg;
-        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, inType, inLengthFieldSize,
-                              WonByteBufferSink, &aMsg);
-        return aMsg;
+        return static_cast<AuthSession*>(reinterpret_cast<RefCount*>((intptr_t)this->GetNum(EE_WON_PEEROP_SESSION)));
     }
-    void Reset() { ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_RESET, 0); } //2e5cb0
-    void SetClientKeySize(unsigned char inSize, bool inUseSecret = true)
-    {
-        ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_CLIENT_KEY, inSize | (inUseSecret ? 0x100 : 0));
-    }
-};
-class PeerAuthServer : public PeerAuth {
-public:
-    enum PeerAuthServerState { STATE_NOT_STARTED=0, STATE_AWAITING_REQUEST=1, STATE_AWAITING_CHALLENGE2=2 };
-    PeerAuthServer() : PeerAuth(true) {} //2e7cc0
-    void Start(const AuthPeerData* inData, unsigned char inLengthFieldSize) //2e7d30
-    {
-        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, 0, inLengthFieldSize, WonByteBufferSink,
-                              NULL);
-    }
-};
-// RTTI PeerAuthServerOp > ServerOp > AsyncOpWithTracker > AsyncOp > RefCount.
-// 0x2240 bytes; protocol/constructor/destructor are out of line.
-class PeerAuthServerOp : public ServerOp {
-    bool CheckStatus(WONStatus); //2e8fa0 original boolRET4 status/Finish helper
-    void AsyncRun(); //2e8fc0 original asynchronous receive setup
-    void Success(); //2e9370 original session transform installation/completion
-    virtual bool CallbackHook(AsyncOp*,int); //2e8d70 fourth slot
-protected:
-    virtual ~PeerAuthServerOp(); //2e8bc0, 422 bytes, own-vptr store then the members
-    virtual void RunHook();   //2e9050 RunHook
-    virtual void CleanupHook(); //2e7cb0 shared CleanupHook
-public:
-    PeerAuthServerOp(AuthContext*,BlockingSocket*); //2e8950, 230 bytes, RET8
-    // Typed field view for the game's use; access and names inferred.
-    IPAddr mConnectAddr; //94..bc, default IPAddr (0x28) constructed at 2b2350
-    // the client's certificate's VerifyPermissions after the handshake (LanLogic's check)
-    bool ClientPermits(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
-    {
-        return this->mPeerAuthServer.OtherPermits(inUser, inCommunity, inTrust);
-    }
-private:
-    PeerAuthServer mPeerAuthServer; //bc..2240
-};
-
-class PeerAuthOp : public ServerOp {
-    IPAddr mConnectAddr; //94..bc, owned address/string (0x28)
-    WONStatus mGetCertStatus; //bc, the constructor leaves it untouched
-    ConstSmartPtr<AuthPeerData> mPeerData; //c0
-    PeerAuthClient mPeerAuthClient; //c4..2244
-    enum PeerAuthTrack { PeerAuth_Track_Socket=1, PeerAuth_Track_GetCert=2 };
-    bool CheckStatus(WONStatus); //2e8fa0 ICF-shared bool/Finish helper, RET4
-    void AsyncRetry(); //2e71a0
-    void AsyncSend(const ByteBuffer*); //2e7240, RET4
-    void AsyncConnect(); //2e7370
-    void AsyncRefreshCert(); //2e74a0
-    void AsyncRun(); //2e75f0
-    void Success(); //2e7c40
-    virtual bool CallbackHook(AsyncOp*,int); //2e6ed0 fourth slot, no new slots
-protected:
-    virtual ~PeerAuthOp(); //2e6d10, 437 bytes, own-vptr destructor
-    virtual void RunHook();   //2e76d0 RunHook
-    virtual void CleanupHook(); //2e7cb0 CleanupHook
-public:
-    PeerAuthOp(const IPAddr&,AuthContext*,AuthType,BlockingSocket*,bool=true); //2e6a10, 370 bytes, ret20
-    AuthSession* GetSession() { return this->mPeerAuthClient.GetSession(); }
-    BlockingSocket* GetSocket() { return this->mSocket.get(); }
-    WONStatus GetGetCertStatus() const { return this->mGetCertStatus; }
+    WONStatus GetGetCertStatus() const { return (WONStatus)this->GetNum(EE_WON_PEEROP_GET_CERT_STATUS); }
 };
 
 // HTTP operation, 0x15c bytes.

@@ -1178,6 +1178,33 @@ constexpr static const int32_t EE_WON_HOST_SESSION_ADD = 150;
 /// the op's `mTracker.IsEmpty()` -> out_num
 constexpr static const int32_t EE_WON_HOST_TRACKER_EMPTY = 151;
 
+/// `ServerOp::mSocket` -> out_obj, borrowed
+constexpr static const int32_t EE_WON_HOST_OWN_SOCKET = 152;
+
+/// a socket obj0's `GetLengthFieldSize()` -> out_num
+constexpr static const int32_t EE_WON_HOST_SOCKET_LFS = 153;
+
+/// `mClientKeySize | mUseClientKey << 8` -> out_num
+constexpr static const int32_t EE_WON_HOST_CLIENT_KEY = 154;
+
+/// `mAuthContext->GetPeerData()` -> out_num: a new `EeWonAuthObj*` reference the op takes (0: none)
+constexpr static const int32_t EE_WON_HOST_PEER_CTX_DATA = 155;
+
+/// `mAuthContext->RefreshBlock(num0)` -> out_num (the status)
+constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_BLOCK = 156;
+
+/// `new LightGetCertOp` -> out_obj
+constexpr static const int32_t EE_WON_HOST_PEER_NEW_LIGHT = 157;
+
+/// `mAuthContext->RefreshAsync(obj0)` (a LightGetCertOp; may call back)
+constexpr static const int32_t EE_WON_HOST_PEER_REFRESH_ASYNC = 158;
+
+/// a LightGetCertOp obj0's `GetPeerData()` -> out_num as `EE_WON_HOST_PEER_CTX_DATA`
+constexpr static const int32_t EE_WON_HOST_PEER_LIGHT_DATA = 159;
+
+/// `new AuthSession(num0)` (an `EeWonAuthSession*` the session takes) -> out_obj
+constexpr static const int32_t EE_WON_HOST_PEER_NEW_SESSION = 160;
+
 /// `ConnectOp(addr)`
 constexpr static const int64_t EE_WON_HOST_OP_CONNECT = 0;
 
@@ -1478,6 +1505,15 @@ constexpr static const int32_t EE_WON_PEERAUTH_OTHER_USER = 6;
 
 /// the other side's certificate's `VerifyPermissions(a, b, c)`
 constexpr static const int32_t EE_WON_PEERAUTH_OTHER_PERMITS = 7;
+
+/// `GetSession()` (an `AuthSession*`, borrowed; NULL: none)
+constexpr static const int32_t EE_WON_PEEROP_SESSION = 1;
+
+/// `GetGetCertStatus()`
+constexpr static const int32_t EE_WON_PEEROP_GET_CERT_STATUS = 2;
+
+/// the server's: the client's certificate's `VerifyPermissions(0, index, 0)`
+constexpr static const int32_t EE_WON_PEEROP_CLIENT_PERMITS = 3;
 
 /// `GetDirOp`: the query's flags, path (UTF-16 LE), data type count and each type
 constexpr static const int32_t EE_WON_REQOPS_DIR_GET = 7;
@@ -10293,6 +10329,17 @@ int32_t ee_won_peerauth_recv(const EeWonPeerAuth *p,
 /// # Safety
 /// `p` is live.
 EeWonAuthSession *ee_won_peerauth_take_session(const EeWonPeerAuth *p);
+
+/// `new PeerAuthOp(addr, context, type, socket, useAuth2)`'s Rust op (the C++ class sets the context, type and
+/// socket).
+///
+/// # Safety
+/// `addr` holds six bytes.
+EeWonHostOp *ee_won_hostop_peerauth(const uint8_t *addr,
+                                    bool use_auth2);
+
+/// `new PeerAuthServerOp(context, socket)`'s Rust op.
+EeWonHostOp *ee_won_hostop_peerauth_server();
 
 /// `write_global` into the sink.
 ///

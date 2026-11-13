@@ -367,6 +367,73 @@ struct OrigHalf {
 // ---- the game's classes: AuthBase and AuthPeerData over ee_won's objects (peerobj.rs), read through their numbers
 // as the original's accessors
 
+// PeerAuthClient / PeerAuthServer as the game's shims over ee_won's handshake object were in round 14's first
+// step (the ops own the object since; ee_won_peerauth_* stays for this driver and the ops' driver)
+class PeerAuth {
+    EeWonPeerAuth* mImpl;
+    SmartPtr<AuthSession> mSession;
+    PeerAuth(const PeerAuth&);
+    PeerAuth& operator=(const PeerAuth&);
+protected:
+    explicit PeerAuth(bool inServer) : mImpl(ee_won_peerauth_new(inServer)) {}
+    EeWonPeerAuth* Impl() const { return this->mImpl; }
+    void TakeSession()
+    {
+        if (EeWonAuthSession* aSession = ee_won_peerauth_take_session(this->mImpl))
+            this->mSession = new AuthSession(aSession);
+    }
+public:
+    ~PeerAuth() { ee_won_peerauth_free(this->mImpl); }
+    WONStatus HandleRecvMsg(const void* inMsg, unsigned long inLength, ByteBufferPtr& outMsg)
+    {
+        outMsg = NULL;
+        bool aHasOut = false;
+        WONStatus aStatus = ee_won_peerauth_recv(this->mImpl, static_cast<const uint8_t*>(inMsg), inLength, WonByteBufferSink,
+                                                 &outMsg, &aHasOut);
+        this->TakeSession();
+        return aStatus;
+    }
+    AuthSession* GetSession() { return this->mSession.get(); }
+    int GetState() const { return (int)ee_won_peerauth_num(this->mImpl, EE_WON_PEERAUTH_STATE, 0, 0, 0); }
+    void SetUseAuth2(bool inValue) { ee_won_peerauth_set(this->mImpl, EE_WON_PEERAUTH_USE_AUTH2, inValue); }
+    // the other side's certificate (EE_WON_PEERAUTH_OTHER, _OTHER_USER, _OTHER_PERMITS of a, b, c)
+    long long Other(int inWhich, long long inA = 0, long long inB = 0, long long inC = 0) const
+    {
+        return ee_won_peerauth_num(this->mImpl, inWhich, inA, inB, inC);
+    }
+    bool OtherPermits(DWORD inUser, DWORD inCommunity, unsigned short inTrust) const
+    {
+        return this->Other(EE_WON_PEERAUTH_OTHER_PERMITS, inUser, inCommunity, inTrust) != 0;
+    }
+};
+class PeerAuthClient : public PeerAuth {
+public:
+    enum PeerAuthClientState { STATE_NOT_STARTED=0, STATE_AWAITING_CHALLENGE=1, STATE_AWAITING_COMPLETE=2 };
+    PeerAuthClient() : PeerAuth(false) {} //2e5c30
+    ByteBufferPtr Start(const AuthPeerData* inData, AuthType inType, unsigned char inLengthFieldSize) //2e6730
+    {
+        ByteBufferPtr aMsg;
+        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, inType, inLengthFieldSize,
+                              WonByteBufferSink, &aMsg);
+        return aMsg;
+    }
+    void Reset() { ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_RESET, 0); } //2e5cb0
+    void SetClientKeySize(unsigned char inSize, bool inUseSecret = true)
+    {
+        ee_won_peerauth_set(this->Impl(), EE_WON_PEERAUTH_CLIENT_KEY, inSize | (inUseSecret ? 0x100 : 0));
+    }
+};
+class PeerAuthServer : public PeerAuth {
+public:
+    enum PeerAuthServerState { STATE_NOT_STARTED=0, STATE_AWAITING_REQUEST=1, STATE_AWAITING_CHALLENGE2=2 };
+    PeerAuthServer() : PeerAuth(true) {} //2e7cc0
+    void Start(const AuthPeerData* inData, unsigned char inLengthFieldSize) //2e7d30
+    {
+        ee_won_peerauth_start(this->Impl(), inData != NULL ? inData->Impl() : NULL, 0, inLengthFieldSize, WonByteBufferSink,
+                              NULL);
+    }
+};
+
 struct NCert : AuthBase {
     NCert(uint32_t inKind, const string& b) : AuthBase(inKind, b.data(), (unsigned long)b.size()) {}
     bool IsExpired(time_t e) const { return this->Num(EE_WON_AUTHOBJ_EXPIRED, e) != 0; }

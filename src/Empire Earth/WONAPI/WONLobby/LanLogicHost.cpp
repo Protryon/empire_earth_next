@@ -141,7 +141,7 @@ void LanLogic::HandlePeerAuthDone(AsyncOp* inOp)
     AuthContext* auth = GetLobbyAuthContext();
     if (!auth) return;
     DWORD community = auth->GetPeerData()->GetFirstCommunity();
-    if (!op->ClientPermits(0, community, 0)) {
+    if (!op->ClientPermits(community)) {
         socket->QueueClose(1000);
         return;
     }

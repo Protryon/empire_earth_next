@@ -758,6 +758,113 @@ static string RunOrig(const Scenario& sc)
     return t;
 }
 
+// ---- the Rust half: the op through the base's C call, answered by the same stand-in
+
+struct RustObjs {
+    ConstSmartPtr<AuthPeerData> peers[2];
+    const AuthPeerData* Peer(int i) const { return i >= 1 && i <= 2 ? peers[i - 1].get() : NULL; }
+};
+static RustObjs* sRust;
+static void* P(int o) { return reinterpret_cast<void*>((intptr_t)o); }
+static int I(void* p) { return (int)(intptr_t)p; }
+static void RustHost(void*, EeWonHostCall* c)
+{
+    int o0 = I(c->obj[0]);
+    long long n0 = c->num[0];
+    string data = c->len ? string(reinterpret_cast<const char*>(c->data), c->len) : string();
+    switch (c->code) {
+    case EE_WON_HOST_STATUS: c->out_num = S.mStatus; break;
+    case EE_WON_HOST_MODE: c->out_num = S.mAsync ? 1 : 2; break;
+    case EE_WON_HOST_TIME_LEFT: c->out_num = kTimeLeft; break;
+    case EE_WON_HOST_SEND_TIME: c->out_num = kSendTime; break;
+    case EE_WON_HOST_RECV_TIME: c->out_num = kRecvTime; break;
+    case EE_WON_HOST_CONNECT_TIME: c->out_num = kConnectTime; break;
+    case EE_WON_HOST_AUTH_TYPE: c->out_num = S.mType; break;
+    case EE_WON_HOST_OWN_SOCKET: c->out_obj = P(kSocket); break;
+    case EE_WON_HOST_SOCKET_LFS: c->out_num = S.mLfs; break;
+    case EE_WON_HOST_CLIENT_KEY: c->out_num = S.mKey; break;
+    case EE_WON_HOST_CONNECT: c->out_num = HConnect(o0, (unsigned long)n0); break;
+    case EE_WON_HOST_SEND_MSG: c->out_num = HSend(o0, data, (unsigned long)n0); break;
+    case EE_WON_HOST_RECV_MSG: {
+        string b;
+        bool isNull = false;
+        c->out_num = HRecv(o0, (unsigned long)n0, b, isNull);
+        if (!isNull && c->out_num == 0) c->out_sink(c->out_context, reinterpret_cast<const uint8_t*>(b.data()), b.size());
+        break;
+    }
+    case EE_WON_HOST_NEW_OP: {
+        int kind = n0 == EE_WON_HOST_OP_CONNECT ? 0 : n0 == EE_WON_HOST_OP_SEND_MSG ? 1 : 2;
+        c->out_obj = P(HNewOp(kind, o0, data));
+        break;
+    }
+    case EE_WON_HOST_TRACK: HTrack(o0, (int)n0); break;
+    case EE_WON_HOST_QUEUE: HQueue(o0, I(c->obj[1]), (unsigned long)n0); break;
+    case EE_WON_HOST_FINISH: HFinish((int)n0); break;
+    case EE_WON_HOST_RELEASE: case EE_WON_HOST_ADD_REF: break;
+    case EE_WON_HOST_PEER_CTX_DATA: {
+        const AuthPeerData* p = sRust->Peer(HCtxPeer());
+        c->out_num = p ? (long long)(intptr_t)ee_won_authobj_clone(p->Impl()) : 0;
+        break;
+    }
+    case EE_WON_HOST_PEER_REFRESH_BLOCK: c->out_num = HRefreshBlock((unsigned long)n0); break;
+    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = P(HNewLight()); break;
+    case EE_WON_HOST_PEER_REFRESH_ASYNC: HRefreshAsync(o0); break;
+    case EE_WON_HOST_PEER_LIGHT_DATA: {
+        const AuthPeerData* p = sRust->Peer(HLightData(o0));
+        c->out_num = p ? (long long)(intptr_t)ee_won_authobj_clone(p->Impl()) : 0;
+        break;
+    }
+    case EE_WON_HOST_OP_STATUS: c->out_num = HOpStatus(o0); break;
+    case EE_WON_HOST_OP_IS_RECV_MSG: c->out_num = HIsRecv(o0); break;
+    case EE_WON_HOST_OP_BYTES: {
+        bool isNull = false;
+        string b = HOpBytes(o0, isNull);
+        if (!isNull) c->out_sink(c->out_context, reinterpret_cast<const uint8_t*>(b.data()), b.size());
+        break;
+    }
+    case EE_WON_HOST_PEER_NEW_SESSION: {
+        EeWonAuthSession* s = reinterpret_cast<EeWonAuthSession*>((intptr_t)n0);
+        int o = HNewSession((int)ee_won_auth_session_get(s, 0));
+        S.mSessions[o] = s;
+        c->out_obj = P(o);
+        break;
+    }
+    case EE_WON_HOST_ADD_CRYPT: HCrypt(o0, I(c->obj[1])); break;
+    case EE_WON_HOST_BASE_CLEANUP: HCleanup(); break;
+    default:
+        Log("unexpected(" + Num(c->code) + ")");
+        break;
+    }
+}
+
+static string RunRust(const Scenario& sc)
+{
+    Begin(sc);
+    RustObjs objs;
+    sRust = &objs;
+    SmartPtr<AuthBase> block = new AuthBase(EE_WON_AUTH_PUB_KEY_BLOCK, sc.block.data(), (unsigned long)sc.block.size());
+    objs.peers[0] = NewPeer(sc.ctx, block.get());
+    objs.peers[1] = NewPeer(sc.refreshed, block.get());
+    const uint8_t kAddr[6] = { 1, 2, 3, 4, 5, 6 };
+    EeWonHostOp* op = sc.server ? ee_won_hostop_peerauth_server() : ee_won_hostop_peerauth(kAddr, sc.useAuth2);
+    ee_won_hostop_bind(op, RustHost, NULL);
+    ee_won_hostop_run(op);
+    if (sc.async) Drive([&](int o, int id) { ee_won_hostop_callback(op, id, P(o)); });
+    ee_won_hostop_cleanup(op);
+    string result;
+    if (sc.server)
+        result = " session " + Num(ee_won_hostop_num(op, EE_WON_PEEROP_SESSION, 0) != 0) + " permits " +
+                 Num(ee_won_hostop_num(op, EE_WON_PEEROP_CLIENT_PERMITS, kCommunity));
+    else
+        result = " session " + Num(ee_won_hostop_num(op, EE_WON_PEEROP_SESSION, 0) != 0) + " gcs " +
+                 Num(ee_won_hostop_num(op, EE_WON_PEEROP_GET_CERT_STATUS, 0));
+    ee_won_hostop_free(op);
+    string t = S.mTrace + "|status " + Num(S.mStatus) + result;
+    End();
+    sRust = NULL;
+    return t;
+}
+
 // ---- the golden's line: the scenario, then the original's trace
 
 static string Spec(const PeerSpec& p)
@@ -775,9 +882,11 @@ static string Line(const Scenario& sc, const string& t)
 int main(int argc, char** argv)
 {
     int print = 0, count = 2000;
+    bool origOnly = false;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--print") && i + 1 < argc) print = atoi(argv[i + 1]);
         if (!strcmp(argv[i], "--count") && i + 1 < argc) count = atoi(argv[i + 1]);
+        if (!strcmp(argv[i], "--original")) origOnly = true;
     }
     if (print) {
         for (int i = 0; i < print; i++) {
@@ -790,7 +899,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < count; i++) {
         Scenario sc = Generate(i);
         string a = RunOrig(sc);
-        string b = RunOrig(sc); // the original half is deterministic under the seed
+        string b = origOnly ? RunOrig(sc) : RunRust(sc);
         CHECK(a == b);
         if (a != b && sFailures < 4)
             printf("sequence %d\n  original %s\n  rust     %s\n", i, a.c_str(), b.c_str());

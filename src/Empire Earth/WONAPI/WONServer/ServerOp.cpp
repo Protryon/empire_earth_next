@@ -178,6 +178,24 @@ const AuthPeerData* GetCertOp::GetPeerData() const
 {
     return Peer(reinterpret_cast<void*>((intptr_t)ee_won_hostop_num(this->GetRustOp(), EE_WON_GETCERT_PEER, 0)));
 }
+// FUNCTION: WON 0x006e6a10
+// A peer auth op for an address, auth context, auth type and socket (ee_won peerop.rs)
+PeerAuthOp::PeerAuthOp(const IPAddr& inAddr, AuthContext* inContext, AuthType inType, BlockingSocket* inSocket,
+                       bool inUseAuth2)
+    : RustServerOp(ee_won_hostop_peerauth(reinterpret_cast<const uint8_t*>(inAddr.GetSixByte()), inUseAuth2))
+{
+    this->mAuthContext = inContext;
+    this->mAuthType = inType;
+    this->mSocket = inSocket;
+}
+// FUNCTION: WON 0x006e8950
+// A server-side peer auth op for an auth context and an accepted socket (ee_won peerop.rs)
+PeerAuthServerOp::PeerAuthServerOp(AuthContext* inContext, BlockingSocket* inSocket)
+    : RustServerOp(ee_won_hostop_peerauth_server())
+{
+    this->mAuthContext = inContext;
+    this->mSocket = inSocket;
+}
 DetectFirewallOp::DetectFirewallOp(ServerContext* inContext) : RustServerOp(ee_won_hostop_firewall())
 {
     this->Set(EE_WON_REQHOST_CONTEXT, inContext);
@@ -700,6 +718,26 @@ void RustServerOp::HostCall(void* inOp, EeWonHostCall* c)
     }
     case EE_WON_HOST_CERT_SET_PEER: Ctx(o0)->SetPeerData(Peer(c->obj[1])); break;
     case EE_WON_HOST_CERT_CLEAR_ONE_TIME: Ctx(o0)->ClearOneTimeData(); break;
+    // PeerAuthOp's and PeerAuthServerOp's (ee_won peerop.rs)
+    case EE_WON_HOST_OWN_SOCKET: c->out_obj = static_cast<RefCount*>(o->mSocket.get()); break;
+    case EE_WON_HOST_SOCKET_LFS: c->out_num = Sock(o0)->GetLengthFieldSize(); break;
+    case EE_WON_HOST_CLIENT_KEY: c->out_num = o->mClientKeySize | (o->mUseClientKey ? 0x100 : 0); break;
+    case EE_WON_HOST_PEER_CTX_DATA: {
+        ConstSmartPtr<AuthPeerData> aPeer = o->mAuthContext->GetPeerData();
+        c->out_num = aPeer.get() != NULL ? (long long)(intptr_t)ee_won_authobj_clone(aPeer->Impl()) : 0;
+        break;
+    }
+    case EE_WON_HOST_PEER_REFRESH_BLOCK: c->out_num = o->mAuthContext->RefreshBlock((DWORD)n0); break;
+    case EE_WON_HOST_PEER_NEW_LIGHT: c->out_obj = Out(new LightGetCertOp); break;
+    case EE_WON_HOST_PEER_REFRESH_ASYNC: o->mAuthContext->RefreshAsync(static_cast<LightGetCertOp*>(Op(o0))); break;
+    case EE_WON_HOST_PEER_LIGHT_DATA: {
+        const AuthPeerData* aPeer = static_cast<LightGetCertOp*>(Op(o0))->GetPeerData();
+        c->out_num = aPeer != NULL ? (long long)(intptr_t)ee_won_authobj_clone(aPeer->Impl()) : 0;
+        break;
+    }
+    case EE_WON_HOST_PEER_NEW_SESSION:
+        c->out_obj = Out(new AuthSession(reinterpret_cast<EeWonAuthSession*>((intptr_t)n0)));
+        break;
     default: break;
     }
 }

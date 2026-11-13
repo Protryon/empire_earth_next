@@ -367,6 +367,22 @@ pub(crate) unsafe fn peer_of(o: *const EeWonAuthObj) -> Option<Arc<PeerData>> {
     }
 }
 
+/// A new reference to peer data (the tests' stand-in answers with one).
+#[cfg(test)]
+pub(crate) fn peer_handle(peer: Arc<PeerData>) -> *mut EeWonAuthObj {
+    obj(Held::Peer(peer))
+}
+
+/// Takes a reference the C++ side handed over (null: none).
+///
+/// # Safety
+/// `o` is null or a live object nothing uses afterwards.
+pub(crate) unsafe fn take_peer(o: *mut EeWonAuthObj) -> Option<Arc<PeerData>> {
+    let p = unsafe { peer_of(o) };
+    unsafe { ee_won_authobj_free(o) };
+    p
+}
+
 /// `new AuthCertificate(data, len)` (`EE_WON_AUTH_CERTIFICATE`), `Auth2Certificate` or `AuthPubKeyBlock`; another
 /// kind is the base block.
 ///
