@@ -12433,3 +12433,84 @@ Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `includ
     root 0 (env 0) as a harmless op. A method moved behind a forwarder that reads `this->mX` first is no longer
     safe on a NULL `this` that the original's early return tolerated: before moving a class, grep its callers for
     calls through a pointer that may be NULL (`GetRootContainer()->`, `GetRoot()->`).
+
+## R6 WON round 31: a NULL-receiver audit of the moved classes; the child layouts whole in Rust (ee_won layoutobj.rs; branch rust-r6-won31, 2026-11-13)
+
+Measured as rounds 18-30 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi` at the commit, `wc -l`):
+80,092 at the branch's start (round 30's head merged with rust) -> 80,096 (the hardening, +4) -> 79,917 (the child
+layouts, -179). This round's own net: -175.
+
+- **The audit (its own commit first).** Round 30's crash came from a forwarder reading its Rust object through a
+  NULL `this` where the original returned before touching `this`. A NULL `this` only survived a non-virtual call
+  (a virtual call reads the vtable) whose original body, on some path, read nothing of the object. Scanning every
+  moved class's Rust methods for an early return decided by the arguments alone (ctobj, dialogobj, tabobj,
+  comboobj, rootobj, btnobj, barobj, scrollerobj, paneobj, listobj, inputobj, labelobj, textobj, splitobj,
+  multiobj, treeobj, menuobj) found:
+  - `Container::BringToTop` / `EnsureOnTopOf` / `RemoveChild` / `AddTimerChild`: the child's parent compared with
+    `this` (no read). RemoveChild and AddTimerChild are virtual; EnsureOnTopOf's one caller tests the parent;
+    BringToTop's (the dialog's drag, `t->mParent->BringToTop(t)`) runs only with a next sibling, so with a parent.
+  - `RootContainer::AddBG`: round 30's fix.
+  - `Button::IsDefaultButton`: a pointer compare; its callers pass live buttons.
+  - `ListArea::GetItemPos(NULL)` and `InputBox::Add/SetInputHistory("")`: every receiver is a member set at
+    construction or a tested cast.
+  - `MultiListItem::SetItem` and `MultiListHeader::SetColumnItem` with a negative column: undefined in the original,
+    not a NULL path.
+
+  No live caller passes NULL. Two host ops whose safety rested on the Rust's own test now guard explicitly: the
+  dialog's `DlgBringToTop` (a NULL parent) and the viewport's `VpAreaRectVisible` (an area never set: not visible).
+  A guard must sit at the call site: clang assumes `this` is not NULL and drops an `if (!this)` inside a method.
+- **Why the layouts this round.** They are the next leaf under Container (every container owns a manager), with no
+  platform call and no draw, so a golden sees all they do. Window/WindowManager are mostly platform calls, popups
+  and the modal stack, and their callers reach them through `GetRoot()`, which is NULL for a component outside a
+  window (the round-30 hazard at its largest); the skins' Button subclasses are paint only the lobby captures see.
+- **The census.** No layout member was read outside the layout units: `mGroupId` and `mEnabled` only by
+  `Container::AddChildLayout` (moved), the lists and numbers only by the classes' own methods. The lobby makes the
+  classes (`new CenterLayout(...)->Add(...)`, ContainerConfig's LAYOUT keywords, the message box, the error screen)
+  and hands them to `AddChildLayout`. Nothing needed an accessor, so there was no census commit. Before moving, the
+  callers' receivers: ContainerConfig's `mContainer`, the dialogs, `this`; `mChildLayout` is NULL only after the
+  container's destructor deleted it, when every child's parent is already cleared.
+- **The move** (`layoutobj.rs`):
+  - `EeWonLayout`: one Rust type for the eight classes (`EeWonLayoutKind`), with five references, eight ints, two
+    flags, the component list, the group (a byte) and the enabled flag. Its constructor's numbers come as one
+    `EeWonLayoutInit`. Execute is each class's statements; every read is made where the original made it, after
+    the moves before it (Center and NoOverlap read a listed component's place at its move, so a component listed
+    twice reads its moved place).
+  - `EeWonLayoutMgr`: the instructions (held, each with its Rust object) and the layout points (held). Execute
+    reads the list again after each call (an instruction appended meanwhile runs, as the `std::list` walk ran it).
+    The destructor releases the points first, then the instructions (the members' reverse order); Clear releases
+    the instructions first.
+  - `Container::AddChildLayout`'s statements (the group stored as a byte, group 0 enabled and run before the
+    manager holds it, any other disabled) and `PercentLayoutParam::DoCalc` moved; `CenterLayout::Center` runs a
+    Rust centre layout with no C++ object.
+  - The C++ classes are reference-counted shells: the base holds `mLay`, a subclass constructor makes it, `Add`,
+    `Execute` and `UsesComponent` forward. `PercentLayoutParam` stays C++ (its `SetBorders` already called the
+    Rust rule); `PercentLayout`'s constructor hands its anchors and numbers over. Four ops (560-563): the parent
+    read, `SetSizeAtLeast`, an instruction's `AddRef` / `Release`; the reads and moves are the existing `Child*`
+    ops. ChildLayouts.cpp is the host; CenterLayoutExecute.cpp and CenterLayoutStatic.cpp are deleted.
+  - Every op is on a component or instruction passed in: a layout object never reads its own shell, so a NULL
+    shell cannot be read through.
+- **The golden** (`tests/won/won_layoutobj_test.cpp`): the original statements, copied before the change, over a
+  world of 14 components (1 the container, 2-9 its children, 10 a grandchild so a reference is sometimes the
+  child's parent, 11-14 layout points). A size change of the container runs its manager again one level deep
+  (Container::SizeChanged), so a layout that grows its own container re-enters the manager mid-walk. Moves and
+  references are traced; reads answered from the world.
+  - The original's `push_back` of a raw pointer into a list of `SmartPtr`s makes a temporary (an extra hold and
+    release); the copy uses `emplace_back` so the trace shows the lasting references only.
+  - 20,000 sequences of 40 calls, 3,003,344 trace lines, all identical, every reference given back.
+  - Seven mutations fail it: Center reading every place before moving (2,796 sequences), the destructor releasing
+    the instructions first (13,325), RemoveComponent skipping the instruction after an erased one (93),
+    AddChildLayout holding before its first run (20,000), NoOverlap moving the list before the target (9,838), the
+    group not truncated to a byte (4,646), the percent layout's right edge without the width (11,253). The restored
+    source: 0, and the mutation run had ended before anything else ran (round 29's lesson).
+  - `golden_layoutobj.txt` (40 sequences) is replayed by cargo: the replay makes each line's call on the Rust
+    objects over its own copy of the world and compares the whole trace (no op-by-op answers); it fails on a move
+    changed by one.
+- **Lesson:** clippy's `not_unsafe_ptr_arg_deref` rejects a `pub fn` taking a raw pointer it dereferences: take a
+  reference and dereference at the FFI dispatch.
+- **What runs it.** EE-SIM never builds the lobby, so the oracle is unchanged by construction (seeds 2-3 identical).
+  Every lobby container runs its layouts through `layoutobj.rs` at each size change: the lead's LAN game
+  (`lan_game.py`: every screen laid out at lobby entry, the game room, the dialogs centred by `CenterLayout::Center`)
+  and the lobby captures (every control's place and size, the percent and same-size layouts of the skins'
+  resources) are the check. A window resize relayouts everything; only a person resizes the lobby window.
+- **Left:** Window/WindowManager (platform ops; audit every `GetRoot()->` caller first), the skins' Button
+  subclasses (draw ops), the remaining WONGUI controls' C++ paint.
