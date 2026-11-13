@@ -1316,6 +1316,13 @@ function M.step(view, memory)
                     if served then
                         rank = nil
                     end
+                    -- (BO.OPT.mines_after_barracks, the owner's Prehistoric order in his log: the patches' centres, a
+                    -- tower, the barracks, then the iron and gold centres, then the second tower) a mine's settlement
+                    -- in the Prehistoric waits for the barracks to stand and the first tower
+                    if rank ~= nil and ECON.order and BO.OPT.mines_after_barracks and phase == "pre" and not s.patch
+                            and (((V.buildings(view, "b_barracks") or {}).finished or 0) < 1 or towers_built < 1) then
+                        rank = nil
+                    end
                     if rank ~= nil then
                         wanted[#wanted + 1] = {rank = rank, distance = s.distance, x = s.x, y = s.y, site = s}
                     end

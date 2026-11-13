@@ -47,6 +47,7 @@ M.OPT = {
     pre_mines = false,      -- (off until benched) the Prehistoric part of owner_mines alone
     pre_lean = false,       -- (off until benched) the owner's Prehistoric settlements: two patches while two home patches
                             -- stand, one settlement a site (any kind touched), none for wood
+    mines_after_barracks = false, -- (off until benched) a Prehistoric mine settlement waits for the barracks and a tower
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }
