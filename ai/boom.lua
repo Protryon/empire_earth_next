@@ -543,6 +543,15 @@ function M.step(view, memory)
     end
     PL.afford_retry = ECON.order and (BO.OPT.settle_afford or BO.OPT.mines_early) or false
     PL.blocked_skip = ECON.order and BO.OPT.blocked_skip or false
+    -- (BO.OPT.owner_mines / pre_mines: the owner's mines; lib.place takes no food gatherer to build)
+    local pre_mines = ECON.order and (BO.OPT.owner_mines or BO.OPT.pre_mines)
+    PL.no_food_builders = pre_mines or false
+    BO.wood_cap = nil
+    -- (the dock and 10 boats first, the owner's from his 575 bank: with no bank the cap waits for the boats)
+    if ECON.order and BO.OPT.owner_mines and (phase == "stone_start" or phase == "stone_grow")
+            and (view.time - view.epoch_start) < BO.STONE_WOOD_MIN * 60000 and view.boats >= 10 then
+        BO.wood_cap = BO.STONE_WOOD
+    end
     if plan.army_per ~= nil then
         plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
     end
@@ -765,9 +774,10 @@ function M.step(view, memory)
     -- (only while saving: banked from 26 citizens the settlements waited, the patches had no drop site, the food places
     -- and with them the citizens fell to 20 and the town was raided out of the Prehistoric in 6 of 32 games)
     -- (and only once the Prehistoric barracks stands: banked before it, 12 of 16 towns came to the advance without one)
-    if ECON.order and phase == "pre" and saving and reserve.wood < BO.WOOD_BANK
+    local bank = ECON.order and BO.OPT.owner_mines and BO.WOOD_BANK_OWNER or BO.WOOD_BANK
+    if ECON.order and phase == "pre" and saving and reserve.wood < bank
             and ((V.buildings(view, "b_barracks") or {}).finished or 0) >= 1 then   -- (stands: a queued one waits on wood)
-        reserve.wood = BO.WOOD_BANK
+        reserve.wood = bank
         differs = differs or reserve.wood ~= view.reserve.wood
     end
     -- (the army's priority spends, boom-defence: memory.priority_spend = the cost of what its answer still has to buy,
@@ -1043,6 +1053,16 @@ function M.step(view, memory)
             local claim_want = want[r]
             if ECON.order and BO.OPT.claim_target then
                 claim_want = math.max(want[r], BO.fill(phase, plan.citizens_max)[r])
+            end
+            -- (BO.OPT.owner_mines / pre_mines, the owner: two gold and two iron mines with 6 each by Stone +10, a third
+            -- only past 12 on it) the Prehistoric claims two of each, near home; later the claim stops at 12 until 12
+            -- gather there
+            if ECON.order and (BO.OPT.owner_mines or BO.OPT.pre_mines) and (r == "gold" or r == "iron") then
+                if phase == "pre" then
+                    claim_want = math.max(claim_want, 2 * SITE_PLACES)
+                elseif BO.OPT.owner_mines and (view.gatherers[r] or 0) < 2 * SITE_PLACES then
+                    claim_want = math.min(claim_want, 2 * SITE_PLACES)
+                end
             end
             -- (BO.OPT.mines_early: from the advance the gold and iron are claimed for stone_grow's target, within the
             -- claim range near home; stone_start's own fill wants 2 of each, so the second mine waited 5 minutes)
