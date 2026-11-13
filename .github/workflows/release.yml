@@ -111,7 +111,12 @@ jobs:
           mkdir -p dist/ee-aoc
           cp build/xbuild/linux-x86_64/game/ee-aoc dist/ee-aoc/
           cp .github/release/README.txt dist/ee-aoc/
+          # the symbols as a separate asset (as Windows' .pdb), the shipped program stripped
+          objcopy --only-keep-debug dist/ee-aoc/ee-aoc dist/ee-aoc.debug
+          strip --strip-debug dist/ee-aoc/ee-aoc
+          objcopy --add-gnu-debuglink=dist/ee-aoc.debug dist/ee-aoc/ee-aoc
           tar -C dist -czf "dist/EE-AOC-$TAG-linux-x86_64.tar.gz" ee-aoc
+          tar -C dist -czf "dist/EE-AOC-$TAG-linux-x86_64-debug.tar.gz" ee-aoc.debug
 
       - uses: actions/upload-artifact@v4
         with:
