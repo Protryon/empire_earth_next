@@ -71,9 +71,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
-#include "ee/EESEEGCPlace.h"
-#include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityClass.h"
@@ -93,11 +90,13 @@
 #include "ee/EESETSETSetObjectStance.h"
 #include "ee/EESMTrigger.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x58e4a4
 // Creates the stance action type with its own change-effect event (never attached in this unit)
 EESETSETSetObjectStance::EESETSETSetObjectStance()
 {
-    this->mAction = new EESEEChangeEffectAction();
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x58e4d5
@@ -344,7 +343,7 @@ void EESETSETTrigger::Show(EESETSEffectControls* inControls)
         inControls->mScenarioComboBoxes[0]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[0]->SetDisplayMode(kDisplayModeShown);
     // SetTriggerEvent takes its own reference: drop the creation reference (the event leaked).
-    EESEEChangeEffectAction* theChangeEvent = new EESEEChangeEffectAction();
+    UIEvent* theChangeEvent = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
     inControls->mScenarioComboBoxes[0]->SetTriggerEvent(kControlTriggerSelectionChanged, theChangeEvent);
     theChangeEvent->Dereference();
     gResource->GetString(IDS_STATE, theText);

@@ -51,23 +51,13 @@
 #include "ee/EECivilization.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EESEARotateUnits.h"
+#include "rust/ee_screens.h"
 
 // FUNCTION: EXE 0x5aa74f
-// Turns every selected unit that can turn to face the action's yaw
+// Turns every selected unit that can turn to face the action's yaw (ee_screens editor_actions.rs)
 void EESEARotateUnits::Virtual4()
 {
-    GETransformation theTransformation;
-    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
-    unsigned long theCount = theEditor->GetSelectedUnitCount();
-    for (unsigned long i = 0; i < theCount; i++) {
-        EEUnit* theUnit = theEditor->mSelectedUnits[i];
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        if (theComplexUnit == NULL || !(theUnit->mUnitClass->mAngularAcceleration > 0.0f))
-            continue;
-        theTransformation = theComplexUnit->mPhysicalModel.GetLocation();
-        theTransformation.SetOrientationYPR(this->mYaw, 0.0f, 0.0f);
-        theComplexUnit->SetTransformation(theTransformation, true);
-    }
+    ee_screens_seu_rotate(this->mYaw);
 }
 
 // FUNCTION: EXE 0x5aa7ec

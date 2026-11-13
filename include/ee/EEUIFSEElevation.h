@@ -16,12 +16,6 @@ class UIRadioButton;
 class UISlider;
 class UITextLabel;
 
-class EEUIEElevationTool : public UIEvent {
-public:
-    virtual ~EEUIEElevationTool() {}
-    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);   // +0x04 0x1a085f
-};
-
 class EEUIFSEElevation : public EEUIFSEMainGroup {
 public:
     EEUIFSEElevation(EEAScroll* inScroll, EEUIFSEBrushGroup* inBrushes, unsigned long& ioIndex,

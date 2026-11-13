@@ -8,7 +8,6 @@
 
 #include "ee/EESETSEffectType.h"
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 

@@ -16,3 +16,5 @@ crate-type = ["rlib"]
 ee_plat_core = { path = "../ee_plat_core" }
 # GERectangle and its And (the framed background's clips: frame.rs)
 ee_ge = { path = "../ee_ge" }
+# the scenario editor's terrain paint draws its ambient units from URandom (editor_actions.rs)
+ee_random = { path = "../ee_random" }

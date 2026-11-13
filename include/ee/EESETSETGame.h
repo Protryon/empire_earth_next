@@ -9,7 +9,6 @@
 #include "ee/EESETSEffectType.h"
 #include <vector>
 
-class EESEEChangeEffectAction;
 class EESETSEffectControls;
 class EESMEffect;
 
@@ -34,7 +33,7 @@ public:
     //   [4] EESETSETGameStartCinematic
     //   [5] EESETSETGameEndCinematic
     //   [6] EESETSETGameAmbientWeather
-    EESEEChangeEffectAction* mAction;                                                               // +0x20 (new 0xc: the action combo's trigger event)
+    UIEvent* mAction;                                                                               // +0x20 (new 0xc: the action combo's trigger event)
     long mCurrentType;                                                                              // +0x24 (0 in the ctor)
 };
 
