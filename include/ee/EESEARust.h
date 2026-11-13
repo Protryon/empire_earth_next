@@ -2,7 +2,7 @@
 // save, test, exit and quick save actions, the tech lists' move, the rotation, the trigger area's rectangle, the
 // blank and random maps, the wall and gate placements (the original's EESEASaveScenario, EESEATestScenario,
 // EESEAExitScenario, EESEAQuickSaveScenario, EESEATechTree, EESEARotateUnits, EESEAPaintArea, EESEACreateBlankMap,
-// EESEACreateRandomMap, EESEAPlaceWall, EESEAPlaceGate). One EEAction holds the Rust action; the kinds that posted
+// EESEACreateRandomMap, EESEAPlaceWall, EESEAPlaceGate, EESEAPlaceUnit, EESEAMoveUnit). One EEAction holds the Rust action; the kinds that posted
 // themselves when made post when made. Requires ee/EEAction.h.
 #ifndef EE_EESEARUST_H
 #define EE_EESEARUST_H
@@ -23,6 +23,13 @@ extern "C" void ee_screens_sew_wall(EeScreensSewAction* action, float x0, float 
                                     int32_t technology);
 extern "C" uint8_t ee_screens_sew_gate(EeScreensSewAction* action, int32_t x, int32_t y, int32_t player,
                                        int32_t technology, int32_t direction);
+extern "C" uint8_t ee_screens_sew_place_unit(EeScreensSewAction* action, int32_t player);
+extern "C" void ee_screens_sew_place_push(EeScreensSewAction* action, int32_t player, int32_t unit_type, const float* t,
+                                         int32_t animation);
+extern "C" void ee_screens_sew_pick_up(EeScreensSewAction* action, uint32_t id);
+extern "C" void ee_screens_sew_put_down(EeScreensSewAction* action);
+extern "C" void ee_screens_sew_cancel(EeScreensSewAction* action);
+extern "C" uint8_t ee_screens_sew_moving(const EeScreensSewAction* action);
 
 // the kinds (EE_SCREENS_SEW_*)
 enum {
@@ -37,6 +44,8 @@ enum {
     kSEARandomMap = 9,      // size, style
     kSEAPlaceWall = 10,
     kSEAPlaceGate = 11,
+    kSEAPlaceUnit = 12,
+    kSEAMoveUnit = 13,
 };
 
 class EESEARust : public EEAction {

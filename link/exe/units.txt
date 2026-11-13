@@ -349,11 +349,9 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 1a6b45 1a7331 Empire Earth/Scenario Editor Actions/EESEADeleteUnit.cpp
 1a7358 1a747d Empire Earth/Scenario Editor Actions/EESEALasso.cpp
 1a747d 1a75e0 Empire Earth/Scenario Editor Actions/EESEAMouseClick.cpp
-1a75e0 1a8284 Empire Earth/Scenario Editor Actions/EESEAMoveUnit.cpp
 1a830a 1a86ff Empire Earth/Scenario Editor Actions/EESEAPaintElevation.cpp
 1a86ff 1a8d3e Empire Earth/Scenario Editor Actions/EESEAPaintMoutains.cpp
 1a8d3e 1a9112 Empire Earth/Scenario Editor Actions/EESEAPaintTerrain.cpp
-1a9650 1aa0d1 Empire Earth/Scenario Editor Actions/EESEAPlaceUnit.cpp
 1aa70e 1aa723 Empire Earth/Scenario Editor Actions/EESEAQuickSaveLoad.cpp
 1aaad4 1af2a9 Empire Earth/Scenario Editor/EEUIFSETerrain.cpp
 1af2a9 1afa90 Empire Earth/Scenario Editor/EEUIFSETRBPaintType.cpp

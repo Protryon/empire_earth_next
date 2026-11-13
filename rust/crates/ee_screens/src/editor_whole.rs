@@ -12,7 +12,8 @@
 //!   height and water depth, then water, shorelines and cliffs);
 //! - the random map (`EESEACreateRandomMap`): a new world from a random map generator for the players not observing;
 //! - the wall and gate placements (`EESEAPlaceWall`, `EESEAPlaceGate`): queued lines and gates built for their
-//!   players.
+//!   players;
+//! - the unit placement and move (`EESEAPlaceUnit`, `EESEAMoveUnit`: `editor_place.rs`).
 //!
 //! The world, the screens and the files are the host's ([`SewHost`]); every call is in the original's order and
 //! the elevation file's floats are the original's operations (`f32`, in order; Windows' `min` and `max` macros).
@@ -21,6 +22,7 @@ use ee_ge::types::GeTransformation;
 use ee_ge::um::lrintf;
 
 use crate::editor_actions::area_rectangle;
+use crate::editor_place::{SepHost, SepMove, SepPlace};
 use crate::save_load::{EE_SCREENS_SL_SAVE_SCREEN_GAME, EE_SCREENS_SL_SAVE_SCREEN_SCENARIO};
 
 // ---- the kinds (`EESEARust`'s constructor: `object`, then a..d)
@@ -47,6 +49,10 @@ pub const EE_SCREENS_SEW_RANDOM_MAP: u32 = 9;
 pub const EE_SCREENS_SEW_PLACE_WALL: u32 = 10;
 /// `EESEAPlaceGate` (`ee_screens_sew_gate` queues and posts).
 pub const EE_SCREENS_SEW_PLACE_GATE: u32 = 11;
+/// `EESEAPlaceUnit` (`ee_screens_sew_place_unit` queues and posts).
+pub const EE_SCREENS_SEW_PLACE_UNIT: u32 = 12;
+/// `EESEAMoveUnit` (`ee_screens_sew_pick_up`, `_put_down`, `_cancel`).
+pub const EE_SCREENS_SEW_MOVE_UNIT: u32 = 13;
 
 // ---- the host's ops (`ee_screenscpp_sew`: `p` a pointer, `i` up to 8 integers, `f` up to 4 floats, in and out)
 
@@ -164,8 +170,8 @@ pub struct SewElevation {
     pub land_cutoff: i32,
 }
 
-/// The world, the screens and the files.
-pub trait SewHost {
+/// The world, the screens and the files (the placements' world calls: [`SepHost`]).
+pub trait SewHost: SepHost {
     /// One op of the `EE_SCREENS_SEW_OP_*` list.
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32;
     /// The map tab's elevation file when one is picked and reads whole (`CreateMap`'s files).
@@ -219,6 +225,8 @@ pub enum SewKind {
     RandomMap { size: u32, style: u32 },
     PlaceWall { walls: Vec<SewWall> },
     PlaceGate { gates: Vec<SewGate> },
+    PlaceUnit(SepPlace),
+    MoveUnit(SepMove),
 }
 
 /// An action: its kind and its `EESEARust` (the object posted).
@@ -258,6 +266,8 @@ impl SewAction {
             EE_SCREENS_SEW_RANDOM_MAP => SewKind::RandomMap { size: a as u32, style: b as u32 },
             EE_SCREENS_SEW_PLACE_WALL => SewKind::PlaceWall { walls: Vec::new() },
             EE_SCREENS_SEW_PLACE_GATE => SewKind::PlaceGate { gates: Vec::new() },
+            EE_SCREENS_SEW_PLACE_UNIT => SewKind::PlaceUnit(SepPlace::default()),
+            EE_SCREENS_SEW_MOVE_UNIT => SewKind::MoveUnit(SepMove::default()),
             _ => return None,
         };
         Some(SewAction { owner, kind })
@@ -395,7 +405,53 @@ impl SewAction {
                 }
                 op(h, EE_SCREENS_SEW_OP_SELECT_UNIT_TYPE, &[]);
             }
+            SewKind::PlaceUnit(place) => place.run(h),
+            SewKind::MoveUnit(moving) => moving.run(h),
         }
+    }
+
+    /// `EESEAPlaceUnit::Place(player)`.
+    pub fn place_unit<H: SewHost + ?Sized>(&mut self, h: &mut H, player: i32) -> bool {
+        let owner = self.owner;
+        match &mut self.kind {
+            SewKind::PlaceUnit(place) => place.place(h, owner, player),
+            _ => false,
+        }
+    }
+
+    /// A unit queued as `Place` queues one, without a ghost (the original's `mUnits.push_back`; not posted).
+    pub fn place_push(&mut self, entry: crate::editor_place::SepPlaced) {
+        if let SewKind::PlaceUnit(place) = &mut self.kind {
+            place.units.push(entry);
+        }
+    }
+
+    /// `EESEAMoveUnit::PickUp(id)`.
+    pub fn pick_up<H: SewHost + ?Sized>(&mut self, h: &mut H, id: u32) {
+        let owner = self.owner;
+        if let SewKind::MoveUnit(moving) = &mut self.kind {
+            moving.pick_up(h, owner, id);
+        }
+    }
+
+    /// `EESEAMoveUnit::PutDown`.
+    pub fn put_down<H: SewHost + ?Sized>(&mut self, h: &mut H) {
+        let owner = self.owner;
+        if let SewKind::MoveUnit(moving) = &mut self.kind {
+            moving.put_down(h, owner);
+        }
+    }
+
+    /// `EESEAMoveUnit::Cancel`.
+    pub fn cancel<H: SewHost + ?Sized>(&mut self, h: &mut H) {
+        if let SewKind::MoveUnit(moving) = &mut self.kind {
+            moving.cancel(h);
+        }
+    }
+
+    /// The move's `mIsMoving`: a unit is picked up.
+    pub fn moving(&self) -> bool {
+        matches!(&self.kind, SewKind::MoveUnit(m) if m.moving)
     }
 }
 
@@ -634,6 +690,13 @@ mod tests {
         }
         fn valid(&self, x: i32, y: i32) -> bool {
             x >= 0 && y >= 0 && (x as u32) < self.size && (y as u32) < self.size
+        }
+    }
+
+    impl SepHost for Rec {
+        fn sep(&mut self, op: u32, _: usize, _: &mut GeTransformation, _: &mut [i32; 8], _: &mut [f32; 4]) -> i32 {
+            self.log.push(format!("sep {op}"));
+            0
         }
     }
 

@@ -900,6 +900,106 @@ constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_UNITS = 79;
 
 constexpr static const size_t EE_SCREENS_SEU_MSG_ADD_REMOVE_UNITS = 80;
 
+/// The ghosts' lock taken (i0 != 0) or let go.
+constexpr static const uint32_t EE_SCREENS_SEP_GHOST_LOCK = 1;
+
+/// -> the ghosts' count.
+constexpr static const uint32_t EE_SCREENS_SEP_GHOST_COUNT = 2;
+
+/// The ghost i0 -> whether it can be placed (0 also when there is no such ghost); i1 its class's type, i2, i3 its
+/// tile, i4 its class's tile size, i5 its animation, i6 flags ([`EE_SCREENS_SEP_F_CLASS`] ..), f0 the class's cruise altitude;
+/// t its transformation.
+constexpr static const uint32_t EE_SCREENS_SEP_GHOST = 3;
+
+/// -> whether the tile (i0, i1) is on the map; f0 its height.
+constexpr static const uint32_t EE_SCREENS_SEP_TILE_HEIGHT = 4;
+
+/// -> the unit tab's unit under the mouse (-1: none).
+constexpr static const uint32_t EE_SCREENS_SEP_UNDER_MOUSE = 5;
+
+/// The unit i0 (under the mouse) as a transport for a unit of type i2 of the player i1 (i1 -1: the player of the
+/// unit i3) -> whether it is one; i4 its id, referenced.
+constexpr static const uint32_t EE_SCREENS_SEP_BOARD = 6;
+
+/// The player i0 loads the media of the unit type i1.
+constexpr static const uint32_t EE_SCREENS_SEP_LOAD_MEDIA = 7;
+
+/// The action posted (p: its `EESEARust`).
+constexpr static const uint32_t EE_SCREENS_SEP_POST = 8;
+
+/// -> whether the unit type i0's class pitches with the terrain.
+constexpr static const uint32_t EE_SCREENS_SEP_PITCHES = 9;
+
+/// -> the terrain's pitch under t (`GetTerrainPitch`) in f0.
+constexpr static const uint32_t EE_SCREENS_SEP_TERRAIN_PITCH = 10;
+
+/// A unit of type i1 for the player i0 made at t (a camera object cloaked on t's nearest tile), its media released,
+/// a land building built with the animation i2, its power given; when i3 is a transport's id (not -1), loaded into
+/// it, the transport selected and the unit tab's selection updated, the transport released.
+constexpr static const uint32_t EE_SCREENS_SEP_CREATE = 11;
+
+/// The unit i0 released.
+constexpr static const uint32_t EE_SCREENS_SEP_RELEASE = 12;
+
+/// The unit i0's parts' ids (each referenced) into p (i32s, room for i1) -> their count (0: no such unit).
+constexpr static const uint32_t EE_SCREENS_SEP_PARTS = 13;
+
+/// The unit i0 moved off the map (-10000, -10000).
+constexpr static const uint32_t EE_SCREENS_SEP_LIFT = 14;
+
+/// The ghosts cleared.
+constexpr static const uint32_t EE_SCREENS_SEP_CLEAR_GHOSTS = 15;
+
+/// The unit i0 -> flags ([`EE_SCREENS_SEP_U_EXISTS`] ..); t its complex unit's location.
+constexpr static const uint32_t EE_SCREENS_SEP_UNIT = 16;
+
+/// The unit i0's ghost made at the mouse turned to f0 (`EEGhostUnit::Create`, a move).
+constexpr static const uint32_t EE_SCREENS_SEP_GHOST_FOR = 17;
+
+/// The unit i0 loaded into the transport i1, the transport selected, the selection updated, the transport released.
+constexpr static const uint32_t EE_SCREENS_SEP_LOAD_INTO = 18;
+
+/// The unit i0 moved to the tile (i1, i2) (`MoveTo`, as its complex unit when it has one).
+constexpr static const uint32_t EE_SCREENS_SEP_MOVE_TO = 19;
+
+/// The unit i0's location set to t.
+constexpr static const uint32_t EE_SCREENS_SEP_SET_LOCATION = 20;
+
+/// The airport i0's parts turned to its facing quarter and their ground levelled (f0: the height in and out).
+constexpr static const uint32_t EE_SCREENS_SEP_AIRPORT = 21;
+
+/// The unit i0's class levels the ground at the tile (i1, i2) (f0: the height in and out).
+constexpr static const uint32_t EE_SCREENS_SEP_LEVEL = 22;
+
+/// The unit i0 deleted (`new EESEADeleteUnit(i0)`, posted).
+constexpr static const uint32_t EE_SCREENS_SEP_DELETE = 23;
+
+/// [`EE_SCREENS_SEP_GHOST`]'s flags: the class exists (`gUnitClassTable`); it is small (tile size up to 1, no land
+/// building); an airport; a granary; it flies over.
+constexpr static const int32_t EE_SCREENS_SEP_F_CLASS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEP_F_SMALL = 2;
+
+constexpr static const int32_t EE_SCREENS_SEP_F_AIRPORT = 4;
+
+constexpr static const int32_t EE_SCREENS_SEP_F_GRANARY = 8;
+
+constexpr static const int32_t EE_SCREENS_SEP_F_FLIES = 16;
+
+/// [`EE_SCREENS_SEP_UNIT`]'s flags: the unit exists; it is a complex unit; its class flies over; pitches; an airport;
+/// a land building other than a camera object.
+constexpr static const int32_t EE_SCREENS_SEP_U_EXISTS = 1;
+
+constexpr static const int32_t EE_SCREENS_SEP_U_COMPLEX = 2;
+
+constexpr static const int32_t EE_SCREENS_SEP_U_FLIES = 4;
+
+constexpr static const int32_t EE_SCREENS_SEP_U_PITCHES = 8;
+
+constexpr static const int32_t EE_SCREENS_SEP_U_AIRPORT = 16;
+
+constexpr static const int32_t EE_SCREENS_SEP_U_BUILDING = 32;
+
 /// `EESEASaveScenario`.
 constexpr static const uint32_t EE_SCREENS_SEW_SAVE = 1;
 
@@ -932,6 +1032,12 @@ constexpr static const uint32_t EE_SCREENS_SEW_PLACE_WALL = 10;
 
 /// `EESEAPlaceGate` (`ee_screens_sew_gate` queues and posts).
 constexpr static const uint32_t EE_SCREENS_SEW_PLACE_GATE = 11;
+
+/// `EESEAPlaceUnit` (`ee_screens_sew_place_unit` queues and posts).
+constexpr static const uint32_t EE_SCREENS_SEW_PLACE_UNIT = 12;
+
+/// `EESEAMoveUnit` (`ee_screens_sew_pick_up`, `_put_down`, `_cancel`).
+constexpr static const uint32_t EE_SCREENS_SEW_MOVE_UNIT = 13;
 
 /// `gUserInterface->PostAction(p)` (p: the action's `EESEARust`).
 constexpr static const uint32_t EE_SCREENS_SEW_OP_POST = 1;
@@ -3521,6 +3627,47 @@ uint8_t ee_screens_sew_gate(EeScreensSewAction *action,
                             int32_t player,
                             int32_t technology,
                             int32_t direction);
+
+/// `EESEAPlaceUnit::Place(player)`: 1 when any unit was queued (the action posted).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+uint8_t ee_screens_sew_place_unit(EeScreensSewAction *action, int32_t player);
+
+/// `EESEAMoveUnit::PickUp(id)`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_pick_up(EeScreensSewAction *action, uint32_t id);
+
+/// `EESEAMoveUnit::PutDown`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_put_down(EeScreensSewAction *action);
+
+/// `EESEAMoveUnit::Cancel`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+void ee_screens_sew_cancel(EeScreensSewAction *action);
+
+/// The move's `mIsMoving`: 1 while a unit is picked up.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+uint8_t ee_screens_sew_moving(const EeScreensSewAction *action);
+
+/// A unit queued for the placement without a ghost (the original's `mUnits.push_back`: no transport, not posted);
+/// `t` the unit's transformation (sixteen floats).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL); `t` points at sixteen floats.
+void ee_screens_sew_place_push(EeScreensSewAction *action,
+                               int32_t player,
+                               int32_t unit_type,
+                               const float *t,
+                               int32_t animation);
 
 /// `EEUIManager`'s control-event factory: the event code for a control event id (`EE_SCREENS_CPP_*` for a C++
 /// class), 0 when no factory of the game's knows it. `screen_active` is `gGameScreenActive`, `in_editor` the

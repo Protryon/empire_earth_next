@@ -99,6 +99,10 @@
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "ee/EESEUnit.h"
+#include "lle/GEOrientation.h"
+#include "ee/EEUCBuilding.h"
+#include "ee/EEMouse.h"
+#include "ee/EESEADeleteUnit.h"
 #include "ee/EESEARust.h"
 
 // FUNCTION: EXE 0x5a8d3e
@@ -259,7 +263,8 @@ static_assert(kSEASave == EE_SCREENS_SEW_SAVE && kSEATest == EE_SCREENS_SEW_TEST
                   kSEAQuickSave == EE_SCREENS_SEW_QUICK_SAVE && kSEATechTree == EE_SCREENS_SEW_TECH_TREE &&
                   kSEARotate == EE_SCREENS_SEW_ROTATE && kSEAPaintArea == EE_SCREENS_SEW_PAINT_AREA &&
                   kSEABlankMap == EE_SCREENS_SEW_BLANK_MAP && kSEARandomMap == EE_SCREENS_SEW_RANDOM_MAP &&
-                  kSEAPlaceWall == EE_SCREENS_SEW_PLACE_WALL && kSEAPlaceGate == EE_SCREENS_SEW_PLACE_GATE,
+                  kSEAPlaceWall == EE_SCREENS_SEW_PLACE_WALL && kSEAPlaceGate == EE_SCREENS_SEW_PLACE_GATE &&
+                  kSEAPlaceUnit == EE_SCREENS_SEW_PLACE_UNIT && kSEAMoveUnit == EE_SCREENS_SEW_MOVE_UNIT,
               "ee/EESEARust.h's kinds are editor_whole.rs's");
 
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
@@ -546,4 +551,240 @@ extern "C" size_t ee_screenscpp_sew_elevation(int16_t* outData, size_t inCapacit
         theMapFile.Close();
     }
     return theResult;
+}
+
+// ------------------------------------------------------------------------------------------------ placement and move
+// The host of the unit placement and move (ee_screens editor_place.rs: EE_SCREENS_SEP_*; the original EESEAPlaceUnit
+// and EESEAMoveUnit, EESEARust kinds): units by id (the original's handles), referenced while the actions hold them;
+// t a GETransformation (sixteen floats)
+
+static EEUnit* EESEPUnit(int32_t inID)
+{
+    EEUnit* theUnit;
+    EEUnitHandleResolve((uint32_t)inID, theUnit);
+    return theUnit;
+}
+
+static EEComplexUnit* EESEPComplexUnit(int32_t inID)
+{
+    EEComplexUnit* theUnit;
+    EEUnitHandleResolve((uint32_t)inID, theUnit);
+    return theUnit;
+}
+
+extern "C" int32_t ee_screenscpp_sep(uint32_t inOp, void* p, float* t, int32_t* i, float* f)
+{
+    GETransformation& theT = *reinterpret_cast<GETransformation*>(t);
+    EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+    switch (inOp) {
+    case EE_SCREENS_SEP_GHOST_LOCK:
+        if (i[0] != 0)
+            gWorld.mGhostUnitsLock->Enter();
+        else
+            gWorld.mGhostUnitsLock->Leave();
+        break;
+    case EE_SCREENS_SEP_GHOST_COUNT:
+        return (int32_t)gWorld.GetNumGhostUnits();
+    case EE_SCREENS_SEP_GHOST: {
+        if ((unsigned long)i[0] >= gWorld.GetNumGhostUnits())
+            return 0;
+        EEGhostUnit* theGhost = gWorld.mGhostUnits[i[0]];
+        long theType = theGhost->mUnitClass->mUnitType;
+        EEUnitClass* theClass = gUnitClassTable[theType];
+        int32_t theFlags = 0;
+        if (theClass != NULL) {
+            theFlags |= EE_SCREENS_SEP_F_CLASS;
+            if (theClass->mTileSize <= 1 && !theClass->IsLandBuilding())
+                theFlags |= EE_SCREENS_SEP_F_SMALL;
+            if (theClass->FliesOver() == true) {
+                theFlags |= EE_SCREENS_SEP_F_FLIES;
+                f[0] = theClass->GetCruiseAltitude();
+            }
+        }
+        if (theType == kUnitTypeAirport)
+            theFlags |= EE_SCREENS_SEP_F_AIRPORT;
+        if (theType == kUnitTypeGranaryImproved || theType == kUnitTypeGranary)
+            theFlags |= EE_SCREENS_SEP_F_GRANARY;
+        i[1] = (int32_t)theType;
+        i[2] = (int32_t)theGhost->mTileX;
+        i[3] = (int32_t)theGhost->mTileY;
+        i[4] = (int32_t)theGhost->mUnitClass->mTileSize;
+        i[5] = (int32_t)theGhost->mAnimation;
+        i[6] = theFlags;
+        theT = theGhost->mTransformation;
+        return theGhost->mCanPlace;
+    }
+    case EE_SCREENS_SEP_TILE_HEIGHT: {
+        EEMapTile* theTile = gWorld.GetMap()->RTSMap::GetTile(i[0], i[1]);
+        if (theTile == NULL)
+            return 0;
+        f[0] = theTile->mHeight;
+        return 1;
+    }
+    case EE_SCREENS_SEP_UNDER_MOUSE:
+        return (int32_t)theEditor->GetUnitScreen()->mUnitUnderMouse;
+    case EE_SCREENS_SEP_BOARD: {
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        if (theUnit == NULL)
+            return 0;
+        EEComplexUnit* theContainer = theUnit->mComplexUnit;
+        EEUnitClass* theClass = gUnitClassTable[i[2]];
+        EEPlayer* thePlayer = i[1] >= 0 ? gWorld.mPlayers[i[1]] : EESEPUnit(i[3])->mPlayer;
+        if (theContainer == NULL || theContainer->mPlayer != thePlayer || !(theUnit->mUnitClass->mTransportCapacity > 0) ||
+            !(theContainer->mCargoRoom >= theClass->mWeight) || !theClass->CanEnter(theContainer->mUnitClass))
+            return 0;
+        theContainer->Reference();
+        i[4] = (int32_t)theContainer->mUnitID;
+        return 1;
+    }
+    case EE_SCREENS_SEP_LOAD_MEDIA:
+        gWorld.mPlayers[i[0]]->SetUnitClassMedia(i[1], 0x7f);
+        break;
+    case EE_SCREENS_SEP_POST:
+        gUserInterface->PostAction(static_cast<EEAction*>(p));
+        break;
+    case EE_SCREENS_SEP_PITCHES:
+        return gUnitClassTable[i[0]]->mPitchesWithTerrain != 0;
+    case EE_SCREENS_SEP_TERRAIN_PITCH:
+        f[0] = gWorld.mMap->GetTerrainPitch(theT);
+        break;
+    case EE_SCREENS_SEP_CREATE: {
+        EEUnitClass* theClass = gUnitClassTable[i[1]];
+        EEPlayer* thePlayer = gWorld.mPlayers[i[0]];
+        EEComplexUnit* theContainer = i[3] != -1 ? EESEPComplexUnit(i[3]) : NULL;   // (a handle: NULL once gone)
+        EEUnit* theUnit;
+        if (theClass->mUnitType != kUnitTypeCameraObject) {
+            if (theContainer != NULL)
+                theT.mMatrix[0][3] = theT.mMatrix[1][3] = -10000.0f;
+            theUnit = theClass->CreateUnitAt(theT, i[0], false, NULL);
+        } else {
+            theUnit = theClass->CreateUnitAt(gWorld.mTransformation, i[0], false, NULL);
+            theUnit->GetComplexUnit()->SetCloakableChain(true);
+            theUnit->GetComplexUnit()->SetCloakedChain(true);
+            GE3DPoint thePoint(theT);
+            long theX;
+            long theY;
+            gWorld.mMap->GetClosestTile(&thePoint, &theX, &theY);
+            theUnit->mTileX = theX;
+            theUnit->mTileY = theY;
+            theUnit->UpdateTile(gWorld.mMap);
+        }
+        thePlayer->UnloadUnitClassMedia(theClass->mUnitType);
+        if (theUnit->mTileNode != NULL) {
+            if (theClass->IsLandBuilding()) {
+                theUnit->GetComplexUnit()->SetBuilt(1, 0, 1);
+                theUnit->GetComplexUnit()->SetAnimation(i[2], -1, 0);
+            }
+            if (theUnit->mTileNode != NULL && theUnit->mStats->mPower > 0)
+                theUnit->GetComplexUnit()->SetPower(theUnit->mStats->mPower);
+        }
+        if (theContainer != NULL) {
+            // Port: the new unit is inserted first (its id given, as the physics' flush gives it): the transport's
+            // cargo holds units by id since R5a.4, and a unit without one resolved to nothing (the next save crashed)
+            thePlayer->AddPendingUnits(0, 1);
+            theContainer->LoadCargo(theUnit->GetComplexUnit(), false, 0);
+            if (!theContainer->mIsEditorSelected)
+                theEditor->SelectUnit(theContainer);
+            theEditor->GetUnitScreen()->UpdateSelection();
+            theContainer->Dereference();
+        }
+        break;
+    }
+    case EE_SCREENS_SEP_RELEASE: {
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        if (theUnit != NULL)
+            theUnit->Dereference();
+        break;
+    }
+    case EE_SCREENS_SEP_PARTS: {
+        if (UIsNone32((unsigned long)(uint32_t)i[0]))
+            return 0;
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        if (theUnit == NULL)
+            return 0;
+        int32_t* theParts = static_cast<int32_t*>(p);
+        int32_t theCount = 0;
+        EEComplexUnit* thePart = theUnit->mComplexUnit;
+        if (thePart == NULL) {
+            theUnit->Reference();
+            theParts[theCount++] = (int32_t)theUnit->mUnitID;
+        }
+        for (; thePart != NULL && theCount < i[1]; thePart = thePart->mNextPart) {
+            thePart->Reference();
+            theParts[theCount++] = (int32_t)thePart->mUnitID;
+        }
+        return theCount;
+    }
+    case EE_SCREENS_SEP_LIFT:
+        EESEPUnit(i[0])->MoveTo(-10000, -10000, true);
+        break;
+    case EE_SCREENS_SEP_CLEAR_GHOSTS:
+        gWorld.ClearGhostUnits();
+        break;
+    case EE_SCREENS_SEP_UNIT: {
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        if (theUnit == NULL)
+            return 0;
+        int32_t theFlags = EE_SCREENS_SEP_U_EXISTS;
+        if (theUnit->GetUnitClass()->FliesOver())
+            theFlags |= EE_SCREENS_SEP_U_FLIES;
+        if (theUnit->GetUnitClass()->mPitchesWithTerrain)
+            theFlags |= EE_SCREENS_SEP_U_PITCHES;
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (theComplex != NULL) {
+            theFlags |= EE_SCREENS_SEP_U_COMPLEX;
+            theT = theComplex->mPhysicalModel.GetLocation();
+            if (theComplex->GetUnitClass()->mUnitType == kUnitTypeAirport)
+                theFlags |= EE_SCREENS_SEP_U_AIRPORT;
+            if (theComplex->GetUnitClass()->IsLandBuilding() &&
+                theComplex->GetUnitClass()->mUnitType != kUnitTypeCameraObject)
+                theFlags |= EE_SCREENS_SEP_U_BUILDING;
+        }
+        return theFlags;
+    }
+    case EE_SCREENS_SEP_GHOST_FOR: {
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        EEGhostUnit::Create(gMouse->mPosition, theUnit->GetUnitClass()->mUnitType, theUnit->mPlayer, f[0], true);
+        break;
+    }
+    case EE_SCREENS_SEP_LOAD_INTO: {
+        EEComplexUnit* theContainer = EESEPComplexUnit(i[1]);
+        theContainer->LoadCargo(EESEPUnit(i[0])->mComplexUnit, false, 0);
+        if (!theContainer->mIsEditorSelected)
+            theEditor->SelectUnit(theContainer);
+        theEditor->GetUnitScreen()->UpdateSelection();
+        theContainer->Dereference();
+        break;
+    }
+    case EE_SCREENS_SEP_MOVE_TO: {
+        EEUnit* theUnit = EESEPUnit(i[0]);
+        if (theUnit->mComplexUnit != NULL)
+            theUnit->mComplexUnit->MoveTo(i[1], i[2], true);
+        else
+            theUnit->MoveTo(i[1], i[2], true);
+        break;
+    }
+    case EE_SCREENS_SEP_SET_LOCATION:
+        EESEPUnit(i[0])->mComplexUnit->mPhysicalModel.SetLocation(theT);
+        break;
+    case EE_SCREENS_SEP_AIRPORT: {
+        EEComplexUnit* theUnit = EESEPUnit(i[0])->mComplexUnit;
+        long theLevel = EEGetUnitFacingQuarter(theUnit);
+        if (theUnit->mFacing != theLevel)
+            theUnit->mFacing = theLevel;
+        for (EEComplexUnit* theOther = theUnit->mNextPart; theOther != NULL; theOther = theOther->mNextPart) {
+            if (theOther->mFacing != theUnit->mFacing)
+                theOther->mFacing = theUnit->mFacing;
+            theOther->GetUnitClass()->LevelGround(&gWorld.mMap->mTerrainMesh, theOther->mTileX, theOther->mTileY, &f[0]);
+        }
+        break;
+    }
+    case EE_SCREENS_SEP_LEVEL:
+        EESEPUnit(i[0])->mComplexUnit->GetUnitClass()->LevelGround(&gWorld.mMap->mTerrainMesh, i[1], i[2], &f[0]);
+        break;
+    case EE_SCREENS_SEP_DELETE:
+        new EESEADeleteUnit((unsigned long)(uint32_t)i[0]);
+        break;
+    }
+    return 0;
 }

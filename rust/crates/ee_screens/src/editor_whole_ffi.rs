@@ -5,6 +5,9 @@
 
 use core::ffi::c_void;
 
+use ee_ge::types::GeTransformation;
+
+use crate::editor_place::SepHost;
 use crate::editor_whole::{SewAction, SewElevation, SewGate, SewHost, SewWall};
 
 /// cbindgen:ignore
@@ -14,10 +17,19 @@ mod sys {
     extern "C" {
         pub fn ee_screenscpp_sew(op: u32, p: *mut c_void, i: *mut i32, f: *mut f32) -> i32;
         pub fn ee_screenscpp_sew_elevation(data: *mut i16, capacity: usize, out: *mut i32) -> usize;
+        pub fn ee_screenscpp_sep(op: u32, p: *mut c_void, t: *mut f32, i: *mut i32, f: *mut f32) -> i32;
     }
 }
 
 struct Host;
+
+impl SepHost for Host {
+    fn sep(&mut self, op: u32, p: usize, t: &mut GeTransformation, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
+        // a transformation is sixteen floats, row by row (GETransformation's mMatrix)
+        let t = t.m.as_mut_ptr().cast::<f32>();
+        unsafe { sys::ee_screenscpp_sep(op, p as *mut c_void, t, i.as_mut_ptr(), f.as_mut_ptr()) }
+    }
+}
 
 impl SewHost for Host {
     fn op(&mut self, op: u32, p: usize, i: &mut [i32; 8], f: &mut [f32; 4]) -> i32 {
@@ -188,4 +200,86 @@ pub unsafe extern "C" fn ee_screens_sew_gate(
     }
     let gate = SewGate { x, y, player, technology, direction };
     unsafe { with_action(action, |a| u8::from(a.place_gate(&mut Host, gate))) }
+}
+
+/// `EESEAPlaceUnit::Place(player)`: 1 when any unit was queued (the action posted).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_place_unit(action: *mut EeScreensSewAction, player: i32) -> u8 {
+    if action.is_null() {
+        return 0;
+    }
+    unsafe { with_action(action, |a| u8::from(a.place_unit(&mut Host, player))) }
+}
+
+/// `EESEAMoveUnit::PickUp(id)`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_pick_up(action: *mut EeScreensSewAction, id: u32) {
+    if !action.is_null() {
+        unsafe { with_action(action, |a| a.pick_up(&mut Host, id)) }
+    }
+}
+
+/// `EESEAMoveUnit::PutDown`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_put_down(action: *mut EeScreensSewAction) {
+    if !action.is_null() {
+        unsafe { with_action(action, |a| a.put_down(&mut Host)) }
+    }
+}
+
+/// `EESEAMoveUnit::Cancel`.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_cancel(action: *mut EeScreensSewAction) {
+    if !action.is_null() {
+        unsafe { with_action(action, |a| a.cancel(&mut Host)) }
+    }
+}
+
+/// The move's `mIsMoving`: 1 while a unit is picked up.
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL).
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_moving(action: *const EeScreensSewAction) -> u8 {
+    if action.is_null() {
+        return 0;
+    }
+    u8::from(unsafe { (*action).0.moving() })
+}
+
+/// A unit queued for the placement without a ghost (the original's `mUnits.push_back`: no transport, not posted);
+/// `t` the unit's transformation (sixteen floats).
+///
+/// # Safety
+/// `action` comes from `ee_screens_sew_new` (or is NULL); `t` points at sixteen floats.
+#[no_mangle]
+pub unsafe extern "C" fn ee_screens_sew_place_push(
+    action: *mut EeScreensSewAction,
+    player: i32,
+    unit_type: i32,
+    t: *const f32,
+    animation: i32,
+) {
+    if action.is_null() {
+        return;
+    }
+    let mut transformation = GeTransformation::IDENTITY;
+    let floats = unsafe { core::slice::from_raw_parts(t, 16) };
+    for (k, v) in floats.iter().enumerate() {
+        transformation.m[k / 4][k % 4] = *v;
+    }
+    let entry = crate::editor_place::SepPlaced { container: -1, t: transformation, player, unit_type, animation };
+    unsafe { (*action).0.place_push(entry) };
 }

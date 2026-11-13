@@ -23,9 +23,7 @@ class EEUICSelectUnits;
 class EESEUICCommandUnits;
 class EESEAMouseClick;
 class EESEALasso;
-class EESEAPlaceUnit;
 class EESEARust;
-class EESEAMoveUnit;
 class GEBitmap;
 class GEFont;
 class UIComboBox;
@@ -98,10 +96,10 @@ public:
     EESEUICCommandUnits* mCommandUnits;     // +0x110 (0x3f7)
     EESEAMouseClick* mMouseClick;           // +0x114
     EESEALasso* mLasso;                     // +0x118
-    EESEAPlaceUnit* mPlaceUnit;             // +0x11c
+    EESEARust* mPlaceUnit;                  // +0x11c
     EESEARust* mPlaceGate;                  // +0x120
     EESEARust* mPlaceWall;                  // +0x124
-    EESEAMoveUnit* mMoveUnit;               // +0x128 (new 0x20, ctor 0x1a75e0)
+    EESEARust* mMoveUnit;                   // +0x128 (the original's EESEAMoveUnit, new 0x20, ctor 0x1a75e0)
     long mUnitTypeMode;                     // +0x12c (6: none yet)
     long mSortMode;                         // +0x130 (3)
     long mLayer;                            // +0x134 (2)

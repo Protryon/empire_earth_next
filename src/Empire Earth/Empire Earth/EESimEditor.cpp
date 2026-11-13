@@ -151,7 +151,6 @@
 #include "lle/GEOrientation.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEUCBuilding.h"
-#include "ee/EESEAMoveUnit.h"
 #include "lle/GE3DPlane.h"
 #include "lle/UIRadioButton.h"
 #include "ee/EEEffectManager.h"
@@ -161,7 +160,6 @@
 #include "lle/URandom.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileCoordinate.h"
-#include "ee/EESEAPlaceUnit.h"
 #include "ee/EESEAQuickSaveLoad.h"
 #include "ee/EEAreaEffect.h"
 #include "ee/EEScreenEvent.h"
@@ -474,8 +472,8 @@ unsigned long UnitRef(const std::string& inWord)
 
 // the editor's long-lived actions (the tabs keep one of each and post it again)
 EESEARust* sRotate = NULL;
-EESEAMoveUnit* sMove = NULL;
-EESEAPlaceUnit* sPlace = NULL;
+EESEARust* sMove = NULL;
+EESEARust* sPlace = NULL;
 
 // The ghosts put on the tile (X, Y) as EEPreviewPlacement puts them under the mouse over the map: each on the tile
 // (a farm ghost on its slot), at the tile's centre (an even size: its corner) at the mesh's height, FillSquare
@@ -633,16 +631,12 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
             };
         else if (c == "place")   // place PLAYER TYPE X Y YAW [ANIMATION]
             theCode = [=] {
-                EESEAPlaceUnit* a = new EESEAPlaceUnit;
-                EESEAPlacedUnit theEntry;
-                theEntry.mPlayer = L(1);
-                theEntry.mUnitType = L(2);
-                theEntry.mTransformation.SetOrientationYPR(F(5), 0.0f, 0.0f);
+                EESEARust* a = new EESEARust(kSEAPlaceUnit);
+                GETransformation theTransformation;
+                theTransformation.SetOrientationYPR(F(5), 0.0f, 0.0f);
                 EEMapTile* theTile = gWorld.mMap->RTSMap::GetTile((long)F(3), (long)F(4));
-                theEntry.mTransformation.SetPosition(F(3), F(4), theTile != NULL ? theTile->mHeight : 0.0f);
-                if (w.size() > 6)
-                    theEntry.mAnimation = L(6);
-                a->mUnits.push_back(theEntry);
+                theTransformation.SetPosition(F(3), F(4), theTile != NULL ? theTile->mHeight : 0.0f);
+                ee_screens_sew_place_push(a->mAction, L(1), L(2), &theTransformation.mMatrix[0][0], w.size() > 6 ? L(6) : 7);
                 gUserInterface->PostAction(a);
                 a->Dereference();
             };
@@ -674,8 +668,8 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         else if (c == "pickup")   // pickup UNIT: the move's first half (lifted off the map, a ghost at the mouse)
             theCode = [=] {
                 if (sMove == NULL)
-                    sMove = new EESEAMoveUnit;
-                sMove->PickUp(UnitRef(w[1]));
+                    sMove = new EESEARust(kSEAMoveUnit);
+                ee_screens_sew_pick_up(sMove->mAction, (uint32_t)UnitRef(w[1]));
             };
         else if (c == "putdown")   // putdown X Y YAW: the picked-up unit's ghosts on the tile, turned, then PutDown
             theCode = [=] {
@@ -694,7 +688,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 }
                 gWorld.mGhostUnitsLock->Leave();
                 gUIManager->mScenarioEditorForm->GetUnitScreen()->mUnitUnderMouse = -1;
-                sMove->PutDown();
+                ee_screens_sew_put_down(sMove->mAction);
             };
         else if (c == "wall")   // wall PLAYER TECHNOLOGY X0 Y0 X1 Y1
             theCode = [=] {
@@ -758,11 +752,11 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 bool thePlaced = true;
                 if (c == "drop") {
                     if (sMove != NULL)
-                        sMove->PutDown();
+                        ee_screens_sew_put_down(sMove->mAction);
                 } else {
                     if (sPlace == NULL)
-                        sPlace = new EESEAPlaceUnit;
-                    thePlaced = sPlace->Place(L(1));
+                        sPlace = new EESEARust(kSEAPlaceUnit);
+                    thePlaced = ee_screens_sew_place_unit(sPlace->mAction, L(1)) != 0;
                 }
                 theScreen->mUnitUnderMouse = -1;
                 gWorld.mGhostUnitsLock->Enter();
@@ -773,7 +767,7 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
         else if (c == "cancelmove")
             theCode = [=] {
                 if (sMove != NULL)
-                    sMove->Cancel();
+                    ee_screens_sew_cancel(sMove->mAction);
                 gWorld.mGhostUnitsLock->Enter();
                 gWorld.ClearGhostUnits();
                 gWorld.mGhostUnitsLock->Leave();

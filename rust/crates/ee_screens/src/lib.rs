@@ -61,7 +61,7 @@
 //!   paints' queued areas and runs, the trigger area's rectangle.
 //! - [`editor_whole`]: the scenario editor's actions whole in Rust behind one C++ action (`EESEARust`): save, test,
 //!   exit, quick save, the tech lists, the rotation, the trigger area, the blank map (the elevation file's heights)
-//!   and the random map, the wall and gate placements.
+//!   and the random map, the wall and gate placements, the unit placement and move ([`editor_place`]).
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
@@ -101,6 +101,7 @@ mod diplomacy_ffi;
 pub mod editor_actions;
 #[cfg(not(test))]
 mod editor_actions_ffi;
+pub mod editor_place;
 pub mod editor_whole;
 #[cfg(not(test))]
 mod editor_whole_ffi;
