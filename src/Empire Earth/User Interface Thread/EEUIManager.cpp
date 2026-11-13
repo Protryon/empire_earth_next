@@ -148,19 +148,8 @@ extern FSPath* gDataPath;                   // 0x531908
 void EEPostF9Key();                         // 0x27a7f5
 
 // the event factories (UIManager's control-event callbacks, then its form-event callback)
-UIEvent* EECreateGameSettingsEvent(UIForm* inForm, unsigned long inID);
+UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID);
-UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateDebugSoundEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateCampaignEditorEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateChatLogEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateCivilizationBuilderEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID);
-UIEvent* EECreateSinglePlayerLoadEvent(UIForm* inForm, unsigned long inID);
 UIEvent* EECreateWonNetServerSelectEvent(UIForm* inForm, unsigned long inID);
 
 #include "lle/GELine.h"
@@ -193,20 +182,11 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
                          const UString& inUnused)
     : UIManager(inRasterizer, gSoundManager, inNumberOfSurfaces, gTexturePixelDepth, gResource, inScreen)
 {
-    this->RegisterControlEventCallback(EECreateCampaignEditorEvent);
-    this->RegisterControlEventCallback(EECreateChatLogEvent);
-    this->RegisterControlEventCallback(EECreateCivilizationBuilderEvent);
-    this->RegisterControlEventCallback(EECreateGameSettingsEvent);
-    this->RegisterControlEventCallback(EECreateSaveLoadEvent);
-    this->RegisterControlEventCallback(EECreateMainGameEvent);
-    this->RegisterControlEventCallback(EECreateMainScreenEvent);   // + single player, play campaign (Rust's table)
-    this->RegisterControlEventCallback(EECreatePostGameSummaryEvent);
-    this->RegisterControlEventCallback(EECreateScenarioIntroEvent);
-    this->RegisterControlEventCallback(EECreateScenarioLoadEvent);
-    this->RegisterControlEventCallback(EECreateSinglePlayerLoadEvent);
-    this->RegisterControlEventCallback(EECreateGameSettingsEvent);
+    // (the original's one factory per form, registered campaign editor, chat log, civilization builder, game settings,
+    // save/load, main game, main screen, post-game summary, scenario intro, scenario load, single player load, game
+    // settings again, WON server select, debug sound: one Rust table in that order but WON's, whose ids are its own)
+    this->RegisterControlEventCallback(EECreateGameEvent);
     this->RegisterControlEventCallback(EECreateWonNetServerSelectEvent);
-    this->RegisterControlEventCallback(EECreateDebugSoundEvent);
     this->RegisterFormEventCallback(EECreateFormEvent);
     this->LoadDatabase(gDataPath, UString());
     // port: the settings' texture resolution combo box (ee_screens settings_form.rs), in the video tab's right column
@@ -301,96 +281,49 @@ EEUIManager::~EEUIManager()
 }
 
 // FUNCTION: EXE 0x671598
-// Creates the game settings form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
-// settings_form.rs)
-UIEvent* EECreateGameSettingsEvent(UIForm* inForm, unsigned long inID)
+// FUNCTION: EXE 0x671f5d
+// FUNCTION: EXE 0x6724eb
+// FUNCTION: EXE 0x6726b3
+// FUNCTION: EXE 0x672ab1
+// FUNCTION: EXE 0x672ade
+// FUNCTION: EXE 0x672de6
+// FUNCTION: EXE 0x6734c5
+// FUNCTION: EXE 0x673a89
+// FUNCTION: EXE 0x673eac
+// FUNCTION: EXE 0x67406e
+// FUNCTION: EXE 0x6743d2
+// Creates a game form's event for a control id; NULL for an id no factory knows. The original's factories per form
+// (EECreateGameSettingsEvent, EECreateSaveLoadEvent, EECreateDebugSoundEvent, EECreateCampaignEditorEvent,
+// EECreateChatLogEvent, EECreateCivilizationBuilderEvent, EECreateMainGameEvent, EECreateMainScreenEvent with the
+// single player and play campaign factories 0x674200 and 0x673836 folded in, EECreatePostGameSummaryEvent,
+// EECreateScenarioIntroEvent, EECreateScenarioLoadEvent, EECreateSinglePlayerLoadEvent) are one Rust table in their
+// registration order (ee_screens factories.rs). The save/load screens' kind comes from the screen and the editor;
+// their Cancel opens the form the load was made for; the main game form's unit reload is C++.
+UIEvent* EECreateGameEvent(UIForm* inForm, unsigned long inID)
 {
-    return EECreateScreenEvent(ee_screens_settings_event_for(inID));
+    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
+    uint32_t theCode = ee_screens_control_event_for(inID, gGameScreenActive, theManager->mInScenarioEditor);
+    if (theCode == EE_SCREENS_CPP_CANCEL_LOAD)
+        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->mScenarioEditorForm)
+                                                  : theManager->mMainGameForm);
+    if (theCode == EE_SCREENS_CPP_LOAD_UNIT)
+        return new EEUIELoadUnit;
+    return EECreateScreenEvent(theCode);
 }
 
 // FUNCTION: EXE 0x671a10
-// Creates the event a form fires when it opens, closes or activates; NULL for other ids
+// Creates the event a form fires when it opens, closes or activates; NULL for other ids (ee_screens factories.rs;
+// WON's server select open is C++)
 UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kFormEventGameSettingsOpen:
-        break;
-    case kFormEventMainScreenOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MAIN_OPEN);
-        break;
-    case kFormEventChatFormOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CH_OPEN);
-        break;
-    case kFormEventChatFormClose:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CLOSE);
-        break;
-    case kFormEventChatMLBPressed:
-    case kFormEventChatMRBPressed:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CH_CANCEL);
-        break;
-    case kFormEventWNSFormOpen:
-        theEvent = new EEUIEWNSOpen;
-        break;
-    case kFormEventScenarioIntroOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_SI_OPEN);
-        break;
-    case kFormEventScenarioIntroClose:
-        theEvent = EECreateScreenEvent(EE_SCREENS_SI_CLOSE);
-        break;
-    case kFormEventScenarioLoadOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_SCL_OPEN);
-        break;
-    case kFormEventSinglePlayerLoadOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_SPL_OPEN);
-        break;
-    case kFormEventSSFormOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_SS_OPEN);   // (ee_screens splash.rs)
-        break;
-    case kFormEventPGSOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_OPEN);
-        break;
-    case kFormEventPGSClose:
-        theEvent = EECreateScreenEvent(EE_SCREENS_PGS_CLOSE);
-        break;
-    case kFormEventDSOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
-        break;
-    case kFormEventCEOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CE_OPEN);   // (ee_screens campaign_editor.rs)
-        break;
-    case kFormEventCEClose:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CE_CLOSE);
-        break;
-    case kFormEventChatLogOpen:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CL_OPEN);
-        break;
-    case kFormEventChatLogMLBPressed:
-    case kFormEventChatLogMRBPressed:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CL_MOUSE_PRESSED);
-        break;
-    }
-    return theEvent;
+    uint32_t theCode = ee_screens_form_event_for(inID);
+    if (theCode == EE_SCREENS_CPP_WNS_OPEN)
+        return new EEUIEWNSOpen;
+    return EECreateScreenEvent(theCode);
 }
 
 // SYNTHETIC: EXE 0x671daf
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
-
-
-
-
-// FUNCTION: EXE 0x671f5d
-// Creates the save/load game form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
-// save_load.rs; made with the form, whose screen and editor decide the saved games' or the scenarios' kind). The
-// load form's Cancel opens the form it was made for.
-UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID)
-{
-    EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
-    if (inID == kControlEventCancelLoad)
-        return new EEUIECancel(!gGameScreenActive ? static_cast<UIForm*>(theManager->mScenarioEditorForm)
-                                                  : theManager->mMainGameForm);
-    return EECreateScreenEvent(ee_screens_save_load_event_for(inID, gGameScreenActive, theManager->mInScenarioEditor));
-}
 
 // FUNCTION: EXE 0x6724af
 // Opens the form the cancel event was made for (the save/load screens' cancel)
@@ -399,205 +332,6 @@ UIEvent* EECreateSaveLoadEvent(UIForm* inForm, unsigned long inID)
 // SYNTHETIC: EXE 0x6724c0
 // (EEUIECancel's scalar deleting destructor, after its first user)
 
-// FUNCTION: EXE 0x6724eb
-// Creates the debug sound form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
-// debug_sound.rs)
-UIEvent* EECreateDebugSoundEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_debug_sound_event_for(inID));
-}
-
-// FUNCTION: EXE 0x6726b3
-// Creates the campaign editor's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
-// campaign_editor.rs)
-UIEvent* EECreateCampaignEditorEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_campaign_editor_event_for(inID));
-}
-
-// FUNCTION: EXE 0x672ab1
-// Creates the chat log form's event for a control id; NULL for other ids
-UIEvent* EECreateChatLogEvent(UIForm* inForm, unsigned long inID)
-{
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventChatLogClose:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CL_CLOSE);
-        break;
-    }
-    return theEvent;
-}
-
-// FUNCTION: EXE 0x672ade
-// Creates the civilization builder's event for a control id; NULL for other ids
-UIEvent* EECreateCivilizationBuilderEvent(UIForm* inForm, unsigned long inID)
-{
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventCBSaveGameNameSelected:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SAVE_NAME_SELECTED);
-        break;
-    case kControlEventCBCancelNewCivDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_NAME);
-        break;
-    case kControlEventCBShowLoadCivDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_LOAD);
-        break;
-    case kControlEventCBCancelLoadCivDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_LOAD);
-        break;
-    case kControlEventCBShowSaveCivDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_SAVE);
-        break;
-    case kControlEventCBCancelSaveCivDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_SAVE);
-        break;
-    case kControlEventCBPurchasedUpgradeSelected:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASED_SELECTED);
-        break;
-    case kControlEventCBPotentialUpgradeSelected:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_POTENTIAL_SELECTED);
-        break;
-    case kControlEventCBUpgradePurchased:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_PURCHASE);
-        break;
-    case kControlEventCBUpgradeReturned:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_RETURNED);
-        break;
-    case kControlEventCBUpdateControls:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_UPDATE_CONTROLS);
-        break;
-    case kControlEventCBCancelChanges:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_CANCEL_CHANGES);
-        break;
-    case kControlEventCBAcceptChanges:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGES);
-        break;
-    case kControlEventCBShowChangeNameDialog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_SHOW_CHANGE_NAME);
-        break;
-    case kControlEventCBSaveCivEnterPressed:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
-        break;
-    case kControlEventCBAcceptLoadCivilization:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
-        break;
-    case kControlEventCBAcceptChangeName:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
-        break;
-    case kControlEventCBDisplayDeleteCivDialogInLoad:
-    case kControlEventCBDisplayDeleteCivDialogInSave:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_DELETE);
-        break;
-    case kControlEventCBAcceptChangeNameEnterPressed:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_CHANGE_NAME);
-        break;
-    case kControlEventCBAcceptLoadCivilizationDoubleClicked:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_LOAD);
-        break;
-    case kControlEventCBAcceptSaveCivilization:
-        theEvent = EECreateScreenEvent(EE_SCREENS_CB_ACCEPT_SAVE);
-        break;
-    }
-    return theEvent;
-}
-
-// FUNCTION: EXE 0x672de6
-// Creates the main game form's event for a control id; NULL for other ids
-UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
-{
-    UIEvent* theEvent = NULL;
-    switch (inID) {
-    case kControlEventSRMMainGameStatistics:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_STATISTICS);
-        break;
-    case kControlEventSRMMainGameDiplomacy:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_DIPLOMACY);
-        break;
-    case kControlEventSRMMainGameChat:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CHAT);
-        break;
-    case kControlEventSRMMainGameOptions:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_OPTIONS);
-        break;
-    case kControlEventSRMLargeCivBuilderAlert:
-    case kControlEventSRMMainGameCivBuilder:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_DISPLAY_CIV_BUILDER);
-        break;
-    case kControlEventSRMLargeScenBriefingAlert:
-    case kControlEventSRMGameInfoScenarioIntroduction:
-        theEvent = EECreateScreenEvent(EE_SCREENS_GO_DISPLAY_INTRO);
-        break;
-    case kControlEventSRMTempBoxLoadUnit:
-        theEvent = new EEUIELoadUnit;
-        break;
-    case kControlEventSRMIdleCitizen:
-        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(kUnitTypeCitizen, true, false, false));
-        break;
-    case kControlEventSRMIdleMilitary:
-        theEvent = EECreateScreenEvent(ee_screens_hot_key_unit_selection(0, false, true, false));
-        break;
-    case kControlEventSRMFighterRallyTimer:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_FIGHTER);
-        break;
-    case kControlEventSRMBomberRallyTimer:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_BOMBER);
-        break;
-    case kControlEventSRMAtomicRallyTimer:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_RALLY_ATOMIC);
-        break;
-    case kControlEventSRMChatDialogFinished:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_END_SCENARIO_DIALOG);
-        break;
-    case kControlEventSRMHiddenUnitToggle:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_TOGGLE_HIDDEN);
-        break;
-    case kControlEventSRMFlare:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FLARE);
-        break;
-    case kControlEventSRMSetScoutBehavior:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_SCOUT);
-        break;
-    case kControlEventSRMSetStandGroundBehavior:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_STAND_GROUND);
-        break;
-    case kControlEventSRMSetGuardBehavior:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_GUARD);
-        break;
-    case kControlEventSRMSetAggressiveBehavior:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_BEHAVIOR_AGGRESSIVE);
-        break;
-    case kControlEventSRMSetFormationShortLine:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 0);
-        break;
-    case kControlEventSRMSetFormationLongLine:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 1);
-        break;
-    case kControlEventSRMSetFormationLooseLine:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 2);
-        break;
-    case kControlEventSRMSetFormationStaggeredLine:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 3);
-        break;
-    case kControlEventSRMSetFormationDeepWedge:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 4);
-        break;
-    case kControlEventSRMSetFormationShallowWedge:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 5);
-        break;
-    case kControlEventSRMSetFormationInwardCircle:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 6);
-        break;
-    case kControlEventSRMSetFormationOutwardCircle:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_FORMATION + 7);
-        break;
-    case kControlEventSRMDisplayChatLog:
-        theEvent = EECreateScreenEvent(EE_SCREENS_MG_PREVIOUS_MESSAGES);
-        break;
-    }
-    return theEvent;
-}
-
 // FUNCTION: EXE 0x673345
 // Reloads the unit data through the main game form's unit editing hack (debug load-unit event)
 // (EEUIELoadUnit::ProcessEvent, inline in the class)
@@ -605,49 +339,12 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
 // SYNTHETIC: EXE 0x673359
 // (EEUIELoadUnit's scalar deleting destructor, after its first user)
 
-// FUNCTION: EXE 0x6734c5
-// Creates the main screen's, the editors' sub-menu's, the single player form's and the play campaign form's event for
-// a control id (the menus are Rust's whole: ee_screens menus.rs; the original's single player and play campaign
-// factories, 0x674200 and 0x673836, folded in); NULL for other ids
-UIEvent* EECreateMainScreenEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_menus_event_for(inID));
-}
-
-// FUNCTION: EXE 0x673a89
-// Creates the post-game summary's event for a control id; NULL for other ids (ee_screens post_game.rs)
-UIEvent* EECreatePostGameSummaryEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_post_game_event_for(inID));
-}
-
 // FUNCTION: EXE 0x673e7d
 // Creates the scenario editor form on first use
 void EEUIManager::CreateScenarioEditor()
 {
     if (this->mScenarioEditorForm == NULL)
         this->mScenarioEditorForm = new EEUIFScenarioEditor(this);
-}
-
-// FUNCTION: EXE 0x673eac
-// Creates the scenario intro form's event for a control id; NULL for other ids (ee_screens scenario_screens.rs)
-UIEvent* EECreateScenarioIntroEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_scenario_intro_event_for(inID));
-}
-
-// FUNCTION: EXE 0x67406e
-// Creates the scenario load form's event for a control id; NULL for other ids (ee_screens save_load.rs)
-UIEvent* EECreateScenarioLoadEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_scenario_load_event_for(inID));
-}
-
-// FUNCTION: EXE 0x6743d2
-// Creates the single player load form's event for a control id; NULL for other ids (ee_screens save_load.rs)
-UIEvent* EECreateSinglePlayerLoadEvent(UIForm* inForm, unsigned long inID)
-{
-    return EECreateScreenEvent(ee_screens_sp_load_event_for(inID));
 }
 
 // FUNCTION: EXE 0x674564
@@ -815,7 +512,8 @@ void EEUIManager::DeleteScenarioEditor()
 void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned long inAlignment, EEUIFPasswordCallback inCallback,
                                         bool inFlag)
 {
-    (new EEUIFError(this))->DisplayPassword(inMessage, inAlignment, inCallback, inFlag);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_PASSWORD, inMessage, inAlignment, NULL, (EEUIFErrorCallback)inCallback,
+                                   NULL, NULL, inFlag);
 }
 
 // FUNCTION: EXE 0x674d79
@@ -823,7 +521,7 @@ void EEUIManager::DisplayPasswordPrompt(const UWideString& inMessage, unsigned l
 void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                 EEUIFErrorCallback inCallback, UIForm* inCancel)
 {
-    (new EEUIFError(this))->DisplayCancel(inMessage, inAlignment, inForm, inCallback, inCancel);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_CANCEL, inMessage, inAlignment, inForm, inCallback, NULL, inCancel, false);
 }
 
 // FUNCTION: EXE 0x674db5
@@ -831,7 +529,7 @@ void EEUIManager::DisplayCancel(const UWideString& inMessage, unsigned long inAl
 void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                  EEUIFErrorCallback inCallback, bool inFlag)
 {
-    (new EEUIFError(this))->DisplayMessage(inMessage, inAlignment, inForm, inCallback, inFlag);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_MESSAGE, inMessage, inAlignment, inForm, inCallback, NULL, NULL, inFlag);
 }
 
 // FUNCTION: EXE 0x674df1
@@ -839,7 +537,7 @@ void EEUIManager::DisplayMessage(const UWideString& inMessage, unsigned long inA
 void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm, EEUIFErrorCallback inYes,
                                   EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->DisplayQuestion(inMessage, inAlignment, inForm, inYes, inNo);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_QUESTION, inMessage, inAlignment, inForm, inYes, inNo, NULL, false);
 }
 
 // FUNCTION: EXE 0x674e2d
@@ -847,7 +545,8 @@ void EEUIManager::DisplayQuestion(const UWideString& inMessage, unsigned long in
 void EEUIManager::DisplayYesNoCancel(const UWideString& inMessage, unsigned long inAlignment, UIForm* inForm,
                                      EEUIFErrorCallback inYes, EEUIFErrorCallback inNo)
 {
-    (new EEUIFError(this))->DisplayYesNoCancel(inMessage, inAlignment, inForm, inYes, inNo);
+    (new EEUIFError(this))->Display(EE_SCREENS_DIALOG_YES_NO_CANCEL, inMessage, inAlignment, inForm, inYes, inNo, NULL,
+                                   false);
 }
 
 // FUNCTION: EXE 0x674e69

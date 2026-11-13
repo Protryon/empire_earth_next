@@ -29,6 +29,8 @@
 //! - [`civ_choice`]: the in-game civilization choice form whole (form 35: the predefined civilizations, over the C++
 //!   host; the posted loads' files by slot).
 //! - [`debug_sound`]: the debug sound panel whole (form 22: its sliders' events over the C++ host).
+//! - [`dialog`]: the game's message box (`EEUIFError`: each kind's buttons and controls, its layout on open), over
+//!   the C++ host.
 //! - [`diplomacy`]: the diplomacy form whole (form 27: its events and tribute helpers over the C++ host; the players
 //!   as records).
 //! - [`post_game`]: the post-game summary whole (form 25: its graphs, bars and stars, the stats server's reports,
@@ -38,10 +40,16 @@
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
 //! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
+//! - [`factories`]: the UI manager's control-event factories (one table in their registration order) and its
+//!   form-event factory.
+//! - [`frame`]: the framed form background's draw (`EEUIBGenericBackground`: the tinted panel, the edges, corners
+//!   and side ornaments), over the C++ host.
 //! - [`hot_keys`]: the main game form's hot key events whole (the control groups, the unit selection keys, the closest
 //!   aircraft; the player's units as records).
 //! - [`main_game`]: the main game form's events whole (form 11: its buttons' and hot keys' events, the formation
 //!   change, over the C++ host).
+//! - [`actions`]: the UI thread's action, undo and redo queues (`EEUserInterface`: post, run, undo, redo; the actions
+//!   C++ objects held as handles).
 //! - [`camera`]: the camera, scroll and zoom events whole (the main game form's and the scenario editor's: the free
 //!   camera's turns, the arrow keys, the zoom keys, the wheel, the grab scroll with its per-form record).
 //! - [`main_game_options`]: the in-game options menu whole (form 28: its events over the C++ host).
@@ -50,6 +58,9 @@
 //! - [`hud`]: the in-game HUD's status box: the attribute texts (base+bonus), the armor attributes' values,
 //!   `Fill`'s attribute icons and bars, `Refresh`'s texts, bars and the carried resource's icon.
 
+pub mod actions;
+#[cfg(not(test))]
+mod actions_ffi;
 pub mod camera;
 #[cfg(not(test))]
 mod camera_ffi;
@@ -74,9 +85,16 @@ pub mod custom_campaign;
 pub mod debug_sound;
 #[cfg(not(test))]
 mod debug_sound_ffi;
+pub mod dialog;
+#[cfg(not(test))]
+mod dialog_ffi;
 pub mod diplomacy;
 #[cfg(not(test))]
 mod diplomacy_ffi;
+pub mod factories;
+pub mod frame;
+#[cfg(not(test))]
+mod frame_ffi;
 pub mod hot_keys;
 #[cfg(not(test))]
 mod hot_keys_ffi;
