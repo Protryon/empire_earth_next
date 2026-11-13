@@ -84,7 +84,7 @@ void EELobbyFileDialog::LoadSelectedFile()
 // Returns the full path of the selected saved game, or an empty string with nothing selected
 std::string EELobbyFileDialog::GetSelectedFile()
 {
-    ListItem* theItem = this->mFileList->mSelItem;
+    ListItem* theItem = this->mFileList->GetSelItem();
     if (theItem == NULL)
         return "";
     std::string theText = static_cast<TextListItem*>(theItem)->mText.mData->GetString();
@@ -101,7 +101,7 @@ void EELobbyFileDialog::HandleComponentEvent(ComponentEvent* inEvent)
             if (LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true) == 100001) {
                 WONFile theFile(this->GetSelectedFile());
                 theFile.Delete(true);
-                this->mFileList->RemoveItem(this->mFileList->mSelItem);
+                this->mFileList->RemoveItem(this->mFileList->GetSelItem());
                 return;
             }
         } else if (inEvent->mComponent == this->mLoadButton.mPtr) {

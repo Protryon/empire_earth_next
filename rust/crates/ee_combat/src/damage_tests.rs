@@ -73,6 +73,9 @@ impl QueryHost for World {
         if code == EE_COMBAT_Q_TARGETABLE {
             return 1;
         }
+        if code == EE_COMBAT_Q_ARMOR {
+            return self.armor.to_bits();
+        }
         self.reads.get(&(code, object)).copied().unwrap_or(0)
     }
     fn handle(&mut self, code: i32, object: EeCombatHandle, _arg: i32) -> EeCombatHandle {
@@ -101,7 +104,6 @@ impl WorldHost for World {
                     i.attack_factor = 1.0;
                     i.weapon_factor = 1.0;
                 }
-                i.armor = self.armor;
                 i.minimum_damage = 1;
                 i.ally_factor = 0.5;
                 i.herd_ally_factor = 0.1;

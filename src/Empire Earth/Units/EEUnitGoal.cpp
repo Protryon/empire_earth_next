@@ -20,7 +20,7 @@
 
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGCastCalamity.h"
 #include "ee/EEUGAttackUnit.h"
@@ -96,7 +96,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = new EEUGLocation(false, false, false, false);
         break;
     case kGoalPatrol:
-        theGoal = new EEUGPatrol(false);
+        theGoal = EEUGRust::NewPatrol(false);
         break;
     case kGoalUnloadTransport:
         theGoal = new EEUGUnloadTransport(false);

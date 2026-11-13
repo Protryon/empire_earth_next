@@ -10,6 +10,7 @@ pub mod asyncop;
 pub mod auth;
 pub mod authctx;
 pub mod authflow;
+pub mod authlogin;
 pub mod bigint;
 pub mod blowfish;
 mod blowfish_tables;
@@ -74,6 +75,7 @@ pub mod labelobj;
 pub mod lan;
 pub mod lanlogic;
 pub mod lanobj;
+pub mod listobj;
 pub mod lobbyhost;
 pub mod lobbymap;
 pub mod md5;
@@ -121,6 +123,7 @@ pub mod thread;
 pub mod titlecfg;
 pub mod udpmgr;
 pub mod udpops;
+pub mod verop;
 pub mod wire;
 
 #[cfg(test)]

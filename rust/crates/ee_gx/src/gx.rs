@@ -1211,6 +1211,31 @@ impl<B: Backend, P: Platform> Gx<B, P> {
             let keyed = flags & GXBLT_KEYSRC != 0 && self.s(source).has_key;
             return self.primary_blt(target, destination, source, source_rect, keyed);
         }
+        if self.s(source).is_primary {
+            // a copy from the primary reads what the window shows, as DirectDraw read the screen (the mouse-pointer
+            // thread saves the screen under the pointer so): the window image while it holds partial blits, else the
+            // last whole frame, in that frame's coordinates. With nothing shown here (none yet, or full screen, whose
+            // Flip presents without primary_blt) the target is left as it was. The primary has no texture: sampling
+            // it drew white.
+            let primary = self.s(source);
+            let shown = match primary.window_image {
+                Some(image) if primary.window_image_current => Some(image),
+                _ => primary.last_frame,
+            };
+            let Some(shown) = shown.filter(|&shown| shown != target) else {
+                return done(GX_OK);
+            };
+            let (origin_x, origin_y) = (primary.origin_x, primary.origin_y);
+            let shown_rect = match source_rect {
+                Some(rect) => {
+                    Rect::new(rect.left - origin_x, rect.top - origin_y, rect.right - origin_x, rect.bottom - origin_y)
+                }
+                None => self.s(shown).whole(),
+            };
+            let destination = destination.unwrap_or_else(|| self.s(target).whole());
+            self.blit(target, &destination, Some(shown), Some(&shown_rect), BlitMode::Copy, None, 0.0, false);
+            return done(GX_OK);
+        }
         let source_rect = source_rect.unwrap_or_else(|| self.s(source).whole());
         let destination = destination.unwrap_or_else(|| self.s(target).whole());
         let keyed = flags & GXBLT_KEYSRC != 0 && self.s(source).has_key;

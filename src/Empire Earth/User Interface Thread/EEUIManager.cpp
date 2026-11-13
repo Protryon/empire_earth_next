@@ -123,7 +123,6 @@
 #include "ee/RTSMousePointer.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EESETSEffectControls.h"
-#include "ee/EEUIECampaignEditorEvents.h"
 #include "ee/EEScreenEvent.h"
 #include "rust/ee_screens.h"   // ee_screens_menus_event_for (ee_screens menus.rs)
 #include "ee/EEUIEProcessTimerExpired.h"
@@ -358,10 +357,10 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
         theEvent = EECreateScreenEvent(EE_SCREENS_DS_OPEN);
         break;
     case kFormEventCEOpen:
-        theEvent = new EEUIECEOpen;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CE_OPEN);   // (ee_screens campaign_editor.rs)
         break;
     case kFormEventCEClose:
-        theEvent = new EEUIECEClose;
+        theEvent = EECreateScreenEvent(EE_SCREENS_CE_CLOSE);
         break;
     case kFormEventChatLogOpen:
         theEvent = EECreateScreenEvent(EE_SCREENS_CL_OPEN);
@@ -378,11 +377,7 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 // (EEUIEWNSOpen's scalar deleting destructor, after its first user)
 
 
-// SYNTHETIC: EXE 0x671eb1
-// (EEUIECEOpen's scalar deleting destructor, after its first user)
 
-// SYNTHETIC: EXE 0x671edc
-// (EEUIECEClose's scalar deleting destructor, after its first user)
 
 // FUNCTION: EXE 0x671f5d
 // Creates the save/load game form's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
@@ -413,76 +408,12 @@ UIEvent* EECreateDebugSoundEvent(UIForm* inForm, unsigned long inID)
 }
 
 // FUNCTION: EXE 0x6726b3
-// Creates the campaign editor's event for a control id; NULL for other ids
+// Creates the campaign editor's event for a control id; NULL for other ids (the codes are Rust's: ee_screens
+// campaign_editor.rs)
 UIEvent* EECreateCampaignEditorEvent(UIForm* inForm, unsigned long inID)
 {
-    UIEvent* theEvent = NULL;
-    if (inID >= kControlEventCEAddScenario && inID <= kControlEventCECampaignNew) {
-        switch (inID) {
-        case kControlEventCEAddScenario:
-            return new EEUIECEAddScenario;
-        case kControlEventCEDeleteCampaign:
-            return new EEUIECECampaignDelete;
-        case kControlEventCECampaignNameChanged:
-            return new EEUIECECampaignNameChanged;
-        case kControlEventCECampaignSave:
-            return new EEUIECECampaignSave;
-        case kControlEventCECampaignSelected:
-            return new EEUIECECampaignSelected;
-        case kControlEventCEMoveScenarioUp:
-            return new EEUIECEMoveScenarioUp;
-        case kControlEventCEMoveScenarioDown:
-            return new EEUIECEMoveScenarioDown;
-        case kControlEventCERemoveScenario:
-            return new EEUIECERemoveScenario;
-        case kControlEventCEMainMenu:
-            return new EEUIECEMainScreen;
-        case kControlEventCEStartScenarioEditor:
-            return new EEUIECEScenarioEditorOpen;
-        case kControlEventCEPasswordEntered:
-        case kControlEventCEPasswordOKButtonHit:
-            return new EEUIECEPasswordEntered;
-        case kControlEventCECampaignNew:
-            return new EEUIECECampaignNew;
-        }
-    }
-    return theEvent;}
-
-// SYNTHETIC: EXE 0x6728ad
-// (EEUIECEAddScenario's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6728d8
-// (EEUIECERemoveScenario's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672903
-// (EEUIECEMoveScenarioUp's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x67292e
-// (EEUIECEMoveScenarioDown's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672959
-// (EEUIECECampaignNameChanged's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672984
-// (EEUIECECampaignSave's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6729af
-// (EEUIECECampaignSelected's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x6729da
-// (EEUIECECampaignNew's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672a05
-// (EEUIECEPasswordEntered's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672a30
-// (EEUIECECampaignDelete's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672a5b
-// (EEUIECEMainScreen's scalar deleting destructor, after its first user)
-
-// SYNTHETIC: EXE 0x672a86
-// (EEUIECEScenarioEditorOpen's scalar deleting destructor, after its first user)
+    return EECreateScreenEvent(ee_screens_campaign_editor_event_for(inID));
+}
 
 // FUNCTION: EXE 0x672ab1
 // Creates the chat log form's event for a control id; NULL for other ids
@@ -1023,18 +954,3 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 void EEUIManager::FnE123D()
 {
 }
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUIECECampaignNameChanged::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-
-// ICF-FOLDED: EXE 0x67cf38
-// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
-long EEUIECEClose::ProcessEvent(class UIForm *,class UIEntity *)
-{
-    return 0;
-}
-

@@ -488,15 +488,15 @@ void InitLogic::StartHTTPDocuments()
     if (config == NULL)
         return;
     SmartPtr<RustServerOp> motd = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_MOTD);
-    motd->SetHttpDocConfig(config->mLanguage);
+    motd->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage);
     motd->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(motd.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
     SmartPtr<RustServerOp> tou = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_TOU);
-    tou->SetHttpDocConfig(config->mLanguage);
+    tou->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage);
     tou->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(tou.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
     SmartPtr<RustServerOp> adv = RustServerOp::NewHttpDocument(config->mProductName, HTTPDocType_ADV);
-    adv->SetHttpDocConfig(config->mLanguage);
+    adv->SetBytes(EE_WON_HTTPDOC_CONFIG, config->mLanguage);
     adv->Set(EE_WON_HTTPDOC_SESSION, this->mHTTPSession.get());
     this->RunTrackedOp(adv.get(), new LogicCompletion<InitLogic>(&InitLogic::HTTPDocumentCompletion, this), 0);
 }

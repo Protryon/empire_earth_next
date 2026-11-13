@@ -57,7 +57,7 @@
 #include "ee/EECalamityClass.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGGather.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "lle/U2DSparseArray.h"
 #include "ee/EEUGExplore.h"
@@ -1149,14 +1149,14 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionMoveToNextPatrolPoint: {
-        EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(this->mGoal);
+        EEUGRust* theGoal = EEPatrolGoalCast(this->mGoal);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             bool theTransport = theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;
             if (!theUnit->mIsCommandable)
                 continue;
             if (theTransport && theUnit->mContainer) {
-                EEComplexUnit* thePoint = theGoal->mTarget ? theGoal->mTarget : theGoal->mPatrolGroup->GetLast();
+                EEComplexUnit* thePoint = theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : theGoal->GetPatrolGroup()->GetLast();
                 thePoint->mPhysicalModel.GetLocation().GetPosition(theLocation);
                 theUnit->ClearGoalQueue(0);
                 theUnit->ClearGoalQueue(1);
@@ -1166,7 +1166,7 @@ void EEActiveGroup::Plan()
             } else {
                 if (!theUnit->mUnitClass->mCanPatrol
                     && (!theUnit->mIsDetachedFromAI || theUnit->mUnitClass->FindAction(kActionGetNextPatrolPoint) == NULL)) {
-                    EEComplexUnit* thePoint = theGoal->mTarget ? theGoal->mTarget : theGoal->mPatrolGroup->GetLast();
+                    EEComplexUnit* thePoint = theGoal->GetPatrolTarget() ? theGoal->GetPatrolTarget() : theGoal->GetPatrolGroup()->GetLast();
                     thePoint->mPhysicalModel.GetLocation().GetPosition(theLocation);
                     theUnit->SetGoal(new EEUGLocation(&theLocation, true, true, false, 0.0f, false, false), 0, 0);
                     theUnit->StartAction(kActionPrepareToMove);

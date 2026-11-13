@@ -227,32 +227,8 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
     ioText += theText;
 }
 
-// FUNCTION: EXE 0x61d7e2
-// Returns whether the target is a gate's middle part whose gate is not closed (despite the name)
-bool EEUGAttackUnit::IsGateClosed(EEComplexUnit* inUnit)
-{
-    EECombatHostReadScope theScope;
-    // ee_combat reads.rs gate_closed over the C++ host (EECombatGoals.cpp); CBQR records the outcome
-    bool theClosed = EECombatIsGateClosed(inUnit, this);
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_GATE_CLOSED, inUnit, this->mTarget, theClosed);
-    return theClosed;
-}
-
-// FUNCTION: EXE 0x61d857
-// Returns whether the target is still reachable (melee units must reach it; at most 25 path attempts); if not,
-// the unit starts ignoring it
-bool EEUGAttackUnit::IsStillReachable(EEComplexUnit* inUnit)
-{
-    EECombatHostReadScope theScope;
-    EEUnit* theTarget = this->mTarget;
-    // ee_combat reads.rs still_reachable over the C++ host; CBQR records the outcome
-    bool theReachable = EECombatIsStillReachable(inUnit, this);
-    if (theScope.mOuter)
-        EECombatCaptureHostRead(EE_COMBAT_HR_STILL_REACHABLE, inUnit, theTarget, theReachable, (uint32_t)this->mPathAttempts,
-                                (uint32_t)inUnit->mIgnoredTargets.size());
-    return theReachable;
-}
+// IsGateClosed 0x61d7e2 and IsStillReachable 0x61d857: ee_combat reads.rs gate_closed and still_reachable, called
+// by the trigger test's host (EECombatGoals.cpp EECombatIsGateClosed, EECombatIsStillReachable)
 
 // FUNCTION: EXE 0x61d8d7
 // Returns the path attempt count plus one
@@ -423,12 +399,7 @@ void EEUGAttackUnit::SetTarget(EEUnit* inTarget)
 bool EEUGAttackUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
 {
     // ee_combat goals.rs condition over the plain reads and the host's lazy ones (CBTC)
-    EeCombatConditionIn in;
-    EECombatFillCondition(in, EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->mTarget);
-    in.goal_tile[0] = (int32_t)this->mTargetTileX;
-    in.goal_tile[1] = (int32_t)this->mTargetTileY;
-    in.convert = this->mIsConvert;
-    return EECombatCondition(in, inUnit, this, NULL) != 0;
+    return EECombatCondition(EE_COMBAT_GOAL_ATTACK_UNIT, inUnit, inEvent, this->mTarget, this, NULL) != 0;
 }
 
 // FUNCTION: EXE 0x61e01e

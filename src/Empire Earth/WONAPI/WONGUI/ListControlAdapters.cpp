@@ -11,14 +11,6 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
-// FUNCTION: WON 0x006facd0
-// Changes the list box's sort type and re-sorts it; does nothing when the type is unchanged
-void ListArea::SetSortType(ListSortType type)
-{
-    if(this->mSortType==type) return;
-    this->mSortType=type;
-    this->Sort();
-}
 // FUNCTION: WON 0x006fb520
 // Returns the list box's text colour
 int ListArea::GetTextColor() { return this->mTextColor; }

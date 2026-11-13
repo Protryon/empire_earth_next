@@ -10131,6 +10131,49 @@ Round 4's pattern (RUST_PLAN's row) applied to the rest of the main game form's 
   with its form's destructor (the original's object was released when its last reference went, normally the same
   moment).
 
+## R6: WON's Internet code, round 13 (AuthContext's login data, GetVersionOp and FindPatchOp as Rust objects)
+
+Branch `rust-won-net13`. Measured by net C++ deletion, as rounds 7 to 12. Nothing in the game reaches this code but
+an Internet login (AuthContext's login data: the lobby's login, account and certificate requests) or nothing at all
+(GetVersionOp and FindPatchOp had no caller); the servers are gone. Only the drivers and the Rust replays exercise
+it; the shims' new lines only compile.
+
+- **AuthContext's login data as one Rust object** (`authlogin.rs`): the user name and password, the secret file and
+  its secrets, the communities (CD key, valid flag, file hashes), the CD-key joins, the user data, the nicknames,
+  each setter of the original and the login request's three blocks, behind its own lock. AuthContext keeps its
+  lock, peer data, server context and certificate flow and is otherwise a shim (`mLogin`); its maps, strings,
+  secret list and the `AuthLoginCommunityData` type are gone. `GetName`, `GetUserName` and `GetPassword` return
+  copies now (EEWonNet and UpdateAccountCtrl read them).
+- **The file hashes over the original's stdio loop.** `SetHashFileList` is the MD5 loop over `PlatFOpen` / `fread` /
+  `feof` (a `Stream` trait: the C file in the game, the bytes in the replay, the end flag set by a short read as
+  the CRT's): sections run across files, the short last one at the end of the last file; a file that does not
+  open returns false with the hashes cleared and what was hashed so far kept, as the original.
+- **The maps' order is `std::map<std::wstring>`'s on Windows** (UTF-16 units). A POSIX build's 32-bit `wchar_t`
+  ordered names above U+FFFF differently; nothing uses such names.
+- **GetVersionOp and FindPatchOp are directory request ops** (`verop.rs`, kinds 16 and 17): each ran one GetDirOp
+  child and read its entities when it finished, so the Rust op is the directory op itself (made at `RunHook`, its
+  flags and path as the original's) reading the listing when it succeeds. Results and queries by number (the
+  versions, their descriptions, `CheckVersion`, the patches and the three patch lists through a setter and
+  `num_at`). The `SetVersionCompare` hook (no caller) is gone: the compare is `std::string::compare`. Their units,
+  headers and the C++ helpers only they used (`FindPatchMsg`, `PatchFilterSet`, `PatchIsFiltered`) moved to
+  `tests/won/won_version_msg.h`. New C ABI for bare request ops: `ee_won_reqop_set`, `_num_at`, `_entities`.
+- **GetHTTPDocumentOp's C++ helpers moved in** (`httpdoc.rs`): the cache file names (from the WON directory the
+  shim passes), the once-per-process path file (closed now; the original left it open), the lower case of the
+  product and language, and `GetDocument`'s read through `PlatFOpen`. The web proxy file stays C++: its read is a
+  host call in `golden_hostop.txt`'s H traces.
+- **Goldens first.** `golden_authlogin.txt` (won_auth_test's login sequences, 300) and `golden_verop.txt`
+  (won_verop_test, 600). Drivers 117,983 and 100,000 checks, 0 failed; mutations fail 18,563 and 293 checks and
+  the replays.
+- **A version's data was read as a C string** (`std::string(mData->data())`): to its first NUL, and past the end
+  of a buffer without one. An empty buffer's `data()` is NULL here (ee_won's bytes), which crashed the driver's
+  original half: the data is read to its first NUL or its end, both halves.
+- **A first golden missed the filter**: the generator's version data used "pt:opt", but the filter line's key is
+  "pt" before a space. Check that a golden reaches each branch (count the outcomes) before recording it.
+- **Goldens printed on Windows are CR LF** (stdout's text mode); `str::lines` reads both. The new ones are LF.
+- **Not moved, and why.** The peer auth objects (PeerAuthOp, PeerAuthServerOp, PeerAuthClient, PeerAuthServer) and
+  the certificate classes: not started this round. AuthContext's lock, peer data, server context and the
+  certificate flow's hook table stay C++ until the peer auth ops and GetCertOp's objects are Rust.
+
 ## R5b.4, fourteenth round: the other classes' ActionChanged as Rust decisions, the stats table, units of no id by object (ee_units actions.rs, stats.rs, store.rs, header_consts.rs; branch rust-r5b4-core14, 2026-11-12)
 
 - **Golden first, the same notes.** The thirteenth round's notes header (ee/EEUnitUpdateGolden.h, TEST ONLY) came back
@@ -10504,6 +10547,28 @@ Round 4's pattern (RUST_PLAN's row) applied to the last small pieces of the game
   the scenario intro's form manager (`EEUISCIFormManager`, 315: file specs and media strings the scenario screens,
   the summary and the main game form read), the civilization builder's helpers.
 
+## R5b.4, sixteenth round: the goal queues' record and update, the patrol goal whole in Rust (ee_units goals.rs, patrol.rs; EEUGRust; branch rust-r5b4-core16, 2026-11-13)
+
+- **The record from the mirror.** The queue mirror now holds the goals' objects and kinds beside their ids, and the
+  timer (reported by `AddTime`, `ResetTimer`, the copies and the load's reads). `EEGoalQueueContainer::Save` writes
+  from it and `Load` is a Rust sequence; the host makes the typed `FSFile` calls (the debug file formats each type, so
+  a byte is `Write(unsigned char)`, never raw bytes) and the goals' own `Save`/`CreateGoal`+`Load`. Saves are
+  byte-for-byte the same format; saveload's oracle setting stays END on every save.
+- **The queues' update.** The classes' goal-queue step (started, non-empty queues expire at start + time, then
+  `RefreshGoals`/`RefreshActiveGoal`) reads the mirror per queue: the refresh may change the next one. One host op
+  keeps the one USST note.
+- **A whole goal class to Rust, and what it costs.** `EEUGPatrol` is gone: a patrol goal is an `EEUGRust` (one C++
+  class for goals whose state and bodies are Rust's: the base goal's fields and vtable stay, every virtual is one
+  call), its state a Rust table by goal object. The callers moved to `EEUGRust::NewPatrol`, `EEPatrolGoalCast` and
+  accessors. The first class costs as much as it saves (C++ +413 -414): the generic class and its host table are as
+  long as the class. The next goals reuse both, so each further class deletes its whole file.
+- **A broad regex over a file edits more than the class.** `theGoal->mTarget` -> the patrol accessor also caught the
+  attack goal's `theGoal->mTarget` in an earlier case of `EEActiveGroup::Plan`; the compiler named it. Anchor such
+  replacements to the declaration they follow.
+- **Coverage by a temporary print.** The oracle and late games never patrol; the scenario profile's games create
+  routed patrols and step them, so its captures gate the move. No saveload game holds a patrol goal: its record is
+  unit tests only.
+
 ## R4.4, eighth round: the marching icons, the particles, the battlefield decals, the damage controller, the particle emitter and the aged effects on the records (ee_gfx effect_state.rs; branch rust-gfx14, 2026-11-12)
 
 The effects' leaf families on the round-7 records, one family a commit, EFST the gate (seeds 2-3 of the oracle and
@@ -10542,3 +10607,203 @@ late profiles per commit; calamity too at the end). Graphics Thread C++ (`src/Em
 - **Only a tour or a person reaches:** the particles' move (the renderer's `Queue`) and draws, the decals', splash's,
   shock wave's, flash's and ripple's draws, the marching icons' draw; EE-SIM steps, saves (EFST) and loads (saveload)
   the rest.
+
+## R6 WON round 23: ListArea whole in Rust, its readers on accessors (ee_won listobj.rs; branch rust-r6-won23, 2026-11-12)
+
+Measured as rounds 18-22 (every file under `src/Empire Earth/WONAPI` and `include/ee/wonapi`, `wc -l`): 88,296 at
+the branch's start (round 22 merged with rust) -> 87,629 after the ListArea commit (-667, the two accessor commits
+included).
+
+- **Accessors first, in their own commits.** The lobby read ListArea's members in 12 units: `mSelItem` (combo
+  boxes, menus, the friend, user, game user, room, server, adapter and file lists, the game options) became
+  `GetSelItem()`, `mPaintWidth` (the items' paints) a new `GetPaintWidth()`, the game user list's `mItems.size()`
+  `GetNumItems()`. Then the family's own writes: `MultiListArea::SetSortColumn` sets the sort type through
+  `SetSortTypeOnly` (no sort, as the original's field write), its paint the paint width through `SetPaintWidth`,
+  `MultiListHeader` reads `GetSortType`, and MultiListItem's and TreeItem's MouseExit clear the list's mouse item
+  through `ClearMouseItem` (the field only, not the virtual `NotifyMouseItemGone`, as before).
+- **The move** (`listobj.rs`): the items (a reference held on each, as the original's `SmartPtr` vector), the top
+  line, the list flags, the batch depth, the paint width, the sort type, the current, keyboard and mouse items and
+  the selection walk; every method of ListArea.cpp and SetSortType. The C++ `ListArea` keeps the font, the colours,
+  the selection colours, the sort function and the item tool tip; its virtuals are forwarders, and the Rust calls
+  the list's own virtuals back through the C++ object (`VirtAdjustPosition`, `VirtSort`,
+  `VirtNotifyMouseItemGone`, `VirtListSelChangedHook`), so MultiListArea's, TreeArea's and PopupMenu's overrides run
+  and call the base back into Rust. The items stay C++ data (the lobby's item classes), read and set through ops.
+- **The sort stays C++'s `std::sort`.** It is not stable: a Rust sort would order equal items differently. The op
+  `SortItems` sorts the Rust object's item array (raw pointers) with the original `LineSortPred`, `LowerBound` is
+  `std::lower_bound` for the sorted insert, `Less` the predicate RefreshItem tests its neighbours with. The
+  original sorted `SmartPtr`s; the same algorithm over raw pointers makes the same comparisons and the same order.
+- **RefreshItem's move** permutes the item vector by `SmartPtr` assignments; their AddRef / Release pairs never take
+  an item to zero, so the Rust permutes plain pointers and keeps the one reference per item.
+- **A dropped statement:** MultiListArea's constructor reserved 11,000 entries of the vector (capacity only).
+- **The golden** (`tests/won/won_listobj_test.cpp`): the original's methods with every C++ call replaced by its op,
+  against the Rust object over one scripted host (the scroll area's fields and clamp, items with sizes, keys and
+  selectable flags, the base size change and the list's virtuals calling the side's ListArea back): 20,000
+  sequences of 40 calls (sorted and placed inserts, batches, refreshes that move an item, deletes, ranges, clears,
+  every flag, every selection path, the walk, sorting, scrolls, paints, the mouse with every flag, keys),
+  12,464,203 trace lines identical, every reference given back. A mutation (the toggle flag's test) fails 6,552
+  sequences. `golden_listobj.txt` (45 sequences) is replayed by cargo.
+- **Shell lesson:** a Bash tool command whose heredoc holds an odd number of single quotes (a Python `r'''`
+  string) fails before running ("unexpected EOF while looking for matching"): the tool wraps the command in single
+  quotes. Write such scripts to a file and run the file.
+- **What runs it.** EE-SIM never builds the lobby (the oracle is unchanged by construction). Only the lobby reaches
+  ListArea: the LAN game list and the user list of the LAN lobby, the game room's player list (MultiListArea), the
+  combo boxes' drop-downs (the user name, the options), popup menus (right click on a user), the room tree
+  (Internet only). The LAN game (joining by the game list's selection and double click) and the lobby captures
+  (the lists' rows, selection colours, scroll) are the check. Item tool tips, keyboard navigation and the sort's
+  column clicks run only in the golden unless a person uses them.
+- **Left:** MultiListArea, MultiListHeader, MultiListItem, TreeArea and TreeItem (now C++ subclasses and items over
+  the Rust base), PopupMenu with MenuBehavior, and the scroll bars (Scrollbar has ~50 member reads in 9 units:
+  an accessor commit first).
+
+## R6: the game screens, twelfth round: the campaign editor's events whole in Rust (ee_screens campaign_editor.rs; branch rust-screens12, 2026-11-12)
+
+Round 4's pattern (RUST_PLAN's row) applied to the campaign editor (form 24); round 10's count.
+
+- **Deleted:** `EEUIECampaignEditorEvents.cpp` (934) and its header (102); `EEUIECEClose` and
+  `EEUIECECampaignNameChanged` (both the shared `return 0`) out of `EEUIManagerEvents.h` and `EEUIManager.cpp`, with the
+  factory's twelve `new`s and the classes' `??_G` notes; the unit's `link/exe/units.txt` line. Game UI C++ lines
+  39,004 -> 38,083 (-921); git over the C++ +218 -1,144 (the host +208).
+- **Codes:** 0x1801..0x180f the form's open and close events and its control events (`ee_screens_campaign_editor_event_for`
+  is the factory's table; the password box's Enter and the password page's OK share one code, as they shared a
+  class), 0x1810..0x1818 the questions' answers. The answers are host statics that call `ee_screens_event` with their
+  code on the question's form (round 7's `EEScreensResignYes` pattern, one macro line each); the save error's message
+  reuses the custom campaign form's `EEScreensNoCustomCampaigns` (the original's `CloseEditor` was ICF-folded into
+  that unit's identical static: both close the top form).
+- **The model stays C++:** `EECampaignEditorBehavior` and its global `gCampaignEditor` (now in `EEScreens.cpp`) are
+  called through host ops, one model call each (a field by number, a list as 0-ended texts, the scenario list's result
+  and the last error kept by the host). The host clears the kept error before each call that takes one: the
+  original's error was a fresh local per function, and the delete question's yes shows an empty error when nothing
+  is selected (Rust passes an empty text there rather than reading the kept one).
+- **The `dynamic_cast` checks** are one host op (`EE_SCREENS_OP_CE_IS`: control and class) asked where the original
+  asked them; the reads and writes after it are the static casts the other forms use. `CheckUnsavedChanges`' four
+  comparisons are one host op each (`UWideString`'s `!=`, `PlatMbsCmp`, stays C++; the getters' calls are in it).
+- **The posted save** (`EEUIECECampaignSaveContinued` held the form): a code cannot, so the code runs on form 24 by id
+  (`ee_screenscpp_form(24)`; only form 24's Save button posts it).
+- **Golden driver** (scratch, `build/sc12/ce_driver.cpp`, `drv.py`): a type-checking cast registry (`dynamic_cast`
+  redefined to a template that answers per control and class from sets the case draws), fake list virtuals by probed
+  vtable slots with the toolkit's selection rules (`ChangeSelectionIndex` clamps, `DeleteAllEntries` drops the
+  selection: without them the original read past a list's end), the model printing every call, the questions',
+  messages' and posted events' callbacks kept and run by later cases. Old unit and new host print the same on seeds
+  1-5 (2,000; 20,000 x3; 2,000 cases). The committed golden is seed 5 (`golden_campaign_editor.txt`), the seed of the
+  first ten whose 2,000 cases reach the save-before-open path that moves the selection; the Rust replay redraws each
+  case with the driver's generator instead of parsing its state line. Mutations (that path's scroll flag; the
+  background label's text when not found) each fail it; a mutation of the scroll flag passed seed 1's golden, which
+  never reaches it.
+- **Behaviour:** none intended. Only a person reaches the campaign editor (the editors' sub-menu's Campaign Editor;
+  no gate opens form 24).
+- **Not moved:** the scenario intro's form manager (`EEUISCIFormManager`, 315): its decisions are three extension
+  lists and `HasMedia`'s short-circuit; a Rust move replaces each test with a forwarder of the same size, so it
+  deletes nothing (the only saving there is a C++ refactor of the three `Open*`). The civilization builder's helpers
+  (`EECivilizationBuilder.cpp` 617, `EECBUIListBox` 835) are thin toolkit calls with C++ callers across the builder's
+  units; they wait for the builder's files to move.
+
+## A citizen waiting for a gather spot whose goal is no gather (EE-SIM, 2026-11-12)
+
+- **Crash:** `EEUGGather::FindGatherSpot` read `this->mResource` through a NULL `this` (c0000005, every time at
+  105 minutes in one seed of boom_order against the improved classic). `EEUGBuildRepair::BeginRepair` asks the units on
+  the site to step aside (`EEStepAsideFromSite`), and `EEComplexUnit::StepAside` takes a unit in
+  `kActionWaitForOpenPosition` to have an `EEUGGather` goal: `dynamic_cast<EEUGGather*>(GetGoal())->FindGatherSpot`.
+  This unit's goal was something else (probably a new order from a script, given while the action had not changed
+  yet). Frames resolved from `EE-SIM.map` by address (the image loads at its preferred base).
+- **Fix:** a NULL cast skips the gather-spot search; the unit stays where it is.
+
+## The mouse pointer's save-under under GX (full screen, 2026-11-12)
+
+- **Symptom**: in full screen (not windowed), moving the mouse left white squares and pieces of the pointer along its
+  path, over the menus (Game Setup) and the game's top and bottom bars: everywhere the UI is redrawn only where it
+  is dirty. The 3D view, redrawn every frame, hid them. The harness never saw it: its build is windowed.
+- **Two save-unders, a DirectDraw flip chain behind them.** RTSMouse keeps two save-under records and swaps them every
+  pointer frame. The graphics thread saves under the pointer, draws it, shows the frame and restores: windowed the
+  record it just saved (the back buffer keeps its pixels after the blit to the window), in full screen the previous
+  one, because a flip hands back the frame before last with the previous pointer in it. GX's Flip presents a copy of
+  the back buffer and keeps it, so that full-screen restore put back a stale rectangle: the pointer drawn this frame
+  stayed until the next one, and the next save took pieces of it in (the fragments).
+- **The mouse-pointer thread draws on the primary.** Every 25 ms, when the pointer moved, RTSMousePointer restores,
+  saves under and draws the pointer straight onto the screen (the original's pointer between frames), with the same
+  records. GX's primary has no texture and sampling it gives white, so its save-under was white; the graphics
+  thread's full-screen restore of "the previous record" then wrote that white rectangle into the back buffer.
+- **Fix**: RTSGraphics::Render restores the frame's own record in full screen too (the windowed restore), and a GX
+  blit from the primary reads what the window shows (the window image with the pointer's partial blits, else the last
+  whole frame, in its coordinates) instead of white; in full screen, where Flip leaves no such frame, it leaves the
+  target alone. Evidence, from a throwaway build that dumped the presented GPU copy and moved the pointer a little
+  every frame (full-screen Game Setup, WARP): before, 2,517 graphics-thread restores of a pointer-thread record and
+  3,125 white 8x8 blocks after 17,600 frames; after, none in full screen or windowed.
+- **Not a regression of a recent commit**: both halves date from the GX renderer (2026-11-04). The harness and
+  windowed play never show it, and how often the pointer thread runs between two frames depends on timing.
+- Dumping a frame by setting the surface's CPU copy valid changes which path later blits take (CPU blits instead of
+  GPU ones), and that hid the bug: dump frames without changing a surface's CPU/GPU state, or the evidence lies.
+- The harness cannot see this class of bug: the test profile is windowed and the gates check milestones. A
+  full-screen check needs a display. A disconnected session (this machine's RDP) still renders (WARP), but a BitBlt
+  of the screen captures white.
+
+## The merge of main a2c4347e into the rust branch (the Lua AI's ferry and guard work, the classic's gather capacity; 2026-11-12)
+
+50 commits of main (since 79be8619; almost all Lua AI work: `ai/classic_lua/ferry.lua` and `army.lua`, `lib/guard.lua`,
+`lib/build_order.lua`, `boom.lua`, AI_RESEARCH to §8.63) merged into `rust` as `git merge origin/main` (branch
+rust-mainmerge2). Main changed none of `EECPLua.cpp`, `EECPLua.h` or `EECPNextUnits.cpp`: nothing to port into ee_ai.
+
+- **Conflicts.** `EEComplexUnit::StepAside`: rust's `EEGoalCast<EEUGGather>` with main's NULL check (a waiting unit
+  whose goal is no gather; `EEGoalCast` answers NULL as `dynamic_cast` did). `GX.cpp` is Rust here (ee_gx): main's
+  blit from the primary (a copy from the window reads what it shows: the window image while it holds partial blits,
+  else the last whole frame, in that frame's coordinates; nothing shown leaves the target alone) went into `gx.rs`'s
+  `blt`, with a test. `RTSGraphics.cpp` (the full-screen pointer restore) merged as it is. PORT_LEARNINGS.md: both
+  sides' sections (`git merge-file --union` on LF copies, written back CRLF). Only a full-screen session shows the
+  pointer fix: the lead's tour is windowed.
+- **Equivalence with main, measured on main's own exe.** origin/main built in a temporary worktree. Main's EE-SIM has
+  no `--checksum-trace` or `--save-at`, and reads `dbrandommap.dat` (plus the other db files without a text form),
+  which this branch's open tree no longer has: its tree was the shared tree hard-linked with main's own `Data/db`
+  (main's eedata from the installs; scratch `build/mm2/tools/maindb.py`). On EE-SIM traces (decision and sim-hash
+  lines): boom, classic_lua and ageofai seeds 2-3 (2700 s, `--ai-scripts ai`) identical, six of six; the oracle seeds
+  2-7 identical; the space profile's seeds 2-7 identical. The late profile parts on seeds 2, 4-7 (seed 3 identical),
+  and that is older than this merge: main at 79be8619 parts from this branch's late seeds 2 and 7 at the same lines
+  (a gatherer list holding a dead fishing boat on main; rust's `UnitLost` fix cd6233db alone is not it: a control
+  without it plays as the merge). Calamity, missile and scenario have no main counterpart (main's EE-SIM lacks them).
+- **The rebaseline** (declared, its own commits). Main's `GetGatherCapacity` change (8ad91423) changes every oracle
+  seed: the new reference `build/rust_oracle/mm2-ref` (with the checksum lines) in this worktree, recorded twice,
+  identical. Capture goldens re-recorded from the merged build for exactly the changed games: oracle 2-7, late 4-6,
+  space 3, 6, 7, missile 2-7 (its sweep follows the oracle game), calamity 7; late 2, 3, 7, space 2, 4, 5,
+  calamity 2-6 and scenario 2-7 give their old digests. Two one-run flakes under load, both equal to the golden on a
+  rerun: calamity seed 3's message counts (NMEX/NMIM 3 -> 4, NMDC and USCK one more) and scenario seed 4's lobby
+  timeout. Reading the check's output by eye misleads: after a dropped tag it pairs golden and got lines one apart
+  (late seed 7 looked changed and was not); compare the digest with the golden by tag instead.
+- **saveload_expect.** The next rows are unchanged; 12 rows do better and 5 worse. The oracle seed 2 save at 1000 s
+  no longer continues identically (parts 14 ticks after the load): at the save's tick the loaded resource manager's
+  mine list (`mMines`) holds 27 units where the continued game's holds 8 (`--dump-at` against `--dump-load`), and
+  main's capacity count now reads it; a control build with main's change reverted gives the old rows. A save gap to
+  fix in its own round, not a merge error.
+- Disk: main's build in a worktree took about 40 minutes under the machine's load (SDL3 and every unit compiled
+  again under its own staging root); a second staging root (`C:/EEX-mm2main`) is left for the lead to delete.
+
+## R5b.2, eleventh round: the stats reads from the stats table, the goals' last reads in Rust (ee_combat store.rs, reads.rs; branch rust-combat11, 2026-11-13)
+
+Measured by net C++ deletion (src and include/ee, git numstat).
+
+| Commit | What | C++ |
+|---|---|---|
+| the stats reads | the trigger, step and heal-work records' stats fields, the reads' seven stats cases, the damage record's armour from ee_units' stats table | +7 -45, net -38 |
+| the goals' reads | `EECombatFillCondition` folded into `EECombatCondition(kind, unit, event, target, goal, class)` (six call sites one line each); `EEUGAttackUnit::IsGateClosed`/`IsStillReachable` and `EEUGHealUnit::IsInRange` deleted | +58 -91, net -33 |
+
+- **The stats by the record's object.** The unit record's `stats` (field 48) names the `EEUnitClassUpgrade`; ee_rust's
+  bridge `ee_combat_store_stats_of` copies the fields combat reads from `ee_units::stats::stats_of` (a Rust-to-Rust
+  bridge: listed in cbindgen.toml's `exclude` with the other two, or it lands in `ee_rust_common.h` and makes that
+  header include `ee_combat.h`). No stats object, or one the table lacks, reads 0 (the fills' NULL test); the
+  original's reads dereferenced the stats unchecked, so no defined behaviour changed. The armour is a read
+  (`EE_COMBAT_Q_ARMOR`, arg the weapon column) after the C++'s damage operation, not inside it: the record is the same
+  bytes (CBDM unchanged).
+- **The captures stay where the calls are.** `IsGateClosed`/`IsStillReachable` had only the trigger test's host as
+  caller; their CBQR records (scope, outcome, path attempts, ignored count) moved into `EECombatIsGateClosed`/
+  `EECombatIsStillReachable` unchanged, so CBQR is equal. `IsInRange` (heal) is `reads.rs heal_in_range`: the class's
+  heal range read first, the positions the store's locations (`GetPosition` is the location's translation),
+  `within_range` of `distance_to_squared` (dz, dy, dx then the sum in x, y, z order, as `GE3DPoint::DistanceToSquared`).
+  No game of the profiles heals (CBCH is a sweep): the heal range test has unit tests and the trigger's CBTC only where
+  a calamity game heals; `EEUnitClass::Heal` reaches it too.
+- **`IsHuman` not moved.** A player table field would be written by `EEUnitStorePlayerTable`, but `EEPlayer::Reset`
+  (its first caller) runs in the base constructor, where `IsHuman` answers false for an `EEHumanPlayer`: the field
+  needs a report from `EEHumanPlayer`'s constructors, which adds C++ for one deleted line. Left for the round that moves
+  the players.
+- **`sed -i` and `cargo fmt` on CRLF files.** reads.rs is CRLF in the index; Git Bash's `sed -i` rewrote it to LF (a
+  whole-file diff). Edit such files through bytes (Python) and check `git ls-files --eol` before committing.
+- **A fresh worktree's first link failed**: `build/clang/exe` did not exist (`link.rsp` FileNotFoundError after every
+  unit compiled); `mkdir -p build/clang/exe` and rerun.
+- **What only a person or a tour reaches:** nothing drawn changed. The heal range test also gates `EEUnitClass::Heal`'s
+  animation and effect.

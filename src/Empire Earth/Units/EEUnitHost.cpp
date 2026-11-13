@@ -31,7 +31,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
@@ -446,9 +446,9 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         return static_cast<EEUnitGoal*>(new EEUGHealUnit(theTarget, theFlagA));
     }
     case EE_GOAL_CTOR_PATROL:
-        return static_cast<EEUnitGoal*>(new EEUGPatrol(theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(theFlagA));
     case EE_GOAL_CTOR_PATROL_ROUTE:
-        return static_cast<EEUnitGoal*>(new EEUGPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewPatrol(static_cast<EEPPatrolGroup*>(inSpec->object), ComplexOf(inSpec->unit_a), theFlagA));
     case EE_GOAL_CTOR_LOCATION: {   // EEMPathTo's: new EEUGLocation(&point, true, forced, rotating, facing, false, 0)
         GE3DPoint theLocation(inSpec->point[0], inSpec->point[1], inSpec->point[2]);
         EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, theFlagA, theFlagB, inSpec->value, false, 0);
@@ -796,8 +796,8 @@ extern "C" void ee_units_host_patrol_insert_point_at(uint32_t inUnit, float inX,
 // the route of the unit's current goal when it is a patrol (EEGoalCast<EEUGPatrol>(GetGoal())), else NULL; a read
 extern "C" void* ee_units_host_unit_goal_patrol_route(uint32_t inUnit)
 {
-    EEUGPatrol* theGoal = EEGoalCast<EEUGPatrol>(ComplexOf(inUnit)->GetGoal());
-    EEPPatrolGroup* theRoute = theGoal != NULL ? theGoal->mPatrolGroup : NULL;
+    EEUGRust* theGoal = EEPatrolGoalCast(ComplexOf(inUnit)->GetGoal());
+    EEPPatrolGroup* theRoute = theGoal != NULL ? theGoal->GetPatrolGroup() : NULL;
     if (sDry != NULL) {
         Log({kDryGoalRoute, inUnit});
         LogRoute(theRoute);
@@ -824,9 +824,9 @@ extern "C" void ee_units_host_goal_patrol_add_point(void* inGoal, float inX, flo
         return;
     }
     EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
-    EEUGPatrol* theGoal = static_cast<EEUGPatrol*>(static_cast<EEUnitGoal*>(inGoal));
-    theGoal->mPatrolGroup->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
-    thePlayer->AddPatrolGroup(theGoal->mPatrolGroup);
+    EEUGRust* theGoal = static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal));
+    theGoal->GetPatrolGroup()->AddPoint(GE2DPoint(inX, inY), thePlayer->mPlayerID);
+    thePlayer->AddPatrolGroup(theGoal->GetPatrolGroup());
 }
 
 // the dry host does not spread: the group keeps its units (logged)

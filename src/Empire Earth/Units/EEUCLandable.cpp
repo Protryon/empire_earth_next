@@ -48,7 +48,7 @@
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGExplore.h"
-#include "ee/EEUGPatrol.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCTransport.h"
@@ -230,15 +230,15 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(theGoal);
     EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
     EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
-    EEUGPatrol* thePatrol = EEGoalCast<EEUGPatrol>(theGoal);
+    EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
     EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(theGoal);
     EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
     if (theLocation != NULL) {
         theTarget.SetX(theLocation->mLocation.GetX());
         theTarget.SetY(theLocation->mLocation.GetY());
     } else if (thePatrol != NULL) {
-        theTarget.SetX((float)thePatrol->mTarget->GetTileX() + 0.5f);
-        theTarget.SetY((float)thePatrol->mTarget->GetTileY() + 0.5f);
+        theTarget.SetX((float)thePatrol->GetPatrolTarget()->GetTileX() + 0.5f);
+        theTarget.SetY((float)thePatrol->GetPatrolTarget()->GetTileY() + 0.5f);
     } else if (theExplore != NULL) {
         theExplore->GetTileCenter(theTarget);
         if (theTarget.GetX() <= 0.5f && theTarget.GetY() <= 0.5f) {
@@ -758,7 +758,7 @@ unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
             break;
         }
         case kGoalPatrol: {
-            EEComplexUnit* theOther = static_cast<EEUGPatrol*>(theGoal)->mTarget;
+            EEComplexUnit* theOther = static_cast<EEUGRust*>(theGoal)->GetPatrolTarget();
             const GETransformation& theOtherLocation = theOther->mPhysicalModel.GetLocation();
             theTarget.SetX(theOtherLocation.GetX());
             theTarget.SetY(theOtherLocation.GetY());

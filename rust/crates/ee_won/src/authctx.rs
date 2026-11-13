@@ -299,7 +299,14 @@ unsafe fn secrets<'a>(s: *mut EeWonAuthSecrets) -> &'a mut Secrets {
 /// `s` is a list, `path` a C string.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_auth_secrets_load(s: *mut EeWonAuthSecrets, path: *const c_char) -> bool {
-    let list = unsafe { secrets(s) };
+    unsafe { load_secrets(secrets(s), path) }
+}
+
+/// `LoadSecretList` into a list (authlogin.rs's login holds one).
+///
+/// # Safety
+/// `path` is a C string.
+pub(crate) unsafe fn load_secrets(list: &mut Secrets, path: *const c_char) -> bool {
     list.list.clear();
     let file = unsafe { stdio::PlatFOpen(path, c"rb".as_ptr()) };
     if file.is_null() {
@@ -326,7 +333,15 @@ pub unsafe extern "C" fn ee_won_auth_secrets_load(s: *mut EeWonAuthSecrets, path
 /// `s` is a list, `path` a C string.
 #[no_mangle]
 pub unsafe extern "C" fn ee_won_auth_secrets_save(s: *mut EeWonAuthSecrets, path: *const c_char) -> bool {
-    let bytes = unsafe { secrets(s) }.file_bytes();
+    unsafe { save_secrets(secrets(s), path) }
+}
+
+/// `SaveSecretList` of a list.
+///
+/// # Safety
+/// `path` is a C string.
+pub(crate) unsafe fn save_secrets(list: &Secrets, path: *const c_char) -> bool {
+    let bytes = list.file_bytes();
     let file = unsafe { stdio::PlatFOpen(path, c"wb".as_ptr()) };
     if file.is_null() {
         return false;
