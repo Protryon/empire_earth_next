@@ -57,7 +57,7 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEMainGroup.h"
 #include "lle/GE3DPoint.h"
-#include "ee/EESEARotateUnits.h"
+#include "ee/EESEARust.h"
 #include "ee/EESEADeleteUnit.h"
 #include "ee/EEUICCommandUnits.h"
 #include "ee/EESEUICCommandUnits.h"
@@ -67,7 +67,7 @@ EESEUICCommandUnits::EESEUICCommandUnits(UIForm* inForm, unsigned long inId, uns
                                          EEAMouseClick* inListener)
     : EEUICCommandUnits(inForm, inId, inIndex, inListener)
 {
-    this->mRotateAction = new EESEARotateUnits;
+    this->mRotateAction = new EESEARust(kSEARotate);
 }
 
 // SYNTHETIC: EXE 0x5972ac
@@ -86,7 +86,7 @@ long EESEUICCommandUnits::MouseMove(const GE2DPoint& inLocation)
 {
     EEUICCommandUnits::MouseMove(inLocation);
     if (this->mHasFacing)
-        this->mRotateAction->Rotate(this->mFacing);
+        ee_screens_sew_rotate(this->mRotateAction->mAction, this->mFacing);
     return 0;
 }
 

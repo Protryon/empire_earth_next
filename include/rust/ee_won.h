@@ -2556,6 +2556,10 @@ enum class EeWonGuiOp : uint32_t {
   DlgIsDefault,
   /// `((Button*)a->mComponent)->mButtonFlags` (a `ComponentEvent*`; a pure read).
   DlgEventButtonFlags,
+  /// `((Button*)a)->GetText() == *(const GUIString*)b` (0 or 1; a pure read).
+  TabTextIs = 480,
+  /// `AddLayoutPoint((LayoutPoint*)a)`.
+  TabAddLayoutPoint,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods).
@@ -2845,6 +2849,8 @@ enum class EeWonGuiEvent : uint32_t {
   ListSelChanged = 3,
   /// `ComponentEvent_Scroll`.
   Scroll = 4,
+  /// `ComponentEvent_TabCtrlTabSelected`.
+  TabCtrlTabSelected = 5,
 };
 
 /// What pressed a scrollbar's button (`Scrollbar::HandleComponentEvent`).
@@ -3831,6 +3837,51 @@ enum class EeWonStagingCall : uint32_t {
   NotifyPingChange,
 };
 
+/// The inward calls of the C++ `TabBar` shell.
+enum class EeWonTabBarCall : uint32_t {
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent = 1,
+};
+
+/// The inward calls of the C++ `TabCtrl` shell.
+enum class EeWonTabCall : uint32_t {
+  /// `Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `GetDesiredSize(*a, *b)` (`a`, `b` point at i32s).
+  DesiredSize,
+  /// `KeyDown(a)` (0 or 1).
+  KeyDown,
+  AddedToParent,
+  /// `HandleComponentEvent(a)` (a `ComponentEvent*`).
+  HandleComponentEvent,
+  /// `TabFocus(a != 0, b != 0)` (0 or 1).
+  TabFocus,
+  /// `CopyAttributes(a)` (`a` the other control's `EeWonTabCtrl*`).
+  CopyAttributes,
+  /// `SetTabBarOnRight(a != 0)`.
+  SetTabBarOnRight,
+  /// `SetArrowsOnLeft(a != 0)`.
+  SetArrowsOnLeft,
+  /// `SetTabArrows(a, b)` (two `Button*` as `Component*`).
+  SetTabArrows,
+  /// `SetCurTab(a, b != 0)`.
+  SetCurTab,
+  /// `SetCurTabByName(*a, b != 0)` (`a` a `const GUIString*`).
+  SetCurTabByName,
+  /// `GetTabIdForContainer(a)` (a `Container*` as a `Component*`).
+  GetTabIdForContainer,
+  /// `EnableTab(a, b != 0)`.
+  EnableTab,
+  /// `AddTab(a, b)` (a `Button*` and a `Container*` as `Component*`s, `b` may be NULL).
+  AddTab,
+  /// `RemoveTab(a)`.
+  RemoveTab,
+  /// the field `a` (`EeWonTabField`).
+  GetField,
+  /// the field `a` = `b`.
+  SetField,
+};
+
 /// The inward calls (the C++ shell's virtuals and methods). `a`..`d` as each says.
 enum class EeWonTextCall : uint32_t {
   /// `Virtual08` (SizeChanged).
@@ -4172,6 +4223,19 @@ enum class EeWonDlgField : uint32_t {
   DefaultButton,
 };
 
+/// The control's fields its configs and the root screen read and set.
+enum class EeWonTabField : uint32_t {
+  /// the bottom bar's selected tab id (read only).
+  CurTabId = 1,
+  TabBarHeight,
+  /// the bottom bar's overlap between tabs.
+  TabOverlap,
+  TabBarOverlap,
+  BottomTabTopOffset,
+  BottomTabLeftOffset,
+  UserHasInteracted,
+};
+
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
@@ -4321,6 +4385,12 @@ struct EeWonStaging;
 
 /// The Rust TreeItem.
 struct EeWonTNode;
+
+/// The Rust TabBar.
+struct EeWonTabBar;
+
+/// The Rust TabCtrl.
+struct EeWonTabCtrl;
 
 /// The Rust TextArea.
 struct EeWonText;
@@ -6240,6 +6310,17 @@ struct EeWonGameSummary {
   bool ok;
   uint32_t read;
   size_t rest;
+};
+
+/// The constructor's parts (`ee_won_tab_init`): the bottom bar's Rust object, the four containers and the layout
+/// point, as `Component*`s.
+struct EeWonTabParts {
+  const EeWonTabBar *bar;
+  ptrdiff_t bottom_bar;
+  ptrdiff_t top_bar;
+  ptrdiff_t bottom_bar_container;
+  ptrdiff_t top_bar_container;
+  ptrdiff_t layout;
 };
 
 /// What a thread runs: `run(context)` once (the C++ calls its virtual `ThreadFunc`), then, when the thread was set
@@ -13600,6 +13681,56 @@ int32_t ee_won_compare_no_case32(const int32_t *a,
                                  size_t a_count,
                                  const int32_t *b,
                                  size_t b_count);
+
+/// A new Rust TabBar for the C++ `component` over its container's Rust object `ct`, the bar of the control `ctrl`
+/// (NULL for none), its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the bar's; `ctrl` (when not NULL) is live until it
+/// is freed (it then leaves the bar).
+EeWonTabBar *ee_won_tabbar_new(void *component,
+                               EeWonGuiHostFn host,
+                               const EeWonContainer *ct,
+                               const EeWonTabCtrl *ctrl);
+
+/// The destructor's statements (the buttons given back), then the object freed.
+///
+/// # Safety
+/// `bar` came from `ee_won_tabbar_new` (or is NULL) and is not used again.
+void ee_won_tabbar_free(EeWonTabBar *bar);
+
+/// One of TabBar's virtuals (`EeWonTabBarCall`).
+///
+/// # Safety
+/// `bar` is live.
+ptrdiff_t ee_won_tabbar_call(const EeWonTabBar *bar, EeWonTabBarCall call, ptrdiff_t a);
+
+/// A new Rust TabCtrl for the C++ `component` over its container's Rust object `ct`, its calls out through `host`.
+///
+/// # Safety
+/// `ct` is the component's live container object and outlives the control's.
+EeWonTabCtrl *ee_won_tab_new(void *component,
+                             EeWonGuiHostFn host,
+                             const EeWonContainer *ct);
+
+/// The constructor's statements over its made members (`parts`).
+///
+/// # Safety
+/// `tab` is live; `parts` is readable, its bar the live bottom bar's Rust object, held by the control's member.
+void ee_won_tab_init(const EeWonTabCtrl *tab,
+                     const EeWonTabParts *parts);
+
+/// The destructor's statements (the arrows given back), then the object freed.
+///
+/// # Safety
+/// `tab` came from `ee_won_tab_new` (or is NULL) and is not used again.
+void ee_won_tab_free(EeWonTabCtrl *tab);
+
+/// One of TabCtrl's methods (`EeWonTabCall`).
+///
+/// # Safety
+/// `tab` is live; the call's arguments as documented.
+ptrdiff_t ee_won_tab_call(const EeWonTabCtrl *tab, EeWonTabCall call, ptrdiff_t a, ptrdiff_t b);
 
 /// A new Rust TextArea for the C++ `component`, its calls out through `host`.
 EeWonText *ee_won_text_new(void *component, EeWonGuiHostFn host);

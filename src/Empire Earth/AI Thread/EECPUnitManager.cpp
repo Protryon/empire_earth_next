@@ -36,8 +36,8 @@
 #include "lle/U2DSparseArray.h"
 #include "lle/U2DPolygon.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGBuildRepair.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIArea.h"
@@ -346,12 +346,12 @@ EEComplexUnit* EECPUnitManager::FindStalledBuilder()
     this->GetCitizens(theUnits);
     for (unsigned long i = 0, theCount = theUnits.size(); i < theCount && theResult == NULL; i++) {
         EEComplexUnit* theUnit = theUnits[i];
-        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal());
+        EEUGRust* theGoal = EEBuildRepairGoalCast(theUnit->GetLoadGoal());
         if (!theGoal || theUnit->mIsDetachedFromAI)
             continue;
         if ((theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionWaitForBuildSiteToClear && !theUnit->mIsDisabled)
             continue;
-        EEUnit* theTargetUnit = theGoal->mTarget;
+        EEUnit* theTargetUnit = theGoal->GetBuildTarget();
         EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
         if (!theTarget->mIsBuilt && theGoal->IsBuildSiteTaken())
             theResult = theUnit;
@@ -483,9 +483,9 @@ EEComplexUnit* EECPUnitManager::FindBuilder(GE2DPoint& inLocation, long inUnitCl
                 }
                 if (!theSame)
                     continue;
-                EEUGGather* theGoal;
-                if (inUnitClass == 0x2a && (theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal())) != NULL &&
-                    theGoal->mResource != NULL && theGoal->mResource->GetUnitClass()->mUnitType == kUnitTypeFarm)
+                EEUGRust* theGoal;
+                if (inUnitClass == 0x2a && (theGoal = EEGatherGoalCast(theUnit->GetLoadGoal())) != NULL &&
+                    theGoal->GetGatherResource() != NULL && theGoal->GetGatherResource()->GetUnitClass()->mUnitType == kUnitTypeFarm)
                     continue;
             }
             theResult = theUnit;

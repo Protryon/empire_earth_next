@@ -26,11 +26,11 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
@@ -433,7 +433,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         return static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
     }
     case EE_GOAL_CTOR_GATHER:
-        return static_cast<EEUnitGoal*>(new EEUGGather(UnitOf(inSpec->unit_a), UnitOf(inSpec->unit_b), theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewGather(UnitOf(inSpec->unit_a), UnitOf(inSpec->unit_b), theFlagA));
     case EE_GOAL_CTOR_HEAL_UNIT: {
         EEComplexUnit* theTarget = ComplexOf(inSpec->unit_a);
         if (theTarget == NULL)
@@ -1143,9 +1143,9 @@ extern "C" void ee_units_host_unit_start_action(uint32_t inUnit, int32_t inActio
 extern "C" uint32_t ee_units_host_unit_load_farm(uint32_t inUnit)
 {
     uint32_t theFarm = 0xffffffffu;
-    EEUGGather* theGather = EEGoalCast<EEUGGather>(ComplexOf(inUnit)->GetLoadGoal());
-    if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mUnitClass->mUnitType == kUnitTypeFarm) {
-        EEComplexUnit* theComplex = theGather->mResource->mComplexUnit;
+    EEUGRust* theGather = EEGatherGoalCast(ComplexOf(inUnit)->GetLoadGoal());
+    if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mUnitClass->mUnitType == kUnitTypeFarm) {
+        EEComplexUnit* theComplex = theGather->GetGatherResource()->mComplexUnit;
         if (theComplex != NULL)
             theFarm = static_cast<uint32_t>(theComplex->mUnitID);
     }

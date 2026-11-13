@@ -47,7 +47,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUnitUtilities.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPBuildManager.h"
@@ -464,7 +464,7 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
                 for (unsigned long c = 0; c < theCitizens.size(); c++) {
                     EEComplexUnit* theUnit = theCitizens[c];
                     if (!(theUnit->GetHitPoints() > 0) || theUnit->GetTileX() == -10000 || theUnit->mIsDetachedFromAI
-                        || dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal()) != NULL
+                        || EEBuildRepairGoalCast(theUnit->GetLoadGoal()) != NULL
                         || dynamic_cast<EEUGLocation*>(theUnit->GetLoadGoal()) != NULL)
                         continue;
                     long long theDX = theUnit->GetTileX() - theX, theDY = theUnit->GetTileY() - theY;

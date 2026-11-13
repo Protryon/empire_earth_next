@@ -37,7 +37,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEWheel.h"
@@ -987,7 +987,7 @@ void EECPCivilizationManager::RepairBuildings()
             else
                 theTarget = theGate->GetLastLinked(theTarget);
         }
-        theRepairer->SetGoal(new EEUGBuildRepair(this->mPlayer, theTarget, true), 1, 0);
+        theRepairer->SetGoal(EEUGRust::NewBuildRepair(this->mPlayer, theTarget, true), 1, 0);
         theRepairer->GetUnitClass()->ActionChanged(theRepairer);
         std::vector<EEUnitHandle<EEComplexUnit> >::iterator theFound = std::find(this->mRepairing.begin(), this->mRepairing.end(), theTarget);
         if (theFound != this->mRepairing.end())

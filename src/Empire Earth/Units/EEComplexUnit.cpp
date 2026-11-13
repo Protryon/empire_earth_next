@@ -45,7 +45,7 @@
 #include "ee/EEUCLandable.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEAEManager.h"
@@ -84,7 +84,7 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFleeFromLocationScreenBase.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCombatManager.h"
@@ -413,7 +413,7 @@ void EEComplexUnit::OrderRepair(EEUnit* inTarget)
 {
     EEUnit* theTarget;
     if (this->mGoalState != NULL && this->mGoalState->mKind == kGoalBuildRepair) {
-        theTarget = EEGoalCast<EEUGBuildRepair>(this->GetGoal())->mTarget;
+        theTarget = EEBuildRepairGoalCast(this->GetGoal())->GetBuildTarget();
         theTarget->Reference();
         this->mCitizenBuildQueue.push_front(theTarget);
     }
@@ -2626,7 +2626,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
         if (theCommand == kActionWaitForOpenPosition) {
             // (the port: a unit waiting for a spot whose goal is no longer a gather - the original dereferenced the
             // null cast; seen when a repair began beside such a unit, PORT_LEARNINGS)
-            EEUGGather* theGather = EEGoalCast<EEUGGather>(this->GetGoal());
+            EEUGRust* theGather = EEGatherGoalCast(this->GetGoal());
             if (theGather != NULL && theGather->FindGatherSpot(this)) {
                 this->StartAction(kActionMoveToWaitingArea);
                 this->GetUnitClass()->ActionChanged(this);
