@@ -31,6 +31,8 @@ M.OPT = {
                             -- another, and the engine builds no granary's fields (gather granary_farms = 0) until all
                             -- stand, then 8 each
     soldiers_after_boats = false, -- (off until benched) stone_start trains no soldier before 10 boats, unless threatened
+    settle_afford = false,  -- (off until benched) a settlement is placed only with its whole cost in hand, and one refused
+                            -- for its cost tries again in 20 s, not 5 minutes
     pre_dock = false,       -- the dock built while the Stone Age is saved for (off: the fish verb refuses a Prehistoric
                             -- dock, not_in_epoch)
 }

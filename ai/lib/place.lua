@@ -14,6 +14,7 @@
 --   M.step(view, mem)            the jobs: the builders released once the drop site stands (or after JOB_MS)
 --   M.pending(mem)               the jobs under way (the settlements going up)
 local M = {}
+M.afford_retry = false     -- (set by boom with BO.OPT.settle_afford)
 
 local JOB_MS = 180000       -- a job's builders are released after this, built or not
 local WALK_MS = 60000       -- a walker stands at an unexplored site this long at most
@@ -349,8 +350,10 @@ function M.request(view, mem, key, type, rids, x, y, spotf)
     local code, reason, _, id = ai.build(b, type, bx, by)
     if code ~= "ok" or id == nil then
         ai.release(b)
-        -- (a granary refused for its cost is tried again soon: the engine checks its cost against more than the stock)
-        P.bad[key] = view.time + (reason == "cannot_afford" and type == "b_granary" and AFFORD_MS or BAD_MS)
+        -- (a granary, or with M.afford_retry any building, refused for its cost is tried again soon: the engine checks
+        -- its cost against more than the stock)
+        P.bad[key] = view.time + (reason == "cannot_afford" and (type == "b_granary" or M.afford_retry) and AFFORD_MS
+            or BAD_MS)
         print(string.format("place refused key=%s type=%s at=%d,%d gap=%d reason=%s", key, type, bx, by, g,
             tostring(reason)))
         return "none"

@@ -541,6 +541,7 @@ function M.step(view, memory)
         phase = BO.phase(view, memory)
         plan = BO.plan(plan, phase)
     end
+    PL.afford_retry = ECON.order and BO.OPT.settle_afford or false
     if plan.army_per ~= nil then
         plan = GD.scaled(plan, view.citizens, view.epoch)   -- (the light army by the workers, balanced's rule: lib.guard)
     end
@@ -1250,6 +1251,13 @@ function M.step(view, memory)
                     -- the touching tile and builds there; the wood above the reserve pays)
                     local settle_cost = V.cost(view, "b_settlement")
                     local payable = settle_cost ~= nil and view.stock.wood - reserve.wood >= settle_cost.cost.wood
+                    -- (BO.OPT.settle_afford, §8.51: the wood alone was checked; a mine's settlement short of stone was
+                    -- refused cannot_afford and its key waited 5 minutes, iron at 6 gatherers of 18 wanted for 10)
+                    if payable and ECON.order and BO.OPT.settle_afford then
+                        for r, n in pairs(settle_cost.cost) do
+                            payable = payable and (n or 0) <= view.stock[r] - (reserve[r] or 0)
+                        end
+                    end
                     if ECON.order and BO.OPT.place and c.site ~= nil then
                         local s = c.site
                         local rids = {}
