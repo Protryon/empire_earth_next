@@ -12496,3 +12496,59 @@ Measured as rounds 18-29 (every file under `src/Empire Earth/WONAPI` and `includ
   identical to ref; Rust gate PASS; captures at seeds 2-3 of oracle, late, space and calamity: every seed 2-3 digest
   equal to its golden (the `check` was run without `--seeds 2-3` and failed only on the seed 4-7 digests the run did
   not make: pass `--seeds` to `check` too); `saveload --settings all --seeds 2-3 --at 1000,1900 --expect` PASS.
+
+## R6: the game screens, twentieth round: the editor's thin action classes whole in Rust or inline over it; their host unit (ee_screens editor_actions.rs, editor_whole.rs; Scenario Editor Actions/EESEARust.cpp; branch rust-screens20, 2026-11-13)
+
+Round 16's leftovers of the scenario editor's actions (b): the classes whose algorithms round 15 had moved. Count:
+`git diff -M --numstat` over `include/ee` and `src` without the gate's own file.
+
+- **The gate first** (expected.txt 1781 -> 1820 lines, recorded on the unmodified actions in its own commit, twice
+  identical, the first 1781 lines unchanged): `mouseclick X Y [ROTATING]` (`EESEAMouseClick::Execute` with the mouse
+  at a screen point), `lasso select|add|addremove L T R B [TYPE]` (an `EESEALasso` with that `EEMSelectUnits`),
+  `lassorect L T R B` (`SelectInRectangle`), `selection`, and `units` (ids, types, players, tiles). The script makes
+  a new blank map with three units, then clicks, lassoes and deletes (a missing unit's id: nothing posted; a
+  player's first selected unit).
+  - EE-SIM draws nothing, so `EEUnitPicker` has no entries (`mCount` 0): the click finds no unit (the selection
+    cleared), every lasso picks nothing (its replace clears, its add and toggle leave the selection). The picking
+    itself stays a person's; the gate checks the paths around it.
+  - The full digest's hit points differ by run at the script's end: the round-19 lines set the players' start
+    epochs, and the placed units' hit points follow them on a clock of their own. Hence `units` (no hit points).
+- **The paints** (`EESEAPaintTerrain`, `EESEAPaintElevation`, `EESEAPaintMoutains`): one class,
+  `EESEAPaintRust : EESEAPaint` (`ee/EESEAPaint.h`), made with the paint kind and its two arguments; `Virtual4`,
+  `SetArea` and the destructor forward to the record round 15 made. Their users (the terrain tab's and the
+  elevation tab's `CreatePaintAction`, the elevation tab's right-button drag, the blank map's ambient paint) make
+  it. Two units and two headers deleted; `EESEAPaintTerrain.cpp`, which held the editor actions' hosts, is now
+  `Scenario Editor Actions/EESEARust.cpp` (`units.EXTRA_UNITS`, a port addition naming the original ranges).
+  The elevation action's `mLevel` member and the terrain action's `mTerrain`/`mTexture` were never read: gone.
+  +46 -333 (net -287).
+- **The deletion** (`EESEADeleteUnit`): `EESEARust` kind 14 (`a` the unit's id, or -1 for the player `b`'s
+  selection, `c` all of it). `begin` reads the unit's player through a new host op (`EE_SCREENS_SEW_OP_UNIT_PLAYER`)
+  and posts only when the unit exists, as the original's constructor; the run is `delete_units` through the
+  selection's host (`SewHost::delete`). `ee_screens_seu_delete` is gone (its one caller went with the class); the
+  selection's host (`ee_screenscpp_seu`, `_seu_pick`) moved into `EESEARust.cpp`. +137 -316 (net -179).
+- **The click and the lasso** cannot be `EESEARust` kinds: they are `EEAMouseClick` and `EEALasso` (the mouse and
+  the unit tab call `Execute` and `SelectInRectangle` through their vtables), and the trigger tab's object screen
+  subclasses both (`EESETSAMouseClick`, `EESETSALasso`). They stay the types, with their bodies inline over Rust:
+  `Execute` is `click_execute` (the unit under the mouse picked and released by the host; a selected unit with a
+  complex unit toggled off, empty ground clears; the message given to the action and the action posted, as the
+  original), `SelectInRectangle` is `lasso_in_rectangle`, `Virtual4` reads the message's rectangle through a host
+  op. The action is passed as its `EEAction*` and cast back by the host. Two units deleted. +73 -195 (net -122).
+- **Count:** net -588 this round (six original units and three headers gone, one port unit added; the gate's
+  own file +55 -8).
+- **Behaviour:** none intended. `SelectInRectangle` "deselects" picked units that were not selected (the original's
+  `DeselectUnit` on them does nothing): kept.
+- **Tests:** 4 new (2 in `editor_whole.rs`: the deletion of one unit posted only when it exists, with its player,
+  and of a selection; 2 in `editor_actions.rs`: the click's Execute paths, the lasso's rectangle). No golden driver:
+  the editor gate ran on the unmodified code first and is unchanged by each move.
+- **Only a person reaches:** the picking under the mouse (`PickUnit` for the click's Execute and the command
+  panel's delete, `PickUnitsInRectangle` for the lasso), so a click on a unit and a lasso that catches units; the
+  delete key and the cargo list's remove (they build the same kind 14 as the gate); the elevation tab's right-button
+  drag (the same `EESEAPaintRust` as the gate's elevation paint); the trigger tab's object screen's click and lasso
+  (`EESETSA*`: the same bodies, then its `UpdateSelection`). No tour opens the editor.
+- **Item 2 (the next game screen) not started:** the row's biggest remaining game-screen C++ is `EEUIFMainGame`
+  (1,915 lines). Its next movable part is the cursor's command decisions (`GetAttackStance`, `GetCommandOnUnit`,
+  `Fn265D7A`, `GetTransportCommand`, `UpdateCursorKind`: ~180 lines); every branch there is a world query
+  (`CanGather`, `CanAttackClass`, `EECanEnterUnit`, the selected group), so a move adds a host op per line, and no
+  gate reaches them (only a person's mouse): they need a golden driver over the original unit first.
+- **Not done:** `EESEAChangeLoadText` (posted only by the editor's load thread), the quick save/load pair
+  (`EEAQuickSaveLoad`, shared with the game), terrain colour/type (bitmap work EE-SIM cannot check).
