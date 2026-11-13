@@ -30,15 +30,15 @@ bool TabCtrlConfig::Virtual24(const std::string& key)
     } else if(aKeyIdx==2) {
         this->mTabCtrl->SetArrowsOnLeft(this->ReadBool());
     } else if(aKeyIdx==3) {
-        int height=this->ReadInt(); this->mTabCtrl->mTabBarHeight=height;
+        int height=this->ReadInt(); this->mTabCtrl->SetTabBarHeight(height);
     } else if(aKeyIdx==4) {
-        int overlap=this->ReadInt(); this->mTabCtrl->mBottomTabBar->mOverlap=overlap;
+        int overlap=this->ReadInt(); this->mTabCtrl->SetTabOverlap(overlap);
     } else if(aKeyIdx==5) {
-        int overlap=this->ReadInt(); this->mTabCtrl->mTabBarOverlap=overlap;
+        int overlap=this->ReadInt(); this->mTabCtrl->SetTabBarOverlap(overlap);
     } else if(aKeyIdx==6) {
-        int offset=this->ReadInt(); this->mTabCtrl->mBottomTabTopOffset=offset;
+        int offset=this->ReadInt(); this->mTabCtrl->SetBottomTabTopOffset(offset);
     } else if(aKeyIdx==7) {
-        int offset=this->ReadInt(); this->mTabCtrl->mBottomTabLeftOffset=offset;
+        int offset=this->ReadInt(); this->mTabCtrl->SetBottomTabLeftOffset(offset);
     } else return ContainerConfig::Virtual24(key);
     return true;
 }

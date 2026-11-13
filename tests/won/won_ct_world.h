@@ -3,7 +3,7 @@
 // ids, and the root, the window's focus, the mouse and the cursors; Component's own behaviour; the host every side
 // runs over. A test defines, before including it: SideCall (a container's call on the side running), CtObjectOf
 // (the object CtContainerOf answers), ExtraRead (its own pure reads), ExtraOp (its own traced ops) and ExtraLine
-// (an op line it prints itself).
+// (an op line it prints itself); and WON_CT_N / WON_CT_CT for a bigger world (won_tabobj_test).
 #ifndef WON_CT_WORLD_H
 #define WON_CT_WORLD_H
 #include "rust/ee_won.h"
@@ -17,7 +17,11 @@ static unsigned DR(unsigned n) { sDriverSeed = sDriverSeed * 69069u + 1u; return
 static unsigned sAnswerSeed;
 static unsigned AR(unsigned n) { sAnswerSeed = sAnswerSeed * 1103515245u + 12345u; return n ? (sAnswerSeed >> 16) % n : 0; }
 
+#ifdef WON_CT_N
+enum { kN = WON_CT_N, kCt = WON_CT_CT };
+#else
 enum { kN = 12, kCt = 4 };
+#endif
 static const intptr_t kGraphics = 0x7000, kIds = 0x6000, kEvent = 0x6100;
 
 struct World {
@@ -56,6 +60,7 @@ static void Set(int id, int field, long long v)
     case 5: w.w = (int)v; break;
     case 6: w.h = (int)v; break;
     case 7: w.controlId = (int)v; break;
+    case 8: w.parent = (intptr_t)v; break;
     }
     Line("set %lld %lld %lld", id, field, v);
 }
