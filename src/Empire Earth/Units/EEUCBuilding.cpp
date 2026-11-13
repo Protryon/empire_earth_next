@@ -48,7 +48,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EECPIntelligence.h"
@@ -147,7 +147,7 @@ bool EEUCBuilding::EruptVolcano(EEComplexUnit* inUnit)
         ESVerify(__FILE__, 261, "EECalamityManager::Instance()->FindCalamityClass(keectVolcano, theVolcanoClass)"); // the original assert text (provisional names here)
     inUnit->GetPosition(thePosition);
     theVolcanoClass->GetRandomLocation(thePosition, theTarget);
-    inUnit->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
+    inUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, false), 0, 0);
     return true;
 }
 

@@ -19,7 +19,6 @@
 #include "lle/U2DSparseArray.h"
 
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGCastCalamity.h"
@@ -69,7 +68,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
     EEUnitGoal* theGoal = NULL;
     switch (inKind) {
     case kGoalAttackGround:
-        theGoal = new EEUGAttackGround(false);
+        theGoal = EEUGRust::NewAttackGround(GE3DPoint(), false);
         break;
     case kGoalAttackUnit:
         theGoal = new EEUGAttackUnit(false);

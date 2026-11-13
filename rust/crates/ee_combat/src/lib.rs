@@ -19,6 +19,7 @@ pub mod decide;
 pub mod ffi;
 pub mod flight;
 pub mod geometry;
+pub mod goal_objects;
 pub mod goals;
 pub mod impact;
 pub mod launch;

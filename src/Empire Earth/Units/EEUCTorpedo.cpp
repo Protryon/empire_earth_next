@@ -20,7 +20,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
@@ -45,7 +45,7 @@ bool EEUCTorpedo::CheckGroundImpact(EEComplexUnit* inUnit)
     in.position[2] = thePosition.GetZ();
     EeCombatImpactOut theOut = EECombatImpact(this, inUnit, in);
     if (theOut.goal == EE_COMBAT_IMPACT_GOAL_GROUND)
-        inUnit->SetGoal(new EEUGAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
     return theOut.result != 0;
 }
 

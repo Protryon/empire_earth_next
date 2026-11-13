@@ -208,11 +208,17 @@ void EEUGRust::SetPatrolGroup(EEPPatrolGroup* inGroup)
 
 EEUGRust::~EEUGRust()
 {
+    if (EEUGRustIsCombat(this->mKind)) {
+        this->CombatDestroy();
+        return;
+    }
     Patrol(EE_UNITS_PATROL_DESTROY, this, 0, 0);
 }
 
 EEUnitGoal* EEUGRust::Clone()
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatClone();
     EEPPatrolGroup* theGroup = this->GetPatrolGroup();
     EEComplexUnit* theStart = UnitOf((uint64_t)Patrol(EE_UNITS_PATROL_CLONE_TARGET, this, 0, 0));
     return EEUGRust::NewPatrol(theGroup, theGroup != NULL ? theStart : NULL, this->GetB1C());
@@ -220,6 +226,8 @@ EEUnitGoal* EEUGRust::Clone()
 
 void EEUGRust::DumpOutOfSynch(FILE* inFile)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatDumpOutOfSynch(inFile);
     EEComplexUnit* theTarget = this->GetPatrolTarget();
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is %ld\n", this->GetPatrolGroup()->mID);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #%08lx\n",
@@ -231,12 +239,16 @@ void EEUGRust::DumpOutOfSynch(FILE* inFile)
 
 long EEUGRust::GetOutOfSynchChecksum()
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatChecksum();
     long theChecksum = (long)Patrol(EE_UNITS_PATROL_CHECKSUM, this, 0, 0);
     return EEUnitGoal::GetOutOfSynchChecksum() + theChecksum;
 }
 
 void EEUGRust::GetDebugLine(UWideString& ioText)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatDebugLine(ioText);
     UWideString theText;
     EEPPatrolGroup* theGroup = this->GetPatrolGroup();
     if (theGroup != NULL)
@@ -248,6 +260,8 @@ void EEUGRust::GetDebugLine(UWideString& ioText)
 
 void EEUGRust::GetDebugText(UWideString& ioText)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatDebugText(ioText);
     UWideString theText;
     EEPPatrolGroup* theGroup = this->GetPatrolGroup();
     sprintf(theText, "Patrol\nPatrol Points: %ld", theGroup != NULL ? theGroup->GetNumPoints() : 0);
@@ -269,50 +283,110 @@ void EEUGRust::GetDebugText(UWideString& ioText)
 
 void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatGoalLocation(outLocation);
     this->GetPatrolTarget()->GetPosition(outLocation);
 }
 
 long EEUGRust::GetStartAction()
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatStartAction();
     return kActionGetNextPatrolPoint;
 }
 
 void EEUGRust::Step(EEComplexUnit* inUnit)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatStep(inUnit);
     Patrol(EE_UNITS_PATROL_STEP, this, Handle(inUnit), 0);
 }
 
 long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatLoad(inMajorVersion, inMinorVersion, inFile);
     long theResult = EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult != 0)
         return theResult;
     return (long)Patrol(EE_UNITS_PATROL_LOAD, this, 0, 0, &inFile);
 }
 
-long EEUGRust::RepairPointers(unsigned long, unsigned long)
+long EEUGRust::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatRepairPointers(inFirst, inSecond);
     return (long)Patrol(EE_UNITS_PATROL_REPAIR, this, 0, 0);
 }
 
 void EEUGRust::Start(EEComplexUnit* inUnit)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatStart(inUnit);
     Patrol(EE_UNITS_PATROL_START, this, Handle(inUnit), 0);
 }
 
 long EEUGRust::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatSave(inMajorVersion, inMinorVersion, outFile);
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
     return (long)Patrol(EE_UNITS_PATROL_SAVE, this, 0, 0, &outFile);
 }
 
-void EEUGRust::ReplaceUnit(EEComplexUnit*, EEComplexUnit*, EEComplexUnit*)
+void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        this->CombatReplaceUnit(inOld, inNew);
 }
 
-bool EEUGRust::Suits(EEUnit*)
+bool EEUGRust::Suits(EEUnit* inUnit)
 {
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatSuits(inUnit);
     return true;
+}
+
+void EEUGRust::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatDestination(inUnit, outLocation);
+    EEUnitGoal::GetDestination(inUnit, outLocation);
+}
+
+long EEUGRust::GetMaxPathAttempts()
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatMaxPathAttempts();
+    return EEUnitGoal::GetMaxPathAttempts();
+}
+
+void EEUGRust::SetOwner(EEComplexUnit* inUnit)
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatSetOwner(inUnit);
+    EEUnitGoal::SetOwner(inUnit);
+}
+
+void EEUGRust::SetPathAttempts(long inValue)
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatSetPathAttempts(inValue);
+    EEUnitGoal::SetPathAttempts(inValue);
+}
+
+bool EEUGRust::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatEvaluateCondition(inUnit, inEvent);
+    return EEUnitGoal::EvaluateCondition(inUnit, inEvent);
+}
+
+void EEUGRust::Work(EEComplexUnit* inUnit)
+{
+    if (EEUGRustIsCombat(this->mKind))
+        return this->CombatWork(inUnit);
+    EEUnitGoal::Work(inUnit);
 }

@@ -131,6 +131,31 @@ constexpr static const int32_t EE_COMBAT_WEAPON_KIND_BOX = 3;
 /// model's default point (in `top`) under the unscaled location.
 constexpr static const int32_t EE_COMBAT_WEAPON_KIND_DEFAULT = 4;
 
+/// `inUnit->CanReachTile(args[0], args[1])`.
+constexpr static const int32_t EE_COMBAT_G_CAN_REACH_TILE = 1;
+
+/// the unit's location's x, y, z as float bits into `args[0..3]`.
+constexpr static const int32_t EE_COMBAT_G_UNIT_LOCATION = 2;
+
+/// `if (inUnit->mActiveGroup != NULL) inUnit->mActiveGroup->TellGroup(inUnit, point)`, the point's bits in
+/// `args[0..3]`; answers whether the unit had a group.
+constexpr static const int32_t EE_COMBAT_G_TELL_GROUP = 3;
+
+/// `inUnit->StartAction(args[0]); inUnit->mUnitClass->ActionChanged(inUnit)`.
+constexpr static const int32_t EE_COMBAT_G_START_ACTION = 4;
+
+/// the file's `Write(float)` of the bits in `args[0]`; answers the result.
+constexpr static const int32_t EE_COMBAT_G_WRITE_F32 = 10;
+
+/// the file's `Read(float)` into `args[0]` (bits; its value before the read in `args[0]` too); answers the result.
+constexpr static const int32_t EE_COMBAT_G_READ_F32 = 11;
+
+/// `kActionInitialAttackState` (ee/EEUnitAction.h).
+constexpr static const int64_t ACTION_INITIAL_ATTACK_STATE = 2016;
+
+/// `kActionCheckRange`: the attack goals' first action.
+constexpr static const int32_t ACTION_CHECK_RANGE = 2013;
+
 /// `EEUGAttackUnit`.
 constexpr static const int32_t EE_COMBAT_GOAL_ATTACK_UNIT = 0;
 
@@ -1378,6 +1403,15 @@ struct EeCombatWeaponIn {
   int32_t chain;
 };
 
+/// The arguments and answers of one host operation.
+using EeCombatGoalArgs = int64_t[8];
+
+/// The C++ host: `op` over `ctx` (the call's file for the save and load).
+struct EeCombatGoalHost {
+  void *ctx;
+  int64_t (*op)(void *ctx, int32_t code, uint64_t unit, EeCombatGoalArgs *args);
+};
+
 /// A trigger test's outcome.
 struct EeCombatConditionOut {
   /// the test's value (`bool` 0/1; the shots' `long`)
@@ -2200,6 +2234,42 @@ float ee_combat_weapon_height(const EeCombatWeaponIn *input,
 void ee_combat_weapon_point(const EeCombatWeaponIn *input,
                             const float (*chain)[16],
                             float *out);
+
+/// A new attack-ground goal's record (its target point).
+void ee_combat_ground_create(uint64_t goal, float x, float y, float z);
+
+/// The goal object goes: its record with it (any kind).
+void ee_combat_goal_drop(uint64_t goal);
+
+/// The attack-ground goal's target into `out` (0, 0, 0 for a goal without a record).
+///
+/// # Safety
+/// `out` must point to three writable floats.
+void ee_combat_ground_target(uint64_t goal, float (*out)[3]);
+
+/// `GetDestination` of the attack-ground goal into `out`.
+///
+/// # Safety
+/// `host` must be a valid host; `out` three writable floats.
+void ee_combat_ground_destination(uint64_t goal,
+                                  uint64_t unit,
+                                  const EeCombatGoalHost *host,
+                                  float (*out)[3]);
+
+/// The attack-ground goal's own checksum part.
+int32_t ee_combat_ground_checksum(uint64_t goal);
+
+/// The attack-ground goal's own `Save` part over `host`'s file.
+///
+/// # Safety
+/// `host` must be a valid host.
+int32_t ee_combat_ground_save(uint64_t goal, const EeCombatGoalHost *host);
+
+/// The attack-ground goal's own `Load` part over `host`'s file.
+///
+/// # Safety
+/// `host` must be a valid host.
+int32_t ee_combat_ground_load(uint64_t goal, const EeCombatGoalHost *host);
 
 /// The trigger test of `input.kind`; the lazy reads go to `host` and are logged into `*input`.
 ///

@@ -98,7 +98,7 @@ void OriginalAttackGround(EEPlayer* thePlayer, void* theGroup, float inX, float 
                     ee_units_host_group_clear_goal(theActiveGroup);
                     EeGoalSpec theSpec;
                     memset(&theSpec, 0, sizeof(theSpec));
-                    theSpec.ctor = EE_GOAL_CTOR_ATTACK_GROUND;   // new EEUGAttackGround(theTarget, true)
+                    theSpec.ctor = EE_GOAL_CTOR_ATTACK_GROUND;   // EEUGRust::NewAttackGround(theTarget, true)
                     theSpec.unit_a = kNone;
                     theSpec.unit_b = kNone;
                     theSpec.point[0] = theTarget.GetX();

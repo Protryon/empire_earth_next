@@ -25,7 +25,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"

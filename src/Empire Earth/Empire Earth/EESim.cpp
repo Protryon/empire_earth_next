@@ -191,7 +191,7 @@
 #include "ee/EEPhysicsModel.h"      // the missile sweep's flight steps
 #include "ee/EEUCMissile.h"         // the missile sweep's impact tests
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "ee/EECalamity.h"
@@ -414,7 +414,7 @@ static void EECombatMissileSweep()
                 if (((i + k) & 1) == 0)
                     theGoal = new EEUGAttackUnit(m, theTarget, false, false);
                 else
-                    theGoal = new EEUGAttackGround(theAt, false);
+                    theGoal = EEUGRust::NewAttackGround(theAt, false);
                 m->SetGoal(theGoal, false, false);
                 m->SetVelocity(a->GetVelocity());
                 theClass->LaunchProjectile(m, theAt);

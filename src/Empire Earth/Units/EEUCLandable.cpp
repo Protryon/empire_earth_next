@@ -49,7 +49,6 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGExplore.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackGround.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandable.h"
@@ -231,7 +230,7 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(theGoal);
     EEUGExplore* theExplore = EEGoalCast<EEUGExplore>(theGoal);
     EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
-    EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(theGoal);
+    EEUGRust* theGround = EEAttackGroundCast(theGoal);
     EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
     if (theLocation != NULL) {
         theTarget.SetX(theLocation->mLocation.GetX());
@@ -252,8 +251,8 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
                 inUnit->StartAction(kActionTakeoff);
         }
     } else if (theGround != NULL) {
-        theTarget.SetX(theGround->mTarget.GetX());
-        theTarget.SetY(theGround->mTarget.GetY());
+        theTarget.SetX(theGround->GetGroundTarget().GetX());
+        theTarget.SetY(theGround->GetGroundTarget().GetY());
     } else if (theUnload != NULL)
         theUnload->GetGoalLocation(theTarget);
     else {
@@ -457,7 +456,7 @@ int64_t EELandableActionOperation(int inOperation, EEUnitClass* inClass, EECompl
         return (int64_t)theAirTraffic->QueueRequest(inUnit->mHomeBase, inUnit, 1);
     case EE_UNITS_ACT_BOMBER_GROUND_GOAL:
         EEFindDropLocation(inUnit, &theEnemy, &theTarget, NULL);
-        inUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
         break;
     case EE_UNITS_ACT_INITIAL_ATTACK_HEIGHT:
         if (inUnit->mHeight < theClass->GetCruiseAltitude() && theClass->GetCruiseAltitude() != inUnit->mHeight)
@@ -738,7 +737,7 @@ unsigned long EEUCLandable::GetNextFlightState(EEComplexUnit* inUnit)
         switch (theGoal->mKind) {
         case kGoalLocation:
         case kGoalAttackGround:
-            theTarget = static_cast<EEUGAttackGround*>(theGoal)->mTarget;
+            theTarget = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
             break;
         case kGoalAttackUnit: {
             EEUnit* theUnit = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;

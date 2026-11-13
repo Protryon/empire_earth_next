@@ -25,7 +25,6 @@ extern const uint32_t EE_UNIT_OBJECT_KINDS[256];  // the unit object classes of 
 class EEUnitGoal;
 class EEUGLocation;
 class EEUGAttackUnit;
-class EEUGAttackGround;
 class EEUGBuildRepair;
 class EEUGGather;
 class EEUGLoadContainer;
@@ -40,7 +39,6 @@ class EEUGHealUnit;
 template <class T> struct EEGoalKindBit;
 template <> struct EEGoalKindBit<EEUGLocation> { static const uint32_t kBit = EE_GOAL_KIND_LOCATION; };
 template <> struct EEGoalKindBit<EEUGAttackUnit> { static const uint32_t kBit = EE_GOAL_KIND_ATTACK_UNIT; };
-template <> struct EEGoalKindBit<EEUGAttackGround> { static const uint32_t kBit = EE_GOAL_KIND_ATTACK_GROUND; };
 template <> struct EEGoalKindBit<EEUGBuildRepair> { static const uint32_t kBit = EE_GOAL_KIND_BUILD_REPAIR; };
 template <> struct EEGoalKindBit<EEUGGather> { static const uint32_t kBit = EE_GOAL_KIND_GATHER; };
 template <> struct EEGoalKindBit<EEUGLoadContainer> { static const uint32_t kBit = EE_GOAL_KIND_LOAD_CONTAINER; };

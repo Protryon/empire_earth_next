@@ -89,7 +89,7 @@ EEClient::EEClient()
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGGather.h"
@@ -805,7 +805,7 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         if (inCommand == 0xb9) {
             if (EEGoalCast<EEUGAttackUnit>(theGoal) != NULL)
                 break;
-            if (EEGoalCast<EEUGAttackGround>(theGoal) != NULL) {
+            if (EEAttackGroundCast(theGoal) != NULL) {
                 theGoal->GetGoalLocation(theGround);
                 gWorld.GetEffectManager()->CreateEffect(NULL, theGround, theAttackEffect, &theHandle, theIndex);
                 EEEffect* theEffect = gWorld.GetEffectManager()->GetEffect(theHandle);

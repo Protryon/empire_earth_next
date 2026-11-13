@@ -25,7 +25,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPhysicsModel.h"
@@ -78,7 +78,7 @@ bool EEUCProjectile::CheckGroundImpact(EEComplexUnit* inUnit)
     // the ground point: the position at the ground's height (the unit's tile's off the map)
     GE3DPoint theGround(thePosition.GetX(), thePosition.GetY(), in.ground_read ? in.ground_z : in.tile_height);
     if (theOut.goal == EE_COMBAT_IMPACT_GOAL_GROUND)
-        inUnit->SetGoal(new EEUGAttackGround(theGround, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewAttackGround(theGround, false), 0, 0);
     if (theOut.decal)
         EEPlaceImpactDecal(inUnit, theGround);
     return true;
@@ -100,7 +100,7 @@ bool EEUCProjectile::CheckWaterImpact(EEComplexUnit* inUnit)
     in.position[2] = thePosition.GetZ();
     EeCombatImpactOut theOut = EECombatImpact(this, inUnit, in);
     if (theOut.goal == EE_COMBAT_IMPACT_GOAL_WATER)
-        inUnit->SetGoal(new EEUGAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewAttackGround(GE3DPoint(theOut.goal_point[0], theOut.goal_point[1], theOut.goal_point[2]), false), 0, 0);
     return theOut.result != 0;
 }
 
@@ -390,7 +390,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         EEMapTile* theTile = ::gWorld.mMap->GetTile(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY);
         if (theTile != NULL)
             thePosition.SetZ(theTile->GetHeight());
-        theUnit->SetGoal(new EEUGAttackGround(thePosition, false), 0, 0);
+        theUnit->SetGoal(EEUGRust::NewAttackGround(thePosition, false), 0, 0);
         break;
     }
     case EE_COMBAT_SHOT_RETARGET_CONTAINER: {
@@ -405,7 +405,7 @@ int32_t EEShotOp(void* inContext, int32_t inOp, int32_t inArg, int32_t inArg1)
         EEUnitGoal* theGoal = theUnit->mGoalState;
         GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
         theGoal->GetGoalLocation(theTarget);
-        theUnit->SetGoal(new EEUGAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
+        theUnit->SetGoal(EEUGRust::NewAttackGround(theTarget, theGoal->GetB1C()), 0, 0);
         break;
     }
     case EE_COMBAT_SHOT_POPULATION:

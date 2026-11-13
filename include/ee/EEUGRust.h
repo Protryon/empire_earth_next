@@ -25,6 +25,12 @@ public:
     EEComplexUnit* GetPatrolTarget();
     void SetPatrolGroup(EEPPatrolGroup* inGroup);
 
+    // the combat lane's goals (EEUGRustCombat.cpp; ee_combat goal_objects.rs): an attack on the ground at inTarget
+    // (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's EEUGAttackGround(inArg) at 0, 0, 0) and its
+    // target point
+    static EEUGRust* NewAttackGround(const GE3DPoint& inTarget, bool inArg);
+    GE3DPoint GetGroundTarget();
+
     virtual ~EEUGRust();
     virtual EEUnitGoal* Clone();
     virtual void DumpOutOfSynch(FILE* inFile);
@@ -40,15 +46,53 @@ public:
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);
     virtual bool Suits(EEUnit* inUnit);
+    // the base goal's for a patrol; the combat goals' (EEUGRustCombat.cpp)
+    virtual void GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);
+    virtual long GetMaxPathAttempts();
+    virtual void SetOwner(EEComplexUnit* inUnit);
+    virtual void SetPathAttempts(long inValue);
+    virtual bool EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
+    virtual void Work(EEComplexUnit* inUnit);
 
 private:
     EEUGRust(unsigned char inKind, bool inArg);
+    // the combat goals' bodies (EEUGRustCombat.cpp), one per virtual above, for a kind EEUGRustIsCombat answers
+    void CombatDestroy();
+    EEUnitGoal* CombatClone();
+    void CombatDumpOutOfSynch(FILE* inFile);
+    long CombatChecksum();
+    void CombatDebugLine(UWideString& ioText);
+    void CombatDebugText(UWideString& ioText);
+    void CombatGoalLocation(GE3DPoint& outLocation);
+    long CombatStartAction();
+    void CombatStep(EEComplexUnit* inUnit);
+    long CombatLoad(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);
+    long CombatRepairPointers(unsigned long inFirst, unsigned long inSecond);
+    void CombatStart(EEComplexUnit* inUnit);
+    long CombatSave(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);
+    void CombatReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew);
+    bool CombatSuits(EEUnit* inUnit);
+    void CombatDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation);
+    long CombatMaxPathAttempts();
+    void CombatSetOwner(EEComplexUnit* inUnit);
+    void CombatSetPathAttempts(long inValue);
+    bool CombatEvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent);
+    void CombatWork(EEComplexUnit* inUnit);
 };
+
+// whether goals of inKind are the combat lane's (EEUGRustCombat.cpp)
+bool EEUGRustIsCombat(unsigned char inKind);
 
 // the patrol goal of inGoal (the old EEGoalCast<EEUGPatrol>), NULL when it is another goal or none
 inline EEUGRust* EEPatrolGoalCast(EEUnitGoal* inGoal)
 {
     return inGoal != NULL && inGoal->mKind == kGoalPatrol ? static_cast<EEUGRust*>(inGoal) : NULL;
+}
+
+// the attack-ground goal of inGoal (the old EEGoalCast<EEUGAttackGround>), NULL when it is another goal or none
+inline EEUGRust* EEAttackGroundCast(EEUnitGoal* inGoal)
+{
+    return inGoal != NULL && inGoal->mKind == kGoalAttackGround ? static_cast<EEUGRust*>(inGoal) : NULL;
 }
 
 #endif

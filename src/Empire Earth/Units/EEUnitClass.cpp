@@ -60,7 +60,7 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEAIContinentManager.h"
 #include "lle/U2DRectangle.h"
@@ -1798,7 +1798,7 @@ void EEUnitClass::LaunchShot(EEComplexUnit* inUnit, EEUnit* inTarget, GE3DPoint&
     theCreated->GetComplexUnit()->SetOwner(inUnit);
     EEUnitGoal* theGoal;
     if (inTarget != NULL) theGoal = new EEUGAttackUnit(theCreated->GetComplexUnit(), inTarget, false, false);
-    else theGoal = new EEUGAttackGround(inLocation, false);
+    else theGoal = EEUGRust::NewAttackGround(inLocation, false);
     theCreated->GetComplexUnit()->SetGoal(theGoal, false, false);
     theCreated->GetComplexUnit()->SetVelocity(inUnit->GetVelocity());
     theCreated->GetComplexUnit()->SetHeight(inUnit->mPhysicalModel.GetLocation().GetZ());
@@ -3419,7 +3419,7 @@ void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
         theTransformation.SetZ(0.3f);
     EEUnit* theCreated = theClass->CreateUnit(theX, theY, inUnit->mPlayer->GetPlayerID(), false, NULL);
     EEComplexUnit* theComplex = theCreated->GetComplexUnit();
-    EEUnitGoal* theGoal = new EEUGAttackGround(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
+    EEUnitGoal* theGoal = EEUGRust::NewAttackGround(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
                                                          theTransformation.GetZ()), false);
     theComplex->SetVelocity(0.0f);
     theComplex->SetLauncherClass(theCreated->GetUnitClass());
@@ -3471,7 +3471,7 @@ void EEUnitClass::LaunchFromTurret(EEComplexUnit* inUnit, EEUnit* inTarget, GE3D
         if (inTarget != NULL)
             theGoal = new EEUGAttackUnit(theShot->GetComplexUnit(), inTarget, false, false);
         else
-            theGoal = new EEUGAttackGround(inLocation, false);
+            theGoal = EEUGRust::NewAttackGround(inLocation, false);
         theShot->GetComplexUnit()->SetGoal(theGoal, 0, 0);
         theShot->GetComplexUnit()->SetVelocity(inUnit->mVelocity);
         theShot->GetComplexUnit()->SetHeight(inUnit->mPhysicalModel.GetLocation().GetZ());

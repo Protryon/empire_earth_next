@@ -85,7 +85,7 @@
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFleeFromLocationScreenBase.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAIPathSector.h"
@@ -4133,10 +4133,10 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
                 return this->mLastAttacker;
         }
     } else {
-        EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(this->mLastAttacker->GetGoal());
+        EEUGRust* theGround = EEAttackGroundCast(this->mLastAttacker->GetGoal());
         if (theGround != NULL) {
-            float theDX = this->mPhysicalModel.GetLocation().GetX() - theGround->mTarget.GetX();
-            float theDY = this->mPhysicalModel.GetLocation().GetY() - theGround->mTarget.GetY();
+            float theDX = this->mPhysicalModel.GetLocation().GetX() - theGround->GetGroundTarget().GetX();
+            float theDY = this->mPhysicalModel.GetLocation().GetY() - theGround->GetGroundTarget().GetY();
             float theRadius = this->mLastAttacker->mStats->mAreaEffect;
             if (theDX * theDX + theDY * theDY <= theRadius * theRadius)
                 return this->mLastAttacker;

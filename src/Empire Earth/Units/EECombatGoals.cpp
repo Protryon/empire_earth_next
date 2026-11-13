@@ -25,7 +25,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUCProjectile.h"
 #include "ee/EEUCMissile.h"
@@ -218,7 +218,7 @@ void EECombatCaptureShot(uint32_t inFunc, const EEComplexUnit* inUnit, uint32_t 
         EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
         theRecord[8] = theTarget != NULL ? (uint32_t)theTarget->mUnitID : 0;
     } else if (theGoal != NULL && theGoal->mKind == kGoalAttackGround) {
-        const GE3DPoint& thePoint = static_cast<EEUGAttackGround*>(theGoal)->mTarget;
+        const GE3DPoint& thePoint = static_cast<EEUGRust*>(theGoal)->GetGroundTarget();
         theRecord[9] = EEShotBits(thePoint.GetX());
         theRecord[10] = EEShotBits(thePoint.GetY());
         theRecord[11] = EEShotBits(thePoint.GetZ());
@@ -434,11 +434,11 @@ uint32_t EEConditionRead(void* inContext, int32_t inCode)
             return (uint32_t)theContext->mClass->EEUnitClass::EvaluateCondition(theUnit, theContext->mEvent);
         }
     case EE_COMBAT_READ_CAN_REACH_TILE: {
-        const GE3DPoint& theTarget = static_cast<EEUGAttackGround*>(theContext->mGoal)->mTarget;
+        const GE3DPoint& theTarget = static_cast<EEUGRust*>(theContext->mGoal)->GetGroundTarget();
         return theUnit->CanReachTile(UMFloor(theTarget.GetX()), UMFloor(theTarget.GetY()));
     }
     case EE_COMBAT_READ_FACES_POINT:
-        return theUnit->GetUnitClass()->FacesPoint(theUnit, static_cast<EEUGAttackGround*>(theContext->mGoal)->mTarget, true);
+        return theUnit->GetUnitClass()->FacesPoint(theUnit, static_cast<EEUGRust*>(theContext->mGoal)->GetGroundTarget(), true);
     case EE_COMBAT_READ_HEAL_IN_RANGE:
         return EECombatHealInRange(theUnit, static_cast<EEUGHealUnit*>(theContext->mGoal)->mTarget);
     case EE_COMBAT_READ_REPAIRABLE:

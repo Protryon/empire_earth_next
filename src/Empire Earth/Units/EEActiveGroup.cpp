@@ -55,7 +55,6 @@
 #include "ee/EEClient.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECalamityClass.h"
-#include "ee/EEUGAttackGround.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
@@ -950,7 +949,7 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionAttackLocation: {
-        EEUGAttackGround* theGoal = EEGoalCast<EEUGAttackGround>(this->mGoal);
+        EEUGRust* theGoal = EEAttackGroundCast(this->mGoal);
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             bool theTransport = theUnit->mUnitClass->mCategory == kUnitCategoryAirplane || theUnit->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship;
