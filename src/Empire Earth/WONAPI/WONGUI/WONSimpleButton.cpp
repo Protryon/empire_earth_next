@@ -44,7 +44,7 @@ void WONSimpleButton::Paint(Graphics &g)
 	p.pressed = this->IsPressed();
 	p.mouse_over = this->IsMouseOver();
 	p.scale_image = this->mScaleImage;
-	p.mouse_down_state = this->mMouseDownState;
+	p.mouse_down_state = this->GetMouseDownState();
 	p.width = this->Width();
 	p.height = this->Height();
 	WONDrawSlots aSlots;

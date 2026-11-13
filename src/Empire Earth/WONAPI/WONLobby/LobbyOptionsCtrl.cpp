@@ -162,7 +162,7 @@ bool LobbyOptionsCtrl::HandleButton(Component* inComponent)
     if(inComponent==NULL) return false;
     Button* button=dynamic_cast<Button*>(inComponent);
     if(button==NULL) return false;
-    bool checked=button->mChecked!=0;
+    bool checked=button->IsChecked();
     switch(inComponent->mControlId) {
     case 3:LobbySetCrossPromotion(checked);break;
     case 4:LobbySetDoAutoAFK(checked);return true;

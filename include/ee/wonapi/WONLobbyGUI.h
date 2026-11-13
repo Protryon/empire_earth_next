@@ -551,6 +551,8 @@ public:
     bool IsActivateOnPress() { return (mButtonFlags & 0x40) != 0; }
     bool IsNoActivate() { return (mButtonFlags & 0x200) != 0; }
     bool IsDefaultOnFocus() { return (mButtonFlags & 0x400) != 0; }
+    unsigned long GetButtonFlags() { return mButtonFlags; }
+    int GetMouseDownState() { return mMouseDownState; } // 0 up, 1 down outside, 2 down over
     bool mKeyDown; //34
     int mDelayAcc; //38
     SmartPtr<Sound> mClickSound; // at +0x3c

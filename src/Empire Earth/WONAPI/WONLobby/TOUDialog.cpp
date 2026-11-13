@@ -62,7 +62,7 @@ void TOUDialog::HandleComponentEvent(ComponentEvent* inEvent)
         return;
     }
     if(inEvent->mType==ComponentEvent_ButtonPressed && inEvent->mComponent==this->mAgreeCheck.get()) {
-        this->mAcceptButton->SetEnabled(this->mAgreeCheck->mChecked!=0);
+        this->mAcceptButton->SetEnabled(this->mAgreeCheck->IsChecked());
         return;
     }
     Dialog::HandleComponentEvent(inEvent);

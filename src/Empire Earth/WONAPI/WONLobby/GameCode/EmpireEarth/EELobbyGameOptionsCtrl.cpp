@@ -285,7 +285,7 @@ void EELobbyGameOptionsCtrl::OptionChanged(int inOption)
             case 1: {
                 Button* theCheck = this->GetCheckBox(inOption);
                 if (theCheck != NULL)
-                    theGame->ChangeOption(inOption, theCheck->mChecked, true);
+                    theGame->ChangeOption(inOption, theCheck->IsChecked(), true);
                 break;
             }
             case 0: {

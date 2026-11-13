@@ -45,8 +45,8 @@ void CreateRoomDialog::Reset(bool inClear)
 // Shows the password field only while the password box is checked
 void CreateRoomDialog::UpdatePasswordVisibility()
 {
-    this->mPasswordInput->SetVisible(this->mPasswordCheck->mChecked);
-    this->mPasswordLabel->SetVisible(this->mPasswordCheck->mChecked);
+    this->mPasswordInput->SetVisible(this->mPasswordCheck->IsChecked());
+    this->mPasswordLabel->SetVisible(this->mPasswordCheck->IsChecked());
     this->CheckInput();
 }
 // FUNCTION: WON 0x7f6d20

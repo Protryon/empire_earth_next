@@ -15,7 +15,7 @@ using namespace WONAPI;
 // pressed frame, and the text shifted one pixel while pressed
 void MSButton::Paint(Graphics& g) {
     Component::Paint(g);
-    bool down=(mButtonFlags&0x20)!=0;
+    bool down=this->IsPressed();
     int offset=down?1:0;
     g.SetSysColor(StandardColor_3DFace);
     if(!this->mIsTransparent) g.FillRect(0,0,this->Width(),this->Height());

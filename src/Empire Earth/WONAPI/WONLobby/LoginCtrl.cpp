@@ -136,7 +136,7 @@ void LoginCtrl::HandleComponentEvent(ComponentEvent* inEvent)
     case ComponentEvent_ButtonPressed:
         if (inEvent->mComponent==this->mLoginButton.get()) {
             this->DeliverEvent(new LoginEvent(this->mPasswordInput->GetText(),
-                                  this->mRememberPasswordCheck->mChecked!=0,
+                                  this->mRememberPasswordCheck->IsChecked(),
                                   this->mUserNameCombo->mEdit.mPtr->GetText()),false);
             return;
         } else if (inEvent->mComponent==this->mRememberPasswordCheck.get()) {

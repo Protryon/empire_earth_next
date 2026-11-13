@@ -31,7 +31,7 @@ void WONHeaderButton::Paint(Graphics &g)
 	// the arrow after the text, one pixel down and right while pressed (guidraw.rs header_arrow)
 	WONDrawOps anOps([&](EeWonDrawOp* o, size_t n) {
 		return ee_won_gui_draw_header_arrow((int)aSortType,aColor,aText!=NULL,aText ? aText->GetWidth() : 0,
-			this->mLeftTextPad,this->Width(),this->Height(),(mButtonFlags&0x20)!=0,o,n); });
+			this->mLeftTextPad,this->Width(),this->Height(),this->IsPressed(),o,n); });
 	WONDrawRun(g,anOps,WONDrawSlots());
 }
 

@@ -28,7 +28,7 @@ ImageTextButton::ImageTextButton(const GUIString& text) {
 // Draws the button image, then its caption in black, shifted one pixel while the button is held down
 void ImageTextButton::Paint(Graphics& g) {
     ImageButton::Paint(g);
-    int down=(mButtonFlags>>5)&1;
+    int down=this->IsPressed()?1:0;
     g.SetFont(this->mFont.get());
     g.SetColor(0);
     g.DrawString(this->mText,30+down,(this->Height()-this->mFont->GetHeight()-4)/2+down);
