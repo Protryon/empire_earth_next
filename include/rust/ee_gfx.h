@@ -1071,6 +1071,89 @@ struct EeGfxBeamVertex {
   EeGfxTexCoord coord;
 };
 
+/// The light fade's and the letterbox's state (the C++'s statics `sLightFade` 0x4be368, `sLightFadeStart`,
+/// `sL529070`, `sF529074`, `sF529078`, `sLetterboxDirection` 0x4be370, `sLetterboxStart`, `sF52907C`, `sF529080`,
+/// `sB529088`); the zoom itself is the C++'s `gF4BE374`, which the scenario manager reads.
+struct EeGfxSceneFade {
+  float light_fade;
+  float light_fade_start;
+  /// 1: fading down to black, 0: up to full
+  int32_t fade_down;
+  float fade_rate;
+  float fade_time;
+  /// 1: the bars opening towards the full view (zoom to 1), 0: closing (zoom to 0)
+  int32_t letterbox_direction;
+  float letterbox_start;
+  float letterbox_rate;
+  float letterbox_time;
+  /// the bars are to be cleared again on the next frame
+  bool bars_cleared;
+};
+
+/// The render environment's clocks.
+struct EeGfxSceneClocks {
+  /// `gU4E9330`: the grid's and the area rings' texture scroll, in [0, 1)
+  float grid_phase;
+  float water_phase;
+  float cloud_offset;
+};
+
+/// What a frame's fade and letterbox step asks the C++ to do.
+struct EeGfxSceneStep {
+  /// the light fade moved (the terrain is lit again)
+  bool fade_changed;
+  /// the new zoom (`gF4BE374`)
+  float zoom;
+  /// clear the bars (they were flagged, or the zoom is 0)
+  bool clear_bars;
+  /// the zoom changed: set the view band and clear the bars (one row more at the top)
+  bool set_view;
+  /// the full view again: show the UI's backgrounds
+  bool show_backgrounds;
+  /// the full view left: hide them
+  bool hide_backgrounds;
+};
+
+/// The letterboxed view band at a zoom, and the screen rows of the bars at a window height.
+struct EeGfxLetterbox {
+  float left;
+  float right;
+  float top;
+  float bottom;
+  /// the top bar's end row (`height / 1200 * top`)
+  float top_bar_end;
+  /// the bottom bar's first row
+  float bottom_bar_start;
+};
+
+/// The lights at a time of day.
+struct EeGfxDaylight {
+  /// the lit direction (`gU4E9210`): the moon's at night
+  EeGeVector direction;
+  /// the terrain's and units' light colour
+  EeGfxColor light;
+  float light_intensity;
+  float ambient_intensity;
+  float unit_ambient_intensity;
+  /// the prelit colour (and `mColor54`), clamped; its half
+  EeGfxColor prelit;
+  EeGfxColor dim_prelit;
+};
+
+/// The time-of-day light tables (`EEInitialiseScene`'s 17 key frames: `gU4E9348` the colours, `gU4E92EC` the light's
+/// intensity, `gU4E92A8` the terrain's ambient intensity, `gU4E9264` the units'; `gU4E9338` the ambient colour,
+/// `gU4E9240` the three fill lights) and the sun's and moon's directions.
+struct EeGfxDaylightTables {
+  EeGfxColor colors[17];
+  float light[17];
+  float ambient[17];
+  float unit_ambient[17];
+  EeGfxColor ambient_color;
+  EeGeVector fill[3];
+  EeGeVector sun;
+  EeGeVector moon;
+};
+
 /// The texture's u across the five vertices of a row.
 constexpr static const float EE_GFX_QUAKE_ROW_U[5] = { 0.0, 0.25, 0.5, 0.75, 1.0, };
 
@@ -2323,6 +2406,70 @@ size_t ee_gfx_effects_destroyed_len(const EeGfxEffectStore *s);
 
 /// The destruction queue's `i`th handle.
 uint32_t ee_gfx_effects_destroyed_at(const EeGfxEffectStore *s, size_t i);
+
+/// `EEInitialiseScene`'s reset of the fade and letterbox.
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_reset(EeGfxSceneFade *s);
+
+/// `EEStartLightFadeOut` (`down`) / `EEStartLightFadeIn` over `frames` (0: at once).
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_start_fade(EeGfxSceneFade *s, bool down, uint32_t frames);
+
+/// `EEStartLetterboxOut` (`out`) / `EEStartLetterboxIn` over `frames`, from the zoom `zoom`.
+///
+/// # Safety
+/// `s` is the C++'s state.
+void ee_gfx_scene_start_letterbox(EeGfxSceneFade *s, bool out, uint32_t frames, float zoom);
+
+/// The grid, water and cloud clocks after `elapsed` milliseconds in a wind of `wind`.
+///
+/// # Safety
+/// `c` is writable.
+void ee_gfx_scene_step_clocks(EeGfxSceneClocks *c, float elapsed, float wind);
+
+/// A frame's fade and letterbox for `elapsed` milliseconds from the zoom `zoom`.
+///
+/// # Safety
+/// `s` is the C++'s state.
+EeGfxSceneStep ee_gfx_scene_step(EeGfxSceneFade *s, float elapsed, float zoom);
+
+/// The view band at `zoom` and the bars' rows at the window height `height`.
+EeGfxLetterbox ee_gfx_scene_letterbox(float zoom, float height);
+
+/// The lights at `time_of_day`.
+///
+/// # Safety
+/// `t` is readable.
+EeGfxDaylight ee_gfx_scene_daylight(const EeGfxDaylightTables *t, float time_of_day);
+
+/// A map object's place inside its tiles (`FillObject`, `FillDoppelgangerObject`).
+EeGe2DPoint ee_gfx_capture_object_place(int32_t id, int32_t size, int32_t tile_x, int32_t tile_y);
+
+/// A map object's size jitter by id.
+float ee_gfx_capture_object_scale(int32_t id);
+
+/// The sway clock after a frame at `now`.
+///
+/// # Safety
+/// `clock` and `last` are writable.
+void ee_gfx_capture_sway_tick(uint32_t *clock, uint32_t *last, uint32_t now);
+
+/// A swaying map object's blend fraction.
+float ee_gfx_capture_sway_fraction(uint32_t clock, int32_t id);
+
+/// `DrawGroundCircle`'s 51 points into `points` (the last the first again); returns the strip's width.
+///
+/// # Safety
+/// `ground` is readable; `points` has room for `EE_GFX_RING_POINTS`.
+float ee_gfx_capture_ground_circle(const EeGfxParticleGround *ground,
+                                   float x,
+                                   float y,
+                                   float radius,
+                                   EeGe3DPoint *points);
 
 }  // extern "C"
 

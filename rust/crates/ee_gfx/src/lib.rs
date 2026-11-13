@@ -7,7 +7,8 @@
 //! models (`models.rs`, `EEROUnits::LoadMedia`) and the sky's colours, the sky, star and cloud models' points
 //! and the grid mode (`terrain.rs`, `EEROTerrain.cpp`), the earthquake's crack (`quake.rs`), the tracer beam's
 //! aim and stretch (`beam.rs`) and the farm's and the volcano's meshes (`farm.rs`, `volcano.rs`, over `mesh.rs`) and the
-//! effect manager's containers (`effect_store.rs`) and algorithms (`effect_manager.rs`), the effects' records, their base classes' Load and Save, their random
+//! effect manager's containers (`effect_store.rs`) and algorithms (`effect_manager.rs`), the capture's fade, letterbox,
+//! clocks and time-of-day light blend (`scene.rs`) and its per-object arithmetic (`capture.rs`), the effects' records, their base classes' Load and Save, their random
 //! generator and the smoke generators (`effect_state.rs`).
 //!
 //! The camera's `Update` also runs in the simulation tick, so its math is deterministic code under RUST_PLAN 2.1;
@@ -24,6 +25,7 @@
 
 pub mod beam;
 pub mod camera;
+pub mod capture;
 pub mod effect_icon;
 pub mod effect_manager;
 pub mod effect_state;
@@ -37,6 +39,7 @@ pub mod ffi;
 pub mod ffi_effect;
 pub mod ffi_manager;
 pub mod ffi_mesh;
+pub mod ffi_scene;
 #[cfg(test)]
 mod golden_beam;
 #[cfg(test)]
@@ -66,6 +69,8 @@ mod golden_rings;
 #[cfg(test)]
 mod golden_rounits;
 #[cfg(test)]
+mod golden_scene;
+#[cfg(test)]
 mod golden_select;
 #[cfg(test)]
 mod golden_sky;
@@ -79,6 +84,7 @@ pub mod models;
 pub mod mouse;
 pub mod pick;
 pub mod quake;
+pub mod scene;
 pub mod select;
 pub mod terrain;
 pub mod units;
