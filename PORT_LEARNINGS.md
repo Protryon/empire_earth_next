@@ -11935,3 +11935,39 @@ Round 14's item (a), second part. Count: git over the moved paths (`git diff --n
 - **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`), map type
   (`EEUIFSEEMapType`), unit sort (`EEUIFSEESortUnitList`), start epoch (`EESEEChangeStartEpoch`), unit limit
   (`EESEEGameUnitLimit`), `EESEAChangeLoadText`, and the thin click, lasso, delete and paint classes.
+
+## R6: the game screens, nineteenth round: the editor tabs' map type, unit sort, start epoch and unit limit events whole in Rust (ee_screens editor_events.rs; branch rust-screens19, 2026-11-13)
+
+Round 14's item (a), third part. Count: git over `include/ee` and `src` without the gate's own file.
+
+- **The gate first** (expected.txt 1734 -> 1781 lines, recorded on the unmodified events in its own commit, lines
+  only added): `combo ID LINE`, `slider ID VALUE` and `radio ID` drive an editor control by id (a combo's
+  selection-changed or a slider's range-changed event processed after the value is set; a radio's `Check` fires its
+  own); `controls ID...` prints display modes and a label's first line; `unitlist` prints the unit tab's list
+  (0x3f1); `epoch ROW START END` sets a player row's end epoch, picks its start and prints the end combo. The script
+  shows and hides the map tab's elevation boxes, re-sorts and re-filters the unit list (by epoch, alphabetical, sea,
+  world), walks the start epochs (end kept, end earlier than the new start, the all-players row) and moves the unit
+  limit.
+  - The sea button's radio left the list unchanged and the world button changed it (169 -> 15 units): recorded as
+    the code does; not investigated.
+- **Moved whole** (4 classes, `EESEERust` kinds 13-16; `EESEEGameUnitLimit.h` deleted, `EEUIFSEEMapType` and
+  `EESEEChangeStartEpoch` out of their headers, `EEUIFSEESortUnitList` out of `EESEUnit.cpp`):
+  - `EEUIFSEEMapType`: the original's unsigned `selection > 0` (no selection reads as -1: shown).
+  - `EEUIFSEESortUnitList`: the editor form's unit tab's `RefreshUnitList` (the form argument, as the original).
+  - `EESEEChangeStartEpoch`: the end epoch's index in all epochs (`end + count - lines`, unsigned), the titles from
+    the start on refilled by one host op (`AppendStringArray` of the whole list, as the original), the end kept or
+    the first line.
+  - `EESEEGameUnitLimit`: no longer a `UIESliderChange`; the record holds the label, "%g", the modifier and the
+    offset (a `long` made a float, as the original's sum). The per-player count (unsigned division by
+    `mMaxPlayers - 1`) goes into label 0x162 first, then the value as `UIESliderChange::ProcessEvent` prints it
+    (no value of this event is ever mapped to a string, so the map lookup is not carried).
+- **Behaviour changes:** with `mMaxPlayers` 1 the unit limit skips the per-player label (the original divided by
+  zero); the start epoch and map type read a failed `GetCurrentSelection` as -1 (the original's out value).
+- **Count:** +65 -101 (net -36).
+- **Tests:** 3 new in `editor_events.rs` (12 there): map type and sort, start epoch (kept, earlier, none), unit
+  limit (per player then "%g"; one player).
+- **Only a person reaches:** the mouse on these controls; the drawing of the map, unit and player tabs.
+- **Not done:** terrain colour/type (`EEUIETerrainColorChange`, `EEUIETerrainTypeChange`: bitmap and texture work,
+  which EE-SIM cannot check), `EESEAChangeLoadText` (posted only by the editor's load thread, which the gate does not
+  run), and the thin click, lasso, delete and paint action classes (with the `EESEAPaintTerrain.cpp` hosts moving to
+  an `EXTRA_UNITS` unit if that file goes).
