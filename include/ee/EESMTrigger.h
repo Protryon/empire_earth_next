@@ -12,8 +12,10 @@
 #include "ee/EESMIDMap.h"
 #include "ee/EESMTConditionWrapper.h"
 #include "ee/EESMTEffectWrapper.h"
+#include "rust/ee_scenario.h"
 
-class EESMTrigger {
+// the numbers (mConditionDuration .. mIsInCinematic) are EeScenarioTriggerFields (ee_scenario fields.rs)
+class EESMTrigger : public EeScenarioTriggerFields {
 public:
     EESMTrigger();                          // 0x1c97b7
     ~EESMTrigger();                         // 0x1c98dd
@@ -55,13 +57,6 @@ public:
     UWideString mText;                      // +0x18
     std::vector<EESMTConditionWrapper*> mConditions;    // +0x2c
     std::vector<EESMTEffectWrapper*> mEffects;  // +0x3c
-    unsigned long mConditionDuration;                   // +0x4c
-    unsigned long mConditionStartTime;                  // +0x50
-    unsigned long mID;                                  // +0x54
-    bool mIsOn;                             // +0x58 (ctor: true)
-    bool mHasFired;                         // +0x59
-    bool mIsLooping;                        // +0x5a
-    bool mIsInCinematic;                    // +0x5b
 };
 
 #endif

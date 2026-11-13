@@ -11,8 +11,11 @@
 #include <vector>
 #include "lle/UWideString.h"
 #include "ee/EESMIDMap.h"
+#include "rust/ee_scenario.h"
 
-class EESMEffect {
+// the numbers (mPlayerAttribute .. mB193, their order and types) are EeScenarioEffectFields (ee_scenario fields.rs):
+// their defaults, saves and index upkeep are Rust's
+class EESMEffect : public EeScenarioEffectFields {
 public:
     EESMEffect();                           // 0x1bb5a5
     ~EESMEffect();                          // 0x1bb609
@@ -76,66 +79,6 @@ public:
     UWideString mNewName;                   // +0x8c
     UWideString mFileName;                  // +0xa0
     UWideString mDescription;               // +0xb4
-    unsigned long mPlayerAttribute;                   // +0xc8
-    unsigned long mDiplomacy;                         // +0xcc
-    unsigned long mULD0;                              // +0xd0  // reset: = 8
-    unsigned long mMessagePlayer;                     // +0xd4  // reset: = 7
-    unsigned long mNewOwner;                          // +0xd8  // reset: = 7
-    unsigned long mPlayer;                            // +0xdc  // reset: = 7
-    unsigned long mDiplomacyPlayer;                   // +0xe0  // reset: = 8
-    unsigned long mAIAction;                          // +0xe4
-    unsigned long mAIAttribute;                       // +0xe8
-    unsigned long mAIToggle;                          // +0xec
-    unsigned long mMediaAction;                       // +0xf0
-    unsigned long mULF4;                              // +0xf4
-    unsigned long mPlayerAction;                      // +0xf8
-    unsigned long mTriggerState;                      // +0xfc
-    unsigned long mType;                               // +0x100  // reset: = 1
-    unsigned long mObjectAction;                       // +0x104
-    unsigned long mAttributeMode;                      // +0x108
-    long mTechnology;                        // +0x10c
-    float mFloatValue;                        // +0x110
-    long mIntValue1;                         // +0x114
-    long mIntValue2;                         // +0x118
-    long mAttributePlayer;                   // +0x11c  // reset: = -1
-    unsigned long mTargetArea;                         // +0x120
-    unsigned long mTargetObject;                       // +0x124
-    unsigned long mPlacedEffect;                       // +0x128
-    unsigned long mPlaceArea;                          // +0x12c
-    unsigned long mPlaceObject;                        // +0x130
-    unsigned long mDaylightHour;            // +0x134 // reset: = 0xf (unsigned: StartCinematic's fild qword)
-    unsigned long mCycleTime;                          // +0x138
-    unsigned long mGameAction;                         // +0x13c
-    unsigned long mDuration;                           // +0x140  // reset: = 0x14
-    unsigned long mTextObject;              // +0x144 (unsigned: ChangeText's GetCurrentSelection(&) target)
-    unsigned long mAttribute;                          // +0x148
-    unsigned long mAttributeAmount;                    // +0x14c
-    unsigned long mAttributeUnitType;                  // +0x150
-    unsigned long mAttributeUnit;                      // +0x154  // reset: = -1
-    unsigned long mObject;                             // +0x158
-    unsigned long mStance;                             // +0x15c
-    unsigned long mTaskAction;                         // +0x160
-    unsigned long mTaskArea;                           // +0x164
-    unsigned long mTaskObject;                         // +0x168
-    unsigned long mCivPoints;                          // +0x16c  // reset: = 1
-    unsigned long mPlayerAttributeMode;                // +0x170
-    unsigned long mPlayerAttributeAmount;              // +0x174
-    unsigned long mLocationArea;                       // +0x178
-    unsigned long mLocationObject;                     // +0x17c
-    unsigned long mTrigger;                            // +0x180
-    unsigned long mID;                                 // +0x184
-    bool mIsOn;                              // +0x188
-    bool mUsesTargetArea;                    // +0x189
-    bool mIsAttack;                          // +0x18a
-    bool mUsesFavorites;                     // +0x18b
-    bool mIsAddTarget;                       // +0x18c  // reset: = 1
-    bool mB18D;                              // +0x18d
-    bool mIsClearText;                       // +0x18e  // reset: = 1
-    bool mUsesLocationArea;                  // +0x18f  // reset: = 1
-    bool mUsesPercent;                       // +0x190
-    bool mIsAddTechnology;                   // +0x191  // reset: = 1
-    bool mUsesPlaceArea;                     // +0x192  // reset: = 1
-    bool mB193;                              // +0x193
 };
 
 #endif

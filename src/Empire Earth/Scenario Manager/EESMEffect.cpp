@@ -73,6 +73,7 @@
 #include "ee/EECPBehavior.h"
 #include "ee/EEEffectKindIDs.h"
 #include "ee/EEScenarioCapture.h"
+#include "ee/EEScenarioHost.h"
 
 // FUNCTION: EXE 0x5bb5a5
 // Creates a scenario effect with the default settings (see Reset)
@@ -89,77 +90,19 @@ EESMEffect::~EESMEffect()
 
 // FUNCTION: EXE 0x5bb65a
 // Resets every effect setting to its default: an object Create effect, 20 s duration, empty texts and object list
+// (the numbers: ee_scenario fields.rs effect_defaults)
 void EESMEffect::Reset()
 {
     this->mName = "";
     this->mText = "";
-    this->mDuration = 0x14;
     this->mMessage = "";
     this->mS64 = "";
     this->mS78 = "";
     this->mNewName = "";
     this->mFileName = "";
     this->mDescription = "";
-    this->mPlayerAttribute = 0;
-    this->mDiplomacy = 0;
-    this->mMessagePlayer = 7;
-    this->mNewOwner = 7;
-    this->mPlayer = 7;
-    this->mDiplomacyPlayer = 8;
-    this->mMediaAction = kSMMediaActionPlaySound;
-    this->mULF4 = 0;
-    this->mPlayerAction = kSMPlayerActionVictory;
-    this->mTriggerState = kSMTriggerStateOn;
-    this->mType = kSMEffectObject;
-    this->mObjectAction = kSMObjectActionCreate;
-    this->mTechnology = kTechEpochPrehistoric;
-    this->mPlacedEffect = 0;
-    this->mPlaceArea = 0;
-    this->mPlaceObject = 0;
-    this->mDaylightHour = 0xf;
-    this->mCycleTime = 0;
-    this->mGameAction = kSMGameActionDaylightHour;
-    this->mTextObject = kSMMediaTextHints;
-    this->mAttribute = kSMUnitAttributeHitPoints;
-    this->mAttributePlayer = -1;
-    this->mAttributeUnitType = 0;
-    this->mAttributeUnit = -1;
-    this->mAttributeMode = 0;
-    this->mAttributeAmount = 0;
-    this->mObject = 0;
-    this->mStance = kSMStanceExplore;
-    this->mTaskAction = kSMTaskActionNormal;
-    this->mTaskArea = 0;
-    this->mTaskObject = 0;
-    this->mCivPoints = 1;
-    this->mPlayerAttributeMode = 0;
-    this->mPlayerAttributeAmount = 0;
-    this->mLocationArea = 0;
-    this->mLocationObject = 0;
-    this->mTrigger = 0;
-    this->mB18D = false;
-    this->mIsClearText = true;
-    this->mUsesLocationArea = true;
-    this->mUsesPercent = false;
-    this->mIsAddTechnology = true;
-    this->mUsesPlaceArea = true;
-    this->mFloatValue = 0.0f;
-    this->mB193 = false;
-    this->mAIAction = kSMAIActionModifyAIMilitaryTarget;
-    this->mTargetArea = 0;
-    this->mAIAttribute = kCPBehaviorNone;
-    this->mIsOn = false;
-    this->mIntValue1 = 0;
-    this->mIntValue2 = 0;
+    *static_cast<EeScenarioEffectFields*>(this) = ee_scenario_effect_defaults();
     this->mObjects.clear();
-    this->mULD0 = 8;
-    this->mTargetObject = 0;
-    this->mAIToggle = kSMAIToggleActive;
-    this->mUsesTargetArea = false;
-    this->mIsAttack = false;
-    this->mUsesFavorites = false;
-    this->mID = 0;
-    this->mIsAddTarget = true;
 }
 
 #include "lle/U2DSparseArray.h"
@@ -492,67 +435,8 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     this->mNewName = inEffect.mNewName;
     this->mFileName = inEffect.mFileName;
     this->mDescription = inEffect.mDescription;
-    this->mPlayerAttribute = inEffect.mPlayerAttribute;
-    this->mDiplomacy = inEffect.mDiplomacy;
-    this->mDuration = inEffect.mDuration;
-    this->mMessagePlayer = inEffect.mMessagePlayer;
-    this->mNewOwner = inEffect.mNewOwner;
-    this->mPlayer = inEffect.mPlayer;
-    this->mDiplomacyPlayer = inEffect.mDiplomacyPlayer;
-    this->mMediaAction = inEffect.mMediaAction;
-    this->mULF4 = inEffect.mULF4;
-    this->mPlayerAction = inEffect.mPlayerAction;
-    this->mTriggerState = inEffect.mTriggerState;
-    this->mType = inEffect.mType;
-    this->mObjectAction = inEffect.mObjectAction;
-    this->mTechnology = inEffect.mTechnology;
-    this->mPlacedEffect = inEffect.mPlacedEffect;
-    this->mPlaceArea = inEffect.mPlaceArea;
-    this->mPlaceObject = inEffect.mPlaceObject;
-    this->mDaylightHour = inEffect.mDaylightHour;
-    this->mCycleTime = inEffect.mCycleTime;
-    this->mGameAction = inEffect.mGameAction;
-    this->mTextObject = inEffect.mTextObject;
-    this->mAttribute = inEffect.mAttribute;
-    this->mAttributeUnitType = inEffect.mAttributeUnitType;
-    this->mAttributeUnit = inEffect.mAttributeUnit;
-    this->mAttributePlayer = inEffect.mAttributePlayer;
-    this->mAttributeMode = inEffect.mAttributeMode;
-    this->mAttributeAmount = inEffect.mAttributeAmount;
-    this->mObject = inEffect.mObject;
-    this->mStance = inEffect.mStance;
-    this->mTaskAction = inEffect.mTaskAction;
-    this->mTaskArea = inEffect.mTaskArea;
-    this->mTaskObject = inEffect.mTaskObject;
-    this->mCivPoints = inEffect.mCivPoints;
-    this->mPlayerAttributeMode = inEffect.mPlayerAttributeMode;
-    this->mPlayerAttributeAmount = inEffect.mPlayerAttributeAmount;
-    this->mLocationArea = inEffect.mLocationArea;
-    this->mLocationObject = inEffect.mLocationObject;
-    this->mTrigger = inEffect.mTrigger;
-    this->mB18D = inEffect.mB18D;
-    this->mIsClearText = inEffect.mIsClearText;
-    this->mUsesLocationArea = inEffect.mUsesLocationArea;
-    this->mUsesPercent = inEffect.mUsesPercent;
-    this->mIsAddTechnology = inEffect.mIsAddTechnology;
-    this->mUsesPlaceArea = inEffect.mUsesPlaceArea;
-    this->mB193 = inEffect.mB193;
-    this->mAIAction = inEffect.mAIAction;
-    this->mTargetArea = inEffect.mTargetArea;
-    this->mAIAttribute = inEffect.mAIAttribute;
-    this->mIsOn = inEffect.mIsOn;
-    this->mFloatValue = inEffect.GetFloatValue();
-    this->mIntValue1 = inEffect.mIntValue1;
-    this->mIntValue2 = inEffect.mIntValue2;
+    *static_cast<EeScenarioEffectFields*>(this) = inEffect;   // every number
     this->mObjects = inEffect.mObjects;
-    this->mULD0 = inEffect.mULD0;
-    this->mTargetObject = inEffect.mTargetObject;
-    this->mAIToggle = inEffect.mAIToggle;
-    this->mUsesTargetArea = inEffect.mUsesTargetArea;
-    this->mIsAddTarget = inEffect.mIsAddTarget;
-    this->mIsAttack = inEffect.mIsAttack;
-    this->mUsesFavorites = inEffect.mUsesFavorites;
-    this->mID = inEffect.mID;
 }
 
 // FUNCTION: EXE 0x5bc942
@@ -1513,114 +1397,25 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
 
 // FUNCTION: EXE 0x5bf2b3
 // Follows an area move in the effect's area references (old and new index swap); on a delete (new index -1) references
-// to it become 0 and later ones shift down
+// to it become 0 and later ones shift down (ee_scenario fields.rs)
 void EESMEffect::RenumberAreas(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex;
-    theIndex = this->mTaskArea;
-    if (theIndex == inOldIndex) {
-        this->mTaskArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTaskArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTaskArea = theIndex - 1;
-    }
-    theIndex = this->mTargetArea;
-    if (theIndex == inOldIndex) {
-        this->mTargetArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTargetArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTargetArea = theIndex - 1;
-    }
-    theIndex = this->mPlaceArea;
-    if (theIndex == inOldIndex) {
-        this->mPlaceArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mPlaceArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mPlaceArea = theIndex - 1;
-    }
-    theIndex = this->mLocationArea;
-    if (theIndex == inOldIndex) {
-        this->mLocationArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mLocationArea = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mLocationArea = theIndex - 1;
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_AREAS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf384
 // Follows an object move or delete in the effect's object references and object list, like RenumberAreas
 void EESMEffect::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex;
-    theIndex = this->mObject;
-    if (theIndex == inOldIndex) {
-        this->mObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mObject = theIndex - 1;
-    }
-    theIndex = this->mLocationObject;
-    if (theIndex == inOldIndex) {
-        this->mLocationObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mLocationObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mLocationObject = theIndex - 1;
-    }
-    theIndex = this->mTaskObject;
-    if (theIndex == inOldIndex) {
-        this->mTaskObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTaskObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTaskObject = theIndex - 1;
-    }
-    theIndex = this->mPlaceObject;
-    if (theIndex == inOldIndex) {
-        this->mPlaceObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mPlaceObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mPlaceObject = theIndex - 1;
-    }
-    theIndex = this->mTargetObject;
-    if (theIndex == inOldIndex) {
-        this->mTargetObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTargetObject = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTargetObject = theIndex - 1;
-    }
-    for (unsigned long i = 0; i < this->mObjects.size(); i++) {
-        unsigned long& theID = this->mObjects[i];
-        theIndex = theID;
-        if (theIndex == inOldIndex) {
-            theID = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-        } else if (theIndex == inNewIndex) {
-            theID = inOldIndex;
-        } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-            theID = theIndex - 1;
-        }
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_OBJECTS, inOldIndex, inNewIndex);
+    ee_scenario_renumber_ids(this->mObjects.data(), this->mObjects.size(), inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf4c9
 // Follows a trigger move or delete in the effect's trigger reference, like RenumberAreas
 void EESMEffect::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewIndex)
 {
-    unsigned long theIndex = this->mTrigger;
-    if (theIndex == inOldIndex) {
-        this->mTrigger = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
-    } else if (theIndex == inNewIndex) {
-        this->mTrigger = inOldIndex;
-    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
-        this->mTrigger = theIndex - 1;
-    }
+    ee_scenario_effect_renumber(this, EE_SCENARIO_RENUMBER_TRIGGERS, inOldIndex, inNewIndex);
 }
 
 // FUNCTION: EXE 0x5bf508
@@ -1753,321 +1548,26 @@ void EESMEffect::KillUnits(bool inFlag)
 
 // FUNCTION: EXE 0x5bfa67
 // Reads the effect from a scenario file, renumbering player actions and unit attributes of older files; returns the
-// first read error
+// first read error (ee_scenario save.rs effect_load)
 long EESMEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
-    UWideString theString;
-    unsigned long theCount;
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDuration);
-    if (theResult == kErrorOK)
-        theResult = this->mMessage.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS64.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS78.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mNewName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mFileName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mDescription.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDiplomacy);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMessagePlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mNewOwner);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDiplomacyPlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mMediaAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mULF4);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAction);
-    if (this->mPlayerAction >= kSMPlayerActionTotal)
-        this->mPlayerAction -= 2;
-    if (this->mPlayerAction >= kSMPlayerActionTotal)
-        this->mPlayerAction = kSMPlayerActionVictory;
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTriggerState);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mObjectAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlacedEffect);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlaceObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mDaylightHour);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCycleTime);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mGameAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTextObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttribute);
-    if (theResult == kErrorOK && inMajorVersion <= 0 && inMinorVersion < 0xcd && this->mAttribute > kSMUnitAttributeConstructionComplete)
-        this->mAttribute += 3;
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributePlayer);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeUnitType);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeUnit);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mStance);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTaskObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mCivPoints);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mPlayerAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLocationArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mLocationObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mB18D);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsClearText);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesLocationArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesPercent);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAddTechnology);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mB193);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIAction);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTargetArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIAttribute);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsOn);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mFloatValue);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIntValue1);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIntValue2);
-    if (theResult == kErrorOK) {
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            this->mObjects.clear();
-            for (unsigned long i = 0; i < theCount; i++) {
-                unsigned long theValue;
-                theResult = inFile.Read(theValue);
-                if (theResult != kErrorOK)
-                    break;
-                this->mObjects.push_back(theValue);
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mULD0);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mTargetObject);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mAIToggle);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesTargetArea);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAddTarget);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mID);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mIsAttack);
-    if (theResult == kErrorOK)
-        theResult = inFile.Read(this->mUsesFavorites);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
+                                 &this->mNewName, &this->mFileName, &this->mDescription};
+    EESMStream theStream = {&inFile, theStrings, &this->mObjects};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_effect_load(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5c0134
 // Writes the effect to a scenario file (civ points from minor version 0x2a, mB193 from 0x14); returns the first write
-// error
+// error (ee_scenario save.rs effect_save)
 long EESMEffect::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    unsigned long theCount;
-    long theResult = this->mName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mText.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDuration);
-    if (theResult == kErrorOK)
-        theResult = this->mMessage.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS64.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mS78.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mNewName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mFileName.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = this->mDescription.Save(outFile);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDiplomacy);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMessagePlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mNewOwner);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDiplomacyPlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mMediaAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mULF4);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTriggerState);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mObjectAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTechnology);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlacedEffect);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlaceArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlaceObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mDaylightHour);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mCycleTime);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mGameAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTextObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributePlayer);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeUnitType);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeUnit);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mStance);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTaskObject);
-    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 0x2a))
-        theResult = outFile.Write(this->mCivPoints);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttributeMode);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mPlayerAttributeAmount);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLocationArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mLocationObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTrigger);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mB18D);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsClearText);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesLocationArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesPercent);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAddTechnology);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesPlaceArea);
-    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 0x14))
-        theResult = outFile.Write(this->mB193);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIAction);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTargetArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIAttribute);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsOn);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mFloatValue);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIntValue1);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIntValue2);
-    if (theResult == kErrorOK) {
-        theCount = this->mObjects.size();
-        theResult = outFile.Write(theCount);
-        if (theResult == kErrorOK) {
-            for (unsigned long i = 0; i < theCount; i++) {
-                theResult = outFile.Write(this->mObjects[i]);
-                if (theResult != kErrorOK)
-                    break;
-            }
-        }
-    }
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mULD0);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mTargetObject);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mAIToggle);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesTargetArea);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAddTarget);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mID);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsAttack);
-    if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mUsesFavorites);
-    return theResult;
+    UWideString* theStrings[] = {&this->mName, &this->mText, &this->mMessage, &this->mS64, &this->mS78,
+                                 &this->mNewName, &this->mFileName, &this->mDescription};
+    EESMStream theStream = {&outFile, theStrings, &this->mObjects};
+    EeScenarioStream theTable = EESMStreamTable(&theStream);
+    return ee_scenario_effect_save(&theTable, this, inMajorVersion, inMinorVersion);
 }
 
 // FUNCTION: EXE 0x5c07c4
@@ -2171,257 +1671,73 @@ void EESMEffect::ScriptCamera()
 
 #include "ee/EECPCivilizationManager.h"
 
-// EEComputerPlayer's scenario tuning setters (declared in ee/EEComputerPlayer.h): store the value, then mirror it
-// into the civilization manager's map under the unit type. The local manager pointer makes all 34 exact (the
-// original reloads ecx from +0xbc4 after the store). Emitted after SetAIVariable (0x1c1ca9..0x1c24c8).
-inline void EEComputerPlayer::SetAntiAirMax(long inValue)
+#include "ee/EEUnitClassIDs.h"
+#include "ee/EESMAIFields.h"
+
+namespace {
+
+// EE_SM_STORE begin (the golden driver's stand-in expands this text too: TEST ONLY scratch, PORT_LEARNINGS "R5b.5,
+// second round")
+// the long and float fields and the building counts by Set AI Variable's field numbers (ee/EESMAIFields.h)
+#define EE_SM_MEMBER(inField) &EEComputerPlayer::inField,
+long EEComputerPlayer::* const kSMLongFields[] = {EE_SM_AI_LONGS(EE_SM_MEMBER)};
+float EEComputerPlayer::* const kSMFloatFields[] = {EE_SM_AI_FLOATS(EE_SM_MEMBER)};
+#undef EE_SM_MEMBER
+struct EESMBuildingFields {
+    long EEComputerPlayer::* mMax;
+    long EEComputerPlayer::* mUnitsPer;
+    long mUnitType;
+};
+#define EE_SM_BUILDING(inMax, inUnitsPer, inType) {&EEComputerPlayer::inMax, &EEComputerPlayer::inUnitsPer, inType},
+const EESMBuildingFields kSMBuildings[] = {EE_SM_AI_BUILDINGS(EE_SM_BUILDING)};
+#undef EE_SM_BUILDING
+
+// one store of Set AI Variable on a computer player; a building count also into the civilization manager's copy
+// (the original's 34 inline setters, COMDATs 0x1c1ca9..0x1c24c8)
+void EESMStoreAI(EEComputerPlayer* inPlayer, const EeScenarioAiWrite& inWrite)
 {
-    this->mAntiAirMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeAA10Gun88mm] = inValue;
+    switch (inWrite.kind) {
+    case EE_SCENARIO_AI_KIND_LONG:
+        inPlayer->*kSMLongFields[inWrite.field] = inWrite.long_value;
+        break;
+    case EE_SCENARIO_AI_KIND_FLOAT:
+        inPlayer->*kSMFloatFields[inWrite.field] = inWrite.float_value;
+        break;
+    case EE_SCENARIO_AI_KIND_MAX_COUNT:
+    case EE_SCENARIO_AI_KIND_UNITS_PER: {
+        const EESMBuildingFields& theBuilding = kSMBuildings[inWrite.field];
+        bool theMax = inWrite.kind == EE_SCENARIO_AI_KIND_MAX_COUNT;
+        inPlayer->*(theMax ? theBuilding.mMax : theBuilding.mUnitsPer) = inWrite.long_value;
+        EECPCivilizationManager* theManager = inPlayer->mCivilizationManager;
+        if (theManager != NULL)
+            (theMax ? theManager->mMaxCounts : theManager->mUnitsPer)[theBuilding.mUnitType] = inWrite.long_value;
+        break;
+    }
+    case EE_SCENARIO_AI_KIND_CALL:
+        switch (inWrite.field) {
+        case EE_SCENARIO_AI_CALL_NEXT_ATTACK_TIME_NOW: inPlayer->SetNextAttackTime(gPhysics->mGameTime); break;
+        case EE_SCENARIO_AI_CALL_ISLAND_EXPANSION_TIMER: inPlayer->SetIslandExpansionTimer(inWrite.long_value); break;
+        case EE_SCENARIO_AI_CALL_DM_ATTACK_FREQUENCY_MODIFIER: inPlayer->SetDMAttackFrequencyModifier(inWrite.float_value); break;
+        case EE_SCENARIO_AI_CALL_DM_INITIAL_ATTACK_MODIFIER: inPlayer->SetDMInitialAttackModifier(inWrite.float_value); break;
+        }
+        break;
+    }
 }
-inline void EEComputerPlayer::SetAirportMax(long inValue)
-{
-    this->mAirportMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeAirport] = inValue;
-}
-inline void EEComputerPlayer::SetArcheryRangeMax(long inValue)
-{
-    this->mArcheryRangeMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeArcheryRange] = inValue;
-}
-inline void EEComputerPlayer::SetBarracksMax(long inValue)
-{
-    this->mBarracksMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeBarracks] = inValue;
-}
-inline void EEComputerPlayer::SetDockMax(long inValue)
-{
-    this->mDockMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeDock] = inValue;
-}
-inline void EEComputerPlayer::SetGranaryMax(long inValue)
-{
-    this->mGranaryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeFarm] = inValue;
-}
-inline void EEComputerPlayer::SetHospitalMax(long inValue)
-{
-    this->mHospitalMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeHospital] = inValue;
-}
-inline void EEComputerPlayer::SetCyberFactoryMax(long inValue)
-{
-    this->mCyberFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeCyberFactory] = inValue;
-}
-inline void EEComputerPlayer::SetCyberLabMax(long inValue)
-{
-    this->mCyberLabMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeCyberLaboratory] = inValue;
-}
-inline void EEComputerPlayer::SetNavalYardMax(long inValue)
-{
-    this->mNavalYardMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeNavyYard] = inValue;
-}
-inline void EEComputerPlayer::SetSiegeFactoryMax(long inValue)
-{
-    this->mSiegeFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeSiegeFactory] = inValue;
-}
-inline void EEComputerPlayer::SetSpaceDockMax(long inValue)
-{
-    this->mSpaceDockMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeSpaceDock] = inValue;
-}
-inline void EEComputerPlayer::SetStableMax(long inValue)
-{
-    this->mStableMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeStable] = inValue;
-}
-inline void EEComputerPlayer::SetTankFactoryMax(long inValue)
-{
-    this->mTankFactoryMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeTankFactory] = inValue;
-}
-inline void EEComputerPlayer::SetTempleMax(long inValue)
-{
-    this->mTempleMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeTemple] = inValue;
-}
-inline void EEComputerPlayer::SetTowerMax(long inValue)
-{
-    this->mTowerMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeGuardTowerPaleo] = inValue;
-}
-inline void EEComputerPlayer::SetUniversityMax(long inValue)
-{
-    this->mUniversityMax = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mMaxCounts[kUnitTypeUniversity] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerAntiAirBuilding(long inValue)
-{
-    this->mUnitsPerAntiAirBuilding = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeAA10Gun88mm] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerAirport(long inValue)
-{
-    this->mUnitsPerAirport = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeAirport] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerArcheryRange(long inValue)
-{
-    this->mUnitsPerArcheryRange = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeArcheryRange] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerBarracks(long inValue)
-{
-    this->mUnitsPerBarracks = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeBarracks] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerDock(long inValue)
-{
-    this->mUnitsPerDock = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeDock] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerGranary(long inValue)
-{
-    this->mUnitsPerGranary = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeFarm] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerHospital(long inValue)
-{
-    this->mUnitsPerHospital = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeHospital] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerCyberFactory(long inValue)
-{
-    this->mUnitsPerCyberFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeCyberFactory] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerCyberLab(long inValue)
-{
-    this->mUnitsPerCyberLab = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeCyberLaboratory] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerNavalYard(long inValue)
-{
-    this->mUnitsPerNavalYard = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeNavyYard] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerSiegeFactory(long inValue)
-{
-    this->mUnitsPerSiegeFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeSiegeFactory] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerSpaceDock(long inValue)
-{
-    this->mUnitsPerSpaceDock = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeSpaceDock] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerStable(long inValue)
-{
-    this->mUnitsPerStable = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeStable] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerTankFactory(long inValue)
-{
-    this->mUnitsPerTankFactory = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeTankFactory] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerTemple(long inValue)
-{
-    this->mUnitsPerTemple = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeTemple] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerTower(long inValue)
-{
-    this->mUnitsPerTower = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeGuardTowerPaleo] = inValue;
-}
-inline void EEComputerPlayer::SetUnitsPerUniversity(long inValue)
-{
-    this->mUnitsPerUniversity = inValue;
-    EECPCivilizationManager* theManager = this->mCivilizationManager;
-    if (theManager != NULL)
-        theManager->mUnitsPer[kUnitTypeUniversity] = inValue;
-}
+// EE_SM_STORE end
+
+}   // namespace
 
 // FUNCTION: EXE 0x5c0cc9
 // Sets one AI tuning value (mAIAttribute) on each chosen computer player from mIntValue1/2 and mFloatValue; most
-// building-count settings are also queued as pending effects
-// Calls the 34 EEComputerPlayer inline setters (COMDATs 0x1c1ca9..0x1c24c8, emitted after it)
+// building-count settings are also queued as pending effects. The stores are Rust's (ee_scenario aivar.rs: the
+// original's switch as data); the C++ applies them.
 void EESMEffect::SetAIVariable()
 {
     std::vector<long> thePlayers;
     EESMEffect theEffect;
-    bool theDeferred = false;
+    EeScenarioAiWrite theWrites[EE_SCENARIO_AI_MAX_WRITES];
+    size_t theCount = 0;
+    bool theDeferred = ee_scenario_ai_variable(this, theWrites, &theCount);
     gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, true);
     for (unsigned long i = 0; i < thePlayers.size(); ++i) {
         EEPlayer* theBasePlayer = gWorld.GetPlayer(thePlayers[i]);
@@ -2429,479 +1745,8 @@ void EESMEffect::SetAIVariable()
             continue;
         // Original dispatch uses the computer-player-only tuning and manager members after its player-kind test.
         EEComputerPlayer* thePlayer = static_cast<EEComputerPlayer*>(theBasePlayer);
-        long theValue;
-        switch(this->mAIAttribute) {
-        case kCPBehaviorInitialAttackDelay:
-            thePlayer->mInitialAttackDelayMax = max(this->mIntValue1, this->mIntValue2);
-            thePlayer->mInitialAttackDelayMin = min(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorAttackDelayModifier:   // as EEComputerPlayer::Init (was mDifficulty = value 1)
-            thePlayer->mAttackDelayModifierEasy = this->mIntValue1;
-            thePlayer->mAttackDelayModifierHard = this->mIntValue2;
-            break;
-        case kCPBehaviorTroopsToAssistAllies:
-            thePlayer->mAssistAlliesDelayEasy = this->mIntValue1 * 60000;
-            thePlayer->mAssistAlliesDelayMedium = this->mIntValue2 * 60000;   // value 2, as Init
-            theValue = (long)(this->mFloatValue * 60000.0f);
-            thePlayer->mAssistAlliesDelayHard = theValue;
-            break;
-        case kCPBehaviorAttackFrequency:
-            thePlayer->mAttackFrequencyMin = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mAttackFrequencyMax = max(this->mIntValue1, this->mIntValue2);
-            thePlayer->SetNextAttackTime(gPhysics->mGameTime);
-            break;
-        case kCPBehaviorAttackFrequencyModifier:
-            thePlayer->mAttackFrequencyModifierEasy = this->mIntValue1;
-            thePlayer->mAttackFrequencyModifierHard = this->mIntValue2;
-            break;
-        case kCPBehaviorNumberOfLandExplorers:
-            thePlayer->mNumLandExplorers = this->mIntValue1;
-            break;
-        case kCPBehaviorNumberOfSeaExplorers:
-            thePlayer->mNumSeaExplorers = this->mIntValue1;
-            break;
-        case kCPBehaviorNumberOfAirExplorers:
-            thePlayer->mNumAirExplorers = this->mIntValue1;
-            break;
-        case kCPBehaviorAttackGroupModifier:
-            thePlayer->mAttackGroupModifierEasy = this->mIntValue1;
-            thePlayer->mAttackGroupModifierMedium = this->mIntValue2;   // value 2, as Init
-            theValue = (long)this->mFloatValue;
-            thePlayer->mAttackGroupModifierHard = theValue;
-            break;
-        case kCPBehaviorCountWeights:
-            thePlayer->mMilitaryCountWeight = (float)this->mIntValue1 * 0.01f;
-            thePlayer->mWorkerCountWeight = (float)this->mIntValue2 * 0.01f;   // as Init (was mMilitaryCountWeight again)
-            break;
-        case kCPBehaviorAttackGroupSize:
-            thePlayer->mAttackGroupSizeMin = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mAttackGroupSizeMax = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorResourceDropOffDistance:
-            thePlayer->mDropOffDistance = this->mIntValue1;
-            break;
-        case kCPBehaviorResearchFrequency:
-            thePlayer->mResearchFrequency = this->mIntValue1;
-            break;
-        case kCPBehaviorUnitSelectedForImprovements:
-            thePlayer->mNumImprovedUnitTypes = this->mIntValue1;
-            break;
-        case kCPBehaviorUnitAttributesSelectedForImprovements:
-            thePlayer->mNumImprovedAttributes = this->mIntValue1;
-            break;
-        case 0x10:
-            thePlayer->mLD7C = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mLD78 = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorInitialAttackDelayPerEpoch:
-            thePlayer->mInitialAttackDelayPerEpoch = this->mIntValue1;
-            break;
-        case kCPBehaviorAttackFrequencyBoundaries:
-            thePlayer->mAttackDelayFloor = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mAttackDelayCeiling = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorDefensiveUnitCap:
-            thePlayer->mDefensiveUnitCap = this->mFloatValue;
-            break;
-        case kCPBehaviorAttackFrequencyBoundary:
-            thePlayer->mAttackFrequencyFloor = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mAttackFrequencyCeiling = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorAttackFrequencyPerEpoch:
-            thePlayer->mAttackFrequencyPerEpoch = this->mFloatValue;
-            break;
-        case kCPBehaviorResearchFrequencyModifier:
-            thePlayer->mResearchFrequencyModifierEasy = this->mIntValue1;
-            thePlayer->mResearchFrequencyModifierHard = this->mIntValue2;
-            break;
-        case kCPBehaviorAttackEnemy:
-            thePlayer->mAttackEnemyChance = this->mIntValue1;
-            break;
-        case kCPBehaviorAttackToClaimResource:
-            thePlayer->mAttackToClaimResourceChance = this->mIntValue1;
-            break;
-        case kCPBehaviorAttackForRevenge:
-            thePlayer->mAttackForRevengeChance = this->mIntValue1;
-            break;
-        case kCPBehaviorEpochFrequency:
-            thePlayer->mEpochFrequencyMin = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mEpochFrequencyMax = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorDesiredNumberOfBarracks:
-        {
-            thePlayer->SetUnitsPerBarracks(this->mIntValue1);
-            thePlayer->SetBarracksMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfArcheryRanges:
-        {
-            thePlayer->SetUnitsPerArcheryRange(this->mIntValue1);
-            thePlayer->SetArcheryRangeMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfStables:
-        {
-            thePlayer->SetUnitsPerStable(this->mIntValue1);
-            thePlayer->SetStableMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfDocks:
-        {
-            thePlayer->SetUnitsPerDock(this->mIntValue1);
-            thePlayer->SetDockMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfSiegeFactories:
-        {
-            thePlayer->SetUnitsPerSiegeFactory(this->mIntValue1);
-            thePlayer->SetSiegeFactoryMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfNavalYards:
-        {
-            thePlayer->SetUnitsPerNavalYard(this->mIntValue1);
-            thePlayer->SetNavalYardMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfAirports:
-        {
-            thePlayer->SetUnitsPerAirport(this->mIntValue1);
-            thePlayer->SetAirportMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfCyberFactories:
-        {
-            thePlayer->SetUnitsPerCyberFactory(this->mIntValue1);
-            thePlayer->SetCyberFactoryMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfUniversities:
-        {
-            thePlayer->SetUnitsPerUniversity(this->mIntValue1);
-            thePlayer->SetUniversityMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfTemples:
-        {
-            thePlayer->SetUnitsPerTemple(this->mIntValue1);
-            thePlayer->SetTempleMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfHospitals:
-        {
-            thePlayer->SetUnitsPerHospital(this->mIntValue1);
-            thePlayer->SetHospitalMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfGranaries:
-        {
-            thePlayer->SetUnitsPerGranary(this->mIntValue1);
-            thePlayer->SetGranaryMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfCyberLaboratories:
-        {
-            thePlayer->SetUnitsPerCyberLab(this->mIntValue1);
-            thePlayer->SetCyberLabMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfSpaceDocks:
-        {
-            thePlayer->SetUnitsPerSpaceDock(this->mIntValue1);
-            thePlayer->SetSpaceDockMax(UMFloatToLong(this->mFloatValue));
-            theDeferred = true;
-            break;
-        }
-        case kCPBehaviorNumberOfMilitaryUnitsToTrain:
-            thePlayer->mMilitaryPopPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorSpecializedUnitPercentage:
-            thePlayer->mSpecializedUnitPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorMaximumAttackResponseRange:
-            // the triggers compare it with squared distances: square it as EECPBehaviorTable::Load squares the
-            // database value (the editor slider uses the unsquared range)
-            thePlayer->mMaxAttackResponseRange = this->mFloatValue * this->mFloatValue;
-            break;
-        case kCPBehaviorPriestUsage:
-            thePlayer->mPriestMaxPerGroup = this->mIntValue1;
-            thePlayer->mPriestChance = (float)this->mIntValue2 * 0.01f;
-            thePlayer->mPriestPopPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorProphetUsage:
-            thePlayer->mProphetMaxPerGroup = this->mIntValue1;
-            thePlayer->mProphetChance = (float)this->mIntValue2 * 0.01f;
-            thePlayer->mProphetPopPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorHeroUsage:
-            thePlayer->mHeroMaxPerGroup = this->mIntValue1;
-            thePlayer->mHeroChance = (float)this->mIntValue2 * 0.01f;
-            thePlayer->mHeroPopPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorCarrierUsage:
-            thePlayer->mCarrierMaxPerGroup = this->mIntValue1;
-            thePlayer->mCarrierChance = (float)this->mIntValue2 * 0.01f;
-            thePlayer->mCarrierPopPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorRPSSelectionNonIslands:
-            thePlayer->mRPSSelectionNonIslands = this->mFloatValue;
-            break;
-        case kCPBehaviorEnableStockCivilization:
-            thePlayer->mEnableStockCivilization = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockResource:
-            thePlayer->mEnableStockResource = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockResearch:
-            thePlayer->mEnableStockResearch = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockProduction:
-            thePlayer->mEnableStockProduction = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockBuild:
-            thePlayer->mEnableStockBuild = this->mIntValue1;
-            break;
-        case 0x3c:
-            thePlayer->mLE80 = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockDefense:
-            thePlayer->mEnableStockDefense = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockExploration:
-            thePlayer->mEnableStockExploration = this->mIntValue1;
-            break;
-        case kCPBehaviorEnableStockCombat:
-            thePlayer->mEnableStockCombat = this->mIntValue1;
-            break;
-        case kCPBehaviorManagerEpochAdvanceWait:
-            thePlayer->mManagerEpochAdvanceWait = this->mIntValue1;
-            break;
-        case kCPBehaviorManagerAttackWait:
-            thePlayer->mManagerAttackWait = this->mIntValue1;
-            break;
-        case kCPBehaviorMaxEnabledManagers:
-            thePlayer->mMaxEnabledManagers = this->mIntValue1;
-            break;
-        case kCPBehaviorUnitCostReductionMedium:
-            thePlayer->mUnitCostMedium = this->mFloatValue;   // a percentage, as Init (the user scales it by 0.01)
-            break;
-        case kCPBehaviorEnableInterval:
-            thePlayer->mEnableInterval = this->mFloatValue;
-            break;
-        case kCPBehaviorAidThreatThreshold:
-            thePlayer->mAidThreatThreshold = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardChokepointPercentage:
-            thePlayer->mGuardChokepointPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardContinentPercentage:
-            thePlayer->mGuardContinentPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardHighGroundPercentage:
-            thePlayer->mGuardHighGroundPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardTownLandPercentage:
-            thePlayer->mGuardTownLandPercentage = this->mFloatValue;
-            break;
-        case 0x4a:
-            thePlayer->mFC44 = this->mFloatValue;
-            break;
-        case 0x4b:
-            thePlayer->mFC50 = this->mFloatValue;
-            break;
-        case 0x4c:
-            thePlayer->mFC58 = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardChokepointAirPercentage:
-            thePlayer->mGuardChokepointAirPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardTownPercentage:
-            thePlayer->mGuardTownPercentage = this->mFloatValue;
-            break;
-        case 0x4f:
-            thePlayer->mFC38 = this->mFloatValue;
-            break;
-        case 0x50:
-            thePlayer->mFC40 = this->mFloatValue;
-            break;
-        case 0x51:
-            thePlayer->mFC4C = this->mFloatValue;
-            break;
-        case kCPBehaviorGuardWaterwayPercentage:
-            thePlayer->mGuardWaterwayPercentage = this->mFloatValue;
-            break;
-        case 0x53:
-            thePlayer->mFC3C = this->mFloatValue;
-            break;
-        case 0x54:
-            thePlayer->mFC48 = this->mFloatValue;
-            break;
-        case 0x55:
-            thePlayer->mFC54 = this->mFloatValue;
-            break;
-        case kCPBehaviorNumChokePointsToGuard:
-            thePlayer->mNumChokePointsToGuard = this->mIntValue1;
-            break;
-        case kCPBehaviorDefenseGroupSizeModifierPercentage:
-            thePlayer->mDefenseGroupSizeMin = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mDefenseGroupSizeMax = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorDefensiveUnitUpdate:
-            thePlayer->mDefensiveUnitUpdateEasy = this->mIntValue1;
-            thePlayer->mDefensiveUnitUpdateMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mDefensiveUnitUpdateHard = theValue;
-            break;
-        case kCPBehaviorInitialDelayInReplenishmentDefenseUnits:
-            thePlayer->mReplenishDelayMin = min(this->mIntValue1, this->mIntValue2);
-            thePlayer->mReplenishDelayMax = max(this->mIntValue1, this->mIntValue2);
-            break;
-        case kCPBehaviorTownGuardPercentage:
-            thePlayer->mTownGuardPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorComputerVsComputerAggression:
-            thePlayer->mComputerAggression = this->mFloatValue;
-            break;
-        case kCPBehaviorDesiredNumberOfTowers:
-        {
-            thePlayer->SetUnitsPerTower(this->mIntValue1);
-            thePlayer->SetTowerMax(UMFloatToLong(this->mFloatValue));
-            break;
-        }
-        case kCPBehaviorUnitCostReductionEasyAndHard:   // its own values, as Init (was the epoch frequency modifier body)
-            thePlayer->mUnitCostReductionEasy = this->mIntValue1;
-            thePlayer->mUnitCostReductionHard = this->mIntValue2;
-            break;
-        case kCPBehaviorEpochFrequencyModifier:
-            thePlayer->mEpochFrequencyModifierEasy = this->mIntValue1;
-            thePlayer->mEpochFrequencyModifierHard = this->mIntValue2;
-            break;
-        case kCPBehaviorExpansionTimer:
-        {
-            thePlayer->mExpansionTimerEasy = this->mIntValue1;
-            thePlayer->mExpansionTimerMedium = this->mIntValue2;
-            long theRoundedValue = UMFloatToLong(this->mFloatValue);
-            thePlayer->mExpansionTimerHard = theRoundedValue;
-            break;
-        }
-        case kCPBehaviorPopulationLimitAdjustment:
-        {
-            thePlayer->mPopLimitAdjustmentEasy = this->mIntValue1;
-            thePlayer->mPopLimitAdjustmentMedium = this->mIntValue2;
-            long theRoundedValue = UMFloatToLong(this->mFloatValue);
-            thePlayer->mPopLimitAdjustmentHard = theRoundedValue;
-            break;
-        }
-        case kCPBehaviorTownCenterUpgradeTimer:
-            thePlayer->mTownCenterUpgradeTimer = this->mIntValue1;
-            break;
-        case kCPBehaviorCapitolUpgradeTimer:
-            thePlayer->mCapitolUpgradeTimer = this->mIntValue1;
-            break;
-        case kCPBehaviorEpochCatchUp:
-            thePlayer->mEpochCatchUpMin = this->mIntValue1;
-            thePlayer->mEpochCatchUpMax = this->mIntValue2;
-            break;
-        case kCPBehaviorEasyMinNumberMilitaryBuildings:
-            thePlayer->mMinMilitaryBuildingsEasy = this->mIntValue1;
-            break;
-        case kCPBehaviorHardMinNumberMilitaryBuildings:
-            thePlayer->mMinMilitaryBuildingsHard = this->mIntValue1;
-            break;
-        case kCPBehaviorDMEarlyAttack:
-            thePlayer->mDMEarlyAttackScale = (float)this->mIntValue1 * 0.01f;
-            break;
-        case kCPBehaviorMediumMinNumberMilitaryBuildings:
-            thePlayer->mMinMilitaryBuildingsMedium = this->mIntValue1;
-            break;
-        case kCPBehaviorDesiredNumberOfTankFactories:
-        {
-            thePlayer->SetUnitsPerTankFactory(this->mIntValue1);
-            thePlayer->SetTankFactoryMax(UMFloatToLong(this->mFloatValue));
-            break;
-        }
-        case kCPBehaviorDesiredNumberOfAntiAirBuildings:
-        {
-            thePlayer->SetUnitsPerAntiAirBuilding(this->mIntValue1);
-            thePlayer->SetAntiAirMax(UMFloatToLong(this->mFloatValue));
-            break;
-        }
-        case kCPBehaviorSpecializedUnitSelectionChance:   // its own value, as Init (was the RPS islands body)
-            thePlayer->mSpecializedUnitChance = this->mFloatValue;
-            break;
-        case kCPBehaviorRPSSelectionIslands:
-            thePlayer->mRPSSelectionIslands = this->mFloatValue;
-            break;
-        case kCPBehaviorNavalUnitWeight:
-            thePlayer->mNavalUnitWeight = this->mFloatValue;
-            break;
-        case kCPBehaviorAirUnitWeight:
-            thePlayer->mAirUnitWeight = this->mFloatValue;
-            break;
-        case kCPBehaviorDesiredNumberOfFlameThrowers:
-            thePlayer->mMaxFlameThrowers = this->mIntValue1;
-            break;
-        case kCPBehaviorTownGuardUpdate:
-            thePlayer->mTownGuardUpdateEasy = this->mIntValue1;
-            thePlayer->mTownGuardUpdateMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mTownGuardUpdateHard = theValue;
-            break;
-        case kCPBehaviorTownGuardUpdateDeathmatch:
-            thePlayer->mDMTownGuardUpdateEasy = this->mIntValue1;
-            thePlayer->mDMTownGuardUpdateMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mDMTownGuardUpdateHard = theValue;
-            break;
-        case kCPBehaviorDefensiveUnitUpdateDeathmatch:
-            thePlayer->mDMDefensiveUnitUpdateEasy = this->mIntValue1;
-            thePlayer->mDMDefensiveUnitUpdateMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mDMDefensiveUnitUpdateHard = theValue;
-            break;
-        case kCPBehaviorMinimumShipMaintenanceTimer:
-            thePlayer->mShipMaintenanceTimer = this->mIntValue1;
-            break;
-        case kCPBehaviorShipsToMaintain:
-            thePlayer->mShipsToMaintainEasy = this->mIntValue1;
-            thePlayer->mShipsToMaintainMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mShipsToMaintainHard = theValue;
-            break;
-        case kCPBehaviorShipsToMaintainDeathmatch:
-            thePlayer->mShipsToMaintainDMEasy = this->mIntValue1;
-            thePlayer->mShipsToMaintainDMMedium = this->mIntValue2;
-            theValue = (long)this->mFloatValue;
-            thePlayer->mShipsToMaintainDMHard = theValue;
-            break;
-        case kCPBehaviorSiegeWeaponPercentage:
-            thePlayer->mSiegeWeaponPercentage = this->mFloatValue;
-            break;
-        case kCPBehaviorBonzaiAttackLevel:
-            thePlayer->mBonzaiAttackLevel = this->mIntValue1;
-            break;
-        case kCPBehaviorIslandExpansionTimer:
-            thePlayer->SetIslandExpansionTimer(this->mIntValue1);
-            break;
-        case kCPBehaviorDMAttackFrequencyModifier:
-            thePlayer->SetDMAttackFrequencyModifier(this->mFloatValue);
-            break;
-        case kCPBehaviorDMInitialAttackModifier:
-            thePlayer->SetDMInitialAttackModifier(this->mFloatValue);
-        }
+        for (size_t w = 0; w < theCount; w++)
+            EESMStoreAI(thePlayer, theWrites[w]);
         if (!theDeferred)
             continue;
         theEffect.Copy(*this);
@@ -2909,142 +1754,6 @@ void EESMEffect::SetAIVariable()
         gWorld.mScenarioManager->AddV134Effect(theEffect);
     }
 }
-
-// FUNCTION: EXE 0x5c1ca9
-// Sets the computer player's anti-aircraft building maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetAntiAirMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1ce8
-// Sets the computer player's airport maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetAirportMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1d27
-// Sets the computer player's archery range maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetArcheryRangeMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1d66
-// Sets the computer player's barracks maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetBarracksMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1da5
-// Sets the computer player's dock maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetDockMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1de4
-// Sets the computer player's granary (farm) maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetGranaryMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1e23
-// Sets the computer player's hospital maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetHospitalMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1e62
-// Sets the computer player's cyber factory maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetCyberFactoryMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1ea1
-// Sets the computer player's cyber laboratory maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetCyberLabMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1ee0
-// Sets the computer player's naval yard maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetNavalYardMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1f1f
-// Sets the computer player's siege factory maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetSiegeFactoryMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1f5e
-// Sets the computer player's space dock maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetSpaceDockMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1f9d
-// Sets the computer player's stable maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetStableMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c1fdc
-// Sets the computer player's tank factory maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetTankFactoryMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c201b
-// Sets the computer player's temple maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetTempleMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c205a
-// Sets the computer player's tower maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetTowerMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2099
-// Sets the computer player's university maximum (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUniversityMax(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c20d8
-// Sets the computer player's units per anti-aircraft building (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerAntiAirBuilding(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2117
-// Sets the computer player's units per airport (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerAirport(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2156
-// Sets the computer player's units per archery range (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerArcheryRange(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2195
-// Sets the computer player's units per barracks (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerBarracks(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c21d4
-// Sets the computer player's units per dock (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerDock(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2213
-// Sets the computer player's units per granary (farm) (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerGranary(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2252
-// Sets the computer player's units per hospital (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerHospital(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2291
-// Sets the computer player's units per cyber factory (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerCyberFactory(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c22d0
-// Sets the computer player's units per cyber laboratory (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerCyberLab(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c230f
-// Sets the computer player's units per naval yard (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerNavalYard(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c234e
-// Sets the computer player's units per siege factory (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerSiegeFactory(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c238d
-// Sets the computer player's units per space dock (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerSpaceDock(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c23cc
-// Sets the computer player's units per stable (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerStable(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c240b
-// Sets the computer player's units per tank factory (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerTankFactory(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c244a
-// Sets the computer player's units per temple (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerTemple(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c2489
-// Sets the computer player's units per tower (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerTower(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
-
-// FUNCTION: EXE 0x5c24c8
-// Sets the computer player's units per university (and the civilization manager's copy)
-// Inline EEComputerPlayer::SetUnitsPerUniversity(long), emitted by SetAIVariable (ee/EEComputerPlayer.h).
 
 // FUNCTION: EXE 0x5c2507
 // Sets each chosen computer player's favourite air, land and sea unit types (mObject, mIntValue1, mIntValue2), each
