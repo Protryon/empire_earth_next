@@ -1,8 +1,11 @@
-// WONGUI's component objects in Rust (R6 WON round 21): the one outward call table, ee_won_guicpp_call
+// WONGUI's component objects in Rust (R6 WON rounds 21-22): the one outward call table, ee_won_guicpp_call
 // (rust/crates/ee_won/src/guihost.rs EeWonGuiOp), and the C++ left of the classes that moved: the TextArea's
-// constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs). Each op is a run of the
+// constructor and destructor and the segments it makes (the Rust TextArea is textobj.rs); the InputBox's
+// constructor, destructor and numeric filter (the Rust InputBox is inputobj.rs); the Label's constructor and
+// destructor (the Rust Label is labelobj.rs); the Splitter's (splitobj.rs). Each op is a run of the
 // original's C++ statements with no decision between them.
 #include <windows.h>
+#include <ctype.h>
 #include <string>
 #include <vector>
 #include <list>
@@ -13,6 +16,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyTextAreaConfig.h"
+#include "ee/wonapi/WONLobbySplitterConfig.h"
 #include "ee/wonapi/WONComponentFlags.h"
 #include "rust/ee_won.h"
 #include "ee/wonapi/WONGUIDraw.h"
@@ -42,8 +46,19 @@ static Cursor* CursorOf(intptr_t inCursor)
     switch ((EeWonGuiCursor)inCursor) {
     case EeWonGuiCursor::Hand: return Cursor::GetStandardCursor(StandardCursor_Hand);
     case EeWonGuiCursor::IBeam: return Cursor::GetStandardCursor(StandardCursor_IBeam);
+    case EeWonGuiCursor::NorthSouthEastWest: return Cursor::GetStandardCursor(StandardCursor_NorthSouthEastWest);
+    case EeWonGuiCursor::EastWest: return Cursor::GetStandardCursor(StandardCursor_EastWest);
+    case EeWonGuiCursor::NorthSouth: return Cursor::GetStandardCursor(StandardCursor_NorthSouth);
     default: return NULL;
     }
+}
+
+// a text the Rust object hands out (u32 units)
+static GUIString UnitsText(intptr_t inUnits, intptr_t inCount)
+{
+    std::wstring w;
+    for (intptr_t i = 0; i < inCount; i++) w.push_back((wchar_t)((const uint32_t*)inUnits)[i]);
+    return GUIString(w);
 }
 
 // a component's services, the same for every component object
@@ -56,6 +71,18 @@ static intptr_t ComponentOp(Component* c, Op op, intptr_t a, intptr_t b)
     case Op::GetMousePos: c->GetMousePos(*(int*)a, *(int*)b); return 0;
     case Op::KeyMod: return c->GetKeyMod();
     case Op::SetParentCursor: c->mParent->SetCursor(CursorOf(a)); return 0;
+    case Op::SetSize: c->SetSize((int)a, (int)b); return 0;
+    case Op::SetDefaultCursor: c->SetDefaultCursor(CursorOf(a)); return 0;
+    case Op::FireEvent:
+        c->Fn2F5380((EeWonGuiEvent)a == EeWonGuiEvent::InputReturn ? ComponentEvent_InputReturn
+                                                                  : ComponentEvent_InputTextChanged, 0);
+        return 0;
+    case Op::ClipboardSet: Clipboard::Set(UnitsText(a, b)); return 0;
+    case Op::ClipboardTake: {
+        GUIString aText = Clipboard::Get();
+        ee_won_gui_sink_units((void*)a, aText.mData->mText, aText.length(), sizeof(wchar_t));
+        return 0;
+    }
     default: return 0;
     }
 }
@@ -193,4 +220,233 @@ void TextArea::AddFormatedText(const GUIString& text,bool lineBreak) {
     for(size_t i=0;i<aCount && i<aParts.size();i++)
         this->AddSegment(text.substr((unsigned short)aParts[i].start,(unsigned short)aParts[i].len),aParts[i].line_break);
 }
+}
+
+// ---- the input box
+
+extern "C" intptr_t ee_won_guicpp_input_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    InputBox* t = (InputBox*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
+    case Op::BaseGotFocus: t->Component::GotFocus(); return 0;
+    case Op::BaseLostFocus: t->Component::LostFocus(); return 0;
+    case Op::BaseMouseExit: t->Component::MouseExit(); return 0;
+    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
+    case Op::FontHeight: return t->mFont->GetHeight();
+    case Op::FontCharWidth: return t->mFont->GetCharacterWidth((int)a);
+    case Op::TextWidth: return t->mFont->GetStringWidth(t->mText, (unsigned short)a, (unsigned short)b);
+    case Op::TextWidthAll: return t->mFont->GetStringWidth(t->mText);
+    case Op::TextCharWidth: return t->mFont->GetCharacterWidth(t->mText[(int)a]);
+    case Op::FontStringM: return t->mFont->GetStringWidth(GUIString("M"));
+    case Op::TextStore: (a == 0 ? t->mText : t->mRealText) = UnitsText(b, c); return 0;
+    case Op::Filter: {
+        if (!t->mInputFilter) return 2;
+        GUIString aText = UnitsText(a, b);
+        bool r = t->mInputFilter(t, aText);
+        ee_won_gui_sink_units((void*)c, aText.mData->mText, aText.length(), sizeof(wchar_t));
+        return r ? 1 : 0;
+    }
+    case Op::IconWidth: return t->mIcon.get() != NULL ? t->mIcon->mWidth : -1;
+    case Op::PaintInputs: {
+        EeWonInputPaint* p = (EeWonInputPaint*)a;
+        p->disabled_look = t->IsDisabled() && t->mUseDisabledColors;
+        p->has_icon = t->mIcon.get() != NULL;
+        p->has_focus = t->HasFocus();
+        p->text_color = (int)t->mTextColor;
+        p->disabled_text_color = t->mDisabledTextColor;
+        p->icon_height = p->has_icon ? t->mIcon->mHeight : 0;
+        p->font_height = t->mFont->GetHeight();
+        p->sel = WONDrawSelOf(t->mSelColor);
+        return 0;
+    }
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mImages[0] = t->mIcon.get();
+        aSlots.mFont = t->mFont.get();
+        aSlots.mString = &t->mText;
+        Graphics& g = *(Graphics*)a;
+        const EeWonDrawOp& o = *(const EeWonDrawOp*)b;
+        auto aBackground = [&](const EeWonDrawOp& call) {
+            Background& aBack = call.b ? t->mDisabledBackground : t->mBackground;
+            aBack.Paint(g, 0, 0, call.c, call.d, call.e, 0);
+        };
+        WONDrawOne(g, o, aSlots, aBackground);
+        return 0;
+    }
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x006f7f70
+// Input filter that accepts only digits, with a leading minus sign allowed at the start of the box
+bool InputBox::NumericFilter(InputBox *theInputBox, GUIString &theStr)
+{
+    int aPos = 0;
+    if(theStr[0]=='-')
+    {
+        if(theInputBox->GetSelStart()>0)
+            return false;
+        aPos++;
+    }
+    for(;aPos<theStr.length();aPos++)
+        if(!isdigit(theStr[aPos]))
+            return false;
+    return true;
+}
+
+// FUNCTION: WON 0x006f7fd0
+// Creates an empty input box with the InputBox font, system colours and the I-beam cursor (the Rust box holds the
+// rest: the 500 ms blink, the 100-entry input history, the padding)
+InputBox::InputBox()
+{
+    this->mRust=ee_won_input_new(this,ee_won_guicpp_input_call);
+    this->mFont=this->GetNamedFont("InputBox");
+    this->SetComponentFlags(0x4008,true);
+    this->mTextColor=0x8000000e;
+    this->mDisabledTextColor=(int)0x80000006;
+    this->mDisabledBackground.SetColor((int)0x80000001);
+    this->mUseDisabledColors=true;
+    this->SetDefaultCursor(Cursor::GetStandardCursor(StandardCursor_IBeam));
+    this->mInputFilter=NULL;
+}
+// FUNCTION: WON 0x006f8270
+// Destroys the input box: the Rust box goes
+InputBox::~InputBox() { ee_won_input_free(this->mRust); }
+}
+
+// ---- the label
+
+extern "C" intptr_t ee_won_guicpp_label_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    Label* t = (Label*)inComp;
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Component::Virtual08(); return 0;
+    case Op::BasePaint: t->Component::Paint(*(Graphics*)a); return 0;
+    case Op::WrapSetMaxWidth: t->mWrappedText->SetMaxWidth((int)a); return 0;
+    case Op::WrapSetCentered: t->mWrappedText->SetCentered(a != 0); return 0;
+    case Op::WrapSetWrap: t->mWrappedText->SetWrap(a != 0); return 0;
+    case Op::WrapWidth: return t->mWrappedText->GetWidth();
+    case Op::WrapHeight: return t->mWrappedText->GetHeight();
+    case Op::PaintBackground: t->mBackground.Paint(*(Graphics*)a, 0, 0, (int)b, (int)c); return 0;
+    case Op::Draw: {
+        WONDrawSlots aSlots;
+        aSlots.mText = t->mWrappedText.get();
+        WONDrawNoCall aNoCall;
+        WONDrawOne(*(Graphics*)a, *(const EeWonDrawOp*)b, aSlots, aNoCall);
+        return 0;
+    }
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+namespace WONAPI {
+// FUNCTION: WON 0x006f9d80
+// Creates an empty, clipped label with the Label font, no wrapping and no background colour (the Rust label holds
+// the colour, the top-left alignment and the zero padding)
+Label::Label()
+{
+    this->mRust=ee_won_label_new(this,ee_won_guicpp_label_call);
+    this->mWrappedText=new WrappedText;
+    this->mWrappedText->SetFont(this->GetNamedFont("Label"));
+    this->mWrappedText->SetWrap(false);
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+    this->mBackground.SetColor(-1);
+}
+// FUNCTION: WON 0x006f9f50
+// Destroys the label: the Rust label goes
+Label::~Label() { ee_won_label_free(this->mRust); }
+}
+
+// ---- the splitter
+
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d);
+static Component* Comp(intptr_t a) { return (Component*)a; }
+static Button* Btn(intptr_t a) { return (Button*)a; }
+
+namespace WONAPI {
+intptr_t SplitterHostCall(Splitter* t, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c)
+{
+    switch (op) {
+    case Op::Get:
+        if ((Fd)a == Fd::Width) return t->Width();
+        if ((Fd)a == Fd::Height) return t->Height();
+        return 0;
+    case Op::BaseSizeChanged: t->Container::Virtual08(); return 0;
+    case Op::BaseMouseDown: t->Container::MouseDown((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseUp: t->Container::MouseUp((int)a, (int)b, (int)c); return 0;
+    case Op::BaseMouseDrag: t->Container::MouseDrag((int)a, (int)b); return 0;
+    case Op::BaseHandleEvent: t->Container::HandleComponentEvent((ComponentEvent*)a); return 0;
+    case Op::ChildSetEnabled: Comp(a)->SetEnabled(b != 0); return 0;
+    case Op::ChildSetVisible: Comp(a)->SetVisible(b != 0); return 0;
+    case Op::ChildSetPosSize: {
+        const EeWonRect4* r = (const EeWonRect4*)b;
+        Comp(a)->SetPosSize(r->x, r->y, r->w, r->h);
+        return 0;
+    }
+    case Op::ChildIsVisible: return Comp(a)->IsVisible() ? 1 : 0;
+    case Op::ChildWidth: return Comp(a)->Width();
+    case Op::ChildHeight: return Comp(a)->Height();
+    case Op::ChildLeft: return Comp(a)->Left();
+    case Op::ChildTop: return Comp(a)->Top();
+    case Op::ChildHold: Comp(a)->AddRef(); return 0;
+    case Op::ChildRelease: Comp(a)->Release(); return 0;
+    case Op::ChildFlagSet: return Comp(a)->ComponentFlagSet((int)b) ? 1 : 0;
+    case Op::ChildSetFlags: Comp(a)->SetComponentFlags((int)b, c != 0); return 0;
+    case Op::ChildHasDefaultCursor: return Comp(a)->GetDefaultCursor() != NULL ? 1 : 0;
+    case Op::ChildSetDefaultCursor: Comp(a)->SetDefaultCursor(CursorOf(b)); return 0;
+    case Op::ChildMouseChild: return (intptr_t)Comp(a)->GetMouseChild();
+    case Op::AddChild: t->AddChild(Comp(a)); return 0;
+    case Op::MouseChild: return (intptr_t)t->mMouseChild;
+    case Op::ButtonControlId: return Btn(a)->mControlId;
+    case Op::ButtonSetControlId: Btn(a)->mControlId = (int)b; return 0;
+    case Op::ButtonSetCheck: Btn(a)->SetCheck(b != 0, false); return 0;
+    case Op::ButtonIsChecked: return Btn(a)->IsChecked() ? 1 : 0;
+    case Op::NewDragComponent: {
+        Container* aContainer = (Container*)Comp(a);
+        SmartPtr<Component> aDragComponent = new Component;
+        aContainer->Fn2F6140(aDragComponent.get(), 3, aContainer, 0, 0, 0, 0, 0);
+        aContainer->AddChildEx(aDragComponent.get(), 0);
+        return (intptr_t)aDragComponent.get();
+    }
+    case Op::NewSizedComponent: {
+        Component* aComp = new Component;
+        aComp->AddRef(); // the creator's SmartPtr, given back with ChildRelease
+        aComp->SetSize((int)a, (int)a);
+        return (intptr_t)aComp;
+    }
+    case Op::EventIsButtonPress: return ((ComponentEvent*)a)->mType == ComponentEvent_ButtonPressed ? 1 : 0;
+    case Op::EventControlId: return ((ComponentEvent*)a)->GetControlId();
+    case Op::EventButton: return (intptr_t)dynamic_cast<Button*>(((ComponentEvent*)a)->mComponent);
+    default: return ComponentOp(t, op, a, b);
+    }
+}
+
+// FUNCTION: WON 0x00707060
+// Creates an empty clipping splitter (the Rust splitter holds the split at 50% / 50% and no minimum pane sizes)
+Splitter::Splitter()
+{
+    this->mRust=ee_won_split_new(this,ee_won_guicpp_split_call);
+    this->SetComponentFlags(ComponentFlag_Clip,true);
+}
+// FUNCTION: WON 0x007071e0
+// Destroys the splitter: the Rust splitter gives its buttons and drag handles back
+Splitter::~Splitter() { ee_won_split_free(this->mRust); }
+}
+
+extern "C" intptr_t ee_won_guicpp_split_call(void* inComp, EeWonGuiOp op, intptr_t a, intptr_t b, intptr_t c, intptr_t d)
+{
+    (void)d;
+    return SplitterHostCall((Splitter*)inComp, op, a, b, c);
 }
