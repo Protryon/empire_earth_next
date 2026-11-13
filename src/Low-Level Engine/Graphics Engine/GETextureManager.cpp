@@ -131,9 +131,9 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::TexGet:
         switch ((EeGeTexField)a) {
         case EeGeTexField::FromPack:
-            return theTexture->mIsFromTexturePack;
+            return theTexture->GetIsFromTexturePack();
         case EeGeTexField::PackMipLevels:
-            return theTexture->mTexturePackMipLevels;
+            return theTexture->GetTexturePackMipLevels();
         case EeGeTexField::NumMipLevelsToDrop:
             return (intptr_t)theTexture->GetNumMipLevelsToDrop();
         case EeGeTexField::CreateMipMaps:
@@ -148,16 +148,16 @@ intptr_t GETextureManager::Host(void* inOwner, EeGeManOp inOp, void* inObj, intp
     case EeGeManOp::TexSet:
         switch ((EeGeTexField)a) {
         case EeGeTexField::FromPack:
-            theTexture->mIsFromTexturePack = b != 0;
+            theTexture->SetIsFromTexturePack(b != 0);
             break;
         case EeGeTexField::PackMipLevels:
-            theTexture->mTexturePackMipLevels = (long)b;
+            theTexture->SetTexturePackMipLevels((long)b);
             break;
         case EeGeTexField::NumMipLevelsToDrop:
-            theTexture->mNumMipLevelsToDrop = (unsigned long)b;
+            theTexture->SetNumMipLevelsToDrop((unsigned long)b);
             break;
         case EeGeTexField::IsManaged:
-            theTexture->mIsManaged = b != 0;
+            theTexture->SetIsManaged(b != 0);
             break;
         case EeGeTexField::Promoted:
             theTexture->SetIsPromoted(b != 0);

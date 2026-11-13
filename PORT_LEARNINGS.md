@@ -14101,3 +14101,110 @@ Measured as rounds 18-31 (every file under `src/Empire Earth/WONAPI` and `includ
   double-clicks with timing, or hovers for a tooltip; those run only in the golden.
 - **Left:** WindowManager (its popup and modal stack, the event loop, the caches; its census is mostly done by this
   round's accessors), the skins' Button subclasses (draw ops).
+
+## R4.3, eighth part: GETexture whole in Rust; `lrintf` as the UCRT's (ee_ge texobj_tex.rs, um.rs; branch rust-ge8, 2026-11-13)
+
+The second whole-class round of the Graphics Engine, in part seven's pattern (a census commit, then the move, a golden
+over the unmodified unit with traced fakes, mutations, a cargo replay).
+
+| Commit | What | C++ (`git diff --numstat` over src, include/lle, include/ee) |
+|---|---|---|
+| 9868b49c | GETexture's census: the manager's host and the store gate's digest read a texture through accessors | +21 -6, net +15 (census: positive) |
+| b6ed5e38 | GETexture whole in Rust (`texobj_tex.rs`) | +205 -503, net -298 |
+| a8dd77ba | `um.rs`'s `lrintf` answers as the UCRT's out of the `long` range (Rust only) | 0 |
+
+- **The census was small.** Part seven's upper bound named GETexture's members in 91 outside files, but every member is
+  private: only its two friends read them (GETextureManager's host: the pack fields, the drop count, `mIsManaged`; the
+  store gate's digest: everything). The 91 files read the header's inline accessors, which keep their signatures. The
+  census commit added private accessors for what the friends read (the texture's own `mData`, `mIsCompressed`,
+  `mIsPromoted`, `mFrameTexture`, `mFrames`, `mFramesPerRow`, the pack fields; the public `GetData`/`GetIsCompressed`/
+  `GetIsPromoted` read the current frame's) and routed both friends through them (oracle identical, store gate PASS).
+  No renderer file changed.
+- **The move** (`texobj_tex.rs`, `EeGeTexture`): the stage (`EeGeTStage`, a `#[repr(C)]` mirror of `GETStage`) and the
+  frame corner (`EeGeTexCoord`, of `GETextureCoordinate`) live inside the Box, so `GetStage()` and
+  `GetFrameTopLeftCorner()` return pointers into it as they returned members (GETexture.cpp `static_assert`s both
+  layouts); the frames are `Option<Vec<usize>>` (NULL or `new GETexture*[n]`), the rest scalars. Every method of
+  GETexture.cpp is Rust: the constructors' fields (the surface constructor's reference, screen and rasterizer handle
+  after the object exists, since the rasterizer may read the texture), the destructor (frames released through
+  `UReferenceCounter::Dereference`, frame 0 shown, the handle, the surface), `Dereference`'s decision, `Load`'s two frame
+  formats (MIP filtering, dropped levels, the grid cells), `Lock`/`Unlock`, `Recreate` with the logical shift,
+  `SetLogicalShift` over the frames, the seven stage setters over every frame (one generic walk), `SetFrame`,
+  `SetSurface`, `Promote`. The header's accessors forward through `ee_ge_tex_get`/`ee_ge_tex_set` with a field enum
+  (`EeGeTexVal`; the `Frame...` values read the current frame's texture), plus typed ones for the UV size, the stage,
+  the corner, the frame array and a frame. The class's only member is `mRust`; `sRasterizer` stays its C++ static
+  (exported).
+- **The host** (`GETexture::Host`, `EeGeTexOp`, 29 operations): the surfaces' reference counts, sizes, locks, copies
+  (`EeGeTexCopy`: the two rectangles as GERectangle's setters fill them), descriptions and logical shifts; the screen's
+  `CreateSurface`; the decoded file's info and a frame stored into a surface (`ee_of_texture_frame` then the C++
+  `GEStoreFrame`, the original's order; ee_ge cannot call ee_openformats); a frame texture made, its Rust object, its
+  two dereferences and its reference count; the manager's `RemoveTexture` and `PromoteTexture`; the rasterizer's
+  handles. A frame texture's fields (format 0) are read and written on its own object, reached through `TexObj`.
+  `Dereference` reads the manager before dropping the reference (the original read it after; the same value on every
+  defined path). `texture_ffi.rs` lost the seven `ee_ge_texture_*` wrappers only GETexture.cpp called.
+- **The golden** (scratch, `build/ge8/golden`: `build.py gtex orig 9868b49c | cur`, `mutate.py`): GETexture.cpp and its
+  header of the census commit (unmodified) or the worktree's, its engine includes replaced by traced fakes
+  (`fake_gtex.h`: surfaces with mip chains and pixel buffers whose hashes are traced, two screens whose surface
+  creations fail 5% of the time, locks and copies that fail now and then, a rasterizer, two managers with caches, the
+  decoded files with frames that sometimes do not fit), linked with a scratch staticlib of `ee_ge` (the real pixel
+  store runs). Random sequences of every method and of the callers' own acts (references, the cache's reference and
+  `RemoveTexture`, frames held past their parent's reload, the pack fields), each followed by every live texture's
+  state through the accessors. Fakes allocate zeroed memory that is never reused, so a dangling stage texture still
+  names its dead texture and an unset member reads 0 on both sides. 20,000 sequences, 5,444,831 trace lines, identical
+  over the shell. The first 20 sequences are `golden_gtex.txt`, which cargo replays (`texobj_tex_tests.rs`): a world
+  of textures and surfaces by construction serial makes each line's call on the Rust objects and writes every line the
+  fakes and the driver wrote (answers to the fakes' random failures, and whether a frame fit, read from the golden).
+
+  | Mutation of the Rust | Sequences of 20,000 that change | cargo |
+  |---|---|---|
+  | SetSurface keeps the old surface's handle | 6,519 | replay fails |
+  | the destructor releases frames through GETexture::Dereference | 1,561 | unit test fails |
+  | a reload releases the old frames through the base | 2,576 | replay fails |
+  | the MIP filter copies to the level's own size | 11,917 | replay fails |
+  | a stage setter marks unchanged frames changed | 279 | unit test fails |
+  | the pack's MIP filter ignores CreateMIPMaps | 67 | unit test fails |
+  | Recreate loses the logical size | 7,432 | replay fails |
+  | Promote ignores the frame's promotion | 623 | replay fails |
+  | SetFrame leaves the texture unchanged | 740 | replay fails |
+  | a failed frame surface is not reported | 1,609 | replay fails |
+  | the grid's staging surface is kept | 15,345 | replay fails |
+
+  The restored source: 0. Three mutations escaped the 20 replayed sequences; a direct test each was added after.
+- **Driver lessons.** Two first differences were the driver's own: the end's release loop walked a `std::map` keyed by
+  pointer, and the managers' caches were `std::set`s of pointers, whose order follows the heap (the Rust side
+  allocates differently). Key every driver container by construction serial. Python `write_text` turned two scratch
+  files and a Rust test into CRLF again (part seven's lesson): `read_bytes`/`write_bytes` only.
+- **Behaviour changes** (undefined paths of the original only): the constructors set `mCreateMIPMaps` false (the
+  original left it unset until `Load`; `SetStageMipFilterMode` on a never-loaded texture read it); a NULL frame entry
+  or a missing frame array is skipped by the destructor, the reload and the stage setters and reads as NULL in
+  `GetFrameTexture`/`SetFrame` (the original read through NULL or past the array); the copy constructor and assignment
+  are deleted (none was used).
+- **`lrintf` as the UCRT's** (the lead's request; the triggers lane found it): the game's `UMFloatToLong` is `UMRint`,
+  `cvtss2si` inside 2^30 and the UCRT's `lrintf` beyond. A scratch driver linked with `libucrt.lib`
+  (`build/ge8/lrint`) measured it: half to even inside the range; exactly 2^31 gives `LONG_MIN` (-2^31 too, in range);
+  everything further out (2^31 + 256, 3e9, 2^32, 2^40, 2^63, `FLT_MAX`, their negatives), both infinities and NaN give
+  0. `um.rs` returned `i32::MIN` for all of them; it now returns `rounded as i64 as i32` on [-2^31, 2^31] and 0
+  otherwise, bit for bit with the measured table (28 values in its unit test). POSIX builds call their libc's
+  `lrintf` into a 64-bit `long`, which differs from Windows there already; the Rust follows Windows.
+  - Callers of `ee_ge::um::lrintf` (and of `floor`/`floor_unsigned`/`ceil` on it): ee_combat (damage, launch, search,
+    world, lib), ee_ge (pixel, terrain, terrain_mesh, physical_walk, vector), ee_gfx (effect_icon, effect_state,
+    effect_storm, minimap, pick, select, terrain), ee_screens (editor_whole), ee_tech (calamity_update, contagion),
+    ee_rmap (through `math.rs`'s re-export). Only a value rounding outside the `long` range or a NaN changes; the oracle
+    on seeds 2-7 and the oracle, late and calamity captures stayed identical. Two tests pinned the old answer and now
+    pin the UCRT's: ee_rmap's `math.rs`, and ee_gfx's damage smoke with `time2` below `time1` (its interval rounds to
+    2^31 + 256: the UCRT gives 0, so it puffs at once).
+  - Not changed (other lanes' copies, each with its own `i32::MIN`): ee_netmsg `execute.rs`, ee_units `physics.rs` and
+    `tick.rs`, ee_astar `sectors.rs`, ee_input `lrintf_long`, ee_dx7 `vertex.rs` `float_to_long`.
+- **What runs it.** EE-SIM loads, sizes, refreshes and stage-sets textures (the oracle; the store gate runs every
+  texture of the open tree through LoadTexture, ReloadTexture and RefreshAllTextures, 25,140 lines equal). Only the
+  game runs the renderer's per-draw accessors (`GetStage`, `GetFrameSurface`, `GetData`/`SetData` in DX7Rasterizer),
+  `Lock`/`Unlock` from the UI, `Recreate` at a device loss, `Promote`, and textures made from the screen's surfaces:
+  the tour (below) and the lead's menu pixel comparison.
+- **Gates.** Each commit: build `--sim` 0/0, the Rust gate PASS, the store gate PASS (25,140 lines), the oracle
+  identical on seeds 2-3. After the lrintf commit: the oracle identical on seeds 2-7, the captures at seeds 2-3 PASS
+  (oracle 169, late 170, calamity 183 digests; TNMT without a golden, as before), `--profile effects` PASS (6
+  digests), the test profile 0/0, the tour (`fixture_game.py --exercise tour --play-seconds 60`, under the harness lock) `RESULT PASS tour`. `rust` had not moved (57ae2ad1, already merged): nothing to
+  merge.
+- **Left** (by the census, logic lines now 3,278): GESurface (codecs; DX7Surface's base), GEModel (members read by the
+  renderer, the effects and the graphic objects: a census commit first; 'GEModel Load.cpp'), GETerrainMesh,
+  GERasterizer, GEBitmap, GEFontBitmap, GETransformation's member copies. GETexture.cpp keeps 113 logic lines, the
+  host's switch.

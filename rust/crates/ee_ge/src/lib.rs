@@ -74,6 +74,7 @@ pub mod terrain_visible;
 /// cbindgen:ignore
 pub mod terrain_volume;
 pub mod texobj;
+pub mod texobj_tex;
 /// cbindgen:ignore
 pub mod texture;
 pub mod texture_ffi;

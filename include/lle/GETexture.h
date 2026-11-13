@@ -1,7 +1,14 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GETexture.h (RECONSTRUCTION). GETexture.cpp (~0x10032cfa) holds the
 // ctors, dtor and the heavy members; the accessors are inline (GEBitmap.cpp emits them first, 0x1000e040..).
+//
+// port (R4.3, eighth part): the texture is a whole Rust object (ee_ge texobj_tex.rs): its stage, frames, surface,
+// screen, sizes and flags with every method. The class's only member is that object; the accessors below forward
+// to it, and GETexture.cpp is the forwarders and the host (the calls the texture makes on other objects).
 #ifndef LLE_GETEXTURE_H
 #define LLE_GETEXTURE_H
+
+#include <stdint.h>
+#include "rust/ee_ge.h"   // the texture (ee_ge texobj_tex.rs), its host's EeGeTexOp
 
 class FSFileSpec;
 class GERasterizer;
@@ -10,7 +17,7 @@ class GESurface;
 class GETexture;
 class GETextureManager;
 struct GESurfaceDescription;
-struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_rust.h)
+struct EeOfTexture;                        // a texture decoded by Rust (rust/ee_openformats.h)
 
 struct GETStage {                           // sizeof 0x20 (copied with rep movsd in GETexture's copy ctor)
     GETexture* mTexture;                    // +0x00 (GetStageTexture)
@@ -26,39 +33,37 @@ struct GETStage {                           // sizeof 0x20 (copied with rep movs
 class LLE_API GETexture : public UReferenceCounter {   // sizeof 0x6c (vector deleting dtor 0xe255)
 public:
 
-    void* GetData() { return this->mFrameTexture->mData; }
-    bool GetCreateMIPMaps() const { return this->mCreateMIPMaps; }
-    float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->mFrameUVSize; }
-    GESurface* GetFrameSurface() const { return this->mFrameTexture->mSurface; }
+    void* GetData() { return (void*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameData); }
+    bool GetCreateMIPMaps() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::CreateMipMaps) != 0; }
+    float GetFrameHeight() const { return this->GetFrameSurface()->GetHeight() * this->GetFrameUVSize(); }
+    GESurface* GetFrameSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameSurface); }
     GETexture* GetFrameTexture(unsigned long inFrame) const
-        { return this->mFrameFormat == 0 ? this->mFrames[inFrame] : this->mFrames[0]; }
-    const GETextureCoordinate& GetFrameTopLeftCorner() const { return this->mFrameTopLeftCorner; }
-    float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->mFrameUVSize; }
-    unsigned long GetHeight() const { return this->mSurface->GetHeight(); }   // logical (GESurface::GetLogicalShift)
-    bool GetIsCompressed() const { return this->mFrameTexture->mIsCompressed; }
-    bool GetIsPromoted() const { return this->mFrameTexture->mIsPromoted; }
-    unsigned long GetPixelFormat() const { return this->mFrameTexture->mSurface->GetPixelFormat(); }
-    GETexture* GetStageTexture(unsigned long inStage) const { return this->mStage.mTexture; }
-    unsigned long GetWidth() const { return this->mSurface->GetWidth(); }
-    bool HasChanged() const { return this->mHasChanged; }
-    long Promote()
-    {
-        if (this->mFrameTexture->mIsPromoted)
-            return 0;
-        return this->mManager->PromoteTexture(this->mFrameTexture);
-    }
-    void SetData(void* inData) { this->mFrameTexture->mData = inData; }
-    void SetHasChanged() { this->mHasChanged = true; }
-    void ValidateChanges() { this->mHasChanged = false; }
+        { return (GETexture*)ee_ge_tex_frame_texture(this->mRust, inFrame); }
+    const GETextureCoordinate& GetFrameTopLeftCorner() const
+        { return *(const GETextureCoordinate*)ee_ge_tex_corner(this->mRust); }
+    float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->GetFrameUVSize(); }
+    unsigned long GetHeight() const { return this->GetSurface()->GetHeight(); }   // logical (GESurface::GetLogicalShift)
+    bool GetIsCompressed() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FrameIsCompressed) != 0; }
+    bool GetIsPromoted() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FrameIsPromoted) != 0; }
+    unsigned long GetPixelFormat() const { return this->GetFrameSurface()->GetPixelFormat(); }
+    GETexture* GetStageTexture(unsigned long inStage) const { return this->GetStage()->mTexture; }
+    unsigned long GetWidth() const { return this->GetSurface()->GetWidth(); }
+    bool HasChanged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::HasChanged) != 0; }
+    long Promote() { return ee_ge_tex_promote(this->mRust); }
+    void SetData(void* inData) { ee_ge_tex_set(this->mRust, EeGeTexVal::FrameData, (intptr_t)inData); }
+    void SetHasChanged() { ee_ge_tex_set(this->mRust, EeGeTexVal::HasChanged, 1); }
+    void ValidateChanges() { ee_ge_tex_set(this->mRust, EeGeTexVal::HasChanged, 0); }
 
-    unsigned long GetFrame() const { return this->mFrame; }
-    unsigned long GetFrameCount() const { return this->mFrameCount; }
-    float GetFrameUVSize() const { return this->mFrameUVSize; }
-    unsigned long GetMipLevelCount() const { return this->mMipLevelCount; }
-    unsigned long GetNumMipLevelsToDrop() const { return this->mNumMipLevelsToDrop; }
-    GEScreen* GetScreen() const { return this->mScreen; }
-    const GETStage* GetStage() const { return &this->mStage; }
-    GESurface* GetSurface() const { return this->mSurface; }
+    unsigned long GetFrame() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::Frame); }
+    unsigned long GetFrameCount() const { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameCount); }
+    float GetFrameUVSize() const { return ee_ge_tex_frame_uv_size(this->mRust); }
+    unsigned long GetMipLevelCount() const
+        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::MipLevelCount); }
+    unsigned long GetNumMipLevelsToDrop() const
+        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::NumMipLevelsToDrop); }
+    GEScreen* GetScreen() const { return (GEScreen*)ee_ge_tex_get(this->mRust, EeGeTexVal::Screen); }
+    const GETStage* GetStage() const { return (const GETStage*)ee_ge_tex_stage(this->mRust); }
+    GESurface* GetSurface() const { return (GESurface*)ee_ge_tex_get(this->mRust, EeGeTexVal::Surface); }
 
     long Demote();
     void Dereference();
@@ -84,36 +89,39 @@ private:
     friend struct GEStoreDigest;            // tools/eemodel/storegate: reads what the loaders stored
     GETexture(GETextureManager* inManager);                         // ??0GETexture@@AAE@PAVGETextureManager@@@Z
     GETexture(GESurface* inSurface, GETextureManager* inManager);   // private too (AAE)
-    unsigned long GetFrameFormat() const { return this->mFrameFormat; }  // ?GetFrameFormat@GETexture@@ABEKXZ
+    GETexture(const GETexture&) = delete;
+    GETexture& operator=(const GETexture&) = delete;
+    unsigned long GetFrameFormat() const   // ?GetFrameFormat@GETexture@@ABEKXZ
+        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameFormat); }
     // port (D9): the frames of a texture's PNG files, decoded by Rust (GEFindTextureFile), in place of a texture file
     long Load(const EeOfTexture* inTexture, GESurfaceDescription& inDescription, GEScreen* inScreen,
               bool inCreateMIPMaps, long inNumMipLevelsToDrop, unsigned long inFrameFormat);
-    void SetIsPromoted(bool inIsPromoted) { this->mIsPromoted = inIsPromoted; }
+    void SetIsPromoted(bool inIsPromoted) { ee_ge_tex_set(this->mRust, EeGeTexVal::IsPromoted, inIsPromoted); }
+    // port: the members the friends read and write (the manager's host, the store gate's digest), this texture's own
+    // (GetData, GetIsCompressed and GetIsPromoted read the current frame's)
+    bool GetIsManaged() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsManaged) != 0; }
+    void SetIsManaged(bool inIsManaged) { ee_ge_tex_set(this->mRust, EeGeTexVal::IsManaged, inIsManaged); }
+    GETexture* GetCurrentFrameTexture() const
+        { return (GETexture*)ee_ge_tex_get(this->mRust, EeGeTexVal::FrameTexture); }
+    GETexture* const* GetFrames() const { return (GETexture* const*)ee_ge_tex_frames(this->mRust); }
+    unsigned long GetFramesPerRow() const
+        { return (unsigned long)ee_ge_tex_get(this->mRust, EeGeTexVal::FramesPerRow); }
+    void* GetOwnData() const { return (void*)ee_ge_tex_get(this->mRust, EeGeTexVal::Data); }
+    bool GetOwnIsCompressed() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsCompressed) != 0; }
+    bool GetOwnIsPromoted() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::IsPromoted) != 0; }
+    void SetNumMipLevelsToDrop(unsigned long inCount)
+        { ee_ge_tex_set(this->mRust, EeGeTexVal::NumMipLevelsToDrop, (intptr_t)inCount); }
+    bool GetIsFromTexturePack() const { return ee_ge_tex_get(this->mRust, EeGeTexVal::FromPack) != 0; }
+    void SetIsFromTexturePack(bool inIsFromTexturePack)
+        { ee_ge_tex_set(this->mRust, EeGeTexVal::FromPack, inIsFromTexturePack); }
+    long GetTexturePackMipLevels() const { return (long)ee_ge_tex_get(this->mRust, EeGeTexVal::PackMipLevels); }
+    void SetTexturePackMipLevels(long inLevels) { ee_ge_tex_set(this->mRust, EeGeTexVal::PackMipLevels, inLevels); }
     // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
     void SetLogicalShift(unsigned long inShift);
+    // port: the calls the Rust texture makes on other objects (EeGeTexOp)
+    static intptr_t Host(void* inOwner, EeGeTexOp inOp, void* inObj, intptr_t a, intptr_t b, intptr_t c);
 
-    bool mIsManaged;                        // +0x08 set by GETextureManager (Dereference then calls RemoveTexture)
-    GETStage mStage;                        // +0x0c
-    GETextureCoordinate mFrameTopLeftCorner;   // +0x2c
-    GEScreen* mScreen;                      // +0x34
-    GESurface* mSurface;                    // +0x38
-    GETexture* mFrameTexture;               // +0x3c the current frame's texture (this when unframed)
-    GETexture** mFrames;                    // +0x40
-    GETextureManager* mManager;             // +0x44
-    void* mData;                            // +0x48
-    float mFrameUVSize;                     // +0x4c
-    unsigned long mFrameFormat;             // +0x50 0: one texture per frame
-    unsigned long mFrame;                   // +0x54
-    unsigned long mFrameCount;              // +0x58
-    unsigned long mFramesPerRow;            // +0x5c frame format 1: frames per row/column of the grid (SetFrame)
-    long mMipLevelCount;                    // +0x60 signed (Load: jle/jge)
-    unsigned long mNumMipLevelsToDrop;      // +0x64
-    bool mIsCompressed;                     // +0x68
-    bool mIsPromoted;                       // +0x69
-    bool mHasChanged;                       // +0x6a
-    bool mCreateMIPMaps;                    // +0x6b
-    bool mIsFromTexturePack;                // port: loaded from the texture pack (GETextureManager::SetTexturePack)
-    long mTexturePackMipLevels;             // port: the MIP levels the pack dropped on top of mNumMipLevelsToDrop
+    EeGeTexture* mRust;                     // port: the texture (ee_ge texobj_tex.rs)
 
     static GERasterizer* sRasterizer;       // exported ?sRasterizer@GETexture@@0PAVGERasterizer@@A
 };

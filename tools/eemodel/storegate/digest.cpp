@@ -1,5 +1,5 @@
-// storegate's digests of what a GEModel and a GETexture store, read through their members (GEStoreDigest is a
-// friend of GEModel, GEMaterial and GETexture; the texture manager's cache through its accessors). FNV-1a over
+// storegate's digests of what a GEModel and a GETexture store: a model read through its members (GEStoreDigest is a
+// friend of GEModel, GEMaterial and GETexture), a texture and the manager's cache through their accessors. FNV-1a over
 // every value, floats by their bits; an array shared with an earlier frame is hashed as that frame's number.
 #include <windows.h>
 #include <stdio.h>
@@ -97,8 +97,8 @@ static void HashSurface(Hash& ioHash, GESurface* inSurface)
 
 static void HashTexture(Hash& ioHash, GETexture* inTexture, bool inFrames)
 {
-    ioHash.U(inTexture->mIsManaged);
-    const GETStage& s = inTexture->mStage;
+    ioHash.U(inTexture->GetIsManaged());
+    const GETStage& s = *inTexture->GetStage();
     ioHash.U(s.mTexture == inTexture);
     ioHash.U(s.mColorMode);
     ioHash.U(s.mAlphaMode);
@@ -107,32 +107,32 @@ static void HashTexture(Hash& ioHash, GETexture* inTexture, bool inFrames)
     ioHash.U(s.mMagFilterMode);
     ioHash.U(s.mMipFilterMode);
     ioHash.F(s.mMipMapBias);
-    ioHash.F(inTexture->mFrameTopLeftCorner.GetU());
-    ioHash.F(inTexture->mFrameTopLeftCorner.GetV());
-    ioHash.U(inTexture->mFrameTexture == inTexture);
-    ioHash.U(inTexture->mData != NULL);
-    ioHash.F(inTexture->mFrameUVSize);
-    ioHash.U(inTexture->mFrameFormat);
-    ioHash.U(inTexture->mFrame);
-    ioHash.U(inTexture->mFrameCount);
-    ioHash.U(inTexture->mFramesPerRow);
-    ioHash.U((unsigned long long)(long long)inTexture->mMipLevelCount);
-    ioHash.U(inTexture->mNumMipLevelsToDrop);
-    ioHash.U(inTexture->mIsCompressed);
-    ioHash.U(inTexture->mIsPromoted);
-    ioHash.U(inTexture->mHasChanged);
-    ioHash.U(inTexture->mCreateMIPMaps);
-    ioHash.U(inTexture->mIsFromTexturePack);
-    ioHash.U((unsigned long long)(long long)inTexture->mTexturePackMipLevels);
+    ioHash.F(inTexture->GetFrameTopLeftCorner().GetU());
+    ioHash.F(inTexture->GetFrameTopLeftCorner().GetV());
+    ioHash.U(inTexture->GetCurrentFrameTexture() == inTexture);
+    ioHash.U(inTexture->GetOwnData() != NULL);
+    ioHash.F(inTexture->GetFrameUVSize());
+    ioHash.U(inTexture->GetFrameFormat());
+    ioHash.U(inTexture->GetFrame());
+    ioHash.U(inTexture->GetFrameCount());
+    ioHash.U(inTexture->GetFramesPerRow());
+    ioHash.U((unsigned long long)(long long)(long)inTexture->GetMipLevelCount());
+    ioHash.U(inTexture->GetNumMipLevelsToDrop());
+    ioHash.U(inTexture->GetOwnIsCompressed());
+    ioHash.U(inTexture->GetOwnIsPromoted());
+    ioHash.U(inTexture->HasChanged());
+    ioHash.U(inTexture->GetCreateMIPMaps());
+    ioHash.U(inTexture->GetIsFromTexturePack());
+    ioHash.U((unsigned long long)(long long)inTexture->GetTexturePackMipLevels());
     ioHash.U(inTexture->GetReferenceCount());
     ioHash.U(inTexture->GetAllocatedSize());
-    HashSurface(ioHash, inTexture->mSurface);
-    if (inFrames && inTexture->mFrameFormat == 0 && inTexture->mFrames) {
-        ioHash.U(inTexture->mFrames[0] == inTexture);
-        for (unsigned long i = 1; i < inTexture->mFrameCount; i++)
-            HashTexture(ioHash, inTexture->mFrames[i], false);
+    HashSurface(ioHash, inTexture->GetSurface());
+    if (inFrames && inTexture->GetFrameFormat() == 0 && inTexture->GetFrames()) {
+        ioHash.U(inTexture->GetFrames()[0] == inTexture);
+        for (unsigned long i = 1; i < inTexture->GetFrameCount(); i++)
+            HashTexture(ioHash, inTexture->GetFrames()[i], false);
     } else
-        ioHash.U(inTexture->mFrames != NULL);
+        ioHash.U(inTexture->GetFrames() != NULL);
 }
 
 // The index of the first entry equal to entry i (an array a frame shares with an earlier one)
