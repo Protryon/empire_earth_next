@@ -32,8 +32,55 @@ constexpr static const size_t TERRAIN_POLYGON_CAPACITY = 12000;
 
 constexpr static const size_t WATER_POLYGON_CAPACITY = 5000;
 
+/// A call the managers make on another object (the C++ hosts `GEModelManagerHost` and `GETextureManagerHost`).
+/// `obj`, `a`, `b` and `c` are the operation's arguments as each describes; the result is the call's.
+enum class EeGeManOp : uint32_t {
+  /// `TSScheduler::CreateCriticalSection` (with its `ESVERIFY`): the lock.
+  LockCreate = 1,
+  /// `TSScheduler::DestroyCriticalSection(obj)`.
+  LockDestroy,
+  /// `obj->Enter()`.
+  LockEnter,
+  /// `obj->Leave()`.
+  LockLeave,
+  /// `obj->Reference()` (an `FSPath`).
+  PathReference,
+  /// `obj->Dereference()` (an `FSPath`).
+  PathDereference,
+  /// `obj->mReferenceCount` (a model or texture).
+  RefCount,
+  /// `obj->UReferenceCounter::Dereference()` (a model or texture).
+  BaseDereference,
+  /// The dump's heading into the file `obj` (`FSFileSpec&`).
+  DumpHeader,
+  /// The dump's line of the cached `obj` (its reference count) named `a` (`const char*`) into the file `b`.
+  DumpLine,
+  /// `new GEModel(counts and flags of a, UString(b), this)`: `a` the forwarder's `GEModelCreateArgs*`, `b` the
+  /// created name (`const char*`).
+  ModelNew = 20,
+  /// `CreateSubModel`'s body under the lock: `new GEModel(counts and flags of a, obj->mName, this)`,
+  /// `obj->SetSubModel(model, b)`, `model->UReferenceCounter::Dereference()`; the model.
+  ModelNewSub,
+  /// `GEFindModelFile(obj, UString(a), *b, *c)`: `obj` the path, `a` the name (`const char*`), `b` the shared
+  /// frames (`std::map<unsigned long, long>*`), `c` the file's out pointer (`EeGeCemModel**`); the result.
+  ModelFindFile,
+  /// `new GEModel(this)`.
+  ModelNewEmpty,
+  /// `obj->StoreLoaded(a, *b)`: `a` the file, `b` the shared frames; the result.
+  ModelStoreLoaded,
+  /// `obj->SizeOf()`.
+  ModelSizeOf,
+  /// `obj->Verify()` (the result ignored, as the original did).
+  ModelVerify,
+  /// `ee_ge_cem_free(obj)`.
+  ModelFreeFile,
+};
+
 /// A model as `GEModel::StoreLoaded` takes it.
 struct EeGeCemModel;
+
+/// The model manager.
+struct EeGeModelManager;
 
 /// The plan of one frame.
 struct EeGeVisiblePlan;
@@ -221,6 +268,14 @@ struct EeGeGlyphDraw {
   EeGeRectangle destination;
   EeGeRectangle source;
 };
+
+/// The C++ host: `owner` is the C++ manager the object belongs to.
+using EeGeManHostFn = ptrdiff_t(*)(void *owner,
+                                   EeGeManOp op,
+                                   void *obj,
+                                   ptrdiff_t a,
+                                   ptrdiff_t b,
+                                   ptrdiff_t c);
 
 /// Borrowed bytes (no terminating NUL).
 struct EeGeBytes {
@@ -1183,6 +1238,81 @@ size_t ee_ge_texman_made_name(char *out, size_t capacity);
 /// # Safety
 /// `name` is NUL-terminated; `out` holds `capacity` bytes.
 size_t ee_ge_modman_created_name(const char *name, char *out, size_t capacity);
+
+/// `GEModelManager::GEModelManager(path)`: the object of the C++ manager `owner`.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_modman_free`.
+EeGeModelManager *ee_ge_modman_new(EeGeManHostFn host, void *owner, void *path);
+
+/// `~GEModelManager`.
+///
+/// # Safety
+/// `p` is from `ee_ge_modman_new` (freed).
+void ee_ge_modman_free(EeGeModelManager *p);
+
+/// `CreateModel` (`args` the host's counts and flags, `name` the caller's name).
+///
+/// # Safety
+/// `p` is live; `name` is NUL-terminated.
+void *ee_ge_modman_create(EeGeModelManager *p, const void *args, const char *name);
+
+/// `CreateSubModel`.
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_modman_create_sub(EeGeModelManager *p,
+                              const void *args,
+                              unsigned long index,
+                              void *parent);
+
+/// `DumpAllLoadedMedia(file)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_modman_dump(EeGeModelManager *p, void *file);
+
+/// `GetMemoryFootprint`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_modman_footprint(EeGeModelManager *p);
+
+/// `GetModelCount`.
+///
+/// # Safety
+/// `p` is live.
+unsigned long ee_ge_modman_count(EeGeModelManager *p);
+
+/// `LoadModel(name, textures)`.
+///
+/// # Safety
+/// `p` is live; `name` is NUL-terminated.
+void *ee_ge_modman_load(EeGeModelManager *p, const char *name, void *textures);
+
+/// `RemoveAllModels`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_modman_remove_all(EeGeModelManager *p);
+
+/// `RemoveModel(model)`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_modman_remove(EeGeModelManager *p, void *model);
+
+/// `SetModelPath(path)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_modman_set_path(EeGeModelManager *p, void *path);
+
+/// `VerifyModels`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_modman_verify(EeGeModelManager *p);
 
 /// Frees a model (`ee_of_gltf_to_model`'s; not a sub-model's handle).
 ///
