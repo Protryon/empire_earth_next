@@ -181,7 +181,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 a random favourite candidate, none: the count to land; the favourite land type, else a random favourite
                 candidate); the sea's classes and counts as the land's (the counter classes 3-5 at sea, the held units
                 within each domain's count). DEVIATION: the target file's counts (see EECPIntelligence).
-                AllocateSpecialUnits: the priests, prophets and heroes (the chance, the most per group, the population share; the heroes without the game's hero limit). NOT STARTED: its carriers and paratroopers, the deathmatch
+                AllocateSpecialUnits: the priests, prophets and heroes (the chance, the most per group, the population share; the heroes without the game's hero limit); its aircraft carriers (the carrier chance, the most per group less one sea unit, the population share of the unit limit; as in the C++ they never come up with this data: the carrier is neither an attack nor a defence unit, so it is no candidate, and carriers come only as the carrier fighters' producer). NOT STARTED: its paratroopers, the deathmatch
                 early scale, ChooseUnitsToKill's room.
   EECPPersonnel.cpp             PARTLY -> army.lua: the requests (a slot per class: a free unit of the class, else
                 one ordered once through the unit manager's RequestUnits; the 600 s deadline drops the open slots);
@@ -214,7 +214,7 @@ Per-file map (C++ file -> module). PORTED / PARTLY (what is missing) / ENGINE / 
                 the adjacent continents' step of the ladder, AidAllies, CheckRaids / Retaliate, BuildUp
                 (deathmatch), CheckSpace, CheckSpecials. CheckNaval: PORTED (every ship_maintenance_timer minutes, more than
                 50 water tiles: the warships own and asked for topped up to ships_to_maintain by a sea-only group of
-                kind 5; its ChooseUnitsToKill and the carrier fighters: NOT STARTED).
+                kind 5; the carrier fighters from WW2, the difficulty's carrier_fighters_* kept, own and asked for, of the epoch's fighter; its ChooseUnitsToKill: NOT STARTED).
   EECPExplorationManager.cpp    PARTLY -> explore.lua: the land explorers (num_land_explorers, the fastest land
                 class drafted or requested, explore with the difficulty's stance, every 30 s), the sea explorers
                 (num_sea_explorers of the fastest warship class, once the dock is researched, with water on the map).

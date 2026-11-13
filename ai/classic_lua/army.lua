@@ -33,6 +33,10 @@ local FOREST_RANGE = 35          -- AssignSubGroupTask: forests within squared d
 local CITIZEN_DEATHS = 20        -- NoteThreat: more citizens lost in a region than this sends the army there
 
 local KIND_SPECIAL, KIND_SIEGE, KIND_ARTILLERY, KIND_HERO, KIND_ANTI_TANK, KIND_ANTI_AIR = 3, 0x14, 0x10, 0x1b, 1, 0xd
+local KIND_CARRIER = 0xf                -- kAIKindAircraftCarrier
+local CARRIER = "s11_enterprise_aircraft_carrier"   -- kUnitTypeS11EnterpriseAircraftCarrier
+-- EECPUGatherCarrierFightersCount's carrier fighters (the three the data has)
+local FIGHTERS = {"a_carrierfighter11_corsair1", "a_carrierfighter12_f_14", "a_carrierfighter13_avenger"}
 
 local function army(memory)
     local a = memory.army
@@ -796,7 +800,7 @@ end
 -- group (and the land count - 1), under its share of the population limit (pop_percentage, the own and asked for
 -- counted): a free one of the class taken -> the wanted count asked for; else the held candidates of the class, else
 -- the class asked for when a candidate. As the original, the free-one path leaves the land count as it is.
--- The paratroopers and carriers: NOT STARTED
+-- The paratroopers: NOT STARTED (the carriers: in select_units)
 local function special_slots(view, memory, kind, numLand, numUnits, list, cands, held, byKind)
     local b = memory.t.behavior
     local slots = {}
@@ -1082,6 +1086,53 @@ local function select_units(view, memory, kind, target, naval)
             slots[#slots + 1] = name
         end
     end
+    -- AllocateSpecialUnits' aircraft carriers: with a sea count and more than one unit, by the carrier chance, 1 up
+    -- to the most per group (less one sea unit), while the carriers (own and asked for) stay under their share of the
+    -- military room; a class of the carriers' kind among the sea candidates (as the C++: none, no carriers)
+    do
+        local b = memory.t.behavior
+        local ck = cls(CARRIER)
+        local takes = kind == 4 or kind == 5 or (ck.attack_unit and kind == 0) or (ck.defense_unit and kind == 1)
+        if numSea > 0 and count > 1 and ck.ai_kind ~= nil and takes and T.random_k() <= (b.carrier_chance_k or 0) then
+            local wanted = ai.random(1, math.max(math.min(b.carrier_max_per_group or 0, numSea - 1), 1))
+            local have = 0
+            for _, u in ipairs(own_ships()) do
+                if (cls(u.type).ai_kind or 0) == KIND_CARRIER then
+                    have = have + 1
+                end
+            end
+            for _, g in ipairs(G.all(army(memory))) do
+                for _, sl in ipairs(g.slots or {}) do
+                    if (cls(sl.c or sl).ai_kind or 0) == KIND_CARRIER then
+                        have = have + 1
+                    end
+                end
+            end
+            local limit = ((b.carrier_pop_percentage_k or 0) * unit_limit(view, memory) + 999) // 1000
+            if have < limit then
+                wanted = math.min(wanted, limit - have)
+                local names = {}
+                for _, ak in ipairs(ai.keys(seaKind)) do
+                    for _, name in ipairs(seaKind[ak]) do
+                        if (cls(name).ai_kind or 0) == KIND_CARRIER then
+                            names[#names + 1] = name
+                        end
+                    end
+                end
+                table.sort(names)
+                if #names > 0 then
+                    local pick = names[ai.random(1, #names)]
+                    for _ = 1, wanted do
+                        if numSea <= 0 then
+                            break
+                        end
+                        slots[#slots + 1] = pick
+                        numSea = numSea - 1
+                    end
+                end
+            end
+        end
+    end
     -- AllocateCounterUnits: the families that counter the target's unit types, weighted 3/2/1 (WeighCounters: the
     -- families with a candidate class), the sea (3-5 classes) before the land (2-6, the siege share)
     if counters and (numLand > 0 or numSea > 0) then
@@ -1297,15 +1348,19 @@ local function create_group(view, memory, kind, mission, target, why, naval)
             if #part.ids > 0 then
                 G.add(mem, g, part.ids)
             end
-            local nair = 0
+            local nair, ncarrier = 0, 0
             for _, sl in ipairs(g.slots) do
-                if domain_of(cls(sl.c or sl)) == "air" then
+                local k = cls(sl.c or sl)
+                if domain_of(k) == "air" then
                     nair = nair + 1
                 end
+                if (k.ai_kind or 0) == KIND_CARRIER then
+                    ncarrier = ncarrier + 1
+                end
             end
-            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d%s",
+            print(string.format("classic_lua army.%s id=%d kind=%d mission=%d target=%d size=%d held=%d slots=%d str=%d sea=%d air=%d airslots=%d carriers=%d%s",
                 why, g.id, kind, mission, target or 0, sel.count, #part.ids, #g.slots, sel.strength, sel.sea_k,
-                sel.air_k or 0, nair, g.sea and " navy" or ""))
+                sel.air_k or 0, nair, ncarrier, g.sea and " navy" or ""))
             first = first or g
         end
     end
@@ -1855,7 +1910,7 @@ end
 -- CheckNaval: every ship_maintenance_timer minutes, with more than 50 water tiles on the map, the warships (own and
 -- asked for) topped up to the difficulty's ships_to_maintain by a group of a sea-only strategy (kind 5: a defence
 -- group) against a random enemy; the peace rules hold it back as an attack's. ChooseUnitsToKill's room: NOT STARTED.
--- The carrier fighters (WW2): NOT STARTED
+-- The carrier fighters: from WW2, the difficulty's number kept (carrier_fighters_*)
 local function check_naval(view, memory)
     local a = army(memory)
     if view.time <= (a.next_naval or 0) then
@@ -1886,6 +1941,27 @@ local function check_naval(view, memory)
             local peace = (view.epoch <= 0 and not p.prehistoric_attacks) or (view.epoch == 1 and not p.stone_attacks)
             if target ~= nil and not peace then
                 create_group(view, memory, 5, 1, target, "naval", limit - have)
+            end
+        end
+        -- the carrier fighters (from the Atomic Age - WW2): the difficulty's number kept, own and asked for, of the
+        -- epoch's carrier fighter (WW2 the Corsair, Modern the F-14, later the Avenger)
+        if view.epoch >= 10 then
+            local wanted
+            if t.deathmatch then
+                wanted = T.by_difficulty(memory, b.carrier_fighters_dm_easy, b.carrier_fighters_dm_medium,
+                    b.carrier_fighters_dm_hard)
+            else
+                wanted = T.by_difficulty(memory, b.carrier_fighters_easy, b.carrier_fighters_medium,
+                    b.carrier_fighters_hard)
+            end
+            wanted = (wanted or 0) - #ai.units{type = FIGHTERS}
+            for _, name in ipairs(FIGHTERS) do
+                wanted = wanted - (U.state(memory).waiting[name] or 0)
+            end
+            if wanted > 0 then
+                local class = view.epoch == 10 and "a_carrierfighter11_corsair1"
+                    or view.epoch == 11 and "a_carrierfighter12_f_14" or "a_carrierfighter13_avenger"
+                U.request(view, memory, class, wanted)
             end
         end
     end
