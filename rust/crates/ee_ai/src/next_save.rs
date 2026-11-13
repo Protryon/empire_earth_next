@@ -2,7 +2,7 @@
 //! `EECPNextLoadState`, saved with the computer player from save version 0.252). Little-endian int32 fields, strings
 //! as a uint32 length and their bytes:
 //!
-//! - "EENS", version (written: 5; read: 1-5);
+//! - "EENS", version (written: 6; read: 1-6);
 //! - the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next
 //!   repair time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen
 //!   strength, last seen, seen town x, y; the events (count, then kind, type, count each); the C++ test opening's
@@ -15,7 +15,9 @@
 //! - version 3: the gather safety's spots and the time of its last scan;
 //! - version 4 (save 0.274): the walkers sent to see a site, as spots;
 //! - version 5: gather(granary_farms = n)'s setting (main's AI_RESEARCH 8.51; main's own version 4 is version 3
-//!   plus this field, without the walkers: both lines took version 4, the merged block is version 5).
+//!   plus this field, without the walkers: both lines took version 4, the merged block is version 5);
+//! - version 6: gather(exact = n)'s setting (main keeps it unsaved: a loaded game rebalanced with one gatherer of
+//!   slack until the script's next gather order, and parted from the continued game ticks after the load).
 //!
 //! The decoder keeps the C++ reader's limits: at most 256 events, `max_results` results, 1,000 groups and 2,048 spots
 //! of each list are kept (the rest are read and dropped), a group id past the results is read and dropped.
@@ -34,7 +36,7 @@ const EVENTS_KEPT: usize = 256;
 const GROUPS_KEPT: i64 = 1000;
 const SPOTS_KEPT: i64 = 64 * 32;
 /// The version the encoder writes.
-pub(crate) const VERSION: i32 = 5;
+pub(crate) const VERSION: i32 = 6;
 
 /// An enemy place the army remembers (a gather spot, a tower, a threat, a walker's site).
 #[repr(C)]
@@ -77,7 +79,7 @@ pub struct Group {
 
 /// The saved state. On a decode, `version` is the block's: below 2 the army fields (`next_group` to `army_y`) were
 /// not in the block and the C++ keeps its own; `threats`/`threats_time` are empty/-1 below 3, `explore` empty
-/// below 4 and `granary_farms` -1 (the engine's rule) below 5, as the C++ sets them.
+/// below 4, `granary_farms` -1 (the engine's rule) below 5 and `exact` 0 below 6, as the C++ sets them.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NextSave {
     pub version: i32,
@@ -114,6 +116,7 @@ pub struct NextSave {
     pub threats_time: i32,
     pub explore: Vec<EeAiNextSpot>,
     pub granary_farms: i32,
+    pub exact: i32,
 }
 
 impl Default for NextSave {
@@ -153,6 +156,7 @@ impl Default for NextSave {
             threats_time: -1,
             explore: Vec::new(),
             granary_farms: -1,
+            exact: 0,
         }
     }
 }
@@ -206,7 +210,7 @@ pub fn encode_army(s: &NextSave, out: &mut Vec<u8>) {
     }
 }
 
-/// The block of a state (always version 5; `s.version` is not read). A group's `aims` must be as long as its units.
+/// The block of a state (always version 6; `s.version` is not read). A group's `aims` must be as long as its units.
 pub fn encode(s: &NextSave) -> Vec<u8> {
     let mut out = Vec::with_capacity(4096);
     out.extend_from_slice(b"EENS");
@@ -261,6 +265,7 @@ pub fn encode(s: &NextSave) -> Vec<u8> {
     put(&mut out, s.threats_time);
     put_spots(&mut out, &s.explore);
     put(&mut out, s.granary_farms);
+    put(&mut out, s.exact);
     out
 }
 
@@ -316,7 +321,7 @@ impl Reader<'_> {
     }
 }
 
-/// The state of a block, None when it is not one (no "EENS", a version not 1-5, a field past the end, bytes left
+/// The state of a block, None when it is not one (no "EENS", a version not 1-6, a field past the end, bytes left
 /// over). `max_results` is the C++ `kNextMaxOrders`: the results past it are read and dropped.
 pub fn decode(bytes: &[u8], max_results: usize) -> Option<NextSave> {
     if bytes.len() < 8 || &bytes[0..4] != b"EENS" {
@@ -324,7 +329,7 @@ pub fn decode(bytes: &[u8], max_results: usize) -> Option<NextSave> {
     }
     let mut g = Reader { b: bytes, at: 4, ok: true };
     let version = g.get();
-    if !(1..=5).contains(&version) {
+    if !(1..=6).contains(&version) {
         return None;
     }
     let mut s = NextSave { version, ..NextSave::default() };
@@ -432,6 +437,9 @@ pub fn decode(bytes: &[u8], max_results: usize) -> Option<NextSave> {
     if version >= 5 {
         s.granary_farms = g.get();
     }
+    if version >= 6 {
+        s.exact = g.get();
+    }
     if !g.ok || g.at != bytes.len() {
         return None;
     }
@@ -454,6 +462,7 @@ mod tests {
         s.threats_time = 77;
         s.explore.push(EeAiNextSpot { player: 0, x: 1, y: 1, time: 1, unit: 99 });
         s.granary_farms = 2;
+        s.exact = 1;
         s
     }
 
@@ -461,7 +470,7 @@ mod tests {
     fn round_trip() {
         let s = sample();
         let b = encode(&s);
-        assert_eq!(&b[0..8], b"EENS\x05\0\0\0");
+        assert_eq!(&b[0..8], b"EENS\x06\0\0\0");
         let d = decode(&b, 200).unwrap();
         assert_eq!(d, s);
         assert_eq!(encode(&d), b);
@@ -474,9 +483,9 @@ mod tests {
         let mut extra = b.clone();
         extra.push(0);
         assert!(decode(&extra, 200).is_none());
-        let mut v6 = b.clone();
-        v6[4] = 6;
-        assert!(decode(&v6, 200).is_none());
+        let mut v7 = b.clone();
+        v7[4] = 7;
+        assert!(decode(&v7, 200).is_none());
         let mut magic = b.clone();
         magic[0] = b'X';
         assert!(decode(&magic, 200).is_none());
@@ -489,11 +498,12 @@ mod tests {
         let mut s = sample();
         s.granary_farms = 7;
         let mut b = encode(&s);
-        b.truncate(b.len() - 4);
+        b.truncate(b.len() - 8);
         b[4] = 4;
         let d = decode(&b, 200).unwrap();
         assert_eq!(d.version, 4);
         assert_eq!(d.granary_farms, -1);
+        assert_eq!(d.exact, 0);
         assert_eq!(d.explore, s.explore);
     }
 

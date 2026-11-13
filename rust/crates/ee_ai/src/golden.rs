@@ -270,11 +270,11 @@ fn gen_next(seed: u32, big: bool) -> NextSave {
     s
 }
 
-/// A version 5 block as the driver's version 4 (the C++ the golden was printed by): the same bytes without the last
-/// field (granary_farms, from the merge of main daf9dadb; -1 on a version 4 decode).
+/// A version 6 block as the driver's version 4 (the C++ the golden was printed by): the same bytes without the last
+/// two fields (granary_farms, from the merge of main daf9dadb, -1 on a version 4 decode; exact, 0).
 fn as_v4(mut b: Vec<u8>) -> Vec<u8> {
-    assert_eq!(b[4], 5);
-    b.truncate(b.len() - 4);
+    assert_eq!(b[4], 6);
+    b.truncate(b.len() - 8);
     b[4] = 4;
     b
 }
@@ -351,7 +351,7 @@ fn next_state_block() {
             match next_save::decode(&m, 200) {
                 None => got.push(format!("nens dec {seed} {name} 0")),
                 Some(d) => {
-                    assert_eq!(d.granary_farms, -1);
+                    assert_eq!((d.granary_farms, d.exact), (-1, 0));
                     let again = as_v4(next_save::encode(&next_apply(&target, &d)));
                     got.push(format!(
                         "nens dec {seed} {name} 1 {} 1 {} {:016x}",

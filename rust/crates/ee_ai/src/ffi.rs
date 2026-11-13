@@ -119,6 +119,7 @@ pub struct EeAiNextSave {
     pub explore: *const EeAiNextSpot,
     pub explore_count: usize,
     pub granary_farms: i32,
+    pub exact: i32,
 }
 
 /// Safety: every pointer of `v` points to its count of values.
@@ -179,6 +180,7 @@ unsafe fn next_from_view(v: &EeAiNextSave) -> NextSave {
         threats_time: v.threats_time,
         explore: slice(v.explore, v.explore_count).to_vec(),
         granary_farms: v.granary_farms,
+        exact: v.exact,
     }
 }
 
@@ -268,6 +270,7 @@ fn next_decoded(state: NextSave) -> Box<EeAiNextDecoded> {
         explore: s.explore.as_ptr(),
         explore_count: s.explore.len(),
         granary_farms: s.granary_farms,
+        exact: s.exact,
     };
     // the vectors' buffers do not move when the vectors move into the box
     d.results = results;
@@ -687,7 +690,7 @@ mod tests {
 
     #[test]
     fn next_view_round_trip() {
-        let mut s = NextSave { claim_range: 30, threats_time: 5, granary_farms: 3, ..NextSave::default() };
+        let mut s = NextSave { claim_range: 30, threats_time: 5, granary_farms: 3, exact: 2, ..NextSave::default() };
         s.income_ring[59][4] = 77;
         s.groups.push(Group { fields: [1; GROUP_FIELDS], units: vec![4, 5], aims: vec![0, 6], skips: vec![] });
         s.results.push(OrderResult { verb: b"build".to_vec(), code: 2, reason: 3, count: 0, group: 0 });

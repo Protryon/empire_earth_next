@@ -862,8 +862,8 @@ void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView
 
 // ---------------------------------------------------------------------------------------------------------------
 // The save (EEPPlayerHelper, from version 0.252): little-endian int32 fields, strings as a uint32 length and bytes.
-//   "EENS", uint32 version 5 (1: the same without the army block below; 3 adds the gather safety's spots and scan
-//     time; 4 the site walkers; 5 the granary_farms setting, gather(granary_farms = n))
+//   "EENS", uint32 version 6 (1: the same without the army block below; 3 adds the gather safety's spots and scan
+//     time; 4 the site walkers; 5 the granary_farms setting, gather(granary_farms = n); 6 gather(exact = n)'s)
 //   the tactics' state: claim range, reserve[5], food preference, land food gatherers, epoch, epoch start, next repair
 //     time, income totals[5], the income ring[60][5], its step count; per player id 0..63: seen army, seen strength,
 //     last seen, seen town x, y; the events (count, then kind, type, count each); the C++ test opening's memory (4)
@@ -1028,14 +1028,15 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     v->explore = theExplore.data();
     v->explore_count = theExplore.size();
     v->granary_farms = (int32_t)s->mGranaryFarms;   // (version 5)
+    v->exact = (int32_t)s->mExact;   // (version 6)
     size_t theLength = ee_ai_next_save_encode(v.get(), NULL, 0);
     outBytes.assign(theLength, '\0');
     ee_ai_next_save_encode(v.get(), (uint8_t*)&outBytes[0], theLength);
 }
 
-// the state from its bytes (false: not a block of versions 1-5, or bytes left over; the state is then as it was);
+// the state from its bytes (false: not a block of versions 1-6, or bytes left over; the state is then as it was);
 // the Lua memory goes to mRestoreBytes, restored at the first step. A version 1 block has no army (the state keeps
-// its own), below version 3 no gather safety's memory, below 4 no walkers, below 5 no granary_farms (-1)
+// its own), below version 3 no gather safety's memory, below 4 no walkers, below 5 no granary_farms (-1), below 6 no exact (0)
 static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
 {
     EeAiNextDecoded* theDecoded = ee_ai_next_save_decode((const uint8_t*)inBytes.data(), inBytes.size(), kNextMaxOrders);
@@ -1120,6 +1121,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     s->mThreatsTime = v.threats_time;   // (below version 3: -1)
     EECPNextSpotsIn(v.explore, v.explore_count, s->mExplore);
     s->mGranaryFarms = v.granary_farms;   // (below version 5: -1, the engine's rule)
+    s->mExact = v.exact;   // (below version 6: 0)
     ee_ai_next_decoded_free(theDecoded);
     delete s->mLua;
     s->mLua = NULL;
