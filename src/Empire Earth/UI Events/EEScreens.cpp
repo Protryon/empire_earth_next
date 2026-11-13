@@ -584,6 +584,71 @@ static uint32_t EEScreensHotKeyCall(UIForm* inForm, uint32_t inOp, uint32_t inA,
     return 0;
 }
 
+// ---- the chat log (chat_log.rs): its C++ entry points, and a saved game's reads and writes
+void EEUIECLEFormManager::AddEntry(const EEChatLogEntry& inEntry)
+{
+    EeScreensChatLogHead theHead = {{inEntry.mColor.mRed, inEntry.mColor.mGreen, inEntry.mColor.mBlue},
+                                    (uint32_t)inEntry.mType, (uint32_t)inEntry.mTime};
+    ee_screens_chat_log_add(&theHead, (const uint8_t*)(const char*)inEntry.mName, inEntry.mName.GetTCHARLength(),
+                            (const uint8_t*)(const char*)inEntry.mText, inEntry.mText.GetTCHARLength());
+}
+void EEUIECLEFormManager::Clear() { ee_screens_chat_log_clear(); }
+unsigned long EEUIECLEFormManager::GetEntryCount() { return ee_screens_chat_log_count(); }
+long EEUIECLEFormManager::Load(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_load(&inFile);
+}
+long EEUIECLEFormManager::Save(unsigned long inVersion, unsigned long inSize, FSFile& inFile)
+{
+    return ee_screens_chat_log_save(&inFile);
+}
+
+static UWideString sChatLogString;   // the last read's string and colour (ee_screenscpp_cl_last)
+static GEColor sChatLogColour;
+
+extern "C" long ee_screenscpp_cl_read(void* inFile, uint32_t inKind, uint32_t* outValue)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = 0;
+        long theResult = theFile.Read(theValue);
+        *outValue = (uint32_t)theValue;
+        return theResult;
+    }
+    if (inKind == 1)
+        return sChatLogString.Load(theFile);
+    return sChatLogColour.Load(theFile);
+}
+
+extern "C" size_t ee_screenscpp_cl_last(uint32_t inKind, uint8_t* outText, size_t inCapacity)
+{
+    if (inKind == 2) {
+        const float theColour[3] = {sChatLogColour.mRed, sChatLogColour.mGreen, sChatLogColour.mBlue};
+        memcpy(outText, theColour, inCapacity < 12 ? inCapacity : 12);
+        return 12;
+    }
+    size_t theLength = sChatLogString.GetTCHARLength();
+    memcpy(outText, (const char*)sChatLogString, theLength < inCapacity ? theLength : inCapacity);
+    return theLength;
+}
+
+extern "C" long ee_screenscpp_cl_write(void* inFile, uint32_t inKind, uint32_t inValue, const uint8_t* inBytes,
+                                       size_t inLength)
+{
+    FSFile& theFile = *static_cast<FSFile*>(inFile);
+    if (inKind == 0) {
+        unsigned long theValue = inValue;
+        return theFile.Write(theValue);
+    }
+    if (inKind == 1)
+        return Text(inBytes, inLength).Save(theFile);
+    GEColor theColour;
+    memcpy(&theColour.mRed, inBytes, 4);
+    memcpy(&theColour.mGreen, inBytes + 4, 4);
+    memcpy(&theColour.mBlue, inBytes + 8, 4);
+    return theColour.Save(theFile);
+}
+
 // ---- the chat forms' (chat.rs): inForm is the chat form or the chat log form (NULL for the log's posted close)
 static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, uint32_t inB, uint32_t inC)
 {
@@ -636,7 +701,7 @@ static uint32_t EEScreensChatCall(UIForm* inForm, uint32_t inOp, uint32_t inA, u
         break;
     }
     case EE_SCREENS_GAME_CL_COUNT:
-        return EEUIECLEFormManager::Get()->mEntries.size();
+        return ee_screens_chat_log_count();
     case EE_SCREENS_OP_CL_CENTER:
         static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormChatLog)->GetControl(kChatLogChatLogTextBox))->SetAlignment(kTextAlignCenter);
         break;
@@ -1436,6 +1501,47 @@ static uint32_t EEScreensPostGameCall(UIForm* inForm, UIEntity* inEntity, uint32
     return 0;
 }
 
+// ---- the loading screen's (splash.rs): inForm is the loading screen (form 23)
+static uint32_t EEScreensSplashCall(UIForm* inForm, UIEntity* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB,
+                                    uint32_t inC, uint32_t inD)
+{
+    switch (inOp) {
+    case EE_SCREENS_GAME_SS_LOCK:
+        if (inA)
+            gWorld.GetLobbyOptions().mLock->ReadLock();
+        else
+            gWorld.GetLobbyOptions().mLock->ReadUnlock();
+        break;
+    case EE_SCREENS_GAME_SS_HUMANS:
+        return gCommunications->GetNumHumanPlayers();
+    case EE_SCREENS_GAME_SS_PLAYER: {
+        const EEGameOptionsPlayer& p = gWorld.GetLobbyOptions().mPlayers[inA];
+        return (uint32_t)(p.mType & 0xff) | (p.mIsLocal == true ? 1u << 8 : 0u);
+    }
+    case EE_SCREENS_GAME_SS_LOCAL:
+        gUserInterface->mLocalPlayer = (long)inA;
+        break;
+    case EE_SCREENS_OP_SS_BAR_PLAYER_COLOUR:
+        static_cast<UIStatusBar*>(inForm->GetControl(inA))
+            ->SetStatusBarColor(EEGetPlayerColor(gWorld.GetLobbyOptions().mPlayers[inB].mColor));
+        break;
+    case EE_SCREENS_OP_SS_BAR_VALUE:
+        static_cast<UIStatusBar*>(inForm->GetControl(inA))->SetCurrentRangeValue((long)(int32_t)inB);
+        break;
+    case EE_SCREENS_OP_SS_BACKGROUND: {
+        UIBackground* theBackground = inForm->GetBackgroundByID(0x84);
+        GERectangle theRectangle = theBackground->GetRectangle();
+        theRectangle.SetBottom(Float(inA));
+        theBackground->SetRectangle(theRectangle);
+        theBackground->SetVisibility(true);
+        break;
+    }
+    default:
+        return EEScreensPostGameCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+    }
+    return 0;
+}
+
 // ---- the civilization choice form's (civ_choice.rs): the form 35 by the manager, or the event's form
 static std::vector<EECivilizationEntry> sPdcsCivs;   // EE_SCREENS_GAME_PDCS_CIVS's, for the names and files
 static UWideString sPdcsName;                        // the last EE_SCREENS_TEXT_PDCS_LOAD's civilization
@@ -1502,7 +1608,7 @@ static uint32_t EEScreensCivChoiceCall(UIForm* inForm, UIEntity* inEntity, uint3
         break;
     }
     default:
-        return EEScreensPostGameCall(inForm, inEntity, inOp, inA, inB, inC, inD);
+        return EEScreensSplashCall(inForm, inEntity, inOp, inA, inB, inC, inD);
     }
     return 0;
 }
@@ -2414,6 +2520,23 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
     UIForm* theForm = static_cast<UIForm*>(inForm);
     std::string theList;   // the lists' texts, each ended by a 0 byte
     switch (inWhich) {
+    // the loading screen's (splash.rs): the decrypted lines, the registered name, a lobby slot's name
+    case EE_SCREENS_TEXT_SS_TITLE:
+    case EE_SCREENS_TEXT_SS_COPYRIGHT: {
+        UString theEncrypted(inWhich == EE_SCREENS_TEXT_SS_TITLE
+                                 ? "B7B2265DB7B2265D2C11B5F7AC114576B5A95DCC84F90596C4116DB6D6B115C626B327BEB7B274D5"
+                                 : "B7B227FDB7B227FD1CC12D1714F15D2EFC610D9EB419BD94242B2506FCD147BEA49B253E24C9BD96AC19859696B327BEB7B25FB5");
+        UString theDecrypted;
+        UEDecryptUString(theEncrypted, theDecrypted);
+        theText = theDecrypted;
+        break;
+    }
+    case EE_SCREENS_TEXT_SS_SUFFIX:
+        theText = gU530BC8;
+        break;
+    case EE_SCREENS_TEXT_SS_NAME:
+        theText = gWorld.GetLobbyOptions().mPlayers[inArg].mName;
+        break;
     // the post-game summary's (post_game.rs)
     case EE_SCREENS_TEXT_PGS_NAME:
         theText = gWorld.mStatistics.GetRecords()[inArg].GetName();
@@ -2457,11 +2580,18 @@ extern "C" size_t ee_screenscpp_text(void* inForm, uint32_t inWhich, uint32_t in
         theText = theForm->GetMusicFileName();
         break;
     case EE_SCREENS_TEXT_CL_NAME:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mName;
+    case EE_SCREENS_TEXT_CL_TEXT: {
+        // (ee_screens chat_log.rs)
+        uint32_t theWhich = inWhich == EE_SCREENS_TEXT_CL_TEXT;
+        theList.resize(1024);
+        size_t theLength = ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        if (theLength > theList.size()) {
+            theList.resize(theLength);
+            ee_screens_chat_log_text(inArg, theWhich, (uint8_t*)&theList[0], theList.size());
+        }
+        theList.resize(theLength);
         break;
-    case EE_SCREENS_TEXT_CL_TEXT:
-        theText = EEUIECLEFormManager::Get()->mEntries[inArg].mText;
-        break;
+    }
     case EE_SCREENS_TEXT_CL_PLAYER:
         theText = gWorld.GetCurrentPlayer()->mName;
         break;

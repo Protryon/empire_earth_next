@@ -52,6 +52,8 @@
 #include "ee/EEPlayer.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUIPGSLineGraph.h"
+#include "rust/ee_screens.h"   // ee_screens_pgs_format_x/_y (ee_screens post_game.rs)
+#include <string>
 
 // FUNCTION: EXE 0x676442
 // Creates the post-game summary's line graph
@@ -105,22 +107,26 @@ long EEUIPGSLineGraph::DrawSeries(const UGraphSeries& inSeries)
 }
 
 // FUNCTION: EXE 0x676578
-// Formats a y axis value as a rounded integer
+// Formats a y axis value as a rounded integer (ee_screens post_game.rs format_y)
 void EEUIPGSLineGraph::FormatYValues(float inValue, UWideString& outString)
 {
-    sprintf(outString, "%ld", (long)(inValue + 0.5f));
+    char theText[32];
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    size_t theLength = ee_screens_pgs_format_y(theBits, (uint8_t*)theText, sizeof(theText));
+    outString = std::string(theText, theLength).c_str();
 }
 
 // FUNCTION: EXE 0x67659d
-// Formats an x axis value (game time) as minutes:seconds, at least 0:01
+// Formats an x axis value (game time) as minutes:seconds, at least 0:01 (ee_screens post_game.rs format_x)
 void EEUIPGSLineGraph::FormatXValues(float inValue, UWideString& outString)
 {
-    unsigned long theSeconds;
-    unsigned long theMinutes;
-    if (inValue < 1.0f)
-        inValue = 1.0f;
-    gPhysics->GetMinutesAndSeconds(&theMinutes, &theSeconds, (unsigned long)inValue);
-    sprintf(outString, "%ld:%.2ld", theMinutes, theSeconds);
+    char theText[32];
+    uint32_t theBits;
+    memcpy(&theBits, &inValue, 4);
+    size_t theLength = ee_screens_pgs_format_x(theBits, (uint32_t)gPhysics->GetGameTime(), (uint8_t*)theText,
+                                               sizeof(theText));
+    outString = std::string(theText, theLength).c_str();
 }
 
 // FUNCTION: EXE 0x6765eb
