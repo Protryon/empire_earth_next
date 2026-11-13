@@ -10,6 +10,8 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+constexpr static const uint8_t GOAL_ATTACK_GROUND = 3;
+
 constexpr static const uint32_t ALIGN_CENTER = 1;
 
 constexpr static const uint32_t ALIGN_RIGHT = 2;

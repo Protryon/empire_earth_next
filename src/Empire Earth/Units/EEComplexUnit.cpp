@@ -84,8 +84,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFleeFromLocationScreenBase.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
@@ -2800,7 +2798,7 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
 {
     std::vector<GE3DPoint> thePath;
     EEUnitVectorItem* theQueue = &this->mGoalQueues[0];
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(this->GetGoal());
+    EEUGRust* theAttack = EEAttackUnitCast(this->GetGoal());
     EEUGLocation* theLocation = EEGoalCast<EEUGLocation>(this->GetGoal());
     EEAIPathSector* theStartSector = gContinentManager.GetPathSector(this);
     long theSkipped = 0;
@@ -4124,9 +4122,9 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
 {
     if (this->mLastAttacker == NULL)
         return NULL;
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(this->mLastAttacker->GetGoal());
+    EEUGRust* theAttack = EEAttackUnitCast(this->mLastAttacker->GetGoal());
     if (theAttack != NULL) {
-        if (theAttack->mTarget == this && this->mLastAttacker->IsInReach(this)) {
+        if (theAttack->GetAttackTarget() == this && this->mLastAttacker->IsInReach(this)) {
             EEUnit* theArg1;
             long theArg2, theArg3;
             if (this->GetUnitClass()->mShootsHigh || this->GetStats()->mCanFireOverWalls
@@ -4134,10 +4132,10 @@ EEComplexUnit* EEComplexUnit::GetConditionTarget()
                 return this->mLastAttacker;
         }
     } else {
-        EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(this->mLastAttacker->GetGoal());
+        EEUGRust* theGround = EEAttackGroundCast(this->mLastAttacker->GetGoal());
         if (theGround != NULL) {
-            float theDX = this->mPhysicalModel.GetLocation().GetX() - theGround->mTarget.GetX();
-            float theDY = this->mPhysicalModel.GetLocation().GetY() - theGround->mTarget.GetY();
+            float theDX = this->mPhysicalModel.GetLocation().GetX() - theGround->GetGroundTarget().GetX();
+            float theDY = this->mPhysicalModel.GetLocation().GetY() - theGround->GetGroundTarget().GetY();
             float theRadius = this->mLastAttacker->mStats->mAreaEffect;
             if (theDX * theDX + theDY * theDY <= theRadius * theRadius)
                 return this->mLastAttacker;

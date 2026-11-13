@@ -92,6 +92,9 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        # EEUGUnloadTransport's 0x2283bc..0x228c4c, the load goals' 0x22585a..0x227621
                        # (ee/EEUGRust.h; ee_units rust_goal.rs)
                        "Empire Earth/Units/EEUGRust.cpp",
+                       # the combat lane's goals on EEUGRust: EEUGAttackGround's and EEUGAttackUnit's ranges
+                       # 0x21ce6c..0x21e0c1 (ee_combat goal_objects.rs, goal_attack.rs)
+                       "Empire Earth/Units/EEUGRustCombat.cpp",
                        # the goals' and shots' trigger tests and steps: their plain reads and CBTC/CBGS records
                        # (ee/EECombatGoals.h; ee_combat goals.rs)
                        "Empire Earth/Units/EECombatGoals.cpp",

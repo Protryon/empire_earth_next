@@ -60,12 +60,13 @@ void EECombatCaptureHostRead(uint32_t inFunc, const EEComplexUnit* inUnit, const
 // The reads' bodies through ee_combat reads.rs over the C++ host (EECombatGoals.cpp): FindImpactUnit, IsInReach,
 // EEUGAttackUnit's IsStillReachable and IsGateClosed (inGoal the attack goal; their CBQR records here),
 // EEIsEnemyWithinRange, FacesPoint (inClass `this`), EEUGHealUnit's IsInRange (the healer's heal range)
-class EEUGAttackUnit;
+class EEUGRust;
+class EEPlayer;
 class GE3DPoint;
 EEUnit* EECombatFindImpactUnit(EEComplexUnit* inUnit);
 bool EECombatIsInReach(EEComplexUnit* inUnit, EEUnit* inTarget);
-bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
-bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGAttackUnit* inGoal);
+bool EECombatIsStillReachable(EEComplexUnit* inUnit, EEUGRust* inGoal);
+bool EECombatIsGateClosed(EEComplexUnit* inUnit, EEUGRust* inGoal);
 bool EECombatIsEnemyWithinRange(EEComplexUnit* inUnit);
 bool EECombatHealInRange(EEComplexUnit* inHealer, EEUnit* inTarget);
 bool EECombatFacesPoint(EEUnitClass* inClass, EEComplexUnit* inUnit, const GE3DPoint& inLocation, bool inUseTolerance);
@@ -118,12 +119,27 @@ enum {
     EE_COMBAT_XA_AREA_DAMAGE = 4,       // inBefore: the victims' FNV-1a 32 (id, hit points, resource amount)
 };
 void EECombatCaptureXAction(uint32_t inFunc, EEComplexUnit* inUnit, EEUnit* inTarget, uint32_t inBefore);
+// CBGO (TEST ONLY): the attack, attack-ground and heal goals' GetDestination and Suits, at each call's end: the
+// function, the goal's kind, the unit's and target's ids (0 without one), the result, a point's x, y, z bits
+// (GetDestination's out location) and two extras (per function below); folded like CBQR (EE_SIM_CAPTURE_CBGO_FULL=1).
+// Recorded from the original C++ bodies before the goals moved to EEUGRust (R5b.2, twelfth round).
+enum {
+    EE_COMBAT_GO_DESTINATION = 1,       // extra 0, 1: the attack goal's last target tile after
+    EE_COMBAT_GO_SUITS = 2,             // attack ground: the target point's bits
+};
+void EECombatCaptureGoal(uint32_t inFunc, uint32_t inKind, const EEUnit* inUnit, const EEUnit* inTarget, int32_t inResult,
+                         const float* inPoint = NULL, uint32_t inExtra0 = 0, uint32_t inExtra1 = 0);
 // A body of ee_combat world.rs (EE_COMBAT_WORLD_*: IsTargetIgnored, IgnoreTarget, CanReachUnit,
 // IsOnTileBorderingTarget, EEIsAttackReachable, Attacked, FireShot) of inUnit on inTarget over the world host
 // (EECombatGoals.cpp); inClass the class of Attacked or FireShot (`this`), ioX, ioY EEIsAttackReachable's tile (written
 // when the body sets it). Returns the body's answer (0/1).
 int32_t EECombatWorld(int32_t inFunction, EEComplexUnit* inUnit, EEUnit* inTarget, EEUnitClass* inClass = NULL,
                       long* ioX = NULL, long* ioY = NULL);
+// EEGetFiringPosition (inFiring) or EEGetLeadPosition (ee_combat leaves.rs firing_position, lead_position) over the
+// world host: ioLocation in and out.
+void EECombatAttackPosition(bool inFiring, EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& ioLocation);
+// EEIsSeenBy (ee_combat leaves.rs is_seen_by) over the world host.
+bool EECombatIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored);
 // The damage of one hit (ee_combat damage.rs compute_damage; ee/EERules.h EEDamageForm, combat.yaml's constants):
 // inUnit hits inTarget with inAttack, attack kind inAmmo (dbfamily column) and weapon inWeapon (dbweapontohit row);
 // the elevation rule is inUnit's class's. inFriendlyFactor: splash on the own player's units. False when the hit does

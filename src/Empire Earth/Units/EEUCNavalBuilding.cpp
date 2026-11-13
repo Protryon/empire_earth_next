@@ -29,7 +29,7 @@
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUCBuilding.h"
@@ -60,7 +60,7 @@ bool EEUCNavalBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
         if (theCargo->mPlayer->IsHuman()) {
             if (theCargo->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
-                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
                     EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;
@@ -69,7 +69,7 @@ bool EEUCNavalBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
             }
             if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
                 EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
-                if (EEGoalCast<EEUGAttackUnit>(theGoal) == 0 &&
+                if (EEAttackUnitCast(theGoal) == 0 &&
                     EEGoalCast<EEUGLocation>(theGoal) == 0 &&
                     EEExploreGoalCast(theGoal) == 0)
                     theGoal = NULL;

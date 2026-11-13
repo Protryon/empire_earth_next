@@ -29,7 +29,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUCBasicCitizen.h"
 #include "ee/EEUGBuildRepair.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
@@ -707,7 +707,7 @@ void EEUGGather::ArriveAtResource(EEComplexUnit* inUnit)
     if (theKind == kUnitFamilyAnimal || theKind == kUnitFamilyFish) {
         long theAction = 0x7e0;
         if (this->mResource->mHitPoints > 0 && inUnit->mUnitClass->FindAction(theAction) != NULL) {
-            inUnit->SetGoal(new EEUGAttackUnit(inUnit, this->mResource, this->GetB1C(), false), 1, 0);
+            inUnit->SetGoal(EEUGRust::NewAttackUnit(inUnit, this->mResource, this->GetB1C(), false), 1, 0);
             inUnit->StartAction(theAction);
         } else
             inUnit->StartAction(kActionMoveToResource);

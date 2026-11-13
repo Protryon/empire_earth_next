@@ -864,6 +864,9 @@ constexpr static const int32_t EE_UNITS_GOAL_MAX_PATH_ATTEMPTS = 18;
 /// `a`: the unit; `Suits` (true but for the unload)
 constexpr static const int32_t EE_UNITS_GOAL_SUITS = 19;
 
+/// `a`: the new path attempt count (`SetPathAttempts`, after the base goal's; nothing more for these kinds)
+constexpr static const int32_t EE_UNITS_GOAL_SET_PATH_ATTEMPTS = 22;
+
 /// `a`: the unit; `AddCreatedUnit` and `Abandon` (the base goal's do nothing)
 constexpr static const int32_t EE_UNITS_GOAL_ADD_CREATED_UNIT = 20;
 

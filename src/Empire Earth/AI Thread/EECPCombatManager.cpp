@@ -41,7 +41,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
 #include "ee/RTSRegionTable.h"
@@ -426,7 +426,7 @@ void EECPCombatManager::Update(unsigned long inTime)
                 if (theCannons.size() > 0) {
                     EEComplexUnit* theCannon = (*(theCannons.begin() + 0))->mComplexUnit;
                     if (theCannon->mContainer) {
-                        theCannon->mContainer->SetGoal(new EEUGAttackUnit(theCannon->mContainer, theWonder, true, false),
+                        theCannon->mContainer->SetGoal(EEUGRust::NewAttackUnit(theCannon->mContainer, theWonder, true, false),
                             0, 0);
                         theCannon->mContainer->StartAction(kActionInitialAttackState);
                         theCannon->mContainer->GetUnitClass()->ActionChanged(theCannon->mContainer);
@@ -535,7 +535,7 @@ void EECPCombatManager::Update(unsigned long inTime)
                     if (theTargets.size() > 0) {
                         std::sort(theTargets.begin(), theTargets.end(), EECPHitPointsGreater());
                         EEUnit* theVictim = theTargets[0];
-                        theCannon->SetGoal(new EEUGAttackUnit(theCannon, theVictim, true, false), 0, 0);
+                        theCannon->SetGoal(EEUGRust::NewAttackUnit(theCannon, theVictim, true, false), 0, 0);
                         theCannon->StartAction(kActionInitialAttackState);
                         theCannon->GetUnitClass()->ActionChanged(theCannon);
                     }

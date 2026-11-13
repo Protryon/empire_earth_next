@@ -29,7 +29,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEHerd.h"
@@ -100,7 +100,7 @@ bool EEUnitClass::AttackNearby(EEComplexUnit* inUnit, EEUnitGoal* inGoal)
                     }
                 }
                 if (theAttack) {
-                    EEUGAttackUnit* theAttackGoal = new EEUGAttackUnit(inUnit, theTarget, false, false);
+                    EEUGRust* theAttackGoal = EEUGRust::NewAttackUnit(inUnit, theTarget, false, false);
                     if (inGoal != NULL && (theKind == 1 || theKind == 9 || theKind == 10))
                         inUnit->SetGoal(theAttackGoal, 1, 0);
                     else
@@ -179,7 +179,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         // their weapon range
         if (!theFlag && inUnit->mBehavior->mReturnsToInitialContactLocation && inUnit->mBehavior->mCanTargetEnemies
             && theGoal != NULL && theGoal->mKind == kGoalAttackUnit && inUnit->mLastAttacker != NULL
-            && static_cast<EEUGAttackUnit*>(theGoal)->mTarget == inUnit->mLastAttacker && inUnit->mLastAttacker->mHitPoints > 0)
+            && static_cast<EEUGRust*>(theGoal)->GetAttackTarget() == inUnit->mLastAttacker && inUnit->mLastAttacker->mHitPoints > 0)
             theFlag = true;
         break;
     case kTriggerCanIPursuePastInitialContactLOS:
@@ -229,7 +229,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         if (theGoal != NULL) {
             if (theGoal->mKind != kGoalAttackUnit)
                 break;
-            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
             if (!theTarget->mUnitClass->IsLandBuilding()) {
                 // port: a unit still on its way to its target (not yet in reach of it) fights back against another
                 // unit that hits it (Generic Attack.tai UnderAttack retaliates only when this holds); the original
@@ -442,7 +442,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         if (theGoal != NULL) {
             if (theGoal->mKind != kGoalAttackUnit)
                 break;
-            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            EEUnit* theTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
             if (!theTarget->mUnitClass->IsLandBuilding())
                 break;
             if (theTarget->mStats->mAttack != 0.0f) {
