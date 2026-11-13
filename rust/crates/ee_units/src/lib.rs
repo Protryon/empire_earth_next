@@ -32,6 +32,7 @@ pub mod goals;
 pub mod group;
 mod header_consts;
 pub mod host;
+pub mod improve;
 pub mod kinds;
 pub mod load;
 pub mod motion;

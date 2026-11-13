@@ -486,6 +486,26 @@ constexpr static const uint32_t EE_GOAL_CTOR_CAST_CALAMITY = 12;
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
 
+/// The improvement kinds (ee/EEImprovementIDs.h): 0 area effect, 1 attack, 2..7 the armours, 8 flight time or power,
+/// 9 hit points, 10 leadership, 11 range, 12 repair, 14 speed, 15 transport; 13 unused.
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_AREA_EFFECT = 0;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_ATTACK = 1;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_FLIGHT_TIME_OR_POWER = 8;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_HIT_POINTS = 9;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_LEADERSHIP = 10;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_RANGE = 11;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_REPAIR = 12;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_SPEED = 14;
+
+constexpr static const int32_t EE_UNITS_IMPROVEMENT_TRANSPORT = 15;
+
 /// The goal classes (`EEUG*`).
 constexpr static const uint32_t EE_GOAL_KIND_LOCATION = 1;
 
@@ -1788,6 +1808,48 @@ struct EeGoalSpec {
   int64_t ints[3];
 };
 
+/// A unit class's fields the improvements read.
+struct EeUnitsImproveClass {
+  float area_effect;
+  int32_t attack;
+  int32_t armor[6];
+  int32_t flight_time;
+  int32_t power;
+  int32_t hit_points;
+  int32_t leadership;
+  float range;
+  int32_t repair_rate;
+  float max_velocity;
+  int32_t carry_amount;
+  int32_t transport_capacity;
+  /// the class's `mUpgradesAreaEffect`, `mUpgradesArrowArmor` .. `mUpgradesShockArmor` (by improvement 2..7),
+  /// `mUpgradesRepair`
+  bool upgrades_area_effect;
+  bool upgrades_armor[6];
+  bool upgrades_repair;
+  /// the class has an improvement table (`mImprovements`), and its entries' step factors
+  bool has_table;
+  float step_factors[16];
+};
+
+/// An upgrade's stats a level change moves.
+struct EeUnitsImproveStats {
+  float area_effect;
+  float attack;
+  float armor[6];
+  int32_t flight_time;
+  int32_t power;
+  int32_t max_hit_points;
+  float leadership;
+  float range;
+  float line_of_sight;
+  int32_t repair_rate;
+  float max_velocity;
+  int32_t carry_amount;
+  /// the upgrade's own class has a flight time (a flight-time-or-power change moves the flight time)
+  bool upgrade_has_flight_time;
+};
+
 /// What `Move`'s arithmetic gives: whether the unit moves (the push is past the stop distance), whether the move is
 /// past the move distance (the shuffle animation's test), the push's size per axis after the clamp, the new point.
 struct EeUnitsPush {
@@ -2560,6 +2622,42 @@ extern void ee_units_host_group_remove_unit(void *group, uint32_t unit);
 extern void ee_units_host_unit_clear_goals(uint32_t unit);
 
 extern int64_t ee_units_host_object_hit_points(uint32_t unit);
+
+/// `CanUpgrade`
+///
+/// # Safety
+/// `c` points to a valid record.
+bool ee_units_improve_can_upgrade(const EeUnitsImproveClass *c, int32_t improvement);
+
+/// `GetBaseValue`
+///
+/// # Safety
+/// `c` points to a valid record.
+float ee_units_improve_base_value(const EeUnitsImproveClass *c, int32_t improvement);
+
+/// `GetCost`
+int32_t ee_units_improve_cost(int32_t improvement);
+
+/// `ChangeLevel` on the records: `levels` the 16 words, `total_cost` the points spent; true when the stats moved.
+///
+/// # Safety
+/// The pointers are valid; `levels` points to 16 words.
+bool ee_units_improve_change_level(const EeUnitsImproveClass *c,
+                                   EeUnitsImproveStats *s,
+                                   int32_t *levels,
+                                   int32_t *total_cost,
+                                   int32_t improvement,
+                                   int32_t delta);
+
+/// `GetGainText`'s number
+///
+/// # Safety
+/// The pointers are valid; `levels` points to 16 words.
+int32_t ee_units_improve_gain(const EeUnitsImproveClass *c,
+                              const EeUnitsImproveStats *s,
+                              const int32_t *levels,
+                              int32_t level,
+                              int32_t improvement);
 
 /// `AfterStep`'s roll decay over the store: the new roll.
 float ee_units_step_roll(uint32_t id, uint64_t object, float member, float tick_seconds);
