@@ -297,7 +297,7 @@ void PlatGUIWindow::TimerEvent(DWORD inElapsed)
         return;
     if (theHit != this) {
         Window* thePopup = theManager->GetPopupWindow();
-        if (thePopup != NULL && (theManager->mPopupFlags & PopupFlag_DontWantMouse) && thePopup == theHit)
+        if (thePopup != NULL && (theManager->GetPopupFlags() & PopupFlag_DontWantMouse) && thePopup == theHit)
             return;
     }
     this->QueueEvent(new InputEvent(InputEvent_MouseExit));

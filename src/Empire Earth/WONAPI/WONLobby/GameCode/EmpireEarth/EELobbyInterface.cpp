@@ -423,7 +423,7 @@ void EELobbyOpen()
     gEELobbyWindowManager->SetDoPumpThread(true);
     gEELobbyWindowManager->Startup();
     gEELobbyRootWindow = new PlatWindowManager;
-    gEELobbyRootWindow->mBA5 = false;
+    gEELobbyRootWindow->SetPopupsInOwnWindow(false);
     JPGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
     PNGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
     gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder);

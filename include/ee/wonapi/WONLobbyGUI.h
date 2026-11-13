@@ -1854,6 +1854,14 @@ public:
     void ClearSubscriptions(); //32f5d0
     WindowEventBase* PeekNextEvent(); //32f700
     void ProcessEvents(); //32f760
+    // R6 WON round 33's census: the state read or written outside WindowManager.cpp
+    Component* GetModalComponent() const { return this->mModalComponent; }
+    Window* GetFocusWindow() const { return this->mFocusWindow; }
+    int GetPopupFlags() const { return this->mPopupFlags; }
+    bool GetPopupsInOwnWindow() const { return this->mBA5; }
+    void SetPopupsInOwnWindow(bool inOwn) { this->mBA5 = inOwn; }
+    DWORD GetLastInputTick() const { return this->mLastInputTick; }
+    Window* GetDefaultWindow() const { return this->mDefaultWindow; }
 
     typedef std::map<std::string,SmartPtr<Font>,StringLessNoCase> NamedFontMap;
     typedef std::map<std::string,SmartPtr<NativeImage>,StringLessNoCase> NativeImageMap;
