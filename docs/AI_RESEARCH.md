@@ -4557,7 +4557,9 @@ The owner's direction: port all of the C++ classic into Lua, so that its decisio
 1. the inventory (below);
 2. the missing parts by value: transports and island play (2a), walls (2b), air, space and submarines (2c), the
    wonder race and the ICBM (2d), allies (2e), the rest (2f);
-3. benches beyond Small land maps;
+3. benches beyond Small land maps. First on the list (coordinator, 2026-11-13): the late-start economy. At the WW2
+   start the port has 22 citizens at 10 minutes against the C++'s 33 (§8.74). An economy that trails the C++'s
+   blocks the deletion, so this cannot stay a known deviation. After it: the wall count (§8.70) and the rest;
 4. classic_lua as the lobby's classic for a soak;
 5. then the deletion, keeping the helpers the Lua calls (EEComputerPlayer's engine glue split out).
 
