@@ -51,7 +51,7 @@
 #include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
@@ -590,7 +590,7 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             if (theGoal == NULL)
                 theIdle++;
             else if (theGoal->mKind == kGoalGather) {
-                EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
+                EEUnit* theResource = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
                 unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
                 theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
                 if (theResource != NULL && theType >= kResourceFood && theType <= kResourceIron)

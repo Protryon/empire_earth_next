@@ -973,42 +973,44 @@ pub fn body(op: i32, goal: u64, a: u64, b: u64, io: &mut EeUnitsGoalIo, host: &m
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::rust_goal::*;
     use std::collections::BTreeMap as Map;
 
     /// Units by handle, the goals' nodes, a log of the world calls and the file.
     #[derive(Default)]
-    struct World {
-        log: Vec<String>,
-        text: String,
-        file: Vec<String>,
-        reads: Vec<i64>,
-        units: Map<u64, EeUnitsBuildUnit>,
-        refs: Map<u64, i64>,
-        commands: Map<u64, i64>,
-        positions: Map<u64, [f32; 3]>,
-        free_tile: Option<[f32; 3]>,
-        surrounding: Vec<(i32, i32)>,
-        work_reach: bool,
-        afford: bool,
-        friendly: bool,
-        clear: bool,
-        queued: bool,
-        users: i32,
-        goal_state: u64,
+    pub(crate) struct World {
+        pub(crate) log: Vec<String>,
+        pub(crate) text: String,
+        pub(crate) file: Vec<String>,
+        pub(crate) reads: Vec<i64>,
+        pub(crate) units: Map<u64, EeUnitsBuildUnit>,
+        pub(crate) refs: Map<u64, i64>,
+        pub(crate) commands: Map<u64, i64>,
+        pub(crate) positions: Map<u64, [f32; 3]>,
+        pub(crate) free_tile: Option<[f32; 3]>,
+        pub(crate) surrounding: Vec<(i32, i32)>,
+        pub(crate) work_reach: bool,
+        pub(crate) afford: bool,
+        pub(crate) friendly: bool,
+        pub(crate) clear: bool,
+        pub(crate) queued: bool,
+        pub(crate) users: i32,
+        pub(crate) goal_state: u64,
+        /// the gather mock's answers by name
+        pub(crate) knobs: Map<&'static str, i64>,
     }
 
-    const GOAL: u64 = 0x9000;
-    const P: u64 = 0x50;
-    const NODE: u64 = 0x60;
-    const CLASS: u64 = 0x70;
-    const B: u64 = 0x100;
-    const W: u64 = 0x200;
+    pub(crate) const GOAL: u64 = 0x9000;
+    pub(crate) const P: u64 = 0x50;
+    pub(crate) const NODE: u64 = 0x60;
+    pub(crate) const CLASS: u64 = 0x70;
+    pub(crate) const B: u64 = 0x100;
+    pub(crate) const W: u64 = 0x200;
 
     impl World {
-        fn unit(&mut self, u: u64) -> &mut EeUnitsBuildUnit {
+        pub(crate) fn unit(&mut self, u: u64) -> &mut EeUnitsBuildUnit {
             self.units.entry(u).or_default()
         }
     }
@@ -1274,7 +1276,7 @@ mod tests {
     }
 
     /// A house at (10, 20) of size 2, 100 of 400 hit points, unbuilt; a citizen worker.
-    fn world() -> World {
+    pub(crate) fn world() -> World {
         let mut w = World { work_reach: true, afford: true, friendly: true, ..Default::default() };
         *w.unit(B) = EeUnitsBuildUnit {
             complex: B,
@@ -1315,7 +1317,7 @@ mod tests {
     }
 
     /// a goal handle no other test uses (the tests run at once over the one table)
-    fn fresh() -> u64 {
+    pub(crate) fn fresh() -> u64 {
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(GOAL);
         NEXT.fetch_add(0x10, std::sync::atomic::Ordering::Relaxed)
     }

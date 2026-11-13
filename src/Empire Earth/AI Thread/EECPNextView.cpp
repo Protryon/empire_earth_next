@@ -40,7 +40,7 @@
 #include "ee/EEAIForest.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
@@ -241,8 +241,8 @@ long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource)
             EEComplexUnit* theUnit = theResources->mGatherers[r][k];
             if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen || !(theUnit->GetHitPoints() > 0))
                 continue;
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-            if (theGather != NULL && theGather->mResource == inResource)
+            EEUGRust* theGather = EEGatherGoalCast(theUnit->GetLoadGoal());
+            if (theGather != NULL && theGather->GetGatherResource() == inResource)
                 theCount++;
         }
     return theCount;
@@ -840,10 +840,10 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen)
                 continue;
             EEUnitGoal* theGoal = theUnit->GetLoadGoal();
-            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+            EEUGRust* theGather = EEGatherGoalCast(theGoal);
             EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-            if ((theGather != NULL && theGather->mResource != NULL
-                    && theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal)
+            if ((theGather != NULL && theGather->GetGatherResource() != NULL
+                    && theGather->GetGatherResource()->mUnitClass->mFamily == kUnitFamilyAnimal)
                 || (theAttack != NULL && theAttack->mTarget != NULL
                     && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
                 outView.hunters++;

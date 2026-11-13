@@ -86,7 +86,7 @@
 #include "ee/EEFleeFromLocationScreenBase.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCombatManager.h"
@@ -2628,7 +2628,7 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
         if (theCommand == kActionWaitForOpenPosition) {
             // (the port: a unit waiting for a spot whose goal is no longer a gather - the original dereferenced the
             // null cast; seen when a repair began beside such a unit, PORT_LEARNINGS)
-            EEUGGather* theGather = EEGoalCast<EEUGGather>(this->GetGoal());
+            EEUGRust* theGather = EEGatherGoalCast(this->GetGoal());
             if (theGather != NULL && theGather->FindGatherSpot(this)) {
                 this->StartAction(kActionMoveToWaitingArea);
                 this->GetUnitClass()->ActionChanged(this);

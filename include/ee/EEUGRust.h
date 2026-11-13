@@ -2,11 +2,12 @@
 // the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
 // bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
 // calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore, unload.rs for kGoalUnloadTransport, load.rs for
-// kGoalLoadTransport and kGoalLoadGarrison, build.rs for kGoalBuildRepair), every virtual one call. Replaces
+// kGoalLoadTransport and kGoalLoadGarrison, build.rs for kGoalBuildRepair, gather.rs for kGoalGather), every virtual one call. Replaces
 // EEUGPatrol (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity
 // (0x220986..0x2213dd), EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals
 // EEUGLoadContainer (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport
-// (0x2271c7..0x227621), and EEUGBuildRepair (0x21e0c1..0x220986): their classes and files are deleted.
+// (0x2271c7..0x227621), EEUGBuildRepair (0x21e0c1..0x220986) and EEUGGather (0x221d98..0x22528d): their classes and files are
+// deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -100,6 +101,24 @@ public:
     EEUnitClass* GetBuildTargetClass();
     bool IsBuildSiteTaken();
 
+    // a gather goal (kGoalGather): the resource and the storage, both referenced (EEUGGather(inResource, inStorage,
+    // inArg)); or the load's empty goal (EEUGGather(inArg))
+    static EEUGRust* NewGather(EEUnit* inResource, EEUnit* inStorage, bool inArg);
+    static EEUGRust* NewGather(bool inArg);
+    // the resource, the storage, the gathering and waiting flags, the destination; a new resource or storage (the
+    // references moved)
+    EEUnit* GetGatherResource();
+    EEUnit* GetGatherStorage();
+    bool IsGathering();
+    bool IsGatherWaiting();
+    void GetGatherDestination(GE3DPoint& outLocation);
+    void SetGatherResource(EEUnit* inResource);
+    void SetGatherStorage(EEUnit* inStorage);
+    // a waiting area by the resource (true when found); an unfinished living settlement within twice the
+    // gatherer's line of sight (NULL if none)
+    bool FindGatherSpot(EEComplexUnit* inUnit);
+    EEUnit* FindUnfinishedFarm(EEComplexUnit* inUnit);
+
     virtual ~EEUGRust();
     virtual void AddCreatedUnit(EEComplexUnit* inUnit);
     virtual bool IsLoadGoal();
@@ -123,6 +142,9 @@ public:
     virtual void ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplexUnit*);
     virtual bool Suits(EEUnit* inUnit);
     virtual void Work(EEComplexUnit* inUnit);
+    virtual void PathTaken(EEComplexUnit* inUnit);
+    // the gather goal reports 5000 while not active (EEUGGather's inline)
+    virtual bool IsActive(unsigned long* outValue);
 };
 
 // the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>,
@@ -151,6 +173,11 @@ inline EEUGRust* EEUnloadGoalCast(EEUnitGoal* inGoal)
 inline EEUGRust* EEBuildRepairGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalBuildRepair);
+}
+// the old EEGoalCast<EEUGGather> and dynamic_cast<EEUGGather*>
+inline EEUGRust* EEGatherGoalCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalGather);
 }
 // the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
 inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)

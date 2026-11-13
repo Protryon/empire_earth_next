@@ -27,7 +27,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAreaUtilities.h"
@@ -305,8 +305,8 @@ bool EEPMSpaceship::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
                 inUnit->mCollisionState = 0;
             theResult = true;
             EEUnitGoal* theOwnGoal = inUnit->mGoalState;
-            if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGGather*>(theOwnGoal)->mResource
-                && static_cast<EEUGGather*>(theOwnGoal)->mResource->mResourceType == kResourceWood)
+            if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()
+                && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()->mResourceType == kResourceWood)
                 inUnit->StartAction(kActionFindNewResource);
             else
                 inUnit->StartAction(kActionIdle);

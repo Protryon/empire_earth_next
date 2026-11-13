@@ -49,7 +49,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
@@ -1387,7 +1387,7 @@ static long EECPNextDoing(EEComplexUnit* inUnit)
         return kDoingIdle;
     switch (theGoal->mKind) {
     case kGoalGather: {
-        EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
+        EEUnit* theResource = static_cast<EEUGRust*>(theGoal)->GetGatherResource();
         if (theResource == NULL)
             return kDoingOther;
         switch (theResource->mResourceType) {

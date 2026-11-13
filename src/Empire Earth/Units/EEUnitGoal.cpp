@@ -21,7 +21,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGHealUnit.h"
@@ -79,7 +79,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = EEUGRust::NewExplore(false);
         break;
     case kGoalGather:
-        theGoal = new EEUGGather(false);
+        theGoal = EEUGRust::NewGather(false);
         break;
     case kGoalLoadGarrison:
         theGoal = EEUGRust::NewLoad(kGoalLoadGarrison, false);

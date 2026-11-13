@@ -34,7 +34,7 @@
 #include "ee/EEUnitVectorItem.h"
 #include "lle/FSPersistent.h"
 #include "ee/EEEnvironmentManager.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEAEManager.h"
@@ -1155,7 +1155,7 @@ bool EEUnitClass::ProduceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, bool 
                     if (theGoal->mKind == kGoalAttackUnit && (theCreated->GetUnitClass()->GetCategory() == kUnitCategoryLandCitizen || theCreated->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen)) {
                         EEUnit* theTarget = EEGoalCast<EEUGAttackUnit>(theGoal)->mTarget;
                         if (theCreated->CanGather(theTarget, theTarget->GetTileX(), theTarget->GetTileY(), false, true)) {
-                            EEUnitGoal* theGather = new EEUGGather(theTarget, 0, true);
+                            EEUnitGoal* theGather = EEUGRust::NewGather(theTarget, 0, true);
                             delete theGoal;
                             theGoal = theGather;
                             theCreated->SetBehavior(EEUnitBehavior::sTable[5]);
@@ -3265,8 +3265,8 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
         inUnit->mCollisionResolutionCount = 0.0f;
         inUnit->SetVelocity(0.0f);
         inUnit->SetCurrentPhysicsAction(6);
-        EEUGGather* theGather = EEGoalCast<EEUGGather>(theGoal);
-        if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mResourceType == kResourceWood)
+        EEUGRust* theGather = EEGatherGoalCast(theGoal);
+        if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mResourceType == kResourceWood)
             inUnit->StartAction(kActionFindNewResource);
         else
             inUnit->StartAction(kActionIdle);

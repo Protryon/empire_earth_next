@@ -70,9 +70,18 @@
 #include "lle/GERasterizer.h"
 #include "lle/UIManager.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGGather.h"
 #include "ee/EEUCGate.h"
 #include "ee/EEUCBasicCitizen.h"
+#include "ee/EEUCNavalCitizen.h"
+#include "ee/EESaveGameFiles.h"
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEGameVariant.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EERules.h"
+#include "ee/EECPResourceManager.h"
+#include "ee/EEAIPathSector.h"
+#include "ee/AStarGraphableObjectBase.h"
+#include "ee/EEAIForest.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPWallManager.h"
@@ -174,7 +183,7 @@ void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             theRejected.push_back(theResource);
             theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
         } else {
-            inUnit->SetGoal(new EEUGGather(theResource, inTarget, false), 0, 0);
+            inUnit->SetGoal(EEUGRust::NewGather(theResource, inTarget, false), 0, 0);
             inUnit->StartAction(kActionMoveToWaitingArea);
             inUnit->mUnitClass->ActionChanged(inUnit);
             theResult = true;
@@ -182,7 +191,7 @@ void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
     }
     if (!theResult && theRejected.size() > 0) {
         EEAIRandomShuffle(theRejected.begin(), theRejected.end());
-        inUnit->SetGoal(new EEUGGather(theRejected[0], inTarget, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewGather(theRejected[0], inTarget, false), 0, 0);
         inUnit->StartAction(kActionMoveToWaitingArea);
         inUnit->mUnitClass->ActionChanged(inUnit);
     }
@@ -271,6 +280,398 @@ bool EEBuildSiteFree(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
 }
 
 }  // namespace
+
+// ---- the gather goal's world work (EEUGGather.cpp's helpers; the goal itself is gather.rs)
+
+// EEAIContinentManager's inline forest id (ee/EEAIContinentManager.h declares it; EEAIForest is complete here). Its
+// out-of-line COMDAT is 0x625272 (GatherNextTree's first call; the second is expanded)
+inline unsigned short EEAIContinentManager::GetForestIDAt(const EETileLocation& inTile)
+{
+    EEAIForest* theForest = this->GetForestAt(inTile);
+    return theForest != NULL ? theForest->mID : 0;
+}
+
+namespace {
+
+// the squared distance within which a gatherer checks the resource's tiles (0x44759c; provisional name)
+const float kGatherRangeSquared = 16.0f;
+
+// The order FindGatherSpot sorts the tiles around the resource in: the farther from the gatherer first (0x18 bytes:
+// the gatherer's position, the resource's tile, its path sector's id, the gatherer) (provisional name)
+struct EEGatherTileFarther {
+    EEGatherTileFarther(EEComplexUnit* inUnit, const EETileCoordinate& inTile) : mTile(inTile), mUnit(inUnit)
+    {
+        EEAIPathSector* theSector = gContinentManager.GetPathSector(inTile);
+        this->mSector = theSector ? theSector->mID : (unsigned short)0;
+        this->mPosition.SetX(inUnit->mPhysicalModel.GetLocation().GetX());
+        this->mPosition.SetY(inUnit->mPhysicalModel.GetLocation().GetY());
+    }
+    // 0x621ddb: whether the first tile is farther from the gatherer than the second (sorting puts the nearest last)
+    bool operator()(const U2DPoint<long>& inFirst, const U2DPoint<long>& inSecond) const
+    {
+        float theFirst = this->mPosition.DistanceToSquared(U2DPoint<float>((float)inFirst.GetX(), (float)inFirst.GetY()));
+        float theSecond = this->mPosition.DistanceToSquared(U2DPoint<float>((float)inSecond.GetX(), (float)inSecond.GetY()));
+        return theFirst > theSecond;
+    }
+
+    U2DPoint<float> mPosition;              // +0x00
+    EETileCoordinate mTile;                 // +0x08
+    unsigned short mSector;                 // +0x10
+    EEComplexUnit* mUnit;                   // +0x14
+};
+
+// 0x622271 IsAtResourceSpot: within 4 tiles of the resource, on one of its gather spots with room to stand
+bool EEGatherAtResourceSpot(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    GE3DPoint theLocation;
+    std::vector<U2DPoint<long> > theTiles;
+    bool theResult = false;
+    if (inResource != NULL && !(inUnit->DistanceSquaredToUnit(inResource) > kGatherRangeSquared)) {
+        EEGetResourceSpots(inResource, theTiles);
+        U2DPoint<long> theTile(inUnit->mTileX, inUnit->GetTileY());
+        if (std::find(theTiles.begin(), theTiles.end(), theTile) != theTiles.end())
+            theResult = EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), inUnit->mTileX, inUnit->GetTileY(), 1, inUnit->mTileX,
+                                   inUnit->GetTileY(), 1, &theLocation);
+    }
+    return theResult;
+}
+
+// 0x622593 SendToNextFarm: the first free farm around the drop sites of the gatherer's farm worked
+void EEGatherNextFarm(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    EEComplexUnit* theTarget = NULL;
+    std::vector<EEUnit*> theUnits;
+    long theCount = 1;
+    if (!EEGetFarmDropSites(inResource->GetComplexUnit(), theUnits))
+        return;
+    for (std::vector<EEUnit*>::iterator theIterator = theUnits.begin(); theIterator != theUnits.end();
+         ++theIterator) {
+        if (theTarget != NULL)
+            break;
+        theTarget = EEFindFreeFarm((*theIterator)->GetComplexUnit(), 1, &theCount);
+    }
+    if (theTarget != NULL)
+        EEWorkFarm(theTarget, inUnit);
+}
+
+// 0x6226cf FindGatherSpot's search: the resource's nearest spot in its path subsector, under the gatherer or in a
+// neighbouring subsector the gatherer can enter, else any spot with room (the waiting area, at the tile's height)
+bool EEGatherFindSpot(EEComplexUnit* inUnit, EEUnit* inResource, GE3DPoint& outWaitingArea)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    std::vector<U2DPoint<long> > theOthers;
+    EECPASGFlags theFlags;
+    bool theFound = false;
+    bool theHaveFlags = false;
+    GE3DPoint theLocation;
+    EEGetResourceSpots(inResource, theTiles);
+    std::sort(theTiles.begin(), theTiles.end(), EEGatherTileFarther(inUnit, inResource->GetTile()));
+    EEAIPathSubSector* theStart = gContinentManager.GetPathSubSectorAt(inResource);
+    while (!theFound && theTiles.size() != 0) {
+        EEAIPathSubSector* theSubSector =
+            gContinentManager.GetPathSubSectorAt(theTiles.back().GetX(), theTiles.back().GetY());
+        if (theSubSector == theStart || U2DPoint<long>(inUnit->mTileX, inUnit->GetTileY()) == theTiles.back())
+            theFound = true;
+        else if (theStart->IsNeighbor(theSubSector)) {
+            if (!theHaveFlags) {
+                inUnit->mUnitClass->GetTerrainFlags(inUnit, theFlags);
+                theHaveFlags = true;
+            }
+            if (theFlags.mFlags[theSubSector->mKind])
+                theFound = true;
+        }
+        if (theFound == true) {
+            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles.back().GetX(), theTiles.back().GetY());
+            if (theTile != NULL
+                && EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), theTiles.back().GetX(), theTiles.back().GetY(), 1,
+                              theTiles.back().GetX(), theTiles.back().GetY(), 1, &theLocation)) {
+                outWaitingArea = theLocation;
+                outWaitingArea.mZ = theTile->GetHeight();
+            } else
+                theFound = false;
+        } else
+            theOthers.push_back(theTiles.back());
+        theTiles.pop_back();
+    }
+    if (!theFound) {
+        for (unsigned long i = 0; i < theOthers.size() && !theFound; i++) {
+            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theOthers[i].mX, theOthers[i].mY);
+            if (theTile == NULL
+                || !EEFindPlaceOnTile(inUnit, inUnit->GetUnitClass(), theOthers[i].mX, theOthers[i].mY, 1,
+                              theOthers[i].mX, theOthers[i].mY, 1, &theLocation))
+                continue;
+            outWaitingArea = theLocation;
+            theFound = true;
+            outWaitingArea.mZ = theTile->GetHeight();
+        }
+    }
+    return theFound;
+}
+
+// the gather time of the resource (variant-scaled except stone) as the work timer
+void EEGatherWorkTimer(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    long theRate = inUnit->mStats->mGatherTimes[EEGetResourceIndex(inResource)];
+    if (inResource->mResourceType != kResourceStone)
+        inUnit->SetWorkTimer(UMFloatToLong(
+            EEGameVariant::GetGameVariant(::gWorld.mGameOptions.mVariant)->mWorkTimeFactor * theRate));
+    else
+        inUnit->SetWorkTimer(theRate);
+}
+
+// 0x622ae2 BeginGathering: the animation for the resource (hunt, farm, chop, mine; a mining beam from the nano age),
+// facing it, the work timer, the gatherer stopped
+void EEGatherBegin(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    if (inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+        inUnit->SetAnimation(0xb, -1, 0);
+    else {
+        long theCategory = inResource->mUnitClass->mCategory;
+        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand)
+            inUnit->SetAnimation(inResource->mHitPoints > 0 ? 0xb : 0xa, -1, 0);
+        else
+            switch (inResource->mResourceType) {
+            case kResourceFood:
+                inUnit->SetAnimation(inResource->mUnitClass->mUnitType == kUnitTypeFarm ? 6 : 0xa, -1, 0);
+                break;
+            case kResourceWood:
+                inUnit->SetAnimation(3, -1, 0);
+                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)
+                    inUnit->ReleaseFireEffect();
+                break;
+            case kResourceStone:
+            case kResourceGold:
+            case kResourceIron:
+                inUnit->SetAnimation(9, -1, 0);
+                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools) {
+                    inUnit->ReleaseFireEffect();
+                    GE3DPoint thePosition;
+                    inResource->GetPosition(thePosition);
+                    EEEffectHandle theHandle;
+                    ::gWorld.GetEffectManager()->CreateEffect(inUnit, thePosition, EEGraphicEffect::Get(kGraphicEffectSpaceCitizenMiningBeam), &theHandle, 0);
+                    inUnit->mFireEffect = theHandle;
+                }
+                break;
+            }
+    }
+    inUnit->SetResourceType(inResource->mResourceType);
+    if (inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
+        inUnit->FaceTarget(inResource);
+    EEGatherWorkTimer(inUnit, inResource);
+    inUnit->DropPath();
+    inUnit->mActiveGoal->SetPathAttempts(0);
+    inUnit->SetCurrentPhysicsAction(6);
+    inUnit->SetVelocity(0.0f);
+    inUnit->mAngularVelocity.mYaw = 0.0f;
+    inUnit->mAngularVelocity.mPitch = 0.0f;
+    inUnit->mAngularVelocity.mRoll = 0.0f;
+}
+
+// 0x622ff0 GatherNextTree's world part: a carried load of another type dropped; a tree with no free spot gives way to
+// the first gatherable tree of its forest on the line from a nearby drop site (or the gatherer) to it (the result,
+// NULL for none); another resource but an animal becomes the gathered one
+EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    std::vector<EEUnit*> theUnits;
+    std::vector<U2DPoint<long> > theTiles;
+    GE3DPoint theLocation;
+    U2DPoint<long> theTile;
+    U2DPoint<long> theTarget;
+    GE2DPoint theCenter;
+    EEUnit* theFound = NULL;
+    EEUCBasicCitizen* theCitizen = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    if (inUnit->mResourceAmount > 0 && inUnit->mResourceType != inResource->mResourceType)
+        inUnit->mResourceAmount = 0;
+    if (inResource->mResourceType == kResourceWood && !EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(inResource), theLocation)) {
+        unsigned short theForestID =
+            gContinentManager.GetForestIDAt(U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY()));
+        EEAIForest* theForest = gContinentManager.mForests[theForestID];
+        if (theForest != NULL && theForest->mTiles.Size() > 1) {
+            theCenter.SetX(inResource->GetTileX());
+            theCenter.SetY(inResource->GetTileY());
+            EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
+            EEComplexUnit* theOther = NULL;
+            for (long i = theUnits.size() - 1; i >= 0; i--) {
+                EEComplexUnit* theUnit = (EEComplexUnit*)*(theUnits.begin() + i);
+                if (theUnit->GetPlayer() == inUnit->GetPlayer() && theUnit->GetUnitClass()->IsDropSite()
+                    && theUnit->CanTake(inUnit, 3)) {
+                    theOther = theUnit;
+                    break;
+                }
+            }
+            if (theOther != NULL)
+                theTile.SetXY(theOther->GetTileX(), theOther->GetTileY());
+            else
+                theTile.SetXY(inUnit->GetTileX(), inUnit->GetTileY());
+            theTarget = U2DPoint<long>(inResource->GetTileX(), inResource->GetTileY());
+            if (theTile != theTarget) {
+                theTile.GetLineTiles(theTarget, 1.0f, theTiles);
+                for (unsigned long j = 0; j < theTiles.size() && theFound == NULL; j++) {
+                    long theX = theTiles[j].mX;
+                    long theY = (theTiles.begin() + j)->mY;
+                    EEMapTile* theMapTile = ::gWorld.GetMap()->GetTile(theX, theY);
+                    if (theMapTile == NULL)
+                        continue;
+                    for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL && theFound == NULL;
+                         theNode = theNode->mNext) {
+                        EEUnit* theTree = theNode->mUnit;
+                        if (theTree != NULL && theTree->mResourceType == kResourceWood && inUnit->CanGather(theTree, theX, theY, false, false)
+                            && theCitizen->HasGatherPoint(inUnit, theTree)
+                            && gContinentManager.GetForestIDAt(U2DPoint<long>(theX, theY)) == theForestID)
+                            theFound = theTree;
+                    }
+                }
+            }
+        }
+    } else if (inResource->GetUnitClass()->mFamily != kUnitFamilyAnimal)
+        inUnit->SetGatheredResource(inResource);
+    return theFound;
+}
+
+// 0x62333b BuildFarms' search: a build goal for each unfinished own settlement or town centre in sight, each the
+// goal's storage
+void EEGatherBuildFarms(EEComplexUnit* inUnit, EEUGRust* inGoal)
+{
+    GE2DPoint theCenter;
+    std::vector<EEUnit*> theUnits;
+    theCenter.SetX(inUnit->mTileX);
+    theCenter.SetY(inUnit->GetTileY());
+    EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
+    for (long theIndex = theUnits.size() - 1; theIndex >= 0; theIndex--) {
+        EEUnit* theUnit = theUnits[theIndex];
+        unsigned long theType = theUnit->GetUnitClass()->GetUnitType();
+        if ((theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter) || theUnit->GetPlayer() != inUnit->GetPlayer() || !(theUnit->GetHitPoints() > 0)
+            || static_cast<EEComplexUnit*>(theUnit)->GetIsBuilt())
+            continue;
+        EEUGRust* theGoal = EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theUnit, false);
+        inGoal->SetGatherStorage(theUnit);
+        inUnit->SetGoal(theGoal, 1, 0);
+        inUnit->GetUnitClass()->ActionChanged(inUnit);
+    }
+}
+
+// 0x623757 HasGatherRoom: a farm takes one gatherer, others their unblocked side tiles (counted twice) and corner
+// tiles, capped by the player's mining limit
+bool EEGatherHasRoom(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    std::vector<U2DPoint<long> > theTiles;
+    std::vector<U2DPoint<long> > theEdges;
+    EEMap* theMap = ::gWorld.GetMap();
+    unsigned long theLimit;
+    if (inResource->GetUnitClass()->GetUnitType() == kUnitTypeFarm)
+        theLimit = 1;
+    else {
+        EEGetSideTiles(inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theTiles);
+        EEGetCornerTiles(0, inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theEdges);
+        unsigned long theCount = theTiles.size() * 2 + theEdges.size();
+        for (int thePass = 0; thePass < 2; thePass++) {
+            std::vector<U2DPoint<long> >& theList = thePass == 0 ? theTiles : theEdges;
+            for (unsigned long theIndex = 0; theIndex < theList.size(); theIndex++) {
+                EEMapTile* theTile = theMap->GetTile(theList[theIndex].mX, theList[theIndex].mY);
+                if (theTile == NULL)
+                    theCount--;
+                else
+                    for (RTSTileUnitNode* theNode = theTile->mUnits; theNode; theNode = theNode->mNext) {
+                        EEUnit* theUnit = theNode->mUnit;
+                        if (theUnit == NULL)
+                            continue;
+                        long theCategory = theUnit->GetUnitClass()->GetCategory();
+                        if (theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen && !theUnit->IsPassableBy(inUnit))
+                            theCount--;
+                    }
+            }
+        }
+        theLimit = theCount < inUnit->GetPlayer()->mMiningLimit ? theCount : inUnit->GetPlayer()->mMiningLimit;
+    }
+    return ::gWorld.GetResourceUsers(inResource) < theLimit;
+}
+
+// the resource-accessible trigger: a land gatherer's resource on land, a naval one's on deep water, in its continent
+// with a gather point
+bool EEGatherAccessible(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(inUnit->GetUnitClass());
+    if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen) {
+        if (inResource != NULL && inResource->mTile->mTerrainType != kTerrainDeepWater
+            && gContinentManager.InSameContinent(inUnit, inResource))
+            return theClass->HasGatherPoint(inUnit, inResource);
+    } else if (inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen) {
+        if (inResource != NULL && inResource->mTile->mTerrainType == kTerrainDeepWater
+            && gContinentManager.InSameContinent(inUnit, inResource))
+            return theClass->HasGatherPoint(inUnit, inResource);
+    }
+    return false;
+}
+
+// 0x62410b Work: hits a living non-farm resource with the gatherer's attack, else takes one unit of it; regrows
+// trees and restarts the work timer
+void EEGatherWork(EEComplexUnit* inUnit, EEUnit* inResource)
+{
+    unsigned long theState = inUnit->mAnimation;
+    if (inResource->mHitPoints != 0 && inResource->mUnitClass->mUnitType != kUnitTypeFarm) {
+        inResource->TakeHit(inUnit, UMFloatToLong(inUnit->mStats->mAttack), 0, 1);
+        long theCategory = inResource->mUnitClass->mCategory;
+        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand) {
+            unsigned long theNewState = (inResource->mHitPoints > 0) + 10;
+            if (theNewState != theState)
+                inUnit->SetAnimation(theNewState, -1, 0);
+        }
+    } else {
+        long theCategory = inResource->mUnitClass->mCategory;
+        if ((theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryLand) && theState != 10)
+            inUnit->SetAnimation(10, -1, 0);
+        inResource->DepleteResource(1);
+        inUnit->AddResourceAmount(1);
+        inUnit->SetLastResource(inResource);
+    }
+    if (inResource->mUnitClass->mIsTree)
+        inResource->RegrowForest(inUnit);
+    EEGatherWorkTimer(inUnit, inResource);
+}
+
+// 0x624250 SearchNavalResource's world part: 0 idle (no resource, or an AI's farm), 1 another fish (outFound), 2
+// nothing, 3 waits facing the resource (animation 7 or 8 by the physics draw)
+long EEGatherNavalSearch(EEComplexUnit* inUnit, EEUnit* inResource, EEUnit** outFound)
+{
+    std::vector<EEUnit*> theUnits;
+    long theRange = UMFloatToLong(inUnit->GetLineOfSight() * 5.0f);
+    EEUCNavalCitizen* theClass = EEUnitClassCast<EEUCNavalCitizen>(inUnit->GetUnitClass());
+    if (inResource == NULL || inUnit->mPlayer->mComputerPlayer != NULL && inResource->mUnitClass->mUnitType == kUnitTypeFarm)
+        return 0;
+    if (inResource->mUnitClass->mUnitType == kUnitTypeResFish) {
+        EEUnit* theResource = theClass->FindResourceOfKind(inUnit, inResource, inResource, theRange, inResource->GetResourceType(), &theUnits, true);
+        if (theResource == NULL || theResource == inResource)
+            return 2;
+        *outFound = theResource;
+        return 1;
+    }
+    inUnit->SetCurrentPhysicsAction(4);
+    inUnit->FaceTarget(inResource);
+    if (::gPhysics->mRandom.Generate() < 0.5f || inUnit->mStats->mCanFireOverWalls)
+        inUnit->SetAnimation(7, -1, 0);
+    else
+        inUnit->SetAnimation(8, -1, 0);
+    return 3;
+}
+
+}  // namespace
+
+// 0x623675: an unfinished living settlement within twice the gatherer's line of sight (NULL if none)
+EEUnit* EEUGRust::FindUnfinishedFarm(EEComplexUnit* inUnit)
+{
+    GE2DPoint theCenter((float)inUnit->GetTileX(), (float)inUnit->GetTileY());
+    std::vector<EEUnit*> theUnits;
+    EEUnit* theResult = NULL;
+    EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight() * 2, theUnits);
+    for (long i = theUnits.size() - 1; i >= 0; i--) {
+        EEUnit* theUnit = theUnits[i];
+        if (theUnit->mUnitClass->mUnitType == kUnitTypeSettlement && theUnit->mHitPoints > 0 && !static_cast<EEComplexUnit*>(theUnit)->mIsBuilt) {
+            theResult = theUnit;
+            break;
+        }
+    }
+    return theResult;
+}
 
 namespace {
 
@@ -877,7 +1278,14 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
                 theFields->built = theOwn->mIsBuilt;
                 theFields->paid_for = theOwn->mIsPaidFor;
                 theFields->shift_queued_build = theOwn->mHasShiftQueuedBuild;
+                theFields->disabled = theOwn->mIsDisabled;
             }
+            theFields->resource_type = theUnit->mResourceType;
+            theFields->resource_amount = theUnit->mResourceAmount;
+            theFields->carry_amount = theUnit->mStats->mCarryAmount;
+            theFields->family = theClass->mFamily;
+            theFields->is_tree = theClass->mIsTree;
+            theFields->moving = theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mStats->mMaxVelocity > 0.0f;
             return 0;
         }
     case EE_UNITS_GOAL_HOST_TECH_NODE:
@@ -1014,7 +1422,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_RESOURCE_USERS:
         return ::gWorld.GetResourceUsers(theUnit);
     case EE_UNITS_GOAL_HOST_NEW_GATHER:
-        return Handle(new EEUGGather(theUnit, ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0));
+        return Handle(EEUGRust::NewGather(theUnit, ObjectOf<EEUnit>(inB), ioArgs->i[0] != 0));
     case EE_UNITS_GOAL_HOST_SET_GOAL:
         theComplex->SetGoal(ObjectOf<EEUnitGoal>(inB), (long)ioArgs->i[0], (long)ioArgs->i[1]);
         return 0;
@@ -1078,6 +1486,150 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         }
     case EE_UNITS_GOAL_HOST_GOAL_ARG:
         return ObjectOf<EEUnitGoal>(inA)->GetB1C();
+    // the gather goal's
+    case EE_UNITS_GOAL_HOST_FARM_TILE: {
+            std::vector<EETileCoordinate> theTiles;
+            EEGetFootprintTiles(theUnit, theTiles);
+            std::sort(theTiles.begin(), theTiles.end(), EETileDistanceLess(ObjectOf<EEUnit>(inB)->GetTile()));
+            ioArgs->i[0] = theTiles[0].GetX();
+            ioArgs->i[1] = theTiles[0].GetY();
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_RESOURCE_SPOT: {
+            bool theFound = EEFindResourceSpot(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
+            PointOut(ioArgs, thePoint);
+            return theFound;
+        }
+    case EE_UNITS_GOAL_HOST_NEXT_RESOURCE: {
+            std::vector<EEUnit*> thePassed;
+            for (size_t k = 0; k < ioArgs->list_len; k++)
+                thePassed.push_back(ObjectOf<EEUnit>(ioArgs->list[k]));
+            return Handle(static_cast<EEUCBasicCitizen*>(theComplex->mUnitClass)
+                              ->FindNextResource(theComplex, ObjectOf<EEUnit>(inB), (long)ioArgs->i[0], &thePassed));
+        }
+    case EE_UNITS_GOAL_HOST_FIND_STORAGE:
+        return Handle(static_cast<EEUCBasicCitizen*>(theComplex->mUnitClass)->FindStorage(theComplex, ioArgs->i[0] != 0));
+    case EE_UNITS_GOAL_HOST_FREE_TILE: {
+            bool theFound = EEFindNextFreeTile(theComplex, ObjectOf<EEComplexUnit>(inB), thePoint);
+            PointOut(ioArgs, thePoint);
+            return theFound;
+        }
+    case EE_UNITS_GOAL_HOST_TILE_HEIGHT:
+        ioArgs->f[0] = theUnit->mTile->GetHeight();
+        return 0;
+    case EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT:
+        return EEGatherAtResourceSpot(theComplex, ObjectOf<EEUnit>(inB));
+    case EE_UNITS_GOAL_HOST_NEXT_FARM:
+        EEGatherNextFarm(theComplex, ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_STORAGE_SEARCH: {
+            // FindStorage's search (an AI may order a settlement for the gatherer instead: -1)
+            unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
+            theComplex->ReleaseFireEffect();
+            if ((theCommand == kActionFindStorage || theCommand == kActionFindNewStorage) && !theComplex->mPlayer->IsHuman()) {
+                bool theFree =
+                    !theComplex->mPlayer->mComputerPlayer->mCivilizationManager->mResourceManager->BuildSettlementFor(theComplex);
+                if (!theFree)
+                    return -1;
+            }
+            EEUCBasicCitizen* theClass = EEUnitClassCast<EEUCBasicCitizen>(theComplex->GetUnitClass());
+            return Handle(theClass->FindStorage(theComplex, (theComplex->mCommand ? theComplex->mCommand->mType : 0) == kActionFindNewStorage));
+        }
+    case EE_UNITS_GOAL_HOST_GATHER_SPOT: {
+            bool theFound = EEGatherFindSpot(theComplex, ObjectOf<EEUnit>(inB), thePoint);
+            PointOut(ioArgs, thePoint);
+            return theFound;
+        }
+    case EE_UNITS_GOAL_HOST_BEGIN_GATHERING:
+        EEGatherBegin(theComplex, ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_DEPOSIT_LOAD:
+        EEDepositLoad(theComplex, ObjectOf<EEComplexUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_NEXT_TREE:
+        return Handle(EEGatherNextTree(theComplex, ObjectOf<EEUnit>(inB)));
+    case EE_UNITS_GOAL_HOST_BUILD_FARMS:
+        EEGatherBuildFarms(theComplex, ObjectOf<EEUGRust>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_HUNT: {
+            EEUnit* theResource = ObjectOf<EEUnit>(inB);
+            long theAction = 0x7e0;
+            if (!(theResource->mHitPoints > 0 && theComplex->mUnitClass->FindAction(theAction) != NULL))
+                return 0;
+            theComplex->SetGoal(new EEUGAttackUnit(theComplex, theResource, ioArgs->i[0] != 0, false), 1, 0);
+            theComplex->StartAction(theAction);
+            theComplex->mUnitClass->ActionChanged(theComplex);
+            return 1;
+        }
+    case EE_UNITS_GOAL_HOST_SET_GATHERED:
+        theComplex->SetGatheredResource(ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_GATHER_ROOM:
+        return EEGatherHasRoom(theComplex, ObjectOf<EEUnit>(inB));
+    case EE_UNITS_GOAL_HOST_LAST_WAYPOINT:
+        PointOut(ioArgs, GE3DPoint(theComplex->mWaypoints.back().mLocation));
+        return 0;
+    case EE_UNITS_GOAL_HOST_RESOURCE_REACH:
+        return EEIsWithinReachOf(thePoint, theComplex, ObjectOf<EEUnit>(inB));
+    case EE_UNITS_GOAL_HOST_STORAGE_REACH: {
+            GE2DPoint the2D;
+            the2D.SetX(thePoint.GetX());
+            the2D.SetY(thePoint.GetY());
+            float theDistance = theUnit->mComplexUnit->DistanceSquared2D(the2D);
+            float theRange = theUnit->mUnitClass->mInnerCollisionSphere * 1.4142135f;
+            return theDistance <= theRange * theRange;
+        }
+    case EE_UNITS_GOAL_HOST_SET_ACTIVE:
+        ObjectOf<EEUnitGoal>(inA)->mIsActive = ioArgs->i[0] != 0;
+        return 0;
+    case EE_UNITS_GOAL_HOST_FIND_GHOST:
+        if (inB != 0)
+            return Handle(EEFindLoadedGhost((unsigned long)inA));
+        return Handle(EEFindLoadedGhostUnit((unsigned long)inA));
+    case EE_UNITS_GOAL_HOST_AT_RESOURCE: {
+            // IsAtResource: on its farm or within reach of another resource; a land gatherer faces it
+            EEUnit* theResource = ObjectOf<EEUnit>(inB);
+            bool theResult = ::gWorld.GetMap()->GetTile(theComplex->mTileX, theComplex->GetTileY())->HasUnit(theResource);
+            if (theResource->mUnitClass->mUnitType != kUnitTypeFarm)
+                theResult = EEIsWithinReach(theComplex, theResource);
+            if (theResult && theComplex->mUnitClass->mCategory != kUnitCategoryNavalCitizen)
+                theComplex->FaceTarget(theResource);
+            return theResult;
+        }
+    case EE_UNITS_GOAL_HOST_AT_STORAGE: {
+            // IsAtStorage: within the storage's inner radius squared times sqrt 2
+            EEUnit* theStorage = ObjectOf<EEUnit>(inB);
+            float theDistance = theStorage->mComplexUnit->DistanceSquaredTo(theComplex);
+            float theRange = theStorage->mUnitClass->mInnerCollisionSphere;
+            float theRangeSquared = theRange * theRange;
+            return theDistance <= theRangeSquared * 1.4142135f;
+        }
+    case EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED: {
+            EEUnit* theBlocker;
+            long theArg4;
+            long theArg5;
+            return EEIsLineToUnitBlocked(theComplex, ObjectOf<EEUnit>(inB), &theBlocker, &theArg4, &theArg5);
+        }
+    case EE_UNITS_GOAL_HOST_ACCESSIBLE:
+        return EEGatherAccessible(theComplex, ObjectOf<EEUnit>(inB));
+    case EE_UNITS_GOAL_HOST_PATH_LENGTH: {
+            EETileCoordinate theTile;
+            theTile.mX = (long)ioArgs->i[0];
+            theTile.mY = (long)ioArgs->i[1];
+            ioArgs->f[0] = EEGetPathLengthTo(theComplex, theTile, 0x10, false);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_GATHER_WORK:
+        EEGatherWork(theComplex, ObjectOf<EEUnit>(inB));
+        return 0;
+    case EE_UNITS_GOAL_HOST_NAVAL_SEARCH: {
+            EEUnit* theFound = NULL;
+            ioArgs->i[0] = EEGatherNavalSearch(theComplex, ObjectOf<EEUnit>(inB), &theFound);
+            return Handle(theFound);
+        }
+    case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
+        theComplex->mActiveGoal->SetPathAttempts(0);
+        return 0;
     }
     return 0;
 }
@@ -1289,6 +1841,80 @@ bool EEUGRust::IsBuildSiteTaken()
 void EEUGRust::Work(EEComplexUnit* inUnit)
 {
     Goal(EE_UNITS_GOAL_WORK, this, Handle(inUnit));
+}
+
+EEUGRust* EEUGRust::NewGather(EEUnit* inResource, EEUnit* inStorage, bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalGather, inArg);
+    Goal(EE_UNITS_GOAL_NEW_GATHER, theGoal, Handle(inResource), Handle(inStorage));
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewGather(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalGather, inArg);
+    Goal(EE_UNITS_GOAL_GATHER_NEW_EMPTY, theGoal);
+    return theGoal;
+}
+
+EEUnit* EEUGRust::GetGatherResource()
+{
+    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_GATHER_FIELDS, this));
+}
+
+EEUnit* EEUGRust::GetGatherStorage()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
+    return ObjectOf<EEUnit>((uint64_t)theArgs.i[0]);
+}
+
+bool EEUGRust::IsGathering()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
+    return theArgs.i[1] != 0;
+}
+
+bool EEUGRust::IsGatherWaiting()
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
+    return theArgs.i[2] != 0;
+}
+
+void EEUGRust::GetGatherDestination(GE3DPoint& outLocation)
+{
+    EeUnitsGoalIo theArgs = {};
+    Goal(EE_UNITS_GOAL_GATHER_FIELDS, this, 0, 0, &theArgs);
+    PointIn(theArgs, outLocation);
+}
+
+void EEUGRust::SetGatherResource(EEUnit* inResource)
+{
+    Goal(EE_UNITS_GOAL_GATHER_SET_RESOURCE, this, Handle(inResource));
+}
+
+void EEUGRust::SetGatherStorage(EEUnit* inStorage)
+{
+    Goal(EE_UNITS_GOAL_GATHER_SET_STORAGE, this, Handle(inStorage));
+}
+
+bool EEUGRust::FindGatherSpot(EEComplexUnit* inUnit)
+{
+    return Goal(EE_UNITS_GOAL_GATHER_FIND_SPOT, this, Handle(inUnit)) != 0;
+}
+
+void EEUGRust::PathTaken(EEComplexUnit* inUnit)
+{
+    Goal(EE_UNITS_GOAL_PATH_TAKEN, this, Handle(inUnit));
+}
+
+bool EEUGRust::IsActive(unsigned long* outValue)
+{
+    if (this->mKind == kGoalGather && !this->mIsActive)
+        *outValue = 5000;
+    return this->mIsActive;
 }
 
 EEUGRust* EEUGRust::NewLoad(unsigned char inKind, EEComplexUnit* inContainer, std::vector<EEComplexUnit*>& inUnits,

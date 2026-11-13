@@ -37,7 +37,7 @@
 #include "lle/U2DPolygon.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EEAIAStarStorage.h"
 #include "ee/EEAIArea.h"
@@ -483,9 +483,9 @@ EEComplexUnit* EECPUnitManager::FindBuilder(GE2DPoint& inLocation, long inUnitCl
                 }
                 if (!theSame)
                     continue;
-                EEUGGather* theGoal;
-                if (inUnitClass == 0x2a && (theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal())) != NULL &&
-                    theGoal->mResource != NULL && theGoal->mResource->GetUnitClass()->mUnitType == kUnitTypeFarm)
+                EEUGRust* theGoal;
+                if (inUnitClass == 0x2a && (theGoal = EEGatherGoalCast(theUnit->GetLoadGoal())) != NULL &&
+                    theGoal->GetGatherResource() != NULL && theGoal->GetGatherResource()->GetUnitClass()->mUnitType == kUnitTypeFarm)
                     continue;
             }
             theResult = theUnit;

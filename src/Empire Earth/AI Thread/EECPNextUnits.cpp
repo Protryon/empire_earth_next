@@ -54,7 +54,7 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitBehavior.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
@@ -80,7 +80,7 @@
 #include "ee/EEEvent.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EERandomMapIDs.h"
 #include "ee/EETechTreeTechID.h"
@@ -414,9 +414,9 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
         theManager->AddIdleGatherer(inUnit);
         return;
     }
-    EEUGGather* theGoal = inWork ? dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal()) : NULL;
-    if (theGoal != NULL && theGoal->mResource != NULL && theGoal->mResource->mHitPoints > 0) {
-        long theResource = (long)theGoal->mResource->GetResourceType();
+    EEUGRust* theGoal = inWork ? EEGatherGoalCast(inUnit->GetLoadGoal()) : NULL;
+    if (theGoal != NULL && theGoal->GetGatherResource() != NULL && theGoal->GetGatherResource()->mHitPoints > 0) {
+        long theResource = (long)theGoal->GetGatherResource()->GetResourceType();
         if (theResource >= 0 && theResource < 7) {
             theManager->RemoveGatherer(inUnit);
             theManager->AddGatherer(inUnit, theResource);
@@ -428,9 +428,9 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     // a boom game 18 of 33 citizens were on no list, so the food list stayed short, more went hunting (30 on food
     // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
     if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
-        EEUGGather* theWork = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
+        EEUGRust* theWork = EEGatherGoalCast(inUnit->GetLoadGoal());
         EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
-        long theResource = theWork != NULL && theWork->mResource != NULL ? (long)theWork->mResource->GetResourceType()
+        long theResource = theWork != NULL && theWork->GetGatherResource() != NULL ? (long)theWork->GetGatherResource()->GetResourceType()
             : theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
             ? (long)kResourceFood : -1;
         theManager->RemoveGatherer(inUnit);
@@ -1034,14 +1034,14 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
         // the goal's target unit (AI_LUA_UNITS §2.3 `target`): the resource gathered, the building built or repaired,
         // the unit attacked; and a gatherer's resource kind
         EEUnit* theTarget = NULL;
-        if (EEUGGather* theGather = dynamic_cast<EEUGGather*>(g)) {
-            theTarget = theGather->mResource;
+        if (EEUGRust* theGather = EEGatherGoalCast(g)) {
+            theTarget = theGather->GetGatherResource();
             long r = (long)c->mResourceType - kResourceFood;
             static const char* const kKinds[5] = {"food", "wood", "stone", "gold", "iron"};
             if (r >= 0 && r < 5)
                 EECPUnitsSetStr(L, "gathers", kKinds[r]);
             // waiting for room at its resource (the classic resource manager counts these gatherers as idle)
-            if (theGather->mWaiting && c->mCurrentPhysicsAction != 0)
+            if (theGather->IsGatherWaiting() && c->mCurrentPhysicsAction != 0)
                 EECPUnitsSetBool(L, "waiting", true);
         } else if (EEUGRust* theBuild = EEBuildRepairGoalCast(g)) {
             theTarget = theBuild->GetBuildTarget();
@@ -3997,9 +3997,9 @@ static int LuaGatherers(lua_State* L)
         EEComplexUnit* c = theUnit->mComplexUnit;
         if (c == NULL || !(theUnit->mHitPoints > 0) || !EECPUnitsCitizen(c))
             continue;
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(c->GetGoalState());
-        if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mIsValid)
-            theCounts[(long)theGather->mResource->mUnitID]++;
+        EEUGRust* theGather = EEGatherGoalCast(c->GetGoalState());
+        if (theGather != NULL && theGather->GetGatherResource() != NULL && theGather->GetGatherResource()->mIsValid)
+            theCounts[(long)theGather->GetGatherResource()->mUnitID]++;
     }
     EECPUnitsCharge(L, kCostCall + theTested * kCostScan + (int64_t)theCounts.size() * kCostId);
     lua_createtable(L, 0, (int)theCounts.size());

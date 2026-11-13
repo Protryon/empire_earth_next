@@ -391,6 +391,9 @@ constexpr static const int32_t EE_TECH_CONQUISTADORS_SPELL = 7020;
 /// the calamity class whose cast every selected caster takes a copy of (`mClassEnum` 0x12)
 constexpr static const int32_t EE_CALAMITY_CLASS_GROUP_CAST = 18;
 
+/// `kGoalGather`
+constexpr static const uint8_t GOAL_GATHER = 6;
+
 /// `kMovement*` (ee/EEUnitClassIDs.h `EEMovementDomain`)
 constexpr static const uint8_t EE_MOVEMENT_AIR = 1;
 
@@ -908,6 +911,66 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_FOUNDATION_STARTED = 441;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_GOAL_ARG = 442;
 
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FARM_TILE = 450;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_SPOT = 451;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_RESOURCE = 452;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_STORAGE = 453;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FREE_TILE = 454;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TILE_HEIGHT = 455;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE_SPOT = 456;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_FARM = 457;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_SEARCH = 458;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_SPOT = 459;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BEGIN_GATHERING = 460;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_DEPOSIT_LOAD = 461;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NEXT_TREE = 462;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_BUILD_FARMS = 463;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_HUNT = 464;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_GATHERED = 465;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_ROOM = 466;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LAST_WAYPOINT = 467;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESOURCE_REACH = 468;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_STORAGE_REACH = 469;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SET_ACTIVE = 470;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_GHOST = 471;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_RESOURCE = 472;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_AT_STORAGE = 473;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_LINE_TO_UNIT_BLOCKED = 474;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_ACCESSIBLE = 475;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_PATH_LENGTH = 476;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_GATHER_WORK = 477;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_NAVAL_SEARCH = 478;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH = 479;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -1042,6 +1105,22 @@ constexpr static const int32_t EE_UNITS_GOAL_BUILD_FIELDS = 312;
 
 /// `IsBuildSiteTaken`
 constexpr static const int32_t EE_UNITS_GOAL_BUILD_SITE_TAKEN = 313;
+
+/// a gather goal: `a` the resource, `b` the storage
+constexpr static const int32_t EE_UNITS_GOAL_NEW_GATHER = 320;
+
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_NEW_EMPTY = 321;
+
+/// the resource (the result), `io.i`: the storage, the gathering and waiting flags; `io.f` the destination
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_FIELDS = 322;
+
+/// `a`: the new resource, storage (`SetResource`, `SetStorage`)
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_SET_RESOURCE = 323;
+
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_SET_STORAGE = 324;
+
+/// `a`: the unit; `FindGatherSpot`
+constexpr static const int32_t EE_UNITS_GOAL_GATHER_FIND_SPOT = 325;
 
 /// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
 constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
@@ -1952,6 +2031,15 @@ struct EeUnitsBuildUnit {
   bool human;
   bool computer;
   bool shift_queued_build;
+  /// the gather goal's: `mResourceType`, `mResourceAmount`, `mStats->mCarryAmount`, the class's `mFamily` and
+  /// `mIsTree`, the complex unit's `mStats->mMaxVelocity > 0`, `mIsDisabled`
+  int32_t resource_type;
+  int32_t resource_amount;
+  int32_t carry_amount;
+  int32_t family;
+  bool is_tree;
+  bool moving;
+  bool disabled;
 };
 
 extern "C" {

@@ -56,7 +56,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECalamityClass.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPPatrolGroup.h"
 #include "lle/U2DSparseArray.h"
@@ -878,8 +878,8 @@ void EEActiveGroup::Plan()
         this->Finish();
         break;
     case kActionDropoffResource: {
-        EEUGGather* theGoal = EEGoalCast<EEUGGather>(this->mGoal);
-        EEComplexUnit* theStorage = static_cast<EEComplexUnit*>(theGoal->mStorage);
+        EEUGRust* theGoal = EEGatherGoalCast(this->mGoal);
+        EEComplexUnit* theStorage = static_cast<EEComplexUnit*>(theGoal->GetGatherStorage());
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if (!theUnit->mIsCommandable)
@@ -888,12 +888,12 @@ void EEActiveGroup::Plan()
                 theUnit->QueueGoal(theGoal->Clone(), 0);
             else {
                 if (theUnit->mResourceAmount > 0 && theStorage->CanTake(theUnit, theUnit->mResourceType)) {
-                    EEUGGather* theCurrent = EEGoalCast<EEUGGather>(theUnit->mGoalState);
+                    EEUGRust* theCurrent = EEGatherGoalCast(theUnit->mGoalState);
                     theUnit->SetGatheredResource(NULL);
                     if (theCurrent == NULL)
                         theUnit->SetGoal(theGoal->Clone(), 0, 0);
                     else
-                        theCurrent->SetStorage(theStorage);
+                        theCurrent->SetGatherStorage(theStorage);
                     theUnit->StartAction(kActionMoveToStorage);
                 } else {
                     long theX = theStorage->GetTileX();
@@ -914,20 +914,20 @@ void EEActiveGroup::Plan()
         break;
     }
     case kActionGatherResource: {
-        EEUGGather* theGoal = EEGoalCast<EEUGGather>(this->mGoal);
-        EEUnit* theResource = theGoal->mResource;
+        EEUGRust* theGoal = EEGatherGoalCast(this->mGoal);
+        EEUnit* theResource = theGoal->GetGatherResource();
         for (unsigned long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = this->GetUnit(i);
             if (!theUnit->mIsCommandable)
                 continue;
             if (gContinentManager.CanGetTo(theUnit, theResource->GetTileX(), theResource->GetTileY())) {
-                EEUGGather* theCurrent = EEGoalCast<EEUGGather>(theUnit->mGoalState);
-                if (theCurrent == NULL || theCurrent->mResource != theResource) {
+                EEUGRust* theCurrent = EEGatherGoalCast(theUnit->mGoalState);
+                if (theCurrent == NULL || theCurrent->GetGatherResource() != theResource) {
                     if (this->mIsQueued && theUnit->mGoalState)
                         theUnit->QueueGoal(theGoal->Clone(), 0);
                     else {
-                        if (theCurrent && theCurrent->mResource && theCurrent->mResource->mResourceType != kResourceWood
-                            && theCurrent->mResource->mUnitClass->mFamily != kUnitFamilyAnimal)
+                        if (theCurrent && theCurrent->GetGatherResource() && theCurrent->GetGatherResource()->mResourceType != kResourceWood
+                            && theCurrent->GetGatherResource()->mUnitClass->mFamily != kUnitFamilyAnimal)
                             theUnit->SetGatheredResource(NULL);
                         theUnit->SetGoal(theGoal->Clone(), 0, 0);
                         theUnit->StartAction(kActionMoveToWaitingArea);

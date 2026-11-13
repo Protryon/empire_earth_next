@@ -59,7 +59,7 @@
 #include "ee/EEUCBuildingPriest.h"
 #include "ee/EEUCAirAnimal.h"
 #include "ee/EEAirTrafficControl.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEUnitStore.h"
@@ -596,7 +596,7 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
     case EE_UNITS_ACT_FIND_STORAGE_GOAL: {
         EEUnit* theStorage = static_cast<EEUCBasicCitizen*>(theClass)->FindStorage(theUnit, inA != 0);
         if (theStorage != NULL)
-            theUnit->SetGoal(new EEUGGather(NULL, theStorage, false), 0, 0);
+            theUnit->SetGoal(EEUGRust::NewGather(NULL, theStorage, false), 0, 0);
         break;
     }
     case EE_UNITS_ACT_SET_RESOURCE_AMOUNT:

@@ -104,7 +104,7 @@
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
@@ -563,7 +563,7 @@ void EEBuildWall(EEActiveGroup* inGroup, std::vector<EEUnit*>& inPieces)
 void EEWorkFarm(EEComplexUnit* inTarget, EEComplexUnit* inUnit)
 {
     if (inTarget->mIsBuilt && inTarget->GetHitPoints() == inTarget->mStats->mMaxHitPoints) {
-        inUnit->SetGoal(new EEUGGather(inTarget, NULL, false), 0, 0);
+        inUnit->SetGoal(EEUGRust::NewGather(inTarget, NULL, false), 0, 0);
         inUnit->StartAction(kActionMoveToResource);
     } else {
         inUnit->SetGoal(EEUGRust::NewBuildRepair(inTarget->GetPlayer(), inTarget, false), 0, 0);
@@ -2426,9 +2426,9 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
             return 0;
         EEUnitGoal* theGoal = theTarget->mGoalState;
         EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+        EEUGRust* theGather = EEGatherGoalCast(theGoal);
         return (theAttack != NULL && theAttack->mTarget->mComplexUnit == theUnit)
-            || (theGather != NULL && theGather->mResource == theUnit);
+            || (theGather != NULL && theGather->GetGatherResource() == theUnit);
     }
     }
     return 0;
@@ -3590,8 +3590,8 @@ EEComplexUnit* EEGetWaitingGatherer(EEUnit* inUnit)
             theCommand = theUnit->mCommand != NULL ? theUnit->mCommand->mType : 0;
             if (theCommand != kActionWaitForOpenPosition || theUnit->mGoalState == NULL || theUnit->mGoalState->mKind != kGoalGather)
                 continue;
-            EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->mGoalState.Get());
-            if (theGoal != NULL && theGoal->mResource == inUnit)
+            EEUGRust* theGoal = EEGatherGoalCast(theUnit->mGoalState.Get());
+            if (theGoal != NULL && theGoal->GetGatherResource() == inUnit)
                 theResult = theUnit;
         }
     }

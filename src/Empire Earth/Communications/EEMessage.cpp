@@ -84,7 +84,7 @@
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
@@ -6841,7 +6841,7 @@ void EEMSetRallyGoal::Execute()
                  && theTarget->mHitPoints > 0)
             && (theTarget->mUnitClass->mFamily == kUnitFamilyFish || theTarget->mTileNode == NULL
                 || (theTarget->mComplexUnit->mIsBuilt && theTarget->mPlayer == theBuilding->mPlayer))) {
-            theGoal = new EEUGGather(theTarget, NULL, true);
+            theGoal = EEUGRust::NewGather(theTarget, NULL, true);
             theGoals.push_back(theGoal);
             theCommand = 0xba;
             theCommandTarget = theTarget;

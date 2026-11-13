@@ -40,7 +40,7 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include <math.h>
@@ -199,7 +199,7 @@ void Sample(unsigned long inTime)
                 if (g == NULL)
                     theIdle++;
                 else if (g->mKind == kGoalGather) {
-                    EEUnit* r = static_cast<EEUGGather*>(g)->mResource;
+                    EEUnit* r = static_cast<EEUGRust*>(g)->GetGatherResource();
                     unsigned long t = r != NULL ? r->mResourceType : 0;
                     theGather[t < 7 ? t : 0]++;
                 } else if (g->mKind == kGoalBuildRepair)

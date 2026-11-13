@@ -72,7 +72,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitVectorItem.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGAttackUnit.h"
 #include <algorithm>
 #include <vector>
@@ -569,11 +569,11 @@ static void SaveGhosts(FSFile& outFile)
                         AddHeldGhost(theAttack->mTarget, theDead, theSimple);
                         continue;
                     }
-                    EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoals[g]);
+                    EEUGRust* theGather = EEGatherGoalCast(theGoals[g]);
                     if (theGather == NULL)
                         continue;
-                    AddHeldGhost(theGather->mResource, theDead, theSimple);
-                    AddHeldGhost(theGather->mStorage, theDead, theSimple);
+                    AddHeldGhost(theGather->GetGatherResource(), theDead, theSimple);
+                    AddHeldGhost(theGather->GetGatherStorage(), theDead, theSimple);
                 }
             }
         }

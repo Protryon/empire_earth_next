@@ -30,7 +30,7 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCGate.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
@@ -526,8 +526,8 @@ bool EEPhysicsModel::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
                         inUnit->mCollisionState = 0;
                     theResult = true;
                     EEUnitGoal* theOwnGoal = inUnit->mGoalState;
-                    if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGGather*>(theOwnGoal)->mResource
-                        && static_cast<EEUGGather*>(theOwnGoal)->mResource->mResourceType == kResourceWood)
+                    if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()
+                        && static_cast<EEUGRust*>(theOwnGoal)->GetGatherResource()->mResourceType == kResourceWood)
                         inUnit->StartAction(kActionFindNewResource);
                     else
                         inUnit->StartAction(kActionIdle);
@@ -707,8 +707,8 @@ void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
                     if (theOwnKind != theKind)
                         theCollide = false;
                     else if (theOwnKind == kGoalGather)
-                        theCollide = static_cast<EEUGGather*>(inUnit->mGoalState)->mResource
-                            == ((EEUGGather*) theNode->mData->mGoalState)->mResource;
+                        theCollide = static_cast<EEUGRust*>(inUnit->mGoalState)->GetGatherResource()
+                            == static_cast<EEUGRust*>(theNode->mData->mGoalState)->GetGatherResource();
                     else
                         theCollide = static_cast<EEUGRust*>(inUnit->GetGoalState())->GetBuildTarget()
                             == static_cast<EEUGRust*>(theNode->mData->GetGoalState())->GetBuildTarget();
