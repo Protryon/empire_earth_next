@@ -122,32 +122,6 @@ bool EETileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 
 namespace {
 
-// the build/repair search radius (0x447404; provisional name)
-const float kBuildRepairRadius = 4.0f;
-
-// 0x61eb31: the unit helps build the first unbuilt, paid-for land building of its player within 4 tiles
-void EEHelpBuildNearby(EEComplexUnit* inUnit, EEUnit* inTarget)
-{
-    std::vector<EEUnit*> theUnits;
-    GE2DPoint theCenter;
-    U2DPoint<long> theTile(inTarget->mTileX, inTarget->mTileY);
-    theCenter = GE2DPoint((float)theTile.GetX(), (float)theTile.GetY());
-    if (EEGetUnitsInRadius(theCenter, kBuildRepairRadius, theUnits) > 0) {
-        std::vector<EEUnit*>::iterator i;
-        for (i = theUnits.begin(); i != theUnits.end(); ++i) {
-            EEComplexUnit* theUnit = (EEComplexUnit*)*i;
-            if (!theUnit->mIsBuilt && theUnit != inTarget && theUnit->mHitPoints > 0
-                && theUnit->mUnitClass->IsLandBuilding() && theUnit->mIsPaidFor && theUnit->GetPlayer() == inUnit->GetPlayer())
-                break;
-        }
-        if (i != theUnits.end()) {
-            inUnit->SetGoal(EEUGRust::NewBuildRepair((*i)->GetPlayer(), *i, false), 0, 0);
-            inUnit->StartAction(kActionMoveToRepairSite);
-            inUnit->mUnitClass->ActionChanged(inUnit);
-        }
-    }
-}
-
 // 0x61ec58: the unit works the nearest free farm around the farm's drop sites
 void EETendNextFarm(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
@@ -196,88 +170,6 @@ void EEGatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
         inUnit->StartAction(kActionMoveToWaitingArea);
         inUnit->mUnitClass->ActionChanged(inUnit);
     }
-}
-
-// 0x61f4f5: units other than the building block a tile of its footprint
-bool EEBuildSiteTaken(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    bool theResult = false;
-    EEGetFootprintTiles(inTarget, theTiles);
-    for (unsigned long i = 0; i < theTiles.size() && !theResult; ++i) {
-        EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
-        EEGetBlockingUnits(inPlayer, inType, theTile, 0, theUnits);
-        if (theUnits.size() > 1 || (theUnits.size() == 1 && theUnits[0] != inTarget))
-            theResult = true;
-    }
-    return theResult;
-}
-
-// a gate's own parts (the first part and every next one)
-void EEGateParts(EEUnit* inTarget, std::vector<EEUnit*>& outParts)
-{
-    if (inTarget->GetUnitClass()->GetCategory() != kUnitCategoryGate)
-        return;
-    EEComplexUnit* theUnit = inTarget->GetComplexUnit();
-    while (theUnit->mPreviousPart != NULL)
-        theUnit = theUnit->mPreviousPart;
-    for (; theUnit != NULL; theUnit = theUnit->mNextPart)
-        outParts.push_back(theUnit);
-}
-
-// 0x61f5fc: no blocking or movable units stand on the footprint (the building, a runway under type 0x42 and a gate's
-// own parts excepted); farms always pass
-bool EEBuildFootprintClear(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theLinked;
-    bool theResult = true;
-    if (inType != 0x2a && inType != 0x33a) {
-        EEGateParts(inTarget, theLinked);
-        EEGetFootprintTiles(inTarget, theTiles);
-        for (unsigned long i = 0; i < theTiles.size() && theResult; ++i) {
-            EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
-            if (theTile == NULL)   // port: a footprint tile off the map (Small Islands seed 11): nothing stands there
-                continue;
-            EEGetBlockingUnits(inPlayer, inType, theTile, 0, theUnits);
-            if (theUnits.empty() || (theUnits.size() == 1 && theUnits[0] == inTarget)
-                || (theUnits.size() == 1 && theUnits[0]->GetUnitClass()->GetUnitType() == kUnitTypeAirportRunway && inType == 0x42))
-                theResult = !EEGetMovableTileUnits(inPlayer, inType, theTile, 0, theUnits);
-            else
-                theResult = false;
-            if (!theResult && theLinked.size() > 0) {
-                for (unsigned long j = 0; j < theUnits.size() && !theResult; ++j)
-                    theResult = std::find(theLinked.begin(), theLinked.end(), theUnits[j]) != theLinked.end();
-            }
-        }
-    }
-    return theResult;
-}
-
-// 0x61f85e: no unit on the footprint stands in the way (standing 2) and no foundation above 1 hit point is there
-// (the building, the player's runway under type 0x42 and a gate's own parts excepted)
-bool EEBuildSiteFree(EEUnit* inTarget, EEPlayer* inPlayer, long inType)
-{
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<EEUnit*> theUnits;
-    std::vector<EEUnit*> theLinked;
-    bool theResult = true;
-    EEGetFootprintTiles(inTarget, theTiles);
-    EEGetUnitsOn(theTiles, theUnits);
-    EEGateParts(inTarget, theLinked);
-    unsigned long theCount = theUnits.size();
-    for (unsigned long i = 0; i < theCount && theResult; ++i) {
-        if (theUnits[i] == inTarget
-            || (theUnits[i]->mUnitClass->GetUnitType() == kUnitTypeAirportRunway && inType == 0x42 && theUnits[i]->mPlayer == inPlayer)
-            || ((theLinked.size() > 0) && std::find(theLinked.begin(), theLinked.end(), theUnits[i]) != theLinked.end()))
-            continue;
-        theResult = EEGetTileUnitStanding(theUnits[i], inPlayer, inType, false) != 2;
-        if (theUnits[i]->IsFoundation() && theUnits[i]->mHitPoints > 1)
-            theResult = false;
-    }
-    return theResult;
 }
 
 }  // namespace
@@ -529,28 +421,6 @@ EEUnit* EEGatherNextTree(EEComplexUnit* inUnit, EEUnit* inResource)
     return theFound;
 }
 
-// 0x62333b BuildFarms' search: a build goal for each unfinished own settlement or town centre in sight, each the
-// goal's storage
-void EEGatherBuildFarms(EEComplexUnit* inUnit, EEUGRust* inGoal)
-{
-    GE2DPoint theCenter;
-    std::vector<EEUnit*> theUnits;
-    theCenter.SetX(inUnit->mTileX);
-    theCenter.SetY(inUnit->GetTileY());
-    EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
-    for (long theIndex = theUnits.size() - 1; theIndex >= 0; theIndex--) {
-        EEUnit* theUnit = theUnits[theIndex];
-        unsigned long theType = theUnit->GetUnitClass()->GetUnitType();
-        if ((theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter) || theUnit->GetPlayer() != inUnit->GetPlayer() || !(theUnit->GetHitPoints() > 0)
-            || static_cast<EEComplexUnit*>(theUnit)->GetIsBuilt())
-            continue;
-        EEUGRust* theGoal = EEUGRust::NewBuildRepair(inUnit->GetPlayer(), theUnit, false);
-        inGoal->SetGatherStorage(theUnit);
-        inUnit->SetGoal(theGoal, 1, 0);
-        inUnit->GetUnitClass()->ActionChanged(inUnit);
-    }
-}
-
 // 0x623757 HasGatherRoom: a farm takes one gatherer, others their unblocked side tiles (counted twice) and corner
 // tiles, capped by the player's mining limit
 bool EEGatherHasRoom(EEComplexUnit* inUnit, EEUnit* inResource)
@@ -656,23 +526,6 @@ long EEGatherNavalSearch(EEComplexUnit* inUnit, EEUnit* inResource, EEUnit** out
 }
 
 }  // namespace
-
-// 0x623675: an unfinished living settlement within twice the gatherer's line of sight (NULL if none)
-EEUnit* EEUGRust::FindUnfinishedFarm(EEComplexUnit* inUnit)
-{
-    GE2DPoint theCenter((float)inUnit->GetTileX(), (float)inUnit->GetTileY());
-    std::vector<EEUnit*> theUnits;
-    EEUnit* theResult = NULL;
-    EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight() * 2, theUnits);
-    for (long i = theUnits.size() - 1; i >= 0; i--) {
-        EEUnit* theUnit = theUnits[i];
-        if (theUnit->mUnitClass->mUnitType == kUnitTypeSettlement && theUnit->mHitPoints > 0 && !static_cast<EEComplexUnit*>(theUnit)->mIsBuilt) {
-            theResult = theUnit;
-            break;
-        }
-    }
-    return theResult;
-}
 
 namespace {
 
@@ -1264,6 +1117,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             theFields->wall = theClass->mIsWall;
             theFields->tower = theClass->mIsTower;
             theFields->drop_site = theClass->IsDropSite();
+            theFields->land_building = theClass->IsLandBuilding();
             if (thePlayer != NULL) {
                 theFields->instant_build = thePlayer->mInstantBuild;
                 theFields->human = thePlayer->IsHuman();
@@ -1377,9 +1231,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_LOCATION_GOAL:
         theComplex->SetGoal(EEUGRust::NewLocation(&thePoint, false, true, false, 0.0f, false, false), 0, 0);
         return 0;
-    case EE_UNITS_GOAL_HOST_HELP_BUILD:
-        EEHelpBuildNearby(theComplex, ObjectOf<EEUnit>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_TEND_FARM:
         EETendNextFarm(theComplex, ObjectOf<EEComplexUnit>(inB));
         return 0;
@@ -1404,12 +1255,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         theComplex->SetVelocity(0.0f);
         theComplex->mAngularVelocity = GEOrientation();
         return 0;
-    case EE_UNITS_GOAL_HOST_SITE_TAKEN:
-        return EEBuildSiteTaken(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_FOOTPRINT_CLEAR:
-        return EEBuildFootprintClear(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
-    case EE_UNITS_GOAL_HOST_SITE_FREE:
-        return EEBuildSiteFree(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0]);
     case EE_UNITS_GOAL_HOST_OTHER_GOAL_QUEUED: {
             // IsShiftQueueNext's queue: another goal than this one that is no automatic waypoint
             const EEGoalDeque& theGoals = theComplex->GetQueueGoals(0);
@@ -1551,9 +1396,6 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_NEXT_TREE:
         return Handle(EEGatherNextTree(theComplex, ObjectOf<EEUnit>(inB)));
-    case EE_UNITS_GOAL_HOST_BUILD_FARMS:
-        EEGatherBuildFarms(theComplex, ObjectOf<EEUGRust>(inB));
-        return 0;
     case EE_UNITS_GOAL_HOST_HUNT: {
             EEUnit* theResource = ObjectOf<EEUnit>(inB);
             long theAction = 0x7e0;
@@ -1649,6 +1491,44 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return (int64_t)theComplex->mGoalQueues[0].mGoals.size();
     case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
         theComplex->mActiveGoal->SetPathAttempts(0);
+        return 0;
+    // the world searches' queries (world.rs): unit lists into the sink, tiles as ee_units_goal_push_tile
+    case EE_UNITS_GOAL_HOST_UNITS_IN_RADIUS: {
+            std::vector<EEUnit*> theUnits;
+            EEGetUnitsInRadius(GE2DPoint(ioArgs->f[0], ioArgs->f[1]), ioArgs->f[2], theUnits);
+            for (size_t i = 0; i < theUnits.size(); i++)
+                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_FOOTPRINT_TILES:
+    case EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS: {
+            std::vector<U2DPoint<long> > theTiles;
+            std::vector<EEUnit*> theUnits;
+            EEGetFootprintTiles(theUnit, theTiles);
+            if (inOp == EE_UNITS_GOAL_HOST_FOOTPRINT_UNITS)
+                EEGetUnitsOn(theTiles, theUnits);
+            for (size_t i = 0; inOp == EE_UNITS_GOAL_HOST_FOOTPRINT_TILES && i < theTiles.size(); i++)
+                ee_units_goal_push_tile(ioArgs->sink, (int32_t)theTiles[i].mX, (int32_t)theTiles[i].mY);
+            for (size_t i = 0; i < theUnits.size(); i++)
+                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_BLOCKING_UNITS:
+    case EE_UNITS_GOAL_HOST_MOVABLE_UNITS: {
+            std::vector<EEUnit*> theUnits;
+            EEMapTile* theTile = ::gWorld.GetMap()->GetTile((long)ioArgs->i[1], (long)ioArgs->i[2]);
+            if (inOp == EE_UNITS_GOAL_HOST_BLOCKING_UNITS)
+                EEGetBlockingUnits(ObjectOf<EEPlayer>(inA), (long)ioArgs->i[0], theTile, 0, theUnits);
+            else
+                EEGetMovableTileUnits(ObjectOf<EEPlayer>(inA), (long)ioArgs->i[0], theTile, 0, theUnits);
+            for (size_t i = 0; i < theUnits.size(); i++)
+                ee_units_goal_push_unit(ioArgs->sink, Handle(theUnits[i]));
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_TILE_STANDING:
+        return EEGetTileUnitStanding(theUnit, ObjectOf<EEPlayer>(inB), (long)ioArgs->i[0], false);
+    case EE_UNITS_GOAL_HOST_ACTION_CHANGED:
+        theComplex->mUnitClass->ActionChanged(theComplex);
         return 0;
     case EE_UNITS_GOAL_HOST_BASE_FIELDS: {   // the base goal's saved fields, read (b 0) or written (b 1)
         EEUnitGoal* theGoal = ObjectOf<EEUnitGoal>(inA);
@@ -2311,4 +2191,10 @@ void EEUGRust::SetPathAttempts(long inValue)
 {
     this->mPathAttempts = inValue;
     Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
+}
+
+// an unfinished living settlement within twice the gatherer's line of sight (NULL if none; world.rs)
+EEUnit* EEUGRust::FindUnfinishedFarm(EEComplexUnit* inUnit)
+{
+    return ObjectOf<EEUnit>((uint64_t)Goal(EE_UNITS_GOAL_UNFINISHED_FARM, this, Handle(inUnit)));
 }
