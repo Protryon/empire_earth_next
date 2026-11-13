@@ -1,7 +1,7 @@
 //! The goals whose class moved whole into Rust (RUST_PLAN R5b.4, rounds 16 and 17): one C++ class, `EEUGRust`
 //! (ee/EEUGRust.h), keeps the base goal's fields and vtable; every virtual is one call of
 //! [`ee_units_rust_goal`], which dispatches by the goal's kind to the class's bodies (`patrol`, `calamity`,
-//! `explore`), their state a Rust table by the goal's object. The C++ answers through one operation callback
+//! `explore`, `unload`), their state a Rust table by the goal's object. The C++ answers through one operation callback
 //! ([`EeUnitsGoalHost`]): every read and world call the bodies make is one numbered operation
 //! (`EE_UNITS_GOAL_HOST_*`) with two handles and an argument block ([`EeUnitsGoalIo`]).
 //!
@@ -13,6 +13,7 @@ use std::ffi::c_void;
 use crate::calamity::CalamityHost;
 use crate::explore::ExploreHost;
 use crate::patrol::PatrolHost;
+use crate::unload::UnloadHost;
 
 /// What a unit or group field of a goal holds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -133,6 +134,7 @@ pub const EE_UNITS_GOAL_HOST_UNIT_TILE: i32 = 4;
 pub const EE_UNITS_GOAL_HOST_UNIT_VALID: i32 = 5;
 pub const EE_UNITS_GOAL_HOST_UNIT_COMMAND: i32 = 6;
 pub const EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS: i32 = 7;
+/// `i[0]`: the action, `i[1]` 1: without the class's `ActionChanged`
 pub const EE_UNITS_GOAL_HOST_START_ACTION: i32 = 8;
 pub const EE_UNITS_GOAL_HOST_FIND_UNIT: i32 = 9;
 pub const EE_UNITS_GOAL_HOST_UNIT_POSITION: i32 = 10;
@@ -196,6 +198,22 @@ pub const EE_UNITS_GOAL_HOST_RANDOM: i32 = 84;
 pub const EE_UNITS_GOAL_HOST_NOTICE_FOREIGN: i32 = 85;
 pub const EE_UNITS_GOAL_HOST_UNIT_FAMILY: i32 = 86;
 pub const EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE: i32 = 87;
+// the unload transport's
+pub const EE_UNITS_GOAL_HOST_UNLOAD_RANGE: i32 = 90;
+pub const EE_UNITS_GOAL_HOST_CLASS_TYPE: i32 = 91;
+pub const EE_UNITS_GOAL_HOST_CARGO_COUNT: i32 = 92;
+pub const EE_UNITS_GOAL_HOST_CARGO_CATEGORY: i32 = 93;
+pub const EE_UNITS_GOAL_HOST_TRANSPORT_KIND: i32 = 94;
+pub const EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: i32 = 95;
+/// `i[0..8]`: the destination, unload, first cargo and found tiles in and out
+pub const EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES: i32 = 96;
+/// `i[0..6]`: the unload, first cargo and destination tiles in and out
+pub const EE_UNITS_GOAL_HOST_CAN_UNLOAD_NEAR: i32 = 97;
+pub const EE_UNITS_GOAL_HOST_SAME_PLAYER: i32 = 98;
+pub const EE_UNITS_GOAL_HOST_FIRE_CARGO: i32 = 99;
+pub const EE_UNITS_GOAL_HOST_UNLOAD_AT: i32 = 100;
+/// `i[0]`: the space sound
+pub const EE_UNITS_GOAL_HOST_UNLOAD_SOUND: i32 = 101;
 
 /// The FFI adapter over the callback.
 pub struct OpHost<'a>(pub &'a EeUnitsGoalHost);
@@ -511,6 +529,77 @@ pub unsafe extern "C" fn ee_units_goal_push_tile(sink: *mut c_void, x: i32, y: i
     tiles.push((x, y));
 }
 
+fn tiles_in(io: &mut EeUnitsGoalIo, tiles: &[(i32, i32)]) {
+    for (k, t) in tiles.iter().enumerate() {
+        io.i[2 * k] = i64::from(t.0);
+        io.i[2 * k + 1] = i64::from(t.1);
+    }
+}
+
+fn tiles_out(io: &EeUnitsGoalIo, tiles: &mut [(i32, i32)]) {
+    for (k, t) in tiles.iter_mut().enumerate() {
+        *t = (io.i[2 * k] as i32, io.i[2 * k + 1] as i32);
+    }
+}
+
+impl UnloadHost for OpHost<'_> {
+    fn unload_range(&mut self, unit: u64) -> f32 {
+        self.op_point(EE_UNITS_GOAL_HOST_UNLOAD_RANGE, unit, 0, &[])[0]
+    }
+    fn class_type(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_CLASS_TYPE, unit, 0)
+    }
+    fn cargo_count(&mut self, unit: u64) -> u32 {
+        self.op(EE_UNITS_GOAL_HOST_CARGO_COUNT, unit, 0) as u32
+    }
+    fn cargo_category(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_CARGO_CATEGORY, unit, 0)
+    }
+    fn transport_kind(&mut self, unit: u64) -> i64 {
+        self.op(EE_UNITS_GOAL_HOST_TRANSPORT_KIND, unit, 0)
+    }
+    fn can_unload_at(&mut self, unit: u64, tile: (i32, i32)) -> bool {
+        self.op_ints(EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT, unit, 0, &[i64::from(tile.0), i64::from(tile.1)]) != 0
+    }
+    fn find_unload_tiles(&mut self, unit: u64, tiles: &mut [(i32, i32); 4]) {
+        let mut io = EeUnitsGoalIo::default();
+        tiles_in(&mut io, tiles);
+        self.call(EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES, unit, 0, &mut io);
+        tiles_out(&io, tiles);
+    }
+    fn can_unload_near(&mut self, unit: u64, tiles: &mut [(i32, i32); 3]) -> bool {
+        let mut io = EeUnitsGoalIo::default();
+        tiles_in(&mut io, tiles);
+        let near = self.call(EE_UNITS_GOAL_HOST_CAN_UNLOAD_NEAR, unit, 0, &mut io) != 0;
+        tiles_out(&io, tiles);
+        near
+    }
+    fn human(&mut self, unit: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_PLAYER_HUMAN, unit, 0) != 0
+    }
+    fn same_player(&mut self, unit: u64, other: u64) -> bool {
+        self.op(EE_UNITS_GOAL_HOST_SAME_PLAYER, unit, other) != 0
+    }
+    fn hit_points(&mut self, unit: u64) -> i32 {
+        self.op(EE_UNITS_GOAL_HOST_HIT_POINTS, unit, 0) as i32
+    }
+    fn start_action_only(&mut self, unit: u64, action: i64) {
+        self.op_ints(EE_UNITS_GOAL_HOST_START_ACTION, unit, 0, &[action, 1]);
+    }
+    fn fire_cargo(&mut self, unit: u64) {
+        self.op(EE_UNITS_GOAL_HOST_FIRE_CARGO, unit, 0);
+    }
+    fn unload_at(&mut self, unit: u64, tile: (i32, i32)) {
+        self.op_ints(EE_UNITS_GOAL_HOST_UNLOAD_AT, unit, 0, &[i64::from(tile.0), i64::from(tile.1)]);
+    }
+    fn unload_sound(&mut self, unit: u64, space: bool) {
+        self.op_ints(EE_UNITS_GOAL_HOST_UNLOAD_SOUND, unit, 0, &[i64::from(space)]);
+    }
+    fn complex_unit(&mut self, unit: u64) -> u64 {
+        self.op(EE_UNITS_GOAL_HOST_COMPLEX_UNIT, unit, 0) as u64
+    }
+}
+
 // ---- the goal's bodies, by operation (`EEUGRust`'s virtuals and accessors)
 pub const EE_UNITS_GOAL_DESTROY: i32 = 1;
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -534,6 +623,10 @@ pub const EE_UNITS_GOAL_START: i32 = 15;
 pub const EE_UNITS_GOAL_EVALUATE: i32 = 16;
 /// `a`: the old complex unit, `b`: the new one
 pub const EE_UNITS_GOAL_REPLACE_UNIT: i32 = 17;
+/// `GetMaxPathAttempts` (the base goal's 3 but for the unload's 9)
+pub const EE_UNITS_GOAL_MAX_PATH_ATTEMPTS: i32 = 18;
+/// `a`: the unit; `Suits` (true but for the unload)
+pub const EE_UNITS_GOAL_SUITS: i32 = 19;
 // the classes' own: creation (the goal made by `new EEUGRust(kind, arg)`) and accessors
 /// a patrol: `a` the group (0: a new empty one), `b` the point
 pub const EE_UNITS_GOAL_NEW_PATROL: i32 = 30;
@@ -553,8 +646,20 @@ pub const EE_UNITS_GOAL_NEW_EXPLORE: i32 = 50;
 /// `io.i`: the tile x, y (out; in for the set)
 pub const EE_UNITS_GOAL_EXPLORE_TILE: i32 = 51;
 pub const EE_UNITS_GOAL_EXPLORE_SET_TILE: i32 = 52;
+/// an unload: `a` the transport, `io.i` the tile
+pub const EE_UNITS_GOAL_NEW_UNLOAD: i32 = 60;
+pub const EE_UNITS_GOAL_UNLOAD_NEW_EMPTY: i32 = 61;
+pub const EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT: i32 = 62;
+pub const EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD: i32 = 63;
+/// the transport (the result), `io.i` the unload tile
+pub const EE_UNITS_GOAL_UNLOAD_FIELDS: i32 = 64;
+/// `io.i`: a new unload tile, the unload tiles found for it
+pub const EE_UNITS_GOAL_UNLOAD_SET_DESTINATION: i32 = 65;
+/// the transport dropped without its release
+pub const EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT: i32 = 66;
 
-/// `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
+/// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
+pub const GOAL_UNLOAD_TRANSPORT: u8 = 8;
 pub const GOAL_PATROL: u8 = 9;
 pub const GOAL_EXPLORE: u8 = 10;
 pub const GOAL_CAST_CALAMITY: u8 = 11;
@@ -577,10 +682,19 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     // SAFETY: the caller's contract
     let (io, table) = unsafe { (&mut *io, &*host) };
     let mut h = OpHost(table);
+    // the base goal's answers for the classes that keep them
+    if kind != GOAL_UNLOAD_TRANSPORT {
+        match op {
+            EE_UNITS_GOAL_MAX_PATH_ATTEMPTS => return 3,
+            EE_UNITS_GOAL_SUITS => return 1,
+            _ => {}
+        }
+    }
     match kind {
         GOAL_PATROL => crate::patrol::body(op, goal, a, b, io, &mut h),
         GOAL_CAST_CALAMITY => crate::calamity::body(op, goal, a, b, io, &mut h),
         GOAL_EXPLORE => crate::explore::body(op, goal, a, b, io, &mut h),
+        GOAL_UNLOAD_TRANSPORT => crate::unload::body(op, goal, a, b, io, &mut h),
         _ => 0,
     }
 }

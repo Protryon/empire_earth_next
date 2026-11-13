@@ -32,7 +32,6 @@
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "lle/USingleton.h"
 #include "ee/EECalamityManager.h"
@@ -457,7 +456,7 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
         EEComplexUnit* theUnit = ComplexOf(inSpec->unit_a);
         if (theUnit == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
+        return static_cast<EEUnitGoal*>(EEUGRust::NewUnloadTransport(theUnit->GetComplexUnit(), (long)inSpec->point[0],
                                                                 (long)inSpec->point[1], theFlagA));
     }
     case EE_GOAL_CTOR_LOCATION_XY:   // EEMUnloadTransport's move
@@ -960,7 +959,7 @@ extern "C" void ee_units_host_goal_set_transport(void* inGoal, uint32_t inUnit)
         Log({kDrySetTransport, static_cast<DryGoal*>(inGoal)->mCtor, inUnit});
         return;
     }
-    static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->SetTransport(ComplexOf(inUnit)->mComplexUnit);
+    static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->SetUnloadTransport(ComplexOf(inUnit)->mComplexUnit);
 }
 
 // the dry goal is a record: it answers yes (logged)
@@ -970,7 +969,7 @@ extern "C" uint8_t ee_units_host_goal_can_unload(void* inGoal)
         Log({kDryCanUnloadThere, static_cast<DryGoal*>(inGoal)->mCtor});
         return 1;
     }
-    return static_cast<EEUGUnloadTransport*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
+    return static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->CanUnloadAtDestination() ? 1 : 0;
 }
 
 extern "C" void ee_units_host_unload_warning(void* inPlayer, int64_t inX, int64_t inY)

@@ -3304,7 +3304,6 @@ void EESMEffect::ChangeAttribute()
 
 #include "ee/EECalamityClass.h"
 #include "ee/EELocationCalamityClass.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEWUnitsOffMapInfo.h"
 #include "ee/EEUnitCalamityClass.h"
@@ -3881,8 +3880,8 @@ void EESMEffect::TaskUnitsToArea()
             case kSMTaskActionUnload: {
                 for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
                     EEComplexUnit* theUnit = theGroup->GetUnit(u);
-                    EEUGUnloadTransport* theGoal =
-                        new EEUGUnloadTransport(theUnit, (long)theTarget.GetX(), (long)theTarget.GetY(), true);
+                    EEUGRust* theGoal =
+                        EEUGRust::NewUnloadTransport(theUnit, (long)theTarget.GetX(), (long)theTarget.GetY(), true);
                     if (theUnit->GetUnitClass()->IsTransport() && theUnit->GetNumCargoUnits() > 0
                         && theGoal->CanUnloadAtDestination()) {
                         theUnit->ClearGoals(0);

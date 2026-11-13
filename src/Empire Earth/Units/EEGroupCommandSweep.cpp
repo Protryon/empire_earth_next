@@ -460,7 +460,7 @@ void OriginalUnloadTransport(EEPlayer* thePlayer, void* theGroup, long inX, long
             uint32_t theUnit = Count(theActiveGroup) > 0 ? UnitAt(theActiveGroup, 0) : kNone;   // GetFirstUnit()
             if (theUnit == kNone)
                 continue;
-            EeGoalSpec theSpec;   // new EEUGUnloadTransport(theUnit->GetComplexUnit(), x, y, false)
+            EeGoalSpec theSpec;   // EEUGRust::NewUnloadTransport(theUnit->GetComplexUnit(), x, y, false)
             memset(&theSpec, 0, sizeof(theSpec));
             theSpec.ctor = EE_GOAL_CTOR_UNLOAD_TRANSPORT;
             theSpec.unit_a = theUnit;

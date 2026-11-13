@@ -74,7 +74,7 @@
 #include "ee/EECPUnitSelector.h"
 #include "ee/EECPPersonnel.h"
 #include "ee/EETown.h"
-#include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUGRust.h"
 
 // FUNCTION: EXE 0x44e6e7
 // Creates a naval transport sub-group for the attack group, with no land group to carry yet
@@ -1145,7 +1145,7 @@ void EECPASGSeaTransport::UnloadAt(const EECPILocation& inLocation)
     long i;
     for (i = this->mUnits.size() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
-        EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit, inLocation.mTile.mX,
+        EEUGRust* theGoal = EEUGRust::NewUnloadTransport(theUnit, inLocation.mTile.mX,
                                                               inLocation.mTile.GetY(), true);
         bool theSkip = theUnit->GetNumCargoUnits() == 0;
         if (!theSkip) {

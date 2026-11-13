@@ -7525,7 +7525,6 @@ bool EEMUnloadTransport::IsResponse(NEMessage* inMessage)
 }
 
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 
 // FUNCTION: EXE 0x4c8615
 // Splits the sender's selection by kind; parts with a loaded transport unload at the point, the rest move

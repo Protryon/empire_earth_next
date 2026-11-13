@@ -28,7 +28,6 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGLoadGarrison.h"
 #include "ee/EEUGLoadTransport.h"
-#include "ee/EEUGUnloadTransport.h"
 
 const UString EEUnitGoal::sData("EEUnitGoal-Data");
 // SYNTHETIC: EXE 0x63c332   (wrapper)
@@ -97,7 +96,7 @@ EEUnitGoal* EEUnitGoal::CreateGoal(unsigned char inKind)
         theGoal = EEUGRust::NewPatrol(false);
         break;
     case kGoalUnloadTransport:
-        theGoal = new EEUGUnloadTransport(false);
+        theGoal = EEUGRust::NewUnloadTransport(false);
         break;
     case kGoalHealUnit:
         theGoal = new EEUGHealUnit(false);

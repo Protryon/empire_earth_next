@@ -49,7 +49,6 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandable.h"
 
@@ -231,7 +230,7 @@ void EEUCLandable::FlyToGoal(GE3DPoint& inPoint, EEComplexUnit* inUnit)
     EEUGRust* theExplore = EEExploreGoalCast(theGoal);
     EEUGRust* thePatrol = EEPatrolGoalCast(theGoal);
     EEUGAttackGround* theGround = EEGoalCast<EEUGAttackGround>(theGoal);
-    EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(theGoal);
+    EEUGRust* theUnload = EEUnloadGoalCast(theGoal);
     if (theLocation != NULL) {
         theTarget.SetX(theLocation->mLocation.GetX());
         theTarget.SetY(theLocation->mLocation.GetY());

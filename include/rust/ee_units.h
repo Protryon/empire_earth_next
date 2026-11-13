@@ -620,6 +620,7 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_COMMAND = 6;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_RESET_PATH_ATTEMPTS = 7;
 
+/// `i[0]`: the action, `i[1]` 1: without the class's `ActionChanged`
 constexpr static const int32_t EE_UNITS_GOAL_HOST_START_ACTION = 8;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_UNIT = 9;
@@ -738,6 +739,33 @@ constexpr static const int32_t EE_UNITS_GOAL_HOST_UNIT_FAMILY = 86;
 
 constexpr static const int32_t EE_UNITS_GOAL_HOST_OWNS_LIGHTHOUSE = 87;
 
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNLOAD_RANGE = 90;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CLASS_TYPE = 91;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_COUNT = 92;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CARGO_CATEGORY = 93;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_TRANSPORT_KIND = 94;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT = 95;
+
+/// `i[0..8]`: the destination, unload, first cargo and found tiles in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES = 96;
+
+/// `i[0..6]`: the unload, first cargo and destination tiles in and out
+constexpr static const int32_t EE_UNITS_GOAL_HOST_CAN_UNLOAD_NEAR = 97;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_SAME_PLAYER = 98;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_FIRE_CARGO = 99;
+
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNLOAD_AT = 100;
+
+/// `i[0]`: the space sound
+constexpr static const int32_t EE_UNITS_GOAL_HOST_UNLOAD_SOUND = 101;
+
 constexpr static const int32_t EE_UNITS_GOAL_DESTROY = 1;
 
 /// `b`: the base goal's `GetB1C()`; the new goal's handle
@@ -777,6 +805,12 @@ constexpr static const int32_t EE_UNITS_GOAL_EVALUATE = 16;
 /// `a`: the old complex unit, `b`: the new one
 constexpr static const int32_t EE_UNITS_GOAL_REPLACE_UNIT = 17;
 
+/// `GetMaxPathAttempts` (the base goal's 3 but for the unload's 9)
+constexpr static const int32_t EE_UNITS_GOAL_MAX_PATH_ATTEMPTS = 18;
+
+/// `a`: the unit; `Suits` (true but for the unload)
+constexpr static const int32_t EE_UNITS_GOAL_SUITS = 19;
+
 /// a patrol: `a` the group (0: a new empty one), `b` the point
 constexpr static const int32_t EE_UNITS_GOAL_NEW_PATROL = 30;
 
@@ -807,7 +841,27 @@ constexpr static const int32_t EE_UNITS_GOAL_EXPLORE_TILE = 51;
 
 constexpr static const int32_t EE_UNITS_GOAL_EXPLORE_SET_TILE = 52;
 
-/// `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
+/// an unload: `a` the transport, `io.i` the tile
+constexpr static const int32_t EE_UNITS_GOAL_NEW_UNLOAD = 60;
+
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_NEW_EMPTY = 61;
+
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT = 62;
+
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD = 63;
+
+/// the transport (the result), `io.i` the unload tile
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_FIELDS = 64;
+
+/// `io.i`: a new unload tile, the unload tiles found for it
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_SET_DESTINATION = 65;
+
+/// the transport dropped without its release
+constexpr static const int32_t EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT = 66;
+
+/// `kGoalUnloadTransport`, `kGoalPatrol`, `kGoalExplore`, `kGoalCastCalamity`
+constexpr static const uint8_t GOAL_UNLOAD_TRANSPORT = 8;
+
 constexpr static const uint8_t GOAL_PATROL = 9;
 
 constexpr static const uint8_t GOAL_EXPLORE = 10;
@@ -1012,6 +1066,11 @@ constexpr static const uint8_t EE_UNIT_COMPLEX_OTHER = 2;
 /// on-map check count those on the map (the chain holds them).
 /// The id of a unit that has none (`RTSUnit::Reset`'s 0xffffffff): its record is by object (`Store::unlisted`).
 constexpr static const uint32_t EE_UNIT_ID_UNLISTED = 4294967295;
+
+/// the transport's classes (`EEUnitClassCast<EEUCTransport>`, `<EEUCAirplane>`)
+constexpr static const int64_t TRANSPORT_CLASS = 1;
+
+constexpr static const int64_t AIRPLANE_CLASS = 2;
 
 constexpr static const int32_t EE_UNITS_UPDATE_LAND = 1;
 

@@ -86,7 +86,6 @@
 #include "ee/EEFleeFromLocationScreenBase.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGAttackGround.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEAIPathSector.h"
 #include "ee/EEComputerPlayer.h"
@@ -1000,7 +999,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
         for (unsigned long j = 0; j < theOther->mGoalQueues[i].mGoals.size(); ++j) {
             EEUnitGoal* theGoal = theOther->mGoalQueues[i].mGoals[j];
             if (theGoal->mKind == kGoalUnloadTransport && theOther->GetPlayer() == this->GetPlayer())
-                EEGoalCast<EEUGUnloadTransport>(theGoal)->SetTransport(this);
+                EEUnloadGoalCast(theGoal)->SetUnloadTransport(this);
             theGoal = theGoal->Clone();
             this->mGoalQueues[i].mGoals.push_back(theGoal);
             theGoal->SetOwner(this->mGoalQueues[i].mUnit);

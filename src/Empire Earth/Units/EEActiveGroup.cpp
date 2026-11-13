@@ -65,7 +65,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "lle/U2DRectangle.h"
 #include "ee/EEFormation.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitUtilities.h"
 #include "rust/ee_units.h"   // ee_units_keeps_ground_attacker
 
@@ -340,9 +339,9 @@ void EEActiveGroup::LayOutFormation()
         theYaw = EEGoalCast<EEUGLocation>(this->mGoal)->mYaw;
         break;
     case kGoalUnloadTransport: {
-        EEUGUnloadTransport* theUnload = EEGoalCast<EEUGUnloadTransport>(this->mGoal);
+        EEUGRust* theUnload = EEUnloadGoalCast(this->mGoal);
         if (this->GetNumUnits() > 0) {
-            theDestination = theUnload->mDestination;
+            theUnload->GetUnloadTransport(&theDestination.mX, &theDestination.mY);
             theHasYaw = true;
             EEComplexUnit* theFirst = this->GetUnit(0);
             theFrom.mX = theFirst->GetTileX();
@@ -508,9 +507,9 @@ void EEActiveGroup::LayOutFormation()
         case kGoalUnloadTransport:
             if ((theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
                 && theUnit->GetComplexUnit()->GetNumCargoUnits() > 0) {
-                theGoal = new EEUGUnloadTransport(theUnit, UMFloor(theSlotLocation.GetX()),
+                theGoal = EEUGRust::NewUnloadTransport(theUnit, UMFloor(theSlotLocation.GetX()),
                                                   UMFloor(theSlotLocation.GetY()), true);
-                if (EEGoalCast<EEUGUnloadTransport>(theGoal)->CanUnloadAtDestination())
+                if (EEUnloadGoalCast(theGoal)->CanUnloadAtDestination())
                     theUnloads = true;
                 else {
                     delete theGoal;

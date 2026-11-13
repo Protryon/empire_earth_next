@@ -1,8 +1,8 @@
 // New (port; docs/RUST_PLAN.md R5b.4, rounds 16 and 17): the goals whose class moved whole into Rust
 // (ee/EEUGRust.h). Each virtual is one call of the Rust body (ee_units rust_goal.rs, by mKind) over the host below:
 // one operation callback whose cases are the reads and world calls the bodies make (the units, the patrol group's
-// walk, the calamity classes and manager, the explore goal's map, path and continent queries, the typed file
-// calls, the texts). The base goal's own fields, save and checksum stay EEUnitGoal's.
+// walk, the calamity classes and manager, the explore goal's map, path and continent queries, the transport
+// classes, the typed file calls, the texts). The base goal's own fields, save and checksum stay EEUnitGoal's.
 #include <windows.h>
 #include <stdio.h>
 #include <map>
@@ -32,6 +32,10 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/EECalamityManager.h"
 #include "ee/EECalamityClass.h"
+#include "ee/EEUCTransport.h"
+#include "ee/EEUCAirplane.h"
+#include "ee/EEMedia.h"
+#include "ee/EESoundObject.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EETileLocation.h"
 #include "ee/EEUnitUtilities.h"
@@ -50,6 +54,8 @@
 #include "ee/EEMapDimensions.h"
 #include "ee/EEUnitKind.h"
 #include "rust/ee_units.h"
+
+long gSpaceUnloadSoundID = 498;             // 0x4c8fa8 (.data = 0x1f2; the teleporter's unload sound)
 
 namespace {
 
@@ -82,6 +88,21 @@ void PointIn(const EeUnitsGoalIo& inArgs, GE3DPoint& outLocation)
     outLocation.SetX(inArgs.f[0]);
     outLocation.SetY(inArgs.f[1]);
     outLocation.SetZ(inArgs.f[2]);
+}
+
+// the tiles of an argument block (i[2k], i[2k + 1]) in and out
+void TilesIn(const EeUnitsGoalIo* inArgs, U2DPoint<long>* outTiles, int inCount)
+{
+    for (int k = 0; k < inCount; k++)
+        outTiles[k].SetXY((long)inArgs->i[2 * k], (long)inArgs->i[2 * k + 1]);
+}
+
+void TilesOut(EeUnitsGoalIo* ioArgs, const U2DPoint<long>* inTiles, int inCount)
+{
+    for (int k = 0; k < inCount; k++) {
+        ioArgs->i[2 * k] = inTiles[k].mX;
+        ioArgs->i[2 * k + 1] = inTiles[k].mY;
+    }
 }
 
 // one operation (EE_UNITS_GOAL_HOST_*) of a body: inA, inB the handles it names, ioArgs the rest
@@ -121,7 +142,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
         return 0;
     case EE_UNITS_GOAL_HOST_START_ACTION:
         theComplex->StartAction((unsigned long)ioArgs->i[0]);
-        theComplex->mUnitClass->ActionChanged(theComplex);
+        if (ioArgs->i[1] == 0)
+            theComplex->mUnitClass->ActionChanged(theComplex);
         return 0;
     case EE_UNITS_GOAL_HOST_FIND_UNIT:
         if (inB != 0)
@@ -402,6 +424,67 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             EEGetPlayerUnitsOfType(kUnitTypeLighthouseAtAlexandria, theComplex->mPlayer->GetPlayerID(), theUnits);
             return theUnits.size() > 0;
         }
+
+    // the unload transport's
+    case EE_UNITS_GOAL_HOST_UNLOAD_RANGE:
+        ioArgs->f[0] = theComplex->mUnitClass->mUnloadRange;
+        return 0;
+    case EE_UNITS_GOAL_HOST_CLASS_TYPE:
+        return theComplex->mUnitClass->mUnitType;
+    case EE_UNITS_GOAL_HOST_CARGO_COUNT:
+        return (uint32_t)theComplex->GetNumCargoUnits();
+    case EE_UNITS_GOAL_HOST_CARGO_CATEGORY:
+        return theComplex->mCargo[0]->mUnitClass->mCategory;
+    case EE_UNITS_GOAL_HOST_TRANSPORT_KIND:
+        return (EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass()) != NULL ? 1 : 0)
+            | (EEUnitClassCast<EEUCAirplane>(theComplex->GetUnitClass()) != NULL ? 2 : 0);
+    case EE_UNITS_GOAL_HOST_CAN_UNLOAD_AT: {
+            EEUCTransport* theTransport = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            if (theTransport != NULL)
+                return theTransport->CanUnloadAt(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
+            return EEIsTileFree(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
+        }
+    case EE_UNITS_GOAL_HOST_FIND_UNLOAD_TILES: {
+            U2DPoint<long> theTiles[4];
+            TilesIn(ioArgs, theTiles, 4);
+            EEUCTransport* theTransport = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass());
+            if (theTransport != NULL)
+                theTransport->FindUnloadTiles(theComplex, &theTiles[0], &theTiles[1], &theTiles[2], &theTiles[3]);
+            else
+                EEUnitClassCast<EEUCAirplane>(theComplex->GetUnitClass())
+                    ->FindUnloadTiles(theComplex, &theTiles[0], &theTiles[1], &theTiles[2], &theTiles[3]);
+            TilesOut(ioArgs, theTiles, 4);
+            return 0;
+        }
+    case EE_UNITS_GOAL_HOST_CAN_UNLOAD_NEAR: {
+            U2DPoint<long> theTiles[3];
+            TilesIn(ioArgs, theTiles, 3);
+            bool theResult = EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass())
+                                 ->CanUnloadNear(theComplex, theComplex->GetCargo(0), &theTiles[0], &theTiles[1],
+                                                 &theTiles[2]);
+            TilesOut(ioArgs, theTiles, 3);
+            return theResult;
+        }
+    case EE_UNITS_GOAL_HOST_SAME_PLAYER:
+        return theComplex->mPlayer == ObjectOf<EEComplexUnit>(inB)->mPlayer;
+    case EE_UNITS_GOAL_HOST_FIRE_CARGO:
+        theComplex->mUnitClass->FireShot(theComplex);
+        return 0;
+    case EE_UNITS_GOAL_HOST_UNLOAD_AT:
+        EEUnitClassCast<EEUCTransport>(theComplex->GetUnitClass())
+            ->UnloadAt(theComplex, (long)ioArgs->i[0], (long)ioArgs->i[1]);
+        return 0;
+    case EE_UNITS_GOAL_HOST_UNLOAD_SOUND: {
+            EESoundObject* theSound = EESoundObject::Get(ioArgs->i[0] != 0 ? gSpaceUnloadSoundID : 0x184);
+            if (theSound != NULL) {
+                float theVolume;
+                float thePan;
+                float thePitch;
+                theComplex->mUnitClass->GetSoundParameters(theComplex, theSound, &theVolume, &thePan, &thePitch);
+                theSound->Play(theVolume, thePan, thePitch);
+            }
+            return 0;
+        }
     }
     return 0;
 }
@@ -510,6 +593,54 @@ void EEUGRust::SetExploreTile(long inX, long inY)
     Goal(EE_UNITS_GOAL_EXPLORE_SET_TILE, this, 0, 0, &theArgs);
 }
 
+EEUGRust* EEUGRust::NewUnloadTransport(EEComplexUnit* inTransport, long inX, long inY, bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalUnloadTransport, inArg);
+    EeUnitsGoalIo theArgs = {{inX, inY}};
+    Goal(EE_UNITS_GOAL_NEW_UNLOAD, theGoal, Handle(inTransport), 0, &theArgs);
+    return theGoal;
+}
+
+EEUGRust* EEUGRust::NewUnloadTransport(bool inArg)
+{
+    EEUGRust* theGoal = new EEUGRust(kGoalUnloadTransport, inArg);
+    Goal(EE_UNITS_GOAL_UNLOAD_NEW_EMPTY, theGoal);
+    return theGoal;
+}
+
+EEComplexUnit* EEUGRust::GetUnloadTransport(long* outX, long* outY)
+{
+    EeUnitsGoalIo theArgs = {};
+    EEComplexUnit* theTransport =
+        ObjectOf<EEComplexUnit>((uint64_t)Goal(EE_UNITS_GOAL_UNLOAD_FIELDS, this, 0, 0, &theArgs));
+    if (outX != NULL)
+        *outX = (long)theArgs.i[0];
+    if (outY != NULL)
+        *outY = (long)theArgs.i[1];
+    return theTransport;
+}
+
+void EEUGRust::SetUnloadTransport(EEComplexUnit* inTransport)
+{
+    Goal(EE_UNITS_GOAL_UNLOAD_SET_TRANSPORT, this, Handle(inTransport));
+}
+
+bool EEUGRust::CanUnloadAtDestination()
+{
+    return Goal(EE_UNITS_GOAL_UNLOAD_CAN_UNLOAD, this) != 0;
+}
+
+void EEUGRust::ForgetUnloadTransport()
+{
+    Goal(EE_UNITS_GOAL_UNLOAD_FORGET_TRANSPORT, this);
+}
+
+void EEUGRust::SetUnloadDestination(long inX, long inY)
+{
+    EeUnitsGoalIo theArgs = {{inX, inY}};
+    Goal(EE_UNITS_GOAL_UNLOAD_SET_DESTINATION, this, 0, 0, &theArgs);
+}
+
 EEUGRust::~EEUGRust()
 {
     Goal(EE_UNITS_GOAL_DESTROY, this);
@@ -556,6 +687,11 @@ void EEUGRust::GetGoalLocation(GE3DPoint& outLocation)
     PointIn(theArgs, outLocation);
 }
 
+long EEUGRust::GetMaxPathAttempts()
+{
+    return (long)Goal(EE_UNITS_GOAL_MAX_PATH_ATTEMPTS, this);
+}
+
 long EEUGRust::GetStartAction()
 {
     return (long)Goal(EE_UNITS_GOAL_START_ACTION, this);
@@ -576,12 +712,12 @@ long EEUGRust::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     long theResult = EEUnitGoal::Load(inMajorVersion, inMinorVersion, inFile);
     if (theResult != 0)
         return theResult;
-    return (long)Goal(EE_UNITS_GOAL_LOAD, this, 0, 0, NULL, &inFile);
+    return (long)Goal(EE_UNITS_GOAL_LOAD, this, inMajorVersion, inMinorVersion, NULL, &inFile);
 }
 
-long EEUGRust::RepairPointers(unsigned long, unsigned long)
+long EEUGRust::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    return (long)Goal(EE_UNITS_GOAL_REPAIR, this);
+    return (long)Goal(EE_UNITS_GOAL_REPAIR, this, inMajorVersion, inMinorVersion);
 }
 
 void EEUGRust::Start(EEComplexUnit* inUnit)
@@ -607,7 +743,7 @@ void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplex
     Goal(EE_UNITS_GOAL_REPLACE_UNIT, this, Handle(inOld), Handle(inNew));
 }
 
-bool EEUGRust::Suits(EEUnit*)
+bool EEUGRust::Suits(EEUnit* inUnit)
 {
-    return true;
+    return Goal(EE_UNITS_GOAL_SUITS, this, Handle(inUnit)) != 0;
 }

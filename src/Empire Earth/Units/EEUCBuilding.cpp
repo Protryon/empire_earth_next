@@ -56,7 +56,6 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUCFortress.h"
 
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
@@ -578,7 +577,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                         theRally->GetGoalLocation(theTarget);
                         if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()),
                                                   UMFloorUnsigned(theTarget.GetY())))
-                            theGoal = new EEUGUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
+                            theGoal = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
                         else
                             theGoal = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
                     }
@@ -608,7 +607,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
             theCargo->GetGoal()->GetGoalLocation(theTarget);
             EEUnitGoal* theCopy;
             if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY())))
-                theCopy = new EEUGUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
+                theCopy = EEUGRust::NewUnloadTransport(theCargo, (long)theTarget.GetX(), (long)theTarget.GetY(), false);
             else
                 theCopy = new EEUGLocation(&theTarget, false, true, false, 0.0f, false, false);
             theCargo->QueueGoal(theCopy, 0);
