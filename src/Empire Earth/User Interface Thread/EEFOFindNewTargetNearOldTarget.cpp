@@ -4329,71 +4329,16 @@ void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoin
 // Finds where a dropped unit lands on a target: the model's drop point (lower when damaged) or its tile
 // Where a unit dropped onto inTarget (its goal's target when NULL) lands: the model's drop point (scaled down with
 // a damaged unit's health), else its tile; *outTarget the target (NULL when not placed)
-// (new: the model's and the tile's point are ee_combat's drop_point; the goal's location and the target stay here)
 void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
 {
-    EEUnitGoal* theGoal = inUnit->mActiveGoal;
-    GE3DPoint theLocation;
-    EeCombatDropIn in = {};
-    if (inTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
-        in.kind = EE_COMBAT_DROP_KIND_GOAL;
-        theGoal->GetGoalLocation(theLocation);
-    } else {
-        if (inTarget == NULL)
-            inTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
-        if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
-            in.kind = EE_COMBAT_DROP_KIND_MODEL;
-            in.offset[0] = inTarget->GetModel()->mDefaultPoint.GetX();
-            in.offset[1] = inTarget->GetModel()->mDefaultPoint.GetY();
-            in.offset[2] = inTarget->GetModel()->mDefaultPoint.GetZ();
-            in.scale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
-            in.built = inTarget->mComplexUnit->mIsBuilt;
-            in.hit_points = (int32_t)inTarget->mHitPoints;
-            in.max_hit_points = (int32_t)inTarget->mStats->mMaxHitPoints;
-            memcpy(in.transformation, inTarget->mComplexUnit->mPhysicalModel.GetLocation().mMatrix, sizeof(in.transformation));
-        } else if (inTarget->mTile != NULL) {
-            in.kind = EE_COMBAT_DROP_KIND_TILE;
-            in.tile_x = (int32_t)inTarget->GetTileX();
-            in.tile_y = (int32_t)inTarget->GetTileY();
-            in.tile_height = inTarget->mTile->GetHeight();
-        } else {
-            in.kind = EE_COMBAT_DROP_KIND_NONE;
-            inTarget = NULL;
-        }
-        if (in.kind != EE_COMBAT_DROP_KIND_NONE) {
-            EeCombatDropOut thePoint = ee_combat_drop_point(&in);
-            theLocation.SetX(thePoint.x);
-            theLocation.SetY(thePoint.y);
-            theLocation.SetZ(thePoint.z);
-        }
-    }
-    *outTarget = inTarget;
-    *outLocation = theLocation;
-    if (EESimCaptureRecord::Active()) {
-        struct { float x, y, z; int32_t target; } theOut = {outLocation->GetX(), outLocation->GetY(), outLocation->GetZ(),
-                                                            EECombatCaptureID(*outTarget)};
-        EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'P'), in, theOut);
-    }
+    *outTarget = EECombatFindDropLocation(inUnit, inTarget, *outLocation);   // ee_combat leaves.rs find_drop_location
 }
 
 // FUNCTION: EXE 0x6494cb
 // Returns the squared ground distance from a unit (or a point) to where it would hit a target
 float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inX, float inY)
 {
-    GE3DPoint theTarget;
-    GE3DPoint thePosition;
-    EEUnit* theDropTarget;
-    inUnit->GetPosition(thePosition);
-    if (!inUnit->mUnitClass->mIsMelee)
-        EEFindDropLocation(inUnit, &theDropTarget, &theTarget, inTarget);
-    else
-        inTarget->GetPosition(theTarget);
-    // the arithmetic is ee_combat's hit_distance (screen.rs)
-    EeCombatHitDistanceIn in = {{thePosition.GetX(), thePosition.GetY(), thePosition.GetZ()},
-                                {theTarget.GetX(), theTarget.GetY(), theTarget.GetZ()}, inX, inY};
-    float theDistance = ee_combat_hit_distance(&in);
-    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'D'), in, theDistance);
-    return theDistance;
+    return EECombatHitDistanceSquared(inUnit, inTarget, inX, inY);   // ee_combat leaves.rs hit_distance_squared
 }
 
 // FUNCTION: EXE 0x649560

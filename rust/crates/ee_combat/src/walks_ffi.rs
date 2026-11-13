@@ -33,15 +33,6 @@ pub unsafe extern "C" fn ee_combat_can_heal(input: *const EeCombatCanHealIn) -> 
     can_heal(unsafe { read(input) })
 }
 
-/// `EEFindDropLocation`'s drop point.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_drop_point(input: *const EeCombatDropIn) -> EeCombatDropOut {
-    drop_point(unsafe { read(input) })
-}
-
 // ---- the line of fire
 
 /// `EEIsLineToUnitBlocked`'s world (see `LineHost`).

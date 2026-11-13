@@ -537,6 +537,24 @@ constexpr static const int32_t EE_COMBAT_W_FOOTPRINT_TILE = 67;
 /// tile never; `IsSeenBy(player)` when `a[2]` (explored), else `GetVisibility(id) > 1`.
 constexpr static const int32_t EE_COMBAT_W_TILE_SEEN = 68;
 
+/// a complex unit's `mActiveGoal->mKind` ([`EE_COMBAT_Q_NONE`] without one).
+constexpr static const int32_t EE_COMBAT_Q_ACTIVE_GOAL_KIND = 88;
+
+/// a complex unit's active goal's attack target (`static_cast<EEUGRust*>(mActiveGoal)->GetAttackTarget()`).
+constexpr static const int32_t EE_COMBAT_H_ACTIVE_GOAL_TARGET = 10;
+
+/// `object->mActiveGoal->GetGoalLocation(point)`: the point's bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_GOAL_LOCATION = 70;
+
+/// `object->GetModel()->mModel != NULL`; the model's `mDefaultPoint` bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_DROP_MODEL = 71;
+
+/// `object->mTile != NULL`; the tile's `GetHeight()` bits out in `a[0]`.
+constexpr static const int32_t EE_COMBAT_W_TILE_HEIGHT = 72;
+
+/// `object->GetPosition(point)` (the virtual: a simple unit's tile centre): the point's bits out in `a[0..3]`.
+constexpr static const int32_t EE_COMBAT_W_POSITION = 73;
+
 /// `GetTileX()`, `GetTileY()`.
 constexpr static const int32_t EE_COMBAT_Q_TILE_X = 1;
 
@@ -2004,17 +2022,6 @@ struct EeCombatScreenIn {
 /// The host's distance of a screen's candidate (asked only for a living one).
 using EeCombatScreenDistance = float(*)(void *context);
 
-/// `EEGetHitDistanceSquared`'s points (the capture's CBHD layout).
-struct EeCombatHitDistanceIn {
-  /// the unit's position
-  float from[3];
-  /// the target's point (its drop point, a melee unit's: its position)
-  float to[3];
-  /// the point to measure from instead of the unit's (x -10000: none)
-  float x;
-  float y;
-};
-
 /// A search's result: the best target (0 for none), its score, and whether the search ended early.
 struct EeCombatSearchOut {
   uint64_t best;
@@ -2167,31 +2174,6 @@ struct EeCombatCanHealIn {
   int32_t allied;
   /// the healer's unit set holds the target's type (0 for a set out of the manager's range)
   int32_t in_set;
-};
-
-/// The drop point.
-struct EeCombatDropOut {
-  float x;
-  float y;
-  float z;
-};
-
-/// `EEFindDropLocation`'s inputs: the kind, then the model's (`DROP_KIND_MODEL`) or the tile's (`DROP_KIND_TILE`) values.
-struct EeCombatDropIn {
-  int32_t kind;
-  /// the target model's `mDefaultPoint`
-  float offset[3];
-  /// the target's physical model's scale
-  float scale;
-  int32_t built;
-  int32_t hit_points;
-  int32_t max_hit_points;
-  /// the target's physical model's location (`GETransformation::mMatrix`)
-  float transformation[4][4];
-  int32_t tile_x;
-  int32_t tile_y;
-  /// the target tile's height
-  float tile_height;
 };
 
 /// The result: blocked, and the last tile reached.
@@ -2575,6 +2557,25 @@ bool ee_combat_is_seen_by(uint64_t unit,
                           int32_t explored,
                           const EeCombatWorldHost *host);
 
+/// `EEFindDropLocation` of `unit` on `target` (0: its goal's) over `host`: the target out, the point in `point`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context, `point` to three floats.
+uint64_t ee_combat_find_drop_location(uint64_t unit,
+                                      uint64_t target,
+                                      const EeCombatWorldHost *host,
+                                      float (*point)[3]);
+
+/// `EEGetHitDistanceSquared(unit, target, x, y)` over `host`.
+///
+/// # Safety
+/// `host` must point to a valid table whose callbacks may be called with its context.
+float ee_combat_hit_distance_squared(uint64_t unit,
+                                     uint64_t target,
+                                     float x,
+                                     float y,
+                                     const EeCombatWorldHost *host);
+
 /// `EEUUGetIsUnitClassTargetable` (`can_target` 0) or `EECanTargetClass` (1) of the record.
 ///
 /// # Safety
@@ -2638,12 +2639,6 @@ int32_t ee_combat_faces_point(const EeCombatFacingIn *input,
 int32_t ee_combat_screen(EeCombatScreenIn *input,
                          void *context,
                          EeCombatScreenDistance distance);
-
-/// `EEGetHitDistanceSquared`'s arithmetic.
-///
-/// # Safety
-/// `input` must point to a valid record.
-float ee_combat_hit_distance(const EeCombatHitDistanceIn *input);
 
 /// `EESearchTarget`.
 ///
@@ -2712,12 +2707,6 @@ EeCombatCanConvertOut ee_combat_can_convert(const EeCombatCanConvertIn *input);
 /// # Safety
 /// `input` must point to a valid record.
 int32_t ee_combat_can_heal(const EeCombatCanHealIn *input);
-
-/// `EEFindDropLocation`'s drop point.
-///
-/// # Safety
-/// `input` must point to a valid record.
-EeCombatDropOut ee_combat_drop_point(const EeCombatDropIn *input);
 
 /// `EEIsLineToUnitBlocked`.
 ///

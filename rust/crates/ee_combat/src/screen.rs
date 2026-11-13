@@ -93,15 +93,6 @@ pub unsafe extern "C" fn ee_combat_screen(
     accepted as i32
 }
 
-/// `EEGetHitDistanceSquared`'s arithmetic.
-///
-/// # Safety
-/// `input` must point to a valid record.
-#[no_mangle]
-pub unsafe extern "C" fn ee_combat_hit_distance(input: *const EeCombatHitDistanceIn) -> f32 {
-    hit_distance(unsafe { &*input })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
