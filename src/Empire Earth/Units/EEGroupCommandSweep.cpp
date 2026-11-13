@@ -177,7 +177,7 @@ void OriginalGather(EEPlayer* thePlayer, void* theGroup, int32_t inTargetID, boo
         ee_units_host_group_spread_around_resource(theActiveGroup, IDOf(theTarget));
         if (Count(theActiveGroup)) {
             ee_units_host_group_clear_goal(theActiveGroup);
-            EeGoalSpec theSpec;   // new EEUGGather(theTarget, NULL, true)
+            EeGoalSpec theSpec;   // EEUGRust::NewGather(theTarget, NULL, true)
             memset(&theSpec, 0, sizeof(theSpec));
             theSpec.ctor = EE_GOAL_CTOR_GATHER;
             theSpec.unit_a = IDOf(theTarget);
@@ -404,7 +404,7 @@ void OriginalDropoffResource(EEPlayer* thePlayer, void* theGroup, int32_t inDrop
         ee_units_host_group_spread_around_tile(theActiveGroup, (int64_t)theDropoff->mTileX.Get(), (int64_t)theDropoff->mTileY.Get());
         if (Count(theActiveGroup) > 0) {
             ee_units_host_group_clear_goal(theActiveGroup);
-            EeGoalSpec theSpec;   // new EEUGGather(NULL, theDropoff, true)
+            EeGoalSpec theSpec;   // EEUGRust::NewGather(NULL, theDropoff, true)
             memset(&theSpec, 0, sizeof(theSpec));
             theSpec.ctor = EE_GOAL_CTOR_GATHER;
             theSpec.unit_a = kNone;
@@ -639,7 +639,7 @@ void OriginalSmartFarmers(EEPlayer* thePlayer, void* theSelection, int32_t inTar
             theSpec.unit_b = kNone;
             long theAction;
             if (theObject->mResourceAmount > 0 && ee_units_host_can_take(IDOf(theTarget), theUnit)) {
-                theSpec.ctor = EE_GOAL_CTOR_GATHER;   // new EEUGGather(NULL, theTarget, true)
+                theSpec.ctor = EE_GOAL_CTOR_GATHER;   // EEUGRust::NewGather(NULL, theTarget, true)
                 theSpec.unit_b = IDOf(theTarget);
                 theSpec.flag_a = 1;
                 theAction = kActionMoveToStorage;

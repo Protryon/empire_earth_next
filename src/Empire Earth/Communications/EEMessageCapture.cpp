@@ -95,7 +95,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEScenarioManager.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGGather.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEActiveGroup.h"
 #include "ee/EEPPatrolGroup.h"
