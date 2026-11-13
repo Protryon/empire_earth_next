@@ -426,7 +426,7 @@ const ACTION_AIRPORT_OPEN: i32 = 13000;
 const ACTION_FLY: i64 = 1006;
 
 /// A selected unit's plain state: the store's record, else (a unit already out of its list) the object's.
-fn selected(host: &mut impl Host, id: u32) -> Option<EeUnitRecord> {
+pub(crate) fn selected(host: &mut impl Host, id: u32) -> Option<EeUnitRecord> {
     match host.unit(id) {
         Some(unit) => Some(unit),
         None => host.object_record(id),

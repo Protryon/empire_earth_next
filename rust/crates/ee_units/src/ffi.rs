@@ -523,6 +523,30 @@ pub extern "C" fn ee_units_stop_active_group(selection: *mut c_void) {
     crate::rally::stop_active_group(&mut host, crate::host::HostRef(selection));
 }
 
+/// `EEMLoadGarrison::Execute`'s body (`boarding::load_garrison`) for the sender, its selection (null: none) and the
+/// garrison's id.
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_load_garrison(player: *mut c_void, selection: *mut c_void, garrison: u32) {
+    let mut host = crate::host::game::GameHost;
+    crate::boarding::load_garrison(&mut host, crate::host::HostRef(player), crate::host::HostRef(selection), garrison);
+}
+
+/// `EEMLoadTransport::Execute`'s body (`boarding::load_transport`) for the sender, its selection (null: none), the
+/// transport's id and the passenger's (-1: the selection).
+#[cfg(not(test))]
+#[no_mangle]
+pub extern "C" fn ee_units_load_transport(player: *mut c_void, selection: *mut c_void, transport: u32, passenger: i32) {
+    let mut host = crate::host::game::GameHost;
+    crate::boarding::load_transport(
+        &mut host,
+        crate::host::HostRef(player),
+        crate::host::HostRef(selection),
+        transport,
+        passenger,
+    );
+}
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 #[cfg(not(test))]

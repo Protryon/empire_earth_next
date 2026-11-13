@@ -1154,6 +1154,183 @@ void OriginalStopActiveGroup(void* theGroup)
     }
 }
 
+// the rejected units' groups of EEMLoadGarrison and EEMLoadTransport, as they were: for each formation slot a new
+// group of the units in it keeps its mobile units and moves to the tile, else it is released
+void OriginalSendRejected(EEPlayer* thePlayer, const std::vector<EEComplexUnit*>& theRejected, long inX, long inY)
+{
+    for (unsigned long i = 1; i < 6; i++) {
+        void* theGroup = ee_units_host_active_group_new(thePlayer);   // new EEActiveGroup(thePlayer)
+        for (std::vector<EEComplexUnit*>::const_iterator theIterator = theRejected.begin(); theIterator != theRejected.end();
+             theIterator++) {
+            EEUnitClass* theClass = (*theIterator)->mUnitClass;
+            bool theInSlot;   // theGroup->IsInFormationSlot(*theIterator, i)
+            switch (i) {
+            case 1: theInSlot = (theClass->mDomains & kMovementAir) != 0; break;
+            case 2: theInSlot = (theClass->mDomains & kMovementLand) || theClass->IsLandBuilding(); break;
+            case 3: theInSlot = (theClass->mDomains & kMovementSea) && theClass->mCategory != kUnitCategorySubmergedNaval; break;
+            case 4: theInSlot = (theClass->mDomains & kMovementSea) && theClass->mCategory == kUnitCategorySubmergedNaval; break;
+            default: theInSlot = ((theClass->mDomains >> 3) & 1) != 0; break;
+            }
+            if (theInSlot)
+                ee_units_host_group_add_unit(theGroup, IDOf(*theIterator));   // AddMember(*theIterator, true)
+        }
+        ee_units_host_group_keep_mobile(theGroup);
+        if (Count(theGroup) > 0) {
+            ee_units_host_group_set_goal(theGroup, LocationGoal((float)inX, (float)inY), 0);
+            ee_units_host_group_set_action(theGroup, kActionPrepareToMove);
+            ee_units_host_pending_push(thePlayer, theGroup);
+            ee_units_host_group_plan(theGroup);
+        } else
+            ee_units_host_group_release(theGroup);   // Dereference()
+    }
+}
+
+// EEUGRust::NewLoad's sort of the caller's vector (by reference), as the original's later loop saw it
+void SortLoadUnits(std::vector<EEComplexUnit*>& ioUnits)
+{
+    std::sort(ioUnits.begin(), ioUnits.end(),
+              [](EEComplexUnit* inFirst, EEComplexUnit* inSecond) { return inFirst->mUnitID < inSecond->mUnitID; });
+    ioUnits.erase(std::unique(ioUnits.begin(), ioUnits.end()), ioUnits.end());
+}
+
+std::vector<uint32_t> IDsOf(const std::vector<EEComplexUnit*>& inUnits)
+{
+    std::vector<uint32_t> theIDs;
+    for (size_t i = 0; i < inUnits.size(); i++)
+        theIDs.push_back(IDOf(inUnits[i]));
+    return theIDs;
+}
+
+// each boarding unit: SetGoal(theGoal->Clone(), 0, 0), StartAction(kActionPrepareToMove), ActionChanged
+void OriginalBoard(void* theGoal, const std::vector<EEComplexUnit*>& theUnits)
+{
+    for (std::vector<EEComplexUnit*>::const_iterator theIterator = theUnits.begin(); theIterator != theUnits.end(); theIterator++) {
+        uint32_t theUnit = IDOf(*theIterator);
+        void* theClone = ee_units_host_goal_clone(theGoal);
+        if (theClone != NULL)
+            ee_units_host_unit_set_goal(theUnit, theClone);
+        ee_units_host_unit_start_action(theUnit, kActionPrepareToMove);
+    }
+}
+
+// EEMLoadGarrison::Execute (0x4c1722) as it was, each world call through the host, the units read on the objects
+// (the load goal's calls are host calls on the goal)
+void OriginalLoadGarrison(EEPlayer* thePlayer, void* theSelection, int32_t inGarrisonID)
+{
+    EEUnit* theGarrisonUnit = gWorld.GetUnit(inGarrisonID);
+    std::vector<EEComplexUnit*> theUnits;
+    std::vector<EEComplexUnit*> theRejected;
+    if (theGarrisonUnit == NULL || theGarrisonUnit->mTileNode == NULL || theGarrisonUnit->mHitPoints <= 0)
+        return;
+    uint32_t theGarrisonID = ee_units_host_unit_complex_id(IDOf(theGarrisonUnit));   // ->mComplexUnit
+    if (theGarrisonID == kNone)
+        return;
+    EEComplexUnit* theGarrison = static_cast<EEComplexUnit*>(ObjectOf(theGarrisonID));
+    void* theOldGoal = ee_units_host_unit_load_goal(theGarrisonID, kGoalLoadGarrison);   // mGoalState (a load garrison)
+    if (theSelection == NULL || Count(theSelection) == 0 || UnitAt(theSelection, 0) == kNone
+        || theGarrison->mUnitClass->mGarrisonCapacity <= 0)
+        return;
+    unsigned long theCount = Count(theSelection);
+    for (unsigned long i = 0; i < theCount; i++) {
+        EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(ObjectOf(UnitAt(theSelection, (long)i)));
+        if (theUnit != NULL && theUnit != theGarrison && theUnit->mHitPoints > 0)
+            (theUnit->mUnitClass->mCanGarrison ? theUnits : theRejected).push_back(theUnit);
+    }
+    int64_t theX, theY;
+    if (theUnits.size() > 0) {
+        void* theGoal;
+        if (theOldGoal != NULL) {
+            theGoal = theOldGoal;
+            std::vector<uint32_t> theIDs = IDsOf(theUnits);
+            ee_units_host_load_goal_add_units(theGoal, &theIDs[0], theIDs.size());
+        } else {
+            SortLoadUnits(theUnits);
+            std::vector<uint32_t> theIDs = IDsOf(theUnits);
+            theGoal = ee_units_host_load_goal_new(kGoalLoadGarrison, theGarrisonID, &theIDs[0], theIDs.size(), 0);
+            if (ee_units_host_load_goal_fields(theGoal, &theX, &theY)) {   // IsLoadGarrisonValid()
+                ee_units_host_unit_set_goal(theGarrisonID, theGoal);
+                if (theGarrison->mStats->mMaxVelocity > 0.0f)   // StartAction, then ActionChanged
+                    ee_units_host_unit_start_action(theGarrisonID, kActionPrepareToMove);
+                else
+                    ee_units_host_unit_start_action(theGarrisonID, kActionPickedUpLoadableUnits);
+            }
+        }
+        if (ee_units_host_load_goal_fields(theGoal, &theX, &theY))
+            OriginalBoard(theGoal, theUnits);
+        else
+            ee_units_host_player_event(thePlayer, theGarrisonUnit->mTileX, theGarrisonUnit->mTileY, 0x7c3a);
+    }
+    if (theRejected.size() > 0)
+        OriginalSendRejected(thePlayer, theRejected, theGarrison->mTileX, theGarrison->mTileY);
+}
+
+// EEMLoadTransport::Execute (0x4c1b79) as it was, each world call through the host (FilterLoadable is a host call;
+// the two reads of GetLoadUnitTile are one), the units read on the objects
+void OriginalLoadTransport(EEPlayer* thePlayer, void* theSelection, int32_t inTransportID, int32_t inPassengerID)
+{
+    EEUnit* theTransportUnit = gWorld.GetUnit(inTransportID);
+    std::vector<EEComplexUnit*> theUnits;
+    std::vector<EEComplexUnit*> theRejected;
+    if (theTransportUnit == NULL || theTransportUnit->mTileNode == NULL || theTransportUnit->mHitPoints <= 0)
+        return;
+    uint32_t theTransportID = ee_units_host_unit_complex_id(IDOf(theTransportUnit));   // ->mComplexUnit
+    if (theTransportID == kNone)
+        return;
+    EEComplexUnit* theTransport = static_cast<EEComplexUnit*>(ObjectOf(theTransportID));
+    void* theOldGoal = ee_units_host_unit_load_goal(theTransportID, kGoalLoadTransport);   // GetLoadGoal()
+    if (theSelection == NULL || Count(theSelection) == 0 || UnitAt(theSelection, 0) == kNone
+        || !theTransport->mUnitClass->IsTransport())
+        return;
+    if (inPassengerID == -1) {
+        unsigned long theCount = Count(theSelection);
+        for (unsigned long i = 0; i < theCount; i++) {
+            EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(ObjectOf(UnitAt(theSelection, (long)i)));
+            if (theUnit != NULL && theUnit != theTransport && theUnit->mHitPoints > 0)
+                theUnits.push_back(theUnit);
+        }
+    } else {
+        EEUnit* thePassenger = gWorld.GetUnit(inPassengerID);
+        uint32_t thePassengerID = thePassenger != NULL ? ee_units_host_unit_complex_id(IDOf(thePassenger)) : kNone;
+        EEComplexUnit* theUnit = thePassengerID != kNone ? static_cast<EEComplexUnit*>(ObjectOf(thePassengerID)) : NULL;
+        if (theUnit != NULL && theUnit->mHitPoints > 0)
+            theUnits.push_back(theUnit);
+    }
+    {   // FilterLoadable(&theUnits, theTransport, &theRejected)
+        std::vector<uint32_t> theIDs = IDsOf(theUnits);
+        std::vector<uint32_t> theOut(theIDs.size() + 1);
+        size_t theKept = ee_units_host_transport_filter(theTransportID, theIDs.empty() ? NULL : &theIDs[0], theIDs.size(), &theOut[0]);
+        for (size_t i = theKept; i < theIDs.size(); i++)
+            theRejected.push_back(static_cast<EEComplexUnit*>(ObjectOf(theOut[i - theKept])));
+        theUnits.clear();
+        for (size_t i = 0; i < theKept; i++)
+            theUnits.push_back(static_cast<EEComplexUnit*>(ObjectOf(theIDs[i])));
+    }
+    int64_t theTileX;
+    int64_t theTileY;
+    if (theUnits.size() != 0) {
+        void* theGoal;
+        if (theOldGoal != NULL) {
+            theGoal = theOldGoal;
+            std::vector<uint32_t> theIDs = IDsOf(theUnits);
+            ee_units_host_load_goal_add_units(theGoal, &theIDs[0], theIDs.size());
+        } else {
+            SortLoadUnits(theUnits);
+            std::vector<uint32_t> theIDs = IDsOf(theUnits);
+            theGoal = ee_units_host_load_goal_new(kGoalLoadTransport, theTransportID, &theIDs[0], theIDs.size(), 1);
+            ee_units_host_unit_set_goal(theTransportID, theGoal);
+            ee_units_host_unit_start_action(theTransportID, theTransport->mStats->mMaxVelocity > 0.0f ? 8000 : 0x2ee3);
+        }
+        ee_units_host_load_goal_fields(theGoal, &theTileX, &theTileY);   // GetLoadUnitTile()
+        OriginalBoard(theGoal, theUnits);
+    } else {
+        theTileX = theTransport->mTileX;
+        theTileY = theTransport->mTileY;
+    }
+    if (theRejected.size() != 0)
+        OriginalSendRejected(thePlayer, theRejected, (long)theTileX, (long)theTileY);
+    ee_units_host_acknowledge_unit(thePlayer, theTransportID);   // PlayAcknowledgement(theTransport)
+}
+
 enum SweepBody {
     kSweepAttackGround = 1,
     kSweepPatrol = 2,
@@ -1172,7 +1349,9 @@ enum SweepBody {
     kSweepSetAirportCommand = 15,
     kSweepSetRallyGoal = 16,
     kSweepClearAirportCommands = 17,
-    kSweepStopActiveGroup = 18
+    kSweepStopActiveGroup = 18,
+    kSweepLoadGarrison = 19,
+    kSweepLoadTransport = 20
 };
 
 struct SweepCase {
@@ -1311,6 +1490,18 @@ void RunBody(const SweepCase& inCase, EEPlayer* inPlayer, void* inSelection, boo
         else
             OriginalStopActiveGroup(inSelection);
         break;
+    case kSweepLoadGarrison:
+        if (inRust)
+            ee_units_load_garrison(inPlayer, inSelection, (uint32_t)inCase.mTarget);
+        else
+            OriginalLoadGarrison(inPlayer, inSelection, inCase.mTarget);
+        break;
+    case kSweepLoadTransport:   // mCaster: the passenger id
+        if (inRust)
+            ee_units_load_transport(inPlayer, inSelection, (uint32_t)inCase.mTarget, inCase.mCaster);
+        else
+            OriginalLoadTransport(inPlayer, inSelection, inCase.mTarget, inCase.mCaster);
+        break;
     }
 }
 
@@ -1354,6 +1545,8 @@ void RunCase(const SweepCase& inCase, unsigned long inPlayerIndex, EEPlayer* inP
         theRecord.I32(inCase.mCaster);
         theRecord.U32(inCase.mQueued ? 1u : 0u);
     }
+    if (inCase.mBody == kSweepLoadTransport)
+        theRecord.I32(inCase.mCaster);
     theRecord.U32((unsigned int)inUnits.size());
     for (size_t i = 0; i < inUnits.size(); i++)
         theRecord.U32(IDOf(inUnits[i]));
@@ -1769,6 +1962,38 @@ void EEGroupCommandSweep()
             RunCase(theCase, p, thePlayer, theUnits);
             theCase.mBody = kSweepStopActiveGroup;
             RunCase(theCase, p, thePlayer, theUnits);
+            // Load Garrison (game messages lane, round 2): into its first garrison, its first unit, the next player's
+            // first unit and an id no unit has
+            std::vector<int32_t> theCarriers;
+            if (theFound[3] != -1)
+                theCarriers.push_back(theFound[3]);
+            if (!theOwn.empty())
+                theCarriers.push_back((int32_t)IDOf(theOwn[0]));
+            if (theTargets.size() > 2)
+                theCarriers.push_back(theTargets[2]);
+            theCarriers.push_back(0x7e000001);
+            theCase.mBody = kSweepLoadGarrison;
+            for (size_t t = 0; t < theCarriers.size(); t++) {
+                theCase.mTarget = theCarriers[t];
+                RunCase(theCase, p, thePlayer, theUnits);
+            }
+            // Load Transport: onto its first transport and the carriers above, with the selection, its last unit as
+            // the passenger and a passenger id no unit has
+            int32_t theTransport = -1;
+            for (size_t k = 0; k < theOwn.size() && theTransport == -1; k++)
+                if (theOwn[k]->mUnitClass.Get() != NULL && theOwn[k]->mUnitClass->IsTransport())
+                    theTransport = (int32_t)IDOf(theOwn[k]);
+            if (theTransport != -1)
+                theCarriers.insert(theCarriers.begin(), theTransport);
+            int32_t thePassengers[3] = {-1, theOwn.empty() ? -1 : (int32_t)IDOf(theOwn.back()), 0x7e000001};
+            theCase.mBody = kSweepLoadTransport;
+            for (size_t t = 0; t < theCarriers.size(); t++)
+                for (int k = 0; k < 3; k++) {
+                    theCase.mTarget = theCarriers[t];
+                    theCase.mCaster = thePassengers[k];
+                    RunCase(theCase, p, thePlayer, theUnits);
+                }
+            theCase.mCaster = 0;
         }
     }
 }

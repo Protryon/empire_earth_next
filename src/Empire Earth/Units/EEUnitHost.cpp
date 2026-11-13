@@ -55,6 +55,7 @@
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitHost.h"
 #include "ee/EEUnitKind.h"
+#include "ee/EEUCTransport.h"
 #include "rust/ee_units.h"
 
 static EEUnit* UnitOf(uint32_t inID)
@@ -162,12 +163,22 @@ enum DryEvent {
     kDryRefreshGoals,     // unit
     kDryClearBuildTargets,  // unit
     kDryActionChanged,    // unit
-    kDryHalt              // unit
+    kDryHalt,             // unit
+    kDryLoadGoal,         // unit, kind, found
+    kDryAddLoadUnits,     // ctor, the count, the ids
+    kDryNewLoad,          // kind, carrier, flag, the count, the ids
+    kDryLoadFields,       // ctor, valid, the tile x, y
+    kDryEvent,            // player id, x, y, code
+    kDryAddUnit,          // tag, unit
+    kDryFilter            // transport, the count kept, the ids, the count rejected, the ids
 };
 
 // the dry goals the host makes without a goal spec: a unit's active goal's clone, the garrison's load goal's clone
 const uint32_t kDryCtorGoalState = 0x101;
 const uint32_t kDryCtorGarrisonLoad = 0x102;
+// a carrier's load goal (the real one, read through) and a load goal the dry host did not make
+const uint32_t kDryCtorOldLoad = 0x103;
+const uint32_t kDryCtorNewLoad = 0x104;
 
 // the dry host's building (EEMakeBuilding makes none) and its two dry farms (ids no unit has)
 const uint32_t kDryBuildingID = 0x7e000002u;
@@ -181,6 +192,8 @@ struct DryGroup {
 struct DryGoal {
     uint32_t mCtor;
     uint8_t mKind;
+    uint32_t mUnit;        // a load goal's carrier
+    EEUnitGoal* mReal;     // a carrier's real load goal (its reads are made on it)
 };
 
 struct DryState {
@@ -1514,6 +1527,8 @@ extern "C" uint8_t ee_units_host_object_record(uint32_t inUnit, EeUnitRecord* ou
     outRecord->tile_x = (int64_t)theUnit->GetTileX();
     outRecord->tile_y = (int64_t)theUnit->GetTileY();
     outRecord->goal_kind = -1;
+    outRecord->domains = theClass != NULL ? (uint8_t)theClass->mDomains : 0;   // (the load orders' formation slots)
+    outRecord->land_building = theClass != NULL && theClass->IsLandBuilding() ? 1 : 0;
     return 1;
 }
 
@@ -1607,4 +1622,140 @@ extern "C" void* ee_units_host_garrison_rally_load(uint32_t inGarrison)
         theGarrison->StartAction(kActionPickedUpLoadableUnits);
     theGarrison->mUnitClass->ActionChanged(theGarrison);
     return static_cast<EEUnitGoal*>(theLoad->Clone());
+}
+
+// ---- EEMLoadGarrison's and EEMLoadTransport's calls (boarding.rs) ----
+
+// a read (the dry host's too)
+extern "C" uint8_t ee_units_host_unit_load_traits(uint32_t inUnit)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    return (theUnit->mUnitClass->mCanGarrison ? EE_UNITS_LOAD_CAN_GARRISON : 0) | (theUnit->mUnitClass->IsTransport() ? EE_UNITS_LOAD_TRANSPORT : 0)
+        | (theUnit->mStats->mMaxVelocity > 0.0f ? EE_UNITS_LOAD_MOVES : 0);
+}
+
+// a garrison's mGoalState, a transport's GetLoadGoal(), when it is of the kind; the dry host wraps the real goal
+extern "C" void* ee_units_host_unit_load_goal(uint32_t inUnit, uint8_t inKind)
+{
+    EEComplexUnit* theUnit = ComplexOf(inUnit);
+    EEUnitGoal* theGoal = inKind == kGoalLoadGarrison ? theUnit->mGoalState.Get() : theUnit->GetLoadGoal();
+    if (theGoal != NULL && theGoal->mKind != inKind)
+        theGoal = NULL;
+    if (sDry == NULL)
+        return theGoal;
+    Log({kDryLoadGoal, inUnit, inKind, theGoal != NULL ? 1u : 0u});
+    if (theGoal == NULL)
+        return NULL;
+    DryGoal* theDry = new DryGoal();
+    theDry->mCtor = kDryCtorOldLoad;
+    theDry->mKind = inKind;
+    theDry->mUnit = inUnit;
+    theDry->mReal = theGoal;
+    sDry->mGoals.push_back(theDry);
+    return theDry;
+}
+
+static std::vector<EEComplexUnit*> ComplexUnits(const uint32_t* inIDs, size_t inCount)
+{
+    std::vector<EEComplexUnit*> theUnits;
+    for (size_t i = 0; i < inCount; i++)
+        theUnits.push_back(ComplexOf(inIDs[i]));
+    return theUnits;
+}
+
+static void LogIDs(const uint32_t* inIDs, size_t inCount)
+{
+    sDry->mLog.push_back((uint32_t)inCount);
+    sDry->mLog.insert(sDry->mLog.end(), inIDs, inIDs + inCount);
+}
+
+extern "C" void ee_units_host_load_goal_add_units(void* inGoal, const uint32_t* inIDs, size_t inCount)
+{
+    if (sDry != NULL) {
+        Log({kDryAddLoadUnits, static_cast<DryGoal*>(inGoal)->mCtor});
+        LogIDs(inIDs, inCount);
+        return;
+    }
+    static_cast<EEUGRust*>(static_cast<EEUnitGoal*>(inGoal))->AddLoadUnits(ComplexUnits(inIDs, inCount));
+}
+
+// EEUGRust::NewLoad (the ids come sorted, none twice): the goal is the carrier's once it takes it
+extern "C" void* ee_units_host_load_goal_new(uint8_t inKind, uint32_t inCarrier, const uint32_t* inIDs, size_t inCount, uint8_t inFlag)
+{
+    if (sDry != NULL) {
+        Log({kDryNewLoad, inKind, inCarrier, inFlag});
+        LogIDs(inIDs, inCount);
+        DryGoal* theGoal = new DryGoal();
+        theGoal->mCtor = kDryCtorNewLoad;
+        theGoal->mKind = inKind;
+        theGoal->mUnit = inCarrier;
+        sDry->mGoals.push_back(theGoal);
+        return theGoal;
+    }
+    std::vector<EEComplexUnit*> theUnits = ComplexUnits(inIDs, inCount);
+    return static_cast<EEUnitGoal*>(EEUGRust::NewLoad(inKind, ComplexOf(inCarrier), theUnits, inFlag != 0));
+}
+
+// IsLoadGarrisonValid, GetLoadUnitTile; a load goal the dry host did not make is valid for an even carrier id and
+// its tile is the carrier's
+extern "C" uint8_t ee_units_host_load_goal_fields(void* inGoal, int64_t* outX, int64_t* outY)
+{
+    EEUnitGoal* theReal = sDry != NULL ? static_cast<DryGoal*>(inGoal)->mReal : static_cast<EEUnitGoal*>(inGoal);
+    bool theValid;
+    if (theReal != NULL) {
+        EEUGRust* theGoal = static_cast<EEUGRust*>(theReal);
+        U2DPoint<long> theTile = theGoal->GetLoadUnitTile();
+        theValid = theGoal->IsLoadGarrisonValid();
+        *outX = theTile.GetX();
+        *outY = theTile.GetY();
+    } else {
+        DryGoal* theDry = static_cast<DryGoal*>(inGoal);
+        EEUnit* theCarrier = UnitOf(theDry->mUnit);
+        theValid = (theDry->mUnit & 1) == 0;
+        *outX = theCarrier->GetTileX();
+        *outY = theCarrier->GetTileY();
+    }
+    if (sDry != NULL)
+        Log({kDryLoadFields, static_cast<DryGoal*>(inGoal)->mCtor, theValid ? 1u : 0u, (uint32_t)*outX, (uint32_t)*outY});
+    return theValid ? 1 : 0;
+}
+
+extern "C" void ee_units_host_player_event(void* inPlayer, int64_t inX, int64_t inY, int32_t inCode)
+{
+    if (sDry != NULL) {
+        Log({kDryEvent, PlayerID(inPlayer), (uint32_t)inX, (uint32_t)inY, (uint32_t)inCode});
+        return;
+    }
+    EEPlayer* thePlayer = static_cast<EEPlayer*>(inPlayer);
+    U2DPoint<long> theTile((long)inX, (long)inY);
+    thePlayer->mEvents.AddEvent(theTile, 2, thePlayer, inCode, false);
+}
+
+extern "C" void ee_units_host_group_add_unit(void* inGroup, uint32_t inUnit)
+{
+    if (sDry != NULL) {
+        Log({kDryAddUnit, Dry(inGroup)->mTag, inUnit});
+        Dry(inGroup)->mUnits.push_back(ComplexOf(inUnit));
+        return;
+    }
+    ActiveOf(inGroup)->AddMember(ComplexOf(inUnit), true);
+}
+
+// EEUCTransport::FilterLoadable (a read: the dry host runs it too)
+extern "C" size_t ee_units_host_transport_filter(uint32_t inTransport, uint32_t* ioIDs, size_t inCount, uint32_t* outRejected)
+{
+    EEComplexUnit* theTransport = ComplexOf(inTransport);
+    std::vector<EEComplexUnit*> theUnits = ComplexUnits(ioIDs, inCount);
+    std::vector<EEComplexUnit*> theRejected;
+    EEUnitClassCast<EEUCTransport>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
+    for (size_t i = 0; i < theUnits.size(); i++)
+        ioIDs[i] = static_cast<uint32_t>(theUnits[i]->mUnitID);
+    for (size_t i = 0; i < theRejected.size(); i++)
+        outRejected[i] = static_cast<uint32_t>(theRejected[i]->mUnitID);
+    if (sDry != NULL) {
+        Log({kDryFilter, inTransport});
+        LogIDs(ioIDs, theUnits.size());
+        LogIDs(outRejected, theRejected.size());
+    }
+    return theUnits.size();
 }

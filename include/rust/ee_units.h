@@ -363,6 +363,11 @@ constexpr static const uint32_t EE_UNITS_ACTION_IDLE = 5000;
 /// `kGoalGather` (`EEUnitGoal::mKind` of `EEUGGather`).
 constexpr static const int32_t EE_UNITS_GOAL_GATHER = 6;
 
+/// `kGoalLoadTransport`, `kGoalLoadGarrison` (ee/EEUnitGoal.h)
+constexpr static const uint8_t GOAL_LOAD_TRANSPORT = 7;
+
+constexpr static const uint8_t GOAL_LOAD_GARRISON = 12;
+
 /// `kGoalBuildRepair`
 constexpr static const uint8_t GOAL_BUILD_REPAIR = 4;
 
@@ -488,6 +493,13 @@ constexpr static const uint32_t EE_GOAL_CTOR_BUILD_REPAIR = 13;
 
 /// "no unit" in a spec (`EEUnitHandle::kNone`)
 constexpr static const uint32_t EE_UNIT_ID_NONE = 4294967295;
+
+/// `Host::unit_load_traits`' bits
+constexpr static const uint8_t EE_UNITS_LOAD_CAN_GARRISON = 1;
+
+constexpr static const uint8_t EE_UNITS_LOAD_TRANSPORT = 2;
+
+constexpr static const uint8_t EE_UNITS_LOAD_MOVES = 4;
 
 /// The improvement kinds (ee/EEImprovementIDs.h): 0 area effect, 1 attack, 2..7 the armours, 8 flight time or power,
 /// 9 hit points, 10 leadership, 11 range, 12 repair, 14 speed, 15 transport; 13 unused.
@@ -2443,6 +2455,19 @@ void ee_units_clear_airport_commands(void *selection);
 /// `EEMStopActiveGroup::Execute`'s body (`rally::stop_active_group`) for the sender's selection (null: none).
 void ee_units_stop_active_group(void *selection);
 
+/// `EEMLoadGarrison::Execute`'s body (`boarding::load_garrison`) for the sender, its selection (null: none) and the
+/// garrison's id.
+void ee_units_load_garrison(void *player,
+                            void *selection,
+                            uint32_t garrison);
+
+/// `EEMLoadTransport::Execute`'s body (`boarding::load_transport`) for the sender, its selection (null: none), the
+/// transport's id and the passenger's (-1: the selection).
+void ee_units_load_transport(void *player,
+                             void *selection,
+                             uint32_t transport,
+                             int32_t passenger);
+
 /// `EEMCastCalamity::Execute`'s body (`commands::cast_calamity`) for the sender, its selection, the caster id, the
 /// target id (-1: none), the tile and the technology.
 void ee_units_cast_calamity(void *player,
@@ -2751,6 +2776,29 @@ extern void ee_units_host_unit_clear_build_targets(uint32_t unit);
 extern void ee_units_host_unit_action_changed(uint32_t unit);
 
 extern void ee_units_host_unit_halt(uint32_t unit);
+
+extern uint8_t ee_units_host_unit_load_traits(uint32_t unit);
+
+extern void *ee_units_host_unit_load_goal(uint32_t unit, uint8_t kind);
+
+extern void ee_units_host_load_goal_add_units(void *goal, const uint32_t *units, size_t count);
+
+extern void *ee_units_host_load_goal_new(uint8_t kind,
+                                         uint32_t carrier,
+                                         const uint32_t *units,
+                                         size_t count,
+                                         uint8_t flag);
+
+extern uint8_t ee_units_host_load_goal_fields(void *goal, int64_t *x, int64_t *y);
+
+extern void ee_units_host_player_event(void *player, int64_t x, int64_t y, int32_t code);
+
+extern void ee_units_host_group_add_unit(void *group, uint32_t unit);
+
+extern size_t ee_units_host_transport_filter(uint32_t transport,
+                                             uint32_t *units,
+                                             size_t count,
+                                             uint32_t *rejected);
 
 /// `CanUpgrade`
 ///

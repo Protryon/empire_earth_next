@@ -353,7 +353,36 @@ pub trait Host {
     fn unit_action_changed(&mut self, unit: u32);
     /// `unit->Halt()`
     fn unit_halt(&mut self, unit: u32);
+    /// The class flags the load orders read on the object: `EE_UNITS_LOAD_CAN_GARRISON` (`mUnitClass->mCanGarrison`),
+    /// `EE_UNITS_LOAD_TRANSPORT` (`mUnitClass->IsTransport()`), `EE_UNITS_LOAD_MOVES` (`mStats->mMaxVelocity > 0.0f`)
+    fn unit_load_traits(&mut self, unit: u32) -> u8;
+    /// The carrier's load goal of the kind, a goal the carrier owns (null: none): a garrison's `mGoalState`, a
+    /// transport's `GetLoadGoal()`, when its `mKind` is `kind`
+    fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef;
+    /// `goal->AddLoadUnits(units)` on a load goal
+    fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]);
+    /// `EEUGRust::NewLoad(kind, carrier, units, flag)` (the units sorted by id, no id twice): a goal the host keeps
+    /// (the carrier takes it through `unit_take_load_goal`; an invalid garrison goal is never deleted, as the original)
+    fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef;
+    /// A load goal's `IsLoadGarrisonValid()` and `GetLoadUnitTile()`
+    fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64);
+    /// `goal->Clone()` of a load goal
+    fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle>;
+    /// `unit->SetGoal(goal, 0, 0)`: the carrier takes the new load goal
+    fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef);
+    /// `player->mEvents.AddEvent(U2DPoint<long>(x, y), 2, player, code, false)`
+    fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32);
+    /// `group->AddMember(unit, true)` (a complex unit)
+    fn group_add_unit(&mut self, group: HostRef, unit: u32);
+    /// `EEUCTransport::FilterLoadable(&units, transport, &rejected)`: the units the transport cannot take leave
+    /// `units` (in order) for `rejected`
+    fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>);
 }
+
+/// `Host::unit_load_traits`' bits
+pub const EE_UNITS_LOAD_CAN_GARRISON: u8 = 1;
+pub const EE_UNITS_LOAD_TRANSPORT: u8 = 2;
+pub const EE_UNITS_LOAD_MOVES: u8 = 4;
 
 /// The game's host (C++). Absent from a test binary.
 #[cfg(not(test))]
@@ -487,6 +516,20 @@ pub mod game {
         fn ee_units_host_unit_clear_build_targets(unit: u32);
         fn ee_units_host_unit_action_changed(unit: u32);
         fn ee_units_host_unit_halt(unit: u32);
+        fn ee_units_host_unit_load_traits(unit: u32) -> u8;
+        fn ee_units_host_unit_load_goal(unit: u32, kind: u8) -> *mut c_void;
+        fn ee_units_host_load_goal_add_units(goal: *mut c_void, units: *const u32, count: usize);
+        fn ee_units_host_load_goal_new(
+            kind: u8,
+            carrier: u32,
+            units: *const u32,
+            count: usize,
+            flag: u8,
+        ) -> *mut c_void;
+        fn ee_units_host_load_goal_fields(goal: *mut c_void, x: *mut i64, y: *mut i64) -> u8;
+        fn ee_units_host_player_event(player: *mut c_void, x: i64, y: i64, code: i32);
+        fn ee_units_host_group_add_unit(group: *mut c_void, unit: u32);
+        fn ee_units_host_transport_filter(transport: u32, units: *mut u32, count: usize, rejected: *mut u32) -> usize;
     }
 
     /// A list the host fills: one call (`capacity` 0) for the count, a second for the ids. The host answers the
@@ -869,6 +912,47 @@ pub mod game {
         fn unit_halt(&mut self, unit: u32) {
             unsafe { ee_units_host_unit_halt(unit) }
         }
+        fn unit_load_traits(&mut self, unit: u32) -> u8 {
+            unsafe { ee_units_host_unit_load_traits(unit) }
+        }
+        fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef {
+            HostRef(unsafe { ee_units_host_unit_load_goal(unit, kind) })
+        }
+        fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]) {
+            // SAFETY: the host reads `count` ids for the call
+            unsafe { ee_units_host_load_goal_add_units(goal.0, units.as_ptr(), units.len()) }
+        }
+        fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef {
+            // SAFETY: as load_goal_add_units
+            HostRef(unsafe { ee_units_host_load_goal_new(kind, carrier, units.as_ptr(), units.len(), flag as u8) })
+        }
+        fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64) {
+            let (mut x, mut y) = (0i64, 0i64);
+            // SAFETY: the two values are written for the call
+            let valid = unsafe { ee_units_host_load_goal_fields(goal.0, &mut x, &mut y) };
+            (valid != 0, x, y)
+        }
+        fn load_goal_clone(&mut self, goal: HostRef) -> Option<GoalHandle> {
+            GoalHandle::from_ptr(unsafe { ee_units_host_goal_clone(goal.0) })
+        }
+        fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef) {
+            unsafe { ee_units_host_unit_set_goal(unit, goal.0) }
+        }
+        fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32) {
+            unsafe { ee_units_host_player_event(player.0, x, y, code) }
+        }
+        fn group_add_unit(&mut self, group: HostRef, unit: u32) {
+            unsafe { ee_units_host_group_add_unit(group.0, unit) }
+        }
+        fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
+            let mut out = vec![0u32; units.len()];
+            // SAFETY: the host keeps at most `count` ids in `units` and writes the others (at most `count`) to `out`
+            let kept =
+                unsafe { ee_units_host_transport_filter(transport, units.as_mut_ptr(), units.len(), out.as_mut_ptr()) };
+            let gone = units.len() - kept.min(units.len());
+            units.truncate(kept);
+            rejected.extend_from_slice(&out[..gone]);
+        }
     }
 }
 
@@ -985,6 +1069,14 @@ pub(crate) mod tests {
         ClearBuildTargets(u32),
         ActionChanged(u32),
         Halt(u32),
+        /// the load orders' calls (goals by address)
+        LoadGoal(u32, u8),
+        AddLoadUnits(usize, Vec<u32>),
+        NewLoad(u8, u32, Vec<u32>, bool),
+        TakeLoadGoal(u32, usize),
+        Event(HostRef, i64, i64, i32),
+        AddUnit(HostRef, u32),
+        Filter(u32, Vec<u32>),
     }
 
     /// A host over plain values: groups as id lists (new ones at 0x1001, 0x1002, ...), goals as boxed kinds; Fill
@@ -1062,6 +1154,13 @@ pub(crate) mod tests {
         /// the units read on the objects (absent from the store); the classes' air traffic types
         pub objects: BTreeMap<u32, EeUnitRecord>,
         pub air_traffic: BTreeMap<u32, i64>,
+        /// the load orders: the units' class flags; the carriers' load goals (by address); the load goals' fields by
+        /// address (new ones at 0x9001, ...: `new_load` gives their fields); the units a transport rejects
+        pub load_traits: BTreeMap<u32, u8>,
+        pub load_goals: BTreeMap<u32, usize>,
+        pub load_fields: BTreeMap<usize, (bool, i64, i64)>,
+        pub new_load: (bool, i64, i64),
+        pub unloadable: Vec<u32>,
     }
 
     impl Host for MockHost {
@@ -1533,6 +1632,46 @@ pub(crate) mod tests {
         }
         fn unit_halt(&mut self, unit: u32) {
             self.calls.push(Call::Halt(unit));
+        }
+        fn unit_load_traits(&mut self, unit: u32) -> u8 {
+            self.load_traits.get(&unit).copied().unwrap_or(0)
+        }
+        fn unit_load_goal(&mut self, unit: u32, kind: u8) -> HostRef {
+            self.calls.push(Call::LoadGoal(unit, kind));
+            HostRef(self.load_goals.get(&unit).copied().unwrap_or(0) as *mut c_void)
+        }
+        fn load_goal_add_units(&mut self, goal: HostRef, units: &[u32]) {
+            self.calls.push(Call::AddLoadUnits(goal.0 as usize, units.to_vec()));
+        }
+        fn load_goal_new(&mut self, kind: u8, carrier: u32, units: &[u32], flag: bool) -> HostRef {
+            self.calls.push(Call::NewLoad(kind, carrier, units.to_vec(), flag));
+            let at = 0x9001 + self.load_fields.len();
+            self.load_fields.insert(at, self.new_load);
+            HostRef(at as *mut c_void)
+        }
+        fn load_goal_fields(&mut self, goal: HostRef) -> (bool, i64, i64) {
+            self.load_fields.get(&(goal.0 as usize)).copied().unwrap_or((false, 0, 0))
+        }
+        fn load_goal_clone(&mut self, _goal: HostRef) -> Option<GoalHandle> {
+            self.calls.push(Call::Clone(7));
+            self.live += 1;
+            GoalHandle::from_ptr(Box::into_raw(Box::new(7u8)) as *mut c_void)
+        }
+        fn unit_take_load_goal(&mut self, unit: u32, goal: HostRef) {
+            self.calls.push(Call::TakeLoadGoal(unit, goal.0 as usize));
+        }
+        fn player_event(&mut self, player: HostRef, x: i64, y: i64, code: i32) {
+            self.calls.push(Call::Event(player, x, y, code));
+        }
+        fn group_add_unit(&mut self, group: HostRef, unit: u32) {
+            self.calls.push(Call::AddUnit(group, unit));
+            self.groups.entry(group.0 as usize).or_default().push(unit);
+        }
+        fn transport_filter(&mut self, transport: u32, units: &mut Vec<u32>, rejected: &mut Vec<u32>) {
+            self.calls.push(Call::Filter(transport, units.clone()));
+            let gone: Vec<u32> = units.iter().copied().filter(|u| self.unloadable.contains(u)).collect();
+            units.retain(|u| !gone.contains(u));
+            rejected.extend(gone);
         }
     }
 

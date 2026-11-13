@@ -22,6 +22,7 @@
 
 pub mod actions;
 pub mod ai;
+pub mod boarding;
 pub mod build;
 pub mod calamity;
 pub mod commands;
