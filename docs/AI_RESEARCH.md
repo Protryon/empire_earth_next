@@ -4735,6 +4735,36 @@ one a game on land: 30 walls and 15 gates in 31 balanced games. Balanced 32 seed
 Determinism: seeds 2 and 5, and seed 12 (4 walls), 90 minutes, --repeat 2: identical. 0 script errors.
 Both builds 0/0, eedata check PASS. Next: the late-epoch start benches (sim_bench `--start-epoch`), where walls and
 towers come up sooner and can be compared with the C++'s.
+### 8.69 Porting everything, 2b: the late-start benches, and the C++'s walls after all (2026-11-13, EE-SIM)
+
+**`sim_bench.py --start-epoch`.** It sets the lobby's starting epoch (control 183) by its line, for example
+`--start-epoch "Copper Age"`, so that late-epoch play comes up in short games. A Copper start (8 seeds, 45 minutes)
+runs cleanly: both sides start in Copper, and the port won 4-0 with 4 close.
+
+**The C++'s walls: a correction.** §8.68 said that the C++ built no wall in 40 bench games. That was wrong: the count
+looked for wall pieces among the build manager's `build.start` lines. The wall manager orders its walls with
+EEMBuildWall, which lays the pieces without that line. A temporary trace (reverted) counted the pieces each wall
+order laid (EEPlanWall) in 8 balanced 90-minute games:
+
+| | wall orders | pieces laid | games with walls |
+|---|---|---|---|
+| the C++ | 62 | 142 | 5 of 8 |
+| the port | 8 | 68 | 2 of 8 |
+
+The C++'s planner is not broken. Its walls are short (2.3 pieces an order), and it orders them every 30 s.
+
+**Why the port orders fewer.** The enemy's centre was the first suspect: the port knew only the enemy towns its view
+carried. It now also takes a remembered unit of the player (ai.memory), and queues its plans again whenever the
+queue is empty (the C++ queues them at the start, every enemy known). The count stayed at 7 orders in 8 games. A
+count of the planner's own steps (4 games, temporary) shows the real cause:
+- of 450 steps across the way, 404 were blocked: a land building within 2 tiles of the line;
+- only 5 open stretches were found, and 1 was long and level; none of them crossed the way clear of the resource
+  centres.
+
+The port's way is ai.route's: straight lines between 8-tile cells, through towns and by buildings. The C++'s is the
+path manager's tile path, refined with the wall pather, which keeps clear of buildings, so its lines across the way
+are seldom blocked. Next in 2b: a generic helper for that tile path (the path manager's FindPath with the wall
+pather, between two tiles), so that the port's planner looks across the same way as the C++'s.
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
