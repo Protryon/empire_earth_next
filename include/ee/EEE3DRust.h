@@ -5,6 +5,7 @@
 // 0xf923f..), all deleted. Requires ee/EEEffect3D.h and rust/ee_gfx.h.
 #ifndef EE_EEE3DRUST_H
 #define EE_EEE3DRUST_H
+#include "rust/ee_gfx.h"
 
 class EEGraphicObject;
 
