@@ -58,7 +58,7 @@
 #include "ee/EECPPersonnel.h"
 #include "ee/EEWheel.h"
 #include "ee/EECPIntelligence.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNextUnits.h"
@@ -477,10 +477,10 @@ void EECPResourceManager::AssignGatherers()
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theUnit->GetLoadGoal());
+        EEUGRust* theAttack = EEAttackUnitCast(theUnit->GetLoadGoal());
         EEUGRust* theGather = EEGatherGoalCast(theUnit->GetLoadGoal());
         if ((theGather != NULL && theGather->GetGatherResource() != NULL)
-            || (theAttack != NULL && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
+            || (theAttack != NULL && theAttack->GetAttackTarget()->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
             theMoved.push_back(theUnit);
     }
     unsigned long i;
@@ -2953,7 +2953,7 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
             if (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen)
                 inManager->AddIdleGatherer(theUnit);   // off its resource's list: reassigned once the fight is over
             theUnit->ClearGoalQueue(0);
-            theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTarget, false, false), 0, 0);
+            theUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit, theTarget, false, false), 0, 0);
             theUnit->StartAction(kActionPrepareToMove);
             theUnit->GetUnitClass()->ActionChanged(theUnit);
             theUnit->Dereference();
@@ -3145,7 +3145,7 @@ void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigne
     for (unsigned long k = 0; k < theNear.size() && theSent < kDefenders; k++, theSent++) {
         EEComplexUnit* theUnit = theNear[k].second;
         theUnit->ClearGoalQueue(0);
-        theUnit->SetGoal(new EEUGAttackUnit(theUnit, theRaider, false, false), 0, 0);
+        theUnit->SetGoal(EEUGRust::NewAttackUnit(theUnit, theRaider, false, false), 0, 0);
         theUnit->StartAction(kActionPrepareToMove);
         theUnit->GetUnitClass()->ActionChanged(theUnit);
     }

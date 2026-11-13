@@ -25,7 +25,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGRust.h"
@@ -120,14 +120,14 @@ void EEPMNaval::Step1(EEComplexUnit* inUnit)
     GE3DPoint theTarget;
     GEVector theForward;
     GEVector theMove;
-    EEUGAttackUnit* theAttack = EEGoalCast<EEUGAttackUnit>(inUnit->GetGoal());
+    EEUGRust* theAttack = EEAttackUnitCast(inUnit->GetGoal());
     EEUGHealUnit* theHeal = EEGoalCast<EEUGHealUnit>(inUnit->GetGoal());
     float theBrake = inUnit->GetAcceleration();
     float theSpeed = inUnit->GetVelocity();
     float theStep = gPhysics->mTickSeconds;
-    if (theAttack && theAttack->mTarget->mComplexUnit) {
-        theTarget.SetX(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetX());
-        theTarget.SetY(theAttack->mTarget->mComplexUnit->mPhysicalModel.GetLocation().GetY());
+    if (theAttack && theAttack->GetAttackTarget()->mComplexUnit) {
+        theTarget.SetX(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetX());
+        theTarget.SetY(theAttack->GetAttackTarget()->mComplexUnit->mPhysicalModel.GetLocation().GetY());
     } else if (theHeal) {
         theTarget.SetX(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetX());
         theTarget.SetY(theHeal->GetTarget()->mPhysicalModel.GetLocation().GetY());

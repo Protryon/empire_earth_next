@@ -1216,6 +1216,8 @@ pub const EE_UNITS_GOAL_REPLACE_UNIT: i32 = 17;
 pub const EE_UNITS_GOAL_MAX_PATH_ATTEMPTS: i32 = 18;
 /// `a`: the unit; `Suits` (true but for the unload)
 pub const EE_UNITS_GOAL_SUITS: i32 = 19;
+/// `a`: the new path attempt count (`SetPathAttempts`, after the base goal's; nothing more for these kinds)
+pub const EE_UNITS_GOAL_SET_PATH_ATTEMPTS: i32 = 22;
 /// `a`: the unit; `AddCreatedUnit` and `Abandon` (the base goal's do nothing)
 pub const EE_UNITS_GOAL_ADD_CREATED_UNIT: i32 = 20;
 pub const EE_UNITS_GOAL_ABANDON: i32 = 21;
@@ -1306,6 +1308,22 @@ pub unsafe extern "C" fn ee_units_rust_goal(
     io: *mut EeUnitsGoalIo,
     host: *const EeUnitsGoalHost,
 ) -> i64 {
+    if !matches!(
+        kind,
+        GOAL_PATROL
+            | GOAL_CAST_CALAMITY
+            | GOAL_EXPLORE
+            | GOAL_UNLOAD_TRANSPORT
+            | GOAL_LOAD_TRANSPORT
+            | GOAL_LOAD_GARRISON
+            | GOAL_BUILD_REPAIR
+            | GOAL_GATHER
+    ) {
+        // another crate's kinds (the combat lane's attack goals: ee_combat), through the same host
+        let other = *OTHER_KINDS.lock().unwrap_or_else(|e| e.into_inner());
+        // SAFETY: the caller's contract, passed on
+        return other.map_or(0, |f| unsafe { f(op, kind, goal, a, b, io.cast(), host.cast()) });
+    }
     // SAFETY: the caller's contract
     let (io, table) = unsafe { (&mut *io, &*host) };
     let mut h = OpHost(table);
@@ -1332,6 +1350,18 @@ pub unsafe extern "C" fn ee_units_rust_goal(
         GOAL_GATHER => crate::gather::body(op, goal, a, b, io, &mut h),
         _ => 0,
     }
+}
+
+/// The bodies of the goal kinds other crates own: `f(op, kind, goal, a, b, io, host)` with the `EeUnitsGoalIo` and
+/// `EeUnitsGoalHost` pointers (ee_combat's goal_objects.rs mirrors their layout). ee_rust registers them at start-up
+/// (ee_units cannot depend on ee_combat, whose bridges are ee_rust's).
+#[allow(clippy::type_complexity)]
+static OTHER_KINDS: std::sync::Mutex<Option<unsafe fn(i32, u8, u64, u64, u64, *mut c_void, *const c_void) -> i64>> =
+    std::sync::Mutex::new(None);
+
+/// Registers the other crates' goal bodies (see `OTHER_KINDS`).
+pub fn register_other_goal_kinds(f: unsafe fn(i32, u8, u64, u64, u64, *mut c_void, *const c_void) -> i64) {
+    *OTHER_KINDS.lock().unwrap_or_else(|e| e.into_inner()) = Some(f);
 }
 
 /// `%08lx` of an `unsigned long`

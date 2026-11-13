@@ -60,7 +60,6 @@
 #include "ee/EEUCAirAnimal.h"
 #include "ee/EEAirTrafficControl.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUnitKind.h"
 #include "ee/EEUnitStore.h"
 #include "ee/EEUnitUpdate.h"
@@ -609,11 +608,11 @@ int64_t EEUpdateAct(void* inContext, int32_t inCode, int64_t inA, int64_t inB)
         theUnit->mHasShiftQueuedBuild = false;
         break;
     case EE_UNITS_ACT_RETARGET_NEAREST_BUILDING: {
-        EEUGAttackUnit* theGoal = EEGoalCast<EEUGAttackUnit>(theUnit->GetGoal());
-        if (theGoal != NULL && theGoal->mTarget != NULL) {
-            EEUnit* theTarget = static_cast<EEUCBuilding*>(theClass)->FindNearestTargetBuilding(theGoal->mTarget);
+        EEUGRust* theGoal = EEAttackUnitCast(theUnit->GetGoal());
+        if (theGoal != NULL && theGoal->GetAttackTarget() != NULL) {
+            EEUnit* theTarget = static_cast<EEUCBuilding*>(theClass)->FindNearestTargetBuilding(theGoal->GetAttackTarget());
             if (theTarget != NULL)
-                theGoal->SetTarget(theTarget);
+                theGoal->SetAttackTarget(theTarget);
         }
         break;
     }

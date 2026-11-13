@@ -19,7 +19,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUCProjectile.h"
 #include "ee/EEUCLandable.h"
 #include "ee/EEUCBomb.h"
@@ -60,7 +60,7 @@ void EEUCBomb::Update(EEComplexUnit* inUnit)
 {
     static GEColor sColor(0.9f, 0.0f, 0.2f);
     if (inUnit->mUnitClass->mUnitType == kUnitTypeBombForSASExplosiveExpert && inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit) {
-        EEUnit* theUnit = static_cast<EEUGAttackUnit*>(inUnit->mGoalState)->mTarget;
+        EEUnit* theUnit = static_cast<EEUGRust*>(inUnit->mGoalState)->GetAttackTarget();
         EEComplexUnit* theTarget = EEUnitCast<EEComplexUnit>(theUnit);
         if (theTarget != NULL) {
             unsigned long theTime = inUnit->mFlightTime % 1000;

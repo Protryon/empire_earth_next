@@ -135,8 +135,6 @@
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGAttackGround.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGHealUnit.h"
@@ -267,10 +265,10 @@ std::string GoalText(EEUnitGoal* inGoal)
         return "location:" + Point(static_cast<EEUGLocation*>(inGoal)->GetLocation().GetX(),
                                    static_cast<EEUGLocation*>(inGoal)->GetLocation().GetY());
     case kGoalAttackUnit:
-        return "attack:" + Number(IDOf(static_cast<EEUGAttackUnit*>(inGoal)->mTarget));
+        return "attack:" + Number(IDOf(static_cast<EEUGRust*>(inGoal)->GetAttackTarget()));
     case kGoalAttackGround:
-        return "ground:" + Point(static_cast<EEUGAttackGround*>(inGoal)->mTarget.GetX(),
-                                 static_cast<EEUGAttackGround*>(inGoal)->mTarget.GetY());
+        return "ground:" + Point(static_cast<EEUGRust*>(inGoal)->GetGroundTarget().GetX(),
+                                 static_cast<EEUGRust*>(inGoal)->GetGroundTarget().GetY());
     case kGoalPatrol:
         return "patrol:" + Number(IDOf(static_cast<EEUGRust*>(inGoal)->GetPatrolTarget()));
     case kGoalBuildRepair:
@@ -461,8 +459,8 @@ void JudgeAttackGround(OrderState& ioState)
         }
         EEUnitGoal* theGoal = theUnit->mGoalState.Get();
         bool theOK = theGoal != NULL && theGoal->mKind == kGoalAttackGround
-            && static_cast<EEUGAttackGround*>(theGoal)->mTarget.GetX() == ioState.mX
-            && static_cast<EEUGAttackGround*>(theGoal)->mTarget.GetY() == ioState.mY;
+            && static_cast<EEUGRust*>(theGoal)->GetGroundTarget().GetX() == ioState.mX
+            && static_cast<EEUGRust*>(theGoal)->GetGroundTarget().GetY() == ioState.mY;
         Judge(theRow, theOK, "ground:" + Point(ioState.mX, ioState.mY), theFound);
     }
 }

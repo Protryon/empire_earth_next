@@ -103,8 +103,6 @@
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EEPathManager.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECalamityManager.h"
@@ -164,7 +162,6 @@ static const float kUUSectorLow = -0.39269909f;  // 0x449bb8 (-pi/8)
 static const float kUUSectorScale = 1.2732395f;  // 0x449bbc (4/pi)
 static const float kUUSectorHigh = 0.39269909f;  // 0x449bc0 (pi/8)
 static const float kUUDropDistance = 20.0f;      // 0x449b50
-static const float kUUContactMargin = 1.42f;     // 0x449b7c
 static const float kUUWorkReach = 1.5f;          // 0x449b80
 static const float kUUGatherReach = 1.42f;       // 0x449b84
 static const float kUUMinimumFacing = 0.1f;      // 0x449b64
@@ -1469,56 +1466,7 @@ void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds,
 // quadratic of the two speeds), else the target's location
 void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation)
 {
-    GE3DPoint theAttacker(inAttacker->mPhysicalModel.GetLocation());
-    EEComplexUnit* theTarget = inTarget->mComplexUnit;
-    GE3DPoint thePosition;
-    GE3DPoint theNext;
-    if (theTarget != NULL && inAttacker != NULL && (long)theTarget->mWaypoints.size() > 1) {
-        theTarget->mComplexUnit->GetPosition(thePosition);
-        float theDistance = theAttacker.DistanceTo(thePosition);
-        float theSpeed = inAttacker->GetMaxVelocity();
-        float theTargetSpeed = theTarget->GetMaxVelocity();
-        float theIndex;
-        theTarget->GetPathStart(theNext, theIndex);
-        float theMoveX = theNext.GetX() - thePosition.GetX();
-        float theMoveY = theNext.GetY() - thePosition.GetY();
-        float theMoveZ = theNext.GetZ() - thePosition.GetZ();
-        float theToX = theAttacker.GetX() - thePosition.GetX();
-        float theToY = theAttacker.GetY() - thePosition.GetY();
-        float theToZ = theAttacker.GetZ() - thePosition.GetZ();
-        float theToLength = (float)sqrt(theToY * theToY + theToX * theToX + theToZ * theToZ);
-        float theDot = theMoveY * theToY + theMoveZ * theToZ + theMoveX * theToX;
-        float theCosine = theDot / ((float)sqrt(theMoveZ * theMoveZ + theMoveY * theMoveY + theMoveX * theMoveX)
-                                    * theToLength);
-        float theA;
-        if (theSpeed != theTargetSpeed)
-            theA = theSpeed * theSpeed - theTargetSpeed * theTargetSpeed;
-        else
-            theA = 0.0f;
-        float theFirst;
-        float theSecond;
-        bool theResult = UMQuadraticEquation(theA, theCosine * theTargetSpeed * theDistance * 2.0f,
-                                             -(theDistance * theDistance), theFirst, theSecond);
-        if (theResult == true) {
-            if (theFirst >= 0.0f) {
-                GE3DPoint theOffset(0.0f, theFirst * theTargetSpeed, 0.0f);
-                theTarget->mPhysicalModel.GetLocation().Apply(theOffset, outLocation);
-            } else if (theSecond >= 0.0f) {
-                GE3DPoint theOffset(0.0f, theSecond * theTargetSpeed, 0.0f);
-                theTarget->mPhysicalModel.GetLocation().Apply(theOffset, outLocation);
-            } else {
-                theResult = false;
-            }
-        }
-        U2DPoint<long> theTile((long)outLocation.GetX(), (long)outLocation.GetY());
-        if (::gWorld.GetMap()->GetTileAtLocation(theTile) == NULL)
-            theResult = false;
-        if (theResult)
-            return;
-    }
-    outLocation.SetX(theTarget->mPhysicalModel.GetLocation().GetX());
-    outLocation.SetY(theTarget->mPhysicalModel.GetLocation().GetY());
-    outLocation.SetZ(theTarget->mPhysicalModel.GetLocation().GetZ());
+    EECombatAttackPosition(false, inAttacker, inTarget, outLocation);   // ee_combat leaves.rs lead_position
 }
 
 // FUNCTION: EXE 0x641a6a
@@ -1551,7 +1499,7 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
 // its attack action (0x7dd) over
 void EERetargetAttack(EEComplexUnit* inUnit, EEUnitGoal* inGoal, EEComplexUnit* inTarget)
 {
-    EEComplexUnit* theOld = static_cast<EEUGAttackUnit*>(inGoal)->mTarget->mComplexUnit;
+    EEComplexUnit* theOld = static_cast<EEUGRust*>(inGoal)->GetAttackTarget()->mComplexUnit;
     if (inTarget != theOld)
         inGoal->ReplaceUnit(theOld, inTarget, NULL);
     inUnit->mCollisionResolutionCount = 0.0f;
@@ -1584,7 +1532,7 @@ void EEFindNewTargetNearOld(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
             if (!(theLink->mNextPart != NULL))
                 break;
             if (!theLink->mUnitClass->IsPartLeftOut(theLink) && !inUnit->IsTargetIgnored(theLink, false)) {
-                EERetargetAttack(inUnit, dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal()), theLink);
+                EERetargetAttack(inUnit, EEAttackUnitCast(inUnit->GetLoadGoal()), theLink);
                 return;
             }
             theLink = theLink->mNextPart;
@@ -1644,72 +1592,7 @@ bool EEFOFindNewTargetNearOldTarget::Virtual08(EEComplexUnit* inUnit)
 // Computes where an attacker should stand to fire on a target (healers and melee closer, others at range)
 void EEGetFiringPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation)
 {
-    std::vector<U2DPoint<long> > theTiles;
-    std::vector<U2DPoint<long> > theOuterTiles;
-    std::vector<U2DPoint<long> > theUnused;
-    EEComplexUnit* theTargetUnit = inTarget->GetComplexUnit();
-    EEUnitClass* theClass = inAttacker->GetUnitClass();
-    bool theHealer;
-    long theRange;
-
-    if (theClass->mUnitType == kUnitTypeX04RomanLegionnaire && inAttacker->mIsSpecialAttack)
-        theHealer = true;
-    else
-        theHealer = false;
-    if (theClass->mIsMelee && !theHealer) {
-        if (EEIsInContactRange(inAttacker, inTarget, -1.0f)) {
-            const GETransformation& theLocation = inAttacker->mPhysicalModel.GetLocation();
-            outLocation.SetX(theLocation.GetX());
-            outLocation.SetY(theLocation.GetY());
-            outLocation.SetZ(theLocation.GetZ());
-        } else if (!EEGetWallSpot(inAttacker, inTarget, outLocation)) {
-            EEFindNewTargetNearOld(inAttacker, theTargetUnit);
-        }
-        return;
-    }
-    if (theClass->mProjectileClass != NULL && (theClass->mProjectileClass->mCategory == kUnitCategoryProjectile || theClass->mProjectileClass->mCategory == kUnitCategoryBomb)) {
-        float theReach;
-        if (theHealer)
-            theReach = theClass->mHealRange;
-        else
-            theReach = inAttacker->mStats->mRange;
-        float theRadius = theClass->GetInnerCollisionSphere();
-        if (EEGetHitDistanceSquared(inAttacker, inTarget, -10000.0f, -10000.0f)
-                <= (theRadius + theReach) * (theClass->GetInnerCollisionSphere() + theReach)
-            && EECanBallisticHit(inAttacker, inTarget)) {
-            const GETransformation& theLocation = inAttacker->mPhysicalModel.GetLocation();
-            outLocation.SetX(theLocation.GetX());
-            outLocation.SetY(theLocation.GetY());
-            outLocation.SetZ(theLocation.GetZ());
-            return;
-        }
-    } else if (EEIsInRangeToHit(inAttacker, inTarget)) {
-        const GETransformation& theLocation = inAttacker->mPhysicalModel.GetLocation();
-        outLocation.SetX(theLocation.GetX());
-        outLocation.SetY(theLocation.GetY());
-        outLocation.SetZ(theLocation.GetZ());
-        return;
-    }
-    theRange = (long)inAttacker->mStats->mRange - inTarget->GetUnitClass()->mTileSize;
-    if (theRange < 0)
-        theRange = 0;
-    theRange /= 2;
-    EEGetSortedRingTiles(GE3DPoint(inAttacker->mPhysicalModel.GetLocation().GetX(), inAttacker->mPhysicalModel.GetLocation().GetY(),
-                         inAttacker->mPhysicalModel.GetLocation().GetZ()), inTarget->GetTileX(), inTarget->GetTileY(),
-               inTarget->GetUnitClass()->GetTileSize(), theRange, 0, theOuterTiles);
-    EEGetSortedRingTiles(GE3DPoint(inAttacker->mPhysicalModel.GetLocation().GetX(), inAttacker->mPhysicalModel.GetLocation().GetY(),
-                         inAttacker->mPhysicalModel.GetLocation().GetZ()), inTarget->GetTileX(), inTarget->GetTileY(),
-               inTarget->GetUnitClass()->GetTileSize(), theRange + 1, 0, theTiles);
-    theTiles.insert(theTiles.end(), theOuterTiles.begin(), theOuterTiles.end());
-    std::sort(theTiles.begin(), theTiles.end(), EEUUTileNearerToUnit(inAttacker));
-    if (EEPickTileNear(theTiles, inAttacker, static_cast<EEComplexUnit*>(inTarget), 0, outLocation))
-        return;
-    if (theTargetUnit != NULL) {
-        theTargetUnit->GetPosition(outLocation);
-    } else {
-        outLocation.mX = (float)inTarget->GetTileX() + 0.5f;
-        outLocation.mY = (float)inTarget->GetTileY() + 0.5f;
-    }
+    EECombatAttackPosition(true, inAttacker, inTarget, outLocation);   // ee_combat leaves.rs firing_position
 }
 
 // FUNCTION: EXE 0x642110
@@ -1821,14 +1704,7 @@ inline bool EEUUAngleLess::operator()(EEUnit* inFirst, EEUnit* inSecond) const
 // Tells whether the target unit is attacking the unit
 bool EEIsAttackedBy(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    EEComplexUnit* theTarget = inTarget->mComplexUnit;
-    bool theResult = false;
-    if (!inUnit->mUnitClass->mIsTower && theTarget != NULL && theTarget->mGoalState != NULL) {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->mGoalState.Get());
-        if (theGoal != NULL)
-            theResult = theGoal->mTarget == inUnit;
-    }
-    return theResult;
+    return EECombatWorld(EE_COMBAT_WORLD_ATTACKED_BY, inUnit, inTarget) != 0;   // ee_combat leaves.rs is_attacked_by
 }
 
 // FUNCTION: EXE 0x642542
@@ -2373,8 +2249,8 @@ static int32_t EESearchRegionTest(EESearchContext* inContext, uint32_t inTest, E
     case EE_COMBAT_SEARCH_TEST_IGNORED:
         return theUnit->mIgnoredTargets.size() != 0 && theUnit->IsTargetIgnored(inTarget, true);
     case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
-        EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inTarget->GetGoal());
-        return theGoal != NULL && theGoal->mTarget->mComplexUnit == theUnit;
+        EEUGRust* theGoal = EEAttackUnitCast(inTarget->GetGoal());
+        return theGoal != NULL && theGoal->GetAttackTarget()->mComplexUnit == theUnit;
     }
     }
     return 0;
@@ -2417,17 +2293,17 @@ static int32_t EESearchListTest(EESearchContext* inContext, uint32_t inTest, EEU
     case EE_COMBAT_SEARCH_TEST_IGNORED:
         return theUnit->mIgnoredTargets.size() != 0 && theTarget != NULL && theUnit->IsTargetIgnored(theTarget, true);
     case EE_COMBAT_SEARCH_TEST_ATTACKS_UNIT: {
-        EEUGAttackUnit* theGoal;
-        return theTarget != NULL && (theGoal = dynamic_cast<EEUGAttackUnit*>(theTarget->GetGoal())) != NULL
-            && theGoal->mTarget->mComplexUnit == theUnit;
+        EEUGRust* theGoal;
+        return theTarget != NULL && (theGoal = EEAttackUnitCast(theTarget->GetGoal())) != NULL
+            && theGoal->GetAttackTarget()->mComplexUnit == theUnit;
     }
     case EE_COMBAT_SEARCH_TEST_PURSUES: {
         if (theTarget == NULL || theTarget->mLauncherClass != NULL || theTarget->mGoalState == NULL)
             return 0;
         EEUnitGoal* theGoal = theTarget->mGoalState;
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+        EEUGRust* theAttack = EEAttackUnitCast(theGoal);
         EEUGRust* theGather = EEGatherGoalCast(theGoal);
-        return (theAttack != NULL && theAttack->mTarget->mComplexUnit == theUnit)
+        return (theAttack != NULL && theAttack->GetAttackTarget()->mComplexUnit == theUnit)
             || (theGather != NULL && theGather->GetGatherResource() == theUnit);
     }
     }
@@ -3740,34 +3616,10 @@ void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vect
 // Tells whether a unit can attack a target from where it stands (in range, not blocked)
 bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    long theA = 0;
-    long theB = 0;
-    EEUnit* theC;
-    EeCombatRangeIn theIn = {};
-    theIn.range = inUnit->mStats->mRange;
-    theIn.crusader = inUnit->mUnitClass->IsCrusader();
-    if (theIn.crusader)
-        theIn.heal_range = inUnit->mUnitClass->mHealRange;
-    theIn.distance_squared = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
-    theIn.building = inTarget->mUnitClass->IsLandBuilding();
-    if (theIn.building)
-        theIn.inner_sphere = inTarget->mUnitClass->mInnerCollisionSphere;
-    bool theResult = EECombatRange(theIn) != 0;
-    if (!theResult)
-        return theResult;
-    theResult = !inUnit->IsOnOtherContinentThan(static_cast<EEComplexUnit*>(inTarget));
-    if (theResult && !inUnit->mUnitClass->mShootsHigh && !inUnit->mStats->mCanFireOverWalls)
-        theResult = !EEIsLineToUnitBlocked(inUnit, inTarget, &theC, &theA, &theB);
-    return theResult;
+    return EECombatWorld(EE_COMBAT_WORLD_IN_RANGE_TO_HIT, inUnit, inTarget) != 0;   // ee_combat leaves.rs in_range_to_hit
 }
 
-// FUNCTION: EXE 0x647316
-// Tells whether two radii (plus a margin), scaled, reach across a squared distance
-bool EECanReach(float inDistanceSquared, float inRadius, float inOtherRadius, float inScale)
-{
-    EeCombatReachIn theIn = {inDistanceSquared, inRadius, inOtherRadius, inScale, 0, 0};
-    return EECombatCanReach(theIn) != 0;
-}
+// (0x647316, EECanReach: ee_combat's can_reach, called by leaves.rs in_contact_range)
 
 // FUNCTION: EXE 0x64734c
 // Tells whether a unit is close enough to a target to build or repair it
@@ -3889,52 +3741,38 @@ bool EECanBallisticHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 // Tells whether a unit touches a target (collision spheres; walls count as radius 1)
 bool EEIsInContactRange(EEComplexUnit* inUnit, EEUnit* inTarget, float inDistanceSquared)
 {
-    float theDistance = inDistanceSquared;
-    float theRadius = inTarget->mUnitClass->GetInnerCollisionSphere();
-    if (inDistanceSquared < 0.0f)
-        theDistance = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
-    if (inTarget->mUnitClass->mIsWall)
-        theRadius = 1.0f;
-    return EECanReach(theDistance, inUnit->mUnitClass->GetInnerCollisionSphere(), theRadius, kUUContactMargin);
+    long theBits = 0;   // ee_combat leaves.rs in_contact_range: the distance's bits as the tile's x
+    memcpy(&theBits, &inDistanceSquared, 4);
+    return EECombatWorld(EE_COMBAT_WORLD_CONTACT_RANGE, inUnit, inTarget, NULL, &theBits, &theBits) != 0;
+}
+
+// the targetable tests' record (ee_combat leaves.rs: targetable, can_target_class); a NULL class is never targetable
+static bool EETargetable(EEUnit* inAttacker, EEUnitClass* inClass, bool inCanTarget)
+{
+    if (inClass == NULL)
+        return false;
+    EeCombatTargetableIn in = {inAttacker != NULL, 0, 0, 0, (int32_t)inClass->mCategory, (uint32_t)inClass->mUnitType,
+                               (uint32_t)inClass->mFamily, inClass->CanBeAttacked()};
+    if (inAttacker != NULL) {
+        in.ammo_type = (int32_t)inAttacker->mUnitClass->mAmmoType;
+        in.land_building = inAttacker->mUnitClass->IsLandBuilding();
+        in.computer = inAttacker->mPlayer != NULL && inAttacker->mPlayer->mComputerPlayer != NULL;
+    }
+    return ee_combat_targetable(&in, inCanTarget);
 }
 
 // FUNCTION: EXE 0x6477f9
 // Tells whether a unit may target a class (walls only by siege units or computer players)
 bool EECanTargetClass(EEComplexUnit* inUnit, EEUnitClass* inClass)
 {
-    bool theResult = EEUUGetIsUnitClassTargetable(inUnit, inClass);
-    if (!theResult || inUnit == NULL || (inClass->mUnitType != kUnitTypeBalloon10ObservationBalloon && inClass->mUnitType != kUnitTypeBalloon09HotAirBalloon))
-        return theResult;
-    if (!inUnit->mUnitClass->IsLandBuilding() && inUnit->mPlayer->mComputerPlayer == NULL)
-        theResult = false;
-    else
-        theResult = true;
-    return theResult;
+    return EETargetable(inUnit, inClass, true);
 }
 
 // FUNCTION: EXE 0x647848
 // Tells whether a class can be targeted at all (by an attacker's ammunition when given)
 bool EEUUGetIsUnitClassTargetable(EEUnit* inAttacker, EEUnitClass* inClass)
 {
-    bool theResult = false;
-    if (inClass != NULL) {
-        if (inAttacker != NULL && inAttacker->mUnitClass->mAmmoType == 0x3c) {
-            unsigned long theKind = inClass->mFamily;
-            if (!inClass->CanBeAttacked() || EEDamageFactor(theKind, 0x3c) <= 0.0f)
-                return false;
-        } else {
-            long theCategory = inClass->mCategory;
-            if (theCategory == kUnitCategoryProjectile || theCategory == kUnitCategoryBomb || theCategory == kUnitCategoryMissile || theCategory == kUnitCategoryTorpedo)
-                return false;
-        }
-        unsigned long theType = inClass->mUnitType;
-        theResult = true;
-        if (theType == kUnitTypeHurricane || theType == kUnitTypeWaypoint || theType == kUnitTypeTankObstacle || theType == kUnitTypeVolcano)
-            return false;
-        if (theType > kUnitTypeX11HauptmannDurerProphet && (theType <= kUnitTypeFlare2 || theType == kUnitTypeAntiMatterStorm))
-            return false;
-    }
-    return theResult;
+    return EETargetable(inAttacker, inClass, false);
 }
 
 // FUNCTION: EXE 0x6478f7
@@ -3983,49 +3821,7 @@ bool EEIsFootprintVisibleTo(EEUnit* inUnit, EEPlayer* inPlayer)
 // unit's footprint)
 bool EEIsSeenBy(EEUnit* inUnit, EEPlayer* inPlayer, bool inExplored)
 {
-    std::vector<EETileCoordinate> theTiles;
-    EEMap* theMap = ::gWorld.mMap;
-    bool theResult = true;
-    if (theMap != NULL && inPlayer->mSaveVisMap) {
-        if (inUnit != NULL) {
-            EEComplexUnit* theComplexUnit = inUnit->mComplexUnit;
-            if (theComplexUnit == NULL || theComplexUnit->mIsCloakable && theComplexUnit->mIsCloaked && inUnit->mPlayer != inPlayer
-                && inPlayer->mEnemies[inUnit->mPlayer->GetPlayerID()] != 0)
-                theResult = theComplexUnit == NULL;
-        }
-        if (theResult) {
-            theResult = false;
-            if (inUnit->mUnitClass->mTileSize > 1 || inUnit->mUnitClass->mCategory == kUnitCategoryGate) {
-                EEGetFootprintTiles(inUnit, theTiles);
-                if (inExplored) {
-                    unsigned long theCount = theTiles.size();
-                    for (unsigned long i = 0; i < theCount; i++) {
-                        if (theResult)
-                            break;
-                        EETileCoordinate& thePoint = theTiles[i];
-                        EETile* theTile = theMap->GetTile(thePoint.mX, thePoint.mY);
-                        theResult = theTile != NULL && theTile->IsSeenBy(inPlayer);
-                    }
-                } else {
-                    unsigned long theCount = theTiles.size();
-                    for (unsigned long i = 0; i < theCount; i++) {
-                        if (theResult)
-                            break;
-                        EETileCoordinate& thePoint = theTiles[i];
-                        EETile* theTile = theMap->GetTile(thePoint.mX, thePoint.mY);
-                        theResult = theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) > 1;
-                    }
-                }
-            } else {
-                EETile* theTile = theMap->GetTileAtLocation(EETileLocation(inUnit->GetTileX(), inUnit->GetTileY()));
-                if (inExplored == true)
-                    theResult = theTile != NULL && theTile->IsSeenBy(inPlayer);
-                else
-                    theResult = theTile != NULL && theTile->GetVisibility(inPlayer->GetPlayerID()) > 1;
-            }
-        }
-    }
-    return theResult;
+    return EECombatIsSeenBy(inUnit, inPlayer, inExplored);   // ee_combat leaves.rs is_seen_by
 }
 
 // FUNCTION: EXE 0x647bd8
@@ -4544,7 +4340,7 @@ void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* ou
         theGoal->GetGoalLocation(theLocation);
     } else {
         if (inTarget == NULL)
-            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+            inTarget = static_cast<EEUGRust*>(theGoal)->GetAttackTarget();
         if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
             in.kind = EE_COMBAT_DROP_KIND_MODEL;
             in.offset[0] = inTarget->GetModel()->mDefaultPoint.GetX();
@@ -4578,37 +4374,6 @@ void EEFindDropLocation(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* ou
                                                             EECombatCaptureID(*outTarget)};
         EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'P'), in, theOut);
     }
-}
-
-static void EEFindDropLocationOriginal(EEComplexUnit* inUnit, EEUnit** outTarget, GE3DPoint* outLocation, EEUnit* inTarget)
-{
-    EEUnitGoal* theGoal = inUnit->mActiveGoal;
-    GE3DPoint theOffset;
-    GE3DPoint theLocation;
-    if (inTarget == NULL && (theGoal == NULL || theGoal->mKind != kGoalAttackUnit)) {
-        theGoal->GetGoalLocation(theLocation);
-    } else {
-        if (inTarget == NULL)
-            inTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-        if (inTarget->mComplexUnit != NULL && inTarget->GetModel()->mModel != NULL) {
-            theOffset = inTarget->GetModel()->mDefaultPoint;
-            float theScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
-            theOffset.SetX(theOffset.GetX() * theScale);
-            theOffset.SetY(theOffset.GetY() * theScale);
-            theOffset.SetZ(theOffset.GetZ() * theScale);
-            if (!inTarget->mComplexUnit->mIsBuilt)
-                theOffset.SetZ(theOffset.GetZ() * ((float)inTarget->mHitPoints / (float)inTarget->mStats->mMaxHitPoints));
-            inTarget->mComplexUnit->mPhysicalModel.GetLocation().Apply(theOffset, theLocation);
-        } else if (inTarget->mTile != NULL) {
-            theLocation.SetX((float)inTarget->GetTileX() + 0.5f);
-            theLocation.SetY((float)inTarget->GetTileY() + 0.5f);
-            theLocation.SetZ(inTarget->mTile->GetHeight());
-        } else {
-            inTarget = NULL;
-        }
-    }
-    *outTarget = inTarget;
-    *outLocation = theLocation;
 }
 
 // FUNCTION: EXE 0x6494cb

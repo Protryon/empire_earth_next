@@ -50,8 +50,6 @@
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EECPAGTask.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
@@ -466,7 +464,7 @@ static void EECPTraceSoldierLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
         theKillerGoal = theKiller->mActiveGoal->mKind == kGoalAttackUnit ? "attack"
             : theKiller->mActiveGoal->mKind == kGoalLocation ? "move" : "other";
         if (theKiller->mActiveGoal->mKind == kGoalAttackUnit) {
-            EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theKiller->mActiveGoal)->mTarget;
+            EEUnit* theTarget = static_cast<EEUGRust*>(theKiller->mActiveGoal)->GetAttackTarget();
             if (theTarget != NULL && theTarget->mUnitClass != NULL) {
                 EEUnitClass* theTargetClass = theTarget->mUnitClass;
                 theKillerTarget = theTargetClass->IsBuilding() ? 'b'

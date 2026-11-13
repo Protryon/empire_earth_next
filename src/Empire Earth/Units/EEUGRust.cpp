@@ -74,7 +74,6 @@
 #include "ee/EEUCBasicCitizen.h"
 #include "ee/EEUCNavalCitizen.h"
 #include "ee/EESaveGameFiles.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EERules.h"
@@ -1556,7 +1555,7 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
             long theAction = 0x7e0;
             if (!(theResource->mHitPoints > 0 && theComplex->mUnitClass->FindAction(theAction) != NULL))
                 return 0;
-            theComplex->SetGoal(new EEUGAttackUnit(theComplex, theResource, ioArgs->i[0] != 0, false), 1, 0);
+            theComplex->SetGoal(EEUGRust::NewAttackUnit(theComplex, theResource, ioArgs->i[0] != 0, false), 1, 0);
             theComplex->StartAction(theAction);
             theComplex->mUnitClass->ActionChanged(theComplex);
             return 1;
@@ -1630,6 +1629,8 @@ int64_t GoalOp(void* inContext, int32_t inOp, uint64_t inA, uint64_t inB, EeUnit
     case EE_UNITS_GOAL_HOST_RESET_ACTIVE_PATH:
         theComplex->mActiveGoal->SetPathAttempts(0);
         return 0;
+    default:   // the combat goals' operations (EEUGRustCombat.cpp)
+        return EECombatGoalHostOp(theContext->mFile, inOp, inA, inB, ioArgs);
     }
     return 0;
 }
@@ -1646,6 +1647,12 @@ int64_t Goal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t
 }
 
 }  // namespace
+
+int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs,
+                     FSFile* inFile)
+{
+    return Goal(inOperation, inGoal, inA, inB, ioArgs, inFile);
+}
 
 EEUGRust::EEUGRust(unsigned char inKind, bool inArg)
     : EEUnitGoal(inKind, inArg)
@@ -2114,4 +2121,10 @@ void EEUGRust::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, EEComplex
 bool EEUGRust::Suits(EEUnit* inUnit)
 {
     return Goal(EE_UNITS_GOAL_SUITS, this, Handle(inUnit)) != 0;
+}
+
+void EEUGRust::SetPathAttempts(long inValue)
+{
+    EEUnitGoal::SetPathAttempts(inValue);
+    Goal(EE_UNITS_GOAL_SET_PATH_ATTEMPTS, this, (uint64_t)(int64_t)inValue);
 }

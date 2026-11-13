@@ -35,7 +35,7 @@
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EECombatGoals.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitBehavior.h"
 #include "rust/ee_units.h"
 
@@ -660,7 +660,7 @@ bool EEPhysicsModel::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
         float theOtherMoveX = theMoveX;
         float theOtherMoveY = theMoveY;
         if (inUnit->mGoalState != NULL && inUnit->mGoalState->mKind == kGoalAttackUnit
-            && inOther == static_cast<EEUGAttackUnit*>(inUnit->mGoalState)->mTarget) {
+            && inOther == static_cast<EEUGRust*>(inUnit->mGoalState)->GetAttackTarget()) {
             theOtherMoveX = theMoveX * 0.25f;
             theOtherMoveY = theMoveY * 0.25f;
         }

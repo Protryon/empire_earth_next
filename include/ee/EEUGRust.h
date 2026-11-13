@@ -1,13 +1,12 @@
-// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 19): the goals whose class moved whole into Rust. The object is
-// the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields, its vtable); its own state and
-// bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind: patrol.rs for kGoalPatrol,
-// calamity.rs for kGoalCastCalamity, explore.rs for kGoalExplore, unload.rs for kGoalUnloadTransport, load.rs for
-// kGoalLoadTransport and kGoalLoadGarrison, build.rs for kGoalBuildRepair, gather.rs for kGoalGather), every virtual one call. Replaces
-// EEUGPatrol (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity
-// (0x220986..0x2213dd), EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals
-// EEUGLoadContainer (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport
-// (0x2271c7..0x227621), EEUGBuildRepair (0x21e0c1..0x220986) and EEUGGather (0x221d98..0x22528d): their classes and files are
-// deleted.
+// New (port; docs/RUST_PLAN.md R5b.4, rounds 16 to 19; R5b.2 for the attack goals): the goals whose class moved
+// whole into Rust. The object is the EEUnitGoal the queues, the unit's mGoalState and the save hold (its base fields,
+// its vtable); its own state and bodies are Rust's (rust/crates/ee_units/src/rust_goal.rs dispatches by mKind:
+// patrol.rs, calamity.rs, explore.rs, unload.rs, load.rs for both load kinds, build.rs for kGoalBuildRepair, gather.rs
+// for kGoalGather; the other kinds go to ee_combat's goal dispatch), every virtual one call. Replaces EEUGPatrol
+// (0x227de8..0x2283bc; EEPlayer's SetPatrolGroup 0x563659 with it), EEUGCastCalamity (0x220986..0x2213dd),
+// EEUGExplore (0x2213dd..0x221d98), EEUGUnloadTransport (0x2283bc..0x228c4c), the load goals EEUGLoadContainer
+// (0x22585a..0x226a43), EEUGLoadGarrison (0x226a43..0x2271c7) and EEUGLoadTransport (0x2271c7..0x227621),
+// EEUGBuildRepair (0x21e0c1..0x220986) and EEUGGather (0x221d98..0x22528d): their classes and files are deleted.
 #ifndef EE_EEUGRUST_H
 #define EE_EEUGRUST_H
 
@@ -25,6 +24,7 @@ class EEUnit;
 class FSFile;
 class GE3DPoint;
 class UWideString;
+struct EeUnitsGoalIo;
 
 class EEUGRust : public EEUnitGoal {
 public:
@@ -70,6 +70,28 @@ public:
     // the transport dropped without its release (the air bomber's unused goal keeps the plane's reference)
     void ForgetUnloadTransport();
 
+    // the combat lane's goals (ee_combat goal_objects.rs, goal_attack.rs; EEUGRustCombat.cpp): an attack on the
+    // ground at inTarget (kGoalAttackGround; EEUGAttackGround(inTarget, inArg), the load's at 0, 0, 0) and its point
+    static EEUGRust* NewAttackGround(const GE3DPoint& inTarget, bool inArg);
+    GE3DPoint GetGroundTarget();
+    // an attack on a unit (kGoalAttackUnit; EEUGAttackUnit(inAttacker, inTarget, inArg3, inIsConvert): a multi-part
+    // target's attack part, the target referenced, the attack counts; the load's EEUGAttackUnit(inArg) empty), its
+    // target, attacker, last known target tile, convert flag, destination and sidestep count
+    static EEUGRust* NewAttackUnit(EEComplexUnit* inAttacker, EEUnit* inTarget, bool inArg3, bool inIsConvert);
+    static EEUGRust* NewAttackUnitEmpty(bool inArg);
+    EEUnit* GetAttackTarget() const;
+    EEComplexUnit* GetAttacker() const;
+    void SetAttacker(EEComplexUnit* inAttacker);
+    void SetAttackTarget(EEUnit* inTarget);           // the old SetTarget (the reference moved, the tile)
+    void RetargetGatePart(EEComplexUnit* inUnit);     // a gate target becomes the part EEGetAttackPart gives
+    void UpdateTargetTile();
+    long GetAttackTileX() const;
+    long GetAttackTileY() const;
+    bool IsConvertAttack() const;
+    GE3DPoint GetAttackLocation() const;
+    void SetAttackLocation(const GE3DPoint& inLocation);
+    unsigned long GetSidestepCount() const;
+    void SetSidestepCount(unsigned long inCount);
     // a load goal (kGoalLoadTransport, kGoalLoadGarrison): the container and the units, all referenced; inUnits is
     // sorted by id and loses its duplicates, as the original constructors did to the caller's list
     // (EEUGLoadTransport/EEUGLoadGarrison(inContainer, inUnits, inArg)); or the load's empty goal
@@ -145,7 +167,16 @@ public:
     virtual void PathTaken(EEComplexUnit* inUnit);
     // the gather goal reports 5000 while not active (EEUGGather's inline)
     virtual bool IsActive(unsigned long* outValue);
+    // the base goal's, then the kind's (the attack unit's: 0 also clears the sidestep count)
+    virtual void SetPathAttempts(long inValue);
 };
+
+// one body of inGoal through the kind dispatch (ee_units_rust_goal over EEUGRust.cpp's host), for the accessors
+// defined outside EEUGRust.cpp (EEUGRustCombat.cpp)
+int64_t EEUGRustGoal(int inOperation, const EEUGRust* inGoal, uint64_t inA = 0, uint64_t inB = 0,
+                     EeUnitsGoalIo* ioArgs = NULL, FSFile* inFile = NULL);
+// the combat goals' host operations (EE_COMBAT_G_*, from 1000; EEUGRustCombat.cpp), the host's other cases
+int64_t EECombatGoalHostOp(FSFile* inFile, int32_t inOp, uint64_t inA, uint64_t inB, EeUnitsGoalIo* ioArgs);
 
 // the goal of kind inKind (the old EEGoalCast<EEUGPatrol>, <EEUGCastCalamity>, <EEUGExplore>,
 // <EEUGUnloadTransport>), NULL for another or none
@@ -178,6 +209,15 @@ inline EEUGRust* EEBuildRepairGoalCast(EEUnitGoal* inGoal)
 inline EEUGRust* EEGatherGoalCast(EEUnitGoal* inGoal)
 {
     return EERustGoalCast(inGoal, kGoalGather);
+}
+// the attack-ground and attack-unit goals (the old EEGoalCast<EEUGAttackGround>, <EEUGAttackUnit>)
+inline EEUGRust* EEAttackGroundCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalAttackGround);
+}
+inline EEUGRust* EEAttackUnitCast(EEUnitGoal* inGoal)
+{
+    return EERustGoalCast(inGoal, kGoalAttackUnit);
 }
 // the old dynamic_cast<EEUGLoadTransport*>, <EEUGLoadGarrison*> and <EEUGLoadContainer*> (either)
 inline EEUGRust* EELoadTransportGoalCast(EEUnitGoal* inGoal)

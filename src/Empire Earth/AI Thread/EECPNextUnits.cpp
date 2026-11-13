@@ -78,8 +78,6 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
 #include "ee/EEEvent.h"
-#include "ee/EEUGAttackUnit.h"
-#include "ee/EEUGRust.h"
 #include "ee/EEUGRust.h"
 #include "ee/EECPBehavior.h"
 #include "ee/EERandomMapIDs.h"
@@ -429,9 +427,9 @@ static void EECPUnitsRelease(EEComputerPlayer* inPlayer, EECPUnitsState* s, EECo
     // against 19 wanted) and the mines got nobody. It goes onto its resource's list (hunting: food), else the idle one
     if (theCategory == kUnitCategoryLandCitizen && EECPNextEngine(inPlayer)) {
         EEUGRust* theWork = EEGatherGoalCast(inUnit->GetLoadGoal());
-        EEUGAttackUnit* theHunt = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
+        EEUGRust* theHunt = EEAttackUnitCast(inUnit->GetLoadGoal());
         long theResource = theWork != NULL && theWork->GetGatherResource() != NULL ? (long)theWork->GetGatherResource()->GetResourceType()
-            : theHunt != NULL && theHunt->mTarget != NULL && theHunt->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
+            : theHunt != NULL && theHunt->GetAttackTarget() != NULL && theHunt->GetAttackTarget()->GetUnitClass()->GetFamily() == kUnitFamilyAnimal
             ? (long)kResourceFood : -1;
         theManager->RemoveGatherer(inUnit);
         if (theResource >= kResourceFood && theResource < 7)
@@ -1051,8 +1049,8 @@ static void EECPUnitsPushRecord(lua_State* L, EEComputerPlayer* me, EECPUnitsSta
                 && theTarget->mComplexUnit != NULL && !theTarget->mComplexUnit->mIsBuilt && theBuild->IsBuildSiteTaken())
                 EECPUnitsSetBool(L, "stalled", true);
         }
-        else if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(g))
-            theTarget = theAttack->mTarget;
+        else if (EEUGRust* theAttack = EEAttackUnitCast(g))
+            theTarget = theAttack->GetAttackTarget();
         if (theTarget != NULL && theTarget->mIsValid)
             EECPUnitsSetInt(L, "target", (long)theTarget->mUnitID);
     }

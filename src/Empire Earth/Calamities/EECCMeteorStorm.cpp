@@ -33,7 +33,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
+#include "ee/EEUGRust.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 
@@ -148,7 +148,7 @@ bool EECCMeteorStorm::LaunchMeteor(EECalamity* inCalamity)
     theClass->PlayCreationEffect(theMeteor);
     theMeteor->SetLauncherClass(theClass);
     theMeteor->SetOwner(theMeteor);
-    theMeteor->SetGoal(new EEUGAttackGround(theTarget, false), 0, 0);
+    theMeteor->SetGoal(EEUGRust::NewAttackGround(theTarget, false), 0, 0);
     theMeteor->SetVelocity(theMeteor->GetMaxVelocity());
     theMeteor->SetProjectileStart(theStart);
     theMeteor->SetLocation(theStart, true);

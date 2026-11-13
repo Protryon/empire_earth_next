@@ -73,7 +73,6 @@
 #include "ee/EEUnitHandle.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEUGRust.h"
-#include "ee/EEUGAttackUnit.h"
 #include <algorithm>
 #include <vector>
 
@@ -565,8 +564,8 @@ static void SaveGhosts(FSFile& outFile)
             for (size_t q = 0; q < theComplex->mGoalQueues.size(); q++) {
                 const EEGoalDeque& theGoals = theComplex->mGoalQueues[q].mGoals;
                 for (size_t g = 0; g < theGoals.size(); g++) {
-                    if (EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoals[g])) {
-                        AddHeldGhost(theAttack->mTarget, theDead, theSimple);
+                    if (EEUGRust* theAttack = EEAttackUnitCast(theGoals[g])) {
+                        AddHeldGhost(theAttack->GetAttackTarget(), theDead, theSimple);
                         continue;
                     }
                     EEUGRust* theGather = EEGatherGoalCast(theGoals[g]);
