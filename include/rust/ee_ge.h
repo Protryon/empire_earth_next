@@ -113,6 +113,127 @@ enum class EeGeManOp : uint32_t {
   TexPackLog,
 };
 
+/// The calls a texture makes on other objects. `obj` is the object called; `a`..`c` as each says.
+enum class EeGeTexOp : uint32_t {
+  /// `obj->Reference()` (a surface).
+  SurfReference = 1,
+  /// `obj->Dereference()` (a surface).
+  SurfDereference,
+  /// `obj->GetParentScreen()`.
+  SurfParentScreen,
+  /// `obj->GetAllocatedSize()`.
+  SurfAllocatedSize,
+  /// `obj->GetLogicalShift()`.
+  SurfLogicalShift,
+  /// `obj->SetLogicalShift(a)`.
+  SurfSetLogicalShift,
+  /// `obj->Lock()`.
+  SurfLock,
+  /// `obj->Unlock()`.
+  SurfUnlock,
+  /// `obj->GetMemoryAddress()`.
+  SurfMemory,
+  /// `obj->GetBytesPerRow()`.
+  SurfBytesPerRow,
+  /// `*(GESurfaceDescription*)a = obj->GetSurfaceDescription()`.
+  SurfDescription,
+  /// `obj->GetAttachedSurface(0)`.
+  SurfAttached,
+  /// `obj->GetAttachedSurfaceCount()`.
+  SurfAttachedCount,
+  /// `obj->GetWidth()` (logical).
+  SurfWidth,
+  /// `obj->GetHeight()` (logical).
+  SurfHeight,
+  /// `obj->CopyWithFilter(a, b's source, b's destination)` (`b` an `EeGeTexCopy`).
+  SurfCopyWithFilter,
+  /// `obj->CopyTo(a, b's source, b's destination, b's transparent)`.
+  SurfCopyTo,
+  /// `((GEScreen*)obj)->CreateSurface(*(GESurfaceDescription*)a, (GESurface**)b)`.
+  ScreenCreateSurface,
+  /// `ee_of_texture_info(obj, (EeOfTextureInfo*)a)`: the decoded file's width, height and frame count.
+  FileInfo,
+  /// `ee_of_texture_frame(a, b, &frame)`, then `GEStoreFrame(obj, frame)`: frame `b` of file `a` into surface `obj`.
+  StoreFrame,
+  /// `new GETexture((GETextureManager*)obj)`: a frame's texture.
+  TexNew,
+  /// The Rust object of texture `obj`.
+  TexObj,
+  /// `((GETexture*)obj)->Dereference()`.
+  TexDereference,
+  /// `((GETexture*)obj)->UReferenceCounter::Dereference()`.
+  TexBaseDereference,
+  /// `((GETexture*)obj)->mReferenceCount`.
+  TexRefCount,
+  /// `((GETextureManager*)obj)->RemoveTexture((GETexture*)a)`.
+  ManagerRemove,
+  /// `((GETextureManager*)obj)->PromoteTexture((GETexture*)a)`.
+  ManagerPromote,
+  /// `GETexture::sRasterizer->CreateTextureHandle((GETexture*)obj)`.
+  RasterCreate,
+  /// `GETexture::sRasterizer->DestroyTextureHandle((GETexture*)obj)`.
+  RasterDestroy,
+};
+
+/// A stage field (`ee_ge_tex_set_stage`): each `SetStage...` setter.
+enum class EeGeTexStageField : uint32_t {
+  AlphaMode = 1,
+  ColorMode,
+  MagFilterMode,
+  MinFilterMode,
+  MipFilterMode,
+  TextureAddressingMode,
+};
+
+/// A field the header's accessors read or write (`ee_ge_tex_get` / `ee_ge_tex_set`). The `Frame...` ones are the
+/// current frame's texture's (`mFrameTexture->m...`), the others this texture's own.
+enum class EeGeTexVal : uint32_t {
+  /// `mFrameTexture->mData`.
+  FrameData = 1,
+  /// `mFrameTexture->mSurface`.
+  FrameSurface,
+  /// `mFrameTexture->mIsCompressed`.
+  FrameIsCompressed,
+  /// `mFrameTexture->mIsPromoted`.
+  FrameIsPromoted,
+  /// `mCreateMIPMaps`.
+  CreateMipMaps,
+  /// `mHasChanged` (set: true, or false for `ValidateChanges`).
+  HasChanged,
+  /// `mFrame`.
+  Frame,
+  /// `mFrameCount`.
+  FrameCount,
+  /// `mMipLevelCount` (signed).
+  MipLevelCount,
+  /// `mNumMipLevelsToDrop`.
+  NumMipLevelsToDrop,
+  /// `mScreen`.
+  Screen,
+  /// `mSurface`.
+  Surface,
+  /// `mFrameFormat`.
+  FrameFormat,
+  /// `mIsPromoted`.
+  IsPromoted,
+  /// `mIsManaged`.
+  IsManaged,
+  /// `mFrameTexture`.
+  FrameTexture,
+  /// `mFramesPerRow`.
+  FramesPerRow,
+  /// `mData`.
+  Data,
+  /// `mIsCompressed`.
+  IsCompressed,
+  /// `mIsFromTexturePack`.
+  FromPack,
+  /// `mTexturePackMipLevels`.
+  PackMipLevels,
+  /// `mManager`.
+  Manager,
+};
+
 /// A texture's field (`EeGeManOp::TexGet` / `TexSet`'s `a`).
 enum class EeGeTexField : uint32_t {
   /// `mIsFromTexturePack` (0 or 1).
@@ -150,6 +271,9 @@ struct EeGeCemModel;
 
 /// The model manager.
 struct EeGeModelManager;
+
+/// The texture.
+struct EeGeTexture;
 
 /// The texture manager.
 struct EeGeTextureManager;
@@ -483,6 +607,50 @@ struct EeGeTextureDescription {
   bool use_texture_pack;
 };
 
+/// The host: `owner` is the C++ texture of the object calling.
+using EeGeTexHostFn = ptrdiff_t(*)(void *owner,
+                                   EeGeTexOp op,
+                                   void *obj,
+                                   ptrdiff_t a,
+                                   ptrdiff_t b,
+                                   ptrdiff_t c);
+
+/// `GESurfaceDescription` (lle/GESurface.h), field for field.
+struct EeGeSurfaceDescription {
+  /// `mType`.
+  unsigned long kind;
+  unsigned long pixel_format;
+  unsigned long surface_volatility;
+  unsigned long width;
+  unsigned long height;
+  unsigned long m14;
+  long mip_level_count;
+  unsigned long pixel_depth;
+  bool is_3d_renderable;
+  bool is_transparency_enabled;
+  /// The constructor's one store (false).
+  bool no_alpha;
+};
+
+/// `GETStage` (lle/GETexture.h), field for field.
+struct EeGeTStage {
+  /// `mTexture` (`GETexture*`).
+  void *texture;
+  unsigned long color_mode;
+  unsigned long alpha_mode;
+  unsigned long texture_addressing_mode;
+  unsigned long min_filter_mode;
+  unsigned long mag_filter_mode;
+  unsigned long mip_filter_mode;
+  float mip_map_bias;
+};
+
+/// `GETextureCoordinate`: u, v.
+struct EeGeTexCoord {
+  float u;
+  float v;
+};
+
 /// The surface a frame is stored into (`GEStoreFrame`): depth 16 or 32, format, no alpha, pixel size, row pitch.
 struct EeGeStoreTarget {
   unsigned long pixel_depth;
@@ -491,19 +659,6 @@ struct EeGeStoreTarget {
   unsigned long pixel_width;
   unsigned long pixel_height;
   unsigned long bytes_per_row;
-};
-
-/// `GETexture::Load`'s plan for frame format 0 (one texture per frame).
-struct EeGeTextureFramePlan {
-  long mip_levels;
-  long drop;
-  unsigned long surface_type;
-  long mip_level_count;
-  bool has_drop;
-  unsigned long drop_type;
-  long drop_mip_level_count;
-  unsigned long drop_width;
-  unsigned long drop_height;
 };
 
 /// `GEViewport` (sizeof 0x288), in the C++'s member order.
@@ -647,23 +802,6 @@ struct EeGeTmTile {
   uint8_t water_info;
 };
 
-/// `GESurfaceDescription` (lle/GESurface.h), field for field.
-struct EeGeSurfaceDescription {
-  /// `mType`.
-  unsigned long kind;
-  unsigned long pixel_format;
-  unsigned long surface_volatility;
-  unsigned long width;
-  unsigned long height;
-  unsigned long m14;
-  long mip_level_count;
-  unsigned long pixel_depth;
-  bool is_3d_renderable;
-  bool is_transparency_enabled;
-  /// The constructor's one store (false).
-  bool no_alpha;
-};
-
 /// `GETexture::Load`'s arguments but the texture and the screen (`EeGeManOp::TexLoad`'s `a`).
 struct EeGeTexLoad {
   /// The decoded file (`const EeOfTexture*`).
@@ -673,6 +811,17 @@ struct EeGeTexLoad {
   bool create_mipmaps;
   long num_mip_levels_to_drop;
   unsigned long frame_format;
+};
+
+/// A rectangle as GERectangle's setters fill it: left, top, right, bottom.
+using EeGeTexRect = float[4];
+
+/// A copy between two surfaces (`EeGeTexOp::SurfCopyTo` / `SurfCopyWithFilter`'s `b`).
+struct EeGeTexCopy {
+  EeGeTexRect source;
+  EeGeTexRect destination;
+  /// `CopyTo`'s `inTransparent` (always false here).
+  bool transparent;
 };
 
 extern "C" {
@@ -1700,6 +1849,152 @@ void ee_ge_texman_set_path(EeGeTextureManager *p, void *path);
 /// `p` is live.
 void ee_ge_texman_update_mip_filter(EeGeTextureManager *p, unsigned long mode);
 
+/// `GETexture::GETexture(manager)`: the object of the C++ texture `owner`.
+///
+/// # Safety
+/// `host` serves `owner` until `ee_ge_tex_destroy`.
+EeGeTexture *ee_ge_tex_new(EeGeTexHostFn host, void *owner, void *manager);
+
+/// `GETexture::GETexture(surface, manager)`'s statements after the fields (`ee_ge_tex_new` first).
+///
+/// # Safety
+/// `p` is live; `surface` a surface.
+void ee_ge_tex_construct_on_surface(EeGeTexture *p, void *surface);
+
+/// `~GETexture`: the releases, then the object freed.
+///
+/// # Safety
+/// `p` is live; it is freed.
+void ee_ge_tex_destroy(EeGeTexture *p);
+
+/// `Dereference`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_dereference(EeGeTexture *p);
+
+/// `GetAllocatedSize`.
+///
+/// # Safety
+/// `p` is live with a surface.
+unsigned long ee_ge_tex_allocated_size(EeGeTexture *p);
+
+/// `Load(file, description, screen, create_mipmaps, drop, frame_format)`.
+///
+/// # Safety
+/// `p` is live; `description` valid; `file` a decoded file; `screen` a screen.
+long ee_ge_tex_load(EeGeTexture *p,
+                    const void *file,
+                    EeGeSurfaceDescription *description,
+                    void *screen,
+                    bool create_mipmaps,
+                    long num_mip_levels_to_drop,
+                    unsigned long frame_format);
+
+/// `Lock(memory, bytes_per_row)`.
+///
+/// # Safety
+/// `p` is live with a surface; the out pointers are valid.
+long ee_ge_tex_lock(EeGeTexture *p, uint8_t **memory, unsigned long *bytes_per_row);
+
+/// `Unlock`.
+///
+/// # Safety
+/// `p` is live with a surface.
+long ee_ge_tex_unlock(EeGeTexture *p);
+
+/// `Recreate(screen)`.
+///
+/// # Safety
+/// `p` is live with a surface.
+long ee_ge_tex_recreate(EeGeTexture *p, void *screen);
+
+/// `SetLogicalShift(shift)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set_logical_shift(EeGeTexture *p, unsigned long shift);
+
+/// `SetStageAlphaMode` .. `SetStageTextureAddressingMode`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set_stage(EeGeTexture *p, EeGeTexStageField which, unsigned long mode);
+
+/// `SetStageMipMapBias(bias)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set_stage_bias(EeGeTexture *p, float bias);
+
+/// `SetStageTexture(texture)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set_stage_texture(EeGeTexture *p, void *texture);
+
+/// `SetFrame(frame)`.
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set_frame(EeGeTexture *p, unsigned long frame);
+
+/// `SetSurface(surface)`.
+///
+/// # Safety
+/// `p` is live; `surface` a surface.
+long ee_ge_tex_set_surface(EeGeTexture *p, void *surface);
+
+/// `Promote`.
+///
+/// # Safety
+/// `p` is live.
+long ee_ge_tex_promote(EeGeTexture *p);
+
+/// A field (the header's accessors).
+///
+/// # Safety
+/// `p` is live.
+ptrdiff_t ee_ge_tex_get(EeGeTexture *p, EeGeTexVal field);
+
+/// A field set (the header's setters).
+///
+/// # Safety
+/// `p` is live.
+void ee_ge_tex_set(EeGeTexture *p, EeGeTexVal field, ptrdiff_t value);
+
+/// `GetStage()`: the stage inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeTStage *ee_ge_tex_stage(EeGeTexture *p);
+
+/// `GetFrameTopLeftCorner()`: the corner inside the object.
+///
+/// # Safety
+/// `p` is live.
+const EeGeTexCoord *ee_ge_tex_corner(EeGeTexture *p);
+
+/// `GetFrameUVSize()`.
+///
+/// # Safety
+/// `p` is live.
+float ee_ge_tex_frame_uv_size(EeGeTexture *p);
+
+/// `mFrames` (NULL without an array).
+///
+/// # Safety
+/// `p` is live.
+void *const *ee_ge_tex_frames(EeGeTexture *p);
+
+/// `GetFrameTexture(frame)`: frame `frame`'s texture in format 0, else the array's first (NULL without an array or
+/// past it: the original read past it).
+///
+/// # Safety
+/// `p` is live.
+void *ee_ge_tex_frame_texture(EeGeTexture *p,
+                              unsigned long frame);
+
 /// `GEPackColor(format, red, green, blue, alpha)`.
 unsigned long ee_ge_pack_color(unsigned long format,
                                unsigned long red,
@@ -1743,62 +2038,6 @@ void ee_ge_texture_store_frame(const EeGeStoreTarget *target,
                                uint32_t channels,
                                const uint8_t *pixels,
                                uint8_t *memory);
-
-/// The frame surfaces' description for a `width` x `height` file with `drop` levels dropped.
-///
-/// # Safety
-/// `out` is valid for a write.
-void ee_ge_texture_frame_plan(uint32_t width,
-                              uint32_t height,
-                              bool create_mipmaps,
-                              long drop,
-                              EeGeTextureFramePlan *out);
-
-/// The frame grid of a one-surface texture (frame format 1): `mFramesPerRow` and `mFrameUVSize`.
-///
-/// # Safety
-/// The out pointers are valid for writes.
-void ee_ge_texture_grid_plan(uint32_t frame_count, unsigned long *frames_per_row, float *uv_size);
-
-/// Frame `frame`'s cell in the grid surface: left, top, right, bottom (`out[4]`) for a `mip_width` x `mip_height` level.
-///
-/// # Safety
-/// `out` holds four floats.
-void ee_ge_texture_grid_cell(unsigned long frame,
-                             unsigned long frames_per_row,
-                             unsigned long mip_width,
-                             unsigned long mip_height,
-                             float *out);
-
-/// `SetFrame`'s UV corner of frame `frame`.
-///
-/// # Safety
-/// `u` and `v` are valid for writes.
-void ee_ge_texture_frame_corner(unsigned long frame,
-                                unsigned long frames_per_row,
-                                float *u,
-                                float *v);
-
-/// `GETexture::Dereference`'s decision at reference count `count`: whether to drop a reference and whether to remove
-/// the texture from its manager.
-///
-/// # Safety
-/// `dereference` and `remove` are valid for writes.
-void ee_ge_texture_dereference_decision(unsigned long count,
-                                        bool managed,
-                                        bool *dereference,
-                                        bool *remove);
-
-/// `GETexture::GetAllocatedSize`.
-unsigned long ee_ge_texture_allocated_size(unsigned long surface_size,
-                                           unsigned long frame_format,
-                                           unsigned long frame_count);
-
-/// `SetStageMipFilterMode`'s mode after the texture pack's override.
-unsigned long ee_ge_texture_mip_filter_mode(unsigned long mode,
-                                            bool has_surface,
-                                            unsigned long logical_shift,
-                                            bool create_mipmaps);
 
 /// `GETextureSet`'s slot of tile (x, y): the texture column and row.
 ///
