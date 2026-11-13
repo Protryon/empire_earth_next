@@ -177,7 +177,8 @@ long EEE3DScreenFlash::Load(unsigned long inMajorVersion, unsigned long inMinorV
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    return inFile.Read(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_aged(this->mRecord, &theFile);
 }
 
 // ICF-folded into 0xe93e0
@@ -191,15 +192,14 @@ long EEE3DScreenFlash::RepairPointers()
 long EEE3DScreenFlash::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
-    return outFile.Write(this->mAge);
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4f90a9
 // Ages the flash by the tick over the effect's duration; returns 7 once it reaches 1
 long EEE3DScreenFlash::Step()
 {
-    this->mAge += (gPhysics->GetTickSeconds() * 1000.0f) / this->mGraphicEffect->mDuration;
-    if (this->mAge >= 1.0f)
-        return 7;
-    return 0;
+    int32_t theTile[2];
+    return ee_gfx_effect_aged_step(this->mRecord, gPhysics->GetTickSeconds(), (uint32_t)this->mGraphicEffect->mDuration, theTile);
 }

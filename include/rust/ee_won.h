@@ -134,6 +134,54 @@ constexpr static const int32_t EE_WON_ADMINOP_PASSWORD_EMAIL = 41;
 /// WONMisc's `GetPatchListOp`: product, config, from, to, state filter
 constexpr static const int32_t EE_WON_ADMINOP_GET_PATCH_LIST = 42;
 
+/// `SetUserName(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_NAME = 1;
+
+/// `SetPassword(text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_PASSWORD = 2;
+
+/// `SetLoginSecretFile(bytes)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SECRET_FILE = 3;
+
+/// `AddCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_COMMUNITY = 4;
+
+/// `SetCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_COMMUNITY = 5;
+
+/// `RemoveCommunity(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_COMMUNITY = 6;
+
+/// `RemoveAllCommunity()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_REMOVE_ALL_COMMUNITY = 7;
+
+/// `SetCDKey(key, CDKey)`: the key's bytes, `num` bit 0 its `mKey` present, bit 1 `mValid`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CDKEY = 8;
+
+/// `AddCDKeyCommunityJoin(key, CDKey)`: the key's bytes, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_JOIN = 9;
+
+/// `ClearCDKeyCommunityJoins()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_JOINS = 10;
+
+/// `AddUserData(key, data)`: the data, `num` bit 0 present
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_USER_DATA = 11;
+
+/// `ClearUserData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_USER_DATA = 12;
+
+/// `ClearOneTimeData()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_ONE_TIME = 13;
+
+/// `AddNickname(key)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_ADD_NICKNAME = 14;
+
+/// `SetNickname(key, text)`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_SET_NICKNAME = 15;
+
+/// `ClearNicknames()`
+constexpr static const int32_t EE_WON_AUTH_LOGIN_CLEAR_NICKNAMES = 16;
+
 /// `SendPubKeyRequest`'s message.
 constexpr static const int32_t EE_WON_CERT_REQ_PUBKEYS = 1;
 
@@ -1194,6 +1242,9 @@ constexpr static const int32_t EE_WON_HTTPDOC_MODIFIED = 7;
 /// `GetDocumentPath(owner)` (bytes)
 constexpr static const int32_t EE_WON_HTTPDOC_PATH = 8;
 
+/// `GetDocument(owner)`: the cache file's bytes as of now, NUL-ended (a MOTD without its flag character)
+constexpr static const int32_t EE_WON_HTTPDOC_DOCUMENT = 9;
+
 /// `SetLocalPath` / `GetLocalPath()` (bytes)
 constexpr static const int32_t EE_WON_HTTPGET_LOCAL_PATH = 1;
 
@@ -1809,6 +1860,49 @@ constexpr static const uint8_t EE_WON_RT_ACT_INVALID_HEADER = 8;
 /// `ThreadPriority_Normal` (the enum: Highest, High, Normal, Low, Lowest).
 constexpr static const int32_t EE_WON_THREAD_PRIORITY_NORMAL = 2;
 
+/// `GetVersionOp`: the product, the extra config, the filter string
+constexpr static const int32_t EE_WON_REQOPS_GET_VERSION = 16;
+
+/// `FindPatchOp`: as `GetVersionOp`'s, then (`FindPatchOp(GetVersionOp*)`) the valid version count and each
+/// version and its description, the filtered version count and each version
+constexpr static const int32_t EE_WON_REQOPS_FIND_PATCH = 17;
+
+/// `GetHighestValidVersion()` (bytes)
+constexpr static const int32_t EE_WON_REQOP_VERSION_HIGHEST = 60;
+
+/// the valid versions (number: the count; bytes: the element), the filtered ones
+constexpr static const int32_t EE_WON_REQOP_VERSION_VALID = 61;
+
+constexpr static const int32_t EE_WON_REQOP_VERSION_FILTERED = 62;
+
+/// the valid version's description (bytes; the element: the valid version's index)
+constexpr static const int32_t EE_WON_REQOP_VERSION_DESCRIPTION = 63;
+
+/// a setter: `CheckVersion(bytes)`, its result (`Version_Invalid` 0, `_Valid_NotLatest` 1, `_Valid_Latest` 2)
+/// read as this number
+constexpr static const int32_t EE_WON_REQOP_VERSION_CHECK = 64;
+
+/// the patches: the count (number); each one's from and to versions, name (UTF-16 LE) and location (bytes, none:
+/// NULL), checksum and size (number); the element: the patch's index
+constexpr static const int32_t EE_WON_REQOP_PATCH_COUNT = 65;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_FROM = 66;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_TO = 67;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_NAME = 68;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_LOCATION = 69;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_CHECKSUM = 70;
+
+constexpr static const int32_t EE_WON_REQOP_PATCH_SIZE = 71;
+
+/// a setter: `GetPatchList` (num 0), `GetValidPatchList` (1), `GetHighestPatchList(from, to)` (2) and
+/// `GetHighestPatchList(from)` (3), the bytes "from\0to"; the chosen patches' indexes read as this number (the
+/// element: the position; -1 past the end)
+constexpr static const int32_t EE_WON_REQOP_PATCH_QUERY = 72;
+
 /// A number of the parser.
 enum class EeWonChatParserNumber {
   Error = 0,
@@ -2135,6 +2229,87 @@ enum class EeWonGuiOp : uint32_t {
   EventButton,
   /// `Container::HandleComponentEvent(a)`.
   BaseHandleEvent,
+  /// `AdjustPosition(a != 0)` (virtual: a subclass's override).
+  VirtAdjustPosition = 190,
+  /// `Sort()` (virtual; 0 or 1).
+  VirtSort,
+  /// `NotifyMouseItemGone()` (virtual).
+  VirtNotifyMouseItemGone,
+  /// `ListSelChangedHook()` (virtual).
+  VirtListSelChangedHook,
+  /// `SetVertOffset(a)`.
+  SetVertOffset,
+  /// `OnBottom()` (0 or 1).
+  OnBottom,
+  /// `if (mFocusChild != NULL) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
+  FocusChildLost,
+  /// `GetRoot()->GetKeyMod()`.
+  RootKeyMod,
+  /// `SetCursor(GetDefaultCursor())`.
+  SetCursorDefault,
+  /// `GetViewport()`.
+  GetViewport,
+  /// the root's mouse point outside the list (`SetListFlags`: a window, a parent, and not `Contains`; 0 or 1).
+  PointerOutside,
+  /// `DeliverEvent(new ListItemClickedEvent(this, a, button, CheckDoubleClick(button), up, x, y), false)` with
+  /// the `EeWonItemClick` at `b`.
+  DeliverItemClicked,
+  /// the item tool tip made when there is none, then `DoTip(a)`.
+  TipShow,
+  /// `if (mItemToolTip != NULL) mItemToolTip->DoTip(NULL)`.
+  TipHide,
+  /// `if (mItemToolTip != NULL) mItemToolTip->EndTip()`.
+  TipEnd,
+  /// `std::sort` of the `b` items at `a` with `LineSortPred(this, GetSortFunc(), c)`.
+  SortItems,
+  /// `std::lower_bound` of the item `c` in the `b` sorted items at `a` with `LineSortPred(this, GetSortFunc(), d)`.
+  LowerBound,
+  /// `LineSortPred(this, GetSortFunc(), c)(a, b)` (0 or 1).
+  Less,
+  /// `a->mTop`.
+  ItemTop = 220,
+  /// `a->mTop = b`.
+  ItemSetTop,
+  /// `a->mHeight`.
+  ItemHeight,
+  /// `a->mHeight = b`.
+  ItemSetHeight,
+  /// `a->mWidth`.
+  ItemWidth,
+  /// `a->mSelected` (0 or 1).
+  ItemSelected,
+  /// `a->mSelected = b != 0`.
+  ItemSetSelected,
+  /// `a->mSelectable` (0 or 1).
+  ItemSelectable,
+  /// `a->SetPos(0, b)`.
+  ItemSetPos,
+  /// `a->Contains(b, c)` (0 or 1).
+  ItemContains,
+  /// `a->CanSelect(this, b, c)` (0 or 1).
+  ItemCanSelect,
+  /// `a->CalcDimensions(this)`.
+  ItemCalcDimensions,
+  /// `a->SetViewport(this, b)` (`b` a `Container*` or NULL).
+  ItemSetViewport,
+  /// `a->Paint(*b, this)`.
+  ItemPaint,
+  /// `a->MouseEnter(this, b, c)`.
+  ItemMouseEnter,
+  /// `a->MouseExit(this)`.
+  ItemMouseExit,
+  /// `a->MouseMove(this, b, c)`.
+  ItemMouseMove,
+  /// `a->MouseDrag(this, b, c)`.
+  ItemMouseDrag,
+  /// `a->MouseDown(this, b, c, d)`.
+  ItemMouseDown,
+  /// `a->MouseUp(this, b, c, d)`.
+  ItemMouseUp,
+  /// `a->AddRef()` (the list's `SmartPtr`).
+  ItemHold,
+  /// `a->Release()`.
+  ItemRelease,
 };
 
 /// The inward calls (the C++ shell's virtuals and methods). Texts are `wchar_t` units: a pointer and a length.
@@ -2592,6 +2767,97 @@ enum class EeWonLanCall : uint32_t {
   Accept,
 };
 
+/// The inward calls (the C++ shell's virtuals and methods). Items are `ListItem*`s.
+enum class EeWonListCall : uint32_t {
+  /// `ListArea::Virtual08` (SizeChanged).
+  SizeChanged = 1,
+  /// `ListArea::AdjustPosition(a != 0)`.
+  AdjustPosition,
+  /// `ListArea::ScrollPaint(*a)` (`a` the Graphics).
+  ScrollPaint,
+  /// `ListArea::MouseEnter(a, b)`.
+  MouseEnter,
+  MouseExit,
+  /// `ListArea::MouseDown(a, b, c)`.
+  MouseDown,
+  /// `ListArea::MouseUp(a, b, c)`.
+  MouseUp,
+  /// `ListArea::MouseMove(a, b)`.
+  MouseMove,
+  /// `ListArea::MouseDrag(a, b)`.
+  MouseDrag,
+  /// `ListArea::KeyDown(a)` (0 or 1).
+  KeyDown,
+  /// `ListArea::NotifyMouseItemGone()`.
+  NotifyMouseItemGone,
+  /// `ListArea::Sort()` (0 or 1).
+  Sort,
+  BeginUpdate,
+  EndUpdate,
+  /// `Clear(a != 0)`.
+  Clear,
+  /// `GetItem(a)`.
+  GetItem,
+  /// `InsertItem(a, b)`: the item.
+  InsertItem,
+  /// `RefreshItem(a)`.
+  RefreshItem,
+  /// `DeleteItem(a)`.
+  DeleteItem,
+  /// `RemoveItem(a)`.
+  RemoveItem,
+  /// `DeleteRange(a, b)`.
+  DeleteRange,
+  /// `SetListFlags(a, b != 0)`.
+  SetListFlags,
+  /// `mListFlags`.
+  ListFlags,
+  /// `GetNumItems()`.
+  NumItems,
+  /// `GetItemPos(a)`.
+  GetItemPos,
+  /// `SetSelItem(int a, b != 0)`.
+  SetSelItemAt,
+  /// `SetSelItem(ListItem* a, b != 0, c != 0)` (0 or 1).
+  SetSelItem,
+  /// `EnsureVisible(a)`.
+  EnsureVisible,
+  /// `ClearSelection(a != 0)`.
+  ClearSelection,
+  /// `SelectRange(a, b)`.
+  SelectRange,
+  /// `FindItemAt(a)`.
+  FindItemAt,
+  /// `IsItemVisible(a)` (0 or 1).
+  IsItemVisible,
+  EnforceInvariants,
+  RewindSelections,
+  /// `HasMoreSelections()` (0 or 1).
+  HasMoreSelections,
+  /// `GetNextSelection()`.
+  GetNextSelection,
+  /// `GetItemPosAtYPos(a)`.
+  GetItemPosAtYPos,
+  /// `FindSelectableItem(a, b != 0, c != 0)`.
+  FindSelectableItem,
+  /// `SetSortType(a)`.
+  SetSortType,
+  /// `mSortType`.
+  SortType,
+  /// `mSortType = a` (no sort).
+  SetSortTypeOnly,
+  /// `mSelItem`.
+  SelItem,
+  /// `mMouseItem`.
+  MouseItem,
+  /// `mMouseItem = NULL` (the field only).
+  ClearMouseItem,
+  /// `mPaintWidth`.
+  PaintWidth,
+  /// `mPaintWidth = a`.
+  SetPaintWidth,
+};
+
 /// A container's key kind (its comparator).
 enum class EeWonLobbyKeyKind {
   /// `unsigned short` / `unsigned long` ids
@@ -2913,6 +3179,8 @@ enum class EeWonGuiEvent : uint32_t {
   InputReturn = 1,
   /// `ComponentEvent_InputTextChanged`.
   InputTextChanged = 2,
+  /// `ComponentEvent_ListSelChanged`.
+  ListSelChanged = 3,
 };
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
@@ -2926,6 +3194,9 @@ struct EeWonAsyncSocket;
 
 /// `AuthContext`'s sessions and certificate flow.
 struct EeWonAuthFlow;
+
+/// The login data (opaque): `AuthContext::mLogin`, its own lock.
+struct EeWonAuthLogin;
 
 /// The secret list (opaque): `AuthContext::mSecrets`.
 struct EeWonAuthSecrets;
@@ -2973,6 +3244,9 @@ struct EeWonLan;
 /// `LobbyLanSocket`'s own state (round 14): its client (the C++ `LobbyLanClient`, a reference held) and the time
 /// its last message came (`time(NULL)`; the original left it unset until then, here 0).
 struct EeWonLanSocket;
+
+/// The Rust ListArea.
+struct EeWonList;
 
 /// An ordered container of the lobby (see the module).
 struct EeWonLobbyMap;
@@ -4932,6 +5206,14 @@ struct EeWonUdpOpHooks {
   const EeWonUdpRecvOp *(*recv_object)(void *op);
 };
 
+/// A click the list delivers (`ListItemClickedEvent`'s arguments besides the item; `DeliverItemClicked`'s `b`).
+struct EeWonItemClick {
+  int32_t button;
+  bool up;
+  int32_t x;
+  int32_t y;
+};
+
 extern "C" {
 
 /// An op's request data into `sink` (`values`: its members in its table's order).
@@ -5105,6 +5387,76 @@ void ee_won_auth_flow_refresh_async(const EeWonAuthFlow *f, void *light, uint32_
 /// # Safety
 /// `f` a flow.
 long ee_won_auth_flow_refresh_block(const EeWonAuthFlow *f, uint32_t timeout);
+
+/// An empty login (the secret file: `secret_file`, the WON directory's `_wonlogin.ks`).
+///
+/// # Safety
+/// `secret_file` holds `len` bytes.
+EeWonAuthLogin *ee_won_auth_login_new(const uint8_t *secret_file, size_t len);
+
+/// # Safety
+/// `l` is from `ee_won_auth_login_new` (or NULL), not used afterwards.
+void ee_won_auth_login_free(EeWonAuthLogin *l);
+
+/// A setter (`EE_WON_AUTH_LOGIN_*`): `key` a map's key and `value` a text (UTF-16 LE bytes) or bytes.
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+void ee_won_auth_login_set(const EeWonAuthLogin *l,
+                           int32_t which,
+                           const uint8_t *key,
+                           size_t key_len,
+                           const uint8_t *value,
+                           size_t value_len,
+                           int64_t num);
+
+/// `EE_WON_AUTH_LOGIN_NAME` / `_PASSWORD`: the text (UTF-16 LE bytes); `_SECRET_FILE`: its bytes.
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_text(const EeWonAuthLogin *l,
+                            int32_t which,
+                            EeWonByteSink sink,
+                            void *context);
+
+/// `SetHashFileList(community, files)`: the files NUL-separated (`files_len` bytes, each path NUL-ended).
+///
+/// # Safety
+/// `l` is a login; the buffers hold their lengths.
+bool ee_won_auth_login_hash_files(const EeWonAuthLogin *l,
+                                  const uint8_t *community,
+                                  size_t community_len,
+                                  const uint8_t *files,
+                                  size_t files_len);
+
+/// The members, one line (`Login::describe`, the drivers' form).
+///
+/// # Safety
+/// `l` is a login; `sink` takes `context`.
+void ee_won_auth_login_describe(const EeWonAuthLogin *l, EeWonByteSink sink, void *context);
+
+/// The login request's blocks: 0 `AppendCommunityData`, 1 `AppendHashes(challenge)` (`data`), 2
+/// `AppendLoginSecrets`.
+///
+/// # Safety
+/// `l` is a login; `data` holds `len` bytes; `sink` takes `context`.
+void ee_won_auth_login_block(const EeWonAuthLogin *l,
+                             int32_t which,
+                             const uint8_t *data,
+                             size_t len,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// The secrets: 0 `LoadSecretList`, 1 `SaveSecretList` (false: the file did not open), 2 `AddSecret(key)` and save,
+/// 3 `RemoveSecret(key)` and save when removed, 4 `CommitSecrets(t0, t1)` and save when it changed anything.
+///
+/// # Safety
+/// `l` is a login; `key` 8 bytes for 2 and 3.
+bool ee_won_auth_login_secrets(const EeWonAuthLogin *l,
+                               int32_t which,
+                               const uint8_t *key,
+                               int64_t t0,
+                               int64_t t1);
 
 /// `ByteBuffer(data, length, false)`: a copy.
 ///
@@ -8898,18 +9250,16 @@ void ee_won_http_cache_file_name(int32_t id,
 /// `HTTPCache::WriteCacheMap`'s keep rule.
 bool ee_won_http_cache_keeps(bool valid, int64_t now, int64_t last_access);
 
-/// `new GetHTTPDocumentOp(product, type)`: the document type, the product's lower-case name and the two cache
-/// files (the C++ side names them from the WON directory, as `SetDocType` did).
+/// `new GetHTTPDocumentOp(product, type)`: the document type, the product (its lower case for the paths) and the
+/// cache files in the WON directory `dir` (`SetDocType`, `CheckHostAndPath`).
 ///
 /// # Safety
 /// The texts hold their lengths' bytes.
 EeWonHostOp *ee_won_httpdoc_new(int32_t doc_type,
-                                const uint8_t *product_lower,
+                                const uint8_t *product,
                                 size_t product_len,
-                                const uint8_t *sys_doc,
-                                size_t sys_len,
-                                const uint8_t *game_doc,
-                                size_t game_len);
+                                const uint8_t *dir,
+                                size_t dir_len);
 
 /// # Safety
 /// `hooks` points to a hook table whose context outlives the connection.
@@ -9260,6 +9610,23 @@ ptrdiff_t ee_won_lan_call(const EeWonLan *lan,
                           void *b,
                           ptrdiff_t c,
                           ptrdiff_t d);
+
+/// A new Rust ListArea for the C++ `component`, its calls out through `host`.
+EeWonList *ee_won_list_new(void *component, EeWonGuiHostFn host);
+
+/// # Safety
+/// `list` came from `ee_won_list_new` (or is NULL) and is not used again.
+void ee_won_list_free(EeWonList *list);
+
+/// One of ListArea's methods (`EeWonListCall`).
+///
+/// # Safety
+/// `list` is live; the call's arguments as documented.
+ptrdiff_t ee_won_list_call(const EeWonList *list,
+                           EeWonListCall call,
+                           ptrdiff_t a,
+                           ptrdiff_t b,
+                           ptrdiff_t c);
 
 /// A "take" op's sink: appends `length` bytes to the Rust buffer `sink` (a `Vec<u8>` the op was given).
 ///
@@ -10370,6 +10737,28 @@ bool ee_won_reqop_bytes_at(const EeWonReqOp *op,
                            int64_t index,
                            EeWonByteSink sink,
                            void *context);
+
+/// A result's number by number and element.
+///
+/// # Safety
+/// `op` is a live op.
+int64_t ee_won_reqop_num_at(const EeWonReqOp *op, int32_t which, int64_t index);
+
+/// A setter by number (a number and bytes).
+///
+/// # Safety
+/// `op` is a live op; `data` holds `len` bytes.
+void ee_won_reqop_set(EeWonReqOp *op, int32_t which, int64_t num, const uint8_t *data, size_t len);
+
+/// A result list of directory entities, each to `sink`; the count.
+///
+/// # Safety
+/// `op` is a live op; `sink` takes `context`.
+size_t ee_won_reqop_entities(const EeWonReqOp *op,
+                             int32_t which,
+                             int64_t index,
+                             EeWonDirEntitySink sink,
+                             void *context);
 
 /// A result's number (the op's `EE_WON_REQOP_*` number).
 ///

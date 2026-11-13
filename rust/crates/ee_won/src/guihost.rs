@@ -260,6 +260,89 @@ pub enum EeWonGuiOp {
     EventButton,
     /// `Container::HandleComponentEvent(a)`.
     BaseHandleEvent,
+    // ---- a list (the C++ object's own virtuals, its scroll area and the item tool tip)
+    /// `AdjustPosition(a != 0)` (virtual: a subclass's override).
+    VirtAdjustPosition = 190,
+    /// `Sort()` (virtual; 0 or 1).
+    VirtSort,
+    /// `NotifyMouseItemGone()` (virtual).
+    VirtNotifyMouseItemGone,
+    /// `ListSelChangedHook()` (virtual).
+    VirtListSelChangedHook,
+    /// `SetVertOffset(a)`.
+    SetVertOffset,
+    /// `OnBottom()` (0 or 1).
+    OnBottom,
+    /// `if (mFocusChild != NULL) { mFocusChild->LostFocus(); mFocusChild = NULL; }`.
+    FocusChildLost,
+    /// `GetRoot()->GetKeyMod()`.
+    RootKeyMod,
+    /// `SetCursor(GetDefaultCursor())`.
+    SetCursorDefault,
+    /// `GetViewport()`.
+    GetViewport,
+    /// the root's mouse point outside the list (`SetListFlags`: a window, a parent, and not `Contains`; 0 or 1).
+    PointerOutside,
+    /// `DeliverEvent(new ListItemClickedEvent(this, a, button, CheckDoubleClick(button), up, x, y), false)` with
+    /// the `EeWonItemClick` at `b`.
+    DeliverItemClicked,
+    /// the item tool tip made when there is none, then `DoTip(a)`.
+    TipShow,
+    /// `if (mItemToolTip != NULL) mItemToolTip->DoTip(NULL)`.
+    TipHide,
+    /// `if (mItemToolTip != NULL) mItemToolTip->EndTip()`.
+    TipEnd,
+    /// `std::sort` of the `b` items at `a` with `LineSortPred(this, GetSortFunc(), c)`.
+    SortItems,
+    /// `std::lower_bound` of the item `c` in the `b` sorted items at `a` with `LineSortPred(this, GetSortFunc(), d)`.
+    LowerBound,
+    /// `LineSortPred(this, GetSortFunc(), c)(a, b)` (0 or 1).
+    Less,
+    // ---- a list item (`a` a `ListItem*`)
+    /// `a->mTop`.
+    ItemTop = 220,
+    /// `a->mTop = b`.
+    ItemSetTop,
+    /// `a->mHeight`.
+    ItemHeight,
+    /// `a->mHeight = b`.
+    ItemSetHeight,
+    /// `a->mWidth`.
+    ItemWidth,
+    /// `a->mSelected` (0 or 1).
+    ItemSelected,
+    /// `a->mSelected = b != 0`.
+    ItemSetSelected,
+    /// `a->mSelectable` (0 or 1).
+    ItemSelectable,
+    /// `a->SetPos(0, b)`.
+    ItemSetPos,
+    /// `a->Contains(b, c)` (0 or 1).
+    ItemContains,
+    /// `a->CanSelect(this, b, c)` (0 or 1).
+    ItemCanSelect,
+    /// `a->CalcDimensions(this)`.
+    ItemCalcDimensions,
+    /// `a->SetViewport(this, b)` (`b` a `Container*` or NULL).
+    ItemSetViewport,
+    /// `a->Paint(*b, this)`.
+    ItemPaint,
+    /// `a->MouseEnter(this, b, c)`.
+    ItemMouseEnter,
+    /// `a->MouseExit(this)`.
+    ItemMouseExit,
+    /// `a->MouseMove(this, b, c)`.
+    ItemMouseMove,
+    /// `a->MouseDrag(this, b, c)`.
+    ItemMouseDrag,
+    /// `a->MouseDown(this, b, c, d)`.
+    ItemMouseDown,
+    /// `a->MouseUp(this, b, c, d)`.
+    ItemMouseUp,
+    /// `a->AddRef()` (the list's `SmartPtr`).
+    ItemHold,
+    /// `a->Release()`.
+    ItemRelease,
 }
 
 /// The events a component object fires (`FireEvent`).
@@ -270,6 +353,8 @@ pub enum EeWonGuiEvent {
     InputReturn = 1,
     /// `ComponentEvent_InputTextChanged`.
     InputTextChanged = 2,
+    /// `ComponentEvent_ListSelChanged`.
+    ListSelChanged = 3,
 }
 
 /// Appends `count` text units of `unit_size` bytes (2 or 4: a `wchar_t`) to the Rust buffer of a take op.

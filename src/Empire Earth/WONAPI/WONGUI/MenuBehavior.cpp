@@ -40,7 +40,7 @@ void MenuItem::Paint(Graphics& g,ListArea* area)
     if(this->mSelected)
     {
         g.SetColor(area->mSelColor.GetBackgroundColor(g));
-        int width=area->mPaintWidth;
+        int width=area->GetPaintWidth();
         if(!area->ListFlagSet(0x10)) width=this->mWidth;
         int x=0;
         if(this->mImage.get()!=NULL) x=20;
@@ -111,7 +111,7 @@ void PopupMenu::HandleComponentEvent(ComponentEvent* event)
 {
     if(ee_won_gui_menu_popup_event(event->mComponent==this->mCurSubMenu.get(), event->mType))
     {
-        if(this->mCurSubMenu->mSelItem!=NULL)
+        if(this->mCurSubMenu->GetSelItem()!=NULL)
             this->SetSelItem(this->GetItemPos(this->mCurSubMenuItem.get()));
     }
     else ScrollArea::HandleComponentEvent(event);
@@ -136,7 +136,7 @@ void PopupMenu::ListSelChangedHook()
     if(!this->mKeyboardMode)
     {
         if(ee_won_gui_menu_sel_clears_sub(this->mKeyboardMode, this->mCurSubMenu.get()!=NULL,
-                                          this->mSelItem==this->mCurSubMenuItem.get()))
+                                          this->GetSelItem()==this->mCurSubMenuItem.get()))
             this->mCurSubMenu->SetSelItem(-1);
         this->RequestTimer(true);
     }
@@ -171,7 +171,7 @@ void PopupMenu::MouseUp(int x,int y,int button)
 void PopupMenu::CheckSubMenu()
 {
     this->mTimerAcc=0;
-    MenuItem* item=dynamic_cast<MenuItem*>(this->mSelItem);
+    MenuItem* item=dynamic_cast<MenuItem*>(this->GetSelItem());
     PopupMenu* submenu=item!=NULL ? item->mSubMenu.get() : NULL;
     uint8_t aStep=ee_won_gui_menu_check_sub(item!=NULL,this->mCurSubMenu.get()!=NULL,
                                             item!=NULL && this->mCurSubMenu.get()==submenu,submenu!=NULL,

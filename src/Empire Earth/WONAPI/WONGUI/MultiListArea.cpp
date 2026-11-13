@@ -86,7 +86,7 @@ void MultiListArea::SetSortColumn(int theCol, ListSortType theType)
 
 	this->mSortColumnPrev = this->mSortColumn;
 	this->mSortColumn = theCol;
-	this->mSortType = theType;
+	this->SetSortTypeOnly(theType);
 	this->mSortColFunc = this->mColumnInfoVector[theCol].mSortFunc;
 	if(this->mListHeader!=NULL)
 		this->mListHeader->SetSortColumn(theCol,theType);
@@ -144,7 +144,7 @@ void MultiListArea::ScrollPaint(Graphics &g)
 		if(o.a==0)
 		{
 			this->mColumnPaintContext = o.b;
-			this->mPaintWidth = o.c;
+			this->SetPaintWidth(o.c);
 		}
 		else
 			ListArea::ScrollPaint(g);

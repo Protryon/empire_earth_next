@@ -29,6 +29,7 @@ pub mod host;
 pub mod kinds;
 pub mod motion;
 pub mod order;
+pub mod patrol;
 pub mod physics;
 pub mod players;
 pub mod registry;

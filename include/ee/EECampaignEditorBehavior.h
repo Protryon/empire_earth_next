@@ -1,7 +1,8 @@
 // EECampaignEditorBehavior (RECONSTRUCTION; class name from RTTI; file name inferred; provisional member and method
 // names). The campaign editor's model: RTTI EECampaignEditorBehavior (vtable 0x44c058, one slot: ??_G 0x28d885),
 // ctor 0x28d82d, dtor 0x28d8a1, members 0x28d8d6..0x28e86f (its own unit, not UI Events).
-// The game has one, a file-scope global of EEUIECampaignEditorEvents.cpp (0x562df0, init chain 0x1cfeef).
+// The game has one, gCampaignEditor (0x562df0, init chain 0x1cfeef; a file-scope global of the original
+// EEUIECampaignEditorEvents.cpp, now of UI Events/EEScreens.cpp, the campaign editor's host: ee_screens campaign_editor.rs).
 // Layout from the ctor/dtor: +0x04 EECampaign (ctor 0x28c08c, dtor 0x1317a9), +0xb4/+0xc4 vector<UWideString>
 // (GetScenarios/GetAvailableScenarios copy them), +0xd4 UWideString (SetPassword), +0xe8/+0xe9 bools (sizeof 0xec).
 // Requires <vector>, ee/EECampaignFormManager.h (EECampaign).

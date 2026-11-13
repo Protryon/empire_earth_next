@@ -158,10 +158,8 @@ long EEE2DWaterRipple::Load(unsigned long inMajorVersion, unsigned long inMinorV
     EEEffect2D::Load(inMajorVersion, inMinorVersion, inFile);
     this->mGraphicObject = this->GetGraphicObject();
     this->mGraphicObject->LoadMedia();
-    long theResult = this->mTransformation.Load(inFile);
-    if (theResult == 0)
-        theResult = inFile.Read(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(inFile);
+    return ee_gfx_effect_load_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e8089
@@ -169,26 +167,18 @@ long EEE2DWaterRipple::Load(unsigned long inMajorVersion, unsigned long inMinorV
 long EEE2DWaterRipple::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EEEffect2D::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = this->mTransformation.Save(outFile);
-    if (theResult == 0)
-        theResult = outFile.Write(this->mAge);
-    return theResult;
+    EeGfxEffectFile theFile = EEEffectFile(outFile);
+    return ee_gfx_effect_save_aged(this->mRecord, &theFile);
 }
 
 // FUNCTION: EXE 0x4e80c0
 // Ages the ripple by the tick over the effect's duration; returns 7 (remove) once it is over or its tile is not blocked
 long EEE2DWaterRipple::Step()
 {
-    long theResult = 0;
-    this->mAge += (gPhysics->GetTickSeconds() * 1000.0f) / this->mGraphicEffect->mDuration;
-    if (this->mAge <= 1.0f) {
-        this->mTransformation.SetZ(0.0f);
-        long theY = UMFloor(this->mTransformation.GetY());
-        long theX = UMFloor(this->mTransformation.GetX());
-        if (!gWorld.IsTileBlocked(theX, theY))
-            theResult = 7;
-    } else {
-        theResult = 7;
-    }
+    int32_t theTile[2];
+    long theResult = ee_gfx_effect_aged_step(this->mRecord, gPhysics->GetTickSeconds(),
+                                             (uint32_t)this->mGraphicEffect->mDuration, theTile);
+    if (theResult == EE_GFX_EFFECT_ASK_BLOCKED)
+        theResult = gWorld.IsTileBlocked(theTile[0], theTile[1]) ? 0 : 7;
     return theResult;
 }

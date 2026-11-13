@@ -104,7 +104,7 @@ void TreeItem::MouseExit(ListArea *theListArea)
 	if(anItem!=NULL)
 	{
 		anItem->MouseExit(theListArea);
-		static_cast<TreeArea*>(theListArea)->mMouseItem = NULL;
+		theListArea->ClearMouseItem();
 	}
 }
 

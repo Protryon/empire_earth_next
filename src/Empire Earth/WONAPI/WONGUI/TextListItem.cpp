@@ -43,7 +43,7 @@ void TextListItem::Paint(Graphics& inGraphics,ListArea* inList)
     r.has_image=anImage!=NULL;
     r.sel=WONDrawSelOf(inList->GetSelColor());
     r.color=(uint32_t)this->mColor;
-    r.paint_width=inList->mPaintWidth;
+    r.paint_width=inList->GetPaintWidth();
     r.width=this->mWidth;
     r.height=this->mHeight;
     r.image_width=anImage ? anImage->mWidth : 0;
