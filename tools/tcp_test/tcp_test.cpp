@@ -1,8 +1,8 @@
-// Loopback test of the TCP/IP network plug-in (src/Low-Level Engine/Network Engine/TCP Protocol/TCP Protocol.cpp)
-// on the platform layer's sockets (platform/PlatSocket.h): one process plays host and client over 127.0.0.1 through
-// the plug-in's own NPIM* entry points, looked up by name in its PIMPlugin table as NEProtocol does
-// (PIMModule::GetEntry), with the arguments the network engine passes (NESynchronousServer::Publish: "EEService",
-// flags 2 = the datagram game socket; NESynchronousClient::Connect: type 2; ConnectForXfer mode 1):
+// Loopback test of the TCP/IP network plug-in (Rust: rust/crates/ee_net_tcp) on the platform layer's sockets
+// (platform/PlatSocket.h): one process plays host and client over 127.0.0.1 through the engine's protocol
+// (NEProtocol.cpp, its NEServer and NEConnection), with the arguments the network engine passes
+// (NESynchronousServer::Publish: "EEService", port 2 = the datagram game socket; NESynchronousClient::Connect: type
+// 2; ConnectForXfer mode 1):
 //
 //   1. activate; host publishes (datagram game socket on 33334, file-transfer listen socket on 33335)
 //   2. client connects (datagram), sends a join packet (type 0x22); the host's ReceiveFrom registers it as client 0
@@ -14,12 +14,12 @@
 // Every payload is checked byte for byte after the plug-in's RC4 enciphering round trip.
 //
 // Build and run: python -I tools/xbuild.py tcptest [--target windows-x86_64|linux-x86_64] [--no-run]. It links the
-// plug-in with the real UString, UWideString, TSCriticalSection and TSEvent units and the
+// protocol and the plug-in's engine calls with the real UString, UWideString, TSCriticalSection and TSEvent units and the
 // platform layer; the rest of the engine the plug-in calls is stood in below (the error system, TMGetTime, the
 // floating-point mode, URandom, TSScheduler's create/destroy). One process holds both roles, so the plug-in's
-// process-wide globals are shared (its xfer listen socket gSocket7280, which every NPIMCloseConnection also
+// process-wide globals are shared (its xfer listen socket gSocket7280, which every connection's close also
 // closes): the closes after the first see it closed already (result 1, as in a real client process). The LAN game
-// search (NPIMSearchForGame) is not tested: its querier and the host both bind port 33334, which needs two machines.
+// search (SearchForGame) is not tested: its querier and the host both bind port 33334, which needs two machines.
 // Uses ports 33334 and 33335 (the game's): no game may run on this machine meanwhile.
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +32,18 @@
 #include "platform/PlatTime.h"
 #include "platform/PlatSim.h"
 #include "lle/LowLevelEngine.h"
-#include "lle/PIMModule.h"
+#include "lle/NEProtocol.h"
+#include "lle/NEConnection.h"
+#include "lle/NEServer.h"
+#include "rust/ee_net_tcp.h"
+
+// The protocol's constructor and destructor are its friends' (NEInitialize, NEShutdown, the server): the test is
+// the server here (the game's server is not linked)
+class NESynchronousServer {
+public:
+    static NEProtocol* New() { return new NEProtocol(); }
+    static void Delete(NEProtocol* inProtocol) { delete inProtocol; }
+};
 
 // ---- stand-ins for the engine functions the plug-in calls (the test links no other engine unit)
 
@@ -117,20 +128,7 @@ long TSScheduler::DestroyThread(TSThread*)
     return kErrorOK;
 }
 
-// ---- the plug-in
-
-extern const PIMPlugin gPIMPluginTCPProtocol;
-
-static void* Entry(const char* inName)
-{
-    for (const PIMEntry* e = gPIMPluginTCPProtocol.mEntries; e->mName != NULL; e++)
-        if (strcmp(e->mName, inName) == 0)
-            return e->mProc;
-    fprintf(stderr, "no entry point %s\n", inName);
-    return NULL;
-}
-
-typedef void* Handle;   // the plug-in's TCPServer* / TCPConnection* (the engine's NEServer / NEConnection slot)
+// ---- the protocol
 
 static int sFailures;
 #define CHECK(cond)                                                                                              \
@@ -175,10 +173,10 @@ static long ReceiveWithin(TSEvent* inEvent, F inReceive)
     }
 }
 
-static void Fill(std::vector<char>& outData, unsigned long inSeed)
+static void Fill(std::vector<unsigned char>& outData, unsigned long inSeed)
 {
     for (size_t i = 0; i < outData.size(); i++)
-        outData[i] = (char)((i * 131 + inSeed * 7 + (i >> 8)) & 0xff);
+        outData[i] = (unsigned char)((i * 131 + inSeed * 7 + (i >> 8)) & 0xff);
 }
 
 int main()
@@ -187,119 +185,87 @@ int main()
     if (const char* theOffset = getenv("EE_TCP_TEST_PORT_OFFSET"))
         gPlatSimPortOffset = atoi(theOffset);
 
-    long (*Activate)() = (long (*)())Entry("NPIMActivate");
-    long (*Deactivate)() = (long (*)())Entry("NPIMDeactivate");
-    bool (*IsValid)() = (bool (*)())Entry("PIMIsValid");
-    long (*Publish)(const UString&, const UWideString&, unsigned long, TSEvent*, TSEvent*, TSEvent*, Handle*, bool,
-                    bool, unsigned long) =
-        (long (*)(const UString&, const UWideString&, unsigned long, TSEvent*, TSEvent*, TSEvent*, Handle*, bool, bool,
-                  unsigned long))Entry("NPIMPublish");
-    long (*Connect)(const UString&, const UString&, const UWideString&, long, TSEvent*, Handle*, unsigned long) =
-        (long (*)(const UString&, const UString&, const UWideString&, long, TSEvent*, Handle*, unsigned long))Entry(
-            "NPIMConnect");
-    long (*Send)(Handle*, char*, unsigned long) = (long (*)(Handle*, char*, unsigned long))Entry("NPIMSend");
-    long (*Receive)(Handle*, unsigned long, char*, unsigned long*) =
-        (long (*)(Handle*, unsigned long, char*, unsigned long*))Entry("NPIMReceive");
-    long (*ReceiveFrom)(Handle*, unsigned long, char*, unsigned long*, unsigned long*) =
-        (long (*)(Handle*, unsigned long, char*, unsigned long*, unsigned long*))Entry("NPIMReceiveFrom");
-    long (*SendTo)(Handle*, unsigned long, char*, unsigned long) =
-        (long (*)(Handle*, unsigned long, char*, unsigned long))Entry("NPIMSendTo");
-    long (*ConnectForXfer)(Handle*, long, TSEvent*, Handle*) =
-        (long (*)(Handle*, long, TSEvent*, Handle*))Entry("NPIMConnectForXfer");
-    long (*AcceptForXfer)(Handle*, Handle*) = (long (*)(Handle*, Handle*))Entry("NPIMAcceptForXfer");
-    long (*XferSendTo)(Handle*, unsigned long, char*, unsigned long) =
-        (long (*)(Handle*, unsigned long, char*, unsigned long))Entry("NPIMXferSendTo");
-    long (*XferReceive)(unsigned long, char*, unsigned long*) =
-        (long (*)(unsigned long, char*, unsigned long*))Entry("NPIMXferReceive");
-    bool (*IsAlive)(Handle*) = (bool (*)(Handle*))Entry("NPIMIsAlive");
-    long (*CloseConnection)(Handle*) = (long (*)(Handle*))Entry("NPIMCloseConnection");
-    long (*CloseServer)(Handle*) = (long (*)(Handle*))Entry("NPIMCloseServer");
-    long (*GetClientAddress)(Handle*, unsigned long, UWideString&) =
-        (long (*)(Handle*, unsigned long, UWideString&))Entry("NPIMGetClientAddress");
-    const UWideString& (*GetLocalAddress)(unsigned long) =
-        (const UWideString& (*)(unsigned long))Entry("NPIMGetLocalAddress");
-    long (*EnumerateAdapters)(std::vector<UWideString>&) =
-        (long (*)(std::vector<UWideString>&))Entry("NPIMEnumerateNetworkAdapters");
-    REQUIRE(Activate && Publish && Connect && Send && Receive && ReceiveFrom && SendTo && ConnectForXfer
-            && AcceptForXfer && XferSendTo && XferReceive && IsAlive && CloseConnection && CloseServer);
-
-    // 1. activate, publish
-    REQUIRE(Activate() == kOK);
-    CHECK(IsValid());
+    // 1. activate (the protocol's constructor), publish
+    NEProtocol* theProtocol = NESynchronousServer::New();
+    REQUIRE(NEProtocol::GetCount() == 1);
+    CHECK(ee_tcp_is_valid());
+    printf("protocol: %s, type %lu\n", (const char*)theProtocol->GetName(), theProtocol->GetProtocolType());
     std::vector<UWideString> theAdapters;
-    long theAdapterCount = EnumerateAdapters(theAdapters);
-    printf("adapters: %ld", theAdapterCount);
+    unsigned long theAdapterCount = theProtocol->EnumerateNetworkAdapters(theAdapters);
+    printf("adapters: %lu", theAdapterCount);
     for (size_t i = 0; i < theAdapters.size(); i++)
         printf("%s \"%s\"", i ? "," : "", (const char*)theAdapters[i]);
-    printf("\nlocal address (adapter 0): %s\n", (const char*)GetLocalAddress(0));
+    printf("\nlocal address (adapter 0): %s\n", (const char*)theProtocol->GetLocalAddress(0));
 
     TSEvent *theHostData, *theHostXfer, *theHostAccept, *theClientData, *theClientXfer;
     REQUIRE(TSScheduler::CreateEvent(theHostData) == kErrorOK && TSScheduler::CreateEvent(theHostXfer) == kErrorOK
             && TSScheduler::CreateEvent(theHostAccept) == kErrorOK
             && TSScheduler::CreateEvent(theClientData) == kErrorOK
             && TSScheduler::CreateEvent(theClientXfer) == kErrorOK);
-    Handle theServer = NULL;
-    long theResult = Publish("EEService", UWideString("tcp_test game"), 2, theHostData, theHostXfer, theHostAccept,
-                             &theServer, false, false, 0);
+    NEServer* theServer = NULL;
+    long theResult = theProtocol->Publish("EEService", UWideString("tcp_test game"), 2, theHostData, theHostXfer,
+                                          theHostAccept, theServer, false, false, 0);
     printf("publish: %ld\n", theResult);
-    REQUIRE(theResult == kOK && theServer != NULL);
+    REQUIRE(theResult == kOK && theServer != NULL && theServer->GetData() != NULL);
 
     // 2. client connects and joins
-    Handle theClient = NULL;
-    theResult = Connect("127.0.0.1", "EEService", UWideString("tcp_test game"), 2, theClientData, &theClient, 0);
+    NEConnection* theClient = NULL;
+    theResult = theProtocol->Connect("127.0.0.1", "EEService", UWideString("tcp_test game"), 2, theClientData,
+                                     theClient, 0);
     printf("connect: %ld\n", theResult);
-    REQUIRE(theResult == kOK && theClient != NULL);
+    REQUIRE(theResult == kOK && theClient != NULL && theClient->GetData() != NULL);
 
-    std::vector<char> theJoin(200), theBuffer(0x10000 + 16);
+    std::vector<unsigned char> theJoin(200), theBuffer(0x10000 + 16);
     Fill(theJoin, 1);
     theJoin[1] = 0x22;                       // a join packet (byte 0 is the cipher key the plug-in writes)
-    std::vector<char> theSent = theJoin;
-    CHECK(Send(&theClient, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    std::vector<unsigned char> theSent = theJoin;
+    CHECK(theClient->Send(theSent.data(), (unsigned long)theSent.size()) == kOK);
     unsigned long theReceived = 0, theIndex = 99;
     theResult = ReceiveWithin(theHostData, [&] {
-        return ReceiveFrom(&theServer, (unsigned long)theBuffer.size(), theBuffer.data(), &theReceived, &theIndex);
+        return theServer->ReceiveFrom((unsigned long)theBuffer.size(), theBuffer.data(), theReceived, theIndex);
     });
     printf("host receive (join): %ld, %lu bytes, client %lu\n", theResult, theReceived, theIndex);
     REQUIRE(theResult == kOK && theReceived == theJoin.size() && theIndex == 0);
     CHECK(memcmp(theBuffer.data() + 1, theJoin.data() + 1, theJoin.size() - 1) == 0);
     UWideString theClientAddress;
-    CHECK(GetClientAddress(&theServer, 0, theClientAddress) == kOK);
+    CHECK(theProtocol->GetClientAddress(theServer, 0, theClientAddress) == kOK);
     printf("client 0 address: %s\n", (const char*)theClientAddress);
     CHECK(strcmp(theClientAddress, "127.0.0.1") == 0);
 
     // 3. host -> client datagram
-    std::vector<char> theReply(900);
+    std::vector<unsigned char> theReply(900);
     Fill(theReply, 2);
     theSent = theReply;
-    CHECK(SendTo(&theServer, 0, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theServer->SendTo(0, theSent.data(), (unsigned long)theSent.size()) == kOK);
     theReceived = 0;
     theResult = ReceiveWithin(theClientData, [&] {
-        return Receive(&theClient, (unsigned long)theBuffer.size(), theBuffer.data(), &theReceived);
+        return theClient->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
     });
     printf("client receive (datagram): %ld, %lu bytes\n", theResult, theReceived);
     CHECK(theResult == kOK && theReceived == theReply.size()
           && memcmp(theBuffer.data() + 1, theReply.data() + 1, theReply.size() - 1) == 0);
 
     // 4. the file-transfer stream
-    Handle theClientStream = NULL, theHostStream = NULL;
-    theResult = ConnectForXfer(&theClient, 1, theClientXfer, &theClientStream);
+    NEConnection *theClientStream = NULL, *theHostStream = NULL;
+    const NEConnection* theFrom = theClient;
+    theResult = theProtocol->ConnectForXfer(theFrom, 1, theClientXfer, theClientStream);
     printf("connect for xfer: %ld\n", theResult);
     REQUIRE(theResult == kOK && theClientStream != NULL);
-    theResult = ReceiveWithin(theHostAccept, [&] { return AcceptForXfer(&theServer, &theHostStream); });
+    theResult = ReceiveWithin(theHostAccept, [&] { return theServer->AcceptForXfer(theHostStream); });
     printf("accept for xfer: %ld\n", theResult);
     REQUIRE(theResult == kOK && theHostStream != NULL);
-    CHECK(IsAlive(&theClientStream) && IsAlive(&theHostStream));
+    CHECK(theClientStream->IsAlive() && theHostStream->IsAlive());
 
     // 5. host -> client transfer, client -> host stream reply
-    std::vector<char> theFile(0x10000);
+    std::vector<unsigned char> theFile(0x10000);
     Fill(theFile, 3);
     theSent = theFile;
-    CHECK(XferSendTo(&theServer, 0, theSent.data(), (unsigned long)theSent.size()) == kOK);
-    std::vector<char> theGot;
+    CHECK(theServer->XferSendTo(0, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    std::vector<unsigned char> theGot;
     uint64_t theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theGot.size() < theFile.size() && PlatTimeMilliseconds() < theDeadline) {
         theReceived = 0;
-        theResult = XferReceive((unsigned long)theBuffer.size(), theBuffer.data(), &theReceived);
+        theResult = theProtocol->XferReceive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
         if (theResult == kOK)
             theGot.insert(theGot.end(), theBuffer.begin(), theBuffer.begin() + theReceived);
         else if (theResult == kWouldBlock)
@@ -310,15 +276,15 @@ int main()
     printf("client xfer receive: %lu of %lu bytes\n", (unsigned long)theGot.size(), (unsigned long)theFile.size());
     CHECK(theGot == theFile);
 
-    std::vector<char> theAnswer(3000);
+    std::vector<unsigned char> theAnswer(3000);
     Fill(theAnswer, 4);
     theSent = theAnswer;
-    CHECK(Send(&theClientStream, theSent.data(), (unsigned long)theSent.size()) == kOK);
+    CHECK(theClientStream->Send(theSent.data(), (unsigned long)theSent.size()) == kOK);
     theGot.clear();
     theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theGot.size() < theAnswer.size() && PlatTimeMilliseconds() < theDeadline) {
         theReceived = 0;
-        theResult = Receive(&theHostStream, (unsigned long)theBuffer.size(), theBuffer.data(), &theReceived);
+        theResult = theHostStream->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
         if (theResult == kOK)
             theGot.insert(theGot.end(), theBuffer.begin(), theBuffer.begin() + theReceived);
         else if (theResult == kWouldBlock)
@@ -328,32 +294,37 @@ int main()
     }
     printf("host stream receive: %lu of %lu bytes\n", (unsigned long)theGot.size(), (unsigned long)theAnswer.size());
     CHECK(theGot == theAnswer);
+    // every byte sent and received through the protocol is counted (the datagrams, the transfer, the stream)
+    printf("protocol bytes: sent %lu, received %lu\n", theProtocol->GetBytesSent(), theProtocol->GetBytesReceived());
+    CHECK(theProtocol->GetBytesSent() == theJoin.size() + theReply.size() + theFile.size() + theAnswer.size());
+    CHECK(theProtocol->GetBytesReceived() == theJoin.size() + theReply.size() + theFile.size() + theAnswer.size());
 
-    // 6. disconnect
-    theResult = CloseConnection(&theClientStream);
+    // 6. disconnect (a connection the plug-in closes is deleted)
+    theResult = theClientStream->Close();
     printf("client closes its stream: %ld\n", theResult);
-    CHECK(theResult == kOK && theClientStream == NULL);
+    CHECK(theResult == kOK);
     bool theAlive = true;
     theDeadline = PlatTimeMilliseconds() + kTimeout;
     while (theAlive && PlatTimeMilliseconds() < theDeadline) {
-        theAlive = IsAlive(&theHostStream);
+        theAlive = theHostStream->IsAlive();
         if (theAlive)
             PlatSleep(1);
     }
     CHECK(!theAlive);
-    theResult = Receive(&theHostStream, (unsigned long)theBuffer.size(), theBuffer.data(), &theReceived);
+    theResult = theHostStream->Receive((unsigned long)theBuffer.size(), theBuffer.data(), theReceived);
     printf("host sees the close: alive %d, receive %ld\n", (int)theAlive, theResult);
     CHECK(theResult == kUnavailable);
-    // the shared xfer listen socket is closed already (see the head comment): these report 1 for it
-    printf("close host stream: %ld\n", CloseConnection(&theHostStream));
-    printf("close client: %ld\n", CloseConnection(&theClient));
-    CHECK(theHostStream == NULL && theClient == NULL);
-    printf("close server: %ld\n", CloseServer(&theServer));
+    // the shared xfer listen socket is closed already (see the head comment): these report 1 for it, and the
+    // protocol keeps the wrappers it could not close
+    printf("close host stream: %ld\n", theHostStream->Close());
+    printf("close client: %ld\n", theClient->Close());
+    printf("close server: %ld\n", theServer->Close());
     TSScheduler::DestroyEvent(theHostData);
     TSScheduler::DestroyEvent(theHostXfer);
     TSScheduler::DestroyEvent(theHostAccept);
     TSScheduler::DestroyEvent(theClientData);
     TSScheduler::DestroyEvent(theClientXfer);
-    CHECK(Deactivate() == kOK);
+    NESynchronousServer::Delete(theProtocol);   // deactivates the plug-in
+    CHECK(NEProtocol::GetCount() == 0);
     return Finish();
 }
