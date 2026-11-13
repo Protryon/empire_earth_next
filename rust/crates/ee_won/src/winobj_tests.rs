@@ -4,8 +4,10 @@ use std::collections::HashMap;
 
 // ---- a small recording host for the unit tests
 
+type Entry = (isize, Op, isize, isize, isize, isize);
+
 thread_local! {
-    static LOG: Cell<Vec<(isize, Op, isize, isize, isize, isize)>> = const { Cell::new(Vec::new()) };
+    static LOG: Cell<Vec<Entry>> = const { Cell::new(Vec::new()) };
     static ANSWERS: Cell<HashMap<(u32, isize), isize>> = Cell::new(HashMap::new());
 }
 
@@ -19,7 +21,7 @@ fn answer(op: Op, sub: isize, v: isize) {
     ANSWERS.with(|m| m.borrow_mut().insert((op as u32, sub), v));
 }
 
-fn take() -> Vec<(isize, Op, isize, isize, isize, isize)> {
+fn take() -> Vec<Entry> {
     LOG.with(|l| std::mem::take(&mut *l.borrow_mut()))
 }
 

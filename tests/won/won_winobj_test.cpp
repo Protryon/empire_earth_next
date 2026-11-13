@@ -15,8 +15,8 @@
 // fields are traced.
 //
 // Each of 20,000 sequences makes 40 random calls on the windows (every Window method, the accessors' setters, world
-// changes). The traces must be the same. The first 30 sequences and every later one that makes an op or a call none
-// before made are rust/crates/ee_won/src/golden_winobj.txt, which the Rust tests replay; `--print` prints them.
+// changes), after a set-up that puts windows 2..4 under smaller ones and opens most windows. The traces must be the
+// same. The first 30 sequences and every later one that makes an op or a call none before made are rust/crates/ee_won/src/golden_winobj.txt, which the Rust tests replay; `--print` prints them.
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -645,10 +645,19 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
         else sOrig[w].Construct(w);
         // a few windows start open, under a smaller id, as Create left them
     }
-    for (int i = 0; i < calls; i++) {
+    // the set-up: windows 2..4 often under a smaller one and opened, so child sets with several windows form
+    // (CanClose's walk over them, PlatformClose's erase); then the random calls
+    int aSetup = 0;
+    int aSetupCalls[2 * kN][2]; // at most kN - 1 parents and kN opens
+    for (int w = 2; w <= kN; w++)
+        if (g.Int(4) != 0) { aSetupCalls[aSetup][0] = w; aSetupCalls[aSetup][1] = kSetParent; aSetup++; }
+    for (int w = 1; w <= kN; w++)
+        if (g.Int(4) != 0) { aSetupCalls[aSetup][0] = w; aSetupCalls[aSetup][1] = kCreate; aSetup++; }
+    for (int i = 0; i < calls + aSetup; i++) {
         sClock += g.Int(5) == 0 ? 0 : (uint32_t)g.Int(1500);
         int w = 1 + g.Int(kN);
         int call = g.Int(kCallCount);
+        if (i < aSetup) { w = aSetupCalls[i][0]; call = aSetupCalls[i][1]; }
         intptr_t a = 0, b = 0;
         EeWonWinEvent e = {};
         switch (call) {
@@ -661,7 +670,7 @@ static std::vector<std::string> RunSide(bool rust, unsigned seed, int calls)
         case kTimer: a = g.Int(1000); break;
         case kRemoveComponent: case kAddComponent: a = 0x7000 + g.Int(10); break;
         case kIsMouseDown: case kCheckDouble: a = g.Int(3); break;
-        case kSetParent: a = w > 1 && g.Int(4) != 0 ? 1 + g.Int(w - 1) : 0; break;
+        case kSetParent: a = w > 1 && (i < aSetup || g.Int(4) != 0) ? 1 + g.Int(w - 1) : 0; break;
         case kSetStyle: a = g.Int(256); break;
         case kWorld: {
             WinWorld& x = sW[w];
