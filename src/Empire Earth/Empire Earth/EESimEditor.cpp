@@ -30,12 +30,23 @@
 //   wall PLAYER TECHNOLOGY X0 Y0 X1 Y1    EESEAPlaceWall::Place
 //   gate PLAYER TECHNOLOGY X Y DIRECTION  EESEAPlaceGate::Place (no ghosts: placed)
 //   quicksave NAME, savefile NAME         EESEAQuickSaveScenario over EESEAQuickSaveLoad; the written file's chunks
+//   elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT   an elevation file pair NAME.dat and NAME.txt (W x H heights, a
+//                                         fixed pattern of land and water) written to data\Scenarios\Elevation Maps,
+//                                         the map tab's list refilled and NAME picked, its four boxes set (the next
+//                                         blank map is made from it); "elevfile -" picks none
+//   ghost PLAYER TYPE X Y YAW             the placement ghosts (EEGhostUnit::Create) put on the tile (X, Y) as
+//                                         EEPreviewPlacement puts them under the mouse (FillSquare: placeable or not)
+//   ghostat X Y                           the ghosts there are moved to the tile (X, Y) (a picked-up unit's ghost)
+//   placeghost PLAYER [UNIT]              EESEAPlaceUnit::Place over the ghosts (UNIT: the unit tab's unit under the
+//                                         mouse, a transport to board)
+//   drop [UNIT]                           EESEAMoveUnit::PutDown over the ghosts (UNIT as placeghost's)
+//   cancelmove                            EESEAMoveUnit::Cancel (the picked-up unit deleted)
 //   digest LABEL                          the map's tiles and mesh, every unit, the selection, the paint area, and
 //                                         the game's save chunks (the header, which holds the date, left out;
 //                                         four chunks differ by run: ChunkByRun)
-// Out of the script's reach (a person's): the ghosts under the mouse (Place, PutDown, the lasso's and the click's
-// picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech lists
-// (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
+// Out of the script's reach (a person's): the mouse's picking (EEPreviewPlacement's screen point, the lasso's and
+// the click's picking), the save and test screens (EESEASaveScenario, EESEATestScenario, EESEAExitScenario), the tech
+// lists (EESEATechTree), the load thread's texts (EESEAChangeLoadText).
 #include <windows.h>
 #include <mbstring.h>
 #include <stdio.h>
@@ -176,6 +187,8 @@
 #include "ee/EEPSaveGameHeader.h"
 #include "lle/FSChunk.h"
 #include "lle/FSPersistent.h"
+#include "ee/EEUIFileComboBox.h"
+#include "ee/EEUnitClassIDs.h"
 #include "ee/EESimEditor.h"
 
 // TEST ONLY: the time TMGetTime answers on this thread (-1: the clock; Time Manager.cpp)
@@ -470,6 +483,87 @@ unsigned long UnitRef(const std::string& inWord)
 // the editor's long-lived actions (the tabs keep one of each and post it again)
 EESEARotateUnits* sRotate = NULL;
 EESEAMoveUnit* sMove = NULL;
+EESEAPlaceUnit* sPlace = NULL;
+
+// The ghosts put on the tile (X, Y) as EEPreviewPlacement puts them under the mouse over the map: each on the tile
+// (a farm ghost on its slot), at the tile's centre (an even size: its corner) at the mesh's height, FillSquare
+// deciding whether it can be placed, its tile from its class
+void PutGhosts(long inX, long inY)
+{
+    gWorld.mGhostUnitsLock->Enter();
+    gGhostUnitsChanged = true;
+    for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
+        EEGhostUnit* theGhost = gWorld.mGhostUnits[i];
+        theGhost->mTileX = inX;
+        theGhost->mTileY = inY;
+        long theType = theGhost->mUnitClass->GetUnitType();
+        if ((theType == kUnitTypeFarm || theType == kUnitTypeRoboticFarm) && gWorld.GetNumGhostUnits() != 1)
+            EEGhostUnit::SetFarmSlotTile(theGhost, i);
+        GE3DPoint thePosition;
+        float theHalf = (theGhost->mUnitClass->GetTileSize() & 1) == 0 ? 0.0f : 0.5f;
+        thePosition.mX = (float)theGhost->mTileX + theHalf;
+        thePosition.mY = (float)theGhost->mTileY + theHalf;
+        thePosition.mZ = 0.0f;
+        if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) != NULL) {
+            thePosition.mZ = gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePosition.mX, thePosition.mY);
+            if (thePosition.mZ < 0.0f)
+                thePosition.mZ = 0.0f;
+        }
+        theGhost->mTransformation.SetPosition(thePosition);
+        theGhost->FillSquare();
+        theGhost->mUnitClass->LocationToTile(thePosition, theGhost->mTileX, theGhost->mTileY);
+        if (gWorld.GetMap()->GetTile(theGhost->mTileX, theGhost->mTileY) == NULL)
+            theGhost->mCanPlace = false;
+    }
+    gWorld.mGhostUnitsLock->Leave();
+}
+
+// The ghosts' tiles and whether each can be placed (the step's output)
+std::string GhostText()
+{
+    std::string theText = "  ghosts";
+    gWorld.mGhostUnitsLock->Enter();
+    for (unsigned long i = 0; i < gWorld.GetNumGhostUnits(); i++) {
+        EEGhostUnit* g = gWorld.mGhostUnits[i];
+        theText += " " + std::to_string(g->mUnitClass->GetUnitType()) + "@" + std::to_string(g->mTileX) + "," +
+                   std::to_string(g->mTileY) + (g->mCanPlace ? "+" : "-");
+    }
+    gWorld.mGhostUnitsLock->Leave();
+    return theText;
+}
+
+// An elevation file pair: NAME.txt holds "W H", NAME.dat W x H shorts (row by row): a ridge of land rising to 300
+// across the middle, water down to -200 at the two ends
+void WriteElevationFile(const std::string& inName, long inWidth, long inHeight)
+{
+    FSFileSpec theDirectory;
+    theDirectory.SetVolume(gStartupVolume);
+    theDirectory.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
+    theDirectory.CreateDirectory();
+    std::vector<short> theData((size_t)(inWidth * inHeight));
+    for (long y = 0; y < inHeight; y++)
+        for (long x = 0; x < inWidth; x++)
+            theData[(size_t)(y * inWidth + x)] = (short)(300 - (labs(2 * y - inHeight) * 500) / inHeight + (x * 37) % 41 - 20);
+    std::string theInfo = std::to_string(inWidth) + " " + std::to_string(inHeight) + "\n";
+    const struct {
+        const char* mExtension;
+        const unsigned char* mData;
+        unsigned long mLength;
+    } theFiles[2] = {{".dat", reinterpret_cast<const unsigned char*>(theData.data()), (unsigned long)(theData.size() * 2)},
+                     {".txt", reinterpret_cast<const unsigned char*>(theInfo.c_str()), (unsigned long)theInfo.size()}};
+    for (const auto& f : theFiles) {
+        FSFileSpec theFile;
+        theFile.SetVolume(gStartupVolume);
+        theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\" + "Elevation Maps\\");
+        theFile.SetFile(UString((inName + f.mExtension).c_str()));
+        theFile.Create();
+        unsigned long theWritten = 0;
+        if (theFile.Open(kFileAccessWrite) == 0) {
+            theFile.Write(f.mData, f.mLength, theWritten);
+            theFile.Close();
+        }
+    }
+}
 
 }   // namespace
 
@@ -636,6 +730,62 @@ int EESimEditorRun(const std::string& inScript, FILE* inOut, std::string& outErr
                 UString theName = GetSaveTextName(UString((std::string("EEQuickSave") + w[1]).c_str()), true);
                 theOutput.push_back("savefile " + w[1]);
                 FileDigest(theName, theOutput);
+            };
+        else if (c == "elevfile")   // elevfile NAME W H WCUT WDEPTH LHEIGHT LCUT | elevfile -
+            theCode = [=, &theOutput] {
+                EEUIFScenarioEditor* theEditor = gUIManager->mScenarioEditorForm;
+                EEUIFileComboBox* theList = static_cast<EEUIFileComboBox*>(theEditor->GetControlById(kSEMapElevationFile));
+                if (w[1] == "-") {
+                    theList->SetCurrentSelection(0);
+                    return;
+                }
+                WriteElevationFile(w[1], L(2), L(3));
+                theList->CreateEntries();
+                long theFound = theList->SelectFile(UWideString(w[1].c_str()));
+                const long theBoxes[4] = {kSEMapWaterCutoff, kSEMapWaterDepth, kSEMapLandHeight, kSEMapLandCutoff};
+                for (int i = 0; i < 4; i++)
+                    static_cast<UIEditBox*>(theEditor->GetControlById(theBoxes[i]))->SetText((unsigned long)L(4 + i));
+                theOutput.push_back("  elevation file " + w[1] + (theFound == 0 ? " listed" : " missing"));
+            };
+        else if (c == "ghost")   // ghost PLAYER TYPE X Y YAW
+            theCode = [=, &theOutput] {
+                EEGhostUnit::Create(GE2DPoint(L(3) + 0.5f, L(4) + 0.5f), L(2), gWorld.mPlayers[L(1)], F(5), false);
+                PutGhosts(L(3), L(4));
+                theOutput.push_back(GhostText());
+            };
+        else if (c == "ghostat")   // ghostat X Y
+            theCode = [=, &theOutput] {
+                PutGhosts(L(1), L(2));
+                theOutput.push_back(GhostText());
+            };
+        else if (c == "placeghost" || c == "drop")   // placeghost PLAYER [UNIT] | drop [UNIT]
+            theCode = [=, &theOutput] {
+                gPhysics->FlushWorld();   // the units placed before are in the world, as a person finds them
+                EESEUnit* theScreen = gUIManager->mScenarioEditorForm->GetUnitScreen();
+                size_t theUnitWord = c == "drop" ? 1 : 2;
+                theScreen->mUnitUnderMouse = w.size() > theUnitWord ? (long)UnitRef(w[theUnitWord]) : -1;
+                bool thePlaced = true;
+                if (c == "drop") {
+                    if (sMove != NULL)
+                        sMove->PutDown();
+                } else {
+                    if (sPlace == NULL)
+                        sPlace = new EESEAPlaceUnit;
+                    thePlaced = sPlace->Place(L(1));
+                }
+                theScreen->mUnitUnderMouse = -1;
+                gWorld.mGhostUnitsLock->Enter();
+                gWorld.ClearGhostUnits();
+                gWorld.mGhostUnitsLock->Leave();
+                theOutput.push_back(std::string("  placed ") + (thePlaced ? "1" : "0"));
+            };
+        else if (c == "cancelmove")
+            theCode = [=] {
+                if (sMove != NULL)
+                    sMove->Cancel();
+                gWorld.mGhostUnitsLock->Enter();
+                gWorld.ClearGhostUnits();
+                gWorld.mGhostUnitsLock->Leave();
             };
         else if (c == "digest")   // the world flushed first: the physics thread flushes it on its own clock otherwise
             theCode = [=, &theOutput] {
