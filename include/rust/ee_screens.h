@@ -1884,6 +1884,160 @@ constexpr static const uint32_t EE_SCREENS_TEXT_SCENARIO_INTRO = 76;
 
 constexpr static const uint32_t EE_SCREENS_TEXT_FORM_EDIT = 77;
 
+/// The trigger tab's events (`EESEEvents.cpp`'s classes). The tab's buttons (`EESETriggerScreen`): the clicked tab,
+/// the list's pick, new, duplicate, delete, up, down, sort, the debug ids, a name or text box's Enter.
+constexpr static const uint32_t EE_SCREENS_SE_SHOW_TAB = 9217;
+
+constexpr static const uint32_t EE_SCREENS_SE_SELECT_ENTRY = 9218;
+
+constexpr static const uint32_t EE_SCREENS_SE_NEW_ENTRY = 9219;
+
+constexpr static const uint32_t EE_SCREENS_SE_DUPLICATE_ENTRY = 9220;
+
+constexpr static const uint32_t EE_SCREENS_SE_DELETE_ENTRY = 9221;
+
+constexpr static const uint32_t EE_SCREENS_SE_INC_PRIORITY = 9222;
+
+constexpr static const uint32_t EE_SCREENS_SE_DEC_PRIORITY = 9223;
+
+constexpr static const uint32_t EE_SCREENS_SE_ALPHA_SORT = 9224;
+
+constexpr static const uint32_t EE_SCREENS_SE_SHOW_DEBUG_IDS = 9225;
+
+constexpr static const uint32_t EE_SCREENS_SE_SELECT_NAME = 9226;
+
+/// The object screen (`EESETSObject`): its mode radios, its check boxes, its unit list's pick.
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_DETAIL = 9227;
+
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_CHECK = 9228;
+
+constexpr static const uint32_t EE_SCREENS_SE_OBJECT_UNIT_SELECT = 9229;
+
+/// The area screen (`EESETSArea`): its mode combo box, its centre button.
+constexpr static const uint32_t EE_SCREENS_SE_AREA_CHECK = 9230;
+
+constexpr static const uint32_t EE_SCREENS_SE_CENTER_CAMERA_ON_AREA = 9231;
+
+/// The condition and effect screens' type and action combo boxes.
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_CONDITION_TYPE = 9232;
+
+/// The player-attribute condition's radios (`EESETSCTPlayerResource`'s event; its `Load` also runs it).
+constexpr static const uint32_t EE_SCREENS_SE_CONDITION_PLAYER_RESOURCE = 9239;
+
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_EFFECT_TYPE = 9233;
+
+constexpr static const uint32_t EE_SCREENS_SE_CHANGE_EFFECT_ACTION = 9234;
+
+/// The trigger screen (`EESETSTrigger`): an and/or combo box, the condition timer's check box, the pairs' back and
+/// forward buttons, a remove button.
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_OPERATOR = 9235;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_CONDITION_TIMER = 9236;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_CHANGE_INDEX = 9237;
+
+constexpr static const uint32_t EE_SCREENS_SE_TRIGGER_REMOVE = 9238;
+
+/// -> the entity's control id.
+constexpr static const uint32_t EE_SCREENS_SE_OP_ENTITY_ID = 1;
+
+/// (method, arg) a call of the trigger tab (`EE_SCREENS_SE_TAB_*`).
+constexpr static const uint32_t EE_SCREENS_SE_OP_TAB = 2;
+
+/// The scenario manager's debug ids flag toggled.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TOGGLE_DEBUG_IDS = 3;
+
+/// (flag) the object screen's select-on-map flag.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_SET_MAP = 4;
+
+/// The object screen's `Refresh`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_REFRESH = 5;
+
+/// -> the object screen's `GetIsSelectOnMap`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_IS_MAP = 6;
+
+/// The UI manager's scenario editor form's `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION = 7;
+
+/// The object screen's `ClearUnitList`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST = 8;
+
+/// The event's form's `ClearSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_FORM_CLEAR_SELECTION = 9;
+
+/// The object screen's unit ids cleared.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CLEAR_IDS = 10;
+
+/// The object screen's `UpdateSelection`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_UPDATE_SELECTION = 11;
+
+/// The object screen's `CheckChanged(entity)`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_OBJECT_CHECK_CHANGED = 12;
+
+/// -> the entity's (a string list's) current selection, `u32::MAX` when it has none.
+constexpr static const uint32_t EE_SCREENS_SE_OP_LIST_SELECTION = 13;
+
+/// -> the editor's selected unit count.
+constexpr static const uint32_t EE_SCREENS_SE_OP_SELECTED_UNIT_COUNT = 14;
+
+/// (index) a centre-camera action on the editor's selected unit.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CENTER_ON_UNIT = 15;
+
+/// -> the entity's (a combo box's) current selection, `u32::MAX` when it has none.
+constexpr static const uint32_t EE_SCREENS_SE_OP_COMBO_SELECTION = 16;
+
+/// (flag) the area screen's rectangle mode.
+constexpr static const uint32_t EE_SCREENS_SE_OP_AREA_MODE = 17;
+
+/// -> the area screen has a centre (kept for the next op).
+constexpr static const uint32_t EE_SCREENS_SE_OP_AREA_CENTER = 18;
+
+/// A centre-camera action on the kept centre (each coordinate truncated to an integer).
+constexpr static const uint32_t EE_SCREENS_SE_OP_CENTER_ON_AREA = 19;
+
+/// The condition screen's `ChangeConditionType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CONDITION_TYPE = 20;
+
+/// The effect screen's `ChangeEffectType`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EFFECT_TYPE = 21;
+
+/// The effect screen's `ChangeEffectAction`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_EFFECT_ACTION = 22;
+
+/// (control id) the trigger screen's `ChangeOperator`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_OPERATOR = 23;
+
+/// (step: 0 conditions back, 1 forward, 2 effects back, 3 forward) the trigger screen's pair index.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_STEP = 24;
+
+/// (control id) the trigger screen's `RemoveEntry`.
+constexpr static const uint32_t EE_SCREENS_SE_OP_TRIGGER_REMOVE = 25;
+
+/// -> the entity (a check box) checked.
+constexpr static const uint32_t EE_SCREENS_SE_OP_CHECKED = 26;
+
+/// (control id, mode) the form's control of the id (`GetControlById`) shown or hidden.
+constexpr static const uint32_t EE_SCREENS_SE_OP_SHOW = 27;
+
+/// The trigger tab's calls (`EE_SCREENS_SE_OP_TAB`'s method): `ShowTab(arg)`, then the argless ones.
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SHOW = 0;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SELECT_ENTRY = 1;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_NEW_ENTRY = 2;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DUPLICATE_ENTRY = 3;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DELETE_ENTRY = 4;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_INC_PRIORITY = 5;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_DEC_PRIORITY = 6;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_ALPHA_SORT = 7;
+
+constexpr static const uint32_t EE_SCREENS_SE_TAB_SELECT_NAME = 8;
+
 /// The campaign scenario select form: its open event (set by the play campaign and custom campaign screens and the
 /// post-game summary), its close event (nothing), the custom campaign list's and the scenario list's selection, the
 /// difficulty, Start, Back, and the open-error message's callback (no event object).

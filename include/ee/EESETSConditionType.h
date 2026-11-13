@@ -8,7 +8,7 @@
 // Slot use (EESETSCondition): +0x04 (condition, controls) writes the controls into the condition (Virtual24 0x17e9fb),
 // +0x08 (controls) hides the type's controls, +0x0c (condition, controls) shows the condition's values (Virtual2C
 // 0x17eae3), +0x10 (controls) shows the type's controls. Slot names by offset (provisional name).
-// Requires ee/EESETSConditionControls.h, <vector>, ee/EESEEConditionPlayerResource.h.
+// Requires ee/EESETSConditionControls.h, <vector>, lle/UIEvent.h.
 #ifndef EE_EESETSCONDITIONTYPE_H
 #define EE_EESETSCONDITIONTYPE_H
 
@@ -76,14 +76,14 @@ public:
 // vtable 0x443b20; sizeof 8 (ctor: COMDAT 0x17ee40; ??_G 0x17ee9c inlines the dtor)
 class EESETSCTPlayerResource : public EESETSConditionType {
 public:
-    EESETSCTPlayerResource() { this->mEvent = new EESEEConditionPlayerResource; }
+    EESETSCTPlayerResource();               // EESETSConditionType.cpp (its event an EEScreenEvent)
     virtual ~EESETSCTPlayerResource() { this->mEvent->Dereference(); }
     virtual void Store(EESMCondition* outCondition, EESETSConditionControls* inControls);         // 0x180cb0
     virtual void Hide(EESETSConditionControls* inControls);                                       // 0x180d16
     virtual void Load(EESMCondition* inCondition, EESETSConditionControls* inControls);           // 0x180d99
     virtual void Show(EESETSConditionControls* inControls);                                       // 0x180e23
 
-    EESEEConditionPlayerResource* mEvent;   // +0x04 (the resource/amount controls' trigger event)
+    UIEvent* mEvent;                        // +0x04 (the resource/amount controls' trigger event)
 };
 
 // vtable 0x443a7c; sizeof 4

@@ -37,6 +37,8 @@
 //!   over the C++ host; the statistics as records).
 //! - [`save_load`]: the load and save screens whole (the in-game save and load forms, the single player and scenario
 //!   load forms).
+//! - [`scenario_editor`]: the scenario editor's events (its trigger tab's buttons, the object, area, condition,
+//!   effect and trigger screens' events), over the editor's C++ objects.
 //! - [`scenario_screens`]: the campaign scenario select form and the scenario intro form whole.
 //! - [`chat_log`]: the chat log whole (its last 40 lines, saved with the game; the file through the C++ host).
 //! - [`chat`]: the in-game chat form and the chat log form's events whole (forms 18 and 29, over the C++ host).
@@ -121,6 +123,9 @@ mod post_game_ffi;
 pub mod save_load;
 #[cfg(not(test))]
 mod save_load_ffi;
+pub mod scenario_editor;
+#[cfg(not(test))]
+mod scenario_editor_ffi;
 pub mod scenario_screens;
 #[cfg(not(test))]
 mod scenario_screens_ffi;

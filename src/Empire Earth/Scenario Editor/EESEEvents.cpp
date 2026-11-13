@@ -1,9 +1,9 @@
 // C:\EEX\Empire Earth\Scenario Editor\EESEEvents.cpp (file name inferred: no __FILE__; class prefix EESEE). The
-// scenario editor's UI events: 0x16f892..0x16ff5f, the ProcessEvents in class order (ee/EESEEvents.h), with the
-// inline COMDATs they are the first users of (EEUIFScenarioEditor::GetTriggerScreen 0x16fa2f, GetSelectedUnitCount
-// 0x16fabb, EEACenterCamera's ctor 0x16fad4, EESETSTrigger's index steps 0x16fdfc..0x16fe41) and the static combo
-// helper 0x16fe85 after its first user. After RTSPlayer.cpp (..0x16f892), before EESEIAExport.cpp's Virtual4
-// 0x16ff5f. Unit flags: the exe module set.
+// scenario editor's UI events: 0x16f892..0x16ff5f. The trigger tab's events (0x16f892..0x16fd46: its buttons, the
+// object, area, condition, effect and trigger screens' events) are EEScreenEvent codes handled by ee_screens
+// scenario_editor.rs over this unit's host, ee_screenscpp_se (docs/RUST_PLAN.md "R6 game screens"); the events with
+// per-instance state (the slider's label, the check box's controls, the scenario combo box's refill) stay here.
+// After RTSPlayer.cpp (..0x16f892), before EESEIAExport.cpp's Virtual4 0x16ff5f. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -82,264 +82,130 @@
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESEEvents.h"
-#include "ee/EESEEConditionPlayerResource.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 void FillScenarioComboBox(EESETSEScenarioComboBox* inComboBox, UITextLabel* inLabel, bool inAreas);
 
-// FUNCTION: EXE 0x56f892
-// Switches the trigger tab to the sub-screen of the clicked tab button
-long EESEEShowTab::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->ShowTab(static_cast<UIControl*>(inEntity)->GetId());
-    return kErrorOK;
-}
+// ---- the host of the trigger tab's events (ee_screens scenario_editor.rs): inForm is the scenario editor's form,
+// inEntity the event's control. The editor's objects, one call each (EE_SCREENS_SE_OP_*).
+static GE2DPoint sAreaCenter;   // EE_SCREENS_SE_OP_AREA_CENTER's, for EE_SCREENS_SE_OP_CENTER_ON_AREA
 
-// FUNCTION: EXE 0x56f8b3
-// Loads the entry picked in the trigger tab's list
-long EESEESelectEntry::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+extern "C" uint32_t ee_screenscpp_se(void* inForm, void* inEntity, uint32_t inOp, uint32_t inA, uint32_t inB)
 {
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->SelectEntry();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f8ca
-// Adds a new entry to the trigger tab's current list
-long EESEENewEntry::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->NewEntry();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f8e1
-// Duplicates the trigger tab's selected entry
-long EESEEDuplicateEntry::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->DuplicateEntry();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f8f8
-// Deletes the trigger tab's selected entry
-long EESEEDeleteEntry::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->DeleteEntry();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f90f
-// Moves the trigger tab's selected entry one place up
-long EESEEIncPriority::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->IncPriority();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f926
-// Moves the trigger tab's selected entry one place down
-long EESEEDecPriority::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->DecPriority();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f93d
-// Sorts the trigger tab's current list alphabetically
-long EESEEAlphaSort::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->AlphaSort();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f954
-// Toggles the debug ids shown in the trigger tab's names and reloads the selected entry
-long EESEEShowDebugIDs::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    gWorld.mScenarioManager->mShowDebugIDs = !gWorld.mScenarioManager->mShowDebugIDs;
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->SelectEntry();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f97d
-// Stores the trigger tab's entry after Enter in a name or text box
-long EESEESelectName::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    static_cast<EEUIFScenarioEditor*>(inForm)->GetTriggerScreen()->SelectName();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56f994
-// Switches the object screen between picking units on the map and its other modes; leaving map mode
-// clears the editor's unit selection (twice) and the object's unit list
-long EESEEObjectDetail::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inForm);
-    unsigned long theID = static_cast<UIControl*>(inEntity)->GetId();
-    EESETSObject* theObject = static_cast<EESETSObject*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenObject));
-    theObject->mIsSelectOnMap = theID == kSETSObjectUnitsRadio;
-    theObject->Refresh();
-    if (!static_cast<EESETSObject*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->GetIsSelectOnMap()) {
+    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(static_cast<UIForm*>(inForm));
+    UIEntity* theEntity = static_cast<UIEntity*>(inEntity);
+    auto Screen = [&](long inIndex) { return theEditor->GetTriggerScreen()->GetScreen(inIndex); };
+    auto Object = [&]() { return static_cast<EESETSObject*>(Screen(kSETriggerScreenObject)); };
+    auto Trigger = [&]() { return static_cast<EESETSTrigger*>(Screen(kSETriggerScreenTrigger)); };
+    switch (inOp) {
+    case EE_SCREENS_SE_OP_ENTITY_ID:
+        return static_cast<UIControl*>(theEntity)->GetId();
+    case EE_SCREENS_SE_OP_TAB: {
+        EESETriggerScreen* theScreen = theEditor->GetTriggerScreen();
+        switch (inA) {
+        case EE_SCREENS_SE_TAB_SHOW: theScreen->ShowTab(inB); break;
+        case EE_SCREENS_SE_TAB_SELECT_ENTRY: theScreen->SelectEntry(); break;
+        case EE_SCREENS_SE_TAB_NEW_ENTRY: theScreen->NewEntry(); break;
+        case EE_SCREENS_SE_TAB_DUPLICATE_ENTRY: theScreen->DuplicateEntry(); break;
+        case EE_SCREENS_SE_TAB_DELETE_ENTRY: theScreen->DeleteEntry(); break;
+        case EE_SCREENS_SE_TAB_INC_PRIORITY: theScreen->IncPriority(); break;
+        case EE_SCREENS_SE_TAB_DEC_PRIORITY: theScreen->DecPriority(); break;
+        case EE_SCREENS_SE_TAB_ALPHA_SORT: theScreen->AlphaSort(); break;
+        default: theScreen->SelectName(); break;
+        }
+        break;
+    }
+    case EE_SCREENS_SE_OP_TOGGLE_DEBUG_IDS:
+        gWorld.mScenarioManager->mShowDebugIDs = !gWorld.mScenarioManager->mShowDebugIDs;
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_SET_MAP:
+        Object()->mIsSelectOnMap = inA != 0;
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_REFRESH:
+        Object()->Refresh();
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_IS_MAP:
+        return Object()->GetIsSelectOnMap();
+    case EE_SCREENS_SE_OP_MANAGER_CLEAR_SELECTION:
         gUIManager->mScenarioEditorForm->ClearSelection();
-        static_cast<EESETSObject*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->ClearUnitList();
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_CLEAR_UNIT_LIST:
+        Object()->ClearUnitList();
+        break;
+    case EE_SCREENS_SE_OP_FORM_CLEAR_SELECTION:
         theEditor->ClearSelection();
-        static_cast<EESETSObject*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->mUnitIDs.clear();
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_CLEAR_IDS:
+        Object()->mUnitIDs.clear();
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_UPDATE_SELECTION:
+        Object()->UpdateSelection();
+        break;
+    case EE_SCREENS_SE_OP_OBJECT_CHECK_CHANGED:
+        Object()->CheckChanged(theEntity);
+        break;
+    case EE_SCREENS_SE_OP_LIST_SELECTION: {
+        unsigned long theSelection;
+        return static_cast<UILBString*>(theEntity)->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection
+                                                                                                    : 0xffffffffu;
     }
-    static_cast<EESETSObject*>(theEditor->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->UpdateSelection();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fa2f
-// Returns the scenario editor's trigger tab
-// EEUIFScenarioEditor::GetTriggerScreen (inline, ee/EEUIFScenarioEditor.h; refused in 0x56f994/0x56fcd6)
-
-// FUNCTION: EXE 0x56fa39
-// Passes a check box change to the trigger tab's object screen
-long EESEEObjectCheck::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSObject*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenObject))->CheckChanged(inEntity);
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fa57
-// Centers the camera on the selected unit picked in the object screen's unit list
-long EESEEObjectUnitSelect::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inForm);
-    unsigned long theSelection;
-    if (static_cast<UILBString*>(inEntity)->GetCurrentSelection(theSelection) == kErrorOK &&
-        theSelection < theEditor->GetSelectedUnitCount()) {
+    case EE_SCREENS_SE_OP_SELECTED_UNIT_COUNT:
+        return theEditor->GetSelectedUnitCount();
+    case EE_SCREENS_SE_OP_CENTER_ON_UNIT: {
         EEACenterCamera* theAction = new EEACenterCamera;
-        theAction->SetUnit(theEditor->GetSelectedUnit(theSelection));
+        theAction->SetUnit(theEditor->GetSelectedUnit(inA));
         theAction->Dereference();
+        break;
     }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fabb
-// Returns the number of units selected in the scenario editor
-// EEUIFScenarioEditor::GetSelectedUnitCount (inline, ee/EEUIFScenarioEditor.h)
-
-// FUNCTION: EXE 0x56fad4
-// Creates a center-camera action with no target yet
-// EEACenterCamera::EEACenterCamera (inline, ee/EEACenterCamera.h)
-
-// FUNCTION: EXE 0x56faf7
-// Puts the area screen in rectangle mode when the combo box's first entry is picked, else leaves it
-long EESEEAreaCheck::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    unsigned long theSelection;
-    static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theSelection);
-    ((EESETSArea*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenArea))->SetAreaMode(theSelection == 0);
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fb20
-// Centers the camera on the selected area, if it has a center
-long EESEECenterCameraOnArea::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    GE2DPoint theCenter;
-    EESETSArea* theArea = (EESETSArea*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenArea);
-    if (theArea->GetCenter(theCenter)) {
+    case EE_SCREENS_SE_OP_COMBO_SELECTION: {
+        // (the original read the selection whatever the call answered: none reads as no selection here)
+        unsigned long theSelection;
+        return static_cast<UIComboBox*>(theEntity)->GetCurrentSelection(theSelection) == kErrorOK ? (uint32_t)theSelection
+                                                                                                    : 0xffffffffu;
+    }
+    case EE_SCREENS_SE_OP_AREA_MODE:
+        static_cast<EESETSArea*>(Screen(kSETriggerScreenArea))->SetAreaMode(inA != 0);
+        break;
+    case EE_SCREENS_SE_OP_AREA_CENTER:
+        return static_cast<EESETSArea*>(Screen(kSETriggerScreenArea))->GetCenter(sAreaCenter);
+    case EE_SCREENS_SE_OP_CENTER_ON_AREA: {
         EEACenterCamera* theAction = new EEACenterCamera;
-        theAction->SetLocation((long)theCenter.GetX(), (long)theCenter.GetY());
+        theAction->SetLocation((long)sAreaCenter.GetX(), (long)sAreaCenter.GetY());
         theAction->Dereference();
-    }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fb8d
-// Switches the condition screen to the type picked in its type combo box
-long EESEEChangeConditionType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSCondition*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenCondition))->ChangeConditionType();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fba7
-// Shows the amount box when 'use amount' (0x91a) is checked, else the other player's combo and attribute
-// combo (the local names do not match the control ids 0x910 amount, 0x92f player, 0x935 attribute)
-long EESEEConditionPlayerResource::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    UIControl* theResource = inForm->GetControlById(0x910);
-    UIControl* theAmount = inForm->GetControlById(0x92f);
-    UIControl* theCompare = inForm->GetControlById(0x935);
-    if (static_cast<UIControl*>(inEntity)->GetId() == 0x91a) {
-        theResource->SetDisplayMode(kDisplayModeShown);
-        theAmount->SetDisplayMode(kDisplayModeHidden);
-        theCompare->SetDisplayMode(kDisplayModeHidden);
-    } else {
-        theResource->SetDisplayMode(kDisplayModeHidden);
-        theAmount->SetDisplayMode(kDisplayModeShown);
-        theCompare->SetDisplayMode(kDisplayModeShown);
-    }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fc20
-// Switches the effect screen to the picked effect type
-long EESEEChangeEffectType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSEffect*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->ChangeEffectType();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fc3a
-// Switches the effect screen to the picked effect action
-long EESEEChangeEffectAction::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSEffect*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenEffect))->ChangeEffectAction();
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fc54
-// Applies the and/or picked in one of the trigger screen's operator combo boxes
-long EESEETriggerOperator::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->ChangeOperator(static_cast<UIControl*>(inEntity)->GetId());
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fc78
-// Shows the condition duration box and its seconds label while the timer check box is checked
-long EESEETriggerConditionTimer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    if (static_cast<UICheckBox*>(inEntity)->GetIsChecked()) {
-        inForm->GetControlById(kSETSTriggerConditionDurationEditBox)->SetDisplayMode(kDisplayModeShown);
-        inForm->GetControlById(kSETSTriggerSecondsLabel)->SetDisplayMode(kDisplayModeShown);
-    } else {
-        inForm->GetControlById(kSETSTriggerConditionDurationEditBox)->SetDisplayMode(kDisplayModeHidden);
-        inForm->GetControlById(kSETSTriggerSecondsLabel)->SetDisplayMode(kDisplayModeHidden);
-    }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fcd6
-// Scrolls the trigger screen's shown condition or effect pair back or forward by one
-long EESEETriggerChangeIndex::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    switch (static_cast<UIControl*>(inEntity)->GetId()) {
-    case kSETSTriggerPrevConditionsButton:
-        ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->DecrementA4();
-        break;
-    case kSETSTriggerNextConditionsButton:
-        ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->IncrementA4();
-        break;
-    case kSETSTriggerPrevEffectsButton:
-        ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->DecrementA8();
-        break;
-    case kSETSTriggerNextEffectsButton:
-        ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->IncrementA8();
         break;
     }
-    return kErrorOK;
-}
-
-// FUNCTION: EXE 0x56fd46
-// Removes the condition or effect of the clicked remove button from the trigger
-long EESEETriggerRemove::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
-{
-    ((EESETSTrigger*)(static_cast<EEUIFScenarioEditor*>(inForm))->GetTriggerScreen()->GetScreen(kSETriggerScreenTrigger))->RemoveEntry(static_cast<UIControl*>(inEntity)->GetId());
-    return kErrorOK;
+    case EE_SCREENS_SE_OP_CONDITION_TYPE:
+        static_cast<EESETSCondition*>(Screen(kSETriggerScreenCondition))->ChangeConditionType();
+        break;
+    case EE_SCREENS_SE_OP_EFFECT_TYPE:
+        static_cast<EESETSEffect*>(Screen(kSETriggerScreenEffect))->ChangeEffectType();
+        break;
+    case EE_SCREENS_SE_OP_EFFECT_ACTION:
+        static_cast<EESETSEffect*>(Screen(kSETriggerScreenEffect))->ChangeEffectAction();
+        break;
+    case EE_SCREENS_SE_OP_TRIGGER_OPERATOR:
+        Trigger()->ChangeOperator(inA);
+        break;
+    case EE_SCREENS_SE_OP_TRIGGER_STEP:
+        switch (inA) {
+        case 0: Trigger()->DecrementA4(); break;
+        case 1: Trigger()->IncrementA4(); break;
+        case 2: Trigger()->DecrementA8(); break;
+        default: Trigger()->IncrementA8(); break;
+        }
+        break;
+    case EE_SCREENS_SE_OP_TRIGGER_REMOVE:
+        Trigger()->RemoveEntry(inA);
+        break;
+    case EE_SCREENS_SE_OP_CHECKED:
+        return static_cast<UICheckBox*>(theEntity)->GetIsChecked();
+    case EE_SCREENS_SE_OP_SHOW:
+        if (UIControl* theControl = theEditor->GetControlById(inA))
+            theControl->SetDisplayMode(inB);
+        break;
+    }
+    return 0;
 }
 
 // FUNCTION: EXE 0x56fd6a
@@ -362,22 +228,6 @@ long EESEECheckDisplay::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         this->mControls[i]->SetDisplayMode(theMode);
     return kErrorOK;
 }
-
-// FUNCTION: EXE 0x56fdfc
-// Stores the trigger and shows the condition pair one step back
-// EESETSTrigger::DecrementA4 (inline, ee/EESETSTrigger.h)
-
-// FUNCTION: EXE 0x56fe13
-// Stores the trigger and shows the effect pair one step back
-// EESETSTrigger::DecrementA8 (inline, ee/EESETSTrigger.h)
-
-// FUNCTION: EXE 0x56fe2a
-// Stores the trigger and shows the condition pair one step forward
-// EESETSTrigger::IncrementA4 (inline, ee/EESETSTrigger.h)
-
-// FUNCTION: EXE 0x56fe41
-// Stores the trigger and shows the effect pair one step forward
-// EESETSTrigger::IncrementA8 (inline, ee/EESETSTrigger.h)
 
 // FUNCTION: EXE 0x56fe58
 // Refills the scenario combo box with area names (area control clicked) or object names and picks the first

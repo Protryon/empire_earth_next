@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -122,6 +121,8 @@
 // 0x563678: the unit action ids by name (the object screen's action combo box) are EEUnitAction::sActionIDs
 #include "ee/EEUnitAction.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // The unit type combo box's sort (0x19330c, the std::sort instantiation 0x193077..0x19370e): type 0 first, then the
 // unit classes by name (provisional name)
 struct EESETSOUnitTypeNameLess {
@@ -169,7 +170,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mUnitsRadio = new UIRadioButton(kSETSObjectUnitsRadio, theText, inFont, GERectangle(thePosition, 200.0f, 20.0f), inForm, ioIndex, 0,
                                     false, true, false);
     this->mUnitsRadio->SetBgOpacity(0.4f);
-    UIEvent* theEvent = new EESEEObjectDetail;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_DETAIL);
     this->mUnitsRadio->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
     GEText* theGEText = this->mUnitsRadio->GetTextLabel()->GetGEText();
@@ -184,7 +185,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mTypeRadio = new UIRadioButton(0x835, theText, inFont, GERectangle(thePosition, 200.0f, 20.0f), inForm, ioIndex, 0,
                                    false, false, false);
     this->mTypeRadio->SetBgOpacity(0.4f);
-    theEvent = new EESEEObjectDetail;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_DETAIL);
     this->mTypeRadio->SetTriggerEvent(kControlTriggerChecked, theEvent);
     theEvent->Dereference();
     theGEText = this->mTypeRadio->GetTextLabel()->GetGEText();
@@ -387,7 +388,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mUnitList = new EESETSOUnitList(0x836, theTemp2, gU531930, false, thePosition, 200.0f,
                                     (unsigned long)(this->mMaxEditBox->GetRectangle().GetBottom() - thePosition.GetY()), inForm,
                                     ioIndex, 3);
-    theEvent = new EESEEObjectUnitSelect;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_UNIT_SELECT);
     this->mUnitList->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     this->mUnitList->SetBgOpacity(0.4f);
@@ -405,7 +406,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mAreaCheck = new UITriStateCheckBox(kSETSObjectAreaCheck, theText, inFont, GERectangle(thePosition, 100.0f, 20.0f), inForm, ioIndex,
                                         0);
     this->mAreaCheck->SetBgOpacity(0.4f);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mAreaCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mAreaCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -433,7 +434,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     thePosition.SetX(4.0f);
     thePosition.SetY(652.0f);
     this->mNearCheck = new UITriStateCheckBox(kSETSObjectNearCheck, theText, inFont, GERectangle(thePosition, 22.0f, 20.0f), inForm, ioIndex, 0);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mNearCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mNearCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -474,7 +475,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mHasAttributeCheck = new UITriStateCheckBox(0x84a, theText, inFont, GERectangle(thePosition, 110.0f, 20.0f), inForm, ioIndex,
                                       0);
     this->mHasAttributeCheck->SetBgOpacity(0.4f);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mHasAttributeCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mHasAttributeCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -567,7 +568,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     thePosition.SetY(616.0f);
     this->mVisibleByCheck = new UITriStateCheckBox(kSETSObjectVisibleByCheck, theText, inFont, GERectangle(thePosition, 100.0f, 20.0f), inForm, ioIndex,
                                       0);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mVisibleByCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mVisibleByCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -599,7 +600,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mHasStateCheck = new UITriStateCheckBox(kSETSObjectHasStateCheck, theText, inFont, GERectangle(thePosition, 100.0f, 20.0f), inForm, ioIndex,
                                       0);
     this->mHasStateCheck->SetBgOpacity(0.4f);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mHasStateCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mHasStateCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -629,7 +630,7 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
     this->mSelectedByCheck = new UITriStateCheckBox(kSETSObjectSelectedByCheck, theText, inFont, GERectangle(thePosition, 100.0f, 20.0f), inForm, ioIndex,
                                       0);
     this->mSelectedByCheck->SetBgOpacity(0.4f);
-    theEvent = new EESEEObjectCheck;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_OBJECT_CHECK);
     this->mSelectedByCheck->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mSelectedByCheck->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -1323,15 +1324,6 @@ void EESETSObject::MouseMove(const GE2DPoint& inLocation)
 
 // SYNTHETIC: EXE 0x59370e
 // (UITriStateCheckBox's scalar deleting destructor, emitted with its vtable)
-
-// SYNTHETIC: EXE 0x59372b
-// (EESEEObjectDetail's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x593756
-// (EESEEObjectCheck's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x593781
-// (EESEEObjectUnitSelect's scalar deleting destructor)
 
 // FUNCTION: EXE 0x5937ac
 // Destroys a list of strings (vector<UWideString>::~vector, a jump to _Tidy; the ctor calls it)

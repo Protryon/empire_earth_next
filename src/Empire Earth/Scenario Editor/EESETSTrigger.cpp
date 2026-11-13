@@ -69,7 +69,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -92,6 +91,8 @@
 #include "ee/EESETSTriggerUIComboBox.h"
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // The last nine controls set their position with SetXY (one inline expansion each): with SetX/SetY pairs the inline
 // budget refuses GEColor::operator= at label 0x9e5 (mSecondConditionLabel), which the original expands.
 // FUNCTION: EXE 0x59393b
@@ -379,7 +380,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mRemoveFirstConditionButton = new UIButton(0x9d8, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
     this->mRemoveFirstConditionButton->SetBgOpacity(0.4f);
     this->mRemoveFirstConditionButton->SetText(theText, inFont);
-    theEvent = new EESEETriggerRemove;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
     this->mRemoveFirstConditionButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     theGEText = this->mRemoveFirstConditionButton->GetGEText();
@@ -393,7 +394,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mRemoveSecondConditionButton = new UIButton(0x9d9, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
     this->mRemoveSecondConditionButton->SetBgOpacity(0.4f);
     this->mRemoveSecondConditionButton->SetText(theText, inFont);
-    theEvent = new EESEETriggerRemove;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
     this->mRemoveSecondConditionButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     theGEText = this->mRemoveSecondConditionButton->GetGEText();
@@ -407,7 +408,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mRemoveFirstEffectButton = new UIButton(0x9da, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
     this->mRemoveFirstEffectButton->SetBgOpacity(0.4f);
     this->mRemoveFirstEffectButton->SetText(theText, inFont);
-    theEvent = new EESEETriggerRemove;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
     this->mRemoveFirstEffectButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     theGEText = this->mRemoveFirstEffectButton->GetGEText();
@@ -421,7 +422,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mRemoveSecondEffectButton = new UIButton(0x9db, NULL, NULL, NULL, GERectangle(thePosition, 115.0f, 20.0f), inForm, ioIndex, 2);
     this->mRemoveSecondEffectButton->SetBgOpacity(0.4f);
     this->mRemoveSecondEffectButton->SetText(theText, inFont);
-    theEvent = new EESEETriggerRemove;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_REMOVE);
     this->mRemoveSecondEffectButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     theGEText = this->mRemoveSecondEffectButton->GetGEText();
@@ -433,7 +434,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mPrevConditionsButton = new UIButton(kSETSTriggerPrevConditionsButton, inForm->GetManager()->GetSBBitmapLeftNormal(), NULL,
                              inForm->GetManager()->GetSBBitmapLeftPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
                              ioIndex, 0);
-    theEvent = new EESEETriggerChangeIndex;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
     this->mPrevConditionsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mPrevConditionsButton, 9);
@@ -442,7 +443,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mNextConditionsButton = new UIButton(kSETSTriggerNextConditionsButton, inForm->GetManager()->GetSBBitmapRightNormal(), NULL,
                              inForm->GetManager()->GetSBBitmapRightPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
                              ioIndex, 0);
-    theEvent = new EESEETriggerChangeIndex;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
     this->mNextConditionsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mNextConditionsButton, 9);
@@ -451,7 +452,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mPrevEffectsButton = new UIButton(kSETSTriggerPrevEffectsButton, inForm->GetManager()->GetSBBitmapLeftNormal(), NULL,
                              inForm->GetManager()->GetSBBitmapLeftPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
                              ioIndex, 0);
-    theEvent = new EESEETriggerChangeIndex;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
     this->mPrevEffectsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mPrevEffectsButton, 9);
@@ -460,7 +461,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     this->mNextEffectsButton = new UIButton(kSETSTriggerNextEffectsButton, inForm->GetManager()->GetSBBitmapRightNormal(), NULL,
                              inForm->GetManager()->GetSBBitmapRightPressed(), GERectangle(thePosition, 20.0f, 20.0f), inForm,
                              ioIndex, 0);
-    theEvent = new EESEETriggerChangeIndex;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CHANGE_INDEX);
     this->mNextEffectsButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mNextEffectsButton, 9);
@@ -478,7 +479,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     thePosition.SetXY(329.0f, 535.0f);
     this->mConditionTimerCheckBox = new UICheckBox(0x9e1, theText, inFont, GERectangle(thePosition, 250.0f, 20.0f), inForm, ioIndex, 0, false);
     this->mConditionTimerCheckBox->SetBgOpacity(0.4f);
-    theEvent = new EESEETriggerConditionTimer;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_CONDITION_TIMER);
     this->mConditionTimerCheckBox->SetTriggerEvent(kControlTriggerChecked, theEvent);
     this->mConditionTimerCheckBox->SetTriggerEvent(kControlTriggerUnchecked, theEvent);
     theEvent->Dereference();
@@ -513,7 +514,7 @@ EESETSTrigger::EESETSTrigger(GEFont* inFont, UIForm* inForm, unsigned long& ioIn
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mInCinematicCheckBox, 9);
     ioIndex++;
-    this->mOperatorEvent = new EESEETriggerOperator;
+    this->mOperatorEvent = EECreateScreenEvent(EE_SCREENS_SE_TRIGGER_OPERATOR);
     this->mFirstCondition = 0;
     this->mFirstEffect = 0;
 }
@@ -1037,18 +1038,6 @@ void EESETSTrigger::Show()
 // FUNCTION: EXE 0x596dff
 // Returns the trigger's number of conditions (the address is also bound to EEUnitClass::GetNumResearchTechnologies)
 // EESMTrigger::GetConditionCount (inline, ee/EESMTrigger.h)
-
-// SYNTHETIC: EXE 0x596e12
-// (EESEETriggerOperator's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x596e3d
-// (EESEETriggerConditionTimer's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x596e68
-// (EESEETriggerChangeIndex's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x596e93
-// (EESEETriggerRemove's scalar deleting destructor)
 
 // ICF-FOLDED: EXE 0x4e123d
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)

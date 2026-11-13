@@ -68,7 +68,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -87,6 +86,8 @@
 #include "ee/EESETSETMSDCameraScrollChange.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x585fed
 // Creates the media effect page with its four actions (sound, change text, dialogue, chat) and its combo event
 EESETSETMedia::EESETSETMedia()
@@ -96,7 +97,7 @@ EESETSETMedia::EESETSETMedia()
     this->mTypes[kSMMediaActionSendDialogue] = new EESETSETMediaSendDialog;
     this->mTypes[kSMMediaActionSendChatMessage] = new EESETSETMediaSendMessage;
     this->mCurrentType = 0;
-    this->mAction = new EESEEChangeEffectAction;
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x58608a

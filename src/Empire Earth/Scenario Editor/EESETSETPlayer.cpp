@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -101,6 +100,8 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x589904
 // Creates the player effect page with its twelve player action types (victory ... mini-map flare) and its combo event
 EESETSETPlayer::EESETSETPlayer()
@@ -118,7 +119,7 @@ EESETSETPlayer::EESETSETPlayer()
     this->mTypes[kSMPlayerActionVisibilityOff] = new EESETSETPVisibility;
     this->mTypes[kSMPlayerActionMiniMapFlare] = new EESETSETMiniMapFlare;
     this->mCurrentType = kSMPlayerActionVictory;
-    this->mAction = new EESEEChangeEffectAction;
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x589a75

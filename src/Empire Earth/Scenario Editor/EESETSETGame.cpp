@@ -68,7 +68,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -88,6 +87,8 @@
 #include "ee/EESETSETAI.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x5843c7
 // Creates the game effect page with its seven game action types (daylight hour ... ambient weather) and its combo event
 EESETSETGame::EESETSETGame()
@@ -100,7 +101,7 @@ EESETSETGame::EESETSETGame()
     this->mTypes[kSMGameActionEndCinematicMode] = new EESETSETGameEndCinematic;
     this->mTypes[kSMGameActionAmbientWeather] = new EESETSETGameAmbientWeather;
     this->mCurrentType = 0;
-    this->mAction = new EESEEChangeEffectAction;
+    this->mAction = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_ACTION);
 }
 
 // SYNTHETIC: EXE 0x5844df

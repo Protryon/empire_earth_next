@@ -70,7 +70,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -96,6 +95,8 @@
 #include "ee/EESETSEffect.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x582629
 // Creates the effect sub-screen: shared controls, title label, effect-type combo and the seven effect types,
 // starting on the object effect
@@ -122,7 +123,7 @@ EESETSEffect::EESETSEffect(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
         gResource->GetString(IDS_TRIGGER_EFFECT_TYPE_FIRST + i, theTypeNames[i]);
     this->mTypeComboBox = new UIComboBox(kSETSEffectTypeComboBox, 1, theTypeNames, inFont, GERectangle(thePosition, 200.0f, 20.0f),
                                    0x190, inForm, ioIndex, 0, 2);
-    UIEvent* theEvent = new EESEEChangeEffectType;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_CHANGE_EFFECT_TYPE);
     this->mTypeComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     this->mTypeComboBox->SetTextBoxBgOpacity(0.4f);
@@ -319,9 +320,6 @@ void EESETSEffect::Hide()
 // FUNCTION: EXE 0x582d82
 // Returns the scenario effect with the given index (EEScenarioManager::GetEffect)
 // (inline, ee/EEScenarioManager.h)
-
-// SYNTHETIC: EXE 0x582daf
-// (EESEEChangeEffectType's scalar deleting destructor)
 
 // ICF-FOLDED: EXE 0x4e123d
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)

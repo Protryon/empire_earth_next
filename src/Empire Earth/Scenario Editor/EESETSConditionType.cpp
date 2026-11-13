@@ -87,10 +87,11 @@
 #include "ee/EESETSEScenarioComboBox.h"
 #include "ee/EESETSCComboBox.h"
 #include "ee/EESETSConditionControls.h"
-#include "ee/EESEEConditionPlayerResource.h"
 #include "ee/EESETSConditionType.h"
 #include "ee/EESEEvents.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x57ef10
 // Shows the condition title and type combo box and the trigger tab's name, duplicate and delete controls again
 void EESETSCTAlwaysTrue::Hide(EESETSConditionControls* inControls)
@@ -156,7 +157,7 @@ void EESETSCTChatMessage::Show(EESETSConditionControls* inControls)
     inControls->mTextEditBox->SetText(theEmpty);
     inControls->mTextEditBox->SetRectangle(theRect);
     inControls->mTextEditBox->SetDisplayMode(kDisplayModeShown);
-    UIEvent* theEvent = new EESEESelectName;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_SELECT_NAME);
     inControls->mTextEditBox->SetTriggerEvent(kControlTriggerEnterPressed, theEvent);
     theEvent->Dereference();
 }
@@ -620,6 +621,12 @@ void EESETSCTPlayerResearch::Show(EESETSConditionControls* inControls)
 
 // FUNCTION: EXE 0x580c7c
 // Pops the top technology id of a heap into a given slot (std::_Pop_heap)
+
+// The player-attribute type's resource/amount radios' event (ee_screens scenario_editor.rs)
+EESETSCTPlayerResource::EESETSCTPlayerResource()
+{
+    this->mEvent = EECreateScreenEvent(EE_SCREENS_SE_CONDITION_PLAYER_RESOURCE);
+}
 
 // FUNCTION: EXE 0x580cb0
 // Writes the player, attribute, comparison, amount, other player and attribute, and whether to compare

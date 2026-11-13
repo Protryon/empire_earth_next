@@ -72,7 +72,6 @@
 #include "ee/EESMEffect.h"
 #include "ee/EESETSBaseObject.h"
 #include "ee/EESETriggerScreen.h"
-#include "ee/EESEEChangeEffectAction.h"
 #include "ee/EESEEGCPlace.h"
 #include "ee/EESEEPlace.h"
 #include "ee/EESEEvents.h"
@@ -101,6 +100,8 @@
 #include "ee/EESMArea.h"
 #include "ee/EESETSArea.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EEScreenEvent.h"
+#include "rust/ee_screens.h"
 // FUNCTION: EXE 0x57ccf3
 // Creates the area sub-screen: the red 'no area selected' label, the area selection mode combo
 // and the center camera button, in rectangle mode with no area drawn
@@ -132,7 +133,7 @@ EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
     this->mModeComboBox->SetListBoxAlwaysDirty(true);
     this->mModeComboBox->GetGEText()->SetFgColor(GEColor(254.0f / 255.0f, 247.0f / 255.0f, 32.0f / 255.0f));
     this->mModeComboBox->GetGEText()->SetIsTransparent(true);
-    UIEvent* theEvent = new EESEEAreaCheck;
+    UIEvent* theEvent = EECreateScreenEvent(EE_SCREENS_SE_AREA_CHECK);
     this->mModeComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
     inForm->AddControl(this->mModeComboBox, 11);
@@ -142,7 +143,7 @@ EESETSArea::EESETSArea(GEFont* inFont, UIForm* inForm, unsigned long& ioIndex)
     this->mCenterButton = new UIButton(0x89a, NULL, NULL, NULL, GERectangle(thePosition, 250.0f, 20.0f), inForm,
                                  ioIndex, 2);
     this->mCenterButton->SetBgOpacity(0.4f);
-    theEvent = new EESEECenterCameraOnArea;
+    theEvent = EECreateScreenEvent(EE_SCREENS_SE_CENTER_CAMERA_ON_AREA);
     this->mCenterButton->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
     this->mCenterButton->SetText(theText, inFont);
@@ -486,9 +487,6 @@ EESEAPaintArea::EESEAPaintArea(long inX, long inY) : mStartX(inX), mStartY(inY),
 
 // SYNTHETIC: EXE 0x57da35
 // (EESETSBaseObject's scalar deleting destructor)
-
-// SYNTHETIC: EXE 0x57da52
-// (EESEEAreaCheck's scalar deleting destructor)
 
 // SYNTHETIC: EXE 0x57da7d
 // (EESEECenterCameraOnArea's scalar deleting destructor)
