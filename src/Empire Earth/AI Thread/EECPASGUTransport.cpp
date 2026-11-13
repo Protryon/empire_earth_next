@@ -16,7 +16,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EECPILocation.h"
 #include "ee/EECPASTargetUnit.h"
 #include "ee/EECPAttackSubGroup.h"
@@ -65,7 +65,7 @@ bool EECPASGUTransport::IsInDanger()
             for (long i = this->mSubGroup->mTargets.size() - 1; i >= 0 && !theResult; i--) {
                 EEUnitGoal* theGoal = this->mSubGroup->mTargets[i]->mUnit->mGoalState;
                 if (theGoal != NULL && theGoal->mKind == kGoalAttackUnit)
-                    theResult = static_cast<EEUGAttackUnit*>(theGoal)->mTarget == this->mUnit;
+                    theResult = static_cast<EEUGRust*>(theGoal)->GetAttackTarget() == this->mUnit;
             }
         }
     }

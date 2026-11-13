@@ -26,8 +26,6 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEUnitGoal.h"
-#include "ee/EEUGAttackGround.h"
-#include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGGather.h"
 #include "ee/EEUGHealUnit.h"
 #include "ee/EEUGRust.h"
@@ -427,12 +425,12 @@ extern "C" void* ee_units_host_goal_new(const EeGoalSpec* inSpec)
     case EE_GOAL_CTOR_EXPLORE:
         return static_cast<EEUnitGoal*>(EEUGRust::NewExplore(theFlagA));
     case EE_GOAL_CTOR_ATTACK_GROUND:
-        return static_cast<EEUnitGoal*>(new EEUGAttackGround(GE3DPoint(inSpec->point[0], inSpec->point[1], inSpec->point[2]), theFlagA));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewAttackGround(GE3DPoint(inSpec->point[0], inSpec->point[1], inSpec->point[2]), theFlagA));
     case EE_GOAL_CTOR_ATTACK_UNIT: {
         EEUnit* theTarget = UnitOf(inSpec->unit_b);
         if (theTarget == NULL)
             return NULL;
-        return static_cast<EEUnitGoal*>(new EEUGAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
+        return static_cast<EEUnitGoal*>(EEUGRust::NewAttackUnit(ComplexOf(inSpec->unit_a), theTarget, theFlagA, theFlagB));
     }
     case EE_GOAL_CTOR_GATHER:
         return static_cast<EEUnitGoal*>(new EEUGGather(UnitOf(inSpec->unit_a), UnitOf(inSpec->unit_b), theFlagA));

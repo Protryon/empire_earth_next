@@ -694,6 +694,10 @@ pub const EE_COMBAT_WORLD_BORDERING: i32 = 5;
 pub const EE_COMBAT_WORLD_ATTACK_REACHABLE: i32 = 6;
 pub const EE_COMBAT_WORLD_ATTACKED: i32 = 7;
 pub const EE_COMBAT_WORLD_FIRE_SHOT: i32 = 8;
+/// leaves.rs: `EEIsInRangeToHit`, `EEIsInContactRange` (the distance's bits in `tile[0]`), `EEIsAttackedBy`.
+pub const EE_COMBAT_WORLD_IN_RANGE_TO_HIT: i32 = 9;
+pub const EE_COMBAT_WORLD_CONTACT_RANGE: i32 = 10;
+pub const EE_COMBAT_WORLD_ATTACKED_BY: i32 = 11;
 
 /// One body of this module (`EE_COMBAT_WORLD_*`) of `unit` on `target` over `host`: the answer (0/1); the attack
 /// reach writes its tile into `tile` when it sets one.
@@ -735,6 +739,13 @@ pub unsafe extern "C" fn ee_combat_world(
             fire_shot(h, unit);
             0
         }
+        EE_COMBAT_WORLD_IN_RANGE_TO_HIT => i32::from(crate::leaves::in_range_to_hit(h, unit, target)),
+        EE_COMBAT_WORLD_CONTACT_RANGE => {
+            // SAFETY: the function's contract
+            let distance = f32::from_bits(unsafe { (*tile)[0] } as u32);
+            i32::from(crate::leaves::in_contact_range(h, unit, target, distance))
+        }
+        EE_COMBAT_WORLD_ATTACKED_BY => i32::from(crate::leaves::is_attacked_by(h, unit, target)),
         _ => 0,
     }
 }

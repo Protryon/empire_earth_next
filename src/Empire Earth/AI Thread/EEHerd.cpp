@@ -51,7 +51,7 @@
 #include "ee/EEFCircle.h"
 #include "ee/EEFInwardCircle.h"
 #include "ee/EEUGLocation.h"
-#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGRust.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEHerd.h"
 #include "ee/EESaveGameFiles.h"
@@ -217,7 +217,7 @@ void EEHerd::HandleUnitHit(EEComplexUnit* inUnit)
 void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits)
 {
     for (long i = inUnits.size() - 1; i >= 0; i--) {
-        EEUGAttackUnit* theGoal = new EEUGAttackUnit(inUnits[i], inTarget, true, false);
+        EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnits[i], inTarget, true, false);
         if (!this->GiveGoal(inUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
             delete theGoal;
     }
@@ -227,7 +227,7 @@ void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEComplexUnit*>& inUnits
 void EEHerd::Attack(EEUnit* inTarget, const std::vector<EEUnitHandle<EEComplexUnit> >& inUnits)
 {
     for (long i = inUnits.size() - 1; i >= 0; i--) {
-        EEUGAttackUnit* theGoal = new EEUGAttackUnit(inUnits[i], inTarget, true, false);
+        EEUGRust* theGoal = EEUGRust::NewAttackUnit(inUnits[i], inTarget, true, false);
         if (!this->GiveGoal(inUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
             delete theGoal;
     }
@@ -1258,7 +1258,7 @@ unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
         for (long i = this->mUnits.size() - 1; i >= 0; i--) {
             if (this->mUnits[i]->GetGoal() != NULL)
                 continue;
-            EEUGAttackUnit* theGoal = new EEUGAttackUnit(this->mUnits[i], this->mTarget, true, false);
+            EEUGRust* theGoal = EEUGRust::NewAttackUnit(this->mUnits[i], this->mTarget, true, false);
             if (!this->GiveGoal(this->mUnits[i], theGoal, 0, kActionInitialAttackState) && theGoal)
                 delete theGoal;
         }

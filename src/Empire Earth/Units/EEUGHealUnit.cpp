@@ -250,6 +250,7 @@ bool EEUGHealUnit::Suits(EEUnit* inUnit)
     bool theResult = false;
     if (EECanHeal(inUnit, this->mTarget))
         theResult = true;
+    EECombatCaptureGoal(EE_COMBAT_GO_SUITS, kGoalHealUnit, inUnit, this->mTarget, theResult);
     return theResult;
 }
 
