@@ -224,9 +224,14 @@ void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnit
                     theOrder[k] = a;
                 }
             }
+        // (the next engine's gather(exact = 2), §8.51: an idle citizen goes to no resource that has its wanted
+        // gatherers; it stays idle for the script's builders, not spilled onto wood past the script's count)
+        EECPNextState* theNextState = EECPNextEngine(this->mManager->mPlayer) ? EECPNextGetState(this->mManager->mPlayer) : NULL;
+        bool theExactIdle = theNextState != NULL && theNextState->mExact >= 2;
         EEUnit* theResource = NULL;
         for (long i = 0; i < 4 && theResource == NULL; i++)
-            theResource = theOrder[i] != 3 ? this->FindResourceTarget(theOrder[i], *it, false)
+            if (!theExactIdle || this->mGatherers[theOrder[i]].size() < this->mWantedGatherers[theOrder[i]])
+                theResource = theOrder[i] != 3 ? this->FindResourceTarget(theOrder[i], *it, false)
                 : EECPNextEngine(this->mManager->mPlayer) ? EECPRMNextWoodTarget(this, 1, *it) : this->FindForestTarget(1, *it);
         if (theResource != NULL)
             this->SendToGather(*it, theResource, NULL);

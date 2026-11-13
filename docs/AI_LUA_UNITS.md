@@ -1009,6 +1009,9 @@ found no town). `tests/ai_units/types.lua` checks that a list's ids are the unio
   it off, absent leaves it as it was): the gatherer runner's rebalance then moves a gatherer off a resource as soon as
   it has more than wanted, not only past one more (`EECPNextState::mExact`, per player, not saved: the next order sets
   it again). Boom's build order (`lib.build_order`, `ECON.order`) sends it with every gather order.
+  `exact = 2` (2026-11-13) also keeps the engine's idle runner (AssignIdleGatherers) from sending an idle citizen to
+  a resource that already has its wanted gatherers: the leftovers stay idle for the script (boom's
+  `BO.OPT.builder_pool`: the owner's ranges, no spill onto wood). exact = 1 and the classic are unchanged.
 - **The food `gather` order takes `granary_farms = n`** (2026-11-12): a standing granary lays its fields as free
   foundations, and the engine's food runner sends idle food gatherers to build them (each paying a farm's cost). With
   `granary_farms = 0` it builds none; with n > 0 it stops at n built farms per standing granary; -1 restores the
