@@ -1065,6 +1065,7 @@ public:
     void SetTextAndSel(const GUIString&,bool);
     void ShowList();
     void SetNoType(bool);
+    void SetShowButtonWhenDisabled(bool v) { this->mShowButtonWhenDisabled=v; } // ComboBoxConfig
     SmartPtr<InputBox> mEdit; //84
     SmartPtr<Button> mButton; //88
     SmartPtr<Scroller> mListBox; //8c
