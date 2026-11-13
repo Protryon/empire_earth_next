@@ -89,10 +89,10 @@ extern "C" void ee_uicpp_radio_uncheck(void* inButton, long inIndex)
 
 void UIButtonRust::RadioSwap(UIRadioButton* inButton)
 {
-    GEBitmap* theNormalBitmap = inButton->mNormalBitmap;
+    GEBitmap* theNormalBitmap = inButton->GetNormalBitmap();
     if (theNormalBitmap)
         theNormalBitmap->Reference();
-    GEBitmap* thePressedBitmap = inButton->mPressedBitmap;
+    GEBitmap* thePressedBitmap = inButton->GetPressedBitmap();
     if (thePressedBitmap)
         thePressedBitmap->Reference();
     inButton->SetNormalBitmap(inButton->mOtherNormalBitmap);
@@ -138,10 +138,10 @@ UIRadioButton::UIRadioButton(unsigned long inId, const UWideString& inText, GEFo
     this->mOtherPressedBitmap = this->mForm->GetManager()->GetRadioDownOn();
     this->mOtherPressedBitmap->Reference();
     if (this->mIsChecked) {
-        GEBitmap* theNormalBitmap = this->mNormalBitmap;
+        GEBitmap* theNormalBitmap = this->GetNormalBitmap();
         if (theNormalBitmap)
             theNormalBitmap->Reference();
-        GEBitmap* thePressedBitmap = this->mPressedBitmap;
+        GEBitmap* thePressedBitmap = this->GetPressedBitmap();
         if (thePressedBitmap)
             thePressedBitmap->Reference();
         this->SetNormalBitmap(this->mOtherNormalBitmap);
@@ -187,14 +187,15 @@ long UIRadioButton::CopyData()
 long UIRadioButton::DrawPolygons()
 {
     long theResult;
-    if (this->mScaleBitmap && this->mCopiedBitmap) {
-        float theXScale = this->mCopiedBitmap->GetXScale();
-        float theYScale = this->mCopiedBitmap->GetYScale();
+    GEBitmap* theBitmap = this->GetCopiedBitmap();
+    if (this->mScaleBitmap && theBitmap) {
+        float theXScale = theBitmap->GetXScale();
+        float theYScale = theBitmap->GetYScale();
         float theScale[2];   // the box's height over 20 pixels (ee_ui draw.rs)
         ee_ui_box_bitmap_scale(theXScale, theYScale, this->GetCopiedDrawRectangle().GetHeight(), false, 0, theScale);
-        this->mCopiedBitmap->SetXYScale(theScale[0], theScale[1]);
+        theBitmap->SetXYScale(theScale[0], theScale[1]);
         theResult = UIButton::DrawPolygons();
-        this->mCopiedBitmap->SetXYScale(theXScale, theYScale);
+        theBitmap->SetXYScale(theXScale, theYScale);
     } else
         theResult = UIButton::DrawPolygons();
     if (this->mTextLabel)
@@ -238,11 +239,7 @@ void UIRadioButton::RemoveOtherChecks()
 void UIRadioButton::SetDownCheckedBitmap(GEBitmap* inBitmap)
 {
     if (this->mIsChecked) {
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Dereference();
-        this->mPressedBitmap = inBitmap;
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Reference();
+        this->ReplacePressedBitmap(inBitmap);
     } else {
         if (this->mOtherPressedBitmap)
             this->mOtherPressedBitmap->Dereference();
@@ -263,11 +260,7 @@ void UIRadioButton::SetDownUncheckedBitmap(GEBitmap* inBitmap)
         if (this->mOtherPressedBitmap)
             this->mOtherPressedBitmap->Reference();
     } else {
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Dereference();
-        this->mPressedBitmap = inBitmap;
-        if (this->mPressedBitmap)
-            this->mPressedBitmap->Reference();
+        this->ReplacePressedBitmap(inBitmap);
     }
 }
 
@@ -292,11 +285,7 @@ void UIRadioButton::SetText(const UWideString& inText, GEFont* inFont)
 void UIRadioButton::SetUpCheckedBitmap(GEBitmap* inBitmap)
 {
     if (this->mIsChecked) {
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Dereference();
-        this->mNormalBitmap = inBitmap;
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Reference();
+        this->ReplaceNormalBitmap(inBitmap);
     } else {
         if (this->mOtherNormalBitmap)
             this->mOtherNormalBitmap->Dereference();
@@ -317,11 +306,7 @@ void UIRadioButton::SetUpUncheckedBitmap(GEBitmap* inBitmap)
         if (this->mOtherNormalBitmap)
             this->mOtherNormalBitmap->Reference();
     } else {
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Dereference();
-        this->mNormalBitmap = inBitmap;
-        if (this->mNormalBitmap)
-            this->mNormalBitmap->Reference();
+        this->ReplaceNormalBitmap(inBitmap);
     }
 }
 

@@ -23,6 +23,7 @@ public:
     ~EESMArea();                            // 0x1ba0ac
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x00 0x1ba670
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x04 0x1ba78e
+    long SaveIO(FSFile& inFile, bool inSave);   // Load's or Save's values (ee_scenario save.rs)
     // 0x1ba0d1: whether inUnit is in this area (EESMObject's 0x1c6458 asks; provisional name)
     bool ContainsUnit(EEUnit* inUnit);
     bool ContainsUnitUncaptured(EEUnit* inUnit);   // (+ SMAR)

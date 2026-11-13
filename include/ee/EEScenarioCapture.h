@@ -14,6 +14,10 @@
 //         result and the timed effects after
 //   SMUP  each trigger round of EEScenarioManager::Update (every 500 ms): the clocks, the human flag, the triggers'
 //         state and the timed effects after
+//   SMSV  the manager's saved bytes (kind 0: after EEScenarioManager::Load, with its result; kind 1: every 120th
+//         trigger round): each list's count, the first error and the FNV-1a of its elements' Saves into a memory
+//         file (triggers, conditions, effects, objects, areas, pending effects, the built-ins included), then the
+//         whole manager's Save
 // Off (EE_SIM_CAPTURE unset) each hook is one cached test.
 #ifndef EE_EESCENARIOCAPTURE_H
 #define EE_EESCENARIOCAPTURE_H
@@ -54,5 +58,7 @@ void EESMCapturePlayers(long inType, bool inSingle, long inResult, const void* i
 void EESMCaptureArea(EESMArea* inArea, long inKind, long inA, long inB, long inX, long inY, unsigned long long inHash);
 void EESMCaptureEffect(EESMEffect* inEffect, bool inIsCinematic, unsigned int inSeed);
 void EESMCaptureUpdate(EEScenarioManager* inManager, bool inHumanPlaying);
+void EESMCaptureSaved(EEScenarioManager* inManager, long inKind, long inResult, unsigned long inMajorVersion,
+                      unsigned long inMinorVersion);
 
 #endif

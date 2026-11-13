@@ -1,7 +1,6 @@
-// The Rust button logic's view of a UIButton and its subclasses (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md
-// R6): the object, its members from mTextRectangle on (EeUiButtonFields), the UIControl members the logic uses and the
-// subclass's own record. A friend of UIButton, UICheckBox, UIRadioButton, UIScrollButton and UIDualButton; the
-// subclass members are defined in the subclass's unit. Requires lle/UIButton.h, lle/UITextLabel.h.
+// The Rust button subclasses' view of a UIButton (rust/crates/ee_ui/src/button_ffi.rs, docs/RUST_PLAN.md R6): the
+// object, its whole Rust button (buttonobj.rs) and the subclass's own record. A friend of UIButton, UICheckBox,
+// UIRadioButton, UIScrollButton and UIDualButton; the subclass members are defined in the subclass's unit. Requires lle/UIButton.h, lle/UITextLabel.h.
 #ifndef LLE_UIBUTTONRUST_H
 #define LLE_UIBUTTONRUST_H
 
@@ -26,13 +25,8 @@ struct UIButtonRust {
         Refs(const UIButton* inButton, void* inSub = NULL, void* inContext = NULL)
         {
             UIButton* theButton = const_cast<UIButton*>(inButton);
-            UIButtonRust::CheckLayout();
             this->mRefs.button = theButton;
-            this->mRefs.fields = reinterpret_cast<EeUiButtonFields*>(&theButton->mTextRectangle);
-            this->mRefs.border_type = &theButton->mBorderType;
-            this->mRefs.rect = reinterpret_cast<const EeUiRect*>(&theButton->mRectangle);
-            this->mRefs.border = &theButton->mBorderThickness;
-            this->mRefs.index = &theButton->mIndex;
+            this->mRefs.obj = theButton->mRust;
             this->mRefs.sub = inSub;
             this->mRefs.ctx = inContext;
         }
@@ -57,38 +51,6 @@ struct UIButtonRust {
         if (ee_ui_button_label_bitmap_offset(inHeight, inBorder, inScaleBitmap, inFloatBorder, &theOffset))
             inButton->SetBitmapDrawOffset(UIButtonRust::Point(theOffset));
     }
-    static void CheckLayout()
-    {
-        // the record's offsets from mTextRectangle (ee_ui/src/button.rs ButtonFields)
-#define EE_UI_BUTTON_FIELD(member, field)                                                                             \
-    static_assert(offsetof(UIButton, member) - offsetof(UIButton, mTextRectangle) == offsetof(EeUiButtonFields, field), \
-                  "ee_ui/src/button.rs")
-        EE_UI_BUTTON_FIELD(mTextRectangle, text_rect);
-        EE_UI_BUTTON_FIELD(mBitmapLocation, bitmap_location);
-        EE_UI_BUTTON_FIELD(mPressedBitmap, pressed_bitmap);
-        EE_UI_BUTTON_FIELD(mNormalBitmap, normal_bitmap);
-        EE_UI_BUTTON_FIELD(mFocusedBitmap, focused_bitmap);
-        EE_UI_BUTTON_FIELD(mCopiedBitmap, copied_bitmap);
-        EE_UI_BUTTON_FIELD(mState, state);
-        EE_UI_BUTTON_FIELD(mCopiedTextRectangle, copied_text_rect);
-        EE_UI_BUTTON_FIELD(mBitmapDrawOffset, bitmap_draw_offset);
-        EE_UI_BUTTON_FIELD(mFocusedTextColor, focused_text_color);
-        EE_UI_BUTTON_FIELD(mButtonDownSound, button_down_sound);
-        EE_UI_BUTTON_FIELD(mButtonUpSound, button_up_sound);
-        EE_UI_BUTTON_FIELD(mText, text);
-        EE_UI_BUTTON_FIELD(mCopiedText, copied_text);
-        EE_UI_BUTTON_FIELD(mKeyDown, key_down);
-        EE_UI_BUTTON_FIELD(mMouseDown, mouse_down);
-        EE_UI_BUTTON_FIELD(mHasCopiedText, has_copied_text);
-#undef EE_UI_BUTTON_FIELD
-        static_assert(sizeof(UIButton) - offsetof(UIButton, mTextRectangle) >= sizeof(EeUiButtonFields),
-                      "ee_ui/src/button.rs");
-        static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
-        static_assert(sizeof(GE2DPoint) == sizeof(EeUiPoint), "ee_ui/src/rect.rs");
-        static_assert(sizeof(GEColor) == sizeof(EeUiColor), "ee_ui/src/button.rs");
-        static_assert(sizeof(((UIButton*)0)->mBorderType) == sizeof(unsigned long), "ee_ui/src/button_ffi.rs");
-        static_assert(sizeof(((UIButton*)0)->mIndex) == sizeof(unsigned long), "ee_ui/src/button_ffi.rs");
-    }
     // the subclasses' records (their units)
     static void* CheckFields(UICheckBox* inBox);
     static void* RadioFields(UIRadioButton* inButton);
@@ -100,38 +62,6 @@ struct UIButtonRust {
     static TMPoll* ScrollDelay(void* inButton);
     static TMPoll* ScrollRepeat(void* inButton);
     static UISlider* ScrollSlider(void* inButton);
-    // the protected UIControl members the host calls use (UIButton.cpp)
-    static void CaptureMouse(void* inButton) { Button(inButton)->CaptureMouse(); }
-    static void CaptureKeyboard(void* inButton) { Button(inButton)->CaptureKeyboard(); }
-    static const GE2DPoint& MouseLocation(void* inButton) { return Button(inButton)->GetMouseLocation(); }
-    static bool Key(int inKey)
-    {
-        switch (inKey) {
-        case 0:
-            return UIButton::sSpaceKey->JustPressed();
-        case 1:
-            return UIButton::sEnterKey->JustPressed();
-        case 2:
-            return UIButton::sSpaceKey->JustUnpressed();
-        default:
-            return UIButton::sEnterKey->JustUnpressed();
-        }
-    }
-    static void ButtonDown(void* inButton) { Button(inButton)->ButtonDown(); }
-    static void ButtonUp(void* inButton) { Button(inButton)->ButtonUp(); }
-    static void MouseOver(void* inButton) { Button(inButton)->MouseOver(); }
-    static void MouseMove(void* inButton, float inX, float inY) { Button(inButton)->MouseMove(GE2DPoint(inX, inY)); }
-    static void SetCopiedBitmap(void* inButton, GEBitmap* inBitmap)
-    {
-        UIButton* theButton = Button(inButton);
-        if (theButton->mCopiedBitmap)
-            theButton->mCopiedBitmap->Dereference();
-        theButton->mCopiedBitmap = inBitmap;
-        if (theButton->mCopiedBitmap)
-            theButton->mCopiedBitmap->Reference();
-    }
-    static GEText* Text(void* inButton) { return Button(inButton)->mText; }
-    static void CopyText(void* inButton, bool inFocused);   // UIButton.cpp
 };
 
 #endif

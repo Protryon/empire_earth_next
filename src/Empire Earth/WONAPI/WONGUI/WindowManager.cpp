@@ -157,7 +157,7 @@ void WindowManager::RestoreScreenResolution()
 	while(anItr!=this->mWindowSet.end())
 	{
 		Window *aWindow = anItr->get();
-		if(aWindow->mWindowState==Window::WindowState_Open && aWindow->mMinimizeOnResolutionRestore)
+		if(aWindow->GetWindowState()==Window::WindowState_Open && aWindow->GetMinimizeOnResolutionRestore())
 			aWindow->Minimize(true);
 
 		++anItr;
@@ -542,7 +542,7 @@ void WindowManager::ProcessEvents()
 
 		switch(ee_won_gui_wm_popup_focus_step(this->mPopupIsUp, this->mFocusWindow==this->mPopupOwnerWindow,
 		                                      this->mPopupFlags, this->mFocusWindow!=NULL,
-		                                      this->mFocusWindow!=NULL && this->mFocusWindow->mIsPopup, this->mEndPopup))
+		                                      this->mFocusWindow!=NULL && this->mFocusWindow->IsPopup(), this->mEndPopup))
 		{
 			case 1:
 				this->mEndPopup = false;
@@ -800,7 +800,7 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 		this->EndPopup(NULL);
 
 	int y;
-	int x = ee_won_gui_popup_place(theParams.mx, theParams.my, aParent->mMouseX, aParent->mMouseY, &y);
+	int x = ee_won_gui_popup_place(theParams.mx, theParams.my, aParent->GetMouseX(), aParent->GetMouseY(), &y);
 
 	aPopup->SetPos(x,y);
 
@@ -831,12 +831,12 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 
 		if(this->mPopupWindowSave.get()!=NULL)
 		{
-			if(this->mPopupWindowSave->mParent!=aParent.get())
+			if(this->mPopupWindowSave->GetParent()!=aParent.get())
 				this->mPopupWindowSave->Close();
 			else
 			{
 				this->mPopupWindowSave->SetPosSize(aRect.x, aRect.y, aRect.width, aRect.height);
-				this->mPopupWindowSave->mIsPopup = true;
+				this->mPopupWindowSave->SetIsPopup(true);
 				this->mPopupWindowSave->Show(true);
 				aPopupWindow = this->mPopupWindowSave;
 			}
@@ -846,14 +846,14 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 		if(aPopupWindow.get()==NULL)
 		{
 			aPopupWindow = CreateNativeWindow();
-			aPopupWindow->mIsOneComponentWindow = true;
-			aPopupWindow->mStyle=0x20;
+			aPopupWindow->SetOneComponentWindow(true);
+			aPopupWindow->SetStyle(0x20);
 			aPopupWindow->SetParent(aParent.get());
-			aPopupWindow->mIsPopup = true;
+			aPopupWindow->SetIsPopup(true);
 
 			aPopupWindow->Create(aRect);
 		}
-		aPopupWindow->mIsPopup = true;
+		aPopupWindow->SetIsPopup(true);
 
 		if(((this->mPopupFlags & (PopupFlag_WantInput))?true:false))
 		{
@@ -932,7 +932,7 @@ void WindowManager::EndPopup(Component *thePopup)
 
 		if(aPopupWindow.get()!=aPopupOwnerWindow.get())
 		{
-			aPopupWindow->mIsPopup = false;
+			aPopupWindow->SetIsPopup(false);
 			if(this->mPopupList.empty())
 				this->mPopupWindowSave = aPopupWindow;
 
@@ -990,7 +990,7 @@ void WindowManager::FindMouseWindow(MouseEvent *theEvent)
 	if(!this->mPopupIsUp)
 		return;
 
-	if(((this->mPopupFlags & (PopupFlag_DontWantMouse))?true:false) && theEvent->mWindow->mIsPopup)
+	if(((this->mPopupFlags & (PopupFlag_DontWantMouse))?true:false) && theEvent->mWindow->IsPopup())
 	{
 		WONRectangle aPopupRect, anOwnerRect;
 		theEvent->mWindow->GetRect(aPopupRect,true);
@@ -1011,7 +1011,7 @@ void WindowManager::FindMouseWindow(MouseEvent *theEvent)
 
 	WONRectangle anOwnerRect;
 	theEvent->mWindow->GetRect(anOwnerRect,true);
-	if(this->mMouseDownWindow!=NULL && this->mMouseDownWindow->mMouseIsDown[0])
+	if(this->mMouseDownWindow!=NULL && this->mMouseDownWindow->IsMouseDown(MouseButton_Left))
 	{
 		WONRectangle aRect;
 		this->mMouseDownWindow->GetRect(aRect,true);
@@ -1089,7 +1089,7 @@ bool WindowManager::CheckPopupClick(MouseEvent *theEvent)
 		}
 	}
 
-	if(theEvent->mWindow->mIsPopup)
+	if(theEvent->mWindow->IsPopup())
 		this->mPopupOwnerWindow->PlatformSetFocus();
 
 	return false;
@@ -1112,8 +1112,8 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				if(this->CheckPopupClick(anEvent))
 					break;
 			}
-			if(ee_won_gui_wm_press_focuses(this->mFocusWindow==anEvent->mWindow, anEvent->mWindow->mIsPopup,
-			                               this->mFocusWindow!=anEvent->mWindow && !anEvent->mWindow->mIsPopup &&
+			if(ee_won_gui_wm_press_focuses(this->mFocusWindow==anEvent->mWindow, anEvent->mWindow->IsPopup(),
+			                               this->mFocusWindow!=anEvent->mWindow && !anEvent->mWindow->IsPopup() &&
 			                               this->NotModalWindow(anEvent->mWindow)))
 				anEvent->mWindow->PlatformSetFocus();
 
@@ -1121,7 +1121,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 				anEvent->mWindow->PlatformSetMouseCapture(true);
 		}
 
-		if(theEvent->mWindow->mMouseIsInClientArea)
+		if(theEvent->mWindow->IsMouseInClientArea())
 			theEvent->mWindow->HandleMouseEvent(static_cast<MouseEvent*>(theEvent));
 		break;
 
@@ -1239,7 +1239,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 		case InputEvent_WindowClose:
 		{
 			if(ee_won_gui_wm_close_ends_popup(this->mPopupIsUp, theEvent->mWindow==this->mPopupOwnerWindow,
-			                                  theEvent->mWindow->mIsPopup))
+			                                  theEvent->mWindow->IsPopup()))
 				this->EndPopup(NULL);
 
 
@@ -1312,7 +1312,7 @@ bool WindowManager::CheckModalValid()
 {
     if(this->mModalWindow == NULL)
         return true;
-    if(this->mModalWindow->mWindowState != Window::WindowState_Open)
+    if(this->mModalWindow->GetWindowState() != Window::WindowState_Open)
         return false;
 
     if(!this->mModalWindow->PlatformIsVisible())

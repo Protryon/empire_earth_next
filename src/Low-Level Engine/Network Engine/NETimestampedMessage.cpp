@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/NEPlayer.h"
 #include "lle/NEMessage.h"
 #include "lle/NETimestampedMessage.h"
 

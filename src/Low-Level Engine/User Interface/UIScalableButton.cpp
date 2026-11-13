@@ -56,7 +56,7 @@ UIScalableButton::UIScalableButton(unsigned long inId, GEBitmap* inNormalBitmap,
     this->mNormalRectangle = inNormalRectangle;
     this->mFocusedRectangle = inFocusedRectangle;
     this->mPressedRectangle = inPressedRectangle;
-    this->mTextRectangle = inTextRectangle;
+    this->SetTextRectangle(inTextRectangle);
 }
 
 // FUNCTION: LLE 0x1007c609
@@ -67,7 +67,7 @@ long UIScalableButton::CopyData()
     EeUiRect theFocused = UIScalableButtonRust::Rect(this->mFocusedRectangle);
     EeUiRect thePressed = UIScalableButtonRust::Rect(this->mPressedRectangle);
     EeUiRect theCurrent = UIScalableButtonRust::Rect(this->mCopiedRectangle);
-    this->mCopiedRectangle = UIScalableButtonRust::Rect(ee_ui_scalable_copied_rect(this->mState, this->mFocusedBitmap != NULL, &theNormal,
+    this->mCopiedRectangle = UIScalableButtonRust::Rect(ee_ui_scalable_copied_rect(this->GetState(), this->GetFocusedBitmap() != NULL, &theNormal,
                                                                            &theFocused, &thePressed, &theCurrent));
     return UIButton::CopyData();
 }
@@ -79,18 +79,19 @@ long UIScalableButton::DrawPolygons()
     GERectangle theSource;
     GERectangle theDestination;
     long theResult = kErrorOK;
-    if (this->mCopiedBitmap) {
+    GEBitmap* theBitmap = this->GetCopiedBitmap();
+    if (theBitmap) {
         // the left cap, the right cap and the stretched middle (ee_ui button_variants.rs)
         EeUiSlice theSlices[3];
         EeUiRect theCopied = UIScalableButtonRust::Rect(this->mCopiedRectangle);
         EeUiRect theDraw = UIScalableButtonRust::Rect(this->mCopiedDrawRectangle);
-        ee_ui_scalable_slices(&theCopied, &theDraw, this->mCopiedBitmap->GetTexture(this->GetScreenIndex())->GetWidth(), theSlices);
+        ee_ui_scalable_slices(&theCopied, &theDraw, theBitmap->GetTexture(this->GetScreenIndex())->GetWidth(), theSlices);
         for (int i = 0; i < 3; i++) {
             theSource = UIScalableButtonRust::Rect(theSlices[i].source);
             theDestination = UIScalableButtonRust::Rect(theSlices[i].destination);
-            this->mCopiedBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
-            this->mCopiedBitmap->SetLocation(UIScalableButtonRust::Point(theSlices[i].location));
-            theResult = this->GetRasterizer()->Draw(this->mCopiedBitmap, this->GetScreenIndex());
+            theBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, this->GetScreenIndex());
+            theBitmap->SetLocation(UIScalableButtonRust::Point(theSlices[i].location));
+            theResult = this->GetRasterizer()->Draw(theBitmap, this->GetScreenIndex());
         }
     }
     return theResult;

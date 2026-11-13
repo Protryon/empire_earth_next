@@ -1,7 +1,7 @@
 //! `UIStatusBar` (`User Interface/UIStatusBar.cpp`), a progress bar: the value clamped to its range and the fill's
 //! width ([`fill`]), the fill and text rectangles a move lays out ([`location`]) and the frame's copies (the fill
-//! inset by the border, the text centred in its area: [`copy_fill`], [`copy_text`]). The C++ keeps the rhombi, the texts, every draw
-//! and `SetDirty`.
+//! inset by the border, the text centred in its area: [`copy_fill`], [`copy_text`]). The whole object
+//! (`statusobj.rs`) calls them; the rhombi, the texts and every draw are its host's.
 
 use core::ffi::{c_long, c_ulong};
 
